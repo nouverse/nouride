@@ -11,6 +11,7 @@
 #   images     `nouride` and `nouride-router`, from the signed image kit, natively per architecture (no emulation),
 #              pushed as `<version>-amd64` and `<version>-arm64`; the image's bundle must be the kit's, byte for byte
 #   manifest   one multi-arch tag per edition — `<version>`, `<major>.<minor>`, and `latest` unless the release is quiet
+#              or a long-term patch, which gets `lts` instead
 #   publish    the draft becomes the release, once everything above passed
 #
 # Why it is here: GitHub's runners are free for public repositories, native arm64 and macOS included, and the
@@ -25,6 +26,10 @@ on:
         required: true
       quiet:
         description: "yes for a quiet release: published as a pre-release, no `latest` tag"
+        required: false
+        default: "no"
+      lts:
+        description: "yes for a patch to a long-term line (Nouride 0.8.18): published, not a pre-release, not latest; images tagged `lts`"
         required: false
         default: "no"
       rehearsal:
@@ -193,12 +198,14 @@ jobs:
         env:
           EDITION: ${{ matrix.edition }}
           QUIET: ${{ inputs.quiet }}
+          LTS: ${{ inputs.lts }}
         run: |
           if [ "$EDITION" = basic ]; then pkg=nouride; else pkg="nouride-${EDITION}"; fi
           version="${TAG#v}"
           base="ghcr.io/nouverse/${pkg}"
           tags="-t ${base}:${version} -t ${base}:${version%.*}"
-          [ "$QUIET" = yes ] || tags="$tags -t ${base}:latest"
+          # A long-term patch never moves `latest`: a 0.9.x cut after 0.10.0 would move every `latest` pull back a line.
+          if [ "$LTS" = yes ]; then tags="$tags -t ${base}:lts"; elif [ "$QUIET" != yes ]; then tags="$tags -t ${base}:latest"; fi
           if [ "$REHEARSAL" = yes ]; then version=rehearsal; tags="-t ${base}:rehearsal"; fi
           echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
           # shellcheck disable=SC2086
@@ -220,9 +227,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           QUIET: ${{ inputs.quiet }}
+          LTS: ${{ inputs.lts }}
         run: |
           if [ "$QUIET" = yes ]; then
             gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false --prerelease --latest=false
+          elif [ "$LTS" = yes ]; then
+            # Offered to the updaters that ask for it (they read every release), not to `releases/latest`.
+            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false --latest=false
           else
             gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false --latest
           fi
