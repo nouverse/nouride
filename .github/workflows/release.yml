@@ -332,12 +332,12 @@ jobs:
                   # which GitHub reports as null for a LicenseRef — so v0.1.0
                   # shipped an image labelled `NOASSERTION`.
                   #
-                  # What LICENSE says, for every edition: the PolyForm Strict
+                  # What LICENSE says, for every edition: the PolyForm Noncommercial
                   # License 1.0.0, its SPDX id as in package.json. The public
                   # images once carried a placeholder,
                   # LicenseRef-Nouride, that no file defined. An image label is a
                   # claim somebody reads with `docker inspect`.
-                  "licence": "PolyForm-Strict-1.0.0",
+                  "licence": "PolyForm-Noncommercial-1.0.0",
               }
               for v, _f, p, e, g, n, _t in keep
               if p is not None and g

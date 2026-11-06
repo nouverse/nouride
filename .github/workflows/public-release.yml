@@ -218,7 +218,7 @@ jobs:
           docker buildx imagetools inspect "${base}:${version}"
           # Every platform of the published tag states its licence.
           got=$(docker buildx imagetools inspect "${base}:${version}" --format '{{ json .Image }}' | jq -r '[ .. | objects | select(has("Labels")) | .Labels // {} | .["org.opencontainers.image.licenses"] ] | map(select(. != null)) | unique | join(",")')
-          [ "$got" = "PolyForm-Strict-1.0.0" ] || { error "${base}:${version} is labelled '${got:-<none>}'"; exit 1; }
+          [ "$got" = "PolyForm-Noncommercial-1.0.0" ] || { error "${base}:${version} is labelled '${got:-<none>}'"; exit 1; }
 
   publish:
     needs: [tarballs, manifest]

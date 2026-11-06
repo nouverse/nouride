@@ -181,5 +181,5 @@ jobs:
 
           # And the free image must carry none of the sign-in flow. This is the check that stands
           # between a mistake and a public download containing code that was never meant to leave.
-          [ "$label" = "PolyForm-Strict-1.0.0" ] || { error "the image must be labelled PolyForm-Strict-1.0.0, what LICENSE says"; exit 1; }
+          [ "$label" = "PolyForm-Noncommercial-1.0.0" ] || { error "the image must be labelled PolyForm-Noncommercial-1.0.0, what LICENSE says"; exit 1; }
           [ "$oauth" = "no" ] || { error "this image carries the Nouverse sign-in flow — it is not the edition it claims to be"; exit 1; }

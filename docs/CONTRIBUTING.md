@@ -297,7 +297,7 @@ version:
 
 ## License
 
-The [PolyForm Strict License 1.0.0](../LICENSE), Nouverse Technologies: the source can be read and Nouride used for any noncommercial
-purpose, but not changed or redistributed. The WhatsApp bridge, `packages/wa-bridge`, and the built-in skills and agent
+The [PolyForm Noncommercial License 1.0.0](../LICENSE), Nouverse Technologies: Nouride may be used, changed and shared for
+any noncommercial purpose; commercial use needs a licence. The WhatsApp bridge, `packages/wa-bridge`, and the built-in skills and agent
 templates, `content/`, are MIT. A pull request is a contribution Nouverse may use, change and license as part of Nouride,
 under any terms, as the README says.

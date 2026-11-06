@@ -1,15 +1,15 @@
-Nouride is licensed under the PolyForm Strict License 1.0.0, below.
+Nouride is licensed under the PolyForm Noncommercial License 1.0.0, below.
 
 Required Notice: Copyright (c) 2026 Nouverse Technologies (https://nouverse.com)
 
 What this means, in short (the licence text below is what governs):
 
-- You may read the source code, and use Nouride for any noncommercial purpose:
-  personal use, a hobby project, study, a homelab, or a noncommercial
-  organization such as a school or a charity.
-- You may not change it, build new works on it, or distribute it, in source or
-  binary form.
+- You may use Nouride, change it and share it, with your changes, for any
+  noncommercial purpose: personal use, a hobby project, study, a homelab, or a
+  noncommercial organization such as a school or a charity. Whoever you share
+  it with gets these terms and the notice above with it.
 - Commercial use needs a licence from Nouverse: https://nouverse.com
+- A changed copy is not Nouride: do not give it the name.
 - The Nouride name and logo are trademarks of Nouverse and are not licensed by
   these terms.
 
@@ -30,9 +30,9 @@ how, and apps/engine/tests/contracts/wa-bridge-licence.test.ts fails if
 
 -------------------------------------------------------------------------------
 
-# PolyForm Strict License 1.0.0
+# PolyForm Noncommercial License 1.0.0
 
-<https://polyformproject.org/licenses/strict/1.0.0>
+<https://polyformproject.org/licenses/noncommercial/1.0.0>
 
 ## Acceptance
 
@@ -40,7 +40,21 @@ In order to get any license under these terms, you must agree to them as both st
 
 ## Copyright License
 
-The licensor grants you a copyright license for the software to do everything you might do with the software that would otherwise infringe the licensor's copyright in it for any permitted purpose, other than distributing the software or making changes or new works based on the software.
+The licensor grants you a copyright license for the software to do everything you might do with the software that would otherwise infringe the licensor's copyright in it for any permitted purpose.  However, you may only distribute the software according to [Distribution License](#distribution-license) and make changes or new works based on the software according to [Changes and New Works License](#changes-and-new-works-license).
+
+## Distribution License
+
+The licensor grants you an additional copyright license to distribute copies of the software.  Your license to distribute covers distributing the software with changes and new works permitted by [Changes and New Works License](#changes-and-new-works-license).
+
+## Notices
+
+You must ensure that anyone who gets a copy of any part of the software from you also gets a copy of these terms or the URL for them above, as well as copies of any plain-text lines beginning with `Required Notice:` that the licensor provided with the software.  For example:
+
+> Required Notice: Copyright Yoyodyne, Inc. (http://example.com)
+
+## Changes and New Works License
+
+The licensor grants you an additional copyright license to make changes and new works based on the software for any permitted purpose.
 
 ## Patent License
 

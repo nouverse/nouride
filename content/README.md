@@ -7,4 +7,4 @@ was at its tag, and that copy is the skill an install's agents use.
 ## Licence
 
 MIT, under [LICENSE](./LICENSE): change the agents and skills you run as you like. The rest of Nouride is under the
-PolyForm Strict License 1.0.0 ([LICENSE](../LICENSE)).
+PolyForm Noncommercial License 1.0.0 ([LICENSE](../LICENSE)).

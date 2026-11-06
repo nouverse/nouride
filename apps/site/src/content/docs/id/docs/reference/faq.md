@@ -44,8 +44,8 @@ atau `nouride update` memintanya, daftar rilis publik di GitHub. Permintaan tera
 mengirim apa pun tentang instalasimu.
 
 **Open source?**
-Kodenya terbuka untuk dibaca, tapi bukan open source: Nouride memakai PolyForm Strict License 1.0.0. Gratis untuk
-pemakaian pribadi dan non-komersial lainnya; kodenya boleh dibaca, tapi tidak boleh diubah atau disebarkan ulang.
+Kodenya terbuka, tapi bukan open source: Nouride memakai PolyForm Noncommercial License 1.0.0. Gratis untuk pemakaian
+pribadi dan non-komersial lainnya, dan untuk keperluan itu kodenya boleh diubah dan perubahannya boleh dibagikan.
 Pemakaian komersial butuh lisensi dari Nouverse Technologies. Bridge WhatsApp serta skill dan template agent bawaan
 memakai MIT, jadi agent dan skill yang kamu jalankan bebas kamu ubah. Kodenya ada di
 [github.com/nouverse/nouride](https://github.com/nouverse/nouride).

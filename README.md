@@ -2,7 +2,7 @@
 
 > The source code, official binary releases and container images of [Nouride](https://nouride.com).
 > The source is here to read: Nouride is free for personal and other noncommercial use, under the
-> [PolyForm Strict License 1.0.0](#licence).
+> [PolyForm Noncommercial License 1.0.0](#licence).
 
 [![GitHub Sponsors](https://img.shields.io/badge/Sponsor-GitHub-ea4aaa?style=flat-square&logo=githubsponsors&logoColor=white)](https://github.com/sponsors/gadingnst) [![Ko-fi](https://img.shields.io/badge/Support-Ko--fi-29abe0?style=flat-square&logo=kofi&logoColor=white)](https://ko-fi.com/gadingnst) [![Trakteer](https://img.shields.io/badge/Support-Trakteer-red?style=flat-square)](https://trakteer.id/gadingnst) [![KaryaKarsa](https://img.shields.io/badge/Support-KaryaKarsa-ffb800?style=flat-square)](https://karyakarsa.com/gadingnst)
 
@@ -238,14 +238,14 @@ site (`apps/site`) and the packages they share (`packages/`). Nouride Pro's comp
 
 ## Licence
 
-Nouride is licensed under the [PolyForm Strict License 1.0.0](./LICENSE). In short:
+Nouride is licensed under the [PolyForm Noncommercial License 1.0.0](./LICENSE). In short:
 
 - **Free for personal and noncommercial use.** You may read the source and run Nouride for yourself, at home, in a
   homelab, for a hobby project or for study, and in a noncommercial organization such as a school or a charity.
-- **No changes and no redistribution.** You may not modify Nouride, build new works on it, or distribute it, in source
-  or binary form.
+- **Change it and share it, noncommercially.** Fix, adapt and extend your own install, and share your changes, for any
+  noncommercial purpose, with these terms beside them.
 - **Commercial use needs a licence** from [Nouverse Technologies](https://nouverse.com).
-- **The Nouride name and logo** are trademarks of Nouverse and are not licensed.
+- **The Nouride name and logo** are trademarks of Nouverse and are not licensed: a changed copy is not called Nouride.
 
 Licensed separately: the WhatsApp bridge in `packages/wa-bridge` and the built-in skills and agent templates in
 `content/` are MIT, so the agents and skills you run are yours to change. [LICENSE](./LICENSE) lists every exception.
