@@ -138,7 +138,7 @@ jobs:
       - run: bun run build:dashboard
       - run: bun run lint:check
       - run: bun run lint:site
-      - run: bun test --timeout=30000 ./apps/engine/tests/contracts/
+      - run: bun run test:contracts
         env:
           TMPDIR: ${{ runner.temp }}
 

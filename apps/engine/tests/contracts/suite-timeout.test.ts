@@ -20,7 +20,10 @@ describe("the suite", () => {
 
   test("is run as `bun run test` wherever it runs, never spelled out: verify, every other script, every workflow", () => {
     expect(SCRIPTS.verify).toContain("bun run test");
-    const scripts = Object.entries(SCRIPTS).filter(([name, script]) => name !== "test" && /\bbun test\b/.test(script)).map(([name]) => name);
+    // `test:contracts` is CI's light job for documentation (scripts/ci-changes.ts): the contract tests alone, with the
+    // same thirty seconds.
+    expect(SCRIPTS["test:contracts"]).toStartWith("bun test --timeout=30000 ");
+    const scripts = Object.entries(SCRIPTS).filter(([name, script]) => !["test", "test:contracts"].includes(name) && /\bbun test\b/.test(script)).map(([name]) => name);
     const steps = readdirSync(WORKFLOWS)
       .filter((name) => name.endsWith(".yml"))
       .flatMap((name) =>

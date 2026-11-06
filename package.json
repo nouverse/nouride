@@ -39,6 +39,7 @@
     "lint:types": "bun run scripts/check-types.ts",
     "lint:check": "bun run lint:arch && bun run lint:deps && bun run lint:sql && bun run lint:timers && bun run lint:size && bun run lint:skills && bun run lint:cli && bun run lint:wire && bun run lint:seams && bun run lint:deadcode && bun run lint:pointers && bun run lint:public && bun run lint:types",
     "test": "bun test --timeout=30000 ./apps/ ./packages/ ./internals/ --path-ignore-patterns='**/internals/nougate/**'",
+    "test:contracts": "bun test --timeout=30000 ./apps/engine/tests/contracts/",
     "cli": "bun run apps/engine/src/cli/main.ts",
     "build:binary": "bun run build:dashboard && bun run scripts/build-binary.ts",
     "build:pro": "bun run build:dashboard && bun run internals/pro/build-pro/build.ts",
