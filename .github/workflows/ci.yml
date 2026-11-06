@@ -11,11 +11,10 @@
 # submodules. Whether the image still builds is `ci-image.yml`'s, which runs when something the
 # Dockerfile copies changes.
 #
-# No path filter. The suite and `lint:check` read more than code: `docs/EVENTS.md` and
-# `docs/contracts/`, the release notes, the site's `src/consts.mjs`, the workflows themselves, and
-# `check-public` every published file, site content included — so a change to any of them can turn
-# a check red. Ignoring `docs/**`, `*.md` and `apps/site/**` let such a commit land unchecked and
-# the failure surface on the next one.
+# What runs depends on what the push changed (`changes`, scripts/ci-changes.ts; the owner, 2026-11-06): code runs
+# everything; documentation and the site alone run `docs`, the light job. Not a path filter on the trigger: the suite
+# and `lint:check` read more than code (the release notes, the site's pages, every published file for `check-public`),
+# and ignoring `docs/**` once let such a commit land unchecked. `docs` runs exactly the checks that read them.
 
 name: ci
 
@@ -95,10 +94,58 @@ jobs:
             fi
           done
 
+  # What the push changed, and so which of the jobs below it needs.
+  changes:
+    if: github.repository_owner == 'nouverse'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      code: ${{ steps.needs.outputs.code }}
+      helper: ${{ steps.needs.outputs.helper }}
+      docs: ${{ steps.needs.outputs.docs }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - id: needs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BEFORE: ${{ github.event.before }}
+        run: bun run scripts/ci-changes.ts "${BEFORE}" "${GITHUB_SHA}"
+
+  # Documentation and the site alone: the checks that read them, a few minutes instead of the suite's half hour.
+  docs:
+    needs: [changes]
+    if: ${{ needs.changes.outputs.code != 'true' && needs.changes.outputs.docs == 'true' && github.repository_owner == 'nouverse' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+      - run: bun install --frozen-lockfile
+      - run: bun run build:dashboard
+      - run: bun run lint:check
+      - run: bun run lint:site
+      - run: bun test --timeout=30000 ./apps/engine/tests/contracts/
+        env:
+          TMPDIR: ${{ runner.temp }}
+
   verify:
-    needs: [passed]
+    needs: [passed, changes]
     # Whatever `passed` did, skipped off `main` included: without a status function GitHub skips a job whose need was.
-    if: ${{ !cancelled() && needs.passed.outputs.verify != 'yes' && github.repository_owner == 'nouverse' }}
+    if: ${{ !cancelled() && needs.changes.outputs.code == 'true' && needs.passed.outputs.verify != 'yes' && github.repository_owner == 'nouverse' }}
     # runs-on: [self-hosted, build-runner]
     runs-on: ${{ fromJSON(vars.CI_RUNNER || '"ubuntu-24.04"') }}
     # A hung test must not spend six hours of runner time, the default.
@@ -140,8 +187,8 @@ jobs:
   # users, in a throwaway container — the one place they can run. Run on a Mac they say so and pass nothing, so this is
   # where they are proved. Also `fmt` and `clippy`: the one program that runs as root is held to its own lint.
   helper:
-    needs: [passed]
-    if: ${{ !cancelled() && needs.passed.outputs.helper != 'yes' && github.repository_owner == 'nouverse' }}
+    needs: [passed, changes]
+    if: ${{ !cancelled() && needs.changes.outputs.helper == 'true' && needs.passed.outputs.helper != 'yes' && github.repository_owner == 'nouverse' }}
     # runs-on: [self-hosted, build-runner]
     runs-on: ${{ fromJSON(vars.CI_RUNNER || '"ubuntu-24.04"') }}
     timeout-minutes: 15
@@ -161,8 +208,8 @@ jobs:
   # skips: a gate that quietly stops running is how the editions it guards stopped being built (RELEASE_VARIANTS).
   # release.yml runs the same job on a tag unless this one already passed on that commit.
   verify-private:
-    needs: [passed]
-    if: ${{ !cancelled() && github.event_name == 'push' && needs.passed.outputs.verify_private != 'yes' && github.repository_owner == 'nouverse' }}
+    needs: [passed, changes]
+    if: ${{ !cancelled() && github.event_name == 'push' && needs.changes.outputs.code == 'true' && needs.passed.outputs.verify_private != 'yes' && github.repository_owner == 'nouverse' }}
     # runs-on: [self-hosted, build-runner]
     runs-on: ${{ fromJSON(vars.CI_RUNNER || '"ubuntu-24.04"') }}
     timeout-minutes: 35

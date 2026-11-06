@@ -40,12 +40,13 @@ describe("ci.yml", () => {
   });
 
   test("skips every other job where it passed, and runs it everywhere else: a skipped `passed` does not skip it", () => {
-    const others = Object.keys(all).filter((id) => id !== "passed");
+    // `changes` and `docs` decide and run nothing a release depends on: what a push changed, and the light checks for docs.
+    const others = Object.keys(all).filter((id) => !["passed", "changes", "docs"].includes(id));
     expect(others.toSorted()).toEqual(["helper", "verify", "verify-private"]);
     for (const id of others) {
       const block = all[id]!;
       const condition = /^ {4}if: (.*)$/m.exec(block)?.[1] ?? "";
-      expect({ id, needs: /^ {4}needs: (.*)$/m.exec(block)?.[1] }).toEqual({ id, needs: "[passed]" });
+      expect({ id, needs: /^ {4}needs: (.*)$/m.exec(block)?.[1] }).toEqual({ id, needs: "[passed, changes]" });
       // Without a status function GitHub skips a job whose need was skipped: every job off `main` would go.
       expect({ id, cancelled: condition.startsWith("${{ !cancelled() && ") }).toEqual({ id, cancelled: true });
       expect({ id, skipped: condition.includes(`needs.passed.outputs.${id.replaceAll("-", "_")} != 'yes'`) }).toEqual({ id, skipped: true });
