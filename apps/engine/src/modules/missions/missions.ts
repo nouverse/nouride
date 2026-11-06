@@ -24,6 +24,7 @@ import { acceptMission, acceptOutside, answerMission, continueMission, deleteMis
 import { markRead, tellMission, unreadTold, type TellAnswer } from "./tell.ts";
 import { MissionStore } from "./missions.store.ts";
 import { doneNotice, endedNotice, goesOnNotice, needsYouNotice, paged, queuedNotice, startedNotice, warnNotice } from "./notices.ts";
+import { withOptions } from "./options.ts";
 import { announceDraft, editDraft, type DraftEdited } from "./draft-edit.ts";
 import { briefPath, type DraftChange, type DraftEditor } from "./drafts.ts";
 import { sendFiles, sendReport } from "./results.ts";
@@ -40,7 +41,7 @@ const log = createLogger("missions");
 const OUTSIDE_EARLIER = "outside content this mission read earlier";
 
 /** What the agent said in a turn about the mission itself — acted on when the turn ends. */
-type Claim = { kind: "done"; summary: string; report: string; files: string[] } | { kind: "ask"; question: string } | { kind: "fail"; reason: string; report: string };
+type Claim = { kind: "done"; summary: string; report: string; files: string[] } | { kind: "ask"; question: string; options?: string[] } | { kind: "fail"; reason: string; report: string };
 
 /** What a mission's turns leave in memory between them: none of it needs to survive a restart. */
 interface TurnState {
@@ -404,7 +405,7 @@ export class Missions implements TurnShaper {
       return;
     }
     if (claim?.kind === "fail") return this.end(mission, "failed", `gave up: ${claim.reason}`, claim.report);
-    if (claim?.kind === "ask") return this.asked(mission, claim.question);
+    if (claim?.kind === "ask") return this.asked(mission, withOptions(claim.question, claim.options ?? []), claim.options ?? []);
     if (claim?.kind === "done") {
       mission.summary = claim.summary;
       mission.report = claim.report;
@@ -465,11 +466,12 @@ export class Missions implements TurnShaper {
     state.claimedAt ??= this.now();
   }
 
-  private asked(mission: Mission, question: string): void {
+  /** `question` as the person reads it, its `options` listed under it (`options.ts`). */
+  private asked(mission: Mission, question: string, options: string[]): void {
     const state = this.turnState(mission.id);
     const last = mission.answers.at(-1);
     state.sameQuestion = last && last.question.trim().toLowerCase() === question.trim().toLowerCase() ? state.sameQuestion + 1 : 1;
-    mission.answers = [...mission.answers, { question, at: this.now() }].slice(-ANSWERS_KEPT);
+    mission.answers = [...mission.answers, { question, at: this.now(), ...(options.length > 0 ? { options } : {}) }].slice(-ANSWERS_KEPT);
     if (state.sameQuestion >= SAME_QUESTION) {
       return this.wait(mission, "stuck", `it asked the same question ${SAME_QUESTION} times in a row, going round in circles: "${question}"`);
     }

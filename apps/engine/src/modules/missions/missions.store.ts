@@ -101,7 +101,14 @@ function answered(text: string): Answered[] {
   return value.flatMap((entry: unknown) => {
     const one = entry as Partial<Answered> | null;
     return one && typeof one.question === "string" && typeof one.at === "number"
-      ? [{ question: one.question, at: one.at, ...(typeof one.answer === "string" ? { answer: one.answer } : {}) }]
+      ? [
+          {
+            question: one.question,
+            at: one.at,
+            ...(Array.isArray(one.options) && one.options.every((option) => typeof option === "string") ? { options: one.options } : {}),
+            ...(typeof one.answer === "string" ? { answer: one.answer } : {}),
+          },
+        ]
       : [];
   });
 }

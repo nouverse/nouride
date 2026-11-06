@@ -17,6 +17,7 @@ import { isDraft, signedOffBy, type DraftChange } from "@/modules/missions/draft
 import type { Missions } from "@/modules/missions/missions.ts";
 import type { StartRequest } from "@/modules/missions/start.ts";
 import type { Mission } from "@/modules/missions/types.ts";
+import { MAX_OPTIONS } from "@/modules/missions/options.ts";
 import { doneWhen, shortId } from "@/modules/missions/page.ts";
 
 /**
@@ -119,6 +120,15 @@ function strings(value: unknown): string[] | undefined {
 
 function text(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
+}
+
+/** `ask`'s options: none when left out or empty, null when they are not a pick a person can tap (one, too many, not text). */
+function askOptions(value: unknown): string[] | null {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value)) return null;
+  const options = value.map(text);
+  if (options.length === 0) return [];
+  return value.length >= 2 && value.length <= MAX_OPTIONS && options.every(Boolean) ? options : null;
 }
 
 /** What `start` asks for, from the call — who it runs as is the caller's to add. */
@@ -250,7 +260,8 @@ export function createMissionTools(missions: Missions, options: { linkFor?: Link
       description:
         'This mission\'s own actions. "done": the goal is met, with its result as `summary`, its whole `report` and the `files` ' +
         'the person should receive, inside its folder; the daemon then runs the checks. "ask": one `question` for the ' +
-        'person; the mission waits for the answer. "fail": it cannot be done, with the `reason` and a `report` of what is left. ' +
+        'person, with `options` when the answer is a pick; the mission waits for the answer. "fail": it cannot be done, ' +
+        'with the `reason` and a `report` of what is left. ' +
         'Each ends this turn. "start": hand a separate piece to another agent as a mission ' +
         `of its own (one level: it starts none). ${ONE_OWNER}`,
       parameters: {
@@ -261,6 +272,14 @@ export function createMissionTools(missions: Missions, options: { linkFor?: Link
           report: { type: "string", description: "done, fail: the whole account of the work, markdown, as long as it needs: what was done and how, what was checked, what was not done, what a person should look at. The person receives it whole as `report.md`. In the person's language, in a formal register." },
           files: { type: "array", items: { type: "string" }, description: "done: files the person should receive (a document, an image, a spreadsheet, a video), paths inside the mission's folder. Not the report, which is sent as `report.md` already. What git tracks in its worktree stays on its branch and is not sent. Never what was made to check the work (evidence, stills, fixtures, an answer key): the report names their paths. None when the brief says to send nothing." },
           question: { type: "string", description: "ask: one question for the person, in their language." },
+          options: {
+            type: "array",
+            items: { type: "string" },
+            description:
+              `ask, when the answer is a pick: the answers the person can choose from, 2 to ${MAX_OPTIONS}, each a few words. Each ` +
+              "becomes a button, and they are listed under the question: do not write them in it too. Leave it out for an open " +
+              "answer. Steps for the person to follow, or any list to read, stay in the question and are never options.",
+          },
           reason: { type: "string", description: "fail: why it cannot be done." },
           ...START_FIELDS,
         },
@@ -298,7 +317,9 @@ export function createMissionTools(missions: Missions, options: { linkFor?: Link
         case "ask": {
           const question = text(args.question);
           if (!question) return refused("`ask` needs one `question`.");
-          missions.claim(mission.id, { kind: "ask", question });
+          const options = askOptions(args.options);
+          if (options === null) return refused(`\`options\` are 2 to ${MAX_OPTIONS} answers to pick from, each a few words of text. Leave it out for an open answer.`);
+          missions.claim(mission.id, { kind: "ask", question, ...(options.length > 0 ? { options } : {}) });
           return claimed("Asked. This turn ends here and the mission waits for the answer; it comes back as the next turn.", `Asked: ${question}`);
         }
         case "fail": {

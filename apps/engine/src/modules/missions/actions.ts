@@ -9,7 +9,7 @@
 
 import type { ButtonPress, MessageButton, PressAnswer } from "@nouride/shared";
 import type { Missions } from "./missions.ts";
-import { optionButtons, optionsIn } from "./options.ts";
+import { optionButtons, optionsOf } from "./options.ts";
 import { shortId } from "./page.ts";
 import type { Mission, WaitKind } from "./types.ts";
 
@@ -53,7 +53,7 @@ function actionButtons(mission: Pick<Mission, "id" | "startedAt">, kind: WaitKin
 export function buttonsFor(mission: Pick<Mission, "id" | "status" | "waitKind" | "answers" | "startedAt">): MessageButton[] | undefined {
   if (mission.status !== "waiting" || !mission.waitKind) return undefined;
   const asked = mission.waitKind === "input" ? mission.answers.at(-1) : undefined;
-  const options = asked ? optionsIn(asked.question) : [];
+  const options = asked ? optionsOf(asked) : [];
   const buttons = asked && options.length > 0 ? optionButtons(mission.id, options, asked.at) : actionButtons(mission, mission.waitKind);
   return buttons.length > 0 ? buttons : undefined;
 }

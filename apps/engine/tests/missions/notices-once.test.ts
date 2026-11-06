@@ -1,14 +1,16 @@
 /**
  * What a mission says in its chat, read once (0.8.7): *started* with its goal whole (0.8.11) and how to stop it, a
- * question never clipped unsaid, a button for each option a question names, and one progress message rewritten where the
- * chat can edit.
+ * question never clipped unsaid, a button for each option the agent names (0.8.22), and one progress message rewritten
+ * where the chat can edit.
  */
 
 import { describe, expect, test } from "bun:test";
-import type { ButtonPress } from "@nouride/shared";
+import type { ButtonPress, ToolContext } from "@nouride/shared";
 import { doneNotice, needsYouNotice, paged, QUESTION_CHARS, startedNotice } from "@/modules/missions/notices.ts";
-import { OptionPresses, optionButtons, optionsIn } from "@/modules/missions/options.ts";
+import { MISSION_GATEWAY_ID } from "@/modules/missions/gateway.ts";
+import { OptionPresses, optionButtons, optionsOf, withOptions } from "@/modules/missions/options.ts";
 import { ProgressLines } from "@/modules/missions/progress-line.ts";
+import { createMissionTools } from "@/modules/tools/builtins/mission.ts";
 import { missionsHarness } from "./harness.ts";
 
 const BASE = { id: "msn_0123456789abcdef0123", goal: "Fix the login bug\nThe brief goes on for pages: …", checks: ["bun test", "bun run lint"], reviewOn: true, accept: false, jobId: null };
@@ -71,50 +73,88 @@ describe("a question is never clipped unsaid", () => {
   });
 });
 
-describe("options a question names", () => {
-  test("one per line, in the usual spellings", () => {
-    expect(optionsIn("Which way?\nA) merge now\nB) wait for Nox\nC) drop it")).toEqual([
-      { key: "A", text: "merge now" },
-      { key: "B", text: "wait for Nox" },
-      { key: "C", text: "drop it" },
-    ]);
-    expect(optionsIn("Pick:\n- **A.** fast\n- **B.** safe").map((one) => one.key)).toEqual(["A", "B"]);
-    expect(optionsIn("(A) yes\n(B) no").map((one) => one.text)).toEqual(["yes", "no"]);
+describe("options the agent names", () => {
+  test("listed under the question, lettered as their buttons are; an open question as it was asked", () => {
+    expect(withOptions("Which way?", ["merge now", "wait for Nox", "drop it"])).toBe("Which way?\n\nA) merge now\nB) wait for Nox\nC) drop it");
+    expect(withOptions("What should the file be called?", [])).toBe("What should the file be called?");
+    expect(optionsOf({ options: ["yes", "no"] })).toEqual([{ key: "A", text: "yes" }, { key: "B", text: "no" }]);
+    expect(optionsOf({})).toEqual([]);
   });
 
-  test("on one line", () => {
-    expect(optionsIn("Should I A) keep the flag, B) remove it, or C) ask Nox?")).toEqual([
-      { key: "A", text: "keep the flag" },
-      { key: "B", text: "remove it" },
-      { key: "C", text: "ask Nox" },
-    ]);
-  });
-
-  test("numbered, as an agent writes them as often as lettered — six of them, as many as letters take", () => {
-    // Live on Discord (0.8.12): Nouva asked "Which colour do you prefer?" over six numbered lines, and the question went
-    // out with no buttons — only A) to F) were read as options.
-    expect(optionsIn("Which colour do you prefer?\n1. red\n2. orange\n3. yellow\n4. green\n5. blue\n6. purple").map((one) => `${one.key} ${one.text}`)).toEqual([
-      "1 red", "2 orange", "3 yellow", "4 green", "5 blue", "6 purple",
-    ]);
-    expect(optionsIn("Should I 1) keep the flag, 2) remove it, or 3) ask Nox?").map((one) => one.key)).toEqual(["1", "2", "3"]);
-    // One kind of marker: a list that mixes them, or starts past 1, is not a choice this reads.
-    expect(optionsIn("1. one\nB) two")).toEqual([]);
-    expect(optionsIn("2. one\n3. two")).toEqual([]);
-  });
-
-  test("none: a single option, letters out of order, or no options at all", () => {
-    expect(optionsIn("A) the only one")).toEqual([]);
-    expect(optionsIn("B) one\nA) two")).toEqual([]);
-    expect(optionsIn("Should I merge it or not?")).toEqual([]);
+  test("steps numbered in a question are not options: they go without buttons (live, 2026-11-07)", async () => {
+    // Nix's question to the owner, as it was asked: four numbered steps to follow, then the question itself. Each step
+    // went out as a button above it, and a tap would have answered "on the charger or not?" with a step.
+    const nix = [
+      "Iya, nanti aja pas lu udah di rumah. Langkahnya tetap sama:",
+      "1. Buka kunci HP, biarin layarnya nyala.",
+      "2. Dialog Play Protect: pilih tetap instal.",
+      '3. App Nouride kebuka sendiri: izinkan notifikasi dan "abaikan optimasi baterai" kalau ditanya.',
+      "4. Kunci lagi HP-nya dan biarin 8 jam, paling pas semalaman.",
+      "",
+      "Pertanyaannya: selama tes 8 jam, HP-nya mau dicolok charger atau nggak?",
+    ].join("\n");
+    const h = await missionsHarness();
+    const mission = await h.start();
+    h.turn(mission, {}, () => h.missions.claim(mission.id, { kind: "ask", question: nix }));
+    expect(h.told.at(-1)!.text).toContain("1. Buka kunci HP, biarin layarnya nyala.");
+    expect(h.told.at(-1)!.buttons).toBeUndefined();
+    // Lettered lines in the words are no different: what the agent offers to pick from, it names.
+    h.missions.answer(mission.id, "nggak", "Gading");
+    h.tick(60_000);
+    h.turn(mission, {}, () => h.missions.claim(mission.id, { kind: "ask", question: "Which way?\nA) merge now\nB) wait for Nox" }));
+    expect(h.told.at(-1)!.buttons).toBeUndefined();
   });
 
   test("buttons carry the mission, the question and the letter, within Telegram's 64 bytes", () => {
     const askedAt = Date.UTC(2099, 11, 31);
-    const buttons = optionButtons(BASE.id, optionsIn("A) merge now\nB) a very long option text that goes on and on past the label"), askedAt);
+    const buttons = optionButtons(BASE.id, optionsOf({ options: ["merge now", "a very long option text that goes on and on past the label"] }), askedAt);
     const stamp = askedAt.toString(36);
     expect(buttons.map((button) => button.data)).toEqual([`mission:answer:${BASE.id}:${stamp}:A`, `mission:answer:${BASE.id}:${stamp}:B`]);
     for (const button of buttons) expect(new TextEncoder().encode(button.data).length).toBeLessThanOrEqual(64);
     expect(buttons[1]!.label.length).toBeLessThanOrEqual(40);
+  });
+});
+
+describe("the mission tool's options", () => {
+  async function asking() {
+    const h = await missionsHarness();
+    const mission = await h.start();
+    const { inside } = createMissionTools(h.missions);
+    const ctx = { agentId: mission.agentId, gatewayId: MISSION_GATEWAY_ID, chatId: mission.id, senderId: "mission" } as ToolContext;
+    return { h, mission, ask: (args: Record<string, unknown>) => inside.execute({ action: "ask", ...args }, ctx) };
+  }
+
+  test("2 to 6 answers to pick from: kept beside the question, listed under it, a button each", async () => {
+    const { h, mission, ask } = await asking();
+    h.turn(mission, {}, () => void ask({ question: "Selama tes 8 jam, HP-nya dicolok charger atau nggak?", options: ["Dicolok charger", " Tanpa charger "] }));
+    const asked = h.store.get(mission.id)!.answers.at(-1)!;
+    expect(asked.options).toEqual(["Dicolok charger", "Tanpa charger"]);
+    expect(asked.question).toBe("Selama tes 8 jam, HP-nya dicolok charger atau nggak?\n\nA) Dicolok charger\nB) Tanpa charger");
+    expect(h.told.at(-1)!.text).toContain("A) Dicolok charger\nB) Tanpa charger");
+    expect(h.told.at(-1)!.buttons!.map((button) => button.label)).toEqual(["A: Dicolok charger", "B: Tanpa charger"]);
+  });
+
+  test("refused when they are not a pick: one, more than six, or not text; an empty list is an open question", async () => {
+    for (const options of [["only"], ["a", "b", "c", "d", "e", "f", "g"], ["a", 2], ["a", " "], "a, b"]) {
+      const { ask } = await asking();
+      const answer = await ask({ question: "Which?", options });
+      expect(answer.isError).toBe(true);
+      expect(answer.content).toContain("`options` are 2 to 6 answers to pick from");
+    }
+    const { h, mission, ask } = await asking();
+    h.turn(mission, {}, () => void ask({ question: "What should it be called?", options: [] }));
+    expect(h.store.get(mission.id)!.answers.at(-1)).toMatchObject({ question: "What should it be called?" });
+    expect(h.store.get(mission.id)!.answers.at(-1)!.options).toBeUndefined();
+    expect(h.told.at(-1)!.buttons).toBeUndefined();
+  });
+
+  test("the words the agent reads: a pick's answers go in options, and steps never do", async () => {
+    const { inside } = createMissionTools((await missionsHarness()).missions);
+    const options = (inside.definition.parameters as { properties: Record<string, { description: string }> }).properties.options!.description;
+    expect(options).toContain("2 to 6, each a few words");
+    expect(options).toContain("do not write them in it too");
+    expect(options).toContain("Steps for the person to follow, or any list to read, stay in the question and are never options.");
+    expect(inside.definition.description).toContain('"ask": one `question` for the person, with `options` when the answer is a pick');
   });
 });
 
@@ -125,7 +165,7 @@ describe("answering by a button", () => {
     const h = await missionsHarness();
     const presses = new OptionPresses({ missions: h.missions, isAdmin: () => false });
     const mission = await h.start();
-    h.turn(mission, {}, () => h.missions.claim(mission.id, { kind: "ask", question: "Which?\nA) merge now\nB) wait for Nox" }));
+    h.turn(mission, {}, () => h.missions.claim(mission.id, { kind: "ask", question: "Which?", options: ["merge now", "wait for Nox"] }));
     const sent = h.told.at(-1)!.buttons!.map((button) => button.data);
     const stamp = h.store.get(mission.id)!.answers.at(-1)!.at.toString(36);
     expect(sent).toEqual([`mission:answer:${mission.id}:${stamp}:A`, `mission:answer:${mission.id}:${stamp}:B`]);
@@ -137,26 +177,27 @@ describe("answering by a button", () => {
     expect((await presses.press(press({ data: sent[0]! }))).notice).toBe("That question is already answered.");
   });
 
-  test("a numbered option's button answers with its number and words", async () => {
+  test("a button drawn before 0.8.22 from a numbered line finds no option, and says to answer in words", async () => {
     const h = await missionsHarness();
     const presses = new OptionPresses({ missions: h.missions, isAdmin: () => false });
     const mission = await h.start();
     h.turn(mission, {}, () => h.missions.claim(mission.id, { kind: "ask", question: "Which colour?\n1. red\n2. blue" }));
-    const buttons = h.told.at(-1)!.buttons!;
-    expect(buttons.map((button) => button.label)).toEqual(["1: red", "2: blue"]);
-    expect((await presses.press(press({ data: buttons[1]!.data }))).notice).toBe("Answered 2.");
-    expect(h.queued.at(-1)!.text).toContain("Gading answered your question: 2) blue");
+    const stamp = h.store.get(mission.id)!.answers.at(-1)!.at.toString(36);
+    const pressed = await presses.press(press({ data: `mission:answer:${mission.id}:${stamp}:2` }));
+    expect(pressed).toEqual({ notice: "That option is not on its question: answer it in your own words.", settled: `❓ Mission ${mission.id.slice(0, 10)}: that option is not on its question. Answer it in your own words.` });
+    expect(h.store.get(mission.id)).toMatchObject({ status: "waiting", waitKind: "input" });
+    expect(h.store.get(mission.id)!.answers.at(-1)!.answer).toBeUndefined();
   });
 
   test("a button left under an earlier question does not answer the one asked after it", async () => {
     const h = await missionsHarness();
     const presses = new OptionPresses({ missions: h.missions, isAdmin: () => false });
     const mission = await h.start();
-    h.turn(mission, {}, () => h.missions.claim(mission.id, { kind: "ask", question: "First?\nA) red\nB) blue" }));
+    h.turn(mission, {}, () => h.missions.claim(mission.id, { kind: "ask", question: "First?", options: ["red", "blue"] }));
     const first = h.told.at(-1)!.buttons!.map((button) => button.data);
     h.missions.answer(mission.id, "blue, typed", "Gading");
     h.tick(60_000);
-    h.turn(mission, {}, () => h.missions.claim(mission.id, { kind: "ask", question: "Second?\nA) delete it\nB) keep it" }));
+    h.turn(mission, {}, () => h.missions.claim(mission.id, { kind: "ask", question: "Second?", options: ["delete it", "keep it"] }));
     const pressed = await presses.press(press({ data: first[0]! }));
     expect(pressed).toEqual({ notice: "It has asked another question since: answer that one.", settled: `❓ Mission ${mission.id.slice(0, 10)}: asked something else since.` });
     expect(h.store.get(mission.id)).toMatchObject({ status: "waiting", waitKind: "input" });
@@ -167,7 +208,7 @@ describe("answering by a button", () => {
     const h = await missionsHarness();
     const presses = new OptionPresses({ missions: h.missions, isAdmin: () => false });
     const mission = await h.start();
-    h.turn(mission, {}, () => h.missions.claim(mission.id, { kind: "ask", question: "A) yes\nB) no" }));
+    h.turn(mission, {}, () => h.missions.claim(mission.id, { kind: "ask", question: "Ship it?", options: ["yes", "no"] }));
     const a = h.told.at(-1)!.buttons![0]!.data;
     expect((await presses.press(press({ chatId: "other", data: a }))).notice).toBe("That mission does not report to this chat.");
     expect((await presses.press(press({ chatType: "group", senderId: "stranger", data: a }))).notice).toContain("Only the person who started");

@@ -25,7 +25,8 @@ const STATES = ["queued", "running", "checking", "input", "approval", "stuck", "
 type State = (typeof STATES)[number];
 
 const CHECKS = ["test -s out.md"];
-const QUESTION = "Which way? A) keep the old route B) drop it";
+/** A question offering two answers to pick from, a button each (`options.ts`). */
+const ASK = { kind: "ask" as const, question: "Which way?", options: ["keep the old route", "drop it"] };
 
 /** A mission in `state`, reached the way the daemon reaches it, in a harness of its own. */
 async function inState(state: State): Promise<{ h: Harness; mission: Mission }> {
@@ -49,7 +50,7 @@ async function inState(state: State): Promise<{ h: Harness; mission: Mission }> 
     }
     case "input": {
       const mission = await started();
-      h.turn(mission, {}, () => h.missions.claim(mission.id, { kind: "ask", question: QUESTION }));
+      h.turn(mission, {}, () => h.missions.claim(mission.id, ASK));
       return { h, mission };
     }
     case "approval": {
@@ -477,7 +478,7 @@ describe("pressing them", () => {
   test("a button for a wait it has left does nothing — waiting on something else now", async () => {
     const { h, mission } = await inState("stuck");
     h.missions.continueMission(mission.id, "Gading");
-    h.turn(mission, {}, () => h.missions.claim(mission.id, { kind: "ask", question: QUESTION }));
+    h.turn(mission, {}, () => h.missions.claim(mission.id, ASK));
     const pressed = await buttonsPresses(h).actions.press(pressOf(data(mission, "accept", "stuck")));
     expect(pressed.notice).toContain("waiting for input");
     expect(h.store.get(mission.id)).toMatchObject({ status: "waiting", waitKind: "input" });
@@ -499,7 +500,7 @@ describe("pressing them", () => {
     expect((await actions.press(pressOf(data(mission, "accept", "stuck"), { ...room, senderId: "999" }))).notice).toBe("Only the person who started this mission, or an admin, can answer it.");
     expect(h.store.get(mission.id)!.waitKind).toBe("stuck");
     h.missions.continueMission(mission.id, "Gading");
-    h.turn(mission, {}, () => h.missions.claim(mission.id, { kind: "ask", question: QUESTION }));
+    h.turn(mission, {}, () => h.missions.claim(mission.id, ASK));
     const b = buttonsFor(h.store.get(mission.id)!)![1]!.data;
     expect((await options.press(pressOf(b, { ...room, senderId: "999" }))).notice).toBe("Only the person who started this mission, or an admin, can answer it.");
     expect((await options.press(pressOf(b, { ...room, senderId: "777" }))).notice).toBe("Answered B.");

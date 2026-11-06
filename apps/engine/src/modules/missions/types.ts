@@ -32,7 +32,10 @@ export function seenAs(status: MissionStatus): SeenAs {
 
 /** A question the mission asked, and the answer once there is one. */
 export interface Answered {
+  /** As the person reads it, with its options listed under it (`options.ts` `withOptions`). */
   question: string;
+  /** The answers the agent offered to pick from, a button each; none for a free answer. */
+  options?: string[];
   answer?: string;
   at: number;
 }

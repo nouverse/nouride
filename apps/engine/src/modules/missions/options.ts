@@ -1,13 +1,19 @@
 /**
- * A mission's question that names its options — "A) …", "B) …" — answered with a button each (0.8.7). The person
- * taps one rather than typing `/mission answer msn_… B`; a free answer still works the way it always did. The options
- * are read back from the question itself when a button is pressed, so nothing is kept between the two.
+ * The answers a mission's question offers to pick from, a button each (0.8.7): the person taps one rather than typing
+ * `/mission answer msn_… B`, and a free answer still works the way it always did.
+ *
+ * The agent names them, as the `mission` tool's `options`; nothing reads them out of the question's words (0.8.22).
+ * Read from its lines since 0.8.7, numbered ones too since 0.8.12, the four steps Nix numbered for the owner to follow
+ * went out as four buttons above the question it actually asked ("on the charger or not?"), where a tap would have
+ * answered it with a step (live, 2026-11-07). A numbered list is as often what to do as what to choose, and no rule
+ * over the words tells them apart.
  */
 
 import type { ButtonPress, MessageButton, PressAnswer } from "@nouride/shared";
 import { pressRefusal } from "./actions.ts";
 import type { Missions } from "./missions.ts";
 import { shortId } from "./page.ts";
+import type { Answered } from "./types.ts";
 
 export interface AnswerOption {
   key: string;
@@ -15,46 +21,31 @@ export interface AnswerOption {
 }
 
 /** At most this many: a row of buttons past it is a menu nobody reads on a phone. */
-const MAX_OPTIONS = 6;
+export const MAX_OPTIONS = 6;
 const LABEL_CHARS = 40;
 
-/**
- * One option per line — `A) …`, `A. …`, `A: …`, `(A) …`, `- **A)** …` — or numbered the same ways, `1. …`: an agent
- * numbers them as often as it letters them, and a numbered question went out with no buttons (Discord, 0.8.12).
- */
-const LINE = /^[ \t]*(?:[-*][ \t]+)?\(?\*{0,2}([A-F]|[1-6])\*{0,2}[).:]\*{0,2}[ \t]+(\S[^\n]*)$/gm;
-/** All on one line — `A) this, B) that, or C) neither?` — split at each marker. */
-const INLINE = /(?:^|[\s(,;])\(?([A-F]|[1-6])\)[ \t]+/g;
-
-/**
- * The options in order from A or from 1, or none: fewer than two, out of order, or letters and numbers mixed, is not a
- * choice this reads.
- */
-function inOrder(found: AnswerOption[]): AnswerOption[] {
-  if (found.length < 2 || found.length > MAX_OPTIONS) return [];
-  const lettered = found.every((option, index) => option.key === String.fromCharCode(65 + index));
-  const numbered = found.every((option, index) => option.key === String(index + 1));
-  return lettered || numbered ? found : [];
+function letter(index: number): string {
+  return String.fromCharCode(65 + index);
 }
 
-export function optionsIn(question: string): AnswerOption[] {
-  const lines = inOrder([...question.matchAll(LINE)].map((match) => ({ key: match[1]!, text: match[2]!.trim() })));
-  if (lines.length > 0) return lines;
-  for (const line of question.split("\n")) {
-    const markers = [...line.matchAll(INLINE)];
-    if (markers.length < 2) continue;
-    const found = markers.map((match, index) => {
-      const start = match.index! + match[0].length;
-      const end = markers[index + 1]?.index ?? line.length;
-      return { key: match[1]!, text: line.slice(start, end).replace(/[\s,;]*(?:or|and)?[\s,;?]*$/i, "").trim() };
-    });
-    const ordered = inOrder(found);
-    if (ordered.length > 0) return ordered;
-  }
-  return [];
+/**
+ * The question as the person reads it: its options listed under it, lettered as their buttons are. Where a chat has no
+ * buttons the list is how they are seen, a typed "B" names one, and the agent reads its own question back with them.
+ */
+export function withOptions(question: string, options: readonly string[]): string {
+  return options.length === 0 ? question : `${question.trim()}\n\n${options.map((text, index) => `${letter(index)}) ${text}`).join("\n")}`;
 }
 
-/** Mission, question (when it was asked, base 36), letter or number. */
+/** A question's options, lettered from A: none for a free answer, or one asked before the agent named them. */
+export function optionsOf(asked: Pick<Answered, "options">): AnswerOption[] {
+  return (asked.options ?? []).map((text, index) => ({ key: letter(index), text }));
+}
+
+/**
+ * Mission, question (when it was asked, base 36), letter. A number is a button drawn before 0.8.22 from a numbered
+ * line: pressed now, it finds no option on its question and its buttons go, rather than reading as a mission no longer
+ * there.
+ */
 const DATA = /^mission:answer:(msn_[A-Za-z0-9]+):([0-9a-z]+):([A-F1-6])$/;
 
 /**
@@ -100,8 +91,8 @@ export class OptionPresses {
       const now = mission.status === "waiting" ? `waiting for ${mission.waitKind}` : mission.status;
       return { notice: `Mission ${id} has moved on (${now}), so this question no longer waits.`, settled: `❓ Mission ${id}: moved on before this was answered (${now}).` };
     }
-    const option = optionsIn(asked.question).find((one) => one.key === match[3]);
-    if (!option) return { notice: "That option is not on its question.", settled: `❓ Mission ${id}: that option is not on its question.` };
+    const option = optionsOf(asked).find((one) => one.key === match[3]);
+    if (!option) return { notice: "That option is not on its question: answer it in your own words.", settled: `❓ Mission ${id}: that option is not on its question. Answer it in your own words.` };
     const acted = this.deps.missions.answer(mission.id, `${option.key}) ${option.text}`, press.senderName || press.senderId);
     if ("refused" in acted) return { notice: acted.refused };
     return { notice: `Answered ${option.key}.`, settled: `❓ Mission ${id}, answered by ${press.senderName || press.senderId}: ${option.key}) ${option.text}` };
