@@ -111,10 +111,6 @@ jobs:
       # would be read as this commit's, built into a public image, or stop the next checkout over what its install changed.
       - name: Start without the last job's submodules
         run: if git config --get-regexp '^submodule\.' >/dev/null; then git submodule deinit --force --all; fi
-      # `content/` is a public repository of its own (nouverse/nouride-builtin-contents): the skills and agent packs every
-      # build ships and every test reads. Public, so no token; after the line above, so it is this commit's pin.
-      - name: Check out the built-in content
-        run: git submodule update --init content
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: .bun-version
@@ -178,10 +174,6 @@ jobs:
       # would be read as this commit's, built into a public image, or stop the next checkout over what its install changed.
       - name: Start without the last job's submodules
         run: if git config --get-regexp '^submodule\.' >/dev/null; then git submodule deinit --force --all; fi
-      # `content/` is a public repository of its own (nouverse/nouride-builtin-contents): the skills and agent packs every
-      # build ships and every test reads. Public, so no token; after the line above, so it is this commit's pin.
-      - name: Check out the built-in content
-        run: git submodule update --init content
       # Both: the hosted gateway's drift tests read `internals/nougate` as the Pro ones read `internals/pro`, and
       # one token reads both. Through `-c`, not `git config --global`: no later step holds it, and on the
       # self-hosted runner a global config would outlive the job.

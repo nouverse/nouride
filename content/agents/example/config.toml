@@ -1,0 +1,115 @@
+# Agent config: see §4.2 SPEC.
+# Anything omitted falls back to the daemon defaults in .nouride/config.toml.
+
+[agent]
+display_name = "Example"
+emoji = "🧪"
+enabled = false                     # a template: flip to true on a real copy
+
+# `provider` names a [providers.*] profile in .nouride/config.toml. That profile owns the
+# endpoint, the wire format and the credential. Switching this agent to a different
+# deployment is a one-word change here.
+[llm]
+provider = "anthropic"
+model = "claude-sonnet-5-5"
+# The models of its other two tiers, for the work it hands off with `tier = "small"` or `"high"` (a helper, another
+# agent's answer). Unset, each inherits [llm.defaults] while this agent runs on the install's provider, else it is `model`.
+# small_model = "claude-haiku-5-5"
+# high_model = "claude-opus-5-5"
+max_tokens = 8192
+temperature = 0.7
+# effort = "medium"   # how long a thinking model thinks: low, medium, high, xhigh, max; else [llm.defaults] effort
+
+# Chats this agent answers in, keyed by GATEWAY INSTANCE id (platform:name), because two
+# bots on one platform are two different audiences. Empty or absent means the agent only
+# answers when addressed by name, or always if a gateway instance names it as its owner.
+# Each entry is the chat id itself: on Discord the channel's id (Developer Mode, then right-click
+# the channel → Copy Channel ID), on Telegram the group's id.
+# [channels]
+# "discord:main" = ["1234567890123456789"]
+# "telegram:nouva" = ["-1001234567"]
+
+[tools]
+enabled = ["read", "web_search", "web_fetch", "memory_read", "memory_write", "person_record", "person_notes", "send_file"]
+approval_required = ["exec", "write", "edit"]
+blocked = ["rm", "shutdown", "reboot"]
+
+# Skills are NOT configured here. There is one pool, `agents/skills/`, and every agent gets all
+# of it; this agent's exceptions live in `skills.toml` beside this file:
+#
+#   [skills]
+#   document-authoring = false     # off for this agent only
+#
+# Default-on rather than an opt-in list, because a list written today cannot name a skill that
+# arrives next month: every later skill would show up switched off with nothing to say why. The
+# dashboard's Skills Workshop writes that file, as does the agent's own `skill_toggle` tool.
+#
+# To override a built-in skill rather than switch it off, copy it into `agents/skills/` and edit:
+# a pooled skill of the same name wins.
+
+# Directories this agent's file and exec tools may reach, beyond its own pack.
+# Empty means its own directory only: safe, but it cannot touch a project.
+#
+# `skill_roots` is a second, narrower list: directories whose `.agents/skills/` this agent loads.
+# Drop a SKILL.md into a project you are working on and the next message already knows about it,
+# with no reload, the way project instructions behave in an editor-based agent.
+#
+# Deliberately NOT "every root". A root is somewhere the agent may read and write; a skill root is
+# somewhere it accepts *instructions* from, and those land in the system prompt, the most trusted
+# position in the request. Auto-loading from everything reachable would make a pull request into a
+# prompt-injection vector. A repository you cloned yesterday should be the first without being the
+# second.
+#
+# Project skills are read-only to the agent, and a pack skill of the same name wins.
+# [workspace]
+# roots = ["/home/you/projects/thing"]
+# skill_roots = ["/home/you/projects/thing"]
+
+[security]
+# Narrows who may talk to this agent, among the senders the daemon already lets in ([security.access] in
+# config.toml, pairing by default). Empty narrows nothing. Bare ids or gateway-scoped ("telegram:main:123").
+sender_allowlist = []
+
+# The daemon's ssh-agent socket ($SSH_AUTH_SOCK), for an agent whose work is reaching other machines:
+# its commands, sessions, scheduled commands and stdio MCP servers get it. The socket signs with every
+# key the ssh-agent holds, for whoever asks, so it is off unless you say so, since 0.7.9. A key named in
+# ~/.ssh/config is a file, not the socket, and works either way.
+# ssh_agent = true
+
+# Once a turn has read something from outside the conversation (a web page, a file, a forwarded
+# message), the first command to use a secret handle asks a person, at every approval level. On
+# unless you say so; also on the agent's Access tab and `/secret guard off`.
+# secret_guard = false
+
+# Secret NAMES this agent's commands may receive as environment variables, never values:
+# `twit_auth_token` arrives in a child process as $TWIT_AUTH_TOKEN, resolved from the secret store at
+# the moment the command runs.
+#
+# The model never sees a value, which is the whole point: it can use a credential it has never read,
+# so nothing lands in the prompt, the tool result or the transcript. Opt-in per agent, because "which
+# credentials may this agent spend" is a question worth answering deliberately.
+#
+# Each secret is bound to the commands that need it, written as the command line starts: a command handed
+# one asks before it runs, and nothing else gets it. `["*"]` hands it to every command. (A plain list,
+# `exec_secrets = ["twit_auth_token"]`, the form before 0.7.4, is refused at load.)
+#
+# Files that cannot be an environment variable (a service-account JSON, an OAuth cache that gets
+# rewritten on refresh) go in $NOURIDE_CREDENTIALS_DIR instead. See [security] credentials_dir.
+[security.exec_secrets]
+# twit_auth_token = ["twit post", "twit reply"]
+
+# External tools, over the Model Context Protocol. A server is the install's, in its library
+# (agents/mcp.toml): add one with `nouride mcp add` or the dashboard's Connectors page, then switch it on for
+# this agent (`nouride mcp enable --agent <id> --name <server>`, or the agent's Connectors tab), which writes
+# this agent's own agents/<id>/mcp.toml. A `[[mcp_servers]]` block in this file is refused at load: a
+# pack has not declared its own servers since 0.7.19. Switching a server on is the whole opt-in: its
+# tools are discovered on connect and offered to this agent as `<server>__<tool>`.
+#
+# An MCP tool runs without asking, exactly like a built-in that nobody listed. To gate one, name it
+# in [tools] approval_required by its qualified name, "nouva-mcp__memory_query", the same name the
+# model calls it by. Answer "always" at the prompt to keep a standing grant for that one tool on that
+# one server.
+#
+# Its results and even its tool descriptions are marked as untrusted before the model sees them: both
+# are text written by somebody who is not you. Marking is not gating: a server you would not run a
+# command from is a server you should not connect.

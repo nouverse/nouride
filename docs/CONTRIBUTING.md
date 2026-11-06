@@ -18,9 +18,8 @@ git submodule update --init content
 bun install
 ```
 
-`content/` — the built-in skills and agent packs — is a public repository of its own,
-[`nouverse/nouride-builtin-contents`](https://github.com/nouverse/nouride-builtin-contents), checked out as a submodule:
-every build ships it and the tests read it. Change a skill there, then move the pin here. The private submodules under
+`content/` — the built-in skills and agent packs, MIT — is a folder of this repository: every build ships it and the
+tests read it. The private submodules under
 `internals/` are not needed for the free edition: a clone without them builds and tests it (`ARCHITECTURE.md` §2).
 
 ---
@@ -218,7 +217,7 @@ packages/
   ui-graph/     the dashboard's graph canvas — browser code lives only in ui-*
 
 internals/      two private submodules: pro (the commercial plugins), nougate (the LLM gateway)
-content/        what a human edits, not what runs — a submodule: nouverse/nouride-builtin-contents (public)
+content/        what a human edits, not what runs — the built-in skills and agent packs, MIT
   agents/       example persona pack — config-as-code, copied by operators, never shipped
   skills/       skills that ship with the daemon — installed as `skills/` beside the binary
 .nouride/        a local install (gitignored): config.toml, data/, agents/, memory/, workspace/

@@ -16,7 +16,7 @@ const READY: PublishFacts = {
   dirty: [],
   head: "a".repeat(40),
   pushedHead: "a".repeat(40),
-  pins: [PIN("internals/pro", "b".repeat(40)), PIN("internals/nougate", "c".repeat(40)), PIN("content", "d".repeat(40))],
+  pins: [PIN("internals/pro", "b".repeat(40)), PIN("internals/nougate", "c".repeat(40))],
   mainFastForwards: true,
   ciGreen: true,
   stranded: [],
@@ -31,7 +31,6 @@ describe("publishing a release", () => {
       "git push origin main",
       `git -C internals/pro push origin ${"b".repeat(40)}:refs/heads/main`,
       `git -C internals/nougate push origin ${"c".repeat(40)}:refs/heads/main`,
-      `git -C content push origin ${"d".repeat(40)}:refs/heads/main`,
       "git tag v0.8.18 releases/v0.8.18",
       "git push origin v0.8.18",
     ]);
@@ -93,10 +92,9 @@ describe("what is uncommitted", () => {
   });
 
   test("a submodule's own entry is left to its tree, which is read on its own", () => {
-    expect(dirtyPaths(" M internals/pro\n M content", ".")).toEqual([]);
+    expect(dirtyPaths(" M internals/pro\n M internals/nougate", ".")).toEqual([]);
   });
 });
-
 
 describe("waiting for a run", () => {
   test("its outcome is the run's own, read once it completed: a watch cut off by the network is no failure (0.8.18)", () => {

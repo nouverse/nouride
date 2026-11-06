@@ -17,9 +17,8 @@ Licensed separately, and not by this file:
 
 - packages/wa-bridge, the WhatsApp bridge: MIT, under the LICENSE file in its
   own directory.
-- content/, the built-in skills and agent templates (a submodule of
-  github.com/nouverse/nouride-builtin-contents): MIT, under its own LICENSE
-  file, so you can change the agents and skills you run.
+- content/, the built-in skills and agent templates: MIT, under the LICENSE
+  file in that directory, so you can change the agents and skills you run.
 - The typefaces the dashboard ships, Manrope and DM Mono, in
   apps/dashboard/src/styles/fonts: SIL Open Font License 1.1, under the OFL
   files beside them.

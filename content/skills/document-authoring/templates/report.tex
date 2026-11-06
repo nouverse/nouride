@@ -1,0 +1,50 @@
+% Single-column report, proposal, chapter or letter. Copy before editing.
+%
+% Compile:  tectonic -X compile laporan.tex --outdir build
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[bahasa]{babel}      % drop for English
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}          % works here: single column has a full-width galley
+\usepackage{graphicx}
+\usepackage{parskip}            % blank line between paragraphs, no first-line indent
+\usepackage[hidelinks]{hyperref}
+
+\title{\bfseries Judul Laporan}
+\author{Nama}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Ringkasan}
+Isi.
+
+\section{Rincian}
+
+% longtable splits across pages on its own and needs no float. This is the one
+% thing a single-column document can do that a two-column one cannot.
+\begin{longtable}{@{}p{0.8cm}p{5cm}p{6cm}@{}}
+  \caption{Tabel panjang}\label{tab:panjang}\\
+  \toprule
+  No & Item & Keterangan \\
+  \midrule
+  \endfirsthead
+  \toprule
+  No & Item & Keterangan \\
+  \midrule
+  \endhead
+  \bottomrule
+  \endfoot
+  1 & & \\
+  2 & & \\
+\end{longtable}
+
+\section{Kesimpulan}
+Isi.
+
+\end{document}

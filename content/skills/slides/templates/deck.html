@@ -1,0 +1,207 @@
+<!doctype html>
+<!--
+  A slide deck: one HTML file, 16:9, rendered to PDF and PNG by the slides skill's scripts/render.mjs.
+  Copy this file into your work folder; never edit it where it is installed.
+
+  - Each slide is a <section class="slide LAYOUT">. Layouts: title, section, bullets, two-col, image, image-right,
+    quote, big-number, table, closing. Delete the example slides you do not use; copy the ones you do.
+  - Speaker notes go in <aside class="notes"> inside the slide. They are not shown; render.mjs writes them to notes.md
+    and pptx.py puts them into PowerPoint's notes.
+  - Colours and fonts are the variables in :root. Change them there, nowhere else.
+  - Pictures: <img src="assets/photo.jpg" alt="..."> with the file beside this deck (a path relative to it). A credit
+    line goes in <p class="source">.
+  - Sizes are pixels on a 1280x720 slide. Do not make text smaller than 20px (sources and footers: 14px).
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Presentation title</title>
+<style>
+  :root {
+    --bg: #FFFFFF;          /* slide background */
+    --fg: #14181F;          /* text */
+    --muted: #5B6472;       /* secondary text: subtitles, sources */
+    --accent: #2563EB;      /* one accent colour: rules, numbers, links */
+    --accent-fg: #FFFFFF;   /* text on the accent colour */
+    --soft: #EEF2F8;        /* panels, table stripes */
+    /* Fonts installed on the machine that renders, first: the PDF embeds what was rendered. "Liberation Sans" is
+       Arial's metric twin on Linux, so the PowerPoint copy (in Arial) breaks lines in the same places. */
+    --font: "Liberation Sans", "Arial", "Helvetica", "DejaVu Sans", sans-serif;
+    --font-head: var(--font);
+  }
+
+  @page { size: 1280px 720px; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #888; }
+  body { font-family: var(--font); color: var(--fg); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  .slide {
+    position: relative; width: 1280px; height: 720px; overflow: hidden;
+    background: var(--bg); padding: 64px 80px 56px; margin: 0 auto 24px;
+    display: flex; flex-direction: column; gap: 24px;
+    page-break-after: always; break-after: page;
+  }
+  @media print { html, body { background: none; } .slide { margin: 0; } }
+  .notes { display: none; }
+
+  h1, h2, h3 { font-family: var(--font-head); margin: 0; line-height: 1.12; letter-spacing: -0.01em; }
+  h1 { font-size: 64px; font-weight: 800; }
+  h2 { font-size: 44px; font-weight: 750; }
+  h3 { font-size: 30px; font-weight: 700; }
+  p, li, td, th, blockquote { font-size: 28px; line-height: 1.35; margin: 0; }
+  ul, ol { margin: 0; padding-left: 1.1em; display: flex; flex-direction: column; gap: 14px; }
+  li::marker { color: var(--accent); }
+  li ul { gap: 8px; margin-top: 8px; }
+  li li { font-size: 24px; color: var(--muted); }
+  strong { font-weight: 750; }
+  .accent { color: var(--accent); }
+  .muted { color: var(--muted); }
+  .source { position: absolute; left: 80px; right: 80px; bottom: 22px; font-size: 14px; color: var(--muted); line-height: 1.3; }
+  .body { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 20px; }
+  .slide > h2 { padding-bottom: 14px; border-bottom: 4px solid var(--accent); align-self: flex-start; }
+
+  /* title: the first slide */
+  .slide.title { justify-content: center; gap: 28px; background: var(--fg); color: var(--bg); }
+  .slide.title h1 { font-size: 72px; max-width: 1000px; }
+  .slide.title .subtitle { font-size: 32px; color: var(--soft); max-width: 960px; }
+  .slide.title .meta { font-size: 22px; color: var(--soft); opacity: 0.8; }
+  .slide.title::after { content: ""; position: absolute; left: 80px; top: 64px; width: 96px; height: 8px; background: var(--accent); }
+
+  /* section: a divider between parts */
+  .slide.section { justify-content: center; background: var(--accent); color: var(--accent-fg); }
+  .slide.section h2 { font-size: 60px; border: 0; }
+  .slide.section p { font-size: 28px; opacity: 0.9; }
+
+  /* two-col: two lists or a list and a panel */
+  .cols { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 48px; }
+  .cols > div { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  .panel { background: var(--soft); border-radius: 16px; padding: 28px 32px; }
+
+  /* image: one picture, as large as the slide allows, with a caption */
+  .slide.image .figure { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+  .slide.image img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px; }
+  .caption { font-size: 22px; color: var(--muted); }
+
+  /* image-right: text left, picture right */
+  .slide.image-right .cols { grid-template-columns: 1fr 1.1fr; align-items: center; }
+  .slide.image-right img { width: 100%; max-height: 520px; object-fit: cover; border-radius: 12px; }
+
+  /* quote */
+  .slide.quote { justify-content: center; background: var(--soft); }
+  .slide.quote blockquote { font-size: 44px; line-height: 1.25; font-weight: 600; max-width: 1040px; }
+  .slide.quote blockquote::before { content: "\201C"; color: var(--accent); }
+  .slide.quote blockquote::after { content: "\201D"; color: var(--accent); }
+  .slide.quote .who { font-size: 26px; color: var(--muted); }
+
+  /* big-number: one figure that is the point of the slide */
+  .slide.big-number { justify-content: center; }
+  .slide.big-number .number { font-size: 160px; font-weight: 800; line-height: 1; color: var(--accent); letter-spacing: -0.03em; }
+  .slide.big-number .label { font-size: 36px; font-weight: 600; max-width: 980px; }
+
+  /* table: at most 6 rows x 5 columns at this size */
+  table { border-collapse: collapse; width: 100%; }
+  th, td { font-size: 24px; padding: 12px 16px; text-align: left; border-bottom: 1px solid #D5DBE5; }
+  th { font-weight: 700; border-bottom: 3px solid var(--fg); }
+  td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+  tbody tr:nth-child(even) td { background: var(--soft); }
+
+  /* closing: the ask, the contact */
+  .slide.closing { justify-content: center; background: var(--fg); color: var(--bg); }
+  .slide.closing h2 { border: 0; font-size: 56px; }
+  .slide.closing p { color: var(--soft); }
+</style>
+</head>
+<body>
+
+<section class="slide title">
+  <h1>A deck title that states the point</h1>
+  <p class="subtitle">One sentence on who it is for and why</p>
+  <p class="meta">Presenter · Organisation · 1 November 2026</p>
+  <aside class="notes">What to say while this slide is up: a greeting, the aim of the talk in one sentence.</aside>
+</section>
+
+<section class="slide bullets">
+  <h2>A slide title is its conclusion, not its topic</h2>
+  <div class="body">
+    <ul>
+      <li>One idea per bullet, two lines at most</li>
+      <li>Five bullets per slide at most</li>
+      <li>A number with its unit and period: <strong>$30.4M</strong> (Jan–Jun 2026)</li>
+    </ul>
+  </div>
+  <p class="source">Source: name of the source, year.</p>
+  <aside class="notes">The full explanation goes here, not on the slide.</aside>
+</section>
+
+<section class="slide two-col">
+  <h2>Two options, compared on the same points</h2>
+  <div class="cols">
+    <div class="panel">
+      <h3>Option A</h3>
+      <ul><li>For</li><li>Against</li></ul>
+    </div>
+    <div class="panel">
+      <h3>Option B</h3>
+      <ul><li>For</li><li>Against</li></ul>
+    </div>
+  </div>
+  <aside class="notes">Speaker notes.</aside>
+</section>
+
+<section class="slide big-number">
+  <p class="number">30%</p>
+  <p class="label">One number that is the point of the slide, with what it means in one sentence</p>
+  <p class="source">Source: name of the source, year.</p>
+  <aside class="notes">Speaker notes.</aside>
+</section>
+
+<section class="slide image">
+  <h2>A chart or picture that proves the title</h2>
+  <div class="figure"><img src="assets/chart.png" alt="What the picture shows"></div>
+  <p class="source">Image: author, licence, link.</p>
+  <aside class="notes">Speaker notes.</aside>
+</section>
+
+<section class="slide image-right">
+  <h2>Text on the left, a picture on the right</h2>
+  <div class="cols">
+    <div><ul><li>First point</li><li>Second point</li></ul></div>
+    <div><img src="assets/photo.jpg" alt="What the picture shows"></div>
+  </div>
+  <p class="source">Photo: author, licence, link.</p>
+  <aside class="notes">Speaker notes.</aside>
+</section>
+
+<section class="slide table">
+  <h2>A small table: six rows at most</h2>
+  <div class="body">
+    <table>
+      <thead><tr><th>City</th><th class="n">Sales ($M)</th><th class="n">Share</th></tr></thead>
+      <tbody>
+        <tr><td>North</td><td class="n">30.4</td><td class="n">30%</td></tr>
+        <tr><td>South</td><td class="n">13.7</td><td class="n">13%</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <aside class="notes">Speaker notes.</aside>
+</section>
+
+<section class="slide quote">
+  <blockquote>A short quote someone really said or wrote</blockquote>
+  <p class="who">Name, role, source</p>
+  <aside class="notes">Speaker notes.</aside>
+</section>
+
+<section class="slide section">
+  <h2>Part 2</h2>
+  <p>A divider between parts</p>
+</section>
+
+<section class="slide closing">
+  <h2>What we ask for: one clear decision</h2>
+  <p>Contact · email · link</p>
+  <aside class="notes">Speaker notes.</aside>
+</section>
+
+</body>
+</html>

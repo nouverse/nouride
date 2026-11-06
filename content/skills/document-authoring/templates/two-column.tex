@@ -1,0 +1,79 @@
+% Two-column paper. Copy into the workspace before editing — this file ships with
+% the daemon and an upgrade replaces it.
+%
+% Compile:  tectonic -X compile paper.tex --outdir build
+\documentclass[10pt,a4paper,twocolumn]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[bahasa]{babel}      % drop for English; changes hyphenation AND "Tabel"/"Gambar"
+\usepackage[margin=2cm,columnsep=0.6cm]{geometry}
+\usepackage{booktabs}           % \toprule/\midrule/\bottomrule — never \hline
+\usepackage{array}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage[hidelinks]{hyperref}
+
+% Justified text with hyphenation is the default and is what makes a two-column
+% measure readable. Do not switch to \raggedright: a 8cm column set ragged has
+% rivers a printed page shows and a screen hides.
+\captionsetup[table]{skip=4pt,font=small,labelfont=bf}
+\captionsetup[figure]{skip=4pt,font=small,labelfont=bf}
+
+\title{\bfseries Judul Makalah}
+\author{Nama Penulis\\ \small Institusi \\ \small surel@contoh.ac.id}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent Ringkasan satu paragraf. Dalam kelas \texttt{article} bermode dua kolom, judul dan
+abstrak membentang penuh sementara isi mengalir dua kolom --- itu memang perilaku yang benar.
+\end{abstract}
+
+\section{Pendahuluan}
+Ganti paragraf ini. Teks contoh ada di sini dengan sengaja: dengan satu kata per bagian, kolom kedua tidak pernah terisi dan dokumen dua kolom ini akan tampak seperti satu kolom saat dibuka --- kesan pertama yang salah, dan sudah pernah membuat orang mengira templat ini rusak.
+
+Panjang segini juga yang membuat penjatahan kata dan perataan kanan-kiri terlihat, sehingga masalah tata letak muncul sekarang dan bukan setelah naskah selesai ditulis. Perhatikan bahwa teks mengalir dari kolom kiri ke kolom kanan, lalu ke halaman berikutnya. Tabel yang lebih lebar dari satu kolom tidak ikut aliran itu: ia mengambang ke puncak halaman sebagai \texttt{table*}, dan itulah sebabnya Tabel~\ref{tab:lit} tidak muncul di sebelah kalimat yang menyebutnya. Rujuk tabel dengan nomornya, jangan dengan kata \emph{berikut ini}.
+
+\section{Metode}
+Ganti paragraf ini. Teks contoh ada di sini dengan sengaja: dengan satu kata per bagian, kolom kedua tidak pernah terisi dan dokumen dua kolom ini akan tampak seperti satu kolom saat dibuka --- kesan pertama yang salah, dan sudah pernah membuat orang mengira templat ini rusak.
+
+Panjang segini juga yang membuat penjatahan kata dan perataan kanan-kiri terlihat, sehingga masalah tata letak muncul sekarang dan bukan setelah naskah selesai ditulis. Perhatikan bahwa teks mengalir dari kolom kiri ke kolom kanan, lalu ke halaman berikutnya. Tabel yang lebih lebar dari satu kolom tidak ikut aliran itu: ia mengambang ke puncak halaman sebagai \texttt{table*}, dan itulah sebabnya Tabel~\ref{tab:lit} tidak muncul di sebelah kalimat yang menyebutnya. Rujuk tabel dengan nomornya, jangan dengan kata \emph{berikut ini}.
+
+% A table wider than one column MUST be `table*` — the starred float spans both
+% columns. It only ever places at the top of a page: [h] and [b] are ignored, so
+% expect it on the next page if this one is already committed. That is correct,
+% and it is why this one lands on page 2 in the template as shipped rather than
+% beside the section that refers to it. Verified, not assumed: moving it directly
+% after \maketitle does not change it, because page 1 has already begun.
+%
+% Refer to it by \ref{tab:lit} in the text and let it float. Fighting the
+% placement with [h!] on a starred float does nothing at all.
+\begin{table*}[t]
+  \centering
+  \caption{Matriks ekstraksi literatur}
+  \label{tab:lit}
+  \small
+  % p{} columns for prose cells. A bare l/c column does not wrap, and one long
+  % sentence in a cell is the first Overfull \hbox of the day.
+  \begin{tabular}{@{}p{0.6cm}p{3cm}p{4cm}p{1cm}p{4.5cm}@{}}
+    \toprule
+    No & Penulis & Judul & Tahun & Catatan \\
+    \midrule
+    1 & & & & \\
+    2 & & & & \\
+    \bottomrule
+  \end{tabular}
+\end{table*}
+
+\section{Kesimpulan}
+Ganti paragraf ini. Teks contoh ada di sini dengan sengaja: dengan satu kata per bagian, kolom kedua tidak pernah terisi dan dokumen dua kolom ini akan tampak seperti satu kolom saat dibuka --- kesan pertama yang salah, dan sudah pernah membuat orang mengira templat ini rusak.
+
+Panjang segini juga yang membuat penjatahan kata dan perataan kanan-kiri terlihat, sehingga masalah tata letak muncul sekarang dan bukan setelah naskah selesai ditulis. Perhatikan bahwa teks mengalir dari kolom kiri ke kolom kanan, lalu ke halaman berikutnya. Tabel yang lebih lebar dari satu kolom tidak ikut aliran itu: ia mengambang ke puncak halaman sebagai \texttt{table*}, dan itulah sebabnya Tabel~\ref{tab:lit} tidak muncul di sebelah kalimat yang menyebutnya. Rujuk tabel dengan nomornya, jangan dengan kata \emph{berikut ini}.
+
+\bibliographystyle{plain}
+% \bibliography{referensi}
+
+\end{document}

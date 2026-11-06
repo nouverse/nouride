@@ -21,7 +21,7 @@ import { floorOf, strandedFloors, type MirrorEntry } from "./mirror-page.ts";
 
 const ROOT = new URL("../../", import.meta.url).pathname;
 const REPO = "nouverse/nouride";
-const SUBMODULES = ["internals/pro", "internals/nougate", "content"] as const;
+const SUBMODULES = ["internals/pro", "internals/nougate"] as const;
 
 export type Mode = "ordinary" | "lts" | "quiet";
 

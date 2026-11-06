@@ -84,10 +84,6 @@ jobs:
       # would be read as this commit's, built into a public image, or stop the next checkout over what its install changed.
       - name: Start without the last job's submodules
         run: if git config --get-regexp '^submodule\.' >/dev/null; then git submodule deinit --force --all; fi
-      # `content/` is a public repository of its own (nouverse/nouride-builtin-contents): the skills and agent packs every
-      # build ships and every test reads. Public, so no token; after the line above, so it is this commit's pin.
-      - name: Check out the built-in content
-        run: git submodule update --init content
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:

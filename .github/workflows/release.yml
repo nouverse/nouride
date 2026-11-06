@@ -466,11 +466,6 @@ jobs:
       - name: Start without the last job's submodules
         if: startsWith(github.ref, 'refs/tags/v')
         run: if git config --get-regexp '^submodule\.' >/dev/null; then git submodule deinit --force --all; fi
-      # `content/` is a public repository of its own (nouverse/nouride-builtin-contents): the skills and agent packs every
-      # build ships and every test reads. Public, so no token; after the line above, so it is this commit's pin.
-      - name: Check out the built-in content
-        if: startsWith(github.ref, 'refs/tags/v')
-        run: git submodule update --init content
       # The public page is held to the private values `lint:public` holds the tree to, and their hashes are in
       # `internals/pro` (`publish-denylist.json`). Without it the notes below were filtered by the plain patterns alone
       # (HARDENING §3). After the step above, so it is this commit's `internals/pro`, never the last job's; and the notes
@@ -607,10 +602,6 @@ jobs:
       # would be read as this commit's, built into a public image, or stop the next checkout over what its install changed.
       - name: Start without the last job's submodules
         run: if git config --get-regexp '^submodule\.' >/dev/null; then git submodule deinit --force --all; fi
-      # `content/` is a public repository of its own (nouverse/nouride-builtin-contents): the skills and agent packs every
-      # build ships and every test reads. Public, so no token; after the line above, so it is this commit's pin.
-      - name: Check out the built-in content
-        run: git submodule update --init content
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: .bun-version
@@ -648,10 +639,6 @@ jobs:
       # would be read as this commit's, built into a public image, or stop the next checkout over what its install changed.
       - name: Start without the last job's submodules
         run: if git config --get-regexp '^submodule\.' >/dev/null; then git submodule deinit --force --all; fi
-      # `content/` is a public repository of its own (nouverse/nouride-builtin-contents): the skills and agent packs every
-      # build ships and every test reads. Public, so no token; after the line above, so it is this commit's pin.
-      - name: Check out the built-in content
-        run: git submodule update --init content
       # Both: the drift tests of the hosted LLM gateway read `internals/nougate` the way the Pro ones read
       # `internals/pro`, and one token reads both. Through `-c`, so no step after this one holds it.
       - name: Check out the private submodules
@@ -738,10 +725,6 @@ jobs:
       # would be read as this commit's, built into a public image, or stop the next checkout over what its install changed.
       - name: Start without the last job's submodules
         run: if git config --get-regexp '^submodule\.' >/dev/null; then git submodule deinit --force --all; fi
-      # `content/` is a public repository of its own (nouverse/nouride-builtin-contents): the skills and agent packs every
-      # build ships and every test reads. Public, so no token; after the line above, so it is this commit's pin.
-      - name: Check out the built-in content
-        run: git submodule update --init content
 
       # Private, so `GITHUB_TOKEN` cannot see them. Which ones depends on the
       # variant — `matrix.submodules` names them, and the public `basic` build
@@ -934,10 +917,6 @@ jobs:
       # would be read as this commit's, built into a public image, or stop the next checkout over what its install changed.
       - name: Start without the last job's submodules
         run: if git config --get-regexp '^submodule\.' >/dev/null; then git submodule deinit --force --all; fi
-      # `content/` is a public repository of its own (nouverse/nouride-builtin-contents): the skills and agent packs every
-      # build ships and every test reads. Public, so no token; after the line above, so it is this commit's pin.
-      - name: Check out the built-in content
-        run: git submodule update --init content
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: .bun-version
@@ -1100,10 +1079,6 @@ jobs:
       # would be read as this commit's, built into a public image, or stop the next checkout over what its install changed.
       - name: Start without the last job's submodules
         run: if git config --get-regexp '^submodule\.' >/dev/null; then git submodule deinit --force --all; fi
-      # `content/` is a public repository of its own (nouverse/nouride-builtin-contents): the skills and agent packs every
-      # build ships and every test reads. Public, so no token; after the line above, so it is this commit's pin.
-      - name: Check out the built-in content
-        run: git submodule update --init content
 
       # Same as the binaries job — see the note there for why it is one step.
       - name: Check out the private submodules
@@ -1418,10 +1393,6 @@ jobs:
       # would be read as this commit's, built into a public image, or stop the next checkout over what its install changed.
       - name: Start without the last job's submodules
         run: if git config --get-regexp '^submodule\.' >/dev/null; then git submodule deinit --force --all; fi
-      # `content/` is a public repository of its own (nouverse/nouride-builtin-contents): the skills and agent packs every
-      # build ships and every test reads. Public, so no token; after the line above, so it is this commit's pin.
-      - name: Check out the built-in content
-        run: git submodule update --init content
       # Every Pro edition the plan kept reached the release, and a tag that kept none fails here rather than going
       # green while no box is offered it. This was a warning that blamed SUBMODULE_TOKEN whenever no Pro Router
       # tarball was there, whatever the cause — and when the cause was RELEASE_VARIANTS, nothing named it.
