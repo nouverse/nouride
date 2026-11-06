@@ -11,6 +11,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
+import { tmpdir } from "node:os";
 import { canElevate, runCommand, whichBinary } from "../src/process.ts";
 import { eventually } from "./wait.ts";
 
@@ -200,4 +201,15 @@ describe("activity at the timeout", () => {
     expect(killed.activity?.bytesMoved).toBeNull();
     expect(killed.activity?.cpuSeconds).toBeNull();
   });
+});
+
+test("a command that exits without reading its stdin answers with its own exit, not a broken pipe", async () => {
+  // The helper's `put` refusing a file exits before it reads the bytes, and writing them then raised EPIPE: the caller
+  // saw "broken pipe" instead of the refusal (CI on main, 2026-11-06). A megabyte is past any pipe's buffer, so the
+  // write is still under way when the command has gone.
+  const stdin = new Uint8Array(1 << 20);
+  for (let i = 0; i < 5; i += 1) {
+    const out = await runCommand(["/bin/sh", "-c", "echo refused >&2; exit 1"], { cwd: tmpdir(), env: { PATH: "/usr/bin:/bin" }, timeoutMs: 10_000, maxOutputBytes: 1024, stdin });
+    expect({ exitCode: out.exitCode, stderr: out.stderr.trim() }).toEqual({ exitCode: 1, stderr: "refused" });
+  }
 });

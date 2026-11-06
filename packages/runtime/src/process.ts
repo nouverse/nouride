@@ -61,8 +61,14 @@ export async function runCommand(cmd: string[], opts: SandboxOptions): Promise<S
    * already delivered.
    */
   if (opts.stdin !== undefined && proc.stdin) {
-    proc.stdin.write(typeof opts.stdin === "string" ? new TextEncoder().encode(opts.stdin) : opts.stdin);
-    await proc.stdin.end();
+    // A command may exit without reading it, a refusal above all: the helper's `put` turning a file down. The write then
+    // breaks on a closed pipe, and that is no error of the run: its exit code and stderr say what happened.
+    try {
+      proc.stdin.write(typeof opts.stdin === "string" ? new TextEncoder().encode(opts.stdin) : opts.stdin);
+      await proc.stdin.end();
+    } catch (err) {
+      if ((err as { code?: string }).code !== "EPIPE") throw err;
+    }
   }
 
   let timedOut = false;
