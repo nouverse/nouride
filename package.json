@@ -1,7 +1,7 @@
 {
   "name": "@nouverse/nouride",
   "description": "Ultra-lightweight, zero-bloat multi-agent AI engine in a single daemon. Homelab-friendly and built for mini devices (Raspberry Pi, Orange Pi, Geekom, NUC, LXC).",
-  "version": "0.8.20",
+  "version": "0.8.21",
   "license": "PolyForm-Strict-1.0.0",
   "private": true,
   "type": "module",
