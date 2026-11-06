@@ -1,0 +1,263 @@
+---
+title: Instalasi
+description: Unduh binary-nya dan dapatkan daemon yang tersupervisi, Linux, Raspberry Pi, macOS atau Docker.
+---
+
+import { Tabs, TabItem, Steps, Aside, LinkCard } from '@astrojs/starlight/components';
+
+Nouride adalah satu binary yang membawa runtime-nya sendiri. Gak ada yang perlu dipasang di
+sampingnya. Pilih platform kamu, jalankan satu perintah, lalu selesaikan di browser.
+
+<Aside type="caution" title="Baca sebelum kamu pipe ke shell">
+Script installer sengaja ditulis dalam POSIX `sh` polos dan bisa dibaca dari atas sampai bawah. Cek kapan saja:
+
+```bash
+@@INSPECT_CMD@@
+```
+</Aside>
+
+<Tabs syncKey="platform">
+  <TabItem label="Linux" icon="linux">
+
+    #### Edisi Standar
+
+    Memasang daemon Nouride mandiri (edisi dasar):
+
+    ```bash
+    @@INSTALL_CMD@@
+    ```
+
+    #### Edisi Router (dengan Nougate AI Router)
+
+    Memasang daemon lengkap dengan Nougate AI Router in-process. Setup cukup masuk ke akun AI, tanpa API key, dan gateway-nya menjadi halaman **LLM Gateway** di dashboard:
+
+    ```bash
+    @@ROUTER_INSTALL_CMD@@
+    ```
+
+    #### Membuka ke LAN
+
+    Secara default dashboard cuma bind ke loopback (`127.0.0.1:@@PORT@@`). Untuk melayaninya di
+    jaringan lokal, kasih `--host` ke installer mana pun:
+
+    ```bash
+    curl -fsSL @@INSTALL_URL@@ | sudo sh -s -- --host 0.0.0.0
+    ```
+
+    #### Apa yang dilakukan installer
+
+    1. Membaca `uname -m` **dan** C library kamu, lalu memilih build yang cocok.
+    2. Membuat akun layanan `nouride` (`nouride service install` menolak menulis unit yang jalan sebagai root). Kalau kamu menjalankannya pakai `sudo`, kamu ditambahkan ke grup akun itu, jadi `nouride` bisa dipakai tanpa `sudo` mulai login berikutnya.
+    3. Membongkar binary, dashboard, dan skill bawaan ke `@@INSTALL_DIR@@` (WhatsApp sudah ada di dalam binary).
+    4. Menulis `.env` berizin `0600` untuk kredensial, dan menaruh launcher `nouride` kecil di `/usr/local/bin`. Kalau dijalankan root, launcher ini menjalankan CLI sebagai akun layanan, jadi root gak pernah menjalankan file yang bisa diubah agent.
+    5. Memberi service home-nya sendiri, `.nouride/home`, tempat kunci SSH dan login CLI tetap ada setelah upgrade, dan menyimpan kunci penyimpanan secret di luar instalasi, di `/etc/nouride/nouride.env` milik root (dibuat sekali, `0600`; di Mac, `~/.config/nouride/nouride.env`): salinan folder instalasi gak membawa kunci. [Secret →](/id/docs/architecture/storage/#secret)
+    6. Kalau mesinnya punya systemd dan `useradd`, memasang `nouride-run` di `/usr/local/lib/nouride-run/`, helper root kecil yang menjalankan perintah tiap agent sebagai user miliknya sendiri, `nr-<agent>`. HOME tiap agent lalu jadi folder-nya sendiri, `.nouride/workspace/private/<id>/`, diisi sekali dari `.nouride/home`. [Tiap agent punya user sendiri →](/id/docs/architecture/overview/#tiap-agent-punya-user-sendiri)
+    7. Dengan `--allow-packages`, memasang `nouride-pkg`, service root kecil yang dipakai agent untuk memasang [paket sistem](/id/docs/deployment/system-packages/).
+    8. Membuat unit systemd lewat `nouride service install`, mengaktifkan, dan menjalankannya.
+    9. Menunggu daemon menjawab di `/health`, lalu mencetak langkah selanjutnya.
+
+    Jalankan lagi untuk upgrade. Binary dan unit-nya diganti, sementara `.nouride/` (database,
+    secret, agent) dibiarkan apa adanya. Dari 0.7.x: lihat [Upgrade ke v0.8](/id/docs/deployment/upgrading-to-0-8/).
+
+    #### Opsi
+
+    | Flag | Default | Fungsi |
+    |---|---|---|
+    | `--host ADDR` | `127.0.0.1` | Alamat yang di-bind dashboard |
+    | `--port PORT` | `@@PORT@@` | Port dashboard |
+    | `--variant NAME` | (basic) | `router` menambahkan Nougate AI Router. `pro` berlisensi dan cuma bisa dipasang lewat `--tarball` |
+    | `--allow-packages` | mati | Izinkan agent memasang paket sistem dari repositori sistem ini sendiri, dengan bertanya ke kamu sebelum tiap perubahan, kecuali agent-nya `trusted`. Tanpanya, agent cuma memasang ke direktori bin miliknya sendiri. Dipertahankan oleh run berikutnya |
+    | `--no-packages` | | Mematikan `--allow-packages` lagi |
+    | `--dir PATH` | `@@INSTALL_DIR@@` | Direktori instalasi |
+    | `--user NAME` | `nouride` | Akun layanan yang dibuat dan dipakai menjalankan daemon |
+    | `--version TAG` | `latest` | Rilis yang diunduh |
+    | `--base-url URL` | `@@DOWNLOAD_BASE@@` | Sumber unduhan |
+    | `--repo OWNER/N` | `@@GITHUB_REPO@@` | Unduh dari rilis GitHub sebagai gantinya |
+    | `--tarball PATH` | | Pasang dari tarball yang sudah ada di mesin |
+
+    #### Raspberry Pi dan Orange Pi
+
+    Perintahnya sama. **OS kamu wajib 64-bit**: cek dulu sebelum mulai:
+
+    ```bash
+    uname -m     # aarch64 → aman.  armv7l → 32-bit, gak didukung
+    ```
+
+    Gak ada build ARM 32-bit, dan installer langsung berhenti dengan `unsupported architecture`
+    daripada mengunduh sesuatu yang gak bakal jalan.
+
+    #### Alpine dan sistem musl lainnya
+
+    Installer mendeteksi musl dan memilih build `-musl`. Kamu juga butuh satu paket yang di-link
+    binary dan gak dibawa Alpine polos:
+
+    ```bash
+    apk add libstdc++
+    ```
+
+  </TabItem>
+
+  <TabItem label="macOS" icon="apple">
+
+    #### Edisi Standar
+
+    Di Mac dengan Apple Silicon (M1 ke atas), sebagai dirimu sendiri, **tanpa `sudo`**:
+
+    ```bash
+    curl -fsSL @@INSTALL_URL@@ | sh
+    ```
+
+    #### Edisi Router (dengan Nougate AI Router)
+
+    ```bash
+    curl -fsSL @@INSTALL_URL@@ | sh -s -- --variant router
+    ```
+
+    #### Yang dilakukan installer di Mac
+
+    1. Memilih build `darwin-arm64`.
+    2. Memasang ke `~/nouride`, dan menautkan `nouride` ke `/usr/local/bin` kalau bisa ditulis, atau ke `~/.local/bin` kalau folder itu ada, jadi CLI jalan dari folder mana pun. Kalau keduanya gak ada, jalankan sebagai `~/nouride/nouride`, atau buat `~/.local/bin` (yang ada di `PATH`-mu) lalu jalankan installer lagi.
+    3. Membuat LaunchAgent (`~/Library/LaunchAgents/tech.nouverse.nouride.plist`) lalu memuatnya. Ia jalan sebagai dirimu, dengan Homebrew paling depan di `PATH`-nya, dan hanya selama kamu login, jadi cocok untuk laptop atau Mac mini yang kamu pakai; supaya tetap jalan melewati restart, lihat di bawah.
+    4. Membuat `.nouride/data` sebelum start pertama, jadi password admin sekali pakai tertulis di `~/nouride/.nouride/data/nouride.log`.
+    5. Menunggu daemon menjawab di `/health`, lalu menampilkan langkah berikutnya.
+
+    Jalankan lagi untuk upgrade, atau pakai `nouride update`; dari 0.7.x, lihat [Upgrade ke v0.8](/id/docs/deployment/upgrading-to-0-8/). Semua flag di tabel Linux juga berlaku di sini,
+    kecuali `--user` (selalu dirimu) dan `--allow-packages` (gak ada layanan paket root di Mac; pasang yang
+    dibutuhkan agent lewat Homebrew sendiri).
+
+    #### Supaya Mac jalan 24 jam
+
+    LaunchAgent jalan selama kamu login, juga saat layarnya terkunci. Ia berhenti kalau kamu logout, saat Mac sleep, dan
+    setelah Mac restart sampai ada yang login lagi, misalnya update macOS di malam hari atau listrik padam. Tiga
+    pengaturan ini membuatnya kembali jalan sendiri:
+
+    - **Jangan sleep.** Di Mac mini atau iMac: **System Settings → Energy → Prevent automatic sleeping when the display is
+      off**. Di MacBook yang dicolok: **System Settings → Battery → Options → Prevent automatic sleeping on power adapter
+      when the display is off**.
+    - **Nyala lagi setelah listrik padam.** **System Settings → Energy → Start up automatically after a power failure**
+      (ada di Mac mini dan Mac desktop).
+    - **Login otomatis.** **System Settings → Users & Groups → Automatically log in as**, lalu pilih akunmu.
+
+    Kalau FileVault menyala (bawaan Mac baru), login otomatis gak bisa dipilih, dan Mac yang restart berhenti di layar
+    password sampai ada yang mengetiknya. Matikan FileVault untuk Mac yang harus kembali sendiri, atau biarkan menyala
+    dan ketik password setiap kali Mac restart.
+
+    <Aside type="note">
+    Mac akan bertanya sekali sebelum sebuah program boleh merekam layar atau mengendalikan komputer. Nouride
+    belum membutuhkan keduanya untuk apa yang dikerjakannya sekarang.
+    </Aside>
+
+  </TabItem>
+
+  <TabItem label="Docker" icon="seti:docker">
+
+    Buat file `docker-compose.yml`.
+
+    #### Edisi Standar
+
+    ```yaml
+    services:
+      nouride:
+        image: @@DOCKER_IMAGE@@
+        container_name: nouride
+        restart: unless-stopped
+        stop_grace_period: 45s   # biar giliran yang jalan sempat menuntaskan langkahnya saat container berhenti
+        ports:
+          - "127.0.0.1:@@PORT@@:@@PORT@@"
+        env_file:
+          - path: .env
+            required: false
+        volumes:
+          - ./nouride:/app/.nouride
+    ```
+
+    #### Edisi Router
+
+    Dashboard gateway-nya adalah halaman **LLM Gateway** di `@@PORT@@`. Buka port `18256` juga untuk tool yang memanggil gateway secara langsung, atau console mandirinya (`/frontend/`):
+
+    ```yaml
+    services:
+      nouride:
+        image: @@DOCKER_IMAGE@@-router
+        container_name: nouride
+        restart: unless-stopped
+        stop_grace_period: 45s
+        ports:
+          - "127.0.0.1:@@PORT@@:@@PORT@@"
+          - "127.0.0.1:18256:18256"   # Nougate AI Router & Web Console (/frontend/)
+        env_file:
+          - path: .env
+            required: false
+        volumes:
+          - ./nouride:/app/.nouride
+    ```
+
+    Jalankan container-nya:
+
+    ```bash
+    docker compose up -d
+    ```
+
+    Image diterbitkan sebagai manifest multi-arch untuk `linux/amd64` dan `linux/arm64`. Di dalam
+    container ia bind ke semua interface, jadi port yang dipublikasikan langsung jalan tanpa perlu
+    mengatur `HOST`.
+
+    Port-nya dipublikasikan hanya di loopback host, sama seperti instalasi native: buka dasbor di mesin itu
+    sendiri, atau tunnel dari mesinmu dengan `ssh -L @@PORT@@:127.0.0.1:@@PORT@@ kamu@server-kamu`. Supaya
+    bisa dijangkau dari mesin lain, hapus `127.0.0.1:` (`"@@PORT@@:@@PORT@@"`). Dasbor lalu menjawab siapa pun
+    yang bisa menjangkau host, dan port yang dipublikasikan Docker melewati firewall seperti `ufw`. Untuk alamat
+    publik, biarkan di loopback dan pasang reverse proxy dengan TLS di depannya, di mesin yang sama (Caddy, nginx,
+    Cloudflare Tunnel): dasbor itu halaman login, dan login lewat HTTP biasa berarti password lewat tanpa enkripsi.
+
+    <LinkCard title="Panduan Docker & Compose" description="File compose lengkap, opsi production, healthcheck, dan detail volume mount." href="/id/docs/deployment/docker/" />
+
+  </TabItem>
+</Tabs>
+
+---
+
+## Mengunduh binary sendiri
+
+Setiap rilis adalah tarball berisi executable (WhatsApp ada di dalamnya), dashboard, skill bawaan,
+`nouride-pkg` untuk `--allow-packages`, di Linux `run/nouride-run` untuk user milik tiap agent, dan
+`config.example.toml` yang lengkap dengan penjelasan.
+
+### Edisi Standar
+
+| Platform | Arsitektur | Libc | Unduhan |
+|---|---|---|---|
+| Linux | `x86_64` | glibc | [`nouride-linux-x64.tar.gz`](@@TARBALL_BASE@@/nouride-linux-x64.tar.gz) |
+| Linux | `aarch64` | glibc | [`nouride-linux-arm64.tar.gz`](@@TARBALL_BASE@@/nouride-linux-arm64.tar.gz) |
+| Linux (Alpine) | `x86_64` | musl | [`nouride-linux-x64-musl.tar.gz`](@@TARBALL_BASE@@/nouride-linux-x64-musl.tar.gz) |
+| Linux (Alpine) | `aarch64` | musl | [`nouride-linux-arm64-musl.tar.gz`](@@TARBALL_BASE@@/nouride-linux-arm64-musl.tar.gz) |
+| macOS | Apple Silicon | tidak berlaku | [`nouride-darwin-arm64.tar.gz`](@@TARBALL_BASE@@/nouride-darwin-arm64.tar.gz) |
+
+### Edisi Router (dengan Nougate AI Router)
+
+| Platform | Arsitektur | Libc | Unduhan |
+|---|---|---|---|
+| Linux | `x86_64` | glibc | [`nouride-router-linux-x64.tar.gz`](@@TARBALL_BASE@@/nouride-router-linux-x64.tar.gz) |
+| Linux | `aarch64` | glibc | [`nouride-router-linux-arm64.tar.gz`](@@TARBALL_BASE@@/nouride-router-linux-arm64.tar.gz) |
+| Linux (Alpine) | `x86_64` | musl | [`nouride-router-linux-x64-musl.tar.gz`](@@TARBALL_BASE@@/nouride-router-linux-x64-musl.tar.gz) |
+| Linux (Alpine) | `aarch64` | musl | [`nouride-router-linux-arm64-musl.tar.gz`](@@TARBALL_BASE@@/nouride-router-linux-arm64-musl.tar.gz) |
+| macOS | Apple Silicon | tidak berlaku | [`nouride-router-darwin-arm64.tar.gz`](@@TARBALL_BASE@@/nouride-router-darwin-arm64.tar.gz) |
+
+Kalau kamu sudah punya tarball di mesin, installer bakal memakainya dan melewati unduhan sama sekali:
+
+```bash
+sudo sh install.sh --tarball /tmp/nouride-linux-x64.tar.gz
+```
+
+<Aside type="tip" title="Dashboard ikut bersama binary">
+Dashboard adalah direktori berisi aset bernama hash, yang gak bisa dikompilasi ke dalam satu
+executable. Daemon mencarinya **di sebelah dirinya sendiri**. Itulah kenapa tarball berisi lebih dari
+satu file, dan kenapa binary dipasang di direktorinya sendiri, bukan ditaruh sendirian di
+`/usr/local/bin`.
+</Aside>
+
+---
+
+## Selanjutnya
+
+<LinkCard title="Menyalakan pertama kali" description="Password sekali pakai, dashboard, dan tiga langkah singkat yang menyelesaikan setup." href="/id/docs/start/first-run/" />
+<LinkCard title="Kalau belum jalan" description="Arsitektur gak didukung, service jalan tapi gak melayani, dashboard yang gak bisa dijangkau." href="/id/docs/start/troubleshooting/" />

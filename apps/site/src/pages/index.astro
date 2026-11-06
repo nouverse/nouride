@@ -1,0 +1,20 @@
+---
+import Site from '../layouts/Site.astro';
+---
+
+<Site
+  locale="en"
+  title="Nouride, Serious Agents. Tiny Runtime."
+  description="Self-hosted multi-agent AI engine running directly on your own hardware. Native Telegram, Discord, and WhatsApp support. One binary, runs in 64 MB of RAM (measured 2026-10-17)."
+  image="/og.png"
+>
+  <script is:inline>
+    (function () {
+      var lang = (navigator.language || '').toLowerCase().startsWith('id') ? '/id' : '/en';
+      window.location.replace(lang);
+    })();
+  </script>
+  <noscript>
+    <meta http-equiv="refresh" content="0;url=/en" />
+  </noscript>
+</Site>

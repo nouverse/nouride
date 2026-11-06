@@ -1,0 +1,262 @@
+---
+title: Install
+description: Download the binary and get a supervised daemon running, Linux, Raspberry Pi, macOS or Docker.
+---
+
+import { Tabs, TabItem, Steps, Aside, LinkCard } from '@astrojs/starlight/components';
+
+Nouride is one binary that carries its own runtime. There is nothing to install alongside it. Pick
+your platform, run one command, and finish in the browser.
+
+<Aside type="caution" title="Read it before you pipe it to a shell">
+The installer is deliberately plain POSIX `sh` and readable top to bottom. Inspect it anytime:
+
+```bash
+@@INSPECT_CMD@@
+```
+</Aside>
+
+<Tabs syncKey="platform">
+  <TabItem label="Linux" icon="linux">
+
+    #### Standard Edition
+
+    Installs the standalone Nouride daemon (basic edition):
+
+    ```bash
+    @@INSTALL_CMD@@
+    ```
+
+    #### Router Edition (with Nougate AI Router)
+
+    Installs the daemon with the in-process Nougate AI Router. Setup signs in to an AI account instead of asking for an API key, and the gateway is the dashboard's **LLM Gateway** page:
+
+    ```bash
+    @@ROUTER_INSTALL_CMD@@
+    ```
+
+    #### Exposing it to your LAN
+
+    The dashboard binds to loopback (`127.0.0.1:@@PORT@@`) by default. To serve it on your local
+    network instead, pass `--host` to either installer:
+
+    ```bash
+    curl -fsSL @@INSTALL_URL@@ | sudo sh -s -- --host 0.0.0.0
+    ```
+
+    #### What the installer does
+
+    1. Reads `uname -m` **and** your C library, and picks the matching build.
+    2. Creates a `nouride` service account (`nouride service install` refuses to write a unit that runs as root). When you ran it with `sudo`, it adds you to that account's group, so `nouride` works without `sudo` from your next login.
+    3. Unpacks the binary, its dashboard and the built-in skills into `@@INSTALL_DIR@@` (WhatsApp is built into the binary).
+    4. Writes a `0600` `.env` for credentials, and puts a small `nouride` launcher in `/usr/local/bin`. Run by root, it runs the CLI as the service account, so root never runs a file the agents could change.
+    5. Gives the service a home of its own, `.nouride/home`, where SSH keys and CLI logins survive upgrades, and keeps the secret store's key outside the install, in root's `/etc/nouride/nouride.env` (made once, `0600`; on a Mac, `~/.config/nouride/nouride.env`): a copy of the install folder carries no key. [Secrets →](/en/docs/architecture/storage/#secrets)
+    6. Where the machine has systemd and `useradd`, installs `nouride-run` in `/usr/local/lib/nouride-run/`, the small root helper that runs each agent's commands as its own user, `nr-<agent>`. Each agent's HOME is then its own folder, `.nouride/workspace/private/<id>/`, seeded once from `.nouride/home`. [Each agent its own user →](/en/docs/architecture/overview/#each-agent-its-own-user)
+    7. With `--allow-packages`, sets up `nouride-pkg`, the small root service agents install [system packages](/en/docs/deployment/system-packages/) through.
+    8. Generates a systemd unit through `nouride service install`, enables it, and starts it.
+    9. Waits for the daemon to answer on `/health`, then prints where to go next.
+
+    Run it again to upgrade. It replaces the binary and the unit, and leaves `.nouride/` (the
+    database, the secrets, the agents) alone. From 0.7.x: see [Upgrading to v0.8](/en/docs/deployment/upgrading-to-0-8/).
+
+    #### Options
+
+    | Flag | Default | What it does |
+    |---|---|---|
+    | `--host ADDR` | `127.0.0.1` | Address the dashboard binds to |
+    | `--port PORT` | `@@PORT@@` | Dashboard port |
+    | `--variant NAME` | (basic) | `router` adds the Nougate AI Router. `pro` is licensed and installs only with `--tarball` |
+    | `--allow-packages` | off | Let agents install system packages from this system's own repositories, asking you before every change unless an agent is `trusted`. Without it they install only into their own bin directory. Later runs keep it |
+    | `--no-packages` | | Turn `--allow-packages` off again |
+    | `--dir PATH` | `@@INSTALL_DIR@@` | Install directory |
+    | `--user NAME` | `nouride` | Service account to create and run as |
+    | `--version TAG` | `latest` | Release to download |
+    | `--base-url URL` | `@@DOWNLOAD_BASE@@` | Where to download from |
+    | `--repo OWNER/N` | `@@GITHUB_REPO@@` | Download from GitHub releases instead |
+    | `--tarball PATH` | | Install from a tarball already on the machine |
+
+    #### Raspberry Pi and Orange Pi
+
+    Same command. **Your OS must be 64-bit**: check before you start:
+
+    ```bash
+    uname -m     # aarch64 → good.  armv7l → 32-bit, not supported
+    ```
+
+    There is no 32-bit ARM build, and the installer stops with `unsupported architecture` rather than
+    downloading something that will not run.
+
+    #### Alpine and other musl systems
+
+    The installer detects musl and picks the `-musl` build. You also need one package the binary links
+    and a bare Alpine does not ship:
+
+    ```bash
+    apk add libstdc++
+    ```
+
+  </TabItem>
+
+  <TabItem label="macOS" icon="apple">
+
+    #### Standard Edition
+
+    On a Mac with Apple Silicon (M1 and later), as yourself (**no `sudo`**):
+
+    ```bash
+    curl -fsSL @@INSTALL_URL@@ | sh
+    ```
+
+    #### Router Edition (with Nougate AI Router)
+
+    ```bash
+    curl -fsSL @@INSTALL_URL@@ | sh -s -- --variant router
+    ```
+
+    #### What the installer does on a Mac
+
+    1. Picks the `darwin-arm64` build.
+    2. Installs into `~/nouride`, and links `nouride` into `/usr/local/bin` when it can write there, or else into `~/.local/bin` when that directory exists. Then the CLI works from any directory. With neither, run it as `~/nouride/nouride`, or create `~/.local/bin` (on your `PATH`) and run the installer again.
+    3. Generates a LaunchAgent (`~/Library/LaunchAgents/tech.nouverse.nouride.plist`) and loads it. It runs as you, with Homebrew first on its `PATH`, and only while you are logged in: right for a laptop or a Mac mini you sign in to; to keep one serving through restarts, see below.
+    4. Creates `.nouride/data` before the first start, so the one-time admin password is written to `~/nouride/.nouride/data/nouride.log`.
+    5. Waits for the daemon to answer on `/health`, then prints where to go next.
+
+    Run it again to upgrade, or use `nouride update`; from 0.7.x, see [Upgrading to v0.8](/en/docs/deployment/upgrading-to-0-8/). Every flag in the Linux table works here too, except
+    `--user` (it is always you) and `--allow-packages` (there is no root package service on a Mac; install what
+    agents need with Homebrew yourself).
+
+    #### Keeping a Mac serving around the clock
+
+    The LaunchAgent runs while you are logged in, screen locked or not. It stops when you log out, while the Mac sleeps,
+    and after a restart until someone logs in (a macOS update at night, or a power cut). Three settings bring it back by
+    itself:
+
+    - **No sleep.** On a Mac mini or an iMac: **System Settings → Energy → Prevent automatic sleeping when the display is
+      off**. On a MacBook on power: **System Settings → Battery → Options → Prevent automatic sleeping on power adapter
+      when the display is off**.
+    - **Start after a power cut.** **System Settings → Energy → Start up automatically after a power failure**, on a Mac
+      mini and the desktops.
+    - **Log in by itself.** **System Settings → Users & Groups → Automatically log in as**, and your account.
+
+    With FileVault on (the default on a new Mac), automatic login cannot be chosen, and a Mac that restarts waits at
+    the password screen until someone types it. Turn FileVault off for a Mac that must come back on its own, or keep it
+    and type the password after each restart.
+
+    <Aside type="note">
+    A Mac asks once before a program may record the screen or control the computer. Nouride needs neither
+    for what it does today.
+    </Aside>
+
+  </TabItem>
+
+  <TabItem label="Docker" icon="seti:docker">
+
+    Create `docker-compose.yml`.
+
+    #### Standard Edition
+
+    ```yaml
+    services:
+      nouride:
+        image: @@DOCKER_IMAGE@@
+        container_name: nouride
+        restart: unless-stopped
+        stop_grace_period: 45s   # lets a running turn finish its step when the container stops
+        ports:
+          - "127.0.0.1:@@PORT@@:@@PORT@@"
+        env_file:
+          - path: .env
+            required: false
+        volumes:
+          - ./nouride:/app/.nouride
+    ```
+
+    #### Router Edition
+
+    The gateway's dashboard is the **LLM Gateway** page on `@@PORT@@`. Publish `18256` as well for tools that call the gateway directly, or its standalone console (`/frontend/`):
+
+    ```yaml
+    services:
+      nouride:
+        image: @@DOCKER_IMAGE@@-router
+        container_name: nouride
+        restart: unless-stopped
+        stop_grace_period: 45s
+        ports:
+          - "127.0.0.1:@@PORT@@:@@PORT@@"
+          - "127.0.0.1:18256:18256"   # Nougate AI Router & Web Console (/frontend/)
+        env_file:
+          - path: .env
+            required: false
+        volumes:
+          - ./nouride:/app/.nouride
+    ```
+
+    Start the container:
+
+    ```bash
+    docker compose up -d
+    ```
+
+    The image is published as a multi-arch manifest covering `linux/amd64` and `linux/arm64`. It
+    binds every interface inside the container, so the published port works without setting `HOST`.
+
+    The port is published on the host's loopback only, as a native install listens: open the dashboard on
+    the machine itself, or tunnel to it from yours with `ssh -L @@PORT@@:127.0.0.1:@@PORT@@ you@your-server`.
+    To reach it from other machines, drop `127.0.0.1:` (`"@@PORT@@:@@PORT@@"`): the dashboard then answers anyone
+    who can reach the host, and a port Docker publishes goes around a firewall such as `ufw`. For a public address,
+    keep it on loopback and put a reverse proxy with TLS in front of it on the same machine (Caddy, nginx, a
+    Cloudflare Tunnel): the dashboard is a login, and a login over plain HTTP is a password on the wire.
+
+    <LinkCard title="Docker & Compose Guide" description="Full compose file, production settings, healthchecks, and volume mount details." href="/en/docs/deployment/docker/" />
+
+  </TabItem>
+</Tabs>
+
+---
+
+## Downloading the binary yourself
+
+Every release is a tarball holding the executable (WhatsApp is inside it), its dashboard, the
+built-in skills, `nouride-pkg` for `--allow-packages`, on Linux `run/nouride-run` for each agent's own user, and an
+annotated `config.example.toml`.
+
+### Standard Edition
+
+| Platform | Architecture | Libc | Download |
+|---|---|---|---|
+| Linux | `x86_64` | glibc | [`nouride-linux-x64.tar.gz`](@@TARBALL_BASE@@/nouride-linux-x64.tar.gz) |
+| Linux | `aarch64` | glibc | [`nouride-linux-arm64.tar.gz`](@@TARBALL_BASE@@/nouride-linux-arm64.tar.gz) |
+| Linux (Alpine) | `x86_64` | musl | [`nouride-linux-x64-musl.tar.gz`](@@TARBALL_BASE@@/nouride-linux-x64-musl.tar.gz) |
+| Linux (Alpine) | `aarch64` | musl | [`nouride-linux-arm64-musl.tar.gz`](@@TARBALL_BASE@@/nouride-linux-arm64-musl.tar.gz) |
+| macOS | Apple Silicon | not applicable | [`nouride-darwin-arm64.tar.gz`](@@TARBALL_BASE@@/nouride-darwin-arm64.tar.gz) |
+
+### Router Edition (with Nougate AI Router)
+
+| Platform | Architecture | Libc | Download |
+|---|---|---|---|
+| Linux | `x86_64` | glibc | [`nouride-router-linux-x64.tar.gz`](@@TARBALL_BASE@@/nouride-router-linux-x64.tar.gz) |
+| Linux | `aarch64` | glibc | [`nouride-router-linux-arm64.tar.gz`](@@TARBALL_BASE@@/nouride-router-linux-arm64.tar.gz) |
+| Linux (Alpine) | `x86_64` | musl | [`nouride-router-linux-x64-musl.tar.gz`](@@TARBALL_BASE@@/nouride-router-linux-x64-musl.tar.gz) |
+| Linux (Alpine) | `aarch64` | musl | [`nouride-router-linux-arm64-musl.tar.gz`](@@TARBALL_BASE@@/nouride-router-linux-arm64-musl.tar.gz) |
+| macOS | Apple Silicon | not applicable | [`nouride-router-darwin-arm64.tar.gz`](@@TARBALL_BASE@@/nouride-router-darwin-arm64.tar.gz) |
+
+If you already have a tarball on the machine, the installer will use it and skip the download
+entirely:
+
+```bash
+sudo sh install.sh --tarball /tmp/nouride-linux-x64.tar.gz
+```
+
+<Aside type="tip" title="The dashboard travels with the binary">
+The dashboard is a directory of hash-named assets, which cannot be compiled into an executable. The
+daemon looks for it **next to itself**. That is why the tarball has more than one file in it, and why
+the binary is installed into its own directory rather than dropped into `/usr/local/bin` alone.
+</Aside>
+
+---
+
+## Next
+
+<LinkCard title="First run" description="The one-time password, the dashboard, and the three short steps that finish the setup." href="/en/docs/start/first-run/" />
+<LinkCard title="When it does not work" description="Unsupported architecture, a service that starts but never serves, a dashboard you cannot reach." href="/en/docs/start/troubleshooting/" />

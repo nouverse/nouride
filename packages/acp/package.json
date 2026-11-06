@@ -1,0 +1,10 @@
+{
+  "name": "@nouride/acp",
+  "description": "Nouride's Agent Client Protocol — a coding CLI driven as an ACP client, and Nouride's agents served to an editor.",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

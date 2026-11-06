@@ -1,0 +1,16 @@
+{
+  "name": "@nouride/persona",
+  "description": "Nouride agent pack loader \u2014 persona markdown, skills, and per-agent config.toml.",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@nouride/policy": "workspace:*",
+    "@nouride/runtime": "workspace:*",
+    "@nouride/secrets": "workspace:*",
+    "@nouride/shared": "workspace:*"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "@nouride/policy",
+  "description": "Nouride exec permission policy \u2014 the pure decision layer: ceiling, ask mode, durable grants, hardline classes.",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@nouride/runtime": "workspace:*",
+    "@nouride/shared": "workspace:*"
+  }
+}

@@ -1,0 +1,283 @@
+---
+title: An Android phone as a server
+description: Run Nouride on an Android phone you no longer use, with Termux and Debian and no root, from installing Termux to an open dashboard.
+---
+
+import { Steps, Aside, LinkCard } from '@astrojs/starlight/components';
+
+There is no Android build of Nouride. It ships for Linux (glibc and musl) and macOS, and Android has a
+C library of its own. So the phone runs a Debian userland inside [Termux](https://termux.dev) with
+[proot-distro](https://github.com/termux/proot-distro), and the `linux-arm64` build of the Router edition
+runs inside that Debian. The phone does not need to be rooted.
+
+<Aside type="note" title="Tested on one phone">
+A Redmi 12 (HyperOS on Android 15, 6 GB of RAM) with Termux 0.118.3 from GitHub, Debian 13 from
+proot-distro 5.10, and Nouride 0.8.18 (the Community edition), on 2026-11-05. The daemon was ready in
+under two seconds, the dashboard opened from a computer on the same Wi-Fi, an agent answered on
+Telegram, and the daemon kept running for almost eight hours overnight. Not tried yet: other phones,
+the Router edition on the phone, a restart of the phone, starting it on boot, and updating Nouride on
+the phone.
+</Aside>
+
+## What works and what does not
+
+The daemon, the dashboard, the chat apps (Telegram was tested), agents and their tools all work. Four
+things do not:
+
+- **Each agent its own user.** proot only pretends to be root, and there is no systemd, so
+  `nouride-run` is not installed: every agent's commands run as the daemon's own account, and the daemon
+  logs `agents' commands run as the daemon's own user` at every start. Run only agents you trust with
+  each other's files. [Each agent its own user →](/en/docs/architecture/overview/#each-agent-its-own-user)
+- **Coming back by itself.** Nothing restarts the daemon if it stops, and nothing starts it when the
+  phone restarts. `nouride restart` and `nouride update --start` have no service manager to hand over to.
+- **System packages for agents.** `--allow-packages` needs systemd. Install what your agents need
+  yourself, with `apt` inside Debian.
+- **Nouride Box features**, such as the setup hotspot and Wi-Fi onboarding. They need NetworkManager,
+  and on a phone Android owns the Wi-Fi.
+
+## What you need
+
+- **A 64-bit phone on Android 7 or later.** The first step below checks the processor: Nouride has no
+  32-bit ARM build.
+- **About 1.5 GB of free storage.** Termux, Debian and Nouride took that much on the test phone after a
+  day of use. What your agents download and build comes on top.
+- **Memory.** The test phone has 6 GB. Nouride itself needs little
+  ([Footprint & performance](/en/docs/architecture/performance/)); with less RAM, Android closes
+  background apps sooner, Termux included.
+- **A charger.** The phone runs all the time, so keep it plugged in.
+- **The same Wi-Fi** as the computer you will open the dashboard from, if you want to open it from
+  anywhere but the phone.
+- **A model account or an API key.** The Router edition installed below signs in to an account you
+  already have (Claude Pro or Max, ChatGPT, GitHub Copilot, Google Gemini or Kiro) through its built-in
+  Nougate gateway; a provider's endpoint and API key work as well. The
+  [First run](/en/docs/start/first-run/) wizard asks at the end.
+- **Optional: a computer with `adb`** ([Android's platform tools](https://developer.android.com/tools/releases/platform-tools)),
+  for one setting that some phones have no switch for. See [the phantom process killer](#android-12-and-later-the-phantom-process-killer).
+
+## Install
+
+<Steps>
+
+1. ### Install Termux
+
+   Install it from [F-Droid](https://f-droid.org/packages/com.termux/), or from its
+   [GitHub releases](https://github.com/termux/termux-app/releases): the `arm64-v8a` APK, or the
+   `universal` one if you are not sure. Android asks once whether your browser (or F-Droid) may install
+   apps. Allow it.
+
+   Not from Google Play: the build there is a separate one, which Termux itself calls under development,
+   with missing functionality. Termux and its add-ons (Termux:Boot, Termux:API) have to come from the same
+   place, or Android refuses to install the second one.
+
+   Open Termux and wait for the `~ $` prompt. Then check the processor:
+
+   ```bash
+   uname -m
+   ```
+
+   `aarch64` means you can go on. `armv7l` or `armv8l` is a 32-bit system, which Nouride has no build for.
+
+2. ### Let Termux run with the screen off
+
+   Android stops apps that keep working in the background. Do this before installing anything, so an
+   install is not cut off halfway.
+
+   - **Battery.** Settings, Apps, Termux, then battery: set it to **Unrestricted** (HyperOS calls it
+     **No restrictions**). The menu names differ between brands.
+   - **Wake lock.** Run `termux-wake-lock` in Termux, or pull down Termux's notification and tap
+     **Acquire wakelock**. It keeps the processor awake while the screen is off.
+   - **Recent apps**, on Xiaomi and some other brands: open the recent apps, long-press Termux and tap the
+     lock, so clearing them leaves Termux alone.
+
+3. ### Install Debian
+
+   In Termux:
+
+   ```bash
+   pkg update
+   pkg install proot-distro
+   proot-distro install debian
+   ```
+
+   `pkg update` asks before it upgrades, and may ask about a configuration file. Enter takes the default
+   answer both times. The last command downloads Debian (about 50 MB) and unpacks it.
+
+4. ### Install Nouride inside Debian
+
+   Enter Debian. The prompt changes to `root@localhost`:
+
+   ```bash
+   proot-distro login debian
+   ```
+
+   You are root in there (proot's root, not the phone's), so nothing needs `sudo`. Install `curl`, and
+   `procps` for the `ps` and `pkill` that Debian's minimal image leaves out, then run the installer:
+
+   ```bash
+   apt update && apt install -y curl ca-certificates procps
+   curl -fsSL @@INSTALL_URL@@ | sh -s -- --host 0.0.0.0 --variant router
+   ```
+
+   `--variant router` installs the Router edition: Nouride with the [Nougate](/en/docs/providers/nougate/)
+   LLM gateway inside the same daemon, on port `18256`. The setup wizard can then sign in to a model
+   account you already have instead of asking for an API key, and the phone is both your Nouride server
+   and a model gateway for your other devices.
+
+   `--host 0.0.0.0` lets other devices on your Wi-Fi open the dashboard, and use the gateway with a
+   gateway key. Do that on a network you trust, such as your home Wi-Fi. Leave it out to keep both on
+   the phone itself.
+
+   The installer says `no systemd here, so the daemon will be installed but not supervised`. Here that
+   is expected. Near the end it prints the dashboard's address,
+   `http://<the phone's address>:@@PORT@@/dashboard/`. Note it down.
+
+   If the download fails, run the same command again a little later: during the test, GitHub, where the
+   release is downloaded from, answered `504` for a while.
+
+   Then leave Debian and go back to Termux:
+
+   ```bash
+   exit
+   ```
+
+5. ### Start Nouride
+
+   The start command the installer printed runs the daemon in the foreground, so it stops with that
+   terminal. Start it in the background instead, from a small script in Termux (not in Debian):
+
+   ```bash
+   cat > ~/start-nouride.sh <<'EOF'
+   nohup proot-distro login debian -- su -s /bin/sh nouride -c 'cd @@INSTALL_DIR@@ && exec ./nouride start' >> ~/nouride.log 2>&1 &
+   EOF
+   sh ~/start-nouride.sh
+   ```
+
+   It runs as the `nouride` account the installer made, and writes its log to `~/nouride.log` in Termux.
+   Running the script a second time does no harm: the second daemon stops with
+   `another Nouride instance is running`.
+
+   Leave Termux open from now on: switch to another app instead of typing `exit` in its last session.
+   Termux's notification is what keeps Android from closing it, and the daemon with it.
+
+   The first start prints the first login, **once**. Read it from the log:
+
+   ```bash
+   grep -A12 'Nouride is ready' ~/nouride.log
+   ```
+
+   ```
+     Nouride is ready. Open the dashboard to finish setting it up:
+
+       http://localhost:@@PORT@@/dashboard/
+
+     or from another device on this network:
+       http://192.168.0.23:@@PORT@@/dashboard/
+
+       username  admin
+       password  <generated>
+   ```
+
+   The second address, the phone's, is there only with `--host 0.0.0.0`.
+
+6. ### Open the dashboard
+
+   On the phone, open `@@DASHBOARD_URL@@` in its browser. From a computer on the same Wi-Fi, open the
+   address the installer printed. The phone's address is also in its Wi-Fi settings: tap the network you
+   are connected to. Your router may give the phone another address later. Reserving one for it in the
+   router's DHCP settings keeps the link working.
+
+   Sign in with `admin` and the password from the log. From here it is the same on every platform: the
+   first screen replaces the generated login with your own (after that, the password in the log no longer
+   works), then the wizard asks for a model endpoint and your first agent. Carry on at
+   [First run](/en/docs/start/first-run/#open-the-dashboard).
+
+   The wizard's first step takes an API key, and under it offers **Use Nougate LLM Gateway**: sign in to
+   an account you already have and no API key is needed.
+   [How the sign-in goes →](/en/docs/providers/nougate/#running-it-inside-the-daemon)
+
+</Steps>
+
+<LinkCard title="First run" description="Your own login, a model endpoint, and your first agent." href="/en/docs/start/first-run/" />
+
+## Keep it running
+
+### Android 12 and later: the phantom process killer
+
+Android 12 and later stop an app's child processes when there are more than 32 of them in total, or
+when they use much CPU in the background. Debian, the daemon and every command an agent runs are child
+processes of Termux, so a busy agent can get the daemon killed. Turn the check off in one of two ways:
+
+- **Developer options, Disable child process restrictions**, on Android 14 and later where the phone
+  has it. Not every brand shows it. Developer options appear after tapping **Build number** seven times
+  in About phone (on Xiaomi, the **OS version**).
+- **From a computer with `adb`**, with USB debugging or wireless debugging turned on in Developer
+  options:
+
+  ```bash
+  adb shell device_config set_sync_disabled_for_tests persistent
+  adb shell device_config put activity_manager max_phantom_processes 2147483647
+  adb shell settings put global settings_enable_monitor_phantom_procs false
+  ```
+
+  The first two lines raise the limit so far that it never trips, and keep Android from setting it back.
+  The third turns the check off on Android 12L and later. On Xiaomi phones the third needs Developer
+  options, **USB debugging (Security settings)**, which asks for a Mi account. The first two are enough
+  on their own, and they are what the test phone runs with. To check them:
+
+  ```bash
+  adb shell device_config get activity_manager max_phantom_processes
+  ```
+
+  It prints `2147483647`.
+
+### After the phone restarts
+
+Nothing starts by itself. Open Termux, take the wake lock again and run the script:
+
+```bash
+termux-wake-lock
+sh ~/start-nouride.sh
+```
+
+[Termux:Boot](https://github.com/termux/termux-boot) can run a script when the phone starts. This guide
+has not tested it yet.
+
+## Day to day
+
+Nouride's commands run from Termux, through Debian:
+
+```bash
+proot-distro login debian -- nouride doctor
+proot-distro login debian -- nouride gateway
+```
+
+Run by Debian's root, `nouride` runs as the `nouride` account, as on any Linux install.
+
+When a change needs a restart, there is no service manager to do it, so restart it by hand, in Termux:
+
+```bash
+pkill -f '^\./nouride start'
+sh ~/start-nouride.sh
+```
+
+Keep the `^`. Without it, `pkill -f 'nouride start'` also matches any shell whose command line contains
+those words, an SSH session that typed it included.
+
+Typing on the phone's keyboard gets old. To work from a computer instead, in Termux:
+`pkg install openssh`, put your computer's public key in `~/.ssh/authorized_keys`, and run `sshd`.
+It listens on port 8022:
+
+```bash
+ssh -p 8022 <the phone's address>
+```
+
+## Removing it
+
+Stop the daemon with the `pkill` line above, then delete Debian in Termux:
+
+```bash
+proot-distro remove debian
+```
+
+That deletes Nouride and all of its data with it: agents, conversations, secrets, the gateway's
+accounts. Uninstalling Termux deletes everything as well.

@@ -1,0 +1,244 @@
+---
+title: Menyalakan pertama kali
+description: Menemukan password sekali pakai, membuka dashboard, dan menjalani tiga langkah singkat yang menyelesaikan setup.
+---
+
+import { Steps, Aside, Tabs, TabItem, LinkCard } from '@astrojs/starlight/components';
+
+**Daemon-nya menyala tanpa konfigurasi apa pun.** Gak ada file config yang harus ditulis sebelum ia
+start. Endpoint model, kredensialnya, dan agent pertama kamu semuanya diatur lewat browser.
+
+<Steps>
+
+1. ### Cari password pertama
+
+   Dibuat saat start pertama, dicetak **satu kali**, dan gak pernah disimpan sebagai teks biasa. Di
+   mana mencarinya tergantung cara kamu memasang.
+
+   <Tabs syncKey="platform">
+     <TabItem label="Linux" icon="linux">
+       ```bash
+       sudo journalctl -u nouride | grep -A12 'Nouride is ready'
+       ```
+     </TabItem>
+     <TabItem label="macOS" icon="apple">
+       ```bash
+       grep -A12 'Nouride is ready' ~/nouride/.nouride/data/nouride.log
+       ```
+     </TabItem>
+     <TabItem label="Docker" icon="seti:docker">
+       ```bash
+       docker compose logs nouride | grep -A12 'Nouride is ready'
+       ```
+     </TabItem>
+   </Tabs>
+
+   Hasilnya kira-kira begini:
+
+   ```
+     Nouride is ready. Open the dashboard to finish setting it up:
+
+       http://localhost:@@PORT@@/dashboard/
+
+       username  admin
+       password  <dibuat otomatis>
+   ```
+
+   Daemon yang bind ke semua interface (`--host 0.0.0.0`, atau instalasi Docker mana pun) juga
+   menampilkan alamat jaringannya di antara keduanya, itu sebabnya perintah di atas membaca dua belas
+   baris.
+
+   <Aside type="caution" title="Password cuma ditampilkan sekali">
+   Gak ada yang menyimpannya sebagai teks biasa. Untuk memulihkan password yang hilang, hentikan
+   daemon, jalankan `sudo nouride users reset` (perintah ini menghapus semua akun, setelah mengambil
+   snapshot database), lalu start lagi: admin baru dibuat dan password-nya dicetak. Percakapan,
+   secret dan agent gak tersentuh; semua akun yang terhapus, jadi di instalasi dengan beberapa akun,
+   masing-masing dibuat ulang. Di Mac, hentikan dengan
+   `launchctl unload ~/Library/LaunchAgents/tech.nouverse.nouride.plist`, jalankan `nouride users reset`
+   (tanpa `sudo`), lalu start lagi dengan `launchctl load -w` pada file yang sama. Dengan Docker, hentikan container daemon dan jalankan perintahnya di
+   container sekali pakai: `docker compose run --rm nouride nouride users reset`.
+
+   Mau menentukan sendiri? Set keduanya di `.env` *sebelum* start pertama: untuk installer, buat
+   `@@INSTALL_DIR@@/.env` (`~/nouride/.env` di Mac) sebelum kamu menjalankannya; untuk Docker, taruh di sebelah file compose
+   kamu. Keduanya cuma dibaca selama tabel user masih kosong, jadi gak bisa dipakai untuk mereset
+   password belakangan, dan konfigurasi yang setengah diabaikan, bukan diterapkan setengah.
+
+   ```bash
+   INITIAL_ADMIN_USERNAME=admin
+   INITIAL_ADMIN_PASSWORD=<sesuatu yang panjang>
+   ```
+   </Aside>
+
+2. ### Buka dashboard
+
+   ```
+   @@DASHBOARD_URL@@
+   ```
+
+   Di Mac tempat kamu memasangnya, buka saja di sana. Di server yang bind ke loopback, yaitu
+   default-nya, buat tunnel dari komputer kamu sendiri:
+
+   ```bash
+   ssh -L @@PORT@@:127.0.0.1:@@PORT@@ user@server-kamu
+   ```
+
+   Lalu buka URL yang sama secara lokal. Gak ada yang terbuka ke jaringan karena ini.
+
+   Layar pertama menggantikan login yang dibuat otomatis: pilih username dan password kamu sendiri,
+   dan kalau mau, nama kamu, yang nantinya dipakai agent untuk memanggil kamu. Layar ini **gak**
+   menanyakan password saat ini: kamu baru mengetiknya satu layar sebelumnya untuk masuk, dan password
+   itu diberikan ke kamu, bukan kamu yang memilih. Setiap perubahan sesudahnya butuh password saat ini.
+
+   ![Login pertama, menggantikan login yang dibuat otomatis](/media/setup-password.png)
+
+3. ### Arahkan ke sebuah model
+
+   Wizard menanyakan wire format (**OpenAI-compatible** atau **Anthropic**), nama profil, base URL,
+   dan API key.
+
+   ![Wizard menanyakan endpoint model](/media/setup-wizard-provider.png)
+
+   | | |
+   |---|---|
+   | **Anthropic** | wire format `anthropic`, `https://api.anthropic.com/v1` |
+   | **OpenAI** | wire format `openai`, `https://api.openai.com/v1` |
+   | **OpenRouter** | wire format `openai`, `https://openrouter.ai/api/v1` |
+   | **Ollama** | wire format `openai`, `http://<alamatnya>:11434/v1` |
+   | **Nougate** | format mana pun, [lihat halaman Nougate](/id/docs/providers/nougate/). Build Router menawarkan gateway bawaannya lewat satu tombol |
+
+   **Tombol simpan baru aktif setelah Test Connection lolos**, jadi salah ketik gagal di sini, bukan
+   di pesan pertama kamu. Kredensial yang gak jalan adalah cara paling umum instalasi baru gagal, dan
+   kalau gak diuji, ia baru ketahuan lama setelah setup bilang sukses.
+
+   Yang ditulis ke `config.toml` adalah *nama* kredensialnya, bukan nilainya. Nilainya masuk ke
+   penyimpanan secret, `data/secrets.enc`, terenkripsi, dengan mode `0600`. Itulah sebabnya file config
+   aman untuk di-commit, dicetak, dan ditampilkan di UI.
+
+4. ### Buat agent pertama kamu
+
+   Nama tampilan, id, model, headline, dan kepribadian, gak lebih. Agent pertama adalah **Pilot**,
+   bernama NouridePilot sampai kamu menggantinya: bisa memakai semua tool dan bertanya dulu ke kamu
+   sebelum melakukan apa pun yang berisiko, dan headline serta kepribadiannya sudah terisi dengan milik
+   Pilot. Agent yang kamu tambahkan nanti bisa dimulai dari preset yang lebih sempit (Researcher,
+   Assistant, Developer, atau Custom untuk memilih tool sendiri).
+
+   ![Wizard menanyakan agent pertama](/media/setup-wizard-agent.png)
+
+   Id adalah nama direktori sekaligus cara agent dipanggil, huruf kecil, tanpa spasi. Daftar model
+   diambil dari yang dilaporkan endpoint kamu. Kepribadian menjadi isi `SOUL.md`-nya, dan seluruh
+   file itu bisa kamu tulis ulang nanti dari tab **Files** milik agent itu.
+
+5. ### Biarkan agent mengenal kamu
+
+   Langkah terakhir menanyakan cara memori bekerja, dengan semua sakelar menyala secara default:
+
+   - **Remember conversations**: sekali semalam, pada jam yang kamu pilih, tiap chat menjadi catatan
+     pendek.
+   - **Learn about you**: apa yang dipelajari proses malam tentang kamu (preferensi, rencana, tanggal)
+     langsung disimpan, tanpa approval.
+   - **Learn shared knowledge**: hal yang perlu diketahui semua agent diusulkan, dan kamu menyetujui
+     satu per satu.
+
+   ![Langkah terakhir wizard: mengingat percakapan, belajar tentang kamu, dan pengetahuan bersama](/media/setup-wizard-memory.png)
+
+   **Skip for now** mematikan ketiganya. Biayanya satu panggilan model per percakapan, sekali semalam;
+   sisanya, termasuk semantic search, ada di **Knowledge & Memory** di dashboard. Cara kerjanya ada di halaman
+   [Memori](/id/docs/architecture/memory/).
+
+6. ### Ajak ngobrol
+
+   Dashboard punya chat. Terminal kamu juga, dan itu gak butuh bot token:
+
+   ```bash
+   nouride chat
+   ```
+
+   Pesan di sana lewat gateway in-process yang sungguhan, jadi routing, antrean, tool loop dan
+   penyimpanan sesi berperilaku persis seperti nanti di Telegram.
+
+   ![Sesi chat di terminal](/media/cli-chat.png)
+
+</Steps>
+
+---
+
+## Kalau hanya bisa lewat SSH
+
+Kalau mesinnya cuma bisa kamu jangkau lewat terminal, `nouride setup` mengurus provider dan agent
+pertama lewat kode yang sama dengan wizard, bukan implementasi kedua.
+
+```bash
+# Sebagai service account, di direktori instalasi. `su -s /bin/sh` karena akun itu memakai
+# `nologin` sebagai shell-nya, yang bikin `sudo -u` tersandung di sebagian distribusi.
+sudo su -s /bin/sh nouride -c 'cd @@INSTALL_DIR@@ && ./nouride setup'
+```
+
+Di Mac, sebagai diri kamu sendiri: `cd ~/nouride && ./nouride setup`. Di Docker, `docker compose exec nouride ./nouride setup`.
+
+Daemon-nya sudah jalan dan baru membaca apa yang ditulis `setup` setelah di-restart:
+`sudo systemctl restart nouride`, `launchctl kickstart -k gui/$(id -u)/tech.nouverse.nouride` di Mac, atau
+`docker compose restart nouride`. Memori tetap mati sampai
+kamu menyalakannya di **Knowledge & Memory** di dashboard.
+
+Secara default ia interaktif. Untuk script provisioning, berikan semuanya dan lewati prompt:
+
+```bash
+./nouride setup --yes \
+  --provider anthropic \
+  --api-key-from-env ANTHROPIC_API_KEY \
+  --agent nouva --name Nouva \
+  --model claude-sonnet-4-20250514 \
+  --prompt "Kamu asisten yang membantu."
+```
+
+<Aside type="caution" title="Sengaja gak ada flag --api-key">
+Key di baris perintah masuk ke riwayat shell kamu, ke output `ps` selama prosesnya jalan, dan ke log
+CI mana pun yang menampilkan perintahnya. `--api-key-from-env` menyebut nama variabel; prompt
+interaktif membaca nilainya tanpa menampilkannya.
+</Aside>
+
+`setup` menolak jalan di instalasi yang sudah punya `config.toml`. Kalau dijalankan dua kali, ia bakal
+kelihatan gak melakukan apa-apa padahal sudah mengganti orchestrator dan mengarahkan ulang provider
+kamu.
+
+| Flag | Yang diatur |
+|---|---|
+| `--yes` | Gak pernah bertanya. Yang gak diberikan memakai default-nya; key yang gak ada bikin gagal |
+| `--provider` | `anthropic` (default) atau `openai`: wire format-nya |
+| `--base-url` | Endpoint. Default ke yang umum untuk wire format itu |
+| `--api-key-from-env` | Nama environment variable yang memuat key |
+| `--agent` | Id agent. Default `nouridepilot` |
+| `--name` | Nama tampilan. `NouridePilot` untuk id default, selain itu id-nya |
+| `--model` | Model yang dipakai. Default ke model pertama yang didaftarkan endpoint |
+| `--prompt` | Persona, ditulis ke `SOUL.md`. Default: milik Pilot |
+| `--config` | Path tempat config ditulis |
+
+---
+
+## Sudah jalan belum?
+
+```bash
+curl -fsS @@HEALTH_URL@@
+```
+
+```json
+{"status":"ok","edition":"basic","appliance":false,"uptime":147,"version":"<version>","agents":6,"install":"a1b2c3d4e5f6","gateways":{"web:dashboard":"connected","telegram:nouva":"connected"}}
+```
+
+`status` menjadi `degraded`, dan endpoint-nya menjawab **503**, ketika sebuah gateway mati, ketika
+sebuah provider gagal tiga kali berturut-turut, atau ketika WAL SQLite melewati ambangnya. `issues`
+memuat apa yang salah; gateway yang cuma terputus atau sedang reconnect muncul di sana tanpa membuat
+pemeriksaan gagal. Selama daemon berhenti, `status` menjadi `shutting_down`, juga dengan 503.
+`install` adalah hash direktori data, jadi CLI bisa tahu ia sedang bicara dengan daemon yang benar
+ketika dua instalasi di satu mesin berebut port.
+
+**Periksa ini, bukan cuma status service.** `systemctl start` (atau `launchctl load` di Mac) yang
+mengembalikan 0 berarti prosesnya di-spawn, bukan berarti ia sudah melayani, daemon yang menolak
+config-nya keluar *setelah* supervisor-nya melaporkan sukses.
+
+---
+
+## Selanjutnya
+
+<LinkCard title="Sambungkan aplikasi chat" description="Telegram, Discord dan WhatsApp, satu identitas bot per agent." href="/id/docs/start/connect-chat/" />
+<LinkCard title="Panduan pemakaian" description="Approval, skill, penjadwalan, dan semua yang bakal kamu lakukan di hari kedua." href="/id/docs/manual/overview/" />

@@ -1,0 +1,332 @@
+{
+  "kinds": {
+    "audit": {
+      "args": {
+        "type": "object"
+      },
+      "callId": {
+        "identity": true,
+        "optional": true,
+        "type": "string"
+      },
+      "error": {
+        "optional": true,
+        "type": "boolean"
+      },
+      "ms": {
+        "type": "number"
+      },
+      "secrets": {
+        "items": "string",
+        "optional": true,
+        "type": "array"
+      },
+      "threw": {
+        "optional": true,
+        "type": "string"
+      },
+      "tool": {
+        "identity": true,
+        "type": "string"
+      }
+    },
+    "compact": {
+      "dropped": {
+        "optional": true,
+        "type": "number"
+      },
+      "phase": {
+        "identity": true,
+        "type": "string",
+        "values": [
+          "start",
+          "done",
+          "failed",
+          "trimmed",
+          "pruned"
+        ]
+      },
+      "pruned": {
+        "optional": true,
+        "type": "number"
+      },
+      "step": {
+        "identity": true,
+        "type": "number"
+      },
+      "text": {
+        "type": "string"
+      },
+      "tokens": {
+        "optional": true,
+        "type": "number"
+      },
+      "turns": {
+        "optional": true,
+        "type": "number"
+      }
+    },
+    "note": {
+      "capped": {
+        "optional": true,
+        "type": "boolean"
+      },
+      "step": {
+        "identity": true,
+        "type": "number"
+      },
+      "text": {
+        "type": "string"
+      }
+    },
+    "reasoning": {
+      "step": {
+        "identity": true,
+        "type": "number"
+      },
+      "text": {
+        "type": "string"
+      }
+    },
+    "reply": {
+      "from": {
+        "identity": true,
+        "type": "number"
+      },
+      "text": {
+        "type": "string"
+      }
+    },
+    "retry": {
+      "attempt": {
+        "optional": true,
+        "type": "number"
+      },
+      "delayMs": {
+        "optional": true,
+        "type": "number"
+      },
+      "dropped": {
+        "optional": true,
+        "type": "number"
+      },
+      "failure": {
+        "optional": true,
+        "type": "string"
+      },
+      "maxAttempts": {
+        "optional": true,
+        "type": "number"
+      },
+      "reason": {
+        "identity": true,
+        "type": "string",
+        "values": [
+          "provider",
+          "context_overflow",
+          "audio_refused"
+        ]
+      },
+      "status": {
+        "optional": true,
+        "type": "number"
+      },
+      "step": {
+        "identity": true,
+        "type": "number"
+      },
+      "text": {
+        "type": "string"
+      }
+    },
+    "steer": {
+      "step": {
+        "identity": true,
+        "type": "number"
+      },
+      "text": {
+        "type": "string"
+      }
+    },
+    "steer_reply": {
+      "step": {
+        "identity": true,
+        "type": "number"
+      },
+      "text": {
+        "type": "string"
+      }
+    },
+    "tool": {
+      "callId": {
+        "identity": true,
+        "type": "string"
+      },
+      "name": {
+        "identity": true,
+        "type": "string"
+      },
+      "step": {
+        "identity": true,
+        "type": "number"
+      },
+      "text": {
+        "type": "string"
+      }
+    },
+    "tool_done": {
+      "callId": {
+        "identity": true,
+        "type": "string"
+      },
+      "error": {
+        "type": "boolean"
+      },
+      "name": {
+        "identity": true,
+        "type": "string"
+      },
+      "step": {
+        "identity": true,
+        "type": "number"
+      },
+      "text": {
+        "type": "string"
+      }
+    },
+    "turn": {
+      "error": {
+        "optional": true,
+        "type": "string"
+      },
+      "inputTokens": {
+        "optional": true,
+        "type": "number"
+      },
+      "messageId": {
+        "optional": true,
+        "type": "string"
+      },
+      "model": {
+        "optional": true,
+        "type": "string"
+      },
+      "outputTokens": {
+        "optional": true,
+        "type": "number"
+      },
+      "phase": {
+        "identity": true,
+        "type": "string",
+        "values": [
+          "start",
+          "note",
+          "end"
+        ]
+      },
+      "prompt": {
+        "optional": true,
+        "type": "string"
+      },
+      "reply": {
+        "optional": true,
+        "type": "string"
+      },
+      "replyChars": {
+        "optional": true,
+        "type": "number"
+      },
+      "senderId": {
+        "optional": true,
+        "type": "string"
+      },
+      "sessionId": {
+        "optional": true,
+        "type": "string"
+      },
+      "status": {
+        "identity": true,
+        "optional": true,
+        "type": "string",
+        "values": [
+          "done",
+          "failed",
+          "cancelled",
+          "interrupted"
+        ]
+      },
+      "toolCalls": {
+        "optional": true,
+        "type": "number"
+      }
+    },
+    "unstep": {
+      "steps": {
+        "items": "number",
+        "type": "array"
+      }
+    },
+    "usage": {
+      "attempts": {
+        "optional": true,
+        "type": "number"
+      },
+      "cacheCreationInputTokens": {
+        "optional": true,
+        "type": "number"
+      },
+      "cachedInputTokens": {
+        "optional": true,
+        "type": "number"
+      },
+      "estimated": {
+        "optional": true,
+        "type": "boolean"
+      },
+      "inputTokens": {
+        "type": "number"
+      },
+      "latencyMs": {
+        "optional": true,
+        "type": "number"
+      },
+      "model": {
+        "type": "string"
+      },
+      "outputTokens": {
+        "type": "number"
+      },
+      "provider": {
+        "type": "string"
+      },
+      "upstream": {
+        "optional": true,
+        "type": "object"
+      },
+      "usd": {
+        "optional": true,
+        "type": "number"
+      }
+    },
+    "waiting": {
+      "callId": {
+        "identity": true,
+        "optional": true,
+        "type": "string"
+      },
+      "name": {
+        "identity": true,
+        "optional": true,
+        "type": "string"
+      },
+      "step": {
+        "identity": true,
+        "type": "number"
+      },
+      "text": {
+        "type": "string"
+      }
+    }
+  },
+  "version": "1.0"
+}

@@ -1,0 +1,88 @@
+import { useId, type ImgHTMLAttributes } from "react";
+/**
+ * The chibi pose, from `packages/shared/assets` — one copy for the whole workspace.
+ *
+ * It was `nouride.png`, which is the full brand lockup: the cat on a motorcycle inside an emblem,
+ * with "NOURIDE — SERIOUS AGENTS. TINY RUNTIME." set beneath it. Every use of this component in the
+ * dashboard is between `size-6` and `size-14` — 24 to 56 pixels — and a wordmark at 24 pixels is
+ * grey mush. The chibi is a portrait: head, shades, a raised paw, and nothing that has to be read.
+ *
+ * The lockup is still the right asset where it is rendered large, which is the docs site's header
+ * and hero. It is not an avatar.
+ *
+ * A 128 px WebP of `nouride-chibi.png`, 6 KB. The source is 1254 px and 922 KB, and it was what this
+ * imported: 43% of a cold dashboard load for an image drawn at most at `size-14`, 56 px, which 128
+ * covers at a 2x screen. The source stays for the docs site's social banner (`generate-og.ts`).
+ * Made with `magick nouride-chibi.png -filter Lanczos -resize 128x128 -strip chibi-128.png` and
+ * `cwebp -q 90 -alpha_q 100 -m 6 chibi-128.png -o nouride-chibi-128.webp`.
+ */
+import chibi from "@brand/nouride-chibi-128.webp";
+
+/**
+ * Nouride Rider Cat — the mascot, as an avatar.
+ *
+ * Stands for the app — in the sidebar and the mobile header, on the sign-in, setup and welcome pages, in a
+ * chat with nothing in it yet, and while the dashboard reconnects. Renders the image
+ * directly as an `<img>` rather than an SVG sprite, because the art is raster. Its size in pixels is
+ * stated so the layout does not move when it arrives; the class sets the size it is drawn at.
+ */
+export function NovaAppIcon({ className = "size-8", ...props }: ImgHTMLAttributes<HTMLImageElement>) {
+  return (
+    <img
+      src={chibi}
+      alt="Nouride"
+      width={128}
+      height={128}
+      decoding="async"
+      className={className}
+      draggable={false}
+      {...props}
+    />
+  );
+}
+
+/**
+ * The Nougate mark — the LLM gateway a Router build carries, on its LLM Gateway page and in setup.
+ *
+ * A gateway seen head-on: two arches drawn with the Nouverse "n" stroke, one inside the other, and
+ * the nou mark's planet passing through. The same picture as nougate's own `favicon.svg` and
+ * `internals/nougate/apps/frontend/src/components/brand/NougateMark.tsx`, which explain why it has
+ * exactly these three elements; change one, change all three.
+ *
+ * Carries its own background, like the cat beside it, so it reads the same on both themes. The
+ * gradient id is per instance: two marks on one page would otherwise both paint from the first.
+ */
+export function NougateMark({ className = "size-8" }: { className?: string }) {
+  const gradient = useId();
+  return (
+    <svg viewBox="0 0 48 48" className={className} role="img" aria-label="Nougate">
+      <defs>
+        <linearGradient id={gradient} x1="6" y1="2" x2="42" y2="46" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#2EE6B0" />
+          <stop offset=".5" stopColor="#0BAF90" />
+          <stop offset="1" stopColor="#4338CA" />
+        </linearGradient>
+      </defs>
+      <rect width="48" height="48" rx="11.5" fill={`url(#${gradient})`} />
+      <rect x=".75" y=".75" width="46.5" height="46.5" rx="10.75" fill="none" stroke="#fff" strokeOpacity=".18" strokeWidth="1.5" />
+      <path d="M11 36.5V22a13 13 0 0 1 26 0v14.5" fill="none" stroke="#fff" strokeOpacity=".42" strokeWidth="3.2" strokeLinecap="round" />
+      <path d="M17 36.5V24.5a7 7 0 0 1 14 0v12" fill="none" stroke="#fff" strokeWidth="4.2" strokeLinecap="round" />
+      <circle cx="24" cy="30.8" r="3.2" fill="#fff" />
+    </svg>
+  );
+}
+
+/**
+ * The same mark as a line glyph in the current colour, for a row among Lucide icons — the sidebar,
+ * an empty state. Drawn larger in its box than the tile's glyph, because there is no tile around it,
+ * and taking `size` like a Lucide icon so it drops into the same slots.
+ */
+export function NougateGlyph({ size = 24, className }: { size?: number; className?: string }) {
+  return (
+    <svg viewBox="0 0 48 48" width={size} height={size} className={className} fill="none" stroke="currentColor" strokeLinecap="round" aria-hidden="true">
+      <path d="M5 42.5V23a19 19 0 0 1 38 0v19.5" strokeOpacity=".45" strokeWidth="4" />
+      <path d="M13.5 42.5V25.5a10.5 10.5 0 0 1 21 0v17" strokeWidth="5.2" />
+      <circle cx="24" cy="34" r="4.2" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}

@@ -1,0 +1,1442 @@
+# Cut a release: verify once, then publish seven artefacts.
+#
+# Triggered by a `v*` tag. Everything comes from the same commit and the same
+# verification, because the install shapes are documented as equals in
+# docs/DEPLOY.md and a release where only one of them was tested is a release
+# that lies about the others.
+#
+# ## What comes out
+#
+# Three editions — scripts/build/ makes them, docs/ARCHITECTURE.md §10 — and NOT as a cross product: each
+# row below is something somebody receives, and the combinations nobody
+# receives are not built. Pro is one edition for every Nouride Box (the tarball) and
+# pod (the image), and carries the LLM gateway, off unless `[nougate] in_process = true`.
+# WhatsApp is in every one of them, in-process, so it is not a column. (Device, Device Pro
+# and Cloud were the names until 2026-09-30; Pro Router became Pro in 0.7.20.)
+#
+# | edition | flag | nougate | multi-user, sign-in, pairing | tarball | image | public |
+# |---|---|---|---|---|---|---|
+# | free | *(none)* | absent | absent | yes | `nouride` (built in nouverse/nouride) | yes |
+# | Router | `--router` | bundled | absent | yes | `nouride-router` (built in nouverse/nouride) | yes |
+# | Pro | `--pro` | bundled | bundled | Linux | `nouride-pro` | no |
+#
+# This table was the old naming — `-`, `nougate`, `wa`, `wa-nougate` — for a
+# while after the editions were renamed on 2026-09-15, and the asset check at
+# the bottom was still grepping for `nouride-nougate-*`. A name the builder has
+# never produced, so every tagged release ended by blaming `SUBMODULE_TOKEN`
+# while the job that needs it had succeeded. A test now pins that pattern to
+# `artifactName` in scripts/targets.ts.
+#
+# The two private rows carry plugins that are not published — multi-user,
+# Nouverse sign-in and Box pairing. Pro's image goes to a separate GHCR
+# package that stays private, and their tarballs are never attached to a release
+# on a public repository. `guard-visibility` below reads the repository's
+# visibility and every upload heeds it, rather than trusting anyone to remember
+# that — so on a public repository they are built and kept nowhere, and no box is
+# offered them.
+#
+# ## What this needs that `GITHUB_TOKEN` cannot give
+#
+# `SUBMODULE_TOKEN` — a token that can read `nouverse/nougate` and
+# `nouverse/nouride-pro`, private repositories and therefore invisible to
+# `GITHUB_TOKEN`. Router and both Pro editions build from them, and
+# `verify-private` tests the Pro code with them before either Pro edition is
+# built. A tag builds every edition, so on a tag a missing secret fails the run;
+# a dispatch drops the rows that need it and says so.
+# The WhatsApp bridge is part of this repository (`packages/wa-bridge`) and needs nothing.
+#
+# `RELEASES_REPO_TOKEN` — write access to `nouverse/nouride`, the public
+# mirror the free tarballs are published to. `GITHUB_TOKEN` cannot reach another
+# repository, so without this the public half of a release is not created.
+#
+# **Both are checked before anything is built**, in `guard-visibility`. Being set
+# is not the same as still working: a rotated PAT is set, non-empty, and answers
+# 401 — and when that happened it surfaced as two unrelated-looking failures
+# (a release that would not create, a submodule that would not clone) three
+# minutes apart, neither naming the cause. The preflight uses each token against
+# the thing it exists for and names the secret in the error.
+
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  # So the whole thing can be exercised before a real tag exists. Builds
+  # everything, publishes images under the branch name, attaches nothing.
+  workflow_dispatch:
+    inputs:
+      variants:
+        description: "Which to build: all, public, or private"
+        type: choice
+        default: public
+        options: [all, public, private]
+
+# Read-only by default; each job asks for what it writes. A step in one job — a third-party action, a package's
+# install script — cannot use a permission only another job holds.
+permissions:
+  contents: read
+
+
+# ── Runner ────────────────────────────────────────────────────────────────────
+# GitHub-hosted (`ubuntu-24.04`, not `ubuntu-latest`, which GitHub moves to Ubuntu 26 from 2026-10-19 —
+# a new image is a change to make on purpose, through a CI run first) unless the repository variable
+# `CI_RUNNER` says otherwise. To go
+# back to the self-hosted build runner without editing this file, set it (Settings → Secrets and
+# variables → Actions → Variables) to the JSON of the labels:
+#
+#   CI_RUNNER = ["self-hosted", "build-runner"]
+#
+# The self-hosted line each job used is kept, commented, beside its `runs-on`.
+
+# ── Error lines ───────────────────────────────────────────────────────────────
+# The runner prints a step's script at the head of the step's log, so an error spelled out in a script is in the
+# log of every run that reaches the step, green or not. v0.7.10's release passed all twelve jobs with six
+# `::error::` lines in its first, from the token and version checks below, and a real error is easy to miss among
+# those. So no step writes the command out: a step that can fail defines `error`, which builds it only when it is
+# said. `apps/engine/tests/contracts/release-log.test.ts` holds every step to that.
+jobs:
+  # ── The guard that makes the public/private split mechanical ────────────────
+  #
+  # The private tarballs must never become release assets on a public repository,
+  # and "remember not to" is not a control. This reads the repository's actual
+  # visibility and hands the answer to the jobs below, so the day the repo is
+  # flipped to public the release simply stops carrying them.
+  guard-visibility:
+    if: github.repository_owner == 'nouverse'
+    permissions:
+      contents: write # create the release
+      actions: read # whether CI already passed on the tagged commit
+    # runs-on: [self-hosted, build-runner]
+    runs-on: ${{ fromJSON(vars.CI_RUNNER || '"ubuntu-24.04"') }}
+    outputs:
+      public_repo: ${{ steps.check.outputs.public_repo }}
+      publish_private_assets: ${{ steps.check.outputs.publish_private_assets }}
+      binaries: ${{ steps.plan.outputs.binaries }}
+      images: ${{ steps.plan.outputs.images }}
+      private_variants: ${{ steps.plan.outputs.private_variants }}
+      public_only: ${{ steps.quiet.outputs.public_only }}
+      quiet: ${{ steps.quiet.outputs.quiet }}
+      lts: ${{ steps.quiet.outputs.lts }}
+      ci_green: ${{ steps.ci.outputs.ci_green }}
+      ci_private_green: ${{ steps.ci.outputs.ci_private_green }}
+    timeout-minutes: 10
+    steps:
+      # GitHub-hosted images ship `gh`; the self-hosted build runner does not. Fetched into this job's
+      # temp directory when missing — nothing is installed on the host.
+      - name: GitHub CLI
+        run: |
+          command -v gh >/dev/null && exit 0
+          # A pinned version, checked: "latest" downloaded and run whatever the release said, in jobs holding tokens.
+          v=2.102.0
+          curl -fsSL --max-time 120 -o "$RUNNER_TEMP/gh.tar.gz" "https://github.com/cli/cli/releases/download/v${v}/gh_${v}_linux_amd64.tar.gz"
+          echo "bb766f710eef8ede859c18578c72c327597cd4c8a85b06001b1f3843c6019386  $RUNNER_TEMP/gh.tar.gz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/gh.tar.gz" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/gh_${v}_linux_amd64/bin" >> "$GITHUB_PATH"
+      # Whether ci.yml already passed on this exact commit. A tag is cut from a commit that was just
+      # pushed to main and tested there; running the whole suite again was the release's longest job
+      # after the builds, for an answer already known. Anything else — a dispatch, a commit CI skipped
+      # — still runs `verify`.
+      #
+      # Each job by its own conclusion, `verify-private` passed rather than skipped: a green run that did not run it (a
+      # run before the job existed, or `main`'s, which skips what the release branch's run passed) proves nothing about
+      # the Pro code, and then `verify-private` below runs here instead.
+      - name: Did CI already pass on this commit
+        id: ci
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          passed=$(gh run list --repo "${GITHUB_REPOSITORY}" --workflow ci.yml --commit "${GITHUB_SHA}" --status success --json databaseId --jq '.[].databaseId' 2>/dev/null \
+            | while read -r run; do gh run view "${run}" --repo "${GITHUB_REPOSITORY}" --json jobs --jq '.jobs[] | select(.conclusion == "success") | .name' 2>/dev/null; done || true)
+          if printf '%s\n' "${passed}" | grep -qx verify; then
+            echo "ci_green=yes" >> "$GITHUB_OUTPUT"
+            echo "::notice::ci.yml already passed on ${GITHUB_SHA}; verify is skipped."
+          else
+            echo "ci_green=no" >> "$GITHUB_OUTPUT"
+          fi
+          if printf '%s\n' "${passed}" | grep -qx verify-private; then
+            echo "ci_private_green=yes" >> "$GITHUB_OUTPUT"
+            echo "::notice::ci.yml's verify-private already passed on ${GITHUB_SHA}; it is skipped here."
+          else
+            echo "ci_private_green=no" >> "$GITHUB_OUTPUT"
+          fi
+      # A quiet release: an annotated tag whose message contains `[quiet]`.
+      #
+      # Published, but offered to nobody who has not asked for it. The GitHub releases are marked
+      # pre-release and not latest — `nouride update` skips pre-releases (packages/update/src/release.ts)
+      # and install.sh follows `releases/latest` — and the images get their version tags but not
+      # `latest`. For a release that must reach the Box fleet, which updates through the Nouverse
+      # gate rather than GitHub, before the free editions hear of it. Undo with
+      # `gh release edit <tag> --prerelease=false --latest` on both repositories.
+      #
+      # Read through the API rather than from the checkout: whether `actions/checkout` fetched the tag
+      # object or only the commit it points at is not something this should depend on.
+      #
+      # The same message can say `[public-only]`: this tag builds no Pro edition, and no box is offered it. The one
+      # way to cut a release without them on purpose — written in git, beside the tag, where a repository variable
+      # is not (see the plan below).
+      - name: Is this a quiet release
+        id: quiet
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ref=$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${GITHUB_REF_NAME}" --jq '.object.type + " " + .object.sha')
+          message=""
+          if [ "${ref%% *}" = "tag" ]; then
+            message=$(gh api "repos/${GITHUB_REPOSITORY}/git/tags/${ref#* }" --jq .message)
+          fi
+          if printf '%s' "${message}" | grep -q '\[quiet\]'; then
+            echo "quiet=yes" >> "$GITHUB_OUTPUT"
+            echo "::notice::${GITHUB_REF_NAME} is a quiet release: pre-release, not latest, no :latest image."
+          else
+            echo "quiet=no" >> "$GITHUB_OUTPUT"
+          fi
+          if printf '%s' "${message}" | grep -q '\[public-only\]'; then
+            echo "public_only=yes" >> "$GITHUB_OUTPUT"
+            echo "::notice::${GITHUB_REF_NAME} says [public-only]: no Pro edition is built, and no box is offered it."
+          else
+            echo "public_only=no" >> "$GITHUB_OUTPUT"
+          fi
+          # A patch to a long-term line (0.8.18, PLAN §3.3): published, never a pre-release, and not latest (not GitHub's,
+          # not the images'), so a 1.0.x cut after 1.1.0 does not move a newer line's installs back. Its images get
+          # `<version>`, `<major>.<minor>` and `lts`. Quiet and long-term at once is two answers to whether it is
+          # offered, so it stops here.
+          if printf '%s' "${message}" | grep -q '\[lts\]'; then
+            if printf '%s' "${message}" | grep -q '\[quiet\]'; then
+              error() { printf '::%s::%s\n' error "$*"; }
+              error "${GITHUB_REF_NAME} says both [quiet] and [lts]: a long-term patch is offered to its line, a quiet release to nobody. Tag it again with one of them."
+              exit 1
+            fi
+            echo "lts=yes" >> "$GITHUB_OUTPUT"
+            echo "::notice::${GITHUB_REF_NAME} is a long-term patch: published, not latest, images tagged lts."
+          else
+            echo "lts=no" >> "$GITHUB_OUTPUT"
+          fi
+
+      # The matrices are computed here rather than filtered with a job-level
+      # `if`, because `matrix` is not a context an `if` at that level can read —
+      # a filter written there is silently always-true. So the selection happens
+      # once, in one place, and the jobs below consume what it decided.
+      - id: plan
+        env:
+          # A tag builds every edition. The Pro ones are what the box fleet updates from, and this default used
+          # to be `public` with `RELEASE_VARIANTS=all` set by hand: while that variable was unset, every tag from
+          # 0.6.x to 0.7.1 built no Pro edition, no box was offered anything, and each run stayed green. A
+          # variable outside version control must not be what keeps the fleet updating — so it is only an
+          # override now, `[public-only]` in the tag message is the way to leave them out on purpose, and a tag
+          # that plans none fails its audit (`release` below). A dispatch builds what it is asked for, public
+          # unless told otherwise.
+          WANT: ${{ github.event_name == 'workflow_dispatch' && inputs.variants || steps.quiet.outputs.public_only == 'yes' && 'public' || vars.RELEASE_VARIANTS || 'all' }}
+          # Whether the private submodule is reachable at all. The secret's VALUE is
+          # never read here — only whether it is set — so nothing sensitive enters
+          # the planner or its log.
+          HAS_NOUGATE_TOKEN: ${{ secrets.SUBMODULE_TOKEN != '' && 'yes' || 'no' }}
+          IS_TAG: ${{ startsWith(github.ref, 'refs/tags/v') && 'yes' || 'no' }}
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os, sys
+
+          # Seven artefacts, not a cross product. Each row is a thing somebody
+          # receives — a free download, a Box tarball, a Pro container — and
+          # the combinations nobody receives are not built.
+          #
+          # `router` is the second public row, and the only one that is public
+          # *and* needs a private submodule: it is the free build plus the LLM
+          # gateway, and nothing else. Its nougate source stays private; only the
+          # compiled bundle ships.
+          #
+          # The last field is the **private submodules** that variant needs, space
+          # separated, and it used to be a bare "needs nougate" boolean. Two more
+          # plugins moved out into private repositories of their own when this
+          # repository was prepared to go public, and a boolean could no longer say
+          # which. `wa-bridge` is not here: it is part of this repository.
+          #
+          # variant, build flag or None, image package or None, edition arg, public, private submodules, targets
+          #
+          # `pro` produces both: the tarball for a Box, the image for a pod. It carries the LLM gateway, off unless
+          # `[nougate] in_process = true` — Pro Router was the same build with it, and became Pro in 0.7.20 (the
+          # owner, 2026-10-19: one Pro for every Box). Its targets are every Linux one and macOS (0.8.3 Apple Silicon, 0.8.4
+          # Intel): a Box and a pod are Linux, and a Pro server licensed from Nouverse may be a Mac — a buyer's was Intel.
+          # The public editions stay Apple Silicon only on a Mac.
+          #
+          # The public rows build their tarballs here, where the source and its private maps are; their images are
+          # built from a signed kit in nouverse/nouride (made by `binaries`), on GitHub's free runners, natively
+          # per architecture — the images were most of a release's time on the one build runner, under emulation.
+          # Two private submodules: `internals/pro` (build-pro, multi-user, oauth, appliance
+          # and the internal docs, one repository) and `internals/nougate`. Which features an
+          # edition carries is the build's decision (`scripts/build/edition.ts`); this only
+          # decides what is checked out, and the public rows check out neither.
+          PRO = "internals/pro"
+          NOUGATE = "internals/nougate"
+          PRO_TARGETS = "linux-x64,linux-arm64,linux-x64-musl,linux-arm64-musl,darwin-arm64,darwin-x64"
+          ROWS = [
+              ("",       "",         "nouride",        "basic",  False, "",                 "all"),
+              ("router", "--router", "nouride-router", "router", False, NOUGATE,            "all"),
+              ("pro",    "--pro",    "nouride-pro",    "pro",    True,  f"{PRO} {NOUGATE}", PRO_TARGETS),
+          ]
+          want = os.environ["WANT"]
+          keep = [r for r in ROWS if want == "all" or (want == "public") != r[4]]
+
+          # Without a token for the private repositories, three of the four cannot be
+          # built. What to do about that depends on why we are here:
+          #
+          #   a tag  — fail. A release that quietly ships half of what it advertises is
+          #            worse than one that stops and says which half is missing.
+          #   a dispatch — drop them and warn. This is the run somebody uses to check the
+          #            pipeline works, and the two that CAN build are worth checking.
+          if os.environ.get("HAS_NOUGATE_TOKEN") != "yes" and os.environ.get("IS_TAG") != "yes":
+              # `r[5]`: the submodule paths — a row is seven long, and indexing past them was an IndexError on the
+              # one path this exists for, a dispatch run with no submodule token, which nobody watches closely.
+              dropped = [r[0] or "default" for r in keep if r[5]]
+              keep = [r for r in keep if not r[5]]
+              if dropped:
+                  print(
+                      "::warning::SUBMODULE_TOKEN is not set, so these variants are skipped: "
+                      + ", ".join(dropped)
+                      + ". They need read access to the private nouverse/nougate, "
+                      "and nouverse/nouride-pro "
+                      "repositories. A tagged release does NOT skip them — it fails.",
+                      file=sys.stderr,
+                  )
+
+          binaries = [
+              {
+                  "variant": v,
+                  "flags": f,
+                  "private": g,
+                  "submodules": n,
+                  "name": v or "default",
+                  # Which entry point. The public one refuses `--pro` and the private one refuses `--router`, so the
+                  # wrong pairing fails loudly at the flag check rather than building the wrong thing.
+                  "script": "build:pro" if g else "build:binary",
+                  "targets": t,
+                  # A public edition with an image also makes that image's kit, in the same job: the same checkout,
+                  # install and dashboard build, which a job of its own did again (0.7.21). Empty for Pro.
+                  "kit": e if p is not None and not g else "",
+              }
+              for v, f, p, e, g, n, t in keep
+              if f is not None
+          ]
+          # The private image, built here. The public ones are built in nouverse/nouride from a kit.
+          images = [
+              {
+                  "variant": v,
+                  "package": p,
+                  "edition": e,
+                  "private": g,
+                  "submodules": n,
+                  # Stated here because `docker/metadata-action` writes its own
+                  # `org.opencontainers.image.licenses` and `build-push-action`'s
+                  # `labels:` input OVERRIDES whatever the Dockerfile set. It
+                  # derives the value from the repository's declared licence,
+                  # which GitHub reports as null for a LicenseRef — so v0.1.0
+                  # shipped an image labelled `NOASSERTION`.
+                  #
+                  # What LICENSE says, for every edition: the PolyForm Strict
+                  # License 1.0.0, its SPDX id as in package.json. The public
+                  # images once carried a placeholder,
+                  # LicenseRef-Nouride, that no file defined. An image label is a
+                  # claim somebody reads with `docker inspect`.
+                  "licence": "PolyForm-Strict-1.0.0",
+              }
+              for v, _f, p, e, g, n, _t in keep
+              if p is not None and g
+          ]
+          print("binaries=" + json.dumps(binaries))
+          print("images=" + json.dumps(images))
+          # The Pro variants this run builds, for the gate in front of them (`verify-private`) and for the
+          # audit that checks each reached the release. `r[0]` and `r[4]`: the variant and whether it is
+          # private — a row is seven long.
+          print("private_variants=" + " ".join(r[0] for r in keep if r[4]))
+          PY
+      - id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          visibility=$(gh repo view "${GITHUB_REPOSITORY}" --json visibility --jq .visibility)
+          echo "repository visibility: ${visibility}"
+          if [ "${visibility}" = "PUBLIC" ]; then
+            echo "public_repo=true" >> "$GITHUB_OUTPUT"
+            echo "publish_private_assets=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::This repository is PUBLIC, so the private tarballs (Pro) are NOT attached to its release, their image is not pushed, and no box is offered them: the sign job signs and publishes them for boxes from this repository's release, which cannot carry them."
+          else
+            echo "public_repo=false" >> "$GITHUB_OUTPUT"
+            echo "publish_private_assets=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ── Are the credentials this run needs still alive? ─────────────────────
+      #
+      # Every check above this asks whether a secret is *set*. None asked whether
+      # it still works, and the difference cost a release: a rotated PAT is set,
+      # non-empty, and answers 401. The run got far enough to create the release
+      # on the private repo, failed creating the public one, and the Pro Router
+      # build died three minutes later on a submodule clone — two separate
+      # failures, both the same dead token, neither named by the error.
+      #
+      # So each token is used here, against the exact thing it exists for, before
+      # anything is created or built. Ten seconds, and the message names the
+      # secret rather than the symptom.
+      #
+      # The VALUES never reach the log: `gh` reads them from the environment, and
+      # what is printed is the repository name and the verdict.
+      # Not gated on being a tag: a `workflow_dispatch` run builds the same
+      # binaries and clones the same submodule, so the check that saves it three
+      # minutes has to run there too. Only the releases half is tag-only, and
+      # that is decided inside rather than by skipping the step.
+      - name: Check the tokens this run depends on
+        env:
+          RELEASES_TOKEN: ${{ secrets.RELEASES_REPO_TOKEN }}
+          SUBMODULE_TOKEN: ${{ secrets.SUBMODULE_TOKEN }}
+          # Any variant that names a private submodule. `basic` names none, so a
+          # public-only run still needs no token — and this used to key on one
+          # edition's name, which stopped covering the set the moment another
+          # private edition needed something other than nougate.
+          # Both lists, so a variant that produced only an image could not be
+          # invisible in `binaries` alone.
+          WANT_PRIVATE: ${{ (contains(steps.plan.outputs.binaries, 'internals/') || contains(steps.plan.outputs.images, 'internals/')) && 'yes' || 'no' }}
+          IS_TAG: ${{ startsWith(github.ref, 'refs/tags/v') && 'yes' || 'no' }}
+        run: |
+          error() { printf '::%s::%s\n' error "$*"; }
+          fail=0
+
+          # Push access, not merely read: this token creates a release and uploads
+          # assets there, and a read-only token passes a `GET` and fails the upload.
+          if [ "${IS_TAG}" = "yes" ] && [ -n "${RELEASES_TOKEN}" ]; then
+            if perm=$(GH_TOKEN="${RELEASES_TOKEN}" gh api /repos/nouverse/nouride --jq .permissions.push 2>/dev/null); then
+              if [ "${perm}" = "true" ]; then
+                echo "RELEASES_REPO_TOKEN: ok — can write to nouverse/nouride"
+                # It pushes the public IMAGES too, since the token that pushes is what
+                # decides which repository owns the package. That needs `write:packages`
+                # on top of `repo`, and a token without it fails at the push three
+                # minutes from here rather than at this step.
+                #
+                # Classic PATs report their scopes in a header. A fine-grained token
+                # reports none, so an absent header is unknown rather than missing — said
+                # out loud instead of guessed.
+                scopes=$(GH_TOKEN="${RELEASES_TOKEN}" gh api -i /user 2>/dev/null | tr -d '\r' | sed -n 's/^[Xx]-[Oo][Aa]uth-[Ss]copes: //p')
+                if [ -z "${scopes}" ]; then
+                  echo "::notice::RELEASES_REPO_TOKEN reports no OAuth scopes (a fine-grained token). Confirm it has package write access to nouverse/nouride."
+                elif echo "${scopes}" | grep -q "write:packages"; then
+                  echo "RELEASES_REPO_TOKEN: ok — has write:packages, so the public images land under nouverse/nouride"
+                else
+                  error "RELEASES_REPO_TOKEN lacks write:packages, so the public images cannot be pushed under nouverse/nouride. Scopes seen: ${scopes}"
+                  fail=1
+                fi
+              else
+                error "RELEASES_REPO_TOKEN can read nouverse/nouride but not write to it. The public tarballs cannot be uploaded. Re-issue it with 'repo' scope."
+                fail=1
+              fi
+            else
+              error "RELEASES_REPO_TOKEN is set but rejected by GitHub — expired, revoked, or rotated. Public releases cannot be created. Replace the repository secret."
+              fail=1
+            fi
+          elif [ "${IS_TAG}" = "yes" ]; then
+            echo "::warning::RELEASES_REPO_TOKEN is not set; falling back to GITHUB_TOKEN, which cannot reach nouverse/nouride."
+          fi
+
+          # Only when this run is actually going to clone them. A release built
+          # from the public rows alone is a supported outcome, and failing here
+          # for a token it never uses would block it for nothing.
+          #
+          # Both, not the first one: one token reads every private submodule, so a
+          # grant that covers nougate and not nouride-pro fails three minutes later
+          # on a clone rather than here, which is the whole reason this step exists.
+          if [ "${WANT_PRIVATE}" = "yes" ] && [ -n "${SUBMODULE_TOKEN}" ]; then
+            for repo in nouverse/nougate nouverse/nouride-pro; do
+              if GH_TOKEN="${SUBMODULE_TOKEN}" gh api "/repos/${repo}" --jq .full_name >/dev/null 2>&1; then
+                echo "SUBMODULE_TOKEN: ok — can read ${repo}"
+              else
+                error "SUBMODULE_TOKEN is set but cannot read ${repo} — expired, revoked, rotated, or never granted that repository. The builds that need it would fail on the submodule clone. Replace the repository secret."
+                fail=1
+              fi
+            done
+          fi
+
+          [ "${fail}" = "0" ] || exit 1
+
+      # Full history, for the notes below. Nothing else in this job needs a
+      # checkout, which is why there was not one — and why the public release
+      # page said the same sentence on every version.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          fetch-depth: 0
+      # The self-hosted runner keeps its working copy between jobs, submodules and all: the last job's private checkout
+      # would be read as this commit's, built into a public image, or stop the next checkout over what its install changed.
+      - name: Start without the last job's submodules
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: if git config --get-regexp '^submodule\.' >/dev/null; then git submodule deinit --force --all; fi
+      # `content/` is a public repository of its own (nouverse/nouride-builtin-contents): the skills and agent packs every
+      # build ships and every test reads. Public, so no token; after the line above, so it is this commit's pin.
+      - name: Check out the built-in content
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: git submodule update --init content
+      # The public page is held to the private values `lint:public` holds the tree to, and their hashes are in
+      # `internals/pro` (`publish-denylist.json`). Without it the notes below were filtered by the plain patterns alone
+      # (HARDENING §3). After the step above, so it is this commit's `internals/pro`, never the last job's; and the notes
+      # step refuses to write the public page without the list (`--require-private-values`).
+      - name: Check out internals/pro, for the private values the public notes are held to
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          TOKEN: ${{ secrets.SUBMODULE_TOKEN }}
+        run: |
+          error() { printf '::%s::%s\n' error "$*"; }
+          if [ -z "${TOKEN}" ]; then
+            error "SUBMODULE_TOKEN is not set, so the public release notes cannot be held to the private values in internals/pro. See the header of this workflow."
+            exit 1
+          fi
+          # The token goes through `-c`, not `git config --global`: on the self-hosted runner a global config outlives the job.
+          git -c "url.https://x-access-token:${TOKEN}@github.com/.insteadOf=https://github.com/" submodule update --init --depth 1 internals/pro
+
+      # A tag on the wrong commit builds a binary that reports another version, and a box that installs it reads
+      # an update that did not take and rolls it back (`modules/update/confirm.ts`). Refused before any build.
+      - name: The tag is the version the code says
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          error() { printf '::%s::%s\n' error "$*"; }
+          want="${GITHUB_REF_NAME#v}"
+          for file in package.json apps/engine/package.json; do
+            have=$(sed -n 's/^  "version": "\([^"]*\)",$/\1/p' "$file")
+            [ "$have" = "$want" ] || { error "${file} says ${have:-no version}, the tag says ${want}"; exit 1; }
+          done
+          grep -q "VERSION = '${want}';" apps/site/src/consts.mjs || { error "apps/site/src/consts.mjs does not say ${want}"; exit 1; }
+
+      # The public half checks every signature with its own copy of the release keys — its verify-sums script, in
+      # nouverse/nouride, which is this tree's public export: pushed before the tag (`publish.ts`). A key rotated here and not there would fail that half after this one had published
+      # the Pro editions; said here, before anything is built.
+      - name: The public repository trusts the keys this release is signed for
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_REPO_TOKEN }}
+        run: |
+          error() { printf '::%s::%s\n' error "$*"; }
+          keys() { sed -n '/^# >>> release keys/,/^# <<< release keys/p'; }
+          want=$(keys < scripts/install.sh)
+          got=$(gh api repos/nouverse/nouride/contents/scripts/release/verify-sums.sh --jq .content | base64 -d | keys)
+          [ -n "$want" ] && [ "$want" = "$got" ] || { error "nouverse/nouride scripts/release/verify-sums.sh holds other release keys than scripts/install.sh — push the public export first"; exit 1; }
+          echo "release keys: the same in install.sh and nouverse/nouride"
+
+      # ── What the release page says ─────────────────────────────────────────
+      #
+      # Both halves used to say nothing. The private one asked GitHub to
+      # generate notes, which lists merged pull requests — and this repository
+      # releases straight from `main`, so it produced a bare compare link. The
+      # public one, the page people installing Nouride actually read, had the
+      # sentence hardcoded: "Official release v0.4.7 for Nouride Linux
+      # binaries", identical on every version and true of all of them.
+      #
+      # Then both were the commit subjects since the previous tag, and v0.7.8's
+      # named a private host: the PUBLIC page carried it until the body was
+      # replaced by hand — as every release's had been, to put the written notes
+      # there. So `scripts/release/release-notes.ts` writes both from
+      # `docs/releases/<tag>.md` in the tagged tree, and only without that file
+      # from the subjects, the public page leaving out any that `check-public.ts`
+      # would refuse.
+      #
+      # Bun for that script and nothing else: no `bun install` runs here, and
+      # what it imports is this repository's own.
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          bun-version-file: .bun-version
+      # Every updater before 0.8.18 reads one page of thirty releases (REVIEW A1, PLAN §4.2): a release that would push a
+      # floor's stepping stone past the twenty-fifth stops here, before anything is built or published. Delete
+      # intermediate releases from the mirror first (D1); `mirror-page.ts` names the floor.
+      - name: The mirror's first page keeps every stepping stone
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: bun run scripts/release/mirror-page.ts --adding "${GITHUB_REF_NAME}"
+      - name: Initialize releases if tagged
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PUBLIC_GH_TOKEN: ${{ secrets.RELEASES_REPO_TOKEN || secrets.GITHUB_TOKEN }}
+          QUIET: ${{ steps.quiet.outputs.quiet }}
+          LTS: ${{ steps.quiet.outputs.lts }}
+        run: |
+          # See "Is this a quiet release" above.
+          visibility=""
+          if [ "${QUIET}" = "yes" ]; then visibility="--prerelease --latest=false"; fi
+          if [ "${LTS}" = "yes" ]; then visibility="--latest=false"; fi
+          # The release before this one is the highest version below it, not the highest tag: for a 1.0.x cut after
+          # 1.1.0 that was 1.1.0, and the notes said what changed since a newer release.
+          prev=$(git tag --sort=-v:refname | awk -v cur="${GITHUB_REF_NAME}" 'found { print; exit } $0 == cur { found = 1 }')
+
+          bun run scripts/release/release-notes.ts --tag "${GITHUB_REF_NAME}" --previous "${prev}" \
+            --repo "${GITHUB_REPOSITORY}" --public-repo nouverse/nouride \
+            --internal /tmp/release-notes-internal.md --public /tmp/release-notes-public.md --require-private-values
+
+          echo "notes for ${GITHUB_REF_NAME} (since ${prev:-the beginning}):"
+          cat /tmp/release-notes-public.md
+
+          # `--title`, which the public one has always passed and this one did not. Without it the
+          # release is created with an empty name and GitHub falls back to displaying the tagged
+          # commit's subject — so every release page since v0.4.8 has been headed
+          # "chore(release): v0.5.2" rather than "v0.5.2". Cosmetic, and it is the first thing
+          # anybody sees.
+          if ! gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            echo "creating initial release for ${GITHUB_REF_NAME} on ${GITHUB_REPOSITORY}..."
+            gh release create "${GITHUB_REF_NAME}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --title "${GITHUB_REF_NAME}" ${visibility} \
+              --notes-file /tmp/release-notes-internal.md --verify-tag
+          fi
+          # A draft, published by nouverse/nouride once each public tarball has started on its own platform
+          # and the public images are built (0.7.20). Created only when absent, so a re-run never puts a published
+          # release back into draft — the surprise that once made this "published, never drafted".
+          if ! GH_TOKEN="${PUBLIC_GH_TOKEN}" gh release view "${GITHUB_REF_NAME}" --repo "nouverse/nouride" >/dev/null 2>&1; then
+            echo "creating the draft for ${GITHUB_REF_NAME} on nouverse/nouride..."
+            GH_TOKEN="${PUBLIC_GH_TOKEN}" gh release create "${GITHUB_REF_NAME}" \
+              --repo "nouverse/nouride" \
+              --title "${GITHUB_REF_NAME}" --draft ${visibility} \
+              --notes-file /tmp/release-notes-public.md
+          fi
+
+  # Gates every publish job. Nothing reaches a registry or a release page that
+  # has not passed the same checks the repo asks a contributor to run.
+  verify:
+    needs: [guard-visibility]
+    if: ${{ needs.guard-visibility.outputs.ci_green != 'yes' && github.repository_owner == 'nouverse' }}
+    # runs-on: [self-hosted, build-runner]
+    runs-on: ${{ fromJSON(vars.CI_RUNNER || '"ubuntu-24.04"') }}
+    timeout-minutes: 25
+    steps:
+      # No submodules: what this job verifies is all in this repository, and the
+      # ones under `internals/` are private.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # The self-hosted runner keeps its working copy between jobs, submodules and all: the last job's private checkout
+      # would be read as this commit's, built into a public image, or stop the next checkout over what its install changed.
+      - name: Start without the last job's submodules
+        run: if git config --get-regexp '^submodule\.' >/dev/null; then git submodule deinit --force --all; fi
+      # `content/` is a public repository of its own (nouverse/nouride-builtin-contents): the skills and agent packs every
+      # build ships and every test reads. Public, so no token; after the line above, so it is this commit's pin.
+      - name: Check out the built-in content
+        run: git submodule update --init content
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - run: bun install --frozen-lockfile
+      # `routeTree.gen.ts` is written by the TanStack Router Vite plugin and is
+      # gitignored, so a fresh checkout does not have it and twenty-seven route
+      # files fail to typecheck. Building the dashboard produces it — and proves
+      # the dashboard builds, which nothing else here does.
+      - run: bun run build:dashboard
+      - run: bun run lint:check
+      # Its temporary files in the job's own folder, which the runner empties at each job's start and end: what a test
+      # leaves behind cannot pile up on the self-hosted runner's disk (13 GB in `/tmp` filled it on 2026-10-29).
+      - run: bun run test
+        env:
+          TMPDIR: ${{ runner.temp }}
+
+  # ── The Pro code's own gate ─────────────────────────────────────────────────
+  #
+  # `verify` above checks out no submodule, so the code the Box editions are built from — pairing, licensing,
+  # onboarding, the update source, multi-user, sign-in, flash — was tested, typechecked and linted by nothing
+  # here: `binaries` checked it out to build it and ran no test on it. The same job as ci.yml's `verify-private`,
+  # skipped when that one already passed on this commit, and only when this run builds a Pro edition. The Pro
+  # rows of `binaries` and `images` refuse to build without it; the public ones do not wait on it.
+  verify-private:
+    needs: [guard-visibility]
+    if: ${{ needs.guard-visibility.outputs.private_variants != '' && needs.guard-visibility.outputs.ci_private_green != 'yes' && github.repository_owner == 'nouverse' }}
+    # runs-on: [self-hosted, build-runner]
+    runs-on: ${{ fromJSON(vars.CI_RUNNER || '"ubuntu-24.04"') }}
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The self-hosted runner keeps its working copy between jobs, submodules and all: the last job's private checkout
+      # would be read as this commit's, built into a public image, or stop the next checkout over what its install changed.
+      - name: Start without the last job's submodules
+        run: if git config --get-regexp '^submodule\.' >/dev/null; then git submodule deinit --force --all; fi
+      # `content/` is a public repository of its own (nouverse/nouride-builtin-contents): the skills and agent packs every
+      # build ships and every test reads. Public, so no token; after the line above, so it is this commit's pin.
+      - name: Check out the built-in content
+        run: git submodule update --init content
+      # Both: the drift tests of the hosted LLM gateway read `internals/nougate` the way the Pro ones read
+      # `internals/pro`, and one token reads both. Through `-c`, so no step after this one holds it.
+      - name: Check out the private submodules
+        env:
+          TOKEN: ${{ secrets.SUBMODULE_TOKEN }}
+        run: |
+          error() { printf '::%s::%s\n' error "$*"; }
+          if [ -z "${TOKEN}" ]; then
+            error "SUBMODULE_TOKEN is not set, so the Pro code this release builds cannot be verified. See the header of this workflow."
+            exit 1
+          fi
+          git -c "url.https://x-access-token:${TOKEN}@github.com/.insteadOf=https://github.com/" submodule update --init --depth 1 internals/pro internals/nougate
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - run: bun install --frozen-lockfile
+      # `internals/pro` is a workspace of its own, with its own lockfile: the setup console's build tools.
+      - run: bun install --frozen-lockfile
+        working-directory: internals/pro
+      # What the hosted-gateway drift tests import (`drizzle-orm`), as `binaries` installs it to build.
+      - run: bun install --production --frozen-lockfile
+        working-directory: internals/nougate/apps/backend
+      # The voice and video tests run ffmpeg, and skip without it.
+      - name: ffmpeg
+        run: command -v ffmpeg >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends ffmpeg; }
+      - run: bun run build:dashboard
+      # With the submodule present `lint:check` covers it too: the Pro tsconfigs in `check-types.ts`, and the
+      # size and dead-code rules over `internals/pro`.
+      - run: bun run lint:check
+      # Its temporary files in the job's own folder, which the runner empties at each job's start and end: what a test
+      # leaves behind cannot pile up on the self-hosted runner's disk (13 GB in `/tmp` filled it on 2026-10-29).
+      - run: bun run test
+        env:
+          TMPDIR: ${{ runner.temp }}
+      # The Pro edition assembles, and carries what it says: `build:pro` asserts its plugins are in the bundle.
+      - run: bun run build:pro --pro --bundle-only
+
+  # ── Tarballs ────────────────────────────────────────────────────────────────
+  binaries:
+    permissions:
+      contents: write # upload assets to the release
+    needs: [verify, verify-private, guard-visibility]
+    # `verify` is skipped when CI already passed on this commit; skipped is as good as passed here.
+    if: ${{ !cancelled() && needs.guard-visibility.result == 'success' && (needs.verify.result == 'success' || needs.verify.result == 'skipped') && github.repository_owner == 'nouverse' }}
+    # On the runner CI_RUNNER names, as every job is. GitHub's own runners were tried for this job in 0.7.21's rehearsal
+    # and refused to start: this private repository has no Actions minutes to spend ("spending limit"), which is why the
+    # whole release moved to the build runner on 2026-10-18.
+    # runs-on: [self-hosted, build-runner]
+    runs-on: ${{ fromJSON(vars.CI_RUNNER || '"ubuntu-24.04"') }}
+    timeout-minutes: 45
+    strategy:
+      # One variant failing must not cost the other three: they are independent
+      # artefacts and a release with three of four is better than none.
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.guard-visibility.outputs.binaries) }}
+    name: binaries (${{ matrix.name }})
+    steps:
+      # A Pro row is built only from Pro code that passed its gate — here, or in ci.yml on this commit, when
+      # `verify-private` was skipped for that. The public rows carry none of it and do not wait on it.
+      - name: The Pro code passed its gate
+        if: matrix.private
+        env:
+          RESULT: ${{ needs.verify-private.result }}
+        run: |
+          error() { printf '::%s::%s\n' error "$*"; }
+          case "${RESULT}" in
+            success|skipped) echo "verify-private: ${RESULT}" ;;
+            *) error "verify-private ended '${RESULT}': the Pro code this edition is built from did not pass its tests, typecheck and lint, so it is not built."; exit 1 ;;
+          esac
+      # GitHub-hosted images ship `gh`; the self-hosted build runner does not. Fetched into this job's
+      # temp directory when missing — nothing is installed on the host.
+      - name: GitHub CLI
+        run: |
+          command -v gh >/dev/null && exit 0
+          # A pinned version, checked: "latest" downloaded and run whatever the release said, in jobs holding tokens.
+          v=2.102.0
+          curl -fsSL --max-time 120 -o "$RUNNER_TEMP/gh.tar.gz" "https://github.com/cli/cli/releases/download/v${v}/gh_${v}_linux_amd64.tar.gz"
+          echo "bb766f710eef8ede859c18578c72c327597cd4c8a85b06001b1f3843c6019386  $RUNNER_TEMP/gh.tar.gz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/gh.tar.gz" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/gh_${v}_linux_amd64/bin" >> "$GITHUB_PATH"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # The self-hosted runner keeps its working copy between jobs, submodules and all: the last job's private checkout
+      # would be read as this commit's, built into a public image, or stop the next checkout over what its install changed.
+      - name: Start without the last job's submodules
+        run: if git config --get-regexp '^submodule\.' >/dev/null; then git submodule deinit --force --all; fi
+      # `content/` is a public repository of its own (nouverse/nouride-builtin-contents): the skills and agent packs every
+      # build ships and every test reads. Public, so no token; after the line above, so it is this commit's pin.
+      - name: Check out the built-in content
+        run: git submodule update --init content
+
+      # Private, so `GITHUB_TOKEN` cannot see them. Which ones depends on the
+      # variant — `matrix.submodules` names them, and the public `basic` build
+      # names none and skips this entirely.
+      #
+      # One `insteadOf` and one `update` for all of them: the token is the same,
+      # and a step per repository was three copies of the same five lines that
+      # drifted the moment a third repository appeared.
+      - name: Check out the private submodules
+        if: matrix.submodules
+        env:
+          TOKEN: ${{ secrets.SUBMODULE_TOKEN }}
+          PATHS: ${{ matrix.submodules }}
+        run: |
+          error() { printf '::%s::%s\n' error "$*"; }
+          if [ -z "${TOKEN}" ]; then
+            error "SUBMODULE_TOKEN is not set, and these submodules are private: ${PATHS}. This variant cannot be built. See the header of this workflow."
+            exit 1
+          fi
+          # Unquoted on purpose: the value is a space-separated list of paths. The token goes through `-c`,
+          # not `git config --global`: on the self-hosted runner a global config outlives the job.
+          git -c "url.https://x-access-token:${TOKEN}@github.com/.insteadOf=https://github.com/" submodule update --init --depth 1 ${PATHS}
+
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - run: bun install --frozen-lockfile
+      # The nougate repository is a separate project outside the workspace. Its backend needs drizzle-orm
+      # so that the build can resolve and bundle `@nouverse/nougate-backend`.
+      #
+      # Guarded on the directory rather than on the variant: `matrix.submodules`
+      # is a list now, and `pro` is in it without needing nougate at all.
+      - name: Install nougate backend dependencies
+        if: contains(matrix.submodules, 'internals/nougate')
+        run: bun install --production --frozen-lockfile
+        working-directory: internals/nougate/apps/backend
+
+      - name: Build nougate frontend
+        if: contains(matrix.submodules, 'internals/nougate')
+        # Frozen, as every install in a release is: this build ships in the public Router tarball and image, and a plain
+        # install resolves afresh whenever the manifest and the lockfile disagree.
+        run: |
+          bun install --frozen-lockfile
+          bun run build
+        working-directory: internals/nougate/apps/frontend
+      - run: bun run build:dashboard
+
+      # Every Linux target: glibc and musl, x64 and arm64. Each tarball holds
+      # the binary plus the `dashboard/`, `skills/` and `config.example.toml` it
+      # needs beside it — see scripts/build/core.ts.
+      #
+      # Bun cross-compiles from this one amd64 runner, so there is no emulation
+      # here and no arm64 runner to pay for.
+      #
+      # And `run/nouride-run` in each, the helper that runs every agent's commands as its own user: static musl for both
+      # architectures, linked by the toolchain's own `rust-lld` (scripts/build/nouride-run.ts). The toolchain the escape
+      # tests ran on; where this runner has no rustup, the build compiles it in that toolchain's container instead.
+      - name: Rust targets for nouride-run
+        run: |
+          if command -v rustup >/dev/null 2>&1; then
+            rustup toolchain install 1.99 --profile minimal --target x86_64-unknown-linux-musl,aarch64-unknown-linux-musl
+            rustup default 1.99
+          else
+            echo "no rustup here: the build compiles nouride-run in rust:1.99-bookworm"
+          fi
+      - run: bun run ${{ matrix.script }} --target ${{ matrix.targets }} ${{ matrix.flags }}
+
+      # The build prints which variant it is and what that means for the
+      # licence. Echoed into the log again so a release audit can read it off
+      # the job rather than off a tarball.
+      - name: What was built
+        run: |
+          ls -la dist/*.tar.gz
+          # One private source map per tarball, beside it and never in it (the build fails a tarball that carries one).
+          ls -la dist/*.map
+          echo "variant: ${{ matrix.name }}  private: ${{ matrix.private }}"
+
+      # Checksums per variant, so the four files never collide and each set
+      # verifies on its own.
+      - name: Checksums
+        run: |
+          cd dist
+          name="CHECKSUMS${{ matrix.variant && format('-{0}', matrix.variant) || '' }}"
+          sha256sum ./*.tar.gz > "$name"
+          # The release's upgrade floor, when `docs/releases/<tag>.md` declares one (`min-version:` in its front matter):
+          # `# nouride-min-version: <version>` in this file, which `sign` then signs with the line in it.
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then bun run ../scripts/release/release-floor.ts --tag "${GITHUB_REF_NAME}" "$name"; fi
+          cat "$name"
+
+      # Upload directly to the respective release page to avoid consuming GitHub Actions artifact storage.
+      # Keyed on `private`, not on the variant name. The question this answers is "may this leave the
+      # private repository", and the licence is what decides it — `router` bundles the LLM gateway
+      # and nothing private, so it is publishable, and a condition naming `''` would have kept
+      # it private for no reason anyone could point at.
+      - name: Upload public Linux binaries to distribution repository
+        if: startsWith(github.ref, 'refs/tags/v') && !matrix.private
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_REPO_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          echo "uploading public Linux binaries to nouverse/nouride..."
+          gh release upload "${GITHUB_REF_NAME}" dist/*.tar.gz dist/CHECKSUMS* \
+            --repo "nouverse/nouride" --clobber
+
+      - name: Upload private Pro binaries to internal repository
+        # Never onto a release of a public repository: the guard above reads the visibility, and this is what heeds it.
+        if: startsWith(github.ref, 'refs/tags/v') && matrix.private && needs.guard-visibility.outputs.publish_private_assets == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "uploading private Pro binaries to ${GITHUB_REPOSITORY}..."
+          gh release upload "${GITHUB_REF_NAME}" dist/*.tar.gz dist/CHECKSUMS* \
+            --repo "${GITHUB_REPOSITORY}" --clobber
+
+      # The source maps `bun run symbolize` reads a customer's stack trace with: one per tarball, for every row, public
+      # or not, because a map carries the source it was built from (`sourcesContent`, Pro plugins included). So they go
+      # where the Pro checksum signatures go — the internal release, under the same guard as the private tarballs —
+      # and never to nouverse/nouride, whose upload above names only `*.tar.gz` and `CHECKSUMS*`.
+      - name: Upload the private source maps to the internal repository
+        if: startsWith(github.ref, 'refs/tags/v') && needs.guard-visibility.outputs.publish_private_assets == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "uploading private source maps to ${GITHUB_REPOSITORY}..."
+          gh release upload "${GITHUB_REF_NAME}" dist/*.map --repo "${GITHUB_REPOSITORY}" --clobber
+
+      # ── The public image's kit ──
+      #
+      # The public images are built in nouverse/nouride (0.7.20), on GitHub's free runners, natively per
+      # architecture — no source there, and no secret. What they are built from is made here, after every upload above
+      # so their globs never take it: the edition's bundle, with the private source map written for exactly those bytes,
+      # the dashboard, the skills, the entrypoint scripts and a Dockerfile taken from this one's runtime stages
+      # (`scripts/release/image-kit.ts`). The kit goes onto the public draft with a checksum file that `sign` signs; the
+      # public workflow checks that signature with the keys every install trusts before it builds, and holds the
+      # image's bundle to the kit's. The map goes to the internal release, as the images' maps always have.
+      - name: The bundle, and its kit
+        if: matrix.kit
+        run: |
+          bun run build:binary --bundle-only ${{ matrix.flags }}
+          bun run scripts/release/image-kit.ts --edition ${{ matrix.kit }}
+      - name: The kit's checksums
+        if: matrix.kit
+        env:
+          EDITION: ${{ matrix.kit }}
+        run: |
+          cd dist
+          if [ "$EDITION" = basic ]; then kit=nouride-image-kit.tar.gz; sums=CHECKSUMS-image-kit; else kit="nouride-image-kit-${EDITION}.tar.gz"; sums="CHECKSUMS-image-kit-${EDITION}"; fi
+          sha256sum "./$kit" > "$sums"
+          # The release's upgrade floor too, as every checksum file of it carries: an updater reading whichever one a
+          # release lists (`packages/update`, a channel with no build of its edition) must not find one without it.
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then bun run ../scripts/release/release-floor.ts --tag "${GITHUB_REF_NAME}" "$sums"; fi
+          cat "$sums"
+      - name: Upload the kit to the public draft
+        if: matrix.kit && startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_REPO_TOKEN }}
+        run: gh release upload "${GITHUB_REF_NAME}" dist/nouride-image-kit*.tar.gz dist/CHECKSUMS-image-kit* --repo nouverse/nouride --clobber
+      - name: Upload the bundle's private source map to the internal repository
+        if: matrix.kit && startsWith(github.ref, 'refs/tags/v') && needs.guard-visibility.outputs.publish_private_assets == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${GITHUB_REF_NAME}" dist/*-image.map --repo "${GITHUB_REPOSITORY}" --clobber
+
+  # ── Signing, and the appliance release channel ──────────────────────────────
+  #
+  # The one job that holds the release signing key and the appliance token. Both sat in `binaries`, after
+  # `bun install` and the build: a dependency's install script, and anything the build ran, ran beside the key
+  # every install and every box trusts. Here nothing is installed. The checksum files `binaries` uploaded are
+  # downloaded, signed with OpenSSL (`scripts/release/sign-checksums.sh`, which checks each signature against the
+  # keys install.sh embeds before keeping it), and their `.sig` uploaded beside them — the public ones are what
+  # `nouride update` and install.sh require from 0.7.4 on (D7). The private editions then go to R2 and the Nouverse
+  # update gate at 0 %, on a pinned Bun running one script that imports nothing outside the runtime. On the runner
+  # CI_RUNNER names, as every job is — one switch for the whole release (the owner, 2026-10-18). On the self-hosted
+  # build runner, which keeps state between jobs, the key is on a machine that also builds: that is the trade the
+  # switch makes, and unset, signing is on GitHub's fresh runner again.
+  #
+  # Checkable only on a tag, so `release` below says so when a checksum file has no signature beside it.
+  sign:
+    needs: [binaries, guard-visibility]
+    if: ${{ !cancelled() && startsWith(github.ref, 'refs/tags/v') && needs.binaries.result != 'skipped' && github.repository_owner == 'nouverse' }}
+    # runs-on: [self-hosted, build-runner]
+    runs-on: ${{ fromJSON(vars.CI_RUNNER || '"ubuntu-24.04"') }}
+    timeout-minutes: 20
+    permissions:
+      contents: write # the private checksum files' signatures go beside them on the internal release; the public release is written with its own token
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The self-hosted runner keeps its working copy between jobs, submodules and all: the last job's private checkout
+      # would be read as this commit's, built into a public image, or stop the next checkout over what its install changed.
+      - name: Start without the last job's submodules
+        run: if git config --get-regexp '^submodule\.' >/dev/null; then git submodule deinit --force --all; fi
+      # `content/` is a public repository of its own (nouverse/nouride-builtin-contents): the skills and agent packs every
+      # build ships and every test reads. Public, so no token; after the line above, so it is this commit's pin.
+      - name: Check out the built-in content
+        run: git submodule update --init content
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+
+      # The self-hosted runner has no `gh`: 0.7.17's first tag failed here with "gh: command not found".
+      - name: GitHub CLI
+        run: |
+          command -v gh >/dev/null && exit 0
+          v=2.102.0
+          curl -fsSL --max-time 120 -o "$RUNNER_TEMP/gh.tar.gz" "https://github.com/cli/cli/releases/download/v${v}/gh_${v}_linux_amd64.tar.gz"
+          echo "bb766f710eef8ede859c18578c72c327597cd4c8a85b06001b1f3843c6019386  $RUNNER_TEMP/gh.tar.gz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/gh.tar.gz" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/gh_${v}_linux_amd64/bin" >> "$GITHUB_PATH"
+
+      # A missing key fails the release: nothing installs an unsigned public release from 0.7.4 on
+      # (`SIGNED_SINCE`, packages/update/src/signing.ts), so publishing one unsigned publishes a release nobody can take.
+      - name: Sign the public checksum files
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_REPO_TOKEN || secrets.GITHUB_TOKEN }}
+          RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
+        run: |
+          error() { printf '::%s::%s\n' error "$*"; }
+          mkdir -p public
+          gh release download "${GITHUB_REF_NAME}" --repo "nouverse/nouride" --pattern 'CHECKSUMS*' --dir public --clobber
+          rm -f public/*.sig
+          set -- public/CHECKSUMS*
+          [ -e "$1" ] || { error "the public release has no checksum files — did binaries upload them?"; exit 1; }
+          if [ -z "${RELEASE_SIGNING_KEY}" ]; then
+            error "RELEASE_SIGNING_KEY is not set, and $* must be signed — nothing installs an unsigned release from 0.7.4 on."
+            exit 1
+          fi
+          sh scripts/release/sign-checksums.sh "$@"
+          gh release upload "${GITHUB_REF_NAME}" public/*.sig --repo "nouverse/nouride" --clobber
+
+      # The licensed channel. A missing secret here is a warning that stops the chain rather than a failed release: an
+      # unsigned or unregistered build is never offered to a box, which is the safe outcome, and the public half is
+      # unaffected. Only while the repository is private: the private tarballs are read back from its release.
+      - name: Sign the private checksum files
+        id: private
+        if: needs.guard-visibility.outputs.publish_private_assets == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
+        run: |
+          mkdir -p private
+          gh release download "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --pattern 'CHECKSUMS-*' --dir private --clobber || true
+          rm -f private/*.sig
+          set -- private/CHECKSUMS-*
+          if [ ! -e "$1" ]; then
+            echo "::warning::this release has no private checksum files, so no box will be offered it."
+            echo "signed=no" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ -z "${RELEASE_SIGNING_KEY}" ]; then
+            echo "::warning::RELEASE_SIGNING_KEY is not set, so the private editions are not signed and no box will be offered them."
+            echo "signed=no" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          sh scripts/release/sign-checksums.sh "$@"
+          # Beside the checksum files on the internal release, as the public ones are on theirs: a `--tarball` install
+          # of a Pro build taken from there was checked against a checksum file and nothing that vouched for it.
+          gh release upload "${GITHUB_REF_NAME}" private/*.sig --repo "${GITHUB_REPOSITORY}" --clobber
+          echo "signed=yes" >> "$GITHUB_OUTPUT"
+
+      # The public half, once everything it is built from is signed: nouverse/nouride tests each public
+      # tarball on its own platform, builds the public images from their kits, and turns the draft into the release
+      # (its `release.yml`). Started, not waited on — it reports on its own run, and this runner is not held for it.
+      # Started when both public kits are on the draft, not when every `binaries` row passed: a Pro row that failed is
+      # the private half's to answer for, and must not hold back the public one (it had a job of its own until 0.7.21).
+      # And before the boxes are published, for the same reason: v0.8.0's first run stopped there, the update gate
+      # refusing `CHECKSUMS-pro`, and the public half was never started.
+      - name: Start the public half of the release
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_REPO_TOKEN }}
+          QUIET: ${{ needs.guard-visibility.outputs.quiet }}
+          LTS: ${{ needs.guard-visibility.outputs.lts }}
+        run: |
+          error() { printf '::%s::%s\n' error "$*"; }
+          assets=$(gh release view "${GITHUB_REF_NAME}" --repo nouverse/nouride --json assets --jq '.assets[].name')
+          for kit in nouride-image-kit.tar.gz nouride-image-kit-router.tar.gz; do
+            echo "$assets" | grep -qx "$kit" || { error "the public draft has no $kit — its binaries row failed — so the public half is not started."; exit 1; }
+          done
+          gh workflow run public-release.yml --repo nouverse/nouride -f tag="${GITHUB_REF_NAME}" -f quiet="${QUIET:-no}" -f lts="${LTS:-no}"
+          echo "::notice::started the public half: https://github.com/nouverse/nouride/actions/workflows/public-release.yml"
+
+      # The publisher is Pro tooling, in `internals/pro` (2026-11-06: nothing of the Box's in the public tree).
+      - name: Check out internals/pro, for the box publisher
+        if: steps.private.outputs.signed == 'yes'
+        env:
+          TOKEN: ${{ secrets.SUBMODULE_TOKEN }}
+        run: git -c "url.https://x-access-token:${TOKEN}@github.com/.insteadOf=https://github.com/" submodule update --init --depth 1 internals/pro
+
+      # Upload before register, never the other way: a registered release is one boxes may be offered.
+      - name: Publish for boxes — upload to R2 and register with the Nouverse update gate
+        if: steps.private.outputs.signed == 'yes'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NOUVERSE_RELEASE_TOKEN: ${{ secrets.NOUVERSE_RELEASE_TOKEN }}
+        run: |
+          # An error, not a warning (REVIEW B1): this step runs only when Pro editions were signed, and without the
+          # token no box is offered them while the run went green.
+          if [ -z "${NOUVERSE_RELEASE_TOKEN}" ]; then
+            error() { printf '::%s::%s\n' error "$*"; }
+            error "NOUVERSE_RELEASE_TOKEN is not set, so the signed Pro editions cannot be published for boxes. Set it and re-run this job."
+            exit 1
+          fi
+          for sums in private/CHECKSUMS-*; do
+            case "$sums" in *.sig) continue ;; esac
+            edition="${sums#private/CHECKSUMS-}"
+            gh release download "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --pattern "nouride-${edition}-*.tar.gz" --dir private --clobber
+            # Presigned PUT URLs from the service: this job never holds an R2 credential.
+            bun run internals/pro/build-pro/publish-appliance-release.ts --tag "${GITHUB_REF_NAME}" --edition "${edition}" --dir private
+          done
+
+  # ── Images ──────────────────────────────────────────────────────────────────
+  #
+  # Four packages rather than four tags on one, because GHCR visibility is per
+  # package: the private pair has to be able to stay private while the other two go
+  # public, and a tag cannot be private on a public package.
+  images:
+    permissions:
+      contents: write # the image's private source map goes on the internal release, beside the binaries'
+      packages: write # push to ghcr.io
+    needs: [verify, verify-private, guard-visibility]
+    # The Pro image only, since 0.7.20: the public ones are built from their kits in nouverse/nouride.
+    if: ${{ !cancelled() && needs.guard-visibility.result == 'success' && needs.guard-visibility.outputs.images != '[]' && (needs.verify.result == 'success' || needs.verify.result == 'skipped') && github.repository_owner == 'nouverse' }}
+    # runs-on: [self-hosted, build-runner]
+    runs-on: ${{ fromJSON(vars.CI_RUNNER || '"ubuntu-24.04"') }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.guard-visibility.outputs.images) }}
+    name: image (${{ matrix.package }})
+    steps:
+      # The same gate as a Pro row of `binaries`: the private image is the same code.
+      - name: The Pro code passed its gate
+        if: matrix.private
+        env:
+          RESULT: ${{ needs.verify-private.result }}
+        run: |
+          error() { printf '::%s::%s\n' error "$*"; }
+          case "${RESULT}" in
+            success|skipped) echo "verify-private: ${RESULT}" ;;
+            *) error "verify-private ended '${RESULT}': the Pro code this image is built from did not pass its tests, typecheck and lint, so it is not built."; exit 1 ;;
+          esac
+      # GitHub-hosted images ship `gh`; the self-hosted build runner does not. Fetched into this job's
+      # temp directory when missing — nothing is installed on the host.
+      - name: GitHub CLI
+        run: |
+          command -v gh >/dev/null && exit 0
+          # A pinned version, checked: "latest" downloaded and run whatever the release said, in jobs holding tokens.
+          v=2.102.0
+          curl -fsSL --max-time 120 -o "$RUNNER_TEMP/gh.tar.gz" "https://github.com/cli/cli/releases/download/v${v}/gh_${v}_linux_amd64.tar.gz"
+          echo "bb766f710eef8ede859c18578c72c327597cd4c8a85b06001b1f3843c6019386  $RUNNER_TEMP/gh.tar.gz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/gh.tar.gz" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/gh_${v}_linux_amd64/bin" >> "$GITHUB_PATH"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # The self-hosted runner keeps its working copy between jobs, submodules and all: the last job's private checkout
+      # would be read as this commit's, built into a public image, or stop the next checkout over what its install changed.
+      - name: Start without the last job's submodules
+        run: if git config --get-regexp '^submodule\.' >/dev/null; then git submodule deinit --force --all; fi
+      # `content/` is a public repository of its own (nouverse/nouride-builtin-contents): the skills and agent packs every
+      # build ships and every test reads. Public, so no token; after the line above, so it is this commit's pin.
+      - name: Check out the built-in content
+        run: git submodule update --init content
+
+      # Same as the binaries job — see the note there for why it is one step.
+      - name: Check out the private submodules
+        if: matrix.submodules
+        env:
+          TOKEN: ${{ secrets.SUBMODULE_TOKEN }}
+          PATHS: ${{ matrix.submodules }}
+        run: |
+          error() { printf '::%s::%s\n' error "$*"; }
+          if [ -z "${TOKEN}" ]; then
+            error "SUBMODULE_TOKEN is not set, and these submodules are private: ${PATHS}. This variant cannot be built. See the header of this workflow."
+            exit 1
+          fi
+          # Unquoted on purpose: the value is a space-separated list of paths. The token goes through `-c`,
+          # not `git config --global`: on the self-hosted runner a global config outlives the job.
+          git -c "url.https://x-access-token:${TOKEN}@github.com/.insteadOf=https://github.com/" submodule update --init --depth 1 ${PATHS}
+
+      # QEMU for the arm64 half of the image. Only its final stage runs emulated: `bun install`
+      # and the Vite build run on the runner's own platform (`--platform=$BUILDPLATFORM` in the
+      # Dockerfile), so the emulated part is copying the result in.
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      # ── Which token pushes decides which repository owns the package ─────────
+      #
+      # And that, not the `image.source` label, is what puts a package under a
+      # repository. `GITHUB_TOKEN` is scoped to THIS repository, which is private,
+      # so anything pushed with it lands under this repository — where a public
+      # image is invisible to the people it is for. Setting the label to
+      # `nouverse/nouride` was not enough on its own: a token cannot claim a
+      # package for a repository it has no rights over.
+      #
+      # So the public images are pushed with `RELEASES_REPO_TOKEN`, the same
+      # secret that uploads their tarballs to `nouverse/nouride`. It
+      # needs `write:packages` as well as `repo`; without it the push fails here
+      # rather than producing a package in the wrong place.
+      #
+      # The private images keep `GITHUB_TOKEN`: they belong under this repository,
+      # and a package nobody outside can see is the point of them.
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ matrix.private && secrets.GITHUB_TOKEN || secrets.RELEASES_REPO_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          # Hardcoded owner rather than `${{ github.repository }}`: the packages
+          # are named after the product, and three of the four are not named
+          # after this repository at all.
+          #
+          # One name per image: Nouverse's pods pull `nouride-pro`.
+          images: |
+            ghcr.io/nouverse/${{ matrix.package }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') && needs.guard-visibility.outputs.quiet != 'yes' && needs.guard-visibility.outputs.lts != 'yes' }}
+            type=raw,value=lts,enable=${{ startsWith(github.ref, 'refs/tags/v') && needs.guard-visibility.outputs.lts == 'yes' }}
+            type=ref,event=branch
+          # Only the rule above decides `latest`. The action's default, `latest=auto`, adds it to every
+          # highest semver tag on its own — which is how the first quiet release (v0.6.0) still moved
+          # `:latest` while that rule evaluated to false.
+          flavor: |
+            latest=false
+          # Overrides this action's own guess. Without it the label is whatever
+          # GitHub reports for the repository's licence, which for a proprietary
+          # LicenseRef is nothing at all.
+          #
+          # `image.source` decides which repository GitHub links the package to,
+          # and therefore who can see it. A **public** image must point at
+          # `nouverse/nouride`, the public repository — this said
+          # `matrix.package == 'nouride'` and so linked `nouride-router`, which is
+          # equally public, to the private one. Keyed on `matrix.private` now, the
+          # same field every other public/private decision in this workflow uses.
+          labels: |
+            org.opencontainers.image.licenses=${{ matrix.licence }}
+            org.opencontainers.image.source=${{ matrix.private && format('https://github.com/{0}', github.repository) || 'https://github.com/nouverse/nouride' }}
+
+      # ── The annotation, not just the label, is what links the package ────────
+      #
+      # `metadata-action` writes `image.source` twice: once as a config **label**
+      # and once as a manifest **annotation**. Overriding `labels:` changed the
+      # first and left the second saying the private repository — and the annotation
+      # is the one GHCR reads to decide which repository owns the package. So
+      # `nouride-router` kept landing under this private repository however the
+      # label read, which is two releases spent looking at the wrong string.
+      #
+      # Rewritten here rather than rebuilt: everything else in that block —
+      # created, revision, version, title — is right and regenerated every run.
+      - id: source
+        env:
+          ANNOTATIONS: ${{ steps.meta.outputs.annotations }}
+          WANT: ${{ matrix.private && github.repositoryUrl || 'https://github.com/nouverse/nouride' }}
+        run: |
+          # `github.repositoryUrl` is a git:// URL; the annotation needs the https one.
+          want=$(echo "${WANT}" | sed 's#^git://#https://#; s#\.git$##')
+          fixed=$(echo "${ANNOTATIONS}" | sed "s#^\(.*image\.source=\).*#\1${want}#")
+          echo "source annotation → ${want}"
+          {
+            echo "annotations<<EOF"
+            echo "${fixed}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          # A private edition's image is not pushed from a public repository, whose packages can inherit its visibility.
+          push: ${{ !matrix.private || needs.guard-visibility.outputs.publish_private_assets == 'true' }}
+          build-args: |
+            EDITION=${{ matrix.edition }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # The annotation, not just the label — see the step above for why.
+          annotations: ${{ steps.source.outputs.annotations }}
+          # Per variant: one shared cache would have four different images
+          # evicting each other's layers on every run.
+          cache-from: type=gha,scope=${{ matrix.package }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.package }}
+
+      # The licence on the artefact that was actually published.
+      #
+      # `ci-image.yml` checks this too, but it cannot catch this class of mistake: it
+      # builds locally, where the Dockerfile's own LABEL survives. Only a pushed
+      # image has been through `metadata-action`, so only here can the published
+      # claim be read back. v0.1.0 published an image asserting
+      # `NOASSERTION` and every local check passed.
+      - name: The published image states its licence
+        run: |
+          error() { printf '::%s::%s\n' error "$*"; }
+          ref=$(echo '${{ steps.meta.outputs.tags }}' | head -n1)
+
+          # `.Image` on a MULTI-PLATFORM image is a map keyed by platform, not one
+          # image — so `.Image.Config.Labels` is `index of untyped nil` and the step
+          # dies rather than reporting anything. That is what the first version did,
+          # after the push had already succeeded.
+          #
+          # So: walk the JSON for any object carrying `Labels` (the key is `config`,
+          # lower-case, nested under each platform) and collect the licence from every
+          # one. `unique` means a manifest whose platforms disagree fails loudly
+          # instead of being decided by whichever came first.
+          got=$(docker buildx imagetools inspect "$ref" --format '{{ json .Image }}' | jq -r '
+            [ .. | objects | select(has("Labels")) | .Labels // {} | .["org.opencontainers.image.licenses"] ]
+            | map(select(. != null)) | unique | join(",")')
+
+          echo "published licence label: ${got:-<none>}"
+          if [ "$got" != "${{ matrix.licence }}" ]; then
+            error "${ref} is labelled '${got:-<none>}' but must be '${{ matrix.licence }}' on every platform"
+            exit 1
+          fi
+
+      # ── The image's private source map ───────────────────────────────────────
+      #
+      # The bundle in the image is mangled like the binaries, so a frame from a container
+      # (`/app/nouride.bundle.js:LINE:COL`) is read back with `bun run symbolize --target image` and the
+      # map the build stage wrote beside the bundle. The runtime stages never copy it; the Dockerfile's
+      # `source-map` stage is the one way out, built here from the same builder and cache as the push,
+      # so the stage that made the pushed bundle is the stage the map comes from.
+      #
+      # Taken out wherever the image was pushed, so a workflow_dispatch run exercises it before a tag.
+      - name: Export the image's private source map
+        if: ${{ !matrix.private || needs.guard-visibility.outputs.publish_private_assets == 'true' }}
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          target: source-map
+          platforms: linux/amd64
+          build-args: |
+            EDITION=${{ matrix.edition }}
+          outputs: type=local,dest=${{ runner.temp }}/image-map
+          cache-from: type=gha,scope=${{ matrix.package }}
+
+      # Checked against the image that was pushed, not trusted: the stamp's hash must be the bundle's on
+      # every platform, and no platform's image may carry a `.map` (scripts/release/image-map-fits.sh).
+      - name: The source map fits the bundle in the pushed image
+        if: ${{ !matrix.private || needs.guard-visibility.outputs.publish_private_assets == 'true' }}
+        env:
+          MAP_DIR: ${{ runner.temp }}/image-map
+          EDITION: ${{ matrix.edition }}
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          IMAGE=$(echo "${TAGS}" | head -n1) VERSION=$(jq -r .version apps/engine/package.json) \
+            sh scripts/release/image-map-fits.sh
+
+      # Only after the check above passed, and only to the internal release: the same guard as the
+      # binaries' maps. A map is the private source; the release audit fails if one reaches
+      # nouverse/nouride.
+      - name: Upload the image's private source map to the internal repository
+        if: startsWith(github.ref, 'refs/tags/v') && needs.guard-visibility.outputs.publish_private_assets == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "uploading the ${{ matrix.edition }} image's private source map to ${GITHUB_REPOSITORY}..."
+          gh release upload "${GITHUB_REF_NAME}" "${{ runner.temp }}"/image-map/*.map --repo "${GITHUB_REPOSITORY}" --clobber
+
+      # A GHCR package's visibility is set by hand in its settings, once, and a push does not change it.
+      # The public images were made public that way; the private one must never be, so it is the one
+      # this says out loud.
+      - name: Visibility reminder
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          echo "pushed ghcr.io/nouverse/${{ matrix.package }} (private: ${{ matrix.private }})"
+          if [ "${{ matrix.private }}" = "true" ]; then
+            echo "::notice::ghcr.io/nouverse/${{ matrix.package }} carries private plugins and must stay PRIVATE."
+          fi
+
+
+  # ── install.sh, run whole ───────────────────────────────────────────────────
+  #
+  # 994 lines of POSIX sh that run as root on a machine nobody has logged into yet, and nothing ran them end to end
+  # (REVIEW B1): 0.5.10 and 0.5.11 shipped one dash refused at its last block, and until 0.8.18 it told a system with
+  # no service manager to run a command that does not exist and stopped at `useradd` on Alpine. This release's
+  # install.sh on this release's public tarballs, twice each (an install, then the re-run every upgrade is), in
+  # Debian, Ubuntu on arm64 and Alpine: `scripts/release/install-run.sh`. And the download host answers.
+  install:
+    needs: [binaries, guard-visibility]
+    if: ${{ !cancelled() && startsWith(github.ref, 'refs/tags/v') && needs.binaries.result == 'success' && github.repository_owner == 'nouverse' }}
+    # runs-on: [self-hosted, build-runner]
+    runs-on: ${{ fromJSON(vars.CI_RUNNER || '"ubuntu-24.04"') }}
+    timeout-minutes: 30
+    steps:
+      # GitHub-hosted images ship `gh`; the self-hosted build runner does not. Fetched into this job's
+      # temp directory when missing — nothing is installed on the host.
+      - name: GitHub CLI
+        run: |
+          command -v gh >/dev/null && exit 0
+          # A pinned version, checked: "latest" downloaded and run whatever the release said, in jobs holding tokens.
+          v=2.102.0
+          curl -fsSL --max-time 120 -o "$RUNNER_TEMP/gh.tar.gz" "https://github.com/cli/cli/releases/download/v${v}/gh_${v}_linux_amd64.tar.gz"
+          echo "bb766f710eef8ede859c18578c72c327597cd4c8a85b06001b1f3843c6019386  $RUNNER_TEMP/gh.tar.gz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/gh.tar.gz" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/gh_${v}_linux_amd64/bin" >> "$GITHUB_PATH"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: The download host answers
+        run: |
+          error() { printf '::%s::%s\n' error "$*"; }
+          curl -fsS --max-time 30 -o /dev/null https://get.nouride.com/install.sh
+          code=$(curl -sS --max-time 30 -o /dev/null -w '%{http_code}' https://get.nouride.com/latest/nouride-linux-x64.tar.gz)
+          [ "$code" = 302 ] || { error "get.nouride.com/latest answered ${code}, not a redirect to the release"; exit 1; }
+      - name: This release's public tarballs, from its draft
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_REPO_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          rm -rf install-run && mkdir install-run
+          gh release download "${GITHUB_REF_NAME}" --repo nouverse/nouride --dir install-run \
+            --pattern nouride-linux-x64.tar.gz --pattern nouride-linux-arm64.tar.gz --pattern nouride-linux-x64-musl.tar.gz
+      # QEMU for the Ubuntu arm64 run: a GitHub-hosted runner has no arm64 emulation of its own, and without it that
+      # container dies on `exec format error` (0.8.20's release, the first on hosted runners since build-runner had it).
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+      - name: install.sh, twice, on Debian, Ubuntu arm64 and Alpine
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          sh scripts/release/install-run.sh install-run/nouride-linux-x64.tar.gz debian:13 linux/amd64 "$v"
+          sh scripts/release/install-run.sh install-run/nouride-linux-arm64.tar.gz ubuntu:24.04 linux/arm64 "$v"
+          sh scripts/release/install-run.sh install-run/nouride-linux-x64-musl.tar.gz alpine:3.20 linux/amd64 "$v"
+          rm -rf install-run
+
+  # ── The release audit ───────────────────────────────────────────────────────
+  release:
+    needs: [binaries, sign, guard-visibility]
+    # `always()` so verification still reports if any variant fails.
+    if: ${{ always() && startsWith(github.ref, 'refs/tags/v') && github.repository_owner == 'nouverse' }}
+    # runs-on: [self-hosted, build-runner]
+    runs-on: ${{ fromJSON(vars.CI_RUNNER || '"ubuntu-24.04"') }}
+    timeout-minutes: 15
+    steps:
+      # GitHub-hosted images ship `gh`; the self-hosted build runner does not. Fetched into this job's
+      # temp directory when missing — nothing is installed on the host.
+      - name: GitHub CLI
+        run: |
+          command -v gh >/dev/null && exit 0
+          # A pinned version, checked: "latest" downloaded and run whatever the release said, in jobs holding tokens.
+          v=2.102.0
+          curl -fsSL --max-time 120 -o "$RUNNER_TEMP/gh.tar.gz" "https://github.com/cli/cli/releases/download/v${v}/gh_${v}_linux_amd64.tar.gz"
+          echo "bb766f710eef8ede859c18578c72c327597cd4c8a85b06001b1f3843c6019386  $RUNNER_TEMP/gh.tar.gz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/gh.tar.gz" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/gh_${v}_linux_amd64/bin" >> "$GITHUB_PATH"
+      # Direct upload from `binaries` bypasses Actions artifact storage.
+      # This step verifies and reports assets on both releases.
+      - name: Verify published release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PUBLIC_GH_TOKEN: ${{ secrets.RELEASES_REPO_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          error() { printf '::%s::%s\n' error "$*"; }
+          echo "checking public assets on nouverse/nouride..."
+          GH_TOKEN="${PUBLIC_GH_TOKEN}" gh release view "${GITHUB_REF_NAME}" \
+            --repo "nouverse/nouride" --json assets,isDraft \
+            --jq '"draft=\(.isDraft)  assets=\([.assets[].name] | join(" "))"' || true
+          # Signed in a job of its own (`sign`), so its work is checked here: a checksum file with no `.sig` is a
+          # release nothing installs.
+          public=$(GH_TOKEN="${PUBLIC_GH_TOKEN}" gh release view "${GITHUB_REF_NAME}" --repo "nouverse/nouride" \
+            --json assets --jq '[.assets[].name] | join(" ")' || true)
+          for sums in $public; do
+            case "$sums" in CHECKSUMS*.sig) continue ;; CHECKSUMS*) ;; *) continue ;; esac
+            case " $public " in *" ${sums}.sig "*) ;; *) error "${sums} has no signature beside it — nothing installs this release"; exit 1 ;; esac
+          done
+          # A source map is the private source. One on the public release is a leak to take down, not a warning.
+          for asset in $public; do
+            case "$asset" in *.map) error "${asset} is on nouverse/nouride — source maps go to the internal release only. Delete it now."; exit 1 ;; esac
+          done
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The self-hosted runner keeps its working copy between jobs, submodules and all: the last job's private checkout
+      # would be read as this commit's, built into a public image, or stop the next checkout over what its install changed.
+      - name: Start without the last job's submodules
+        run: if git config --get-regexp '^submodule\.' >/dev/null; then git submodule deinit --force --all; fi
+      # `content/` is a public repository of its own (nouverse/nouride-builtin-contents): the skills and agent packs every
+      # build ships and every test reads. Public, so no token; after the line above, so it is this commit's pin.
+      - name: Check out the built-in content
+        run: git submodule update --init content
+      # Every Pro edition the plan kept reached the release, and a tag that kept none fails here rather than going
+      # green while no box is offered it. This was a warning that blamed SUBMODULE_TOKEN whenever no Pro Router
+      # tarball was there, whatever the cause — and when the cause was RELEASE_VARIANTS, nothing named it.
+      # `scripts/release/check-private-editions.sh` tells the two apart; a test runs it against the names
+      # `artifactName` gives.
+      - name: Every planned Pro edition is on the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PRIVATE_VARIANTS: ${{ needs.guard-visibility.outputs.private_variants }}
+          PUBLIC_ONLY: ${{ needs.guard-visibility.outputs.public_only }}
+          PUBLISH_PRIVATE: ${{ needs.guard-visibility.outputs.publish_private_assets }}
+          RELEASE_VARIANTS: ${{ vars.RELEASE_VARIANTS }}
+        run: |
+          echo "checking private assets on ${GITHUB_REPOSITORY}..."
+          ASSETS=$(gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" \
+            --json assets --jq '[.assets[].name] | join(" ")' || true)
+          echo "assets now on the release: ${ASSETS}"
+          ASSETS="${ASSETS}" sh scripts/release/check-private-editions.sh

@@ -1,0 +1,396 @@
+/* ── Fonts: Manrope & DM Mono (Nouverse Design Standard) ── */
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Manrope:wght@300;400;500;600;700;800&display=swap');
+
+/* ── Light Mode (Default) ────────────────────────────────── */
+:root,
+:root[data-theme='light'] {
+  --sl-color-accent-low: #e0f2fe;
+  --sl-color-accent: #0284c7;
+  --sl-color-accent-high: #0369a1;
+  --sl-color-text-accent: #0284c7;
+  --sl-color-text-invert: #ffffff;
+  --sl-color-bg-accent: #0284c7;
+  --sl-color-white: #0f172a;
+  --sl-color-gray-1: #1e293b;
+  --sl-color-gray-2: #334155;
+  --sl-color-gray-3: #475569;
+  --sl-color-gray-4: #94a3b8;
+  --sl-color-gray-5: #e2e8f0;
+  --sl-color-gray-6: #f8fafc;
+  --sl-color-black: #ffffff;
+
+  --sl-color-bg: #f8fafc;
+  --sl-color-bg-nav: rgba(248, 250, 252, 0.85);
+  --sl-color-bg-sidebar: #f1f5f9;
+  --sl-color-hairline-light: #e2e8f0;
+  --sl-color-hairline: #cbd5e1;
+
+  --sl-font-mono: 'DM Mono', ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Monaco, Consolas, monospace;
+  --sl-font-system: 'Manrope', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* ── Dark Mode (Cosmic Space Theme) ───────────────────────── */
+:root[data-theme='dark'] {
+  --sl-color-accent-low: rgba(56, 189, 248, 0.12);
+  --sl-color-accent: #38bdf8;
+  --sl-color-accent-high: #7dd3fc;
+  --sl-color-text-accent: #38bdf8;
+  --sl-color-text-invert: #06080d;
+  --sl-color-bg-accent: #38bdf8;
+  --sl-color-white: #f8fafc;
+  --sl-color-gray-1: #e2e8f0;
+  --sl-color-gray-2: #94a3b8;
+  --sl-color-gray-3: #64748b;
+  --sl-color-gray-4: #334155;
+  --sl-color-gray-5: #131b2c;
+  --sl-color-gray-6: #0a0e17;
+  --sl-color-black: #06080d;
+
+  --sl-color-bg: #070a10;
+  --sl-color-bg-nav: rgba(7, 10, 16, 0.85);
+  --sl-color-bg-sidebar: #090d15;
+  --sl-color-hairline-light: rgba(56, 189, 248, 0.14);
+  --sl-color-hairline: rgba(255, 255, 255, 0.08);
+
+  --sl-font-mono: 'DM Mono', ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Monaco, Consolas, monospace;
+  --sl-font-system: 'Manrope', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* ── Base Typography & Atmosphere ────────────────────────── */
+body {
+  font-family: var(--sl-font-system);
+  letter-spacing: -0.01em;
+}
+
+code, pre, kbd, samp {
+  font-family: var(--sl-font-mono) !important;
+}
+
+/* ── Header & Navigation ─────────────────────────────────── */
+header.header {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+:root[data-theme='light'] header.header {
+  border-bottom: 1px solid #e2e8f0;
+  background-color: rgba(248, 250, 252, 0.85);
+}
+
+:root[data-theme='dark'] header.header {
+  border-bottom: 1px solid rgba(56, 189, 248, 0.12);
+  background-color: rgba(7, 10, 16, 0.85);
+}
+
+/* Logo in navbar */
+.site-title {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.7rem !important;
+  text-decoration: none !important;
+}
+
+.site-title img {
+  height: 2.25rem !important;
+  width: auto !important;
+  border-radius: 8px;
+  object-fit: contain;
+}
+
+:root[data-theme='light'] .site-title,
+:root[data-theme='light'] .site-title span,
+:root[data-theme='light'] .site-title .site-title-text {
+  color: #0f172a !important;
+  font-weight: 750 !important;
+  font-size: 1.25rem !important;
+  letter-spacing: -0.03em !important;
+  font-family: var(--sl-font-system);
+}
+
+:root[data-theme='dark'] .site-title,
+:root[data-theme='dark'] .site-title span,
+:root[data-theme='dark'] .site-title .site-title-text {
+  color: #f8fafc !important;
+  font-weight: 750 !important;
+  font-size: 1.25rem !important;
+  letter-spacing: -0.03em !important;
+  font-family: var(--sl-font-system);
+}
+
+:root[data-theme='dark'] .site-title img {
+  filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.35));
+}
+
+.site-title:hover {
+  opacity: 0.9;
+}
+
+/* Sidebar styling */
+:root[data-theme='light'] .sidebar-pane {
+  background-color: #f1f5f9;
+  border-right: 1px solid #e2e8f0;
+}
+
+:root[data-theme='dark'] .sidebar-pane {
+  background-color: #090d15;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ── Sidebar Active & Focus States ──────────────────────── */
+.sidebar-pane a[aria-current='page'],
+.sidebar-pane a[aria-current='page']:hover,
+.sidebar-pane a[aria-current='page']:focus {
+  font-weight: 600 !important;
+  border-radius: 8px !important;
+}
+
+:root[data-theme='light'] .sidebar-pane a[aria-current='page'],
+:root[data-theme='light'] .sidebar-pane a[aria-current='page']:hover,
+:root[data-theme='light'] .sidebar-pane a[aria-current='page']:focus {
+  background-color: #0284c7 !important;
+  color: #ffffff !important;
+}
+
+:root[data-theme='dark'] .sidebar-pane a[aria-current='page'],
+:root[data-theme='dark'] .sidebar-pane a[aria-current='page']:hover,
+:root[data-theme='dark'] .sidebar-pane a[aria-current='page']:focus {
+  background-color: rgba(56, 189, 248, 0.15) !important;
+  color: #38bdf8 !important;
+  border: 1px solid rgba(56, 189, 248, 0.3) !important;
+}
+
+/* ── Table of Contents Active Links ─────────────────────── */
+starlight-toc a[aria-current='true'],
+starlight-toc a[aria-current='true']:hover,
+starlight-toc a[aria-current='true']:focus {
+  font-weight: 600 !important;
+}
+
+:root[data-theme='light'] starlight-toc a[aria-current='true'],
+:root[data-theme='light'] starlight-toc a[aria-current='true']:hover,
+:root[data-theme='light'] starlight-toc a[aria-current='true']:focus {
+  color: #0284c7 !important;
+}
+
+:root[data-theme='dark'] starlight-toc a[aria-current='true'],
+:root[data-theme='dark'] starlight-toc a[aria-current='true']:hover,
+:root[data-theme='dark'] starlight-toc a[aria-current='true']:focus {
+  color: #38bdf8 !important;
+}
+
+/* ── Hero Section ────────────────────────────────────────── */
+.hero {
+  padding-block: 4rem 3rem !important;
+  position: relative;
+}
+
+.hero .hero-html img,
+.hero img {
+  max-height: 380px;
+  width: auto;
+  animation: float 6s ease-in-out infinite;
+}
+
+:root[data-theme='dark'] .hero img {
+  filter: drop-shadow(0 15px 35px rgba(56, 189, 248, 0.25)) drop-shadow(0 0 20px rgba(2, 132, 199, 0.2));
+}
+
+:root[data-theme='light'] .hero img {
+  filter: drop-shadow(0 15px 25px rgba(2, 132, 199, 0.15));
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.hero .tagline {
+  font-size: 1.25rem !important;
+  line-height: 1.65 !important;
+  max-width: 48ch;
+}
+
+:root[data-theme='light'] .hero .tagline {
+  color: #475569 !important;
+  font-weight: 450;
+}
+
+:root[data-theme='dark'] .hero .tagline {
+  color: #94a3b8 !important;
+}
+
+/* ── Action Buttons (Pill & Calm Glow) ───────────────────── */
+:root[data-theme='light'] .sl-link-button.primary,
+:root[data-theme='light'] .action.primary,
+:root[data-theme='light'] .actions a.primary,
+:root[data-theme='light'] a[class*="primary"] {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  border: 1px solid #0284c7 !important;
+  border-radius: 999px !important;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25) !important;
+  transition: all 0.2s ease !important;
+}
+
+:root[data-theme='light'] .sl-link-button.primary:hover,
+:root[data-theme='light'] .action.primary:hover,
+:root[data-theme='light'] .actions a.primary:hover,
+:root[data-theme='light'] a[class*="primary"]:hover {
+  background: linear-gradient(135deg, #0369a1 0%, #075985 100%) !important;
+  box-shadow: 0 6px 20px rgba(2, 132, 199, 0.4) !important;
+  transform: translateY(-2px);
+}
+
+:root[data-theme='dark'] .sl-link-button.primary,
+:root[data-theme='dark'] .action.primary,
+:root[data-theme='dark'] .actions a.primary,
+:root[data-theme='dark'] a[class*="primary"] {
+  background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%) !important;
+  color: #06080d !important;
+  font-weight: 700 !important;
+  border: 1px solid #7dd3fc !important;
+  border-radius: 999px !important;
+  box-shadow: 0 4px 20px rgba(56, 189, 248, 0.3) !important;
+  transition: all 0.2s ease !important;
+}
+
+:root[data-theme='dark'] .sl-link-button.primary:hover,
+:root[data-theme='dark'] .action.primary:hover,
+:root[data-theme='dark'] .actions a.primary:hover,
+:root[data-theme='dark'] a[class*="primary"]:hover {
+  box-shadow: 0 6px 25px rgba(56, 189, 248, 0.5) !important;
+  transform: translateY(-2px);
+}
+
+:root[data-theme='light'] .sl-link-button.secondary,
+:root[data-theme='light'] .action.secondary,
+:root[data-theme='light'] .actions a.secondary {
+  border: 1px solid #cbd5e1 !important;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  font-weight: 500 !important;
+  border-radius: 999px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+}
+
+:root[data-theme='light'] .sl-link-button.secondary:hover,
+:root[data-theme='light'] .action.secondary:hover,
+:root[data-theme='light'] .actions a.secondary:hover {
+  background: #f1f5f9 !important;
+  border-color: #94a3b8 !important;
+}
+
+:root[data-theme='dark'] .sl-link-button.secondary,
+:root[data-theme='dark'] .action.secondary,
+:root[data-theme='dark'] .actions a.secondary {
+  border: 1px solid rgba(56, 189, 248, 0.25) !important;
+  background: rgba(56, 189, 248, 0.05) !important;
+  color: #f8fafc !important;
+  border-radius: 999px !important;
+}
+
+:root[data-theme='dark'] .sl-link-button.secondary:hover,
+:root[data-theme='dark'] .action.secondary:hover,
+:root[data-theme='dark'] .actions a.secondary:hover {
+  background: rgba(56, 189, 248, 0.12) !important;
+  border-color: #38bdf8 !important;
+}
+
+/* ── Code Blocks & Callouts ──────────────────────────────── */
+.expressive-code {
+  margin-top: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+:root[data-theme='light'] .expressive-code pre {
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 10px !important;
+}
+
+:root[data-theme='dark'] .expressive-code pre {
+  border: 1px solid rgba(56, 189, 248, 0.14) !important;
+  border-radius: 10px !important;
+  background-color: #090d15 !important;
+}
+
+/* ── Feature Cards Grid ──────────────────────────────────── */
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.25rem;
+  margin-top: 2.5rem;
+  margin-bottom: 2.5rem;
+}
+
+.feature-box {
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: all 0.2s ease-in-out;
+}
+
+:root[data-theme='light'] .feature-box {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.04);
+}
+
+:root[data-theme='light'] .feature-box:hover {
+  border-color: #0284c7;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px -4px rgba(2, 132, 199, 0.12);
+}
+
+:root[data-theme='dark'] .feature-box {
+  background: rgba(11, 16, 26, 0.8);
+  border: 1px solid rgba(56, 189, 248, 0.12);
+}
+
+:root[data-theme='dark'] .feature-box:hover {
+  border-color: rgba(56, 189, 248, 0.35);
+  transform: translateY(-2px);
+  background: rgba(14, 21, 35, 0.95);
+  box-shadow: 0 10px 30px -10px rgba(56, 189, 248, 0.15);
+}
+
+.feature-box h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+}
+
+:root[data-theme='light'] .feature-box h3 {
+  color: #0f172a;
+}
+
+:root[data-theme='dark'] .feature-box h3 {
+  color: #f8fafc;
+}
+
+.feature-box p {
+  font-size: 0.9rem;
+  line-height: 1.55;
+  margin: 0;
+}
+
+:root[data-theme='light'] .feature-box p {
+  color: #475569;
+}
+
+:root[data-theme='dark'] .feature-box p {
+  color: #94a3b8;
+}
+
+/*
+ * Tab labels stay on one line. Starlight lets a label wrap, and on a phone "Linux / Raspberry Pi" and
+ * "macOS (Apple Silicon)" broke into two lines each beside a one-line one. The tab list already scrolls
+ * sideways when it does not fit, so a label that does not wrap costs nothing.
+ */
+starlight-tabs .tab > [role='tab'] {
+  white-space: nowrap;
+}

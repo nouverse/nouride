@@ -1,0 +1,189 @@
+name: ci-image
+
+# Does the image still build? Its own workflow so it runs only when something that goes into the
+# image changed: the paths below are what the Dockerfile copies, and `build-hygiene.test.ts` holds
+# them to its COPY lines. They were a hand-picked few — `packages/wa-bridge` matched nothing once it
+# stopped being a submodule, and tsconfig.base.json, scripts/sync-brand.ts and the engine's own source
+# were not watched though each has broken an image build. A docs or site change still skips it.
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "Dockerfile"
+      - ".dockerignore"
+      - "package.json"
+      - "bun.lock"
+      - "tsconfig.base.json"
+      - "config.example.toml"
+      - "apps/engine/**"
+      - "apps/dashboard/**"
+      - "packages/**"
+      - "scripts/**"
+      - "content/**"
+      - ".github/workflows/ci-image.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ci-image-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+# ── Runner ────────────────────────────────────────────────────────────────────
+# GitHub-hosted (`ubuntu-24.04`, not `ubuntu-latest`, which GitHub moves to Ubuntu 26 from 2026-10-19 —
+# a new image is a change to make on purpose, through a CI run first) unless the repository variable
+# `CI_RUNNER` says otherwise. To go
+# back to the self-hosted build runner without editing this file, set it (Settings → Secrets and
+# variables → Actions → Variables) to the JSON of the labels:
+#
+#   CI_RUNNER = ["self-hosted", "build-runner"]
+#
+# The self-hosted line each job used is kept, commented, beside its `runs-on`.
+jobs:
+  # Does the image still build? The free edition, on amd64 only.
+  #
+  # It catches an ordinary Dockerfile break — the one that went unnoticed for
+  # weeks — and it needs no private submodule, so a pull request from a fork
+  # builds it. What it no longer catches is the conditional-stage machinery,
+  # where a mistake in the `FROM edition-${EDITION}` interpolation fails with
+  # `invalid reference format` and only a build selecting that stage sees it.
+  # `release.yml` builds every stage and is where that now surfaces.
+  #
+  # amd64 only, and no push. arm64 under QEMU runs `bun install` and the Vite build emulated, which
+  # is minutes per variant for an architecture no code path here is specific to.
+  # ── Only the free edition ────────────────────────────────────────────────────
+  #
+  # `cloud` (now part of Pro) was built here too until 2026-09-17, and it stopped being buildable: it needs
+  # `internals/pro/oauth`, `internals/pro/multi-user` and `internals/pro/build-pro`, all private, none of which this
+  # workflow has a token for. It failed on every push with the Dockerfile's `RUN` step, which reads
+  # as a broken image rather than a missing submodule.
+  #
+  # Dropped rather than given a token. This job exists to catch a broken image build quickly, and
+  # `basic` catches that. It is also the one image that must be proven **not** to carry the private
+  # plugins, which is the assertion below and the half that matters on a public download. The private
+  # editions are built and checked in `release.yml`, where the token and the submodules belong.
+  #
+  # `router` is not here for the same reason: public, but it bundles the private nougate.
+  image:
+    if: github.repository_owner == 'nouverse'
+    # runs-on: [self-hosted, build-runner]
+    runs-on: ${{ fromJSON(vars.CI_RUNNER || '"ubuntu-24.04"') }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: basic
+            edition: basic
+    name: image (${{ matrix.name }})
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # The self-hosted runner keeps its working copy between jobs, submodules and all: the last job's private checkout
+      # would be read as this commit's, built into a public image, or stop the next checkout over what its install changed.
+      - name: Start without the last job's submodules
+        run: if git config --get-regexp '^submodule\.' >/dev/null; then git submodule deinit --force --all; fi
+      # `content/` is a public repository of its own (nouverse/nouride-builtin-contents): the skills and agent packs every
+      # build ships and every test reads. Public, so no token; after the line above, so it is this commit's pin.
+      - name: Check out the built-in content
+        run: git submodule update --init content
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: nouride:ci-${{ matrix.name }}
+          build-args: |
+            EDITION=${{ matrix.edition }}
+          cache-from: type=gha,scope=ci-${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=ci-${{ matrix.name }}
+
+      # The image's private source map, out through the Dockerfile's `source-map` stage as `release.yml`
+      # takes it, and checked the same way: the map is the one for the bundle this image carries, and the
+      # image carries no map. A broken stage or a map that slipped into the image fails here, not on a tag.
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          target: source-map
+          platforms: linux/amd64
+          build-args: |
+            EDITION=${{ matrix.edition }}
+          outputs: type=local,dest=${{ runner.temp }}/image-map
+          cache-from: type=gha,scope=ci-${{ matrix.name }}
+      - name: The source map fits the bundle in the image, and the image carries none
+        env:
+          MAP_DIR: ${{ runner.temp }}/image-map
+          EDITION: ${{ matrix.edition }}
+          IMAGE: nouride:ci-${{ matrix.name }}
+          PLATFORMS: linux/amd64
+          PULL: "no"
+        run: VERSION=$(jq -r .version apps/engine/package.json) sh scripts/release/image-map-fits.sh
+
+      # A build that succeeds and a daemon that boots are different claims, and this one costs
+      # seconds. `/health` is unauthenticated and is what the deploy check curls.
+      - name: Does it boot?
+        run: |
+          cid=$(docker run -d \
+            -e INITIAL_ADMIN_USERNAME=ci \
+            -e INITIAL_ADMIN_PASSWORD=ci-password-1 \
+            nouride:ci-${{ matrix.name }})
+          for _ in $(seq 1 60); do
+            if docker exec "$cid" bun -e \
+              'await fetch("http://127.0.0.1:18254/health").then(r=>process.exit(r.ok?0:1))' 2>/dev/null
+            then
+              echo "healthy"
+              break
+            fi
+            sleep 1
+          done
+          docker exec "$cid" bun -e \
+            'const r = await fetch("http://127.0.0.1:18254/health"); if (!r.ok) process.exit(1); console.log(await r.text())'
+          docker logs "$cid" 2>&1 | tail -20
+          docker rm -f "$cid" >/dev/null
+
+      # The commercial boundary, asserted rather than trusted. The free image must not carry the
+      # Nouverse sign-in flow: if it does, the build that claims to be the free edition is not one.
+      #
+      # The bridge is checked in the other direction — every image must carry it, because WhatsApp
+      # stopped being an edition switch on 2026-09-16 and an image that cannot resolve it is one
+      # where `bridge_transport = inproc`, the default, fails at the first connection.
+      - name: The edition boundary holds
+        run: |
+          error() { printf '::%s::%s\n' error "$*"; }
+          label=$(docker image inspect nouride:ci-${{ matrix.name }} \
+            --format '{{index .Config.Labels "org.opencontainers.image.licenses"}}')
+
+          # In a single bundle image, bundled plugins live inside /app/nouride.bundle.js.
+          # We check the unique bundle markers from scripts/build/edition.ts:
+          # - wa-bridge marker: "md-app-state"
+          # - oauth marker: "the provider did not return an email for this account"
+          if docker run --rm --entrypoint grep nouride:ci-${{ matrix.name }} \
+               -q "md-app-state" /app/nouride.bundle.js 2>/dev/null
+          then resolves=yes
+          else resolves=no
+          fi
+
+          # The same marker check for the sign-in flow: whether the free
+          # edition contains it is the commercial boundary, and a build that
+          # quietly linked it would look identical from outside.
+          if docker run --rm --entrypoint grep nouride:ci-${{ matrix.name }} \
+               -q "the provider did not return an email for this account" /app/nouride.bundle.js 2>/dev/null
+          then oauth=yes
+          else oauth=no
+          fi
+
+          echo "licence label:              $label"
+          echo "contains nouride-wa-bridge: $resolves"
+          echo "contains nouride-oauth:     $oauth"
+
+          # Every edition bundles the bridge — an image that cannot resolve it is one where
+          # `bridge_transport = inproc`, the default, fails at the first connection.
+          [ "$resolves" = "yes" ] || { error "this image cannot resolve nouride-wa-bridge — bridge_transport = inproc, the default, would fail at the first connection"; exit 1; }
+
+          # And the free image must carry none of the sign-in flow. This is the check that stands
+          # between a mistake and a public download containing code that was never meant to leave.
+          [ "$label" = "PolyForm-Strict-1.0.0" ] || { error "the image must be labelled PolyForm-Strict-1.0.0, what LICENSE says"; exit 1; }
+          [ "$oauth" = "no" ] || { error "this image carries the Nouverse sign-in flow — it is not the edition it claims to be"; exit 1; }

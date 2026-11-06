@@ -1,0 +1,38 @@
+{
+  "name": "@nouride/dashboard",
+  "description": "Nouride dashboard — React + Vite + TanStack Router + TailwindCSS + daisyUI.",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun run ../../scripts/sync-brand.ts && vite",
+    "build": "bun run ../../scripts/sync-brand.ts && vite build",
+    "preview": "vite preview",
+    "lint:check": "bun x tsc --noEmit --skipLibCheck",
+    "test": "bun test tests"
+  },
+  "dependencies": {
+    "@nouride/ui-graph": "workspace:*",
+    "@tanstack/react-query": "5.101.4",
+    "@tanstack/react-router": "1.170.25",
+    "clsx": "^2.1.1",
+    "lucide-react": "1.46.0",
+    "qrcode": "^1.5.4",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "tailwind-merge": "^3.6.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.3.3",
+    "@tanstack/router-generator": "1.167.27",
+    "@tanstack/router-plugin": "1.168.29",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
+    "@vitejs/plugin-react": "6.1.1",
+    "daisyui": "5.7.16",
+    "happy-dom": "^20.14.0",
+    "tailwindcss": "4.3.3",
+    "typescript": "6.0.3",
+    "vite": "8.3.0"
+  }
+}

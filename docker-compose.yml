@@ -1,0 +1,77 @@
+name: nouride
+
+# Builds the image from this checkout and runs it. Use this to verify the
+# Dockerfile before publishing; use docker-compose.prod.yml to deploy.
+
+services:
+  nouride:
+    container_name: nouride
+    build: .
+    ports:
+      # The host's loopback only, as a native install listens; drop `127.0.0.1:` to reach it from other machines.
+      - "127.0.0.1:${PORT:-18254}:${PORT:-18254}"
+    # Credentials cannot be enumerated here. Secret names are chosen by whoever writes
+    # config.toml — `api_key = "nougate"` reads $NOUGATE — so a fixed list in this file
+    # would silently drop whatever the deployment actually named. env_file passes the
+    # whole .env through instead; `environment` below is only for values that must
+    # differ inside a container regardless of what .env says.
+    #
+    # First run needs nothing in here. The daemon creates an admin account, prints its password to
+    # `docker compose logs`, and requires it to be changed at first sign-in. Put
+    # INITIAL_ADMIN_USERNAME and INITIAL_ADMIN_PASSWORD in .env to choose your own instead — which is
+    # what an unattended deployment wants, since nobody is watching the log.
+    env_file:
+      - path: .env
+        required: false
+    # The secret store's key (0.8.19). The store in the volume is encrypted, and its key is best
+    # kept out of the volume, so a backup of ./.nouride carries no key: put
+    # NOURIDE_ENCRYPTION_KEY=<openssl rand -base64 32> in .env above, or mount a Docker secret
+    # and name its file in NOURIDE_ENCRYPTION_KEY_FILE. Without either, the daemon makes a key
+    # and keeps it in the volume (`nouride doctor` says so), and moves to one given later at its
+    # next start. Keep a copy of it: without the key, or the backup passphrase, the store
+    # cannot be opened.
+    environment:
+      # Loopback is the default for a native daemon; a container has to bind its own
+      # interface or the published port reaches nothing.
+      - HOST=${HOST:-0.0.0.0}
+      - PORT=${PORT:-18254}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      # The address people reach this at, when that is not host:port — behind a
+      # proxy, or a port map. Webhook URLs and the OAuth redirect are built from
+      # it, and both reach nobody without it. Left empty it simply is not set.
+      - NOURIDE_PUBLIC_URL=${NOURIDE_PUBLIC_URL:-}
+
+      # ── Sign in with Nouverse (optional) ────────────────────────────────
+      # Leave these unset and nothing changes: the login page is a username and
+      # a password. Setting the issuer is what turns the button on, and all
+      # three must be set together or the daemon refuses to start.
+      #
+      # `SECRET_NAME` is the NAME of the secret. Its value arrives under that
+      # name — `nouverse_oauth` reads $NOUVERSE_OAUTH, which `env_file` passes
+      # through like any other credential.
+      #
+      # apps/site/src/content/docs/en/docs/reference/environment.md has the whole story.
+      - NOURIDE_OAUTH_ISSUER=${NOURIDE_OAUTH_ISSUER:-}
+      - NOURIDE_OAUTH_CLIENT_ID=${NOURIDE_OAUTH_CLIENT_ID:-}
+      - NOURIDE_OAUTH_SECRET_NAME=${NOURIDE_OAUTH_SECRET_NAME:-}
+      - NOURIDE_OAUTH_LABEL=${NOURIDE_OAUTH_LABEL:-}
+      # `false` hides the password form entirely, which the daemon refuses
+      # unless the three above are set — otherwise nothing could sign in.
+      - NOURIDE_PASSWORD_LOGIN=${NOURIDE_PASSWORD_LOGIN:-}
+    volumes:
+      # The whole install as one mount: config.toml, data/ (SQLite, secrets, attachments),
+      # agents/ (personas, edited on the host and tracked in git) and workspace/ (what the
+      # agents produce). One directory to back up, and one to delete to start over.
+      - ./.nouride:/app/.nouride:z
+    restart: unless-stopped
+    # Docker's default is 10 s and then SIGKILL — shorter than the daemon's own 30 s drain, which would
+    # kill a turn in flight before it finishes its step and says so. The systemd unit allows 45 too.
+    stop_grace_period: 45s
+    healthcheck:
+      # The port the daemon reads, from inside the container: 18254 was written here while PORT moved the daemon,
+      # which left a container with PORT set unhealthy for good.
+      test: ["CMD", "bun", "-e", "await fetch('http://localhost:'+(process.env.PORT||18254)+'/health').then(r=>process.exit(r.ok?0:1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

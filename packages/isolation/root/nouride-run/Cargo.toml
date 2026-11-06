@@ -1,0 +1,19 @@
+[package]
+name = "nouride-run"
+version = "0.1.0"
+edition = "2021"
+description = "Runs a Nouride agent's command as that agent's own user. The one root piece of isolation."
+license = "PolyForm-Strict-1.0.0"
+publish = false
+
+# libc and nothing else: this is the process that runs as root, and every crate it pulls in is code a review has to
+# read. The request is framed bytes, not JSON, so there is no parser to trust.
+[dependencies]
+libc = "0.2"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

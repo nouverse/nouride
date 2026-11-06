@@ -1,0 +1,13 @@
+{
+  "name": "@nouride/runtime",
+  "description": "Nouride runtime adapters — the only module allowed to call Bun APIs (TD-001).",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@nouride/shared": "workspace:*"
+  }
+}

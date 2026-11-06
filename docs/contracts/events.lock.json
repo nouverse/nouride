@@ -1,0 +1,608 @@
+{
+  "frames": {
+    "bye": {
+      "reason": {
+        "identity": true,
+        "type": "string",
+        "values": [
+          "shutdown",
+          "slow"
+        ]
+      }
+    },
+    "gap": {
+      "reason": {
+        "identity": true,
+        "type": "string",
+        "values": [
+          "swept",
+          "capped"
+        ]
+      },
+      "since": {
+        "type": "number"
+      },
+      "until": {
+        "type": "number"
+      }
+    },
+    "hello": {
+      "epoch": {
+        "type": "string"
+      },
+      "latest": {
+        "type": "number"
+      },
+      "oldest": {
+        "type": "number"
+      },
+      "version": {
+        "type": "string"
+      }
+    },
+    "reset": {
+      "latest": {
+        "type": "number"
+      }
+    },
+    "thinking": {
+      "text": {
+        "type": "string"
+      },
+      "turnId": {
+        "type": "string"
+      }
+    }
+  },
+  "kinds": {
+    "audit": {
+      "args": {
+        "type": "object"
+      },
+      "callId": {
+        "identity": true,
+        "optional": true,
+        "type": "string"
+      },
+      "error": {
+        "optional": true,
+        "type": "boolean"
+      },
+      "ms": {
+        "type": "number"
+      },
+      "secrets": {
+        "items": "string",
+        "optional": true,
+        "type": "array"
+      },
+      "threw": {
+        "optional": true,
+        "type": "string"
+      },
+      "tool": {
+        "identity": true,
+        "type": "string"
+      }
+    },
+    "compact": {
+      "by": {
+        "optional": true,
+        "type": "string"
+      },
+      "dropped": {
+        "optional": true,
+        "type": "number"
+      },
+      "phase": {
+        "identity": true,
+        "type": "string",
+        "values": [
+          "start",
+          "done",
+          "failed",
+          "trimmed",
+          "pruned"
+        ]
+      },
+      "pruned": {
+        "optional": true,
+        "type": "number"
+      },
+      "step": {
+        "identity": true,
+        "type": "number"
+      },
+      "text": {
+        "type": "string"
+      },
+      "tokens": {
+        "optional": true,
+        "type": "number"
+      },
+      "turns": {
+        "optional": true,
+        "type": "number"
+      },
+      "via": {
+        "optional": true,
+        "type": "string",
+        "values": [
+          "delegate",
+          "ask_agent"
+        ]
+      }
+    },
+    "context": {
+      "by": {
+        "optional": true,
+        "type": "string"
+      },
+      "cleared": {
+        "type": "number"
+      },
+      "estimatedTokens": {
+        "type": "number"
+      },
+      "keptAt": {
+        "items": "string",
+        "optional": true,
+        "type": "array"
+      },
+      "notes": {
+        "type": "boolean"
+      },
+      "request": {
+        "identity": true,
+        "type": "number"
+      },
+      "summary": {
+        "type": "boolean"
+      },
+      "via": {
+        "optional": true,
+        "type": "string",
+        "values": [
+          "delegate",
+          "ask_agent"
+        ]
+      }
+    },
+    "note": {
+      "by": {
+        "optional": true,
+        "type": "string"
+      },
+      "capped": {
+        "optional": true,
+        "type": "boolean"
+      },
+      "step": {
+        "identity": true,
+        "type": "number"
+      },
+      "text": {
+        "type": "string"
+      },
+      "via": {
+        "optional": true,
+        "type": "string",
+        "values": [
+          "delegate",
+          "ask_agent"
+        ]
+      }
+    },
+    "reasoning": {
+      "by": {
+        "optional": true,
+        "type": "string"
+      },
+      "step": {
+        "identity": true,
+        "type": "number"
+      },
+      "text": {
+        "type": "string"
+      },
+      "via": {
+        "optional": true,
+        "type": "string",
+        "values": [
+          "delegate",
+          "ask_agent"
+        ]
+      }
+    },
+    "reply": {
+      "from": {
+        "identity": true,
+        "type": "number"
+      },
+      "text": {
+        "type": "string"
+      }
+    },
+    "retry": {
+      "attempt": {
+        "optional": true,
+        "type": "number"
+      },
+      "by": {
+        "optional": true,
+        "type": "string"
+      },
+      "delayMs": {
+        "optional": true,
+        "type": "number"
+      },
+      "dropped": {
+        "optional": true,
+        "type": "number"
+      },
+      "failure": {
+        "optional": true,
+        "type": "string"
+      },
+      "from": {
+        "optional": true,
+        "type": "string"
+      },
+      "maxAttempts": {
+        "optional": true,
+        "type": "number"
+      },
+      "reason": {
+        "identity": true,
+        "type": "string",
+        "values": [
+          "provider",
+          "context_overflow",
+          "audio_refused",
+          "fallback"
+        ]
+      },
+      "status": {
+        "optional": true,
+        "type": "number"
+      },
+      "step": {
+        "identity": true,
+        "type": "number"
+      },
+      "text": {
+        "type": "string"
+      },
+      "to": {
+        "optional": true,
+        "type": "string"
+      },
+      "via": {
+        "optional": true,
+        "type": "string",
+        "values": [
+          "delegate",
+          "ask_agent"
+        ]
+      }
+    },
+    "steer": {
+      "editOf": {
+        "optional": true,
+        "type": "string"
+      },
+      "step": {
+        "identity": true,
+        "type": "number"
+      },
+      "text": {
+        "type": "string"
+      }
+    },
+    "steer_reply": {
+      "step": {
+        "identity": true,
+        "type": "number"
+      },
+      "text": {
+        "type": "string"
+      }
+    },
+    "tool": {
+      "by": {
+        "optional": true,
+        "type": "string"
+      },
+      "callId": {
+        "identity": true,
+        "type": "string"
+      },
+      "like": {
+        "optional": true,
+        "type": "string",
+        "values": [
+          "exec",
+          "read",
+          "edit",
+          "search",
+          "web_fetch"
+        ]
+      },
+      "name": {
+        "identity": true,
+        "type": "string"
+      },
+      "step": {
+        "identity": true,
+        "type": "number"
+      },
+      "text": {
+        "type": "string"
+      },
+      "via": {
+        "optional": true,
+        "type": "string",
+        "values": [
+          "delegate",
+          "ask_agent"
+        ]
+      }
+    },
+    "tool_done": {
+      "by": {
+        "optional": true,
+        "type": "string"
+      },
+      "callId": {
+        "identity": true,
+        "type": "string"
+      },
+      "error": {
+        "type": "boolean"
+      },
+      "name": {
+        "identity": true,
+        "type": "string"
+      },
+      "outcome": {
+        "optional": true,
+        "type": "string",
+        "values": [
+          "ok",
+          "exit",
+          "failed",
+          "timed_out",
+          "killed"
+        ]
+      },
+      "step": {
+        "identity": true,
+        "type": "number"
+      },
+      "text": {
+        "type": "string"
+      },
+      "via": {
+        "optional": true,
+        "type": "string",
+        "values": [
+          "delegate",
+          "ask_agent"
+        ]
+      }
+    },
+    "turn": {
+      "by": {
+        "optional": true,
+        "type": "string"
+      },
+      "editOf": {
+        "optional": true,
+        "type": "string"
+      },
+      "error": {
+        "optional": true,
+        "type": "string"
+      },
+      "inputTokens": {
+        "optional": true,
+        "type": "number"
+      },
+      "messageId": {
+        "optional": true,
+        "type": "string"
+      },
+      "model": {
+        "optional": true,
+        "type": "string"
+      },
+      "outputTokens": {
+        "optional": true,
+        "type": "number"
+      },
+      "phase": {
+        "identity": true,
+        "type": "string",
+        "values": [
+          "start",
+          "note",
+          "end"
+        ]
+      },
+      "prompt": {
+        "optional": true,
+        "type": "string"
+      },
+      "reply": {
+        "optional": true,
+        "type": "string"
+      },
+      "replyChars": {
+        "optional": true,
+        "type": "number"
+      },
+      "senderId": {
+        "optional": true,
+        "type": "string"
+      },
+      "sessionId": {
+        "optional": true,
+        "type": "string"
+      },
+      "status": {
+        "identity": true,
+        "optional": true,
+        "type": "string",
+        "values": [
+          "done",
+          "failed",
+          "cancelled",
+          "interrupted"
+        ]
+      },
+      "toolCalls": {
+        "optional": true,
+        "type": "number"
+      },
+      "via": {
+        "optional": true,
+        "type": "string",
+        "values": [
+          "delegate",
+          "ask_agent"
+        ]
+      }
+    },
+    "unstep": {
+      "steps": {
+        "items": "number",
+        "type": "array"
+      }
+    },
+    "usage": {
+      "attempts": {
+        "optional": true,
+        "type": "number"
+      },
+      "basis": {
+        "optional": true,
+        "type": "string",
+        "values": [
+          "list",
+          "included",
+          "unpriced",
+          "cli"
+        ]
+      },
+      "cacheCreationInputTokens": {
+        "optional": true,
+        "type": "number"
+      },
+      "cachedInputTokens": {
+        "optional": true,
+        "type": "number"
+      },
+      "durationMs": {
+        "optional": true,
+        "type": "number"
+      },
+      "estimated": {
+        "optional": true,
+        "type": "boolean"
+      },
+      "inputTokens": {
+        "type": "number"
+      },
+      "latencyMs": {
+        "optional": true,
+        "type": "number"
+      },
+      "model": {
+        "type": "string"
+      },
+      "outputTokens": {
+        "type": "number"
+      },
+      "priceAsOf": {
+        "optional": true,
+        "type": "string"
+      },
+      "provider": {
+        "type": "string"
+      },
+      "purpose": {
+        "optional": true,
+        "type": "string",
+        "values": [
+          "turn",
+          "helper",
+          "peer",
+          "steer_reply",
+          "compaction",
+          "reflection",
+          "memory",
+          "embedding",
+          "vision",
+          "transcription",
+          "second_look",
+          "side_question"
+        ]
+      },
+      "stopReason": {
+        "optional": true,
+        "type": "string",
+        "values": [
+          "stop",
+          "tool_calls",
+          "max_tokens",
+          "error"
+        ]
+      },
+      "upstream": {
+        "optional": true,
+        "type": "object"
+      },
+      "usd": {
+        "optional": true,
+        "type": "number"
+      }
+    },
+    "waiting": {
+      "approvalId": {
+        "identity": true,
+        "optional": true,
+        "type": "string"
+      },
+      "by": {
+        "optional": true,
+        "type": "string"
+      },
+      "callId": {
+        "identity": true,
+        "optional": true,
+        "type": "string"
+      },
+      "name": {
+        "identity": true,
+        "optional": true,
+        "type": "string"
+      },
+      "step": {
+        "identity": true,
+        "type": "number"
+      },
+      "text": {
+        "type": "string"
+      },
+      "via": {
+        "optional": true,
+        "type": "string",
+        "values": [
+          "delegate",
+          "ask_agent"
+        ]
+      }
+    }
+  },
+  "version": "1.8"
+}

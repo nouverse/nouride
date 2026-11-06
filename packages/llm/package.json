@@ -1,0 +1,13 @@
+{
+  "name": "@nouride/llm",
+  "description": "Nouride LLM clients — OpenAI-compatible and Anthropic, raw fetch, no SDKs.",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@nouride/shared": "workspace:*"
+  }
+}

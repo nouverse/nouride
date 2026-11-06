@@ -1,0 +1,17 @@
+# One request to nouride-pkg, started by nouride-pkg.socket. Root, and deliberately without the
+# daemon's sandbox: installing a package writes /usr and /etc. What it may do is decided by the script.
+#
+# Its log: journalctl -t nouride-pkg
+
+[Unit]
+Description=Nouride system packages (request)
+
+[Service]
+Type=simple
+ExecStart=/usr/local/lib/nouride-pkg/nouride-pkg --serve
+StandardInput=socket
+StandardOutput=socket
+StandardError=journal
+SyslogIdentifier=nouride-pkg
+# A large upgrade on a Pi can take a quarter of an hour. Past this it is stuck, not slow.
+RuntimeMaxSec=1800

@@ -1,0 +1,2013 @@
+{
+  "/sessions/ses_1/turns": {
+    "events": [],
+    "room": null,
+    "session": {
+      "id": "ses_1",
+      "agentId": "nouva",
+      "chatId": "web-1",
+      "gatewayId": "web:dashboard",
+      "updatedAt": 1760000000000,
+      "writable": true
+    },
+    "earlier": [],
+    "messages": [],
+    "turns": [
+      {
+        "id": "turn_1",
+        "agentId": "nouva",
+        "chatId": "web-1",
+        "sessionId": "ses_1",
+        "status": "done",
+        "prompt": "is the disk full?",
+        "reply": "No — 40% used.",
+        "model": "test-model",
+        "toolCalls": 1,
+        "inputTokens": 120,
+        "outputTokens": 8,
+        "startedAt": 1760000000000,
+        "endedAt": 1760000000000,
+        "durationMs": 0,
+        "steps": [
+          {
+            "seq": 1,
+            "at": 1760000000000,
+            "kind": "tool",
+            "text": "exec df -h",
+            "callId": "c1",
+            "name": "exec",
+            "ms": 0
+          },
+          {
+            "seq": 2,
+            "at": 1760000000000,
+            "kind": "tool_done",
+            "text": "exec ok · 12ms",
+            "callId": "c1",
+            "name": "exec",
+            "error": false,
+            "outcome": "ok",
+            "ms": 0
+          }
+        ]
+      }
+    ]
+  },
+  "/sessions/ses_1/live": {
+    "jobs": [],
+    "turn": {
+      "id": "turn_2",
+      "agentId": "nouva",
+      "chatId": "web-1",
+      "sessionId": "ses_1",
+      "status": "running",
+      "prompt": "clean the build",
+      "reply": "",
+      "toolCalls": 0,
+      "startedAt": 1760000000000,
+      "steps": [
+        {
+          "seq": 1,
+          "at": 1760000000000,
+          "kind": "reasoning",
+          "text": "The build directory is large; a helper can check the cache.",
+          "ms": 0
+        },
+        {
+          "seq": 2,
+          "at": 1760000000000,
+          "kind": "tool",
+          "text": "delegate 1 task",
+          "callId": "c2",
+          "name": "delegate",
+          "ms": 0
+        },
+        {
+          "seq": 3,
+          "at": 1760000000000,
+          "kind": "tool",
+          "text": "↳ du -sh cache",
+          "callId": "c3",
+          "name": "exec",
+          "ms": 0
+        },
+        {
+          "seq": 4,
+          "at": 1760000000000,
+          "kind": "waiting",
+          "text": "waiting for approval: exec",
+          "callId": "c4",
+          "name": "exec",
+          "ms": 0
+        }
+      ],
+      "cursor": 4
+    }
+  },
+  "/sessions/ses_1/notes": {
+    "text": "## Clean the build\n\n### Goal\nFree space on the build disk.\n\n### Done\n- Measured the cache: 41 GB.\n\n### Next\n- Ask before deleting anything.\n",
+    "tasks": [
+      {
+        "title": "Clean the build",
+        "body": "### Goal\nFree space on the build disk.\n\n### Done\n- Measured the cache: 41 GB.\n\n### Next\n- Ask before deleting anything."
+      }
+    ],
+    "plan": {
+      "task": "Clean the build",
+      "steps": [
+        {
+          "text": "Measure the cache",
+          "state": "done"
+        },
+        {
+          "text": "Ask before deleting",
+          "state": "active"
+        },
+        {
+          "text": "Delete artifacts older than a week",
+          "state": "pending"
+        },
+        {
+          "text": "Prune Docker images",
+          "state": "skipped",
+          "reason": "no Docker on this box"
+        }
+      ],
+      "updatedAt": 1760000000000
+    },
+    "setAside": {
+      "titles": [
+        "Try the remote cache"
+      ],
+      "at": 1760000000000
+    }
+  },
+  "/missions": {
+    "missions": [
+      {
+        "id": "msn_1",
+        "agentId": "nouva",
+        "startedBy": "usr_1",
+        "byAgent": null,
+        "gatewayId": "web:dashboard",
+        "chatId": "missions",
+        "goal": "Write a report on the disk usage of the build box",
+        "checks": [
+          "test -s report.md"
+        ],
+        "review": null,
+        "reviewOn": true,
+        "accept": false,
+        "status": "running",
+        "waitKind": null,
+        "reason": null,
+        "report": null,
+        "summary": null,
+        "files": [],
+        "lastCheck": null,
+        "answers": [],
+        "told": [],
+        "workdir": "/srv/nouride/workspace/shared/report",
+        "branch": null,
+        "parentId": null,
+        "untrusted": false,
+        "jobId": null,
+        "request": null,
+        "reviewed": false,
+        "limits": {
+          "hours": 8,
+          "turns": 50,
+          "tokens": 50000000
+        },
+        "turnsUsed": 0,
+        "tokensUsed": 0,
+        "cliTurns": 0,
+        "cliUnreported": 0,
+        "helpersSince": null,
+        "resumes": 0,
+        "waitedMs": 0,
+        "waitingSince": null,
+        "warnedAt": null,
+        "followedUpAt": null,
+        "progressAt": null,
+        "progressDone": 0,
+        "nudgedAt": null,
+        "createdAt": 1760000000000,
+        "startedAt": 1760000000000,
+        "updatedAt": 1760000000000,
+        "endedAt": null,
+        "seen": "working",
+        "workedMs": 0,
+        "shown": {
+          "turns": true,
+          "tokens": "known"
+        },
+        "checklist": {
+          "done": 1,
+          "total": 3,
+          "active": "Write report.md"
+        }
+      },
+      {
+        "id": "msn_2",
+        "agentId": "nouva",
+        "startedBy": "usr_1",
+        "byAgent": null,
+        "gatewayId": "web:dashboard",
+        "chatId": "missions",
+        "goal": "Tidy the old logs",
+        "checks": [
+          "test -s report.md"
+        ],
+        "review": null,
+        "reviewOn": true,
+        "accept": false,
+        "status": "stopped",
+        "waitKind": null,
+        "reason": "stopped by tester",
+        "report": null,
+        "summary": null,
+        "files": [],
+        "lastCheck": null,
+        "answers": [],
+        "told": [],
+        "workdir": "/srv/nouride/workspace/shared/logs",
+        "branch": null,
+        "parentId": null,
+        "untrusted": false,
+        "jobId": null,
+        "request": null,
+        "reviewed": false,
+        "limits": {
+          "hours": 8,
+          "turns": 50,
+          "tokens": 50000000
+        },
+        "turnsUsed": 0,
+        "tokensUsed": 0,
+        "cliTurns": 0,
+        "cliUnreported": 0,
+        "helpersSince": null,
+        "resumes": 0,
+        "waitedMs": 0,
+        "waitingSince": null,
+        "warnedAt": null,
+        "followedUpAt": null,
+        "progressAt": null,
+        "progressDone": 0,
+        "nudgedAt": null,
+        "createdAt": 1760000000000,
+        "startedAt": 1760000000000,
+        "updatedAt": 1760000000000,
+        "endedAt": 1760000000000,
+        "seen": "ended",
+        "workedMs": 0,
+        "shown": {
+          "turns": true,
+          "tokens": "known"
+        },
+        "checklist": null
+      }
+    ]
+  },
+  "/missions/msn_1": {
+    "mission": {
+      "id": "msn_1",
+      "agentId": "nouva",
+      "startedBy": "usr_1",
+      "byAgent": null,
+      "gatewayId": "web:dashboard",
+      "chatId": "missions",
+      "goal": "Write a report on the disk usage of the build box",
+      "checks": [
+        "test -s report.md"
+      ],
+      "review": null,
+      "reviewOn": true,
+      "accept": false,
+      "status": "running",
+      "waitKind": null,
+      "reason": null,
+      "report": null,
+      "summary": null,
+      "files": [],
+      "lastCheck": null,
+      "answers": [],
+      "told": [],
+      "workdir": "/srv/nouride/workspace/shared/report",
+      "branch": null,
+      "parentId": null,
+      "untrusted": false,
+      "jobId": null,
+      "request": null,
+      "reviewed": false,
+      "limits": {
+        "hours": 8,
+        "turns": 50,
+        "tokens": 50000000
+      },
+      "turnsUsed": 0,
+      "tokensUsed": 0,
+      "cliTurns": 0,
+      "cliUnreported": 0,
+      "helpersSince": null,
+      "resumes": 0,
+      "waitedMs": 0,
+      "waitingSince": null,
+      "warnedAt": null,
+      "followedUpAt": null,
+      "progressAt": null,
+      "progressDone": 0,
+      "nudgedAt": null,
+      "createdAt": 1760000000000,
+      "startedAt": 1760000000000,
+      "updatedAt": 1760000000000,
+      "endedAt": null,
+      "seen": "working",
+      "workedMs": 0,
+      "shown": {
+        "turns": true,
+        "tokens": "known"
+      }
+    },
+    "sessionId": "ses_msn_1",
+    "steps": 0,
+    "brief": null,
+    "briefPath": null,
+    "plan": {
+      "task": "Mission",
+      "steps": [
+        {
+          "text": "Measure each directory",
+          "state": "done",
+          "note": "du in sizes.txt — build/ is 41 GB"
+        },
+        {
+          "text": "Write report.md",
+          "state": "active"
+        },
+        {
+          "text": "Check it reads well",
+          "state": "pending"
+        }
+      ],
+      "updatedAt": 1760000000000
+    },
+    "notes": [
+      {
+        "title": "Mission",
+        "body": ""
+      }
+    ],
+    "parked": []
+  },
+  "/policy/missions": {
+    "perAgent": 1,
+    "maxRunning": 1,
+    "limitHours": 8,
+    "limitTurns": 100,
+    "limitTokens": 100000000,
+    "auto": true,
+    "defaults": {
+      "perAgent": 1,
+      "maxRunning": 1,
+      "limitHours": 8,
+      "limitTurns": 100,
+      "limitTokens": 100000000
+    },
+    "bounds": {
+      "perAgent": {
+        "min": 1,
+        "max": 4,
+        "integer": true
+      },
+      "maxRunning": {
+        "min": 1,
+        "max": 1,
+        "integer": true
+      },
+      "limitHours": {
+        "min": 0.25,
+        "max": 168,
+        "integer": false
+      },
+      "limitTurns": {
+        "min": 1,
+        "max": 1000,
+        "integer": true
+      },
+      "limitTokens": {
+        "min": 100000,
+        "integer": true
+      }
+    },
+    "editable": true
+  },
+  "/setup/state": {
+    "hasUser": true,
+    "hasProvider": true,
+    "hasAgent": true,
+    "complete": true,
+    "oauth": {
+      "available": false,
+      "label": "Nouverse"
+    },
+    "passwordLogin": true,
+    "bundledGateway": {
+      "available": false
+    }
+  },
+  "/auth/me": {
+    "kind": "user",
+    "role": "admin",
+    "actor": "tester",
+    "user": {
+      "id": "usr_1",
+      "username": "tester",
+      "displayName": "",
+      "role": "admin",
+      "createdAt": 1760000000000,
+      "updatedAt": 1760000000000,
+      "mustChangePassword": false,
+      "lastLoginAt": null,
+      "hasPassword": true
+    }
+  },
+  "/status": {
+    "status": "ready",
+    "uptime": 0,
+    "durable": {
+      "inFlight": 0,
+      "waiting": 0
+    },
+    "supervisor": {
+      "kind": "none",
+      "restartsOnExit": false
+    },
+    "configSource": "/srv/nouride/data/config.toml",
+    "dataDir": "/srv/nouride/data",
+    "orchestrator": null,
+    "agents": [
+      {
+        "id": "nouva",
+        "displayName": "Nouva",
+        "headline": null,
+        "enabled": true,
+        "since": null,
+        "state": "running",
+        "activity": {
+          "activity": "idle",
+          "working": [],
+          "jobs": 0,
+          "missions": 0,
+          "missionsWaiting": 0,
+          "waiting": 0,
+          "unavailable": null
+        },
+        "provider": "test",
+        "model": "test-model",
+        "fallbacks": [],
+        "effort": null,
+        "effortDefault": null,
+        "tiers": {
+          "small": {
+            "own": null,
+            "inherits": "test-model"
+          },
+          "high": {
+            "own": null,
+            "inherits": "test-model"
+          }
+        },
+        "contextWindow": {
+          "tokens": 32000,
+          "source": "default"
+        },
+        "maxToolIterations": null,
+        "maxTurnSeconds": null,
+        "jobQuietAfterMinutes": null,
+        "maxBackgroundHelpers": null,
+        "missionsPerAgent": null,
+        "tools": [
+          "read",
+          "glob",
+          "grep",
+          "plan",
+          "delegate",
+          "ask_agent",
+          "web_fetch",
+          "web_search",
+          "memory_read",
+          "memory_write",
+          "memory_search",
+          "memory_analyze",
+          "person_record",
+          "person_notes",
+          "send_file",
+          "send_message",
+          "session_status",
+          "nouride"
+        ],
+        "approvals": "per-person",
+        "access": "follow",
+        "sharedTools": true,
+        "secondLook": {
+          "own": null,
+          "install": ""
+        },
+        "skills": [],
+        "workspaceRoots": []
+      }
+    ],
+    "failures": [],
+    "providers": [
+      {
+        "name": "test",
+        "kind": "openai",
+        "baseUrl": "https://fake.test/v1",
+        "hasCredential": true
+      },
+      {
+        "name": "ollama",
+        "kind": "openai",
+        "baseUrl": "http://127.0.0.1:11434/v1",
+        "hasCredential": true
+      }
+    ],
+    "gateways": [
+      {
+        "id": "telegram:main",
+        "platform": "telegram",
+        "status": "connected"
+      }
+    ],
+    "queue": {
+      "keys": 0,
+      "waiting": 0,
+      "running": 0,
+      "completed": 0
+    },
+    "pendingApprovals": 0,
+    "helpers": []
+  },
+  "/health": {
+    "status": "ok",
+    "edition": "unknown",
+    "appliance": false,
+    "uptime": 0,
+    "version": "0.7.10",
+    "eventProtocol": "1.8",
+    "agents": 1,
+    "install": "install_1",
+    "gateways": {
+      "telegram:main": "connected"
+    },
+    "memory": {
+      "rssMb": 64,
+      "heapUsedMb": 32
+    }
+  },
+  "/setup/presets": {
+    "presets": [
+      {
+        "id": "pilot",
+        "label": "Pilot",
+        "summary": "Full access: files, terminal, web and the daemon itself. Asks before anything risky.",
+        "headline": "Takes a task to the end: files, terminal, web and this daemon",
+        "soul": "You are a capable, calm operator. You take a task from the first step to the last and say plainly what you did.\n\n- Be brief: lead with the result, then what is left.\n- Prefer doing over asking, but ask before anything destructive or hard to undo.\n- When you are unsure, check (read the file, run the command) rather than guess.\n- Answer in the language you are spoken to in.",
+        "tools": [
+          "read",
+          "glob",
+          "grep",
+          "plan",
+          "delegate",
+          "write",
+          "edit",
+          "multi_edit",
+          "web_fetch",
+          "web_search",
+          "memory_read",
+          "memory_write",
+          "memory_search",
+          "memory_analyze",
+          "person_record",
+          "person_notes",
+          "send_file",
+          "send_message",
+          "session_status",
+          "exec",
+          "session",
+          "secret_save",
+          "nouride",
+          "update",
+          "skill_create",
+          "skill_toggle",
+          "skill_improve",
+          "skill_search",
+          "skill_install",
+          "mcp_search",
+          "agent_create",
+          "agent_configure"
+        ]
+      },
+      {
+        "id": "researcher",
+        "label": "Researcher",
+        "summary": "Searches and reads the web, and reads files. No terminal, writes nothing.",
+        "headline": "Research: searches the web and reads sources, with links; writes nothing",
+        "soul": "You are a careful researcher. You find out what is true and show where you found it.\n\n- Check more than one source and give each claim its link.\n- Keep what you verified apart from what you infer, and say how sure you are.\n- Summarise first, then the detail for whoever wants it.\n- Answer in the language you are spoken to in.",
+        "tools": [
+          "read",
+          "glob",
+          "grep",
+          "plan",
+          "web_fetch",
+          "web_search",
+          "memory_read",
+          "memory_write",
+          "memory_search",
+          "memory_analyze",
+          "person_record",
+          "person_notes",
+          "send_file",
+          "session_status"
+        ]
+      },
+      {
+        "id": "assistant",
+        "label": "Assistant",
+        "summary": "Everyday help: remembers what matters, sets reminders, looks things up.",
+        "headline": "Everyday help: reminders, plans, remembering things, looking things up",
+        "soul": "You are a warm, practical personal assistant. You make everyday life a little easier.\n\n- Be friendly and brief.\n- Remember what people tell you (preferences, plans, dates) and use it later.\n- Offer a reminder when a date or a promise comes up.\n- Answer in the language you are spoken to in.",
+        "tools": [
+          "plan",
+          "web_fetch",
+          "web_search",
+          "memory_read",
+          "memory_write",
+          "memory_search",
+          "memory_analyze",
+          "person_record",
+          "person_notes",
+          "send_file",
+          "session_status",
+          "nouride"
+        ]
+      },
+      {
+        "id": "developer",
+        "label": "Developer",
+        "summary": "Code and servers: reads and edits files, runs commands and tests.",
+        "headline": "Code and servers: reads and changes code, runs commands and tests",
+        "soul": "You are a pragmatic software engineer. You change code carefully and prove it works.\n\n- Read the code before you change it; never guess an interface.\n- Make the smallest change that fixes the problem, then run the tests or the command that shows it.\n- Report what you changed, why, and how you checked it.\n- Answer in the language you are spoken to in.",
+        "tools": [
+          "read",
+          "glob",
+          "grep",
+          "plan",
+          "delegate",
+          "write",
+          "edit",
+          "multi_edit",
+          "web_fetch",
+          "web_search",
+          "memory_read",
+          "memory_write",
+          "memory_search",
+          "send_file",
+          "session_status",
+          "exec",
+          "session"
+        ]
+      },
+      {
+        "id": "custom",
+        "label": "Custom",
+        "summary": "Pick the tools yourself.",
+        "headline": "Assistant",
+        "soul": "You are a helpful, precise assistant.\n\n- Be clear and brief.\n- Say when you do not know, rather than guess.\n- Answer in the language you are spoken to in.",
+        "tools": []
+      }
+    ],
+    "groups": [
+      {
+        "label": "Files",
+        "tools": [
+          "read",
+          "glob",
+          "grep",
+          "write",
+          "edit",
+          "multi_edit",
+          "send_file"
+        ]
+      },
+      {
+        "label": "Terminal",
+        "tools": [
+          "exec",
+          "session",
+          "secret_save"
+        ]
+      },
+      {
+        "label": "Web",
+        "tools": [
+          "web_search",
+          "web_fetch"
+        ]
+      },
+      {
+        "label": "Memory",
+        "tools": [
+          "memory_read",
+          "memory_write",
+          "memory_search",
+          "memory_analyze",
+          "person_record",
+          "person_notes"
+        ]
+      },
+      {
+        "label": "Planning and other agents",
+        "tools": [
+          "plan",
+          "delegate",
+          "agent_create",
+          "agent_configure"
+        ]
+      },
+      {
+        "label": "Skills and MCP",
+        "tools": [
+          "skill_create",
+          "skill_toggle",
+          "skill_improve",
+          "skill_search",
+          "skill_install",
+          "mcp_search"
+        ]
+      },
+      {
+        "label": "This daemon",
+        "tools": [
+          "nouride",
+          "session_status",
+          "update"
+        ]
+      },
+      {
+        "label": "Other",
+        "tools": [
+          "send_message"
+        ]
+      }
+    ]
+  },
+  "/web-search": {
+    "mode": "free",
+    "endpoint": "",
+    "apiKeySecret": "brave_search_api_key",
+    "apiKeyOrigin": "missing",
+    "fallbackEnabled": true,
+    "allowPrivateUrls": false,
+    "effective": "free",
+    "restartPending": false,
+    "editable": true
+  },
+  "/secrets": {
+    "secrets": [
+      {
+        "name": "mcp-lib-github-github_token",
+        "origin": "store",
+        "usedBy": [],
+        "shadowed": false,
+        "fields": {},
+        "addedAt": "2025-10-09T08:53:20.000Z"
+      },
+      {
+        "name": "team_brave",
+        "origin": "store",
+        "usedBy": [],
+        "shadowed": false,
+        "fields": {},
+        "addedAt": "2025-10-09T08:53:20.000Z"
+      },
+      {
+        "name": "testkey",
+        "origin": "env",
+        "usedBy": [
+          "provider test",
+          "provider ollama"
+        ],
+        "shadowed": false,
+        "fields": {}
+      }
+    ],
+    "sealedInSnapshots": false,
+    "lock": {
+      "encrypted": true,
+      "key": {
+        "where": "/srv/nouride/data/encryption.key",
+        "level": "data"
+      }
+    }
+  },
+  "/providers": {
+    "providers": [
+      {
+        "name": "test",
+        "kind": "openai",
+        "baseUrl": "https://fake.test/v1",
+        "apiKeySecret": "testkey",
+        "hasCredential": false,
+        "builtIn": false
+      },
+      {
+        "name": "ollama",
+        "kind": "openai",
+        "baseUrl": "http://127.0.0.1:11434/v1",
+        "apiKeySecret": "testkey",
+        "hasCredential": false,
+        "builtIn": false
+      }
+    ],
+    "editable": true
+  },
+  "/providers/ollama/models": {
+    "ok": true,
+    "models": [
+      "llama3.2",
+      "qwen3:8b"
+    ]
+  },
+  "/skills/hub/search": {
+    "hits": [
+      {
+        "ref": "skills.sh:anthropics/skills/pdf",
+        "source": "skills.sh",
+        "name": "pdf",
+        "description": "from anthropics/skills",
+        "url": "https://skills.sh/anthropics/skills/pdf",
+        "installs": 205751
+      }
+    ],
+    "errors": [
+      {
+        "source": "clawhub",
+        "error": "HTTP 503 from clawhub.ai"
+      },
+      {
+        "source": "well-known",
+        "error": "HTTP 503 from agentskills.io"
+      }
+    ],
+    "sources": [
+      "skills.sh",
+      "clawhub",
+      "well-known",
+      "github"
+    ]
+  },
+  "/mcp-server": {
+    "enabled": true,
+    "tokens": [
+      {
+        "id": "tok_1",
+        "person": "gading",
+        "agents": [
+          "nouva"
+        ],
+        "scopes": [
+          "memory",
+          "personas"
+        ],
+        "label": "zed",
+        "createdAt": 1760000000000,
+        "lastUsedAt": null,
+        "expiresAt": null
+      }
+    ]
+  },
+  "/mcp/library": {
+    "servers": [
+      {
+        "name": "notion",
+        "transport": "streamable-http",
+        "url": "https://mcp.notion.com/mcp",
+        "hasCredential": false,
+        "envSecrets": [],
+        "needsLogin": false,
+        "agents": [
+          {
+            "id": "nouva",
+            "on": false,
+            "own": false
+          }
+        ]
+      },
+      {
+        "name": "github",
+        "transport": "stdio",
+        "command": "npx",
+        "args": [
+          "-y",
+          "@acme/github-mcp"
+        ],
+        "hasCredential": false,
+        "envSecrets": [
+          {
+            "name": "GITHUB_TOKEN",
+            "set": true
+          }
+        ],
+        "needsLogin": false,
+        "agents": [
+          {
+            "id": "nouva",
+            "on": true,
+            "own": false,
+            "connected": false,
+            "tools": 0,
+            "needsLogin": false
+          }
+        ]
+      }
+    ]
+  },
+  "/agents/nouva/mcp": {
+    "servers": [
+      {
+        "name": "notion",
+        "transport": "streamable-http",
+        "url": "https://mcp.notion.com/mcp",
+        "hasCredential": false,
+        "envSecrets": [],
+        "on": false,
+        "credential": "library",
+        "loginAs": "library",
+        "needsLogin": false,
+        "connected": false,
+        "tools": 0,
+        "schemaBytes": 0,
+        "running": false
+      },
+      {
+        "name": "github",
+        "transport": "stdio",
+        "command": "npx",
+        "args": [
+          "-y",
+          "@acme/github-mcp"
+        ],
+        "hasCredential": false,
+        "envSecrets": [
+          {
+            "name": "GITHUB_TOKEN",
+            "set": true
+          }
+        ],
+        "on": true,
+        "credential": "library",
+        "loginAs": "library",
+        "needsLogin": false,
+        "connected": false,
+        "tools": 0,
+        "schemaBytes": 0,
+        "running": false
+      }
+    ]
+  },
+  "/people": {
+    "people": [
+      {
+        "key": "gading",
+        "name": "Gading",
+        "ids": [
+          "telegram:814",
+          "whatsapp:62811"
+        ]
+      },
+      {
+        "key": "sam",
+        "name": "Kak Sam",
+        "ids": [
+          "telegram:777",
+          "whatsapp:62877"
+        ]
+      },
+      {
+        "key": "raka",
+        "name": "Raka",
+        "ids": [
+          "discord:444"
+        ]
+      }
+    ]
+  },
+  "/groups": {
+    "groups": [
+      {
+        "gatewayId": "telegram:main",
+        "platform": "telegram",
+        "chatId": "-100200",
+        "dashboard": false,
+        "platformTitle": "Keluarga Besar",
+        "agents": [
+          "nouva"
+        ],
+        "people": [
+          {
+            "key": "gading",
+            "name": "Gading"
+          },
+          {
+            "name": "Tetangga"
+          }
+        ],
+        "lastActive": 1760000000000,
+        "name": "Rumah"
+      }
+    ]
+  },
+  "/chats": {
+    "chats": [
+      {
+        "gatewayId": "telegram:main",
+        "chatId": "-100200",
+        "platform": "telegram",
+        "kind": "group",
+        "title": "Rumah",
+        "people": [
+          "Gading",
+          "Tetangga"
+        ],
+        "lastActive": 1760000000000
+      }
+    ]
+  },
+  "/memory/settings": {
+    "pass": true,
+    "passAt": "01:00",
+    "passPerNight": 20,
+    "passMaxTokens": 0,
+    "passProvider": "",
+    "passModel": "",
+    "maxAttempts": 3,
+    "facts": "auto",
+    "proposeShared": true,
+    "promptRecent": 3,
+    "recall": true,
+    "transcriptDays": 180,
+    "archive": true,
+    "semantic": {
+      "enabled": true,
+      "provider": "ollama",
+      "model": "bge-m3",
+      "dimensions": 4
+    },
+    "summaryModel": ""
+  },
+  "/llm/tiers": {
+    "defaults": {
+      "provider": "test",
+      "model": "test-model",
+      "smallModel": "",
+      "highModel": ""
+    },
+    "helpers": {
+      "summaryModel": "",
+      "passModel": "",
+      "steerReplyModel": "",
+      "imageModel": "",
+      "learningModel": ""
+    },
+    "passProvider": "",
+    "editable": true
+  },
+  "/memory/status": {
+    "pass": {
+      "enabled": true,
+      "at": "01:00",
+      "timeZone": "Asia/Jakarta",
+      "running": false,
+      "lastDay": "2026-09-25",
+      "lastRun": null,
+      "next": {
+        "at": 1760000000000,
+        "due": true
+      }
+    },
+    "waiting": 0,
+    "backlog": {
+      "waiting": 0,
+      "oldest": null,
+      "perNight": 20,
+      "days": 7,
+      "agents": [],
+      "behind": [],
+      "enough": null
+    },
+    "failed": 1,
+    "semantic": {
+      "enabled": true,
+      "model": "ollama/bge-m3@4",
+      "items": 52,
+      "running": false,
+      "reachable": true
+    },
+    "archive": {
+      "files": 3,
+      "bytes": 848
+    },
+    "index": {
+      "ok": true,
+      "detail": "ok"
+    }
+  },
+  "/memory/people": {
+    "people": [
+      {
+        "key": "gading",
+        "name": "Gading",
+        "facts": 2,
+        "updatedAt": 1760000000000
+      },
+      {
+        "key": "sam",
+        "name": "Kak Sam",
+        "facts": 40,
+        "updatedAt": 1760000000000
+      },
+      {
+        "key": "raka",
+        "name": "Raka",
+        "facts": 0,
+        "updatedAt": null
+      }
+    ]
+  },
+  "/memory/documents/gading": {
+    "subject": "gading",
+    "path": "people/gading.md",
+    "exists": true,
+    "content": "---\ntype: person\nname: Gading\n---\n\n## Work\n- Uses a MacBook M3. ([[2026-09-25-1405-nouva]]) {gading}\n- Got a new laptop. ([[2026-09-25-2000-nix]]) {sam}\n",
+    "versions": [
+      "2026-09-25T15-00-00-000Z"
+    ]
+  },
+  "/memory/documents/shared": {
+    "subject": "shared",
+    "path": "shared.md",
+    "exists": true,
+    "content": "---\ntype: shared\n---\n\n## House\n- The router is in the hall. ([[2026-09-25-2100-nouva]]) {gading}\n",
+    "versions": []
+  },
+  "/memory/episodes": {
+    "episodes": [
+      {
+        "id": "2026-09-25-2210-nouva",
+        "status": "raw",
+        "kind": "dm",
+        "chat": "telegram:nouva:814",
+        "day": "2026-09-25",
+        "week": "2026-W39",
+        "month": "2026-09",
+        "startedAt": 1760000000000,
+        "endedAt": 1760000000000,
+        "preview": "Cari memori soal board STB",
+        "agents": [
+          "nouva"
+        ],
+        "participants": [
+          "gading"
+        ],
+        "mentions": [],
+        "tags": [],
+        "related": []
+      },
+      {
+        "id": "2026-09-25-2100-nouva",
+        "status": "compacted",
+        "kind": "dm",
+        "chat": "telegram:nouva:814",
+        "day": "2026-09-25",
+        "week": "2026-W39",
+        "month": "2026-09",
+        "startedAt": 1760000000000,
+        "endedAt": 1760000000000,
+        "importance": 3,
+        "summary": "Where the router is.",
+        "agents": [
+          "nouva"
+        ],
+        "participants": [
+          "gading"
+        ],
+        "mentions": [],
+        "tags": [
+          "home"
+        ],
+        "related": []
+      },
+      {
+        "id": "2026-09-25-2000-nix",
+        "status": "compacted",
+        "kind": "dm",
+        "chat": "telegram:nix:777",
+        "day": "2026-09-25",
+        "week": "2026-W39",
+        "month": "2026-09",
+        "startedAt": 1760000000000,
+        "endedAt": 1760000000000,
+        "importance": 3,
+        "summary": "Sam says Gading has a new laptop.",
+        "agents": [
+          "nix"
+        ],
+        "participants": [
+          "sam"
+        ],
+        "mentions": [],
+        "tags": [
+          "home"
+        ],
+        "related": []
+      },
+      {
+        "id": "2026-09-25-1405-nouva",
+        "status": "compacted",
+        "kind": "dm",
+        "chat": "telegram:nouva:814",
+        "day": "2026-09-25",
+        "week": "2026-W39",
+        "month": "2026-09",
+        "startedAt": 1760000000000,
+        "endedAt": 1760000000000,
+        "importance": 3,
+        "summary": "Planning a trip to Bali.",
+        "agents": [
+          "nouva"
+        ],
+        "participants": [
+          "gading"
+        ],
+        "mentions": [],
+        "tags": [
+          "travel"
+        ],
+        "related": []
+      }
+    ]
+  },
+  "/memory/changes": {
+    "changes": [
+      {
+        "at": 1760000000000,
+        "subject": "sam",
+        "change": "removed",
+        "text": "Keeps note 1 about the garden.",
+        "cause": "consolidation"
+      },
+      {
+        "at": 1760000000000,
+        "subject": "sam",
+        "change": "merged",
+        "text": "Owns a MacBook Air M1 laptop.",
+        "previous": "Owns a MacBook Air M1.\nOwns a MacBook Air M1 laptop.",
+        "source": "2026-09-05-0900-nix",
+        "cause": "consolidation"
+      },
+      {
+        "at": 1760000000000,
+        "subject": "shared",
+        "change": "added",
+        "text": "The router is in the hall.",
+        "source": "2026-09-25-2100-nouva",
+        "cause": "approval"
+      },
+      {
+        "at": 1760000000000,
+        "subject": "gading",
+        "change": "added",
+        "text": "Got a new laptop.",
+        "source": "2026-09-25-2000-nix",
+        "cause": "pass",
+        "secondhand": true
+      },
+      {
+        "at": 1760000000000,
+        "subject": "gading",
+        "change": "added",
+        "text": "Uses a MacBook M3.",
+        "source": "2026-09-25-1405-nouva",
+        "cause": "pass"
+      }
+    ]
+  },
+  "/memory/proposals": {
+    "proposals": [
+      {
+        "episode": "2026-09-25-2000-nix",
+        "subject": "shared",
+        "operation": {
+          "op": "add",
+          "section": "House",
+          "text": "The porch light goes off at 22:00."
+        },
+        "provenance": {
+          "source": "2026-09-25-2000-nix",
+          "readers": {
+            "people": [
+              "sam"
+            ]
+          }
+        },
+        "why": "shared",
+        "id": "prp_1",
+        "createdAt": 1760000000000
+      }
+    ]
+  },
+  "/memory/failed": {
+    "failed": [
+      {
+        "episodeId": "2026-09-25-2210-nouva",
+        "attempts": 3,
+        "lastError": "the answer had no usable summary"
+      }
+    ]
+  },
+  "/memory/agents": {
+    "agents": [
+      {
+        "id": "nouva",
+        "name": "Nouva",
+        "bytes": 0,
+        "updatedAt": null
+      }
+    ]
+  },
+  "/memory/graph": {
+    "nodes": [
+      {
+        "id": "e:2026-09-25-2210-nouva",
+        "kind": "episode",
+        "label": "Cari memori soal board STB",
+        "degree": 2,
+        "day": "2026-09-25"
+      },
+      {
+        "id": "a:nouva",
+        "kind": "agent",
+        "label": "nouva",
+        "degree": 3
+      },
+      {
+        "id": "p:gading",
+        "kind": "person",
+        "label": "Gading",
+        "degree": 3
+      },
+      {
+        "id": "e:2026-09-25-2100-nouva",
+        "kind": "episode",
+        "label": "Where the router is.",
+        "degree": 3,
+        "day": "2026-09-25",
+        "importance": 3
+      },
+      {
+        "id": "t:home",
+        "kind": "tag",
+        "label": "home",
+        "degree": 2
+      },
+      {
+        "id": "e:2026-09-25-2000-nix",
+        "kind": "episode",
+        "label": "Sam says Gading has a new laptop.",
+        "degree": 3,
+        "day": "2026-09-25",
+        "importance": 3
+      },
+      {
+        "id": "a:nix",
+        "kind": "agent",
+        "label": "nix",
+        "degree": 1
+      },
+      {
+        "id": "p:sam",
+        "kind": "person",
+        "label": "Kak Sam",
+        "degree": 1
+      },
+      {
+        "id": "e:2026-09-25-1405-nouva",
+        "kind": "episode",
+        "label": "Planning a trip to Bali.",
+        "degree": 2,
+        "day": "2026-09-25",
+        "importance": 3
+      }
+    ],
+    "links": [
+      {
+        "source": "e:2026-09-25-2210-nouva",
+        "target": "a:nouva",
+        "kind": "agent"
+      },
+      {
+        "source": "e:2026-09-25-2210-nouva",
+        "target": "p:gading",
+        "kind": "participant"
+      },
+      {
+        "source": "e:2026-09-25-2100-nouva",
+        "target": "a:nouva",
+        "kind": "agent"
+      },
+      {
+        "source": "e:2026-09-25-2100-nouva",
+        "target": "p:gading",
+        "kind": "participant"
+      },
+      {
+        "source": "e:2026-09-25-2100-nouva",
+        "target": "t:home",
+        "kind": "tag"
+      },
+      {
+        "source": "e:2026-09-25-2000-nix",
+        "target": "a:nix",
+        "kind": "agent"
+      },
+      {
+        "source": "e:2026-09-25-2000-nix",
+        "target": "p:sam",
+        "kind": "participant"
+      },
+      {
+        "source": "e:2026-09-25-2000-nix",
+        "target": "t:home",
+        "kind": "tag"
+      },
+      {
+        "source": "e:2026-09-25-1405-nouva",
+        "target": "a:nouva",
+        "kind": "agent"
+      },
+      {
+        "source": "e:2026-09-25-1405-nouva",
+        "target": "p:gading",
+        "kind": "participant"
+      }
+    ],
+    "episodes": 4,
+    "total": 4
+  },
+  "/memory/graph?knowledge=1": {
+    "nodes": [
+      {
+        "id": "e:2026-09-25-2210-nouva",
+        "kind": "episode",
+        "label": "Cari memori soal board STB",
+        "degree": 2,
+        "day": "2026-09-25"
+      },
+      {
+        "id": "a:nouva",
+        "kind": "agent",
+        "label": "nouva",
+        "degree": 3
+      },
+      {
+        "id": "p:gading",
+        "kind": "person",
+        "label": "Gading",
+        "degree": 3
+      },
+      {
+        "id": "e:2026-09-25-2100-nouva",
+        "kind": "episode",
+        "label": "Where the router is.",
+        "degree": 3,
+        "day": "2026-09-25",
+        "importance": 3
+      },
+      {
+        "id": "t:home",
+        "kind": "tag",
+        "label": "home",
+        "degree": 2
+      },
+      {
+        "id": "e:2026-09-25-2000-nix",
+        "kind": "episode",
+        "label": "Sam says Gading has a new laptop.",
+        "degree": 3,
+        "day": "2026-09-25",
+        "importance": 3
+      },
+      {
+        "id": "a:nix",
+        "kind": "agent",
+        "label": "nix",
+        "degree": 1
+      },
+      {
+        "id": "p:sam",
+        "kind": "person",
+        "label": "Kak Sam",
+        "degree": 2
+      },
+      {
+        "id": "e:2026-09-25-1405-nouva",
+        "kind": "episode",
+        "label": "Planning a trip to Bali.",
+        "degree": 2,
+        "day": "2026-09-25",
+        "importance": 3
+      },
+      {
+        "id": "c:house",
+        "kind": "collection",
+        "label": "House",
+        "degree": 2
+      },
+      {
+        "id": "d:house/router.md",
+        "kind": "document",
+        "label": "Router",
+        "degree": 4
+      },
+      {
+        "id": "d:house/wifi.md",
+        "kind": "document",
+        "label": "Wifi",
+        "degree": 4
+      },
+      {
+        "id": "c:family",
+        "kind": "collection",
+        "label": "Family",
+        "degree": 1
+      },
+      {
+        "id": "d:family/recipes.md",
+        "kind": "document",
+        "label": "Recipes",
+        "degree": 4
+      },
+      {
+        "id": "c:health",
+        "kind": "collection",
+        "label": "Kak Sam's check-ups",
+        "degree": 1
+      },
+      {
+        "id": "d:health/lab-2026-10.md",
+        "kind": "document",
+        "label": "Lab results, October",
+        "degree": 5
+      }
+    ],
+    "links": [
+      {
+        "source": "e:2026-09-25-2210-nouva",
+        "target": "a:nouva",
+        "kind": "agent"
+      },
+      {
+        "source": "e:2026-09-25-2210-nouva",
+        "target": "p:gading",
+        "kind": "participant"
+      },
+      {
+        "source": "e:2026-09-25-2100-nouva",
+        "target": "a:nouva",
+        "kind": "agent"
+      },
+      {
+        "source": "e:2026-09-25-2100-nouva",
+        "target": "p:gading",
+        "kind": "participant"
+      },
+      {
+        "source": "e:2026-09-25-2100-nouva",
+        "target": "t:home",
+        "kind": "tag"
+      },
+      {
+        "source": "e:2026-09-25-2000-nix",
+        "target": "a:nix",
+        "kind": "agent"
+      },
+      {
+        "source": "e:2026-09-25-2000-nix",
+        "target": "p:sam",
+        "kind": "participant"
+      },
+      {
+        "source": "e:2026-09-25-2000-nix",
+        "target": "t:home",
+        "kind": "tag"
+      },
+      {
+        "source": "e:2026-09-25-1405-nouva",
+        "target": "a:nouva",
+        "kind": "agent"
+      },
+      {
+        "source": "e:2026-09-25-1405-nouva",
+        "target": "p:gading",
+        "kind": "participant"
+      },
+      {
+        "source": "c:house",
+        "target": "d:house/router.md",
+        "kind": "collection"
+      },
+      {
+        "source": "c:house",
+        "target": "d:house/wifi.md",
+        "kind": "collection"
+      },
+      {
+        "source": "c:family",
+        "target": "d:family/recipes.md",
+        "kind": "collection"
+      },
+      {
+        "source": "c:health",
+        "target": "d:health/lab-2026-10.md",
+        "kind": "collection"
+      },
+      {
+        "source": "p:sam",
+        "target": "d:health/lab-2026-10.md",
+        "kind": "about"
+      },
+      {
+        "source": "d:house/router.md",
+        "target": "d:house/wifi.md",
+        "kind": "link"
+      },
+      {
+        "source": "d:family/recipes.md",
+        "target": "d:health/lab-2026-10.md",
+        "kind": "similar"
+      },
+      {
+        "source": "d:family/recipes.md",
+        "target": "d:house/router.md",
+        "kind": "similar"
+      },
+      {
+        "source": "d:family/recipes.md",
+        "target": "d:house/wifi.md",
+        "kind": "similar"
+      },
+      {
+        "source": "d:health/lab-2026-10.md",
+        "target": "d:house/router.md",
+        "kind": "similar"
+      },
+      {
+        "source": "d:health/lab-2026-10.md",
+        "target": "d:house/wifi.md",
+        "kind": "similar"
+      }
+    ],
+    "episodes": 4,
+    "total": 4,
+    "knowledge": {
+      "documents": 4,
+      "total": 4,
+      "byMeaning": true
+    }
+  },
+  "/memory/facets": {
+    "agents": [
+      {
+        "value": "nouva",
+        "count": 3
+      },
+      {
+        "value": "nix",
+        "count": 1
+      }
+    ],
+    "people": [
+      {
+        "value": "gading",
+        "count": 3,
+        "label": "Gading"
+      },
+      {
+        "value": "sam",
+        "count": 1,
+        "label": "Kak Sam"
+      }
+    ],
+    "tags": [
+      {
+        "value": "home",
+        "count": 2
+      },
+      {
+        "value": "travel",
+        "count": 1
+      }
+    ]
+  },
+  "/knowledge": {
+    "collections": [
+      {
+        "id": "family",
+        "name": "Family",
+        "description": "",
+        "readers": {
+          "kind": "group",
+          "chat": "telegram:main:-100200"
+        },
+        "agents": null,
+        "about": [],
+        "archived": false,
+        "documents": 1,
+        "sections": 1
+      },
+      {
+        "id": "health",
+        "name": "Kak Sam's check-ups",
+        "description": "Lab results and the next check-up dates",
+        "readers": {
+          "kind": "people",
+          "people": [
+            "gading",
+            "sam"
+          ]
+        },
+        "agents": [
+          "nouva"
+        ],
+        "about": [
+          "sam"
+        ],
+        "archived": false,
+        "documents": 1,
+        "sections": 1
+      },
+      {
+        "id": "house",
+        "name": "House",
+        "description": "How the house runs: the router, the wifi, the bins.",
+        "readers": {
+          "kind": "everyone"
+        },
+        "agents": null,
+        "about": [],
+        "archived": false,
+        "documents": 3,
+        "sections": 3
+      },
+      {
+        "id": "old",
+        "name": "Old notes",
+        "description": "",
+        "readers": {
+          "kind": "admins"
+        },
+        "agents": null,
+        "about": [],
+        "archived": true,
+        "documents": 1,
+        "sections": 1
+      }
+    ]
+  },
+  "/knowledge/house/documents": {
+    "documents": [
+      {
+        "collection": "house",
+        "path": "porch.jpg",
+        "size": 17,
+        "mtime": 1760000000000,
+        "title": "porch",
+        "status": "listed",
+        "reason": "Nouride does not read this kind of file, so it is kept here but not searched.",
+        "sections": 0,
+        "indexedAt": 1760000000000
+      },
+      {
+        "collection": "house",
+        "path": "router.md",
+        "size": 107,
+        "mtime": 1760000000000,
+        "title": "Router",
+        "status": "indexed",
+        "sections": 2,
+        "indexedAt": 1760000000000
+      },
+      {
+        "collection": "house",
+        "path": "wifi.md",
+        "size": 47,
+        "mtime": 1760000000000,
+        "title": "Wifi",
+        "status": "indexed",
+        "sections": 1,
+        "indexedAt": 1760000000000
+      }
+    ]
+  },
+  "/knowledge/house/document": {
+    "document": {
+      "collection": "house",
+      "path": "router.md",
+      "size": 107,
+      "mtime": 1760000000000,
+      "title": "Router",
+      "status": "indexed",
+      "sections": 2,
+      "indexedAt": 1760000000000
+    },
+    "sections": [
+      {
+        "item": "knowledge:house/router.md#0",
+        "collection": "house",
+        "path": "router.md",
+        "n": 0,
+        "trail": "Router",
+        "text": "The router is in the hall. Its admin page is at 192.168.0.1."
+      },
+      {
+        "item": "knowledge:house/router.md#1",
+        "collection": "house",
+        "path": "router.md",
+        "n": 1,
+        "trail": "Router › Wifi",
+        "text": "The password is in [[Wifi]]."
+      }
+    ]
+  },
+  "/knowledge/house/related": {
+    "byMeaning": true,
+    "related": [
+      {
+        "collection": "family",
+        "collectionName": "Family",
+        "path": "recipes.md",
+        "title": "Recipes",
+        "score": 1
+      },
+      {
+        "collection": "health",
+        "collectionName": "Kak Sam's check-ups",
+        "path": "lab-2026-10.md",
+        "title": "Lab results, October",
+        "score": 1
+      },
+      {
+        "collection": "house",
+        "collectionName": "House",
+        "path": "wifi.md",
+        "title": "Wifi",
+        "score": 1
+      }
+    ]
+  },
+  "/knowledge/house/pending": {
+    "pending": []
+  },
+  "/knowledge/health/pending": {
+    "pending": []
+  },
+  "/knowledge/health/documents": {
+    "documents": [
+      {
+        "collection": "health",
+        "path": "lab-2026-10.md",
+        "size": 93,
+        "mtime": 1760000000000,
+        "title": "Lab results, October",
+        "status": "indexed",
+        "sections": 1,
+        "indexedAt": 1760000000000
+      }
+    ]
+  },
+  "/knowledge/health/document": {
+    "document": {
+      "collection": "health",
+      "path": "lab-2026-10.md",
+      "size": 93,
+      "mtime": 1760000000000,
+      "title": "Lab results, October",
+      "status": "indexed",
+      "sections": 1,
+      "indexedAt": 1760000000000
+    },
+    "sections": [
+      {
+        "item": "knowledge:health/lab-2026-10.md#0",
+        "collection": "health",
+        "path": "lab-2026-10.md",
+        "n": 0,
+        "trail": "Lab results, October",
+        "text": "Blood test on 12 October: all within range. The next one is in April."
+      }
+    ]
+  },
+  "/knowledge/health/related": {
+    "byMeaning": true,
+    "related": [
+      {
+        "collection": "family",
+        "collectionName": "Family",
+        "path": "recipes.md",
+        "title": "Recipes",
+        "score": 1
+      },
+      {
+        "collection": "house",
+        "collectionName": "House",
+        "path": "router.md",
+        "title": "Router",
+        "score": 1
+      },
+      {
+        "collection": "house",
+        "collectionName": "House",
+        "path": "wifi.md",
+        "title": "Wifi",
+        "score": 1
+      }
+    ]
+  },
+  "/knowledge/search": {
+    "hits": [
+      {
+        "item": "knowledge:house/router.md#1",
+        "collection": "house",
+        "path": "router.md",
+        "n": 1,
+        "trail": "Router › Wifi",
+        "text": "The password is in [[Wifi]].",
+        "collectionName": "House",
+        "score": 0.040215163934426236
+      },
+      {
+        "item": "knowledge:house/router.md#0",
+        "collection": "house",
+        "path": "router.md",
+        "n": 0,
+        "trail": "Router",
+        "text": "The router is in the hall. Its admin page is at 192.168.0.1.",
+        "collectionName": "House",
+        "score": 0.03584439240176945
+      },
+      {
+        "item": "knowledge:old/router-2019.md#0",
+        "collection": "old",
+        "path": "router-2019.md",
+        "n": 0,
+        "trail": "The old router",
+        "text": "Replaced in 2024.",
+        "collectionName": "Old notes",
+        "score": 0.03537890806531737
+      },
+      {
+        "item": "knowledge:family/recipes.md#0",
+        "collection": "family",
+        "path": "recipes.md",
+        "n": 0,
+        "trail": "Recipes",
+        "text": "Rendang, the way Mum makes it.",
+        "collectionName": "Family",
+        "score": 0.01639344262295082
+      },
+      {
+        "item": "knowledge:health/lab-2026-10.md#0",
+        "collection": "health",
+        "path": "lab-2026-10.md",
+        "n": 0,
+        "trail": "Lab results, October",
+        "text": "Blood test on 12 October: all within range. The next one is in April.",
+        "collectionName": "Kak Sam's check-ups",
+        "score": 0.016129032258064516
+      },
+      {
+        "item": "knowledge:house/wifi.md#0",
+        "collection": "house",
+        "path": "wifi.md",
+        "n": 0,
+        "trail": "Wifi",
+        "text": "The guest network is called Rumah-Tamu.",
+        "collectionName": "House",
+        "score": 0.015384615384615385
+      }
+    ]
+  }
+}

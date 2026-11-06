@@ -1,0 +1,13 @@
+{
+  "name": "@nouride/queue",
+  "description": "Nouride keyed work queue — sequential per key, parallel across keys, with dedup and backpressure.",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@nouride/shared": "workspace:*"
+  }
+}

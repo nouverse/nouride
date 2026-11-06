@@ -1,0 +1,33 @@
+---
+import Default from '@astrojs/starlight/components/Footer.astro';
+---
+
+<Default {...Astro.props}><slot /></Default>
+
+<div class="docs-footer-bar">
+  <span>&copy; {new Date().getFullYear()} Nouverse Technologies. All rights reserved.</span>
+  <span>Powered by <a href="https://nouverse.com" target="_blank" rel="noopener noreferrer">Nouverse Technologies</a></span>
+</div>
+
+<style>
+  .docs-footer-bar {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--sl-color-hairline);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    font-size: var(--sl-text-xs);
+    color: var(--sl-color-gray-3);
+  }
+  .docs-footer-bar a {
+    color: var(--sl-color-accent);
+    text-decoration: none;
+    font-weight: 500;
+  }
+  .docs-footer-bar a:hover {
+    text-decoration: underline;
+  }
+</style>

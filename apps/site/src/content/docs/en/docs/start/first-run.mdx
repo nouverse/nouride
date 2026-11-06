@@ -1,0 +1,240 @@
+---
+title: First run
+description: Find the one-time password, open the dashboard, and take the three short steps that finish the setup.
+---
+
+import { Steps, Aside, Tabs, TabItem, LinkCard } from '@astrojs/starlight/components';
+
+**The daemon boots with no configuration at all.** There is no config file to write before it starts.
+The model endpoint, its credential and your first agent are all set in the browser.
+
+<Steps>
+
+1. ### Find the first-time password
+
+   It is generated on the very first start, printed **once**, and never stored in plain text. Where to
+   look depends on how you installed.
+
+   <Tabs syncKey="platform">
+     <TabItem label="Linux" icon="linux">
+       ```bash
+       sudo journalctl -u nouride | grep -A12 'Nouride is ready'
+       ```
+     </TabItem>
+     <TabItem label="macOS" icon="apple">
+       ```bash
+       grep -A12 'Nouride is ready' ~/nouride/.nouride/data/nouride.log
+       ```
+     </TabItem>
+     <TabItem label="Docker" icon="seti:docker">
+       ```bash
+       docker compose logs nouride | grep -A12 'Nouride is ready'
+       ```
+     </TabItem>
+   </Tabs>
+
+   You will get something like:
+
+   ```
+     Nouride is ready. Open the dashboard to finish setting it up:
+
+       http://localhost:@@PORT@@/dashboard/
+
+       username  admin
+       password  <generated>
+   ```
+
+   A daemon bound to every interface (`--host 0.0.0.0`, or any Docker install) also lists its
+   network addresses in between, which is why the command reads twelve lines.
+
+   <Aside type="caution" title="The password is shown once">
+   Nothing stores it in plain text. To recover from a lost one, stop the daemon, run
+   `sudo nouride users reset` (it removes every account, after taking a snapshot of the database),
+   and start it again: a new admin is created and its password printed. Conversations, secrets and
+   agents are not touched; every account is, so on an install with several each is created again.
+   On a Mac, stop it with `launchctl unload ~/Library/LaunchAgents/tech.nouverse.nouride.plist`, run
+   `nouride users reset` (no `sudo`), and start it with `launchctl load -w` on the same file.
+   With Docker, stop the daemon's container and run it in a one-off one:
+   `docker compose run --rm nouride nouride users reset`.
+
+   Prefer to choose your own? Set both of these in `.env` *before* the first start: for the
+   installer, create `@@INSTALL_DIR@@/.env` (`~/nouride/.env` on a Mac) before you run it; for Docker, put it beside your compose
+   file. They are read only while the user table is empty, so they cannot be used to reset a password
+   later, and half a configuration is ignored rather than half-applied.
+
+   ```bash
+   INITIAL_ADMIN_USERNAME=admin
+   INITIAL_ADMIN_PASSWORD=<something long>
+   ```
+   </Aside>
+
+2. ### Open the dashboard
+
+   ```
+   @@DASHBOARD_URL@@
+   ```
+
+   On a Mac you installed it on, open it there. On a server bound to loopback, the default, tunnel to
+   it from your own machine:
+
+   ```bash
+   ssh -L @@PORT@@:127.0.0.1:@@PORT@@ you@your-server
+   ```
+
+   Then open the same URL locally. Nothing is exposed to the network by doing this.
+
+   The first screen replaces the generated login: pick your own username and password, and
+   optionally your name, which is what your agents will call you. It does **not** ask for the current
+   password: you typed it a screen ago to get in, and it was handed to you rather than chosen. Every
+   change after that requires the current password.
+
+   ![The first sign-in, replacing the generated login](/media/setup-password.png)
+
+3. ### Point it at a model
+
+   The wizard asks for a wire format (**OpenAI-compatible** or **Anthropic**), a profile name, a base
+   URL and an API key.
+
+   ![The wizard asking for a model endpoint](/media/setup-wizard-provider.png)
+
+   | | |
+   |---|---|
+   | **Anthropic** | `anthropic` wire format, `https://api.anthropic.com/v1` |
+   | **OpenAI** | `openai` wire format, `https://api.openai.com/v1` |
+   | **OpenRouter** | `openai` wire format, `https://openrouter.ai/api/v1` |
+   | **Ollama** | `openai` wire format, `http://<its address>:11434/v1` |
+   | **Nougate** | either format, [see the Nougate page](/en/docs/providers/nougate/). A Router build offers its own with one button |
+
+   **Save stays disabled until Test Connection passes**, so a typo fails here rather than at your
+   first message. A credential that does not work is the most common way a fresh install fails, and
+   it otherwise surfaces long after setup reported success.
+
+   What gets written to `config.toml` is the *name* of the credential, never its value. The value
+   goes into the secret store, `data/secrets.enc`, encrypted, at mode `0600`. That is why a config file
+   is safe to commit, print, and show in the UI.
+
+4. ### Create your first agent
+
+   A display name, an id, a model, a headline and a personality, nothing else. The first agent is a
+   **Pilot**, named NouridePilot until you change it: it can use every tool and checks with you before
+   anything risky, and its headline and personality are filled in with the Pilot's own. An agent you add
+   later can start from a narrower preset (Researcher, Assistant, Developer, or Custom to pick the tools
+   yourself).
+
+   ![The wizard asking for a first agent](/media/setup-wizard-agent.png)
+
+   The id is the directory name and how the agent is addressed, lowercase, no spaces. The model list
+   is what your endpoint reported. The personality becomes the body of its `SOUL.md`, and you can
+   rewrite the whole file later from the agent's **Files** tab.
+
+5. ### Let your agent get to know you
+
+   The last step asks how memory works, every switch on by default:
+
+   - **Remember conversations**: once a night, at the hour you pick, each chat becomes a short note.
+   - **Learn about you**: what the nightly pass learns about you (preferences, plans, dates) is kept
+     right away, with no approvals.
+   - **Learn shared knowledge**: things every agent should know are suggested, and you approve each.
+
+   ![The wizard's last step: remembering conversations, learning about you, and shared knowledge](/media/setup-wizard-memory.png)
+
+   **Skip for now** turns all three off. It spends one model call per conversation, once a night; the
+   rest, semantic search included, is under **Knowledge & Memory** in the dashboard. How it works is on the
+   [Memory](/en/docs/architecture/memory/) page.
+
+6. ### Say something to it
+
+   The dashboard has a chat. So does your terminal, and it needs no bot token:
+
+   ```bash
+   nouride chat
+   ```
+
+   Messages there travel through a real in-process gateway, so routing, the queue, the tool loop and
+   session persistence all behave exactly as they will for Telegram.
+
+   ![A terminal chat session](/media/cli-chat.png)
+
+</Steps>
+
+---
+
+## Doing it over SSH instead
+
+If you can only reach the machine through a terminal, `nouride setup` does the provider and the
+first agent through the same code as the wizard, it is not a second implementation.
+
+```bash
+# As the service account, in the install directory. `su -s /bin/sh` because that account has
+# `nologin` as its shell, which `sudo -u` trips over on some distributions.
+sudo su -s /bin/sh nouride -c 'cd @@INSTALL_DIR@@ && ./nouride setup'
+```
+
+On a Mac, as yourself: `cd ~/nouride && ./nouride setup`. In Docker, `docker compose exec nouride ./nouride setup`.
+
+The daemon is already running and picks up what `setup` wrote only when it restarts:
+`sudo systemctl restart nouride`, `launchctl kickstart -k gui/$(id -u)/tech.nouverse.nouride` on a Mac, or
+`docker compose restart nouride`. Memory stays off until you
+turn it on under **Knowledge & Memory** in the dashboard.
+
+It is interactive by default. For a provisioning script, pass everything and skip the prompts:
+
+```bash
+./nouride setup --yes \
+  --provider anthropic \
+  --api-key-from-env ANTHROPIC_API_KEY \
+  --agent nouva --name Nouva \
+  --model claude-sonnet-4-20250514 \
+  --prompt "You are a helpful assistant."
+```
+
+<Aside type="caution" title="There is deliberately no --api-key flag">
+A key on a command line lands in your shell history, in `ps` output for as long as the process runs,
+and in any CI log that echoes its commands. `--api-key-from-env` names a variable instead; the
+interactive prompt reads the value without echoing it.
+</Aside>
+
+`setup` refuses to run against an install that already has a `config.toml`. Run twice it would
+otherwise look like a no-op while having replaced your orchestrator and repointed the provider.
+
+| Flag | What it sets |
+|---|---|
+| `--yes` | Never prompt. Anything not passed takes its default; a missing key fails |
+| `--provider` | `anthropic` (default) or `openai`: the wire format |
+| `--base-url` | The endpoint. Defaults to the well-known one for that wire format |
+| `--api-key-from-env` | Name of the environment variable holding the key |
+| `--agent` | The agent id. Default `nouridepilot` |
+| `--name` | Display name. `NouridePilot` for the default id, else the id |
+| `--model` | Model to use. Defaults to the first one the endpoint lists |
+| `--prompt` | The persona, into `SOUL.md`. Default: the Pilot's |
+| `--config` | Path to write the config to |
+
+---
+
+## Is it actually up?
+
+```bash
+curl -fsS @@HEALTH_URL@@
+```
+
+```json
+{"status":"ok","edition":"basic","appliance":false,"uptime":147,"version":"<version>","agents":6,"install":"a1b2c3d4e5f6","gateways":{"web:dashboard":"connected","telegram:nouva":"connected"}}
+```
+
+`status` is `degraded`, and the endpoint answers **503**, when a gateway is dead, when a provider has
+failed three times in a row, or when the SQLite WAL has grown past its threshold. `issues` lists what
+is wrong; a gateway that is only disconnected or reconnecting shows up there without failing the
+check. While the daemon stops, `status` is `shutting_down`, also with a 503.
+`install` is a hash of the data directory, so a CLI can tell it is talking to the right daemon when two
+installs on one machine compete for the port.
+
+**Check this, not just the service state.** `systemctl start` (or `launchctl load` on a Mac) returning 0
+means the process was spawned, not that it is serving, a daemon that refuses its config exits *after*
+its supervisor reports success.
+
+---
+
+## Next
+
+<LinkCard title="Connect a chat app" description="Telegram, Discord and WhatsApp, one bot identity per agent." href="/en/docs/start/connect-chat/" />
+<LinkCard title="The manual" description="Approvals, skills, scheduling, and everything you will do on day two." href="/en/docs/manual/overview/" />

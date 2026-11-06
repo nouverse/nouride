@@ -1,0 +1,3 @@
+# What every `bun test` run loads first: the folders the tests make are removed when it ends (`temp-dirs.ts`).
+[test]
+preload = ["./apps/engine/tests/temp-dirs.ts"]

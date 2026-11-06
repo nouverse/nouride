@@ -1,0 +1,896 @@
+# Nouride — daemon configuration
+#
+# Copy to .nouride/config.toml. Every value here matches the built-in default, so a
+# missing file boots the same daemon; delete anything you are not changing.
+#
+# NO CREDENTIALS IN THIS FILE. Where one is needed, the setting names a SECRET,
+# and the secret's value comes from the environment or the secret store:
+#
+#   api_key = "nougate"   →  $NOUGATE, or $NOURIDE_SECRET_NOUGATE, or data/secrets.enc (encrypted)
+#
+# Environment wins over the store, so a container platform can always pin a value.
+# The store is what the dashboard writes to, which is why adding a bot token does
+# not need a redeploy. This file stays safe to commit, print, and show in the UI.
+#
+# What is here is what people change. Thirty-six keys are rarely needed — cooldowns, the queue's
+# and the scheduler's limits, streaming, how the context window is trimmed — and are left out; they
+# work the same when written. They are listed in one place, the docs' Configuration page under
+# "Advanced settings", and `nouride config explain <key>` describes any one of them.
+
+[daemon]
+name = "nouride"
+log_level = "info"                  # debug | info | warn | error
+# One install is one directory. The three paths below default inside `./.nouride/`, so the whole
+# thing can be backed up, moved or deleted as a unit — and they are separate keys because the three
+# hold different kinds of thing and deserve different treatment:
+#
+#   data/       daemon state — SQLite, secrets, control token, attachments, backups
+#   agents/     persona packs — identity and MEMORY.md. Config-as-code, worth committing
+#   workspace/  what the agents actually produce. Output, and the only one that can grow large
+#
+# Point workspace_dir at another disk if that is where the work belongs; nothing else has to move.
+data_dir = "./.nouride/data"
+agents_dir = "./.nouride/agents"
+workspace_dir = "./.nouride/workspace"
+# timezone = "Asia/Jakarta"         # the nightly pass, cron, rollover and every time an agent sees; left out, this
+                                    # machine's zone — and TZ in the environment wins over both
+
+# How many dated snapshots to keep of each: the database (data/backups/db/), the memory vault
+# (data/backups/memory/) and the persona packs (data/backups/agents/). They are taken at boot and then
+# weekly, so the default of four reaches a month back. 0 disables it.
+#
+# MEMORY.md is the only thing in an installation that is not in git and cannot be rebuilt.
+# The .bak rotation memory_write does covers the agent corrupting its own memory; it does
+# not cover the directory being deleted, a bad checkout, or a disk.
+#
+# Deliberately a directory of copies rather than an archive: recovery is `cp`, and it does
+# not need this code to still work. These are kilobytes of markdown.
+backup_keep = 4
+
+# Where the scheduled snapshots go — the database, the memory vault and the packs — instead of
+# data/backups/. On a box running from an SD card or eMMC, a USB drive: snapshots are the largest
+# writes this daemon makes, and the card is the thing they exist to outlive.
+#
+# Point it at a directory ON the drive — /mnt/usb/nouride, not /mnt/usb. It is never created, so
+# while the drive is unplugged snapshots are skipped (and logged) instead of quietly filling the
+# card underneath the empty mount point. Snapshots taken right before a schema migration or a
+# vault tidy are the way back from it, and stay in data/backups/ either way.
+# backup_dir = "/mnt/usb/nouride"
+
+# The secret store in the config snapshots, sealed to a passphrase (0.8.18). Set it with
+# `nouride secret seal --stdin`, which writes this line: a salt and the public half of a key the
+# passphrase derives, never the passphrase. The daemon seals each snapshot's secrets.sealed and can
+# open none; `nouride secret unseal` opens one with the passphrase. Unset, no snapshot holds a secret.
+# backup_seal = "nrseal1:…"
+# The orchestrator: the agent that answers when a message mentions nobody, arrives on a
+# gateway with no owner, and matches no channel binding — and the front desk of a room
+# several of our bots share: a message there that tags, names or replies to nobody is
+# answered by it, once, through its own bot, and it hands on to the agent whose headline
+# fits. A room that requires a mention (groups_require_mention, or /mention on in that group)
+# stays quiet for it too. Set to the first agent you make. `default_agent` before 0.7.18.
+# orchestrator = "nouva"
+
+# ── Providers ────────────────────────────────────────────────────────────────
+# A provider profile is an ENDPOINT, not a vendor: protocol + base_url + credential.
+# `kind` is only which wire format to speak — a proxy can serve either one.
+#
+# No profiles exist by default. Create each one explicitly — through the setup
+# wizard, the dashboard, or right here. The section below is the minimum viable
+# profile for Anthropic; duplicate and adjust for OpenAI, a gateway, or a local
+# proxy.
+
+# [providers.anthropic]
+# kind = "anthropic"
+# base_url = "https://api.anthropic.com/v1"
+# api_key = "anthropic_api_key"           # secret NAME, not the value
+
+# One Nougate deployment, one key, both wire formats. This is the case a single
+# ANTHROPIC_API_KEY / OPENAI_API_KEY pair could not describe.
+# [providers.nougate-anthropic]
+# kind = "anthropic"
+# base_url = "https://nougate.nouverse.tech/anthropic/v1"
+# api_key = "nougate"
+#
+# [providers.nougate-openai]
+# kind = "openai"
+# base_url = "https://nougate.nouverse.tech/openai/v1"
+# api_key = "nougate"
+# billing = "included"                    # its models are subscriptions: no cost per token, so outside the
+#                                         # dollar cap and still inside the token cap
+
+# [providers.openrouter]
+# kind = "openai"
+# base_url = "https://openrouter.ai/api/v1"
+# api_key = "openrouter"
+# headers = { "HTTP-Referer" = "https://nouverse.tech" }
+
+# Agents addressing each other.
+#
+# Two agents in one channel can hand work over by tagging: Nouva writes "@nox benerin build ini",
+# Nox sees it and acts on it. The tag is the handover — a reply WITHOUT one reaches nobody, which is
+# how an exchange ends naturally ("SIP okay Nox, nanti kita minta review Gading dulu").
+#
+# That soft brake depends on a model choosing not to tag, so there is a hard one too. Only a mention
+# routes a message from an agent — never the channel binding, the gateway owner, or the orchestrator —
+# and after five handovers the daemon says so in the chat and stops delivering. A human saying anything
+# resets the count, because the limit exists to bound *unattended* chatter.
+#
+# Works on any platform that has mentions (Discord, Telegram). Nothing to configure per gateway.
+#
+# IN A ONE-TO-ONE CHAT THIS IS NOT HOW IT WORKS, and it cannot be. Each bot has its own private
+# conversation with the person, so a tag written in a DM reaches nobody — the mentioned agent's bot
+# never sees the message. There an agent hands work over with the `ask_agent` tool instead: the other
+# agent runs behind the chat with its own skills, tools and permissions, its progress line appears
+# labelled `[nox]`, and its answer comes back to the agent that asked. The one you are talking to
+# stays the only one that speaks. Nothing to configure — the prompt tells each agent which of the two
+# applies to the chat it is in, and `mentions_enabled = false` turns off both.
+[agents]
+mentions_enabled = true    # false = every bot message is ignored, as it was before this existed
+# Long work is nudged, never stopped: at this many minutes and then at each doubling (5, 10, 20, 40…). A helper or an
+# agent asked with `ask_agent` is told to stop and report honestly if it is stuck — and the agent waiting on one in the
+# background hears how long it has run, so it can wait, tell you, or `nouride jobs kill` it. A reply you are waiting on
+# is asked for a one-line status. 0 = off.
+nudge_after_minutes = 5
+groups_require_mention = false  # true = ignore unaddressed group chatter; DMs still answer all messages
+group_context_messages = 20     # recent group messages replayed when an agent IS addressed, so "@nouva ini"
+                                # arrives with the exchange it points at. 0 = off, 100 = ceiling. Chatter
+                                # still triggers nothing — it is remembered, not answered. Note that this
+                                # means everything said in the room becomes context for the agents in it,
+                                # including from senders [security.access] has not paired.
+                                # Telegram only delivers unaddressed group messages once privacy mode is
+                                # disabled in @BotFather (/setprivacy -> Disable) or the bot is an admin.
+                                # Per connection: `group_context_messages` on a [gateways.*] entry.
+
+# ── Coding CLIs for external agents ──────────────────────────────────────────
+# An agent whose pack has [external] cli = "…" is answered by a coding CLI over ACP. Two are built in: claude-code
+# and codex; an entry with either id is refused. Add another here, by the id a pack names. It runs from the agent's
+# folder — as the agent's own user where install.sh set up the helper (Linux with systemd), as the daemon's user in a
+# container, on macOS and without it. Read at the next start.
+# A secret it needs is bound to its command in [security.exec_secrets] — there is no `env` here.
+#
+# [[external_clis]]
+# id = "opencode"
+# name = "OpenCode"
+# command = "opencode"              # the program, on the daemon's PATH or by path
+# args = ["acp"]                    # what starts its ACP mode
+# install = "npm i -g opencode-ai"  # said when it is not installed
+# profile_env = "OPENCODE_HOME"     # points it at a sign-in folder, one per [external] profile; absent: its HOME
+# modes = { folder = "build", all = "plan" }  # each preset as its own mode id; one it lacks keeps its default
+# login = ["auth", "login"]         # run in a terminal to sign in
+# login_note = "Signs in with …"    # said beside the sign-in
+# status = ["auth", "status"]       # exits 0 when its profile is signed in; absent: a session it opens or refuses says
+# signed_out = ["not logged in"]    # words in a refusal that mean "sign in first"
+# version_args = ["--version"]      # prints its version; this is the default
+# instruction_file = "AGENTS.md"    # the CLI's instruction file in the agent's folder, where Nouride writes the
+#                                   # persona between its markers; absent: AGENTS.md
+
+[security]
+# How much gets asked before a tool call runs, when neither the agent nor the person has said. Three presets over one
+# fixed list of what always asks — `nouride policy` prints it:
+#
+#   careful   a new command or a change asks once, and "allow always" remembers it; everything on the fixed list —
+#             deletes outside the workspace, tearing infrastructure down, force-pushes, stopping or replacing this
+#             daemon, its database, scheduling a job that runs unasked and the rest — asks every time
+#   balanced  only changing a config.toml, giving someone access, stopping this daemon, replacing or deleting a
+#             stored secret, and a credential leaving this machine ask; everything else runs
+#   trusted   nothing asks but two things every level asks: work nobody watches sending somewhere its job did
+#             not name, and a program installed for every agent (`nouride tools run`)
+#
+# `nouride setup` writes `careful` for a new install. Unset, it is `balanced`, which is what an install that never
+# set it had. Where each agent runs as its own user (install.sh sets that up on Linux), the operating system keeps
+# the daemon's own files and the other agents' work out of its reach, whatever the level.
+#
+# An agent can override this for everyone who talks to it — `[agent] approvals` in its pack — and a
+# person can set their own with `/approvals` in chat. The agent wins when it states one.
+#
+# `trusted` is deliberately hard to reach: no CLI verb writes it and no chat command can set it, because
+# a chat sender is not authenticated. The dashboard, behind a login, and this file are the two ways in.
+approvals = "balanced"
+tool_timeout_ms = 30000
+approval_timeout_ms = 300000        # a request nobody answers expires as a DENIAL
+max_conversation_turns = 200        # cap on stored history, in turns
+job_max_ms = 0                      # stop a background job still running after this long, and tell its agent;
+                                    # 0 never does. Services are exempt. e.g. 7200000 = two hours
+# The second look: before work nobody watches — a scheduled job's run, a webhook's, a mission — sends something off
+# this machine after reading outside content, a model weighs the action against what the work is for, and may add a
+# question. Unset: on at careful and balanced on the agent's high tier, off at trusted. "off" turns it off; a tier
+# (small, default, high) or a model id keeps it on at every level. A pack's [security] model_guard says it for one agent.
+# model_guard = "off"
+# Who may talk is [security.access] below. An agent can narrow it further with `sender_allowlist` in its own
+# pack's [security].
+
+# ── What `exec` may run ──────────────────────────────────────────────────────
+# An allowlist, not just a blocklist (TD-010). A blocklist answers "what did I
+# remember to ban", which is the wrong question once an agent is reachable from a
+# chat platform.
+#
+# The [security.exec] keys are further down, after [security.access]. Where file-shaped credentials live
+# (`credentials_dir`, <data_dir>/credentials by default) is an advanced setting.
+
+[security.access]
+# Who may talk to the agents.
+#
+#   "pair"      an unknown sender is told a short code and dropped. You approve the code and they are
+#               remembered — forever, on disk. This is the default.
+#   "allowlist" only ids listed below. Anyone else is dropped in SILENCE: no reply, no error.
+#   "open"      anyone. Only sane for a daemon with no chat gateway at all — with one, and an agent
+#               holding `exec`, the daemon refuses to start, whatever `allowlist` holds: anyone who found
+#               the bot could run commands on this host.
+#
+# The old default was effectively "open" whenever the allowlist was empty — which is what a fresh
+# install has — so anyone who found the bot could run the agent's tools.
+#
+# Set up with "pair", then switch to "allowlist" once the people you want are paired: senders already
+# approved keep talking, everyone else is dropped at the gate. The Access page in the dashboard and
+# `nouride access mode <mode>` both write this line, and both take effect on the next message rather
+# than the next restart.
+mode = "pair"
+
+# Pre-approved senders, let in without pairing in "pair" and "allowlist" mode ("open" lets everyone in).
+# Two spellings:
+#   "123456789"                   bare id
+#   "telegram:nouva:123456789"    fully qualified — reach for this when one daemon runs bots on more
+#                                 than one platform, since a Telegram id and a Discord snowflake are
+#                                 both numeric and a bare id can match on the wrong one
+allowlist = []
+
+[security.exec]
+# What a command may run is anything, and when it asks is [security] approvals above. 0.8.0 took the knobs that used to
+# be here — mode, ask, ask_fallback, sensitive_paths and the allowlist — into those levels: a file that still writes one
+# of them starts with a warning naming it, or is refused where leaving it out would let more run without asking.
+
+# Landlock, on top of each agent's own user (Linux with the helper install.sh sets up): where an agent's
+# command may change files — its own folder, shared/, its declared roots, the temporary folders —
+# whatever the files' modes would let its user do. A layer, not the wall: many kernels ship it off.
+#   "auto"     where the kernel has it (the default); `nouride doctor` says whether this one does
+#   "require"  no command runs where the kernel has none
+#   "off"      the agent's own user alone
+#
+#   landlock = "auto"
+
+# Refused before anything else: beats a standing grant and every level. Your own veto
+# list — "never on this machine, whatever I click at 2am".
+#
+# What always asks — deletes outside the workspace, teardowns, this daemon stopped — is the fixed
+# list, so it does not need an entry here. See packages/policy/src/hardline.ts.
+blocked = []
+
+# Kernel ceilings on a single command, in megabytes and seconds of CPU. 0 = unlimited.
+#
+# The timeout bounds wall-clock and the output cap bounds what is read; neither stops a
+# command that allocates until the machine swaps or spins a core flat for the whole
+# timeout. Those are the failures that take the HOST down rather than the turn — which is
+# the difference that matters on a server you also use for other things.
+#
+# Off by default: a limit that kills a legitimate build is worse than no limit on a machine
+# nobody else uses. Linux only, through prlimit; a native macOS install says so at boot
+# rather than pretending the setting applied.
+max_memory_mb = 0
+max_cpu_seconds = 0
+
+[media]
+# Reading images — one sent in a chat, one an agent opens with `read` (a screenshot it took), and one an
+# MCP server returns. A file is downloaded either way; this decides whether anything looks at it.
+#
+# Empty model = the AGENT'S OWN model, which is the useful default: a multimodal conversation model
+# (Sonnet on a Nougate deployment) reads images with no configuration at all. Name a cheaper one when
+# the conversation model is expensive and images arrive often — openclaw keeps a whole list of these
+# for the same reason.
+image_model = ""                      # e.g. "antigravity:gemini-3.1-flash-lite", or a tier: "small"
+
+# Off is a legitimate posture, not a bug: every image is a model call someone pays for. When off, the
+# agent is told the image was not read *and why*, so it says something true instead of guessing.
+read_images = true
+
+# Voice notes and audio files, sent to the conversation model as sound — but only to a model KNOWN to
+# hear. A model that cannot (Claude, or one behind a gateway that drops audio) never gets a clip it
+# would answer about without hearing; the agent says it could not listen, and you get one alert.
+read_audio = true
+
+# Who says a model hears. "auto": the gateway's /models listing — Nougate says which of its models do,
+# and sends Telegram/WhatsApp voice notes as they arrived, no ffmpeg needed. "always": you vouch for a
+# provider that hears but does not say so; clips go as mp3, which needs ffmpeg on this machine.
+audio_input = "auto"
+
+max_audio_seconds = 600
+
+# When the conversation model cannot hear (Claude, for one): turn speech into text instead, through a
+# provider profile's /audio/transcriptions — OpenAI, Groq, or a Whisper server on another machine at home
+# (whisper.cpp server, faster-whisper-server) so the voice never leaves the house. Empty = no
+# transcription, and the agent says it could not listen. Also used for the sound of a video.
+transcribe_provider = ""              # e.g. "groq", with [providers.groq] base_url = "https://api.groq.com/openai/v1"
+transcribe_model = "whisper-1"        # "whisper-large-v3" on Groq
+
+# Documents are not sent to a model at all. They land in the agent's workspace and it opens them with
+# `read` or `exec` — hermes' approach, and it means a PDF costs nothing until the agent looks.
+
+[jobs]
+# A background job that prints nothing for this many minutes wakes its agent to tell the person it is
+# still running — then at double that, and double again: 5, 10, 20, 40, 80… New output starts the count
+# over. Nothing is stopped for being quiet — [security] job_max_ms stops one for running too long. 0 never
+# tells. An agent can set its own under [jobs] in its config.toml.
+quiet_after_minutes = 5
+
+[delegate]
+# Helpers one agent may have working in the background at once (`delegate` with `background: true`). Each is a job
+# of its own: the turn that started it ends at once, so the person can keep talking to the agent, and each helper's
+# result wakes the agent as that helper finishes. One is the habit for a long task, two for two independent pieces.
+# 0 turns them off; at most 4. An agent can set its own under [delegate] in its config.toml — from its Settings page
+# in the dashboard, too. It counts the agent's asks in the background as well (0.7.19): an `ask_agent` still waiting
+# after a minute moves there, and at 0 every ask waits for its answer.
+max_background = 2
+
+[missions]
+# Long work an agent finishes alone (0.8.0): started with /mission, from the dashboard, or by the agent when the work
+# needs one. It runs turn after turn from a page of its own, survives restarts, parks what needs your approval and goes
+# on with the rest, and is done only when its checks pass. These are the five limits; a mission takes them when it
+# starts. A mission waiting for you holds no slot, and the time it waits is not counted.
+per_agent = 1           # running at once for one agent; an agent's pack may set its own [missions] per_agent
+# max_running = 3       # running at once on this box; unset: half the agents that are on, at least 1, at most 8
+limit_hours = 8         # hours of work before it stops and asks to continue
+limit_turns = 100       # turns before it stops and asks to continue
+limit_tokens = 100000000 # input and output tokens before it stops and asks to continue
+
+[alerts]
+# Where the daemon reports on ITSELF: a gateway that gave up reconnecting, a session that needs
+# relinking. Not agent replies — those go to whoever was talking.
+#
+# Empty means these only reach the log. On a server that means you find out a gateway is dead when
+# you notice the agent has gone quiet, so boot warns if you have chat gateways and no alert channel.
+gateway = ""                          # a gateway instance id, e.g. "telegram:nouva"
+chat_id = ""                          # the chat on it to send to (your own DM)
+
+
+[security.web]
+# Permit private/LAN/loopback addresses. For networks where DNS resolves real names
+# into private ranges (a home router, a corporate proxy, a VPN). Cloud metadata stays
+# blocked either way.
+#
+# This is also what lets an agent check a service it just started — `http://localhost:3000/health`
+# after running the dev server. Off by default because on a server it turns web_fetch into a reader
+# of every internal service on the box, and the agent takes its instructions from chat.
+allow_private_urls = false
+
+# ── web_search ───────────────────────────────────────────────────────────────
+# `web_search` is only offered to an agent when a backend below actually works. A
+# tool in the schema is a promise the model will try to keep, so one that cannot
+# answer is not offered at all rather than failing on every call.
+#
+# Brave — the default. A public endpoint with a free tier (~2k queries/month), so
+# it is the only backend that can have a default at all. Put the key in .env as
+# BRAVE_SEARCH_API_KEY and leave the two lines below alone.
+# Image search rides on the same backend. `web_search` takes kind = "image" and returns direct image
+# URLs, which `send_file` can take with its `url` parameter — that is the whole "find a picture and
+# send it" path, with no browser anywhere in it.
+#
+# Only the two configured backends can do it: Brave needs the key below, SearXNG needs an endpoint.
+# The keyless fallback scrapes result *pages* and has no image mode, so on a daemon with neither
+# configured, an image search refuses and names both settings rather than running a web search and
+# handing back page URLs that are not images.
+
+search_kind = "brave"
+search_api_key = "brave_search_api_key"   # a secret NAME, never the key itself
+search_endpoint = ""                      # empty = the backend's own default
+
+# ── fallback on runtime failures ─────────────────────────────────────────
+# When the primary search backend returns 429 (rate limit), 5xx (outage),
+# or times out, try the fallback chain before giving up.
+# Enabled by default — an agent mid-task should not lose search because of
+# a transient upstream failure.
+fallback_enabled = true
+fallback_backends = ["duckduckgo"]     # the keyless sources, asked in parallel — see the site's architecture/tools page
+
+# SearXNG — self-hosted, no key, genuinely free. Add it beside the daemon:
+#
+#   # docker-compose.yml
+#   searxng:
+#     image: searxng/searxng
+#     environment:
+#       - SEARXNG_BASE_URL=http://searxng:8080/
+#     volumes:
+#       - ./searxng:/etc/searxng
+#
+# then:
+#
+#   search_kind = "searxng"
+#   search_endpoint = "http://searxng:8080/search"
+#   allow_private_urls = true    # it lives on a private address, so the SSRF
+#                                # guard has to be told this one is expected
+#
+# Two things a fresh SearXNG gets wrong, both in its own settings.yml:
+#   - `json` is missing from `search.formats`, so it answers HTML. The tool says
+#     so by name when this happens.
+#   - the rate limiter is on, and answers 429 to a server-side caller. Turn it
+#     off for a private instance.
+
+[security.rate_limit]
+messages_per_minute = 10            # per sender, per gateway
+
+[dashboard]
+enabled = true
+# Loopback, matching the built-in default in `config/defaults.ts` — this line said 0.0.0.0 and did
+# not. A container has to bind its own interface or the published port reaches nothing, so the image
+# sets $HOST instead; `scripts/install.sh --host 0.0.0.0` writes it into `.env` for a native box.
+host = "127.0.0.1"                  # $HOST overrides this
+port = 18254                        # $PORT overrides this
+# The address this daemon is reachable at from outside, when that is not host:port —
+# behind a reverse proxy, or a container port map. Webhook URLs and the OAuth
+# redirect URI are both built from it, and both reach nobody without it.
+# public_url = "https://agents.example.com"
+
+# ── External sign-in (optional) ──────────────────────────────────────────────
+# "Continue with Nouverse" on the login page, instead of only a password.
+#
+# This daemon is the OIDC *client*, never the provider. A self-hosted install
+# cannot register a Google app for a domain it does not own — so social sign-in
+# arrives by trusting an issuer that already holds those credentials, and the
+# user picks Google or GitHub on *that* login page.
+#
+# All three settings come from registering this install with the issuer, and the
+# redirect URI to register is:
+#
+#     <public_url>/api/control/auth/oauth/callback
+#
+# An identity is matched to an existing account by email and NEVER creates one:
+# the provider authenticates every user it has, not only the ones this daemon
+# knows about. Create the account first, with the person's email as its username.
+#
+# Leave `issuer` empty for password login and nothing else. Setting some of these
+# and not others is refused at boot rather than shown as a button that fails.
+
+# Allow a username and password. Off is only permitted when [dashboard.oauth]
+# below is configured — otherwise nobody could sign in, and the daemon refuses
+# to start rather than serve a login page nobody can satisfy. Existing
+# passwords are kept either way.
+# password_login = true
+
+# [dashboard.oauth]
+# issuer = "https://service.nouverse.tech/api/auth"
+# client_id = "nvo_..."
+# # The NAME of a secret, not the secret. Reads $NOUVERSE_OAUTH, then the store.
+# secret_name = "nouverse_oauth"
+# label = "Nouverse"
+
+
+# ── Gateways ─────────────────────────────────────────────────────────────────
+# Each connection is NAMED: [gateways.<platform>.<name>] → id "telegram:nouva".
+# That is what lets one daemon run a bot identity per agent instead of one bot
+# for everything.
+#
+# `agent = "..."` makes the instance that agent's own bot: everything it receives
+# goes to them unless someone else is addressed by name. Without it, routing falls
+# back to channel bindings in the agent's config.toml.
+#
+# None are defined by default, so a fresh checkout brings up the dashboard and
+# nothing else rather than retry-looping against a platform it has no token for.
+
+# [gateways.telegram.nouva]
+# enabled = true
+# token = "telegram-nouva"          # secret name → $TELEGRAM_NOUVA
+# agent = "nouva"
+# mode = "polling"                  # the one mode; "webhook" is refused
+
+# [gateways.discord.main]
+# enabled = true
+# token = "discord-main"
+# Needs the MESSAGE CONTENT intent enabled in the Discord developer portal, or
+# every message arrives empty.
+#
+# ── how much Discord state to hold in memory ─────────────────────────────
+# All three default to 0, which means "do not cache". discord.js ships them
+# unbounded (bar 200 messages per channel) with a sweeper that only sweeps
+# threads, and with one bot per agent that is one set per connection: measured
+# on a live box, six of them grew the daemon from 76MB to 97MB over twenty
+# minutes. Nothing in the adapter reads them — the message author and the
+# member arrive on the gateway payload, and fetching a message is a REST call
+# either way — so the cost bought nothing.
+#
+# Raise one only if something starts needing it. Channels and guilds are always
+# cached and are not configurable: they are bounded by how many places the bot
+# was added to rather than by traffic.
+# [gateways.discord.main.cache]
+# messages = 0   # per channel
+# users = 0      # global
+# members = 0    # per guild
+
+# [gateways.whatsapp.main]
+# enabled = false
+# encryption_key = "wa-encryption-key"   # secret NAME; the value is 64 hex chars
+# session_dir = "/var/lib/wa"          # optional; unset keeps the login in <data_dir>/whatsapp
+#
+# WhatsApp has no bot token. Linking is a QR scan from the phone holding the number,
+# once — the dashboard shows the code under Gateways. What comes back is a login, so
+# it is stored AES-256-GCM under `encryption_key`: a copy of session_dir without that
+# key is useless, and a copy WITH it is a working login. Generate one with
+#   openssl rand -hex 32
+# and keep it, or the next restart asks for a new scan.
+#
+# The daemon never talks to Baileys directly — only to the bridge, over a
+# newline-delimited JSON protocol. Every release carries that bridge in its own
+# process, so there is nothing to install or spawn, and one WhatsApp number per
+# daemon. `bridge_transport` has one value left, "inproc", and needs no line;
+# "ws" went in 0.7.10 and is refused. See §6 of docs/ARCHITECTURE.md.
+
+# ── LLM ──────────────────────────────────────────────────────────────────────
+
+[llm.defaults]
+provider = ""                       # a [providers.*] profile name — leave empty until you add one
+model = ""                           # set via dashboard or fill in after adding a provider
+# Two more models beside it, for the work an agent hands off: it picks one per helper or agent it asks,
+# with `tier` — "small" for quick, simple work, "high" for hard work that has to be right, "default" (the
+# model above) when it says nothing. Each is optional: unset, it is `model`. An agent on this provider
+# inherits them, and its pack can name its own in [llm]. The helper keys ([media] image_model, summary_model,
+# pass_model, [skills.learning] model) may name a tier too — summary_model = "small" — and stay on each
+# agent's own model until one does.
+# small_model = "claude-haiku-4-5"
+# high_model = "claude-opus-4-1"
+max_tokens = 0                       # output per reply; 0 = by model (32000 for Claude 4/5, Gemini 2.5/3, GPT-5; else 8192)
+temperature = 0.7
+# effort = "medium"                  # how long a thinking model thinks: low, medium, high, xhigh, max; unset = the provider's
+# Who answers when an agent's model cannot, in order — each a provider profile and a model on it. Another model on the
+# same provider answers a rate limit, an overload or a model not served; another provider also answers one that is down
+# (a 5xx, a refused connection, a timeout, a stream dropped before its reply began), out of credit or refusing its key.
+# A reply that fails after it began is not handed on. The turn's closing call uses the list too. For every agent whose
+# pack names no fallbacks of its own.
+# fallbacks = [{ provider = "openrouter", model = "anthropic/claude-sonnet-4" }]
+
+[llm.limits]
+max_tokens_per_turn = 32000          # ceiling on every request's output, whatever set it
+# Tool round-trips one reply may take before the model is asked to summarise and stop.
+# 5–9999. 250 carries a long piece of work through in one turn, the way a coding agent does;
+# the conversation is compacted as it grows, and `/stop` ends a turn at once. Work that waits
+# on something slow — a build, a coding agent's run — belongs in a background job, which wakes
+# the agent when it is done. One agent can want a different number: put `max_tool_iterations`
+# in that agent's own [llm] table and it overrides this for that agent only.
+max_tool_iterations = 250
+# Hard wall-clock cap on one turn. Separate from the per-request and per-tool timeouts,
+# which each bound a single step.
+# An hour, the most allowed. A ceiling, not a target — nearly every turn finishes in seconds.
+# Allowed 30-3600 seconds; per agent, set [llm] max_turn_seconds in its own config.toml.
+max_turn_duration_ms = 3600000
+# Two ceilings, and 0 on either means that one is off. Both are enforced before the provider is
+# called, and whichever is reached first refuses the turn.
+#
+# `max_daily_cost_usd` can only see models that are in the price book: each vendor's listed models,
+# by exact id. One it does not list is unpriced, and a daemon pointed at a self-hosted gateway may
+# have no priced calls at all, so there the dollar cap is not a partial measure — it is nothing.
+# A profile with `billing = "included"` is a subscription: its calls cost nothing per token, so they
+# are left out of the dollar cap and still counted by the token cap.
+#
+# `max_daily_tokens` is the one that always applies: every metered call counts — a turn's own, and
+# the compaction, reflection, image reading and embedding it causes — whether anybody published a
+# price or not. Set this one if you set only one. Past either cap the work nobody waits on stops too.
+max_daily_cost_usd = 0
+max_daily_tokens = 0
+cost_alert_threshold_pct = 80
+
+[llm.context]
+# A long conversation is compacted — the oldest of it summarized once, and kept — when it grows past
+# this many tokens of context: the WHOLE request, system prompt, tools and history, which is the number
+# the usage log shows. (Or past 80% of the model's window, whichever comes first; that ratio, and how
+# the rest of the trimming works, are advanced settings.)
+#
+# Left out, each model gets its own figure: Gemini Flash 200k (it runs at ~75% prompt-cache hits, so
+# carrying more of it is cheap and stays fast), everything else 160k. An agent can name its own with
+# `compact_at_tokens` in its `[llm]` block, which beats both this and the model's figure.
+#
+# Why there is a ceiling at all: on a million-token window the ratio alone put compaction near 610k, so
+# a 426k-token chat never compacted once and every iteration of a turn resent all of it — 12M input
+# tokens for one reply, ~15 seconds a call, and the turn died on the five-minute deadline while it was
+# still making progress. A window says what a model *can* read; it was never a claim about what it
+# should carry to answer well.
+#
+# Compaction itself: old tool output is cleared first; then everything
+# older than the newest ~30% is summarized ONCE into a new part, and parts are never summarized again —
+# the oldest are archived to one line each, which `memory_read` reads back exactly from the turn log.
+# It runs right after a reply is sent, so nobody waits on it.
+#
+#   compact_at_tokens = 160000
+# The model that writes the summary, on the agent's own provider profile; a cheaper one is the
+# obvious economy here — or the small tier, "small", which is each agent's own cheaper model. Empty
+# uses [memory] pass_model, on its pass_provider, when those are set — the nightly pass condenses the
+# same conversations — and the agent's own model when they are not.
+# summary_model = "claude-haiku-4-5-20251001"
+
+[queue]
+# Turns running at once across ALL conversations. 0 lifts the ceiling. One chat runs one turn at a time
+# whatever this says; different chats run in parallel up to it. Without it, fifty active chats meant
+# fifty simultaneous provider calls — fifty times the spend per second, and a provider rate limit hit
+# immediately. Anything over the ceiling waits its turn in arrival order rather than being dropped.
+max_concurrent_turns = 8
+# A message to an agent already working in a one-to-one chat is read by that turn at its next step —
+# after the tool or model call it is in finishes — rather than waiting an hour for the turn to end.
+# The person is told it was received, with a sentence in the agent's own words about what it will do.
+# In a room only the person who started the turn steers it, and only by addressing the agent. Off: a
+# message sent mid-turn waits for the turn, as before.
+steer = true
+
+[attachments]
+# How long a file is kept is NOT here. It is `[retention] session_days`, the same window as the
+# transcript that mentions it — a file is part of what was said. This section had its own
+# `retention_days` (seven days against a thirty-day transcript) and the result was a conversation
+# that mentioned a screenshot for another twenty-three days after the screenshot was deleted.
+max_size_mb = 50
+
+# How long this install's history is kept. Swept at boot and once a day.
+#
+# `session_days` governs the conversation and everything that belongs to it — the transcript, its
+# turns and steps, a room's events and messages, and the **files** people sent, which used to have a
+# knob of their own and outlived nothing correctly. Sessions are keyed on last activity, so a chat
+# that runs every day is never swept however old it is.
+#
+# `audit_days` governs what the daemon did and what it spent: `audit_log`, `llm_usage`, settled
+# approvals and decided skill drafts. Keyed on when the row was written, because that is all such a row is.
+#
+# What memory changed and why — Recent changes on the People page — is kept ninety days, a window of
+# its own rather than a knob, swept here too.
+#
+# 0 on either one keeps everything — the off position, not "delete all".
+# ── The bundled LLM gateway ──────────────────────────────────────────────────
+# Only in the Router and Pro editions — on by default in Router, off in Pro; the free edition refuses
+# `in_process = true`, having no gateway to start. The gateway then
+# runs inside this daemon on 127.0.0.1:18256 instead of being reached over the network, so a provider
+# profile can point at localhost and nothing leaves the box to pick a model.
+#
+#   [nougate]
+#   in_process = true
+
+[retention]
+session_days = 30
+audit_days = 30
+job_log_days = 3        # data/jobs/*.log — a background command's output. The agent may still be holding
+                        # the path `exec` gave it, so these cannot be deleted when the job ends.
+tool_output_days = 2    # data/tool-output/<session>/ — a tool result too large for the context, written
+                        # to disk with only an excerpt + the path handed to the model. Read within a turn
+                        # or the one after, so two days is already generous. 0 = keep forever (both keys).
+log_days = 3            # the daemon's own log, kept in the database and read from System Logs on the
+                        # dashboard. 0 keeps it forever; stdout still reaches the journal either way,
+                        # so this trims what the dashboard can show, not what the host recorded.
+scratchpad_days = 3     # .nouride/workspace/private/<agent>/.scratchpad/ — the disposable directory an agent
+                        # is told to put throwaway artefacts in: a screenshot on its way to being sent, a
+                        # download on its way to being converted. Deleting inside it is the one delete
+                        # that is not hardline, so an agent can clear up after itself without an approval
+                        # `/auto on` is never allowed to answer. Swept on a timer rather than after the
+                        # turn, because the next message is usually about the file that was just sent.
+
+# Clearing a conversation's context on a schedule, so a chat nobody resets does not carry a week of
+# history into every turn.
+#
+# A session concern, not memory's. Memory cuts conversations from the turn log (see [memory]), which a
+# rollover does not touch, so nothing is lost either way — this only decides how long one context runs
+# before it starts fresh.
+#
+# Evaluated when a message arrives, not on a timer: a conversation nobody is having needs no closing.
+#
+#   none    never rolls over
+#   daily   clears a conversation that *began* before today's `at_hour` boundary
+#   idle    clears one nobody has touched for `idle_minutes`
+#
+# `daily` reads when the conversation began and `idle` when it was last touched: a chat kept up all
+# day is still stale at the next boundary, and one started an hour ago is not idle however old the chat
+# itself is. Boundaries are in `[daemon] timezone`.
+[rollover]
+mode = "none"
+# 4am rather than midnight: a conversation running at 1am belongs to the evening it started in.
+at_hour = 4
+# Only read in `idle` mode. Six hours is a gap that means the conversation ended, not paused.
+idle_minutes = 360
+
+# Which releases this install is offered (0.8.18). `latest`: every release as it comes. `lts`: a long-term line,
+# 1.0 the first, which an install on an older line moves to and stays on, taking its fixes only. The dashboard's
+# Update page and `nouride update --track` set it; a Pro install or a Box tells Nouverse, which chooses within it.
+[update]
+track = "latest"
+
+# Who the agents talk to.
+#
+# A household install has several people, and the agent needs to know which one is speaking. Nouride
+# has always carried the platform's display name — but it only told the agent in *group* chats, and
+# a family talks to it in DMs. So on the surface where knowing the person matters most, the agent
+# knew nothing.
+#
+# IDENTITY IS THE ID, NEVER THE NAME. `sender_access` records display names as untrusted for a
+# reason: anyone can rename themselves to "Gading" in Telegram. An id here is the platform and the account
+# (below), and it is matched on nothing else. A sender who is not in this list is described to the agent as
+# unverified, in different words, so a rename cannot read as an identity.
+#
+# `nouride access` shows the ids the daemon has actually seen.
+#
+# This tells the agent WHO it is talking to. It does not give different people different permissions
+# — every sender gets the same toolset. If members of a household need different capabilities, give
+# them different agents: a pack per person, routed by [channels] on the same bot, is how that is
+# expressed here.
+#
+# ## Which id to write
+#
+# The platform and the account, and nothing between them:
+#
+#   "discord:214777"                        the person on Discord, whichever of our bots they address
+#   "whatsapp:628111000001@s.whatsapp.net"  the person on WhatsApp, whichever of our numbers they write to
+#
+# A connection in the middle — "discord:nero:214777", "whatsapp:nouva:628…" — is refused, naming the
+# account: it named somebody only while they talked to that one bot. Who may talk to which bot is a
+# different question, answered per connection on the Access page.
+#
+# A bare "214777" is refused. A Telegram user id and a Discord snowflake are both plain numbers, and
+# matching one as the other identifies the wrong human with complete confidence.
+#
+# ## One person, several addresses
+#
+# Use `ids` when the same human reaches you more than one way: WhatsApp reports both a `@lid` and a
+# phone number for one account, and a household member has a Telegram id as well. One person means one
+# name and one set of notes, instead of three copies that drift apart on the next edit.
+#
+# ## Where they are written
+#
+# Not in this file. Since 0.8.18 each person is a file of their own beside it, people/<key>.toml, the
+# file's name their key (their memory profile, people/<key>.md under [memory] dir, is another folder).
+# The People page, `nouride people` and the agents write them, each keeping its last versions as
+# <key>.toml.bak.N; one edited by hand is what the next write patches. A [[people]] block here is read only
+# until the first start of 0.8.18 moves it there, and then kept for the way back to 0.8.17; what 0.8.17
+# changes in it after a rollback is moved again at the next start of 0.8.18. people/gading.toml:
+#
+#   [person]
+#   ids   = ["telegram:5550001111", "discord:214777", "whatsapp:628111000001@s.whatsapp.net"]
+#   name  = "Gading"
+#   notes = "Runs the homelab. Prefers short answers and Indonesian."
+#   facts = "auto"     # what the nightly pass learns about them, over [memory] facts; absent follows it
+#   recall = false     # leave what is remembered about them out of prompts, over [memory] recall
+#
+# The dashboard's own sender can be named too — `web:<account id>`, from the dashboard's Users page. Not
+# required: an agent is already told the name on a signed-in account, because this daemon verified the
+# login itself. Name them here when you want *notes* attached to them as well.
+
+# ─── Memory ─────────────────────────────────────────────────────────────────
+# What the agents remember (docs/SPEC.md §12). An Obsidian vault under `dir`:
+#
+#   episodes/   one file per conversation: its summary, tags, who took part, and the transcript while
+#               it is kept. Cut from the turn log on /new, /reset, and by the nightly pass.
+#   people/     one profile per person, by their key (their file in people/ beside config.toml): facts the nightly pass keeps, each
+#               marked with the conversation it came from and who may read it.
+#   shared.md   what every agent knows, nobody's in particular — added only once you approve it.
+#   days/, agents/, groups/, tags/   generated, so the graph view has nodes to join.
+#
+# An agent's own MEMORY.md stays in its pack and is its own; the nightly pass never writes it.
+#
+# Who sees what is decided by who was in the conversation, never by a model: a DM recalls what its
+# person took part in, on any agent; a group recalls what was said in it. A fact is readable exactly
+# where the conversation it came from is.
+#
+# Kept outside `daemon.agents_dir` on purpose: the packs are usually git repositories, and a
+# household's conversations do not belong in one.
+
+[memory]
+dir = "./.nouride/memory"
+
+# Each night, once no turn is running: cut every chat active since its last cut into episodes, and
+# file each — one model call: a summary, tags, importance, and the facts worth keeping. Its spend
+# counts toward [llm.limits] like any other request, and a night over budget stops, not fails.
+# Off until the setup wizard's last step asks.
+pass = false
+pass_at = "01:00"
+pass_per_night = 20          # per agent; direct conversations first, the rest wait for the next night
+# Tokens the pass may use in one night, every agent's together, in and out; past it the rest wait for the next night.
+# 0: no limit of its own. A box with more conversations a day than pass_per_night falls behind every night — the Memory
+# page and `nouride doctor` say so, with the count to set — and this is what keeps a raised count's night affordable.
+pass_max_tokens = 0
+# One model for every agent's pass, or both empty for each agent's own. Set together: agents use
+# different providers, so a model alone would go to each one's. A small model is enough — or the small
+# tier, pass_model = "small" with no pass_provider: each agent's own cheaper model, on its own provider.
+# It also writes conversations' compaction summaries, unless [llm.context] summary_model names one.
+pass_provider = ""
+pass_model = ""
+max_attempts = 3
+# What the pass does to people's profiles. auto: every fact is kept, rewritten or removed at once,
+# readable only where it was said. ask: every change waits for you. off: conversations are filed, no
+# facts kept. A [[people]] entry's own `facts` overrides this for that person.
+facts = "off"
+# Let the pass propose shared knowledge (shared.md, read in every chat). Each proposal waits for you.
+propose_shared = false
+
+# Conversation summaries in each prompt, of those the chat may see. 0 leaves them out.
+prompt_recent = 3
+
+# Put what is remembered into each prompt: people's facts, shared knowledge, what is coming up and
+# the latest conversations. Off, the pass still learns and agents still search memory with their
+# tools. A [[people]] entry's own `recall` overrides it; off there, their facts are left out
+# everywhere and a DM with them carries none.
+recall = true
+
+# A conversation's transcript stays readable this many days; its summary is kept forever. With
+# `archive`, the transcript is then kept compressed under archive/, where no agent can read it — to
+# file again with a better model someday. 0 keeps every transcript forever: archive then does nothing,
+# and the next pass gives back the transcripts it had archived.
+transcript_days = 180
+archive = true
+
+# Semantic search: find memory by meaning as well as words. Conversation summaries and facts are sent
+# to this provider to be embedded (OpenAI's /embeddings: OpenAI, Gemini, Mistral, Jina, or a local
+# Ollama). Switched on only once it answers.
+[memory.semantic]
+enabled = false
+provider = ""               # a [providers.*] profile that embeds, e.g. one pointing at Ollama's /v1
+model = ""                  # e.g. "bge-m3" or "text-embedding-3-small"
+dimensions = 512            # asked of models that can shorten their vectors; others keep their own
+
+# Nouride as an MCP server at /mcp: other tools (Claude Code, Cursor, an editor) read this install's
+# memory and personas with a token that belongs to a person and names its agents and scopes —
+# nouride mcp-server token create. The other direction, an agent using someone else's MCP server, is a
+# server in the install's library (agents/mcp.toml, `nouride mcp add`) switched on for that agent.
+[mcp_server]
+enabled = false
+
+# Scheduled work — reminders, recurring checks, daily reports.
+#
+# A job carries three things that are easy to confuse, and are kept apart on purpose:
+#
+#   target    the conversation it is about  — a (gateway instance, chat) pair, which is how a
+#             Discord channel, a WhatsApp group and a Telegram topic are all addressed already
+#   session   whose history the turn runs against: "fresh" (none at all, the default — a daily
+#             report gains nothing from yesterday's), "isolated" (its own, at cron:<jobId>, kept
+#             across runs) or "chat" (the target's, read and appended to — choose it deliberately)
+#   delivery  where the output goes — the target by default, somewhere else if you say so
+#
+# Payloads, cheapest first. A reminder costs no model call at all and works while the provider is
+# down. A command runs on this host with no model, and can hand its output to one turn instead of
+# making the agent discover it has to run something. An agent turn is the expensive one.
+[cron]
+enabled = true
+
+# What happens when a scheduled turn needs an approval and nobody is there to give it.
+#
+#   "auto"  approve it, and record the decision in the audit log against the job. This is a real
+#           escalation of what a schedule can do, and it is the honest default: a 3am job that stops
+#           at a prompt nobody will ever see has not run at all. The hardline classes are still not
+#           auto-approved — privilege escalation, recursive deletes, credential paths and this
+#           daemon's own state are refused on a schedule, and the agent is told why.
+#   "deny"  refuse it with a reason the agent can report. The job fails honestly instead of quietly
+#           doing less than it was asked to.
+#
+# Either way, `exec` still meets the blocked list and this agent's allowlist first.
+unattended_approval = "auto"
+
+# ── skills ────────────────────────────────────────────────────────────────────────────────────────
+[skills]
+# Skills no agent loads, whatever their own skills.toml says. Names, not paths.
+#
+# The other axis from the per-agent switches. Those answer "nero does not need this one", which is a
+# preference; this answers "nobody should be carrying this", which is a removal. A pool skill can be
+# deleted outright, so this exists mainly for the built-ins: those ship inside the executable, so
+# deleting one is refused and would be undone by the next upgrade anyway.
+#
+# Doing the same thing by writing false into every pack would not be off — it would be off for the
+# agents that existed at the time, and the next agent created would carry the skill again with
+# nothing to say why. Read on every pack reload, so the dashboard's switch applies from the next
+# message rather than the next restart.
+#
+# A name here that matches nothing is ignored rather than refused: a skill switched off and then
+# deleted must not make the config unloadable.
+off = []
+
+[skills.learning]
+# Skill learning: after a conversation that took real working out, the agent reads it back and asks one
+# question — is there a procedure here that an agent doing this kind of work again would follow? Facts
+# about your machines belong in memory and a task's progress in its work notes, so neither becomes a skill.
+# A new kind of work is noted the first time and becomes a skill when another conversation is the same
+# work, or when somebody asks for one in words ("catet jadi skill ya"). A new skill is on only for the agent
+# that learned it. Was [rsi] until 0.7.27; when the pass looks is its own now, not a setting.
+#
+# How much runs without you:
+#   off   no turn is examined. Drafts already queued stay decidable; nothing new is made.
+#   ask   draft it and wait. The default.
+#   auto  the agent approves its own drafts as it writes them and tells you afterwards — what Hermes does.
+#         The weekly review's proposals (tighten, merge, archive) still wait for you.
+#
+# Anything unrecognised is read as ask, never as auto: a bad value here should cost an approval, not grant
+# autonomy.
+mode = "ask"
+
+# Model for the pass. Empty uses the agent's own — same reasoning as [llm.context] summary_model, and it
+# resolves against the agent's provider profile, so a name here has to be one that profile can serve.
+# A tier's name — "small" — is each agent's own model of that tier.
+model = ""
+
+# Announce a new draft in the conversation that produced it. Off leaves the Skills Workshop and
+# `nouride skills drafts` as the only way to find one.
+notify_chat = true

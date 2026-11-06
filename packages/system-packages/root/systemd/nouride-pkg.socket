@@ -1,0 +1,23 @@
+# Where the Nouride daemon asks for a system package — see /usr/local/lib/nouride-pkg/nouride-pkg.
+#
+# Installed by install.sh --allow-packages. Only root and the service account's group may connect: the daemon, and the
+# operators install.sh added to that group. Each connection starts one nouride-pkg@ process as root,
+# outside the daemon's sandbox, and the rules in that script decide what it may do.
+
+[Unit]
+Description=Nouride system packages (socket)
+
+[Socket]
+ListenStream=/run/nouride-pkg.sock
+SocketUser=root
+SocketGroup=@GROUP@
+SocketMode=0660
+Accept=yes
+# Gone when stopped. The daemon reads "is the service here" from this file, and one left behind by a
+# stopped socket would say ready while every request was refused.
+RemoveOnStop=yes
+# One change at a time, and a client that floods it is not a reason for fifty root processes.
+MaxConnections=4
+
+[Install]
+WantedBy=sockets.target

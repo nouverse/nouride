@@ -1,0 +1,10 @@
+{
+  "name": "@nouride/shared",
+  "description": "Nouride shared contracts \u2014 message envelope, config and agent types, logger, errors, and the brand assets every surface uses.",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

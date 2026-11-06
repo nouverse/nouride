@@ -1,0 +1,113 @@
+name: nouride
+
+# Pulls the published image. Nothing is built on the box that serves traffic.
+#
+# Three images are published, and this file names the first. They differ only in
+# what is compiled into them — see the Dockerfile header, and docs/DEPLOY.md's
+# "From the registry":
+#
+#   ghcr.io/nouverse/nouride          the free build
+#   ghcr.io/nouverse/nouride-router   + the LLM gateway, in this process
+#   ghcr.io/nouverse/nouride-pro      + Nouverse sign-in and multi-user — private
+
+#
+# The Pro image is what Nouverse pods run; it is not for handing out. Swap the
+# `image:` line to use another; nothing else in this file changes.
+#
+# WhatsApp is in all of them, in-process, which is what an unset
+# `bridge_transport` means. Nothing has to be run beside the container for it.
+
+services:
+  nouride:
+    # The latest release. An install still on 0.7.x runs `:0.8.0` once on this volume before any later release —
+    # that tag, not `:0.8`, which moves to every 0.8.x — and one that missed the last 0.7.x runs `:0.7` once before
+    # that (docs/DEPLOY.md § The upgrade floor).
+    image: ghcr.io/nouverse/nouride
+    container_name: nouride
+    restart: unless-stopped
+    # Docker's default is 10 s and then SIGKILL — shorter than the daemon's own 30 s drain, which would
+    # kill a turn in flight before it finishes its step and says so. The systemd unit allows 45 too.
+    stop_grace_period: 45s
+    ports:
+      # The host's loopback only, as a native install listens; drop `127.0.0.1:` to reach it from other machines.
+      - "127.0.0.1:${PORT:-18254}:${PORT:-18254}"
+    # Everything in .env reaches the container. Without env_file, Compose would
+    # still read .env — but only to substitute ${...} in this file, so any key not
+    # also listed under `environment` would be silently ignored by the daemon.
+    env_file:
+      - path: .env
+        required: false
+    # The secret store's key (0.8.19). The store in the volume is encrypted, and its key is best
+    # kept out of the volume, so a backup of ./.nouride carries no key: put
+    # NOURIDE_ENCRYPTION_KEY=<openssl rand -base64 32> in .env above, or mount a Docker secret
+    # and name its file in NOURIDE_ENCRYPTION_KEY_FILE. Without either, the daemon makes a key
+    # and keeps it in the volume (`nouride doctor` says so), and moves to one given later at its
+    # next start. Keep a copy of it: without the key, or the backup passphrase, the store
+    # cannot be opened.
+    environment:
+      # Explicit entries win over env_file, and this list is deliberately short:
+      # credentials arrive through env_file because their variable names are chosen in
+      # config.toml (`api_key = "nougate"` → $NOUGATE) and cannot be enumerated here.
+      # Anything hardcoded would silently ignore whatever the deployment named.
+      # Loopback is the default for a native daemon; a container has to bind its own
+      # interface or the published port reaches nothing.
+      - HOST=${HOST:-0.0.0.0}
+      - PORT=${PORT:-18254}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      # The address people reach this at, when that is not host:port. Webhook
+      # URLs and the OAuth redirect are built from it and reach nobody without
+      # it. Unset in .env, and it simply is not set here.
+      - NOURIDE_PUBLIC_URL=${NOURIDE_PUBLIC_URL:-}
+
+      # ── Sign in with Nouverse (optional) ────────────────────────────────
+      # Leave all of these out and nothing changes: the login page is a
+      # username and a password, which is the whole minimum for a working
+      # install. Setting the issuer is what turns the button on, and the three
+      # go together — the daemon refuses to start with half of them.
+      #
+      # `SECRET_NAME` is the NAME of the secret, never its value. The value
+      # arrives under that name through env_file above, like every other
+      # credential: `nouverse_oauth` → $NOUVERSE_OAUTH.
+      #
+      # See apps/site/src/content/docs/en/docs/reference/environment.md for what to register and why an identity
+      # never creates an account.
+      - NOURIDE_OAUTH_ISSUER=${NOURIDE_OAUTH_ISSUER:-}
+      - NOURIDE_OAUTH_CLIENT_ID=${NOURIDE_OAUTH_CLIENT_ID:-}
+      - NOURIDE_OAUTH_SECRET_NAME=${NOURIDE_OAUTH_SECRET_NAME:-}
+      - NOURIDE_OAUTH_LABEL=${NOURIDE_OAUTH_LABEL:-}
+      # `false` removes the password form. Refused unless the three above are
+      # set, because otherwise there would be no way in at all. Easier from
+      # Dashboard → Users, which checks the secret actually resolves.
+      - NOURIDE_PASSWORD_LOGIN=${NOURIDE_PASSWORD_LOGIN:-}
+
+      # Only on a network with no direct outbound route — a managed pod, some
+      # corporate networks. EVERYTHING the daemon calls goes through it: the
+      # model provider, web search, webhooks, and Nouverse sign-in.
+      # - HTTP_PROXY=${HTTP_PROXY:-}
+      # - HTTPS_PROXY=${HTTPS_PROXY:-}
+      # - NO_PROXY=${NO_PROXY:-}
+
+      # Alternatively, keep credentials out of .env entirely and set them from the
+      # dashboard: they land in .nouride/data/secrets.json, which is on the mounted volume.
+    volumes:
+      # One mount for the whole install — config.toml, data/, agents/, workspace/.
+      #
+      # To keep the agents' output on a different disk from the daemon's state, mount `workspace`
+      # separately and point `workspace_dir` at it; the three paths are separate config keys for
+      # exactly that.
+      - ./nouride:/app/.nouride:z
+    healthcheck:
+      # The port the daemon reads, from inside the container: 18254 was written here while PORT moved the daemon,
+      # which left a container with PORT set unhealthy for good.
+      test: ["CMD", "bun", "-e", "await fetch('http://localhost:'+(process.env.PORT||18254)+'/health').then(r=>process.exit(r.ok?0:1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # WhatsApp runs inside the daemon in every image; there is no bridge container to add.

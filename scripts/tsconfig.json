@@ -1,0 +1,10 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["bun"],
+    "paths": {
+      "@/*": ["../apps/engine/src/*"]
+    }
+  },
+  "include": [".", "../apps/engine/src/db/sql.d.ts"]
+}

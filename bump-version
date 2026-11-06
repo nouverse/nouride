@@ -1,0 +1,5 @@
+#!/bin/sh
+# Set the product version everywhere it is written down. `scripts/bump-version.ts` has the reasoning
+# and the list of files; this is here only so the command is `./bump-version 0.5.2`, from the root,
+# with nothing to remember.
+exec bun run "$(dirname "$0")/scripts/bump-version.ts" "$@"

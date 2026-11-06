@@ -1,0 +1,33 @@
+{
+  "name": "@nouride/engine",
+  "description": "Nouride engine \u2014 the multi-agent daemon: router, agents, LLM executor, tools, cron, web API.",
+  "version": "0.8.20",
+  "license": "PolyForm-Strict-1.0.0",
+  "private": true,
+  "type": "module",
+  "module": "src/index.ts",
+  "bin": {
+    "nouride": "./src/cli/main.ts"
+  },
+  "scripts": {
+    "start": "bun run src/cli/main.ts start",
+    "dev": "bun run --watch src/cli/main.ts start",
+    "lint:check": "bun x tsc --noEmit --skipLibCheck",
+    "test": "bun test tests",
+    "cli": "bun run src/cli/main.ts"
+  },
+  "dependencies": {
+    "@nouride/gateways": "workspace:*",
+    "@nouride/isolation": "workspace:*",
+    "@nouride/llm": "workspace:*",
+    "@nouride/acp": "workspace:*",
+    "@nouride/mcp": "workspace:*",
+    "@nouride/persona": "workspace:*",
+    "@nouride/policy": "workspace:*",
+    "@nouride/queue": "workspace:*",
+    "@nouride/runtime": "workspace:*",
+    "@nouride/secrets": "workspace:*",
+    "@nouride/shared": "workspace:*",
+    "hono": "4.13.1"
+  }
+}

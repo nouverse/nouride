@@ -1,0 +1,115 @@
+name: nouride-dev
+
+# Driven by ./run-dev.sh. Source is mounted, dependencies live in named volumes so
+# a host-arch node_modules never leaks into the container, and both halves rebuild
+# on change: `scripts/dev-watch.sh` polls the source and restarts the engine or
+# rebuilds the dashboard, whichever was edited.
+
+
+services:
+  nouride:
+    container_name: nouride-dev
+    # `.bun-version`, as the image and CI have it, and the image's digest beside the tag, as the Dockerfile pins it;
+    # a test holds them together.
+    image: oven/bun:1.4.4-alpine@sha256:4cf82f5686b196504fe119db3fcd9185b191f82ece82c40680e597228ec6070a
+    working_dir: /app
+    # The supervisor is a mounted script rather than an inline command: it restarts
+    # the engine and rebuilds the dashboard by polling, because a bind mount from a
+    # macOS host delivers no inotify events into the VM and `bun --watch` would
+    # silently never fire. See scripts/dev-watch.sh.
+    entrypoint: ["sh"]
+    command: ["/app/scripts/dev-watch.sh"]
+    ports:
+      - "${PORT:-18254}:${PORT:-18254}"
+      - "${SITE_PORT:-4321}:${SITE_PORT:-4321}"
+    # env_file is needed alongside `environment`: Compose reads .env to substitute
+    # ${...} in this file, but that alone never sets variables inside the container.
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # Explicit entries win over env_file. These are the values that must differ
+      # in a container regardless of what .env says.
+      - NODE_ENV=development
+      # Loopback is the default for a native daemon; a container has to bind its own
+      # interface or the published port reaches nothing.
+      - HOST=${HOST:-0.0.0.0}
+      - PORT=${PORT:-18254}
+      - SITE_PORT=${SITE_PORT:-4321}
+      - LOG_LEVEL=${LOG_LEVEL:-debug}
+    volumes:
+      # ── Engine ──
+      - ./apps/engine/src:/app/apps/engine/src
+      - ./apps/engine/package.json:/app/apps/engine/package.json:ro
+      - ./apps/engine/tsconfig.json:/app/apps/engine/tsconfig.json:ro
+      # ── Dashboard (built inside the container, served by the engine) ──
+      - ./apps/dashboard/src:/app/apps/dashboard/src
+      - ./apps/dashboard/index.html:/app/apps/dashboard/index.html:ro
+      - ./apps/dashboard/package.json:/app/apps/dashboard/package.json:ro
+      - ./apps/dashboard/tsconfig.json:/app/apps/dashboard/tsconfig.json:ro
+      - ./apps/dashboard/vite.config.ts:/app/apps/dashboard/vite.config.ts:ro
+      # ── Docs (Astro dev server) ──
+      - ./apps/site:/app/apps/site
+      # ── Shared packages ──
+      - ./packages:/app/packages
+      # ── Workspace root ──
+      - ./package.json:/app/package.json:ro
+      - ./tsconfig.base.json:/app/tsconfig.base.json:ro
+      - ./bun.lock:/app/bun.lock
+      - ./scripts:/app/scripts:ro
+      - ./config.example.toml:/app/config.example.toml:ro
+      # ── Built-in skills (content/skills → skills/, matching install layout) ──
+      - ./content/skills:/app/skills:ro
+      # Bun's isolated linker puts the package store in the root node_modules and
+      # gives every workspace member its own node_modules of symlinks into it. All of
+      # them are container-owned volumes: a host install is macOS/arm binaries and a
+      # container install is linux, and sharing either through a bind mount breaks
+      # whichever one ran second.
+      #
+      # One per workspace member in the root package.json, in its order — a test holds the two lists together. It was
+      # seven of them, and a member without one shared its host install with the container.
+      - root_node_modules:/app/node_modules
+      - engine_node_modules:/app/apps/engine/node_modules
+      - dashboard_node_modules:/app/apps/dashboard/node_modules
+      - site_node_modules:/app/apps/site/node_modules
+      - ui_graph_node_modules:/app/packages/ui-graph/node_modules
+      - acp_node_modules:/app/packages/acp/node_modules
+      - gateways_node_modules:/app/packages/gateways/node_modules
+      - isolation_node_modules:/app/packages/isolation/node_modules
+      - llm_node_modules:/app/packages/llm/node_modules
+      - mcp_node_modules:/app/packages/mcp/node_modules
+      - persona_node_modules:/app/packages/persona/node_modules
+      - policy_node_modules:/app/packages/policy/node_modules
+      - queue_node_modules:/app/packages/queue/node_modules
+      - runtime_node_modules:/app/packages/runtime/node_modules
+      - secrets_node_modules:/app/packages/secrets/node_modules
+      - shared_node_modules:/app/packages/shared/node_modules
+      - system_packages_node_modules:/app/packages/system-packages/node_modules
+      - update_node_modules:/app/packages/update/node_modules
+      - wa_bridge_node_modules:/app/packages/wa-bridge/node_modules
+      - dashboard_dist:/app/apps/dashboard/dist
+      # ── Persistent ──
+      - ./.nouride:/app/.nouride:z
+    restart: unless-stopped
+
+volumes:
+  root_node_modules:
+  engine_node_modules:
+  dashboard_node_modules:
+  site_node_modules:
+  ui_graph_node_modules:
+  acp_node_modules:
+  gateways_node_modules:
+  isolation_node_modules:
+  llm_node_modules:
+  mcp_node_modules:
+  persona_node_modules:
+  policy_node_modules:
+  queue_node_modules:
+  runtime_node_modules:
+  secrets_node_modules:
+  shared_node_modules:
+  system_packages_node_modules:
+  update_node_modules:
+  wa_bridge_node_modules:
+  dashboard_dist:

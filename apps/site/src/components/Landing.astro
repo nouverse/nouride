@@ -1,0 +1,1222 @@
+---
+/**
+ * The landing page.
+ *
+ * Its own Astro page rather than a Starlight `template: splash`, and that is the whole point of the
+ * file. Starlight is built for reading, sidebar, search, prev/next, and it drew the front page
+ * inside that shell. A front page has a different job: say what this is, show it, and give one
+ * command. When `/` eventually needs pricing or a signup, this is where that goes; Starlight keeps
+ * `/docs` and never has to be fought.
+ *
+ * **One component, rendered twice.** `src/pages/en/index.astro` and `id/index.astro` are five lines
+ * each; the markup and the CSS live here and the sentences live in `src/i18n/landing.mjs`. Two
+ * copies of this file would drift, and the drift would be invisible in the language nobody on the
+ * team reads back.
+ *
+ * ## Styling
+ *
+ * Scoped CSS in this file, on Starlight's own custom properties, `--sl-color-accent`,
+ * `--sl-color-bg`, the greys. No Tailwind and no daisyUI, deliberately: this app has neither, and
+ * adding a second styling stack inside a Starlight site means two sources of truth for one palette
+ * and a landing page that stops matching the docs the moment either changes.
+ *
+ * Dark mode comes from those same variables, which Starlight switches on `[data-theme]`. There is no
+ * toggle on this page, the header links into the docs, where Starlight's own toggle lives, so it
+ * follows whatever the reader last chose there, and `prefers-color-scheme` before they have chosen.
+ */
+
+import Site from '../layouts/Site.astro';
+import { Icon } from '@astrojs/starlight/components';
+import {
+  INSTALL_COMMAND,
+  MAC_INSTALL_COMMAND,
+  DOCKER_RUN_COMMAND,
+  INSPECT_COMMAND,
+  GITHUB_REPO,
+} from '../consts.mjs';
+
+/** The hero's platform picker. Linux first: it is the default and what most visitors are on. */
+const platforms = [
+  { id: 'linux', icon: 'linux', command: INSTALL_COMMAND, event: 'copy-install-command' },
+  { id: 'macos', icon: 'apple', command: MAC_INSTALL_COMMAND, event: 'copy-install-command-macos' },
+  { id: 'docker', icon: 'seti:docker', command: DOCKER_RUN_COMMAND, event: 'copy-install-command-docker' },
+] as const;
+import logo from '@brand/nouride.png';
+
+interface Props {
+  /** `en` or `id`. Every in-page link is built from it, so the two never cross. */
+  locale: string;
+  /** One dictionary from `src/i18n/landing.mjs`. */
+  t: Record<string, any>;
+}
+
+const { locale, t } = Astro.props;
+
+/** Docs links are locale-first, matching the routing rule in `astro.config.mjs`. */
+const href = (slug: string) => `/${locale}/${slug}/`;
+---
+
+<Site locale={locale} title={t.meta.title} description={t.meta.description}>
+<div class="page">
+  <header class="nav">
+    <a class="brand" href={`/${locale}/`}>
+      <img src={logo.src} alt="" width="32" height="32" />
+      <span>Nouride</span>
+    </a>
+    <nav>
+      <a href={href('docs/start/what-is-nouride')}>{t.nav.docs}</a>
+      <a href={href('docs/start/install')}>{t.nav.install}</a>
+      <a
+        href="https://app.nouverse.tech/pod/products/nouride"
+        target="_blank"
+        rel="noopener noreferrer"
+      >{t.nav.cloud}</a>
+      <a
+        href={`https://github.com/${GITHUB_REPO}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="GitHub Repository"
+        class="github-link"
+      >
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="currentColor">
+          <path d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2z"></path>
+        </svg>
+        <span>{t.nav.github}</span>
+      </a>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <div class="hero-content">
+      {/* <p class="eyebrow">{t.hero.eyebrow}</p> */}
+      <h1>{t.hero.title}</h1>
+      <p class="tagline">{t.hero.tagline}</p>
+
+      <div class="actions">
+        <a class="btn primary" href={href('docs/start/install')}>{t.hero.primary}</a>
+        <a class="btn" href={href('docs/start/what-is-nouride')}>{t.hero.secondary}</a>
+      </div>
+
+      <div class="install">
+        <p class="install-label">{t.hero.installLabel}</p>
+        {/*
+          Radios and labels, not a script: the picker works with JavaScript off, and each command stays selectable
+          text. The inputs come first so `:checked ~` can reach the tab row, the commands and the note.
+        */}
+        <div class="picker">
+          {platforms.map((p, i) => (
+            <input type="radio" name="platform" id={`pf-${p.id}`} class="pf-radio" checked={i === 0} />
+          ))}
+          <div class="pf-tabs">
+            {platforms.map((p) => (
+              <label for={`pf-${p.id}`} class={`pf-tab pf-tab-${p.id}`}>
+                <Icon name={p.icon} size="1em" />
+                {t.hero.platforms[p.id]}
+              </label>
+            ))}
+          </div>
+          {platforms.map((p) => (
+            <div class={`command pf-cmd pf-cmd-${p.id}`}>
+              <code>{p.command}</code>
+              <button type="button" data-copy={p.command} data-copied={t.hero.copied} data-umami-event={p.event}>
+                {t.hero.copy}
+              </button>
+            </div>
+          ))}
+          <p class="inspect pf-note-script">
+            {t.hero.inspectNote} <code>{INSPECT_COMMAND}</code>
+          </p>
+          <p class="inspect pf-note-docker">
+            {t.hero.dockerNote} <a href={href('docs/deployment/docker')}>{t.hero.dockerGuide}</a>
+          </p>
+        </div>
+        {t.hero.hardwareBadge && (
+          <div class="hardware-badge">
+            <span class="badge-dot" aria-hidden="true" />
+            <span>{t.hero.hardwareBadge}</span>
+          </div>
+        )}
+      </div>
+    </div>
+
+    <div class="hero-media">
+      <img src={logo.src} alt="Nouride Mascot" width="340" height="340" class="hero-logo" />
+    </div>
+  </section>
+
+  <div class="terminal-showcase">
+    <div class="terminal-box">
+      <div class="terminal-bar">
+        <div class="terminal-lights">
+          <span class="t-light t-red"></span>
+          <span class="t-light t-yellow"></span>
+          <span class="t-light t-green"></span>
+        </div>
+        <span class="terminal-caption">pi@homelab:~ (nouride engine)</span>
+        <span class="terminal-tag">SBC ARM64</span>
+      </div>
+      <div class="terminal-view">
+        <div class="term-line term-run">
+          <span class="t-cyan">$</span>
+          <code class="t-typed-cmd" data-text="nouride start">nouride start</code><span class="t-cursor" aria-hidden="true">_</span>
+        </div>
+        <div class="term-sep"></div>
+        <div class="term-line term-main">
+          <span class="t-bolt">⚡</span> <strong>nouride daemon</strong> <span class="t-dim">latest · linux/arm64</span>
+        </div>
+        <div class="term-tree">
+          <div class="t-branch-row">
+            <span class="t-tree-char">├─</span>
+            <span class="t-tree-key">RAM floor:</span>
+            <span class="t-tree-val t-highlight">64 MB <span class="t-dim">min · measured 2026-10-17</span></span>
+          </div>
+          <div class="t-branch-row">
+            <span class="t-tree-char">├─</span>
+            <span class="t-tree-key">Gateways:</span>
+            <span class="t-tree-val">WhatsApp · Telegram · Discord</span>
+          </div>
+          <div class="t-branch-row">
+            <span class="t-tree-char">├─</span>
+            <span class="t-tree-key">Loaded Agents:</span>
+            <span class="t-tree-val">nouva <span class="t-role">lead</span>, nix <span class="t-role">dev</span>, nero <span class="t-role">ops</span></span>
+          </div>
+          <div class="t-branch-row">
+            <span class="t-tree-char">├─</span>
+            <span class="t-tree-key">Local Tools:</span>
+            <span class="t-tree-val">exec, web_fetch, memory_search, nouride</span>
+          </div>
+          <div class="t-branch-row">
+            <span class="t-tree-char">└─</span>
+            <span class="t-tree-key">Dashboard:</span>
+            <span class="t-tree-val t-link">http://localhost:18254/dashboard/</span>
+          </div>
+        </div>
+        <div class="term-sep"></div>
+        <div class="term-line term-footer">
+          <span class="t-live-dot"></span>
+          <span class="t-dim">Standing by. Listening on socket &amp; chat gateways...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <section class="band">
+    <h2>{t.what.title}</h2>
+    <p class="lead">{t.what.lead}</p>
+    <div class="cards">
+      {t.what.cards.map((card: { title: string; body: string }) => (
+        <article class="card">
+          <h3>{card.title}</h3>
+          <p>{card.body}</p>
+        </article>
+      ))}
+    </div>
+  </section>
+
+  <section class="band">
+    <h2>{t.showcase.title}</h2>
+    <p class="lead">{t.showcase.lead}</p>
+    {/*
+      Placeholders, and they say so on their own faces, `public/media/README.md` explains how to
+      drop a real screenshot in with the same stem. Sized 16:10 so replacing one does not reflow the
+      page.
+    */}
+    <figure class="shot wide">
+      <img src={t.showcase.shots[0].src} alt={t.showcase.shots[0].alt} loading="lazy" />
+    </figure>
+    <div class="shots">
+      {t.showcase.shots.slice(1).map((shot: { src: string; alt: string }) => (
+        <figure class="shot">
+          <img src={shot.src} alt={shot.alt} loading="lazy" />
+        </figure>
+      ))}
+    </div>
+  </section>
+
+  <section class="band">
+    <h2>{t.steps.title}</h2>
+    <ol class="steps">
+      {t.steps.items.map((step: { title: string; body: string; link: string }, i: number) => (
+        <li>
+          <span class="num">{i + 1}</span>
+          <div>
+            <h3><a href={href(step.link)}>{step.title}</a></h3>
+            <p>{step.body}</p>
+          </div>
+        </li>
+      ))}
+    </ol>
+    <a class="btn primary" href={href('docs/start/install')}>{t.steps.cta}</a>
+  </section>
+
+  <section class="band">
+    <h2>{t.numbers.title}</h2>
+    <p class="lead">{t.numbers.lead}</p>
+    <dl class="numbers">
+      {t.numbers.items.map((item: { value: string; label: string; note: string }) => (
+        <div>
+          <dt>{item.value}</dt>
+          <dd>
+            <strong>{item.label}</strong>
+            <span>{item.note}</span>
+          </dd>
+        </div>
+      ))}
+    </dl>
+    <a class="quiet" href={href(t.numbers.sourceLink)}>{t.numbers.source} &rarr;</a>
+  </section>
+
+  <section class="band">
+    <h2>{t.where.title}</h2>
+    <ul class="chips">
+      {t.where.items.map((item: string) => <li>{item}</li>)}
+    </ul>
+    <p class="lead">{t.where.note}</p>
+  </section>
+
+  <section class="cta">
+    <h2>{t.footer.title}</h2>
+    <p>{t.footer.body}</p>
+    <div class="actions">
+      <a class="btn primary" href={href('docs/start/install')}>{t.footer.primary}</a>
+      <a class="btn" href={href('docs/manual/overview')}>{t.footer.secondary}</a>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <div class="footer-left">
+      <a class="footer-brand" href={`/${locale}/`}>
+        <img src={logo.src} alt="" width="22" height="22" />
+        <span>Nouride</span>
+      </a>
+      <span class="footer-sep">·</span>
+      <p class="copyright">
+        &copy; {new Date().getFullYear()} Nouverse Technologies. All rights reserved.
+      </p>
+    </div>
+
+    <div class="footer-right">
+      <p class="powered-by">
+        Powered by <a href="https://nouverse.com" target="_blank" rel="noopener noreferrer">Nouverse Technologies</a>
+      </p>
+    </div>
+  </footer>
+</div>
+</Site>
+
+<script>
+  /**
+   * The copy button, and the reason it is eight lines of inline script rather than a framework.
+   *
+   * It is the only interactive thing on the page. Shipping a runtime for one clipboard call would
+   * cost every visitor a bundle to make one button work, and the button already degrades correctly
+   * without it: the command is selectable text.
+   */
+  for (const button of document.querySelectorAll<HTMLButtonElement>('button[data-copy]')) {
+    button.addEventListener('click', async () => {
+      const text = button.dataset.copy ?? '';
+      const done = button.dataset.copied ?? 'Copied';
+      const original = button.textContent;
+      try {
+        await navigator.clipboard.writeText(text);
+        button.textContent = done;
+      } catch {
+        // No clipboard permission, or an insecure origin. Saying nothing would read as a dead
+        // button, and the text is selectable either way.
+        button.textContent = '⌘C';
+      }
+      setTimeout(() => (button.textContent = original), 2000);
+    });
+  }
+
+  // Typewriter effect + sequential reveal when terminal is scrolled into view
+  const term = document.querySelector<HTMLElement>('.terminal-box');
+  const cmd = term?.querySelector<HTMLElement>('.t-typed-cmd');
+  const cursor = term?.querySelector<HTMLElement>('.t-cursor');
+
+  if (term && cmd) {
+    const fullText = cmd.dataset.text || cmd.textContent || 'nouride start';
+    cmd.textContent = '';
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            observer.unobserve(term);
+
+            // Step 1: Typewriter effect for "nouride start" (relaxed pacing)
+            let i = 0;
+            const typeInterval = setInterval(() => {
+              if (i < fullText.length) {
+                cmd.textContent += fullText.charAt(i);
+                i++;
+              } else {
+                clearInterval(typeInterval);
+                if (cursor) cursor.classList.add('t-cursor-idle');
+                // Step 2: Brief pause before executing daemon output
+                setTimeout(() => {
+                  term.classList.add('in-view');
+                }, 300);
+              }
+            }, 85);
+          }
+        });
+      },
+      { threshold: 0.15 }
+    );
+    observer.observe(term);
+  }
+</script>
+
+<style>
+  /* Starlight's variables, so this page and the docs cannot disagree about the palette. */
+  .page {
+    --edge: var(--sl-color-hairline-light, #e2e8f0);
+    --muted: var(--sl-color-gray-3, #475569);
+    max-width: 68rem;
+    margin: 0 auto;
+    padding: 0 1.5rem max(5rem, env(safe-area-inset-bottom, 0px) + 3rem);
+    color: var(--sl-color-white);
+    font-family: var(--sl-font-system, system-ui, sans-serif);
+  }
+
+  .nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.25rem 0;
+    border-bottom: 1px solid var(--edge);
+    flex-wrap: wrap;
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-weight: 700;
+    font-size: 1.05rem;
+    text-decoration: none;
+    color: inherit;
+  }
+  .nav nav {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    font-size: 0.95rem;
+  }
+  .nav nav a {
+    color: var(--muted);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: color 0.15s ease;
+  }
+  .nav nav a:hover {
+    color: var(--sl-color-accent);
+  }
+  .github-link svg {
+    flex-shrink: 0;
+  }
+
+  .hero {
+    padding: 4.5rem 0 3.5rem;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 3rem;
+    text-align: left;
+    margin: 0 auto;
+    max-width: 68rem;
+  }
+  .hero-content {
+    flex: 1 1 38rem;
+    max-width: 41rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+  }
+  .hero-media {
+    flex: 0 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0;
+  }
+  .hero-logo {
+    width: clamp(260px, 28vw, 360px);
+    height: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 20px 45px rgba(0, 0, 0, 0.5));
+    animation: hero-float 4s ease-in-out infinite alternate;
+  }
+  @keyframes hero-float {
+    0% {
+      transform: translateY(0px);
+    }
+    100% {
+      transform: translateY(-8px);
+    }
+  }
+
+  .terminal-showcase {
+    display: flex;
+    justify-content: center;
+    padding: 0 0 3.5rem;
+    margin: 0 auto;
+    max-width: 68rem;
+  }
+  .terminal-box {
+    width: 100%;
+    max-width: 46rem;
+    background: #090d15;
+    border: 1px solid rgba(56, 189, 248, 0.18);
+    border-radius: 0.85rem;
+    box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.6), 0 0 30px rgba(56, 189, 248, 0.08);
+    font-family: var(--sl-font-mono, monospace);
+    overflow: hidden;
+    text-align: left;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .terminal-box:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 25px 50px -10px rgba(0, 0, 0, 0.7), 0 0 35px rgba(56, 189, 248, 0.14);
+  }
+  .terminal-bar {
+    padding: 0.65rem 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    background: rgba(255, 255, 255, 0.04);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .terminal-lights {
+    display: flex;
+    gap: 0.4rem;
+    flex-shrink: 0;
+  }
+  .t-light {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .t-light.t-red { background: #ff5f56; }
+  .t-light.t-yellow { background: #ffbd2e; }
+  .t-light.t-green { background: #27c93f; }
+  .terminal-caption {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+  .terminal-tag {
+    font-size: 0.65rem;
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    background: rgba(56, 189, 248, 0.12);
+    color: #38bdf8;
+    font-weight: 600;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .terminal-view {
+    padding: 1rem 1.15rem;
+    font-size: 0.82rem;
+    line-height: 1.65;
+    color: #e2e8f0;
+  }
+  .term-line {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+  .t-cyan { color: #38bdf8; font-weight: 700; }
+  .t-bolt { color: #38bdf8; }
+  .term-sep {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.06);
+    margin: 0.65rem 0;
+  }
+  .term-tree {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin: 0.5rem 0;
+  }
+  .t-branch-row {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.2rem 0.45rem;
+    font-size: 0.78rem;
+    line-height: 1.5;
+  }
+  .t-tree-char { color: #64748b; flex-shrink: 0; }
+  .t-tree-key { color: #94a3b8; flex-shrink: 0; }
+  .t-tree-val { color: #f1f5f9; min-width: 0; word-break: break-word; }
+  .t-highlight { color: #38bdf8; font-weight: 600; }
+  .t-dim { color: #64748b; font-size: 0.75rem; }
+  .t-chip {
+    display: inline-block;
+    padding: 0.05rem 0.35rem;
+    background: rgba(56, 189, 248, 0.12);
+    border-radius: 4px;
+    font-size: 0.7rem;
+    color: #7dd3fc;
+  }
+  .t-role {
+    font-size: 0.7rem;
+    color: #94a3b8;
+  }
+  .t-link {
+    color: #38bdf8;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .term-footer {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+  }
+  .t-live-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 8px #10b981;
+    flex-shrink: 0;
+    animation: live-blink 2s ease-in-out infinite;
+  }
+  @keyframes live-blink {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.85); }
+  }
+
+  .t-cursor {
+    display: inline-block;
+    color: #38bdf8;
+    font-weight: 700;
+    margin-left: 2px;
+    animation: cursor-blink 0.8s infinite;
+  }
+  .t-cursor.t-cursor-idle {
+    animation: none;
+    opacity: 0.35;
+  }
+  @keyframes cursor-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+
+  /* Sequential terminal output animation */
+  .terminal-box .term-sep,
+  .terminal-box .term-main,
+  .terminal-box .t-branch-row,
+  .terminal-box .term-footer {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  .terminal-box.in-view .term-sep:first-of-type {
+    animation: term-reveal 0.3s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards;
+  }
+  .terminal-box.in-view .term-main {
+    animation: term-reveal 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.35s forwards;
+  }
+  .terminal-box.in-view .t-branch-row:nth-child(1) {
+    animation: term-reveal 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.65s forwards;
+  }
+  .terminal-box.in-view .t-branch-row:nth-child(2) {
+    animation: term-reveal 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.95s forwards;
+  }
+  .terminal-box.in-view .t-branch-row:nth-child(3) {
+    animation: term-reveal 0.35s cubic-bezier(0.16, 1, 0.3, 1) 1.25s forwards;
+  }
+  .terminal-box.in-view .t-branch-row:nth-child(4) {
+    animation: term-reveal 0.35s cubic-bezier(0.16, 1, 0.3, 1) 1.55s forwards;
+  }
+  .terminal-box.in-view .t-branch-row:nth-child(5) {
+    animation: term-reveal 0.35s cubic-bezier(0.16, 1, 0.3, 1) 1.85s forwards;
+  }
+  .terminal-box.in-view .term-sep:last-of-type {
+    animation: term-reveal 0.3s cubic-bezier(0.16, 1, 0.3, 1) 2.1s forwards;
+  }
+  .terminal-box.in-view .term-footer {
+    animation: term-reveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) 2.35s forwards;
+  }
+
+  @keyframes term-reveal {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .terminal-box .term-run,
+    .terminal-box .term-sep,
+    .terminal-box .term-main,
+    .terminal-box .t-branch-row,
+    .terminal-box .term-footer {
+      opacity: 1;
+      transform: none;
+      animation: none !important;
+    }
+  }
+  .eyebrow {
+    margin: 0 0 0.75rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--sl-color-accent);
+  }
+  .hero h1 {
+    margin: 0 0 1rem;
+    font-size: clamp(2.25rem, 4.5vw, 3.5rem);
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+  }
+  .tagline {
+    margin: 0 0 2rem;
+    max-width: 34rem;
+    font-size: clamp(1.05rem, 1.8vw, 1.2rem);
+    line-height: 1.6;
+    color: var(--muted);
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 0.75rem;
+    margin-bottom: 2.5rem;
+  }
+  .install {
+    width: 100%;
+    max-width: 41rem;
+    text-align: left;
+  }
+  .btn {
+    display: inline-block;
+    padding: 0.7rem 1.4rem;
+    border: 1px solid var(--edge);
+    border-radius: 999px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.2s ease;
+  }
+  .btn:hover {
+    border-color: var(--sl-color-accent);
+    color: var(--sl-color-accent);
+    transform: translateY(-1px);
+  }
+  .btn.primary {
+    background: var(--sl-color-accent);
+    border-color: var(--sl-color-accent);
+    color: var(--sl-color-black);
+    box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25);
+  }
+  .btn.primary:hover {
+    background: var(--sl-color-accent-high);
+    border-color: var(--sl-color-accent-high);
+    color: var(--sl-color-black);
+    box-shadow: 0 6px 20px rgba(2, 132, 199, 0.4);
+    transform: translateY(-2px);
+  }
+
+  .install-label {
+    margin: 0 0 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--muted);
+  }
+  .pf-radio {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .pf-tabs {
+    display: flex;
+    gap: 0.25rem;
+    margin-bottom: 0.5rem;
+  }
+  .pf-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.3rem 0.8rem;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .pf-tab:hover {
+    color: var(--sl-color-accent);
+  }
+  #pf-linux:checked ~ .pf-tabs .pf-tab-linux,
+  #pf-macos:checked ~ .pf-tabs .pf-tab-macos,
+  #pf-docker:checked ~ .pf-tabs .pf-tab-docker {
+    border-color: var(--edge);
+    background: var(--sl-color-bg-sidebar, transparent);
+    color: var(--sl-color-white);
+  }
+  #pf-linux:focus-visible ~ .pf-tabs .pf-tab-linux,
+  #pf-macos:focus-visible ~ .pf-tabs .pf-tab-macos,
+  #pf-docker:focus-visible ~ .pf-tabs .pf-tab-docker {
+    outline: 2px solid var(--sl-color-accent);
+    outline-offset: 2px;
+  }
+  .pf-cmd {
+    display: none !important;
+  }
+  #pf-linux:checked ~ .pf-cmd-linux,
+  #pf-macos:checked ~ .pf-cmd-macos,
+  #pf-docker:checked ~ .pf-cmd-docker {
+    display: flex !important;
+  }
+  /* The script note is about install.sh, which the container does not run; Docker gets its own line instead. */
+  #pf-docker:checked ~ .pf-note-script,
+  #pf-linux:checked ~ .pf-note-docker,
+  #pf-macos:checked ~ .pf-note-docker {
+    display: none;
+  }
+  .pf-note-docker a {
+    color: var(--sl-color-accent);
+  }
+  .command {
+    display: flex;
+    align-items: stretch;
+    gap: 0.5rem;
+    border: 1px solid var(--edge);
+    border-radius: 0.6rem;
+    background: var(--sl-color-bg-sidebar, transparent);
+    padding: 0.35rem 0.35rem 0.35rem 0.85rem;
+    overflow: hidden;
+  }
+  .command code {
+    flex: 1;
+    align-self: center;
+    font-family: var(--sl-font-mono, monospace);
+    font-size: 0.85rem;
+    /* A long command (the Docker one) wraps where it must rather than scrolling out of sight. */
+    overflow-wrap: anywhere;
+  }
+  .command button {
+    flex-shrink: 0;
+    align-self: center;
+    padding: 0.45rem 0.85rem;
+    border: 1px solid var(--edge);
+    border-radius: 0.4rem;
+    background: var(--sl-color-bg);
+    color: inherit;
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .command button:hover {
+    border-color: var(--sl-color-accent);
+    color: var(--sl-color-accent);
+  }
+  .inspect {
+    margin: 0.75rem 0 0;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .inspect code {
+    font-family: var(--sl-font-mono, monospace);
+    font-size: 0.8rem;
+  }
+  .hardware-badge {
+    margin-top: 1.25rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.45rem 0.85rem;
+    background: rgba(56, 189, 248, 0.08);
+    border: 1px solid rgba(56, 189, 248, 0.22);
+    border-radius: 0.6rem;
+    font-family: var(--sl-font-mono, monospace);
+    font-size: 0.76rem;
+    line-height: 1.45;
+    color: var(--sl-color-gray-1, #e2e8f0);
+    letter-spacing: 0.01em;
+    width: fit-content;
+    max-width: 100%;
+  }
+  .badge-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #38bdf8;
+    box-shadow: 0 0 8px #38bdf8;
+    flex-shrink: 0;
+  }
+
+  .band {
+    padding: 3.5rem 0;
+    border-top: 1px solid var(--edge);
+  }
+  .band h2 {
+    margin: 0 0 0.75rem;
+    font-size: clamp(1.5rem, 3.5vw, 2rem);
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    margin: 0 0 2rem;
+    max-width: 44rem;
+    line-height: 1.65;
+    color: var(--muted);
+  }
+
+  .cards {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  }
+  .card {
+    padding: 1.25rem;
+    border: 1px solid var(--edge);
+    border-radius: 0.85rem;
+    transition: all 0.2s ease;
+  }
+  .card:hover {
+    border-color: var(--sl-color-accent);
+    transform: translateY(-2px);
+  }
+  .card h3 {
+    margin: 0 0 0.5rem;
+    font-size: 1rem;
+    font-weight: 700;
+  }
+  .card p {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--muted);
+  }
+
+  .shot {
+    margin: 0;
+    border: 1px solid var(--edge);
+    border-radius: 0.85rem;
+    overflow: hidden;
+    background: var(--sl-color-bg-sidebar, transparent);
+  }
+  .shot img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .shot.wide {
+    margin-bottom: 1rem;
+  }
+  .shots {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  }
+
+  .steps {
+    list-style: none;
+    margin: 0 0 2rem;
+    padding: 0;
+    display: grid;
+    gap: 1.25rem;
+  }
+  .steps li {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+  .num {
+    flex-shrink: 0;
+    width: 1.9rem;
+    height: 1.9rem;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--sl-color-accent-low);
+    color: var(--sl-color-accent-high);
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+  .steps h3 {
+    margin: 0.15rem 0 0.35rem;
+    font-size: 1rem;
+  }
+  .steps h3 a {
+    color: inherit;
+    text-decoration: none;
+  }
+  .steps h3 a:hover {
+    color: var(--sl-color-accent);
+  }
+  .steps p {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--muted);
+  }
+
+  .numbers {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    margin: 0 0 1.5rem;
+  }
+  .numbers > div {
+    padding: 1.25rem;
+    border: 1px solid var(--edge);
+    border-radius: 0.85rem;
+    transition: all 0.2s ease;
+  }
+  .numbers > div:hover {
+    border-color: var(--sl-color-accent);
+    transform: translateY(-2px);
+  }
+  .numbers dt {
+    font-size: 1.75rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--sl-color-accent);
+  }
+  .numbers dd {
+    margin: 0.4rem 0 0;
+    display: grid;
+    gap: 0.2rem;
+  }
+  .numbers strong {
+    font-size: 0.9rem;
+  }
+  .numbers span {
+    font-size: 0.8rem;
+    line-height: 1.5;
+    color: var(--muted);
+  }
+  .quiet {
+    font-size: 0.9rem;
+    color: var(--sl-color-accent);
+    text-decoration: none;
+  }
+  .quiet:hover {
+    text-decoration: underline;
+  }
+
+  .chips {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0 0 1.5rem;
+    padding: 0;
+  }
+  .chips li {
+    padding: 0.4rem 0.9rem;
+    border: 1px solid var(--edge);
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    font-family: var(--sl-font-mono, monospace);
+    background: var(--sl-color-bg-sidebar, transparent);
+    transition: all 0.15s ease;
+  }
+  .chips li:hover {
+    border-color: var(--sl-color-accent);
+    color: var(--sl-color-accent);
+  }
+
+  .cta {
+    margin-top: 3.5rem;
+    padding: 3.5rem 2rem;
+    border: 1px solid var(--edge);
+    border-radius: 1.25rem;
+    text-align: center;
+    background: var(--sl-color-bg-sidebar, transparent);
+  }
+  .cta h2 {
+    margin: 0 0 0.75rem;
+    font-size: clamp(1.5rem, 3.5vw, 2rem);
+  }
+  .cta > p {
+    margin: 0 auto 1.75rem;
+    max-width: 34rem;
+    line-height: 1.65;
+    color: var(--muted);
+  }
+  .cta .actions {
+    justify-content: center;
+    margin-bottom: 1.5rem;
+  }
+  .license {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  .site-footer {
+    margin-top: 4rem;
+    padding: 2.5rem 0 1.5rem;
+    border-top: 1px solid var(--edge);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .footer-left {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+  }
+  .footer-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-weight: 700;
+    color: var(--sl-color-white);
+    text-decoration: none;
+  }
+  .footer-brand:hover {
+    color: var(--sl-color-accent);
+  }
+  .footer-sep {
+    opacity: 0.4;
+  }
+  .footer-left .copyright {
+    margin: 0;
+  }
+  .footer-right .powered-by {
+    margin: 0;
+  }
+  .powered-by a {
+    color: var(--sl-color-accent);
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.15s ease;
+  }
+  .powered-by a:hover {
+    text-decoration: underline;
+    color: var(--sl-color-accent-high, var(--sl-color-accent));
+  }
+
+  @media (max-width: 54rem) {
+    .page {
+      padding: 0 1rem max(4rem, env(safe-area-inset-bottom, 0px) + 2rem);
+    }
+    .hero {
+      flex-direction: column-reverse;
+      align-items: center;
+      text-align: center;
+      padding: 2rem 0 2rem;
+      gap: 1.5rem;
+    }
+    .hero-content {
+      align-items: center;
+      text-align: center;
+      max-width: 100%;
+    }
+    .hero-media {
+      margin-bottom: 0.25rem;
+    }
+    .hero-logo {
+      width: clamp(160px, 40vw, 220px);
+    }
+    .terminal-showcase {
+      padding: 0 0 2rem;
+    }
+    .terminal-box {
+      width: 100%;
+      max-width: 100%;
+    }
+    .terminal-bar {
+      padding: 0.5rem 0.75rem;
+    }
+    .terminal-caption {
+      font-size: 0.7rem;
+    }
+    .terminal-view {
+      padding: 0.85rem 0.75rem;
+      font-size: 0.75rem;
+      line-height: 1.55;
+    }
+    .t-branch-row {
+      font-size: 0.74rem;
+      gap: 0.15rem 0.4rem;
+    }
+    .hardware-badge {
+      margin: 1rem auto 0;
+      text-align: left;
+      padding: 0.45rem 0.7rem;
+      font-size: 0.72rem;
+      line-height: 1.4;
+      align-items: flex-start;
+    }
+    .badge-dot {
+      margin-top: 0.3rem;
+    }
+    .inspect {
+      font-size: 0.78rem;
+    }
+    .inspect code {
+      word-break: break-all;
+    }
+    .hero h1 {
+      font-size: clamp(2rem, 7vw, 2.75rem);
+    }
+    .tagline {
+      margin: 0 auto 1.75rem;
+      max-width: 34rem;
+    }
+    .actions {
+      justify-content: center;
+    }
+    .install {
+      max-width: 100%;
+      width: 100%;
+      margin: 0 auto;
+    }
+    .command {
+      padding: 0.35rem 0.35rem 0.35rem 0.65rem;
+    }
+    .command code {
+      font-size: 0.72rem;
+    }
+    .site-footer {
+      flex-direction: column;
+      text-align: center;
+      justify-content: center;
+      gap: 0.75rem;
+    }
+    .footer-left {
+      justify-content: center;
+    }
+    .footer-sep {
+      display: none;
+    }
+  }
+</style>

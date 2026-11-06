@@ -1,0 +1,2 @@
+# The repository's line width (biome, 120), so the Rust reads like the rest.
+max_width = 120

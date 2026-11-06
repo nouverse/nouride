@@ -1,0 +1,7 @@
+#!/bin/sh
+#
+# A merge that needs no hand is committed by git itself, which runs `pre-merge-commit` for it and never `pre-commit`:
+# what two green branches break only together would land unchecked. The same checks as a commit (0.8.17), and
+# `--no-verify` skips both.
+
+exec "$(dirname "$0")/pre-commit"

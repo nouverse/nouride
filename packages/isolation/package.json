@@ -1,0 +1,16 @@
+{
+  "name": "@nouride/isolation",
+  "description": "Each Nouride agent's commands as that agent's own user: the root helper nouride-run (root/), and how the daemon finds and reaches it (src/).",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "comment": [
+    "Everything that runs as root is in root/ and nowhere else, so the one part a security review has to read can be",
+    "read on its own: a Rust program with libc as its only dependency (root/nouride-run).",
+    "src/ is the daemon's side and runs as the daemon: it decides at boot whether the helper is there, and builds the",
+    "client's command line @nouride/runtime puts in front of an agent's command."
+  ],
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

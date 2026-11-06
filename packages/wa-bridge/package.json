@@ -1,0 +1,29 @@
+{
+  "name": "nouride-wa-bridge",
+  "description": "WhatsApp bridge for Nouride — its own module, compiled into the daemon and speaking newline-delimited JSON to it.",
+  "version": "0.1.0",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "comment": [
+    "A workspace member on @nouride/runtime, like every package here; it was its own repository",
+    "(nouverse/nouride-internal-wa-bridge, kept) until 2026-09-30.",
+    "`libsignal` is pointed at a local shim that forwards to `whatsapp-rust-bridge` (MIT). The real",
+    "package is GPL-3.0 and is the only reason a binary carrying this bridge would be a combined",
+    "work — Baileys itself is MIT. The override lives in the ROOT package.json, because overrides",
+    "only apply there in a workspace; apps/engine/tests/contracts/wa-bridge-licence.test.ts fails",
+    "if the real one ever lands in bun.lock."
+  ],
+  "dependencies": {
+    "@nouride/runtime": "workspace:*",
+    "@whiskeysockets/baileys": "7.0.0-rc13",
+    "libsignal": "file:./shims/libsignal"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./io": "./src/io.ts"
+  },
+  "devDependencies": {
+    "whatsapp-rust-bridge": "0.5.4"
+  }
+}

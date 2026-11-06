@@ -1,0 +1,22 @@
+{
+  "name": "nouride-system-packages",
+  "description": "System packages for a sandboxed Nouride agent: the root service nouride-pkg, its package-manager backends, and the client the engine talks to it with.",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "comment": [
+    "A workspace member that depends on @nouride/runtime and nothing else of this repository's.",
+    "Everything that runs as root is in root/ and nowhere else, so the one part a security review",
+    "has to read can be read — or published — on its own.",
+    "What it may never decide is whether a change needs a person: that gate is packages/policy's.",
+    "The shapes the engine needs are declared by hand in",
+    "apps/engine/src/modules/system-packages/nouride-system-packages.d.ts, and",
+    "apps/engine/tests/system-packages/external.test.ts checks they have not drifted."
+  ],
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@nouride/runtime": "workspace:*"
+  }
+}

@@ -1,0 +1,62 @@
+#!/bin/sh
+#
+# Everything that has to be true before a commit lands, and nothing slow:
+#
+#   check-arch.ts           the import rules — §3 of ARCHITECTURE.md, the adapter boundary
+#   check-deps.ts           each package.json against its member's imports, both ways — the package graph
+#   check-sql.ts            SQL is standard, and lives only in a `*.store.ts` file
+#   check-timers.ts         no timer callback in the daemon can let an exception out — one would shut it down
+#   check-size.ts           no explicit `any`, no file over its budget
+#   check-skills-link.ts    .claude/skills is a symlink to .agents/skills
+#   check-cli-help.ts       every dispatched command is in `nouride help`, and nothing else is
+#   check-wire.ts           the dashboard's copies of the daemon's word lists match the originals
+#   check-seams.ts          the engine's plugin declarations, and types kept on two sides, compile against each other
+#   check-deadcode.ts       tables, modules and exports nothing reaches
+#   check-pointers.ts       every pointer in a comment, a doc or a skill leads somewhere; no stacked doc comments
+#   check-public.ts         nothing private in what would be published
+#   check-types.ts          every tsconfig in the tree, as many at a time as the machine takes
+#
+# And two of the suite's tests, half a second together, because each turned a push red that a commit could have
+# caught (0.8.17):
+#
+#   test-waits.test.ts      every member waits through its own `tests/wait.ts`, its fixed sleeps at their cap
+#   dashboard-wire.test.ts  the dashboard's mount fixtures are what the daemon's routes answer
+#
+# About half a minute on a laptop, the typecheck most of it: 31 seconds measured on 2026-11-03, where this said 20.
+# Over a minute on a small server. There is no style linter in this repo and this is not one: every rule here is a
+# thing that was found by hand, weeks late, on a live box — a table with no code behind it, an export whose last
+# caller went in a refactor, an adapter reaching past its boundary. Formatting has never been the thing that broke.
+#
+# Versioned rather than left in `.git/hooks`, which is not cloned — a rule that only exists on the
+# machine where it was written is a rule the next clone does not have. `bun install` points
+# `core.hooksPath` here through the `prepare` script, so a fresh checkout gets it without being told.
+#
+# ## Why the test suite is not here
+#
+# It was, and it was the slow half by a factor of five: ~28 seconds of tests against ~6 of lint, on
+# every commit including the ones that only touch a comment. What it bought was real — this repo's
+# failures are consistently things a static check misses, like a rename inside a SQL string that only
+# the suite could see — but it bought it at the wrong moment. A commit is not a release, and on a
+# branch it is often a checkpoint rather than a claim that anything works.
+#
+# So the suite moved to where the claim is actually made: `bun run verify` runs lint *and* tests, and
+# it is what "before you say you are done" means in the contributing skill. **Run it before you push
+# or open a PR** — a green pre-commit no longer means the tests pass. The two tests above are the exception
+# that cost nothing: static checks in all but name, read off the tree in half a second.
+#
+# A merge runs this too, through `pre-merge-commit`: a clean merge commits without the pre-commit hook.
+#
+# `git commit --no-verify` skips even this, for a work-in-progress commit on a branch and not for main.
+
+set -e
+
+# Named individually rather than as "lint", because the summary line is the only part of this most
+# people ever read — and a line that said "lint + types" while also enforcing the import rules and
+# the dead-code rules got asked "does the hook check arch and deadcode?" twice by the person who
+# wrote them. A check nobody knows ran is a check they will ask about again.
+echo "pre-commit: arch · deps · sql · timers · size · skills link · cli help · wire · seams · dead code · pointers · public tree · types · test waits · dashboard wire"
+
+bun run lint:check
+bun test ./apps/engine/tests/contracts/test-waits.test.ts ./apps/engine/tests/contracts/dashboard-wire.test.ts
+
+echo "pre-commit: ok"

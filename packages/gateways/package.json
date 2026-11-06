@@ -1,0 +1,16 @@
+{
+  "name": "@nouride/gateways",
+  "description": "Nouride chat gateway adapters \u2014 Discord, Telegram, WhatsApp (bridge client).",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@nouride/runtime": "workspace:*",
+    "@nouride/shared": "workspace:*",
+    "discord.js": "14.27.0",
+    "grammy": "1.45.1"
+  }
+}

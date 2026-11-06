@@ -1,0 +1,15 @@
+---
+/**
+ * `/id`: the landing page.
+ *
+ * Five lines on purpose: the markup and CSS are in `components/Landing.astro` and the sentences in
+ * `i18n/landing.mjs`, so this file is a route and a choice of language and nothing else. An Astro
+ * page here takes precedence over Starlight's injected `[...slug]`, which is what lets the front
+ * page leave the docs theme while `/id/docs/*` stays inside it.
+ */
+
+import Landing from '../../components/Landing.astro';
+import { id as copy } from '../../i18n/landing.mjs';
+---
+
+<Landing locale="id" t={copy} />

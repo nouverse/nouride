@@ -1,0 +1,163 @@
+#!/bin/sh
+#
+# nouride-pkg in Nouride's container image: what systemd does for it on a host, and what keeps an
+# agent's packages through a recreate (0.8.15).
+#
+# On a host, `install.sh --allow-packages` puts nouride-pkg behind a systemd socket. The image has no
+# systemd, and what `apk` installs lands in the image's /usr and /lib — gone when the container is
+# recreated, which every update does; only the volume, /app/.nouride, outlives it. So the entrypoint,
+# as root before it hands the container to the daemon's user, runs `start`:
+#
+#   - apk's cache goes on the volume (/etc/apk/cache -> .nouride/system-packages/cache), so a package
+#     is downloaded once;
+#   - what agents installed — the world beyond the image's own — is installed again from that cache,
+#     online or not, before the daemon starts;
+#   - a listener serves /run/nouride-pkg.sock as systemd's `Accept=yes` does, one `serve` per
+#     connection: nouride-pkg with its rules, then the list of what agents installed written again.
+#
+# The rules are nouride-pkg's, unchanged, and one more: what the image ships is protected. Root in a
+# container is not root on the host — what a change can break is this container, and recreating it
+# puts the image back — so the image turns this on unless NOURIDE_SYSTEM_PACKAGES=off.
+#
+#   nouride-pkg-container start     prepare, install again, then listen in the background
+#   nouride-pkg-container restore   install again what agents installed
+#   nouride-pkg-container serve     one request, on stdin and stdout
+#
+# POSIX sh, readable top to bottom, for the reason nouride-pkg is: it runs as root.
+
+set -u
+umask 022
+
+# Fixed, not inherited — as nouride-pkg's are, and overridable the same way: by whoever already
+# controls root's environment, which is the tests.
+PATH="${NOURIDE_PKG_PATH:-/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin}"
+export PATH
+# `sort` and `comm` agree on one order, whatever the locale.
+LC_ALL=C
+export LC_ALL
+LIB="${NOURIDE_PKG_LIB:-/usr/local/lib/nouride-pkg}"
+# On the volume, and root's: the daemon's user reads it, and cannot change what root installs at the
+# next start (the entrypoint leaves this directory out of the ownership it hands over).
+KEEP="${NOURIDE_PKG_KEEP:-/app/.nouride/system-packages}"
+APK="${NOURIDE_PKG_APK:-/etc/apk}"
+SOCKET="${NOURIDE_PKG_SOCKET:-/run/nouride-pkg.sock}"
+# Who may connect besides root: the daemon's user, as the service account's group does on a host.
+GROUP="${NOURIDE_PKG_GROUP:-bun}"
+WORLD="$APK/world"
+# The world as the image shipped it, taken at this container's first start: what agents installed is
+# everything beyond it, and everything in it is protected.
+IMAGE_WORLD="$APK/world.image"
+
+log() { printf 'nouride-pkg: %s\n' "$*" >&2; }
+
+# nouride-pkg's rule for a name, again here: the list it reads at every start is installed as root.
+valid_name() {
+  case "$1" in
+    ''|*[!a-z0-9.+_-]*|[!a-z0-9]*|*-|*+) return 1 ;;
+  esac
+  [ "${#1}" -le 100 ]
+}
+
+# One writer at a time for the list, and none while it is being installed again: a request answered
+# mid-restore would write down a world only half back, and the next recreate would drop the rest.
+# Taken inside a subshell, so it is let go when that ends: inherited by the listener started after a
+# restore, it would be held for as long as the listener runs, and every request would wait on it.
+lock_keep() {
+  exec 9> "$KEEP/.lock"
+  flock 9
+}
+
+# What agents installed, after a request: what was kept and what the world now holds beyond the image's,
+# less what this request removed. Never the world alone: a restore that could not finish — no network, a
+# name the repositories dropped — leaves the world without what was kept, and the next request would have
+# forgotten it for good. Sets with `comm`, not `grep -v -f`: busybox's prints nothing for an empty list.
+keep_world() {
+  [ -f "$IMAGE_WORLD" ] && [ -f "$WORLD" ] || return 0
+  (
+    lock_keep
+    t="$KEEP/.world.$$"
+    sort -u "$1" > "$t.before"
+    sort -u "$WORLD" > "$t.after"
+    sort -u "$IMAGE_WORLD" > "$t.image"
+    { cat "$KEEP/world" 2>/dev/null; comm -23 "$t.after" "$t.image"; } | sort -u > "$t.all"
+    comm -23 "$t.before" "$t.after" > "$t.removed"
+    comm -23 "$t.all" "$t.removed" > "$t.kept"
+    mv -f "$t.kept" "$KEEP/world"
+    rm -f "$t.before" "$t.after" "$t.image" "$t.all" "$t.removed"
+  )
+}
+
+restore() {
+  [ -s "$KEEP/world" ] || return 0
+  (
+    lock_keep
+    names=""
+    while IFS= read -r name; do
+      if valid_name "$name"; then names="$names $name"; else log "not installing again, not a package name: $name"; fi
+    done < "$KEEP/world"
+    [ -n "$names" ] || exit 0
+    log "installing again what agents installed:$names"
+    # Together and online first, for the versions this image's repositories have now; together from the
+    # cache alone when there is no network. Bounded: the daemon waits, and a stalled mirror must not hold it.
+    # shellcheck disable=SC2086
+    if ! timeout 300 apk add --no-progress $names >&2 && ! timeout 120 apk add --no-network --no-progress $names >&2; then
+      # Then each on its own: one name the repositories no longer have — renamed in a newer release —
+      # fails a transaction as a whole, and the rest would not come back with it.
+      missed=""
+      for name in $names; do
+        timeout 120 apk add --no-progress "$name" >&2 || timeout 60 apk add --no-network --no-progress "$name" >&2 || missed="$missed $name"
+      done
+      if [ -n "$missed" ]; then
+        # Kept, cache and all, for the next start to try again.
+        log "could not install again:$missed; the daemon starts without them, and \`nouride pkg install\` puts one back"
+        exit 1
+      fi
+    fi
+    # The versions nothing needs any more: after an update the cache would otherwise keep both.
+    apk cache clean >/dev/null 2>&1 || true
+    exit 0
+  )
+}
+
+listen() {
+  while :; do
+    # `fork`: one `serve` per connection, at most four at once, as nouride-pkg.socket's MaxConnections.
+    socat "UNIX-LISTEN:$SOCKET,fork,max-children=4,unlink-early,user=root,group=$GROUP,mode=0660" \
+      "EXEC:$LIB/container/nouride-pkg-container serve"
+    log "the package service stopped listening (exit $?): starting it again"
+    sleep 1
+  done
+}
+
+case "${1:-}" in
+  start)
+    mkdir -p "$KEEP/cache" || exit 1
+    # Root's and readable, whatever a host copy left it as. A test runs this as a user, where it is so.
+    chown root:root "$KEEP" "$KEEP/cache" 2>/dev/null || true
+    chmod 755 "$KEEP" "$KEEP/cache"
+    ln -sfn "$KEEP/cache" "$APK/cache"
+    # This container's first start: what is in the world now is the image's. A restart keeps the file,
+    # and the packages with it; a recreate starts from the image again.
+    [ -f "$IMAGE_WORLD" ] || cp "$WORLD" "$IMAGE_WORLD"
+    restore
+    listen &
+    ;;
+  restore)
+    restore
+    ;;
+  serve)
+    before=$(mktemp) || exit 1
+    cp "$WORLD" "$before" 2>/dev/null || : > "$before"
+    # The request on stdin, the answer on stdout — the connection — as systemd hands them over, and as
+    # long as systemd would give it (`RuntimeMaxSec`).
+    NOURIDE_PKG_PROTECTED="$IMAGE_WORLD" timeout 1800 "$LIB/nouride-pkg" --serve
+    status=$?
+    keep_world "$before"
+    rm -f "$before"
+    exit "$status"
+    ;;
+  *)
+    echo "usage: nouride-pkg-container start|restore|serve" >&2
+    exit 2
+    ;;
+esac

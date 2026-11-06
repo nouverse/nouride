@@ -1,0 +1,14 @@
+{
+  "name": "@nouride/mcp",
+  "description": "Nouride MCP host — connects to Model Context Protocol servers and exposes their tools.",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@nouride/shared": "workspace:*",
+    "@nouride/runtime": "workspace:*"
+  }
+}

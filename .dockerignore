@@ -1,0 +1,41 @@
+node_modules
+**/node_modules
+.git
+.gitignore
+.github
+.claude
+.env
+.env.*
+*.env
+tmp
+*.log
+# Python's bytecode cache beside a skill's script: `COPY content/skills` would put a stray one in the image.
+**/__pycache__
+
+# Runtime state must come from the mounted volume, never the image
+data
+
+# Rebuilt inside the image
+apps/dashboard/dist
+
+# Tests are never needed in docker builds or images
+tests
+**/tests
+**/*.test.*
+**/*.spec.*
+
+# Docs are not needed at runtime.
+#
+# The whole directory, not a list of filenames. The list was five entries against fifteen files and
+# had to be remembered on every new document — DEPLOY.md, CLI.md and HANDOFF.md had all been added
+# without it. Nothing in the image reads a `.md` from here: the Dockerfile copies `packages`,
+# `apps/engine` and the dashboard manifest, never `docs`.
+docs
+screenshots
+
+# Build output and source maps from the checkout. The image builds its own bundle and its own map; a map here —
+# `dist/*.map` from a local build, `.cache/symbolize/` from `bun run symbolize` — is the private source, and has no
+# business in a build context that the public images are made from.
+dist
+.cache
+**/*.map

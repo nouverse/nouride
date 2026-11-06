@@ -1,0 +1,77 @@
+# Continuous deployment for the documentation and landing site (apps/site) to Cloudflare Pages.
+
+name: deploy-site
+
+# The paths are what the site's build reads: its own tree, the brand assets and the two installers
+# `sync-installer.ts` publishes — `install-bundle-router.sh` was missing, so get.nouride.com served a
+# stale one — plus the manifests and the Bun it is built with. A pull request builds it and deploys
+# nothing, so a site that does not build is found before main.
+on:
+  push:
+    branches: ["main"]
+    paths: &site
+      - "apps/site/**"
+      - "packages/shared/assets/**"
+      - "scripts/install.sh"
+      - "scripts/install-bundle-router.sh"
+      - "scripts/sync-brand.ts"
+      - "package.json"
+      - "bun.lock"
+      - ".bun-version"
+      - ".github/workflows/deploy-site.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-site-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+
+# ── Runner ────────────────────────────────────────────────────────────────────
+# GitHub-hosted (`ubuntu-24.04`, not `ubuntu-latest`, which GitHub moves to Ubuntu 26 from 2026-10-19 —
+# a new image is a change to make on purpose, through a CI run first) unless the repository variable
+# `CI_RUNNER` says otherwise. To go
+# back to the self-hosted build runner without editing this file, set it (Settings → Secrets and
+# variables → Actions → Variables) to the JSON of the labels:
+#
+#   CI_RUNNER = ["self-hosted", "build-runner"]
+#
+# The self-hosted line each job used is kept, commented, beside its `runs-on`.
+jobs:
+  deploy:
+    if: github.repository_owner == 'nouverse'
+    # runs-on: [self-hosted, build-runner]
+    runs-on: ${{ fromJSON(vars.CI_RUNNER || '"ubuntu-24.04"') }}
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # The self-hosted runner keeps its working copy between jobs, submodules and all: the last job's private checkout
+      # would be read as this commit's, built into a public image, or stop the next checkout over what its install changed.
+      - name: Start without the last job's submodules
+        run: if git config --get-regexp '^submodule\.' >/dev/null; then git submodule deinit --force --all; fi
+      # `content/` is a public repository of its own (nouverse/nouride-builtin-contents): the skills and agent packs every
+      # build ships and every test reads. Public, so no token; after the line above, so it is this commit's pin.
+      - name: Check out the built-in content
+        run: git submodule update --init content
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build Site
+        run: bun run build:site
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@953926a2e2182532811c01a25e53647d93bf07c0 # v4.1.3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy apps/site/dist --project-name=nouride-apps-site --branch=main
+          packageManager: bun

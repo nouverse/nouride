@@ -1,0 +1,203 @@
+---
+/**
+ * The document around a page that is not a Starlight page.
+ *
+ * Starlight builds its own `<html>`, so nothing outside it has one, the first build of the landing
+ * page produced a body with no `<head>`, no title and none of the palette, because every
+ * `--sl-color-*` it styled against was undefined and only the fallbacks were doing anything.
+ *
+ * So this file is the shell: the head, the palette, and the one script that has to run before paint.
+ *
+ * ## The theme, and why the key matters
+ *
+ * `custom.css` selects dark with `:root[data-theme='dark']`, and inside the docs it is Starlight's
+ * own script that sets that attribute, from `localStorage`, falling back to the system preference.
+ * Outside the docs nothing sets it, so without this the landing would be permanently light for a
+ * reader whose docs are dark.
+ *
+ * Replicated in six lines, reading **Starlight's own key** rather than one of our own, so a choice
+ * made with the toggle in the docs is the choice the landing page opens with. Inline and before the
+ * stylesheet, because a theme applied after first paint is a white flash on a dark screen.
+ *
+ * ## The loading overlay
+ *
+ * On first navigation (especially after a redirect from `/`) there is a brief moment before the
+ * page's own CSS and fonts are ready. Rather than a bare white or black flash, we show a centred
+ * logo with a breathing animation. The overlay removes itself as soon as the page load event fires,
+ * with a short fade-out so the transition is not jarring. Both the script that applies the theme
+ * and the one that removes the overlay are inline and run before first paint.
+ */
+
+import '../styles/custom.css';
+import favicon from '@brand/favicon.png';
+import loaderMark from '@brand/favicon-site.png';
+import { SITE_URL, UMAMI_SCRIPT_URL, UMAMI_WEBSITE_ID } from '../consts.mjs';
+
+interface Props {
+  locale?: string;
+  title?: string;
+  description?: string;
+  image?: string;
+}
+
+const {
+  locale = 'en',
+  title = 'Nouride, Serious Agents. Tiny Runtime.',
+  description = 'Self-hosted multi-agent AI engine running directly on your own machine. Native Discord, Telegram, and WhatsApp support. One binary, runs in 64 MB of RAM (measured 2026-10-17).',
+  image = '/og.png',
+} = Astro.props;
+
+const canonical = new URL(Astro.url.pathname, SITE_URL).href;
+const ogImage = new URL(image, SITE_URL).href;
+const ogLocale = locale === 'id' ? 'id_ID' : 'en_US';
+---
+
+<!doctype html>
+<html lang={locale}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="title" content={title} />
+    <meta name="description" content={description} />
+    <meta name="robots" content="index, follow" />
+    <link rel="icon" href={favicon.src} />
+    <link rel="apple-touch-icon" href={favicon.src} />
+    <link rel="canonical" href={canonical} />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+
+    {/* Open Graph / Facebook / WhatsApp / Discord */}
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Nouride" />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:secure_url" content={ogImage} />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={title} />
+    <meta property="og:locale" content={ogLocale} />
+
+    {/* Twitter / X */}
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content={canonical} />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
+    <meta name="twitter:image:alt" content={title} />
+
+    {/* Language alternates */}
+    <link rel="alternate" hreflang="en" href={new URL('/en/', SITE_URL).href} />
+    <link rel="alternate" hreflang="id" href={new URL('/id/', SITE_URL).href} />
+    <link rel="alternate" hreflang="x-default" href={new URL('/en/', SITE_URL).href} />
+
+    <script is:inline>
+      // Starlight's key, so the toggle in the docs decides this page too.
+      const stored = localStorage.getItem('starlight-theme');
+      const dark = stored === 'dark' || (!stored && matchMedia('(prefers-color-scheme: dark)').matches);
+      document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+    </script>
+
+    {/* Umami Analytics */}
+    <script
+      is:inline
+      defer
+      src={UMAMI_SCRIPT_URL}
+      data-website-id={UMAMI_WEBSITE_ID}
+    ></script>
+    <script is:inline defer src="/analytics.js"></script>
+  </head>
+  <body>
+    {/*
+      Loading overlay: shown immediately, removed on `load`. Inline styles only, the external
+      stylesheet has not been parsed yet when this renders, so class-based styling would not apply.
+      The logo is the full mark scaled to 256 px (`favicon-site.png`, 97 KB), imported so it is hashed.
+      It was `public/logo.png`, the 1235 px, 1.4 MB original, drawn at 72 px, and `load` waits for it.
+    */}
+    <div id="site-loader" aria-hidden="true">
+      <img src={loaderMark.src} alt="" width="72" height="72" />
+    </div>
+    <slot />
+  </body>
+</html>
+
+<style is:global>
+  /*
+   * `custom.css` styles Starlight's own elements and assumes its reset. This page has neither, so
+   * the three things a bare document needs are here rather than repeated in every page.
+   */
+  html {
+    background: var(--sl-color-bg);
+    color-scheme: light;
+  }
+  html[data-theme='dark'] {
+    color-scheme: dark;
+  }
+  body {
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Loading overlay ──────────────────────────────────────────────────── */
+  #site-loader {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--sl-color-bg, #0f172a);
+    transition: opacity 0.35s ease;
+  }
+
+  #site-loader.fade-out {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  #site-loader img {
+    width: 72px;
+    height: 72px;
+    animation: loader-breathe 2s ease-in-out infinite;
+    /* Keep the image crisp at small sizes. */
+    image-rendering: auto;
+  }
+
+  @keyframes loader-breathe {
+    0%, 100% {
+      transform: scale(1);
+      opacity: 0.85;
+      filter: drop-shadow(0 0 0px rgba(99, 102, 241, 0));
+    }
+    50% {
+      transform: scale(1.1);
+      opacity: 1;
+      filter: drop-shadow(0 0 14px rgba(99, 102, 241, 0.55));
+    }
+  }
+</style>
+
+<script is:inline>
+  // Remove the loading overlay once the page (fonts, images, CSS) is fully ready.
+  // Using `load` rather than `DOMContentLoaded` so the overlay stays until the page
+  // looks right, not just until the DOM is parsed.
+  (function () {
+    function dismiss() {
+      var el = document.getElementById('site-loader');
+      if (!el) return;
+      el.classList.add('fade-out');
+      // Remove from the DOM after the CSS transition finishes so it cannot block clicks.
+      el.addEventListener('transitionend', function () { el.remove(); }, { once: true });
+    }
+
+    if (document.readyState === 'complete') {
+      dismiss();
+    } else {
+      window.addEventListener('load', dismiss, { once: true });
+    }
+  })();
+</script>

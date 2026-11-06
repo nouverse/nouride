@@ -1,0 +1,216 @@
+/**
+ * Missions (0.8.0): long work an agent finishes alone — one record, and one conversation (`web:mission`, the chat id
+ * the mission's id) where it does the work. The record is read here; the conversation through the routes every
+ * conversation has, by the `sessionId` a mission's page is handed. Spread into `api`, like the chat's own calls.
+ *
+ * The three word lists below are the daemon's (`modules/missions/types.ts`), held to them by `scripts/check-wire.ts`.
+ */
+
+import { control, post, request } from "./api.client";
+import type { ApprovalRequest } from "./api";
+import type { NotesPlan, NotesTask } from "./api.notes";
+
+/** Seven for the page and the CLI; a person sees four (`MissionSeen`). */
+export type MissionStatus = "queued" | "running" | "waiting" | "checking" | "done" | "failed" | "stopped";
+
+/** Why a waiting mission waits — each needs a person. */
+export type MissionWaitKind = "approval" | "input" | "stuck" | "unknown_outcome" | "limit" | "accept" | "retry";
+
+/** What a person sees: working, needs you, done, ended. */
+export type MissionSeen = "working" | "needs_you" | "done" | "ended";
+
+/** A question the mission asked, and the answer once there is one. */
+export interface MissionAnswered {
+  question: string;
+  answer?: string;
+  at: number;
+}
+
+/** What a person told it while it worked (0.8.10), and the turn it read it in — absent while unread. */
+export interface MissionTold {
+  id: string;
+  by: string;
+  at: number;
+  text: string;
+  /** The agent that passed it on from its chat, when one did. */
+  via?: string;
+  read?: number;
+}
+
+/** Whether a mission's tokens are known: all reported, none, or some — a floor. */
+export type MissionTokens = "known" | "unknown" | "partial";
+
+/** A mission as the daemon's routes answer it: the record, what a person sees it as, and the time it has worked. */
+export interface MissionView {
+  id: string;
+  agentId: string;
+  /** Who started it, on `gatewayId` — whose approval level applies. */
+  startedBy: string;
+  /** The agent that started it on that person's behalf, when an agent did. */
+  byAgent: string | null;
+  /** Where it reports: the chat it began in. */
+  gatewayId: string;
+  chatId: string;
+  goal: string;
+  checks: string[];
+  /** The reviewer's criteria; null is the goal itself. */
+  review: string | null;
+  reviewOn: boolean;
+  /** A person accepts the result before it is done. */
+  accept: boolean;
+  status: MissionStatus;
+  waitKind: MissionWaitKind | null;
+  /** What it waits for, or why it ended. */
+  reason: string | null;
+  report: string | null;
+  /** Result files `done` named, inside its folder. */
+  files: string[];
+  /** The failed check's output, clipped. */
+  lastCheck: string | null;
+  answers: MissionAnswered[];
+  told: MissionTold[];
+  workdir: string;
+  /** The branch its worktree was named at start; null is `mission/<id>`. */
+  branch: string | null;
+  limits: { hours: number; turns: number; tokens: number };
+  turnsUsed: number;
+  tokensUsed: number;
+  createdAt: number;
+  startedAt: number | null;
+  updatedAt: number;
+  endedAt: number | null;
+  seen: MissionSeen;
+  /** Time it has worked, waits on a person left out — what the hours limit measures. */
+  workedMs: number;
+  /**
+   * Which limits hold and whether its tokens are known (0.8.8): a coding CLI's mission is held to no turn limit, and its
+   * tokens are unknown where the CLI reports none — a floor where it reported for some turns only.
+   */
+  shown: { turns: boolean; tokens: MissionTokens };
+  /** The scheduled job or webhook whose run this is (0.8.0): it ends at the reviewer. Absent from a daemon before it. */
+  jobId?: string | null;
+  /** The request body that started the run, when a webhook did. */
+  request?: string | null;
+  /** The reviewer passed it. */
+  reviewed?: boolean;
+  /** On the list only: how far along its checklist is, null before it wrote one. */
+  checklist?: { done: number; total: number; active: string | null } | null;
+}
+
+/** One mission, as its page reads it. */
+export interface MissionDetail {
+  mission: MissionView;
+  /** Its conversation's session: its turns, its live steps, its notes. */
+  sessionId: string;
+  plan: NotesPlan | null;
+  notes: NotesTask[];
+  /** Calls it parked for a person, answerable for a day. */
+  parked: ApprovalRequest[];
+  /** The steps its turns took, as each turn's line counts them: a call, or a wait on a person (0.8.0). */
+  steps?: number;
+  /** The name of the job it is a run of, while that job exists. */
+  jobName?: string;
+  /** The reviewer at work (0.8.10): which pass, of how many, since when — absent when none is. */
+  reviewing?: Reviewing;
+  /** Its `BRIEF.md` as written in its folder (0.8.11): what the work is, what to read, what done means. */
+  brief?: string | null;
+  /** Where that brief is: its own folder's `BRIEF.md`, or a file its goal names, in its agent's folder (0.8.11). */
+  briefPath?: string | null;
+}
+
+/** A draft's change from the dashboard (0.8.11): what is sent changes, what is not stays. `workdir: null` is its own folder. */
+export interface MissionEdit {
+  goal?: string;
+  checks?: string[];
+  review?: string;
+  noReview?: boolean;
+  accept?: boolean;
+  workdir?: string | null;
+  branch?: string | null;
+  limits?: { hours?: number; turns?: number; tokens?: number };
+  brief?: string;
+}
+
+/** The reviewer at work on a mission: minutes a pass, where "Running its checks" alone read as stuck. */
+export interface Reviewing {
+  pass: number;
+  of: number;
+  since: number;
+}
+
+export interface MissionStart {
+  agent: string;
+  goal: string;
+  checks?: string[];
+  review?: string;
+  /** No reviewer at all: checks, and a person when there are none. */
+  noReview?: boolean;
+  accept?: boolean;
+  workdir?: string;
+}
+
+/** What a person says to a mission. */
+export type MissionVerb = "stop" | "continue" | "accept" | "answer" | "tell";
+
+/** The five `[missions]` settings by name. */
+export interface MissionLimits {
+  perAgent: number;
+  maxRunning: number;
+  limitHours: number;
+  limitTurns: number;
+  limitTokens: number;
+}
+
+/**
+ * `[missions]`: the values in force, each one's default, and the bounds each keeps — the schema's, so the form and the
+ * loader agree. The slots on the box follow the agents that are on while unset (`auto`): their default and their most
+ * are worked out from those agents.
+ */
+export interface MissionSettings extends MissionLimits {
+  auto: boolean;
+  defaults: MissionLimits;
+  bounds: Record<keyof MissionLimits, { min: number; max?: number; integer: boolean }>;
+  editable: boolean;
+}
+
+/** `null` takes a key out of the file — back to its default. */
+export type MissionSettingsPatch = Partial<Record<keyof MissionLimits, number | null>>;
+
+export const missionsApi = {
+  /**
+   * Sorted by the daemon: needs you first, then working, then the rest, newest first within each. 501 without missions.
+   * `days`: how far back the ended ones go (0.8.8) — the daemon lists a week unless asked, and a month at most.
+   */
+  missions: (agent?: string, days?: number) => {
+    const query = new URLSearchParams({ ...(agent ? { agent } : {}), ...(days ? { days: String(days) } : {}) }).toString();
+    return request<{ missions: MissionView[] }>(`${control}/missions${query ? `?${query}` : ""}`);
+  },
+
+  mission: (id: string) => request<MissionDetail>(`${control}/missions/${encodeURIComponent(id)}`),
+
+  /** 201 with the mission; a refusal (no such agent, no goal, a relative folder) is a 400 whose `error` is a sentence. */
+  startMission: (input: MissionStart) => post<{ mission: MissionView }>(`${control}/missions`, input),
+
+  /** A draft changed before it starts (0.8.11); a 409 says why not — it started, or nothing changes. */
+  editMission: (id: string, change: MissionEdit) =>
+    post<{ mission: MissionView; changed: string[]; briefFailed?: string }>(`${control}/missions/${encodeURIComponent(id)}/edit`, change),
+
+  /** A 409 says why it does not apply now — it ended already, it is not waiting for that. */
+  actOnMission: (id: string, verb: MissionVerb, text?: string) =>
+    post<{ mission: MissionView; said?: string }>(`${control}/missions/${encodeURIComponent(id)}/${verb}`, text ? { text } : {}),
+
+  /**
+   * An ended mission deleted (0.8.13): its record, conversation and own folder. A 409 says why not — it is still open, or
+   * its folder holds work nobody committed, which `force` loses.
+   */
+  deleteMission: (id: string, force = false) =>
+    request<{ ok: true; mission: string; turns: number }>(`${control}/missions/${encodeURIComponent(id)}${force ? "?force=1" : ""}`, { method: "DELETE" }),
+
+  missionSettings: () => request<MissionSettings>(`${control}/policy/missions`),
+
+  /** Operators and up. A value outside its bounds is a 400 naming the key and the range; nothing is saved then. */
+  setMissionSettings: (patch: MissionSettingsPatch) => post<MissionSettings & { ok: true }>(`${control}/policy/missions`, patch),
+
+  /** One agent's own missions at once (0.8.11). `null` means "follow the daemon". */
+  setAgentMissionsPerAgent: (agent: string, perAgent: number | null) => post<{ ok: true }>(`${control}/agents/${agent}/missions`, { perAgent }),
+};

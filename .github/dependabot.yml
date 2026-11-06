@@ -1,0 +1,11 @@
+# Every action in .github/workflows is pinned to a commit, with its version in a comment beside it. A pin nobody
+# moves goes stale; this proposes the move, as a pull request a person reads before it lands.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]

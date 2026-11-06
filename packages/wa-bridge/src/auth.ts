@@ -1,0 +1,154 @@
+/**
+ * Baileys credentials, encrypted at rest.
+ *
+ * `useMultiFileAuthState` writes the session as plain JSON, and that session is a *login* — anyone
+ * who copies the directory is signed in as this WhatsApp account, on their own machine, with no
+ * further prompt. On a server that directory sits next to everything else being backed up, which is
+ * how a backup becomes a credential leak (§17.1 item 6).
+ *
+ * So this implements the same `AuthenticationState` contract Baileys expects, with every file
+ * AES-256-GCM'd under a key the engine supplies through the environment. The key never touches the
+ * wire protocol and never goes in the config file — the config holds its *name*, like every other
+ * credential here.
+ *
+ * The layout is deliberately the same as the stock one: one file per key, so a re-key or a manual
+ * recovery is a file-by-file job rather than one giant blob that fails as a unit.
+ */
+
+import { ensureDir, join, listDir, openAesGcm, readBytesSync, removePath, renamePath, sealAesGcm, writeBytesSync } from "@nouride/runtime";
+import { initAuthCreds, BufferJSON, proto } from "@whiskeysockets/baileys";
+import type { AuthenticationCreds, AuthenticationState, SignalDataTypeMap } from "@whiskeysockets/baileys";
+
+
+/** 64 hex characters — the same 32 bytes AES-256 wants, checked here rather than truncated silently. */
+export function parseKey(hex: string): Buffer {
+  const cleaned = hex.trim();
+  if (!/^[0-9a-fA-F]{64}$/.test(cleaned)) {
+    throw new Error(
+      "the WhatsApp session key must be 64 hex characters (32 bytes): generate one with `openssl rand -hex 32`",
+    );
+  }
+  return Buffer.from(cleaned, "hex");
+}
+
+// AES-256-GCM as `iv | tag | ciphertext` (`sealAesGcm`), the layout every session file already
+// written has. A wrong key or a tampered file throws rather than returning plausible garbage — which
+// is the whole reason for GCM over CBC here.
+function encrypt(key: Uint8Array, plaintext: string): Uint8Array {
+  return sealAesGcm(key, new TextEncoder().encode(plaintext));
+}
+
+function decrypt(key: Uint8Array, blob: Uint8Array): string {
+  return new TextDecoder().decode(openAesGcm(key, blob));
+}
+
+/** `session-abc.json` — the id is not ours and may contain anything, so it is not a path component. */
+function fileFor(dir: string, name: string): string {
+  return join(dir, `${name.replace(/[^0-9A-Za-z._-]/g, "_")}.enc`);
+}
+
+export interface EncryptedAuthState {
+  state: AuthenticationState;
+  saveCreds: () => Promise<void>;
+  /** Drops every credential. Used when WhatsApp says this session is finished. */
+  clear: () => void;
+  /**
+   * Read one stored entry by name, decrypted.
+   *
+   * Exists for the LID mapping. Baileys writes `lid-mapping-<lid>_reverse` into the same store as
+   * everything else and then never consults it when addressing an outgoing message — so the caller
+   * has to. See `phoneForLid` in connection.ts for why that matters.
+   */
+  read: <T>(name: string) => T | null;
+}
+
+/**
+ * Whether a stored session is one the signal backend can read: the bytes it serialised, which the store keeps as a
+ * Buffer. Anything else — a file another implementation wrote, or one damaged into other JSON — is read as **absent**,
+ * not handed on: a record that looks present makes Baileys skip the re-handshake, and every message for that contact
+ * then fails with `SessionNotFound` while the phone goes on sending for a session only the cipher disagrees about.
+ * Absent, Baileys negotiates a new one on the next message and writes it over the file.
+ */
+function readableSession(value: unknown): boolean {
+  return Buffer.isBuffer(value) || value instanceof Uint8Array;
+}
+
+export async function useEncryptedAuthState(
+  dir: string,
+  keyHex: string,
+): Promise<EncryptedAuthState> {
+  const key = parseKey(keyHex);
+  ensureDir(dir, 0o700);
+
+  const readData = <T>(name: string): T | null => {
+    try {
+      const blob = readBytesSync(fileFor(dir, name));
+      return JSON.parse(decrypt(key, blob), BufferJSON.reviver) as T;
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code === "ENOENT") return null;
+      // A key change or a corrupt file is worth saying out loud. Returning null would look like a
+      // fresh install and silently ask for a new QR scan, hiding the real cause.
+      process.stderr.write(`session file ${name} unreadable: ${String(err)}\n`);
+      return null;
+    }
+  };
+
+  const writeData = (name: string, value: unknown): void => {
+    const path = fileFor(dir, name);
+    const tmp = `${path}.tmp`;
+    // Written aside and renamed: a crash mid-write must not leave a half-file where the credentials
+    // were, because that is unrecoverable without another QR scan.
+    writeBytesSync(tmp, encrypt(key, JSON.stringify(value, BufferJSON.replacer)), 0o600);
+    renamePath(tmp, path);
+  };
+
+  const creds: AuthenticationCreds = readData<AuthenticationCreds>("creds") ?? initAuthCreds();
+
+  return {
+    state: {
+      creds,
+      keys: {
+        get: (type, ids) => {
+          const out: { [id: string]: SignalDataTypeMap[typeof type] } = {};
+          for (const id of ids) {
+            let value = readData<SignalDataTypeMap[typeof type]>(`${type}-${id}`);
+            // Here, at the store, because Baileys reaches `loadSession` from places the signal layer
+            // does not wrap — `validateSession` is one (`readableSession`).
+            if (type === "session" && value && !readableSession(value)) {
+              process.stderr.write(`session file ${type}-${id} is not a session this backend reads, so it is read as absent and a new one is negotiated\n`);
+              value = null;
+            }
+            // Baileys stores this one as a protobuf and expects it back as one.
+            if (type === "app-state-sync-key" && value) {
+              value = proto.Message.AppStateSyncKeyData.fromObject(
+                value as object,
+              ) as unknown as SignalDataTypeMap[typeof type];
+            }
+            if (value) out[id] = value;
+          }
+          return Promise.resolve(out);
+        },
+        set: (data) => {
+          for (const [type, entries] of Object.entries(data)) {
+            for (const [id, value] of Object.entries(entries ?? {})) {
+              const name = `${type}-${id}`;
+              if (value) writeData(name, value);
+              else removePath(fileFor(dir, name));
+            }
+          }
+          return Promise.resolve();
+        },
+      },
+    },
+    saveCreds: async () => {
+      writeData("creds", creds);
+    },
+    clear: () => {
+      for (const { name } of listDir(dir)) {
+        if (name.endsWith(".enc")) removePath(join(dir, name));
+      }
+    },
+    read: <T,>(name: string) => readData<T>(name),
+  };
+}

@@ -1,0 +1,230 @@
+#!/bin/sh
+#
+# nouride-pkg — system packages for a Nouride agent, within rules it cannot change.
+#
+# The daemon runs sandboxed (`NoNewPrivileges`, `ProtectSystem=strict`), so nothing it starts can ever
+# become root, `sudo` included. This is the one way through, and it is narrow on purpose:
+#
+#   - packages from the configured repositories only, by exact name: no files, no URLs, no new
+#     repositories, no options — a request is an operation and names, nothing else;
+#   - never a change that would remove a protected package: whatever keeps the box reachable and
+#     running (ssh, networking, sudo, the init system, libc, the package manager itself);
+#   - every change is simulated first, and refused as a whole if any part of it breaks a rule.
+#
+# The rules live here, root-owned, because the daemon runs as the same user as the commands its agents
+# run: anything that trusted the daemon to have asked a person first would trust an agent that went
+# around it. The daemon asks a person before every change (`nouride pkg`, never auto-approved); this
+# is what holds when that is bypassed.
+#
+# Set up by `install.sh --allow-packages`. Run by systemd, one process per request
+# (`nouride-pkg.socket`, `Accept=yes`), with the request on stdin and the answer on stdout — and in
+# Nouride's container image, which has no systemd, by `container/nouride-pkg-container` the same way.
+# Root can also run it directly: `nouride-pkg check install jq`.
+#
+# Protocol 1. A request is one line:
+#
+#   status                      which backend this host uses
+#   check <op> [name ...]       what <op> would change, without changing it
+#   install <name ...>
+#   remove <name ...>
+#   upgrade [name ...]          no names: everything that has an update
+#   refresh                     refresh the package lists
+#
+# The answer is the package manager's own output, then one last line:
+#
+#   @nouride-pkg ok|refused|failed <detail>
+#
+# A plan (from `check`, and before every change) is printed as `+ name` for what would be installed or
+# upgraded and `- name` for what would be removed.
+#
+# Backends are one file each under backends/, with the same seven functions — see backends/README.
+# Adding a distribution is adding a file there and its name to BACKENDS.
+#
+# POSIX sh, readable top to bottom, for the same reason as install.sh: it runs as root.
+
+set -u
+umask 022
+
+# Fixed, not inherited: this runs as root and what it runs is found on this PATH. Overridable only by
+# whoever already controls root's environment — the tests, which put stand-in package managers first.
+PATH="${NOURIDE_PKG_PATH:-/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin}"
+export PATH
+LIB="${NOURIDE_PKG_LIB:-/usr/local/lib/nouride-pkg}"
+LOCK="${NOURIDE_PKG_LOCK:-/run/nouride-pkg.lock}"
+# A file naming more packages to protect, one per line — what Nouride's container image ships, which
+# `container/nouride-pkg-container` passes: removing it would break the container until it is recreated.
+MORE_PROTECTED="${NOURIDE_PKG_PROTECTED:-}"
+
+PROTOCOL=1
+BACKENDS="apt apk"
+# A request names a few packages. Twenty is well past anything an agent needs in one step, and short of
+# a list pasted from somewhere else.
+MAX_NAMES=20
+MAX_LINE=2048
+
+log() { printf 'nouride-pkg: %s\n' "$*" >&2; }
+answer() {
+  # The status line is the last thing written, whatever came before it.
+  printf '@nouride-pkg %s\n' "$*"
+  log "$*"
+}
+refuse() { answer "refused $*"; exit 2; }
+fail() { answer "failed $*"; exit 1; }
+
+# ── The request ──────────────────────────────────────────────────────────────
+
+if [ "${1:-}" = "--serve" ]; then
+  IFS= read -r line || line="${line:-}"
+  [ "${#line}" -le "$MAX_LINE" ] || refuse "request too long"
+  # Split on blanks with globbing off: a name like `*` must stay the four bytes it is, to be refused,
+  # never expand to the files in this directory.
+  set -f
+  # shellcheck disable=SC2086
+  set -- $line
+  set +f
+fi
+
+[ "$#" -ge 1 ] || refuse "empty request"
+op="$1"
+shift
+
+planning=0
+if [ "$op" = "check" ]; then
+  [ "$#" -ge 1 ] || refuse "check needs an operation: check install|remove|upgrade <name ...>"
+  planning=1
+  op="$1"
+  shift
+fi
+
+case "$op" in
+  status|refresh)
+    [ "$planning" = "0" ] || refuse "nothing to check for $op"
+    [ "$#" -eq 0 ] || refuse "$op takes no names" ;;
+  install|remove)
+    [ "$#" -ge 1 ] || refuse "$op needs at least one package name" ;;
+  upgrade) ;;
+  *) refuse "unknown operation: $op (status, check, install, remove, upgrade, refresh)" ;;
+esac
+[ "$#" -le "$MAX_NAMES" ] || refuse "at most $MAX_NAMES packages in one request"
+
+# A package name as every supported manager spells one: lowercase letters, digits and `.+_-`, starting
+# with a letter or digit. Not ending in `-` or `+`, which apt reads as "remove" and "install" suffixes.
+# This refuses options, paths, URLs, versions (`=`), releases (`/`) and globs before anything sees them;
+# exactness against the repositories is checked by the backend after it.
+valid_name() {
+  case "$1" in
+    ''|*[!a-z0-9.+_-]*|[!a-z0-9]*|*-|*+) return 1 ;;
+  esac
+  [ "${#1}" -le 100 ]
+}
+for name in "$@"; do
+  valid_name "$name" || refuse "not a package name: $name"
+done
+
+# ── The backend ──────────────────────────────────────────────────────────────
+
+BACKEND=""
+for candidate in $BACKENDS; do
+  [ -f "$LIB/backends/$candidate.sh" ] || continue
+  # shellcheck disable=SC1090
+  . "$LIB/backends/$candidate.sh"
+  if pkg_detect; then
+    BACKEND="$candidate"
+    break
+  fi
+done
+[ -n "$BACKEND" ] || refuse "no supported package manager on this host (supported: $BACKENDS)"
+
+if [ "$op" = "status" ]; then
+  answer "ok protocol=$PROTOCOL backend=$BACKEND"
+  exit 0
+fi
+
+# One change at a time. The package managers lock too, but a second request would then fail halfway
+# through its plan instead of waiting its turn. `mkdir` is atomic everywhere, `flock` is not everywhere.
+take_lock() {
+  waited=0
+  until mkdir "$LOCK" 2>/dev/null; do
+    holder=$(cat "$LOCK/pid" 2>/dev/null || echo "")
+    if [ -n "$holder" ] && ! kill -0 "$holder" 2>/dev/null; then
+      rm -rf "$LOCK"
+      continue
+    fi
+    [ "$waited" -lt 300 ] || fail "another package change has been running for 5 minutes"
+    sleep 1
+    waited=$((waited + 1))
+  done
+  echo "$$" > "$LOCK/pid"
+  trap 'rm -rf "$LOCK"' EXIT INT TERM
+}
+
+if [ "$op" = "refresh" ]; then
+  take_lock
+  pkg_refresh 2>&1 || fail "refreshing the package lists did not work (exit $?)"
+  answer "ok refreshed"
+  exit 0
+fi
+
+# ── The rules ────────────────────────────────────────────────────────────────
+
+PROTECTED=$(
+  pkg_protected
+  # A line of apk's world can carry a version or a tag after the name: the name is what is protected.
+  if [ -n "$MORE_PROTECTED" ] && [ -r "$MORE_PROTECTED" ]; then sed -e 's/[<>=~@].*//' "$MORE_PROTECTED"; fi
+)
+is_protected() { printf '%s\n' "$PROTECTED" | grep -qxF -- "$1"; }
+
+for name in "$@"; do
+  case "$op" in
+    install)
+      pkg_known "$name" || refuse "no package called $name in this host's repositories" ;;
+    remove)
+      is_protected "$name" && refuse "$name is protected: removing it could leave this box unreachable"
+      pkg_installed "$name" || refuse "$name is not installed" ;;
+    upgrade)
+      pkg_installed "$name" || refuse "$name is not installed" ;;
+  esac
+done
+
+[ "$planning" = "1" ] || take_lock
+
+plan_file=$(mktemp) || fail "no temporary file"
+out_file=$(mktemp) || fail "no temporary file"
+if [ "$planning" = "1" ]; then trap 'rm -f "$plan_file" "$out_file"' EXIT INT TERM
+else trap 'rm -f "$plan_file" "$out_file"; rm -rf "$LOCK"' EXIT INT TERM
+fi
+
+if ! pkg_plan "$op" "$@" > "$plan_file" 2> "$out_file"; then
+  cat "$out_file"
+  fail "$BACKEND could not plan this: nothing was changed"
+fi
+
+touched=""
+while IFS= read -r entry; do
+  case "$entry" in
+    "- "*) is_protected "${entry#- }" && touched="$touched ${entry#- }" ;;
+  esac
+done < "$plan_file"
+[ -z "$touched" ] || { cat "$plan_file"; refuse "would remove protected packages:$touched"; }
+
+cat "$plan_file"
+if [ ! -s "$plan_file" ]; then
+  answer "ok nothing to change"
+  exit 0
+fi
+if [ "$planning" = "1" ]; then
+  answer "ok planned"
+  exit 0
+fi
+
+log "$op $* (backend $BACKEND)"
+# Into a file, then to the client — not streamed into the socket. The client can go away mid-change (a
+# job someone stopped, a daemon restarting), and a package manager writing to a closed socket gets
+# SIGPIPE: killed half-way, it leaves the box needing `dpkg --configure -a`. Ignored here and in what
+# runs below, so the change finishes whoever is still listening.
+trap '' PIPE
+pkg_run "$op" "$@" > "$out_file" 2>&1
+status=$?
+cat "$out_file"
+[ "$status" -eq 0 ] || fail "$BACKEND exited $status"
+answer "ok $op done"

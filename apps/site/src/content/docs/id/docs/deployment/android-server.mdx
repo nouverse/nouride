@@ -1,0 +1,221 @@
+---
+title: HP Android jadi server
+description: "Menjalankan Nouride di HP Android bekas dengan Termux dan Debian, tanpa root, dari memasang Termux sampai dashboard terbuka."
+---
+
+import { Steps, Aside, LinkCard } from '@astrojs/starlight/components';
+
+Nouride gak punya build khusus Android. Rilisnya cuma untuk Linux (glibc dan musl) dan macOS, sementara Android punya C library sendiri, Bionic. Jadi HP-nya menjalankan Debian di dalam [Termux](https://termux.dev/) lewat [proot-distro](https://github.com/termux/proot-distro), dan build `linux-arm64` edisi Router jalan di dalam Debian itu. HP-nya gak perlu di-root.
+
+<Aside type="note" title="Diuji di satu HP">
+Redmi 12 (HyperOS di Android 15, RAM 6 GB) dengan Termux 0.118.3 dari GitHub, Debian 13 dari proot-distro 5.10, dan Nouride 0.8.18 (edisi Community), pada 2026-11-05. Daemon siap dalam kurang dari dua detik, dashboard bisa dibuka dari komputer di Wi-Fi yang sama, agent membalas lewat Telegram, dan daemon tetap jalan hampir delapan jam semalaman. Yang belum diuji: HP lain, edisi Router di HP, HP setelah restart, start otomatis waktu HP menyala, dan update Nouride di HP.
+</Aside>
+
+## Yang berfungsi dan keterbatasannya
+
+Daemon, dashboard, aplikasi chat (yang diuji Telegram), agent dan tool-nya jalan semua. Empat hal ini gak:
+
+- **Isolasi user per agent.** proot cuma meniru root, dan gak ada systemd sungguhan, jadi `nouride-run` gak terpasang. Semua perintah agent jalan sebagai user daemon itu sendiri, dan daemon menulis `agents' commands run as the daemon's own user` di log tiap kali start. Jadi jalankan cuma agent yang kamu percaya untuk saling membuka file. [Tiap agent punya user sendiri →](/id/docs/architecture/overview/#tiap-agent-punya-user-sendiri)
+- **Auto-restart saat mati.** Gak ada service manager yang menyalakan daemon lagi kalau ia berhenti, atau waktu HP restart. `nouride restart` dan `nouride update --start` gak punya init system untuk diserahi tugas itu.
+- **Instalasi paket sistem oleh agent.** `--allow-packages` butuh systemd. Paket sistem yang dibutuhkan agent kamu pasang sendiri dengan `apt` di dalam Debian.
+- **Fitur Nouride Box**, seperti setup hotspot dan onboarding Wi-Fi. Fitur itu butuh NetworkManager, dan di HP, Wi-Fi dipegang Android.
+
+## Kebutuhan sistem
+
+- **HP 64-bit dengan Android 7 ke atas.** Langkah pertama di bawah mengecek prosesornya: Nouride gak punya build ARM 32-bit.
+- **Ruang kosong minimal 1,5 GB.** Segitu yang dipakai Termux, Debian dan Nouride di HP pengujian setelah sehari dipakai. Yang diunduh dan dibangun agent kamu menambah di atas itu.
+- **RAM.** HP pengujian punya RAM 6 GB. Nouride sendiri cuma butuh sedikit ([Konsumsi Sumber Daya](/id/docs/architecture/performance/)); dengan RAM lebih kecil, Android lebih cepat menutup aplikasi di background, termasuk Termux.
+- **Charger.** HP-nya jalan terus sebagai server, jadi biarkan tetap tercolok.
+- **Wi-Fi yang sama** dengan komputer yang kamu pakai untuk membuka dashboard, kalau mau membukanya dari selain HP itu.
+- **Akun model atau API key.** Edisi Router yang dipasang di bawah bisa masuk pakai akun yang sudah kamu punya (Claude Pro atau Max, ChatGPT, GitHub Copilot, Google Gemini atau Kiro) lewat gateway Nougate bawaannya; endpoint dan API key provider juga bisa. Wizard [Menyalakan Pertama Kali](/id/docs/start/first-run/) menanyakannya di akhir.
+- **Opsional: komputer dengan `adb`** ([platform tools Android](https://developer.android.com/tools/releases/platform-tools)), untuk satu setelan yang di sebagian HP gak ada tombolnya. Lihat [phantom process killer](#android-12-ke-atas-phantom-process-killer).
+
+## Langkah instalasi
+
+<Steps>
+
+1. ### Pasang Termux
+
+   Pasang dari [F-Droid](https://f-droid.org/packages/com.termux/), atau dari [rilis GitHub-nya](https://github.com/termux/termux-app/releases): APK `arm64-v8a`, atau yang `universal` kalau ragu. Kalau Android bertanya apakah browser (atau F-Droid) boleh memasang aplikasi, izinkan.
+
+   Jangan dari Google Play: build di sana build terpisah, yang oleh Termux sendiri disebut masih dalam pengembangan dan fiturnya belum lengkap. Termux dan add-on-nya (Termux:Boot, Termux:API) harus dari sumber yang sama. Kalau beda, signature-nya beda, dan Android menolak memasang yang kedua.
+
+   Buka Termux dan tunggu sampai muncul prompt `~ $`. Lalu cek prosesornya:
+
+   ```bash
+   uname -m
+   ```
+
+   `aarch64` berarti bisa lanjut. `armv7l` atau `armv8l` berarti sistemnya 32-bit, dan Nouride gak punya build untuk itu.
+
+2. ### Izinkan Termux berjalan di background
+
+   Android menghentikan aplikasi yang terus bekerja di background. Lakukan ini sebelum memasang apa pun, supaya instalasinya gak terputus di tengah jalan:
+
+   - **Baterai.** Setelan → Aplikasi → Termux → Baterai: pilih **Tidak dibatasi** (HyperOS menyebutnya **Tidak ada pembatasan**). Nama menunya beda-beda tiap merek.
+   - **Wake lock.** Jalankan `termux-wake-lock` di Termux, atau tarik notifikasi Termux lalu tap **Acquire wakelock**. Ini menjaga prosesor tetap bangun waktu layar mati.
+   - **Kunci di recent apps.** Di Xiaomi dan beberapa merek lain: buka daftar aplikasi terbaru, tahan Termux, lalu tap ikon gembok, supaya Termux gak ikut tertutup waktu daftar itu dibersihkan.
+
+3. ### Pasang Debian
+
+   Di Termux:
+
+   ```bash
+   pkg update
+   pkg install proot-distro
+   proot-distro install debian
+   ```
+
+   `pkg update` bertanya dulu sebelum meng-upgrade paket, dan mungkin juga soal file konfigurasi. Tekan Enter untuk memakai jawaban default. Perintah terakhir mengunduh image Debian (sekitar 50 MB) lalu membongkarnya.
+
+4. ### Pasang Nouride di dalam Debian
+
+   Masuk ke Debian. Prompt-nya berubah jadi `root@localhost`:
+
+   ```bash
+   proot-distro login debian
+   ```
+
+   Di dalamnya kamu root (root-nya proot, bukan root HP), jadi gak ada yang perlu `sudo`. Pasang `curl`, sertifikat, dan `procps` (untuk `ps` dan `pkill`, yang gak ada di image Debian yang minimal), lalu jalankan installer:
+
+   ```bash
+   apt update && apt install -y curl ca-certificates procps
+   curl -fsSL @@INSTALL_URL@@ | sh -s -- --host 0.0.0.0 --variant router
+   ```
+
+   `--variant router` memasang edisi Router: Nouride dengan gateway LLM [Nougate](/id/docs/providers/nougate/) di dalam daemon yang sama, di port `18256`. Jadi wizard setup bisa masuk pakai akun model yang sudah kamu punya, gak harus API key, dan HP-nya jadi server Nouride sekaligus gateway model untuk perangkat kamu yang lain.
+
+   `--host 0.0.0.0` membuat perangkat lain di Wi-Fi kamu bisa membuka dashboard, dan memakai gateway-nya dengan key gateway. Pakai di jaringan yang kamu percaya, misalnya Wi-Fi rumah. Hilangkan kalau dua-duanya cukup dipakai dari HP itu saja.
+
+   Installer menulis `no systemd here, so the daemon will be installed but not supervised`. Di proot itu memang wajar. Menjelang akhir ia menampilkan alamat dashboard, misalnya `http://<alamat-IP-HP>:@@PORT@@/dashboard/`. Catat alamat itu.
+
+   Kalau unduhannya gagal (misalnya GitHub menjawab `504`), tunggu sebentar lalu ulangi perintah yang sama.
+
+   Lalu keluar dari Debian dan kembali ke Termux:
+
+   ```bash
+   exit
+   ```
+
+5. ### Jalankan Nouride di background
+
+   Perintah start yang dicetak installer menjalankan daemon di foreground, jadi daemon-nya ikut mati kalau terminal itu ditutup. Jalankan di background saja, lewat script kecil di Termux (bukan di Debian):
+
+   ```bash
+   cat > ~/start-nouride.sh <<'EOF'
+   nohup proot-distro login debian -- su -s /bin/sh nouride -c 'cd @@INSTALL_DIR@@ && exec ./nouride start' >> ~/nouride.log 2>&1 &
+   EOF
+
+   sh ~/start-nouride.sh
+   ```
+
+   Daemon-nya jalan sebagai akun `nouride` yang dibuat installer, dan log-nya masuk ke `~/nouride.log` di Termux. Menjalankan script ini dua kali gak bikin masalah: daemon yang kedua berhenti dengan `another Nouride instance is running`.
+
+   Mulai sekarang biarkan Termux tetap terbuka di recent apps, dan jangan ketik `exit` di sesi terminal terakhirnya. Notifikasi Termux itulah yang menjaga Android gak mematikan Termux, dan daemon di dalamnya ikut terjaga.
+
+   Start pertama mencetak login sementara, **sekali saja**. Baca dari log:
+
+   ```bash
+   grep -A12 'Nouride is ready' ~/nouride.log
+   ```
+
+   Contoh yang muncul:
+
+   ```
+     Nouride is ready. Open the dashboard to finish setting it up:
+
+       http://localhost:@@PORT@@/dashboard/
+
+     or from another device on this network:
+       http://192.168.0.23:@@PORT@@/dashboard/
+
+       username  admin
+       password  <dibuat otomatis>
+   ```
+
+   Alamat kedua, alamat IP HP, cuma muncul kalau instalasinya pakai `--host 0.0.0.0`.
+
+6. ### Buka dashboard
+
+   - Dari HP: buka `@@DASHBOARD_URL@@` di browser HP.
+   - Dari komputer di Wi-Fi yang sama: buka alamat yang dicetak installer. Alamat IP HP juga ada di setelan Wi-Fi-nya: tap jaringan yang sedang tersambung. Router bisa memberi HP alamat lain belakangan, jadi pesan satu alamat untuk HP itu di setelan DHCP router (DHCP static reservation) supaya link-nya tetap jalan.
+
+   Masuk dengan username `admin` dan password dari log. Layar pertama mengganti login sementara itu dengan username dan password kamu sendiri (setelah itu, password di log gak berlaku lagi), lalu wizard menanyakan endpoint model dan agent pertama kamu. Lanjutkan di [Menyalakan Pertama Kali](/id/docs/start/first-run/#buka-dashboard).
+
+   Langkah pertama wizard menerima API key, dan di bawahnya ada **Use Nougate LLM Gateway**: masuk pakai akun yang sudah kamu punya, gak perlu API key. [Cara masuknya →](/id/docs/providers/nougate/#menjalankannya-di-dalam-daemon)
+
+</Steps>
+
+<LinkCard title="Menyalakan Pertama Kali" description="Login milik kamu sendiri, endpoint model, dan agent pertama kamu." href="/id/docs/start/first-run/" />
+
+## Menjaga server tetap aktif
+
+### Android 12 ke atas: phantom process killer
+
+Android 12 ke atas mematikan proses anak aplikasi kalau jumlahnya lebih dari 32 secara total, atau kalau proses itu memakai banyak CPU di background. Sesi Debian, daemon, dan setiap perintah yang dijalankan agent adalah proses anak Termux, jadi agent yang lagi sibuk bisa bikin daemon-nya ikut dimatikan Android.
+
+Matikan pembatasan ini dengan salah satu cara berikut:
+
+- **Opsi Developer: Disable child process restrictions** (terjemahan namanya bisa beda), di Android 14 ke atas kalau HP-nya punya. Opsi Developer muncul setelah kamu tap Nomor Build tujuh kali di Tentang ponsel (nama menunya beda-beda tiap merek; di Xiaomi, Versi OS).
+- **Dari komputer dengan `adb`**, dengan USB debugging atau wireless debugging menyala di Opsi Developer:
+
+  ```bash
+  adb shell device_config set_sync_disabled_for_tests persistent
+  adb shell device_config put activity_manager max_phantom_processes 2147483647
+  adb shell settings put global settings_enable_monitor_phantom_procs false
+  ```
+
+  Dua baris pertama menaikkan batasnya setinggi mungkin supaya gak pernah tercapai, dan menjaga Android gak mengembalikannya ke default. Baris ketiga mematikan pemantauan phantom process di Android 12L ke atas. Di HP Xiaomi, baris ketiga butuh Opsi Developer **USB debugging (Security settings)**, yang minta login akun Mi. Dua baris pertama saja sudah cukup, dan itulah yang dipakai HP pengujian.
+
+  Untuk mengeceknya:
+
+  ```bash
+  adb shell device_config get activity_manager max_phantom_processes
+  ```
+
+  Hasilnya harus `2147483647`.
+
+### Setelah HP restart
+
+Daemon gak nyala sendiri waktu HP menyala lagi. Buka Termux, ambil wake lock lagi, lalu jalankan script-nya:
+
+```bash
+termux-wake-lock
+sh ~/start-nouride.sh
+```
+
+[Termux:Boot](https://github.com/termux/termux-boot) bisa menjalankan script otomatis waktu HP menyala, tapi panduan ini belum mengujinya.
+
+## Operasional harian
+
+Perintah Nouride dijalankan dari Termux, lewat Debian:
+
+```bash
+proot-distro login debian -- nouride doctor
+proot-distro login debian -- nouride gateway
+```
+
+Kalau ada perubahan konfigurasi yang butuh restart, gak ada service manager yang mengerjakannya, jadi restart manual di Termux:
+
+```bash
+pkill -f '^\./nouride start'
+sh ~/start-nouride.sh
+```
+
+Jangan buang `^`-nya. Tanpa itu, `pkill` juga bisa kena shell lain yang baris perintahnya mengandung kata-kata itu, termasuk sesi SSH yang mengetiknya.
+
+Ngetik di keyboard HP lama-lama capek. Untuk kerja dari laptop: di Termux, `pkg install openssh`, taruh public key komputer kamu di `~/.ssh/authorized_keys`, lalu jalankan `sshd`. SSH Termux mendengarkan di port **8022**:
+
+```bash
+ssh -p 8022 <alamat-IP-HP>
+```
+
+## Menghapus instalasi
+
+Hentikan daemon dengan baris `pkill` di atas, lalu hapus Debian dari Termux:
+
+```bash
+proot-distro remove debian
+```
+
+Itu ikut menghapus Nouride dan semua datanya: agent, histori chat, secret, dan akun di gateway-nya. Uninstall Termux juga menghapus semuanya.
