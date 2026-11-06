@@ -65,7 +65,7 @@ let app: Hono;
 /**
  * Make `nouride-oauth` resolvable for this run.
  *
- * The flow lives in `internals/pro/oauth`, outside the workspace, so that
+ * The flow lives in `internals/pro/packages/oauth`, outside the workspace, so that
  * `--external nouride-oauth` can remove it from every edition but `--pro`.
  * That is the whole point of the boundary — and it means a plain checkout has
  * no `node_modules/nouride-oauth` to import.
@@ -96,7 +96,7 @@ const REPO_ROOT = new URL("../../../..", import.meta.url).pathname;
 /**
  * Whether the plugin is on disk at all, which in a public clone it is not.
  *
- * `internals/pro/oauth` is a **private** submodule — the flow is Nouverse's own, and the editions that
+ * `internals/pro/packages/oauth` is a **private** submodule — the flow is Nouverse's own, and the editions that
  * carry it are the ones that are not published. `git clone` without access to it leaves the
  * directory there and empty, so the symlink above would resolve to nothing and every test in this
  * file would fail on an import. Keyed on `package.json`: absent means nobody checked the submodule

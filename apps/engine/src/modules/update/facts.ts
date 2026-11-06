@@ -1,7 +1,7 @@
 /**
  * What this install *is*, gathered so the plugin can decide what to do about it.
  *
- * The split is deliberate and it is the same one `internals/pro/multi-user` draws: the engine
+ * The split is deliberate and it is the same one `internals/pro/packages/multi-user` draws: the engine
  * knows where it lives and what supervises it; the plugin knows what those facts mean.
  * Nothing here decides anything — every value is read, and the one that cannot be read
  * honestly says so rather than guessing.

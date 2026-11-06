@@ -596,7 +596,7 @@ describe("what `/setup/state` says about the bundled gateway", () => {
 
 /**
  * `/appliance/*` — a forward to the Device-only plugin. The engine owns only who may reach it and
- * the prefix; what it serves is the plugin's (`internals/pro/appliance/src/core/box.ts`).
+ * the prefix; what it serves is the plugin's (`internals/pro/packages/appliance/src/core/box.ts`).
  */
 describe("the appliance forward", () => {
   function withAppliance(): { app: Hono; seen: { method: string; path: string; body: string }[] } {

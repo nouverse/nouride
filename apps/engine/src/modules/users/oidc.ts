@@ -1,7 +1,7 @@
 /**
  * What the engine knows about external sign-in — which is deliberately little.
  *
- * The **flow** lives in `internals/pro/oauth`, outside this source tree, so that
+ * The **flow** lives in `internals/pro/packages/oauth`, outside this source tree, so that
  * `--external nouride-oauth` can genuinely remove it from a build. A binary
  * that is not a Pro edition does not contain that code, which is the
  * difference between a feature switched off and a feature that is not there.

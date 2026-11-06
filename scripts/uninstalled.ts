@@ -4,7 +4,7 @@
  *
  * Nougate and the Pro tree keep their own lockfiles, and the root `bun install` does not reach them. In a fresh clone
  * their sources import packages from nowhere, and each check said so once per import, as if the code were broken —
- * `lint:types` with a bare TS2307 for `internals/pro/appliance` and nothing about why (fresh-checkout-hook).
+ * `lint:types` with a bare TS2307 for `internals/pro/packages/appliance` and nothing about why (fresh-checkout-hook).
  *
  * This file is itself tooling, so it is exempt from the Bun and Node rules the engine follows.
  */

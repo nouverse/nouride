@@ -124,8 +124,8 @@ describe("a pointer from the published tree", () => {
     const review = path("archive", ["v0.7.x", "IMPROVEMENT", "PROPOSALS.md"].join("_"));
     expect(real.published("docs/SPEC.md")).toBe(true);
     // The skills live in the private submodule since 2026-11-06; `.agents/skills` is only a link to them.
-    expect(real.published(path("internals", "pro", "agent-skills", "nouride-contributing", "SKILL.md"))).toBe(false);
-    expect(real.paths.has(path("internals", "pro", "agent-skills", "nouride-contributing"))).toBe(true);
+    expect(real.published(path("internals", "pro", ".agents", "skills", "nouride-contributing", "SKILL.md"))).toBe(false);
+    expect(real.paths.has(path("internals", "pro", ".agents", "skills", "nouride-contributing"))).toBe(true);
     // A document only this repository's private half has — there in every job, the public one included.
     expect(real.privateOnly(path("nouride-deploy", "SKILL.md"))).toBe(true);
     // CI's public job has no Pro checkout, and the review is only there (0.7.17's CI found it).

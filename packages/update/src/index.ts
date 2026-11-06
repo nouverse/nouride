@@ -3,7 +3,7 @@
  *
  * ## Why this is a plugin
  *
- * Not for the reason `internals/pro/oauth` and `internals/pro/multi-user` are. Those draw a *licence*
+ * Not for the reason `internals/pro/packages/oauth` and `internals/pro/packages/multi-user` are. Those draw a *licence*
  * boundary: they are externalised out of the free build so a published binary provably does not
  * contain them. This one is linked into **every** edition — an install that cannot tell you it
  * is out of date is worse in the free edition than anywhere else.

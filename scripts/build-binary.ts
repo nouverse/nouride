@@ -3,7 +3,7 @@
  * Build the standalone `nouride` executable — the public editions.
  *
  * `basic` and `router`, and nothing else. The third, `pro`, is built by
- * `internals/pro/build-pro/build.ts`, a private submodule, because which plugins it links and which
+ * `internals/pro/packages/build-pro/build.ts`, a private submodule, because which plugins it links and which
  * markers prove it is commercial information about a product that is not published. Both entry
  * points import the same `scripts/build/core.ts`, so there is one build and two lists.
  *

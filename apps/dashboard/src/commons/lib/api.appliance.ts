@@ -1,7 +1,7 @@
 /**
  * My Box — this Nouride Box's link to a Nouverse account, served by the appliance plugin.
  *
- * Every call goes to `/api/control/appliance/*`, which the engine forwards to `internals/pro/appliance`
+ * Every call goes to `/api/control/appliance/*`, which the engine forwards to `internals/pro/packages/appliance`
  * (Pro only) for admins. On any other edition the route does not exist and these
  * calls answer 404, which the page reads as "this is not a box".
  *

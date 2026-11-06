@@ -23,7 +23,7 @@ import { join } from "node:path";
 
 const ENGINE_SRC = join(import.meta.dir, "../../src");
 /** tests/appliance → tests → engine → apps → repo root. */
-const PLUGIN_DIR = join(import.meta.dir, "../../../../internals/pro/appliance");
+const PLUGIN_DIR = join(import.meta.dir, "../../../../internals/pro/packages/appliance");
 /** The runtime half. `src/ui` is the setup console's React source, built to one HTML file; it is not code the engine loads. */
 const PLUGIN_SRC = join(PLUGIN_DIR, "src", "core");
 

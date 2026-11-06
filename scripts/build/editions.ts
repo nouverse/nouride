@@ -1,7 +1,7 @@
 /**
  * The editions this build script can produce: the two that are published.
  *
- * `pro` is not here and that is deliberate — its recipe lives in `internals/pro/build-pro`, in a
+ * `pro` is not here and that is deliberate — its recipe lives in `internals/pro/packages/build-pro`, in a
  * private submodule, because which plugins it links and which markers prove it is commercial information
  * about a product that is not published. Run it with `bun run build:pro --pro`; the entry point there
  * imports the same core.

@@ -1,11 +1,11 @@
 /**
  * What the engine knows about multi-user capability — which is deliberately little.
  *
- * The **rules** live in `internals/pro/multi-user`, outside this source tree, so that
+ * The **rules** live in `internals/pro/packages/multi-user`, outside this source tree, so that
  * `--external nouride-multi-user` can genuinely remove them from the Basic (free) build.
  * A binary without `--pro` or `--pro` does not contain that code, which is the
  * difference between a feature switched off and a feature that is not there. The same
- * boundary `internals/pro/oauth` draws for Nouverse sign-in.
+ * boundary `internals/pro/packages/oauth` draws for Nouverse sign-in.
  *
  * This file used to hold a boolean and let the routes keep the rules —
  * `if (multiUserSupported()) { …every multi-user decision… }`. That removed the feature

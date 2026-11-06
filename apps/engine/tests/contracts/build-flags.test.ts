@@ -92,7 +92,7 @@ describe("the build script exits on one", () => {
   test("--pro-router is refused by name, from either entry point", async () => {
     // Pro Router became Pro in 0.7.20: a script still passing the flag builds nothing rather than something else.
     const root = new URL("../../../..", import.meta.url).pathname;
-    const entries = ["scripts/build-binary.ts", ...(existsSync(join(root, "internals/pro/build-pro/build.ts")) ? ["internals/pro/build-pro/build.ts"] : [])];
+    const entries = ["scripts/build-binary.ts", ...(existsSync(join(root, "internals/pro/packages/build-pro/build.ts")) ? ["internals/pro/packages/build-pro/build.ts"] : [])];
     for (const entry of entries) {
       const result = await runCommand(["bun", entry, "--target", "linux-x64", "--pro-router"], {
         cwd: root,

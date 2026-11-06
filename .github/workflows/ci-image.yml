@@ -56,7 +56,7 @@ jobs:
   # ── Only the free edition ────────────────────────────────────────────────────
   #
   # `cloud` (now part of Pro) was built here too until 2026-09-17, and it stopped being buildable: it needs
-  # `internals/pro/oauth`, `internals/pro/multi-user` and `internals/pro/build-pro`, all private, none of which this
+  # `internals/pro/packages/oauth`, `internals/pro/packages/multi-user` and `internals/pro/packages/build-pro`, all private, none of which this
   # workflow has a token for. It failed on every push with the Dockerfile's `RUN` step, which reads
   # as a broken image rather than a missing submodule.
   #

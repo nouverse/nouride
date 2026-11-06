@@ -27,7 +27,7 @@ export function registerUserRoutes(control: ControlApp, deps: ControlDeps): void
     /**
      * Whether a second account may exist, and holding which role, is not decided here.
      *
-     * `internals/pro/multi-user` decides it; a Basic build has no such plugin and its policy
+     * `internals/pro/packages/multi-user` decides it; a Basic build has no such plugin and its policy
      * refuses. Keeping the rule out of this file is the point — the route's job is to
      * read a request, ask, and carry the answer back. The bootstrap admin is created by
      * `ensureInitialAdmin` at boot and never arrives here, so every request this sees is
@@ -84,7 +84,7 @@ export function registerUserRoutes(control: ControlApp, deps: ControlDeps): void
     /**
      * Same seam as `POST /users`: whether a role may move — including the rule that the
      * last administrator may not be demoted, because promoting one back requires an
-     * administrator — belongs to `internals/pro/multi-user`. A Basic build refuses the whole
+     * administrator — belongs to `internals/pro/packages/multi-user`. A Basic build refuses the whole
      * route, and it refuses it from there rather than from a condition written here.
      */
     const admission = userPolicy().admitRoleChange({

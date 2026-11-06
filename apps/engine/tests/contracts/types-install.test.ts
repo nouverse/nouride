@@ -2,7 +2,7 @@
  * lint:types names the install a project is waiting for, as lint:seams does.
  *
  * The Pro tree keeps its own lockfile and is installed apart from this workspace, so in a fresh clone
- * `internals/pro/appliance` failed with three TS2307s and nothing said why. `installsInTsc` reads `tsc`'s output for
+ * `internals/pro/packages/appliance` failed with three TS2307s and nothing said why. `installsInTsc` reads `tsc`'s output for
  * them; laid out here as the Pro tree is: a workspace with its lockfile at its root, and a member that declares what it
  * imports.
  */
@@ -35,9 +35,9 @@ const cannotFind = (file: string, specifier: string) => `${file}(1,30): error TS
 describe("tsc's output in a clone whose Pro tree is not installed", () => {
   test("a TS2307 for a package the project declares is the install, run beside the Pro tree's lockfile", () => {
     const output = [
-      cannotFind("internals/pro/appliance/vite.config.ts", "vite"),
-      cannotFind("internals/pro/appliance/vite.config.ts", "@vitejs/plugin-react"),
-      cannotFind("internals/pro/appliance/src/ui.ts", "vite/client"),
+      cannotFind("internals/pro/packages/appliance/vite.config.ts", "vite"),
+      cannotFind("internals/pro/packages/appliance/vite.config.ts", "@vitejs/plugin-react"),
+      cannotFind("internals/pro/packages/appliance/src/ui.ts", "vite/client"),
     ].join("\n");
     expect(installsInTsc(output, root)).toEqual(new Map([["internals/pro", new Set(["vite", "@vitejs/plugin-react"])]]));
   });
@@ -45,10 +45,10 @@ describe("tsc's output in a clone whose Pro tree is not installed", () => {
   test("a TS2307 that no install would fix — undeclared, relative, already installed — and any other error are not", () => {
     mkdirSync(join(root, "internals/pro/node_modules/vite"), { recursive: true });
     const output = [
-      cannotFind("internals/pro/appliance/vite.config.ts", "vite"),
-      cannotFind("internals/pro/appliance/vite.config.ts", "left-pad"),
-      cannotFind("internals/pro/appliance/src/ui.ts", "./missing.ts"),
-      "internals/pro/appliance/src/ui.ts(4,7): error TS2322: Type 'string' is not assignable to type 'number'.",
+      cannotFind("internals/pro/packages/appliance/vite.config.ts", "vite"),
+      cannotFind("internals/pro/packages/appliance/vite.config.ts", "left-pad"),
+      cannotFind("internals/pro/packages/appliance/src/ui.ts", "./missing.ts"),
+      "internals/pro/packages/appliance/src/ui.ts(4,7): error TS2322: Type 'string' is not assignable to type 'number'.",
     ].join("\n");
     expect(installsInTsc(output, root)).toEqual(new Map());
   });

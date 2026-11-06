@@ -31,7 +31,7 @@ const USER_ROLES: readonly UserRole[] = ["admin", "operator", "viewer"];
  * Not exported, and that is the multi-user boundary showing.
  *
  * Validating a role that arrived over the wire is something only a daemon that can be
- * *asked* to change one does, and that daemon is the one carrying `internals/pro/multi-user` —
+ * *asked* to change one does, and that daemon is the one carrying `internals/pro/packages/multi-user` —
  * which declares the same three strings and does the validating there. What is left here
  * is reading a role back out of a row, where the only question is whether the database
  * says something this build understands.

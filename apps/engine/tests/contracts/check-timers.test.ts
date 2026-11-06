@@ -158,7 +158,7 @@ describe("listeners", () => {
 
 describe("where it looks", () => {
   test("what runs in the daemon or the CLI — not tests, and not a page a browser runs", () => {
-    for (const rel of ["apps/engine/src/boot/maintenance.ts", "apps/engine/src/cli/commands/chat.ts", "packages/gateways/src/commons/resilience.ts", "internals/pro/appliance/src/core/onboard/maintenance.ts"]) {
+    for (const rel of ["apps/engine/src/boot/maintenance.ts", "apps/engine/src/cli/commands/chat.ts", "packages/gateways/src/commons/resilience.ts", "internals/pro/packages/appliance/src/core/onboard/maintenance.ts"]) {
       expect({ rel, daemon: isDaemonSource(rel) }).toEqual({ rel, daemon: true });
     }
     for (const rel of [
@@ -167,7 +167,7 @@ describe("where it looks", () => {
       "apps/engine/src/boot/nouride-appliance.d.ts",
       "apps/dashboard/src/main.tsx",
       "packages/ui-graph/src/index.ts",
-      "internals/pro/appliance/src/ui/App.tsx",
+      "internals/pro/packages/appliance/src/ui/App.tsx",
     ]) {
       expect({ rel, daemon: isDaemonSource(rel) }).toEqual({ rel, daemon: false });
     }
@@ -181,13 +181,13 @@ describe("where it looks", () => {
         writeFileSync(join(root, rel), text);
       };
       plant("apps/engine/src/boot/sweep.ts", "setInterval(() => store.sweep(), DAY);\n");
-      plant("internals/pro/appliance/src/core/restart.ts", "setTimeout(() => options.restart(), 500);\n");
+      plant("internals/pro/packages/appliance/src/core/restart.ts", "setTimeout(() => options.restart(), 500);\n");
       plant("apps/engine/tests/sweep.test.ts", "setInterval(() => store.sweep(), DAY);\n");
-      plant("internals/pro/appliance/src/ui/App.tsx", "setInterval(() => void refresh(), 5000);\n");
+      plant("internals/pro/packages/appliance/src/ui/App.tsx", "setInterval(() => void refresh(), 5000);\n");
       const { findings } = await checkTimers(root);
       expect(findings.map((finding) => `${finding.file}:${finding.line}`).sort()).toEqual([
         "apps/engine/src/boot/sweep.ts:1",
-        "internals/pro/appliance/src/core/restart.ts:1",
+        "internals/pro/packages/appliance/src/core/restart.ts:1",
       ]);
     } finally {
       rmSync(root, { recursive: true, force: true });

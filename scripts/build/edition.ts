@@ -12,7 +12,7 @@
  * editions that are not published, and it has no business in a public tree.
  *
  * So an edition is one record. The build core takes it as an argument and names none of them; the
- * public list is `editions.ts` beside this file, and the private list lives in `internals/pro/build-pro`, in a
+ * public list is `editions.ts` beside this file, and the private list lives in `internals/pro/packages/build-pro`, in a
  * submodule.
  *
  * ## What cannot move with it
@@ -38,7 +38,7 @@ export interface PluginSpec {
    * repository, its own directory.
    *
    * Named in the "not checked out" error and in the `git submodule update --init` line it prints, so
-   * it has to be the path git knows. The Pro plugins said `internals/pro/oauth` and the like after `internals/pro`
+   * it has to be the path git knows. The Pro plugins said `internals/pro/packages/oauth` and the like after `internals/pro`
    * became one submodule (2026-09-30), and the line printed failed with "did not match any file(s) known to git".
    * `build-flags.test.ts` holds each one to `.gitmodules`.
    */
@@ -130,7 +130,7 @@ export const NOUGATE: PluginSpec = {
 };
 
 /**
- * The two private plugins, named here and not only in `internals/pro/build-pro`.
+ * The two private plugins, named here and not only in `internals/pro/packages/build-pro`.
  *
  * They have to be: the public editions **exclude** them, and an exclusion has to name what it
  * excludes. That is the check standing between a mistake and a public download carrying code that
@@ -143,7 +143,7 @@ export const NOUGATE: PluginSpec = {
 export const OAUTH: PluginSpec = {
   pkg: "nouride-oauth",
   dir: "internals/pro",
-  pkgDir: "internals/pro/oauth",
+  pkgDir: "internals/pro/packages/oauth",
   // Not `code_challenge_method`, which is short enough to plausibly appear elsewhere one day.
   marker: "the provider did not return an email for this account",
 };
@@ -151,7 +151,7 @@ export const OAUTH: PluginSpec = {
 export const MULTI_USER: PluginSpec = {
   pkg: "nouride-multi-user",
   dir: "internals/pro",
-  pkgDir: "internals/pro/multi-user",
+  pkgDir: "internals/pro/packages/multi-user",
   marker: "multi-user capability provider active in this daemon process",
 };
 
@@ -171,7 +171,7 @@ export const MULTI_USER: PluginSpec = {
 export const APPLIANCE: PluginSpec = {
   pkg: "nouride-appliance",
   dir: "internals/pro",
-  pkgDir: "internals/pro/appliance",
+  pkgDir: "internals/pro/packages/appliance",
   marker: "appliance pairing and licensing active in this daemon process",
 };
 

@@ -42,7 +42,7 @@
     "test:contracts": "bun test --timeout=30000 ./apps/engine/tests/contracts/",
     "cli": "bun run apps/engine/src/cli/main.ts",
     "build:binary": "bun run build:dashboard && bun run scripts/build-binary.ts",
-    "build:pro": "bun run build:dashboard && bun run internals/pro/build-pro/build.ts",
+    "build:pro": "bun run build:dashboard && bun run internals/pro/packages/build-pro/build.ts",
     "bump-version": "bun run scripts/bump-version.ts",
     "build:release": "bun run build:binary --target all",
     "prepare": "git rev-parse --git-dir >/dev/null 2>&1 && git config core.hooksPath .githooks || true",

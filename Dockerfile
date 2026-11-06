@@ -29,7 +29,7 @@
 # `NOUGATE_IN_PROCESS=1`: a pod that wants it no longer needs another image.
 #
 # **The two public images carry no Pro plugin.** Neither has
-# `internals/pro/oauth`, which is the difference between a feature switched off
+# `internals/pro/packages/oauth`, which is the difference between a feature switched off
 # and a feature that is not there. A `NOURIDE_OAUTH_ISSUER` set against one is
 # refused at boot with a sentence saying this build has no external sign-in,
 # rather than ignored.
@@ -138,7 +138,7 @@ RUN if [ -f /app/internals/nougate/apps/backend/package.json ]; then \
 # The edition flag and the entry point, mapped from the build arg.
 #
 # Two entry points since 2026-09-16: `scripts/build-binary.ts` knows the public editions and
-# `internals/pro/build-pro/build.ts` knows the rest, so the recipe for what is not published stays out of
+# `internals/pro/packages/build-pro/build.ts` knows the rest, so the recipe for what is not published stays out of
 # a public tree. Each refuses the other's flags, so a wrong pairing fails at the flag check.
 #
 # `--bundle-only` produces `nouride.bundle.js` rather than a compiled binary: the runtime image has
@@ -152,7 +152,7 @@ RUN if [ -f /app/internals/nougate/apps/backend/package.json ]; then \
 RUN case "$EDITION" in \
       basic)      SCRIPT=scripts/build-binary.ts;     FLAG="" ;; \
       router)     SCRIPT=scripts/build-binary.ts;     FLAG="--router" ;; \
-      pro)        SCRIPT=internals/pro/build-pro/build.ts;  FLAG="--pro" ;; \
+      pro)        SCRIPT=internals/pro/packages/build-pro/build.ts;  FLAG="--pro" ;; \
       *) echo "unknown EDITION: $EDITION" >&2; exit 1 ;; \
     esac && \
     bun run "$SCRIPT" --bundle-only $FLAG

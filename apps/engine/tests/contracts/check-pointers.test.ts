@@ -46,17 +46,17 @@ describe("paths", () => {
   });
 
   test("a path into a submodule that is not checked out is not judged", () => {
-    expect(rules(tree({}, ["internals/pro/"]), "internals/pro/appliance/src/gone.ts")).toEqual([]);
-    expect(rules(tree({}), "internals/pro/appliance/src/gone.ts")).toHaveLength(1);
+    expect(rules(tree({}, ["internals/pro/"]), "internals/pro/packages/appliance/src/gone.ts")).toEqual([]);
+    expect(rules(tree({}), "internals/pro/packages/appliance/src/gone.ts")).toHaveLength(1);
   });
 });
 
 describe("where a path is read from", () => {
-  const PRO = tree({ "internals/pro/docs/RUNBOOK.md": "", "internals/pro/appliance/scripts/build-ui.ts": "", "docs/SPEC.md": "# Spec" });
+  const PRO = tree({ "internals/pro/docs/RUNBOOK.md": "", "internals/pro/packages/appliance/scripts/build-ui.ts": "", "docs/SPEC.md": "# Spec" });
 
   test("inside Pro, from the root, Pro's root or the package the file is in", () => {
     expect(rules(PRO, "see docs/RUNBOOK.md and docs/SPEC.md", "internals/pro/scripts/e2e/README.md")).toEqual([]);
-    expect(rules(PRO, "`scripts/build-ui.ts` inlines it", "internals/pro/appliance/vite.config.ts")).toEqual([]);
+    expect(rules(PRO, "`scripts/build-ui.ts` inlines it", "internals/pro/packages/appliance/vite.config.ts")).toEqual([]);
     expect(rules(PRO, "see docs/GONE.md", "internals/pro/docs/X.md")).toEqual(["path: `docs/GONE.md` is not a tracked file or directory"]);
   });
 

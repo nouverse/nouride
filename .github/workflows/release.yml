@@ -1045,7 +1045,7 @@ jobs:
             edition="${sums#private/CHECKSUMS-}"
             gh release download "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --pattern "nouride-${edition}-*.tar.gz" --dir private --clobber
             # Presigned PUT URLs from the service: this job never holds an R2 credential.
-            bun run internals/pro/build-pro/publish-appliance-release.ts --tag "${GITHUB_REF_NAME}" --edition "${edition}" --dir private
+            bun run internals/pro/packages/build-pro/publish-appliance-release.ts --tag "${GITHUB_REF_NAME}" --edition "${edition}" --dir private
           done
 
   # ── Images ──────────────────────────────────────────────────────────────────

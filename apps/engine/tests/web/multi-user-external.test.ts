@@ -26,7 +26,7 @@ const ENGINE_SRC = join(import.meta.dir, "../../src");
  * level too far, `existsSync` was false everywhere, and the three tests that read the plugin returned early and
  * passed — green with the plugin deleted.
  */
-const PLUGIN_SRC = join(import.meta.dir, "../../../../internals/pro/multi-user/src/index.ts");
+const PLUGIN_SRC = join(import.meta.dir, "../../../../internals/pro/packages/multi-user/src/index.ts");
 
 function source(rel: string): string {
   return readFileSync(join(ENGINE_SRC, rel), "utf8");
@@ -35,7 +35,7 @@ function source(rel: string): string {
 /**
  * Whether the private submodule is checked out, which in a public clone it is not.
  *
- * `internals/pro/multi-user` only ships in editions that are not published, so the repository it lives in
+ * `internals/pro/packages/multi-user` only ships in editions that are not published, so the repository it lives in
  * is private and `git clone` leaves the directory here empty. The drift check below reads its source
  * and cannot run without it.
  *
@@ -45,7 +45,7 @@ function source(rel: string): string {
  * fails on it — which is the bug the note on `PLUGIN_SRC` above describes, where three tests reported
  * themselves green with the plugin deleted.
  */
-const CHECKED_OUT = existsSync(join(import.meta.dir, "../../../../internals/pro/multi-user/package.json"));
+const CHECKED_OUT = existsSync(join(import.meta.dir, "../../../../internals/pro/packages/multi-user/package.json"));
 
 describe("the multi-user plugin is reached only on demand", () => {
   test("no static import of the plugin anywhere in the engine", () => {

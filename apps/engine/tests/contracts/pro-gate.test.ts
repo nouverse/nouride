@@ -110,10 +110,10 @@ describe("the lints", () => {
 
   test.skipIf(!CHECKED_OUT)("typecheck every Pro project it has, and name the packages it has none for", () => {
     const { projects, uncovered } = proProjects(ROOT);
-    expect(projects).toContain("internals/pro/oauth");
-    expect(projects).toContain("internals/pro/build-pro/flash");
+    expect(projects).toContain("internals/pro/packages/oauth");
+    expect(projects).toContain("internals/pro/packages/build-pro/flash");
     // A package is either a project or said to have none; never neither.
-    for (const pkg of ["internals/pro/appliance", "internals/pro/multi-user", "internals/pro/oauth"]) {
+    for (const pkg of ["internals/pro/packages/appliance", "internals/pro/packages/multi-user", "internals/pro/packages/oauth"]) {
       expect(projects.some((project) => project === pkg || project.startsWith(`${pkg}/`)) !== uncovered.includes(pkg)).toBe(true);
     }
   });

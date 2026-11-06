@@ -1,7 +1,7 @@
 /**
  * `/appliance/*` — forwarded to the appliance plugin, for admins, and nothing else.
  *
- * The dashboard's My Box page belongs to `internals/pro/appliance` (Pro only): its state,
+ * The dashboard's My Box page belongs to `internals/pro/packages/appliance` (Pro only): its state,
  * its claim links and what claiming means all live there, behind `handle()`. This file knows none of
  * it — the prefix, the admin check, and the forward. On any other edition, or before the plugin has
  * loaded, `ctx.appliance` is unset and the answer is a 404, the same as a route that does not exist,

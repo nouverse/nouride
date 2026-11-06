@@ -23,7 +23,7 @@
  * code that would make it otherwise is not compiled into it, and a reader should be able to tell which
  * build they hold without reading a flag matrix. This script makes the two published ones — `basic`
  * (no flag) and `--router`, which carries the LLM gateway in this process. The third, `--pro`, is
- * `bun run build:pro`, whose recipe is private (`internals/pro/build-pro`) and imports this same core; it
+ * `bun run build:pro`, whose recipe is private (`internals/pro/packages/build-pro`) and imports this same core; it
  * carries the gateway too, since Pro Router became Pro in 0.7.20. `--target` and `--no-smol` are orthogonal to all
  * of them.
  *
@@ -146,7 +146,7 @@ async function assertDashboardBuilt(): Promise<void> {
 }
 
 /**
- * The Nouride Box setup console (`internals/pro/appliance/src/ui`), rebuilt into the one HTML file the plugin
+ * The Nouride Box setup console (`internals/pro/packages/appliance/src/ui`), rebuilt into the one HTML file the plugin
  * embeds — on every build of an edition that carries the plugin, so the binary never ships a page
  * older than its source. Skipped when the private checkout is absent; the committed file stands in.
  */

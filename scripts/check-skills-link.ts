@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Keeps `.claude/skills` a symlink to `.agents/skills`, and `.agents/skills` one to `internals/pro/agent-skills`.
+ * Keeps `.claude/skills` a symlink to `.agents/skills`, and `.agents/skills` one to `internals/pro/.agents/skills`.
  *
  * The skills describe the homelab this repository is developed on, so since the source went public (2026-11-06) they
  * live in the private submodule; `.agents/skills` points there, which the `project` scope follows (it opens the
@@ -23,9 +23,9 @@
 import { lstat, readlink } from "node:fs/promises";
 
 const ROOT = new URL("../", import.meta.url).pathname;
-const SOURCE = "internals/pro/agent-skills";
+const SOURCE = "internals/pro/.agents/skills";
 const LINKS: [string, string][] = [
-  [".agents/skills", "../internals/pro/agent-skills"],
+  [".agents/skills", "../internals/pro/.agents/skills"],
   [".claude/skills", "../.agents/skills"],
 ];
 

@@ -178,7 +178,7 @@ async function graphInput(): Promise<GraphInput> {
 }
 
 /**
- * Files a `package.json` script runs by path — `build:pro` runs `internals/pro/build-pro/build.ts` — which nothing
+ * Files a `package.json` script runs by path — `build:pro` runs `internals/pro/packages/build-pro/build.ts` — which nothing
  * imports and which are not dead: they are run by name, like `scripts/`.
  */
 const RUN_BY_SCRIPT = new Set(
