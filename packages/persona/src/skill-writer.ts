@@ -193,9 +193,8 @@ export async function archivePoolSkill(agentsDir: string, name: string): Promise
  * directory the daemon can write, so the pattern is what stands between a skill and an arbitrary
  * file write. `..` cannot be spelled in it, and neither can a second slash.
  *
- * Exported because the reflection pass now *reads* support files as well as writing them, and a
- * second pattern for reading would be a second answer to "what may this path be" — the one that
- * drifts is always the copy nobody is looking at.
+ * Writing only: reading follows the directory (`skill-files.ts`), and the reflection pass reads
+ * the files its listing showed it, whatever their case (`apps/engine` reflection `pool.ts`).
  */
 export const VALID_SUPPORT_PATH = /^(references|scripts|templates)\/[a-z0-9][a-z0-9._-]{0,63}$/;
 

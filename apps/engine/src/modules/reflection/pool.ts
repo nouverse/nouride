@@ -10,7 +10,6 @@
 import { createLogger } from "@nouride/shared";
 import { dirname, join, listDir, readTextFileIfExists } from "@nouride/runtime";
 import { agentSkillPool, parseFrontmatter, skillsDirFor, type SkillState } from "@nouride/persona";
-import { VALID_SUPPORT_PATH } from "@nouride/persona";
 import type { DraftsPort } from "./drafts.store.ts";
 
 const log = createLogger("reflection");
@@ -123,12 +122,13 @@ export async function breadthOf(skill: SkillState): Promise<{ bytes: number }> {
 }
 
 /**
- * The support files beside one skill, relative to its directory.
+ * The support files beside one skill, relative to its directory: what the model is shown, and so
+ * what it may read (`readSkillFile`).
  *
  * Resolved through the pool listing for the same reason `readSkill` is: the name comes from a
  * model, and joining it to a path directly would let a chosen string address a directory outside
- * the pool. One level deep only, matching `VALID_SUPPORT_PATH` — nothing writes deeper, so
- * nothing needs to be read deeper.
+ * the pool. One level deep only, under the three directories a skill's writer uses; a dotfile is
+ * not a support file.
  */
 export async function listSkillFiles(pool: SkillState[], name: string): Promise<string[]> {
   const found = pool.find((skill) => skill.name === name);
@@ -137,7 +137,7 @@ export async function listSkillFiles(pool: SkillState[], name: string): Promise<
   const out: string[] = [];
   for (const kind of ["references", "scripts", "templates"]) {
     for (const entry of listDir(join(root, kind))) {
-      if (!entry.isDirectory) out.push(`${kind}/${entry.name}`);
+      if (!entry.isDirectory && !entry.name.startsWith(".")) out.push(`${kind}/${entry.name}`);
     }
   }
   return out;
@@ -148,20 +148,21 @@ export async function listSkillFiles(pool: SkillState[], name: string): Promise<
  *
  * Two boundaries, and both are needed because both inputs come from the model. The *name* is
  * resolved through the pool listing, exactly as `readSkill` does, so a chosen string cannot address
- * a directory outside the pool. The *path* is matched against the same pattern that governs
- * writing — one level, under one of the three known directories — so `../../config.toml` is a
- * miss rather than a read.
+ * a directory outside the pool. The *path* must be one `listSkillFiles` names for that skill, so
+ * `../../config.toml` is a miss rather than a read. Not the pattern that governs writing: its
+ * names are lowercase, and the model was shown `references/INFRASTRUCTURE.md`, asked for it, was
+ * refused, and spent every round of the pass asking again (live, 2026-11-06).
  *
  * `null` for anything that does not resolve. The caller turns that into a sentence naming what was
  * not found, because a model handed an empty string reads the same path again.
  */
 export async function readSkillFile(pool: SkillState[], name: string, path: string): Promise<string | null> {
-  if (!VALID_SUPPORT_PATH.test(path)) {
+  const found = pool.find((skill) => skill.name === name);
+  if (!found) return null;
+  if (!(await listSkillFiles(pool, name)).includes(path)) {
     log.warn("reflection asked to read a path it may not", { skill: name, path });
     return null;
   }
-  const found = pool.find((skill) => skill.name === name);
-  if (!found) return null;
   return await readTextFileIfExists(join(dirname(found.path), path));
 }
 

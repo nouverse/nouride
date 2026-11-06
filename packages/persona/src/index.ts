@@ -83,7 +83,6 @@ export {
   updateExistingSkill,
   validateSupportFiles,
   VALID_SKILL_NAME,
-  VALID_SUPPORT_PATH,
   VALID_INSTALLED_PATH,
   writeNewSkill,
   type SkillDeleteResult,
