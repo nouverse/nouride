@@ -21,6 +21,8 @@ import { floorOf, strandedFloors, type MirrorEntry } from "./mirror-page.ts";
 
 const ROOT = new URL("../../", import.meta.url).pathname;
 const REPO = "nouverse/nouride";
+/** Where the Pro half of a release runs, since the main repository went public (2026-11-06). */
+const PRO_REPO = "nouverse/nouride-pro";
 const SUBMODULES = ["internals/pro", "internals/nougate"] as const;
 
 export type Mode = "ordinary" | "lts" | "quiet";
@@ -212,5 +214,8 @@ if (import.meta.main) {
   console.log(`release.yml: ${release}`);
   const publicHalf = release === "success" ? waitFor(REPO, "public-release.yml", since) : "not started";
   console.log(`the public half: ${publicHalf}`);
-  process.exit(release === "success" && publicHalf === "success" ? 0 : 1);
+  // The Pro editions, their image and the boxes' update, in the private repository the release starts (2026-11-06).
+  const proHalf = release === "success" ? waitFor(PRO_REPO, "release.yml", since) : "not started";
+  console.log(`the Pro half: ${proHalf}`);
+  process.exit(release === "success" && publicHalf === "success" && proHalf === "success" ? 0 : 1);
 }

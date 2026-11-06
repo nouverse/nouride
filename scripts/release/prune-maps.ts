@@ -34,7 +34,7 @@
  * asset is not brought back by the next run. So this lists, and deletes only with `--apply`.
  */
 
-import { INTERNAL_REPO } from "../symbolize.ts";
+import { MAPS_REPO } from "../symbolize.ts";
 
 /** How many of the newest releases keep their maps whatever their age. */
 const KEEP_NEWEST = 10;
@@ -103,7 +103,7 @@ function listReleases(run: Gh): ReleaseMaps[] {
   const jq =
     '.[] | {tag: .tag_name, publishedAt: (if .draft then null else .published_at end), ' +
     'maps: [.assets[] | select(.name | endswith(".map")) | {name, size}]}';
-  const result = run(["api", "--paginate", `repos/${INTERNAL_REPO}/releases?per_page=100`, "--jq", jq]);
+  const result = run(["api", "--paginate", `repos/${MAPS_REPO}/releases?per_page=100`, "--jq", jq]);
   if (result.status !== 0) throw new Error(`gh api: ${result.stderr.trim() || `exit ${result.status}`}`);
   return result.stdout
     .split("\n")
@@ -134,7 +134,7 @@ export function main(argv: readonly string[], run: Gh = gh, now: number = Date.n
   let failed = 0;
   for (const { tag, maps } of plan.prune) {
     for (const { name } of maps) {
-      const result = run(["release", "delete-asset", tag, name, "--repo", INTERNAL_REPO, "--yes"]);
+      const result = run(["release", "delete-asset", tag, name, "--repo", MAPS_REPO, "--yes"]);
       if (result.status === 0) continue;
       failed += 1;
       say(`✗ ${tag} ${name}: ${result.stderr.trim() || `exit ${result.status}`}`);

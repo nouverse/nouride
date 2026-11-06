@@ -12,7 +12,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runCommand } from "@nouride/runtime";
 import { STAMP_FIELD, type RawSourceMap } from "../../../../scripts/build/source-map.ts";
-import { findMap, mapNameFor, symbolize } from "../../../../scripts/symbolize.ts";
+import { findMap, internalRepoFor, mapNameFor, symbolize } from "../../../../scripts/symbolize.ts";
 import { enclosingFunction, errorNames, parseFrames } from "../../../../scripts/symbolize/resolve.ts";
 
 const ROOT = new URL("../../../..", import.meta.url).pathname;
@@ -215,4 +215,11 @@ describe("the map for a build", () => {
     const usage = await run(["bun", "scripts/symbolize.ts", "--version", "0.0.1"]);
     expect(usage.exitCode).toBe(1);
   });
+});
+
+test("a version's maps are read from the private release that holds them: legacy up to 0.8.20, nouride-pro after", () => {
+  expect(internalRepoFor("0.7.10")).toBe("nouverse/nouride-legacy");
+  expect(internalRepoFor("0.8.20")).toBe("nouverse/nouride-legacy");
+  expect(internalRepoFor("0.8.21")).toBe("nouverse/nouride-pro");
+  expect(internalRepoFor("1.0.0")).toBe("nouverse/nouride-pro");
 });

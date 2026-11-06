@@ -41,26 +41,30 @@ function runOf(job: string, step: string): string {
 
 describe("ci.yml", () => {
   const job = jobs(read(".github/workflows/ci.yml")).get("verify-private") ?? "";
+  // The Pro checks themselves, in nouverse/nouride-pro since the main repository went public (2026-11-06).
+  const proVerify = existsSync(join(ROOT, "internals/pro/.github/workflows/verify.yml")) ? read("internals/pro/.github/workflows/verify.yml") : null;
 
-  test("verifies the Pro code on a push, with the private submodules checked out", () => {
-    // Pushes only, and only in nouverse's own repository: a pull request never holds the token, and a fork cannot clone
-    // the private submodules (workflow-repository.test.ts).
+  test("verifies the Pro code on a push, in nouverse/nouride-pro, whose logs are private", () => {
+    // Pushes only, and only in nouverse's own repository: a fork holds no token (workflow-repository.test.ts).
     expect(job).toMatch(/^ {4}if: \$\{\{ !cancelled\(\) && github\.event_name == 'push' && .* && github\.repository_owner == 'nouverse' \}\}$/m);
-    expect(job).toContain("submodule update --init --depth 1 internals/pro internals/nougate");
-    // Through `-c`, so no step after the checkout holds the token.
-    expect(job).toContain("persist-credentials: false");
-    expect(job).toContain('git -c "url.https://x-access-token:${TOKEN}@github.com/.insteadOf=https://github.com/" submodule update');
+    expect(job).toContain('gh workflow run verify.yml --repo nouverse/nouride-pro -f ref="${GITHUB_SHA}"');
+    // Its conclusion decides this job: anything but success fails it.
+    expect(job).toContain('[ "${conclusion}" = "success" ] ||');
+    // Nothing of Pro's is checked out or run here.
+    expect(job).not.toContain("internals/pro");
   });
 
-  test("and runs everything over it: the lints, the whole suite, and a Pro build", () => {
-    for (const step of ["bun run lint:check", "bun run test", "bun run build:pro --pro --bundle-only"]) expect(job).toContain(`- run: ${step}`);
-    expect(job).toContain("working-directory: internals/pro");
+  test.skipIf(proVerify === null)("and that run checks everything over it: the lints, the whole suite, and a Pro build", () => {
+    for (const step of ["bun run lint:check", "bun run test", "bun run build:pro --pro --bundle-only"]) expect(proVerify).toContain(`- run: ${step}`);
+    // The submodules at the commits the main repository pins, not their branches' tips.
+    expect(proVerify).toContain("ref: ${{ steps.pins.outputs.pro }}");
+    expect(proVerify).toContain("ref: ${{ steps.pins.outputs.nougate }}");
   });
 
   test("a missing token fails the job rather than skipping it", () => {
-    const run = spawnSync("sh", ["-c", runOf(job, "Check out the private submodules")], { encoding: "utf8", env: { PATH: process.env.PATH ?? "/usr/bin:/bin", TOKEN: "" } });
+    const run = spawnSync("sh", ["-c", runOf(job, "The Pro checks in nouverse/nouride-pro, for this commit")], { encoding: "utf8", env: { PATH: process.env.PATH ?? "/usr/bin:/bin", GH_TOKEN: "" } });
     expect(run.status).toBe(1);
-    expect(run.stdout).toContain("::error::SUBMODULE_TOKEN is not set");
+    expect(run.stdout).toContain("::error::RELEASES_REPO_TOKEN is not set");
   });
 });
 

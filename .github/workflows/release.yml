@@ -547,6 +547,7 @@ jobs:
           PUBLIC_GH_TOKEN: ${{ secrets.RELEASES_REPO_TOKEN || secrets.GITHUB_TOKEN }}
           QUIET: ${{ steps.quiet.outputs.quiet }}
           LTS: ${{ steps.quiet.outputs.lts }}
+          PUBLIC_REPO: ${{ steps.check.outputs.public_repo }}
         run: |
           # See "Is this a quiet release" above.
           visibility=""
@@ -568,7 +569,10 @@ jobs:
           # commit's subject — so every release page since v0.4.8 has been headed
           # "chore(release): v0.5.2" rather than "v0.5.2". Cosmetic, and it is the first thing
           # anybody sees.
-          if ! gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+          # The internal release, only where this repository is private: in nouverse/nouride, public since 2026-11-06,
+          # the release is the public draft below, and one created here first would be a published release with the
+          # internal notes, and no draft for the public half to publish.
+          if [ "${PUBLIC_REPO}" != "true" ] && ! gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
             echo "creating initial release for ${GITHUB_REF_NAME} on ${GITHUB_REPOSITORY}..."
             gh release create "${GITHUB_REF_NAME}" \
               --repo "${GITHUB_REPOSITORY}" \
@@ -1001,6 +1005,19 @@ jobs:
           done
           gh workflow run public-release.yml --repo nouverse/nouride -f tag="${GITHUB_REF_NAME}" -f quiet="${QUIET:-no}" -f lts="${LTS:-no}"
           echo "::notice::started the public half: https://github.com/nouverse/nouride/actions/workflows/public-release.yml"
+
+      # The Pro half, in nouverse/nouride-pro (2026-11-06): from a public repository nothing of Pro's is built, logged or
+      # kept, so its release workflow builds, signs and publishes the Pro editions, their image and the boxes' update
+      # from this tag. Started after the free editions are signed, as the boxes always came after the public half.
+      - name: Start the Pro half of the release
+        if: needs.guard-visibility.outputs.publish_private_assets != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_REPO_TOKEN }}
+          QUIET: ${{ needs.guard-visibility.outputs.quiet }}
+          LTS: ${{ needs.guard-visibility.outputs.lts }}
+        run: |
+          gh workflow run release.yml --repo nouverse/nouride-pro -f tag="${GITHUB_REF_NAME}" -f quiet="${QUIET:-no}" -f lts="${LTS:-no}"
+          echo "::notice::started the Pro half in nouverse/nouride-pro"
 
       # The publisher is Pro tooling, in `internals/pro` (2026-11-06: nothing of the Box's in the public tree).
       - name: Check out internals/pro, for the box publisher

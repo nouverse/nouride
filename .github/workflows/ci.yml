@@ -196,70 +196,34 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: sh packages/isolation/scripts/test-root.sh
 
-  # The Pro code: the private submodules, checked out, and the same checks over them.
-  #
-  # `verify` checks out no submodule, so the code the Box editions are built from — pairing, licensing, onboarding,
-  # the update source, multi-user, sign-in, flash — was tested, typechecked and linted only when one laptop ran
-  # `bun run verify`: about 215 Pro tests and the engine's drift tests against the plugins' declarations skipped
-  # here, and every Box binary was built from it with every gate green.
-  #
-  # Pushes only, and only in this repository: a pull request — a fork's above all — never holds the token, and the
-  # public tree this repository exports has no private submodules to check. Without the secret it fails rather than
-  # skips: a gate that quietly stops running is how the editions it guards stopped being built (RELEASE_VARIANTS).
-  # release.yml runs the same job on a tag unless this one already passed on that commit.
+  # The Pro code, verified in nouverse/nouride-pro: its verify.yml checks this commit with the private submodules at
+  # their pins (lint, the whole suite, the Pro edition assembled). Not here since 2026-11-06: this repository is public,
+  # and so are its logs, which would say what Pro does. This job starts that run, waits for it, and reports its
+  # conclusion and nothing else; a run that cannot be started or found fails here, never passes. Pushes only, and only
+  # under nouverse: a fork holds no token for it. release.yml asks the same of a tag unless this passed on its commit.
   verify-private:
     needs: [passed, changes]
     if: ${{ !cancelled() && github.event_name == 'push' && needs.changes.outputs.code == 'true' && needs.passed.outputs.verify_private != 'yes' && github.repository_owner == 'nouverse' }}
-    # runs-on: [self-hosted, build-runner]
-    runs-on: ${{ fromJSON(vars.CI_RUNNER || '"ubuntu-24.04"') }}
-    timeout-minutes: 35
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      # The self-hosted runner keeps its working copy between jobs, submodules and all: the last job's private checkout
-      # would be read as this commit's, built into a public image, or stop the next checkout over what its install changed.
-      - name: Start without the last job's submodules
-        run: if git config --get-regexp '^submodule\.' >/dev/null; then git submodule deinit --force --all; fi
-      # Both: the hosted gateway's drift tests read `internals/nougate` as the Pro ones read `internals/pro`, and
-      # one token reads both. Through `-c`, not `git config --global`: no later step holds it, and on the
-      # self-hosted runner a global config would outlive the job.
-      - name: Check out the private submodules
+      - name: The Pro checks in nouverse/nouride-pro, for this commit
         env:
-          TOKEN: ${{ secrets.SUBMODULE_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASES_REPO_TOKEN }}
         run: |
           error() { printf '::%s::%s\n' error "$*"; }
-          if [ -z "${TOKEN}" ]; then
-            error "SUBMODULE_TOKEN is not set, so the Pro code is not verified. It needs read access to nouverse/nouride-pro and nouverse/nougate."
-            exit 1
-          fi
-          git -c "url.https://x-access-token:${TOKEN}@github.com/.insteadOf=https://github.com/" submodule update --init --depth 1 internals/pro internals/nougate
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-        with:
-          bun-version-file: .bun-version
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.bun/install/cache
-          key: bun-private-${{ runner.os }}-${{ hashFiles('bun.lock', 'internals/pro/bun.lock') }}
-          restore-keys: bun-private-${{ runner.os }}-
-      - run: bun install --frozen-lockfile
-      # `internals/pro` is a workspace of its own, with its own lockfile: the setup console's build tools.
-      - run: bun install --frozen-lockfile
-        working-directory: internals/pro
-      # What the hosted-gateway drift tests import (`drizzle-orm`).
-      - run: bun install --production --frozen-lockfile
-        working-directory: internals/nougate/apps/backend
-      # The voice and video tests run ffmpeg, and skip without it.
-      - name: ffmpeg
-        run: command -v ffmpeg >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends ffmpeg; }
-      - run: bun run build:dashboard
-      # With the submodule present `lint:check` covers it too: the Pro tsconfigs in `check-types.ts`, and the size
-      # and dead-code rules over `internals/pro`.
-      - run: bun run lint:check
-      # Its temporary files in the job's own folder, which the runner empties at each job's start and end: what a test
-      # leaves behind cannot pile up on the self-hosted runner's disk (13 GB in `/tmp` filled it on 2026-10-29).
-      - run: bun run test
-        env:
-          TMPDIR: ${{ runner.temp }}
-      # The Pro edition assembles, and carries what it says: `build:pro` asserts its plugins are in the bundle.
-      - run: bun run build:pro --pro --bundle-only
+          [ -n "${GH_TOKEN}" ] || { error "RELEASES_REPO_TOKEN is not set, so the Pro code is not verified."; exit 1; }
+          since=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          gh workflow run verify.yml --repo nouverse/nouride-pro -f ref="${GITHUB_SHA}"
+          run=""
+          for _ in $(seq 1 30); do
+            sleep 5
+            run=$(gh run list --repo nouverse/nouride-pro --workflow verify.yml --event workflow_dispatch --limit 20 \
+              --json databaseId,displayTitle,createdAt --jq ".[] | select(.displayTitle == \"verify ${GITHUB_SHA}\" and .createdAt >= \"${since}\") | .databaseId" | head -n1)
+            [ -n "${run}" ] && break
+          done
+          [ -n "${run}" ] || { error "the Pro checks were started but their run was not found."; exit 1; }
+          gh run watch "${run}" --repo nouverse/nouride-pro --interval 30 >/dev/null 2>&1 || true
+          conclusion=$(gh run view "${run}" --repo nouverse/nouride-pro --json conclusion --jq .conclusion)
+          echo "the Pro checks: ${conclusion}"
+          [ "${conclusion}" = "success" ] || { error "the Pro checks ended '${conclusion}' (their log is in nouverse/nouride-pro)."; exit 1; }

@@ -36,8 +36,19 @@ import { artifactName, EDITIONS, KNOWN_TARGETS, type Edition } from "./targets.t
 const ROOT = new URL("..", import.meta.url).pathname;
 /** Where downloaded maps are kept. Gitignored, and under the checkout so `lint:public` never lists it. */
 export const CACHE_DIR = join(ROOT, ".cache", "symbolize");
-/** The internal release, which is private — the only place a map is uploaded (`release.yml`). */
-export const INTERNAL_REPO = "nouverse/nouride-legacy";
+/** Where the maps of every release from 0.8.21 go; nouverse/nouride-legacy, archived, is read-only. */
+export const MAPS_REPO = "nouverse/nouride-pro";
+
+/**
+ * The private release a version's maps are on. Up to 0.8.20 the main repository was private and kept them on its own
+ * releases, now archived as nouverse/nouride-legacy; from 0.8.21 nouverse/nouride is public and the Pro half of a
+ * release puts them on nouverse/nouride-pro's (its release.yml).
+ */
+export function internalRepoFor(version: string): string {
+  const [major = 0, minor = 0, patch = 0] = version.split(".").map((part) => Number.parseInt(part, 10) || 0);
+  const legacy = major === 0 && (minor < 8 || (minor === 8 && patch <= 20));
+  return legacy ? "nouverse/nouride-legacy" : MAPS_REPO;
+}
 
 export interface BuildId {
   version: string;
@@ -71,7 +82,7 @@ function readMap(path: string): RawSourceMap | null {
 function download(id: BuildId, dir: string): { ok: boolean; detail: string } {
   mkdirSync(dir, { recursive: true });
   const proc = Bun.spawnSync(
-    ["gh", "release", "download", `v${id.version}`, "--repo", INTERNAL_REPO, "--pattern", mapNameFor(id), "--dir", dir, "--clobber"],
+    ["gh", "release", "download", `v${id.version}`, "--repo", internalRepoFor(id.version), "--pattern", mapNameFor(id), "--dir", dir, "--clobber"],
     { stdout: "pipe", stderr: "pipe" },
   );
   return { ok: proc.exitCode === 0, detail: proc.stderr.toString().trim().split("\n")[0] ?? "" };
@@ -125,7 +136,7 @@ export function findMap(
   }
   const got = (opts.fetch ?? download)(id, cacheDir);
   if (!got.ok) {
-    looked.push(`${INTERNAL_REPO} release v${id.version}: ${got.detail || "download failed"}`);
+    looked.push(`${internalRepoFor(id.version)} release v${id.version}: ${got.detail || "download failed"}`);
     return { looked };
   }
   const fetched = found(join(cacheDir, name));
@@ -203,7 +214,7 @@ async function main(argv: string[]): Promise<number> {
     console.error(
       `✗ no source map for nouride ${version} ${edition} ${target} — nothing is resolved, and no other build's map is tried.\n` +
         found.looked.map((line) => `  ${line}`).join("\n") +
-        `\n  The map is ${mapNameFor(id)} on the ${INTERNAL_REPO} release v${version} (internal). ` +
+        `\n  The map is ${mapNameFor(id)} on the ${internalRepoFor(version)} release v${version} (internal). ` +
         `Check the version, edition and target against /health, or rebuild that exact commit to get it.`,
     );
     return 2;
