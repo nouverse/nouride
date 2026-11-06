@@ -16,6 +16,7 @@ import { backupAgents } from "@nouride/persona";
 import { startAgentBackups, startDatabaseBackups, startVaultBackups } from "@/boot/maintenance.ts";
 import { backupVault } from "@/modules/memory/backup.ts";
 import { sleep } from "../helpers.ts";
+import { eventually } from "../wait.ts";
 import { backupDirFor } from "@/commons/backup-dir.ts";
 import { listBackups, newestBackupAt } from "@/db/backup.ts";
 import { DEFAULT_CONFIG } from "@/modules/config/defaults.ts";
@@ -199,7 +200,10 @@ describe("the vault and the packs follow the database's rule", () => {
     for (const minutes of [0, 1, 2]) {
       writeFileSync(join(cfg.memory.dir, "people", "sam.md"), `- changed at boot ${minutes}\n`);
       timers.push(startVaultBackups(cfg, () => NOW + minutes * 60_000));
-      await sleep(30);
+      // The first boot's snapshot on disk before the next boot looks, however slow the runner: a fixed 30 ms let the
+      // second boot start first on CI and take a snapshot of its own (2026-11-06). The later boots take none.
+      if (minutes === 0) await eventually(() => readdirSync(join(dir, "backups", "memory")).sort().at(-1) !== before.at(-1), 4_000, "the first boot's snapshot");
+      else await sleep(30);
     }
     const after = readdirSync(join(dir, "backups", "memory")).sort();
     expect(after).toHaveLength(KEEP);
@@ -221,7 +225,10 @@ describe("the vault and the packs follow the database's rule", () => {
     for (const minutes of [0, 1, 2]) {
       writeFileSync(join(pack, "MEMORY.md"), `- changed at boot ${minutes}\n`);
       timers.push(startAgentBackups(cfg, () => NOW + minutes * 60_000));
-      await sleep(30);
+      // The first boot's snapshot on disk before the next boot looks, however slow the runner: a fixed 30 ms let the
+      // second boot start first on CI and take a snapshot of its own (2026-11-06). The later boots take none.
+      if (minutes === 0) await eventually(() => readdirSync(join(dir, "backups", "agents")).sort().at(-1) !== before.at(-1), 4_000, "the first boot's snapshot");
+      else await sleep(30);
     }
     const after = readdirSync(join(dir, "backups", "agents")).sort();
     expect(after).toHaveLength(KEEP);
