@@ -18,11 +18,11 @@ let root = "";
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), "types-install-"));
   const pro = join(root, "internals/pro");
-  mkdirSync(join(pro, "appliance/src"), { recursive: true });
+  mkdirSync(join(pro, "packages/appliance/src"), { recursive: true });
   writeFileSync(join(root, "bun.lock"), "{}\n");
   writeFileSync(join(pro, "bun.lock"), "{}\n");
-  writeFileSync(join(pro, "package.json"), JSON.stringify({ name: "pro", workspaces: ["appliance"] }));
-  writeFileSync(join(pro, "appliance/package.json"), JSON.stringify({ name: "appliance", devDependencies: { vite: "8.3.0", "@vitejs/plugin-react": "6.1.1" } }));
+  writeFileSync(join(pro, "package.json"), JSON.stringify({ name: "pro", workspaces: ["packages/appliance"] }));
+  writeFileSync(join(pro, "packages/appliance/package.json"), JSON.stringify({ name: "appliance", devDependencies: { vite: "8.3.0", "@vitejs/plugin-react": "6.1.1" } }));
 });
 
 afterEach(() => {

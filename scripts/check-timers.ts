@@ -84,7 +84,7 @@ const HELPER = "contained";
  * Code a browser runs, and so not the daemon: the UI packages, and the setup console's page, which `src/core` imports
  * as text once `build:ui` has made it one HTML file.
  */
-const BROWSER = [/^packages\/ui-[^/]+\//, /^internals\/pro\/[^/]+\/src\/ui\//];
+const BROWSER = [/^packages\/ui-[^/]+\//, /^internals\/pro\/packages\/[^/]+\/src\/ui\//];
 
 /** Operators that combine two values without calling anything a reader would have to look up. */
 const VALUE_OPERATORS = new Set([
@@ -115,7 +115,7 @@ export const MIN_TIMERS = 45;
 export function isDaemonSource(rel: string): boolean {
   if (rel.includes("/tests/") || /\.test\.tsx?$/.test(rel) || rel.endsWith(".d.ts")) return false;
   if (BROWSER.some((pattern) => pattern.test(rel))) return false;
-  return rel.startsWith("apps/engine/src/") || /^packages\/[^/]+\/src\//.test(rel) || /^internals\/pro\/[^/]+\/src\//.test(rel);
+  return rel.startsWith("apps/engine/src/") || /^packages\/[^/]+\/src\//.test(rel) || /^internals\/pro\/packages\/[^/]+\/src\//.test(rel);
 }
 
 /**

@@ -283,7 +283,7 @@ const headings = (markdown: string): string[] =>
 
 /** Where a path written in `from` may be read from: the root, and inside Pro also Pro's root and the package it is in. */
 function bases(from: string): string[] {
-  const pro = /^(internals\/pro\/)([^/]+\/)?/.exec(from);
+  const pro = /^(internals\/pro\/)(packages\/[^/]+\/)?/.exec(from);
   return pro ? ["", pro[1]!, ...(pro[2] ? [`${pro[1]}${pro[2]}`] : [])] : [""];
 }
 
