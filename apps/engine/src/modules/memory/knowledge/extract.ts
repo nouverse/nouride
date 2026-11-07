@@ -43,6 +43,9 @@ export function htmlText(html: string): string {
 
 /** The sections of one file, at most `SECTIONS_MAX`, and what a person is told of the rest. */
 function capped(title: string, sections: Section[]): Extracted {
+  // A scanned PDF reads without an error and without a word: it was "indexed" with nothing in it, and the agent that kept
+  // it was told it could be searched now. It is said instead, as any file that is kept and not searched is.
+  if (sections.length === 0) return { kind: "unreadable", title, reason: "It has no text to search, as a scanned page has none, so it is kept here but not searched." };
   if (sections.length <= SECTIONS_MAX) return { kind: "read", title, sections };
   return { kind: "read", title, sections: sections.slice(0, SECTIONS_MAX), note: `Only its first ${SECTIONS_MAX.toLocaleString("en")} sections are searched.` };
 }

@@ -49,7 +49,7 @@ Nouride membaca Markdown, teks, CSV, halaman web, PDF, Word, Excel, PowerPoint d
 per file. File PDF dan Office dibaca dengan Python, yang tidak ada di image Docker; PDF juga butuh `pdftotext` (atau pypdf
 di Python), dan file lama `.doc`, `.xls` dan `.ppt` butuh LibreOffice. Kalau belum ada, dokumennya memberi tahu dan
 halaman menawarkan untuk memasangnya; setelah terpasang, dokumen terbaca dalam lima menit. Gambar dan video disimpan dan
-didaftar, tidak dicari.
+didaftar, tidak dicari, begitu juga PDF hasil scan, yang tidak berisi teks untuk dibaca.
 
 ## Cara agent memakainya
 

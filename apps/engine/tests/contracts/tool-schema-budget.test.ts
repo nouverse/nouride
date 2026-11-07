@@ -136,7 +136,10 @@ const PER_TOOL = 3_400;
 // 47,850 for `memory_write` keeping a document (0.8.20, ~730): `about` "knowledge" with its `collection`, `title`, `file`
 // and `source` — a document, a file or a link a person hands over goes to the knowledge base, never into a profile or
 // MEMORY.md, and the field is where the model learns which.
-const TOTAL = 47_850;
+// 48,000 for `memory_write` saying a PDF or an Office file is read for its text (0.8.22, ~135): Nestor, asked to keep the
+// owner's legal PDFs, did not know a PDF's text was read and planned to take the text out first, as "a file to keep as it
+// is" said no more; and a scan, with no text, is kept but not searched, which the agent can say before it starts.
+const TOTAL = 48_000;
 
 describe("tool schema budget", () => {
   test("every conditional tool was built, so the total means what it says", () => {

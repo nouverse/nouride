@@ -69,6 +69,27 @@ describe("keeping a document from a chat", () => {
     expect(outside).toMatchObject({ isError: true, content: 'No file "/etc/hosts" that you may read here: an attachment of this chat, or one in your workspace.' });
   });
 
+  test("a file with no text in it is kept, and the agent is told it is not searched and why, never that it can be", async () => {
+    const { h, workspace, keep } = await home();
+    writeFileSync(join(workspace, "blank.txt"), "\n\n");
+    expect(await keep({ collection: "Legal", file: "blank.txt" })).toMatchObject({
+      isError: false,
+      content: 'Kept in "Legal" as blank.txt, a collection made now for the people in this chat. It is kept but not searched: It has no text to search, as a scanned page has none, so it is kept here but not searched.',
+    });
+    expect(existsSync(join(h.knowledgeRoot, "legal", "blank.txt"))).toBe(true);
+  });
+
+  // Nestor, asked to put the owner's legal PDFs in the knowledge base, said it did not know whether a PDF's text could be
+  // read, and planned to take the text out first (2026-11-07): the words said "a file to keep as it is", and no more.
+  test("agents are told a PDF or an Office file is read for its text, to give the file itself, and when one is not searched", async () => {
+    const { h } = await home();
+    const tool = createMemoryWriteTool(h.memory);
+    expect(tool.definition.description).toContain(
+      "A PDF, Word, Excel or PowerPoint file is read for its text, so give the file itself, not text taken out of it; a scan, with no text, is kept but not searched.",
+    );
+    expect(JSON.stringify(tool.definition.parameters)).not.toContain("as it is");
+  });
+
   test("a file sent in the chat is kept under the name it was sent with, not the one it is stored by", async () => {
     const { h, keep, found } = await home();
     const store = new AttachmentStore({ rootDir: join(h.dir, "attachments"), maxBytes: 1024 * 1024 });

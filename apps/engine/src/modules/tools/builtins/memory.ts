@@ -277,7 +277,9 @@ export function createMemoryWriteTool(memory?: MemoryToolsDeps, files?: Pick<Att
             "tastes, plans) right away (change=add, update or remove); their name is `person_record`. " +
             "The rest is filed for you each night. about=knowledge keeps a document someone hands you to keep for " +
             "reference (an SOP, a manual, a file, a page): `collection` names where (a new name makes one for the people " +
-            "here), `title` and the text as `content`, or a `file`; `source` is a page's address. "
+            "here), `title` and the text as `content`, or a `file`; `source` is a page's address. A PDF, Word, Excel or " +
+            "PowerPoint file is read for its text, so give the file itself, not text taken out of it; a scan, with no " +
+            "text, is kept but not searched. "
           : "Update your MEMORY.md. ") +
         "For MEMORY.md, a subject that already has a heading gets `replace_section` on it, sent whole: " +
         "what you leave out of the section is deleted. full_replace is refused.",
@@ -289,7 +291,7 @@ export function createMemoryWriteTool(memory?: MemoryToolsDeps, files?: Pick<Att
                 about: { type: "string", enum: ["agent", "person", "knowledge"], description: '"agent" is your MEMORY.md; "person" is the person you are talking to; "knowledge" is a document kept for reference.' },
                 collection: { type: "string", description: "For about=knowledge: the collection's name." },
                 title: { type: "string", description: "For about=knowledge with `content`: the document's title." },
-                file: { type: "string", description: "For about=knowledge: a file to keep as it is, an attachment of this chat or one in your workspace." },
+                file: { type: "string", description: "For about=knowledge: a file to keep, an attachment of this chat or one in your workspace." },
                 source: { type: "string", description: "For about=knowledge: the address of the page `content` was read from." },
                 section: {
                   type: "string",

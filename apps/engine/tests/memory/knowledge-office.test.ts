@@ -22,7 +22,7 @@ const DOC_PY = join(import.meta.dir, "../../../../content/skills/document-readin
  * A stand-in `doc.py`: what it is asked is counted in a file, and it answers as the real one does — a PDF's text with
  * its page markers, a workbook's sheets one CSV each, or exit 3 naming the program it needs.
  */
-function standIn(dir: string, behaviour: "ok" | "missing" | "no-python"): { script: string; calls: () => number } {
+function standIn(dir: string, behaviour: "ok" | "missing" | "no-python" | "scan"): { script: string; calls: () => number } {
   const script = join(dir, "doc.py");
   const counter = join(dir, "calls");
   writeFileSync(
@@ -36,7 +36,7 @@ if ${behaviour === "no-python" ? "True" : "False"}:
 path = sys.argv[2]
 if path.endswith(".pdf"):
     out = sys.argv[sys.argv.index("--out") + 1]
-    open(out, "w").write("=== page 1 ===\\nOpening.\\n\\nHotels up to Rp 1.5 million.\\n=== page 2 ===\\nMeals with receipts.\\n")
+    open(out, "w").write(${behaviour === "scan" ? '"=== page 1 ===\\n\\n=== page 2 ===\\n"' : '"=== page 1 ===\\nOpening.\\n\\nHotels up to Rp 1.5 million.\\n=== page 2 ===\\nMeals with receipts.\\n"'})
 else:
     tmp = os.environ["TMPDIR"]
     for name, rows in (("Prices", "sku,price\\nA,1\\n"), ("Stock", "sku,qty\\nA,9\\n")):
@@ -99,6 +99,31 @@ describe("read by doc.py", () => {
     const now = standIn(join(dir, "b"), "ok");
     expect((await syncKnowledge({ root, store, now: () => 2, office: { script: now.script, cacheDir: join(dir, "cache") } })).indexed).toBe(1);
     expect(store.document("finance", "policy.pdf")).toMatchObject({ status: "indexed", sections: 1 });
+  });
+
+  // A scanned PDF reads without an error and without a word: the real doc.py notes "almost no text came out" and exits 0.
+  // It was indexed with nothing in it, and the agent that kept it was told it could be searched now (2026-11-07, while
+  // Nestor planned the owner's legal documents into the knowledge base).
+  test("a scan, with no text in it: kept, not searched, says why, and not read again while it is the same", async () => {
+    const dir = tempDir("knowledge-office");
+    const root = join(dir, "knowledge");
+    mkdirSync(join(root, "legal"), { recursive: true });
+    writeFileSync(join(root, "legal", "deed.pdf"), "%PDF-1.4 stand-in");
+    const db = await openAndMigrate(join(dir, "data", "test.db"));
+    const store = new KnowledgeStore(db);
+    const scan = standIn(dir, "scan");
+    const office = { script: scan.script, cacheDir: join(dir, "cache") };
+    expect(await syncKnowledge({ root, store, now: () => 1, office })).toMatchObject({ indexed: 0, notSearched: 1 });
+    expect(store.document("legal", "deed.pdf")).toMatchObject({
+      status: "unreadable",
+      sections: 0,
+      reason: "It has no text to search, as a scanned page has none, so it is kept here but not searched.",
+    });
+    expect(store.document("legal", "deed.pdf")!.needs).toBeUndefined();
+    const calls = scan.calls();
+    expect(calls).toBe(1);
+    expect((await syncKnowledge({ root, store, now: () => 2, office })).unchanged).toBe(1);
+    expect(scan.calls()).toBe(calls);
   });
 
   test("a program missing: not searched, says which, and read at the next sync once it is there", async () => {

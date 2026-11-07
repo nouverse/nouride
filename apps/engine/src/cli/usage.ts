@@ -242,7 +242,7 @@ ${BOLD}Talking to a running daemon${RESET}
   nouride memory embed             Give every conversation and fact a vector (semantic search)
   nouride knowledge [list]         The knowledge base: its collections, who may be answered from each
   nouride knowledge search <words> [--in <collection>]   Sections of the documents that match, best first
-  nouride knowledge add <file> --to <collection>   Add a file to a collection, and read it
+  nouride knowledge add <file> --to <collection>   Add a file to a collection, and read it: text, PDF, Office
   nouride knowledge add - --name <file name> --to <collection>   The same, the file on stdin
   nouride knowledge reindex [collection]   Read again what changed in the knowledge folder
   nouride knowledge archive|unarchive <collection>   Keep a collection without searching it, or search it again
