@@ -320,7 +320,9 @@ describe("agents know where to look", () => {
     const ctx = (tools: string[]) => ({ ctx: { agent: { ...fakeAgent(), skills: [] }, gateway: "web", tools: tools.map((name) => ({ name })) } }) as never;
     expect(renderSkillPolicy(ctx(["skill_search", "skill_install"])).join("\n")).toContain("`skill_search`, then `skill_install`");
     expect(renderSkillPolicy(ctx(["nouride"])).join("\n")).toContain("`nouride skills search <words>`");
-    expect(renderSkillPolicy(ctx(["read"]))).toEqual([]);
+    // An agent with neither is not told of the hubs. With `read` it is still told of a project's own skills (2026-11-07).
+    expect(renderSkillPolicy(ctx(["read"])).join("\n")).not.toContain("public hubs");
+    expect(renderSkillPolicy(ctx([]))).toEqual([]);
   });
 });
 

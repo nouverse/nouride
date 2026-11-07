@@ -190,6 +190,11 @@ wins. A skill there may be a link to a folder elsewhere in the same root, a priv
 example, and it loads like the others. A link out of the root is skipped: naming the root trusts that
 directory, not wherever its links lead.
 
+An agent is told this much about itself. Set to work on a project that has `.agents/skills/` and is
+not one of its skill roots, it reads the skills that fit the task as the project's conventions, the
+way it would read a `CONTRIBUTING` file, and asks you whether to add the project to `skill_roots`. It
+cannot add it itself: its `config.toml` is yours to change.
+
 ### Skills are not configured here
 
 There is one pool at `agents/skills/`, and every agent gets all of it, along with the skills that

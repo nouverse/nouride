@@ -195,6 +195,11 @@ dengan nama sama yang menang. Skill di sana boleh berupa link ke folder lain di 
 misalnya milik submodule privat, dan dimuat seperti yang lain. Link yang keluar dari root dilewati:
 menyebut sebuah root berarti memercayai direktori itu, bukan ke mana pun link-nya mengarah.
 
+Agent tahu soal ini. Saat disuruh mengerjakan proyek yang punya `.agents/skills/` tapi bukan salah
+satu skill root-nya, agent membaca skill yang cocok dengan tugasnya sebagai aturan proyek itu, seperti
+membaca file `CONTRIBUTING`, lalu bertanya ke kamu apakah proyek itu mau ditambahkan ke `skill_roots`.
+Agent gak bisa menambahkannya sendiri: `config.toml`-nya adalah milikmu untuk diubah.
+
 ### Skill gak dikonfigurasi di sini
 
 Ada satu kumpulan di `agents/skills/`, dan semua agent mendapat seluruhnya, ditambah skill bawaan
