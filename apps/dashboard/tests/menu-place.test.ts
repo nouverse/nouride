@@ -6,7 +6,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { placeMenu } from "@/commons/lib/menu-place";
+import { offScreen, placeMenu } from "@/commons/lib/menu-place";
 
 const phone = { width: 393, height: 800 };
 const at = (left: number, top: number, width = 140, height = 36) => ({ left, right: left + width, top, bottom: top + height });
@@ -39,6 +39,13 @@ describe("where a dropdown goes", () => {
     const cramped = placeMenu(at(100, 60), { width: 393, height: 260 }, { width: 200, maxHeight: 300 }, "start");
     expect(cramped.top).toBe(102);
     expect(cramped.maxHeight).toBe(260 - 96 - 6 - 8);
+  });
+
+  test("a menu whose button scrolled out of the window closes, rather than float over the page", () => {
+    expect(offScreen(at(16, -60), phone)).toBe(true);
+    expect(offScreen(at(16, 820), phone)).toBe(true);
+    expect(offScreen(at(16, -20), phone)).toBe(false);
+    expect(offScreen(at(16, 300), phone)).toBe(false);
   });
 
   test("no menu is a daisyUI dropdown tied to a button any more", () => {

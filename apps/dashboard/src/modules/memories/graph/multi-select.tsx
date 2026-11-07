@@ -9,7 +9,7 @@
 import { Check, ChevronDown, Search, X } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { placeMenu } from "@/commons/lib/menu-place";
+import { offScreen, placeMenu } from "@/commons/lib/menu-place";
 
 export interface Choice {
   value: string;
@@ -51,6 +51,10 @@ export function MultiSelect({
     const measure = () => {
       const box = root.current?.getBoundingClientRect();
       if (!box) return;
+      if (offScreen(box, { height: window.innerHeight })) {
+        setOpen(false);
+        return;
+      }
       setPlace({ position: "fixed", ...placeMenu(box, { width: window.innerWidth, height: window.innerHeight }, { width: 256, maxHeight: 340 }, "start") });
     };
     measure();

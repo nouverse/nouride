@@ -21,6 +21,11 @@ export interface Place {
   maxHeight: number;
 }
 
+/** Whether a button has left the window: its menu closes rather than float with nothing under it. */
+export function offScreen(anchor: Box, view: { height: number }): boolean {
+  return anchor.bottom <= 0 || anchor.top >= view.height;
+}
+
 const GAP = 6;
 const MARGIN = 8;
 /** Below this much room under the button, a list opens upwards if there is more room there. */

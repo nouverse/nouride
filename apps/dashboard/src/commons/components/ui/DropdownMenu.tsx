@@ -1,13 +1,13 @@
 /**
  * A button that opens a menu, the one way the dashboard does it: the menu is drawn on `document.body`, placed by
- * `placeMenu` (inside the window, flipped up when there is no room below), and closed by a click elsewhere, Escape, or
- * an item that calls `close`. Replaces daisyUI's `dropdown`, whose fixed-width list tied to the button's edge left a
+ * `placeMenu` (inside the window, flipped up when there is no room below), and closed by a click elsewhere, Escape, an
+ * item that calls `close`, or its button scrolling out of the window. Replaces daisyUI's `dropdown`, whose fixed-width list tied to the button's edge left a
  * phone's screen and slid under the next card.
  */
 
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { placeMenu } from "@/commons/lib/menu-place";
+import { offScreen, placeMenu } from "@/commons/lib/menu-place";
 
 export function DropdownMenu({
   trigger,
@@ -41,6 +41,10 @@ export function DropdownMenu({
     const measure = () => {
       const box = button.current?.getBoundingClientRect();
       if (!box) return;
+      if (offScreen(box, { height: window.innerHeight })) {
+        setOpen(false);
+        return;
+      }
       setPlace({ position: "fixed", ...placeMenu(box, { width: window.innerWidth, height: window.innerHeight }, { width, maxHeight }, align) });
     };
     measure();
