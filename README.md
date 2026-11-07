@@ -1,11 +1,11 @@
 # Nouride
 
 > The source code, official binary releases and container images of [Nouride](https://nouride.com).
-> The source is here to read: Nouride is free for personal and other noncommercial use, under the
-> [PolyForm Noncommercial License 1.0.0](#licence).
+> Use it, change it and share it for anything but a competing product, under the
+> [Functional Source License 1.1](#licence); each version becomes Apache 2.0 two years after its release.
 
 
-[![License: PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/License-PolyForm%20Noncommercial%201.0.0-blue.svg?style=flat-square)](https://polyformproject.org/licenses/noncommercial/1.0.0)
+[![License: FSL-1.1-ALv2](https://img.shields.io/badge/License-FSL--1.1--ALv2-blue.svg?style=flat-square)](https://fsl.software)
 [![GitHub Sponsors](https://img.shields.io/badge/Sponsor-GitHub-ea4aaa?style=flat-square&logo=githubsponsors&logoColor=white)](https://github.com/sponsors/gadingnst) [![Ko-fi](https://img.shields.io/badge/Support-Ko--fi-29abe0?style=flat-square&logo=kofi&logoColor=white)](https://ko-fi.com/gadingnst) [![Trakteer](https://img.shields.io/badge/Support-Trakteer-red?style=flat-square)](https://trakteer.id/gadingnst) [![KaryaKarsa](https://img.shields.io/badge/Support-KaryaKarsa-ffb800?style=flat-square)](https://karyakarsa.com/gadingnst)
 
 [Nouride](https://nouride.com) is an ultra-lightweight, zero-bloat multi-agent AI engine in a single binary daemon. Built for servers, homelabs, and edge/mini devices (Raspberry Pi, Orange Pi, Geekom, NUC, LXC, Docker, a Mac with Apple Silicon), it connects multiple chat platforms (Discord, Telegram, WhatsApp) to isolated AI agents with individual personas, shared skill pools, tool execution approval gates, scheduled work, long missions an agent finishes on its own, and a web dashboard.
@@ -233,20 +233,21 @@ site (`apps/site`) and the packages they share (`packages/`). Nouride Pro's comp
 
 - **Found a bug or crash?** Please **[Open an Issue](https://github.com/nouverse/nouride/issues)**. Include your OS version, architecture (`uname -m`), deployment method (native or Docker), and relevant terminal output.
 - **Feature Proposals:** Have ideas for new homelab integrations, agent tools, or chat adapters? Open an issue with your proposal and rationale.
-- **Pull requests** are welcome. By sending one you agree that Nouverse may use, change and license your contribution as part of Nouride, under any terms, and you confirm that it is yours to give.
+- **Pull requests** are welcome. Before the first one is merged, its author agrees to the [Contributor Licence Agreement](./docs/CLA.md): you keep your copyright, and Nouverse may use your contribution in every edition, under any terms.
 - **Security Inquiries:** For sensitive security concerns, reach out directly to security@nouverse.tech.
 
 ---
 
 ## Licence
 
-Nouride is licensed under the [PolyForm Noncommercial License 1.0.0](./LICENSE). In short:
+Nouride is licensed under the [Functional Source License 1.1, ALv2 Future License](./LICENSE) (`FSL-1.1-ALv2`). In
+short:
 
-- **Free for personal and noncommercial use.** You may read the source and run Nouride for yourself, at home, in a
-  homelab, for a hobby project or for study, and in a noncommercial organization such as a school or a charity.
-- **Change it and share it, noncommercially.** Fix, adapt and extend your own install, and share your changes, for any
-  noncommercial purpose, with these terms beside them.
-- **Commercial use needs a licence** from [Nouverse Technologies](https://nouverse.com).
+- **Use it for anything but a competing product.** At home, in a homelab, at work, inside your company, and to set it
+  up for a client. Change it and share your changes, with these terms beside them.
+- **A competing product needs a licence** from [Nouverse Technologies](https://nouverse.com): Nouride, or something
+  that does what it does, made available to others commercially, such as a hosted Nouride or a device sold with it.
+- **Each version becomes Apache 2.0** two years after it is released.
 - **The Nouride name and logo** are trademarks of Nouverse and are not licensed: a changed copy is not called Nouride.
 
 Licensed separately: the WhatsApp bridge in `packages/wa-bridge` and the built-in skills and agent templates in

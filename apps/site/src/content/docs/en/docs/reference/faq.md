@@ -43,10 +43,11 @@ dashboard's update badge or `nouride update` asks, the public release list on Gi
 request sends nothing about your install.
 
 **Is it open source?**
-The source is public, but not open source: Nouride is under the PolyForm Noncommercial License 1.0.0. It is free for
-personal and other noncommercial use, and for those you may change it and share your changes. Commercial use needs a licence from
-Nouverse Technologies. The WhatsApp bridge and the built-in skills and agent templates are MIT, so you can change the
-agents and skills you run. The source is at [github.com/nouverse/nouride](https://github.com/nouverse/nouride).
+The source is public under the Functional Source License 1.1 (`FSL-1.1-ALv2`), which is not open source yet: you may use
+Nouride for anything but a competing product, at home, at work and for your clients, change it and share your changes.
+Offering Nouride, or something that does what it does, to others as a commercial product or service needs a licence from
+Nouverse Technologies. Each version becomes open source, Apache 2.0, two years after it is released. The WhatsApp bridge
+and the built-in skills and agent templates are MIT, so you can change the agents and skills you run. The source is at [github.com/nouverse/nouride](https://github.com/nouverse/nouride).
 
 ## Setting up
 

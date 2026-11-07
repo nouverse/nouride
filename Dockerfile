@@ -241,17 +241,17 @@ RUN mkdir -p /app/.nouride/data /app/.nouride/agents /app/.nouride/workspace/sha
     && chown -R bun:bun /app/.nouride
 
 # `wa-bridge="1"` on every edition: it stopped being a switch on 2026-09-16.
-# The licence is the repository's own, for every edition: LICENSE is the PolyForm Noncommercial License 1.0.0, and this is its
-# SPDX id, as the manifests say it. The public images once carried `LicenseRef-Nouride`, a placeholder no file defined.
+# The licence is the repository's own, for every edition: LICENSE is the Functional Source License 1.1 with Apache 2.0 as
+# its future licence, and this is its SPDX id, as the manifests say it. The public images once carried `LicenseRef-Nouride`, a placeholder no file defined.
 FROM runtime-base AS edition-basic
-LABEL org.opencontainers.image.licenses="PolyForm-Noncommercial-1.0.0"
+LABEL org.opencontainers.image.licenses="FSL-1.1-ALv2"
 LABEL tech.nouverse.nouride.edition="basic"
 LABEL tech.nouverse.nouride.bundled.wa-bridge="1"
 LABEL tech.nouverse.nouride.bundled.oauth="0"
 
 # The free build plus the LLM gateway, and nothing else.
 FROM runtime-base AS edition-router
-LABEL org.opencontainers.image.licenses="PolyForm-Noncommercial-1.0.0"
+LABEL org.opencontainers.image.licenses="FSL-1.1-ALv2"
 LABEL tech.nouverse.nouride.edition="router"
 LABEL tech.nouverse.nouride.bundled.wa-bridge="1"
 LABEL tech.nouverse.nouride.bundled.nougate="1"
@@ -262,7 +262,7 @@ EXPOSE 18256
 # Everything, the gateway included since 0.7.20. Its frontend is beside the bundle as Router's is,
 # and its port is declared, though nothing listens on it until the gateway is switched on.
 FROM runtime-base AS edition-pro
-LABEL org.opencontainers.image.licenses="PolyForm-Noncommercial-1.0.0"
+LABEL org.opencontainers.image.licenses="FSL-1.1-ALv2"
 LABEL tech.nouverse.nouride.edition="pro"
 LABEL tech.nouverse.nouride.bundled.wa-bridge="1"
 LABEL tech.nouverse.nouride.bundled.nougate="1"

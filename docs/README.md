@@ -17,6 +17,7 @@ explains — so nothing published points at one.
 | [TECH_DECISION.md](./TECH_DECISION.md) | The numbered decisions (TD-001…) other files and code comments cite. |
 | [EVENTS.md](./EVENTS.md) | The event stream's contract — every kind, what a reader can rely on, how it may change. Locked by [contracts/](./contracts/). |
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | How to work in this repo. |
+| [CLA.md](./CLA.md) | The Contributor Licence Agreement a pull request's author agrees to before it is merged. |
 
 ## Operating it
 

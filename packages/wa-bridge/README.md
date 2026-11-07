@@ -163,7 +163,7 @@ events. Bun works; it is the only runtime the bridge runs under now that it live
 
 MIT — see [LICENSE](./LICENSE).
 
-MIT rather than the PolyForm Noncommercial licence the engine carries, because this module is useful on its own
+MIT rather than the Functional Source License the engine carries, because this module is useful on its own
 and shares no code with it: the entire coupling is the wire protocol. The dependencies are MIT too,
 and `shims/libsignal/` exists so that stays true — the npm package `libsignal` is GPL-3.0 and is not
 installed. Nothing here is derived from it; correctness is pinned by known-answer vectors rather than

@@ -4,9 +4,9 @@
  * - **The Bun version** was set in five places that disagreed: CI pinned 1.4.2, the image floated on `1.4-alpine`
  *   (1.4.0 on the machine that checked it), the types said 1.4.0. Patch versions matter here — `fs.ts` records one
  *   that changed what `slice().stream()` returned. `.bun-version` is the one place now.
- * - **The licence id** on the public images was `LicenseRef-Nouride`, a placeholder no file defined. Since 2026-11-06
- *   (the owner) the code is under the PolyForm Noncommercial License 1.0.0, so every manifest and image label says its SPDX id,
- *   `PolyForm-Noncommercial-1.0.0`. `packages/wa-bridge` is MIT and stays so.
+ * - **The licence id** on the public images was `LicenseRef-Nouride`, a placeholder no file defined. The code is under
+ *   the Functional Source License 1.1 with Apache 2.0 as its future licence, so every manifest and image label says its
+ *   SPDX id, `FSL-1.1-ALv2`. `packages/wa-bridge` is MIT and stays so.
  * - **Installs in a release path** ran without a frozen lockfile, so the router artefacts were not reproducible from
  *   their lockfiles and the image and the tarball of one edition could resolve different trees.
  * - **The compose healthchecks** fetched port 18254 while `PORT` moved the daemon.
@@ -82,17 +82,20 @@ describe("the Bun version", () => {
 });
 
 describe("the licence id", () => {
-  // The SPDX id every manifest and image label carries: free to use, change and share for noncommercial purposes.
-  const declared = "PolyForm-Noncommercial-1.0.0";
+  // The SPDX id every manifest and image label carries: any use but a competing one, each version Apache 2.0 two years on.
+  const declared = "FSL-1.1-ALv2";
 
   test("is what LICENSE says, and the manifests say it as npm does", () => {
-    expect(read("LICENSE").split("\n")[0]).toBe("Nouride is licensed under the PolyForm Noncommercial License 1.0.0, below.");
-    expect(read("LICENSE")).toContain("# PolyForm Noncommercial License 1.0.0");
+    expect(read("LICENSE").split("\n")[0]).toBe("Nouride is licensed under the Functional Source License, Version 1.1, ALv2 Future License, below.");
+    expect(read("LICENSE")).toContain("# Functional Source License, Version 1.1, ALv2 Future License");
+    expect(read("LICENSE")).toContain("Copyright 2026 Nouverse Technologies");
+    // The promise that makes it more than a licence to look: each version under Apache 2.0 two years after its release.
+    expect(read("LICENSE")).toContain("effective on the second anniversary of\nthe date we make the Software available");
     for (const path of ["package.json", "apps/engine/package.json"]) {
       expect({ path, license: (JSON.parse(read(path)) as { license?: string }).license }).toEqual({ path, license: declared });
     }
     expect(read("packages/isolation/root/nouride-run/Cargo.toml")).toContain(`license = "${declared}"`);
-    // The bridge is MIT — the owner's call (0.7.10): the bridge open, the rest under the PolyForm Noncommercial terms. Its manifest, its
+    // The bridge is MIT — the owner's call (0.7.10): the bridge open, the rest under the repository's licence. Its manifest, its
     // own LICENSE and the root LICENSE's list of separately licensed parts say the same thing.
     expect((JSON.parse(read("packages/wa-bridge/package.json")) as { license?: string }).license).toBe("MIT");
     expect(read("packages/wa-bridge/LICENSE").split("\n")[0]).toBe("MIT License");

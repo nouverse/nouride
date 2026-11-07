@@ -7,6 +7,22 @@ mistakes, and the testing skill beside it.
 
 ---
 
+## Before your first pull request
+
+Nouride is source-available under the Functional Source License (`LICENSE`), and Nouverse sells editions of it:
+Pro, a hosted service and Enterprise. So a pull request is merged only once its author has agreed to the
+[Contributor Licence Agreement](./CLA.md). You keep the copyright in your work; Nouverse may use it in every edition,
+and under other licence terms later.
+
+You agree once, by commenting on your first pull request:
+
+> I have read the CLA Document and I hereby sign the CLA
+
+If you contribute as part of your job, check with your employer first: section 5 of the agreement asks you to. To
+agree for a company or organization, contact Nouverse through https://nouverse.com before you start.
+
+---
+
 ## Prerequisites
 
 - **Bun 1.4.4** — runtime, package manager, test runner: `.bun-version`, which CI, the images and
@@ -298,7 +314,7 @@ version:
 
 ## License
 
-The [PolyForm Noncommercial License 1.0.0](../LICENSE), Nouverse Technologies: Nouride may be used, changed and shared for
-any noncommercial purpose; commercial use needs a licence. The WhatsApp bridge, `packages/wa-bridge`, and the built-in skills and agent
-templates, `content/`, are MIT. A pull request is a contribution Nouverse may use, change and license as part of Nouride,
-under any terms, as the README says.
+The [Functional Source License 1.1, ALv2 Future License](../LICENSE), Nouverse Technologies: Nouride may be used, changed
+and shared for any purpose but a competing product, and each version becomes Apache 2.0 two years after its release. The
+WhatsApp bridge, `packages/wa-bridge`, and the built-in skills and agent templates, `content/`, are MIT. A pull request
+is merged once its author has agreed to the [Contributor Licence Agreement](./CLA.md), as [above](#before-your-first-pull-request).
