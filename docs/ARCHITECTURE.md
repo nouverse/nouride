@@ -16,7 +16,7 @@ nouride/
 │   ├── engine/                 # @nouride/engine    — the daemon (the one resident process; MCP servers and coding CLIs are its children, §8)
 │   ├── dashboard/              # @nouride/dashboard — React SPA, built to static assets
 │   ├── site/                   # @nouride/site      — the public website: landing + the manual
-│   └── android-appliance/      # private git submodule — the Android app that runs Nouride under proot (Kotlin, Gradle)
+│   └── android-appliance/      # git submodule (public) — Nouride Home, the Android app that runs Nouride under proot (Kotlin, Gradle)
 ├── internals/                  # two private git submodules — not needed for the free edition (§2)
 │   ├── pro/                    # nouride-pro: appliance, multi-user, Nouverse sign-in, the private build
 │   └── nougate/                # the LLM gateway, bundled into the router editions
