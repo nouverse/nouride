@@ -21,6 +21,7 @@ import {
   KeyRound,
   Layers,
   LogOut,
+  ChevronLeft,
   Menu,
   MessageSquare,
   Moon,
@@ -43,6 +44,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import type { ComponentType } from "react";
 import { api } from "@/commons/lib/api";
+import { HOME_APP_BACK, inHomeApp } from "@/commons/lib/home-app";
 import { ReconnectingBanner, ReconnectingScreen, RestartedToast, RestartPendingBar } from "./Reconnecting";
 import { UpdatedBanner } from "./UpdatedBanner";
 import { bundleVersion, staleBundle } from "@/commons/lib/bundle";
@@ -403,6 +405,11 @@ export function RootLayout() {
         {/* Mobile Header — its two buttons a finger's size (40px), where they were 32 and 24. */}
         <header className="bg-base-100/80 backdrop-blur-xl border-b border-base-content/[0.08] shrink-0 z-20 flex h-[calc(3.5rem+env(safe-area-inset-top))] items-center justify-between px-3 pt-[env(safe-area-inset-top)] lg:hidden shadow-xs">
           <div className="flex items-center gap-2">
+            {inHomeApp() && (
+              <a href={HOME_APP_BACK} className="btn btn-ghost btn-square size-10 -mr-1 text-primary active:scale-90 transition-transform" aria-label="Back to Nouride Home">
+                <ChevronLeft size={22} />
+              </a>
+            )}
             <button
               type="button"
               className="btn btn-ghost btn-square size-10 active:scale-90 transition-transform"
