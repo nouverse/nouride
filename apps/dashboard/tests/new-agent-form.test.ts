@@ -67,8 +67,12 @@ describe("the New Agent form", () => {
       expect(text.indexOf("Personality and instructions")).toBeLessThan(text.indexOf("What it can do"));
       const model = host.querySelector('input[role="combobox"]') as HTMLInputElement;
       model.focus();
-      model.dispatchEvent(new (model.ownerDocument.defaultView as unknown as typeof globalThis).FocusEvent("focus", { bubbles: true }));
-      await eventually(() => (dom.document.querySelector('[role="listbox"]')?.textContent ?? "").includes("claude-sonnet-5-5"), 2_000, "the chat models");
+      // A model's list waits for typing, or the arrow keys, which show it whole once the models are in (`Combobox`).
+      const down = () => model.dispatchEvent(new (model.ownerDocument.defaultView as unknown as typeof globalThis).KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+      await eventually(() => {
+        if (!dom.document.querySelector('[role="listbox"]')) down();
+        return (dom.document.querySelector('[role="listbox"]')?.textContent ?? "").includes("claude-sonnet-5-5");
+      }, 2_000, "the chat models");
       expect(dom.document.querySelector('[role="listbox"]')?.textContent).not.toContain("bge-m3");
       expect(dom.document.querySelector('[role="listbox"]')?.textContent).not.toContain("text-embedding");
       model.blur();

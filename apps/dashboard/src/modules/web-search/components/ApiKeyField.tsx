@@ -94,6 +94,7 @@ export function ApiKeyField({
             disabled={disabled}
             placeholder="brave_search_api_key" // plain-words-ok: an example of what this field takes
             customHint="use this name"
+            listOnFocus
           />
         </Field>
       )}

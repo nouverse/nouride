@@ -12,6 +12,11 @@
  * three models that contain it, so a prefix you mean to send verbatim and a prefix you are using to
  * search are both one keystroke from done. The value is propagated as it is typed — the field is the
  * answer, the list is a shortcut — which is why there is no "invalid model" state to get stuck in.
+ *
+ * A model's list comes once something is typed (or on the arrow keys), never on focus alone, and an emptied field shows
+ * none. On a phone a list opened on focus was moved by the keyboard coming up and by every keystroke after, and the
+ * owner picking a model in the setup wizard had it jump under their finger (2026-11-07). A field whose answer is picked
+ * from what is listed, a chat or a stored secret's name, asks for `listOnFocus`: nobody knows a chat's id to type.
  */
 
 import { useLayoutEffect, useRef, useState, type CSSProperties } from "react";
@@ -35,6 +40,8 @@ export interface ComboboxProps {
   id?: string;
   /** Words for an option, shown above it and searched with it — a chat id is a number, "DM · Gading" is a chat. */
   describe?: (option: string) => string | undefined;
+  /** The whole list on focus, for a field answered by picking from it; a model's list waits for typing (see above). */
+  listOnFocus?: boolean;
 }
 
 export function Combobox(props: ComboboxProps) {
@@ -51,6 +58,8 @@ export function Combobox(props: ComboboxProps) {
   const [open, setOpen] = useState(false);
   /** Which row Enter takes. -1 is "none", which is also what a fresh keystroke resets it to. */
   const [active, setActive] = useState(-1);
+  /** The arrow keys asked for the whole list: the one way to see it with nothing typed. */
+  const [browsing, setBrowsing] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [place, setPlace] = useState<CSSProperties | null>(null);
@@ -75,7 +84,7 @@ export function Combobox(props: ComboboxProps) {
    * drawn *under* the next card whatever its z-index — the model picker on an agent's Model tab
    * opened behind the budget card below it.
    */
-  const showing = open && rows.length > 0;
+  const showing = open && rows.length > 0 && (query !== "" || browsing);
   useLayoutEffect(() => {
     if (!showing) return;
     const measure = () => {
@@ -98,6 +107,7 @@ export function Combobox(props: ComboboxProps) {
     setDraft(null);
     setActive(-1);
     setOpen(false);
+    setBrowsing(false);
   };
 
   return (
@@ -113,7 +123,7 @@ export function Combobox(props: ComboboxProps) {
         disabled={props.disabled}
         required={props.required}
         role="combobox"
-        aria-expanded={open && rows.length > 0}
+        aria-expanded={showing}
         aria-autocomplete="list"
         autoComplete="off"
         placeholder={
@@ -131,18 +141,25 @@ export function Combobox(props: ComboboxProps) {
           onChange(e.target.value);
           setActive(-1);
           setOpen(true);
+          setBrowsing(false);
         }}
-        onFocus={() => setOpen(true)}
+        onFocus={() => {
+          if (!props.listOnFocus) return;
+          setOpen(true);
+          setBrowsing(true);
+        }}
         onKeyDown={(e) => {
           if (e.key === "Escape") {
             setOpen(false);
             setActive(-1);
+            setBrowsing(false);
             return;
           }
           if (e.key === "ArrowDown" || e.key === "ArrowUp") {
             if (rows.length === 0) return;
             e.preventDefault();
             setOpen(true);
+            setBrowsing(true);
             const step = e.key === "ArrowDown" ? 1 : -1;
             setActive((index) => {
               const next = index + step;
@@ -168,6 +185,7 @@ export function Combobox(props: ComboboxProps) {
           setDraft(null);
           setActive(-1);
           setOpen(false);
+          setBrowsing(false);
         }}
       />
 

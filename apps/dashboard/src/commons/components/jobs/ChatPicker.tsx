@@ -53,6 +53,7 @@ export function ChatPicker({
           placeholder="Pick a chat, or type its id"
           customHint="use this id"
           required
+          listOnFocus
         />
       </Field>
     </div>

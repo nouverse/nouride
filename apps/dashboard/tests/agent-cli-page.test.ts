@@ -242,7 +242,8 @@ describe("an external agent's Brain tab", () => {
       const field = host.querySelector('input[role="combobox"]') as HTMLInputElement;
       expect(field.placeholder).toBe("Codex's default");
       field.focus();
-      field.dispatchEvent(new (field.ownerDocument.defaultView as unknown as typeof globalThis).FocusEvent("focus", { bubbles: true }));
+      // A model's list waits for typing, or the arrow keys, which show it whole (`Combobox`).
+      field.dispatchEvent(new (field.ownerDocument.defaultView as unknown as typeof globalThis).KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
       await eventually(() => dom.document.querySelector('[role="listbox"]') !== null, 2_000, "the suggestions");
       const listed = dom.document.querySelector('[role="listbox"]')!.textContent ?? "";
       expect(listed).toContain("gpt-5.5-codex");
