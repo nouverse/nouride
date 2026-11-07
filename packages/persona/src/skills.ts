@@ -136,7 +136,7 @@ export async function agentSkillPool(options: {
  * `templates/` sit beside skills in the same tree, and a skill that bundles files is the normal
  * case rather than the exception.
  */
-async function readSkills(
+export async function readSkills(
   skillsDir: string,
   names: string[],
   scope: Skill["scope"],

@@ -23,12 +23,21 @@
  * into a repository it works on can write into that prompt, and a pull request becomes an injection
  * vector. This codebase already marks web content and MCP tool descriptions as untrusted for far
  * less. Naming the roots costs one line of config and removes the entire class.
+ *
+ * ## A skill that is a link
+ *
+ * A repository may keep a skill that is not for everyone in a private submodule and link it by name from
+ * `.agents/skills/` (Nouride's own does, since its source went public on 2026-11-06). Claude Code and Codex follow
+ * such a link; this scope did not, so a Nouride agent working in the same checkout as a coding agent had fewer of
+ * its skills. A link is followed when it leads to a directory **inside the root**: the root is what the operator
+ * named as trusted, and what reads it (`read`'s roots, the credentials guard) is bounded by it. A link out of the
+ * root, to another project or a home directory, is skipped and logged.
  */
 
-import { join, listDir, statFile } from "@nouride/runtime";
+import { escapes, join, listDir, realPathStrict, relative, statFile } from "@nouride/runtime";
 import { createLogger, type LoadedAgent, type Skill } from "@nouride/shared";
 import { PROJECT_SKILLS_DIR } from "./loader.ts";
-import { listSkills, skillEnabled } from "./skills.ts";
+import { readSkills, skillEnabled } from "./skills.ts";
 
 const log = createLogger("agents.project-skills");
 
@@ -38,6 +47,47 @@ const log = createLogger("agents.project-skills");
  * the failure mode without a cap is *other* skills quietly disappearing.
  */
 const MAX_PER_ROOT = 24;
+
+/** A link out of its root, logged once rather than on every turn that skips it. */
+const toldOutside = new Set<string>();
+
+/**
+ * The skill folders under a root's `.agents/skills/`: each directory, and each link to a directory inside the root,
+ * with where it really is. See "A skill that is a link" above.
+ */
+function projectSkillFolders(root: string): { name: string; linkedTo: string | null }[] {
+  const dir = join(root, PROJECT_SKILLS_DIR);
+  const folders: { name: string; linkedTo: string | null }[] = [];
+  let realRoot: string | null | undefined;
+  for (const entry of listDir(dir)) {
+    if (entry.isDirectory) {
+      folders.push({ name: entry.name, linkedTo: null });
+      continue;
+    }
+    if (entry.isFile) continue;
+    // Neither a file nor a directory as the entry itself says: a link, or a socket or pipe, which resolves to nothing.
+    const real = realPathStrict(join(dir, entry.name));
+    if (!real || statFile(real)?.isDirectory !== true) continue;
+    realRoot ??= realPathStrict(root);
+    if (!realRoot || escapes(relative(realRoot, real))) {
+      if (!toldOutside.has(join(dir, entry.name))) {
+        toldOutside.add(join(dir, entry.name));
+        log.warn("project skill links out of its root, not loaded", { root, skill: entry.name, target: real });
+      }
+      continue;
+    }
+    folders.push({ name: entry.name, linkedTo: real });
+  }
+  return folders.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * What `read` must open for one root's skills: its `.agents/skills/`, and where each linked skill really is. `read`
+ * checks a path by where it really leads, so a linked skill named in the prompt by its link was otherwise refused.
+ */
+export function projectSkillReadRoots(root: string): string[] {
+  return [join(root, PROJECT_SKILLS_DIR), ...projectSkillFolders(root).flatMap((f) => (f.linkedTo ? [f.linkedTo] : []))];
+}
 
 interface CacheEntry {
   /** Every skill file's path, size and mtime. Any change to any of them invalidates the entry. */
@@ -80,7 +130,8 @@ export class ProjectSkills {
 
   private async forRoot(root: string): Promise<Skill[]> {
     const dir = join(root, PROJECT_SKILLS_DIR);
-    const signature = this.signatureOf(dir);
+    const names = projectSkillFolders(root).map((folder) => folder.name);
+    const signature = this.signatureOf(dir, names);
 
     // Nothing there: cached as an empty result so a root without skills costs one `readdir` a turn
     // rather than a directory walk.
@@ -90,10 +141,8 @@ export class ProjectSkills {
     // Every skill in the directory, with no toggles applied — everything in a project's `.agents/`
     // was put there deliberately by whoever owns the repository, and the per-agent switch is applied
     // by `forAgent` after the cache.
-    const loaded = await listSkills(dir, "project", {});
-    const skills: Skill[] = loaded
-      .slice(0, MAX_PER_ROOT)
-      .map(({ enabled: _enabled, decided: _decided, ...skill }) => skill);
+    const loaded = await readSkills(dir, names, "project");
+    const skills: Skill[] = loaded.slice(0, MAX_PER_ROOT);
 
     if (loaded.length > MAX_PER_ROOT) {
       // Said out loud rather than truncated silently: a skill that is simply absent from the prompt
@@ -117,13 +166,8 @@ export class ProjectSkills {
    * forever. Per-file size and mtime catches an edit; the sorted name list catches an add or a
    * delete.
    */
-  private signatureOf(dir: string): string {
-    const entries = listDir(dir)
-      .filter((entry) => entry.isDirectory)
-      .map((entry) => entry.name)
-      .sort();
-
-    return entries
+  private signatureOf(dir: string, names: string[]): string {
+    return names
       .map((name) => {
         const stat = statFile(join(dir, name, "SKILL.md"));
         return stat ? `${name}:${stat.size}:${stat.mtimeMs}` : `${name}:absent`;

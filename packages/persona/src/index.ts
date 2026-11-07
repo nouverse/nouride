@@ -19,7 +19,6 @@ export {
   skillsDirFor,
   SHARED_DIR,
   SKILLS_DIR,
-  PROJECT_SKILLS_DIR,
   type DiscoveryResult,
   type LoadAgentOptions,
 } from "./loader.ts";
@@ -57,7 +56,7 @@ export { backupAgents, newestAgentBackupAt, prepareBackupDir, type BackupResult 
 export { CANDIDATES, resolveBuiltinSkillsDir } from "./builtin-skills.ts";
 export { assertCredentialsUnreadable, type CredentialsGuardInput } from "./credentials-guard.ts";
 export { OutboundRegistry } from "./outbound-registry.ts";
-export { ProjectSkills } from "./project-skills.ts";
+export { ProjectSkills, projectSkillReadRoots } from "./project-skills.ts";
 export { AgentRegistry, type AgentFailure, type RegistryOptions } from "./registry.ts";
 export {
   deleteSupportFile,

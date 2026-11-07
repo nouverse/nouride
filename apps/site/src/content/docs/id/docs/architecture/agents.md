@@ -191,7 +191,9 @@ kedua.
 
 Skill milik sebuah skill root ada di `.agents/skills/`-nya, dan skill baru di sana langsung dikenali
 di pesan berikutnya, tanpa reload. Skill itu read-only bagi agent, dan skill kumpulan atau bawaan
-dengan nama sama yang menang.
+dengan nama sama yang menang. Skill di sana boleh berupa link ke folder lain di dalam root yang sama,
+misalnya milik submodule privat, dan dimuat seperti yang lain. Link yang keluar dari root dilewati:
+menyebut sebuah root berarti memercayai direktori itu, bukan ke mana pun link-nya mengarah.
 
 ### Skill gak dikonfigurasi di sini
 

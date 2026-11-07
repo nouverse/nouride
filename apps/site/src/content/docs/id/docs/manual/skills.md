@@ -51,7 +51,7 @@ barisnya:
 |---|---|
 | **Built in** | ikut bersama Nouride, di direktori `skills/` di samping binary, dan diperbarui bersamanya |
 | **Shared** | kumpulan bersama, apa yang kamu dan para agent tulis. Skill kumpulan yang bernama sama dengan skill bawaan mengalahkannya |
-| **Project** | sebuah `SKILL.md` di bawah `.agents/skills/` dalam direktori yang disebut di `[workspace] skill_roots` agent itu. Dibaca ulang setiap giliran, jadi skill yang ditambahkan ke repository berlaku sejak pesan berikutnya |
+| **Project** | sebuah `SKILL.md` di bawah `.agents/skills/` dalam direktori yang disebut di `[workspace] skill_roots` agent itu. Dibaca ulang setiap giliran, jadi skill yang ditambahkan ke repository berlaku sejak pesan berikutnya. Skill di sana yang berupa link ke folder lain di dalam direktori yang sama ikut dimuat |
 
 `[skills] off` di config daemon adalah sumbu yang lain: nama yang gak dimuat siapa pun, apa pun isi
 `skills.toml` mereka. Itu penghapusan, bukan preferensi, dan ada terutama untuk skill bawaan, yang gak

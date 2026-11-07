@@ -11,11 +11,12 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { mkdirSync, rmSync, writeFileSync, utimesSync, mkdtempSync } from "node:fs";
-import type { LoadedAgent } from "@nouride/shared";
-import { ProjectSkills } from "@nouride/persona";
+import { mkdirSync, realpathSync, rmSync, symlinkSync, writeFileSync, utimesSync, mkdtempSync } from "node:fs";
+import type { LoadedAgent, ToolContext } from "@nouride/shared";
+import { ProjectSkills, projectSkillReadRoots } from "@nouride/persona";
 import { fakeAgent } from "../helpers.ts";
-import { rootsFor } from "@/modules/tools/builtins/files.ts";
+import { createReadTool, rootsFor } from "@/modules/tools/builtins/files.ts";
+import { TurnContext } from "@/modules/pipeline/turn-context.ts";
 
 const DIR = mkdtempSync(join(tmpdir(), "nouride-tmp-project-skills-"));
 const PROJECT = join(DIR, "my-project");
@@ -282,5 +283,90 @@ describe("a skill root outside every workspace root is still readable", () => {
     expect(readable).toContain("/home/gading/workspace/my-project/.agents/skills");
     // Read-only: the agent may learn from a repository it cannot modify.
     expect(rootsFor(ctx, "write")).not.toContain("/home/gading/workspace/my-project/.agents/skills");
+  });
+});
+
+describe("a skill linked into .agents/skills from elsewhere in its root", () => {
+  // The layout of a repository that keeps its maintainers' skills in a private submodule and links each by name
+  // (Nouride's own, since 2026-11-06). Claude Code follows the link; this scope skipped it, so a Nouride agent in the
+  // same checkout was missing them.
+  const PRIVATE = join(PROJECT, "internals", "pro");
+  const LINK = join(PROJECT, ".agents", "skills", "release-gate");
+  const readTool = createReadTool();
+
+  function linkSkills(): void {
+    writeSkill(PRIVATE, "release-gate", "What a tag waits on");
+    symlinkSync(join("..", "..", "internals", "pro", ".agents", "skills", "release-gate"), LINK);
+  }
+
+  function readContext(readOnlyRoots: string[]): ToolContext {
+    const workspace = join(DIR, "workspace");
+    mkdirSync(workspace, { recursive: true });
+    return {
+      agentId: "nouva",
+      sessionId: "s",
+      chatId: "c",
+      gateway: "telegram",
+      gatewayId: "telegram:main",
+      senderId: "u",
+      workspaceDir: workspace,
+      agentDir: join(DIR, "pack"),
+      workspaceRoots: [workspace],
+      readOnlyRoots,
+      signal: new AbortController().signal,
+    } as ToolContext;
+  }
+
+  test("is offered, by the link's path", async () => {
+    linkSkills();
+    const skills = await new ProjectSkills().forAgent(agentWith([PROJECT]));
+    expect(skills.map((s) => s.name).sort()).toEqual(["deploy-rules", "release-gate"]);
+    expect(skills.find((s) => s.name === "release-gate")?.path).toBe(join(LINK, "SKILL.md"));
+  });
+
+  test("is readable by `read` at the path the prompt names, and only with its real place a root", async () => {
+    linkSkills();
+    const path = join(LINK, "SKILL.md");
+    const roots = projectSkillReadRoots(PROJECT);
+    expect(roots).toContain(realpathSync(join(PRIVATE, ".agents", "skills", "release-gate")));
+    const read = await readTool.execute({ path }, readContext(roots));
+    expect(read.isError).toBe(false);
+    expect(read.content).toContain("What a tag waits on");
+    // `read` checks where a path really leads: the skills directory alone does not open a linked skill.
+    await expect(readTool.execute({ path }, readContext([join(PROJECT, ".agents", "skills")]))).rejects.toThrow();
+  });
+
+  test("the pipeline gives every turn the linked skill's real place as a read root", () => {
+    linkSkills();
+    const turns = new TurnContext({ tools: new Map(), config: { daemon: { agentsDir: join(DIR, "agents") } } } as never, {} as never, {} as never);
+    const roots = turns.readOnlyRoots(agentWith([PROJECT]), "s");
+    expect(roots).toContain(join(PROJECT, ".agents", "skills"));
+    expect(roots).toContain(realpathSync(join(PRIVATE, ".agents", "skills", "release-gate")));
+  });
+
+  test("a link out of the root is neither offered nor readable", async () => {
+    // The root is what the operator named as trusted; a link in it does not stretch that to another project.
+    symlinkSync(join(OTHER, ".agents", "skills", "malicious"), join(PROJECT, ".agents", "skills", "malicious"));
+    const skills = await new ProjectSkills().forAgent(agentWith([PROJECT]));
+    expect(skills.map((s) => s.name)).toEqual(["deploy-rules"]);
+    expect(projectSkillReadRoots(PROJECT).some((root) => root.includes("cloned-yesterday"))).toBe(false);
+  });
+
+  test("a link with nothing behind it, as in a public clone without the submodule, is skipped", async () => {
+    symlinkSync(join("..", "..", "internals", "pro", ".agents", "skills", "release-gate"), LINK);
+    const skills = await new ProjectSkills().forAgent(agentWith([PROJECT]));
+    expect(skills.map((s) => s.name)).toEqual(["deploy-rules"]);
+    expect(projectSkillReadRoots(PROJECT)).toEqual([join(PROJECT, ".agents", "skills")]);
+  });
+
+  test("an edit behind the link is seen on the next turn", async () => {
+    linkSkills();
+    const project = new ProjectSkills();
+    await project.forAgent(agentWith([PROJECT]));
+    const file = join(PRIVATE, ".agents", "skills", "release-gate", "SKILL.md");
+    writeFileSync(file, "---\nname: release-gate\ndescription: What a tag waits on, now with the upgrade run\n---\n\nBody.\n");
+    utimesSync(file, new Date(), new Date(Date.now() + 5_000));
+    const skills = await project.forAgent(agentWith([PROJECT]));
+    expect(skills.find((s) => s.name === "release-gate")?.description).toBe("What a tag waits on, now with the upgrade run");
   });
 });

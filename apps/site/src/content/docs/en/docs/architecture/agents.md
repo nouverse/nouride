@@ -186,7 +186,9 @@ vector. A repository you cloned yesterday should be the first without being the 
 
 A skill root's skills live in its `.agents/skills/`, and a new one there is picked up on the next
 message, no reload. They are read-only to the agent, and a pool or built-in skill of the same name
-wins.
+wins. A skill there may be a link to a folder elsewhere in the same root, a private submodule's for
+example, and it loads like the others. A link out of the root is skipped: naming the root trusts that
+directory, not wherever its links lead.
 
 ### Skills are not configured here
 

@@ -48,7 +48,7 @@ A skill comes from one of three places, and the agent's **Skills** tab labels ea
 |---|---|
 | **Built in** | ships with Nouride, in the `skills/` directory beside the binary, and updates with it |
 | **Shared** | the pool, what you and the agents write. A pool skill with a built-in's name outranks it |
-| **Project** | a `SKILL.md` under `.agents/skills/` in a directory named in that agent's `[workspace] skill_roots`. Read again every turn, so a skill added to the repository counts from the next message |
+| **Project** | a `SKILL.md` under `.agents/skills/` in a directory named in that agent's `[workspace] skill_roots`. Read again every turn, so a skill added to the repository counts from the next message. A skill there that is a link to a folder elsewhere in the same directory loads too |
 
 `[skills] off` in the daemon config is the other axis: names nobody loads, whatever their own
 `skills.toml` says. That is a removal rather than a preference, and it exists mainly for the

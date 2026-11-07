@@ -21,9 +21,9 @@ import { closeTurn, type ClosedTurn, type InterruptCause } from "@/modules/turns
 import type { TurnJournal } from "@/modules/turns/journal.store.ts";
 import { startJobFor } from "@/modules/jobs/jobs.store.ts";
 import { goalLine } from "@/modules/tools/builtins/delegate-brief.ts";
-import { agentCommandsHaveOwnUsers, ensureDir, join, readFileBytes } from "@nouride/runtime";
+import { agentCommandsHaveOwnUsers, ensureDir, readFileBytes } from "@nouride/runtime";
 import { createLogger, resolveMaxBackground, type Attachment, type ChatMessage, type LoadedAgent, type MessageEnvelope, type SessionKey, type ToolContext, type Tool } from "@nouride/shared";
-import { PROJECT_SKILLS_DIR, skillsDirFor } from "@nouride/persona";
+import { projectSkillReadRoots, skillsDirFor } from "@nouride/persona";
 import { privateWorkspace, scratchpadFor, sharedWorkspace } from "@nouride/persona";
 import { hostReadRoots } from "@/modules/toolchain/facts.ts";
 import { resolveApprovalLevel, type ApprovalResolution } from "@nouride/policy";
@@ -474,7 +474,10 @@ export class TurnContext extends ActiveTurns {
       // project happened to sit *inside* the workspace, which is already a root. A skill root
       // outside one — `~/workspace/my-project`, the case this feature exists for — was advertised
       // in the prompt and then refused by `read`.
-      ...agent.config.skillRoots.map((root) => join(root, PROJECT_SKILLS_DIR)),
+      //
+      // A skill linked into `.agents/skills/` from elsewhere in the root adds where it really is: `read` checks a path
+      // by where it leads, so the link named in the prompt was refused otherwise (`projectSkillReadRoots`).
+      ...agent.config.skillRoots.flatMap((root) => projectSkillReadRoots(root)),
       // HOME and the install's program directories, for an agent that could `cat` them anyway — see
       // `hostReadRoots`. Not for one without a shell: for that agent they would be new reach.
       ...(agent.config.tools.enabled.includes("exec") ? hostReadRoots() : []),

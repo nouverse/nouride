@@ -7,8 +7,8 @@
  * Since the source went public (2026-11-06), what describes the homelab this repository is developed on (the box, the
  * release gate, the private docs) lives in the private submodule; what any contributor needs (the invariants, how a
  * change is proven, the UI kit) is written here. A public clone has the public skills and links with nothing behind
- * them. Claude Code and Codex follow a link per skill; Nouride's `project` scope does not (it walks with
- * `withFileTypes`), so a Nouride agent that needs the private ones names `internals/pro` as a second root.
+ * them. Claude Code and Codex follow a link per skill, and so does Nouride's `project` scope, for a link that stays
+ * inside the root an agent named (`packages/persona/src/project-skills.ts`).
  *
  * Two paths because two families of tooling look in different places, and one directory because a copy drifts.
  *
