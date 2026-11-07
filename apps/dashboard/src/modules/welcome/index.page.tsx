@@ -64,7 +64,7 @@ export default function WelcomePage() {
   const ready = username.trim().length > 0 && next.length >= MIN_PASSWORD_LENGTH && next === confirm;
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center p-4 selection:bg-primary/20 overflow-hidden">
+    <div className="relative flex min-h-screen items-center justify-center p-4 selection:bg-primary/20 overflow-clip">
       {/* Ambient Apple Glow */}
       <div className="absolute top-1/4 -left-32 size-96 rounded-full bg-primary/15 blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 -right-32 size-96 rounded-full bg-secondary/15 blur-3xl pointer-events-none" />

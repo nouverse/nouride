@@ -64,7 +64,7 @@ export default function LoginPage() {
   });
 
   return (
-    <div className="relative flex min-h-screen min-h-dvh items-center justify-center p-4 selection:bg-primary/20 overflow-hidden">
+    <div className="relative flex min-h-screen min-h-dvh items-center justify-center p-4 selection:bg-primary/20 overflow-clip">
       {/* Subtle Ambient Apple Glow */}
       <div className="absolute -top-40 -left-40 size-96 rounded-full bg-primary/15 blur-3xl pointer-events-none" />
       <div className="absolute -bottom-40 -right-40 size-96 rounded-full bg-secondary/15 blur-3xl pointer-events-none" />

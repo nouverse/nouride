@@ -33,7 +33,7 @@ export default function SetupPage() {
   const step = !state?.hasProvider ? 1 : !state.hasAgent ? 2 : 3;
 
   return (
-    <div className="relative min-h-screen py-10 px-4 flex flex-col items-center justify-center selection:bg-primary/20 overflow-hidden">
+    <div className="relative min-h-screen py-10 px-4 flex flex-col items-center justify-center selection:bg-primary/20 overflow-clip">
       {/* Ambient Apple Glow */}
       <div className="absolute top-0 left-1/4 size-96 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
       <div className="absolute bottom-0 right-1/4 size-96 rounded-full bg-secondary/10 blur-3xl pointer-events-none" />
