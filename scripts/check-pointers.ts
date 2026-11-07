@@ -52,9 +52,10 @@
  *
  * Paths into `internals/pro` and `internals/nougate` are checked only when that submodule is checked out —
  * a public clone does not have them, and a pointer that cannot be read cannot be judged. The same goes for a
- * bare file name that is not in the public tree while Pro is absent. Nougate is never a bare name's answer: it
- * is another product with its own repository, so a file of it is named by its path, which is judged when it is
- * checked out. Bare names therefore pass or fail the same with Nougate checked out or not — they used to be
+ * bare file name that is not in the public tree while Pro is absent. Nougate and the Android app
+ * (`apps/android-appliance`) are never a bare name's answer: each is another product with its own repository, so a file
+ * of it is named by its path, which is judged when it is checked out, and its own files are not read for pointers. A
+ * submodule that is not checked out is absent, so a pointer into it is not judged either. Bare names therefore pass or fail the same with Nougate checked out or not — they used to be
  * judged only while it was, so a hook run with Pro alone passed what the full check failed.
  *
  * ## The ways this could pass while checking nothing
@@ -158,8 +159,13 @@ export const NOT_POINTERS: Readonly<Record<string, string>> = {
   "appliances.admin.controller.ts": "in the Nouverse service's repository, not this one",
 };
 
-/** Another product's tree: judged by path when it is checked out, and never the answer to a bare file name. */
-const OTHER_PRODUCT = "internals/nougate/";
+/**
+ * Other products' trees: judged by path when they are checked out, never the answer to a bare file name, and their own
+ * files not read for pointers, which are to their own repository's paths. Nougate, and the Android app (2026-11-07):
+ * four of its scripts' paths were findings from this root the day it became a submodule.
+ */
+const OTHER_PRODUCTS = ["internals/nougate/", "apps/android-appliance/"];
+const otherProduct = (rel: string): boolean => OTHER_PRODUCTS.some((dir) => rel.startsWith(dir));
 
 /**
  * Whether git ignores `rel`: a build output or a scratch directory is somewhere, just not tracked. Asked as a
@@ -177,7 +183,7 @@ export function indexOf(files: Iterable<string>): { dirs: Set<string>; byBase: M
   const byBase = new Map<string, string[]>();
   for (const file of files) {
     for (let dir = dirname(file); dir !== "."; dir = dirname(dir)) dirs.add(dir);
-    if (file.startsWith(OTHER_PRODUCT)) continue;
+    if (otherProduct(file)) continue;
     const base = basename(file);
     byBase.set(base, [...(byBase.get(base) ?? []), file]);
   }
@@ -190,10 +196,16 @@ export function buildIndex(root = ROOT): Index {
   // submodule's `ls-files` would read that one and list none of its own files.
   const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_")));
   const ls = (cwd: string): string[] => Bun.spawnSync(["git", "ls-files", "-z"], { cwd, env }).stdout.toString().split("\0").filter(Boolean);
+  // A submodule's entry, checked out or not: one that is not (Pro's CI has no Android app) is absent, not a file.
+  const gitlinks = new Set(
+    Bun.spawnSync(["git", "ls-files", "-s", "-z"], { cwd: root, env }).stdout.toString().split("\0")
+      .filter((line) => line.startsWith("160000 "))
+      .map((line) => line.slice(line.indexOf("\t") + 1)),
+  );
   const files = new Set<string>();
   const absent: string[] = [];
   for (const rel of ls(root)) {
-    if (existsSync(join(root, rel, ".git")) || (rel.startsWith("internals/") && !rel.includes("/", "internals/".length))) {
+    if (existsSync(join(root, rel, ".git")) || gitlinks.has(rel) || (rel.startsWith("internals/") && !rel.includes("/", "internals/".length))) {
       if (existsSync(join(root, rel, "package.json")) || existsSync(join(root, rel, ".git"))) for (const sub of ls(join(root, rel))) files.add(`${rel}/${sub}`);
       else absent.push(`${rel}/`);
       continue;
@@ -310,7 +322,7 @@ export function pointerProblems(index: Index, text: string, from: string, offset
   const add = (at: number, rule: string, detail: string): void => {
     out.push({ file: from, line: lineAt(whole, offset + at), rule, detail });
   };
-  const someAbsent = index.absent.some((dir) => dir !== OTHER_PRODUCT);
+  const someAbsent = index.absent.some((dir) => !OTHER_PRODUCTS.includes(dir));
 
   for (const m of text.matchAll(PATH)) {
     const token = m[1]!.replace(/[.\]]+$/, "");
@@ -482,7 +494,7 @@ export function check(index: Index, root = ROOT): { findings: Finding[]; pointer
   const findings: Finding[] = [];
   let pointers = 0;
   for (const rel of [...index.files].sort()) {
-    if (rel.includes("/node_modules/") || rel.startsWith("internals/nougate/")) continue;
+    if (rel.includes("/node_modules/") || otherProduct(rel)) continue;
     const doc = isDoc(rel);
     const code = isCode(rel) && isScript(rel);
     const hashed = isHashed(rel);

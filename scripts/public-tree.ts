@@ -2,7 +2,7 @@
  * Which tracked files are published — one answer, read by `check-public.ts`.
  *
  * Since 2026-11-06 this repository is public (`nouverse/nouride`), so everything it tracks is published but
- * `internals/`, the private submodules: the Pro code and its tooling, the internal docs, and the agent skills that
+ * `internals/` and every submodule (`apps/android-appliance` is one too): the Pro code and its tooling, the internal docs, and the agent skills that
  * describe the homelab (each a link in `.agents/skills` into `internals/pro`; the public ones are written there).
  * */
 
