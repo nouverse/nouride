@@ -8,7 +8,7 @@
 
 import { Link, Outlet, useMatches, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Box,
   Bot,
@@ -189,6 +189,10 @@ const NAV: { group: string; items: NavItem[] }[] = [
 export function RootLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const search = useRouterState({ select: (s) => s.location.searchStr });
+  // The page actually drawn: the location moves at once on a navigation, the matched page only once its route is in.
+  const drawnPath = useRouterState({ select: (s) => s.resolvedLocation?.pathname ?? s.location.pathname });
+  /** Where a gate redirect went, until that page is the one drawn (see the spinner below). */
+  const redirectedTo = useRef<string | null>(null);
   /**
    * Pages that own the viewport rather than growing past it.
    *
@@ -222,14 +226,24 @@ export function RootLayout() {
 
   useEffect(() => {
     // `href`, not `to`: the login form's address carries the page it goes on to (`?next=`).
-    if (gate.redirectTo) void navigate({ href: gate.redirectTo });
+    if (!gate.redirectTo) return;
+    redirectedTo.current = new URL(gate.redirectTo, "http://dashboard.invalid").pathname;
+    void navigate({ href: gate.redirectTo });
   }, [gate.redirectTo, navigate]);
+
+  useEffect(() => {
+    if (redirectedTo.current !== null && drawnPath === redirectedTo.current) redirectedTo.current = null;
+  }, [drawnPath]);
 
   useEffect(() => setDrawerOpen(false), [pathname]);
 
   const { signOut, dialog: signOutDialog } = useSignOut();
 
-  if (gate.loading) {
+  // Also while a redirect is on its way, until the page it goes to is the one drawn: the page asked for was drawn first,
+  // and then again while the next page's route came in, so an unfinished install opened at Overview showed Overview,
+  // then the setup wizard (Nouride Home, 2026-11-07).
+  const arriving = redirectedTo.current !== null && drawnPath !== redirectedTo.current;
+  if (gate.loading || gate.redirectTo || arriving) {
     return (
       <div className="bg-base-200/60 flex min-h-screen items-center justify-center">
         <span className="loading loading-spinner loading-lg text-primary opacity-60" />

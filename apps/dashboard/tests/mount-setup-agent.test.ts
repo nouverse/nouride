@@ -33,3 +33,24 @@ test("the setup wizard's first agent is a Pilot named NouridePilot, the Pilot's 
     record.restore();
   }
 });
+
+// Nouride Home's first open of the dashboard (2026-11-07): an unfinished install opened at Overview drew Overview for a
+// moment, then went to the setup wizard. The page asked for is not drawn while the redirect is on its way.
+test("an unfinished install opened at Overview goes to the setup wizard without drawing Overview first", async () => {
+  answer({ "/setup/state": { status: 200, body: { complete: false, hasAdmin: true, hasUser: true, hasProvider: false, hasAgent: false } } });
+  let drewOverview = false;
+  const observer = new MutationObserver(() => {
+    if ((document.body.textContent ?? "").includes("Overview")) drewOverview = true;
+  });
+  observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+  try {
+    const html = await renderPage("/", async (host, app) => {
+      await eventually(() => app.location() === "/dashboard/setup" || app.location() === "/setup", 2_000, "sent to the setup wizard");
+      await eventually(() => (host.textContent ?? "").includes("Set up Nouride"), 2_000, "the wizard drawn");
+    });
+    expect(html).toContain("Set up Nouride");
+  } finally {
+    observer.disconnect();
+  }
+  expect(drewOverview).toBe(false);
+});
