@@ -117,7 +117,9 @@ describe("a pointer from the published tree", () => {
   });
 
   // Not in a public export, which has no private half to read.
-  test.skipIf(!existsSync(join(import.meta.dir, "../../../../.agents/skills")))("is judged against the real private tree, which it reads whole", async () => {
+  // Skipped by whether Pro's skills are there, not `.agents/skills`: since 5eaa9ec3 that is a directory of its own
+  // in every checkout, and the public CI job, which has no Pro, ran this and failed.
+  test.skipIf(!existsSync(join(import.meta.dir, "../../../../internals/pro/.agents/skills")))("is judged against the real private tree, which it reads whole", async () => {
     // A tree read wrong finds nothing private and passes everything.
     const real = await privateTree();
     // The review, archived into Pro when 0.7.x closed: a document only the private tree has.
