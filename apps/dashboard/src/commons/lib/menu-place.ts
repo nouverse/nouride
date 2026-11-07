@@ -23,7 +23,8 @@ export interface Place {
 
 /** Whether a button has left the window: its menu closes rather than float with nothing under it. */
 export function offScreen(anchor: Box, view: { height: number }): boolean {
-  return anchor.bottom <= 0 || anchor.top >= view.height;
+  // Strictly past an edge: a box with no layout (0 by 0 at the corner) is not taken for one that scrolled away.
+  return anchor.bottom < 0 || anchor.top > view.height;
 }
 
 const GAP = 6;
