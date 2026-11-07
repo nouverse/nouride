@@ -140,7 +140,8 @@ describe("the memory graph", () => {
     const html = await renderPage("/memories/graph", async (host) => {
       (host.querySelector('button[aria-label="People"]') as HTMLElement).click();
       await frames();
-      const gading = [...host.querySelectorAll('[role="option"]')].find((option) => option.textContent?.includes("Gading")) as HTMLElement;
+      // The list is drawn on the page's body, not inside the filter (`placeMenu`): looked for there.
+      const gading = [...document.querySelectorAll('[role="option"]')].find((option) => option.textContent?.includes("Gading")) as HTMLElement;
       gading.click();
       await frames();
     });

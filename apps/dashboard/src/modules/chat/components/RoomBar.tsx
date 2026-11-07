@@ -17,6 +17,7 @@ import { Check, Plus, Trash2, Users, X } from "lucide-react";
 import { api, type Room } from "@/commons/lib/api";
 import { useConfirm } from "@/commons/components/ui/confirm";
 import { useToast } from "@/commons/components/ui/toast";
+import { DropdownMenu } from "@/commons/components/ui/DropdownMenu";
 
 export function RoomBar({ room }: { room: Room }) {
   const navigate = useNavigate();
@@ -168,31 +169,32 @@ export function RoomBar({ room }: { room: Room }) {
         ))}
 
         {available.length > 0 && (
-          <div className="dropdown dropdown-end">
-            <button
-              type="button"
-              tabIndex={0}
-              className="btn btn-ghost btn-xs btn-square rounded-lg"
-              aria-label="Add an agent"
-            >
-              <Plus size={13} />
-            </button>
-            <ul className="dropdown-content menu z-30 mt-1 w-52 rounded-xl border border-base-content/[0.08] bg-base-100 p-1.5 shadow-lg">
-              {available.map((agent) => (
+          <DropdownMenu
+            trigger={<Plus size={13} />}
+            triggerClassName="btn btn-ghost btn-xs btn-square rounded-lg"
+            ariaLabel="Add an agent"
+            width={208}
+            menuClassName="rounded-xl border border-base-content/[0.08] bg-base-100 p-1.5 shadow-lg"
+          >
+            {(close) =>
+              available.map((agent) => (
                 <li key={agent.id}>
                   <button
                     type="button"
                     className="text-xs"
                     disabled={addMember.isPending}
-                    onClick={() => addMember.mutate(agent.id)}
+                    onClick={() => {
+                      close();
+                      addMember.mutate(agent.id);
+                    }}
                   >
                     <span className="font-mono">@{agent.id}</span>
                     <span className="text-base-content/65">{agent.displayName}</span>
                   </button>
                 </li>
-              ))}
-            </ul>
-          </div>
+              ))
+            }
+          </DropdownMenu>
         )}
 
         <button

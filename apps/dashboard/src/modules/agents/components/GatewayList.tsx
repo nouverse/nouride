@@ -15,6 +15,7 @@ import { useConfirm } from "@/commons/components/ui/confirm";
 import { WhatsAppPairing } from "./WhatsAppPairing";
 import { RestartNeeded } from "@/commons/components/ui/RestartNeeded";
 import { Details } from "@/commons/components/ui/Details";
+import { DropdownMenu } from "@/commons/components/ui/DropdownMenu";
 
 type Platform = "telegram" | "discord" | "whatsapp";
 
@@ -74,28 +75,29 @@ export function GatewayList({ agentId }: { agentId: string }) {
           The chat apps this agent answers on. A message that comes in on one goes straight to it.
         </p>
 
-        <div className="dropdown dropdown-end">
-          <button
-            type="button"
-            tabIndex={0}
-            className="btn btn-primary btn-sm rounded-xl gap-2 shadow-xs active:scale-95 transition-all"
-          >
-            <Plus size={16} /> Add Connection
-          </button>
-          <ul className="dropdown-content menu bg-base-100/95 backdrop-blur-xl rounded-2xl border border-base-content/10 z-20 w-52 p-2 shadow-xl">
-            {PLATFORMS.map((platform) => (
+        <DropdownMenu
+          trigger={<><Plus size={16} /> Add Connection</>}
+          triggerClassName="btn btn-primary btn-sm rounded-xl gap-2 shadow-xs active:scale-95 transition-all"
+          width={208}
+          menuClassName="bg-base-100/95 backdrop-blur-xl rounded-2xl border border-base-content/10 p-2 shadow-xl"
+        >
+          {(close) =>
+            PLATFORMS.map((platform) => (
               <li key={platform.id}>
                 <button
                   type="button"
                   className="rounded-xl py-2 font-medium text-sm active:scale-95"
-                  onClick={() => setAdding(platform.id)}
+                  onClick={() => {
+                    close();
+                    setAdding(platform.id);
+                  }}
                 >
                   <span className="font-semibold">{platform.label}</span>
                 </button>
               </li>
-            ))}
-          </ul>
-        </div>
+            ))
+          }
+        </DropdownMenu>
       </div>
 
       {/* A connection is opened at boot: one added or changed since is saved, and not connected until a restart. */}

@@ -17,6 +17,7 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { CornerDownLeft, Loader2 } from "lucide-react";
+import { placeMenu } from "@/commons/lib/menu-place";
 
 export interface ComboboxProps {
   /** Suggestions. May be empty, stale, or wrong — see above. */
@@ -80,14 +81,8 @@ export function Combobox(props: ComboboxProps) {
     const measure = () => {
       const box = inputRef.current?.getBoundingClientRect();
       if (!box) return;
-      const below = window.innerHeight - box.bottom;
-      const up = below < 260 && box.top > below;
-      setPlace({
-        position: "fixed",
-        left: box.left,
-        width: box.width,
-        ...(up ? { bottom: window.innerHeight - box.top + 6 } : { top: box.bottom + 6 }),
-      });
+      // The field's own width, kept inside the window, flipped up when there is no room below (`placeMenu`).
+      setPlace({ position: "fixed", ...placeMenu(box, { width: window.innerWidth, height: window.innerHeight }, { width: box.width, maxHeight: 240 }, "start") });
     };
     measure();
     window.addEventListener("resize", measure);
@@ -188,7 +183,7 @@ export function Combobox(props: ComboboxProps) {
           style={place}
           // The field keeps the focus while the list is scrolled or clicked, so its blur does not close it.
           onMouseDown={(e) => e.preventDefault()}
-          className="bg-base-100/95 backdrop-blur-xl border border-base-content/10 z-[1000] max-h-60 list-none overflow-y-auto rounded-2xl p-1.5 shadow-xl space-y-0.5"
+          className="bg-base-100/95 backdrop-blur-xl border border-base-content/10 z-[1000] list-none overflow-y-auto rounded-2xl p-1.5 shadow-xl space-y-0.5"
         >
           {rows.map((row, index) => {
             const isCustom = custom !== null && index === 0;

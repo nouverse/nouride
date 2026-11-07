@@ -18,6 +18,7 @@ import { agentModel } from "@/commons/lib/agents";
 import { useConfirm } from "@/commons/components/ui/confirm";
 import { NewRoomButton } from "./NewRoom.tsx";
 import { RoomBar } from "./RoomBar.tsx";
+import { DropdownMenu } from "@/commons/components/ui/DropdownMenu";
 
 export interface ChatHeaderProps {
   historyOpen: boolean;
@@ -146,19 +147,20 @@ export function ChatHeader({
           <Trash2 size={12} />
         </button>
       ) : null}
-      <div className={`dropdown ${room || sessionId ? "hidden" : ""}`}>
-        <button
-          type="button"
-          tabIndex={0}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-base-200/60 hover:bg-base-200 border border-base-content/[0.08] text-sm font-semibold text-base-content active:scale-95 transition-all shadow-xs"
+      <div className={room || sessionId ? "hidden" : "contents"}>
+        <DropdownMenu
+          trigger={<>
+            <span className="truncate max-w-[130px] sm:max-w-[200px]">
+              {currentAgent?.displayName || "Select Agent"}
+            </span>
+            <ChevronDown size={13} className="text-base-content/40 shrink-0" />
+          </>}
+          triggerClassName="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-base-200/60 hover:bg-base-200 border border-base-content/[0.08] text-sm font-semibold text-base-content active:scale-95 transition-all shadow-xs"
+          align="start"
+          width={288}
+          menuClassName="bg-base-100/95 backdrop-blur-2xl rounded-2xl border border-base-content/10 p-2 shadow-2xl space-y-1"
         >
-          <span className="truncate max-w-[130px] sm:max-w-[200px]">
-            {currentAgent?.displayName || "Select Agent"}
-          </span>
-          <ChevronDown size={13} className="text-base-content/40 shrink-0" />
-        </button>
-
-        <ul className="dropdown-content menu bg-base-100/95 backdrop-blur-2xl rounded-2xl border border-base-content/10 z-30 w-72 p-2 shadow-2xl mt-1.5 space-y-1">
+          {(close) => <>
           <li className="menu-title text-[10px] uppercase font-bold text-base-content/65 px-2.5 py-1 font-mono">
             Switch Agent
           </li>
@@ -166,7 +168,10 @@ export function ChatHeader({
             <li key={agent.id}>
               <button
                 type="button"
-                onClick={() => pickAgent(agent.id)}
+                onClick={() => {
+                  close();
+                  pickAgent(agent.id);
+                }}
                 className={`flex items-center justify-between p-2.5 rounded-xl text-xs ${
                   agent.id === currentAgent?.id ? "bg-primary/10 text-primary font-bold" : "text-base-content/80"
                 }`}
@@ -188,7 +193,8 @@ export function ChatHeader({
               </button>
             </li>
           ))}
-        </ul>
+          </>}
+        </DropdownMenu>
       </div>
 
       {/*

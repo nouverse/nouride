@@ -7,7 +7,9 @@
  */
 
 import { Check, ChevronDown, Search, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import { placeMenu } from "@/commons/lib/menu-place";
 
 export interface Choice {
   value: string;
@@ -39,12 +41,32 @@ export function MultiSelect({
   const [query, setQuery] = useState("");
   const [firstAtOpen, setFirstAtOpen] = useState<readonly string[]>([]);
   const root = useRef<HTMLDivElement>(null);
+  const panel = useRef<HTMLDivElement>(null);
+  const [place, setPlace] = useState<CSSProperties | null>(null);
   const ticked = new Set(selected);
+
+  // Drawn on the page, inside the window (`placeMenu`): 256 px tied to the button's left went off a phone's screen.
+  useLayoutEffect(() => {
+    if (!open) return;
+    const measure = () => {
+      const box = root.current?.getBoundingClientRect();
+      if (!box) return;
+      setPlace({ position: "fixed", ...placeMenu(box, { width: window.innerWidth, height: window.innerHeight }, { width: 256, maxHeight: 340 }, "start") });
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    window.addEventListener("scroll", measure, true);
+    return () => {
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("scroll", measure, true);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
     const away = (event: PointerEvent) => {
-      if (!root.current?.contains(event.target as Node)) setOpen(false);
+      const target = event.target as Node;
+      if (!root.current?.contains(target) && !panel.current?.contains(target)) setOpen(false);
     };
     document.addEventListener("pointerdown", away);
     return () => document.removeEventListener("pointerdown", away);
@@ -95,8 +117,8 @@ export function MultiSelect({
         <ChevronDown size={14} className={`ml-auto shrink-0 opacity-60 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
 
-      {open ? (
-        <div className="border-base-content/[0.08] bg-base-100 absolute top-full left-0 z-30 mt-1.5 w-64 overflow-hidden rounded-xl border shadow-lg">
+      {open && place ? createPortal(
+        <div ref={panel} style={place} className="border-base-content/[0.08] bg-base-100 z-[1000] flex flex-col overflow-hidden rounded-xl border shadow-lg">
           {choices.length > SEARCH_FROM ? (
             <label className="border-base-content/[0.06] flex items-center gap-2 border-b px-3 py-2">
               <Search size={13} className="opacity-50" />
@@ -109,7 +131,7 @@ export function MultiSelect({
               />
             </label>
           ) : null}
-          <ul role="listbox" aria-multiselectable className="max-h-72 overflow-y-auto p-1">
+          <ul role="listbox" aria-multiselectable className="min-h-0 flex-1 overflow-y-auto p-1">
             {shown.map((choice) => {
               const on = ticked.has(choice.value);
               return (
@@ -140,7 +162,8 @@ export function MultiSelect({
               </button>
             </div>
           ) : null}
-        </div>
+        </div>,
+        document.body,
       ) : null}
     </div>
   );
