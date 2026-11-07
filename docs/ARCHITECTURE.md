@@ -44,7 +44,7 @@ nouride/
 │   ├── build-binary.ts, build/ # the single binary and its editions (§10)
 │   ├── install.sh              # the native install, and the root launcher on PATH
 │   └── dev-watch.sh            # dev container supervisor (§8)
-├── .agents/skills/             # contributing skill — invariants and task guides
+├── .agents/skills/             # coding-agent skills: contributing, testing, UI kit; links to the private ones
 ├── .claude/skills/             # symlink to .agents/skills
 ├── config.example.toml         # template → copy to .nouride/config.toml
 ├── run-dev.sh                  # one-command local dev

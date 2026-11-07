@@ -30,8 +30,8 @@ apps/dashboard/.tanstack/
 plugins/
 
 # Personal Claude Code settings — machine-local permission posture, not shared config.
-# .agents/skills/** IS tracked: the contributing skill is part of the repo, and .claude/skills is a
-# tracked symlink to it.
+# .agents/skills/** IS tracked: the public skills are part of the repo, the private ones are links into
+# internals/pro, and .claude/skills is a tracked symlink to it.
 .claude/settings.local.json
 # Claude Code's agent worktrees: whole checkouts with their own node_modules, one per agent, never part of the repo.
 .claude/worktrees/

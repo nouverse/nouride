@@ -8,12 +8,13 @@ agent working in this repository — Claude Code, Codex and the rest read it.
 
 - `docs/ARCHITECTURE.md` — the layout and the reasons for it. `docs/CONTRIBUTING.md` — running, testing, conventions.
   `docs/TECH_DECISION.md` and `docs/SPEC.md` for the decisions and the behaviour.
-- With the private tree checked out, the agent skills under `.agents/` (Claude Code reads them as `.claude/skills`) hold
-  the detail: **nouride-contributing** (the invariants, task guides, mistakes already made), **nouride-testing** (what
-  evidence a change needs), **nouride-deploy** (the live box), **nouride-debug-crash** (a release binary's stack trace),
-  **nouride-box-e2e** (a sandbox on the box with its own Telegram bot, to test in a real chat),
-  **nouride-release-rfc** (one RFC per release: opened before its work, worked through, then archived, with what was
-  put off as backlog lines).
+- The agent skills under `.agents/skills/` (Claude Code reads them as `.claude/skills`) hold the detail:
+  **nouride-contributing** (the invariants, task guides, mistakes already made), **nouride-testing** (what evidence a
+  change needs) and **react-tailwind-daisyui** (the UI kit). The maintainers' own, linked from the private tree and
+  empty in a public clone: **nouride-release-gate** (what a release tag waits on, live checks on the box),
+  **nouride-deploy** (the live box), **nouride-debug-crash** (a release binary's stack trace), **nouride-box-e2e** (a
+  sandbox on the box with its own Telegram bot, to test in a real chat), **nouride-release-rfc** (one RFC per release:
+  opened before its work, worked through, then archived, with what was put off as backlog lines).
   Read the one that fits the task before you start.
 
 ## Map

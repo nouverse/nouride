@@ -1,9 +1,9 @@
 # Contributing to Nouride
 
 This guide covers what you need to work on the codebase. A coding agent starts at `AGENTS.md` in the
-repository root: the rules the checks enforce, how a change is proven, and where the detail lives — with the
-private tree, the contributing skill under `.agents/skills/` (not in the public export), with invariants,
-task-specific references, and a catalog of past mistakes.
+repository root: the rules the checks enforce, how a change is proven, and where the detail lives — the
+contributing skill under `.agents/skills/`, with invariants, task-specific references, and a catalog of past
+mistakes, and the testing skill beside it.
 
 ---
 
@@ -87,7 +87,7 @@ bun run verify        # lint:check, then the whole test suite — what CI runs
 | `lint:sql` | that SQL is fast and safe: no injection, no table scan in a query plan, no read per item in a loop, none of SQLite's footguns (TD-015) |
 | `lint:timers` | that no timer callback in the daemon can let an exception out — an uncaught one shuts the daemon down: each is `contained(log, "what failed", …)`, one `try … catch`, or a form that cannot throw |
 | `lint:size` | no `any`, and no file past its code-line budget |
-| `lint:skills` | `.claude/skills/` is a symlink to `.agents/skills/`, where the skills live |
+| `lint:skills` | `.claude/skills/` is a symlink to `.agents/skills/`, where the skills live: each one written there, or a link to the private one of its name |
 | `lint:cli` | every command the CLI dispatches is in `nouride help`, and every flag there is read |
 | `lint:deadcode` | no export, table or module that nothing reaches |
 | `lint:pointers` | every path, file name, `file:symbol`, section, link and `nouride` verb in a comment, a doc or a skill leads somewhere; no line numbers; no doc comment stacked on another |
@@ -289,7 +289,8 @@ version:
 - `.nouride/` is entirely gitignored — an install never appears in a diff. The tracked
   `content/agents/` is seed material, not a live install.
 - Edit skills in `.agents/skills/`. `.claude/skills/` is a symlink to it, and `lint:skills`
-  fails if it stops being one.
+  fails if it stops being one. A skill about the maintainers' own machines is private: it lives in the private
+  submodule, and `.agents/skills/` holds a link to it of the same name.
 - Never paste a real credential into a test fixture. Use obvious placeholders — `lint:public` fails on
   a real id or address in anything that would be published.
 
