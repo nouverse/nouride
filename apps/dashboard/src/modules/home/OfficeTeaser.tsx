@@ -38,8 +38,11 @@ export function OfficeTeaser({ agents: everyone, orchestrator }: { agents: Agent
   const canvas = useRef<HTMLCanvasElement>(null);
   const scene = useRef<OfficeScene | null>(null);
   const homes = useRef<Map<string, number>>(new Map());
-  const box = useRef<HTMLDivElement>(null);
-  const [boxWidth, setBoxWidth] = useState(1_000);
+  // The box only exists once there are agents, which is after the first render while the status loads: a ref read once
+  // at mount found nothing, never measured, and drew the office at its 1 000 px guess, twice a phone's width, over the
+  // cards below it. Kept in state, so it is measured whenever it appears; 0 until then draws nothing too big.
+  const [box, setBox] = useState<HTMLDivElement | null>(null);
+  const [boxWidth, setBoxWidth] = useState(0);
   const layout = useMemo(
     () => layoutOffice(agents.map((agent) => ({ id: agent.id, status: statusOf(agent), lead: agent.id === orchestrator })), homes.current, 0, false),
     [agents, orchestrator],
@@ -47,12 +50,13 @@ export function OfficeTeaser({ agents: everyone, orchestrator }: { agents: Agent
   const scale = Math.min(scaleFor(boxWidth, layout.width), 2);
 
   useEffect(() => {
-    const element = box.current;
-    if (!element || typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(([entry]) => setBoxWidth(entry?.contentRect.width ?? 1_000));
-    observer.observe(element);
+    if (!box) return;
+    setBoxWidth(box.clientWidth);
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(([entry]) => setBoxWidth(entry?.contentRect.width ?? box.clientWidth));
+    observer.observe(box);
     return () => observer.disconnect();
-  }, []);
+  }, [box]);
 
   useLayoutEffect(() => {
     if (!canvas.current) return;
@@ -83,7 +87,7 @@ export function OfficeTeaser({ agents: everyone, orchestrator }: { agents: Agent
       {everyone.length === 0 ? (
         <EmptyState icon={Bot} title="No agents yet" />
       ) : (
-        <div ref={box} className="min-w-0">
+        <div ref={setBox} className="min-w-0">
           <Link to="/office" aria-label={`Open the Office: ${counts}`} className="block w-fit">
             <canvas
               ref={canvas}
