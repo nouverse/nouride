@@ -14,7 +14,7 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Lock, Waypoints } from "lucide-react";
 import { api } from "@/commons/lib/api";
@@ -31,9 +31,10 @@ import { TimelineTab } from "./timeline.tab";
 import { KnowledgeTab } from "./knowledge/knowledge.tab";
 import { SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
 
-type Tab = "knowledge" | "notes" | "people" | "timeline" | "shared" | "proposals" | "settings";
+export type MemoryTab = "knowledge" | "notes" | "people" | "timeline" | "shared" | "proposals" | "settings";
+type Tab = MemoryTab;
 
-const TABS: { value: Tab; label: string }[] = [
+export const MEMORY_TABS: { value: Tab; label: string }[] = [
   { value: "knowledge", label: "Knowledge" },
   { value: "notes", label: "Agent notes" },
   { value: "people", label: "People" },
@@ -43,11 +44,15 @@ const TABS: { value: Tab; label: string }[] = [
   { value: "settings", label: "Settings" },
 ];
 
-export default function MemoriesPage() {
+export default function MemoriesPage({ tab: opened }: { tab?: MemoryTab } = {}) {
   const me = useMe();
   const operator = canWrite(me.data ?? null);
   const admin = isAdmin(me.data ?? null);
-  const [tab, setTab] = useState<Tab>("knowledge");
+  const [tab, setTab] = useState<Tab>(opened ?? "knowledge");
+  // A link to another tab, followed while the page is open, opens that tab.
+  useEffect(() => {
+    if (opened) setTab(opened);
+  }, [opened]);
 
   const proposals = useQuery({ queryKey: ["memory-proposals"], queryFn: api.memoryProposals, enabled: operator });
   const waiting = proposals.data?.proposals.length ?? 0;
@@ -69,7 +74,7 @@ export default function MemoriesPage() {
       {operator ? (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <SegmentedTabs
-            tabs={TABS.map((option) => ({
+            tabs={MEMORY_TABS.map((option) => ({
               value: option.value,
               label: option.label,
               ...(option.value === "proposals" && waiting > 0 ? { after: <span className="badge badge-xs badge-warning font-mono">{waiting}</span> } : {}),

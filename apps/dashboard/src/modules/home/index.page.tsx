@@ -73,7 +73,7 @@ export default function HomePage() {
       <Hero name={name} line={summaryLine(awake, movingNow.length, needs.total)} />
 
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
-        <NeedsYouCards approvals={approvals.data?.pending ?? []} missions={waiting} requests={needs.requests} skills={needs.skills} names={names} />
+        <NeedsYouCards approvals={approvals.data?.pending ?? []} missions={waiting} requests={needs.requests} skills={needs.skills} facts={needs.facts} documents={needs.documents} names={names} />
         {movingNow.length > 0 && <MovingNow missions={movingNow} looks={looks} names={names} />}
         {quiet && (
           <section className="flex items-center gap-4 rounded-[22px] border border-base-content/[0.08] bg-base-100 p-4 shadow-soft sm:p-5 lg:col-span-2">

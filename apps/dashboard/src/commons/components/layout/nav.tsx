@@ -87,6 +87,12 @@ function SkillsBadge() {
   return <NeedsBadge n={skills} label={`${skills} waiting for review`} />;
 }
 
+function MemoryBadge() {
+  const { facts, documents } = useNeedsYou();
+  const n = facts + documents.reduce((sum, one) => sum + one.count, 0);
+  return <NeedsBadge n={n} label={`${n} waiting for your review`} />;
+}
+
 function AccessBadge() {
   const { requests } = useNeedsYou();
   return <NeedsBadge n={requests} label={`${requests} waiting to be approved`} />;
@@ -103,7 +109,7 @@ export const DAILY: NavItem[] = [
 /** Now and then. */
 const OCCASIONAL: NavItem[] = [
   { to: "/skills", label: "Skills", icon: Wrench, badge: SkillsBadge },
-  { to: "/memories", label: "Memory", icon: Brain, holds: ["/people", "/groups"] },
+  { to: "/memories", label: "Memory", icon: Brain, holds: ["/people", "/groups"], badge: MemoryBadge },
 ];
 
 /**

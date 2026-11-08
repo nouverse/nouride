@@ -10,11 +10,12 @@ import { LIFTS } from "@/commons/components/ui/CardGrid";
 import { Tag } from "@/commons/components/ui/Tag";
 import { cn } from "@/commons/lib/utils";
 
-export function WaitingLink({ to, params, tag, title, line }: { to: string; params?: Record<string, string>; tag: string; title: string; line: string }) {
+export function WaitingLink({ to, params, search, tag, title, line }: { to: string; params?: Record<string, string>; search?: Record<string, string>; tag: string; title: string; line: string }) {
   return (
     <Link
       to={to}
       {...(params ? { params } : {})}
+      {...(search ? { search } : {})}
       className={cn("group flex flex-col gap-2 rounded-[22px] border border-base-content/[0.08] bg-base-100 p-4 shadow-soft sm:p-5", LIFTS)}
     >
       <Tag tone="needs" className="self-start">{tag}</Tag>

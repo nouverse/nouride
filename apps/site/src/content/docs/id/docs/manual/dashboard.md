@@ -113,8 +113,10 @@ Home dibuka dengan sapaan dan satu baris tentang apa yang sedang terjadi: berapa
 sedang jalan, berapa hal yang butuh kamu. Di bawahnya, berurutan:
 
 - **Yang butuh kamu.** Tool call yang ditunggu agent dijawab langsung di situ: **Allow once**, **Deny**, dan **Always
-  allow** kalau ditawarkan. Misi yang menunggu jawaban, permintaan untuk bicara dengan agent, atau skill yang perlu
-  ditinjau tampil sebagai kartu yang membuka halamannya.
+  allow** kalau ditawarkan. Misi yang menunggu jawaban, permintaan untuk bicara dengan agent, skill yang perlu
+  ditinjau, fakta yang ingin disimpan atau diubah oleh proses malam, atau dokumen yang disimpan agent untuk sebuah
+  koleksi tampil sebagai kartu yang membuka halamannya. Fakta dan dokumen ditampilkan ke yang boleh memutuskannya:
+  admin atau operator.
 - **Yang sedang jalan.** Tiap misi yang sedang dikerjakan, dengan seberapa jauh checklist-nya.
 - **Quick chat**, di laptop: satu baris ke sebuah agent, lalu chat-nya terbuka dengan jawabannya. Di HP, tombol
   **+ Chat** melayang di atas bar tab sebagai gantinya.
@@ -188,7 +190,8 @@ terulang.
 | **Approvals** | Home, Work → *Waiting for you*, dan di bawah percakapan di Chats, hanya kalau gak kosong | Agent berhenti di tengah giliran, ingin menjalankan sesuatu |
 | **Permintaan pairing** | **Settings → Access** → *Pending*, dengan angka di sebelah Settings di menu | Seseorang meminta izin masuk sama sekali |
 | **Skill drafts** | Skills Workshop → *Pending*, dengan angka di sebelah Skills di menu | Agent *mengusulkan* sebuah skill, atau kamu mengambilnya dari hub |
-| **Memory proposals** | Knowledge & Memory → *Proposals* | Proses malam ingin mengubah sesuatu yang sebaiknya diputuskan orang |
+| **Memory proposals** | Home, dan Knowledge & Memory → *Proposals*, dengan angka di sebelah Memory di menu | Proses malam ingin mengubah sesuatu yang sebaiknya diputuskan orang |
+| **Dokumen untuk ditambahkan** | Home, dan kartu koleksinya di Knowledge & Memory → *Knowledge*, dengan angka di sebelah Memory | Agent menyimpan dokumen untuk sebuah koleksi, dan dokumen itu menunggu kamu tambahkan atau tolak |
 
 Approval adalah giliran yang berhenti di tengah jalan dengan timer. Draft atau proposal adalah usulan
 tentang pekerjaan yang sudah selesai: gak menghalangi apa pun dan menunggu kamu. Menyatukan mereka

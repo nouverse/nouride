@@ -111,8 +111,9 @@ Home opens with a greeting and one line on what is going on: how many agents are
 how many things need you. Under it, in this order:
 
 - **What needs you.** A tool call an agent waits on is answered right there: **Allow once**, **Deny**, and **Always
-  allow** where it is offered. A mission waiting for an answer, a request to talk to the agents or a skill to review
-  is a card that opens its page.
+  allow** where it is offered. A mission waiting for an answer, a request to talk to the agents, a skill to review, a
+  fact the nightly pass wants to keep or change, or a document an agent saved for a collection is a card that opens
+  its page. Facts and documents are shown to whoever may decide them: an admin or an operator.
 - **What is moving.** Each mission at work, with how far along its checklist is.
 - **Quick chat**, on a laptop: a line to an agent, and the chat opens with the answer. On a phone a **+ Chat** button
   floats above the tab bar instead.
@@ -183,7 +184,8 @@ operator an hour, and the wording is chosen so it cannot happen again.
 | **Approvals** | Home, Work → *Waiting for you*, and under the conversation in Chats, only when non-empty | An agent has stopped mid-turn wanting to run something |
 | **Pairing requests** | **Settings → Access** → *Pending*, with a count beside Settings in the menu | A person is asking to be let in at all |
 | **Skill drafts** | Skills Workshop → *Pending*, with a count beside Skills in the menu | An agent has *proposed* a skill, or you fetched one from a hub |
-| **Memory proposals** | Knowledge & Memory → *Proposals* | The nightly pass wants a change a person should decide on |
+| **Memory proposals** | Home, and Knowledge & Memory → *Proposals*, with a count beside Memory in the menu | The nightly pass wants a change a person should decide on |
+| **Documents to add** | Home, and the collection's card under Knowledge & Memory → *Knowledge*, with a count beside Memory | An agent saved a document for a collection, and it waits for you to add or decline it |
 
 An approval is a turn stopped mid-flight with a timer on it. A draft or a proposal is a suggestion
 about work that already finished: it blocks nothing and waits for you. Putting them in one queue
