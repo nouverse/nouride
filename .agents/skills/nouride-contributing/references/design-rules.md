@@ -52,7 +52,7 @@ Dashboard work keeps it that way:
 ## The mascot
 
 The chibi tuxedo cat (helmet with the "N", see-through lavender sunglasses, lavender hoodie, cream
-scooter). Its poses are transparent images in `packages/shared/assets/mascot/` (`standing/`, `riding/`, `states/`); each pose means one
+scooter). Its poses are transparent images in `docs/design/mascot/` (`standing/`, `riding/`, `states/`) until the dashboard uses them; a pose it uses moves to `packages/shared/assets/`, where every file must be named by code (`brand-assets.test.ts`). Each pose means one
 state and is used for that state only:
 
 - waving: the greeting; pointing: what needs the person; typing on a laptop: an agent at work;
