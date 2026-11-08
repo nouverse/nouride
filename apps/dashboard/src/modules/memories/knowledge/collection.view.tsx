@@ -25,6 +25,7 @@ import { PendingList } from "./pending";
 import { countsLine } from "./words";
 import { WriteDialog } from "./write.dialog";
 import { Leaving } from "@/commons/components/ui/OverPage";
+import { ListLoading } from "@/commons/components/ui/Spinner";
 
 export function CollectionView({
   collection,
@@ -155,9 +156,7 @@ export function CollectionView({
         >
           <ErrorNote error={documents.error} />
           {documents.isPending ? (
-            <div className="flex justify-center py-8">
-              <span className="loading loading-spinner loading-md opacity-60" />
-            </div>
+            <ListLoading />
           ) : list.length === 0 && reading.length === 0 ? (
             <EmptyState icon={FilePlus2} title="No documents yet" description={editable ? "Drop files here, or write one." : "Nothing has been added to it yet."} />
           ) : (

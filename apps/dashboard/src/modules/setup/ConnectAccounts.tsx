@@ -15,6 +15,7 @@ import { AlertTriangle, Check, Copy, ExternalLink, Loader2, LogIn } from "lucide
 import { copyText } from "@/commons/lib/clipboard";
 import { gatewayApi, parsePastedCode, signInHref, type GatewayProvider, type SignInStart } from "./gateway-api";
 import { accountProviders, providerCopy } from "./gateway-providers";
+import { ListLoading } from "@/commons/components/ui/Spinner";
 
 export function ConnectAccounts({ mount }: { mount: string }) {
   const gateway = gatewayApi(mount);
@@ -22,13 +23,7 @@ export function ConnectAccounts({ mount }: { mount: string }) {
   const [open, setOpen] = useState<string | null>(null);
   const rows = accountProviders(providers.data);
 
-  if (providers.isPending) {
-    return (
-      <div className="flex items-center justify-center py-8 text-base-content/65">
-        <Loader2 size={18} className="animate-spin" />
-      </div>
-    );
-  }
+  if (providers.isPending) return <ListLoading />;
   if (providers.isError) {
     return (
       <div className="alert alert-error bg-error/10 border border-error/30 text-error text-xs rounded-xl p-3 flex items-center gap-2">

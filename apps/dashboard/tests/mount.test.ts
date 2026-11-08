@@ -493,10 +493,11 @@ describe("something on its way shows (0.7.19)", () => {
     expect(html.match(/aria-label="loading"/g)).toHaveLength(1);
   });
 
-  test("MCP's Explore list loads with a spinner", async () => {
+  test("MCP's Explore list loads drawn as its shape", async () => {
     answer({ "/mcp/catalog": { status: 200, body: {}, hold: true } });
     const html = await renderPage("/mcp", (host) => press(host, '[role="tab"]', "Explore", 'aria-busy="true"'));
     expect(html).toContain('aria-busy="true"');
+    expect(html).toContain("animate-pulse");
   });
 });
 

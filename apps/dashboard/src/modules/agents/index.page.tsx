@@ -16,6 +16,7 @@ import { agentModel, orchestratorFirst } from "@/commons/lib/agents";
 import { isAdmin, useMe } from "@/commons/lib/session";
 import { Card, EmptyState, ErrorNote, PageHeader } from "@/commons/components/ui/ui";
 import { NewAgentForm } from "./components/NewAgentForm";
+import { ListLoading } from "@/commons/components/ui/Spinner";
 
 export default function AgentListPage() {
   // Polled while the page is open, so what each agent is doing stays true; not in a hidden tab.
@@ -97,9 +98,7 @@ export default function AgentListPage() {
         the page could not make, with a button inviting a duplicate.
       */}
       {status.isPending ? (
-        <div className="flex justify-center py-16">
-          <span className="loading loading-spinner loading-lg text-primary opacity-60" />
-        </div>
+        <ListLoading shape="cards" />
       ) : status.error && !status.data ? (
         <ErrorNote error={status.error} />
       ) : agents.length === 0 ? (

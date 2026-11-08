@@ -22,6 +22,7 @@ import { RetentionControl } from "@/commons/components/ui/RetentionControl";
 import { useMotionList } from "@/commons/hooks/use-motion-list";
 import { JobRow } from "./components/JobRow";
 import { anyRunning, kindOf, searchedIn, tabOf, type JobKindFilter, type JobTab } from "./lib/job";
+import { ListLoading } from "@/commons/components/ui/Spinner";
 
 /**
  * A tab's jobs, from what the daemon sent rather than what the filters left: one that changes state leaves the tab or
@@ -74,11 +75,7 @@ export default function JobsPage({ agent }: { agent?: string }) {
   const found = useTextFilter(jobs, filter, searchedIn);
 
   if (list.isLoading) {
-    return (
-      <div className="flex justify-center p-16">
-        <span className="loading loading-spinner loading-lg text-primary opacity-60" />
-      </div>
-    );
+    return <ListLoading />;
   }
   if (list.error && !list.data) return <ErrorNote error={list.error} />;
 

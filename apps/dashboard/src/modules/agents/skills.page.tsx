@@ -27,6 +27,7 @@ import { useTextFilter } from "@/commons/lib/use-text-filter";
 import { useSaved } from "@/commons/hooks/use-saved";
 import { ExternalNote } from "./components/ExternalNote";
 import { SkillRootsCard } from "./components/SkillRootsCard";
+import { ListLoading } from "@/commons/components/ui/Spinner";
 
 const SCOPE: Record<AgentSkill["scope"], { label: string; icon: typeof BookOpen; hint: string }> = {
   shared: {
@@ -76,11 +77,7 @@ export default function AgentSkillsPage({ agentId }: { agentId: string }) {
   const visible = useTextFilter(list, query, agentSkillText);
 
   if (skills.isPending) {
-    return (
-      <div className="flex justify-center py-20">
-        <span className="loading loading-spinner loading-lg text-primary opacity-60" />
-      </div>
-    );
+    return <ListLoading />;
   }
   const editable = Boolean(skills.data?.editable) && canWrite(me.data ?? null);
   // What reaches the prompt: this agent's switch, and the operator's global one over it.

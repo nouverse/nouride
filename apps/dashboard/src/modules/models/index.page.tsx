@@ -19,6 +19,7 @@ import { FILL_PAGE, ScrollArea } from "@/commons/components/ui/ScrollCard";
 import { Count, SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
 import { ModelTiersPanel } from "./components/ModelTiersPanel";
 import { CodingClis } from "./components/CodingClis";
+import { ListLoading } from "@/commons/components/ui/Spinner";
 
 const KINDS = [
   { id: "anthropic", label: "Anthropic", baseUrl: "https://api.anthropic.com/v1" },
@@ -84,9 +85,7 @@ export default function ModelsPage({ tab }: { tab?: "clis" | undefined } = {}) {
       {source === "providers" ? <ModelTiersPanel /> : null}
 
       {source !== "providers" ? null : providers.isPending ? (
-        <div className="flex justify-center py-16">
-          <span className="loading loading-spinner loading-lg text-primary opacity-60" />
-        </div>
+        <ListLoading />
       ) : list.length === 0 ? (
         <Card>
           <EmptyState icon={Cpu} title="No providers yet" />

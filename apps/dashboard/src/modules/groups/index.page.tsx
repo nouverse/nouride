@@ -19,6 +19,7 @@ import { Card, EmptyState, ErrorNote, PageHeader } from "@/commons/components/ui
 import { FILL_PAGE, ScrollCard } from "@/commons/components/ui/ScrollCard";
 import { useSaved } from "@/commons/hooks/use-saved";
 import { useTextFilter } from "@/commons/lib/use-text-filter";
+import { ListLoading } from "@/commons/components/ui/Spinner";
 
 /** A room nobody named, by a short form of its id: what there is to tell two of them apart. */
 function shortChatId(chatId: string): string {
@@ -45,9 +46,7 @@ export default function GroupsPage() {
       />
 
       {groups.isPending ? (
-        <div className="flex justify-center py-16">
-          <span className="loading loading-spinner loading-lg text-primary opacity-60" />
-        </div>
+        <ListLoading />
       ) : groups.isError ? (
         <ErrorNote error={groups.error} />
       ) : list.length === 0 ? (

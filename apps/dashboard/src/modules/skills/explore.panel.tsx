@@ -136,9 +136,7 @@ export function ExplorePanel({ editable, onReview }: { editable: boolean; onRevi
           {search.isPending ? <ListLoading /> : null}
           {!searched ? (
             popular.isPending ? (
-              <div className="flex justify-center py-8">
-                <span className="loading loading-spinner loading-md text-primary opacity-60" />
-              </div>
+              <ListLoading />
             ) : popular.data?.error ? (
               <p className="flex items-center gap-2 text-xs text-warning">
                 <ShieldAlert size={13} /> {popular.data.plain ?? `ClawHub did not answer: ${popular.data.error}`}

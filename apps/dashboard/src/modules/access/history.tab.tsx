@@ -12,6 +12,7 @@ import { EmptyState, ErrorNote } from "@/commons/components/ui/ui";
 import { ScrollCard } from "@/commons/components/ui/ScrollCard";
 import { ago } from "@/commons/lib/format";
 import { NoMatch, SenderLine, byWhom, useSenderFilter } from "./sender-line";
+import { ListLoading } from "@/commons/components/ui/Spinner";
 
 const SAID: Record<AccessEvent["action"], { icon: LucideIcon; tone: string; text: (event: AccessEvent) => string }> = {
   access_requested: { icon: UserPlus, tone: "text-info", text: () => "Asked to talk to the agent" },
@@ -61,9 +62,7 @@ export function HistoryTab({
     <ScrollCard title="History" description="Every request and every answer, newest first, kept as long as the audit log is." {...search}>
       <ErrorNote error={history.error} />
       {history.isPending ? (
-        <div className="flex justify-center py-10">
-          <span className="loading loading-spinner loading-md text-primary opacity-60" />
-        </div>
+        <ListLoading />
       ) : entries.length === 0 ? (
         <EmptyState icon={History} title="Nothing yet" description="Requests and answers appear here as they happen." />
       ) : visible.length === 0 ? (

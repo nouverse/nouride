@@ -24,6 +24,7 @@ import { DeniedTab } from "./denied.tab";
 import { HistoryTab } from "./history.tab";
 import { PendingTab } from "./pending.tab";
 import type { AccessSearch, AccessTab } from "./search";
+import { ListLoading } from "@/commons/components/ui/Spinner";
 
 const count = (n: number, tone = "badge-ghost") => (n > 0 ? <span className={`badge badge-xs ${tone} font-semibold`}>{n}</span> : null);
 
@@ -114,9 +115,7 @@ export default function AccessPage({ search, onSearch }: { search: AccessSearch;
           </div>
 
           {access.isPending ? (
-            <div className="flex justify-center py-16">
-              <span className="loading loading-spinner loading-lg text-primary opacity-60" />
-            </div>
+            <ListLoading />
           ) : tab === "pending" ? (
             <PendingTab senders={pending} agentOf={agentOf} pairingOn={mode !== "allowlist"} />
           ) : tab === "approved" ? (

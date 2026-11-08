@@ -22,6 +22,7 @@ import { FILL_PAGE, ScrollArea } from "@/commons/components/ui/ScrollCard";
 import { Count, SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
 import { useConfirm } from "@/commons/components/ui/confirm";
 import { jobCardId } from "./search";
+import { ListLoading } from "@/commons/components/ui/Spinner";
 
 type Filter = "all" | "active" | "paused" | "failing";
 
@@ -134,11 +135,7 @@ export default function SchedulePage({ job: linked }: { job?: string }) {
   const { ask, dialog } = useConfirm();
 
   if (jobs.isLoading) {
-    return (
-      <div className="flex justify-center p-16">
-        <span className="loading loading-spinner loading-lg text-primary opacity-60" />
-      </div>
-    );
+    return <ListLoading />;
   }
 
   // "Not enabled" only when the daemon says so (501). A boot's 503 or a timeout said it too, which it was not.

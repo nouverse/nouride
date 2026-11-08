@@ -18,6 +18,7 @@
 import { useState } from "react";
 import { Loader2, MessageSquare, Search, Trash2, Users, X } from "lucide-react";
 import type { Room, SessionSummary } from "@/commons/lib/api";
+import { ListLoading } from "@/commons/components/ui/Spinner";
 
 export function SessionDrawer({
   open,
@@ -194,9 +195,7 @@ export function SessionDrawer({
 
       <div className="flex-1 overflow-y-auto p-2 space-y-1">
         {loading ? (
-          <div className="flex justify-center py-10">
-            <Loader2 size={18} className="animate-spin text-primary/60" />
-          </div>
+          <ListLoading count={4} />
         ) : sessions.length === 0 ? (
           <div className="text-center py-10 px-4 text-xs text-base-content/65">
             {search ? (

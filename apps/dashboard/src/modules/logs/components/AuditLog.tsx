@@ -1,10 +1,11 @@
 /** System Logs → Audit: one row per decision, with the actor who made it. */
 
 import { useQuery } from "@tanstack/react-query";
-import { Check, Loader2 } from "lucide-react";
+import { Check } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import { EmptyState } from "@/commons/components/ui/ui";
 import { Panel } from "./Panel";
+import { ListLoading } from "@/commons/components/ui/Spinner";
 
 export function AuditLog() {
   const audit = useQuery({
@@ -22,9 +23,7 @@ export function AuditLog() {
       description="Every tool run, approval answer and config change, with who caused it. Kept far longer than the daemon log: this is the record of authority, not a scroll."
     >
       {audit.isPending ? (
-        <div className="flex justify-center py-12">
-          <Loader2 size={20} className="animate-spin text-primary/60" />
-        </div>
+        <ListLoading count={5} />
       ) : entries.length === 0 ? (
         <EmptyState icon={Check} title="Nothing recorded yet" />
       ) : (

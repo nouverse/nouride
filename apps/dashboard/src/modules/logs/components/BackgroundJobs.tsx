@@ -2,10 +2,11 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Bot, Loader2, MessagesSquare, Terminal, TriangleAlert } from "lucide-react";
+import { Bot, MessagesSquare, Terminal, TriangleAlert } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import { Card, EmptyState } from "@/commons/components/ui/ui";
 import { Panel } from "./Panel";
+import { ListLoading } from "@/commons/components/ui/Spinner";
 
 export function BackgroundJobs() {
   const jobs = useQuery({
@@ -32,9 +33,7 @@ export function BackgroundJobs() {
       description="Commands started with exec background: true, helpers started with delegate background: true, and agents asked with ask_agent that were still working after a minute (the turn that launched one is long over while it runs). A row opens its page under Background Helpers: its output, or a helper's or an asked agent's steps."
     >
       {jobs.isPending ? (
-        <div className="flex justify-center py-12">
-          <Loader2 size={20} className="animate-spin text-primary/60" />
-        </div>
+        <ListLoading count={5} />
       ) : list.length === 0 ? (
         <EmptyState icon={Terminal} title="Nothing running or recently finished" />
       ) : (

@@ -7,6 +7,7 @@ import { api, type StoredLogEntry } from "@/commons/lib/api";
 import { Card, EmptyState } from "@/commons/components/ui/ui";
 import { useDebounced } from "@/commons/hooks/use-debounced";
 import { Panel } from "./Panel";
+import { ListLoading } from "@/commons/components/ui/Spinner";
 
 const PAGE = 200;
 
@@ -132,9 +133,7 @@ export function DaemonLog() {
       }
     >
       {logs.isPending ? (
-        <div className="flex justify-center py-12">
-          <Loader2 size={20} className="animate-spin text-primary/60" />
-        </div>
+        <ListLoading count={5} />
       ) : entries.length === 0 ? (
         <EmptyState
           icon={ScrollText}

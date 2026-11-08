@@ -1,10 +1,11 @@
 /** System Logs → Schedule: what the scheduler fired across every job, and what came back. */
 
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, Check, Clock, Loader2, RotateCcw } from "lucide-react";
+import { AlertTriangle, Check, Clock, RotateCcw } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import { Card, EmptyState } from "@/commons/components/ui/ui";
 import { Panel } from "./Panel";
+import { ListLoading } from "@/commons/components/ui/Spinner";
 
 export function ScheduleRuns() {
   const runs = useQuery({
@@ -34,9 +35,7 @@ export function ScheduleRuns() {
       description={`Every firing across every job, newest first. Times in ${timezone}.`}
     >
       {runs.isPending ? (
-        <div className="flex justify-center py-12">
-          <Loader2 size={20} className="animate-spin text-primary/60" />
-        </div>
+        <ListLoading count={5} />
       ) : list.length === 0 ? (
         <EmptyState icon={Clock} title="Nothing has fired yet" />
       ) : (

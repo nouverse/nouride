@@ -17,6 +17,7 @@ import { SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
 import { McpExplore } from "@/commons/components/mcp/McpExplore";
 import { McpServerForm } from "@/commons/components/mcp/McpServerForm";
 import { LibraryServerCard } from "./components/LibraryServerCard";
+import { ListLoading } from "@/commons/components/ui/Spinner";
 
 export default function McpLibraryPage({ install, agent }: { install?: string; agent?: string }) {
   const me = useMe();
@@ -107,9 +108,7 @@ export default function McpLibraryPage({ install, agent }: { install?: string; a
       ) : null}
 
       {tab !== "installed" ? null : library.isPending ? (
-        <div className="flex justify-center py-16">
-          <span className="loading loading-spinner loading-lg text-primary opacity-60" />
-        </div>
+        <ListLoading />
       ) : (
         // Scrolls inside its card, as Skills' lists do, so the tabs stay in reach however many servers there are.
         <ScrollCard

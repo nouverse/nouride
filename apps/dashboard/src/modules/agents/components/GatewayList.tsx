@@ -16,6 +16,7 @@ import { WhatsAppPairing } from "./WhatsAppPairing";
 import { RestartNeeded } from "@/commons/components/ui/RestartNeeded";
 import { Details } from "@/commons/components/ui/Details";
 import { DropdownMenu } from "@/commons/components/ui/DropdownMenu";
+import { ListLoading } from "@/commons/components/ui/Spinner";
 
 type Platform = "telegram" | "discord" | "whatsapp";
 
@@ -117,9 +118,7 @@ export function GatewayList({ agentId }: { agentId: string }) {
       )}
 
       {gateways.isPending ? (
-        <div className="flex justify-center py-16">
-          <span className="loading loading-spinner loading-lg text-primary opacity-60" />
-        </div>
+        <ListLoading />
       ) : mine.length === 0 ? (
         <Card>
           <EmptyState

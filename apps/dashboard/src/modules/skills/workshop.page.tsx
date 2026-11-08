@@ -61,11 +61,7 @@ export default function SkillWorkshopPage() {
   const visiblePending = useTextFilter(pending, pendingQuery, (draft) => [draft.name, draft.description, draft.triggerReason, draft.agentId]);
 
   if (catalog.isPending) {
-    return (
-      <div className="flex justify-center py-20">
-        <span className="loading loading-spinner loading-lg text-primary opacity-60" />
-      </div>
-    );
+    return <ListLoading />;
   }
 
   const showPending = tab === "pending";

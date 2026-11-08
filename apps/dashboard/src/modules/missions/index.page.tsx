@@ -27,6 +27,7 @@ import { MissionCard } from "./components/MissionCard";
 import { MissionSettingsCard } from "./components/MissionSettingsCard";
 import { NewMissionForm } from "./components/NewMissionForm";
 import { anyOpen, grouped, searchedIn, tabOf, type MissionTab } from "./lib/mission";
+import { ListLoading } from "@/commons/components/ui/Spinner";
 
 /** While something is working or waiting on a person; a finished list changes only when somebody starts one. */
 const OPEN_MS = 5_000;
@@ -108,11 +109,7 @@ export default function MissionsPage({ agent }: { agent?: string }) {
   const found = useTextFilter(missions, filter, searchedIn);
 
   if (list.isLoading) {
-    return (
-      <div className="flex justify-center p-16">
-        <span className="loading loading-spinner loading-lg text-primary opacity-60" />
-      </div>
-    );
+    return <ListLoading shape="cards" />;
   }
 
   // "Not run here" only when the daemon says so (501) — a boot's 503 or a timeout is an error, said as one.

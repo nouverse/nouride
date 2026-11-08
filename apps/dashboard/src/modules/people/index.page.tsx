@@ -26,6 +26,7 @@ import { useConfirm } from "@/commons/components/ui/confirm";
 import { useToast } from "@/commons/components/ui/toast";
 import { useSaved } from "@/commons/hooks/use-saved";
 import { Leaving } from "@/commons/components/ui/OverPage";
+import { ListLoading } from "@/commons/components/ui/Spinner";
 
 export default function PeoplePage() {
   const queryClient = useQueryClient();
@@ -66,9 +67,7 @@ export default function PeoplePage() {
       )}
 
       {people.isPending ? (
-        <div className="flex justify-center py-16">
-          <span className="loading loading-spinner loading-lg text-primary opacity-60" />
-        </div>
+        <ListLoading />
       ) : list.length === 0 ? (
         <Card>
           <EmptyState

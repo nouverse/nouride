@@ -16,6 +16,7 @@ import type { PersonRecord } from "@/commons/lib/api.people";
 import { SignInMethods } from "./components/SignInMethods";
 import { useMe } from "@/commons/lib/session";
 import { PasswordInput } from "@/commons/components/ui/PasswordInput";
+import { ListLoading } from "@/commons/components/ui/Spinner";
 
 /** The person an account is linked to: `web:<id>`. */
 function personOfAccount(people: PersonRecord[], userId: string): PersonRecord | undefined {
@@ -127,9 +128,7 @@ export default function UsersPage() {
 
       <ScrollCard fill title="Accounts">
         {users.isPending ? (
-          <div className="flex justify-center py-16">
-            <span className="loading loading-spinner loading-lg text-primary opacity-60" />
-          </div>
+          <ListLoading />
         ) : list.length === 0 ? (
           <EmptyState icon={UsersIcon} title="No user accounts registered" />
         ) : (

@@ -11,6 +11,7 @@ import { isAdmin, useMe } from "@/commons/lib/session";
 import { Card, EmptyState, ErrorNote } from "@/commons/components/ui/ui";
 import { Details } from "@/commons/components/ui/Details";
 import { AgentMcpRow } from "./components/AgentMcpRow";
+import { ListLoading } from "@/commons/components/ui/Spinner";
 
 export default function AgentMcpPage({ agentId }: { agentId: string }) {
   const me = useMe();
@@ -55,9 +56,7 @@ export default function AgentMcpPage({ agentId }: { agentId: string }) {
       <ErrorNote error={mcp.error} />
 
       {mcp.isPending ? (
-        <div className="flex justify-center py-16">
-          <span className="loading loading-spinner loading-lg text-primary opacity-60" />
-        </div>
+        <ListLoading />
       ) : servers.length === 0 ? (
         <Card>
           <EmptyState icon={Plug} title="No connectors yet" description="Add one in Configure → Connectors (from the catalog, or by hand) and switch it on here." />
