@@ -5,12 +5,12 @@
  * ```markdown
  * ---
  * type: person
- * name: Gading
+ * name: Alex
  * ---
  *
  * ## Work
- * - Uses a MacBook Pro M3. ([[2026-09-20-1405-nix]]) {gading}
- * - The porch light goes off at 22:00. ([[2026-09-26-1310-nix]]) {gading, sam, in telegram:nouva:-1001}
+ * - Uses a MacBook Pro. ([[2026-09-20-1405-nix]]) {alex}
+ * - The porch light goes off at 22:00. ([[2026-09-26-1310-nix]]) {alex, sam, in telegram:nouva:-1001}
  * ```
  *
  * The `{…}` list is the source conversation's audience — who took part, and the group chat it was in

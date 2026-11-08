@@ -1235,7 +1235,7 @@ describe("what the agent is told about the CLI it can run", () => {
 
   test("a credential kept from the chat reaches every command, and narrowing it is the table form, never the list", () => {
     // Keeping one binds it to `"*"` itself (`secret_save`, `/secret set`), so the agent is not sent to edit its pack. The
-    // list form hands every command every secret in it — what S6 closed — and is not taught.
+    // list form hands every command every secret in it (the leak per-command binding closed) and is not taught.
     const prompt = buildSystemPrompt(
       context({ harness: { ...HARNESS, workspace: { dir: "/w/shared", privateDir: "/w/private/nouva", roots: ["/w/shared", "/w/private/nouva"] } } }),
     ).text;

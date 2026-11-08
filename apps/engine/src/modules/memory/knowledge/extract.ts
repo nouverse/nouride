@@ -1,5 +1,5 @@
 /**
- * The words in a knowledge document, by its kind (KNOWLEDGE_BASE §6, 0.8.20).
+ * The words in a knowledge document, by its kind (0.8.20).
  *
  * Text, Markdown, tables and web pages are read here; PDF and Office files by `doc.py` (`office.ts`). A kind Nouride does
  * not read (a picture, a video) is listed and not searched, and says so in a sentence a person reads; the folder keeps

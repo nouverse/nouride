@@ -1,5 +1,5 @@
 /**
- * What a vector is recorded under, and what becomes of the old ones when that changes (M6, M7).
+ * What a vector is recorded under, and what becomes of the old ones when that changes.
  *
  * The size asked of a model is part of the key, so a change of `dimensions` embeds everything again rather than
  * leaving vectors no query can be compared with. And a change of model keeps the old model's vectors beside the new

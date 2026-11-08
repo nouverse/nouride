@@ -1,8 +1,8 @@
 /**
  * What the harness tells an agent about `delegate` — and, where it may, about helpers in the background (0.7.15).
  *
- * A prompt is behaviour, so the wording that carries a rule is asserted directly. The rules here are the owner's
- * (2026-10-18): one helper in the background is the habit for a task that takes a while, so the agent stays free for
+ * A prompt is behaviour, so the wording that carries a rule is asserted directly. The rules: one helper in the
+ * background is the habit for a task that takes a while, so the agent stays free for
  * the person; two only for two independent pieces; not for a quick answer or a question the person is waiting on;
  * look at what is running first; the brief in English, with its context; and each result reported as it arrives.
  */

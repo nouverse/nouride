@@ -1,5 +1,5 @@
 /**
- * An agent's `[llm] fallbacks` as a turn's request carries them: each pair with its endpoint (SMART_AUTOMATION §3.1).
+ * An agent's `[llm] fallbacks` as a turn's request carries them: each pair with its endpoint.
  *
  * Every profile was checked when the pack loaded; one removed from `config.toml` since is left out here rather than
  * failing the turn the agent's own model may well answer.

@@ -1,5 +1,5 @@
 /**
- * `identify` from config to the wire (G1/M9): the profile key is read, the registry hands it to the client, and a
+ * `identify` from config to the wire: the profile key is read, the registry hands it to the client, and a
  * turn says which agent and which conversation it is — the root one, so a `delegate` helper shares its parent's.
  */
 

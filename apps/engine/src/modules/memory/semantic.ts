@@ -11,7 +11,7 @@
  *
  * Access is not decided here either: `rankByMeaning` is handed items the audience may already see.
  *
- * **A change of model** (M7). Each model's vectors are kept under its own key, side by side, and the new one is caught
+ * **A change of model.** Each model's vectors are kept under its own key, side by side, and the new one is caught
  * up 2,000 items a night. Until it has as many vectors as the model before it, a search is ranked by the one before —
  * its query embedded by that model, through the provider its key names — and once the new one has every item, the old
  * one's vectors go (`catchUp`). A key whose provider cannot be asked any more ranks nothing: the model in use ranks with
@@ -49,7 +49,7 @@ export interface Semantic {
   embedder: Embedder;
   /**
    * The model a vector key names, to embed a query for its vectors: the one before a change of model, while the one in
-   * use catches up (M7). Null when it cannot be asked — a key with no size in it, or a provider that has just failed.
+   * use catches up. Null when it cannot be asked — a key with no size in it, or a provider that has just failed.
    */
   embedderFor?: (key: string) => Embedder | null;
 }
@@ -57,7 +57,7 @@ export interface Semantic {
 type VectorSettings = Pick<MemorySemanticSection, "provider" | "model" | "dimensions">;
 
 /**
- * What a vector is recorded under: the provider, the model and the size asked of it (M6). The size was not part of it,
+ * What a vector is recorded under: the provider, the model and the size asked of it. The size was not part of it,
  * so a change of `dimensions` kept every vector at the old size — a query at the new one compares with none of them,
  * and since no item's text had changed, nothing was embedded again: search by meaning ranked nothing, unannounced.
  */
@@ -125,8 +125,8 @@ export function similarity(a: Int8Array, b: Int8Array): number {
 }
 
 /**
- * What several stored vectors mean together: their mean, stored as one is (0.8.20, a knowledge document's sections,
- * KNOWLEDGE_BASE §11). Each is a unit vector scaled to int8, so their sum points where their mean does, and is scaled
+ * What several stored vectors mean together: their mean, stored as one is (0.8.20, a knowledge document's sections).
+ * Each is a unit vector scaled to int8, so their sum points where their mean does, and is scaled
  * back as one vector. Vectors of another size than the first are left out; null for none.
  */
 export function centroid(vectors: readonly Int8Array[]): Int8Array | null {
@@ -153,7 +153,7 @@ export interface CatchUpReport {
   embedded: number;
   /** Vectors of items that are gone, whichever model made them. */
   pruned: number;
-  /** Vectors another model made, removed because this one now has every item (M7). */
+  /** Vectors another model made, removed because this one now has every item. */
   superseded: number;
   /** Still without a vector after this run's cap — the next run continues. */
   waiting: number;
@@ -186,7 +186,7 @@ export async function catchUp(deps: {
 
   /**
    * What is gone goes now, whichever model made it: a forgotten conversation is not to be found by meaning. Another
-   * model's vectors are not deleted ahead of this one's (M7). They were pruned first, so a model that could not be
+   * model's vectors are not deleted ahead of this one's. They were pruned first, so a model that could not be
    * reached, or one tried and switched back from, left nothing: every vector of the old model gone before a single new
    * one existed. Now they are kept beside this model's — the key is the item and the model — and rank searches until
    * this one has every item (`rankingModel`); then they go, below.
@@ -229,7 +229,7 @@ export function rankingModel(vectors: Pick<MemoryVectorPort, "counts">, current:
   return best;
 }
 
-/** The vectors a search ranks by (`rankingModel`) — while a change of model is caught up, the one before (M7). */
+/** The vectors a search ranks by (`rankingModel`) — while a change of model is caught up, the one before. */
 export function rankingVectors(semantic: Semantic): ReadonlyMap<string, Int8Array> {
   return semantic.vectors.of(rankingModel(semantic.vectors, semantic.embedder.model));
 }
@@ -238,7 +238,7 @@ export function rankingVectors(semantic: Semantic): ReadonlyMap<string, Int8Arra
  * Items ordered by meaning, most similar first, or null when the query could not be embedded. An
  * item with no vector yet is left out rather than guessed at; the keyword half still has it.
  *
- * Scored against the vectors the store holds in memory (M5): a search reads no vector from the database and decodes
+ * Scored against the vectors the store holds in memory: a search reads no vector from the database and decodes
  * none. Ranked by `rankingModel`, its query embedded by that model — and when that is not the model in use and cannot
  * be asked, or fails, by the model in use over the vectors it has.
  */
@@ -309,7 +309,7 @@ export function meanVector(vectors: readonly Int8Array[]): Int8Array | null {
 
 /**
  * What the keyword ranking's first three places are worth on top of their share, in shares of a first place
- * (`1 / (k + 1)`) — QMD's top-rank bonus, in the units it is added to (M11).
+ * (`1 / (k + 1)`) — QMD's top-rank bonus, in the units it is added to.
  *
  * As absolute numbers (0.05, 0.02, 0.02) against a first place's 1/61 ≈ 0.016, the bonus was three
  * rankings' worth: a keyword-only hit at second place outranked an item both rankings put near the top.

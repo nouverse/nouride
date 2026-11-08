@@ -1,5 +1,5 @@
 /**
- * PDF and Office files in the knowledge base (0.8.20, KNOWLEDGE_BASE §6): read by `doc.py`, a PDF's sections keeping the
+ * PDF and Office files in the knowledge base (0.8.20): read by `doc.py`, a PDF's sections keeping the
  * pages they span, a workbook's sheets each a table, the result cached by the file's hash, and a file that needs a
  * program the box lacks saying which, so the page can offer it, and read once it is there.
  */
@@ -81,7 +81,7 @@ describe("read by doc.py", () => {
   });
 
   // The same PDF added again under another name took the first name's title from the cache, and was listed and searched
-  // as `pajak-SKT` while its file was `SKT (2).pdf` (the owner's box, 2026-11-08).
+  // as `pajak-SKT` while its file was `SKT (2).pdf` (a live box, 2026-11-08).
   test("the same bytes under another name: read from the cache, titled by the name it has now", async () => {
     const dir = tempDir("knowledge-office");
     const reader = standIn(dir, "ok");
@@ -123,7 +123,7 @@ describe("read by doc.py", () => {
 
   // A scanned PDF reads without an error and without a word: the real doc.py notes "almost no text came out" and exits 0.
   // It was indexed with nothing in it, and the agent that kept it was told it could be searched now (2026-11-07, while
-  // Nestor planned the owner's legal documents into the knowledge base).
+  // Nestor planned a person's legal documents into the knowledge base).
   test("a scan, with no text in it: kept, not searched, says why, and not read again while it is the same", async () => {
     const dir = tempDir("knowledge-office");
     const root = join(dir, "knowledge");

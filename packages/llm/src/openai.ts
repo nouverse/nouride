@@ -361,7 +361,7 @@ export class OpenAIProvider implements LLMProvider {
     if (params.tail) messages.push({ role: "user", content: params.tail });
 
     /**
-     * Who is asking, for a profile that says `identify` (G1/M9). Without it every agent was one client to a gateway,
+     * Who is asking, for a profile that says `identify`. Without it every agent was one client to a gateway,
      * and two agents in one chat one session: `user` tells them apart, `x-client-id` names the agent in its
      * metrics, and `prompt_cache_key` sends a conversation's requests to the cache its prefix is already in.
      */

@@ -201,7 +201,7 @@ function collectSections(ctx: PromptContext): Section[] {
   // The product's own instructions, written here and shipped in the binary — see `Section.origin`.
   push("harness", renderHarness(ctx), true, "capability", "shipped");
   /**
-   * What is remembered about the people in this chat — after the harness, in a tier of its own (M2).
+   * What is remembered about the people in this chat — after the harness, in a tier of its own.
    *
    * It sat at the end of the pack's tier, ahead of both breakpoints, so whatever moved it took the
    * harness out of the cache with it, and in a group something always did: the profiles were in the

@@ -4,7 +4,7 @@
  *   NOURIDE_BENCH_SEARCH=1 bun test apps/engine/tests/memory/search-bench.test.ts
  *
  * A synthetic vault in a temp directory, put straight into the index (search reads the index, never the files): one
- * episode an hour for as many hours as asked, every one in a chat Gading took part in so their DM sees them all, 512-dim
+ * episode an hour for as many hours as asked, every one in a chat the searcher was in so their DM sees them all, 512-dim
  * vectors, about 1% of summaries holding the word searched for. One search cold (the first, which reads the vectors
  * into memory), then twenty warm: the time, and the episodes read whole. Run it before and after a change to search,
  * the vector store or a memory migration, on the same machine, and quote both. What the vectors held in memory cost is

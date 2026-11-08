@@ -1,5 +1,5 @@
 /**
- * The memory graph's knowledge layer (0.8.20, KNOWLEDGE_BASE §12): off unless asked for, and then each collection and
+ * The memory graph's knowledge layer (0.8.20): off unless asked for, and then each collection and
  * its documents, a line for each link one document's words make to another (a Markdown link or a wikilink), a line from
  * each person a collection is about, and a dashed line from each document to its nearest by meaning while search by
  * meaning is on. Bounded as the conversations are: the most linked first, then the newest.

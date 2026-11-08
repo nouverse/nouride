@@ -1,5 +1,5 @@
 /**
- * Who is asking, on the wire — for a profile that says `identify` (G1/M9), and only for one.
+ * Who is asking, on the wire — for a profile that says `identify`, and only for one.
  *
  * Nougate tells clients apart by `x-client-id` and sessions by `user`; OpenAI routes a request to the cache its
  * prefix is in by `prompt_cache_key`. Nouride sent none of them, so every agent was one client and two agents in
@@ -50,7 +50,7 @@ describe("Anthropic", () => {
 });
 
 /**
- * Who answered, read back (G1): Nougate says on every response which provider served the call, with which model,
+ * Who answered, read back: Nougate says on every response which provider served the call, with which model,
  * after how many tries. `llm_usage` kept only what was asked, so its rows could not be split by what ran them.
  */
 describe("who answered, when a gateway says", () => {
@@ -91,7 +91,7 @@ describe("who answered, when a gateway says", () => {
 });
 
 /**
- * Who was tried, when nothing answered (`roadmap-x-nougate-all-threw`): when every provider behind Nougate threw, its
+ * Who was tried, when nothing answered: when every provider behind Nougate threw, its
  * error response carried no attribution, and Nouride read the x-nougate headers only off an answer anyway. Nougate now
  * says `x-nougate-tried` and `-attempts` on the error; the error a call ends with carries them, structured and in its
  * message — which is what a failed turn records — and never in what the chat is told.

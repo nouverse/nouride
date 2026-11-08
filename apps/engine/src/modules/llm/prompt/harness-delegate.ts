@@ -3,10 +3,9 @@
  * hand it to one in the background (0.7.15).
  *
  * Its own file because the background half is a decision the model makes about the *person*, not about a tool: whether
- * the work is long enough that they should not wait on it. The owner's words for the habit (2026-10-18): "minimal
- * commonnya spawn 1 terus gitu lah supaya bisa standby" — one helper for a long task, so the agent stays free — and
- * two only for two independent pieces. A tool's schema cannot say that; a model meets a schema only once it has
- * already chosen the tool.
+ * the work is long enough that they should not wait on it. The habit wanted: one helper for a long task, so the agent
+ * stays free, and two only for two independent pieces. A tool's schema cannot say that; a model meets a schema only
+ * once it has already chosen the tool.
  *
  * Every line is a task shape, the way the rest of TOOLS is written, and each is gated on what this agent holds: the
  * background lines only when `[delegate] max_background` gives it any (`HarnessFacts.backgroundHelpers`), with the

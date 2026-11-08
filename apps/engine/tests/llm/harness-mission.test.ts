@@ -1,9 +1,9 @@
 /**
  * What the harness tells an agent about missions. A prompt is behaviour, so the words that carry the rule are
- * asserted. Since 0.8.17 (the owner, 2026-11-04) a mission is long work, more than about an hour, that goes on with
+ * asserted. Since 0.8.17 a mission is long work, more than about an hour, that goes on with
  * little from the person: the hour a reply and a helper in the background have. Before, "many steps or items" drafted
  * missions for work of ten minutes. It is said in "Who does the work" beside the other ways (`harness-work.test.ts`),
- * and started as a draft the person starts (RFC MISSION_DRAFTS §2.7).
+ * and started as a draft the person starts.
  */
 
 import { describe, expect, test } from "bun:test";

@@ -13,7 +13,7 @@
  * `transcript` is what the synthesis pass read, already scrubbed of anything that looked like a
  * credential, and it is kept beside the draft so the person deciding can trace a procedure back to the
  * turn that produced it. Approving one you cannot trace is approving a model's word for it. (The
- * baseline migration's comment on that column calls this the Origin Trajectory Inspector, §3.4 of a
+ * baseline migration's comment on that column calls this the Origin Trajectory Inspector, from a
  * design note that has since been retired.)
  */
 

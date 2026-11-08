@@ -1,5 +1,5 @@
 /**
- * PDF, Word, Excel, PowerPoint and their open cousins, read for the knowledge base (KNOWLEDGE_BASE §6, 0.8.20) by the
+ * PDF, Word, Excel, PowerPoint and their open cousins, read for the knowledge base (0.8.20) by the
  * `document-reading` skill's `doc.py`, run by the daemon as itself: the reader agents already use, so a file an agent
  * can read is one the knowledge base can, and the other way round.
  *
@@ -125,7 +125,7 @@ async function run(reader: OfficeReader, args: string[], env: Record<string, str
 /**
  * Sections read before for a file of another name, under this one's. The cache is kept by the file's bytes and a title by
  * its name: the same PDF added again as `SKT (2).pdf` was listed and searched as `pajak-SKT`, the name it had first been
- * read under (the owner's box, 2026-11-08). Every trail starts with the title it was read under.
+ * read under. Every trail starts with the title it was read under.
  */
 function renamed(sections: Section[], from: string, to: string): Section[] {
   if (from === to) return sections;

@@ -123,7 +123,7 @@ export function renderRuntime(ctx: PromptContext): string {
   }
 
   // Here and not in the harness, which says what the directory is for: an install moves this line, and in the
-  // last block that costs the conversation's cache once, not the harness's (M12, `harness-toolchain.ts`).
+  // last block that costs the conversation's cache once, not the harness's (`harness-toolchain.ts`).
   const installed = ctx.tools.some((tool) => tool.name === "exec") ? installedLine(ctx.harness.binDir, ctx.harness.sharedBinDir) : undefined;
   if (installed) lines.push(installed);
 

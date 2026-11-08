@@ -2,7 +2,7 @@
  * What a provider profile's endpoint says about its models: its `/models` listing, asked at most hourly.
  *
  * Two readers, one listing. Hearing asks which models take audio (`attachments/hearing.ts`); a turn asks how large a
- * request to its model may be (G2, `executor/prepare.ts`). Each fetched its own listing, or would have — a gateway asked
+ * request to its model may be (`executor/prepare.ts`). Each fetched its own listing, or would have — a gateway asked
  * twice an hour per profile for the same answer.
  *
  * A turn never waits for it. `windowNow` answers from what the endpoint last said and asks again in the background

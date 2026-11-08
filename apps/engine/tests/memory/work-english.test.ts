@@ -17,7 +17,7 @@ const CODE_ON_MEMORYS_LIST = [
   "du /var/lib",
   "ls -la /srv/nouride && du -sh *",
   "Fix the non-empty check in config.ini",
-  // `du` anywhere on a line (Nox, B2), and words of memory's list English uses as they are (Nox, A1).
+  // `du` anywhere on a line, and words of memory's list English uses as they are.
   "Run du /var/lib",
   "sudo du /var/lib/docker",
   "Then run du /srv/share",
@@ -70,7 +70,7 @@ describe("English working text passes", () => {
       "Mira wrote “tolong cek log di server ya, ada error dari tadi pagi” — check the nginx logs on box-2 and tell me what you find.",
       "The person said 'jangan push ke main dulu' so keep it on the branch.",
       "The person wrote:\n> tolong cek semua log di server nas dan kasih tau kalau ada error\nCheck /var/log on the NAS for errors since 06:00 and list them with their paths.",
-      // Quote styles memory's pattern does not take, and a quote line in a list (Nox, A3).
+      // Quote styles memory's pattern does not take, and a quote line in a list.
       "Анна wrote «проверь логи на сервере» — check the nginx logs on box-2.",
       "Mira wrote „tolong cek log di server ya“ — check the nginx logs on box-2.",
       "- > tolong cek semua log di server nas\n- Check /var/log on the NAS for errors.",
@@ -85,7 +85,7 @@ describe("English working text passes", () => {
       "Call Gading about the NAS",
       "Ask Анна about the invoice",
       "Send the invoice to 田中 by Friday",
-      // A name that opens a line — a list of who did what, as a note's "Done" holds (Nox, B4).
+      // A name that opens a line — a list of who did what, as a note's "Done" holds.
       "Анна confirmed",
       "- Анна: invoice paid",
       "Анна: paid\nМария: pending\nIvan: paid",
@@ -130,13 +130,13 @@ describe("working text in another language is refused", () => {
     const answer = writeWorkInEnglish("The task");
     expect(answer).toStartWith("The task is not in English.");
     expect(answer).toContain("only what reaches the person is in their language");
-    // Tables too, since their rows are not judged (D5): told only of code, a model rewriting a translation's brief in
+    // Tables too, since their rows are not judged: told only of code, a model rewriting a translation's brief in
     // English would translate the strings it is about.
     expect(answer).toContain("Nothing was kept or sent: write it again in English. A person's words may stay as they said them, in quotation marks, and names, paths, code and tables as they are.");
   });
 });
 
-/** A translation task's strings: the data a brief carries in the language the work is about (D5). */
+/** A translation task's strings: the data a brief carries in the language the work is about. */
 const STRINGS_TABLE = [
   "| Key | Indonesian |",
   "|---|---|",

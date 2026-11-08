@@ -36,7 +36,7 @@ export type WindowSource = "pack" | "gateway" | "table" | "default";
  *
  * 1. the pack's `[llm] context_window`, and only for the model it was written against — a `/model` override points at
  *    something else, and carrying a hand-written window across to it is how a 32k model gets a 1M budget;
- * 2. what the agent's gateway states for the model in its `/models` listing (G2, `llm/catalog.ts`);
+ * 2. what the agent's gateway states for the model in its `/models` listing (`llm/catalog.ts`);
  * 3. the table of model families (`contextWindowInfo`, `@nouride/llm`);
  * 4. its conservative default — a guess, which `doctor` and the log say out loud.
  *

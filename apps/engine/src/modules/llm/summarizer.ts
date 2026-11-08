@@ -6,7 +6,7 @@
  * 2. Else `[memory] pass_provider` and `pass_model`, when they are set — always together (`validate-memory.ts`).
  *    The operator has already chosen a model for condensing a stretch of conversation: the nightly pass files the
  *    same transcripts compaction condenses, and the model chosen for it is usually the small one. Compaction ran on
- *    the agent's own model regardless, the dearest model on a box that had set a cheap one (M12).
+ *    the agent's own model regardless, the dearest model on a box that had set a cheap one.
  * 3. Else the turn's own profile and model, as before either existed.
  *
  * Either key may name a tier instead of a model (0.8.0, `types/tiers.ts`) — `summary_model = "small"` — and then it is

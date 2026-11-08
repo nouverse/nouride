@@ -1,7 +1,7 @@
 /**
  * The vector store: each item's vector per model, as its bytes, read from SQLite once and held in memory after — and
  * what is held kept right by every write, so a search never reads a vector from the database and never reads a stale
- * one (M5, M7 — `memory-vectors.store.ts`).
+ * one (`memory-vectors.store.ts`).
  */
 
 import { afterEach, beforeEach, expect, test } from "bun:test";

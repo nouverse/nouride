@@ -139,7 +139,7 @@ export async function syncIndex(vault: Vault, index: MemoryIndexPort): Promise<S
   const report: SyncReport = { episodes: 0, profiles: 0, dropped: 0, problems: [] };
 
   // What each file was indexed at, in one read: a statement per file was a query for every file in the
-  // vault on every sync — at boot, before each pass, after each tidy (M10).
+  // vault on every sync — at boot, before each pass, after each tidy.
   const known = index.indexedFiles("episodes/");
   const present = new Set<string>();
   for (const { id, file } of episodeFiles(vault)) {
@@ -206,7 +206,7 @@ function unchangedFolder(now: ReadonlyMap<string, FileState>, recorded: Readonly
 
 /**
  * Tag aliases and which chat each group stub names. A folder is read again only when a stub in it was
- * added, removed or changed since the last read; it was read whole on every sync (M10).
+ * added, removed or changed since the last read; it was read whole on every sync.
  */
 async function syncStubs(vault: Vault, index: MemoryIndexPort): Promise<void> {
   const tagFiles = stubStates(vault, vault.tagsDir);

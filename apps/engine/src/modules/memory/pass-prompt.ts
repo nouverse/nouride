@@ -108,7 +108,7 @@ function renderFacts(facts: readonly PromptFact[], waiting: readonly string[]): 
 }
 
 /**
- * The question for one episode, in two system blocks that are each a cache breakpoint (M3): the rules, the same
+ * The question for one episode, in two system blocks that are each a cache breakpoint: the rules, the same
  * for every episode, then the audience's vocabulary, the same for every episode it shares — a run reads it once
  * per audience and files that audience's conversations back to back (`run.ts`). From the second call on, both
  * are read from the cache and only the episode is new.

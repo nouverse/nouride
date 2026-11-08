@@ -39,7 +39,7 @@ export interface CollectionView extends Collection {
   sections: number;
 }
 
-/** A document close to another in meaning: the dashboard's **Related documents** (§11). */
+/** A document close to another in meaning: the dashboard's **Related documents**. */
 export interface RelatedDocument {
   collection: string;
   collectionName: string;
@@ -55,7 +55,7 @@ export interface Asker {
   audience: Audience;
 }
 
-/** A document an agent keeps from a chat (`memory_write` about knowledge, §9). */
+/** A document an agent keeps from a chat (`memory_write` about knowledge). */
 export interface KeepRequest {
   /** The collection, by its name or id: a new name makes one, for the people in this chat. */
   collection: string;
@@ -67,7 +67,7 @@ export interface KeepRequest {
   file?: { name: string; bytes: Uint8Array };
   /** The web address a page came from. */
   source?: string;
-  /** Who and where, in words, for the admin a wider collection asks: "Gading, in a one-to-one chat with nouva". */
+  /** Who and where, in words, for the admin a wider collection asks: "Sam, in a one-to-one chat with nouva". */
   from: string;
   /** The day it is saved, for its frontmatter. */
   day: string;
@@ -156,7 +156,7 @@ export function createKnowledge(input: {
   /**
    * Keep a document from a chat. Into a new collection, made for the people in this chat, or one whose readers are no
    * wider than them: saved at once. Into one wider than that: it waits for an admin's yes. An agent never widens who may
-   * be answered from a collection (§5.1, §9).
+   * be answered from a collection.
    */
   async function keep(asker: Asker, request: KeepRequest): Promise<KeepResult> {
     const knowledge = deps.knowledge;
@@ -264,7 +264,7 @@ export function createKnowledge(input: {
       });
     },
     /**
-     * A document's nearest by meaning (§11's **Related documents**), among the documents of every collection not archived
+     * A document's nearest by meaning (the **Related documents**), among the documents of every collection not archived
      * and its own: the mean of its sections' vectors against each other document's, from the vectors search holds. None,
      * and `byMeaning` false, while search by meaning is off; none either before its sections have their vectors.
      */
@@ -286,7 +286,7 @@ export function createKnowledge(input: {
       return { byMeaning: true, related };
     },
     /**
-     * The memory graph's knowledge layer (§12): the collections not archived, their documents that were read, the links
+     * The memory graph's knowledge layer: the collections not archived, their documents that were read, the links
      * between them, whom they are about, and each one's nearest by meaning while search by meaning is on. Null without a
      * knowledge base.
      */

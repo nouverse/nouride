@@ -321,7 +321,7 @@ export async function runPass(deps: RunDeps, options: { ask: PassDeps["ask"]; st
   }
   for (const unwritten of await refreshDays(deps.vault, deps.index, days)) report.problems.push({ what: `day ${unwritten.day}`, problem: unwritten.problem });
   // A night of writes leaves FTS5 a segment per batch. A bounded merge folds them in; the whole index is
-  // rewritten into one b-tree once a week, not every night for twenty documents (E12).
+  // rewritten into one b-tree once a week, not every night for twenty documents.
   deps.index.optimizeText(firstPassOfWeek(deps.state.lastFinishedRun()?.day ?? null, localTime(deps.now(), safeTimeZone(deps.timeZone)).day));
   // A stub whose tag no longer has two episodes goes, if nobody wrote in it — it comes back on a second use.
   report.tags.stubsRemoved = await pruneTagStubs(deps.vault, deps.analytics.tagCounts().counts);

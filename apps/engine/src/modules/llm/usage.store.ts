@@ -22,7 +22,7 @@
  * And a fourth, since 0.8.8: **a coding CLI's prompt is its own account's.** What it reports over ACP is recorded, so
  * `/status` and a turn's record say what it spent, as `basis = 'cli'` with a cost of 0 — and is outside both caps: the
  * CLI runs on its own subscription, and its hours of work stopped every agent on the daemon's own models at the token
- * cap otherwise (the owner's decision, 2026-10-29).
+ * cap otherwise.
  */
 
 import { createLogger, newId, type TokenUsage, type Port, type StopReason, type UsageBasis, type UsagePurpose } from "@nouride/shared";
@@ -51,13 +51,13 @@ export interface UsageRecord {
   cachedInputTokens?: number;
   /** Input tokens written to the cache this request, at a 25% premium. Also inside `inputTokens`. */
   cacheCreationInputTokens?: number;
-  /** The turn this call was made for (D2). Absent for what no turn made: the nightly pass, an embedding. */
+  /** The turn this call was made for. Absent for what no turn made: the nightly pass, an embedding. */
   turnId?: string;
   /** The call as the turn waited on it, retries included — what the provider reported with its usage. */
   latencyMs?: number;
   /** HTTP attempts it took: 1 unless the provider refused or timed out and was asked again. */
   attempts?: number;
-  /** Who answered, when a gateway in between said (G1) — `TokenUsage.upstream`. */
+  /** Who answered, when a gateway in between said — `TokenUsage.upstream`. */
   upstream?: TokenUsage["upstream"];
   /** What the call was for (`USAGE_PURPOSES`). Absent on a caller that predates it, read as the turn's own. */
   purpose?: UsagePurpose;
@@ -268,7 +268,7 @@ export class UsageStore {
   }
 
   /**
-   * Each profile and model since a moment — what `cacheWarnings` compares (TOKEN_SAVINGS §3.1, 0.8.13): its requests,
+   * Each profile and model since a moment — what `cacheWarnings` compares (0.8.13): its requests,
    * its input, and how much of the input that reported a cache came from it. A coding CLI's prompts are its own
    * account's, and an embedding or a transcription is no prompt: none of them is a route here.
    */
@@ -326,7 +326,7 @@ export class UsageStore {
     since: number,
     /**
      * A coding CLI's prompts alone (0.8.8): `/status` says them as the CLI's, outside the caps — and a turn its agent's own
-     * model answered, the CLI being signed out, is neither (Nox's review).
+     * model answered, the CLI being signed out, is neither.
      */
     onlyCli = false,
   ): {

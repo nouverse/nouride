@@ -1,5 +1,5 @@
 /**
- * A tool result made smaller by what its text is (TOKEN_SAVINGS §3.3, 0.8.17): colour codes out, a redrawn line at its
+ * A tool result made smaller by what its text is (0.8.17): colour codes out, a redrawn line at its
  * last state, a run of identical lines counted, JSON without its spaces. Diffs, source code and a file read exactly are
  * left as they are, and a result made smaller names the file that keeps its whole text.
  */

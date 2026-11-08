@@ -37,7 +37,7 @@ const log = createLogger("llm.images");
  *
  * There was a count, four, on the reasoning that a person's fifth screenshot is a sequence whose end is what matters.
  * An agent reviewing a video reads a dozen stills and their checks in one round, and with four it lost each set as it
- * opened the next — then re-read them, or decided they had never reached it (live, 0.8.12). The owner: no limit on
+ * opened the next — then re-read them, or decided they had never reached it (live, 0.8.12). So there is no limit on
  * pictures. Sixteen megabytes stays, because past it the request itself is the problem: providers reject an oversized
  * body, and a turn that dies on upload sees nothing at all.
  */

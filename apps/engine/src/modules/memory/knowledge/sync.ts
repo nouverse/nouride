@@ -1,5 +1,5 @@
 /**
- * The knowledge index brought in line with the folders (KNOWLEDGE_BASE §8, 0.8.20): the files are the truth.
+ * The knowledge index brought in line with the folders (0.8.20): the files are the truth.
  *
  * A file is read again only when its size or modification time moved, the way memory's vault is synced
  * (`index-sync.ts`): a scan of a few hundred documents is a stat each, not a read. A document whose file is gone is

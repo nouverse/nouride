@@ -1,5 +1,5 @@
 /**
- * Each helper key may name a tier instead of a model (0.8.0, SIMPLIFY §3) — `summary_model = "small"` — and is then the
+ * Each helper key may name a tier instead of a model (0.8.0) — `summary_model = "small"` — and is then the
  * agent's own model of that tier, on the agent's own provider. Unset, every helper is the agent's own model, as before.
  * Held here through each helper's own path: the compaction summary, the nightly pass, an image read, and skill
  * learning's weekly review. (`steer_reply_model` is held beside its own tests, `pipeline/steering.test.ts`.)

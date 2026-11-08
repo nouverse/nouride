@@ -1,5 +1,5 @@
 /**
- * M2 — what a group's prompt recalls does not move with who is speaking, and what does move it costs only its own block.
+ * What a group's prompt recalls does not move with who is speaking, and what does move it costs only its own block.
  *
  * Driven the way the daemon drives it: two people speak in the family group, the pass files what each said, and the
  * prompt is built from `memory.recall` for each of them in turn. The profiles used to come out speaker first, so the
@@ -76,7 +76,7 @@ describe("a group's recall, as the prompt carries it", () => {
     const gading = h.memory.recall(speaker(GADING_HERE));
     const sam = h.memory.recall(speaker(SAM_HERE));
 
-    // In key order — gading before sam — for both of them, rather than each one first in their own turn.
+    // In key order, the admin's before Sam's, for both of them, rather than each one first in their own turn.
     expect(gading.profiles.map((profile) => profile.name)).toEqual(["Gading", "Kak Sam"]);
     expect(sam).toEqual(gading);
 

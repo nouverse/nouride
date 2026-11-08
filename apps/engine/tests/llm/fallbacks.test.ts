@@ -1,5 +1,5 @@
 /**
- * `[llm] fallbacks` (SMART_AUTOMATION §3.1): when the model a turn is on cannot answer after its retries, the next pair
+ * `[llm] fallbacks`: when the model a turn is on cannot answer after its retries, the next pair
  * — a provider and a model — answers, in order. Another model on the same profile answers a model that is busy or not
  * served; another profile answers an endpoint that is down, out of credit or refusing its key.
  *

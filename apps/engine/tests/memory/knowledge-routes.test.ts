@@ -1,5 +1,5 @@
 /**
- * The knowledge base's routes (0.8.20, KNOWLEDGE_BASE §5.1, §11, §13): what the dashboard's Knowledge tab and
+ * The knowledge base's routes (0.8.20): what the dashboard's Knowledge tab and
  * `nouride knowledge` read and change. A collection made here is the maker's until an admin opens it; an operator adds
  * and removes documents; an admin deletes a collection.
  */
@@ -14,7 +14,7 @@ import { household, type Household } from "./fixture.ts";
 let h: Household;
 beforeEach(async () => {
   h = await household();
-  // Gading's dashboard account, so a collection Gading makes is Gading's.
+  // The admin's dashboard account, so a collection made from it is the admin's.
   h.config.people.find((person) => person.key === "gading")!.ids!.push("web:acc-gading");
 });
 afterEach(() => h.close());
@@ -55,7 +55,7 @@ describe("making a collection", () => {
     expect(open.status).toBe(201);
     const taken = await app("admin").hono.request("/knowledge", json("POST", { name: "House" }));
     expect(taken.status).toBe(409);
-    // The dashboard's words beside the command line's (0.8.20 item 0).
+    // The dashboard's words beside the command line's (0.8.20).
     expect(await taken.json()).toEqual({ error: 'There is already a collection called "house".', plain: "There is already a collection with that name." });
     expect((await app("admin").hono.request("/knowledge", json("POST", { name: "Y", readers: { kind: "people", people: ["nobody"] } }))).status).toBe(400);
     expect((await app("admin").hono.request("/knowledge", json("POST", { name: "Z", agents: ["ghost"] }))).status).toBe(400);

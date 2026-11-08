@@ -31,7 +31,7 @@ export interface ProviderSpec {
   baseUrl: string;
   apiKey: string;
   headers?: Record<string, string>;
-  /** Send `ChatParams.identity` (G1/M9) — `ProviderProfile.identify`. */
+  /** Send `ChatParams.identity` — `ProviderProfile.identify`. */
   identify?: boolean;
   http?: HttpDeps;
 }

@@ -1,5 +1,5 @@
 /**
- * A model whose window nothing knows (SMART_AUTOMATION §3.6) is budgeted at a 32k guess. Looked at before changing
+ * A model whose window nothing knows is budgeted at a 32k guess. Looked at before changing
  * anything: an agent's prompt and tool schemas alone come to about 31k on the live box, so at that guess the history
  * budget is nothing, and the in-turn trim cleared every tool result — the one the model had just asked for too, which it
  * then asked for again. The oldest go first now, and a result the model has not read yet is never cleared.

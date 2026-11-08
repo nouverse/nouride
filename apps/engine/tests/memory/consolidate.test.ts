@@ -21,7 +21,7 @@ afterEach(() => h.close());
 const DM = "{gading}";
 const GROUP = "{gading, sam, in whatsapp:main:1203@g.us}";
 
-/** A profile past the size, in two groups: most of it said in Gading's DM, the last lines in the family group. */
+/** A profile past the size, in two groups: most of it said in the admin's DM, the last lines in the family group. */
 async function bigProfile(): Promise<string> {
   const filler = Array.from({ length: TIDY_PAST_FACTS }, (_, n) => `- Keeps note number ${n + 1} about the homelab. ([[2026-09-0${(n % 9) + 1}-0900-nouva]]) ${DM}`);
   const text = [

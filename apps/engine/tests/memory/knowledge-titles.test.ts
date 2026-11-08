@@ -3,7 +3,7 @@
  * collection's `knowledge.toml`, first in each section's trail, so search by words and by meaning both carry it. An agent
  * gives an English one when it keeps a document; a person sets one on the dashboard or with `nouride knowledge title`.
  *
- * Asked for by the owner on 2026-11-08: English words found nothing in Indonesian documents on a box searching by words
+ * Needed because English words found nothing in Indonesian documents on a box searching by words
  * alone, the default of a new install, and documents keep the language they were written in.
  */
 
@@ -37,7 +37,7 @@ async function home() {
   return { h, put, found, workspace, keep };
 }
 
-/** An Indonesian document, as the owner's legal papers are: no English word in it. */
+/** An Indonesian document, as a person's legal papers are: no English word in it. */
 const NIB = "PEMERINTAH REPUBLIK INDONESIA\n\nNomor Induk Berusaha 1234567890123 diterbitkan kepada PT Contoh Teknologi Indonesia, bentuk usaha Perseroan Perorangan.\n";
 const TITLE = "NIB, business registration certificate (Nomor Induk Berusaha)";
 

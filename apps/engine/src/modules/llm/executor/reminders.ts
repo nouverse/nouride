@@ -1,7 +1,7 @@
 /**
  * What a turn adds to the message it answers: the clock, and the reminders for this turn.
  *
- * ## Kept as sent (M1, 2026-10-15)
+ * ## Kept as sent (2026-10-15)
  *
  * The message went to the model with its notes and was stored without them, on the reasoning that a
  * note in the transcript is a line the person never wrote, "filed every night and found by every

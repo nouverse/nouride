@@ -1,5 +1,5 @@
 /**
- * The knowledge base through memory, the way agents reach it (0.8.20, KNOWLEDGE_BASE §5, §8 to §10): `memory_search`
+ * The knowledge base through memory, the way agents reach it (0.8.20): `memory_search`
  * ranks a document's sections with conversations and facts, only the collections this conversation may search, a
  * document about someone in it higher; `memory_read` opens a section or its document; RECALL names the collections.
  */
@@ -46,7 +46,7 @@ describe("searching documents", () => {
     const hit = mine[0] as Extract<SearchHit, { kind: "section" }>;
     expect(hit.collection).toBe("Finance");
     expect(hit.section.trail).toBe("Expense policy › Hotels");
-    // Sam's chat, and a group Gading is in, find nothing of it.
+    // Sam's chat, and a group the admin is in, find nothing of it.
     expect(await h.memory.search(speaker(SAM_DM, "nix"), { query: "hotels receipt" })).toEqual([]);
     expect(await h.memory.search(speaker(FAMILY), { query: "hotels receipt" })).toEqual([]);
   });

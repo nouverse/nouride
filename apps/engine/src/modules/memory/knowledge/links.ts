@@ -1,5 +1,5 @@
 /**
- * Links between knowledge documents (0.8.20, KNOWLEDGE_BASE §12): a Markdown link `[text](…)` or a wikilink `[[…]]`
+ * Links between knowledge documents (0.8.20): a Markdown link `[text](…)` or a wikilink `[[…]]`
  * in one document's words that names another document kept here — the memory graph's document → document line. A web
  * address names no document, and a link to a file that is not kept names nothing.
  *

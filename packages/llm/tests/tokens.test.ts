@@ -65,7 +65,7 @@ describe("estimateTokens", () => {
       });
       return samples.sort((a, b) => a - b)[4]!;
     };
-    // What the estimator used to do: a regex test per character (E9). Measured here, beside it, so the
+    // What the estimator used to do: a regex test per character. Measured here, beside it, so the
     // comparison is between two runs on the same machine — a range check costs about a quarter of it.
     const regex = median(() => {
       let cjk = 0;

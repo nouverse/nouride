@@ -97,7 +97,7 @@ function undelimit(value: string): string[] {
   return value.split(",").filter(Boolean);
 }
 
-/** Pages a night's merge of the word index writes at most — 64 of FTS5's 4 KB pages (E12). */
+/** Pages a night's merge of the word index writes at most — 64 of FTS5's 4 KB pages. */
 const MERGE_PAGES = 64;
 
 /** Episodes a sweep over the vault reads at once (`pages`). */
@@ -114,7 +114,7 @@ export class MemoryIndexStore {
 
   /**
    * Every file indexed under `prefix` (a path relative to the vault root), with the state it was indexed at —
-   * read once per sync, not once per file (M10).
+   * read once per sync, not once per file.
    */
   indexedFiles(prefix: string): Map<string, FileState> {
     return new Map(
@@ -262,7 +262,7 @@ export class MemoryIndexStore {
   }
 
   /**
-   * The ids of the episodes in scope, newest first, and nothing else — what search ranks by meaning (M5). It read the
+   * The ids of the episodes in scope, newest first, and nothing else — what search ranks by meaning. It read the
    * same episodes whole, five statements over up to 5,000 ids, only to collect their ids.
    */
   episodeIds(filter: EpisodeFilter, limit: number): string[] {

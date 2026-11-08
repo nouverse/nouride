@@ -1,5 +1,5 @@
 /**
- * Old tool output out of the history at a turn's start (TOKEN_SAVINGS §3.2, 0.8.13). Measured on the live box: tool
+ * Old tool output out of the history at a turn's start (0.8.13). Measured on the live box: tool
  * output was 75 % of the stored history and stayed whole until compaction, so requests grew to 100–200k first. Now
  * output older than the last two turns is cleared — the same marker and kept file as a trim — when the cache was lost
  * anyway (the prompt, the model or the tools changed, or an hour idle), or once there is enough of it to pay for the

@@ -1,6 +1,6 @@
 /**
  * The dashboard's graph of memory: conversations, and the people, tags and agents they link to — and, as a layer asked
- * for (0.8.20, KNOWLEDGE_BASE §12), the knowledge base's collections and documents.
+ * for (0.8.20), the knowledge base's collections and documents.
  *
  * Not the vault's own graph (`graph.ts` writes the stubs and day hubs a markdown editor draws). This
  * one is read from the index and built small on purpose — the browser lays it out, so the daemon

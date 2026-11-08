@@ -1,5 +1,5 @@
 /**
- * Routes that lose the provider's cache (TOKEN_SAVINGS §3.1, 0.8.13): the same model through two profiles can cache
+ * Routes that lose the provider's cache (0.8.13): the same model through two profiles can cache
  * very differently — on the live box Gemini Flash through one wire cached 1 % of its input at $0.77 a million, through
  * the other 94 % at $0.15, and the poor pairs were half the spend. Found from the usage rows alone: a route is the
  * profile and the model as recorded, compared with another route of the same model — never a provider named here.

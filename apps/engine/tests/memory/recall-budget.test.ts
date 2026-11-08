@@ -1,6 +1,6 @@
 /**
  * How many facts a prompt carries in a big group: 60 a person, 120 in all, the same share for everyone present
- * whoever is speaking (M2) — so a group of fifteen does not put 900 facts in every turn, and a change of speaker
+ * whoever is speaking — so a group of fifteen does not put 900 facts in every turn, and a change of speaker
  * does not rewrite the block.
  */
 

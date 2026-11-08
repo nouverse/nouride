@@ -66,7 +66,7 @@ describe("what is already there", () => {
     const lines = toolchainLines(bin).join("\n");
     expect(lines).toContain(`What is installed in \`${bin}\` is on PATH for every command, so call it by name, with no \`which\` and no full path. RUNTIME lists what is there now.`);
     expect(lines).toContain(`$HOME is \`${join(root, ".nouride", "home")}\``);
-    // The rule, not the listing: what is there is RUNTIME's line, so an install never moves the harness (M12).
+    // The rule, not the listing: what is there is RUNTIME's line, so an install never moves the harness.
     expect(lines).not.toContain("ffmpeg");
     expect(installedLine(bin)).toBe(`Installed in \`${bin}\`, on PATH: ffmpeg, yt-dlp.`);
   });
@@ -118,7 +118,7 @@ describe("what is already there", () => {
   });
 
   /**
-   * M12: the harness listed what the bin directory held, so an agent installing something mid-conversation rewrote the
+   * The harness listed what the bin directory held, so an agent installing something mid-conversation rewrote the
    * harness block and took it out of the cache. The listing is RUNTIME's now — the last block, which no breakpoint is
    * put on — and the harness says what the directory is for, which no install changes.
    */

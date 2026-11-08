@@ -48,7 +48,7 @@ export interface AnthropicProviderOptions {
   baseUrl: string;
   apiKey: string;
   headers?: Record<string, string>;
-  /** Send who is asking, as `metadata.user_id` (`ChatParams.identity`, G1/M9). */
+  /** Send who is asking, as `metadata.user_id` (`ChatParams.identity`). */
   identify?: boolean;
   http?: HttpDeps;
 }
@@ -355,7 +355,7 @@ export class AnthropicProvider implements LLMProvider {
         ...(params.temperature !== undefined ? { temperature: params.temperature } : {}),
         // How long the model thinks before it answers: `output_config`, not a top-level field.
         ...(params.effort ? { output_config: { effort: params.effort } } : {}),
-        // The Messages API's own field for who a request is on behalf of (G1/M9), for a profile that says `identify`.
+        // The Messages API's own field for who a request is on behalf of, for a profile that says `identify`.
         ...(this.options.identify && params.identity ? { metadata: { user_id: `${params.identity.agentId}:${params.identity.conversation}` } } : {}),
         // `false` said outright, for a proxy that would otherwise pick for us — see the OpenAI client.
         ...(stream ? { stream: true } : { stream: false }),

@@ -1,5 +1,5 @@
 /**
- * Search by meaning over ids (M5): the episodes an audience may see are asked of SQLite by id, scored against vectors
+ * Search by meaning over ids: the episodes an audience may see are asked of SQLite by id, scored against vectors
  * held in memory, and only what can be a hit is read whole. It read up to 5,000 episodes whole — five statements each —
  * and decoded every candidate's vector from base64, only to rank them.
  */
@@ -46,7 +46,7 @@ afterEach(() => {
   removePath(dir);
 });
 
-/** An episode in `chat`, with Gading taking part only where it is their own chat — the others are not theirs to see. */
+/** An episode in `chat`, with the searcher taking part only where it is their own chat — the others are not theirs to see. */
 function episode(i: number, chat: string, summary: string, vector: number[]): void {
   const startedAt = Date.UTC(2026, 0, 1) + i * 60_000;
   const row: IndexedEpisode = {
