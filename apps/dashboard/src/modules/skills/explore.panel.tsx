@@ -95,8 +95,7 @@ export function ExplorePanel({ editable, onReview }: { editable: boolean; onRevi
       <Card
         title="Find a skill"
         description="Search skills.sh, ClawHub and other public lists of skills at once. Installing one puts it on the Pending tab for you to read and approve; nothing runs until you do." // plain-words-ok: skills.sh, a website's own name
-        className="flex min-h-[22rem] flex-1 flex-col"
-        bodyClassName="flex min-h-0 flex-1 flex-col"
+        className="flex flex-col"
       >
         <form onSubmit={submit} className="space-y-3">
           <div className="flex flex-wrap items-center gap-2">
@@ -130,8 +129,10 @@ export function ExplorePanel({ editable, onReview }: { editable: boolean; onRevi
           />
         </form>
 
-        {/* Bounded: forty hits would push the rest of the page off the screen. The list scrolls inside. */}
-        <div className="mt-5 min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pr-1">
+        {/* The page scrolls, not the list: nothing is below it to push off the screen, and held to what the window left
+            under the two cards above it, the hits had the height of one (the owner, 2026-11-08: "masa skills gw cuma bisa
+            segini doang tingginya"). */}
+        <div data-explore-hits className="mt-5 space-y-3">
           <ErrorNote error={search.error} />
           {search.isPending ? <ListLoading /> : null}
           {!searched ? (
