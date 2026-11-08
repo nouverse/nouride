@@ -41,8 +41,8 @@ agent working in this repository — Claude Code, Codex and the rest read it.
 5. What is not implemented throws a `NourideError` that names what is missing — never a stub that returns nothing.
 6. Fail at load, not at the first message: a bad config names its file and field.
 7. Packages import each other by the matrix in `scripts/check-arch.ts`, and through a package's barrel only.
-8. One file, one concern. A file past its budget in `scripts/check-size.ts` is split on a seam, or its budget is raised
-   with the reason — never squeezed to fit the number.
+8. One file, one concern. A file past its budget in `scripts/size-budgets.ts` is split on a seam, or its budget is
+   raised with today's reason in at most 200 characters — never squeezed to fit the number.
 9. An export is a claim that something else needs it; one nothing imports is removed.
 
 `bun run lint:check` runs all of it, and the pre-commit hook runs it again.

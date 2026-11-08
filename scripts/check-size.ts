@@ -25,7 +25,7 @@
 
 import { relative } from "node:path";
 import { lintedFiles } from "./lint-sources.ts";
-import { ANY_BUDGET, BUDGET, TEST_BUDGET } from "./size-budgets.ts";
+import { ANY_BUDGET, BUDGET, TEST_BUDGET, type Budget } from "./size-budgets.ts";
 
 const ROOT = new URL("../", import.meta.url).pathname;
 
@@ -40,6 +40,22 @@ const MAX_CODE_LINES = 400;
 
 /** How far over its file a budget may sit — a few lines for the next small change, not room to grow back into. */
 const HEADROOM = 10;
+
+/**
+ * The longest a budget's `why` may be: one reason, today's. A reason that gained a clause at every raise read as a
+ * changelog, and a raise nobody had to argue for again was a raise nobody questioned.
+ */
+const MAX_WHY = 200;
+
+/**
+ * Files split on their seams that may not be budgeted again. Each is a composition of parts now, and a budget would let
+ * it grow back into the one function it was: past the cap, the new part goes in a file of its own.
+ */
+const NEVER_BUDGETED: readonly string[] = [
+  "apps/engine/src/index.ts",
+  "apps/engine/src/modules/pipeline/index.ts",
+  "apps/engine/src/modules/pipeline/turn.ts",
+];
 
 /**
  * Tests have a cap of their own, and the files over it a budget. They used to be exempt, and six grew past a thousand
@@ -124,7 +140,7 @@ export function sizeFinding(
   if (code > budget) {
     return {
       rule: "file-grew",
-      detail: `${code} lines of code, over its budget of ${budget}. Split it, or raise the budget in \`${table}\` and say in its \`why\` what the lines are and why they belong here`,
+      detail: `${code} lines of code, over its budget of ${budget}. Split it, or raise the budget in \`${table}\` and say in its \`why\` what the lines are and why they belong here, in at most ${MAX_WHY} characters`,
     };
   }
   if (code <= cap) return { rule: "budget-under-cap", detail: `${code} lines of code, under the ${cap} cap — remove its entry from \`${table}\`, or it may grow back to ${budget}` };
@@ -132,16 +148,45 @@ export function sizeFinding(
   return null;
 }
 
-async function main(): Promise<void> {
+/** What a budget table's own entries break: one short reason each, and no entry for a file split on its seams. */
+function budgetFindings(budgets: Readonly<Record<string, Budget>>, table: string): Omit<Finding, "line">[] {
+  const findings: Omit<Finding, "line">[] = [];
+  for (const [file, { why }] of Object.entries(budgets)) {
+    if (NEVER_BUDGETED.includes(file)) {
+      findings.push({
+        file,
+        rule: "budget-refused",
+        detail: `split on its seams, it may not be budgeted again: remove its entry from \`${table}\` and put what grew it in a file of its own`,
+      });
+    }
+    if (why.trim() === "" || why.length > MAX_WHY) {
+      findings.push({
+        file,
+        rule: "budget-why",
+        detail: `its \`why\` in \`${table}\` is ${why.length} characters; say the one reason the file is over the cap today, in 1 to ${MAX_WHY}. Its history is in git`,
+      });
+    }
+  }
+  return findings;
+}
+
+/** The tables the check holds the tree to: `size-budgets.ts`'s, or a test's with an entry planted. */
+interface SizeTables {
+  BUDGET: Readonly<Record<string, Budget>>;
+  TEST_BUDGET: Readonly<Record<string, Budget>>;
+  ANY_BUDGET: Readonly<Record<string, number>>;
+}
+
+/** Everything the check finds in the tree at `root` against `tables`. */
+export async function checkSize(root: string, tables: SizeTables = { BUDGET, TEST_BUDGET, ANY_BUDGET }): Promise<Finding[]> {
   const findings: Finding[] = [];
   const seen = new Set<string>();
-  const sizes = new Map<string, number>();
 
   // `internals/pro` included when it is checked out, and held to the same cap: it ships in the Box editions. It
   // used to be skipped here as "another repository with rules of its own", and it had none — see `lint-sources.ts`.
   // The root `scripts/` too (`sizedFiles`).
-  for (const path of await sizedFiles(ROOT)) {
-    const rel = relative(ROOT, path);
+  for (const path of await sizedFiles(root)) {
+    const rel = relative(root, path);
     if (isGenerated(rel)) continue;
 
     const raw = await Bun.file(path).text();
@@ -154,7 +199,7 @@ async function main(): Promise<void> {
     // `any` is a fake that cannot disagree with the thing it stands in for, which is how a test
     // starts agreeing with the bug. The `{ id: string }` approval fixture did exactly that.
     const anys = [...stripStrings(source).matchAll(EXPLICIT_ANY)];
-    const allowed = ANY_BUDGET[rel] ?? 0;
+    const allowed = tables.ANY_BUDGET[rel] ?? 0;
     if (anys.length > allowed) {
       // Reported per occurrence past the budget, newest first, so a file at its limit names the line
       // that pushed it over rather than all of them.
@@ -173,19 +218,21 @@ async function main(): Promise<void> {
 
     // ── size ────────────────────────────────────────────────────────────────
     const code = source.split("\n").filter((line) => line.trim().length > 0).length;
-    const [cap, budgets, table] = isTest(rel) ? [MAX_TEST_CODE_LINES, TEST_BUDGET, "TEST_BUDGET"] : [MAX_CODE_LINES, BUDGET, "BUDGET"];
-    sizes.set(rel, code);
+    const [cap, budgets, table] = isTest(rel) ? [MAX_TEST_CODE_LINES, tables.TEST_BUDGET, "TEST_BUDGET"] : [MAX_CODE_LINES, tables.BUDGET, "BUDGET"];
     const finding = sizeFinding(code, cap, budgets[rel]?.lines, table);
     if (finding) findings.push({ file: rel, line: finding.rule === "file-too-large" || finding.rule === "file-grew" ? 1 : 0, ...finding });
   }
 
   // A budget for a file that is gone is a licence nothing needs.
-  for (const [rel, { lines }] of [...Object.entries(BUDGET), ...Object.entries(TEST_BUDGET)]) {
+  for (const [rel, { lines }] of [...Object.entries(tables.BUDGET), ...Object.entries(tables.TEST_BUDGET)]) {
     if (!seen.has(rel)) {
       findings.push({ file: rel, line: 0, rule: "stale-budget", detail: `listed at ${lines} lines and no longer exists — remove the entry` });
     }
   }
-  for (const rel of Object.keys(ANY_BUDGET)) {
+  for (const finding of [...budgetFindings(tables.BUDGET, "BUDGET"), ...budgetFindings(tables.TEST_BUDGET, "TEST_BUDGET")]) {
+    findings.push({ line: 0, ...finding });
+  }
+  for (const rel of Object.keys(tables.ANY_BUDGET)) {
     if (!seen.has(rel)) {
       findings.push({
         file: rel,
@@ -195,7 +242,11 @@ async function main(): Promise<void> {
       });
     }
   }
+  return findings;
+}
 
+async function main(): Promise<void> {
+  const findings = await checkSize(ROOT);
   if (findings.length === 0) {
     console.log("✓ no explicit `any`, no file over its budget");
     return;

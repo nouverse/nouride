@@ -393,6 +393,12 @@ Nine hard rules, all enforced by `bun run lint:check`:
    `PendingApproval` was narrowed to `{ id: string }`, its fixtures matched, and the CLI printed
    `undefined` for four fields no test could see.
 
+   A raise is allowed, and its entry says why in at most 200 characters: the one reason the file is
+   over the cap today. When each raise added a clause, the reasons became a changelog nobody read, and
+   a raise went in with nothing to weigh it against; the history is in git. The three files split on
+   their seams, `src/index.ts`, `pipeline/index.ts` and `pipeline/turn.ts`, may not be budgeted again:
+   past the cap, the new part goes in a file of its own.
+
 7. **No stray control characters in source.** `control-character` refuses the C0 range apart from tab
    and newline, and a bare carriage return. It is here because it happened twice in one afternoon and
    the second time it *disabled a rule while reporting success*: an edit script wrote a word-boundary
