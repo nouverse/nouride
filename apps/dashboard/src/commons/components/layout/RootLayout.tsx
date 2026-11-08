@@ -23,6 +23,7 @@ import { SidebarVersion } from "@/commons/components/layout/SidebarVersion";
 import { BoxCard } from "@/commons/components/layout/BoxCard";
 import { TAB_BAR_SPACE, TabBar } from "@/commons/components/layout/TabBar";
 import { SectionTabs } from "@/commons/components/layout/SectionTabs";
+import { SettingsBack } from "@/commons/components/layout/SettingsBack";
 import { Mascot } from "@/commons/components/brand/Mascot";
 import { useNeedsYou } from "@/commons/hooks/use-needs-you";
 import { cn } from "@/commons/lib/utils";
@@ -219,6 +220,7 @@ export function RootLayout() {
         {ownsViewport ? (
           /* Above the tab bar on a phone: a chat's composer sits on the page's foot. */
           <main className={`flex min-h-0 flex-1 flex-col overflow-hidden *:animate-fade ${TAB_BAR_SPACE}`}>
+            <SettingsBack pathname={pathname} className="mx-4 mt-2 sm:mx-6 lg:mx-8 lg:mt-4" />
             <Outlet />
           </main>
         ) : fillsViewport ? (
@@ -229,6 +231,7 @@ export function RootLayout() {
                 does — a list scrolling inside a card inside a scrolling page, under a header, is a sliver there. */}
             <div className={`mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 pt-2 sm:px-6 sm:pt-4 lg:h-full lg:p-8 ${PAGE_BOTTOM} *:animate-fade`}>
               <SectionTabs pathname={pathname} />
+              <SettingsBack pathname={pathname} />
               <Outlet />
             </div>
           </main>
@@ -236,6 +239,7 @@ export function RootLayout() {
           <main className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
             <div className={`mx-auto w-full max-w-6xl space-y-6 px-4 pt-2 sm:px-6 sm:pt-4 lg:p-8 ${PAGE_BOTTOM} *:animate-fade`}>
               <SectionTabs pathname={pathname} />
+              <SettingsBack pathname={pathname} />
               <Outlet />
             </div>
           </main>
