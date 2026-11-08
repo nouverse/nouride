@@ -182,7 +182,7 @@ const { usageFor } = await import("../apps/engine/src/cli/usage.ts");
 
 /** The files whose flag reads are a command's, where the command is not named by one file of its own. */
 const FILES: Record<string, string[]> = {
-  agent: ["commands/agents.ts", "commands/agent-cli.ts"],
+  agent: ["commands/agents.ts", "commands/agent-cli.ts", "commands/agent-skill-root.ts"],
   agents: ["commands/agents.ts", "commands/external-clis.ts"],
   gateway: ["commands/gateway.ts", "commands/gateway-rename.ts", "wake-up.ts"],
   memory: ["commands/memory.ts", "commands/memory-tags.ts"],

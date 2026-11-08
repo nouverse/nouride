@@ -390,6 +390,18 @@ export function isWritableDir(path: string): boolean {
   }
 }
 
+/** Whether `path` is a directory this process can list and open things in, by the effective uid as {@link isWritableDir}. */
+export function isReadableDir(path: string): boolean {
+  try {
+    if (!statSync(path).isDirectory()) return false;
+    // R_OK | X_OK: listing it needs read, opening what is in it needs search.
+    accessSync(path, 5);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Can this process read and write `path` — a socket, a device? By the effective uid, groups and mounts, as
  * {@link isWritableDir} is, because a mode bit cannot say what a service's sandbox lets it reach.

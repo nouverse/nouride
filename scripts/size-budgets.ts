@@ -221,9 +221,11 @@ export const BUDGET: Record<string, Budget> = {
       "489 → 492: the knowledge base's tables in `SCANS_ALLOWED` and its collection list in `INTERPOLATIONS` (0.8.20) — lines of the lists",
   },
   "apps/engine/src/index.ts": {
-    lines: 587,
+    lines: 590,
     why:
       "boot order and graceful shutdown — what is not ordering is lifted into `boot/`, and what is left is the sequence; " +
+      "587 → 590 for an agent's skill roots (0.8.24): the Files tab's one write built once, for the persona tool and the skill roots, " +
+      "which need the credentials folder settled above; " +
       "570 → 586 for the knowledge base (0.8.20): who its admins are, known once the accounts are opened, and its wait for room, " +
       "once the box's load is sampled, both after memory is built — two steps of the sequence — its look at the folder among the timers, " +
       "and the built-in skills handed to memory, whose `doc.py` reads PDF and Office files; " +

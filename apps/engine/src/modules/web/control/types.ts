@@ -48,6 +48,7 @@ import type { UsersPort } from "@/modules/users/users.store.ts";
 import type { SetupService } from "@/modules/setup/service.ts";
 import type { SettingsService } from "@/modules/config/settings/index.ts";
 import type { FileService } from "@/modules/setup/files.ts";
+import type { SkillRoots } from "@/modules/setup/skill-roots.ts";
 import type { SessionsPort } from "@/modules/sessions/sessions.store.ts";
 import type { TurnsPort } from "@/modules/turns/turns.store.ts";
 import type { TurnInspector } from "@/modules/turns/inspection.store.ts";
@@ -178,6 +179,8 @@ export interface ControlDeps {
   settings?: SettingsService;
   /** Persona and config file editing. */
   files?: FileService;
+  /** An agent's skill roots, listed, added and removed (0.8.24, `routes/skill-roots.ts`). */
+  skillRoots?: SkillRoots;
   /** Conversations, for the dashboard's chat view. */
   sessions?: SessionsPort;
   /** Each conversation's work notes, shown and edited beside it (`routes/notes.ts`). */

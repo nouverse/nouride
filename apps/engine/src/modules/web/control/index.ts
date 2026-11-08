@@ -20,6 +20,7 @@ import { controlGuard } from "./guard.ts";
 import type { ControlApp, ControlDeps, ControlEnv } from "./types.ts";
 import { registerSetupRoutes } from "./routes/setup.ts";
 import { registerFileRoutes } from "./routes/files.ts";
+import { registerSkillRootRoutes } from "./routes/skill-roots.ts";
 import { registerDiagnosticRoutes } from "./routes/diagnostics.ts";
 import { registerConversationRoutes } from "./routes/conversations.ts";
 import { registerChatRoutes } from "./routes/chat.ts";
@@ -79,6 +80,8 @@ export function mountControlRoutes(app: Hono, deps: ControlDeps): void {
   // Before `registerAgentRoutes`: `/agents/:id/files` has to be matched before that module's
   // catch-all `POST /agents/:id/:action`.
   registerFileRoutes(control, deps);
+  // Before it too: `POST /agents/:id/skill-roots` is three segments.
+  registerSkillRootRoutes(control, deps);
   registerDiagnosticRoutes(control, deps);
   registerConversationRoutes(control, deps);
   registerChatRoutes(control, deps);

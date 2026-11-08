@@ -112,12 +112,12 @@ export class ProjectSkills {
     const collected: Skill[] = [];
     for (const root of roots) {
       try {
-        collected.push(...(await this.forRoot(root)));
+        collected.push(...(await this.ofRoot(root)));
       } catch (err) {
         log.warn("could not read project skills", { root, error: String(err) });
       }
     }
-    // Filtered here, not in `forRoot`, because the cache is keyed by directory and shared by every
+    // Filtered here, not in `ofRoot`, because the cache is keyed by directory and shared by every
     // agent that names the root. Filtering inside it would store one agent's toggles under a key the
     // next agent reads — a skill switched off for Nix disappearing for Nero, from a cache hit.
     return collected.filter((skill) => skillEnabled(agent.config.skills, skill, agent.config.id));
@@ -128,7 +128,11 @@ export class ProjectSkills {
     this.cache.clear();
   }
 
-  private async forRoot(root: string): Promise<Skill[]> {
+  /**
+   * What one root brings, before any agent's switch: the Skills page lists each root with its skills (0.8.24). Throws
+   * where the folder cannot be read; `forAgent` holds that per root.
+   */
+  async ofRoot(root: string): Promise<Skill[]> {
     const dir = join(root, PROJECT_SKILLS_DIR);
     const names = projectSkillFolders(root).map((folder) => folder.name);
     const signature = this.signatureOf(dir, names);

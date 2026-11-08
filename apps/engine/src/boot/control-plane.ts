@@ -51,6 +51,7 @@ import type { RoomMessagesPort } from "@/modules/chat-events/room-messages.store
 import type { ChatAttachmentsPort } from "@/modules/attachments/chat-attachments.store.ts";
 import type { UploadStore } from "@/modules/web/control/uploads.ts";
 import { FileService } from "@/modules/setup/files.ts";
+import type { SkillRoots } from "@/modules/setup/skill-roots.ts";
 import { SetupService } from "@/modules/setup/service.ts";
 import type { SqliteApprovalGate } from "@/modules/tools/approvals.store.ts";
 import type { AutoApprovePort } from "@/modules/tools/auto-approve.store.ts";
@@ -134,6 +135,8 @@ export async function startControlPlane(deps: {
   mcp: McpManager;
   reach: ApprovalReach;
   projectSkills: ProjectSkills;
+  /** An agent's skill roots, for its Skills page and `nouride agent skill-root add|rm` (0.8.24). */
+  skillRoots: SkillRoots;
   /** `skills/` beside the executable, so `/skills` lists built-in skills the same way the loader does. */
   builtinSkillsDir: string | undefined;
   autoApprove: AutoApprovePort;
@@ -385,6 +388,7 @@ export async function startControlPlane(deps: {
               mcp,
               reach,
               projectSkills,
+              skillRoots: deps.skillRoots,
               reflection,
               skillHub: createSkillHub({ config, secrets, reflection, builtinSkillsDir }),
               ...(deps.mcpCatalog ? { mcpCatalog: deps.mcpCatalog } : {}),

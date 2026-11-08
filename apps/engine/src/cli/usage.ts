@@ -135,6 +135,7 @@ ${BOLD}Talking to a running daemon${RESET}
   nouride agent <enable|disable> <id>       written to config.toml, so it survives one
   nouride agent external <id> <cli> [--profile <name>]   a coding CLI answers it instead of its model
   nouride agent internal <id>               its model answers it again
+  nouride agent skill-root <add|rm> <id> <path>   a folder whose .agents/skills it takes as its own skills
   nouride gateway [list]           Gateway connection status
   nouride gateway add --platform <p> --name <n> --agent <id> --stdin
                                    --token <value> inline instead (kept forever in the grant and the

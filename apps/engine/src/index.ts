@@ -33,6 +33,7 @@ import { AgentRegistry } from "@nouride/persona";
 import { resolveBuiltinSkillsDir } from "@nouride/persona";
 import { defaultConfigPath } from "@/modules/config/global/index.ts";
 import { FileService } from "@/modules/setup/files.ts";
+import { SkillRoots } from "@/modules/setup/skill-roots.ts";
 import { setEffort } from "@/modules/setup/agent-effort.ts";
 import { createPersonaTool } from "@/modules/tools/builtins/persona.ts";
 import type { DaemonContext } from "@/commons/context.ts";
@@ -757,6 +758,11 @@ export async function runDaemon(): Promise<void> {
 
   ctx.mcp = mcp;
 
+  // The Files tab's one write to an agent's pack, for what writes it from elsewhere: an agent's persona change once an
+  // admin approves it (0.8.8), and its skill roots from its Skills page, the CLI and its own request (0.8.24).
+  const packFiles = new FileService({ agentsDir: config.daemon.agentsDir, configPath: source ?? defaultConfigPath(), registry, config, audit });
+  const skillRoots = new SkillRoots({ registry, files: packFiles, credentialsDir, projectSkills });
+
   const pipeline = new Pipeline({
     // Read for a role only: whether a chat sender is an admin, for `/daemon-restart`.
     users: accounts,
@@ -790,7 +796,7 @@ export async function runDaemon(): Promise<void> {
     missionTools: missions.tools,
     scheduleTool: proposals.tool,
     // An agent's change to its own persona goes to an admin, and through the Files tab's one write once approved (0.8.8).
-    personaTool: createPersonaTool({ files: new FileService({ agentsDir: config.daemon.agentsDir, configPath: source ?? defaultConfigPath(), registry, config, audit }) }),
+    personaTool: createPersonaTool({ files: packFiles }),
     externalAgents,
     // `/effort … lock` (0.8.17) writes the agent's own effort the way its Model tab does, audited.
     agentEffort: (agentId, effort, actor) => setEffort({ registry, audit }, { agentId, effort, actor }),
@@ -911,7 +917,7 @@ export async function runDaemon(): Promise<void> {
     ...(nougate ? { gateway: nougate } : {}),
     ...(credentialSharing ? { credentialSharing } : {}),
     ctx, db, config, configSource: source, secrets, registry, providers, pipeline, approvals,
-    grants, toolGrants, access, memory, memoryPass, jobs, notifier, audit, logs, logStore, mcp, reach, projectSkills,
+    grants, toolGrants, access, memory, memoryPass, jobs, notifier, audit, logs, logStore, mcp, reach, projectSkills, skillRoots,
     builtinSkillsDir, autoApprove, sessions, notes, missions: missions.missions, externalAgents, turns, events, chatEvents, roomMessages, attachmentIndex, rooms, usage, uploads, cron, scheduler, proposals: proposals.cards, localGateway,
     supervisorInfo, reflection, mcpCatalog, mcpLogins, agentsSeen, state,
     builtinTools: tools,

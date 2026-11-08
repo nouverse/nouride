@@ -60,7 +60,10 @@ export const GRAMMAR: Readonly<Record<string, CommandGrammar>> = {
   agents: { forms: { "": NONE, scan: NONE, login: NONE } },
   acp: { forms: { "": ["--agent <id>"] } },
   // `pause` and `resume`, what asleep was called before 0.8.0: kept, untaught.
-  agent: { forms: { "": NONE, sleep: NONE, wake: NONE, pause: NONE, resume: NONE, reload: NONE, enable: NONE, disable: NONE, external: ["--profile <name>"], internal: NONE }, untaught: ["pause", "resume"] },
+  agent: {
+    forms: { "": NONE, sleep: NONE, wake: NONE, pause: NONE, resume: NONE, reload: NONE, enable: NONE, disable: NONE, external: ["--profile <name>"], internal: NONE, "skill-root add": NONE, "skill-root rm": NONE },
+    untaught: ["pause", "resume"],
+  },
   gateway: {
     forms: {
       "": NONE,

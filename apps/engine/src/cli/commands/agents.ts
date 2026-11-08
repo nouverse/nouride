@@ -6,6 +6,7 @@ import { loginCli, scanClis } from "@/cli/commands/external-clis.ts";
 import { knownAction } from "@/cli/usage.ts";
 import { saidSaved } from "@/cli/saved.ts";
 import { answeredBy } from "@/cli/commands/agent-cli.ts";
+import { skillRootCommand } from "@/cli/commands/agent-skill-root.ts";
 
 /** `nouride agents [scan|login <id>]`: the list, the coding CLIs this box has, an external agent's sign-in. */
 export async function agentsCommand(client: Client, args: string[]): Promise<void> {
@@ -46,7 +47,8 @@ async function agents(client: Client): Promise<void> {
 
 export async function agentAction(client: Client, args: string[]): Promise<void> {
   const [action, id] = args;
-  knownAction("agent", action, ["sleep", "wake", "pause", "resume", "reload", "enable", "disable", "external", "internal"]);
+  knownAction("agent", action, ["sleep", "wake", "pause", "resume", "reload", "enable", "disable", "external", "internal", "skill-root"]);
+  if (action === "skill-root") return skillRootCommand(client, args.slice(1));
   if (!action || !id) usageError(`Which agent?`, "Usage: nouride agent <sleep|wake|reload|enable|disable|internal> <id>, or nouride agent external <id> <cli>");
   if (action === "external" || action === "internal") return answeredBy(client, action, id, args.slice(2));
   const answer = await client.post<{ restartRequired?: boolean }>(`/agents/${id}/${action}`);
