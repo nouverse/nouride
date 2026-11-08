@@ -35,6 +35,10 @@ Dashboard work keeps it that way:
 - Lavender here is the brand's, chosen on purpose: the "purple-on-white default" warning in
   `design-book/taste.md` does not apply to it. Saturated purple gradients still do.
 - Text on peach and on mint is ink, not white: white on these reads below AA.
+- By day a pastel cannot carry text at AA on cream, so in `main.css` each daisyUI colour is its pastel's
+  hue deepened until text in it does, and the pastel itself is a `--fill-*` for the few solid fills that
+  make the look (the main button, a progress bar, the greeting's light). Write text in `text-primary` and
+  the rest as usual; the main action is `btn-primary`, which takes the pastel.
 
 ## Type
 
@@ -61,15 +65,21 @@ state and is used for that state only:
   an update, a delivery); good night: the Night greeting;
 - the head alone: the logo, the favicon and the app icon.
 
-At most one mascot per view, beside the content it explains and never on top of it. No mascot in a
-table, a form or a dialog's body. A view that reads as plain information gets none.
+At most one mascot per view, beside the content it explains and never on top of it; Home is the one
+exception its mockup draws, a small one beside the card it explains. No mascot in a table, a form or a
+dialog's body. A view that reads as plain information gets none. In the dashboard a pose is `<Mascot
+pose=…>` or `<EmptyState pose=…>`; which state takes which pose is the table in v0.8.24's RFC
+("The new look, as built").
 
 ## Layout
 
 - Desktop: the sidebar. Phone (below 768px): a tab bar at the bottom (Home, Chats, Work, Agents, More),
   with Work holding missions, approvals and jobs under one badge, and a floating "+ Chat" on Home and
   Chats. No sidebar drawer on a phone.
-- Home, in order: what needs the person, what is moving, Quick Chat, the agents.
+- Home, in order: what needs the person, what is moving, Quick Chat, the agents. On a phone "+ Chat"
+  stands in for Quick Chat: a floating button never covers a field.
+- The menu by how often a page is opened: Home, Chats, Work, Agents; then Skills, Memory; everything set up
+  once behind Settings, a page of grouped cards with a search. A section's other pages are tabs over it.
 - An approval is answered where it is asked: in the chat as well as on its page.
 - Every multi-column layout collapses explicitly below 768px.
 
