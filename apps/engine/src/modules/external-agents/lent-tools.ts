@@ -44,6 +44,8 @@ const LENT = new Set([
   "agent_configure",
   // Its own persona (0.8.8): the pack is the daemon's, so a change it proposes goes to an admin, as an internal agent's does.
   "persona",
+  // Its own skill roots (0.8.24), asked of an admin as its persona is: the pack is the daemon's to write.
+  "skill_root",
   // What a Nouride agent did that a CLI could not (0.8.11, §C.5). A new agent's pack and a skill in the one pool are the
   // daemon's files: a skill a CLI wrote in its own skills folder was its alone — not on the Skills tab, not checked as a
   // draft, in no other agent's pool. The hubs' queue is the daemon's; `mcp_search`'s add link names the dashboard and the

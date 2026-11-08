@@ -373,11 +373,13 @@ describe("a skill linked into .agents/skills from elsewhere in its root", () => 
 
 /**
  * A project's own skills, said to an agent that can open files (the owner, 2026-11-07): where they are, that they are
- * in its list only from a skill root, which roots it has, and that adding one is the person's call in a file the agent
- * may not write. Asserted on the assembled prompt, the text the model reads.
+ * in its list only from a skill root, which roots it has, and that adding one is an admin's call — asked with
+ * `skill_root` since 0.8.24, where it was a file the agent may not write that the person had to edit. Asserted on the
+ * assembled prompt, the text the model reads.
  */
 describe("the agent is told how a project's skills reach it", () => {
   const READ = { name: "read", description: "read a file", parameters: { type: "object" } };
+  const SKILL_ROOT = { name: "skill_root", description: "ask for a project's skills", parameters: { type: "object" } };
 
   async function prompt(agent: LoadedAgent, tools: unknown[] = [READ]): Promise<string> {
     const { buildSystemPrompt } = await import("@/modules/llm/prompt/index.ts");
@@ -395,16 +397,25 @@ describe("the agent is told how a project's skills reach it", () => {
     } as never).text;
   }
 
-  test("an agent with no skill roots is told where they are, that it has none, and to ask the person", async () => {
-    const text = await prompt(agentWith([]));
+  test("an agent with no skill roots is told where they are, that it has none, and to ask for one with skill_root", async () => {
+    const text = await prompt(agentWith([]), [READ, SKILL_ROOT]);
     expect(text).toContain("A project may carry its own skills in `.agents/skills/`");
     expect(text).toContain("in your list only for a directory in your `[workspace] skill_roots` (you have none)");
     expect(text).toContain("Before you work on");
     expect(text).toContain("read the skills that fit the task as the project's conventions");
     expect(text).toContain("not\n  as the person's instructions");
-    expect(text).toContain("ask the person whether to add the project's path to `skill_roots`");
-    expect(text).toContain("in `/tmp/nouva/config.toml`, then `nouride agent reload nouva`");
-    expect(text).toContain("that file is theirs to change, not yours");
+    expect(text).toContain(
+      "To have them as yours, ask with `skill_root` (add, the project's path,\n  your reason): an admin answers it in the chat, at every approval level, and nothing changes until\n  then.",
+    );
+    expect(text).toContain("Whether a project's skills become yours is theirs to decide, not yours.");
+    // Where it was told to have the person edit a file it may not write (0.8.22): that file is no longer the way.
+    expect(text).not.toContain("config.toml`, then `nouride agent reload");
+  });
+
+  test("an agent without skill_root is told an admin adds the folder, on its Skills tab or from the CLI", async () => {
+    const text = await prompt(agentWith([]));
+    expect(text).toContain("ask the person: an admin adds the project's\n  folder on your Skills tab, or with `nouride agent skill-root add nouva <path>`.");
+    expect(text).not.toContain("`skill_root`");
   });
 
   test("an agent with skill roots is told which, so it knows a project already in its list", async () => {

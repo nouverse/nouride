@@ -82,7 +82,7 @@ export const BUDGET: Record<string, Budget> = {
       "0.7.25 (507 → 510): a job started by a command that prints credentials has its log go through the same swap to handles as the foreground output (`tools/credential-output.ts`) — the option, handed through the `exec` adapter and into the spawn; 510 → 511: a job's sandbox names whose user it runs as — its agent's, or the daemon's for its own CLI (0.8.0)",
   },
   "apps/engine/src/modules/tools/registry.ts": {
-    lines: 440,
+    lines: 443,
     why:
       "the built-in tools and one agent's toolset made of them — what it is offered, how each is gated, what each " +
       "result is masked of: one place to read what an agent can do. 0.7.17: `secret_save` comes with `exec`, and the " +
@@ -92,7 +92,8 @@ export const BUDGET: Record<string, Budget> = {
       "0.7.23 (410 → 414): `send_message`, offered where the daemon has gateways to send through, and brought by `send_file` — an option, the line that offers it, and the implied pair; " +
       "0.7.25 (414 → 419): the daemon's own credentials handed to `exec` and `session` too, so a printed credential file's value that is one keeps its mask rather than gaining a handle (`tools/credential-output.ts`); " +
       "0.7.26 (419 → 427): `notes`, offered by the daemon to every agent that holds a tool — an option, the line that builds it, and the daemon-resolved block beside `attachment_read`'s — and `plan` built with the store it keeps a plan in; " +
-      "416 → 419 for `mission` (0.8.0), handed per turn as that turn holds it — `start` in a chat, the mission's own actions in a mission's; 419 → 422 for `schedule`, resolved by the daemon for a chat's turn as `mission` is (0.8.0); 422 → 431: `delegate` is handed the mission's helper worktree (`isolated`, 0.8.1) — the option and its pass-through; 431 → 433: `isolated` is taken off `delegate`'s schema outside such a mission, as `background` is where it is not allowed; 0.8.7 (433 → 436): `work`, offered by the daemon to every agent that holds a tool, beside `notes` and `mission` — an option and its daemon-resolved line; 436 → 439 (0.8.8): `persona` resolved by the daemon for every agent that holds a tool, as `schedule` is; 439 → 440 (0.8.11): `mcp_search`'s link through the one rule for dashboard links (`web/links.ts`) instead of a bare address — the option's type and its import",
+      "416 → 419 for `mission` (0.8.0), handed per turn as that turn holds it — `start` in a chat, the mission's own actions in a mission's; 419 → 422 for `schedule`, resolved by the daemon for a chat's turn as `mission` is (0.8.0); 422 → 431: `delegate` is handed the mission's helper worktree (`isolated`, 0.8.1) — the option and its pass-through; 431 → 433: `isolated` is taken off `delegate`'s schema outside such a mission, as `background` is where it is not allowed; 0.8.7 (433 → 436): `work`, offered by the daemon to every agent that holds a tool, beside `notes` and `mission` — an option and its daemon-resolved line; 436 → 439 (0.8.8): `persona` resolved by the daemon for every agent that holds a tool, as `schedule` is; 439 → 440 (0.8.11): `mcp_search`'s link through the one rule for dashboard links (`web/links.ts`) instead of a bare address — the option's type and its import; " +
+      "0.8.24 (440 → 443): `skill_root`, resolved in every turn of an agent that holds a tool, as `persona` is.",
   },
   "apps/engine/src/modules/tools/builtins/exec.ts": {
     lines: 426,
@@ -221,11 +222,11 @@ export const BUDGET: Record<string, Budget> = {
       "489 → 492: the knowledge base's tables in `SCANS_ALLOWED` and its collection list in `INTERPOLATIONS` (0.8.20) — lines of the lists",
   },
   "apps/engine/src/index.ts": {
-    lines: 590,
+    lines: 592,
     why:
       "boot order and graceful shutdown — what is not ordering is lifted into `boot/`, and what is left is the sequence; " +
-      "587 → 590 for an agent's skill roots (0.8.24): the Files tab's one write built once, for the persona tool and the skill roots, " +
-      "which need the credentials folder settled above; " +
+      "587 → 592 for an agent's skill roots (0.8.24): the Files tab's one write built once, for the persona tool and the skill roots, " +
+      "which need the credentials folder settled above, and `skill_root` handed to the pipeline beside `persona`; " +
       "570 → 586 for the knowledge base (0.8.20): who its admins are, known once the accounts are opened, and its wait for room, " +
       "once the box's load is sampled, both after memory is built — two steps of the sequence — its look at the folder among the timers, " +
       "and the built-in skills handed to memory, whose `doc.py` reads PDF and Office files; " +

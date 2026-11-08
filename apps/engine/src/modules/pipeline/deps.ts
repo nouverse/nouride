@@ -198,6 +198,8 @@ export interface PipelineDeps {
   scheduleTool?: Tool;
   /** `persona` (0.8.8): an agent's change to its own persona, proposed to an admin — in every turn (`tools/registry.ts`). */
   personaTool?: Tool;
+  /** `skill_root` (0.8.24): an agent's request for a project's skills, put to an admin — in every turn, as `persona`. */
+  skillRootTool?: Tool;
   /** The external agents' coding CLIs (0.8.1, `modules/external-agents`). Absent: every agent's turn is the executor's. */
   externalAgents?: ExternalBrains;
   /** An agent's own effort written to its pack, for `/effort … lock` (0.8.17): `setup/agent-effort.ts`, the Model tab's. */

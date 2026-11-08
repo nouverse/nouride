@@ -36,6 +36,7 @@ import { FileService } from "@/modules/setup/files.ts";
 import { SkillRoots } from "@/modules/setup/skill-roots.ts";
 import { setEffort } from "@/modules/setup/agent-effort.ts";
 import { createPersonaTool } from "@/modules/tools/builtins/persona.ts";
+import { createSkillRootTool } from "@/modules/tools/builtins/skill-root.ts";
 import type { DaemonContext } from "@/commons/context.ts";
 import { SchemaDriftError } from "@/db/index.ts";
 import { databaseEpoch } from "@/db/epoch.ts";
@@ -797,6 +798,7 @@ export async function runDaemon(): Promise<void> {
     scheduleTool: proposals.tool,
     // An agent's change to its own persona goes to an admin, and through the Files tab's one write once approved (0.8.8).
     personaTool: createPersonaTool({ files: packFiles }),
+    skillRootTool: createSkillRootTool({ roots: skillRoots }),
     externalAgents,
     // `/effort … lock` (0.8.17) writes the agent's own effort the way its Model tab does, audited.
     agentEffort: (agentId, effort, actor) => setEffort({ registry, audit }, { agentId, effort, actor }),

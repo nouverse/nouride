@@ -1073,8 +1073,8 @@ export const HARDLINE_SUMMARY: { class: HardlineVerdict["class"]; what: string; 
   },
   {
     class: "persona",
-    what: "An agent's own SOUL.md, IDENTITY.md or AGENTS.md changed; asked under trusted too, and answered in a chat by an admin only",
-    examples: ["persona, the one way an agent changes them"],
+    what: "An agent's own SOUL.md, IDENTITY.md or AGENTS.md changed, or the folders it takes skills from; asked under trusted too, and answered in a chat by an admin only",
+    examples: ["persona, the one way an agent changes them", "skill_root, its request for a project's skills"],
   },
   {
     class: "people",

@@ -588,6 +588,7 @@ export class TurnContext extends ActiveTurns {
     return {
       ...(this.deps.mcp ? { mcpTools: this.deps.mcp.toolsFor.bind(this.deps.mcp) } : {}),
       ...(this.deps.personaTool ? { personaTool: this.deps.personaTool } : {}),
+      ...(this.deps.skillRootTool ? { skillRootTool: this.deps.skillRootTool } : {}),
       ...(this.deps.jobs
         ? {
             startJob: startJobFor(this.deps.jobs),

@@ -380,7 +380,8 @@ export type HardlineClass =
   /**
    * An agent's own `SOUL.md`, `IDENTITY.md` or `AGENTS.md` changed (0.8.8, the `persona` tool): who it is, its
    * confirmation rules and its boundaries. Asked at every level, `trusted` too, and answered in a chat by an admin only:
-   * a turn talked into loosening its own rules would otherwise leave no one to see it.
+   * a turn talked into loosening its own rules would otherwise leave no one to see it. And a folder added to or taken
+   * from its skill roots (0.8.24, `skill_root`): the skills it brings are instructions in the agent's prompt too.
    */
   | "persona"
   /**

@@ -82,6 +82,14 @@ function projectSkillFolders(root: string): { name: string; linkedTo: string | n
 }
 
 /**
+ * The names of the skills a root brings, read from its folders alone and at once: what an agent's request to add the
+ * root shows the admin deciding it (0.8.24), in a gate that cannot wait for each `SKILL.md` to be parsed.
+ */
+export function projectSkillNames(root: string): string[] {
+  return projectSkillFolders(root).map((folder) => folder.name);
+}
+
+/**
  * What `read` must open for one root's skills: its `.agents/skills/`, and where each linked skill really is. `read`
  * checks a path by where it really leads, so a linked skill named in the prompt by its link was otherwise refused.
  */

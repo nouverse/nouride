@@ -429,6 +429,8 @@ export interface ToolsetDeps {
   scheduleTool?: Tool;
   /** `persona` (0.8.8): follows the daemon, to every agent that holds a tool — it only proposes, and an admin decides. */
   personaTool?: Tool;
+  /** `skill_root` (0.8.24): the same way — it only asks for a folder's skills, and an admin decides. */
+  skillRootTool?: Tool;
   /** A mission's turn in a worktree of its own (0.8.1): `delegate` offers `isolated`. Absent: its schema has none. */
   helperWorktrees?: boolean;
 }
@@ -642,8 +644,13 @@ export function resolveToolset(
   if (deps?.personaTool && holdsTools) resolved.set("persona", deps.personaTool);
   else resolved.delete("persona");
 
+  // `skill_root` the same way (0.8.24): a project's skills become instructions in the agent's prompt, so asking for them
+  // is asking an admin, at every level, as a persona change is; it is the agent's one way to say which it should have.
+  if (deps?.skillRootTool && holdsTools) resolved.set("skill_root", deps.skillRootTool);
+  else resolved.delete("skill_root");
+
   if (unknown.length > 0) {
-    // `ask_agent`, `attachment_read`, `notes`, `mission`, `work`, `schedule` and `persona` are never in this list: all are daemon-resolved above, and
+    // `ask_agent`, `attachment_read`, `notes`, `mission`, `work`, `schedule`, `persona` and `skill_root` are never in this list: all are daemon-resolved above, and
     // reporting a pack's own default as a mistake in its config would send the operator looking for a
     // typo that is not there.
     log.warn("agent enables tools that do not exist", { agent_id: agent.config.id, unknown });

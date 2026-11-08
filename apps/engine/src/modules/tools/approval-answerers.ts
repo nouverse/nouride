@@ -7,8 +7,9 @@
  * grant for it. The CLI answers anything — the operator, through a token-guarded surface — and does not ask this; the
  * dashboard asks only whether an admin's request is answered by an admin's account.
  *
- * A change to an agent's own persona (`persona`, 0.8.8) is an admin's alone, in a one-to-one chat too: the files hold the
- * agent's rules and boundaries, and the person chatting with it — a family member paired to it — is not their owner. So
+ * A change to an agent's own persona (`persona`, 0.8.8; its skill roots too, `skill_root`, 0.8.24) is an admin's alone, in a
+ * one-to-one chat too: the files hold the agent's rules and boundaries, and the person chatting with it — a family member
+ * paired to it — is not their owner. So
  * is a change to who People says a person is (`people`, 0.8.9): an admin is a person there, and whoever answers it could
  * otherwise make their own chat an admin's. And a program installed for every agent (`shared-tools`, 0.8.9): its install
  * scripts run as the daemon's user, which reaches People, every pack and the secret store (Nox's review, N7). And this

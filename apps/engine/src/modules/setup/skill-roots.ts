@@ -12,7 +12,7 @@
  */
 
 import { escapes, expandHome, isAbsolute, isReadableDir, parseToml, realPathStrict, relative, resolve, statFile } from "@nouride/runtime";
-import type { AgentRegistry, ProjectSkills } from "@nouride/persona";
+import { projectSkillNames, type AgentRegistry, type ProjectSkills } from "@nouride/persona";
 import { removeTomlKey, removeTomlTable, upsertTomlTable } from "@/modules/config/edit.ts";
 import type { FileService } from "./files.ts";
 
@@ -119,6 +119,18 @@ export class SkillRoots {
     }
     if (agent.config.skillRoots.some((root) => sameFolder(root, path))) return { refused: "already", error: `${path} is already one of ${agentId}'s skill roots.` };
     return { path };
+  }
+
+  /** The agent's root `given` names, as the loader reads it, or null where it is not one of them. */
+  rootOf(agentId: string, given: string): string | null {
+    const path = fullPath(given);
+    if (!path) return null;
+    return this.deps.registry.get(agentId)?.config.skillRoots.find((root) => sameFolder(root, path)) ?? null;
+  }
+
+  /** The names of the skills a folder brings now, read from its folders alone. */
+  skillsAt(path: string): string[] {
+    return projectSkillNames(path);
   }
 
   /** Add a root, checked first. `details` goes into the audit entry beside what changed: a request says it was one. */
