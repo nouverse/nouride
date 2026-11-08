@@ -15,18 +15,18 @@ the same Linux build of Nouride, the Router edition, with the [Nougate](/en/docs
 gateway inside.
 
 <Aside type="note" title="Tested on one phone">
-A Redmi 12 (HyperOS on Android 15, 6 GB of RAM) with Nouride Home 0.1.4 and Nouride 0.8.22, on
-2026-11-08: the first start, the dashboard on the phone and from a computer on the same Wi-Fi, an update
-of the app from the version before, and a restart of the phone. Not tried yet: other phones, and a phone
-where Android's limit on child processes has not been raised (see [Keep it running](#keep-it-running)).
+A Redmi Note 12 (HyperOS 2 on Android 15, 6 GB of RAM) with Nouride 0.8.22, on 2026-11-07 and 08: the
+first start, the dashboard on the phone and from a computer on the same Wi-Fi, the app updating itself
+(0.1.3 to 0.1.4 to 0.1.5), and a restart of the phone. Not tried yet: other phones, and a phone where
+Android's limit on child processes has not been raised (see [Keep it running](#keep-it-running)).
 </Aside>
 
 ## What you need
 
 - **A 64-bit phone on Android 7 or later.** Nouride has no 32-bit ARM build, and Android refuses to install
   the app on a 32-bit phone.
-- **About 700 MB of free storage.** The app, Debian and Nouride took that much on the test phone after the
-  first start. What your agents download and build comes on top.
+- **About 1.5 GB of free storage.** The app, Debian and Nouride took 1.3 GB on the test phone after a day of
+  use. What your agents download and build comes on top.
 - **The internet for the first start**, which downloads Nouride, and **a charger**: the phone runs all
   the time, so keep it plugged in.
 - **The same Wi-Fi** as the devices you will open the dashboard from, if you want to open it anywhere but
@@ -85,10 +85,11 @@ Nouride Home starts Nouride again if it stops on its own. What it cannot do alon
 under **Keep Nouride running**:
 
 - **Battery.** The card says whether the phone lets Nouride run with the screen off, and **Allow** asks
-  again if it does not. Until it is allowed, Home shows a reminder.
-- **Xiaomi, Redmi and POCO.** Tap **Open settings**, turn on **Autostart**, and set **Battery saver** to
-  **No restrictions**. Without Autostart, HyperOS does not let Nouride start again after the phone
-  restarts.
+  again if it does not (on a Xiaomi phone, it also sets Battery saver to No restrictions). Until it is
+  allowed, Home shows a reminder.
+- **Xiaomi, Redmi and POCO.** Some of these phones keep Nouride off after a restart until **Autostart**
+  allows it. Under **Start again after a restart**, tap **Open settings** and turn on Nouride Home in the
+  list. The test phone started Nouride again with Autostart off as well.
 - **Android 12 and later** stop an app's child processes when there are too many, and Nouride and every
   command an agent runs are child processes of Nouride Home. The test phone had that limit raised. If
   Nouride stops while agents are busy, raise it as in
@@ -97,8 +98,9 @@ under **Keep Nouride running**:
 ### After the phone restarts
 
 Nouride starts again by itself once the phone has been unlocked for the first time after the restart:
-Android starts no app before that. On Xiaomi, Redmi and POCO phones this needs Autostart, above. If you
-turned Nouride off before the restart, it stays off.
+Android starts no app before that. On the test phone it answered within a minute of the unlock. On some
+Xiaomi, Redmi and POCO phones this also needs Autostart, above. If you turned Nouride off before the
+restart, it stays off.
 
 ## Updates
 

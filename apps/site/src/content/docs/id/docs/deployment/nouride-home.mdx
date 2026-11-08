@@ -10,13 +10,13 @@ Nouride Home adalah aplikasi Android yang menjalankan Nouride di HP itu sendiri.
 Hasilnya sama dengan [HP Android jadi server](/id/docs/deployment/android-server/) yang dikerjakan manual lewat Termux: build Linux Nouride yang sama, edisi Router, dengan LLM gateway [Nougate](/id/docs/providers/nougate/) di dalamnya.
 
 <Aside type="note" title="Diuji di satu HP">
-Redmi 12 (HyperOS di Android 15, RAM 6 GB) dengan Nouride Home 0.1.4 dan Nouride 0.8.22, pada 2026-11-08: start pertama, dashboard di HP dan dari komputer di Wi-Fi yang sama, update aplikasi dari versi sebelumnya, dan HP di-restart. Yang belum diuji: HP lain, dan HP yang batas child process Android-nya belum dinaikkan (lihat [Biar tetap jalan](#biar-tetap-jalan)).
+Redmi Note 12 (HyperOS 2 di Android 15, RAM 6 GB) dengan Nouride 0.8.22, pada 2026-11-07 dan 08: start pertama, dashboard di HP dan dari komputer di Wi-Fi yang sama, aplikasi meng-update dirinya sendiri (0.1.3 ke 0.1.4 ke 0.1.5), dan HP di-restart. Yang belum diuji: HP lain, dan HP yang batas child process Android-nya belum dinaikkan (lihat [Biar tetap jalan](#biar-tetap-jalan)).
 </Aside>
 
 ## Kebutuhan
 
 - **HP 64-bit dengan Android 7 ke atas.** Nouride gak punya build ARM 32-bit, dan Android menolak memasang aplikasinya di HP 32-bit.
-- **Ruang kosong sekitar 700 MB.** Segitu yang dipakai aplikasi, Debian dan Nouride di HP uji setelah start pertama. Yang diunduh dan di-build agent kamu nanti di luar itu.
+- **Ruang kosong sekitar 1,5 GB.** Aplikasi, Debian dan Nouride memakai 1,3 GB di HP uji setelah sehari dipakai. Yang diunduh dan di-build agent kamu nanti di luar itu.
 - **Internet untuk start pertama**, karena Nouride diunduh waktu itu, dan **charger**: HP-nya jalan terus, jadi biarkan tercolok.
 - **Wi-Fi yang sama** dengan perangkat yang mau membuka dashboard, kalau dashboard-nya mau dibuka selain dari HP itu.
 - **Akun model atau API key.** Edisi Router bisa masuk pakai akun yang sudah kamu punya (Claude Pro atau Max, ChatGPT, GitHub Copilot, Google Gemini atau Kiro) lewat gateway Nougate bawaannya; endpoint dan API key provider juga bisa. Setup wizard yang menanyakannya.
@@ -55,13 +55,13 @@ Router kamu bisa memberi HP alamat lain nanti. Pesan satu alamat untuk HP itu di
 
 Nouride Home menyalakan Nouride lagi kalau ia berhenti sendiri. Yang gak bisa dikerjakan aplikasinya sendiri ada di tab **More**, di kartu **Keep Nouride running**:
 
-- **Baterai.** Kartunya memberi tahu apakah HP mengizinkan Nouride jalan waktu layar mati, dan **Allow** meminta izinnya lagi kalau belum. Selama belum diizinkan, Home menampilkan pengingat.
-- **Xiaomi, Redmi dan POCO.** Ketuk **Open settings**, nyalakan **Autostart**, dan atur **Battery saver** ke **No restrictions**. Tanpa Autostart, HyperOS gak mengizinkan Nouride menyala lagi setelah HP restart.
+- **Baterai.** Kartunya memberi tahu apakah HP mengizinkan Nouride jalan waktu layar mati, dan **Allow** meminta izinnya lagi kalau belum (di HP Xiaomi, ini sekalian mengatur penghemat baterai ke No restrictions). Selama belum diizinkan, Home menampilkan pengingat.
+- **Xiaomi, Redmi dan POCO.** Sebagian HP ini membiarkan Nouride mati setelah restart sampai **Autostart** mengizinkannya. Di kartu **Start again after a restart**, ketuk **Open settings** lalu nyalakan Nouride Home di daftarnya. Di HP uji, Nouride tetap menyala lagi walaupun Autostart mati.
 - **Android 12 ke atas** menghentikan child process aplikasi kalau jumlahnya terlalu banyak, dan Nouride serta tiap perintah agent adalah child process Nouride Home. Batas itu sudah dinaikkan di HP uji. Kalau Nouride berhenti waktu agent sedang sibuk, naikkan batasnya seperti di [phantom process killer](/id/docs/deployment/android-server/#android-12-ke-atas-phantom-process-killer).
 
 ### Setelah HP restart
 
-Nouride menyala lagi sendiri setelah kunci layar HP dibuka untuk pertama kali sejak restart: Android gak menjalankan aplikasi apa pun sebelum itu. Di HP Xiaomi, Redmi dan POCO, ini butuh Autostart di atas. Kalau Nouride kamu matikan sebelum restart, ia tetap mati.
+Nouride menyala lagi sendiri setelah kunci layar HP dibuka untuk pertama kali sejak restart: Android gak menjalankan aplikasi apa pun sebelum itu. Di HP uji, Nouride sudah menjawab kurang dari semenit setelah kunci layar dibuka. Di sebagian HP Xiaomi, Redmi dan POCO, ini juga butuh Autostart di atas. Kalau Nouride kamu matikan sebelum restart, ia tetap mati.
 
 ## Update
 
