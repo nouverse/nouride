@@ -93,7 +93,7 @@ describe("a round of looking is cheap enough to do", () => {
 });
 
 describe("assets: asked for first, then found, checked and cut by the book (0.8.12)", () => {
-  // The owner: so the skill works on a small model too — where to find, how to cut, and always ask the person first.
+  // So the skill works on a small model too — where to find, how to cut, and always ask the person first.
   const assets = readFileSync(join(import.meta.dir, "../../../../content/skills/motion-graphics/references/assets.md"), "utf8");
 
   test("the skill asks the person about assets before looking, and points to the reference", () => {

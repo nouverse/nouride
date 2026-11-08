@@ -1,5 +1,5 @@
 /**
- * The agents an upgrade to 0.7.9 took the ssh-agent socket from, named at boot (S11).
+ * The agents an upgrade to 0.7.9 took the ssh-agent socket from, named at boot.
  *
  * Every command and stdio MCP server of every agent held `SSH_AUTH_SOCK` until 0.7.9; now an agent's pack has to ask.
  * A default that changes under an install that relied on it fails far from the cause — a `git push` waiting on a

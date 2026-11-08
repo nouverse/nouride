@@ -89,7 +89,7 @@ export function mountLlmGateway(app: Hono, deps: LlmGatewayDeps): void {
   app.all(LLM_GATEWAY_PREFIX, (c) => c.redirect(`${LLM_GATEWAY_PREFIX}/frontend/`));
 
   app.all(`${LLM_GATEWAY_PREFIX}/*`, async (c: Context) => {
-    // Another site's page may not write through the session this page holds — it is every upstream account (S9).
+    // Another site's page may not write through the session this page holds — it is every upstream account.
     const crossSite = crossSiteWrite(c.req.raw);
     if (crossSite) return c.json({ error: "forbidden", note: crossSite }, 403);
 

@@ -1,5 +1,5 @@
 /**
- * A chat's task becomes a mission without starting over (MISSIONS §4): the task the chat's plan is kept with — else the
+ * A chat's task becomes a mission without starting over: the task the chat's plan is kept with — else the
  * one written last — moves into the mission's notes with its plan, and the chat keeps one line in its place,
  * `→ mission msn_…, running`. When the mission ends, that line becomes its outcome. One page moves; nothing is written
  * twice, and the chat's next turn does not carry on with work a mission is doing. Only the work of the turn that starts

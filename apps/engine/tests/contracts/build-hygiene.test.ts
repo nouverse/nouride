@@ -95,7 +95,7 @@ describe("the licence id", () => {
       expect({ path, license: (JSON.parse(read(path)) as { license?: string }).license }).toEqual({ path, license: declared });
     }
     expect(read("packages/isolation/root/nouride-run/Cargo.toml")).toContain(`license = "${declared}"`);
-    // The bridge is MIT — the owner's call (0.7.10): the bridge open, the rest under the repository's licence. Its manifest, its
+    // The bridge is MIT (0.7.10): the bridge open, the rest under the repository's licence. Its manifest, its
     // own LICENSE and the root LICENSE's list of separately licensed parts say the same thing.
     expect((JSON.parse(read("packages/wa-bridge/package.json")) as { license?: string }).license).toBe("MIT");
     expect(read("packages/wa-bridge/LICENSE").split("\n")[0]).toBe("MIT License");

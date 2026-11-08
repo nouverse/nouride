@@ -37,7 +37,7 @@ describe("started", () => {
 
 describe("each part of a notice is its own paragraph (0.8.11)", () => {
   // In WhatsApp, Nouva's done notice to a person read as one block: "Mission … done", the result and "Branch: …" ran
-  // together, each on the next line. The owner asked for an empty line between them.
+  // together, each on the next line. An empty line between them keeps them apart.
   const worked = { id: BASE.id, summary: "Lima dokumen sudah diaudit.", reviewed: true, checks: ["x"], workdir: `/srv/w/missions/${BASE.id}/worktree`, branch: null, reason: null };
   const page = `https://box/dashboard/missions/${BASE.id}`;
 
@@ -82,7 +82,7 @@ describe("options the agent names", () => {
   });
 
   test("steps numbered in a question are not options: they go without buttons (live, 2026-11-07)", async () => {
-    // Nix's question to the owner, as it was asked: four numbered steps to follow, then the question itself. Each step
+    // Nix's question to its person, as it was asked: four numbered steps to follow, then the question itself. Each step
     // went out as a button above it, and a tap would have answered "on the charger or not?" with a step.
     const nix = [
       "Iya, nanti aja pas lu udah di rumah. Langkahnya tetap sama:",

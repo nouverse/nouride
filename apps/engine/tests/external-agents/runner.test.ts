@@ -202,13 +202,13 @@ describe("a turn of an external agent", () => {
     // An agent its own model answers, or none at all, is held by the approvals.
     expect(service.freeToDelete(agent(undefined, false))).toBe(false);
     expect(service.freeToDelete(undefined)).toBe(false);
-    // A CLI of the person's own with no `folder` mode keeps its default there, which may ask (Nox's review).
+    // A CLI of the person's own with no `folder` mode keeps its default there, which may ask.
     const modeless = new ExternalAgents({ rows: () => [{ ...row(), modes: {} }], workspaceDir: () => "/nonexistent", secretsFor: () => ({}), sessions: { load: () => ({}), save: () => {} } });
     expect(modeless.freeToDelete(agent("folder"))).toBe(false);
   });
 
   test("the models the CLI offers are kept as its session said them, and outlive a restart, for the Brain tab to suggest (0.8.1)", async () => {
-    // On the live box the Brain tab's model field was empty text: the owner had to know the CLI's names for its models.
+    // On the live box the Brain tab's model field was empty text: a person had to know the CLI's names for its models.
     const { service, runner, req } = setup();
     expect(service.models.of("coder")).toEqual([]);
     await runner.run(req("one"));
@@ -286,7 +286,7 @@ describe("a turn of an external agent", () => {
   });
 
   test("its instruction file carries Nouride's block — who it is, which CLI, its persona pack in a prompt's order — and the person's lines", async () => {
-    // One persona pack whoever answers (0.8.1): the owner edited SOUL.md on the Files tab and expected a CLI agent to
+    // One persona pack whoever answers (0.8.1): a person edited SOUL.md on the Files tab and expected a CLI agent to
     // read it, and a separate instruction field on the Brain tab read as a second persona.
     const persona = { identity: "# Coder\nWrites the household's code.", soul: "Answer in Indonesian.", agents: "Run the tests before a push.", memory: "The repo is nouride." };
     const { runner, req, folder } = setup({ persona });

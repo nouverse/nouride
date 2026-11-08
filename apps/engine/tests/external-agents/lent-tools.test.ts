@@ -1,5 +1,5 @@
 /**
- * Nouride's tools lent to an external agent's CLI (0.8.1, EXTERNAL_AGENTS §4): a CLI started as a real process is
+ * Nouride's tools lent to an external agent's CLI (0.8.1): a CLI started as a real process is
  * given `/mcp/agent` when its session opens, lists what the turn lends — Nouride's own, not what the CLI does itself —
  * and its call runs as one of the turn's, through the executor's own tool path. Between turns, from another address,
  * or with no token of its session's, nothing runs.

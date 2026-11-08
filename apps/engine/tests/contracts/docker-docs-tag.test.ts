@@ -3,7 +3,7 @@
  * latest one, with no tag.
  *
  * From 0.7.11 to 0.7.20 the compose file followed `:0.7`, so no install would jump to 0.8.0 before its notes said how
- * to cross, and this test held every page to it. The owner moved everything to the latest image in 0.7.20: a fresh
+ * to cross, and this test held every page to it. Everything moved to the latest image in 0.7.20: a fresh
  * install should start on the newest release, and one pulled with each release passes through the last 0.7.x anyway.
  * A page left on `:0.7` would now be the odd one out, so a tag on any of them fails here (DEPLOY.md § The upgrade floor
  * has what a container that missed the last 0.7.x does).

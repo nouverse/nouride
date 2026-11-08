@@ -128,7 +128,7 @@ export function registerAuthRoutes(control: ControlApp, deps: ControlDeps): void
      * on success because the person has just proved who they are.
      */
     const address = c.env.clientAddress ?? NO_ADDRESS;
-    // Lower-cased so `Gading` and `gading` cannot be counted as two accounts to get two allowances.
+    // Lower-cased so `Sam` and `sam` cannot be counted as two accounts to get two allowances.
     const account = username.trim().toLowerCase();
 
     // Address first: it is the rule that catches spraying, and the cheaper one to be refused by.

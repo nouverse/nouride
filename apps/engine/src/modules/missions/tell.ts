@@ -1,5 +1,5 @@
 /**
- * `tell` (0.8.10, RFC_MISSION_STEERING): a person's words for a mission while it works. A mission could be stopped,
+ * `tell` (0.8.10): a person's words for a mission while it works. A mission could be stopped,
  * answered, let go on and accepted, and told nothing: a person who saw it go the wrong way stopped it and started again,
  * or waited hours for it to ask. msn_3d28e0 worked 3h41m in three turns, one prompt 2h42m long.
  *

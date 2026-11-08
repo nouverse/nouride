@@ -1,5 +1,5 @@
 /**
- * Turns, read whole — what `nouride turns` asks (D2).
+ * Turns, read whole — what `nouride turns` asks.
  *
  * The dashboard reads a turn through its conversation; this reads one by its id, with what the transcript does not
  * carry: each model call with its tokens, cost, latency and retries, and the audit log's rows for its tool calls.

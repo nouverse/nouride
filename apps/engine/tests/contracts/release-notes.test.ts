@@ -92,7 +92,7 @@ describe("the release workflow", () => {
   });
 
   /**
-   * HARDENING §3: the job checked out no submodule, so the public page was held to the plain patterns alone — the
+   * The job checked out no submodule, so the public page was held to the plain patterns alone — the
    * hashed private values `lint:public` holds the tree to are in `internals/pro`. Proved here by the job's shape; the
    * job itself runs only on a tag.
    */
@@ -113,7 +113,7 @@ describe("the release workflow", () => {
     expect(step).toContain('git -c "url.https://x-access-token:${TOKEN}@github.com/.insteadOf=https://github.com/" submodule update --init --depth 1 internals/pro');
     expect(step).not.toMatch(/^\s*git config/m);
     expect(job.slice(notes, job.indexOf("\n\n", notes))).toContain("--require-private-values");
-    // And nothing between the two takes it away again (Nox's review, N8).
+    // And nothing between the two takes it away again.
     expect(job.slice(pro + 1, notes)).not.toMatch(/submodule deinit|rm -rf[^\n]*internals|git clean/);
   });
 });

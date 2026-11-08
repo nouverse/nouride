@@ -1,6 +1,6 @@
 /**
  * The files a mission hands back are checked when it says it is done (0.8.12), while its agent can still name them
- * right. Live: Nouva named its video `worktree/apps/gading/out/…mp4` from inside the worktree, the path held a
+ * right. Live: Nouva named its video `worktree/apps/sam/out/…mp4` from inside the worktree, the path held a
  * `worktree` twice and nothing was there, and the person got "Not sent as files" at the end.
  */
 

@@ -1,5 +1,5 @@
 /**
- * The public mirror's first page (REVIEW A1, PLAN §4.2): every updater before 0.8.18 reads thirty releases, newest by
+ * The public mirror's first page: every updater before 0.8.18 reads thirty releases, newest by
  * date, and finds a stepping stone only there. Each release's floor needs a stone at or above it, below the release,
  * within the first twenty-five; the release audit and `publish.ts` stop a release that would push one off.
  */

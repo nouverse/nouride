@@ -1,5 +1,5 @@
 /**
- * What the chat a mission came from is told — and only this (MISSIONS §11): *started* with how to stop it; *needs you*,
+ * What the chat a mission came from is told — and only this: *started* with how to stop it; *needs you*,
  * with what; *done*, with its result; *ended*, with why. The whole report follows a result as `report.md`, and then the
  * files (`Missions.end`, `Missions.wait`). And, between them, a progress line
  * the daemon writes from the checklist, at most one every half hour. The chat stays quiet: the work is on the mission's
@@ -16,7 +16,7 @@ import type { Mission } from "./types.ts";
 /**
  * Between a notice's parts — its first line, the result or question, the branch, what to send, the page — an empty line
  * (0.8.11). Each on the next line, a done notice in WhatsApp read as one block: "Mission … done", the result and
- * "Branch: …" ran together, and the owner asked for the space.
+ * "Branch: …" ran together; the empty line keeps them apart.
  */
 export const GAP = "\n\n";
 
@@ -109,7 +109,7 @@ export function doneNotice(mission: Pick<Mission, "id" | "summary" | "reviewed" 
   // accepted as it stood (`person.ts`): the reason says which, and by whom. Saying they passed would be the one claim
   // the notice must not make.
   const how = mission.reason ?? [mission.checks.length > 0 ? "checks passed" : "", mission.reviewed ? "reviewed" : "", accepted ? "accepted" : ""].filter(Boolean).join(", ");
-  // A mission in a worktree of its own ends with its branch (§8): where its work is, whether or not it was merged.
+  // A mission in a worktree of its own ends with its branch: where its work is, whether or not it was merged.
   const branch = worktreeBranch(mission);
   return [`✓ Mission ${shortId(mission.id)} done${how ? ` (${how})` : ""}.`, mission.summary?.trim() ?? "", branch ? `Branch: ${branch}` : ""].filter(Boolean).join(GAP);
 }

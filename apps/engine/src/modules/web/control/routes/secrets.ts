@@ -34,12 +34,12 @@ const SECRET_PARTS: Record<SecretPart, string> = {
 export function registerSecretRoutes(control: ControlApp, deps: ControlDeps): void {
   control.get("/secrets", (c) => {
     if (!deps.settings) return c.json({ error: "the secret store is not available" }, 501);
-    // Whether the snapshots hold them, sealed (D5), and whether the store is encrypted and where its key is (0.8.19):
+    // Whether the snapshots hold them, sealed, and whether the store is encrypted and where its key is (0.8.19):
     // said beside the names, where somebody looks. Where the key is, never the key.
     return c.json({ secrets: deps.settings.secretInventory(), sealedInSnapshots: Boolean(deps.ctx.config.daemon.backupSeal), lock: deps.settings.secretLock() });
   });
 
-  /** The backup passphrase (0.8.18, D5): `{ passphrase }` sets it, `{ off: true }` keeps secrets out of snapshots. Admin. */
+  /** The backup passphrase (0.8.18): `{ passphrase }` sets it, `{ off: true }` keeps secrets out of snapshots. Admin. */
   control.post("/secrets/seal", async (c) => {
     if (!deps.settings) return c.json({ error: "config editing is not available", plain: NO_SETTINGS }, 501);
     const principal = c.get("principal");

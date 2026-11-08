@@ -1,8 +1,8 @@
 /**
- * The dashboard in plain words (0.8.19). The people who use it are not technical (the owner, 2026-11-05), so what a page
+ * The dashboard in plain words (0.8.19). The people who use it are not technical, so what a page
  * says holds no command (`nouride …`), flag, file name or path, and none of the words that say how Nouride is built
  * rather than what it does for them: daemon, gateway, snapshot, seal, passphrase, payload, ACP, MCP, CLI (a coding CLI
- * aside, the name the owner kept), stdin, adapter, registry, config, install as a noun, a line or track of releases,
+ * aside, a name kept on purpose), stdin, adapter, registry, config, install as a noun, a line or track of releases,
  * token; nor a section of the config file, a setting's name as it writes it, or a `git` word (0.8.20). Every word says
  * what something means for them and what they can do on that page; `TECHNICAL` in the inventory says what is refused,
  * and the server's own replies on the dashboard's routes are held to it by `plain-replies.test.ts`.

@@ -1,5 +1,5 @@
 /**
- * No em dash in what a person reads (the owner, 2026-11-03): the site's docs, the README and the guide, release notes
+ * No em dash in what a person reads: the site's docs, the README and the guide, release notes
  * from 0.8.15 on, the dashboard's words, what the daemon and its packages say (and what their prompts teach a model to
  * write to a person), what the installer and the container's scripts print, and the built-in skills and example pack.
  * A comma, a colon, a full stop or parentheses says it; a page full of dashes reads as written by a machine.

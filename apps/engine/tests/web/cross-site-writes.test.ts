@@ -1,6 +1,6 @@
 /**
- * Another site's page may not write through the dashboard's session (S9), and the hosted gateway's own port signs
- * nobody in once its dashboard is a page of this one (G5).
+ * Another site's page may not write through the dashboard's session, and the hosted gateway's own port signs
+ * nobody in once its dashboard is a page of this one.
  *
  * `SameSite=Lax` was the whole of the CSRF defence: right for a cross-site form, no help against a same-site one — a
  * sibling subdomain is the same site. Planted for real here: the session cookie a browser would attach, on a POST the

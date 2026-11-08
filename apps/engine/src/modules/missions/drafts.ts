@@ -16,7 +16,7 @@ import { ownFolderOf } from "./worktree.ts";
 
 /**
  * A brief its goal names by its path — "audit KK 1.3a per /…/audit_rina/BRIEF.md" — where the mission has no `BRIEF.md`
- * of its own (0.8.11): the owner asked to see it on the mission's page, as its report is. Its real path, every link
+ * of its own (0.8.11): it is shown on the mission's page, as its report is. Its real path, every link
  * followed, and only inside the agent's private workspace: the daemon reads it, so a goal naming a path through a
  * linked folder must not put the daemon's own files — its control token — on a page. `real` is `realPathStrict`.
  */

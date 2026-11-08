@@ -1,5 +1,5 @@
 /**
- * What a mission's reviewer is handed, and how its answer is read (MISSIONS §5). It gets the goal, what it is to verify,
+ * What a mission's reviewer is handed, and how its answer is read. It gets the goal, what it is to verify,
  * the agent's report and the result files — the report as the claim under review, never as evidence — and answers PASS,
  * or FAIL with what is missing: a reviewer that cannot say "pass" plainly has not passed it. One that ran out of its clock,
  * or answered neither — "NO VERDICT", "Not a PASS. I ran out of time" — has not judged the work (`checking.ts`): what it

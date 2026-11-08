@@ -247,7 +247,7 @@ describe("what no client calls is not served", () => {
   test("pruning every conversation before a moment, and saving a draft's edit without deciding, are gone", async () => {
     /**
      * Neither had a caller in the dashboard, the CLI or the Pro tree, nor a test: one bulk-deleted history, the
-     * other wrote a draft, and both read like features no screen offers (`dash-dead-api-wrappers`). The neighbours
+     * other wrote a draft, and both read like features no screen offers. The neighbours
      * they sat beside stay — one conversation deleted by id, a draft's edits sent with its approval — and answer
      * here with 501, for the dependency this harness leaves out, which is how a 404 is known to mean "no route".
      */

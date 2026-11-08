@@ -1,12 +1,12 @@
 /**
- * The knowledge base (0.8.20, KNOWLEDGE_BASE §11 and §13): its collections and their documents, for the dashboard's
+ * The knowledge base (0.8.20): its collections and their documents, for the dashboard's
  * Knowledge tab and `nouride knowledge`. Everything goes through `Memory.knowledge`, so a name is made safe and a
  * folder written in one place.
  *
  * Roles: reading is an operator's, as memory's reads are: a collection may be kept for one person, and a viewer reading
  * it through these routes read what its rule keeps from every chat but theirs. Making a collection and adding or
  * removing a document is an operator's too, the role memory's own writes need. Who may be answered from a collection beyond the person who made it, and deleting one, is an
- * admin's (§5.1: opened on purpose, by someone who may).
+ * admin's (opened on purpose, by someone who may).
  */
 
 import { idsOf } from "@/modules/people/match.ts";
@@ -99,7 +99,7 @@ export function registerKnowledgeRoutes(control: ControlApp, deps: ControlDeps):
     return null;
   }
 
-  /** The person whose dashboard account this is, by key: who a collection made here is for (§5.1). */
+  /** The person whose dashboard account this is, by key: who a collection made here is for. */
   function personOf(principal: Principal): string | null {
     const account = principal.user?.id;
     if (!account) return null;
@@ -220,7 +220,7 @@ export function registerKnowledgeRoutes(control: ControlApp, deps: ControlDeps):
   });
 
   /**
-   * A document's nearest documents by meaning, three at most: the page's **Related documents** (§11). None, with
+   * A document's nearest documents by meaning, three at most: the page's **Related documents**. None, with
    * `byMeaning` false, while search by meaning is off.
    */
   control.get("/knowledge/:id/related", (c) => {
@@ -316,7 +316,7 @@ export function registerKnowledgeRoutes(control: ControlApp, deps: ControlDeps):
     return c.json({ document: done.document });
   });
 
-  /** Documents saved from a chat into a collection wider than that chat, waiting for an admin's yes (§9). */
+  /** Documents saved from a chat into a collection wider than that chat, waiting for an admin's yes. */
   control.get("/knowledge/:id/pending", (c) => {
     const no = refusal(c.get("principal"), "operator");
     if (no) return c.json({ error: no[0] }, no[1]);

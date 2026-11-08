@@ -99,7 +99,7 @@ const PER_TOOL = 3_400;
 // approved — with its trigger in one field and each kind of work in a word. 41,800 since `agent_create`'s look words
 // and its two models (0.8.1): on the live box the loader refused a guessed look word one part a try, and the CLI's model
 // went into Nouride's own `[llm]` — the look's words are its enum now, and `model` and `external.model` say which is which.
-// 41,850 since `mission` says when in minutes (0.8.5): the owner's line, past about ten, so long work in a chat — a
+// 41,850 since `mission` says when in minutes (0.8.5): the line drawn past about ten, so long work in a chat — a
 // refactor across many files — is handed over too, not only work left running while the person sleeps. 42,100 since
 // 0.8.7: a mission's `goal` and `review` say "in English" (an agent's goal in another language is refused at start, and
 // the field it writes is where it learns that before the refusal does), and `mission` takes a `branch` and says where
@@ -141,7 +141,7 @@ const PER_TOOL = 3_400;
 // is" said no more; and a scan, with no text, is kept but not searched, which the agent can say before it starts.
 // 48,150 for a kept document's English title (0.8.23, ~135): `memory_write`'s `title` says what the document is, in
 // English with its own terms, the words search finds it by in any language; on a box searching by words alone, English
-// found nothing in Indonesian documents (the owner's ask, 2026-11-08). `memory_search`'s words about documents got shorter.
+// found nothing in Indonesian documents. `memory_search`'s words about documents got shorter.
 const TOTAL = 48_150;
 
 describe("tool schema budget", () => {

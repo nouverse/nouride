@@ -1,5 +1,5 @@
 /**
- * A scheduled job's or a webhook's run, as a mission (0.8.0, SMART_AUTOMATION §2): a trigger and a mission template,
+ * A scheduled job's or a webhook's run, as a mission (0.8.0): a trigger and a mission template,
  * not a second engine. The job says what the work is; each run is a mission started as the person who turned the job
  * on, reporting to the job's chat, ending at the reviewer — and one at a time, so a run due while the last still works
  * is skipped rather than stacked behind it.

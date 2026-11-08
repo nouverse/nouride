@@ -3,7 +3,7 @@
  *
  * Nougate keeps its own lockfiles and is installed apart from this workspace, so in a fresh clone its backend imports
  * `drizzle-orm` from nowhere — and the check said so twelve times, as if the seam had drifted, until somebody worked
- * out which `bun install` it wanted (fresh-checkout-hook). `uninstalledAt` decides which unresolved import is that, and
+ * out which `bun install` it wanted. `uninstalledAt` decides which unresolved import is that, and
  * where to run the install; laid out here as Nougate is: a repository with a lockfile at its root and one per app.
  */
 

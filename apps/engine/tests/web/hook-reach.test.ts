@@ -1,5 +1,5 @@
 /**
- * Whether a webhook can arrive from the internet (0.8.0, SMART_AUTOMATION §1.1): local network only, reachable, or
+ * Whether a webhook can arrive from the internet (0.8.0): local network only, reachable, or
  * unknown — and the test that tells them apart, sent through the public address and counted by the hook route
  * without running the job.
  *

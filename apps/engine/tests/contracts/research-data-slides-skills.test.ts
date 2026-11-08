@@ -1,7 +1,7 @@
 /**
  * research, data-sheets and slides (0.8.12): built-in skills with helpers a small model drives. Held here without a
  * browser, matplotlib or python-pptx: the ledger refuses a citation with no source and a source never cited; numbers
- * and money follow any locale and currency, not one country's (the owner: "users are generic"); an ambiguous `1.250` is
+ * and money follow any locale and currency, not one country's (their users may be anywhere); an ambiguous `1.250` is
  * flagged, never guessed; and the skills keep what live runs taught them.
  */
 
@@ -84,7 +84,7 @@ f = Formatter("id-ID", "IDR"); print(json.dumps([f.money(1234567.5), f.source]))
   });
 
   /**
-   * A dashboard (the owner, after Nouva drew a 2×2 one by hand): a script of the agent's own, started from a working
+   * A dashboard (asked for after Nouva drew a 2×2 one by hand): a script of the agent's own, started from a working
    * example rather than from nothing. Run here through the built-in number table; matplotlib draws where it is
    * installed, and where it is not, every number is printed before the script says what to install.
    */

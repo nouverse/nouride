@@ -1,5 +1,5 @@
 /**
- * Nouride's tools, lent to an external agent's CLI over MCP while its turn runs (EXTERNAL_AGENTS §4, §4.2): what the
+ * Nouride's tools, lent to an external agent's CLI over MCP while its turn runs: what the
  * CLI has no way to do itself — ask another agent, search what the household remembers, keep the conversation's plan
  * and notes, schedule, a mission's own tools — and the agent's MCP servers from its library, proxied, their credentials
  * staying in the daemon. Its own files, shell and web the CLI has, and those are not lent.

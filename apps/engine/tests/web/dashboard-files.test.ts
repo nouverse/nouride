@@ -1,5 +1,5 @@
 /**
- * How long a browser may keep each dashboard file (E16, 2026-10-15).
+ * How long a browser may keep each dashboard file (2026-10-15).
  *
  * Served with no caching headers, every visit re-downloaded the build — ~2 MB from a Pi over Wi-Fi —
  * and a conditional request was answered 200. Against a dist of its own, so this does not depend on

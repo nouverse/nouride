@@ -168,7 +168,7 @@ export function registerMcpRoutes(control: ControlApp, deps: ControlDeps): void 
         needsLogin: Boolean(state?.needsLogin),
         connected: state?.connected ?? false,
         tools: state?.tools ?? 0,
-        // What those tools add to every request this agent makes (G12).
+        // What those tools add to every request this agent makes.
         schemaBytes: state?.schemaBytes ?? 0,
         running: status.has(server.name),
         // The agent's `tools` list (0.7.21): absent, it has every tool the server offers.

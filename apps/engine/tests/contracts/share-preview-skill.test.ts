@@ -30,7 +30,7 @@ test("binds the app to loopback, so the tunnel is the only way in", () => {
 });
 
 /**
- * A link to a page nobody looked at (0.8.12, Nestor's review of browser-automation): the skill checked only that the
+ * A link to a page nobody looked at (0.8.12, found reviewing browser-automation): the skill checked only that the
  * server answered, and a blank page, an error overlay or a layout broken at a phone's width all answer 200.
  */
 describe("the page is looked at before the link goes", () => {

@@ -1,5 +1,5 @@
 /**
- * `tell` (0.8.10, RFC_MISSION_STEERING): a person's words for a mission while it works — recorded first, put into the
+ * `tell` (0.8.10): a person's words for a mission while it works — recorded first, put into the
  * turn at work or kept for the next, on every later page, and never a resume, a new goal or a raised limit. A mission
  * could be stopped, answered, let go on and accepted, and told nothing: msn_3d28e0 worked 3h41m in three turns.
  */

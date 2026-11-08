@@ -1,5 +1,5 @@
 /**
- * `/health` names the packs that failed to load (`health-ok-with-agents-failed`).
+ * `/health` names the packs that failed to load.
  *
  * Found in the 0.7.7 → 0.7.10 upgrade run: a daemon whose one pack had failed answered `ok` with `agents: 0` — to
  * Docker's healthcheck, the update's confirmation and a monitoring probe alike — and nothing on the probe said which.

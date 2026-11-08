@@ -1,5 +1,5 @@
 /**
- * Re-running `install.sh` on an install that already has a `.env` (`config-ops-install-sh-rerun-papercuts`).
+ * Re-running `install.sh` on an install that already has a `.env`.
  *
  * `--host 0.0.0.0` on an existing install left HOST alone and then printed a network URL for a daemon still on
  * loopback; a re-run without the first run's `--port` probed the default port; `curl -f` read the 503 `/health` gives

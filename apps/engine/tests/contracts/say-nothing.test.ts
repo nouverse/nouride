@@ -2,7 +2,7 @@
  * How a system event lets an agent stay quiet: a reply of only ".", which the daemon drops (`commons/silence.ts`).
  *
  * "Reply with nothing at all" was wrong for a coding CLI, which asks its model again for visible output when a turn ends
- * empty — the person got a filler line where silence was asked for (msn_53b16d; Nexa, 2026-10-31).
+ * empty — the person got a filler line where silence was asked for (seen live, 2026-10-31).
  */
 
 import { describe, expect, test } from "bun:test";

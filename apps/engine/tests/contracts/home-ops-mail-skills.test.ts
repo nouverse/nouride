@@ -62,7 +62,7 @@ describe("what waits for the person", () => {
   });
 
   /**
-   * A device Home Assistant does not have (0.8.12, the owner's own test): asked about a Xiaomi air purifier, Nouva swept
+   * A device Home Assistant does not have (0.8.12, found in use): asked about a Xiaomi air purifier, Nouva swept
    * the network, got no answer from three guessed addresses and handed the hunt back. The page it should have read
    * asks one question, finds the device by what it announces, and brings it into HA — the person signing in there.
    */

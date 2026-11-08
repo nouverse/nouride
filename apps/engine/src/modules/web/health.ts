@@ -99,7 +99,7 @@ export function installFingerprint(dataDir: string): string {
 
 /**
  * What `/health` says before boot has a `DaemonContext` to read — `web/server.ts` answers with it from the moment
- * the port is bound (D1). The fields a probe and the CLI compare are all here: which install, which version, which
+ * the port is bound. The fields a probe and the CLI compare are all here: which install, which version, which
  * build. What is not known yet — agents, gateways — is empty rather than guessed.
  */
 export function startingHealth(dataDir: string, startedAt: number, phase: string, readMemory: () => HealthPayload["memory"] = processMemory): HealthResult {
@@ -152,7 +152,7 @@ export function buildHealth(ctx: DaemonContext, readMemory: () => HealthPayload[
     }
   }
 
-  // A journal write that failed (P8): the daemon still answers, but a crash now loses more of a turn than it should,
+  // A journal write that failed: the daemon still answers, but a crash now loses more of a turn than it should,
   // and the next one says less about what ran. An issue rather than a status — a restart does not empty a full disk.
   const journal = ctx.journal?.failures();
   if (journal && journal.count > 0) {

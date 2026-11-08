@@ -165,8 +165,8 @@ export function registerConversationRoutes(control: ControlApp, deps: ControlDep
   /**
    * The command line's, and only its: `nouride chat` and `nouride acp` send with the control token and say who speaks. A
    * dashboard account sends with `/chat/send`, which takes the sender from its login. Here the sender is the body's, so an
-   * account below admin wrote `/approve` as the admin's account and answered what only an admin may (0.8.9, Nox's review
-   * B1) — refused to every account, not only to that one sender.
+   * account below admin wrote `/approve` as the admin's account and answered what only an admin may (0.8.9). It is
+   * refused to every account, not only to that one sender.
    */
   control.post("/message", async (c) => {
     if (c.get("principal").kind !== "token") {

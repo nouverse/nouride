@@ -1,5 +1,5 @@
 /**
- * How the image runs its bundle: with `--smol`, as the compiled binary does (E8), and with `--no-install`.
+ * How the image runs its bundle: with `--smol`, as the compiled binary does, and with `--no-install`.
  *
  * The release binary has `--smol` in its execArgv and the image started the bundle with plain `bun run`, so the
  * container — the shape most likely to run under a memory cap — ran the larger heap: about 29 % more at peak.

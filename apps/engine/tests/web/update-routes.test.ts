@@ -1,7 +1,7 @@
 /**
  * The `/update` routes: the last check in front of replacing this daemon's binary from the dashboard or the CLI.
  *
- * Nothing sent them a request (`tests-update-apply-orchestration-untested`): the admin gate on the routes that swap
+ * Nothing sent them a request: the admin gate on the routes that swap
  * the binary, the all-three-or-none rule for the follow-up, the delay's bounds, and the audit record were all
  * unpinned, and `cli-contract.test.ts` checked only that `/update/apply` is registered. Mounted here the way the
  * daemon mounts them, with the real guard and real accounts, and the update module replaced by `ControlDeps.updates`.

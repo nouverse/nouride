@@ -1,5 +1,5 @@
 /**
- * `POST /mcp/agent` — Nouride's tools for an external agent's CLI, during its turn (0.8.1, EXTERNAL_AGENTS §4). The
+ * `POST /mcp/agent` — Nouride's tools for an external agent's CLI, during its turn (0.8.1). The
  * protocol is `/mcp`'s (`serveRpc`); what is offered and how a call runs is `external-agents/lent-tools.ts`'s.
  *
  * Its own path and its own bearer — `nagt_…`, handed to the CLI when its session opens, one conversation's, or the

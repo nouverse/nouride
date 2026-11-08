@@ -62,7 +62,7 @@ export interface MissionsDeps {
    * null (`worktree.ts` `branchRefusal`).
    */
   branchRefusal: (request: { agentId: string; workdir: string; branch: string }) => Promise<string | null>;
-  /** Make a mission's folder, as its agent — and, where it moved into a worktree of its own (§8), where it now works. */
+  /** Make a mission's folder, as its agent — and, where it moved into a worktree of its own, where it now works. */
   prepare: (mission: Mission) => Promise<string | void>;
   /** Run a mission's checks in its folder, as its agent. */
   check: (mission: Mission) => Promise<CheckResult>;
@@ -72,7 +72,7 @@ export interface MissionsDeps {
   readBrief?: (path: string) => string | null;
   /** A mission changed status — the event stream's row (`mission`). */
   changed?: (mission: Mission) => void;
-  /** What lasts of a mission that ended, filed once as an episode of its agent's memory, from its report (§11). */
+  /** What lasts of a mission that ended, filed once as an episode of its agent's memory, from its report. */
   remember?: (mission: Mission) => Promise<void>;
   /**
    * Remove an ended mission's own folder, past `KEEP_MS` — only ever the folder the daemon made for it. `keepUnsaved`:
@@ -81,7 +81,7 @@ export interface MissionsDeps {
   remove?: (mission: Mission, how?: { keepUnsaved: boolean }) => Promise<string[]>;
   /**
    * The free megabytes where missions work, when they are below the daemon's disk warning — null when there is room or
-   * it cannot be read. Low, an ended mission's folder goes an hour after it ended instead of a week (HARDENING §7).
+   * it cannot be read. Low, an ended mission's folder goes an hour after it ended instead of a week.
    */
   diskLow?: () => number | null;
   /**

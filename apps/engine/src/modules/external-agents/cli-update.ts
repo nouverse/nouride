@@ -1,5 +1,5 @@
 /**
- * A coding CLI updated, and the way back (0.8.24, v0.8.24 item 3; EXTERNAL_AGENTS §5.3). `nouride agents update <cli>`
+ * A coding CLI updated, and the way back (0.8.24). `nouride agents update <cli>`
  * holds the CLI here — no new turn starts in it — and waits until none runs; installs the version through the shared
  * tools folder, as `nouride tools run` does; then asks here for the check: the CLI started again for the first of its
  * agents, and the new version's handshake read for what Nouride uses (`handshakeProblem`: steering, the presets' modes;

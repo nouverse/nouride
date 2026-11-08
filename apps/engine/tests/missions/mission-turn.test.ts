@@ -116,7 +116,7 @@ describe("when work is a mission's (0.8.5)", () => {
 describe("the language a mission's turn writes in", () => {
   test("a chat's turn is asked for its first words in the person's language, a mission's own turn is not", async () => {
     // Nobody reads a mission's turn as it runs and no preamble is wired there, yet the harness asked every one of its
-    // turns to open with a sentence in the person's language, beside a page asking for all of it in English (Nox, B1).
+    // turns to open with a sentence in the person's language, beside a page asking for all of it in English.
     const opening = "start your first reply with one short sentence saying what you are about to do, in the person's language";
     const d = await missionDaemon([{ text: "On it." }, { text: "Still waiting on the write." }]);
     d.gateway.receive(envelope({ text: "refactor the whole module", timestamp: Date.now() }));
@@ -245,7 +245,7 @@ describe("a mission's turn", () => {
     expect(d.missions().get(started.mission.id)!).toMatchObject({ waitKind: "approval", turnsUsed: 2 });
   });
   test("what one turn read from outside, every later turn of the mission starts as having read (S13)", async () => {
-    // Each turn starts fresh, so the mark ended with the turn that read the page — and with it the guards S13 puts on
+    // Each turn starts fresh, so the mark ended with the turn that read the page — and with it the guards put on
     // what follows outside content: a memory write after a page asks a person, which a later turn wrote in silence.
     const seen: (readonly string[] | undefined)[] = [];
     const peek: Tool = {

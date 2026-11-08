@@ -33,7 +33,7 @@ test("a camera frame without ffmpeg installed: a static build into the bin direc
 
 describe("asked \"can you access my …?\" (0.8.12)", () => {
   // Live: asked about an air purifier and a laptop at the office, a small model never opened this skill, said "no" to
-  // the first and only named Tailscale for the second. The owner: an agent asked about any device must know the way in,
+  // the first and only named Tailscale for the second. The rule: an agent asked about any device must know the way in,
   // and away from home the way is Tailscale.
   const said = source.replace(/\s+/g, " ");
   const description = source.split("\n").find((line) => line.startsWith("description:")) ?? "";
@@ -58,7 +58,7 @@ describe("asked \"can you access my …?\" (0.8.12)", () => {
 });
 
 test("an iPhone: said plainly that nothing logs into it, then the ways that work (0.8.12)", () => {
-  // The owner asked what an agent says about an iPhone; the skill had one line. Guideline only, by their word.
+  // What an agent says about an iPhone: the skill had one line. Guideline only, as asked.
   const said = source.replace(/\s+/g, " ");
   expect(source).toContain("## An iPhone or iPad");
   expect(said).toContain("iOS lets nothing log into it: no shell, no ssh, no `adb`. Say so plainly");

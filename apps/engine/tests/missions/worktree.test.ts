@@ -1,5 +1,5 @@
 /**
- * A mission's worktree (0.8.1, MISSIONS §8), against a real git repository: a mission in one, where the machine can
+ * A mission's worktree (0.8.1), against a real git repository: a mission in one, where the machine can
  * hold it, works in a worktree on its own branch from the last commit — what was not committed is neither taken nor
  * touched — at the same place in it as its folder had; two such missions do not queue for the repository; elsewhere,
  * or without room, it keeps its folder and says why; its removal takes the worktree and leaves the branch.

@@ -1,5 +1,5 @@
 /**
- * What a new mission is, and what refuses one (MISSIONS §2, §10) — apart from the service that runs it, since both are
+ * What a new mission is, and what refuses one — apart from the service that runs it, since both are
  * decisions about the request alone.
  */
 
@@ -58,7 +58,7 @@ const WRITE_MISSION_IN_ENGLISH =
 
 /**
  * "brief" as the thing named — "Full brief, read first:", "the brief at", "brief file" — not as a word about length: "a
- * brief summary of /home/rina/laporan.md" names the person's document, which is the work (Nox's review, 0.8.8).
+ * brief summary of /home/rina/laporan.md" names the person's document, which is the work (0.8.8).
  */
 const BRIEF_NOUN = /(?<!\b(?:it|be|keep|stay|and)\s+)\bbrief\b(?!\s+(?!(?:at|in|file|is|here|first|for|from|read)\b)[a-z])/i;
 
@@ -132,7 +132,7 @@ export function startRefusal(
   if (request.workdir !== undefined && !request.workdir.startsWith("/")) return "`workdir` is an absolute path to a folder the agent can reach.";
   // A worktree is made only for a folder given in a repository: the mission's own folder is never one.
   if (request.branch !== undefined && request.workdir === undefined) return "`branch` names the worktree's branch, so it needs a `workdir` in a git repository.";
-  // An agent starting work is counted; a person starting it is not (§10).
+  // An agent starting work is counted; a person starting it is not.
   if (request.byAgent && deps.store.startedByAgentSince(request.byAgent, deps.now - DAY_MS) >= AGENT_MISSIONS_PER_DAY) {
     return `${request.byAgent} has started ${AGENT_MISSIONS_PER_DAY} missions in the last day, the most an agent may. A person can still start one with /mission.`;
   }

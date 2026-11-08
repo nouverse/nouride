@@ -231,7 +231,7 @@ describe("deleting one", () => {
 });
 
 /**
- * A draft changed on the dashboard before it starts (0.8.11, RFC MISSION_DRAFTS §2.3): the new-mission form's fields, its
+ * A draft changed on the dashboard before it starts (0.8.11): the new-mission form's fields, its
  * limits and its brief, by an operator; a started mission's are its own. And the page reads its brief.
  */
 describe("a draft on the dashboard", () => {

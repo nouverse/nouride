@@ -1,5 +1,5 @@
 /**
- * An external agent is never the orchestrator (0.8.1, EXTERNAL_AGENTS §5.2): Nouride's approval level, fixed list and tool
+ * An external agent is never the orchestrator (0.8.1): Nouride's approval level, fixed list and tool
  * switches do not reach its coding CLI's own commands, and the orchestrator is the agent anyone in a room reaches. Refused
  * where it would be made one, saying why — not "cannot delegate or keep the household's memory", untrue since 0.8.1.
  */

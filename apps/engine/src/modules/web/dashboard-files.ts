@@ -1,5 +1,5 @@
 /**
- * The dashboard's files, and how long a browser may keep each one (E16, 2026-10-15).
+ * The dashboard's files, and how long a browser may keep each one (2026-10-15).
  *
  * They were served with no caching headers at all — no `Cache-Control`, no `ETag`, and a conditional
  * request answered 200 — so every visit pulled the whole build again: a 905 KB script, 208 KB of CSS
@@ -12,7 +12,7 @@
  *   unless the file changed. Stale `index.html` is how a browser runs last week's build against today's
  *   API.
  *
- * And a script or stylesheet is sent compressed when the browser accepts it (E16, 0.7.10). The build
+ * And a script or stylesheet is sent compressed when the browser accepts it (0.7.10). The build
  * writes `.br` and `.gz` beside each one (`apps/dashboard/scripts/precompress.ts`), because brotli at its
  * best is too slow to run per request on a Pi; until then the 958 KB script went over the wire raw. A
  * file with copies is answered with `Vary: Accept-Encoding` whichever one is sent, so a cache in front

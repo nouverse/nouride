@@ -1,7 +1,7 @@
 /**
  * Coding-CLI accounts (0.8.1): a CLI with a shared sign-in signs an account in once — its token kept in the secret
  * store, never shown — and every agent on the account then answers; any other CLI's account is signed in once per
- * agent. The owner wanted one place for sign-ins, apart from which account an agent uses.
+ * agent. Sign-ins are kept in one place, apart from which account an agent uses.
  */
 
 import { afterEach, describe, expect, test } from "bun:test";
@@ -102,7 +102,7 @@ describe("coding-CLI accounts", () => {
     expect(shown).not.toContain("CCCCDDDD");
     expect(shown).toContain("[saved to Nouride's secret store]");
 
-    // Audited with who started it, the CLI and the account — and no part of the token (0.8.9, HARDENING §8).
+    // Audited with who started it, the CLI and the account — and no part of the token (0.8.9).
     await eventually(() => audits.length > 0, 4_000, "the sign-in audited");
     expect(audits).toEqual([{ action: "cli_account_signed_in", actor: "ada", details: { cli: "fake", account: "team" } }]);
     for (const part of ["fk-tok", "AAAABBBB", "CCCCDDDD", "EEEEFFFF"]) expect(JSON.stringify(audits)).not.toContain(part);

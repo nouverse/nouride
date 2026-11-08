@@ -1,5 +1,5 @@
 /**
- * Done means checked (MISSIONS §5) — what happens once the agent says a mission is done:
+ * Done means checked — what happens once the agent says a mission is done:
  *
  * 1. **The commands**, run by the daemon in the mission's folder (`checks.ts`). One failing is the next turn, with its
  *    output on the page.
@@ -52,7 +52,7 @@ export class Checking {
   private readonly rejected = new Map<string, number>();
   /**
    * The review at work, by mission. A review takes minutes — ten a pass, three passes — and the page said only "Running
-   * its checks" all along: the owner took a mission under review for a stuck one (live, 0.8.10).
+   * its checks" all along: a person took a mission under review for a stuck one (live, 0.8.10).
    */
   private readonly reviewing = new Map<string, Reviewing>();
 
@@ -194,7 +194,7 @@ export class Checking {
     this.same.delete(mission.id);
     this.rejected.delete(mission.id);
     // Where no command could tell, or it asked for one, a person has the last word — but not on a job's run, whose
-    // person accepted the work when they turned the job on (MISSIONS §5): a run every Monday must not wait for a tap.
+    // person accepted the work when they turned the job on: a run every Monday must not wait for a tap.
     const accept = waitsForAccept(mission);
     // Told something while it was being checked, and not read (0.8.10): never closed over a person's words. Where a
     // person decides anyway, they are shown them beside the result and decide; where it would end by itself, it goes one

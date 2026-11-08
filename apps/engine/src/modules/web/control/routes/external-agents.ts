@@ -1,10 +1,10 @@
 /**
- * External agents' CLIs (0.8.1, EXTERNAL_AGENTS §5.3, §5.7): which this box has, and one agent's CLI — its settings,
+ * External agents' CLIs (0.8.1): which this box has, and one agent's CLI — its settings,
  * why it cannot answer, and its sign-in, run in a terminal on the box and answered from here a line at a time.
  *
  * **Admin only for the sign-in.** It signs an account in on the box, and what is typed into it is a code that does.
  *
- * **Audited (0.8.9, HARDENING §8):** an account added, removed, and a shared account's sign-in that kept a token, each
+ * **Audited (0.8.9):** an account added, removed, and a shared account's sign-in that kept a token, each
  * with who did it and which CLI and account — never a token or any part of one. An account that vanished from the page
  * with its secret still kept could not be told from a failed delete without them.
  */
@@ -28,7 +28,7 @@ export function registerExternalAgentRoutes(control: ControlApp, deps: ControlDe
   control.get("/external-clis", async (c) => {
     if (!deps.externalAgents) return c.json({ error: "external agents are not available on this daemon", plain: NOT_RUNNING }, 501);
     if (!atLeast(c.get("principal"), "operator")) return c.json({ error: "operator only" }, 403);
-    // A box with no room for a CLI's session is told so, and offered nothing to add (EXTERNAL_AGENTS §6).
+    // A box with no room for a CLI's session is told so, and offered nothing to add.
     const room = deps.externalAgents.room();
     // `check` asks the npm registry for the newest now, where it is otherwise asked once a day (0.8.24).
     return c.json({ room, clis: room.enough ? await deps.externalAgents.scan(c.req.query("fresh") === "1", c.req.query("check") === "1") : [] });

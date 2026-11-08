@@ -1,8 +1,8 @@
 /**
- * The page every turn of a mission starts from (MISSIONS §4) — never its history.
+ * The page every turn of a mission starts from — never its history.
  *
  * A mission of fifty turns carries fifty pages, not fifty turns of transcript: hours of work in one conversation is what
- * rotted the audit case's context (§1.1 there). What a later turn needs is kept outside the history — the work notes and
+ * rotted the audit case's context. What a later turn needs is kept outside the history — the work notes and
  * the checklist, which reach every request at its end (`notes/tail.ts`), the files in its folder, and this page — so
  * the page names where things are and says how a mission works, and does not repeat the checklist.
  */
@@ -116,8 +116,8 @@ export interface LimitsShown {
 
 /**
  * Its turns against its limit, as the page, `show` and `work` say them — and `nouride mission show`. An ended mission none
- * of whose turns finished — stopped in the first, or a draft dropped — read "0 turns ran", and the CLI "turn 0 of 100"
- * (B4).
+ * of whose turns finished — stopped in the first, or a draft dropped — read "0 turns ran", and the CLI
+ * "turn 0 of 100".
  */
 export function turnsSaid(mission: Pick<Mission, "turnsUsed" | "limits" | "startedAt" | "endedAt">, limited = true): string {
   const none = mission.endedAt !== null && mission.turnsUsed === 0;
@@ -143,7 +143,7 @@ export function limitsLine(mission: Pick<Mission, "turnsUsed" | "limits" | "toke
 export function doneWhen(mission: Pick<Mission, "checks" | "reviewOn" | "review" | "accept" | "jobId">): string {
   const commands = mission.checks.length > 0 ? `the commands pass (${mission.checks.map((check) => `\`${check}\``).join(", ")})` : "";
   const reviewer = mission.reviewOn ? `the reviewer agrees: "${mission.review ?? "the goal is met"}"` : "";
-  // A job's run ends at the reviewer: its person accepted the work when they turned the job on (§5).
+  // A job's run ends at the reviewer: its person accepted the work when they turned the job on.
   const person = mission.accept || (mission.checks.length === 0 && mission.jobId === null) ? "a person accepts" : "";
   return [commands, reviewer, person].filter(Boolean).join(", then ") || (mission.jobId ? "you call it done" : "a person accepts");
 }
