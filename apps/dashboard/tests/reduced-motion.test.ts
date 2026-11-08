@@ -42,6 +42,7 @@ const UTILITIES = `
   .active\\:scale-95 { scale: 95% 95%; }
   .group-hover\\:translate-x-1 { translate: 0.25rem; }
   .group-hover\\:rotate-12 { rotate: 12deg; }
+  .hover\\:-translate-y-0\\.5 { translate: 0 -0.125rem; }
   .-translate-y-1\\/2 { translate: 0 -50%; }
   .rotate-180 { rotate: 180deg; }
 `;
@@ -81,6 +82,11 @@ describe("a system that asks for less motion", () => {
     expect(computed("reduce", "active:scale-95", "scale")).toBe("none");
     expect(computed("reduce", "group-hover:translate-x-1", "translate")).toBe("none");
     expect(computed("reduce", "group-hover:rotate-12", "rotate")).toBe("none");
+  });
+
+  test("gets no card lifting under the pointer", () => {
+    expect(computed("no-preference", "hover:-translate-y-0.5", "translate")).toBe("0 -0.125rem");
+    expect(computed("reduce", "hover:-translate-y-0.5", "translate")).toBe("none");
   });
 
   test("keeps what places an element and what says its state", () => {

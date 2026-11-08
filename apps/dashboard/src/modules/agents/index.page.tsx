@@ -17,6 +17,8 @@ import { isAdmin, useMe } from "@/commons/lib/session";
 import { Card, EmptyState, ErrorNote, PageHeader } from "@/commons/components/ui/ui";
 import { NewAgentForm } from "./components/NewAgentForm";
 import { ListLoading } from "@/commons/components/ui/Spinner";
+import { LIFTS } from "@/commons/components/ui/CardGrid";
+import { cn } from "@/commons/lib/utils";
 
 export default function AgentListPage() {
   // Polled while the page is open, so what each agent is doing stays true; not in a hidden tab.
@@ -139,7 +141,10 @@ export default function AgentListPage() {
                 key={agent.id}
                 type="button"
                 onClick={() => void navigate({ to: "/agents/$agentId", params: { agentId: agent.id } })}
-                className="group relative flex flex-col justify-between text-left rounded-2xl border border-base-content/[0.08] bg-base-100/80 backdrop-blur-xl p-5 shadow-xs transition-all duration-200 hover:border-primary/40 hover:shadow-md active:scale-[0.98]"
+                className={cn(
+                  "group relative flex flex-col justify-between text-left rounded-2xl border border-base-content/[0.08] bg-base-100/80 backdrop-blur-xl p-5 shadow-xs hover:border-primary/40 hover:shadow-md active:scale-[0.98]",
+                  LIFTS,
+                )}
               >
                 <div>
                   <div className="flex items-start justify-between gap-3">

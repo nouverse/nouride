@@ -10,6 +10,7 @@ import { ago } from "@/commons/lib/format";
 import { formatDuration } from "@/commons/lib/steps";
 import { cn } from "@/commons/lib/utils";
 import { Lit } from "@/commons/components/ui/Lit";
+import { LIFTS } from "@/commons/components/ui/CardGrid";
 import { ENTER, type Motion } from "@/commons/hooks/use-motion-list";
 import { jobTitle, kindOf, ranFor, rowLine, statusWord } from "../lib/job";
 
@@ -41,7 +42,8 @@ export function JobRow({ job, motion = "" }: { job: BackgroundJob; motion?: Moti
       to="/jobs/$jobId"
       params={{ jobId: job.id }}
       className={cn(
-        "group relative block rounded-2xl border border-base-content/[0.08] bg-base-100/80 p-4 shadow-xs backdrop-blur-xl transition-all duration-150 hover:border-base-content/20 active:scale-[0.99] sm:p-5",
+        "group relative block rounded-2xl border border-base-content/[0.08] bg-base-100/80 p-4 shadow-xs backdrop-blur-xl hover:border-base-content/20 active:scale-[0.99] sm:p-5",
+        LIFTS,
         motion,
       )}
     >

@@ -7,7 +7,7 @@
 import { Link } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
 import type { MissionView } from "@/commons/lib/api";
-import { CARD } from "@/commons/components/ui/CardGrid";
+import { CARD, LIFTS } from "@/commons/components/ui/CardGrid";
 import { ago } from "@/commons/lib/format";
 import { cn } from "@/commons/lib/utils";
 import { Lit } from "@/commons/components/ui/Lit";
@@ -23,7 +23,7 @@ export function MissionCard({ mission, motion = "" }: { mission: MissionView; mo
     <Link
       to="/missions/$missionId"
       params={{ missionId: mission.id }}
-      className={cn(CARD, "group hover:border-base-content/20 active:scale-[0.99]", motion)}
+      className={cn(CARD, LIFTS, "group hover:border-base-content/20 active:scale-[0.99]", motion)}
     >
       <Lit state={`${mission.status} ${mission.seen}`} arrived={motion === ENTER} />
       {/* The badge on a line of its own: "Needs you · a question" beside the goal left it a word or two a line. */}
