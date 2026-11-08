@@ -399,6 +399,13 @@ Nine hard rules, all enforced by `bun run lint:check`:
    their seams, `src/index.ts`, `pipeline/index.ts` and `pipeline/turn.ts`, may not be budgeted again:
    past the cap, the new part goes in a file of its own.
 
+   **Functions** are held the same way by `bun run lint:functions` (`scripts/check-functions.ts`),
+   because a file under its cap said nothing of what was in it: the executor's `run` reached 535 lines
+   in one. A named function (a declaration, a method, an arrow function given to a name) may reach 150
+   lines of code; the ones over it when the rule began are recorded in `scripts/function-lengths.ts` at
+   their length, each with its reason, and ratchet as the budgets do. A callback handed to a call is
+   its caller's. The function is read by the TypeScript parser, so a comment inside it costs nothing.
+
 7. **No stray control characters in source.** `control-character` refuses the C0 range apart from tab
    and newline, and a bare carriage return. It is here because it happened twice in one afternoon and
    the second time it *disabled a rule while reporting success*: an edit script wrote a word-boundary

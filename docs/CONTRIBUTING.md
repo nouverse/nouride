@@ -102,6 +102,7 @@ bun run verify        # lint:check, then the whole test suite — what CI runs
 | `lint:sql` | that SQL is fast and safe: no injection, no table scan in a query plan, no read per item in a loop, none of SQLite's footguns (TD-015) |
 | `lint:timers` | that no timer callback in the daemon can let an exception out — an uncaught one shuts the daemon down: each is `contained(log, "what failed", …)`, one `try … catch`, or a form that cannot throw |
 | `lint:size` | no `any`, and no file past its code-line budget; each budget with one reason of at most 200 characters, and none for a file split on its seams |
+| `lint:functions` | no named function past 150 lines of code but the ones recorded in `scripts/function-lengths.ts`, each at its length with its reason |
 | `lint:skills` | `.claude/skills/` is a symlink to `.agents/skills/`, where the skills live: each one written there, or a link to the private one of its name |
 | `lint:cli` | every command the CLI dispatches is in `nouride help`, and every flag there is read |
 | `lint:deadcode` | no export, table or module that nothing reaches |
@@ -291,7 +292,7 @@ version:
 9. **Prove the test catches the bug** — and test the path that actually runs
 10. **Inter-package imports follow each package's `package.json`** — `lint:deps`, both directions
 11. **Import from the barrel, not the internals** — `@nouride/llm`, never `@nouride/llm/src/…`
-12. **One file, one concern** — and no file grows past its budget (`lint:size`)
+12. **One file, one concern** — and no file grows past its budget (`lint:size`), no function past 150 lines of code (`lint:functions`)
 13. **An export is a claim that something else needs it** — `lint:deadcode`
 14. **The event stream is a contract** — within a major version a row only gains: `EVENT_CONTRACT`, its lock and `EVENTS_CHANGELOG.md` change together
 15. **No timer callback lets an exception out** — `contained(…)` around the body; `lint:timers`

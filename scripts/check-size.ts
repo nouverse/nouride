@@ -45,7 +45,7 @@ const HEADROOM = 10;
  * The longest a budget's `why` may be: one reason, today's. A reason that gained a clause at every raise read as a
  * changelog, and a raise nobody had to argue for again was a raise nobody questioned.
  */
-const MAX_WHY = 200;
+export const MAX_WHY = 200;
 
 /**
  * Files split on their seams that may not be budgeted again. Each is a composition of parts now, and a budget would let
@@ -84,7 +84,7 @@ export async function sizedFiles(root: string): Promise<string[]> {
 }
 
 /** A file nobody wrote by hand, or one whose job is to be a test fixture. */
-function isGenerated(rel: string): boolean {
+export function isGenerated(rel: string): boolean {
   return rel.endsWith(".gen.ts") || rel.includes("routeTree");
 }
 

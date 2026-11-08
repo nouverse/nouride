@@ -42,7 +42,8 @@ agent working in this repository — Claude Code, Codex and the rest read it.
 6. Fail at load, not at the first message: a bad config names its file and field.
 7. Packages import each other by the matrix in `scripts/check-arch.ts`, and through a package's barrel only.
 8. One file, one concern. A file past its budget in `scripts/size-budgets.ts` is split on a seam, or its budget is
-   raised with today's reason in at most 200 characters — never squeezed to fit the number.
+   raised with today's reason in at most 200 characters — never squeezed to fit the number. A named function past 150
+   lines of code is held the same way, by `scripts/function-lengths.ts`.
 9. An export is a claim that something else needs it; one nothing imports is removed.
 
 `bun run lint:check` runs all of it, and the pre-commit hook runs it again.

@@ -236,7 +236,8 @@ Rules of thumb, in the order they actually help:
   everything that is *not* ordering (see `src/boot/`) and leave the sequence linear.
 
 If you are adding to a file that is already over ~500 lines, the split is part of the
-change, not a follow-up someone else will do.
+change, not a follow-up someone else will do. The same holds inside a file: `lint:functions` refuses a
+named function past 150 lines of code, and a recorded one that grows (`scripts/function-lengths.ts`).
 
 **13. An export is a claim that something else needs it.** `lint:deadcode` fails when an
 exported function, const or class is named by no other file — the case `noUnusedLocals`
