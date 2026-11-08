@@ -72,7 +72,10 @@ describe("fields over the control API", () => {
     const { send, secrets } = await app();
     const put = await send("PUT", "/secrets/github", { value: "ghp_stand_in_value", fields: { set: { backup: "ghp_aBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789" } } });
     expect(put.status).toBe(400);
-    expect(((await put.json()) as { error: string }).error).toContain('field "backup" looks like a key or a password');
+    const refused = (await put.json()) as { error: string; plain: string };
+    expect(refused.error).toContain('field "backup" looks like a key or a password');
+    // The page names the part of the form at fault, the details, not "what you entered" (0.8.23).
+    expect(refused.plain).toBe("Nothing was saved. Check the details, and try again.");
     expect(secrets.has("github")).toBe(false);
   });
 
@@ -84,7 +87,12 @@ describe("fields over the control API", () => {
     expect((await admin.send("PATCH", "/secrets/github/fields", {})).status).toBe(400);
     const missing = await admin.send("PATCH", "/secrets/nothing/fields", { set: { a: "b" } });
     expect(missing.status).toBe(400);
-    expect(((await missing.json()) as { error: string }).error).toContain('no stored secret "nothing"');
+    const gone = (await missing.json()) as { error: string; plain: string };
+    expect(gone.error).toContain('no stored secret "nothing"');
+    // No field of the form is at fault: the words stay what they were.
+    expect(gone.plain).toBe("Nothing was saved. Check what you entered, and try again.");
+    const named = await admin.send("PATCH", "/secrets/github/fields", { set: { "1 not a name": "b" } });
+    expect(((await named.json()) as { plain: string }).plain).toBe("Nothing was saved. Check the details, and try again.");
   });
 });
 

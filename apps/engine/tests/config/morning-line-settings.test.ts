@@ -47,8 +47,12 @@ describe("a morning line", () => {
   });
 
   test("a time that is not one, or nobody by that key, is refused before anything is written", async () => {
-    expect(await settings.writePersonMorning("mira", { at: "7am" }, "admin")).toMatchObject({ ok: false, error: expect.stringContaining("HH:MM") });
-    expect(await settings.writePersonMorning("ghost", { at: "07:00" }, "admin")).toMatchObject({ ok: false });
+    expect(await settings.writePersonMorning("mira", { at: "7am" }, "admin")).toMatchObject({ ok: false, field: "at", error: expect.stringContaining("HH:MM") });
+    // Where it goes, refused, is that field of the row (0.8.23); nobody by that key is no field of it.
+    expect(await settings.writePersonMorning("mira", { at: "07:00", to: "telegram:999" }, "admin")).toMatchObject({ ok: false, field: "to" });
+    const ghost = await settings.writePersonMorning("ghost", { at: "07:00" }, "admin");
+    expect(ghost).toMatchObject({ ok: false });
+    expect(ghost).not.toHaveProperty("field");
     expect(read()).toBe(MIRA);
   });
 

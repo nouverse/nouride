@@ -22,7 +22,15 @@ import type { SkillDraft } from "@/modules/reflection/types.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { jsonBody } from "../payloads.ts";
 import { LONG_REQUEST_SECONDS } from "./memory.ts";
-import { NOT_SAVED, NO_SETTINGS } from "../plain.ts";
+import type { LearningField } from "@/modules/config/settings/learning.ts";
+import { NO_SETTINGS, notSaved } from "../plain.ts";
+
+/** Each setting a save of skill learning can be refused for, as the Skills page names it. */
+const LEARNING_FIELDS: Record<LearningField, string> = {
+  mode: "what an agent may do with what it learns",
+  model: "the model for the pass",
+  notifyChat: "whether new drafts are announced",
+};
 
 /** The draft as a client sees it. Same fields, minus nothing — there is nothing secret in a draft. */
 function toJson(draft: SkillDraft): Record<string, unknown> {
@@ -107,7 +115,7 @@ export function registerDraftRoutes(control: ControlApp, deps: ControlDeps): voi
 
     const body = ((await jsonBody(c)) ?? {}) as Record<string, unknown>;
     const result = await deps.settings.setSkillLearning({ patch: body, actor: principal.actor });
-    if (!result.ok) return c.json({ error: result.error, plain: NOT_SAVED }, 400);
+    if (!result.ok) return c.json({ error: result.error, plain: notSaved(result.field && LEARNING_FIELDS[result.field]) }, 400);
 
     return c.json({ ok: true, ...deps.ctx.config.skills.learning });
   });

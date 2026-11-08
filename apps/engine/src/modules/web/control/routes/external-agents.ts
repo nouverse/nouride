@@ -17,7 +17,7 @@ import { atLeast } from "@/modules/users/auth.ts";
 import type { ExternalAgents } from "@/modules/external-agents/index.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { jsonBody } from "../payloads.ts";
-import { INCOMPLETE, NOT_RUNNING, NOT_SAVED } from "../plain.ts";
+import { INCOMPLETE, NOT_RUNNING, NOT_SAVED, notSaved } from "../plain.ts";
 
 /** What a typed answer may be: a code, a choice — never a document. */
 const ANSWER_MAX = 2000;
@@ -186,7 +186,8 @@ export function registerExternalAgentRoutes(control: ControlApp, deps: ControlDe
       if (row && !row.installed) return c.json({ error: `${row.name} is not installed on this machine: ${row.install}` }, 400);
     }
     const result = await deps.setup.setAnsweredBy({ agentId: c.req.param("id"), cli: body.cli, ...(typeof body.profile === "string" ? { profile: body.profile } : {}), actor: principal.actor });
-    return result.ok ? c.json({ ok: true }) : c.json({ error: result.error, plain: NOT_SAVED }, 400);
+    // Its one field, Answered by, where the choice itself was refused (the orchestrator's own).
+    return result.ok ? c.json({ ok: true }) : c.json({ error: result.error, plain: notSaved(result.field && "who answers it") }, 400);
   });
 
   /**

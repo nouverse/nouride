@@ -33,8 +33,14 @@ const log = createLogger("settings");
  */
 export type PeopleWriteDeps = Pick<SettingsDeps, "config" | "configPath" | "audit" | "keyHeld">;
 
+/** A field of a person's form a refusal names (0.8.23): their name, their key, their accounts. */
+export type PersonField = "name" | "key" | "ids";
+
 /** A save that went through, with the person as they now are. */
-export type SavedPerson = { ok: true; restartRequired: boolean; person: Person } | Extract<SaveResult, { ok: false }>;
+export type SavedPerson = { ok: true; restartRequired: boolean; person: Person } | Extract<SaveResult<PersonField>, { ok: false }>;
+
+/** A field of a person's morning line a refusal names: its time, or where it goes. */
+export type MorningField = "at" | "to";
 
 /*
  * Every write here holds the config file for its whole length (`holdingConfigFile`): its checks read the household,
@@ -132,7 +138,7 @@ async function writePerson(
 ): Promise<SavedPerson> {
   const { actor } = params;
   const name = params.person.name?.trim() ?? "";
-  if (!name) return { ok: false, error: "person name is required" };
+  if (!name) return { ok: false, field: "name", error: "person name is required" };
   const { dir, people } = peopleNow(deps);
 
   /** Every address in today's spelling, without blanks or repeats — and each one an address. */
@@ -140,7 +146,7 @@ async function writePerson(
   const account = params.account?.trim() ? canonicalPersonId(params.account) : undefined;
   for (const id of [...(ids ?? []), ...(account ? [account] : [])]) {
     const refusal = refusePersonId(id);
-    if (refusal) return { ok: false, error: `id "${id}" ${refusal}` };
+    if (refusal) return { ok: false, field: "ids", error: `id "${id}" ${refusal}` };
   }
 
   /**
@@ -158,11 +164,11 @@ async function writePerson(
       ? people.find((person) => idsOf(person).includes(account))
       : undefined;
   if (params.create && target) {
-    return { ok: false, error: `person key "${target.key}" is already ${target.name}'s: choose another` };
+    return { ok: false, field: "key", error: `person key "${target.key}" is already ${target.name}'s: choose another` };
   }
   if (wantedKey && !target) {
     const refusal = refusePersonKey(wantedKey, people, params.reattach ? undefined : deps.keyHeld);
-    if (refusal) return { ok: false, error: refusal };
+    if (refusal) return { ok: false, field: "key", error: refusal };
   }
   const key = target?.key ?? wantedKey ?? freeKey(people, name, deps.keyHeld);
   const reattached = !target && params.reattach === true ? (deps.keyHeld?.(key) ?? null) : null;
@@ -202,7 +208,7 @@ async function writePerson(
   const clash = people.find((person) => person !== target && idsOf(person).some((id) => accounts.includes(id)));
   if (clash) {
     const taken = idsOf(clash).filter((id) => accounts.includes(id));
-    return { ok: false, error: `${taken.join(", ")} already belongs to ${clash.name}` };
+    return { ok: false, field: "ids", error: `${taken.join(", ")} already belongs to ${clash.name}` };
   }
 
   const notes = params.person.notes;
@@ -338,9 +344,9 @@ export async function writePersonMorning(
   key: string,
   line: { at: string | null; to?: string | null },
   actor: string,
-): Promise<{ ok: true } | { ok: false; error: string }> {
+): Promise<{ ok: true } | { ok: false; error: string; field?: MorningField }> {
   const { at } = line;
-  if (at !== null && !/^([01]\d|2[0-3]):[0-5]\d$/.test(at)) return { ok: false, error: `"${at}" is a time of day, HH:MM, such as "07:00"` };
+  if (at !== null && !/^([01]\d|2[0-3]):[0-5]\d$/.test(at)) return { ok: false, field: "at", error: `"${at}" is a time of day, HH:MM, such as "07:00"` };
   return await holdingConfigFile(deps, async (file) => {
     const { dir, people } = peopleNow(deps);
     const person = people.find((candidate) => candidate.key === key);
@@ -348,7 +354,7 @@ export async function writePersonMorning(
     // Off takes where it went with it: turned on again, it goes where they last wrote from until somebody picks.
     const to = at === null ? null : line.to === undefined ? (person.morningTo ?? null) : line.to;
     if (to !== null && (!idsOf(person).includes(to) || to.startsWith("web:"))) {
-      return { ok: false, error: `"${to}" is not one of ${person.name}'s chat accounts: a telegram, discord or whatsapp one of their ids` };
+      return { ok: false, field: "to", error: `"${to}" is not one of ${person.name}'s chat accounts: a telegram, discord or whatsapp one of their ids` };
     }
     if ((person.morning ?? null) === at && (person.morningTo ?? null) === to) return { ok: true };
     const saved = await writeTo(file, dir, { key: person.key, name: person.name, morning: at ?? "", morningTo: to ?? "" }, idsOf(person));

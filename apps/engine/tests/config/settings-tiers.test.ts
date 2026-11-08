@@ -85,10 +85,12 @@ describe("the install's tiers and each helper's", () => {
 
   test("refused before anything is written: a tier named as a model, a pass model with no provider, a key it does not know", async () => {
     const before = readFileSync(configPath, "utf8");
-    expect(await settings.setModelTiers({ patch: { smallModel: "high" }, actor: "t" })).toEqual({ ok: false, error: "small_model names a model, not a tier" });
+    expect(await settings.setModelTiers({ patch: { smallModel: "high" }, actor: "t" })).toEqual({ ok: false, field: "smallModel", error: "small_model names a model, not a tier" });
     await settings.setModelTiers({ patch: { passModel: "small" }, actor: "t" });
     const afterTier = readFileSync(configPath, "utf8");
-    expect(await settings.setModelTiers({ patch: { passModel: "m-other" }, actor: "t" })).toMatchObject({ ok: false, error: expect.stringContaining("needs its provider") });
+    expect(await settings.setModelTiers({ patch: { passModel: "m-other" }, actor: "t" })).toMatchObject({ ok: false, field: "passModel", error: expect.stringContaining("needs its provider") });
+    expect(await settings.setModelTiers({ patch: { imageModel: 3 } as never, actor: "t" })).toMatchObject({ ok: false, field: "imageModel" });
+    // A key the page does not have names no field of it.
     expect(await settings.setModelTiers({ patch: { fallbackModel: "x" } as never, actor: "t" })).toEqual({ ok: false, error: 'unknown setting "fallbackModel"' });
     expect(readFileSync(configPath, "utf8")).toBe(afterTier);
     expect(before).not.toBe(afterTier);
@@ -110,8 +112,8 @@ describe("one agent's own pair", () => {
 
   test("a tier's name or nothing is refused, and the pack is left as it was", async () => {
     const before = readFileSync(pack(), "utf8");
-    expect(await save({ high: "small" })).toEqual({ ok: false, error: "high_model names a model, not a tier" });
-    expect(await save({ small: "  " })).toMatchObject({ ok: false });
+    expect(await save({ high: "small" })).toEqual({ ok: false, field: "highModel", error: "high_model names a model, not a tier" });
+    expect(await save({ small: "  " })).toMatchObject({ ok: false, field: "smallModel" });
     expect(readFileSync(pack(), "utf8")).toBe(before);
   });
 });

@@ -8,10 +8,18 @@
 
 import { atLeast } from "@/modules/users/auth.ts";
 import { createWebSearchTool } from "@/modules/tools/builtins/web/index.ts";
-import { DEFAULT_SEARCH_SECRET, type WebSearchPatch } from "@/modules/config/settings/web.ts";
+import { DEFAULT_SEARCH_SECRET, type WebSearchField, type WebSearchPatch } from "@/modules/config/settings/web.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { jsonBody } from "../payloads.ts";
-import { NOT_SAVED, NO_SETTINGS } from "../plain.ts";
+import { NO_SETTINGS, notSaved } from "../plain.ts";
+
+/** Each field a save can be refused for, as the Web Search page names it. */
+const WEB_SEARCH_FIELDS: Record<WebSearchField, string> = {
+  mode: "the search service",
+  endpoint: "the address",
+  secret: "the secret's name",
+  key: "the key",
+};
 
 const TEST_QUERY = "open source software";
 
@@ -48,7 +56,7 @@ export function registerWebSearchRoutes(control: ControlApp, deps: ControlDeps):
     const patch = parsePatch(await jsonBody(c));
     if (typeof patch === "string") return c.json({ error: patch }, 400);
     const result = await deps.settings.setWebSearchSettings({ patch, actor: principal.actor });
-    if (!result.ok) return c.json({ error: result.error, plain: NOT_SAVED }, 400);
+    if (!result.ok) return c.json({ error: result.error, plain: notSaved(result.field && WEB_SEARCH_FIELDS[result.field]) }, 400);
     return c.json({ ok: true, restartRequired: result.restartRequired, settings: deps.settings.webSearchSettings() });
   });
 

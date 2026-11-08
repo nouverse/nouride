@@ -228,7 +228,7 @@ describe("a write, once people/ is there", () => {
     await movePeopleToFiles(deps);
     writeFileSync(join(deps.dir, "budi.toml"), '[person]\nname = "Budi"\nids = ["discord:42"]\n');
     const saved = await savePerson(deps, { person: { key: "ani", name: "Ani", ids: ["whatsapp:62811@s.whatsapp.net", "discord:42"] } });
-    expect(saved).toEqual({ ok: false, error: "discord:42 already belongs to Budi" });
+    expect(saved).toEqual({ ok: false, field: "ids", error: "discord:42 already belongs to Budi" });
   });
 
   test("removing a person removes their file, its last version kept as a backup", async () => {

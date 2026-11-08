@@ -12,9 +12,27 @@
 import type { FactsMode } from "@nouride/shared";
 import { atLeast } from "@/modules/users/auth.ts";
 import { MEMORY_KEYS, type MemorySettings } from "@/modules/config/settings/memory.ts";
+import type { MemoryField } from "@/modules/config/global/validate-memory.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { jsonBody } from "../payloads.ts";
-import { NO_SETTINGS, NOT_SAVED } from "../plain.ts";
+import { NO_SETTINGS, NOT_SAVED, notSaved } from "../plain.ts";
+
+/** Each setting a memory save can be refused for, as the Memory page names it. */
+const MEMORY_FIELDS: Record<MemoryField, string> = {
+  promptRecent: "the recent conversations in each prompt",
+  transcriptDays: "the days a transcript is kept",
+  passAt: "the time of the nightly pass",
+  facts: "what the nightly pass may learn about people",
+  passPerNight: "the conversations per night",
+  // Its label is Tokens per night, a word the page keeps on its own line: said here by what it counts.
+  passMaxTokens: "the nightly pass's limit on model use",
+  maxAttempts: "the attempts per conversation",
+  passProvider: "the helper model's provider",
+  passModel: "the helper model",
+  semanticDimensions: "the dimensions",
+  semanticProvider: "the provider for search by meaning",
+  semanticModel: "the embedding model",
+};
 
 /**
  * The routes that do their work before they answer — the pass, a reindex, a forget that rewrites
@@ -95,7 +113,7 @@ export function registerMemoryRoutes(control: ControlApp, deps: ControlDeps): vo
     }
     const result = await deps.settings.setMemorySettings({ patch: patch as Partial<MemorySettings>, actor: principal.actor });
     if (!result.ok) {
-      const plain = result.probe ? "The embedding model did not answer, so search by meaning stays off. Check its provider and its name, and save again." : NOT_SAVED;
+      const plain = result.probe ? "The embedding model did not answer, so search by meaning stays off. Check its provider and its name, and save again." : notSaved(result.field && MEMORY_FIELDS[result.field]);
       return c.json({ error: result.error, plain }, 400);
     }
     return c.json(view(deps.settings));

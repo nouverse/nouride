@@ -63,10 +63,10 @@ export function parseScheduleInput(
 ): JobTrigger {
   const given = [input.at, input.every, input.cron].filter(Boolean);
   if (given.length === 0) {
-    throw new CronValidationError("give a trigger: `at` for once, `every` for an interval, or `cron`.");
+    throw new CronValidationError("give a trigger: `at` for once, `every` for an interval, or `cron`.", "schedule");
   }
   if (given.length > 1) {
-    throw new CronValidationError("give exactly one of `at`, `every` or `cron`.");
+    throw new CronValidationError("give exactly one of `at`, `every` or `cron`.", "schedule");
   }
 
   if (input.tz) assertTimezone(input.tz);
@@ -80,6 +80,7 @@ export function parseScheduleInput(
     if (ms === null) {
       throw new CronValidationError(
         `\`${input.every}\` is not an interval. Use a number and a unit: 30s, 15m, 6h, 1d.`,
+        "schedule",
       );
     }
     return { kind: "every", everyMs: ms };
@@ -108,7 +109,7 @@ function parseInstant(text: string, now: number, tz: string): number {
   // Offset or `Z` present: the string already says which instant it means.
   if (/[zZ]$|[+-]\d{2}:?\d{2}$/.test(trimmed)) {
     const parsed = Date.parse(trimmed);
-    if (Number.isNaN(parsed)) throw new CronValidationError(`\`${text}\` is not a timestamp.`);
+    if (Number.isNaN(parsed)) throw new CronValidationError(`\`${text}\` is not a timestamp.`, "schedule");
     return parsed;
   }
 
@@ -116,6 +117,7 @@ function parseInstant(text: string, now: number, tz: string): number {
   if (!match) {
     throw new CronValidationError(
       `\`${text}\` is not a time. Use a duration (2h), or a timestamp (2026-08-19 09:00).`,
+      "schedule",
     );
   }
   assertTimezone(tz);
@@ -133,7 +135,7 @@ function parseInstant(text: string, now: number, tz: string): number {
     // starting a day and a half early covers every zone without scanning a year.
     return nextCronOccurrence(asIfUtcCron, naive - 36 * 3_600_000, tz);
   } catch {
-    throw new CronValidationError(`\`${text}\` is not a valid date in ${tz}.`);
+    throw new CronValidationError(`\`${text}\` is not a valid date in ${tz}.`, "schedule");
   }
 }
 

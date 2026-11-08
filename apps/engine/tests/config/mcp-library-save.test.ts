@@ -165,6 +165,46 @@ describe("one agent's switch", () => {
   });
 });
 
+describe("the field a refusal names, for the page to say which to fix (0.8.23)", () => {
+  const server = (edit: Record<string, unknown>) => settings.saveLibraryServer({ packs, actor: "test", server: { name: "gh", transport: "stdio", command: "npx", ...edit } as never });
+  const remote = { transport: "streamable-http", url: "https://mcp.example.com/mcp" };
+
+  test("a server's own fields: its name, its program, its address", async () => {
+    expect(await server({ name: "my server" })).toMatchObject({ ok: false, field: "name" });
+    expect(await server({ command: " " })).toMatchObject({ ok: false, field: "command" });
+    expect(await server({ ...remote, url: "" })).toMatchObject({ ok: false, field: "url" });
+    expect(await server({ ...remote, url: "not a url" })).toMatchObject({ ok: false, field: "url" });
+    expect(await server({ ...remote, url: "ftp://mcp.example.com" })).toMatchObject({ ok: false, field: "url" });
+    expect(await settings.saveLibraryServer({ packs, actor: "test", server: gh, enable: ["ghost"] })).toMatchObject({ ok: false, field: "agents" });
+  });
+
+  test("its credential: a key, or the secret variables", async () => {
+    expect(await settings.saveLibraryServer({ packs, actor: "test", server: gh, token: "t-1" })).toMatchObject({ ok: false, field: "token" });
+    expect(await settings.saveLibraryServer({ packs, actor: "test", server: { name: "gh", ...remote } as never, envSecrets: { A: { value: "v" } } })).toMatchObject({ ok: false, field: "variables" });
+    expect(await save({ "1BAD": { value: "v" } })).toMatchObject({ ok: false, field: "variables" });
+    expect(await save({ [`A${"B".repeat(59)}`]: { value: "v" } })).toMatchObject({ ok: false, field: "variables" });
+    expect(await save({ OTHER: {} })).toMatchObject({ ok: false, field: "variables" });
+    expect(await save({ GITHUB_TOKEN: { secret: "github_token" } })).toMatchObject({ ok: false, field: "variables" });
+  });
+
+  test("an agent's word on it: its tools, and a sign-in a stdio server cannot have", async () => {
+    await save(undefined, ["nouva"]);
+    expect(await settings.setAgentMcp({ packs, agentId: "nouva", actor: "test", name: "gh", tools: [" "] })).toMatchObject({ ok: false, field: "tools" });
+    expect(await settings.setAgentMcp({ packs, agentId: "nouva", actor: "test", name: "gh", credential: { login: true } })).toMatchObject({ ok: false, field: "login" });
+    expect(await settings.setAgentMcp({ packs, agentId: "nouva", actor: "test", name: "gh", credential: { token: "t-1" } })).toMatchObject({ ok: false, field: "token" });
+  });
+
+  test("what is no field of the form names none: an agent or a server gone, a pack that would not load", async () => {
+    expect(await settings.setAgentMcp({ packs, agentId: "ghost", actor: "test", name: "gh", on: true })).not.toHaveProperty("field");
+    expect(await settings.setAgentMcp({ packs, agentId: "nouva", actor: "test", name: "ghost", on: true })).not.toHaveProperty("field");
+    await save(undefined, ["nouva"]);
+    failReload = true;
+    const refused = await save({ GITHUB_TOKEN: { value: "ghp_should-not-stay" } });
+    expect(refused).toMatchObject({ ok: false });
+    expect(refused).not.toHaveProperty("field");
+  });
+});
+
 describe("taking a server out of the library", () => {
   test("out of every agent that named it, and says who — so their logins can go too", async () => {
     await save(undefined, ["nouva"]);

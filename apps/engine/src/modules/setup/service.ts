@@ -169,12 +169,12 @@ export class SetupService {
   }
 
   /** Whether a coding CLI answers an agent that exists, or none (`external-agent.ts`). */
-  async setAnsweredBy(input: { agentId: string; cli: string | null; profile?: string; actor: string }): Promise<{ ok: true } | { ok: false; error: string }> {
+  async setAnsweredBy(input: { agentId: string; cli: string | null; profile?: string; actor: string }): ReturnType<typeof setAnsweredBy> {
     return await setAnsweredBy(this.deps, input);
   }
 
   /** An agent's cat in Nouride Office (`agent-look.ts`). */
-  async setLook(input: { agentId: string; look: LookChange; actor: string }): Promise<{ ok: true } | { ok: false; error: string }> {
+  async setLook(input: { agentId: string; look: LookChange; actor: string }): ReturnType<typeof setLook> {
     return await setLook(this.deps, input);
   }
 

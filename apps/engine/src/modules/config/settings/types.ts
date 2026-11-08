@@ -112,11 +112,18 @@ export interface PackSecrets {
   secrets: readonly string[];
 }
 
-export type SaveResult =
+export type SaveResult<Field extends string = string> =
   | { ok: true; restartRequired: boolean }
   /**
    * `conflict`: refused because what it was made against changed meanwhile — a 409, not a 400. `probe`: because the
    * model it would use did not answer a test call (semantic search's embedding model), which the dashboard says in its
-   * own words (0.8.20).
+   * own words (0.8.20). `field` (0.8.23): the one field of the form whose value was refused, by its name here, which the
+   * route names to the page in the dashboard's words; absent where no one field was (a file that would not load).
    */
-  | { ok: false; error: string; conflict?: true; probe?: true };
+  | { ok: false; error: string; conflict?: true; probe?: true; field?: Field };
+
+/** A writer's refusal of one field of what it was sent: which, and why, in the words its `error` says it. */
+export interface FieldRefusal<Field extends string> {
+  field: Field;
+  error: string;
+}

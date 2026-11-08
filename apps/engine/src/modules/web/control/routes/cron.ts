@@ -7,9 +7,32 @@ import { atLeast } from "@/modules/users/auth.ts";
 import { webhookUrl } from "@/modules/web/hooks.ts";
 import { sendReachTest } from "@/modules/web/hook-reach.ts";
 import { settledCard, turnOnProposal } from "@/modules/cron/proposals.ts";
-import { cronInputFrom, cronPatchFrom, isCronRefusal, jsonBody, webhookView } from "../payloads.ts";
+import type { CronField } from "@/modules/cron/validate.ts";
+import { cronInputFrom, cronPatchFrom, cronRefusalField, isCronRefusal, jsonBody, webhookView } from "../payloads.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
-import { NOT_CHANGED, NOT_SAVED } from "../plain.ts";
+import { NOT_CHANGED, notSaved } from "../plain.ts";
+
+/** Each field a job or a webhook can be refused for, as the Schedule and Webhooks pages' forms name it. */
+const CRON_FIELDS: Record<CronField, string> = {
+  name: "the name",
+  agent: "the agent",
+  target: "where it goes",
+  schedule: "when it runs",
+  kind: "what should happen",
+  text: "the message",
+  message: "what to ask the agent",
+  command: "the command",
+  goal: "the mission's goal",
+  checks: "the mission's checks",
+  review: "the mission's review",
+  delivery: "where it goes",
+};
+
+/** A cron refusal in the page's words: the field it names, or what was entered. */
+function refusalWords(err: unknown): string {
+  const field = cronRefusalField(err);
+  return notSaved(field && CRON_FIELDS[field]);
+}
 
 export function registerCronRoutes(control: ControlApp, deps: ControlDeps): void {
   // ── Scheduled jobs ────────────────────────────────────────────────────────
@@ -85,7 +108,7 @@ export function registerCronRoutes(control: ControlApp, deps: ControlDeps): void
       });
       return c.json({ webhook: webhookView(job, deps) });
     } catch (err) {
-      if (isCronRefusal(err)) return c.json({ error: (err as Error).message, plain: NOT_SAVED }, 400);
+      if (isCronRefusal(err)) return c.json({ error: (err as Error).message, plain: refusalWords(err) }, 400);
       throw err;
     }
   });
@@ -169,7 +192,7 @@ export function registerCronRoutes(control: ControlApp, deps: ControlDeps): void
     } catch (err) {
       // A refusal here is the caller's mistake, not a server fault, and the message is written for
       // them — 500 with a stack trace would hide the one sentence that says which field is wrong.
-      if (isCronRefusal(err)) return c.json({ error: (err as Error).message, plain: NOT_SAVED }, 400);
+      if (isCronRefusal(err)) return c.json({ error: (err as Error).message, plain: refusalWords(err) }, 400);
       throw err;
     }
   });
@@ -187,7 +210,7 @@ export function registerCronRoutes(control: ControlApp, deps: ControlDeps): void
       const job = deps.cron.store.update(existing.id, patch, c.get("principal").actor);
       return c.json({ job });
     } catch (err) {
-      if (isCronRefusal(err)) return c.json({ error: (err as Error).message, plain: NOT_SAVED }, 400);
+      if (isCronRefusal(err)) return c.json({ error: (err as Error).message, plain: refusalWords(err) }, 400);
       throw err;
     }
   });

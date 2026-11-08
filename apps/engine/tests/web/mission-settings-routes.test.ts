@@ -118,7 +118,8 @@ describe("one agent's missions at once (0.8.11)", () => {
     const operator = agentApp("operator");
     const refused = await operator.post("nix", { perAgent: 9 });
     expect(refused.status).toBe(400);
-    expect(await refused.json()).toEqual({ error: "[missions] per_agent must be a whole number from 1 to 4, got 9", plain: "Nothing was saved. Check what you entered, and try again." });
+    // Its one field, named as the agent's Settings page names it (0.8.23).
+    expect(await refused.json()).toEqual({ error: "[missions] per_agent must be a whole number from 1 to 4, got 9", plain: "Nothing was saved. Check the number of missions at once, and try again." });
     expect((await operator.post("nix", { perAgent: "3" })).status).toBe(400);
     expect((await operator.post("ghost", { perAgent: 3 })).status).toBe(404);
     expect(operator.calls).toHaveLength(1);

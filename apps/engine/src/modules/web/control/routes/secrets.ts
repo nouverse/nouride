@@ -19,10 +19,17 @@
  */
 
 import { atLeast } from "@/modules/users/auth.ts";
-import { assertSecretName, type FieldChange, SecretError } from "@nouride/secrets";
+import { assertSecretName, type FieldChange, SecretError, type SecretPart } from "@nouride/secrets";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { jsonBody } from "../payloads.ts";
-import { INCOMPLETE, NOT_SAVED, NO_SETTINGS } from "../plain.ts";
+import { INCOMPLETE, NO_SETTINGS, notSaved } from "../plain.ts";
+
+/** Each part of a secret a save can be refused for, as the Secrets page's form names it. */
+const SECRET_PARTS: Record<SecretPart, string> = {
+  name: "the name",
+  value: "the value",
+  fields: "the details",
+};
 
 export function registerSecretRoutes(control: ControlApp, deps: ControlDeps): void {
   control.get("/secrets", (c) => {
@@ -75,7 +82,7 @@ export function registerSecretRoutes(control: ControlApp, deps: ControlDeps): vo
       actor: principal.user?.username ?? principal.kind,
       ...(fields ? { fields } : {}),
     });
-    if (!result.ok) return c.json({ error: result.error, plain: NOT_SAVED }, 400);
+    if (!result.ok) return c.json({ error: result.error, plain: notSaved(result.field && SECRET_PARTS[result.field]) }, 400);
 
     /**
      * Whether the write will actually be what resolves.
@@ -95,7 +102,7 @@ export function registerSecretRoutes(control: ControlApp, deps: ControlDeps): vo
     const change = fieldChange((await jsonBody(c)) ?? {});
     if (!change || change === "bad") return c.json({ error: "give `set` with names and texts, or `remove` with names" }, 400);
     const result = await deps.settings.changeSecretFields({ name: c.req.param("name"), change, actor: principal.user?.username ?? principal.kind });
-    if (!result.ok) return c.json({ error: result.error, plain: NOT_SAVED }, 400);
+    if (!result.ok) return c.json({ error: result.error, plain: notSaved(result.field && SECRET_PARTS[result.field]) }, 400);
     return c.json({ ok: true, fields: result.fields ?? {} });
   });
 

@@ -9,7 +9,7 @@
  */
 
 import { createLogger } from "@nouride/shared";
-import { envNamesFor, type FieldChange, SecretError, type StoreLock } from "@nouride/secrets";
+import { envNamesFor, type FieldChange, SecretError, type SecretPart, type StoreLock } from "@nouride/secrets";
 import { unnamePackSecret } from "./agents.ts";
 import type { SaveResult, SettingsDeps } from "./types.ts";
 
@@ -121,14 +121,14 @@ export async function changeSecretFields(deps: Pick<SettingsDeps, "secrets" | "a
   name: string;
   change: FieldChange;
   actor?: string;
-}): Promise<SaveResult & { fields?: Record<string, string> }> {
+}): Promise<SaveResult<SecretPart> & { fields?: Record<string, string> }> {
   try {
     const fields = await deps.secrets.changeFields(params.name.trim(), params.change);
     const changed = [...Object.keys(params.change.set ?? {}), ...(params.change.remove ?? [])];
     deps.audit?.record({ action: "secret_fields_changed", actor: params.actor, details: { name: params.name, fields: changed } });
     return { ok: true, restartRequired: false, fields };
   } catch (err) {
-    if (err instanceof SecretError) return { ok: false, error: err.message };
+    if (err instanceof SecretError) return { ok: false, error: err.message, field: err.part };
     throw err;
   }
 }
@@ -157,17 +157,17 @@ export async function setSecret(deps: Pick<SettingsDeps, "secrets" | "audit">, p
   actor?: string;
   /** What is said about it, given with the value (0.8.19). */
   fields?: FieldChange;
-}): Promise<SaveResult> {
+}): Promise<SaveResult<SecretPart>> {
   const name = params.name.trim();
-  if (!name) return { ok: false, error: "secret name is required" };
-  if (!params.value) return { ok: false, error: "a secret with no value is not a secret" };
+  if (!name) return { ok: false, field: "name", error: "secret name is required" };
+  if (!params.value) return { ok: false, field: "value", error: "a secret with no value is not a secret" };
 
   const replaced = deps.secrets.has(name);
   try {
     await deps.secrets.set(name, params.value, { ...(params.fields ? { fields: params.fields } : {}), ...(params.actor ? { actor: params.actor } : {}) });
   } catch (err) {
     // A field refused (a key's shape in it, a name too long), said back; the value is not stored without what was said.
-    if (err instanceof SecretError) return { ok: false, error: err.message };
+    if (err instanceof SecretError) return { ok: false, error: err.message, field: err.part };
     throw err;
   }
 

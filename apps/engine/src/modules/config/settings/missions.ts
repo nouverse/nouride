@@ -30,14 +30,15 @@ const KEYS = {
   limitTokens: "limit_tokens",
 } as const satisfies Record<keyof MissionsSection, string>;
 
-type Setting = keyof typeof KEYS;
+/** A setting of the Missions page's limits: what a refusal names (0.8.23). */
+export type MissionSetting = keyof typeof KEYS;
 type Bounds = ReturnType<typeof boundsOf>;
 
 /** The agents that are on, each by its own `per_agent` — its pack's, or undefined where it follows the daemon's (0.8.11). */
 export type AgentSlots = readonly (number | undefined)[];
 
 /** The bounds a setting keeps: the schema's, and for the slots on the box every agent at its own `per_agent` at once. */
-function boundsFor(name: Setting, agents: AgentSlots, perAgent: number): Bounds {
+function boundsFor(name: MissionSetting, agents: AgentSlots, perAgent: number): Bounds {
   const bounds = boundsOf(`missions.${KEYS[name]}`);
   return name === "maxRunning" ? { min: bounds.min, max: mostRunning(agents.map((own) => own ?? perAgent)), integer: bounds.integer } : bounds;
 }
@@ -48,18 +49,18 @@ function boundsFor(name: Setting, agents: AgentSlots, perAgent: number): Bounds 
  */
 export function missionSettings(deps: Pick<SettingsDeps, "config">, agents: AgentSlots) {
   const missions = deps.config.missions;
-  const bounds = Object.fromEntries((Object.keys(KEYS) as Setting[]).map((name) => [name, boundsFor(name, agents, missions.perAgent)]));
+  const bounds = Object.fromEntries((Object.keys(KEYS) as MissionSetting[]).map((name) => [name, boundsFor(name, agents, missions.perAgent)]));
   return {
     ...missions,
     maxRunning: missions.maxRunning ?? autoRunning(agents.length),
     auto: missions.maxRunning === undefined,
     defaults: { ...DEFAULT_CONFIG.missions, maxRunning: autoRunning(agents.length) },
-    bounds: bounds as Record<Setting, Bounds>,
+    bounds: bounds as Record<MissionSetting, Bounds>,
   };
 }
 
 /** Why a value cannot be saved, in the words the loader would refuse it with — or null. */
-function refusal(name: Setting, value: unknown, bounds: Bounds): string | null {
+function refusal(name: MissionSetting, value: unknown, bounds: Bounds): string | null {
   const fits =
     typeof value === "number" &&
     Number.isFinite(value) &&
@@ -76,21 +77,21 @@ function refusal(name: Setting, value: unknown, bounds: Bounds): string | null {
  * written: one out of bounds saves none. The slots on the box are held to the agents that are on now, at the `per_agent`
  * the same save leaves.
  */
-export async function setMissionSettings(deps: SettingsDeps, params: { patch: Record<string, unknown>; agents: AgentSlots; actor?: string }): Promise<SaveResult> {
+export async function setMissionSettings(deps: SettingsDeps, params: { patch: Record<string, unknown>; agents: AgentSlots; actor?: string }): Promise<SaveResult<MissionSetting>> {
   const names = Object.keys(params.patch);
   const unknown = names.filter((name) => !(name in KEYS));
   if (unknown.length > 0) return { ok: false, error: `[missions] has no ${unknown.join(", ")}: it holds ${Object.keys(KEYS).join(", ")}` };
   if (names.length === 0) return { ok: false, error: "nothing to change: send one of perAgent, maxRunning, limitHours, limitTurns, limitTokens" };
   const next = params.patch.perAgent;
   const perAgent = typeof next === "number" ? next : next === null ? DEFAULT_CONFIG.missions.perAgent : deps.config.missions.perAgent;
-  for (const name of names as Setting[]) {
+  for (const name of names as MissionSetting[]) {
     if (params.patch[name] === null) continue;
     const refused = refusal(name, params.patch[name], boundsFor(name, params.agents, perAgent));
-    if (refused) return { ok: false, error: refused };
+    if (refused) return { ok: false, field: name, error: refused };
   }
 
   const previous = { ...deps.config.missions };
-  const values = Object.fromEntries((names as Setting[]).map((name) => [KEYS[name], params.patch[name] as number | null]));
+  const values = Object.fromEntries((names as MissionSetting[]).map((name) => [KEYS[name], params.patch[name] as number | null]));
   const set = Object.fromEntries(Object.entries(values).filter((entry): entry is [string, number] => entry[1] !== null));
   const cleared = Object.keys(values).filter((key) => values[key] === null);
   const saved = await editConfigFile(deps, (source) => cleared.reduce((text, key) => removeTomlKey(text, "missions", key), upsertTomlTable(source, "missions", set)));

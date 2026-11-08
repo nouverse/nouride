@@ -11,13 +11,25 @@
 import { readMcpLibrary, SHARED_LOGIN } from "@nouride/persona";
 import type { McpServerConfig } from "@nouride/shared";
 import { atLeast } from "@/modules/users/auth.ts";
-import type { McpPacks, SecretInput } from "@/modules/config/settings/mcp.ts";
+import type { McpField, McpPacks, SecretInput } from "@/modules/config/settings/mcp.ts";
 import type { McpServerEdit } from "@/modules/config/edit-blocks.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { jsonBody } from "../payloads.ts";
-import { NOT_CHANGED, NOT_SAVED, NO_SETTINGS } from "../plain.ts";
+import { NOT_CHANGED, NOT_SAVED, NO_SETTINGS, notSaved } from "../plain.ts";
 
 type Body = Record<string, unknown>;
+
+/** Each field a save of a connector can be refused for, as the Connectors page and an agent's tab name it. */
+const MCP_FIELDS: Record<McpField, string> = {
+  name: "the connector's name",
+  command: "the program it starts",
+  url: "the connector's address",
+  token: "the key",
+  variables: "the secret variables",
+  agents: "the agents it is switched on for",
+  tools: "the tools",
+  login: "how it signs in",
+};
 
 /** The packs as the library's writers need them. */
 function packsOf(deps: ControlDeps): McpPacks {
@@ -112,7 +124,7 @@ export function registerMcpRoutes(control: ControlApp, deps: ControlDeps): void 
       ...(envSecrets ? { envSecrets } : {}),
       ...(Array.isArray(body.enable) ? { enable: body.enable.map(String) } : {}),
     });
-    return result.ok ? c.json(result) : c.json({ error: result.error, plain: NOT_SAVED }, 400);
+    return result.ok ? c.json(result) : c.json({ error: result.error, plain: notSaved(result.field && MCP_FIELDS[result.field]) }, 400);
   });
 
   control.delete("/mcp/library/:name", async (c) => {
@@ -215,7 +227,7 @@ export function registerMcpRoutes(control: ControlApp, deps: ControlDeps): void 
       // A list chooses the server's tools for this agent (0.7.21); null gives it all of them again.
       ...(body.tools === null ? { tools: null } : Array.isArray(body.tools) ? { tools: body.tools.map(String) } : {}),
     });
-    return result.ok ? c.json(result) : c.json({ error: result.error, plain: NOT_SAVED }, 400);
+    return result.ok ? c.json(result) : c.json({ error: result.error, plain: notSaved(result.field && MCP_FIELDS[result.field]) }, 400);
   });
 
   /** Add a server for this agent: into the library, switched on here — `nouride mcp add --agent`, and older pages. */
@@ -235,7 +247,7 @@ export function registerMcpRoutes(control: ControlApp, deps: ControlDeps): void 
       ...(envSecrets ? { envSecrets } : {}),
       enable: [id],
     });
-    return result.ok ? c.json(result) : c.json({ error: result.error, plain: NOT_SAVED }, 400);
+    return result.ok ? c.json(result) : c.json({ error: result.error, plain: notSaved(result.field && MCP_FIELDS[result.field]) }, 400);
   });
 
   /** Switch it off for this agent. The library keeps it; `DELETE /mcp/library/:name` takes it away for everyone. */

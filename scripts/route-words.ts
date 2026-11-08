@@ -14,8 +14,10 @@
  * `web/control/routes`, each `c.json(body, status)` its handler answers with (the functions of its own file it calls
  * included), and the `error`, `note` and `plain` of each body; the guard's replies answer every route. What a value
  * holds is followed inside the file (`route-values.ts`): a const, what a function of the file returns, an element of a
- * tuple or a field of an object it returns, either side of `?:`, `||` and `??`, and a parameter of a function of the
- * file, by the arguments its calls pass. What comes from another file, a domain's refusal or an exception's message, is
+ * tuple, a field of an object it returns or an entry of a table it looks up, either side of `?:`, `||` and `??`, the
+ * right of `&&`, and a parameter of a function, by the argument the call followed passes (else every call of its file):
+ * the words a route hands `notSaved` are read in the sentence it makes. What comes from another file, a domain's
+ * refusal or an exception's message, is
  * words this cannot read: such a reply carries a `plain`, worded at the route from what the domain returned (its kind
  * and its data), never parsed out of its sentence. Each body a reply can answer with is held on its own, and a word
  * passes with a `plain` beside it, in its object or one it is spread into.
@@ -29,7 +31,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import ts from "typescript";
 import { answersWithWords, dashboardCalls, matches, routeShape, type Call } from "./dashboard-calls.ts";
-import { CONTROL, declarationOf, functionOf, isNoText, isText, propertyName, unwrap, values } from "./route-values.ts";
+import { CONTROL, declarationOf, functionOf, isNoText, isText, propertyName, unwrap, values, valuesBound, type Bound } from "./route-values.ts";
 import { technical } from "./dashboard-words.ts";
 
 const ROOT = join(import.meta.dir, "..");
@@ -76,8 +78,8 @@ export interface Reply extends Omit<Body, "plainAlways" | "bare" | "bareUnread">
   plainAlways: boolean;
 }
 
-/** A name that holds a sentence rather than data. */
-const SENTENCE = /^(?:e|err|error|errors|message|refused|refusal|reason|note|why|notice|hint|said|problem|failure|cause|detail)$|(?:Error|Message|Reason|Note|Refusal|Notice)$/;
+/** A name that holds a sentence rather than data; `what`, the words a helper names a field by (`notSaved`). */
+const SENTENCE = /^(?:e|err|error|errors|message|refused|refusal|reason|note|why|notice|hint|said|problem|failure|cause|detail|what)$|(?:Error|Message|Reason|Note|Refusal|Notice)$/;
 
 /** Calls that make data of data: a list joined, a number written out, a value trimmed. */
 const DATA_METHODS = new Set(["join", "toString", "toFixed", "trim", "slice", "toLowerCase", "toUpperCase", "toISOString", "padStart", "padEnd"]);
@@ -86,37 +88,53 @@ const DATA_FUNCTIONS = new Set(["String", "Number", "encodeURIComponent", "JSON.
 const lineOf = (node: ts.Node): number => node.getSourceFile().getLineAndCharacterOfPosition(node.getStart()).line + 1;
 
 /** The words a field can hold: each text it can be, and what in each this could not read. */
-function textsOf(node: ts.Expression): Said[] {
-  return values(node).flatMap((value): Said[] => {
+function textsOf(node: ts.Expression, bound?: Bound): Said[] {
+  return valuesBound(node, bound).flatMap(({ node: value, bound: under }): Said[] => {
     if (ts.isStringLiteral(value) || ts.isNoSubstitutionTemplateLiteral(value)) return [{ text: value.text, line: lineOf(value), unread: [] }];
-    if (ts.isTemplateExpression(value)) return template(value);
-    if (ts.isBinaryExpression(value) && value.operatorToken.kind === ts.SyntaxKind.PlusToken) return joined(value);
+    if (ts.isTemplateExpression(value)) return template(value, under);
+    if (ts.isBinaryExpression(value) && value.operatorToken.kind === ts.SyntaxKind.PlusToken) return joined(value, under);
     if (isNoText(value)) return [];
     return [{ text: "", line: lineOf(value), unread: [value.getText()] }];
   });
 }
 
 /** A sentence written in pieces, `"a " + "b"`: one text where each side is one, else each side's. */
-function joined(node: ts.BinaryExpression): Said[] {
-  const left = textsOf(node.left);
-  const right = textsOf(node.right);
+function joined(node: ts.BinaryExpression, bound: Bound): Said[] {
+  const left = textsOf(node.left, bound);
+  const right = textsOf(node.right, bound);
   if (left.length !== 1 || right.length !== 1) return [...left, ...right];
   return [{ text: left[0]!.text + right[0]!.text, line: lineOf(node), unread: [...left[0]!.unread, ...right[0]!.unread] }];
 }
 
-/** A template's words, a value as `{}`; the words a value holds, read or not, beside them. */
-function template(node: ts.TemplateExpression): Said[] {
+/**
+ * A template's words, a value as `{}`; the words a value holds, read or not, beside them. A value is read by what the
+ * parameters of the function the template came out of stand for at the call it was reached through.
+ */
+function template(node: ts.TemplateExpression, bound: Bound): Said[] {
   const inside: Said[] = [];
   let text = node.head.text;
   for (const span of node.templateSpans) {
-    for (const value of values(span.expression)) {
-      if (isText(value)) inside.push(...textsOf(value));
-      else if (!isData(value)) inside.push({ text: "", line: lineOf(value), unread: [value.getText()] });
+    const handed = handedWords(span.expression, bound);
+    for (const { node: value, bound: under } of valuesBound(span.expression, bound)) {
+      if (isText(value)) inside.push(...textsOf(value, under));
+      else if (handed || !isData(value)) inside.push({ text: "", line: lineOf(value), unread: [value.getText()] });
     }
     text += `{}${span.literal.text}`;
   }
   const unread = inside.filter((said) => said.text === "").flatMap((said) => said.unread);
   return [{ text, line: lineOf(node), unread }, ...inside.filter((said) => said.text !== "")];
+}
+
+/**
+ * A parameter named for a sentence, handed its words by the call this followed (`notSaved`'s `what`): whatever the
+ * caller passed has to be words this reads. A name or a count it passed would otherwise stand as data, unread, in a
+ * sentence the page shows.
+ */
+function handedWords(expression: ts.Expression, bound: Bound): boolean {
+  const at = unwrap(expression);
+  if (!ts.isIdentifier(at) || !SENTENCE.test(at.text)) return false;
+  const declaration = declarationOf(at.text, at);
+  return declaration !== undefined && ts.isParameter(declaration) && bound.has(declaration);
 }
 
 /** A value that is data, an id or a name or a count, rather than words. */

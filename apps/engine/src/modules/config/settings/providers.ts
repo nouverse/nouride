@@ -16,6 +16,9 @@ import {
 
 const log = createLogger("settings");
 
+/** A field of the provider form a refusal names (0.8.23). */
+export type ProviderField = "name" | "kind" | "baseUrl" | "apiKey";
+
 // ── Provider profiles ──────────────────────────────────────────────────────
 
 export function providerProfiles(deps: SettingsDeps): ProviderView[] {
@@ -44,22 +47,22 @@ export async function saveProvider(deps: Pick<SettingsDeps, "config" | "configPa
   baseUrl: string;
   apiKey?: string;
   actor: string;
-}): Promise<SaveResult> {
+}): Promise<SaveResult<ProviderField>> {
   const name = input.name.trim().toLowerCase();
   if (!NAME_PATTERN.test(name)) {
-    return { ok: false, error: "name may contain only letters, digits, - and _" };
+    return { ok: false, field: "name", error: "name may contain only letters, digits, - and _" };
   }
   const kind = input.kind as ProviderKind;
   if (!PROVIDER_KINDS.includes(kind)) {
-    return { ok: false, error: `unknown provider kind "${input.kind}"` };
+    return { ok: false, field: "kind", error: `unknown provider kind "${input.kind}"` };
   }
   const baseUrl = input.baseUrl.trim().replace(/\/+$/, "");
-  if (!baseUrl) return { ok: false, error: "a base URL is required" };
+  if (!baseUrl) return { ok: false, field: "baseUrl", error: "a base URL is required" };
 
   const existing = deps.config.providers[name];
   const apiKeySecret = existing?.apiKeySecret ?? `${name}_api_key`;
   const apiKey = input.apiKey?.trim();
-  if (!apiKey && !existing) return { ok: false, error: "an API key is required" };
+  if (!apiKey && !existing) return { ok: false, field: "apiKey", error: "an API key is required" };
 
   const saved = await editConfigFile(deps, (source) =>
     upsertTomlTable(source, `providers.${name}`, {

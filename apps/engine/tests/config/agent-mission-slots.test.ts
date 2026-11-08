@@ -63,7 +63,7 @@ describe("the box's max_running, with agents at their own numbers", () => {
     const configPath = join(dir, "config.toml");
     writeFileSync(configPath, '[daemon]\nname = "t"\n');
     const deps = { config, configPath } as unknown as SettingsDeps;
-    expect(await setMissionSettings(deps, { patch: { maxRunning: 7 }, agents })).toEqual({ ok: false, error: "[missions] max_running must be a whole number from 1 to 6, got 7" });
+    expect(await setMissionSettings(deps, { patch: { maxRunning: 7 }, agents })).toEqual({ ok: false, field: "maxRunning", error: "[missions] max_running must be a whole number from 1 to 6, got 7" });
     expect(await setMissionSettings(deps, { patch: { maxRunning: 6 }, agents })).toEqual({ ok: true, restartRequired: false });
   });
 });

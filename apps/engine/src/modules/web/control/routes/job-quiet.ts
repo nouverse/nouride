@@ -9,7 +9,10 @@ import { JOB_QUIET_MINUTES_MAX } from "@/modules/config/settings/jobs.ts";
 import { atLeast } from "@/modules/users/auth.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { jsonBody } from "../payloads.ts";
-import { NOT_A_NUMBER, NOT_SAVED, NO_SETTINGS } from "../plain.ts";
+import { NOT_A_NUMBER, NO_SETTINGS, notSaved } from "../plain.ts";
+
+/** The one field either save has, as Quiet background jobs names it. */
+const MINUTES = "the minutes for quiet background jobs";
 
 export function registerJobQuietRoutes(control: ControlApp, deps: ControlDeps): void {
   control.get("/policy/job-quiet", (c) =>
@@ -29,7 +32,7 @@ export function registerJobQuietRoutes(control: ControlApp, deps: ControlDeps): 
     if (typeof body.minutes !== "number") return c.json({ error: "minutes must be a whole number" }, 400);
 
     const result = await deps.settings.setJobQuietMinutes({ minutes: body.minutes, actor: principal.actor });
-    if (!result.ok) return c.json({ error: result.error, plain: NOT_SAVED }, 400);
+    if (!result.ok) return c.json({ error: result.error, plain: notSaved(MINUTES) }, 400);
     return c.json({ ok: true, minutes: deps.ctx.config.jobs.quietAfterMinutes });
   });
 
@@ -55,7 +58,7 @@ export function registerJobQuietRoutes(control: ControlApp, deps: ControlDeps): 
       actor: principal.actor,
       agentId: id,
     });
-    if (!result.ok) return c.json({ error: result.error, plain: NOT_SAVED }, 400);
+    if (!result.ok) return c.json({ error: result.error, plain: notSaved(MINUTES) }, 400);
     return c.json({ ok: true });
   });
 }

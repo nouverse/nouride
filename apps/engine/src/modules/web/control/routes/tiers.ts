@@ -6,9 +6,21 @@
 
 import { join } from "@nouride/runtime";
 import { atLeast } from "@/modules/users/auth.ts";
+import type { TierField } from "@/modules/config/settings/tiers.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { jsonBody } from "../payloads.ts";
-import { INCOMPLETE, NOT_SAVED, NO_SETTINGS } from "../plain.ts";
+import { INCOMPLETE, NO_SETTINGS, notSaved } from "../plain.ts";
+
+/** Each model a tiers' save can be refused for, as the Models page and an agent's Model tab name it. */
+const TIER_FIELDS: Record<TierField, string> = {
+  smallModel: "the small model",
+  highModel: "the high model",
+  summaryModel: "the model for compacting a long conversation",
+  passModel: "the model for the nightly memory pass",
+  steerReplyModel: "the model for the reply under a steered message",
+  imageModel: "the model for reading an image",
+  learningModel: "the model for skill learning",
+};
 
 export function registerTierRoutes(control: ControlApp, deps: ControlDeps): void {
   control.get("/llm/tiers", (c) => {
@@ -25,7 +37,7 @@ export function registerTierRoutes(control: ControlApp, deps: ControlDeps): void
     const body = await jsonBody(c);
     if (!body) return c.json({ error: "send the settings to change, as an object" }, 400);
     const result = await deps.settings.setModelTiers({ patch: body as Record<string, string>, actor: principal.actor });
-    if (!result.ok) return c.json({ error: result.error, plain: NOT_SAVED }, 400);
+    if (!result.ok) return c.json({ error: result.error, plain: notSaved(result.field && TIER_FIELDS[result.field]) }, 400);
     return c.json({ ok: true, ...deps.settings.modelTiers() });
   });
 
@@ -54,7 +66,7 @@ export function registerTierRoutes(control: ControlApp, deps: ControlDeps): void
       actor: principal.actor,
       agentId: id,
     });
-    if (!result.ok) return c.json({ error: result.error, plain: NOT_SAVED }, 400);
+    if (!result.ok) return c.json({ error: result.error, plain: notSaved(result.field && TIER_FIELDS[result.field]) }, 400);
     return c.json({ ok: true });
   });
 }

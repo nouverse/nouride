@@ -39,6 +39,9 @@ export interface ModelTiersView {
 
 export type ModelTiersPatch = Partial<{ smallModel: string; highModel: string } & Record<Helper, string>>;
 
+/** A field of the tiers' form, or of an agent's pair: what a refusal names (0.8.23). */
+export type TierField = keyof Required<ModelTiersPatch>;
+
 export function modelTiers(deps: Pick<SettingsDeps, "config">): ModelTiersView {
   const { config } = deps;
   return {
@@ -60,10 +63,10 @@ export function modelTiers(deps: Pick<SettingsDeps, "config">): ModelTiersView {
 }
 
 /** The install's tiers and each helper's, from a patch; absent fields are left alone, and nothing is written past a refusal. */
-export async function setModelTiers(deps: SettingsDeps, params: { patch: ModelTiersPatch; actor?: string }): Promise<SaveResult> {
+export async function setModelTiers(deps: SettingsDeps, params: { patch: ModelTiersPatch; actor?: string }): Promise<SaveResult<TierField>> {
   const patch = Object.fromEntries(Object.entries(params.patch).filter(([, value]) => value !== undefined).map(([key, value]) => [key, typeof value === "string" ? value.trim() : value])) as ModelTiersPatch;
   const refused = refusal(patch, deps.config.memory.passProvider);
-  if (refused) return { ok: false, error: refused };
+  if (refused) return { ok: false, ...refused };
   if (Object.keys(patch).length === 0) return { ok: true, restartRequired: false };
 
   const saved = await editConfigFile(deps, (source) => {
@@ -89,18 +92,19 @@ export async function setModelTiers(deps: SettingsDeps, params: { patch: ModelTi
   return { ok: true, restartRequired: false };
 }
 
-function refusal(patch: ModelTiersPatch, passProvider: string): string | null {
+/** Why a patch cannot be saved, and the field it is about where it is one the form has. */
+function refusal(patch: ModelTiersPatch, passProvider: string): { error: string; field?: TierField } | null {
   for (const [field, value] of Object.entries(patch)) {
-    if (field !== "smallModel" && field !== "highModel" && !(field in HELPERS)) return `unknown setting "${field}"`;
-    if (typeof value !== "string") return `${field} must be text: a model, ${MODEL_TIERS.join(", ")}, or empty`;
+    if (field !== "smallModel" && field !== "highModel" && !(field in HELPERS)) return { error: `unknown setting "${field}"` };
+    if (typeof value !== "string") return { field: field as TierField, error: `${field} must be text: a model, ${MODEL_TIERS.join(", ")}, or empty` };
   }
   for (const field of ["smallModel", "highModel"] as const) {
-    if (patch[field] !== undefined && isModelTier(patch[field])) return `${field === "smallModel" ? "small_model" : "high_model"} names a model, not a tier`;
+    if (patch[field] !== undefined && isModelTier(patch[field])) return { field, error: `${field === "smallModel" ? "small_model" : "high_model"} names a model, not a tier` };
   }
   // A model id for the pass is a model on `pass_provider`'s profile; without one, it would be sent to every agent's.
   const pass = patch.passModel;
   if (pass && !isModelTier(pass) && !passProvider) {
-    return "a model for the nightly pass needs its provider: set both on the Memory page, or choose a tier here";
+    return { field: "passModel", error: "a model for the nightly pass needs its provider: set both on the Memory page, or choose a tier here" };
   }
   return null;
 }
@@ -115,14 +119,14 @@ export async function saveAgentTiers(deps: SettingsDeps, input: {
   tiers: { small?: string | null; high?: string | null };
   actor: string;
   agentId: string;
-}): Promise<SaveResult> {
+}): Promise<SaveResult<TierField>> {
   const wanted = (["small", "high"] as const).flatMap((tier) => {
     const value = input.tiers[tier];
-    return value === undefined ? [] : [{ tier, key: `${tier}_model`, value: value === null ? null : value.trim() }];
+    return value === undefined ? [] : [{ field: `${tier}Model` as const, key: `${tier}_model`, value: value === null ? null : value.trim() }];
   });
-  for (const { key, value } of wanted) {
-    if (value === "") return { ok: false, error: `${key} is a model id, or none to inherit the install's` };
-    if (value !== null && isModelTier(value)) return { ok: false, error: `${key} names a model, not a tier` };
+  for (const { field, key, value } of wanted) {
+    if (value === "") return { ok: false, field, error: `${key} is a model id, or none to inherit the install's` };
+    if (value !== null && isModelTier(value)) return { ok: false, field, error: `${key} names a model, not a tier` };
   }
   if (wanted.length === 0) return { ok: true, restartRequired: false };
 

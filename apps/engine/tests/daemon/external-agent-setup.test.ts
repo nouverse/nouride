@@ -118,12 +118,20 @@ describe("an agent that exists, answered by a coding CLI or by its model again (
 
   test("a CLI the install does not know changes nothing, and the orchestrator is never made one", async () => {
     const { config, registry, setup } = await service();
+    // Nouva first, so it is the orchestrator: made first, Nix was, and the refusal below was the orchestrator's, the
+    // unknown CLI's never reached.
+    await setup.createAgent({ id: "nouva", displayName: "Nouva", systemPrompt: "", model: "gpt-4o", actor: "t" });
     expect(await setup.createAgent({ id: "nix", displayName: "Nix", systemPrompt: "", model: "gpt-4o", actor: "t" })).toMatchObject({ ok: true });
+    expect(config.daemon.orchestrator).toBe("nouva");
     const before = await readTextFileIfExists(join(root, "agents", "nix", "config.toml"));
-    expect(await setup.setAnsweredBy({ agentId: "nix", cli: "cursor", actor: "t" })).toMatchObject({ ok: false });
+    // Refused by the pack's own load: no one field of the page to name.
+    const unknown = await setup.setAnsweredBy({ agentId: "nix", cli: "cursor", actor: "t" });
+    expect(unknown).toMatchObject({ ok: false });
+    expect(unknown).not.toHaveProperty("field");
     expect(await readTextFileIfExists(join(root, "agents", "nix", "config.toml"))).toBe(before);
     config.daemon.orchestrator = "nix";
-    expect(await setup.setAnsweredBy({ agentId: "nix", cli: "claude-code", actor: "t" })).toMatchObject({ ok: false, error: expect.stringContaining("Make a Nouride agent the orchestrator") });
+    // The choice itself, refused for the orchestrator, names its field (0.8.23).
+    expect(await setup.setAnsweredBy({ agentId: "nix", cli: "claude-code", actor: "t" })).toMatchObject({ ok: false, field: "cli", error: expect.stringContaining("Make a Nouride agent the orchestrator") });
     expect(registry.get("nix")?.config.external).toBeUndefined();
   });
 });

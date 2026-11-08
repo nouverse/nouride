@@ -32,7 +32,7 @@ interface PackWrite {
 }
 
 /** The pack's `config.toml` changed, its agent reloaded — or why nothing stayed written. */
-async function savePack(input: PackWrite, edit: ConfigEdit): Promise<Extract<SaveResult, { ok: false }> | null> {
+async function savePack(input: PackWrite, edit: ConfigEdit): Promise<Extract<SaveResult<never>, { ok: false }> | null> {
   const saved = await editPackFile({ path: input.agentConfigPath, reload: input.reload, edit });
   return saved.ok ? null : saved;
 }
@@ -170,13 +170,14 @@ export async function saveAgentModel(deps: SettingsDeps, input: {
   model: string;
   actor: string;
   agentId: string;
-}): Promise<SaveResult> {
+}): Promise<SaveResult<"provider" | "model">> {
   const provider = input.provider.trim();
   const model = input.model.trim();
-  if (!model) return { ok: false, error: "a model is required" };
+  if (!model) return { ok: false, field: "model", error: "a model is required" };
   if (!deps.config.providers[provider]) {
     return {
       ok: false,
+      field: "provider",
       error: `no provider profile "${provider}" (known: ${Object.keys(deps.config.providers).join(", ")})`,
     };
   }

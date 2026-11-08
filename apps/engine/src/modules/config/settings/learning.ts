@@ -12,22 +12,25 @@ import { createLogger, type SkillLearningMode, type SkillLearningSection } from 
 import { CONFIG_ENUMS } from "@/modules/config/schema.ts";
 import { upsertTomlTable } from "@/modules/config/edit.ts";
 import { editConfigFile } from "./file.ts";
-import type { SaveResult, SettingsDeps } from "./types.ts";
+import type { FieldRefusal, SaveResult, SettingsDeps } from "./types.ts";
 
 const log = createLogger("settings");
 
 export type LearningPatch = Partial<SkillLearningSection>;
 
+/** A setting of skill learning a refusal names (0.8.23). */
+export type LearningField = keyof SkillLearningSection;
+
 /**
  * Apply a patch; absent fields are left alone. Validated whole before anything is written, so a half-valid patch
  * changes nothing.
  */
-export async function setSkillLearning(deps: SettingsDeps, params: { patch: LearningPatch; actor?: string }): Promise<SaveResult> {
+export async function setSkillLearning(deps: SettingsDeps, params: { patch: LearningPatch; actor?: string }): Promise<SaveResult<LearningField>> {
   const { patch } = params;
   const current = deps.config.skills.learning;
 
-  const error = validate(patch);
-  if (error) return { ok: false, error };
+  const refused = validate(patch);
+  if (refused) return { ok: false, ...refused };
 
   const next: SkillLearningSection = {
     mode: patch.mode ?? current.mode,
@@ -53,13 +56,13 @@ export async function setSkillLearning(deps: SettingsDeps, params: { patch: Lear
   return { ok: true, restartRequired: false };
 }
 
-function validate(patch: LearningPatch): string | null {
+function validate(patch: LearningPatch): FieldRefusal<LearningField> | null {
   const modes: readonly string[] = CONFIG_ENUMS["skills.learning.mode"];
-  if (patch.notifyChat !== undefined && typeof patch.notifyChat !== "boolean") return "notifyChat must be true or false";
+  if (patch.notifyChat !== undefined && typeof patch.notifyChat !== "boolean") return { field: "notifyChat", error: "notifyChat must be true or false" };
   // Refused here, unlike at load: the loader reads an unknown mode as `ask` so a file it accepted yesterday still
   // starts; a save is a person choosing now, and telling them it did not take beats the loop quietly doing otherwise.
-  if (patch.mode !== undefined && !modes.includes(patch.mode)) return `mode must be one of ${modes.join(", ")}`;
-  if (patch.model !== undefined && typeof patch.model !== "string") return "model must be a string (empty means the agent's own model)";
+  if (patch.mode !== undefined && !modes.includes(patch.mode)) return { field: "mode", error: `mode must be one of ${modes.join(", ")}` };
+  if (patch.model !== undefined && typeof patch.model !== "string") return { field: "model", error: "model must be a string (empty means the agent's own model)" };
   return null;
 }
 

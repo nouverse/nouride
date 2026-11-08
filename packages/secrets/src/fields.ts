@@ -20,12 +20,12 @@ export interface FieldChange {
 
 function assertField(secret: string, name: string, text: string): void {
   if (!name || name.length > MAX_FIELD_NAME || !FIELD_NAME.test(name)) {
-    throw new SecretError(`"${name}" is not a field name for ${secret}: letters, digits, spaces, dashes and underscores, starting with a letter, at most ${MAX_FIELD_NAME}`);
+    throw new SecretError(`"${name}" is not a field name for ${secret}: letters, digits, spaces, dashes and underscores, starting with a letter, at most ${MAX_FIELD_NAME}`, "fields");
   }
-  if (text.length > MAX_FIELD_TEXT) throw new SecretError(`${secret}'s field "${name}" is longer than ${MAX_FIELD_TEXT} characters`);
-  if (/[\r\n]/.test(text)) throw new SecretError(`${secret}'s field "${name}" is more than one line`);
+  if (text.length > MAX_FIELD_TEXT) throw new SecretError(`${secret}'s field "${name}" is longer than ${MAX_FIELD_TEXT} characters`, "fields");
+  if (/[\r\n]/.test(text)) throw new SecretError(`${secret}'s field "${name}" is more than one line`, "fields");
   if (handlesIn(text).length > 0 || findSecrets(text, "ingress").length > 0) {
-    throw new SecretError(`${secret}'s field "${name}" looks like a key or a password, and fields are shown to everyone: store it as a secret's value instead`);
+    throw new SecretError(`${secret}'s field "${name}" looks like a key or a password, and fields are shown to everyone: store it as a secret's value instead`, "fields");
   }
 }
 
@@ -40,6 +40,6 @@ export function changedFields(secret: string, fields: Readonly<Record<string, st
     if (text) next[name] = text;
     else delete next[name];
   }
-  if (Object.keys(next).length > MAX_FIELDS) throw new SecretError(`${secret} would have more than ${MAX_FIELDS} fields`);
+  if (Object.keys(next).length > MAX_FIELDS) throw new SecretError(`${secret} would have more than ${MAX_FIELDS} fields`, "fields");
   return next;
 }

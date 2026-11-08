@@ -7,11 +7,21 @@
  */
 
 import { join } from "@nouride/runtime";
-import { missionSettings } from "@/modules/config/settings/missions.ts";
+import { missionSettings, type MissionSetting } from "@/modules/config/settings/missions.ts";
 import { atLeast } from "@/modules/users/auth.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { jsonBody } from "../payloads.ts";
-import { NOT_A_NUMBER, NOT_SAVED, NO_SETTINGS } from "../plain.ts";
+import { NOT_A_NUMBER, NO_SETTINGS, notSaved } from "../plain.ts";
+
+/** Each limit a save can be refused for, as the Missions page names it. */
+const MISSION_FIELDS: Record<MissionSetting, string> = {
+  perAgent: "the missions per agent",
+  maxRunning: "the missions on this server",
+  limitHours: "the hours limit",
+  limitTurns: "the turns limit",
+  // Its label is Tokens, a word the page keeps on its own line: said here by what it counts.
+  limitTokens: "the limit on model use",
+};
 
 export function registerMissionSettingsRoutes(control: ControlApp, deps: ControlDeps): void {
   // The agents that are on, now, each by its own `per_agent`: the slots on the box follow them unset, and may be set as
@@ -31,7 +41,7 @@ export function registerMissionSettingsRoutes(control: ControlApp, deps: Control
     const body = await jsonBody(c);
     if (!body) return c.json({ error: "send the settings to change, as an object" }, 400);
     const result = await deps.settings.setMissionSettings({ patch: body, agents: agents(), actor: principal.actor });
-    if (!result.ok) return c.json({ error: result.error, plain: NOT_SAVED }, 400);
+    if (!result.ok) return c.json({ error: result.error, plain: notSaved(result.field && MISSION_FIELDS[result.field]) }, 400);
     // Whole, as the GET answers: the page puts this in place of what it read, and without `editable` its form went
     // read-only after the first save.
     return c.json({ ok: true, ...deps.settings.missionSettings(agents()), editable: true });
@@ -59,7 +69,7 @@ export function registerMissionSettingsRoutes(control: ControlApp, deps: Control
       actor: principal.actor,
       agentId: id,
     });
-    if (!result.ok) return c.json({ error: result.error, plain: NOT_SAVED }, 400);
+    if (!result.ok) return c.json({ error: result.error, plain: notSaved("the number of missions at once") }, 400);
     return c.json({ ok: true });
   });
 }

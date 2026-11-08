@@ -21,6 +21,9 @@ import {
 
 const log = createLogger("settings");
 
+/** A field of a connection's form a refusal names (0.8.23): the chat app, its name, its key, its own group context. */
+export type GatewayField = "platform" | "name" | "token" | "groupContextMessages";
+
 export function gateways(deps: SettingsDeps): GatewayView[] {
   const live = deps.gatewayStatus();
   const names = new Set(deps.secrets.inventory().map((entry) => entry.name));
@@ -59,16 +62,17 @@ export async function saveGateway(deps: SettingsDeps, input: {
    * every gateway table would grow a line restating a setting nobody changed.
    */
   groupContextMessages?: number;
-}): Promise<SaveResult> {
+}): Promise<SaveResult<GatewayField>> {
   const platform = input.platform as ConfigurableGatewayName;
   if (!GATEWAY_PLATFORMS.includes(platform)) {
-    return { ok: false, error: `unknown platform "${input.platform}"` };
+    return { ok: false, field: "platform", error: `unknown platform "${input.platform}"` };
   }
 
   const name = input.name.trim().toLowerCase();
   if (!NAME_PATTERN.test(name)) {
     return {
       ok: false,
+      field: "name",
       error: "name must start with a letter or digit and contain only letters, digits, - and _",
     };
   }
@@ -91,7 +95,7 @@ export async function saveGateway(deps: SettingsDeps, input: {
 
   let token = input.token?.trim();
   if (!token && !existing) {
-    if (!pairs) return { ok: false, error: "a token is required to add a gateway" };
+    if (!pairs) return { ok: false, field: "token", error: "a token is required to add a gateway" };
     // Generated once, at creation, and kept. Nobody should have to run `openssl rand -hex 32` to
     // add a gateway — and generating it per boot instead would lock you out of your own session,
     // which is why the loader refuses to default it.
@@ -118,6 +122,7 @@ export async function saveGateway(deps: SettingsDeps, input: {
     if (!Number.isInteger(groupContext) || groupContext < 0 || groupContext > GROUP_CONTEXT_MAX) {
       return {
         ok: false,
+        field: "groupContextMessages",
         error: `group context must be a whole number between 0 (off) and ${GROUP_CONTEXT_MAX}`,
       };
     }

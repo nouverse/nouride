@@ -103,12 +103,13 @@ describe("[memory] settings", () => {
   test("refused by the same rules as the loader, and nothing is written", async () => {
     const { settings, configPath } = deps();
     await writeTextFile(configPath, "");
-    expect((await setMemorySettings(settings, { patch: { passAt: "25:00" } })).ok).toBe(false);
-    expect((await setMemorySettings(settings, { patch: { facts: "sometimes" as never } })).ok).toBe(false);
+    // Each with the setting it refused, which the Memory page names (0.8.23).
+    expect(await setMemorySettings(settings, { patch: { passAt: "25:00" } })).toMatchObject({ ok: false, field: "passAt" });
+    expect(await setMemorySettings(settings, { patch: { facts: "sometimes" as never } })).toMatchObject({ ok: false, field: "facts" });
     // The loader's last net (every number against its bounds) is not run by a save: a value it would refuse at the next
     // boot has to be refused here by name, or the dashboard writes a config the daemon will not start with.
-    expect(await setMemorySettings(settings, { patch: { passMaxTokens: -1 } })).toEqual({ ok: false, error: expect.stringContaining("pass_max_tokens must be a whole number of tokens") });
-    expect((await setMemorySettings(settings, { patch: { passMaxTokens: 2.5 } })).ok).toBe(false);
+    expect(await setMemorySettings(settings, { patch: { passMaxTokens: -1 } })).toEqual({ ok: false, field: "passMaxTokens", error: expect.stringContaining("pass_max_tokens must be a whole number of tokens") });
+    expect(await setMemorySettings(settings, { patch: { passMaxTokens: 2.5 } })).toMatchObject({ ok: false, field: "passMaxTokens" });
     expect(await readTextFileIfExists(configPath)).toBe("");
     expect(await setMemorySettings(settings, { patch: { passMaxTokens: 500_000 } })).toEqual({ ok: true, restartRequired: false });
     expect(await readTextFileIfExists(configPath)).toContain("pass_max_tokens = 500000");

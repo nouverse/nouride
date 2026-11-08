@@ -1,10 +1,11 @@
 /**
  * What a value in a control route can be, as far as its file says (0.8.20): the half of `route-words.ts` that follows a
  * value, split out when that file passed its size cap. A const and what it holds; what a function of the file returns,
- * an element of a tuple or a field of an object it returns; either side of `?:`, `||` and `??`; a parameter of a function
- * of the file, by the arguments its calls pass; and a const another file exports, or a function of the control API's
- * own (`web/control/`). A function of any other file is a domain's: what it returns is not followed, and the value
- * stands as itself, for `route-words.ts` to call words it cannot read.
+ * an element of a tuple or a field of an object it returns, an entry of a table it looks up; either side of `?:`, `||`
+ * and `??`, and the right of `&&`; a parameter of a function of the file, by the arguments its calls pass; and a const
+ * another file exports, or a function of the control API's own (`web/control/`). A function of any other file is a
+ * domain's: what it returns is not followed, and the value stands as itself, for `route-words.ts` to call words it
+ * cannot read.
  */
 
 import { readFileSync } from "node:fs";
@@ -158,59 +159,115 @@ function callsOf(fn: Fn): ts.CallExpression[] | undefined {
 }
 
 /**
- * What a value can be, as far as its file says: itself, or what a const holds, what a function of the file returns,
- * an element of a tuple or a field of an object it returns, either side of `?:`, `||` and `??`, and a parameter's
- * arguments where the function is the file's. What the file does not say is the value itself, for the caller to read.
+ * What the parameters of a function followed through a call stand for there (0.8.23): the arguments that call passes,
+ * or a parameter's default where it passes none (null: nothing). A helper that makes a sentence of the words it is
+ * handed, `notSaved("the schedule")` in `plain.ts`, is read with its caller's words in it; read as its own file's, its
+ * parameter had no calls there, and what each route handed it was never read.
  */
-export function values(node: ts.Expression, seen: Set<ts.Node> = new Set()): ts.Expression[] {
+export type Bound = ReadonlyMap<ts.ParameterDeclaration, ts.Expression | null>;
+
+/** A value, and what the parameters of the functions it was followed into stand for there. */
+export interface Valued {
+  node: ts.Expression;
+  bound: Bound;
+}
+
+const UNBOUND: Bound = new Map();
+
+/** A call's arguments over the function's parameters, beside those of the calls it was reached through. */
+function bindings(fn: Fn, call: ts.CallExpression, outer: Bound): Bound {
+  // Spread over them, which argument is which parameter is not written: each is read by its file's calls, as before.
+  if (call.arguments.some(ts.isSpreadElement)) return outer;
+  const inner = new Map(outer);
+  fn.parameters.forEach((parameter, index) => inner.set(parameter, call.arguments[index] ?? parameter.initializer ?? null));
+  return inner;
+}
+
+/** What a value can be, as far as its file says: `valuesBound`'s, without what its parameters stood for. */
+export function values(node: ts.Expression): ts.Expression[] {
+  return valuesBound(node).map((value) => value.node);
+}
+
+/**
+ * What a value can be, as far as its file says: itself, or what a const holds, what a function of the file returns,
+ * an element of a tuple, a field of an object it returns or an entry of a table it looks up, either side of `?:`, `||`
+ * and `??`, the right of `&&`, and a parameter's arguments: those of the call it was followed through, else every call
+ * of its file's. What the file does not say is the value itself, for the caller to read. Each with what the parameters
+ * of the functions it came out of stand for there, for a template it is to read its values by.
+ */
+export function valuesBound(node: ts.Expression, bound: Bound = UNBOUND, seen: Set<ts.Node> = new Set()): Valued[] {
   const at = unwrap(node);
   if (seen.has(at)) return [];
   seen.add(at);
-  if (ts.isConditionalExpression(at)) return [...values(at.whenTrue, seen), ...values(at.whenFalse, seen)];
-  if (ts.isBinaryExpression(at) && (at.operatorToken.kind === ts.SyntaxKind.BarBarToken || at.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken)) {
-    return [...values(at.left, seen), ...values(at.right, seen)];
+  const self: Valued[] = [{ node: at, bound }];
+  const next = (expression: ts.Expression, under: Bound = bound) => valuesBound(expression, under, seen);
+  if (ts.isConditionalExpression(at)) return [...next(at.whenTrue), ...next(at.whenFalse)];
+  if (ts.isBinaryExpression(at)) {
+    const operator = at.operatorToken.kind;
+    if (operator === ts.SyntaxKind.BarBarToken || operator === ts.SyntaxKind.QuestionQuestionToken) return [...next(at.left), ...next(at.right)];
+    // `a && b` is `a` only where `a` is empty, false or nothing, which says nothing: what it can say is `b`.
+    if (operator === ts.SyntaxKind.AmpersandAmpersandToken) return next(at.right);
   }
-  if (ts.isAwaitExpression(at)) return values(at.expression, seen);
+  if (ts.isAwaitExpression(at)) return next(at.expression);
   if (ts.isIdentifier(at)) {
     const declaration = declarationOf(at.text, at);
     if (declaration && ts.isVariableDeclaration(declaration) && declaration.initializer && isConst(declaration) && !functionOf(declaration)) {
-      return values(declaration.initializer, seen);
+      return next(declaration.initializer);
     }
     if (declaration && ts.isParameter(declaration)) {
+      if (bound.has(declaration)) {
+        const argument = bound.get(declaration);
+        return argument ? next(argument) : [];
+      }
       const fn = declaration.parent as Fn;
       const index = fn.parameters.indexOf(declaration);
       const calls = callsOf(fn);
       if (calls && calls.length > 0 && calls.every((call) => !call.arguments.some(ts.isSpreadElement))) {
         return calls.flatMap((call) => {
           const argument = call.arguments[index] ?? declaration.initializer;
-          return argument ? values(argument, seen) : [];
+          return argument ? next(argument) : [];
         });
       }
     }
-    return [at];
+    return self;
   }
   if (ts.isCallExpression(at) && ts.isIdentifier(at.expression)) {
     const fn = functionOf(declarationOf(at.expression.text, at));
-    if (fn) return returnsOf(fn).flatMap((returned) => values(returned, seen));
-    return [at];
+    if (!fn) return self;
+    // What it returns, read again for each call: it stands for that call's arguments. The way here stays seen.
+    const again = new Set(seen);
+    const under = bindings(fn, at, bound);
+    return returnsOf(fn).flatMap((returned) => valuesBound(returned, under, again));
   }
-  if (ts.isElementAccessExpression(at) && ts.isNumericLiteral(at.argumentExpression)) {
-    const index = Number(at.argumentExpression.text);
-    return values(at.expression, seen).flatMap((value) => {
-      if (ts.isArrayLiteralExpression(value)) return value.elements[index] ? values(value.elements[index] as ts.Expression, seen) : [];
-      return isNoText(value) ? [] : [at];
+  if (ts.isElementAccessExpression(at)) {
+    const key = at.argumentExpression;
+    return next(at.expression).flatMap(({ node: value, bound: under }) => {
+      // An element by its index, an entry by its name; by a key this cannot read, any of them.
+      if (ts.isArrayLiteralExpression(value)) {
+        const elements = ts.isNumericLiteral(key) ? [value.elements[Number(key.text)]] : value.elements;
+        return elements.flatMap((element) => (element && !ts.isSpreadElement(element) ? next(element, under) : []));
+      }
+      if (ts.isObjectLiteralExpression(value)) {
+        const named = ts.isStringLiteralLike(key) ? key.text : null;
+        return value.properties.flatMap((p) =>
+          (ts.isPropertyAssignment(p) || ts.isShorthandPropertyAssignment(p)) && (named === null || propertyName(p.name) === named)
+            ? next(ts.isPropertyAssignment(p) ? p.initializer : p.name, under)
+            : [],
+        );
+      }
+      return isNoText(value) ? [] : self;
     });
   }
   if (ts.isPropertyAccessExpression(at)) {
     const name = at.name.text;
-    return values(at.expression, seen).flatMap((value) => {
+    return next(at.expression).flatMap(({ node: value, bound: under }) => {
       if (ts.isObjectLiteralExpression(value)) {
         const field = value.properties.find((p): p is ts.PropertyAssignment | ts.ShorthandPropertyAssignment => (ts.isPropertyAssignment(p) || ts.isShorthandPropertyAssignment(p)) && propertyName(p.name) === name);
         if (!field) return [];
-        return values(ts.isPropertyAssignment(field) ? field.initializer : field.name, seen);
+        return next(ts.isPropertyAssignment(field) ? field.initializer : field.name, under);
       }
-      return isNoText(value) ? [] : [at];
+      return isNoText(value) ? [] : self;
     });
   }
-  return [at];
+  return self;
 }

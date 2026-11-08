@@ -12,6 +12,7 @@ import { openDatabase, type SqliteDb } from "@nouride/runtime";
 import type { CronSection } from "@nouride/shared";
 import { migrate } from "@/db/index.ts";
 import { CronStore, type JobInput } from "@/modules/cron/cron.store.ts";
+import { cronInputFrom, cronRefusalField, isCronRefusal } from "@/modules/web/control/payloads.ts";
 
 const DIR = mkdtempSync(join(tmpdir(), "nouride-tmp-cron-store-"));
 
@@ -154,6 +155,50 @@ describe("validation happens at create, not at fire time", () => {
   test("the job ceiling is enforced", () => {
     for (let i = 0; i < CONFIG.maxJobs; i++) store.create(input({ name: `job ${i}` }));
     expect(() => store.create(input())).toThrow(/ceiling/);
+  });
+
+  /** What a route reads off a refusal to name the field on the Schedule and Webhooks pages (0.8.23). */
+  const fieldOf = (write: () => unknown): string | undefined => {
+    try {
+      write();
+    } catch (err) {
+      return isCronRefusal(err) ? (cronRefusalField(err) ?? "none") : "not a refusal";
+    }
+    return "accepted";
+  };
+
+  test("each refusal names the field of the job it is about; the ceiling, none", () => {
+    const mission = (payload: Record<string, unknown>, extra: Partial<JobInput> = {}) =>
+      input({ payload: { kind: "mission", goal: "Sum up the week's mail.", ...payload } as JobInput["payload"], ...extra });
+    const cases: [Partial<JobInput>, string][] = [
+      [{ name: " " }, "name"],
+      [{ agentId: "" }, "agent"],
+      [{ target: { gatewayId: "telegram:main", chatId: "" } }, "target"],
+      [{ trigger: { kind: "at", at: clock - 1000 } }, "schedule"],
+      [{ trigger: { kind: "every", everyMs: 1000 } }, "schedule"],
+      // The expression's and the zone's own refusal, a CronParseError: when it runs, all the same.
+      [{ trigger: { kind: "cron", expr: "0 9 * *" } }, "schedule"],
+      [{ trigger: { kind: "cron", expr: "0 9 * * *", tz: "Asia/Jakartaa" } }, "schedule"],
+      [{ payload: { kind: "systemEvent", text: " " } }, "text"],
+      [{ payload: { kind: "agentTurn", message: " " } }, "message"],
+      [{ payload: { kind: "command", argv: [] } as never }, "command"],
+      [{ delivery: { mode: "webhook" } }, "delivery"],
+      [{ delivery: { mode: "announce", chatId: "999" } }, "delivery"],
+    ];
+    for (const [overrides, field] of cases) expect(fieldOf(() => store.create(input(overrides))), field).toBe(field);
+    expect(fieldOf(() => store.create(mission({ goal: "  " })))).toBe("goal");
+    expect(fieldOf(() => store.create(mission({ checks: Array.from({ length: 11 }, () => "true") })))).toBe("checks");
+    expect(fieldOf(() => store.create(mission({ review: "x".repeat(1001) })))).toBe("review");
+    expect(fieldOf(() => store.create(mission({}, { delivery: { mode: "none" } })))).toBe("delivery");
+    for (let i = 0; i < CONFIG.maxJobs; i++) store.create(input({ name: `job ${i}` }));
+    expect(fieldOf(() => store.create(input()))).toBe("none");
+  });
+
+  test("a request's own shape names its field too: when it runs, and what should happen", () => {
+    expect(fieldOf(() => cronInputFrom({ agentId: "nouva", name: "x" }, "tester", "Asia/Jakarta"))).toBe("schedule");
+    expect(fieldOf(() => cronInputFrom({ agentId: "nouva", name: "x", every: "soon" }, "tester", "Asia/Jakarta"))).toBe("schedule");
+    expect(fieldOf(() => cronInputFrom({ agentId: "nouva", name: "x", every: "5m", payload: { kind: "dance" } }, "tester", "Asia/Jakarta"))).toBe("kind");
+    expect(fieldOf(() => cronInputFrom({ agentId: "nouva", name: "x", every: "5m", payload: { kind: "systemEvent", text: "hi" }, delivery: { mode: "fax" } }, "tester", "Asia/Jakarta"))).toBe("delivery");
   });
 });
 

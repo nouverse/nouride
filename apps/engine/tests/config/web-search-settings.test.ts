@@ -155,6 +155,9 @@ describe("saving", () => {
       expect.stringContaining("http:// or https://"),
       expect.stringContaining("looks like a credential"),
     ]);
+    // And the field each is about, which the page names (0.8.23).
+    expect(refusals.map((r) => (r.ok ? "ok" : r.field))).toEqual(["key", "secret", "endpoint", "endpoint", "endpoint", "secret"]);
+    expect(await settings.setWebSearchSettings({ patch: { mode: "gopher" as never } })).toMatchObject({ ok: false, field: "mode" });
     expect(file()).toBe(before);
   });
 });
@@ -170,6 +173,12 @@ describe("the routes", () => {
   test("the key never comes back in an answer", async () => {
     await call("/web-search", { mode: "brave", apiKeyValue: KEY });
     expect(JSON.stringify(await (await call("/web-search")).json())).not.toContain(KEY);
+  });
+
+  test("a save refused says which field on the page, and the server's own reason for the CLI", async () => {
+    const refused = await call("/web-search", { mode: "searxng" });
+    expect(refused.status).toBe(400);
+    expect(await refused.json()).toEqual({ error: "SearXNG needs the address of your instance", plain: "Nothing was saved. Check the address, and try again." });
   });
 
   test("bad bodies are refused before the service sees them", async () => {

@@ -9,7 +9,7 @@ import { MAX_BACKGROUND_HELPERS } from "@nouride/shared";
 import { atLeast } from "@/modules/users/auth.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { jsonBody } from "../payloads.ts";
-import { NOT_A_NUMBER, NOT_SAVED, NO_SETTINGS } from "../plain.ts";
+import { NOT_A_NUMBER, NO_SETTINGS, notSaved } from "../plain.ts";
 
 export function registerDelegateRoutes(control: ControlApp, deps: ControlDeps): void {
   control.get("/policy/delegate", (c) =>
@@ -42,7 +42,7 @@ export function registerDelegateRoutes(control: ControlApp, deps: ControlDeps): 
       actor: principal.actor,
       agentId: id,
     });
-    if (!result.ok) return c.json({ error: result.error, plain: NOT_SAVED }, 400);
+    if (!result.ok) return c.json({ error: result.error, plain: notSaved("the number of helpers in the background") }, 400);
     return c.json({ ok: true });
   });
 }

@@ -19,12 +19,12 @@ import { handlesIn } from "./transient.ts";
 import { fileExistsSync, join, readTextFileSync, removePath, renamePath, setFileMode, writeFileAtomic, writeTextFileAtomic } from "@nouride/runtime";
 import { createLogger } from "@nouride/shared";
 import { changedFields, type FieldChange } from "./fields.ts";
-import { SecretError } from "./store-error.ts";
+import { SecretError, type SecretPart } from "./store-error.ts";
 import { ENCRYPTED_FILE, encodeStore, PLAIN_FILE, type StoredSecret, valuesOnly } from "./store-file.ts";
 import { fileSignature, type Format, parseStored, readDisk } from "./store-disk.ts";
 import { findStoreKeys, forgetMadeKey, type KeyLayout, type KeyLevel, makeStoreKey, type StoreKey } from "./store-key.ts";
 
-export { SecretError };
+export { SecretError, type SecretPart };
 
 const log = createLogger("secrets");
 
@@ -57,18 +57,20 @@ export function looksLikeCredential(value: string): boolean {
 }
 
 export function assertSecretName(name: string, where: string): void {
-  if (!name) throw new SecretError(`${where} is empty: a secret name is expected`);
+  if (!name) throw new SecretError(`${where} is empty: a secret name is expected`, "name");
 
   if (name.length > 63 || LOOKS_LIKE_A_VALUE.some((pattern) => pattern.test(name))) {
     throw new SecretError(
       `${where} looks like a credential, not a name. Put the value in .env or the secret store ` +
         `and reference it by name here, e.g. api_key = "nougate".`,
+      "name",
     );
   }
 
   if (!VALID_NAME.test(name)) {
     throw new SecretError(
       `${where} is not a valid secret name: use letters, digits, dashes and underscores`,
+      "name",
     );
   }
 }
@@ -91,12 +93,13 @@ export function envNamesFor(name: string): string[] {
  */
 function assertSecretValue(name: string, value: string): void {
   assertSecretName(name, `secret name "${name}"`);
-  if (!value) throw new SecretError(`refusing to store an empty value for "${name}"`);
+  if (!value) throw new SecretError(`refusing to store an empty value for "${name}"`, "value");
   const trimmed = value.trim();
   if (handlesIn(trimmed).length > 0 && trimmed.replace(/\$TMP_SECRET_[0-9A-F]{12}/g, "").trim() === "") {
     throw new SecretError(
       `refusing to store ${trimmed} as "${name}": it is the handle of a credential sent in chat, not the credential. ` +
         "Hand it over where it is replaced by its value: the `nouride` tool's stdin or a command's environment",
+      "value",
     );
   }
 }

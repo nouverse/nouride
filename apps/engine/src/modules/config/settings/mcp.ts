@@ -15,9 +15,16 @@ import { MCP_FILE, mcpLibraryPath, parseAgentMcp, parseMcpLibrary, readMcpLibrar
 import { createLogger, type AgentMcpChoice, type McpServerConfig } from "@nouride/shared";
 import { editPackFile } from "@/modules/config/config-file.ts";
 import { removeMcpServer as removeFromToml, upsertMcpServer, type McpServerEdit } from "@/modules/config/edit-blocks.ts";
-import { NAME_PATTERN, type SaveResult, type SettingsDeps } from "./types.ts";
+import { NAME_PATTERN, type FieldRefusal, type SaveResult, type SettingsDeps } from "./types.ts";
 
 const log = createLogger("config.mcp");
+
+/**
+ * A field of a server's form, or of an agent's word on it, that a refusal names (0.8.23): its name, the command a stdio
+ * server starts with, the address of a remote one, its key, its secret variables, the agents it was switched on for,
+ * an agent's tools, and an agent's own sign-in.
+ */
+export type McpField = "name" | "command" | "url" | "token" | "variables" | "agents" | "tools" | "login";
 
 /** The packs, as far as an MCP write needs them: where each is, what it uses, and how to reload it. */
 export interface McpPacks {
@@ -44,18 +51,18 @@ async function reloadAll(packs: McpPacks, ids: readonly string[]): Promise<void>
 }
 
 /** A server's shape refused before anything is written: a pack that loads and then cannot start one fails far from the cause. */
-function shapeProblem(server: McpServerEdit): string | null {
-  if (!NAME_PATTERN.test(server.name)) return "name may contain only letters, digits, - and _";
-  if (server.transport === "stdio" && !server.command?.trim()) return "a stdio server needs a command";
+function shapeProblem(server: McpServerEdit): FieldRefusal<McpField> | null {
+  if (!NAME_PATTERN.test(server.name)) return { field: "name", error: "name may contain only letters, digits, - and _" };
+  if (server.transport === "stdio" && !server.command?.trim()) return { field: "command", error: "a stdio server needs a command" };
   if (server.transport === "stdio") return null;
-  if (!server.url?.trim()) return `transport "${server.transport}" needs a url`;
+  if (!server.url?.trim()) return { field: "url", error: `transport "${server.transport}" needs a url` };
   let parsed: URL;
   try {
     parsed = new URL(server.url.trim());
   } catch {
-    return `"${server.url}" is not a valid URL`;
+    return { field: "url", error: `"${server.url}" is not a valid URL` };
   }
-  return parsed.protocol === "http:" || parsed.protocol === "https:" ? null : `transport "${server.transport}" needs an http or https url`;
+  return parsed.protocol === "http:" || parsed.protocol === "https:" ? null : { field: "url", error: `transport "${server.transport}" needs an http or https url` };
 }
 
 // ── The library ────────────────────────────────────────────────────────────
@@ -74,12 +81,12 @@ export async function saveLibraryServer(deps: SettingsDeps, input: {
   token?: string;
   envSecrets?: Record<string, SecretInput>;
   enable?: readonly string[];
-}): Promise<SaveResult & { on?: string[] }> {
+}): Promise<SaveResult<McpField> & { on?: string[] }> {
   const server = { ...input.server, name: input.server.name.trim() };
   const problem = shapeProblem(server);
-  if (problem) return { ok: false, error: problem };
+  if (problem) return { ok: false, ...problem };
   const unknown = (input.enable ?? []).filter((id) => !input.packs.agents().some((agent) => agent.id === id));
-  if (unknown.length > 0) return { ok: false, error: `no agent ${unknown.map((id) => `"${id}"`).join(", ")}` };
+  if (unknown.length > 0) return { ok: false, field: "agents", error: `no agent ${unknown.map((id) => `"${id}"`).join(", ")}` };
 
   const current = (await readMcpLibrary(input.packs.agentsDir)).servers.find((entry) => entry.name === server.name);
   const credential = await settleCredential(deps, {
@@ -89,7 +96,7 @@ export async function saveLibraryServer(deps: SettingsDeps, input: {
     ...(input.envSecrets ? { envSecrets: input.envSecrets } : {}),
     current,
   });
-  if ("error" in credential) return { ok: false, error: credential.error };
+  if ("error" in credential) return { ok: false, ...credential };
 
   const reached = users(input.packs, server.name).map((agent) => agent.id);
   const saved = await editPackFile({
@@ -167,7 +174,7 @@ export async function setAgentMcp(deps: SettingsDeps, input: {
   on?: boolean;
   credential?: "library" | { token?: string; envSecrets?: Record<string, SecretInput>; login?: boolean };
   tools?: readonly string[] | null;
-}): Promise<SaveResult> {
+}): Promise<SaveResult<McpField>> {
   const agent = input.packs.agents().find((entry) => entry.id === input.agentId);
   if (!agent) return { ok: false, error: `no agent "${input.agentId}"` };
   const server = (await readMcpLibrary(input.packs.agentsDir)).servers.find((entry) => entry.name === input.name);
@@ -178,7 +185,7 @@ export async function setAgentMcp(deps: SettingsDeps, input: {
   if (input.tools === null) delete next.tools;
   else if (input.tools !== undefined) {
     const names = [...new Set(input.tools.map((name) => name.trim()))];
-    if (names.some((name) => !name)) return { ok: false, error: "a tool's name may not be empty" };
+    if (names.some((name) => !name)) return { ok: false, field: "tools", error: "a tool's name may not be empty" };
     next.tools = names;
   }
   let undo = async () => {};
@@ -188,7 +195,7 @@ export async function setAgentMcp(deps: SettingsDeps, input: {
     delete next.login;
   } else if (input.credential) {
     const remote = server.transport !== "stdio";
-    if (input.credential.login && !remote) return { ok: false, error: "a stdio server has no login: give it its own variables instead" };
+    if (input.credential.login && !remote) return { ok: false, field: "login", error: "a stdio server has no login: give it its own variables instead" };
     const settled = await settleCredential(deps, {
       prefix: agentSecret(input.agentId, input.name),
       remote,
@@ -197,7 +204,7 @@ export async function setAgentMcp(deps: SettingsDeps, input: {
       // This agent's own, never the library's: a kept variable keeps the secret it named before.
       current: { ...(before?.envSecrets ? { envSecrets: before.envSecrets } : {}), ...(before?.authSecret ? { authSecret: before.authSecret } : {}) },
     });
-    if ("error" in settled) return { ok: false, error: settled.error };
+    if ("error" in settled) return { ok: false, ...settled };
     undo = settled.undo;
     if (settled.fields.envSecrets !== undefined) next.envSecrets = settled.fields.envSecrets;
     if (settled.fields.authSecret !== undefined) next.authSecret = settled.fields.authSecret;
@@ -233,7 +240,7 @@ async function writeChoices(
   packDir: string,
   reload: () => Promise<unknown>,
   change: (there: Record<string, AgentMcpChoice>) => Record<string, AgentMcpChoice>,
-): Promise<SaveResult> {
+): Promise<SaveResult<never>> {
   const path = join(packDir, MCP_FILE);
   const saved = await editPackFile({
     path,
@@ -255,7 +262,7 @@ async function writeChoices(
 async function settleCredential(
   deps: Pick<SettingsDeps, "secrets">,
   input: { prefix: string; remote: boolean; token?: string; envSecrets?: Record<string, SecretInput>; current: Pick<McpServerConfig, "envSecrets" | "authSecret"> | undefined },
-): Promise<{ fields: { authSecret?: string; envSecrets?: Record<string, string> }; undo: () => Promise<void> } | { error: string }> {
+): Promise<{ fields: { authSecret?: string; envSecrets?: Record<string, string> }; undo: () => Promise<void> } | FieldRefusal<McpField>> {
   const undos: (() => Promise<void>)[] = [];
   const undo = async () => {
     for (const step of undos.reverse()) await step();
@@ -263,11 +270,11 @@ async function settleCredential(
   const fields: { authSecret?: string; envSecrets?: Record<string, string> } = {};
   const token = input.token?.trim();
   if (token) {
-    if (!input.remote) return { error: "a stdio server takes its credential in variables, not a token" };
+    if (!input.remote) return { field: "token", error: "a stdio server takes its credential in variables, not a token" };
     try {
       assertSecretName(input.prefix, "an MCP server's credential");
     } catch {
-      return { error: "the secret's name would be too long: shorten the server's name" };
+      return { field: "name", error: "the secret's name would be too long: shorten the server's name" };
     }
     undos.push(await storeUndoably(deps, input.prefix, token));
     fields.authSecret = input.prefix;
@@ -275,10 +282,10 @@ async function settleCredential(
     fields.authSecret = input.current.authSecret;
   }
   if (input.envSecrets) {
-    if (input.remote) return { error: "a remote server's credential is a token; variables are for a stdio server" };
+    if (input.remote) return { field: "variables", error: "a remote server's credential is a token; variables are for a stdio server" };
     const table: Record<string, string> = {};
     for (const [variable, wanted] of Object.entries(input.envSecrets)) {
-      const fail = async (error: string) => (await undo(), { error });
+      const fail = async (error: string): Promise<FieldRefusal<McpField>> => (await undo(), { field: "variables", error });
       if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(variable)) return await fail(`"${variable}" is not an environment variable's name`);
       const value = wanted.value?.trim();
       if (value) {

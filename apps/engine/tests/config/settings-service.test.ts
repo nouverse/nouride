@@ -143,7 +143,7 @@ describe("saving a gateway", () => {
       actor: "test",
     });
 
-    expect(result).toEqual({ ok: false, error: "a token is required to add a gateway" });
+    expect(result).toEqual({ ok: false, field: "token", error: "a token is required to add a gateway" });
     expect(read()).not.toContain("gateways.telegram.nouva");
     expect(config.gateways).toHaveLength(0);
   });
@@ -157,7 +157,7 @@ describe("saving a gateway", () => {
         token: TOKEN,
         actor: "test",
       });
-      expect(result.ok).toBe(false);
+      expect(result).toMatchObject({ ok: false, field: "name" });
     }
     expect(read()).not.toContain("[gateways.telegram");
   });
@@ -170,7 +170,7 @@ describe("saving a gateway", () => {
       token: TOKEN,
       actor: "test",
     });
-    expect(result).toEqual({ ok: false, error: 'unknown platform "slack"' });
+    expect(result).toEqual({ ok: false, field: "platform", error: 'unknown platform "slack"' });
   });
 
   test("reports a saved-but-not-running instance as having no status", async () => {
@@ -483,7 +483,7 @@ describe("an agent's model", () => {
       agentId: "nouva",
     });
 
-    expect(result.ok).toBe(false);
+    expect(result).toMatchObject({ ok: false, field: "provider" });
     // Left alone: the agent would otherwise keep loading and fail on its first message, hours later,
     // to whoever happened to message it.
     expect(readFileSync(agentConfig, "utf8")).toContain('provider = "anthropic"');
@@ -494,15 +494,15 @@ describe("an agent's model", () => {
     writeFileSync(agentConfig, "[llm]\nprovider = \"anthropic\"\nmodel = \"m\"\n");
 
     expect(
-      (await settings.saveAgentModel({
+      await settings.saveAgentModel({
         agentConfigPath: agentConfig,
         reload: async () => {},
         provider: "anthropic",
         model: "   ",
         actor: "test",
         agentId: "nouva",
-      })).ok,
-    ).toBe(false);
+      }),
+    ).toMatchObject({ ok: false, field: "model" });
   });
 });
 
@@ -567,24 +567,29 @@ describe("provider profiles", () => {
 
   test("refuses an unknown wire format and a missing base URL", async () => {
     expect(
-      (await settings.saveProvider({
+      await settings.saveProvider({
         name: "x",
         kind: "grpc",
         baseUrl: "https://x",
         apiKey: "k",
         actor: "t",
-      })).ok,
-    ).toBe(false);
+      }),
+    ).toMatchObject({ ok: false, field: "kind" });
 
     expect(
-      (await settings.saveProvider({
+      await settings.saveProvider({
         name: "x",
         kind: "openai",
         baseUrl: "  ",
         apiKey: "k",
         actor: "t",
-      })).ok,
-    ).toBe(false);
+      }),
+    ).toMatchObject({ ok: false, field: "baseUrl" });
+  });
+
+  test("a refusal names the field of the form it is about, for the page (0.8.23)", async () => {
+    expect(await settings.saveProvider({ name: "my provider", kind: "openai", baseUrl: "https://x", apiKey: "k", actor: "t" })).toMatchObject({ ok: false, field: "name" });
+    expect(await settings.saveProvider({ name: "fresh", kind: "openai", baseUrl: "https://x", actor: "t" })).toMatchObject({ ok: false, field: "apiKey" });
   });
 });
 
@@ -810,7 +815,7 @@ describe("the group context window, saved from the dashboard", () => {
     // install a value the next boot dies on.
     for (const bad of [500, -1, 2.5]) {
       const result = await settings.saveGateway({ ...base, token: TOKEN, groupContextMessages: bad });
-      expect(result.ok).toBe(false);
+      expect(result).toMatchObject({ ok: false, field: "groupContextMessages" });
     }
     expect(read()).not.toContain("group_context_messages");
   });
@@ -1051,8 +1056,11 @@ describe("skill learning settings", () => {
   test("a patch with one bad field changes nothing at all", async () => {
     const before = { ...config.skills.learning };
     const result = await settings.setSkillLearning({ patch: { model: "m", mode: "always_allow" as never }, actor: "test" });
-    expect(result.ok).toBe(false);
+    // The bad one named for the page, not the first sent (0.8.23).
+    expect(result).toMatchObject({ ok: false, field: "mode" });
     if (!result.ok) expect(result.error).toContain("off, ask, auto");
+    expect(await settings.setSkillLearning({ patch: { model: 3 as never } })).toMatchObject({ ok: false, field: "model" });
+    expect(await settings.setSkillLearning({ patch: { notifyChat: "yes" as never } })).toMatchObject({ ok: false, field: "notifyChat" });
     // The valid half must not have been applied.
     expect(config.skills.learning).toEqual(before);
     expect(read()).not.toContain("[skills.learning]");
@@ -1111,7 +1119,7 @@ describe("naming a person", () => {
 
     const result = await settings.savePerson({ person: { key: "sam", name: "Samuel" }, create: true });
 
-    expect(result).toMatchObject({ ok: false });
+    expect(result).toMatchObject({ ok: false, field: "key" });
     // Whose it is, so the operator knows what to choose instead.
     expect(result.ok ? "" : result.error).toContain("Sam");
     expect(read()).toBe(before);
@@ -1123,6 +1131,7 @@ describe("naming a person", () => {
     for (const key of ["Sam", "sam wijaya", "sam_w", "../x", "-sam", "sam-", "shared", "a".repeat(33)]) {
       const result = await settings.savePerson({ person: { key, name: "Sam" }, create: true });
       expect(result.ok, key).toBe(false);
+      expect(result.ok ? null : result.field, key).toBe("key");
     }
     expect(read()).toBe(before);
     expect(config.people).toEqual([]);
@@ -1185,7 +1194,7 @@ describe("naming a person", () => {
     const before = read();
     const result = await settings.savePerson({ person: { name: "  " }, create: true });
 
-    expect(result.ok).toBe(false);
+    expect(result).toMatchObject({ ok: false, field: "name" });
     expect(read()).toBe(before);
   });
 
@@ -1261,7 +1270,7 @@ describe("naming a person", () => {
 
       const result = await settings.savePerson({ person: { key: "alex", name: "Alex", ids: ["discord:214"] } });
 
-      expect(result).toMatchObject({ ok: false });
+      expect(result).toMatchObject({ ok: false, field: "ids" });
       // The refusal names who already holds it: the operator has to decide *whose* address it is, and a
       // bare "already taken" leaves them opening config.toml to find out.
       expect(result.ok ? "" : result.error).toContain("Sam");
@@ -1271,7 +1280,7 @@ describe("naming a person", () => {
 
     test("an account without its platform is refused, not written", async () => {
       const result = await settings.savePerson({ person: { name: "Sam", ids: ["5550001111"] }, create: true });
-      expect(result.ok).toBe(false);
+      expect(result).toMatchObject({ ok: false, field: "ids" });
       expect(config.people).toEqual([]);
     });
 

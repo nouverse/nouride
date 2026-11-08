@@ -14,7 +14,7 @@ import { collectionIdOf, TITLE_MAX, type CollectionSettings, type CollectionView
 import { atLeast, type Principal } from "@/modules/users/auth.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { jsonBody } from "../payloads.ts";
-import { NOT_SAVED } from "../plain.ts";
+import { NOT_SAVED, notSaved } from "../plain.ts";
 
 /** Files one upload may carry. */
 const FILES_PER_UPLOAD = 20;
@@ -297,7 +297,7 @@ export function registerKnowledgeRoutes(control: ControlApp, deps: ControlDeps):
     const body = await jsonBody(c);
     if (!body || (body.title !== null && typeof body.title !== "string")) return c.json({ error: "title is a line of words, or null to take it off" }, 400);
     const title = typeof body.title === "string" && body.title.trim() ? body.title.trim() : null;
-    if (title && title.length > TITLE_MAX) return c.json({ error: `title is at most ${TITLE_MAX} characters`, plain: NOT_SAVED }, 400);
+    if (title && title.length > TITLE_MAX) return c.json({ error: `title is at most ${TITLE_MAX} characters`, plain: notSaved("the title") }, 400);
     const done = await memory().knowledge.retitle(id, path, title);
     if ("refused" in done) return c.json({ error: done.refused, plain: refusedWords(done.why) }, done.why === "missing" ? 404 : 400);
     deps.audit.record({ action: "knowledge_document_titled", actor: principal.actor, details: { collection: id, document: path, titled: title !== null } });

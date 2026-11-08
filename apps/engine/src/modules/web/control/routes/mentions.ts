@@ -9,7 +9,7 @@
 import { atLeast } from "@/modules/users/auth.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { jsonBody } from "../payloads.ts";
-import { NOT_SAVED, NO_SETTINGS } from "../plain.ts";
+import { NOT_SAVED, NO_SETTINGS, notSaved } from "../plain.ts";
 
 export function registerMentionRoutes(control: ControlApp, deps: ControlDeps): void {
   /**
@@ -57,7 +57,7 @@ export function registerMentionRoutes(control: ControlApp, deps: ControlDeps): v
         maxHops: body.mentionMaxHops,
         actor: principal.actor,
       });
-      if (!result.ok) return c.json({ error: result.error, plain: NOT_SAVED }, 400);
+      if (!result.ok) return c.json({ error: result.error, plain: notSaved("the hop limit") }, 400);
     }
 
     return c.json({

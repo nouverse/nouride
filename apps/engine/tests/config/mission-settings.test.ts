@@ -9,7 +9,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DEFAULT_CONFIG } from "@/modules/config/defaults.ts";
-import { missionSettings, setMissionSettings, type AgentSlots } from "@/modules/config/settings/missions.ts";
+import { missionSettings, setMissionSettings, type AgentSlots, type MissionSetting } from "@/modules/config/settings/missions.ts";
 import type { SettingsDeps } from "@/modules/config/settings/types.ts";
 
 let dir = "";
@@ -47,18 +47,21 @@ describe("[missions] from the dashboard", () => {
 
   test("refused outside the schema's bounds, with the key and the range — and a bad value saves none of the good ones", async () => {
     const d = deps();
-    const cases: [Record<string, unknown>, string][] = [
-      [{ perAgent: 0 }, "[missions] per_agent must be a whole number from 1 to 4, got 0"],
-      [{ perAgent: 5 }, "[missions] per_agent must be a whole number from 1 to 4, got 5"],
-      [{ maxRunning: 7 }, "[missions] max_running must be a whole number from 1 to 6, got 7"],
-      [{ maxRunning: 0 }, "[missions] max_running must be a whole number from 1 to 6, got 0"],
-      [{ limitHours: 0.1 }, "[missions] limit_hours must be a number from 0.25 to 168, got 0.1"],
-      [{ limitTurns: 2.5 }, "[missions] limit_turns must be a whole number from 1 to 1000, got 2.5"],
-      [{ limitTokens: 99_999 }, "[missions] limit_tokens must be a whole number from 100000 up, got 99999"],
-      [{ limitTurns: "50" }, '[missions] limit_turns must be a whole number from 1 to 1000, got "50"'],
-      [{ limitHours: 4, perAgent: 9 }, "[missions] per_agent must be a whole number from 1 to 4, got 9"],
+    // Each with the setting it refused, which the page names (0.8.23): the one at fault, not the first sent.
+    const cases: [Record<string, unknown>, string, MissionSetting][] = [
+      [{ perAgent: 0 }, "[missions] per_agent must be a whole number from 1 to 4, got 0", "perAgent"],
+      [{ perAgent: 5 }, "[missions] per_agent must be a whole number from 1 to 4, got 5", "perAgent"],
+      [{ maxRunning: 7 }, "[missions] max_running must be a whole number from 1 to 6, got 7", "maxRunning"],
+      [{ maxRunning: 0 }, "[missions] max_running must be a whole number from 1 to 6, got 0", "maxRunning"],
+      [{ limitHours: 0.1 }, "[missions] limit_hours must be a number from 0.25 to 168, got 0.1", "limitHours"],
+      [{ limitTurns: 2.5 }, "[missions] limit_turns must be a whole number from 1 to 1000, got 2.5", "limitTurns"],
+      [{ limitTokens: 99_999 }, "[missions] limit_tokens must be a whole number from 100000 up, got 99999", "limitTokens"],
+      [{ limitTurns: "50" }, '[missions] limit_turns must be a whole number from 1 to 1000, got "50"', "limitTurns"],
+      [{ limitHours: 4, perAgent: 9 }, "[missions] per_agent must be a whole number from 1 to 4, got 9", "perAgent"],
     ];
-    for (const [patch, error] of cases) expect(await setMissionSettings(d, { patch, agents: following(6) })).toEqual({ ok: false, error });
+    for (const [patch, error, field] of cases) expect(await setMissionSettings(d, { patch, agents: following(6) })).toEqual({ ok: false, field, error });
+    // A key the page does not have is no field of it.
+    expect(await setMissionSettings(d, { patch: { perHour: 2 }, agents: following(6) })).not.toHaveProperty("field");
     expect(d.config.missions).toEqual(DEFAULT_CONFIG.missions);
     expect(readFileSync(d.configPath, "utf8")).not.toContain("[missions]");
   });
@@ -94,7 +97,7 @@ describe("[missions] from the dashboard", () => {
     const d = deps();
     expect(await setMissionSettings(d, { patch: { maxRunning: 30 }, agents: following(30) })).toEqual({ ok: true, restartRequired: false });
     expect(d.config.missions.maxRunning).toBe(30);
-    expect(await setMissionSettings(d, { patch: { maxRunning: 31 }, agents: following(30) })).toEqual({ ok: false, error: "[missions] max_running must be a whole number from 1 to 30, got 31" });
+    expect(await setMissionSettings(d, { patch: { maxRunning: 31 }, agents: following(30) })).toEqual({ ok: false, field: "maxRunning", error: "[missions] max_running must be a whole number from 1 to 30, got 31" });
     // One agent running two: two at once is every agent at its per_agent, said in the same save.
     expect(await setMissionSettings(d, { patch: { perAgent: 2, maxRunning: 2 }, agents: following(1) })).toEqual({ ok: true, restartRequired: false });
     expect(await setMissionSettings(d, { patch: { perAgent: null, maxRunning: 2 }, agents: following(1) })).toMatchObject({ ok: false, error: expect.stringContaining("from 1 to 1, got 2") });

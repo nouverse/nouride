@@ -8,7 +8,7 @@
  */
 
 import { ConfigError, createLogger, type FactsMode, type GlobalConfig, type MemorySection } from "@nouride/shared";
-import { validateMemory } from "@/modules/config/global/validate-memory.ts";
+import { MemoryConfigError, type MemoryField, validateMemory } from "@/modules/config/global/validate-memory.ts";
 import { CONFIG_ENUMS } from "@/modules/config/schema.ts";
 import { type TomlScalar, upsertTomlTable } from "@/modules/config/edit.ts";
 import { editConfigFile } from "./file.ts";
@@ -187,7 +187,7 @@ export function memorySettings(deps: SettingsDeps): MemorySettings {
 export async function setMemorySettings(deps: SettingsDeps, params: {
   patch: Partial<MemorySettings>;
   actor?: string;
-}): Promise<SaveResult> {
+}): Promise<SaveResult<MemoryField>> {
   const entries = Object.entries(params.patch).filter(([, value]) => value !== undefined) as [
     keyof MemorySettings,
     MemorySettings[keyof MemorySettings],
@@ -211,7 +211,7 @@ export async function setMemorySettings(deps: SettingsDeps, params: {
   try {
     validateMemory({ memory: next, providers: deps.config.providers });
   } catch (err) {
-    if (err instanceof ConfigError) return { ok: false, error: err.message };
+    if (err instanceof ConfigError) return { ok: false, error: err.message, ...(err instanceof MemoryConfigError ? { field: err.field } : {}) };
     throw err;
   }
 

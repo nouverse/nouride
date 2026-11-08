@@ -14,7 +14,7 @@ import { jsonBody } from "../payloads.ts";
 import { contextWindowFor } from "@/modules/llm/executor/context-window.ts";
 import { helperTrouble } from "@/modules/llm/helper-trouble.ts";
 import { cachedShare, cacheWarnings, usdPerMillion } from "@/modules/llm/cache-routes.ts";
-import { INCOMPLETE, NOT_SAVED, NO_SETTINGS } from "../plain.ts";
+import { INCOMPLETE, NO_SETTINGS, notSaved } from "../plain.ts";
 
 /** Days a route's cache is judged over, at least — a starting value (TOKEN_SAVINGS §3.1). */
 const ROUTE_DAYS = 7;
@@ -157,7 +157,7 @@ export function registerDiagnosticRoutes(control: ControlApp, deps: ControlDeps)
       days: Number(body.days),
       actor: principal.user?.username ?? principal.kind,
     });
-    if (!result.ok) return c.json({ error: result.error, plain: NOT_SAVED }, 400);
+    if (!result.ok) return c.json({ error: result.error, plain: notSaved("the number of days") }, 400);
     return c.json({ windows: deps.settings.retentionWindows() });
   });
 

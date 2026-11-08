@@ -73,10 +73,11 @@ export async function setExternal(
 export async function setAnsweredBy(
   deps: Pick<SetupDeps, "registry" | "audit" | "config">,
   input: { agentId: string; cli: string | null; profile?: string; actor: string },
-): Promise<{ ok: true } | { ok: false; error: string }> {
+): Promise<{ ok: true } | { ok: false; error: string; field?: "cli" }> {
   const agent = deps.registry.get(input.agentId);
   if (!agent) return { ok: false, error: `no agent "${input.agentId}"` };
-  if (input.cli !== null && deps.config.daemon.orchestrator === input.agentId) return { ok: false, error: externalOrchestratorRefusal(input.agentId) };
+  // The choice itself refused (0.8.23): the page names it.
+  if (input.cli !== null && deps.config.daemon.orchestrator === input.agentId) return { ok: false, field: "cli", error: externalOrchestratorRefusal(input.agentId) };
   if (input.cli === null && !agent.config.external) return { ok: true };
   const profile = input.profile?.trim();
   const cli = input.cli;

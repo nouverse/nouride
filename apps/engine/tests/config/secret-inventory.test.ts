@@ -147,8 +147,8 @@ describe("storing and removing one", () => {
   test("a blank name or an empty value is refused, and nothing is stored", async () => {
     const { secrets } = await inventory();
     const deps = { config, secrets } as unknown as SettingsDeps;
-    expect(await setSecret(deps, { name: "   ", value: "v" })).toEqual({ ok: false, error: "secret name is required" });
-    expect(await setSecret(deps, { name: "token", value: "" })).toEqual({ ok: false, error: "a secret with no value is not a secret" });
+    expect(await setSecret(deps, { name: "   ", value: "v" })).toEqual({ ok: false, field: "name", error: "secret name is required" });
+    expect(await setSecret(deps, { name: "token", value: "" })).toEqual({ ok: false, field: "value", error: "a secret with no value is not a secret" });
     expect(secrets.inventory()).toEqual([]);
   });
 

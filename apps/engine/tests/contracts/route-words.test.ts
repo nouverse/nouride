@@ -7,6 +7,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { repliesIn, routesIn, unplain, type Reply, type Said } from "../../../../scripts/route-words.ts";
+import { CONTROL } from "../../../../scripts/route-values.ts";
 
 const read = (source: string, path = "fixture.ts") => repliesIn(path, source);
 const words = (said: Said[]) => said.map((one) => one.text || `<${one.unread.join(", ")}>`);
@@ -40,7 +41,7 @@ describe("what the reader reads", () => {
     ]);
   });
 
-  test("a value followed inside the file: a const, a function's tuple, a parameter by its calls, ?:, || and a spread", () => {
+  test("a value followed inside the file: a const, a function's tuple, a parameter by the call followed, ?:, || and a spread", () => {
     const replies = read(`
       export function registerMemory(control: ControlApp, deps: ControlDeps): void {
         const unavailable = { error: "memory is not run in this process" };
@@ -63,12 +64,53 @@ describe("what the reader reads", () => {
     `);
     const forget = replies.filter((reply) => reply.path === "/memory/forget");
     expect(forget.map(summary)).toEqual([
-      // Its role and its reason, from the arguments each call passes and the parameter's default.
-      "POST /memory/forget 403,503: {} only{} | admin | operator | : forgetting cannot be undone | memory is not wired in this process",
+      // Its role and its reason, from the arguments its own call passes: never the other route's "operator".
+      "POST /memory/forget 403,503: {} only{} | admin | : forgetting cannot be undone | memory is not wired in this process",
       "POST /memory/forget 501: memory is not run in this process",
       "POST /memory/forget 409: a pass is running | nothing to forget | try again later",
     ]);
     expect(forget.flatMap((reply) => [...reply.error, ...reply.note]).flatMap((said) => said.unread)).toEqual([]);
+    // A parameter's default, where its call passes nothing.
+    const status = replies.find((reply) => reply.path === "/memory/status" && reply.status?.includes(403))!;
+    expect(summary(status)).toBe("GET /memory/status 403,503: {} only{} | operator | memory is not wired in this process");
+  });
+
+  test("a sentence a helper of the control API makes of the words it is handed: read with each call's words", () => {
+    // At a route's own path, so `../plain.ts` is the real one and its `notSaved` is followed.
+    const replies = read(`
+      import { NOT_SAVED, notSaved } from "../plain.ts";
+      const CRON_FIELDS = { schedule: "the schedule", agentId: "the agent", "payload.goal": "the goal" } as const;
+      export function registerCron(control: ControlApp, deps: ControlDeps): void {
+        control.post("/cron", (c) => c.json({ error: result.error, plain: notSaved("the schedule") }, 400));
+        control.post("/cron/:id", (c) => c.json({ error: result.error, plain: notSaved(result.field && CRON_FIELDS[result.field]) }, 400));
+        control.post("/cron/:id/goal", (c) => c.json({ error: result.error, plain: notSaved(CRON_FIELDS["payload.goal"]) }, 400));
+        control.post("/cron/:id/run", (c) => c.json({ error: result.error, plain: NOT_SAVED }, 400));
+      }
+    `, `${CONTROL}/routes/cron.ts`);
+    const plains = replies.map((reply) => words(reply.plain));
+    const shape = "Nothing was saved. Check {}, and try again.";
+    const generic = "Nothing was saved. Check what you entered, and try again.";
+    expect(plains).toEqual([
+      [shape, "the schedule", generic],
+      // Every entry of the table the route looks the field up in, and the words with no field.
+      [shape, "the schedule", "the agent", "the goal", generic],
+      [shape, "the goal", generic],
+      [generic],
+    ]);
+    expect(replies.every((reply) => reply.plainAlways)).toBe(true);
+  });
+
+  test("words handed to a helper are held like any: one it cannot read, or a technical one, does not pass", () => {
+    const reply = (argument: string) =>
+      read(`
+        import { notSaved } from "../plain.ts";
+        export function r(control: ControlApp) { control.post("/x", (c) => c.json({ error: result.error, plain: notSaved(${argument}) }, 400)); }
+      `, `${CONTROL}/routes/x.ts`)[0]!;
+    // The domain's own words, or a name a route passes on: the page would show what nothing here checked.
+    expect(unplain(reply("result.field"))).toEqual(["plain holds words written elsewhere: result.field"]);
+    expect(unplain(reply(`c.req.param("field")`))).toEqual(['plain holds words written elsewhere: c.req.param("field")']);
+    expect(unplain(reply(`"the bot_token"`))).toEqual(['plain has a setting\'s name: "the bot_token"']);
+    expect(unplain(reply(`"the port"`))).toEqual([]);
   });
 
   test("what another file writes cannot be read: a domain's refusal, an exception's message, a body built elsewhere", () => {

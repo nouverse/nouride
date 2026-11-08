@@ -16,8 +16,18 @@ export const NO_SETTINGS = "The dashboard cannot read or change the settings on 
 /** The dashboard's own chat, off on this server: `[control] chat` is false. */
 export const CHAT_OFF = "Chat on the dashboard is turned off on this server. Whoever runs the server can turn it on.";
 
-/** A save the server turned down, for a reason in its own words (under Details). */
+/** A save the server turned down, for a reason in its own words (under Details), that no one field of the form explains. */
 export const NOT_SAVED = "Nothing was saved. Check what you entered, and try again.";
+
+/**
+ * A save turned down for one field of its form (0.8.23), named as the page names it: "the schedule", "the bot's key". A
+ * form of several fields said only "check what you entered", and left the person to guess which one. `what` is words
+ * the route writes, a field's own or one of a table it looks up by the field a refusal names; with none, `NOT_SAVED`.
+ * Never left out: a call with no words would read, to the contract, as one that names a field.
+ */
+export function notSaved(what: string | undefined): string {
+  return what ? `Nothing was saved. Check ${what}, and try again.` : NOT_SAVED;
+}
 
 /** A change that is not a form's (a removal, an action), turned down for a reason in the server's own words. */
 export const NOT_CHANGED = "Nothing was changed. Reload the page, and try again.";

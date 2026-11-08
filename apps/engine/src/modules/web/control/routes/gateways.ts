@@ -5,9 +5,18 @@
  */
 
 import { atLeast } from "@/modules/users/auth.ts";
+import type { GatewayField } from "@/modules/config/settings/gateways.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { jsonBody } from "../payloads.ts";
-import { NOT_CHANGED, NOT_SAVED, NO_SETTINGS } from "../plain.ts";
+import { NOT_CHANGED, NO_SETTINGS, notSaved } from "../plain.ts";
+
+/** Each field a connection's save can be refused for, as its form on an agent's page names it. */
+const GATEWAY_FIELDS: Record<GatewayField, string> = {
+  platform: "the chat app",
+  name: "the connection's name",
+  token: "the key",
+  groupContextMessages: "the group context",
+};
 
 export function registerGatewayRoutes(control: ControlApp, deps: ControlDeps): void {
   control.get("/gateways", (c) => {
@@ -44,7 +53,7 @@ export function registerGatewayRoutes(control: ControlApp, deps: ControlDeps): v
         ? { groupContextMessages: body.groupContextMessages }
         : {}),
     });
-    return result.ok ? c.json(result) : c.json({ error: result.error, plain: NOT_SAVED }, 400);
+    return result.ok ? c.json(result) : c.json({ error: result.error, plain: notSaved(result.field && GATEWAY_FIELDS[result.field]) }, 400);
   });
 
   control.delete("/gateways/:id", async (c) => {

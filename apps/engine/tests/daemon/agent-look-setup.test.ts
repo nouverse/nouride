@@ -61,7 +61,9 @@ describe("an agent's look", () => {
     const { setup } = await service();
     await setup.createAgent({ id: "nouva", displayName: "Nouva", systemPrompt: "", model: "gpt-4o", actor: "t" });
     const before = await readTextFileIfExists(join(root, "agents", "nouva", "config.toml"));
-    expect(await setup.setLook({ agentId: "nouva", look: { hat: "crown" }, actor: "t" })).toEqual({ ok: false, error: "hat must be one of none, beanie, cap, beret, headband, headphones, or empty for its own" });
+    // The part refused, which the Look tab names (0.8.23).
+    expect(await setup.setLook({ agentId: "nouva", look: { hat: "crown" }, actor: "t" })).toEqual({ ok: false, field: "hat", error: "hat must be one of none, beanie, cap, beret, headband, headphones, or empty for its own" });
+    expect(await setup.setLook({ agentId: "nouva", look: { outfitColor: "gold" }, actor: "t" })).toMatchObject({ ok: false, field: "outfitColor" });
     expect(await readTextFileIfExists(join(root, "agents", "nouva", "config.toml"))).toBe(before);
   });
 });

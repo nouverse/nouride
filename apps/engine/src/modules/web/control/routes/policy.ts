@@ -9,7 +9,7 @@ import { startOfLocalDay } from "@/commons/clock.ts";
 import { atLeast } from "@/modules/users/auth.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { jsonBody } from "../payloads.ts";
-import { NOT_SAVED, NO_SETTINGS } from "../plain.ts";
+import { NO_SETTINGS, notSaved } from "../plain.ts";
 
 export function registerPolicyRoutes(control: ControlApp, deps: ControlDeps): void {
   /**
@@ -60,7 +60,7 @@ export function registerPolicyRoutes(control: ControlApp, deps: ControlDeps): vo
       usd: body.maxDailyCostUsd,
       actor: principal.actor,
     });
-    if (!result.ok) return c.json({ error: result.error, plain: NOT_SAVED }, 400);
+    if (!result.ok) return c.json({ error: result.error, plain: notSaved("the daily spend cap") }, 400);
     return c.json({ ok: true, maxDailyCostUsd: deps.ctx.config.llm.limits.maxDailyCostUsd });
   });
 
@@ -96,7 +96,7 @@ export function registerPolicyRoutes(control: ControlApp, deps: ControlDeps): vo
       iterations: body.maxToolIterations,
       actor: principal.actor,
     });
-    if (!result.ok) return c.json({ error: result.error, plain: NOT_SAVED }, 400);
+    if (!result.ok) return c.json({ error: result.error, plain: notSaved("the tool budget") }, 400);
     return c.json({ ok: true, maxToolIterations: deps.ctx.config.llm.limits.maxToolIterations });
   });
 
@@ -133,7 +133,7 @@ export function registerPolicyRoutes(control: ControlApp, deps: ControlDeps): vo
       seconds: body.turnSeconds,
       actor: principal.actor,
     });
-    if (!result.ok) return c.json({ error: result.error, plain: NOT_SAVED }, 400);
+    if (!result.ok) return c.json({ error: result.error, plain: notSaved("the turn budget") }, 400);
     return c.json({
       ok: true,
       turnSeconds: Math.round(deps.ctx.config.llm.limits.maxTurnDurationMs / 1000),

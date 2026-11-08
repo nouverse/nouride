@@ -9,7 +9,7 @@ import { idFormsFor } from "@/modules/people/match.ts";
 import type { Person } from "@nouride/shared";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { jsonBody } from "../payloads.ts";
-import { INCOMPLETE, NOT_SAVED, NO_SETTINGS } from "../plain.ts";
+import { INCOMPLETE, NOT_SAVED, NO_SETTINGS, notSaved } from "../plain.ts";
 
 /**
  * Who an approved sender is: `me` (the approving admin's own person), `person:<key>` (somebody known),
@@ -100,7 +100,7 @@ export function registerAccessRoutes(control: ControlApp, deps: ControlDeps): vo
       messages: body.messages,
       actor: principal.actor,
     });
-    return result.ok ? c.json(result) : c.json({ error: result.error, plain: NOT_SAVED }, 400);
+    return result.ok ? c.json(result) : c.json({ error: result.error, plain: notSaved("the number of messages replayed") }, 400);
   });
 
   /**

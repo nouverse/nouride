@@ -18,13 +18,14 @@ export type LookChange = Partial<Record<keyof AgentLook, string>>;
 export async function setLook(
   deps: Pick<SetupDeps, "registry" | "audit">,
   input: { agentId: string; look: LookChange; actor: string },
-): Promise<{ ok: true } | { ok: false; error: string }> {
+): Promise<{ ok: true } | { ok: false; error: string; field?: keyof AgentLook }> {
   const agent = deps.registry.get(input.agentId);
   if (!agent) return { ok: false, error: `no agent "${input.agentId}"` };
   const given = Object.entries(input.look).filter((entry): entry is [keyof AgentLook, string] => entry[0] in LOOK_PARTS && typeof entry[1] === "string");
   for (const [part, value] of given) {
     const { key, values } = LOOK_PARTS[part];
-    if (value && !(values as readonly string[]).includes(value)) return { ok: false, error: `${key} must be one of ${values.join(", ")}, or empty for its own` };
+    // The part refused, which the Look tab names (0.8.23).
+    if (value && !(values as readonly string[]).includes(value)) return { ok: false, field: part, error: `${key} must be one of ${values.join(", ")}, or empty for its own` };
   }
   if (given.length === 0) return { ok: true };
   const saved = await editPackFile({

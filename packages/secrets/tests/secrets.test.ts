@@ -3,7 +3,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { readTextFileIfExists, removePath, writeTextFile } from "@nouride/runtime";
-import { assertSecretName, envNamesFor, SecretStore } from "../src/index.ts";
+import { assertSecretName, envNamesFor, SecretError, SecretStore } from "../src/index.ts";
 
 let dir: string;
 
@@ -124,6 +124,18 @@ describe("SecretStore persistence", () => {
   test("refuses to store an empty value", async () => {
     const store = await SecretStore.open(dir, {});
     await expect(store.set("nougate", "")).rejects.toThrow(/empty value/);
+  });
+
+  test("a refusal says which part of what was sent it is about: the name, the value, or what is said about it", async () => {
+    // The dashboard's form sends all three, and names the one at fault (0.8.23).
+    const store = await SecretStore.open(dir, {});
+    const part = async (write: Promise<unknown>) => write.then(() => "stored", (err: unknown) => (err instanceof SecretError ? err.part : "not a refusal"));
+    expect(await part(store.set("not a name", "v"))).toBe("name");
+    expect(await part(store.set("nougate", ""))).toBe("value");
+    expect(await part(store.set("telegram_nix", "$TMP_SECRET_3C60E07835C7"))).toBe("value");
+    expect(await part(store.set("github", "v", { fields: { set: { "1 bad": "x" } } }))).toBe("fields");
+    expect(await part(store.set("github", "v", { fields: { set: { backup: "ghp_aBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789" } } }))).toBe("fields");
+    expect(await part(store.changeFields("nothing", { set: { a: "b" } }))).toBeUndefined();
   });
 
   test("refuses to store the handle of a credential sent in chat — it is not the credential", async () => {

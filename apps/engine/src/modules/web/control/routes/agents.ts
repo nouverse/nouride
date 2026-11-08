@@ -16,7 +16,10 @@ import { EFFORT_CHOICES, isEffortChoice } from "@/modules/setup/agent-effort.ts"
 import { atLeast } from "@/modules/users/auth.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { jsonBody } from "../payloads.ts";
-import { INCOMPLETE, NOT_A_NUMBER, NOT_RUNNING, NOT_SAVED, NO_SETTINGS } from "../plain.ts";
+import { INCOMPLETE, NOT_A_NUMBER, NOT_RUNNING, NOT_SAVED, NO_SETTINGS, notSaved } from "../plain.ts";
+
+/** The two fields an agent's model can be refused for, as its Model tab names them. */
+const MODEL_FIELDS = { provider: "the provider", model: "the model" } as const;
 
 export function registerAgentRoutes(control: ControlApp, deps: ControlDeps): void {
   /**
@@ -46,7 +49,7 @@ export function registerAgentRoutes(control: ControlApp, deps: ControlDeps): voi
       actor: principal.actor,
       agentId: id,
     });
-    if (!result.ok) return c.json({ error: result.error, plain: NOT_SAVED }, 400);
+    if (!result.ok) return c.json({ error: result.error, plain: notSaved(result.field && MODEL_FIELDS[result.field]) }, 400);
     return c.json({ ok: true });
   });
 
@@ -95,7 +98,7 @@ export function registerAgentRoutes(control: ControlApp, deps: ControlDeps): voi
       actor: principal.actor,
       agentId: id,
     });
-    if (!result.ok) return c.json({ error: result.error, plain: NOT_SAVED }, 400);
+    if (!result.ok) return c.json({ error: result.error, plain: notSaved("the fallbacks") }, 400);
     return c.json({ ok: true });
   });
 
@@ -126,7 +129,7 @@ export function registerAgentRoutes(control: ControlApp, deps: ControlDeps): voi
       actor: principal.actor,
       agentId: id,
     });
-    if (!result.ok) return c.json({ error: result.error, plain: NOT_SAVED }, 400);
+    if (!result.ok) return c.json({ error: result.error, plain: notSaved("the turn budget") }, 400);
     return c.json({ ok: true });
   });
 
@@ -161,7 +164,7 @@ export function registerAgentRoutes(control: ControlApp, deps: ControlDeps): voi
       actor: principal.actor,
       agentId: id,
     });
-    if (!result.ok) return c.json({ error: result.error, plain: NOT_SAVED }, 400);
+    if (!result.ok) return c.json({ error: result.error, plain: notSaved("the tool budget") }, 400);
     return c.json({
       ok: true,
       maxToolIterations: deps.registry.get(id)?.config.llm.maxToolIterations ?? null,

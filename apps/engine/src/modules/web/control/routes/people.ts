@@ -4,9 +4,23 @@
 
 import { atLeast } from "@/modules/users/auth.ts";
 import { accountIdentity, personOf, type LinkTarget } from "@/modules/config/settings/identities.ts";
+import type { MorningField, PersonField } from "@/modules/config/settings/people.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { jsonBody } from "../payloads.ts";
-import { CHANGED_MEANWHILE, NOT_CHANGED, NOT_SAVED, NO_SETTINGS } from "../plain.ts";
+import { CHANGED_MEANWHILE, NOT_CHANGED, NO_SETTINGS, notSaved } from "../plain.ts";
+
+/** Each field a person's save can be refused for, as the People page's form names it. */
+const PERSON_FIELDS: Record<PersonField, string> = {
+  name: "the display name",
+  key: "the person key",
+  ids: "the accounts",
+};
+
+/** The two fields of a person's morning line, as its row names them. */
+const MORNING_FIELDS: Record<MorningField, string> = {
+  at: "the morning line's time",
+  to: "where the morning line goes",
+};
 
 export function registerPeopleRoutes(control: ControlApp, deps: ControlDeps): void {
   // As loaded: every account in the platform's spelling, which the loader holds `[[people]]` to.
@@ -74,7 +88,7 @@ export function registerPeopleRoutes(control: ControlApp, deps: ControlDeps): vo
 
     if (!result.ok) {
       const conflict = "conflict" in result && result.conflict === true;
-      return c.json({ error: result.error, plain: conflict ? CHANGED_MEANWHILE : NOT_SAVED }, conflict ? 409 : 400);
+      return c.json({ error: result.error, plain: conflict ? CHANGED_MEANWHILE : notSaved(result.field && PERSON_FIELDS[result.field]) }, conflict ? 409 : 400);
     }
     return c.json({ ok: true, person: result.person, people: deps.ctx.config.people });
   });
@@ -122,7 +136,7 @@ export function registerPeopleRoutes(control: ControlApp, deps: ControlDeps): vo
     if (at !== null && typeof at !== "string") return c.json({ error: "`at` is a time of day, HH:MM, or null" }, 400);
     if (to !== undefined && to !== null && typeof to !== "string") return c.json({ error: "`to` is one of their accounts, or null" }, 400);
     const result = await deps.settings.writePersonMorning(c.req.param("key"), { at, ...(to !== undefined ? { to } : {}) }, principal.actor);
-    if (!result.ok) return c.json({ error: result.error, plain: NOT_SAVED }, 400);
+    if (!result.ok) return c.json({ error: result.error, plain: notSaved(result.field && MORNING_FIELDS[result.field]) }, 400);
     return c.json({ ok: true, at, to: at === null ? null : (to ?? deps.ctx.config.people.find((one) => one.key === c.req.param("key"))?.morningTo ?? null) });
   });
 

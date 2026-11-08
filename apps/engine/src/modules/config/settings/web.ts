@@ -24,7 +24,7 @@ import { upsertTomlTable } from "@/modules/config/edit.ts";
 import { resolveSearch } from "@/modules/tools/builtins/search-backends.ts";
 import { editConfigFile } from "./file.ts";
 import { setSecret } from "./secrets.ts";
-import type { SaveResult, SettingsDeps } from "./types.ts";
+import type { FieldRefusal, SaveResult, SettingsDeps } from "./types.ts";
 
 export type WebSearchMode = "free" | "brave" | "searxng" | "custom";
 const WEB_SEARCH_MODES: WebSearchMode[] = ["free", "brave", "searxng", "custom"];
@@ -97,19 +97,22 @@ export interface WebSearchPatch {
   allowPrivateUrls?: boolean;
 }
 
-/** Check a patch as the boot would, and say what is wrong in a sentence. `null` when it is fine. */
-function checkWebSearchPatch(deps: SettingsDeps, patch: WebSearchPatch): string | null {
-  if (!WEB_SEARCH_MODES.includes(patch.mode)) return `mode must be one of ${WEB_SEARCH_MODES.join(", ")}`;
+/** A field of the Web Search page a refusal names (0.8.23): the service picked, its address, the key or its secret's name. */
+export type WebSearchField = "mode" | "endpoint" | "secret" | "key";
+
+/** Check a patch as the boot would, and say what is wrong in a sentence, and in which field. `null` when it is fine. */
+function checkWebSearchPatch(deps: SettingsDeps, patch: WebSearchPatch): FieldRefusal<WebSearchField> | null {
+  if (!WEB_SEARCH_MODES.includes(patch.mode)) return { field: "mode", error: `mode must be one of ${WEB_SEARCH_MODES.join(", ")}` };
   const endpoint = patch.endpoint?.trim() ?? "";
   if (patch.mode === "searxng" || patch.mode === "custom") {
-    if (!endpoint) return patch.mode === "searxng" ? "SearXNG needs the address of your instance" : "a custom endpoint needs its URL";
+    if (!endpoint) return { field: "endpoint", error: patch.mode === "searxng" ? "SearXNG needs the address of your instance" : "a custom endpoint needs its URL" };
     let url: URL;
     try {
       url = new URL(endpoint);
     } catch {
-      return `"${endpoint}" is not a URL`;
+      return { field: "endpoint", error: `"${endpoint}" is not a URL` };
     }
-    if (url.protocol !== "http:" && url.protocol !== "https:") return "the endpoint must be an http:// or https:// URL";
+    if (url.protocol !== "http:" && url.protocol !== "https:") return { field: "endpoint", error: "the endpoint must be an http:// or https:// URL" };
   }
 
   const name = patch.apiKeySecret?.trim() ?? "";
@@ -117,13 +120,13 @@ function checkWebSearchPatch(deps: SettingsDeps, patch: WebSearchPatch): string 
     try {
       assertSecretName(name || DEFAULT_SEARCH_SECRET, "secret name");
     } catch (err) {
-      return err instanceof Error ? err.message : String(err);
+      return { field: "secret", error: err instanceof Error ? err.message : String(err) };
     }
   }
   if (patch.mode === "brave" && !patch.apiKeyValue && !(name && deps.secrets.resolve(name))) {
     return name
-      ? `the secret "${name}" is not set: paste the key, or pick a secret that holds it`
-      : "Brave needs an API key: paste it, or pick the secret that holds it";
+      ? { field: "secret", error: `the secret "${name}" is not set: paste the key, or pick a secret that holds it` }
+      : { field: "key", error: "Brave needs an API key: paste it, or pick the secret that holds it" };
   }
   return null;
 }
@@ -132,10 +135,10 @@ function checkWebSearchPatch(deps: SettingsDeps, patch: WebSearchPatch): string 
 export async function setWebSearchSettings(
   deps: SettingsDeps,
   params: { patch: WebSearchPatch; actor?: string },
-): Promise<SaveResult> {
+): Promise<SaveResult<WebSearchField>> {
   const { patch } = params;
   const problem = checkWebSearchPatch(deps, patch);
-  if (problem) return { ok: false, error: problem };
+  if (problem) return { ok: false, ...problem };
 
   const usesKey = patch.mode === "brave" || patch.mode === "custom";
   let secretName = usesKey ? (patch.apiKeySecret?.trim() ?? "") : "";
@@ -157,7 +160,7 @@ export async function setWebSearchSettings(
   // Once the save is through, so a refused one leaves the key that works in place.
   if (usesKey && patch.apiKeyValue) {
     const stored = await setSecret(deps, { name: secretName, value: patch.apiKeyValue, actor: params.actor });
-    if (!stored.ok) return stored;
+    if (!stored.ok) return { ok: false, field: "key", error: stored.error };
   }
 
   deps.audit?.record({

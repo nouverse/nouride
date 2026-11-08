@@ -9,7 +9,7 @@
 import type { Attachment, Job, JobDelivery, JobPayload, JobSessionMode } from "@nouride/shared";
 import { attachmentTypeFor } from "@nouride/gateways";
 import type { JobInput } from "@/modules/cron/cron.store.ts";
-import { CronValidationError } from "@/modules/cron/validate.ts";
+import { CronValidationError, type CronField } from "@/modules/cron/validate.ts";
 import { parseScheduleInput } from "@/modules/cron/parse.ts";
 import { webhookUrl } from "@/modules/web/hooks.ts";
 import { hookReach } from "@/modules/web/hook-reach.ts";
@@ -61,6 +61,11 @@ export function isCronRefusal(err: unknown): boolean {
   return err instanceof CronValidationError || (err as Error)?.name === "CronParseError";
 }
 
+/** The field of a job a cron refusal is about (0.8.23): its own, or when it runs, for an expression or a zone refused. */
+export function cronRefusalField(err: unknown): CronField | undefined {
+  return err instanceof CronValidationError ? err.field : (err as Error)?.name === "CronParseError" ? "schedule" : undefined;
+}
+
 function cronPayloadFrom(raw: unknown): JobPayload {
   const payload = (raw ?? {}) as Record<string, unknown>;
   const kind = payload.kind;
@@ -94,7 +99,7 @@ function cronPayloadFrom(raw: unknown): JobPayload {
       ...(payload.review === false ? { review: false } : typeof payload.review === "string" && payload.review.trim() ? { review: payload.review.trim() } : {}),
     };
   }
-  throw new CronValidationError('`payload.kind` must be "systemEvent", "agentTurn", "command" or "mission".');
+  throw new CronValidationError('`payload.kind` must be "systemEvent", "agentTurn", "command" or "mission".', "kind");
 }
 
 function cronDeliveryFrom(raw: unknown): JobDelivery | undefined {
@@ -102,7 +107,7 @@ function cronDeliveryFrom(raw: unknown): JobDelivery | undefined {
   const delivery = raw as Record<string, unknown>;
   const mode = delivery.mode;
   if (mode !== "announce" && mode !== "none" && mode !== "webhook") {
-    throw new CronValidationError('`delivery.mode` must be "announce", "none" or "webhook".');
+    throw new CronValidationError('`delivery.mode` must be "announce", "none" or "webhook".', "delivery");
   }
   return {
     mode,

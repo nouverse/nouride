@@ -62,7 +62,7 @@ export class SettingsService {
     return secrets.secretShadowedByEnv(this.deps, name);
   }
 
-  async setSecret(...args: Rest<typeof secrets.setSecret>): Promise<SaveResult> {
+  async setSecret(...args: Rest<typeof secrets.setSecret>): ReturnType<typeof secrets.setSecret> {
     return await secrets.setSecret(this.deps, ...args);
   }
 
@@ -87,7 +87,7 @@ export class SettingsService {
     return gateways.gateways(this.deps);
   }
 
-  async saveGateway(...args: Rest<typeof gateways.saveGateway>): Promise<SaveResult> {
+  async saveGateway(...args: Rest<typeof gateways.saveGateway>): ReturnType<typeof gateways.saveGateway> {
     return await gateways.saveGateway(this.deps, ...args);
   }
 
@@ -99,7 +99,7 @@ export class SettingsService {
     return providers.providerProfiles(this.deps);
   }
 
-  async saveProvider(...args: Rest<typeof providers.saveProvider>): Promise<SaveResult> {
+  async saveProvider(...args: Rest<typeof providers.saveProvider>): ReturnType<typeof providers.saveProvider> {
     return await providers.saveProvider(this.deps, ...args);
   }
 
@@ -107,7 +107,7 @@ export class SettingsService {
     return await providers.removeProvider(this.deps, ...args);
   }
 
-  async saveAgentModel(...args: Rest<typeof agents.saveAgentModel>): Promise<SaveResult> {
+  async saveAgentModel(...args: Rest<typeof agents.saveAgentModel>): ReturnType<typeof agents.saveAgentModel> {
     return await agents.saveAgentModel(this.deps, ...args);
   }
 
@@ -124,7 +124,7 @@ export class SettingsService {
   }
 
   /** One agent's own small and high model, or none to inherit the install's (0.8.0). See `settings/tiers.ts`. */
-  async saveAgentTiers(...args: Rest<typeof tiers.saveAgentTiers>): Promise<SaveResult> {
+  async saveAgentTiers(...args: Rest<typeof tiers.saveAgentTiers>): ReturnType<typeof tiers.saveAgentTiers> {
     return await tiers.saveAgentTiers(this.deps, ...args);
   }
 
@@ -133,7 +133,7 @@ export class SettingsService {
     return tiers.modelTiers(this.deps);
   }
 
-  async setModelTiers(...args: Rest<typeof tiers.setModelTiers>): Promise<SaveResult> {
+  async setModelTiers(...args: Rest<typeof tiers.setModelTiers>): ReturnType<typeof tiers.setModelTiers> {
     return await tiers.setModelTiers(this.deps, ...args);
   }
 
@@ -183,7 +183,7 @@ export class SettingsService {
   }
 
   /** Change some of `[missions]`, live. See `settings/missions.ts`. */
-  async setMissionSettings(...args: Rest<typeof missions.setMissionSettings>): Promise<SaveResult> {
+  async setMissionSettings(...args: Rest<typeof missions.setMissionSettings>): ReturnType<typeof missions.setMissionSettings> {
     return await missions.setMissionSettings(this.deps, ...args);
   }
 
@@ -221,7 +221,7 @@ export class SettingsService {
     return await mcp.removeLibraryServer(this.deps, ...args);
   }
 
-  async setAgentMcp(...args: Rest<typeof mcp.setAgentMcp>): Promise<SaveResult> {
+  async setAgentMcp(...args: Rest<typeof mcp.setAgentMcp>): ReturnType<typeof mcp.setAgentMcp> {
     return await mcp.setAgentMcp(this.deps, ...args);
   }
 
@@ -229,7 +229,7 @@ export class SettingsService {
     return await policy.setAccessMode(this.deps, ...args);
   }
 
-  async setSkillLearning(...args: Rest<typeof learning.setSkillLearning>): Promise<SaveResult> {
+  async setSkillLearning(...args: Rest<typeof learning.setSkillLearning>): ReturnType<typeof learning.setSkillLearning> {
     return await learning.setSkillLearning(this.deps, ...args);
   }
 
@@ -259,7 +259,7 @@ export class SettingsService {
   }
 
   /** Change some of `[memory]`, checked as the loader checks it. See `memory.ts`. */
-  async setMemorySettings(...args: Rest<typeof memory.setMemorySettings>): Promise<SaveResult> {
+  async setMemorySettings(...args: Rest<typeof memory.setMemorySettings>): ReturnType<typeof memory.setMemorySettings> {
     return await memory.setMemorySettings(this.deps, ...args);
   }
 
@@ -287,7 +287,7 @@ export class SettingsService {
     return web.webSearchSettings(this.deps);
   }
 
-  async setWebSearchSettings(...args: Rest<typeof web.setWebSearchSettings>): Promise<SaveResult> {
+  async setWebSearchSettings(...args: Rest<typeof web.setWebSearchSettings>): ReturnType<typeof web.setWebSearchSettings> {
     return await web.setWebSearchSettings(this.deps, ...args);
   }
 
@@ -313,7 +313,7 @@ export class SettingsService {
     return await people.savePerson(this.deps, ...args);
   }
 
-  async writePersonMorning(...args: Rest<typeof people.writePersonMorning>): Promise<{ ok: true } | { ok: false; error: string }> {
+  async writePersonMorning(...args: Rest<typeof people.writePersonMorning>): ReturnType<typeof people.writePersonMorning> {
     return await people.writePersonMorning(this.deps, ...args);
   }
 

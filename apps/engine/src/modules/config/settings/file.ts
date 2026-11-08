@@ -11,11 +11,14 @@ import type { SaveResult, SettingsDeps } from "./types.ts";
 /** All these use. Asking for the whole deps would make the config path look load-bearing on the secret store. */
 type ConfigFileDeps = Pick<SettingsDeps, "config" | "configPath">;
 
-/** Change the file with `edit`, and the running copy with it. A refusal is a `SaveResult` the caller hands straight back. */
+/**
+ * Change the file with `edit`, and the running copy with it. A refusal is a `SaveResult` the caller hands straight back:
+ * the file's, about no one field of a form.
+ */
 export async function editConfigFile(
   deps: ConfigFileDeps,
   edit: ConfigEdit,
-): Promise<{ ok: true; changed: boolean } | Extract<SaveResult, { ok: false }>> {
+): Promise<{ ok: true; changed: boolean } | Extract<SaveResult<never>, { ok: false }>> {
   return await editDaemonConfig(deps.configPath, deps.config, edit);
 }
 
