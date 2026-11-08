@@ -7,7 +7,7 @@
  * agent's own command cannot, being its own user, which may not write there.
  */
 
-import { dirname, join, runCommand } from "@nouride/runtime";
+import { dirname, ensureDir, join, runCommand } from "@nouride/runtime";
 import { DIM, GREEN, RESET, YELLOW, emit, fail, say, usageError } from "@/cli/ui.ts";
 import { loadConfig } from "@/cli/load-config.ts";
 import { composePath, pythonEnvDir, toolchainEnv } from "@/modules/toolchain/env.ts";
@@ -46,6 +46,9 @@ export async function runShared(command: readonly string[]): Promise<{ exitCode:
   const bin = join(nouride, "bin");
   const path = composePath({ bin, python: pythonEnvDir(nouride), startup: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", home });
   const env = { ...toolchainEnv(nouride), HOME: home, PATH: path, NOURIDE_BIN: bin, NOURIDE_PATH: path, LANG: process.env.LANG ?? "C.UTF-8" };
+  // The service's install makes it (install.sh) and its boot too; a plain `nouride start` in a person's own home makes
+  // neither, and an install run in a folder that is not there failed as a missing `setsid` (the e2e VM, 0.8.24).
+  ensureDir(home);
   const ran = await runCommand([...command], {
     cwd: home,
     env,

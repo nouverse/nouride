@@ -5,10 +5,26 @@
  */
 
 import { describe, expect, test } from "bun:test";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { notAnInstall } from "@/modules/toolchain/installers.ts";
 import { usageFor } from "@/cli/usage.ts";
+import { runCli } from "../cli-harness.ts";
+import { tempDir } from "../helpers.ts";
 
 describe("nouride tools run", () => {
+  test("runs on an install with no .nouride/home, as a plain `nouride start` in a person's own home leaves it, and makes it", async () => {
+    const root = tempDir("tools-run-home");
+    const data = join(root, ".nouride", "data");
+    mkdirSync(data, { recursive: true });
+    writeFileSync(join(root, "config.toml"), `[daemon]\ndata_dir = "${data}"\n`);
+    // `npm --version` is no install: refused before it runs, it shows nothing. An install the folder decides is.
+    const run = await runCli(["tools", "run", "--", "npm", "i", "-g", "--dry-run", "--offline", "left-pad-not-here"], { cwd: root, config: join(root, "config.toml") });
+    // What it failed with in a folder that was not there: the spawn itself, said as a missing `setsid`.
+    expect(run.err).not.toContain("posix_spawn");
+    expect(existsSync(join(root, ".nouride", "home"))).toBe(true);
+  }, 60_000);
+
   test("runs an installer's install, update or removal", () => {
     for (const command of [
       ["npm", "i", "-g", "@agentclientprotocol/claude-agent-acp"],
