@@ -1,0 +1,135 @@
+<!doctype html><html><head><meta charset="utf-8"><link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Manrope:wght@400;500;600;700;800&family=DM+Mono&display=swap" rel="stylesheet"><style>*{box-sizing:border-box;margin:0}
+body{font-family:Manrope,sans-serif;background:#e9e4da;padding:28px;display:flex;flex-direction:column;gap:14px;width:1500px}
+.label{font:600 15px Fredoka;color:#6b6578;letter-spacing:.08em;text-transform:uppercase}
+[data-theme=day]{--bg:#fff8ee;--side:#fff1de;--card:#ffffff;--ink:#241f35;--muted:#7a7290;--line:#241f35;--pri:#ff7a59;--pri-ink:#fff;--accent:#7c5cff;--mint:#2ec4a0;--hot:#ff5c8a;--shadow:#241f35;--chip:#f3ecff;--code:#fff1de}
+[data-theme=night]{--bg:#17142a;--side:#1f1b38;--card:#262145;--ink:#f6f1ff;--muted:#a79fc8;--line:#3d3668;--pri:#ff8a6b;--pri-ink:#1a1530;--accent:#a48bff;--mint:#46e0b6;--hot:#ff6f9a;--shadow:#0c0a18;--chip:#332c5c;--code:#1f1b38}
+.app{display:flex;background:var(--bg);color:var(--ink);border-radius:28px;overflow:hidden;border:2px solid var(--line);min-height:640px;
+ background-image:radial-gradient(circle at 92% 8%, color-mix(in srgb,var(--accent) 16%,transparent) 0 120px,transparent 121px),radial-gradient(circle at 70% 98%, color-mix(in srgb,var(--pri) 14%,transparent) 0 90px,transparent 91px)}
+.side{width:230px;background:var(--side);padding:22px 16px;display:flex;flex-direction:column;gap:20px;border-right:2px solid var(--line)}
+.logo{display:flex;align-items:center;gap:10px;font:600 24px Fredoka}
+nav{display:flex;flex-direction:column;gap:4px}
+nav a{padding:10px 14px;border-radius:14px;font-weight:600;color:var(--muted);display:flex;justify-content:space-between;align-items:center}
+nav a.on{background:var(--ink);color:var(--bg)}
+.pill{font:600 12px Manrope;background:var(--chip);color:var(--accent);border-radius:99px;padding:1px 9px}
+.pill.hot{background:var(--hot);color:#fff}
+.card{background:var(--card);border:2px solid var(--line);border-radius:22px;box-shadow:4px 4px 0 var(--shadow);padding:18px}
+.box{margin-top:auto}.small{padding:12px 14px;border-radius:16px;box-shadow:3px 3px 0 var(--shadow)}
+.boxk{font-size:12px;color:var(--muted)}.boxv{font:500 13px "DM Mono";display:flex;align-items:center;gap:8px;margin-top:4px}
+main{flex:1;padding:28px 32px;display:flex;flex-direction:column;gap:20px}
+header{display:flex;justify-content:space-between;align-items:center}
+.hi{font:600 34px Fredoka}.sub{color:var(--muted);font-weight:500;margin-top:2px}
+.btn{font:700 15px Manrope;border:2px solid var(--line);border-radius:14px;padding:10px 18px;box-shadow:3px 3px 0 var(--shadow);background:var(--card);color:var(--ink)}
+.btn.primary{background:var(--pri);color:var(--pri-ink)}
+.btn.ghost{box-shadow:none}
+.grid{display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:18px}
+.tag{display:inline-block;font:600 12px Manrope;background:var(--chip);color:var(--accent);border-radius:99px;padding:3px 10px}
+.tag.hot{background:var(--hot);color:#fff}
+.ttl{font:600 21px Fredoka;margin:10px 0 8px}
+.code{font:13px "DM Mono";background:var(--code);border:1.5px dashed var(--muted);border-radius:10px;padding:7px 10px}
+.muted{color:var(--muted);font-size:13px;margin:8px 0 14px}
+.row{display:flex;gap:10px}
+.bar{height:14px;border:2px solid var(--line);border-radius:99px;overflow:hidden;background:var(--chip)}
+.bar span{display:block;height:100%;background:repeating-linear-gradient(45deg,var(--mint) 0 10px,color-mix(in srgb,var(--mint) 75%,#fff) 10px 20px)}
+.steps{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.steps span{font-size:12px;font-weight:600;padding:4px 10px;border-radius:99px;border:1.5px solid var(--line);color:var(--muted)}
+.steps .done{background:var(--mint);color:#11201b;border-color:var(--mint)}
+.steps .now{background:var(--accent);color:#fff;border-color:var(--accent)}
+.chat{display:flex;flex-direction:column;gap:8px}
+.bubble{padding:9px 13px;border-radius:16px;font-size:14px;max-width:88%;font-weight:500}
+.bubble.me{align-self:flex-end;background:var(--accent);color:#fff;border-bottom-right-radius:4px}
+.bubble.them{background:var(--chip);border-bottom-left-radius:4px;display:flex;gap:6px;align-items:flex-start}
+.mini{flex:none}
+.input{margin-top:auto;border:2px solid var(--line);border-radius:14px;padding:9px 12px;color:var(--muted);display:flex;justify-content:space-between;align-items:center;font-size:14px}
+.send{background:var(--pri);color:var(--pri-ink);border-radius:10px;width:28px;height:28px;display:grid;place-items:center;font-weight:800}
+h2{font:600 22px Fredoka}
+.agents{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.agent{display:flex;gap:12px;align-items:center;padding:14px}
+.avatar{background:var(--chip);border-radius:18px;padding:4px;border:2px solid var(--line)}
+.aname{font:600 18px Fredoka}.role{font:500 12px Manrope;color:var(--muted)}
+.aline{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px;margin-top:3px}
+.dot-on,.dot-busy{width:9px;height:9px;border-radius:99px;background:var(--mint);display:inline-block;flex:none}
+.dot-busy{background:var(--pri)}
+[data-theme=night] .avatar{background:#3b3466}
+.boxv{white-space:nowrap;font-size:12px}
+body{width:1540px}
+
+body{width:1340px;flex-direction:row;flex-wrap:wrap;gap:34px;align-items:flex-start}
+.phone{width:390px;height:844px;border:3px solid #241f35;border-radius:46px;background:var(--bg);color:var(--ink);position:relative;overflow:hidden;padding:0 18px;box-shadow:6px 6px 0 #241f35}
+.status{font:600 14px Manrope;padding:16px 10px 6px}
+.m-head{display:flex;justify-content:space-between;align-items:center;margin:8px 4px 16px}
+.m-hi{font:600 28px Fredoka}
+.m-av{background:var(--chip);border:2px solid var(--line);border-radius:14px;display:inline-grid;place-items:center;padding:2px}
+.m-av.sm{border-radius:12px}
+.m-card{padding:16px}.grow{flex:1}
+.sect{font:600 16px Fredoka;margin:20px 4px 10px}
+.m-row{display:flex;gap:12px;align-items:center;padding:12px 14px;margin-bottom:10px;box-shadow:3px 3px 0 var(--shadow)}
+.m-row.line{background:transparent;border:none;border-bottom:1.5px solid color-mix(in srgb,var(--line) 15%,transparent);border-radius:0;margin:0;padding:14px 4px;box-shadow:none}
+.rt{font-weight:700;font-size:15px}.when{font-weight:500;font-size:12px;color:var(--muted);float:right}
+.prev{font-size:13px;color:var(--muted);margin-top:2px}
+.unread{background:var(--pri);color:#fff;border-radius:99px;font-size:12px;padding:2px 8px}
+.bar.thin{height:10px;margin-top:8px}
+.fab{position:absolute;right:20px;bottom:104px;background:var(--pri);color:var(--pri-ink);font:700 15px Manrope;padding:14px 20px;border-radius:18px;border:2px solid var(--line);box-shadow:3px 3px 0 var(--shadow)}
+.tabbar{flex-direction:row;gap:0;position:absolute;left:12px;right:12px;bottom:16px;height:72px;background:var(--card);border:2px solid var(--line);border-radius:24px;display:flex;justify-content:space-around;align-items:center;box-shadow:3px 3px 0 var(--shadow)}
+.tb{display:flex;flex-direction:column;align-items:center;font:600 11px Manrope;color:var(--muted);gap:2px;padding:6px 10px;border-radius:14px}
+.tb.on{background:var(--ink);color:var(--bg)}.ti{font-size:20px;position:relative}
+.tb-badge{position:absolute;top:-4px;right:-12px;background:var(--hot);color:#fff;font-size:10px;border-radius:99px;padding:1px 6px}
+.search{border:2px solid var(--line);border-radius:14px;padding:10px 14px;color:var(--muted);margin-bottom:8px}
+.c-head{display:flex;align-items:center;gap:10px;padding:8px 2px 14px;border-bottom:1.5px solid var(--line)}
+.back{font-size:30px;color:var(--accent);padding-right:4px}
+.c-body{display:flex;flex-direction:column;gap:10px;padding-top:16px}
+.ask{padding:14px;box-shadow:3px 3px 0 var(--shadow)} code{font-family:'DM Mono'}
+.c-input{position:absolute;left:14px;right:14px;bottom:22px;display:flex;gap:10px;align-items:center;border:2px solid var(--line);border-radius:20px;padding:10px 12px;background:var(--card)}
+.plus{font-size:20px;color:var(--accent)}.fake{color:var(--muted)}
+.send{background:var(--pri);color:var(--pri-ink);border-radius:12px;width:34px;height:34px;display:grid;place-items:center;font-weight:800}
+/* soft, semi-fun: no ink outlines, no offset shadows, muted pastels */
+[data-theme=day]{--bg:#faf7f2;--side:#f4efe8;--card:#ffffff;--ink:#2b2838;--muted:#8a8597;--line:#ebe5dc;--pri:#f08a6c;--pri-ink:#fff;--accent:#8c7ae6;--mint:#7fcdb4;--hot:#ee7f9d;--shadow:rgba(60,45,30,.07);--chip:#f1edfb;--code:#f7f3ec}
+[data-theme=night]{--bg:#1b1a24;--side:#211f2c;--card:#272534;--ink:#efedf5;--muted:#9c98ad;--line:#33303f;--pri:#f29a7e;--pri-ink:#22202c;--accent:#a99af0;--mint:#86d5bd;--hot:#f08fab;--shadow:rgba(0,0,0,.28);--chip:#322f44;--code:#211f2c}
+.app{border:1px solid var(--line);background-image:radial-gradient(circle at 95% 0%, color-mix(in srgb,var(--accent) 10%,transparent) 0 260px,transparent 420px)}
+.side{border-right:1px solid var(--line)}
+.card,.small,.m-row,.ask{border:1px solid var(--line);box-shadow:0 1px 2px var(--shadow),0 8px 24px var(--shadow)}
+.btn{border:1px solid var(--line);box-shadow:none;border-radius:999px}
+.btn.primary{border-color:transparent;box-shadow:0 6px 16px color-mix(in srgb,var(--pri) 30%,transparent)}
+nav a.on{background:var(--chip);color:var(--accent)}
+.tb.on{background:var(--chip);color:var(--accent)}
+.hi,.ttl,.aname,h2,.m-hi,.logo,.sect{font-family:Fredoka;font-weight:500}
+.bar{border:none;height:8px}.bar.thin{height:6px}
+.bar span{background:linear-gradient(90deg,var(--mint),color-mix(in srgb,var(--mint) 60%,var(--accent)))}
+.avatar,.m-av{border:none;background:var(--chip)}
+.code{border:1px solid var(--line)}
+.steps span{border:1px solid var(--line)}
+.steps .done{background:color-mix(in srgb,var(--mint) 35%,var(--card));color:var(--ink);border-color:transparent}
+.steps .now{background:color-mix(in srgb,var(--accent) 25%,var(--card));color:var(--ink);border-color:transparent}
+.tag.hot{background:color-mix(in srgb,var(--hot) 22%,var(--card));color:color-mix(in srgb,var(--hot) 80%,var(--ink))}
+.bubble.me{background:color-mix(in srgb,var(--accent) 85%,#fff)}
+.input,.search,.c-input{border:1px solid var(--line);background:var(--card)}
+.tabbar{border:1px solid var(--line);box-shadow:0 8px 30px var(--shadow)}
+.fab{border:none;border-radius:999px;box-shadow:0 8px 20px color-mix(in srgb,var(--pri) 35%,transparent)}
+.phone{border:1px solid #d9d2c6;box-shadow:0 20px 50px rgba(60,45,30,.18)}
+.phone[data-theme=night]{border-color:#2e2b3a}
+.unread{background:var(--pri)}
+.pill.hot{background:var(--hot)}
+
+.hero{display:flex;align-items:center;gap:6px;min-height:180px;padding:0 30px;position:relative;overflow:hidden;
+ background:linear-gradient(110deg,color-mix(in srgb,var(--accent) 14%,var(--card)) 0%,var(--card) 55%,color-mix(in srgb,var(--pri) 12%,var(--card)) 100%)}
+.hero img{width:200px;margin:-10px 0 -34px -14px}
+.corner{position:absolute;right:8px;bottom:6px;width:96px}
+.approval,.mission{position:relative;overflow:hidden}
+.av{width:56px;height:56px;border-radius:18px;display:grid;place-items:center;flex:none;overflow:hidden}
+.av img{width:62px;margin-top:6px}
+.av.sm{width:40px;height:40px;border-radius:13px}.av.sm img{width:46px;margin-top:4px}
+.empty{display:flex;align-items:center;gap:16px;padding:12px 18px}
+.empty img{width:110px;margin:-8px 0}
+.mini img{width:26px}
+</style></head><body style="width:900px"><div class="phone" data-theme="day"><div class="status">9:41</div>
+<div class="card hero" style="min-height:140px;padding:0 14px;margin-top:6px"><img src="../../../packages/shared/assets/mascot/standing/01-waving.webp" style="width:130px;margin:0 0 -22px -6px"><div><div class="m-hi" style="font-size:24px">Evening, Sam</div><div class="sub">1 thing needs you</div></div></div>
+<div class="card m-card approval" style="margin-top:14px"><div class="tag hot">Needs you</div><div class="ttl">Kit asks to add a skill root</div><div class="code">~/projects/recipes-app</div><div class="row" style="margin-top:12px"><button class="btn primary grow">Allow</button><button class="btn ghost">Deny</button></div></div>
+<div class="sect">Moving now</div>
+<div class="card m-row"><div class="av sm" style="background:#ffe2d6"><img src="../../../packages/shared/assets/mascot/standing/12-head.webp"></div><div class="grow"><div class="rt">Tidy the photo library</div><div class="bar thin"><span style="width:62%"></span></div></div></div>
+<div class="card m-row"><div class="av sm" style="background:#ffe2d6"><img src="../../../packages/shared/assets/mascot/standing/12-head.webp"></div><div class="grow"><div class="rt">Weekly report</div><div class="bar thin"><span style="width:30%"></span></div></div></div>
+<div class="fab">＋ Chat</div><nav class="tabbar"><div class="tb on"><span class="ti">⌂</span>Home</div><div class="tb "><span class="ti">✉</span>Chats</div><div class="tb "><span class="ti">◎<b class=tb-badge>3</b></span>Work</div><div class="tb "><span class="ti">☺</span>Agents</div><div class="tb "><span class="ti">⋯</span>More</div></nav></div><div class="phone" data-theme="night"><div class="status">9:41</div>
+<div class="card hero" style="min-height:140px;padding:0 14px;margin-top:6px"><img src="../../../packages/shared/assets/mascot/standing/01-waving.webp" style="width:130px;margin:0 0 -22px -6px"><div><div class="m-hi" style="font-size:24px">Evening, Sam</div><div class="sub">1 thing needs you</div></div></div>
+<div class="card m-card approval" style="margin-top:14px"><div class="tag hot">Needs you</div><div class="ttl">Kit asks to add a skill root</div><div class="code">~/projects/recipes-app</div><div class="row" style="margin-top:12px"><button class="btn primary grow">Allow</button><button class="btn ghost">Deny</button></div></div>
+<div class="sect">Moving now</div>
+<div class="card m-row"><div class="av sm" style="background:#ffe2d6"><img src="../../../packages/shared/assets/mascot/standing/12-head.webp"></div><div class="grow"><div class="rt">Tidy the photo library</div><div class="bar thin"><span style="width:62%"></span></div></div></div>
+<div class="card m-row"><div class="av sm" style="background:#ffe2d6"><img src="../../../packages/shared/assets/mascot/standing/12-head.webp"></div><div class="grow"><div class="rt">Weekly report</div><div class="bar thin"><span style="width:30%"></span></div></div></div>
+<div class="fab">＋ Chat</div><nav class="tabbar"><div class="tb on"><span class="ti">⌂</span>Home</div><div class="tb "><span class="ti">✉</span>Chats</div><div class="tb "><span class="ti">◎<b class=tb-badge>3</b></span>Work</div><div class="tb "><span class="ti">☺</span>Agents</div><div class="tb "><span class="ti">⋯</span>More</div></nav></div></body></html>
