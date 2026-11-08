@@ -21,6 +21,17 @@ export interface CliRow {
   args: readonly string[];
   /** How a person installs it — Nouride ships no CLI. */
   install: string;
+  /**
+   * The npm package that carries it (0.8.24): its newest version is read from the registry, and an update installs it.
+   * Absent: a person's own CLI, updated the way it was installed.
+   */
+  package?: string;
+  /**
+   * The versions of `package` this release of Nouride was tried with, lowest and highest (0.8.24): below the lowest it is
+   * older than Nouride supports, above the highest newer than it was tested with (`versions.ts`). Each is a version that
+   * ran Nouride's turns, named where it ran; a version is added here only after that.
+   */
+  tested?: { lowest: string; highest: string };
   /** Prints its version. */
   versionArgs: readonly string[];
   /** The variable that points it at a profile folder (its sign-in and settings), made before it starts. Absent: HOME. */
@@ -83,6 +94,9 @@ export const BUILT_IN_CLIS: readonly CliRow[] = [
     command: "claude-agent-acp",
     args: [],
     install: "npm i -g @agentclientprotocol/claude-agent-acp (Node 22 or later; it carries Claude Code itself)",
+    package: "@agentclientprotocol/claude-agent-acp",
+    // 0.95.0 answers the owner's agents on the box, and 0.100.0 the e2e VM's Claude, each the version there on 2026-11-08.
+    tested: { lowest: "0.95.0", highest: "0.100.0" },
     versionArgs: ["--version"],
     profileEnv: "CLAUDE_CONFIG_DIR",
     // v1 pinned: the adapter also serves a draft v2 to a client that asks. No claude.ai connectors: a profile signed in
@@ -109,6 +123,9 @@ export const BUILT_IN_CLIS: readonly CliRow[] = [
     command: "codex-acp",
     args: [],
     install: "npm i -g @agentclientprotocol/codex-acp (it carries Codex itself)",
+    package: "@agentclientprotocol/codex-acp",
+    // 2.3.0 on the box, and 2.5.0 the e2e VM's Codex, each the version there on 2026-11-08.
+    tested: { lowest: "2.3.0", highest: "2.5.0" },
     versionArgs: ["--version"],
     // The folder must exist before it starts, or the handshake itself fails.
     profileEnv: "CODEX_HOME",

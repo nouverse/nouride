@@ -30,7 +30,8 @@ export function registerExternalAgentRoutes(control: ControlApp, deps: ControlDe
     if (!atLeast(c.get("principal"), "operator")) return c.json({ error: "operator only" }, 403);
     // A box with no room for a CLI's session is told so, and offered nothing to add (EXTERNAL_AGENTS §6).
     const room = deps.externalAgents.room();
-    return c.json({ room, clis: room.enough ? await deps.externalAgents.scan(c.req.query("fresh") === "1") : [] });
+    // `check` asks the npm registry for the newest now, where it is otherwise asked once a day (0.8.24).
+    return c.json({ room, clis: room.enough ? await deps.externalAgents.scan(c.req.query("fresh") === "1", c.req.query("check") === "1") : [] });
   });
 
   /**

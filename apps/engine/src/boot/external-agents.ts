@@ -9,10 +9,11 @@ import type { ProjectSkills } from "@nouride/persona";
 import type { GlobalConfig } from "@nouride/shared";
 import { totalMemoryBytes, type CommandIsolation } from "@nouride/runtime";
 import type { SecretStore } from "@nouride/secrets";
-import { cliAccountsState, cliLeftRunningState, externalEffortsState, externalInstructionsState, externalModelsState, externalSessionsState, externalVersionsState } from "@/commons/daemon-state.ts";
+import { cliAccountsState, cliLeftRunningState, cliNewestState, externalEffortsState, externalInstructionsState, externalModelsState, externalSessionsState, externalVersionsState } from "@/commons/daemon-state.ts";
 import type { StateRows } from "@/commons/daemon-state.store.ts";
 import type { AuditPort } from "@/commons/audit.store.ts";
 import { ExternalAgents } from "@/modules/external-agents/index.ts";
+import { NewestVersions } from "@/modules/external-agents/newest.ts";
 import type { NotesStore } from "@/modules/notes/store.ts";
 import type { ChildEnv } from "@/modules/tools/exec-secrets.ts";
 
@@ -37,6 +38,7 @@ export function startExternalAgents(params: { config: GlobalConfig; state: State
     keepPlan: (key, task, steps) => params.notes().keepPlan(key, task, steps),
     mcpUrl: () => agentMcpUrl(params.config.dashboard.host, params.port?.()),
     room: () => params.commands.commandsMaxBytes ?? totalMemoryBytes(),
+    newest: new NewestVersions({ kept: cliNewestState(params.state) }),
     projectSkills: (agent) => params.projectSkills.forAgent(agent),
   });
   externalAgents.start();

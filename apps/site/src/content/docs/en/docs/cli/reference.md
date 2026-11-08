@@ -158,7 +158,9 @@ nouride acp [--agent <id>]        # an agent in Zed or another ACP editor; the e
 ```
 
 `agents scan` looks again each time, and prints each CLI with the command Nouride starts and that command's version:
-the ACP adapter's (`claude-agent-acp 0.97.0`), not the CLI's own. `agents login` runs the CLI's sign-in on the box, in
+the ACP adapter's (`claude-agent-acp 0.97.0`), not the CLI's own. Under each built-in CLI it says where that version
+stands against the versions this Nouride was tested with and the newest out, which it asks the npm registry at most
+once a day; `nouride doctor` says the same. `agents login` runs the CLI's sign-in on the box, in
 that agent's own profile, and shows here what it prints; a line you type is its next input, and Ctrl-D stops it.
 `agent external` and `agent internal` are an admin's, as signing in is. `acp` is started by an editor, not typed: it
 speaks the Agent Client Protocol on stdin and stdout, and without `--agent` the orchestrator answers.

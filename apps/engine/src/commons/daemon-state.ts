@@ -15,6 +15,7 @@
 
 import { createLogger } from "@nouride/shared";
 import type { StateName, StateRows } from "@/commons/daemon-state.store.ts";
+import type { NewestRead } from "@/modules/external-agents/newest.ts";
 
 const log = createLogger("daemon");
 
@@ -146,6 +147,17 @@ export function externalModelsState(rows: StateRows): { load(): Record<string, C
  */
 export function externalEffortsState(rows: StateRows): { load(): Record<string, CliModel[]>; save(efforts: Record<string, CliModel[]>): void } {
   return cliChoicesState(rows, "external-efforts", "the efforts the external CLIs offer");
+}
+
+/** The newest version of each coding CLI's package, as the npm registry said at its last read (0.8.24, `newest.ts`). */
+export function cliNewestState(rows: StateRows): { load(): NewestRead | null; save(read: NewestRead): void } {
+  const row = new StateRow<NewestRead>(rows, "cli-newest", "the newest coding CLI versions", (value) => {
+    const { at, asked, versions } = (value ?? {}) as { at?: unknown; asked?: unknown; versions?: unknown };
+    const strings = stringsOf(versions);
+    if (typeof at !== "number" || !Array.isArray(asked) || !strings) return null;
+    return { at, asked: asked.filter((name): name is string => typeof name === "string"), versions: strings };
+  });
+  return { load: () => row.load(), save: (read) => row.save(read) };
 }
 
 function cliChoicesState(rows: StateRows, name: StateName, what: string): { load(): Record<string, CliModel[]>; save(choices: Record<string, CliModel[]>): void } {

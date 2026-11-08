@@ -332,7 +332,7 @@ what to do about it. Exits 1 on a real problem, so it works in a healthcheck; `-
     Create one under agents/. IDENTITY.md is the only required file.
 ```
 
-It checks, in order, the half that needs no daemon — config source and data directory, **semantic config problems** (below), the SQLite inside this binary, system packages, the toolchain (below), whether the systemd unit still kills a running command on restart (re-run `install.sh` once to fix that), the free disk in the data directory against 1 GB, the database's own `quick_check` (read-only, as `nouride db verify` runs it), and the modes of the files that hold a secret — the control token no more open than 0640, the secret store, the database and its log 0600, the credentials directory 0700 — then daemon reachability, the daemon's own memory as its `/health` reports it (resident, and the JavaScript heap in use; since 0.7.11), what its `/health` counts as an issue (a dead gateway, a provider failing in a row, a write-ahead log past its threshold), what compaction and the memory pass ran into with their models in the last 24 h — failures, or a pass or summary model the agents' own stood in for — with how often, the last error and the setting to change (since 0.7.25), the memory index's own integrity check, durable turns, provider credentials, agent packs that failed to load, whether anything is actually running, workspace roots that do not exist, agents pointing at a profile with no key, gateway connection states, waiting approvals, queue depth, and skills naming software this box does not have.
+It checks, in order, the half that needs no daemon — config source and data directory, **semantic config problems** (below), the SQLite inside this binary, system packages, the toolchain (below), whether the systemd unit still kills a running command on restart (re-run `install.sh` once to fix that), the free disk in the data directory against 1 GB, the database's own `quick_check` (read-only, as `nouride db verify` runs it), and the modes of the files that hold a secret — the control token no more open than 0640, the secret store, the database and its log 0600, the credentials directory 0700 — then daemon reachability, the daemon's own memory as its `/health` reports it (resident, and the JavaScript heap in use; since 0.7.11), what its `/health` counts as an issue (a dead gateway, a provider failing in a row, a write-ahead log past its threshold), what compaction and the memory pass ran into with their models in the last 24 h — failures, or a pass or summary model the agents' own stood in for — with how often, the last error and the setting to change (since 0.7.25), the memory index's own integrity check, durable turns, provider credentials, agent packs that failed to load, whether anything is actually running, workspace roots that do not exist, agents pointing at a profile with no key, gateway connection states, each installed coding CLI's version against the versions this Nouride was tested with (as `nouride agents scan` says it, since 0.8.24), waiting approvals, queue depth, and skills naming software this box does not have.
 
 The semantic checks run *before* the daemon check, and that ordering is deliberate: the daemon check
 returns early when nothing is reachable, and a config broken enough to matter is usually why nothing
@@ -494,6 +494,13 @@ nouride agents login coder         # sign coder's CLI in, on its own profile
 — and prints which are installed, each with the command that starts it and its version (for the built-in two, the
 ACP adapter's: `claude-agent-acp`, `codex-acp`), and how to install the others. On a box whose agents' commands have
 less than 512 MiB it says so in one line and lists none.
+
+For each built-in CLI that is installed, a second line says where its version stands (0.8.24): against the lowest and
+highest versions of its package this Nouride was tested with, and the newest the npm registry has published, read at
+most once a day. Up to date, a newer tested version out, older than this Nouride supports, or newer than it was tested
+with, which runs, untested. With no network nothing is said of the newest;
+a CLI that is not installed is not asked about. `nouride doctor` prints the same line for each, a warning for the
+last two.
 
 `login` signs in the agent's own profile: it runs the CLI's sign-in in a terminal on the box, as the agent, and
 prints what that terminal prints — the link to open, and the code where the flow has one. A line typed here is the

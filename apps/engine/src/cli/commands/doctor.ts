@@ -1,4 +1,5 @@
-import type { McpResponse, SkillCatalogResponse, StatusResponse } from "@/cli/wire.ts";
+import type { ExternalClisResponse, McpResponse, SkillCatalogResponse, StatusResponse } from "@/cli/wire.ts";
+import { cliVersionChecks } from "@/cli/commands/external-clis.ts";
 import { formatBytes, type GlobalConfig } from "@nouride/shared";
 import { MCP_SCHEMA_WARN_BYTES } from "@/modules/tools/mcp.ts";
 import { lintConfig } from "@/modules/config/schema.ts";
@@ -282,6 +283,11 @@ export async function doctor(args: string[] = []): Promise<void> {
       add("bad", `gateway ${gateway.id} is dead`, "Check its token, then `nouride gateway restart <id>`.");
     } else add("warn", `gateway ${gateway.id}: ${gateway.status}`);
   }
+
+  // The coding CLIs installed here against the versions this Nouride was tested with, and the newest out (0.8.24): what
+  // `nouride agents scan` says of each. Nothing on a box with none.
+  const clis = await client.softGet<ExternalClisResponse>("/external-clis").catch(() => null);
+  for (const check of cliVersionChecks(clis?.clis ?? [])) add(check.level, check.message);
 
   if (status.pendingApprovals > 0) {
     add(

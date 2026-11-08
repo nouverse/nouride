@@ -22,6 +22,7 @@
  * - `profiles.ts` — the agent's sign-ins of its CLI, and whether each is signed in.
  * - `accounts.ts` — the accounts on the Models page: shared ones signed in once, the others once per agent.
  * - `scan.ts` — which CLIs this box has, and their versions.
+ * - `newest.ts` — the newest version of each CLI's package, as the npm registry says, once a day.
  * - `lent-tools.ts` — Nouride's tools, lent to the CLI over MCP while its turn runs.
  * - `usage.ts` — what it says it spent, and of its context, as Nouride records and shows them.
  */
@@ -46,7 +47,8 @@ import { profileNames, type CliProfile } from "./profiles.ts";
 import { cliSessionKey, ExternalTurnRunner, type RunnerHost } from "./runner.ts";
 import { Instructed, type InstructedFile } from "./instructed.ts";
 import { promptTakes, type PromptTakes } from "./prompt.ts";
-import { scanCli, type ScannedCli } from "./scan.ts";
+import { scanCli, withStanding, type ScannedCli } from "./scan.ts";
+import type { NewestVersions } from "./newest.ts";
 import type { Situation } from "./situation.ts";
 import { OwnWords, ownKey, type OwnChat } from "./own-words.ts";
 import { LeftRunning, type LeftRunningFile } from "./left-running.ts";
@@ -120,6 +122,8 @@ export interface ExternalAgentsDeps {
   /** Runs a CLI's status words as the agent. */
   run?: typeof runCommand;
   scan?: (row: CliRow) => Promise<ScannedCli>;
+  /** The newest version of each CLI's package, as the npm registry says (0.8.24). Absent: nothing is said of it. */
+  newest?: Pick<NewestVersions, "of">;
   now?: () => number;
   idleMs?: number;
   /** How many commands a CLI's process still runs (`commandsRunningUnder`). */
@@ -455,14 +459,18 @@ export class ExternalAgents implements RunnerHost {
     return { enough: bytes === 0 || bytes >= CLI_SESSION_BYTES, bytes, needs: CLI_SESSION_BYTES };
   }
 
-  /** Every CLI this install knows, as this box has it: installed or not, and which version. */
-  scan(fresh = false): Promise<ScannedCli[]> {
+  /**
+   * Every CLI this install knows, as this box has it: installed or not, which version, and where that version stands
+   * against the ones this Nouride was tested with and the newest out (0.8.24). `check` asks the registry now, where it is
+   * otherwise asked once a day (`newest.ts`); only about the CLIs installed here.
+   */
+  async scan(fresh = false, check = false): Promise<ScannedCli[]> {
     const now = (this.deps.now ?? Date.now)();
     if (fresh || !this.scanned || now - this.scanned.at > SCAN_MS) {
       const scan = this.deps.scan ?? ((row: CliRow) => scanCli(row));
       this.scanned = { at: now, clis: Promise.all(this.rows().map(scan)) };
     }
-    return this.scanned.clis;
+    return withStanding(await this.scanned.clis, this.deps.newest, check);
   }
 
   /**

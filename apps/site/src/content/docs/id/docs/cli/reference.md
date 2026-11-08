@@ -161,7 +161,9 @@ nouride acp [--agent <id>]        # agent di Zed atau editor ACP lain; editor ya
 ```
 
 `agents scan` mengecek ulang tiap kali, dan mencetak tiap CLI beserta perintah yang dijalankan Nouride dan versi
-perintah itu: versi adapter ACP-nya (`claude-agent-acp 0.97.0`), bukan versi CLI-nya sendiri. `agents login`
+perintah itu: versi adapter ACP-nya (`claude-agent-acp 0.97.0`), bukan versi CLI-nya sendiri. Di bawah tiap CLI
+bawaan dia bilang posisi versi itu dibanding versi-versi yang sudah dites dengan Nouride ini dan versi terbaru yang
+sudah rilis, yang dia tanyakan ke registry npm paling sering sehari sekali; `nouride doctor` bilang hal yang sama. `agents login`
 menjalankan login CLI di box, di profil milik agent itu sendiri, dan menampilkan di sini apa yang dicetaknya; baris yang
 kamu ketik jadi input berikutnya, dan Ctrl-D menghentikannya. `agent external` dan `agent internal` urusan admin,
 sama seperti login. `acp` dijalankan oleh editor, bukan diketik: dia bicara Agent Client Protocol lewat stdin dan
