@@ -229,6 +229,15 @@ site (`apps/site`) and the packages they share (`packages/`). Nouride Pro's comp
 
 ---
 
+## Related repositories
+
+- **[nouverse/nouride-android-appliance](https://github.com/nouverse/nouride-android-appliance)**: Nouride Home, the
+  Android app that runs Nouride on a phone, with no terminal and no root. It has its own releases and updates itself;
+  the APK is on its [Releases](https://github.com/nouverse/nouride-android-appliance/releases) page, and how to use it is
+  in the [Nouride Home guide](https://nouride.com/en/docs/deployment/nouride-home/).
+
+---
+
 ## Contributing & Issues
 
 - **Found a bug or crash?** Please **[Open an Issue](https://github.com/nouverse/nouride/issues)**. Include your OS version, architecture (`uname -m`), deployment method (native or Docker), and relevant terminal output.

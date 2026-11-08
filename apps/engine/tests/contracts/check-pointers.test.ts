@@ -350,34 +350,39 @@ describe("a clone without the private submodules", () => {
   });
 });
 
-describe("the Android app, another product in a submodule", () => {
-  test("its own scripts are not judged from this root, and a name only it has answers no bare name", () => {
-    // Its paths are its own repository's, not this one's: four of them were findings the day
-    // it became `apps/android-appliance` (2026-11-07).
-    // Put together at run time: written out, the path would be a pointer of this file's own.
-    const own = ["scripts", "assets.lock"].join("/");
-    const app = "apps/android-appliance/scripts/build-rootfs.sh";
-    const report = ["SPIKE", "REPORT.md"].join("_");
-    const files = { [app]: `# pinned in \`${own}\`\n`, [`apps/android-appliance/${own}`]: "", [`apps/android-appliance/${report}`]: "" };
-    const index = tree(files);
-    const root = mkdtempSync(join(tmpdir(), "nr-other-product-"));
-    try {
-      for (const [rel, text] of Object.entries(files)) {
-        spawnSync("mkdir", ["-p", join(root, rel, "..")]);
-        writeFileSync(join(root, rel), text);
+describe("Nouride Home, a related repository", () => {
+  test("its path is absent here, with a clone of it or without: none of its files are this tree's, and a pointer into it is not judged", () => {
+    // A submodule from 2026-11-07 to 2026-11-08, then its own repository, linked from the README (the owner); a clone of
+    // it beside Nouride is ignored, and a fresh clone of this one has none.
+    for (const clone of [false, true]) {
+      const root = mkdtempSync(join(tmpdir(), "nr-related-"));
+      try {
+        const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_")));
+        const git = (cwd: string, ...args: string[]) => spawnSync("git", args, { cwd, env });
+        git(root, "init", "-q");
+        spawnSync("mkdir", ["-p", join(root, "apps/engine/src/cli")]);
+        writeFileSync(join(root, "apps/engine/src/cli/main.ts"), "");
+        writeFileSync(join(root, ".gitignore"), "/apps/android-appliance/\n");
+        if (clone) {
+          spawnSync("mkdir", ["-p", join(root, "apps/android-appliance/scripts")]);
+          git(join(root, "apps/android-appliance"), "init", "-q");
+          writeFileSync(join(root, "apps/android-appliance/scripts/build-rootfs.sh"), "# pinned in its own assets.lock\n");
+        }
+        git(root, "add", "-A");
+        const index = buildIndex(root);
+        expect({ clone, absent: index.absent.includes("apps/android-appliance/") }).toEqual({ clone, absent: true });
+        expect([...index.files].filter((rel) => rel.startsWith("apps/android-appliance"))).toEqual([]);
+        expect(rules(index, "see `apps/android-appliance/README.md`")).toEqual([]);
+      } finally {
+        rmSync(root, { recursive: true, force: true });
       }
-      // `check` also runs the whole tree's own checks; only the app's file is this test's.
-      expect(check(index, root).findings.filter((f) => f.file.startsWith("apps/android-appliance/"))).toEqual([]);
-    } finally {
-      rmSync(root, { recursive: true, force: true });
     }
-    expect(rules(index, `see \`${report}\``)).toEqual([`file-name: no tracked file is called \`${report}\``]);
-    // Named by its path, it is judged, and found.
-    expect(rules(index, `see \`apps/android-appliance/${report}\``)).toEqual([]);
   });
+});
 
+describe("another product in a submodule", () => {
   test("a submodule that is not checked out is absent, not a file, so a pointer into it is not judged", () => {
-    // Pro's own CI checks out Pro and Nougate, not the Android app: Pro's docs point into it.
+    // Pro's own CI checks out Pro and Nougate and nothing else a docs page may point into.
     const root = mkdtempSync(join(tmpdir(), "nr-gitlink-"));
     try {
       const git = (...args: string[]) => spawnSync("git", args, { cwd: root, env: Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_"))) });
@@ -385,10 +390,10 @@ describe("the Android app, another product in a submodule", () => {
       spawnSync("mkdir", ["-p", join(root, "apps/engine/src/cli")]);
       writeFileSync(join(root, "apps/engine/src/cli/main.ts"), "");
       git("add", "-A");
-      git("update-index", "--add", "--cacheinfo", "160000,0123456789012345678901234567890123456789,apps/android-appliance");
+      git("update-index", "--add", "--cacheinfo", "160000,0123456789012345678901234567890123456789,apps/other-product");
       const index = buildIndex(root);
-      expect(index.absent).toContain("apps/android-appliance/");
-      expect(index.files.has("apps/android-appliance")).toBe(false);
+      expect(index.absent).toContain("apps/other-product/");
+      expect(index.files.has("apps/other-product")).toBe(false);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

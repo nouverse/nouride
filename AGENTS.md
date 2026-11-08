@@ -20,9 +20,10 @@ agent working in this repository — Claude Code, Codex and the rest read it.
 ## Map
 
 - `apps/engine` — the daemon: `src/index.ts` is the boot order; `src/modules/<domain>` one domain each; `src/db`,
-  `src/cli`, `src/boot`. `apps/dashboard` — the UI. `apps/site` — the public docs. `apps/android-appliance` — Nouride
-  Home, the Android app that runs Nouride under proot: a submodule of its own public repository, Kotlin and Gradle,
-  outside the Bun workspace.
+  `src/cli`, `src/boot`. `apps/dashboard` — the UI. `apps/site` — the public docs. Nouride Home, the Android app that
+  runs Nouride under proot, is a related repository, not part of this one: `nouverse/nouride-android-appliance`, linked
+  from the README. Clone it to `apps/android-appliance` to work on it beside Nouride; that folder is ignored here, and
+  its commits and releases are its own.
 - `packages/*` — what a second tool could use without the daemon: `runtime`, `shared`, `llm`, `gateways`, `secrets`,
   `persona`, `queue`, `policy`, `mcp`, `wa-bridge` (MIT).
 - `internals/` — private submodules: `pro`, and `nougate` (its own product, with its own rules).

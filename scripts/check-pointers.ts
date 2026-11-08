@@ -52,10 +52,11 @@
  *
  * Paths into `internals/pro` and `internals/nougate` are checked only when that submodule is checked out —
  * a public clone does not have them, and a pointer that cannot be read cannot be judged. The same goes for a
- * bare file name that is not in the public tree while Pro is absent. Nougate and the Android app
- * (`apps/android-appliance`) are never a bare name's answer: each is another product with its own repository, so a file
- * of it is named by its path, which is judged when it is checked out, and its own files are not read for pointers. A
- * submodule that is not checked out is absent, so a pointer into it is not judged either. Bare names therefore pass or fail the same with Nougate checked out or not — they used to be
+ * bare file name that is not in the public tree while Pro is absent. Nougate is never a bare name's answer: it is
+ * another product with its own repository, so a file of it is named by its path, which is judged when it is checked
+ * out, and its own files are not read for pointers. A submodule that is not checked out is absent, so a pointer into it
+ * is not judged either; nor is one into Nouride Home (`apps/android-appliance`), a related repository whose clone, where
+ * there is one, this one ignores. Bare names therefore pass or fail the same with Nougate checked out or not — they used to be
  * judged only while it was, so a hook run with Pro alone passed what the full check failed.
  *
  * ## The ways this could pass while checking nothing
@@ -161,10 +162,16 @@ export const NOT_POINTERS: Readonly<Record<string, string>> = {
 
 /**
  * Other products' trees: judged by path when they are checked out, never the answer to a bare file name, and their own
- * files not read for pointers, which are to their own repository's paths. Nougate, and the Android app (2026-11-07):
- * four of its scripts' paths were findings from this root the day it became a submodule.
+ * files not read for pointers, which are to their own repository's paths: Nougate.
  */
-const OTHER_PRODUCTS = ["internals/nougate/", "apps/android-appliance/"];
+const OTHER_PRODUCTS = ["internals/nougate/"];
+
+/**
+ * Related repositories cloned at a path of this tree, which ignores them: Nouride Home, the Android app, a submodule
+ * from 2026-11-07 to 2026-11-08 (the owner: its own repository, linked from the README). Always absent, clone or not:
+ * a pointer into one names that repository's path, which this tree cannot judge.
+ */
+const ELSEWHERE = ["apps/android-appliance/"];
 const otherProduct = (rel: string): boolean => OTHER_PRODUCTS.some((dir) => rel.startsWith(dir));
 
 /**
@@ -215,6 +222,7 @@ export function buildIndex(root = ROOT): Index {
   // In the public export the private paths are not there at all, not even as a submodule's entry: a pointer into one
   // cannot be checked there, and `check-public` already decides which of them a published file may name.
   for (const dir of PRIVATE) if (![...files].some((rel) => rel.startsWith(dir)) && !absent.includes(dir)) absent.push(dir);
+  for (const dir of ELSEWHERE) if (!absent.includes(dir)) absent.push(dir);
   const { dirs, byBase } = indexOf(files);
   const main = readFileSync(join(root, "apps/engine/src/cli/main.ts"), "utf8");
   const verbs = new Set([...main.matchAll(/^\s*case "([a-z][a-z-]*)":/gm)].map((m) => m[1]!));

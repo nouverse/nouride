@@ -4,6 +4,3 @@
 [submodule "internals/pro"]
 	path = internals/pro
 	url = https://github.com/nouverse/nouride-pro.git
-[submodule "apps/android-appliance"]
-	path = apps/android-appliance
-	url = https://github.com/nouverse/nouride-android-appliance.git

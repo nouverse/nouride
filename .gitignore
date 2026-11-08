@@ -55,3 +55,7 @@ apps/site/.astro/
 
 # Source maps `bun run symbolize` downloaded from the internal release. Private source: never committed.
 .cache/
+
+# Nouride Home, the Android app: its own repository (nouverse/nouride-android-appliance), linked from the README, not
+# a submodule since 2026-11-08. A clone of it here, to work on it beside Nouride, is its own and not tracked here.
+/apps/android-appliance/
