@@ -249,8 +249,8 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
     if ("refused" in edited) return c.json({ error: edited.refused, plain: "The draft was not changed. Reload it, check what you entered, and try again." }, 409);
     deps.audit.record({ action: "mission_edited", actor: principal.actor, agentId: edited.mission.agentId, details: { mission: edited.mission.id, changed: edited.changed } });
     // What changed is the chat's list (a folder by its path among it), and a brief's failure an exception's message: the
-    // page says what it means (0.8.23), and the agent's chat has the list.
-    const plain = edited.briefFailed ? "Saved, but its brief could not be written, so it has none for now. Whoever runs the server can see why." : "Saved. Its agent is told what changed.";
+    // page says what it means (0.8.23), and the chat it began in has the list.
+    const plain = edited.briefFailed ? "Saved, but its brief could not be written, so it has none for now. Whoever runs the server can see why." : "Saved. The chat it began in is told what changed.";
     return c.json({ mission: view(missions, edited.mission), changed: edited.changed, ...(edited.briefFailed ? { briefFailed: edited.briefFailed } : {}), plain });
   });
 

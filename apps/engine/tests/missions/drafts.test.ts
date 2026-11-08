@@ -188,7 +188,7 @@ describe("D4 — a draft changed before it runs", () => {
       registerMissionRoutes(control as never, { missions, notes: h.notes, approvals: { pending: () => [] }, audit: { record: () => {} } } as never);
       return (await (await control.request(`/missions/${mission!.id}/edit`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })).json()) as Record<string, unknown>;
     };
-    expect(await edit(h.missions, { goal: "Revise the RFC to every answer" })).toMatchObject({ changed: ["goal"], plain: "Saved. Its agent is told what changed." });
+    expect(await edit(h.missions, { goal: "Revise the RFC to every answer" })).toMatchObject({ changed: ["goal"], plain: "Saved. The chat it began in is told what changed." });
     const broken = await edit(failing, { goal: "Revise the RFC to the last answers" });
     expect(broken).toMatchObject({ changed: ["goal"], briefFailed: expect.stringContaining("EACCES"), plain: "Saved, but its brief could not be written, so it has none for now. Whoever runs the server can see why." });
   });
