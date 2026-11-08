@@ -80,6 +80,26 @@ describe("read by doc.py", () => {
     expect(reader.calls()).toBe(2);
   });
 
+  // The same PDF added again under another name took the first name's title from the cache, and was listed and searched
+  // as `pajak-SKT` while its file was `SKT (2).pdf` (the owner's box, 2026-11-08).
+  test("the same bytes under another name: read from the cache, titled by the name it has now", async () => {
+    const dir = tempDir("knowledge-office");
+    const reader = standIn(dir, "ok");
+    const office = { script: reader.script, cacheDir: join(dir, "cache") };
+    writeFileSync(join(dir, "pajak-SKT.pdf"), "%PDF-1.4 stand-in");
+    writeFileSync(join(dir, "SKT (2).pdf"), "%PDF-1.4 stand-in");
+    writeFileSync(join(dir, "book.xlsx"), "PK stand-in");
+    writeFileSync(join(dir, "stock.xlsx"), "PK stand-in");
+    await readOffice(join(dir, "pajak-SKT.pdf"), "pages", "pajak-SKT", office);
+    await readOffice(join(dir, "book.xlsx"), "book", "book", office);
+    const again = await readOffice(join(dir, "SKT (2).pdf"), "pages", "SKT (2)", office);
+    const sheets = await readOffice(join(dir, "stock.xlsx"), "book", "stock", office);
+    expect(reader.calls()).toBe(2);
+    expect(again).toMatchObject({ kind: "read", title: "SKT (2)" });
+    expect(again.kind === "read" ? again.sections.map((section) => section.trail) : again).toEqual(["SKT (2)"]);
+    expect(sheets.kind === "read" ? sheets.sections.map((section) => section.trail) : sheets).toEqual(["stock › Prices", "stock › Stock"]);
+  });
+
   // The container image has no Python, and there every PDF and Office file said only that it could not be read, with
   // nothing to install and never tried again: python3 is started through \`nice\`, which answers 127 when it is missing,
   // and the error the reader looked for was never thrown (0.8.20's check on the image, 2026-11-06). Stood in here by a

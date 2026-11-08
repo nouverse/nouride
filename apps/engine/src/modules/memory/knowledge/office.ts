@@ -9,7 +9,7 @@
  */
 
 import { ensureDir, join, randomHex, readTextFile, removePath, runCommand, sha256File, statFile, writeTextFileAtomic } from "@nouride/runtime";
-import { sectionsOfTable, sectionsOfText, type Section } from "./sections.ts";
+import { sectionsOfTable, sectionsOfText, TRAIL_MARK, type Section } from "./sections.ts";
 
 /** Where `doc.py` is and where its work and its results go. */
 export interface OfficeReader {
@@ -122,6 +122,19 @@ async function run(reader: OfficeReader, args: string[], env: Record<string, str
   return await runCommand(["python3", reader.script, ...args], { cwd: reader.cacheDir, timeoutMs: READ_MS, maxOutputBytes: 1_000_000, env });
 }
 
+/**
+ * Sections read before for a file of another name, under this one's. The cache is kept by the file's bytes and a title by
+ * its name: the same PDF added again as `SKT (2).pdf` was listed and searched as `pajak-SKT`, the name it had first been
+ * read under (the owner's box, 2026-11-08). Every trail starts with the title it was read under.
+ */
+function renamed(sections: Section[], from: string, to: string): Section[] {
+  if (from === to) return sections;
+  return sections.map((section) => ({
+    ...section,
+    trail: section.trail === from ? to : section.trail.startsWith(`${from}${TRAIL_MARK}`) ? `${to}${section.trail.slice(from.length)}` : section.trail,
+  }));
+}
+
 /** A file `doc.py` reads, read: from the cache when its bytes were read before. */
 export async function readOffice(path: string, kind: "pages" | "text" | "book", title: string, reader: OfficeReader): Promise<OfficeRead> {
   ensureDir(reader.cacheDir);
@@ -130,7 +143,7 @@ export async function readOffice(path: string, kind: "pages" | "text" | "book", 
   if (cached && statFile(cached)) {
     try {
       const read = JSON.parse(await readTextFile(cached)) as { version: number; title: string; sections: Section[] };
-      if (read.version === CACHE_VERSION) return { kind: "read", title: read.title, sections: read.sections };
+      if (read.version === CACHE_VERSION) return { kind: "read", title, sections: renamed(read.sections, read.title, title) };
     } catch {
       // A cache that cannot be read is read again from the file.
     }
