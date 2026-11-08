@@ -229,7 +229,7 @@ Turning it on is what lets an agent check a service it just started, `http://loc
 after running a dev server. It is off by default because on a server it turns `web_fetch` into a
 reader of every internal service on the box, and the agent takes its instructions from chat.
 
-Set it up on the dashboard's **Web Search** page (under Connect): pick a provider, follow the steps to get its key or server, test it, save. `web_search` has three backends: Brave (a key, a free tier), SearXNG (self-hosted, no key), and a
+Set it up on the dashboard's **Web Search** page (under Settings): pick a provider, follow the steps to get its key or server, test it, save. `web_search` has three backends: Brave (a key, a free tier), SearXNG (self-hosted, no key), and a
 keyless scraping fallback. On a runtime failure, 429, 5xx, a timeout, the primary falls back rather
 than losing an agent's search mid-task.
 

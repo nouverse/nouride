@@ -152,13 +152,14 @@ itu bukan build sebelum versi ini.
 
 ## Dari dashboard
 
-**Overview** punya badge di sebelah pil status, *Up to date*, atau versi yang sedang menunggu. Itu
-pintunya: menekannya membuka halaman **Update**, halaman tersendiri dan bukan entri menu, karena
-memperbarui itu sesuatu yang jarang dilakukan dan hanya kalau memang ada yang perlu dilakukan.
+Kartu box di **Home** punya badge di sebelah **Restart**, *Up to date*, atau versi yang sedang
+menunggu. Itu pintunya: menekannya membuka halaman **Update**, yang berupa kartu di Settings dan bukan
+entri menu, karena memperbarui itu sesuatu yang jarang dilakukan dan hanya kalau memang ada yang perlu
+dilakukan.
 
-Sidebar menampilkan versi yang sedang jalan di bawah wordmark, dengan titik kecil kalau ada yang
-lebih baru. Titik itu sinyal, bukan pintu: brand-nya menuju halaman depan, dan badge di Overview
-yang ditekan.
+**Your box**, di bagian bawah sidebar, menampilkan versi yang sedang jalan, dan sebuah tombol yang
+membuka Update kalau ada yang lebih baru. Versi di bawah wordmark juga dapat titik kecil saat itu.
+Titik itu sinyal, bukan pintu: brand-nya menuju Home, dan badge atau tombol tadi yang ditekan.
 
 ![Halaman Update: versi dan edisi yang jalan di kiri, dan rilis terbaru untuk edisi itu di kanan](/media/dashboard-update.png)
 

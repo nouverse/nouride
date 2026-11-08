@@ -214,7 +214,7 @@ the copy wins. [Skills →](/en/docs/manual/skills/)
 
 ### MCP servers
 
-External tools, installed once and switched on per agent, as skills are. **Configure → Connectors** in the dashboard
+External tools, installed once and switched on per agent, as skills are. **Settings → Connectors** in the dashboard
 is the install's list of servers (the library, `agents/mcp.toml`), and an agent's **Connectors** tab switches each one
 on or off for it. A server's tools are discovered on connect and offered as `<server>__<tool>`, because the names come
 from the server and cannot be listed in `[tools] enabled` before you have connected once.
@@ -427,8 +427,8 @@ answer, and not for something you are waiting on now.
   starts no helper of its own; it says what is worth keeping, and the agent decides.
 - **How many at once** is `[delegate] max_background`: 2 by default, 0 turns them off, set per agent on
   its **Settings** tab, from the next helper on.
-- **Each helper is a job**: in `nouride jobs` and under System Logs → Background work, with its goal, and
-  in the chat's strip while it runs. `/stop` in the chat stops the agent's helpers there; `nouride jobs
+- **Each helper is a job**: in `nouride jobs` and under Work → Helpers in the dashboard, with its goal,
+  and in the chat's strip while it runs. `/stop` in the chat stops the agent's helpers there; `nouride jobs
   kill <id>` stops one.
 - **An approval it needs** is asked in your chat, naming it and its goal: "a background task (job_…:
   …) wants to run this". Unanswered, it stops there and says so.
@@ -451,8 +451,8 @@ wakes that agent in the same chat, saying what it is the answer to and when it w
 even after you moved on. An agent that knows the work is long asks with `background: true` and does not wait
 at all.
 
-- **It is a job of the asking agent's**, `ask <agent>: <task>` in `nouride jobs` and under System Logs →
-  Background work, and in the chat's strip while it runs. `/stop` in that chat and `nouride jobs kill <id>`
+- **It is a job of the asking agent's**, `ask <agent>: <task>` in `nouride jobs` and under Work → Helpers
+  in the dashboard, and in the chat's strip while it runs. `/stop` in that chat and `nouride jobs kill <id>`
   stop it; `[security] job_max_ms` bounds it; a restart closes it as interrupted, and the agent is told.
 - **It shares the helpers' limit**, `[delegate] max_background`. When that is full an ask waits to the end,
   as it always did, and says why it took so long.

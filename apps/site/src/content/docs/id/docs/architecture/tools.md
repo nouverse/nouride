@@ -234,7 +234,7 @@ Menyalakannya adalah yang membuat agent bisa memeriksa layanan yang baru saja di
 server itu mengubah `web_fetch` menjadi pembaca setiap layanan internal di mesin itu, dan agent
 mengambil instruksinya dari chat.
 
-Atur lewat halaman **Web Search** di dashboard (di bawah Connect): pilih provider, ikuti langkah untuk mendapatkan key atau server-nya, tes, lalu simpan. `web_search` punya tiga backend: Brave (butuh key, ada free tier), SearXNG (self-hosted, tanpa key), dan
+Atur lewat halaman **Web Search** di dashboard (di bawah Settings): pilih provider, ikuti langkah untuk mendapatkan key atau server-nya, tes, lalu simpan. `web_search` punya tiga backend: Brave (butuh key, ada free tier), SearXNG (self-hosted, tanpa key), dan
 fallback scraping tanpa key. Pada kegagalan runtime, 429, 5xx, timeout, yang utama jatuh ke fallback
 daripada membuat agent kehilangan pencarian di tengah tugas.
 

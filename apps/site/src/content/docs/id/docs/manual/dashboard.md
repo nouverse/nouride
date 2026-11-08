@@ -18,21 +18,19 @@ setup dan `nouride setup` menjalankan kode yang sama, dan halaman Skills menulis
 
 ## Peta
 
+Menunya diurutkan menurut seberapa sering halamannya dibuka: **Home, Chats, Work, dan Agents** tiap hari, **Skills**
+dan **Memory** sesekali, dan semua yang cukup diatur sekali ada di balik **Settings**.
+
 ```
-Interact
-  Chat            satu agent, atau room berisi beberapa, dengan setiap langkah tampil langsung
-  Missions        kerjaan panjang yang diselesaikan agent sendiri: yang butuh kamu, yang jalan, yang selesai; Limits
-
-Monitor
-  Overview        kesehatan · token dan biaya hari ini · approval yang menunggu kamu · Office versi kecil
-  Office          status para agent sebagai kantor kecil berisi kucing
-  Schedule        semua job: buat, ubah, jalankan sekarang; filter aktif / dijeda / gagal
-  Webhooks        endpoint yang menjalankan job saat dipanggil, bukan saat jam tertentu
-  Background Helpers  helper, perintah dan agent yang ditanya, yang dibiarkan agent jalan: langkahnya, Stop
-  System Logs     Daemon · Audit · Schedule · Background Helpers
-
-Configure
-  Agents          daftarnya, New Agent (admin), dan Settings seluruh daemon
+Home                yang butuh kamu · yang sedang jalan · Quick chat · agent kamu · box-nya · pemakaian AI hari ini
+Chats               satu agent, atau room berisi beberapa, dengan setiap langkah tampil langsung
+Work
+  Waiting for you   tool call yang ditunggu agent, dan misi yang menunggu jawabanmu
+  Missions          kerjaan panjang yang diselesaikan agent sendiri: yang butuh kamu, yang jalan, yang selesai; Limits
+  Helpers           helper, perintah dan agent yang ditanya, yang dibiarkan agent jalan: langkahnya, Stop
+  Schedule          semua job: buat, ubah, jalankan sekarang; filter aktif / dijeda / gagal
+Agents
+  Agents            daftarnya, New Agent (admin), dan Settings seluruh daemon
     └ <agent>
         Files           IDENTITY.md, SOUL.md, AGENTS.md, MEMORY.md, config.toml
         Model           provider profile dan model yang dipakai agent ini
@@ -44,41 +42,87 @@ Configure
         Connectors      server MCP instalasi yang dipakai agent ini
         Settings        batas tool dan turn-nya, job senyap, dan tool apa saja yang dimilikinya
         Look            kucingnya di Office
-  Skills          Skills Workshop: Live · Pending · Explore
-  Connectors      server MCP instalasi: Installed · Explore, saklar per agent
+  Office            status para agent sebagai kantor kecil berisi kucing
+
+Skills              Skills Workshop: Live · Pending · Explore
+Memory
   Knowledge & Memory   Knowledge · Agent notes · People · Timeline · Shared · Proposals · Settings, dan graph
-  People          nama dan catatan untuk manusia yang mereka ajak bicara
-  Groups          ruangan tempat mereka bicara: nama tiap ruangan, agent-nya, siapa yang bicara di sana
-  Access          siapa yang boleh bicara dengan agent: Pending · Approved · Denied · Blocked · History
-  Models          Model providers: endpoint, wire format, kredensial;     (admin)
-                  Coding CLIs: akun tiap CLI dan login-nya
-  LLM Gateway     Nougate di dalam daemon: akun, key, pemakaian (Router)  (admin)
-  Secrets         kredensial, untuk apa masing-masing, password backup    (admin)
+  People            nama dan catatan untuk manusia yang mereka ajak bicara
+  Groups            ruangan tempat mereka bicara: nama tiap ruangan, agent-nya, siapa yang bicara di sana
 
-Connect
-  Integrations    aplikasi AI lain yang menjangkau memori, satu key per aplikasi (admin)
-  Web Search      tempat agent mencari: sumber gratis, Brave, SearXNG, sendiri (admin)
+Settings
+  Models and keys
+    Models          Model providers: endpoint, wire format, kredensial;       (admin)
+                    Coding CLIs: akun tiap CLI dan login-nya
+    Secrets         kredensial, untuk apa masing-masing, password backup      (admin)
+    LLM Gateway     Nougate di dalam daemon: akun, key, pemakaian (Router)    (admin)
+  Reaching out
+    Connectors      server MCP instalasi: Installed · Explore, saklar per agent
+    Integrations    aplikasi AI lain yang menjangkau memori, satu key per aplikasi (admin)
+    Web Search      tempat agent mencari: sumber gratis, Brave, SearXNG, sendiri (admin)
+    Webhooks        endpoint yang menjalankan job saat dipanggil, bukan saat jam tertentu
+  People and sign-in
+    Access          siapa yang boleh bicara dengan agent: Pending · Approved · Denied · Blocked · History
+    Users           akun dan peran (edisi Pro)                                (admin)
+    My Account      username, nama, password
+  This box
+    My Box          perangkatnya sendiri (hanya Box yang sudah dipasangkan)   (admin)
+    Logs            Daemon · Audit · Schedule · Helpers
+    Update          versi yang jalan, rilis terbaru, dan cara memasangnya
 
-Account
-  My Account      username, nama, password
-  Users           akun dan peran (edisi Pro)                             (admin)
-  My Box          perangkatnya sendiri (hanya Box yang sudah dipasangkan)  (admin)
-
-Learn
-  Documentation   situs ini
+Documentation       situs ini, di tab baru
 ```
 
-Halaman khusus admin **gak muncul** di sidebar bagi yang gak boleh memakainya, bukan muncul lalu
+Work, Agents, dan Memory masing-masing berisi beberapa halaman, tampil sebagai tab di bagian atas tiap halamannya.
+Setiap tab tetap punya alamat sendiri, jadi link ke salah satunya tetap membukanya. Work terbuka di **Waiting for
+you**, dan angka di sebelah Work di menu adalah jumlah yang menunggu di sana.
+
+**Settings** adalah halaman berisi kartu dalam empat kelompok, tiap kartu dengan satu baris tentang gunanya halaman
+itu, plus kotak pencarian yang menemukan halaman dari namanya atau baris itu. **Restart** dan **Documentation** ada di
+bagian bawahnya. Di sidebar, halaman-halaman milik Settings cuma tampil di bawahnya selagi kamu sedang di Settings atau
+di salah satunya.
+
+Halaman khusus admin **gak muncul** di menu maupun di Settings bagi yang gak boleh memakainya, bukan muncul lalu
 menolak.
 
-**Update** gak punya entri menu. Versi di bawah logo menampilkan titik kalau ada rilis yang lebih baru,
-dan badge di Overview membuka halamannya. Cek, unduh, dan pasang adalah tiga langkah terpisah, karena
-cuma yang terakhir yang me-restart daemon, dan itu pun menunggu sampai gak ada yang jalan.
+Di bagian bawah sidebar, **Your box** menunjukkan apakah box-nya jalan dengan baik dan versi berapa yang jalan, plus
+sebuah tombol kalau ada versi yang lebih baru. Kartunya sendiri membuka Settings.
+
+Judul tab browser menghitung semua yang menunggu kamu, `(2) Nouride`, jadi tab yang ditinggal di belakang tetap
+memberi tahu.
+
+**Di HP**, ada bar tab di bagian bawah berisi Home, Chats, Work, dan Agents, dengan angka milik Work di situ, plus
+**More**, yang membuka sisa menunya sebagai lembar yang naik dari bawah.
+
+**Tampilannya** krem lembut di siang hari dan ungu keabuan di malam hari. Ia mengikuti setelan perangkatmu sampai kamu
+memilih sendiri lewat tombol matahari atau bulan di sebelah namamu. Kucing Nouride menyapa kamu di Home dan menemani
+di halaman yang masih kosong.
+
+**Update** adalah kartu di Settings, bukan entri menu. Versi di bawah logo menampilkan titik kalau ada rilis yang lebih
+baru, dan badge di kartu box di Home atau tombol di **Your box** membuka halamannya. Cek, unduh, dan pasang adalah tiga
+langkah terpisah, karena cuma yang terakhir yang me-restart daemon, dan itu pun menunggu sampai gak ada yang jalan.
 [Update →](/id/docs/deployment/updating/)
 
-**Restart**, di sebelahnya di Overview, me-restart daemon untuk perubahan yang membutuhkannya. Ia
-bertanya dulu, menunggu sampai gak ada yang jalan, menawarkan **Restart now** selama menunggu, dan
-memberi tahu begitu daemon kembali. Cuma admin atau operator yang melihatnya.
+**Restart**, di sebelah badge update di kartu box di Home, me-restart daemon untuk perubahan yang membutuhkannya. Ia
+bertanya dulu, menunggu sampai gak ada yang jalan, menawarkan **Restart now** selama menunggu, dan memberi tahu begitu
+daemon kembali. Cuma admin atau operator yang melihatnya, di situ dan di bagian bawah Settings.
+
+## Home
+
+Home dibuka dengan sapaan dan satu baris tentang apa yang sedang terjadi: berapa agent yang bangun, berapa misi yang
+sedang jalan, berapa hal yang butuh kamu. Di bawahnya, berurutan:
+
+- **Yang butuh kamu.** Tool call yang ditunggu agent dijawab langsung di situ: **Allow once**, **Deny**, dan **Always
+  allow** kalau ditawarkan. Misi yang menunggu jawaban, permintaan untuk bicara dengan agent, atau skill yang perlu
+  ditinjau tampil sebagai kartu yang membuka halamannya.
+- **Yang sedang jalan.** Tiap misi yang sedang dikerjakan, dengan seberapa jauh checklist-nya.
+- **Quick chat**, di laptop: satu baris ke sebuah agent, lalu chat-nya terbuka dengan jawabannya. Di HP, tombol
+  **+ Chat** melayang di atas bar tab sebagai gantinya.
+- **Your agents.** Kucing tiap agent, namanya, dan apa yang sedang ia kerjakan.
+- **Box-nya.** Versi, sudah berapa lama nyala, hal yang perlu dicek, badge update, dan **Restart**. Lalu pemakaian AI
+  hari ini, dilipat jadi satu baris, dan catatan setup kalau saat terakhir dinyalakan ada yang ditemukan.
+
+Kalau gak ada yang menunggu dan gak ada yang jalan, kucing yang tidur bilang *Nothing is waiting for you*.
 
 ## Agent adalah modulnya
 
@@ -141,31 +185,32 @@ terulang.
 
 | | Di mana | Artinya |
 |---|---|---|
-| **Approvals** | Overview dan di bawah percakapan di Chat, hanya kalau gak kosong | Agent berhenti di tengah giliran, ingin menjalankan sesuatu |
-| **Permintaan pairing** | **Access** → *Pending*, dengan angka di sebelah Access di sidebar | Seseorang meminta izin masuk sama sekali |
-| **Skill drafts** | Skills Workshop → *Pending* | Agent *mengusulkan* sebuah skill, atau kamu mengambilnya dari hub |
+| **Approvals** | Home, Work → *Waiting for you*, dan di bawah percakapan di Chats, hanya kalau gak kosong | Agent berhenti di tengah giliran, ingin menjalankan sesuatu |
+| **Permintaan pairing** | **Settings → Access** → *Pending*, dengan angka di sebelah Settings di menu | Seseorang meminta izin masuk sama sekali |
+| **Skill drafts** | Skills Workshop → *Pending*, dengan angka di sebelah Skills di menu | Agent *mengusulkan* sebuah skill, atau kamu mengambilnya dari hub |
 | **Memory proposals** | Knowledge & Memory → *Proposals* | Proses malam ingin mengubah sesuatu yang sebaiknya diputuskan orang |
 
 Approval adalah giliran yang berhenti di tengah jalan dengan timer. Draft atau proposal adalah usulan
 tentang pekerjaan yang sudah selesai: gak menghalangi apa pun dan menunggu kamu. Menyatukan mereka
 dalam satu antrean akan memberi salah satunya siklus hidup yang salah.
 
-### Apa yang Overview katakan tentang yang lain
+### Apa yang Home katakan tentang yang lain
 
-Approval dijawab langsung di Overview, paling atas di bawah pemakaian hari ini, karena agent-nya memang
-terhenti dan jawabannya adalah alasan kenapa ia ditampilkan. Antrean yang gak bisa ditemukan siapa pun
-adalah giliran yang akhirnya kedaluwarsa.
+Approval dijawab langsung di Home, paling depan di antara yang butuh kamu, dan di *Waiting for you* milik Work, karena
+agent-nya memang terhenti dan jawabannya adalah alasan kenapa ia ditampilkan. Antrean yang gak bisa ditemukan siapa
+pun adalah giliran yang akhirnya kedaluwarsa.
 
-Permintaan pairing dan skill draft hanya *diumumkan* di sana, satu baris masing-masing, berisi berapa
-yang menunggu dan tautan ke tempat ia dijawab:
+Permintaan pairing dan skill draft hanya *diumumkan* di sana, satu kartu masing-masing, berisi berapa
+yang menunggu dan membuka tempat ia dijawab:
 
-> You have 2 pending pairing requests. **See details →**
-> You have 1 skill waiting for review. **See details →**
+> 2 people ask to talk to your agents. **See who is asking →**
+> A new skill waits for your review. **Review them →**
 
 Keduanya hanya muncul kalau antreannya gak kosong, dan gak satu pun membawa tombol approve. Mengizinkan
 orang asing masuk, atau menerbitkan skill yang ditulis agent, bukan keputusan yang diambil dari
 halaman yang cuma kamu lirik, jadi jumlahnya di sini, permintaannya dibaca di tempat ia diputuskan.
-Memory proposals tampil sebagai angka di tab *Proposals*.
+Misi yang menunggu jawaban juga tampil sebagai kartu, yang membuka misinya. Memory proposals tampil
+sebagai angka di tab *Proposals*.
 
 ![Kartu approval](/media/dashboard-approvals.png)
 

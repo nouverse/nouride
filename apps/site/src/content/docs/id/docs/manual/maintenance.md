@@ -48,7 +48,7 @@ docker compose restart
 docker compose logs -f
 ```
 
-`nouride restart` jalan di semuanya, begitu juga **Restart** di Overview dashboard dan
+`nouride restart` jalan di semuanya, begitu juga **Restart** di Home dashboard dan
 `/daemon-restart` di chat. Ketiganya menunggu sampai tidak ada giliran atau approval yang berjalan,
 paling lama sepuluh menit, dan sampai setiap background job selesai, berapa lama pun itu. `--now`
 (**Restart now**, `/daemon-restart now`) tidak menunggu, dan menghentikan job-job itu.

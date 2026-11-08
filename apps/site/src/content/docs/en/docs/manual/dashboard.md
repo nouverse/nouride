@@ -18,21 +18,19 @@ the setup wizard and `nouride setup` run the same code, and the Skills page writ
 
 ## The map
 
+The menu is in the order its pages are opened: **Home, Chats, Work and Agents** every day, **Skills** and **Memory**
+now and then, and everything you set up once behind **Settings**.
+
 ```
-Interact
-  Chat            one agent, or a room of several, with each step live as it works
-  Missions        long work agents finish alone: what needs you, what runs, what ended; Limits
-
-Monitor
-  Overview        health · today's tokens and spend · approvals waiting on you · the Office, small
-  Office          the agents' statuses as a small office of cats
-  Schedule        every job: create, edit, run now; filter by active / paused / failing
-  Webhooks        endpoints that run a job when called, rather than on a clock
-  Background Helpers  helpers, commands and asked agents an agent left running: each one's steps, Stop
-  System Logs     Daemon · Audit · Schedule · Background Helpers
-
-Configure
-  Agents          the list, New Agent (admin), and daemon-wide Settings
+Home                what needs you · what is moving · Quick chat · your agents · the box · today's AI use
+Chats               one agent, or a room of several, with each step live as it works
+Work
+  Waiting for you   tool calls an agent waits on, and missions waiting for your answer
+  Missions          long work agents finish alone: what needs you, what runs, what ended; Limits
+  Helpers           helpers, commands and asked agents an agent left running: each one's steps, Stop
+  Schedule          every job: create, edit, run now; filter by active / paused / failing
+Agents
+  Agents            the list, New Agent (admin), and daemon-wide Settings
     └ <agent>
         Files           IDENTITY.md, SOUL.md, AGENTS.md, MEMORY.md, config.toml
         Model           which provider profile and model this agent runs on
@@ -44,41 +42,85 @@ Configure
         Connectors      the install's MCP servers this agent uses
         Settings        its tool and turn budgets, quiet jobs, and which tools it has
         Look            its cat in the Office
-  Skills          the Skills Workshop: Live · Pending · Explore
-  Connectors      the install's MCP servers: Installed · Explore, a switch per agent
+  Office            the agents' statuses as a small office of cats
+
+Skills              the Skills Workshop: Live · Pending · Explore
+Memory
   Knowledge & Memory   Knowledge · Agent notes · People · Timeline · Shared · Proposals · Settings, and a graph
-  People          names and notes for the humans they talk to
-  Groups          the rooms they talk in: each one's name, its agents, who talks there
-  Access          who may talk to the agents: Pending · Approved · Denied · Blocked · History
-  Models          Model providers: endpoint, wire format, credential;     (admin)
-                  Coding CLIs: each CLI's accounts and their sign-ins
-  LLM Gateway     the in-process Nougate: accounts, keys, usage (Router)  (admin)
-  Secrets         the credentials, what each is for, the backup password  (admin)
+  People            names and notes for the humans they talk to
+  Groups            the rooms they talk in: each one's name, its agents, who talks there
 
-Connect
-  Integrations    other AI apps reaching memory, one key per app          (admin)
-  Web Search      where agents search: free sources, Brave, SearXNG, own  (admin)
+Settings
+  Models and keys
+    Models          Model providers: endpoint, wire format, credential;       (admin)
+                    Coding CLIs: each CLI's accounts and their sign-ins
+    Secrets         the credentials, what each is for, the backup password    (admin)
+    LLM Gateway     the in-process Nougate: accounts, keys, usage (Router)    (admin)
+  Reaching out
+    Connectors      the install's MCP servers: Installed · Explore, a switch per agent
+    Integrations    other AI apps reaching memory, one key per app            (admin)
+    Web Search      where agents search: free sources, Brave, SearXNG, own    (admin)
+    Webhooks        endpoints that run a job when called, rather than on a clock
+  People and sign-in
+    Access          who may talk to the agents: Pending · Approved · Denied · Blocked · History
+    Users           accounts and roles (Pro editions)                         (admin)
+    My Account      username, name, password
+  This box
+    My Box          the appliance itself (a paired Box only)                  (admin)
+    Logs            Daemon · Audit · Schedule · Helpers
+    Update          the version running, the newest release, installing it
 
-Account
-  My Account      username, name, password
-  Users           accounts and roles (Pro editions)                       (admin)
-  My Box          the appliance itself (a paired Box only)                (admin)
-
-Learn
-  Documentation   this site
+Documentation       this site, in a new tab
 ```
 
-Admin-only pages are **absent** from the sidebar for anyone who cannot use them, rather than present
+Work, Agents and Memory each hold several pages, shown as tabs across the top of each of them. Every tab keeps its own
+address, so a link to one still opens it. Work opens on **Waiting for you**, and the count beside Work in the menu is
+what waits there.
+
+**Settings** is a page of cards in four groups, each card with a line on what its page is for, and a search box that
+finds one by its name or that line. **Restart** and **Documentation** sit at its foot. In the sidebar, Settings' own
+pages are listed under it only while you are on Settings or one of them.
+
+Admin-only pages are **absent** from the menu and from Settings for anyone who cannot use them, rather than present
 and refusing.
 
-**Update** has no menu entry. The version under the logo shows a dot when a newer release exists, and
-the badge on Overview opens the page. Check, download and install are three steps, because only the
-last one restarts the daemon, and it waits until nothing is running.
+At the foot of the sidebar, **Your box** says whether the box is running well and which version it runs, with a button
+when a newer version is out. The card itself opens Settings.
+
+The browser tab's title counts everything waiting for you, `(2) Nouride`, so a tab left in the background still tells
+you.
+
+**On a phone**, a tab bar along the bottom holds Home, Chats, Work and Agents, with Work's count on it, and **More**,
+which slides the rest of the menu up as a sheet.
+
+**The look** is a soft cream by day and a violet grey by night. It follows your device until you choose with the sun or
+moon button beside your name. The Nouride cat greets you on Home and keeps you company on an empty page.
+
+**Update** is a card on Settings rather than a menu entry. The version under the logo shows a dot when a newer release
+exists, and the badge on Home's box card or the button on **Your box** opens the page. Check, download and install are
+three steps, because only the last one restarts the daemon, and it waits until nothing is running.
 [Updating →](/en/docs/deployment/updating/)
 
-**Restart**, beside it on Overview, restarts the daemon for a change that needs one. It asks first,
-waits until nothing is running, offers **Restart now** while it waits, and says when the daemon is
-back. Only an admin or an operator sees it.
+**Restart**, beside the update badge on Home's box card, restarts the daemon for a change that needs one. It asks
+first, waits until nothing is running, offers **Restart now** while it waits, and says when the daemon is back. Only an
+admin or an operator sees it, there and at the foot of Settings.
+
+## Home
+
+Home opens with a greeting and one line on what is going on: how many agents are awake, how many missions are moving,
+how many things need you. Under it, in this order:
+
+- **What needs you.** A tool call an agent waits on is answered right there: **Allow once**, **Deny**, and **Always
+  allow** where it is offered. A mission waiting for an answer, a request to talk to the agents or a skill to review
+  is a card that opens its page.
+- **What is moving.** Each mission at work, with how far along its checklist is.
+- **Quick chat**, on a laptop: a line to an agent, and the chat opens with the answer. On a phone a **+ Chat** button
+  floats above the tab bar instead.
+- **Your agents.** Each one's cat, its name and what it is doing now.
+- **The box.** The version, how long it has been up, anything to look at, the update badge and **Restart**. Then
+  today's AI use, folded to one line, and setup notes when the last start found something.
+
+When nothing waits and nothing moves, a sleeping cat says *Nothing is waiting for you*.
 
 ## An agent is the module
 
@@ -138,30 +180,30 @@ operator an hour, and the wording is chosen so it cannot happen again.
 
 | | Where | What it means |
 |---|---|---|
-| **Approvals** | Overview and under the conversation in Chat, only when non-empty | An agent has stopped mid-turn wanting to run something |
-| **Pairing requests** | **Access** → *Pending*, with a count beside Access in the sidebar | A person is asking to be let in at all |
-| **Skill drafts** | Skills Workshop → *Pending* | An agent has *proposed* a skill, or you fetched one from a hub |
+| **Approvals** | Home, Work → *Waiting for you*, and under the conversation in Chats, only when non-empty | An agent has stopped mid-turn wanting to run something |
+| **Pairing requests** | **Settings → Access** → *Pending*, with a count beside Settings in the menu | A person is asking to be let in at all |
+| **Skill drafts** | Skills Workshop → *Pending*, with a count beside Skills in the menu | An agent has *proposed* a skill, or you fetched one from a hub |
 | **Memory proposals** | Knowledge & Memory → *Proposals* | The nightly pass wants a change a person should decide on |
 
 An approval is a turn stopped mid-flight with a timer on it. A draft or a proposal is a suggestion
 about work that already finished: it blocks nothing and waits for you. Putting them in one queue
 would give one of them the wrong lifecycle.
 
-### What Overview says about the others
+### What Home says about the others
 
-Approvals are answered on Overview, at the top under today's usage, because the agent is blocked and
-the answer is the whole point of showing it. A queue nobody can find is a turn that times out.
+Approvals are answered on Home, first among what needs you, and on Work's *Waiting for you*, because the agent is
+blocked and the answer is the whole point of showing it. A queue nobody can find is a turn that times out.
 
-Pairing requests and skill drafts are only *announced* there, one line each, saying how many are
-waiting and linking to where they are answered:
+Pairing requests and skill drafts are only *announced* there, one card each, saying how many are
+waiting and opening where they are answered:
 
-> You have 2 pending pairing requests. **See details →**
-> You have 1 skill waiting for review. **See details →**
+> 2 people ask to talk to your agents. **See who is asking →**
+> A new skill waits for your review. **Review them →**
 
 Both appear only when the queue is not empty, and neither carries an approve button. Letting a
 stranger in, or publishing a skill an agent wrote, is not a decision to make from a page you are
-skimming, so the count is here and the request is read where it is decided. Memory proposals show as
-a count on the *Proposals* tab.
+skimming, so the count is here and the request is read where it is decided. A mission waiting for an
+answer is a card too, opening the mission. Memory proposals show as a count on the *Proposals* tab.
 
 ![An approval card](/media/dashboard-approvals.png)
 

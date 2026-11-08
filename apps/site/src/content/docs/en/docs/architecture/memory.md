@@ -244,7 +244,7 @@ small hardware. A failed embed falls back to keywords, never to an error.
 
 ### The Knowledge & Memory page
 
-**Knowledge & Memory** in the sidebar. The line at the top says whether memory is on, when the nightly pass runs
+**Memory** in the menu opens it. The line at the top says whether memory is on, when the nightly pass runs
 next and whether search by meaning is on; under it, the last tag tidy, with **Undo**.
 
 ![The Memory page, on the Agent notes tab](/media/memory-page.png)
@@ -382,7 +382,7 @@ agent's own model is asked instead. Whether it is working is shown under it, on 
 Knowledge & Memory → Settings: *Working* when nothing is failing, otherwise what is (summarizing, the nightly pass, or
 the model each agent's own stands in for), how many times, how long ago and the provider's last error. A
 warning clears once its job works again or its model is no longer the one set, at the latest a day after the
-last failure. `nouride doctor` and the Overview's warnings say the same.
+last failure. `nouride doctor` and the warnings on Home say the same.
 
 A vector is kept under the provider, the model and the size asked of it, so changing any of the three
 embeds everything again, a night's share at a time. Until then the old vectors stay where they were: each

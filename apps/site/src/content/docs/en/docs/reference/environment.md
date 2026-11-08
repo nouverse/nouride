@@ -210,7 +210,7 @@ password field.
 otherwise nothing could sign in at all. Nothing is deleted: existing passwords
 are kept and work again the moment you turn it back on.
 
-There is an easier place to do this: **Dashboard → Users**, where an admin gets
+There is an easier place to do this: **Dashboard → Settings → Users**, where an admin gets
 a switch. That one applies immediately, and it refuses if the client secret does
 not actually resolve, a check the config file cannot make, because it is read
 before the secret store is open.

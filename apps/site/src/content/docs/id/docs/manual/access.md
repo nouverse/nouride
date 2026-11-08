@@ -36,12 +36,13 @@ dapat apa-apa.
 "Kirim kode itu ke siapa pun yang menjalankan saya" jadi jalan buntu kalau kamu **adalah** orang itu
 dan gak ada yang memberi tahu bahwa ada halamannya. Jadi pesannya menyebutkan halaman itu.
 
-**Overview memberi tahu bahwa ada, begitu juga sidebar:** angka di sebelah **Access**, di setiap
-halaman, karena kodenya bisa kedaluwarsa. Baris di Overview berisi jumlah yang menunggu dan sebuah
-tautan, tanpa tombol. Keduanya hanya muncul kalau memang ada yang mengantre; angka nol permanen adalah
-sesuatu yang lama-lama berhenti kamu lihat.
+**Home memberi tahu bahwa ada, begitu juga menu:** angka di sebelah **Settings**, di setiap halaman,
+karena kodenya bisa kedaluwarsa (di sebelah **Access** sebagai gantinya, selagi halaman-halaman milik
+Settings tampil). Kartu di Home berisi jumlah yang menunggu dan membuka Access, tanpa tombol. Keduanya
+hanya muncul kalau memang ada yang mengantre; angka nol permanen adalah sesuatu yang lama-lama berhenti
+kamu lihat.
 
-Pemisahan itu disengaja. Overview adalah tempat melirik, dan menyetujui orang asing gak bisa
+Pemisahan itu disengaja. Home adalah tempat melirik, dan menyetujui orang asing gak bisa
 dibatalkan dengan memalingkan muka, jadi keputusannya diambil di halaman yang menampilkan
 permintaannya secara utuh, bukan cuma jumlahnya.
 

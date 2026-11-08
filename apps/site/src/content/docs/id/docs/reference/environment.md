@@ -216,7 +216,7 @@ kolom username, tanpa kolom password.
 gak ada yang bisa masuk sama sekali. Gak ada yang dihapus: password yang
 sudah ada tetap disimpan dan berfungsi lagi begitu kamu menyalakannya kembali.
 
-Ada tempat yang lebih gampang untuk ini: **Dashboard → Users**, di situ admin
+Ada tempat yang lebih gampang untuk ini: **Dashboard → Settings → Users**, di situ admin
 dapat sebuah switch. Yang itu berlaku seketika, dan dia menolak kalau client
 secret-nya ternyata gak menghasilkan apa-apa, pemeriksaan yang gak bisa
 dilakukan file config, karena file dibaca sebelum secret store terbuka.

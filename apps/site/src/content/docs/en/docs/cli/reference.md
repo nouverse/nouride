@@ -84,7 +84,7 @@ sends a signal, which is the path that still works when the HTTP server is what 
 `restart` waits the way `update --start` does: until no turn is running or queued and no approval is
 pending, for ten minutes at most, and until no background job is working, however long that takes.
 It names the jobs it is waiting for. `--now` restarts at once and stops them. The dashboard's
-**Restart** on Overview and `/daemon-restart` in a chat do the same.
+**Restart** on Home and `/daemon-restart` in a chat do the same.
 
 An agent must pass `--then "<follow-up>"` (or `--no-then`). The command ends the conversation it was
 run from, so the follow-up turn is created *before* the service goes down, and a restart that goes

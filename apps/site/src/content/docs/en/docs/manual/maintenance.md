@@ -48,7 +48,7 @@ docker compose restart
 docker compose logs -f
 ```
 
-`nouride restart` works on any of them, and so do **Restart** on the dashboard's Overview and
+`nouride restart` works on any of them, and so do **Restart** on the dashboard's Home and
 `/daemon-restart` in a chat. All three wait until no turn or approval is in progress, for ten
 minutes at most, and until every background job has finished, however long that takes. `--now`
 (**Restart now**, `/daemon-restart now`) does not wait, and stops the jobs. They work by **asking

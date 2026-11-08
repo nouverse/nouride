@@ -85,7 +85,7 @@ mengirim sinyal, jalur yang tetap bekerja ketika justru HTTP server yang macet.
 `restart` menunggu seperti `update --start`: sampai tidak ada giliran yang berjalan atau mengantre
 dan tidak ada approval yang menunggu, paling lama sepuluh menit, dan sampai tidak ada background job
 yang bekerja, berapa lama pun itu. Ia menyebutkan job yang ditunggunya. `--now` langsung restart dan
-menghentikan job-job itu. Tombol **Restart** di Overview dashboard dan `/daemon-restart` di chat
+menghentikan job-job itu. Tombol **Restart** di Home dashboard dan `/daemon-restart` di chat
 melakukan hal yang sama.
 
 Agent wajib memberi `--then "<tindak lanjut>"` (atau `--no-then`). Perintah ini mengakhiri percakapan

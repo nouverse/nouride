@@ -144,12 +144,13 @@ before this.
 
 ## From the dashboard
 
-**Overview** carries a badge next to the health pill, *Up to date*, or the version that is
-waiting. It is the way in: pressing it opens **Update**, which is a page of its own rather than a
+The box card on **Home** carries a badge beside **Restart**, *Up to date*, or the version that is
+waiting. It is the way in: pressing it opens **Update**, which is a card on Settings rather than a
 menu entry, because updating is something you do rarely and only when there is something to do.
 
-The sidebar shows the running version under the wordmark, with a dot when something newer exists.
-That dot is a signal, not a door: the brand goes home, and the badge on Overview is what you press.
+**Your box**, at the foot of the sidebar, shows the running version, and a button that opens Update
+when something newer is out. The version under the wordmark gets a dot then too. That dot is a
+signal, not a door: the brand goes home, and the badge or the button is what you press.
 
 ![The Update page: the running version and edition on the left, and the newest release for that edition on the right](/media/dashboard-update.png)
 

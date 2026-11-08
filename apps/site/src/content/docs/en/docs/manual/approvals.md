@@ -410,6 +410,6 @@ nouride audit          # recent audited actions
 nouride audit 100      # more of them
 ```
 
-The dashboard shows the same trail under **System Logs → Audit**, where an admin can also change how
+The dashboard shows the same trail under **Settings → Logs → Audit**, where an admin can also change how
 long it is kept: `[retention] audit_days`, 30 by default. Worth knowing, because a few other features
 derive from it, including "which skills has nobody read".

@@ -36,12 +36,12 @@ gets nothing.
 "Send that code to whoever runs me" is a dead end when you *are* that person and nothing has told
 you there is a page for it. So the message names one.
 
-**Overview tells you there is one**, and so does the sidebar: a count beside **Access**, on every
-page, because the code expires. Overview's line says how many are waiting, with a link and no
-buttons. Both appear only when somebody is queued; a permanent zero is a thing you learn to stop
-seeing.
+**Home tells you there is one**, and so does the menu: a count beside **Settings**, on every page,
+because the code expires (beside **Access** instead, while Settings' own pages are listed). Home's card
+says how many are waiting and opens Access, with no buttons. Both appear only when somebody is queued; a
+permanent zero is a thing you learn to stop seeing.
 
-That split is deliberate. Overview is a glance, and approving a stranger is not undone by looking
+That split is deliberate. Home is a glance, and approving a stranger is not undone by looking
 away, so the decision is made on a page that shows the whole request rather than a count of them.
 
 **Access** is where you answer it, for every agent at once: one person can ask two bots, and "who did

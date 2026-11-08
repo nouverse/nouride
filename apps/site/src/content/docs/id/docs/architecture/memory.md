@@ -258,7 +258,7 @@ hardware kecil. Embed yang gagal jatuh kembali ke kata kunci, gak pernah ke erro
 
 ### Halaman Knowledge & Memory
 
-**Knowledge & Memory** di sidebar. Baris paling atas menunjukkan apakah memori menyala, kapan nightly pass
+**Memory** di menu membukanya. Baris paling atas menunjukkan apakah memori menyala, kapan nightly pass
 berikutnya jalan, dan apakah pencarian berdasarkan makna aktif; di bawahnya, tag tidy terakhir,
 lengkap dengan **Undo**.
 
@@ -395,7 +395,7 @@ milik tiap agent yang ditanya sebagai gantinya. Apakah ia jalan ditampilkan di b
 model** di Knowledge & Memory → Settings: *Working* kalau gak ada yang sedang gagal, kalau tidak: apa yang gagal
 (meringkas, nightly pass, atau model yang digantikan model milik tiap agent), berapa kali, sudah berapa lama,
 dan error terakhir dari provider. Peringatan hilang begitu pekerjaannya jalan lagi atau modelnya sudah gak
-dipakai, paling lambat sehari setelah kegagalan terakhir. `nouride doctor` dan peringatan di Overview
+dipakai, paling lambat sehari setelah kegagalan terakhir. `nouride doctor` dan peringatan di Home
 mengatakan hal yang sama.
 
 Sebuah vektor disimpan menurut provider, model, dan ukuran yang diminta darinya, jadi mengganti salah

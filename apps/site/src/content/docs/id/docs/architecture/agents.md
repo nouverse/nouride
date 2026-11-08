@@ -220,7 +220,7 @@ agent yang menulis ke sana ditolak. Untuk mengubahnya, salin ke kumpulan, dan sa
 
 ### Server MCP
 
-Tool eksternal, dipasang sekali lalu dinyalakan per agent, seperti skill. **Configure → Connectors** di dashboard
+Tool eksternal, dipasang sekali lalu dinyalakan per agent, seperti skill. **Settings → Connectors** di dashboard
 adalah daftar server milik instalasi (library-nya, `agents/mcp.toml`), dan tab **Connectors** sebuah agent menyalakan
 atau mematikan masing-masing untuk agent itu. Tool sebuah server ditemukan saat terhubung lalu ditawarkan sebagai
 `<server>__<tool>`, karena namanya datang dari server dan gak bisa didaftarkan di `[tools] enabled` sebelum kamu pernah
@@ -444,7 +444,7 @@ untuk jawaban cepat, dan bukan untuk hal yang sedang kamu tunggu sekarang.
   memutuskan.
 - **Berapa sekaligus** diatur `[delegate] max_background`: 2 secara default, 0 mematikannya, bisa diatur
   per agent di tab **Settings**-nya, berlaku mulai helper berikutnya.
-- **Tiap helper adalah sebuah job**: muncul di `nouride jobs` dan di System Logs → Background work
+- **Tiap helper adalah sebuah job**: muncul di `nouride jobs` dan di Work → Helpers di dashboard
   dengan tujuannya, dan di strip chat selama berjalan. `/stop` di chat menghentikan helper agent di
   chat itu; `nouride jobs kill <id>` menghentikan satu.
 - **Approval yang dibutuhkannya** ditanyakan di chatmu, dengan nama dan tujuannya: "a background task
@@ -469,8 +469,8 @@ dengannya. Begitu jawabannya datang, agent itu dibangunkan di chat yang sama, de
 untuk permintaan apa dan kapan dimintanya, jadi tetap nyambung walau kamu sudah pindah topik. Agent yang
 tahu pekerjaannya bakal lama meminta dengan `background: true` dan gak menunggu sama sekali.
 
-- **Ia adalah job milik agent yang meminta**, `ask <agent>: <tugas>` di `nouride jobs` dan di System Logs →
-  Background work, dan di strip chat selama berjalan. `/stop` di chat itu dan `nouride jobs kill <id>`
+- **Ia adalah job milik agent yang meminta**, `ask <agent>: <tugas>` di `nouride jobs` dan di Work → Helpers
+  di dashboard, dan di strip chat selama berjalan. `/stop` di chat itu dan `nouride jobs kill <id>`
   menghentikannya; `[security] job_max_ms` membatasinya; restart menutupnya sebagai terputus, dan agent
   diberi tahu.
 - **Ia berbagi batas dengan helper**, `[delegate] max_background`. Kalau batas itu penuh, permintaannya

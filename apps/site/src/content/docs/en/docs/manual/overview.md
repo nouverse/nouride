@@ -31,9 +31,9 @@ gate and audit as `exec`. The agent never reads the control token itself.
 | Switch models | dashboard → Agents → Model | [Provider profiles](/en/docs/providers/configuration/) |
 | Decide what it keeps learning | dashboard → Skills | [Skills & learning](/en/docs/manual/skills/) |
 | See what it remembers | dashboard → Memory | [Memory](/en/docs/architecture/memory/) |
-| Let someone in, or keep them out | dashboard → Access | [Who may talk to it](/en/docs/manual/access/) |
-| Make something happen at 9am | dashboard → Schedule, `nouride cron`, or just ask | [Scheduled work](/en/docs/manual/schedule/) |
-| See what every agent is doing at a glance | dashboard → Monitor → Office | [Office](/en/docs/manual/office/) |
+| Let someone in, or keep them out | dashboard → Settings → Access | [Who may talk to it](/en/docs/manual/access/) |
+| Make something happen at 9am | dashboard → Work → Schedule, `nouride cron`, or just ask | [Scheduled work](/en/docs/manual/schedule/) |
+| See what every agent is doing at a glance | dashboard → Agents → Office | [Office](/en/docs/manual/office/) |
 | Have Claude Code or Codex answer an agent | dashboard → Agents → New Agent, or ask the orchestrator | [External agents](/en/docs/manual/external-agents/) |
 | Check on it | `nouride status`, `nouride doctor` | [doctor](/en/docs/cli/doctor/) |
 | Back it up, upgrade it | `nouride db backup`, `nouride update --start` | [Maintenance](/en/docs/manual/maintenance/) |

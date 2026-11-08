@@ -428,6 +428,6 @@ nouride audit          # aksi teraudit terbaru
 nouride audit 100      # lebih banyak
 ```
 
-Dashboard menampilkan jejak yang sama di **System Logs → Audit**, tempat admin juga bisa mengubah
+Dashboard menampilkan jejak yang sama di **Settings → Logs → Audit**, tempat admin juga bisa mengubah
 berapa lama ia disimpan: `[retention] audit_days`, 30 hari secara default. Layak diketahui, karena
 beberapa fitur lain diturunkan darinya, termasuk "skill mana yang belum pernah dibaca siapa pun".

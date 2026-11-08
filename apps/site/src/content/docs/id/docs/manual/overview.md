@@ -32,9 +32,9 @@ gak pernah membaca control token itu sendiri.
 | Ganti model | dashboard → Agents → Model | [Profil provider](/id/docs/providers/configuration/) |
 | Menentukan apa yang boleh dipelajari | dashboard → Skills | [Skill & pembelajaran](/id/docs/manual/skills/) |
 | Melihat apa yang diingatnya | dashboard → Memory | [Memori](/id/docs/architecture/memory/) |
-| Mengizinkan atau menolak orang | dashboard → Access | [Siapa yang boleh bicara](/id/docs/manual/access/) |
-| Menjadwalkan sesuatu jam 9 pagi | dashboard → Schedule, `nouride cron`, atau minta saja | [Tugas terjadwal](/id/docs/manual/schedule/) |
-| Melihat semua agent lagi ngapain dalam sekali lihat | dashboard → Monitor → Office | [Office](/id/docs/manual/office/) |
+| Mengizinkan atau menolak orang | dashboard → Settings → Access | [Siapa yang boleh bicara](/id/docs/manual/access/) |
+| Menjadwalkan sesuatu jam 9 pagi | dashboard → Work → Schedule, `nouride cron`, atau minta saja | [Tugas terjadwal](/id/docs/manual/schedule/) |
+| Melihat semua agent lagi ngapain dalam sekali lihat | dashboard → Agents → Office | [Office](/id/docs/manual/office/) |
 | Bikin agent yang dijawab Claude Code atau Codex | dashboard → Agents → New Agent, atau minta orchestrator | [Agent eksternal](/id/docs/manual/external-agents/) |
 | Memeriksa keadaannya | `nouride status`, `nouride doctor` | [doctor](/id/docs/cli/doctor/) |
 | Backup dan upgrade | `nouride db backup`, `nouride update --start` | [Perawatan](/id/docs/manual/maintenance/) |
