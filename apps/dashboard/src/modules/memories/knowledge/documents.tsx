@@ -2,10 +2,14 @@
  * A collection's documents (0.8.20, KNOWLEDGE_BASE §6 and §11), each with how it reads: ready to search, being read, or
  * could not be read and why. Where a program has to be installed first, the Ask button opens a chat with the
  * orchestrator, the request already written; the package's name is under Details.
+ *
+ * Newest first, each saying when it was added (0.8.23): sorted by name, a file just dropped landed somewhere down the
+ * list, and nothing said which one was new (the owner, 2026-11-08). Its title, what search finds it by, is set on its row.
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { FileText, FileWarning, Loader2, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { FileText, FileWarning, Loader2, Pencil, Trash2 } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import type { KnowledgeCollection, KnowledgeDocument } from "@/commons/lib/api.knowledge";
 import { formatBytes } from "@/commons/lib/format";
@@ -14,7 +18,8 @@ import { AskAgentButton } from "@/commons/components/ui/AskAgentButton";
 import { useConfirm } from "@/commons/components/ui/confirm";
 import { Details } from "@/commons/components/ui/Details";
 import { useToast } from "@/commons/components/ui/toast";
-import { installMessage, statusOf } from "./words";
+import { TitleDialog } from "./title.dialog";
+import { addedLine, installMessage, statusOf } from "./words";
 
 const TONE = { ready: "badge-success", reading: "badge-info", "not-read": "badge-warning" } as const;
 
@@ -43,6 +48,7 @@ function DocumentRow({ collection, document, editable, onOpen }: { collection: K
   const queryClient = useQueryClient();
   const toast = useToast();
   const confirm = useConfirm();
+  const [titling, setTitling] = useState(false);
   const status = statusOf(document);
   const file = fileName(document);
   const remove = useMutation({
@@ -73,6 +79,7 @@ function DocumentRow({ collection, document, editable, onOpen }: { collection: K
           <Status label={status.label} tone={status.tone} />
           {file ? <span className="font-mono break-all">{file}</span> : null}
           <span>{formatBytes(document.size)}</span>
+          <span title={new Date(document.mtime).toLocaleString()}>{addedLine(document.mtime)}</span>
         </p>
         {document.reason ? <p className="text-base-content/70 text-xs">{document.reason}</p> : null}
         {document.needs ? (
@@ -85,11 +92,17 @@ function DocumentRow({ collection, document, editable, onOpen }: { collection: K
         ) : null}
       </div>
       {editable ? (
+        <button type="button" className="btn btn-ghost btn-xs rounded-lg" aria-label={`Change the title of ${document.title}`} title="Change the title" onClick={() => setTitling(true)}>
+          <Pencil size={13} />
+        </button>
+      ) : null}
+      {editable ? (
         <button type="button" className="btn btn-ghost btn-xs text-error rounded-lg hover:bg-error/10" aria-label={`Remove ${document.title}`} title={`Remove ${document.title}`} disabled={remove.isPending} onClick={() => void askRemove()}>
           <Trash2 size={13} />
         </button>
       ) : null}
       {confirm.dialog}
+      {titling ? <TitleDialog collection={collection} document={document} onClose={() => setTitling(false)} /> : null}
     </li>
   );
 }
@@ -108,7 +121,7 @@ export function DocumentList({
   editable: boolean;
   onOpen: (path: string) => void;
 }) {
-  const sorted = [...documents].sort((a, b) => a.title.localeCompare(b.title));
+  const sorted = [...documents].sort((a, b) => b.mtime - a.mtime || a.title.localeCompare(b.title));
   return (
     <ul className="divide-base-content/[0.06] divide-y">
       {reading.map((name, n) => (

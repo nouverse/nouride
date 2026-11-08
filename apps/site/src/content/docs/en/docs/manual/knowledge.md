@@ -52,6 +52,18 @@ Python's pypdf), and old `.doc`, `.xls` and `.ppt` files need LibreOffice. When 
 the page offers to have it installed; once it is, the document is read within five minutes. Pictures and videos are kept
 and listed, not searched, and so is a scanned PDF, which has no text in it to read.
 
+On the dashboard a collection's documents are listed newest first, each saying when it was added.
+
+### A document's title
+
+Each document has a title, shown over its file's name: what search finds it by, in any language. An agent that keeps a
+document gives it an English one that says what it is, with the document's own terms ("NIB, business registration
+certificate (Nomor Induk Berusaha)"), so an English search finds a document written in Indonesian even where search by
+meaning is not set up. The file keeps the name it came with.
+
+You can give a document a title yourself with the pencil on its row, in any language; written in English, your agents find
+it whatever language they search in. Without one, a document's title is its first heading or its file's name.
+
 ## How agents use it
 
 - An agent is told the names of the collections it may search in that chat, and whom each is about, never what is in
@@ -60,7 +72,7 @@ and listed, not searched, and so is a scanned PDF, which has no text in it to re
   document. An answer from a document names the document and the part.
 - Documents are found by their words always, and by meaning when search by meaning is set up: the same model memory
   uses, set once under Knowledge & Memory.
-- A document keeps the language it was written in.
+- A document keeps the language it was written in, and its English title finds it in English.
 
 ## Memory or the knowledge base
 
@@ -84,6 +96,7 @@ nouride knowledge add <file> --to <collection>
 nouride knowledge add - --name <file name> --to <collection> < <file>   # the file on standard input
 nouride knowledge reindex [collection]             # read again what changed in the folder
 nouride knowledge archive|unarchive <collection>
+nouride knowledge title <collection>/<file> <words>   # its title; "" takes it off
 nouride knowledge rm <collection>/<file>
 ```
 

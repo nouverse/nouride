@@ -13,6 +13,7 @@ import { EditPreviewSwitch, MarkdownArea, type MarkdownMode } from "@/commons/co
 import { overPage } from "@/commons/components/ui/OverPage";
 import { useToast } from "@/commons/components/ui/toast";
 import { ErrorNote, Field } from "@/commons/components/ui/ui";
+import { TITLE_HINT } from "./words";
 
 export function WriteDialog({ collection, onClose }: { collection: KnowledgeCollection; onClose: () => void }) {
   const queryClient = useQueryClient();
@@ -59,7 +60,7 @@ export function WriteDialog({ collection, onClose }: { collection: KnowledgeColl
             <X size={16} />
           </button>
         </div>
-        <Field label="Title">
+        <Field label="Title" hint={TITLE_HINT}>
           <input className="input w-full rounded-xl text-sm" value={title} maxLength={100} placeholder="How to reset the router" onChange={(event) => setTitle(event.target.value)} />
         </Field>
         <div className="flex items-center justify-between gap-2">

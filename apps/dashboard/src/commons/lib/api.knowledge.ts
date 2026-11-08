@@ -132,6 +132,9 @@ export const knowledgeApi = {
   /** A document written on the page, saved under its title. */
   writeDocument: (id: string, title: string, text: string) => post<{ saved: SavedDocument[] }>(`${control}/knowledge/${encodeURIComponent(id)}/documents`, { name: title, text }),
   removeDocument: (id: string, path: string) => request<{ ok: true }>(`${control}/knowledge/${encodeURIComponent(id)}/documents?path=${encodeURIComponent(path)}`, { method: "DELETE" }),
+  /** A document's title, what search finds it by in any language; null takes it off and its own comes back (0.8.23). */
+  setDocumentTitle: (id: string, path: string, title: string | null) =>
+    request<{ document: KnowledgeDocument | null }>(`${control}/knowledge/${encodeURIComponent(id)}/documents?path=${encodeURIComponent(path)}`, { method: "PATCH", body: JSON.stringify({ title }) }),
 
   /** What search finds in every collection: the sections, best first. */
   searchKnowledge: (words: string) => request<{ hits: KnowledgeHit[] }>(`${control}/knowledge/search?q=${encodeURIComponent(words)}`),

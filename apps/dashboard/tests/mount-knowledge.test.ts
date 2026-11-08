@@ -250,6 +250,48 @@ describe("documents", () => {
     });
   });
 
+  // A file just dropped landed where its name sorted, and nothing said which one was new (the owner, 2026-11-08).
+  test("newest first, each saying when it was added", async () => {
+    const [porch, router, wifi] = HOUSE.documents as Record<string, unknown>[];
+    const now = Date.now();
+    answer({ "/knowledge/house/documents": ok({ documents: [{ ...porch, mtime: now - 3 * 86_400_000 }, { ...router, mtime: now - 2 * 3_600_000 }, { ...wifi, mtime: now - 30_000 }] }) });
+    await renderPage("/memories", async () => {
+      await open("House");
+      await shows("Added just now");
+      const rows = [...body().querySelectorAll("li")].map((row) => row.querySelector("button")?.textContent).filter(Boolean);
+      expect(rows).toEqual(["Wifi", "Router", "porch"]);
+      expect(text()).toContain("Added 2 h ago");
+      expect(text()).toContain("Added 3 days ago");
+    });
+  });
+
+  test("a document's title set on its row, and taken off again; the file keeps its name", async () => {
+    const titled = { ...(HOUSE.documents[1] as Record<string, unknown>), title: "Router setup" };
+    const sent = watch({ "PATCH /knowledge/house/documents": { status: 200, body: { document: titled } } });
+    await renderPage("/memories", async () => {
+      await open("House");
+      await eventually(() => body().querySelector('button[aria-label="Change the title of Router"]') !== null, 3_000, "the title button");
+      (body().querySelector('button[aria-label="Change the title of Router"]') as HTMLButtonElement).click();
+      await shows("router.md keeps its name.");
+      expect(text()).toContain("Written in English, your agents find it whatever language they search in.");
+      const input = body().querySelector('[role="dialog"] input[aria-label="Title"]') as HTMLInputElement;
+      expect(input.value).toBe("Router");
+      type(input, "Router setup");
+      click("Save");
+      await shows("Title saved: Router setup");
+      await eventually(() => body().querySelector('[role="dialog"] input[aria-label="Title"]') === null, 2_000, "the dialog closed");
+      (body().querySelector('button[aria-label="Change the title of Router"]') as HTMLButtonElement).click();
+      await eventually(() => body().querySelector('[role="dialog"] input[aria-label="Title"]') !== null, 2_000, "the dialog again");
+      type(body().querySelector('[role="dialog"] input[aria-label="Title"]') as HTMLInputElement, "  ");
+      click("Save");
+      await eventually(() => sent.filter((request) => request.method === "PATCH").length === 2, 2_000, "the second request");
+    });
+    expect(sent.filter((request) => request.method === "PATCH")).toEqual([
+      { method: "PATCH", path: "/knowledge/house/documents", query: "?path=router.md", body: { title: "Router setup" } },
+      { method: "PATCH", path: "/knowledge/house/documents", query: "?path=router.md", body: { title: null } },
+    ]);
+  });
+
   test("written on the page: a title, Markdown and its preview, saved under the title", async () => {
     const sent = watch({ "POST /knowledge/house/documents": { status: 201, body: { saved: [{ path: "Bins.md", status: "indexed" }] } } });
     await renderPage("/memories", async () => {

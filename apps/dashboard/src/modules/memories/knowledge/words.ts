@@ -7,6 +7,7 @@
  */
 
 import type { KnowledgeDocument, KnowledgeReaders, KnowledgeSection } from "@/commons/lib/api.knowledge";
+import { ago } from "@/commons/lib/format";
 
 /** "Gading", "Gading and Kak Sam", "Gading, Kak Sam and Raka". */
 export function listed(names: readonly string[]): string {
@@ -88,3 +89,14 @@ export function installMessage(needs: string, title: string, collection: string)
 
 /** Memory's key for a group chat, as a collection's readers name one: the connection, then the chat. */
 export const groupKey = (gatewayId: string, chatId: string): string => `${gatewayId}:${chatId}`;
+
+/**
+ * Under a document's title (0.8.23): what the title does, in plain words. An agent always gives an English one; a person
+ * may write any language, and is told what English adds.
+ */
+export const TITLE_HINT = "A few words saying what it is. Written in English, your agents find it whatever language they search in.";
+
+/** When a document came in: the time its file was saved here, which a later change to it moves. */
+export function addedLine(mtime: number, now = Date.now()): string {
+  return `Added ${ago(mtime, now)}`;
+}

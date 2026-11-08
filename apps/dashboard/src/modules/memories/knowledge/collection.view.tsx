@@ -126,7 +126,7 @@ export function CollectionView({
         {dragging ? <DropOverlay label={`Drop to add to ${collection.name}`} /> : null}
         <Card
           title="Documents"
-          description={editable ? "Drop files here to add them, or write one. Pictures and videos are kept, not searched." : "What your agents can look things up in."}
+          description={editable ? "Drop files here to add them, or write one. Pictures, videos and scanned pages are kept, not searched." : "What your agents can look things up in."}
           actions={
             editable ? (
               <>

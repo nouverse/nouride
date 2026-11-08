@@ -51,6 +51,18 @@ di Python), dan file lama `.doc`, `.xls` dan `.ppt` butuh LibreOffice. Kalau bel
 halaman menawarkan untuk memasangnya; setelah terpasang, dokumen terbaca dalam lima menit. Gambar dan video disimpan dan
 didaftar, tidak dicari, begitu juga PDF hasil scan, yang tidak berisi teks untuk dibaca.
 
+Di dashboard, dokumen sebuah koleksi diurutkan dari yang terbaru, masing-masing dengan kapan ditambahkan.
+
+### Judul dokumen
+
+Setiap dokumen punya judul, tampil di atas nama file-nya: kata-kata yang dipakai pencarian untuk menemukannya, dalam
+bahasa apa pun. Agent yang menyimpan dokumen memberinya judul berbahasa Inggris yang menyebut dokumen itu apa, dengan
+istilah aslinya ("NIB, business registration certificate (Nomor Induk Berusaha)"), jadi pencarian berbahasa Inggris
+menemukan dokumen berbahasa Indonesia walaupun pencarian makna belum diatur. Nama file-nya tetap seperti saat dikirim.
+
+Anda bisa memberi judul sendiri lewat ikon pensil di baris dokumen, dalam bahasa apa pun; kalau ditulis dalam bahasa
+Inggris, agent menemukannya dari bahasa apa pun. Tanpa judul, judul dokumen adalah heading pertamanya atau nama file-nya.
+
 ## Cara agent memakainya
 
 - Agent diberi tahu nama koleksi yang boleh ia cari di chat itu, dan tentang siapa masing-masing, tidak pernah isinya,
@@ -59,7 +71,7 @@ didaftar, tidak dicari, begitu juga PDF hasil scan, yang tidak berisi teks untuk
   atau seluruh dokumen. Jawaban dari dokumen menyebut dokumen dan bagiannya.
 - Dokumen selalu bisa ditemukan lewat kata-katanya, dan lewat makna kalau pencarian makna sudah diatur: model yang sama
   dengan memory, diatur sekali di Knowledge & Memory.
-- Dokumen tetap dalam bahasa aslinya.
+- Dokumen tetap dalam bahasa aslinya, dan judul berbahasa Inggrisnya membuatnya ketemu lewat bahasa Inggris.
 
 ## Memory atau knowledge base
 
@@ -83,6 +95,7 @@ nouride knowledge add <file> --to <koleksi>
 nouride knowledge add - --name <nama file> --to <koleksi> < <file>   # file lewat standard input
 nouride knowledge reindex [koleksi]                # baca ulang yang berubah di folder
 nouride knowledge archive|unarchive <koleksi>
+nouride knowledge title <koleksi>/<file> <kata>   # judulnya; "" menghapusnya
 nouride knowledge rm <koleksi>/<file>
 ```
 
