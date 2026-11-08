@@ -51,7 +51,7 @@ interface Pair {
   relation: "equal" | "into";
 }
 
-const PRO = "internals/pro";
+const PRO = "internals/pro/packages";
 
 export const PAIRS: Pair[] = [
   {

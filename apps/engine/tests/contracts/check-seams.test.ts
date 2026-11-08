@@ -6,9 +6,9 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { checkSeams, declarations } from "../../../../scripts/check-seams.ts";
+import { checkSeams, declarations, PAIRS } from "../../../../scripts/check-seams.ts";
 
 const ROOT = join(import.meta.dir, "../../../..");
 const BRIDGE = "apps/engine/src/modules/gateways/wa-bridge.d.ts";
@@ -88,4 +88,21 @@ describe("the types kept on two sides", () => {
     const { problems } = checkSeams(texts, only("the bridge protocol's version"));
     expect(problems.join("\n")).toContain("the bridge protocol's version");
   });
+
+  // The Pro plugins moved under `internals/pro/packages/`, and every pair naming them kept the old folder: with the Pro
+  // tree checked out, six pairs were said to be "not in this tree" and compared with nothing.
+  test.skipIf(!existsSync(join(ROOT, "internals/pro/package.json")))("with the Pro tree checked out, every pair naming it is compared", () => {
+    const pro = PAIRS.filter((pair) => pair.from.file.startsWith("internals/pro/") || pair.to.file.startsWith("internals/pro/")).map((pair) => pair.what);
+    expect(pro.length).toBeGreaterThan(0);
+    const report = checkSeams(undefined, (name) => pro.includes(name));
+    expect(report.absent).toEqual([]);
+    expect(report.checked.sort()).toEqual([...pro].sort());
+    expect(report.problems).toEqual([]);
+  }, 60_000);
+
+  test.skipIf(!existsSync(join(ROOT, "internals/pro/package.json")))("a role the wire's accounts lose and the multi-user plugin still has is caught", () => {
+    const texts = drifted("packages/wire/src/status.ts", 'export type UserRole = "admin" | "operator" | "viewer";', 'export type UserRole = "admin" | "operator";');
+    const { problems } = checkSeams(texts, only("the roles an account can hold"));
+    expect(problems.join("\n")).toContain("the roles an account can hold");
+  }, 60_000);
 });
