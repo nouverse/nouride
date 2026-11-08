@@ -159,7 +159,7 @@ export default function JobPage({ jobId }: { jobId: string }) {
   return (
     <div className="space-y-5">
       <Link to="/jobs" className="btn btn-ghost btn-xs -ml-2 gap-1.5 rounded-lg text-base-content/70">
-        <ArrowLeft size={13} aria-hidden="true" /> Background Helpers
+        <ArrowLeft size={13} aria-hidden="true" /> Helpers
       </Link>
 
       <header className="space-y-3">

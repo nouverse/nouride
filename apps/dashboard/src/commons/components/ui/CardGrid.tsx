@@ -7,7 +7,7 @@
 import type { ReactNode } from "react";
 
 /** One card's frame: its border, surface, corners and padding. */
-export const CARD = "border-base-content/[0.08] bg-base-100/80 relative flex flex-col gap-3 rounded-2xl border p-5 shadow-xs transition-colors";
+export const CARD = "border-base-content/[0.08] bg-base-100 relative flex flex-col gap-3 rounded-[22px] border p-5 shadow-soft transition-colors";
 
 /**
  * A card that is itself what opens something — a mission, a background helper, an agent — lifted a little under the

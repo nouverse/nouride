@@ -7,6 +7,7 @@
  * - DaisyUI semantic theme colors
  */
 
+import { Mascot, type Pose } from "@/commons/components/brand/Mascot";
 import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { AlertCircle, ChevronDown } from "lucide-react";
@@ -28,7 +29,7 @@ export function PageHeader({
   return (
     <header className={cn("flex flex-wrap items-start justify-between gap-4 pb-1", className)}>
       <div className="space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight text-base-content sm:text-3xl">{title}</h1>
+        <h1 className="text-2xl text-base-content sm:text-3xl">{title}</h1>
         {description && (
           <p className="text-base-content/65 max-w-2xl text-sm leading-relaxed">{description}</p>
         )}
@@ -45,7 +46,6 @@ export function Card({
   children,
   className = "",
   bodyClassName,
-  glass = true,
   folded,
 }: {
   title?: string;
@@ -55,7 +55,6 @@ export function Card({
   className?: string;
   /** For a card whose body scrolls on its own under a header that stays put. */
   bodyClassName?: string;
-  glass?: boolean;
   /**
    * A card that folds to its header (0.8.11): its title a button that opens and closes it, its body there only while it
    * is open. A mission's brief, closed until asked for — the owner's word.
@@ -65,8 +64,8 @@ export function Card({
   return (
     <section
       className={cn(
-        "rounded-2xl border border-base-content/[0.08] shadow-sm transition-all duration-200",
-        glass ? "bg-base-100/80 backdrop-blur-xl backdrop-saturate-150" : "bg-base-100",
+        // The design rules' floating card: a hairline and a soft, wide shadow, 22px corners. No glass.
+        "rounded-[22px] border border-base-content/[0.08] bg-base-100 shadow-soft transition-all duration-200",
         className
       )}
     >
@@ -80,13 +79,13 @@ export function Card({
             <button type="button" className="flex min-w-0 flex-[1_1_16rem] items-start gap-2 text-left" aria-expanded={folded.open} onClick={folded.toggle}>
               <ChevronDown size={16} aria-hidden="true" className={cn("mt-0.5 shrink-0 text-base-content/60 transition-transform", !folded.open && "-rotate-90")} />
               <span className="space-y-0.5 min-w-0">
-                {title && <h2 className="font-semibold tracking-tight text-base-content text-base [overflow-wrap:anywhere]">{title}</h2>}
+                {title && <h2 className="text-lg text-base-content [overflow-wrap:anywhere]">{title}</h2>}
                 {description && <p className="text-base-content/65 text-sm [overflow-wrap:anywhere]">{description}</p>}
               </span>
             </button>
           ) : (
             <div className="space-y-0.5 min-w-0">
-              {title && <h2 className="font-semibold tracking-tight text-base-content text-base [overflow-wrap:anywhere]">{title}</h2>}
+              {title && <h2 className="text-lg text-base-content [overflow-wrap:anywhere]">{title}</h2>}
               {description && <p className="text-base-content/65 text-sm [overflow-wrap:anywhere]">{description}</p>}
             </div>
           )}
@@ -124,26 +123,34 @@ export function Field({
   );
 }
 
+/**
+ * A list with nothing in it, and what to do next. With a `pose` (0.8.24), the mascot in place of the icon: for the one
+ * empty list a page is about, as the design rules allow one mascot a view. An empty card among others keeps its icon.
+ */
 export function EmptyState({
   icon: Icon,
+  pose,
   title,
   description,
   action,
   className,
 }: {
-  icon: LucideIcon;
   title: string;
   description?: string;
   action?: ReactNode;
   className?: string;
-}) {
+} & ({ icon: LucideIcon; pose?: undefined } | { pose: Pose; icon?: undefined })) {
   return (
     <div className={cn("flex flex-col items-center justify-center gap-3.5 py-12 px-4 text-center", className)}>
-      <div className="bg-base-content/[0.05] text-base-content/65 grid size-12 place-items-center rounded-2xl border border-base-content/[0.06] shadow-inner">
-        <Icon size={24} aria-hidden="true" />
-      </div>
+      {pose ? (
+        <Mascot pose={pose} decorative className="w-36 sm:w-40" />
+      ) : Icon ? (
+        <div className="bg-base-content/[0.05] text-base-content/65 grid size-12 place-items-center rounded-2xl border border-base-content/[0.06]">
+          <Icon size={24} aria-hidden="true" />
+        </div>
+      ) : null}
       <div className="space-y-1 max-w-md">
-        <p className="font-semibold text-base-content text-base tracking-tight">{title}</p>
+        <p className="font-display text-lg font-medium text-base-content tracking-tight">{title}</p>
         {description && (
           <p className="text-base-content/65 text-sm leading-relaxed">{description}</p>
         )}

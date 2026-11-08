@@ -11,7 +11,7 @@
  * so connecting is a copy and a paste.
  */
 
-import { AgentName, useOrchestrator, useOrchestratorFirst } from "@/commons/components/ui/AgentName";
+import { AgentName, useOrchestrator, useOrchestratorFirst } from "@/commons/components/agents/AgentName";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { KeyRound, Lock, Trash2 } from "lucide-react";

@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { AskAgentButton } from "@/commons/components/ui/AskAgentButton";
+import { AskAgentButton } from "@/commons/components/agents/AskAgentButton";
 import { answer, recordPosts, renderPage, useMountHarness, WIRE } from "./mount-harness.ts";
 import { eventually } from "./wait.ts";
 

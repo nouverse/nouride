@@ -183,34 +183,6 @@ describe("pages that keep their lists in bounds", () => {
     answer({});
   });
 
-  test("Overview: today's spend first, closed until opened; the Office in place of the agent and gateway lists", async () => {
-    answer({
-      "/status": ok({
-        status: "ready", gateways: [], providers: [], uptimeMs: 1000, orchestrator: "nero",
-        agents: [
-          { id: "nouva", displayName: "Nouva", enabled: true, state: "running", provider: "p", model: "m", tools: [], approvals: "careful" },
-          { id: "nero", displayName: "Nero", enabled: true, state: "running", provider: "p", model: "m", tools: [], approvals: "careful" },
-        ],
-      }),
-      "/usage": ok({ days: 1, total: { usd: 1.2345, inputTokens: 100, outputTokens: 50, cachedInputTokens: 0, cacheCreationInputTokens: 0, requests: 7 }, byModel: [], byAgent: [] }),
-    });
-    const closed = await renderPage("/");
-    expect(closed.indexOf("AI usage and spend")).toBeLessThan(closed.indexOf("Active Agents"));
-    // Tokens, compact, and the cached share — no dollars in the header.
-    expect(closed).toMatch(/>100<\/span> in ·.*?>50<\/span> out ·.*?>0%<\/span> cached/s);
-    expect(closed).not.toContain("$1.2345");
-    expect(closed).not.toContain("Tokens read");
-    // The Office, small, where the lists were (0.8.15): who is doing what, and a way in.
-    expect(closed).toContain("data-office-teaser");
-    expect(closed).toContain("2 idle");
-    expect(closed).toContain('aria-label="Open the Office: 2 idle"');
-    expect(closed).not.toContain("Live connections bridging chat platforms to agents.");
-    expect(closed).not.toContain("Active persona packs and their runtime state.");
-
-    const open = await renderPage("/", (host) => clickText(host, "button[aria-expanded]", "AI usage"));
-    expect(open).toContain("Tokens read");
-  });
-
   test("Users: what the roles mean comes before the accounts, which scroll", async () => {
     answer({
       "/users": ok({ multiUser: true, users: [{ id: "u1", username: "tester", role: "admin", createdAt: 0, mustChangePassword: false }] }),
@@ -748,19 +720,22 @@ describe("the login page, signed out", () => {
 /**
  * Where a queue is *reported* and where it is *decided* are different pages, on purpose.
  *
- * Overview is a glance. An earlier version put Approve buttons on it, next to somebody's name, on a
- * page people skim — and approving a stranger is not undoable by looking away. So Overview says how
- * many and where, and the answer is given on the page that shows the whole request.
+ * Home is a glance (Overview until 0.8.24). An earlier version put Approve buttons on it, next to somebody's name, on
+ * a page people skim — and approving a stranger is not undoable by looking away. So Home says what waits and where,
+ * and the answer is given on the page that shows the whole request. A tool call an agent is blocked on is the
+ * exception it always was: answered on Home as in its chat.
  *
  * Asserted on rendered output rather than on the component, because the mistake this guards against
  * is a button being put back, and a unit test of the component nobody edited would not see it.
  */
-describe("pending work is announced on Overview and answered elsewhere", () => {
-  test("Overview counts both queues and links out, and carries no decision", async () => {
+describe("pending work is announced on Home and answered elsewhere", () => {
+  test("Home names both queues and links out, and carries no decision", async () => {
     const html = await renderPage("/");
 
-    expect(html).toContain("1 pending pairing request.");
-    expect(html).toContain("1 skill waiting for review.");
+    expect(html).toContain("Someone asks to talk to your agents");
+    expect(html).toContain('href="/dashboard/access"');
+    expect(html).toContain("A new skill waits for your review");
+    expect(html).toContain('href="/dashboard/skills"');
     // The two words that must not be on this page. `Deny` would be worse, but `Approve` is the one
     // that was actually there.
     expect(html).not.toContain(">Approve<");
@@ -776,8 +751,11 @@ describe("pending work is announced on Overview and answered elsewhere", () => {
     expect(html).toContain(">Approve<");
     expect(html).toContain(">Deny<");
     expect(html).toContain(">Block<");
-    // On every page, beside Access, because the code expires.
-    expect(html).toMatch(/<span>Access<\/span><span[^>]*badge[^>]*>1<\/span>/);
+    // Beside Access while Settings' list is open, because the code expires; folded, beside Settings (below).
+    expect(html).toMatch(/<span[^>]*>Access<\/span><span[^>]*badge[^>]*>1<\/span>/);
+    const home = await renderPage("/");
+    expect(home).toMatch(/<span[^>]*>Settings<\/span><span[^>]*badge[^>]*>1<\/span>/);
+    expect(home).not.toMatch(/<span class="min-w-0 flex-1 truncate">Access<\/span>/);
   });
 
   test("the Agents page carries no decision any more: one place answers every agent's requests", async () => {
@@ -1465,7 +1443,8 @@ describe("running a job by hand", () => {
  * Answering an approval says what happened — and a 409, the request answered elsewhere or expired, is not an Allow.
  *
  * The chat said nothing when an answer failed, and the card vanished on the next poll either way, so a tap on Allow
- * a second after the timeout read as allowed. Overview showed the error inside the card that same poll removed.
+ * a second after the timeout read as allowed. Overview (Home since 0.8.24) showed the error inside the card that same
+ * poll removed.
  */
 describe("answering an approval", () => {
   const settle = async () => {
@@ -1480,7 +1459,7 @@ describe("answering an approval", () => {
   };
   const stale = { "/approvals/ap1/allow-once": { status: 409, body: { error: "not pending", id: "ap1" } } };
 
-  test("on Overview, a request that was no longer open says so, in a toast that outlives the card", async () => {
+  test("on Home, a request that was no longer open says so, in a toast that outlives the card", async () => {
     answer({ "/approvals": { status: 200, body: { pending: [pending] } }, ...stale });
     const html = await renderPage("/", async (host) => {
       await allowOnce(host);
@@ -1527,10 +1506,10 @@ describe("a failed load is not an empty or healthy page", () => {
     expect(html).not.toContain("unassigned connection");
   });
 
-  test("Overview says everything is working only while it is", async () => {
+  test("Home says everything is working only while it is", async () => {
     answer({ "/health": { status: 503, body: { status: "degraded", uptime: 10, version: "0.7.10", agents: 1, gateways: {} } } });
     const degraded = await renderPage("/");
-    expect(degraded).toContain(">degraded<");
+    expect(degraded).toContain("Not everything is working");
     expect(degraded).not.toContain("Everything is working");
 
     answer({ "/health": { status: 200, body: { status: "ok", uptime: 10, version: "0.7.10", agents: 1, gateways: {} } } });
@@ -1546,8 +1525,9 @@ describe("a failed load is not an empty or healthy page", () => {
  * its Save buttons below the fold and no way to scroll to them.
  */
 describe("which pages own the viewport", () => {
-  const SCROLLS = '<main class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">';
-  const FILLS = '<main class="flex-1 min-h-0 flex flex-col overflow-hidden *:animate-fade">';
+  const SCROLLS = '<main class="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">';
+  // Above the phone's tab bar, where a chat's composer sits (0.8.24).
+  const FILLS = '<main class="flex min-h-0 flex-1 flex-col overflow-hidden *:animate-fade max-lg:pb-[calc(4.75rem+env(safe-area-inset-bottom))]">';
   const agent = (id: string) => ({ id, displayName: id, enabled: true, state: "running", provider: "p", model: "m", tools: [], approvals: "careful" });
 
   test("an agent named like one of those pages still scrolls, on every tab", async () => {
@@ -1560,7 +1540,7 @@ describe("which pages own the viewport", () => {
     }
   });
 
-  test("chat, System Logs, Secrets and the LLM Gateway fill it", async () => {
+  test("chat, Logs, Secrets and the LLM Gateway fill it", async () => {
     for (const path of ["/chat", "/chat/ses_1", "/chat/room/room_1", "/logs", "/secrets", "/llm-gateway"]) {
       const html = await renderPage(path);
       expect({ path, fills: html.includes(FILLS) }).toEqual({ path, fills: true });
@@ -1569,7 +1549,7 @@ describe("which pages own the viewport", () => {
 });
 
 /**
- * The daemon restarting under an open page — Overview's Restart, a save that needs one, an update installing. Every
+ * The daemon restarting under an open page — a Restart, a save that needs one, an update installing. Every
  * `/api` path answers 503 while it boots. A refetch of who is signed in failing then was read as signed out: the page
  * went to the login form, and whatever was typed in it went too.
  */
@@ -1686,10 +1666,11 @@ describe("a page older than its daemon", () => {
  * an unstyled "Something went wrong!", and a mistyped address showed a bare "Not Found" — no way back but the URL bar.
  */
 describe("a page that is not there, or that throws", () => {
-  test("an unknown address says so and links back to Overview", async () => {
+  test("an unknown address says so, with the puzzled cat, and links back to Home", async () => {
     const html = await renderPage("/no-such-page");
     expect(html).toContain("No page here");
-    expect(html).toContain("Go to Overview");
+    expect(html).toContain("Go to Home");
+    expect(html).toContain("07-confused");
   });
 
   test("a page that throws while drawing shows what failed, with a way to reload", async () => {
@@ -1899,7 +1880,7 @@ describe("missions", () => {
     });
     expect(seen.tabs).toBe("All2 | Needs you0 | Working1 | Done0 | Failed0 | Stopped1");
     // Held to the window (`fillsViewport`) from a laptop's width up, the list scrolling inside its card, so the tabs stay put.
-    expect(seen.all).toContain("mx-auto flex w-full max-w-6xl flex-col px-4 pt-4 sm:px-6 sm:pt-6 lg:h-full lg:p-8");
+    expect(seen.all).toContain("mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 pt-2 sm:px-6 sm:pt-4 lg:h-full lg:p-8");
     expect(seen.all).toMatch(/lg:min-h-0 lg:flex-1 lg:overflow-y-auto/);
     // Its search and agent filter wrap under each other on a phone rather than run past the card's edge.
     expect(seen.all).toMatch(/<div class="flex min-w-0 max-w-full flex-wrap items-center gap-2"><div class="flex flex-wrap items-center gap-2"><label class="input/);
@@ -1930,7 +1911,8 @@ describe("missions", () => {
       globalThis.fetch = spy;
     }
     expect(chosen).toBe("nouva");
-    expect(asked[0]).toBe("?agent=nouva&days=3");
+    // The page's own asks: the menu's count reads the week's missions on every page, with no filter of its own (0.8.24).
+    expect(asked.filter((search) => search !== "")[0]).toBe("?agent=nouva&days=3");
   });
 
   test("a mission's page: four meters against its limits, the checklist with each step's note, how it is judged done — and only Stop while it works", async () => {

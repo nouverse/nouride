@@ -20,7 +20,7 @@ export const SEGMENTED_BAR =
 
 export function segmentClass(active: boolean): string {
   return `flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-3.5 py-2 font-mono text-xs font-medium transition-all active:scale-95 sm:py-1.5 ${
-    active ? "bg-primary text-primary-content shadow-xs" : "text-base-content/65 hover:bg-base-200/50 hover:text-base-content"
+    active ? "bg-secondary/10 font-semibold text-secondary" : "text-base-content/65 hover:bg-base-200/50 hover:text-base-content"
   }`;
 }
 

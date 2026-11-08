@@ -7,7 +7,7 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { api, type AgentSummary, type MissionStart, type MissionView } from "@/commons/lib/api";
-import { useOrchestrator, useOrchestratorFirst } from "@/commons/components/ui/AgentName";
+import { useOrchestrator, useOrchestratorFirst } from "@/commons/components/agents/AgentName";
 import { ErrorNote, Field } from "@/commons/components/ui/ui";
 
 /** The form's fields as the route takes them: checks one per line, blanks dropped; a reviewer's words or none at all. */

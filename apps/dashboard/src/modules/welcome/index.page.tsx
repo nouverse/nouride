@@ -11,7 +11,7 @@ import { KeyRound } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import { useGate } from "@/commons/lib/session";
 import { ErrorNote, Field } from "@/commons/components/ui/ui";
-import { NovaAppIcon } from "@/commons/components/icons/logos";
+import { NovaAppIcon } from "@/commons/components/brand/logos";
 import { MIN_PASSWORD_LENGTH } from "@/commons/lib/password";
 import { PasswordInput } from "@/commons/components/ui/PasswordInput";
 

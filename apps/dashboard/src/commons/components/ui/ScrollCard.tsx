@@ -12,9 +12,10 @@ import { SearchInput } from "./SearchInput";
 /**
  * The space under a page's last card, on a phone and a tablet: the browser's toolbar floats over the bottom of the page
  * there, and the home indicator under it, so the last card sat flush against the edge with the toolbar over it — hard to
- * scroll to the end of (the owner's iPhone, 0.8.12). Four rem past the safe area. A laptop keeps its 2rem.
+ * scroll to the end of (the owner's iPhone, 0.8.12). Since 0.8.24 the tab bar floats there too (`TabBar`), so 7rem past
+ * the safe area: the bar's 4.75rem and a little air. A laptop keeps its 2rem.
  */
-export const PAGE_BOTTOM = "pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-8";
+export const PAGE_BOTTOM = "pb-[calc(7rem+env(safe-area-inset-bottom))] lg:pb-8";
 
 /**
  * A page laid out to fill the window (`staticData: { fillsViewport: true }`): its root, a column the list takes the rest

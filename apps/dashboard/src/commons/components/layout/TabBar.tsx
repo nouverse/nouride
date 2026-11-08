@@ -1,0 +1,53 @@
+/**
+ * The phone's tab bar (0.8.24): Home, Chats, Work and Agents under a thumb, and More for the rest, where a phone had
+ * only a menu button at the top and a drawer. It floats above the page's foot, inside the home indicator's inset, and
+ * each tab is a finger's size (44px). Work carries the count of what waits for an answer, as it does in the sidebar.
+ */
+
+import { Link } from "@tanstack/react-router";
+import { Ellipsis } from "lucide-react";
+import { DAILY, isCurrent } from "@/commons/components/layout/nav";
+import { useNeedsYou } from "@/commons/hooks/use-needs-you";
+import { cn } from "@/commons/lib/utils";
+
+/** How far the bar reaches up from the screen's foot: what a page or a composer stays above. */
+export const TAB_BAR_SPACE = "max-lg:pb-[calc(4.75rem+env(safe-area-inset-bottom))]";
+
+const TAB = "relative flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-2xl text-xs font-medium transition-colors active:scale-95";
+
+export function TabBar({ pathname, more, onMore }: { pathname: string; more: boolean; onMore: () => void }) {
+  const { approvals, missions } = useNeedsYou();
+  const waiting = approvals + missions;
+  return (
+    <nav
+      aria-label="Tabs"
+      className="fixed inset-x-3 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] z-40 grid grid-cols-5 gap-1 rounded-[22px] border border-base-content/[0.08] bg-base-100 p-1.5 shadow-soft lg:hidden"
+    >
+      {DAILY.map((item) => {
+        const current = !more && isCurrent(item, pathname);
+        const Icon = item.icon;
+        return (
+          <Link
+            key={item.to}
+            to={item.to}
+            activeOptions={{ exact: item.to === "/" }}
+            aria-current={current ? "page" : undefined}
+            className={cn(TAB, current ? "bg-secondary/10 text-secondary" : "text-base-content/70")}
+          >
+            <Icon size={20} aria-hidden="true" />
+            <span>{item.label}</span>
+            {item.to === "/work" && waiting > 0 && (
+              <span className="badge badge-xs absolute top-0.5 left-1/2 ml-1.5 border-0 bg-accent px-1.5 font-mono font-semibold text-accent-content" title={`${waiting} waiting for your answer`}>
+                {waiting}
+              </span>
+            )}
+          </Link>
+        );
+      })}
+      <button type="button" aria-expanded={more} onClick={onMore} className={cn(TAB, more ? "bg-secondary/10 text-secondary" : "text-base-content/70")}>
+        <Ellipsis size={20} aria-hidden="true" />
+        <span>More</span>
+      </button>
+    </nav>
+  );
+}

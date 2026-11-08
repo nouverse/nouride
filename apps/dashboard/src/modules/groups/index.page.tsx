@@ -12,7 +12,7 @@ import { platformName } from "@/commons/lib/platform";
 import { isAdmin, useMe } from "@/commons/lib/session";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { MessagesSquare, Pencil } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import type { GroupRecord } from "@/commons/lib/api.groups";
 import { Card, EmptyState, ErrorNote, PageHeader } from "@/commons/components/ui/ui";
@@ -52,7 +52,7 @@ export default function GroupsPage() {
       ) : list.length === 0 ? (
         <Card>
           <EmptyState
-            icon={MessagesSquare}
+            pose="sleeping"
             title="No groups yet"
             description="A group appears here once an agent has talked in it. Add a bot to a WhatsApp or Telegram group or a Discord channel, or make a room in Chat."
           />

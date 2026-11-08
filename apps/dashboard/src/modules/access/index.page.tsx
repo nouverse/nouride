@@ -11,7 +11,7 @@
  * (everything answered, from the audit log). Each list scrolls inside its own card, as Skills' do.
  */
 
-import { useOrchestrator, useOrchestratorFirst } from "@/commons/components/ui/AgentName";
+import { useOrchestrator, useOrchestratorFirst } from "@/commons/components/agents/AgentName";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { AlertTriangle, Lock, Shield } from "lucide-react";

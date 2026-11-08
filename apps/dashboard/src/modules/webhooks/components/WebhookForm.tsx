@@ -7,7 +7,7 @@
  * agent turn. "Can it just fire a command like cron does" was a field away, not a feature away.
  */
 
-import { useOrchestrator, useOrchestratorFirst } from "@/commons/components/ui/AgentName";
+import { useOrchestrator, useOrchestratorFirst } from "@/commons/components/agents/AgentName";
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { api, type JobPayloadInput } from "@/commons/lib/api";

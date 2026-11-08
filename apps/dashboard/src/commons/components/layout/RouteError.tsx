@@ -5,7 +5,8 @@
  */
 
 import { Link, type ErrorComponentProps } from "@tanstack/react-router";
-import { AlertTriangle, Compass, RotateCw } from "lucide-react";
+import { RotateCw } from "lucide-react";
+import { Mascot, type Pose } from "@/commons/components/brand/Mascot";
 import { useEffect } from "react";
 import { isChunkLoadError, reloadForNewBuild, tabStorage } from "@/commons/lib/new-build";
 
@@ -18,7 +19,7 @@ export function RouteError({ error }: ErrorComponentProps) {
 
   return (
     <Panel
-      icon={<AlertTriangle size={18} className="text-error" aria-hidden="true" />}
+      pose={stale ? "update" : "offline"}
       title={stale ? "The dashboard was updated" : "This page ran into an error"}
       role="alert"
     >
@@ -32,12 +33,12 @@ export function RouteError({ error }: ErrorComponentProps) {
           {error instanceof Error ? error.message : String(error)}
         </pre>
       )}
-      <div className="card-actions">
+      <div className="flex flex-wrap gap-2">
         <button type="button" className="btn btn-primary btn-sm gap-1.5" onClick={() => window.location.reload()}>
           <RotateCw size={14} aria-hidden="true" /> Reload
         </button>
         <Link to="/" className="btn btn-ghost btn-sm">
-          Overview
+          Home
         </Link>
       </div>
     </Panel>
@@ -46,30 +47,26 @@ export function RouteError({ error }: ErrorComponentProps) {
 
 export function NotFound() {
   return (
-    <Panel icon={<Compass size={18} className="text-primary" aria-hidden="true" />} title="No page here">
+    <Panel pose="confused" title="No page here">
       <p className="text-sm text-base-content/70">
         This address is not a page of the dashboard: a mistyped link, or one from an older version.
       </p>
-      <div className="card-actions">
+      <div className="flex flex-wrap gap-2">
         <Link to="/" className="btn btn-primary btn-sm">
-          Go to Overview
+          Go to Home
         </Link>
       </div>
     </Panel>
   );
 }
 
-function Panel({ icon, title, role, children }: { icon: React.ReactNode; title: string; role?: "alert"; children: React.ReactNode }) {
+function Panel({ pose, title, role, children }: { pose: Pose; title: string; role?: "alert"; children: React.ReactNode }) {
   return (
-    <div className="mx-auto flex min-h-[50vh] w-full max-w-xl items-center p-4">
-      <div role={role} className="card w-full bg-base-100 border border-base-content/10 shadow-sm">
-        <div className="card-body gap-3">
-          <h1 className="flex items-center gap-2 text-base font-semibold tracking-tight">
-            {icon}
-            {title}
-          </h1>
-          {children}
-        </div>
+    <div className="mx-auto flex min-h-[50vh] w-full max-w-xl flex-col items-center justify-center gap-2 p-4">
+      <Mascot pose={pose} decorative className="w-36" />
+      <div role={role} className="w-full space-y-3 rounded-[22px] border border-base-content/[0.08] bg-base-100 p-5 shadow-soft">
+        <h1 className="text-xl text-base-content">{title}</h1>
+        {children}
       </div>
     </div>
   );

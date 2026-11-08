@@ -20,7 +20,7 @@
  * expressions are legal, and the two would disagree on the day one of them was fixed.
  */
 
-import { useOrchestrator, useOrchestratorFirst } from "@/commons/components/ui/AgentName";
+import { useOrchestrator, useOrchestratorFirst } from "@/commons/components/agents/AgentName";
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Clock, Target, Terminal, Zap } from "lucide-react";

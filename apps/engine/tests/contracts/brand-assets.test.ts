@@ -32,16 +32,28 @@ function code(text: string): string {
     .replace(/(^|[^:])\/\/[^\n]*/g, "$1");
 }
 
-/** The assets in `files` that no text in `texts` names in a string. */
+/**
+ * The assets in `files` (paths under the assets, a folder's included) that no text in `texts` names in a string. A
+ * query after the name is still the name: `?inline` builds the file into the bundle (the mascot's offline pose).
+ */
 function unused(files: readonly string[], texts: readonly string[]): string[] {
   return files.filter((file) => {
-    const named = new RegExp(`(?:@brand/|${ASSETS}/)${file.replace(/[.]/g, "\\.")}["'\`]`);
+    const named = new RegExp(`(?:@brand/|${ASSETS}/)${file.replace(/[.]/g, "\\.")}(?:\\?[\\w=&]*)?["'\`]`);
     return !texts.some((text) => named.test(code(text)));
   });
 }
 
+/** Every file under `dir`, by its path from it: a folder of assets is its files, each needing a use of its own. */
+function files(dir: string, under = ""): string[] {
+  return readdirSync(join(dir, under), { withFileTypes: true })
+    .filter((entry) => !entry.name.startsWith("."))
+    .flatMap((entry) => (entry.isDirectory() ? files(dir, join(under, entry.name)) : [join(under, entry.name)]));
+}
+
 describe("brand assets", () => {
-  const assets = readdirSync(join(ROOT, ASSETS)).filter((name) => !name.startsWith("."));
+  // The mascot's poses are a folder (0.8.24): each pose a page draws is here, named by the code that draws it; the rest
+  // of the set waits in docs/design/mascot until one is.
+  const assets = files(join(ROOT, ASSETS));
   const texts = ["apps", "packages", "scripts"].flatMap((top) => sources(join(ROOT, top))).map((path) => readFileSync(path, "utf8"));
 
   test("each is named by code that uses it", () => {
@@ -55,6 +67,14 @@ describe("brand assets", () => {
     expect(unused(["a.png"], ['import a from "@brand/a.png";'])).toEqual([]);
     expect(unused(["a.png"], ["const SRC = `${ROOT}/packages/shared/assets/a.png`;"])).toEqual([]);
     expect(unused(["a.png"], ['import a from "@brand/a.png.bak";'])).toEqual(["a.png"]);
+  });
+
+  test("a file in a folder is named by its path, built in or fetched; its folder's or a sibling's name is not it", () => {
+    expect(unused(["mascot/states/01-error.webp"], ['import offline from "@brand/mascot/states/01-error.webp?inline";'])).toEqual([]);
+    expect(unused(["mascot/standing/01-waving.webp"], ['import waving from "@brand/mascot/standing/01-waving.webp";'])).toEqual([]);
+    expect(unused(["mascot/standing/01-waving.webp"], ['import x from "@brand/mascot/standing/02-thumbs-up.webp";'])).toEqual(["mascot/standing/01-waving.webp"]);
+    expect(unused(["mascot/standing/01-waving.webp"], ['const dir = "@brand/mascot";'])).toEqual(["mascot/standing/01-waving.webp"]);
+    expect(files(join(ROOT, ASSETS)).some((file) => file.includes("/"))).toBe(true);
   });
 
   test("read from the whole tree — a walk that found nothing would find every asset unused, or with no assets, pass", () => {

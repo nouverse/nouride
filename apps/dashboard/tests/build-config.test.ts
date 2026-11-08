@@ -105,7 +105,8 @@ describe("a real build", () => {
     const assets = readdirSync(join(out, "assets"));
     const stylesheet = readFileSync(join(out, "assets", assets.find((name) => /^index-.*\.css$/.test(name))!), "utf8");
     const named = [...stylesheet.matchAll(/url\(([^)]+\.woff2)\)/g)].map((m) => m[1]!.replace(/^["']|["']$/g, ""));
-    expect(named).toHaveLength(6);
+    // Manrope and DM Mono's six, and Fredoka's two for the headings (0.8.24).
+    expect(named).toHaveLength(8);
     for (const url of named) {
       expect(url).toMatch(/^\/dashboard\/assets\/[\w-]+\.woff2$/);
       expect(assets).toContain(url.replace("/dashboard/assets/", ""));

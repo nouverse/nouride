@@ -32,6 +32,7 @@
  * just did, where the page itself already shows the new state.
  */
 
+import { Mascot } from "@/commons/components/brand/Mascot";
 import {
   createContext,
   useCallback,
@@ -105,11 +106,12 @@ const ICONS: Record<ToastKind, typeof Info> = {
   info: Info,
 };
 
-const ALERT_CLASS: Record<ToastKind, string> = {
-  success: "alert-success",
-  error: "alert-error",
-  warning: "alert-warning",
-  info: "alert-info",
+/** Each kind's icon colour: the toast itself is a card, so only the mark says how it went. */
+const TONE_CLASS: Record<ToastKind, string> = {
+  success: "text-success",
+  error: "text-error",
+  warning: "text-warning",
+  info: "text-info",
 };
 
 export interface Toaster {
@@ -233,11 +235,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               key={toast.id}
               role="status"
               // In as it is raised, and out as it is dismissed or its time is up; a leaving one takes no click.
-              className={`alert ${ALERT_CLASS[kind]} flex items-start gap-2.5 rounded-2xl py-2.5 pr-2.5 shadow-lg ${
+              className={`flex items-start gap-2.5 rounded-[18px] border border-base-content/[0.08] bg-base-100 py-2.5 pr-2.5 pl-3 text-base-content shadow-soft ${
                 toast.leaving ? "pointer-events-none animate-leave" : "pointer-events-auto animate-enter"
               }`}
             >
-              <Icon size={16} className="mt-0.5 shrink-0" />
+              {/* Done is the cat's thumbs up (0.8.24); the other kinds keep a mark in their colour. An error says what to
+                  do in its detail, which every caller writes. */}
+              {kind === "success" ? <Mascot pose="thumbsUp" decorative className="-my-1 w-10" /> : <Icon size={16} className={`mt-0.5 shrink-0 ${TONE_CLASS[kind]}`} />}
               <div className="min-w-0 flex-1 leading-snug">
                 {/* `break-words`: a daemon error can be one unbroken path or URL, and without it the
                     box grows past the viewport instead of wrapping. */}

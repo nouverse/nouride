@@ -13,10 +13,10 @@
 import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, FolderOpen, ListChecks, ScrollText, ShieldCheck, TriangleAlert } from "lucide-react";
+import { ArrowLeft, FolderOpen, ScrollText, ShieldCheck, TriangleAlert } from "lucide-react";
 import { api, type MissionDetail } from "@/commons/lib/api";
 import { ApiError } from "@/commons/lib/api.client";
-import { ApprovalCard } from "@/commons/components/ui/ApprovalCard";
+import { ApprovalCard } from "@/commons/components/approvals/ApprovalCard";
 import { Card, EmptyState, ErrorNote } from "@/commons/components/ui/ui";
 import { useAnswerApproval } from "@/commons/hooks/use-answer-approval";
 import { useConversation } from "@/commons/hooks/use-conversation";
@@ -119,7 +119,7 @@ export default function MissionPage({ missionId }: { missionId: string }) {
     if (found.error instanceof ApiError && found.error.status === 404) {
       return (
         <Card>
-          <EmptyState icon={ListChecks} title="No such mission" description={`There is no mission called ${missionId} here.`} action={<Link to="/missions" className="btn btn-sm btn-ghost">All missions</Link>} />
+          <EmptyState pose="confused" title="No such mission" description={`There is no mission called ${missionId} here.`} action={<Link to="/missions" className="btn btn-sm btn-ghost">All missions</Link>} />
         </Card>
       );
     }

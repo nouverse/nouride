@@ -58,7 +58,7 @@ export function NavHighlight({ nav }: { nav: RefObject<HTMLElement | null> }) {
       aria-hidden="true"
       data-current-mark=""
       className={cn(
-        "pointer-events-none absolute top-0 left-0 -z-10 rounded-xl border border-primary/20 bg-primary/10 shadow-xs",
+        "pointer-events-none absolute top-0 left-0 -z-10 rounded-[14px] bg-secondary/10",
         moves && "transition-[translate] duration-200 ease-out",
         !place && "invisible",
       )}

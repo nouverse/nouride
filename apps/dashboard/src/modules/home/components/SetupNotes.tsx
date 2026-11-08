@@ -4,7 +4,7 @@
  *
  * Each is logged at warn the first time and at info after, so the journal stops repeating them — and without this
  * they were in the journal only. Folded away: these are things to fix when there is time, not things waiting on
- * somebody, which is what `PendingAlerts` above is for. Renders nothing when the last boot said nothing.
+ * somebody, which is what Home's needs-you cards are for. Renders nothing when the last boot said nothing.
  */
 
 import { useQuery } from "@tanstack/react-query";

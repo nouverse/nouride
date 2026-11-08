@@ -19,7 +19,7 @@ import { canWrite, useMe } from "@/commons/lib/session";
 import { ErrorNote } from "@/commons/components/ui/ui";
 import { useConfirm } from "@/commons/components/ui/confirm";
 import { useToast } from "@/commons/components/ui/toast";
-import { RestartNeeded } from "@/commons/components/ui/RestartNeeded";
+import { RestartNeeded } from "@/commons/components/box/RestartNeeded";
 import { Details } from "@/commons/components/ui/Details";
 import { useSaved } from "@/commons/hooks/use-saved";
 import { useRestartsFinished } from "@/commons/lib/restart";

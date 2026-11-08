@@ -30,7 +30,6 @@ import {
   Plus,
   RefreshCw,
   Trash2,
-  Webhook,
   Zap,
 } from "lucide-react";
 import { api, type WebhookSummary } from "@/commons/lib/api";
@@ -110,12 +109,12 @@ export default function WebhooksPage() {
 
       {webhooks.length === 0 && !adding ? (
         <EmptyState
-          icon={Webhook}
+          pose="sleeping"
           title="No webhooks yet"
           description="A webhook gives one agent job a URL. Whatever calls that URL starts the job, and the request body is handed to the agent."
         />
       ) : shown.length === 0 ? (
-        <EmptyState icon={Webhook} title={`No ${filter} webhooks`} />
+        <EmptyState pose="sleeping" title={`No ${filter} webhooks`} />
       ) : (
         // Its own scroll, so the filters stay put over a long list. Keyed by the filter, to fade in anew (`FILL_PAGE`).
         <ScrollArea key={filter} fill className="space-y-4 pr-1">

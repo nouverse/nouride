@@ -33,7 +33,7 @@ const TABS: { id: Tab; label: string; hint: string }[] = [
   { id: "daemon", label: "Daemon", hint: "Every line the process printed" },
   { id: "audit", label: "Audit", hint: "One row per decision, with an actor" },
   { id: "schedule", label: "Schedule", hint: "What the scheduler fired" },
-  { id: "jobs", label: "Background Helpers", hint: "Commands started and not waited for" },
+  { id: "jobs", label: "Helpers", hint: "Commands started and not waited for" },
 ];
 
 export default function LogsPage() {
@@ -53,7 +53,7 @@ export default function LogsPage() {
     <div className={`flex h-full flex-col gap-4 overflow-y-auto overflow-x-hidden px-4 pt-4 sm:px-6 sm:pt-6 lg:overflow-hidden lg:px-8 lg:pt-8 ${PAGE_BOTTOM} *:animate-fade`}>
       <div className="shrink-0 space-y-4">
         <PageHeader
-          title="System Logs"
+          title="Logs"
           description="For whoever runs the server: what Nouride has been doing, who did what, what ran on a schedule and what still runs in the background, to find out why something went wrong."
         />
 

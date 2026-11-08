@@ -11,7 +11,7 @@ import { AlertTriangle, CheckCircle2, KeyRound, LogIn, Plus, RefreshCw } from "l
 import { api } from "@/commons/lib/api";
 import type { CliLoginView, CliProfile } from "@/commons/lib/api.external-agents";
 import { Card, ErrorNote } from "@/commons/components/ui/ui";
-import { CliSignIn } from "@/commons/components/ui/CliSignIn";
+import { CliSignIn } from "@/commons/components/agents/CliSignIn";
 
 export interface CliProfilesProps {
   agentId: string;

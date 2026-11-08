@@ -22,18 +22,18 @@ const request = (id: string, command: string, queued?: true) => ({
   ...(queued ? { queued } : {}),
 });
 
-test("Overview marks the pending approval the chat has not been asked yet, and only that one", async () => {
+test("Home marks the pending approval the chat has not been asked yet, and only that one", async () => {
   answer({ "/approvals": { status: 200, body: { pending: [request("apr_1", "git push"), request("apr_2", "ls /tmp", true)] } } });
   let cards: { command: string; marked: boolean }[] = [];
   await renderPage("/", async (host) => {
     await eventually(() => host.textContent?.includes("ls /tmp") === true, 2_000, "the approvals");
-    // Each card, by the badge every one of them carries.
-    cards = [...host.querySelectorAll(".badge")]
-      .filter((badge) => badge.textContent === "Needs Approval")
-      .map((badge) => badge.closest(".rounded-2xl")!)
+    // Each card, by the tag every one of them carries.
+    cards = [...host.querySelectorAll("[data-tag]")]
+      .filter((tag) => tag.textContent === "Needs you")
+      .map((tag) => tag.closest(".rounded-\\[22px\\]")!)
       .map((card) => ({
         command: card.textContent?.includes("ls /tmp") ? "ls /tmp" : "git push",
-        marked: [...card.querySelectorAll(".badge")].some((badge) => badge.textContent === "Not in the chat yet"),
+        marked: [...card.querySelectorAll("[data-tag]")].some((tag) => tag.textContent === "Not in the chat yet"),
       }));
   });
   expect(cards).toEqual([

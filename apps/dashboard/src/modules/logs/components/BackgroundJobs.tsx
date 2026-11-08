@@ -19,7 +19,7 @@ export function BackgroundJobs() {
   if (jobs.error) {
     return (
       <Card className="shrink-0">
-        <EmptyState icon={Terminal} title="Background helpers are not enabled on this daemon" />
+        <EmptyState icon={Terminal} title="Helpers are not turned on here" />
       </Card>
     );
   }
@@ -30,7 +30,7 @@ export function BackgroundJobs() {
     <Panel
       title="Background work"
       retention="jobLogs"
-      description="Commands started with exec background: true, helpers started with delegate background: true, and agents asked with ask_agent that were still working after a minute (the turn that launched one is long over while it runs). A row opens its page under Background Helpers: its output, or a helper's or an asked agent's steps."
+      description="Commands started with exec background: true, helpers started with delegate background: true, and agents asked with ask_agent that were still working after a minute (the turn that launched one is long over while it runs). A row opens its page under Helpers: its output, or a helper's or an asked agent's steps."
     >
       {jobs.isPending ? (
         <ListLoading count={5} />

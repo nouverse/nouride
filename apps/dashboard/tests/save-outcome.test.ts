@@ -66,7 +66,7 @@ describe("a save says what happened", () => {
   });
 
   test("and a save that waits for a restart has the Restart button beside it, wherever it is said", () => {
-    for (const file of ["commons/components/ui/RestartNeeded.tsx", "commons/components/layout/Reconnecting.tsx"]) {
+    for (const file of ["commons/components/box/RestartNeeded.tsx", "commons/components/layout/Reconnecting.tsx"]) {
       const text = readFileSync(join(SRC, file), "utf8");
       expect({ file, button: /<RestartButton\b/.test(text) }).toEqual({ file, button: true });
     }

@@ -10,7 +10,7 @@
  */
 
 import { Spinner } from "@/commons/components/ui/Spinner";
-import { AgentName, useOrchestrator, useOrchestratorFirst } from "@/commons/components/ui/AgentName";
+import { AgentName, useOrchestrator, useOrchestratorFirst } from "@/commons/components/agents/AgentName";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BookOpen, ChevronDown, ChevronRight, CircleCheck, Package, Power, PowerOff, Trash2, TriangleAlert, Wrench } from "lucide-react";

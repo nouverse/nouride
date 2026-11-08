@@ -6,7 +6,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { ExternalLink, Info, Plus, ShieldCheck, Trash2, Users as UsersIcon } from "lucide-react";
+import { ExternalLink, Info, Plus, ShieldCheck, Trash2 } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import { Card, EmptyState, ErrorNote, Field, PageHeader } from "@/commons/components/ui/ui";
 import { FILL_PAGE, ScrollCard } from "@/commons/components/ui/ScrollCard";
@@ -130,7 +130,7 @@ export default function UsersPage() {
         {users.isPending ? (
           <ListLoading />
         ) : list.length === 0 ? (
-          <EmptyState icon={UsersIcon} title="No user accounts registered" />
+          <EmptyState pose="sleeping" title="No user accounts registered" />
         ) : (
           <div className="overflow-x-auto -mx-4 -my-2 sm:-mx-6">
             {/* A card per account on a phone, the table from `sm` up, as People draws its rows. */}

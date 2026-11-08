@@ -4,11 +4,11 @@
  * glowing status indicators, and clear metadata.
  */
 
-import { AgentStatusBadge } from "@/commons/components/agent-status-badge";
+import { AgentStatusBadge } from "@/commons/components/agents/agent-status-badge";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { AlertTriangle, Bot, ChevronRight, Crown, KeyRound, Plus, Radio, Settings, Wrench } from "lucide-react";
+import { AlertTriangle, ChevronRight, Crown, KeyRound, Plus, Radio, Settings, Wrench } from "lucide-react";
 import { api, type AgentSummary } from "@/commons/lib/api";
 import { FILL_PAGE, ScrollArea } from "@/commons/components/ui/ScrollCard";
 import { Count, SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
@@ -106,7 +106,7 @@ export default function AgentListPage() {
       ) : agents.length === 0 ? (
         <Card>
           <EmptyState
-            icon={Bot}
+            pose="sleeping"
             title="No agents yet"
             description="Make your first agent to start talking with it, here or in your chat apps."
             action={
@@ -128,7 +128,7 @@ export default function AgentListPage() {
           value={filter}
           onChange={setFilter}
         />
-        {shown.length === 0 ? <EmptyState icon={Bot} title={`No ${filter} agents`} /> : null}
+        {shown.length === 0 ? <EmptyState pose="sleeping" title={`No ${filter} agents`} /> : null}
         {/* Its own scroll, so the tabs stay put over a long list. Keyed by the tab, to fade in anew (`FILL_PAGE`). */}
         <ScrollArea key={filter} fill className="pr-1">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

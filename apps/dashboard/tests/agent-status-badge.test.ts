@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { statusBadge } from "@/commons/components/agent-status-badge";
+import { statusBadge } from "@/commons/components/agents/agent-status-badge";
 
 const activity = (over: Partial<NonNullable<Parameters<typeof statusBadge>[0]["activity"]>>) => ({
   activity: "idle" as const,

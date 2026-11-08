@@ -13,7 +13,7 @@ import { api, type GatewayInstance } from "@/commons/lib/api";
 import { Card, EmptyState, ErrorNote, Field, StatusDot } from "@/commons/components/ui/ui";
 import { useConfirm } from "@/commons/components/ui/confirm";
 import { WhatsAppPairing } from "./WhatsAppPairing";
-import { RestartNeeded } from "@/commons/components/ui/RestartNeeded";
+import { RestartNeeded } from "@/commons/components/box/RestartNeeded";
 import { Details } from "@/commons/components/ui/Details";
 import { DropdownMenu } from "@/commons/components/ui/DropdownMenu";
 import { ListLoading } from "@/commons/components/ui/Spinner";

@@ -293,13 +293,14 @@ export const TEST_BUDGET: Record<string, Budget> = {
     why: "reflection end to end, written before `modules/reflection` was split; 2_046 → 2_052 for 0.7.27 — the large-skill case's new stance, the fixture split into `[skills.learning]` and the pass's own tuning, and `/drafts approve` saying on for the agent that learned it, not every agent; 2_052 → 2_075 for 0.8.12 — the pass drafts nothing for a skill that ships with Nouride or one a person wrote, beside the built-in cases it completes, on this file's `enginePointedAt` (which now hands back its drafts and revise calls); new cases go to tests/reflection/",
   },
   "apps/dashboard/tests/mount.test.ts": {
-    lines: 1_799,
+    lines: 1_780,
     why:
       "every page mounted, the memory graph's too, and the cases that click through one — 2_051 → 1_796 when its harness " +
       "(the fake DOM, fetch and hooks, renderPage, press/type/recordPosts) moved to `mount-harness.ts` (0.8.0), as this " +
       "entry said it would the next time the file grew: a page's new cases can now go in a file of their own; 1_796 → 1_798 " +
       "for the Missions list's tabs, one per way a mission finished (0.8.0) — an existing case, changed where it stands; " +
-      "1_798 → 1_799 for the second look's card saying what it does in words the owner could read (0.8.0), asserted in its existing case.",
+      "1_798 → 1_799 for the second look's card saying what it does in words the owner could read (0.8.0), asserted in its existing case; " +
+      "1_799 → 1_780 when Overview's layout case went to Home's own file (0.8.24).",
   },
   "apps/engine/tests/llm/prompt.test.ts": { lines: 1_041, why: "prompt assembly, every section and its order — and, since 0.7.11, the formatting line a connection gives or the browser's; how a kept secret reaches commands; 0.7.23: the `send_message` line, beside `send_file`'s, and the database ruled out; 0.7.26: the reader that puts who is speaking after the system prompt, where it is sent now; 0.8.12 (1,025 → 1,039): the skills list shortened before the agent's memory is trimmed, beside the trim test it extends; 0.8.15 (1,039 → 1,041): trusted's exec line now names what every level still asks, its whole words asserted" },
 };

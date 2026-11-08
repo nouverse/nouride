@@ -8,10 +8,10 @@
  * page's queries meanwhile, so nothing on it turns into an error and back.
  */
 
+import { Mascot } from "@/commons/components/brand/Mascot";
 import { useEffect, useRef } from "react";
 import { Loader2, RotateCw } from "lucide-react";
-import { NovaAppIcon } from "@/commons/components/icons/logos";
-import { RestartButton } from "@/commons/components/ui/RestartButton";
+import { RestartButton } from "@/commons/components/box/RestartButton";
 import { useToast } from "@/commons/components/ui/toast";
 import { restartNow, useRestart, useRestartPending, useRestartsFinished, type RestartState } from "@/commons/lib/restart";
 
@@ -97,17 +97,17 @@ export function RestartedToast() {
 
 /** A first load while the daemon boots: nobody known yet to show a page to, and the login form would be wrong. */
 export function ReconnectingScreen() {
+  // The one pose built into the bundle (`Mascot`'s `offline`): nothing more can be fetched from a daemon that does not
+  // answer, so a picture it had to serve would be a broken image here.
   return (
-    <div className="bg-base-200/60 flex min-h-screen items-center justify-center p-4">
-      <div role="status" aria-live="polite" className="card bg-base-100 border border-base-content/10 shadow-sm w-full max-w-sm">
-        <div className="card-body items-center text-center gap-3">
-          <NovaAppIcon className="size-10" />
-          <h1 className="text-base font-semibold tracking-tight">Waiting for Nouride</h1>
-          <p className="text-sm text-base-content/70">
-            Nouride is not answering yet; it is probably starting. This page tries again every few seconds.
-          </p>
-          <Loader2 size={18} className="animate-spin text-primary" aria-hidden="true" />
-        </div>
+    <div className="bg-app flex min-h-screen items-center justify-center p-4">
+      <div role="status" aria-live="polite" className="flex w-full max-w-sm flex-col items-center gap-3 rounded-[22px] border border-base-content/[0.08] bg-base-100 p-6 text-center shadow-soft">
+        <Mascot pose="offline" decorative className="w-32" />
+        <h1 className="text-xl text-base-content">Waiting for Nouride</h1>
+        <p className="text-sm text-base-content/70">
+          Nouride is not answering yet; it is probably starting. This page tries again every few seconds.
+        </p>
+        <Loader2 size={18} className="animate-spin text-secondary" aria-hidden="true" />
       </div>
     </div>
   );

@@ -106,10 +106,16 @@ function sources(dir: string, pattern: RegExp): string[] {
 }
 
 describe("the faces", () => {
-  test("Manrope is the sans and DM Mono the mono, each before its fallbacks", () => {
+  test("Manrope is the sans, DM Mono the mono and Fredoka the headings' face, each before its fallbacks", () => {
     const theme = /@theme\s*\{([^}]*)\}/.exec(css)?.[1] ?? "";
     expect(/--font-sans:\s*"Manrope",/.test(theme)).toBe(true);
     expect(/--font-mono:\s*"DM Mono",/.test(theme)).toBe(true);
+    expect(/--font-display:\s*"Fredoka",/.test(theme)).toBe(true);
+    // Every heading in it, at the one weight there is a file for: a `font-bold` on one is not emboldened by the browser.
+    const headings = /h1,\s*h2,\s*h3\s*\{([^}]*)\}/.exec(css)?.[1] ?? "";
+    expect(headings).toContain("font-family: var(--font-display)");
+    expect(headings).toContain("font-weight: 500");
+    expect(headings).toContain("font-synthesis-weight: none");
   });
 
   test("every face is a woff2 file beside the stylesheet, Latin split from Latin Extended", () => {
@@ -118,6 +124,8 @@ describe("the faces", () => {
       "DM Mono 400",
       "DM Mono 500",
       "DM Mono 500",
+      "Fredoka 500",
+      "Fredoka 500",
       "Manrope 200 800",
       "Manrope 200 800",
     ]);
@@ -132,7 +140,7 @@ describe("the faces", () => {
   });
 
   test("each family's licence ships beside it", () => {
-    for (const licence of ["OFL-Manrope.txt", "OFL-DMMono.txt"]) {
+    for (const licence of ["OFL-Manrope.txt", "OFL-DMMono.txt", "OFL-Fredoka.txt"]) {
       const path = join(STYLES, "fonts", licence);
       expect(existsSync(path)).toBe(true);
       expect(readFileSync(path, "utf8")).toContain("SIL OPEN FONT LICENSE Version 1.1");
@@ -185,10 +193,15 @@ describe("DM Mono for what is technical (dashboard-text-contrast-and-mono)", () 
     expect(wanting.filter(({ words }) => !words.includes("font-mono")).map(({ file, words }) => `${file}: ${words.join(" ")}`)).toEqual([]);
   });
 
-  test("so are the sidebar's navigation, the page tabs and a connection's status", () => {
+  test("so are the page tabs and a connection's status; the menu is in the interface's face (0.8.24)", () => {
     const read = (file: string) => readFileSync(join(SRC, file), "utf8");
-    // The route links and the manual's link; the current one adds only its colour and weight (its mark is the highlight).
-    expect(read("commons/components/layout/RootLayout.tsx").match(/rounded-xl px-3 py-2 font-mono/g)?.length).toBe(2);
+    // The soft look's menu reads as words, not identifiers, as its mockup has it: every item, the manual's link too, is
+    // the one `ITEM` list, and the current one adds only its colour and weight (its mark is the highlight).
+    const nav = read("commons/components/layout/nav.tsx");
+    const item = /const ITEM = "([^"]+)"/.exec(nav)?.[1] ?? "";
+    expect(item).toContain("rounded-[14px]");
+    expect(item).not.toContain("font-mono");
+    expect(nav.match(/cn\(ITEM/g)?.length).toBe(2);
     expect(read("commons/components/ui/SegmentedTabs.tsx")).toMatch(/segmentClass[\s\S]*font-mono/);
     expect(read("commons/components/ui/ui.tsx")).toMatch(/export function StatusDot[\s\S]*rounded-full font-mono/);
   });

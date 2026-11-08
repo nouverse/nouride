@@ -14,7 +14,7 @@ import { api } from "@/commons/lib/api";
 import type { KnowledgeCollection, KnowledgeDocument } from "@/commons/lib/api.knowledge";
 import { formatBytes } from "@/commons/lib/format";
 import { cn } from "@/commons/lib/utils";
-import { AskAgentButton } from "@/commons/components/ui/AskAgentButton";
+import { AskAgentButton } from "@/commons/components/agents/AskAgentButton";
 import { useConfirm } from "@/commons/components/ui/confirm";
 import { Details } from "@/commons/components/ui/Details";
 import { useToast } from "@/commons/components/ui/toast";

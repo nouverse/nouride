@@ -382,7 +382,7 @@ function BlockedCard({ plan }: { plan: NonNullable<NonNullable<UpdateStatus["che
         </>
       )}
       <p className="text-xs text-base-content/65 mt-3">
-        Back to <Link to="/" className="link link-hover">Overview</Link>.
+        Back to <Link to="/" className="link link-hover">Home</Link>.
       </p>
     </Card>
   );

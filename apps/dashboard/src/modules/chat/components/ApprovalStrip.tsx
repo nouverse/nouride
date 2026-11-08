@@ -9,7 +9,7 @@
  * otherwise leave a gap under every transcript.
  */
 
-import { ApprovalCard } from "@/commons/components/ui/ApprovalCard";
+import { ApprovalCard } from "@/commons/components/approvals/ApprovalCard";
 import type { ApprovalRequest, ApprovalDecision } from "@/commons/lib/api";
 
 export interface ApprovalStripProps {

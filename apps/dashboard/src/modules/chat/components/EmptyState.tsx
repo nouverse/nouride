@@ -8,7 +8,7 @@
 
 import { Sparkles } from "lucide-react";
 import type { Room } from "@/commons/lib/api";
-import { NovaAppIcon } from "@/commons/components/icons/logos";
+import { NovaAppIcon } from "@/commons/components/brand/logos";
 import { CatPortrait } from "@/commons/cat/CatPortrait";
 import type { Look } from "@/commons/cat/look";
 

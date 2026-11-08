@@ -36,10 +36,17 @@ describe("brand images in the dashboard", () => {
 
   test("each is small enough to be fetched on a cold load", () => {
     const heavy = imports
-      .map(({ from, file }) => ({ from, file, bytes: statSync(join(BRAND, file)).size }))
+      // `?inline` is how the file is built in, not part of its name.
+      .map(({ from, file }) => ({ from, file, bytes: statSync(join(BRAND, file.replace(/\?.*$/, ""))).size }))
       .filter(({ bytes }) => bytes > MAX_BYTES)
       .map(({ from, file, bytes }) => `${from}: @brand/${file} is ${bytes} B`);
     expect(heavy).toEqual([]);
+  });
+
+  test("one picture alone is built into the script, the one the waiting screen shows with the daemon gone (0.8.24)", () => {
+    // Each `?inline` is a `data:` URL in the bundle every page loads, a third larger than the file: the mascot's other
+    // poses are fetched by the page that draws one.
+    expect(imports.filter(({ file }) => file.endsWith("?inline"))).toEqual([{ from: "commons/components/brand/Mascot.tsx", file: "mascot/states/01-error.webp?inline" }]);
   });
 });
 

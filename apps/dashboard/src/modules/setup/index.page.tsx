@@ -13,7 +13,7 @@ import { api, type SetupState } from "@/commons/lib/api";
 import { gatewayMount } from "@/commons/lib/bundled-gateway";
 import { GatewayOffer, GatewayStep } from "./GatewayStep";
 import { MemoryStep } from "./MemoryStep";
-import { NovaAppIcon } from "@/commons/components/icons/logos";
+import { NovaAppIcon } from "@/commons/components/brand/logos";
 
 const PRESETS: Record<string, { label: string; baseUrl: string; hint: string }> = {
   openai: {

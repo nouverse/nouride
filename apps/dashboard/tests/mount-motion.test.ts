@@ -44,11 +44,12 @@ describe("a page", () => {
     await renderPage("/missions", async (host, app) => {
       await eventually(() => host.textContent?.includes("Long work an agent finishes alone") ?? false, 4_000, "Missions to draw");
       const before = page(host).root;
-      const sidebar = host.querySelector("nav");
-      host.querySelector<HTMLElement>('nav a[href$="/jobs"]')!.click();
-      await eventually(() => app.location().endsWith("/jobs") && (host.textContent?.includes("Work an agent left running") ?? false), 4_000, "Background Helpers to draw");
+      const sidebar = host.querySelector('nav[aria-label="Menu"]');
+      // Helpers is a tab of Work now (0.8.24): a page of the menu's own, as the test means.
+      host.querySelector<HTMLElement>('nav[aria-label="Menu"] a[href$="/skills"]')!.click();
+      await eventually(() => app.location().endsWith("/skills") && (host.textContent?.includes("Skills") ?? false), 4_000, "Skills to draw");
       const after = page(host).root;
-      seen = { anew: after !== before, fades: fadesIn(after), sidebarKept: host.querySelector("nav") === sidebar };
+      seen = { anew: after !== before, fades: fadesIn(after), sidebarKept: host.querySelector('nav[aria-label="Menu"]') === sidebar };
     });
     expect(seen).toEqual({ anew: true, fades: true, sidebarKept: true });
   });
@@ -69,7 +70,7 @@ describe("a tab", () => {
     expect(seen).toEqual({ anew: true, fades: true, barKept: true });
   });
 
-  test("on System Logs is a panel of its own, drawn anew and faded in", async () => {
+  test("on Logs is a panel of its own, drawn anew and faded in", async () => {
     let seen = { anew: false, fades: false };
     await renderPage("/logs", async (host) => {
       await eventually(() => host.querySelector('[role="tablist"]') !== null, 4_000, "the tab bar");

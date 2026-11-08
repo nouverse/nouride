@@ -5,7 +5,7 @@
 
 import type { ReactNode } from "react";
 import { AlertTriangle } from "lucide-react";
-import { RestartButton } from "@/commons/components/ui/RestartButton";
+import { RestartButton } from "@/commons/components/box/RestartButton";
 import { RESTART_NEEDED } from "@/commons/hooks/use-saved";
 
 export function RestartNeeded({ children }: { children?: ReactNode }) {

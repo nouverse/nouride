@@ -25,7 +25,7 @@ import { ApiKeyField, type KeySource } from "./components/ApiKeyField";
 import { BraveGuide, CustomGuide, FreeGuide, SearxngGuide } from "./components/Guides";
 import { ProviderPicker } from "./components/ProviderPicker";
 import { TestResult } from "./components/TestResult";
-import { RestartNeeded } from "@/commons/components/ui/RestartNeeded";
+import { RestartNeeded } from "@/commons/components/box/RestartNeeded";
 import { useSaved } from "@/commons/hooks/use-saved";
 
 interface Draft {

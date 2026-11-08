@@ -18,9 +18,9 @@ import { CheckCircle2, ExternalLink, Info, KeyRound, LogIn, Plus, RefreshCw, Ter
 import { api } from "@/commons/lib/api";
 import { cliLabel, type CliAccountsView, type CliAccountView } from "@/commons/lib/api.external-agents";
 import { Card, EmptyState, ErrorNote } from "@/commons/components/ui/ui";
-import { CliSignIn } from "@/commons/components/ui/CliSignIn";
-import { AskAgentButton } from "@/commons/components/ui/AskAgentButton";
-import { CliStanding } from "@/commons/components/ui/CliStanding";
+import { CliSignIn } from "@/commons/components/agents/CliSignIn";
+import { AskAgentButton } from "@/commons/components/agents/AskAgentButton";
+import { CliStanding } from "@/commons/components/agents/CliStanding";
 import { Details } from "@/commons/components/ui/Details";
 import { isAdmin, useMe } from "@/commons/lib/session";
 import { byInstaller, setUpMessage } from "@/commons/lib/set-up";

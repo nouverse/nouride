@@ -4,7 +4,7 @@
  */
 
 import { Spinner } from "@/commons/components/ui/Spinner";
-import { AgentName, useOrchestrator, useOrchestratorFirst } from "@/commons/components/ui/AgentName";
+import { AgentName, useOrchestrator, useOrchestratorFirst } from "@/commons/components/agents/AgentName";
 import { useMutation } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { KeyRound, Trash2, Users } from "lucide-react";

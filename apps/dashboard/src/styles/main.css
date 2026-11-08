@@ -9,13 +9,29 @@
    check for, names they refuse. None of that is the app's, so none of it is downloaded. */
 @source not "../../tests";
 
-/* ── Type: Manrope for the interface, DM Mono for what is technical ───────────────────────────────
-   The Nouverse faces (the Nouverse design rules), served by the daemon from beside this file: an offline box
-   reaches no font CDN, and the dashboard's CSP (`default-src 'self'`) refuses one anyway. Latin and Latin
-   Extended only, and a browser fetches each file only when a page draws a character in its range; anything
-   else falls back to the system face named after it. Manrope is one variable file for every weight. DM Mono
-   comes in 400 and 500, as the family does, and a bold request is the browser emboldening 500.
-   Both are SIL Open Font License 1.1: the licences are in `fonts/`. */
+/* ── Type: Fredoka for headings, Manrope for the interface, DM Mono for what is technical ──────────────
+   Nouride's faces (the design rules, `nouride-contributing` § Type), served by the daemon from beside this file: an
+   offline box reaches no font CDN, and the dashboard's CSP (`default-src 'self'`) refuses one anyway. Latin and Latin
+   Extended only, and a browser fetches each file only when a page draws a character in its range; anything else falls
+   back to the system face named after it. Fredoka comes in the one weight a heading uses, 500. Manrope is one variable
+   file for every weight. DM Mono comes in 400 and 500, as the family does, and a bold request is the browser
+   emboldening 500. All three are SIL Open Font License 1.1: the licences are in `fonts/`. */
+@font-face {
+  font-family: "Fredoka";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("./fonts/fredoka-500-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Fredoka";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("./fonts/fredoka-500-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
 @font-face {
   font-family: "Manrope";
   font-style: normal;
@@ -68,6 +84,8 @@
 @theme {
   --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
   --font-mono: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  /* `font-display`: a page's title and a card's heading. */
+  --font-display: "Fredoka", "Manrope", ui-sans-serif, system-ui, sans-serif;
 
   /* ── Motion: where something changes, and only there ────────────────────────────────────────────
      The owner's reference (playquorum.dev/company), read from its stylesheet: what moves, moves in opacity and
@@ -118,97 +136,151 @@
   }
 }
 
-/* ── The palette: Nouverse, in daisyUI's names ────────────────────────────────────────────────────
-   Blue, from the mascot: the cat's own azure (#0084fc) is the brand, and its navy shadow the ink (0.7.16 — the
-   owner: the cat is blue, so a green brand read beside it as somebody else's). What each name is for, in both themes:
-   - base-*: the canvas and the cards on it. Light is cool paper under navy ink; dark is that navy turned into the
-     room, with the paper as its text.
-   - primary: the brand blue, and only for signals and actions — a button, a link, the page you are on, something
-     working. Lifted on dark (#55a8ff) and deepened on paper (#0052ab) from the cat's #0084fc, because that blue as
-     text over its own tint reads at 3.7:1 on navy and 3.9:1 on paper, and `text-primary` is a link.
-   - secondary: mist — the slate-blue surfaces. accent: soft peach, the one warm note. info: teal, so it is not
-     taken for an action. On paper each is deepened the same way, so text in it passes too.
-   - success, warning, error: green, amber, coral, calm rather than neon, and readable as text and as a fill.
-   Every value is `#rrggbb`: the memory graph reads them for its canvas (`palette.ts`) and adds an alpha to
+/* ── The palette: Nouride's soft look, in daisyUI's names ─────────────────────────────────────────
+   The design rules' "soft semi-fun" (2026-11-08): a cream day and a violet-grey night, peach for the main action,
+   lavender for where you are and what is yours, sage mint for what is moving or done, pink for what needs you, and red
+   for errors only. What each name is for, in both themes:
+   - base-100 is a card, base-200 the sidebar, and the page between them is RootLayout's `bg-base-200/50` over
+     base-100: cream by day, violet grey by night. base-300 is the deepest well.
+   - primary: peach, the main action, one per view. secondary: lavender, the page you are on and your own chat bubble.
+     accent: pink, "needs you" and nothing else. info and success: sage mint. warning: amber. error: red.
+   - Each colour is also written as text (a link, an icon, a tag's words on its own tint), so each must read at AA as
+     text: at night the soft accents do as they are; by day the pastels cannot, so each daisyUI colour is that hue
+     deepened until it does, and the pastel itself is `--fill-*` below, for the few solid fills a person sees as the
+     look: the main action, your chat bubble, a progress bar. Text on a pastel fill is ink, never white.
+   Every `--color-*` is `#rrggbb`: the memory graph reads them for its canvas (`palette.ts`) and adds an alpha to
    each. `tests/nouverse-look.test.ts` holds every pair that can carry text to WCAG AA, 4.5:1, in both themes. */
 
-/* ── Nouride, dark ──────────────────────────────────────────────────────────────────────────────── */
+/* ── Nouride, night ─────────────────────────────────────────────────────────────────────────────── */
 @plugin "daisyui/theme" {
   name: "nouride";
   default: true;
   color-scheme: dark;
 
-  --color-base-100: #111a27;
-  --color-base-200: #0b121c;
-  --color-base-300: #070c13;
-  --color-base-content: #e6edf6;
+  --color-base-100: #272534;
+  --color-base-200: #17161f;
+  --color-base-300: #121119;
+  --color-base-content: #efedf5;
 
-  --color-primary: #55a8ff;
-  --color-primary-content: #04111f;
-  --color-secondary: #a9bfd8;
-  --color-secondary-content: #0d1a2a;
-  --color-accent: #f4c8ae;
-  --color-accent-content: #2b1a10;
-  --color-neutral: #233044;
-  --color-neutral-content: #e6edf6;
+  --color-primary: #f29a7e;
+  --color-primary-content: #22202c;
+  --color-secondary: #b0a2f8;
+  --color-secondary-content: #22202c;
+  --color-accent: #f08fab;
+  --color-accent-content: #22202c;
+  --color-neutral: #3a3649;
+  --color-neutral-content: #efedf5;
 
-  --color-info: #7fd3e0;
-  --color-info-content: #072a30;
-  --color-success: #8fd6a3;
-  --color-success-content: #0f2416;
+  --color-info: #86d5bd;
+  --color-info-content: #1b2a25;
+  --color-success: #86d5bd;
+  --color-success-content: #1b2a25;
   --color-warning: #f2c27b;
   --color-warning-content: #2b1d08;
   --color-error: #ff9d8c;
   --color-error-content: #2e0f0a;
 
-  /* Shape: softer than daisyUI's defaults, as Nouverse is — fields and buttons at 0.5rem, boxes at 1rem,
-     which is what the dashboard's own cards (`rounded-2xl`) already are. */
-  --radius-selector: 0.5rem;
-  --radius-field: 0.5rem;
-  --radius-box: 1rem;
+  /* The pastels as fills, and the ink written on them: at night the same as the colours above. */
+  --fill-primary: #f29a7e;
+  --fill-secondary: #a99af0;
+  --fill-success: #86d5bd;
+  --fill-ink: #22202c;
+  /* The soft shadow's colour (`shadow-soft`): deeper at night, where a light one would not show. */
+  --shade: rgb(0 0 0 / 0.28);
+
+  /* Shape: the design rules' large radii. Inputs at 14px, cards and dialogs at 22px; a button is a pill
+     (`.btn` below), which daisyUI's field radius would also give every input. */
+  --radius-selector: 0.625rem;
+  --radius-field: 0.875rem;
+  --radius-box: 1.375rem;
   --size-selector: 0.25rem;
   --size-field: 0.25rem;
   --border: 1px;
-  --depth: 1;
+  --depth: 0;
   --noise: 0;
 }
 
-/* ── Nouride, light ─────────────────────────────────────────────────────────────────────────────── */
+/* ── Nouride, day ───────────────────────────────────────────────────────────────────────────────── */
 @plugin "daisyui/theme" {
   name: "nouride-light";
   color-scheme: light;
 
-  --color-base-100: #fbfcfe;
-  --color-base-200: #eef2f7;
-  --color-base-300: #dde5ef;
-  --color-base-content: #0f1b2d;
+  --color-base-100: #ffffff;
+  --color-base-200: #f4efe8;
+  --color-base-300: #efe9e0;
+  --color-base-content: #221e2e;
 
-  --color-primary: #0052ab;
-  --color-primary-content: #f0f7ff;
-  --color-secondary: #39567a;
-  --color-secondary-content: #eef3f9;
-  --color-accent: #8a4724;
-  --color-accent-content: #fff3ec;
-  --color-neutral: #172235;
-  --color-neutral-content: #eef2f7;
+  /* Ink a shade under the design rules' #2b2838, so muted copy (`text-base-content/65`) still reads at AA on the
+     sidebar's cream. Each colour is its pastel's hue deepened in OKLCH lightness until text in it reads at AA on the
+     cream page and on its own tint, up to `/20`. */
+  --color-primary: #993b1f;
+  --color-primary-content: #ffffff;
+  --color-secondary: #5e48b0;
+  --color-secondary-content: #ffffff;
+  --color-accent: #9a3355;
+  --color-accent-content: #ffffff;
+  --color-neutral: #221e2e;
+  --color-neutral-content: #faf7f2;
 
-  --color-info: #0a5a68;
-  --color-info-content: #e9f9fb;
-  --color-success: #23633a;
-  --color-success-content: #eef8f0;
-  --color-warning: #7d4b00;
-  --color-warning-content: #fff6e6;
-  --color-error: #a0221b;
-  --color-error-content: #fff1ef;
+  --color-info: #096550;
+  --color-info-content: #ffffff;
+  --color-success: #096550;
+  --color-success-content: #ffffff;
+  --color-warning: #824a00;
+  --color-warning-content: #fff8ec;
+  --color-error: #ad001f;
+  --color-error-content: #ffffff;
 
-  --radius-selector: 0.5rem;
-  --radius-field: 0.5rem;
-  --radius-box: 1rem;
+  --fill-primary: #f08a6c;
+  --fill-secondary: #8c7ae6;
+  --fill-success: #7fcdb4;
+  --fill-ink: #221e2e;
+  --shade: rgb(60 45 30 / 0.07);
+
+  --radius-selector: 0.625rem;
+  --radius-field: 0.875rem;
+  --radius-box: 1.375rem;
   --size-selector: 0.25rem;
   --size-field: 0.25rem;
   --border: 1px;
-  --depth: 1;
+  --depth: 0;
   --noise: 0;
+}
+
+/* ── The soft look's few rules of its own ─────────────────────────────────────────────────────────
+   A button is a pill, and the main one is the peach pastel with ink on it and a faint glow of its own colour (the
+   design rules: the main action may glow, nothing else does). By custom property rather than `border-radius`, so a
+   `join` still squares the inner ends of its buttons and a page's own `rounded-*` still wins. */
+.btn {
+  --radius-field: 9999px;
+}
+.btn-primary:not(.btn-outline, .btn-ghost, .btn-link, .btn-soft, .btn-dash) {
+  --btn-color: var(--fill-primary);
+  --btn-fg: var(--fill-ink);
+  --btn-shadow: 0 6px 16px color-mix(in srgb, var(--fill-primary) 30%, transparent);
+}
+/* A card floats: a hairline in the theme's line colour and a soft, wide shadow, small offset, large blur. */
+@utility shadow-soft {
+  box-shadow: 0 1px 2px var(--shade), 0 8px 24px var(--shade);
+}
+/* What is moving, how far along: a mint bar easing into lavender (Home's "Moving now"). */
+@utility bar-moving {
+  background: linear-gradient(90deg, var(--fill-success), color-mix(in oklab, var(--fill-success) 60%, var(--fill-secondary)));
+}
+/* Home's greeting: the card's white or violet grey, lit lavender at its left and peach at its right. */
+@utility hero-soft {
+  background: linear-gradient(
+    110deg,
+    color-mix(in oklab, var(--fill-secondary) 14%, var(--color-base-100)) 0%,
+    var(--color-base-100) 55%,
+    color-mix(in oklab, var(--fill-primary) 12%, var(--color-base-100)) 100%
+  );
+}
+/* The page behind everything: RootLayout's cream or violet grey, with a faint lavender light at the top right. */
+@utility bg-app {
+  background:
+    radial-gradient(60rem 30rem at 100% 0%, color-mix(in oklab, var(--fill-secondary) 9%, transparent), transparent 70%),
+    color-mix(in oklab, var(--color-base-200) 50%, var(--color-base-100));
 }
 
 /* A live state's halo: a soft ring in the dot's own colour, as the Nouverse signal dot has, where the
@@ -320,6 +392,16 @@
 }
 
 @layer base {
+  /* Headings in Fredoka at its one weight: a page's `font-bold` on one is drawn as 500 rather than emboldened. */
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-synthesis-weight: none;
+    letter-spacing: -0.01em;
+  }
+
   :root {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;

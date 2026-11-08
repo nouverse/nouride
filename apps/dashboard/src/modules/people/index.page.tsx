@@ -15,7 +15,7 @@ import { platformName } from "@/commons/lib/platform";
 import { isAdmin, useMe } from "@/commons/lib/session";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Lock, NotebookText, Pencil, Plus, Trash2, Users, X } from "lucide-react";
+import { Lock, NotebookText, Pencil, Plus, Trash2, X } from "lucide-react";
 import { api, type PersonRecord } from "@/commons/lib/api";
 import { PersonNotes } from "@/commons/components/people/PersonNotes";
 import { MorningLine } from "./components/MorningLine";
@@ -71,7 +71,7 @@ export default function PeoplePage() {
       ) : list.length === 0 ? (
         <Card>
           <EmptyState
-            icon={Users}
+            pose="sleeping"
             title="Nobody yet"
             description="Add the people in your household by name. Their WhatsApp, Telegram or Discord accounts can be added now, or approved as theirs when they first message an agent."
           />

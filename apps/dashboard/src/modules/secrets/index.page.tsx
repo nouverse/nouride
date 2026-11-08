@@ -24,7 +24,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { AlertTriangle, Eye, KeyRound, Plus, RefreshCw } from "lucide-react";
+import { AlertTriangle, Eye, Plus, RefreshCw } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import type { FieldChange, SecretEntry } from "@/commons/lib/api.secrets";
 import { isAdmin, useMe } from "@/commons/lib/session";
@@ -197,7 +197,7 @@ export default function SecretsPage() {
       >
         {entries.length === 0 ? (
           <EmptyState
-            icon={KeyRound}
+            pose="security"
             title="No secrets yet"
             description="Add one here, or have whoever runs the server set it there. Your settings use it by its name either way."
           />

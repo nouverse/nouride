@@ -38,6 +38,9 @@ const daisyThemeVariables = (() => {
   return [...new Set([...light.matchAll(/(--[\w-]+)\s*:/g)].map((m) => m[1]!))].sort();
 })();
 
+/** The variables each theme carries for the soft look's own rules in `main.css`, beside daisyUI's. */
+const OWN = ["--fill-primary", "--fill-secondary", "--fill-success", "--fill-ink", "--shade"];
+
 describe("the themes", () => {
   test("are the two the dashboard switches between", () => {
     expect(themes.map((theme) => theme.name).sort()).toEqual(Object.values(DAISY).sort());
@@ -47,7 +50,17 @@ describe("the themes", () => {
     // The fail-open shape: an empty list would make the comparison below pass for anything.
     expect(daisyThemeVariables).toContain("--radius-field");
     expect(daisyThemeVariables.length).toBeGreaterThan(20);
-    for (const theme of themes) expect({ theme: theme.name, variables: [...theme.variables].sort() }).toEqual({ theme: theme.name, variables: daisyThemeVariables });
+    for (const theme of themes) {
+      const daisy = theme.variables.filter((name) => !OWN.includes(name));
+      expect({ theme: theme.name, variables: daisy.sort() }).toEqual({ theme: theme.name, variables: daisyThemeVariables });
+    }
+  });
+
+  test("and the soft look's own, the same in both: the pastel fills, their ink and the shadow's colour", () => {
+    // Read by `main.css` alone (the main action, a progress bar, `shadow-soft`): one theme without one would draw that
+    // piece in nothing.
+    for (const theme of themes) expect({ theme: theme.name, own: theme.variables.filter((name) => OWN.includes(name)).sort() }).toEqual({ theme: theme.name, own: [...OWN].sort() });
+    for (const name of OWN) expect(css).toContain(`var(${name})`);
   });
 
   test("daisyUI's stock themes are not compiled in", () => {

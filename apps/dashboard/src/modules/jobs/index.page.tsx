@@ -11,10 +11,9 @@
 import { useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { Bot } from "lucide-react";
 import { api, type BackgroundJob } from "@/commons/lib/api";
 import { useTextFilter } from "@/commons/lib/use-text-filter";
-import { useOrchestrator, useOrchestratorFirst } from "@/commons/components/ui/AgentName";
+import { useOrchestrator, useOrchestratorFirst } from "@/commons/components/agents/AgentName";
 import { FILL_PAGE, ScrollCard } from "@/commons/components/ui/ScrollCard";
 import { Count, SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
 import { EmptyState, ErrorNote, PageHeader } from "@/commons/components/ui/ui";
@@ -118,7 +117,7 @@ export default function JobsPage({ agent }: { agent?: string }) {
   return (
     <div className={FILL_PAGE}>
       <PageHeader
-        title="Background Helpers"
+        title="Helpers"
         description="Work an agent left running in the background: helpers it handed a piece to, commands it did not wait for, agents it asked. Each opens to what it did."
       />
       {/* The window that sweeps these rows, as System Logs' jobs panel shows it — the owner asked for it here (0.8.12). */}
@@ -148,7 +147,7 @@ export default function JobsPage({ agent }: { agent?: string }) {
           shown={(job) => matched.has(job)}
           empty={
             counts[tab] === 0 ? (
-              <EmptyState icon={Bot} title={agent && tab === "all" ? `${agent} has nothing in the background yet` : current.none} />
+              <EmptyState pose="sleeping" title={agent && tab === "all" ? `${agent} has nothing in the background yet` : current.none} />
             ) : (
               <p className="py-6 text-center text-sm text-base-content/65">Nothing matches “{filter}”.</p>
             )

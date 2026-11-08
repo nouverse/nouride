@@ -363,6 +363,8 @@ export function useMountHarness(): void {
 /** Route paths as TanStack knows them, with parameters filled in with something plausible. */
 export const PAGES: [name: string, path: string][] = [
   ["home", "/"],
+  ["work", "/work"],
+  ["settings", "/settings"],
   ["agents", "/agents"],
   ["agent settings", "/agents/settings"],
   ["agent files", "/agents/nouva"],

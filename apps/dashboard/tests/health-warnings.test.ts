@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { healthWarnings } from "@/modules/home/health-warnings";
+import { healthWarnings } from "@/commons/lib/health-warnings";
 
 describe("the Overview's warnings", () => {
   test("say each pack that did not load, with how to bring it back, after the daemon's own issues", () => {

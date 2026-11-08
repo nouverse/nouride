@@ -49,7 +49,8 @@ test("what finished is the last 3, 7, 14 or 30 days — 3 unless chosen, no furt
   }
   expect(options).toEqual(["Last 3 days", "Last 7 days", "Last 14 days", "Last 30 days"]);
   expect(chosen).toBe("3");
-  expect(asked[0]).toContain("days=3");
+  // The page's first ask; the menu's count reads the daemon's own week on every page, unfiltered (0.8.24).
+  expect(asked.filter((url) => !url.endsWith("/api/control/missions"))[0]).toContain("days=3");
   expect(asked.some((url) => url.includes("days=30"))).toBe(true);
 });
 
@@ -59,6 +60,6 @@ test("the list is cards in the Knowledge tab's grid, each with its status, steps
   const working = html.slice(html.indexOf('aria-label="Working"'), html.indexOf('aria-label="Finished"'));
   expect(working).toContain('<div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">');
   const card = /<a[^>]*href="\/dashboard\/missions\/msn_1"[^>]*>([\s\S]*?)<\/a>/.exec(html);
-  expect(card?.[0]).toContain("rounded-2xl border p-5");
+  expect(card?.[0]).toContain("rounded-[22px] border p-5");
   for (const words of ["Write a report on the disk usage of the build box", "1 of 3 steps", "Write report.md", "Open"]) expect(card?.[1]).toContain(words);
 });

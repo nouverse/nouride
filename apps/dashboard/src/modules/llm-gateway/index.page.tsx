@@ -14,7 +14,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { ExternalLink } from "lucide-react";
-import { NougateGlyph, NougateMark } from "@/commons/components/icons/logos";
+import { NougateGlyph, NougateMark } from "@/commons/components/brand/logos";
 import { api } from "@/commons/lib/api";
 import { gatewayDashboard, gatewayMount } from "@/commons/lib/bundled-gateway";
 import { frameSource, type GatewaySearch } from "./search";

@@ -9,7 +9,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
-import { NougateMark } from "@/commons/components/icons/logos";
+import { NougateMark } from "@/commons/components/brand/logos";
 import { api, type SetupState } from "@/commons/lib/api";
 import { ConnectAccounts } from "./ConnectAccounts";
 import { gatewayApi } from "./gateway-api";

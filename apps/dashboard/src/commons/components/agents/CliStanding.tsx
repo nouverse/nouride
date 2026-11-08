@@ -8,7 +8,7 @@ import type { CliVersionView } from "@/commons/lib/api.external-agents";
 import { standingWords } from "@/commons/lib/cli-standing";
 import { updateMessage } from "@/commons/lib/set-up";
 import { AskAgentButton } from "./AskAgentButton";
-import { Details } from "./Details";
+import { Details } from "@/commons/components/ui/Details";
 
 const TONE = { success: "badge-success", info: "badge-info", warning: "badge-warning" } as const;
 

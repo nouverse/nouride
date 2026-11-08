@@ -11,3 +11,15 @@ declare module "*.png" {
   const src: string;
   export default src;
 }
+
+/** The mascot's poses (`@brand/mascot/…`), typed as their emitted URL like the PNGs above. */
+declare module "*.webp" {
+  const src: string;
+  export default src;
+}
+
+/** A pose built into the bundle as a `data:` URL (Vite's `?inline`): drawn with the daemon unreachable. */
+declare module "*.webp?inline" {
+  const src: string;
+  export default src;
+}

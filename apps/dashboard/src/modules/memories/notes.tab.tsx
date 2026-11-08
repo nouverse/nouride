@@ -15,7 +15,7 @@ import { api } from "@/commons/lib/api";
 import { NotesModal } from "@/commons/components/ui/NotesModal";
 import { EmptyState, ErrorNote } from "@/commons/components/ui/ui";
 import { ScrollCard } from "@/commons/components/ui/ScrollCard";
-import { OrchestratorBadge, useOrchestrator, useOrchestratorFirst } from "@/commons/components/ui/AgentName";
+import { OrchestratorBadge, useOrchestrator, useOrchestratorFirst } from "@/commons/components/agents/AgentName";
 import { Leaving } from "@/commons/components/ui/OverPage";
 
 function NoteView({ id, editable, onClose }: { id: string; editable: boolean; onClose: () => void }) {

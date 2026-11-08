@@ -3,9 +3,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { MessageSquare, Moon, Palette, Sun, Target, X } from "lucide-react";
 import { api, type AgentSummary } from "@/commons/lib/api";
 import { canWrite, useMe } from "@/commons/lib/session";
-import { AgentStatusBadge } from "@/commons/components/agent-status-badge";
+import { AgentStatusBadge } from "@/commons/components/agents/agent-status-badge";
 import { ErrorNote } from "@/commons/components/ui/ui";
-import { OrchestratorBadge, useOrchestrator } from "@/commons/components/ui/AgentName";
+import { OrchestratorBadge, useOrchestrator } from "@/commons/components/agents/AgentName";
 import type { Status } from "@/commons/office/lib/layout";
 
 /** A mission's turns run on this connection; its chat id is the mission's. */

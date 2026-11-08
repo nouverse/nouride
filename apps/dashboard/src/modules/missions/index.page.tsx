@@ -12,12 +12,12 @@
 import { useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { AlertTriangle, Plus, SlidersHorizontal, Target, X } from "lucide-react";
+import { AlertTriangle, Plus, SlidersHorizontal, X } from "lucide-react";
 import { api, type MissionView } from "@/commons/lib/api";
 import { ApiError } from "@/commons/lib/api.client";
 import { canWrite, useMe } from "@/commons/lib/session";
 import { useTextFilter } from "@/commons/lib/use-text-filter";
-import { useOrchestrator, useOrchestratorFirst } from "@/commons/components/ui/AgentName";
+import { useOrchestrator, useOrchestratorFirst } from "@/commons/components/agents/AgentName";
 import { FILL_PAGE, ScrollCard } from "@/commons/components/ui/ScrollCard";
 import { Count, SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
 import { Card, EmptyState, ErrorNote, PageHeader } from "@/commons/components/ui/ui";
@@ -243,12 +243,12 @@ export default function MissionsPage({ agent }: { agent?: string }) {
           empty={
             missions.length === 0 && tab === "all" ? (
               <EmptyState
-                icon={Target}
+                pose="sleeping"
                 title={agent ? `${agent} has no missions in the last ${days} days` : `No missions in the last ${days} days`}
                 description="Start one here, or send /mission and a goal in a chat. An agent also starts one when a piece of work needs hours rather than a reply."
               />
             ) : counts[tab] === 0 ? (
-              <EmptyState icon={Target} title={current.none(days)} />
+              <EmptyState pose="sleeping" title={current.none(days)} />
             ) : (
               <p className="py-6 text-center text-sm text-base-content/65">Nothing matches “{filter}”.</p>
             )

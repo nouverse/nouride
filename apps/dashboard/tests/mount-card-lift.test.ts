@@ -21,7 +21,7 @@ const lifting = (host: HTMLElement) =>
 describe("a card that opens something", () => {
   for (const [page, path, what] of [
     ["Missions", "/missions", 'a[href$="/missions/msn_1"]'],
-    ["Background Helpers", "/jobs", 'a[href*="/jobs/"]'],
+    ["Helpers", "/jobs", 'a[href*="/jobs/"]'],
     ["Agents", "/agents", "main button.group"],
   ] as const) {
     test(`lifts on ${page}, eased, and only where it opens something`, async () => {
@@ -43,12 +43,24 @@ describe("a card that opens something", () => {
     });
   }
 
-  test("does not lift on Overview, whose cards open nothing", async () => {
+  test("on Home, lifts only the cards that open something: an agent, what waits for you elsewhere (0.8.24)", async () => {
     let found: { tag: string; eased: boolean }[] = [];
     await renderPage("/", async (host) => {
-      await eventually(() => host.textContent?.includes("Everything is working") ?? false, 4_000, "Overview");
+      await eventually(() => host.textContent?.includes("Everything is working") ?? false, 4_000, "Home");
       found = lifting(host);
     });
-    expect(found).toEqual([]);
+    // The harness's install has a request to talk to the agents and a skill to review, each a card that opens its page.
+    expect(found.length).toBeGreaterThan(0);
+    for (const card of found) expect(card).toEqual({ tag: "a", eased: true });
+  });
+
+  test("and every card of Settings, each a page", async () => {
+    let found: { tag: string; eased: boolean }[] = [];
+    await renderPage("/settings", async (host) => {
+      await eventually(() => host.textContent?.includes("Models and keys") ?? false, 4_000, "Settings");
+      found = lifting(host);
+    });
+    expect(found.length).toBeGreaterThan(5);
+    for (const card of found) expect(card).toEqual({ tag: "a", eased: true });
   });
 });

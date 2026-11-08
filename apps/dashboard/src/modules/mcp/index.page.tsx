@@ -6,7 +6,7 @@
 
 import { useCallback, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plug, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { api, type CatalogDraft } from "@/commons/lib/api";
 import { isAdmin, useMe } from "@/commons/lib/session";
 import { EmptyState, ErrorNote, PageHeader } from "@/commons/components/ui/ui";
@@ -117,7 +117,7 @@ export default function McpLibraryPage({ install, agent }: { install?: string; a
           {...(servers.length > 0 ? { search: { value: filter, onChange: setFilter, placeholder: "Filter connectors" } } : {})}
         >
           {servers.length === 0 ? (
-            <EmptyState icon={Plug} title="No connectors yet" description="Find one in Explore, or add one by hand, then switch it on for the agents that should use it." />
+            <EmptyState pose="sleeping" title="No connectors yet" description="Find one in Explore, or add one by hand, then switch it on for the agents that should use it." />
           ) : visible.length === 0 ? (
             <p className="py-6 text-center text-sm text-base-content/65">Nothing matches “{filter}”.</p>
           ) : (

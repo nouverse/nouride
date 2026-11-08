@@ -12,7 +12,7 @@
 import { ListLoading } from "@/commons/components/ui/Spinner";
 import { useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, ExternalLink, FolderGit2, PackageSearch, Search, ShieldAlert } from "lucide-react";
+import { Download, ExternalLink, FolderGit2, Search, ShieldAlert } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import type { SkillHubHit, SkillHubInstall } from "@/commons/lib/api.skills";
 import { Card, EmptyState, ErrorNote } from "@/commons/components/ui/ui";
@@ -151,7 +151,7 @@ export function ExplorePanel({ editable, onReview }: { editable: boolean; onRevi
             </p>
           ))}
           {search.isSuccess && hits.length === 0 ? (
-            <EmptyState icon={PackageSearch} title="Nothing found" description="Try other words, or install straight from a GitHub repository above." />
+            <EmptyState pose="searching" title="Nothing found" description="Try other words, or install straight from a GitHub repository above." />
           ) : null}
           {(search.isPending ? [] : hits).map((hit) => (
             <HitRow

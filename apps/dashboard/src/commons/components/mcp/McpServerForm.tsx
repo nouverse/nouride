@@ -3,7 +3,7 @@
  * (`McpExplore`) — and, while adding, which agents to switch it on for.
  */
 
-import { AgentName, useOrchestrator, useOrchestratorFirst } from "@/commons/components/ui/AgentName";
+import { AgentName, useOrchestrator, useOrchestratorFirst } from "@/commons/components/agents/AgentName";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, type CatalogDraft, type McpLibraryServer, type McpServer } from "@/commons/lib/api";

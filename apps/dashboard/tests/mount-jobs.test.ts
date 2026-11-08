@@ -63,18 +63,19 @@ const TURNS = {
   }),
 };
 
-test("it is in Monitor, between Webhooks and System Logs — watched, not talked to", async () => {
+test("it is Work's third tab, between Missions and Schedule, and the menu marks Work while it is open (0.8.24)", async () => {
   answer({ "/jobs": ok({ jobs: [] }) });
-  const html = await renderPage("/jobs");
-  const webhooks = html.indexOf('href="/dashboard/webhooks"');
-  const jobs = html.indexOf('href="/dashboard/jobs"');
-  const logs = html.indexOf('href="/dashboard/logs"');
-  expect(webhooks).toBeGreaterThan(-1);
-  expect(jobs).toBeGreaterThan(webhooks);
-  expect(logs).toBeGreaterThan(jobs);
-  // Nothing between them: the link after Webhooks is this one, and the one after it System Logs.
-  expect(html.slice(webhooks + 1, jobs).includes('href="/dashboard/')).toBe(false);
-  expect(html.slice(jobs + 1, logs).includes('href="/dashboard/')).toBe(false);
+  let seen = { tabs: [] as string[], current: [] as string[] };
+  await renderPage("/jobs", async (host) => {
+    await eventually(() => host.querySelector('main a[href="/dashboard/schedule"]') !== null, 2_000, "Work's tabs");
+    seen = {
+      tabs: [...host.querySelectorAll("main a")].filter((a) => /\/dashboard\/(work|missions|jobs|schedule)$/.test(a.getAttribute("href") ?? "")).map((a) => a.textContent?.trim() ?? ""),
+      // The item's name, without the count of what waits there.
+      current: [...host.querySelectorAll('nav[aria-label="Menu"] a[aria-current="page"]')].map((a) => a.querySelector("span")?.textContent?.trim() ?? ""),
+    };
+  });
+  expect(seen.tabs).toEqual(["Waiting for you", "Missions", "Helpers", "Schedule"]);
+  expect(seen.current).toEqual(["Work"]);
 });
 
 test("the list: a row per job opening its page, counted by tab, the Failed tab showing only what failed", async () => {
@@ -158,11 +159,11 @@ test("a job that is not there says so, with the way back", async () => {
   expect(html).toContain('href="/dashboard/jobs"');
 });
 
-test("System Logs → Background Helpers: each row opens the job's page here", async () => {
+test("Logs → Helpers: each row opens the job's page here", async () => {
   answer({ "/jobs": ok({ jobs: [RUNNING, BUILD] }) });
   let html = "";
   await renderPage("/logs", async (host) => {
-    [...host.querySelectorAll("button")].find((b) => b.textContent?.trim() === "Background Helpers")!.click();
+    [...host.querySelectorAll("button")].find((b) => b.textContent?.trim() === "Helpers")!.click();
     await eventually(() => host.innerHTML.includes('href="/dashboard/jobs/job_3"'), 2_000, "the job rows");
     html = host.innerHTML;
   });
@@ -170,7 +171,7 @@ test("System Logs → Background Helpers: each row opens the job's page here", a
   expect(html).toContain('href="/dashboard/jobs/job_3"');
 });
 
-test("the window that sweeps these rows is shown and set here, as on System Logs (0.8.12)", async () => {
+test("the window that sweeps these rows is shown and set here, as on Logs (0.8.12)", async () => {
   answer({ "/jobs": ok({ jobs: [BUILD] }), "/retention": ok({ windows: { log: 3, audit: 30, cronRuns: 30, jobLogs: 3, sessions: 30 } }) });
   let text = "";
   let days = "";

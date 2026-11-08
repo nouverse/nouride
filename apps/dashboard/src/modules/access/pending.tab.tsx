@@ -12,7 +12,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Ban, Check, Clock, UserCheck, X } from "lucide-react";
+import { Ban, Check, UserCheck, X } from "lucide-react";
 import { api, type SenderRecord } from "@/commons/lib/api";
 import type { PersonTarget } from "@/commons/lib/api.people";
 import type { SenderAnswer } from "@/commons/lib/api.access";
@@ -91,7 +91,7 @@ export function PendingTab({
     >
       <ErrorNote error={approve.error ?? answer.error} />
       {senders.length === 0 ? (
-        <EmptyState icon={Clock} title="No pending requests" />
+        <EmptyState pose="security" title="No pending requests" />
       ) : visible.length === 0 ? (
         <NoMatch query={query} />
       ) : (

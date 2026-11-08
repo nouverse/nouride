@@ -7,7 +7,7 @@
 import { expect, test } from "bun:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { UsageRoutes } from "@/modules/home/UsageRoutes";
+import { UsageRoutes } from "@/modules/home/components/UsageRoutes";
 
 const route = (provider: string, model: string, requests: number, cachedShare: number | null, usdPerMillion: number | null) => ({
   provider, model, requests, inputTokens: 1_000_000, cachedShare, usdPerMillion,

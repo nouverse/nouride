@@ -6,7 +6,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { Library, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import { EmptyState, ErrorNote } from "@/commons/components/ui/ui";
 import { CollectionCard } from "./collection-card";
@@ -73,7 +73,7 @@ export function KnowledgeTab({ editable, admin }: { editable: boolean; admin: bo
           </div>
           {list.length ? <KnowledgeSearch onOpen={setReading} /> : null}
           {list.length === 0 && collections.data ? (
-            <EmptyState icon={Library} title="No collections yet" description="Make one, then drop files on it or write a document in it." action={newCollection} />
+            <EmptyState pose="knowledge" title="No collections yet" description="Make one, then drop files on it or write a document in it." action={newCollection} />
           ) : null}
           {active.length ? <CardGrid>{active.map(card)}</CardGrid> : null}
           {archived.length ? (

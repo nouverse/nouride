@@ -19,7 +19,7 @@ import { ErrorNote } from "@/commons/components/ui/ui";
 
 const SRC = join(dirname(import.meta.path), "..", "src");
 /** Modules whose components draw a glyph and no text. */
-const ICON_MODULES = new Set(["lucide-react", "@/commons/components/icons/logos"]);
+const ICON_MODULES = new Set(["lucide-react", "@/commons/components/brand/logos"]);
 
 function sources(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {

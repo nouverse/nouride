@@ -4,7 +4,7 @@
  * state indicators, and an elegant segmented tab bar.
  */
 
-import { AgentStatusBadge } from "@/commons/components/agent-status-badge";
+import { AgentStatusBadge } from "@/commons/components/agents/agent-status-badge";
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {

@@ -223,14 +223,14 @@ export default function SchedulePage({ job: linked }: { job?: string }) {
       {list.length === 0 ? (
         <Card>
           <EmptyState
-            icon={Clock}
+            pose="schedule"
             title="Nothing is scheduled"
             description={'Press "New job", or just ask an agent: "remind me to check the deploy in two hours".'}
           />
         </Card>
       ) : shown.length === 0 ? (
         <Card>
-          <EmptyState icon={Clock} title={`No ${filter} jobs`} />
+          <EmptyState pose="schedule" title={`No ${filter} jobs`} />
         </Card>
       ) : null}
 

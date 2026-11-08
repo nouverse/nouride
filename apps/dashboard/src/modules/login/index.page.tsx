@@ -4,7 +4,7 @@ import { useState } from "react";
 import { AlertTriangle, Lock, LogIn, ShieldCheck, User } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import { nextOf } from "@/commons/lib/session";
-import { NovaAppIcon } from "@/commons/components/icons/logos";
+import { NovaAppIcon } from "@/commons/components/brand/logos";
 import { Details } from "@/commons/components/ui/Details";
 import { PasswordInput } from "@/commons/components/ui/PasswordInput";
 
