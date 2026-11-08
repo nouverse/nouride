@@ -866,8 +866,9 @@ jobs:
           QUIET: ${{ needs.guard-visibility.outputs.quiet }}
           LTS: ${{ needs.guard-visibility.outputs.lts }}
         run: |
+          error() { printf '::%s::%s\n' error "$*"; }
           sh scripts/release/to-internal-release.sh "${GITHUB_REF_NAME}" "$(git rev-parse HEAD:internals/pro)" dist/*.map \
-            || { echo "::error::The source maps did not reach nouverse/nouride-pro's release ${GITHUB_REF_NAME}, so a crash on it cannot be read: RELEASES_REPO_TOKEN needs Contents write there."; exit 1; }
+            || { error "The source maps did not reach nouverse/nouride-pro's release ${GITHUB_REF_NAME}, so a crash on it cannot be read: RELEASES_REPO_TOKEN needs Contents write there."; exit 1; }
 
       # ── The public image's kit ──
       #
@@ -914,8 +915,9 @@ jobs:
           QUIET: ${{ needs.guard-visibility.outputs.quiet }}
           LTS: ${{ needs.guard-visibility.outputs.lts }}
         run: |
+          error() { printf '::%s::%s\n' error "$*"; }
           sh scripts/release/to-internal-release.sh "${GITHUB_REF_NAME}" "$(git rev-parse HEAD:internals/pro)" dist/*-image.map \
-            || { echo "::error::The image's source map did not reach nouverse/nouride-pro's release ${GITHUB_REF_NAME}, so a crash in the image cannot be read: RELEASES_REPO_TOKEN needs Contents write there."; exit 1; }
+            || { error "The image's source map did not reach nouverse/nouride-pro's release ${GITHUB_REF_NAME}, so a crash in the image cannot be read: RELEASES_REPO_TOKEN needs Contents write there."; exit 1; }
 
   # ── Signing, and the appliance release channel ──────────────────────────────
   #

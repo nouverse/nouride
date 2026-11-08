@@ -37,7 +37,11 @@ describe("from a public repository, the free editions' maps go to the internal r
       expect(text).toContain("QUIET: ${{ needs.guard-visibility.outputs.quiet }}");
       expect(text).toContain("LTS: ${{ needs.guard-visibility.outputs.lts }}");
       expect(text).toContain("continue-on-error: true");
-      expect(text).toMatch(/\|\| \{ echo "::error::[^"]+"; exit 1; \}/);
+      // Said through `error`, as every step says one: written into the script, the runner would echo it on every run
+      // that reaches the step (`release-log.test.ts`).
+      expect(text).toContain(`error() { printf '::%s::%s\\n' error "$*"; }`);
+      expect(text).toMatch(/\|\| \{ error "[^"]+"; exit 1; \}/);
+      expect(text).not.toContain("::error::");
     });
   }
 });
