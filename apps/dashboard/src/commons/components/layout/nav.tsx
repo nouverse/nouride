@@ -18,7 +18,7 @@ import { useRef, type ComponentType } from "react";
 import {
   Blocks,
   BookOpen,
-  Bot,
+  Cat,
   Box,
   Brain,
   Cpu,
@@ -104,7 +104,8 @@ export const DAILY: NavItem[] = [
   { to: "/", label: "Home", icon: House },
   { to: "/chat", label: "Chats", icon: MessageSquare },
   { to: "/work", label: "Work", icon: Target, holds: ["/missions", "/jobs", "/schedule", "/webhooks"], badge: WorkBadge },
-  { to: "/agents", label: "Agents", icon: Bot, holds: ["/office"] },
+  // A cat, as every agent is one here (the owner, 2026-11-08), where it was a robot.
+  { to: "/agents", label: "Agents", icon: Cat, holds: ["/office"] },
 ];
 
 /** Now and then. */

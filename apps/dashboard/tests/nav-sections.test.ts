@@ -25,6 +25,11 @@ describe("the page you are on", () => {
   });
 });
 
+test("Agents is drawn as a cat, in the sidebar and the tab bar alike (both read DAILY)", async () => {
+  const { Cat } = await import("lucide-react");
+  expect(item("/agents").icon).toBe(Cat);
+});
+
 describe("a section's tabs", () => {
   test("over its list pages, and none over one mission or one agent", () => {
     expect(sectionTabs("/jobs")?.map((tab) => tab.label)).toEqual(["Waiting for you", "Missions", "Helpers", "Schedule", "Webhooks"]);
