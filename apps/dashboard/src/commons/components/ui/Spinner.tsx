@@ -25,8 +25,11 @@ function Lines({ under }: { under: number }) {
 
 export function ListLoading({ shape = "rows", count = 3 }: { shape?: "rows" | "cards"; count?: number }) {
   const drawn = Array.from({ length: count }, (_, at) => at);
+  // The pulse inside a frame of its own: as a page's section the frame fades in (`*:animate-fade`), and one element
+  // takes one animation — the fade would stop the pulse.
   return (
-    <div aria-busy="true" aria-label="loading" className={cn("animate-pulse", shape === "cards" ? "grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3" : "space-y-2.5")}>
+    <div aria-busy="true" aria-label="loading">
+      <div className={cn("animate-pulse", shape === "cards" ? "grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3" : "space-y-2.5")}>
       {drawn.map((at) =>
         shape === "cards" ? (
           <div key={at} className="flex h-40 flex-col gap-3 rounded-2xl border border-base-content/[0.06] p-5">
@@ -38,6 +41,7 @@ export function ListLoading({ shape = "rows", count = 3 }: { shape?: "rows" | "c
           </div>
         ),
       )}
+      </div>
     </div>
   );
 }

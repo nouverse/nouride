@@ -61,6 +61,23 @@ describe("a list that is loading", () => {
     expect(html).not.toContain("loading-spinner loading-lg");
   });
 
+  test("pulses inside its frame, which a page's section fades in: one element takes one animation", async () => {
+    answer({ "/people": { status: 200, body: {}, hold: true } });
+    let seen = { frame: [] as string[], inside: [] as string[], fades: false };
+    await renderPage("/people", async (host) => {
+      await eventually(() => host.querySelector('[aria-busy="true"]') !== null, 4_000, "the shape");
+      const frame = host.querySelector('[aria-busy="true"]')!;
+      seen = {
+        frame: (frame.getAttribute("class") ?? "").split(/\s+/),
+        inside: (frame.firstElementChild?.getAttribute("class") ?? "").split(/\s+/),
+        fades: (frame.parentElement?.getAttribute("class") ?? "").split(/\s+/).includes("*:animate-fade"),
+      };
+    });
+    expect(seen.fades).toBe(true);
+    expect(seen.frame.filter((word) => word.startsWith("animate-"))).toEqual([]);
+    expect(seen.inside).toContain("animate-pulse");
+  });
+
   test("on People is rows, and the list takes their place once it comes", async () => {
     answer({ "/people": { status: 200, body: {}, hold: true } });
     const loading = await renderPage("/people", async (host) => {

@@ -107,6 +107,11 @@ export interface Conversation {
   jobs: RunningJob[];
   /** A message sent whose turn has not appeared yet. */
   pending: string | null;
+  /**
+   * This conversation opened on a message the page sent a moment before, from a new chat: what it then holds is what
+   * arrives in it, not what it was opened on.
+   */
+  startedHere: boolean;
   /** Something is running: this client sent it, or somebody else did. */
   busy: boolean;
   loading: boolean;
@@ -144,6 +149,7 @@ export function useConversation(input: {
   const seenRunning = useRef(new Set<string>());
   const [jobs, setJobs] = useState<RunningJob[]>([]);
   const [pending, setPending] = useState<string | null>(null);
+  const [startedHere, setStartedHere] = useState(false);
   const [startError, setStartError] = useState<Error | null>(null);
   const pendingSince = useRef(0);
 
@@ -317,13 +323,16 @@ export function useConversation(input: {
 
     if (!sessionId) {
       setPending(null);
+      setStartedHere(false);
       return;
     }
 
     // Anything sent a moment ago, before this mount existed.
     const carried = justSent.get(sessionId);
     justSent.delete(sessionId);
-    if (carried && Date.now() - carried.at < 60_000) {
+    const fresh = carried !== undefined && Date.now() - carried.at < 60_000;
+    setStartedHere(fresh);
+    if (carried && fresh) {
       setPending(carried.text);
       pendingSince.current = carried.at;
     }
@@ -580,6 +589,7 @@ export function useConversation(input: {
     liveTurns: roomChatId ? liveTurns : liveShown ? [liveShown] : [],
     jobs,
     pending,
+    startedHere,
     /**
      * Something is running here.
      *

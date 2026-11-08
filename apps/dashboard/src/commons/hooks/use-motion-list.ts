@@ -35,24 +35,13 @@ interface Memory<T> {
 
 const fresh = <T>(scope: unknown): Memory<T> => ({ scope, seen: null, arrived: new Set(), drawn: [], leaving: new Map() });
 
-/**
- * `items` undefined while the list loads, so what its first answer brings is not new. A new `scope` (another
- * conversation, say) starts over: what it opens on is not new either.
- */
-export function useMotionList<T>(
-  items: readonly T[] | undefined,
-  keyOf: (item: T) => string,
-  { shown = () => true, scope = null }: { shown?: (item: T) => boolean; scope?: unknown } = {},
-): Moving<T>[] {
-  const memory = useRef<Memory<T>>(fresh(scope));
-  const [, redraw] = useState(0);
-  const current = memory.current.scope === scope ? memory.current : fresh<T>(scope);
-
-  const present = new Map((items ?? []).map((item) => [keyOf(item), item] as const));
-  // What was drawn and is gone now waits to be put back where it was: before the next one that stays, or at the end.
+/** The items with their motion, and what was drawn and is gone now put back where it was, leaving. */
+function draw<T>(memory: Memory<T>, present: Map<string, T>, shown: (item: T) => boolean, opensEmpty: boolean): Moving<T>[] {
+  const seen = memory.seen ?? (opensEmpty ? new Set<string>() : null);
+  // What is gone waits to be put back before the next one that stays, or at the end.
   const before = new Map<string, Moving<T>[]>();
   let waiting: Moving<T>[] = [];
-  for (const entry of current.drawn) {
+  for (const entry of memory.drawn) {
     if (!present.has(entry.key)) waiting.push({ key: entry.key, item: entry.item, motion: LEAVE });
     else if (waiting.length > 0) {
       before.set(entry.key, waiting);
@@ -63,20 +52,36 @@ export function useMotionList<T>(
   for (const [key, item] of present) {
     entries.push(...(before.get(key) ?? []));
     if (!shown(item)) continue;
-    const arrived = current.seen !== null && (current.arrived.has(key) || !current.seen.has(key));
+    const arrived = seen !== null && (memory.arrived.has(key) || !seen.has(key));
     entries.push({ key, item, motion: arrived ? ENTER : "" });
   }
-  entries.push(...waiting);
+  return [...entries, ...waiting];
+}
+
+/**
+ * `items` undefined while the list loads: what its first answer brings is not new — unless the list `opensEmpty`, as a
+ * conversation a new chat just started does, whose first answer is what arrives in it — and a list loading again holds
+ * still, as last drawn. A new `scope` (another conversation, say) starts over: what it opens on is not new either.
+ */
+export function useMotionList<T>(
+  items: readonly T[] | undefined,
+  keyOf: (item: T) => string,
+  { shown = () => true, scope = null, opensEmpty = false }: { shown?: (item: T) => boolean; scope?: unknown; opensEmpty?: boolean } = {},
+): Moving<T>[] {
+  const memory = useRef<Memory<T>>(fresh(scope));
+  const [, redraw] = useState(0);
+  const current = memory.current.scope === scope ? memory.current : fresh<T>(scope);
+  const present = items === undefined ? null : new Map(items.map((item) => [keyOf(item), item] as const));
+  const entries = present === null ? current.drawn : draw(current, present, shown, opensEmpty);
 
   useEffect(() => {
     memory.current = current;
-    if (items !== undefined) {
-      if (current.seen === null) current.seen = new Set(present.keys());
-      for (const key of present.keys()) {
-        if (current.seen.has(key)) continue;
-        current.seen.add(key);
-        current.arrived.add(key);
-      }
+    if (present === null) return;
+    if (current.seen === null) current.seen = new Set(opensEmpty ? [] : present.keys());
+    for (const key of present.keys()) {
+      if (current.seen.has(key)) continue;
+      current.seen.add(key);
+      current.arrived.add(key);
     }
     current.drawn = entries;
     for (const key of current.leaving.keys()) if (present.has(key)) current.leaving.delete(key);

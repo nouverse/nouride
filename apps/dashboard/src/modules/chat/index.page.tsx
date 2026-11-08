@@ -383,13 +383,13 @@ export default function ChatPage(
 
   /*
     What arrives in the conversation moves in: a message, a note, an answer starting. What it opens on stays still —
-    another conversation starts over (`scope`) — and a turn is one entry by its id, live or finished, so one that
-    finishes does not move again.
+    another conversation starts over (`scope`) — but a conversation a new chat just started opens on its first answer,
+    which is what arrives. A turn is one entry by its id, live or finished, so one that finishes does not move again.
   */
   const stream = useMotionList(
     conversation.loading ? undefined : interleave(conversation.turns, conversation.liveTurns, conversation.events, conversation.messages),
     (entry) => (entry.kind === "message" ? `message ${entry.message.id}` : entry.kind === "event" ? `event ${entry.event.id}` : `turn ${entry.turn.id}`),
-    { scope: roomChatId ?? sessionId ?? "" },
+    { scope: roomChatId ?? sessionId ?? "", opensEmpty: conversation.startedHere },
   );
 
   const empty =

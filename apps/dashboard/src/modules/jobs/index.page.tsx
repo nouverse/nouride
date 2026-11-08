@@ -8,7 +8,7 @@
  * anything runs, and only as a slow net once nothing does; a hidden tab asks for nothing.
  */
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Bot } from "lucide-react";
@@ -26,10 +26,12 @@ import { ListLoading } from "@/commons/components/ui/Spinner";
 
 /**
  * A tab's jobs, from what the daemon sent rather than what the filters left: one that changes state leaves the tab or
- * enters it, and one the kind or the search hides only is not drawn (`shown`) — choosing a filter moves nothing.
+ * enters it, and one the kind or the search hides only is not drawn (`shown`) — choosing a filter moves nothing. Kept
+ * drawn while the tab is empty, showing `empty` once nothing is left to draw, so it sees the first job arrive.
  */
-function JobList({ jobs, shown }: { jobs: BackgroundJob[]; shown: (job: BackgroundJob) => boolean }) {
+function JobList({ jobs, shown, empty }: { jobs: BackgroundJob[]; shown: (job: BackgroundJob) => boolean; empty: ReactNode }) {
   const rows = useMotionList(jobs, (job) => job.id, { shown });
+  if (rows.length === 0) return empty;
   return (
     <div className="space-y-2.5">
       {rows.map(({ key, item, motion }) => (
@@ -82,7 +84,6 @@ export default function JobsPage({ agent }: { agent?: string }) {
   const counts: Record<JobTab, number> = { all: jobs.length, running: 0, done: 0, failed: 0, stopped: 0 };
   for (const job of jobs) counts[tabOf(job)] += 1;
   const current = TABS.find((entry) => entry.id === tab)!;
-  const inTab = tab === "all" ? found : found.filter((job) => tabOf(job) === tab);
   const matched = new Set(found);
 
   const kindFilter = (
@@ -142,13 +143,17 @@ export default function JobsPage({ agent }: { agent?: string }) {
           </>
         }
       >
-        {counts[tab] === 0 ? (
-          <EmptyState icon={Bot} title={agent && tab === "all" ? `${agent} has nothing in the background yet` : current.none} />
-        ) : inTab.length === 0 ? (
-          <p className="py-6 text-center text-sm text-base-content/65">Nothing matches “{filter}”.</p>
-        ) : (
-          <JobList jobs={(list.data?.jobs ?? []).filter((job) => tab === "all" || tabOf(job) === tab)} shown={(job) => matched.has(job)} />
-        )}
+        <JobList
+          jobs={(list.data?.jobs ?? []).filter((job) => tab === "all" || tabOf(job) === tab)}
+          shown={(job) => matched.has(job)}
+          empty={
+            counts[tab] === 0 ? (
+              <EmptyState icon={Bot} title={agent && tab === "all" ? `${agent} has nothing in the background yet` : current.none} />
+            ) : (
+              <p className="py-6 text-center text-sm text-base-content/65">Nothing matches “{filter}”.</p>
+            )
+          }
+        />
       </ScrollCard>
     </div>
   );

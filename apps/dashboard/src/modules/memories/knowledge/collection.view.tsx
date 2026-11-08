@@ -157,10 +157,15 @@ export function CollectionView({
           <ErrorNote error={documents.error} />
           {documents.isPending ? (
             <ListLoading />
-          ) : list.length === 0 && reading.length === 0 ? (
-            <EmptyState icon={FilePlus2} title="No documents yet" description={editable ? "Drop files here, or write one." : "Nothing has been added to it yet."} />
           ) : (
-            <DocumentList collection={collection} documents={list} reading={reading} editable={editable} onOpen={(path) => onOpen({ collection: collection.id, path })} />
+            <DocumentList
+              collection={collection}
+              documents={list}
+              reading={reading}
+              editable={editable}
+              onOpen={(path) => onOpen({ collection: collection.id, path })}
+              empty={<EmptyState icon={FilePlus2} title="No documents yet" description={editable ? "Drop files here, or write one." : "Nothing has been added to it yet."} />}
+            />
           )}
         </Card>
       </section>

@@ -122,3 +122,52 @@ describe("a collection's documents", () => {
     for (const row of rows.slice(1)) expect(row).not.toContain("animate-enter");
   });
 });
+
+describe("the first one in an empty list", () => {
+  test("a document added to an empty collection enters", async () => {
+    const wire = WIRE["/knowledge/house/documents"] as { documents: Record<string, unknown>[] };
+    let row: string[] = [];
+    await renderPage("/memories", async (host, app) => {
+      answer({ "/knowledge/house/documents": { status: 200, body: { ...wire, documents: [] } } });
+      const body = host.ownerDocument.body;
+      const card = () => body.querySelector('article[aria-label="House"]');
+      await eventually(() => card() !== null, 4_000, "the House card");
+      ([...card()!.querySelectorAll("button")].find((button) => button.textContent?.trim() === "Open") as HTMLElement).click();
+      await eventually(() => body.textContent?.includes("No documents yet") ?? false, 4_000, "the empty collection");
+      answer({ "/knowledge/house/documents": { status: 200, body: { ...wire, documents: [wire.documents[0]] } } });
+      await app.queryClient.invalidateQueries({ queryKey: ["knowledge-documents", "house"] });
+      await eventually(() => body.querySelector('section[aria-label="Documents"] li') !== null, 4_000, "the first document");
+      row = classes(body.querySelector('section[aria-label="Documents"] li'));
+    });
+    expect(row).toContain("animate-enter");
+  });
+
+  test("the first mission enters, as one in a list already would", async () => {
+    const wire = WIRE["/missions"] as { missions: Record<string, unknown>[] };
+    let card: string[] = [];
+    await renderPage("/missions", async (host, app) => {
+      answer({ "/missions": { status: 200, body: { ...wire, missions: [] } } });
+      await app.queryClient.invalidateQueries({ queryKey: ["missions"] });
+      await eventually(() => host.textContent?.includes("No missions in the last") ?? false, 4_000, "no missions");
+      answer({ "/missions": { status: 200, body: { ...wire, missions: [wire.missions[0]] } } });
+      await app.queryClient.invalidateQueries({ queryKey: ["missions"] });
+      await eventually(() => host.querySelector('a[href$="/missions/msn_1"]') !== null, 4_000, "the first mission");
+      card = classes(host.querySelector('a[href$="/missions/msn_1"]'));
+    });
+    expect(card).toContain("animate-enter");
+  });
+
+  test("the first background helper enters", async () => {
+    const started = Date.now() - 60_000;
+    const job = { id: "job_1", agentId: "nouva", gatewayId: null, chatId: "555", command: "helper: Render the video", kind: "helper", cwd: "/srv/work", status: "running", pid: null, exitCode: null, startedAt: started, endedAt: null, logBytes: 0, logUpdatedAt: started, processAlive: true, brief: null, report: null, turnId: null };
+    let row: string[] = [];
+    await renderPage("/jobs", async (host, app) => {
+      await eventually(() => host.textContent?.includes("Nothing has run in the background yet") ?? false, 4_000, "no jobs");
+      answer({ "/jobs": { status: 200, body: { jobs: [job] } } });
+      await app.queryClient.invalidateQueries();
+      await eventually(() => host.querySelector('a[href$="/jobs/job_1"]') !== null, 4_000, "the first job");
+      row = classes(host.querySelector('a[href$="/jobs/job_1"]'));
+    });
+    expect(row).toContain("animate-enter");
+  });
+});

@@ -8,7 +8,7 @@
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { FileText, FileWarning, Loader2, Pencil, Trash2 } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import type { KnowledgeCollection, KnowledgeDocument } from "@/commons/lib/api.knowledge";
@@ -128,6 +128,7 @@ export function DocumentList({
   reading,
   editable,
   onOpen,
+  empty,
 }: {
   collection: KnowledgeCollection;
   documents: readonly KnowledgeDocument[];
@@ -135,10 +136,13 @@ export function DocumentList({
   reading: readonly string[];
   editable: boolean;
   onOpen: (path: string) => void;
+  /** Drawn while there is nothing, by the list itself: kept drawn, it sees the first document arrive. */
+  empty: ReactNode;
 }) {
   const sorted = [...documents].sort((a, b) => b.mtime - a.mtime || a.title.localeCompare(b.title));
   // Newest first: one just added enters at the top, where the file being read stood; one removed leaves where it was.
   const rows = useMotionList(sorted, (document) => document.path);
+  if (rows.length === 0 && reading.length === 0) return empty;
   return (
     <ul className="divide-base-content/[0.06] divide-y">
       {reading.map((name, n) => (

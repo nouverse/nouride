@@ -21,19 +21,19 @@ beforeAll(() => {
 interface Drawn {
   host: HTMLElement;
   /** Draw the list again, with these items (undefined: still loading), as these the filter shows, in this scope. */
-  draw: (items: string[] | undefined, options?: { shown?: (item: string) => boolean; scope?: string }) => void;
+  draw: (items: string[] | undefined, options?: { shown?: (item: string) => boolean; scope?: string; opensEmpty?: boolean }) => void;
   /** Each item drawn, in order, with its motion: `a`, `b+` (entering), `c-` (leaving). */
   rows: () => string[];
   unmount: () => void;
 }
 
 /** A list of names drawn through `useMotionList`, each an `<li>` with its motion as its class. */
-async function list(items: string[] | undefined, options: { shown?: (item: string) => boolean; scope?: string } = {}): Promise<Drawn> {
+async function list(items: string[] | undefined, options: { shown?: (item: string) => boolean; scope?: string; opensEmpty?: boolean } = {}): Promise<Drawn> {
   const React = await import("react");
   const { createRoot } = await import("react-dom/client");
   const { flushSync } = await import("react-dom");
   const { ENTER, LEAVE, useMotionList } = await import("@/commons/hooks/use-motion-list");
-  const List = ({ items: shown, options: given }: { items: string[] | undefined; options: { shown?: (item: string) => boolean; scope?: string } }) => {
+  const List = ({ items: shown, options: given }: { items: string[] | undefined; options: { shown?: (item: string) => boolean; scope?: string; opensEmpty?: boolean } }) => {
     const rows = useMotionList(shown, (item) => item, given);
     return React.createElement(
       "ul",
@@ -117,6 +117,28 @@ describe("a list's motion", () => {
       expect(drawn.rows()).toEqual(["a", "c"]);
       drawn.draw(["a", "b", "c"]);
       expect(drawn.rows()).toEqual(["a", "b", "c"]);
+    } finally {
+      drawn.unmount();
+    }
+  });
+
+  test("holds still while it loads again: nothing leaves, what comes back does not move, what is new enters", async () => {
+    const drawn = await list(["a", "b"]);
+    try {
+      drawn.draw(undefined);
+      expect(drawn.rows()).toEqual(["a", "b"]);
+      drawn.draw(["a", "b", "c"]);
+      expect(drawn.rows()).toEqual(["a", "b", "c+"]);
+    } finally {
+      drawn.unmount();
+    }
+  });
+
+  test("that opens empty enters what its first answer brings: a conversation a new chat just started", async () => {
+    const drawn = await list(undefined, { opensEmpty: true });
+    try {
+      drawn.draw(["answer"], { opensEmpty: true });
+      expect(drawn.rows()).toEqual(["answer+"]);
     } finally {
       drawn.unmount();
     }

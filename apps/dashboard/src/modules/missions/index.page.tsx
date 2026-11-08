@@ -9,7 +9,7 @@
  * asks for nothing, which is the query client's own rule for an interval.
  */
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { AlertTriangle, Plus, SlidersHorizontal, Target, X } from "lucide-react";
@@ -50,29 +50,38 @@ const TABS: { id: MissionTab; label: string; title: (n: number) => string; none:
 ];
 
 /**
- * A list of missions, from what the daemon sent rather than what the search left: a mission that changes state leaves
- * its group and enters the next, and one the search hides only is not drawn (`shown`) — typing moves nothing.
+ * The missions a tab shows, from what the daemon sent rather than what the search left: a mission that changes state
+ * leaves its group and enters the next, and one the search hides only is not drawn (`shown`) — typing moves nothing.
+ * Kept drawn while the tab is empty, showing `empty` once nothing is left to draw, so it sees the first mission arrive.
  */
-function useMoving(missions: MissionView[], shown: (mission: MissionView) => boolean): Moving<MissionView>[] {
-  return useMotionList(missions, (mission) => mission.id, { shown });
+function MissionList({ missions, tab, shown, empty }: { missions: MissionView[]; tab: MissionTab; shown: (mission: MissionView) => boolean; empty: ReactNode }) {
+  const groups = grouped(missions);
+  const key = (mission: MissionView) => mission.id;
+  const needsYou = useMotionList(groups.needsYou, key, { shown });
+  const working = useMotionList(groups.working, key, { shown });
+  const finished = useMotionList(groups.finished, key, { shown });
+  const inTab = useMotionList(missions.filter((mission) => tabOf(mission) === tab), key, { shown });
+  if (tab !== "all") return inTab.length === 0 ? empty : <Cards cards={inTab} />;
+  if (needsYou.length + working.length + finished.length === 0) return empty;
+  return (
+    <div className="space-y-7">
+      <Group title="Needs you" cards={needsYou} count={groups.needsYou.filter(shown).length} />
+      <Group title="Working" cards={working} count={groups.working.filter(shown).length} />
+      <Group title="Finished" cards={finished} count={groups.finished.filter(shown).length} />
+    </div>
+  );
 }
 
-function Group({ title, missions, shown }: { title: string; missions: MissionView[]; shown: (mission: MissionView) => boolean }) {
-  const cards = useMoving(missions, shown);
+function Group({ title, cards, count }: { title: string; cards: Moving<MissionView>[]; count: number }) {
   if (cards.length === 0) return null;
   return (
     <section aria-label={title} className="space-y-2.5">
       <h3 className="px-1 font-mono text-[11px] font-bold uppercase tracking-wider text-base-content/65">
-        {title} <span className="font-normal">· {missions.filter(shown).length}</span>
+        {title} <span className="font-normal">· {count}</span>
       </h3>
       <Cards cards={cards} />
     </section>
   );
-}
-
-/** One tab's missions, moving as a group's do. */
-function TabCards({ missions, shown }: { missions: MissionView[]; shown: (mission: MissionView) => boolean }) {
-  return <Cards cards={useMoving(missions, shown)} />;
 }
 
 /** The missions as cards, in the Knowledge tab's grid. */
@@ -126,10 +135,8 @@ export default function MissionsPage({ agent }: { agent?: string }) {
   const counts: Record<MissionTab, number> = { all: missions.length, needs_you: 0, working: 0, done: 0, failed: 0, stopped: 0 };
   for (const mission of missions) counts[tabOf(mission)] += 1;
   const current = TABS.find((entry) => entry.id === tab)!;
-  const inTab = tab === "all" ? found : found.filter((mission) => tabOf(mission) === tab);
   const matched = new Set(found);
   const shown = (mission: MissionView) => matched.has(mission);
-  const groups = grouped(missions);
 
   const spanFilter = (
     <select className="select select-sm w-36 rounded-xl" aria-label="Finished in" value={days} onChange={(event) => setDays(Number(event.target.value) as Span)}>
@@ -229,25 +236,24 @@ export default function MissionsPage({ agent }: { agent?: string }) {
           </>
         }
       >
-        {missions.length === 0 && tab === "all" ? (
-          <EmptyState
-            icon={Target}
-            title={agent ? `${agent} has no missions in the last ${days} days` : `No missions in the last ${days} days`}
-            description="Start one here, or send /mission and a goal in a chat. An agent also starts one when a piece of work needs hours rather than a reply."
-          />
-        ) : counts[tab] === 0 ? (
-          <EmptyState icon={Target} title={current.none(days)} />
-        ) : inTab.length === 0 ? (
-          <p className="py-6 text-center text-sm text-base-content/65">Nothing matches “{filter}”.</p>
-        ) : tab === "all" ? (
-          <div className="space-y-7">
-            <Group title="Needs you" missions={groups.needsYou} shown={shown} />
-            <Group title="Working" missions={groups.working} shown={shown} />
-            <Group title="Finished" missions={groups.finished} shown={shown} />
-          </div>
-        ) : (
-          <TabCards missions={missions.filter((mission) => tabOf(mission) === tab)} shown={shown} />
-        )}
+        <MissionList
+          missions={missions}
+          tab={tab}
+          shown={shown}
+          empty={
+            missions.length === 0 && tab === "all" ? (
+              <EmptyState
+                icon={Target}
+                title={agent ? `${agent} has no missions in the last ${days} days` : `No missions in the last ${days} days`}
+                description="Start one here, or send /mission and a goal in a chat. An agent also starts one when a piece of work needs hours rather than a reply."
+              />
+            ) : counts[tab] === 0 ? (
+              <EmptyState icon={Target} title={current.none(days)} />
+            ) : (
+              <p className="py-6 text-center text-sm text-base-content/65">Nothing matches “{filter}”.</p>
+            )
+          }
+        />
       </ScrollCard>
     </div>
   );
