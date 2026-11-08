@@ -82,6 +82,14 @@ describe("the page", () => {
     expect(at("Nix asks to use")).toBeLessThan(at("Moving now"));
     expect(at("Moving now")).toBeLessThan(at("Quick chat"));
     expect(at("Quick chat")).toBeLessThan(at("Your agents"));
+    // The box's state at the top, in the greeting's corner, before anything that needs you (the owner, 2026-11-08).
+    expect(at("Everything is working")).toBeGreaterThan(-1);
+    expect(at("Everything is working")).toBeLessThan(at("Nix asks to use"));
+    // Quick chat asks the orchestrator first, and says it is the orchestrator.
+    expect(html.slice(at("Quick chat"), at("Your agents"))).toMatch(/Ask Nouva<\/span><span[^>]*badge[^>]*>.*?orchestrator<\/span>/);
+    // Your agents: the Office's picture, and each agent a chip with its whole name, the orchestrator crowned.
+    expect(html).toContain("data-office-teaser");
+    expect(html).toMatch(/<span class="shrink-0 text-sm font-semibold text-base-content">Nouva<\/span><svg[^>]*aria-label="orchestrator"/);
     // The greeting's waving or good-night cat, and nothing asleep: something waits.
     expect(html).toMatch(/01-waving|12-good-night/);
     expect(html).not.toContain("Nothing is waiting for you");
@@ -197,11 +205,11 @@ describe("Work's first tab", () => {
   });
 });
 
-test("an agent's name is never the part cut short: its line about what it does is (seen on the box)", () => {
+test("an agent's name is never the part cut short, and what it does is kept for a pointer (seen on the box)", () => {
+  // Seven agents with long lines about them read "N…" on Home's cards; the chips carry the whole name, the line in their title.
   const source = readFileSync(join(import.meta.dir, "../src/modules/home/components/YourAgents.tsx"), "utf8");
   const name = /<span className="([^"]+)">\{name\}<\/span>/.exec(source)?.[1] ?? "";
-  const line = /<span className="([^"]+)">\{agent\.headline\}<\/span>/.exec(source)?.[1] ?? "";
   expect(name.split(" ")).toContain("shrink-0");
   expect(name.split(" ")).not.toContain("truncate");
-  expect(line.split(" ")).toContain("truncate");
+  expect(source).toContain("title={agent.headline ? `${name}: ${agent.headline}` : name}");
 });

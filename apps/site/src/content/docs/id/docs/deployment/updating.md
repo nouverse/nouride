@@ -152,7 +152,7 @@ itu bukan build sebelum versi ini.
 
 ## Dari dashboard
 
-Kartu box di **Home** punya badge di sebelah **Restart**, *Up to date*, atau versi yang sedang
+Bagian atas **Home** punya badge di sebelah **Restart**, *Up to date*, atau versi yang sedang
 menunggu. Itu pintunya: menekannya membuka halaman **Update**, yang berupa kartu di Settings dan bukan
 entri menu, karena memperbarui itu sesuatu yang jarang dilakukan dan hanya kalau memang ada yang perlu
 dilakukan.

@@ -6,7 +6,7 @@ description: Status agent-agent kamu dalam bentuk kantor kecil berisi kucing (si
 **Agents → Office** menampilkan apa yang sedang dikerjakan agent-agent kamu sebagai kantor kecil pixel art: ruang
 kerja, lobi, dan kamar tidur, berjejer di atas lorong. Tiap agent adalah kucing Nouride dengan meja sendiri, kursi
 sofa sendiri, dan kasur sendiri (meja orchestrator sendirian di depan ruang kerja, dengan mahkota di namanya).
-Home menampilkan agent yang sama di **Your agents**: kucing tiap agent, namanya, dan apa yang sedang ia kerjakan.
+Home menampilkan office yang sama, kecil dan diam, di **Your agents**, dengan tiap agent di sebelahnya sebagai chip.
 
 ![Office: Nouva, sang orchestrator, dan Ember sedang kerja (Ember dengan tanda ! merah karena gak bisa kerja), Wren nunggu kamu, Kira dan Pip di sofa, Moss tidur, dan Codey di kasur karena gak bisa kerja](/media/dashboard-office.png)
 

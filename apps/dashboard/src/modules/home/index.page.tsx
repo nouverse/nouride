@@ -1,7 +1,7 @@
 /**
  * Home (0.8.24, where Overview was): an inbox before a dashboard. In the design rules' order: what needs the person,
- * answered here where it can be; what is moving; a quick line to an agent; and the agents. Below them, the box and
- * today's use. When nothing waits and nothing moves, the cat sleeps where the cards would be.
+ * answered here where it can be; what is moving; a quick line to an agent; and the agents, the Office's picture with
+ * each one as a chip. The box's state sits in the greeting's corner, its warnings under it; today's use at the foot. When nothing waits and nothing moves, the cat sleeps where the cards would be.
  */
 
 import { useQuery } from "@tanstack/react-query";
@@ -18,8 +18,8 @@ import { Hero } from "./components/Hero";
 import { NeedsYouCards } from "./components/NeedsYou";
 import { MovingNow, moving } from "./components/MovingNow";
 import { QuickChat } from "./components/QuickChat";
-import { YourAgents } from "./components/YourAgents";
-import { BoxStatus } from "./components/BoxStatus";
+import { OfficeTeaser } from "./components/OfficeTeaser";
+import { BoxLine, BoxWarnings } from "./components/BoxStatus";
 import { UsageCard } from "./components/UsageCard";
 import { SetupNotes } from "./components/SetupNotes";
 import { NewChatButton } from "./components/NewChatButton";
@@ -70,7 +70,8 @@ export default function HomePage() {
 
   return (
     <div className="space-y-6">
-      <Hero name={name} line={summaryLine(awake, movingNow.length, needs.total)} />
+      <Hero name={name} line={summaryLine(awake, movingNow.length, needs.total)} aside={<BoxLine health={health.data} />} />
+      <BoxWarnings health={health.data} />
 
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
         <NeedsYouCards approvals={approvals.data?.pending ?? []} missions={waiting} requests={needs.requests} skills={needs.skills} facts={needs.facts} documents={needs.documents} names={names} />
@@ -84,12 +85,11 @@ export default function HomePage() {
             </div>
           </section>
         )}
-        <QuickChat agents={agents} />
+        <QuickChat agents={agents} orchestrator={status.data?.orchestrator ?? null} />
       </div>
 
-      <YourAgents agents={agents} looks={looks} />
+      <OfficeTeaser agents={status.data?.agents ?? []} orchestrator={status.data?.orchestrator ?? null} />
 
-      <BoxStatus health={health.data} />
       <UsageCard />
       <SetupNotes />
 

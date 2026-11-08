@@ -7,8 +7,8 @@ import { CatPortrait } from "@/commons/cat/CatPortrait";
 import type { Look } from "@/commons/cat/look";
 import { cn } from "@/commons/lib/utils";
 
-/** The tile's tint by size: a row's 40px or a card's 56px. */
-const SIZES = { sm: { tile: "size-10 rounded-[12px]", scale: 1.25 }, md: { tile: "size-14 rounded-[16px]", scale: 1.75 } } as const;
+/** The tile by size: a chip's 32px, a row's 40px or a card's 56px. */
+const SIZES = { xs: { tile: "size-8 rounded-[10px]", scale: 1 }, sm: { tile: "size-10 rounded-[12px]", scale: 1.25 }, md: { tile: "size-14 rounded-[16px]", scale: 1.75 } } as const;
 
 export function AgentAvatar({ look, name, size = "md", className }: { look: Look; name: string; size?: keyof typeof SIZES; className?: string }) {
   const { tile, scale } = SIZES[size];

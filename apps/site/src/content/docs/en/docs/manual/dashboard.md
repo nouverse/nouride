@@ -97,29 +97,31 @@ which slides the rest of the menu up as a sheet.
 moon button beside your name. The Nouride cat greets you on Home and keeps you company on an empty page.
 
 **Update** is a card on Settings rather than a menu entry. The version under the logo shows a dot when a newer release
-exists, and the badge on Home's box card or the button on **Your box** opens the page. Check, download and install are
+exists, and the badge at the top of Home or the button on **Your box** opens the page. Check, download and install are
 three steps, because only the last one restarts the daemon, and it waits until nothing is running.
 [Updating →](/en/docs/deployment/updating/)
 
-**Restart**, beside the update badge on Home's box card, restarts the daemon for a change that needs one. It asks
+**Restart**, beside the update badge at the top of Home, restarts the daemon for a change that needs one. It asks
 first, waits until nothing is running, offers **Restart now** while it waits, and says when the daemon is back. Only an
 admin or an operator sees it, there and at the foot of Settings.
 
 ## Home
 
 Home opens with a greeting and one line on what is going on: how many agents are awake, how many missions are moving,
-how many things need you. Under it, in this order:
+how many things need you. In the greeting's corner the box says whether everything is working, its version and how
+long it has been up, beside the update badge and **Restart**; anything to look at is a card right under it. Then, in
+this order:
 
 - **What needs you.** A tool call an agent waits on is answered right there: **Allow once**, **Deny**, and **Always
   allow** where it is offered. A mission waiting for an answer, a request to talk to the agents, a skill to review, a
   fact the nightly pass wants to keep or change, or a document an agent saved for a collection is a card that opens
   its page. Facts and documents are shown to whoever may decide them: an admin or an operator.
 - **What is moving.** Each mission at work, with how far along its checklist is.
-- **Quick chat**, on a laptop: a line to an agent, and the chat opens with the answer. On a phone a **+ Chat** button
-  floats above the tab bar instead.
-- **Your agents.** Each one's cat, its name and what it is doing now.
-- **The box.** The version, how long it has been up, anything to look at, the update badge and **Restart**. Then
-  today's AI use, folded to one line, and setup notes when the last start found something.
+- **Quick chat**, on a laptop: a line to an agent, the orchestrator first and marked as such, and the chat opens with
+  the answer. On a phone a **+ Chat** button floats above the tab bar instead.
+- **Your agents.** The Office, small, and beside it each agent as a chip: its cat, its name, a crown on the
+  orchestrator and a dot for what it is doing. A chip opens the agent; the picture opens the Office.
+- Then today's AI use, folded to one line, and setup notes when the last start found something.
 
 When nothing waits and nothing moves, a sleeping cat says *Nothing is waiting for you*.
 

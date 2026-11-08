@@ -144,7 +144,7 @@ before this.
 
 ## From the dashboard
 
-The box card on **Home** carries a badge beside **Restart**, *Up to date*, or the version that is
+The top of **Home** carries a badge beside **Restart**, *Up to date*, or the version that is
 waiting. It is the way in: pressing it opens **Update**, which is a card on Settings rather than a
 menu entry, because updating is something you do rarely and only when there is something to do.
 

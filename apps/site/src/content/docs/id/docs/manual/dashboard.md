@@ -99,18 +99,20 @@ memilih sendiri lewat tombol matahari atau bulan di sebelah namamu. Kucing Nouri
 di halaman yang masih kosong.
 
 **Update** adalah kartu di Settings, bukan entri menu. Versi di bawah logo menampilkan titik kalau ada rilis yang lebih
-baru, dan badge di kartu box di Home atau tombol di **Your box** membuka halamannya. Cek, unduh, dan pasang adalah tiga
+baru, dan badge di bagian atas Home atau tombol di **Your box** membuka halamannya. Cek, unduh, dan pasang adalah tiga
 langkah terpisah, karena cuma yang terakhir yang me-restart daemon, dan itu pun menunggu sampai gak ada yang jalan.
 [Update →](/id/docs/deployment/updating/)
 
-**Restart**, di sebelah badge update di kartu box di Home, me-restart daemon untuk perubahan yang membutuhkannya. Ia
+**Restart**, di sebelah badge update di bagian atas Home, me-restart daemon untuk perubahan yang membutuhkannya. Ia
 bertanya dulu, menunggu sampai gak ada yang jalan, menawarkan **Restart now** selama menunggu, dan memberi tahu begitu
 daemon kembali. Cuma admin atau operator yang melihatnya, di situ dan di bagian bawah Settings.
 
 ## Home
 
 Home dibuka dengan sapaan dan satu baris tentang apa yang sedang terjadi: berapa agent yang bangun, berapa misi yang
-sedang jalan, berapa hal yang butuh kamu. Di bawahnya, berurutan:
+sedang jalan, berapa hal yang butuh kamu. Di pojok sapaan, box-nya bilang apakah semua berjalan baik, versinya, dan
+sudah berapa lama nyala, di sebelah badge update dan **Restart**; hal yang perlu dicek tampil sebagai kartu tepat di
+bawahnya. Lalu, berurutan:
 
 - **Yang butuh kamu.** Tool call yang ditunggu agent dijawab langsung di situ: **Allow once**, **Deny**, dan **Always
   allow** kalau ditawarkan. Misi yang menunggu jawaban, permintaan untuk bicara dengan agent, skill yang perlu
@@ -118,11 +120,12 @@ sedang jalan, berapa hal yang butuh kamu. Di bawahnya, berurutan:
   koleksi tampil sebagai kartu yang membuka halamannya. Fakta dan dokumen ditampilkan ke yang boleh memutuskannya:
   admin atau operator.
 - **Yang sedang jalan.** Tiap misi yang sedang dikerjakan, dengan seberapa jauh checklist-nya.
-- **Quick chat**, di laptop: satu baris ke sebuah agent, lalu chat-nya terbuka dengan jawabannya. Di HP, tombol
-  **+ Chat** melayang di atas bar tab sebagai gantinya.
-- **Your agents.** Kucing tiap agent, namanya, dan apa yang sedang ia kerjakan.
-- **Box-nya.** Versi, sudah berapa lama nyala, hal yang perlu dicek, badge update, dan **Restart**. Lalu pemakaian AI
-  hari ini, dilipat jadi satu baris, dan catatan setup kalau saat terakhir dinyalakan ada yang ditemukan.
+- **Quick chat**, di laptop: satu baris ke sebuah agent, orchestrator lebih dulu dan diberi tanda, lalu chat-nya
+  terbuka dengan jawabannya. Di HP, tombol **+ Chat** melayang di atas bar tab sebagai gantinya.
+- **Your agents.** Office versi kecil, dan di sebelahnya tiap agent sebagai chip: kucingnya, namanya, mahkota di
+  orchestrator, dan titik untuk apa yang sedang ia kerjakan. Chip membuka agent-nya; gambarnya membuka Office.
+- Lalu pemakaian AI hari ini, dilipat jadi satu baris, dan catatan setup kalau saat terakhir dinyalakan ada yang
+  ditemukan.
 
 Kalau gak ada yang menunggu dan gak ada yang jalan, kucing yang tidur bilang *Nothing is waiting for you*.
 

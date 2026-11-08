@@ -10,9 +10,10 @@ import { ArrowUp } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { api, type AgentSummary } from "@/commons/lib/api";
 import { Tag } from "@/commons/components/ui/Tag";
+import { OrchestratorBadge } from "@/commons/components/agents/AgentName";
 import { useToast } from "@/commons/components/ui/toast";
 
-export function QuickChat({ agents }: { agents: AgentSummary[] }) {
+export function QuickChat({ agents, orchestrator }: { agents: AgentSummary[]; orchestrator: string | null }) {
   const navigate = useNavigate();
   const toast = useToast();
   const [agent, setAgent] = useState("");
@@ -39,12 +40,18 @@ export function QuickChat({ agents }: { agents: AgentSummary[] }) {
             {agents.map((one) => (
               <option key={one.id} value={one.id}>
                 {one.displayName || one.id}
+                {one.id === orchestrator ? " (orchestrator)" : ""}
               </option>
             ))}
           </select>
         )}
       </div>
-      <p className="text-sm text-base-content/70">Ask {chosen.displayName || chosen.id} something; the chat opens with the answer.</p>
+      {/* The orchestrator marked as everywhere else: the one that answers a message naming no agent, and hands work on. */}
+      <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-base-content/70">
+        <span>Ask {chosen.displayName || chosen.id}</span>
+        {chosen.id === orchestrator && <OrchestratorBadge />}
+        <span>something; the chat opens with the answer.</span>
+      </p>
       <div className="mt-auto flex items-center gap-2 rounded-full border border-base-content/10 bg-base-100 py-1 pr-1 pl-4 focus-within:border-secondary/50">
         <input
           className="min-w-0 flex-1 bg-transparent text-sm outline-none"

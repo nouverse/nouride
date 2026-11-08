@@ -5,6 +5,7 @@
 
 import { Link } from "@tanstack/react-router";
 import { MessageSquarePlus } from "lucide-react";
+import type { ReactNode } from "react";
 import { Mascot } from "@/commons/components/brand/Mascot";
 
 /** The greeting for the hour it is where the person is, and whether it is the night's. */
@@ -15,12 +16,12 @@ export function greetingAt(hour: number): { words: string; night: boolean } {
   return { words: "Good night", night: true };
 }
 
-export function Hero({ name, line, hour = new Date().getHours() }: { name: string; line: string; hour?: number }) {
+export function Hero({ name, line, aside, hour = new Date().getHours() }: { name: string; line: string; aside?: ReactNode; hour?: number }) {
   const { words, night } = greetingAt(hour);
   return (
-    <section className="hero-soft flex items-center gap-4 overflow-hidden rounded-[22px] border border-base-content/[0.08] p-4 shadow-soft sm:gap-6 sm:p-6">
+    <section className="hero-soft flex flex-wrap items-center gap-x-4 gap-y-3 overflow-hidden rounded-[22px] border border-base-content/[0.08] p-4 shadow-soft sm:gap-x-6 sm:p-6">
       <Mascot pose={night ? "goodNight" : "waving"} className="-my-2 w-24 sm:-my-4 sm:w-40" />
-      <div className="min-w-0 space-y-1.5 sm:space-y-3">
+      <div className="min-w-0 flex-1 space-y-1.5 sm:space-y-3">
         <h1 className="text-2xl leading-tight text-base-content sm:text-4xl">
           {words}
           {name ? `, ${name}` : ""}
@@ -31,6 +32,7 @@ export function Hero({ name, line, hour = new Date().getHours() }: { name: strin
           New chat
         </Link>
       </div>
+      {aside && <div className="w-full lg:w-auto lg:max-w-[45%] lg:self-start">{aside}</div>}
     </section>
   );
 }

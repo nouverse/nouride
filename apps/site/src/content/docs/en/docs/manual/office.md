@@ -6,7 +6,7 @@ description: Your agents' statuses as a small office of cats (who is working, wh
 **Agents → Office** shows what your agents are doing as a small pixel-art office: a workroom, the lobby and a
 bedroom, side by side over a hall. Each agent is a Nouride cat with its own desk, its own seat on a sofa and its own
 bed (the orchestrator's desk alone at the front of the workroom, a crown by its name).
-Home shows the same agents under **Your agents**: each one's cat, its name and what it is doing now.
+Home shows the same office, small and still, under **Your agents**, with each agent beside it as a chip.
 
 ![The Office: Nouva, the orchestrator, and Ember at work (Ember under a red ! because it cannot work), Wren waiting for you, Kira and Pip on the sofa, Moss asleep, and Codey in bed because it cannot work](/media/dashboard-office.png)
 
