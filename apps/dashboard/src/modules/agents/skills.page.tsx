@@ -6,9 +6,9 @@
  * `agents/skills/`, every agent starts with all of it, and this page writes one file —
  * `agents/<id>/skills.toml`.
  *
- * A project skill is listed and not switchable. It comes from a repository the operator pointed at,
- * so it is switched off by removing the root from `[workspace] skill_roots` — a different act with
- * different consequences, and one control that quietly did both would be a trap.
+ * A project skill is listed and not switchable. It comes from a repository an admin pointed at, so it
+ * is switched off by removing its folder in the Project folders card below (0.8.24) — a different act
+ * with different consequences, and one control that quietly did both would be a trap.
  *
  * The list filters and scrolls inside its card, as the workshop's does (`ScrollCard`): with forty skills the
  * page was one long scroll, and finding one meant reading every row.
@@ -26,6 +26,7 @@ import { ScrollCard } from "@/commons/components/ui/ScrollCard";
 import { useTextFilter } from "@/commons/lib/use-text-filter";
 import { useSaved } from "@/commons/hooks/use-saved";
 import { ExternalNote } from "./components/ExternalNote";
+import { SkillRootsCard } from "./components/SkillRootsCard";
 
 const SCOPE: Record<AgentSkill["scope"], { label: string; icon: typeof BookOpen; hint: string }> = {
   shared: {
@@ -41,7 +42,7 @@ const SCOPE: Record<AgentSkill["scope"], { label: string; icon: typeof BookOpen;
   project: {
     label: "Project",
     icon: FolderGit2,
-    hint: "From a folder named in the server's settings.",
+    hint: "From a project folder below.",
   },
 };
 
@@ -200,6 +201,8 @@ export default function AgentSkillsPage({ agentId }: { agentId: string }) {
         </span>
         {!editable ? <span>Read only: you need the operator role to change this.</span> : null}
       </div>
+
+      <SkillRootsCard agentId={agentId} />
     </div>
   );
 }

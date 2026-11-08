@@ -9,6 +9,14 @@
 import { control, post, request } from "./api.client";
 import type { AgentSkill, FallbackPair, FileSummary, McpServer } from "./api";
 
+/** A folder an agent takes project skills from, and the skills it brings (0.8.24). */
+export interface SkillRoot {
+  path: string;
+  /** Whether the server can open it now: a repository not cloned yet cannot be. */
+  readable: boolean;
+  skills: { name: string; description: string }[];
+}
+
 /** The levels an agent's effort can be set to (`LLM_EFFORTS` in the daemon), and "default" for the install's. */
 export const EFFORT_LEVELS = ["low", "medium", "high", "xhigh", "max"] as const;
 
@@ -33,6 +41,15 @@ export const agentsApi = {
   // switch flipped in another tab meanwhile stays. The whole map was a last write that undid the other tab's.
   saveAgentSkills: (agent: string, changes: Record<string, boolean>) =>
     post<{ ok: true }>(`${control}/agents/${agent}/skills`, { changes }),
+
+  /** The folders this agent takes project skills from, each with what it brings, and whether this account may change them. */
+  skillRoots: (agent: string) => request<{ roots: SkillRoot[]; editable: boolean }>(`${control}/agents/${agent}/skill-roots`),
+
+  /** A folder added, checked and saved by the server, which answers with the skills it brings. An admin's. */
+  addSkillRoot: (agent: string, path: string) => post<{ ok: true; path: string; skills: string[] }>(`${control}/agents/${agent}/skill-roots`, { path }),
+
+  removeSkillRoot: (agent: string, path: string) =>
+    request<{ ok: true; path: string }>(`${control}/agents/${agent}/skill-roots?path=${encodeURIComponent(path)}`, { method: "DELETE" }),
 
   agentFiles: (agent: string) => request<{ files: FileSummary[] }>(`${control}/agents/${agent}/files`),
 
