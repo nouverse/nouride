@@ -29,6 +29,7 @@ Work
   Missions          kerjaan panjang yang diselesaikan agent sendiri: yang butuh kamu, yang jalan, yang selesai; Limits
   Helpers           helper, perintah dan agent yang ditanya, yang dibiarkan agent jalan: langkahnya, Stop
   Schedule          semua job: buat, ubah, jalankan sekarang; filter aktif / dijeda / gagal
+  Webhooks          endpoint yang menjalankan job saat dipanggil, bukan saat jam tertentu
 Agents
   Agents            daftarnya, New Agent (admin), dan Settings seluruh daemon
     └ <agent>
@@ -60,7 +61,6 @@ Settings
     Connectors      server MCP instalasi: Installed · Explore, saklar per agent
     Integrations    aplikasi AI lain yang menjangkau memori, satu key per aplikasi (admin)
     Web Search      tempat agent mencari: sumber gratis, Brave, SearXNG, sendiri (admin)
-    Webhooks        endpoint yang menjalankan job saat dipanggil, bukan saat jam tertentu
   People and sign-in
     Access          siapa yang boleh bicara dengan agent: Pending · Approved · Denied · Blocked · History
     Users           akun dan peran (edisi Pro)                                (admin)

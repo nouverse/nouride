@@ -3,7 +3,8 @@
  * always sees, two now and then, and everything set up once behind Settings:
  *
  * - **Home, Chats, Work, Agents.** Work holds what agents do without anyone in the chat: what waits for an answer,
- *   missions, helpers and the schedule, under one badge. Agents holds the Office, the same agents drawn as cats.
+ *   missions, helpers, the schedule and webhooks (work a clock starts, and work another app starts by calling), under
+ *   one badge. Agents holds the Office, the same agents drawn as cats.
  * - **Skills, Memory.** Memory holds what the agents know, and the people and groups they know it about.
  * - **Settings**, a page of its own that lists every other page, and opens its list here only while one of them is the
  *   page you are on: shown always, fourteen links were the menu, and the four that matter were lost among them.
@@ -32,7 +33,6 @@ import {
   Target,
   UserCog,
   Users,
-  Webhook,
   Wrench,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -96,7 +96,7 @@ function AccessBadge() {
 export const DAILY: NavItem[] = [
   { to: "/", label: "Home", icon: House },
   { to: "/chat", label: "Chats", icon: MessageSquare },
-  { to: "/work", label: "Work", icon: Target, holds: ["/missions", "/jobs", "/schedule"], badge: WorkBadge },
+  { to: "/work", label: "Work", icon: Target, holds: ["/missions", "/jobs", "/schedule", "/webhooks"], badge: WorkBadge },
   { to: "/agents", label: "Agents", icon: Bot, holds: ["/office"] },
 ];
 
@@ -125,7 +125,6 @@ export const SETTINGS: { group: string; items: NavItem[] }[] = [
       { to: "/mcp", label: "Connectors", icon: Plug, about: "Outside tools and services the agents can use." },
       { to: "/integrations", label: "Integrations", icon: Blocks, adminOnly: true, about: "Other apps that use this box's agents." },
       { to: "/web-search", label: "Web Search", icon: Search, adminOnly: true, about: "Which search service the agents look things up with." },
-      { to: "/webhooks", label: "Webhooks", icon: Webhook, about: "Addresses that start an agent's work when another app calls them." },
     ],
   },
   {

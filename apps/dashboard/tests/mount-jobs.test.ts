@@ -69,12 +69,12 @@ test("it is Work's third tab, between Missions and Schedule, and the menu marks 
   await renderPage("/jobs", async (host) => {
     await eventually(() => host.querySelector('main a[href="/dashboard/schedule"]') !== null, 2_000, "Work's tabs");
     seen = {
-      tabs: [...host.querySelectorAll("main a")].filter((a) => /\/dashboard\/(work|missions|jobs|schedule)$/.test(a.getAttribute("href") ?? "")).map((a) => a.textContent?.trim() ?? ""),
+      tabs: [...host.querySelectorAll("main a")].filter((a) => /\/dashboard\/(work|missions|jobs|schedule|webhooks)$/.test(a.getAttribute("href") ?? "")).map((a) => a.textContent?.trim() ?? ""),
       // The item's name, without the count of what waits there.
       current: [...host.querySelectorAll('nav[aria-label="Menu"] a[aria-current="page"]')].map((a) => a.querySelector("span")?.textContent?.trim() ?? ""),
     };
   });
-  expect(seen.tabs).toEqual(["Waiting for you", "Missions", "Helpers", "Schedule"]);
+  expect(seen.tabs).toEqual(["Waiting for you", "Missions", "Helpers", "Schedule", "Webhooks"]);
   expect(seen.current).toEqual(["Work"]);
 });
 

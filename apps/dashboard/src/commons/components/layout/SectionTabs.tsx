@@ -19,6 +19,7 @@ const SECTIONS: Tab[][] = [
     { to: "/missions", label: "Missions" },
     { to: "/jobs", label: "Helpers" },
     { to: "/schedule", label: "Schedule" },
+    { to: "/webhooks", label: "Webhooks" },
   ],
   [
     { to: "/memories", label: "Knowledge & Memory" },

@@ -29,6 +29,7 @@ Work
   Missions          long work agents finish alone: what needs you, what runs, what ended; Limits
   Helpers           helpers, commands and asked agents an agent left running: each one's steps, Stop
   Schedule          every job: create, edit, run now; filter by active / paused / failing
+  Webhooks          endpoints that run a job when called, rather than on a clock
 Agents
   Agents            the list, New Agent (admin), and daemon-wide Settings
     └ <agent>
@@ -60,7 +61,6 @@ Settings
     Connectors      the install's MCP servers: Installed · Explore, a switch per agent
     Integrations    other AI apps reaching memory, one key per app            (admin)
     Web Search      where agents search: free sources, Brave, SearXNG, own    (admin)
-    Webhooks        endpoints that run a job when called, rather than on a clock
   People and sign-in
     Access          who may talk to the agents: Pending · Approved · Denied · Blocked · History
     Users           accounts and roles (Pro editions)                         (admin)
