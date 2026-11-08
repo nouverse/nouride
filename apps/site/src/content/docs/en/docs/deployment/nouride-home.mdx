@@ -1,0 +1,118 @@
+---
+title: Nouride Home on Android
+description: Nouride Home is an Android app that runs Nouride on the phone, with no terminal and no root. Install it, press Start, and open the dashboard.
+---
+
+import { Steps, Aside, LinkCard } from '@astrojs/starlight/components';
+
+Nouride Home is an Android app that runs Nouride on the phone itself. It carries a small Debian system
+inside, runs the official installer in it on the first start, and keeps Nouride running in the
+background. There is nothing to type in a terminal, and the phone does not need to be rooted. Other
+devices on the same Wi-Fi open the dashboard from the phone.
+
+It does what [An Android phone as a server](/en/docs/deployment/android-server/) does by hand with Termux:
+the same Linux build of Nouride, the Router edition, with the [Nougate](/en/docs/providers/nougate/) LLM
+gateway inside.
+
+<Aside type="note" title="Tested on one phone">
+A Redmi 12 (HyperOS on Android 15, 6 GB of RAM) with Nouride Home 0.1.4 and Nouride 0.8.22, on
+2026-11-08: the first start, the dashboard on the phone and from a computer on the same Wi-Fi, an update
+of the app from the version before, and a restart of the phone. Not tried yet: other phones, and a phone
+where Android's limit on child processes has not been raised (see [Keep it running](#keep-it-running)).
+</Aside>
+
+## What you need
+
+- **A 64-bit phone on Android 7 or later.** Nouride has no 32-bit ARM build, and Android refuses to install
+  the app on a 32-bit phone.
+- **About 700 MB of free storage.** The app, Debian and Nouride took that much on the test phone after the
+  first start. What your agents download and build comes on top.
+- **The internet for the first start**, which downloads Nouride, and **a charger**: the phone runs all
+  the time, so keep it plugged in.
+- **The same Wi-Fi** as the devices you will open the dashboard from, if you want to open it anywhere but
+  on the phone.
+- **A model account or an API key.** The Router edition signs in to an account you already have (Claude
+  Pro or Max, ChatGPT, GitHub Copilot, Google Gemini or Kiro) through its built-in Nougate gateway; a
+  provider's endpoint and API key work as well. The setup wizard asks.
+
+## Install
+
+<Steps>
+
+1. ### Download the app
+
+   On the phone, open [Nouride Home's latest release](https://github.com/nouverse/nouride-android-appliance/releases/latest)
+   and tap `nouride-home-<version>.apk` under Assets. Android asks once whether your browser may install
+   apps: allow it. Google Play Protect may offer to scan the app first, as it does for apps from outside
+   Google Play. Nouride Home is not on Google Play.
+
+2. ### Press Start
+
+   Open Nouride Home and press **Start**. Android asks whether Nouride Home may run in the background:
+   allow it, or Android may stop Nouride when the screen is off.
+
+   The first start unpacks Debian and installs Nouride. It takes a few minutes, and the app shows each
+   step. Keep the phone on Wi-Fi and plugged in until it says **Nouride is running**.
+
+3. ### Open the dashboard
+
+   Press **Open Nouride**. The dashboard opens already signed in, on **Personalize Your Account**: choose
+   the username and password you will sign in with from now on, on the phone and on any other device. Then
+   the setup wizard asks for a model and your first agent, as on every platform. Carry on at
+   [First run](/en/docs/start/first-run/#open-the-dashboard).
+
+</Steps>
+
+<LinkCard title="First run" description="A model endpoint and your first agent." href="/en/docs/start/first-run/" />
+
+## Open it on another device
+
+The **Connect** tab has a QR code and the address, `http://<the phone's address>:18254`. On a tablet, a
+computer or another phone on the same Wi-Fi, scan the code with its camera or type the address into its
+browser, and sign in with the username and password you chose. **Copy** and **Share address** send the
+address on.
+
+**Open from other devices**, the switch at the top of the tab, is on as installed. Turn it off on a Wi-Fi
+you do not trust: Nouride then answers only on the phone itself. Nouride starts again for a moment to
+take the change.
+
+Your router may give the phone another address later. Reserving one for it in the router's DHCP settings
+keeps the link working.
+
+## Keep it running
+
+Nouride Home starts Nouride again if it stops on its own. What it cannot do alone is on the **More** tab,
+under **Keep Nouride running**:
+
+- **Battery.** The card says whether the phone lets Nouride run with the screen off, and **Allow** asks
+  again if it does not. Until it is allowed, Home shows a reminder.
+- **Xiaomi, Redmi and POCO.** Tap **Open settings**, turn on **Autostart**, and set **Battery saver** to
+  **No restrictions**. Without Autostart, HyperOS does not let Nouride start again after the phone
+  restarts.
+- **Android 12 and later** stop an app's child processes when there are too many, and Nouride and every
+  command an agent runs are child processes of Nouride Home. The test phone had that limit raised. If
+  Nouride stops while agents are busy, raise it as in
+  [the phantom process killer](/en/docs/deployment/android-server/#android-12-and-later-the-phantom-process-killer).
+
+### After the phone restarts
+
+Nouride starts again by itself once the phone has been unlocked for the first time after the restart:
+Android starts no app before that. On Xiaomi, Redmi and POCO phones this needs Autostart, above. If you
+turned Nouride off before the restart, it stays off.
+
+## Updates
+
+Nouride Home looks for a newer version by itself, and **Home** says when one is ready. **Check for
+updates**, on **More**, looks at once. Press **Update**: the app downloads the new version and Android asks
+you to install it. The first time, Android also asks you to allow installing apps from Nouride Home. Nouride,
+Debian and your agents stay as they are, and Nouride starts again by itself.
+
+## When something goes wrong
+
+**Technical Logs**, at the bottom of **More**, has the details whoever helps you will ask for: what
+Nouride Home did, Nouride's state, and its log.
+
+## Removing it
+
+Uninstall Nouride Home. That deletes Nouride and all of its data with it: agents, conversations, secrets,
+the gateway's accounts.

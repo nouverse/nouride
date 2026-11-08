@@ -100,6 +100,7 @@ const sidebar = [
       { label: 'System packages', slug: 'docs/deployment/system-packages', translations: { id: 'Paket sistem' } },
       { label: 'Docker & Compose', slug: 'docs/deployment/docker' },
       { label: 'Homelab & mini PCs', slug: 'docs/deployment/homelab', translations: { id: 'Homelab & Mini PC' } },
+      { label: 'Nouride Home on Android', slug: 'docs/deployment/nouride-home', translations: { id: 'Nouride Home di Android' } },
       { label: 'An Android phone as a server', slug: 'docs/deployment/android-server', translations: { id: 'HP Android Jadi Server' } },
       { label: 'Sign in with Nouverse', slug: 'docs/deployment/sign-in', translations: { id: 'Masuk dengan Nouverse' } },
       { label: 'Updating', slug: 'docs/deployment/updating', translations: { id: 'Memperbarui' } },

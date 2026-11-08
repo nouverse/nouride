@@ -1,0 +1,76 @@
+---
+title: Nouride Home di Android
+description: "Nouride Home adalah aplikasi Android yang menjalankan Nouride di HP, tanpa terminal dan tanpa root. Pasang, tekan Start, lalu buka dashboard."
+---
+
+import { Steps, Aside, LinkCard } from '@astrojs/starlight/components';
+
+Nouride Home adalah aplikasi Android yang menjalankan Nouride di HP itu sendiri. Di dalamnya ada sistem Debian kecil, installer resmi Nouride dijalankan di situ waktu start pertama, lalu aplikasinya menjaga Nouride tetap jalan di latar belakang. Gak ada yang perlu diketik di terminal, dan HP-nya gak perlu di-root. Perangkat lain di Wi-Fi yang sama bisa membuka dashboard dari HP itu.
+
+Hasilnya sama dengan [HP Android jadi server](/id/docs/deployment/android-server/) yang dikerjakan manual lewat Termux: build Linux Nouride yang sama, edisi Router, dengan LLM gateway [Nougate](/id/docs/providers/nougate/) di dalamnya.
+
+<Aside type="note" title="Diuji di satu HP">
+Redmi 12 (HyperOS di Android 15, RAM 6 GB) dengan Nouride Home 0.1.4 dan Nouride 0.8.22, pada 2026-11-08: start pertama, dashboard di HP dan dari komputer di Wi-Fi yang sama, update aplikasi dari versi sebelumnya, dan HP di-restart. Yang belum diuji: HP lain, dan HP yang batas child process Android-nya belum dinaikkan (lihat [Biar tetap jalan](#biar-tetap-jalan)).
+</Aside>
+
+## Kebutuhan
+
+- **HP 64-bit dengan Android 7 ke atas.** Nouride gak punya build ARM 32-bit, dan Android menolak memasang aplikasinya di HP 32-bit.
+- **Ruang kosong sekitar 700 MB.** Segitu yang dipakai aplikasi, Debian dan Nouride di HP uji setelah start pertama. Yang diunduh dan di-build agent kamu nanti di luar itu.
+- **Internet untuk start pertama**, karena Nouride diunduh waktu itu, dan **charger**: HP-nya jalan terus, jadi biarkan tercolok.
+- **Wi-Fi yang sama** dengan perangkat yang mau membuka dashboard, kalau dashboard-nya mau dibuka selain dari HP itu.
+- **Akun model atau API key.** Edisi Router bisa masuk pakai akun yang sudah kamu punya (Claude Pro atau Max, ChatGPT, GitHub Copilot, Google Gemini atau Kiro) lewat gateway Nougate bawaannya; endpoint dan API key provider juga bisa. Setup wizard yang menanyakannya.
+
+## Pasang
+
+<Steps>
+
+1. ### Unduh aplikasinya
+
+   Di HP, buka [rilis terbaru Nouride Home](https://github.com/nouverse/nouride-android-appliance/releases/latest) lalu ketuk `nouride-home-<versi>.apk` di bagian Assets. Android sekali bertanya apakah browser boleh memasang aplikasi: izinkan. Google Play Protect mungkin menawarkan untuk memindai aplikasinya dulu, seperti untuk aplikasi lain dari luar Google Play. Nouride Home gak ada di Google Play.
+
+2. ### Tekan Start
+
+   Buka Nouride Home lalu tekan **Start**. Android bertanya apakah Nouride Home boleh jalan di latar belakang: izinkan, kalau gak Android bisa menghentikan Nouride waktu layar mati.
+
+   Start pertama membongkar Debian dan memasang Nouride. Butuh beberapa menit, dan aplikasinya menampilkan tiap langkah. Biarkan HP tetap di Wi-Fi dan tercolok sampai muncul **Nouride is running**.
+
+3. ### Buka dashboard
+
+   Tekan **Open Nouride**. Dashboard terbuka dalam keadaan sudah login, di halaman **Personalize Your Account**: pilih username dan password yang akan kamu pakai untuk login mulai sekarang, di HP itu maupun di perangkat lain. Setelah itu setup wizard menanyakan model dan agent pertamamu, sama seperti di platform lain. Lanjutkan di [Pertama kali jalan](/id/docs/start/first-run/#buka-dashboard).
+
+</Steps>
+
+<LinkCard title="Pertama kali jalan" description="Endpoint model dan agent pertamamu." href="/id/docs/start/first-run/" />
+
+## Buka dari perangkat lain
+
+Tab **Connect** menampilkan kode QR dan alamatnya, `http://<alamat HP>:18254`. Di tablet, komputer atau HP lain di Wi-Fi yang sama, pindai kodenya dengan kamera atau ketik alamatnya di browser, lalu login dengan username dan password yang kamu pilih. **Copy** dan **Share address** untuk mengirim alamatnya ke tempat lain.
+
+**Open from other devices**, switch di atas tab itu, sudah menyala sejak dipasang. Matikan kalau kamu di Wi-Fi yang gak kamu percaya: Nouride lalu cuma bisa dibuka dari HP itu sendiri. Nouride start ulang sebentar untuk menerapkan perubahannya.
+
+Router kamu bisa memberi HP alamat lain nanti. Pesan satu alamat untuk HP itu di pengaturan DHCP router supaya link-nya tetap jalan.
+
+## Biar tetap jalan
+
+Nouride Home menyalakan Nouride lagi kalau ia berhenti sendiri. Yang gak bisa dikerjakan aplikasinya sendiri ada di tab **More**, di kartu **Keep Nouride running**:
+
+- **Baterai.** Kartunya memberi tahu apakah HP mengizinkan Nouride jalan waktu layar mati, dan **Allow** meminta izinnya lagi kalau belum. Selama belum diizinkan, Home menampilkan pengingat.
+- **Xiaomi, Redmi dan POCO.** Ketuk **Open settings**, nyalakan **Autostart**, dan atur **Battery saver** ke **No restrictions**. Tanpa Autostart, HyperOS gak mengizinkan Nouride menyala lagi setelah HP restart.
+- **Android 12 ke atas** menghentikan child process aplikasi kalau jumlahnya terlalu banyak, dan Nouride serta tiap perintah agent adalah child process Nouride Home. Batas itu sudah dinaikkan di HP uji. Kalau Nouride berhenti waktu agent sedang sibuk, naikkan batasnya seperti di [phantom process killer](/id/docs/deployment/android-server/#android-12-ke-atas-phantom-process-killer).
+
+### Setelah HP restart
+
+Nouride menyala lagi sendiri setelah kunci layar HP dibuka untuk pertama kali sejak restart: Android gak menjalankan aplikasi apa pun sebelum itu. Di HP Xiaomi, Redmi dan POCO, ini butuh Autostart di atas. Kalau Nouride kamu matikan sebelum restart, ia tetap mati.
+
+## Update
+
+Nouride Home mencari versi baru sendiri, dan **Home** memberi tahu kalau sudah ada. **Check for updates** di **More** langsung mengecek saat itu juga. Tekan **Update**: aplikasinya mengunduh versi baru dan Android memintamu memasangnya. Pertama kali, Android juga meminta izin memasang aplikasi dari Nouride Home. Nouride, Debian dan agent kamu tetap seperti semula, dan Nouride menyala lagi sendiri.
+
+## Kalau ada masalah
+
+**Technical Logs**, di paling bawah **More**, berisi detail yang akan ditanyakan orang yang membantumu: apa yang dikerjakan Nouride Home, keadaan Nouride, dan log-nya.
+
+## Menghapus
+
+Uninstall Nouride Home. Itu ikut menghapus Nouride dan semua datanya: agent, percakapan, secret, dan akun di gateway.

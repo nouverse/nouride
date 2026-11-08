@@ -7,6 +7,10 @@ import { Steps, Aside, LinkCard } from '@astrojs/starlight/components';
 
 Nouride gak punya build khusus Android. Rilisnya cuma untuk Linux (glibc dan musl) dan macOS, sementara Android punya C library sendiri, Bionic. Jadi HP-nya menjalankan Debian di dalam [Termux](https://termux.dev/) lewat [proot-distro](https://github.com/termux/proot-distro), dan build `linux-arm64` edisi Router jalan di dalam Debian itu. HP-nya gak perlu di-root.
 
+<Aside type="tip" title="Cara gampangnya: Nouride Home">
+[Nouride Home](/id/docs/deployment/nouride-home/) adalah aplikasi Android yang mengerjakan semua ini untukmu, tanpa ada yang perlu diketik di terminal. Halaman ini cara manualnya, lewat Termux.
+</Aside>
+
 <Aside type="note" title="Diuji di satu HP">
 Redmi 12 (HyperOS di Android 15, RAM 6 GB) dengan Termux 0.118.3 dari GitHub, Debian 13 dari proot-distro 5.10, dan Nouride 0.8.18 (edisi Community), pada 2026-11-05. Daemon siap dalam kurang dari dua detik, dashboard bisa dibuka dari komputer di Wi-Fi yang sama, agent membalas lewat Telegram, dan daemon tetap jalan hampir delapan jam semalaman. Yang belum diuji: HP lain, edisi Router di HP, HP setelah restart, start otomatis waktu HP menyala, dan update Nouride di HP.
 </Aside>
