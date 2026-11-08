@@ -58,6 +58,8 @@ import { gatewayDashboard } from "@/commons/lib/bundled-gateway";
 import { isPairedBox } from "@/commons/lib/api.appliance";
 import { DOCS_URL } from "@/commons/lib/docs";
 import { PAGE_BOTTOM } from "@/commons/components/ui/ScrollCard";
+import { NavHighlight } from "@/commons/components/layout/NavHighlight";
+import { cn } from "@/commons/lib/utils";
 
 interface NavItem {
   /** An in-app route. Exactly one of `to` and `href` is set. */
@@ -219,6 +221,7 @@ export function RootLayout() {
   const navigate = useNavigate();
   const [theme, toggleTheme] = useTheme();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const nav = useRef<HTMLElement>(null);
   // Whether this is a paired Box decides whether My Box exists (see `NavItem.boxOnly`). Stale for a
   // minute is fine: it changes only with the binary or a flash.
   const health = useQuery({ queryKey: ["health"], queryFn: api.health, staleTime: 60_000 });
@@ -305,8 +308,9 @@ export function RootLayout() {
         </button>
       </div>
 
-      {/* Nav Menu */}
-      <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
+      {/* Nav Menu: the page you are on is marked by the one highlight under the items, which moves to the item you open. */}
+      <nav ref={nav} className="relative isolate flex-1 space-y-6 overflow-y-auto px-3 py-5">
+        <NavHighlight nav={nav} />
         {groups.map((group) => (
           <div key={group.group} className="space-y-1">
             <p className="text-base-content/65 px-3 text-[11px] font-bold tracking-wider uppercase font-mono">
@@ -336,11 +340,9 @@ export function RootLayout() {
                   <Link
                     key={to}
                     to={to}
-                    className="text-base-content/70 hover:text-base-content hover:bg-base-content/[0.05] flex items-center gap-3 rounded-xl px-3 py-2 font-mono text-[13px] font-medium transition-all duration-150 active:scale-[0.98]"
-                    activeProps={{
-                      className:
-                        "flex items-center gap-3 rounded-xl px-3 py-2 font-mono text-[13px] font-semibold bg-primary/10 text-primary border border-primary/20 shadow-xs",
-                    }}
+                    className="hover:bg-base-content/[0.05] flex items-center gap-3 rounded-xl px-3 py-2 font-mono text-[13px] transition-all duration-150 active:scale-[0.98]"
+                    inactiveProps={{ className: "text-base-content/70 hover:text-base-content font-medium" }}
+                    activeProps={{ className: "text-primary font-semibold" }}
                     activeOptions={{ exact: to === "/" }}
                   >
                     <Icon size={16} className="shrink-0 transition-transform group-hover:scale-105" />
@@ -396,23 +398,28 @@ export function RootLayout() {
        desktop each inset is 0. The bottom is each page's own (`PAGE_BOTTOM`), so what scrolls can pass under the
        home indicator and still end above it. */
     <div className="bg-base-200/50 h-screen h-[100dvh] flex flex-col text-base-content selection:bg-primary/20 overflow-hidden pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
-      {/* Desktop Fixed Sidebar */}
-      <div className="fixed inset-y-0 left-0 z-30 hidden lg:block">{sidebar}</div>
-
-      {/* Mobile Drawer */}
-      {drawerOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <button
-            type="button"
-            className="absolute inset-0 bg-black/40 backdrop-blur-xs transition-opacity duration-200"
-            onClick={() => setDrawerOpen(false)}
-            aria-label="Close menu"
-          />
-          <div className="absolute inset-y-0 left-0 bg-base-100 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)]">
-            {sidebar}
-          </div>
-        </div>
-      )}
+      {/* The sidebar, drawn once: fixed beside the page from a laptop's width up, and on a phone a drawer that slides in
+          over a shade that fades, and slides back out. It stays drawn so it can be seen to go: drawn only while open, it
+          came and went at once. Hidden once out (`invisible`), it and the shade take no click and no focus. Only their
+          place and opacity move; the sidebar's blur stays as it is. */}
+      <button
+        type="button"
+        className={cn(
+          "fixed inset-0 z-40 bg-black/40 backdrop-blur-xs transition-[opacity,visibility] duration-200 ease-out lg:hidden",
+          drawerOpen ? "visible opacity-100" : "invisible opacity-0",
+        )}
+        onClick={() => setDrawerOpen(false)}
+        aria-label="Close menu"
+      />
+      <div
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 bg-base-100 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] transition-[translate,visibility] duration-200 ease-out",
+          "lg:visible lg:z-30 lg:translate-x-0 lg:bg-transparent lg:p-0",
+          drawerOpen ? "visible translate-x-0" : "invisible -translate-x-full",
+        )}
+      >
+        {sidebar}
+      </div>
 
       {/* Main Content Area */}
       <div className="lg:pl-64 flex flex-col flex-1 min-h-0 h-full overflow-hidden">

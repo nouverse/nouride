@@ -45,6 +45,7 @@ const UTILITIES = `
   .hover\\:-translate-y-0\\.5 { translate: 0 -0.125rem; }
   .-translate-y-1\\/2 { translate: 0 -50%; }
   .rotate-180 { rotate: 180deg; }
+  .-translate-x-full { translate: -100%; }
 `;
 
 /** What a browser applies to an element with these classes, with the system asking for `motion`. */
@@ -92,6 +93,8 @@ describe("a system that asks for less motion", () => {
   test("keeps what places an element and what says its state", () => {
     expect(computed("reduce", "-translate-y-1/2", "translate")).toBe("0 -50%");
     expect(computed("reduce", "rotate-180", "rotate")).toBe("180deg");
+    // A phone's closed sidebar: it does not slide, but it is still out of the way.
+    expect(computed("reduce", "-translate-x-full", "translate")).toBe("-100%");
   });
 
   test("keeps the spinners turning: in place, and the one sign a wait is still a wait", () => {

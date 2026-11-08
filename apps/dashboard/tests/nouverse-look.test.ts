@@ -187,7 +187,8 @@ describe("DM Mono for what is technical (dashboard-text-contrast-and-mono)", () 
 
   test("so are the sidebar's navigation, the page tabs and a connection's status", () => {
     const read = (file: string) => readFileSync(join(SRC, file), "utf8");
-    expect(read("commons/components/layout/RootLayout.tsx").match(/rounded-xl px-3 py-2 font-mono/g)?.length).toBe(3);
+    // The route links and the manual's link; the current one adds only its colour and weight (its mark is the highlight).
+    expect(read("commons/components/layout/RootLayout.tsx").match(/rounded-xl px-3 py-2 font-mono/g)?.length).toBe(2);
     expect(read("commons/components/ui/SegmentedTabs.tsx")).toMatch(/segmentClass[\s\S]*font-mono/);
     expect(read("commons/components/ui/ui.tsx")).toMatch(/export function StatusDot[\s\S]*rounded-full font-mono/);
   });
