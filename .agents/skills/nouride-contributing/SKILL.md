@@ -385,6 +385,8 @@ packages/
   persona/   agent pack loader, and the registry: discovery, pause/resume, hot-reload
   gateways/  Discord / Telegram / WhatsApp adapters
   mcp/       MCP client: stdio and HTTP transports
+  wire/      the control API's payload types, types only: a payload the engine and the dashboard
+               share is declared here once, never copied into the dashboard (ARCHITECTURE §3)
 
 content/
   agents/    an example pack an operator copies — never shipped, never loaded

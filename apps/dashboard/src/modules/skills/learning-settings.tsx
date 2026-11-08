@@ -13,7 +13,8 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Sliders } from "lucide-react";
-import { api, type LearningMode } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { LearningMode } from "@nouride/wire";
 import { ErrorNote } from "@/commons/components/ui/ui";
 import { useSaved } from "@/commons/hooks/use-saved";
 

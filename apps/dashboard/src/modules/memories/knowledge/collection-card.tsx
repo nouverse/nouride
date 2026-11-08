@@ -7,7 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Bot, FolderOpen, Hourglass, Loader2, UserRound, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import { api } from "@/commons/lib/api";
-import type { KnowledgeCollection } from "@/commons/lib/api.knowledge";
+import type { KnowledgeCollection } from "@nouride/wire";
 import { CARD } from "@/commons/components/ui/CardGrid";
 import { Details } from "@/commons/components/ui/Details";
 import { DropOverlay, useFileDrop } from "@/commons/components/ui/FileDrop";

@@ -7,7 +7,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Check, ExternalLink, Hourglass, X } from "lucide-react";
 import { api } from "@/commons/lib/api";
-import type { KnowledgeCollection, PendingDocument } from "@/commons/lib/api.knowledge";
+import type { KnowledgeCollection, PendingDocument } from "@nouride/wire";
 import { ago } from "@/commons/lib/format";
 import { useToast } from "@/commons/components/ui/toast";
 import { usePending } from "./collection-card";

@@ -8,7 +8,8 @@ import { describe, expect, test } from "bun:test";
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ApiError, type McpServer, type Principal } from "@/commons/lib/api";
+import { ApiError } from "@/commons/lib/api";
+import type { McpServer, Principal } from "@nouride/wire";
 import { MCP_LOGIN_CALLBACK, redirectFor } from "@/commons/lib/session";
 import { loginLine, McpServerLogin, needsClientId } from "@/commons/components/mcp/McpServerLogin";
 

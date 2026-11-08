@@ -6,10 +6,11 @@
  * page.
  */
 
+import type { MissionWaitKind } from "@nouride/wire";
 import { worktreeBranch } from "./worktree.ts";
 import type { KeptPlan } from "@/modules/notes/store.ts";
 import { shortId } from "./page.ts";
-import type { Mission, WaitKind } from "./types.ts";
+import type { Mission } from "./types.ts";
 
 function clip(text: string, max: number): string {
   const trimmed = text.trim();
@@ -60,7 +61,7 @@ export function queuedNotice(mission: Pick<Mission, "id">, behind: string): stri
  * *Needs you*, by what it waits for. `detail` is the question, the limit, the call — whatever the wait is about; `gives`,
  * at a limit, what going on gives it ("100M more tokens").
  */
-export function needsYouNotice(mission: Pick<Mission, "id" | "checks" | "workdir" | "branch" | "summary">, kind: WaitKind, detail: string, gives?: string): string {
+export function needsYouNotice(mission: Pick<Mission, "id" | "checks" | "workdir" | "branch" | "summary">, kind: MissionWaitKind, detail: string, gives?: string): string {
   const id = shortId(mission.id);
   switch (kind) {
     case "input": {

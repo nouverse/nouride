@@ -19,23 +19,9 @@
 
 import { createLogger, newId, TURN_SECONDS_MAX, type Port, type TurnEventData, type TurnStepKind } from "@nouride/shared";
 import type { SqliteDb } from "@nouride/runtime";
+import type { TurnCause, TurnStatus } from "@nouride/wire";
 
 const log = createLogger("turns");
-
-export type TurnStatus =
-  /** In flight. The only status a client polls. */
-  | "running"
-  /** Finished and answered. */
-  | "done"
-  /** Threw. `error` carries what the person was told. */
-  | "failed"
-  /** Somebody pressed stop. */
-  | "cancelled"
-  /**
-   * Cut short by a restart: a turn the shutdown could not wait for, or one a dead daemon left `running`,
-   * which the next boot closes. What it did is in the conversation either way.
-   */
-  | "interrupted";
 
 /**
  * What a boot found left over from the last one.
@@ -81,7 +67,6 @@ export function childrenOf(sessionId: string): [string, string] {
   // `;` is the character after `:`: every id that starts with `<id>:` sorts between the two.
   return [`${sessionId}:`, `${sessionId};`];
 }
-
 
 /**
  * A file that arrived with the question.
@@ -157,30 +142,6 @@ export interface TurnRecord {
 /** A record with its steps. What a transcript is made of. */
 export interface TurnView extends TurnRecord {
   steps: TurnStep[];
-}
-
-/**
- * Why a turn was started other than by a message as it was sent. The daemon's own reasons, for a turn nobody typed: the
- * chat headed one by matching the wake-up message's words — rewording a sentence there changed what the chat said had
- * happened — so the reason travels as data. And a person's edit (`EDITED`, G11): the turn answers a message as edited.
- */
-export interface TurnCause {
-  /**
-   * What pushed it: `job completion`, `job quiet`, `schedule` (`SCHEDULED`) — a cron job's own run — or `edit`
-   * (`EDITED`). Or (0.7.26) `delegate` or `ask_agent`: a delegate's own turn, working in the background as the job `job`.
-   */
-  via: string;
-  job?: string;
-  /** A delegate's own turn: the turn whose call started it — where its model calls and audit rows are counted (D2). */
-  parent?: string;
-  /** How the job ended, for a completion. */
-  outcome?: "finished" | "failed" | "stopped" | "interrupted";
-  /** For an edit: the platform id of the message edited — the turn's own message when it was edited while it waited. */
-  of?: string;
-  /** The job was a helper `delegate` started in the background (0.7.15), whose report this turn gives. */
-  helper?: true;
-  /** The job was an ask that moved to the background (0.7.19): the agent asked, whose answer this turn passes on. */
-  asked?: string;
 }
 
 /** The cause of a scheduled job's own turn (`pipeline/job-turns.ts`): its `job` is the job's id. */

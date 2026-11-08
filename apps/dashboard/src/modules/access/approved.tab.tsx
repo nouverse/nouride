@@ -14,9 +14,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Ban, ShieldCheck, UserCheck, Users, UserX } from "lucide-react";
-import { api, type SenderRecord } from "@/commons/lib/api";
-import type { SenderAnswer } from "@/commons/lib/api.access";
-import type { PersonRecord } from "@/commons/lib/api.people";
+import { api } from "@/commons/lib/api";
+import type { PersonRecord, SenderAnswer, SenderRecord } from "@nouride/wire";
 import { canWrite, useMe } from "@/commons/lib/session";
 import { Card, EmptyState, ErrorNote } from "@/commons/components/ui/ui";
 import { Details } from "@/commons/components/ui/Details";

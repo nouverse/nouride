@@ -8,7 +8,7 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowUpRight, Bot } from "lucide-react";
 import { useLayoutEffect, useMemo, useRef, useState, useEffect } from "react";
-import type { AgentSummary } from "@/commons/lib/api";
+import type { AgentSummary } from "@nouride/wire";
 import { Card, EmptyState } from "@/commons/components/ui/ui";
 import { looksOf } from "@/commons/cat/look";
 import { layoutOffice, scaleFor, type Status } from "@/commons/office/lib/layout";

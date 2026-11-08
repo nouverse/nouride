@@ -13,7 +13,7 @@
  * command already typed in full.
  */
 
-import type { SlashCommand } from "@/commons/lib/api";
+import type { SlashCommand } from "@nouride/wire";
 
 export interface SlashMenuProps {
   commands: SlashCommand[];

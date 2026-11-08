@@ -7,7 +7,8 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Pencil, X } from "lucide-react";
-import { api, type MissionEdit, type MissionView } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { MissionEdit, MissionView } from "@nouride/wire";
 import { useToast } from "@/commons/components/ui/toast";
 import { ErrorNote, Field } from "@/commons/components/ui/ui";
 

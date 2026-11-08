@@ -11,7 +11,8 @@ import { ListLoading, Spinner } from "@/commons/components/ui/Spinner";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState, type FormEvent } from "react";
 import { ExternalLink, Globe, Package, Search, Star } from "lucide-react";
-import { api, type CatalogDraft, type McpCatalogCard, type McpCatalogPage } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { CatalogDraft, McpCatalogCard, McpCatalogPage } from "@nouride/wire";
 import { Card, EmptyState, ErrorNote } from "@/commons/components/ui/ui";
 import { ago } from "@/commons/lib/format";
 

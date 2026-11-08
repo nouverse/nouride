@@ -5,7 +5,7 @@
 
 import { Link } from "@tanstack/react-router";
 import type { Look } from "@/commons/cat/look";
-import type { MissionView } from "@/commons/lib/api";
+import type { MissionView } from "@nouride/wire";
 import { AgentAvatar } from "@/commons/components/agents/AgentAvatar";
 import { ProgressBar } from "@/commons/components/ui/ProgressBar";
 import { Tag } from "@/commons/components/ui/Tag";

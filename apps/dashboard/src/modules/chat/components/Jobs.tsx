@@ -10,7 +10,7 @@
 
 import { useEffect, useState } from "react";
 import { Bot, Loader2, MessagesSquare, Terminal } from "lucide-react";
-import type { RunningJob } from "@/commons/lib/api";
+import type { RunningJob } from "@nouride/wire";
 import { formatDuration } from "@/commons/lib/steps";
 
 export function JobStrip({ jobs }: { jobs: RunningJob[] }) {

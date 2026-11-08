@@ -25,7 +25,7 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import type { ChatTurn, LiveTurn, TurnStatus } from "@/commons/lib/api";
+import type { ChatTurn, LiveTurn, TurnStatus } from "@nouride/wire";
 import { Markdown } from "@/commons/components/ui/Markdown";
 import { StepFeed, StepPill } from "@/commons/components/turns/Steps";
 import { formatDuration, splitThinking } from "@/commons/lib/steps";

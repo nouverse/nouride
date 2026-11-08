@@ -12,7 +12,7 @@ import { Card, EmptyState, ErrorNote, Field, PageHeader } from "@/commons/compon
 import { FILL_PAGE, ScrollCard } from "@/commons/components/ui/ScrollCard";
 import { useConfirm } from "@/commons/components/ui/confirm";
 import { PersonPicker } from "@/commons/components/people/PersonPicker";
-import type { PersonRecord } from "@/commons/lib/api.people";
+import type { PersonRecord } from "@nouride/wire";
 import { SignInMethods } from "./components/SignInMethods";
 import { useMe } from "@/commons/lib/session";
 import { PasswordInput } from "@/commons/components/ui/PasswordInput";

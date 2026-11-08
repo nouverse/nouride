@@ -9,7 +9,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, Terminal } from "lucide-react";
 import { api } from "@/commons/lib/api";
-import type { AgentCli, CliPreset } from "@/commons/lib/api.external-agents";
+import type { AgentCli, CliPreset } from "@nouride/wire";
 import { isAdmin, useMe } from "@/commons/lib/session";
 import { Card, ErrorNote, Field } from "@/commons/components/ui/ui";
 import { Combobox } from "@/commons/components/ui/Combobox";

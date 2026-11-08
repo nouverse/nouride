@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { badgeState, editionLabel } from "@/commons/hooks/use-update";
-import type { UpdateStatus } from "@/commons/lib/api";
+import type { UpdateStatus } from "@nouride/wire";
 
 const INSTALL: UpdateStatus["install"] = {
   version: "0.3.1",

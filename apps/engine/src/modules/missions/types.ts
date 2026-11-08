@@ -4,18 +4,7 @@
  * chat uses. The §-numbers in this module are the design's (MISSIONS); this file is its shape.
  */
 
-/** Seven for the page, the CLI and the event stream; people see four (`seenAs`). */
-export type MissionStatus = "queued" | "running" | "waiting" | "checking" | "done" | "failed" | "stopped";
-
-/**
- * Why a waiting mission waits: approvals parked and nothing else left to do, a question it asked, a loop it cannot get
- * out of, a call a restart cut off whose outcome is unknown, a limit reached, or checks that passed and a person who
- * accepts — each needing a person — or (0.8.7) its model could not answer, and it tries again by itself (`retry`).
- */
-export type WaitKind = "approval" | "input" | "stuck" | "unknown_outcome" | "limit" | "accept" | "retry";
-
-/** What a person sees: working, needs you, done, ended. */
-export type SeenAs = "working" | "needs_you" | "done" | "ended";
+import type { MissionSeen, MissionStatus, MissionWaitKind } from "@nouride/wire";
 
 const FINAL: readonly MissionStatus[] = ["done", "failed", "stopped"];
 
@@ -23,7 +12,7 @@ export function isFinal(status: MissionStatus): boolean {
   return FINAL.includes(status);
 }
 
-export function seenAs(status: MissionStatus): SeenAs {
+export function seenAs(status: MissionStatus): MissionSeen {
   if (status === "waiting") return "needs_you";
   if (status === "done") return "done";
   if (status === "failed" || status === "stopped") return "ended";
@@ -84,7 +73,7 @@ export interface Mission {
   reviewOn: boolean;
   accept: boolean;
   status: MissionStatus;
-  waitKind: WaitKind | null;
+  waitKind: MissionWaitKind | null;
   /** What it waits for, or why it ended. */
   reason: string | null;
   /** The whole account of the work `done` or `fail` handed back: sent to its chat as `report.md`, never cut (0.8.11). */

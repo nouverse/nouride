@@ -11,7 +11,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Check, Layers } from "lucide-react";
-import { api, type AgentSummary } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { AgentSummary } from "@nouride/wire";
 import { Card, ErrorNote, Field } from "@/commons/components/ui/ui";
 import { Combobox } from "@/commons/components/ui/Combobox";
 import { useSaved } from "@/commons/hooks/use-saved";

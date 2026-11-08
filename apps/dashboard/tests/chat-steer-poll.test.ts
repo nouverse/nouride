@@ -9,7 +9,7 @@
 
 import { afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { Window } from "happy-dom";
-import type { ChatTurn, LiveTurn, TurnStep } from "@/commons/lib/api";
+import type { ChatTurn, LiveTurn, TurnStep } from "@nouride/wire";
 import type { Conversation } from "@/commons/hooks/use-conversation";
 import { saidWhileWorking } from "@/commons/lib/steps";
 import { eventually, sleep } from "./wait.ts";
@@ -30,7 +30,6 @@ beforeAll(() => {
 afterEach(() => {
   globalThis.fetch = realFetch;
 });
-
 
 const ACK = "↪ Got it, I'll read that before my next step.";
 

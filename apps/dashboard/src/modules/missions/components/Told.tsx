@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 import { MessageSquarePlus } from "lucide-react";
-import type { MissionTold } from "@/commons/lib/api.missions";
+import type { MissionTold } from "@nouride/wire";
 import { ago } from "@/commons/lib/format";
 
 export function TellBox({ onTell, pending, disabled }: { onTell: (text: string, done: () => void) => void; pending: boolean; disabled: boolean }) {

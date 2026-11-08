@@ -15,12 +15,13 @@
  * a restart's resume leave it out (`OWN` in `turns/turns.store.ts`).
  */
 
+import type { TurnStatus } from "@nouride/wire";
 import type { ActivityKind } from "@/commons/activity.ts";
 import type { HelperOutcome, RunningHelper } from "@/modules/jobs/helper-jobs.ts";
 import type { TurnResult } from "@/modules/llm/executor/types.ts";
 import type { ContextLine } from "@/modules/llm/executor/context-line.ts";
 import { TurnRecorder } from "@/modules/turns/recorder.ts";
-import type { TurnStatus, TurnsPort } from "@/modules/turns/turns.store.ts";
+import type { TurnsPort } from "@/modules/turns/turns.store.ts";
 
 export interface DelegatedStart {
   via: "delegate" | "ask_agent";

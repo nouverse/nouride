@@ -3,7 +3,7 @@
  * far along it is. Pure, so the rules are tested without a page.
  */
 
-import type { NotesPlan, NotesPlanStep, NotesTask } from "@/commons/lib/api.notes";
+import type { NotesPlan, NotesPlanStep, NotesTask } from "@nouride/wire";
 
 /** A title as the daemon matches it (`sameTitle` in the engine's `modules/notes/format.ts`): case and spacing aside. */
 const titleKey = (title: string) => title.trim().replace(/\s+/g, " ").toLowerCase();

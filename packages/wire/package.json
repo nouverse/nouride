@@ -1,0 +1,14 @@
+{
+  "name": "@nouride/wire",
+  "description": "What the control API sends and takes, as types only: the engine's routes and the dashboard both import them, and nothing of it runs.",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@nouride/acp": "workspace:*",
+    "@nouride/shared": "workspace:*"
+  }
+}

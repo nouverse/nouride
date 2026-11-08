@@ -34,6 +34,7 @@ nouride/
 │   ├── update/                 # nouride-update     — download, verify and swap a release
 │   ├── system-packages/        # nouride-system-packages — `nouride pkg`, and its root service
 │   ├── wa-bridge/              # nouride-wa-bridge  — the WhatsApp/Baileys bridge, MIT (§6)
+│   ├── wire/                   # @nouride/wire      — the control API's payload types, types only (§3)
 │   └── ui-graph/               # @nouride/ui-graph  — the dashboard's graph canvas (§3)
 ├── content/                    # what a human edits, not what runs (§1.1)
 │   ├── agents/                 # persona pack template — copied, never shipped
@@ -164,6 +165,7 @@ layer is one module inside it (`src/modules/web/`).
 | `packages/acp` | `@nouride/acp` | no |
 | `packages/isolation` | `@nouride/isolation` | no |
 | `packages/ui-graph` | `@nouride/ui-graph` | no |
+| `packages/wire` | `@nouride/wire` | no |
 | `packages/update` | `nouride-update` | no |
 | `packages/system-packages` | `nouride-system-packages` | no |
 | `packages/wa-bridge` | `nouride-wa-bridge` | no — MIT, see `packages/wa-bridge/README.md` (§6) |
@@ -238,10 +240,11 @@ own `src/` (same convention as Nougate).
 ## 3. Dependency Rules
 
 One-way. `bun run lint:deps` enforces the arrows between packages, and `lint:arch` what a manifest cannot
-state: that `packages/shared` imports nothing, and the dashboard's line.
+state: that `packages/shared` imports nothing, the dashboard's line, and that `packages/wire` is types only.
 
 ```
-apps/engine ──────┬──> packages/persona  ──> packages/secrets, packages/policy, packages/runtime, packages/shared
+apps/engine ──────┬──> packages/wire     ──> packages/shared, packages/acp (types only)
+                  ├──> packages/persona  ──> packages/secrets, packages/policy, packages/runtime, packages/shared
                   ├──> packages/secrets  ──> packages/runtime ──> packages/shared
                   ├──> packages/policy   ──> packages/runtime, packages/shared
                   ├──> packages/gateways ──> packages/runtime, packages/shared
@@ -255,6 +258,7 @@ apps/engine ──────┬──> packages/persona  ──> packages/secr
                   └──> packages/shared   ──> (nothing)
 
 apps/dashboard ───> packages/ui-* ──> packages/ui-* only
+       ├──────────> packages/wire, by `import type` alone — nothing of it reaches the bundle
        └──────────> (HTTP only — never imports engine code)
 ```
 
@@ -263,18 +267,36 @@ workspace member to its manifest both ways — an import it does not declare, in
 dependency it declares and never imports — and refuses a cycle. `packages/wa-bridge` reaches the
 engine by its wire protocol alone (§6).
 
-**Frontend packages are named `ui-*`, and the dashboard imports nothing else from the workspace.**
-`@nouride/ui-graph` is the first: a force-directed graph on a canvas — layout, zoom, hit-testing, click
-and drag — with no Nouride type in it. The Memory graph tells it colours, sizes and labels, and it
-draws. The name is the rule, so a new one needs no list edited; `lint:arch` holds four lines:
+**Frontend packages are named `ui-*`, and the dashboard imports nothing else from the workspace but the
+control API's types.** `@nouride/ui-graph` is the first: a force-directed graph on a canvas — layout, zoom,
+hit-testing, click and drag — with no Nouride type in it. The Memory graph tells it colours, sizes and
+labels, and it draws. The name is the rule, so a new one needs no list edited; `lint:arch` holds four lines:
 
-- `apps/dashboard` imports only `ui-*` packages (`dashboard-imports-workspace`).
+- `apps/dashboard` imports only `ui-*` packages, and `@nouride/wire` by `import type` (`dashboard-imports-workspace`).
 - A `ui-*` package imports only other `ui-*` packages (`ui-imports-workspace`) — not even
   `@nouride/shared`, or it would become the way engine code reaches the dashboard.
 - Nothing else imports a `ui-*` package (`ui-outside-the-dashboard`): browser code stays out of the daemon.
 - Browser code lives only in `ui-*` (`browser-code-outside-ui`): a package whose tsconfig adds the
   `DOM` lib, or that has a `.tsx` file, must be named so. The base tsconfig is `ESNext` alone, so
   touching the DOM requires that lib — a signal that cannot be dodged.
+
+**What the control API sends and takes is `@nouride/wire`, one copy that both sides import.** The dashboard
+kept its own copy of every payload type — 184 types in 28 files — and `check-wire.ts` compared 32 of their word
+lists with the daemon's; a field renamed or retyped passed both, and the page broke only in a browser. The
+package holds those types and nothing that runs. The dashboard reads every payload through it, and the engine
+imports from it the words it shares with the dashboard: a turn's status and cause, a mission's status, wait and
+what a person sees of it, a chat event's kind, a draft's trigger, a plan step's state, a role, a retention scope.
+The routes of `/health`, `/status` and `/turns/:id` hold their answers to it with `satisfies`. So a payload changed
+in the package fails the dashboard's typecheck, and the engine's where a route is held to it
+(`tests/contracts/wire-types.test.ts`).
+
+Where a payload names a word the daemon keeps elsewhere, the package names that type, from `@nouride/shared` or
+`@nouride/acp`, and declares no copy. A list the page offers at runtime — a cat's parts, the effort levels — stays a
+value in the dashboard, typed as the daemon's own const (`LookParts`, `EffortLevels`), so a word one side has and
+the other does not fails the typecheck. `lint:arch` holds the line, through `scripts/wire-rules.ts`: the package
+declares types and nothing else (`wire-not-types-only`), names no package but those two (`wire-imports-workspace`),
+the dashboard imports it with `import type` alone (`wire-imported-as-value`), and declares no type it exports
+(`wire-type-copied`).
 
 **Inside the engine, memory is reached through `modules/memory/index.ts`** (`memory-past-its-barrel`):
 the object `createMemory` returns, and the few names the barrel exports for what runs without one — the
@@ -358,8 +380,9 @@ Nine hard rules, all enforced by `bun run lint:check`:
    Lines of **code**, not lines of file, because the house style here is dense documentation and a
    total-line rule would punish the files that explain themselves best. The cap is 400, set against a
    median of 84 code lines and a p90 of 287. `policy/src/hardline.ts` and the dashboard's
-   `commons/lib/api.ts` are both long, for opposite reasons — one is a documented classifier, the
-   other grew into a god file — and a rule that cannot tell them apart is a rule that gets switched off.
+   `commons/lib/api.ts` were both long, for opposite reasons — one is a documented classifier, the
+   other grew into a god file, until its payload types went to `@nouride/wire` — and a rule that cannot
+   tell them apart is a rule that gets switched off.
 
    A **ratchet**, not a threshold: a plain cap would have failed on fifteen files the day it landed,
    so it would have been committed set above all of them — a rule that permits everything present and

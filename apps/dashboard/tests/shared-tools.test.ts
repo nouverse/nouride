@@ -5,7 +5,7 @@
 
 import { expect, test } from "bun:test";
 import { offersSharedTools } from "@/modules/agents/components/SharedTools";
-import type { AgentSummary } from "@/commons/lib/api";
+import type { AgentSummary } from "@nouride/wire";
 
 const agent = (id: string, sharedTools?: boolean) => ({ id, ...(sharedTools === undefined ? {} : { sharedTools }) }) as AgentSummary;
 

@@ -5,7 +5,7 @@
  * never a button on a page people skim (`mount.test.ts`, "pending work is announced").
  */
 
-import type { ApprovalRequest, MissionView } from "@/commons/lib/api";
+import type { ApprovalRequest, MissionView } from "@nouride/wire";
 import { ApprovalCard } from "@/commons/components/approvals/ApprovalCard";
 import { WaitingLink } from "@/commons/components/approvals/WaitingLink";
 import { useAnswerApproval } from "@/commons/hooks/use-answer-approval";

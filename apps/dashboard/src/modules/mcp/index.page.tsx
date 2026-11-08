@@ -7,7 +7,8 @@
 import { useCallback, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
-import { api, type CatalogDraft } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { CatalogDraft } from "@nouride/wire";
 import { isAdmin, useMe } from "@/commons/lib/session";
 import { EmptyState, ErrorNote, PageHeader } from "@/commons/components/ui/ui";
 import { Details } from "@/commons/components/ui/Details";

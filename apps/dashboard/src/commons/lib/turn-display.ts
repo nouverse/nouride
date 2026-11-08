@@ -15,7 +15,7 @@
  * So: decide what is live first, then let the history keep everything else.
  */
 
-import type { ChatTurn, LiveTurn, TurnCause, TurnStep } from "@/commons/lib/api";
+import type { ChatTurn, LiveTurn, TurnCause, TurnStep } from "@nouride/wire";
 
 export interface Display {
   /** Drawn as finished exchanges, oldest first. */

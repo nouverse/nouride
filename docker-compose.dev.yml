@@ -87,6 +87,7 @@ services:
       - system_packages_node_modules:/app/packages/system-packages/node_modules
       - update_node_modules:/app/packages/update/node_modules
       - wa_bridge_node_modules:/app/packages/wa-bridge/node_modules
+      - wire_node_modules:/app/packages/wire/node_modules
       - dashboard_dist:/app/apps/dashboard/dist
       # ── Persistent ──
       - ./.nouride:/app/.nouride:z
@@ -112,4 +113,5 @@ volumes:
   system_packages_node_modules:
   update_node_modules:
   wa_bridge_node_modules:
+  wire_node_modules:
   dashboard_dist:

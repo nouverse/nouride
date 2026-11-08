@@ -6,7 +6,7 @@
 
 import { Bot, FileText, Filter, Hash, Library, MessageCircle, User, X } from "lucide-react";
 import { useMemo } from "react";
-import type { Facet, GraphNode, GraphNodeKind, MemoryGraph } from "@/commons/lib/api.memory";
+import type { Facet, GraphNode, GraphNodeKind, MemoryGraph } from "@nouride/wire";
 import { stars } from "../episode-view";
 import { MergeTag } from "./merge-tag";
 import { KIND_LABEL, usePalette } from "./palette";

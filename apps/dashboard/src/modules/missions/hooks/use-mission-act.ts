@@ -5,7 +5,8 @@
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, type MissionVerb } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { MissionVerb } from "@nouride/wire";
 import { useToast } from "@/commons/components/ui/toast";
 
 const DONE: Record<MissionVerb, string> = {

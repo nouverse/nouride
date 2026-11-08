@@ -28,6 +28,7 @@
     "@nouride/runtime": "workspace:*",
     "@nouride/secrets": "workspace:*",
     "@nouride/shared": "workspace:*",
+    "@nouride/wire": "workspace:*",
     "hono": "4.13.1"
   }
 }

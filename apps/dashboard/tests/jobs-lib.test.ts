@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import type { BackgroundJob } from "@/commons/lib/api";
+import type { BackgroundJob } from "@nouride/wire";
 import { jobTitle, ownTurnOf, rowLine, statusWord, tabOf } from "@/modules/jobs/lib/job";
 
 const job = (over: Partial<BackgroundJob> = {}): BackgroundJob => ({

@@ -1,7 +1,7 @@
 /** What a test search found, or why it found nothing: in the page's words where the server gave them (0.8.20), its own under Details. */
 
 import { CheckCircle2, XCircle } from "lucide-react";
-import type { WebSearchTest } from "@/commons/lib/api.web-search";
+import type { WebSearchTest } from "@nouride/wire";
 import { Details } from "@/commons/components/ui/Details";
 
 export function TestResult({ result }: { result: WebSearchTest }) {

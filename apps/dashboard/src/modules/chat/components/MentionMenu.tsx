@@ -12,7 +12,7 @@
  * picking one replaces just that token.
  */
 
-import type { Room } from "@/commons/lib/api";
+import type { Room } from "@nouride/wire";
 
 export interface MentionCandidate {
   agentId: string;

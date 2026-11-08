@@ -15,7 +15,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { SqliteDb } from "@nouride/runtime";
-import { EVENT_CONTRACT, EVENT_KINDS, EVENT_PROTOCOL_VERSION, TURN_STEP_KINDS, eventProblems, type EventField, type Tool } from "@nouride/shared";
+import { EVENT_CONTRACT, EVENT_KINDS, EVENT_PROTOCOL_VERSION, eventProblems, type EventField, type Tool } from "@nouride/shared";
 import { eventLine } from "@/cli/commands/events.ts";
 import { AuditLog } from "@/commons/audit.store.ts";
 import type { EventRow } from "@/modules/events/events.store.ts";
@@ -197,10 +197,10 @@ describe("what the daemon writes", () => {
 });
 
 describe("its readers", () => {
-  test("the dashboard's step kinds are the contract's — it cannot import them, so they are compared here", () => {
-    const api = read("apps/dashboard/src/commons/lib/api.ts");
-    const union = /export interface TurnStep \{[^}]*?\n\s+kind: ([^;]+);/s.exec(api)?.[1] ?? "";
-    expect(union.split("|").map((kind) => kind.trim().replaceAll('"', "")).sort()).toEqual([...TURN_STEP_KINDS].sort());
+  test("the dashboard's step kinds are the contract's own type, through @nouride/wire — not a list written again", () => {
+    const wire = read("packages/wire/src/chat.ts");
+    expect(/export interface TurnStep \{[^}]*?\n\s+kind: ([^;]+);/s.exec(wire)?.[1]).toBe("TurnStepKind");
+    expect(wire).toMatch(/^import type \{[^}]*\bTurnStepKind\b[^}]*\} from "@nouride\/shared";$/m);
   });
 
   test("docs/EVENTS.md lists every kind, with exactly its keys and which are optional", () => {

@@ -10,7 +10,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { splitForDisplay } from "../src/commons/lib/turn-display.ts";
-import type { ChatTurn, LiveTurn } from "../src/commons/lib/api.ts";
+import type { ChatTurn, LiveTurn } from "@nouride/wire";
 
 const turn = (id: string, status: ChatTurn["status"] = "done"): ChatTurn => ({
   id,

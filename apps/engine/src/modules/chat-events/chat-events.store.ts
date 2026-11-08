@@ -21,13 +21,14 @@
  * two options for anything the daemon wants to say are "put it in the model's context" and "throw it away", and most
  * of these belong in neither. The column comments in `069_baseline.sql` predate three squashes and stay as they are — an
  * applied migration is never edited — so its "see above" on the audience means `EventAudience`, and its list of kinds
- * predates `delegated`: `EventKind` is the list.
+ * predates `delegated`: `ChatEventKind` is the list.
  *
  * This file is the only thing that writes the table, and the guard below is why that matters.
  */
 
 import { createLogger, newId, type Port} from "@nouride/shared";
 import type { SqliteDb } from "@nouride/runtime";
+import type { ChatEventKind } from "@nouride/wire";
 
 const log = createLogger("chat-events");
 
@@ -39,48 +40,12 @@ const log = createLogger("chat-events");
  */
 export type EventAudience = "agents" | "ui";
 
-/**
- * What happened, for the wording and the icon.
- *
- * A closed set rather than free text, because the dashboard renders each differently and an
- * unrecognised kind should be a compile error here rather than a blank pill there.
- */
-export type EventKind =
-  /** An agent or a person was added to the room. */
-  | "joined"
-  | "left"
-  /** The room's subject changed. */
-  | "topic"
-  /** The conversation moved to another gateway, or arrived from one. */
-  | "moved"
-  /** A message the daemon could not take — a full queue, a rate limit. */
-  | "dropped"
-  /** Somebody was tagged and the router could not tell who. */
-  | "ambiguous"
-  /** An agent-to-agent chain reached its hop budget and stopped. */
-  | "hop_budget"
-  /**
-   * One agent in this room asked another to do something.
-   *
-   * Recorded only in a room that holds more than one agent, because the point of it is the agents
-   * who are *not* involved: without it they see nothing, and a third agent can answer as though
-   * nothing were in progress or start the same work again. In a one-to-one chat there is nobody to
-   * tell, and the line would land in the prompt of the agent that wrote it.
-   */
-  | "delegated"
-  /** The daemon restarted while this conversation was open. */
-  | "restart"
-  /** A credential a person sent was taken out of their message before anything kept it (`pipeline/chat-secrets.ts`). */
-  | "secret"
-  /** Anything a caller writes deliberately, with its own sentence. */
-  | "note";
-
 export interface ChatEvent {
   id: string;
   gatewayId: string;
   chatId: string;
   audience: EventAudience;
-  kind: EventKind;
+  kind: ChatEventKind;
   text: string;
   agentId?: string;
   actor?: string;
@@ -92,7 +57,7 @@ export interface RecordEvent {
   gatewayId: string;
   chatId: string;
   audience: EventAudience;
-  kind: EventKind;
+  kind: ChatEventKind;
   text: string;
   /** The agent this is *about*, when it is about one. Omitted means room-wide. */
   agentId?: string;
@@ -280,7 +245,7 @@ function toEvent(row: Row): ChatEvent {
     gatewayId: row.gateway_id,
     chatId: row.chat_id,
     audience: row.audience as EventAudience,
-    kind: row.kind as EventKind,
+    kind: row.kind as ChatEventKind,
     text: row.text,
     ...(row.agent_id ? { agentId: row.agent_id } : {}),
     ...(row.actor ? { actor: row.actor } : {}),

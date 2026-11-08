@@ -17,7 +17,8 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, ChevronDown, ChevronRight, FileCode, Lightbulb, Pencil, Trash2 } from "lucide-react";
-import { api, type SkillDraft } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { SkillDraft } from "@nouride/wire";
 import { ErrorNote } from "@/commons/components/ui/ui";
 import { DiffCounts, DiffView } from "@/commons/components/ui/DiffView";
 import { diffCounts, diffLines } from "@/commons/lib/diff";

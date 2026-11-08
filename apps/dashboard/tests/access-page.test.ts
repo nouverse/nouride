@@ -9,7 +9,7 @@ import { byWhom } from "@/modules/access/sender-line";
 import { ago, inTime } from "@/commons/lib/format";
 import { personFor } from "@/modules/access/approved.tab";
 import { platformName } from "@/commons/lib/platform";
-import type { PersonRecord } from "@/commons/lib/api.people";
+import type { PersonRecord } from "@nouride/wire";
 
 describe("parseAccessSearch", () => {
   test("reads the tab and the agent an agent's Access tab links with", () => {

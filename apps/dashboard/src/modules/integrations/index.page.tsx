@@ -16,7 +16,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { KeyRound, Lock, Trash2 } from "lucide-react";
 import { api } from "@/commons/lib/api";
-import type { McpScope } from "@/commons/lib/api.mcp-server";
+import type { McpScope } from "@nouride/wire";
 import { isAdmin, useMe } from "@/commons/lib/session";
 import { useConfirm } from "@/commons/components/ui/confirm";
 import { useToast } from "@/commons/components/ui/toast";

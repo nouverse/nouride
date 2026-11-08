@@ -8,8 +8,7 @@
  */
 
 import { control, post, request } from "./api.client";
-import type { SetupState } from "./api";
-import type { PresetId } from "./api.agent-tools";
+import type { PresetId, SetupState } from "@nouride/wire";
 
 export const setupApi = {
   setupState: () => request<SetupState>(`${control}/setup/state`),

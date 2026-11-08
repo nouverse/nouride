@@ -3,7 +3,7 @@
  */
 
 import { ArrowUpCircle, CheckCircle2, Info } from "lucide-react";
-import type { UpdateStatus } from "@/commons/lib/api";
+import type { UpdateStatus } from "@nouride/wire";
 import { Card } from "@/commons/components/ui/ui";
 import { Details } from "@/commons/components/ui/Details";
 import { editionLabel } from "@/commons/hooks/use-update";

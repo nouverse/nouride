@@ -7,7 +7,8 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, type AgentSummary } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { AgentSummary } from "@nouride/wire";
 import { isAdmin, useMe } from "@/commons/lib/session";
 import { Card, ErrorNote } from "@/commons/components/ui/ui";
 

@@ -13,9 +13,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Ban, Check, UserCheck, X } from "lucide-react";
-import { api, type SenderRecord } from "@/commons/lib/api";
-import type { PersonTarget } from "@/commons/lib/api.people";
-import type { SenderAnswer } from "@/commons/lib/api.access";
+import { api } from "@/commons/lib/api";
+import type { PersonTarget, SenderAnswer, SenderRecord } from "@nouride/wire";
 import { canWrite, isAdmin, useMe } from "@/commons/lib/session";
 import { EmptyState, ErrorNote } from "@/commons/components/ui/ui";
 import { ScrollCard } from "@/commons/components/ui/ScrollCard";

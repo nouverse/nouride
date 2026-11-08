@@ -19,7 +19,8 @@
  */
 
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
-import { api, type UpdateStatus } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { UpdateStatus } from "@nouride/wire";
 
 export const UPDATE_QUERY_KEY = ["update"] as const;
 

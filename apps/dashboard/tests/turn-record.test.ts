@@ -8,7 +8,7 @@ import { describe, expect, test } from "bun:test";
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { TurnRecordView } from "../src/commons/components/turns/TurnRecord.tsx";
-import type { TurnRecordDetail } from "../src/commons/lib/api.ts";
+import type { TurnRecordDetail } from "@nouride/wire";
 
 const record = (extra: Partial<TurnRecordDetail> = {}): TurnRecordDetail => ({
   turn: { id: "t1", agentId: "nouva", status: "done", prompt: "verify the 52 documents", reply: "Done 30." },

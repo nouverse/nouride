@@ -7,7 +7,7 @@ import { describe, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
-import type { UpdateStatus } from "@/commons/lib/api";
+import type { UpdateStatus } from "@nouride/wire";
 import { FloorCard } from "@/modules/update/FloorCard";
 import { InstallCard } from "@/modules/update/InstallCard";
 import UpdatePage from "@/modules/update/index.page";

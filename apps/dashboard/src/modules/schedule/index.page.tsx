@@ -7,7 +7,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, ChevronDown, ChevronUp, Clock, Pause, Pencil, Play, Plus, Target, Terminal, Trash2, X, Zap } from "lucide-react";
-import { api, type JobSummary } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { JobSummary } from "@nouride/wire";
 import { ApiError } from "@/commons/lib/api.client";
 import { runOutcomeToast } from "@/commons/lib/run-outcome";
 import { useToast } from "@/commons/components/ui/toast";

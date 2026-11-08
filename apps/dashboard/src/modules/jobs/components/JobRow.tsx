@@ -5,7 +5,7 @@
 
 import { Link } from "@tanstack/react-router";
 import { Bot, ChevronRight, MessagesSquare, Terminal } from "lucide-react";
-import type { BackgroundJob } from "@/commons/lib/api";
+import type { BackgroundJob } from "@nouride/wire";
 import { ago } from "@/commons/lib/format";
 import { formatDuration } from "@/commons/lib/steps";
 import { cn } from "@/commons/lib/utils";

@@ -4,7 +4,7 @@
  * changing them later look the same.
  */
 
-import type { AgentPresets } from "@/commons/lib/api.agent-tools";
+import type { AgentPresets } from "@nouride/wire";
 
 export function ToolPicker({
   groups,

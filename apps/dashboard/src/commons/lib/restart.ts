@@ -21,7 +21,8 @@
 
 import { onlineManager, type QueryClient } from "@tanstack/react-query";
 import { useSyncExternalStore } from "react";
-import { api, type HealthPayload } from "./api";
+import { api } from "./api";
+import type { HealthPayload } from "@nouride/wire";
 import { ApiError, whenUnreachable } from "./api.client";
 import { lookAgain, lookAtInstall, POLL_MS, type InstallPhase, type RestartWatch } from "./restart-watch";
 

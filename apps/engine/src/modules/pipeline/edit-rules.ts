@@ -8,7 +8,8 @@
  */
 
 import type { MessageEnvelope } from "@nouride/shared";
-import { EDITED, type TurnCause } from "@/modules/turns/turns.store.ts";
+import type { TurnCause } from "@nouride/wire";
+import { EDITED } from "@/modules/turns/turns.store.ts";
 import { INBOX_FRESH_MS } from "./inbox.store.ts";
 
 /**

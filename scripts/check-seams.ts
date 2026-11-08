@@ -81,7 +81,7 @@ export const PAIRS: Pair[] = [
   {
     what: "a box's state, as My Box reads it",
     from: { file: `${PRO}/appliance/src/core/box.ts`, type: "BoxState" },
-    to: { file: "apps/dashboard/src/commons/lib/api.appliance.ts", type: "BoxState" },
+    to: { file: "packages/wire/src/appliance.ts", type: "BoxState" },
     relation: "into",
   },
   {
@@ -99,7 +99,7 @@ export const PAIRS: Pair[] = [
   {
     what: "the roles an account can hold",
     from: { file: `${PRO}/multi-user/src/index.ts`, type: "MultiUserRole" },
-    to: { file: "apps/engine/src/modules/users/users.store.ts", type: "UserRole" },
+    to: { file: "packages/wire/src/status.ts", type: "UserRole" },
     relation: "equal",
   },
   {

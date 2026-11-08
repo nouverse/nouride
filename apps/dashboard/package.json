@@ -23,6 +23,7 @@
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
+    "@nouride/wire": "workspace:*",
     "@tailwindcss/vite": "4.3.3",
     "@tanstack/router-generator": "1.167.27",
     "@tanstack/router-plugin": "1.168.29",

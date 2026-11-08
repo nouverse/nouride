@@ -12,7 +12,8 @@
  */
 
 import { useQueries, useQuery } from "@tanstack/react-query";
-import { api, type MissionView } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { MissionView } from "@nouride/wire";
 import { canWrite, useMe } from "@/commons/lib/session";
 
 export interface NeedsYou {

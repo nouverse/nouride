@@ -24,15 +24,8 @@ import { useOrchestrator, useOrchestratorFirst } from "@/commons/components/agen
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Clock, Target, Terminal, Zap } from "lucide-react";
-import {
-  api,
-  type AgentSummary,
-  type GatewayInstance,
-  type JobPatch,
-  type JobPayloadInput,
-  type JobSummary,
-  type SessionSummary,
-} from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { AgentSummary, GatewayInstance, JobPatch, JobPayloadInput, JobSummary, SessionSummary } from "@nouride/wire";
 import { ErrorNote, Field } from "@/commons/components/ui/ui";
 import { ChatPicker } from "@/commons/components/jobs/ChatPicker";
 import { MissionFields, missionDraft, missionPayload } from "@/commons/components/jobs/MissionFields";

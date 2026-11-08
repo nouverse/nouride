@@ -17,7 +17,7 @@
 
 import { useState } from "react";
 import { Loader2, MessageSquare, Search, Trash2, Users, X } from "lucide-react";
-import type { Room, SessionSummary } from "@/commons/lib/api";
+import type { Room, SessionSummary } from "@nouride/wire";
 import { ListLoading } from "@/commons/components/ui/Spinner";
 
 export function SessionDrawer({

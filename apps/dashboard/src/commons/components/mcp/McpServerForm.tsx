@@ -6,7 +6,8 @@
 import { AgentName, useOrchestrator, useOrchestratorFirst } from "@/commons/components/agents/AgentName";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
-import { api, type CatalogDraft, type McpLibraryServer, type McpServer } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { CatalogDraft, McpLibraryServer, McpServer } from "@nouride/wire";
 import { Card, ErrorNote, Field } from "@/commons/components/ui/ui";
 import { useSaved } from "@/commons/hooks/use-saved";
 import { McpSecretEnv, secretEnvPayload, secretEnvProblem, secretEnvRows, type SecretEnvRow } from "./McpSecretEnv";

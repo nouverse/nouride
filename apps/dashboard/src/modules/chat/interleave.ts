@@ -6,7 +6,7 @@
  * function can be tested; a `.sort()` inside a nine-hundred-line component can only be looked at.
  */
 
-import type { ChatEvent, ChatTurn, LiveTurn, RoomMessage } from "@/commons/lib/api";
+import type { ChatEvent, ChatTurn, LiveTurn, RoomMessage } from "@nouride/wire";
 
 export type Entry =
   | { kind: "turn"; turn: ChatTurn; at: number }

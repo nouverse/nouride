@@ -12,7 +12,7 @@ import { eventually } from "./wait.ts";
 import { greetingAt } from "@/modules/home/components/Hero";
 import { doingNow } from "@/modules/home/components/YourAgents";
 import { summaryLine } from "@/modules/home/index.page";
-import type { AgentSummary } from "@/commons/lib/api";
+import type { AgentSummary } from "@nouride/wire";
 
 useMountHarness();
 

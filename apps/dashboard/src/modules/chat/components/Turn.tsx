@@ -9,7 +9,7 @@
 import { useEffect, useState } from "react";
 import { Pencil, Square } from "lucide-react";
 import { Markdown } from "@/commons/components/ui/Markdown";
-import type { ChatTurn, LiveTurn, TurnAttachment, TurnCause, TurnStep } from "@/commons/lib/api";
+import type { ChatTurn, LiveTurn, TurnAttachment, TurnCause, TurnStep } from "@nouride/wire";
 import { AttachmentList } from "./Attachments";
 import { saidWhileWorking, splitThinking } from "@/commons/lib/steps";
 import { answersAnEdit, saidAsDrawn, systemHeading } from "@/commons/lib/turn-display";

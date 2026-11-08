@@ -6,7 +6,8 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ShieldCheck, ShieldAlert } from "lucide-react";
-import { api, type HeldAction, type JobSummary } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { HeldAction, JobSummary } from "@nouride/wire";
 import { useToast } from "@/commons/components/ui/toast";
 
 function useAllowed(jobId: string) {

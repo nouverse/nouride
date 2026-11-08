@@ -3,7 +3,7 @@
  * Schedule form offered `5550001111` and `-1005550002` side by side, and nobody could tell a one-to-one from a group.
  */
 
-import type { KnownChat } from "./api.groups";
+import type { KnownChat } from "@nouride/wire";
 
 export function chatLabel(chat: Pick<KnownChat, "kind" | "title" | "people">): string {
   if (chat.kind === "dm") return `DM · ${chat.people[0] ?? "someone"}`;

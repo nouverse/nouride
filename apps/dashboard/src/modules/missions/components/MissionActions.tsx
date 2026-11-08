@@ -5,7 +5,7 @@
  */
 
 import { Check, Play, Square, Trash2 } from "lucide-react";
-import type { MissionVerb, MissionView } from "@/commons/lib/api";
+import type { MissionVerb, MissionView } from "@nouride/wire";
 import { ApiError } from "@/commons/lib/api.client";
 import { useConfirm } from "@/commons/components/ui/confirm";
 import { useToast } from "@/commons/components/ui/toast";

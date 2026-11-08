@@ -9,7 +9,8 @@
  * one that moved (headphones, a hat since 0.8.1, an accessory before) stays where the hash put it, as what it is now.
  */
 
-import { LOOK_PARTS, type AgentLook } from "@/commons/lib/api.look";
+import { LOOK_PARTS } from "@/commons/lib/api.look";
+import type { AgentLook } from "@nouride/wire";
 
 export type Look = Required<AgentLook>;
 

@@ -6,7 +6,7 @@
 
 import { afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { Window } from "happy-dom";
-import type { JobSummary } from "@/commons/lib/api.cron";
+import type { JobSummary } from "@nouride/wire";
 import { jobCardId, parseScheduleSearch } from "@/modules/schedule/search";
 import { eventually } from "./wait.ts";
 

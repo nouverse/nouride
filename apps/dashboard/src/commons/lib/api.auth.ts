@@ -2,12 +2,11 @@
  * Signing in and out, your own password and profile, and the daemon's accounts.
  *
  * Split out of `api.ts`, which had grown past the size cap with every endpoint group inline, and spread
- * into `api` like the others: `api.x()` reads the same at every call site, and the types stay in `api.ts`,
- * where `scripts/check-wire.ts` compares them with the daemon's.
+ * into `api` like the others: `api.x()` reads the same at every call site. The payload types are `@nouride/wire`'s.
  */
 
 import { control, post, request } from "./api.client";
-import type { Principal, User } from "./api";
+import type { Principal, User } from "@nouride/wire";
 
 export const authApi = {
   login: (username: string, password: string) =>

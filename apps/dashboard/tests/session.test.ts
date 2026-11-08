@@ -8,7 +8,7 @@
 import { describe, expect, test } from "bun:test";
 import { nextOf, redirectFor, safeNext, sessionFrom } from "@/commons/lib/session";
 import { ApiError } from "@/commons/lib/api.client";
-import type { Principal, SetupState } from "@/commons/lib/api";
+import type { Principal, SetupState } from "@nouride/wire";
 
 const unfinished = { complete: false } as SetupState;
 const finished = { complete: true } as SetupState;

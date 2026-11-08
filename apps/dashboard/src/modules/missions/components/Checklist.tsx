@@ -4,7 +4,7 @@
  */
 
 import { Check, Circle, CircleDot, Minus } from "lucide-react";
-import type { NotesPlan, NotesPlanStep } from "@/commons/lib/api.notes";
+import type { NotesPlan, NotesPlanStep } from "@nouride/wire";
 
 const MARK: Record<NotesPlanStep["state"], { icon: typeof Check; tone: string; said: string }> = {
   done: { icon: Check, tone: "text-success", said: "done" },

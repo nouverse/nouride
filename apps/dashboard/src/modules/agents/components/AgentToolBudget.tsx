@@ -22,11 +22,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Repeat } from "lucide-react";
-import { api, type AgentSummary } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { AgentSummary } from "@nouride/wire";
 import { Card, ErrorNote } from "@/commons/components/ui/ui";
 import { useSaved } from "@/commons/hooks/use-saved";
 import { SWEET_SPOT } from "./ToolBudgetControl";
-
 
 export function AgentToolBudget({ agent, editable }: { agent: AgentSummary; editable: boolean }) {
   const policy = useQuery({

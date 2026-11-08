@@ -9,7 +9,8 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { api, type McpServer } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { McpServer } from "@nouride/wire";
 import { ErrorNote } from "@/commons/components/ui/ui";
 import { ScrollArea } from "@/commons/components/ui/ScrollCard";
 import { Spinner } from "@/commons/components/ui/Spinner";

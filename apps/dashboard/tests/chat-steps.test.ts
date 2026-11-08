@@ -9,7 +9,7 @@ import { createElement } from "react";
 import { formatDuration, formatElapsed, saidWhileWorking, turnTokens, workSteps } from "@/commons/lib/steps";
 import { StepFeed } from "@/commons/components/turns/Steps";
 import { LiveTurnView, TurnView } from "@/modules/chat/components/Turn";
-import type { ChatTurn, LiveTurn, TurnStep } from "@/commons/lib/api";
+import type { ChatTurn, LiveTurn, TurnStep } from "@nouride/wire";
 
 describe("the clock", () => {
   test("whole seconds — no tenths", () => {

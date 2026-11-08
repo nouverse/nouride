@@ -1,0 +1,19 @@
+/**
+ * Background jobs' watchdog and delegation (`routes/job-quiet.ts`, `routes/delegate.ts`): how long a job may be quiet,
+ * and what a helper may do.
+ */
+
+export interface JobQuietPolicy {
+  /** 0 is off. Notices then come at double the wait, and double again. */
+  minutes: number;
+  max: number;
+  editable: boolean;
+}
+
+/** `[delegate] max_background`: how many helpers an agent may have in the background at once (0.7.15). */
+export interface DelegatePolicy {
+  /** The daemon's — an agent without its own follows it. 0 is off. */
+  maxBackground: number;
+  max: number;
+  editable: boolean;
+}

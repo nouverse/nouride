@@ -7,7 +7,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { useMemo } from "react";
-import { api, type HealthPayload } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { HealthPayload } from "@nouride/wire";
 import { orchestratorFirst } from "@/commons/lib/agents";
 import { looksOf } from "@/commons/cat/look";
 import { useMe } from "@/commons/lib/session";

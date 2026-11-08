@@ -6,7 +6,7 @@
 
 import { Link } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
-import type { MissionView } from "@/commons/lib/api";
+import type { MissionView } from "@nouride/wire";
 import { CARD, LIFTS } from "@/commons/components/ui/CardGrid";
 import { ago } from "@/commons/lib/format";
 import { cn } from "@/commons/lib/utils";

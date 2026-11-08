@@ -8,7 +8,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Merge } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "@/commons/lib/api";
-import type { Facet } from "@/commons/lib/api.memory";
+import type { Facet } from "@nouride/wire";
 import { useConfirm } from "@/commons/components/ui/confirm";
 import { useToast } from "@/commons/components/ui/toast";
 

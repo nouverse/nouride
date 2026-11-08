@@ -14,7 +14,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Save } from "lucide-react";
 import { api } from "@/commons/lib/api";
-import type { MemorySettings } from "@/commons/lib/api.memory";
+import type { MemorySettings } from "@nouride/wire";
 import { useSaved } from "@/commons/hooks/use-saved";
 import { Card, ErrorNote, Field } from "@/commons/components/ui/ui";
 import { useToast } from "@/commons/components/ui/toast";

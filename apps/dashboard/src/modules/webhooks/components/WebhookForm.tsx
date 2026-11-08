@@ -10,7 +10,8 @@
 import { useOrchestrator, useOrchestratorFirst } from "@/commons/components/agents/AgentName";
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { api, type JobPayloadInput } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { JobPayloadInput } from "@nouride/wire";
 import { Card, ErrorNote, Field } from "@/commons/components/ui/ui";
 import { MissionFields, missionDraft, missionPayload } from "@/commons/components/jobs/MissionFields";
 import { ChatPicker } from "@/commons/components/jobs/ChatPicker";

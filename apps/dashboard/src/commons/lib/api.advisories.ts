@@ -5,15 +5,7 @@
  */
 
 import { control, request } from "./api.client";
-
-/** One thing said, with every agent it was said about — six agents with one unscoped secret is one line. */
-export interface AdvisoryLine {
-  message: string;
-  agents: string[];
-  hint?: string;
-  /** When it was first said, unchanged since — epoch ms. */
-  since: number;
-}
+import type { AdvisoryLine } from "@nouride/wire";
 
 export const advisoriesApi = {
   advisories: () => request<{ advisories: AdvisoryLine[] }>(`${control}/advisories`),

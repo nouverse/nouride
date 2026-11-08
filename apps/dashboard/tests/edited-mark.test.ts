@@ -11,7 +11,7 @@ import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { answersAnEdit, saidAsDrawn } from "../src/commons/lib/turn-display.ts";
 import { TurnView } from "../src/modules/chat/components/Turn.tsx";
-import type { ChatTurn } from "../src/commons/lib/api.ts";
+import type { ChatTurn } from "@nouride/wire";
 
 const turn = (extra: Partial<ChatTurn> = {}): ChatTurn => ({
   id: "t1",

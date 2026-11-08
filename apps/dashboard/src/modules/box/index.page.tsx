@@ -29,7 +29,8 @@ import {
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
-import { applianceApi as api, type BoxState } from "@/commons/lib/api.appliance";
+import { applianceApi as api } from "@/commons/lib/api.appliance";
+import type { BoxState } from "@nouride/wire";
 import { editionLabel } from "@/commons/hooks/use-update";
 import { ago } from "@/commons/lib/format";
 import { QrTile } from "./components/QrTile";

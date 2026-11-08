@@ -9,7 +9,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { AlertTriangle, CheckCircle2, KeyRound, LogIn, Plus, RefreshCw } from "lucide-react";
 import { api } from "@/commons/lib/api";
-import type { CliLoginView, CliProfile } from "@/commons/lib/api.external-agents";
+import type { CliLoginView, CliProfile } from "@nouride/wire";
 import { Card, ErrorNote } from "@/commons/components/ui/ui";
 import { CliSignIn } from "@/commons/components/agents/CliSignIn";
 
@@ -87,7 +87,6 @@ export function CliProfiles(props: CliProfilesProps) {
             <RefreshCw size={14} className={props.checking ? "animate-spin" : ""} aria-hidden="true" /> Check again
           </button>
         </div>
-
 
         {login ? (
           <CliSignIn

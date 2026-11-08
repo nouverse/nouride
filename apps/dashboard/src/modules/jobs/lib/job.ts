@@ -3,7 +3,7 @@
  * called, and the one line under it. Pure, so each answer is tested without a page.
  */
 
-import type { BackgroundJob, HandedOffTurn } from "@/commons/lib/api";
+import type { BackgroundJob, HandedOffTurn } from "@nouride/wire";
 
 export type JobTab = "all" | "running" | "done" | "failed" | "stopped";
 export type JobKindFilter = "all" | "helper" | "command" | "ask";

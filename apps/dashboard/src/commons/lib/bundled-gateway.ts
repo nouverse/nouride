@@ -12,7 +12,7 @@
  * went with them.
  */
 
-import type { SetupState } from "@/commons/lib/api";
+import type { SetupState } from "@nouride/wire";
 
 /**
  * Where the gateway's dashboard and API are reachable through this daemon — or null.

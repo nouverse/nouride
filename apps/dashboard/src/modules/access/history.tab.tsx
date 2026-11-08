@@ -7,7 +7,8 @@
 import { useQuery } from "@tanstack/react-query";
 import type { LucideIcon } from "lucide-react";
 import { Ban, Check, Clock, History, RotateCcw, Unlock, UserPlus, UserX, X } from "lucide-react";
-import { api, type AccessEvent, type SenderRecord } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { AccessEvent, SenderRecord } from "@nouride/wire";
 import { EmptyState, ErrorNote } from "@/commons/components/ui/ui";
 import { ScrollCard } from "@/commons/components/ui/ScrollCard";
 import { ago } from "@/commons/lib/format";

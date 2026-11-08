@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import type { LiveTurn, MissionSettings, MissionView, TurnStep } from "@/commons/lib/api";
+import type { LiveTurn, MissionSettings, MissionView, TurnStep } from "@nouride/wire";
 import { stepNow } from "@/commons/lib/steps";
 import { actionsFor, briefShown, grouped, inFolder, meters, missionTitle, needsYouSaid, rowLine, searchedIn, seenAs, tabOf, whyStarted } from "@/modules/missions/lib/mission";
 import { startInput } from "@/modules/missions/components/NewMissionForm";

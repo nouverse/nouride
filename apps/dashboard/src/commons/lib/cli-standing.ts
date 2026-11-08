@@ -5,7 +5,7 @@
  * older than it supports.
  */
 
-import type { CliVersionView } from "./api.external-agents";
+import type { CliVersionView } from "@nouride/wire";
 
 export interface StandingWords {
   /** A word or two, on a badge. */

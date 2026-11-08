@@ -15,7 +15,8 @@ import { describeToolCall } from "@/commons/activity.ts";
 import { withoutReminders } from "@/modules/llm/executor/reminders.ts";
 import { SYSTEM_SENDER } from "@/modules/pipeline/deps.ts";
 import type { ChatMessage } from "@nouride/shared";
-import type { TurnAttachment, TurnCause, TurnStep, TurnView } from "./turns.store.ts";
+import type { TurnCause } from "@nouride/wire";
+import type { TurnAttachment, TurnStep, TurnView } from "./turns.store.ts";
 
 /** One step, plus how long it took — which is the part a person reads. */
 export interface StepPayload extends TurnStep {

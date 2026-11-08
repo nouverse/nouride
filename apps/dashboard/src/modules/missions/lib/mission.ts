@@ -5,7 +5,7 @@
  * for one is a press that only ever fails.
  */
 
-import type { ChatTurn, MissionSeen, MissionView, MissionWaitKind } from "@/commons/lib/api";
+import type { ChatTurn, MissionSeen, MissionView, MissionWaitKind } from "@nouride/wire";
 import { systemHeading } from "@/commons/lib/turn-display";
 
 /** What a person sees, in their words. */

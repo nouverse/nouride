@@ -15,7 +15,7 @@
 
 import type { RefObject } from "react";
 import { Send, Square, SquareSlash } from "lucide-react";
-import type { Room, SlashCommand } from "@/commons/lib/api";
+import type { Room, SlashCommand } from "@nouride/wire";
 import type { Conversation } from "@/commons/hooks/use-conversation";
 import { AttachButton, AttachmentTray, type AttachedFile } from "@/commons/components/ui/FileDrop";
 import { ErrorNote } from "@/commons/components/ui/ui";

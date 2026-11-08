@@ -14,7 +14,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Sparkles, Tags, Undo2, X } from "lucide-react";
 import { useState } from "react";
 import { api } from "@/commons/lib/api";
-import type { TagTidyChange } from "@/commons/lib/api.memory";
+import type { TagTidyChange } from "@nouride/wire";
 import { useConfirm } from "@/commons/components/ui/confirm";
 import { useToast } from "@/commons/components/ui/toast";
 import { ErrorNote } from "@/commons/components/ui/ui";

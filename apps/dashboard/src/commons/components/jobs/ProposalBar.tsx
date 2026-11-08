@@ -6,7 +6,8 @@
 
 import { useMutation } from "@tanstack/react-query";
 import { Power, Trash2 } from "lucide-react";
-import { api, type JobSummary } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { JobSummary } from "@nouride/wire";
 import { ErrorNote } from "@/commons/components/ui/ui";
 
 export function ProposalBar({ job, canAnswer, onAnswered }: { job: Pick<JobSummary, "id" | "name" | "proposal">; canAnswer: boolean; onAnswered: () => void }) {

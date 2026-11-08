@@ -14,7 +14,8 @@ import { AgentName, useOrchestrator, useOrchestratorFirst } from "@/commons/comp
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BookOpen, ChevronDown, ChevronRight, CircleCheck, Package, Power, PowerOff, Trash2, TriangleAlert, Wrench } from "lucide-react";
-import { api, type CatalogSkill } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { CatalogSkill } from "@nouride/wire";
 import { ErrorNote } from "@/commons/components/ui/ui";
 import { Details } from "@/commons/components/ui/Details";
 import { useConfirm } from "@/commons/components/ui/confirm";

@@ -11,7 +11,8 @@
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, type ApprovalDecision, type ApprovalRequest } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { ApprovalDecision, ApprovalRequest } from "@nouride/wire";
 import { ApiError } from "@/commons/lib/api.client";
 import { useToast } from "@/commons/components/ui/toast";
 

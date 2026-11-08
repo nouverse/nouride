@@ -7,7 +7,7 @@
  */
 
 import { afterAll, describe, expect, test } from "bun:test";
-import type { HealthPayload } from "@/commons/lib/api";
+import type { HealthPayload } from "@nouride/wire";
 import { entryScript, follow, following, markRestartPending, restartPending, restartState, type RestartIo } from "@/commons/lib/restart";
 import { POLL_MS } from "@/commons/lib/restart-watch";
 

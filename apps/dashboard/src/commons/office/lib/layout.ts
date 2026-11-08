@@ -26,7 +26,7 @@ export interface Spot extends Point {
   out: Point[];
 }
 
-export interface Room {
+export interface OfficeRoom {
   name: "workroom" | "lobby" | "bedroom";
   x: number;
   y: number;
@@ -46,7 +46,7 @@ export interface OfficeLayout {
   height: number;
   /** Side by side over the hall, or one above another beside it (`stacked`, a narrow page). */
   stacked: boolean;
-  rooms: Room[];
+  rooms: OfficeRoom[];
   /** Each desk's left edge and the top of the frame of the cat behind it — the orchestrator's first, when it is here. */
   desks: Point[];
   /** The orchestrator's desk, when it is here: `desks[0]`. */
@@ -128,7 +128,7 @@ export function layoutOffice(
   const names = ["workroom", "lobby", "bedroom"] as const;
   const stackedWidth = Math.max(...WIDTHS);
   let along = 0;
-  const rooms: Room[] = names.map((name, i) => {
+  const rooms: OfficeRoom[] = names.map((name, i) => {
     const rows = stacked ? roomRows[i]! : sharedRows;
     const x = stacked ? HALL : along;
     const y = stacked ? along : 0;
@@ -141,8 +141,8 @@ export function layoutOffice(
     const hallDoor = stacked ? { x: (HALL - 32) / 2, y: door.y } : door;
     return { name, x, y, width, height, lane: x, aisles, door, hallDoor };
   });
-  const [workroom, lobby, bedroom] = rooms as [Room, Room, Room];
-  const rowTop = (room: Room, row: number) => room.y + TOP + row * ROW;
+  const [workroom, lobby, bedroom] = rooms as [OfficeRoom, OfficeRoom, OfficeRoom];
+  const rowTop = (room: OfficeRoom, row: number) => room.y + TOP + row * ROW;
   const deskAt = (row: number, column: number) => ({ x: workroom.x + LANE + column * DESK_PITCH, y: rowTop(workroom, row) });
 
   // The orchestrator's in the middle of the front row; the rest three to a row behind it.

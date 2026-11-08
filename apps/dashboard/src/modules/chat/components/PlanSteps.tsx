@@ -4,7 +4,7 @@
  */
 
 import { Circle, CircleCheck, CircleDot, CircleSlash } from "lucide-react";
-import type { NotesPlan, NotesPlanStep } from "@/commons/lib/api.notes";
+import type { NotesPlan, NotesPlanStep } from "@nouride/wire";
 import { stepsDone } from "../lib/notes";
 
 /** Each state's mark and how its words read; the mark's tint is beside the mark, where it is plainly decoration. */

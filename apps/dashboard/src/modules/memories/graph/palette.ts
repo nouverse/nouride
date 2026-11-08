@@ -10,7 +10,7 @@
  */
 
 import { useEffect, useState } from "react";
-import type { GraphNodeKind } from "@/commons/lib/api.memory";
+import type { GraphNodeKind } from "@nouride/wire";
 
 export interface Palette {
   kinds: Record<GraphNodeKind, string>;

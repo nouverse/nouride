@@ -12,7 +12,8 @@
  */
 
 import { useMutation, useQuery, type UseQueryResult } from "@tanstack/react-query";
-import { api, type UpdateDownload } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { UpdateDownload } from "@nouride/wire";
 
 export const UPDATE_PROGRESS_KEY = ["update", "progress"] as const;
 

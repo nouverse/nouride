@@ -13,7 +13,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Layers } from "lucide-react";
-import { api, type ModelTiersPatch, type TierHelper } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { ModelTiersPatch, TierHelper } from "@nouride/wire";
 import { isAdmin, useMe } from "@/commons/lib/session";
 import { ErrorNote } from "@/commons/components/ui/ui";
 import { Details } from "@/commons/components/ui/Details";

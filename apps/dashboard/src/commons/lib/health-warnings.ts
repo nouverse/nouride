@@ -7,7 +7,7 @@
  * the command (`nouride agent reload <id>`), which is for whoever runs the server.
  */
 
-import type { HealthPayload } from "@/commons/lib/api";
+import type { HealthPayload } from "@nouride/wire";
 
 export function healthWarnings(health: Pick<HealthPayload, "issues" | "failedAgents">): string[] {
   return [

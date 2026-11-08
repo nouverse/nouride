@@ -8,7 +8,7 @@
 
 import { useState } from "react";
 import { KeyRound } from "lucide-react";
-import type { FieldChange } from "@/commons/lib/api.secrets";
+import type { FieldChange } from "@nouride/wire";
 import { Card, Field } from "@/commons/components/ui/ui";
 import { changeFrom, FieldsEditor, type Row, rowsOf } from "./FieldsEditor";
 

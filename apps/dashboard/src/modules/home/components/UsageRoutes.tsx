@@ -5,7 +5,7 @@
  */
 
 import { AlertTriangle } from "lucide-react";
-import type { UsageRouteView } from "@/commons/lib/api";
+import type { UsageRouteView } from "@nouride/wire";
 
 export function UsageRoutes({ days, routes, warnings }: { days: number; routes: UsageRouteView[]; warnings: { said: string }[] }) {
   if (routes.length === 0) return null;

@@ -12,7 +12,8 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
-import { api, type Principal, type SetupState } from "./api";
+import { api } from "./api";
+import type { Principal, SetupState } from "@nouride/wire";
 import { ApiError } from "./api.client";
 
 export interface Gate {

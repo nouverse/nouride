@@ -5,7 +5,7 @@
 
 import { useState } from "react";
 import { Send } from "lucide-react";
-import type { MissionAnswered } from "@/commons/lib/api.missions";
+import type { MissionAnswered } from "@nouride/wire";
 
 export function AnswerBox({ onAnswer, pending, disabled }: { onAnswer: (text: string) => void; pending: boolean; disabled: boolean }) {
   const [text, setText] = useState("");

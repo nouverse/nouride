@@ -20,7 +20,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { stepIcon, stepRows } from "../src/commons/lib/steps.ts";
-import type { TurnStep } from "../src/commons/lib/api.ts";
+import type { TurnStep } from "@nouride/wire";
 
 let seq = 0;
 const step = (kind: TurnStep["kind"], text: string, ms = 5): TurnStep => ({

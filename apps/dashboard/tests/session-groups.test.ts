@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { groupByDate } from "../src/modules/chat/components/SessionDrawer.tsx";
-import type { Room, SessionSummary } from "../src/commons/lib/api.ts";
+import type { Room, SessionSummary } from "@nouride/wire";
 
 const NOW = new Date("2026-09-06T10:00:00").getTime();
 

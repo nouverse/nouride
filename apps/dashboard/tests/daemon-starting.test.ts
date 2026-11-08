@@ -7,7 +7,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { ApiError, request } from "@/commons/lib/api.client";
 import { readRestart } from "@/commons/lib/restart-watch";
-import type { HealthPayload } from "@/commons/lib/api";
+import type { HealthPayload } from "@nouride/wire";
 
 const realFetch = globalThis.fetch;
 afterEach(() => {

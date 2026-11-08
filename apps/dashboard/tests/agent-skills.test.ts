@@ -5,7 +5,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { agentSkillText } from "@/modules/agents/skills.page";
-import type { AgentSkill } from "@/commons/lib/api";
+import type { AgentSkill } from "@nouride/wire";
 
 const skill = (over: Partial<AgentSkill>): AgentSkill =>
   ({ name: "x", description: "", scope: "shared", enabled: true, offGlobally: false, toggleable: true, missing: [], ...over }) as AgentSkill;

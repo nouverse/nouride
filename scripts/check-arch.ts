@@ -12,6 +12,7 @@
 
 import { dirname, join, relative, resolve } from "node:path";
 import { MODULE_SPECIFIER, PRO } from "./lint-sources.ts";
+import { WIRE, wireExports, wireFindings } from "./wire-rules.ts";
 
 interface Violation {
   file: string;
@@ -97,8 +98,9 @@ const APPS_IMPORT = /from\s+["'](?:[^"']*\/apps\/|@nouride\/(?:engine|dashboard)
  * Frontend packages are named `ui-*` — `packages/ui-graph` is the first. The name is the rule, so a
  * new one needs no edit here:
  *
- * - `apps/dashboard` imports `ui-*` packages and no other workspace package. It talks to the daemon
- *   over HTTP (ARCHITECTURE.md §3), and a `@nouride/shared` import would put engine code one hop away.
+ * - `apps/dashboard` imports `ui-*` packages and no other workspace package but `@nouride/wire`, the control
+ *   API's payload types, with `import type` alone (`wire-rules.ts`). It talks to the daemon over HTTP
+ *   (ARCHITECTURE.md §3), and a `@nouride/shared` import would put engine code one hop away.
  * - A `ui-*` package imports only other `ui-*` packages, for the same reason one level down.
  * - Nothing else imports a `ui-*` package: browser code has no business in the daemon.
  * - Browser code lives only in `ui-*`: a package whose tsconfig adds the `DOM` lib, or that has a
@@ -384,9 +386,19 @@ async function main(): Promise<void> {
   const violations: Violation[] = [];
   const glob = new Bun.Glob("{apps,packages}/**/*.{ts,tsx}");
 
+  const wireNames = new Set<string>();
+  for await (const path of new Bun.Glob("packages/wire/src/**/*.ts").scan({ cwd: ROOT, absolute: true })) {
+    for (const name of wireExports(relative(ROOT, path), await Bun.file(path).text())) wireNames.add(name);
+  }
+
   for await (const path of glob.scan({ cwd: ROOT, absolute: true })) {
     const rel = relative(ROOT, path);
     if (rel.includes("node_modules") || rel.endsWith(".gen.ts")) continue;
+
+    // The wire's line, read by the TypeScript parser: whether an import is `import type` is not a thing a grep can tell.
+    if (rel.startsWith("packages/wire/") || rel.startsWith("apps/dashboard/")) {
+      for (const finding of wireFindings(rel, await Bun.file(path).text(), wireNames)) violations.push({ file: rel, ...finding });
+    }
 
     const isRuntimePkg = rel.startsWith("packages/runtime/");
     /**
@@ -636,8 +648,8 @@ async function main(): Promise<void> {
 
       // Rule 4b: frontend packages are `ui-*`, and the line between them and the rest holds both ways
       const fromUi = ownPkg !== null && isUiPackage(ownPkg);
-      if (rel.startsWith("apps/dashboard/") && !isUiPackage(target)) {
-        at("dashboard-imports-workspace", `the dashboard talks to the daemon over HTTP; it may import only @nouride/${UI_PREFIX}* packages`);
+      if (rel.startsWith("apps/dashboard/") && !isUiPackage(target) && `@nouride/${target}` !== WIRE) {
+        at("dashboard-imports-workspace", `the dashboard talks to the daemon over HTTP; it may import only @nouride/${UI_PREFIX}* packages, and ${WIRE}'s types`);
       } else if (fromUi && !isUiPackage(target)) {
         at("ui-imports-workspace", `a ${UI_PREFIX}* package may import only other ${UI_PREFIX}* packages`);
       } else if (!fromUi && !rel.startsWith("apps/dashboard/") && isUiPackage(target)) {

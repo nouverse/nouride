@@ -6,7 +6,8 @@
 import { Spinner } from "@/commons/components/ui/Spinner";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
-import { api, type AgentMcpCredential, type McpServer } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { AgentMcpCredential, McpServer } from "@nouride/wire";
 import { ErrorNote, StatusDot } from "@/commons/components/ui/ui";
 import { Details } from "@/commons/components/ui/Details";
 import { formatBytes } from "@/commons/lib/format";

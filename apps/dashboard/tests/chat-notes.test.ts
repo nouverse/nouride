@@ -11,8 +11,7 @@ import { afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { Window } from "happy-dom";
-import type { ChatTurn, LiveTurn } from "@/commons/lib/api";
-import type { WorkNotes } from "@/commons/lib/api.notes";
+import type { ChatTurn, LiveTurn, WorkNotes } from "@nouride/wire";
 import { stepsDone, withPlans } from "@/modules/chat/lib/notes";
 import { eventually } from "./wait.ts";
 

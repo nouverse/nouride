@@ -5,7 +5,7 @@
  * limit", three blocks of the same words. Pure, so each reading is tested on its own (`tests/missions-timeline.test.ts`).
  */
 
-import type { ChatTurn } from "@/commons/lib/api";
+import type { ChatTurn } from "@nouride/wire";
 import { whyStarted } from "./mission";
 
 /** What started a turn, as the timeline marks it. */

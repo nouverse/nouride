@@ -14,7 +14,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Pencil } from "lucide-react";
 import { api } from "@/commons/lib/api";
-import type { GroupRecord } from "@/commons/lib/api.groups";
+import type { GroupRecord } from "@nouride/wire";
 import { Card, EmptyState, ErrorNote, PageHeader } from "@/commons/components/ui/ui";
 import { FILL_PAGE, ScrollCard } from "@/commons/components/ui/ScrollCard";
 import { useSaved } from "@/commons/hooks/use-saved";

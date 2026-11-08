@@ -26,7 +26,7 @@ import {
   StickyNote,
   Users,
 } from "lucide-react";
-import type { ChatEvent } from "@/commons/lib/api";
+import type { ChatEvent } from "@nouride/wire";
 import { Markdown } from "@/commons/components/ui/Markdown";
 
 const ICONS: Record<ChatEvent["kind"], typeof Hash> = {

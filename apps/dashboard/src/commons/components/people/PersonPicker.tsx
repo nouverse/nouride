@@ -8,7 +8,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "@/commons/lib/api";
-import type { PersonTarget } from "@/commons/lib/api.people";
+import type { PersonTarget } from "@nouride/wire";
 
 export function PersonPicker({
   onPick,

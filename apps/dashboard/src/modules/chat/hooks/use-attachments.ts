@@ -12,7 +12,8 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { api, ApiError, type UploadedFile } from "@/commons/lib/api";
+import { api, ApiError } from "@/commons/lib/api";
+import type { UploadedFile } from "@nouride/wire";
 import type { AttachedFile } from "@/commons/components/ui/FileDrop";
 
 /** What the caller sends with the message. */

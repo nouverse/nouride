@@ -24,6 +24,7 @@
         "tailwind-merge": "^3.6.0",
       },
       "devDependencies": {
+        "@nouride/wire": "workspace:*",
         "@tailwindcss/vite": "4.3.3",
         "@tanstack/router-generator": "1.167.27",
         "@tanstack/router-plugin": "1.168.29",
@@ -55,6 +56,7 @@
         "@nouride/runtime": "workspace:*",
         "@nouride/secrets": "workspace:*",
         "@nouride/shared": "workspace:*",
+        "@nouride/wire": "workspace:*",
         "hono": "4.13.1",
       },
     },
@@ -191,6 +193,14 @@
       },
       "devDependencies": {
         "whatsapp-rust-bridge": "0.5.4",
+      },
+    },
+    "packages/wire": {
+      "name": "@nouride/wire",
+      "version": "0.1.0",
+      "dependencies": {
+        "@nouride/acp": "workspace:*",
+        "@nouride/shared": "workspace:*",
       },
     },
   },
@@ -510,6 +520,8 @@
     "@nouride/site": ["@nouride/site@workspace:apps/site"],
 
     "@nouride/ui-graph": ["@nouride/ui-graph@workspace:packages/ui-graph"],
+
+    "@nouride/wire": ["@nouride/wire@workspace:packages/wire"],
 
     "@oslojs/encoding": ["@oslojs/encoding@1.1.0", "", {}, "sha512-70wQhgYmndg4GCPxPPxPGevRKqTIJ2Nh4OkiMWmDAVYsTQ+Ta7Sq+rPevXyXGdzr30/qZBnyOalCszoMxlyldQ=="],
 

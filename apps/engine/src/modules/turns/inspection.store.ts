@@ -11,8 +11,9 @@
 
 import type { SqliteDb } from "@nouride/runtime";
 import type { StopReason, TurnEventData } from "@nouride/shared";
+import type { TurnCause } from "@nouride/wire";
 import { contextOfTurn, stepsOfTurn } from "@/modules/events/turn-events.store.ts";
-import { childrenOf, parseCause, toRecord, type TurnCause, type TurnRecord, type TurnRow, type TurnStep } from "./turns.store.ts";
+import { childrenOf, parseCause, toRecord, type TurnRecord, type TurnRow, type TurnStep } from "./turns.store.ts";
 
 /** One provider call the turn made — its own agent's, or a helper's or a peer's charged to it. */
 export interface ModelCall {

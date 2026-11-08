@@ -4,7 +4,7 @@
  * the number the CLI itself shows: kept out of the sentence for that reason.
  */
 
-import type { CliVersionView } from "@/commons/lib/api.external-agents";
+import type { CliVersionView } from "@nouride/wire";
 import { standingWords } from "@/commons/lib/cli-standing";
 import { updateMessage } from "@/commons/lib/set-up";
 import { AskAgentButton } from "./AskAgentButton";

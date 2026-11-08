@@ -1,5 +1,5 @@
 import { Cpu, Wifi, Wrench } from "lucide-react";
-import type { BoxState } from "@/commons/lib/api.appliance";
+import type { BoxState } from "@nouride/wire";
 import { Card } from "@/commons/components/ui/ui";
 import { QrTile } from "./QrTile";
 

@@ -7,7 +7,7 @@
 
 import { afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { Window } from "happy-dom";
-import type { AgentCli, CliAccountsView, CliVersionView } from "@/commons/lib/api.external-agents";
+import type { AgentCli, CliAccountsView, CliVersionView } from "@nouride/wire";
 import { standingWords } from "@/commons/lib/cli-standing";
 import { eventually } from "./wait.ts";
 

@@ -11,7 +11,7 @@ import { useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FolderGit2, Plus, Trash2, TriangleAlert } from "lucide-react";
 import { api } from "@/commons/lib/api";
-import type { SkillRoot } from "@/commons/lib/api.agents";
+import type { SkillRoot } from "@nouride/wire";
 import { Card, ErrorNote } from "@/commons/components/ui/ui";
 import { Details } from "@/commons/components/ui/Details";
 import { useConfirm } from "@/commons/components/ui/confirm";

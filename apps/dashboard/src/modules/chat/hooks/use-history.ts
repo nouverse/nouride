@@ -18,7 +18,7 @@
 
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/commons/lib/api";
-import type { Room, SessionSummary } from "@/commons/lib/api";
+import type { Room, SessionSummary } from "@nouride/wire";
 
 /** Conversations per page. A list somebody scrolls, not a report. */
 const SESSION_PAGE = 50;

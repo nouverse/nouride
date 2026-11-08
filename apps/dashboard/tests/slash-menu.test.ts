@@ -13,7 +13,7 @@ import {
   matchCommands,
   slashToken,
 } from "../src/modules/chat/components/SlashMenu.tsx";
-import type { SlashCommand } from "../src/commons/lib/api.ts";
+import type { SlashCommand } from "@nouride/wire";
 
 const COMMANDS: SlashCommand[] = [
   { command: "/help", description: "Show what I can do" },

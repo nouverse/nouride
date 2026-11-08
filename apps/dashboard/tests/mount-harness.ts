@@ -54,7 +54,7 @@ export const RESPONSES: Record<string, unknown> = {
    * Every route below as the daemon's own routes answer it — the account, the status, setup, settings, providers,
    * the skills hub, MCP tokens, people, memory in each of its views, a conversation — written by the engine's
    * `tests/contracts/dashboard-wire.test.ts` over an install wired as the daemon wires it, which fails when a route
-   * answers otherwise. Not hand-written from this app's copies of the wire types, which agree with any fixture written
+   * answers otherwise. Not hand-written from the wire types (`@nouride/wire`), which agree with any fixture written
    * from them.
    */
   ...WIRE,

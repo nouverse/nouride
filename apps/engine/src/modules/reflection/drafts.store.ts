@@ -19,7 +19,8 @@
 
 import { newId, type Port} from "@nouride/shared";
 import type { SqliteDb } from "@nouride/runtime";
-import type { DraftStatus, SkillDraft, SkillFile, TriggerKind } from "./types.ts";
+import type { TriggerKind } from "@nouride/wire";
+import type { DraftStatus, SkillDraft, SkillFile } from "./types.ts";
 
 interface DraftRow {
   id: string;

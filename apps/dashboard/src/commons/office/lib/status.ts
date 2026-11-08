@@ -2,7 +2,7 @@
  * Where an agent's cat is, from its status: the Office and Home's agents read it the same way.
  */
 
-import type { AgentSummary } from "@/commons/lib/api";
+import type { AgentSummary } from "@nouride/wire";
 import type { Status } from "./layout";
 
 export function statusOf(agent: Pick<AgentSummary, "activity" | "state">): Status {

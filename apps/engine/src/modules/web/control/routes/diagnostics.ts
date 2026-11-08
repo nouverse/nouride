@@ -9,6 +9,7 @@ import { isRetentionScope } from "@/modules/config/settings/memory.ts";
 import { atLeast } from "@/modules/users/auth.ts";
 import { statFile } from "@nouride/runtime";
 import { groupAdvisories, readAdvisories } from "@/boot/advisories.ts";
+import type { AgentSummary, StatusPayload } from "@nouride/wire";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { jsonBody } from "../payloads.ts";
 import { contextWindowFor } from "@/modules/llm/executor/context-window.ts";
@@ -174,7 +175,7 @@ export function registerDiagnosticRoutes(control: ControlApp, deps: ControlDeps)
       status: gateway.status,
     }));
 
-    return c.json({
+    const body = {
       status: deps.ctx.status,
       uptime: Math.round((Date.now() - deps.ctx.startedAt) / 1000),
       // Turns in flight with a journal, and messages waiting in the inbox.
@@ -217,7 +218,7 @@ export function registerDiagnosticRoutes(control: ControlApp, deps: ControlDeps)
               inherits: tierModel({ provider: agent.config.llm.provider, model: agent.config.llm.model }, deps.ctx.config.llm.defaults, tier),
             },
           ]),
-        ),
+        ) as NonNullable<AgentSummary["tiers"]>,
         // What its turns are budgeted at, and where the number comes from — `doctor` says when it is a 32k guess (G2).
         contextWindow: contextWindowFor({
           model: agent.config.llm.model,
@@ -295,7 +296,8 @@ export function registerDiagnosticRoutes(control: ControlApp, deps: ControlDeps)
       // What compaction and the memory pass ran into with their models in the last day, the provider's own words
       // included — doctor says each with its fix. `/health` says them without those words: anybody reaches it.
       helpers: deps.logStore ? helperTrouble(deps.logStore, deps.ctx.config, Date.now()) : [],
-    });
+    };
+    return c.json(body satisfies StatusPayload);
   });
 
   control.get("/audit", (c) => {

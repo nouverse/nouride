@@ -320,7 +320,8 @@ Nested routes use flat dotted names: `agents.$agentId.access.tsx` is `/agents/:a
 current UI. There is no separate step to forget.
 
 The dashboard imports no workspace package but `ui-*` ones — `@nouride/ui-graph` draws the Memory
-graph — and reaches the daemon over HTTP only (`ARCHITECTURE.md` §3).
+graph — and `@nouride/wire`, the types of what the control API sends and takes, by `import type` alone. It
+reaches the daemon over HTTP only (`ARCHITECTURE.md` §3).
 
 ### Where things live
 
@@ -332,7 +333,7 @@ graph — and reaches the daemon over HTTP only (`ARCHITECTURE.md` §3).
 | `src/commons/components/ui/ui.tsx` | `Card`, `Field`, `PageHeader`, `EmptyState`, `StatusDot`, `ErrorNote` |
 | `src/commons/components/ui/confirm.tsx` | `useConfirm()` — the one "are you sure?", promise-shaped |
 | `src/commons/components/ui/Markdown.tsx` | the deliberately small, HTML-free renderer |
-| `src/commons/lib/api.ts` and `api.*.ts` | every control-API call, typed; cookie auth, same-origin |
+| `src/commons/lib/api.ts` and `api.*.ts` | every control-API call, typed by `@nouride/wire`; cookie auth, same-origin |
 | `src/commons/lib/session.ts` | the single description of who may be where, and the redirects |
 
 `session.ts` holds the redirect decision in one place on purpose. Spread across five components it

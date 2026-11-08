@@ -6,7 +6,7 @@
  */
 
 import type { ToastRequest } from "@/commons/components/ui/toast";
-import type { RunNowOutcome } from "./api";
+import type { RunNowOutcome } from "@nouride/wire";
 
 /** A reply or a command's output can be pages long; a toast carries the start of it. */
 const DETAIL_CHARS = 240;

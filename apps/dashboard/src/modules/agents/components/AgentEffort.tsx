@@ -9,7 +9,8 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { api, type AgentSummary } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { AgentSummary } from "@nouride/wire";
 import { EFFORT_LEVELS } from "@/commons/lib/api.agents";
 import { Card, ErrorNote, Field } from "@/commons/components/ui/ui";
 import { useSaved } from "@/commons/hooks/use-saved";

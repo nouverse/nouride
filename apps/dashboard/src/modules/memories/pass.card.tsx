@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Play, RotateCcw } from "lucide-react";
 import { api } from "@/commons/lib/api";
-import type { PassBacklog } from "@/commons/lib/api.memory";
+import type { PassBacklog } from "@nouride/wire";
 import { useToast } from "@/commons/components/ui/toast";
 import { Card } from "@/commons/components/ui/ui";
 

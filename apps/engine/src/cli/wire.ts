@@ -1,4 +1,5 @@
 import type { AgentLook, ApprovalRequest, Job, Person, Session } from "@nouride/shared";
+import type { MissionSeen } from "@nouride/wire";
 import type { DraftResult } from "@/modules/mcp-registry/index.ts";
 import type { AgentStatus } from "@/modules/pipeline/agent-status.ts";
 import type { BufferedLog } from "@/commons/log-buffer.ts";
@@ -11,7 +12,7 @@ import type { JobSnapshot } from "@/modules/jobs/jobs.store.ts";
 import type { HookReach } from "@/modules/web/hook-reach.ts";
 import type { SkillDraft } from "@/modules/reflection/types.ts";
 import type { HelperTrouble } from "@/modules/llm/helper-trouble.ts";
-import type { Mission, SeenAs } from "@/modules/missions/types.ts";
+import type { Mission } from "@/modules/missions/types.ts";
 import type { KeptPlan } from "@/modules/notes/store.ts";
 import type { LoginView } from "@/modules/external-agents/login.ts";
 import type { ScannedCli } from "@/modules/external-agents/scan.ts";
@@ -444,7 +445,7 @@ export interface McpCatalogEntryResponse extends McpCatalogCard {
 }
 
 /** A mission as `/missions` sends it: the record, what a person sees it as, and the time it has worked (0.8.0). */
-export type MissionView = Mission & { seen: SeenAs; workedMs: number };
+export type MissionView = Mission & { seen: MissionSeen; workedMs: number };
 
 export interface MissionListResponse {
   missions: MissionView[];

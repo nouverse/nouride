@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Loader2, RefreshCw } from "lucide-react";
-import { applianceApi as api, type BoxState } from "@/commons/lib/api.appliance";
+import { applianceApi as api } from "@/commons/lib/api.appliance";
+import type { BoxState } from "@nouride/wire";
 import { Card, ErrorNote } from "@/commons/components/ui/ui";
 
 /**

@@ -11,7 +11,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { api } from "@/commons/lib/api";
-import type { HelperTrouble } from "@/commons/lib/api.memory";
+import type { HelperTrouble } from "@nouride/wire";
 import { ago } from "@/commons/lib/format";
 
 /** One trouble, as a person reads it: what failed, how often, when last and on which model. */

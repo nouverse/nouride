@@ -10,7 +10,8 @@
 import { useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, ChevronRight, Loader2 } from "lucide-react";
-import { api, type TurnContextLine, type TurnModelCall, type TurnRecordDetail, type HandedOffTurn } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { HandedOffTurn, TurnContextLine, TurnModelCall, TurnRecordDetail } from "@nouride/wire";
 import { statusMark } from "@/commons/lib/steps";
 
 /** Why a call ended, in words — `max_tokens` and `error` stand out; no reason given, no words. */

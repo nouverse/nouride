@@ -5,22 +5,7 @@
  */
 
 import { control, post, request } from "./api.client";
-import type { BackgroundJob } from "./api.logs";
-
-export interface JobQuietPolicy {
-  /** 0 is off. Notices then come at double the wait, and double again. */
-  minutes: number;
-  max: number;
-  editable: boolean;
-}
-
-/** `[delegate] max_background`: how many helpers an agent may have in the background at once (0.7.15). */
-export interface DelegatePolicy {
-  /** The daemon's — an agent without its own follows it. 0 is off. */
-  maxBackground: number;
-  max: number;
-  editable: boolean;
-}
+import type { BackgroundJob, DelegatePolicy, JobQuietPolicy } from "@nouride/wire";
 
 export const jobsApi = {
   /** The Helpers & jobs page (0.8.12): every job retention has left, or one agent's. */

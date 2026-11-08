@@ -6,7 +6,7 @@
  * Pure.
  */
 
-import type { KnowledgeDocument, KnowledgeReaders, KnowledgeSection } from "@/commons/lib/api.knowledge";
+import type { KnowledgeDocument, KnowledgeReaders, KnowledgeSection } from "@nouride/wire";
 import { ago } from "@/commons/lib/format";
 
 /** "Gading", "Gading and Kak Sam", "Gading, Kak Sam and Raka". */

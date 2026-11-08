@@ -16,7 +16,7 @@ import { Link } from "@tanstack/react-router";
 import { ArrowLeft, Bot, FileText, Filter, Hash, Loader2, Search, User, Waypoints, X } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { api } from "@/commons/lib/api";
-import type { GraphNode, GraphNodeKind, MemoryGraph } from "@/commons/lib/api.memory";
+import type { GraphNode, GraphNodeKind, MemoryGraph } from "@nouride/wire";
 import { EmptyState, ErrorNote, PageHeader } from "@/commons/components/ui/ui";
 import { canWrite, useMe } from "@/commons/lib/session";
 import { EpisodeView } from "../episode-view";

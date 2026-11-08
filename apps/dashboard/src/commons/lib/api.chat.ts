@@ -2,12 +2,11 @@
  * Conversations: sending, the live turn, transcripts, rooms, sessions, and the approvals a turn waits on.
  *
  * Split out of `api.ts`, which had grown past the size cap with every endpoint group inline, and spread
- * into `api` like the others: `api.x()` reads the same at every call site, and the types stay in `api.ts`,
- * where `scripts/check-wire.ts` compares them with the daemon's.
+ * into `api` like the others: `api.x()` reads the same at every call site. The payload types are `@nouride/wire`'s.
  */
 
 import { control, post, request } from "./api.client";
-import type { ApprovalDecision, ApprovalRequest, LiveTurn, Room, RunningJob, SessionSummary, SlashCommand, Transcript, TurnAttachment, UploadedFile } from "./api";
+import type { ApprovalDecision, ApprovalRequest, LiveTurn, Room, RunningJob, SessionSummary, SlashCommand, Transcript, TurnAttachment, UploadedFile } from "@nouride/wire";
 
 export const chatApi = {
   /**

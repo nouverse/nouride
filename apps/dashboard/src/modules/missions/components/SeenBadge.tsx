@@ -1,6 +1,6 @@
 /** What a person sees a mission as — working, needs you and with what, done, ended — as a capsule, the same on both pages. */
 
-import type { MissionView } from "@/commons/lib/api";
+import type { MissionView } from "@nouride/wire";
 import { cn } from "@/commons/lib/utils";
 import { seenAs, SEEN_TONE } from "../lib/mission";
 

@@ -6,7 +6,7 @@
 import { Link } from "@tanstack/react-router";
 import { Crown } from "lucide-react";
 import type { Look } from "@/commons/cat/look";
-import type { AgentSummary } from "@/commons/lib/api";
+import type { AgentSummary } from "@nouride/wire";
 import { AgentAvatar } from "@/commons/components/agents/AgentAvatar";
 import { cn } from "@/commons/lib/utils";
 

@@ -12,7 +12,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Check, Inbox, X } from "lucide-react";
 import { api } from "@/commons/lib/api";
-import type { Proposal } from "@/commons/lib/api.memory";
+import type { Proposal } from "@nouride/wire";
 import { useToast } from "@/commons/components/ui/toast";
 import { EmptyState, ErrorNote } from "@/commons/components/ui/ui";
 import { ScrollCard } from "@/commons/components/ui/ScrollCard";

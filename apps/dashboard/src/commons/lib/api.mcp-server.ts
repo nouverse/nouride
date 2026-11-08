@@ -1,26 +1,10 @@
 /**
  * Nouride as an MCP server (`/mcp`): switched on and off, and its tokens. Split out of `api.ts`, and
- * spread into `api` like the others. The types are the engine's, duplicated rather than imported: the
- * dashboard is its own build.
+ * spread into `api` like the others. The payload types are `@nouride/wire`'s.
  */
 
 import { control, post, request } from "./api.client";
-
-/** What a token may do: read memory, save conversations to it, read personas. */
-export type McpScope = "memory" | "memory:write" | "personas";
-
-export interface McpTokenView {
-  id: string;
-  /** The `[[people]]` key it belongs to. */
-  person: string;
-  agents: string[];
-  scopes: McpScope[];
-  /** The client it was made for — `claude_code`, `zed`. */
-  label: string;
-  lastUsedAt: number | null;
-  /** When it stops working — null never does, absent from a daemon before 0.7.9. */
-  expiresAt?: number | null;
-}
+import type { McpScope, McpTokenView } from "@nouride/wire";
 
 export const mcpServerApi = {
   mcpServer: () => request<{ enabled: boolean; tokens: McpTokenView[] }>(`${control}/mcp-server`),

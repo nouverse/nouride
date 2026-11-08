@@ -10,7 +10,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ArrowDown, Check, Plus, Trash2 } from "lucide-react";
-import { api, type AgentSummary, type FallbackPair } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { AgentSummary, FallbackPair } from "@nouride/wire";
 import { Card, ErrorNote } from "@/commons/components/ui/ui";
 import { Combobox } from "@/commons/components/ui/Combobox";
 import { useSaved } from "@/commons/hooks/use-saved";

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "@/commons/lib/api";
 import { Card, ErrorNote, Field } from "@/commons/components/ui/ui";
 import { Combobox } from "@/commons/components/ui/Combobox";
-import type { PresetId } from "@/commons/lib/api.agent-tools";
+import type { PresetId } from "@nouride/wire";
 import { ToolPicker } from "./ToolPicker";
 import { AccountPicker, AnsweredBy } from "./AnsweredBy";
 import { chatModels } from "@/commons/lib/model-kind";

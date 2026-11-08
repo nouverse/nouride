@@ -15,7 +15,7 @@ import { useEffect, useState } from "react";
 import { FlaskConical, Save, Search } from "lucide-react";
 import { useRestartsFinished } from "@/commons/lib/restart";
 import { api } from "@/commons/lib/api";
-import type { WebSearchMode, WebSearchPatch, WebSearchSettings, WebSearchTest } from "@/commons/lib/api.web-search";
+import type { WebSearchMode, WebSearchPatch, WebSearchSettings, WebSearchTest } from "@nouride/wire";
 import { isAdmin, useMe } from "@/commons/lib/session";
 import { ToggleRow } from "@/commons/components/ui/ToggleRow";
 import { Card, ErrorNote, Field, PageHeader } from "@/commons/components/ui/ui";

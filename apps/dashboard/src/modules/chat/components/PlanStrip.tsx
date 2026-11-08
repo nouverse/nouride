@@ -11,8 +11,8 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ChevronDown, ChevronUp, ListChecks, Target } from "lucide-react";
-import { api, type MissionView } from "@/commons/lib/api";
-import type { NotesPlan } from "@/commons/lib/api.notes";
+import { api } from "@/commons/lib/api";
+import type { MissionView, NotesPlan } from "@nouride/wire";
 import { stepsDone } from "../lib/notes";
 import { PlanSteps } from "./PlanSteps";
 

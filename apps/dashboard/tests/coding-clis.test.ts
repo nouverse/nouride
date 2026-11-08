@@ -7,7 +7,7 @@
 
 import { afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { Window } from "happy-dom";
-import type { CliAccountsView } from "@/commons/lib/api.external-agents";
+import type { CliAccountsView } from "@nouride/wire";
 import { eventually } from "./wait.ts";
 
 const GLOBALS = ["window", "document", "navigator", "localStorage", "HTMLElement", "Element", "Node"] as const;

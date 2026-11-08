@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import type { ChatTurn } from "@/commons/lib/api";
+import type { ChatTurn } from "@nouride/wire";
 import { reasonOf, timelineOf } from "@/modules/missions/lib/timeline";
 
 /** A mission turn's prompt: its page, with the "Why this turn:" the daemon wrote, then the checklist's line. */

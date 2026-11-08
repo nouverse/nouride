@@ -8,7 +8,7 @@
 
 import { afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { Window } from "happy-dom";
-import type { ChatTurn, LiveTurn } from "@/commons/lib/api";
+import type { ChatTurn, LiveTurn } from "@nouride/wire";
 import type { Conversation } from "@/commons/hooks/use-conversation";
 import { rowEffects } from "@/commons/lib/event-stream";
 import { eventually, sleep } from "./wait.ts";

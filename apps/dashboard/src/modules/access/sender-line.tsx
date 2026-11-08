@@ -6,7 +6,7 @@
 
 import { useState, type ReactNode } from "react";
 import { Bot } from "lucide-react";
-import type { SenderRecord } from "@/commons/lib/api";
+import type { SenderRecord } from "@nouride/wire";
 import { useTextFilter } from "@/commons/lib/use-text-filter";
 import { platformName } from "@/commons/lib/platform";
 
@@ -65,7 +65,6 @@ function AgentBadge({ id }: { id: string }) {
     </span>
   );
 }
-
 
 /** Who gave an answer, as the audit log names them: a dashboard user, or the control token's `cli`. */
 export const byWhom = (actor: string | null | undefined) => (actor ? ` by ${actor === "cli" ? "the server itself" : actor}` : "");

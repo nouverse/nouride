@@ -7,7 +7,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import { api } from "@/commons/lib/api";
-import type { KnowledgeCollection } from "@/commons/lib/api.knowledge";
+import type { KnowledgeCollection } from "@nouride/wire";
 import { useToast } from "@/commons/components/ui/toast";
 
 export interface Uploads {

@@ -8,7 +8,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { interleave } from "../src/modules/chat/interleave.ts";
-import type { ChatEvent, ChatTurn, LiveTurn, RoomMessage } from "../src/commons/lib/api.ts";
+import type { ChatEvent, ChatTurn, LiveTurn, RoomMessage } from "@nouride/wire";
 
 const message = (id: string, at: number) => ({ id, at, text: id } as RoomMessage);
 const turn = (id: string, at: number) => ({ id, startedAt: at, agentId: "a" } as ChatTurn);

@@ -9,7 +9,7 @@
 
 import { useState } from "react";
 import { AlertTriangle, KeyRound, ListPlus, Pencil, Trash2 } from "lucide-react";
-import type { FieldChange, SecretEntry } from "@/commons/lib/api.secrets";
+import type { FieldChange, SecretEntry } from "@nouride/wire";
 import { changeFrom, FieldsEditor, type Row, rowsOf } from "./FieldsEditor";
 
 /** Where the value comes from, in everyday words. */

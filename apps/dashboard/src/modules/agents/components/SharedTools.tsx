@@ -8,7 +8,8 @@
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, type AgentSummary } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { AgentSummary } from "@nouride/wire";
 import { Card, ErrorNote } from "@/commons/components/ui/ui";
 import { useConfirm } from "@/commons/components/ui/confirm";
 import { ToggleRow } from "@/commons/components/ui/ToggleRow";

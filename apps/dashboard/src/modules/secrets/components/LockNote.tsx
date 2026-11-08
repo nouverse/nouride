@@ -5,7 +5,7 @@
  */
 
 import { ShieldCheck, ShieldAlert } from "lucide-react";
-import type { SecretLock } from "@/commons/lib/api.secrets";
+import type { SecretLock } from "@nouride/wire";
 
 /** The sentence for each state, and whether it is one to act on. Pure. */
 export function lockWords(lock: SecretLock): { text: string; warn: boolean } {

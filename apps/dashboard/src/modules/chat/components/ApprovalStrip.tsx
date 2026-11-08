@@ -10,7 +10,7 @@
  */
 
 import { ApprovalCard } from "@/commons/components/approvals/ApprovalCard";
-import type { ApprovalRequest, ApprovalDecision } from "@/commons/lib/api";
+import type { ApprovalDecision, ApprovalRequest } from "@nouride/wire";
 
 export interface ApprovalStripProps {
   requests: ApprovalRequest[];

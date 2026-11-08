@@ -5,7 +5,7 @@
  */
 
 import { expect, test } from "bun:test";
-import type { BackgroundJob } from "@/commons/lib/api";
+import type { BackgroundJob } from "@nouride/wire";
 import { answer, buttons, press, recordPosts, renderPage, useMountHarness } from "./mount-harness.ts";
 import { eventually } from "./wait.ts";
 

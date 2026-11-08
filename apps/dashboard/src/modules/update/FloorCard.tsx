@@ -6,7 +6,7 @@
  */
 
 import { Footprints } from "lucide-react";
-import type { UpdateStatus } from "@/commons/lib/api";
+import type { UpdateStatus } from "@nouride/wire";
 import { Card } from "@/commons/components/ui/ui";
 
 export function FloorCard({ check }: { check: NonNullable<UpdateStatus["check"]> }) {

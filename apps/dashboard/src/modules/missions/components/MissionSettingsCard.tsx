@@ -12,7 +12,8 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Gauge } from "lucide-react";
-import { api, type MissionSettingsPatch } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { MissionSettingsPatch } from "@nouride/wire";
 import { canWrite, useMe } from "@/commons/lib/session";
 import { Card, ErrorNote } from "@/commons/components/ui/ui";
 import { useSaved } from "@/commons/hooks/use-saved";

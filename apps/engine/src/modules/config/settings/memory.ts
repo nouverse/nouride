@@ -14,6 +14,7 @@ import { type TomlScalar, upsertTomlTable } from "@/modules/config/edit.ts";
 import { editConfigFile } from "./file.ts";
 import { writePersonMemory, type PersonMemorySetting } from "./people.ts";
 import type { SaveResult, SettingsDeps } from "./types.ts";
+import type { RetentionScope } from "@nouride/wire";
 
 const log = createLogger("settings.memory");
 
@@ -77,9 +78,8 @@ const RETENTION_SCOPES = {
     max: 3650,
     read: (config: GlobalConfig) => config.retention.sessionDays,
   },
-} as const;
-
-export type RetentionScope = keyof typeof RETENTION_SCOPES;
+  // Every scope the dashboard names, and no other: one this map lacks or adds fails here, not as a 400.
+} as const satisfies Record<RetentionScope, { table: string; key: string; max: number; read: (config: GlobalConfig) => number }>;
 
 /**
  * The names, at runtime, so a caller can validate one without restating the list.

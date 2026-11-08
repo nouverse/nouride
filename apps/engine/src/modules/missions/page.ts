@@ -7,6 +7,7 @@
  * the page names where things are and says how a mission works, and does not repeat the checklist.
  */
 
+import type { MissionTokens } from "@nouride/wire";
 import { worktreeBranch } from "./worktree.ts";
 import type { KeptPlan } from "@/modules/notes/store.ts";
 import { toldBy, type Mission, type Told } from "./types.ts";
@@ -111,9 +112,6 @@ export interface LimitsShown {
   turns: boolean;
   tokens: MissionTokens;
 }
-
-/** Whether a mission's tokens are known: all reported, none — a CLI that reports none — or some, a floor (0.8.7). */
-export type MissionTokens = "known" | "unknown" | "partial";
 
 /**
  * Its turns against its limit, as the page, `show` and `work` say them — and `nouride mission show`. An ended mission none

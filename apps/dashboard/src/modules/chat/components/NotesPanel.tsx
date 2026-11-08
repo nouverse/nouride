@@ -14,7 +14,7 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Archive, Pencil, Save, X } from "lucide-react";
 import { api } from "@/commons/lib/api";
-import type { WorkNotes } from "@/commons/lib/api.notes";
+import type { WorkNotes } from "@nouride/wire";
 import { ago } from "@/commons/lib/format";
 import { Markdown } from "@/commons/components/ui/Markdown";
 import { Spinner } from "@/commons/components/ui/Spinner";

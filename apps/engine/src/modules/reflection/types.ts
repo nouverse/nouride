@@ -6,6 +6,7 @@
  */
 
 import type { ChatMessage } from "@nouride/shared";
+import type { TriggerKind } from "@nouride/wire";
 
 /**
  * One tool call as the loop saw it.
@@ -18,19 +19,6 @@ export interface ToolStep {
   name: string;
   ok: boolean;
 }
-
-/** Why a turn was worth reflecting on. Recorded on the draft, and shown to whoever decides. */
-export type TriggerKind =
-  | "error_recovery"
-  | "user_request"
-  | "sustained_effort"
-  /** An agent said so while using the skill — `skill_improve`, not the after-the-turn pass. */
-  | "in_use"
-  | "first_integration"
-  /** Fetched from a skill hub — GitHub, skills.sh, ClawHub, a well-known index — by a person or an agent. */
-  | "external_install"
-  /** The weekly review of the library: tighten, merge or archive (`curator.ts`). Waits for a person in every mode. */
-  | "curation";
 
 export interface Trigger {
   kind: TriggerKind;

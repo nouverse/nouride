@@ -11,7 +11,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, Link2 } from "lucide-react";
 import { api } from "@/commons/lib/api";
-import type { ChangeCause, ChangeKind } from "@/commons/lib/api.memory";
+import type { ChangeCause, ChangeKind } from "@nouride/wire";
 import { ErrorNote } from "@/commons/components/ui/ui";
 
 const KIND: Record<ChangeKind, { label: string; badge: string }> = {

@@ -6,7 +6,7 @@
 
 import { Combobox } from "@/commons/components/ui/Combobox";
 import { Field } from "@/commons/components/ui/ui";
-import type { GatewayInstance } from "@/commons/lib/api";
+import type { GatewayInstance } from "@nouride/wire";
 import { useKnownChats } from "@/commons/hooks/use-known-chats";
 
 export function ChatPicker({

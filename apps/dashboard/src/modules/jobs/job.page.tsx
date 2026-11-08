@@ -10,7 +10,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft, FolderOpen, ListChecks, Square, TriangleAlert } from "lucide-react";
-import { api, type BackgroundJob, type JobReport } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { BackgroundJob, JobReport } from "@nouride/wire";
 import { ApiError } from "@/commons/lib/api.client";
 import { Markdown } from "@/commons/components/ui/Markdown";
 import { TurnRecord } from "@/commons/components/turns/TurnRecord";

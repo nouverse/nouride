@@ -5,7 +5,7 @@
  */
 
 import { Plus, Trash2 } from "lucide-react";
-import type { McpServer } from "@/commons/lib/api";
+import type { McpServer } from "@nouride/wire";
 
 export interface SecretEnvRow {
   name: string;

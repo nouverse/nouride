@@ -4,7 +4,7 @@
  */
 
 import { Globe, Server, Sparkles, Waypoints, type LucideIcon } from "lucide-react";
-import type { WebSearchMode } from "@/commons/lib/api.web-search";
+import type { WebSearchMode } from "@nouride/wire";
 import { cn } from "@/commons/lib/utils";
 
 interface Choice {

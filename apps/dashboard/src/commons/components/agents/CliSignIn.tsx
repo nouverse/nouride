@@ -12,7 +12,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { CheckCircle2, CornerDownLeft, ExternalLink, KeyRound, Send, Square } from "lucide-react";
-import type { CliLoginView } from "@/commons/lib/api.external-agents";
+import type { CliLoginView } from "@nouride/wire";
 import { ErrorNote } from "@/commons/components/ui/ui";
 
 export function CliSignIn(props: {

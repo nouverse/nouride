@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
-import type { LiveTurn, MissionView, Reviewing, RunningJob } from "@/commons/lib/api";
+import type { LiveTurn, MissionView, Reviewing, RunningJob } from "@nouride/wire";
 import { formatElapsed, stepIcon, stepNow } from "@/commons/lib/steps";
 
 /** The line, as words: what is happening, and whether it is happening now (a spinner) or waiting on something. */

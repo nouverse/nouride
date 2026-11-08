@@ -1,4 +1,4 @@
-import type { AgentSummary } from "./api";
+import type { AgentSummary } from "@nouride/wire";
 
 /**
  * The orchestrator first, the rest as the daemon listed them — on every page that lists agents, so

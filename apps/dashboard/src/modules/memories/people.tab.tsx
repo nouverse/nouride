@@ -21,7 +21,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Brain, ChevronDown, NotebookText, Pencil, UserX } from "lucide-react";
 import { api } from "@/commons/lib/api";
-import type { FactsMode, PersonSummary } from "@/commons/lib/api.memory";
+import type { FactsMode, PersonSummary } from "@nouride/wire";
 import { PersonNotes } from "@/commons/components/people/PersonNotes";
 import { useToast } from "@/commons/components/ui/toast";
 import { EmptyState, ErrorNote } from "@/commons/components/ui/ui";

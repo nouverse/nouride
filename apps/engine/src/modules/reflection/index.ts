@@ -54,7 +54,7 @@ export { CandidateStore } from "./candidates.store.ts";
 export { ReviewStore } from "./reviews.store.ts";
 export type { ReviewReport } from "./curator.ts";
 export type { DraftsPort } from "./drafts.store.ts";
-export type { DraftEdits, ObservedTurn, SkillDraft, ToolStep, Trigger, TriggerKind } from "./types.ts";
+export type { DraftEdits, ObservedTurn, SkillDraft, ToolStep, Trigger } from "./types.ts";
 
 const log = createLogger("reflection");
 

@@ -11,7 +11,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { FileText, FileWarning, Loader2, Pencil, Trash2 } from "lucide-react";
 import { api } from "@/commons/lib/api";
-import type { KnowledgeCollection, KnowledgeDocument } from "@/commons/lib/api.knowledge";
+import type { KnowledgeCollection, KnowledgeDocument } from "@nouride/wire";
 import { formatBytes } from "@/commons/lib/format";
 import { cn } from "@/commons/lib/utils";
 import { AskAgentButton } from "@/commons/components/agents/AskAgentButton";

@@ -7,8 +7,8 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Ban, RotateCcw, ShieldOff } from "lucide-react";
-import { api, type SenderRecord } from "@/commons/lib/api";
-import type { SenderAnswer } from "@/commons/lib/api.access";
+import { api } from "@/commons/lib/api";
+import type { SenderAnswer, SenderRecord } from "@nouride/wire";
 import { canWrite, useMe } from "@/commons/lib/session";
 import { EmptyState, ErrorNote } from "@/commons/components/ui/ui";
 import { ScrollCard } from "@/commons/components/ui/ScrollCard";

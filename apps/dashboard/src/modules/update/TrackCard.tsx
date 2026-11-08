@@ -6,13 +6,13 @@
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, type UpdateStatus } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { UpdateStatus, UpdateTrack } from "@nouride/wire";
 import { Card, ErrorNote } from "@/commons/components/ui/ui";
 import { UPDATE_QUERY_KEY } from "@/commons/hooks/use-update";
 import { isAdmin, useMe } from "@/commons/lib/session";
 
 type Check = NonNullable<UpdateStatus["check"]>;
-type UpdateTrack = NonNullable<Check["track"]>;
 
 const TRACKS: { id: UpdateTrack; label: string; summary: string }[] = [
   { id: "latest", label: "Newest", summary: "Every update as soon as it is out: new features and fixes." },

@@ -4,7 +4,7 @@
  * still opens.
  */
 
-import type { GraphFilter } from "@/commons/lib/api.memory";
+import type { GraphFilter } from "@nouride/wire";
 
 export type GraphRange = "30d" | "90d" | "1y" | "all";
 

@@ -8,7 +8,7 @@
  */
 
 import { Field } from "@/commons/components/ui/ui";
-import type { JobPayloadInput } from "@/commons/lib/api";
+import type { JobPayloadInput } from "@nouride/wire";
 
 type MissionPayload = Extract<JobPayloadInput, { kind: "mission" }>;
 

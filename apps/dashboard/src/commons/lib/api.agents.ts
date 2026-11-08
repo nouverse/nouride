@@ -2,23 +2,14 @@
  * One agent's own files, MCP servers, skills, model and approvals level, and pausing it.
  *
  * Split out of `api.ts`, which had grown past the size cap with every endpoint group inline, and spread
- * into `api` like the others: `api.x()` reads the same at every call site, and the types stay in `api.ts`,
- * where `scripts/check-wire.ts` compares them with the daemon's.
+ * into `api` like the others: `api.x()` reads the same at every call site. The payload types are `@nouride/wire`'s.
  */
 
 import { control, post, request } from "./api.client";
-import type { AgentSkill, FallbackPair, FileSummary, McpServer } from "./api";
+import type { AgentSkill, EffortLevels, FallbackPair, FileSummary, McpServer, SkillRoot } from "@nouride/wire";
 
-/** A folder an agent takes project skills from, and the skills it brings (0.8.24). */
-export interface SkillRoot {
-  path: string;
-  /** Whether the server can open it now: a repository not cloned yet cannot be. */
-  readable: boolean;
-  skills: { name: string; description: string }[];
-}
-
-/** The levels an agent's effort can be set to (`LLM_EFFORTS` in the daemon), and "default" for the install's. */
-export const EFFORT_LEVELS = ["low", "medium", "high", "xhigh", "max"] as const;
+/** The levels an agent's effort can be set to (`LLM_EFFORTS` in the daemon, and typed as it), and "default" for the install's. */
+export const EFFORT_LEVELS: EffortLevels = ["low", "medium", "high", "xhigh", "max"];
 
 export const agentsApi = {
   /** The library's servers with this agent's word on each, and any its pack still declares itself. */

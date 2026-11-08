@@ -6,7 +6,8 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, X } from "lucide-react";
-import { api, type RetentionScope } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { RetentionScope } from "@nouride/wire";
 import { canWrite, useMe } from "@/commons/lib/session";
 import { ErrorNote } from "@/commons/components/ui/ui";
 import { Details } from "@/commons/components/ui/Details";

@@ -26,7 +26,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { AlertTriangle, Eye, Plus, RefreshCw } from "lucide-react";
 import { api } from "@/commons/lib/api";
-import type { FieldChange, SecretEntry } from "@/commons/lib/api.secrets";
+import type { FieldChange, SecretEntry } from "@nouride/wire";
 import { isAdmin, useMe } from "@/commons/lib/session";
 import { Card, EmptyState, ErrorNote, PageHeader } from "@/commons/components/ui/ui";
 import { useConfirm } from "@/commons/components/ui/confirm";

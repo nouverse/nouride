@@ -8,7 +8,8 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Sun } from "lucide-react";
-import { api, type PersonRecord } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { PersonRecord } from "@nouride/wire";
 import { useToast } from "@/commons/components/ui/toast";
 
 /** What a morning line is set to the first time it is turned on. */

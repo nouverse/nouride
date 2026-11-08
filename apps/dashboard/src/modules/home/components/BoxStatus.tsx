@@ -4,7 +4,7 @@
  */
 
 import { AlertTriangle } from "lucide-react";
-import type { HealthPayload } from "@/commons/lib/api";
+import type { HealthPayload } from "@nouride/wire";
 import { editionLabel } from "@/commons/hooks/use-update";
 import { healthWarnings } from "@/commons/lib/health-warnings";
 import { RestartButton } from "@/commons/components/box/RestartButton";

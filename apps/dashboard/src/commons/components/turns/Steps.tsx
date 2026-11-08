@@ -8,7 +8,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ChevronDown, ChevronRight, Loader2 } from "lucide-react";
-import type { TurnStep, TurnStatus } from "@/commons/lib/api";
+import type { TurnStatus, TurnStep } from "@nouride/wire";
 import { TurnRecord } from "@/commons/components/turns/TurnRecord";
 import {
   countedSteps,

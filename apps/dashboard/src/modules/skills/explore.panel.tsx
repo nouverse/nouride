@@ -14,7 +14,7 @@ import { useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, ExternalLink, FolderGit2, Search, ShieldAlert } from "lucide-react";
 import { api } from "@/commons/lib/api";
-import type { SkillHubHit, SkillHubInstall } from "@/commons/lib/api.skills";
+import type { SkillHubHit, SkillHubInstall } from "@nouride/wire";
 import { Card, EmptyState, ErrorNote } from "@/commons/components/ui/ui";
 import { Details } from "@/commons/components/ui/Details";
 import { SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";

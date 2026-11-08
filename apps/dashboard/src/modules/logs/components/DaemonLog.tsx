@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { AlertTriangle, ChevronDown, Info, Loader2, RefreshCw, ScrollText, Search, TriangleAlert, X } from "lucide-react";
-import { api, type StoredLogEntry } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { StoredLogEntry } from "@nouride/wire";
 import { Card, EmptyState } from "@/commons/components/ui/ui";
 import { useDebounced } from "@/commons/hooks/use-debounced";
 import { Panel } from "./Panel";

@@ -11,6 +11,7 @@
 import { isModelTier, type GlobalConfig, type InstallTiers } from "@nouride/shared";
 import type { LogsPort, StoredLog } from "@/commons/logs.store.ts";
 import { HELPER_ANSWERED, shorten } from "./helper-model.ts";
+import type { HelperJob } from "@nouride/wire";
 
 /** What `summarize.ts` says when a summary did not come back — the fallback's too, when it had one. */
 export const COMPACTION_FAILED = "could not summarize history, keeping it as it was";
@@ -24,7 +25,7 @@ export const PASS_CALL_FAILED = "memory pass call failed";
 
 const DAY_MS = 24 * 60 * 60_000;
 
-type Job = "compaction" | "memory pass" | "fallback";
+type Job = HelperJob;
 
 /** A number in a log line's data, or 0. */
 const num = (data: Record<string, unknown> | undefined, key: string): number => (typeof data?.[key] === "number" ? (data[key] as number) : 0);

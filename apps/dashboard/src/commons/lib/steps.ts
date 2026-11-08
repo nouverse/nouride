@@ -6,7 +6,7 @@
  * and 224318 into `3m 44s`.
  */
 
-import type { TurnStep, TurnStatus } from "@/commons/lib/api";
+import type { TurnStatus, TurnStep } from "@nouride/wire";
 
 const TOOL_MARKS: [RegExp, string][] = [
   [/^exec\b/, "💻"],

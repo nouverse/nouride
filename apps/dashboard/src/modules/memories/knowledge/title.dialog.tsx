@@ -7,7 +7,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Save, X } from "lucide-react";
 import { api } from "@/commons/lib/api";
-import type { KnowledgeCollection, KnowledgeDocument } from "@/commons/lib/api.knowledge";
+import type { KnowledgeCollection, KnowledgeDocument } from "@nouride/wire";
 import { overPage } from "@/commons/components/ui/OverPage";
 import { useToast } from "@/commons/components/ui/toast";
 import { ErrorNote, Field } from "@/commons/components/ui/ui";

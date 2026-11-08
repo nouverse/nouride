@@ -9,6 +9,7 @@
  */
 
 import { createLogger, newId, type MessageEnvelope } from "@nouride/shared";
+import type { MissionWaitKind } from "@nouride/wire";
 import { describeToolCall } from "@/commons/activity.ts";
 import { cutLine, worstCut, type CutCall } from "@/modules/turns/cut-calls.ts";
 import type { TurnOutcome, TurnShape, TurnShaper } from "@/modules/pipeline/turn-shape.ts";
@@ -32,7 +33,7 @@ import { limitsLine, missionPage, shortId, type LimitsShown } from "./page.ts";
 import { MissionCounts } from "./counts.ts";
 import { carryBack, carryInto, carryWait, closePlan } from "./carry.ts";
 import { MissionTimers } from "./timers.ts";
-import { isFinal, seenAs, type Mission, type WaitKind } from "./types.ts";
+import { isFinal, seenAs, type Mission } from "./types.ts";
 import { worktreeBranch } from "./worktree.ts";
 
 const log = createLogger("missions");
@@ -593,7 +594,7 @@ export class Missions implements TurnShaper {
     this.queueTurn(mission, `its model could not answer at the last try (${why}). Trying again: carry on from the page.`);
   }
 
-  wait(mission: Mission, kind: WaitKind, detail: string, tellPerson = true, gives?: string): void {
+  wait(mission: Mission, kind: MissionWaitKind, detail: string, tellPerson = true, gives?: string): void {
     const now = this.now();
     mission.status = "waiting";
     mission.waitKind = kind;

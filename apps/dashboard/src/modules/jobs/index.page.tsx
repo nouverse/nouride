@@ -11,7 +11,8 @@
 import { useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { api, type BackgroundJob } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { BackgroundJob } from "@nouride/wire";
 import { useTextFilter } from "@/commons/lib/use-text-filter";
 import { useOrchestrator, useOrchestratorFirst } from "@/commons/components/agents/AgentName";
 import { FILL_PAGE, ScrollCard } from "@/commons/components/ui/ScrollCard";

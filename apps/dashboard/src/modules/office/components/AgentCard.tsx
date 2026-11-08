@@ -1,7 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { MessageSquare, Moon, Palette, Sun, Target, X } from "lucide-react";
-import { api, type AgentSummary } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { AgentSummary } from "@nouride/wire";
 import { canWrite, useMe } from "@/commons/lib/session";
 import { AgentStatusBadge } from "@/commons/components/agents/agent-status-badge";
 import { ErrorNote } from "@/commons/components/ui/ui";

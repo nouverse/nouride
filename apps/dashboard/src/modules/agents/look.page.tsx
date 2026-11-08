@@ -7,7 +7,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/commons/lib/api";
-import { LOOK_PARTS, lookApi, type AgentLook } from "@/commons/lib/api.look";
+import { LOOK_PARTS, lookApi } from "@/commons/lib/api.look";
+import type { AgentLook } from "@nouride/wire";
 import { canWrite, useMe } from "@/commons/lib/session";
 import { Card, ErrorNote, Field } from "@/commons/components/ui/ui";
 import { looksOf, type Look } from "@/commons/cat/look";

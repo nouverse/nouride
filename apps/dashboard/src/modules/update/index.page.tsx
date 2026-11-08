@@ -38,7 +38,8 @@ import {
   Trash2,
   TriangleAlert,
 } from "lucide-react";
-import { api, type UpdateStatus } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { UpdateStatus } from "@nouride/wire";
 import { Card, ErrorNote, PageHeader } from "@/commons/components/ui/ui";
 import { Details } from "@/commons/components/ui/Details";
 import { useConfirm } from "@/commons/components/ui/confirm";
@@ -49,7 +50,6 @@ import { RestartingCard } from "./RestartingCard";
 import { UPDATE_QUERY_KEY, useUpdate } from "@/commons/hooks/use-update";
 import { formatBytes } from "@/commons/lib/format";
 import { UPDATE_PROGRESS_KEY, useDownloadProgress, useInstall } from "./useUpdate";
-
 
 export default function UpdatePage() {
   const status = useUpdate();

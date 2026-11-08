@@ -25,6 +25,7 @@ import { Hono, type Context } from "hono";
 import { createLogger, type GlobalConfig } from "@nouride/shared";
 import type { DaemonContext } from "@/commons/context.ts";
 import { dashboardFile } from "@/modules/web/dashboard-files.ts";
+import type { HealthPayload } from "@nouride/wire";
 import { buildHealth, startingHealth, type HealthResult } from "@/modules/web/health.ts";
 import { LLM_GATEWAY_PREFIX } from "@/modules/web/llm-gateway.ts";
 
@@ -194,7 +195,7 @@ function createWebApp(ctx: DaemonContext, deps: WebDeps = {}): Hono {
 
   const health = (c: Context) => {
     const { payload, httpStatus } = buildHealth(ctx);
-    return c.json(payload, httpStatus);
+    return c.json(payload satisfies HealthPayload, httpStatus);
   };
 
   app.get("/health", health);

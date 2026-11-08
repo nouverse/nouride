@@ -12,18 +12,10 @@
 
 import { createLogger, newId, type Port} from "@nouride/shared";
 import { hashPassword, passwordNeedsRehash, randomToken, sha256Text, verifyPassword, type SqliteDb } from "@nouride/runtime";
+import type { UserRole } from "@nouride/wire";
 import type { AuditPort } from "@/commons/audit.store.ts";
 
 const log = createLogger("users");
-
-/**
- * What each role may do.
- *
- * `viewer` is read-only: it can watch, and that is all. `operator` runs the daemon — chat, approvals,
- * agents, files — but cannot create accounts or hand out roles, because the ability to mint an admin is
- * the ability to become one. `admin` is both.
- */
-export type UserRole = "admin" | "operator" | "viewer";
 
 const USER_ROLES: readonly UserRole[] = ["admin", "operator", "viewer"];
 
@@ -523,7 +515,6 @@ export class UserStore {
       .run(this.now()).changes;
   }
 }
-
 
 /**
  * Dashboard accounts and sessions, as the daemon depends on it.

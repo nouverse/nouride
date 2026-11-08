@@ -29,6 +29,7 @@ import {
   statFile,
   writeTextFileAtomic,
 } from "@nouride/runtime";
+import type { StepState } from "@nouride/wire";
 import { cleanBody, cleanTitle, NOTES_MAX_BYTES, notesBytes, parseNotes, renderNotes, sameTitle, withoutTask, withTask, type Task } from "./format.ts";
 
 const log = createLogger("notes");
@@ -39,8 +40,6 @@ export interface NotesKey {
   gatewayId: string;
   chatId: string;
 }
-
-export type StepState = "pending" | "active" | "done" | "skipped";
 
 export interface PlanStep {
   text: string;

@@ -9,10 +9,9 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/commons/lib/api";
 import { Mascot } from "@/commons/components/brand/Mascot";
 import { Tag } from "@/commons/components/ui/Tag";
-import type { ApprovalDecision, ApprovalPreview, ApprovalRequest } from "@/commons/lib/api";
+import type { ApprovalDecision, ApprovalPreview, ApprovalRequest } from "@nouride/wire";
 import { formatBytes } from "@/commons/lib/format";
 import { DiffCounts, DiffView } from "@/commons/components/ui/DiffView";
-
 
 /** An agent's name, from the list every page already holds; its id until that list is in. */
 function useAgentName(id: string): string {

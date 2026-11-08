@@ -6,7 +6,8 @@
 
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { api, type AgentSummary, type MissionStart, type MissionView } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { AgentSummary, MissionStart, MissionView } from "@nouride/wire";
 import { useOrchestrator, useOrchestratorFirst } from "@/commons/components/agents/AgentName";
 import { ErrorNote, Field } from "@/commons/components/ui/ui";
 

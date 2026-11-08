@@ -5,6 +5,7 @@
  * carry: each model call with its tokens, cost, latency and retries, and the audit log's rows for its tool calls.
  */
 
+import type { TurnRecordDetail } from "@nouride/wire";
 import type { ControlApp, ControlDeps } from "../types.ts";
 
 /** Turns a list asks for, at most. Newest first, so the bound only ever cuts the old end. */
@@ -26,6 +27,6 @@ export function registerTurnRoutes(control: ControlApp, deps: ControlDeps): void
     if (!found) {
       return c.json({ error: `no turn ${id}`, note: "`nouride turns` lists the newest; a shortened id has to name one turn", plain: "That record is not there any more." }, 404);
     }
-    return c.json(found);
+    return c.json(found satisfies TurnRecordDetail);
   });
 }

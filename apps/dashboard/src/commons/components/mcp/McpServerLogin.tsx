@@ -9,7 +9,8 @@
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { KeyRound, LogIn, LogOut } from "lucide-react";
-import { api, ApiError, type McpLoginScope, type McpServer } from "@/commons/lib/api";
+import { api, ApiError } from "@/commons/lib/api";
+import type { McpLoginScope, McpServer } from "@nouride/wire";
 import { ErrorNote } from "@/commons/components/ui/ui";
 import { useConfirm } from "@/commons/components/ui/confirm";
 import { isAdmin, useMe } from "@/commons/lib/session";

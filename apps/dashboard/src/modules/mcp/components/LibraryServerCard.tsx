@@ -8,7 +8,8 @@ import { AgentName, useOrchestrator, useOrchestratorFirst } from "@/commons/comp
 import { useMutation } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { KeyRound, Trash2, Users } from "lucide-react";
-import { api, type McpLibraryServer } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { McpLibraryServer } from "@nouride/wire";
 import { Card, ErrorNote } from "@/commons/components/ui/ui";
 import { Details } from "@/commons/components/ui/Details";
 import { useConfirm } from "@/commons/components/ui/confirm";

@@ -7,7 +7,7 @@
  * answered, with `systemctl status` offered as the fix. Pure, so the decision is tested as one.
  */
 
-import type { HealthPayload } from "./api";
+import type { HealthPayload } from "@nouride/wire";
 
 /** How often to look. Often enough to feel live, rarely enough to be polite. */
 export const POLL_MS = 2_000;

@@ -22,13 +22,8 @@ import { splitForDisplay } from "@/commons/lib/turn-display";
 import { useEventStream } from "@/commons/hooks/use-event-stream";
 import { usePageVisible } from "@/commons/hooks/use-page-visible";
 import { notesKey } from "@/commons/hooks/use-notes";
-import {
-  api,
-  ApiError,
-  type ChatSession,
-  type ChatTurn,
-  type LiveTurn,
-  type RunningJob, type ChatEvent , type RoomMessage } from "@/commons/lib/api";
+import { api, ApiError } from "@/commons/lib/api";
+import type { ChatEvent, ChatSession, ChatTurn, LiveTurn, RoomMessage, RunningJob } from "@nouride/wire";
 
 /**
  * How often to ask while something is happening.

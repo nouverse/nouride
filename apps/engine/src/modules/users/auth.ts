@@ -12,7 +12,8 @@
 
 
 import { timingSafeEqual } from "@nouride/runtime";
-import type { UserRecord, UserRole, UsersPort } from "@/modules/users/users.store.ts";
+import type { UserRole } from "@nouride/wire";
+import type { UserRecord, UsersPort } from "@/modules/users/users.store.ts";
 
 export const SESSION_COOKIE = "nouride_session";
 

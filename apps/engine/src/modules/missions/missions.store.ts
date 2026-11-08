@@ -13,7 +13,8 @@
 
 import type { SqliteDb } from "@nouride/runtime";
 import { newId, type Port } from "@nouride/shared";
-import type { Answered, Mission, MissionStatus, Told, WaitKind } from "./types.ts";
+import type { MissionStatus, MissionWaitKind } from "@nouride/wire";
+import type { Answered, Mission, Told } from "./types.ts";
 
 interface Row {
   id: string;
@@ -137,7 +138,7 @@ function fromRow(row: Row): Mission {
     reviewOn: row.review_on === 1,
     accept: row.accept === 1,
     status: row.status as MissionStatus,
-    waitKind: row.wait_kind as WaitKind | null,
+    waitKind: row.wait_kind as MissionWaitKind | null,
     reason: row.reason,
     report: row.report,
     summary: row.summary,

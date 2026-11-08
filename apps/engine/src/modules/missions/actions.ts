@@ -8,16 +8,17 @@
  */
 
 import type { ButtonPress, MessageButton, PressAnswer } from "@nouride/shared";
+import type { MissionWaitKind } from "@nouride/wire";
 import type { Missions } from "./missions.ts";
 import { optionButtons, optionsOf } from "./options.ts";
 import { shortId } from "./page.ts";
-import type { Mission, WaitKind } from "./types.ts";
+import type { Mission } from "./types.ts";
 
 type Verb = "accept" | "continue" | "stop";
 
 const DATA = /^mission:do:(msn_[A-Za-z0-9]+):(accept|continue|stop):([a-z_]+)$/;
 
-function button(mission: Pick<Mission, "id">, verb: Verb, kind: WaitKind, label: string, style?: MessageButton["style"]): MessageButton {
+function button(mission: Pick<Mission, "id">, verb: Verb, kind: MissionWaitKind, label: string, style?: MessageButton["style"]): MessageButton {
   return { label, data: `mission:do:${mission.id}:${verb}:${kind}`, ...(style ? { style } : {}) };
 }
 
@@ -25,7 +26,7 @@ function button(mission: Pick<Mission, "id">, verb: Verb, kind: WaitKind, label:
  * The buttons for what a mission waits on. A question has its options' buttons instead (`options.ts`), and an approval
  * the prompt's own; a limit, a loop or a cut-off call can go on, be accepted as it stands, or end.
  */
-function actionButtons(mission: Pick<Mission, "id" | "startedAt">, kind: WaitKind): MessageButton[] {
+function actionButtons(mission: Pick<Mission, "id" | "startedAt">, kind: MissionWaitKind): MessageButton[] {
   switch (kind) {
     case "accept":
       // Continue and Stop too, as the dashboard has them (0.8.10): a review that could not judge it left the owner with

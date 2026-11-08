@@ -9,7 +9,8 @@
  */
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, type PersonRecord } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { PersonRecord } from "@nouride/wire";
 import { NotesModal } from "@/commons/components/ui/NotesModal";
 
 /** Their entry, by key: the one name for them that never changes. */

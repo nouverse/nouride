@@ -23,7 +23,8 @@
  */
 
 import { createLogger, rootSessionOf, type Tool, type ToolContext, type ToolResult } from "@nouride/shared";
-import { NotesRefused, type NotesKey, type NotesPort, type PlanStep, type StepState } from "@/modules/notes/store.ts";
+import type { StepState } from "@nouride/wire";
+import { NotesRefused, type NotesKey, type NotesPort, type PlanStep } from "@/modules/notes/store.ts";
 import { planLines } from "@/modules/notes/tail.ts";
 import { isMissionChat } from "@/modules/missions/gateway.ts";
 import { workTextIsEnglish, writeWorkInEnglish } from "@/modules/memory/index.ts";

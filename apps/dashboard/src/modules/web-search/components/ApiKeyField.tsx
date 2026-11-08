@@ -8,7 +8,7 @@
  */
 
 import { CheckCircle2, CircleAlert, KeyRound } from "lucide-react";
-import type { SecretEntry } from "@/commons/lib/api.secrets";
+import type { SecretEntry } from "@nouride/wire";
 import { Combobox } from "@/commons/components/ui/Combobox";
 import { SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
 import { Field } from "@/commons/components/ui/ui";

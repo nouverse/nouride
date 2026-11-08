@@ -32,7 +32,8 @@ import {
   Trash2,
   Zap,
 } from "lucide-react";
-import { api, type WebhookSummary } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { WebhookSummary } from "@nouride/wire";
 import { canWrite, isAdmin, useMe } from "@/commons/lib/session";
 import { Card, EmptyState, ErrorNote, PageHeader } from "@/commons/components/ui/ui";
 import { copyText } from "@/commons/lib/clipboard";

@@ -18,7 +18,7 @@
  */
 
 import { createLogger } from "@nouride/shared";
-import type { UserRole } from "@/modules/users/users.store.ts";
+import type { UserRole } from "@nouride/wire";
 
 const log = createLogger("users.multi-user");
 

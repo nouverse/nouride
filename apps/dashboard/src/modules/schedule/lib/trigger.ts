@@ -11,7 +11,7 @@
  * cron expression, or as nothing at all.
  */
 
-import type { JobScheduleInput } from "@/commons/lib/api";
+import type { JobScheduleInput } from "@nouride/wire";
 
 export type TriggerMode = "interval" | "daily" | "cron" | "once";
 

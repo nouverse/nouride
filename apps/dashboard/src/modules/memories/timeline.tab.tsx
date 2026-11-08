@@ -11,7 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { CalendarDays, ChevronDown, RotateCcw, Search } from "lucide-react";
 import { api } from "@/commons/lib/api";
-import type { EpisodeFilter, EpisodeStatus } from "@/commons/lib/api.memory";
+import type { EpisodeFilter, EpisodeStatus } from "@nouride/wire";
 import { useToast } from "@/commons/components/ui/toast";
 import { Card, EmptyState, ErrorNote } from "@/commons/components/ui/ui";
 import { ScrollCard } from "@/commons/components/ui/ScrollCard";

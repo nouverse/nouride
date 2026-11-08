@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { depFindings, importsOf, workspaceMembers, type Manifest, type Member } from "../../../../scripts/check-deps.ts";
@@ -89,15 +89,16 @@ describe("lint:deps", () => {
   });
 });
 
-/** `check-arch.ts` run over a tree of its own: the two scripts, and the files planted. */
+/** `check-arch.ts` run over a tree of its own: its scripts, the files planted, and the TypeScript its wire rules parse with. */
 function archOver(files: Record<string, string>): { code: number; out: string } {
   const root = mkdtempSync(join(tmpdir(), "nouride-arch-"));
   try {
-    for (const script of ["check-arch.ts", "lint-sources.ts"]) {
+    for (const script of ["check-arch.ts", "lint-sources.ts", "wire-rules.ts"]) {
       mkdirSync(join(root, "scripts"), { recursive: true });
       copyFileSync(join(ROOT, "scripts", script), join(root, "scripts", script));
     }
     writeFileSync(join(root, ".gitmodules"), "");
+    symlinkSync(join(ROOT, "node_modules"), join(root, "node_modules"));
     for (const [path, text] of Object.entries(files)) {
       mkdirSync(dirname(join(root, path)), { recursive: true });
       writeFileSync(join(root, path), text);
@@ -114,6 +115,15 @@ describe("lint:arch's import rules, in every spelling", () => {
     const { code, out } = archOver({ "apps/dashboard/src/a.ts": 'export const m = await import("@nouride/shared");\n' });
     expect(code).toBe(1);
     expect(out).toContain("[dashboard-imports-workspace]");
+  });
+
+  test("the dashboard may import the wire's types, by `import type` alone", () => {
+    const wire = { "packages/wire/src/index.ts": "export interface User { id: string }\n" };
+    expect(archOver({ ...wire, "apps/dashboard/src/a.ts": 'import type { User } from "@nouride/wire";\nexport const id = (u: User) => u.id;\n' })).toMatchObject({ code: 0 });
+    const { code, out } = archOver({ ...wire, "apps/dashboard/src/a.ts": 'import { User } from "@nouride/wire";\nexport const id = (u: User) => u.id;\n' });
+    expect(code).toBe(1);
+    expect(out).toContain("[wire-imported-as-value]");
+    expect(out).not.toContain("[dashboard-imports-workspace]");
   });
 
   test("shared importing a sibling for its side effect is caught", () => {

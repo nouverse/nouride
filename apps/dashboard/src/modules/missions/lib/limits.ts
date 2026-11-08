@@ -8,7 +8,7 @@
  * Tokens are typed in millions — 50, not 50000000, which nobody reads at a glance — and sent as tokens.
  */
 
-import type { MissionLimits, MissionSettings, MissionSettingsPatch } from "@/commons/lib/api";
+import type { MissionLimits, MissionSettings, MissionSettingsPatch } from "@nouride/wire";
 
 export type LimitKey = keyof MissionLimits;
 type Bounds = MissionSettings["bounds"][LimitKey];

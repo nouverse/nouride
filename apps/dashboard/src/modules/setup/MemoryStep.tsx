@@ -22,7 +22,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Brain, Check, Loader2 } from "lucide-react";
 import { api } from "@/commons/lib/api";
-import type { SettingsPatch } from "@/commons/lib/api.memory";
+import type { SettingsPatch } from "@nouride/wire";
 import { ErrorNote } from "@/commons/components/ui/ui";
 import { ToggleRow } from "@/commons/components/ui/ToggleRow";
 

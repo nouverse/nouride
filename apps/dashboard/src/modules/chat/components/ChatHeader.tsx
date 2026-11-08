@@ -13,7 +13,7 @@
  */
 
 import { Check, ChevronDown, Crown, Lock, NotebookPen, PanelLeft, Plus, Trash2 } from "lucide-react";
-import type { AgentSummary, Room } from "@/commons/lib/api";
+import type { AgentSummary, Room } from "@nouride/wire";
 import { agentModel } from "@/commons/lib/agents";
 import { useConfirm } from "@/commons/components/ui/confirm";
 import { NewRoomButton } from "./NewRoom.tsx";

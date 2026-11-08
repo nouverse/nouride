@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import type { HealthPayload } from "@/commons/lib/api";
+import type { HealthPayload } from "@nouride/wire";
 import { BOOT_PATIENCE_MS, lookAgain, lookAtInstall, type RestartWatch } from "@/commons/lib/restart-watch";
 
 const health = (version: string, uptime: number, status: HealthPayload["status"] = "ok"): HealthPayload => ({

@@ -7,7 +7,8 @@
 
 import { useMutation } from "@tanstack/react-query";
 import { Globe, HelpCircle, House, Send, type LucideIcon } from "lucide-react";
-import { api, type WebhookSummary } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { WebhookSummary } from "@nouride/wire";
 import { DOCS_URL } from "@/commons/lib/docs";
 import { ErrorNote } from "@/commons/components/ui/ui";
 import { Details } from "@/commons/components/ui/Details";

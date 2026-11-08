@@ -3,11 +3,12 @@
  */
 
 import { dirname, fileExistsSync, join } from "@nouride/runtime";
+import type { MissionWaitKind } from "@nouride/wire";
 import type { KeptPlan } from "@/modules/notes/store.ts";
 import { IDLE_TURNS, RETRY_AFTER_MS, RETRY_ATTEMPTS, WARN_AT } from "./limits.ts";
 import { hoursLimit, millions, workedMs } from "./page.ts";
 import type { MissionsInForce } from "./slots.ts";
-import { isFinal, type Mission, type WaitKind } from "./types.ts";
+import { isFinal, type Mission } from "./types.ts";
 
 /**
  * Where a mission's repository is: the nearest folder above its workdir holding `.git`, or the workdir itself. A
@@ -175,7 +176,7 @@ export function stepsDone(plan: KeptPlan | undefined): number {
  * nor a turn a restart or a provider takes up, nor an approval answered while it waits on its question: each resumed it
  * without what it waited for, and the person's `/mission answer` was then refused.
  */
-export function answersWait(wait: WaitKind | null, via: unknown): boolean {
+export function answersWait(wait: MissionWaitKind | null, via: unknown): boolean {
   if (via === "job completion") return wait === "approval" || wait === "input";
   return via === "approval resumed" && wait === "approval";
 }

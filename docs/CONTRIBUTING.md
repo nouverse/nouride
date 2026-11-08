@@ -230,6 +230,7 @@ packages/
   system-packages/  `nouride pkg`, and the root service behind it
   wa-bridge/    the WhatsApp bridge (MIT)
   ui-graph/     the dashboard's graph canvas — browser code lives only in ui-*
+  wire/         what the control API sends and takes, types only — the engine and the dashboard import it
 
 internals/      two private submodules: pro (the commercial plugins), nougate (the LLM gateway)
 content/        what a human edits, not what runs — the built-in skills and agent packs, MIT

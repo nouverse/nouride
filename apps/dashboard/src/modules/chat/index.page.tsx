@@ -20,11 +20,8 @@ import { Composer } from "./components/Composer.tsx";
 import { useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import {
-  api,
-  type SessionSummary,
-  type SlashCommand,
-} from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { SessionSummary, SlashCommand } from "@nouride/wire";
 import { ApprovalStrip } from "./components/ApprovalStrip.tsx";
 import { useStickyScroll } from "@/commons/hooks/use-sticky-scroll";
 import { useDebounced } from "@/commons/hooks/use-debounced";
@@ -379,7 +376,6 @@ export default function ChatPage(
     attachments.clear();
     if (textareaRef.current) textareaRef.current.style.height = "auto";
   };
-
 
   /*
     What arrives in the conversation moves in: a message, a note, an answer starting. What it opens on stays still —

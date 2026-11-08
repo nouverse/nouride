@@ -4,7 +4,7 @@
  * it was.
  */
 
-import type { AgentSummary } from "@/commons/lib/api";
+import type { AgentSummary } from "@nouride/wire";
 
 type Tone = "warning" | "primary" | "success" | "ghost" | "error";
 

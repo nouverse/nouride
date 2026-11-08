@@ -11,7 +11,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { Archive, ArchiveRestore, ArrowLeft, FilePlus2, PenLine, Settings2, Trash2, Upload } from "lucide-react";
 import { api } from "@/commons/lib/api";
-import type { KnowledgeCollection } from "@/commons/lib/api.knowledge";
+import type { KnowledgeCollection } from "@nouride/wire";
 import { useConfirm } from "@/commons/components/ui/confirm";
 import { DropOverlay, useFileDrop } from "@/commons/components/ui/FileDrop";
 import { useToast } from "@/commons/components/ui/toast";

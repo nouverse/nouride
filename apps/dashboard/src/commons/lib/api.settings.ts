@@ -3,35 +3,11 @@
  * mentions, group context, `config.toml` itself, and the restart that applies them.
  *
  * Split out of `api.ts`, which had grown past the size cap with every endpoint group inline, and spread
- * into `api` like the others, so `api.x()` reads the same at every call site. The types these calls carry
- * are declared here and re-exported from `api.ts`, which is where every consumer imports them from.
+ * into `api` like the others, so `api.x()` reads the same at every call site. The payload types are `@nouride/wire`'s.
  */
 
 import { control, post, request } from "./api.client";
-
-export interface GatewayInstance {
-  id: string;
-  platform: "telegram" | "discord" | "whatsapp";
-  name: string;
-  enabled: boolean;
-  tokenSecret: string;
-  agent?: string;
-  /** Live connection state, or null for an instance added since the last restart. */
-  status: string | null;
-  hasCredential: boolean;
-  sessionDir?: string;
-  /** Per-connection override for `[agents] group_context_messages`. Absent means it inherits. */
-  groupContextMessages?: number;
-}
-
-export interface ProviderProfileView {
-  name: string;
-  kind: "openai" | "anthropic";
-  baseUrl: string;
-  apiKeySecret: string;
-  hasCredential: boolean;
-  builtIn: boolean;
-}
+import type { GatewayInstance, ProviderProfileView } from "@nouride/wire";
 
 export const settingsApi = {
   gateways: () =>

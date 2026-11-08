@@ -18,7 +18,8 @@
 
 import { useEffect, useState } from "react";
 import { Download, ExternalLink, ImageOff, Video, X } from "lucide-react";
-import { api, type TurnAttachment } from "@/commons/lib/api";
+import { api } from "@/commons/lib/api";
+import type { TurnAttachment } from "@nouride/wire";
 import { fileIconFor } from "@/commons/components/ui/FileDrop";
 import { isMarkdownFile, MarkdownPreview } from "@/commons/components/ui/MarkdownPreview";
 import { formatBytes } from "@/commons/lib/format";
