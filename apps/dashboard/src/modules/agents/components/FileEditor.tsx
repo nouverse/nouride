@@ -22,7 +22,9 @@ export function FileEditor({ agent, editable }: { agent: string; editable: boole
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
-  const [mode, setMode] = useState<MarkdownMode>("edit");
+  // A file opens as it reads, Preview first (the owner, 2026-11-08): it is read far more often than written, and Edit is
+  // one click away. Each file opened starts there again.
+  const [mode, setMode] = useState<MarkdownMode>("preview");
 
   const files = useQuery({ queryKey: ["files", agent], queryFn: () => api.agentFiles(agent) });
 
@@ -71,7 +73,10 @@ export function FileEditor({ agent, editable }: { agent: string; editable: boole
             <button
               key={file.name}
               type="button"
-              onClick={() => setSelected(file.name)}
+              onClick={() => {
+                setSelected(file.name);
+                setMode("preview");
+              }}
               className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-xs font-semibold transition-all active:scale-95 ${
                 selected === file.name
                   ? "bg-primary text-primary-content shadow-xs"
@@ -125,9 +130,11 @@ export function FileEditor({ agent, editable }: { agent: string; editable: boole
                 </div>
               </div>
 
+              {/* Edit and Preview one height, each scrolling inside it, as Write a document's are: the preview grew with
+                  the file and moved the page under the switch (the owner, 2026-11-08). */}
               <MarkdownArea
                 mode={markdown ? mode : "edit"}
-                className="min-h-[26rem]"
+                className="h-[26rem] overflow-auto"
                 value={draft}
                 // Held while a save is on its way: the saved text becomes the draft when it lands.
                 readOnly={!editable || save.isPending}

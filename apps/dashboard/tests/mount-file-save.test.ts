@@ -50,7 +50,10 @@ test("a successful save disables Save and clears the badge at once, and the next
     await renderPage("/agents/nouva", async (host) => {
       await eventually(() => host.textContent?.includes("SOUL.md") === true, 2_000, "the file list");
       press(host, "SOUL.md");
-      await eventually(() => host.querySelector("textarea")?.value === "old\n", 2_000, "the file opened");
+      // It opens as it reads (0.8.23); Edit is one click away.
+      await eventually(() => host.querySelector('button[aria-pressed="true"]')?.textContent?.trim() === "Preview", 2_000, "the file opened");
+      press(host, "Edit");
+      await eventually(() => host.querySelector("textarea")?.value === "old\n", 2_000, "the file in the editor");
 
       type(host.querySelector("textarea") as HTMLTextAreaElement, "new\n");
       await enabled(host, "Save File");
@@ -86,7 +89,10 @@ test("a file changed under an open tab is still refused with a 409, and the edit
     await renderPage("/agents/nouva", async (host) => {
       await eventually(() => host.textContent?.includes("SOUL.md") === true, 2_000, "the file list");
       press(host, "SOUL.md");
-      await eventually(() => host.querySelector("textarea")?.value === "old\n", 2_000, "the file opened");
+      // It opens as it reads (0.8.23); Edit is one click away.
+      await eventually(() => host.querySelector('button[aria-pressed="true"]')?.textContent?.trim() === "Preview", 2_000, "the file opened");
+      press(host, "Edit");
+      await eventually(() => host.querySelector("textarea")?.value === "old\n", 2_000, "the file in the editor");
 
       // The agent writes the file meanwhile.
       server.disk.content = "written by the agent\n";
