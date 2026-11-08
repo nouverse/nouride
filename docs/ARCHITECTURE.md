@@ -459,6 +459,9 @@ second consumer ever appears, extraction is mechanical.
 apps/engine/src/
 ├── index.ts             # boot ORDER (§14.2 SPEC) — one linear read, top to bottom
 ├── boot/                # what boot does but does not order
+│   ├── stores.ts        #   the boot's first long step: the database and every store, opened in order
+│   ├── timers.ts        #   the snapshots, then the upkeep: each timer started once what it reads exists
+│   ├── turn-machine.ts  #   the turn machine's parts, then the pipeline, scheduler and toolset they make
 │   ├── preflight.ts     #   checks that must pass before a message can arrive
 │   ├── agent-home.ts    #   the agents' HOME (.nouride/home) and .nouride/bin first on PATH
 │   ├── toolchain.ts     #   installers pointed at .nouride, the one PATH, the shared Python env

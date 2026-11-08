@@ -342,8 +342,9 @@ identical in a different product?"* If yes, it is not a module.
 apps/
   engine/src/
     index.ts        boot ORDER + graceful shutdown — read this first
-    boot/           what boot does but does not order: preflight, maintenance,
-                      tools, control-plane, shutdown
+    boot/           what boot does but does not order: its three long steps (stores,
+                      timers, turn-machine), preflight, maintenance, tools,
+                      control-plane, shutdown
     cli/            main.ts is a dispatch table; commands/<name>.ts is one command
     db/             open SQLite, apply migrations, and the migrations themselves.
                       Storage, not a domain — the whole directory would be the same
