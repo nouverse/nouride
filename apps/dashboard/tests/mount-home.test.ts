@@ -5,6 +5,8 @@
  */
 
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { answer, renderPage, type, useMountHarness } from "./mount-harness.ts";
 import { eventually } from "./wait.ts";
 import { greetingAt } from "@/modules/home/components/Hero";
@@ -60,6 +62,7 @@ describe("the page", () => {
       "/status": ok({ status: "ready", gateways: [], providers: [], uptimeMs: 1000, orchestrator: "nouva", agents: [agent("nouva"), agent("nix", { headline: "engineer" })] }),
       "/approvals": ok({ pending: [approval] }),
       "/missions": ok({ missions: [mission("m1", "running", { checklist: { done: 2, total: 5, active: null } }), mission("m2", "waiting", { waitKind: "input" })] }),
+      "/knowledge": ok({ collections: [] }),
     });
     let html = "";
     let title = "";
@@ -82,9 +85,11 @@ describe("the page", () => {
     // The greeting's waving or good-night cat, and nothing asleep: something waits.
     expect(html).toMatch(/01-waving|12-good-night/);
     expect(html).not.toContain("Nothing is waiting for you");
-    // One count: the approval, the mission, the harness's request and its skill draft.
-    expect(html).toContain("4 things need you");
-    expect(title).toBe("(4) Nouride");
+    // One count: the approval, the mission, the harness's request, its skill draft and its fact to review.
+    expect(html).toContain("A fact waits for your yes or no");
+    expect(html).toContain('href="/dashboard/memories?tab=proposals"');
+    expect(html).toContain("5 things need you");
+    expect(title).toBe("(5) Nouride");
   });
 
   test("nothing waiting and nothing moving: the cat asleep where the cards were", async () => {
@@ -93,6 +98,8 @@ describe("the page", () => {
       "/missions": ok({ missions: [] }),
       "/access": ok({ senders: [] }),
       "/skills/drafts": ok({ enabled: true, pending: [], recent: [] }),
+      "/memory/proposals": ok({ proposals: [] }),
+      "/knowledge": ok({ collections: [] }),
     });
     let html = "";
     let title = "";
@@ -131,6 +138,45 @@ describe("the page", () => {
   });
 });
 
+describe("what waits in Memory", () => {
+  const doc = (path: string) => ({ path, title: path, savedAt: 0, agent: "nouva", from: "Gading, in a chat with Nouva" });
+  const collection = (id: string, name: string, archived = false) => ({ id, name, description: "", readers: "everyone", agents: null, about: [], archived, documents: 1, sections: 1 });
+
+  test("a document an agent saved for a collection is a card on Home and a count on Memory, and opens Knowledge", async () => {
+    answer({
+      "/approvals": ok({ pending: [] }),
+      "/missions": ok({ missions: [] }),
+      "/access": ok({ senders: [] }),
+      "/skills/drafts": ok({ enabled: true, pending: [], recent: [] }),
+      "/memory/proposals": ok({ proposals: [] }),
+      "/knowledge": ok({ collections: [collection("house", "House"), collection("old", "Old", true)] }),
+      "/knowledge/house/pending": ok({ pending: [doc("boiler.md"), doc("roof.md")] }),
+      // Archived: kept, never searched, and nothing in it is asked about.
+      "/knowledge/old/pending": ok({ pending: [doc("stale.md")] }),
+    });
+    let seen = { card: false, badge: "", title: "", href: "" };
+    await renderPage("/", async (host) => {
+      await eventually(() => host.textContent?.includes("2 documents wait to be added to House") === true, 3_000, "the documents' card");
+      seen = {
+        card: true,
+        badge: host.querySelector('nav[aria-label="Menu"] a[href="/dashboard/memories"] .badge')?.textContent ?? "",
+        title: host.ownerDocument.title,
+        href: [...host.querySelectorAll("main a")].find((a) => a.textContent?.includes("documents wait"))?.getAttribute("href") ?? "",
+      };
+    });
+    expect(seen).toEqual({ card: true, badge: "2", title: "(2) Nouride", href: "/dashboard/memories?tab=knowledge" });
+  });
+
+  test("the Memory page opens on the tab its address names", async () => {
+    let selected = "";
+    await renderPage("/memories?tab=proposals", async (host) => {
+      await eventually(() => host.querySelector('[aria-selected="true"]') !== null, 3_000, "a tab chosen");
+      selected = host.querySelector('[aria-selected="true"]')?.textContent?.trim() ?? "";
+    });
+    expect(selected).toContain("Proposals");
+  });
+});
+
 describe("Work's first tab", () => {
   test("lists every thing its badge counts: a tool call to answer, and a mission waiting for an answer", async () => {
     answer({
@@ -149,4 +195,13 @@ describe("Work's first tab", () => {
     // The mission waiting on a tool's approval is that approval, counted and answered once.
     expect(seen).toEqual({ badge: "2", answerable: 1, missions: ["/dashboard/missions/m2"] });
   });
+});
+
+test("an agent's name is never the part cut short: its line about what it does is (seen on the box)", () => {
+  const source = readFileSync(join(import.meta.dir, "../src/modules/home/components/YourAgents.tsx"), "utf8");
+  const name = /<span className="([^"]+)">\{name\}<\/span>/.exec(source)?.[1] ?? "";
+  const line = /<span className="([^"]+)">\{agent\.headline\}<\/span>/.exec(source)?.[1] ?? "";
+  expect(name.split(" ")).toContain("shrink-0");
+  expect(name.split(" ")).not.toContain("truncate");
+  expect(line.split(" ")).toContain("truncate");
 });

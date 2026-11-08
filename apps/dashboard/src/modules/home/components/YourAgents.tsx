@@ -40,9 +40,11 @@ export function YourAgents({ agents, looks }: { agents: AgentSummary[]; looks: M
             <Link key={agent.id} to="/agents/$agentId" params={{ agentId: agent.id }} className={cn("flex items-center gap-3 rounded-[22px] border border-base-content/[0.08] bg-base-100 p-3 shadow-soft", LIFTS)}>
               {look && <AgentAvatar look={look} name={name} />}
               <span className="min-w-0 flex-1">
-                <span className="flex items-baseline gap-1.5">
-                  <span className="truncate font-display text-lg font-medium text-base-content">{name}</span>
-                  {agent.headline && <span className="truncate text-xs text-base-content/65">{agent.headline}</span>}
+                {/* The name whole, and what it does cut short after it: a long line about an agent cut its name to "N…" on
+                    the box's seven agents. */}
+                <span className="flex min-w-0 items-baseline gap-1.5">
+                  <span className="shrink-0 font-display text-lg font-medium text-base-content">{name}</span>
+                  {agent.headline && <span className="min-w-0 truncate text-xs text-base-content/65">{agent.headline}</span>}
                 </span>
                 <span className="flex items-center gap-1.5 text-xs text-base-content/70">
                   <span className={cn("size-2 shrink-0 rounded-full", DOT[now.tone])} aria-hidden="true" />
