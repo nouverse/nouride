@@ -14,7 +14,7 @@
  * rate limit has had its retries already (`postJson`), and is the provider being slow, not the model being gone.
  */
 
-import { createLogger, LLMError, type ChatParams, type LLMProvider } from "@nouride/shared";
+import { clip, createLogger, LLMError, type ChatParams, type LLMProvider, oneLine } from "@nouride/shared";
 
 const log = createLogger("llm.helper");
 
@@ -51,13 +51,7 @@ export function helperUnavailable(err: unknown): string | null {
     status === 404 ||
     (status === 429 && text.includes("quota")) ||
     (status !== undefined && status >= 400 && status < 500 && NOT_SERVED.test(text));
-  return gone ? shorten(err.message) : null;
-}
-
-/** One line of an error, short enough for a log line or a doctor hint. */
-export function shorten(text: string, max = 160): string {
-  const line = text.replace(/\s+/g, " ").trim();
-  return line.length > max ? `${line.slice(0, max - 1)}…` : line;
+  return gone ? clip(oneLine(err.message), 160) : null;
 }
 
 /**

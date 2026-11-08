@@ -28,6 +28,7 @@ import {
   type ExecSecret,
   type LLMDefaultsSection,
   type McpServerConfig,
+  oneLine,
   toolIterationsRefusal,
   turnSecondsRefusal,
 } from "@nouride/shared";
@@ -555,7 +556,7 @@ function execSecrets(value: unknown, where: string): ExecSecret[] {
   return Object.entries(value as Record<string, unknown>).map(([name, commands], index) => {
     // Named by position: if the key is a pasted credential, no part of it goes into the message.
     secretName(name, `${where} (entry ${index + 1})`);
-    const list = strArray(commands, `${where}.${name}`).map((command) => command.trim().replace(/\s+/g, " "));
+    const list = strArray(commands, `${where}.${name}`).map((command) => oneLine(command));
     if (list.length === 0 || list.some((command) => command === "")) {
       throw new ConfigError(`${where}.${name} must name at least one command ("twine upload"), or "*" for every command`);
     }

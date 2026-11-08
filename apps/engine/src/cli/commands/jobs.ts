@@ -1,5 +1,5 @@
+import { clip, formatBytes, plural } from "@nouride/shared";
 import type { JobListResponse, JobLogResponse } from "@/cli/wire.ts";
-import { formatBytes } from "@nouride/shared";
 import { BOLD, DIM, GREEN, RED, RESET, say, usageError, YELLOW } from "@/cli/ui.ts";
 import type { Client } from "@/cli/client.ts";
 import { hasFlag } from "@/cli/args.ts";
@@ -68,7 +68,7 @@ export async function jobs(client: Client, args: string[]): Promise<void> {
     ]
       .filter(Boolean)
       .join(" · ");
-    say(`${mark} ${BOLD}${oneLine(job.command)}${RESET}`);
+    say(`${mark} ${BOLD}${listedCommand(job.command)}${RESET}`);
     say(
       `    ${DIM}${job.id} · ${job.agentId} · ${job.status}${
         job.exitCode !== null ? ` (exit ${job.exitCode})` : ""
@@ -77,7 +77,7 @@ export async function jobs(client: Client, args: string[]): Promise<void> {
   }
   const hidden = ended.length - shown.length;
   say();
-  if (hidden > 0) say(`${DIM}${hidden} older ${hidden === 1 ? "job" : "jobs"} not shown · nouride jobs --all${RESET}`);
+  if (hidden > 0) say(`${DIM}${hidden} older ${plural(hidden, "job")} not shown · nouride jobs --all${RESET}`);
   say(`${DIM}nouride jobs log <id> for the whole command and its output  ·  nouride jobs kill <id>${RESET}`);
 }
 
@@ -91,9 +91,9 @@ export async function jobs(client: Client, args: string[]): Promise<void> {
 const RECENT_ENDED = 5;
 
 /** A command as one line of a list: its first line, cut at a width a terminal shows — `jobs log` prints it whole. */
-function oneLine(command: string): string {
+function listedCommand(command: string): string {
   const [first = ""] = command.split("\n");
-  const cut = first.length > COMMAND_WIDTH ? `${first.slice(0, COMMAND_WIDTH - 1)}…` : first;
+  const cut = clip(first, COMMAND_WIDTH);
   return cut !== command && !cut.endsWith("…") ? `${cut} …` : cut;
 }
 

@@ -8,9 +8,8 @@
  * down comes within the hour after its time, or not that day.
  */
 
-import { contained, createLogger, type Person } from "@nouride/shared";
+import { clip, contained, createLogger, cutAtWord, oneLine, type Person } from "@nouride/shared";
 import { localTime } from "@/commons/clock.ts";
-import { cutAtWord } from "@/commons/cut-at-word.ts";
 import { formatTokens } from "@/modules/hooks/format.ts";
 
 const log = createLogger("people.morning");
@@ -35,17 +34,12 @@ export interface MorningFacts {
 /** How many of a kind are named; the rest are counted. */
 const NAMED = 4;
 
-const clip = (text: string, max: number) => {
-  const line = text.replace(/\s+/g, " ").trim();
-  return line.length > max ? `${line.slice(0, max - 1)}…` : line;
-};
-
 /**
  * A mission by the first sentence of its goal, cut at a word — as its page names it. A goal is often a paragraph, and
  * a list of them cut mid-word ran into one wall of text. Code marks go: a cut inside one left it open.
  */
 function titled(goal: string, max = 70): string {
-  const flat = goal.replace(/`/g, "").replace(/\s+/g, " ").trim();
+  const flat = oneLine(goal.replace(/`/g, ""));
   const first = /^.+?[.!?](?=\s|$)/.exec(flat)?.[0] ?? flat;
   return cutAtWord(first, max, Math.ceil(max * 0.6));
 }
@@ -65,13 +59,13 @@ export function morningText(facts: MorningFacts): string | null {
   // What a person can act on comes first; what is only news after it.
   const needs = [
     ...facts.approvals.map((one) => `${one.agent} asks to run ${one.what}`),
-    ...facts.needsYou.map((one) => `${titled(one.goal)} (${clip(one.what, 80)})`),
+    ...facts.needsYou.map((one) => `${titled(one.goal)} (${clip(oneLine(one.what), 80)})`),
   ];
   const sections = ["☀ **Since yesterday morning**"];
   if (needs.length) sections.push(section("Needs you", needs));
-  if (facts.failed.length) sections.push(section("Scheduled runs failed", facts.failed.map((one) => `${one.job} (${clip(one.why, 80)})`)));
+  if (facts.failed.length) sections.push(section("Scheduled runs failed", facts.failed.map((one) => `${one.job} (${clip(oneLine(one.why), 80)})`)));
   if (done.length) sections.push(section("Missions done", done.map((one) => titled(one.goal))));
-  if (ended.length) sections.push(section("Missions stopped or failed", ended.map((one) => `${titled(one.goal)} (${one.why ? clip(one.why, 60) : one.status})`)));
+  if (ended.length) sections.push(section("Missions stopped or failed", ended.map((one) => `${titled(one.goal)} (${one.why ? clip(oneLine(one.why), 60) : one.status})`)));
   if (facts.spent) {
     const priced = facts.spent.usd !== null;
     const amount = (usd: number, tokens: number) => (priced ? `$${usd.toFixed(2)}` : `${formatTokens(tokens)} tokens`);

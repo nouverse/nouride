@@ -8,6 +8,7 @@
  */
 
 import type { MissionTokens } from "@nouride/wire";
+import { clip, oneLine, plural } from "@nouride/shared";
 import { worktreeBranch } from "./worktree.ts";
 import type { KeptPlan } from "@/modules/notes/store.ts";
 import { toldBy, type Mission, type Told } from "./types.ts";
@@ -120,7 +121,7 @@ export interface LimitsShown {
  */
 export function turnsSaid(mission: Pick<Mission, "turnsUsed" | "limits" | "startedAt" | "endedAt">, limited = true): string {
   const none = mission.endedAt !== null && mission.turnsUsed === 0;
-  const count = mission.endedAt === null ? `turn ${mission.turnsUsed + 1}` : none ? (mission.startedAt === null ? "ended before it started" : "ended before a turn finished") : `${mission.turnsUsed} turn${mission.turnsUsed === 1 ? "" : "s"} ran`;
+  const count = mission.endedAt === null ? `turn ${mission.turnsUsed + 1}` : none ? (mission.startedAt === null ? "ended before it started" : "ended before a turn finished") : `${mission.turnsUsed} ${plural(mission.turnsUsed, "turn")} ran`;
   return !limited ? `${count} (a coding CLI's: turns not limited)` : none ? `${count} (at most ${mission.limits.turns} turns)` : `${count} of at most ${mission.limits.turns}`;
 }
 
@@ -176,8 +177,7 @@ function toldLines(told: readonly Told[], now: number): string[] {
 }
 
 function saidLine(said: string): string {
-  const line = said.replace(/\s+/g, " ").trim();
-  return line.length > SAID_CHARS ? `${line.slice(0, SAID_CHARS - 1)}…` : line;
+  return clip(oneLine(said), SAID_CHARS);
 }
 
 export function missionPage(input: PageInput): string {

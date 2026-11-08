@@ -6,6 +6,8 @@
  * turns into text) are testable without spawning anything.
  */
 
+import { oneLine } from "@nouride/shared";
+
 /**
  * The version this host asks for: the newest it speaks, MCP 2025-06-18.
  *
@@ -258,7 +260,7 @@ function isImage(block: McpContentBlock): boolean {
  */
 function linkLine(block: McpContentBlock): string | null {
   if (typeof block.uri !== "string" || !block.uri.trim()) return null;
-  const text = (value: unknown): string => (typeof value === "string" ? value.replace(/\s+/g, " ").trim() : "");
+  const text = (value: unknown): string => (typeof value === "string" ? oneLine(value) : "");
   const label = text(block.title) || text(block.name);
   const about = [text(block.mimeType), typeof block.size === "number" ? `${block.size} bytes` : ""].filter(Boolean).join(", ");
   const description = text(block.description);

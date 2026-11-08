@@ -224,9 +224,12 @@ const DATA_LAYER = [
  * Formatters that exist once, in `@nouride/shared`, because their output is read by people.
  *
  * Kept short deliberately: this is not a general no-duplication rule, it is a list of functions
- * whose answers have to agree.
+ * whose answers have to agree. The text helpers (`text.ts`) are on it because each was written again,
+ * alike but for an off-by-one, wherever a line was cut; a function or an arrow given one of their
+ * names outside `@nouride/shared` is a copy coming back.
  */
-const SHARED_FORMATTERS = /(?:export\s+)?function\s+(formatBytes)\s*\(/g;
+const SHARED_FORMATTERS =
+  /(?:export\s+)?(?:function\s+|(?:const|let)\s+)(formatBytes|clip|clipTrimmed|oneLine|joinLines|cutAtWord|elide|keepEnds|plural)\s*(?:\(|=\s*(?:\([^)]*\)|\w+)\s*(?::\s*[^=]+)?=>|=\s*function\b)/g;
 
 /** The one module that writes a config file — the daemon's `config.toml`, or a file of an agent's pack. */
 const CONFIG_WRITER = "apps/engine/src/modules/config/config-file.ts";
@@ -591,7 +594,7 @@ async function main(): Promise<void> {
           file: rel,
           line: source.slice(0, match.index).split("\n").length,
           rule: "reimplemented-formatter",
-          detail: `${match[1]} is defined in @nouride/shared — import it, or two callers will disagree about one number`,
+          detail: `${match[1]} is defined in @nouride/shared — import it, or two callers will give two answers to one question`,
         });
       }
     }

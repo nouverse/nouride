@@ -5,6 +5,7 @@
  * from — and throw it away, the way `/reset` does, without throwing the conversation away too.
  */
 
+import { plural } from "@nouride/shared";
 import { renderNotes } from "@/modules/notes/format.ts";
 import type { Hook } from "../types.ts";
 import { sessionKey } from "../format.ts";
@@ -25,7 +26,7 @@ export const notesHooks: Hook[] = [
       const plan = notes.plan(key);
       if (tasks.length === 0) return { handled: true, reply: "No work notes in this chat yet." };
       const steps = plan ? `\nPlan for "${plan.task}": ${plan.steps.filter((step) => step.state === "done" || step.state === "skipped").length} of ${plan.steps.length} steps done.` : "";
-      return { handled: true, reply: `Work notes (${tasks.length} task${tasks.length === 1 ? "" : "s"}):\n\n${renderNotes(tasks).trim()}${steps}` };
+      return { handled: true, reply: `Work notes (${tasks.length} ${plural(tasks.length, "task")}):\n\n${renderNotes(tasks).trim()}${steps}` };
     },
   },
 ];

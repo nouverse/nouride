@@ -17,7 +17,7 @@
  *   anybody else is told the agent is busy (`busyNotice`), once, instead of being refused in silence.
  */
 
-import type { ChatMessage, MessageEnvelope } from "@nouride/shared";
+import { type ChatMessage, clipTrimmed, type MessageEnvelope, oneLine } from "@nouride/shared";
 import { formatDuration } from "@/modules/hooks/format.ts";
 import { isSystemEvent, type PipelineDeps } from "./deps.ts";
 import { isEdit, steerEditHeader } from "./edit-rules.ts";
@@ -172,8 +172,7 @@ const QUOTE_MAX = 80;
 
 /** The request as a short, inert quote: its address off, nobody's name made into a mention, one line. */
 function quoted(text: string, names: readonly string[]): string {
-  const said = inert(unaddressed(text, ...names)).replace(/\s+/g, " ").trim();
-  return said.length > QUOTE_MAX ? `${said.slice(0, QUOTE_MAX - 1).trimEnd()}…` : said;
+  return clipTrimmed(oneLine(inert(unaddressed(text, ...names))), QUOTE_MAX);
 }
 
 /** Without what makes text a mention: `@name`, and the platforms' `<@123>` markup. */

@@ -24,7 +24,7 @@
  * leaving, a job that runs unasked, an interactive session, a remote's history rewritten.
  */
 
-import type { HardlineClass } from "@nouride/shared";
+import { clip, type HardlineClass, oneLine } from "@nouride/shared";
 import { classifyOwnCli, ownCliInner } from "./own-cli.ts";
 import { programName } from "./shell-segments.ts";
 
@@ -973,7 +973,7 @@ export function classifyOwnState(argv: readonly string[], cwd?: string): Hardlin
     // from an agent's workspace names its pack without the literal `.nouride/agents` (C7).
     const named = [arg, ...(cwd ? pathsIn(arg).map((path) => resolvedFrom(cwd, path)) : [])];
     const hit = OWN_STATE.find((entry) => named.some((one) => entry.pattern.test(one)));
-    if (hit) return { class: hit.class, reason: `touches ${hit.what} (${clip(arg)})` };
+    if (hit) return { class: hit.class, reason: `touches ${hit.what} (${matchedLine(arg)})` };
   }
   return null;
 }
@@ -997,7 +997,7 @@ function resolvedFrom(cwd: string, path: string): string {
 /** The argument naming a credential path, clipped for a prompt — or `null`. See `CREDENTIAL_PATTERNS`. */
 export function credentialPath(argv: readonly string[]): string | null {
   const hit = argv.slice(1).find((arg) => !isFlag(arg) && CREDENTIAL_PATTERNS.some((pattern) => pattern.test(arg)));
-  return hit === undefined ? null : clip(hit);
+  return hit === undefined ? null : matchedLine(hit);
 }
 
 /**
@@ -1008,9 +1008,8 @@ export function credentialPath(argv: readonly string[]): string | null {
  * to catch. Printing it in full turns the one line that says *why* into a wall nobody reads, which
  * is the same failure the preview design exists to avoid.
  */
-function clip(value: string): string {
-  const oneLine = value.replace(/\s+/g, " ").trim();
-  return oneLine.length > 80 ? `${oneLine.slice(0, 77)}…` : oneLine;
+function matchedLine(value: string): string {
+  return clip(oneLine(value), 80, 77);
 }
 
 /**

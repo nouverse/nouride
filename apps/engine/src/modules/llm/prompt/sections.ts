@@ -7,10 +7,10 @@
  */
 
 import { missingFor, missingToolsFor } from "@nouride/persona";
+import { cutAtWord } from "@nouride/shared";
 import type { PromptContext } from "./types.ts";
 import { installedLine } from "./harness-toolchain.ts";
 import { localTime, safeTimeZone } from "@/commons/clock.ts";
-import { cutAtWord } from "@/commons/cut-at-word.ts";
 
 /** Join non-empty blocks with a blank line between them. */
 export function joinBlocks(...blocks: (string | undefined)[]): string {

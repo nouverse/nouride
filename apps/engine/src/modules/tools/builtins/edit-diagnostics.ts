@@ -15,6 +15,8 @@
  * decided nothing will be written.
  */
 
+import { plural } from "@nouride/shared";
+
 /**
  * A file this size is a generated bundle, not something an agent is hand-editing.
  *
@@ -157,7 +159,7 @@ function describeAnchor(sourceLines: string[], needleLines: string[]): string {
   if (hits.length > MAX_ANCHOR_HITS) {
     return ` Its first line appears at more than ${MAX_ANCHOR_HITS} places in the file, but the block as a whole matches none of them. Read one of them to see what follows it now.`;
   }
-  return ` Its first line is at ${hits.length === 1 ? "line" : "lines"} ${hits.join(", ")}, but the lines after it differ. Read there and copy the current text.`;
+  return ` Its first line is at ${plural(hits.length, "line")} ${hits.join(", ")}, but the lines after it differ. Read there and copy the current text.`;
 }
 
 function trimEnd(line: string): string {

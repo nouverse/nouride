@@ -1,3 +1,4 @@
+import { clip, plural } from "@nouride/shared";
 import type {
   DraftListResponse,
   SkillCatalogResponse,
@@ -127,7 +128,7 @@ async function hubSearch(client: Client, query: string, args: string[]): Promise
   for (const hit of hits) {
     const count = hit.installs !== undefined ? ` ${DIM}${hit.installs.toLocaleString("en-US")} installs${RESET}` : "";
     say(`${BOLD}${hit.name}${RESET} ${DIM}[${hit.source}]${RESET}${count}`);
-    if (hit.description) say(`  ${hit.description.length > 140 ? `${hit.description.slice(0, 139)}…` : hit.description}`);
+    if (hit.description) say(`  ${clip(hit.description, 140)}`);
     say(`  ${CYAN}nouride skills install ${hit.ref}${RESET}`);
   }
   for (const failure of errors) say(`${YELLOW}${failure.source}:${RESET} ${failure.error}`);
@@ -247,7 +248,7 @@ async function draftList(client: Client): Promise<void> {
   if (!pending || pending.length === 0) {
     say(`${DIM}no skill drafts are waiting${RESET}`);
   } else {
-    say(`${BOLD}${pending.length} draft${pending.length === 1 ? "" : "s"} waiting${RESET}`);
+    say(`${BOLD}${pending.length} ${plural(pending.length, "draft")} waiting${RESET}`);
     for (const draft of pending) {
       const verb = draftVerb(draft);
       say(`  ${verb ? `${YELLOW}${verb}${RESET} ` : ""}${BOLD}${draft.name}${RESET}  ${DIM}${draft.description}${RESET}`);
@@ -263,7 +264,7 @@ async function draftList(client: Client): Promise<void> {
        */
       if (draft.carries?.length > 0) {
         const n = draft.carries.length;
-        say(`      ${YELLOW}also carries ${n} earlier lesson${n === 1 ? "" : "s"}:${RESET}`);
+        say(`      ${YELLOW}also carries ${n} earlier ${plural(n, "lesson")}:${RESET}`);
         for (const lesson of draft.carries) say(`        ${DIM}· ${lesson}${RESET}`);
       }
       if (draft.files?.length > 0) {

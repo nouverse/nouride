@@ -24,6 +24,7 @@ import {
   readTextFileSync,
   statFile,
 } from "@nouride/runtime";
+import { plural } from "@nouride/shared";
 import { configProblem } from "@/modules/config/global/index.ts";
 import { editDaemonConfig, editPackFile } from "@/modules/config/config-file.ts";
 import {
@@ -206,9 +207,9 @@ export async function gatewayRename(args: string[]): Promise<void> {
 
   say();
   say(`${GREEN}✓${RESET} ${BOLD}${plan.from}${RESET} is now ${BOLD}${plan.to}${RESET}`);
-  say(`${DIM}  ${plan.total} row${plan.total === 1 ? "" : "s"} rewritten · ${source} updated${RESET}`);
-  if (packs.packs.length > 0) say(`${DIM}  ${packs.packs.length} agent pack${packs.packs.length === 1 ? "" : "s"} updated${RESET}`);
-  if (memory.files.length > 0) say(`${DIM}  ${memory.files.length} memory file${memory.files.length === 1 ? "" : "s"} updated${RESET}`);
+  say(`${DIM}  ${plan.total} ${plural(plan.total, "row")} rewritten · ${source} updated${RESET}`);
+  if (packs.packs.length > 0) say(`${DIM}  ${packs.packs.length} agent ${plural(packs.packs.length, "pack")} updated${RESET}`);
+  if (memory.files.length > 0) say(`${DIM}  ${memory.files.length} memory ${plural(memory.files.length, "file")} updated${RESET}`);
   say(`${DIM}  Start it again: systemctl start nouride${RESET}`);
   if (plan.from.startsWith("whatsapp:")) {
     // Named because the answer is reassuring and not obvious: the pairing lives in a directory named

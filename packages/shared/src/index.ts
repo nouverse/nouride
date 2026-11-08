@@ -16,6 +16,7 @@ export * from "./port.ts";
 export * from "./rate-limit.ts";
 export * from "./sse.ts";
 export * from "./snapshot-stamp.ts";
+export * from "./text.ts";
 export * from "./types/agent.ts";
 export * from "./types/bridge.ts";
 export * from "./types/config.ts";

@@ -4,6 +4,7 @@
 
 import { dirname, fileExistsSync, join } from "@nouride/runtime";
 import type { MissionWaitKind } from "@nouride/wire";
+import { plural } from "@nouride/shared";
 import type { KeptPlan } from "@/modules/notes/store.ts";
 import { IDLE_TURNS, RETRY_AFTER_MS, RETRY_ATTEMPTS, WARN_AT } from "./limits.ts";
 import { hoursLimit, millions, workedMs } from "./page.ts";
@@ -147,7 +148,7 @@ export function limitReached(mission: Mission, now: number, inForce: LimitsInFor
  */
 export function continueGives(reached: readonly MissionLimit[], settings: { limitTurns: number; limitTokens: number; limitHours: number }): string {
   const more = reached.map((limit) =>
-    limit === "turns" ? `${settings.limitTurns} more ${settings.limitTurns === 1 ? "turn" : "turns"}` : limit === "tokens" ? `${millions(settings.limitTokens)} more tokens` : `${hoursLimit(settings.limitHours)} more of work`,
+    limit === "turns" ? `${settings.limitTurns} more ${plural(settings.limitTurns, "turn")}` : limit === "tokens" ? `${millions(settings.limitTokens)} more tokens` : `${hoursLimit(settings.limitHours)} more of work`,
   );
   return more.join(" and ");
 }

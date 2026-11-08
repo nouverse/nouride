@@ -34,7 +34,7 @@
  * before they are written (`Tool.keepsInPrompt`) — unless the approval level is `trusted`.
  */
 
-import { createLogger, type Person, type Tool, type ToolResult } from "@nouride/shared";
+import { createLogger, oneLine, type Person, type Tool, type ToolResult } from "@nouride/shared";
 import { savePerson, updatePersonNotes, type PeopleWriteDeps } from "@/modules/config/settings/people.ts";
 import { canonicalPersonId, idFormsFor, idsOf } from "@/modules/people/match.ts";
 import { editNotes, type NotesChange, type NotesEdit } from "@/modules/people/notes.ts";
@@ -133,7 +133,7 @@ export function createPersonRecordTool(options: PeopleToolOptions): Tool {
         );
       }
 
-      const note = typeof args.note === "string" ? args.note.replace(/\s+/g, " ").trim() : "";
+      const note = typeof args.note === "string" ? oneLine(args.note) : "";
 
       /**
        * Notes somebody already has are a page, and a note from here never replaces them.

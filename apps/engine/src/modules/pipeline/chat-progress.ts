@@ -23,9 +23,9 @@
  * report, and a "working…" that is immediately replaced by an answer is noise with extra steps.
  */
 
+import { contained, createLogger, elide, type Gateway, oneLine, plural } from "@nouride/shared";
 import { cronJobOfChat } from "@/modules/cron/session.ts";
-import { contained, createLogger, type Gateway } from "@nouride/shared";
-import { elide, type ActivityKind } from "@/commons/activity.ts";
+import type { ActivityKind } from "@/commons/activity.ts";
 import { NUDGE_READ } from "@/modules/llm/executor/nudges.ts";
 
 const log = createLogger("chat-progress");
@@ -112,8 +112,8 @@ function mark(line: string): string {
  * arrives already inside this budget and nothing is taken off; what this is really for is the
  * whitespace.
  */
-function oneLine(text: string): string {
-  return elide(text.replace(/\s+/g, " ").trim(), MAX_LINE);
+function stepLine(text: string): string {
+  return elide(oneLine(text), MAX_LINE);
 }
 
 export interface ChatProgressOptions {
@@ -199,7 +199,7 @@ export class ChatProgress {
    */
   step(text: string, blocked = false, like?: string): void {
     if (this.closed) return;
-    const line = oneLine(text);
+    const line = stepLine(text);
     if (!line) return;
 
     // `⏳` while it is our work, `⏸` while it is somebody else's — a turn parked on an approval is
@@ -260,7 +260,7 @@ export class ChatProgress {
     this.steps += lines.length;
     this.absorb = lines.length;
     if (this.summaryOnly) return;
-    const calls = lines.map((line) => `${mark(line)} ${oneLine(line)}`).join(" · ");
+    const calls = lines.map((line) => `${mark(line)} ${stepLine(line)}`).join(" · ");
     this.pending = elide(`${prefix}⏳ ⚡ ${lines.length} at once: ${calls}`, MAX_BATCH_LINE);
     this.schedule();
   }
@@ -272,7 +272,7 @@ export class ChatProgress {
    */
   note(text: string): void {
     if (this.closed || this.summaryOnly) return;
-    const line = oneLine(text);
+    const line = stepLine(text);
     if (!line) return;
     const prefix = this.options.agentLabel ? `[${this.options.agentLabel}] ` : "";
     this.pending = `${prefix}⏳ ${mark(line)} ${line}`;
@@ -379,9 +379,9 @@ export class ChatProgress {
     this.timer = undefined;
 
     const seconds = Math.max(1, Math.round((Date.now() - this.startedAt) / 1000));
-    const plural = this.steps === 1 ? "step" : "steps";
+    const steps = plural(this.steps, "step");
     const prefix = this.options.agentLabel ? `[${this.options.agentLabel}] ` : "";
-    this.pending = reason === undefined ? `${prefix}✓ ${this.steps} ${plural} · ${seconds}s` : `${prefix}⏸ ${this.steps} ${plural} · ${seconds}s (${oneLine(reason)})`;
+    this.pending = reason === undefined ? `${prefix}✓ ${this.steps} ${steps} · ${seconds}s` : `${prefix}⏸ ${this.steps} ${steps} · ${seconds}s (${stepLine(reason)})`;
     await this.flush();
 
     // Forget the message and start the next bubble's count from zero. The sealed one stays where it is.
@@ -452,9 +452,9 @@ export class ChatProgress {
     // Not named `mark` — that is the module function above, and shadowing it here would work today
     // and break the moment someone adds a tool mark to the summary line.
     const outcomeMark = outcome === "ok" ? "✓" : "✕";
-    const plural = this.steps === 1 ? "step" : "steps";
+    const steps = plural(this.steps, "step");
     const prefix = this.options.agentLabel ? `[${this.options.agentLabel}] ` : "";
-    this.pending = `${prefix}${outcomeMark} ${this.steps} ${plural} · ${seconds}s`;
+    this.pending = `${prefix}${outcomeMark} ${this.steps} ${steps} · ${seconds}s`;
     await this.flush();
   }
 

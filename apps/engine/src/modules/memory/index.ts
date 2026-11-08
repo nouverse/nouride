@@ -16,7 +16,7 @@
  */
 
 import { dirname, join } from "@nouride/runtime";
-import { createLogger, type ChatType, type MemorySection, type MemorySemanticSection, type Person } from "@nouride/shared";
+import { createLogger, type ChatType, type MemorySection, type MemorySemanticSection, oneLine, type Person } from "@nouride/shared";
 import { audienceOf, canSeeEpisode, canSeeFact, memoryChatKey, scopeOf, type Audience } from "./access.ts";
 import { analyze, type AnalyzeRequest } from "./analyze.ts";
 import { passBacklog, type PassBacklog } from "./backlog.ts";
@@ -314,7 +314,7 @@ export function createMemory(deps: MemoryDeps) {
       const { person, identity, audience } = situate(speaker);
       if (!person) return { refused: "The person you are talking to has no profile yet. If you know their name, record them with `person_record` first, then call this again. If you do not, keep it only for this conversation: do not put it in MEMORY.md." };
       const readers: Readers = audience.kind === "dm" ? { people: [identity] } : { people: [...audience.present], chat: audience.chat };
-      const same = (a: string, b: string) => a.replace(/\s+/g, " ").trim().toLowerCase() === b.replace(/\s+/g, " ").trim().toLowerCase();
+      const same = (a: string, b: string) => oneLine(a).toLowerCase() === oneLine(b).toLowerCase();
       const result = await editProfile({ vault, index, state, now }, person.key, {
         operations: (facts): FactOperation[] | { refused: string } => {
           if (change.op === "add") return [change];

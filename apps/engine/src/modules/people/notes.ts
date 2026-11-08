@@ -11,6 +11,8 @@
  * Pure: the text in, the text out. Who may do this, and the write itself, are the caller's.
  */
 
+import { oneLine } from "@nouride/shared";
+
 /** One fact. Longer is a paragraph, and notes are read on every turn with them. */
 const NOTE_LINE_MAX = 300;
 
@@ -43,7 +45,7 @@ const TOO_LONG = `One fact, one line, under ${NOTE_LINE_MAX} characters: notes a
 
 /** A line's words: on one line, without its list marker. How lines are compared and how one is written. */
 function flatten(text: string): string {
-  return text.replace(/\s+/g, " ").trim().replace(MARKER, "").trim();
+  return oneLine(text).replace(MARKER, "").trim();
 }
 
 function headingOf(line: string): { depth: number; text: string } | null {

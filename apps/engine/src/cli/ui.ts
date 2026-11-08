@@ -16,6 +16,7 @@
  * formatting an agent had to read its way back through.
  */
 
+import { clip } from "@nouride/shared";
 import { crashReport } from "@/commons/crash.ts";
 
 export const RESET = "\x1b[0m";
@@ -130,7 +131,7 @@ export function usageLines(text: string): never {
 export function summarize(details: Record<string, unknown>, maxValue = 120): string {
   const shorten = (value: unknown): unknown => {
     if (typeof value === "string" && value.length > maxValue) {
-      return `${value.slice(0, maxValue)}…(+${value.length - maxValue} chars)`;
+      return `${clip(value, maxValue, maxValue)}(+${value.length - maxValue} chars)`;
     }
     if (value && typeof value === "object" && !Array.isArray(value)) {
       return Object.fromEntries(

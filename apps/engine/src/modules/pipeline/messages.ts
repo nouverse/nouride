@@ -8,7 +8,17 @@
  */
 
 import type { DropReason } from "@nouride/queue";
-import type { ApprovalRequest, Attachment, AudioRefPart, ImageRefPart, MessageContent, MessageEnvelope, TakenSecret } from "@nouride/shared";
+import {
+  type ApprovalRequest,
+  type Attachment,
+  type AudioRefPart,
+  clip,
+  type ImageRefPart,
+  type MessageContent,
+  type MessageEnvelope,
+  plural,
+  type TakenSecret,
+} from "@nouride/shared";
 import { duration } from "@/modules/jobs/wake-text.ts";
 
 /**
@@ -98,7 +108,7 @@ const OPENER_CHARS = 2_000;
  */
 export function threadOpenerNote(opener: { name: string; text: string; where?: string | undefined }): string {
   const text = opener.text.trim();
-  const said = text.length > OPENER_CHARS ? `${text.slice(0, OPENER_CHARS)}…` : text;
+  const said = clip(text, OPENER_CHARS, OPENER_CHARS);
   return `[This thread was started from a message${opener.where ? ` in ${opener.where}` : ""} by ${opener.name}: ${said}]`;
 }
 
@@ -130,7 +140,7 @@ export function secretsNote(taken: readonly TakenSecret[] | undefined, options: 
   if (!taken?.length) return "";
   const list = taken.map((secret) => `${secret.handle} (${secret.label})`).join(", ");
   const handle = taken[0]!.handle;
-  const head = `[The daemon took ${taken.length === 1 ? "a credential" : "credentials"} out of the message below before you saw it: ${list}. `;
+  const head = `[The daemon took ${plural(taken.length, "a credential", "credentials")} out of the message below before you saw it: ${list}. `;
   if (options.ownShell) {
     return (
       head +
@@ -174,7 +184,7 @@ export function describeApprovalParams(request: Pick<ApprovalRequest, "params">)
   // A command arrives as argv or as one line for the shell — the same call either way.
   const line = typeof argv === "string" ? argv : Array.isArray(argv) && argv.every((part) => typeof part === "string") ? argv.join(" ") : null;
   if (line !== null) {
-    return `\`${line.length > 200 ? `${line.slice(0, 200)}…` : line}\``;
+    return `\`${clip(line, 200, 200)}\``;
   }
   const path = request.params?.path;
   return typeof path === "string" ? `\`${path}\`` : "";

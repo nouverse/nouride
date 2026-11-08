@@ -6,6 +6,7 @@
  * the way back in.
  */
 
+import { clip } from "@nouride/shared";
 import type { Missions } from "@/modules/missions/missions.ts";
 import { doneWhen, shortId } from "@/modules/missions/page.ts";
 import { isFinal, seenAs, type Mission } from "@/modules/missions/types.ts";
@@ -36,13 +37,13 @@ function show(mission: Mission, limits: string): string {
   else if (mission.reason) lines.push(`${mission.status === "waiting" ? "Waiting for" : "Why"}: ${mission.reason}`);
   if (mission.report) lines.push(`Report: ${mission.report}`);
   const told = mission.told.at(-1);
-  if (told) lines.push(`Told while it worked: ${mission.told.length}. Latest, ${told.read === undefined ? "not read yet" : `read in turn ${told.read}`}: "${told.text.length > 200 ? `${told.text.slice(0, 199)}…` : told.text}"`);
+  if (told) lines.push(`Told while it worked: ${mission.told.length}. Latest, ${told.read === undefined ? "not read yet" : `read in turn ${told.read}`}: "${clip(told.text, 200)}"`);
   return lines.join("\n");
 }
 
 /** One mission in one line, as a list shows it. */
 function line(mission: Mission): string {
-  return `${shortId(mission.id)} · ${mission.agentId} · ${state(mission)} · ${mission.goal.length > 80 ? `${mission.goal.slice(0, 79)}…` : mission.goal}`;
+  return `${shortId(mission.id)} · ${mission.agentId} · ${state(mission)} · ${clip(mission.goal, 80)}`;
 }
 
 function state(mission: Mission): string {

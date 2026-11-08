@@ -10,7 +10,7 @@
  * CLI's turn saw the turn's prompt and none of its steps.
  */
 
-import { messageText, type ChatMessage } from "@nouride/shared";
+import { clip, messageText, type ChatMessage, oneLine } from "@nouride/shared";
 import type { JournalEntry } from "@/modules/turns/journal.store.ts";
 import type { PipelineDeps } from "./deps.ts";
 
@@ -18,8 +18,6 @@ import type { PipelineDeps } from "./deps.ts";
 const PER_MESSAGE = 1_500;
 /** Characters of the running turn's steps, its newest kept first. A design value (RFC_SIDE_QUESTIONS §5.1). */
 const STEPS_BUDGET = 6_000;
-
-const clip = (text: string, max: number) => (text.length > max ? `${text.slice(0, max)}…` : text);
 
 /** Lines, the newest kept first within `budget` characters, in the order they happened. */
 function newestWithin(lines: readonly string[], budget: number): string {
@@ -43,8 +41,8 @@ export function conversationSoFar(messages: readonly ChatMessage[], budget: numb
   for (const message of messages) {
     if (message.role !== "user" && message.role !== "assistant") continue;
     // One line a message, so where one ends and the next begins is never in doubt.
-    const text = messageText(message.content).replace(/\s+/g, " ").trim();
-    if (text) lines.push(`${message.role === "user" ? "They said" : "You said"}: ${clip(text, PER_MESSAGE)}`);
+    const text = oneLine(messageText(message.content));
+    if (text) lines.push(`${message.role === "user" ? "They said" : "You said"}: ${clip(text, PER_MESSAGE, PER_MESSAGE)}`);
   }
   return newestWithin(lines, budget);
 }
@@ -56,12 +54,12 @@ export function stepsOf(entries: JournalEntry[]): string {
     if (!("message" in entry)) continue;
     const message: ChatMessage = entry.message;
     const text = messageText(message.content).trim();
-    if (message.role === "user" && text) lines.push(`Asked: ${clip(text, 400)}`);
+    if (message.role === "user" && text) lines.push(`Asked: ${clip(text, 400, 400)}`);
     if (message.role === "assistant") {
-      if (text) lines.push(`You said: ${clip(text, 400)}`);
-      for (const call of message.toolCalls ?? []) lines.push(`You called ${call.name} ${clip(JSON.stringify(call.arguments), 300)}`);
+      if (text) lines.push(`You said: ${clip(text, 400, 400)}`);
+      for (const call of message.toolCalls ?? []) lines.push(`You called ${call.name} ${clip(JSON.stringify(call.arguments), 300, 300)}`);
     }
-    if (message.role === "tool") lines.push(`It answered: ${clip(text, 500)}`);
+    if (message.role === "tool") lines.push(`It answered: ${clip(text, 500, 500)}`);
   }
   return newestWithin(lines, STEPS_BUDGET);
 }
@@ -80,6 +78,6 @@ export function workInFlight(deps: Pick<PipelineDeps, "turns" | "journal">, agen
   if (journaled) return stepsOf(entries);
   const recorded = (deps.turns?.stepsSince(running) ?? [])
     .filter((step) => step.kind === "tool" || step.kind === "tool_done" || step.kind === "note")
-    .map((step) => `- ${clip(step.text.replace(/\s+/g, " ").trim(), 300)}`);
+    .map((step) => `- ${clip(oneLine(step.text), 300, 300)}`);
   return newestWithin([...stepsOf(entries).split("\n").filter(Boolean), ...recorded], STEPS_BUDGET);
 }

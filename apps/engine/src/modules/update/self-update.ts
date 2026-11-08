@@ -18,7 +18,7 @@
  * something does.
  */
 
-import { contained, createLogger } from "@nouride/shared";
+import { clip, contained, createLogger } from "@nouride/shared";
 import type { CronPort } from "@/modules/cron/cron.store.ts";
 import type { JobsPort } from "@/modules/jobs/jobs.store.ts";
 import type { UpdateToolOptions } from "@/modules/tools/builtins/update.ts";
@@ -158,7 +158,7 @@ export function restartWhenIdle(input: {
 /** `the background job \`make build\` (12m)`, or the first three of several — what a restart is waiting for. */
 export function describeJobs(jobs: readonly WorkingJob[], at: number = Date.now()): string {
   const one = (job: WorkingJob) => {
-    const command = job.command.length > 48 ? `${job.command.slice(0, 47)}…` : job.command;
+    const command = clip(job.command, 48);
     const seconds = Math.max(1, Math.round((at - job.startedAt) / 1000));
     return `\`${command}\` (${seconds < 60 ? `${seconds}s` : `${Math.round(seconds / 60)}m`})`;
   };

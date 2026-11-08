@@ -11,7 +11,7 @@
  * even if asked — so a fault is never mistaken for a mode. `asleep` (0.8.0) is the pause mark, which the registry keeps.
  */
 
-import type { AgentRuntimeStatus, GatewayPresence } from "@nouride/shared";
+import { type AgentRuntimeStatus, type GatewayPresence, plural } from "@nouride/shared";
 
 export type AgentActivity = "waiting" | "working" | "asleep" | "idle";
 
@@ -73,7 +73,7 @@ export function presenceFor(activity: AgentActivity): GatewayPresence {
 
 /** The status in a few words, the same in `/status` and `nouride agents`: "working (in 2 chats, 1 job)". */
 export function describeStatus(status: AgentStatus): string {
-  const count = (n: number, one: string) => `${n} ${one}${n === 1 ? "" : "s"}`;
+  const count = (n: number, one: string) => `${n} ${plural(n, one)}`;
   const detail =
     status.activity === "waiting"
       ? ` (${[status.waiting > 0 ? count(status.waiting, "approval") : "", status.missionsWaiting > 0 ? count(status.missionsWaiting, "mission") : ""].filter(Boolean).join(", ")})`

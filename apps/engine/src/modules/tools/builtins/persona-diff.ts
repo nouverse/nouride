@@ -12,7 +12,7 @@
  * first made one 512 KiB call hold the daemon for minutes (Nox's third review).
  */
 
-import type { ApprovalPreview, DiffLine } from "@nouride/shared";
+import { type ApprovalPreview, type DiffLine, plural } from "@nouride/shared";
 
 /**
  * The most a persona change may change at once: what a chat's prompt shows whole beside its question and buttons. Never
@@ -201,7 +201,7 @@ export function personaChange(before: string, after: string): DiffLine[] | { ref
   const found = lines.filter((line): line is Change => line.sign !== "=");
   const text = (change: Change) => (change.sign === "-" ? a : b)[change.at]!;
   const tooLarge = (lines: number, chars: number) =>
-    `this change shows ${lines} line${lines === 1 ? "" : "s"} and ${chars} characters, and an admin is shown every line of it whole, with where it sits: ` +
+    `this change shows ${lines} ${plural(lines, "line")} and ${chars} characters, and an admin is shown every line of it whole, with where it sits: ` +
     `at most ${MAX_LINES} lines and ${MAX_CHARS} characters at once. Propose it a section at a time`;
   const raw = found.reduce((sum, change) => sum + text(change).length, 0);
   if (found.length > MAX_LINES || raw > MAX_CHARS) return { refused: tooLarge(found.length, raw) };

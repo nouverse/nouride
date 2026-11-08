@@ -43,7 +43,7 @@
  * second, quieter cap in this file would drop text with no pointer to what was dropped.
  */
 
-import type { StopReason } from "@nouride/shared";
+import { plural, type StopReason } from "@nouride/shared";
 import { OUT_OF_ROUNDS, OUT_OF_TIME, SAME_ANSWER } from "@/modules/llm/executor/settle.ts";
 
 /**
@@ -227,8 +227,8 @@ export function renderHandoff(handoff: SubAgentHandoff): string {
   const { toolCalls, steps, ms } = handoff.metrics;
   lines.push(
     "",
-    `${toolCalls} ${toolCalls === 1 ? "tool call" : "tool calls"} · ` +
-      `${steps} ${steps === 1 ? "step" : "steps"} · ${Math.round(ms / 1000)}s`,
+    `${toolCalls} ${plural(toolCalls, "tool call")} · ` +
+      `${steps} ${plural(steps, "step")} · ${Math.round(ms / 1000)}s`,
   );
 
   return lines.join("\n");

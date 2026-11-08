@@ -32,8 +32,7 @@
  * budget is the honest limit: whatever they are doing, they get four turns of it.
  */
 
-import type { MessageEnvelope } from "@nouride/shared";
-import { cutAtWord } from "@/commons/cut-at-word.ts";
+import { cutAtWord, type MessageEnvelope } from "@nouride/shared";
 
 export interface AgentMentionPolicy {
   /** Whether agents may address each other at all. */

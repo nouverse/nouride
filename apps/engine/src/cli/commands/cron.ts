@@ -1,3 +1,4 @@
+import { plural } from "@nouride/shared";
 import type {
   CronDetailResponse,
   CronJobRow,
@@ -187,7 +188,7 @@ export async function cron(client: Client, args: string[]): Promise<void> {
     say(
       `    ${DIM}${job.agentId} → ${job.target.gatewayId} ${job.target.chatId}` +
         ` · ${job.session}` +
-        ` · ${job.runCount} run${job.runCount === 1 ? "" : "s"}` +
+        ` · ${job.runCount} ${plural(job.runCount, "run")}` +
         `${job.failCount > 0 ? `, ${job.failCount} failed` : ""}${RESET}`,
     );
   }

@@ -28,7 +28,7 @@
  * the turn's record (`steer-accept.ts`).
  */
 
-import { createLogger, helperModel, type ChatParams, type LLMProvider, type MessageEnvelope, type TokenUsage } from "@nouride/shared";
+import { clipTrimmed, createLogger, helperModel, type ChatParams, type LLMProvider, type MessageEnvelope, oneLine, type TokenUsage } from "@nouride/shared";
 import { meter } from "@/modules/llm/metered.ts";
 import { conversationSoFar } from "./aside-context.ts";
 import { isSystemEvent } from "./deps.ts";
@@ -79,17 +79,12 @@ export interface SteerReplyInput {
   signal?: AbortSignal;
 }
 
-const oneLine = (text: string, max = LINE_MAX): string => {
-  const line = text.replace(/\s+/g, " ").trim();
-  return line.length > max ? `${line.slice(0, max - 1).trimEnd()}…` : line;
-};
-
 /** The request: who the agent is and what it was told not to do, then the turn and the message. */
 function steerReplyParams(input: Omit<SteerReplyInput, "provider" | "timeoutMs">): ChatParams {
   const steps = input.steps
     .filter((step) => step.kind === "tool" || step.kind === "tool_done" || step.kind === "note")
     .slice(-STEPS)
-    .map((step) => `- ${oneLine(step.text, 160)}`);
+    .map((step) => `- ${clipTrimmed(oneLine(step.text), 160)}`);
   const persona = input.persona.trim().slice(0, PERSONA_MAX);
   return {
     model: input.model,
@@ -110,13 +105,13 @@ function steerReplyParams(input: Omit<SteerReplyInput, "provider" | "timeoutMs">
         role: "user",
         content: [
           input.conversation ? `The conversation before this task:\n${input.conversation}` : "",
-          input.working ? `Working on: ${oneLine(input.working)}` : "Working on a task you started yourself.",
+          input.working ? `Working on: ${clipTrimmed(oneLine(input.working), LINE_MAX)}` : "Working on a task you started yourself.",
           steps.length ? `Latest steps:\n${steps.join("\n")}` : "",
           // What a reply points at — without it, "this one" or "you" in their message is a guess.
           input.repliedTo?.text.trim()
-            ? `Their message replies to this one${input.repliedTo.sender ? ` from ${input.repliedTo.sender}` : ""}: "${oneLine(input.repliedTo.text, 1000)}"`
+            ? `Their message replies to this one${input.repliedTo.sender ? ` from ${input.repliedTo.sender}` : ""}: "${clipTrimmed(oneLine(input.repliedTo.text), 1000)}"`
             : "",
-          `Their message: ${oneLine(input.said, 1000)}`,
+          `Their message: ${clipTrimmed(oneLine(input.said), 1000)}`,
         ]
           .filter(Boolean)
           .join("\n\n"),
@@ -138,7 +133,7 @@ async function steerReply(
     onUsage?.(response.usage, response.model);
     // A server, or a fetch, that finished anyway: late is late.
     if (signal.aborted) return { line: null, why: `no answer within ${input.timeoutMs} ms, or the turn moved on` };
-    const line = oneLine(response.text.replace(/^["“']|["”']$/g, ""));
+    const line = clipTrimmed(oneLine(response.text.replace(/^["“']|["”']$/g, "")), LINE_MAX);
     return line ? { line } : { line: null, why: `the model said nothing (stop: ${response.stopReason})` };
   } catch (err) {
     return { line: null, why: signal.aborted ? `no answer within ${input.timeoutMs} ms, or the turn moved on` : String(err) };

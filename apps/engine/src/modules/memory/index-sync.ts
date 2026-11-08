@@ -8,7 +8,7 @@
  */
 
 import { join, listDir, readTextFileIfExists, relative, statFile } from "@nouride/runtime";
-import { createLogger } from "@nouride/shared";
+import { clipTrimmed, createLogger, oneLine } from "@nouride/shared";
 import { isoWeek } from "@/commons/clock.ts";
 import { parseEpisode, type Episode } from "./episode.ts";
 import { episodeFiles } from "./episodes.ts";
@@ -63,11 +63,11 @@ function previewOf(episode: Episode): string | undefined {
   const agents = new Set(episode.agents.map((agent) => agent.toLowerCase()));
   const blocks = episode.transcript.split(/\n{2,}/).map((block) => {
     const [header = "", ...lines] = block.split("\n");
-    return { speaker: header.split(" · ")[1]?.trim().toLowerCase() ?? "", text: lines.join(" ").replace(/\s+/g, " ").trim() };
+    return { speaker: header.split(" · ")[1]?.trim().toLowerCase() ?? "", text: oneLine(lines.join(" ")) };
   });
   const first = blocks.find((block) => block.text && !agents.has(block.speaker)) ?? blocks.find((block) => block.text);
   if (!first) return undefined;
-  return first.text.length > PREVIEW_CHARS ? `${first.text.slice(0, PREVIEW_CHARS - 1).trimEnd()}…` : first.text;
+  return clipTrimmed(first.text, PREVIEW_CHARS);
 }
 
 export function indexedEpisode(episode: Episode): IndexedEpisode {

@@ -10,7 +10,7 @@
  */
 
 import { dirname, join } from "@nouride/runtime";
-import { formatBytes } from "@nouride/shared";
+import { formatBytes, plural } from "@nouride/shared";
 
 export interface Check {
   level: "ok" | "warn" | "bad";
@@ -306,7 +306,7 @@ export function plainCopiesCheck(names: readonly string[]): Check | null {
   if (!plain.length) return null;
   return {
     level: "warn",
-    message: `secret store: ${plain.length} other cop${plain.length === 1 ? "y" : "ies"} beside it (${plain.join(", ")})`,
+    message: `secret store: ${plain.length} other ${plural(plain.length, "copy", "copies")} beside it (${plain.join(", ")})`,
     hint: "A secrets.json beside the encrypted store holds every value in plain text: remove it once you no longer need it, by hand. An .unopened file is a store whose key was not here.",
   };
 }

@@ -2,7 +2,7 @@
  * Small renderers the hook replies share.
  */
 
-import { createLogger, toUserMessage, type ChatMessage } from "@nouride/shared";
+import { createLogger, plural, toUserMessage, type ChatMessage } from "@nouride/shared";
 import { estimateMessagesTokens } from "@nouride/llm";
 import { groupTurns } from "@/modules/llm/context.ts";
 import type { HookContext } from "./types.ts";
@@ -50,7 +50,7 @@ export function formatDuration(seconds: number): string {
  */
 export function clearedSize(messages: ChatMessage[]): string {
   const turns = groupTurns(messages).length;
-  return `${turns} turn${turns === 1 ? "" : "s"}, ${messages.length} message${messages.length === 1 ? "" : "s"}, ~${formatTokens(estimateMessagesTokens(messages))} tokens`;
+  return `${turns} ${plural(turns, "turn")}, ${messages.length} ${plural(messages.length, "message")}, ~${formatTokens(estimateMessagesTokens(messages))} tokens`;
 }
 
 export function formatTokens(n: number): string {

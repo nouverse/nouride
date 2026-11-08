@@ -14,8 +14,8 @@
  * - **A conversation's.** A cron run has a schedule and a record of its own.
  */
 
+import { type ApprovalRequest, clip, type MessageEnvelope, oneLine } from "@nouride/shared";
 import { cutLine, type CutCall, type CutKind } from "@/modules/turns/cut-calls.ts";
-import type { ApprovalRequest, MessageEnvelope } from "@nouride/shared";
 import { SCHEDULED, type TurnRecord, type TurnsPort } from "@/modules/turns/turns.store.ts";
 import { SYSTEM_SENDER } from "./deps.ts";
 import { INBOX_FRESH_MS } from "./inbox.store.ts";
@@ -82,8 +82,7 @@ export function restartResumeEnvelope(
   waiting: readonly Pick<ApprovalRequest, "tool" | "params">[] = [],
   cut?: Cut,
 ): MessageEnvelope {
-  const asked = turn.prompt.trim().replace(/\s+/g, " ");
-  const quoted = asked.length > 200 ? `${asked.slice(0, 199)}…` : asked;
+  const quoted = clip(oneLine(turn.prompt), 200);
   const open = waiting.map((request) => `\`${request.tool}\`${describeApprovalParams(request) ? ` ${describeApprovalParams(request)}` : ""}`);
   const kept = open.length
     ? ` The approval you were waiting on (${open.join("; ")}) is still open, and has been put in front of them again. If it ` +

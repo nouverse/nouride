@@ -4,7 +4,7 @@
  * conversation's, a fact's or a document section's, each with the id `memory_read` opens.
  */
 
-import type { Tool, ToolResult } from "@nouride/shared";
+import { clip, oneLine, type Tool, type ToolResult } from "@nouride/shared";
 import type { SearchHit } from "@/modules/memory/index.ts";
 import { aboutOf, agentsOf, pagesOf, speakerOf, type MemoryToolsDeps } from "./memory.ts";
 
@@ -17,8 +17,7 @@ const SECTION_PREVIEW = 300;
 function hitLine(hit: SearchHit, agentId: string): string {
   if (hit.kind === "fact") return `- ${hit.fact.subject === "shared" ? "shared" : hit.fact.subject} · ${hit.fact.section}: ${hit.fact.text}`;
   if (hit.kind === "section") {
-    const text = hit.section.text.replace(/\s+/g, " ").trim();
-    const preview = text.length > SECTION_PREVIEW ? `${text.slice(0, SECTION_PREVIEW)}…` : text;
+    const preview = clip(oneLine(hit.section.text), SECTION_PREVIEW, SECTION_PREVIEW);
     return `- document · ${hit.collection}${aboutOf(hit.about)} · ${hit.section.trail}${pagesOf(hit.section)} · ${preview} ⟨${hit.section.item}⟩`;
   }
   const episode = hit.episode;

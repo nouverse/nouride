@@ -13,7 +13,7 @@
 
 import { PrintedCredentials, type PrintedKind, type TransientSecrets } from "@nouride/secrets";
 import type { TextFilter } from "@nouride/runtime";
-import type { ToolContext } from "@nouride/shared";
+import { plural, type ToolContext } from "@nouride/shared";
 import { commandWords, namedCredential } from "./credential-files.ts";
 import { secretScope } from "./held-secrets.ts";
 
@@ -139,7 +139,7 @@ export function printedOutput(
     filter: () => new PrintedCredentials(source.kind, swap),
     note: () => {
       if (swapped.size === 0) return null;
-      const n = `${swapped.size} value${swapped.size === 1 ? "" : "s"}`;
+      const n = `${swapped.size} ${plural(swapped.size, "value")}`;
       // Said, because an agent that saw a commit message masked took the commit for broken and rewrote it (2026-10-23).
       const unchanged = "Only this output is masked: nothing the command read, wrote or committed was changed";
       return scope

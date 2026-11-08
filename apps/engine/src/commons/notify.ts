@@ -16,9 +16,14 @@
  */
 
 import {
+  type ApprovalPreview,
+  type ApprovalRequest,
+  clip,
+  createLogger,
+  type Gateway,
+  type MessageButton,
   previewHeadline,
-  type ApprovalPreview, type ApprovalRequest, createLogger } from "@nouride/shared";
-import type { Gateway, MessageButton } from "@nouride/shared";
+} from "@nouride/shared";
 import { escapeMarkdown } from "@nouride/gateways";
 
 const log = createLogger("notify");
@@ -363,8 +368,7 @@ export function approvalPrompt(notice: ApprovalNoticeLike, shown: { buttons?: bo
 
 /** A mission's goal as a prompt names it: its first line, short. */
 function clipGoal(goal: string): string {
-  const first = goal.trim().split("\n")[0]!;
-  return first.length > 80 ? `${first.slice(0, 79)}…` : first;
+  return clip(goal.trim().split("\n")[0]!, 80);
 }
 
 /**
@@ -395,7 +399,7 @@ export function approvalSettledLine(
           : `⌛ No longer waiting: ${agent} did not run ${tool}`;
   // What it was about, on one short line: the summary a person decided from, else the command.
   const about = (request.preview ? previewHeadline(request.preview) : describeParams(request.params).split("\n")[0]!).replace(/`/g, "'");
-  return about ? `${head}\n\`${about.length > 120 ? `${about.slice(0, 119)}…` : about}\`` : head;
+  return about ? `${head}\n\`${clip(about, 120)}\`` : head;
 }
 
 /**
@@ -413,7 +417,6 @@ function describeParams(params: Record<string, unknown>): string {
       : JSON.stringify(params);
 
   const cwd = typeof params.cwd === "string" ? `\n(in ${params.cwd})` : "";
-  return rendered.length > MAX_COMMAND_CHARS
-    ? `${rendered.slice(0, MAX_COMMAND_CHARS)}… [clipped, see nouride approvals]${cwd}`
-    : `${rendered}${cwd}`;
+  const shown = clip(rendered, MAX_COMMAND_CHARS, MAX_COMMAND_CHARS);
+  return shown === rendered ? `${rendered}${cwd}` : `${shown} [clipped, see nouride approvals]${cwd}`;
 }

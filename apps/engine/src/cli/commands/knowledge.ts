@@ -5,6 +5,7 @@
  */
 
 import { basename, readFileBytes, readStdinBytes } from "@nouride/runtime";
+import { clip, oneLine } from "@nouride/shared";
 import type { Client } from "@/cli/client.ts";
 import { flagValue } from "@/cli/args.ts";
 import { BOLD, DIM, RESET, YELLOW, emit, fail, say, usageError } from "@/cli/ui.ts";
@@ -122,9 +123,9 @@ export async function knowledge(client: Client, args: string[]): Promise<void> {
     emit({ hits });
     if (hits.length === 0) return say(`${DIM}nothing found${RESET}`);
     for (const hit of hits) {
-      const text = hit.text.replace(/\s+/g, " ").trim();
+      const text = oneLine(hit.text);
       say(`${BOLD}${hit.collectionName}${RESET} · ${hit.trail}${hit.pageFrom !== undefined ? ` · p. ${hit.pageFrom}` : ""} ${DIM}${hit.item}${RESET}`);
-      say(`  ${text.length > 200 ? `${text.slice(0, 200)}…` : text}`);
+      say(`  ${clip(text, 200, 200)}`);
     }
     return;
   }

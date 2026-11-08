@@ -9,6 +9,7 @@
  */
 
 import { autoApprovable, type PolicyAsk, type PolicyOutcome } from "@nouride/policy";
+import { clip } from "@nouride/shared";
 
 /** What one command is handed: its environment's secrets, and their names. */
 export interface CommandSecrets {
@@ -64,7 +65,7 @@ export function setSecretFields(read: (name: string) => Readonly<Record<string, 
 /** The fields shown with a credential's name: at most six, each cut to a line's length, so no field fills a prompt. */
 export function secretFieldsLine(name: string): string {
   const fields = Object.entries(fieldsOf(name) ?? {}).slice(0, 6);
-  return fields.map(([field, text]) => `${field}: ${text.length > 120 ? `${text.slice(0, 119)}…` : text}`).join(", ");
+  return fields.map(([field, text]) => `${field}: ${clip(text, 120)}`).join(", ");
 }
 
 /**

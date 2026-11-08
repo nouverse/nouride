@@ -13,7 +13,7 @@
  * the answers still arrive, through `POST /message`.
  */
 
-import type { StreamFrameData } from "@nouride/shared";
+import { joinLines, type StreamFrameData } from "@nouride/shared";
 import type { ActivityKind } from "@/commons/activity.ts";
 import { readFrames } from "@/cli/commands/events.ts";
 
@@ -49,14 +49,6 @@ export const MARKS = {
   retry: "said",
   compact: "said",
 } as const satisfies Record<ActivityKind, "doing" | "thinking" | "said">;
-
-/**
- * A step as one line of the screen. A model's reasoning arrives with its own line breaks, and printed as it came the
- * lines after the first lost their mark — "1." and "2." of a list sat bare between the `│` lines.
- */
-export function oneLine(text: string): string {
-  return text.replace(/\s*\n\s*/g, " ").trim();
-}
 
 /** The kinds drawn as progress: what the turn did, not what was said to it or about its cost. */
 const DRAWN = new Set<string>(Object.keys(MARKS).filter((kind) => kind !== "thinking"));
@@ -114,11 +106,13 @@ export function followChat(deps: {
       }
       return;
     }
-    if (DRAWN.has(row.kind) && typeof row.data.text === "string" && deps.drawing()) deps.draw({ kind: row.kind, text: oneLine(row.data.text) });
+    // A step as one line of the screen: a model's reasoning arrives with its own line breaks, and printed as it came the
+    // lines after the first lost their mark, "1." and "2." of a list bare between the `│` lines.
+    if (DRAWN.has(row.kind) && typeof row.data.text === "string" && deps.drawing()) deps.draw({ kind: row.kind, text: joinLines(row.data.text) });
   };
 
   const thinking = (data: StreamFrameData["thinking"]): void => {
-    if (deps.drawing()) deps.draw({ kind: "thinking", text: oneLine(data.text) });
+    if (deps.drawing()) deps.draw({ kind: "thinking", text: joinLines(data.text) });
   };
 
   const run = async (): Promise<void> => {

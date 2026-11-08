@@ -156,7 +156,7 @@ describe("a voice note", () => {
 });
 
 describe("a video", () => {
-  const clip = (name: string, extra: Partial<Attachment> = {}) => ({
+  const videoNote = (name: string, extra: Partial<Attachment> = {}) => ({
     type: "video" as const,
     mimeType: "video/mp4",
     filename: name,
@@ -166,7 +166,7 @@ describe("a video", () => {
 
   test.skipIf(!ffmpegWorks)("becomes four frames the model sees, and sound it hears", async () => {
     const { subject } = intake({ listing: hears });
-    const result = await subject.store("nouva", envelope([clip("talking.mp4", { recordedBySender: true })]), target);
+    const result = await subject.store("nouva", envelope([videoNote("talking.mp4", { recordedBySender: true })]), target);
 
     expect(result.media.filter((part) => part.type === "image_ref")).toHaveLength(4);
     expect(result.media.filter((part) => part.type === "audio_ref")).toHaveLength(1);
@@ -180,7 +180,7 @@ describe("a video", () => {
 
   test.skipIf(!ffmpegWorks)("to Claude: the frames still go, the sound is honestly not heard", async () => {
     const { subject } = intake({ kind: "anthropic" });
-    const result = await subject.store("nouva", envelope([clip("talking.mp4")]), target);
+    const result = await subject.store("nouva", envelope([videoNote("talking.mp4")]), target);
     expect(result.media.filter((part) => part.type === "image_ref")).toHaveLength(4);
     expect(result.media.filter((part) => part.type === "audio_ref")).toHaveLength(0);
     expect(result.notice).toContain("The sound of the video");
@@ -189,7 +189,7 @@ describe("a video", () => {
 
   test("with no ffmpeg: not seen, said so, and the operator told how to fix it", async () => {
     const { subject, alerts } = intake({ listing: hears, ffmpeg: null });
-    const result = await subject.store("nouva", envelope([clip("talking.mp4")]), target);
+    const result = await subject.store("nouva", envelope([videoNote("talking.mp4")]), target);
     expect(result.media).toEqual([]);
     expect(result.notice).toContain("you cannot see it");
     expect(alerts.some((text) => text.includes("ffmpeg"))).toBe(true);

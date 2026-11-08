@@ -12,6 +12,7 @@
  * chatter instead of the person who tagged it.
  */
 
+import { oneLine } from "@nouride/shared";
 import type { ChatEvent } from "./chat-events.store.ts";
 
 /**
@@ -50,6 +51,8 @@ export function formatRoomEvents(events: ChatEvent[], budget = BLOCK_MAX_CHARS):
   for (let index = events.length - 1; index >= 0; index -= 1) {
     const event = events[index];
     if (!event) continue;
+    // One line per event, whatever the writer put in `text`: a newline inside one would break the list into something
+    // that reads like a new section, which is how a background block starts looking like an instruction.
     const line = `- ${oneLine(event.text)}`;
     if (spent + line.length + 1 > budget) break;
     spent += line.length + 1;
@@ -58,15 +61,4 @@ export function formatRoomEvents(events: ChatEvent[], budget = BLOCK_MAX_CHARS):
 
   if (lines.length === 0) return "";
   return [head, ...lines.reverse()].join("\n");
-}
-
-/**
- * One line per event, whatever the writer put in `text`.
- *
- * The block's shape is what the label describes, and a newline inside an event would break the list
- * into something that reads like a new section — which is how a background block starts looking like
- * an instruction.
- */
-function oneLine(text: string): string {
-  return text.replace(/\s+/g, " ").trim();
 }

@@ -12,7 +12,7 @@
  * replaced it.
  */
 
-import type { ExecutorStepKind } from "@nouride/shared";
+import { elide, type ExecutorStepKind } from "@nouride/shared";
 
 /**
  * What the executor says, by kind: `thinking` — waiting on the provider, a frame and never a step — and the step kinds
@@ -22,41 +22,8 @@ import type { ExecutorStepKind } from "@nouride/shared";
  */
 export type ActivityKind = "thinking" | ExecutorStepKind;
 
-/**
- * How much of a cut line is kept from the end.
- *
- * A third, because the two ends answer different questions and the front is the cheaper one. `ssh -i
- * /srv/nouride/.nouride/agents/shared/.credentials/id_ed25519_nouva -o ConnectTimeout=5 …` spends its
- * whole budget on a key path and a pile of flags, and the thing a person actually wants — which host,
- * running what — is at the far end, where a head-only cut throws it away.
- *
- * Watched live: every long `ssh` step read as "nouva is ssh-ing somewhere", identically, for a whole
- * turn. The command's subject is usually the last thing on it.
- */
-const TAIL_SHARE = 1 / 3;
-
-/** What one tool call's arguments get, before the tool's own name is put in front. */
+/** What one tool call's arguments get, before the tool's own name is put in front; `elide` keeps both of its ends. */
 const DETAIL_MAX = 120;
-
-/**
- * Cut the middle out of a line too long to show, keeping both ends.
- *
- * Lives here, beside the only thing that builds these lines, because the alternative is what shipped:
- * a length cap here with no marker at all, and a *second* one in the chat renderer that added the `…`
- * and kept the tail. Two rules for one question, and the one that ran first won — silently, since its
- * output then fitted the second's budget and the second never fired. The tail never survived either
- * way, and the fix went into the half that was not doing the cutting.
- *
- * So: one rule, one place, and everything that shows a step imports it.
- */
-export function elide(text: string, max: number): string {
-  if (text.length <= max) return text;
-  // The ellipsis is part of the budget, so the result is never longer than an uncut line.
-  const keep = max - 1;
-  const tail = Math.floor(keep * TAIL_SHARE);
-  const head = keep - tail;
-  return `${text.slice(0, head)}…${text.slice(text.length - tail)}`;
-}
 
 /**
  * A tool call as one readable line.

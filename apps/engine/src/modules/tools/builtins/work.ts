@@ -8,7 +8,7 @@
  * API with it, or asked a person to look.
  */
 
-import type { ApprovalRequest, Tool, ToolContext, ToolResult } from "@nouride/shared";
+import { type ApprovalRequest, clip, type Tool, type ToolContext, type ToolResult } from "@nouride/shared";
 import type { JobRecord, JobsPort } from "@/modules/jobs/jobs.store.ts";
 import type { Missions } from "@/modules/missions/missions.ts";
 import type { KeptPlan } from "@/modules/notes/store.ts";
@@ -53,10 +53,6 @@ function refused(content: string): ToolResult {
 
 function text(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
-}
-
-function clip(value: string, max: number): string {
-  return value.length > max ? `${value.slice(0, max - 1)}…` : value;
 }
 
 function ago(at: number, now: number): string {

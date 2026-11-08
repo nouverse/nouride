@@ -37,7 +37,7 @@
  * model, which is the shape of a bill nobody meant to run up.
  */
 
-import { createLogger, type ModelTier, type Tool, type ToolContext, type ToolResult } from "@nouride/shared";
+import { createLogger, type ModelTier, plural, type Tool, type ToolContext, type ToolResult } from "@nouride/shared";
 import { renderHandoff, type SubAgentHandoff } from "@/modules/tools/handoff.ts";
 import { goalLine, parseBriefs, type HelperBrief } from "./delegate-brief.ts";
 import { duration } from "@/modules/jobs/wake-text.ts";
@@ -293,7 +293,7 @@ function said(brief: HelperBrief, outcome: BackgroundStart): string {
       // Helpers and asks share the one limit (0.7.19): an agent asked with `ask_agent` that is still at work in the
       // background is one of what is running.
       return (
-        `Not started: ${goal}. You already have ${outcome.running.length} ${outcome.running.length === 1 ? "job" : "jobs"} ` +
+        `Not started: ${goal}. You already have ${outcome.running.length} ${plural(outcome.running.length, "job")} ` +
         `working in the background (helpers and asks), the most this agent may have (\`[delegate] max_background = ${outcome.limit}\`): ` +
         `${runningList(outcome.running)}. Wait for one to finish (its result comes to you as a message), stop one ` +
         `with \`nouride jobs kill <id>\`, or run this one in the foreground (leave \`background\` off).`

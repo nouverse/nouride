@@ -139,4 +139,22 @@ describe("lint:arch's import rules, in every spelling", () => {
     expect(out).toContain("[ui-outside-the-dashboard]");
     expect(archOver({ "packages/llm/src/a.ts": "export const x = 1;\n" })).toMatchObject({ code: 0 });
   });
+
+  // The names are put in from outside each line, or lint:arch would read these very lines as copies.
+  test("a text helper written again outside @nouride/shared is refused, as a function or an arrow", () => {
+    for (const copy of [
+      `function ${"clip"}(text: string, max: number): string {\n  return text.slice(0, max);\n}\nexport const x = clip('a', 1);\n`,
+      `const ${"oneLine"} = (text: string): string => text.trim();\nexport const x = oneLine('a');\n`,
+      `export const ${"plural"} = (n: number, one: string) => (n === 1 ? one : one + "s");\n`,
+    ]) {
+      const { code, out } = archOver({ "packages/llm/src/a.ts": copy });
+      expect(code).toBe(1);
+      expect(out).toContain("[reimplemented-formatter]");
+    }
+  });
+
+  test("a value that is only named like one, and the dashboard's own copy, are not", () => {
+    expect(archOver({ "packages/llm/src/a.ts": "export const clip = await Promise.resolve(1);\n" })).toMatchObject({ code: 0 });
+    expect(archOver({ "apps/dashboard/src/a.ts": `export function ${"clip"}(text: string): string {\n  return text;\n}\n` })).toMatchObject({ code: 0 });
+  });
 });

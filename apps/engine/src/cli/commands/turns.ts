@@ -6,6 +6,7 @@
  * together: the question, every model call with its tokens, cost, latency and retries, the steps, the tool calls.
  */
 
+import { clip, oneLine, plural } from "@nouride/shared";
 import type { Client } from "@/cli/client.ts";
 import { flagValue } from "@/cli/args.ts";
 import { BOLD, DIM, RESET, YELLOW, say, summarize, usageError } from "@/cli/ui.ts";
@@ -34,8 +35,8 @@ export async function turns(client: Client, args: string[]): Promise<void> {
     // A delegate's own turn (0.7.26): its calls are counted in the turn that asked, so it names that instead.
     const counted = isDelegated(row.cause)
       ? `↳ ${row.cause.via}${row.cause.parent ? ` for ${row.cause.parent}` : ""}`
-      : `${row.calls} ${row.calls === 1 ? "call" : "calls"} · ${cost}`;
-    say(`${DIM}${minute(row.startedAt)}${RESET} ${row.id} ${BOLD}${row.agentId}${RESET} ${tone(row.status)} ${DIM}${counted}${RESET}  ${edited}${oneLine(row.prompt, 60)}`);
+      : `${row.calls} ${plural(row.calls, "call")} · ${cost}`;
+    say(`${DIM}${minute(row.startedAt)}${RESET} ${row.id} ${BOLD}${row.agentId}${RESET} ${tone(row.status)} ${DIM}${counted}${RESET}  ${edited}${clip(oneLine(row.prompt), 60)}`);
   }
   say(`${DIM}nouride turns show <id> (a shortened id works when it names one turn)${RESET}`);
 }
@@ -44,7 +45,7 @@ function show(found: TurnInspection): void {
   const { turn, totals, calls, steps, audit } = found;
   const took = turn.endedAt ? ` · ${seconds(turn.endedAt - turn.startedAt)}` : "";
   say(`${BOLD}${turn.id}${RESET} ${turn.agentId} · ${tone(turn.status)} · ${second(turn.startedAt)}${took}`);
-  say(`${DIM}asked${RESET}   ${oneLine(turn.prompt, 200)}`);
+  say(`${DIM}asked${RESET}   ${clip(oneLine(turn.prompt), 200)}`);
   // A person's edit (G11): of the message it answers, edited while it waited, or of one an earlier turn answered.
   if (turn.cause?.via === EDITED) say(`${DIM}edited${RESET}  ${turn.cause.of === turn.messageId ? "before it was answered" : `message ${turn.cause.of}, answered again`}`);
   // A delegate's own turn (0.7.26): the job it ran as, and the turn that asked — where its calls and audit rows are.
@@ -57,7 +58,7 @@ function show(found: TurnInspection): void {
   const cached = totals.cachedInputTokens > 0 ? ` (${count(totals.cachedInputTokens)} cached)` : "";
   // Every call unpriced is "unpriced", not "$0.0000" — a figure that reads as a price.
   const cost = totals.calls > 0 && totals.unpriced === totals.calls ? "unpriced" : `$${totals.usd.toFixed(4)}${totals.unpriced > 0 ? `, ${totals.unpriced} unpriced` : ""}`;
-  const retries = totals.retries > 0 ? ` · ${YELLOW}${totals.retries} ${totals.retries === 1 ? "retry" : "retries"}${RESET}` : "";
+  const retries = totals.retries > 0 ? ` · ${YELLOW}${totals.retries} ${plural(totals.retries, "retry", "retries")}${RESET}` : "";
   say();
   say(
     `${BOLD}model calls${RESET} ${totals.calls} · ${count(totals.inputTokens)} in${cached} · ${count(totals.outputTokens)} out · ` +
@@ -70,7 +71,7 @@ function show(found: TurnInspection): void {
     say(`${BOLD}steps${RESET}`);
     let previous = turn.startedAt;
     for (const step of steps) {
-      say(`  ${DIM}+${seconds(step.at - previous).padStart(6)}${RESET} ${step.kind.padEnd(11)} ${oneLine(step.text, 110)}`);
+      say(`  ${DIM}+${seconds(step.at - previous).padStart(6)}${RESET} ${step.kind.padEnd(11)} ${clip(oneLine(step.text), 110)}`);
       previous = step.at;
     }
   }
@@ -88,7 +89,7 @@ function show(found: TurnInspection): void {
     say(`${BOLD}handed off${RESET}`);
     for (const handed of found.delegated) {
       const took = handed.endedAt ? ` · ${seconds(handed.endedAt - handed.startedAt)}` : "";
-      say(`  ${handed.id} ${handed.cause?.via ?? ""} ${BOLD}${handed.agentId}${RESET} ${tone(handed.status)}${DIM}${took}${RESET}  ${oneLine(handed.prompt, 80)}`);
+      say(`  ${handed.id} ${handed.cause?.via ?? ""} ${BOLD}${handed.agentId}${RESET} ${tone(handed.status)}${DIM}${took}${RESET}  ${clip(oneLine(handed.prompt), 80)}`);
     }
   }
 
@@ -119,7 +120,7 @@ function callLine(call: ModelCall, agentId: string): string {
 /** One request's line: `#3 ~148,200 tokens · 2 results cleared · summary`, and where each newly cleared one was kept. */
 function requestLine(line: NonNullable<TurnInspection["contexts"]>[number]): string {
   const who = line.by ? `${line.by} ` : "";
-  const cleared = line.cleared > 0 ? ` · ${line.cleared} ${line.cleared === 1 ? "result" : "results"} cleared` : "";
+  const cleared = line.cleared > 0 ? ` · ${line.cleared} ${plural(line.cleared, "result")} cleared` : "";
   const kept = (line.keptAt ?? []).map((path) => `\n      ${DIM}kept at ${path}${RESET}`).join("");
   return `${DIM}#${line.request}${RESET} ${who}~${count(line.estimatedTokens)} tokens${cleared}${line.summary ? " · summary" : ""}${line.notes ? " · notes" : ""}${kept}`;
 }
@@ -151,7 +152,3 @@ const seconds = (ms: number) => (ms < 1000 ? `${Math.max(0, Math.round(ms))}ms` 
 const minute = (at: number) => new Date(at).toISOString().slice(0, 16).replace("T", " ");
 const second = (at: number) => new Date(at).toISOString().slice(0, 19).replace("T", " ");
 const clock = (at: number) => new Date(at).toISOString().slice(11, 19);
-const oneLine = (text: string, max: number) => {
-  const line = text.replace(/\s+/g, " ").trim();
-  return line.length > max ? `${line.slice(0, max - 1)}…` : line;
-};

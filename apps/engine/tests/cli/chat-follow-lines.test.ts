@@ -5,15 +5,10 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { followChat, oneLine, type FollowedLine } from "@/cli/chat-follow.ts";
+import { followChat, type FollowedLine } from "@/cli/chat-follow.ts";
 import { eventually } from "../wait.ts";
 
 describe("a step as one line", () => {
-  test("line breaks inside a step become spaces, and the ends are trimmed", () => {
-    expect(oneLine("The user wants me to:\n1.\n Use delegate\n2. ")).toBe("The user wants me to: 1. Use delegate 2.");
-    expect(oneLine("one line")).toBe("one line");
-  });
-
   test("a reasoning row with line breaks is drawn as one line", async () => {
     const row = {
       seq: 7, at: 0, turnId: "turn_1", agentId: "e2e", gatewayId: "web:dashboard", chatId: "cli-1",

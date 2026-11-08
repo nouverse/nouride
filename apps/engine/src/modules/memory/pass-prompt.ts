@@ -19,7 +19,7 @@
  * Pure.
  */
 
-import type { SystemBlock } from "@nouride/shared";
+import { oneLine, type SystemBlock } from "@nouride/shared";
 import { extractJson } from "@/modules/llm/json-answer.ts";
 import { WRITE_IN_ENGLISH, memoryTextIsEnglish } from "./english.ts";
 import { FOLLOW_UPS } from "./fact-dates.ts";
@@ -186,7 +186,7 @@ export function buildPassPrompt(input: PassInput): PassPrompt {
 }
 
 function str(value: unknown): string | undefined {
-  return typeof value === "string" && value.trim() ? value.replace(/\s+/g, " ").trim() : undefined;
+  return typeof value === "string" && value.trim() ? oneLine(value) : undefined;
 }
 
 function operationOf(raw: Record<string, unknown>): FactOperation | string {

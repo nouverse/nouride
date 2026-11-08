@@ -6,6 +6,7 @@
  * wrote is where the next pass goes on from.
  */
 
+import { clip } from "@nouride/shared";
 import type { HelperBrief } from "@/modules/tools/builtins/delegate-brief.ts";
 import type { SubAgentHandoff } from "@/modules/tools/handoff.ts";
 import type { Review } from "./checking.ts";
@@ -67,7 +68,7 @@ function judged(summary: string): boolean {
 /** What a pass that ran out of its clock wrote, for the next pass and a person: its words, clipped long. */
 export function reviewNotes(summary: string): string {
   const text = summary.trim();
-  return (text.length > NOTES_CHARS ? `${text.slice(0, NOTES_CHARS - 1)}…` : text) || "it wrote nothing before its time ran out";
+  return clip(text, NOTES_CHARS) || "it wrote nothing before its time ran out";
 }
 
 /** The reviewer's answer: PASS on its first line passes; anything else fails, its words the finding. */

@@ -40,8 +40,10 @@
  */
 
 import {
+  clip,
   createLogger,
   type ChatMessage,
+  keepEnds,
   type LLMProvider,
   messageText,
 } from "@nouride/shared";
@@ -408,23 +410,17 @@ const ENTRY_MAX_CHARS = 12_000;
 const TOOL_RESULT_MAX_CHARS = 4_000;
 const TOOL_ARGS_MAX_CHARS = 600;
 
-function clip(text: string, max: number): string {
-  if (text.length <= max) return text;
-  const keep = Math.floor(max / 2);
-  return `${text.slice(0, keep)}\n[… ${text.length - max} characters left out …]\n${text.slice(-keep)}`;
-}
-
 function serialize(message: ChatMessage): string {
   const text = messageText(message.content);
-  if (message.role === "tool") return `tool result: ${clip(text, TOOL_RESULT_MAX_CHARS)}`;
+  if (message.role === "tool") return `tool result: ${keepEnds(text, TOOL_RESULT_MAX_CHARS)}`;
   if (message.role === "assistant") {
     const calls = (message.toolCalls ?? []).map(
-      (call) => `→ ${call.name}(${clip(JSON.stringify(call.arguments), TOOL_ARGS_MAX_CHARS)})`,
+      (call) => `→ ${call.name}(${keepEnds(JSON.stringify(call.arguments), TOOL_ARGS_MAX_CHARS)})`,
     );
-    return [text ? `assistant: ${clip(text, ENTRY_MAX_CHARS)}` : "assistant:", ...calls].join("\n");
+    return [text ? `assistant: ${keepEnds(text, ENTRY_MAX_CHARS)}` : "assistant:", ...calls].join("\n");
   }
-  if (isSummary(message)) return clip(text, ENTRY_MAX_CHARS);
-  return `${message.role}: ${clip(text, ENTRY_MAX_CHARS)}`;
+  if (isSummary(message)) return keepEnds(text, ENTRY_MAX_CHARS);
+  return `${message.role}: ${keepEnds(text, ENTRY_MAX_CHARS)}`;
 }
 
 function nextPartNumber(head: { parts: Part[]; archived: Archived[] }): number {
@@ -435,7 +431,7 @@ function nextPartNumber(head: { parts: Part[]; archived: Archived[] }): number {
 function headlineOf(part: Part): string {
   const line = part.text.split("\n").find((l) => l.trim()) ?? "";
   const headline = line.replace(/^Headline:\s*/i, "").trim();
-  return headline.length > 120 ? `${headline.slice(0, 117)}…` : headline || "(no headline)";
+  return clip(headline, 120, 117) || "(no headline)";
 }
 
 function stamp(ms: number, timezone: string | undefined): string {

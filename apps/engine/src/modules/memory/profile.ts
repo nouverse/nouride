@@ -23,6 +23,7 @@
  * Pure.
  */
 
+import { oneLine } from "@nouride/shared";
 import { parseFront, renderFront, type Front } from "./frontmatter.ts";
 
 /** Who took part in the conversation a fact came from, and the group chat when it was one. */
@@ -74,7 +75,7 @@ function parseReaders(raw: string): Readers {
 }
 
 function renderFact(fact: { text: string; source?: string; readers?: Readers }): string {
-  const text = fact.text.replace(/\s+/g, " ").trim();
+  const text = oneLine(fact.text);
   return `- ${text}${fact.source ? ` ([[${fact.source}]])` : ""}${fact.readers ? ` ${renderReaders(fact.readers)}` : ""}`;
 }
 
@@ -162,7 +163,7 @@ export function applyFacts(body: string, operations: readonly FactOperation[], p
 
   for (const operation of operations) {
     if (operation.op === "add") {
-      const text = operation.text.replace(/\s+/g, " ").trim();
+      const text = oneLine(operation.text);
       if (!text) {
         result.rejected.push({ operation, reason: "an add with no text" });
         continue;

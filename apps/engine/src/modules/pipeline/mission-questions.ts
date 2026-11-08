@@ -7,6 +7,7 @@
  * sent is the same as before" — a repeat, not the answer its mission was waiting for (2026-11-02).
  */
 
+import { clip } from "@nouride/shared";
 import type { Mission } from "@/modules/missions/types.ts";
 
 /** At most this much of a question in the note: the whole is on the mission's page. */
@@ -22,7 +23,7 @@ export function missionQuestions(missions: readonly Mission[], agentId: string, 
       const open = [...mission.answers].reverse().find((entry) => entry.answer === undefined);
       if (!open?.question.trim()) return [];
       const question = open.question.trim();
-      const shown = question.length > QUESTION_CHARS ? `${question.slice(0, QUESTION_CHARS)}…` : question;
+      const shown = clip(question, QUESTION_CHARS, QUESTION_CHARS);
       const pass = work
         ? `pass the answer on with work (action "answer", id ${mission.id}) and say that you did`
         : `tell them to send it with /mission answer ${mission.id} <answer> (you cannot pass it on)`;

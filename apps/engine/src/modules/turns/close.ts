@@ -15,8 +15,8 @@
  * Pure, so the crash at every boundary can be tested by closing every prefix of a journal.
  */
 
+import { clip, messageText, type ChatMessage, oneLine } from "@nouride/shared";
 import type { CutCall } from "./cut-calls.ts";
-import { messageText, type ChatMessage } from "@nouride/shared";
 import { describeToolCall } from "@/commons/activity.ts";
 import type { JournalEntry } from "./journal.store.ts";
 
@@ -155,8 +155,7 @@ function list(items: readonly string[]): string {
  * model, so it cannot claim work that did not happen.
  */
 export function interruptionReport(closed: ClosedTurn, prompt: string): string {
-  const asked = prompt.trim().replace(/\s+/g, " ");
-  const quoted = asked.length > 80 ? `${asked.slice(0, 79)}…` : asked;
+  const quoted = clip(oneLine(prompt), 80);
   const unrecorded = closed.incomplete ? ` Part of what I did could not be recorded, so this may not be all of it. Check before running anything again.` : "";
   if (closed.done.length + closed.cut.length === 0) {
     return `⚠️ I was interrupted by a restart before I could answer "${quoted}".${unrecorded} Your message is kept, and I'll answer it once I'm back. If I don't, say "continue".`;

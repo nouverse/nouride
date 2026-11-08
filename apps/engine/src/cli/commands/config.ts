@@ -1,5 +1,5 @@
 import { join, loadTomlIfExists } from "@nouride/runtime";
-import { holdLines } from "@nouride/shared";
+import { holdLines, plural } from "@nouride/shared";
 import { assertGatewayExecPosture, noteOf } from "@/modules/config/global/index.ts";
 import { assertUpgradeFloor, loadConfigPastTheFloor } from "@/boot/upgrade-floor.ts";
 import { configJsonSchema, describeConfig, fieldsIn, findField, lintConfig } from "@/modules/config/schema.ts";
@@ -102,7 +102,7 @@ async function configCheck(target: string | undefined): Promise<void> {
   for (const failure of registry.loadFailures()) failures.push({ ...failure, enabled: await packEnabled(join(config.daemon.agentsDir, failure.id)) });
   const failed = failures.filter((failure) => failure.enabled);
   const parked = failures.filter((failure) => !failure.enabled);
-  const verdict = failed.length > 0 ? `this configuration would start, but ${failed.length} agent${failed.length === 1 ? "" : "s"} will not load` : null;
+  const verdict = failed.length > 0 ? `this configuration would start, but ${failed.length} ${plural(failed.length, "agent")} will not load` : null;
 
   if (verdict) {
     say(`${RED}✗${RESET} ${verdict}`);

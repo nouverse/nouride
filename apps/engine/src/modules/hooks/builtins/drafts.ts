@@ -11,6 +11,7 @@
  * not only by `dft_` and twenty characters of base32.
  */
 
+import { plural } from "@nouride/shared";
 import { approvedSentence, draftVerb } from "@/modules/reflection/moves.ts";
 import type { SkillDraft } from "@/modules/reflection/types.ts";
 import type { Hook } from "../types.ts";
@@ -66,7 +67,7 @@ export const draftHooks: Hook[] = [
             handled: true,
             reply: [
               done.length > 0
-                ? `✅ Approved ${done.length} draft${done.length === 1 ? "" : "s"}: ${done.join(", ")}.`
+                ? `✅ Approved ${done.length} ${plural(done.length, "draft")}: ${done.join(", ")}.`
                 : "Nothing was approved.",
               // Named individually, because a count would leave the operator to work out which of
               // the ones they just approved is not actually in the pool.
@@ -153,7 +154,7 @@ function renderList(pending: SkillDraft[]): string {
   });
 
   return [
-    `${pending.length} skill draft${pending.length === 1 ? "" : "s"} waiting on you:`,
+    `${pending.length} skill ${plural(pending.length, "draft")} waiting on you:`,
     "",
     ...rows,
     "",

@@ -6,6 +6,8 @@
  * title and its words.
  */
 
+import { oneLine } from "@nouride/shared";
+
 export interface Task {
   title: string;
   body: string;
@@ -48,7 +50,7 @@ export function renderNotes(tasks: readonly Task[]): string {
 
 /** A title as it is matched: case and spacing do not make two tasks. */
 export function sameTitle(a: string, b: string): boolean {
-  return a.trim().replace(/\s+/g, " ").toLowerCase() === b.trim().replace(/\s+/g, " ").toLowerCase();
+  return oneLine(a).toLowerCase() === oneLine(b).toLowerCase();
 }
 
 /**

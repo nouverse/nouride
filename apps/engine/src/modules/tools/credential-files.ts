@@ -27,6 +27,7 @@
 
 import { commandSegments, looseSegments } from "@nouride/policy";
 import { basename, isAbsolute, join, listDir, normalize, readTextFileSync, relative, statFile } from "@nouride/runtime";
+import { plural } from "@nouride/shared";
 
 export type CredentialKind = "own" | "env" | "credential";
 
@@ -349,7 +350,7 @@ function hideValues(path: string, text: string, seen?: (value: string) => void, 
     text: out,
     note:
       kind === "env"
-        ? `\n[${hidden} secret value${hidden === 1 ? "" : "s"} hidden, so they stay out of this conversation. A command uses them without printing them: \`set -a; . ${path}; set +a; <command>\`.]`
-        : `\n[${hidden} secret value${hidden === 1 ? "" : "s"} hidden, so they stay out of this conversation. The program that needs them reads this file itself.]`,
+        ? `\n[${hidden} secret ${plural(hidden, "value")} hidden, so they stay out of this conversation. A command uses them without printing them: \`set -a; . ${path}; set +a; <command>\`.]`
+        : `\n[${hidden} secret ${plural(hidden, "value")} hidden, so they stay out of this conversation. The program that needs them reads this file itself.]`,
   };
 }

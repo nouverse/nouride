@@ -6,6 +6,7 @@
  * memory vault and the persona as loaded, `/reset` re-reads both from disk.
  */
 
+import { plural } from "@nouride/shared";
 import { describeStatus } from "@/modules/pipeline/agent-status.ts";
 import { editionLabel } from "@/commons/build.ts";
 import type { Hook } from "../types.ts";
@@ -30,7 +31,7 @@ export const sessionHooks: Hook[] = [
           handled: true,
           reply:
             `New conversation started. Cleared ${clearedSize(existing.messages)}.` +
-            (kept > 0 ? ` Work notes kept (${kept} task${kept === 1 ? "" : "s"}); /notes clear empties them.` : "") +
+            (kept > 0 ? ` Work notes kept (${kept} ${plural(kept, "task")}); /notes clear empties them.` : "") +
             memoryNote(ended.cut),
         };
       },
