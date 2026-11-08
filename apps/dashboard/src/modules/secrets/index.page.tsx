@@ -30,7 +30,8 @@ import type { FieldChange, SecretEntry } from "@/commons/lib/api.secrets";
 import { isAdmin, useMe } from "@/commons/lib/session";
 import { Card, EmptyState, ErrorNote, PageHeader } from "@/commons/components/ui/ui";
 import { useConfirm } from "@/commons/components/ui/confirm";
-import { PAGE_BOTTOM } from "@/commons/components/ui/ScrollCard";
+import { PAGE_BOTTOM, ScrollCard } from "@/commons/components/ui/ScrollCard";
+import { useTextFilter } from "@/commons/lib/use-text-filter";
 import { BackupPasswordCard } from "./components/BackupPasswordCard";
 import { LockNote } from "./components/LockNote";
 import { SecretForm } from "./components/SecretForm";
@@ -104,6 +105,10 @@ export default function SecretsPage() {
 
   const entries = secrets.data?.secrets ?? [];
   const missing = entries.filter((entry) => entry.origin === "missing");
+  // A secret found by its name, what uses it, or what is said about it: with forty of them, the one to replace was a
+  // long scroll away (the owner, 2026-11-08).
+  const [filter, setFilter] = useState("");
+  const visible = useTextFilter(entries, filter, (entry) => [entry.name, ...entry.usedBy.map(plainUse), ...Object.entries(entry.fields ?? {}).flat(), entry.addedBy]);
 
   /**
    * The page owns the viewport (see `ownsViewport` in the layout): the header and the list's own
@@ -174,9 +179,8 @@ export default function SecretsPage() {
         />
       ) : null}
 
-      <Card
-        className="lg:flex lg:min-h-[22rem] lg:flex-1 lg:flex-col"
-        bodyClassName="lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain"
+      <ScrollCard
+        fill
         title="Your secrets"
         description="Each one, where its value comes from, and what needs it."
         actions={
@@ -189,6 +193,7 @@ export default function SecretsPage() {
             <RefreshCw size={13} className={secrets.isFetching ? "animate-spin" : ""} /> Refresh
           </button>
         }
+        {...(entries.length > 0 ? { search: { value: filter, onChange: setFilter, placeholder: "Search secrets" } } : {})}
       >
         {entries.length === 0 ? (
           <EmptyState
@@ -196,9 +201,11 @@ export default function SecretsPage() {
             title="No secrets yet"
             description="Add one here, or have whoever runs the server set it there. Your settings use it by its name either way."
           />
+        ) : visible.length === 0 ? (
+          <p className="py-6 text-center text-sm text-base-content/65">Nothing matches “{filter}”.</p>
         ) : (
           <div className="space-y-2">
-            {entries.map((entry: SecretEntry) => (
+            {visible.map((entry: SecretEntry) => (
               <SecretRow
                 key={entry.name}
                 entry={entry}
@@ -213,7 +220,7 @@ export default function SecretsPage() {
             ))}
           </div>
         )}
-      </Card>
+      </ScrollCard>
 
       {/**
        * Stated on the page, not only in a code comment.

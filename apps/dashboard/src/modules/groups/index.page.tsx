@@ -18,6 +18,7 @@ import type { GroupRecord } from "@/commons/lib/api.groups";
 import { Card, EmptyState, ErrorNote, PageHeader } from "@/commons/components/ui/ui";
 import { FILL_PAGE, ScrollCard } from "@/commons/components/ui/ScrollCard";
 import { useSaved } from "@/commons/hooks/use-saved";
+import { useTextFilter } from "@/commons/lib/use-text-filter";
 
 /** A room nobody named, by a short form of its id: what there is to tell two of them apart. */
 function shortChatId(chatId: string): string {
@@ -31,6 +32,10 @@ export default function GroupsPage() {
   const editable = isAdmin(me.data ?? null);
   const list = groups.data?.groups ?? [];
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["groups"] });
+  // A room found by any name it goes by, its platform, who talks there or which agents are in it: with many rooms, the
+  // one to rename was a long scroll away (the owner, 2026-11-08).
+  const [filter, setFilter] = useState("");
+  const visible = useTextFilter(list, filter, (group) => [group.name, group.platformTitle, group.chatId, platformName(group.platform), ...group.agents, ...group.people.map((person) => person.name)]);
 
   return (
     <div className={FILL_PAGE}>
@@ -54,7 +59,10 @@ export default function GroupsPage() {
           />
         </Card>
       ) : (
-        <ScrollCard fill title="Known Rooms" description="One row per room. A Discord thread is a room of its own.">
+        <ScrollCard fill title="Known Rooms" description="One row per room. A Discord thread is a room of its own." search={{ value: filter, onChange: setFilter, placeholder: "Search groups" }}>
+          {visible.length === 0 ? (
+            <p className="py-6 text-center text-sm text-base-content/65">Nothing matches “{filter}”.</p>
+          ) : (
           <div className="overflow-x-auto -mx-4 -my-2 sm:-mx-6">
             {/* A card per room on a phone, the table from `sm` up, as People draws its rows: in four columns at a phone's
                 width a room's name had a column a word wide. */}
@@ -68,12 +76,13 @@ export default function GroupsPage() {
                 </tr>
               </thead>
               <tbody className="block divide-y divide-base-content/[0.06] sm:table-row-group">
-                {list.map((group) => (
+                {visible.map((group) => (
                   <GroupRow key={`${group.platform}:${group.chatId}`} group={group} editable={editable} onChanged={refresh} />
                 ))}
               </tbody>
             </table>
           </div>
+          )}
         </ScrollCard>
       )}
     </div>
