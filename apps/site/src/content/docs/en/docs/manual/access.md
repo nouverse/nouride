@@ -173,7 +173,7 @@ An agent that knows a chat id knows nothing useful. **People** ties an account t
 some notes, and a **person key**), and those facts land in the prompt so the agent addresses somebody
 properly.
 
-![The People page: one entry per person, with every id they are reachable at (notes blurred)](/media/dashboard-people.png)
+![The People page: one entry per person, with every id they are reachable at](/media/dashboard-people.png)
 
 ```bash
 nouride people                                        # who the agents know, and who has no name yet

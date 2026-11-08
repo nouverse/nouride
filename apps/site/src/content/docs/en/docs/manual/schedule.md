@@ -129,7 +129,7 @@ allowed always does not carry over to its new shape: it asks again.
 
 An endpoint that runs a job when something calls it.
 
-![A webhook: its URL, how to call it, what it runs and where the reply goes (private parts blurred)](/media/dashboard-webhooks.png)
+![A webhook: its URL, how to call it, what it runs and where the reply goes](/media/dashboard-webhooks.png)
 
 ```bash
 nouride webhook                  # what exists, and its URL

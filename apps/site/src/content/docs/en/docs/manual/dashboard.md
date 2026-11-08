@@ -14,7 +14,7 @@ It is the operator's interface for anything an **agent** owns. It is not a lesse
 the setup wizard and `nouride setup` run the same code, and the Skills page writes the same file
 `nouride skills on|off` does.
 
-![Dashboard overview](/media/dashboard-overview.png)
+![Home: what needs you, what is moving and Quick chat](/media/dashboard-overview.png)
 
 ## The map
 

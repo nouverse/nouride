@@ -132,7 +132,7 @@ membuatnya. Izin *allow always* milik job lama gak ikut ke bentuk barunya: ia be
 
 Endpoint yang menjalankan sebuah job ketika ada yang memanggilnya.
 
-![Sebuah webhook: URL-nya, cara memanggilnya, apa yang dijalankan dan ke mana balasannya (bagian pribadi diburamkan)](/media/dashboard-webhooks.png)
+![Sebuah webhook: URL-nya, cara memanggilnya, apa yang dijalankan dan ke mana balasannya](/media/dashboard-webhooks.png)
 
 ```bash
 nouride webhook                  # apa yang ada, beserta URL-nya

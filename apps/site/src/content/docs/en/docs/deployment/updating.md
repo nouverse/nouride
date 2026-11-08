@@ -154,9 +154,9 @@ signal, not a door: the brand goes home, and the badge or the button is what you
 
 ![The Update page: the running version and edition on the left, and the newest release for that edition on the right](/media/dashboard-update.png)
 
-Everything the page needs to be trusted is on it at once: what is running, what edition that is,
-what platform, where it lives, what is supervising it, and, beside that, the newest release **for
-this edition** rather than the newest tag.
+Everything the page needs to be trusted is on it: what is running and what edition that is, with what
+platform, where it lives and what is supervising it under Details, and, beside that, the newest release
+**for this edition** rather than the newest tag.
 
 The page checks on arrival, every time. There is a **Check again** button for the impatient, and
 then two steps:
@@ -181,7 +181,7 @@ binary in the writable layer, restart, and work; and the next time the container
 next deploy, the next `compose up`, the next node drain, the image would put the old version straight
 back. A version that silently reverts is worse than one that never changed.
 
-![The Update page on a container: "<current> cannot be installed from here", with the compose, docker and kubectl commands that do work](/media/dashboard-update-container.png)
+![The Update page on a container: the newest version "cannot be installed from here", with the compose, docker and kubectl commands that do work under Details](/media/dashboard-update-container.png)
 
 Note what the page does *not* do: there is no disabled button and no shrug. The refusal says which
 of the reasons applies to this install, and hands back commands that work, much like the ones below

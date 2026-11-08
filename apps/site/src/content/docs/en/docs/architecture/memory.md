@@ -247,7 +247,7 @@ small hardware. A failed embed falls back to keywords, never to an error.
 **Memory** in the menu opens it. The line at the top says whether memory is on, when the nightly pass runs
 next and whether search by meaning is on; under it, the last tag tidy, with **Undo**.
 
-![The Memory page, on the Agent notes tab](/media/memory-page.png)
+![The Knowledge & Memory page, on the Agent notes tab](/media/memory-page.png)
 
 | Tab | What it holds |
 |---|---|

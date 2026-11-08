@@ -14,7 +14,7 @@ Ini antarmuka operator untuk apa pun yang dimiliki **agent**. Ia bukan versi mur
 setup dan `nouride setup` menjalankan kode yang sama, dan halaman Skills menulis file yang sama dengan
 `nouride skills on|off`.
 
-![Ikhtisar dashboard](/media/dashboard-overview.png)
+![Home: yang butuh kamu, yang sedang jalan, dan Quick chat](/media/dashboard-overview.png)
 
 ## Peta
 

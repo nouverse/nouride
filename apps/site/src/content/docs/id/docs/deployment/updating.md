@@ -163,9 +163,9 @@ Titik itu sinyal, bukan pintu: brand-nya menuju Home, dan badge atau tombol tadi
 
 ![Halaman Update: versi dan edisi yang jalan di kiri, dan rilis terbaru untuk edisi itu di kanan](/media/dashboard-update.png)
 
-Semua yang dibutuhkan untuk mempercayai halaman ini ada sekaligus: apa yang sedang jalan, edisinya
-apa, platformnya apa, letaknya di mana, dan apa yang mengawasinya, lalu di sebelahnya, rilis
-terbaru **untuk edisi ini**, bukan tag terbaru.
+Semua yang dibutuhkan untuk mempercayai halaman ini ada di sana: apa yang sedang jalan dan edisinya
+apa, dengan platformnya, letaknya, dan apa yang mengawasinya di balik Details, lalu di sebelahnya,
+rilis terbaru **untuk edisi ini**, bukan tag terbaru.
 
 Halamannya mengecek setiap kali dibuka. Ada tombol **Check again** untuk yang gak sabar, lalu dua
 langkah:
@@ -190,7 +190,7 @@ mengganti binary-nya sendiri di writable layer, restart, dan jalan; lalu begitu 
 ulang, deploy berikutnya, `compose up` berikutnya, node drain berikutnya, image-nya mengembalikan
 versi lama. Versi yang diam-diam mundur lebih buruk daripada versi yang gak pernah berubah.
 
-![Halaman Update di sebuah container: "<current> cannot be installed from here", berikut perintah compose, docker dan kubectl yang memang bekerja](/media/dashboard-update-container.png)
+![Halaman Update di sebuah container: versi terbaru "cannot be installed from here", berikut perintah compose, docker dan kubectl yang memang bekerja di balik Details](/media/dashboard-update-container.png)
 
 Perhatikan yang **gak** dilakukan halaman ini: gak ada tombol mati, gak ada angkat tangan.
 Penolakannya menyebutkan alasan mana yang berlaku untuk install ini, dan mengembalikan perintah yang

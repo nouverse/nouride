@@ -262,7 +262,7 @@ hardware kecil. Embed yang gagal jatuh kembali ke kata kunci, gak pernah ke erro
 berikutnya jalan, dan apakah pencarian berdasarkan makna aktif; di bawahnya, tag tidy terakhir,
 lengkap dengan **Undo**.
 
-![Halaman Memory, di tab Agent notes](/media/memory-page.png)
+![Halaman Knowledge & Memory, di tab Agent notes](/media/memory-page.png)
 
 | Tab | Isinya |
 |---|---|

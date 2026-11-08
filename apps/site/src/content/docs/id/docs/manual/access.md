@@ -184,7 +184,7 @@ Agent yang tahu sebuah chat id gak tahu apa-apa yang berguna. **People** mengika
 seseorang (nama, beberapa catatan, dan sebuah **person key**), dan fakta itu masuk ke prompt sehingga
 agent memanggil orang dengan benar.
 
-![Halaman People: satu entri per orang, dengan semua id tempat ia bisa dihubungi (catatan diburamkan)](/media/dashboard-people.png)
+![Halaman People: satu entri per orang, dengan semua id tempat ia bisa dihubungi](/media/dashboard-people.png)
 
 ```bash
 nouride people                                        # siapa yang dikenal agent, dan siapa yang belum bernama
