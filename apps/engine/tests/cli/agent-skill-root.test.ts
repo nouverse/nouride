@@ -6,7 +6,7 @@
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { Hono } from "hono";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { serveHttp, type HttpServer } from "@nouride/runtime";
 import { AgentRegistry, ProjectSkills } from "@nouride/persona";
@@ -23,7 +23,9 @@ let dir = "";
 let project = "";
 
 beforeAll(async () => {
-  dir = tempDir("cli-skill-root");
+  // Its real path: the command resolves `.` from the folder it runs in, which on macOS is `/private/var/…` where the
+  // temp folder's name says `/var/…`, and a root is written as the folder resolves.
+  dir = realpathSync(tempDir("cli-skill-root"));
   const agentsDir = join(dir, "agents");
   mkdirSync(join(agentsDir, "nix"), { recursive: true });
   writeFileSync(join(agentsDir, "nix", "IDENTITY.md"), "# IDENTITY\n- Name: Nix\n");
