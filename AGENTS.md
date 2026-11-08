@@ -40,7 +40,8 @@ agent working in this repository — Claude Code, Codex and the rest read it.
 4. Never invent a number; an estimate is marked as one.
 5. What is not implemented throws a `NourideError` that names what is missing — never a stub that returns nothing.
 6. Fail at load, not at the first message: a bad config names its file and field.
-7. Packages import each other by the matrix in `scripts/check-arch.ts`, and through a package's barrel only.
+7. Packages import each other by the matrix in `scripts/check-arch.ts`, and through a package's barrel only. An engine
+   domain (`src/modules/<domain>`) imports another only by a link recorded in `scripts/domain-links.ts`.
 8. One file, one concern. A file past its budget in `scripts/size-budgets.ts` is split on a seam, or its budget is
    raised with today's reason in at most 200 characters — never squeezed to fit the number. A named function past 150
    lines of code is held the same way, by `scripts/function-lengths.ts`.

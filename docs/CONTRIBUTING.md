@@ -98,6 +98,7 @@ bun run verify        # lint:check, then the whole test suite — what CI runs
 | Script | Holds |
 |---|---|
 | `lint:arch` | the import boundaries in [ARCHITECTURE.md §3](./ARCHITECTURE.md#3-dependency-rules) — notably that `Bun.*` appears only in `packages/runtime` |
+| `lint:domains` | no engine domain (a folder of `apps/engine/src/modules/`) imports another but by a link recorded in `scripts/domain-links.ts`, today's as found and each new one with its reason |
 | `lint:deps` | each workspace member's `package.json` against what its files import, both ways, and no cycle among them |
 | `lint:sql` | that SQL is fast and safe: no injection, no table scan in a query plan, no read per item in a loop, none of SQLite's footguns (TD-015) |
 | `lint:timers` | that no timer callback in the daemon can let an exception out — an uncaught one shuts the daemon down: each is `contained(log, "what failed", …)`, one `try … catch`, or a form that cannot throw |
@@ -290,7 +291,7 @@ version:
 7. **Fail at load, not at first message** — validate config eagerly
 8. **Errors shaped for their audience** — chat gets `toUserMessage()`, logs get everything
 9. **Prove the test catches the bug** — and test the path that actually runs
-10. **Inter-package imports follow each package's `package.json`** — `lint:deps`, both directions
+10. **Inter-package imports follow each package's `package.json`** — `lint:deps`, both directions; between the engine's domains, only the links `lint:domains` records
 11. **Import from the barrel, not the internals** — `@nouride/llm`, never `@nouride/llm/src/…`
 12. **One file, one concern** — and no file grows past its budget (`lint:size`), no function past 150 lines of code (`lint:functions`)
 13. **An export is a claim that something else needs it** — `lint:deadcode`

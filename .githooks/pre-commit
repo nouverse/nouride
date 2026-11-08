@@ -3,6 +3,7 @@
 # Everything that has to be true before a commit lands, and nothing slow:
 #
 #   check-arch.ts           the import rules — §3 of ARCHITECTURE.md, the adapter boundary, the wire package types only
+#   check-domains.ts        no engine domain imports another but by a link recorded in scripts/domain-links.ts
 #   check-deps.ts           each package.json against its member's imports, both ways — the package graph
 #   check-sql.ts            SQL is standard, and lives only in a `*.store.ts` file
 #   check-timers.ts         no timer callback in the daemon can let an exception out — one would shut it down
@@ -54,7 +55,7 @@ set -e
 # people ever read — and a line that said "lint + types" while also enforcing the import rules and
 # the dead-code rules got asked "does the hook check arch and deadcode?" twice by the person who
 # wrote them. A check nobody knows ran is a check they will ask about again.
-echo "pre-commit: arch · deps · sql · timers · size · functions · skills link · cli help · seams · dead code · pointers · public tree · types · test waits · dashboard wire"
+echo "pre-commit: arch · domains · deps · sql · timers · size · functions · skills link · cli help · seams · dead code · pointers · public tree · types · test waits · dashboard wire"
 
 bun run lint:check
 bun test ./apps/engine/tests/contracts/test-waits.test.ts ./apps/engine/tests/contracts/dashboard-wire.test.ts

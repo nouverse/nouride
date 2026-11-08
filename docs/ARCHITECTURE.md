@@ -298,6 +298,15 @@ declares types and nothing else (`wire-not-types-only`), names no package but th
 the dashboard imports it with `import type` alone (`wire-imported-as-value`), and declares no type it exports
 (`wire-type-copied`).
 
+**Inside the engine, a domain imports another only by a recorded link.** Each folder of
+`apps/engine/src/modules/` is a domain, and nothing held the imports between them: when the rule began there
+were 134 links among 32 domains, 24 of them both ways. `bun run lint:domains` (`scripts/check-domains.ts`)
+reads every import, a type's and a dynamic one's too, and refuses a link not in `scripts/domain-links.ts`, at
+each import that makes it. Today's links are recorded there as found; a new one is added with the reason the
+one domain needs the other, or what it needs is handed in through a port at boot. A recorded link nothing makes
+any more leaves the list. `commons/` and `boot/` are not domains: one is there to be shared, the other wires
+the domains together.
+
 **Inside the engine, memory is reached through `modules/memory/index.ts`** (`memory-past-its-barrel`):
 the object `createMemory` returns, and the few names the barrel exports for what runs without one — the
 CLI, the config check, the tools, the MCP surface. Boot and the daemon's `index.ts` build the stores

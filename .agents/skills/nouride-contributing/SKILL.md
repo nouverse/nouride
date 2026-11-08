@@ -196,6 +196,11 @@ mcp      →  shared, runtime
 update, system-packages, wa-bridge  →  runtime
 ```
 
+Inside the engine, each folder of `src/modules/` is a domain, and one imports another only by a link
+`lint:domains` has recorded (`scripts/domain-links.ts`). The links there when the rule began are listed as
+found; before adding one, ask whether the caller can be handed what it needs through a port at boot, which is
+what `boot/` is for. If not, add the link with the reason the one domain needs the other.
+
 **11. Import from the barrel, not the internals.** `from "@nouride/llm"` — never
 `from "@nouride/llm/src/anthropic"`. Every package's public API is its `index.ts`;
 reaching past it couples callers to internal file layout and makes any refactor breaking.
