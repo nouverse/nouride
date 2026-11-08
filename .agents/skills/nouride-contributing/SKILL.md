@@ -1,6 +1,6 @@
 ---
 name: nouride-contributing
-description: How to work on Nouride — the runtime adapter boundary, provider profiles and named gateway instances, the secret store, persona packs, the turn executor and tool sandbox, the Nouverse design rules for every interface, the writing rules for every text a person reads, and the mistakes that have actually been made here. Use when touching config, adding a gateway or LLM wire format, changing the prompt or context window, writing tools, running and testing this repo, designing or reviewing UI, or writing or editing docs, release notes and copy — including checking a draft for AI slop.
+description: How to work on Nouride — the runtime adapter boundary, provider profiles and named gateway instances, the secret store, persona packs, the turn executor and tool sandbox, Nouride's design rules for every interface (its soft look and its mascot), the writing rules for every text a person reads, and the mistakes that have actually been made here. Use when touching config, adding a gateway or LLM wire format, changing the prompt or context window, writing tools, running and testing this repo, designing or reviewing UI, or writing or editing docs, release notes and copy — including checking a draft for AI slop.
 ---
 
 # Contributing to Nouride
