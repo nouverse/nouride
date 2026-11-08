@@ -1,4 +1,4 @@
-/** System Logs → Background jobs: commands an agent started and did not wait for, and whether each is still there. */
+/** Logs → Helpers: commands an agent started and did not wait for, and whether each is still there. */
 
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
@@ -28,7 +28,7 @@ export function BackgroundJobs() {
 
   return (
     <Panel
-      title="Background work"
+      title="Helpers"
       retention="jobLogs"
       description="Commands started with exec background: true, helpers started with delegate background: true, and agents asked with ask_agent that were still working after a minute (the turn that launched one is long over while it runs). A row opens its page under Helpers: its output, or a helper's or an asked agent's steps."
     >

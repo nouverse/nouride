@@ -4,7 +4,7 @@
  * Live (2026-10-21) the model set for the nightly pass went away, and the pass and every compaction failed for hours
  * with nothing on this page to say so. The daemon counts what failed in the last 24 h from its own log
  * (`modules/llm/helper-trouble.ts`) and answers it on `/status` as `helpers` — what `nouride doctor` says, and the
- * Overview's warnings without the provider's words. This reads that list rather than a copy of it, so the three cannot
+ * Home's warnings without the provider's words. This reads that list rather than a copy of it, so the three cannot
  * disagree. The Memory menu is an operator's, and so are those words: `/status` is where they are said.
  */
 

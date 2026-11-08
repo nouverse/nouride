@@ -1,4 +1,4 @@
-/** System Logs → Daemon: every line the process printed, filtered and paged from the stored log. */
+/** Logs → Daemon: every line the process printed, filtered and paged from the stored log. */
 
 import { useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";

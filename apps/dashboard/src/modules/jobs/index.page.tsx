@@ -120,7 +120,7 @@ export default function JobsPage({ agent }: { agent?: string }) {
         title="Helpers"
         description="Work an agent left running in the background: helpers it handed a piece to, commands it did not wait for, agents it asked. Each opens to what it did."
       />
-      {/* The window that sweeps these rows, as System Logs' jobs panel shows it — the owner asked for it here (0.8.12). */}
+      {/* The window that sweeps these rows, as Logs' jobs panel shows it — the owner asked for it here (0.8.12). */}
       <RetentionControl scope="jobLogs" />
 
       <SegmentedTabs

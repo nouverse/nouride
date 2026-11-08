@@ -1,4 +1,4 @@
-/** System Logs → Audit: one row per decision, with the actor who made it. */
+/** Logs → Audit: one row per decision, with the actor who made it. */
 
 import { useQuery } from "@tanstack/react-query";
 import { Check } from "lucide-react";

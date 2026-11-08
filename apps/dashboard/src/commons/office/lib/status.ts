@@ -1,5 +1,5 @@
 /**
- * Where an agent's cat is, from its status: the Office and the Overview's view of it read it the same way.
+ * Where an agent's cat is, from its status: the Office and Home's agents read it the same way.
  */
 
 import type { AgentSummary } from "@/commons/lib/api";

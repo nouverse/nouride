@@ -2,7 +2,7 @@
  * The update page's own questions: how far a download has got, and the install.
  *
  * The check itself — whether there is anything newer — is asked once per page load and shared with
- * the sidebar and Overview, so it lives in `commons/hooks/use-update.ts`.
+ * the sidebar and Home, so it lives in `commons/hooks/use-update.ts`.
  *
  * ## Progress is a different question
  *

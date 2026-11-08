@@ -1,4 +1,4 @@
-/** System Logs → Schedule: what the scheduler fired across every job, and what came back. */
+/** Logs → Schedule: what the scheduler fired across every job, and what came back. */
 
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Check, Clock, RotateCcw } from "lucide-react";

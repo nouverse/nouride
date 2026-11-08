@@ -8,9 +8,9 @@
  *
  * ## Why the dot does not link to the update page
  *
- * It is inside the brand link, which goes to Overview, and that is deliberate: the brand is the
+ * It is inside the brand link, which goes to Home, and that is deliberate: the brand is the
  * way home and nesting a second destination inside it makes a click a coin toss. The dot says
- * *that* there is something; the badge on Overview is what you press. One signal in two places,
+ * *that* there is something; the badge on Home or the button on Your box is what you press. One signal in two places,
  * with only one of them a door.
  */
 

@@ -29,7 +29,7 @@ export function AgentName({ id, orchestrator, size = 11 }: { id: string; orchest
   );
 }
 
-/** Beside an agent's name where there is room for words — the Agents list, Overview, Memory's notes. */
+/** Beside an agent's name where there is room for words — the Agents list, Home, Memory's notes. */
 export function OrchestratorBadge() {
   return (
     <span className="badge badge-xs badge-primary gap-1 font-semibold px-2 py-1 shadow-xs font-mono">

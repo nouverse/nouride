@@ -1,5 +1,5 @@
 /**
- * The panel every System Logs tab is drawn in, and the retention control in its head: one window per
+ * The panel every Logs tab is drawn in, and the retention control in its head: one window per
  * record, so each panel carries its own.
  */
 

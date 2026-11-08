@@ -1,5 +1,5 @@
 /**
- * What the Overview's warning box lists: the daemon's own issues, and each pack that did not load.
+ * What Home's box card lists as something to look at: the daemon's own issues, and each pack that did not load.
  *
  * A daemon whose one pack had failed showed "System Healthy" and nothing else — `/health` was `ok`, and the agent
  * was simply missing from the list below (`health-ok-with-agents-failed`). The daemon names them now; this says each

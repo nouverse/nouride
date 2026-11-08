@@ -1,5 +1,5 @@
 /**
- * Restart: the daemon, for its supervisor to start again — on Overview, and beside every "takes effect after a restart".
+ * Restart: the daemon, for its supervisor to start again — on Home, at the foot of Settings, and beside every "takes effect after a restart".
  *
  * It waits for running work the way `nouride restart` does, says so while it waits, and offers the way to stop waiting.
  * What happens after is the follower's (`commons/lib/restart.ts`): the page holds still while the daemon is away and

@@ -1,5 +1,5 @@
 /**
- * System Logs — the four records the daemon keeps, in one place.
+ * Logs — the four records the daemon keeps, in one place.
  *
  * Until now every one of them was reachable only over SSH or from the CLI, which meant every
  * diagnosis on a live box went through `journalctl -u nouride` and a terminal. The four are

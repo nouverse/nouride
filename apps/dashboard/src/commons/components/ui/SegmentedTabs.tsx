@@ -1,5 +1,5 @@
 /**
- * The one tab bar: a segmented control, the shape an agent's page, Memory, Skills and System Logs all
+ * The one tab bar: a segmented control, the shape an agent's page, Memory, Skills and Logs all
  * use. It was four shapes — daisyUI `tabs-box` on two pages, two hand-rolled segmented bars of
  * different sizes on the others — so moving between pages changed what a tab looked like.
  *

@@ -12,9 +12,9 @@
  * automatic refetch switched off means exactly one request per page load; **Check again** is
  * the only thing that asks for another, and a full browser reload is the other.
  *
- * Three places share the check — the sidebar's version line, the Overview badge, and the update
+ * Three places share the check — the sidebar's version line, Home's badge and Your box, and the update
  * page — and one query key means React Query de-duplicates it and they cannot disagree. That is why
- * it is here and not in `modules/update`: the sidebar and Overview are not the update page. The
+ * it is here and not in `modules/update`: the sidebar and Home are not the update page. The
  * download's progress and the install are the update page's own (`modules/update/useUpdate.ts`).
  */
 

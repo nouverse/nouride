@@ -71,10 +71,10 @@ export default function SettingsPage() {
           </section>
         ))
       )}
-      {/* Not a page: a restart, for the box's owner, and the manual, which leaves the dashboard. */}
+      {/* Not a page: a restart (shown to whoever may restart, as on Home), and the manual, which leaves the dashboard. */}
       {!words && (
         <div className="flex flex-wrap items-center gap-2.5">
-          {where.admin && <RestartButton />}
+          <RestartButton />
           <a href={`${DOCS_URL}/docs`} target="_blank" rel="noreferrer noopener" className="btn btn-ghost btn-sm gap-1.5">
             <BookOpen size={15} aria-hidden="true" />
             Documentation

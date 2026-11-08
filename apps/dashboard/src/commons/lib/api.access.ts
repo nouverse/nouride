@@ -7,7 +7,7 @@
  * A different queue from `approvals`, and confusing the two cost an operator an hour: the bot told them
  * to approve a pairing code, the dashboard's approval list was empty because that list is for *tool*
  * calls, and the only way to answer was a CLI command nothing had mentioned. The code expired while they
- * looked. **Approvals** are on Overview — an agent is stopped mid-turn. **Access** is its own page — a
+ * looked. **Approvals** are on Home and Work — an agent is stopped mid-turn. **Access** is its own page — a
  * person is asking to be let in. Neither borrows the other's word.
  */
 

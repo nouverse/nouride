@@ -46,7 +46,7 @@ export function RootLayout() {
    *
    * Everything else scrolls as a document, which is right for a page you read top to bottom. It is
    * wrong for a page whose whole content is a long list: the header, the tabs and the filters scroll
-   * away with it, so filtering means scrolling back up to reach the control. Chat, System Logs and
+   * away with it, so filtering means scrolling back up to reach the control. Chat, Logs and
    * Secrets keep their chrome fixed and scroll inside their own panels, and the LLM Gateway's frame
    * scrolls itself.
    *

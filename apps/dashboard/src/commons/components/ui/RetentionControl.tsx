@@ -1,5 +1,5 @@
 /**
- * How many days of a record to keep, set where the record is read: each System Logs panel, and Helpers & jobs (0.8.12),
+ * How many days of a record to keep, set where the record is read: each Logs panel, and Helpers & jobs (0.8.12),
  * which shows the same rows the jobs panel does and is where the owner looks for them.
  */
 
