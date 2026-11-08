@@ -38,7 +38,7 @@ import type { CliModel } from "@/commons/daemon-state.ts";
 import type { AuditPort } from "@/commons/audit.store.ts";
 import { CliConnection, signedOut, unavailableReason, type Spawn } from "./connection.ts";
 import { OfferedModels, offeredModels } from "./models.ts";
-import { accountLaunch, launchFor, profileDirOf } from "./launch.ts";
+import { accountLaunch, launchFor, ownFolder, profileDirOf } from "./launch.ts";
 import { FRESH_POLL_MS, FRESH_WAIT_MS, hashedEach, notStartedWith, pause } from "./fresh-secrets.ts";
 import { CliAccounts, type AccountsDeps, type CliAccountsView } from "./accounts.ts";
 import { LentTools } from "./lent-tools.ts";
@@ -418,7 +418,7 @@ export class ExternalAgents implements RunnerHost {
     if (pending) return pending;
     const start = (async () => {
       const lent = row.mcpEnvHeaders && this.deps.mcpUrl?.() ? this.lent.env(agentId) : {};
-      const launch = launchFor({ row, profile, privateDir: this.privateDir(agentId), secrets: { ...secrets, ...this.tokenEnv(row, profile), ...lent } });
+      const launch = launchFor({ row, profile, privateDir: ownFolder(this.privateDir(agentId)), secrets: { ...secrets, ...this.tokenEnv(row, profile), ...lent } });
       const connection = new CliConnection(row, launch, agentId, this.deps.spawn ?? spawnLongLived, this.deps.now);
       connection.onOwnWords = (sessionId, update) => {
         // It says what came of it: a stop from here cuts nothing of that session's off.
@@ -516,7 +516,7 @@ export class ExternalAgents implements RunnerHost {
     }
     const inUse = external.profile ?? "default";
     const on = profile ?? inUse;
-    const launch = launchFor({ row, profile: on, privateDir: this.privateDir(agentId), secrets: this.deps.secretsFor(agentId, [row.command, ...row.login]), args: row.login });
+    const launch = launchFor({ row, profile: on, privateDir: ownFolder(this.privateDir(agentId)), secrets: this.deps.secretsFor(agentId, [row.command, ...row.login]), args: row.login });
     const login = new CliLogin((this.deps.interactive ?? spawnInteractive)(launch.cmd, { cwd: launch.cwd, env: launch.env, agent: agentId }));
     this.logins.set(agentId, { login, profile: on });
     log.info("an external agent's sign-in started", { agent_id: agentId, cli: row.id, profile: on });
@@ -683,7 +683,7 @@ export class ExternalAgents implements RunnerHost {
 
   /** The row's status words, run as the agent on the profile: exit 0 signed in, a missing program not installed. */
   private async status(row: CliRow, agentId: string, profile: string): Promise<Pick<CliProfile, "signedIn" | "reason">> {
-    const launch = launchFor({ row, profile, privateDir: this.privateDir(agentId), secrets: { ...this.deps.secretsFor(agentId, [row.command, ...(row.status ?? [])]), ...this.tokenEnv(row, profile) }, args: row.status ?? [] });
+    const launch = launchFor({ row, profile, privateDir: ownFolder(this.privateDir(agentId)), secrets: { ...this.deps.secretsFor(agentId, [row.command, ...(row.status ?? [])]), ...this.tokenEnv(row, profile) }, args: row.status ?? [] });
     try {
       // What it prints may name the account: only the exit is read.
       const out = await (this.deps.run ?? runCommand)(launch.cmd, { cwd: launch.cwd, env: launch.env, timeoutMs: PROBE_MS, maxOutputBytes: 4096, agent: agentId });
@@ -697,7 +697,7 @@ export class ExternalAgents implements RunnerHost {
 
   /** The CLI on a profile the agent does not answer with, started for a check. */
   private async started(row: CliRow, agentId: string, profile: string): Promise<CliConnection> {
-    const launch = launchFor({ row, profile, privateDir: this.privateDir(agentId), secrets: { ...this.deps.secretsFor(agentId, [row.command, ...row.args]), ...this.tokenEnv(row, profile) } });
+    const launch = launchFor({ row, profile, privateDir: ownFolder(this.privateDir(agentId)), secrets: { ...this.deps.secretsFor(agentId, [row.command, ...row.args]), ...this.tokenEnv(row, profile) } });
     const connection = new CliConnection(row, launch, agentId, this.deps.spawn ?? spawnLongLived, this.deps.now);
     try {
       await connection.open();

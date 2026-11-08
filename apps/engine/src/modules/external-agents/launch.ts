@@ -7,7 +7,7 @@
  * CLI starts, so every file in it is the agent's and none is the daemon's.
  */
 
-import { fileExists, join, runCommand } from "@nouride/runtime";
+import { agentCommandsHaveOwnUsers, ensureDir, fileExists, join, runCommand } from "@nouride/runtime";
 import { NourideError } from "@nouride/shared";
 import type { CliRow } from "@nouride/acp";
 import { buildEnv, ownHomeEnv } from "@/modules/tools/builtins/exec.ts";
@@ -39,6 +39,23 @@ export function prepareScript(files: Readonly<Record<string, string>> = {}): str
   }
   lines.push("shift", 'exec "$@"');
   return lines.join("\n");
+}
+
+/**
+ * The agent's own folder, where its CLI starts, made where agents are not their own users — where they are, the helper
+ * makes it, as theirs. A turn makes it too (`workspaceFor`), but the Brain tab's sign-in check can come first: started in
+ * a folder that was not there, a new agent's CLI read as not installed (the e2e VM, 0.8.24). One that cannot be made is
+ * left to the start, which says why.
+ */
+export function ownFolder(dir: string): string {
+  if (!agentCommandsHaveOwnUsers()) {
+    try {
+      ensureDir(dir);
+    } catch {
+      // Said by the start that needs it, in the CLI's words.
+    }
+  }
+  return dir;
 }
 
 export function launchFor(input: {
