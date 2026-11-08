@@ -30,6 +30,14 @@ test("Agents is drawn as a cat, in the sidebar and the tab bar alike (both read 
   expect(item("/agents").icon).toBe(Cat);
 });
 
+test("the menu leaves the dashboard nowhere: the manual is at the foot of Settings", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { join } = await import("node:path");
+  const read = (file: string) => readFileSync(join(import.meta.dir, "../src", file), "utf8");
+  expect(read("commons/components/layout/nav.tsx")).not.toContain("DOCS_URL");
+  expect(read("modules/settings/index.page.tsx")).toContain("href={`${DOCS_URL}/docs`}");
+});
+
 describe("a section's tabs", () => {
   test("over its list pages, and none over one mission or one agent", () => {
     expect(sectionTabs("/jobs")?.map((tab) => tab.label)).toEqual(["Waiting for you", "Missions", "Helpers", "Schedule", "Webhooks"]);

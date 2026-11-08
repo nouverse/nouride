@@ -69,8 +69,6 @@ Settings
     My Box          perangkatnya sendiri (hanya Box yang sudah dipasangkan)   (admin)
     Logs            Daemon · Audit · Schedule · Helpers
     Update          versi yang jalan, rilis terbaru, dan cara memasangnya
-
-Documentation       situs ini, di tab baru
 ```
 
 Work, Agents, dan Memory masing-masing berisi beberapa halaman, tampil sebagai tab di bagian atas tiap halamannya.

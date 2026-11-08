@@ -69,8 +69,6 @@ Settings
     My Box          the appliance itself (a paired Box only)                  (admin)
     Logs            Daemon · Audit · Schedule · Helpers
     Update          the version running, the newest release, installing it
-
-Documentation       this site, in a new tab
 ```
 
 Work, Agents and Memory each hold several pages, shown as tabs across the top of each of them. Every tab keeps its own

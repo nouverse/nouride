@@ -195,13 +195,13 @@ describe("DM Mono for what is technical (dashboard-text-contrast-and-mono)", () 
 
   test("so are the page tabs and a connection's status; the menu is in the interface's face (0.8.24)", () => {
     const read = (file: string) => readFileSync(join(SRC, file), "utf8");
-    // The soft look's menu reads as words, not identifiers, as its mockup has it: every item, the manual's link too, is
-    // the one `ITEM` list, and the current one adds only its colour and weight (its mark is the highlight).
+    // The soft look's menu reads as words, not identifiers, as its mockup has it: every item is the one `ITEM` list, and
+    // the current one adds only its colour and weight (its mark is the highlight).
     const nav = read("commons/components/layout/nav.tsx");
     const item = /const ITEM = "([^"]+)"/.exec(nav)?.[1] ?? "";
     expect(item).toContain("rounded-[14px]");
     expect(item).not.toContain("font-mono");
-    expect(nav.match(/cn\(ITEM/g)?.length).toBe(2);
+    expect(nav.match(/cn\(ITEM/g)?.length).toBe(1);
     expect(read("commons/components/ui/SegmentedTabs.tsx")).toMatch(/segmentClass[\s\S]*font-mono/);
     expect(read("commons/components/ui/ui.tsx")).toMatch(/export function StatusDot[\s\S]*rounded-full font-mono/);
   });

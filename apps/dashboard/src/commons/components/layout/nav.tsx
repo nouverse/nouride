@@ -10,19 +10,18 @@
  * - **Settings**, a page of its own that lists every other page, and opens its list here only while one of them is the
  *   page you are on: shown always, fourteen links were the menu, and the four that matter were lost among them.
  *
- * The same sections on a phone: the first four in the tab bar, the rest in More.
+ * The same sections on a phone: the first four in the tab bar, the rest in More. The manual is not in it: it is at the
+ * foot of Settings, and a menu entry that leaves the dashboard was one more line for something opened rarely (the owner).
  */
 
 import { Link } from "@tanstack/react-router";
 import { useRef, type ComponentType } from "react";
 import {
   Blocks,
-  BookOpen,
   Cat,
   Box,
   Brain,
   Cpu,
-  ExternalLink,
   House,
   KeyRound,
   MessageSquare,
@@ -40,7 +39,6 @@ import type { LucideIcon } from "lucide-react";
 import { NougateGlyph } from "@/commons/components/brand/logos";
 import { NavHighlight } from "@/commons/components/layout/NavHighlight";
 import { useNeedsYou } from "@/commons/hooks/use-needs-you";
-import { DOCS_URL } from "@/commons/lib/docs";
 import { cn } from "@/commons/lib/utils";
 
 export interface NavItem {
@@ -217,12 +215,6 @@ export function SidebarNav({ pathname, where }: { pathname: string; where: { adm
           </div>
         )}
       </div>
-      {/* The one entry that leaves the daemon: the manual, in a new tab, without telling it which install sent you. */}
-      <a href={`${DOCS_URL}/docs`} target="_blank" rel="noreferrer noopener" className={cn(ITEM, "font-medium text-base-content/70 hover:bg-base-content/[0.05] hover:text-base-content")}>
-        <BookOpen size={17} className="shrink-0" aria-hidden="true" />
-        <span className="flex-1">Documentation</span>
-        <ExternalLink size={12} className="shrink-0 text-base-content/65" aria-label="opens in a new tab" />
-      </a>
     </nav>
   );
 }
