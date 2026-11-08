@@ -45,7 +45,7 @@ export const en = {
   },
   chats: {
     title: 'Say hi from the apps you already use',
-    places: ['Telegram', 'Discord', 'WhatsApp', 'Your browser', 'Your terminal'],
+    places: ['Telegram', 'Discord', 'WhatsApp', 'Your browser'],
     note: 'Same agent, same memory, wherever you write. Each agent can have a bot of its own, with its own name.',
     link: 'Connect a chat app',
     mascotAlt: 'The Nouride cat on its scooter, delivering a parcel',
@@ -69,7 +69,7 @@ export const en = {
     title: 'Risky stuff waits for your yes',
     tiles: {
       prompt: ['It stops and asks', 'Mid-task, in the chat where you asked. Nothing runs while it waits.'],
-      anywhere: ['Answer from anywhere', 'The chat, the dashboard or the terminal: it is one queue.'],
+      anywhere: ['Answer from anywhere', 'In the chat or on the dashboard: it is one queue.'],
       keys: ['Tap it or type it', 'Buttons on Telegram and Discord, commands everywhere.'],
       always: ['Always, for one command', 'Stops asking for that exact command.'],
       fixed: ['Some things always ask', 'Deleting for good, stopping Nouride, a password leaving the box: no "always" for these.'],
@@ -173,7 +173,7 @@ export const id = {
   },
   chats: {
     title: 'Sapa dari aplikasi yang biasa kamu pakai',
-    places: ['Telegram', 'Discord', 'WhatsApp', 'Browser', 'Terminal'],
+    places: ['Telegram', 'Discord', 'WhatsApp', 'Browser'],
     note: 'Agent yang sama, ingatan yang sama, dari mana pun kamu chat. Tiap agent bisa punya bot sendiri, lengkap dengan namanya.',
     link: 'Sambungkan aplikasi chat',
     mascotAlt: 'Kucing Nouride naik skuter, mengantar paket',
@@ -197,7 +197,7 @@ export const id = {
     title: 'Yang berisiko, nunggu izinmu',
     tiles: {
       prompt: ['Dia berhenti dan bertanya', 'Di tengah kerja, di chat tempat kamu meminta. Tidak ada yang jalan selama dia menunggu.'],
-      anywhere: ['Jawab dari mana saja', 'Dari chat, dashboard, atau terminal: antreannya satu.'],
+      anywhere: ['Jawab dari mana saja', 'Dari chat atau dashboard: antreannya satu.'],
       keys: ['Tekan atau ketik', 'Tombol di Telegram dan Discord, perintah di mana saja.'],
       always: ['Selalu, untuk satu perintah', 'Berhenti bertanya untuk perintah yang persis sama.'],
       fixed: ['Yang ini selalu tanya', 'Hapus permanen, mematikan Nouride, password keluar dari mesin: tidak ada "selalu" untuk ini.'],
