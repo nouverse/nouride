@@ -454,7 +454,7 @@ export function phoneForLid(lid: string): string | null {
   return digits ? `${digits}@s.whatsapp.net` : null;
 }
 
-/** One incoming message up to the engine, with its media saved to disk first — or a person's edit of one (G11). */
+/** One incoming message up to the engine, with its media saved to disk first — or a person's edit of one. */
 async function forward(message: WAMessage): Promise<void> {
   const edited = incomingEdit(message);
   if (edited) return emit(editEvent(message, edited, selfIdsOf(socket?.user)));

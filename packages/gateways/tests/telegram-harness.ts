@@ -1,7 +1,7 @@
 /**
  * The Telegram adapter started with Telegram's half answered here — `init` says who the bot is, `start` is a poll that
  * never ends — so an update goes in through `handleUpdate`, the way a poll hands one over, and every call the adapter
- * makes back to Telegram is recorded and answered instead of sent (`calls`). For the tests of edits and buttons (G11).
+ * makes back to Telegram is recorded and answered instead of sent (`calls`). For the tests of edits and buttons.
  */
 
 import { spyOn } from "bun:test";

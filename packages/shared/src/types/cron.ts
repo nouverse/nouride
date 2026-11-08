@@ -80,7 +80,7 @@ export type JobPayload =
       then: "deliver" | "agentTurn";
     }
   /**
-   * Long work as a mission (0.8.0, SMART_AUTOMATION §2): every run starts one, as the person who turned the job on,
+   * Long work as a mission (0.8.0): every run starts one, as the person who turned the job on,
    * reporting to its chat — and ends at the reviewer, since that person accepted the work when they turned it on. One
    * run at a time; a webhook's body reaches the run's page as data.
    */
@@ -233,7 +233,7 @@ export interface JobRun {
   jobId: string;
   startedAt: number;
   finishedAt?: number;
-  /** `interrupted`: cut off by a daemon restart — not a failure, and not reported as one (P11). */
+  /** `interrupted`: cut off by a daemon restart — not a failure, and not reported as one. */
   status: "success" | "error" | "skipped" | "interrupted";
   result?: string;
   /** What its guards held with nobody there to ask (0.8.0): each can be allowed always for the job from its page. */

@@ -37,7 +37,7 @@ export interface RegistryOptions {
   /** `[skills] off` — see `LoadAgentOptions.skillsOffGlobally`. A function, so a reload sees a change. */
   skillsOffGlobally?: readonly string[] | (() => readonly string[]);
   /**
-   * Where the pause marks are kept, so a restart does not resume an agent somebody stopped (D15).
+   * Where the pause marks are kept, so a restart does not resume an agent somebody stopped.
    *
    * They lived in this process alone, and a nightly update is a restart: an agent stopped with `/stop` was answering
    * again the next morning. Absent — a command that loads the packs once and exits — they are this process's only.

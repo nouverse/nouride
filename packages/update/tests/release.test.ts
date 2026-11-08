@@ -158,7 +158,7 @@ describe("what a community install is told", () => {
     /**
      * The public mirror never carries a Pro tarball, so a Pro server on it saw `newer: false` and "up to date" while it
      * missed fixes, and the one command it could be offered was `curl … | sudo sh -s -- --variant pro`, which the
-     * installer refuses (`config-ops-pro-offbox-update-dead-end`).
+     * installer refuses.
      */
     const check = await checkForUpdate({
       facts: { ...INSTALLED, edition: "pro", arch: "arm64" },

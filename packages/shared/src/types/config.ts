@@ -56,7 +56,7 @@ export interface DaemonSection {
    */
   backupDir: string;
   /**
-   * The secrets in the snapshots, sealed to a passphrase (0.8.18, D5): `nrseal1:<salt>:<public key>`, which
+   * The secrets in the snapshots, sealed to a passphrase (0.8.18): `nrseal1:<salt>:<public key>`, which
    * `nouride secret seal` writes. Only the public half of the key the passphrase derives is here, so the daemon seals
    * every config snapshot's `secrets.sealed` and opens none. Empty: no secret goes into a snapshot.
    */
@@ -80,7 +80,7 @@ export interface ProviderProfile {
   /** Extra headers, e.g. OpenRouter attribution or a gateway key. */
   headers?: Record<string, string>;
   /**
-   * Say which agent and conversation each request is for (G1/M9) — the fields a gateway such as Nougate tells its
+   * Say which agent and conversation each request is for — the fields a gateway such as Nougate tells its
    * clients and sessions apart by, and that route a conversation to the cache its prefix is already in. Off unless
    * set: a strict server rejects a field it does not know.
    */
@@ -109,7 +109,7 @@ export type ApprovalDecision = "allow-once" | "allow-always" | "deny";
 /**
  * Exec's configuration. Whether a command runs, asks or is refused is `@nouride/policy`'s, under the approval level
  * (`[security] approvals`): 0.8.0 took the four knobs that guessed at it — `mode`, `ask`, `ask_fallback`,
- * `sensitive_paths` — and the editable allowlist into the levels and one fixed list (SIMPLIFY RFC §1). What is left is
+ * `sensitive_paths` — and the editable allowlist into the levels and one fixed list. What is left is
  * the ceilings on a command, and the operator's own veto.
  */
 export interface ExecPolicySection {
@@ -379,7 +379,7 @@ export function resolveQuietAfterMs(perAgentMinutes: number | undefined, daemonM
  */
 export interface DelegateSection {
   /**
-   * How many background helpers one agent may have running at once. 2 by default (the owner's number): one is the
+   * How many background helpers one agent may have running at once. 2 by default: one is the
    * habit for a long task, so the agent stays free for the person; two is for two independent pieces. 0 turns them
    * off — `delegate` then works only in the foreground, where the agent waits for its helpers.
    *
@@ -405,7 +405,7 @@ export interface MissionsSection {
   limitHours: number;
   /** Turns, the reviewer's and failed checks' included. 100. */
   limitTurns: number;
-  /** Input and output tokens, its helpers and the reviewer included. 100 million — measured, §7 there. */
+  /** Input and output tokens, its helpers and the reviewer included. 100 million, as measured. */
   limitTokens: number;
 }
 
@@ -1133,7 +1133,7 @@ export interface CronSection {
  * name; it never told the agent in a DM, which is where a household actually talks to it.
  *
  * **A sender is recognised by their account, never by name.** `sender_access` already states why: the
- * display name is "whatever the platform reports", and anyone can rename themselves to "Gading" in
+ * display name is "whatever the platform reports", and anyone can rename themselves to "Sam" in
  * Telegram. So a sender is matched against the accounts in `ids` — `<platform>:<account>` — and the
  * name here is what the *operator* wrote, not what the platform said.
  *
@@ -1363,7 +1363,7 @@ export interface NougateSection {
   port: number;
 }
 
-/** `latest`: the newest release. `lts`: stay on a long-term line (0.8.18, PLAN §3.3; `packages/update/src/track.ts`). */
+/** `latest`: the newest release. `lts`: stay on a long-term line (0.8.18; `packages/update/src/track.ts`). */
 export const UPDATE_TRACKS = ["latest", "lts"] as const;
 export type UpdateTrack = (typeof UPDATE_TRACKS)[number];
 

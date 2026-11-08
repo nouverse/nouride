@@ -41,8 +41,7 @@ export async function resolveHostAddresses(hostname: string): Promise<string[]> 
 export { isIP };
 
 /**
- * Fetch a URL from one address — the one a check already resolved and judged — rather than resolving its name again
- * (S12).
+ * Fetch a URL from one address — the one a check already resolved and judged — rather than resolving its name again.
  *
  * A check that resolves a name and a fetch that resolves it again are two answers, and a resolver that answers with a
  * TTL of 0 can give the check a public address and the connection `127.0.0.1` or the cloud's metadata service. So the

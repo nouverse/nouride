@@ -65,7 +65,7 @@ describe("database file permissions", () => {
 });
 
 /**
- * The write-ahead log on flash (E3/E4, 2026-10-15).
+ * The write-ahead log on flash (2026-10-15).
  *
  * Asking the log's size used to *be* a checkpoint — `wal_checkpoint(PASSIVE)` reports the frame count
  * as a side effect of doing one — and `/health` asks every ten seconds while the dashboard is open. So

@@ -59,7 +59,7 @@ export interface BackgroundOptions {
   agent?: string;
   /**
    * What the log is written through — a new one per stream, given its text as it arrives. The engine masks the job's
-   * credentials with it (S5): the file is readable by the agent, so a value has to be gone before it is written,
+   * credentials with it: the file is readable by the agent, so a value has to be gone before it is written,
    * not when the log is read back. Without one, the bytes go to the file as they came.
    */
   filter?: () => TextFilter;
@@ -90,7 +90,7 @@ export function startBackgroundCommand(
     // In a group of its own for the same reason, and the outermost wrapper for the same reason it is
     // there: what the job starts has to be reachable by the signal that stops it.
     //
-    // Under the same ceilings as the foreground, when the operator set them (S5): a job runs unwatched for as long
+    // Under the same ceilings as the foreground, when the operator set them: a job runs unwatched for as long
     // as it likes, which makes an allocation that never stops worse here, not better.
     cmd: line.cmd,
     ...ownGroupSpawnOptions(),

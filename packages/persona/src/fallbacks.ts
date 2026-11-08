@@ -1,5 +1,5 @@
 /**
- * An agent's fallbacks as its pack says them (SMART_AUTOMATION §3.1): `[llm] fallbacks`, each a provider and a model —
+ * An agent's fallbacks as its pack says them: `[llm] fallbacks`, each a provider and a model —
  * and one `{ provider, model }`, which the daemon's own `[llm.defaults]` reads with the same words.
  */
 

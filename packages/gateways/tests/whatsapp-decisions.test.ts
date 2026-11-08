@@ -1,6 +1,6 @@
 /**
- * The WhatsApp adapter's decisions one by one, against a fake bridge — written for the mutation sweep
- * (tests-unreviewed-areas-mutation), where each of these was a line no test noticed going wrong: what a status or an
+ * The WhatsApp adapter's decisions one by one, against a fake bridge — written for a mutation sweep of
+ * the untested areas, where each of these was a line no test noticed going wrong: what a status or an
  * error from the bridge does to the connection, what an outgoing attachment becomes, what a stop or a logout leaves
  * behind, and which refusal walls a chat off.
  */

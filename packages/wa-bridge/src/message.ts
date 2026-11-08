@@ -186,7 +186,7 @@ export interface IncomingEdit extends Incoming {
 
 /**
  * A person's edit of a message they sent, as WhatsApp sends one: a protocol message naming the message it changes, with
- * what that message says now (G11). Not one of our own — the account's own edits, from its phone — not a status
+ * what that message says now. Not one of our own — the account's own edits, from its phone — not a status
  * broadcast, and not one that leaves no words: an edit is words. Baileys reports the same edit again as an update to
  * the message; the bridge forwards it once, from here.
  */

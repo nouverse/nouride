@@ -1,5 +1,5 @@
 /**
- * Buttons on Discord (G11): a row of message components under a message, and a press on one — a button interaction —
+ * Buttons on Discord: a row of message components under a message, and a press on one — a button interaction —
  * as the engine reads it, its answer carried out inside the three seconds Discord gives an interaction.
  */
 

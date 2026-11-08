@@ -210,7 +210,7 @@ export interface ChatParams {
    * so a caller that does not care about caching passes a string and every provider still works.
    */
   system?: string | SystemBlock[];
-  /** Who is asking, sent only to a profile that says `identify` (G1/M9): the agent, and the conversation it is in. */
+  /** Who is asking, sent only to a profile that says `identify`: the agent, and the conversation it is in. */
   identity?: { agentId: string; conversation: string };
   /**
    * Said after everything else, for this request only: the conversation's work notes (0.7.26), read fresh at every step.
@@ -308,13 +308,13 @@ export interface TokenUsage {
   cacheCreationInputTokens?: number;
   /**
    * Not tokens: what the call itself took, carried with its usage because usage is the one thing every caller
-   * already records (D2). HTTP attempts — 1 unless the provider refused or timed out and was asked again.
+   * already records. HTTP attempts — 1 unless the provider refused or timed out and was asked again.
    */
   attempts?: number;
   /** From the request leaving to this usage being read, retries and their waits included. */
   latencyMs?: number;
   /**
-   * Who answered, when a gateway in between says so (G1): Nougate sends `x-nougate-provider`, `-model` and
+   * Who answered, when a gateway in between says so: Nougate sends `x-nougate-provider`, `-model` and
    * `-attempts` on every response. The model asked for and the one that answered can differ — an alias, a
    * fallback — and only the gateway knows which provider it went to, and how many it tried. Absent when nothing
    * in between said.

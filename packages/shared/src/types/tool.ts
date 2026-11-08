@@ -21,14 +21,14 @@ export interface ToolContext {
   sessionId: string;
   chatId: string;
   /**
-   * The turn the call belongs to (D2): what its `tool_exec` audit row, the usage of a helper or a peer it starts,
+   * The turn the call belongs to: what its `tool_exec` audit row, the usage of a helper or a peer it starts,
    * and its log lines are joined by. Absent outside a recorded turn — a cron run, a test.
    */
   turnId?: string;
   /** The call this is — unique within its turn — so what records it can be paired with its result. */
   callId?: string;
   /**
-   * When the turn has to have answered by (P5) — so a `delegate` helper started from this call can wrap up before it
+   * When the turn has to have answered by — so a `delegate` helper started from this call can wrap up before it
    * rather than die on the turn's abort with nothing to hand back. Absent for a turn with no clock.
    */
   deadlineAt?: number;
@@ -175,7 +175,7 @@ export interface ToolContext {
    * an MCP server's answer, a file somebody sent: `ToolResult.untrusted`), and what its own prompt carried (a
    * forwarded message, a webhook's payload: `MessageEnvelope.outsideContent`). Set by the executor; absent while there
    * is none. What a turn writes after reading it may have been written *by* it, so a memory write in such a turn is
-   * marked as one, and waits for a person (`Tool.keepsInPrompt`, S13).
+   * marked as one, and waits for a person (`Tool.keepsInPrompt`).
    */
   untrustedRead?: readonly string[];
   /**
@@ -279,13 +279,13 @@ export interface Tool {
    *
    * Asked by the executor before the gate, the way arguments that are not one JSON object are answered: a call that
    * cannot be made is said to the model at once, rather than put to a person who approves it only for it to fail. Set
-   * by an MCP tool, which holds a call to the schema its server declared (G4); a built-in checks its own in `execute`.
+   * by an MCP tool, which holds a call to the schema its server declared; a built-in checks its own in `execute`.
    */
   checkArguments?(args: Record<string, unknown>): string | undefined;
   /**
    * What this tool writes is read by every later prompt — `MEMORY.md`, a person's record and notes. After a turn has
    * read outside content (`ToolContext.untrustedRead`), a call to it waits for a person's yes, as a change to this
-   * daemon's own state does, instead of being written in silence (S13) — at every approval level but `trusted`. A function
+   * daemon's own state does, instead of being written in silence — at every approval level but `trusted`. A function
    * when only some calls write: `person_notes` without `change` reads.
    */
   keepsInPrompt?: true | ((args: Record<string, unknown>) => boolean);
@@ -471,8 +471,8 @@ export interface ApprovalRequest {
   resolvedAt?: number;
   resolvedBy?: string;
   /**
-   * The sender whose turn asked, while the request is pending (S8). Kept by the process that asked rather than in the
-   * table, and handed to the next one when a restart keeps the request (D8, `approvals-kept.ts`); a request kept after
+   * The sender whose turn asked, while the request is pending. Kept by the process that asked rather than in the
+   * table, and handed to the next one when a restart keeps the request (`approvals-kept.ts`); a request kept after
    * a crash has none, and then in a room only an admin may answer. In a room it decides who may answer.
    */
   requestedBy?: string;

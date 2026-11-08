@@ -46,7 +46,7 @@ export interface Attachment {
 }
 
 /**
- * A person's edit of a message they sent (G11, 0.7.14): what an adapter says about one, and what the engine adds.
+ * A person's edit of a message they sent (0.7.14): what an adapter says about one, and what the engine adds.
  */
 export interface MessageEdit {
   /** The platform's id of the message the edit changes — what a reply to the edit quotes. */
@@ -111,13 +111,13 @@ export interface MessageEnvelope {
   quotedSender?: string;
   /**
    * The platform says this message was forwarded from somebody else — its text is outside content, whoever sent it
-   * on (S13). Absent where a platform does not say.
+   * on. Absent where a platform does not say.
    */
   forwarded?: boolean;
   /**
    * What of this message's own text came from outside the conversation, named — a webhook's payload in a scheduled
    * job's prompt. Set by the engine where it builds a message; a platform's fact of the same kind is `forwarded`. A
-   * turn answering either counts as having read outside content from its first step (S13).
+   * turn answering either counts as having read outside content from its first step.
    */
   outsideContent?: string[];
   /** Agent ids the message mentions, resolved by the gateway. */
@@ -213,7 +213,7 @@ export interface MessageEnvelope {
    */
   mergedIds?: string[];
   /**
-   * This is a person's edit of a message they sent earlier (G11): `text` and `mentions` are what that message says
+   * This is a person's edit of a message they sent earlier: `text` and `mentions` are what that message says
    * now, `edit.of` names it, and `id` is the edit's own — an edit is not the message it changes, and the claim, the
    * inbox and the queue each know a message by its id. Words only: a file in an edited message is not sent again.
    *
@@ -282,12 +282,12 @@ export interface OutboundMessage {
   onDelivered?: () => void;
   /**
    * Buttons under the message, in one row — on a gateway that carries them (`Gateway.buttons`); one that does not sends
-   * the text alone. A press comes back as a `ButtonPress` (`Gateway.onPress`) carrying the button's `data` (G11).
+   * the text alone. A press comes back as a `ButtonPress` (`Gateway.onPress`) carrying the button's `data`.
    */
   buttons?: MessageButton[];
 }
 
-/** One button under a message (G11): what it says, and what a press on it reports back — opaque to the gateway. */
+/** One button under a message: what it says, and what a press on it reports back — opaque to the gateway. */
 export interface MessageButton {
   label: string;
   /** What the press carries back. At most 64 bytes: Telegram refuses more. */

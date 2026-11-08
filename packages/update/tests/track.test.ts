@@ -1,5 +1,5 @@
 /**
- * Which releases an install is offered (0.8.18, PLAN §3.3, REVIEW A1 and B1): every page of the channel read, the
+ * Which releases an install is offered (0.8.18): every page of the channel read, the
  * releases ordered by version rather than by date, and the track the install follows. `latest` takes the newest of all;
  * `lts` stays on a long-term line (1.0 the first), and each says what the other would offer.
  */

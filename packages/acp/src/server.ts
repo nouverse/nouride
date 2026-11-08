@@ -59,7 +59,7 @@ export interface AcpServerOptions {
   agentInfo: { name: string; title?: string; version: string };
   /** Beyond `loadSession`, which follows the handlers. */
   promptCapabilities?: AgentCapabilities["promptCapabilities"];
-  /** The MCP servers a session may be given. Absent: none — Nouride served to an editor takes none (ACP_PROTOCOL §8). */
+  /** The MCP servers a session may be given. Absent: none — Nouride served to an editor takes none. */
   mcpCapabilities?: AgentCapabilities["mcpCapabilities"];
   authMethods?: AuthMethod[];
   stray?: (line: string) => void;

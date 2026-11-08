@@ -225,7 +225,7 @@ describe("messageEvent", () => {
 });
 
 /**
- * A person's edit (G11), as WhatsApp sends it: a protocol message — wrapped in `editedMessage` — naming the message it
+ * A person's edit, as WhatsApp sends it: a protocol message — wrapped in `editedMessage` — naming the message it
  * changes, with what that message says now. `incoming` says nothing about one (it has no text of its own); this does.
  */
 describe("incomingEdit and editEvent — an edit", () => {

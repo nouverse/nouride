@@ -711,7 +711,7 @@ function explainRefusal(code: string): { reason: string; terminal: boolean } {
 
 /**
  * The linked number as the journal may hold it: its last four digits. "whatsapp linked" logged the whole JID at info,
- * which put the owner's phone number in every journal and log table a box keeps.
+ * which put the box owner's phone number in every journal and log table a box keeps.
  */
 export function maskedNumber(jid: string): string {
   const digits = jid.split("@")[0]?.split(":")[0]?.replace(/\D/g, "") ?? "";

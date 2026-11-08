@@ -1,5 +1,5 @@
 /**
- * The turn a line was written in (D2): lifted out of the line's context like the agent and the chat, so a journal
+ * The turn a line was written in: lifted out of the line's context like the agent and the chat, so a journal
  * can be filtered by it and the log table keeps it.
  */
 

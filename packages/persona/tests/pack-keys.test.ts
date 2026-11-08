@@ -1,5 +1,5 @@
 /**
- * A pack's `config.toml` warns about a key it does not read (SIMPLIFY §3), as the daemon's config always has: a typo,
+ * A pack's `config.toml` warns about a key it does not read, as the daemon's config always has: a typo,
  * or a key a release deleted, used to load in silence and do nothing. The agent still loads.
  */
 

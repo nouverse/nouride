@@ -1,5 +1,5 @@
 /**
- * The process adapter's decisions one by one — written for the mutation sweep (tests-unreviewed-areas-mutation),
+ * The process adapter's decisions one by one — written for a mutation sweep of the untested areas,
  * which ran these on Linux (glibc, and musl without util-linux) and on macOS, since most of what is decided here is
  * decided by what the host has.
  *

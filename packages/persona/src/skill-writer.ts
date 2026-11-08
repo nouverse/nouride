@@ -288,7 +288,7 @@ export async function updateExistingSkill(
   }
 
   const { fields } = parseFrontmatter(existing);
-  // The version an approval replaces is kept (0.8.18, REVIEW B2): an improvement overwrote it and kept nothing.
+  // The version an approval replaces is kept (0.8.18): an improvement overwrote it and kept nothing.
   await keepPreviousSkill(agentsDir, doc.name, existing);
   await writeTextFileAtomic(
     path,

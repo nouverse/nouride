@@ -330,7 +330,7 @@ describe("parseAgentConfig", () => {
   });
 
   /**
-   * Two servers whose tools would take one name are refused at load (G12), by the file and the entry.
+   * Two servers whose tools would take one name are refused at load, by the file and the entry.
    *
    * A server's tools are `<name>__<tool>`, and the agent's tool list was merged last-writer-wins: two servers of one
    * name, and the agent got whichever connected last — another server's `search` on another boot, with nothing said.
@@ -584,7 +584,7 @@ describe("[security] exec_secrets (S6)", () => {
   });
 });
 
-/** The ssh-agent socket is the pack's to ask for (S11): every command of every agent held it until 0.7.9. */
+/** The ssh-agent socket is the pack's to ask for: every command of every agent held it until 0.7.9. */
 describe("[security] ssh_agent", () => {
   const parse = (security: Record<string, unknown>) => parseAgentConfig("ops", { security }, { defaults: DEFAULTS });
 

@@ -2,7 +2,7 @@
  * The Telegram adapter end to end, with Telegram's half answered here: `init` says who the bot is, `start` is a poll
  * the test ends, and an update goes in through `handleUpdate` the way a poll would hand it over.
  *
- * Written for the mutation sweep (tests-unreviewed-areas-mutation): what reaches the engine from a message, what a
+ * Written for a mutation sweep of the untested areas: what reaches the engine from a message, what a
  * polling failure turns into, and which failures are the token's. Each was a decision no test had reached.
  */
 

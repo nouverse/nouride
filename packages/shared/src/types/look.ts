@@ -1,5 +1,5 @@
 /**
- * How an agent's cat looks in Nouride Office (0.8.1, MISSIONS §9): each part a person may pick on the agent's Look tab,
+ * How an agent's cat looks in Nouride Office (0.8.1): each part a person may pick on the agent's Look tab,
  * kept in its pack as `[look]`. A part left out is the hash of the agent's id, so an agent nobody styled still has a
  * look of its own, and a rename does not change it. The variety is in colour, which is a palette; the shapes stay few,
  * since each is a drawing in every pose — a new colour is a word here and a palette there, a new hat one drawing.

@@ -668,7 +668,7 @@ describe("events and handlers", () => {
   });
 
   /**
-   * A press on a button (G11) goes to the one handler the engine gave, and its answer comes back for the adapter to carry
+   * A press on a button goes to the one handler the engine gave, and its answer comes back for the adapter to carry
    * out — always something to carry out: a platform shows a press pending until it is acknowledged.
    */
   test("a press is answered by the engine's handler; with none, or one that throws, it is still answered", async () => {

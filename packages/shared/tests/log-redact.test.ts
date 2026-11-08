@@ -1,5 +1,5 @@
 /**
- * A credential never reaches the journal (D16): the line is scrubbed at the one place every line passes through, so
+ * A credential never reaches the journal: the line is scrubbed at the one place every line passes through, so
  * the stdout a journal keeps, the log table the dashboard reads and the audit row of an error all get the same,
  * scrubbed entry. And an ordinary field comes through untouched — a scrubber that eats ids and counts is one somebody
  * turns off.

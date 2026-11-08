@@ -22,7 +22,7 @@ export interface LogEntry {
   component: string;
   agent_id?: string;
   chat_id?: string;
-  /** The turn a line was written in, where the caller knew it (D2) — `nouride turns show` names it. */
+  /** The turn a line was written in, where the caller knew it — `nouride turns show` names it. */
   turn_id?: string;
   message: string;
   data?: Record<string, unknown>;
@@ -136,7 +136,7 @@ export function holdLines(): () => LogEntry[] {
 
 /**
  * One line as it is written, handed to a sink and held. Scrubbed here, before any of them: the journal, the log table
- * and the audit log all read this one entry, so a credential in it is in all three (D16, `log-redact.ts`).
+ * and the audit log all read this one entry, so a credential in it is in all three (`log-redact.ts`).
  */
 function entryOf(level: LogLevel, component: string, message: string, ctx?: LogContext): LogEntry {
   const { agent_id, chat_id, turn_id, ...rest } = ctx ?? {};

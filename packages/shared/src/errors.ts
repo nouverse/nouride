@@ -43,7 +43,7 @@ export class GatewayError extends NourideError {
 }
 
 /**
- * The platform refused the gateway's credentials — a wrong or revoked token, not a dropped connection (G8).
+ * The platform refused the gateway's credentials — a wrong or revoked token, not a dropped connection.
  *
  * Its own class because the two want opposite answers: a dropped connection is worth reconnecting to, ten times
  * over ten minutes; a refused token answers the same way every time, so that is ten minutes of noise before the
@@ -82,7 +82,7 @@ export class LLMError extends NourideError {
   readonly failure?: LLMFailure;
   /**
    * What a gateway in between said about the failed call — which providers it tried, in order, how many, and whose
-   * failure it handed back. Nougate says it on an error response since 0.7.11 (`x-nougate-tried`); absent when nothing
+   * failure it handed back. Nougate's `x-nougate-tried` says it on an error response since 0.7.11; absent when nothing
    * in between said. For the operator: the message carries it too, so the turn's `error` does, and never the chat.
    */
   readonly upstream?: { provider?: string; model?: string; attempts?: number; tried?: string[] };

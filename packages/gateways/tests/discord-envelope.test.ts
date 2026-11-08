@@ -1,7 +1,7 @@
 /**
  * What a Discord message becomes before the engine sees it — `discordEnvelope`, on messages shaped the way discord.js hands
  * them over. The decisions in it (`stripLeadingSelfMention`, `writtenMentions`, `worthDelivering`) each had a test; the
- * method that strings them together had none until the mutation sweep (tests-unreviewed-areas-mutation).
+ * method that strings them together had none until a mutation sweep of the untested areas.
  */
 
 import { describe, expect, test } from "bun:test";

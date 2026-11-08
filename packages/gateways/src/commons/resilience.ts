@@ -33,7 +33,7 @@ const OUTBOUND_BUFFER_LIMIT = 100;
 const HEALTH_FAILURE_THRESHOLD = 3;
 
 /**
- * Refused credentials in a row before a gateway is given up on (G8). Two, not one: Telegram answers a 401 now and
+ * Refused credentials in a row before a gateway is given up on. Two, not one: Telegram answers a 401 now and
  * then for a token that is fine, and one more try costs a second where ten cost ten minutes.
  */
 const AUTH_FAILURES_TO_DIE = 2;
@@ -123,7 +123,7 @@ export async function deliverInParts(
     text: (part: string, index: number, ids: string[]) => Promise<void>;
     attachment: (attachment: Attachment, ids: string[]) => Promise<void>;
   },
-  /** Waited for before each part — every one is a message of its own to the platform (`Pacer`, G7). */
+  /** Waited for before each part — every one is a message of its own to the platform (`Pacer`). */
   pace: () => Promise<void> = async () => {},
 ): Promise<string[]> {
   const ids: string[] = [];
@@ -210,7 +210,7 @@ export abstract class BaseGateway implements Gateway {
 
   /**
    * Whether the connection is alive, as the health timer asks it: `ping()`, unless the adapter already hears from the
-   * platform on a schedule of its own and can answer from that (E11) — a request every thirty seconds per bot, at
+   * platform on a schedule of its own and can answer from that — a request every thirty seconds per bot, at
    * idle, to learn what the last poll already said. The probe after a failed send still pings: it asks about now.
    */
   protected async alive(): Promise<boolean> {
@@ -494,7 +494,7 @@ export abstract class BaseGateway implements Gateway {
     } catch (err) {
       this.authFailures = err instanceof GatewayAuthError ? this.authFailures + 1 : 0;
       if (this.authFailures >= AUTH_FAILURES_TO_DIE) {
-        // Refused again: a token that is wrong or revoked answers the same way however often it is asked (G8).
+        // Refused again: a token that is wrong or revoked answers the same way however often it is asked.
         this.setStatus("dead", `auth_failed: ${String(err)}`);
         this.log.error("gateway dead: the platform refused its credentials", { error: String(err) });
         this.emitEvent({ type: "dead", gatewayId: this.id, attempts: this.reconnectAttempts, reason: "auth_failed", detail: String(err) });

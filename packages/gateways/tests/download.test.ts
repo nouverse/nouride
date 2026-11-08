@@ -1,5 +1,5 @@
 /**
- * An attachment's download, handed to the engine unread (G9).
+ * An attachment's download, handed to the engine unread.
  *
  * The adapters used to `arrayBuffer()` the whole file before anything could look at its size, with no deadline at
  * all. What is pinned here is the part only an adapter can get right: the body leaves unread, the declared length
