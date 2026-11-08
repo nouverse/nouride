@@ -168,21 +168,6 @@ export const BUDGET: Record<string, Budget> = {
       "the file; 0.8.0 adds an asleep agent's two answers (kept for its waking, or told once an hour) and a mission's " +
       "turn handed to the missions to shape; 404 → 412 for `abandoned` (0.8.15): a turn that threw before its own end could run gives the chat back, closes its record and tells the person — where admit's rejection is reported, the one place it is seen",
   },
-  "apps/engine/src/modules/pipeline/turn.ts": {
-    lines: 508,
-    why:
-      "running a turn: its executor, its meter, its cause and what a compaction before the answer left; its settle " +
-      "handles the message it answered in the same commit (E7), it tells its executor what the message carried " +
-      "from outside (S13), and who writes its summaries before the answer and after it (`llm/summarizer.ts`, one " +
-      "route for both, M12), and the call ids its helpers and peers share with it (0.7.11); 425 → 428 for a thread's opening " +
-      "message (0.7.24): put in front of the first question there, where the question is composed; 428 → 438 for the " +
-      "opening line before long work (0.7.24): which turns get one and how it is sent are decided where the turn's " +
-      "envelope and voice are, the rule itself is `preamble.ts`, and the answer is not sent twice where it is sent; 438 → 440 for keeping an opening line that calls another agent for the answer, so a room does not start that agent twice; " +
-      "440 → 444 for the reply budget (0.7.25): the turns a person waits on are the ones the opening line is for, decided here, and its watch is stopped where the turn's clock is — the rule and the words are `budget-nudges.ts`; " +
-      "444 → 445 for the line each model request writes to the turn's record (0.7.26): wired where its other sinks are, the line itself is `context-line.ts`; 445 → 446: the executor is told who installs the programs every agent runs — the orchestrator, `toolchain/shared-tools.ts` (0.8.0); " +
-      "446 → 467 for a mission's turn (0.8.0, `turn-shape.ts`): started from its page and not its history, run as the person who started it, its approvals parked, and the mission told how it ended — on every path a turn ends by, which is why it is here; 467 → 468 for whether the long reply's note may say to hand the rest to a mission; " +
-      "468 → 469 for a turn stopped at its next step when its agent is put to sleep, closed as a stop rather than a restart; 469 → 482 for work nobody watches (0.8.0): a mission's or a scheduled chat turn's goal and chat handed to the turn, and the second look built for it with the turn's own level, provider and meter; 482 → 483 for the `Unattended` type a turn hands its executor (0.8.0); 483 → 484: the level resolved once for the executor and its second look, so a scheduled job's turn here is held below `trusted` in both (0.8.1) — the rule is `chatTurnLevel`; 484 → 487: the bubble closed before the agent's words go out, where the line's send is built (0.8.5) — the closing is `ChatProgress.seal`; 487 → 489: a turn woken for what an external agent's CLI said by itself is told so, read from its cause where the request is built (0.8.6) — the reading is `external-agents/own-words.ts`; 0.8.7 (489 → 492): a coding CLI's mission turn runs on a clock that each step restarts (`turn-clock.ts`), wired where the turn's timer is; 492 → 497: the reply as it is written reaches the bubble too, which says the model is writing once its steps are done, and the bubble's tick a test can shorten — wired where the bubble is built; the line itself is `ChatProgress`'s; 497 → 505 for a turn's listener for what is put in front of it, handed to a coding CLI's runner so it hands steers over mid-prompt (0.8.10, `external-agents/steering.ts`); 505 → 506: beside it, whether the line in the agent's own words is still being written, which that runner waits on so the CLI reads the two together (`steer-reply.ts`); 506 → 508 for the chat's `/effort` level its model refused (0.8.17): said under the answer that met it, once, where the reply is composed",
-  },
   "scripts/build/core.ts": {
     lines: 405,
     why:
