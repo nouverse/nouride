@@ -58,6 +58,11 @@ export interface Episode {
   tags: string[];
   importance?: number;
   related: string[];
+  /**
+   * The knowledge documents it opened, as `<collection>/<path>` (0.8.23): what the memory graph joins it to. Kept on the
+   * file, which is the truth; absent on an episode from before, and on one that opened none.
+   */
+  documents?: string[];
   summary?: string;
   /** The conversation, while it is kept. */
   transcript: string;
@@ -98,6 +103,7 @@ export function renderEpisode(episode: Episode): string {
     tags: episode.tags.map((tag) => link(`tags/${tag}`)),
     ...(episode.importance !== undefined ? { importance: episode.importance } : {}),
     related: episode.related.map((id) => link(id)),
+    ...(episode.documents?.length ? { documents: episode.documents } : {}),
     ...(episode.summary ? { summary: episode.summary } : {}),
   };
   return renderFront(front, episode.transcript);
@@ -128,6 +134,8 @@ export function parseEpisode(text: string, id: string): Episode | { problem: str
   const importance = Number(front.importance);
   const group = stripped(frontList(front, "group"), "groups")[0];
   const summary = frontText(front, "summary");
+  // A document's key is its collection and its path: a value without the `/` between them is no document.
+  const documents = frontList(front, "documents").filter((document) => document.indexOf("/") > 0);
   return {
     id,
     status,
@@ -143,6 +151,7 @@ export function parseEpisode(text: string, id: string): Episode | { problem: str
     tags: stripped(frontList(front, "tags"), "tags"),
     ...(Number.isInteger(importance) && importance >= 1 && importance <= 5 ? { importance } : {}),
     related: frontList(front, "related").map(unlink).filter((related) => EPISODE_ID.test(related)),
+    ...(documents.length ? { documents } : {}),
     ...(summary ? { summary } : {}),
     transcript: body.trim() ? `${body.trim()}\n` : "",
   };

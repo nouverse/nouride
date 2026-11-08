@@ -99,13 +99,31 @@ export async function cutChat(deps: RunDeps, chat: { gatewayId: string; chatId: 
       ...(group ? { group } : {}),
       taken: (id) => fileExistsSync(deps.vault.episode(id)),
     });
+    // What each episode opened of the knowledge base, kept on its file: the memory graph joins them (0.8.23).
+    const opened = deps.source.documentsOpenedBetween?.(chat.gatewayId, chat.chatId, after, stop) ?? [];
     for (const episode of episodes) {
+      const documents = openedIn(opened, episode);
+      if (documents.length) episode.documents = documents;
       await writeEpisode(deps, episode);
       await ensureStubs(deps.vault, episode);
     }
     if (group && episodes.length) deps.index.putGroup(key, group);
     return episodes;
   });
+}
+
+/** Documents one conversation opens at most, kept on it: past it a graph line says nothing a person reads. */
+const DOCUMENTS_PER_EPISODE = 20;
+
+/** The documents opened within an episode's time, once each, in the order first opened. Pure. */
+function openedIn(opened: readonly { at: number; document: string }[], episode: Pick<Episode, "started" | "ended">): string[] {
+  const from = Date.parse(episode.started);
+  const to = Date.parse(episode.ended) + WITHIN_THE_SECOND_MS;
+  const out: string[] = [];
+  for (const { at, document } of opened) {
+    if (at >= from && at <= to && !out.includes(document)) out.push(document);
+  }
+  return out.slice(0, DOCUMENTS_PER_EPISODE);
 }
 
 /**

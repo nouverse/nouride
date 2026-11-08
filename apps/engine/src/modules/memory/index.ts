@@ -457,7 +457,9 @@ export function createMemory(deps: MemoryDeps) {
     graph(filter: GraphFilter, limit: number, options: { knowledge?: boolean } = {}): MemoryGraph {
       const graph = management.graph(filter, limit);
       const layer = options.knowledge ? knowledge.surface.layer(limit, config.people) : null;
-      return layer ? withKnowledge(graph, layer) : graph;
+      if (!layer) return graph;
+      const shown = graph.nodes.filter((node) => node.kind === "episode").map((node) => node.id.slice("e:".length));
+      return withKnowledge(graph, layer, deps.index.documentsOpened(shown));
     },
     // The word index is cleared whole and rebuilt from the vault; the documents are not in it, so their words go back after.
     reindex: () =>

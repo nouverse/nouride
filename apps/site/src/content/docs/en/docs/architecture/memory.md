@@ -285,7 +285,10 @@ It is built to open quickly on a Pi, and that shapes what you see:
   vault three tags in four are like that.
 - **Built once per change to memory**, in practice once a night after the pass, however often it is
   opened.
-- **Conversations only.** Facts live in profiles, on the People tab.
+- **Conversations, and documents when asked.** The **Documents** switch lays the knowledge base over them: each
+  collection and its documents, the links between them, the people a collection is about, documents close in
+  meaning, a line from each conversation to the documents it opened, and from each document to the tags its
+  frontmatter gives it, one dot with the conversations' tag of the same name. Facts live in profiles, on the People tab.
 
 How to read it: a tag with many dots around it is a subject that keeps coming back; a short chain of
 conversations joined directly is one matter over several days; a person or an agent with a cloud

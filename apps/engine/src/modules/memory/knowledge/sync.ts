@@ -71,6 +71,7 @@ function documentFrom(collection: string, file: { path: string; size: number; mt
     ...(read.kind === "read" ? (read.note ? { reason: read.note } : {}) : { reason: read.reason, ...(read.needs ? { needs: read.needs } : {}) }),
     sections: read.kind === "read" ? read.sections.length : 0,
     indexedAt: now,
+    ...(read.kind === "read" && read.tags?.length ? { tags: read.tags } : {}),
   };
 }
 

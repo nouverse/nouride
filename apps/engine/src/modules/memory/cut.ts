@@ -58,6 +58,11 @@ export interface ChatSource {
   exchangesBetween(gatewayId: string, chatId: string, after: number, until: number): { agentId: string; senderId?: string; prompt: string; reply: string; startedAt: number; endedAt: number }[];
   roomMessagesBetween(gatewayId: string, chatId: string, after: number, until: number): { senderId: string; senderName?: string; text: string; at: number }[];
   isRoom(gatewayId: string, chatId: string): boolean;
+  /**
+   * The knowledge documents opened in the chat in a window, `<collection>/<path>` (0.8.23): kept on the episodes they
+   * fall in. Boot reads them from the audit log; a source without it files episodes that opened none.
+   */
+  documentsOpenedBetween?(gatewayId: string, chatId: string, after: number, until: number): { at: number; document: string }[];
 }
 
 /** The chat's entries in a window, oldest first. */

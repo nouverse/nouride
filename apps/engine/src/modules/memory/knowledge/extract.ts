@@ -8,7 +8,8 @@
 
 import { basename, extname, readTextFile } from "@nouride/runtime";
 import { officeKind, readOffice, type OfficeReader } from "./office.ts";
-import { sectionsOfTable, sectionsOfText, titleOf, type Section } from "./sections.ts";
+import { normalizeTags } from "../tags.ts";
+import { sectionsOfTable, sectionsOfText, tagsOf, titleOf, type Section } from "./sections.ts";
 
 /** A file larger than this is listed, not read: past it, a document is an archive, not a reference. */
 const FILE_MAX_BYTES = 50 * 1024 * 1024;
@@ -16,7 +17,7 @@ const FILE_MAX_BYTES = 50 * 1024 * 1024;
 const SECTIONS_MAX = 2_000;
 
 export type Extracted =
-  | { kind: "read"; title: string; sections: Section[]; note?: string }
+  | { kind: "read"; title: string; sections: Section[]; note?: string; tags?: string[] }
   /** Kept and shown, not searched, and why, for a person; `needs`, the program that would read it, when one is missing. */
   | { kind: "listed" | "unreadable"; title: string; reason: string; needs?: string };
 
@@ -50,6 +51,15 @@ function capped(title: string, sections: Section[]): Extracted {
   return { kind: "read", title, sections: sections.slice(0, SECTIONS_MAX), note: `Only its first ${SECTIONS_MAX.toLocaleString("en")} sections are searched.` };
 }
 
+/** Tags a document carries at most: the graph's lines to them, not its subject index. */
+const TAGS_MAX = 8;
+
+/** A read with its frontmatter's tags, folded as memory folds a conversation's (no aliases: those are the vault's). */
+function tagged(read: Extracted, raw: readonly string[]): Extracted {
+  const tags = normalizeTags(raw, new Map()).slice(0, TAGS_MAX);
+  return read.kind === "read" && tags.length ? { ...read, tags } : read;
+}
+
 /** What a file says, by its kind. `size` is its size in bytes, as stat saw it; `office`, where `doc.py` is. */
 export async function extract(path: string, size: number, office?: OfficeReader): Promise<Extracted> {
   const title = name(path);
@@ -67,7 +77,7 @@ export async function extract(path: string, size: number, office?: OfficeReader)
     case ".text": {
       const text = await readTextFile(path);
       const named = titleOf(text, title);
-      return capped(named, sectionsOfText(text, named));
+      return tagged(capped(named, sectionsOfText(text, named)), tagsOf(text));
     }
     case ".json":
       return capped(title, sectionsOfText(await readTextFile(path), title));

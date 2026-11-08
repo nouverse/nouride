@@ -92,6 +92,7 @@ export function indexedEpisode(episode: Episode): IndexedEpisode {
     mentions: episode.mentions,
     tags: episode.tags,
     related: episode.related,
+    ...(episode.documents?.length ? { documents: episode.documents } : {}),
   };
 }
 

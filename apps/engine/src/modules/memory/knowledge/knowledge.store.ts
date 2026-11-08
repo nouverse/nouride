@@ -26,6 +26,8 @@ export interface KnowledgeDocument {
   needs?: string;
   sections: number;
   indexedAt: number;
+  /** A text document's frontmatter `tags:`, folded as memory's are (0.8.23): what the memory graph joins it to. */
+  tags?: string[];
 }
 
 export interface IndexedSection extends Section {
@@ -57,6 +59,7 @@ interface DocumentRow {
   needs: string | null;
   sections: number;
   indexed_at: number;
+  tags: string | null;
 }
 
 interface SectionRow {
@@ -84,6 +87,7 @@ function documentOf(row: DocumentRow): KnowledgeDocument {
     ...(row.needs ? { needs: row.needs } : {}),
     sections: row.sections,
     indexedAt: row.indexed_at,
+    ...(row.tags ? { tags: JSON.parse(row.tags) as string[] } : {}),
   };
 }
 
@@ -135,11 +139,11 @@ export class KnowledgeStore {
       }
       this.db
         .prepare(
-          `INSERT INTO knowledge_documents (collection, path, size, mtime, title, status, reason, needs, sections, indexed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `INSERT INTO knowledge_documents (collection, path, size, mtime, title, status, reason, needs, sections, indexed_at, tags) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT (collection, path) DO UPDATE SET size = excluded.size, mtime = excluded.mtime, title = excluded.title, status = excluded.status,
-             reason = excluded.reason, needs = excluded.needs, sections = excluded.sections, indexed_at = excluded.indexed_at`,
+             reason = excluded.reason, needs = excluded.needs, sections = excluded.sections, indexed_at = excluded.indexed_at, tags = excluded.tags`,
         )
-        .run(document.collection, document.path, document.size, document.mtime, document.title, document.status, document.reason ?? null, document.needs ?? null, sections.length, document.indexedAt);
+        .run(document.collection, document.path, document.size, document.mtime, document.title, document.status, document.reason ?? null, document.needs ?? null, sections.length, document.indexedAt, document.tags?.length ? JSON.stringify(document.tags) : null);
     });
   }
 

@@ -249,6 +249,39 @@ export class AuditLog {
       .all(...actions, limit)
       .map(toEntry);
   }
+
+  /**
+   * The knowledge documents opened in a chat between two times, oldest first: each `memory_read` of a `document` that
+   * answered, as `<collection>/<path>` (0.8.23). What a conversation opened is kept on it when it is filed, and the
+   * memory graph draws it (KNOWLEDGE_BASE §12). Walks `idx_audit_ts` over the window, a day's calls at most.
+   */
+  documentsOpened(gatewayId: string, chatId: string, after: number, until: number): { at: number; document: string }[] {
+    this.flush();
+    const rows = this.db
+      .prepare<{ timestamp: number; details: string | null }>(
+        "SELECT timestamp, details FROM audit_log WHERE timestamp > ? AND timestamp <= ? AND action = 'tool_exec' AND gateway = ? AND chat_id = ? ORDER BY timestamp",
+      )
+      .all(after, until, gatewayId, chatId);
+    const out: { at: number; document: string }[] = [];
+    for (const row of rows) {
+      const document = openedDocument(row.details);
+      if (document) out.push({ at: row.timestamp, document });
+    }
+    return out;
+  }
+}
+
+/** A `memory_read` that opened a document and answered, as `<collection>/<path>`; null for any other call. */
+function openedDocument(details: string | null): string | null {
+  if (!details || !details.includes('"memory_read"')) return null;
+  try {
+    const parsed = JSON.parse(details) as { tool?: unknown; args?: { document?: unknown }; error?: unknown };
+    const item = parsed.tool === "memory_read" && parsed.error === false ? parsed.args?.document : undefined;
+    const match = typeof item === "string" ? /^knowledge:([^#]+)(?:#|$)/.exec(item) : null;
+    return match ? match[1]! : null;
+  } catch {
+    return null;
+  }
 }
 
 interface Row {

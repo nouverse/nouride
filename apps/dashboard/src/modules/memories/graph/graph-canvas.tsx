@@ -12,7 +12,7 @@ import { useEffect, useMemo, useRef } from "react";
 import type { GraphLink, GraphNode, GraphNodeKind, MemoryGraph } from "@/commons/lib/api.memory";
 import { usePalette, type Palette } from "./palette";
 
-const LINK_DISTANCE: Record<GraphLink["kind"], number> = { related: 26, tag: 46, participant: 64, mention: 72, agent: 86, link: 30, similar: 34, collection: 52, about: 70 };
+const LINK_DISTANCE: Record<GraphLink["kind"], number> = { related: 26, tag: 46, participant: 64, mention: 72, agent: 86, link: 30, similar: 34, collection: 52, about: 70, opened: 58 };
 /** The side panel's width plus its margin (`sm:w-80` and `right-3`), in pixels. */
 const PANEL_WIDTH = 344;
 /** Where the panel moves to the bottom (`sm:`), and how much of the canvas it then covers. */

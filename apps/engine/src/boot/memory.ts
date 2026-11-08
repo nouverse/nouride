@@ -37,6 +37,7 @@ import { SYSTEM_SENDER } from "@/modules/pipeline/deps.ts";
 import { meter, metered } from "@/modules/llm/metered.ts";
 import { todaysVerdict } from "@/modules/llm/budget.ts";
 import type { TurnsPort } from "@/modules/turns/turns.store.ts";
+import type { AuditLog } from "@/commons/audit.store.ts";
 
 const log = createLogger("memory");
 
@@ -70,6 +71,8 @@ export async function bootMemory(
     knowledge?: Pick<KnowledgeDeps, "admins" | "room">;
     /** The built-in skills, whose `document-reading` reads PDF and Office files for the knowledge base. */
     builtinSkillsDir?: string;
+    /** The audit log, where a conversation's opened documents are read from when it is filed (0.8.23). */
+    audit?: Pick<AuditLog, "documentsOpened">;
   },
 ): Promise<Memory> {
   const { turns, roomMessages, providers, usage, vaultFormat } = with_;
@@ -98,6 +101,7 @@ export async function bootMemory(
         roomMessages.between(gatewayId, chatId, after, until).filter((message) => message.senderId !== SYSTEM_SENDER),
       isRoom: (gatewayId, chatId) => roomMessages.isRoom(gatewayId, chatId),
       chatsActiveSince: (after) => turns.chatsActiveSince(after),
+      ...(with_.audit ? { documentsOpenedBetween: with_.audit.documentsOpened.bind(with_.audit) } : {}),
     },
     speakersIn: (gatewayId, chatId) => [...new Set(roomMessages.forChat(gatewayId, chatId, RECENT_SPEAKERS).map((message) => message.senderId))],
     embed: embedder({ providers, usage, config }),

@@ -37,6 +37,22 @@ function withoutFrontmatter(text: string): { body: string; frontmatter: string }
   return match ? { body: text.slice(match[0].length), frontmatter: match[1] ?? "" } : { body: text, frontmatter: "" };
 }
 
+/**
+ * A document's frontmatter `tags:` as written (0.8.23, KNOWLEDGE_BASE §12): a list on one line (`[ops, backups]`), one
+ * per line (`- ops`), or words split by commas. What the memory graph joins it to, beside the conversations' tags.
+ */
+export function tagsOf(text: string): string[] {
+  const { frontmatter } = withoutFrontmatter(text);
+  const lines = frontmatter.split(/\r?\n/);
+  const at = lines.findIndex((line) => /^tags:/.test(line));
+  if (at < 0) return [];
+  const inline = lines[at]!.slice("tags:".length).trim();
+  const raw = inline
+    ? inline.replace(/^\[|\]$/g, "").split(",")
+    : lines.slice(at + 1).filter((_, i, rest) => rest.slice(0, i + 1).every((line) => /^\s*-\s/.test(line))).map((line) => line.replace(/^\s*-\s*/, ""));
+  return raw.map((tag) => tag.trim().replace(/^["']|["']$/g, "")).filter(Boolean);
+}
+
 /** A document's title: its frontmatter's `title`, its first heading, else the name it was given. */
 export function titleOf(text: string, fallback: string): string {
   const { body, frontmatter } = withoutFrontmatter(text);

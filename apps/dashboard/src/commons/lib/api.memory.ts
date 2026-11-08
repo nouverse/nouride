@@ -144,8 +144,11 @@ export interface GraphNode {
 export interface GraphLink {
   source: string;
   target: string;
-  /** The knowledge layer's: a document in its `collection`, a `link` between two, one `about` a person, two `similar` in meaning. */
-  kind: "agent" | "participant" | "mention" | "tag" | "related" | "collection" | "link" | "about" | "similar";
+  /**
+   * The knowledge layer's: a document in its `collection`, a `link` between two, one `about` a person, two `similar` in
+   * meaning, a conversation that `opened` a document, and a document's `tag` (0.8.23).
+   */
+  kind: "agent" | "participant" | "mention" | "tag" | "related" | "collection" | "link" | "about" | "similar" | "opened";
 }
 
 export interface MemoryGraph {

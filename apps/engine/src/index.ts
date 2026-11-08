@@ -463,6 +463,7 @@ export async function runDaemon(): Promise<void> {
     vaultFormat,
     knowledge: { admins: () => adminKeys(config.people, (id) => knowledgeAt.roleOf?.(id)), room: knowledgeAt.room },
     ...(builtinSkillsDir ? { builtinSkillsDir } : {}),
+    audit,
   });
   const knowledgeTimer = startKnowledgeLook(memory);
 

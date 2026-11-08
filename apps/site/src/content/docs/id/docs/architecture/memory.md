@@ -301,7 +301,10 @@ Graph ini dibuat supaya cepat terbuka bahkan di Pi, dan itu membentuk apa yang k
   apa pun, dan di vault sungguhan tiga dari empat tag seperti itu.
 - **Dibangun sekali tiap memori berubah**, praktisnya sekali semalam setelah pass, seberapa sering
   pun dibuka.
-- **Hanya percakapan.** Fakta ada di profil, di tab People.
+- **Percakapan, dan dokumen kalau diminta.** Tombol **Documents** menampilkan knowledge base di atasnya: tiap
+  koleksi dan dokumennya, link di antara dokumen, orang yang menjadi topik sebuah koleksi, dokumen yang maknanya
+  dekat, garis dari tiap percakapan ke dokumen yang dibukanya, dan dari tiap dokumen ke tag dari frontmatter-nya,
+  satu titik dengan tag percakapan yang bernama sama. Fakta ada di profil, di tab People.
 
 Cara membacanya: tag yang dikelilingi banyak titik adalah topik yang terus muncul; rantai pendek
 percakapan yang tersambung langsung adalah satu urusan selama beberapa hari; orang atau agent dengan

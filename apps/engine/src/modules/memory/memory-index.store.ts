@@ -39,6 +39,8 @@ export interface IndexedEpisode {
   mentions: string[];
   tags: string[];
   related: string[];
+  /** The knowledge documents it opened, `<collection>/<path>` (0.8.23). */
+  documents?: string[];
 }
 
 export interface IndexedFact {
@@ -193,13 +195,15 @@ export class MemoryIndexStore {
       for (const value of episode.tags) tag.run(episode.id, value);
       const related = this.db.prepare("INSERT INTO memory_episode_related (episode_id, related_id) VALUES (?, ?) ON CONFLICT DO NOTHING");
       for (const id of episode.related) related.run(episode.id, id);
+      const opened = this.db.prepare("INSERT INTO memory_episode_documents (episode_id, document) VALUES (?, ?) ON CONFLICT DO NOTHING");
+      for (const document of episode.documents ?? []) opened.run(episode.id, document);
       this.fts.put(episode.id, doc);
       this.setFile(file.path, file.state);
     });
   }
 
   private deleteEpisodeRows(id: string): void {
-    for (const table of ["memory_episode_agents", "memory_episode_people", "memory_episode_tags", "memory_episode_related"]) {
+    for (const table of ["memory_episode_agents", "memory_episode_people", "memory_episode_tags", "memory_episode_related", "memory_episode_documents"]) {
       this.db.prepare(`DELETE FROM ${table} WHERE episode_id = ?`).run(id);
     }
     this.db.prepare("DELETE FROM memory_episodes WHERE id = ?").run(id);
@@ -227,6 +231,7 @@ export class MemoryIndexStore {
     const people = group<{ episode_id: string; person: string; role: string }>("SELECT episode_id, person, role FROM memory_episode_people WHERE episode_id IN (?) ORDER BY person");
     const tags = group<{ episode_id: string; tag: string }>("SELECT episode_id, tag FROM memory_episode_tags WHERE episode_id IN (?) ORDER BY tag");
     const related = group<{ episode_id: string; related_id: string }>("SELECT episode_id, related_id FROM memory_episode_related WHERE episode_id IN (?) ORDER BY related_id");
+    const documents = group<{ episode_id: string; document: string }>("SELECT episode_id, document FROM memory_episode_documents WHERE episode_id IN (?) ORDER BY document");
     return rows.map((row) => ({
       id: row.id,
       status: row.status,
@@ -245,6 +250,7 @@ export class MemoryIndexStore {
       mentions: (people.get(row.id) ?? []).filter((r) => r.role === "mention").map((r) => r.person),
       tags: (tags.get(row.id) ?? []).map((r) => r.tag),
       related: (related.get(row.id) ?? []).map((r) => r.related_id),
+      ...(documents.has(row.id) ? { documents: documents.get(row.id)!.map((r) => r.document) } : {}),
     }));
   }
 
@@ -457,6 +463,15 @@ export class MemoryIndexStore {
     this.db.prepare("INSERT INTO memory_groups (chat, slug) VALUES (?, ?) ON CONFLICT (chat) DO UPDATE SET slug = excluded.slug").run(chat, slug);
   }
 
+  /** The documents these episodes opened, as (episode, document) pairs: the graph's lines between them (0.8.23). */
+  documentsOpened(ids: readonly string[]): [string, string][] {
+    if (ids.length === 0) return [];
+    return this.db
+      .prepare<{ episode_id: string; document: string }>(`SELECT episode_id, document FROM memory_episode_documents WHERE episode_id IN (${marks(ids)})`)
+      .all(...ids)
+      .map((row) => [row.episode_id, row.document]);
+  }
+
   groups(): Map<string, string> {
     return new Map(this.db.prepare<{ chat: string; slug: string }>("SELECT chat, slug FROM memory_groups").all().map((row) => [row.chat, row.slug]));
   }
@@ -465,7 +480,7 @@ export class MemoryIndexStore {
   clear(): void {
     this.db.transaction(() => {
       for (const table of [
-        "memory_episode_agents", "memory_episode_people", "memory_episode_tags", "memory_episode_related", "memory_episodes",
+        "memory_episode_agents", "memory_episode_people", "memory_episode_tags", "memory_episode_related", "memory_episode_documents", "memory_episodes",
         "memory_facts", "memory_tag_aliases", "memory_groups", "memory_files",
       ]) {
         this.db.prepare(`DELETE FROM ${table}`).run();

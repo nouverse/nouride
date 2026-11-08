@@ -58,6 +58,7 @@ import sessionTokenHash from "./migrations/075_session_token_hash.sql" with { ty
 import keptAcrossRestart from "./migrations/076_kept_across_restart.sql" with { type: "text" };
 import daemonState from "./migrations/077_daemon_state.sql" with { type: "text" };
 import knowledge from "./migrations/078_knowledge.sql" with { type: "text" };
+import knowledgeEdges from "./migrations/079_knowledge_edges.sql" with { type: "text" };
 
 export interface Migration {
   /** Parsed from the filename prefix, and what `user_version` is set to once applied. */
@@ -88,6 +89,7 @@ export const MIGRATIONS: readonly Migration[] = [
   { version: 76, name: "076_kept_across_restart.sql", sql: keptAcrossRestart },
   { version: 77, name: "077_daemon_state.sql", sql: daemonState },
   { version: 78, name: "078_knowledge.sql", sql: knowledge },
+  { version: 79, name: "079_knowledge_edges.sql", sql: knowledgeEdges },
 ];
 
 /**

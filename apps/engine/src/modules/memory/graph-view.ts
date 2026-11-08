@@ -23,9 +23,10 @@ import type { Facet, IndexedEpisode, MemoryIndexPort } from "./memory-index.stor
 export type GraphNodeKind = "episode" | "person" | "tag" | "agent" | "collection" | "document";
 /**
  * The knowledge layer's: a document in its `collection`, a `link` from one document to another, a document `about` a
- * person, and two documents close in meaning (`similar`, drawn dashed).
+ * person, two documents close in meaning (`similar`, drawn dashed), a conversation that `opened` a document, and a
+ * document's own `tag` (0.8.23).
  */
-export type GraphLinkKind = "agent" | "participant" | "mention" | "tag" | "related" | "collection" | "link" | "about" | "similar";
+export type GraphLinkKind = "agent" | "participant" | "mention" | "tag" | "related" | "collection" | "link" | "about" | "similar" | "opened";
 
 export interface GraphNode {
   id: string;
@@ -170,8 +171,8 @@ export function buildGraph(episodes: readonly IndexedEpisode[], total: number, p
 export interface KnowledgeGraphInput {
   /** The collections not archived, with whom each is about. */
   collections: readonly { id: string; name: string; about: readonly string[] }[];
-  /** Their documents that were read, with when each file last changed. */
-  documents: readonly { collection: string; path: string; title: string; mtime: number }[];
+  /** Their documents that were read, with when each file last changed, and the tags its frontmatter gives it. */
+  documents: readonly { collection: string; path: string; title: string; mtime: number; tags?: readonly string[] }[];
   /** Document → document, by `documentKey`, from the links in their words. */
   links: readonly (readonly [string, string])[];
   /** Each document's mean vector by `documentKey`, while search by meaning is on. */
@@ -229,6 +230,11 @@ export function buildKnowledgeLayer(input: KnowledgeGraphInput, limit: number, p
       node(personNode(person), "person", personLabel(people, person));
       join(personNode(person), documentNode(document.key), "about");
     }
+    // A conversation's tag and a document's of the same name are one dot (0.8.23): what joins the two worlds.
+    for (const tag of document.tags ?? []) {
+      node(tagNode(tag), "tag", tag);
+      join(documentNode(document.key), tagNode(tag), "tag");
+    }
   }
   const drawn = new Set<string>();
   for (const [pair, [a, b]] of pairs) {
@@ -251,17 +257,30 @@ export function buildKnowledgeLayer(input: KnowledgeGraphInput, limit: number, p
   return { nodes: [...nodes.values()], links, documents: shown.length, total: documents.length, byMeaning: input.vectors !== undefined };
 }
 
-/** The conversations' graph with the knowledge layer over it: a person both draw is one dot. Neither is changed. */
-export function withKnowledge(graph: MemoryGraph, layer: KnowledgeLayer): MemoryGraph {
-  const nodes = new Map(graph.nodes.map((node) => [node.id, node]));
+/**
+ * The conversations' graph with the knowledge layer over it: a person or a tag both draw is one dot. Neither is changed.
+ * `opened` is each shown conversation's documents (0.8.23), joined where the layer shows the document: a conversation
+ * that opened one the layer left out has no line to draw.
+ */
+export function withKnowledge(graph: MemoryGraph, layer: KnowledgeLayer, opened: readonly (readonly [string, string])[] = []): MemoryGraph {
+  const nodes = new Map(graph.nodes.map((node) => [node.id, { ...node }]));
   for (const node of layer.nodes) {
     const there = nodes.get(node.id);
-    nodes.set(node.id, there ? { ...there, degree: there.degree + node.degree } : node);
+    nodes.set(node.id, there ? { ...there, degree: there.degree + node.degree } : { ...node });
+  }
+  const links = [...graph.links, ...layer.links];
+  for (const [episode, document] of opened) {
+    const from = nodes.get(episodeNode(episode));
+    const to = nodes.get(documentNode(document));
+    if (from?.kind !== "episode" || to?.kind !== "document") continue;
+    links.push({ source: from.id, target: to.id, kind: "opened" });
+    from.degree += 1;
+    to.degree += 1;
   }
   return {
     ...graph,
     nodes: [...nodes.values()],
-    links: [...graph.links, ...layer.links],
+    links,
     knowledge: { documents: layer.documents, total: layer.total, byMeaning: layer.byMeaning },
   };
 }
