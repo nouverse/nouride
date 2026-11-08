@@ -44,6 +44,7 @@ const fetched = (files: Record<string, string | Uint8Array>, dirName = "my-skill
   source: "github:o/r@sha/my-skill",
   url: "https://github.com/o/r",
   warnings: [],
+  flagged: false,
 });
 
 describe("references", () => {
@@ -227,6 +228,8 @@ describe("installing", () => {
     const result = await skillHub.install("clawhub:rust-dev", { agentId: "gading", byAgent: false });
     expect(result.drafts[0]!.source).toBe("clawhub:t/rust-dev@0.8.0");
     expect(result.drafts[0]!.warnings.join()).toContain("skillspector: suspicious (CRITICAL)");
+    // A scanner that flagged it: what the page says in its own words (0.8.23), the verdict under Details.
+    expect(result.drafts[0]!.flagged).toBe(true);
     const draft = drafts.get(result.drafts[0]!.id)!;
     expect(draft.files.map((f) => f.path)).toEqual(["references/async.md"]);
     expect(draft.transcript).toContain("skillspector: suspicious");
@@ -296,6 +299,20 @@ describe("the install route", () => {
 
     const spoofed = (await (await install(hono, { ref: "o/r/skills/notes", agentId: "ghost" })).json()) as { drafts: { id: string }[] };
     expect(drafts.get(spoofed.drafts[0]!.id)!.agentId).toBe("cli");
+  });
+
+  test("what it came to, in the page's words: what waits, what was left out, a scan that found something (0.8.23)", async () => {
+    type Answer = { plain: string; refused: { reason: string }[]; drafts: { flagged: boolean }[] };
+    const said = async (skillHub: SkillHub, ref: string) => (await (await install(app(skillHub), { ref })).json()) as Answer;
+
+    expect((await said(hub().skillHub, "o/r/skills/notes")).plain).toBe("“notes” is waiting for your approval in Pending.");
+    expect((await said(hub().skillHub, "o/r")).plain).toBe("2 skills are waiting for your approval in Pending.");
+    const taken = await said(hub({ pool: ["notes"], builtin: ["pdf"] }).skillHub, "o/r");
+    expect(taken.plain).toBe("Nothing was added to Pending. 2 were left out. Why is under Details.");
+    // The hub's own words stay in the answer, for the CLI and for under Details.
+    expect(taken.refused.map((one) => one.reason)).toEqual(['a skill called "notes" is already installed', 'Nouride ships a skill called "pdf" already']);
+    const scanned = await said(hub().skillHub, "clawhub:rust-dev");
+    expect(scanned.plain).toBe("“rust-dev” is waiting for your approval in Pending. A scan of where it came from found something: read what it does before you approve it.");
   });
 });
 

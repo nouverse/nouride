@@ -67,7 +67,7 @@ export const accessApi = {
   setAccessMode: (mode: AccessMode) => post<{ ok: true; mode: AccessMode }>(`${control}/access/mode`, { mode }),
   /** An admin's: it hands them every agent, and "who they are" can hand them somebody's memory. */
   approveSender: (code: string, who?: { as: string; name?: string }) =>
-    post<{ ok: boolean; warning?: string }>(`${control}/access/approve?${new URLSearchParams({ code, ...who })}`),
+    post<{ ok: boolean; warning?: string; plain?: string }>(`${control}/access/approve?${new URLSearchParams({ code, ...who })}`),
   answerSender: (action: SenderAnswer, gatewayId: string, senderId: string) =>
     post<{ ok: boolean }>(`${control}/access/${action}?${senderQuery(gatewayId, senderId)}`),
   accessHistory: () => request<{ entries: AccessEvent[] }>(`${control}/access/history`),

@@ -19,6 +19,7 @@ import type { WebSearchMode, WebSearchPatch, WebSearchSettings, WebSearchTest } 
 import { isAdmin, useMe } from "@/commons/lib/session";
 import { ToggleRow } from "@/commons/components/ui/ToggleRow";
 import { Card, ErrorNote, Field, PageHeader } from "@/commons/components/ui/ui";
+import { Details } from "@/commons/components/ui/Details";
 import { cn } from "@/commons/lib/utils";
 import { ApiKeyField, type KeySource } from "./components/ApiKeyField";
 import { BraveGuide, CustomGuide, FreeGuide, SearxngGuide } from "./components/Guides";
@@ -168,7 +169,17 @@ export default function WebSearchPage() {
                   {current.restartPending ? "After a restart, agents search with" : "Agents search with"}
                 </p>
                 <p className="text-base font-semibold text-base-content">{EFFECTIVE_LABEL[current.effective]}</p>
-                {current.problem ? <p className="text-xs text-error">{current.problem}</p> : null}
+                {/* What it needs in the page's words (0.8.23); why, in the settings file's, under Details. */}
+                {current.problem ? (
+                  <div className="text-xs text-error">
+                    <p>{current.plain ?? current.problem}</p>
+                    {current.plain ? (
+                      <Details>
+                        <p className="break-words">{current.problem}</p>
+                      </Details>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
             </div>
             <StatusBadge settings={current} />

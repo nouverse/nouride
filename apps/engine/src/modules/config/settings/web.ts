@@ -45,6 +45,8 @@ export interface WebSearchSettings {
   effective: "brave" | "searxng" | "free" | "unavailable";
   /** Why `effective` is `unavailable`, in the operator's words. */
   problem?: string;
+  /** What is missing then (0.8.23): the page asks for it in its own words, `problem` naming the file's keys. */
+  needs?: "address" | "key";
 }
 
 /** What the page shows. Read from the live config, so it reflects a save before the restart. */
@@ -78,11 +80,11 @@ function modeOf(web: WebPolicySection, keyResolves: boolean): WebSearchMode {
   return keyResolves ? "brave" : "free";
 }
 
-function describe(web: WebPolicySection, apiKey: string | undefined): Pick<WebSearchSettings, "effective" | "problem"> {
+function describe(web: WebPolicySection, apiKey: string | undefined): Pick<WebSearchSettings, "effective" | "problem" | "needs"> {
   const kind = web.searchKind === "searxng" ? "searxng" : "brave";
   const resolved = resolveSearch({ kind, endpoint: web.searchEndpoint, apiKey });
   if ("keyless" in resolved) return { effective: "free" };
-  if ("unavailable" in resolved) return { effective: "unavailable", problem: resolved.unavailable };
+  if ("unavailable" in resolved) return { effective: "unavailable", problem: resolved.unavailable, needs: resolved.needs };
   return { effective: resolved.kind };
 }
 

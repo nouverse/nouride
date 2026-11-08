@@ -67,7 +67,8 @@ function app() {
 describe("an external agent's CLI routes", () => {
   test("show its settings and status, and run its sign-in", async () => {
     const { call, seen } = app();
-    expect(await (await call("GET", "/agents/coder/cli")).json()).toEqual({ cli: "codex", profile: "work", permissions: "risky", model: null, models: [{ value: "gpt-5.5-codex" }, { value: "gpt-5.5-mini", name: "GPT-5.5 mini" }], effort: "high", efforts: [{ value: "low" }, { value: "high", current: "high" }], effortChoices: ["low", "medium", "high", "xhigh", "max"], effortDefault: "medium", unavailable: "Codex is not signed in", login: null });
+    // Why it cannot answer, in its CLI's words, and that it cannot, in the page's (0.8.23).
+    expect(await (await call("GET", "/agents/coder/cli")).json()).toEqual({ cli: "codex", profile: "work", permissions: "risky", model: null, models: [{ value: "gpt-5.5-codex" }, { value: "gpt-5.5-mini", name: "GPT-5.5 mini" }], effort: "high", efforts: [{ value: "low" }, { value: "high", current: "high" }], effortChoices: ["low", "medium", "high", "xhigh", "max"], effortDefault: "medium", unavailable: "Codex is not signed in", plain: "It cannot answer right now. Whoever runs the server can see why under Details.", login: null });
     expect((await call("POST", "/agents/coder/cli/login")).status).toBe(200);
     expect((await call("POST", "/agents/coder/cli/login/answer", { text: "CODE-1" })).status).toBe(200);
     expect((await call("POST", "/agents/coder/cli/login/stop")).status).toBe(200);
@@ -118,7 +119,8 @@ describe("an external agent's CLI routes", () => {
       } as never);
       return (await (await scoped.request("/agents/coder/cli")).json()) as { login: unknown; cli: string };
     };
-    expect(await answer("admin")).toMatchObject({ cli: "codex", login });
+    // One that can answer has nothing to say about it, in either words.
+    expect(await answer("admin")).toMatchObject({ cli: "codex", login, unavailable: null, plain: null });
     expect(await answer("operator")).toMatchObject({ cli: "codex", login: null });
   });
 

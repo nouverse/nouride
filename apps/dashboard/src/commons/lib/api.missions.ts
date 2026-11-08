@@ -193,11 +193,11 @@ export const missionsApi = {
 
   /** A draft changed before it starts (0.8.11); a 409 says why not — it started, or nothing changes. */
   editMission: (id: string, change: MissionEdit) =>
-    post<{ mission: MissionView; changed: string[]; briefFailed?: string }>(`${control}/missions/${encodeURIComponent(id)}/edit`, change),
+    post<{ mission: MissionView; changed: string[]; briefFailed?: string; plain?: string }>(`${control}/missions/${encodeURIComponent(id)}/edit`, change),
 
   /** A 409 says why it does not apply now — it ended already, it is not waiting for that. */
   actOnMission: (id: string, verb: MissionVerb, text?: string) =>
-    post<{ mission: MissionView; said?: string }>(`${control}/missions/${encodeURIComponent(id)}/${verb}`, text ? { text } : {}),
+    post<{ mission: MissionView; said?: string; plain?: string }>(`${control}/missions/${encodeURIComponent(id)}/${verb}`, text ? { text } : {}),
 
   /**
    * An ended mission deleted (0.8.13): its record, conversation and own folder. A 409 says why not — it is still open, or

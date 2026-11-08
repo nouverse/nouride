@@ -154,7 +154,7 @@ export function registerAccessRoutes(control: ControlApp, deps: ControlDeps): vo
         // The platform form — `telegram:814…` — so it is them whichever of our bots they write to.
         const identity = idFormsFor({ gatewayId: record.gatewayId, senderId: record.senderId }).at(-1)!;
         const linked = await deps.settings.linkIdentity({ identity, target: as, actor: principal.actor });
-        if (!linked.ok) return c.json({ ok: true, sender: record, warning: `approved, but not linked: ${linked.error}` });
+        if (!linked.ok) return c.json({ ok: true, sender: record, warning: `approved, but not linked: ${linked.error}`, plain: "Approved, but not linked to the person you chose. Whoever runs the server can see why." });
         person = linked.person;
       }
       // Told in the conversation they used, so they know to try again rather than waiting.

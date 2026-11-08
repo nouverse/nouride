@@ -6,7 +6,9 @@
  */
 
 import { describe, expect, test } from "bun:test";
+import { Hono } from "hono";
 import type { ButtonPress, ToolContext } from "@nouride/shared";
+import { registerMissionRoutes } from "@/modules/web/control/routes/missions.ts";
 import { ActionPresses } from "@/modules/missions/actions.ts";
 import { MISSION_GATEWAY_ID } from "@/modules/missions/gateway.ts";
 import { longTurnHelperNote } from "@/modules/llm/executor/nudges.ts";
@@ -161,6 +163,34 @@ describe("D4 — a draft changed before it runs", () => {
     expect(late.isError).toBe(true);
     expect(late.content).toContain("has started; a running mission's goal and checks stay as they are");
     expect(h.store.get(mission!.id)!.checks).toEqual(["test -s RFC.md"]);
+  });
+
+  test("changed on the dashboard: what changed and a brief's failure for the CLI, what it means in the page's words (0.8.23)", async () => {
+    const { h, draft } = await setup();
+    const { mission } = await draft();
+    // A brief that could not be written, as a full disk or a folder it may not write would leave it.
+    const failing = new Proxy(h.missions, {
+      get: (target, key) => {
+        if (key === "edit") return async (...args: Parameters<typeof target.edit>) => {
+          const edited = await target.edit(...args);
+          return "refused" in edited ? edited : { ...edited, briefFailed: "EACCES: permission denied, open '/work/missions/BRIEF.md'" };
+        };
+        const value = Reflect.get(target, key) as unknown;
+        return typeof value === "function" ? (value as (...args: unknown[]) => unknown).bind(target) : value;
+      },
+    });
+    const edit = async (missions: typeof h.missions, body: unknown) => {
+      const control = new Hono<{ Variables: { principal: unknown } }>();
+      control.use("*", async (c, next) => {
+        c.set("principal", { kind: "user", actor: "gading", role: "operator", user: { id: "usr_1", username: "gading" } });
+        await next();
+      });
+      registerMissionRoutes(control as never, { missions, notes: h.notes, approvals: { pending: () => [] }, audit: { record: () => {} } } as never);
+      return (await (await control.request(`/missions/${mission!.id}/edit`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })).json()) as Record<string, unknown>;
+    };
+    expect(await edit(h.missions, { goal: "Revise the RFC to every answer" })).toMatchObject({ changed: ["goal"], plain: "Saved. Its agent is told what changed." });
+    const broken = await edit(failing, { goal: "Revise the RFC to the last answers" });
+    expect(broken).toMatchObject({ changed: ["goal"], briefFailed: expect.stringContaining("EACCES"), plain: "Saved, but its brief could not be written, so it has none for now. Whoever runs the server can see why." });
   });
 
   test("an agent's goal or brief is held to English as its start is; a person's on the dashboard is theirs", async () => {

@@ -279,4 +279,22 @@ describe("routes", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ changes: plan.changes.length });
   });
+
+  test("the model's groups that did not pass the checks: their reasons for the CLI, what to do in the page's words (0.8.23)", async () => {
+    await messy();
+    const asking = (groups: unknown[]) => {
+      const hono = new Hono<{ Variables: { principal: unknown } }>();
+      hono.use("*", async (c, next) => {
+        c.set("principal", { kind: "user", actor: "tester", role: "operator" });
+        await next();
+      });
+      registerMemoryTagRoutes(hono as never, { ctx: { config: h.config }, memory: h.memory, memoryPass: { ask: async () => JSON.stringify({ groups }) }, audit: { record: () => undefined } } as never);
+      return hono.request("/memory/tags/tidy/model", { method: "POST" });
+    };
+    const dropped = (await (await asking([{ from: ["no-such-tag"], into: "homelab" }])).json()) as { dropped: { why: string }[]; plain: string };
+    expect(dropped.dropped.map((group) => group.why)).toEqual(["not in use: no-such-tag"]);
+    expect(dropped.plain).toBe("Some of the groups it proposed named tags that are not in use or were already grouped. Try again, or set a stronger model for the pass.");
+    // Nothing dropped, nothing to say.
+    expect(((await (await asking([])).json()) as { plain: unknown }).plain).toBeNull();
+  });
 });

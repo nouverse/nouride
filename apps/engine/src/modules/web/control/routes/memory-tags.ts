@@ -54,7 +54,10 @@ export function registerMemoryTagRoutes(control: ControlApp, deps: ControlDeps):
     if (!deps.memoryPass) return c.json({ error: "the nightly pass's model is not set up in this process" }, 503);
     const result = await deps.memory!.tags.suggest(deps.memoryPass.ask);
     if ("refused" in result) return c.json({ error: result.refused, plain: "The model could not be asked for suggestions. Try again in a moment." }, 502);
-    return c.json(result);
+    // Why each group the model proposed was not offered is the checks' own words (a tag not in use, one in two groups):
+    // the page says what to do instead (0.8.23).
+    const plain = result.dropped.length === 0 ? null : "Some of the groups it proposed named tags that are not in use or were already grouped. Try again, or set a stronger model for the pass.";
+    return c.json({ ...result, plain });
   });
 
   control.post("/memory/tags/tidy", async (c) => {

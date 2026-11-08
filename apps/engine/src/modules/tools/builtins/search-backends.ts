@@ -281,13 +281,15 @@ export function resolveSearch(input: {
     }
   /** Nothing configured: the keyless chain, tried in order. */
   | { keyless: KeylessProvider[] }
-  | { unavailable: string } {
+  /** Nothing that works: why, in the config file's words, and what is missing, for a page that asks for it (0.8.23). */
+  | { unavailable: string; needs: "address" | "key" } {
   const backend = SEARCH_BACKENDS[input.kind];
 
   const endpoint = input.endpoint?.trim() || backend.defaultEndpoint;
   if (!endpoint) {
     return {
       unavailable: `[security.web] search_kind = "${input.kind}" needs a search_endpoint: it has no public default.`,
+      needs: "address",
     };
   }
   // A custom endpoint means the operator has a proxy that handles authentication upstream.
@@ -306,7 +308,7 @@ export function resolveSearch(input: {
     // forgot its key gets told so, because silently searching somewhere else is not what they asked
     // for.
     if (input.kind === DEFAULT_SEARCH_KIND) return { keyless: KEYLESS_PROVIDERS };
-    return { unavailable: `no API key for the "${input.kind}" search backend` };
+    return { unavailable: `no API key for the "${input.kind}" search backend`, needs: "key" };
   }
 
   return {

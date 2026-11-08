@@ -56,7 +56,8 @@ export function PendingTab({
         who === "me" ? { as: "me" } : who && "person" in who ? { as: `person:${who.person}` } : who ? { as: "new", name: who.name } : undefined,
       ),
     onSuccess: async (result) => {
-      if (result.warning) toast.warning("Approved", result.warning);
+      // In the page's words (0.8.23): the server's holds why the link was refused, in its own.
+      if (result.warning) toast.warning("Approved", result.plain ?? result.warning);
       await refresh();
     },
   });

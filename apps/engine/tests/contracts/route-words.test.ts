@@ -218,6 +218,24 @@ describe("what the rule refuses", () => {
     expect(unplain(reply(`{ servers: [], ...(result.error ? { error: result.error } : {}) }`, "200"))).toEqual(["error holds words written elsewhere: result.error"]);
   });
 
+  test("a success's own field a page shows (PAGE_WORDS) is held as a note is, on its route and no other (0.8.23)", () => {
+    const told = (body: string, path = "/missions/:id/:verb") =>
+      read(`export function r(control: ControlApp) { control.post("${path}", (c) => { const told = deps.missions.tell(); return c.json(${body}); }); }`)[0]!;
+    // Where a tell went, in the mission's words: the page shows them.
+    expect(unplain(told(`{ mission: told.mission, said: told.said }`), true)).toEqual(["said holds words written elsewhere: told.said"]);
+    expect(unplain(told(`{ mission: told.mission, said: "Told. It reads this before its next step --now." }`), true)).toEqual(['said has a flag: "Told. It reads this before its next step --now."']);
+    // With the page's words beside them, they are the CLI's.
+    expect(unplain(told(`{ mission: told.mission, said: told.said, plain: "Kept for its next turn." }`), true)).toEqual([]);
+    // A field of that name on a route no page shows it from is data.
+    expect(unplain(told(`{ mission: told.mission, said: told.said }`, "/missions/:id/elsewhere"), false)).toEqual([]);
+    // A body built elsewhere, on a route whose page shows words from its success, cannot pass without them: held by the
+    // table, whatever the page's call declares.
+    const tidy = read(`export function r(control: ControlApp) { control.post("/memory/tags/tidy/model", async (c) => { const result = await deps.memory.tags.suggest(); return c.json(result); }); }`)[0]!;
+    expect(unplain(tidy)).toEqual(["a success the page shows words from written elsewhere: deps.memory.tags.suggest()"]);
+    const beside = read(`export function r(control: ControlApp) { control.post("/memory/tags/tidy/model", async (c) => { const result = await deps.memory.tags.suggest(); return c.json({ ...result, plain: "Try again." }); }); }`)[0]!;
+    expect(unplain(beside)).toEqual([]);
+  });
+
   test("a success is data, unless the page shows words from it: a note, or a test that failed", () => {
     expect(unplain(reply(`{ ok: true, ...result }`, "200"))).toEqual([]);
     expect(unplain(reply(`{ ok: true, ...result }`, "200"), true)).toEqual(["a success the page shows words from written elsewhere: ...deps.do()"]);

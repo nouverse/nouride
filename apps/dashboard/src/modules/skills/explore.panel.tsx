@@ -220,37 +220,42 @@ function HitRow({
   );
 }
 
-/** What an install did: queued, refused, and why — with the way to the Pending tab. */
+/**
+ * What an install did, with the way to the Pending tab: in the page's words (0.8.23), the hub's own beneath them under
+ * Details, where a missing file, a scan's verdict and a path that would take the rest are said as the hub said them.
+ */
 function Outcome({ result, onReview }: { result: SkillHubInstall; onReview: () => void }) {
   if (result.error) {
     return <p className="rounded-xl border border-error/20 bg-error/5 p-3 text-xs text-error">{result.error}</p>;
   }
   const queued = result.drafts ?? [];
+  const flagged = queued.some((draft) => draft.flagged);
+  const said = result.plain ?? (queued.length ? `${queued.length === 1 ? `“${queued[0]!.name}” is` : `${queued.length} skills are`} waiting for your approval.` : null);
+  const hub = [
+    ...queued.flatMap((draft) => draft.warnings.map((warning) => ({ key: `${draft.id}-${warning}`, text: `${draft.name}: ${warning}` }))),
+    ...(result.refused ?? []).map((refused) => ({ key: `refused-${refused.name}`, text: `${refused.name} not queued: ${refused.reason}` })),
+    ...(result.notes ?? []).map((note) => ({ key: `note-${note}`, text: note })),
+  ];
   return (
     <div className="space-y-2 rounded-xl border border-base-content/[0.08] bg-base-200/40 p-3 text-xs">
-      {queued.length ? (
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="font-medium text-success">
-            {queued.length === 1 ? `“${queued[0]!.name}” is` : `${queued.length} skills are`} waiting for your approval.
-          </span>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className={`flex items-center gap-1.5 ${flagged ? "text-warning" : queued.length ? "font-medium text-success" : "text-base-content/70"}`}>
+          {flagged ? <ShieldAlert size={13} className="shrink-0" /> : null}
+          {said}
+        </span>
+        {queued.length ? (
           <button type="button" className="btn btn-success btn-xs rounded-lg" onClick={onReview}>
             Review in Pending
           </button>
-        </div>
+        ) : null}
+      </div>
+      {hub.length ? (
+        <Details>
+          {hub.map((line) => (
+            <p key={line.key} className="break-words">{line.text}</p>
+          ))}
+        </Details>
       ) : null}
-      {queued.flatMap((draft) => draft.warnings.map((warning) => (
-        <p key={`${draft.id}-${warning}`} className="flex items-center gap-1.5 text-warning">
-          <ShieldAlert size={13} /> {draft.name}: {warning}
-        </p>
-      )))}
-      {(result.refused ?? []).map((refused) => (
-        <p key={refused.name} className="text-base-content/70">
-          <span className="font-medium">{refused.name}</span> not queued: {refused.reason}
-        </p>
-      ))}
-      {(result.notes ?? []).map((note) => (
-        <p key={note} className="text-base-content/65">{note}</p>
-      ))}
     </div>
   );
 }

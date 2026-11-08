@@ -131,6 +131,19 @@ describe("an external agent's Brain tab", () => {
     }
   });
 
+  test("one that cannot answer for another reason says so in the page's words, its CLI's own under a closed Details (0.8.23)", async () => {
+    serve("admin", { ...CLI, unavailable: "Codex did not start: spawn codex-acp ENOENT", plain: "It cannot answer right now. Whoever runs the server can see why under Details.", login: null }, SIGNED_IN);
+    const { host, unmount } = await mount();
+    try {
+      await eventually(() => (host.textContent ?? "").includes("It cannot answer right now."), 2_000, "the page's words");
+      const details = [...host.querySelectorAll("details")].find((one) => one.textContent?.includes("spawn codex-acp ENOENT"));
+      expect(details).toBeDefined();
+      expect(details?.hasAttribute("open")).toBe(false);
+    } finally {
+      unmount();
+    }
+  });
+
   test("a viewer sees the sign-in and cannot type into it", async () => {
     serve("viewer");
     const { host, unmount } = await mount();

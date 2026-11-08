@@ -19,7 +19,7 @@ import { MISSION_GATEWAY_ID } from "@/modules/missions/gateway.ts";
 import type { Missions } from "@/modules/missions/missions.ts";
 import { workedMs } from "@/modules/missions/page.ts";
 import type { Deleted, Refused } from "@/modules/missions/person.ts";
-import type { TellAnswer } from "@/modules/missions/tell.ts";
+import type { TellAnswer, TellWhere } from "@/modules/missions/tell.ts";
 import { seenAs, type Mission } from "@/modules/missions/types.ts";
 import { LOCAL_GATEWAY_ID } from "@/modules/gateways/local.ts";
 import { atLeast } from "@/modules/users/auth.ts";
@@ -88,6 +88,49 @@ function refusedPlain(refused: Refused | Exclude<Deleted, { mission: Mission }> 
       return "This mission is still working and has not said it is done. Wait for it, or stop it.";
     case "long":
       return `That is ${refused.length} characters, and a message to a mission can be ${refused.max} at most. Make it shorter.`;
+  }
+}
+
+/**
+ * Where a person's words to a mission went, said on its page (0.8.23), worded here from where the mission put them:
+ * `said` is the chat's, naming the `/mission` command that moves it on, which a button on the page does instead.
+ */
+function toldPlain(where: TellWhere): string {
+  switch (where) {
+    case "next_step":
+      return "Told. It reads this before its next step.";
+    case "into_cli":
+      return "Told. Its coding CLI is given this in the turn it is working on.";
+    case "after_prompt":
+      return "Told. Its coding CLI reads this once the prompt it is working on ends.";
+    case "turn_full":
+      return "Kept for its next turn: the turn at work has read all it can in one turn.";
+    case "next_turn":
+      return "Kept for its next turn, which reads it first.";
+    case "queued":
+      return "Kept: it has not started yet, and its first turn reads this.";
+    case "checks_then_accept":
+      return "Kept: its checks are running. If they fail, its next turn reads this; if they pass, it waits for you to accept it, with this shown.";
+    case "checks_then_turn":
+      return "Kept: its checks are running. If they fail, its next turn reads this; if they pass, it goes one more turn to read this.";
+    case "answer":
+      return "Kept for its next turn. It is waiting for your answer: answer it in the box under its question.";
+    case "limit":
+      return "Kept for its next turn. It is waiting at its limit: Continue lets it go on.";
+    case "unstarted":
+      return "Kept: it has not started. Start it, and its first turn reads this.";
+    case "accept":
+      return "Kept. It is waiting for you: Accept takes it as it is, and Continue has it work on what you said.";
+    case "approval":
+      return "Kept for its next turn. It is waiting for an approval to be answered, and goes on with this once it is.";
+    case "stuck":
+      return "Kept for its next turn. It is stuck: Continue lets it try again with this.";
+    case "unknown_outcome":
+      return "Kept for its next turn. It waits for you to say whether to go on: Continue lets it.";
+    case "retry":
+      return "Kept for its next turn: its model could not answer, and it tries again by itself.";
+    case "kept":
+      return "Kept for its next turn.";
   }
 }
 
@@ -205,7 +248,10 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
     );
     if ("refused" in edited) return c.json({ error: edited.refused, plain: "The draft was not changed. Reload it, check what you entered, and try again." }, 409);
     deps.audit.record({ action: "mission_edited", actor: principal.actor, agentId: edited.mission.agentId, details: { mission: edited.mission.id, changed: edited.changed } });
-    return c.json({ mission: view(missions, edited.mission), changed: edited.changed, ...(edited.briefFailed ? { briefFailed: edited.briefFailed } : {}) });
+    // What changed is the chat's list (a folder by its path among it), and a brief's failure an exception's message: the
+    // page says what it means (0.8.23), and the agent's chat has the list.
+    const plain = edited.briefFailed ? "Saved, but its brief could not be written, so it has none for now. Whoever runs the server can see why." : "Saved. Its agent is told what changed.";
+    return c.json({ mission: view(missions, edited.mission), changed: edited.changed, ...(edited.briefFailed ? { briefFailed: edited.briefFailed } : {}), plain });
   });
 
   /**
@@ -257,7 +303,7 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
       const told = missions.tell(id, text ?? "", by);
       if ("refused" in told) return c.json({ error: told.refused, plain: refusedPlain(told, "tell") }, 409);
       deps.audit.record({ action: "mission_tell", actor: principal.actor, agentId: told.mission.agentId, details: { mission: told.mission.id, chars: (text ?? "").trim().length } });
-      return c.json({ mission: view(missions, told.mission), said: told.said });
+      return c.json({ mission: view(missions, told.mission), said: told.said, plain: toldPlain(told.where) });
     }
     const acted =
       verb === "stop"

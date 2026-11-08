@@ -190,6 +190,33 @@ test("one at work can be told something (0.8.10): the box sends the words, the t
   expect(card).toContain("Gading via nouva");
 });
 
+test("a tell answered in the chat's words and the page's: the toast says the page's, never the chat's command (0.8.23)", async () => {
+  const shown = WIRE["/missions/msn_1"] as { mission: Record<string, unknown> };
+  answer({ "/missions/msn_1": { status: 200, body: { ...shown, mission: { ...shown.mission, status: "running", seen: "working", told: [] } } } });
+  let toast = "";
+  await renderPage("/missions/msn_1", async (host) => {
+    await eventually(() => buttons(host).includes("Tell"), 2_000, "the tell box");
+    const record = recordPosts({
+      "/missions/msn_1/tell": {
+        status: 200,
+        body: {
+          mission: { ...shown.mission, told: [] },
+          said: "Kept for its next turn. It is waiting at its limit: /mission continue msn_1 lets it go on.",
+          plain: "Kept for its next turn. It is waiting at its limit: Continue lets it go on.",
+        },
+      },
+    });
+    type(host.querySelector<HTMLTextAreaElement>('textarea[placeholder^="e.g. use the second tab"]')!, "and the totals");
+    await enabled(host, "Tell");
+    press(host, "Tell");
+    await eventually(() => document.body.textContent?.includes("Continue lets it go on") === true, 2_000, "the toast");
+    toast = document.body.textContent ?? "";
+    record.restore();
+  });
+  expect(toast).toContain("Kept for its next turn. It is waiting at its limit: Continue lets it go on.");
+  expect(toast).not.toContain("/mission continue");
+});
+
 test("one that ended shows what it was told, and offers no box", async () => {
   const shown = WIRE["/missions/msn_1"] as { mission: Record<string, unknown> };
   answer({ "/missions/msn_1": { status: 200, body: { ...shown, mission: { ...shown.mission, status: "done", seen: "done", told: [{ id: "tel_1", by: "Gading", at: 1, text: "use the second tab", read: 2 }] } } } });
@@ -272,6 +299,7 @@ test("a draft (0.8.11): its brief shown, and changed before it starts — only w
   answer({ "/missions/msn_1": detailOf({ status: "waiting", seen: "needs_you", waitKind: "accept", startedAt: null, checks: ["test -s RFC.md"], reviewOn: true, accept: false }, { brief: "## What to read\nThe owner's answers, first." }) });
   let sent: { path: string; body: unknown }[] = [];
   let shown = "";
+  let toast = "";
   await renderPage("/missions/msn_1", async (host) => {
     await eventually(() => buttons(host).includes("Change the draft"), 2_000, "the draft's card");
     // The brief folded until opened (the owner's word), then read in place.
@@ -285,9 +313,16 @@ test("a draft (0.8.11): its brief shown, and changed before it starts — only w
     const accept = [...host.querySelectorAll("label")].find((label) => label.textContent?.includes("I accept the result"))!.querySelector("input") as HTMLInputElement;
     accept.click();
     await enabled(host, "Save the draft");
-    const record = recordPosts({ "/missions/msn_1/edit": { status: 200, body: { mission: {}, changed: ["checks (2)", "you accept it"] } } });
+    const record = recordPosts({
+      "/missions/msn_1/edit": {
+        status: 200,
+        body: { mission: {}, changed: ["checks (2)", "folder /srv/work/rfc"], briefFailed: "EACCES: permission denied, open '/srv/work/rfc/BRIEF.md'", plain: "Saved, but its brief could not be written, so it has none for now. Whoever runs the server can see why." },
+      },
+    });
     press(host, "Save the draft");
     await eventually(() => record.posts.length > 0, 2_000, "the change");
+    await eventually(() => document.body.textContent?.includes("its brief could not be written") === true, 2_000, "the toast");
+    toast = document.body.textContent ?? "";
     record.restore();
     sent = record.posts;
   });
@@ -295,6 +330,9 @@ test("a draft (0.8.11): its brief shown, and changed before it starts — only w
   expect(shown).toContain("What to read");
   expect(shown).toContain("The owner's answers, first.");
   expect(sent).toEqual([{ path: "/missions/msn_1/edit", body: { checks: ["test -s RFC.md", "bun run check-paths"], accept: true } }]);
+  // The page's words (0.8.23): neither the chat's list, a path in it, nor the server's error.
+  expect(toast).toContain("Saved, but its brief could not be written, so it has none for now.");
+  expect(toast).not.toContain("/srv/work/rfc");
 });
 
 test("a mission at work has no draft form, and its brief is still shown — folded until opened, its file there all along", async () => {

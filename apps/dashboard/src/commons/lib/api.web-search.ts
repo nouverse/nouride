@@ -20,6 +20,8 @@ export interface WebSearchSettings {
   /** What a rebuilt `web_search` would use with these settings. */
   effective: "brave" | "searxng" | "free" | "unavailable";
   problem?: string;
+  /** What it needs, in the page's words (0.8.23); `problem` is the settings file's, under Details. */
+  plain?: string | null;
   /** Saved, and the running tool was built before it: a restart applies it. */
   restartPending: boolean;
   editable: boolean;

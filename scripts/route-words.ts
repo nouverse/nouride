@@ -12,15 +12,15 @@
  *
  * Read by the TypeScript parser, as `dashboard-words.ts` reads the dashboard: each `control.<method>(path, handler)` in
  * `web/control/routes`, each `c.json(body, status)` its handler answers with (the functions of its own file it calls
- * included), and the `error`, `note` and `plain` of each body; the guard's replies answer every route. What a value
+ * included), and the `error`, `note` and `plain` of each body, and the success's own fields its page shows (0.8.23,
+ * `PAGE_WORDS`: a mission tell's `said`, a hub install's notes); the guard's replies answer every route. What a value
  * holds is followed inside the file (`route-values.ts`): a const, what a function of the file returns, an element of a
  * tuple, a field of an object it returns or an entry of a table it looks up, either side of `?:`, `||` and `??`, the
  * right of `&&`, and a parameter of a function, by the argument the call followed passes (else every call of its file):
  * the words a route hands `notSaved` are read in the sentence it makes. What comes from another file, a domain's
- * refusal or an exception's message, is
- * words this cannot read: such a reply carries a `plain`, worded at the route from what the domain returned (its kind
- * and its data), never parsed out of its sentence. Each body a reply can answer with is held on its own, and a word
- * passes with a `plain` beside it, in its object or one it is spread into.
+ * refusal or an exception's message, is words this cannot read: such a reply carries a `plain`, worded at the route
+ * from what the domain returned (its kind and its data), never parsed out of its sentence. Each body a reply can answer
+ * with is held on its own, and a word passes with a `plain` beside it, in its object or one it is spread into.
  *
  * In a template, a value is data, an id, a name or a count standing as `{}`, unless it is words: a text this reads, or
  * one it cannot: a caught error, a call that makes words in another file (`String(err)`, `reason(err)`), or a field
@@ -47,17 +47,42 @@ export interface Said {
   unread: string[];
 }
 
+/**
+ * A success's own fields a page shows as the server's words, by route (0.8.23), beside `note` and `error`, which every
+ * route's are: read, and held, as a note is. Found from the answers the dashboard's calls declare and the pages that show
+ * them. A field of the same name another route answers with is not one: a mission's `notes` and a session's `text` are
+ * what an agent wrote, shown as written.
+ */
+export const PAGE_WORDS: Readonly<Record<string, readonly string[]>> = {
+  // Where a person's words for a mission went: the toast under Tell.
+  "POST /missions/:id/:verb": ["said"],
+  // What a draft's edit changed, and why its brief was not written: the toast under Save.
+  "POST /missions/:id/edit": ["changed", "briefFailed"],
+  // What an install from the hub left out, and why: the panel under Install.
+  "POST /skills/hub/install": ["notes", "refused", "drafts"],
+  // A sender approved but not linked to the person chosen: the toast under Approve.
+  "POST /access/:action": ["warning"],
+  // The model's suggestions that did not pass the checks: the toast under Ask the model.
+  "POST /memory/tags/tidy/model": ["dropped"],
+  // Why a coding CLI cannot answer: the box on the agent's Coding CLI tab.
+  "GET /agents/:id/cli": ["unavailable"],
+  // Why the search service saved is not working: the line on the Web Search page.
+  "GET /web-search": ["problem"],
+};
+
 /** One body a reply can answer with, and the words in it. */
 export interface Body {
   error: Said[];
   note: Said[];
   plain: Said[];
+  /** The page's other words in it (`PAGE_WORDS`), each by its field. */
+  shown: { field: string; said: Said }[];
   /** Every word in it has a `plain` beside it: in its own object, or one it is spread into. */
   plainAlways: boolean;
   /** The body, or a spread in it, written in another file: what it holds cannot be read here. */
   unread: string[];
   /** Its words with no `plain` beside them, which the page shows as they are. */
-  bare: { field: "error" | "note"; said: Said }[];
+  bare: { field: string; said: Said }[];
   bareUnread: string[];
 }
 
@@ -156,22 +181,25 @@ function isData(node: ts.Expression): boolean {
 }
 
 /**
- * The fields of one body, through spreads: its `error`, `note` and `plain`, and which of its words have no `plain` beside
- * them: in the same object, or one it is spread into (`covered`). `...(gone ? { error, plain } : {})` says both or
- * neither; `{ error, ...(gone ? { plain } : {}) }` leaves the error bare when it is not gone.
+ * The fields of one body, through spreads: its `error`, `note` and `plain`, the page's other words its route has
+ * (`shown`, from `PAGE_WORDS`), and which of its words have no `plain` beside them: in the same object, or one it is
+ * spread into (`covered`). `...(gone ? { error, plain } : {})` says both or neither; `{ error, ...(gone ? { plain } :
+ * {}) }` leaves the error bare when it is not gone.
  */
-function fieldsOf(object: ts.ObjectLiteralExpression, body: Body, covered = false): void {
+function fieldsOf(object: ts.ObjectLiteralExpression, body: Body, shown: readonly string[], covered = false): void {
   const under = covered || object.properties.some((p) => (ts.isPropertyAssignment(p) || ts.isShorthandPropertyAssignment(p)) && propertyName(p.name) === "plain");
   for (const property of object.properties) {
     if (ts.isPropertyAssignment(property) || ts.isShorthandPropertyAssignment(property)) {
       const name = propertyName(property.name);
-      if (name !== "error" && name !== "note" && name !== "plain") continue;
+      const page = shown.includes(name);
+      if (name !== "error" && name !== "note" && name !== "plain" && !page) continue;
       const said = textsOf(ts.isPropertyAssignment(property) ? property.initializer : property.name);
-      body[name].push(...said);
-      if (name !== "plain" && !under) body.bare.push(...said.map((one) => ({ field: name as "error" | "note", said: one })));
+      if (page) body.shown.push(...said.map((one) => ({ field: name, said: one })));
+      else body[name as "error" | "note" | "plain"].push(...said);
+      if (name !== "plain" && !under) body.bare.push(...said.map((one) => ({ field: name, said: one })));
     } else if (ts.isSpreadAssignment(property)) {
       for (const value of values(property.expression)) {
-        if (ts.isObjectLiteralExpression(value)) fieldsOf(value, body, under);
+        if (ts.isObjectLiteralExpression(value)) fieldsOf(value, body, shown, under);
         else if (!isNoText(value)) {
           body.unread.push(`...${value.getText()}`);
           if (!under) body.bareUnread.push(`...${value.getText()}`);
@@ -183,7 +211,8 @@ function fieldsOf(object: ts.ObjectLiteralExpression, body: Body, covered = fals
 
 /** One reply: each body's words, and the statuses it answers with. */
 function readReply(call: ts.CallExpression, route: { method: string; path: string }): Reply {
-  const reply: Reply = { file: relative(ROOT, call.getSourceFile().fileName), line: lineOf(call), ...route, status: null, bodies: [], error: [], note: [], plain: [], plainAlways: true, unread: [] };
+  const shown = PAGE_WORDS[`${route.method} ${route.path}`] ?? [];
+  const reply: Reply = { file: relative(ROOT, call.getSourceFile().fileName), line: lineOf(call), ...route, status: null, bodies: [], error: [], note: [], plain: [], shown: [], plainAlways: true, unread: [] };
   const [first, second] = call.arguments as unknown as [ts.Expression, ts.Expression | undefined];
   let bodies: ts.Expression[];
   let statuses: ts.Expression[] | null;
@@ -198,21 +227,21 @@ function readReply(call: ts.CallExpression, route: { method: string; path: strin
   }
   reply.status = statuses === null || !statuses.every(ts.isNumericLiteral) ? null : statuses.length === 0 ? [200] : statuses.map((status) => Number(status.text));
   for (const value of bodies) {
-    const body: Body = { error: [], note: [], plain: [], plainAlways: false, unread: [], bare: [], bareUnread: [] };
-    if (ts.isObjectLiteralExpression(value)) fieldsOf(value, body);
+    const body: Body = { error: [], note: [], plain: [], shown: [], plainAlways: false, unread: [], bare: [], bareUnread: [] };
+    if (ts.isObjectLiteralExpression(value)) fieldsOf(value, body, shown);
     else if (!isNoText(value)) {
       body.unread.push(value.getText());
       body.bareUnread.push(value.getText());
     }
     body.plainAlways = body.plain.length > 0 && body.bare.length === 0 && body.bareUnread.length === 0;
     reply.bodies.push(body);
-    for (const field of ["error", "note", "plain", "unread"] as const) (reply[field] as unknown[]).push(...body[field]);
+    for (const field of ["error", "note", "plain", "shown", "unread"] as const) (reply[field] as unknown[]).push(...body[field]);
   }
   reply.plainAlways = reply.plain.length > 0 && reply.bodies.every((body) => body.plainAlways || !hasWords(body));
   return reply;
 }
 
-const hasWords = (body: Body): boolean => body.error.length > 0 || body.note.length > 0 || body.unread.length > 0;
+const hasWords = (body: Body): boolean => body.error.length > 0 || body.note.length > 0 || body.shown.length > 0 || body.unread.length > 0;
 
 const isReply = (node: ts.Node): node is ts.CallExpression =>
   ts.isCallExpression(node) && node.arguments.length > 0 && ts.isPropertyAccessExpression(node.expression) && node.expression.name.text === "json" &&
@@ -305,11 +334,13 @@ export function calledBy(reply: Pick<Reply, "method" | "path">, calls: readonly 
  * dashboard's rule, beside the route's own `error` or `note` for the CLI. An `error` or `note` with a `plain` beside it
  * passes as it is; one without is held to the same rule, and a refusal whose words are written in another file cannot
  * pass. `pageWords`: the page shows words from this route's success (its call's answer has a note or an error), so a
- * success whose fields are written elsewhere cannot pass either.
+ * success whose fields are written elsewhere cannot pass either. A route in `PAGE_WORDS` is held so whatever its calls
+ * declare: the table says its page shows them.
  */
 export function unplain(reply: Reply, pageWords = false): string[] {
   const refusal = reply.status === null || reply.status.some((status) => status >= 400);
-  return [...new Set(reply.bodies.flatMap((body) => unplainBody(body, refusal || pageWords, refusal)))];
+  const shown = pageWords || (reply.method !== "*" && `${reply.method} ${reply.path}` in PAGE_WORDS);
+  return [...new Set(reply.bodies.flatMap((body) => unplainBody(body, refusal || shown, refusal)))];
 }
 
 /** Why one body does not read as everyday words: `held`, a refusal's or a success the page shows words from. */

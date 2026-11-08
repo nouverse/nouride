@@ -165,7 +165,8 @@ function ReviewDialog({ changes, onClose, onDone }: { changes: TagTidyChange[]; 
       setSuggested(result.changes);
       const dropped = result.dropped ?? [];
       if (result.readable === false) toast.error("The model's answer could not be read", "Nothing was suggested. Try again, or set a stronger model for the pass.");
-      else if (!result.changes.length && dropped.length) toast.warning(`The model proposed ${dropped.length} group(s), and none passed the checks`, dropped.map((group) => `${group.from.join(", ")} → ${group.into}: ${group.why}`).slice(0, 3).join("; "));
+      // What the checks said of each group is theirs (0.8.23): the page says it in its own words.
+      else if (!result.changes.length && dropped.length) toast.warning(`The model proposed ${dropped.length} group(s), and none passed the checks`, result.plain ?? "Try again, or set a stronger model for the pass.");
       else if (!result.changes.length) toast.success("Nothing more to suggest", "The model found no tags that mean one subject.");
     },
     onError: (err) => toast.error("The model could not be asked", err),

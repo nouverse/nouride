@@ -21,8 +21,12 @@ export function useMissionAct(id: string) {
   const toast = useToast();
   return useMutation({
     mutationFn: (input: { verb: MissionVerb; text?: string }) => api.actOnMission(id, input.verb, input.text),
-    // A tell says where the words went — into the turn at work, or kept for the next and what moves it (0.8.10).
-    onSuccess: (answer, { verb }) => (verb === "tell" && answer.said ? toast.success(DONE.tell, answer.said) : toast.success(DONE[verb])),
+    // A tell says where the words went: into the turn at work, or kept for the next and what moves it (0.8.10). In the
+    // page's words (0.8.23), `said` being the chat's, with its `/mission` commands.
+    onSuccess: (answer, { verb }) => {
+      const where = answer.plain ?? answer.said;
+      return verb === "tell" && where ? toast.success(DONE.tell, where) : toast.success(DONE[verb]);
+    },
     onError: (error, { verb }) => toast.error(`Could not ${verb} it`, error),
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["missions"] }),
   });

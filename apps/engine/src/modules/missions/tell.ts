@@ -21,9 +21,33 @@ const log = createLogger("missions");
 /** Where words taken into a running turn go: its next step, its coding CLI's prompt, or after that prompt ends. */
 export type SteerOutcome = { taken: true; when: "next_step" | "into_cli" | "after_prompt" } | { taken: false; why: "full" | "ending" | "none" };
 
+/**
+ * Where a person's words went (0.8.23): into the turn at work, kept for the next and what that waits on. `said` is it in
+ * the chat's words, with the `/mission` command that moves it; the dashboard's route words it from this, for a page whose
+ * buttons do what those commands do.
+ */
+export type TellWhere =
+  | "next_step"
+  | "into_cli"
+  | "after_prompt"
+  | "turn_full"
+  | "next_turn"
+  | "queued"
+  | "checks_then_accept"
+  | "checks_then_turn"
+  | "answer"
+  | "limit"
+  | "unstarted"
+  | "accept"
+  | "approval"
+  | "stuck"
+  | "unknown_outcome"
+  | "retry"
+  | "kept";
+
 /** `why` a tell was refused, for the dashboard's words at its route (0.8.20); `length` and `max` for one too long. */
 export type TellAnswer =
-  | { mission: Mission; said: string }
+  | { mission: Mission; said: string; where: TellWhere }
   | { refused: string; why: "missing" | "ended" | "empty" }
   | { refused: string; why: "long"; length: number; max: number };
 
@@ -47,38 +71,64 @@ export function tellMission(missions: Missions, deps: MissionsDeps, id: string, 
   mission.updatedAt = now;
   deps.store.save(mission);
   deps.changed?.(mission);
-  const said = delivered(mission, told, deps);
+  const where = delivered(mission, told, deps);
   log.info("a person told a mission", { mission: mission.id, by, ...(via ? { via } : {}), status: mission.status, chars: words.length });
-  return { mission: deps.store.get(mission.id) ?? mission, said };
+  return { mission: deps.store.get(mission.id) ?? mission, said: chatWords(where, shortId(mission.id)), where };
 }
 
-/** Into its turn when one is at work; otherwise where it is kept and what moves the mission — said for the person. */
-function delivered(mission: Mission, told: Told, deps: MissionsDeps): string {
-  const id = shortId(mission.id);
+/** Into its turn when one is at work; otherwise where it is kept, by what moves the mission. */
+function delivered(mission: Mission, told: Told, deps: MissionsDeps): TellWhere {
   if (mission.status === "running") {
     const steered = deps.steerTurn?.(mission, told) ?? { taken: false, why: "none" };
-    if (steered.taken) {
-      if (steered.when === "next_step") return "Told. It reads this before its next step.";
-      if (steered.when === "into_cli") return "Told. Its coding CLI is given this in the turn it is working on: at once, or once the command it is running ends.";
-      return "Told. Its coding CLI reads this once the prompt it is working on ends.";
-    }
-    if (steered.why === "full") return "Kept for its next turn: the turn at work has read all it reads in one turn.";
-    return "Kept for its next turn, which reads it first.";
+    if (steered.taken) return steered.when;
+    return steered.why === "full" ? "turn_full" : "next_turn";
   }
-  if (mission.status === "queued") return "Kept: it has not started yet, and its first turn reads this.";
-  if (mission.status === "checking") {
-    const then = waitsForAccept(mission) ? "it waits for your accept, with this shown" : "it goes one more turn to read this before it ends";
-    return `Kept: its checks are running. If they fail, its next turn reads this; if they pass, ${then}.`;
-  }
+  if (mission.status === "queued") return "queued";
+  if (mission.status === "checking") return waitsForAccept(mission) ? "checks_then_accept" : "checks_then_turn";
   switch (mission.waitKind) {
     case "input":
+      return "answer";
+    case "limit":
+      return "limit";
+    case "accept":
+      return mission.startedAt === null ? "unstarted" : "accept";
+    case "approval":
+    case "stuck":
+    case "unknown_outcome":
+    case "retry":
+      return mission.waitKind;
+    default:
+      return "kept";
+  }
+}
+
+/** Where the words went, said for the person in a chat: with the `/mission` command that moves it on, where one does. */
+function chatWords(where: TellWhere, id: string): string {
+  switch (where) {
+    case "next_step":
+      return "Told. It reads this before its next step.";
+    case "into_cli":
+      return "Told. Its coding CLI is given this in the turn it is working on: at once, or once the command it is running ends.";
+    case "after_prompt":
+      return "Told. Its coding CLI reads this once the prompt it is working on ends.";
+    case "turn_full":
+      return "Kept for its next turn: the turn at work has read all it reads in one turn.";
+    case "next_turn":
+      return "Kept for its next turn, which reads it first.";
+    case "queued":
+      return "Kept: it has not started yet, and its first turn reads this.";
+    case "checks_then_accept":
+      return "Kept: its checks are running. If they fail, its next turn reads this; if they pass, it waits for your accept, with this shown.";
+    case "checks_then_turn":
+      return "Kept: its checks are running. If they fail, its next turn reads this; if they pass, it goes one more turn to read this before it ends.";
+    case "answer":
       return `Kept for its next turn. It is waiting for your answer: /mission answer ${id} <your answer>.`;
     case "limit":
       return `Kept for its next turn. It is waiting at its limit: /mission continue ${id} lets it go on.`;
+    case "unstarted":
+      return `Kept: it has not started. /mission accept ${id} starts it, and its first turn reads this.`;
     case "accept":
-      return mission.startedAt === null
-        ? `Kept: it has not started. /mission accept ${id} starts it, and its first turn reads this.`
-        : `Kept. It is waiting for your accept: /mission accept ${id} takes it as it is, /mission continue ${id} has it work on what you said.`;
+      return `Kept. It is waiting for your accept: /mission accept ${id} takes it as it is, /mission continue ${id} has it work on what you said.`;
     case "approval":
       return "Kept for its next turn. It is waiting for an approval to be answered, and goes on with this once it is.";
     case "stuck":
@@ -87,7 +137,7 @@ function delivered(mission: Mission, told: Told, deps: MissionsDeps): string {
       return `Kept for its next turn. It waits for you to say whether to go on: /mission continue ${id}.`;
     case "retry":
       return "Kept for its next turn: its model could not answer, and it tries again by itself.";
-    default:
+    case "kept":
       return "Kept for its next turn.";
   }
 }

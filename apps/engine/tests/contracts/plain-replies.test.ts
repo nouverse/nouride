@@ -12,13 +12,16 @@
  * `scripts/dashboard-words.ts`, the rule `plain-dashboard.test.ts` holds the dashboard to), or the reply carries a
  * `plain` that does, whatever else it holds. Words the route did not write, a domain's refusal or an exception's
  * message, pass only with a `plain`, worded at the route from what the domain returned. A note the page shows from a
- * success is held the same way. `bun run scripts/route-words.ts --technical` lists what this would refuse.
+ * success is held the same way, and so (0.8.23) are a success's own fields a page shows as the server's words
+ * (`PAGE_WORDS`: where a tell went, what a hub install left out, why a coding CLI cannot answer). A save refused names
+ * the field it refused, unless none can be at fault (`NO_ONE_FIELD`). `bun run scripts/route-words.ts --technical`
+ * lists what this would refuse.
  */
 
 import { describe, expect, test } from "bun:test";
 import { NOT_SAVED, notSaved } from "@/modules/web/control/plain.ts";
 import { dashboardCalls, matches, routeShape } from "../../../../scripts/dashboard-calls.ts";
-import { controlSources, dashboardReplies, repliesIn, routesIn } from "../../../../scripts/route-words.ts";
+import { controlSources, dashboardReplies, PAGE_WORDS, repliesIn, routesIn } from "../../../../scripts/route-words.ts";
 
 const at = (file: string, line: number) => `${file.replace("apps/engine/src/modules/web/control/", "")}:${line}`;
 
@@ -60,6 +63,21 @@ describe("the server's refusals and notes on the dashboard", () => {
     expect(new Set(replies.map(({ reply }) => at(reply.file, reply.line))).size).toBeGreaterThan(700);
     expect(replies.filter(({ reply }) => reply.error.length > 0).length).toBeGreaterThan(450);
     expect(replies.filter(({ reply }) => reply.method === "*").length).toBeGreaterThan(2);
+  });
+
+  test("each success field a page shows as the server's words (PAGE_WORDS) is on a route the dashboard calls, and is read", () => {
+    // A route renamed, or a field no longer answered, would leave its words held by nothing.
+    const calls = dashboardCalls();
+    const replies = controlSources().flatMap((path) => repliesIn(path));
+    for (const [route, fields] of Object.entries(PAGE_WORDS)) {
+      const [method, path] = route.split(" ") as [string, string];
+      expect(calls.some((call) => (call.method === null || call.method === method) && matches(call.shape, routeShape(path))), route).toBe(true);
+      const on = replies.filter((reply) => reply.method === method && reply.path === path);
+      // Answered by its name, or in a body spread from what the domain returned (`{ ...result, plain }`).
+      const answered = new Set(on.flatMap((reply) => reply.shown.map((said) => said.field)));
+      const spread = on.some((reply) => reply.unread.some((value) => value.startsWith("...")));
+      for (const field of fields) expect(answered.has(field) || spread, `${route} ${field}`).toBe(true);
+    }
   });
 
   test("every route the dashboard calls is one this reads", () => {

@@ -772,6 +772,7 @@
     "fallbackEnabled": true,
     "allowPrivateUrls": false,
     "effective": "free",
+    "plain": null,
     "restartPending": false,
     "editable": true
   },

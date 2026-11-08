@@ -7,9 +7,24 @@
  */
 
 import { atLeast } from "@/modules/users/auth.ts";
-import { hubErrorMessage, SOURCE_IDS, type SourceId } from "@/modules/skills-hub/index.ts";
+import { hubErrorMessage, SOURCE_IDS, type InstallResult, type SourceId } from "@/modules/skills-hub/index.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { jsonBody } from "../payloads.ts";
+
+/**
+ * What an install from a hub came to, said on the Explore page (0.8.23), worded here from what it found: what waits in
+ * Pending, how many were left out, whether its source's scan found something. The hub's own words (a skill's missing
+ * file, its scan's verdict, a path that would take the rest) go under Details there, and stay the CLI's.
+ */
+function installedPlain(result: InstallResult): string {
+  const [first] = result.drafts;
+  const added = !first ? "Nothing was added to Pending." : result.drafts.length === 1 ? `“${first.name}” is waiting for your approval in Pending.` : `${result.drafts.length} skills are waiting for your approval in Pending.`;
+  const left = result.refused.length === 0 ? "" : result.refused.length === 1 ? " One was left out." : ` ${result.refused.length} were left out.`;
+  const rest = result.notes.length === 0 ? "" : " Not everything there was taken.";
+  const scan = result.drafts.some((draft) => draft.flagged) ? " A scan of where it came from found something: read what it does before you approve it." : "";
+  const why = result.refused.length + result.notes.length === 0 ? "" : " Why is under Details.";
+  return `${added}${left}${rest}${scan}${why}`;
+}
 
 export function registerSkillHubRoutes(control: ControlApp, deps: ControlDeps): void {
   control.get("/skills/hub/search", async (c) => {
@@ -57,7 +72,7 @@ export function registerSkillHubRoutes(control: ControlApp, deps: ControlDeps): 
       : { agentId: principal.actor ?? "operator", byAgent: false };
     try {
       const result = await deps.skillHub.install(body.ref, who);
-      return c.json({ ok: result.drafts.length > 0, drafts: result.drafts, refused: result.refused, notes: result.notes });
+      return c.json({ ok: result.drafts.length > 0, drafts: result.drafts, refused: result.refused, notes: result.notes, plain: installedPlain(result) });
     } catch (err) {
       return c.json({ ok: false, error: hubErrorMessage(err), plain: "The skill was not installed. Check where it is from, and try again." }, 400);
     }

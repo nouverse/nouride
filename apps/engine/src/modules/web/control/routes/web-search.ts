@@ -8,7 +8,7 @@
 
 import { atLeast } from "@/modules/users/auth.ts";
 import { createWebSearchTool } from "@/modules/tools/builtins/web/index.ts";
-import { DEFAULT_SEARCH_SECRET, type WebSearchField, type WebSearchPatch } from "@/modules/config/settings/web.ts";
+import { DEFAULT_SEARCH_SECRET, type WebSearchField, type WebSearchPatch, type WebSearchSettings } from "@/modules/config/settings/web.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { jsonBody } from "../payloads.ts";
 import { NO_SETTINGS, notSaved } from "../plain.ts";
@@ -19,6 +19,12 @@ const WEB_SEARCH_FIELDS: Record<WebSearchField, string> = {
   endpoint: "the address",
   secret: "the secret's name",
   key: "the key",
+};
+
+/** What a search that is not working is missing, as the Web Search page asks for it. */
+const NEEDS: Record<NonNullable<WebSearchSettings["needs"]>, string> = {
+  address: "It needs the address of your search service.",
+  key: "It needs the key for your search service.",
 };
 
 const TEST_QUERY = "open source software";
@@ -41,8 +47,11 @@ export function registerWebSearchRoutes(control: ControlApp, deps: ControlDeps):
   control.get("/web-search", (c) => {
     if (!atLeast(c.get("principal"), "admin")) return c.json({ error: "admin only" }, 403);
     if (!deps.settings) return c.json({ error: "config editing is not available", plain: NO_SETTINGS }, 501);
+    const view = deps.settings.webSearchSettings();
     return c.json({
-      ...deps.settings.webSearchSettings(),
+      ...view,
+      // Why searching is not working is said in the settings file's words (0.8.23): the page says what it needs.
+      plain: view.needs ? NEEDS[view.needs] : null,
       restartPending: atBoot !== undefined && live() !== atBoot,
       editable: true,
     });

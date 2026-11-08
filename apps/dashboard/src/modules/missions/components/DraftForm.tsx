@@ -69,7 +69,9 @@ export function DraftForm({ mission, brief, ownFolder, writable }: { mission: Mi
   const save = useMutation({
     mutationFn: () => api.editMission(mission.id, change),
     onSuccess: (answer) => {
-      toast.success("Draft changed", answer.briefFailed ? `${answer.changed.join(", ")}. The brief could not be written: ${answer.briefFailed}` : answer.changed.join(", "));
+      // The page's words (0.8.23): what changed is the chat's list, a folder's path among it, and a brief's failure the
+      // server's error.
+      toast.success("Draft changed", answer.plain ?? (answer.briefFailed ? `${answer.changed.join(", ")}. The brief could not be written: ${answer.briefFailed}` : answer.changed.join(", ")));
       setOpen(false);
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["missions"] }),

@@ -95,9 +95,11 @@ describe("telling a mission something while it works", () => {
     for (const [kind, words] of kinds) {
       const one = await h.start(`work ${kind}`, { startedBy: "8142" });
       h.missions.wait(h.store.get(one.id)!, kind!, "because");
-      expect(h.missions.tell(one.id, "note", "Gading")).toMatchObject({ said: expect.stringContaining(words) });
+      // Where they went, as a kind beside the chat's words, for the dashboard to say in its own (0.8.23).
+      expect(h.missions.tell(one.id, "note", "Gading")).toMatchObject({ said: expect.stringContaining(words), where: kind });
       expect(h.store.get(one.id)!.status).toBe("waiting");
     }
+    expect(h.missions.tell(asking.id, "and the tag too", "Gading")).toMatchObject({ where: "answer" });
   });
 
   test("a proposal not started, and one queued behind others, read it at their first turn", async () => {
@@ -225,12 +227,17 @@ describe("the ways in", () => {
     const mission = await h.start();
     const told = await app("operator")(`/missions/${mission.id}/tell`, { text: "the totals first" });
     expect(told.status).toBe(200);
-    expect(await told.json()).toMatchObject({ said: "Kept for its next turn, which reads it first.", mission: { told: [{ by: "Gading", text: "the totals first" }] } });
+    expect(await told.json()).toMatchObject({ said: "Kept for its next turn, which reads it first.", plain: "Kept for its next turn, which reads it first.", mission: { told: [{ by: "Gading", text: "the totals first" }] } });
     expect(audited).toEqual([{ action: "mission_tell", actor: "operator", agentId: "nova", details: { mission: mission.id, chars: 16 } } as never]);
     expect((await app("viewer")(`/missions/${mission.id}/tell`, { text: "hi" })).status).toBe(403);
     const empty = await app("operator")(`/missions/${mission.id}/tell`, {});
     expect(empty.status).toBe(409);
     expect(((await empty.json()) as { error: string }).error).toContain("Tell it what?");
+    // Waiting on a person, the chat's words name the command that moves it on; the page's, its button (0.8.23).
+    h.missions.wait(h.store.get(mission.id)!, "limit", "because");
+    const waiting = (await (await app("operator")(`/missions/${mission.id}/tell`, { text: "then the rest" })).json()) as { said: string; plain: string };
+    expect(waiting.said).toContain("/mission continue");
+    expect(waiting.plain).toBe("Kept for its next turn. It is waiting at its limit: Continue lets it go on.");
   });
 
   test("`nouride mission tell` says where the words went, `show` lists them — and a daemon before 0.8.10, which sends none, none", async () => {

@@ -120,6 +120,7 @@ export function registerExternalAgentRoutes(control: ControlApp, deps: ControlDe
     const found = externalAgent(deps, c.req.param("id"));
     if ("error" in found) return c.json({ error: found.error, plain: found.plain }, found.status);
     const { agent, external, ops } = found;
+    const unavailable = ops.unavailable(agent.config.id);
     return c.json({
       cli: external.cli,
       profile: external.profile ?? "default",
@@ -134,7 +135,10 @@ export function registerExternalAgentRoutes(control: ControlApp, deps: ControlDe
       // What it can be set to here, and what "default" means on this install (0.8.7): the tab sets it, not only shows it.
       effortChoices: [...LLM_EFFORTS],
       effortDefault: deps.ctx.config.llm.defaults.effort ?? null,
-      unavailable: ops.unavailable(agent.config.id),
+      unavailable,
+      // Why it cannot answer is its CLI's own words (an install command, a process's error): the page says it in its own
+      // (0.8.23), those under Details.
+      plain: unavailable ? "It cannot answer right now. Whoever runs the server can see why under Details." : null,
       // The sign-in's terminal, to an admin only, as the sign-in is: what it prints can be the code that signs in (a
       // device code), and an operator read it here.
       login: atLeast(principal, "admin") ? ops.login(agent.config.id) : null,

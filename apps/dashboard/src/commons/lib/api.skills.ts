@@ -223,7 +223,10 @@ export interface SkillHubSearch {
 export interface SkillHubInstall {
   ok: boolean;
   error?: string;
-  drafts?: { id: string; name: string; description: string; source: string; notes: string[]; warnings: string[] }[];
+  /** `flagged`: its source's scan found something, or could not be read. */
+  drafts?: { id: string; name: string; description: string; source: string; notes: string[]; warnings: string[]; flagged?: boolean }[];
   refused?: { name: string; reason: string }[];
   notes?: string[];
+  /** What it came to in the page's words (0.8.23); `refused`, `notes` and each draft's `warnings` are the hub's, under Details. */
+  plain?: string;
 }

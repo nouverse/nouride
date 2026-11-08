@@ -190,6 +190,15 @@ describe("the routes", () => {
     expect((await app("admin").request("/access/approve?code=ABC&as=who", { method: "POST" })).status).toBe(400);
   });
 
+  test("approved but not linked: why, in the server's words for the CLI, and what it means in the page's (0.8.23)", async () => {
+    const approved = await app("admin").request("/access/approve?code=ABC&as=person:ghost", { method: "POST" });
+    expect(await approved.json()).toMatchObject({
+      ok: true,
+      warning: 'approved, but not linked: no person "ghost"',
+      plain: "Approved, but not linked to the person you chose. Whoever runs the server can see why.",
+    });
+  });
+
   test("linking another account is an admin's", async () => {
     expect((await app("operator").request("/people/link", post({ user: "usr_2", name: "Sam" }))).status).toBe(403);
     const linked = await app("admin").request("/people/link", post({ user: "usr_2", name: "Sam" }));

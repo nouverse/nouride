@@ -49,8 +49,10 @@ describe("resolveSearch", () => {
     // Silently searching somewhere else is not what they asked for; only the *default* falls back.
     // Guessing localhost would produce a connection error rather than the "you have not configured
     // this" that is actually true.
+    // What is missing, too, as a kind (0.8.23): the Web Search page asks for an address in its own words.
     expect(resolveSearch({ kind: "searxng" })).toMatchObject({
       unavailable: expect.stringContaining("search_endpoint"),
+      needs: "address",
     });
     expect(resolveSearch({ kind: "searxng", endpoint: "http://searxng:8080/search" })).toMatchObject({
       endpoint: "http://searxng:8080/search",

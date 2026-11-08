@@ -49,6 +49,11 @@ export interface FetchedSkill {
   url: string;
   /** Things the source itself said about it — ClawHub's scan verdict, for one. */
   warnings: string[];
+  /**
+   * Its source's scan found something, or could not be read (0.8.23): what the dashboard says in its own words, its
+   * `warnings` beneath them. A source that scans nothing flags nothing.
+   */
+  flagged: boolean;
 }
 
 export interface HubHit {
@@ -228,6 +233,7 @@ async function fromGithub(
           source: `github:${owner}/${repo}@${sha}${skillPath ? `/${skillPath}` : ""}`,
           url: `https://github.com/${owner}/${repo}/tree/${sha}${skillPath ? `/${skillPath}` : ""}`,
           warnings: [],
+          flagged: false,
         } satisfies FetchedSkill;
       }),
     );
@@ -301,6 +307,7 @@ async function fromClawhub(slug: string, owner: string | undefined, pinned: stri
 
   // ClawHub scans every version. Its verdict is shown with the draft, and "malicious" ends it here.
   const warnings: string[] = [];
+  let concern = false;
   try {
     const scanned = await hubJson<{ version?: { security?: { status?: string; hasWarnings?: boolean; scanners?: Record<string, { status?: string; severity?: string }> } } }>(
       `${base}/skills/${encodeURIComponent(slug)}/versions/${encodeURIComponent(version)}${ownerQuery ? `?${ownerQuery}` : ""}`,
@@ -312,9 +319,11 @@ async function fromClawhub(slug: string, owner: string | undefined, pinned: stri
     const flagged = Object.entries(security?.scanners ?? {})
       .filter(([, scan]) => scan.status && !["clean", "stale", "pending"].includes(scan.status))
       .map(([name, scan]) => `${name}: ${scan.status}${scan.severity ? ` (${scan.severity})` : ""}`);
+    concern = flagged.length > 0 || (security?.status !== undefined && !["clean", "stale", "pending"].includes(security.status));
     warnings.push(`ClawHub scan: ${security?.status ?? "not scanned"}${flagged.length ? `. Flagged by ${flagged.join(", ")}` : ""}`);
   } catch (err) {
     if (err instanceof HubError && /malicious/.test(err.message)) throw err;
+    concern = true;
     warnings.push("ClawHub scan: could not be read");
   }
 
@@ -333,6 +342,7 @@ async function fromClawhub(slug: string, owner: string | undefined, pinned: stri
     source: `clawhub:${who ? `${who}/` : ""}${slug}@${version}`,
     url: `https://clawhub.ai/${who ? `${who}/` : ""}${slug}`,
     warnings,
+    flagged: concern,
   };
 }
 
@@ -360,6 +370,7 @@ async function fromWellKnown(origin: string, name: string | undefined, deps: Sou
       source: `well-known:${origin}/${skill.name}`,
       url: `${origin}/.well-known/skills/${skill.name}/SKILL.md`,
       warnings: [],
+      flagged: false,
     });
   }
   return { skills, notes: [] };

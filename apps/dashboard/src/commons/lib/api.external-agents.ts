@@ -82,6 +82,8 @@ export interface AgentCli {
   effortDefault: string | null;
   /** Why it cannot answer now — not installed, not signed in — or null. */
   unavailable: string | null;
+  /** That it cannot, in the page's words (0.8.23); `unavailable` is its CLI's own, under Details. */
+  plain?: string | null;
   login: CliLoginView | null;
 }
 

@@ -52,7 +52,8 @@ export function createSkillHub(deps: {
 }
 
 export interface InstallResult {
-  drafts: { id: string; name: string; description: string; source: string; notes: string[]; warnings: string[] }[];
+  /** `flagged`: its source's scan found something, or could not be read (`FetchedSkill`). */
+  drafts: { id: string; name: string; description: string; source: string; notes: string[]; warnings: string[]; flagged: boolean }[];
   refused: { name: string; reason: string }[];
   notes: string[];
 }
@@ -169,6 +170,7 @@ export class SkillHub {
         source: fetched.source,
         notes: candidate.notes,
         warnings: fetched.warnings,
+        flagged: fetched.flagged,
       });
     }
     log.info("skills fetched for install", { ref, by: who.agentId, drafts: result.drafts.length, refused: result.refused.length });

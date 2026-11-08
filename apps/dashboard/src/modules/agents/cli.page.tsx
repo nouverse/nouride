@@ -103,10 +103,20 @@ export default function AgentCliPage({ agentId }: { agentId: string }) {
             </Details>
           ) : null}
           {/* Not signed in is said on the profile it is about, below; anything else here. */}
+          {/* In the page's words (0.8.23): why is its CLI's own, an install command or a process's error, under Details. */}
           {data.unavailable && !signedOut ? (
             <div className="alert alert-warning bg-warning/10 border border-warning/30 text-warning rounded-xl p-3 text-xs">
               <AlertTriangle size={16} className="shrink-0" aria-hidden="true" />
-              <span>{data.unavailable}</span>
+              {data.plain ? (
+                <div className="min-w-0 space-y-1">
+                  <span>{data.plain}</span>
+                  <Details>
+                    <p className="break-words">{data.unavailable}</p>
+                  </Details>
+                </div>
+              ) : (
+                <span>{data.unavailable}</span>
+              )}
             </div>
           ) : null}
         </div>

@@ -175,6 +175,17 @@ describe("the routes", () => {
     expect(JSON.stringify(await (await call("/web-search")).json())).not.toContain(KEY);
   });
 
+  test("a search that is not working says what it needs in the page's words; why, in the settings file's (0.8.23)", async () => {
+    const before = await (await call("/web-search")).json();
+    expect(before).toMatchObject({ effective: "free", plain: null });
+    // SearXNG with no address of its own: the file's words name its keys, the page's what to give it.
+    config.security.web.searchKind = "searxng";
+    const broken = (await (await call("/web-search")).json()) as { effective: string; problem: string; plain: string };
+    expect(broken.effective).toBe("unavailable");
+    expect(broken.problem).toContain("search_endpoint");
+    expect(broken.plain).toBe("It needs the address of your search service.");
+  });
+
   test("a save refused says which field on the page, and the server's own reason for the CLI", async () => {
     const refused = await call("/web-search", { mode: "searxng" });
     expect(refused.status).toBe(400);

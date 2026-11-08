@@ -383,7 +383,7 @@ export const memoryApi = {
   memoryTagPlan: () => request<TagTidyPlan>(`${control}/memory/tags/tidy`),
   /** One model call over the whole vocabulary. */
   suggestTagMerges: () =>
-    post<{ changes: TagTidyChange[]; dropped?: { from: string[]; into: string; why: string }[]; readable?: boolean }>(`${control}/memory/tags/tidy/model`, {}, { timeoutMs: 3 * 60_000 }),
+    post<{ changes: TagTidyChange[]; dropped?: { from: string[]; into: string; why: string }[]; readable?: boolean; plain?: string | null }>(`${control}/memory/tags/tidy/model`, {}, { timeoutMs: 3 * 60_000 }),
   /** Rewrites every episode it touches, after a vault backup. */
   applyTagTidy: (ids: string[], model: TagTidyChange[]) => post<{ at: string; changes: number; episodes: number }>(`${control}/memory/tags/tidy`, { ids, model }, { timeoutMs: 5 * 60_000 }),
   mergeTags: (from: string[], into: string) => post<{ at: string; episodes: number }>(`${control}/memory/tags/merge`, { from, into }, { timeoutMs: 5 * 60_000 }),
