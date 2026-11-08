@@ -8,7 +8,9 @@
  *
  * Four kinds of marker, each counted in the comments of every source file under `apps/` and `packages/` (`comments.ts`
  * reads them; a string a person or a model reads is not a comment and is never counted). Each file's counts are
- * recorded in `comment-markers.json`; a file may lose markers and may not gain them.
+ * recorded in `comment-markers.json`; a file may lose markers and may not gain them. A plan id and a person's name are
+ * allowed nowhere, whatever a record says: the comment says the reason the id pointed at, or what was decided rather
+ * than who decided it. Versions and dates may stay where they are, counted.
  *
  * `--write` records the counts as they are, only downward: it writes nothing while any file is over its record. A
  * raise is an edit of the table by hand, which a reviewer sees.
@@ -34,6 +36,12 @@ const AGENTS = "(?:Nox|Nix|Nexa|Nestor|Nouva|Kuro|Nero)";
  */
 const NOT_PLAN_IDS = "(?:MP3|MP4|ID3|BM25|S256|V8|R[1-5])";
 
+/** A section sign after a document's name, on the same line or at the start of the comment's next. */
+const SECTION = "(?: |\\s*\\n\\s*(?:\\*|//)\\s*)§";
+
+/** The documents of `docs/`, published with the code: cited by a section, they are a pointer, not a private plan. */
+const PUBLIC_DOCS = "(?:ARCHITECTURE|SPEC|CONTRIBUTING|TECH_DECISION|CLI|EVENTS|DASHBOARD|DEPLOY|README|SYSTEM_REQUIREMENTS|CLA)";
+
 export const MARKERS = {
   /** A release, `0.8.12` or `0.8.x`: when a line was written, which git says better. */
   version: /(?<![\w.@/-])v?0\.\d{1,2}\.(?:\d{1,2}|x)(?![\w.]*\d)/g,
@@ -41,13 +49,15 @@ export const MARKERS = {
   date: /\b20\d\d-[01]\d-[0-3]\d\b/g,
   /**
    * An id of a plan, a review or an audit finding, or the name of the private document that holds it: `G11`, `(D8)`,
-   * `REVIEW B2`, `HARDENING §8`, `RFC_SIDE_QUESTIONS`, `PLAN §3.3`, `(config-restart-ux)`.
+   * `REVIEW B2`, `HARDENING §8`, `RFC_SIDE_QUESTIONS`, `PLAN §3.3`, `SIMPLIFY RFC §1`, `(config-restart-ux)`. A
+   * document of `docs/` cited by its section (`ARCHITECTURE.md §3`) is one every reader has, and is not counted.
    */
   plan: new RegExp(
     [
       `(?<![\\w+\\-#.])(?<!lint:sql\`? )(?!${NOT_PLAN_IDS}(?![\\w+]))[A-Z]{1,2}\\d{1,3}(?![\\w+])`,
       "\\b(?:REVIEW|HARDENING|SHAPE_INVENTORY|HARDWARE_PENDING|CARRY_OVER_FROM_[\\w.]+|PLAN_TO_1\\.0|RFC_[A-Z_]*[A-Z]|v0\\.\\d+\\.[\\w.]*_RFC)\\b",
-      "\\bPLAN(?= §)",
+      `\\b(?!${PUBLIC_DOCS}(?:\\.md)?${SECTION})[A-Z][A-Z0-9_]{2,}(?:\\.md)?${SECTION}`,
+      "\\b[A-Z][A-Z0-9_]{3,} RFC\\b",
       "\\(`?(?:[a-z][a-z0-9]*-){2,}[a-z0-9]+`?\\)",
     ].join("|"),
     "g",
@@ -86,7 +96,7 @@ const WHY: Record<MarkerKind, string> = {
 };
 
 /** Kinds no file may hold: none is recorded, so the first one is growth. */
-const NONE_ALLOWED: readonly MarkerKind[] = [];
+const NONE_ALLOWED: readonly MarkerKind[] = ["plan", "name"];
 
 /** How many of each kind the comments of `source` hold. */
 export function markerCounts(source: string, jsx: boolean): Counts {
@@ -111,7 +121,7 @@ export function markerFindings(file: string, counts: Counts, recorded: Counts | 
   const findings: MarkerFinding[] = [];
   for (const kind of Object.keys(MARKERS) as MarkerKind[]) {
     const has = counts[kind] ?? 0;
-    const allowed = recorded?.[kind] ?? 0;
+    const allowed = NONE_ALLOWED.includes(kind) ? 0 : (recorded?.[kind] ?? 0);
     if (has > allowed) {
       const why = WHY[kind];
       const raise = NONE_ALLOWED.includes(kind) ? "" : `, or raise its record in \`scripts/comment-markers.json\` by hand`;
@@ -167,7 +177,7 @@ async function main(): Promise<void> {
   for (const [file, counts] of Object.entries(recorded)) {
     if (!seen.has(file)) findings.push({ file, rule: "record-stale", detail: "recorded and no longer exists — run `bun run scripts/check-markers.ts --write`" });
     for (const kind of NONE_ALLOWED.filter((none) => counts[none])) {
-      findings.push({ file, rule: "markers-grew", detail: `a ${kind} marker is never recorded: none is allowed` });
+      findings.push({ file, rule: "record-stale", detail: `a ${kind} marker is never recorded, as none is allowed — run \`bun run scripts/check-markers.ts --write\`` });
     }
   }
 

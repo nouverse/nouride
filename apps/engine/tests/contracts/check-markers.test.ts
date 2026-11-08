@@ -17,6 +17,14 @@ describe("what is a marker", () => {
     expect(markerCounts(source, false)).toEqual({ version: 1, date: 1, plan: 4, name: 2 });
   });
 
+  test("a private document cited by its section is a plan marker; a document of docs/ is not", () => {
+    expect(markerCounts("// Collections stay apart (KNOWLEDGE_BASE §11).\n", false)).toEqual({ plan: 1 });
+    // A long comment wraps between the document and its section.
+    expect(markerCounts("/**\n * Who answers, in order (SMART_AUTOMATION\n * §3.1), or none.\n */\n", false)).toEqual({ plan: 1 });
+    expect(markerCounts("// A new install starts careful (SIMPLIFY RFC §7.5).\n", false)).toEqual({ plan: 1 });
+    expect(markerCounts("// The dashboard speaks HTTP (ARCHITECTURE.md §3, DEPLOY.md § The upgrade floor).\n", false)).toEqual({});
+  });
+
   test("a string is not a comment: what a person or a model reads keeps its words", () => {
     const source = 'const prompt = "Released in 0.8.12 (G11) on 2026-11-03, the owner said"; // why\nconst url = "https://x.test/a"; // still code\n';
     expect(markerCounts(source, false)).toEqual({});
@@ -44,6 +52,12 @@ describe("a file against its record", () => {
     const lower = markerFindings("a.ts", { version: 1 }, { version: 2 });
     expect(lower.map((finding) => finding.rule)).toEqual(["record-stale"]);
     expect(lower[0]!.detail).toContain("--write");
+  });
+
+  test("a plan id or a name is refused whatever its record says: none is allowed", () => {
+    expect(markerFindings("a.ts", { plan: 1 }, { plan: 1 }).map((finding) => finding.rule)).toEqual(["markers-grew"]);
+    expect(markerFindings("a.ts", { name: 2 }, { name: 5 }).map((finding) => finding.rule)).toEqual(["markers-grew"]);
+    expect(markerFindings("a.ts", { plan: 1 }, undefined)[0]!.detail).not.toContain("raise its record");
   });
 
   test("what to write instead is said with the refusal", () => {
