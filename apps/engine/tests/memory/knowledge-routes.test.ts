@@ -65,6 +65,25 @@ describe("making a collection", () => {
     const made = await read(await app("operator", "acc-stranger").hono.request("/knowledge", json("POST", { name: "Notes" })));
     expect(made.collection).toMatchObject({ readers: { kind: "admins" } });
   });
+
+  test("a refused setting names its field on the page, as the form names it (0.8.23)", async () => {
+    const { hono } = app("admin");
+    await hono.request("/knowledge", json("POST", { name: "Ops" }));
+    const plain = async (method: string, path: string, body: unknown) => {
+      const refused = await hono.request(path, json(method, body));
+      expect(refused.status).toBe(400);
+      return (await read(refused)).plain;
+    };
+    const check = (what: string) => `Nothing was saved. Check ${what}, and try again.`;
+    expect(await plain("POST", "/knowledge", { name: "x".repeat(81) })).toBe(check("the name"));
+    expect(await plain("POST", "/knowledge", { description: "Lab results" })).toBe(check("the name"));
+    expect(await plain("POST", "/knowledge", { name: "Y", description: "x".repeat(301) })).toBe(check("what is in it"));
+    expect(await plain("POST", "/knowledge", { name: "Y", readers: { kind: "people", people: ["nobody"] } })).toBe(check("who may be answered from it"));
+    expect(await plain("POST", "/knowledge", { name: "Y", agents: ["ghost"] })).toBe(check("which agents look in it"));
+    expect(await plain("PATCH", "/knowledge/ops", { about: ["nobody"] })).toBe(check("who it is about"));
+    // The archive switch sends true or false, so nothing a person entered can be what was refused.
+    expect(await plain("PATCH", "/knowledge/ops", { archived: "yes" })).toBe("Nothing was saved. Check what you entered, and try again.");
+  });
 });
 
 describe("documents", () => {

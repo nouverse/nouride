@@ -14,10 +14,22 @@ import { collectionIdOf, TITLE_MAX, type CollectionSettings, type CollectionView
 import { atLeast, type Principal } from "@/modules/users/auth.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { jsonBody } from "../payloads.ts";
-import { NOT_SAVED, notSaved } from "../plain.ts";
+import { notSaved } from "../plain.ts";
 
 /** Files one upload may carry. */
 const FILES_PER_UPLOAD = 20;
+
+/** Each field of a collection's form a refusal names (0.8.23), as the form names it. The archive switch is none. */
+const COLLECTION_FIELDS = {
+  name: "the name",
+  description: "what is in it",
+  readers: "who may be answered from it",
+  agents: "which agents look in it",
+  about: "who it is about",
+} as const;
+
+/** Why a collection's settings cannot be, and in which field of its form. */
+type SettingsRefused = { error: string; field?: keyof typeof COLLECTION_FIELDS };
 
 /** Said in the chat a document waited from, once an admin approved it (0.8.23). */
 function approvedLine(title: string, collection: string): string {
@@ -95,33 +107,33 @@ export function registerKnowledgeRoutes(control: ControlApp, deps: ControlDeps):
   }
 
   /** The settings a request asks for, over `base`, or why they cannot be. */
-  function settingsFrom(body: Record<string, unknown>, base: CollectionSettings): CollectionSettings | string {
+  function settingsFrom(body: Record<string, unknown>, base: CollectionSettings): CollectionSettings | SettingsRefused {
     const next = { ...base };
     if (body.name !== undefined) {
-      if (typeof body.name !== "string" || !body.name.trim() || body.name.trim().length > 80) return "name is a line of at most 80 characters";
+      if (typeof body.name !== "string" || !body.name.trim() || body.name.trim().length > 80) return { field: "name", error: "name is a line of at most 80 characters" };
       next.name = body.name.trim();
     }
     if (body.description !== undefined) {
-      if (typeof body.description !== "string" || body.description.length > 300) return "description is at most 300 characters";
+      if (typeof body.description !== "string" || body.description.length > 300) return { field: "description", error: "description is at most 300 characters" };
       next.description = body.description.trim();
     }
     if (body.agents !== undefined) {
       if (body.agents === null) next.agents = null;
-      else if (!Array.isArray(body.agents) || !body.agents.every((id) => typeof id === "string" && deps.registry.get(id))) return "agents is null (every agent) or a list of agents this daemon has";
+      else if (!Array.isArray(body.agents) || !body.agents.every((id) => typeof id === "string" && deps.registry.get(id))) return { field: "agents", error: "agents is null (every agent) or a list of agents this daemon has" };
       else next.agents = body.agents as string[];
     }
     if (body.about !== undefined) {
       const keys = people().map((person) => person.key);
-      if (!Array.isArray(body.about) || !body.about.every((key) => typeof key === "string" && keys.includes(key))) return "about is a list of people's keys from People";
+      if (!Array.isArray(body.about) || !body.about.every((key) => typeof key === "string" && keys.includes(key))) return { field: "about", error: "about is a list of people's keys from People" };
       next.about = body.about as string[];
     }
     if (body.readers !== undefined) {
       const readers = readersFrom(body.readers, people().map((person) => person.key));
-      if (typeof readers === "string") return readers;
+      if (typeof readers === "string") return { field: "readers", error: readers };
       next.readers = readers;
     }
     if (body.archived !== undefined) {
-      if (typeof body.archived !== "boolean") return "archived is true or false";
+      if (typeof body.archived !== "boolean") return { error: "archived is true or false" };
       next.archived = body.archived;
     }
     return next;
@@ -146,8 +158,8 @@ export function registerKnowledgeRoutes(control: ControlApp, deps: ControlDeps):
     const maker = personOf(principal);
     const base: CollectionSettings = { name: "", description: "", agents: null, readers: maker ? { kind: "people", people: [maker] } : { kind: "admins" }, about: [], archived: false };
     const settings = settingsFrom(body, base);
-    if (typeof settings === "string") return c.json({ error: settings, plain: NOT_SAVED }, 400);
-    if (!settings.name) return c.json({ error: "a collection needs a name" }, 400);
+    if ("error" in settings) return c.json({ error: settings.error, plain: notSaved(settings.field && COLLECTION_FIELDS[settings.field]) }, 400);
+    if (!settings.name) return c.json({ error: "a collection needs a name", plain: notSaved(COLLECTION_FIELDS.name) }, 400);
     if (!atLeast(principal, "admin") && !onlyThem(settings.readers, maker) && settings.readers.kind !== "admins") {
       return c.json({ error: "only an admin opens a collection to more people than the one who made it" }, 403);
     }
@@ -167,7 +179,7 @@ export function registerKnowledgeRoutes(control: ControlApp, deps: ControlDeps):
     const body = await jsonBody(c);
     if (!body) return c.json({ error: "body must be a JSON object" }, 400);
     const settings = settingsFrom(body, current.settings);
-    if (typeof settings === "string") return c.json({ error: settings, plain: NOT_SAVED }, 400);
+    if ("error" in settings) return c.json({ error: settings.error, plain: notSaved(settings.field && COLLECTION_FIELDS[settings.field]) }, 400);
     if (body.readers !== undefined && !atLeast(principal, "admin") && !onlyThem(settings.readers, personOf(principal))) {
       return c.json({ error: "only an admin changes who may be answered from a collection" }, 403);
     }
