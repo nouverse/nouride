@@ -37,6 +37,9 @@ export async function updateCli(client: Client, args: readonly string[], steps: 
   const to = version ?? cli.standing?.offer ?? cli.tested?.highest;
   if (!to) fail(`no version of ${cli.name} to update to`, "Name one: nouride agents update <cli> <version>.");
   if (cli.version === to) {
+    // Let go of a hold a run cut off before its check left (its agents said "being updated" until a restart): the new
+    // version is checked when it first starts all the same (`checkVersion`).
+    await client.post(`/external-clis/${id}/release`);
     emit({ cli: id, version: to, changed: false });
     return say(`${GREEN}✓${RESET} ${cli.name} is at ${to} already`);
   }

@@ -42,12 +42,23 @@ export interface UpdateChecked {
   before?: string;
 }
 
+/**
+ * How long a hold outlives the command that took it: the ten minutes it waits for a turn, an install's few, and room to
+ * spare. A command cut off between its hold and its check (an agent's `nouride` call, at its 30 seconds, on the live box
+ * on 2026-11-08) left the CLI's agents held, "being updated", until the daemon restarted.
+ */
+const HOLD_LIMIT_MS = 30 * 60_000;
+
 export class CliUpdates {
-  private readonly holding = new Set<string>();
+  /** The CLIs held for an update, with when the hold was first taken. */
+  private readonly holding = new Map<string, number>();
   /** The CLIs whose version failed its check, with the version before it, by CLI id: the way back the Brain tab offers. */
   private readonly failing = new Map<string, { version: string; before?: string }>();
 
-  constructor(private readonly host: UpdateHost) {}
+  constructor(
+    private readonly host: UpdateHost,
+    private readonly now: () => number = Date.now,
+  ) {}
 
   /**
    * What a CLI's new version lacks of what Nouride uses, as the reason its agents cannot answer; null where it passed or
@@ -86,12 +97,20 @@ export class CliUpdates {
 
   /** Why a turn in this CLI cannot start now — it is being updated — or null. */
   heldFor(row: CliRow): string | null {
-    return this.holding.has(row.id) ? `${row.name} is being updated: its agents answer again once that is done, in a minute or two` : null;
+    const since = this.holding.get(row.id);
+    if (since === undefined) return null;
+    if (this.now() - since > HOLD_LIMIT_MS) {
+      this.holding.delete(row.id);
+      log.warn("a coding CLI's update hold expired, its command never came back: its agents answer again", { cli: row.id });
+      return null;
+    }
+    return `${row.name} is being updated: its agents answer again once that is done, in a minute or two`;
   }
 
   /** Held: no new turn starts in it. How many of its CLIs still work; at none, they are stopped for the install. */
   async hold(cliId: string): Promise<number> {
-    this.holding.add(cliId);
+    // The first hold's time: the command asks again every two seconds while a turn runs.
+    if (!this.holding.has(cliId)) this.holding.set(cliId, this.now());
     const mine = this.host.runningEntries().filter(([, connection]) => connection.row.id === cliId);
     const busy = mine.filter(([, connection]) => this.host.occupied(connection)).length;
     if (busy === 0) for (const [agentId] of mine) await this.host.stopAgent(agentId);

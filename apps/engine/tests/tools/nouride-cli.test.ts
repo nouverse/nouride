@@ -167,6 +167,18 @@ describe("it covers what exec covers", () => {
     expect(seen.map((args) => args.timeout_ms)).toEqual([240_000, 60_000, undefined, 240_000]);
   });
 
+  test("a coding CLI's update runs in the background unless asked otherwise: cut off at 30 seconds it left the CLI held (2026-11-08)", async () => {
+    const seen: Record<string, unknown>[] = [];
+    const spy = { requiresApproval: false, definition: { name: "exec", description: "", parameters: { type: "object" } },
+      execute: async (args: Record<string, unknown>) => { seen.push(args); return { content: "", isError: false }; } };
+    const tool = createNourideCliTool({ exec: spy as never, installDir: install, command: binary, changesSharedTools: () => true });
+    await tool.execute({ args: ["agents", "update", "claude-code"] }, ctx);
+    await tool.execute({ args: ["--json", "agents", "update", "codex", "2.5.0"] }, ctx);
+    await tool.execute({ args: ["agents", "update", "codex"], background: false }, ctx);
+    await tool.execute({ args: ["agents", "scan"] }, ctx);
+    expect(seen.map((args) => args.background)).toEqual([true, true, false, undefined]);
+  });
+
   test("it tells `exec` the call is the tool, on the context and not in the arguments", async () => {
     /**
      * `exec` refuses this daemon's own CLI and points here, and this is what stops the redirect

@@ -81,6 +81,22 @@ describe("the update, held, installed, checked", () => {
     expect(updates.heldFor(CLAUDE)).toBeNull();
   });
 
+  test("a hold whose command never came back expires: its agents answer again, and a live one does not (live box, 2026-11-08)", async () => {
+    let now = 0;
+    const box = host([], async () => running("claude-code"));
+    const updates = new CliUpdates(box.h, () => now);
+    await updates.hold("claude-code");
+    // Asked again every two seconds while a turn runs: the first hold's time counts.
+    now = 20 * 60_000;
+    await updates.hold("claude-code");
+    expect(updates.heldFor(CLAUDE)).not.toBeNull();
+    now = 30 * 60_000 + 1;
+    expect(updates.heldFor(CLAUDE)).toBeNull();
+    // And it stays let go.
+    now = 0;
+    expect(updates.heldFor(CLAUDE)).toBeNull();
+  });
+
   test("checked: released, started again for its first agent, and a reason the version before left goes", async () => {
     const started: string[] = [];
     const box = host([], async (one) => (started.push(one.config.id), { info: { agentInfo: { version: "0.100.0" } } }) as unknown as CliConnection);
@@ -187,6 +203,18 @@ describe("`nouride agents update`", () => {
       "post /external-clis/claude-code/check",
     ]);
     expect(lines.join("\n")).toContain("Claude Code is at 0.100.0, from 0.95.0: its handshake has what Nouride uses");
+  });
+
+  test("at the version already: nothing installed, and a hold a cut-off run left is let go (live box, 2026-11-08)", async () => {
+    const { client, order } = daemon(0);
+    SCANNED.version = "0.100.0";
+    try {
+      await updateCli(client, ["claude-code"], steps(order));
+    } finally {
+      SCANNED.version = "0.95.0";
+    }
+    expect(order).toEqual(["get /external-clis?fresh=1", "post /external-clis/claude-code/release"]);
+    expect(lines.join("\n")).toContain("Claude Code is at 0.100.0 already");
   });
 
   test("the way back is the same with the version named", async () => {

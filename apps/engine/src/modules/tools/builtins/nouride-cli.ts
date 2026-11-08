@@ -96,6 +96,15 @@ function installs(argv: readonly string[]): boolean {
   return argv[0] === "tools" && argv[1] === "run";
 }
 
+/**
+ * `agents update <cli>`: up to ten minutes' wait for a turn, then an install, far past a foreground command's 30 seconds.
+ * Cut off between its hold and its check, it left the CLI's agents held until a restart (the live box, 2026-11-08), so
+ * it runs in the background unless the agent says otherwise, and the agent is told when it ends.
+ */
+function updatesCli(argv: readonly string[]): boolean {
+  return argv[0] === "agents" && argv[1] === "update";
+}
+
 /** `cron add|update|enable` and `webhook add|rotate` — what would make or widen scheduled work without a card. */
 function schedulesDirectly(argv: readonly string[]): boolean {
   const [verb, action] = argv;
@@ -170,7 +179,7 @@ export function createNourideCliTool(options: NourideCliOptions): Tool {
     // An install takes longer than a command's 30 seconds: `npm i -g` of a coding CLI was cut off at them on the live
     // box, reported as failed, and finished all the same (0.8.1). The longest a foreground command may have, unless asked.
     ...(typeof args.timeout_ms === "number" ? { timeout_ms: args.timeout_ms } : installs(cliArgv(args) ?? []) ? { timeout_ms: INSTALL_TIMEOUT_MS } : {}),
-    ...(typeof args.background === "boolean" ? { background: args.background } : {}),
+    ...(typeof args.background === "boolean" ? { background: args.background } : updatesCli(cliArgv(args) ?? []) ? { background: true } : {}),
     ...(typeof args.on_complete === "string" ? { on_complete: args.on_complete } : {}),
     /**
      * The one field that is not written down anywhere.
