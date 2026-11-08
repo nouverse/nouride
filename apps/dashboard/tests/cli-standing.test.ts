@@ -178,5 +178,10 @@ describe("the Brain tab of an agent that works in it", () => {
     createRoot(host).render(React.createElement(QueryClientProvider, { client: new QueryClient({ defaultOptions: { queries: { retry: false } } }) }, React.createElement(RouterProvider, { router } as never)));
     await eventually(() => host.querySelector("[data-standing]") !== null, 3_000, "the standing");
     expect(plainText(host.querySelector("[data-standing] > p")!).replace(/\s+/g, " ").trim()).toBe("too old This Codex is older than this Nouride supports. Update it.");
+    // One Details in the card: its numbers beside the command it starts, not a second one under the standing.
+    const card = host.querySelector("[data-standing]")!.closest("section")!;
+    expect(card.querySelectorAll("details")).toHaveLength(1);
+    expect(card.querySelector("details")!.textContent).toContain("codex-acp");
+    expect(card.querySelector("details")!.textContent).toContain("2.1.0 · an update installs 2.5.0");
   });
 });
