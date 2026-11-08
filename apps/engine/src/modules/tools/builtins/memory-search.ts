@@ -49,8 +49,8 @@ export function createMemorySearchTool(memory: MemoryToolsDeps): Tool {
         "answer would come from an earlier conversation. Memory is written in English whatever language was " +
         "spoken, and the search matches words: query in English keywords (names, things, topics the answer " +
         "would contain), not the question as asked. Nothing found: try a synonym or a broader word, then the " +
-        "words as they were said (conversations not filed yet keep their own language, and documents are in the " +
-        "language they were written in: search them in its words too). Narrow by date or person; `kind` " +
+        "words as they were said (conversations not filed yet keep their own language, and a document keeps its own, " +
+        "with an English title: search it in either). Narrow by date or person; `kind` " +
         "\"knowledge\" returns documents only. Only what this chat may see is returned.",
       parameters: {
         type: "object",

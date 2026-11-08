@@ -208,8 +208,15 @@ describe("what the agent reads", () => {
     expect(text).not.toContain("1.5 million");
   });
 
+  test("memory_search tells an agent a document keeps its own language, with an English title, and to search in either", async () => {
+    const { h } = await home();
+    expect(createMemorySearchTool(h.memory).definition.description).toContain(
+      "conversations not filed yet keep their own language, and a document keeps its own, with an English title: search it in either",
+    );
+  });
+
   test("the memory harness tells an agent documents keep their own language, and to cite them", () => {
     const lines = renderMemory({ ctx: { harness: {}, tools: [{ name: "memory_search" }] }, toolNames: [], gated: [], free: [] } as never);
-    expect(lines).toContain("- Documents people keep for reference (an SOP, a manual, a price list) are found by `memory_search` too, labelled `document`, and `memory_read` with `document` opens one. They keep the language they were written in: search them in its words too. Answer from one with the document and section named.");
+    expect(lines).toContain("- Documents people keep for reference (an SOP, a manual, a price list) are found by `memory_search` too, labelled `document`, and `memory_read` with `document` opens one. Each keeps its own language, with an English title: search in either. Answer from one with the document and section named.");
   });
 });

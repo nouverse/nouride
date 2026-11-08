@@ -75,6 +75,21 @@ export async function addDocument(root: string, id: string, name: string, bytes:
   return { path };
 }
 
+/**
+ * A document's title written beside its file's name in the collection's `knowledge.toml` (0.8.23), or taken off with
+ * null. The file is never renamed: it keeps the name it came with, and the title is what search finds it by.
+ */
+export async function writeTitle(root: string, id: string, path: string, title: string | null): Promise<Collection | KnowledgeRefusal> {
+  if (!isCollectionId(id) || !dirExists(join(root, id))) return { refused: `There is no collection called "${id}".`, why: "missing" };
+  if (path.split("/").some((part) => !part || part === "." || part === ".." || part.startsWith("."))) return { refused: `"${path}" is not a document's path.`, why: "name" };
+  if (title !== null && !statFile(join(root, id, path))) return { refused: `There is no document "${path}" in "${id}".`, why: "missing" };
+  const { settings } = readCollection(root, id);
+  const titles = { ...settings.titles };
+  if (title === null) delete titles[path];
+  else titles[path] = title;
+  return await writeSettings(root, id, { ...settings, titles });
+}
+
 /** A document's file, by its path in the collection; false when there was none. A path out of the collection is never one. */
 export function removeDocument(root: string, id: string, path: string): boolean {
   if (!isCollectionId(id) || path.split("/").some((part) => !part || part === "." || part === ".." || part.startsWith("."))) return false;

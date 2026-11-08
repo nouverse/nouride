@@ -127,6 +127,22 @@ describe("nouride knowledge", () => {
     expect(missing.out + missing.err).toContain(`${join(dir, "nowhere.md")} is not a file here.`);
   }, 60_000);
 
+  // 0.8.23: the words search finds a document by, beside its file's name, so English finds one in another language.
+  test("a document titled, found by its title's words, its own title back when taken off", async () => {
+    writeFileSync(join(dir, "izin.md"), "Izin usaha diterbitkan pemerintah.\n");
+    expect((await cli("knowledge", "add", join(dir, "izin.md"), "--to", "ops")).code).toBe(0);
+    const titled = await cli("knowledge", "title", "Ops/izin.md", "Business", "licence", "(izin", "usaha)");
+    expect(titled.code).toBe(0);
+    expect(titled.out).toContain('✓ ops/izin.md is titled "Business licence (izin usaha)"');
+    expect((await cli("knowledge", "search", "business licence", "--in", "ops")).out).toContain("Business licence (izin usaha)");
+    const off = await cli("knowledge", "title", "ops/izin.md", "");
+    expect(off.code).toBe(0);
+    expect(off.out).toContain("✓ ops/izin.md has its own title again: izin");
+    expect((await cli("knowledge", "title", "ops/gone.md", "Gone")).code).toBe(1);
+    expect((await cli("knowledge", "title", "ops/izin.md")).code).toBe(2);
+    expect((await cli("knowledge", "rm", "ops/izin.md")).code).toBe(0);
+  }, 60_000);
+
   test("misuse exits 2, saying how; a collection that is not there exits 1", async () => {
     expect((await cli("knowledge", "add", "-", "--to", "ops")).code).toBe(2);
     expect((await cli("knowledge", "add", join(dir, "runbook.md"))).code).toBe(2);

@@ -16,14 +16,14 @@
  * sees a half-file), and the previous version is kept as a rotating backup before every write.
  */
 
-import { basename, join, readFileBytes, readTextFileIfExists, resolveWithin, statFile, writeTextFileAtomic } from "@nouride/runtime";
+import { join, readTextFileIfExists, writeTextFileAtomic } from "@nouride/runtime";
 import { rotateBackups } from "@/commons/backups.ts";
-import { sentName, storedName } from "@/modules/attachments/store.ts";
 import type { AttachmentReadOptions } from "@/modules/tools/builtins/attachment.ts";
 import { withFileLock } from "@/commons/file-lock.ts";
 import { appendBlock, hasSection, leadingHeading, replaceSection } from "@/modules/tools/builtins/memory-markdown.ts";
 import type { Tool, ToolContext, ToolResult } from "@nouride/shared";
 import { memoryTextIsEnglish, WRITE_IN_ENGLISH, type Memory, type Speaker } from "@/modules/memory/index.ts";
+import { keepDocument } from "@/modules/tools/builtins/memory-keep.ts";
 
 const MEMORY_FILE = "MEMORY.md";
 
@@ -277,7 +277,7 @@ export function createMemoryWriteTool(memory?: MemoryToolsDeps, files?: Pick<Att
             "tastes, plans) right away (change=add, update or remove); their name is `person_record`. " +
             "The rest is filed for you each night. about=knowledge keeps a document someone hands you to keep for " +
             "reference (an SOP, a manual, a file, a page): `collection` names where (a new name makes one for the people " +
-            "here), `title` and the text as `content`, or a `file`; `source` is a page's address. A PDF, Word, Excel or " +
+            "here), an English `title`, and the text as `content` or a `file`; `source` is a page's address. A PDF, Word, Excel or " +
             "PowerPoint file is read for its text, so give the file itself, not text taken out of it; a scan, with no " +
             "text, is kept but not searched. "
           : "Update your MEMORY.md. ") +
@@ -290,7 +290,7 @@ export function createMemoryWriteTool(memory?: MemoryToolsDeps, files?: Pick<Att
             ? {
                 about: { type: "string", enum: ["agent", "person", "knowledge"], description: '"agent" is your MEMORY.md; "person" is the person you are talking to; "knowledge" is a document kept for reference.' },
                 collection: { type: "string", description: "For about=knowledge: the collection's name." },
-                title: { type: "string", description: "For about=knowledge with `content`: the document's title." },
+                title: { type: "string", description: "For about=knowledge: what the document is, in English with its own terms, e.g. \"NIB, business registration certificate (Nomor Induk Berusaha)\". Search finds it by these words in any language." },
                 file: { type: "string", description: "For about=knowledge: a file to keep, an attachment of this chat or one in your workspace." },
                 source: { type: "string", description: "For about=knowledge: the address of the page `content` was read from." },
                 section: {
@@ -315,7 +315,7 @@ export function createMemoryWriteTool(memory?: MemoryToolsDeps, files?: Pick<Att
     async execute(args, ctx): Promise<ToolResult> {
       if (args.about !== undefined && args.about !== "agent" && args.about !== "person" && args.about !== "knowledge") return { content: '`about` must be "agent", "person" or "knowledge".', isError: true };
       // A document goes to the knowledge base or nowhere: never into MEMORY.md, which a harness without one would reach.
-      if (args.about === "knowledge") return memory?.knowledge ? await keepDocument(memory.knowledge, args, ctx, files) : { content: "Documents cannot be kept here: this Nouride has no knowledge base.", isError: true };
+      if (args.about === "knowledge") return memory?.knowledge ? await keepDocument(memory.knowledge, args, ctx, speakerOf(ctx), files) : { content: "Documents cannot be kept here: this Nouride has no knowledge base.", isError: true };
       if (args.about !== "person" || !memory) return await writeAgentMemory(args, ctx);
       const change = args.change ?? "add";
       if (change !== "add" && change !== "update" && change !== "remove") return { content: "`change` must be add, update or remove.", isError: true };
@@ -348,75 +348,6 @@ export function createMemoryWriteTool(memory?: MemoryToolsDeps, files?: Pick<Att
       };
     },
   };
-}
-
-/** A file the agent may hand over: one under the roots this turn may read, a chat's attachments among them. */
-function fileWithin(ctx: ToolContext, asked: string): string | null {
-  const roots = [ctx.workspaceDir, ...ctx.workspaceRoots, ...(ctx.privateDir ? [ctx.privateDir] : []), ...(ctx.readOnlyRoots ?? [])];
-  for (const root of roots) {
-    try {
-      const path = resolveWithin(root, asked);
-      if (statFile(path) && !statFile(path)!.isDirectory) return path;
-    } catch {
-      // Not under this root: the next one may hold it.
-    }
-  }
-  return null;
-}
-
-/**
- * The name a file of this chat was sent under, not the one it is stored by. Storing makes a name safe for a path and
- * puts a prefix in front: a file sent on Telegram with a space in its name was kept with an underscore for it (0.8.20's
- * check on the box). The conversation's list of files has the name as it was sent; a file not in it keeps its own.
- */
-function nameAsSent(path: string, ctx: ToolContext, files?: Pick<AttachmentReadOptions, "list">): string {
-  const stored = storedName(basename(path));
-  const listed = files?.list(ctx, 200).find((file) => file.localPath !== undefined && basename(file.localPath) === stored);
-  return listed?.name ?? sentName(basename(path));
-}
-
-/**
- * `memory_write` about=knowledge (KNOWLEDGE_BASE §9, 0.8.20): a document someone handed over to keep, into a collection.
- * A new collection is for the people in this chat; one wider than them waits for an admin's yes, which the agent says.
- */
-async function keepDocument(knowledge: NonNullable<MemoryToolsDeps["knowledge"]>, args: Record<string, unknown>, ctx: ToolContext, files?: Pick<AttachmentReadOptions, "list">): Promise<ToolResult> {
-  const collection = typeof args.collection === "string" ? args.collection.trim() : "";
-  if (!collection) return { content: "`collection` must name where to keep it: an existing collection, or a new name.", isError: true };
-  const text = typeof args.content === "string" ? args.content : "";
-  const asked = typeof args.file === "string" ? args.file.trim() : "";
-  if (!text.trim() && !asked) return { content: "Give the document as `content`, or a `file` to keep.", isError: true };
-  let file: { name: string; bytes: Uint8Array } | undefined;
-  if (asked) {
-    const path = fileWithin(ctx, asked);
-    if (!path) return { content: `No file "${asked}" that you may read here: an attachment of this chat, or one in your workspace.`, isError: true };
-    file = { name: nameAsSent(path, ctx, files), bytes: await readFileBytes(path) };
-  }
-  const result = await knowledge.keep(speakerOf(ctx), {
-    collection,
-    ...(typeof args.title === "string" && args.title.trim() ? { title: args.title.trim() } : {}),
-    ...(text.trim() ? { text } : {}),
-    ...(file ? { file } : {}),
-    ...(typeof args.source === "string" && args.source.trim() ? { source: args.source.trim() } : {}),
-    ...(ctx.senderName?.trim() ? { name: ctx.senderName.trim() } : {}),
-    where: `in a ${ctx.chatType === "dm" ? "one-to-one" : "group"} chat with ${ctx.agentId}`,
-    day: new Date().toISOString().slice(0, 10),
-  });
-  if ("refused" in result) return { content: result.refused, isError: true };
-  if ("waiting" in result) {
-    return {
-      content: `"${result.waiting.collection}" is open to more people than this chat, so the document waits for an admin's yes on the dashboard before it joins it. Tell them so.`,
-      isError: false,
-      metadata: { about: "knowledge", waiting: true },
-    };
-  }
-  const { saved } = result;
-  const made = result.made ? ", a collection made now for the people in this chat" : "";
-  const read = saved.archived
-    ? "The collection is archived, so it is kept but not searched until someone brings it back."
-    : saved.status === "indexed"
-      ? "It can be searched now."
-      : `It is kept but not searched: ${saved.reason ?? "it could not be read"}`;
-  return { content: `Kept in "${saved.collection}" as ${saved.path}${made}. ${read}`, isError: false, metadata: { about: "knowledge" } };
 }
 
 /**

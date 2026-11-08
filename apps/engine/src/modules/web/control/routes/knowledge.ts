@@ -10,7 +10,7 @@
  */
 
 import { idsOf } from "@/modules/people/match.ts";
-import { collectionIdOf, type CollectionSettings, type CollectionView, type KnowledgeReaders } from "@/modules/memory/index.ts";
+import { collectionIdOf, TITLE_MAX, type CollectionSettings, type CollectionView, type KnowledgeReaders } from "@/modules/memory/index.ts";
 import { atLeast, type Principal } from "@/modules/users/auth.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { jsonBody } from "../payloads.ts";
@@ -272,6 +272,26 @@ export function registerKnowledgeRoutes(control: ControlApp, deps: ControlDeps):
     if (!(await memory().knowledge.remove(id, path))) return c.json({ error: `no document "${path}" in "${id}"` }, 404);
     deps.audit.record({ action: "knowledge_document_removed", actor: principal.actor, details: { collection: id, document: path } });
     return c.json({ ok: true });
+  });
+
+  /**
+   * A document's title, what search finds it by in any language (0.8.23): `{ "title": "…" }` sets it, `null` or "" takes
+   * it off. The file keeps its name.
+   */
+  control.patch("/knowledge/:id/documents", async (c) => {
+    const principal = c.get("principal");
+    const no = refusal(principal, "operator");
+    if (no) return c.json({ error: no[0] }, no[1]);
+    const id = c.req.param("id");
+    const path = c.req.query("path") ?? "";
+    const body = await jsonBody(c);
+    if (!body || (body.title !== null && typeof body.title !== "string")) return c.json({ error: "title is a line of words, or null to take it off" }, 400);
+    const title = typeof body.title === "string" && body.title.trim() ? body.title.trim() : null;
+    if (title && title.length > TITLE_MAX) return c.json({ error: `title is at most ${TITLE_MAX} characters`, plain: NOT_SAVED }, 400);
+    const done = await memory().knowledge.retitle(id, path, title);
+    if ("refused" in done) return c.json({ error: done.refused, plain: refusedWords(done.why) }, done.why === "missing" ? 404 : 400);
+    deps.audit.record({ action: "knowledge_document_titled", actor: principal.actor, details: { collection: id, document: path, titled: title !== null } });
+    return c.json({ document: done.document });
   });
 
   /** Documents saved from a chat into a collection wider than that chat, waiting for an admin's yes (§9). */

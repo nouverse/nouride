@@ -13,6 +13,7 @@ import { readCollections, SETTINGS_FILE, type Collection } from "./collections.t
 import { extract, type Extracted } from "./extract.ts";
 import type { KnowledgeDocument, KnowledgePort } from "./knowledge.store.ts";
 import type { OfficeReader } from "./office.ts";
+import { TRAIL_MARK } from "./sections.ts";
 
 const log = createLogger("memory.knowledge");
 
@@ -48,6 +49,17 @@ function filesOf(collection: Pick<Collection, "dir">): { path: string; full: str
   return out.sort((a, b) => a.path.localeCompare(b.path));
 }
 
+/**
+ * A read with the title given beside the file's name (0.8.23), first in every section's trail: the trail is indexed with
+ * each section, by words and by meaning, so an English title finds a document written in another language. What the
+ * file says of itself stays in the trail after it, its words still found.
+ */
+function titled(read: Extracted, title: string | undefined): Extracted {
+  if (!title || title === read.title) return read;
+  if (read.kind !== "read") return { ...read, title };
+  return { ...read, title, sections: read.sections.map((section) => ({ ...section, trail: `${title}${TRAIL_MARK}${section.trail}` })) };
+}
+
 function documentFrom(collection: string, file: { path: string; size: number; mtime: number }, read: Extracted, now: number): KnowledgeDocument {
   return {
     collection,
@@ -73,8 +85,10 @@ export async function syncKnowledge(deps: { root: string; store: KnowledgePort; 
     for (const file of filesOf(collection)) {
       const before = known.get(file.path);
       known.delete(file.path);
-      // One that waited on a program is tried again each time: the program may be installed now.
-      if (before && before.size === file.size && before.mtime === file.mtime && !before.needs) {
+      const title = collection.settings.titles?.[file.path];
+      // One that waited on a program is tried again each time: the program may be installed now. One given a title since
+      // it was read is read again with it, as when `knowledge.toml` is written by hand.
+      if (before && before.size === file.size && before.mtime === file.mtime && !before.needs && (title === undefined || before.title === title)) {
         report.unchanged += 1;
         continue;
       }
@@ -86,6 +100,7 @@ export async function syncKnowledge(deps: { root: string; store: KnowledgePort; 
         log.warn("a knowledge document could not be read", { collection: collection.id, path: file.path, error: err instanceof Error ? err.message : String(err) });
         read = { kind: "unreadable", title: file.path, reason: "It could not be read, so it is kept here but not searched." };
       }
+      read = titled(read, title);
       deps.store.replace(documentFrom(collection.id, file, read, deps.now()), read.kind === "read" ? read.sections : []);
       if (read.kind === "read") report.indexed += 1;
       else report.notSearched += 1;

@@ -234,7 +234,7 @@ export const GRAMMAR: Readonly<Record<string, CommandGrammar>> = {
   sessions: { forms: { "": NONE, "*": NONE } },
   turns: { forms: { "": ["--limit <n>", "--agent <id>"], list: ["--limit <n>", "--agent <id>"], show: NONE }, untaught: ["list"] },
   knowledge: {
-    forms: { "": NONE, list: NONE, search: ["--in <collection>"], add: ["--to <collection>", "--name <file name>"], reindex: NONE, archive: NONE, unarchive: NONE, rm: NONE },
+    forms: { "": NONE, list: NONE, search: ["--in <collection>"], add: ["--to <collection>", "--name <file name>"], reindex: NONE, archive: NONE, unarchive: NONE, title: NONE, rm: NONE },
     untaught: ["list"],
   },
   events: { forms: { "": ["--turn <id>", "--gateway <id>", "--chat <id>", "--kinds <kinds>", "--since <seq>", "--limit <n>", "-f", "--follow"] } },

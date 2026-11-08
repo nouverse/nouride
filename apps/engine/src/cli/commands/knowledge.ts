@@ -97,7 +97,7 @@ function base64(bytes: Uint8Array): string {
 }
 
 export async function knowledge(client: Client, args: string[]): Promise<void> {
-  knownAction("knowledge", args[0], ["list", "search", "add", "reindex", "archive", "unarchive", "rm"]);
+  knownAction("knowledge", args[0], ["list", "search", "add", "reindex", "archive", "unarchive", "title", "rm"]);
   const action = args[0] && !args[0].startsWith("-") ? args[0] : "list";
 
   if (action === "list") {
@@ -161,6 +161,22 @@ export async function knowledge(client: Client, args: string[]): Promise<void> {
     const { collection } = await client.patch<{ collection: CollectionRow | null }>(`/knowledge/${encodeURIComponent(id)}`, { archived: action === "archive" });
     emit({ collection });
     return say(action === "archive" ? `✓ ${id} is kept, and no longer searched` : `✓ ${id} is searched again`);
+  }
+
+  // title <collection>/<path> <words…>: what search finds a document by, beside its file's name; "" takes it off.
+  if (action === "title") {
+    const target = args[1];
+    const slash = target ? target.indexOf("/") : -1;
+    const given = args.slice(2);
+    if (!target || slash <= 0 || slash === target.length - 1 || given.length === 0) {
+      usageError('usage: nouride knowledge title <collection>/<file> <words>', 'the words search finds the document by, in English for any language; "" takes them off');
+    }
+    const id = await collectionId(client, target.slice(0, slash));
+    const path = target.slice(slash + 1);
+    const title = given.join(" ").trim();
+    const { document } = await client.patch<{ document: { title: string } | null }>(`/knowledge/${encodeURIComponent(id)}/documents?path=${encodeURIComponent(path)}`, { title: title || null });
+    emit({ document });
+    return say(title ? `✓ ${id}/${path} is titled "${document?.title ?? title}"` : `✓ ${id}/${path} has its own title again: ${document?.title ?? path}`);
   }
 
   // rm <collection>/<path>

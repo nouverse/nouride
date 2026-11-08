@@ -36,7 +36,16 @@ export interface CollectionSettings {
   about: readonly string[];
   /** Kept, never searched. */
   archived: boolean;
+  /**
+   * A document's title by its path, kept beside its file's name (0.8.23): what search finds it by in any language. An
+   * agent gives an English one when it keeps a document; a person sets one on the dashboard. Absent, a document's title
+   * is its first heading or its file's name.
+   */
+  titles?: Readonly<Record<string, string>>;
 }
+
+/** A title's length at most: a line naming a document, not its summary. */
+export const TITLE_MAX = 200;
 
 export interface Collection {
   /** The folder's name: the collection's id in every item and route. */
@@ -94,6 +103,8 @@ export function parseSettings(id: string, source: string | null): { settings: Co
   if (raw.agents !== undefined && !agents) problems.push("agents is not a list of agent ids");
   const about = raw.about === undefined ? [] : strings(raw.about);
   if (raw.about !== undefined && !about) problems.push("about is not a list of people's keys");
+  const titles = raw.titles === undefined ? {} : titlesFrom(raw.titles);
+  if (!titles) problems.push("titles is not a table of file names and their titles");
   const settings: CollectionSettings = {
     name: typeof raw.name === "string" && raw.name.trim() ? raw.name.trim() : id,
     description: typeof raw.description === "string" ? raw.description.trim() : "",
@@ -101,8 +112,19 @@ export function parseSettings(id: string, source: string | null): { settings: Co
     readers: "problem" in readers ? { kind: "admins" } : readers,
     about: about ?? [],
     archived: raw.archived === true,
+    titles: titles ?? {},
   };
   return problems.length ? { settings, problem: problems.join("; ") } : { settings };
+}
+
+/** `[titles]` as written: each a file's path and a line naming it. One that is not is dropped, and the rest kept. */
+function titlesFrom(value: unknown): Record<string, string> | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
+  const titles: Record<string, string> = {};
+  for (const [path, title] of Object.entries(value)) {
+    if (typeof title === "string" && title.trim() && path.trim()) titles[path] = title.trim().slice(0, TITLE_MAX);
+  }
+  return titles;
 }
 
 /** `knowledge.toml` as the dashboard writes it: every key that says something, the default ones left out. */
@@ -113,6 +135,9 @@ export function renderSettings(settings: CollectionSettings): string {
   lines.push(`readers = ${readersToml(settings.readers)}`);
   if (settings.about.length) lines.push(`about = ${JSON.stringify(settings.about)}`);
   if (settings.archived) lines.push("archived = true");
+  // A table comes after the keys in TOML: the titles last, by path, so the file reads the same each time it is written.
+  const titles = Object.entries(settings.titles ?? {}).sort(([a], [b]) => a.localeCompare(b));
+  if (titles.length) lines.push("", "[titles]", ...titles.map(([path, title]) => `${JSON.stringify(path)} = ${JSON.stringify(title)}`));
   return `${lines.join("\n")}\n`;
 }
 

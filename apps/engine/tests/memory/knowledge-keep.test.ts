@@ -62,17 +62,17 @@ describe("keeping a document from a chat", () => {
   test("a file this turn may read is kept as it is; one outside is refused", async () => {
     const { h, workspace, keep, found } = await home();
     writeFileSync(join(workspace, "prices.csv"), "sku,price\nA,15000\n");
-    expect((await keep({ collection: "Shop", file: "prices.csv" })).isError).toBe(false);
+    expect((await keep({ collection: "Shop", title: "Shop price list", file: "prices.csv" })).isError).toBe(false);
     expect(readFileSync(join(h.knowledgeRoot, "shop", "prices.csv"), "utf8")).toBe("sku,price\nA,15000\n");
     expect(await found(GADING_DM, "15000")).toEqual(["knowledge:shop/prices.csv#0"]);
-    const outside = await keep({ collection: "Shop", file: "/etc/hosts" });
+    const outside = await keep({ collection: "Shop", title: "Hosts", file: "/etc/hosts" });
     expect(outside).toMatchObject({ isError: true, content: 'No file "/etc/hosts" that you may read here: an attachment of this chat, or one in your workspace.' });
   });
 
   test("a file with no text in it is kept, and the agent is told it is not searched and why, never that it can be", async () => {
     const { h, workspace, keep } = await home();
     writeFileSync(join(workspace, "blank.txt"), "\n\n");
-    expect(await keep({ collection: "Legal", file: "blank.txt" })).toMatchObject({
+    expect(await keep({ collection: "Legal", title: "A blank page", file: "blank.txt" })).toMatchObject({
       isError: false,
       content: 'Kept in "Legal" as blank.txt, a collection made now for the people in this chat. It is kept but not searched: It has no text to search, as a scanned page has none, so it is kept here but not searched.',
     });
@@ -98,7 +98,7 @@ describe("keeping a document from a chat", () => {
     if (!isStored(sent)) throw new Error("the attachment was not stored");
     // Stored by another name, so that two files of one name never meet: the agent is handed this path.
     expect(sent.localPath.endsWith("/Gate.md")).toBe(false);
-    expect((await keep({ collection: "Notes", file: sent.localPath })).isError).toBe(false);
+    expect((await keep({ collection: "Notes", title: "The side gate", file: sent.localPath })).isError).toBe(false);
     expect(readFileSync(join(h.knowledgeRoot, "notes", "Gate.md"), "utf8")).toContain("The side gate sticks");
     expect(await found(GADING_DM, "side gate")).toEqual(["knowledge:notes/Gate.md#0"]);
     // A file carried into a group chat is copied under one more prefix.
@@ -120,7 +120,7 @@ describe("keeping a document from a chat", () => {
       { ref: "r1", name: "Back gate (rules).md", localPath: sent.localPath },
     ];
     const write = createMemoryWriteTool(h.memory, { list: () => files as never });
-    const keep = (file: string) => write.execute({ about: "knowledge", collection: "Notes", file }, ctx(GADING_DM, "Gading"));
+    const keep = (file: string) => write.execute({ about: "knowledge", collection: "Notes", title: "Back gate rules", file }, ctx(GADING_DM, "Gading"));
     expect((await keep(sent.localPath)).isError).toBe(false);
     expect(readFileSync(join(h.knowledgeRoot, "notes", "Back gate (rules).md"), "utf8")).toContain("blue hook");
     expect(await found(GADING_DM, "hook")).toEqual(["knowledge:notes/Back gate (rules).md#0"]);

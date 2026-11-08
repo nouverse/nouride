@@ -11,7 +11,7 @@ import type { CatchUpReport, Semantic } from "../semantic.ts";
 import { fuse, rankByMeaning, rankingModel, rankingVectors } from "../semantic.ts";
 import { ftsQuery } from "../terms.ts";
 import { mayUse, readCollection, readCollections, readersOfConversation, widens, type Collection, type CollectionSettings } from "./collections.ts";
-import { addDocument, addPending, approvePending, collectionIdOf, createCollection, declinePending, pendingOf, removeCollection, removeDocument, writeSettings, type KnowledgeRefusal, type PendingDocument } from "./files.ts";
+import { addDocument, addPending, approvePending, collectionIdOf, createCollection, declinePending, pendingOf, removeCollection, removeDocument, writeSettings, writeTitle, type KnowledgeRefusal, type PendingDocument } from "./files.ts";
 import { parseItem, type IndexedSection, type KnowledgeDocument, type KnowledgePort } from "./knowledge.store.ts";
 import type { OfficeReader } from "./office.ts";
 import { documentIndex, linksIn, resolveLink } from "./links.ts";
@@ -59,6 +59,7 @@ export interface Asker {
 export interface KeepRequest {
   /** The collection, by its name or id: a new name makes one, for the people in this chat. */
   collection: string;
+  /** What the document is: a page's heading, and a file's title kept beside its name (0.8.23). */
   title?: string;
   /** Markdown, written by the agent or read from a page. */
   text?: string;
@@ -184,6 +185,12 @@ export function createKnowledge(input: {
     }
     const added = await addDocument(knowledge.root, target.id, file.name, file.bytes);
     if ("refused" in added) return added;
+    // A file keeps its name, and its title beside it: what search finds it by. A page has its title as its heading,
+    // unless its text came with a heading of its own: then the title goes beside it too.
+    if (request.title && (request.file || /^#\s/.test((request.text ?? "").trim()))) {
+      const titled = await writeTitle(knowledge.root, target.id, added.path, request.title);
+      if ("refused" in titled) return titled;
+    }
     await syncKnowledgeNow(target.id);
     const document = knowledge.store.document(target.id, added.path);
     return {
@@ -205,8 +212,11 @@ export function createKnowledge(input: {
     /** An admin's yes: the document joins its collection and is read. */
     async approve(id: string, path: string): Promise<{ path: string; document: KnowledgeDocument | null } | null> {
       const knowledge = deps.knowledge;
+      const waiting = knowledge ? pendingOf(knowledge.root, id).find((document) => document.path === path) : undefined;
       const joined = knowledge ? approvePending(knowledge.root, id, path) : null;
       if (!knowledge || !joined) return null;
+      // The title it was kept with goes with it, unless it was only its name: a page's is its heading already.
+      if (waiting && waiting.title !== path && waiting.title !== path.replace(/\.[^.]+$/, "")) await writeTitle(knowledge.root, id, joined, waiting.title);
       await syncKnowledgeNow(id);
       return { path: joined, document: knowledge.store.document(id, joined) };
     },
@@ -333,8 +343,24 @@ export function createKnowledge(input: {
     },
     async remove(id: string, path: string): Promise<boolean> {
       if (!deps.knowledge || !removeDocument(deps.knowledge.root, id, path)) return false;
+      if (readCollection(deps.knowledge.root, id).settings.titles?.[path] !== undefined) await writeTitle(deps.knowledge.root, id, path, null);
       await syncKnowledgeNow(id);
       return true;
+    },
+    /**
+     * A document's title set, or taken off with null (0.8.23), and the document read again with it: its sections' trails
+     * carry it into search. The file keeps its name.
+     */
+    async retitle(id: string, path: string, title: string | null): Promise<{ document: KnowledgeDocument | null } | KnowledgeRefusal> {
+      const knowledge = deps.knowledge;
+      if (!knowledge) return { refused: "This Nouride keeps no knowledge base.", why: "missing" };
+      if (!knowledge.store.document(id, path)) return { refused: `There is no document "${path}" in "${id}".`, why: "missing" };
+      const written = await writeTitle(knowledge.root, id, path, title);
+      if ("refused" in written) return written;
+      // Taken off, the title the file gives itself comes back only from a read: the row goes, and the sync reads it anew.
+      if (title === null) knowledge.store.remove(id, path);
+      await syncKnowledgeNow(id);
+      return { document: knowledge.store.document(id, path) };
     },
     async removeCollection(id: string): Promise<boolean> {
       if (!deps.knowledge || !removeCollection(deps.knowledge.root, id)) return false;

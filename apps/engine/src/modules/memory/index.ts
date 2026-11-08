@@ -68,6 +68,7 @@ export type { EpisodeStatus } from "./episode.ts";
 export type { TidyChange } from "./tidy.ts";
 export type { PassBacklog } from "./backlog.ts";
 export type { Collection, CollectionSettings, KnowledgeReaders } from "./knowledge/collections.ts";
+export { TITLE_MAX } from "./knowledge/collections.ts";
 export type { IndexedSection, KnowledgeDocument } from "./knowledge/knowledge.store.ts";
 export type { KnowledgeSyncReport } from "./knowledge/sync.ts";
 export type { CollectionView, KeepRequest, KeepResult, KnowledgeDeps } from "./knowledge/surface.ts";

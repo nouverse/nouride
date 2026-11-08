@@ -139,7 +139,10 @@ const PER_TOOL = 3_400;
 // 48,000 for `memory_write` saying a PDF or an Office file is read for its text (0.8.22, ~135): Nestor, asked to keep the
 // owner's legal PDFs, did not know a PDF's text was read and planned to take the text out first, as "a file to keep as it
 // is" said no more; and a scan, with no text, is kept but not searched, which the agent can say before it starts.
-const TOTAL = 48_000;
+// 48,150 for a kept document's English title (0.8.23, ~135): `memory_write`'s `title` says what the document is, in
+// English with its own terms, the words search finds it by in any language; on a box searching by words alone, English
+// found nothing in Indonesian documents (the owner's ask, 2026-11-08). `memory_search`'s words about documents got shorter.
+const TOTAL = 48_150;
 
 describe("tool schema budget", () => {
   test("every conditional tool was built, so the total means what it says", () => {

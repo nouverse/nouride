@@ -26,7 +26,7 @@ export interface Section {
 }
 
 /** A trail's parts joined as a person reads them. */
-const TRAIL_MARK = " › ";
+export const TRAIL_MARK = " › ";
 
 const HEADING = /^(#{1,6})\s+(.+?)\s*#*\s*$/;
 const FENCE = /^\s*(```|~~~)/;
