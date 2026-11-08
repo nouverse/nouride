@@ -30,7 +30,6 @@ agree for a company or organization, contact Nouverse through https://nouverse.c
 - **Docker + Compose** — for containerized dev (`run-dev.sh`), optional for native
 
 ```bash
-git submodule update --init content
 bun install
 ```
 
