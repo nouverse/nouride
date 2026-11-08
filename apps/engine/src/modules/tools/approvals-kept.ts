@@ -53,7 +53,7 @@ export function askedExtras(ask: ApprovalAsk): KeptExtras {
 /**
  * `approvals-kept.json`, which 0.8.17 and before wrote at a clean shutdown with the extras of what was pending. Read
  * once, at the first start of 0.8.18, for rows asked before the upgrade (their extras are not on them), then removed;
- * nothing writes it any more. For 1.0.0 to delete, with `oldHandOver` in `approvals.store.ts`.
+ * nothing writes it any more. For 0.9.0 to delete, with `oldHandOver` in `approvals.store.ts`.
  */
 export interface KeptFile {
   /** What it holds, by request id: nothing when there is no file or it cannot be read. */

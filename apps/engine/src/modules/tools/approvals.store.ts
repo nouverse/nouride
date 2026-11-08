@@ -109,7 +109,7 @@ export interface ApprovalStoreOptions {
   /**
    * What 0.8.17 and before handed the next process at a clean shutdown (`approvals-kept.json`): the extras of a request
    * asked before the upgrade, which its row does not hold. Read once at the first start, moved onto the rows, then
-   * removed (`carryOver`). For 1.0.0 to delete, with the file's reader.
+   * removed (`carryOver`). For 0.9.0 to delete, with the file's reader.
    */
   oldHandOver?: KeptFile;
   /**

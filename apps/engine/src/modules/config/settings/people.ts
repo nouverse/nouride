@@ -426,7 +426,7 @@ function keptBlock(source: string): { people: Person[]; print: string | null } {
  * The move (0.8.18, PLAN §2.1), at the first start that finds `[[people]]` and no `people/`: one file per person, then
  * the block marked as moved and kept, not deleted, so 0.8.17 started again by `nouride update --rollback` still reads it
  * and has its people, missing only what changed since. While `people/` exists the block is not read (the loader,
- * `configFrom`), and 1.0.0 refuses one left in `config.toml`. A folder made with nobody in it is the same answer for an
+ * `configFrom`), and 0.9.0 refuses one left in `config.toml`. A folder made with nobody in it is the same answer for an
  * install with no people: from now on they are written there.
  *
  * And again whenever the block no longer says what it said when it was moved: a version before 0.8.18, started by a

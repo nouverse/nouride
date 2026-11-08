@@ -638,7 +638,7 @@ export async function runDaemon(): Promise<void> {
     toolGrants,
     // A job's guard answered "always" (0.8.0): on the job, a standing yes for its runs to send there.
     jobGrants: { allow: (grant, by) => void cron.allow(grant.jobId, grant, by) },
-    // What 0.8.17 handed over at its last clean shutdown, for requests asked before the upgrade: read once (1.0.0 deletes).
+    // What 0.8.17 handed over at its last clean shutdown, for requests asked before the upgrade: read once (0.9.0 deletes).
     oldHandOver: keptApprovalsFile(config.daemon.dataDir),
     allowedBefore: missions.allowedBefore,
     // Not "is a gateway connected": the local gateway is an in-process object and reports connected

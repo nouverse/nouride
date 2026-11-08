@@ -5,7 +5,7 @@
  * release went on working (`docs/DEPLOY.md` § The upgrade window). 0.8.0 reads none of them. `grammar.ts` refuses a
  * flag or a word a command does not read, but "does not take --isolated" leaves whoever wrote the script to find out
  * what it became — so through 0.8.x each is refused with exit 2 naming what to write instead, before the daemon is
- * asked anything. 1.0.0 deletes this file, and an old spelling is then a word the command does not read like any other.
+ * asked anything. 0.9.0 deletes this file, and an old spelling is then a word the command does not read like any other.
  */
 
 import { usageError } from "@/cli/ui.ts";
