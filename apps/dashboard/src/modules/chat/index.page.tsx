@@ -49,6 +49,7 @@ import { NotesPanel } from "./components/NotesPanel";
 import { PlanStrip } from "./components/PlanStrip";
 import { startWith } from "./lib/start-with";
 import { useWorkNotes } from "@/commons/hooks/use-notes";
+import { ENTER, useMotionList } from "@/commons/hooks/use-motion-list";
 import { looksOf } from "@/commons/cat/look";
 
 export default function ChatPage(
@@ -380,6 +381,17 @@ export default function ChatPage(
   };
 
 
+  /*
+    What arrives in the conversation moves in: a message, a note, an answer starting. What it opens on stays still —
+    another conversation starts over (`scope`) — and a turn is one entry by its id, live or finished, so one that
+    finishes does not move again.
+  */
+  const stream = useMotionList(
+    conversation.loading ? undefined : interleave(conversation.turns, conversation.liveTurns, conversation.events, conversation.messages),
+    (entry) => (entry.kind === "message" ? `message ${entry.message.id}` : entry.kind === "event" ? `event ${entry.event.id}` : `turn ${entry.turn.id}`),
+    { scope: roomChatId ?? sessionId ?? "" },
+  );
+
   const empty =
     conversation.turns.length === 0 &&
     conversation.earlier.length === 0 &&
@@ -500,55 +512,44 @@ export default function ChatPage(
                   dropped" means nothing above the whole conversation and everything between the
                   message before it and the one after.
                 */}
-                {interleave(
-                  conversation.turns,
-                  conversation.liveTurns,
-                  conversation.events,
-                  conversation.messages,
-                ).map(
-                  (entry) => {
-                    if (entry.kind === "message") {
-                      /*
-                        What somebody typed, once, whether or not it was answered. In a room this is
-                        the only place a message comes from — a turn draws its reply and nothing else,
-                        so a message two agents answered is one bubble and a message nobody answered
-                        is still a bubble.
-                      */
-                      return (
-                        <UserBubble
-                          key={entry.message.id}
-                          text={entry.message.text}
-                          sessionId={transcriptId}
-                        />
-                      );
-                    }
-                    if (entry.kind === "event") {
-                      return <EventPill key={entry.event.id} event={entry.event} />;
-                    }
-                    if (entry.kind === "live") {
-                      return (
-                        <LiveTurnView
-                          key={entry.turn.id}
-                          turn={entry.turn}
-                          sessionId={transcriptId}
-                          showPrompt={!room}
-                          onStop={(agentId) => conversation.stop(agentId)}
-                        />
-                      );
-                    }
+                {stream.map(({ key, item: entry, motion }) => {
+                  if (entry.kind === "message") {
+                    /*
+                      What somebody typed, once, whether or not it was answered. In a room this is
+                      the only place a message comes from — a turn draws its reply and nothing else,
+                      so a message two agents answered is one bubble and a message nobody answered
+                      is still a bubble.
+                    */
+                    return <UserBubble key={key} text={entry.message.text} sessionId={transcriptId} motion={motion} />;
+                  }
+                  if (entry.kind === "event") {
+                    return <EventPill key={key} event={entry.event} motion={motion} />;
+                  }
+                  if (entry.kind === "live") {
                     return (
-                      <TurnView
-                        key={entry.turn.id}
+                      <LiveTurnView
+                        key={key}
                         turn={entry.turn}
                         sessionId={transcriptId}
-                        // In a room the question is a message of its own, above.
                         showPrompt={!room}
+                        onStop={(agentId) => conversation.stop(agentId)}
+                        motion={motion}
                       />
                     );
-                  },
-                )}
-                {/* Sent, and the daemon has not reported a turn for it yet. */}
-                {conversation.pending && <UserBubble text={conversation.pending} />}
+                  }
+                  return (
+                    <TurnView
+                      key={key}
+                      turn={entry.turn}
+                      sessionId={transcriptId}
+                      // In a room the question is a message of its own, above.
+                      showPrompt={!room}
+                      motion={motion}
+                    />
+                  );
+                })}
+                {/* Sent, and the daemon has not reported a turn for it yet: it enters as it is sent. */}
+                {conversation.pending && <UserBubble text={conversation.pending} motion={ENTER} />}
                 {/* Still running after the turn that started it ended. */}
                 <JobStrip jobs={conversation.jobs} />
 

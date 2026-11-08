@@ -46,7 +46,8 @@ const ICONS: Record<ChatEvent["kind"], typeof Hash> = {
 /** Past this, or with a line break, an event is a card, not a pill. */
 const PILL_CHARS = 160;
 
-export function EventPill({ event }: { event: ChatEvent }) {
+/** `motion`: how it arrives (`useMotionList`). */
+export function EventPill({ event, motion = "" }: { event: ChatEvent; motion?: string }) {
   const Icon = ICONS[event.kind] ?? StickyNote;
   const told = event.audience === "agents" ? <AgentsTold /> : null;
 
@@ -54,7 +55,7 @@ export function EventPill({ event }: { event: ChatEvent }) {
   // markdown kept: in a pill, a paragraph ran out past the rounded ends, its line breaks gone and its backticks shown.
   if (event.text.includes("\n") || event.text.length > PILL_CHARS) {
     return (
-      <div className="flex justify-center w-full">
+      <div className={`flex justify-center w-full ${motion}`}>
         <div
           className="flex w-full max-w-2xl items-start gap-2 rounded-2xl border border-base-content/[0.08] bg-base-200/60 px-4 py-3 text-base-content/75"
           data-event-kind={event.kind}
@@ -72,7 +73,7 @@ export function EventPill({ event }: { event: ChatEvent }) {
   }
 
   return (
-    <div className="flex justify-center w-full">
+    <div className={`flex justify-center w-full ${motion}`}>
       <div
         className="inline-flex max-w-xl items-start gap-1.5 rounded-full border border-base-content/[0.08] bg-base-200/60 px-3 py-1 text-[11px] leading-snug text-base-content/65"
         // The kind is on the element rather than only in the icon, so the reason a pill looks the way

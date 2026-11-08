@@ -21,6 +21,7 @@ export function UserBubble({
   attachments,
   sessionId,
   edited,
+  motion = "",
 }: {
   text: string;
   /** What was sent with it. Images are shown; anything else is a row that opens in a new tab. */
@@ -28,11 +29,13 @@ export function UserBubble({
   sessionId?: string;
   /** The person edited it after sending, and what is shown — and was answered — is how it reads now (`answersAnEdit`). */
   edited?: boolean;
+  /** How it arrives (`useMotionList`), growing from its own corner. */
+  motion?: string;
 }) {
   const inbound = (attachments ?? []).filter((file) => file.direction !== "out");
 
   return (
-    <div className="flex flex-col items-end space-y-1.5">
+    <div className={`flex flex-col items-end space-y-1.5 origin-bottom-right ${motion}`}>
       {sessionId && inbound.length > 0 && (
         <AttachmentList sessionId={sessionId} files={inbound} align="end" />
       )}
@@ -182,9 +185,15 @@ export function TurnView({
   turn,
   sessionId,
   showPrompt,
+  motion = "",
 }: {
   turn: ChatTurn;
   sessionId: string;
+  /**
+   * How its answer arrives (`useMotionList`). On the answer only: the question above it was drawn as it was sent, and
+   * moving it again would read as sending it twice.
+   */
+  motion?: string;
   /**
    * False in a room, where the question is drawn from the room's own messages.
    *
@@ -220,7 +229,7 @@ export function TurnView({
           {...(turn.attachments?.length ? { attachments: turn.attachments } : {})}
         />
       )}
-      <div className="flex flex-col items-start w-full space-y-1.5">
+      <div className={`flex flex-col items-start w-full space-y-1.5 origin-top-left ${motion}`}>
         <StepPill
           turnId={turn.id}
           status={turn.status}
@@ -307,9 +316,12 @@ export function LiveTurnView({
   sessionId,
   showPrompt,
   onStop,
+  motion = "",
 }: {
   turn: LiveTurn;
   sessionId: string;
+  /** How its answer arrives — see `TurnView`. */
+  motion?: string;
   /** False in a room — see `TurnView`. */
   showPrompt?: boolean;
   /** Cancels this one agent. Absent where there is nothing to stop. */
@@ -338,7 +350,7 @@ export function LiveTurnView({
           {...(turn.attachments?.length ? { attachments: turn.attachments } : {})}
         />
       )}
-      <div className="flex flex-col items-start w-full space-y-2">
+      <div className={`flex flex-col items-start w-full space-y-2 origin-top-left ${motion}`}>
         {/*
           Whose work this is, above the steps.
 

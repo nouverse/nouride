@@ -22,6 +22,7 @@ import { FILL_PAGE, ScrollCard } from "@/commons/components/ui/ScrollCard";
 import { Count, SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
 import { Card, EmptyState, ErrorNote, PageHeader } from "@/commons/components/ui/ui";
 import { CardGrid } from "@/commons/components/ui/CardGrid";
+import { useMotionList, type Moving } from "@/commons/hooks/use-motion-list";
 import { MissionCard } from "./components/MissionCard";
 import { MissionSettingsCard } from "./components/MissionSettingsCard";
 import { NewMissionForm } from "./components/NewMissionForm";
@@ -47,24 +48,38 @@ const TABS: { id: MissionTab; label: string; title: (n: number) => string; none:
   { id: "stopped", label: "Stopped", title: (n) => `${n} stopped`, none: (days) => `Nothing stopped in the last ${days} days` },
 ];
 
-function Group({ title, missions }: { title: string; missions: MissionView[] }) {
-  if (missions.length === 0) return null;
+/**
+ * A list of missions, from what the daemon sent rather than what the search left: a mission that changes state leaves
+ * its group and enters the next, and one the search hides only is not drawn (`shown`) — typing moves nothing.
+ */
+function useMoving(missions: MissionView[], shown: (mission: MissionView) => boolean): Moving<MissionView>[] {
+  return useMotionList(missions, (mission) => mission.id, { shown });
+}
+
+function Group({ title, missions, shown }: { title: string; missions: MissionView[]; shown: (mission: MissionView) => boolean }) {
+  const cards = useMoving(missions, shown);
+  if (cards.length === 0) return null;
   return (
     <section aria-label={title} className="space-y-2.5">
       <h3 className="px-1 font-mono text-[11px] font-bold uppercase tracking-wider text-base-content/65">
-        {title} <span className="font-normal">· {missions.length}</span>
+        {title} <span className="font-normal">· {missions.filter(shown).length}</span>
       </h3>
-      <Cards missions={missions} />
+      <Cards cards={cards} />
     </section>
   );
 }
 
+/** One tab's missions, moving as a group's do. */
+function TabCards({ missions, shown }: { missions: MissionView[]; shown: (mission: MissionView) => boolean }) {
+  return <Cards cards={useMoving(missions, shown)} />;
+}
+
 /** The missions as cards, in the Knowledge tab's grid. */
-function Cards({ missions }: { missions: MissionView[] }) {
+function Cards({ cards }: { cards: Moving<MissionView>[] }) {
   return (
     <CardGrid>
-      {missions.map((mission) => (
-        <MissionCard key={mission.id} mission={mission} />
+      {cards.map(({ key, item, motion }) => (
+        <MissionCard key={key} mission={item} motion={motion} />
       ))}
     </CardGrid>
   );
@@ -115,7 +130,9 @@ export default function MissionsPage({ agent }: { agent?: string }) {
   for (const mission of missions) counts[tabOf(mission)] += 1;
   const current = TABS.find((entry) => entry.id === tab)!;
   const inTab = tab === "all" ? found : found.filter((mission) => tabOf(mission) === tab);
-  const groups = grouped(found);
+  const matched = new Set(found);
+  const shown = (mission: MissionView) => matched.has(mission);
+  const groups = grouped(missions);
 
   const spanFilter = (
     <select className="select select-sm w-36 rounded-xl" aria-label="Finished in" value={days} onChange={(event) => setDays(Number(event.target.value) as Span)}>
@@ -227,12 +244,12 @@ export default function MissionsPage({ agent }: { agent?: string }) {
           <p className="py-6 text-center text-sm text-base-content/65">Nothing matches “{filter}”.</p>
         ) : tab === "all" ? (
           <div className="space-y-7">
-            <Group title="Needs you" missions={groups.needsYou} />
-            <Group title="Working" missions={groups.working} />
-            <Group title="Finished" missions={groups.finished} />
+            <Group title="Needs you" missions={groups.needsYou} shown={shown} />
+            <Group title="Working" missions={groups.working} shown={shown} />
+            <Group title="Finished" missions={groups.finished} shown={shown} />
           </div>
         ) : (
-          <Cards missions={inTab} />
+          <TabCards missions={missions.filter((mission) => tabOf(mission) === tab)} shown={shown} />
         )}
       </ScrollCard>
     </div>

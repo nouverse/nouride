@@ -12,15 +12,31 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Bot } from "lucide-react";
-import { api } from "@/commons/lib/api";
+import { api, type BackgroundJob } from "@/commons/lib/api";
 import { useTextFilter } from "@/commons/lib/use-text-filter";
 import { useOrchestrator, useOrchestratorFirst } from "@/commons/components/ui/AgentName";
 import { FILL_PAGE, ScrollCard } from "@/commons/components/ui/ScrollCard";
 import { Count, SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
 import { EmptyState, ErrorNote, PageHeader } from "@/commons/components/ui/ui";
 import { RetentionControl } from "@/commons/components/ui/RetentionControl";
+import { useMotionList } from "@/commons/hooks/use-motion-list";
 import { JobRow } from "./components/JobRow";
 import { anyRunning, kindOf, searchedIn, tabOf, type JobKindFilter, type JobTab } from "./lib/job";
+
+/**
+ * A tab's jobs, from what the daemon sent rather than what the filters left: one that changes state leaves the tab or
+ * enters it, and one the kind or the search hides only is not drawn (`shown`) — choosing a filter moves nothing.
+ */
+function JobList({ jobs, shown }: { jobs: BackgroundJob[]; shown: (job: BackgroundJob) => boolean }) {
+  const rows = useMotionList(jobs, (job) => job.id, { shown });
+  return (
+    <div className="space-y-2.5">
+      {rows.map(({ key, item, motion }) => (
+        <JobRow key={key} job={item} motion={motion} />
+      ))}
+    </div>
+  );
+}
 
 const RUNNING_MS = 5_000;
 const SETTLED_MS = 30_000;
@@ -70,6 +86,7 @@ export default function JobsPage({ agent }: { agent?: string }) {
   for (const job of jobs) counts[tabOf(job)] += 1;
   const current = TABS.find((entry) => entry.id === tab)!;
   const inTab = tab === "all" ? found : found.filter((job) => tabOf(job) === tab);
+  const matched = new Set(found);
 
   const kindFilter = (
     <select className="select select-sm w-36 rounded-xl" aria-label="Kind" value={kind} onChange={(event) => setKind(event.target.value as JobKindFilter)}>
@@ -133,11 +150,7 @@ export default function JobsPage({ agent }: { agent?: string }) {
         ) : inTab.length === 0 ? (
           <p className="py-6 text-center text-sm text-base-content/65">Nothing matches “{filter}”.</p>
         ) : (
-          <div className="space-y-2.5">
-            {inTab.map((job) => (
-              <JobRow key={job.id} job={job} />
-            ))}
-          </div>
+          <JobList jobs={(list.data?.jobs ?? []).filter((job) => tab === "all" || tabOf(job) === tab)} shown={(job) => matched.has(job)} />
         )}
       </ScrollCard>
     </div>

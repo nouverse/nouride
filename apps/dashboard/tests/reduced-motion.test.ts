@@ -127,8 +127,16 @@ describe("the motion main.css adds", () => {
     for (const motion of MOTIONS) {
       expect(motion.easing).toBe("ease-out");
       expect(motion.duration).toMatch(/^\d+ms$/);
-      expect(Number.parseInt(motion.duration, 10)).toBeGreaterThanOrEqual(150);
-      expect(Number.parseInt(motion.duration, 10)).toBeLessThanOrEqual(250);
+      // A light that holds between rising and falling: each of the two is what moves, and is held to the range.
+      const held = /@keyframes ([\w-]+) \{\s*0%,\s*100% \{[^}]*\}\s*(\d+)%,\s*(\d+)% \{/.exec(css.slice(css.indexOf(`@keyframes ${motion.name} `)));
+      const moving =
+        held?.[1] === motion.name
+          ? [(Number(held[2]) / 100) * Number.parseInt(motion.duration, 10), ((100 - Number(held[3])) / 100) * Number.parseInt(motion.duration, 10)]
+          : [Number.parseInt(motion.duration, 10)];
+      for (const ms of moving) {
+        expect(ms).toBeGreaterThanOrEqual(150);
+        expect(ms).toBeLessThanOrEqual(250);
+      }
     }
   });
 

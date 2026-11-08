@@ -8,6 +8,9 @@ import { Bot, ChevronRight, MessagesSquare, Terminal } from "lucide-react";
 import type { BackgroundJob } from "@/commons/lib/api";
 import { ago } from "@/commons/lib/format";
 import { formatDuration } from "@/commons/lib/steps";
+import { cn } from "@/commons/lib/utils";
+import { Lit } from "@/commons/components/ui/Lit";
+import { ENTER, type Motion } from "@/commons/hooks/use-motion-list";
 import { jobTitle, kindOf, ranFor, rowLine, statusWord } from "../lib/job";
 
 const KIND = {
@@ -30,14 +33,19 @@ export function StatusBadge({ job }: { job: BackgroundJob }) {
   return <span className={`badge badge-sm font-semibold ${tone}`}>{word}</span>;
 }
 
-export function JobRow({ job }: { job: BackgroundJob }) {
+/** `motion`: how the list draws it (`useMotionList`); one that arrives is lit too. */
+export function JobRow({ job, motion = "" }: { job: BackgroundJob; motion?: Motion }) {
   const line = rowLine(job);
   return (
     <Link
       to="/jobs/$jobId"
       params={{ jobId: job.id }}
-      className="group block rounded-2xl border border-base-content/[0.08] bg-base-100/80 p-4 shadow-xs backdrop-blur-xl transition-all duration-150 hover:border-base-content/20 active:scale-[0.99] sm:p-5"
+      className={cn(
+        "group relative block rounded-2xl border border-base-content/[0.08] bg-base-100/80 p-4 shadow-xs backdrop-blur-xl transition-all duration-150 hover:border-base-content/20 active:scale-[0.99] sm:p-5",
+        motion,
+      )}
     >
+      <Lit state={job.status} arrived={motion === ENTER} />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="flex items-center gap-1.5">
           <StatusBadge job={job} />

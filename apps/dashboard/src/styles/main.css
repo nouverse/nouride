@@ -78,10 +78,12 @@
      - `enter`: what opens or appears — a dialog's box, a toast.
      - `leave`: the same going, held at its end until it is taken away. From a whole box, not from what it rests at:
        a confirmation's box rests hidden once its dialog has closed, and would fade from nothing.
+     - `lit`: the light on a card whose state just changed: up in 200 ms, held, and down in 250.
      Every one is cut to nothing by the reduced-motion rule below (`tests/reduced-motion.test.ts`). */
   --animate-fade: fade 200ms ease-out;
   --animate-enter: enter 200ms ease-out;
   --animate-leave: leave 150ms ease-out forwards;
+  --animate-lit: lit 1000ms ease-out;
 
   @keyframes fade {
     from {
@@ -102,6 +104,16 @@
     to {
       opacity: 0;
       scale: 0.96;
+    }
+  }
+  @keyframes lit {
+    0%,
+    100% {
+      opacity: 0;
+    }
+    20%,
+    75% {
+      opacity: 1;
     }
   }
 }

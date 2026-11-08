@@ -10,18 +10,22 @@ import type { MissionView } from "@/commons/lib/api";
 import { CARD } from "@/commons/components/ui/CardGrid";
 import { ago } from "@/commons/lib/format";
 import { cn } from "@/commons/lib/utils";
+import { Lit } from "@/commons/components/ui/Lit";
+import { ENTER, type Motion } from "@/commons/hooks/use-motion-list";
 import { missionTitle, rowLine } from "../lib/mission";
 import { SeenBadge } from "./SeenBadge";
 
-export function MissionCard({ mission }: { mission: MissionView }) {
+/** `motion`: how the list draws it (`useMotionList`); one that arrives is lit too. */
+export function MissionCard({ mission, motion = "" }: { mission: MissionView; motion?: Motion }) {
   const list = mission.checklist;
   const line = rowLine(mission);
   return (
     <Link
       to="/missions/$missionId"
       params={{ missionId: mission.id }}
-      className={cn(CARD, "group hover:border-base-content/20 active:scale-[0.99]")}
+      className={cn(CARD, "group hover:border-base-content/20 active:scale-[0.99]", motion)}
     >
+      <Lit state={`${mission.status} ${mission.seen}`} arrived={motion === ENTER} />
       {/* The badge on a line of its own: "Needs you · a question" beside the goal left it a word or two a line. */}
       <header className="space-y-2.5">
         <SeenBadge mission={mission} />

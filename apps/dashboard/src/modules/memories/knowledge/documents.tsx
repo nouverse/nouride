@@ -21,6 +21,7 @@ import { useToast } from "@/commons/components/ui/toast";
 import { TitleDialog } from "./title.dialog";
 import { addedLine, installMessage, statusOf } from "./words";
 import { Leaving } from "@/commons/components/ui/OverPage";
+import { useMotionList, type Motion } from "@/commons/hooks/use-motion-list";
 
 const TONE = { ready: "badge-success", reading: "badge-info", "not-read": "badge-warning" } as const;
 
@@ -45,7 +46,20 @@ function Reading({ name }: { name: string }) {
   );
 }
 
-function DocumentRow({ collection, document, editable, onOpen }: { collection: KnowledgeCollection; document: KnowledgeDocument; editable: boolean; onOpen: () => void }) {
+/** `motion`: how the list draws it (`useMotionList`). */
+function DocumentRow({
+  collection,
+  document,
+  editable,
+  onOpen,
+  motion,
+}: {
+  collection: KnowledgeCollection;
+  document: KnowledgeDocument;
+  editable: boolean;
+  onOpen: () => void;
+  motion: Motion;
+}) {
   const queryClient = useQueryClient();
   const toast = useToast();
   const confirm = useConfirm();
@@ -70,7 +84,7 @@ function DocumentRow({ collection, document, editable, onOpen }: { collection: K
   };
   const Icon = status.tone === "ready" ? FileText : FileWarning;
   return (
-    <li className="flex items-start gap-3 py-2.5">
+    <li className={cn("flex items-start gap-3 py-2.5", motion)}>
       <Icon size={16} className={cn("mt-0.5 shrink-0", status.tone === "ready" ? "text-base-content/50" : "text-warning")} aria-hidden="true" />
       <div className="min-w-0 flex-1 space-y-1">
         <button type="button" className="hover:text-primary max-w-full truncate text-left text-sm font-medium transition-colors" onClick={onOpen}>
@@ -123,13 +137,15 @@ export function DocumentList({
   onOpen: (path: string) => void;
 }) {
   const sorted = [...documents].sort((a, b) => b.mtime - a.mtime || a.title.localeCompare(b.title));
+  // Newest first: one just added enters at the top, where the file being read stood; one removed leaves where it was.
+  const rows = useMotionList(sorted, (document) => document.path);
   return (
     <ul className="divide-base-content/[0.06] divide-y">
       {reading.map((name, n) => (
         <Reading key={`${name}-${n}`} name={name} />
       ))}
-      {sorted.map((document) => (
-        <DocumentRow key={document.path} collection={collection} document={document} editable={editable} onOpen={() => onOpen(document.path)} />
+      {rows.map(({ key, item, motion }) => (
+        <DocumentRow key={key} collection={collection} document={item} editable={editable} onOpen={() => onOpen(item.path)} motion={motion} />
       ))}
     </ul>
   );
