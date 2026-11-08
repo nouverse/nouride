@@ -30,7 +30,7 @@ export class Batcher {
     const hasMedia = Boolean(envelope.attachments && envelope.attachments.length > 0);
 
     // An edit is never folded into a burst: it is about another message, and in a merge it would read as one more thing
-    // said. What the burst held goes first, in the order it was sent (G11).
+    // said. What the burst held goes first, in the order it was sent.
     if (isEdit(envelope)) {
       if (existing) this.release(batchKey);
       this.push(envelope);
@@ -57,7 +57,7 @@ export class Batcher {
     for (const key of [...this.buffers.keys()]) this.release(key);
   }
 
-  /** A burst still held whose message `match` picks — for an edit of it (G11). The burst itself, so a change to it is what is pushed. */
+  /** A burst still held whose message `match` picks — for an edit of it. The burst itself, so a change to it is what is pushed. */
   find(match: (envelope: MessageEnvelope) => boolean): MessageEnvelope | undefined {
     for (const entry of this.buffers.values()) if (match(entry.envelope)) return entry.envelope;
     return undefined;

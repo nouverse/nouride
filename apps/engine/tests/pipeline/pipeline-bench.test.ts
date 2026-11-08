@@ -70,6 +70,6 @@ test("the next process over the install has the first one's conversation and pau
   expect(next.db).toBe(bench.db);
   const kept = next.sessions.load({ agentId: "nouva", gatewayId: next.gateway.id, chatId: "chat-1" }).messages;
   expect(kept.map((message) => messageText(message.content))).toContain("first answer");
-  // Kept beside the database, as `/stop` is across a restart (D15).
+  // Kept beside the database, as `/stop` is across a restart.
   expect(next.registry.isPaused("nouva")).toBe(true);
 });

@@ -3,7 +3,7 @@
  * steered message gets in the agent's words (`steer-reply.ts`).
  *
  * Both are the agent speaking inside the conversation, so both see it as the agent does: its persona, what was said so
- * far, and the work in flight (the owner, 2026-11-05, v0.8.20_RFC item 1). What differs is what they may do. A side
+ * far, and the work in flight. What differs is what they may do. A side
  * question does nothing and is kept out of the conversation; a steered message goes into the turn and may change its
  * work. Each saw less before: the steer line was written from the message and four steps, and read an Armbian question
  * as one about Nouride's own OS (live, 2026-11-05), the turn correcting it a step later; a side question on a coding
@@ -16,7 +16,7 @@ import type { PipelineDeps } from "./deps.ts";
 
 /** Characters of one message in the conversation: a long report says what it was about in its first lines. */
 const PER_MESSAGE = 1_500;
-/** Characters of the running turn's steps, its newest kept first. A design value (RFC_SIDE_QUESTIONS §5.1). */
+/** Characters of the running turn's steps, its newest kept first. A design value, not a measured one. */
 const STEPS_BUDGET = 6_000;
 
 /** Lines, the newest kept first within `budget` characters, in the order they happened. */

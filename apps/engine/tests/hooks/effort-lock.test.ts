@@ -1,7 +1,7 @@
 /**
  * `/effort … lock` (0.8.17): a level made the agent's own, `[llm] effort` in its pack, for every chat and every mission.
- * `/effort <level>` is one conversation's, and a mission runs in a conversation of its own: the owner set `max` in his
- * chat and the mission he started ran at the pack's level. The write is the Model tab's, and an admin's.
+ * `/effort <level>` is one conversation's, and a mission runs in a conversation of its own: a person set `max` in their
+ * chat and the mission they started ran at the pack's level. The write is the Model tab's, and an admin's.
  */
 
 import { describe, expect, test } from "bun:test";

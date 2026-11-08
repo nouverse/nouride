@@ -61,7 +61,7 @@ export async function compose(
   const { agent, envelope, text, session, history, record } = turn;
   const { rooms, attachments } = with_;
   /**
-   * The turn's journal — `modules/turns/journal.store.ts` — opened before anything slow (P6).
+   * The turn's journal — `modules/turns/journal.store.ts` — opened before anything slow.
    *
    * With the words alone, because the files that came with them download first, up to thirty seconds a file. A
    * crash in that window used to leave a record and no journal: at the next boot the person was told the turn
@@ -274,7 +274,7 @@ export function turnRequest(
     // With the call ids its helpers and peers draw from too: their steps are rows of this turn (`stepsInto`).
     ...(record ? { turnId: record.id, callIds: ctx.callIdsOf(record.id) } : {}),
     senderId: person.senderId,
-    // A mission's call that needs a person is parked, not waited on (MISSIONS §7).
+    // A mission's call that needs a person is parked, not waited on.
     ...(shape ? { parkApprovalsMs: shape.parkApprovalsMs, workdir: shape.workdir, ...(shape.parked > 0 ? { parkedCalls: shape.parked } : {}) } : {}),
     // Work nobody watches (0.8.0): a mission's turn, or a scheduled job's turn put into its own chat.
     ...((): { unattended?: Unattended } => {
@@ -309,7 +309,7 @@ export function turnRequest(
     ...(override ? { model: override } : {}),
     ...(journal ? { journal } : {}),
     // A forwarded message, a webhook's payload — or what a mission read in an earlier turn: read as outside content
-    // from the first step (S13).
+    // from the first step.
     ...outsideOf({ ...envelope, outsideContent: [...(envelope.outsideContent ?? []), ...(shape?.outsideContent ?? [])] }),
     // A shutdown ends a turn between steps rather than in the middle of one; a person's new message is read there.
     // A shutdown, or the agent put to sleep (0.8.0): either stops the turn at its next step, never mid-call.

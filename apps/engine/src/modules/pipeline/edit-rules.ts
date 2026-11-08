@@ -1,5 +1,5 @@
 /**
- * What a person's edit is, decided from the envelope alone (G11): whether a message is one, what a reply to it quotes,
+ * What a person's edit is, decided from the envelope alone: whether a message is one, what a reply to it quotes,
  * whether it changed anything a person can see, whether it is recent enough to answer again, and the words the agent
  * is told about it. Where the message edited is — and so what its edit does — is `edits.ts`.
  *

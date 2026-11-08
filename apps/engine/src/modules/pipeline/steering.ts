@@ -50,7 +50,7 @@ export function steerAck(deps: Pick<PipelineDeps, "registry" | "externalAgents">
   return steerReach(deps, agentId) === "after_prompt" ? STEER_ACK_AFTER_PROMPT : STEER_ACK;
 }
 
-/** The same, for an edit of a message they sent (G11): what they changed is what the turn goes by from its next step. */
+/** The same, for an edit of a message they sent: what they changed is what the turn goes by from its next step. */
 export const STEER_ACK_EDIT = "↪ Got your edit, I'll go by it from my next step.";
 
 /**
@@ -94,7 +94,7 @@ export function steerTarget(turns: Iterable<ActiveTurn>, envelope: MessageEnvelo
 
 /**
  * That turn once it has read all it will (`STEER_CAP`). The message waits for it to end, as it always did — and its
- * sender is told so once, rather than left in silence for up to `queue_timeout_ms` (P9, `steer-accept.ts`).
+ * sender is told so once, rather than left in silence for up to `queue_timeout_ms` (`steer-accept.ts`).
  */
 export function cappedTarget(turns: Iterable<ActiveTurn>, envelope: MessageEnvelope, isCommand: (text: string) => boolean): ActiveTurn | null {
   const turn = workingFor(turns, envelope, isCommand);
@@ -198,7 +198,7 @@ export function unaddressed(text: string, ...names: string[]): string {
  * `names` are the agent's, taken off the front of each: the buffer keeps a message as it arrived, because one no
  * turn read becomes the agent's next turn as an ordinary message would (`TurnContext.returned`).
  *
- * An edit (G11) is a block of its own, after the rest, framed as what it is: a correction of the message the turn is
+ * An edit is a block of its own, after the rest, framed as what it is: a correction of the message the turn is
  * working on when `own` says so — its question, or one it read — or a change to one sent earlier.
  */
 export function steerMessage(
@@ -234,7 +234,7 @@ export function steerMessage(
       "not a promise. Go by their words: if the guess misread them, say so and do what they actually asked."
     : "";
   // A question in it is answered, not only acted on: said as what it may do to the work, "btw, is the artifacts work
-  // pushed?" sent to Claude Code mid-turn was looked into — it checked the mission — and its reply never said (live, Nix,
+  // pushed?" sent to Claude Code mid-turn was looked into — it checked the mission — and its reply never said (live,
   // 2026-10-31).
   const blocks = [
     ...told,

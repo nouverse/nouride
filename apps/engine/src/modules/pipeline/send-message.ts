@@ -85,7 +85,7 @@ export function reachableChats(deps: RoomSources & Pick<PipelineDeps, "registry"
   return [...chats.values()].sort((a, b) => b.lastActive - a.lastActive);
 }
 
-/** Where a message was sent from, for the line in front of it: "your telegram one-to-one with Gading". */
+/** Where a message was sent from, for the line in front of it: "your telegram one-to-one with Sam". */
 function origin(deps: PipelineDeps, ctx: ToolContext): string {
   const platform = ctx.gateway;
   const who = personFor(deps.config.people, ctx.gatewayId, ctx.senderId)?.name;

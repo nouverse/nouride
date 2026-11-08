@@ -4,7 +4,7 @@
  * Live (2026-10-21, a Telegram group of six of our bots, mention off, Nouva the front desk): a reply to Nix's message
  * was answered by Nouva, and Nix said nothing. Telegram shows a reply to another bot's message to that bot alone, so
  * Nouva's copy read it as addressed to nobody; and Nix's copy read its own message number in a record keyed across
- * bots, found Nouva's message of the same number, and left the reply to her. The owner's rule, on every platform: a
+ * bots, found Nouva's message of the same number, and left the reply to her. The rule, on every platform: a
  * reply runs the agent replied to and the front desk stays quiet — unless the reply also tags another agent, and then
  * both answer.
  */

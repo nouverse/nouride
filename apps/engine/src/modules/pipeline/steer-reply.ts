@@ -12,8 +12,7 @@
  * (`aside-context.ts`), then the request the turn is working on, its last few steps, the message they replied to, and
  * the new message: a few thousand tokens in and one sentence out. Run beside the turn, never in its way. Without the
  * conversation it read "yg ini bisa ga sih kita akalim supaya diinstall armbian", a question about a TV box, as one
- * about Nouride's own OS, and the turn said so a step later (live, 2026-11-05); the owner asked for it to see what
- * `/btw` sees (v0.8.20_RFC item 1).
+ * about Nouride's own OS, and the turn said so a step later (live, 2026-11-05). So it sees what `/btw` sees.
  *
  * A turn quicker than its reply: the moment the turn reads the message, answers, or ends, the call is aborted
  * (`ActiveTurn.replyAbort`) — what the turn does with the message is the answer then, and a line arriving after it
@@ -186,7 +185,7 @@ export function replyToSteer(ctx: TurnContext, turn: ActiveTurn, envelope: Messa
           timeoutMs: queue.steerReplyTimeoutMs,
           signal: AbortSignal.any([turn.controller.signal, abort.signal]),
         },
-        // The steered turn's, so a reply in the agent's words is counted with the turn it spoke for (D2).
+        // The steered turn's, so a reply in the agent's words is counted with the turn it spoke for.
         meter(ctx.deps.usage, { agentId: agent.config.id, provider, purpose: "steer_reply", ...(turn.recordId ? { turnId: turn.recordId } : {}) }),
       );
       const at = { agent_id: agent.config.id, chat_id: turn.chatId, ms: Date.now() - startedAt };

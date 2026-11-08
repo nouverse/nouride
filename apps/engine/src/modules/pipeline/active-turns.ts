@@ -76,7 +76,7 @@ export interface ActiveTurn {
   told?: Set<string>;
   /** Messages past `STEER_CAP` drawn on it with the notice that they wait (`steer-accept.ts`): taken back when it ends. */
   waiting?: MessageEnvelope[];
-  /** What it read as it worked, by message id: an edit of one is a correction to its work, as one of its question is (G11). */
+  /** What it read as it worked, by message id: an edit of one is a correction to its work, as one of its question is. */
   read?: Map<string, string>;
   /**
    * Called when a message is put in front of it while it works — a steer, a person's `tell` to its mission (0.8.10). A
@@ -88,7 +88,7 @@ export interface ActiveTurn {
 export class ActiveTurns {
   /** Turn key (`<agent>:<chat>:<gateway>`) → the turn it identifies. */
   readonly activeTurns = new Map<string, ActiveTurn>();
-  /** Peer turns, by the same key: an agent at work for another agent is at work in that chat (P2, `holdPeer`). */
+  /** Peer turns, by the same key: an agent at work for another agent is at work in that chat (`holdPeer`). */
   private readonly peerTurns = new Map<string, ActiveTurn>();
   private readonly turnEndWaiters = new Map<string, (() => void)[]>();
   /** Where a steer no turn read goes — the queue, as the next turn. Set by the pipeline. */
@@ -125,7 +125,7 @@ export class ActiveTurns {
   }
 
   /**
-   * A peer turn, held in the chat it runs in so its agent is at work there (P2): a person addressing it is told so,
+   * A peer turn, held in the chat it runs in so its agent is at work there: a person addressing it is told so,
    * a scheduled turn and a job's wake-up wait, and a second ask is refused. Null when the agent already is. Without
    * the request it answers, which the room never saw and a busy notice must not quote, and with nothing to steer.
    */
@@ -257,7 +257,7 @@ export class ActiveTurns {
 
   /**
    * The turn at work on a message — its question, or one it read as it worked — and what that message said: where an edit
-   * of it goes (G11). A turn past its last step still counts; what it is sent becomes the next turn's question.
+   * of it goes. A turn past its last step still counts; what it is sent becomes the next turn's question.
    */
   answering(gatewayId: string, chatId: string, messageId: string): { turn: ActiveTurn; text: string } | undefined {
     for (const turn of this.activeTurns.values()) {
@@ -268,7 +268,7 @@ export class ActiveTurns {
     return undefined;
   }
 
-  /** A message handed to a turn and not yet read that `match` picks — still waiting, for its edit (G11). */
+  /** A message handed to a turn and not yet read that `match` picks — still waiting, for its edit. */
   unread(match: (envelope: MessageEnvelope) => boolean): MessageEnvelope | undefined {
     for (const turn of this.activeTurns.values()) {
       const found = turn.steers?.find(match);

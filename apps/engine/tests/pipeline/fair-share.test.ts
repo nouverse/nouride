@@ -1,5 +1,5 @@
 /**
- * A room's share of the queue (P12): as many turns at once as it has agents, never more than half the ceiling.
+ * A room's share of the queue: as many turns at once as it has agents, never more than half the ceiling.
  *
  * The decision is `conversationSlots`; the test that matters is the wiring, against a provider that can be held open —
  * with an instant one every turn is over before the next message arrives, and a room holding every slot looks exactly

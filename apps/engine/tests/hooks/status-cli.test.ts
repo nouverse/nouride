@@ -59,7 +59,7 @@ describe("/status of an agent a coding CLI answers", () => {
     // The pack's model is named once, for what it does: answer a turn the CLI cannot.
     expect(text).toContain("Fallback: claude-sonnet-5-5 on nougate-anthropic, only for a turn Claude Code cannot answer");
     // This conversation's CLI session: asked by the connection and the chat the command came in — and its tokens the CLI's
-    // alone, not a turn the pack's own model answered (Nox's review).
+    // alone, not a turn the pack's own model answered.
     expect((c as unknown as { asked: string[] }).asked).toEqual(["telegram:nix|555", "usage onlyCli=true"]);
   });
 

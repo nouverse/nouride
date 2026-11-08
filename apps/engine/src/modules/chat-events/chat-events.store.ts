@@ -1,7 +1,7 @@
 /**
  * Things that happened *to* a conversation — read, written, and swept.
  *
- * WhatsApp draws these in the middle of a thread — "Gading added Nero", "you changed the group name". A room needs
+ * WhatsApp draws these in the middle of a thread — "Sam added Nero", "you changed the group name". A room needs
  * them for the same reason: most of what changes about a group is not something anybody typed, and rendering it as
  * somebody's message is a lie about who said it.
  *

@@ -3,7 +3,7 @@
  *
  * A mission's question goes to the chat it reports to, and says "reply to this in your own words" (`missions/notices.ts`):
  * the reply reaches the agent, which answers the mission for the person. But the agent's turn was not told a question
- * was waiting. Nix's mission asked Gading for three keys; he sent them in Nix's chat, and Nix began "the key you just
+ * was waiting. Nix's mission asked Sam for three keys; Sam sent them in Nix's chat, and Nix began "the key you just
  * sent is the same as before" — a repeat, not the answer its mission was waiting for (2026-11-02).
  */
 

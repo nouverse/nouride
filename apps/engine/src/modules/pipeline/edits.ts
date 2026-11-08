@@ -1,5 +1,5 @@
 /**
- * A person's edit of a message they sent, as it arrives (G11): where the message edited is decides what the edit does.
+ * A person's edit of a message they sent, as it arrives: where the message edited is decides what the edit does.
  *
  * - **Still waiting** for its turn — in the queue, the media batcher, or a running turn's messages not yet read: its text
  *   is replaced, and the agent answers the corrected message once.

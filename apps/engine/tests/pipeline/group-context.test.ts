@@ -469,7 +469,7 @@ describe("how the block spends its budget", () => {
   });
 
   test("the newest message arrives whole, even when it is long", () => {
-    // The case the change is for: Gading asks Nero, Nero answers at length, Gading tags Nox to review
+    // The case the change is for: a person asks Nero, Nero answers at length, the person tags Nox to review
     // that answer. Nox needs the answer, not its opening sentence.
     const block = formatOverheard([sized("1", 50, "Gading"), sized("2", 2_500)], 6_000);
 

@@ -223,7 +223,7 @@ export class InboundRouter {
     // A message from an agent is routed by an explicit mention or not at all.
     //
     // This is the rule the whole design rests on — the tag is the baton, and a reply without one ends
-    // the exchange. Without it the fallbacks quietly defeat that: "SIP okay Nox, nanti review Gading
+    // the exchange. Without it the fallbacks quietly defeat that: "SIP okay Nox, nanti review Sam
     // dulu" mentions nobody, so routing would fall through to the channel binding or the default
     // agent and wake somebody up. The closing line would start a new turn, which is the exact
     // opposite of closing.
@@ -470,7 +470,7 @@ export class InboundRouter {
     // address — a job's log, its command. An `@name` printed by a job ran that agent too (0.7.17, found live on #10).
     if (isSystemEvent(envelope)) return [routed];
     /**
-     * Named and replied to: both answer (the owner, 2026-10-21). On a platform that tells every copy of the reply, each
+     * Named and replied to: both answer. On a platform that tells every copy of the reply, each
      * runs the one it was replied to as well as the one named, and the claim keeps it to one turn each; where only the
      * replied bot's copy knows, it is that copy that runs it.
      */

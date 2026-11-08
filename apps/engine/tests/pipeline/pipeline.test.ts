@@ -2243,7 +2243,7 @@ describe("routing", () => {
   });
 
   test("a scheduled turn in a room only the room log knows hands its tag over — after a restart, before anyone spoke", async () => {
-    // Live in the owner's group (0.8.12): the daemon had restarted and nobody had written there since, so Nouva's
+    // Live in a group (0.8.12): the daemon had restarted and nobody had written there since, so Nouva's
     // scheduled turn was built as a one-to-one — the chat type was this process's memory, empty — and her
     // `@NexaNourideBot …` was posted and never handed over: a DM never is. The room log is on disk, and holds only rooms.
     const h = await harness({
@@ -2829,7 +2829,7 @@ describe("a long turn makes room for itself", () => {
 });
 
 /**
- * A conversation's next turn starts from what its provider last counted (M8), through the daemon's own wiring.
+ * A conversation's next turn starts from what its provider last counted, through the daemon's own wiring.
  *
  * A turn learns from its first call how many tokens the provider counts for each one we estimate. Unless the
  * next turn starts from that, a history that tokenizes at four times its estimate is sent whole by the
@@ -3398,7 +3398,7 @@ describe("a tool that outgrows the context", () => {
 /**
  * A background job reporting in is a system event, not a message from a person.
  *
- * Seen live: the agent killed a dev server it had started, said "Sudah dihentikan, Gading", and then
+ * Seen live: the agent killed a dev server it had started, said "Sudah dihentikan, Sam", and then
  * the job's own completion fired a second turn — "Sip, pekerjaan sudah resmi dihentikan. Ada hal lain
  * yang bisa dibantu?" A conversational answer to a message nobody had sent, restating what had just
  * been said one line earlier.
@@ -5095,7 +5095,7 @@ describe("memory, end to end", () => {
       },
     });
 
-    // 1. The owner says something worth keeping, then ends the conversation.
+    // 1. The person says something worth keeping, then ends the conversation.
     h.gateway.receive(envelope({ id: "m1", text: "Aku mau liburan ke Bali Desember, sebelum tanggal 20." }));
     await h.pipeline.idle();
     h.gateway.receive(envelope({ id: "m2", text: "/new" }));
@@ -5131,7 +5131,7 @@ describe("memory, end to end", () => {
 });
 
 /**
- * The turn's id on what it did (D2): its model calls in `llm_usage`, and the context every tool call is handed —
+ * The turn's id on what it did: its model calls in `llm_usage`, and the context every tool call is handed —
  * which is where the `tool_exec` audit row and a helper's or peer's usage take it from.
  */
 describe("a turn's id", () => {
@@ -5327,7 +5327,7 @@ describe("a turn's id", () => {
 });
 
 /**
- * A scheduled turn and a person's, in one daemon (P1). The cron turn took no slot and checked no busy guard: a
+ * A scheduled turn and a person's, in one daemon. The cron turn took no slot and checked no busy guard: a
  * `session: "chat"` job due while a person talked to the agent there overwrote that turn's `ActiveTurn`, and N due
  * jobs were N provider turns beside the ceiling.
  */
@@ -5455,7 +5455,7 @@ describe("a scheduled turn beside a person's", () => {
 });
 
 /**
- * A helper's executor was wired thinner than a peer's (P5): no approval level, so a person on `balanced` was asked again
+ * A helper's executor was wired thinner than a peer's: no approval level, so a person on `balanced` was asked again
  * for every write a helper made, and no deadline, so a helper never wrapped up and died on the parent's abort with
  * nothing to hand back.
  */
@@ -5508,12 +5508,12 @@ describe("a delegate helper", () => {
 });
 
 /**
- * A peer resolves its own level, not the asking person's (S14).
+ * A peer resolves its own level, not the asking person's.
  *
  * The peer turn read the caller's person: somebody on `balanced` in their chat with Nouva had it apply to whatever Nox
  * did when Nouva asked — though nobody talked to Nox, and Nox's task was written by Nouva's model. So Nouva, holding
  * no write tool at all, could have a write done unasked by handing it over. A helper is different, and keeps its
- * parent's level (P5): it is the same agent, with the same tools, on an errand of the same turn.
+ * parent's level: it is the same agent, with the same tools, on an errand of the same turn.
  */
 describe("an agent asked by another", () => {
   async function askedToWrite(peerToml: string) {

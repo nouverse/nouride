@@ -44,7 +44,7 @@ export interface ClosedTurn {
   /** The calls asked for but never started. Nothing happened. */
   notStarted: string[];
   /**
-   * Set when the journal has a hole — a write that failed (P8). What it held is not here, so no call is said
+   * Set when the journal has a hole — a write that failed. What it held is not here, so no call is said
    * not to have started, and the report says the list may be short.
    */
   incomplete?: true;

@@ -361,7 +361,7 @@ describe("a tag meant for one of two, on Telegram", () => {
 
 describe("an agent's own tag, taken off what it is handed", () => {
   test("a bot's handle that starts with the agent's name is left whole", () => {
-    // Live, 2026-11-01: Nouva's "@NexaNourideBot Gading udah approve…" reached Nexa as "NourideBot Gading udah approve…" —
+    // Live, 2026-11-01: Nouva's "@NexaNourideBot Sam udah approve…" reached Nexa as "NourideBot Sam udah approve…" —
     // "@Nexa" matched the front of the handle and was cut off it.
     const nexa = registry.get("nexa")!;
     expect(stripAddressPrefix("@NexaNourideBot Gading udah approve tuh", nexa)).toBe("@NexaNourideBot Gading udah approve tuh");

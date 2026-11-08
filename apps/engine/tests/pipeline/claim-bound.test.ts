@@ -1,5 +1,5 @@
 /**
- * The claim table has a hard ceiling (P13).
+ * The claim table has a hard ceiling.
  *
  * A claim collapses the copies of one message that every bot in a room is handed. It was swept only of claims older
  * than its TTL, so a burst inside one minute — a busy room, a flood — kept every one and grew past the cap; the

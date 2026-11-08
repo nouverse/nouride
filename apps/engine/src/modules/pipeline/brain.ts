@@ -4,9 +4,8 @@
  * agent declares and never by which agent it is.
  *
  * A CLI that cannot answer a turn — signed out, its account at a limit it refuses past, gone — does not leave the person
- * with nothing: the agent's own model answers that turn instead, and says so first (the owner, 2026-10-26: an agent
- * never goes silent). Not where the CLI had already said something — the answer would be told twice — nor a turn a
- * person stopped.
+ * with nothing: the agent's own model answers that turn instead, and says so first (an agent never goes silent). Not
+ * where the CLI had already said something — the answer would be told twice — nor a turn a person stopped.
  */
 
 import { createTypingKeepalive } from "@nouride/gateways";

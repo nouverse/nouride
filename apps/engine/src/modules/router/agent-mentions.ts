@@ -4,10 +4,10 @@
  * The shape the operator asked for, and it reads like people talking:
  *
  * ```
- * Nouva: "@nox kerjain ini, disuruh Gading"
+ * Nouva: "@nox kerjain ini, disuruh Sam"
  * Nox:   …work…
  * Nox:   "udah kelar @nouva, PR di xxx"
- * Nouva: "SIP okay Nox, nanti kita butuh review Gading dulu ya"
+ * Nouva: "SIP okay Nox, nanti kita butuh review Sam dulu ya"
  * ```
  *
  * The last line ends it, and nothing here makes that happen: the router only routes on a mention, so

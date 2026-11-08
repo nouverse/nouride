@@ -47,7 +47,7 @@ export interface TurnState extends TurnGiven {
   readonly deadlineAt: number;
   readonly clock: TurnClock;
   readonly session: Session;
-  /** What the turn starts from: the conversation so far — or, for a mission's turn, nothing but its page (MISSIONS §4). */
+  /** What the turn starts from: the conversation so far — or, for a mission's turn, nothing but its page. */
   readonly history: ChatMessage[];
   /** Who the turn is for: the sender — or the person who started the mission, whose level and People entry apply. */
   readonly person: { gatewayId: string; senderId: string };
@@ -121,7 +121,7 @@ export function beginTurn(ctx: TurnContext, given: TurnGiven): TurnState {
   const person = shape?.person ?? { gatewayId: envelope.gatewayId, senderId: envelope.senderId };
   const asPerson: MessageEnvelope = shape ? { ...envelope, gatewayId: person.gatewayId, senderId: person.senderId } : envelope;
   const gateway = ctx.deps.gateways.get(envelope.gatewayId);
-  // Or the edit it answers (G11): a message corrected while it waited, or an edit of one already answered.
+  // Or the edit it answers: a message corrected while it waited, or an edit of one already answered.
   const cause = wakeCause(envelope) ?? editCause(envelope);
   const record = TurnRecorder.begin(ctx.deps.turns, {
     sessionId: session.id,

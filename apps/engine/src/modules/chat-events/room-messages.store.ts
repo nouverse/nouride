@@ -105,7 +105,7 @@ export class RoomMessageStore {
   }
 
   /**
-   * A message somebody edited (G11): the room's record says what it says now. Nothing when it was never recorded, and
+   * A message somebody edited: the room's record says what it says now. Nothing when it was never recorded, and
    * nothing for an edit that leaves no words — a blank bubble says nothing.
    */
   revise(gatewayId: string, chatId: string, id: string, text: string): void {

@@ -29,7 +29,7 @@ export interface ReplyFlush {
 }
 const FLUSH: ReplyFlush = { ms: 400, chars: 240 };
 /**
- * On a Box (E7): every write lands on its card, and a partial answer a second late on the dashboard is nothing anybody
+ * On a Box: every write lands on its card, and a partial answer a second late on the dashboard is nothing anybody
  * reads — the finished one is written with the turn's end either way.
  */
 export const APPLIANCE_REPLY_FLUSH: ReplyFlush = { ms: 1_000, chars: 1_024 };

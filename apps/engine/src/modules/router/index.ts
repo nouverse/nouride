@@ -105,7 +105,7 @@ export function routeMessage(
 
   /**
    * A reply to what an agent said, before "somebody else was tagged" — so replying to Nix and tagging Nouva runs both:
-   * Nouva on her copy, by the tag, Nix on his, by the reply (the owner, 2026-10-21). Before, the tag of another agent
+   * Nouva on her copy, by the tag, Nix on his, by the reply. Before, the tag of another agent
    * silenced the reply, and the agent the person answered said nothing.
    *
    * Not in a one-to-one chat to another agent's line (0.7.17, nouride-releases#10): another agent's line can be there
@@ -293,7 +293,7 @@ function matchesName(candidate: string, agent: LoadedAgent): boolean {
 export function stripAddressPrefix(text: string, agent: LoadedAgent): string {
   const names = [agent.config.id, agent.config.displayName].map(escapeRegex);
   // The name ends where a letter, digit or `_` does not follow: "@NexaNourideBot" is a bot's handle, not "@Nexa" with
-  // "NourideBot …" after it. Without it Nexa was handed "NourideBot Gading udah approve…" by Nouva's tag (2026-11-01).
+  // "NourideBot …" after it. Without it Nexa was handed "NourideBot Sam udah approve…" by Nouva's tag (2026-11-01).
   const pattern = new RegExp(`^\\s*@?(${names.join("|")})(?![\\p{L}\\p{N}_])\\s*[:,]?\\s*`, "iu");
   return text.replace(pattern, "").trimStart() || text.trim();
 }

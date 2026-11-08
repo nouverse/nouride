@@ -256,7 +256,7 @@ export class GroupContext {
   }
 
   /**
-   * A message held here, edited by whoever sent it (G11): it says what it says now. False when it is not held — gone
+   * A message held here, edited by whoever sent it: it says what it says now. False when it is not held — gone
    * from the window, or never heard. An edit is not a message of its own here: nobody said a second thing.
    */
   revise(gateway: string, chatId: string, id: string, text: string): boolean {

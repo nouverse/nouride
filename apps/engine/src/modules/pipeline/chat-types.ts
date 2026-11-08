@@ -23,7 +23,7 @@
  * answer the callers handle, not a hole. What it does not hold, the room log may: a chat with a line
  * recorded there is a room, since only rooms are recorded. Without that, every synthetic turn into a
  * room between a restart and the next message there was built as a one-to-one — a scheduled turn's
- * tag of another agent's bot was posted and never handed over (0.8.12, live in the owner's group).
+ * tag of another agent's bot was posted and never handed over (0.8.12, live in a group).
  */
 
 import { createLogger, type ChatType, type MessageEnvelope } from "@nouride/shared";

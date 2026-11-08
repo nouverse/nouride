@@ -70,7 +70,7 @@ export class InboxDesk {
   private readonly settledWithTurn = new Set<string>();
 
   /**
-   * Handled, inside the transaction that ends the turn the message started (E7): the turn's record, its conversation
+   * Handled, inside the transaction that ends the turn the message started: the turn's record, its conversation
    * and the message it answered are one commit, where the message's own was one more after it. A crash after it and
    * before the reply is sent leaves the reply owed (`delivered_at = 0`), and the boot sends it — handled is true.
    */
@@ -84,7 +84,7 @@ export class InboxDesk {
   }
 
   /**
-   * What a message said when it was written down, and when it was sent — what its edit is measured against (G11). Null
+   * What a message said when it was written down, and when it was sent — what its edit is measured against. Null
    * without an inbox, or for a message it never received.
    */
   recorded(gatewayId: string, chatId: string, messageId: string): { text: string; sentAt: number } | null {

@@ -1,19 +1,19 @@
 /**
- * `/btw`, a side question (RFC_SIDE_QUESTIONS, 0.8.17): asked while the agent works, or when it does not, and answered
+ * `/btw`, a side question (0.8.17): asked while the agent works, or when it does not, and answered
  * beside the turn by a one-shot turn of its own, shaped like a peer's (`peer-turn.ts`) and with no session of its own.
  *
- * As the owner put it on 2026-11-05 (v0.8.20_RFC item 1): the agent itself, in its persona and the person's language,
+ * What it is, as decided on 2026-11-05: the agent itself, in its persona and the person's language,
  * with the conversation and the work in flight, that can do nothing. A question is answered; something to do is said,
  * in its own words, to be better asked in the chat. Live that day it was none of that: on Nix, at its `[llm] effort`, it
  * thought for 24 s, called a tool, and its minute ran out on the daemon's English "ask it as a message".
  *
  * - It sees what the agent sees (`aside-context.ts`): the conversation so far and the work in flight, cut to a size
- *   budget (the owner's answer to §5.1, 2026-11-03). It writes nothing back: not journaled, not saved, so neither the
+ *   budget. It writes nothing back: not journaled, not saved, so neither the
  *   running turn nor the next one sees it. Its answer is the command's reply, which the chat gets marked and the turn
- *   log keeps as a `note` record, done without a model, that memory skips (§5.2; `inbound.ts`,
+ *   log keeps as a `note` record, done without a model, that memory skips (`inbound.ts`,
  *   `TurnStore.exchangesBetween`).
  * - No tools: nothing it does can change what the running turn works on, and one round answers it.
- * - The agent's own model (§5.3) at `low` effort, within a minute: an aside, not a task.
+ * - The agent's own model at `low` effort, within a minute: an aside, not a task.
  * - One at a time per chat: a second is refused while one is answered.
  * - Metered as `side_question` in a session of its own, never in the running turn's record; its start, end and failure
  *   are logged with its numbers (invariant 16).
@@ -37,7 +37,7 @@ const log = createLogger("pipeline.side-question");
  * rest are for a model that calls one anyway and is refused.
  */
 export const SIDE_ROUNDS = TOOL_ITERATIONS_MIN;
-/** Its clock: a minute (RFC §3). */
+/** Its clock: a minute. A design value. */
 const SIDE_MS = 60_000;
 /** Characters of the conversation it reads, the newest kept first: the last several exchanges. A design value. */
 const CONVERSATION_BUDGET = 24_000;
@@ -135,7 +135,7 @@ export class SideQuestions {
       const workspace = this.ctx.workspaceFor(agent.config.id);
       const result = await withinTheMinute(this.executor(agent, sessionId).run({
         signal: controller.signal,
-        // A few rounds, not the agent's own budget, at `low` effort: an aside (RFC §3). Its minute is the timer above and
+        // A few rounds, not the agent's own budget, at `low` effort: an aside. Its minute is the timer above and
         // no `deadlineAt`: the reserve kept for a last word is the daemon's turn's (a minute of an hour), and with a
         // minute's deadline it left no room for a round, so every answer was a wrap-up after the first.
         agent: { ...agent, config: { ...agent.config, llm: { ...agent.config.llm, maxToolIterations: SIDE_ROUNDS, effort: SIDE_EFFORT } } },

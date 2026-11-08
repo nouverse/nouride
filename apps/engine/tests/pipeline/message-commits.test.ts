@@ -1,5 +1,5 @@
 /**
- * What one message costs in commits — through the real pipeline, wired as the daemon wires it (`boot/durable.ts`) (E7).
+ * What one message costs in commits — through the real pipeline, wired as the daemon wires it (`boot/durable.ts`).
  *
  * Each commit is a write a Box's card takes. A plain one-line message in a one-to-one chat, answered in one model
  * call, made eleven before 0.7.11:
@@ -58,7 +58,7 @@ describe("one message", () => {
       // What the request carried (0.7.26) goes with the first row it answered, never in a commit of its own.
       "UPDATE turn_records + INSERT events:context + INSERT events:reply",
       "INSERT turn_journal",
-      // The conversation is its row and the two messages the turn added — the question and the answer (E2): the turn
+      // The conversation is its row and the two messages the turn added — the question and the answer: the turn
       // writes those, not the whole conversation again. Still the one settle.
       "INSERT sessions + INSERT session_messages + INSERT session_messages + DELETE turn_journal + UPDATE turn_records + INSERT events:reply + UPDATE turn_records + INSERT events:turn + UPDATE turn_records + UPDATE inbox",
       "UPDATE turn_records",

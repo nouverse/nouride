@@ -137,7 +137,7 @@ export class RoomMemory {
   }
 
   /**
-   * A message the room heard, edited (G11): what the buffer holds and the room's record of it say what it says now,
+   * A message the room heard, edited: what the buffer holds and the room's record of it say what it says now,
    * whoever it was for — so an edit that addresses nobody still changes what the next agent overhears, and starts
    * nothing. Where `observe` runs, before `admit`, for the reason given there: what was said is the room's.
    */

@@ -11,8 +11,8 @@
  *
  * ## What it does and does not protect
  *
- * **Does:** two turns in the same process racing on one path. That is the real case — G3 gave two
- * agents a shared workspace root, so two conversations can edit one file, and each atomic write is
+ * **Does:** two turns in the same process racing on one path. That is the real case — two agents may
+ * share a workspace root, so two conversations can edit one file, and each atomic write is
  * individually fine while the *lost update* happens between them.
  *
  * **Does not:** two processes. The single-instance lock (`acquireLockFile`) is what stops a second

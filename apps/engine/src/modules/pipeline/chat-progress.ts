@@ -288,7 +288,7 @@ export class ChatProgress {
    * The model at work again with no call running — thinking, or writing its answer — and nothing on the bubble but the
    * last step. Said once that has gone on for a tick, then every tick, with how long: `⏳ ✍️ writing a reply… 40s`.
    *
-   * The owner's bubble read `✓ 1 step · 166s` for a turn whose one step took 18 s: the other 148 s Claude Code wrote a
+   * A person's bubble read `✓ 1 step · 166s` for a turn whose one step took 18 s: the other 148 s Claude Code wrote a
    * long reply, and nothing said so — to a person waiting it looked like a hang (0.8.7). Its own timer, at the tick, so
    * a model that is silent while it thinks is said to be thinking all the same; one edit a tick, and no model asked.
    */

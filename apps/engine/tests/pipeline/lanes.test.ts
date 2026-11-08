@@ -1,5 +1,5 @@
 /**
- * A turn's helpers and peers inside the ceiling, and its peers at work in the chat they run in (P2).
+ * A turn's helpers and peers inside the ceiling, and its peers at work in the chat they run in.
  *
  * `delegate` ran four helpers and `ask_agent` a peer per call, none of them counted: eight turns each delegating four
  * was forty provider streams with `max_concurrent_turns` reading eight. And a peer was invisible to `isBusy`, so a

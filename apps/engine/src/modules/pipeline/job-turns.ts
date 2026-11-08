@@ -74,7 +74,7 @@ export class JobTurns {
      * clear a conversation on demand. One verb is all a scheduled turn needs.
      */
     private readonly rollOver: (agent: LoadedAgent, key: SessionKey) => Promise<void>,
-    /** A slot under `max_concurrent_turns`, held for the turn — the queue's, so chat turns and these share one ceiling (P1). */
+    /** A slot under `max_concurrent_turns`, held for the turn — the queue's, so chat turns and these share one ceiling. */
     private readonly slot: <R>(work: () => Promise<R>) => Promise<R>,
   ) {}
 
@@ -114,7 +114,7 @@ export class JobTurns {
     // Asleep (0.8.0): a schedule coming due or a webhook called is recorded as skipped, not failed — nothing went wrong.
     if (this.ctx.deps.registry.isPaused(agent.config.id)) return { text: "", skipped: `agent asleep: ${agent.config.id}` };
     /**
-     * Not into a chat its agent is answering in, and under the same ceiling as every chat turn (P1).
+     * Not into a chat its agent is answering in, and under the same ceiling as every chat turn.
      *
      * It took neither. A `session: "chat"` job due while a person talked to the agent there overwrote that turn's
      * `ActiveTurn`: both wrote one session, and the job's end dropped the person's steers. And N due jobs were N
@@ -286,7 +286,7 @@ export class JobTurns {
       commands: [],
       onUsage: (usage) =>
         meter(this.ctx.deps.usage, { agentId: usage.agentId, provider: agent.config.llm.provider, purpose: "turn", sessionId: session.id, ...(record ? { turnId: record.id } : {}) })(usage, usage.model, usage.purpose, usage.provider),
-      // A job kept in a chat's history compacts it like a turn there: with `[memory]`'s pass model when set (M12).
+      // A job kept in a chat's history compacts it like a turn there: with `[memory]`'s pass model when set.
       summarizer: summarizerFor(this.ctx.deps, { agentId: agent.config.id, profile: agent.config.llm.provider, sessionId: session.id, tiers: agent.config.llm, ...(record ? { turnId: record.id } : {}) }),
     });
 
@@ -335,7 +335,7 @@ export class JobTurns {
         senderId: SYSTEM_SENDER,
         systemEvent: true,
         ...(request.model ? { model: request.model } : {}),
-        // The payload of the webhook that fired it is outside content from the first step (S13).
+        // The payload of the webhook that fired it is outside content from the first step.
         ...(request.outsideContent?.length ? { outsideContent: request.outsideContent } : {}),
         // Nobody is watching it, and it sends only to its job's chat (0.8.0).
         unattended: {
@@ -350,7 +350,7 @@ export class JobTurns {
       if (result.paused) {
         fold({ kind: "restart" });
         close({ status: "interrupted", error: "the daemon restarted while this turn was running" });
-        // Interrupted, not failed: nothing about the job went wrong, and a failure report would say it had (P11).
+        // Interrupted, not failed: nothing about the job went wrong, and a failure report would say it had.
         return { text: "", interrupted: "interrupted by a daemon restart" };
       }
 
@@ -384,7 +384,7 @@ export class JobTurns {
     } catch (err) {
       /**
        * Cut off by a shutdown in the middle of a call — a model answering slowly does not reach a step in the 15 s the
-       * shutdown gives it, and is aborted (`stopTurns`). Interrupted, as one stopped at a step is (P11): it was not
+       * shutdown gives it, and is aborted (`stopTurns`). Interrupted, as one stopped at a step is: it was not
        * the job that failed, nor the provider, and both were said — "The model is not responding right now".
        */
       if (controller.signal.reason === RESTARTING) {
@@ -491,7 +491,7 @@ export class JobTurns {
       deliver: (target: JobTarget, text: string, said?: { agentId: string; job: string }) => this.deliverToChat(target, text, said),
       commandSandbox: (job: Job) => {
         if (!this.ctx.deps.registry.get(job.agentId)) return null;
-        // Every value, to mask what it prints with; in its environment only the secrets bound to its command (S6).
+        // Every value, to mask what it prints with; in its environment only the secrets bound to its command.
         const secrets = this.ctx.deps.childEnv?.(job.agentId) ?? {};
         const handed = job.payload.kind === "command" ? (this.ctx.deps.childEnv?.forCommand(job.agentId, job.payload.argv).env ?? {}) : {};
         const workspace = this.ctx.workspaceFor(job.agentId);

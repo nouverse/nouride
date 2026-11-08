@@ -45,8 +45,8 @@ export function formatDuration(seconds: number): string {
 
 /**
  * What a conversation held when it was cleared, for `/new` and `/reset`: turns, messages and about how many tokens —
- * the estimate the context is planned with, so "~". Asked for by the owner (2026-10-21): "Context cleared" said nothing
- * about how much.
+ * the estimate the context is planned with, so "~". Asked for here because "Context cleared" said nothing about how
+ * much.
  */
 export function clearedSize(messages: ChatMessage[]): string {
   const turns = groupTurns(messages).length;

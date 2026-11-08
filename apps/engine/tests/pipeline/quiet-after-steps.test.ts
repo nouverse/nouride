@@ -2,7 +2,7 @@
  * The bubble while the model works after its steps (0.8.7), through the pipeline: a coding CLI's turn with a real CLI
  * process, and a model's turn — one bubble serves both.
  *
- * The owner's bubble read `[nix] ✓ 1 step · 166s`: the one step took 18 s, and the other 148 s Claude Code wrote a long
+ * A person's bubble read `[nix] ✓ 1 step · 166s`: the one step took 18 s, and the other 148 s Claude Code wrote a long
  * reply with nothing on the bubble to say so. To a person waiting, it looked like a hang.
  */
 

@@ -75,7 +75,7 @@ describe("an unknown sender", () => {
   });
 
   test("renaming yourself does not make you somebody", () => {
-    // The impersonation this exists to prevent: anyone can set their Telegram name to "Gading".
+    // The impersonation this exists to prevent: anyone can set their Telegram name to somebody else's.
     const impostor = prompt({ senderName: "Gading", chatType: "group" });
     const real = prompt({ person: { name: "Gading" } });
     expect(impostor).not.toBe(real);
@@ -90,8 +90,8 @@ describe("an unknown sender", () => {
 });
 
 describe("an unmatched sender on a household install", () => {
-  // The flaw Gading spotted, and it was not in the matching — it was in what else was in the prompt:
-  // `USER.md`, read on every turn until 0.7.0, greeted his partner as Gading. It is gone; a model
+  // The flaw that was spotted was not in the matching — it was in what else was in the prompt:
+  // `USER.md`, read on every turn until 0.7.0, greeted Sam's partner as Sam. It is gone; a model
   // that has met the household still fills a silence with the likeliest name, so it is told.
 
   test("is told it does not know, and told not to call them by anybody else's name", () => {

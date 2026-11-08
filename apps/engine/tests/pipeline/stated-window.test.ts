@@ -1,5 +1,5 @@
 /**
- * A gateway's stated context window reaching a turn through the daemon as it is wired (G2): the provider registry's
+ * A gateway's stated context window reaching a turn through the daemon as it is wired: the provider registry's
  * listing (`llm/catalog.ts`), read for the agent's own profile by the pipeline. The decision itself is in
  * `tests/llm/stated-window.test.ts`; this is the path.
  */

@@ -3,7 +3,7 @@
  *
  * A line after the question holds where the harness, read at the top of a long prompt, loses. It used
  * to be sent and not kept — and the message stored differently from the one sent is the byte at which
- * the next turn's prompt cache stopped (M1, 2026-10-15). The nightly pass reads the turn records, not
+ * the next turn's prompt cache stopped (2026-10-15). The nightly pass reads the turn records, not
  * the session, so nothing a person said is mistaken for it; `llm/executor/reminders.ts` has the rest.
  */
 

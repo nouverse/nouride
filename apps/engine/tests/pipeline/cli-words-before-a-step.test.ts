@@ -1,7 +1,7 @@
 /**
  * What a coding CLI writes before a step, through the pipeline with a real CLI process (0.8.7).
  *
- * Twice the owner saw only an agent's closing line: its explanation, written before a tool call, was gone. Each
+ * Twice a person saw only an agent's closing line: its explanation, written before a tool call, was gone. Each
  * message a CLI writes before a step goes to the chat on its own (0.8.5), and the turn's answer was what was left — so
  * the turn's record kept the closing line alone. The dashboard reads a turn's reply from that record, and on its own
  * connection that is the only way a reply reaches anybody: the explanation reached nobody there.

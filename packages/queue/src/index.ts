@@ -79,7 +79,7 @@ export interface QueueStats {
   keys: number;
   waiting: number;
   running: number;
-  /** Work finished since the queue was made — scheduled work included. A new version's proof it has done any (D7). */
+  /** Work finished since the queue was made — scheduled work included. A new version's proof it has done any. */
   completed: number;
 }
 
@@ -185,7 +185,7 @@ export class KeyedQueue<T> {
   }
 
   /**
-   * Run work that is not an item — a scheduled turn — under the same ceiling (P1).
+   * Run work that is not an item — a scheduled turn — under the same ceiling as the chat turns.
    *
    * Counted in `runningTotal`, so the queue's items wait for it as they wait for each other, and it waits for a slot
    * when the ceiling is reached. A slot freed while it waits is handed straight to it rather than to the next item:
@@ -207,7 +207,7 @@ export class KeyedQueue<T> {
   }
 
   /**
-   * One free slot, now or not at all — for work started by work that holds one, a turn's helpers and peers (P2).
+   * One free slot, now or not at all — for work started by work that holds one, a turn's helpers and peers.
    *
    * Never waits, which is the difference from `runOutside`: the slot it would wait for may be held by the turn
    * waiting on it, and eight turns each waiting on a helper that waits on a slot is a daemon that has stopped. Null

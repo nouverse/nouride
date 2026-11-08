@@ -28,7 +28,7 @@ export interface TurnOutcome {
   error?: string;
   /** Stopped by a person, or by a shutdown — not the turn's doing. */
   interrupted: boolean;
-  /** A call's result carried content from outside — a page, a message, an MCP answer (S13). */
+  /** A call's result carried content from outside — a page, a message, an MCP answer. */
   readOutside: boolean;
 }
 
@@ -49,7 +49,7 @@ export interface TurnShape {
   person: { gatewayId: string; senderId: string };
   /**
    * Outside content read before this turn, named: a mission that read a page or a message in an earlier turn starts
-   * every later one as a turn that has (S13). Each turn starts fresh, so without it the mark ended with the turn that
+   * every later one as a turn that has. Each turn starts fresh, so without it the mark ended with the turn that
    * read — and the guards a page puts on what follows with it.
    */
   outsideContent?: string[];

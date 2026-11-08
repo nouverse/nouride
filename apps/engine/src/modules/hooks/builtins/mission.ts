@@ -1,5 +1,5 @@
 /**
- * `/mission` — a person's side of missions in the chat (MISSIONS §11). `/mission <goal>` starts one for the agent
+ * `/mission` — a person's side of missions in the chat. `/mission <goal>` starts one for the agent
  * addressed, as the sender, reporting here; `/mission` lists what is running and waiting here, *needs you* first;
  * `/mission stop|continue|accept <id>` and `/mission answer <id> <text>` act on one; `/mission tell <id> <words>` (0.8.10)
  * gives it words while it works. Most missions are started by the agent without a command — this is the explicit way, and

@@ -12,7 +12,7 @@
  *
  * A write that fails is logged and swallowed, never thrown: a journal that cannot be written makes a
  * crash cost more, and a turn that died because its journal could not be written would cost everything.
- * Swallowed is not silent (P8): each one is counted, for `/health`, and takes its row's number anyway, so
+ * Swallowed is not silent: each one is counted, for `/health`, and takes its row's number anyway, so
  * the journal it leaves has a hole a closing can see — and does not read past to say a call never started.
  */
 
@@ -94,7 +94,7 @@ export class TurnJournalStore {
         log.error("could not journal a turn", { turn_id: turnId, kind, error: String(err) });
       }
     };
-    // One commit, not two (E7): a journal with a head and no question is not one any reader wants. Never thrown, as no
+    // One commit, not two: a journal with a head and no question is not one any reader wants. Never thrown, as no
     // single write is: a commit that fails takes both rows, and the journal is incomplete from its first entry.
     try {
       this.db.transaction(() => {

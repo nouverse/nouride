@@ -3,9 +3,9 @@
  *
  * The shape asked for reads like people talking:
  *
- *   Nouva: "@nox kerjain ini, disuruh Gading"
+ *   Nouva: "@nox kerjain ini, disuruh Sam"
  *   Nox:   "udah kelar @nouva, PR di xxx"
- *   Nouva: "SIP okay Nox, nanti kita butuh review Gading dulu ya"
+ *   Nouva: "SIP okay Nox, nanti kita butuh review Sam dulu ya"
  *
  * The last line ends it, and nothing makes that happen — the router only routes on a mention, so a
  * reply without one reaches nobody. That is the soft brake, and it depends on a model choosing not to
@@ -310,7 +310,7 @@ describe("OutboundRegistry", () => {
 /**
  * An agent naming another agent in a DM.
  *
- * Reported live: Nouva finished a peer turn with Nox and reported it in Gading's Telegram DM —
+ * Reported live: Nouva finished a peer turn with Nox and reported it in a person's Telegram DM —
  * "Nox says the PR is up". Telegram echoed that back through the inbound handler, the router found
  * "nox" in the text, and Nox took a regular turn in a DM it has no presence in, speaking through
  * Nouva's bot under Nouva's name.

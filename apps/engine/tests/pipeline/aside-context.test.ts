@@ -1,6 +1,6 @@
 /**
  * What a call beside the conversation is shown of it (`aside-context.ts`, 0.8.20): `/btw` and the steer line see the
- * conversation and the work in flight as the agent does (the owner, 2026-11-05). A side question on a coding CLI's turn,
+ * conversation and the work in flight as the agent does. A side question on a coding CLI's turn,
  * fifteen tool calls in, was shown only its prompt (live, 2026-11-05): a CLI journals its prompt and records its steps.
  */
 

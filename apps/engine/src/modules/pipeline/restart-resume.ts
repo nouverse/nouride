@@ -71,7 +71,7 @@ export type Cut = { kind: CutKind; call: CutCall };
 
 /**
  * What the agent is told: what it was doing, and to carry on — checking what was cut off before repeating it. With
- * `waiting`, the approvals it was cut off waiting on, which the restart kept and asked again (D8): the same call made
+ * `waiting`, the approvals it was cut off waiting on, which the restart kept and asked again: the same call made
  * again waits on that question (`approvals-kept.ts`), so it is told to make it rather than to ask in words.
  */
 export function restartResumeEnvelope(

@@ -153,7 +153,8 @@ export const sessionHooks: Hook[] = [
           (helpers === 0 ? "" : ` Stopped ${helpers === 1 ? "the helper" : `the ${helpers} helpers`} working in the background too.`) +
           (asked.length === 0 ? "" : ` Stopped what ${asked.join(" and ")} ${asked.length === 1 ? "was" : "were"} doing in the background for me too.`);
 
-        // "Until /start" says what changed in 0.7.11 (D15): a restart, a nightly update included, no longer resumes it.
+        // "Until /start" says what changed in 0.7.11, when a pause began to outlive a restart: a restart, a nightly
+        // update included, no longer resumes it.
         return {
           handled: true,
           reply: !paused

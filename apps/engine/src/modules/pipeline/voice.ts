@@ -15,7 +15,7 @@ import { cronJobOfChat } from "@/modules/cron/session.ts";
 
 const log = createLogger("pipeline.voice");
 
-/** The pattern the router uses at L165 — duplicated here to keep the module self-contained. */
+/** The pattern the router uses (`router/index.ts`) — duplicated here to keep the module self-contained. */
 const AT_MENTION = /@([\p{L}\p{N}_-]+)/gu;
 
 export class Voice {
