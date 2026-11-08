@@ -159,10 +159,15 @@ describe("argv (D14)", () => {
 describe("exit codes and --json (D5)", () => {
   test("asking wrongly is 2 — an unknown command or action, a missing or malformed argument", async () => {
     expect(await cli("down", "bogus")).toMatchObject({ code: 2, err: expect.stringContaining('Unknown command "bogus"') });
+    expect((await cli("down", "bogus")).err).not.toContain("Did you mean");
+    // A typo is answered with what was most likely meant (0.8.23), and still exits 2.
+    expect(await cli("down", "missions")).toMatchObject({ code: 2, err: expect.stringContaining("Did you mean `nouride mission`?") });
     const typo = await cli("down", "jobs", "lst");
     expect(typo.code).toBe(2);
     expect(typo.err).toContain('`nouride jobs` has no "lst"');
+    expect(typo.err).toContain("Did you mean `nouride jobs list`?");
     expect(typo.err).toContain("nouride jobs log|kill <id>");
+    expect((await cli("down", "secrets", "lsit")).err).toContain("Did you mean `nouride secrets list`?");
     expect((await cli("down", "cron", "rm")).code).toBe(2);
     expect((await cli("down", "logs", "--lines=many")).code).toBe(2);
     expect((await cli("down", "agent", "frobnicate", "ren")).code).toBe(2);

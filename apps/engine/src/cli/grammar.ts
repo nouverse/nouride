@@ -19,6 +19,7 @@
 
 import { usageError, plain } from "@/cli/ui.ts";
 import { refuseRetired } from "@/cli/retired.ts";
+import { nearest } from "@/cli/nearest.ts";
 
 /** The words after the action are another command's own, flags included: `policy check rm -rf /tmp/x`. */
 export const VERBATIM = "<command…>";
@@ -309,6 +310,22 @@ function meantFor(command: string, word: string): string | null {
   return null;
 }
 
+/** The command a mistyped one most likely meant, by its own name (0.8.23): `missions` is `mission`. */
+export function meantCommand(typed: string): string | null {
+  return nearest(typed, [...Object.keys(GRAMMAR), ...Object.keys(COMMAND_ALIASES)], (name) => COMMAND_ALIASES[name] ?? name);
+}
+
+/** The action of `command` a mistyped word most likely meant, among those its help teaches (0.8.23): `lst` is `list`. */
+function meantAction(command: string, word: string): string | null {
+  const grammar = GRAMMAR[COMMAND_ALIASES[command] ?? command];
+  if (!grammar) return null;
+  const actions = Object.keys(grammar.forms)
+    .filter((key) => key !== "" && key !== "*")
+    .map((key) => key.split(" ")[0]!)
+    .filter((action) => !grammar.untaught?.includes(action));
+  return nearest(word, actions);
+}
+
 /**
  * Exit 2 when `args` gives `command` a word or a flag it does not read — before anything is asked of the daemon or
  * written. A word is said as an unknown action is (`unknownAction`), with the command's lines of help.
@@ -318,9 +335,14 @@ export function refuseUnread(command: string, args: readonly string[], help: str
   if (word !== null) {
     refuseRetired(COMMAND_ALIASES[command] ?? command, { action: word });
     const other = meantFor(command, word);
+    const close = other ? null : meantAction(command, word);
     usageError(
       `\`nouride ${command}\` has no "${word}".`,
-      [plain(help ?? "Run `nouride help`."), ...(other ? [`\`nouride ${other} ${word}\` is the one that takes it.`] : [])].join("\n"),
+      [
+        ...(close ? [`Did you mean \`nouride ${command} ${close}\`?`] : []),
+        plain(help ?? "Run `nouride help`."),
+        ...(other ? [`\`nouride ${other} ${word}\` is the one that takes it.`] : []),
+      ].join("\n"),
     );
   }
   const flag = unreadFlag(command, args);

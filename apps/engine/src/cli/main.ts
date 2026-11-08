@@ -39,7 +39,7 @@ import { loadConfig } from "@/cli/load-config.ts";
 import { dispatchedArgv, hasFlag } from "@/cli/args.ts";
 import { crashed, DIM, emit, fail, finish, GREEN, jsonOutput, plain, RESET, say, setJsonOutput, usageError, usageLines } from "@/cli/ui.ts";
 import { usage, usageFor } from "@/cli/usage.ts";
-import { refuseUnread } from "@/cli/grammar.ts";
+import { meantCommand, refuseUnread } from "@/cli/grammar.ts";
 import { lookAtHealth, waitBack } from "@/cli/wait-back.ts";
 import { VERSION } from "@/cli/version.ts";
 
@@ -343,8 +343,10 @@ async function main(): Promise<void> {
       return;
     }
 
-    default:
-      usageError(`Unknown command "${command}".`, "Run `nouride help`.");
+    default: {
+      const meant = meantCommand(command);
+      usageError(`Unknown command "${command}".`, meant ? `Did you mean \`nouride ${meant}\`? \`nouride help\` lists every command.` : "Run `nouride help`.");
+    }
   }
 }
 
