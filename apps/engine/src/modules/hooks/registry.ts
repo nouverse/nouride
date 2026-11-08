@@ -2,7 +2,7 @@
  * Slash commands — handled instead of an agent turn.
  *
  * A command answers immediately and costs no model call, which is why the queue treats them as
- * urgent (see `pipeline/index.ts`): the turn that is waiting on an approval holds the conversation's
+ * urgent (see `pipeline/chat-queue.ts`): the turn that is waiting on an approval holds the conversation's
  * key, so an `/approve` queued behind it could never unblock it.
  *
  * The registry is here; the commands themselves are in `builtins/`, grouped by what they act on —

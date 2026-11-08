@@ -28,7 +28,7 @@ const log = createLogger("pipeline.attachments");
  * back with is one the agent's own tools are handed: a coding CLI's (0.8.11, `ToolContext.lent`), and `exec` for a file
  * the tool cannot read itself. One that cannot be copied stays where it is, said in the log.
  */
-function ownCopy(deps: PipelineDeps, ctx: ToolContext, ref: string, path: string): string {
+function ownCopy(deps: Pick<PipelineDeps, "attachments">, ctx: ToolContext, ref: string, path: string): string {
   const store = deps.attachments;
   if (!store || !agentCommandsHaveOwnUsers() || store.holds(ctx.agentId, path)) return path;
   try {
@@ -40,7 +40,7 @@ function ownCopy(deps: PipelineDeps, ctx: ToolContext, ref: string, path: string
 }
 
 export function attachmentReadOptions(params: {
-  deps: PipelineDeps;
+  deps: Pick<PipelineDeps, "attachments" | "config" | "registry" | "providers" | "usage">;
   index: NonNullable<PipelineDeps["attachmentIndex"]>;
   intake: AttachmentIntake;
   open: (ctx: ToolContext, file: ChatAttachment) => Promise<OpenedAttachment>;

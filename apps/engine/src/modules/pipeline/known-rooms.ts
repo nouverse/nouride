@@ -49,14 +49,14 @@ export function personFor(people: readonly Person[], gatewayId: string, senderId
 }
 
 /** A room or a one-to-one: a dashboard room, a chat with a room log, or what a platform said of it this process. */
-export function chatKind(deps: PipelineDeps, gatewayId: string, chatId: string, chatTypes?: Pick<ChatTypes, "of">): "dm" | "group" {
+export function chatKind(deps: Pick<PipelineDeps, "rooms" | "roomMessages">, gatewayId: string, chatId: string, chatTypes?: Pick<ChatTypes, "of">): "dm" | "group" {
   if (deps.rooms?.get(gatewayId, chatId) || deps.roomMessages?.isRoom(gatewayId, chatId)) return "group";
   const said = chatTypes?.of(gatewayId, chatId);
   return said !== undefined && said !== "dm" ? "group" : "dm";
 }
 
 /** Who is in a chat, as far as the daemon knows: the person on the other end of a one-to-one, or who spoke in a group lately. */
-export function peopleIn(deps: PipelineDeps, gatewayId: string, chatId: string, kind: "dm" | "group"): Who[] {
+export function peopleIn(deps: Pick<PipelineDeps, "config" | "roomMessages" | "turns">, gatewayId: string, chatId: string, kind: "dm" | "group"): Who[] {
   const people = deps.config.people;
   if (kind === "group") {
     const seen = new Map<string, Who>();
@@ -81,8 +81,11 @@ export function peopleIn(deps: PipelineDeps, gatewayId: string, chatId: string, 
   return [{ name: deps.roomMessages?.lastNameOf(gatewayId, sender) ?? sender }];
 }
 
+/** What the rooms are read from: the stores that know a room, and the people and turns that say who is in one. */
+export type RoomSources = Pick<PipelineDeps, "config" | "gateways" | "sessions" | "turns" | "rooms" | "roomMessages" | "roomNames">;
+
 /** Every room the daemon knows, most recently active first. */
-export function knownRooms(deps: PipelineDeps, chatTypes?: Pick<ChatTypes, "of">): KnownRoom[] {
+export function knownRooms(deps: RoomSources, chatTypes?: Pick<ChatTypes, "of">): KnownRoom[] {
   const found = new Map<string, KnownRoom>();
   const add = (gatewayId: string, chatId: string, agentId: string | undefined, at: number) => {
     const gateway = deps.gateways.get(gatewayId);
@@ -135,7 +138,7 @@ export function knownRooms(deps: PipelineDeps, chatTypes?: Pick<ChatTypes, "of">
  * platform room is then called what its platform calls it again.
  */
 export function renameRoom(
-  deps: PipelineDeps,
+  deps: Pick<PipelineDeps, "gateways" | "rooms" | "roomNames">,
   gatewayId: string,
   chatId: string,
   title: string,

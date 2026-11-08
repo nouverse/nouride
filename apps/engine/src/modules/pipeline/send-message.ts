@@ -31,12 +31,12 @@ import type { ReachableChat, SendTargets } from "@/modules/tools/builtins/send-m
 import { SYSTEM_SENDER, type PipelineDeps } from "./deps.ts";
 import type { TurnContext } from "./turn-context.ts";
 import type { ChatTypes } from "./chat-types.ts";
-import { chatKind, peopleIn, personFor, SESSIONS_READ } from "./known-rooms.ts";
+import { chatKind, peopleIn, personFor, SESSIONS_READ, type RoomSources } from "./known-rooms.ts";
 
 const log = createLogger("pipeline.send-message");
 
 /** The chats `agentId` may send into, and the connections it may not use — `send_message`'s `targets`. */
-export function sendTargets(deps: PipelineDeps, agentId: string, chatTypes?: Pick<ChatTypes, "of">): SendTargets {
+export function sendTargets(deps: RoomSources, agentId: string, chatTypes?: Pick<ChatTypes, "of">): SendTargets {
   const othersGateways = deps.config.gateways.filter((gateway) => gateway.agent && gateway.agent !== agentId).map((gateway) => gateway.id);
   const usable = (gatewayId: string) => deps.gateways.has(gatewayId) && !othersGateways.includes(gatewayId);
 
@@ -73,7 +73,7 @@ export function sendTargets(deps: PipelineDeps, agentId: string, chatTypes?: Pic
  * a job's results go (0.8.0). Those offered bare chat ids, and nobody could tell `5550001111` from `-1005550002`; this
  * says which is a one-to-one and with whom, and which a group and its name, as `send_message` already knew.
  */
-export function reachableChats(deps: PipelineDeps, chatTypes?: Pick<ChatTypes, "of">): ReachableChat[] {
+export function reachableChats(deps: RoomSources & Pick<PipelineDeps, "registry">, chatTypes?: Pick<ChatTypes, "of">): ReachableChat[] {
   const chats = new Map<string, ReachableChat>();
   for (const agent of deps.registry.all()) {
     for (const chat of sendTargets(deps, agent.config.id, chatTypes).chats) {

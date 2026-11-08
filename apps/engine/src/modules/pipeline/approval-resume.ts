@@ -1,7 +1,7 @@
 /**
  * What an agent is told when a person answers an approval after the turn that asked stopped waiting.
  *
- * Moved out of `Pipeline.resumeAfterApproval`, which says why it exists and when it is sent; this is only
+ * Moved out of `WakeUps.resumeAfterApproval`, which says why it exists and when it is sent; this is only
  * the message. A system event into the same conversation: an empty reply from one sends nothing, so an agent
  * with nothing to add stays quiet, and the queue keeps it behind whatever the conversation is doing.
  */
