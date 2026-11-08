@@ -90,7 +90,7 @@ export function SessionRetentionControl() {
   }
 
   return (
-    <div className="rounded-2xl border border-base-content/[0.08] bg-base-100/80 backdrop-blur-xl p-5 shadow-xs space-y-4">
+    <div className="rounded-[22px] border border-base-content/[0.08] bg-base-100 p-5 shadow-soft space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="font-bold text-sm tracking-tight text-base-content flex items-center gap-2">

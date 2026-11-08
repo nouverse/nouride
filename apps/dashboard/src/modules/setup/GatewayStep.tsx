@@ -64,7 +64,7 @@ export function GatewayStep({ mount, onBack }: { mount: string; onBack: () => vo
   });
 
   return (
-    <div className="rounded-3xl border border-base-content/[0.08] bg-base-100/85 backdrop-blur-2xl p-6 sm:p-8 shadow-2xl space-y-5">
+    <div className="rounded-[22px] border border-base-content/[0.08] bg-base-100 p-6 sm:p-8 shadow-soft space-y-5">
       <button
         type="button"
         onClick={onBack}

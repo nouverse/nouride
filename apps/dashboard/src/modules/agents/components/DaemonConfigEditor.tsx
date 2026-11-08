@@ -82,7 +82,7 @@ export function DaemonConfigEditor() {
   }
 
   return (
-    <div className="rounded-2xl border border-base-content/[0.08] bg-base-100/80 backdrop-blur-xl p-5 shadow-xs space-y-4">
+    <div className="rounded-[22px] border border-base-content/[0.08] bg-base-100 p-5 shadow-soft space-y-4">
       <button
         type="button"
         className="flex w-full items-start justify-between gap-4 text-left"

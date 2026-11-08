@@ -11,7 +11,7 @@ import { KeyRound } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import { useGate } from "@/commons/lib/session";
 import { ErrorNote, Field } from "@/commons/components/ui/ui";
-import { NovaAppIcon } from "@/commons/components/brand/logos";
+import { Mascot } from "@/commons/components/brand/Mascot";
 import { MIN_PASSWORD_LENGTH } from "@/commons/lib/password";
 import { PasswordInput } from "@/commons/components/ui/PasswordInput";
 
@@ -66,15 +66,12 @@ export default function WelcomePage() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center p-4 selection:bg-primary/20 overflow-clip">
-      {/* Ambient Apple Glow */}
-      <div className="absolute top-1/4 -left-32 size-96 rounded-full bg-primary/15 blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 -right-32 size-96 rounded-full bg-secondary/15 blur-3xl pointer-events-none" />
 
-      <div className="relative w-full max-w-md rounded-3xl border border-base-content/[0.08] bg-base-100/85 backdrop-blur-2xl p-7 sm:p-8 shadow-2xl space-y-6">
+      <div className="relative w-full max-w-md rounded-[22px] border border-base-content/[0.08] bg-base-100 p-7 sm:p-8 shadow-soft space-y-6">
         <div className="space-y-3 text-center sm:text-left">
-          <NovaAppIcon className="size-12 drop-shadow-lg mx-auto sm:mx-0" />
+          <Mascot pose="waving" decorative className="mx-auto w-24 sm:mx-0" />
           <div className="space-y-1">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-base-content">
+            <h1 className="text-2xl text-base-content sm:text-3xl">
               Personalize Your Account
             </h1>
             <p className="text-base-content/65 text-sm leading-relaxed">

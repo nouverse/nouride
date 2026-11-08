@@ -201,7 +201,7 @@ export function Combobox(props: ComboboxProps) {
           style={place}
           // The field keeps the focus while the list is scrolled or clicked, so its blur does not close it.
           onMouseDown={(e) => e.preventDefault()}
-          className="bg-base-100/95 backdrop-blur-xl border border-base-content/10 z-[1000] list-none overflow-y-auto rounded-2xl p-1.5 shadow-xl space-y-0.5"
+          className="bg-base-100 border border-base-content/10 z-[1000] list-none overflow-y-auto rounded-2xl p-1.5 shadow-xl space-y-0.5"
         >
           {rows.map((row, index) => {
             const isCustom = custom !== null && index === 0;

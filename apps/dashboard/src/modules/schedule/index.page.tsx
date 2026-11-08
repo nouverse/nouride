@@ -245,7 +245,7 @@ export default function SchedulePage({ job: linked }: { job?: string }) {
               key={job.id}
               id={jobCardId(job.id)}
               aria-current={marked === job.id ? "true" : undefined}
-              className={`rounded-2xl border bg-base-100/80 backdrop-blur-xl shadow-xs transition-all duration-200 ${
+              className={`rounded-[22px] border bg-base-100 shadow-soft transition-all duration-200 ${
                 marked === job.id ? "border-primary/60 ring-2 ring-primary/30" : "border-base-content/[0.08] hover:border-base-content/15"
               }`}
             >

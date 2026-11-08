@@ -36,7 +36,7 @@ export function Panel({
 }) {
   return (
     // Its own scroll from a laptop's width up; on a phone it is as tall as its rows and the page scrolls (`LogsPage`).
-    <section className="flex shrink-0 flex-col rounded-2xl border border-base-content/[0.08] bg-base-100/80 backdrop-blur-xl shadow-sm lg:min-h-0 lg:flex-1 lg:shrink lg:overflow-hidden">
+    <section className="flex shrink-0 flex-col rounded-[22px] border border-base-content/[0.08] bg-base-100 shadow-soft lg:min-h-0 lg:flex-1 lg:shrink lg:overflow-hidden">
       <div className="shrink-0 space-y-3 border-b border-base-content/[0.08] px-4 py-3.5 sm:px-5">
         <div className="space-y-1 min-w-0">
           <h2 className="font-semibold tracking-tight text-base-content text-base">{title}</h2>

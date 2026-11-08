@@ -1,46 +1,4 @@
-import { useId, type ImgHTMLAttributes } from "react";
-/**
- * The chibi pose, from `packages/shared/assets` — one copy for the whole workspace.
- *
- * It was `nouride.png`, which is the full brand lockup: the cat on a motorcycle inside an emblem,
- * with "NOURIDE — SERIOUS AGENTS. TINY RUNTIME." set beneath it. Every use of this component in the
- * dashboard is between `size-6` and `size-14` — 24 to 56 pixels — and a wordmark at 24 pixels is
- * grey mush. The chibi is a portrait: head, shades, a raised paw, and nothing that has to be read.
- *
- * The lockup is still the right asset where it is rendered large, which is the docs site's header
- * and hero. It is not an avatar.
- *
- * A 128 px WebP of `nouride-chibi.png`, 6 KB. The source is 1254 px and 922 KB, and it was what this
- * imported: 43% of a cold dashboard load for an image drawn at most at `size-14`, 56 px, which 128
- * covers at a 2x screen. The source stays for the docs site's social banner (`generate-og.ts`).
- * Made with `magick nouride-chibi.png -filter Lanczos -resize 128x128 -strip chibi-128.png` and
- * `cwebp -q 90 -alpha_q 100 -m 6 chibi-128.png -o nouride-chibi-128.webp`.
- */
-import chibi from "@brand/nouride-chibi-128.webp";
-
-/**
- * Nouride Rider Cat — the mascot, as an avatar.
- *
- * Stands for the app — in the sidebar and the mobile header, on the sign-in, setup and welcome pages, in a
- * chat with nothing in it yet, and while the dashboard reconnects. Renders the image
- * directly as an `<img>` rather than an SVG sprite, because the art is raster. Its size in pixels is
- * stated so the layout does not move when it arrives; the class sets the size it is drawn at.
- */
-export function NovaAppIcon({ className = "size-8", ...props }: ImgHTMLAttributes<HTMLImageElement>) {
-  return (
-    <img
-      src={chibi}
-      alt="Nouride"
-      width={128}
-      height={128}
-      decoding="async"
-      className={className}
-      draggable={false}
-      {...props}
-    />
-  );
-}
-
+import { useId } from "react";
 /**
  * The Nougate mark — the LLM gateway a Router build carries, on its LLM Gateway page and in setup.
  *

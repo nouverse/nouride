@@ -13,7 +13,7 @@ import { api, type SetupState } from "@/commons/lib/api";
 import { gatewayMount } from "@/commons/lib/bundled-gateway";
 import { GatewayOffer, GatewayStep } from "./GatewayStep";
 import { MemoryStep } from "./MemoryStep";
-import { NovaAppIcon } from "@/commons/components/brand/logos";
+import { Mascot } from "@/commons/components/brand/Mascot";
 
 const PRESETS: Record<string, { label: string; baseUrl: string; hint: string }> = {
   openai: {
@@ -34,14 +34,11 @@ export default function SetupPage() {
 
   return (
     <div className="relative min-h-screen py-10 px-4 flex flex-col items-center justify-center selection:bg-primary/20 overflow-clip">
-      {/* Ambient Apple Glow */}
-      <div className="absolute top-0 left-1/4 size-96 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 right-1/4 size-96 rounded-full bg-secondary/10 blur-3xl pointer-events-none" />
 
       <div className="relative w-full max-w-xl space-y-6">
         <header className="text-center space-y-2">
-          <NovaAppIcon className="size-14 mx-auto drop-shadow-xl" />
-          <h1 className="text-2xl font-bold tracking-tight text-base-content sm:text-3xl">Set up Nouride</h1>
+          <Mascot pose="waving" decorative className="mx-auto w-28" />
+          <h1 className="text-2xl text-base-content sm:text-3xl">Set up Nouride</h1>
           <p className="text-base-content/65 text-sm max-w-md mx-auto">
             Connect a model, create your first agent, and choose how it remembers. Three short steps.
           </p>
@@ -123,7 +120,7 @@ function KeyForm({ state, onUseGateway }: { state: SetupState | undefined; onUse
   const preset = PRESETS[kind];
 
   return (
-    <div className="rounded-3xl border border-base-content/[0.08] bg-base-100/85 backdrop-blur-2xl p-6 sm:p-8 shadow-2xl space-y-5">
+    <div className="rounded-[22px] border border-base-content/[0.08] bg-base-100 p-6 sm:p-8 shadow-soft space-y-5">
       <form
         className="space-y-5"
         onSubmit={(e) => {
@@ -308,7 +305,7 @@ function AgentStep() {
   });
 
   return (
-    <div className="rounded-3xl border border-base-content/[0.08] bg-base-100/85 backdrop-blur-2xl p-6 sm:p-8 shadow-2xl space-y-5">
+    <div className="rounded-[22px] border border-base-content/[0.08] bg-base-100 p-6 sm:p-8 shadow-soft space-y-5">
       <form
         className="space-y-5"
         onSubmit={(e) => {

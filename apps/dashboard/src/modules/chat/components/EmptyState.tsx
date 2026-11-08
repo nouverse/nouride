@@ -8,7 +8,7 @@
 
 import { Sparkles } from "lucide-react";
 import type { Room } from "@/commons/lib/api";
-import { NovaAppIcon } from "@/commons/components/brand/logos";
+import { Mascot } from "@/commons/components/brand/Mascot";
 import { CatPortrait } from "@/commons/cat/CatPortrait";
 import type { Look } from "@/commons/cat/look";
 
@@ -46,7 +46,7 @@ export function EmptyState({ agentName, look, room, senderName, onPick }: EmptyS
           {look && !room ? (
             <CatPortrait look={look} scale={2} label={`${agentName ?? "The agent"}'s cat`} />
           ) : (
-            <NovaAppIcon className="size-12 drop-shadow-sm" />
+            <Mascot pose="head" decorative className="size-12" />
           )}
         </div>
         {/*

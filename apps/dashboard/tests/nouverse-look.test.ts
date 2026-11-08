@@ -240,8 +240,8 @@ function enclosingTag(text: string, at: number): { start: number; end: number; n
 
 /** What draws an icon in a file: every name it imports from lucide-react or our icons, and the usual icon props. */
 function iconNames(text: string): Set<string> {
-  const names = new Set(["NovaAppIcon", "NougateGlyph", "Icon"]);
-  for (const m of text.matchAll(/import\s*\{([^}]*)\}\s*from\s*["'](lucide-react|@\/commons\/components\/icons\/[\w/-]+)["']/g)) {
+  const names = new Set(["NougateGlyph", "Icon"]);
+  for (const m of text.matchAll(/import\s*\{([^}]*)\}\s*from\s*["'](lucide-react|@\/commons\/components\/brand\/[\w/-]+)["']/g)) {
     for (const part of m[1]!.split(",")) names.add(part.trim().split(/\s+as\s+/).pop()!.replace(/^type\s+/, ""));
   }
   return names;

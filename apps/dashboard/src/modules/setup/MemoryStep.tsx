@@ -59,7 +59,7 @@ export function MemoryStep() {
   const busy = finish.isPending || settings.isLoading;
 
   return (
-    <div className="rounded-3xl border border-base-content/[0.08] bg-base-100/85 backdrop-blur-2xl p-6 sm:p-8 shadow-2xl space-y-5">
+    <div className="rounded-[22px] border border-base-content/[0.08] bg-base-100 p-6 sm:p-8 shadow-soft space-y-5">
       <div className="flex items-center gap-2 text-success text-xs font-semibold">
         <Check size={16} />
         <span>Agent created. One last thing.</span>

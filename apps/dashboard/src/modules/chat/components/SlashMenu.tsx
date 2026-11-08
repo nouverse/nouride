@@ -70,7 +70,7 @@ export function SlashMenu({ commands, active, onPick, onHover }: SlashMenuProps)
 
   return (
     <div className="absolute bottom-full left-0 right-0 mb-2 z-40">
-      <ul className="bg-base-100/95 backdrop-blur-xl border border-base-content/10 max-h-72 list-none overflow-y-auto rounded-2xl p-1.5 shadow-2xl space-y-0.5">
+      <ul className="bg-base-100 border border-base-content/10 max-h-72 list-none overflow-y-auto rounded-2xl p-1.5 shadow-xl space-y-0.5">
         <li className="menu-title text-[10px] uppercase font-bold text-base-content/65 px-2.5 py-1 font-mono">
           Commands · answered by Nouride itself, with no AI call
         </li>

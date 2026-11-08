@@ -1309,7 +1309,7 @@ describe("running a job by hand", () => {
   });
   const jobs = { "/cron": { status: 200, body: { jobs: [job("j1", "Morning report"), job("j2", "Backup")], timezone: "UTC" } } };
   const press = async (host: HTMLElement, row: string, label: string) => {
-    const card = [...host.querySelectorAll("div.rounded-2xl")].find((el) => el.querySelector("span.font-bold")?.textContent === row);
+    const card = [...host.querySelectorAll("div.shadow-soft")].find((el) => el.querySelector("span.font-bold")?.textContent === row);
     const button = [...(card?.querySelectorAll("button") ?? [])].find((b) => b.textContent?.trim() === label || b.getAttribute("aria-label") === label) as HTMLElement | undefined;
     if (!button) throw new Error(`no ${label} on ${row}`);
     button.click();

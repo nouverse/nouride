@@ -4,7 +4,7 @@ import { useState } from "react";
 import { AlertTriangle, Lock, LogIn, ShieldCheck, User } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import { nextOf } from "@/commons/lib/session";
-import { NovaAppIcon } from "@/commons/components/brand/logos";
+import { Mascot } from "@/commons/components/brand/Mascot";
 import { Details } from "@/commons/components/ui/Details";
 import { PasswordInput } from "@/commons/components/ui/PasswordInput";
 
@@ -66,11 +66,8 @@ export default function LoginPage() {
 
   return (
     <div className="relative flex min-h-screen min-h-dvh items-center justify-center p-4 selection:bg-primary/20 overflow-clip">
-      {/* Subtle Ambient Apple Glow */}
-      <div className="absolute -top-40 -left-40 size-96 rounded-full bg-primary/15 blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-40 -right-40 size-96 rounded-full bg-secondary/15 blur-3xl pointer-events-none" />
 
-      <div className="relative w-full max-w-sm rounded-3xl border border-base-content/[0.08] bg-base-100/85 backdrop-blur-2xl p-7 sm:p-8 shadow-2xl transition-all duration-200">
+      <div className="relative w-full max-w-sm rounded-[22px] border border-base-content/[0.08] bg-base-100 p-7 sm:p-8 shadow-soft transition-all duration-200">
         <form
           className="space-y-5"
           onSubmit={(e) => {
@@ -80,9 +77,9 @@ export default function LoginPage() {
         >
           {/* Brand & Icon */}
           <div className="space-y-3">
-            <NovaAppIcon className="size-14 drop-shadow-xl" />
+            <Mascot pose="waving" decorative className="-mt-2 -mb-1 w-24" />
             <div className="space-y-0.5">
-              <h1 className="text-xl font-bold tracking-tight text-base-content">Sign in to Nouride</h1>
+              <h1 className="text-2xl text-base-content">Sign in to Nouride</h1>
               <p className="text-base-content/65 text-sm">Your agents, their chats and their work, in one place.</p>
             </div>
           </div>
