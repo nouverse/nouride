@@ -5,24 +5,29 @@
  * Its own Astro page rather than a Starlight `template: splash`, and that is the whole point of the
  * file. Starlight is built for reading, sidebar, search, prev/next, and it drew the front page
  * inside that shell. A front page has a different job: say what this is, show it, and give one
- * command. When `/` eventually needs pricing or a signup, this is where that goes; Starlight keeps
- * `/docs` and never has to be fought.
+ * command. Starlight keeps `/docs` and never has to be fought.
  *
  * **One component, rendered twice.** `src/pages/en/index.astro` and `id/index.astro` are five lines
  * each; the markup and the CSS live here and the sentences live in `src/i18n/landing.mjs`. Two
  * copies of this file would drift, and the drift would be invisible in the language nobody on the
  * team reads back.
  *
+ * ## The idea
+ *
+ * The dashboard's colours each mean one thing (lavender what is yours, mint work that moves, pink what needs you, peach
+ * the main action), and so does each pose of the cat. The page is those colours as chapters, one flat field each, with
+ * the cat in the pose that means it: waving at the top, riding with a parcel by the chat apps, at its laptop by the
+ * missions, pointing at the approvals, reading by what the agents keep. The hero's folders are the chapters' colours,
+ * and each opens its chapter.
+ *
  * ## Styling
  *
- * Scoped CSS in this file, on Starlight's own custom properties, `--sl-color-accent`,
- * `--sl-color-bg`, the greys. No Tailwind and no daisyUI, deliberately: this app has neither, and
- * adding a second styling stack inside a Starlight site means two sources of truth for one palette
- * and a landing page that stops matching the docs the moment either changes.
+ * Scoped CSS on the `--nr-*` palette `custom.css` defines for the docs too, so this page and the docs cannot disagree
+ * about a colour. No Tailwind and no daisyUI: this app has neither. Dark mode is those same variables, switched on
+ * `[data-theme]`, which `layouts/Site.astro` sets from Starlight's own key before first paint.
  *
- * Dark mode comes from those same variables, which Starlight switches on `[data-theme]`. There is no
- * toggle on this page, the header links into the docs, where Starlight's own toggle lives, so it
- * follows whatever the reader last chose there, and `prefers-color-scheme` before they have chosen.
+ * The interface fragments (a mission's card, an approval in a chat) carry `data-ui`: they are the product's own words
+ * and look, drawn small, and stay in English on both pages as the product shows them.
  */
 
 import Site from '../layouts/Site.astro';
@@ -33,15 +38,28 @@ import {
   DOCKER_RUN_COMMAND,
   INSPECT_COMMAND,
   GITHUB_REPO,
+  CLOUD_URL,
 } from '../consts.mjs';
+import head from '@brand/mascot/standing/12-head.webp';
+import waving from '@brand/mascot/standing/01-waving.webp';
+import delivery from '@brand/mascot/riding/08-delivery.webp';
+import laptop from '@brand/mascot/standing/05-laptop.webp';
+import pointing from '@brand/mascot/standing/10-pointing.webp';
+import reading from '@brand/mascot/states/03-knowledge.webp';
 
-/** The hero's platform picker. Linux first: it is the default and what most visitors are on. */
+/** Nouride Home is its own repository; its latest release carries the APK. */
+const HOME_RELEASES = 'https://github.com/nouverse/nouride-android-appliance/releases/latest';
+
+/** The hero's picker. Linux first: it is the default and what most visitors are on. Android has no command: an app. */
 const platforms = [
   { id: 'linux', icon: 'linux', command: INSTALL_COMMAND, event: 'copy-install-command' },
   { id: 'macos', icon: 'apple', command: MAC_INSTALL_COMMAND, event: 'copy-install-command-macos' },
   { id: 'docker', icon: 'seti:docker', command: DOCKER_RUN_COMMAND, event: 'copy-install-command-docker' },
+  { id: 'android', icon: 'phone', command: null, event: null },
 ] as const;
-import logo from '@brand/nouride.png';
+
+/** The folders in the hero, back to front: each opens its chapter and wears its colour. */
+const folders = ['office', 'approvals', 'missions', 'chats'] as const;
 
 interface Props {
   /** `en` or `id`. Every in-page link is built from it, so the two never cross. */
@@ -54,263 +72,311 @@ const { locale, t } = Astro.props;
 
 /** Docs links are locale-first, matching the routing rule in `astro.config.mjs`. */
 const href = (slug: string) => `/${locale}/${slug}/`;
+const year = new Date().getFullYear();
 ---
 
 <Site locale={locale} title={t.meta.title} description={t.meta.description}>
+<script is:inline>document.documentElement.classList.add('js');</script>
 <div class="page">
-  <header class="nav">
-    <a class="brand" href={`/${locale}/`}>
-      <img src={logo.src} alt="" width="32" height="32" />
-      <span>Nouride</span>
-    </a>
-    <nav>
-      <a href={href('docs/start/what-is-nouride')}>{t.nav.docs}</a>
-      <a href={href('docs/start/install')}>{t.nav.install}</a>
-      <a
-        href="https://app.nouverse.tech/pod/products/nouride"
-        target="_blank"
-        rel="noopener noreferrer"
-      >{t.nav.cloud}</a>
-      <a
-        href={`https://github.com/${GITHUB_REPO}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="GitHub Repository"
-        class="github-link"
-      >
-        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="currentColor">
-          <path d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2z"></path>
-        </svg>
-        <span>{t.nav.github}</span>
-      </a>
-    </nav>
-  </header>
 
+  <!-- Hero: the greeting, then the chapters as a stack of folders; the front one is open and holds the command. -->
   <section class="hero">
-    <div class="hero-content">
-      {/* <p class="eyebrow">{t.hero.eyebrow}</p> */}
-      <h1>{t.hero.title}</h1>
-      <p class="tagline">{t.hero.tagline}</p>
-
-      <div class="actions">
-        <a class="btn primary" href={href('docs/start/install')}>{t.hero.primary}</a>
-        <a class="btn" href={href('docs/start/what-is-nouride')}>{t.hero.secondary}</a>
-      </div>
-
-      <div class="install">
-        <p class="install-label">{t.hero.installLabel}</p>
-        {/*
-          Radios and labels, not a script: the picker works with JavaScript off, and each command stays selectable
-          text. The inputs come first so `:checked ~` can reach the tab row, the commands and the note.
-        */}
-        <div class="picker">
-          {platforms.map((p, i) => (
-            <input type="radio" name="platform" id={`pf-${p.id}`} class="pf-radio" checked={i === 0} />
-          ))}
-          <div class="pf-tabs">
-            {platforms.map((p) => (
-              <label for={`pf-${p.id}`} class={`pf-tab pf-tab-${p.id}`}>
-                <Icon name={p.icon} size="1em" />
-                {t.hero.platforms[p.id]}
-              </label>
-            ))}
-          </div>
-          {platforms.map((p) => (
-            <div class={`command pf-cmd pf-cmd-${p.id}`}>
-              <code>{p.command}</code>
-              <button type="button" data-copy={p.command} data-copied={t.hero.copied} data-umami-event={p.event}>
-                {t.hero.copy}
-              </button>
-            </div>
-          ))}
-          <p class="inspect pf-note-script">
-            {t.hero.inspectNote} <code>{INSPECT_COMMAND}</code>
-          </p>
-          <p class="inspect pf-note-docker">
-            {t.hero.dockerNote} <a href={href('docs/deployment/docker')}>{t.hero.dockerGuide}</a>
-          </p>
-        </div>
-        {t.hero.hardwareBadge && (
-          <div class="hardware-badge">
-            <span class="badge-dot" aria-hidden="true" />
-            <span>{t.hero.hardwareBadge}</span>
-          </div>
-        )}
-      </div>
-    </div>
-
-    <div class="hero-media">
-      <img src={logo.src} alt="Nouride Mascot" width="340" height="340" class="hero-logo" />
-    </div>
-  </section>
-
-  <div class="terminal-showcase">
-    <div class="terminal-box">
-      <div class="terminal-bar">
-        <div class="terminal-lights">
-          <span class="t-light t-red"></span>
-          <span class="t-light t-yellow"></span>
-          <span class="t-light t-green"></span>
-        </div>
-        <span class="terminal-caption">pi@homelab:~ (nouride engine)</span>
-        <span class="terminal-tag">SBC ARM64</span>
-      </div>
-      <div class="terminal-view">
-        <div class="term-line term-run">
-          <span class="t-cyan">$</span>
-          <code class="t-typed-cmd" data-text="nouride start">nouride start</code><span class="t-cursor" aria-hidden="true">_</span>
-        </div>
-        <div class="term-sep"></div>
-        <div class="term-line term-main">
-          <span class="t-bolt">⚡</span> <strong>nouride daemon</strong> <span class="t-dim">latest · linux/arm64</span>
-        </div>
-        <div class="term-tree">
-          <div class="t-branch-row">
-            <span class="t-tree-char">├─</span>
-            <span class="t-tree-key">RAM floor:</span>
-            <span class="t-tree-val t-highlight">64 MB <span class="t-dim">min · measured 2026-10-17</span></span>
-          </div>
-          <div class="t-branch-row">
-            <span class="t-tree-char">├─</span>
-            <span class="t-tree-key">Gateways:</span>
-            <span class="t-tree-val">WhatsApp · Telegram · Discord</span>
-          </div>
-          <div class="t-branch-row">
-            <span class="t-tree-char">├─</span>
-            <span class="t-tree-key">Loaded Agents:</span>
-            <span class="t-tree-val">nouva <span class="t-role">lead</span>, nix <span class="t-role">dev</span>, nero <span class="t-role">ops</span></span>
-          </div>
-          <div class="t-branch-row">
-            <span class="t-tree-char">├─</span>
-            <span class="t-tree-key">Local Tools:</span>
-            <span class="t-tree-val">exec, web_fetch, memory_search, nouride</span>
-          </div>
-          <div class="t-branch-row">
-            <span class="t-tree-char">└─</span>
-            <span class="t-tree-key">Dashboard:</span>
-            <span class="t-tree-val t-link">http://localhost:18254/dashboard/</span>
-          </div>
-        </div>
-        <div class="term-sep"></div>
-        <div class="term-line term-footer">
-          <span class="t-live-dot"></span>
-          <span class="t-dim">Standing by. Listening on socket &amp; chat gateways...</span>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <section class="band">
-    <h2>{t.what.title}</h2>
-    <p class="lead">{t.what.lead}</p>
-    <div class="cards">
-      {t.what.cards.map((card: { title: string; body: string }) => (
-        <article class="card">
-          <h3>{card.title}</h3>
-          <p>{card.body}</p>
-        </article>
-      ))}
-    </div>
-  </section>
-
-  <section class="band">
-    <h2>{t.showcase.title}</h2>
-    <p class="lead">{t.showcase.lead}</p>
-    {/*
-      Placeholders, and they say so on their own faces, `public/media/README.md` explains how to
-      drop a real screenshot in with the same stem. Sized 16:10 so replacing one does not reflow the
-      page.
-    */}
-    <figure class="shot wide">
-      <img src={t.showcase.shots[0].src} alt={t.showcase.shots[0].alt} loading="lazy" />
-    </figure>
-    <div class="shots">
-      {t.showcase.shots.slice(1).map((shot: { src: string; alt: string }) => (
-        <figure class="shot">
-          <img src={shot.src} alt={shot.alt} loading="lazy" />
-        </figure>
-      ))}
-    </div>
-  </section>
-
-  <section class="band">
-    <h2>{t.steps.title}</h2>
-    <ol class="steps">
-      {t.steps.items.map((step: { title: string; body: string; link: string }, i: number) => (
-        <li>
-          <span class="num">{i + 1}</span>
-          <div>
-            <h3><a href={href(step.link)}>{step.title}</a></h3>
-            <p>{step.body}</p>
-          </div>
-        </li>
-      ))}
-    </ol>
-    <a class="btn primary" href={href('docs/start/install')}>{t.steps.cta}</a>
-  </section>
-
-  <section class="band">
-    <h2>{t.numbers.title}</h2>
-    <p class="lead">{t.numbers.lead}</p>
-    <dl class="numbers">
-      {t.numbers.items.map((item: { value: string; label: string; note: string }) => (
-        <div>
-          <dt>{item.value}</dt>
-          <dd>
-            <strong>{item.label}</strong>
-            <span>{item.note}</span>
-          </dd>
-        </div>
-      ))}
-    </dl>
-    <a class="quiet" href={href(t.numbers.sourceLink)}>{t.numbers.source} &rarr;</a>
-  </section>
-
-  <section class="band">
-    <h2>{t.where.title}</h2>
-    <ul class="chips">
-      {t.where.items.map((item: string) => <li>{item}</li>)}
-    </ul>
-    <p class="lead">{t.where.note}</p>
-  </section>
-
-  <section class="cta">
-    <h2>{t.footer.title}</h2>
-    <p>{t.footer.body}</p>
-    <div class="actions">
-      <a class="btn primary" href={href('docs/start/install')}>{t.footer.primary}</a>
-      <a class="btn" href={href('docs/manual/overview')}>{t.footer.secondary}</a>
-    </div>
-  </section>
-
-  <footer class="site-footer">
-    <div class="footer-left">
-      <a class="footer-brand" href={`/${locale}/`}>
-        <img src={logo.src} alt="" width="22" height="22" />
+    <header class="nav">
+      <a class="brand" href={`/${locale}/`}>
+        <img src={head.src} alt="" width="40" height="40" />
         <span>Nouride</span>
       </a>
-      <span class="footer-sep">·</span>
-      <p class="copyright">
-        &copy; {new Date().getFullYear()} Nouverse Technologies. All rights reserved.
-      </p>
+      <nav aria-label="Site">
+        <a href={href('docs/start/what-is-nouride')}>{t.nav.docs}</a>
+        <a class="wide-only" href={CLOUD_URL} target="_blank" rel="noopener noreferrer">{t.nav.pro}</a>
+        <a class="wide-only" href={`https://github.com/${GITHUB_REPO}`} target="_blank" rel="noopener noreferrer">{t.nav.github}</a>
+        <a href={`/${t.nav.otherLang}/`} hreflang={t.nav.otherLang} lang={t.nav.otherLang} aria-label={t.nav.other}>{t.nav.otherShort}</a>
+        <a class="nav-action" href={href('docs/start/install')}>{t.nav.install}</a>
+      </nav>
+    </header>
+    <div class="hero-top">
+      <h1 class="lines">
+        {t.hero.lines.map((line: string, i: number) => (
+          <span class="line"><span data-line style={`--i:${i}`}>{line}</span></span>
+        ))}
+      </h1>
+      <p class="tagline" data-rise style="--i:2">{t.hero.tagline}</p>
+      <img class="hero-cat" src={waving.src} alt={t.hero.mascotAlt} width="512" height="512" />
     </div>
 
-    <div class="footer-right">
-      <p class="powered-by">
-        Powered by <a href="https://nouverse.com" target="_blank" rel="noopener noreferrer">Nouverse Technologies</a>
+    <div class="folders">
+      {folders.map((id, i) => (
+        <a class={`folder back ch-${id}`} href={`#${id}`} style={`--x:${4 + i * 17}%`}>
+          <span class="tab">{t.hero.folders[id]}</span>
+        </a>
+      ))}
+      <div class="folder front" id="install" style="--x:72%">
+        <span class="tab">{t.hero.folders.start}</span>
+        <div class="start">
+          <div class="start-actions">
+            <a class="btn primary" href={href('docs/start/install')}>{t.hero.primary}</a>
+            <a class="text-link" href={href('docs/start/what-is-nouride')}>{t.hero.secondary}</a>
+          </div>
+          {/*
+            Radios and labels, not a script: the picker works with JavaScript off, and each command stays selectable
+            text. The inputs come first so `:checked ~` can reach the tab row and the panels.
+          */}
+          <div class="picker">
+            <p class="pick-label" id="pick-label">{t.hero.pick}</p>
+            {platforms.map((p, i) => (
+              <input type="radio" name="platform" id={`pf-${p.id}`} class="pf-radio" checked={i === 0} />
+            ))}
+            <div class="pf-tabs" role="presentation">
+              {platforms.map((p) => (
+                <label for={`pf-${p.id}`} class={`pf-tab pf-tab-${p.id}`}>
+                  <Icon name={p.icon} size="1.05em" />
+                  {t.hero.platforms[p.id]}
+                </label>
+              ))}
+            </div>
+            {platforms.map((p) => (
+              <div class={`pf-panel pf-panel-${p.id}`}>
+                {p.command && (
+                  <div class="command">
+                    <code>{p.command}</code>
+                    <button type="button" data-copy={p.command} data-copied={t.hero.copied} data-umami-event={p.event}>
+                      {t.hero.copy}
+                    </button>
+                  </div>
+                )}
+                {p.id === 'linux' && (
+                  <>
+                    <p class="pf-note">{t.hero.notes.linux}</p>
+                    <p class="pf-note pf-inspect">{t.hero.notes.inspect} <code>{INSPECT_COMMAND}</code></p>
+                  </>
+                )}
+                {p.id === 'macos' && <p class="pf-note">{t.hero.notes.macos}</p>}
+                {p.id === 'docker' && (
+                  <p class="pf-note">
+                    {t.hero.notes.docker} <a href={href('docs/deployment/docker')}>{t.hero.notes.dockerGuide}</a>
+                  </p>
+                )}
+                {p.id === 'android' && (
+                  <>
+                    <p class="pf-note">{t.hero.notes.android}</p>
+                    <p class="pf-links">
+                      <a class="btn" href={HOME_RELEASES} target="_blank" rel="noopener noreferrer">{t.hero.notes.androidGet}</a>
+                      <a class="text-link" href={href('docs/deployment/nouride-home')}>{t.hero.notes.androidGuide}</a>
+                    </p>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Chats: lavender, what is yours. The places to talk, set as a staircase; the cat rides by with a parcel. -->
+  <section class="chapter ch-chats chats" id="chats" data-reveal>
+    <h2 class="mid" style="--i:0">{t.chats.title}</h2>
+    <ul class="stairs">
+      {t.chats.places.map((place: string, i: number) => (
+        <li style={`--i:${i + 1}`}>{place}</li>
+      ))}
+    </ul>
+    <img class="chats-cat drift" src={delivery.src} alt={t.chats.mascotAlt} width="512" height="512" loading="lazy" />
+    <p class="chats-note" style="--i:6">
+      {t.chats.note} <a class="text-link" href={href('docs/start/connect-chat')}>{t.chats.link}</a>
+    </p>
+  </section>
+
+  <!-- Missions: mint, work that moves. One mission's card, four times, further along in each field. -->
+  <section class="missions" id="missions" aria-labelledby="missions-title">
+    {[0, 1, 2, 3].map((step) => (
+      <div class={`m-field m-${step}`} data-reveal>
+        {step === 0 && <h2 class="mid m-title" id="missions-title" style="--i:0">{t.missions.title}</h2>}
+        {step === 1 && <img class="m-cat" src={laptop.src} alt={t.missions.mascotAlt} width="512" height="512" loading="lazy" style="--i:0" />}
+        {step === 3 && <a class="text-link m-link" href={href('docs/manual/missions')} style="--i:0">{t.missions.link}</a>}
+        <article class="mcard" data-ui style="--i:1">
+          <p class="mcard-top">
+            {step === 0 && <span class="chip">Draft</span>}
+            {step === 1 && <span class="chip chip-mint">Working</span>}
+            {step === 2 && <span class="chip chip-pink">Needs you · a question</span>}
+            {step === 3 && <span class="chip chip-mint">Done</span>}
+            <span class="mcard-agent">{t.missions.agent}</span>
+          </p>
+          <p class="mcard-goal">{t.missions.goal}</p>
+          {step === 0 && (
+            <>
+              <p class="mcard-meta">5 checks · signed off by: you</p>
+              <p class="mcard-actions"><span class="ubtn ubtn-main">Start it</span><span class="ubtn">Drop it</span></p>
+            </>
+          )}
+          {step === 1 && (
+            <>
+              <span class="bar"><span style="width:40%"></span></span>
+              <p class="mcard-meta">Now: {t.missions.now}</p>
+            </>
+          )}
+          {step === 2 && <p class="mcard-q">“{t.missions.question}”</p>}
+          {step === 3 && (
+            <>
+              <span class="bar"><span style="width:100%"></span></span>
+              <p class="mcard-meta">Its work is done and its checks passed.</p>
+            </>
+          )}
+        </article>
+        <p class="m-clause" style="--i:2">{t.missions.clauses[step]}</p>
+      </div>
+    ))}
+  </section>
+
+  <!-- Approvals: pink, what needs you. Close-ups of the real prompt on a board, and the cat pointing at it. -->
+  <section class="chapter ch-approvals approvals" id="approvals" aria-labelledby="approvals-title">
+    <div class="board" data-reveal>
+      <div class="tile t-head" style="--i:0">
+        <h2 class="display" id="approvals-title">{t.approvals.title}</h2>
+        <a class="text-link" href={href('docs/manual/approvals')}>{t.approvals.link}</a>
+      </div>
+      <div class="tile t-always" style="--i:1">
+        <div class="zoom" data-ui aria-hidden="true"><span class="tg-btn">Always</span></div>
+        <p class="cap"><strong>{t.approvals.tiles.always[0]}</strong>{t.approvals.tiles.always[1]}</p>
+      </div>
+      <div class="tile t-keys" style="--i:2">
+        <div class="zoom" data-ui aria-hidden="true"><code class="key">/approve</code><code class="key">/deny</code></div>
+        <p class="cap"><strong>{t.approvals.tiles.keys[0]}</strong>{t.approvals.tiles.keys[1]}</p>
+      </div>
+      <div class="tile t-prompt" style="--i:3">
+        <div class="msg" data-ui>
+          <p><strong>{t.missions.agent}</strong> is waiting on you before running <strong>exec</strong>.</p>
+          <pre><code>rm -rf ~/photos/duplicates</code></pre>
+          <p class="msg-hint">This one always asks: it cannot be granted permanently.</p>
+          <p class="msg-btns"><span class="tg-btn">Approve</span><span class="tg-btn">Deny</span></p>
+        </div>
+        <p class="cap"><strong>{t.approvals.tiles.prompt[0]}</strong>{t.approvals.tiles.prompt[1]}</p>
+      </div>
+      <div class="tile t-cat" style="--i:4">
+        <img src={pointing.src} alt={t.approvals.mascotAlt} width="512" height="512" loading="lazy" />
+        <p class="cap"><strong>{t.approvals.tiles.anywhere[0]}</strong>{t.approvals.tiles.anywhere[1]}</p>
+      </div>
+      <div class="tile t-fixed on-dark" style="--i:5">
+        <div class="zoom" data-ui aria-hidden="true"><code>rm -rf ~/</code></div>
+        <p class="cap"><strong>{t.approvals.tiles.fixed[0]}</strong>{t.approvals.tiles.fixed[1]}</p>
+      </div>
+      <div class="tile t-timeout" style="--i:6">
+        <div class="zoom" data-ui aria-hidden="true"><span class="big">5 min</span></div>
+        <p class="cap"><strong>{t.approvals.tiles.timeout[0]}</strong>{t.approvals.tiles.timeout[1]}</p>
+      </div>
+      <div class="tile t-restart" style="--i:7">
+        <div class="zoom" data-ui aria-hidden="true"><span class="chip chip-pink">still open</span></div>
+        <p class="cap"><strong>{t.approvals.tiles.restart[0]}</strong>{t.approvals.tiles.restart[1]}</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- The Office: the night chapter. The real page on the left, what it means on the right. -->
+  <section class="chapter ch-office on-dark office" id="office" data-reveal>
+    <figure class="plate" style="--i:1">
+      <img src={t.office.shot.src} alt={t.office.shot.alt} width="2560" height="1600" loading="lazy" />
+    </figure>
+    <div class="office-text">
+      <div>
+        <h2 class="display" style="--i:0">{t.office.title}</h2>
+        <p class="lead" style="--i:1">{t.office.body}</p>
+        <ul class="legend" style="--i:2">
+          {t.office.legend.map((item: string) => <li>{item}</li>)}
+        </ul>
+      </div>
+      <p class="cells" style="--i:3">
+        <a class="cell" href={href('docs/manual/office')}>{t.office.actions.office}</a>
+        <a class="cell" href={href('docs/manual/dashboard')}>{t.office.actions.dashboard}</a>
       </p>
     </div>
+  </section>
+
+  <!-- What they keep: the page's own cream, a rest in colour. The list pushed right, the reading cat on the left. -->
+  <section class="chapter learn" data-reveal>
+    <h2 class="display lines-static">
+      {t.learn.lines.map((line: string, i: number) => <span class={`l l-${i}`} style={`--i:${i}`}>{line}</span>)}
+    </h2>
+    <div class="learn-body">
+      <img class="learn-cat" src={reading.src} alt={t.learn.mascotAlt} width="512" height="512" loading="lazy" style="--i:3" />
+      <p class="learn-name" style="--i:2">{t.learn.table}</p>
+      <ul class="rows">
+        {t.learn.rows.map((row: { kind: string; text: string; link?: string }, i: number) => (
+          <li class:list={['row', { gap: i === 4 }]} style={`--i:${i + 3}`}>
+            <span class="kind">{row.kind}</span>
+            {row.link ? (
+              <a class="what" href={href(row.link)}>{row.text}<span class="arrow" aria-hidden="true">→</span></a>
+            ) : (
+              <span class="what">{row.text}</span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+
+  <!-- The footprint: one measured number, with its date, owns the screen. -->
+  <section class="chapter ch-box box" id="box" data-reveal>
+    <h2 class="display" style="--i:0">{t.footprint.claim}</h2>
+    <div class="figure-wrap">
+      <p class="figure" style="--i:1">{t.footprint.figure}<span class="unit">{t.footprint.unit}</span></p>
+      <p class="figure-cap" style="--i:2">{t.footprint.caption}</p>
+    </div>
+    <a class="text-link box-source" href={href('docs/architecture/performance')} style="--i:3">{t.footprint.source}</a>
+  </section>
+
+  <!-- Editions: two fields, the free one wider. -->
+  <section class="editions" aria-label={t.editions.title}>
+    <div class="ed ed-community" data-reveal>
+      <div>
+        <h2 class="display" style="--i:0">{t.editions.community.name}</h2>
+        <p class="lead" style="--i:1">{t.editions.community.for}</p>
+        <p class="ed-body" style="--i:2">{t.editions.community.body}</p>
+      </div>
+      <div class="ed-foot" style="--i:3">
+        <p class="display ed-price">{t.editions.community.price}</p>
+        <a class="btn primary" href={href('docs/start/install')}>{t.editions.community.action}</a>
+      </div>
+    </div>
+    <div class="ed ed-pro on-dark" data-reveal>
+      <div>
+        <h2 class="display" style="--i:0">{t.editions.pro.name}</h2>
+        <p class="lead" style="--i:1">{t.editions.pro.for}</p>
+        <p class="ed-body" style="--i:2">{t.editions.pro.body}</p>
+      </div>
+      <div class="ed-foot" style="--i:3">
+        <a class="btn light" href={CLOUD_URL} target="_blank" rel="noopener noreferrer">{t.editions.pro.action}</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- The close: the whole peach band is the one action. -->
+  <a class="close" href={href('docs/start/install')}>
+    <span class="close-sentence">{t.close.sentence}</span>
+    <svg class="close-arrow" viewBox="0 0 48 48" width="48" height="48" aria-hidden="true">
+      <path d="M14 34 34 14M18 14h16v16" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+    </svg>
+    <span class="close-fit" style={`--fit:${t.close.fit}`}><span class:list={['close-word', { descends: t.close.descends }]}>{t.close.word}</span></span>
+  </a>
+
+  <footer class="site-footer">
+    <p class="f-what">{t.footer.what} <a href="https://nouverse.com" target="_blank" rel="noopener noreferrer">Nouverse Technologies</a></p>
+    <p class="f-links">
+      <a href={href('docs/start/what-is-nouride')}>{t.footer.links.docs}</a>
+      <a href={`https://github.com/${GITHUB_REPO}`} target="_blank" rel="noopener noreferrer">{t.footer.links.github}</a>
+      <a href={href('docs/deployment/nouride-home')}>{t.footer.links.home}</a>
+      <a href={`/${t.nav.otherLang}/`} hreflang={t.nav.otherLang} lang={t.nav.otherLang}>{t.nav.other}</a>
+    </p>
+    <p class="f-year">&copy; {year} Nouverse Technologies</p>
   </footer>
 </div>
 </Site>
 
 <script>
   /**
-   * The copy button, and the reason it is eight lines of inline script rather than a framework.
+   * The copy button, and the reason it is a few lines of inline script rather than a framework.
    *
-   * It is the only interactive thing on the page. Shipping a runtime for one clipboard call would
-   * cost every visitor a bundle to make one button work, and the button already degrades correctly
-   * without it: the command is selectable text.
+   * Shipping a runtime for one clipboard call would cost every visitor a bundle to make one button work, and the
+   * button already degrades correctly without it: the command is selectable text.
    */
   for (const button of document.querySelectorAll<HTMLButtonElement>('button[data-copy]')) {
     button.addEventListener('click', async () => {
@@ -329,422 +395,367 @@ const href = (slug: string) => `/${locale}/${slug}/`;
     });
   }
 
-  // Typewriter effect + sequential reveal when terminal is scrolled into view
-  const term = document.querySelector<HTMLElement>('.terminal-box');
-  const cmd = term?.querySelector<HTMLElement>('.t-typed-cmd');
-  const cursor = term?.querySelector<HTMLElement>('.t-cursor');
-
-  if (term && cmd) {
-    const fullText = cmd.dataset.text || cmd.textContent || 'nouride start';
-    cmd.textContent = '';
-
-    const observer = new IntersectionObserver(
+  /**
+   * Each chapter's parts arrive once, in reading order, as it scrolls into view. The hidden state applies only under
+   * `html.js` and only without a reduced-motion preference (the CSS), so with no script, or no observer, everything is
+   * simply there.
+   */
+  if ('IntersectionObserver' in window) {
+    const seen = new IntersectionObserver(
       (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            observer.unobserve(term);
-
-            // Step 1: Typewriter effect for "nouride start" (relaxed pacing)
-            let i = 0;
-            const typeInterval = setInterval(() => {
-              if (i < fullText.length) {
-                cmd.textContent += fullText.charAt(i);
-                i++;
-              } else {
-                clearInterval(typeInterval);
-                if (cursor) cursor.classList.add('t-cursor-idle');
-                // Step 2: Brief pause before executing daemon output
-                setTimeout(() => {
-                  term.classList.add('in-view');
-                }, 300);
-              }
-            }, 85);
-          }
-        });
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          entry.target.classList.add('is-in');
+          seen.unobserve(entry.target);
+        }
       },
-      { threshold: 0.15 }
+      { rootMargin: '0px 0px -12% 0px', threshold: 0.08 },
     );
-    observer.observe(term);
+    for (const el of document.querySelectorAll('[data-reveal]')) seen.observe(el);
+  } else {
+    for (const el of document.querySelectorAll('[data-reveal]')) el.classList.add('is-in');
   }
 </script>
 
 <style>
-  /* Starlight's variables, so this page and the docs cannot disagree about the palette. */
+  /* ── Tokens: the palette from `custom.css`, the chapters' fields, five type sizes ─────────────────────────────── */
   .page {
-    --edge: var(--sl-color-hairline-light, #e2e8f0);
-    --muted: var(--sl-color-gray-3, #475569);
-    max-width: 68rem;
-    margin: 0 auto;
-    padding: 0 1.5rem max(5rem, env(safe-area-inset-bottom, 0px) + 3rem);
-    color: var(--sl-color-white);
-    font-family: var(--sl-font-system, system-ui, sans-serif);
+    --m: clamp(1rem, 2.4vw, 2.25rem);
+    --s-figure: clamp(8.5rem, 23vw, 22rem);
+    --s-display: clamp(2.25rem, 5.2vw, 4.75rem);
+    --s-mid: clamp(1.375rem, 2.1vw, 1.875rem);
+    --s-lead: 1.25rem;
+    --s-body: 1rem;
+    --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+    --ink: var(--nr-ink);
+    /* Quieter text, a shade deeper than the docs' so it still reads at AA on the deepest pastel field. */
+    --soft: #4a4558;
+    --field: var(--nr-page);
+
+    /* Each chapter's ground: its pastel laid over the page, light by day. Text on all of them is the ink. */
+    --ch-chats: color-mix(in oklab, var(--nr-fill-lavender) 24%, var(--nr-page));
+    --ch-m0: color-mix(in oklab, var(--nr-fill-mint) 20%, var(--nr-page));
+    --ch-m1: color-mix(in oklab, var(--nr-fill-mint) 38%, var(--nr-page));
+    --ch-m2: color-mix(in oklab, var(--nr-fill-mint) 56%, var(--nr-page));
+    --ch-m3: color-mix(in oklab, var(--nr-fill-mint) 76%, var(--nr-page));
+    --ch-approvals: color-mix(in oklab, var(--nr-fill-pink) 22%, var(--nr-page));
+    --ch-office: #1b1a24;
+    --ch-box: color-mix(in oklab, var(--nr-fill-lavender) 40%, var(--nr-page));
+    --ch-pro: #1b1a24;
+    --ch-community: var(--nr-card);
+    --ch-close: var(--nr-fill-peach);
+
+    --tile-a: var(--nr-card);
+    --tile-b: color-mix(in oklab, var(--nr-fill-pink) 40%, var(--nr-page));
+    --tile-c: var(--nr-sunk);
+
+    min-width: 0;
+    background: var(--nr-page);
+    color: var(--ink);
+    font-family: 'Manrope', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-size: var(--s-body);
+    line-height: 1.55;
+    overflow-x: clip;
   }
 
+  /* By night the fields are their colours laid thinly over the violet grey, still apart in lightness. */
+  :global(:root[data-theme='dark']) .page {
+    --soft: #c9c5d4;
+    --ch-chats: color-mix(in oklab, var(--nr-fill-lavender) 16%, var(--nr-sunk));
+    --ch-m0: color-mix(in oklab, var(--nr-fill-mint) 7%, var(--nr-sunk));
+    --ch-m1: color-mix(in oklab, var(--nr-fill-mint) 13%, var(--nr-sunk));
+    --ch-m2: color-mix(in oklab, var(--nr-fill-mint) 19%, var(--nr-sunk));
+    --ch-m3: color-mix(in oklab, var(--nr-fill-mint) 26%, var(--nr-sunk));
+    --ch-approvals: color-mix(in oklab, var(--nr-fill-pink) 13%, var(--nr-sunk));
+    --ch-office: #0f0e15;
+    --ch-box: color-mix(in oklab, var(--nr-fill-lavender) 26%, var(--nr-sunk));
+    --ch-pro: #0f0e15;
+    --tile-a: var(--nr-card);
+    --tile-b: color-mix(in oklab, var(--nr-fill-pink) 22%, var(--nr-sunk));
+    --tile-c: var(--nr-sunk);
+  }
+
+  /* A dark field in either theme: the night chapter, the Pro field, one tile. */
+  .on-dark {
+    --ink: #efedf5;
+    --soft: #c9c5d4;
+    color: var(--ink);
+  }
+
+  .chapter {
+    background: var(--field);
+    padding: clamp(4.5rem, 9vw, 8.5rem) var(--m);
+  }
+  .ch-chats { --field: var(--ch-chats); }
+  .ch-approvals { --field: var(--ch-approvals); }
+  .ch-office { --field: var(--ch-office); }
+  .ch-box { --field: var(--ch-box); }
+
+  h1,
+  h2,
+  .display,
+  .mid,
+  .figure,
+  .close-word {
+    font-family: var(--nr-font-display);
+    font-weight: 500;
+    font-synthesis-weight: none;
+    letter-spacing: -0.01em;
+    margin: 0;
+    text-wrap: balance;
+  }
+  .display {
+    font-size: var(--s-display);
+    line-height: 1;
+    letter-spacing: -0.025em;
+  }
+  .mid {
+    font-size: var(--s-mid);
+    line-height: 1.15;
+  }
+  .lead {
+    font-size: var(--s-lead);
+    line-height: 1.5;
+    margin: 0;
+    text-wrap: pretty;
+  }
+  p {
+    margin: 0;
+  }
+
+  a {
+    color: inherit;
+  }
+  .text-link {
+    color: var(--ink);
+    font-weight: 700;
+    text-decoration: underline;
+    text-decoration-thickness: 0.08em;
+    text-underline-offset: 0.22em;
+    text-decoration-color: color-mix(in oklab, currentColor 40%, transparent);
+    transition: text-decoration-color 180ms ease;
+  }
+  .text-link:hover {
+    text-decoration-color: currentColor;
+  }
+
+  /* Buttons: pills. The main one is the peach pastel with ink on it and a faint glow of its own colour. */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 3rem;
+    padding: 0.7rem 1.5rem;
+    border-radius: 999px;
+    border: 1px solid var(--nr-line);
+    background: var(--nr-card);
+    color: var(--nr-ink);
+    font-weight: 700;
+    font-size: var(--s-body);
+    text-decoration: none;
+    transition: transform 140ms var(--ease-out), background-color 180ms ease, box-shadow 180ms ease;
+  }
+  .btn:active {
+    transform: scale(0.97);
+  }
+  .btn.primary {
+    background: var(--nr-fill-peach);
+    border-color: var(--nr-fill-peach);
+    color: var(--nr-on-fill);
+    box-shadow: 0 6px 16px color-mix(in srgb, var(--nr-fill-peach) 32%, transparent);
+  }
+  .btn.light {
+    background: #efedf5;
+    border-color: #efedf5;
+    color: #221e2e;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .btn:hover {
+      background: var(--nr-sunk);
+    }
+    .btn.primary:hover {
+      background: color-mix(in oklab, var(--nr-fill-peach) 88%, #ffffff);
+      box-shadow: 0 8px 22px color-mix(in srgb, var(--nr-fill-peach) 42%, transparent);
+    }
+    .btn.light:hover {
+      background: #ffffff;
+    }
+  }
+  :focus-visible {
+    outline: 3px solid var(--nr-lavender);
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
+
+  /* ── Navigation: a plain bar on the hero's ground ─────────────────────────────────────────────────────────────── */
   .nav {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
-    padding: 1.25rem 0;
-    border-bottom: 1px solid var(--edge);
-    flex-wrap: wrap;
+    padding: 0.85rem var(--m);
   }
   .brand {
     display: inline-flex;
     align-items: center;
-    gap: 0.6rem;
-    font-weight: 700;
-    font-size: 1.05rem;
+    gap: 0.55rem;
+    font-family: var(--nr-font-display);
+    font-weight: 500;
+    font-size: 1.4rem;
     text-decoration: none;
-    color: inherit;
+    color: var(--nr-ink);
+  }
+  .brand img {
+    width: 2.5rem;
+    height: 2.5rem;
   }
   .nav nav {
     display: flex;
     align-items: center;
-    gap: 1.25rem;
-    font-size: 0.95rem;
+    gap: clamp(0.9rem, 2vw, 1.75rem);
+    font-weight: 600;
   }
   .nav nav a {
-    color: var(--muted);
+    color: var(--nr-ink);
     text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    transition: color 0.15s ease;
+    text-underline-offset: 0.25em;
   }
   .nav nav a:hover {
-    color: var(--sl-color-accent);
-  }
-  .github-link svg {
-    flex-shrink: 0;
-  }
-
-  .hero {
-    padding: 4.5rem 0 3.5rem;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    gap: 3rem;
-    text-align: left;
-    margin: 0 auto;
-    max-width: 68rem;
-  }
-  .hero-content {
-    flex: 1 1 38rem;
-    max-width: 41rem;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    text-align: left;
-  }
-  .hero-media {
-    flex: 0 1 auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 0;
-  }
-  .hero-logo {
-    width: clamp(260px, 28vw, 360px);
-    height: auto;
-    object-fit: contain;
-    filter: drop-shadow(0 20px 45px rgba(0, 0, 0, 0.5));
-    animation: hero-float 4s ease-in-out infinite alternate;
-  }
-  @keyframes hero-float {
-    0% {
-      transform: translateY(0px);
-    }
-    100% {
-      transform: translateY(-8px);
-    }
-  }
-
-  .terminal-showcase {
-    display: flex;
-    justify-content: center;
-    padding: 0 0 3.5rem;
-    margin: 0 auto;
-    max-width: 68rem;
-  }
-  .terminal-box {
-    width: 100%;
-    max-width: 46rem;
-    background: #090d15;
-    border: 1px solid rgba(56, 189, 248, 0.18);
-    border-radius: 0.85rem;
-    box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.6), 0 0 30px rgba(56, 189, 248, 0.08);
-    font-family: var(--sl-font-mono, monospace);
-    overflow: hidden;
-    text-align: left;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-  }
-  .terminal-box:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 25px 50px -10px rgba(0, 0, 0, 0.7), 0 0 35px rgba(56, 189, 248, 0.14);
-  }
-  .terminal-bar {
-    padding: 0.65rem 0.9rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-    background: rgba(255, 255, 255, 0.04);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  }
-  .terminal-lights {
-    display: flex;
-    gap: 0.4rem;
-    flex-shrink: 0;
-  }
-  .t-light {
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-    display: inline-block;
-  }
-  .t-light.t-red { background: #ff5f56; }
-  .t-light.t-yellow { background: #ffbd2e; }
-  .t-light.t-green { background: #27c93f; }
-  .terminal-caption {
-    font-size: 0.75rem;
-    color: #94a3b8;
-    font-weight: 500;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    min-width: 0;
-  }
-  .terminal-tag {
-    font-size: 0.65rem;
-    padding: 0.15rem 0.45rem;
-    border-radius: 4px;
-    background: rgba(56, 189, 248, 0.12);
-    color: #38bdf8;
-    font-weight: 600;
-    flex-shrink: 0;
-    white-space: nowrap;
-  }
-  .terminal-view {
-    padding: 1rem 1.15rem;
-    font-size: 0.82rem;
-    line-height: 1.65;
-    color: #e2e8f0;
-  }
-  .term-line {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    min-width: 0;
-  }
-  .t-cyan { color: #38bdf8; font-weight: 700; }
-  .t-bolt { color: #38bdf8; }
-  .term-sep {
-    height: 1px;
-    background: rgba(255, 255, 255, 0.06);
-    margin: 0.65rem 0;
-  }
-  .term-tree {
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-    margin: 0.5rem 0;
-  }
-  .t-branch-row {
-    display: flex;
-    align-items: baseline;
-    flex-wrap: wrap;
-    gap: 0.2rem 0.45rem;
-    font-size: 0.78rem;
-    line-height: 1.5;
-  }
-  .t-tree-char { color: #64748b; flex-shrink: 0; }
-  .t-tree-key { color: #94a3b8; flex-shrink: 0; }
-  .t-tree-val { color: #f1f5f9; min-width: 0; word-break: break-word; }
-  .t-highlight { color: #38bdf8; font-weight: 600; }
-  .t-dim { color: #64748b; font-size: 0.75rem; }
-  .t-chip {
-    display: inline-block;
-    padding: 0.05rem 0.35rem;
-    background: rgba(56, 189, 248, 0.12);
-    border-radius: 4px;
-    font-size: 0.7rem;
-    color: #7dd3fc;
-  }
-  .t-role {
-    font-size: 0.7rem;
-    color: #94a3b8;
-  }
-  .t-link {
-    color: #38bdf8;
     text-decoration: underline;
-    text-underline-offset: 2px;
   }
-  .term-footer {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.75rem;
-  }
-  .t-live-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #10b981;
-    box-shadow: 0 0 8px #10b981;
-    flex-shrink: 0;
-    animation: live-blink 2s ease-in-out infinite;
-  }
-  @keyframes live-blink {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.4; transform: scale(0.85); }
+  .nav .nav-action {
+    padding: 0.5rem 1.1rem;
+    border: 1px solid var(--nr-line);
+    border-radius: 999px;
+    background: var(--nr-card);
   }
 
-  .t-cursor {
-    display: inline-block;
-    color: #38bdf8;
-    font-weight: 700;
-    margin-left: 2px;
-    animation: cursor-blink 0.8s infinite;
+  /* ── Hero ─────────────────────────────────────────────────────────────────────────────────────────────────────── */
+  .hero {
+    /* The greeting's faint light: lavender at the top left, peach at the top right, as the dashboard's Home. */
+    background:
+      radial-gradient(42rem 26rem at 8% 0%, color-mix(in oklab, var(--nr-fill-lavender) 14%, transparent), transparent 70%),
+      radial-gradient(42rem 26rem at 96% 4%, color-mix(in oklab, var(--nr-fill-peach) 13%, transparent), transparent 70%),
+      var(--nr-page);
   }
-  .t-cursor.t-cursor-idle {
-    animation: none;
-    opacity: 0.35;
-  }
-  @keyframes cursor-blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0; }
-  }
-
-  /* Sequential terminal output animation */
-  .terminal-box .term-sep,
-  .terminal-box .term-main,
-  .terminal-box .t-branch-row,
-  .terminal-box .term-footer {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-
-  .terminal-box.in-view .term-sep:first-of-type {
-    animation: term-reveal 0.3s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards;
-  }
-  .terminal-box.in-view .term-main {
-    animation: term-reveal 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.35s forwards;
-  }
-  .terminal-box.in-view .t-branch-row:nth-child(1) {
-    animation: term-reveal 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.65s forwards;
-  }
-  .terminal-box.in-view .t-branch-row:nth-child(2) {
-    animation: term-reveal 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.95s forwards;
-  }
-  .terminal-box.in-view .t-branch-row:nth-child(3) {
-    animation: term-reveal 0.35s cubic-bezier(0.16, 1, 0.3, 1) 1.25s forwards;
-  }
-  .terminal-box.in-view .t-branch-row:nth-child(4) {
-    animation: term-reveal 0.35s cubic-bezier(0.16, 1, 0.3, 1) 1.55s forwards;
-  }
-  .terminal-box.in-view .t-branch-row:nth-child(5) {
-    animation: term-reveal 0.35s cubic-bezier(0.16, 1, 0.3, 1) 1.85s forwards;
-  }
-  .terminal-box.in-view .term-sep:last-of-type {
-    animation: term-reveal 0.3s cubic-bezier(0.16, 1, 0.3, 1) 2.1s forwards;
-  }
-  .terminal-box.in-view .term-footer {
-    animation: term-reveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) 2.35s forwards;
-  }
-
-  @keyframes term-reveal {
-    from {
-      opacity: 0;
-      transform: translateY(4px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .terminal-box .term-run,
-    .terminal-box .term-sep,
-    .terminal-box .term-main,
-    .terminal-box .t-branch-row,
-    .terminal-box .term-footer {
-      opacity: 1;
-      transform: none;
-      animation: none !important;
-    }
-  }
-  .eyebrow {
-    margin: 0 0 0.75rem;
-    font-size: 0.8rem;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--sl-color-accent);
+  .hero-top {
+    position: relative;
+    padding: clamp(2.5rem, 6vh, 4.5rem) var(--m) clamp(2.5rem, 5vh, 3.5rem);
+    text-align: center;
   }
   .hero h1 {
-    margin: 0 0 1rem;
-    font-size: clamp(2.25rem, 4.5vw, 3.5rem);
-    line-height: 1.15;
-    letter-spacing: -0.02em;
+    font-size: var(--s-display);
+    line-height: 1.02;
+    letter-spacing: -0.03em;
+    max-width: 16ch;
+    margin: 0 auto;
+  }
+  .lines .line {
+    display: block;
+    overflow: hidden;
+    padding-bottom: 0.1em;
+    margin-bottom: -0.1em;
+  }
+  .lines [data-line] {
+    display: block;
   }
   .tagline {
-    margin: 0 0 2rem;
-    max-width: 34rem;
-    font-size: clamp(1.05rem, 1.8vw, 1.2rem);
-    line-height: 1.6;
-    color: var(--muted);
+    max-width: 44ch;
+    margin: 1.25rem auto 0;
+    font-size: var(--s-lead);
+    line-height: 1.5;
+    color: var(--nr-body);
+    text-wrap: pretty;
+  }
+  .hero-cat {
+    position: absolute;
+    right: clamp(1rem, 6vw, 7rem);
+    bottom: -0.6rem;
+    width: clamp(8rem, 17vw, 16rem);
+    height: auto;
+    z-index: 2;
+    transform-origin: 60% 90%;
   }
 
-  .actions {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-start;
-    gap: 0.75rem;
-    margin-bottom: 2.5rem;
+  /* The folders: flat bands, each a little lower than the one behind it, a tab rising from each. */
+  .folders {
+    width: min(86%, 92rem);
+    margin: 0 auto;
+    padding-top: 2.5rem;
   }
-  .install {
-    width: 100%;
-    max-width: 41rem;
+  .folder {
+    position: relative;
+    display: block;
+    border-radius: 1.375rem 1.375rem 0 0;
+    background: var(--field);
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .folder.back {
+    height: calc(3.25rem + 1.5rem);
+    margin-bottom: -1.5rem;
+  }
+  .folder.ch-chats { --field: var(--ch-chats); }
+  .folder.ch-missions { --field: var(--ch-m1); }
+  .folder.ch-approvals { --field: var(--ch-approvals); }
+  .folder.ch-office {
+    --field: var(--ch-office);
+    --ink: #efedf5;
+  }
+  .folder.front {
+    --field: var(--nr-card);
+    padding: clamp(1.5rem, 3vw, 2.25rem) clamp(1.25rem, 3vw, 2.5rem) clamp(2rem, 4vw, 3rem);
+    box-shadow: var(--nr-shadow);
+  }
+  .tab {
+    position: absolute;
+    bottom: 100%;
+    left: var(--x);
+    display: inline-flex;
+    align-items: center;
+    height: 2.5rem;
+    padding: 0 1.6rem;
+    background: var(--field);
+    color: var(--ink);
+    font-weight: 700;
+    font-size: var(--s-body);
+    white-space: nowrap;
+    clip-path: polygon(0.9rem 0, calc(100% - 0.9rem) 0, 100% 100%, 0 100%);
+    border-radius: 0.75rem 0.75rem 0 0;
+    transition: transform 180ms var(--ease-out);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    a.folder:hover .tab {
+      transform: translateY(-4px);
+      text-decoration: underline;
+      text-underline-offset: 0.2em;
+    }
+  }
+  .folder.front .tab {
+    left: auto;
+    right: 6%;
+  }
+
+  .start {
+    display: grid;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+    gap: clamp(1.5rem, 4vw, 4rem);
+    align-items: start;
     text-align: left;
   }
-  .btn {
-    display: inline-block;
-    padding: 0.7rem 1.4rem;
-    border: 1px solid var(--edge);
-    border-radius: 999px;
-    font-size: 0.95rem;
-    font-weight: 600;
-    text-decoration: none;
-    color: inherit;
-    transition: all 0.2s ease;
-  }
-  .btn:hover {
-    border-color: var(--sl-color-accent);
-    color: var(--sl-color-accent);
-    transform: translateY(-1px);
-  }
-  .btn.primary {
-    background: var(--sl-color-accent);
-    border-color: var(--sl-color-accent);
-    color: var(--sl-color-black);
-    box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25);
-  }
-  .btn.primary:hover {
-    background: var(--sl-color-accent-high);
-    border-color: var(--sl-color-accent-high);
-    color: var(--sl-color-black);
-    box-shadow: 0 6px 20px rgba(2, 132, 199, 0.4);
-    transform: translateY(-2px);
+  .start-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem 1.5rem;
+    padding-top: 2.1rem;
   }
 
-  .install-label {
-    margin: 0 0 0.5rem;
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--muted);
+  /* The picker: four places it can live. */
+  .pick-label {
+    font-weight: 700;
+    margin-bottom: 0.6rem;
   }
   .pf-radio {
     position: absolute;
@@ -753,470 +764,1074 @@ const href = (slug: string) => `/${locale}/${slug}/`;
   }
   .pf-tabs {
     display: flex;
-    gap: 0.25rem;
-    margin-bottom: 0.5rem;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-bottom: 0.75rem;
   }
   .pf-tab {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
-    padding: 0.3rem 0.8rem;
-    border: 1px solid transparent;
+    gap: 0.45rem;
+    min-height: 2.5rem;
+    padding: 0.35rem 1rem;
     border-radius: 999px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    white-space: nowrap;
-    color: var(--muted);
+    font-weight: 700;
+    color: var(--nr-soft);
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: background-color 180ms ease, color 180ms ease, transform 140ms var(--ease-out);
+  }
+  .pf-tab:active {
+    transform: scale(0.97);
   }
   .pf-tab:hover {
-    color: var(--sl-color-accent);
+    color: var(--nr-ink);
   }
   #pf-linux:checked ~ .pf-tabs .pf-tab-linux,
   #pf-macos:checked ~ .pf-tabs .pf-tab-macos,
-  #pf-docker:checked ~ .pf-tabs .pf-tab-docker {
-    border-color: var(--edge);
-    background: var(--sl-color-bg-sidebar, transparent);
-    color: var(--sl-color-white);
+  #pf-docker:checked ~ .pf-tabs .pf-tab-docker,
+  #pf-android:checked ~ .pf-tabs .pf-tab-android {
+    background: var(--nr-tint-lavender);
+    color: var(--nr-lavender);
   }
   #pf-linux:focus-visible ~ .pf-tabs .pf-tab-linux,
   #pf-macos:focus-visible ~ .pf-tabs .pf-tab-macos,
-  #pf-docker:focus-visible ~ .pf-tabs .pf-tab-docker {
-    outline: 2px solid var(--sl-color-accent);
+  #pf-docker:focus-visible ~ .pf-tabs .pf-tab-docker,
+  #pf-android:focus-visible ~ .pf-tabs .pf-tab-android {
+    outline: 3px solid var(--nr-lavender);
     outline-offset: 2px;
   }
-  .pf-cmd {
-    display: none !important;
-  }
-  #pf-linux:checked ~ .pf-cmd-linux,
-  #pf-macos:checked ~ .pf-cmd-macos,
-  #pf-docker:checked ~ .pf-cmd-docker {
-    display: flex !important;
-  }
-  /* The script note is about install.sh, which the container does not run; Docker gets its own line instead. */
-  #pf-docker:checked ~ .pf-note-script,
-  #pf-linux:checked ~ .pf-note-docker,
-  #pf-macos:checked ~ .pf-note-docker {
+  .pf-panel {
     display: none;
   }
-  .pf-note-docker a {
-    color: var(--sl-color-accent);
+  #pf-linux:checked ~ .pf-panel-linux,
+  #pf-macos:checked ~ .pf-panel-macos,
+  #pf-docker:checked ~ .pf-panel-docker,
+  #pf-android:checked ~ .pf-panel-android {
+    display: block;
   }
   .command {
     display: flex;
-    align-items: stretch;
+    align-items: center;
     gap: 0.5rem;
-    border: 1px solid var(--edge);
-    border-radius: 0.6rem;
-    background: var(--sl-color-bg-sidebar, transparent);
-    padding: 0.35rem 0.35rem 0.35rem 0.85rem;
-    overflow: hidden;
+    border-radius: var(--nr-radius-field);
+    background: var(--nr-sunk);
+    padding: 0.4rem 0.4rem 0.4rem 1rem;
   }
   .command code {
     flex: 1;
-    align-self: center;
-    font-family: var(--sl-font-mono, monospace);
-    font-size: 0.85rem;
-    /* A long command (the Docker one) wraps where it must rather than scrolling out of sight. */
+    min-width: 0;
+    font-size: 0.9rem;
     overflow-wrap: anywhere;
   }
   .command button {
     flex-shrink: 0;
-    align-self: center;
-    padding: 0.45rem 0.85rem;
-    border: 1px solid var(--edge);
-    border-radius: 0.4rem;
-    background: var(--sl-color-bg);
-    color: inherit;
+    min-height: 2.5rem;
+    padding: 0.4rem 1.1rem;
+    border: 0;
+    border-radius: 999px;
+    background: var(--nr-card);
+    color: var(--nr-ink);
     font: inherit;
-    font-size: 0.8rem;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: transform 140ms var(--ease-out);
   }
-  .command button:hover {
-    border-color: var(--sl-color-accent);
-    color: var(--sl-color-accent);
+  .command button:active {
+    transform: scale(0.96);
   }
-  .inspect {
-    margin: 0.75rem 0 0;
-    font-size: 0.85rem;
-    color: var(--muted);
+  .pf-note {
+    margin-top: 0.75rem;
+    color: var(--nr-body);
+    max-width: 62ch;
   }
-  .inspect code {
-    font-family: var(--sl-font-mono, monospace);
-    font-size: 0.8rem;
+  .pf-inspect {
+    margin-top: 0.35rem;
   }
-  .hardware-badge {
-    margin-top: 1.25rem;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.55rem;
-    padding: 0.45rem 0.85rem;
-    background: rgba(56, 189, 248, 0.08);
-    border: 1px solid rgba(56, 189, 248, 0.22);
-    border-radius: 0.6rem;
-    font-family: var(--sl-font-mono, monospace);
-    font-size: 0.76rem;
-    line-height: 1.45;
-    color: var(--sl-color-gray-1, #e2e8f0);
-    letter-spacing: 0.01em;
-    width: fit-content;
-    max-width: 100%;
+  .pf-note code {
+    font-size: 0.875rem;
+    overflow-wrap: anywhere;
+    color: var(--nr-body);
   }
-  .badge-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #38bdf8;
-    box-shadow: 0 0 8px #38bdf8;
-    flex-shrink: 0;
-  }
-
-  .band {
-    padding: 3.5rem 0;
-    border-top: 1px solid var(--edge);
-  }
-  .band h2 {
-    margin: 0 0 0.75rem;
-    font-size: clamp(1.5rem, 3.5vw, 2rem);
-    letter-spacing: -0.01em;
-  }
-  .lead {
-    margin: 0 0 2rem;
-    max-width: 44rem;
-    line-height: 1.65;
-    color: var(--muted);
-  }
-
-  .cards {
-    display: grid;
-    gap: 1rem;
-    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
-  }
-  .card {
-    padding: 1.25rem;
-    border: 1px solid var(--edge);
-    border-radius: 0.85rem;
-    transition: all 0.2s ease;
-  }
-  .card:hover {
-    border-color: var(--sl-color-accent);
-    transform: translateY(-2px);
-  }
-  .card h3 {
-    margin: 0 0 0.5rem;
-    font-size: 1rem;
+  .pf-note a {
+    color: var(--nr-ink);
     font-weight: 700;
   }
-  .card p {
-    margin: 0;
-    font-size: 0.9rem;
-    line-height: 1.6;
-    color: var(--muted);
+  .pf-links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1.5rem;
+    margin-top: 1rem;
   }
 
-  .shot {
-    margin: 0;
-    border: 1px solid var(--edge);
-    border-radius: 0.85rem;
-    overflow: hidden;
-    background: var(--sl-color-bg-sidebar, transparent);
+  /* ── Chats: the staircase ─────────────────────────────────────────────────────────────────────────────────────── */
+  .chats {
+    position: relative;
+    min-height: 92svh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: clamp(2rem, 5vh, 3.5rem);
   }
-  .shot img {
+  .stairs {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-family: var(--nr-font-display);
+    font-weight: 500;
+    font-size: var(--s-display);
+    line-height: 1.04;
+    letter-spacing: -0.025em;
+  }
+  .stairs li:nth-child(1) { padding-left: 0; }
+  .stairs li:nth-child(2) { padding-left: 6vw; color: var(--nr-lavender); }
+  .stairs li:nth-child(3) { padding-left: 12vw; }
+  .stairs li:nth-child(4) { padding-left: 18vw; color: var(--nr-lavender); }
+  .stairs li:nth-child(5) { padding-left: 24vw; }
+  .chats-cat {
+    position: absolute;
+    right: var(--m);
+    top: 50%;
+    width: clamp(10rem, 24vw, 22rem);
+    height: auto;
+    translate: 0 -50%;
+  }
+  .chats-note {
+    max-width: 40ch;
+    font-size: var(--s-lead);
+    line-height: 1.5;
+    text-wrap: pretty;
+  }
+
+  /* ── Missions: one card, four fields ──────────────────────────────────────────────────────────────────────────── */
+  .missions {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .m-field {
+    position: relative;
+    min-height: 84svh;
+    display: grid;
+    grid-template-rows: 1fr auto 1fr;
+    gap: 1.5rem;
+    padding: clamp(2rem, 4vw, 3rem) clamp(1rem, 2vw, 1.75rem) 1.75rem;
+  }
+  .m-0 { background: var(--ch-m0); }
+  .m-1 { background: var(--ch-m1); }
+  .m-2 { background: var(--ch-m2); }
+  .m-3 { background: var(--ch-m3); }
+  .m-title,
+  .m-cat,
+  .m-link {
+    grid-row: 1;
+    align-self: start;
+  }
+  .m-cat {
+    width: clamp(7rem, 11vw, 10rem);
+    height: auto;
+    justify-self: center;
+  }
+  .m-link {
+    justify-self: start;
+  }
+  .mcard {
+    grid-row: 2;
+    justify-self: center;
+    width: min(100%, 16.25rem);
+    transition: transform 150ms var(--ease-out);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .m-field:hover .mcard {
+      transform: translateY(-6px);
+    }
+  }
+  .m-clause {
+    grid-row: 3;
+    align-self: end;
+    font-family: var(--nr-font-display);
+    font-weight: 500;
+    font-size: var(--s-mid);
+    line-height: 1.15;
+    max-width: 17ch;
+    text-wrap: balance;
+  }
+
+  /* A mission's card, as the dashboard draws it: white, a hairline, a soft shadow, 22px corners. */
+  [data-ui] {
+    font-family: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+  }
+  .mcard {
+    display: grid;
+    gap: 0.6rem;
+    padding: 1rem 1.1rem 1.1rem;
+    border-radius: var(--nr-radius-card);
+    border: 1px solid var(--nr-line);
+    background: var(--nr-card);
+    color: var(--nr-ink);
+    box-shadow: var(--nr-shadow);
+    font-size: 0.875rem;
+    line-height: 1.4;
+  }
+  .mcard-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+  .mcard-agent {
+    font-weight: 700;
+    color: var(--nr-soft);
+  }
+  .mcard-goal {
+    font-weight: 700;
+    font-size: 0.95rem;
+  }
+  .mcard-meta {
+    color: var(--nr-soft);
+  }
+  .mcard-q {
+    font-weight: 600;
+    color: var(--nr-ink);
+  }
+  .mcard-actions {
+    display: flex;
+    gap: 0.4rem;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.15rem 0.6rem;
+    border-radius: 999px;
+    background: var(--nr-sunk);
+    color: var(--nr-body);
+    font-weight: 700;
+    font-size: 0.8125rem;
+    white-space: nowrap;
+  }
+  .chip-mint {
+    background: var(--nr-tint-mint);
+    color: var(--nr-mint);
+  }
+  .chip-pink {
+    background: var(--nr-tint-pink);
+    color: var(--nr-pink);
+  }
+  .ubtn {
+    display: inline-flex;
+    padding: 0.3rem 0.85rem;
+    border-radius: 999px;
+    border: 1px solid var(--nr-line);
+    font-weight: 700;
+    font-size: 0.8125rem;
+  }
+  .ubtn-main {
+    background: var(--nr-fill-peach);
+    border-color: var(--nr-fill-peach);
+    color: var(--nr-on-fill);
+  }
+  .bar {
+    display: block;
+    height: 0.4rem;
+    border-radius: 999px;
+    background: var(--nr-sunk);
+    overflow: hidden;
+  }
+  .bar > span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--nr-fill-mint);
+  }
+
+  /* ── Approvals: close-ups on a board ──────────────────────────────────────────────────────────────────────────── */
+  .approvals {
+    padding: clamp(0.5rem, 0.8vw, 0.625rem);
+  }
+  .board {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    grid-auto-rows: 6.5rem;
+    gap: 0.5rem;
+  }
+  .tile {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--nr-radius-card);
+    background: var(--tile-a);
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+  .t-head {
+    grid-column: 1 / 7;
+    grid-row: span 2;
+    background: var(--tile-b);
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+  .t-head h2 {
+    font-size: clamp(2rem, 3.6vw, 3.5rem);
+    max-width: 14ch;
+  }
+  .t-always { grid-column: 7 / 10; grid-row: span 2; }
+  .t-keys { grid-column: 10 / 13; grid-row: span 2; background: var(--tile-c); }
+  .t-prompt { grid-column: 1 / 7; grid-row: span 4; background: var(--tile-c); }
+  .t-cat { grid-column: 7 / 10; grid-row: span 4; background: var(--tile-b); }
+  .t-fixed { grid-column: 10 / 13; grid-row: span 4; background: #221e2e; }
+  .t-timeout { grid-column: 1 / 7; grid-row: span 2; background: var(--tile-b); }
+  .t-restart { grid-column: 7 / 13; grid-row: span 2; }
+
+  .cap {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    gap: 0.15rem;
+    max-width: 34ch;
+    color: var(--soft);
+    font-size: var(--s-body);
+    line-height: 1.45;
+  }
+  .cap strong {
+    color: var(--ink);
+    font-family: var(--nr-font-display);
+    font-weight: 500;
+    font-size: var(--s-lead);
+  }
+
+  /* The enlarged element in a tile, pushed toward a corner so the tile's edges crop it. */
+  .zoom {
+    position: absolute;
+    top: -0.3em;
+    right: -0.4em;
+    display: flex;
+    gap: 0.3em;
+    font-size: 3.2rem;
+    line-height: 1;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+  .tg-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.35em 0.9em;
+    border-radius: 0.45em;
+    background: color-mix(in oklab, var(--nr-fill-lavender) 16%, var(--nr-card));
+    color: var(--nr-lavender);
+    font-weight: 700;
+    font-size: 1em;
+  }
+  .t-always .zoom {
+    top: 0.8rem;
+    right: -1.2rem;
+    font-size: 2.6rem;
+  }
+  .key {
+    display: inline-block;
+    padding: 0.2em 0.45em;
+    border-radius: 0.3em;
+    background: var(--nr-card);
+    border: 1px solid var(--nr-line);
+    font-size: 0.6em;
+    color: var(--nr-ink);
+  }
+  .t-keys .zoom {
+    top: 1rem;
+    right: -1.5rem;
+    font-size: 2.8rem;
+  }
+  .t-fixed .zoom {
+    top: 1.25rem;
+    right: -2rem;
+    font-size: 3.4rem;
+    color: #ff9d8c;
+  }
+  .t-fixed .zoom code {
+    font-size: 1em;
+  }
+  .big {
+    font-family: var(--nr-font-display);
+    font-weight: 500;
+    color: var(--nr-pink);
+    font-size: 1.6em;
+    letter-spacing: -0.03em;
+  }
+  .t-timeout .zoom {
+    top: -0.1em;
+    right: 0.2em;
+  }
+  .t-restart .zoom {
+    top: 1.1rem;
+    right: -0.6rem;
+    font-size: 2.4rem;
+  }
+  .t-restart .chip {
+    font-size: 1em;
+    padding: 0.2em 0.7em;
+  }
+
+  /* The approval as it arrives in a chat: the bot's message, the command, its buttons. */
+  .msg {
+    position: absolute;
+    top: 1.25rem;
+    left: 1.25rem;
+    right: -2.5rem;
+    display: grid;
+    gap: 0.7rem;
+    padding: 1.2rem 1.4rem;
+    border-radius: 1.1rem 1.1rem 1.1rem 0.35rem;
+    background: var(--nr-card);
+    color: var(--nr-ink);
+    box-shadow: var(--nr-shadow);
+    font-size: 1.15rem;
+    line-height: 1.45;
+  }
+  .msg pre {
+    margin: 0;
+    padding: 0.6rem 0.8rem;
+    border-radius: 0.6rem;
+    background: var(--nr-sunk);
+    font-size: 0.95rem;
+    white-space: pre;
+    overflow: hidden;
+  }
+  .msg-hint {
+    color: var(--nr-soft);
+    font-size: 0.95rem;
+  }
+  .msg-btns {
+    display: flex;
+    gap: 0.5rem;
+  }
+  .msg .tg-btn {
+    flex: 1;
+    font-size: 1rem;
+  }
+  .t-prompt .cap {
+    margin-top: auto;
+  }
+  .t-cat img {
+    position: absolute;
+    top: 0.5rem;
+    left: 50%;
+    width: min(88%, 15rem);
+    height: auto;
+    translate: -50% 0;
+  }
+
+  /* ── The Office: square plate, spare text ─────────────────────────────────────────────────────────────────────── */
+  .office {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: clamp(2rem, 4vw, 4.5rem);
+    min-height: 72svh;
+    align-items: center;
+  }
+  .plate {
+    margin: 0;
+    align-self: center;
+  }
+  .plate img {
     display: block;
     width: 100%;
     height: auto;
+    border-radius: var(--nr-radius-field);
   }
-  .shot.wide {
-    margin-bottom: 1rem;
+  .office-text {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: clamp(2rem, 6vh, 4rem);
+    padding-block: 0.5rem;
   }
-  .shots {
-    display: grid;
-    gap: 1rem;
-    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  .office-text .lead {
+    margin-top: 1.5rem;
+    max-width: 38ch;
   }
-
-  .steps {
+  .legend {
     list-style: none;
-    margin: 0 0 2rem;
+    margin: 1.5rem 0 0;
     padding: 0;
     display: grid;
-    gap: 1.25rem;
+    grid-template-columns: repeat(2, max-content);
+    gap: 0.35rem 2rem;
+    font-weight: 700;
+    color: var(--soft);
   }
-  .steps li {
-    display: flex;
-    gap: 1rem;
-    align-items: flex-start;
-  }
-  .num {
-    flex-shrink: 0;
-    width: 1.9rem;
-    height: 1.9rem;
+  .cells {
     display: grid;
-    place-items: center;
-    border-radius: 50%;
-    background: var(--sl-color-accent-low);
-    color: var(--sl-color-accent-high);
-    font-size: 0.85rem;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+  .cell {
+    display: flex;
+    align-items: center;
+    min-height: 4.5rem;
+    padding: 0 1.4rem;
+    border-radius: var(--nr-radius-field);
+    background: #efedf5;
+    color: #221e2e;
+    font-weight: 700;
+    text-decoration: none;
+    transition: transform 140ms var(--ease-out), background-color 180ms ease;
+  }
+  .cell + .cell {
+    background: #2c2a39;
+    color: #efedf5;
+  }
+  .cell:active {
+    transform: scale(0.98);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .cell:hover {
+      background: #ffffff;
+    }
+    .cell + .cell:hover {
+      background: #383547;
+    }
+  }
+
+  /* ── What they keep: a statement, the list pushed right ───────────────────────────────────────────────────────── */
+  .learn h2 .l {
+    display: block;
+  }
+  .learn h2 .l-0 {
+    padding-left: 3vw;
+  }
+  .learn-body {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: 1.5rem;
+    margin-top: clamp(3rem, 7vw, 6rem);
+    align-items: end;
+  }
+  .learn-cat {
+    grid-column: 1 / 5;
+    grid-row: 1;
+    width: min(100%, 22rem);
+    height: auto;
+    align-self: end;
+  }
+  .learn-name {
+    grid-column: 6 / 8;
+    grid-row: 1;
+    align-self: start;
+    color: var(--soft);
     font-weight: 700;
   }
-  .steps h3 {
-    margin: 0.15rem 0 0.35rem;
-    font-size: 1rem;
-  }
-  .steps h3 a {
-    color: inherit;
-    text-decoration: none;
-  }
-  .steps h3 a:hover {
-    color: var(--sl-color-accent);
-  }
-  .steps p {
-    margin: 0;
-    font-size: 0.9rem;
-    line-height: 1.6;
-    color: var(--muted);
-  }
-
-  .numbers {
-    display: grid;
-    gap: 1rem;
-    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
-    margin: 0 0 1.5rem;
-  }
-  .numbers > div {
-    padding: 1.25rem;
-    border: 1px solid var(--edge);
-    border-radius: 0.85rem;
-    transition: all 0.2s ease;
-  }
-  .numbers > div:hover {
-    border-color: var(--sl-color-accent);
-    transform: translateY(-2px);
-  }
-  .numbers dt {
-    font-size: 1.75rem;
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    color: var(--sl-color-accent);
-  }
-  .numbers dd {
-    margin: 0.4rem 0 0;
-    display: grid;
-    gap: 0.2rem;
-  }
-  .numbers strong {
-    font-size: 0.9rem;
-  }
-  .numbers span {
-    font-size: 0.8rem;
-    line-height: 1.5;
-    color: var(--muted);
-  }
-  .quiet {
-    font-size: 0.9rem;
-    color: var(--sl-color-accent);
-    text-decoration: none;
-  }
-  .quiet:hover {
-    text-decoration: underline;
-  }
-
-  .chips {
+  .rows {
+    grid-column: 8 / 13;
+    grid-row: 1;
     list-style: none;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin: 0 0 1.5rem;
-    padding: 0;
-  }
-  .chips li {
-    padding: 0.4rem 0.9rem;
-    border: 1px solid var(--edge);
-    border-radius: 999px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    font-family: var(--sl-font-mono, monospace);
-    background: var(--sl-color-bg-sidebar, transparent);
-    transition: all 0.15s ease;
-  }
-  .chips li:hover {
-    border-color: var(--sl-color-accent);
-    color: var(--sl-color-accent);
-  }
-
-  .cta {
-    margin-top: 3.5rem;
-    padding: 3.5rem 2rem;
-    border: 1px solid var(--edge);
-    border-radius: 1.25rem;
-    text-align: center;
-    background: var(--sl-color-bg-sidebar, transparent);
-  }
-  .cta h2 {
-    margin: 0 0 0.75rem;
-    font-size: clamp(1.5rem, 3.5vw, 2rem);
-  }
-  .cta > p {
-    margin: 0 auto 1.75rem;
-    max-width: 34rem;
-    line-height: 1.65;
-    color: var(--muted);
-  }
-  .cta .actions {
-    justify-content: center;
-    margin-bottom: 1.5rem;
-  }
-  .license {
     margin: 0;
-    font-size: 0.8rem;
-    color: var(--muted);
+    padding: 0;
+    display: grid;
+    gap: 1.4rem;
   }
-
-  .site-footer {
-    margin-top: 4rem;
-    padding: 2.5rem 0 1.5rem;
-    border-top: 1px solid var(--edge);
+  .row {
+    display: grid;
+    grid-template-columns: 7.5rem minmax(0, 1fr);
+    gap: 1rem;
+    align-items: baseline;
+  }
+  .row.gap {
+    margin-top: 1.25rem;
+  }
+  .kind {
+    color: var(--soft);
+    font-weight: 700;
+  }
+  .what {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
     gap: 1rem;
-    font-size: 0.85rem;
-    color: var(--muted);
+    color: var(--ink);
+    text-decoration: none;
+    text-wrap: pretty;
   }
-  .footer-left {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    flex-wrap: wrap;
-  }
-  .footer-brand {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
+  a.what .arrow {
+    flex-shrink: 0;
     font-weight: 700;
-    color: var(--sl-color-white);
-    text-decoration: none;
+    color: var(--nr-peach);
+    transition: transform 180ms var(--ease-out);
   }
-  .footer-brand:hover {
-    color: var(--sl-color-accent);
-  }
-  .footer-sep {
-    opacity: 0.4;
-  }
-  .footer-left .copyright {
-    margin: 0;
-  }
-  .footer-right .powered-by {
-    margin: 0;
-  }
-  .powered-by a {
-    color: var(--sl-color-accent);
-    text-decoration: none;
-    font-weight: 600;
-    transition: color 0.15s ease;
-  }
-  .powered-by a:hover {
-    text-decoration: underline;
-    color: var(--sl-color-accent-high, var(--sl-color-accent));
+  @media (hover: hover) and (pointer: fine) {
+    a.what:hover {
+      text-decoration: underline;
+      text-underline-offset: 0.2em;
+    }
+    a.what:hover .arrow {
+      transform: translateX(4px);
+    }
   }
 
-  @media (max-width: 54rem) {
+  /* ── The footprint: one figure ────────────────────────────────────────────────────────────────────────────────── */
+  .box {
+    position: relative;
+    min-height: 90svh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 3rem;
+  }
+  .figure {
+    font-size: var(--s-figure);
+    line-height: 0.8;
+    letter-spacing: -0.05em;
+    font-variant-numeric: lining-nums;
+    margin-left: -0.04em;
+  }
+  .unit {
+    font-size: var(--s-display);
+    letter-spacing: -0.02em;
+    vertical-align: top;
+    margin-left: 0.15em;
+    position: relative;
+    top: 0.12em;
+  }
+  .figure-cap {
+    margin-top: 1.75rem;
+    max-width: 32ch;
+    font-size: var(--s-lead);
+    line-height: 1.5;
+  }
+  .box-source {
+    position: absolute;
+    right: var(--m);
+    bottom: clamp(4.5rem, 9vw, 8.5rem);
+  }
+
+  /* ── Editions: two fields ─────────────────────────────────────────────────────────────────────────────────────── */
+  .editions {
+    display: grid;
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  }
+  .ed {
+    min-height: 64svh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 3rem;
+    padding: clamp(2.5rem, 5vw, 4.5rem) var(--m);
+  }
+  .ed-community {
+    background: var(--ch-community);
+  }
+  .ed-pro {
+    background: var(--ch-pro);
+  }
+  .ed .lead {
+    margin-top: 1rem;
+    max-width: 26ch;
+  }
+  .ed-body {
+    margin-top: 1rem;
+    max-width: 44ch;
+    font-size: var(--s-body);
+  }
+  .ed-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1.25rem;
+  }
+  .ed-pro .ed-foot {
+    justify-content: flex-end;
+  }
+
+  /* ── The close: one word is the button ────────────────────────────────────────────────────────────────────────── */
+  .close {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 60svh;
+    padding: 1.5rem var(--m) 1.5rem;
+    background: var(--ch-close);
+    color: var(--nr-on-fill);
+    text-decoration: none;
+  }
+  .close-sentence {
+    max-width: 28ch;
+    font-size: var(--s-lead);
+    font-weight: 700;
+    line-height: 1.4;
+  }
+  .close-arrow {
+    position: absolute;
+    top: 1.5rem;
+    right: var(--m);
+    transition: transform 180ms var(--ease-out);
+  }
+  /* The word spans the band's width: its size is the band's width over the word's own width in em (`fit`, per language). */
+  .close-fit {
+    display: block;
+    container-type: inline-size;
+  }
+  .close-word {
+    display: block;
+    font-size: calc(100cqw / var(--fit));
+    line-height: 0.82;
+    letter-spacing: -0.05em;
+    margin-left: -0.05em;
+    padding-bottom: 0.05em;
+  }
+  .close-word.descends {
+    padding-bottom: 0.2em;
+  }
+  .close:hover,
+  .close:focus-visible {
+    background: var(--nr-on-fill);
+    color: var(--nr-fill-peach);
+  }
+  .close:hover .close-arrow {
+    transform: translate(4px, -4px);
+  }
+  .close:focus-visible {
+    outline-offset: -6px;
+  }
+
+  /* ── Footer: one quiet line ───────────────────────────────────────────────────────────────────────────────────── */
+  .site-footer {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: baseline;
+    gap: 1rem 2rem;
+    padding: clamp(6rem, 16svh, 10rem) var(--m) 1.75rem;
+    color: var(--nr-soft);
+  }
+  .site-footer a {
+    color: var(--nr-ink);
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .site-footer a:hover {
+    text-decoration: underline;
+  }
+  .f-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+  }
+  .f-year {
+    justify-self: end;
+  }
+
+  /* ── Motion: the signature move and the entrances. Only where nobody asked for less of it ─────────────────────── */
+  @media (prefers-reduced-motion: no-preference) {
+    :global(html.js) .lines [data-line] {
+      transform: translateY(105%);
+      animation: line-up 900ms var(--ease-out) forwards;
+      animation-delay: calc(var(--i) * 110ms + 150ms);
+    }
+    :global(html.js) [data-rise] {
+      opacity: 0;
+      transform: translateY(18px);
+      animation: rise 800ms var(--ease-out) forwards;
+      animation-delay: calc(var(--i, 0) * 110ms + 250ms);
+    }
+    :global(html.js) .hero-cat {
+      animation: hello 1.4s var(--ease-out) 0.7s both;
+    }
+    :global(html.js) .folder {
+      animation: rise 700ms var(--ease-out) both;
+    }
+    :global(html.js) .folder:nth-child(1) { animation-delay: 420ms; }
+    :global(html.js) .folder:nth-child(2) { animation-delay: 490ms; }
+    :global(html.js) .folder:nth-child(3) { animation-delay: 560ms; }
+    :global(html.js) .folder:nth-child(4) { animation-delay: 630ms; }
+    :global(html.js) .folder:nth-child(5) { animation-delay: 700ms; }
+
+    /* A chapter's parts rise in reading order as it enters: each part carries its place as `--i`. */
+    :global(html.js) [data-reveal] [style*='--i'] {
+      opacity: 0;
+      transform: var(--from, translateY(24px));
+      transition: opacity 700ms var(--ease-out), transform 900ms var(--ease-out);
+      transition-delay: calc(var(--i) * 75ms);
+    }
+    :global(html.js) [data-reveal].is-in [style*='--i'] {
+      opacity: 1;
+      transform: none;
+    }
+    /* The staircase steps in from the left, one place at a time; the board's tiles settle from a slight scale. */
+    .stairs li {
+      --from: translateX(-32px);
+    }
+    .board .tile {
+      --from: scale(0.96);
+    }
+
+    /* The one moving picture: the cat rides a little way across its chapter as the page scrolls past it. */
+    @supports (animation-timeline: view()) {
+      .drift {
+        animation: ride linear both;
+        animation-timeline: view();
+        animation-range: entry 0% exit 100%;
+      }
+    }
+  }
+  @keyframes line-up {
+    to { transform: none; }
+  }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(18px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes hello {
+    0% { opacity: 0; transform: translateY(16px) rotate(0deg); }
+    40% { opacity: 1; transform: none; }
+    60% { transform: rotate(-4deg); }
+    80% { transform: rotate(3deg); }
+    100% { opacity: 1; transform: none; }
+  }
+  @keyframes ride {
+    from { transform: translateX(-12%); }
+    to { transform: translateX(6%); }
+  }
+
+  /* ── Tablet: below 1100px the missions take two rows, the board loosens ───────────────────────────────────────── */
+  @media (max-width: 68.75rem) {
+    .missions {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .m-field {
+      min-height: 34rem;
+    }
+    .t-head { grid-column: 1 / 13; }
+    .t-always { grid-column: 1 / 7; }
+    .t-keys { grid-column: 7 / 13; }
+    .t-prompt { grid-column: 1 / 13; }
+    .t-cat { grid-column: 1 / 7; }
+    .t-fixed { grid-column: 7 / 13; }
+    .start {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .start-actions {
+      padding-top: 0;
+    }
+    /* The waving cat stands above the headline once the headline needs the width. */
+    .hero-top {
+      display: flex;
+      flex-direction: column;
+    }
+    .hero-cat {
+      position: static;
+      order: -1;
+      display: block;
+      width: 8.5rem;
+      margin: 0 auto 0.75rem;
+    }
+    .office {
+      grid-template-columns: minmax(0, 1fr);
+      min-height: 0;
+    }
+    .learn-name {
+      display: none;
+    }
+    .rows {
+      grid-column: 6 / 13;
+    }
+  }
+
+  /* ── Phone: every multi-column layout collapses explicitly below 768px ────────────────────────────────────────── */
+  @media (max-width: 47.99rem) {
     .page {
-      padding: 0 1rem max(4rem, env(safe-area-inset-bottom, 0px) + 2rem);
+      --s-display: clamp(2.1rem, 9.4vw, 3rem);
     }
-    .hero {
-      flex-direction: column-reverse;
-      align-items: center;
-      text-align: center;
-      padding: 2rem 0 2rem;
-      gap: 1.5rem;
+    .wide-only {
+      display: none;
     }
-    .hero-content {
-      align-items: center;
-      text-align: center;
-      max-width: 100%;
+    .nav nav {
+      gap: 1rem;
     }
-    .hero-media {
-      margin-bottom: 0.25rem;
-    }
-    .hero-logo {
-      width: clamp(160px, 40vw, 220px);
-    }
-    .terminal-showcase {
-      padding: 0 0 2rem;
-    }
-    .terminal-box {
-      width: 100%;
-      max-width: 100%;
-    }
-    .terminal-bar {
-      padding: 0.5rem 0.75rem;
-    }
-    .terminal-caption {
-      font-size: 0.7rem;
-    }
-    .terminal-view {
-      padding: 0.85rem 0.75rem;
-      font-size: 0.75rem;
-      line-height: 1.55;
-    }
-    .t-branch-row {
-      font-size: 0.74rem;
-      gap: 0.15rem 0.4rem;
-    }
-    .hardware-badge {
-      margin: 1rem auto 0;
-      text-align: left;
-      padding: 0.45rem 0.7rem;
-      font-size: 0.72rem;
-      line-height: 1.4;
-      align-items: flex-start;
-    }
-    .badge-dot {
-      margin-top: 0.3rem;
-    }
-    .inspect {
-      font-size: 0.78rem;
-    }
-    .inspect code {
-      word-break: break-all;
-    }
-    .hero h1 {
-      font-size: clamp(2rem, 7vw, 2.75rem);
+    .hero-top {
+      padding-top: 0.5rem;
     }
     .tagline {
-      margin: 0 auto 1.75rem;
-      max-width: 34rem;
+      font-size: var(--s-body);
     }
-    .actions {
-      justify-content: center;
+    .hero-cat {
+      width: 7.5rem;
     }
-    .install {
-      max-width: 100%;
-      width: 100%;
-      margin: 0 auto;
+    .folders {
+      width: auto;
+      margin: 0 0.5rem;
+      padding-top: 2rem;
     }
-    .command {
-      padding: 0.35rem 0.35rem 0.35rem 0.65rem;
+    .folder.back {
+      height: calc(2.6rem + 1.5rem);
     }
-    .command code {
-      font-size: 0.72rem;
+    .tab {
+      height: 2rem;
+      padding: 0 1.1rem;
     }
-    .site-footer {
+    .folder.back:nth-child(1) .tab { left: 2%; }
+    .folder.back:nth-child(2) .tab { left: 30%; }
+    .folder.back:nth-child(3) .tab { left: 4%; }
+    .folder.back:nth-child(4) .tab { left: 34%; }
+    .folder.front .tab { right: 4%; }
+    .start-actions .btn {
+      flex: 1 1 100%;
+    }
+
+    .stairs li:nth-child(2) { padding-left: 5vw; }
+    .stairs li:nth-child(3) { padding-left: 10vw; }
+    .stairs li:nth-child(4) { padding-left: 15vw; }
+    .stairs li:nth-child(5) { padding-left: 20vw; }
+    .chats {
+      min-height: 0;
+    }
+    .chats-cat {
+      position: static;
+      translate: none;
+      width: 11rem;
+      align-self: flex-end;
+      margin: -1rem 0 -1rem;
+    }
+
+    .missions {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    /* On a phone each field reads top-down: its heading, picture or link, then the clause, then the card. */
+    .m-field {
+      min-height: 0;
+      display: flex;
       flex-direction: column;
-      text-align: center;
-      justify-content: center;
-      gap: 0.75rem;
+      align-items: flex-start;
+      gap: 1.25rem;
+      padding: 2rem 1.25rem 2.25rem;
     }
-    .footer-left {
-      justify-content: center;
+    .m-clause {
+      order: 1;
+      max-width: none;
     }
-    .footer-sep {
-      display: none;
+    .mcard {
+      order: 2;
+    }
+
+    .board {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-auto-rows: 28vw;
+      gap: 0.375rem;
+    }
+    .t-head { grid-column: 1 / 3; grid-row: span 2; }
+    .t-prompt { grid-column: 1 / 3; grid-row: span 4; }
+    .t-always,
+    .t-keys {
+      grid-column: span 1;
+      grid-row: span 2;
+    }
+    .t-cat,
+    .t-fixed {
+      grid-column: span 1;
+      grid-row: span 3;
+    }
+    .t-timeout,
+    .t-restart {
+      grid-column: 1 / 3;
+      grid-row: span 2;
+    }
+    .tile {
+      padding: 1rem;
+    }
+    .cap strong {
+      font-size: var(--s-body);
+    }
+    .t-head h2 {
+      font-size: var(--s-display);
+    }
+    .zoom {
+      font-size: 2.2rem;
+    }
+    .t-always .zoom,
+    .t-keys .zoom {
+      font-size: 1.8rem;
+      top: 0.6rem;
+    }
+    .t-fixed .zoom {
+      font-size: 2.2rem;
+      top: 0.8rem;
+    }
+    .msg {
+      font-size: 1rem;
+      left: 1rem;
+      top: 1rem;
+    }
+    .t-cat img {
+      width: 62%;
+      top: 0.25rem;
+    }
+
+    .cells {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .legend {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .cell {
+      min-height: 3.75rem;
+    }
+
+    .learn h2 .l-0 {
+      padding-left: 0;
+    }
+    .learn-body {
+      grid-template-columns: minmax(0, 1fr);
+      row-gap: 2rem;
+    }
+    .rows,
+    .learn-cat {
+      grid-column: 1;
+      grid-row: auto;
+    }
+    .learn-cat {
+      width: 60%;
+      justify-self: end;
+    }
+    .row {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0.15rem;
+    }
+
+    .box {
+      min-height: 80svh;
+    }
+    .figure {
+      font-size: 46vw;
+    }
+    .box-source {
+      position: static;
+    }
+
+    .editions {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .ed {
+      min-height: 0;
+      gap: 2.5rem;
+    }
+
+    .close {
+      min-height: 46svh;
+    }
+    .close-arrow {
+      width: 32px;
+      height: 32px;
+    }
+    .close-sentence {
+      max-width: 20ch;
+      font-size: var(--s-body);
+    }
+
+    .site-footer {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0.5rem;
+      padding-top: 20svh;
+    }
+    .f-year {
+      justify-self: start;
     }
   }
 </style>

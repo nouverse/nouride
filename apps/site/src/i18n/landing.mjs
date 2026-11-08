@@ -3,197 +3,266 @@
  *
  * Separated from the markup because the page is one component rendered twice, not two pages. Markup
  * and CSS live once in `components/Landing.astro`; only the sentences differ.
+ *
+ * Every claim here is one the docs make, and says where: a number keeps the date it was measured on. The product's own
+ * words inside a drawn fragment of it (a button, the line an approval opens with) stay as the product shows them, in
+ * English on both pages; what a person would have typed into it is translated.
  */
 
 /** @typedef {typeof en} LandingCopy */
 
 export const en = {
   meta: {
-    title: 'Nouride - Multi AI Agent Runtime for Edge Devices',
+    title: 'Nouride: AI agents that live on your box',
     description:
-      'Full-capability autonomous agent engine for Raspberry Pi, Orange Pi, and any Linux SBCs. Automate tasks, control home devices, and coordinate multi-agent workflows 24/7 on mini-hardware.',
+      'Nouride runs a few AI agents on a small computer you own: a Raspberry Pi, a mini PC, a Mac or an Android phone. Chat with them on Telegram, Discord, WhatsApp or in your browser.',
   },
-  nav: { docs: 'Docs', install: 'Install', cloud: 'Cloud', github: 'GitHub' },
+  nav: { docs: 'Docs', pro: 'Pro', github: 'GitHub', other: 'Bahasa Indonesia', otherShort: 'ID', otherLang: 'id', install: 'Install' },
   hero: {
-    eyebrow: '⚡ Multi AI Agent Runtime for Edge Devices',
-    title: 'Multi AI Agent Runtime for Edge Devices',
+    lines: ['AI agents that live', 'on your box'],
     tagline:
-      'Full-capability autonomous agent engine for Raspberry Pi, Orange Pi, and any Linux SBCs. Automate tasks, control home devices, and coordinate multi-agent workflows 24/7 on mini-hardware.',
-    hardwareBadge: 'Raspberry Pi · Orange Pi · Rockchip · Any 64-bit Linux SBC · ~40MB download · runs in 64 MB of RAM (measured 2026-10-17)',
-    installLabel: 'One command, on Linux, macOS or Docker:',
-    platforms: { linux: 'Linux', macos: 'macOS', docker: 'Docker' },
-    inspectNote: 'Want to inspect the script first? Read it before running:',
-    dockerNote: 'Your agents and settings stay in ./nouride, beside where you ran it. The compose file and every option:',
-    dockerGuide: 'Docker guide',
-    primary: 'Get Started',
-    secondary: 'Learn More',
+      'Nouride runs a few AI agents on a small computer you own. Chat with them on Telegram, Discord, WhatsApp or right in your browser.',
+    primary: 'Install Nouride',
+    secondary: 'What is it?',
+    mascotAlt: 'The Nouride cat, waving hello',
+    /** The folder tabs, back to front. Each one names a chapter below and lends it its colour. */
+    folders: { office: 'Office', approvals: 'Approvals', missions: 'Missions', chats: 'Chats', start: 'Start here' },
+    pick: 'Where will it live?',
+    platforms: { linux: 'Linux', macos: 'Mac', docker: 'Docker', android: 'Android' },
+    notes: {
+      linux: 'A Raspberry Pi, an Orange Pi, a mini PC or any 64-bit Linux. It sets itself up as a service.',
+      inspect: 'Read the script first:',
+      macos: 'A Mac with Apple Silicon. No sudo: it runs as you, while you are logged in.',
+      docker: 'Your agents and settings stay in ./nouride, beside where you ran it.',
+      dockerGuide: 'Docker guide',
+      android:
+        'Nouride Home runs Nouride on a 64-bit Android phone, with no terminal and no root. Install the app and press Start.',
+      androidGet: 'Get Nouride Home',
+      androidGuide: 'How it works',
+    },
     copy: 'Copy',
-    copied: 'Copied!',
+    copied: 'Copied',
   },
-  what: {
-    title: 'Why Nouride?',
-    lead: 'A standalone runtime running locally on your hardware.',
-    cards: [
-      {
-        title: 'Built for Raspberry Pi, Orange Pi, and any Linux SBCs',
-        body:
-          'Engineered for constrained single-board computers (Raspberry Pi, Orange Pi, Rockchip, Radxa, and 64-bit Linux SBCs). Ships as one standalone binary (a ~40MB download), runs in 64 MB of RAM from its very first start (measured 2026-10-17), no GPU required, and runs cool 24/7.',
-      },
-      {
-        title: 'Independent multi-agent roster',
-        body:
-          'Every agent has its own identity, LLM profile, tools, and memory stored in human-readable Markdown and TOML. Agents can collaborate and hand off tasks directly.',
-      },
-      {
-        title: 'Answers where you already chat',
-        body:
-          'Native adapters for Telegram, Discord, and WhatsApp, plus a web dashboard and interactive terminal CLI. Same agent, same memory, wherever you message.',
-      },
-      {
-        title: 'Asks before running dangerous commands',
-        body:
-          'Risky commands pause for your approval right inside the chat. Recursive deletes, stopping services, tearing down infrastructure, and credential paths are never auto-approved behind your back.',
-      },
+  chats: {
+    title: 'Say hi from the apps you already use',
+    places: ['Telegram', 'Discord', 'WhatsApp', 'Your browser', 'Your terminal'],
+    note: 'Same agent, same memory, wherever you write. Each agent can have a bot of its own, with its own name.',
+    link: 'Connect a chat app',
+    mascotAlt: 'The Nouride cat on its scooter, delivering a parcel',
+  },
+  missions: {
+    title: 'Give it a goal, go to bed',
+    agent: 'Pip',
+    goal: 'Sort out the family photo backup',
+    now: 'sorting the 2019 folder',
+    question: 'Keep the blurry ones, or delete them?',
+    clauses: [
+      'First it writes a plan, then waits for you.',
+      'You say go. A restart will not stop it.',
+      'Stuck? It asks you one clear question.',
+      'Done means every check passed.',
     ],
+    link: 'How missions work',
+    mascotAlt: 'The Nouride cat at its laptop, working',
   },
-  showcase: {
-    title: 'Visual web dashboard',
-    lead: 'Manage providers, watch live execution turns, review tool approvals, and chat with your agents. Served directly by the daemon, zero extra services to deploy.',
-    shots: [
-      { src: '/media/dashboard-overview.png', alt: 'The dashboard overview' },
-      { src: '/media/dashboard-chat.png', alt: 'A conversation with live turn steps' },
-      { src: '/media/dashboard-approvals.png', alt: 'The approval queue' },
-      { src: '/media/dashboard-schedule.png', alt: 'Scheduled work' },
+  approvals: {
+    title: 'Risky stuff waits for your yes',
+    tiles: {
+      prompt: ['It stops and asks', 'Mid-task, in the chat where you asked. Nothing runs while it waits.'],
+      anywhere: ['Answer from anywhere', 'The chat, the dashboard or the terminal: it is one queue.'],
+      keys: ['Tap it or type it', 'Buttons on Telegram and Discord, commands everywhere.'],
+      always: ['Always, for one command', 'Stops asking for that exact command.'],
+      fixed: ['Some things always ask', 'Deleting for good, stopping Nouride, a password leaving the box: no "always" for these.'],
+      timeout: ['Silence is a no', 'A question left for five minutes expires, and expiring is a no.'],
+      restart: ['A restart is not a yes', 'A question still open is asked again once Nouride is back.'],
+    },
+    link: 'Approvals and permissions',
+    mascotAlt: 'The Nouride cat, pointing at what needs you',
+  },
+  office: {
+    title: 'Peek into the Office',
+    body:
+      'Each agent is a pixel cat in a little office. It sits at its desk while it works, puts a hand up when it needs you, sits on the sofa when there is nothing to do, and goes to bed when it is asleep. Click a cat to see what it is up to.',
+    legend: ['At its desk: working', 'Hand up: waiting for you', 'On the sofa: idle', 'In bed: asleep'],
+    shot: { src: '/media/dashboard-office.png', alt: 'The Office in the dashboard: cats at their desks, on the sofa and in bed' },
+    actions: { office: 'How the Office works', dashboard: 'Tour the dashboard' },
+  },
+  learn: {
+    lines: ['They learn,', 'and they remember'],
+    table: 'What they keep',
+    rows: [
+      { kind: 'Skills', text: 'They write down what they worked out. You decide what they keep.', link: 'docs/manual/skills' },
+      { kind: 'Memory', text: "With memory on, each day's chats are filed at night: a summary, and facts about the people in them.", link: 'docs/architecture/memory' },
+      { kind: 'Knowledge', text: 'Your manuals, price lists and notes. Answers say which document they came from.', link: 'docs/manual/knowledge' },
+      { kind: 'Schedule', text: 'Reminders and jobs that run on time, every day or just once.', link: 'docs/manual/schedule' },
+      { kind: 'Teamwork', text: 'An agent can hand a job to another agent, or to a helper in the background.' },
+      { kind: 'Coding', text: 'Claude Code and Codex can join as agents of their own.', link: 'docs/manual/external-agents' },
+      { kind: 'Tools', text: 'Files, the web, commands and MCP servers, switched on per agent.', link: 'docs/architecture/tools' },
+      { kind: 'Persona', text: 'Each agent is a folder of plain Markdown: its name, its manner, its rules.', link: 'docs/architecture/agents' },
     ],
+    mascotAlt: 'The Nouride cat, reading a book',
   },
-  steps: {
-    title: 'Up and running in 5 minutes',
-    items: [
-      { title: '1. Run the installer', body: 'The script sets up a dedicated system service, installs the daemon beside its dashboard, and starts it in the background.', link: 'docs/start/install' },
-      { title: '2. Grab your setup password', body: 'A one-time admin password is generated on first start and printed directly to the service journal log.', link: 'docs/start/first-run' },
-      { title: '3. Finish setup in your browser', body: 'Connect your model endpoint (Anthropic, OpenAI, local Ollama, etc.), name your first agent, and craft their persona.', link: 'docs/start/first-run' },
-      { title: '4. Hook up your chat apps', body: 'Paste your Telegram or Discord bot token, or scan a WhatsApp QR code. Your assistant is ready to help.', link: 'docs/start/connect-chat' },
-    ],
-    cta: 'Read the Complete Installation Guide',
+  footprint: {
+    claim: 'Happy on a tiny box',
+    figure: '64',
+    unit: 'MB',
+    caption: 'of RAM is its floor, first start included (measured 2026-10-17, linux-arm64). No GPU, no database server.',
+    source: 'How it was measured',
   },
-  numbers: {
-    title: 'Real benchmarks, zero fluff',
-    lead: 'Measured directly on physical edge hardware, no marketing exaggerations.',
-    items: [
-      { value: '64 MB', label: 'RAM floor, first start included', note: 'Measured 2026-10-17 on linux-arm64. Comfortable on Raspberry Pi, Orange Pi & SBCs' },
-      { value: '~40 MB', label: 'Download size', note: 'Standalone single binary with embedded runtime, compressed' },
-      { value: '0.7%', label: 'CPU idle (of 1 core)', note: 'Uses just 0.7% of a single core while waiting for events' },
-      { value: '0', label: 'External database dependencies', note: 'No Postgres, Redis, or vector database required' },
-    ],
-    source: 'Full system requirements & test measurements',
-    sourceLink: 'docs/architecture/performance',
+  editions: {
+    title: 'Editions',
+    community: {
+      name: 'Community',
+      for: 'Everything on this page, for your own box.',
+      body:
+        'One account with a password. The Router build adds the Nougate gateway, so your agents can use an AI subscription you already have.',
+      price: 'Free',
+      action: 'Install',
+    },
+    pro: {
+      name: 'Pro',
+      for: 'For a family or a team.',
+      body: 'Adds accounts for several people, Sign in with Nouverse, and pairing with a Nouride Box.',
+      action: 'See Pro',
+    },
   },
-  where: {
-    title: 'Where your agents live',
-    items: ['Telegram', 'Discord', 'WhatsApp', 'Web Dashboard', 'Terminal CLI'],
-    note: 'Running multiple bots on the same platform is supported out of the box, one agent per token, each with its own identity and role.',
+  close: {
+    sentence: 'One command, then three short steps in your browser.',
+    word: 'Install',
+    /** The word's width in em, in Fredoka at the band's tracking, so it can be sized to fill the band. */
+    fit: 2.45,
+    descends: false,
   },
   footer: {
-    title: 'Take control of your own AI agents',
-    body: 'One command to install, then configure everything in a browser tab. The manual covers everything from daily workflows to custom skills.',
-    primary: 'Install Nouride',
-    secondary: 'Browse the Docs',
-    github: 'GitHub',
+    what: 'Nouride, by',
+    links: { docs: 'Docs', github: 'GitHub', home: 'Nouride Home' },
   },
 };
 
 /** @type {LandingCopy} */
 export const id = {
   meta: {
-    title: 'Nouride - Runtime Multi AI Agent untuk Edge Device',
+    title: 'Nouride: agent AI yang tinggal di mesinmu',
     description:
-      'Engine AI agent otonom berkemampuan penuh untuk Raspberry Pi, Orange Pi, dan Linux SBC apa pun. Otomasi tugas, kontrol perangkat rumah, dan koordinasikan alur kerja multi-agent 24/7 di mini-hardware.',
+      'Nouride menjalankan beberapa agent AI di komputer kecil milikmu sendiri: Raspberry Pi, mini PC, Mac, atau HP Android. Ngobrol dengan mereka lewat Telegram, Discord, WhatsApp, atau browser.',
   },
-  nav: { docs: 'Dokumentasi', install: 'Instalasi', cloud: 'Cloud', github: 'GitHub' },
+  nav: { docs: 'Dokumentasi', pro: 'Pro', github: 'GitHub', other: 'English', otherShort: 'EN', otherLang: 'en', install: 'Pasang' },
   hero: {
-    eyebrow: '⚡ Runtime Multi AI Agent untuk Edge Device',
-    title: 'Runtime Multi AI Agent untuk Edge Device',
+    lines: ['Agent AI yang', 'tinggal di mesinmu'],
     tagline:
-      'Engine AI agent otonom berkemampuan penuh untuk Raspberry Pi, Orange Pi, dan Linux SBC apa pun. Otomasi tugas, kontrol perangkat rumah, dan koordinasikan alur kerja multi-agent 24/7 di mini-hardware.',
-    hardwareBadge: 'Raspberry Pi · Orange Pi · Rockchip · Linux SBC 64-bit apapun · Unduhan ~40MB · jalan di RAM 64 MB (diukur 2026-10-17)',
-    installLabel: 'Satu perintah, di Linux, macOS, atau Docker:',
-    platforms: { linux: 'Linux', macos: 'macOS', docker: 'Docker' },
-    inspectNote: 'Mau cek isi script-nya dulu sebelum dijalankan? Ketik:',
-    dockerNote: 'Agent dan pengaturan tersimpan di ./nouride, di folder tempat kamu menjalankannya. File compose dan semua opsinya:',
-    dockerGuide: 'panduan Docker',
-    primary: 'Mulai Sekarang',
-    secondary: 'Pelajari Dulu',
+      'Nouride menjalankan beberapa agent AI di komputer kecil milikmu sendiri. Ajak mereka ngobrol lewat Telegram, Discord, WhatsApp, atau langsung di browser.',
+    primary: 'Pasang Nouride',
+    secondary: 'Kenalan dulu',
+    mascotAlt: 'Kucing Nouride melambaikan tangan',
+    folders: { office: 'Office', approvals: 'Izin', missions: 'Misi', chats: 'Chat', start: 'Mulai di sini' },
+    pick: 'Mau dipasang di mana?',
+    platforms: { linux: 'Linux', macos: 'Mac', docker: 'Docker', android: 'Android' },
+    notes: {
+      linux: 'Raspberry Pi, Orange Pi, mini PC, atau Linux 64-bit apa pun. Dia langsung terpasang sebagai service.',
+      inspect: 'Mau baca script-nya dulu?',
+      macos: 'Mac dengan Apple Silicon. Tanpa sudo: jalan sebagai akunmu, selama kamu login.',
+      docker: 'Agent dan pengaturanmu tersimpan di ./nouride, di folder tempat kamu menjalankannya.',
+      dockerGuide: 'Panduan Docker',
+      android:
+        'Nouride Home menjalankan Nouride di HP Android 64-bit, tanpa terminal dan tanpa root. Pasang aplikasinya, lalu tekan Start.',
+      androidGet: 'Unduh Nouride Home',
+      androidGuide: 'Cara kerjanya',
+    },
     copy: 'Salin',
-    copied: 'Tersalin!',
+    copied: 'Tersalin',
   },
-  what: {
-    title: 'Kenapa pakai Nouride?',
-    lead: 'Runtime mandiri yang jalan langsung di hardware kamu.',
-    cards: [
-      {
-        title: 'Dibuat untuk Raspberry Pi, Orange Pi, dan Linux SBC lainnya',
-        body:
-          'Dirancang khusus untuk single-board computer (Raspberry Pi, Orange Pi, Rockchip, Radxa, dan berbagai Linux SBC). Cukup satu binary mandiri (unduhan ~40MB), jalan di RAM 64 MB sejak start pertamanya (diukur 2026-10-17), tanpa butuh GPU, dan aman untuk MicroSD.',
-      },
-      {
-        title: 'Banyak agent dengan persona terisolasi',
-        body:
-          'Tiap agent punya kepribadian, model, memori, dan tool sendiri yang disimpan rapi dalam format Markdown & TOML. Agent juga bisa saling mendelegasikan task secara otomatis.',
-      },
-      {
-        title: 'Hadir di chat yang kamu pakai tiap hari',
-        body:
-          'Akses agent kamu lewat Telegram, Discord, WhatsApp, sampai terminal CLI. Mau chat dari mana pun, agent tetap punya memori yang sama.',
-      },
-      {
-        title: 'Aman dengan konfirmasi manusia (Approval Gate)',
-        body:
-          'Perintah berisiko bakal nunggu izin dari kamu langsung di chat. Hapus rekursif, mematikan layanan, membongkar infrastruktur, dan path kredensial tidak pernah di-approve otomatis di belakang kamu.',
-      },
+  chats: {
+    title: 'Sapa dari aplikasi yang biasa kamu pakai',
+    places: ['Telegram', 'Discord', 'WhatsApp', 'Browser', 'Terminal'],
+    note: 'Agent yang sama, ingatan yang sama, dari mana pun kamu chat. Tiap agent bisa punya bot sendiri, lengkap dengan namanya.',
+    link: 'Sambungkan aplikasi chat',
+    mascotAlt: 'Kucing Nouride naik skuter, mengantar paket',
+  },
+  missions: {
+    title: 'Kasih tujuan, tinggal tidur',
+    agent: 'Pip',
+    goal: 'Rapikan backup foto keluarga',
+    now: 'memilah folder 2019',
+    question: 'Foto yang buram disimpan atau dihapus?',
+    clauses: [
+      'Dia tulis rencananya, lalu menunggumu.',
+      'Kamu bilang gas. Restart pun lanjut.',
+      'Mentok? Dia tanya satu hal yang jelas.',
+      'Selesai berarti semua cek lolos.',
     ],
+    link: 'Cara kerja misi',
+    mascotAlt: 'Kucing Nouride di depan laptop, sedang bekerja',
   },
-  showcase: {
-    title: 'Web Dashboard yang interaktif',
-    lead: 'Pantau log aktivitas real-time, beri persetujuan tool (approval), atur jadwal kerja otomatis, dan ngobrol langsung lewat browser. Semuanya disajikan langsung oleh daemon.',
-    shots: [
-      { src: '/media/dashboard-overview.png', alt: 'Overview dashboard' },
-      { src: '/media/dashboard-chat.png', alt: 'Percakapan interaktif dengan step eksekusi' },
-      { src: '/media/dashboard-approvals.png', alt: 'Antrean approval tool' },
-      { src: '/media/dashboard-schedule.png', alt: 'Jadwal kerja berkala' },
+  approvals: {
+    title: 'Yang berisiko, nunggu izinmu',
+    tiles: {
+      prompt: ['Dia berhenti dan bertanya', 'Di tengah kerja, di chat tempat kamu meminta. Tidak ada yang jalan selama dia menunggu.'],
+      anywhere: ['Jawab dari mana saja', 'Dari chat, dashboard, atau terminal: antreannya satu.'],
+      keys: ['Tekan atau ketik', 'Tombol di Telegram dan Discord, perintah di mana saja.'],
+      always: ['Selalu, untuk satu perintah', 'Berhenti bertanya untuk perintah yang persis sama.'],
+      fixed: ['Yang ini selalu tanya', 'Hapus permanen, mematikan Nouride, password keluar dari mesin: tidak ada "selalu" untuk ini.'],
+      timeout: ['Diam berarti tidak', 'Pertanyaan yang dibiarkan lima menit akan kedaluwarsa, dan kedaluwarsa berarti tidak.'],
+      restart: ['Restart bukan berarti ya', 'Pertanyaan yang masih terbuka ditanyakan lagi begitu Nouride menyala.'],
+    },
+    link: 'Approval dan izin',
+    mascotAlt: 'Kucing Nouride menunjuk yang butuh kamu',
+  },
+  office: {
+    title: 'Intip Office-nya',
+    body:
+      'Tiap agent jadi kucing pixel di kantor kecil. Dia duduk di mejanya saat bekerja, angkat tangan saat butuh kamu, duduk di sofa saat tidak ada kerjaan, dan tidur di kasur saat istirahat. Klik kucingnya untuk lihat dia lagi ngapain.',
+    legend: ['Di meja: bekerja', 'Angkat tangan: menunggu kamu', 'Di sofa: santai', 'Di kasur: tidur'],
+    shot: { src: '/media/dashboard-office.png', alt: 'Office di dashboard: kucing di meja, di sofa, dan di kasur' },
+    actions: { office: 'Cara kerja Office', dashboard: 'Keliling dashboard' },
+  },
+  learn: {
+    lines: ['Mereka belajar,', 'dan mereka ingat'],
+    table: 'Yang mereka simpan',
+    rows: [
+      { kind: 'Skill', text: 'Mereka mencatat cara yang berhasil. Kamu yang putuskan mana yang disimpan.', link: 'docs/manual/skills' },
+      { kind: 'Memori', text: 'Kalau memori aktif, chat tiap hari dirangkum tiap malam: ringkasan, plus fakta tentang orang-orangnya.', link: 'docs/architecture/memory' },
+      { kind: 'Knowledge', text: 'Manual, daftar harga, dan catatanmu. Jawabannya menyebut dokumen sumbernya.', link: 'docs/manual/knowledge' },
+      { kind: 'Jadwal', text: 'Pengingat dan tugas yang jalan tepat waktu, tiap hari atau sekali saja.', link: 'docs/manual/schedule' },
+      { kind: 'Kerja tim', text: 'Agent bisa mengoper tugas ke agent lain, atau ke helper di background.' },
+      { kind: 'Coding', text: 'Claude Code dan Codex bisa ikut jadi agent sendiri.', link: 'docs/manual/external-agents' },
+      { kind: 'Tool', text: 'File, web, perintah, dan server MCP, dinyalakan per agent.', link: 'docs/architecture/tools' },
+      { kind: 'Persona', text: 'Tiap agent adalah folder Markdown biasa: namanya, gayanya, aturannya.', link: 'docs/architecture/agents' },
     ],
+    mascotAlt: 'Kucing Nouride sedang membaca buku',
   },
-  steps: {
-    title: 'Cuma 5 menit, langsung siap pakai',
-    items: [
-      { title: '1. Jalankan script installer', body: 'Script otomatis download binary yang pas, pasang service systemd, dan menyalakan daemon di background.', link: 'docs/start/install' },
-      { title: '2. Ambil password pertama', body: 'Cek log service buat ambil password sementara yang di-generate pas pertama kali daemon nyala.', link: 'docs/start/first-run' },
-      { title: '3. Setup via Web Dashboard', body: 'Buka browser, masukkan API key model favorit kamu (Anthropic, OpenAI, dll), lalu racik nama dan persona agent pertama kamu.', link: 'docs/start/first-run' },
-      { title: '4. Sambungkan ke platform chat', body: 'Cukup tempel token bot Discord/Telegram atau scan QR WhatsApp. Agent kamu langsung aktif dan siap diajak kerja.', link: 'docs/start/connect-chat' },
-    ],
-    cta: 'Lihat Panduan Instalasi Lengkap',
+  footprint: {
+    claim: 'Betah di mesin mungil',
+    figure: '64',
+    unit: 'MB',
+    caption: 'RAM adalah batas bawahnya, start pertama juga (diukur 2026-10-17, linux-arm64). Tanpa GPU, tanpa server database.',
+    source: 'Cara mengukurnya',
   },
-  numbers: {
-    title: 'Diukur langsung, anti-omong kosong',
-    lead: 'Semua angka di bawah diukur langsung di hardware edge fisik, bukan estimasi di atas kertas.',
-    items: [
-      { value: '64 MB', label: 'Batas bawah RAM, start pertama juga', note: 'Diukur 2026-10-17 di linux-arm64. Lega di Raspberry Pi, Orange Pi & SBC' },
-      { value: '~40 MB', label: 'Ukuran unduhan', note: 'Single binary mandiri dengan runtime terintegrasi, terkompresi' },
-      { value: '0.7%', label: 'CPU idle (dari 1 core)', note: 'Hanya menggunakan 0.7% dari 1 core saat menunggu pesan masuk' },
-      { value: '0', label: 'Layanan dependensi luar', note: 'Tanpa butuh Postgres, Redis, atau vector database tambahan' },
-    ],
-    source: 'Spesifikasi sistem lengkap & hasil pengukuran',
-    sourceLink: 'docs/architecture/performance',
+  editions: {
+    title: 'Edisi',
+    community: {
+      name: 'Community',
+      for: 'Semua yang ada di halaman ini, untuk mesinmu sendiri.',
+      body:
+        'Satu akun dengan password. Versi Router menambahkan gateway Nougate, jadi agent bisa pakai langganan AI yang sudah kamu punya.',
+      price: 'Gratis',
+      action: 'Pasang',
+    },
+    pro: {
+      name: 'Pro',
+      for: 'Untuk keluarga atau tim.',
+      body: 'Menambahkan akun untuk beberapa orang, Masuk dengan Nouverse, dan pairing dengan Nouride Box.',
+      action: 'Lihat Pro',
+    },
   },
-  where: {
-    title: 'Platform chat yang didukung',
-    items: ['Telegram', 'Discord', 'WhatsApp', 'Web Dashboard', 'Terminal CLI'],
-    note: 'Bisa pasang beberapa bot sekaligus di platform yang sama, satu agent per bot token, masing-masing dengan kepribadian dan tugas yang beda.',
+  close: {
+    sentence: 'Satu perintah, lalu tiga langkah singkat di browser.',
+    word: 'Pasang',
+    fit: 3.1,
+    /** The word has a descender (the g), which the band makes room for. */
+    descends: true,
   },
   footer: {
-    title: 'Mulai bangun AI workspace kamu sendiri',
-    body: 'Jalankan satu perintah instalasi, buka browser, dan kelola asisten AI kamu secara mandiri.',
-    primary: 'Pasang Sekarang',
-    secondary: 'Baca Dokumentasi',
-    github: 'GitHub',
+    what: 'Nouride, dari',
+    links: { docs: 'Dokumentasi', github: 'GitHub', home: 'Nouride Home' },
   },
 };

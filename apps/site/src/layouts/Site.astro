@@ -30,7 +30,7 @@
 
 import '../styles/custom.css';
 import favicon from '@brand/favicon.png';
-import loaderMark from '@brand/favicon-site.png';
+import loaderMark from '@brand/mascot/standing/12-head.webp';
 import { SITE_URL, UMAMI_SCRIPT_URL, UMAMI_WEBSITE_ID } from '../consts.mjs';
 
 interface Props {
@@ -64,9 +64,6 @@ const ogLocale = locale === 'id' ? 'id_ID' : 'en_US';
     <link rel="icon" href={favicon.src} />
     <link rel="apple-touch-icon" href={favicon.src} />
     <link rel="canonical" href={canonical} />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
 
     {/* Open Graph / Facebook / WhatsApp / Discord */}
     <meta property="og:type" content="website" />
@@ -115,7 +112,7 @@ const ogLocale = locale === 'id' ? 'id_ID' : 'en_US';
     {/*
       Loading overlay: shown immediately, removed on `load`. Inline styles only, the external
       stylesheet has not been parsed yet when this renders, so class-based styling would not apply.
-      The logo is the full mark scaled to 256 px (`favicon-site.png`, 97 KB), imported so it is hashed.
+      The mark is the cat's head, the logo in the design rules (a 512 px WebP, 24 KB), imported so it is hashed.
       It was `public/logo.png`, the 1235 px, 1.4 MB original, drawn at 72 px, and `load` waits for it.
     */}
     <div id="site-loader" aria-hidden="true">
@@ -150,7 +147,7 @@ const ogLocale = locale === 'id' ? 'id_ID' : 'en_US';
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--sl-color-bg, #0f172a);
+    background: var(--sl-color-bg, #faf7f2);
     transition: opacity 0.35s ease;
   }
 
@@ -171,12 +168,16 @@ const ogLocale = locale === 'id' ? 'id_ID' : 'en_US';
     0%, 100% {
       transform: scale(1);
       opacity: 0.85;
-      filter: drop-shadow(0 0 0px rgba(99, 102, 241, 0));
     }
     50% {
-      transform: scale(1.1);
+      transform: scale(1.06);
       opacity: 1;
-      filter: drop-shadow(0 0 14px rgba(99, 102, 241, 0.55));
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #site-loader img {
+      animation: none;
     }
   }
 </style>

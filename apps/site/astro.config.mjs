@@ -15,6 +15,15 @@ import { GITHUB_REPO, SITE_URL, UMAMI_SCRIPT_URL, UMAMI_WEBSITE_ID } from './src
 const brand = fileURLToPath(new URL('../../packages/shared/assets', import.meta.url));
 
 /**
+ * Nouride's three faces (Fredoka, Manrope, DM Mono), the woff2 files the dashboard serves from beside its stylesheet.
+ *
+ * Read from there rather than copied here: `custom.css` names them as `@fonts/<file>`, and the build hashes them into
+ * this site's own output, so the site is served its fonts by itself (no font CDN, as the design rules ask) and the
+ * repository keeps one copy of each, which a change of face cannot leave behind in one app.
+ */
+const fonts = fileURLToPath(new URL('../dashboard/src/styles/fonts', import.meta.url));
+
+/**
  * One entry per page, in the order it is meant to be read.
  *
  * The order is the argument. Somebody arriving here has downloaded a binary and wants a working
@@ -136,7 +145,7 @@ export default defineConfig({
   site: SITE_URL,
   vite: {
     resolve: {
-      alias: { '@brand': brand },
+      alias: { '@brand': brand, '@fonts': fonts },
     },
   },
   markdown: {
@@ -169,28 +178,6 @@ export default defineConfig({
         { icon: 'github', label: 'GitHub', href: `https://github.com/${GITHUB_REPO}` },
       ],
       head: [
-        {
-          tag: 'link',
-          attrs: {
-            rel: 'preconnect',
-            href: 'https://fonts.googleapis.com',
-          },
-        },
-        {
-          tag: 'link',
-          attrs: {
-            rel: 'preconnect',
-            href: 'https://fonts.gstatic.com',
-            crossorigin: 'anonymous',
-          },
-        },
-        {
-          tag: 'link',
-          attrs: {
-            rel: 'stylesheet',
-            href: 'https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Manrope:wght@300;400;500;600;700;800&display=swap',
-          },
-        },
         {
           tag: 'meta',
           attrs: {
@@ -268,8 +255,10 @@ export default defineConfig({
         en: { label: 'English', lang: 'en' },
         id: { label: 'Bahasa Indonesia', lang: 'id' },
       },
+      // The cat's head alone is the logo (the design rules, The mascot); the title beside it says the name.
       logo: {
-        src: '@brand/nouride.png',
+        src: '@brand/mascot/standing/12-head.webp',
+        alt: '',
       },
       customCss: ['./src/styles/custom.css'],
       components: {

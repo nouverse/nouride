@@ -20,9 +20,8 @@ your work.
 
 ## Which ones the landing page uses
 
-`dashboard-overview` is the large one at the top of the showcase; `dashboard-chat`,
-`dashboard-approvals` and `dashboard-schedule` are the three beneath it. Those four are the first
-thing a visitor sees, so they are worth replacing first — the rest are referenced from the manual,
+`dashboard-office` only, in the Office chapter, drawn at half the page's width. It is the one screenshot
+a visitor sees before the docs, so it is worth replacing first; the rest are referenced from the manual,
 where a reader already knows what they are looking at.
 
 ## Adding a slot

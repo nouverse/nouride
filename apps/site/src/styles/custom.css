@@ -1,389 +1,499 @@
-/* ── Fonts: Manrope & DM Mono (Nouverse Design Standard) ── */
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Manrope:wght@300;400;500;600;700;800&display=swap');
+/*
+ * Nouride's soft look, for the docs (Starlight) and the landing page.
+ *
+ * The same palette as the dashboard's two themes in `apps/dashboard/src/styles/main.css`: a cream day and a violet-grey
+ * night, peach for the main action, lavender for where you are, sage mint for what moves or is done, pink for what needs
+ * you, red for errors only. By day a pastel cannot carry text at AA on cream, so text takes each hue deepened (`--nr-*`
+ * text colours) and the pastel itself is a fill (`--nr-fill-*`) with ink on it, never white. Every pair that carries
+ * text here reads at 4.5:1 or more in both themes.
+ *
+ * The `--nr-*` tokens are the palette in this site's own names, and Starlight's `--sl-*` are mapped from them, so the
+ * landing page (which is not a Starlight page) and the docs cannot disagree about a colour.
+ */
 
-/* ── Light Mode (Default) ────────────────────────────────── */
+/* ── Type: Fredoka for headings, Manrope for everything else, DM Mono for code ─────────────────────────────────────
+   Served from this site, never a font CDN, as the dashboard serves them: the same woff2 files, read from beside the
+   dashboard's stylesheet through the `@fonts` alias (`astro.config.mjs`), which the build hashes into this site's own
+   output. One copy in the repository, so the two cannot drift. Latin and Latin Extended only; a browser fetches a file
+   only when a page draws a character in its range. All three are SIL Open Font License 1.1, licences beside the files. */
+@font-face {
+  font-family: 'Fredoka';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('@fonts/fredoka-500-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Fredoka';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('@fonts/fredoka-500-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url('@fonts/manrope-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url('@fonts/manrope-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'DM Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('@fonts/dm-mono-400-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'DM Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('@fonts/dm-mono-400-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'DM Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('@fonts/dm-mono-500-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'DM Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('@fonts/dm-mono-500-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* ── Day ───────────────────────────────────────────────────────────────────────────────────────────────────────── */
 :root,
 :root[data-theme='light'] {
-  --sl-color-accent-low: #e0f2fe;
-  --sl-color-accent: #0284c7;
-  --sl-color-accent-high: #0369a1;
-  --sl-color-text-accent: #0284c7;
+  color-scheme: light;
+
+  /* Grounds: the cream page, the sidebar a step warmer, cards white. */
+  --nr-page: #faf7f2;
+  --nr-sunk: #f4efe8;
+  --nr-well: #efe9e0;
+  --nr-card: #ffffff;
+  --nr-line: #e8e1d6;
+  --nr-line-soft: #f0eae1;
+
+  /* Ink a shade under the design rules' #2b2838, as the dashboard's, so secondary copy still reads at AA on the
+     sidebar's cream. `--nr-soft` is every quieter line of text: 6.0:1 on the sidebar, 6.5:1 on the page. */
+  --nr-ink: #221e2e;
+  --nr-body: #3a3546;
+  --nr-soft: #5d576a;
+  --nr-faint: #8a8597;
+
+  /* Each colour as text, deepened until it reads at AA on cream and on its own tint. */
+  --nr-peach: #993b1f;
+  --nr-peach-strong: #7a2d16;
+  --nr-lavender: #5e48b0;
+  --nr-mint: #096550;
+  --nr-pink: #9a3355;
+  --nr-amber: #824a00;
+  --nr-red: #ad001f;
+
+  /* The pastels, for fills with ink on them. */
+  --nr-fill-peach: #f08a6c;
+  --nr-fill-lavender: #8c7ae6;
+  --nr-fill-mint: #7fcdb4;
+  --nr-fill-pink: #ee7f9d;
+  --nr-fill-amber: #f2c27b;
+  --nr-fill-red: #f08a8a;
+  --nr-on-fill: #221e2e;
+
+  /* A card floats: small offset, large blur, low alpha. */
+  --nr-shade: rgb(60 45 30 / 0.07);
+  --nr-shadow: 0 1px 2px var(--nr-shade), 0 8px 24px var(--nr-shade);
+
+  /* Tints: a pastel laid over the page, for a field, a current item or an aside. */
+  --nr-tint-peach: color-mix(in oklab, var(--nr-fill-peach) 18%, var(--nr-page));
+  --nr-tint-lavender: color-mix(in oklab, var(--nr-fill-lavender) 13%, var(--nr-sunk));
+  --nr-tint-mint: color-mix(in oklab, var(--nr-fill-mint) 20%, var(--nr-page));
+  --nr-tint-pink: color-mix(in oklab, var(--nr-fill-pink) 16%, var(--nr-page));
+  --nr-tint-amber: color-mix(in oklab, var(--nr-fill-amber) 26%, var(--nr-page));
+  --nr-tint-red: color-mix(in oklab, var(--nr-fill-red) 18%, var(--nr-page));
+
+  --nr-radius-card: 1.375rem;
+  --nr-radius-field: 0.875rem;
+  --nr-font-display: 'Fredoka', 'Manrope', ui-sans-serif, system-ui, sans-serif;
+
+  /* Starlight, from the palette. In its light theme `white` is the ink end of the scale and `black` the paper end. */
+  --sl-color-white: var(--nr-ink);
+  --sl-color-gray-1: #2b2838;
+  --sl-color-gray-2: var(--nr-body);
+  --sl-color-gray-3: var(--nr-soft);
+  --sl-color-gray-4: var(--nr-faint);
+  --sl-color-gray-5: #ddd5c9;
+  --sl-color-gray-6: var(--nr-well);
+  --sl-color-gray-7: #fdfbf8;
+  --sl-color-black: var(--nr-card);
+
+  --sl-color-accent-low: var(--nr-tint-peach);
+  --sl-color-accent: var(--nr-peach);
+  --sl-color-accent-high: var(--nr-peach-strong);
+  --sl-color-text: var(--nr-body);
+  --sl-color-text-accent: var(--nr-peach);
   --sl-color-text-invert: #ffffff;
-  --sl-color-bg-accent: #0284c7;
-  --sl-color-white: #0f172a;
-  --sl-color-gray-1: #1e293b;
-  --sl-color-gray-2: #334155;
-  --sl-color-gray-3: #475569;
-  --sl-color-gray-4: #94a3b8;
-  --sl-color-gray-5: #e2e8f0;
-  --sl-color-gray-6: #f8fafc;
-  --sl-color-black: #ffffff;
+  --sl-color-bg: var(--nr-page);
+  --sl-color-bg-nav: var(--nr-page);
+  --sl-color-bg-sidebar: var(--nr-sunk);
+  --sl-color-bg-inline-code: var(--nr-well);
+  --sl-color-bg-accent: var(--nr-fill-peach);
+  --sl-color-hairline-light: var(--nr-line-soft);
+  --sl-color-hairline: var(--nr-line);
+  --sl-color-hairline-shade: var(--nr-line);
+  --sl-color-backdrop-overlay: rgb(34 30 46 / 0.45);
 
-  --sl-color-bg: #f8fafc;
-  --sl-color-bg-nav: rgba(248, 250, 252, 0.85);
-  --sl-color-bg-sidebar: #f1f5f9;
-  --sl-color-hairline-light: #e2e8f0;
-  --sl-color-hairline: #cbd5e1;
+  /* The asides: note is mint (information), tip lavender, caution amber, danger red. */
+  --sl-color-blue-low: var(--nr-tint-mint);
+  --sl-color-blue: var(--nr-fill-mint);
+  --sl-color-blue-high: var(--nr-mint);
+  --sl-color-green-low: var(--nr-tint-mint);
+  --sl-color-green: var(--nr-fill-mint);
+  --sl-color-green-high: var(--nr-mint);
+  --sl-color-purple-low: color-mix(in oklab, var(--nr-fill-lavender) 13%, var(--nr-page));
+  --sl-color-purple: var(--nr-fill-lavender);
+  --sl-color-purple-high: var(--nr-lavender);
+  --sl-color-orange-low: var(--nr-tint-amber);
+  --sl-color-orange: var(--nr-fill-amber);
+  --sl-color-orange-high: var(--nr-amber);
+  --sl-color-red-low: var(--nr-tint-red);
+  --sl-color-red: var(--nr-fill-red);
+  --sl-color-red-high: var(--nr-red);
 
-  --sl-font-mono: 'DM Mono', ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Monaco, Consolas, monospace;
-  --sl-font-system: 'Manrope', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --sl-shadow-sm: 0 1px 2px var(--nr-shade);
+  --sl-shadow-md: var(--nr-shadow);
+  --sl-shadow-lg: 0 2px 4px var(--nr-shade), 0 18px 48px rgb(60 45 30 / 0.12);
+
+  --sl-font: 'Manrope';
+  --sl-font-mono: 'DM Mono';
 }
 
-/* ── Dark Mode (Cosmic Space Theme) ───────────────────────── */
+/* ── Night ─────────────────────────────────────────────────────────────────────────────────────────────────────── */
 :root[data-theme='dark'] {
-  --sl-color-accent-low: rgba(56, 189, 248, 0.12);
-  --sl-color-accent: #38bdf8;
-  --sl-color-accent-high: #7dd3fc;
-  --sl-color-text-accent: #38bdf8;
-  --sl-color-text-invert: #06080d;
-  --sl-color-bg-accent: #38bdf8;
-  --sl-color-white: #f8fafc;
-  --sl-color-gray-1: #e2e8f0;
-  --sl-color-gray-2: #94a3b8;
-  --sl-color-gray-3: #64748b;
-  --sl-color-gray-4: #334155;
-  --sl-color-gray-5: #131b2c;
-  --sl-color-gray-6: #0a0e17;
-  --sl-color-black: #06080d;
+  color-scheme: dark;
 
-  --sl-color-bg: #070a10;
-  --sl-color-bg-nav: rgba(7, 10, 16, 0.85);
-  --sl-color-bg-sidebar: #090d15;
-  --sl-color-hairline-light: rgba(56, 189, 248, 0.14);
-  --sl-color-hairline: rgba(255, 255, 255, 0.08);
+  /* A neutral violet grey, never black; cards one step lighter. */
+  --nr-page: #1b1a24;
+  --nr-sunk: #17161f;
+  --nr-well: #121119;
+  --nr-card: #272534;
+  --nr-line: #34313f;
+  --nr-line-soft: #2a2836;
 
-  --sl-font-mono: 'DM Mono', ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Monaco, Consolas, monospace;
-  --sl-font-system: 'Manrope', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --nr-ink: #efedf5;
+  --nr-body: #d6d2e0;
+  --nr-soft: #a9a3b7;
+  --nr-faint: #6e687e;
+
+  /* At night the soft accents read at AA as they are. */
+  --nr-peach: #f29a7e;
+  --nr-peach-strong: #f7b8a4;
+  --nr-lavender: #b0a2f8;
+  --nr-mint: #86d5bd;
+  --nr-pink: #f08fab;
+  --nr-amber: #f2c27b;
+  --nr-red: #ff9d8c;
+
+  --nr-fill-peach: #f29a7e;
+  --nr-fill-lavender: #a99af0;
+  --nr-fill-mint: #86d5bd;
+  --nr-fill-pink: #f08fab;
+  --nr-fill-amber: #f2c27b;
+  --nr-fill-red: #ff9d8c;
+  --nr-on-fill: #22202c;
+
+  --nr-shade: rgb(0 0 0 / 0.28);
+
+  --nr-tint-peach: color-mix(in oklab, var(--nr-fill-peach) 14%, var(--nr-page));
+  --nr-tint-lavender: color-mix(in oklab, var(--nr-fill-lavender) 14%, var(--nr-sunk));
+  --nr-tint-mint: color-mix(in oklab, var(--nr-fill-mint) 12%, var(--nr-page));
+  --nr-tint-pink: color-mix(in oklab, var(--nr-fill-pink) 12%, var(--nr-page));
+  --nr-tint-amber: color-mix(in oklab, var(--nr-fill-amber) 12%, var(--nr-page));
+  --nr-tint-red: color-mix(in oklab, var(--nr-fill-red) 12%, var(--nr-page));
+
+  --sl-color-white: var(--nr-ink);
+  --sl-color-gray-1: #e2dfea;
+  --sl-color-gray-2: var(--nr-body);
+  --sl-color-gray-3: var(--nr-soft);
+  --sl-color-gray-4: var(--nr-faint);
+  --sl-color-gray-5: #3a3649;
+  --sl-color-gray-6: var(--nr-card);
+  --sl-color-gray-7: #211f2c;
+  --sl-color-black: var(--nr-sunk);
+
+  --sl-color-accent-low: var(--nr-tint-peach);
+  --sl-color-accent: var(--nr-peach);
+  --sl-color-accent-high: var(--nr-peach-strong);
+  --sl-color-text: var(--nr-body);
+  --sl-color-text-accent: var(--nr-peach);
+  --sl-color-text-invert: var(--nr-on-fill);
+  --sl-color-bg: var(--nr-page);
+  --sl-color-bg-nav: var(--nr-page);
+  --sl-color-bg-sidebar: var(--nr-sunk);
+  --sl-color-bg-inline-code: var(--nr-card);
+  --sl-color-bg-accent: var(--nr-fill-peach);
+  --sl-color-hairline-light: var(--nr-line-soft);
+  --sl-color-hairline: var(--nr-line);
+  --sl-color-hairline-shade: var(--nr-line);
+  --sl-color-backdrop-overlay: rgb(10 9 14 / 0.66);
+
+  --sl-color-blue-low: var(--nr-tint-mint);
+  --sl-color-blue: var(--nr-fill-mint);
+  --sl-color-blue-high: var(--nr-mint);
+  --sl-color-green-low: var(--nr-tint-mint);
+  --sl-color-green: var(--nr-fill-mint);
+  --sl-color-green-high: var(--nr-mint);
+  --sl-color-purple-low: color-mix(in oklab, var(--nr-fill-lavender) 12%, var(--nr-page));
+  --sl-color-purple: var(--nr-fill-lavender);
+  --sl-color-purple-high: var(--nr-lavender);
+  --sl-color-orange-low: var(--nr-tint-amber);
+  --sl-color-orange: var(--nr-fill-amber);
+  --sl-color-orange-high: var(--nr-amber);
+  --sl-color-red-low: var(--nr-tint-red);
+  --sl-color-red: var(--nr-fill-red);
+  --sl-color-red-high: var(--nr-red);
+
+  --sl-shadow-sm: 0 1px 2px var(--nr-shade);
+  --sl-shadow-md: var(--nr-shadow);
+  --sl-shadow-lg: 0 2px 4px var(--nr-shade), 0 18px 48px rgb(0 0 0 / 0.4);
 }
 
-/* ── Base Typography & Atmosphere ────────────────────────── */
+/* ── Type ──────────────────────────────────────────────────────────────────────────────────────────────────────── */
 body {
-  font-family: var(--sl-font-system);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Headings in Fredoka at its one weight: a bold request is drawn as 500 rather than emboldened by the browser. */
+.sl-markdown-content :is(h1, h2, h3, h4, h5),
+h1#_top,
+.site-title,
+.starlight-aside__title,
+.card .title,
+.sl-link-card .title {
+  font-family: var(--nr-font-display);
+  font-weight: 500;
+  font-synthesis-weight: none;
   letter-spacing: -0.01em;
 }
 
-code, pre, kbd, samp {
-  font-family: var(--sl-font-mono) !important;
+h1#_top {
+  color: var(--nr-ink);
 }
 
-/* ── Header & Navigation ─────────────────────────────────── */
+.sl-markdown-content :is(h2, h3, h4, h5) {
+  color: var(--nr-ink);
+}
+
+code,
+pre,
+kbd,
+samp {
+  font-family: var(--__sl-font-mono, 'DM Mono', ui-monospace, SFMono-Regular, Menlo, monospace) !important;
+}
+
+/* Links in running text: the deep peach by day, the soft one at night, underlined so they never rely on colour. */
+.sl-markdown-content a:not(:where(.not-content *)) {
+  color: var(--nr-peach);
+  text-decoration-thickness: 0.07em;
+  text-underline-offset: 0.18em;
+}
+.sl-markdown-content a:not(:where(.not-content *)):hover {
+  color: var(--nr-peach-strong);
+}
+
+/* ── The header: a plain bar on the page's own ground, no glass ─────────────────────────────────────────────────── */
 header.header {
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background-color: var(--sl-color-bg-nav);
+  border-bottom: 1px solid var(--nr-line);
 }
 
-:root[data-theme='light'] header.header {
-  border-bottom: 1px solid #e2e8f0;
-  background-color: rgba(248, 250, 252, 0.85);
-}
-
-:root[data-theme='dark'] header.header {
-  border-bottom: 1px solid rgba(56, 189, 248, 0.12);
-  background-color: rgba(7, 10, 16, 0.85);
-}
-
-/* Logo in navbar */
 .site-title {
-  display: flex !important;
-  align-items: center !important;
-  gap: 0.7rem !important;
-  text-decoration: none !important;
+  gap: 0.6rem;
+  color: var(--nr-ink);
+  font-size: 1.35rem;
+  text-decoration: none;
 }
-
 .site-title img {
-  height: 2.25rem !important;
-  width: auto !important;
-  border-radius: 8px;
-  object-fit: contain;
+  height: 2.4rem;
+  width: auto;
 }
 
-:root[data-theme='light'] .site-title,
-:root[data-theme='light'] .site-title span,
-:root[data-theme='light'] .site-title .site-title-text {
-  color: #0f172a !important;
-  font-weight: 750 !important;
-  font-size: 1.25rem !important;
-  letter-spacing: -0.03em !important;
-  font-family: var(--sl-font-system);
+/* The search box is a field: 14px corners, the card's ground, a hairline. */
+site-search button[data-open-modal] {
+  border-radius: 999px;
+  border-color: var(--nr-line);
+  background-color: var(--nr-card);
+  color: var(--nr-soft);
+}
+site-search button[data-open-modal]:hover {
+  border-color: var(--nr-faint);
+  color: var(--nr-ink);
+}
+site-search dialog {
+  border-radius: var(--nr-radius-card);
+  border-color: var(--nr-line);
+  background-color: var(--nr-page);
+  box-shadow: var(--sl-shadow-lg);
+}
+site-search {
+  --sl-search-corners: var(--nr-radius-field);
 }
 
-:root[data-theme='dark'] .site-title,
-:root[data-theme='dark'] .site-title span,
-:root[data-theme='dark'] .site-title .site-title-text {
-  color: #f8fafc !important;
-  font-weight: 750 !important;
-  font-size: 1.25rem !important;
-  letter-spacing: -0.03em !important;
-  font-family: var(--sl-font-system);
+/* The phone's menu button: a card-coloured circle in both themes, lavender while the menu is open. */
+.sl-menu-button {
+  background-color: var(--nr-card);
+  color: var(--nr-ink);
+  box-shadow: var(--nr-shadow);
+}
+.sl-menu-button:has(~ :popover-open) {
+  background-color: var(--nr-tint-lavender);
+  color: var(--nr-lavender);
+  box-shadow: none;
 }
 
-:root[data-theme='dark'] .site-title img {
-  filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.35));
+/* ── The sidebar: the page you are on is lavender, the colour that means "where you are" ─────────────────────────── */
+.sidebar-pane {
+  background-color: var(--sl-color-bg-sidebar);
+  border-inline-end: 1px solid var(--nr-line);
 }
-
-.site-title:hover {
-  opacity: 0.9;
+.sidebar-pane a {
+  border-radius: 0.75rem;
+  color: var(--nr-body);
 }
-
-/* Sidebar styling */
-:root[data-theme='light'] .sidebar-pane {
-  background-color: #f1f5f9;
-  border-right: 1px solid #e2e8f0;
+.sidebar-pane a:hover {
+  color: var(--nr-ink);
+  background-color: color-mix(in oklab, var(--nr-ink) 5%, transparent);
 }
-
-:root[data-theme='dark'] .sidebar-pane {
-  background-color: #090d15;
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-/* ── Sidebar Active & Focus States ──────────────────────── */
 .sidebar-pane a[aria-current='page'],
 .sidebar-pane a[aria-current='page']:hover,
 .sidebar-pane a[aria-current='page']:focus {
-  font-weight: 600 !important;
-  border-radius: 8px !important;
+  font-weight: 600;
+  color: var(--nr-lavender);
+  background-color: var(--nr-tint-lavender);
+}
+.sidebar-pane .large {
+  font-family: var(--nr-font-display);
+  font-weight: 500;
+  color: var(--nr-ink);
 }
 
-:root[data-theme='light'] .sidebar-pane a[aria-current='page'],
-:root[data-theme='light'] .sidebar-pane a[aria-current='page']:hover,
-:root[data-theme='light'] .sidebar-pane a[aria-current='page']:focus {
-  background-color: #0284c7 !important;
-  color: #ffffff !important;
-}
-
-:root[data-theme='dark'] .sidebar-pane a[aria-current='page'],
-:root[data-theme='dark'] .sidebar-pane a[aria-current='page']:hover,
-:root[data-theme='dark'] .sidebar-pane a[aria-current='page']:focus {
-  background-color: rgba(56, 189, 248, 0.15) !important;
-  color: #38bdf8 !important;
-  border: 1px solid rgba(56, 189, 248, 0.3) !important;
-}
-
-/* ── Table of Contents Active Links ─────────────────────── */
+/* "On this page": the heading you are reading is lavender too. */
 starlight-toc a[aria-current='true'],
 starlight-toc a[aria-current='true']:hover,
-starlight-toc a[aria-current='true']:focus {
-  font-weight: 600 !important;
-}
-
-:root[data-theme='light'] starlight-toc a[aria-current='true'],
-:root[data-theme='light'] starlight-toc a[aria-current='true']:hover,
-:root[data-theme='light'] starlight-toc a[aria-current='true']:focus {
-  color: #0284c7 !important;
-}
-
-:root[data-theme='dark'] starlight-toc a[aria-current='true'],
-:root[data-theme='dark'] starlight-toc a[aria-current='true']:hover,
-:root[data-theme='dark'] starlight-toc a[aria-current='true']:focus {
-  color: #38bdf8 !important;
-}
-
-/* ── Hero Section ────────────────────────────────────────── */
-.hero {
-  padding-block: 4rem 3rem !important;
-  position: relative;
-}
-
-.hero .hero-html img,
-.hero img {
-  max-height: 380px;
-  width: auto;
-  animation: float 6s ease-in-out infinite;
-}
-
-:root[data-theme='dark'] .hero img {
-  filter: drop-shadow(0 15px 35px rgba(56, 189, 248, 0.25)) drop-shadow(0 0 20px rgba(2, 132, 199, 0.2));
-}
-
-:root[data-theme='light'] .hero img {
-  filter: drop-shadow(0 15px 25px rgba(2, 132, 199, 0.15));
-}
-
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-8px);
-  }
-}
-
-.hero .tagline {
-  font-size: 1.25rem !important;
-  line-height: 1.65 !important;
-  max-width: 48ch;
-}
-
-:root[data-theme='light'] .hero .tagline {
-  color: #475569 !important;
-  font-weight: 450;
-}
-
-:root[data-theme='dark'] .hero .tagline {
-  color: #94a3b8 !important;
-}
-
-/* ── Action Buttons (Pill & Calm Glow) ───────────────────── */
-:root[data-theme='light'] .sl-link-button.primary,
-:root[data-theme='light'] .action.primary,
-:root[data-theme='light'] .actions a.primary,
-:root[data-theme='light'] a[class*="primary"] {
-  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
-  color: #ffffff !important;
-  font-weight: 600 !important;
-  border: 1px solid #0284c7 !important;
-  border-radius: 999px !important;
-  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25) !important;
-  transition: all 0.2s ease !important;
-}
-
-:root[data-theme='light'] .sl-link-button.primary:hover,
-:root[data-theme='light'] .action.primary:hover,
-:root[data-theme='light'] .actions a.primary:hover,
-:root[data-theme='light'] a[class*="primary"]:hover {
-  background: linear-gradient(135deg, #0369a1 0%, #075985 100%) !important;
-  box-shadow: 0 6px 20px rgba(2, 132, 199, 0.4) !important;
-  transform: translateY(-2px);
-}
-
-:root[data-theme='dark'] .sl-link-button.primary,
-:root[data-theme='dark'] .action.primary,
-:root[data-theme='dark'] .actions a.primary,
-:root[data-theme='dark'] a[class*="primary"] {
-  background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%) !important;
-  color: #06080d !important;
-  font-weight: 700 !important;
-  border: 1px solid #7dd3fc !important;
-  border-radius: 999px !important;
-  box-shadow: 0 4px 20px rgba(56, 189, 248, 0.3) !important;
-  transition: all 0.2s ease !important;
-}
-
-:root[data-theme='dark'] .sl-link-button.primary:hover,
-:root[data-theme='dark'] .action.primary:hover,
-:root[data-theme='dark'] .actions a.primary:hover,
-:root[data-theme='dark'] a[class*="primary"]:hover {
-  box-shadow: 0 6px 25px rgba(56, 189, 248, 0.5) !important;
-  transform: translateY(-2px);
-}
-
-:root[data-theme='light'] .sl-link-button.secondary,
-:root[data-theme='light'] .action.secondary,
-:root[data-theme='light'] .actions a.secondary {
-  border: 1px solid #cbd5e1 !important;
-  background: #ffffff !important;
-  color: #0f172a !important;
-  font-weight: 500 !important;
-  border-radius: 999px !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
-}
-
-:root[data-theme='light'] .sl-link-button.secondary:hover,
-:root[data-theme='light'] .action.secondary:hover,
-:root[data-theme='light'] .actions a.secondary:hover {
-  background: #f1f5f9 !important;
-  border-color: #94a3b8 !important;
-}
-
-:root[data-theme='dark'] .sl-link-button.secondary,
-:root[data-theme='dark'] .action.secondary,
-:root[data-theme='dark'] .actions a.secondary {
-  border: 1px solid rgba(56, 189, 248, 0.25) !important;
-  background: rgba(56, 189, 248, 0.05) !important;
-  color: #f8fafc !important;
-  border-radius: 999px !important;
-}
-
-:root[data-theme='dark'] .sl-link-button.secondary:hover,
-:root[data-theme='dark'] .action.secondary:hover,
-:root[data-theme='dark'] .actions a.secondary:hover {
-  background: rgba(56, 189, 248, 0.12) !important;
-  border-color: #38bdf8 !important;
-}
-
-/* ── Code Blocks & Callouts ──────────────────────────────── */
-.expressive-code {
-  margin-top: 1.25rem;
-  margin-bottom: 1.25rem;
-}
-
-:root[data-theme='light'] .expressive-code pre {
-  border: 1px solid #e2e8f0 !important;
-  border-radius: 10px !important;
-}
-
-:root[data-theme='dark'] .expressive-code pre {
-  border: 1px solid rgba(56, 189, 248, 0.14) !important;
-  border-radius: 10px !important;
-  background-color: #090d15 !important;
-}
-
-/* ── Feature Cards Grid ──────────────────────────────────── */
-.feature-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1.25rem;
-  margin-top: 2.5rem;
-  margin-bottom: 2.5rem;
-}
-
-.feature-box {
-  border-radius: 12px;
-  padding: 1.5rem;
-  transition: all 0.2s ease-in-out;
-}
-
-:root[data-theme='light'] .feature-box {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.04);
-}
-
-:root[data-theme='light'] .feature-box:hover {
-  border-color: #0284c7;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px -4px rgba(2, 132, 199, 0.12);
-}
-
-:root[data-theme='dark'] .feature-box {
-  background: rgba(11, 16, 26, 0.8);
-  border: 1px solid rgba(56, 189, 248, 0.12);
-}
-
-:root[data-theme='dark'] .feature-box:hover {
-  border-color: rgba(56, 189, 248, 0.35);
-  transform: translateY(-2px);
-  background: rgba(14, 21, 35, 0.95);
-  box-shadow: 0 10px 30px -10px rgba(56, 189, 248, 0.15);
-}
-
-.feature-box h3 {
-  font-size: 1.1rem;
+starlight-toc a[aria-current='true']:focus,
+mobile-starlight-toc a[aria-current='true'] {
+  color: var(--nr-lavender);
   font-weight: 600;
-  margin-top: 0;
-  margin-bottom: 0.5rem;
 }
 
-:root[data-theme='light'] .feature-box h3 {
-  color: #0f172a;
+/* ── Content: code, asides, tables, cards ──────────────────────────────────────────────────────────────────────── */
+.sl-markdown-content code:not(:where(.not-content *)) {
+  border-radius: 0.375rem;
+  padding: 0.1em 0.35em;
 }
 
-:root[data-theme='dark'] .feature-box h3 {
-  color: #f8fafc;
+/* A code block is a field: 14px corners. Its own variable, unlayered here so it wins over Expressive Code's layer. */
+:root {
+  --ec-brdRad: 0.875rem;
+}
+.expressive-code {
+  margin-block: 1.25rem;
 }
 
-.feature-box p {
-  font-size: 0.9rem;
-  line-height: 1.55;
-  margin: 0;
+/* An aside is a soft tinted card: its pastel's tint, a hairline in the same hue, the title in its deepened text colour. */
+.starlight-aside {
+  border: 1px solid color-mix(in oklab, var(--sl-color-asides-border) 45%, transparent);
+  border-radius: var(--nr-radius-field);
+  padding: 1rem 1.15rem;
+}
+.starlight-aside__title {
+  font-size: 1.05rem;
 }
 
-:root[data-theme='light'] .feature-box p {
-  color: #475569;
+/* Tables in a soft frame: rounded, warm hairlines, a tinted head. */
+.sl-markdown-content table:not(:where(.not-content *)) {
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--nr-line);
+  border-radius: var(--nr-radius-field);
+  overflow: hidden;
+}
+.sl-markdown-content :is(th, td):not(:where(.not-content *)) {
+  border: 0;
+  border-bottom: 1px solid var(--nr-line-soft);
+}
+.sl-markdown-content tr:last-child td:not(:where(.not-content *)) {
+  border-bottom: 0;
+}
+.sl-markdown-content th:not(:where(.not-content *)) {
+  background-color: var(--nr-sunk);
+  color: var(--nr-ink);
 }
 
-:root[data-theme='dark'] .feature-box p {
-  color: #94a3b8;
+/* Cards float: a hairline and a soft, wide shadow, 22px corners. */
+.card,
+.sl-link-card,
+.pagination-links a {
+  border-radius: var(--nr-radius-card);
+  border-color: var(--nr-line);
+  background-color: var(--nr-card);
+  box-shadow: var(--nr-shadow);
+}
+.sl-link-card:hover,
+.pagination-links a:hover {
+  border-color: var(--nr-faint);
+}
+
+/* Screenshots in the docs sit on the page as cards do. */
+.sl-markdown-content img:not(:where(.not-content *)) {
+  border-radius: var(--nr-radius-field);
+}
+
+/* A Starlight button: the main one is the peach pastel with ink on it and a faint glow of its own colour, every one a pill. */
+.sl-link-button {
+  border-radius: 999px;
+}
+.sl-link-button.primary {
+  background: var(--nr-fill-peach);
+  border-color: var(--nr-fill-peach);
+  color: var(--nr-on-fill);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--nr-fill-peach) 30%, transparent);
+}
+.sl-link-button.secondary {
+  border-color: var(--nr-line);
+  color: var(--nr-ink);
+}
+
+/* Steps: the counter is the mint of progress, with ink on it. */
+.sl-steps > li::before {
+  background-color: var(--nr-fill-mint);
+  color: var(--nr-on-fill);
+  font-family: var(--nr-font-display);
+}
+
+/* Tabs: the chosen one is underlined in peach, as Starlight draws it, in the deepened text colour. */
+starlight-tabs [role='tab'][aria-selected='true'] {
+  color: var(--nr-peach);
 }
 
 /*
