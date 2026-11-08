@@ -29,11 +29,11 @@ import type { TurnContext } from "./turn-context.ts";
 const log = createLogger("pipeline");
 
 export interface JobWakesDeps {
-  deps: PipelineDeps;
-  queue: KeyedQueue<MessageEnvelope>;
-  admission: Admission;
-  chatTypes: ChatTypes;
-  turnContext: TurnContext;
+  deps: Pick<PipelineDeps, "childEnv" | "config" | "gateways" | "ownSecrets" | "turns">;
+  queue: Pick<KeyedQueue<MessageEnvelope>, "push">;
+  admission: Pick<Admission, "noteJobWake">;
+  chatTypes: Pick<ChatTypes, "of">;
+  turnContext: Pick<TurnContext, "waitUntilFree">;
   /** The pipeline's own set, so `idle()` and `drain()` wait for a wake still waiting on a turn. */
   pending: Set<Promise<void>>;
 }

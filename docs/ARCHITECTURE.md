@@ -482,6 +482,9 @@ second consumer ever appears, extraction is mechanical.
 apps/engine/src/
 ├── index.ts             # boot ORDER (§14.2 SPEC) — one linear read, top to bottom
 ├── boot/                # what boot does but does not order
+│   ├── stores.ts        #   the boot's first long step: the database and every store, opened in order
+│   ├── timers.ts        #   the snapshots, then the upkeep: each timer started once what it reads exists
+│   ├── turn-machine.ts  #   the turn machine's parts, then the pipeline, scheduler and toolset they make
 │   ├── preflight.ts     #   checks that must pass before a message can arrive
 │   ├── agent-home.ts    #   the agents' HOME (.nouride/home) and .nouride/bin first on PATH
 │   ├── toolchain.ts     #   installers pointed at .nouride, the one PATH, the shared Python env
@@ -511,9 +514,10 @@ apps/engine/src/
 └── modules/
     ├── pipeline/        # the inbound path (§5)
     │   ├── index.ts     #   composition root: build collaborators, delegate, own nothing
+    │   ├── chat-queue.ts #  the gateways' part; slash-commands, wake-ups, turn-control, chat-directory, tool-ports the other callers'
     │   ├── inbox-desk.ts #  written down on arrival, too old to answer, put back after a restart
     │   ├── inbound.ts   #   whether this message gets a turn at all, and whose
-    │   ├── turn.ts      #   running one: executor, tool loop, persist, reply
+    │   ├── turn.ts      #   running one: its phases in order, over one TurnState (turn-state, turn-brain, turn-request)
     │   ├── job-turns.ts #   the scheduler's turns, and where their output goes
     │   ├── admission.ts #   allowlist and pairing, rate limit, one-turn-per-message claim
     │   ├── voice.ts     #   which bot an agent speaks with + the outbound record
@@ -1229,7 +1233,7 @@ A room's name is read in one place, `roomName` (`apps/engine/src/modules/rooms/r
 Names are kept by the room as the platform sees it (platform + chat id), like `/mention`: several of our bots in one group read one name.
 The memory vault's `groups/<…>.md` is storage, not a name.
 
-A thread's opening message (`MessageEnvelope.threadOpener`) is filled by the adapter and put in front of the first question of a conversation in that thread (`pipeline/turn.ts`).
+A thread's opening message (`MessageEnvelope.threadOpener`) is filled by the adapter and put in front of the first question of a conversation in that thread (`pipeline/turn-request.ts`).
 
 ### 13.1 What a new platform's adapter does
 
