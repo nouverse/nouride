@@ -53,7 +53,8 @@ export default function MemoriesPage() {
   const waiting = proposals.data?.proposals.length ?? 0;
 
   return (
-    <div className="space-y-6">
+    // A tab's panel fades in as it is drawn (`*:animate-fade`), as every section that appears here does.
+    <div className="space-y-6 *:animate-fade">
       <PageHeader
         title="Knowledge & Memory"
         description="The documents you keep for your agents, and what they remember from conversations."

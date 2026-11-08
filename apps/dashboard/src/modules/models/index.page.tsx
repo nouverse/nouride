@@ -103,8 +103,8 @@ export default function ModelsPage({ tab }: { tab?: "clis" | undefined } = {}) {
           onChange={setWire}
         />
         {shown.length === 0 ? <EmptyState icon={Cpu} title="No provider of this kind" /> : null}
-        {/* Its own scroll, so the tabs stay put over a long list. */}
-        <ScrollArea fill className="space-y-4 pr-1">
+        {/* Its own scroll, so the tabs stay put over a long list. Keyed by the tab, to fade in anew (`FILL_PAGE`). */}
+        <ScrollArea key={wire} fill className="space-y-4 pr-1">
           {shown.map((profile) => (
             <ProfileCard
               key={profile.name}

@@ -21,8 +21,10 @@ export const PAGE_BOTTOM = "pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-8"
  * of — from a laptop's width up. On a phone the page scrolls as a document and the list grows with it (`lg:` on each).
  */
 // Its children keep their height (`shrink-0`): a tab bar scrolls sideways, so as a flex item it could shrink to a
-// sliver — it did, on MCP. Only the list grows into what is left (`fill`), and never below its own minimum.
-export const FILL_PAGE = "flex min-h-0 flex-1 flex-col gap-6 [&>*]:shrink-0";
+// sliver — it did, on MCP. Only the list grows into what is left (`fill`), and never below its own minimum. Each fades
+// in as it is drawn (`*:animate-fade`), so a tab's panel, or a form opened above the list, shows where it came from: one
+// that stays is not drawn again, and does not move. A list a tab only filters is keyed by the tab, to be drawn anew.
+export const FILL_PAGE = "flex min-h-0 flex-1 flex-col gap-6 [&>*]:shrink-0 *:animate-fade";
 
 /** The bounded, scrolling region on its own — for a list that is not one card, like Schedule's jobs. */
 export function ScrollArea({

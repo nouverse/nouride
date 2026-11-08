@@ -117,8 +117,8 @@ export default function WebhooksPage() {
       ) : shown.length === 0 ? (
         <EmptyState icon={Webhook} title={`No ${filter} webhooks`} />
       ) : (
-        // Its own scroll, so the filters stay put over a long list.
-        <ScrollArea fill className="space-y-4 pr-1">
+        // Its own scroll, so the filters stay put over a long list. Keyed by the filter, to fade in anew (`FILL_PAGE`).
+        <ScrollArea key={filter} fill className="space-y-4 pr-1">
           {shown.map((hook) => (
             <WebhookCard key={hook.id} hook={hook} onChanged={refresh} canEdit={canWrite(me.data ?? null)} admin={admin} />
           ))}

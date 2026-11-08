@@ -237,8 +237,9 @@ export default function SchedulePage({ job: linked }: { job?: string }) {
         </Card>
       ) : null}
 
-      {/* Its own scroll: a box with thirty jobs should not push the filters and the form off the top. */}
-      <ScrollArea fill className="space-y-3 pr-1">
+      {/* Its own scroll: a box with thirty jobs should not push the filters and the form off the top. Keyed by the
+          filter, to fade in anew when it changes (`FILL_PAGE`). */}
+      <ScrollArea key={filter} fill className="space-y-3 pr-1">
         {shown.map((job) => {
           const Icon = PAYLOAD_ICON[job.payload.kind] ?? Clock;
           const failing = job.failStreak > 0;

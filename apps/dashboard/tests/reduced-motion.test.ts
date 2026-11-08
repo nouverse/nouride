@@ -94,6 +94,65 @@ describe("a system that asks for less motion", () => {
   });
 });
 
+/**
+ * The motion `main.css` adds: each `--animate-*` in its `@theme`, as `name duration easing [fill]`, written as the
+ * utility Tailwind emits for it — in longhand, as above, so a DOM reads it back.
+ */
+const MOTIONS = [...css.matchAll(/^\s*--animate-([\w-]+):\s*([^;]+);/gm)].map((m) => {
+  const [name, duration, easing, fill] = m[2]!.trim().split(/\s+/);
+  return { utility: `animate-${m[1]}`, name: name!, duration: duration!, easing: easing!, fill: fill ?? "none" };
+});
+const MOTION_UTILITIES = MOTIONS.map(
+  (motion) =>
+    `.${motion.utility} { animation-name: ${motion.name}; animation-duration: ${motion.duration}; animation-timing-function: ${motion.easing}; animation-fill-mode: ${motion.fill}; }`,
+).join("\n");
+
+/** As `computed`, with main.css's own motion as the utilities. */
+function computedMotion(motion: "reduce" | "no-preference", className: string, property: string): string {
+  const window = new Window({ settings: { device: { prefersReducedMotion: motion } } } as ConstructorParameters<typeof Window>[0]);
+  try {
+    window.document.head.innerHTML = `<style>${MOTION_UTILITIES}\n${rule}</style>`;
+    const element = window.document.createElement("span");
+    element.className = className;
+    window.document.body.appendChild(element);
+    return window.getComputedStyle(element).getPropertyValue(property).trim();
+  } finally {
+    void window.happyDOM.close();
+  }
+}
+
+describe("the motion main.css adds", () => {
+  test("is read from it, each in the shape this test writes out — opacity and transform in 150 to 250 ms, easing out", () => {
+    expect(MOTIONS.map(({ utility }) => utility)).toContain("animate-fade");
+    for (const motion of MOTIONS) {
+      expect(motion.easing).toBe("ease-out");
+      expect(motion.duration).toMatch(/^\d+ms$/);
+      expect(Number.parseInt(motion.duration, 10)).toBeGreaterThanOrEqual(150);
+      expect(Number.parseInt(motion.duration, 10)).toBeLessThanOrEqual(250);
+    }
+  });
+
+  test("plays for whoever did not ask for less motion", () => {
+    for (const motion of MOTIONS) expect(computedMotion("no-preference", motion.utility, "animation-duration")).toBe(motion.duration);
+  });
+
+  test("is cut to nothing for whoever did, each one: it ends where it would have, at once", () => {
+    for (const motion of MOTIONS) {
+      expect(computedMotion("reduce", motion.utility, "animation-duration")).toBe("0.01ms");
+      expect(computedMotion("reduce", motion.utility, "animation-iteration-count")).toBe("1");
+    }
+  });
+
+  test("is the only motion a page names, beside the spinner and the pulse checked above", () => {
+    const names = new Set(["animate-spin", "animate-pulse", ...MOTIONS.map(({ utility }) => utility)]);
+    const used = literals().flatMap(({ file, words }) =>
+      words.map((word) => word.slice(word.lastIndexOf(":") + 1)).filter((word) => word.startsWith("animate-")).map((word) => ({ file, word })),
+    );
+    expect(used.map(({ word }) => word)).toContain("animate-fade");
+    expect(used.filter(({ word }) => !names.has(word)).map(({ file, word }) => `${file}: ${word}`)).toEqual([]);
+  });
+});
+
 /** Every string literal in `src`'s code, each as its words — where class names live. */
 function literals(): { file: string; words: string[] }[] {
   const files = (function walk(dir: string): string[] {

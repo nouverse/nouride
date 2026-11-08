@@ -1545,7 +1545,7 @@ describe("a failed load is not an empty or healthy page", () => {
  */
 describe("which pages own the viewport", () => {
   const SCROLLS = '<main class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">';
-  const FILLS = '<main class="flex-1 min-h-0 flex flex-col overflow-hidden">';
+  const FILLS = '<main class="flex-1 min-h-0 flex flex-col overflow-hidden *:animate-fade">';
   const agent = (id: string) => ({ id, displayName: id, enabled: true, state: "running", provider: "p", model: "m", tools: [], approvals: "careful" });
 
   test("an agent named like one of those pages still scrolls, on every tab", async () => {

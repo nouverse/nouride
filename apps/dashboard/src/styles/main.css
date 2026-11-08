@@ -68,6 +68,21 @@
 @theme {
   --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
   --font-mono: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* ── Motion: where something changes, and only there ────────────────────────────────────────────
+     The owner's reference (playquorum.dev/company), read from its stylesheet: what moves, moves in opacity and
+     transform over 0.15 to 0.25 s, easing out, and what enters fades in and grows a little — the `enter` keyframes of
+     tailwindcss-animate, written here rather than added as a package. Nothing else moves, so a phone and a small box draw
+     it without laying the page out again: nothing animates a width, a height or a place on the page.
+     - `fade`: a page, a tab's panel or a section of a page, as it is drawn.
+     Every one is cut to nothing by the reduced-motion rule below (`tests/reduced-motion.test.ts`). */
+  --animate-fade: fade 200ms ease-out;
+
+  @keyframes fade {
+    from {
+      opacity: 0;
+    }
+  }
 }
 
 /* ── The palette: Nouverse, in daisyUI's names ────────────────────────────────────────────────────

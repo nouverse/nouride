@@ -50,7 +50,7 @@ export default function LogsPage() {
      * From a laptop's width up. On a phone the title, the tabs and the filters took most of the screen and left the rows
      * a sliver to scroll in, so there the page scrolls as one document and the panel grows with its rows.
      */
-    <div className={`flex h-full flex-col gap-4 overflow-y-auto overflow-x-hidden px-4 pt-4 sm:px-6 sm:pt-6 lg:overflow-hidden lg:px-8 lg:pt-8 ${PAGE_BOTTOM}`}>
+    <div className={`flex h-full flex-col gap-4 overflow-y-auto overflow-x-hidden px-4 pt-4 sm:px-6 sm:pt-6 lg:overflow-hidden lg:px-8 lg:pt-8 ${PAGE_BOTTOM} *:animate-fade`}>
       <div className="shrink-0 space-y-4">
         <PageHeader
           title="System Logs"

@@ -107,7 +107,8 @@ export default function AgentLayoutPage({ agentId }: { agentId: string }) {
   }
 
   return (
-    <div className="space-y-6">
+    // A tab's page fades in as it is drawn (`*:animate-fade`); the header above it stays where it is.
+    <div className="space-y-6 *:animate-fade">
       <div className="space-y-4">
         <Link
           to="/agents"

@@ -49,7 +49,8 @@ export default function AccessPage({ search, onSearch }: { search: AccessSearch;
   const unreachable = access.error instanceof Error && /did not answer|cannot reach/i.test(access.error.message);
 
   return (
-    <div className="space-y-6">
+    // A tab's panel fades in as it is drawn (`*:animate-fade`), as every section that appears here does.
+    <div className="space-y-6 *:animate-fade">
       <PageHeader
         title="Access"
         description="Who may talk to your agents: who is waiting for an answer, who is in, who is kept out, and what was decided."

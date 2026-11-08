@@ -262,7 +262,7 @@ export function RootLayout() {
 
   if (chromeless) {
     return (
-      <div className="bg-base-200/50 min-h-screen text-base-content selection:bg-primary/20">
+      <div className="bg-base-200/50 min-h-screen text-base-content selection:bg-primary/20 *:animate-fade">
         <ReconnectingBanner offline={gate.offline} />
         <Outlet />
       </div>
@@ -452,8 +452,10 @@ export function RootLayout() {
         <RestartedToast />
         {!gate.offline && health.data && staleBundle(bundleVersion(), health.data.version) && <UpdatedBanner running={health.data.version} />}
 
+        {/* A page fades in as it is drawn (`*:animate-fade`): its root is a new element when the page changes, and the
+            same one, not moved, while it stays. */}
         {ownsViewport ? (
-          <main className="flex-1 min-h-0 flex flex-col overflow-hidden">
+          <main className="flex-1 min-h-0 flex flex-col overflow-hidden *:animate-fade">
             <Outlet />
           </main>
         ) : fillsViewport ? (
@@ -462,13 +464,13 @@ export function RootLayout() {
           <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
             {/* Held to the window from a laptop's width up; on a phone it scrolls as a document, as the page beside it
                 does — a list scrolling inside a card inside a scrolling page, under a header, is a sliver there. */}
-            <div className={`mx-auto flex w-full max-w-6xl flex-col px-4 pt-4 sm:px-6 sm:pt-6 lg:h-full lg:p-8 ${PAGE_BOTTOM}`}>
+            <div className={`mx-auto flex w-full max-w-6xl flex-col px-4 pt-4 sm:px-6 sm:pt-6 lg:h-full lg:p-8 ${PAGE_BOTTOM} *:animate-fade`}>
               <Outlet />
             </div>
           </main>
         ) : (
           <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
-            <div className={`mx-auto w-full max-w-6xl space-y-6 px-4 pt-4 sm:px-6 sm:pt-6 lg:p-8 ${PAGE_BOTTOM}`}>
+            <div className={`mx-auto w-full max-w-6xl space-y-6 px-4 pt-4 sm:px-6 sm:pt-6 lg:p-8 ${PAGE_BOTTOM} *:animate-fade`}>
               <Outlet />
             </div>
           </main>

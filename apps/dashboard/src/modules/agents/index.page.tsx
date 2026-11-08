@@ -128,8 +128,8 @@ export default function AgentListPage() {
           onChange={setFilter}
         />
         {shown.length === 0 ? <EmptyState icon={Bot} title={`No ${filter} agents`} /> : null}
-        {/* Its own scroll, so the tabs stay put over a long list. */}
-        <ScrollArea fill className="pr-1">
+        {/* Its own scroll, so the tabs stay put over a long list. Keyed by the tab, to fade in anew (`FILL_PAGE`). */}
+        <ScrollArea key={filter} fill className="pr-1">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {shown.map((agent) => {
             const connections = (gateways.data?.gateways ?? []).filter(

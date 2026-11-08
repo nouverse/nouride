@@ -202,7 +202,9 @@ export default function MissionsPage({ agent }: { agent?: string }) {
         onChange={setTab}
       />
 
+      {/* Keyed by the tab, so the list it filters is drawn anew and fades in (`FILL_PAGE`). */}
       <ScrollCard
+        key={tab}
         fill
         title={current.title(counts[tab])}
         {...(missions.length > 0 ? { search: { value: filter, onChange: setFilter, placeholder: "Search missions" } } : {})}
