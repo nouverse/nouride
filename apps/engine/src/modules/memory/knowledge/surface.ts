@@ -11,7 +11,7 @@ import type { CatchUpReport, Semantic } from "../semantic.ts";
 import { fuse, rankByMeaning, rankingModel, rankingVectors } from "../semantic.ts";
 import { ftsQuery } from "../terms.ts";
 import { mayUse, readCollection, readCollections, readersOfConversation, widens, type Collection, type CollectionSettings } from "./collections.ts";
-import { addDocument, addPending, approvePending, collectionIdOf, createCollection, declinePending, pendingOf, removeCollection, removeDocument, writeSettings, writeTitle, type KnowledgeRefusal, type PendingDocument } from "./files.ts";
+import { addDocument, addPending, approvePending, collectionIdOf, createCollection, declinePending, pendingOf, removeCollection, removeDocument, writeSettings, writeTitle, type KnowledgeRefusal, type PendingChat, type PendingDocument } from "./files.ts";
 import { parseItem, type IndexedSection, type KnowledgeDocument, type KnowledgePort } from "./knowledge.store.ts";
 import type { OfficeReader } from "./office.ts";
 import { documentIndex, linksIn, resolveLink } from "./links.ts";
@@ -71,6 +71,8 @@ export interface KeepRequest {
   from: string;
   /** The day it is saved, for its frontmatter. */
   day: string;
+  /** The chat it was kept from: told the admin's answer when it waits for one (0.8.23). */
+  chat?: PendingChat;
 }
 
 export type KeepResult =
@@ -180,6 +182,7 @@ export function createKnowledge(input: {
         agent: asker.agentId,
         from: request.from,
         ...(request.source ? { source: request.source } : {}),
+        ...(request.chat ? { chat: request.chat } : {}),
       });
       return "refused" in waiting ? waiting : { waiting: { collection: target.settings.name, path: waiting.path } };
     }

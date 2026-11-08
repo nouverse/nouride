@@ -159,6 +159,50 @@ describe("keeping a document from a chat", () => {
     expect(((await (await hono.request("/knowledge/house/pending")).json()) as { pending: unknown[] }).pending).toEqual([]);
   });
 
+  // Approved on the page, the document was found, and its agent still said in that chat that it waited (0.8.20's full
+  // check): what waits keeps the chat it came from, and that chat is told the answer, the agent with it (0.8.23).
+  test("the chat a waiting document came from is told the admin's answer, yes or no; one kept before 0.8.23 is not", async () => {
+    const { h, keep } = await home();
+    mkdirSync(join(h.knowledgeRoot, "house"), { recursive: true });
+    writeFileSync(join(h.knowledgeRoot, "house", "knowledge.toml"), 'name = "House"\nreaders = "everyone"\n');
+    await keep({ collection: "House", title: "Wifi", content: "The guest network is called Tamu." }, GADING_DM, "");
+    await keep({ collection: "House", title: "Alarm", content: "The code is in the drawer." }, GADING_DM, "");
+    expect(h.memory.knowledge.pending("house").map((document) => document.chat)).toEqual([
+      { agentId: "nouva", gatewayId: GADING_DM.gatewayId, chatId: GADING_DM.chatId, chatType: GADING_DM.chatType },
+      { agentId: "nouva", gatewayId: GADING_DM.gatewayId, chatId: GADING_DM.chatId, chatType: GADING_DM.chatType },
+    ]);
+    // Kept before 0.8.23: its `.why.json` has no chat.
+    writeFileSync(join(h.knowledgeRoot, "house", ".pending", "Old.md"), "# Old\nKept long ago.\n");
+    writeFileSync(join(h.knowledgeRoot, "house", ".pending", "Old.md.why.json"), JSON.stringify({ title: "Old", savedAt: 1, agent: "nouva", from: "Gading" }));
+
+    const said: { chat: unknown; text: string; note: string }[] = [];
+    const hono = new Hono<{ Variables: { principal: unknown } }>();
+    hono.use("*", async (c, next) => {
+      c.set("principal", { kind: "user", actor: "tester", role: "admin" });
+      await next();
+    });
+    const pipeline = { sayInChat: async (chat: unknown, text: string, note: string) => (said.push({ chat, text, note }), true) };
+    registerKnowledgeRoutes(hono as never, { ctx: { config: h.config }, memory: h.memory, registry: { get: () => undefined }, audit: { record: () => undefined }, pipeline } as never);
+    const post = (decision: string, path: string) => hono.request(`/knowledge/house/pending/${decision}`, { method: "POST", body: JSON.stringify({ path }), headers: { "content-type": "application/json" } });
+
+    expect((await post("approve", "Wifi.md")).status).toBe(200);
+    expect((await post("decline", "Alarm.md")).status).toBe(200);
+    expect((await post("approve", "Old.md")).status).toBe(200);
+    const chat = { agentId: "nouva", gatewayId: GADING_DM.gatewayId, chatId: GADING_DM.chatId, chatType: GADING_DM.chatType };
+    expect(said).toEqual([
+      {
+        chat,
+        text: 'An admin added "Wifi" to House, so your agents can find it now.',
+        note: 'An admin answered about the document "Wifi" you kept for House, which waited for a yes. The line below was posted in this chat.',
+      },
+      {
+        chat,
+        text: 'An admin did not add "Alarm" to House, so it was not kept.',
+        note: 'An admin answered about the document "Alarm" you kept for House, which waited for a yes. The line below was posted in this chat.',
+      },
+    ]);
+  });
+
   test("a folder made by hand is the one admin's: saved from their chat at once; an archived collection says so", async () => {
     const { h, keep, found } = await home();
     mkdirSync(join(h.knowledgeRoot, "ops"), { recursive: true });

@@ -22,7 +22,7 @@
  */
 
 import { estimateMessagesTokens } from "@nouride/llm";
-import { contained, createLogger, type ChatMessage, type GatewayName, type ToolContext } from "@nouride/shared";
+import { contained, createLogger, type ChatMessage, type ChatType, type GatewayName, type ToolContext } from "@nouride/shared";
 import { capStoredTurns } from "@/modules/llm/context.ts";
 import { cronJobOfChat } from "@/modules/cron/session.ts";
 import { idsOf } from "@/modules/people/match.ts";
@@ -122,6 +122,20 @@ export async function tellChat(turns: TurnContext, ctx: ToolContext, text: strin
   if (!gateway) return false;
   const envelope = { id: `told:${ctx.callId ?? Date.now()}`, timestamp: Date.now(), gateway: gateway.platform as GatewayName, gatewayId: ctx.gatewayId, chatId: ctx.chatId, chatType: ctx.chatType, senderId: SYSTEM_SENDER, senderName: "", text: "", raw: {} };
   return Boolean(await turns.voice.reply(envelope, text, ctx.agentId));
+}
+
+/**
+ * A line the daemon says in a chat for an agent, outside any turn, and keeps in the agent's conversation there (0.8.23):
+ * an admin's answer about a document the agent kept waiting for one. Without it the document was found once approved,
+ * and the agent still said in that chat that it waited (0.8.20's full check).
+ */
+export async function sayInChat(turns: TurnContext, chat: { agentId: string; gatewayId: string; chatId: string; chatType: ChatType }, text: string, note: string): Promise<boolean> {
+  const gateway = turns.deps.gateways.get(chat.gatewayId);
+  if (!gateway) return false;
+  const envelope = { id: `said:${Date.now()}`, timestamp: Date.now(), gateway: gateway.platform as GatewayName, gatewayId: chat.gatewayId, chatId: chat.chatId, chatType: chat.chatType, senderId: SYSTEM_SENDER, senderName: "", text: "", raw: {} };
+  if (!(await turns.voice.reply(envelope, text, chat.agentId))) return false;
+  recordSaid(turns, { agentId: chat.agentId, gatewayId: chat.gatewayId, chatId: chat.chatId, text, note });
+  return true;
 }
 
 /** `send_message`'s `post`: out through the agent's voice in that chat, then into its conversation there. */

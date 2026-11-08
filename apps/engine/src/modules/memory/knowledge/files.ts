@@ -112,6 +112,14 @@ export function removeCollection(root: string, id: string): boolean {
  */
 const PENDING = ".pending";
 
+/** The chat a document was kept from, to be told the admin's answer (0.8.23). */
+export interface PendingChat {
+  agentId: string;
+  gatewayId: string;
+  chatId: string;
+  chatType: "dm" | "group" | "channel";
+}
+
 export interface PendingDocument {
   path: string;
   title: string;
@@ -120,11 +128,18 @@ export interface PendingDocument {
   /** Who and where, in words: "Gading, in a chat with Nouva". */
   from: string;
   source?: string;
+  /** Absent on what waited from before 0.8.23: nobody is told of its answer. */
+  chat?: PendingChat;
 }
+
+const isChat = (value: unknown): value is PendingChat =>
+  typeof value === "object" && value !== null && ["agentId", "gatewayId", "chatId"].every((key) => typeof (value as Record<string, unknown>)[key] === "string") &&
+  ["dm", "group", "channel"].includes((value as PendingChat).chatType);
 
 const isPending = (value: unknown): value is Omit<PendingDocument, "path"> =>
   typeof value === "object" && value !== null && typeof (value as PendingDocument).title === "string" && typeof (value as PendingDocument).savedAt === "number" &&
-  typeof (value as PendingDocument).agent === "string" && typeof (value as PendingDocument).from === "string";
+  typeof (value as PendingDocument).agent === "string" && typeof (value as PendingDocument).from === "string" &&
+  ((value as PendingDocument).chat === undefined || isChat((value as PendingDocument).chat));
 
 export async function addPending(root: string, id: string, name: string, bytes: Uint8Array, about: Omit<PendingDocument, "path">): Promise<{ path: string } | KnowledgeRefusal> {
   if (!isCollectionId(id) || !dirExists(join(root, id))) return { refused: `There is no collection called "${id}".`, why: "missing" };

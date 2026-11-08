@@ -164,6 +164,20 @@ describe("send_message, end to end", () => {
   });
 });
 
+describe("a line said for an agent outside any turn (0.8.23)", () => {
+  // An admin approved a document the agent kept waiting: found at once, and the agent still said in that chat that it
+  // waited (0.8.20's full check). The line goes out through the agent's connection, and into its conversation there.
+  test("goes out through the agent's connection and is in its conversation there; with no connection, nothing", async () => {
+    const { telegram, bench } = await setUp([]);
+    const chat = { agentId: "nouva", gatewayId: "telegram:main", chatId: "814", chatType: "dm" as const };
+    expect(await bench.pipeline.sayInChat(chat, 'An admin added "Wifi" to House, so your agents can find it now.', "An admin answered about the document.")).toBe(true);
+    expect(telegram.sent.map((sent) => ({ chatId: sent.chatId, text: sent.text }))).toEqual([{ chatId: "814", text: 'An admin added "Wifi" to House, so your agents can find it now.' }]);
+    const history = bench.sessions.load({ agentId: "nouva", gatewayId: "telegram:main", chatId: "814" }).messages.map((message) => `${message.role}: ${messageText(message.content)}`);
+    expect(history).toEqual(["user: [system] An admin answered about the document.", 'assistant: An admin added "Wifi" to House, so your agents can find it now.']);
+    expect(await bench.pipeline.sayInChat({ ...chat, gatewayId: "discord:gone" }, "nowhere", "note")).toBe(false);
+  });
+});
+
 describe("a line from the daemon into the chat a call came from (0.8.8)", () => {
   test("lands in that chat through the agent's connection; one it has no connection for is said to have not", async () => {
     // What `agent_configure` tells the person when an agent moves its coding CLI to another model.

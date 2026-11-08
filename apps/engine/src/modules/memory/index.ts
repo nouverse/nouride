@@ -408,7 +408,8 @@ export function createMemory(deps: MemoryDeps) {
         // Who, as People knows them: in a one-to-one chat a platform's display name is not given to a turn (it is not
         // verified), and the admin asked to approve read "Someone".
         const { name, where, ...rest } = request;
-        return knowledge.keep(who(speaker), { ...rest, from: `${situate(speaker).person?.name ?? name ?? "Someone"}, ${where}` });
+        const chat = { agentId: speaker.agentId, gatewayId: speaker.gatewayId, chatId: speaker.chatId, chatType: speaker.chatType };
+        return knowledge.keep(who(speaker), { ...rest, chat, from: `${situate(speaker).person?.name ?? name ?? "Someone"}, ${where}` });
       },
     },
 

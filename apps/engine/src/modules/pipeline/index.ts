@@ -38,6 +38,7 @@ import {
   type ApprovalDecision,
   type ApprovalRequest,
   type Attachment,
+  type ChatType,
   type LoadedAgent,
   type MessageEnvelope,
   type Tool,
@@ -92,7 +93,7 @@ import { ChatSecrets, secretsHookPort } from "./chat-secrets.ts";
 import { answerGroupCommand, groupMentionHookPort } from "./room-mention.ts";
 import { EditLedger } from "./edits.ts";
 import { onGatewayEvent } from "./gateway-events.ts";
-import { postMessage, reachableChats, sendTargets, tellChat } from "./send-message.ts";
+import { postMessage, reachableChats, sayInChat, sendTargets, tellChat } from "./send-message.ts";
 import { knownRooms, renameRoom, type KnownRoom } from "./known-rooms.ts";
 import type { SendMessageOptions } from "@/modules/tools/builtins/send-message.ts";
 import { conversationSlots } from "./fair-share.ts";
@@ -683,6 +684,11 @@ export class Pipeline {
   /** A line from the daemon into the chat a tool call came from (`send-message.ts`). */
   chatNotice(): (ctx: ToolContext, text: string) => Promise<boolean> {
     return (ctx, text) => tellChat(this.turnContext, ctx, text);
+  }
+
+  /** A line said in a chat for an agent outside any turn, and kept in its conversation there (`send-message.ts`, 0.8.23). */
+  sayInChat(chat: { agentId: string; gatewayId: string; chatId: string; chatType: ChatType }, text: string, note: string): Promise<boolean> {
+    return sayInChat(this.turnContext, chat, text, note);
   }
 
   /** The chats a job's results can go to, and what each is — `GET /chats` (0.8.0). */

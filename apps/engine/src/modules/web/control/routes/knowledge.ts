@@ -19,6 +19,16 @@ import { NOT_SAVED } from "../plain.ts";
 /** Files one upload may carry. */
 const FILES_PER_UPLOAD = 20;
 
+/** Said in the chat a document waited from, once an admin approved it (0.8.23). */
+function approvedLine(title: string, collection: string): string {
+  return `An admin added "${title}" to ${collection}, so your agents can find it now.`;
+}
+
+/** Said there once an admin declined it. */
+function declinedLine(title: string, collection: string): string {
+  return `An admin did not add "${title}" to ${collection}, so it was not kept.`;
+}
+
 /** The dashboard's words for a change the knowledge folder refused, by why (`KnowledgeRefusal`). */
 function refusedWords(why: "name" | "taken" | "missing"): string {
   if (why === "name") return "That name cannot be used. Use letters, digits and spaces.";
@@ -312,14 +322,24 @@ export function registerKnowledgeRoutes(control: ControlApp, deps: ControlDeps):
     if (decision !== "approve" && decision !== "decline") return c.json({ error: "approve or decline" }, 404);
     const body = await jsonBody(c);
     const path = typeof body?.path === "string" ? body.path : "";
+    // Read before the answer moves or deletes it: the chat it came from is told, and its agent knows (0.8.23).
+    const waiting = memory().knowledge.pending(id).find((document) => document.path === path);
+    const collection = memory().knowledge.collection(id)?.settings.name ?? id;
+    const tell = (said: string) => {
+      if (!waiting?.chat || !deps.pipeline) return;
+      const note = `An admin answered about the document "${waiting.title}" you kept for ${collection}, which waited for a yes. The line below was posted in this chat.`;
+      void deps.pipeline.sayInChat(waiting.chat, said, note);
+    };
     if (decision === "decline") {
       if (!memory().knowledge.decline(id, path)) return c.json({ error: `nothing called "${path}" waits in "${id}"` }, 404);
       deps.audit.record({ action: "knowledge_document_declined", actor: principal.actor, details: { collection: id, document: path } });
+      if (waiting) tell(declinedLine(waiting.title, collection));
       return c.json({ ok: true });
     }
     const joined = await memory().knowledge.approve(id, path);
     if (!joined) return c.json({ error: `nothing called "${path}" waits in "${id}"` }, 404);
     deps.audit.record({ action: "knowledge_document_approved", actor: principal.actor, details: { collection: id, document: joined.path } });
+    if (waiting) tell(approvedLine(waiting.title, collection));
     return c.json({ saved: { path: joined.path, status: joined.document?.status ?? "indexed", ...(joined.document?.reason ? { reason: joined.document.reason } : {}) } });
   });
 
