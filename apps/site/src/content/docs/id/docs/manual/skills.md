@@ -53,6 +53,14 @@ barisnya:
 | **Shared** | kumpulan bersama, apa yang kamu dan para agent tulis. Skill kumpulan yang bernama sama dengan skill bawaan mengalahkannya |
 | **Project** | sebuah `SKILL.md` di bawah `.agents/skills/` dalam direktori yang disebut di `[workspace] skill_roots` agent itu. Dibaca ulang setiap giliran, jadi skill yang ditambahkan ke repository berlaku sejak pesan berikutnya. Skill di sana yang berupa link ke folder lain di dalam direktori yang sama ikut dimuat |
 
+Folder project milik sebuah agent, `skill_roots`-nya, ada di tab **Skills** agent itu sejak 0.8.24: tiap folder beserta
+skill yang dibawanya, ditambah lewat path-nya dan dihapus di sana oleh admin. `nouride agent skill-root add|rm <id>
+<path>` melakukan hal yang sama dari terminal. Foldernya dicek dulu: folder yang bisa dibuka daemon, bukan folder yang
+memuat folder kredensial, bukan folder yang sudah dimiliki agent itu. Perubahannya disimpan seperti tab Files menyimpan
+`config.toml` agent itu, versi sebelumnya disimpan, agent-nya dimuat ulang. Agent juga bisa meminta folder sendiri
+lewat tool `skill_root`: admin menyetujui atau menolaknya di chat, di setiap level approval, `trusted` juga, karena skill
+sebuah project jadi instruksi yang diikuti agent itu.
+
 `[skills] off` di config daemon adalah sumbu yang lain: nama yang gak dimuat siapa pun, apa pun isi
 `skills.toml` mereka. Itu penghapusan, bukan preferensi, dan ada terutama untuk skill bawaan, yang gak
 bisa dihapus. **Switch off for every agent** di sebuah baris Workshop yang menulisnya.

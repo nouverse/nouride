@@ -50,6 +50,13 @@ A skill comes from one of three places, and the agent's **Skills** tab labels ea
 | **Shared** | the pool, what you and the agents write. A pool skill with a built-in's name outranks it |
 | **Project** | a `SKILL.md` under `.agents/skills/` in a directory named in that agent's `[workspace] skill_roots`. Read again every turn, so a skill added to the repository counts from the next message. A skill there that is a link to a folder elsewhere in the same directory loads too |
 
+An agent's project folders, its `skill_roots`, are on its **Skills** tab since 0.8.24: each with the skills it brings,
+added by its path and removed there by an admin. `nouride agent skill-root add|rm <id> <path>` does the same from a
+terminal. The folder is checked first: one the daemon can open, not one that holds the credentials folder, not one the
+agent has already. The change is saved as the Files tab saves the agent's `config.toml`, the version before kept, the
+agent reloaded. An agent asks for a folder itself with its `skill_root` tool: an admin approves or denies it in the
+chat, at every approval level, `trusted` too, because a project's skills become instructions the agent follows.
+
 `[skills] off` in the daemon config is the other axis: names nobody loads, whatever their own
 `skills.toml` says. That is a removal rather than a preference, and it exists mainly for the
 built-ins, which cannot be deleted. **Switch off for every agent** on a Workshop row writes it.

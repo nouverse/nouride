@@ -468,6 +468,21 @@ installed on this machine is refused, with the command that installs it — `nou
 is the orchestrator, which stays a Nouride agent. After `external` the agent answers nothing until its CLI is signed
 in. Admin only; through the `nouride` tool it is a `config.toml` changed (`config`, `SPEC.md` §17.4).
 
+### `nouride agent skill-root add|rm <id> <path>`
+
+```bash
+nouride agent skill-root add nix /opt/projects/home-app   # nix takes the skills in its .agents/skills as its own
+nouride agent skill-root add nix .                        # the folder you are in
+nouride agent skill-root rm nix /opt/projects/home-app
+```
+
+A folder whose `.agents/skills/` an agent takes as its own skills (0.8.24), without editing its `config.toml` by hand:
+the path is checked (a folder the daemon can open, not one that holds the credentials folder, not one the agent has),
+then written into its `[workspace] skill_roots` as the dashboard's Files tab saves the file — the version before kept
+as `config.toml.bak.1`, the agent reloaded, the change in the audit log. `add` prints the skills the folder brings. A
+relative path is read against where the command runs. Admin only; the agent's Skills tab does the same, and an agent
+asks for one itself with its `skill_root` tool, which an admin answers in the chat at every approval level.
+
 ### `nouride agents scan` · `nouride agents login <id>`
 
 ```bash

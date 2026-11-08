@@ -172,7 +172,7 @@ percakapan yang baru mulai: di chat yang sedang jalan, kirim `/new` atau `/reset
 
 Selama satu giliran jalan, dan hanya saat itu, CLI dipinjami tool Nouride lewat MCP: `ask_agent`, `delegate`,
 `memory_search`, `memory_read`, `memory_analyze`, `memory_write`, `person_notes`, `person_record`, `plan`, `notes`,
-`schedule`, `mission`, `work`, `send_message`, `send_file`, `agent_configure`, `persona`, `agent_create`, tool skill
+`schedule`, `mission`, `work`, `send_message`, `send_file`, `agent_configure`, `persona`, `skill_root`, `agent_create`, tool skill
 (`skill_create`, `skill_toggle`, `skill_improve`, `skill_search`, `skill_install`), `mcp_search`, `secret_save`, dan
 `attachment_read`, juga server MCP milik agent itu dari library, dengan kredensial yang tetap di Nouride. Yang
 dipinjamkan cuma yang diizinkan saklar tool agent-nya, dan tiap panggilan lewat gate, approval level, dan audit yang

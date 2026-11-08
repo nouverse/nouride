@@ -168,7 +168,7 @@ the one before), as a rollover and a delete from the dashboard do.
 
 While a turn runs, and only then, the CLI is lent Nouride's tools over MCP: `ask_agent`, `delegate`, `memory_search`,
 `memory_read`, `memory_analyze`, `memory_write`, `person_notes`, `person_record`, `plan`, `notes`, `schedule`,
-`mission`, `work`, `send_message`, `send_file`, `agent_configure`, `persona`, `agent_create`, the skill tools
+`mission`, `work`, `send_message`, `send_file`, `agent_configure`, `persona`, `skill_root`, `agent_create`, the skill tools
 (`skill_create`, `skill_toggle`, `skill_improve`, `skill_search`, `skill_install`), `mcp_search`, `secret_save` and
 `attachment_read`, and the agent's own MCP servers from the library, their credentials staying in Nouride. It gets
 only those its agent's tool switches give it, and each call meets the same gate, approval level and audit as a model's.
