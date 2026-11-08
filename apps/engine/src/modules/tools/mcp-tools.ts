@@ -138,7 +138,7 @@ function withheld(tool: Tool, name: string, server: string, where: string): Tool
 
 /**
  * What is wrong with a call's arguments against the schema its server declared, as the model will read it — or
- * nothing, for a call worth sending (G4). `argumentProblems` is the check; this is the sentence around it.
+ * nothing, for a call worth sending. `argumentProblems` is the check; this is the sentence around it.
  */
 function argumentsRefusal(name: string, schema: unknown, args: Record<string, unknown>): string | undefined {
   const problems = argumentProblems(schema, args);
@@ -217,7 +217,7 @@ function buildOne(name: string, options: BuildMcpToolsOptions, remote: McpTool):
       const refused = checkArguments(args);
       if (refused) return { content: refused, isError: true };
       try {
-        // The turn's signal, so `/stop` and the deadline end the call now and the server is told (P4).
+        // The turn's signal, so `/stop` and the deadline end the call now and the server is told.
         const result = await client.callTool(remote.name, args, { signal: ctx.signal });
         // A result that breaks its own declared shape is handed over as an error naming what is wrong, never as the data:
         // the model would otherwise act on fields that are missing or of the wrong kind. A reported failure is not held to

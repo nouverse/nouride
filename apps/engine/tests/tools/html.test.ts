@@ -433,7 +433,7 @@ describe("URLs a reader can actually follow", () => {
 });
 
 /**
- * Two things a handmade fixture never produces, both found by fetching gading.dev through the real
+ * Two things a handmade fixture never produces, both found by fetching a personal blog through the real
  * tool. Fixtures are written by whoever holds the assumption; a real page is not.
  */
 describe("what a real page does that a fixture does not", () => {

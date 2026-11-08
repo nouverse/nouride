@@ -42,7 +42,7 @@
  * while the chat's own turn's question went straight past both — two queues in one chat, read as none.
  *
  * In memory, not in SQLite. A restart rebuilds it from the rows it keeps: each kept request enters the
- * floor again in the order it was asked (`SqliteApprovalGate.showKept`, D8), so the state is only ever
+ * floor again in the order it was asked (`SqliteApprovalGate.showKept`), so the state is only ever
  * as old as the process.
  */
 

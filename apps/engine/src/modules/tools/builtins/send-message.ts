@@ -72,7 +72,7 @@ function fold(name: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-/** One chat, in words: "the telegram one-to-one with Gading", "the whatsapp group "keluarga"". */
+/** One chat, in words: "the telegram one-to-one with Sam", "the whatsapp group "keluarga"". */
 function describeChat(chat: ReachableChat): string {
   // The platform as the daemon names it, lower case: a label table would be one more list of platforms to keep.
   const platform = chat.platform;
@@ -192,7 +192,7 @@ export function createSendMessageTool(options: SendMessageOptions): Tool {
       const found = resolve(args, ctx);
       if (!found.ok) return { action: "refuse", reason: found.reason };
       /**
-       * A run of a scheduled job sends only to the chat its job names (0.8.0, SMART_AUTOMATION §2.1): anywhere else is
+       * A run of a scheduled job sends only to the chat its job names (0.8.0): anywhere else is
        * asked first, at every level — parked in a mission, refused in a turn that cannot wait. Checked against the job, not
        * against a chat never written to before, which would ask on every reply of a job that answers customers.
        */

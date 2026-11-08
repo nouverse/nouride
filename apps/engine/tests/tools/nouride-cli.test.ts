@@ -92,7 +92,7 @@ describe("it is an adapter, not a second implementation", () => {
   });
 
   test("answering an approval asks a person through it, and listing them does not", () => {
-    // S2: an agent could once answer the queue — its own request included. Listing what is waiting is how an agent tells
+    // An agent could once answer the queue — its own request included. Listing what is waiting is how an agent tells
     // somebody, and stays free of the list.
     const answer = build().gate!({ args: ["approvals", "allow-always", "apr_1"] }, ctx);
     expect(answer).toMatchObject({ action: "ask", grantable: false, hardlineClass: "access" });
@@ -311,7 +311,7 @@ describe("the programs every agent runs (0.8.0)", () => {
   });
 
   test("the orchestrator's call the command would refuse is refused before anyone is asked, not approved first (0.8.1)", () => {
-    // On the live box the owner said yes to an `ln -s` through `tools run`, and the command then refused it.
+    // On the live box an admin said yes to an `ln -s` through `tools run`, and the command then refused it.
     const link = { args: ["tools", "run", "--", "ln", "-s", "/a", "/b"] };
     expect(tool("nouva").gate!(link, ctx)).toMatchObject({ action: "refuse", reason: expect.stringContaining("runs an installer") });
     expect(tool("nouva").gate!({ args: ["tools", "run", "--", "npm", "i", "-g", "x"] }, ctx)).not.toMatchObject({ action: "refuse" });

@@ -35,7 +35,7 @@ describe("exec env allowlist", () => {
       "LC_ALL",
       "TZ",
       "TERM",
-      // Not SSH_AUTH_SOCK, since 0.7.9 (S11): an agent that needs the ssh-agent asks for it — see below.
+      // Not SSH_AUTH_SOCK, since 0.7.9: an agent that needs the ssh-agent asks for it — see below.
       // Where installers put what they install — `modules/toolchain/env.ts`. Paths and switches only.
       ...TOOLCHAIN_ENV_NAMES,
     ]);
@@ -173,7 +173,7 @@ describe("the scratchpad is where a child's temporary files go", () => {
 });
 
 /**
- * The ssh-agent socket reaches the agents that asked for it, and no others (S11).
+ * The ssh-agent socket reaches the agents that asked for it, and no others.
  *
  * It was on the allowlist above, so every command of every agent held a socket that signs with every key the ssh-agent
  * holds — `git push` or `ssh` to any host those keys open was an ordinary command for an agent that never needed SSH.

@@ -73,7 +73,7 @@ export interface HttpTransportOptions {
 }
 
 /**
- * A minute of silence on the legacy SSE stream, and the client asks `ping` (G13). Long enough that a server talked
+ * A minute of silence on the legacy SSE stream, and the client asks `ping`. Long enough that a server talked
  * to twice an hour costs one small request a minute, short enough that a stream dropped by something in between is
  * found within a call's timeout of it rather than at the next call.
  */
@@ -90,7 +90,7 @@ const SSE_IDLE_PING_MS = 60_000;
  *
  * **The GET stream is opened only when the client asks (`listen`)** — for a server that declared it will say when its
  * tools change. It is the one way such a server can say so unasked; for any other it would be a held connection and a
- * reconnect policy delivering messages nobody reads, which is why none was opened at all before 0.7.13 (G4). A server
+ * reconnect policy delivering messages nobody reads, which is why none was opened at all before 0.7.13. A server
  * that offers no stream answers the GET with 405, which is the end of it.
  */
 export function streamableHttpTransport(options: HttpTransportOptions): McpTransportFactory {
@@ -390,7 +390,7 @@ export function sseTransport(options: HttpTransportOptions): McpTransportFactory
         // No idle timeout, unlike the streamable-http response stream: this one is *supposed* to sit
         // quiet between calls. A server the agent talks to twice an hour is healthy, and cutting it
         // off after thirty seconds would make this transport unusable for the normal case. Silence is asked about
-        // instead: the client pings after `idlePingMs` of it, and a ping unanswered is the stream lost (G13).
+        // instead: the client pings after `idlePingMs` of it, and a ping unanswered is the stream lost.
         for await (const event of parseSse(response.body)) {
           if (event.event === "endpoint") {
             // Servers answer with a path far more often than an absolute URL, and resolving against

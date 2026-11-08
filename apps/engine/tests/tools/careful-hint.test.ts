@@ -1,5 +1,5 @@
 /**
- * The daemon's hint under `careful` (SIMPLIFY RFC §7.5): after five questions in a day, at most once a day per person,
+ * The daemon's hint under `careful`: after five questions in a day, at most once a day per person,
  * never once they have moved, naming `balanced` and where it is set — and never `trusted`.
  */
 

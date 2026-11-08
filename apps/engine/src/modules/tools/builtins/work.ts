@@ -184,7 +184,7 @@ export function createWorkTool(deps: WorkToolDeps): Tool {
         return "refused" in acted ? refused(acted.refused) : ok(`Mission ${shortId(mission.id)} closed as done outside its checks.`);
       }
       case "start": {
-        // A draft started on the person's "go" (0.8.11, RFC MISSION_DRAFTS §2.4): their words, passed on in the turn their
+        // A draft started on the person's "go" (0.8.11): their words, passed on in the turn their
         // own message started, under `tell`'s guards — never the agent's own decision, which is what a draft waits out.
         if (ctx.gatewayId === MISSION_GATEWAY_ID || ctx.askedBy || ctx.unattended || ctx.senderId === SYSTEM_SENDER) {
           return refused("A draft starts on a person's word, passed on in the turn their own message started, not from a mission's turn, another agent's ask or a scheduled run.");
@@ -206,7 +206,7 @@ export function createWorkTool(deps: WorkToolDeps): Tool {
         return ok(`Mission ${shortId(mission.id)} started on ${speaker.name}'s word: "${words}". It runs on its own and reports to this chat; do not do the work here as well.`);
       }
       case "tell": {
-        // A person's words passed on, never the agent's own (0.8.10, RFC_MISSION_STEERING §3.2): not from a mission's own
+        // A person's words passed on, never the agent's own (0.8.10): not from a mission's own
         // turn — whose context carries its starter's id, so it could tell itself as them — not an agent asking another,
         // not a schedule's, a job's or anybody's turn nobody watches.
         if (ctx.gatewayId === MISSION_GATEWAY_ID || ctx.askedBy || ctx.unattended || ctx.senderId === SYSTEM_SENDER) {

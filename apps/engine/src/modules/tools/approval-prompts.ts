@@ -1,13 +1,13 @@
 /**
- * The approval prompt in a chat, and its buttons (G11).
+ * The approval prompt in a chat, and its buttons.
  *
  * Posted under the asking agent's own name, as it always was, and — on a connection that carries buttons
  * (`Gateway.buttons`) — with Approve and Deny under it, and Always where `/approve always` would be honoured. The text
  * still says how to answer by command, for a client that shows no buttons; WhatsApp, which has none a bridge can rely
  * on, gets the text alone.
  *
- * A press is the command's answer: the same `resolve`, by the same rule for who may answer (`approval-answerers.ts`,
- * S8) and from the conversation the question was asked in. Anybody else's press is refused to them alone and changes
+ * A press is the command's answer: the same `resolve`, by the same rule for who may answer (`approval-answerers.ts`)
+ * and from the conversation the question was asked in. Anybody else's press is refused to them alone and changes
  * nothing. Once a request settles — a press, `/approve`, the dashboard, the CLI, its window running out — its prompt
  * says how and by whom, and its buttons go; a press on one already settled, or one a restart left behind, says so.
  */
@@ -52,7 +52,7 @@ export interface ApprovalPromptsDeps {
   approvals: () => { get(id: string): ApprovalRequest | null; resolve(id: string, decision: ApprovalDecision, by: Answerer): boolean };
   /** The connection an agent speaks on in a chat: where its prompt goes, and so where a press on it comes from. */
   voice: (agentId: string, gatewayId: string) => string;
-  /** An admin by People (S8): in a room, who besides the person who asked may answer. */
+  /** An admin by People: in a room, who besides the person who asked may answer. */
   isAdmin: (who: { gatewayId: string; senderId: string }) => boolean;
   /**
    * Where a request asked in a conversation nobody reads is put in front of a person instead — a mission's, whose

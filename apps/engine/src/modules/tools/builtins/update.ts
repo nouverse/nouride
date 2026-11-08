@@ -9,7 +9,7 @@
  * summary, on the way past.
  *
  * `apply` downloads an executable and puts it where this process is started from next.
- * It is on the fixed list as `replace` (SIMPLIFY RFC §1, item 3):
+ * It is on the fixed list as `replace`:
  *
  * - asked every time under `careful`; `balanced` and `trusted` answer it themselves
  * - never grantable, so `allow-always` cannot make it a standing permission

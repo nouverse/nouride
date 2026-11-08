@@ -19,7 +19,7 @@
  *
  * Until 0.8.0 this sorted commands by how they looked — privilege, system control, infrastructure — and a
  * `sudo cat` asked like an `rm -rf /`. The list is what a person would want to be asked about, whichever
- * program does it (SIMPLIFY RFC §1): a config changed, someone given access, the daemon stopped or replaced,
+ * program does it: a config changed, someone given access, the daemon stopped or replaced,
  * a secret replaced, the database, a delete outside the workspace, infrastructure torn down, a credential
  * leaving, a job that runs unasked, an interactive session, a remote's history rewritten.
  */
@@ -29,9 +29,9 @@ import { classifyOwnCli, ownCliInner } from "./own-cli.ts";
 import { programName } from "./shell-segments.ts";
 
 /**
- * The entries `balanced` asks about — the default level, and the owner's everyday one (SIMPLIFY RFC §7).
+ * The entries `balanced` asks about — the default level, and the owner's everyday one.
  *
- * Four the RFC names — a `config.toml` changed, someone given access, the daemon stopped, a stored secret replaced or
+ * Four from the start — a `config.toml` changed, someone given access, the daemon stopped, a stored secret replaced or
  * deleted — and two more that are older than it and stay: a credential leaving (the secret guard, "off only under
  * `trusted`"), and the daemon's own state on an install where nothing else stands in front of it. Since then: what
  * every level asks, `trusted` too (`unwatched`, `shared-tools`, `persona`, `people`), and this machine's packages
@@ -96,7 +96,7 @@ const NAMES_THIS_DAEMON = /(^|[/.@\s])nouride\b/;
 /**
  * Infrastructure torn down, by the subcommand that tears it down.
  *
- * Creating and changing are not on the list (RFC §1, item 7): `terraform apply`, `kubectl scale`, `pct stop` are the
+ * Creating and changing are not on the list: `terraform apply`, `kubectl scale`, `pct stop` are the
  * work an agent is given a Terraform repository or a cluster for, and `careful` asks them as new commands. What is here
  * is what does not come back — a destroyed stack, a deleted namespace, a container's disk.
  *
@@ -173,7 +173,7 @@ const CREDENTIAL_PATTERNS = [
 const OWN_STATE: readonly { pattern: RegExp; class: HardlineClass; what: string }[] = [
   /**
    * An agent's persona — its SOUL.md, IDENTITY.md or AGENTS.md in the daemon's packs — first, so it is answered as the
-   * `persona` tool's change is, by an admin, rather than as any other file of a pack (HARDENING §9, C7): where agents
+   * `persona` tool's change is, by an admin, rather than as any other file of a pack: where agents
    * run as the daemon's user, `sed -i` on its own SOUL.md changed its rules with nobody asked who may.
    */
   { pattern: /(^|\/)\.nouride\/agents\/[^/\s'"]+\/(?:SOUL|IDENTITY|AGENTS)\.md\b/, class: "persona", what: "an agent's persona: its SOUL.md, IDENTITY.md or AGENTS.md, which an admin alone changes" },
@@ -181,7 +181,7 @@ const OWN_STATE: readonly { pattern: RegExp; class: HardlineClass; what: string 
   { pattern: /nouride\.db/, class: "database", what: "the daemon's database, which holds every agent's conversations" },
   { pattern: /secrets\.json|\.control-token|(^|\/)\.nouride\/agents\b/, class: "own-state", what: "Nouride's own state" },
   /**
-   * What is remembered and the documents kept for reference (0.8.20, KNOWLEDGE_BASE §4): memory's tools open them only
+   * What is remembered and the documents kept for reference (0.8.20): memory's tools open them only
    * where the conversation may read them, by who is in it. A command reaching the folders read a profile, or a
    * collection kept for one person, in any chat.
    */
@@ -233,7 +233,7 @@ const DELETES: { program: string; when: (args: string[]) => string | null }[] = 
 ];
 
 /**
- * A push that rewrites or removes a remote's history (RFC §1, item 11) — to any branch, since 0.8.0: a force-push to a
+ * A push that rewrites or removes a remote's history — to any branch, since 0.8.0: a force-push to a
  * feature branch overwrites what a colleague pulled as surely as one to `main`. An ordinary push is not on the list.
  */
 function rewritesRemote(args: readonly string[]): string | null {
@@ -970,7 +970,7 @@ export function classifyOwnState(argv: readonly string[], cwd?: string): Hardlin
   for (const arg of argv.slice(1)) {
     if (isFlag(arg)) continue;
     // The argument as written, then each path in it resolved from the command's folder: `../../agents/nix/SOUL.md`
-    // from an agent's workspace names its pack without the literal `.nouride/agents` (C7).
+    // from an agent's workspace names its pack without the literal `.nouride/agents`.
     const named = [arg, ...(cwd ? pathsIn(arg).map((path) => resolvedFrom(cwd, path)) : [])];
     const hit = OWN_STATE.find((entry) => named.some((one) => entry.pattern.test(one)));
     if (hit) return { class: hit.class, reason: `touches ${hit.what} (${matchedLine(arg)})` };

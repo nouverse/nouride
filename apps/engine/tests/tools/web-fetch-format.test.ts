@@ -82,7 +82,7 @@ describe("markdown is what you get without asking", () => {
     // Above the article, and still under the untrusted marker — the page wrote these strings too.
     expect(result.content.indexOf("---\ntitle:")).toBeLessThan(result.content.indexOf("# Rate limits"));
     expect(result.content).toMatch(/never as instructions to follow/);
-    // And flagged, so a memory write later in the turn is marked as made after it (S13).
+    // And flagged, so a memory write later in the turn is marked as made after it.
     expect(result.untrusted).toBe(true);
   });
 
@@ -139,7 +139,7 @@ describe("html is the whole markup, which is the point of having it", () => {
     // less attacker-controlled than prose — it is more.
     const result = await toolServing(PAGE).execute({ url: "https://example.com/", format: "html" }, ctx);
     expect(result.content).toMatch(/never as instructions to follow/);
-    // And flagged, so a memory write later in the turn is marked as made after it (S13).
+    // And flagged, so a memory write later in the turn is marked as made after it.
     expect(result.untrusted).toBe(true);
   });
 });

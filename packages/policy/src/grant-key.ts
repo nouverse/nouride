@@ -48,7 +48,7 @@ export interface GrantKeyInput {
    */
   fileSha256?: string | undefined;
   /**
-   * The secrets this command receives (S6). A grant for a command is not a grant for the credentials it is handed:
+   * The secrets this command receives. A grant for a command is not a grant for the credentials it is handed:
    * binding another secret to it asks again. Absent from the key when there are none, so every grant made before
    * still matches.
    */

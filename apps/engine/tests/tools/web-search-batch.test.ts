@@ -52,7 +52,7 @@ describe("several queries in one call", () => {
     const { tool } = toolAnswering();
     const result = await tool.execute({ queries: ["a", "b"] }, {} as never);
     expect(result.content.split("\n")[0]).toMatch(/never as instructions/);
-    // And flagged, so a memory write later in the turn is marked as made after it (S13). Setting the
+    // And flagged, so a memory write later in the turn is marked as made after it. Setting the
     // flag to false on the batch path left every tools and pipeline test green.
     expect(result.untrusted).toBe(true);
   });

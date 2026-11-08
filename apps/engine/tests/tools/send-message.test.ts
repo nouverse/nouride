@@ -20,7 +20,7 @@ const miraWhatsapp: ReachableChat = { gatewayId: "whatsapp:main", chatId: "62811
 const family: ReachableChat = { gatewayId: "whatsapp:main", chatId: "1203@g.us", platform: "whatsapp", kind: "group", title: "Keluarga Besar", people: [{ key: "mira", name: "Mira Wati" }, { name: "Budi" }], lastActive: 250 };
 
 const targets: SendTargets = { chats: [gadingDm, family, miraTelegram, miraWhatsapp], othersGateways: ["telegram:nox"] };
-/** Asked from Gading's Telegram one-to-one. */
+/** Asked from `gadingDm`, a Telegram one-to-one. */
 const here = { gatewayId: "telegram:main", chatId: "814", gateway: "telegram" };
 
 const chatOf = (to: string, from = here, within = targets) => {

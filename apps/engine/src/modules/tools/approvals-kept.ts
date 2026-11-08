@@ -1,5 +1,5 @@
 /**
- * An approval that outlives the moment it was asked in — a restart, or a turn that stopped waiting (D8).
+ * An approval that outlives the moment it was asked in — a restart, or a turn that stopped waiting.
  *
  * A restart answered every pending approval "deny": shutdown expired them all before the drain, and boot expired what
  * was left. The question a person was about to answer was gone, and the turn taken up after the restart asked it again,
@@ -28,7 +28,7 @@ export const KEEP_AT_LEAST_MS = 30_000;
 
 /** What only the process that asked knew about a request: on its row as JSON (076), read back across a restart. */
 export interface KeptExtras {
-  /** Who asked: in a room, they or an admin may answer (S8). */
+  /** Who asked: in a room, they or an admin may answer. */
   requestedBy?: string;
   /** The turn that asked — the one a restart takes up again. */
   turnId?: string;

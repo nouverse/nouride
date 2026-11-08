@@ -29,7 +29,7 @@ import { credentialKind, maskCredentials, ownSecretRefusal } from "@/modules/too
  * 5,000-line config can obliterate it in one call and the only record is the audit log.
  *
  * Keyed by agent as well as path: one agent having read a file says nothing about what another knows,
- * and they can share a workspace root since G3.
+ * and two agents can share a workspace root.
  *
  * In memory, so a restart clears it. That is the safe direction — after a restart nothing has been read
  * in this process, so an overwrite asks for a read first.
@@ -571,8 +571,8 @@ export const editTool: Tool = {
     }
     if (!(await fileExists(path))) return fail(`No such file: ${args.path as string}`);
 
-    // The read and the write are one critical section. `edit` is read-modify-write, and G3 gave two
-    // agents a shared workspace root — so two turns could read the same file, both compute a result
+    // The read and the write are one critical section. `edit` is read-modify-write, and two
+    // agents can share a workspace root — so two turns could read the same file, both compute a result
     // from the pre-edit text, and the second write would silently discard the first. Atomic writes
     // do not help: each write is individually atomic and the *lost update* happens between them.
     //

@@ -1,5 +1,5 @@
 /**
- * What an MCP server's tools cost every request of the agent holding them, said where it can be read (G12).
+ * What an MCP server's tools cost every request of the agent holding them, said where it can be read.
  *
  * The built-ins' schemas are held to a budget by `tool-schema-budget.test.ts`; a server's are somebody else's and
  * arrive when it connects, so the budget never covered them. A real server, started the way the daemon starts one:

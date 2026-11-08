@@ -1,5 +1,5 @@
 /**
- * A model's arguments, held to the schema the server declared, before anything is sent (G4).
+ * A model's arguments, held to the schema the server declared, before anything is sent.
  *
  * Two rules and no more: every name in `required` is there, and each declared property that was sent has the top-level
  * `type` it declares — `string`, `number`, `integer`, `boolean`, `array`, `object`, `null`, or a list of them. No `$ref`,

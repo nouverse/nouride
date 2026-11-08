@@ -65,13 +65,13 @@ type NotUp = "again" | "stays";
 /** Handshakes at once. Each is a process starting — often `npx` resolving a package — and on a Pi they queue for the CPU. */
 const CONNECT_CONCURRENCY = 4;
 /**
- * How long boot, or a reload, waits on one server before going on without it (E10). The handshake keeps its own
+ * How long boot, or a reload, waits on one server before going on without it. The handshake keeps its own
  * timeout and joins when it finishes: a server slow to start is late, not gone — the tools come with the next turn.
  */
 const CONNECT_WAIT_MS = 10_000;
 
 /**
- * Past this, one server's tool schemas are said at warn when it connects, and by `nouride doctor` (G12).
+ * Past this, one server's tool schemas are said at warn when it connects, and by `nouride doctor`.
  *
  * Half of what every built-in tool together comes to — `tool-schema-budget.test.ts` holds them under 33,900
  * characters — so a server past it costs the agent holding it more of the window than most of its built-ins, on every
@@ -96,7 +96,7 @@ export interface McpManagerOptions {
   connectWaitMs?: number;
   /** `CONNECT_CONCURRENCY`, for the same tests. */
   connectConcurrency?: number;
-  /** Where each call is written down, as a built-in's is (S10). Absent in a test that does not read it. */
+  /** Where each call is written down, as a built-in's is. Absent in a test that does not read it. */
   audit?: AuditPort;
   /** Remote servers' logins (`modules/mcp-oauth`, 0.7.19). Absent: a server is reached with what its block says, as before. */
   logins?: McpLoginPort;
@@ -178,7 +178,7 @@ export class McpManager {
   constructor(private readonly options: McpManagerOptions = {}) {}
 
   /**
-   * Every agent's servers at once, four handshakes at a time (E10). Boot connected them one agent after another,
+   * Every agent's servers at once, four handshakes at a time. Boot connected them one agent after another,
    * each server waited out to the tool timeout — thirty seconds for every one that did not answer.
    */
   async connectAll(agents: readonly LoadedAgent[]): Promise<void> {
@@ -387,7 +387,7 @@ export class McpManager {
 
   /**
    * A server's tools, listed again after it said they changed (`tools/list_changed`), and put where the next turn
-   * reads them — with what was added and removed said in the log (G4).
+   * reads them — with what was added and removed said in the log.
    *
    * Replaced, never edited in place. A turn already running resolved its toolset when it began (`resolveToolset`), and
    * keeps it: the definitions its model was given, and the tools those name — a removed one still calls its server and
@@ -427,7 +427,7 @@ export class McpManager {
   }
 
   /**
-   * What `/status` and the dashboard report — with what each server's tools cost every request (G12), and which wait
+   * What `/status` and the dashboard report — with what each server's tools cost every request, and which wait
    * for a person to log in: seated ones whose login stopped working, and ones that never connected for want of one.
    */
   status(): McpServerStatus[] {

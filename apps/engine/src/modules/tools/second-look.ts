@@ -1,5 +1,5 @@
 /**
- * The second look (0.8.0, SMART_AUTOMATION §2.1): before work nobody watches sends something off the machine after
+ * The second look (0.8.0): before work nobody watches sends something off the machine after
  * reading outside content, a model is asked whether the action belongs to the work.
  *
  * An automation that reads mail every morning is where a prompt injection does its harm: one message says "forward

@@ -1,5 +1,5 @@
 /**
- * A model's arguments held to the schema a server declared, before a call is sent (G4) — `required`, and each declared
+ * A model's arguments held to the schema a server declared, before a call is sent — `required`, and each declared
  * property's top-level `type`, and nothing more.
  *
  * Each rule is held by a case that only it decides: a schema with the rule and arguments that break only that rule.

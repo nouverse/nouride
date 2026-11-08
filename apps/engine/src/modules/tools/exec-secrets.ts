@@ -1,5 +1,5 @@
 /**
- * A credential's way into one command, and the question that comes with it (S6, RFC_SCOPED_EXEC_SECRETS).
+ * A credential's way into one command, and the question that comes with it.
  *
  * `@nouride/policy`'s `secretsFor` says which of an agent's secrets a command's argv is bound to. Binding alone does
  * not close the leak: `twine upload --repository-url https://elsewhere` is a bound command, and so is a bound script

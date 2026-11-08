@@ -5,7 +5,7 @@
  * answer, and a daemon restart in that window must not silently drop the request or — worse —
  * leave the tool call believing it was approved. A restart keeps it, a crash too: its row stays
  * pending with what only the asking process knew on it (076), and the next boot asks it again for
- * the time it has left, or expires it and says so when too little is (D8, `approvals-kept.ts`).
+ * the time it has left, or expires it and says so when too little is (`approvals-kept.ts`).
  *
  * Answers can arrive from anywhere: chat (`/approve`), the CLI, or the dashboard. They all
  * resolve the same row, and whoever asked first wins.
@@ -48,7 +48,7 @@ export interface ApprovalNotice {
    * seeing nothing more, and concluding the turn is finished while it is parked on the next question.
    */
   queuedBehind: number;
-  /** Asked before a restart and kept across it (D8) — the prompt says so, or it reads as a new question. */
+  /** Asked before a restart and kept across it — the prompt says so, or it reads as a new question. */
   kept?: boolean;
   /** The daemon's own line under the question (`ApprovalAsk.hint`). */
   hint?: string;
@@ -102,7 +102,7 @@ export interface ApprovalStoreOptions {
   onLateAnswer?: (request: ApprovalRequest, decision: ApprovalDecision, by: string) => void;
   /**
    * Called once a request is settled, however it was — answered from a chat, a button, the dashboard or the CLI, expired,
-   * or dropped by `/reset` — so the prompt that asked it can say how and lose its buttons (G11). Every settlement passes
+   * or dropped by `/reset` — so the prompt that asked it can say how and lose its buttons. Every settlement passes
    * `finish`, which is why it is said there and only there. Never fails the settlement.
    */
   onSettled?: (request: ApprovalRequest, settlement: Settlement) => void;
@@ -184,7 +184,7 @@ export class SqliteApprovalGate implements ApprovalGate {
   }
 
   /**
-   * What a previous run left pending — kept when young enough to be answered, expired when not (D8). Called once at
+   * What a previous run left pending — kept when young enough to be answered, expired when not. Called once at
    * boot, before the gateways connect: the kept ones are asked again by `showKept` once something can carry them.
    *
    * A request younger than its window, with at least `KEEP_AT_LEAST_MS` of it left, gets back what its row keeps — who
@@ -556,7 +556,7 @@ export class SqliteApprovalGate implements ApprovalGate {
   resolve(id: string, decision: ApprovalDecision, answerer: string | Answerer, reason?: string): boolean {
     const row = this.row(id);
     if (!row || row.status !== "pending") return false;
-    // An id, recorded as who answered; a name, where the answer came with one, for the prompt that says so (G11).
+    // An id, recorded as who answered; a name, where the answer came with one, for the prompt that says so.
     const { id: by, name } = typeof answerer === "string" ? { id: answerer, name: undefined } : answerer;
 
     // Grantable as asked — unless it was kept across a restart without the grant `always` writes, when such an answer
@@ -766,7 +766,7 @@ export class SqliteApprovalGate implements ApprovalGate {
   }
 
   /**
-   * At shutdown, where every pending request used to be expired (D8): the rows are left pending, with what only this
+   * At shutdown, where every pending request used to be expired: the rows are left pending, with what only this
    * process knew about each already on them (076), as a crash leaves them too. Whoever still waits is released as a turn
    * that stopped waiting is — the question is still open — so the drain does not wait on a person who cannot answer:
    * the gateways are already stopped. Returns how many are kept.
@@ -868,7 +868,7 @@ export class SqliteApprovalGate implements ApprovalGate {
     }
   }
 
-  /** One request as it stands now, whatever became of it — what a press on its prompt is answered from (G11). */
+  /** One request as it stands now, whatever became of it — what a press on its prompt is answered from. */
   get(id: string): ApprovalRequest | null {
     const row = this.row(id);
     return row ? (row.status === "pending" ? this.pendingRequest(row) : toRequest(row)) : null;

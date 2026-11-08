@@ -191,7 +191,7 @@ describe("write refuses to overwrite a file nobody read", () => {
   });
 
   test("one agent reading does not entitle another to overwrite", async () => {
-    // They can share a workspace root since G3, and what one agent has seen says nothing about the
+    // Two agents can share a workspace root, and what one agent has seen says nothing about the
     // other's context.
     await readTool.execute({ path: "README.md" }, ctx("nouva"));
     const result = await writeTool.execute({ path: "README.md", content: "x" }, ctx("nox"));

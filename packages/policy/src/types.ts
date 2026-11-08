@@ -3,7 +3,7 @@
  *
  * What may run is the operator's veto (`blocked`) and nothing else to configure: whether a command asks is the approval
  * level's, over one fixed list of what always asks (`HardlineClass`) — 0.8.0's three presets in place of the four
- * knobs that each guessed at it (SIMPLIFY RFC §1).
+ * knobs that each guessed at it.
  */
 
 import type { ApprovalDecision } from "@nouride/shared";

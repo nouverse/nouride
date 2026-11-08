@@ -93,7 +93,7 @@ function httpHeaders(config: McpServerConfig, reach: Reach): Record<string, stri
 }
 
 /**
- * A stdio server, with the ssh-agent socket in its environment when its agent's pack asked for it (S11).
+ * A stdio server, with the ssh-agent socket in its environment when its agent's pack asked for it.
  *
  * `@nouride/mcp` stopped handing the daemon's `SSH_AUTH_SOCK` to every child it starts, so this is the one way a
  * server gets it. A server's own `env` still wins: an operator who named a socket for one server meant that one.

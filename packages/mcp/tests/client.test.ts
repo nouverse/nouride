@@ -409,7 +409,7 @@ describe("listTools", () => {
 });
 
 /**
- * A call the turn no longer wants (P4). It carried no signal, so `/stop`, the deadline and a shutdown each waited out
+ * A call the turn no longer wants. It carried no signal, so `/stop`, the deadline and a shutdown each waited out
  * the request timeout — thirty seconds by default — and a parallel group of MCP reads held the turn for the slowest.
  */
 describe("a call abandoned by the turn that made it", () => {
@@ -456,7 +456,7 @@ describe("a call abandoned by the turn that made it", () => {
 });
 
 /**
- * What the client tells its transport besides messages (G4): the version settled on, before the handshake is done —
+ * What the client tells its transport besides messages: the version settled on, before the handshake is done —
  * HTTP sends it on every request after — and, only for a server that will say when its tools change, to listen.
  */
 describe("what the transport is told", () => {

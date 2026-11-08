@@ -1,5 +1,5 @@
 /**
- * What an exec grant is bound to (S7): every file the command runs, read the same way with a secret or without —
+ * What an exec grant is bound to: every file the command runs, read the same way with a secret or without —
  * a script run by its path, an interpreter's script, each segment of a `bash -lc` line, after any `cd` in it.
  */
 

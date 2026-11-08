@@ -1,5 +1,5 @@
 /**
- * `mission` — the agent's side of missions (MISSIONS §10): one tool, its `action` deciding which fields count.
+ * `mission` — the agent's side of missions: one tool, its `action` deciding which fields count.
  *
  * Two shapes, handed per turn (`ToolsetDeps.missionTool`). In a chat it offers `start` and `edit`: the agent decides
  * when work is mission-sized and drafts it, and the person starts it (0.8.11, `missions/drafts.ts`) — nobody has to type
@@ -33,7 +33,7 @@ const ONE_OWNER =
  *
  * 0.8.11 dropped minutes ("more than about ten minutes" was a guess made before the work showed its size) for examples,
  * and "many steps or items" among them drafted missions for work of ten minutes, which a helper in the background does
- * without a tap. 0.8.17 (the owner, 2026-11-04): more than about an hour, the hour a reply and a background helper have,
+ * without a tap. 0.8.17: more than about an hour, the hour a reply and a background helper have,
  * so work that may run past it is the one kind that cannot finish there; and what a mission gives, said: it keeps going
  * on its own and proves itself done.
  */
@@ -43,7 +43,7 @@ export const MISSION_IS_FOR =
   "command, or work that should go on while the person is away. A mission keeps this chat free, survives restarts, keeps " +
   "going on its own (it works around what fails and proves itself done with checks) and is signed off.";
 
-/** How one starts from a chat: a draft the person starts (RFC MISSION_DRAFTS §2.7), at once only on their word. */
+/** How one starts from a chat: a draft the person starts, at once only on their word. */
 export const MISSION_DRAFT =
   "From a chat, `mission` makes a draft the person starts; say what it will do and how it will be judged done. Start it " +
   "at once only when the person asked for that, with their words in `said`. What other harnesses call `/goal` is a mission here.";
@@ -54,7 +54,7 @@ export const WHEN_TO_START =
   `agent in the background. ${MISSION_DRAFT}`;
 
 /**
- * Who signs a draft's result off, chosen by who is there (§2.6): a person following the work reads it sooner than a
+ * Who signs a draft's result off, chosen by who is there: a person following the work reads it sooner than a
  * reviewer's ten minutes a pass. Both wrong guesses are harmless — gone, it waits at Accept; there, the reviewer runs.
  * Said where the rule is read — the harness's TOOLS and a coding CLI's instructions — as well as here: in the
  * description alone, Nouva (live, 2026-10-31) drafted with the reviewer for a person who had just asked in the chat. And
@@ -150,7 +150,7 @@ function startFields(args: Record<string, unknown>, ctx: ToolContext): Omit<Star
   };
 }
 
-/** The agent's own draft, changed before it starts (§2.3): its fields, and its brief written again. */
+/** The agent's own draft, changed before it starts: its fields, and its brief written again. */
 async function editOwn(missions: Missions, args: Record<string, unknown>, ctx: ToolContext): Promise<ToolResult> {
   const id = text(args.id);
   const mission = id ? missions.find(id) : null;
@@ -223,7 +223,7 @@ export function createMissionTools(missions: Missions, options: { linkFor?: Link
     async execute(args, ctx) {
       if (args.action === "edit") return await editOwn(missions, args, ctx);
       if (args.action !== "start") return refused('In a chat, `mission` drafts one (action "start") or changes your draft ("edit").');
-      // A draft unless the person asked for it to run now, in words of their own in this turn (RFC MISSION_DRAFTS §2.1).
+      // A draft unless the person asked for it to run now, in words of their own in this turn.
       // A turn nobody typed — a job's end, a schedule — proposes, as it always has.
       const said = text(args.said);
       const now = args.now === true;
@@ -247,7 +247,7 @@ export function createMissionTools(missions: Missions, options: { linkFor?: Link
         ...(typeof args.brief === "string" && args.brief.trim() ? { brief: args.brief.trim() } : {}),
       };
       const { answer, mission } = await startChecked(missions, request, (id) => options.linkFor?.(ctx, { kind: "mission", id }) ?? null);
-      // Started without a draft: the words it rests on are on the record, as a person's start is (§2.1).
+      // Started without a draft: the words it rests on are on the record, as a person's start is.
       if (now && mission) options.audit?.record({ action: "mission_started", actor: `agent ${ctx.agentId}`, agentId: mission.agentId, details: { mission: mission.id, said } });
       return answer;
     },

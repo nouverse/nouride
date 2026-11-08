@@ -33,7 +33,7 @@ export interface ApprovalAsk {
   /** Instance the request came from, so the approval prompt goes back to the right bot. */
   gatewayId: string;
   senderId: string;
-  /** The turn asking — on the request's audit row, and how a restart finds the turn it takes up waiting on it (D8). */
+  /** The turn asking — on the request's audit row, and how a restart finds the turn it takes up waiting on it. */
   turnId?: string;
   tool: string;
   params: Record<string, unknown>;
@@ -66,7 +66,7 @@ export interface ApprovalAsk {
   waitMs?: number;
   /**
    * How long the question stays answerable, when not the daemon's `approval_timeout_ms` — a mission's parked call, which
-   * nobody waits on, stays open for a day (0.8.0, MISSIONS §7).
+   * nobody waits on, stays open for a day (0.8.0).
    */
   answerableMs?: number;
   /** Why a human is being asked, phrased for someone deciding in a chat. */
@@ -105,7 +105,7 @@ export interface ApprovalAsk {
 
 /**
  * Who answered a request: the id the gate records (`resolved_by`, the audit log's actor) — a sender id, a dashboard
- * account, `cli` — and, where the answer came with one, the name a person reads, which a settled prompt says (G11).
+ * account, `cli` — and, where the answer came with one, the name a person reads, which a settled prompt says.
  */
 export interface Answerer {
   id: string;
@@ -170,7 +170,7 @@ export interface ApprovalGate {
   previewOf?(id: string): ApprovalPreview | null;
   /**
    * Called on `/reset`: nothing may stay parked across it. With `chat`, only what this agent asked in that
-   * conversation — what deleting it expires (`pipeline/conversation-end.ts`). A restart keeps them (D8).
+   * conversation — what deleting it expires (`pipeline/conversation-end.ts`). A restart keeps them.
    */
   expireAll(agentId?: string, chat?: { gatewayId: string; chatId: string }): number;
 }

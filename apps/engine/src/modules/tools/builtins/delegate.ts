@@ -31,7 +31,7 @@
  * ## What it cannot do
  *
  * Speak as its parent. It writes no memory — the tools whose writes every later prompt reads, by the
- * same mark S13 holds them at — and sends nothing into the chat: what is kept and what is said is the
+ * same `keepsInPrompt` mark — and sends nothing into the chat: what is kept and what is said is the
  * parent's call, from the handoff. And it cannot delegate: its toolset has this tool removed, so the
  * tree is one level deep. Recursion here would be an unbounded fan-out of provider calls started by a
  * model, which is the shape of a bill nobody meant to run up.
@@ -104,7 +104,7 @@ export interface DelegateToolOptions {
    */
   background?: (request: SubagentRequest) => BackgroundStart;
   /**
-   * A worktree of its own for a helper that writes, inside a mission's (MISSIONS §8): where it works and the branch it
+   * A worktree of its own for a helper that writes, inside a mission's: where it works and the branch it
    * hands back — or why it cannot have one. Absent where this process runs no missions.
    */
   isolate?: (ctx: ToolContext) => Promise<{ path: string; branch: string } | { refused: string }>;

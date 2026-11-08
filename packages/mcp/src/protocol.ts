@@ -11,7 +11,7 @@ import { oneLine } from "@nouride/shared";
 /**
  * The version this host asks for: the newest it speaks, MCP 2025-06-18.
  *
- * It asked for 2024-11-05 until 0.7.13 and took whatever a server answered (G4). A server now answers with one of
+ * It asked for 2024-11-05 until 0.7.13 and took whatever a server answered. A server now answers with one of
  * `MCP_PROTOCOL_VERSIONS` or is refused — the spec has a client that cannot speak the server's version disconnect.
  */
 export const MCP_PROTOCOL_VERSION = "2025-06-18";

@@ -16,7 +16,7 @@
  * What is said about it, its fields (0.8.19: `site`, `username`, `used for`, any name), is given with the value, so a
  * token a person sent is kept with what it is for. Given alone, without `from`, the fields change and the value stays:
  * nothing is revealed, so nothing asks, except after the turn read outside content, since every later prompt reads
- * the fields (S13).
+ * the fields.
  */
 
 import { assertSecretName, envNamesFor, type TransientSecrets } from "@nouride/secrets";
@@ -57,7 +57,7 @@ export function createSecretSaveTool(options: { held: TransientSecrets; keeping:
       const name = String(args.name ?? "");
       if (args.from === undefined) {
         // Only what is said about it: nothing revealed, so nothing asks, unless this turn read outside content first,
-        // for every later prompt reads the fields (S13).
+        // for every later prompt reads the fields.
         if (ctx.untrustedRead?.length) {
           return { action: "ask", grantable: false, hardline: true, hardlineClass: "config", reason: `it changes what is said about the secret \`${name}\`, which every later prompt reads, and this turn read outside content first (${ctx.untrustedRead.join(", ")})` };
         }

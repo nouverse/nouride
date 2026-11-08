@@ -1,5 +1,5 @@
 /**
- * The guards for work nobody watches (0.8.0, SMART_AUTOMATION §2.1): a run of a scheduled job sends only to its job's
+ * The guards for work nobody watches (0.8.0): a run of a scheduled job sends only to its job's
  * chat — anything else asked first, at every level — and, once the work has read outside content, an action that sends
  * something off the machine is weighed by a model against what the work is for. It sees the goal and the action, never
  * the content, and may add a question, never remove one.

@@ -322,7 +322,7 @@ describe("a session's environment", () => {
 });
 
 /**
- * The level, not just the word "ask" (S1, 2026-10-15).
+ * The level, not just the word "ask" (2026-10-15).
  *
  * The gate always said `ask`, and the test above always passed — while at `balanced`, the default level,
  * `ToolCaller` auto-approved every one of them: `skipsApproval("balanced", undefined)` is true, and the

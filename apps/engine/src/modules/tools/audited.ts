@@ -2,7 +2,7 @@
  * Every tool call written down: who ran what, with which arguments, whether it failed, how long it took (§17.2 item 1).
  *
  * One wrapper for every tool the daemon runs — the built-ins the registry makes (`createBuiltinTools`) and the tools an
- * agent's MCP servers offer (`McpManager`), which went unrecorded until 0.7.4 (S10): an issue opened on GitHub through
+ * agent's MCP servers offer (`McpManager`), which went unrecorded until 0.7.4: an issue opened on GitHub through
  * a server left no row saying who asked for it.
  *
  * The row is the audit table's, written as the call returns. What it says rides back on the result
@@ -57,7 +57,7 @@ export function auditableArgs(args: Record<string, unknown>): Record<string, unk
 
 /**
  * `tool`, recording each call as a `tool_exec` row — a result and a throw alike, with the turn's id so its calls can be
- * read by it (D2), and the names of any secrets a command was handed (S6), never a value.
+ * read by it, and the names of any secrets a command was handed, never a value.
  *
  * A throw is answered here as the error result the model is told — sanitized, the detail in the log — rather than
  * rethrown, so its audit row reaches the stream like any other. The executor's own catch stays, for a tool this did

@@ -1,5 +1,5 @@
 /**
- * Who may answer an approval from a chat (S8). In a room, the person whose message asked, or an admin — anyone else
+ * Who may answer an approval from a chat. In a room, the person whose message asked, or an admin — anyone else
  * admitted there could otherwise approve another person's risky command, mint a standing grant for it, or sweep the
  * room's queue with `/approve all`. In a DM nobody else is there. The CLI and the dashboard are the operator's, and
  * answer anything; that is not decided here.

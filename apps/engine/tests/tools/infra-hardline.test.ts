@@ -4,8 +4,8 @@
  * The gap was visible the moment an agent was pointed at a Terraform repository: nothing classified
  * it, so a scheduled turn would have rebuilt a homelab with nobody watching. Until 0.8.0 every change
  * was on the list — `apply`, `scale`, `pct stop` — and asked every time, which is the work an agent is
- * given a repository or a cluster for. The fixed list keeps what does not come back (SIMPLIFY RFC §1,
- * item 7); `careful` still asks the rest once, as any new command.
+ * given a repository or a cluster for. The fixed list keeps what does not come back;
+ * `careful` still asks the rest once, as any new command.
  *
  * On the list rather than an ordinary approval, for the property that defines it: the answer can never
  * become a standing grant. "Allow always" for `terraform destroy` is not a permission anybody means to give.

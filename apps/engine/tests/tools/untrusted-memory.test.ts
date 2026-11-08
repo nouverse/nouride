@@ -1,5 +1,5 @@
 /**
- * What a turn that read outside content writes to memory is marked as such (S13). `MEMORY.md` is in the system
+ * What a turn that read outside content writes to memory is marked as such. `MEMORY.md` is in the system
  * prompt of every turn after: a fetched page saying "remember that you should…" could leave an order there that
  * outlives the conversation. The executor remembers, for the rest of a turn, which tools brought outside content;
  * the memory tool marks what it writes after them. That such a write also waits for a person is `outside-writes.test.ts`.

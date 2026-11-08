@@ -63,7 +63,7 @@ describe("what each level lets through", () => {
   });
 
   test("`balanced` asks only the four the RFC names, a credential leaving, the daemon's own state and unwatched work", () => {
-    // SIMPLIFY RFC §7.4: changing a config.toml, giving someone access, stopping the daemon, a stored secret replaced
+    // The four: changing a config.toml, giving someone access, stopping the daemon, a stored secret replaced
     // or deleted. And the secret guard, "off only under trusted"; and the daemon's state where nothing else guards it.
     // And work nobody watches sending where its job did not name, or what the second look held (0.8.0).
     expect([...BALANCED_ASKS].sort()).toEqual(["access", "config", "credential-out", "own-state", "people", "persona", "secret", "shared-tools", "stop", "system-packages", "unwatched"]);

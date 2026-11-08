@@ -1,5 +1,5 @@
 /**
- * A quiet peer is asked whether it is still there (G13).
+ * A quiet peer is asked whether it is still there.
  *
  * The legacy SSE stream sits silent between calls by design, so one dropped by a NAT or a proxy without a word was
  * noticed only when a call's answer never came back on it: that call waited out its timeout, the transport was never

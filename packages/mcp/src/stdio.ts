@@ -50,7 +50,7 @@ const CLOSE_WAITS: CloseWaits = { input: 2_000, term: 3_000, kill: 2_000 };
 /**
  * Inherited so the child can be found and can locate its own config. Nothing else carries over.
  *
- * Not `SSH_AUTH_SOCK`, since 0.7.9 (S11): the socket signs with every key the ssh-agent holds, for whoever asks, and
+ * Not `SSH_AUTH_SOCK`, since 0.7.9: the socket signs with every key the ssh-agent holds, for whoever asks, and
  * every server of every agent got it. The engine puts it in `env` for the servers of an agent that asked for it.
  */
 const INHERITED_ENV = ["PATH", "HOME", "LANG", "LC_ALL", "TMPDIR"];

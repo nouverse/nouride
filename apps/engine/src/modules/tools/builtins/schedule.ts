@@ -1,5 +1,5 @@
 /**
- * `schedule` — work that runs later, proposed (0.8.0, SMART_AUTOMATION §2). The agent writes the job whole; a person
+ * `schedule` — work that runs later, proposed (0.8.0). The agent writes the job whole; a person
  * turns it on from its card (`cron/proposals.ts`). Nothing runs until they do, and the agent has no way to turn one
  * on, widen it, or change one that runs — a change is a new proposal naming the job it replaces.
  *
@@ -146,7 +146,7 @@ export function createScheduleTool(options: ScheduleToolOptions): Tool {
       const payload = payloadOf(args);
       if (typeof payload === "string") return { content: payload, isError: true };
       // Each run is started as the person who turned the job on, so a run's start does not read the brief its goal
-      // points at, as an agent's own start does (D6): it is read here, while the agent that wrote it is here to fix it.
+      // points at, as an agent's own start does: it is read here, while the agent that wrote it is here to fix it.
       if (payload.kind === "mission" && options.readBrief) {
         for (const path of briefFilesOf(payload.goal)) {
           const text = options.readBrief(path);

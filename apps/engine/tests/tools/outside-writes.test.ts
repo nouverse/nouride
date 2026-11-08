@@ -1,6 +1,6 @@
 /**
  * A write every later prompt reads, made after outside content, waits for a person — and a turn whose own prompt is
- * outside content counts as having read it (S13, the half 0.7.9 left: it marked such writes, and wrote them anyway).
+ * outside content counts as having read it (the half 0.7.9 left: it marked such writes, and wrote them anyway).
  *
  * `MEMORY.md` and a person's notes are in every prompt after: a page, a forwarded message or a webhook's payload saying
  * "remember that you should…" could leave an order there that outlives the conversation it came in.

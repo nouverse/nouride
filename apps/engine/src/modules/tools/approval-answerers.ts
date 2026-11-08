@@ -1,6 +1,6 @@
 /**
- * Who may answer an approval from a chat (S8) — one rule for `/approve`, `/deny`, `/approve all`, the `/approvals balanced`
- * drain and a press on the prompt's buttons (G11), so a button cannot answer what the command would not.
+ * Who may answer an approval from a chat — one rule for `/approve`, `/deny`, `/approve all`, the `/approvals balanced`
+ * drain and a press on the prompt's buttons, so a button cannot answer what the command would not.
  *
  * In a one-to-one chat, the person in it: nobody else is there. In a room, the person whose message asked, or an admin
  * by People: anyone else admitted to a room could otherwise approve another person's risky command, or mint a standing
@@ -12,7 +12,7 @@
  * paired to it — is not their owner. So
  * is a change to who People says a person is (`people`, 0.8.9): an admin is a person there, and whoever answers it could
  * otherwise make their own chat an admin's. And a program installed for every agent (`shared-tools`, 0.8.9): its install
- * scripts run as the daemon's user, which reaches People, every pack and the secret store (Nox's review, N7). And this
+ * scripts run as the daemon's user, which reaches People, every pack and the secret store. And this
  * machine's packages (`system-packages`, 0.8.15): changed as root.
  */
 

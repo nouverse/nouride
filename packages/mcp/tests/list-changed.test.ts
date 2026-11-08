@@ -1,6 +1,6 @@
 /**
  * A server that says its tools changed, against real servers — a child process over stdio, a socket over Streamable
- * HTTP (G4).
+ * HTTP.
  *
  * Every notification was dropped until 0.7.13, so an agent kept the tools its server had at connect until a reload. Now
  * a `tools/list_changed` from a server that declared `tools.listChanged` lists the tools again — once for a burst — and

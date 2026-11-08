@@ -22,8 +22,8 @@
  * grant made while it was loose — the test table caught it, which is the argument for a table.
  *
  * Until 0.8.0 four knobs sat in this order too — `mode`, `ask`, `ask_fallback`, `sensitive_paths` — each a guess at
- * which command is dangerous, and the owner's own box ran with all of them open. The levels and the fixed list say the
- * same things once (SIMPLIFY RFC §1); where each agent runs as its own user, the operating system says the rest.
+ * which command is dangerous, and the project's own box ran with all of them open. The levels and the fixed list say the
+ * same things once; where each agent runs as its own user, the operating system says the rest.
  */
 
 import { classifyHardline, classifyOwnState, credentialPath } from "./hardline.ts";
