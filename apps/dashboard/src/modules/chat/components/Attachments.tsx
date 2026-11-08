@@ -22,7 +22,7 @@ import { api, type TurnAttachment } from "@/commons/lib/api";
 import { fileIconFor } from "@/commons/components/ui/FileDrop";
 import { isMarkdownFile, MarkdownPreview } from "@/commons/components/ui/MarkdownPreview";
 import { formatBytes } from "@/commons/lib/format";
-import { overPage } from "@/commons/components/ui/OverPage";
+import { Leaving, overPage } from "@/commons/components/ui/OverPage";
 
 function isImage(file: TurnAttachment): boolean {
   return file.mimeType.startsWith("image/") || file.kind === "image";
@@ -68,14 +68,14 @@ function Lightbox({ src, name, onClose }: { src: string; name: string; onClose: 
 
   return overPage(
     <div
-      className="fixed inset-0 z-50 grid place-items-center bg-black/80 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 grid place-items-center bg-black/80 backdrop-blur-sm p-4 animate-fade"
       role="dialog"
       aria-label={name}
     >
       {/* The backdrop is the close button, which is what everybody tries first. */}
       <button type="button" className="absolute inset-0 cursor-zoom-out" onClick={onClose} aria-label="Close" />
 
-      <div className="relative z-10 max-w-[92vw] max-h-[88vh] flex flex-col items-center gap-2">
+      <div className="relative z-10 max-w-[92vw] max-h-[88vh] flex flex-col items-center gap-2 animate-enter">
         <img
           src={src}
           alt={name}
@@ -280,8 +280,8 @@ export function AttachmentList({
         })}
       </div>
 
-      {open && <Lightbox src={open.src} name={open.name} onClose={() => setOpen(null)} />}
-      {reading && <MarkdownPreview name={reading.name} url={reading.src} onClose={() => setReading(null)} />}
+      <Leaving value={open}>{(image) => <Lightbox src={image.src} name={image.name} onClose={() => setOpen(null)} />}</Leaving>
+      <Leaving value={reading}>{(file) => <MarkdownPreview name={file.name} url={file.src} onClose={() => setReading(null)} />}</Leaving>
     </>
   );
 }

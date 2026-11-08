@@ -44,6 +44,7 @@ import {
 } from "react";
 import { CircleAlert, CircleCheck, Info, TriangleAlert, X } from "lucide-react";
 import { failureWords } from "@/commons/lib/api.client";
+import { LEAVE_MS } from "@/commons/lib/motion";
 
 export type ToastKind = "success" | "error" | "warning" | "info";
 
@@ -76,6 +77,8 @@ export interface ToastRequest {
 
 interface Toast extends ToastRequest {
   id: number;
+  /** Dismissed, and still drawn while it goes (`LEAVE_MS`): taken off the screen at once, it read as never there. */
+  leaving?: boolean;
 }
 
 /** How long each kind lingers. `0` for errors: an error that vanishes is an error reported to nobody. */
@@ -144,11 +147,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const dismiss = useCallback((id: number) => {
     const timer = timers.current.get(id);
-    if (timer) {
-      clearTimeout(timer);
-      timers.current.delete(id);
-    }
-    setToasts((current) => current.filter((toast) => toast.id !== id));
+    if (timer) clearTimeout(timer);
+    setToasts((current) => current.map((toast) => (toast.id === id ? { ...toast, leaving: true } : toast)));
+    timers.current.set(
+      id,
+      setTimeout(() => {
+        timers.current.delete(id);
+        setToasts((current) => current.filter((toast) => toast.id !== id));
+      }, LEAVE_MS),
+    );
   }, []);
 
   const show = useCallback(
@@ -225,7 +232,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             <div
               key={toast.id}
               role="status"
-              className={`alert ${ALERT_CLASS[kind]} pointer-events-auto flex items-start gap-2.5 rounded-2xl py-2.5 pr-2.5 shadow-lg`}
+              // In as it is raised, and out as it is dismissed or its time is up; a leaving one takes no click.
+              className={`alert ${ALERT_CLASS[kind]} flex items-start gap-2.5 rounded-2xl py-2.5 pr-2.5 shadow-lg ${
+                toast.leaving ? "pointer-events-none animate-leave" : "pointer-events-auto animate-enter"
+              }`}
             >
               <Icon size={16} className="mt-0.5 shrink-0" />
               <div className="min-w-0 flex-1 leading-snug">

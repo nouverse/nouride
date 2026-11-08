@@ -31,7 +31,7 @@ import { EpisodeView } from "./episode-view";
 import { FactList, factsOf } from "./facts";
 import { useNames } from "./names";
 import { useSaved } from "@/commons/hooks/use-saved";
-import { overPage } from "@/commons/components/ui/OverPage";
+import { Leaving, overPage } from "@/commons/components/ui/OverPage";
 import { DocumentDialog, type OpenDocument } from "./knowledge/document.dialog";
 import { DocumentsAbout } from "./knowledge/documents-about";
 
@@ -284,11 +284,11 @@ export function PeopleTab({ editable, admin }: { editable: boolean; admin: boole
         </div>
       ) : null}
 
-      {editing ? <DocumentEditor subject={editing.subject} title={editing.title} editable={editable} onClose={() => setEditing(null)} /> : null}
-      {notesOf ? <PersonNotes person={notesOf} editable={admin} onClose={() => setNotesOf(null)} /> : null}
-      {forgetting ? <ForgetDialog person={forgetting} onClose={() => setForgetting(null)} /> : null}
-      {episode ? <EpisodeView id={episode} editable={editable} nameOf={nameOf} onOpen={setEpisode} onClose={() => setEpisode(null)} /> : null}
-      {reading ? <DocumentDialog at={reading} onOpen={setReading} onClose={() => setReading(null)} /> : null}
+      <Leaving value={editing}>{(document) => <DocumentEditor subject={document.subject} title={document.title} editable={editable} onClose={() => setEditing(null)} />}</Leaving>
+      <Leaving value={notesOf}>{(person) => <PersonNotes person={person} editable={admin} onClose={() => setNotesOf(null)} />}</Leaving>
+      <Leaving value={forgetting}>{(person) => <ForgetDialog person={person} onClose={() => setForgetting(null)} />}</Leaving>
+      <Leaving value={episode}>{(id) => <EpisodeView id={id} editable={editable} nameOf={nameOf} onOpen={setEpisode} onClose={() => setEpisode(null)} />}</Leaving>
+      <Leaving value={reading}>{(at) => <DocumentDialog at={at} onOpen={setReading} onClose={() => setReading(null)} />}</Leaving>
     </div>
   );
 }

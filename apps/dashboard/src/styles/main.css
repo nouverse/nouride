@@ -75,12 +75,33 @@
      tailwindcss-animate, written here rather than added as a package. Nothing else moves, so a phone and a small box draw
      it without laying the page out again: nothing animates a width, a height or a place on the page.
      - `fade`: a page, a tab's panel or a section of a page, as it is drawn.
+     - `enter`: what opens or appears — a dialog's box, a toast.
+     - `leave`: the same going, held at its end until it is taken away. From a whole box, not from what it rests at:
+       a confirmation's box rests hidden once its dialog has closed, and would fade from nothing.
      Every one is cut to nothing by the reduced-motion rule below (`tests/reduced-motion.test.ts`). */
   --animate-fade: fade 200ms ease-out;
+  --animate-enter: enter 200ms ease-out;
+  --animate-leave: leave 150ms ease-out forwards;
 
   @keyframes fade {
     from {
       opacity: 0;
+    }
+  }
+  @keyframes enter {
+    from {
+      opacity: 0;
+      scale: 0.96;
+    }
+  }
+  @keyframes leave {
+    from {
+      opacity: 1;
+      scale: 1;
+    }
+    to {
+      opacity: 0;
+      scale: 0.96;
     }
   }
 }
@@ -183,6 +204,31 @@
    whichever `status-*` the dot wears. */
 @utility halo {
   box-shadow: 0 0 0 3px color-mix(in oklab, currentColor 22%, transparent);
+}
+
+/* ── Dialogs: the box grows in as one opens, and goes back as it closes ───────────────────────────
+   daisyUI moves a dialog's box with transitions of its own, over 0.3 s, and a running transition wins over an
+   animation; the box's opacity and scale are the keyframes above instead, for both kinds of dialog here. One opened with
+   `showModal()` (a confirmation) closes in place: daisyUI keeps it drawn until its shade has faded, in 200 ms here as
+   the rest. One drawn open (`modal-open`), or a picture opened over the chat, is gone when its page stops drawing it, so
+   the page draws it through `Leaving`, which keeps it a moment, and `overPage`'s frame says it is leaving
+   (`data-leaving`): the box goes, the shade under it fades. Unlayered, so it wins over daisyUI's layer. */
+.modal {
+  transition-duration: 200ms;
+}
+.modal-box {
+  transition-property: box-shadow;
+}
+.modal[open] > .modal-box,
+.modal-open > .modal-box {
+  animation: var(--animate-enter);
+}
+.modal:not([open], .modal-open) > .modal-box,
+[data-leaving] > .modal > .modal-box {
+  animation: var(--animate-leave);
+}
+[data-leaving] > * {
+  animation: var(--animate-fade) reverse forwards;
 }
 
 /* ── Less motion, for whoever asked their system for it ───────────────────────────────────────────

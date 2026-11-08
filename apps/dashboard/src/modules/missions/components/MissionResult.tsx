@@ -10,6 +10,7 @@ import { Markdown } from "@/commons/components/ui/Markdown";
 import { MarkdownPreview } from "@/commons/components/ui/MarkdownPreview";
 import { cn } from "@/commons/lib/utils";
 import { inFolder } from "../lib/mission";
+import { Leaving } from "@/commons/components/ui/OverPage";
 
 export function MissionResult({ report, files, workdir }: { report: string | null; files: string[]; workdir: string }) {
   const [open, setOpen] = useState(false);
@@ -50,7 +51,7 @@ export function MissionResult({ report, files, workdir }: { report: string | nul
           )}
         </div>
       )}
-      {report && reading && <MarkdownPreview name="report.md" source={report} onClose={() => setReading(false)} />}
+      <Leaving value={reading && report}>{(source) => <MarkdownPreview name="report.md" source={source} onClose={() => setReading(false)} />}</Leaving>
       {files.length > 0 && (
         <ul className="flex flex-wrap gap-1.5">
           {files.map((file) => (

@@ -90,11 +90,12 @@ export function useConfirm(): Confirmation {
     if (request) ref.current?.showModal();
   }, [request]);
 
+  // The question stays drawn once answered, so its box is seen to close (`main.css`, "Dialogs") rather than emptied
+  // under the closing dialog; the next `ask` replaces it.
   const settle = useCallback((answer: boolean) => {
     resolve.current?.(answer);
     resolve.current = null;
     ref.current?.close();
-    setRequest(null);
   }, []);
 
   const danger = request?.danger !== false;

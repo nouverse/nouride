@@ -112,8 +112,9 @@ describe("an agent's project folders", () => {
   test("removed only after the question: Cancel sends nothing, Remove sends the folder", async () => {
     const served = serve();
     const host = await mount();
-    // The question's own buttons: the dialog's backdrop holds a hidden one named Cancel too.
-    const answer = (label: string) => [...host.querySelectorAll(".modal-box button")].find((one) => one.textContent?.trim() === label) as HTMLButtonElement | undefined;
+    // The open question's own buttons: the dialog's backdrop holds a hidden one named Cancel too, and one answered keeps
+    // its words while it closes.
+    const answer = (label: string) => [...host.querySelectorAll("dialog[open] .modal-box button")].find((one) => one.textContent?.trim() === label) as HTMLButtonElement | undefined;
     button(host, "Remove /srv/projects/home-app")!.click();
     await eventually(() => answer("Cancel") !== undefined, 2_000, "the question");
     expect(host.querySelector(".modal-box")?.textContent).toContain("nova stops reading the skills in /srv/projects/home-app from its next message.");

@@ -1108,8 +1108,9 @@ describe("agents: orchestrator first, presets, and tools", () => {
         if ((init as RequestInit | undefined)?.method === "DELETE") deletes.push(url);
         return (spy as typeof fetch)(input as RequestInfo, init as RequestInit);
       }) as typeof fetch;
-      // Every page has dialogs of its own (signing out asks too); the open one is the only one with a question in it.
-      const dialogs = () => [...document.querySelectorAll("dialog")].map((d) => d.textContent ?? "").join(" ");
+      // Every page has dialogs of its own (signing out asks too), and one answered keeps its words while it closes: the
+      // question asked is the one in the open dialog.
+      const dialogs = () => [...document.querySelectorAll("dialog[open]")].map((d) => d.textContent ?? "").join(" ");
       // The row's Delete, not the dialog's: both read "Delete" once the question is open.
       const rowDelete = () => [...host.querySelectorAll("button")].find((b) => b.textContent?.trim() === "Delete" && !b.closest("dialog")) as HTMLButtonElement;
       const answer = (label: string) => ([...document.querySelectorAll("dialog button")].find((b) => b.textContent?.trim() === label) as HTMLButtonElement).click();

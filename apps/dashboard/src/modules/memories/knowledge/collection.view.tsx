@@ -24,6 +24,7 @@ import type { KnowledgeNames } from "./names";
 import { PendingList } from "./pending";
 import { countsLine } from "./words";
 import { WriteDialog } from "./write.dialog";
+import { Leaving } from "@/commons/components/ui/OverPage";
 
 export function CollectionView({
   collection,
@@ -165,8 +166,8 @@ export function CollectionView({
         </Card>
       </section>
 
-      {writing ? <WriteDialog collection={collection} onClose={() => setWriting(false)} /> : null}
-      {editing ? <CollectionForm collection={collection} names={names} admin={admin} onClose={() => setEditing(false)} /> : null}
+      <Leaving value={writing}>{() => <WriteDialog collection={collection} onClose={() => setWriting(false)} />}</Leaving>
+      <Leaving value={editing}>{() => <CollectionForm collection={collection} names={names} admin={admin} onClose={() => setEditing(false)} />}</Leaving>
       {confirm.dialog}
     </div>
   );

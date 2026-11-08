@@ -18,6 +18,7 @@ import { EmptyState, ErrorNote } from "@/commons/components/ui/ui";
 import { ScrollCard } from "@/commons/components/ui/ScrollCard";
 import { EpisodeView } from "./episode-view";
 import { useNames } from "./names";
+import { Leaving } from "@/commons/components/ui/OverPage";
 
 const WHY: Record<Proposal["why"], string> = {
   shared: "Shared knowledge: every agent reads it, in every chat",
@@ -96,7 +97,7 @@ export function ProposalsTab({ editable }: { editable: boolean }) {
           </ul>
         </ScrollCard>
       ) : null}
-      {episode ? <EpisodeView id={episode} editable={editable} nameOf={nameOf} onOpen={setEpisode} onClose={() => setEpisode(null)} /> : null}
+      <Leaving value={episode}>{(id) => <EpisodeView id={id} editable={editable} nameOf={nameOf} onOpen={setEpisode} onClose={() => setEpisode(null)} />}</Leaving>
     </div>
   );
 }

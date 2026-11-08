@@ -80,14 +80,16 @@ test("one waiting on its question is accepted as it is: asked first — cancelle
   await renderPage("/missions/msn_1", async (host) => {
     await eventually(() => buttons(host).includes("Accept as it is"), 2_000, "accept as it is");
     const record = recordPosts();
+    // What the open confirmation offers: one answered keeps its words while it closes.
+    const asked = () => [...host.querySelectorAll("dialog[open] button")].map((button) => button.textContent?.trim() ?? "");
     // Cancelled: nothing is sent.
     press(host, "Accept as it is");
-    await eventually(() => buttons(host).includes("Accept it"), 2_000, "the confirmation");
+    await eventually(() => asked().includes("Accept it"), 2_000, "the confirmation");
     press(host, "Cancel");
-    await eventually(() => !buttons(host).includes("Accept it"), 2_000, "the confirmation closed");
+    await eventually(() => !asked().includes("Accept it"), 2_000, "the confirmation closed");
     afterCancel = record.posts.length;
     press(host, "Accept as it is");
-    await eventually(() => buttons(host).includes("Accept it"), 2_000, "the confirmation again");
+    await eventually(() => asked().includes("Accept it"), 2_000, "the confirmation again");
     beforeConfirm = record.posts.length;
     press(host, "Accept it");
     await eventually(() => record.posts.length > 0, 2_000, "the accept");

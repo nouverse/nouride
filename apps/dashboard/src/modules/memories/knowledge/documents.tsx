@@ -20,6 +20,7 @@ import { Details } from "@/commons/components/ui/Details";
 import { useToast } from "@/commons/components/ui/toast";
 import { TitleDialog } from "./title.dialog";
 import { addedLine, installMessage, statusOf } from "./words";
+import { Leaving } from "@/commons/components/ui/OverPage";
 
 const TONE = { ready: "badge-success", reading: "badge-info", "not-read": "badge-warning" } as const;
 
@@ -102,7 +103,7 @@ function DocumentRow({ collection, document, editable, onOpen }: { collection: K
         </button>
       ) : null}
       {confirm.dialog}
-      {titling ? <TitleDialog collection={collection} document={document} onClose={() => setTitling(false)} /> : null}
+      <Leaving value={titling}>{() => <TitleDialog collection={collection} document={document} onClose={() => setTitling(false)} />}</Leaving>
     </li>
   );
 }

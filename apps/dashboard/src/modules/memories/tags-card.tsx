@@ -18,7 +18,7 @@ import type { TagTidyChange } from "@/commons/lib/api.memory";
 import { useConfirm } from "@/commons/components/ui/confirm";
 import { useToast } from "@/commons/components/ui/toast";
 import { ErrorNote } from "@/commons/components/ui/ui";
-import { overPage } from "@/commons/components/ui/OverPage";
+import { Leaving, overPage } from "@/commons/components/ui/OverPage";
 
 /** How long the last tidy stays offered for Undo on the card. `nouride memory tags undo` has no limit. */
 const UNDO_DAYS = 7;
@@ -57,7 +57,7 @@ export function TidyTagsButton() {
       <button type="button" className="btn btn-ghost btn-sm gap-1 rounded-xl" disabled={!plan.data} onClick={() => setOpen(true)}>
         <Tags size={14} /> Tidy tags
       </button>
-      {open && plan.data ? <ReviewDialog changes={plan.data.changes} onClose={() => setOpen(false)} onDone={refresh} /> : null}
+      <Leaving value={open && plan.data?.changes}>{(changes) => <ReviewDialog changes={changes} onClose={() => setOpen(false)} onDone={refresh} />}</Leaving>
     </>
   );
 }
@@ -145,7 +145,7 @@ export function TagsCard() {
         </div>
       ) : null}
 
-      {open && plan.data ? <ReviewDialog changes={changes} onClose={() => setOpen(false)} onDone={refresh} /> : null}
+      <Leaving value={open && plan.data ? changes : null}>{(shown) => <ReviewDialog changes={shown} onClose={() => setOpen(false)} onDone={refresh} />}</Leaving>
       {confirm.dialog}
     </div>
   );

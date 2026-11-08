@@ -96,3 +96,21 @@ describe("a tab", () => {
     expect(seen).toEqual({ anew: true, fades: true, headerKept: true });
   });
 });
+
+describe("the chat's drawers", () => {
+  test("slide over a shade that is always there: faded out and out of reach until one opens, then faded in", async () => {
+    let seen = { closed: [] as string[], open: [] as string[], kept: false };
+    await renderPage("/chat", async (host) => {
+      const shade = () => host.querySelector('button[aria-label="Close drawer"]');
+      await eventually(() => shade() !== null, 4_000, "the shade");
+      const before = shade();
+      const closed = before!.className.split(/\s+/);
+      (host.querySelector('button[aria-label^="History"]') as HTMLElement).click();
+      await eventually(() => shade()!.className.split(/\s+/).includes("opacity-100"), 2_000, "the shade to show");
+      seen = { closed, open: shade()!.className.split(/\s+/), kept: shade() === before };
+    });
+    expect(seen.closed).toEqual(expect.arrayContaining(["invisible", "opacity-0", "transition-[opacity,visibility]"]));
+    expect(seen.open).toEqual(expect.arrayContaining(["visible", "opacity-100"]));
+    expect(seen.kept).toBe(true);
+  });
+});

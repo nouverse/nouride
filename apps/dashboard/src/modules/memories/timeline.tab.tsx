@@ -30,6 +30,7 @@ import {
 } from "./timeline-date";
 import { PassCard } from "./pass.card";
 import { TranscriptsCard } from "./transcripts.card";
+import { Leaving } from "@/commons/components/ui/OverPage";
 
 const LABEL = "text-base-content/85 text-xs font-semibold uppercase tracking-wider font-mono";
 
@@ -238,7 +239,7 @@ export function TimelineTab({ editable }: { editable: boolean }) {
         </ScrollCard>
       ) : null}
 
-      {open ? <EpisodeView id={open} editable={editable} nameOf={nameOf} onOpen={setOpen} onClose={() => setOpen(null)} /> : null}
+      <Leaving value={open}>{(id) => <EpisodeView id={id} editable={editable} nameOf={nameOf} onOpen={setOpen} onClose={() => setOpen(null)} />}</Leaving>
     </div>
   );
 }

@@ -18,6 +18,7 @@ import { EpisodeView } from "./episode-view";
 import { FactList, factsOf } from "./facts";
 import { useNames } from "./names";
 import { useSaved } from "@/commons/hooks/use-saved";
+import { Leaving } from "@/commons/components/ui/OverPage";
 
 /** `[memory] propose_shared`, saved at once. */
 function ProposeShared({ editable }: { editable: boolean }) {
@@ -76,8 +77,8 @@ export function SharedTab({ editable }: { editable: boolean }) {
           <p className="text-base-content/65 text-sm">Nothing yet. Add it with Edit, or turn on suggestions above and approve what the nightly pass proposes.</p>
         )}
       </Card>
-      {editing ? <DocumentEditor subject="shared" title="Shared knowledge" editable={editable} onClose={() => setEditing(false)} /> : null}
-      {episode ? <EpisodeView id={episode} editable={editable} nameOf={nameOf} onOpen={setEpisode} onClose={() => setEpisode(null)} /> : null}
+      <Leaving value={editing}>{() => <DocumentEditor subject="shared" title="Shared knowledge" editable={editable} onClose={() => setEditing(false)} />}</Leaving>
+      <Leaving value={episode}>{(id) => <EpisodeView id={id} editable={editable} nameOf={nameOf} onOpen={setEpisode} onClose={() => setEpisode(null)} />}</Leaving>
     </div>
   );
 }

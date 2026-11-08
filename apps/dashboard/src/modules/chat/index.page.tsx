@@ -459,17 +459,19 @@ export default function ChatPage(
           />
         ) : null}
 
-        {(historyOpen || notesOpen) && (
-          <button
-            type="button"
-            className="absolute inset-0 bg-black/30 backdrop-blur-xs z-20 transition-opacity"
-            onClick={() => {
-              setHistoryOpen(false);
-              closeNotes();
-            }}
-            aria-label="Close drawer"
-          />
-        )}
+        {/* Always there, so it fades as the drawers slide: drawn only while one was open, it came and went at once.
+            Hidden once faded (`invisible`), it takes no click and no focus. */}
+        <button
+          type="button"
+          className={`absolute inset-0 bg-black/30 backdrop-blur-xs z-20 transition-[opacity,visibility] duration-200 ease-out ${
+            historyOpen || notesOpen ? "visible opacity-100" : "invisible opacity-0"
+          }`}
+          onClick={() => {
+            setHistoryOpen(false);
+            closeNotes();
+          }}
+          aria-label="Close drawer"
+        />
 
         <div className="relative flex-1 min-h-0 flex flex-col h-full overflow-hidden" {...drop.handlers}>
           {/* Anywhere in the conversation, not just over the input: a file being dragged is aimed at

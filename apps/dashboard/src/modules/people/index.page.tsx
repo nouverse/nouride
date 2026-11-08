@@ -25,6 +25,7 @@ import { keyProblem, suggestKey, typedKey } from "@/commons/lib/person-key";
 import { useConfirm } from "@/commons/components/ui/confirm";
 import { useToast } from "@/commons/components/ui/toast";
 import { useSaved } from "@/commons/hooks/use-saved";
+import { Leaving } from "@/commons/components/ui/OverPage";
 
 export default function PeoplePage() {
   const queryClient = useQueryClient();
@@ -104,7 +105,7 @@ export default function PeoplePage() {
         </ScrollCard>
       )}
 
-      {notesOf ? <PersonNotes person={notesOf} editable={isAdmin(me.data ?? null)} onClose={() => setNotesOf(null)} /> : null}
+      <Leaving value={notesOf}>{(person) => <PersonNotes person={person} editable={isAdmin(me.data ?? null)} onClose={() => setNotesOf(null)} />}</Leaving>
     </div>
   );
 }

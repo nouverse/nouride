@@ -16,6 +16,7 @@ import { NotesModal } from "@/commons/components/ui/NotesModal";
 import { EmptyState, ErrorNote } from "@/commons/components/ui/ui";
 import { ScrollCard } from "@/commons/components/ui/ScrollCard";
 import { OrchestratorBadge, useOrchestrator, useOrchestratorFirst } from "@/commons/components/ui/AgentName";
+import { Leaving } from "@/commons/components/ui/OverPage";
 
 function NoteView({ id, editable, onClose }: { id: string; editable: boolean; onClose: () => void }) {
   const queryClient = useQueryClient();
@@ -74,7 +75,7 @@ export function NotesTab({ editable }: { editable: boolean }) {
           </ul>
         )}
       </ScrollCard>
-      {open ? <NoteView id={open} editable={editable} onClose={() => setOpen(null)} /> : null}
+      <Leaving value={open}>{(id) => <NoteView id={id} editable={editable} onClose={() => setOpen(null)} />}</Leaving>
     </div>
   );
 }

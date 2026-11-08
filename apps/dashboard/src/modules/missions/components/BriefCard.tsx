@@ -9,6 +9,7 @@ import { FileText } from "lucide-react";
 import { Card } from "@/commons/components/ui/ui";
 import { Markdown } from "@/commons/components/ui/Markdown";
 import { MarkdownPreview } from "@/commons/components/ui/MarkdownPreview";
+import { Leaving } from "@/commons/components/ui/OverPage";
 
 export function BriefCard({ brief, shown }: { brief: string; shown: { name: string; said: string } }) {
   const [open, setOpen] = useState(false);
@@ -30,7 +31,7 @@ export function BriefCard({ brief, shown }: { brief: string; shown: { name: stri
         </div>
       </Card>
       {/* Outside the card's body: folded, the body is not there, and the file still opens from the header. */}
-      {reading && <MarkdownPreview name={shown.name} source={brief} onClose={() => setReading(false)} />}
+      <Leaving value={reading}>{() => <MarkdownPreview name={shown.name} source={brief} onClose={() => setReading(false)} />}</Leaving>
     </>
   );
 }

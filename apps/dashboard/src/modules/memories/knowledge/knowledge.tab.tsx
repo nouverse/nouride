@@ -17,6 +17,7 @@ import { useKnowledgeNames } from "./names";
 import { KnowledgeSearch } from "./search";
 import { useUploads } from "./uploads";
 import { CardGrid } from "@/commons/components/ui/CardGrid";
+import { Leaving } from "@/commons/components/ui/OverPage";
 
 export function KnowledgeTab({ editable, admin }: { editable: boolean; admin: boolean }) {
   const collections = useQuery({ queryKey: ["knowledge"], queryFn: api.knowledge });
@@ -83,8 +84,8 @@ export function KnowledgeTab({ editable, admin }: { editable: boolean; admin: bo
           ) : null}
         </>
       )}
-      {making ? <CollectionForm names={names} admin={admin} onClose={() => setMaking(false)} onSaved={setOpen} /> : null}
-      {reading ? <DocumentDialog at={reading} onOpen={setReading} onClose={() => setReading(null)} /> : null}
+      <Leaving value={making}>{() => <CollectionForm names={names} admin={admin} onClose={() => setMaking(false)} onSaved={setOpen} />}</Leaving>
+      <Leaving value={reading}>{(at) => <DocumentDialog at={at} onOpen={setReading} onClose={() => setReading(null)} />}</Leaving>
     </div>
   );
 }

@@ -27,6 +27,7 @@ import { MultiSelect } from "./multi-select";
 import { KIND_LABEL, usePalette } from "./palette";
 import { documentAt, keyOf, Panel } from "./panel";
 import { DEFAULT_LIMIT, DEFAULT_RANGE, LIMITS, RANGES, toFilter, type GraphSearch } from "./search";
+import { Leaving } from "@/commons/components/ui/OverPage";
 
 const KINDS: GraphNodeKind[] = ["episode", "person", "tag", "agent", "collection", "document"];
 /** The knowledge layer's kinds: in the legend while it is on. */
@@ -258,8 +259,8 @@ export default function MemoryGraphPage({ search, onSearch }: { search: GraphSea
         </>
       ) : null}
 
-      {reading ? <EpisodeView id={reading} editable={operator} nameOf={nameOf} onOpen={setReading} onClose={() => setReading(null)} /> : null}
-      {opened ? <DocumentDialog at={opened} onOpen={setOpened} onClose={() => setOpened(null)} /> : null}
+      <Leaving value={reading}>{(id) => <EpisodeView id={id} editable={operator} nameOf={nameOf} onOpen={setReading} onClose={() => setReading(null)} />}</Leaving>
+      <Leaving value={opened}>{(at) => <DocumentDialog at={at} onOpen={setOpened} onClose={() => setOpened(null)} />}</Leaving>
     </div>
   );
 }
