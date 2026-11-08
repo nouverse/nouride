@@ -1,0 +1,54 @@
+# The coding CLIs' newest versions, each week (0.8.24, v0.8.24 item 4): each built-in CLI's newest published version
+# installed, and its handshake read with no sign-in — `initialize`, and a session's modes where one opens signed out —
+# by `scripts/cli-handshake.ts`, the rule an update's check reads. Red when something Nouride uses is gone, a week
+# before a person's Update would find it. A version that passes here and a real turn on the box is named tested in the
+# next release (`CliRow.tested` in packages/acp; PLAN_TO_1.0 §3.3), a long-term line's patch included.
+#
+# A schedule runs the default branch's copy of this file. A push that changes the check or what it reads runs it on that
+# branch too: a release branch sees it green before `main` has it.
+
+name: cli-handshake
+
+on:
+  schedule:
+    # Mondays, 03:17 UTC: a quiet hour, after a week of the CLIs' releases.
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+  push:
+    branches: ["main", "releases/**", "lts/**"]
+    paths:
+      - ".github/workflows/cli-handshake.yml"
+      - "scripts/cli-handshake.ts"
+      - "packages/acp/src/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cli-handshake-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  handshake:
+    if: github.repository_owner == 'nouverse'
+    # runs-on: [self-hosted, build-runner]
+    runs-on: ${{ fromJSON(vars.CI_RUNNER || '"ubuntu-24.04"') }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+      # The adapters ask for Node 22 or later (`CliRow.install`).
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+      # Into a prefix of the job's own, never the runner's global modules, which a self-hosted runner keeps between jobs.
+      - name: The newest of each built-in CLI
+        run: |
+          npm install -g --prefix "$RUNNER_TEMP/clis" $(bun run scripts/cli-handshake.ts --packages)
+          echo "$RUNNER_TEMP/clis/bin" >> "$GITHUB_PATH"
+      - name: Their handshake, with no sign-in
+        run: bun run scripts/cli-handshake.ts

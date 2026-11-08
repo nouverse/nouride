@@ -55,7 +55,9 @@ versinya. Versi itu milik adapter-nya (`claude-agent-acp 0.97.0`), bukan versi C
 bawaan juga bilang posisi versinya dibanding versi-versi yang sudah dites dengan Nouride ini dan versi terbaru yang
 sudah rilis, yang Nouride tanyakan ke registry npm sehari sekali: sudah terbaru, ada versi baru, lebih baru dari yang
 pernah dites dengan Nouride ini (tetap jalan, dengan peringatan), atau lebih lama dari yang didukung. Halaman **Models**
-dan tab **Brain** agent-nya bilang hal yang sama dengan kata-kata, angkanya di bawah Details.
+dan tab **Brain** agent-nya bilang hal yang sama dengan kata-kata, angkanya di bawah Details. Tiap minggu CI Nouride
+sendiri meng-install versi terbaru tiap CLI dan mengecek handshake-nya tanpa login; versi yang lolos itu dan satu
+giliran sungguhan disebut sudah dites di rilis berikutnya.
 
 **Update** di sana meminta orchestrator, lewat pesan yang kamu kirim, menjalankan `nouride agents update <cli>`. Dia
 menunggu sampai gak ada giliran yang jalan di CLI itu, dan gak memulai yang baru selama menunggu; meng-install versi

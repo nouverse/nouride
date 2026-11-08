@@ -53,7 +53,8 @@ is the adapter's (`claude-agent-acp 0.97.0`), not the CLI's own. Since 0.8.24 ea
 version stands against the versions this Nouride was tested with and the newest out, which Nouride asks the npm
 registry once a day: up to date, a newer version out, newer than this Nouride was tested with (it runs, with a
 warning), or older than it supports. The **Models** page and the agent's **Brain** tab say the same in words, with the
-numbers under Details.
+numbers under Details. Each week Nouride's own CI installs each CLI's newest version and checks its handshake with no
+sign-in; a version that passes that and a real turn is named tested in the next release.
 
 **Update** there asks the orchestrator, in a message you send, to run `nouride agents update <cli>`. It waits until no
 turn runs in that CLI, and starts none in it meanwhile; installs the newest version this Nouride was tested with, as

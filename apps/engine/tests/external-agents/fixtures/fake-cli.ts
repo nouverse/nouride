@@ -86,7 +86,8 @@ const server = new AcpServer({
       for (const given of mcpServers) if ("headers" in given) process.stderr.write(`mcp-headers:${given.headers.map((header) => header.value).join(" ")}\n`);
       return {
         sessionId: `s${sessions}`,
-        modes: { currentModeId: "default", availableModes: [{ id: "default", name: "Ask" }, { id: "yolo", name: "Free" }] },
+        // `FAKE_MODES` (0.8.24): the modes a stand-in for a real CLI offers, for the weekly handshake check's tests.
+        modes: { currentModeId: "default", availableModes: (process.env.FAKE_MODES?.split(",") ?? ["default", "yolo"]).map((id) => ({ id, name: id })) },
         configOptions: optionsOf(`s${sessions}`),
       };
     },
