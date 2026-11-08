@@ -102,6 +102,7 @@ bun run verify        # lint:check, then the whole test suite — what CI runs
 | `lint:sql` | that SQL is fast and safe: no injection, no table scan in a query plan, no read per item in a loop, none of SQLite's footguns (TD-015) |
 | `lint:timers` | that no timer callback in the daemon can let an exception out — an uncaught one shuts the daemon down: each is `contained(log, "what failed", …)`, one `try … catch`, or a form that cannot throw |
 | `lint:size` | no `any`, and no file past its code-line budget |
+| `lint:markers` | no comment gains a release version, a date, an id of a private plan or review, or a person's name: each file's count is recorded in `scripts/comment-markers.json`, and may fall but not rise |
 | `lint:skills` | `.claude/skills/` is a symlink to `.agents/skills/`, where the skills live: each one written there, or a link to the private one of its name |
 | `lint:cli` | every command the CLI dispatches is in `nouride help`, and every flag there is read |
 | `lint:deadcode` | no export, table or module that nothing reaches |

@@ -7,6 +7,7 @@
 #   check-sql.ts            SQL is standard, and lives only in a `*.store.ts` file
 #   check-timers.ts         no timer callback in the daemon can let an exception out — one would shut it down
 #   check-size.ts           no explicit `any`, no file over its budget
+#   check-markers.ts        no comment gains a version, a date, a plan id or a name
 #   check-skills-link.ts    .claude/skills is a symlink to .agents/skills
 #   check-cli-help.ts       every dispatched command is in `nouride help`, and nothing else is
 #   check-seams.ts          the engine's plugin declarations, and types kept on two sides, compile against each other
@@ -53,7 +54,7 @@ set -e
 # people ever read — and a line that said "lint + types" while also enforcing the import rules and
 # the dead-code rules got asked "does the hook check arch and deadcode?" twice by the person who
 # wrote them. A check nobody knows ran is a check they will ask about again.
-echo "pre-commit: arch · deps · sql · timers · size · skills link · cli help · seams · dead code · pointers · public tree · types · test waits · dashboard wire"
+echo "pre-commit: arch · deps · sql · timers · size · markers · skills link · cli help · seams · dead code · pointers · public tree · types · test waits · dashboard wire"
 
 bun run lint:check
 bun test ./apps/engine/tests/contracts/test-waits.test.ts ./apps/engine/tests/contracts/dashboard-wire.test.ts
