@@ -15,6 +15,7 @@ import { PersonPicker } from "@/commons/components/people/PersonPicker";
 import type { PersonRecord } from "@/commons/lib/api.people";
 import { SignInMethods } from "./components/SignInMethods";
 import { useMe } from "@/commons/lib/session";
+import { PasswordInput } from "@/commons/components/ui/PasswordInput";
 
 /** The person an account is linked to: `web:<id>`. */
 function personOfAccount(people: PersonRecord[], userId: string): PersonRecord | undefined {
@@ -315,9 +316,8 @@ function NewUserForm({ onClose, onSaved }: { onClose: () => void; onSaved: () =>
           </Field>
           {usePassword ? (
             <Field label="Initial Password" hint="User can change password after initial sign-in.">
-              <input
+              <PasswordInput
                 className="input w-full rounded-xl text-sm"
-                type="password"
                 autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

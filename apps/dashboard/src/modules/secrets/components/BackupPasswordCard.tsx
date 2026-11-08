@@ -12,6 +12,7 @@ import { useState } from "react";
 import { Archive, LockKeyhole } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import { Card, ErrorNote, Field } from "@/commons/components/ui/ui";
+import { PasswordInput } from "@/commons/components/ui/PasswordInput";
 
 const LEAST = 12;
 
@@ -89,10 +90,10 @@ export function BackupPasswordCard({ sealed, admin, onTurnOff }: { sealed: boole
             </span>
           </p>
           <Field label="Backup password">
-            <input type="password" className="input w-full rounded-xl text-sm" autoComplete="new-password" autoFocus value={first} onChange={(event) => setFirst(event.target.value)} />
+            <PasswordInput className="input w-full rounded-xl text-sm" autoComplete="new-password" autoFocus value={first} onChange={(event) => setFirst(event.target.value)} />
           </Field>
           <Field label="The same password again">
-            <input type="password" className="input w-full rounded-xl text-sm" autoComplete="new-password" value={again} onChange={(event) => setAgain(event.target.value)} />
+            <PasswordInput className="input w-full rounded-xl text-sm" autoComplete="new-password" value={again} onChange={(event) => setAgain(event.target.value)} />
           </Field>
           {problem ? <p className="text-xs text-error">{problem}</p> : null}
           <div className="flex items-center justify-end gap-2">

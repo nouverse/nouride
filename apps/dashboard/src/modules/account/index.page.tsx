@@ -13,6 +13,7 @@ import { PersonCard } from "./person.card";
 import { useSignOut } from "@/commons/components/layout/sign-out";
 import { useMe } from "@/commons/lib/session";
 import { MIN_PASSWORD_LENGTH } from "@/commons/lib/password";
+import { PasswordInput } from "@/commons/components/ui/PasswordInput";
 
 export default function AccountPage() {
   const me = useMe();
@@ -176,9 +177,8 @@ function PasswordCard() {
       >
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <Field label="Current Password">
-            <input
+            <PasswordInput
               className="input w-full rounded-xl text-sm"
-              type="password"
               autoComplete="current-password"
               value={current}
               onChange={(e) => setCurrent(e.target.value)}
@@ -186,9 +186,8 @@ function PasswordCard() {
             />
           </Field>
           <Field label="New Password" hint={`Minimum ${MIN_PASSWORD_LENGTH} characters.`}>
-            <input
+            <PasswordInput
               className="input w-full rounded-xl text-sm"
-              type="password"
               autoComplete="new-password"
               value={next}
               onChange={(e) => setNext(e.target.value)}
@@ -196,9 +195,8 @@ function PasswordCard() {
             />
           </Field>
           <Field label="Confirm New Password">
-            <input
+            <PasswordInput
               className={`input w-full rounded-xl text-sm ${mismatch ? "input-error" : ""}`}
-              type="password"
               autoComplete="new-password"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}

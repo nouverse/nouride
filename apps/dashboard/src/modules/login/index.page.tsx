@@ -6,6 +6,7 @@ import { api } from "@/commons/lib/api";
 import { nextOf } from "@/commons/lib/session";
 import { NovaAppIcon } from "@/commons/components/icons/logos";
 import { Details } from "@/commons/components/ui/Details";
+import { PasswordInput } from "@/commons/components/ui/PasswordInput";
 
 /**
  * What the OAuth callback can send a visitor back with.
@@ -111,9 +112,8 @@ export default function LoginPage() {
                 Password
               </span>
               <div className="relative">
-                <input
+                <PasswordInput
                   className="input w-full pl-9 rounded-xl text-sm focus:ring-2 focus:ring-primary/20"
-                  type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete="current-password"

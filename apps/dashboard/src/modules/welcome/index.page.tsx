@@ -13,6 +13,7 @@ import { useGate } from "@/commons/lib/session";
 import { ErrorNote, Field } from "@/commons/components/ui/ui";
 import { NovaAppIcon } from "@/commons/components/icons/logos";
 import { MIN_PASSWORD_LENGTH } from "@/commons/lib/password";
+import { PasswordInput } from "@/commons/components/ui/PasswordInput";
 
 export default function WelcomePage() {
   const gate = useGate("/welcome");
@@ -116,9 +117,8 @@ export default function WelcomePage() {
           ) : null}
 
           <Field label="New Password" hint={`Minimum ${MIN_PASSWORD_LENGTH} characters.`}>
-            <input
+            <PasswordInput
               className={`input w-full rounded-xl text-sm ${short ? "input-error" : ""}`}
-              type="password"
               autoComplete="new-password"
               value={next}
               onChange={(e) => setNext(e.target.value)}
@@ -127,9 +127,8 @@ export default function WelcomePage() {
           </Field>
 
           <Field label="Confirm New Password">
-            <input
+            <PasswordInput
               className={`input w-full rounded-xl text-sm ${mismatch ? "input-error" : ""}`}
-              type="password"
               autoComplete="new-password"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
