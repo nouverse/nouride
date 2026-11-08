@@ -67,6 +67,8 @@ const ROWS: readonly Row[] = [
   { verb: "agent", acts: actions("skill-root"), class: "persona", reason: "adds or removes a folder whose skills become an agent's instructions, which an admin alone answers" },
   // A program every agent runs, installed as the daemon's user (0.8.1): asked under trusted too (`shared-tools`).
   { verb: "tools", acts: actions("run"), class: "shared-tools", reason: "installs or updates a program every agent runs, as the daemon's user, and its install scripts run as the user that owns every pack and the secret store" },
+  // A coding CLI updated (0.8.24): installed as `tools run` installs, for every agent on it.
+  { verb: "agents", acts: actions("update"), class: "shared-tools", reason: "installs another version of a coding CLI every agent on it runs, as the daemon's user, and its install scripts run as the user that owns every pack and the secret store" },
   // This machine's packages, as root, through nouride-pkg (0.8.15): `check`, `status` and `refresh` change nothing.
   { verb: "pkg", acts: actions("install", "remove", "upgrade"), class: "system-packages", reason: "changes this machine's installed packages, as root, through nouride-pkg" },
   // Asleep (0.8.0) is a person's to set: an agent does not silence another, nor wake one a person put to sleep.

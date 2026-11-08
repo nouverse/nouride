@@ -15,7 +15,8 @@ import type { ExternalAgents } from "@/modules/external-agents/index.ts";
 
 const TOKEN = "control-token-for-tests-0000000000";
 
-function app() {
+/** `wayBack`: the version its CLI's update check offers back, where a new version failed it (0.8.24). */
+function app(wayBack: string | null = null) {
   const seen: string[] = [];
   const audits: { action: string; actor?: string; details?: Record<string, unknown> }[] = [];
   const agents: Record<string, LoadedAgent> = {
@@ -26,7 +27,8 @@ function app() {
   const externalAgents = {
     room: () => ({ enough: true, bytes: 2 ** 31, needs: 2 ** 29 }),
     scan: async () => [{ id: "codex", name: "Codex", command: "codex-acp", installed: false, install: "npm i -g", login: true }],
-    unavailable: () => "Codex is not signed in",
+    unavailable: () => (wayBack ? "Codex 2.6.0 did not pass Nouride's check: it no longer offers steering" : "Codex is not signed in"),
+    updates: { wayBack: () => wayBack },
     models: { of: () => [{ value: "gpt-5.5-codex" }, { value: "gpt-5.5-mini", name: "GPT-5.5 mini" }] },
     efforts: { of: () => [{ value: "low" }, { value: "high", current: "high" }] },
     preset: () => "risky",
@@ -65,10 +67,19 @@ function app() {
 }
 
 describe("an external agent's CLI routes", () => {
+  test("after its CLI's new version failed its check, the version before is offered back, in the page's words (0.8.24)", async () => {
+    const { call } = app("2.5.0");
+    expect(await (await call("GET", "/agents/coder/cli")).json()).toMatchObject({
+      unavailable: "Codex 2.6.0 did not pass Nouride's check: it no longer offers steering",
+      plain: "Its coding CLI was updated to a version that does not work with this Nouride. The version before can be put back.",
+      wayBack: "2.5.0",
+    });
+  });
+
   test("show its settings and status, and run its sign-in", async () => {
     const { call, seen } = app();
     // Why it cannot answer, in its CLI's words, and that it cannot, in the page's (0.8.23).
-    expect(await (await call("GET", "/agents/coder/cli")).json()).toEqual({ cli: "codex", profile: "work", permissions: "risky", model: null, models: [{ value: "gpt-5.5-codex" }, { value: "gpt-5.5-mini", name: "GPT-5.5 mini" }], effort: "high", efforts: [{ value: "low" }, { value: "high", current: "high" }], effortChoices: ["low", "medium", "high", "xhigh", "max"], effortDefault: "medium", unavailable: "Codex is not signed in", plain: "It cannot answer right now. Whoever runs the server can see why under Details.", login: null });
+    expect(await (await call("GET", "/agents/coder/cli")).json()).toEqual({ cli: "codex", profile: "work", permissions: "risky", model: null, models: [{ value: "gpt-5.5-codex" }, { value: "gpt-5.5-mini", name: "GPT-5.5 mini" }], effort: "high", efforts: [{ value: "low" }, { value: "high", current: "high" }], effortChoices: ["low", "medium", "high", "xhigh", "max"], effortDefault: "medium", unavailable: "Codex is not signed in", plain: "It cannot answer right now. Whoever runs the server can see why under Details.", wayBack: null, login: null });
     expect((await call("POST", "/agents/coder/cli/login")).status).toBe(200);
     expect((await call("POST", "/agents/coder/cli/login/answer", { text: "CODE-1" })).status).toBe(200);
     expect((await call("POST", "/agents/coder/cli/login/stop")).status).toBe(200);

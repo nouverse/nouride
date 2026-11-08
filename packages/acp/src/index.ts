@@ -9,6 +9,7 @@
  * - `server.ts` — Nouride's agents served to an editor that speaks ACP.
  * - `agents.ts` — the built-in coding CLIs, as data: how each is started, signed in and pointed at a profile.
  * - `versions.ts` — where a CLI's version stands against the versions this Nouride was tested with.
+ * - `handshake.ts` — what a CLI's handshake lacks of what Nouride uses, read after an update and each week in CI.
  *
  * Nothing here starts a process or knows the daemon: a caller feeds lines in and says when the peer ended, which is
  * what keeps the protocol testable against an in-memory peer, and the package usable by another tool.
@@ -16,6 +17,7 @@
 
 export { BUILT_IN_CLIS, type CliPreset, type CliRow } from "./agents.ts";
 export { cliStanding, type CliStanding, type CliVersionView } from "./versions.ts";
+export { handshakeProblem } from "./handshake.ts";
 export { AcpClient, type AcpClientOptions } from "./client.ts";
 export { AcpServer, authRequired, type AcpAgentHandlers, type AcpServerOptions, type SessionChannel } from "./server.ts";
 export { AcpError, type LineTransport } from "./peer.ts";

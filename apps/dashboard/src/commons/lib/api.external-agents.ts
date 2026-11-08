@@ -101,6 +101,8 @@ export interface AgentCli {
   unavailable: string | null;
   /** That it cannot, in the page's words (0.8.23); `unavailable` is its CLI's own, under Details. */
   plain?: string | null;
+  /** The version to go back to, where its CLI's new version failed its check (0.8.24). */
+  wayBack?: string | null;
   login: CliLoginView | null;
 }
 

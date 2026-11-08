@@ -57,7 +57,7 @@ export const GRAMMAR: Readonly<Record<string, CommandGrammar>> = {
   tools: { forms: { "": NONE, run: NONE } },
   chat: { forms: { "": NONE, "*": NONE } },
   status: { forms: { "": NONE } },
-  agents: { forms: { "": NONE, scan: NONE, login: NONE } },
+  agents: { forms: { "": NONE, scan: NONE, login: NONE, update: NONE } },
   acp: { forms: { "": ["--agent <id>"] } },
   // `pause` and `resume`, what asleep was called before 0.8.0: kept, untaught.
   agent: {

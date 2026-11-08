@@ -42,6 +42,11 @@ export interface CliRow {
   env?: Readonly<Record<string, string>>;
   /** Each preset as the CLI's session mode (`session/set_mode`). A preset it has no mode for leaves its default. */
   modes?: Partial<Record<CliPreset, string>>;
+  /**
+   * Nouride relies on its `_session/steering` (0.8.24): a new version whose handshake no longer offers it fails the check
+   * an update runs (`handshake.ts`). Absent: a CLI that never offered it is driven without it.
+   */
+  steering?: boolean;
   /** Its instruction file, in the folder it works in. */
   instructionFile: string;
   /**
@@ -104,6 +109,7 @@ export const BUILT_IN_CLIS: readonly CliRow[] = [
     // audit, where an agent's MCP servers go through it (the live box, 0.8.1; the switch is Claude Code's own).
     env: { CLAUDE_AGENT_ACP_PROTOCOL: "v1", DISABLE_AUTOUPDATER: "1", ENABLE_CLAUDEAI_MCP_SERVERS: "false" },
     modes: { folder: "bypassPermissions", risky: "acceptEdits", all: "default" },
+    steering: true,
     instructionFile: "CLAUDE.md",
     // CLAUDE_CONFIG_DIR/skills: its user skills, read in any folder — a mission's repository too.
     skillsDir: "skills",
@@ -131,6 +137,7 @@ export const BUILT_IN_CLIS: readonly CliRow[] = [
     profileEnv: "CODEX_HOME",
     profileFiles: { "config.toml": 'check_for_update_on_startup = false\ncli_auth_credentials_store = "file"\n' },
     modes: { folder: "agent-full-access", risky: "agent", all: "read-only" },
+    steering: true,
     instructionFile: "AGENTS.md",
     // A person's own override file beside it is read in its place, as Codex's documentation says.
     profileInstructionFile: "AGENTS.md",

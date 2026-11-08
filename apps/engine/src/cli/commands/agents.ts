@@ -6,14 +6,16 @@ import { loginCli, scanClis } from "@/cli/commands/external-clis.ts";
 import { knownAction } from "@/cli/usage.ts";
 import { saidSaved } from "@/cli/saved.ts";
 import { answeredBy } from "@/cli/commands/agent-cli.ts";
+import { updateCli } from "@/cli/commands/agents-update.ts";
 import { skillRootCommand } from "@/cli/commands/agent-skill-root.ts";
 
-/** `nouride agents [scan|login <id>]`: the list, the coding CLIs this box has, an external agent's sign-in. */
+/** `nouride agents [scan|login <id>|update <cli>]`: the list, the coding CLIs this box has, a sign-in, an update. */
 export async function agentsCommand(client: Client, args: string[]): Promise<void> {
   const [action, id] = args;
   if (!action) return agents(client);
-  knownAction("agents", action, ["scan", "login"]);
+  knownAction("agents", action, ["scan", "login", "update"]);
   if (action === "scan") return scanClis(client);
+  if (action === "update") return updateCli(client, args.slice(1));
   if (!id) usageError("Which agent?", "Usage: nouride agents login <id>");
   return loginCli(client, id);
 }

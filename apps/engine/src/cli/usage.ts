@@ -130,6 +130,8 @@ ${BOLD}Talking to a running daemon${RESET}
   nouride agents                   List agents and their state
   nouride agents scan              The coding CLIs this box has for external agents, and their versions
   nouride agents login <id>        Sign an external agent's CLI in: run on the box, answered here a line at a time
+  nouride agents update <cli> [<version>]   A coding CLI to the newest version this Nouride was tested with, or to
+                                   <version>; installed as tools run installs, then checked before its agents work
   nouride acp [--agent <id>]       An agent in Zed or another ACP editor: the editor runs this, on this machine
   nouride agent <sleep|wake|reload> <id>    asleep, it takes no work until wake, a restart included
   nouride agent <enable|disable> <id>       written to config.toml, so it survives one

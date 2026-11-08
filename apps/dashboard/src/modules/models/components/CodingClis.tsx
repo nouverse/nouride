@@ -122,7 +122,7 @@ function CliCard({ cli, admin, onChanged, onRecheck }: { cli: CliAccountsView; a
                   Code 2.x). Its standing says it in words, the numbers under its Details (0.8.24). */}
               <span className="badge badge-sm badge-ghost font-mono">installed</span>
             </div>
-            <CliStanding name={cli.name} pkg={cli.package} version={cli.version} standing={cli.standing} />
+            <CliStanding name={cli.name} cli={cli.id} pkg={cli.package} version={cli.version} standing={cli.standing} />
           </div>
         ) : (
           <div className="space-y-2">

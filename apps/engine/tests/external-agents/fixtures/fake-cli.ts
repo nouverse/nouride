@@ -10,7 +10,6 @@
  * - `deaf` — a prompt that says it started, then runs whatever is said to it: a cancel too;
  * - `badplan` — a turn that first sends a plan without its entries, which no reader can take;
  * - `overloaded` — says on stderr, as a session opens, that an MCP server was "not found", then refuses every prompt;
- * - `badcheck` — answers Nouride's version check with something other than "OK" (every mode else passes it);
  * - `usage` — as the default, its prompt's answer reporting the tokens it spent (0.8.7) — the cache read and written
  *   beside the input, as claude-agent-acp sends them — and its context said first (`usage_update`, 0.8.8);
  * - `explain` — a turn as Claude Code writes one: its explanation in two chunks, a command announced while its input
@@ -109,10 +108,6 @@ const server = new AcpServer({
     },
     prompt: async ({ sessionId, prompt }, channel) => {
       if (closed.has(sessionId)) throw new Error(`Session not found: ${sessionId}`);
-      if (text(prompt).includes("two letters O and K")) {
-        channel.update({ sessionUpdate: "agent_message_chunk", content: { type: "text", text: mode === "badcheck" ? "Sure thing!" : "OK" } });
-        return "end_turn";
-      }
       if (mode === "mcp") {
         channel.update({ sessionUpdate: "agent_message_chunk", content: { type: "text", text: await useNouride(servers.get(sessionId) ?? [], text(prompt)) } });
         return "end_turn";

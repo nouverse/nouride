@@ -22,7 +22,7 @@ import { INCOMPLETE, NOT_RUNNING, NOT_SAVED, notSaved } from "../plain.ts";
 /** What a typed answer may be: a code, a choice — never a document. */
 const ANSWER_MAX = 2000;
 
-type Ops = Pick<ExternalAgents, "room" | "scan" | "row" | "unavailable" | "preset" | "models" | "efforts" | "profiles" | "login" | "startLogin" | "answerLogin" | "stopLogin">;
+type Ops = Pick<ExternalAgents, "room" | "scan" | "row" | "unavailable" | "preset" | "models" | "efforts" | "profiles" | "login" | "startLogin" | "answerLogin" | "stopLogin" | "updates">;
 
 export function registerExternalAgentRoutes(control: ControlApp, deps: ControlDeps): void {
   control.get("/external-clis", async (c) => {
@@ -32,6 +32,40 @@ export function registerExternalAgentRoutes(control: ControlApp, deps: ControlDe
     const room = deps.externalAgents.room();
     // `check` asks the npm registry for the newest now, where it is otherwise asked once a day (0.8.24).
     return c.json({ room, clis: room.enough ? await deps.externalAgents.scan(c.req.query("fresh") === "1", c.req.query("check") === "1") : [] });
+  });
+
+  /**
+   * A coding CLI updated, a step at a time for `nouride agents update` (0.8.24, `external-agents/cli-update.ts`): held
+   * until no turn runs in it, released where the install did not finish, checked once it has. An admin's: it changes
+   * what every agent on that CLI runs. The check is audited with what it came to.
+   */
+  control.post("/external-clis/:cli/hold", async (c) => {
+    const external = deps.externalAgents;
+    if (!external) return c.json({ error: "external agents are not available on this daemon", plain: NOT_RUNNING }, 501);
+    if (!atLeast(c.get("principal"), "admin")) return c.json({ error: "admin only" }, 403);
+    const cli = c.req.param("cli");
+    if (!external.row(cli)) return c.json({ error: `no coding CLI "${cli}" here` }, 404);
+    return c.json({ busy: await external.updates.hold(cli) });
+  });
+
+  control.post("/external-clis/:cli/release", (c) => {
+    const external = deps.externalAgents;
+    if (!external) return c.json({ error: "external agents are not available on this daemon", plain: NOT_RUNNING }, 501);
+    if (!atLeast(c.get("principal"), "admin")) return c.json({ error: "admin only" }, 403);
+    external.updates.release(c.req.param("cli"));
+    return c.json({ ok: true });
+  });
+
+  control.post("/external-clis/:cli/check", async (c) => {
+    const external = deps.externalAgents;
+    if (!external) return c.json({ error: "external agents are not available on this daemon", plain: NOT_RUNNING }, 501);
+    const principal = c.get("principal");
+    if (!atLeast(principal, "admin")) return c.json({ error: "admin only" }, 403);
+    const cli = c.req.param("cli");
+    if (!external.row(cli)) return c.json({ error: `no coding CLI "${cli}" here` }, 404);
+    const checked = await external.updates.check(cli, deps.registry.all());
+    deps.audit.record({ action: "cli_updated", actor: principal.actor, details: { ...checked } });
+    return c.json(checked);
   });
 
   /**
@@ -122,6 +156,8 @@ export function registerExternalAgentRoutes(control: ControlApp, deps: ControlDe
     if ("error" in found) return c.json({ error: found.error, plain: found.plain }, found.status);
     const { agent, external, ops } = found;
     const unavailable = ops.unavailable(agent.config.id);
+    // Its CLI's new version failed its check, and one passed before it: that one is offered back (0.8.24).
+    const wayBack = unavailable ? ops.updates.wayBack(external.cli) : null;
     return c.json({
       cli: external.cli,
       profile: external.profile ?? "default",
@@ -139,7 +175,12 @@ export function registerExternalAgentRoutes(control: ControlApp, deps: ControlDe
       unavailable,
       // Why it cannot answer is its CLI's own words (an install command, a process's error): the page says it in its own
       // (0.8.23), those under Details.
-      plain: unavailable ? "It cannot answer right now. Whoever runs the server can see why under Details." : null,
+      plain: wayBack
+        ? "Its coding CLI was updated to a version that does not work with this Nouride. The version before can be put back."
+        : unavailable
+          ? "It cannot answer right now. Whoever runs the server can see why under Details."
+          : null,
+      wayBack,
       // The sign-in's terminal, to an admin only, as the sign-in is: what it prints can be the code that signs in (a
       // device code), and an operator read it here.
       login: atLeast(principal, "admin") ? ops.login(agent.config.id) : null,

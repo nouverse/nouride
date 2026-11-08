@@ -61,7 +61,7 @@ describe("the Models page", () => {
       const url = new URL(String(input), "http://localhost");
       if (url.pathname === "/api/control/auth/me") return json({ id: "u1", username: "mira", role: "admin" });
       if (url.pathname === "/api/control/cli-accounts") return (asked.push(url.search), json({ clis }));
-      if (url.pathname === "/api/control/status") return json({ orchestrator: "nouva", agents: [], gateways: [] });
+      if (url.pathname === "/api/control/status") return json({ orchestrator: "nouva", agents: [{ id: "nouva", displayName: "Nouva" }], gateways: [] });
       return json({ error: "not found" }, 404);
     }) as typeof fetch;
     const React = await import("react");
@@ -81,7 +81,8 @@ describe("the Models page", () => {
 
   test("each CLI says where it stands in words, its numbers under Details", async () => {
     const { host } = await mount([card("a", "0.100.0", { standing: "current", untested: "0.101.0" }), card("b", "0.97.0", { standing: "update", offer: "0.100.0" }), card("c", "0.102.0", { standing: "newer" }), card("d", "0.90.0", { standing: "older", offer: "0.100.0" })]);
-    const shown = [...host.querySelectorAll("[data-standing]")].map((element) => plainText(element).replace(/\s+/g, " ").trim());
+    // The badge and the sentence: the update's button below them comes once the orchestrator's name is known.
+    const shown = [...host.querySelectorAll("[data-standing] > p")].map((element) => plainText(element).replace(/\s+/g, " ").trim());
     expect(shown).toEqual([
       "up to date This is the newest Claude Code this Nouride was tested with. A newer one is out, not tested with it yet.",
       "update out A newer version of Claude Code is out, one this Nouride was tested with.",
@@ -94,6 +95,16 @@ describe("the Models page", () => {
     expect(plainText(host)).not.toContain("0.90.0");
   });
 
+  test("an update on offer is a button that asks the orchestrator to run the update, in a message the person sends", async () => {
+    const { host } = await mount([card("claude-code", "0.97.0", { standing: "update", offer: "0.100.0" }), card("codex", "2.5.0", { standing: "current" })]);
+    const asking = () => [...host.querySelectorAll("a")].filter((link) => link.textContent?.trim() === "Ask Nouva to update it");
+    await eventually(() => asking().length > 0, 3_000, "the update's button");
+    const asks = asking();
+    expect(asks).toHaveLength(1);
+    const draft = new URL(asks[0]!.getAttribute("href")!, "http://localhost").searchParams.get("draft");
+    expect(draft).toBe("Please update Claude Code on this server with `nouride agents update claude-code`, and tell me how it went.");
+  });
+
   test("Check again asks the server afresh, which reads the newest out again", async () => {
     const { host, asked } = await mount([card("a", "0.100.0", { standing: "current" })]);
     const again = [...host.querySelectorAll("button")].find((entry) => entry.textContent?.trim() === "Check again") as HTMLButtonElement;
@@ -104,6 +115,41 @@ describe("the Models page", () => {
 
 describe("the Brain tab of an agent that works in it", () => {
   const CLI: AgentCli = { cli: "codex", profile: "work", permissions: "risky", model: null, models: [], effort: null, efforts: [], effortChoices: [], effortDefault: null, unavailable: null, login: null };
+
+  async function brainTab(cli: AgentCli, scanned: Record<string, unknown>): Promise<HTMLElement> {
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const path = new URL(String(input), "http://localhost").pathname;
+      if (path === "/api/control/auth/me") return json({ id: "u1", username: "mira", role: "admin" });
+      if (path === "/api/control/agents/coder/cli") return json(cli);
+      if (path === "/api/control/agents/coder/cli/profiles") return json({ profiles: [], separate: true, models: [] });
+      if (path === "/api/control/status") return json({ orchestrator: "nouva", agents: [{ id: "coder", displayName: "Coder" }, { id: "nouva", displayName: "Nouva" }], gateways: [] });
+      if (path === "/api/control/external-clis") return json({ room: { enough: true, bytes: 0, needs: 0 }, clis: [scanned] });
+      return json({ error: "not found" }, 404);
+    }) as typeof fetch;
+    const React = await import("react");
+    const { createRoot } = await import("react-dom/client");
+    const { QueryClient, QueryClientProvider } = await import("@tanstack/react-query");
+    const { RouterProvider, createRootRoute, createRoute, createRouter, createMemoryHistory, Outlet } = await import("@tanstack/react-router");
+    const { ToastProvider } = await import("@/commons/components/ui/toast");
+    const { default: AgentCliPage } = await import("@/modules/agents/cli.page");
+    const routes = createRootRoute({ component: () => React.createElement(Outlet) });
+    const page = createRoute({ getParentRoute: () => routes, path: "/", component: () => React.createElement(ToastProvider, null, React.createElement(AgentCliPage, { agentId: "coder" })) });
+    const router = createRouter({ routeTree: routes.addChildren([page]), history: createMemoryHistory({ initialEntries: ["/"] }) });
+    const host = dom.document.createElement("div") as unknown as HTMLElement;
+    dom.document.body.appendChild(host as never);
+    createRoot(host).render(React.createElement(QueryClientProvider, { client: new QueryClient({ defaultOptions: { queries: { retry: false } } }) }, React.createElement(RouterProvider, { router } as never)));
+    await eventually(() => (host.textContent ?? "").includes("Codex answers Coder"), 3_000, "the Brain tab");
+    return host;
+  }
+
+  test("after a failed check its plain words say so, and the version before is a button that puts it back", async () => {
+    const failed = { ...CLI, unavailable: "Codex 2.6.0 did not pass Nouride's check: it no longer offers steering. Go back to 2.5.0 (`nouride agents update codex 2.5.0`), or update Nouride", plain: "Its coding CLI was updated to a version that does not work with this Nouride. The version before can be put back.", wayBack: "2.5.0" };
+    const host = await brainTab(failed, { id: "codex", name: "Codex", command: "codex-acp", installed: true, version: "2.6.0", install: "npm i -g", login: true, standing: { standing: "newer" } });
+    await eventually(() => [...host.querySelectorAll("a")].some((link) => link.textContent?.trim() === "Ask Nouva to put it back"), 3_000, "the way back");
+    const back = [...host.querySelectorAll("a")].find((link) => link.textContent?.trim() === "Ask Nouva to put it back")!;
+    expect(new URL(back.getAttribute("href")!, "http://localhost").searchParams.get("draft")).toBe("Please put Codex on this server back to 2.5.0 with `nouride agents update codex 2.5.0`, and tell me how it went.");
+    expect(plainText(host)).toContain("Its coding CLI was updated to a version that does not work with this Nouride.");
+  });
 
   test("says the same words, under the CLI's name", async () => {
     globalThis.fetch = (async (input: RequestInfo | URL) => {
@@ -131,6 +177,6 @@ describe("the Brain tab of an agent that works in it", () => {
     dom.document.body.appendChild(host as never);
     createRoot(host).render(React.createElement(QueryClientProvider, { client: new QueryClient({ defaultOptions: { queries: { retry: false } } }) }, React.createElement(RouterProvider, { router } as never)));
     await eventually(() => host.querySelector("[data-standing]") !== null, 3_000, "the standing");
-    expect(plainText(host.querySelector("[data-standing]")!).replace(/\s+/g, " ").trim()).toBe("too old This Codex is older than this Nouride supports. Update it.");
+    expect(plainText(host.querySelector("[data-standing] > p")!).replace(/\s+/g, " ").trim()).toBe("too old This Codex is older than this Nouride supports. Update it.");
   });
 });

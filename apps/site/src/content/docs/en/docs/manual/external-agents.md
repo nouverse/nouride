@@ -49,12 +49,18 @@ where a CLI is not on the box, **Models → Coding CLIs** and an external agent'
 read and send.
 
 `nouride agents scan` lists the CLIs the box has, each with the command Nouride starts and its version. That version
-is the adapter's (`claude-agent-acp 0.97.0`), not the CLI's own, so the dashboard shows only whether a CLI is
-installed.
+is the adapter's (`claude-agent-acp 0.97.0`), not the CLI's own. Since 0.8.24 each built-in CLI also says where its
+version stands against the versions this Nouride was tested with and the newest out, which Nouride asks the npm
+registry once a day: up to date, a newer version out, newer than this Nouride was tested with (it runs, with a
+warning), or older than it supports. The **Models** page and the agent's **Brain** tab say the same in words, with the
+numbers under Details.
 
-To update one, run the same install with `@latest` after the package name. A running CLI keeps its version until it
-stops, after five quiet minutes or at a restart, and its next start checks the new one
-([below](#when-it-cannot-answer)). There is no Update button.
+**Update** there asks the orchestrator, in a message you send, to run `nouride agents update <cli>`. It waits until no
+turn runs in that CLI, and starts none in it meanwhile; installs the newest version this Nouride was tested with, as
+`nouride tools run` installs; then starts the CLI again and checks its handshake for what Nouride uses: steering, and the
+modes its presets set. No prompt is sent for the check. A version that fails it stops only that CLI's agents, saying
+why, and the version before is offered back: **Ask … to put it back** on the agent's Brain tab, or
+`nouride agents update <cli> <version>`. The CLIs' own updaters stay off.
 
 ## Making one
 
@@ -225,9 +231,10 @@ one, starting with a line that says so, and the CLI answers the next once it can
 or one you stopped, is not answered again.
 
 Its status says why: the CLI is not installed (and how to install it), not signed in, or failed to start. A CLI
-updates often, and a new version can change an output: the first time a version starts, Nouride asks it a one-line
-question; one that does not answer "OK" stops its agent, saying the version did not pass Nouride's check, until you go
-back to the version before or update Nouride. The other agents go on.
+updates often, and a new version can change what Nouride uses: the first time a version starts, however it was
+installed, Nouride checks its handshake (steering, the presets' modes; since 0.8.24, in place of a one-line question that
+spent a prompt). One that fails stops its agent, saying the version did not pass Nouride's check and which version to go
+back to, until you go back or update Nouride. The other agents go on.
 
 An external agent is never the orchestrator: Nouride's approval level, fixed list and tool switches do not reach its
 coding CLI's own commands, and the orchestrator is the agent anyone in a room reaches. A save that would make it one is

@@ -42,6 +42,9 @@ describe("the CLI's own verbs, run by an agent", () => {
 
   test("installing for every agent asks under trusted too, and turning an agent external or back changes its config (0.8.1)", () => {
     expect(classifyHardline(["nouride", "tools", "run", "--", "npm", "i", "-g", "x"])?.class).toBe("shared-tools");
+    // A coding CLI updated (0.8.24) installs for every agent on it the same way; the way back too.
+    for (const args of [["agents", "update", "claude-code"], ["agents", "update", "codex", "2.3.0"]]) expect({ args, cls: classifyHardline(["nouride", ...args])?.class }).toEqual({ args, cls: "shared-tools" });
+    expect(gated(["agents", "scan"])).toBe(false);
     for (const args of [["agent", "external", "nix", "claude-code"], ["agent", "internal", "nix"]]) expect(classifyHardline(["nouride", ...args])?.class).toBe("config");
   });
 

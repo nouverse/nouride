@@ -483,11 +483,13 @@ as `config.toml.bak.1`, the agent reloaded, the change in the audit log. `add` p
 relative path is read against where the command runs. Admin only; the agent's Skills tab does the same, and an agent
 asks for one itself with its `skill_root` tool, which an admin answers in the chat at every approval level.
 
-### `nouride agents scan` · `nouride agents login <id>`
+### `nouride agents scan` · `nouride agents login <id>` · `nouride agents update <cli>`
 
 ```bash
 nouride agents scan                # the coding CLIs this box has for external agents, and their versions — looked at now
 nouride agents login coder         # sign coder's CLI in, on its own profile
+nouride agents update claude-code  # to the newest version this Nouride was tested with, checked before its agents work
+nouride agents update claude-code 0.95.0   # the way back, after a version failed its check
 ```
 
 `scan` runs each CLI's version command — the two built in, Claude Code and Codex, and every `[[external_clis]]` row
@@ -509,6 +511,14 @@ agent's CLI starts with the sign-in at its next turn; 1 when the sign-in ended w
 dashboard's **Sign in** is. A CLI with no sign-in that runs in a terminal says what to do instead.
 A Codex account signs in this way, once per agent on it. A shared Claude Code account is signed in once for every
 agent on it, on the dashboard's **Models → Coding CLIs**, and there is no command for it.
+
+`update` (0.8.24), in order: the CLI is held at the daemon, so no new turn starts in it, until none runs (one still
+running after ten minutes: nothing is installed, exit 1); its package is installed at the version as `nouride tools run`
+installs, as this user; then the daemon starts it again for the first of its agents and checks its handshake for what
+Nouride uses — steering, the modes its presets set; no prompt is sent. Passed, exit 0. Failed, exit 1: only that CLI's
+agents are unavailable, saying so, and the version before (the last that passed) is named to go back to. With no
+version it installs the newest this Nouride was tested with. Through the `nouride` tool it is asked as `tools run` is
+(`shared-tools`, at every level); the dashboard's **Update** asks the orchestrator to run it.
 
 ### `nouride acp [--agent <id>]`
 

@@ -14,11 +14,6 @@ import type { LongLivedProcess } from "@nouride/runtime";
 import type { Launch } from "./launch.ts";
 import { thoughtLevel } from "./models.ts";
 
-/** Asked without the answer in it, so a CLI that only repeats what it is sent does not pass. */
-const CHECK_PROMPT = "Reply with the two letters O and K together, and nothing else.";
-/** A first prompt loads the CLI's model and tools; two minutes is what a slow one takes, not what a broken one does. */
-const CHECK_MS = 120_000;
-
 const log = createLogger("external-agents");
 
 export type Spawn = (cmd: string[], opts: { agent: string; cwd: string; env: Record<string, string> }) => LongLivedProcess;
@@ -236,44 +231,9 @@ export class CliConnection {
   }
 
   /**
-   * A one-line prompt in a session of its own, answered with the two letters: what a new version of the CLI is held to
-   * before the agent takes work (EXTERNAL_AGENTS §5.3). Null when it passed; else what it did instead. A refusal — not
-   * signed in — is thrown, as from any prompt.
-   */
-  async answersOk(cwd: string, timeoutMs = CHECK_MS): Promise<string | null> {
-    const client = this.need();
-    const { sessionId } = await client.newSession(cwd);
-    let said = "";
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const late = new Promise<"timeout">((done) => {
-      timer = setTimeout(() => {
-        try {
-          done("timeout");
-          client.cancel(sessionId);
-        } catch {
-          // Gone already: the prompt fails on its own.
-        }
-      }, timeoutMs);
-    });
-    try {
-      const ended = await Promise.race([
-        client.prompt(sessionId, [{ type: "text", text: CHECK_PROMPT }], (update) => {
-          if (update.sessionUpdate === "agent_message_chunk" && update.content.type === "text") said += update.content.text;
-        }),
-        late,
-      ]);
-      if (ended === "timeout") return `it did not answer in ${Math.round(timeoutMs / 1000)} s`;
-      if (ended !== "end_turn") return `its answer ended as ${ended}`;
-      return /\bok\b/i.test(said) ? null : `it answered "${said.trim().slice(0, 80)}" where "OK" was asked for`;
-    } finally {
-      clearTimeout(timer);
-      this.letGo(sessionId);
-    }
-  }
-
-  /**
    * A session opened in `cwd` and left unprompted: a CLI that is not signed in refuses it, and one that opens it says
-   * what it offers. What the Brain tab's sign-in check asks; no model is called.
+   * what it offers. What the Brain tab's sign-in check asks, and a new version's handshake check reads its modes from
+   * (`cli-update.ts`); no model is called.
    */
   async probe(cwd: string): Promise<NewSessionResult> {
     const opened = await this.need().newSession(cwd);

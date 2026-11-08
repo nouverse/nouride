@@ -148,6 +148,7 @@ nouride chat [agent]              # chat interaktif, tanpa bot token
 nouride agents                    # daftar: waiting for you, working, asleep, atau idle
 nouride agents scan               # CLI coding untuk agent eksternal yang ada di box ini, beserta versinya
 nouride agents login <id>         # login CLI agent eksternal: jalan di box, dijawab dari sini
+nouride agents update <cli> [<versi>]   # ke versi terbaru yang sudah dites dengan Nouride ini, atau kembali ke <versi>
 nouride agent sleep <id>          # gak menerima kerjaan sampai wake, restart pun gak membangunkannya (pause juga bisa)
 nouride agent wake  <id>          # (resume juga bisa)
 nouride agent reload <id>

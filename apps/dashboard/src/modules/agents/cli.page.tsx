@@ -16,7 +16,7 @@ import { Combobox } from "@/commons/components/ui/Combobox";
 import { AskAgentButton } from "@/commons/components/ui/AskAgentButton";
 import { CliStanding } from "@/commons/components/ui/CliStanding";
 import { Details } from "@/commons/components/ui/Details";
-import { byInstaller, setUpMessage } from "@/commons/lib/set-up";
+import { byInstaller, goBackMessage, setUpMessage } from "@/commons/lib/set-up";
 import { CliProfiles } from "./components/CliProfiles";
 import AgentModelPage from "./model.page";
 
@@ -86,7 +86,7 @@ export default function AgentCliPage({ agentId }: { agentId: string }) {
               <span className="badge badge-sm badge-warning font-mono">not installed</span>
             ) : null}
           </div>
-          {row?.installed ? <CliStanding name={cliName} pkg={row.package} version={row.version} standing={row.standing} /> : null}
+          {row?.installed ? <CliStanding name={cliName} cli={row.id} pkg={row.package} version={row.version} standing={row.standing} /> : null}
           {/* Not there yet: asked of the orchestrator where it can install it, else whoever runs the server (0.8.19). */}
           {row && !row.installed ? (
             <div className="space-y-2">
@@ -112,6 +112,8 @@ export default function AgentCliPage({ agentId }: { agentId: string }) {
               {data.plain ? (
                 <div className="min-w-0 space-y-1">
                   <span>{data.plain}</span>
+                  {/* Its CLI's new version failed its check: the one before is put back as an update is made (0.8.24). */}
+                  {data.wayBack ? <AskAgentButton task="to put it back" message={goBackMessage(cliName, data.cli, data.wayBack)} className="block w-fit" /> : null}
                   <Details>
                     <p className="break-words">{data.unavailable}</p>
                   </Details>

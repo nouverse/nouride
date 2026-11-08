@@ -145,6 +145,7 @@ nouride chat [agent]              # interactive chat, no bot token needed
 nouride agents                    # list: waiting for you, working, asleep or idle
 nouride agents scan               # the coding CLIs this box has for external agents, with their versions
 nouride agents login <id>         # sign an external agent's CLI in: run on the box, answered here
+nouride agents update <cli> [<version>]   # to the newest version this Nouride was tested with, or back to <version>
 nouride agent sleep <id>          # takes no work until wake, through a restart too (pause works too)
 nouride agent wake  <id>          # (resume works too)
 nouride agent reload <id>

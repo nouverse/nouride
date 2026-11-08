@@ -23,6 +23,7 @@
  * - `accounts.ts` — the accounts on the Models page: shared ones signed in once, the others once per agent.
  * - `scan.ts` — which CLIs this box has, and their versions.
  * - `newest.ts` — the newest version of each CLI's package, as the npm registry says, once a day.
+ * - `cli-update.ts` — a CLI updated: held, installed, its new version's handshake checked, and the way back.
  * - `lent-tools.ts` — Nouride's tools, lent to the CLI over MCP while its turn runs.
  * - `usage.ts` — what it says it spent, and of its context, as Nouride records and shows them.
  */
@@ -48,6 +49,7 @@ import { cliSessionKey, ExternalTurnRunner, type RunnerHost } from "./runner.ts"
 import { Instructed, type InstructedFile } from "./instructed.ts";
 import { promptTakes, type PromptTakes } from "./prompt.ts";
 import { scanCli, withStanding, type ScannedCli } from "./scan.ts";
+import { CliUpdates } from "./cli-update.ts";
 import type { NewestVersions } from "./newest.ts";
 import type { Situation } from "./situation.ts";
 import { OwnWords, ownKey, type OwnChat } from "./own-words.ts";
@@ -165,6 +167,8 @@ export class ExternalAgents implements RunnerHost {
   private scanned: { at: number; clis: Promise<ScannedCli[]> } | null = null;
   /** What the CLIs leave running in the background, and the chats owed what came of it. */
   private readonly left: LeftRunning;
+  /** A CLI being updated, held while its new version installs, and checked after (`cli-update.ts`, 0.8.24). */
+  readonly updates: CliUpdates;
   /** What each conversation's CLI session last said of its context (`usage.ts`). */
   readonly contexts = new CliContexts();
   /** What each conversation's running CLI turn has spent so far, estimated (`usage.ts` `PromptSpend`). */
@@ -192,6 +196,19 @@ export class ExternalAgents implements RunnerHost {
     this.accounts = new CliAccounts(deps.accounts ?? {});
     this.ownWords = new OwnWords((chat) => this.onOwnWords?.(chat), deps.quietMs);
     this.left = new LeftRunning(deps.leftRunning, deps.commandsUnder ?? commandsRunningUnder);
+    this.updates = new CliUpdates({
+      runningEntries: () => [...this.running],
+      occupied: (cli) => cli.busy || cli.held || this.left.commandsOf(cli) > 0,
+      stopAgent: async (agentId) => {
+        const cli = this.running.get(agentId);
+        this.running.delete(agentId);
+        await cli?.close();
+      },
+      connection: (agent) => this.connection(agent),
+      setUnavailable: (agentId, reason) => this.setUnavailable(agentId, reason),
+      forgetScan: () => void (this.scanned = null),
+      ...(deps.versions ? { versions: deps.versions } : {}),
+    });
   }
 
   /** Every CLI this install knows, built-in first. */
@@ -383,6 +400,8 @@ export class ExternalAgents implements RunnerHost {
     const agentId = agent.config.id;
     const row = this.row(external.cli);
     if (!row) throw new Error(`${agentId}'s CLI "${external.cli}" is not one this install knows`);
+    const held = this.updates.heldFor(row);
+    if (held) throw new NourideError("external_agent", held, held);
     const profile = external.profile ?? "default";
     const secrets = this.deps.secretsFor(agentId, [row.command, ...row.args]);
     const stamp = secretsStamp(secrets);
@@ -415,7 +434,12 @@ export class ExternalAgents implements RunnerHost {
         this.setUnavailable(agentId, reason);
         throw new NourideError("external_agent", reason, reason, { cause: err });
       }
-      await this.checkVersion(row, connection, agentId);
+      const failed = await this.updates.checkVersion(row, connection);
+      if (failed) {
+        await connection.close();
+        this.setUnavailable(agentId, failed);
+        throw new NourideError("external_agent", failed, failed);
+      }
       this.running.set(agentId, connection);
       this.startedWith.set(agentId, stamp);
       this.startedWithEach.set(agentId, hashedEach(secrets));
@@ -682,33 +706,6 @@ export class ExternalAgents implements RunnerHost {
       await connection.close();
       throw new NourideError("external_agent", unavailableReason(row, err, connection.stderrTail), undefined, { cause: err });
     }
-  }
-
-  /**
-   * A CLI at a version that has not passed yet answers a one-line prompt first (EXTERNAL_AGENTS §5.3): a new version
-   * can change a flag or an output and stop an agent at 2 a.m., and this is where that is found — the agent unavailable,
-   * saying which version, the others untouched. Passed, the version is kept and not asked again. Not signed in is no
-   * verdict on the version: the check waits for a sign-in.
-   */
-  private async checkVersion(row: CliRow, connection: CliConnection, agentId: string): Promise<void> {
-    const version = connection.info?.agentInfo?.version;
-    if (!this.deps.versions || !version || this.deps.versions.load()[row.id] === version) return;
-    let why: string | null;
-    try {
-      why = await connection.answersOk(connection.launch.cwd);
-    } catch (err) {
-      if (signedOut(row, err)) return;
-      why = err instanceof Error ? err.message : String(err);
-    }
-    if (why === null) {
-      this.deps.versions.save({ ...this.deps.versions.load(), [row.id]: version });
-      log.info("a CLI's new version passed the check", { cli: row.id, version });
-      return;
-    }
-    await connection.close();
-    const reason = `${row.name} ${version} did not pass Nouride's check: ${why}. Go back to the version before, or update Nouride`;
-    this.setUnavailable(agentId, reason);
-    throw new NourideError("external_agent", reason, reason);
   }
 
   /** Stop the CLIs no prompt has used for the idle time. Each start again at the agent's next turn. */

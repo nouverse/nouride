@@ -51,12 +51,19 @@ agent eksternal punya tombol **Ask Nouva to set it up** (dengan nama orchestrato
 permintaannya sudah tertulis, untuk kamu baca lalu kirim.
 
 `nouride agents scan` menampilkan CLI yang ada di box, masing-masing dengan perintah yang dijalankan Nouride dan
-versinya. Versi itu milik adapter-nya (`claude-agent-acp 0.97.0`), bukan versi CLI-nya sendiri, makanya dashboard cuma
-menunjukkan apakah sebuah CLI sudah ter-install.
+versinya. Versi itu milik adapter-nya (`claude-agent-acp 0.97.0`), bukan versi CLI-nya sendiri. Sejak 0.8.24 tiap CLI
+bawaan juga bilang posisi versinya dibanding versi-versi yang sudah dites dengan Nouride ini dan versi terbaru yang
+sudah rilis, yang Nouride tanyakan ke registry npm sehari sekali: sudah terbaru, ada versi baru, lebih baru dari yang
+pernah dites dengan Nouride ini (tetap jalan, dengan peringatan), atau lebih lama dari yang didukung. Halaman **Models**
+dan tab **Brain** agent-nya bilang hal yang sama dengan kata-kata, angkanya di bawah Details.
 
-Untuk update, jalankan perintah install yang sama dengan `@latest` di belakang nama paketnya. CLI yang sedang jalan
-tetap di versinya sampai berhenti, setelah lima menit diam atau saat restart, dan start berikutnya mengecek versi baru
-itu ([lihat di bawah](#kalau-dia-gak-bisa-menjawab)). Gak ada tombol Update.
+**Update** di sana meminta orchestrator, lewat pesan yang kamu kirim, menjalankan `nouride agents update <cli>`. Dia
+menunggu sampai gak ada giliran yang jalan di CLI itu, dan gak memulai yang baru selama menunggu; meng-install versi
+terbaru yang sudah dites dengan Nouride ini, seperti `nouride tools run` meng-install; lalu menyalakan CLI-nya lagi dan
+mengecek handshake-nya untuk hal yang dipakai Nouride: steering, dan mode yang dipasang preset-nya. Pengecekannya gak
+mengirim prompt. Versi yang gak lolos cuma menghentikan agent-agent CLI itu, dengan alasannya, dan versi sebelumnya
+ditawarkan kembali: **Ask … to put it back** di tab Brain agent-nya, atau `nouride agents update <cli> <versi>`.
+Updater bawaan CLI-nya tetap mati.
 
 ## Membuat agent eksternal
 
@@ -231,9 +238,10 @@ menjawab pesan tersebut, diawali satu baris yang bilang begitu, dan CLI menjawab
 yang sudah mulai dijawab CLI, atau yang kamu hentikan, gak dijawab ulang.
 
 Status-nya bilang kenapa: CLI belum ter-install (beserta cara install-nya), belum login, atau gagal start. CLI sering
-update, dan versi baru bisa mengubah output-nya: pertama kali sebuah versi start, Nouride menanyakan satu pertanyaan
-satu baris; versi yang gak menjawab "OK" menghentikan agent-nya, dengan pesan bahwa versi itu gak lolos pengecekan
-Nouride, sampai kamu balik ke versi sebelumnya atau update Nouride. Agent lain tetap jalan.
+update, dan versi baru bisa mengubah hal yang dipakai Nouride: pertama kali sebuah versi start, bagaimanapun cara
+install-nya, Nouride mengecek handshake-nya (steering, mode preset-nya; sejak 0.8.24, menggantikan pertanyaan satu baris
+yang memakai satu prompt). Versi yang gak lolos menghentikan agent-nya, dengan pesan bahwa versi itu gak lolos pengecekan
+Nouride dan versi mana untuk kembali, sampai kamu kembali atau update Nouride. Agent lain tetap jalan.
 
 Agent eksternal gak pernah jadi orchestrator: level approval, fixed list, dan saklar tool Nouride gak menjangkau perintah
 CLI-nya sendiri, padahal orchestrator adalah agent yang dijangkau siapa pun di room. Simpanan yang bakal menjadikannya

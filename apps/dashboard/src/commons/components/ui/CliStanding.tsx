@@ -6,11 +6,14 @@
 
 import type { CliVersionView } from "@/commons/lib/api.external-agents";
 import { standingWords } from "@/commons/lib/cli-standing";
+import { updateMessage } from "@/commons/lib/set-up";
+import { AskAgentButton } from "./AskAgentButton";
 import { Details } from "./Details";
 
 const TONE = { success: "badge-success", info: "badge-info", warning: "badge-warning" } as const;
 
-export function CliStanding({ name, pkg, version, standing }: { name: string; pkg?: string | undefined; version?: string | undefined; standing?: CliVersionView | undefined }) {
+/** `cli` is its id, for the update the button asks for; none where the page offers no update. */
+export function CliStanding({ name, cli, pkg, version, standing }: { name: string; cli?: string; pkg?: string | undefined; version?: string | undefined; standing?: CliVersionView | undefined }) {
   if (!standing) return null;
   const words = standingWords(name, standing);
   return (
@@ -19,6 +22,7 @@ export function CliStanding({ name, pkg, version, standing }: { name: string; pk
         <span className={`badge badge-sm badge-soft shrink-0 font-mono ${TONE[words.tone]}`}>{words.badge}</span>{" "}
         <span>{words.says}</span>
       </p>
+      {words.update && cli ? <AskAgentButton task="to update it" message={updateMessage(name, cli)} /> : null}
       <Details>
         <p className="font-mono">
           {version ? `${pkg ?? "version"} ${version}` : null}
