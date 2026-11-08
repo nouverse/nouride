@@ -1,6 +1,6 @@
 /**
  * A line at the top of an agent's tab saying what of it a coding CLI uses (0.8.1). An external agent has the tabs every
- * agent has, and some of what they set does not reach its CLI: the owner could not tell which, and read the Model
+ * agent has, and some of what they set does not reach its CLI: a person could not tell which, and read the Model
  * tab's fallbacks as a way past the CLI's limit. Shown only for an external agent.
  */
 

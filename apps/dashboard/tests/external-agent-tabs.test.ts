@@ -1,6 +1,6 @@
 /**
  * An external agent's tabs say what of them its CLI uses (0.8.1). Model: the CLI answers on its own model, chosen on the
- * Brain tab, and what the model here is for — the owner read the two as one, and asked whether a fallback would answer when
+ * Brain tab, and what the model here is for: the two read as one, and nothing said whether a fallback would answer when
  * the CLI ran out. Skills: whether Nouride's reach the CLI, and when a change does. Settings: the tool budget does not apply.
  */
 
@@ -56,7 +56,7 @@ describe("an external agent's tabs", () => {
   test("for an external agent, says the CLI answers on its own model and what this one is for", async () => {
     const text = await mount(true);
     expect(text).toContain("codex answers Coder, on its own model, chosen above on the Brain tab.");
-    // The owner asked whether a fallback would answer when the CLI's account runs out: the agent's own model does.
+    // Whether a fallback answers when the CLI's account runs out: the agent's own model does.
     expect(text).toContain("and answer a turn codex cannot, signed out or at its account's limit, saying so.");
   });
 

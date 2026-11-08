@@ -1,5 +1,5 @@
 /**
- * Where a job's results go: a connection, then a chat on it — each chat offered as what it is ("DM · Gading", "Group ·
+ * Where a job's results go: a connection, then a chat on it — each chat offered as what it is ("DM · Sam", "Group ·
  * Nouride"), not a bare id (0.8.0). The Schedule form offered `5550001111` beside `-1005550002` and the Webhooks form
  * asked for an id typed by hand; this is the one picker for both, and an id nobody knows can still be typed.
  */

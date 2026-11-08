@@ -22,7 +22,7 @@ export function FileEditor({ agent, editable }: { agent: string; editable: boole
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
-  // A file opens as it reads, Preview first (the owner, 2026-11-08): it is read far more often than written, and Edit is
+  // A file opens as it reads, Preview first: it is read far more often than written, and Edit is
   // one click away. Each file opened starts there again.
   const [mode, setMode] = useState<MarkdownMode>("preview");
 
@@ -131,7 +131,7 @@ export function FileEditor({ agent, editable }: { agent: string; editable: boole
               </div>
 
               {/* Edit and Preview one height, each scrolling inside it, as Write a document's are: the preview grew with
-                  the file and moved the page under the switch (the owner, 2026-11-08). */}
+                  the file and moved the page under the switch. */}
               <MarkdownArea
                 mode={markdown ? mode : "edit"}
                 className="h-[26rem] overflow-auto"

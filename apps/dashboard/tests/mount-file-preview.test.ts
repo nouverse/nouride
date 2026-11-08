@@ -1,5 +1,5 @@
 /**
- * The Files tab opens a file as it reads (0.8.23, the owner): Preview first, Edit one click away, and each file opened
+ * The Files tab opens a file as it reads (0.8.23): Preview first, Edit one click away, and each file opened
  * starts at Preview again. Both are one height, each scrolling inside it, as Write a document's are: the preview grew
  * with the file and moved the page under the switch. In a file of its own over the shared harness.
  */

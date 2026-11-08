@@ -268,7 +268,7 @@ function AgentStep() {
 
   const models = cachedModels?.length ? cachedModels : fetched ?? [];
 
-  // The first agent is a Pilot named NouridePilot (the owner, 2026-11-06), as `nouride setup` makes it (`FIRST_AGENT`).
+  // The first agent is a Pilot named NouridePilot, as `nouride setup` makes it (`FIRST_AGENT`).
   const [id, setId] = useState("nouridepilot");
   const [displayName, setDisplayName] = useState("NouridePilot");
   // Empty until the person types: the first model on the list was chosen for them, and rarely the one they wanted.

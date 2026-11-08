@@ -2,7 +2,7 @@
  * A module imports from itself and from `commons`, and `commons` imports from no module.
  *
  * The house rule — `commons/` holds what two or more modules share, and no module imports another — and eleven imports
- * broke it (dash-practice-cross-module-imports): the shared layout reached into `update`, `access` and
+ * broke it: the shared layout reached into `update`, `access` and
  * `setup`; `setup` and `llm-gateway` imported each other; `home` and `box` borrowed `update`'s helpers.
  * Deleting or moving one module broke pages in another, which is what the rule exists to prevent. The
  * shared pieces are in `commons` now, and the pieces only one module used went to that module.

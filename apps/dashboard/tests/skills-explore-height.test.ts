@@ -1,6 +1,6 @@
 /**
  * Explore's search hits run down the page (0.8.24): held to what the window left under the two cards above them, they
- * had the height of one hit on a laptop (the owner, 2026-11-08). The page scrolls; the list is not a box of its own.
+ * had the height of one hit on a laptop. The page scrolls; the list is not a box of its own.
  */
 
 import { expect, test } from "bun:test";

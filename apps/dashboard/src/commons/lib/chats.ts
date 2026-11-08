@@ -1,5 +1,5 @@
 /**
- * What a chat is, in words, for a picker or a card: "DM · Gading", "Group · Nouride". A bare chat id said nothing — the
+ * What a chat is, in words, for a picker or a card: "DM · Sam", "Group · Nouride". A bare chat id said nothing — the
  * Schedule form offered `5550001111` and `-1005550002` side by side, and nobody could tell a one-to-one from a group.
  */
 

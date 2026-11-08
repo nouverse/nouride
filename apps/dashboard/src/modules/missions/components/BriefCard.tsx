@@ -1,6 +1,6 @@
 /**
  * A mission's brief (0.8.11): its own folder's `BRIEF.md`, or the file its goal names, on its page — folded to its
- * header until opened, as the owner asked, and opened whole by its file's name as its report is (`MissionResult`),
+ * header until opened, and opened whole by its file's name as its report is (`MissionResult`),
  * folded or not.
  */
 

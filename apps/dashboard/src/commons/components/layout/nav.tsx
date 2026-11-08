@@ -1,5 +1,5 @@
 /**
- * The menu, by how often a page is opened (0.8.24, the owner's call on 2026-11-08). Four a person uses every day and
+ * The menu, by how often a page is opened (0.8.24). Four a person uses every day and
  * always sees, two now and then, and everything set up once behind Settings:
  *
  * - **Home, Chats, Work, Agents.** Work holds what agents do without anyone in the chat: what waits for an answer,
@@ -11,7 +11,7 @@
  *   page you are on: shown always, fourteen links were the menu, and the four that matter were lost among them.
  *
  * The same sections on a phone: the first four in the tab bar, the rest in More. The manual is not in it: it is at the
- * foot of Settings, and a menu entry that leaves the dashboard was one more line for something opened rarely (the owner).
+ * foot of Settings, and a menu entry that leaves the dashboard was one more line for something opened rarely.
  */
 
 import { Link } from "@tanstack/react-router";
@@ -102,14 +102,14 @@ export const DAILY: NavItem[] = [
   { to: "/", label: "Home", icon: House },
   { to: "/chat", label: "Chats", icon: MessageSquare },
   { to: "/work", label: "Work", icon: Target, holds: ["/missions", "/jobs", "/schedule", "/webhooks"], badge: WorkBadge },
-  // A cat, as every agent is one here (the owner, 2026-11-08), where it was a robot.
+  // A cat, as every agent is one here, where it was a robot.
   { to: "/agents", label: "Agents", icon: Cat, holds: ["/office"] },
 ];
 
 /** Now and then. */
 const OCCASIONAL: NavItem[] = [
   { to: "/skills", label: "Skills", icon: Wrench, badge: SkillsBadge },
-  // Under Skills, the same shape: one library of outside tools, switched on per agent (the owner, 2026-11-08).
+  // Under Skills, the same shape: one library of outside tools, switched on per agent.
   { to: "/mcp", label: "Connectors", icon: Plug },
   { to: "/memories", label: "Memory", icon: Brain, holds: ["/people", "/groups"], badge: MemoryBadge },
 ];

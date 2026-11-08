@@ -1,5 +1,5 @@
 /**
- * Every dropdown stays inside the window (the owner, 2026-11-07): the Add Connection menu, 208 px wide and tied to the
+ * Every dropdown stays inside the window: the Add Connection menu, 208 px wide and tied to the
  * right edge of a button that sat at the left of a 393 px phone, opened off the screen.
  */
 

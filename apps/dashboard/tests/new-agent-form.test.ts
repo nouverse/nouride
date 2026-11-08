@@ -1,10 +1,10 @@
 /**
  * The New Agent form (0.8.1): its headline and SOUL.md are filled in from what it can do, for the person to keep or
- * change — the owner: nobody should have to write a system prompt to make an agent. Another preset swaps them, unless
+ * change: nobody should have to write a system prompt to make an agent. Another preset swaps them, unless
  * the person has written their own. What it can do, and Custom's tool list, come after the name and words — not
  * between them — the model field offers chat models only, never an embedding one, and Create waits for an id the
  * daemon would take, a name and a model. Who answers is one choice on the same form — a model, or a coding CLI this
- * box has, on an account — where external agents had a form of their own the owner found hard to follow.
+ * box has, on an account — where external agents had a form of their own that was hard to follow.
  */
 
 import { afterEach, beforeAll, describe, expect, test } from "bun:test";

@@ -131,7 +131,7 @@ export function redirectFor(principal: Principal | null, state: SetupState | nul
   }
 
   // First, before the setup wizard: the account itself. A first-login password (generated, or a
-  // box's setup PIN) works once, and the owner asked for "personalize your account" to be the first
+  // box's setup PIN) works once, and "personalize your account" is the first
   // screen, not a step after models and agents.
   //
   // A generated bootstrap password works once, and replacing it is not optional — so it gets a screen

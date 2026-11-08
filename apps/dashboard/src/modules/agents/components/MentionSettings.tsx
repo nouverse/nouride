@@ -9,7 +9,7 @@
  * "can my agents collaborate" — and saving them independently would mean the operator has to hit
  * Save twice for what feels like one decision.
  *
- * The hop count is an advanced setting (0.8.0, SIMPLIFY §3): rarely changed, so it sits behind "Advanced" under the
+ * The hop count is an advanced setting (0.8.0): rarely changed, so it sits behind "Advanced" under the
  * switch rather than on the card's first line — the same disclosure the Skills page keeps its settings in.
  */
 

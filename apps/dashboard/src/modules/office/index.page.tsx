@@ -1,5 +1,5 @@
 /**
- * Nouride Office (0.8.1, MISSIONS §9): the agents' statuses as a small office — working at a desk, waiting for you with
+ * Nouride Office (0.8.1): the agents' statuses as a small office — working at a desk, waiting for you with
  * a hand up, idle on the sofa, asleep in bed — each agent a cat in its own look. For watching, not for settings.
  *
  * Costs the daemon nothing: it reads `/status` every few seconds while the page is open and the tab is seen, draws

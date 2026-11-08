@@ -1,5 +1,5 @@
 /**
- * The Knowledge tab (0.8.20, KNOWLEDGE_BASE §11): documents a person keeps for the agents to look things up in, in
+ * The Knowledge tab (0.8.20): documents a person keeps for the agents to look things up in, in
  * collections. Each collection a card; one opened shows its documents; a search over all of them shows what an agent
  * would find. Memory learns from conversations; this is what somebody handed over on purpose, kept as it was given.
  */

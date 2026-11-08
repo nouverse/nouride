@@ -1,5 +1,5 @@
 /**
- * Every save in the dashboard says what happened (config-restart-ux): "Applied", or "Saved — takes effect after a
+ * Every save in the dashboard says what happened: "Applied", or "Saved — takes effect after a
  * restart" with the Restart button beside it — in the words the CLI uses, and decided by the daemon's answer.
  *
  * The forms each said it their own way, or not at all: the config editor told the person to find Overview → Restart,

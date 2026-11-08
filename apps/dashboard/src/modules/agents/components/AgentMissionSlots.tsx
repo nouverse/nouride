@@ -1,6 +1,6 @@
 /**
  * How many missions one agent may have working at once (0.8.11) — `[missions] per_agent` in its pack — or none of its
- * own, which means it follows the daemon's, set on the Missions page. The owner asked for three or four, set per agent.
+ * own, which means it follows the daemon's, set on the Missions page. Set per agent, so one can have three or four.
  *
  * The same two states as `AgentBackgroundHelpers`, for the same reason: typing today's default into the field pins it.
  * Live: the dispatcher reads it at its next decision. The box's own `max_running` still bounds them all.

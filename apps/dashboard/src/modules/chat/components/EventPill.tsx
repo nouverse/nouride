@@ -2,7 +2,7 @@
  * Something that happened *to* the conversation, drawn the way a chat app draws it: centred, small,
  * and clearly not anybody's message.
  *
- * WhatsApp's version of this — "Gading added Nero", "you changed the group name" — is the reference,
+ * WhatsApp's version of this — "Sam added Nero", "you changed the group name" — is the reference,
  * and the shape is the point. Most of what changes about a room is not something anybody typed, and
  * rendering it as a message is a lie about who said it. The dashboard already had one of these for a
  * background job waking the agent (`SystemNote` in `Turn.tsx`); this is the general case.

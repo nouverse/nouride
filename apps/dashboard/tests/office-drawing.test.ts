@@ -85,7 +85,7 @@ describe("each agent's look", () => {
 
 describe("headphones", () => {
   test("sit the same on both sides of the head — none over the face", () => {
-    // Drawn 20 wide from x −1 they sat a pixel inside the face on the right, a cup over the cheek (the owner's
+    // Drawn 20 wide from x −1 they sat a pixel inside the face on the right, a cup over the cheek (seen in a
     // screenshot, 0.8.1). Asleep, a plain cat is its head alone, which is symmetric, so the headphones must be too.
     const grid = compose({ ...LOOK, hat: "headphones" }, "sleep");
     const mismatched = grid.flatMap((row, y) => row.flatMap((cell, x) => (cell === row[FRAME - 1 - x] ? [] : [`${x},${y}`])));

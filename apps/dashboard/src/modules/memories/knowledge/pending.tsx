@@ -1,6 +1,6 @@
 /**
  * Documents an agent saved from a chat into a collection that more people may be answered from than were in that chat
- * (0.8.20, KNOWLEDGE_BASE §9): kept aside until an admin says yes. Approved, it joins the collection and is read;
+ * (0.8.20): kept aside until an admin says yes. Approved, it joins the collection and is read;
  * declined, it is deleted. Everyone sees what waits; an admin decides.
  */
 

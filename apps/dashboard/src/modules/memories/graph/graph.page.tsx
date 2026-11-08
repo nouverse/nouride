@@ -3,7 +3,7 @@
  * was with — and to the conversations the nightly pass found related. What the list tabs show one row
  * at a time, this shows as a shape: who comes up together, which subjects keep returning.
  *
- * Documents, a switch away (0.8.20, KNOWLEDGE_BASE §12): the knowledge base laid over it, each collection
+ * Documents, a switch away (0.8.20): the knowledge base laid over it, each collection
  * and its documents, the links between them, the people they are about, and documents close in meaning.
  *
  * Kept cheap at both ends. The daemon answers with ids and one-line labels, bounded by the filter and

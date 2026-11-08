@@ -14,7 +14,7 @@ import { KIND_LABEL, usePalette } from "./palette";
 const KIND_ICON: Record<GraphNodeKind, typeof User> = { episode: MessageCircle, person: User, tag: Hash, agent: Bot, collection: Library, document: FileText };
 const PANEL_LIST = 40;
 
-/** The id without its kind: `p:gading` → `gading`, which is what a filter names. */
+/** The id without its kind: `p:sam` → `sam`, which is what a filter names. */
 export const keyOf = (id: string) => id.slice(2);
 
 /** A document's node read back as the document: `d:<collection>/<path>`, a collection's id holding no `/`. */

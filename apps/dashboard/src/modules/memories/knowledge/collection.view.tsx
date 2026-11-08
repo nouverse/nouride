@@ -1,5 +1,5 @@
 /**
- * One collection, opened (0.8.20, KNOWLEDGE_BASE §11): its settings in sentences and what can be done with it, the
+ * One collection, opened (0.8.20): its settings in sentences and what can be done with it, the
  * documents waiting for an admin's yes, and its documents, each with how it reads. Files are added by dropping them on
  * the list or picking them; a document is written on the page.
  *

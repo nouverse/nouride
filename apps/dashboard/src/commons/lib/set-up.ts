@@ -20,6 +20,6 @@ export const updateMessage = (name: string, cli: string): string =>
 export const goBackMessage = (name: string, cli: string, version: string): string =>
   `Please put ${name} on this server back to ${version} with \`nouride agents update ${cli} ${version}\`, and tell me how it went.`; // plain-words-ok: the agent is told the command to run
 
-/** What the orchestrator is asked, for the person to read and send (the owner's words, 2026-11-05). */
+/** What the orchestrator is asked, for the person to read and send. */
 export const setUpMessage = (name: string): string =>
   `Please install ${name} on this server, with what Nouride needs to use it as an agent (its ACP adapter), and tell me when it is ready to sign in.`; // plain-words-ok: the agent is told what to install, in the words it knows

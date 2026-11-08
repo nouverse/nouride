@@ -1,5 +1,5 @@
 /**
- * The dashboard's look, held to what the Nouverse design rules ask of it (dash-practice-design-language-divergence).
+ * The dashboard's look, held to what the Nouverse design rules ask of it.
  *
  * 0.7.10 decided that the Nouverse rules govern how the dashboard looks, and 0.7.11 re-themed it: paper and ink,
  * one colour for signals and actions, Manrope and DM Mono — green until 0.7.16 made it the mascot's blue, with navy

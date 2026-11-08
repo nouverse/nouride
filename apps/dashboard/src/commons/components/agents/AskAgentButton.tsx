@@ -2,8 +2,7 @@
  * "Ask Nouva to set it up" (0.8.19): where the dashboard cannot do a thing itself and the orchestrator can, a button
  * that opens the chat with the orchestrator, a message already written in the box. Nothing is sent from here: the person
  * reads it, changes it if they like, and presses send; and the agent still asks before it installs anything, as it
- * always does. It replaces a command printed for a person to type, which a person who is not technical cannot use
- * (the owner, 2026-11-05).
+ * always does. It replaces a command printed for a person to type, which a person who is not technical cannot use.
  *
  * The chat takes the message from its address once and drops it from there (`modules/chat/lib/start-with.ts`). Drawn
  * once the orchestrator is known, since its name is on the button: "Ask your orchestrator" asks a person to know the word.

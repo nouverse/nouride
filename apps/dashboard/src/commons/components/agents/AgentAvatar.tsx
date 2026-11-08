@@ -1,6 +1,6 @@
 /**
  * An agent's face (0.8.24): its own pixel cat, the Look it wears in the Office, head and shoulders in a soft rounded
- * tile. Every agent keeps its Look (the owner, 2026-11-08); the soft mascot is Nouride's, not an agent's.
+ * tile. Every agent keeps its Look; the soft mascot is Nouride's, not an agent's.
  */
 
 import { CatPortrait } from "@/commons/cat/CatPortrait";

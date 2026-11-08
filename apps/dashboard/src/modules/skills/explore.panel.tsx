@@ -130,8 +130,7 @@ export function ExplorePanel({ editable, onReview }: { editable: boolean; onRevi
         </form>
 
         {/* The page scrolls, not the list: nothing is below it to push off the screen, and held to what the window left
-            under the two cards above it, the hits had the height of one (the owner, 2026-11-08: "masa skills gw cuma bisa
-            segini doang tingginya"). */}
+            under the two cards above it, the hits had the height of one. */}
         <div data-explore-hits className="mt-5 space-y-3">
           <ErrorNote error={search.error} />
           {search.isPending ? <ListLoading /> : null}

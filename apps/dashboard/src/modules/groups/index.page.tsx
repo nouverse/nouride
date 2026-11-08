@@ -34,7 +34,7 @@ export default function GroupsPage() {
   const list = groups.data?.groups ?? [];
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["groups"] });
   // A room found by any name it goes by, its platform, who talks there or which agents are in it: with many rooms, the
-  // one to rename was a long scroll away (the owner, 2026-11-08).
+  // one to rename was a long scroll away.
   const [filter, setFilter] = useState("");
   const visible = useTextFilter(list, filter, (group) => [group.name, group.platformTitle, group.chatId, platformName(group.platform), ...group.agents, ...group.people.map((person) => person.name)]);
 

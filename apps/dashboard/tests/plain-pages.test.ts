@@ -1,5 +1,5 @@
 /**
- * The dashboard in plain words (0.8.19): the people who use it are not technical (the owner, 2026-11-05), so what a
+ * The dashboard in plain words (0.8.19): the people who use it are not technical, so what a
  * page says, as it is drawn, holds no command, flag, file name or internal word outside a "Details" section, which is
  * for whoever runs the server. Rendered here with the engine's own answers (`fixtures/wire.json`), so the words a page
  * builds from what the daemon sends are read too, not only the ones written in its source. It reads what the default
@@ -16,7 +16,7 @@ useMountHarness();
 /**
  * What a person must never meet in a page's words: the source contract's rule, as a page draws it. A command is
  * lowercase `nouride`, as typed: the product's name starts a sentence ("Nouride restarts"). A coding CLI passes: the
- * name the owner kept for Claude Code, Codex and their like (2026-11-05).
+ * name kept for Claude Code, Codex and their like (2026-11-05).
  */
 const COMMAND = /(?<![\w/.-])nouride [a-z][a-z-]+|(?<![\w-])--[a-z]/;
 const WORDS =

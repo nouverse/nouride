@@ -1,5 +1,5 @@
 /**
- * A draft changed before it starts (0.8.11, RFC MISSION_DRAFTS §2.3): the new-mission form's fields, its limits and its
+ * A draft changed before it starts (0.8.11): the new-mission form's fields, its limits and its
  * brief, prefilled from the draft. Only what was changed is sent; the daemon checks it as a start and says what changed,
  * and sends the draft's notice to its chat again. A started mission has no such form: its checks stay its own.
  */

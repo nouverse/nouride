@@ -1,5 +1,5 @@
 /**
- * An external agent's coding CLI (0.8.1, EXTERNAL_AGENTS §5.7): which CLI answers it and whether it can, its profiles —
+ * An external agent's coding CLI (0.8.1): which CLI answers it and whether it can, its profiles —
  * each a sign-in run on the box as the agent, the link and code shown here and the answer typed here — and how it runs:
  * the model from what the CLI offers, and what it may do without asking. Who it is comes from its persona pack, on the
  * Files tab like any agent's: the daemon writes it into the CLI's own instruction file.

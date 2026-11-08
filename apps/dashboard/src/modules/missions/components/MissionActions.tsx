@@ -55,7 +55,7 @@ export function MissionActions({
   const actions = actionsFor(mission);
   const proposal = mission.waitKind === "accept" && mission.startedAt === null;
   return (
-    // One row beside the title from md: shrunk to the title's leftovers, Stop wrapped under Accept (the owner, 2026-10-31).
+    // One row beside the title from md: shrunk to the title's leftovers, Stop wrapped under Accept.
     <div className="flex flex-wrap items-center gap-2 md:shrink-0 md:flex-nowrap">
       {dialog}
       {actions.includes("accept") && (

@@ -1,5 +1,5 @@
 /**
- * Searching the collections (0.8.20, KNOWLEDGE_BASE §11): the sections search finds for some words, by words and, when
+ * Searching the collections (0.8.20): the sections search finds for some words, by words and, when
  * it is on, by meaning — what an agent looking in them would find. Asked on the button, never on each key pressed.
  */
 

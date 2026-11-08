@@ -1,5 +1,5 @@
 /**
- * Layout on a phone (0.8.12), the rules the owner's iPhone found broken, read from the source:
+ * Layout on a phone (0.8.12), the rules an iPhone found broken, read from the source:
  * - every page ends above the browser's toolbar and the home indicator: its container carries `PAGE_BOTTOM`, past the
  *   safe area, which the viewport reports only with `viewport-fit=cover` — and the layout keeps clear of a notch then;
  * - a grid that sets its columns at a breakpoint sets the phone's too: without `grid-cols-1` its one track is as wide as

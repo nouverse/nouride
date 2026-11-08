@@ -1,5 +1,5 @@
 /**
- * What the dashboard's build does to what it ships (E16).
+ * What the dashboard's build does to what it ships.
  *
  * Read from the real `vite.config.ts`, by the plugins it hands Vite, so a refactor of the file that
  * keeps the behaviour keeps the test green and one that drops it does not.

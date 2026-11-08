@@ -34,7 +34,7 @@ import { reasonOf, timelineOf, type ReasonKind, type TimelineEntry } from "../li
 
 const REASON_ICON: Record<ReasonKind, LucideIcon> = {
   start: Flag,
-  // Forward, not down: the newest turn is at the top, and an arrow down read as pointing at the turn before (the owner).
+  // Forward, not down: the newest turn is at the top, and an arrow down read as pointing at the turn before.
   next: StepForward,
   person: User,
   told: MessageSquarePlus,

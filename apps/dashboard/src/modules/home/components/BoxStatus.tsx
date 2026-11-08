@@ -25,7 +25,7 @@ function stateOf(health: HealthPayload, warnings: number): { words: string; well
 }
 
 /**
- * The box in one line, at the top of Home in the greeting's corner (the owner, 2026-11-08: "taruh atas"): whether
+ * The box in one line, at the top of Home in the greeting's corner: whether
  * everything is working, the version and how long it has been up, the update badge and Restart.
  */
 export function BoxLine({ health }: { health: HealthPayload }) {

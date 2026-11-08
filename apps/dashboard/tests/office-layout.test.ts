@@ -175,7 +175,7 @@ describe("the Office's size", () => {
     expect(scaleFor(600, 248, true)).toBe(2);
     // Stacked on a wide page is twice the office at most: one above another, the rooms are tall already.
     expect(scaleFor(800, 248, true)).toBe(2);
-    // A 750-pixel window's column stacks: side by side it would be drawn at once its size (the owner's screenshot).
+    // A 750-pixel window's column stacks: side by side it would be drawn at once its size.
     expect(753 < STACK_BELOW && scaleFor(753, SIDE_BY_SIDE_WIDTH) < 1.5).toBe(true);
     expect(1_088 < STACK_BELOW).toBe(false);
     expect(scaleFor(1700, 546)).toBe(3);

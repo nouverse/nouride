@@ -2,7 +2,7 @@
  * The brand images the dashboard imports are sized for where they are drawn.
  *
  * The avatar was the 1254 px, 922 KB chibi PNG, drawn at 24 to 56 CSS pixels: 43% of a cold dashboard
- * load, more than the whole script gzipped (dash-dead-mascot-asset-weight). The source stays in
+ * load, more than the whole script gzipped. The source stays in
  * `packages/shared/assets` for the docs site's social banner, which renders it at 460 px; the
  * dashboard imports a 128 px copy. This keeps the next `@brand/` import from being a source file.
  */
@@ -51,7 +51,7 @@ describe("brand images in the dashboard", () => {
 });
 
 /**
- * The tab's icon is sized for a tab (dashboard-theme-saves-system-choice).
+ * The tab's icon is sized for a tab.
  *
  * It was the 256 px chibi, 65 KB: after the script, the largest file a cold load fetched, for a mark a tab draws
  * at 16 to 32 CSS pixels. 64 px covers that on a 2x screen. A favicon cannot be imported, so `sync-brand.ts`

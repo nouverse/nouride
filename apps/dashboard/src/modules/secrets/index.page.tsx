@@ -106,7 +106,7 @@ export default function SecretsPage() {
   const entries = secrets.data?.secrets ?? [];
   const missing = entries.filter((entry) => entry.origin === "missing");
   // A secret found by its name, what uses it, or what is said about it: with forty of them, the one to replace was a
-  // long scroll away (the owner, 2026-11-08).
+  // long scroll away.
   const [filter, setFilter] = useState("");
   const visible = useTextFilter(entries, filter, (entry) => [entry.name, ...entry.usedBy.map(plainUse), ...Object.entries(entry.fields ?? {}).flat(), entry.addedBy]);
 

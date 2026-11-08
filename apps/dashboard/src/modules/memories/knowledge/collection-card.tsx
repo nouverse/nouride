@@ -1,5 +1,5 @@
 /**
- * A collection as a card (0.8.20, KNOWLEDGE_BASE §11): what is in it, who may be answered from it, which agents look in
+ * A collection as a card (0.8.20): what is in it, who may be answered from it, which agents look in
  * it and whom it is about, in sentences; how many documents and sections it holds; and files dropped on it are added.
  */
 

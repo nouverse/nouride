@@ -1,5 +1,5 @@
 /**
- * Helpers & jobs (0.8.12), mounted: the owner asked to see a helper's log and turn on the dashboard, as a mission's are
+ * Helpers & jobs (0.8.12), mounted: a helper's log and turn shown on the dashboard, as a mission's are
  * — before, only `nouride jobs log` and `nouride turns show` on the box showed them. In a file of its own
  * over the shared harness (`mount-harness.ts`).
  */

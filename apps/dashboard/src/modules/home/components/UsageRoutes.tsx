@@ -1,6 +1,6 @@
 /**
- * Each route a model was reached through, and how much of its input came from the provider's cache (TOKEN_SAVINGS §3.1,
- * 0.8.13) — with, above it, a route of a model that caches far below another route of the same model, said with what
+ * Each route a model was reached through, and how much of its input came from the provider's cache
+ * (0.8.13) — with, above it, a route of a model that caches far below another route of the same model, said with what
  * each costs. On the live box the same model cached 1 % one way and 94 % the other, and half the spend went the poor way.
  */
 

@@ -1,5 +1,5 @@
 /**
- * A restart, followed from this tab until the daemon is back — and the page with it (config-restart-ux).
+ * A restart, followed from this tab until the daemon is back — and the page with it.
  *
  * Three places followed a restart and each did part of it: Overview's Restart (`useDaemonRestart`) waited for a new
  * process and refetched every query, the update page's card waited for the version it installed and reloaded, and the

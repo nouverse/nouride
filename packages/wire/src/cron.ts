@@ -105,7 +105,7 @@ export interface JobRunSummary {
   jobId: string;
   startedAt: number;
   finishedAt?: number;
-  /** `interrupted`: cut off by a daemon restart — not a failure (P11). `running`: not over yet, no `finishedAt`. */
+  /** `interrupted`: cut off by a daemon restart — not a failure. `running`: not over yet, no `finishedAt`. */
   status: "success" | "error" | "skipped" | "interrupted" | "running";
   result?: string;
   /** What its guards held with nobody there to ask (0.8.0) — each allowed always for the job from here. */
@@ -141,7 +141,7 @@ export interface CronRunEntry {
   agentId: string;
   startedAt: number;
   finishedAt?: number;
-  /** `interrupted`: cut off by a daemon restart — not a failure (P11). `running`: not over yet, no `finishedAt`. */
+  /** `interrupted`: cut off by a daemon restart — not a failure. `running`: not over yet, no `finishedAt`. */
   status: "success" | "error" | "skipped" | "interrupted" | "running";
   result?: string;
 }

@@ -1,5 +1,5 @@
 /**
- * The knowledge base's calls (0.8.20, KNOWLEDGE_BASE §11): its collections, their documents, what search finds in them,
+ * The knowledge base's calls (0.8.20): its collections, their documents, what search finds in them,
  * and the documents an agent saved from a chat that wait for an admin's yes. Spread into `api` like the other menus'.
  * The types are the engine's (`routes/knowledge.ts`), written again: the dashboard is its own build.
  */

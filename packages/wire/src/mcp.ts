@@ -27,7 +27,7 @@ export interface McpServer {
   connected: boolean;
   running: boolean;
   tools: number;
-  schemaBytes?: number; // what its tools add to every request the agent makes (G12); absent before 0.7.9
+  schemaBytes?: number; // what its tools add to every request the agent makes; absent before 0.7.9
   /** It waits for a person to log in — Connect does (0.7.19). Absent before 0.7.19. */
   needsLogin?: boolean;
   /** What its login is, when it has one — never a token. */

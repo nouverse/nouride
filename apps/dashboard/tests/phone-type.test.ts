@@ -1,5 +1,5 @@
 /**
- * Type on a phone (0.8.12). The owner's iPhone zoomed into the login form the moment a field was focused — iOS does
+ * Type on a phone (0.8.12). An iPhone zoomed into the login form the moment a field was focused — iOS does
  * that to a field whose text is under 16px, and every field here was 12–14px — and read the rest at 10–11px. `main.css`
  * has two rules for it: every field 16px on a phone or to a finger, and nothing under 12px on a phone. This loads them
  * into a DOM that can be told the window's width, beside the utilities as Tailwind writes them, and reads what a browser

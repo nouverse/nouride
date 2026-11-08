@@ -73,7 +73,7 @@ export const logsApi = {
         unpricedRequests: number;
         requests: number;
       };
-      /** Days the routes are added up over: a week at least (TOKEN_SAVINGS §3.1). */
+      /** Days the routes are added up over: a week at least. */
       routeDays?: number;
       /** Each profile and model, with its cached share — null where the provider never said — and $ a million input. */
       routes?: UsageRouteView[];

@@ -1,5 +1,5 @@
 /**
- * A document written on the page (0.8.20, KNOWLEDGE_BASE §11): a title and its text in Markdown, with the Files tab's
+ * A document written on the page (0.8.20): a title and its text in Markdown, with the Files tab's
  * Edit and Preview, saved into the collection under its title. Closing with something written asks first.
  */
 

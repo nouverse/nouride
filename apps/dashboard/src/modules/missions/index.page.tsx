@@ -35,7 +35,7 @@ const OPEN_MS = 5_000;
 const SETTLED_MS = 30_000;
 
 /**
- * How far back the finished ones go — 3 days unless chosen, the owner's word ("defaultnya 3 hari saja"), a month at most,
+ * How far back the finished ones go — 3 days unless chosen, a month at most,
  * the daemon's own bound (`GET /missions?days=`).
  */
 const SPANS = [3, 7, 14, 30] as const;

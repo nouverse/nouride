@@ -1,5 +1,5 @@
 /**
- * Brotli and gzip copies of the build's text assets, written beside them (E16).
+ * Brotli and gzip copies of the build's text assets, written beside them.
  *
  * The daemon served every script and stylesheet raw: the main script went over the wire at its full
  * size to a browser that would have taken a quarter of it compressed, from a Pi over Wi-Fi. Compressing

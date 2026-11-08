@@ -1,5 +1,5 @@
 /**
- * A mission's turn on a phone (0.8.12), from the owner's iPhone and the coordinator's look at the fix:
+ * A mission's turn on a phone (0.8.12), from an iPhone and the coordinator's look at the fix:
  * - the timeline's rail and its column sat beside the turn's own border inside the Turns card, a seventh of the width
  *   gone before a step's command had any. Below `sm` a turn is a block the card's width, its point small at the start of
  *   its head; from `sm` up the rail is as it was;

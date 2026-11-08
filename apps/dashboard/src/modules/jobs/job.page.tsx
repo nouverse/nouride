@@ -1,6 +1,6 @@
 /**
  * One background job (0.8.12): what it was asked to do, what it did step by step, and what it handed back — the page
- * that `nouride jobs log` and `nouride turns show` were, on the box only, until the owner asked for it here.
+ * that `nouride jobs log` and `nouride turns show` were before, on the box only.
  *
  * Three sources. The job and the end of its log (`/jobs/:id/log`), asked again every few seconds while it runs. For a
  * helper or an asked agent, its own turn: the job keeps the turn that started it, and that turn's record lists the

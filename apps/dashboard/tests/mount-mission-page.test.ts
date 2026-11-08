@@ -248,7 +248,7 @@ test("a reviewer's brief naming a long path breaks it, rather than running out o
 });
 
 test("a mission under review says the reviewer is looking, which pass, and for how long — not only that its checks run", async () => {
-  // msn_b97876 on the live box (0.8.10): ten minutes of "Running its checks", and the owner asked whether it was stuck.
+  // msn_b97876 on the live box (0.8.10): ten minutes of "Running its checks", and nothing said whether it was stuck.
   const shown = WIRE["/missions/msn_1"] as { mission: Record<string, unknown> };
   missionTurns([missionTurn(1, {})], { "/missions/msn_1": { status: 200, body: { ...shown, mission: { ...shown.mission, status: "checking", seen: "working" }, reviewing: { pass: 2, of: 3, since: Date.now() - 65_000 } } } });
   let text = "";
@@ -261,7 +261,7 @@ test("a mission under review says the reviewer is looking, which pass, and for h
 });
 
 test("its actions keep one row beside its title from md: Accept, Continue, Stop — Stop wrapped under Accept beside a long title", async () => {
-  // The owner's screenshot of msn_b97876 (2026-10-31): the actions shrank to what the title left, and Stop fell to a row
+  // A screenshot of msn_b97876 (2026-10-31): the actions shrank to what the title left, and Stop fell to a row
   // of its own. happy-dom lays out nothing, so the classes that keep the row are what is asserted.
   const shown = WIRE["/missions/msn_1"] as { mission: Record<string, unknown> };
   missionTurns([missionTurn(1, {})], { "/missions/msn_1": { status: 200, body: { ...shown, mission: { ...shown.mission, status: "waiting", waitKind: "accept", seen: "needs_you", startedAt: 1 } } } });
@@ -304,7 +304,7 @@ test("a draft (0.8.11): its brief shown, and changed before it starts — only w
   let toast = "";
   await renderPage("/missions/msn_1", async (host) => {
     await eventually(() => buttons(host).includes("Change the draft"), 2_000, "the draft's card");
-    // The brief folded until opened (the owner's word), then read in place.
+    // The brief folded until opened, then read in place.
     openBrief(host);
     await eventually(() => host.textContent?.includes("The owner's answers, first.") === true, 2_000, "the brief, opened");
     shown = host.textContent ?? "";

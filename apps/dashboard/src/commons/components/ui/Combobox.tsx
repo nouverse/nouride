@@ -38,7 +38,7 @@ export interface ComboboxProps {
   customHint?: string;
   className?: string;
   id?: string;
-  /** Words for an option, shown above it and searched with it — a chat id is a number, "DM · Gading" is a chat. */
+  /** Words for an option, shown above it and searched with it — a chat id is a number, "DM · Sam" is a chat. */
   describe?: (option: string) => string | undefined;
   /** The whole list on focus, for a field answered by picking from it; a model's list waits for typing (see above). */
   listOnFocus?: boolean;
