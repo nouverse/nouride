@@ -111,7 +111,8 @@ di *Models → Coding CLIs*.
 
 ### Files
 
-Persona pack, diedit di browser, dengan pratinjau untuk file Markdown.
+Persona pack, diedit di browser. File Markdown terbuka di pratinjaunya, dengan **Edit** di sebelahnya, dan
+keduanya setinggi yang sama dan di-scroll di dalamnya, jadi pindah di antara keduanya gak menggeser halaman.
 
 ![Tab Files milik sebuah agent](/media/dashboard-agent-files.png)
 

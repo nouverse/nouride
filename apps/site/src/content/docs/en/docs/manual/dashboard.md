@@ -110,7 +110,8 @@ are under *Models → Coding CLIs*.
 
 ### Files
 
-The persona pack, edited in the browser, with a preview for the Markdown files.
+The persona pack, edited in the browser. A Markdown file opens in its preview, with **Edit** beside it, and both
+are one height that scrolls inside, so switching between them does not move the page.
 
 ![An agent's Files tab](/media/dashboard-agent-files.png)
 

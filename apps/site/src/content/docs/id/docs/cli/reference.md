@@ -43,7 +43,9 @@ Ejaan lama yang masih dibaca 0.7.x ditolak sejak 0.8.0, kode keluar 2, sambil me
 
 Flag yang gak dibaca sebuah perintah ditolak, kode keluar 2, dan sejak 0.7.11 begitu juga kata yang gak
 dibacanya: `reload` sesudah `nouride agents` dulu dibuang dan daftar agent ditampilkan; sekarang ia ditolak
-sebelum daemon ditanya apa pun, dan diarahkan ke `nouride agent reload`, perintah yang menerimanya.
+sebelum daemon ditanya apa pun, dan diarahkan ke `nouride agent reload`, perintah yang menerimanya. Perintah atau
+aksi yang salah ketik dijawab dengan yang paling mungkin dimaksud, tetap kode keluar 2: *missions* sebagai perintah
+dijawab *Did you mean `nouride mission`?*, dan *lst* sesudah `nouride jobs` dijawab *Did you mean `nouride jobs list`?*
 
 :::note[Cara agent menjangkau CLI]
 Agent yang memegang tool `nouride` bisa menjalankan perintah-perintah ini lewat tool itu, dan hanya

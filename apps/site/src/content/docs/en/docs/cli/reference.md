@@ -42,7 +42,9 @@ The old spellings 0.7.x still read are refused since 0.8.0, exit 2, naming what 
 
 A flag a command does not read is refused, exit 2, and since 0.7.11 so is a word it does not read:
 `reload` after `nouride agents` used to be dropped, and the agents listed; now it is refused before anything is
-asked of the daemon, and pointed at `nouride agent reload`, the command that takes it.
+asked of the daemon, and pointed at `nouride agent reload`, the command that takes it. A mistyped command or action
+is answered with the one most likely meant, still exit 2: *missions* for a command gets *Did you mean
+`nouride mission`?*, and *lst* after `nouride jobs` gets *Did you mean `nouride jobs list`?*
 
 :::note[How an agent reaches the CLI]
 An agent that holds the `nouride` tool can run these commands through it, and only through it: `exec`
