@@ -391,9 +391,34 @@ check_floor() {
 fetch() {
   if command -v curl >/dev/null 2>&1; then curl -fsSL "$1" -o "$2"; else wget -qO "$2" "$1"; fi
 }
-# The same, saying nothing when the file is not there: for asking which of two names a release uses.
-fetch_quiet() {
-  if command -v curl >/dev/null 2>&1; then curl -fsL "$1" -o "$2" 2>/dev/null; else wget -qO "$2" "$1" 2>/dev/null; fi
+# fetch_status <url> <file> — downloads, and prints how it went: `ok`, `missing` (a 404 or 410, or a file:// that is
+# not there), or what failed instead (`HTTP 504`, `no answer`). A release's checksum file that GitHub failed to serve
+# for a moment was reported as one the release does not have, which reads as an unsigned release (2026-11-08): only a
+# file that is not there is said to be missing. Whatever was written for a failure is removed.
+fetch_status() {
+  if command -v curl >/dev/null 2>&1; then
+    fs_code="$(curl -sSL -o "$2" -w '%{http_code}' "$1" 2>/dev/null)"
+    fs_exit=$?
+  else
+    wget -S -O "$2" "$1" 2>"$2.headers"
+    fs_exit=$?
+    fs_code="$(awk '/^ *HTTP\//{c=$2} END{print c}' "$2.headers" 2>/dev/null)"
+    rm -f "$2.headers"
+  fi
+  case "$fs_code" in
+    2??) [ "$fs_exit" -eq 0 ] && { echo ok; return 0; } ;;
+    404 | 410) rm -f "$2"; echo missing; return 1 ;;
+  esac
+  if [ "$fs_exit" -eq 0 ] && { [ -z "$fs_code" ] || [ "$fs_code" = "000" ]; }; then echo ok; return 0; fi
+  rm -f "$2"
+  case "$1" in file://*) echo missing; return 1 ;; esac
+  case "$fs_code" in "" | 000) echo "no answer" ;; *) echo "HTTP $fs_code" ;; esac
+  return 1
+}
+# The refusal for a download that failed, as against one that is not there: the release is not at fault, and the same
+# command a few minutes later usually works.
+fetch_failed() {
+  die "could not download $1 ($2), so nothing was installed. GitHub sometimes fails for a moment: run the same command again in a few minutes"
 }
 
 # >>> checksum names
@@ -415,10 +440,16 @@ fetch_sums() {
   fs_base="$(sums_base_for "$2")"
   if [ -z "$fs_base" ]; then
     fs_base="CHECKSUMS"
-    fetch_quiet "$1/$fs_base${3:+-$3}" "$4/$fs_base${3:+-$3}" || fs_base="SHA256SUMS"
+    if ! fs_how="$(fetch_status "$1/$fs_base${3:+-$3}" "$4/$fs_base${3:+-$3}")"; then
+      [ "$fs_how" = "missing" ] || fetch_failed "$fs_base${3:+-$3}" "$fs_how"
+      fs_base="SHA256SUMS"
+    fi
   fi
   SUMS="$fs_base${3:+-$3}"
-  [ -f "$4/$SUMS" ] || fetch "$1/$SUMS" "$4/$SUMS" || die "the release has no $SUMS; refusing to install what nothing vouches for"
+  [ -f "$4/$SUMS" ] && return 0
+  fs_how="$(fetch_status "$1/$SUMS" "$4/$SUMS")" && return 0
+  [ "$fs_how" = "missing" ] || fetch_failed "$SUMS" "$fs_how"
+  die "the release has no $SUMS; refusing to install what nothing vouches for"
 }
 # <<< checksum names
 
@@ -467,7 +498,10 @@ else
   fetch_sums "${url%/*}" "$VERSION" "$VARIANT" "$STAGE"
   sig=""
   if must_be_signed "$VERSION"; then
-    fetch "${url%/*}/$SUMS.sig" "$STAGE/$SUMS.sig" || die "the release has no signature for $SUMS, which every release from v0.7.4 has; refusing it"
+    if ! sig_how="$(fetch_status "${url%/*}/$SUMS.sig" "$STAGE/$SUMS.sig")"; then
+      [ "$sig_how" = "missing" ] || fetch_failed "$SUMS.sig" "$sig_how"
+      die "the release has no signature for $SUMS, which every release from v0.7.4 has; refusing it"
+    fi
     sig="$STAGE/$SUMS.sig"
   fi
   verify_release "$STAGE/nouride.tar.gz" "$STAGE/$SUMS" "$sig" "$ARTIFACT"
