@@ -31,6 +31,23 @@ export interface ScannedCli {
   /** Whether a sign-in can be run for it from here. */
   login: boolean;
   loginNote?: string;
+  /** The package that carries it, and the versions of it this Nouride was tested with (0.8.24). */
+  package?: string;
+  tested?: { lowest: string; highest: string };
+  /** The newest published, where the server could ask. */
+  newest?: string;
+  standing?: CliVersionView;
+}
+
+/** Where a coding CLI's version stands (`cliStanding` in the daemon, 0.8.24). */
+export type CliStanding = "older" | "update" | "current" | "newer";
+
+export interface CliVersionView {
+  standing: CliStanding;
+  /** What an update installs: the newest version this Nouride was tested with. */
+  offer?: string;
+  /** The newest published, where it is past every version this Nouride was tested with. */
+  untested?: string;
 }
 
 /** Whether this box can hold a CLI's session: what the agents' commands may hold, and what one needs. */
@@ -102,6 +119,8 @@ export interface CliAccountsView {
   maker?: string;
   installed: boolean;
   version?: string;
+  package?: string;
+  standing?: CliVersionView;
   install: string;
   /** Signed in once for every agent on an account, or once per agent. */
   shared: boolean;

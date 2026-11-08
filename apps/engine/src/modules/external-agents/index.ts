@@ -542,9 +542,9 @@ export class ExternalAgents implements RunnerHost {
     return token && row.sharedLogin ? { [row.sharedLogin.env]: token } : {};
   }
 
-  /** Every CLI with its accounts and the agents on each, for the Models page. */
+  /** Every CLI with its accounts and the agents on each, for the Models page; `fresh` (Check again) asks the registry too. */
   async accountList(agents: readonly LoadedAgent[], fresh = false): Promise<CliAccountsView[]> {
-    return this.accounts.list(this.rows(), await this.scan(fresh), agents, (agent) => this.profiles(agent, fresh));
+    return this.accounts.list(this.rows(), await this.scan(fresh, fresh), agents, (agent) => this.profiles(agent, fresh));
   }
 
   /**

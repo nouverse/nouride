@@ -20,6 +20,7 @@ import { cliLabel, type CliAccountsView, type CliAccountView } from "@/commons/l
 import { Card, EmptyState, ErrorNote } from "@/commons/components/ui/ui";
 import { CliSignIn } from "@/commons/components/ui/CliSignIn";
 import { AskAgentButton } from "@/commons/components/ui/AskAgentButton";
+import { CliStanding } from "@/commons/components/ui/CliStanding";
 import { Details } from "@/commons/components/ui/Details";
 import { isAdmin, useMe } from "@/commons/lib/session";
 import { byInstaller, setUpMessage } from "@/commons/lib/set-up";
@@ -114,10 +115,14 @@ function CliCard({ cli, admin, onChanged, onRecheck }: { cli: CliAccountsView; a
     >
       <div className="space-y-3 text-sm">
         {cli.installed ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <Terminal size={16} className="text-base-content/60" aria-hidden="true" />
-            {/* No version: what the scan reads is the ACP adapter's (claude-agent-acp 0.95), not the CLI's own (Claude Code 2.x). */}
-            <span className="badge badge-sm badge-ghost font-mono">installed</span>
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Terminal size={16} className="text-base-content/60" aria-hidden="true" />
+              {/* No version here: what the scan reads is the ACP adapter's (claude-agent-acp 0.95), not the CLI's own (Claude
+                  Code 2.x). Its standing says it in words, the numbers under its Details (0.8.24). */}
+              <span className="badge badge-sm badge-ghost font-mono">installed</span>
+            </div>
+            <CliStanding name={cli.name} pkg={cli.package} version={cli.version} standing={cli.standing} />
           </div>
         ) : (
           <div className="space-y-2">

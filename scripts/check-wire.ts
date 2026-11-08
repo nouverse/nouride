@@ -51,6 +51,7 @@ export const PAIRS: Pair[] = [
   { what: "a retention scope", dashboard: { file: `${LIB}/api.logs.ts`, type: "RetentionScope" }, daemon: { file: "apps/engine/src/modules/config/settings/memory.ts", keys: "RETENTION_SCOPES" } },
   { what: "a model tier", dashboard: { file: `${LIB}/api.tiers.ts`, type: "ModelTier" }, daemon: { file: "packages/shared/src/types/tiers.ts", array: "MODEL_TIERS" } },
   { what: "an effort level", dashboard: { file: `${LIB}/api.agents.ts`, array: "EFFORT_LEVELS" }, daemon: { file: "packages/shared/src/types/llm.ts", array: "LLM_EFFORTS" } },
+  { what: "where a coding CLI's version stands", dashboard: { file: `${LIB}/api.external-agents.ts`, type: "CliStanding" }, daemon: { file: "packages/acp/src/versions.ts", type: "CliStanding" } },
   { what: "the skill learning mode", dashboard: { file: `${LIB}/api.skills.ts`, type: "LearningMode" }, daemon: { file: "packages/shared/src/types/config.ts", type: "SkillLearningMode" } },
   { what: "an approval's answer", dashboard: { file: API, type: "ApprovalDecision" }, daemon: { file: "packages/shared/src/types/config.ts", type: "ApprovalDecision" } },
   { what: "a skill draft's trigger", dashboard: { file: `${LIB}/api.skills.ts`, interface: "SkillDraft", property: "triggerKind" }, daemon: { file: "apps/engine/src/modules/reflection/types.ts", type: "TriggerKind" } },

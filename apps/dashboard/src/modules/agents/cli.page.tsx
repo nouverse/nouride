@@ -14,6 +14,7 @@ import { isAdmin, useMe } from "@/commons/lib/session";
 import { Card, ErrorNote, Field } from "@/commons/components/ui/ui";
 import { Combobox } from "@/commons/components/ui/Combobox";
 import { AskAgentButton } from "@/commons/components/ui/AskAgentButton";
+import { CliStanding } from "@/commons/components/ui/CliStanding";
 import { Details } from "@/commons/components/ui/Details";
 import { byInstaller, setUpMessage } from "@/commons/lib/set-up";
 import { CliProfiles } from "./components/CliProfiles";
@@ -85,6 +86,7 @@ export default function AgentCliPage({ agentId }: { agentId: string }) {
               <span className="badge badge-sm badge-warning font-mono">not installed</span>
             ) : null}
           </div>
+          {row?.installed ? <CliStanding name={cliName} pkg={row.package} version={row.version} standing={row.standing} /> : null}
           {/* Not there yet: asked of the orchestrator where it can install it, else whoever runs the server (0.8.19). */}
           {row && !row.installed ? (
             <div className="space-y-2">

@@ -118,6 +118,16 @@ describe("the scan, on fake registry answers", () => {
     expect(await again.of([ROW.package!])).toEqual({ [ROW.package!]: "0.100.0" });
   });
 
+  test("the Models page's list carries each standing and the package, and its Check again asks the registry afresh", async () => {
+    const box = service("0.97.0", { [ROW.package!]: "0.100.0" });
+    const [view] = await box.agents.accountList([]);
+    expect(view).toMatchObject({ id: "claude-code", package: ROW.package, version: "0.97.0", standing: { standing: "update", offer: "0.100.0" } });
+    await box.agents.accountList([]);
+    expect(box.asked).toHaveLength(1);
+    await box.agents.accountList([], true);
+    expect(box.asked).toHaveLength(2);
+  });
+
   test("a CLI not installed is not asked about: a box with none asks the registry nothing", async () => {
     const box = service(null, { [ROW.package!]: "0.100.0" });
     const [cli] = await box.agents.scan();
