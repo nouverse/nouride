@@ -228,6 +228,9 @@ export const TECHNICAL: { why: string; pattern: RegExp }[] = [
   { why: "a path", pattern: /(?:^|[\s(`'"])(?:\/srv\/|\/etc\/|\/opt\/|\/var\/|\/usr\/|\/tmp\/|\/path\/|~\/|\.nouride\b|data\/|workspace\/|agents\/)/ },
   { why: "an internal word", pattern: /\b(?:daemon|gateways?|snapshots?|seal(?:s|ed|ing)?|unseal\w*|passphrases?|payloads?|ACP|MCP|(?<!coding )CLIs?|stdin|adapters?|registry|config(?:s|uration)?|tokens?)\b/i },
   { why: "an internal word", pattern: /\b(?:the|this|that|an|each|every|your|its|our|whole|one|whose)\s+install(?:'s|s)?\b|\binstall's\b/i },
+  // How the program is built, not what it does for a person: "mapped identities injected into agent context" (People,
+  // 0.8.23).
+  { why: "an internal word", pattern: /\b(?:inject(?:s|ed|ing|ion)?|mapped|mappings?)\b/i },
   { why: "an internal word", pattern: /\b(?:update|release|long-term|newer|older|stable|LTS)\s+(?:track|line)s?\b/i },
   { why: "a section of the config file", pattern: /\[\[?[a-z][a-z_]*(?:\.[a-z][a-z_]*)*\]\]?/ },
   { why: "a setting's name", pattern: /\b[a-z]+(?:_[a-z]+)+\b/ },

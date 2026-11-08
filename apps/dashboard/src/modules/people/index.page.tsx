@@ -40,8 +40,8 @@ export default function PeoplePage() {
   return (
     <div className={FILL_PAGE}>
       <PageHeader
-        title="People Directory"
-        description="One entry per person, with a short key that what is remembered about them is kept under. Their chat accounts are optional: add somebody by name, and approve their account as them when they pair."
+        title="People"
+        description="Everyone your agents know, with the chat accounts each writes from. Add someone by name: their accounts can be added now, or approved as theirs when they first message an agent."
         actions={
           <button
             type="button"
@@ -73,11 +73,11 @@ export default function PeoplePage() {
           <EmptyState
             icon={Users}
             title="Nobody yet"
-            description="Add the people in your household by name. Their WhatsApp, Telegram or Discord accounts can be added now, or attached when they pair."
+            description="Add the people in your household by name. Their WhatsApp, Telegram or Discord accounts can be added now, or approved as theirs when they first message an agent."
           />
         </Card>
       ) : (
-        <ScrollCard fill title="Known Contacts" description="Directory of mapped identities injected into agent context.">
+        <ScrollCard fill title="Known People" description="One row per person. Your agents know who is writing, whichever of these accounts they write from.">
           <div className="overflow-x-auto -mx-4 -my-2 sm:-mx-6">
             {/*
               A card per person on a phone, the table from `sm` up: in four columns at phone width an account id had a

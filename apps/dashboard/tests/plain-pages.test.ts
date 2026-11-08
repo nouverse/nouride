@@ -20,7 +20,7 @@ useMountHarness();
  */
 const COMMAND = /(?<![\w/.-])nouride [a-z][a-z-]+|(?<![\w-])--[a-z]/;
 const WORDS =
-  /\b[\w-]+\.(?:toml|json|ya?ml|md|sh|env)\b|\b(?:daemon|gateways?|snapshots?|passphrases?|payloads?|ACP|MCP|(?<!coding )CLIs?|stdin|adapters?|registry|config(?:uration)?)\b|\b(?:this|the|an?|each|every|your|its)\s+install(?:'s)?\b/i;
+  /\b[\w-]+\.(?:toml|json|ya?ml|md|sh|env)\b|\b(?:daemon|gateways?|snapshots?|passphrases?|payloads?|ACP|MCP|(?<!coding )CLIs?|stdin|adapters?|registry|config(?:uration)?|inject(?:s|ed|ing|ion)?|mapped|mappings?)\b|\b(?:this|the|an?|each|every|your|its)\s+install(?:'s)?\b/i;
 
 /**
  * What a person reads without opening a Details section: each element that holds words of its own, with what is inside
