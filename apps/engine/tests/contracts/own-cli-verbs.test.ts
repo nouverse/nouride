@@ -35,6 +35,11 @@ describe("the CLI's own verbs, run by an agent", () => {
     for (const args of [["pkg"], ["pkg", "status"], ["pkg", "check", "install", "jq"], ["pkg", "refresh"]]) expect({ args, gated: gated(args) }).toEqual({ args, gated: false });
   });
 
+  test("a skill root added or removed through the CLI is asked as the agent's own request is: a persona change (0.8.24)", () => {
+    for (const action of ["add", "rm"]) expect({ action, cls: classifyHardline(["nouride", "agent", "skill-root", action, "nix", "/srv/projects/app"])?.class }).toEqual({ action, cls: "persona" });
+    expect(classifyHardline(["nouride", "--json", "agent", "skill-root", "add", "nix", "."])?.class).toBe("persona");
+  });
+
   test("installing for every agent asks under trusted too, and turning an agent external or back changes its config (0.8.1)", () => {
     expect(classifyHardline(["nouride", "tools", "run", "--", "npm", "i", "-g", "x"])?.class).toBe("shared-tools");
     for (const args of [["agent", "external", "nix", "claude-code"], ["agent", "internal", "nix"]]) expect(classifyHardline(["nouride", ...args])?.class).toBe("config");

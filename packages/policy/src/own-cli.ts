@@ -62,6 +62,9 @@ const ROWS: readonly Row[] = [
   { verb: "agent", acts: actions("enable", "disable"), class: "config", reason: "changes the daemon's config.toml: which agents run" },
   // Whether a coding CLI answers an agent (0.8.1): its own config.toml, and who it then is.
   { verb: "agent", acts: actions("external", "internal"), class: "config", reason: "changes an agent's config.toml: whether a coding CLI answers it instead of a model" },
+  // A skill root (0.8.24): a folder whose skills become an agent's instructions, asked as `skill_root` is — at every
+  // level, of an admin. The CLI reads the control token, so through the `nouride` tool it was the same change unasked.
+  { verb: "agent", acts: actions("skill-root"), class: "persona", reason: "adds or removes a folder whose skills become an agent's instructions, which an admin alone answers" },
   // A program every agent runs, installed as the daemon's user (0.8.1): asked under trusted too (`shared-tools`).
   { verb: "tools", acts: actions("run"), class: "shared-tools", reason: "installs or updates a program every agent runs, as the daemon's user, and its install scripts run as the user that owns every pack and the secret store" },
   // This machine's packages, as root, through nouride-pkg (0.8.15): `check`, `status` and `refresh` change nothing.
