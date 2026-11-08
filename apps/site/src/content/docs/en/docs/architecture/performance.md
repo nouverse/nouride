@@ -25,7 +25,7 @@ Sizes move with the runtime. Re-measure before trusting these against a much new
 | **Comfortable** | 512 MB. 1 GB if the agent does real work through `exec`. Reasoning, not a measurement |
 | **External agents** | One coding CLI per agent on top, idle 324 MB for Claude Code and 187 MB for Codex ([below](#external-agents)); none below 512 MiB for the agents' commands |
 | **Disk** | 95 MB installed, a 40 MB download. A fresh `data/` is 364 KB (2026-08-14), and it grows with what is remembered |
-| **CPU** | Any. 0.17% of one core at idle on an x64 box with nine gateways connected; it waits on the network almost all the time |
+| **CPU** | Any. 0.17% of one core at idle on an x64 box with nine gateways connected, and 0.18% with fifteen (measured again 2026-11-08, over two minutes); it waits on the network almost all the time |
 | **Needs no** | Postgres, Redis, vector database, GPU, or local model |
 
 There is no minimum-viable-model requirement, because Nouride does not host one. Providers are remote

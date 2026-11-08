@@ -49,7 +49,7 @@ place, as does re-running the script. From 0.7.x: see [Upgrading to v0.8](/en/do
 | Idle, 1 agent | ~65–75 MB resident |
 | Boot peak | roughly double the resting figure |
 | Each extra agent | ~0.4 MB |
-| CPU at idle | 0.7% of one core |
+| CPU at idle | 0.18% of one core (measured 2026-11-08, x64, fifteen connections) |
 | Disk | ~120 MB installed |
 
 Do not deploy at the floor, 64 MB of RAM (measured 2026-10-17 on linux-arm64, a first start included): it is the

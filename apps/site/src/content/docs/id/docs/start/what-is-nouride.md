@@ -97,7 +97,7 @@ Diukur, bukan diperkirakan, asal-usul tiap angka ada di
 | **Nyaman** | 512 MB. 1 GB kalau agent mengerjakan hal serius lewat `exec`. |
 | **Agent eksternal** | Satu CLI coding per agent, sebagai tambahan: diam dengan satu sesi terbuka, sekitar 330 MB untuk Claude Code dan 190 MB untuk Codex. Cuma ditawarkan kalau perintah agent kebagian 512 MiB, jadi box 512 MB gak dapat. |
 | **Disk** | ~95 MB terpasang, ditambah apa pun yang dihasilkan agent. |
-| **CPU** | Apa saja. 0,7% dari satu core saat idle, hampir selalu menunggu jaringan. |
+| **CPU** | Apa saja. 0,18% dari satu core saat idle (diukur 2026-11-08 di mesin x64 dengan lima belas koneksi): hampir selalu menunggu jaringan. |
 | **Gak butuh** | Postgres, Redis, vector database, GPU, atau model lokal. |
 
 Daemon-nya bergantung langsung pada **empat** paket pihak ketiga: Hono untuk HTTP, serta discord.js,

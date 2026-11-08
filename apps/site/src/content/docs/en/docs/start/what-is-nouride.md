@@ -95,7 +95,7 @@ Measured, not estimated, the provenance for every figure is on the
 | **Comfortable** | 512 MB. 1 GB if the agent does real work through `exec`. |
 | **External agents** | A coding CLI per agent, on top: idle with a session open, about 330 MB for Claude Code and 190 MB for Codex. Offered only where the agents' commands have 512 MiB, so a 512 MB box gets none. |
 | **Disk** | ~95 MB installed, plus whatever the agents produce. |
-| **CPU** | Any. 0.7% of one core at idle, it waits on the network almost all the time. |
+| **CPU** | Any. 0.18% of one core at idle (measured 2026-11-08 on an x64 box with fifteen connections): it waits on the network almost all the time. |
 | **Needs no** | Postgres, Redis, vector database, GPU, or local model. |
 
 The daemon depends directly on **four** third-party packages: Hono for HTTP, and discord.js, grammY

@@ -49,7 +49,7 @@ tempat, sama seperti menjalankan ulang script-nya. Dari 0.7.x: lihat [Upgrade ke
 | Idle, 1 agent | ~65–75 MB resident |
 | Puncak boot | kira-kira dua kali angka diamnya |
 | Tiap agent tambahan | ~0,4 MB |
-| CPU saat idle | 0,7% dari satu core |
+| CPU saat idle | 0,18% dari satu core (diukur 2026-11-08, x64, lima belas koneksi) |
 | Disk | ~120 MB terpasang |
 
 Jangan deploy di batas bawah, RAM 64 MB (diukur 2026-10-17 di linux-arm64, start pertama juga):

@@ -25,7 +25,7 @@ lebih baru; *selisih* antar baris adalah bagian yang bertahan.
 | **Nyaman** | 512 MB. 1 GB kalau agent mengerjakan hal nyata lewat `exec`. Penalaran, bukan pengukuran |
 | **Agent eksternal** | Satu CLI coding per agent sebagai tambahan, saat diam 324 MB untuk Claude Code dan 187 MB untuk Codex ([di bawah](#agent-eksternal)); gak ada kalau perintah agent kebagian di bawah 512 MiB |
 | **Disk** | 95 MB terpasang, unduhan 40 MB. `data/` yang baru berukuran 364 KB (2026-08-14), dan tumbuh sesuai apa yang diingat |
-| **CPU** | Apa saja. 0,17% dari satu core saat idle di mesin x64 dengan sembilan gateway tersambung; hampir sepanjang waktu ia menunggu jaringan |
+| **CPU** | Apa saja. 0,17% dari satu core saat idle di mesin x64 dengan sembilan gateway tersambung, dan 0,18% dengan lima belas (diukur lagi 2026-11-08, selama dua menit); hampir sepanjang waktu ia menunggu jaringan |
 | **Gak butuh** | Postgres, Redis, vector database, GPU, atau model lokal |
 
 Gak ada syarat model minimum, karena Nouride gak menampung model. Provider adalah endpoint jarak
