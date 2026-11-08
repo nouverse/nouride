@@ -18,8 +18,8 @@ setup dan `nouride setup` menjalankan kode yang sama, dan halaman Skills menulis
 
 ## Peta
 
-Menunya diurutkan menurut seberapa sering halamannya dibuka: **Home, Chats, Work, dan Agents** tiap hari, **Skills**
-dan **Memory** sesekali, dan semua yang cukup diatur sekali ada di balik **Settings**.
+Menunya diurutkan menurut seberapa sering halamannya dibuka: **Home, Chats, Work, dan Agents** tiap hari, **Skills**,
+**Connectors** dan **Memory** sesekali, dan semua yang cukup diatur sekali ada di balik **Settings**.
 
 ```
 Home                yang butuh kamu · yang sedang jalan · Quick chat · agent kamu · box-nya · pemakaian AI hari ini
@@ -46,6 +46,7 @@ Agents
   Office            status para agent sebagai kantor kecil berisi kucing
 
 Skills              Skills Workshop: Live · Pending · Explore
+Connectors          server MCP instalasi: Installed · Explore, saklar per agent
 Memory
   Knowledge & Memory   Knowledge · Agent notes · People · Timeline · Shared · Proposals · Settings, dan graph
   People            nama dan catatan untuk manusia yang mereka ajak bicara
@@ -58,7 +59,6 @@ Settings
     Secrets         kredensial, untuk apa masing-masing, password backup      (admin)
     LLM Gateway     Nougate di dalam daemon: akun, key, pemakaian (Router)    (admin)
   Reaching out
-    Connectors      server MCP instalasi: Installed · Explore, saklar per agent
     Integrations    aplikasi AI lain yang menjangkau memori, satu key per aplikasi (admin)
     Web Search      tempat agent mencari: sumber gratis, Brave, SearXNG, sendiri (admin)
   People and sign-in

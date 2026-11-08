@@ -41,7 +41,7 @@ describe("what a person may see", () => {
   const settings = SETTINGS.flatMap((group) => group.items);
   test("a member sees no admin page, a box's page only on a paired box, the gateway only where it is hosted", () => {
     const shown = (where: Parameters<typeof visible>[1]) => visible(settings, where).map((one) => one.label);
-    expect(shown({ admin: false, onBox: true, hostsGateway: true })).toEqual(["Connectors", "Access", "My Account", "Logs"]);
+    expect(shown({ admin: false, onBox: true, hostsGateway: true })).toEqual(["Access", "My Account", "Logs"]);
     expect(shown({ admin: true, onBox: false, hostsGateway: false })).not.toContain("My Box");
     expect(shown({ admin: true, onBox: false, hostsGateway: false })).not.toContain("LLM Gateway");
     expect(shown({ admin: true, onBox: true, hostsGateway: true })).toEqual(expect.arrayContaining(["My Box", "LLM Gateway", "Models", "Secrets"]));

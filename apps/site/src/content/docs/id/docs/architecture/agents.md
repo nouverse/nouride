@@ -220,7 +220,7 @@ agent yang menulis ke sana ditolak. Untuk mengubahnya, salin ke kumpulan, dan sa
 
 ### Server MCP
 
-Tool eksternal, dipasang sekali lalu dinyalakan per agent, seperti skill. **Settings → Connectors** di dashboard
+Tool eksternal, dipasang sekali lalu dinyalakan per agent, seperti skill. **Connectors** di dashboard
 adalah daftar server milik instalasi (library-nya, `agents/mcp.toml`), dan tab **Connectors** sebuah agent menyalakan
 atau mematikan masing-masing untuk agent itu. Tool sebuah server ditemukan saat terhubung lalu ditawarkan sebagai
 `<server>__<tool>`, karena namanya datang dari server dan gak bisa didaftarkan di `[tools] enabled` sebelum kamu pernah

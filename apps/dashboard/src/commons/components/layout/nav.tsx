@@ -5,7 +5,8 @@
  * - **Home, Chats, Work, Agents.** Work holds what agents do without anyone in the chat: what waits for an answer,
  *   missions, helpers, the schedule and webhooks (work a clock starts, and work another app starts by calling), under
  *   one badge. Agents holds the Office, the same agents drawn as cats.
- * - **Skills, Memory.** Memory holds what the agents know, and the people and groups they know it about.
+ * - **Skills, Connectors, Memory.** Connectors is the library of outside tools, switched on per agent as skills are.
+ *   Memory holds what the agents know, and the people and groups they know it about.
  * - **Settings**, a page of its own that lists every other page, and opens its list here only while one of them is the
  *   page you are on: shown always, fourteen links were the menu, and the four that matter were lost among them.
  *
@@ -109,6 +110,8 @@ export const DAILY: NavItem[] = [
 /** Now and then. */
 const OCCASIONAL: NavItem[] = [
   { to: "/skills", label: "Skills", icon: Wrench, badge: SkillsBadge },
+  // Under Skills, the same shape: one library of outside tools, switched on per agent (the owner, 2026-11-08).
+  { to: "/mcp", label: "Connectors", icon: Plug },
   { to: "/memories", label: "Memory", icon: Brain, holds: ["/people", "/groups"], badge: MemoryBadge },
 ];
 
@@ -128,7 +131,6 @@ export const SETTINGS: { group: string; items: NavItem[] }[] = [
   {
     group: "Reaching out",
     items: [
-      { to: "/mcp", label: "Connectors", icon: Plug, about: "Outside tools and services the agents can use." },
       { to: "/integrations", label: "Integrations", icon: Blocks, adminOnly: true, about: "Other apps that use this box's agents." },
       { to: "/web-search", label: "Web Search", icon: Search, adminOnly: true, about: "Which search service the agents look things up with." },
     ],

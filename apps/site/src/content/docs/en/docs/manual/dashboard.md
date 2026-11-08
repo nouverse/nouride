@@ -18,8 +18,8 @@ the setup wizard and `nouride setup` run the same code, and the Skills page writ
 
 ## The map
 
-The menu is in the order its pages are opened: **Home, Chats, Work and Agents** every day, **Skills** and **Memory**
-now and then, and everything you set up once behind **Settings**.
+The menu is in the order its pages are opened: **Home, Chats, Work and Agents** every day, **Skills**, **Connectors**
+and **Memory** now and then, and everything you set up once behind **Settings**.
 
 ```
 Home                what needs you · what is moving · Quick chat · your agents · the box · today's AI use
@@ -46,6 +46,7 @@ Agents
   Office            the agents' statuses as a small office of cats
 
 Skills              the Skills Workshop: Live · Pending · Explore
+Connectors          the install's MCP servers: Installed · Explore, a switch per agent
 Memory
   Knowledge & Memory   Knowledge · Agent notes · People · Timeline · Shared · Proposals · Settings, and a graph
   People            names and notes for the humans they talk to
@@ -58,7 +59,6 @@ Settings
     Secrets         the credentials, what each is for, the backup password    (admin)
     LLM Gateway     the in-process Nougate: accounts, keys, usage (Router)    (admin)
   Reaching out
-    Connectors      the install's MCP servers: Installed · Explore, a switch per agent
     Integrations    other AI apps reaching memory, one key per app            (admin)
     Web Search      where agents search: free sources, Brave, SearXNG, own    (admin)
   People and sign-in

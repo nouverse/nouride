@@ -214,7 +214,7 @@ the copy wins. [Skills →](/en/docs/manual/skills/)
 
 ### MCP servers
 
-External tools, installed once and switched on per agent, as skills are. **Settings → Connectors** in the dashboard
+External tools, installed once and switched on per agent, as skills are. **Connectors** in the dashboard
 is the install's list of servers (the library, `agents/mcp.toml`), and an agent's **Connectors** tab switches each one
 on or off for it. A server's tools are discovered on connect and offered as `<server>__<tool>`, because the names come
 from the server and cannot be listed in `[tools] enabled` before you have connected once.
