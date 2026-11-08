@@ -9,7 +9,7 @@ import { VERSION } from "@/cli/version.ts";
 
 /**
  * `nouride <command> <action>` with an action the command does not have: exit 2, with the command's own lines of
- * help (D5). It used to fall through to the command's listing, which answered a typo with a success.
+ * help. It used to fall through to the command's listing, which answered a typo with a success.
  */
 export function unknownAction(command: string, action: string): never {
   return usageError(`\`nouride ${command}\` has no "${action}".`, plain(usageFor(command) ?? "Run `nouride help`."));

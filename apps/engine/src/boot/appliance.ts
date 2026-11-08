@@ -67,7 +67,7 @@ export async function startApplianceIfPresent(
   }
 }
 
-/** Proof of life where no box service vouches for a new version: what `/health` reports, and what the queue has done (D7). */
+/** Proof of life where no box service vouches for a new version: what `/health` reports, and what the queue has done. */
 export function offBoxHealthy(ctx: DaemonContext, pipeline: UpdateBootDeps["pipeline"], now = Date.now()): boolean {
   const { payload } = buildHealth(ctx);
   return provedHealthy({ status: payload.status, gateways: Object.values(payload.gateways), handled: pipeline.stats().completed, upMs: now - ctx.startedAt });
@@ -162,7 +162,7 @@ async function startBox(
   startApplianceUpdates(ctx, runner, version, updates);
 
   applianceLoop("sync", () => runner.sync(), 0, ctx.backgroundTimers);
-  // The local step: the setup hotspot and its portal when the box has no network (RFC §4), and on every board the
+  // The local step: the setup hotspot and its portal when the box has no network, and on every board the
   // upkeep that must not wait on Wi-Fi.
   applianceLoop("local step", () => runner.onboard(), 0, ctx.backgroundTimers);
   return true;

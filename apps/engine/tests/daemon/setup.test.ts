@@ -208,7 +208,7 @@ describe("saveProvider", () => {
   });
 
   test("a new install starts careful: the first write sets the level, a later one leaves it as it is", async () => {
-    // SIMPLIFY RFC §7.5. An install whose file exists keeps what it says — one that never set a level is `balanced`.
+    // An install whose file exists keeps what it says — one that never set a level is `balanced`.
     const { setup, config } = await service();
     await setup.saveProvider({ kind: "openai", baseUrl: "https://x.example/v1", apiKey: LIVE_KEY, actor: "t" });
     const security = async () => parseToml<{ security?: unknown }>(await readTextFile(configPath)).security;

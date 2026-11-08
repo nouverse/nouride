@@ -1,5 +1,5 @@
 /**
- * The secret store in the snapshots, sealed to a passphrase (0.8.18, the owner's D5).
+ * The secret store in the snapshots, sealed to a passphrase (0.8.18).
  *
  * The person sets a passphrase once (`nouride secret seal --stdin`); `[daemon] backup_seal` keeps the public half of
  * the key it derives and the salt, `nrseal1:<salt>:<public key>` in base64url, never the passphrase or the private half

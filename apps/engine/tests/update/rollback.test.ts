@@ -1,5 +1,5 @@
 /**
- * Going back one version on purpose (D7), and what a new version has to show before it stops being on probation.
+ * Going back one version on purpose, and what a new version has to show before it stops being on probation.
  *
  * The rollback is run against real directories and a real database, because the two halves have to agree: a
  * build swapped without its snapshot is an old binary refusing a newer schema, and a snapshot restored without the

@@ -1,5 +1,5 @@
 /**
- * The secret store in the snapshots, sealed to a passphrase (0.8.18, the owner's D5).
+ * The secret store in the snapshots, sealed to a passphrase (0.8.18).
  *
  * A snapshot held no secret, so a box rebuilt from one came back without a single credential; and a plain copy on a
  * backup drive would be every credential to whoever picks the drive up. `[daemon] backup_seal` now keeps the public half

@@ -26,7 +26,7 @@ export async function configCmd(args: string[]): Promise<void> {
   if (action === "explain") return configExplainCmd(args.slice(1));
   if (action !== "check") {
     if (action !== undefined) unknownAction("config", action);
-    // Bare, what the group does — said as help, as `--help` is (`lint-cli-exit-code-guard`).
+    // Bare, what the group does — said as help, as `--help` is.
     return helpFor("config");
   }
 
@@ -79,7 +79,7 @@ async function packEnabled(dir: string): Promise<boolean> {
  *
  * What the loading logs is held for the length of it (`holdLines`) and said here, as lines of the verdict: "agent pack
  * failed to load", written as JSON above "✓ this configuration would start", was the only place a pack that would not
- * load was said — and the release notes send people here before an upgrade (`config-check-hides-pack-failures`). Each
+ * load was said — and the release notes send people here before an upgrade. Each
  * enabled pack that will not load is a `✗` with why, and the check fails: the daemon would start, and that agent would
  * not. A disabled one is said, and fails nothing — nothing would run it.
  */

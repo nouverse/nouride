@@ -5,7 +5,7 @@
  * writes for a person watching, and "say what went wrong and stop" is the same act everywhere.
  * Anything polled in the background must *throw* instead; see `Client.softGet`.
  *
- * ## Exit codes, and `--json` (D5)
+ * ## Exit codes, and `--json`
  *
  * The CLI is an agent's control surface as much as a person's, and both read the exit code: 0 done, 1 failed,
  * 2 asked wrongly — an unknown command or action, an argument missing or malformed (`usageError`). Usage used to

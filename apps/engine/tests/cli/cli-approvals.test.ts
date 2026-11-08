@@ -1,5 +1,5 @@
 /**
- * `nouride approvals <answer>`, run by a person and run by an agent (S2, 2026-10-15).
+ * `nouride approvals <answer>`, run by a person and run by an agent (2026-10-15).
  *
  * The CLI reads the control token off disk and a bare token is admin, so an agent's `nouride` tool
  * reached the same answer route the operator's terminal does — and with no id, `pending[0]` is
@@ -91,7 +91,7 @@ describe("nouride approvals <answer>", () => {
   });
 
   test("an agent cannot answer another agent's persona change or change to People — listed or looked up — while a person still can (0.8.8, 0.8.9)", async () => {
-    // Nox's review: an orchestrator at `trusted` ran `nouride approvals allow-once` on another agent's persona request,
+    // An orchestrator at `trusted` ran `nouride approvals allow-once` on another agent's persona request,
     // and the change was written with no admin having seen it.
     const client = fakeClient();
     await as("nouva", async () => {

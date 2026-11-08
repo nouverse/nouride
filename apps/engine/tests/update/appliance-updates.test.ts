@@ -229,7 +229,7 @@ describe("a look at the channel", () => {
 
   test("an offer this box cannot take is said once, and nothing is installed — a critical one too", async () => {
     // The tick used to return on it in silence: an OpenWrt box with no supervisor refused every update, and the fleet
-    // saw only a version that stopped moving (`pro-procd-boxes-never-update`). `procd.test.ts` has the reporter.
+    // saw only a version that stopped moving. `procd.test.ts` has the reporter.
     const { state, tick } = box();
     state.critical = true;
     state.offer = {

@@ -1,5 +1,5 @@
 /**
- * `nouride turns` — the newest turns and what each cost; `nouride turns show <id>` — one turn whole (D2).
+ * `nouride turns` — the newest turns and what each cost; `nouride turns show <id>` — one turn whole.
  *
  * What a slow or expensive turn did used to be read off three places that did not share a key: the dashboard's
  * steps, `llm_usage` by session, the audit log by chat. Each row now carries the turn's id, and this prints them
@@ -30,7 +30,7 @@ export async function turns(client: Client, args: string[]): Promise<void> {
   if (rows.length === 0) return say(`${DIM}no turns recorded${RESET}`);
   for (const row of rows) {
     const cost = row.usd === null ? (row.calls > 0 ? "unpriced" : "—") : `$${row.usd.toFixed(4)}`;
-    // A turn that answered a person's edit (G11) is marked before the words it answered, which are the edited ones.
+    // A turn that answered a person's edit is marked before the words it answered, which are the edited ones.
     const edited = row.cause?.via === EDITED ? `${DIM}edited ·${RESET} ` : "";
     // A delegate's own turn (0.7.26): its calls are counted in the turn that asked, so it names that instead.
     const counted = isDelegated(row.cause)
@@ -46,7 +46,7 @@ function show(found: TurnInspection): void {
   const took = turn.endedAt ? ` · ${seconds(turn.endedAt - turn.startedAt)}` : "";
   say(`${BOLD}${turn.id}${RESET} ${turn.agentId} · ${tone(turn.status)} · ${second(turn.startedAt)}${took}`);
   say(`${DIM}asked${RESET}   ${clip(oneLine(turn.prompt), 200)}`);
-  // A person's edit (G11): of the message it answers, edited while it waited, or of one an earlier turn answered.
+  // A person's edit: of the message it answers, edited while it waited, or of one an earlier turn answered.
   if (turn.cause?.via === EDITED) say(`${DIM}edited${RESET}  ${turn.cause.of === turn.messageId ? "before it was answered" : `message ${turn.cause.of}, answered again`}`);
   // A delegate's own turn (0.7.26): the job it ran as, and the turn that asked — where its calls and audit rows are.
   if (isDelegated(turn.cause)) {
@@ -134,7 +134,7 @@ function stopped(call: Pick<ModelCall, "stopReason">): string {
   return call.stopReason === "max_tokens" || call.stopReason === "error" ? ` · ${YELLOW}${call.stopReason}${RESET}` : ` ${DIM}· ${call.stopReason}${RESET}`;
 }
 
-/** Who answered, when a gateway said (G1): the provider, the model when it is not the one asked for, and its tries. */
+/** Who answered, when a gateway said: the provider, the model when it is not the one asked for, and its tries. */
 export function servedBy(call: Pick<ModelCall, "model" | "upstream">): string {
   const upstream = call.upstream;
   if (!upstream?.provider && !upstream?.model) return "";

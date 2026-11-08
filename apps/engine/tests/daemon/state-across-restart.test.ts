@@ -1,5 +1,5 @@
 /**
- * What `/stop` and the alert cooldown leave behind for the next process (D15).
+ * What `/stop` and the alert cooldown leave behind for the next process.
  *
  * Both lived in memory, and a nightly update is a restart: an agent somebody stopped was answering again the next
  * morning, and an alert sent a minute before the update went out again a minute after. A restart here is what it is on

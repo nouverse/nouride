@@ -1,5 +1,5 @@
 /**
- * Every CLI verb that writes a setting says what happened (config-restart-ux): "applied", or "saved — takes effect after
+ * Every CLI verb that writes a setting says what happened: "applied", or "saved — takes effect after
  * a restart" with how to restart — decided by the daemon's answer, `restartRequired`, never by the verb.
  *
  * Each worded it its own way before: `gateway add` warned nothing was connected yet, `mcp add` that it was connecting,

@@ -1,5 +1,5 @@
 /**
- * What the snapshots did not hold before 0.8.18 (REVIEW B2): the daemon's config and its people, the install's MCP
+ * What the snapshots did not hold before 0.8.18: the daemon's config and its people, the install's MCP
  * library, the skill pool, a pack's `skills.toml` and `mcp.toml`; and a skill improvement kept nothing of the version it
  * replaced. Each now has its snapshot, on the schedule the database, the vault and the packs keep.
  */

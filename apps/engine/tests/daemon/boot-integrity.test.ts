@@ -1,5 +1,5 @@
 /**
- * The database check at boot, skipped after a clean stop — `boot/integrity.ts` (E10).
+ * The database check at boot, skipped after a clean stop — `boot/integrity.ts`.
  *
  * `quick_check` reads every page, and boot ran it every time: after a clean stop as after a power cut. Each case
  * here is a way a skip must not happen — a run that died, a check that failed, a week gone by — and the one way it

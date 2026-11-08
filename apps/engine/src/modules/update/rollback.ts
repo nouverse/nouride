@@ -1,5 +1,5 @@
 /**
- * Going back one version on purpose — `nouride update --rollback` (D7).
+ * Going back one version on purpose — `nouride update --rollback`.
  *
  * The unit's guard puts the previous build back by itself when a new one does not start (`confirm.ts`). What it
  * cannot catch is a version that starts and is wrong, and the way back from that was "install the older build by

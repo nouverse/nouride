@@ -63,7 +63,7 @@ const IDLE_WAIT_MS = 10 * 60_000;
  * be undefined where no job store exists: leaving it out is how an update came to kill background work, so a caller
  * has to say so out loud.
  *
- * An approval waiting for a person is not: a restart keeps it and asks it again (D8), where it used to answer it "deny"
+ * An approval waiting for a person is not: a restart keeps it and asks it again, where it used to answer it "deny"
  * — which is why a restart waited, up to ten minutes, for questions nobody was answering. A turn parked on one is
  * still running, and waited for until it stops waiting.
  */
@@ -117,7 +117,7 @@ function working(jobs: Pick<JobsPort, "listSnapshots">): boolean {
  * Except for `jobs`: a background job is waited for however long it takes. Cut off, a two-hour build or a
  * coding agent's run starts again from nothing, and a person who wants it stopped says `now`. A turn still
  * gives up at the cap: it is closed with what it did and taken up again after the restart, with any approval
- * it was waiting on kept and asked again (D8).
+ * it was waiting on kept and asked again.
  */
 export function restartWhenIdle(input: {
   busy: () => boolean;

@@ -109,7 +109,7 @@ declare module "nouride-update" {
 
   export function githubSource(channel?: ReleaseChannel): ReleaseSource;
 
-  /** `latest`: the newest release. `lts`: the first long-term line at or above this one (0.8.18, PLAN §3.3). */
+  /** `latest`: the newest release. `lts`: the first long-term line at or above this one (0.8.18). */
   export type UpdateTrack = "latest" | "lts";
 
   export function checkForUpdate(options: {

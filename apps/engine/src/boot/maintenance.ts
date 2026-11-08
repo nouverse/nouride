@@ -51,7 +51,7 @@ export const DISK_WARN_MB = 1024;
 const HEARTBEAT_MS = 60_000;
 
 /**
- * How often each kind is snapshotted: weekly, keeping `backup_keep` (four, a month back). PLAN §3.5, the owner,
+ * How often each kind is snapshotted: weekly, keeping `backup_keep` (four, a month back). Weekly since
  * 2026-11-03: the scheduled snapshot was the largest write the daemon makes, the whole database (69 MB on the live
  * box) copied every day beside the vault and the packs, on a card a Box runs from.
  */
@@ -60,7 +60,7 @@ const SNAPSHOT_EVERY_MS = 7 * 24 * 60 * 60_000;
 /**
  * A snapshot younger than this at boot is the boot snapshot — see `onSnapshotSchedule`.
  *
- * A week, as the schedule (§3.5): half a day still snapshotted a box that restarts nightly for its update at every boot.
+ * A week, as the schedule: half a day still snapshotted a box that restarts nightly for its update at every boot.
  * A crash loop (five starts in two minutes before systemd gives up) writes the file once instead of five times.
  */
 const BOOT_SNAPSHOT_FRESH_MS = SNAPSHOT_EVERY_MS;
@@ -264,7 +264,7 @@ export function startRetentionSweep(deps: {
  * **unless the newest is younger than `BOOT_SNAPSHOT_FRESH_MS`**. Then "weekly" means a week after the newest, not a
  * week after boot: checked hourly, so a boot that skipped its snapshot does not leave a gap of a week and more.
  *
- * The rule was the database's alone (E1, 2026-10-15). The vault and the packs snapshotted on every boot, and each
+ * The rule was the database's alone (2026-10-15). The vault and the packs snapshotted on every boot, and each
  * kind's rotation keeps the newest `backup_keep` by name — so three restarts in a crash loop (the unit allows five in
  * two minutes) left three copies of the current state and deleted every older one: of the vault, which only the
  * snapshots hold a second copy of, and of `MEMORY.md`, the one pack file that cannot be rebuilt.
@@ -334,7 +334,7 @@ export function startAgentBackups(config: GlobalConfig, now: () => number = Date
  * taken then is one taken with the original known good.
  *
  * Each snapshot writes the whole file and reads it back to verify it — 62 MB of I/O on the live box's 31 MB file — so
- * one is not taken when nothing was written since the last this process took (`writes`, E1): another copy of the same
+ * one is not taken when nothing was written since the last this process took (`writes`): another copy of the same
  * database is a day of SD-card writes that pushes an older, different copy out of the rotation. What the daemon
  * writes about itself — its log lines, one of which says the snapshot was taken — is not counted.
  *
@@ -394,7 +394,7 @@ export function startKnowledgeBackups(config: GlobalConfig, now: () => number = 
 }
 
 /**
- * The daemon's config, its people and the MCP library, and the skill pool (0.8.18, REVIEW B2): what the database, the
+ * The daemon's config, its people and the MCP library, and the skill pool (0.8.18): what the database, the
  * vault and the packs did not hold (`modules/config/snapshot.ts`). On the same schedule as those.
  */
 export function startConfigBackups(config: GlobalConfig, configPath: string, secrets: () => string | null, now: () => number = Date.now): ReturnType<typeof setInterval>[] {
@@ -424,7 +424,7 @@ export function startConfigBackups(config: GlobalConfig, configPath: string, sec
 const LOG_FILE_CAP_BYTES = 16 * 1024 * 1024;
 
 /**
- * The file launchd writes the daemon's output to, kept to one size (E14).
+ * The file launchd writes the daemon's output to, kept to one size.
  *
  * launchd has no journal: the unit points stdout at a file (`service/unit.ts`), and nothing ever rotated it, so a Mac
  * install's `nouride.log` grew for as long as the daemon ran. Checked at boot and hourly; past the cap it is copied to

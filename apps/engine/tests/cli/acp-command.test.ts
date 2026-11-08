@@ -1,5 +1,5 @@
 /**
- * `nouride acp` end to end against a daemon that answers as one does (ACP_PROTOCOL RFC): an editor's client on one
+ * `nouride acp` end to end against a daemon that answers as one does: an editor's client on one
  * side, the adapter on the other. A session's folder is one of the agent's roots or refused naming the fix; a prompt
  * is the local connection's message, its turn's rows arrive as updates, a parked call is the editor's permission and
  * its answer the daemon's approval; a cancel is the daemon's stop; a reopened session replays what was said.

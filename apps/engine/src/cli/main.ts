@@ -121,8 +121,8 @@ function streams(command: string | undefined, args: readonly string[]): boolean 
 }
 
 async function main(): Promise<void> {
-  // `--flag=value` read as `--flag value`, and `--` respected, by every command alike (D14); `--json` is everybody's,
-  // so it is taken off before a command reads its arguments (D5).
+  // `--flag=value` read as `--flag value`, and `--` respected, by every command alike; `--json` is everybody's,
+  // so it is taken off before a command reads its arguments.
   const { argv, json } = dispatchedArgv(process.argv.slice(2));
   setJsonOutput(json);
   const [command, ...args] = argv;
@@ -301,7 +301,7 @@ async function main(): Promise<void> {
      * keeps the same `--then` contract for the same reason.
      */
     case "update":
-      // Local, like `db restore`: it replaces what a running daemon holds open (D7).
+      // Local, like `db restore`: it replaces what a running daemon holds open.
       if (hasFlag(args, "--rollback")) return await rollback(args);
       return await update(await connect(), args);
 
@@ -328,7 +328,7 @@ async function main(): Promise<void> {
         );
       }
       const client = await connect();
-      // Looked at first, so the wait can tell the process that comes back from the one asked to go (D12).
+      // Looked at first, so the wait can tell the process that comes back from the one asked to go.
       const before = hasFlag(args, "--wait") ? await lookAtHealth(client.baseUrl) : null;
       const result = await client.post<AckResponse & { wake_in_seconds?: number }>("/restart", {
         ...(hasFlag(args, "--now") ? { now: true } : {}),

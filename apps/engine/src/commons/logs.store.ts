@@ -134,7 +134,7 @@ export class LogStore {
             entry.component,
             entry.message,
             // `turn_id` back into the tail: the table has no column for it, and dropping it would lose the one id a
-            // turn's lines share (D2).
+            // turn's lines share.
             storedData(entry),
             entry.agent_id ?? null,
             entry.chat_id ?? null,
@@ -197,7 +197,7 @@ export class LogStore {
   /**
    * Drop entries past the retention window, then the oldest past `maxRows`. `0` days keeps every day — up to the cap.
    *
-   * The cap is the half time alone could not give (D17): days bound the table only at the rate the daemon logs, and
+   * The cap is the half time alone could not give: days bound the table only at the rate the daemon logs, and
    * the day it logs fastest — a reconnect storm, a loop — is the day the disk fills, on a box whose disk is a card.
    * The same reason the in-memory ring is a ring.
    */

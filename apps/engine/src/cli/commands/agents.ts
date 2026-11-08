@@ -57,7 +57,7 @@ export async function agentAction(client: Client, args: string[]): Promise<void>
   // `enable` and `disable` write the pack's config.toml — a save, said as one. The others act on the running agent.
   if (action === "enable" || action === "disable") saidSaved(`${action} ${id}`, answer);
   else say(`${GREEN}✓${RESET} ${action} ${id}`);
-  // Said because the two look alike and are not: asleep is a mark the daemon keeps (a restart keeps it too, D15),
+  // Said because the two look alike and are not: asleep is a mark the daemon keeps (a restart keeps it too),
   // `disable` is written into the pack's config.toml.
   if (action === "sleep" || action === "pause") {
     say(`${DIM}  asleep until wake, through a restart too (disable writes it to config.toml instead)${RESET}`);

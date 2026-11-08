@@ -11,7 +11,7 @@
  * The directory is deliberately not a workspace root, so `read` cannot reach it — see
  * `[security] credentials_dir`.
  *
- * So does the ssh-agent socket, for an agent whose pack says `[security] ssh_agent = true` (S11). A path rather than
+ * So does the ssh-agent socket, for an agent whose pack says `[security] ssh_agent = true`. A path rather than
  * a key: the safer of the two ways to give an agent SSH, since the key material stays where no command can copy it.
  * But the other end signs with every key it holds for whoever asks, so it is a credential in what it does, and it
  * reaches the agents that need one — not, as it did until 0.7.9, every command of every agent from the allowlist.
@@ -27,7 +27,7 @@ const log = createLogger("daemon");
 
 /**
  * Every value an agent's commands could be handed, and what one command is handed: the secrets bound to its argv
- * (`[security.exec_secrets]`, S6). Masking takes the first — it must cover whatever any command could print — and
+ * (`[security.exec_secrets]`). Masking takes the first — it must cover whatever any command could print — and
  * spawning the second, so a `curl` that was not bound to a token never holds one.
  */
 export function childEnvFor(deps: {

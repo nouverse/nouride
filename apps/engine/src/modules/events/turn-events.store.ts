@@ -148,7 +148,7 @@ export class EventedTurnStore extends TurnStore {
   /**
    * Kept, unlike a pulse: what a request carried is read back with the turn (`contextOfTurn`). Not a step, no number.
    * Held until the turn writes its next row — the request's first answer, a step, its end — and written in that row's
-   * commit: never a commit of its own, which a Box's card would take once a request (E7).
+   * commit: never a commit of its own, which a Box's card would take once a request.
    */
   override context(turnId: string, line: TurnEventData["context"]): void {
     this.lines.set(turnId, [...(this.lines.get(turnId) ?? []), line]);

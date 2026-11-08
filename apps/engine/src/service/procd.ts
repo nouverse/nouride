@@ -3,7 +3,7 @@
  *
  * A box made by the Box flasher on OpenWrt ran an init script of the flasher's own that set HOST and HOME and
  * nothing else. So the daemon read its supervisor as `none` — nothing restarts it on exit — and refused every update
- * as "a stop", silently on a box (`pro-procd-boxes-never-update`). And it ran no update guard: had it updated, a build
+ * as "a stop", silently on a box. And it ran no update guard: had it updated, a build
  * that crashed at start would have used up procd's five respawns and stayed down, with no way back.
  *
  * Here, so the guard and the marker cannot drift from the systemd unit's: the same `guardScript`, run before every

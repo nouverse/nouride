@@ -221,7 +221,7 @@ export async function drain(
   // `shutdown_timeout_ms` and then force-exited. Observed: a pending `exec` approval turned a clean stop
   // into `shutdown timed out — forcing exit` every time.
   //
-  // Released, and the questions kept (D8): they were expired here, so a restart answered every pending approval
+  // Released, and the questions kept: they were expired here, so a restart answered every pending approval
   // "deny". The rows stay pending and the next boot asks them again for the time they have left — or expires them,
   // and tells their chats, when too little is (`boot/approvals-kept.ts`). Logged by the gate, with how many.
   approvals.handOver();

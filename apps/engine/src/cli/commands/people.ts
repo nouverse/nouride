@@ -22,7 +22,7 @@ export async function peopleCommand(client: Client, args: string[]): Promise<voi
    * The tool took no id: it recorded whoever sent the message being handled, and there was no
    * parameter that could point it at anyone else. That is gone here by construction — a CLI command
    * has no "current sender" to fall back on, so the id has to be an argument. What it removes is the
-   * guard against "record Gading's number as mine"; what stands in its place is that reaching this
+   * guard against "record Sam's number as mine"; what stands in its place is that reaching this
    * command at all costs an `exec` approval a human reads, and every call is audited.
    */
   if (action === "set") {

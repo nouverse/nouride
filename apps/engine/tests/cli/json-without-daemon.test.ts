@@ -1,5 +1,5 @@
 /**
- * `--json` from the commands that answer without a daemon (D5): one object on stdout, carrying what the lines were
+ * `--json` from the commands that answer without a daemon: one object on stdout, carrying what the lines were
  * printed from.
  *
  * The envelope's `data` is the daemon's last answer unless a command hands it one, and these talk to no daemon — so

@@ -33,7 +33,7 @@ import { untilAborted } from "@/commons/abort.ts";
 
 const log = createLogger("attachments");
 
-/** How long one file may take to arrive, from asking for it to its last byte (G9). */
+/** How long one file may take to arrive, from asking for it to its last byte. */
 const DOWNLOAD_DEADLINE_MS = 30_000;
 
 /** Bytes past the cap are never written: a download stops at it, and what it wrote is removed. */
@@ -151,7 +151,7 @@ export class AttachmentStore {
     if (attachment.size !== undefined && attachment.size > max) return { ...attachment, unavailable: tooLarge(attachment.size, max) };
 
     /**
-     * One deadline for all of it — the platform's lookup, the request, every chunk (G9). Handed to the adapter, so
+     * One deadline for all of it — the platform's lookup, the request, every chunk. Handed to the adapter, so
      * its requests are torn down rather than abandoned, and held here as well: an adapter that dropped it must not
      * hold a chat's queue behind a download that never ends.
      */
@@ -484,7 +484,7 @@ const tooLarge = (bytes: number, max: number) => `too large (${formatBytes(bytes
 
 
 /**
- * A download written to disk as it arrives (G9): into `<path>.part`, created private, and renamed once whole — no
+ * A download written to disk as it arrives: into `<path>.part`, created private, and renamed once whole — no
  * file is ever half there under its own name. Stopped at the cap, by what came rather than what was declared, and
  * at the deadline. The bytes kept, or why there are none.
  */

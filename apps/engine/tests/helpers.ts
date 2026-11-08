@@ -135,7 +135,7 @@ export class FakeGateway implements Gateway {
   formatting?: string;
   /** Settable: Telegram's is false, and a room there behaves differently — see `Gateway.echoesOwnMessages`. */
   echoesOwnMessages?: boolean;
-  /** Settable: whether a message can carry buttons — see `Gateway.buttons` (G11). */
+  /** Settable: whether a message can carry buttons — see `Gateway.buttons`. */
   buttons?: boolean;
   /** Settable: the platform's name for a room — see `Gateway.roomTitle` (0.7.24). Absent, the capability is. */
   roomTitle?: (chatId: string) => Promise<string | undefined>;
@@ -432,7 +432,7 @@ export function everyBuiltinToolName(): string[] {
 
 /**
  * A `ChildEnv` for a test: every command is handed `values` — or only those `bound` says, as `[security.exec_secrets]`
- * binds them (S6). The names handed are the variables lower-cased, the way a pack names its secrets.
+ * binds them. The names handed are the variables lower-cased, the way a pack names its secrets.
  */
 export function childEnvOf(values: Record<string, string>, bound: (argv: readonly string[] | null) => boolean = () => true): ChildEnv {
   return Object.assign(() => ({ ...values }), {

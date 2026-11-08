@@ -133,7 +133,7 @@ function writeSnapshot(db: SqliteDb, target: string, freeBytes: (dir: string) =>
     ensureDir(root);
 
     /**
-     * Room for it twice over, or no snapshot (E14).
+     * Room for it twice over, or no snapshot.
      *
      * `VACUUM INTO` writes the whole database again — its pages less the free ones — and on a nearly full card it ran
      * until the disk was full, failed, and deleted what it had written: in between, every write the daemon made failed

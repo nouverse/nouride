@@ -3,7 +3,7 @@
  *
  * A box made by the Box flasher on OpenWrt read its supervisor as `none`, so every update was refused as "a stop",
  * silently; and it ran no guard, so an update that crashed at start would have used up procd's respawns and stayed
- * down (`pro-procd-boxes-never-update`). The init script's command is run here the way procd runs it — the same
+ * down. The init script's command is run here the way procd runs it — the same
  * shell text under `sh` — because that is the half that has to work when the new binary cannot.
  */
 

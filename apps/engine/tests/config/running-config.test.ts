@@ -3,8 +3,8 @@
  *
  * Every setter used to mirror its own write into the config object by hand, and the mirrors drifted from the loader
  * with nothing to show it until a restart — a WhatsApp connection saved from the dashboard took Telegram's reconnect
- * timings and resolved a session directory without its `~`
- * (gap-config-write-path-hand-written-mirrors). Now the running copy follows the loader's reading of the file
+ * timings and resolved a session directory without its `~`.
+ * Now the running copy follows the loader's reading of the file
  * (`config/follow.ts`), and this walks every way the daemon's `config.toml` is written while it runs: write through
  * it, then the running config must be exactly what `loadGlobalConfig` — the boot's own entry — makes of the file, and
  * every section the daemon holds by reference must still be the object it holds.

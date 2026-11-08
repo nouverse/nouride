@@ -1,5 +1,5 @@
 /**
- * `nouride knowledge` against the daemon's own knowledge routes (0.8.20, KNOWLEDGE_BASE §13): the real command, the real
+ * `nouride knowledge` against the daemon's own knowledge routes (0.8.20): the real command, the real
  * routes over a real memory, served the way the daemon serves them under `/api/control`. A file added and found, its
  * collection archived, a document removed; misuse exits 2.
  */

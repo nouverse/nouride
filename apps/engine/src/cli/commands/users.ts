@@ -3,7 +3,7 @@
  * its password: the way back from a lost first password (`docs/DEPLOY.md` § Lost the first password).
  *
  * The recovery was always "empty the account table", and the documented way to do it was `sqlite3` — which neither a
- * Box nor the boxes this is deployed to have (`docs-lost-password-needs-sqlite3`). An operator locked out could not
+ * Box nor the boxes this is deployed to have. An operator locked out could not
  * follow the page. This is that step, with the binary they already have.
  *
  * Local, like `db restore`: the person it is for cannot sign in, and the control token reaches the daemon as an admin

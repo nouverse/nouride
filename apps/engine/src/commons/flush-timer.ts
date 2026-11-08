@@ -1,7 +1,7 @@
 import { contained, type Logger } from "@nouride/shared";
 
 /**
- * A buffer's flush, armed by its first entry — never a clock ticking over an empty one (E13).
+ * A buffer's flush, armed by its first entry — never a clock ticking over an empty one.
  *
  * The audit log and the log table each flushed on a two-second interval, so an idle daemon woke sixty times a minute
  * to find two empty buffers. One timer armed when a buffer goes from empty to holding something, fired once, keeps

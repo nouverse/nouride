@@ -1,7 +1,7 @@
 /**
  * Installing what was downloaded: five decisions, and what it leaves behind.
  *
- * None of this had a test (`tests-update-apply-orchestration-untested`). It was reachable only through the
+ * None of this had a test. It was reachable only through the
  * process's one update provider and one transfer, and the test that stubbed the module replaced it for every file
  * after it in the run. So the function takes what it reads (`installStagedDownload`), and this hands it fakes:
  *

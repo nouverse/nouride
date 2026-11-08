@@ -1,5 +1,5 @@
 /**
- * Housekeeping is never the reason the process stays alive (E13). A timer that is not `unref`'d holds a CLI command,
+ * Housekeeping is never the reason the process stays alive. A timer that is not `unref`'d holds a CLI command,
  * a test run or a daemon that has finished shutting down open until something kills it — the audit log's flush
  * timer did, while the log buffer's beside it did not.
  */

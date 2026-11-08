@@ -1,5 +1,5 @@
 /**
- * `nouride users reset` — a lost first password, recovered with the binary a box has (`docs-lost-password-needs-sqlite3`).
+ * `nouride users reset` — a lost first password, recovered with the binary a box has.
  *
  * The documented recovery was `sqlite3 … 'DELETE FROM user_sessions; DELETE FROM users'`, and neither a Box nor the
  * boxes this is deployed to have `sqlite3`. The CLI is spawned as an operator runs it, against an install of its own:

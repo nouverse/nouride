@@ -1,5 +1,5 @@
 /**
- * `nouride knowledge` — the knowledge base (0.8.20, KNOWLEDGE_BASE §13): its collections, a search of them, a file added
+ * `nouride knowledge` — the knowledge base (0.8.20): its collections, a search of them, a file added
  * to one, the index brought in line with the folder, a collection archived or brought back, a document removed. Through
  * the daemon's own routes (`routes/knowledge.ts`), so this and the dashboard's Knowledge tab say the same.
  */

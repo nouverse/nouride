@@ -1,5 +1,5 @@
 /**
- * The CLI as a program reads it (D4, D5, D11, D12, D14).
+ * The CLI as a program reads it.
  *
  * A flag in either spelling, `--` respected, one name for stdin; an exit code that tells asking wrongly (2) from
  * failing (1); `--json` on any command; a doctor that reads what the daemon and the disk already know; a hint that
@@ -208,7 +208,7 @@ describe("exit codes and --json (D5)", () => {
     expect(down.code).toBe(1);
     expect(down.err).toContain("Cannot reach the daemon");
     // This host's own way: systemd's on a box with the unit — the checkout an agent codes in on the live box (0.8.5) —
-    // else `nouride start`. Which one each host gets is `startHint`'s, below (D11).
+    // else `nouride start`. Which one each host gets is `startHint`'s, below.
     expect(down.err).toContain(startHint({ launchd: join(dir, "Library", "LaunchAgents", "none.plist") }));
   });
 

@@ -53,7 +53,7 @@ export interface JobTurnRequest {
   message: string;
   model?: string;
   signal: AbortSignal;
-  /** What the message carried from outside — the payload of the webhook that fired it (S13, `TurnRequest.outsideContent`). */
+  /** What the message carried from outside — the payload of the webhook that fired it (`TurnRequest.outsideContent`). */
   outsideContent?: string[];
 }
 
@@ -61,9 +61,9 @@ export interface JobTurnResult {
   text: string;
   /** Set when the turn could not complete. Already shaped for a human — no stack traces. */
   error?: string;
-  /** Not run: its agent was in a turn in that chat (P1). The run is `skipped`, not failed. */
+  /** Not run: its agent was in a turn in that chat. The run is `skipped`, not failed. */
   skipped?: string;
-  /** Cut off by a daemon restart (P11). The run is `interrupted`: nothing failed, and nobody is sent a failure report. */
+  /** Cut off by a daemon restart. The run is `interrupted`: nothing failed, and nobody is sent a failure report. */
   interrupted?: string;
   /** What the job's guards held with nobody there to ask (0.8.0) — kept on the run. */
   held?: HeldAction[];
@@ -188,7 +188,7 @@ export class CronScheduler {
    *
    * It used to wake every `tick_interval_ms` (a setting until 0.8.0), one second, to ask SQLite whether anything was due — while
    * `min_interval_ms` forbids any schedule shorter than a minute. Sixty wake-ups a minute on an idle box,
-   * half of all it had (E5, 2026-10-15). Now it sleeps until the next `next_run_at`, so a job fires on its
+   * half of all it had (2026-10-15). Now it sleeps until the next `next_run_at`, so a job fires on its
    * second instead of within one, and the store says when a write moves that time (`onScheduleChange`).
    *
    * Two bounds. At least `MIN_SLEEP_MS`, so a job that is due but cannot be claimed — already running by
@@ -434,7 +434,7 @@ export class CronScheduler {
          * gained is that the message shows up.
          */
         const prompt = withTriggerBody(job.payload.message, trigger);
-        // Whoever called the endpoint wrote the payload: what the turn keeps after reading it waits for a person (S13).
+        // Whoever called the endpoint wrote the payload: what the turn keeps after reading it waits for a person.
         const outside = trigger?.body?.trim() ? [WEBHOOK_PAYLOAD] : undefined;
 
         if (job.delivery.mode === "announce" && runsOnChatHistory(job)) {
@@ -502,7 +502,7 @@ export class CronScheduler {
         }
 
         /**
-         * Nothing printed: nothing to deliver and nothing for the agent to read (PLAN §1.1, 0.8.17). So a check every five
+         * Nothing printed: nothing to deliver and nothing for the agent to read (0.8.17). So a check every five
          * minutes that finds nothing costs no turn and sends nothing, `--then agent` too, where it used to wake the agent
          * with an empty output each time. Its run says so. A failure above is not an empty run, and is reported as before.
          */

@@ -48,7 +48,7 @@ export const DEFAULT_CONFIG: GlobalConfig = {
     backupKeep: 4,
     // Empty: `<data_dir>/backups`. A path names a directory that must already exist — a USB drive's.
     backupDir: "",
-    // No passphrase, no secrets in snapshots (D5): a copy on a USB drive must not be a copy of every credential.
+    // No passphrase, no secrets in snapshots: a copy on a USB drive must not be a copy of every credential.
     backupSeal: "",
   },
   providers: DEFAULT_PROVIDERS,
@@ -122,9 +122,9 @@ export const DEFAULT_CONFIG: GlobalConfig = {
     },
     exec: {
       // What a command may run and when it asks is the approval level's (`approvals` below) over one fixed list, since
-      // 0.8.0 (SIMPLIFY RFC §1): `mode`, `ask`, `ask_fallback`, `sensitive_paths` and the editable allowlist are gone.
+      // 0.8.0: `mode`, `ask`, `ask_fallback`, `sensitive_paths` and the editable allowlist are gone.
       // Where the kernel has it, and nothing refused where it does not: Landlock is a layer on the agent's own user,
-      // not the wall, and the boxes in the field mostly do not have it on (isolation RFC §5).
+      // not the wall, and the boxes in the field mostly do not have it on.
       landlock: "auto",
       /**
        * Kernel ceilings on a command, in megabytes and seconds of CPU. 0 = unlimited.
@@ -147,7 +147,7 @@ export const DEFAULT_CONFIG: GlobalConfig = {
      * How much gets asked when neither the agent nor the person has said.
      *
      * `balanced` in the code, so an install that never set one keeps what it had. A new install is `careful`: setup
-     * writes it into the file (SIMPLIFY RFC §7.5). What `balanced` still asks — a config.toml changed, someone given
+     * writes it into the file. What `balanced` still asks — a config.toml changed, someone given
      * access, the daemon stopped, a secret replaced, a credential leaving, this machine's packages changed, and what
      * every level asks — is `BALANCED_ASKS`.
      *
@@ -220,7 +220,7 @@ export const DEFAULT_CONFIG: GlobalConfig = {
     quietAfterMinutes: 5,
   },
   delegate: {
-    // Two (the owner's number, 2026-10-18): one is the habit for a long task, so the agent stays free for the person,
+    // Two (2026-10-18): one is the habit for a long task, so the agent stays free for the person,
     // and two is for two independent pieces. 0 turns background helpers off.
     maxBackground: 2,
   },
@@ -231,7 +231,7 @@ export const DEFAULT_CONFIG: GlobalConfig = {
     maxRunning: undefined,
     // A working day, a hundred turns of up to `max_tool_iterations` steps each, and 100 million tokens — a million a turn,
     // above nine in ten chat turns measured on a live box (807 turns over 14 days to 2026-10-24: ~190k at the median,
-    // ~880k at the 90th percentile). Raised from 50 and 50 million by the owner in 0.8.0: long work should not stop to
+    // ~880k at the 90th percentile). Raised from 50 and 50 million in 0.8.0: long work should not stop to
     // ask at half a day's steps. Reaching one asks to go on; it never fails the mission.
     limitHours: 8,
     limitTurns: 100,
@@ -430,7 +430,7 @@ export const DEFAULT_CONFIG: GlobalConfig = {
      * Different numbers because they are different bets. A job log is something an operator might go
      * looking for tomorrow; a spilled tool result is something the agent reads within the turn or the
      * one after it, so keeping it two days is already generous. `0` disables a sweep rather than
-     * deleting everything. Job logs were fourteen days until 0.8.12: the owner's word, three, as the daemon log keeps.
+     * deleting everything. Job logs were fourteen days until 0.8.12; now three, as the daemon log keeps.
      */
     jobLogDays: 3,
     toolOutputDays: 2,
@@ -518,7 +518,7 @@ export const DEFAULT_CONFIG: GlobalConfig = {
     // that wants `every` on a background job rather than the scheduler.
     minIntervalMs: 60_000,
     maxJobs: 100,
-    // Three days, as the daemon log and job output keep (0.8.12, the owner's word); it was fourteen.
+    // Three days, as the daemon log and job output keep (0.8.12); it was fourteen.
     runRetentionDays: 3,
     catchupWindowMs: 3_600_000,
     failStreakLimit: 10,

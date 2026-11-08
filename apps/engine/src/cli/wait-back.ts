@@ -1,5 +1,5 @@
 /**
- * `--wait` for `nouride restart` and `nouride update --start` (D12): return when the daemon is back, or say why not.
+ * `--wait` for `nouride restart` and `nouride update --start`: return when the daemon is back, or say why not.
  *
  * Both answered once the daemon had acknowledged — before anything had restarted — so a script, or an agent's
  * `--then`, could not tell a restart that worked from one still under way or one that never came back. The

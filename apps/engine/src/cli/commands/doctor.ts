@@ -105,7 +105,7 @@ export async function doctor(args: string[] = []): Promise<void> {
     );
   }
 
-  // Disk, the database's own check, and who can read the secrets — all of it answered with the daemon down (D4).
+  // Disk, the database's own check, and who can read the secrets — all of it answered with the daemon down.
   const dataDir = config.daemon.dataDir;
   const dbPath = join(dataDir, "nouride.db");
   for (const check of [
@@ -189,7 +189,7 @@ export async function doctor(args: string[] = []): Promise<void> {
   const memory = await client.softGet<{ index?: { ok: boolean; detail: string }; pass?: { enabled?: unknown } | null; backlog?: Parameters<typeof passBacklogCheck>[1] }>("/memory/status").catch(() => null);
   if (memory?.index?.ok) add("ok", "memory index: FTS5 integrity check passed");
   else if (memory?.index) add("bad", `memory index: ${memory.index.detail}`, "It is a cache of the vault: `nouride memory reindex` rebuilds it.");
-  // Whether the nightly pass keeps up with the conversations it files (M4) — skipped by a daemon too old to say.
+  // Whether the nightly pass keeps up with the conversations it files — skipped by a daemon too old to say.
   const backlog = passBacklogCheck(memory?.pass, memory?.backlog);
   if (backlog) add(backlog.level, backlog.message, backlog.hint);
 
@@ -348,7 +348,7 @@ export async function doctor(args: string[] = []): Promise<void> {
   }
 
   /**
-   * What each MCP server's tools cost every request of the agent that holds it (G12).
+   * What each MCP server's tools cost every request of the agent that holds it.
    *
    * The built-ins' schemas are held to a budget by a test; a server's are somebody else's and arrive when it connects,
    * so they can only be said. Past `MCP_SCHEMA_WARN_BYTES` a server costs its agent more of the window than most of its

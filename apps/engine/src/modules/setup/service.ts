@@ -212,7 +212,7 @@ export class SetupService {
   }
 
   /**
-   * A new install starts `careful` (SIMPLIFY RFC §7.5): the first thing setup writes into a `config.toml` that is not
+   * A new install starts `careful`: the first thing setup writes into a `config.toml` that is not
    * there yet — the wizard's or `nouride setup`'s first step, a provider — is `[security] approvals = "careful"`. An
    * install whose file exists is left as it is: one that never set a level stays `balanced`, the default in the code.
    */

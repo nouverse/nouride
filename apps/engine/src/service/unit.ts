@@ -206,7 +206,7 @@ function controlGroups(version: number | undefined): string {
  * rather than three lines: without them Docker, Podman and LXC do not run, and "install a container
  * and point the agent at it" is the first thing anybody does with a machine like this.
  *
- * `/tmp` keeps its ceiling, because that is sizing, not hardening (E8). The Box's own `/tmp` is a tmpfs of half
+ * `/tmp` keeps its ceiling, because that is sizing, not hardening. The Box's own `/tmp` is a tmpfs of half
  * its RAM, every page the agent writes there is charged to this unit, and `MemoryHigh` then throttles the daemon
  * with it until it stops answering — the failure `tmpSizeBytes` describes, on the machine with the least memory to
  * spare. So `/tmp` is a private tmpfs of the measured size, as on any install, and `/var/tmp` stays the host's: on
@@ -311,7 +311,7 @@ export function systemdUnit(params: UnitParams): string {
     : "";
 
   /**
-   * When the kernel kills one process of the unit for memory, that process is what goes (E8).
+   * When the kernel kills one process of the unit for memory, that process is what goes.
    *
    * systemd's default, `OOMPolicy=stop`, stops the whole unit when any of its processes is OOM-killed — so a build an
    * agent ran, killed for eating the machine, took the daemon, every gateway and every turn down with it, and

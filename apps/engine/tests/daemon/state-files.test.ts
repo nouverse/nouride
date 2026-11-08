@@ -1,6 +1,6 @@
 /**
  * The JSON files 0.8.17 kept at the root of `data/`, moved into `daemon_state` by the first start that has the table
- * (`boot/state-files.ts`, 0.8.18, D6). Each file is written as 0.8.17 wrote it, on a database of 0.8.17's schema brought
+ * (`boot/state-files.ts`, 0.8.18). Each file is written as 0.8.17 wrote it, on a database of 0.8.17's schema brought
  * up to this one, as the upgrade does. What a start reads back is asserted through each state's own reader: a row under
  * a name its reader does not ask for is a state lost at the upgrade.
  */

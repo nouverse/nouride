@@ -1,7 +1,7 @@
 /**
  * A config's backups (`commons/backups.ts`): the same text as the file, so they carry its permissions (they were
  * written with the umask's: a `config.toml` at 0640 had `config.toml.bak.1` to `.bak.5` at 0644 beside it). Since 0.8.18
- * (REVIEW B2) a burst of saves no longer pushes out what a file said yesterday: `.bak.1` is always the version just
+ * a burst of saves no longer pushes out what a file said yesterday: `.bak.1` is always the version just
  * before a save, the older slots move along at most once an hour, the same text is no new version, what falls off the
  * last slot goes to `history/`, and a boot that rewrites a file keeps it once as `<file>.before-<version>`.
  */

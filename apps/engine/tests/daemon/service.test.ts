@@ -447,7 +447,7 @@ describe("privileged units", () => {
 });
 
 /**
- * What the unit adds in 0.7.9 (E8, S17), and the rule that keeps it honest: every directive in it is one the
+ * What the unit adds in 0.7.9, and the rule that keeps it honest: every directive in it is one the
  * machine's systemd knows. One it does not know is a journal warning and a setting that looks made and is not.
  */
 describe("the unit's 0.7.9 directives", () => {

@@ -61,7 +61,7 @@ export function personByHandle(people: readonly Person[], handle: string): Perso
 /**
  * The household as a write finds it, holding the file (0.8.18): from `people/`, each person's own file read now, once
  * that folder is there, so a hand edit is what a write is checked against and what it patches, never what it undoes
- * (REVIEW B2: a name and a notes line edited by hand were put back by the next People save). Before the move, and in a
+ * (a name and a notes line edited by hand were put back by the next People save). Before the move, and in a
  * config with no such folder, the `[[people]]` block as the daemon read it.
  */
 function peopleNow(deps: Pick<PeopleWriteDeps, "config" | "configPath">): { dir: string | null; people: readonly Person[] } {
@@ -382,7 +382,7 @@ export async function keyEveryone(deps: PeopleWriteDeps): Promise<number> {
     if (peopleNow(deps).dir) return 0;
     try {
       let keyed = 0;
-      // Kept once, before this start writes the keys in (REVIEW B2): only when it will.
+      // Kept once, before this start writes the keys in: only when it will.
       const current = (await readTextFileIfExists(deps.configPath)) ?? "";
       if (addMissingPeopleKeys(current, deps.config.people.map((person) => person.key)) !== current) await keepBefore(deps.configPath, VERSION);
       const saved = await file.edit((source) => {
@@ -429,7 +429,7 @@ function keptBlock(source: string): { people: Person[]; print: string | null } {
 }
 
 /**
- * The move (0.8.18, PLAN §2.1), at the first start that finds `[[people]]` and no `people/`: one file per person, then
+ * The move (0.8.18), at the first start that finds `[[people]]` and no `people/`: one file per person, then
  * the block marked as moved and kept, not deleted, so 0.8.17 started again by `nouride update --rollback` still reads it
  * and has its people, missing only what changed since. While `people/` exists the block is not read (the loader,
  * `configFrom`), and 0.9.0 refuses one left in `config.toml`. A folder made with nobody in it is the same answer for an
@@ -464,7 +464,7 @@ export async function movePeopleToFiles(deps: PeopleWriteDeps): Promise<number> 
         if (!written.ok) throw new Error(`${person.key}: ${written.error}`);
       }
       if (people.length > 0) {
-        // The file as 0.8.17 left it, kept once, before this start changes it (REVIEW B2).
+        // The file as 0.8.17 left it, kept once, before this start changes it.
         if (!moved) await keepBefore(deps.configPath, VERSION);
         const print = printOf(people);
         const marked = await file.edit((source) => markPeopleMoved(source, print));

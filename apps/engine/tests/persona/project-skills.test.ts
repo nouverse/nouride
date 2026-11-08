@@ -372,7 +372,7 @@ describe("a skill linked into .agents/skills from elsewhere in its root", () => 
 });
 
 /**
- * A project's own skills, said to an agent that can open files (the owner, 2026-11-07): where they are, that they are
+ * A project's own skills, said to an agent that can open files: where they are, that they are
  * in its list only from a skill root, which roots it has, and that adding one is an admin's call — asked with
  * `skill_root` since 0.8.24, where it was a file the agent may not write that the person had to edit. Asserted on the
  * assembled prompt, the text the model reads.

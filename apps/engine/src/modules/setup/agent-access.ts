@@ -49,7 +49,7 @@ export function namingOrchestrator(source: string, agentId: string): string {
 }
 
 /**
- * An external agent is never the orchestrator (EXTERNAL_AGENTS §5.2): Nouride's approval level, fixed list and tool switches
+ * An external agent is never the orchestrator: Nouride's approval level, fixed list and tool switches
  * do not reach its coding CLI's own commands, and the orchestrator is the agent anyone in a room reaches. It answers in its
  * own channel, in a room when addressed, and to `ask_agent`. It said the CLI "cannot route, delegate or keep the household's
  * memory" until 0.8.10 — untrue since 0.8.1 lent it `ask_agent`, `delegate` and the memory tools.

@@ -1,5 +1,5 @@
 /**
- * `nouride update --rollback` — the version before this one, back (D7). `modules/update/rollback.ts` has the why.
+ * `nouride update --rollback` — the version before this one, back. `modules/update/rollback.ts` has the why.
  *
  * Local, like `db restore`, and for the same reason: it replaces what a running daemon holds open. Without `--apply`
  * it says what it would do — which build, and whether the database goes back to the snapshot taken before the update

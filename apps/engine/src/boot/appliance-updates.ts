@@ -122,7 +122,7 @@ export function failureOutcome(message: string): "failed_download" | "failed_ver
  * An offered release this box cannot take, said once per release — in the journal, and to the fleet.
  *
  * The tick returned silently, so an OpenWrt box whose init script declared no supervisor refused every update as
- * "a stop", critical ones too, and Fleet showed only a Version that stopped moving (`pro-procd-boxes-never-update`).
+ * "a stop", critical ones too, and Fleet showed only a Version that stopped moving.
  * Reported as `failed_install`: the outcomes the service accepts are fixed, and this is an install that did not
  * happen, with its reason beside it.
  */

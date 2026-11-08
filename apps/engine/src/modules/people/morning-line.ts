@@ -1,5 +1,5 @@
 /**
- * The morning line (0.8.0, SMART_AUTOMATION §3.4): once a day, at the time a person set (`[[people]] morning`), a
+ * The morning line (0.8.0): once a day, at the time a person set (`[[people]] morning`), a
  * message to their own chat on what happened while they were away — scheduled runs that failed, approvals and missions
  * waiting on them, missions that finished or ended, and for an admin what was spent.
  *

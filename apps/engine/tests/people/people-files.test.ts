@@ -1,5 +1,5 @@
 /**
- * People, one file each (0.8.18, PLAN §2.1, REVIEW B2): `people/<key>.toml` beside `config.toml`. The move on a real
+ * People, one file each (0.8.18): `people/<key>.toml` beside `config.toml`. The move on a real
  * config's people and the block kept for the way back; the loader reading the folder and leaving a file that does not
  * load out by name; every write landing in the person's own file, patched from what is on disk so a hand edit stays;
  * two writers at once; an account claimed in two files.

@@ -220,7 +220,7 @@ export async function update(client: Client, args: string[]): Promise<void> {
    */
   // `--now` restarts at once; without it the daemon restarts when nothing is running, within ten minutes.
   const now = hasFlag(args, "--now");
-  // Looked at before the swap, so the wait knows the process that comes back from the one being replaced (D12).
+  // Looked at before the swap, so the wait knows the process that comes back from the one being replaced.
   const before = hasFlag(args, "--wait") ? await lookAtHealth(client.baseUrl) : null;
   if (!then) {
     const watched = await client.post<{ note: string; to: string }>("/update/apply", now ? { now: true } : {});

@@ -171,7 +171,7 @@ export async function startEmbeddedNougate(
   // Box or in the Router image, from the LAN. Every route behind it asks for a key or a sign-in.
   const hostname = process.env.HOST ?? "127.0.0.1";
   /**
-   * Its own sign-in off once its dashboard is a page of this one (S9, G5): a second password to every upstream account,
+   * Its own sign-in off once its dashboard is a page of this one: a second password to every upstream account,
    * on the LAN where `HOST` puts it. Kept where that page cannot be shown — no dashboard here, or a bundle beside the
    * binary too old to frame — because then the gateway's own port is the only way in.
    */

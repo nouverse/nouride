@@ -1,5 +1,5 @@
 /**
- * `nouride config explain` says when a change to the key takes effect (config-restart-ux): at once when a save through
+ * `nouride config explain` says when a change to the key takes effect: at once when a save through
  * the daemon applies it, after a restart when the daemon reads it at boot — and, for both, that a hand edit waits.
  * Spawned against an install with no daemon, as the command is meant to run.
  */

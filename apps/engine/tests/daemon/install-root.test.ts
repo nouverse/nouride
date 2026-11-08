@@ -1,5 +1,5 @@
 /**
- * An install moved, or copied, to another folder and started there (`boot/install-root.ts`, 0.8.18, the review's B2):
+ * An install moved, or copied, to another folder and started there (`boot/install-root.ts`, 0.8.18):
  * every path its database names under the old folder is renamed under the new one, the grants bound to a directory
  * there are keyed again so they still match, and the new folder is recorded. What records what happened, and what was
  * never under the install, stays as it was.

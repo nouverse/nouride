@@ -1,5 +1,5 @@
 /**
- * Scheduled work an agent proposes, and a person turns on (0.8.0, SMART_AUTOMATION §2).
+ * Scheduled work an agent proposes, and a person turns on (0.8.0).
  *
  * An agent asked for "every Monday at 9, sum up the customer mail for the team" used to run `nouride cron add …` and a
  * person approved a raw command line. Now it proposes: a job written whole and kept off, and a card in the chat that

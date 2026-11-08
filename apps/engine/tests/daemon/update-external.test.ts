@@ -124,7 +124,7 @@ describe("the gate in front of replacing this binary", () => {
 
   test("careful asks it every time; balanced answers it itself, as the RFC draws the line", () => {
     /**
-     * SIMPLIFY RFC §1, item 3: stopping the daemon asks at `balanced`; replacing it — an update, a downgrade — is
+     * Stopping the daemon asks at `balanced`; replacing it — an update, a downgrade — is
      * `careful`'s. Asserted through the policy package's own set, so a change that moved it fails here.
      */
     expect(BALANCED_ASKS.has("replace")).toBe(false);

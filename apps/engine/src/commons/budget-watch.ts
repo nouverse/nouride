@@ -1,7 +1,7 @@
 /**
  * Nudges on a doubling schedule while something runs long — never a kill (0.7.25).
  *
- * The owner's design: a base interval, five minutes by default, and a nudge at the base, then at twice it, four times,
+ * The design: a base interval, five minutes by default, and a nudge at the base, then at twice it, four times,
  * eight — 5, 10, 20, 40, 80 minutes. The same rhythm a quiet background job is reported on (`jobs/watchdog.ts`): often
  * enough that nobody is left wondering, rarely enough that a long piece of work is not a stream of interruptions. What
  * a nudge does is the caller's — a note in front of a delegate, a line to the agent that is waiting on it, a note in a

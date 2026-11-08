@@ -1,5 +1,5 @@
 /**
- * The audit log and the log table wake the daemon only when they hold something (E13).
+ * The audit log and the log table wake the daemon only when they hold something.
  *
  * Each flushed on a two-second interval — sixty wake-ups a minute between them, on an idle daemon, to find two empty
  * buffers. Now one flush is armed by the first entry into an empty buffer and fires once.

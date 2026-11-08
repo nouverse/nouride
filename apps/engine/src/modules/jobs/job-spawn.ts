@@ -1,5 +1,5 @@
 /**
- * How a job's process is started (S5): under the operator's ceilings, with its log written masked.
+ * How a job's process is started: under the operator's ceilings, with its log written masked.
  *
  * A job used to get `nice` and a process group and nothing else. The foreground path has had `prlimit` all along, so
  * the commands most worth bounding — the long ones, which `exec` moves to the background on its own — were the ones

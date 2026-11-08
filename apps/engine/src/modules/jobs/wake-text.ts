@@ -314,7 +314,7 @@ export function jobWakeMessage(completion: JobCompletion, chain?: WakeChain): st
   // The closing instruction is the whole difference between a report and a conversation.
   //
   // It used to say "tell whoever started it what happened", and the model read that as *reply to
-  // them* — so a job finishing produced "Aman Gading, ... Ada hal lain yang bisa dibantu?", a
+  // them* — so a job finishing produced "Aman Sam, ... Ada hal lain yang bisa dibantu?", a
   // conversational answer to a message nobody had sent. Worse when the agent had just killed the job
   // itself: it had already reported the outcome just before, then reported it again as
   // though asked.

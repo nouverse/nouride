@@ -27,7 +27,7 @@ export interface AuditEntry {
   actor?: string;
   gatewayId?: string;
   chatId?: string;
-  /** The turn it happened in (D2) — a `tool_exec` row's, or an error logged during one. */
+  /** The turn it happened in — a `tool_exec` row's, or an error logged during one. */
   turnId?: string;
   details?: Record<string, unknown>;
 }
@@ -253,7 +253,7 @@ export class AuditLog {
   /**
    * The knowledge documents opened in a chat between two times, oldest first: each `memory_read` of a `document` that
    * answered, as `<collection>/<path>` (0.8.23). What a conversation opened is kept on it when it is filed, and the
-   * memory graph draws it (KNOWLEDGE_BASE §12). Walks `idx_audit_ts` over the window, a day's calls at most.
+   * memory graph draws it. Walks `idx_audit_ts` over the window, a day's calls at most.
    */
   documentsOpened(gatewayId: string, chatId: string, after: number, until: number): { at: number; document: string }[] {
     this.flush();

@@ -307,7 +307,7 @@ export function validate(config: GlobalConfig): void {
   // The knob is wired to the queue's per-key concurrency, and the key is the *conversation*. Two turns
   // running at once in one conversation both `SessionStore.load()` it and each `save()`s what it loaded
   // with its own messages after — so the slower one's save drops the faster one's messages, and that
-  // exchange is gone from the transcript with nothing logged. Rows (E2) did not change that: a save is
+  // exchange is gone from the transcript with nothing logged. Rows per message did not change that: a save is
   // still of the whole conversation, written as what differs. Sequential-per-chat is not a default here,
   // it is what the session store requires; a value that silently loses conversation history is worth
   // refusing at boot rather than honouring.
@@ -435,7 +435,7 @@ export function validate(config: GlobalConfig): void {
   }
   // People, checked where they are written: here the `[[people]]` block, whose first problem stops the load.
   validatePeople(config.people);
-  // The seal the snapshots use (D5): one written wrong would seal to nothing anybody can open, said at load.
+  // The seal the snapshots use: one written wrong would seal to nothing anybody can open, said at load.
   parseBackupSeal(config.daemon.backupSeal);
   validateMemory(config);
 

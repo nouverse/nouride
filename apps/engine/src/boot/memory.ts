@@ -130,7 +130,7 @@ export async function bootMemory(
 const KNOWLEDGE_LOOK_MS = 5 * 60_000;
 
 /**
- * The knowledge folder, looked at every few minutes (KNOWLEDGE_BASE §5): a document dropped in by Syncthing, git or a
+ * The knowledge folder, looked at every few minutes: a document dropped in by Syncthing, git or a
  * share is searchable minutes later. The dashboard, the command line and `memory_write` sync what they change at once.
  */
 export function startKnowledgeLook(memory: Pick<Memory, "knowledge">): ReturnType<typeof setInterval> {
@@ -165,7 +165,7 @@ export function embedder(deps: {
       }
       return (await provider.embed({ model: semantic.model, input: texts, dimensions: semantic.dimensions })).vectors;
     } catch (err) {
-      // Not "by words alone" any more: a search ranked by the model before a change goes on with the model in use (M7).
+      // Not "by words alone" any more: a search ranked by the model before a change goes on with the model in use.
       log.warn("memory embedding failed", { provider: semantic.provider, model: semantic.model, error: String(err) });
       return null;
     }

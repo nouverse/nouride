@@ -1,5 +1,5 @@
 /**
- * `nouride config check` over a pack that will not load (`config-check-hides-pack-failures`).
+ * `nouride config check` over a pack that will not load.
  *
  * Found in the 0.7.7 → 0.7.10 upgrade run: a pack 0.7.7 loaded — two `[[mcp_servers]]` of one name, refused since
  * 0.7.10 — made the check every release note sends people to print one raw JSON log line and then "✓ this

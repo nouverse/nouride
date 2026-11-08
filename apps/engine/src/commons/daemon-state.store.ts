@@ -1,5 +1,5 @@
 /**
- * `daemon_state`: the daemon's own small state, one row each (0.8.18, migration 077, the owner's D6). Each row was a JSON
+ * `daemon_state`: the daemon's own small state, one row each (0.8.18, migration 077). Each row was a JSON
  * file at the root of `data/`, outside every snapshot and `nouride db restore`. What each holds and how it is read is
  * `commons/daemon-state.ts`; the move from the files, `boot/state-files.ts`.
  */
