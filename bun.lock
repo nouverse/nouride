@@ -40,7 +40,7 @@
     },
     "apps/engine": {
       "name": "@nouride/engine",
-      "version": "0.8.24",
+      "version": "0.8.25",
       "bin": {
         "nouride": "./src/cli/main.ts",
       },
