@@ -266,11 +266,14 @@ export function StepFeed({
   steps,
   elapsedMs,
   running,
+  bare = false,
 }: {
   steps: TurnStep[];
   elapsedMs: number;
   /** False for the moment between a turn ending and the history catching up — nothing is working then. */
   running: boolean;
+  /** Under a line that already says it (`LiveStepLine`): no heading of its own. */
+  bare?: boolean;
 }) {
   const acted = stepRows(steps);
   const thought = reasoningText(steps);
@@ -292,15 +295,17 @@ export function StepFeed({
 
   return (
     <div className="w-full max-w-xl rounded-2xl bg-base-200/50 border border-base-content/[0.08] p-2 sm:p-3 space-y-1.5 font-mono text-xs">
-      <div className="flex items-center justify-between gap-2 mb-1">
-        <span className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-base-content/65 font-mono">
-          <span
-            className={`size-1.5 rounded-full ${running ? "bg-primary animate-pulse" : "bg-success"}`}
-          />
-          {running ? "Working" : "Finished"} · {counted} {counted === 1 ? "step" : "steps"} ·{" "}
-          {formatElapsed(elapsedMs)}
-        </span>
-      </div>
+      {bare ? null : (
+        <div className="flex items-center justify-between gap-2 mb-1">
+          <span className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-base-content/65 font-mono">
+            <span
+              className={`size-1.5 rounded-full ${running ? "bg-primary animate-pulse" : "bg-success"}`}
+            />
+            {running ? "Working" : "Finished"} · {counted} {counted === 1 ? "step" : "steps"} ·{" "}
+            {formatElapsed(elapsedMs)}
+          </span>
+        </div>
+      )}
 
       {/* Reasoning first — the plan — then the calls that carry it out. */}
       {thought && (

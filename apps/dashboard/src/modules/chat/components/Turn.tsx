@@ -13,7 +13,8 @@ import type { ChatTurn, LiveTurn, TurnAttachment, TurnCause, TurnStep } from "@n
 import { AttachmentList } from "./Attachments";
 import { saidWhileWorking, splitThinking } from "@/commons/lib/steps";
 import { answersAnEdit, saidAsDrawn, systemHeading } from "@/commons/lib/turn-display";
-import { StepFeed, StepPill } from "@/commons/components/turns/Steps";
+import { StepPill } from "@/commons/components/turns/Steps";
+import { LiveStepLine } from "@/commons/components/turns/StepLine";
 import { CopyButton } from "@/commons/components/ui/CopyButton";
 
 export function UserBubble({
@@ -381,7 +382,7 @@ export function LiveTurnView({
             </button>
           ) : null}
         </div>
-        <StepFeed
+        <LiveStepLine
           steps={turn.steps}
           running={turn.status === "running"}
           // The daemon's own clock while it runs, and the recorded duration once it is over — so the
