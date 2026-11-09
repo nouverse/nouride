@@ -46,14 +46,17 @@ const ICONS: Record<ChatEvent["kind"], typeof Hash> = {
 /** Past this, or with a line break, an event is a card, not a pill. */
 const PILL_CHARS = 160;
 
-/** `motion`: how it arrives (`useMotionList`). */
-export function EventPill({ event, motion = "" }: { event: ChatEvent; motion?: string }) {
+/**
+ * `words`: what to say, where the page says it in its own words (`eventWords`) rather than the daemon's sentence.
+ * `motion`: how it arrives (`useMotionList`).
+ */
+export function EventPill({ event, words, motion = "" }: { event: ChatEvent; words?: string; motion?: string }) {
   const Icon = ICONS[event.kind] ?? StickyNote;
-  const told = event.audience === "agents" ? <AgentsTold /> : null;
+  const text = words ?? event.text;
 
   // A line or two stays a pill. Anything longer — a mission's notice with its report — is a card with its lines and its
   // markdown kept: in a pill, a paragraph ran out past the rounded ends, its line breaks gone and its backticks shown.
-  if (event.text.includes("\n") || event.text.length > PILL_CHARS) {
+  if (text.includes("\n") || text.length > PILL_CHARS) {
     return (
       <div className={`flex justify-center w-full ${motion}`}>
         <div
@@ -64,9 +67,8 @@ export function EventPill({ event, motion = "" }: { event: ChatEvent; motion?: s
           <Icon size={13} className="mt-0.5 shrink-0 opacity-70" />
           {/* A branch name or a path is one long word: broken anywhere rather than run out of the card. */}
           <div className="min-w-0 flex-1 [overflow-wrap:anywhere]">
-            <Markdown source={event.text} compact />
+            <Markdown source={text} compact />
           </div>
-          {told}
         </div>
       </div>
     );
@@ -81,25 +83,10 @@ export function EventPill({ event, motion = "" }: { event: ChatEvent; motion?: s
         data-event-kind={event.kind}
       >
         <Icon size={12} className="mt-0.5 shrink-0 opacity-70" />
-        <span className="break-words">{event.text}</span>
-        {/*
-          Marked when the agents were told too, because the two are genuinely different facts about
-          the same line and the difference matters to whoever is debugging a room: "did the agent
-          know this?" is otherwise unanswerable from the transcript.
-        */}
-        {told}
+        {/* No mark that the agents were told it too: a small "AGENTS" beside the line read as internals to the person
+            reading, and whether an agent knew is the agent's own transcript's question. */}
+        <span className="break-words">{text}</span>
       </div>
     </div>
-  );
-}
-
-function AgentsTold() {
-  return (
-    <span
-      className="shrink-0 self-center rounded-full bg-base-content/[0.06] px-1.5 text-[9px] font-semibold uppercase tracking-wider text-base-content/65 font-mono"
-      title="The agents in this room were told this too, with the next message they read."
-    >
-      agents
-    </span>
   );
 }

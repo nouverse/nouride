@@ -47,6 +47,7 @@ import { NotesPanel } from "./NotesPanel";
 import { PlanStrip } from "./PlanStrip";
 import { startWith } from "../lib/start-with";
 import { askedInLog, oldestLine } from "../lib/group-stream";
+import { eventWords } from "../lib/event-words";
 import { useWorkNotes } from "@/commons/hooks/use-notes";
 import { ENTER, useMotionList } from "@/commons/hooks/use-motion-list";
 import { doingNow, orchestratorFirst } from "@/commons/lib/agents";
@@ -425,7 +426,7 @@ export function Conversation(
                     return elsewhere ? <PersonMessage key={key} name={entry.message.senderName} text={entry.message.text} motion={motion} /> : <UserBubble key={key} text={entry.message.text} sessionId={transcriptId} motion={motion} />;
                   }
                   if (entry.kind === "event") {
-                    return <EventPill key={key} event={entry.event} motion={motion} />;
+                    return <EventPill key={key} event={entry.event} words={eventWords(entry.event, { viewer: user?.username, nameOf: data.nameOf })} motion={motion} />;
                   }
                   if (entry.kind === "live") {
                     return (

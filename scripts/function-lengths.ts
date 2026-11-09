@@ -81,7 +81,7 @@ export const LONG_FUNCTIONS: Record<string, Record<string, Budget>> = {
   "apps/engine/src/modules/web/control/routes/mcp.ts": { registerMcpRoutes: { lines: 154, why: ROUTES("MCP library's") } },
   "apps/engine/src/modules/web/control/routes/memory.ts": { registerMemoryRoutes: { lines: 176, why: ROUTES("memory") } },
   "apps/engine/src/modules/web/control/routes/missions.ts": { registerMissionRoutes: { lines: 157, why: ROUTES("missions'") } },
-  "apps/engine/src/modules/web/control/routes/rooms.ts": { registerRoomRoutes: { lines: 206, why: ROUTES("rooms'") } },
+  "apps/engine/src/modules/web/control/routes/rooms.ts": { registerRoomRoutes: { lines: 207, why: ROUTES("rooms'") } },
   "apps/engine/src/modules/web/control/routes/skills.ts": { registerSkillRoutes: { lines: 265, why: ROUTES("skills'") } },
   "internals/pro/packages/appliance/src/core/index.ts": { createAppliance: { lines: 285, why: "the box's appliance surface (sync, claim link, setup, automatic updates): one closure per operation over its identity and licence" } },
   "internals/pro/packages/appliance/src/ui/features/wifi/WifiTab.tsx": { WifiTab: { lines: 243, why: COMPONENT("the Wi-Fi setup: a network, its password, the poll and why it failed") } },

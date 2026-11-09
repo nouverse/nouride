@@ -226,6 +226,24 @@ describe("a conversation from a chat app", () => {
   });
 });
 
+describe("a room's opening line", () => {
+  // It read "cli started this room with nouva, nestor, nix." beside a small "AGENTS": a login, ids and a tag, where a
+  // person reads names.
+  test("says who started it, You for the one reading, with the agents' names, and carries no tag", async () => {
+    const room = { gatewayId: "web:dashboard", chatId: "room_1", title: "Harness research", createdAt: NOW, members: ["nouva", "nestor", "nix"].map((agentId) => ({ agentId, addedAt: NOW })) };
+    const started = { id: "ev1", gatewayId: "web:dashboard", chatId: "room_1", audience: "agents", kind: "joined", text: "tester started this room with nouva, nestor, nix.", actor: "tester", details: { members: ["nouva", "nestor", "nix"] }, at: NOW - 60_000 };
+    const said = { id: "m1", gatewayId: "web:dashboard", chatId: "room_1", senderId: "tester", text: "@nix how is the build?", at: NOW - 30_000 };
+    const transcript = { session: null, room, earlier: [], turns: [], events: [started], messages: [said] };
+    answer({ ...list, "/rooms/room_1": { status: 200, body: { room } }, "/rooms/room_1/turns": { status: 200, body: transcript } });
+    let line = "";
+    await renderPage("/chat/room/room_1", async (host) => {
+      await eventually(() => host.querySelector('[data-event-kind="joined"]') !== null, 3_000, "the opening line");
+      line = host.querySelector('[data-event-kind="joined"]')!.textContent ?? "";
+    });
+    expect(line).toBe("You started this room with Nouva, Nestor and Nix.");
+  });
+});
+
 describe("an agent's History", () => {
   test("lists only that agent's conversations: its own here and on chat apps, never a room's or a group's", async () => {
     const mine = (id: string, chatId: string, gatewayId = "web:dashboard", title = id) => ({ id, agentId: "nouva", chatId, gatewayId, updatedAt: NOW - 1_000, title });

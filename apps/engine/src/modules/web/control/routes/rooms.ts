@@ -356,6 +356,8 @@ export function registerRoomRoutes(control: ControlApp, deps: ControlDeps): void
       kind: "topic",
       text: title ? `${actor} named this room "${title}".` : `${actor} cleared this room's name.`,
       actor,
+      // As data too, so the dashboard says it in its own words rather than reading them out of the sentence.
+      details: { title },
     });
 
     return c.json({ room: deps.rooms.get(local!, chatId) });
