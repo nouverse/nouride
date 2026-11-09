@@ -165,3 +165,28 @@ describe("an agent's History", () => {
     expect(rows[1]).toContain("Telegram · read-only");
   });
 });
+
+describe("New room, from the list's +", () => {
+  // A fieldset is as wide as its widest line unless told otherwise: a long headline ran past the dialog's edge on a
+  // phone, cut off with no ellipsis, where each line is meant to end in one.
+  test("lists every agent with its headline, each line cut inside the dialog rather than running past it", async () => {
+    answer({ ...list, "/status": { status: 200, body: { ...status, agents: status.agents.map((one) => ({ ...one, headline: "A headline far longer than any phone is wide, about the odd jobs nobody else wants" })) } } });
+    const seen: Record<string, unknown> = {};
+    await renderPage("/chat", async (host) => {
+      await eventually(() => host.querySelector('button[aria-label="Start a chat or a room"]') !== null, 3_000, "the +");
+      (host.querySelector('button[aria-label="Start a chat or a room"]') as HTMLElement).click();
+      await eventually(() => byText(host.ownerDocument.body, "New room") !== undefined, 2_000, "the menu");
+      byText(host.ownerDocument.body, "New room")!.click();
+      const dialog = () => dom.document.body.querySelector('[role="dialog"][aria-label="New room"]');
+      await eventually(() => dialog()?.querySelector("fieldset") != null, 2_000, "the dialog");
+      const fieldset = dialog()!.querySelector("fieldset")!;
+      seen.fieldset = fieldset.className.split(/\s+/);
+      seen.names = [...fieldset.querySelectorAll("label")].map((label) => label.querySelector(".truncate")?.textContent);
+      seen.lines = [...fieldset.querySelectorAll("label > span.flex-col")].map((span) => span.className.split(/\s+/));
+    });
+    expect(seen.fieldset).toContain("min-w-0");
+    expect(seen.names).toEqual(["Nouva", "Nestor", "Nix", "Kuro"]);
+    expect(seen.lines).toHaveLength(4);
+    for (const line of seen.lines as string[][]) expect(line).toEqual(expect.arrayContaining(["min-w-0", "flex-1"]));
+  });
+});

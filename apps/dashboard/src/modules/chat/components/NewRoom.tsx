@@ -82,7 +82,8 @@ function NewRoomBox({ onClose, data }: { onClose: () => void; data: ChatListData
           <input className="input w-full rounded-[14px] font-medium" placeholder="Optional, like Launch crew" value={title} maxLength={100} onChange={(event) => setTitle(event.target.value)} />
         </label>
 
-        <fieldset className="flex min-h-0 flex-col gap-1">
+        {/* `min-w-0`: a fieldset is otherwise as wide as its widest line, and a long headline ran past the dialog. */}
+        <fieldset className="flex min-h-0 min-w-0 flex-col gap-1">
           <legend className="mb-1.5 text-sm font-semibold">Agents in this room</legend>
           <div className="-mx-1 flex min-h-0 flex-col gap-0.5 overflow-y-auto overscroll-contain px-1">
             {agents.map((agent) => {
