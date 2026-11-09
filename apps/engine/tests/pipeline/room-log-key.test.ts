@@ -112,6 +112,15 @@ describe("two of our bots in one group", () => {
     expect(h.roomMessages.isRoom("telegram:nestor", "-100")).toBe(true);
   });
 
+  test("the group read across both bots has the line once, and no other group's line of the same number", async () => {
+    const h = await daemon({ bots: ["nouva", "nestor"], mention: true });
+    for (const bot of h.bots) await h.said(bot, { id: "77", chatId: "-100", text: "who is on call tonight?" });
+    await h.said(h.bots[0]!, { id: "77", chatId: "-200", text: "lunch?" });
+
+    const room = h.roomMessages.inRoom(["telegram:nouva", "telegram:nestor"], "-100");
+    expect(room.map((message) => [message.id, message.text])).toEqual([["77", "who is on call tonight?"]]);
+  });
+
   test("the same connection handed the same line again keeps it once", async () => {
     const h = await daemon({ bots: ["nouva"], mention: true });
     await h.said(h.bots[0]!, { id: "77", chatId: "-100", text: "who is on call tonight?" });

@@ -132,6 +132,22 @@ export class RoomMessageStore {
       .map(toMessage);
   }
 
+  /**
+   * One chat as several of our bots heard it — a group read as one room — its newest `limit` lines, oldest first.
+   *
+   * Each connection keeps its own copy, so a line two bots heard is two rows; here it is one, by its id in the chat.
+   * The connections are one platform's, whose ids every bot in the chat shares. Where a platform numbers a group per bot
+   * (a Telegram basic group, `idsPerConnection`) the copies share no id and each is here.
+   */
+  inRoom(gatewayIds: readonly string[], chatId: string, limit = 400): RoomMessage[] {
+    // One connection never holds an id twice, so the room's newest `limit` lines are among each one's newest `limit`.
+    const lines = new Map<string, RoomMessage>();
+    for (const gatewayId of gatewayIds) {
+      for (const message of this.forChat(gatewayId, chatId, limit)) if (!lines.has(message.id)) lines.set(message.id, message);
+    }
+    return [...lines.values()].sort((a, b) => a.at - b.at).slice(-limit);
+  }
+
   /** One room's messages in a window, oldest first — the people's half of a group episode. */
   between(gatewayId: string, chatId: string, after: number, until: number): RoomMessage[] {
     return this.db

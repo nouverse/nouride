@@ -165,7 +165,7 @@ describe("GET /chat-list", () => {
     tick();
     const nestorThere = h.talk("nestor", "telegram:nestor", "-100", "@nestor and you?", "Reading.");
     tick();
-    // Each line kept by the bot whose connection took it first: one line in each bot's copy of the log.
+    // Each bot keeps the lines it was handed, and one can be handed less than the other: here, a line each.
     h.roomMessages.record({ id: "g0", gatewayId: "telegram:nestor", chatId: "-100", senderId: "902", senderName: "Rani", text: "hi all", at: Date.now() - 1_000 });
     h.roomMessages.record({ id: "g1", gatewayId: "telegram:nouva", chatId: "-100", senderId: "814", senderName: "gading_n", text: "thanks both", at: Date.now() });
 
@@ -179,5 +179,23 @@ describe("GET /chat-list", () => {
     // The two the Groups page knew from one bot's copy, and one more from the other's.
     expect(office.people).toBe(3);
     expect(office.working).toBe(false);
+  });
+
+  test("a line both our bots heard is one line of the group: who spoke lately is read from its newest lines, not its newest rows", async () => {
+    const groups = [{ gatewayId: "telegram:nestor", platform: "telegram", chatId: "-100", name: "Nouverse Office", dashboard: false, agents: ["nouva", "nestor"], people: [], lastActive: 1 }];
+    const h = await mount({ groups });
+    h.talk("nouva", "telegram:nouva", "-100", "@nouva deploy?", "Done.");
+    h.talk("nestor", "telegram:nestor", "-100", "@nestor and you?", "Reading.");
+    tick();
+    // Sam once, then thirty lines from Rani, each handed to both bots: two rows a line.
+    const lines = [{ id: "g0", senderId: "903", senderName: "Sam", text: "morning" }, ...Array.from({ length: 30 }, (_, n) => ({ id: `g${n + 1}`, senderId: "902", senderName: "Rani", text: `note ${n + 1}` }))];
+    lines.forEach((line, n) => {
+      for (const gatewayId of ["telegram:nouva", "telegram:nestor"]) h.roomMessages.record({ ...line, gatewayId, chatId: "-100", at: Date.now() + n });
+    });
+
+    const office = (await h.list()).body.groups[0]!;
+    expect(office.last).toEqual({ from: "person", name: "Rani", text: "note 30" });
+    // Thirty-one lines are within the fifty read; counted as rows, Sam's would have fallen out.
+    expect(office.people).toBe(2);
   });
 });
