@@ -36,7 +36,7 @@
  * turn's, wait to the end (`waitingAsk`). A peer has no `ask_agent` at all.
  */
 
-import { createLogger, type LoadedAgent, type ModelTier, type Tool, type ToolContext, type ToolResult } from "@nouride/shared";
+import { createLogger, type LoadedAgent, type ModelTier, plural, type Tool, type ToolContext, type ToolResult } from "@nouride/shared";
 import { isHandoffError, renderHandoff, type SubAgentHandoff } from "@/modules/tools/handoff.ts";
 import { describePeers } from "@/modules/router/agent-mentions.ts";
 import { duration } from "@/modules/jobs/wake-text.ts";
@@ -380,7 +380,7 @@ function stayed(refused: AskRefusal, waitMs: number): string {
 function limitReached(refused: Extract<AskRefusal, { why: "limit" }>): string {
   const n = refused.running.length;
   return (
-    `you already have ${n} ${n === 1 ? "job" : "jobs"} working in the background (helpers and asks), the most this ` +
+    `you already have ${n} ${plural(n, "job")} working in the background (helpers and asks), the most this ` +
     `agent may have (\`[delegate] max_background = ${refused.limit}\`)`
   );
 }

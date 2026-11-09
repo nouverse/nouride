@@ -1,5 +1,5 @@
 /**
- * Documents close in meaning (0.8.20, KNOWLEDGE_BASE §11 and §12): a document's **Related documents** on the dashboard,
+ * Documents close in meaning (0.8.20): a document's **Related documents** on the dashboard,
  * and the dashed lines between documents in the memory graph.
  *
  * Read from the vectors memory already holds for search (`rankingVectors`): a document is the mean of its sections'
@@ -19,7 +19,7 @@ const NEAREST = 3;
 /**
  * The cosine below which two documents are not called close. A design value, not measured on documents: with bge-m3,
  * memory's facts measured a related but different fact at 0.79 and a restatement at 0.86 or more (`same-fact.ts`), and
- * documents on different subjects are expected well under 0.6. The bench on the box sets it (KNOWLEDGE_BASE §14 item 8).
+ * documents on different subjects are expected well under 0.6. The bench on the box sets it.
  */
 const SIMILAR_FLOOR = 0.6;
 

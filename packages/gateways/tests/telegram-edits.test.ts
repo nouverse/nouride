@@ -1,5 +1,5 @@
 /**
- * A person's edit on Telegram (G11): `edited_message`, asked for by the poll and handed to the engine as the edit it is —
+ * A person's edit on Telegram: `edited_message`, asked for by the poll and handed to the engine as the edit it is —
  * what the message says now, the message it changes, when that was sent, an id of its own. Only a person's, only words.
  */
 

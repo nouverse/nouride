@@ -52,7 +52,7 @@ describe("interleaving a room", () => {
 
   test("an event comes before a message in the same millisecond", () => {
     // A room's `joined` is written as the room is created, and the first message can land in the same
-    // tick — "Gading started this room" belongs above what they then said.
+    // tick — "Sam started this room" belongs above what they then said.
     const out = interleave([], [], [event("joined", 10)], [message("first", 10)]);
 
     expect(ids(out)).toEqual(["joined", "first"]);

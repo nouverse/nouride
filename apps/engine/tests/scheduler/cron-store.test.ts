@@ -381,7 +381,7 @@ describe("run history", () => {
     const job = store.create(input());
     store.startRun(job.id);
     expect(store.reconcileInterrupted()).toBe(1);
-    // Interrupted, not failed: nothing about the job went wrong (P11).
+    // Interrupted, not failed: nothing about the job went wrong.
     expect(store.runs(job.id)[0]?.status).toBe("interrupted");
     expect(store.runs(job.id)[0]?.result).toMatch(/restart/);
   });

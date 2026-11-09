@@ -86,7 +86,7 @@ export class TurnContext extends ActiveTurns {
   paused = false;
   /** Try a turn its provider ended again, a few minutes on — set by the pipeline, see `provider-resume.ts`. */
   resumeLater?: (turn: ResumableTurn) => boolean;
-  /** The message a turn answered, handled in the turn's own settle (E7) — `InboxDesk.settleWithTurn`. Set by the pipeline. */
+  /** The message a turn answered, handled in the turn's own settle — `InboxDesk.settleWithTurn`. Set by the pipeline. */
   settleMessage?: (envelope: MessageEnvelope) => void;
   /** Tell the agent a job of its reports to, in that job's chat, how long it has run — set by the pipeline (`JobWakes.quiet`). */
   nudgeLead?: (jobId: string, text: string) => void;
@@ -546,7 +546,7 @@ export class TurnContext extends ActiveTurns {
    * are in `@nouride/policy`'s `approvals.ts`; this only reads them.
    *
    * `person` is who is talking to this agent, and a turn nobody is talking to has none: a peer turn another agent
-   * asked for (S14) resolves on its own posture and the daemon's. A person's "stop asking me" was said to the agent
+   * asked for resolves on its own posture and the daemon's. A person's "stop asking me" was said to the agent
    * they talk to; read for a peer, it let that agent's model hand work to one with tools the person never let run
    * unasked — and have it run unasked.
    */

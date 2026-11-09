@@ -118,7 +118,7 @@ export class SettingsService {
     return await agents.saveAgentToolIterations(this.deps, ...args);
   }
 
-  /** The model an agent answers with when its own cannot, or none (G3). */
+  /** The model an agent answers with when its own cannot, or none. */
   async saveAgentFallbacks(...args: Rest<typeof agents.saveAgentFallbacks>): Promise<SaveResult> {
     return await agents.saveAgentFallbacks(this.deps, ...args);
   }
@@ -148,7 +148,7 @@ export class SettingsService {
     return await policy.setTurnSeconds(this.deps, ...args);
   }
 
-  /** `[daemon] backup_seal`: the passphrase the snapshots' secrets are sealed to, or null for none (0.8.18, D5). */
+  /** `[daemon] backup_seal`: the passphrase the snapshots' secrets are sealed to, or null for none (0.8.18). */
   async setBackupSeal(...args: Rest<typeof backups.setBackupSeal>): Promise<backups.SealResult> {
     return await backups.setBackupSeal(this.deps, ...args);
   }

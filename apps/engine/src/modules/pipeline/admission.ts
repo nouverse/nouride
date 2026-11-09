@@ -276,7 +276,7 @@ export class Admission {
         if (now - at >= CLAIM_TTL_MS) this.claimed.delete(otherKey);
       }
       /**
-       * A hard ceiling, not only a sweep (P13). Expiry alone bounded the table by the traffic of one TTL: a burst of
+       * A hard ceiling, not only a sweep. Expiry alone bounded the table by the traffic of one TTL: a burst of
        * messages inside a minute — a busy room, a flood — kept every claim and grew past the cap. Past it, the oldest
        * go: a Map iterates in insertion order. The copies a claim collapses arrive within milliseconds of each other,
        * so the claim given up is one whose copies have long since come.

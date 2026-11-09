@@ -1,5 +1,5 @@
 /**
- * What a mission counts beside its turns, across a restart (B5, 0.8.13): a coding CLI's turns and how many reported no
+ * What a mission counts beside its turns, across a restart (0.8.13): a coding CLI's turns and how many reported no
  * tokens, and up to when its helpers' tokens are counted. Kept in memory, a restart showed a CLI mission that counted 0
  * as "tokens unknown", one that reported for some turns only as a full count, and counted its helpers' tokens again
  * from its start. A restart here is a new service over the same database, as boot makes one.

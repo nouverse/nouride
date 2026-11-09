@@ -1,7 +1,7 @@
 /**
  * The backup password, on the page (0.8.19; 0.8.18 set it from the command line only). With one set, the weekly backups
  * include the secrets, locked with it, and it is the way back from a lost key or a moved server. In plain words: the
- * people who read this page are not technical (the owner, 2026-11-05).
+ * people who read this page are not technical.
  *
  * The password goes once to the daemon, which keeps only what can lock (`config/sealed-secrets.ts`): it is never
  * stored, never sent back, never shown again. Asked twice, at least twelve characters, and an admin's to set.

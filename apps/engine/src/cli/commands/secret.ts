@@ -16,7 +16,7 @@
  * This is what lets an agent finish a setup it starts: it can ask the person for a bot token in chat
  * and store it itself, rather than getting three steps in and handing back instructions.
  *
- * `seal` sets the backup passphrase (0.8.18, D5): the config snapshots then hold the store sealed to it, which only
+ * `seal` sets the backup passphrase (0.8.18): the config snapshots then hold the store sealed to it, which only
  * that passphrase opens (`secret-unseal.ts`). It arrives on stdin for the reason a value does.
  */
 
@@ -53,7 +53,7 @@ export async function secret(client: Client, args: string[]): Promise<void> {
     say();
     const unset = secrets.filter((entry) => entry.origin === "missing");
     for (const entry of unset) say(`${RED}✗${RESET} ${entry.name} is not set: nouride secret set ${entry.name} --stdin`);
-    // Encrypted, and how far its key is from the data (0.8.19); then where a restore would find them (0.8.18, D5).
+    // Encrypted, and how far its key is from the data (0.8.19); then where a restore would find them (0.8.18).
     if (lock) say(`${DIM}${lockLine(lock)}${RESET}`);
     say(
       sealedInSnapshots

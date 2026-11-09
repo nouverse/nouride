@@ -35,7 +35,7 @@ export interface ListedModel {
   /** What it takes in, when the endpoint says (Nougate does, per route). */
   inputModalities?: string[];
   inputAudioFormats?: string[];
-  /** How many tokens a request to it may hold, when the endpoint says (G2) — a whole number of at least 1024. */
+  /** How many tokens a request to it may hold, when the endpoint says — a whole number of at least 1024. */
   contextWindow?: number;
 }
 

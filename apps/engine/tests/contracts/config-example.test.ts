@@ -150,7 +150,7 @@ describe("every documented setting is visible in the file operators copy", () =>
 });
 
 /**
- * The keys marked advanced (SIMPLIFY §3) are left out of the file operators copy, and written in one place instead: the
+ * The keys marked advanced are left out of the file operators copy, and written in one place instead: the
  * docs' appendix, in both languages. Nothing about what they do changes — only where they are shown.
  */
 describe("an advanced key", () => {

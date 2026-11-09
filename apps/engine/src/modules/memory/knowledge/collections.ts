@@ -1,6 +1,5 @@
 /**
- * The knowledge base's collections: a folder each under `.nouride/knowledge/`, and who may be answered from one
- * (KNOWLEDGE_BASE §4 and §5, 0.8.20).
+ * The knowledge base's collections: a folder each under `.nouride/knowledge/`, and who may be answered from one.
  *
  * A collection's settings are its `knowledge.toml`, every key optional, which the dashboard writes. Who may be answered
  * from it is closed until opened, by where it came from: the dashboard writes the person who made it, a chat writes the
@@ -29,10 +28,10 @@ export interface CollectionSettings {
   name: string;
   /** One line for the agent's prompt, saying when to look in it. */
   description: string;
-  /** The agents that search it; null is every agent (the owner, 2026-11-03). */
+  /** The agents that search it; null is every agent. */
   agents: readonly string[] | null;
   readers: KnowledgeReaders;
-  /** Whom it is about, by person key (§10). It grants nothing. */
+  /** Whom it is about, by person key. It grants nothing. */
   about: readonly string[];
   /** Kept, never searched. */
   archived: boolean;
@@ -188,7 +187,7 @@ export function readersOfConversation(audience: Audience): KnowledgeReaders {
 }
 
 /**
- * Whether `wider` reaches someone `narrower` does not: saving there from a chat waits for an admin's yes (§9). `narrower`
+ * Whether `wider` reaches someone `narrower` does not: saving there from a chat waits for an admin's yes. `narrower`
  * is a chat's readers, its person or its group. The admins are the people they are: a folder made by hand is the one
  * admin's own when there is one admin, and saving into it from their chat is not widening it.
  */

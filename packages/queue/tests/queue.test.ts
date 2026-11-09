@@ -260,7 +260,7 @@ describe("KeyedQueue resilience", () => {
     for (let i = 0; i < 50; i++) queue.push({ chat: `chat-${i}`, n: 1 });
     await queue.idle();
 
-    // Every one of the fifty is counted as done: a new version's proof it has handled something (D7).
+    // Every one of the fifty is counted as done: a new version's proof it has handled something.
     expect(queue.stats()).toEqual({ keys: 0, waiting: 0, running: 0, completed: 50 });
   });
 
@@ -457,7 +457,7 @@ describe("the global ceiling", () => {
 
 /**
  * A scheduled turn ran outside the queue and outside its ceiling: eight due jobs were eight more provider turns
- * beside the eight chat turns `max_concurrent_turns` allowed (P1). `runOutside` puts it under the same ceiling.
+ * beside the eight chat turns `max_concurrent_turns` allowed. `runOutside` puts it under the same ceiling.
  */
 describe("work outside the queue", () => {
   type Item = { key: string; id: string };
@@ -529,7 +529,7 @@ describe("work outside the queue", () => {
 });
 
 /**
- * A turn's helpers and peers, counted without waiting (P2): the slot a helper would wait for may be held by the
+ * A turn's helpers and peers, counted without waiting: the slot a helper would wait for may be held by the
  * very turn waiting on it.
  */
 describe("borrowing a slot", () => {
@@ -572,7 +572,7 @@ describe("borrowing a slot", () => {
 });
 
 /**
- * What still waits, found and changed before it runs — a message its sender edited before it was answered (G11). The
+ * What still waits, found and changed before it runs — a message its sender edited before it was answered. The
  * item itself comes back, so the change is what the handler is given; one already running is not waiting.
  */
 describe("find", () => {

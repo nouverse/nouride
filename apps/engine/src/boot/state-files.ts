@@ -1,5 +1,5 @@
 /**
- * The daemon's state files moved into the database (0.8.18, the owner's D6): at the first start that has `daemon_state`,
+ * The daemon's state files moved into the database (0.8.18): at the first start that has `daemon_state`,
  * each JSON file the daemon kept at the root of `data/` is read into its row, unless the row is already there.
  *
  * The files stay where they are. The way back to 0.8.17 is `nouride update --rollback`, which restores the database

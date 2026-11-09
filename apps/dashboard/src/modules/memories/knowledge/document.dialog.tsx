@@ -1,5 +1,5 @@
 /**
- * A document opened (0.8.20, KNOWLEDGE_BASE §11): its sections as search sees them, each under the headings it sits in
+ * A document opened (0.8.20): its sections as search sees them, each under the headings it sits in
  * and with its pages, and its **Related documents**, the nearest by meaning, each one a click away.
  */
 

@@ -2,7 +2,7 @@
  * Helpers that work in the background (0.7.15), through the real pipeline: a person's message, the agent's turn, the
  * job, the wake-up and the report — with a model that answers each request by who is asking.
  *
- * What the owner asked for, and what each test here holds (2026-10-18): the agent hands a long task to a helper and its
+ * What was asked for, and what each test here holds (2026-10-18): the agent hands a long task to a helper and its
  * turn ends at once, so it can be talked to meanwhile; the helper's result arrives by itself; two helpers are reported
  * one by one, each as it finishes, with no barrier; the limit refuses the one over it; the dashboard's setting applies
  * to the next one; a helper writes no memory and starts no helper; an approval it needs asks in the parent's chat with
@@ -142,7 +142,7 @@ function exec(seen: ExecSeen[]): Tool {
   };
 }
 
-/** A tool that reads a person's notes, and with `change` writes them — what every later prompt reads (S13). */
+/** A tool that reads a person's notes, and with `change` writes them — what every later prompt reads. */
 function notes(written: string[]): Tool {
   return {
     requiresApproval: false,

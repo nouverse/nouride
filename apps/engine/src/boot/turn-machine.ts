@@ -151,7 +151,7 @@ export function buildTurnParts(
   });
 
   // The prompt in the chat — with Approve and Deny where the connection carries buttons — its presses, and its rewrite
-  // once settled (G11). Reads the gate and the pipeline, built below, only when a question or a press comes.
+  // once settled. Reads the gate and the pipeline, built below, only when a question or a press comes.
   const prompts = new ApprovalPrompts({
     gateways,
     notifier,
@@ -342,7 +342,7 @@ export async function buildTurnMachine(
     startedAt: input.startedAt,
     version: VERSION,
     providerErrors: ctx.providerErrors,
-    // A Box writes a partial answer less often — set once the plugin has loaded, after this is built (E7).
+    // A Box writes a partial answer less often — set once the plugin has loaded, after this is built.
     appliance: () => ctx.appliance !== undefined,
   });
 

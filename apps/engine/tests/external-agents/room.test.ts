@@ -1,5 +1,5 @@
 /**
- * Whether a box can hold a coding CLI (EXTERNAL_AGENTS §6): with less room for the agents' commands than one CLI's
+ * Whether a box can hold a coding CLI: with less room for the agents' commands than one CLI's
  * session holds, external agents are not offered — the scan says so and lists none — and a box that will not say what
  * it has is not refused on a number it never gave.
  */

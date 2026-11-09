@@ -1,5 +1,5 @@
 /**
- * The retention call's doc names every record the call governs (dash-practice-orphan-doc-comments).
+ * The retention call's doc names every record the call governs.
  *
  * It said "the four things it writes down" while `RetentionScope` had five: `sessions` was added to the call and
  * not to the sentence about it. A count goes stale without anything failing, so the doc names the scopes and this

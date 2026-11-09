@@ -1,8 +1,8 @@
 /**
  * Coding CLIs on the Models page (0.8.1): each CLI with its accounts and the agents on each — green answers, amber needs
  * a sign-in, with the button beside it: on a shared account for a CLI that signs in once (Claude Code), on each agent's
- * Brain tab for one that does not. And a line saying the agent runs inside the CLI itself, signed in with its own sign-in —
- * the owner wanted people to trust it is not a token swap.
+ * Brain tab for one that does not. And a line saying the agent runs inside the CLI itself, signed in with its own sign-in,
+ * so people can trust it is not a token swap.
  */
 
 import { afterEach, beforeAll, describe, expect, test } from "bun:test";
@@ -89,7 +89,7 @@ describe("Coding CLIs on the Models page", () => {
       expect(plainText(host)).toContain("Nouride uses your subscription the way its maker allows: it never pretends to be the app or shares your login with another program.");
       // "Gemini CLI" is a product's own name; "coding CLI" is the page's word for them, now under Details.
       expect(plainText(host)).not.toMatch(/ACP|adapter|registry|coding CLI/i);
-      // The route, and where to check it (the owner: say it is the official ACP, with its links), under Details, closed.
+      // The route, and where to check it (said to be the official ACP, with its links), under Details, closed.
       const details = [...host.querySelectorAll("details")].find((entry) => entry.textContent?.includes("Agent Client Protocol"))!;
       expect(details.querySelector("summary")?.textContent).toBe("Details");
       expect(details.open).toBe(false);
@@ -134,7 +134,7 @@ describe("Coding CLIs on the Models page", () => {
       expect(plainText(host)).toContain("Mine is not set up on this server yet.Whoever runs this server needs to set this up.");
       expect(plainText(host)).not.toContain("download mine-acp");
       expect([...host.querySelectorAll("details")].some((entry) => entry.textContent?.includes("download mine-acp from mine.example.test onto the PATH"))).toBe(true);
-      // Who makes it, beside its name (the owner, 0.8.1).
+      // Who makes it, beside its name (0.8.1).
       expect(host.textContent).toContain("Anthropic: Claude Code");
       await eventually(() => !button(host, "Sign in")?.disabled, 2_000, "the account's Sign in, once the admin is known");
       button(host, "Sign in")!.click();

@@ -114,7 +114,7 @@ describe("the Memory menu, every tab", () => {
 });
 
 /**
- * The memory graph: drawn, filtered, empty, and failed (dash-practice-tests-untypechecked-and-mount-gaps).
+ * The memory graph: drawn, filtered, empty, and failed.
  *
  * The one page no test drew — its canvas wanted a 2D context happy-dom does not have — so a crash on it would
  * have shipped with the suite green.

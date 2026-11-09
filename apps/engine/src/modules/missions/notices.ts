@@ -1,5 +1,5 @@
 /**
- * What the chat a mission came from is told — and only this (MISSIONS §11): *started* with how to stop it; *needs you*,
+ * What the chat a mission came from is told — and only this: *started* with how to stop it; *needs you*,
  * with what; *done*, with its result; *ended*, with why. The whole report follows a result as `report.md`, and then the
  * files (`Missions.end`, `Missions.wait`). And, between them, a progress line
  * the daemon writes from the checklist, at most one every half hour. The chat stays quiet: the work is on the mission's
@@ -7,20 +7,16 @@
  */
 
 import type { MissionWaitKind } from "@nouride/wire";
+import { clip, plural } from "@nouride/shared";
 import { worktreeBranch } from "./worktree.ts";
 import type { KeptPlan } from "@/modules/notes/store.ts";
 import { shortId } from "./page.ts";
 import type { Mission } from "./types.ts";
 
-function clip(text: string, max: number): string {
-  const trimmed = text.trim();
-  return trimmed.length > max ? `${trimmed.slice(0, max - 1)}…` : trimmed;
-}
-
 /**
  * Between a notice's parts — its first line, the result or question, the branch, what to send, the page — an empty line
  * (0.8.11). Each on the next line, a done notice in WhatsApp read as one block: "Mission … done", the result and
- * "Branch: …" ran together, and the owner asked for the space.
+ * "Branch: …" ran together; the empty line keeps them apart.
  */
 export const GAP = "\n\n";
 
@@ -33,7 +29,7 @@ export const GAP = "\n\n";
 export function startedNotice(mission: Pick<Mission, "id" | "goal" | "checks" | "reviewOn" | "accept" | "jobId">, said?: string): string {
   const id = shortId(mission.id);
   const judged = [
-    mission.checks.length > 0 ? `${mission.checks.length} ${mission.checks.length === 1 ? "check" : "checks"}` : "",
+    mission.checks.length > 0 ? `${mission.checks.length} ${plural(mission.checks.length, "check")}` : "",
     mission.reviewOn ? "reviewer" : "",
     mission.accept || (mission.checks.length === 0 && mission.jobId === null) ? "you accept" : "",
   ].filter(Boolean);
@@ -68,7 +64,8 @@ export function needsYouNotice(mission: Pick<Mission, "id" | "checks" | "workdir
       // Never clipped unsaid (0.8.7): a question cut at 800 characters lost the options it ended with, and the person
       // answered half a question. Past what one notice carries, it says where the whole of it is.
       const whole = detail.trim();
-      const shown = whole.length > QUESTION_CHARS ? `${whole.slice(0, QUESTION_CHARS)}…\n(The question goes on: /mission show ${id} has all of it)` : whole;
+      const cut = clip(whole, QUESTION_CHARS, QUESTION_CHARS);
+      const shown = cut === whole ? whole : `${cut}\n(The question goes on: /mission show ${id} has all of it)`;
       // In words first: a reply reaches the agent, which answers the mission for the person (`work` answer) — live on
       // Discord, "blue" did. Only the command was said, so a person took it for the one way (0.8.12).
       return `❓ Mission ${id} asks: ${shown}${GAP}Answer: reply to this in your own words, or /mission answer ${id} <your answer> · or accept it as it is: /mission accept ${id}`;
@@ -90,10 +87,10 @@ export function needsYouNotice(mission: Pick<Mission, "id" | "checks" | "workdir
     case "unknown_outcome":
       return `⚠ Mission ${id} was cut off by a restart in the middle of ${detail}, and whether it ran is unknown. Check, then /mission continue ${id} or /mission stop ${id}.`;
     case "stuck":
-      return `⚠ Mission ${id} is stuck: ${clip(detail, 600)}${GAP}/mission continue ${id} to try again, /mission accept ${id} to accept it as it is, /mission stop ${id} to end it.`;
+      return `⚠ Mission ${id} is stuck: ${clip(detail.trim(), 600)}${GAP}/mission continue ${id} to try again, /mission accept ${id} to accept it as it is, /mission stop ${id} to end it.`;
     case "retry":
       // Said once, when it pauses: each try after is quiet, and only its going on again or a person's turn is told.
-      return `⏸ Mission ${id} paused because its model could not answer: ${clip(detail, 400)}${GAP}It tries again by itself, further apart each time, for about a day. /mission continue ${id} to try now, /mission stop ${id} to end it.`;
+      return `⏸ Mission ${id} paused because its model could not answer: ${clip(detail.trim(), 400)}${GAP}It tries again by itself, further apart each time, for about a day. /mission continue ${id} to try now, /mission stop ${id} to end it.`;
   }
 }
 
@@ -112,21 +109,21 @@ export function doneNotice(mission: Pick<Mission, "id" | "summary" | "reviewed" 
   // accepted as it stood (`person.ts`): the reason says which, and by whom. Saying they passed would be the one claim
   // the notice must not make.
   const how = mission.reason ?? [mission.checks.length > 0 ? "checks passed" : "", mission.reviewed ? "reviewed" : "", accepted ? "accepted" : ""].filter(Boolean).join(", ");
-  // A mission in a worktree of its own ends with its branch (§8): where its work is, whether or not it was merged.
+  // A mission in a worktree of its own ends with its branch: where its work is, whether or not it was merged.
   const branch = worktreeBranch(mission);
   return [`✓ Mission ${shortId(mission.id)} done${how ? ` (${how})` : ""}.`, mission.summary?.trim() ?? "", branch ? `Branch: ${branch}` : ""].filter(Boolean).join(GAP);
 }
 
 /** *Ended*, failed or stopped: why, in place of a result. A report it has follows as `report.md`. */
 export function endedNotice(mission: Pick<Mission, "id" | "status">, why: string): string {
-  return `✗ Mission ${shortId(mission.id)} ${mission.status === "stopped" ? "stopped" : "ended"}: ${clip(why, 600)}`;
+  return `✗ Mission ${shortId(mission.id)} ${mission.status === "stopped" ? "stopped" : "ended"}: ${clip(why.trim(), 600)}`;
 }
 
 /** A progress line, written from the checklist — never by the model, so it costs nothing and claims nothing more. */
 export function progressNotice(mission: Pick<Mission, "id">, plan: KeptPlan): string {
   const finished = plan.steps.filter((step) => step.state === "done" || step.state === "skipped");
   const last = finished.at(-1);
-  return `… Mission ${shortId(mission.id)}: ${finished.length} of ${plan.steps.length} steps done${last ? ` (last: ${clip(last.text, 160)})` : ""}`;
+  return `… Mission ${shortId(mission.id)}: ${finished.length} of ${plan.steps.length} steps done${last ? ` (last: ${clip(last.text.trim(), 160)})` : ""}`;
 }
 
 export function warnNotice(mission: Pick<Mission, "id">, what: string): string {
@@ -134,5 +131,5 @@ export function warnNotice(mission: Pick<Mission, "id">, what: string): string {
 }
 
 export function followUpNotice(mission: Pick<Mission, "id">, waitingFor: string): string {
-  return `⏰ Mission ${shortId(mission.id)} is still waiting for you: ${clip(waitingFor, 400)}`;
+  return `⏰ Mission ${shortId(mission.id)} is still waiting for you: ${clip(waitingFor.trim(), 400)}`;
 }

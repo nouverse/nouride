@@ -132,7 +132,7 @@ export function isNoise(node: ElementNode): boolean {
  * The children worth reading, with blur-up placeholders removed.
  *
  * Found on a real page and by nothing else — every fixture here renders one `<img>` per image, and
- * gading.dev renders two: a 5%-scale blurred copy that paints immediately, then the real file, as
+ * a personal blog renders two: a 5%-scale blurred copy that paints immediately, then the real file, as
  * siblings with the same `alt` inside one wrapper. Both survived the reduction, so every picture
  * appeared twice in the prose and the frontmatter list was half placeholder.
  *

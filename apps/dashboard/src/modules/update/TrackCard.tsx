@@ -1,5 +1,5 @@
 /**
- * Which releases this install is offered (0.8.18, PLAN §3.3): the newest, or a long-term line (1.0 the first) that it
+ * Which releases this install is offered (0.8.18): the newest, or a long-term line (1.0 the first) that it
  * moves to and stays on. Both choices say what each would install now, so "1.0.7, long-term" and "1.1.0, newest" sit
  * side by side once both exist; until then they offer the same. Picking one saves it at once: it changes what is
  * offered and installs nothing. An admin's choice, as everything that decides what replaces the binary is.

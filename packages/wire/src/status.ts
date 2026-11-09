@@ -8,7 +8,7 @@ import type { AgentLook } from "./look.ts";
 import type { HelperTrouble } from "./memory.ts";
 
 export interface HealthPayload {
-  /** `starting` from the moment the daemon binds its port until its boot is done (D1). */
+  /** `starting` from the moment the daemon binds its port until its boot is done. */
   status: "starting" | "ok" | "degraded" | "shutting_down";
   /** While starting: what boot is doing — "connecting MCP servers". */
   phase?: string;

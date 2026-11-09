@@ -1,5 +1,5 @@
 /**
- * The missions on the control API (0.8.0, MISSIONS §11) — what the dashboard's Missions page and `nouride mission` read
+ * The missions on the control API (0.8.0) — what the dashboard's Missions page and `nouride mission` read
  * and do, each as the signed-in person or the control token's operator:
  *
  *   GET  /missions                      the list, *needs you* first, then working, then the rest — each with its checklist's count
@@ -31,8 +31,8 @@ const DASHBOARD_MISSIONS_CHAT = "missions";
 const ORDER = { needs_you: 0, working: 1, done: 2, ended: 3 } as const;
 const DAY_MS = 24 * 60 * 60_000;
 /**
- * How many days back an ended mission is listed (0.8.8): a week unless the page asks for more, a month at most — the
- * owner's word, "filternya 7 hari terbaru aja, terus max 1 bulan … jangan ditampilin semua". One still open is listed
+ * How many days back an ended mission is listed (0.8.8): a week unless the page asks for more, a month at most: a short
+ * list, never every mission that ever ended. One still open is listed
  * however old: it is what a person may have to act on.
  */
 const LISTED_DAYS = { usual: 7, most: 30 } as const;
@@ -215,9 +215,9 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
   });
 
   /**
-   * A draft changed before it starts (0.8.11, RFC MISSION_DRAFTS §2.3): the fields the new-mission form has, its limits
-   * and its brief. A started mission is refused: its checks and goal stay its own. A POST, as every write here is — the
-   * RFC's PATCH would have been the API's only one.
+   * A draft changed before it starts (0.8.11): the fields the new-mission form has, its limits
+   * and its brief. A started mission is refused: its checks and goal stay its own. A POST, as every write here is — a
+   * PATCH would have been the API's only one.
    */
   control.post("/missions/:id/edit", async (c) => {
     const missions = deps.missions;

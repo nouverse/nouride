@@ -300,7 +300,7 @@ describe("what one session spent", () => {
 
 /**
  * A coding CLI's prompts (0.8.8): what it reported over ACP is recorded, so `/status` and a turn's record say it — and
- * the daily caps do not count it, the CLI being on its own account (the owner's decision, 2026-10-29). A CLI working
+ * the daily caps do not count it, the CLI being on its own account. A CLI working
  * for hours reaches millions of tokens; counted, it stopped every agent on the daemon's own models at the token cap.
  */
 describe("a coding CLI's prompts", () => {

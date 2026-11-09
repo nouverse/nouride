@@ -1,5 +1,5 @@
 /**
- * Which coding CLIs this box has (EXTERNAL_AGENTS §5.3, `nouride agents scan` and New Agent's Answered by): each
+ * Which coding CLIs this box has (`nouride agents scan` and New Agent's Answered by): each
  * row's version command run once, read as installed and a version, or as missing with how to install it. Nouride
  * ships no CLI; this only says what is there.
  */

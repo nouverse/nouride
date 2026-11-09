@@ -1,5 +1,5 @@
 /**
- * What a save says it did: "Applied", or "Saved (takes effect after a restart)" (config-restart-ux).
+ * What a save says it did: "Applied", or "Saved (takes effect after a restart)".
  *
  * Every form that changes a setting reports through this, so the words are the same on every page and the decision is
  * the daemon's: `restartRequired` in its answer, from the setter that wrote the key (`config/settings/*.ts` in the

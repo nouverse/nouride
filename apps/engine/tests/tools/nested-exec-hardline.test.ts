@@ -6,7 +6,7 @@
  * and the classifier saw `ssh` → extracted `pct exec 102 -- systemctl restart nouride` →
  * classified `pct` as argv[0] → fell through every rule → null. The fix makes `classifyHardline`
  * recurse into `pct exec`, `lxc exec`, `docker exec`, `kubectl exec` and `nsenter` the same way it
- * already did for `ssh` and `sh -c`. Since 0.8.0 a restart is on no list (SIMPLIFY RFC §1) — the
+ * already did for `ssh` and `sh -c`. Since 0.8.0 a restart is on no list — the
  * daemon comes back — so the cases below use what still is: this daemon stopped, a delete outside
  * the workspace, infrastructure torn down.
  */

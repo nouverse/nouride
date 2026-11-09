@@ -1,6 +1,6 @@
 /**
  * Every diff drawn one way (0.8.8, `DiffView`): a skill's pending draft against the skill on disk, and an approval's edit.
- * The owner's screenshot of the Workshop: the draft's lines ran past the box that tinted them, cut on the left and the
+ * A screenshot of the Workshop: the draft's lines ran past the box that tinted them, cut on the left and the
  * colour stopping halfway. In a file of its own over the shared harness (`mount-harness.ts`).
  */
 
@@ -90,7 +90,7 @@ test("an approval's edit is drawn by the same DiffView", async () => {
 });
 
 test("a persona change's kept lines are all drawn in its approval — none folded behind a press", async () => {
-  // What a reworded rule now covers (0.8.13, N25): the admin decides on it, so it is never three lines and a fold.
+  // What a reworded rule now covers (0.8.13): the admin decides on it, so it is never three lines and a fold.
   const kept = Array.from({ length: 8 }, (_, i) => `  and the rule goes on past its first line, line ${i + 1}`);
   const request = {
     id: "apr_2",

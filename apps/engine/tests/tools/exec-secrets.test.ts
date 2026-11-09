@@ -1,5 +1,5 @@
 /**
- * Scoped `exec_secrets` (S6), end to end: what a command is handed, and what it takes to be handed it.
+ * Scoped `exec_secrets`, end to end: what a command is handed, and what it takes to be handed it.
  *
  * Every command an agent ran held every secret it had, and at `balanced` — the default — an ordinary `curl` ran without
  * asking, so one instruction planted in a fetched page could spend them all. Now a command holds the secrets bound

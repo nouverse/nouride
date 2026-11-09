@@ -18,7 +18,7 @@
 const PRESET_IDS = ["pilot", "researcher", "assistant", "developer", "custom"] as const;
 
 /**
- * The first agent's id and name when the person setting up gives none: a Pilot, named for it (the owner, 2026-11-06).
+ * The first agent's id and name when the person setting up gives none: a Pilot, named for it.
  * The dashboard's wizard fills its form with the same two.
  */
 export const FIRST_AGENT = { id: "nouridepilot", name: "NouridePilot" } as const;

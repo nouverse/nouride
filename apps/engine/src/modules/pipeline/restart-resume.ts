@@ -14,8 +14,8 @@
  * - **A conversation's.** A cron run has a schedule and a record of its own.
  */
 
+import { type ApprovalRequest, clip, type MessageEnvelope, oneLine } from "@nouride/shared";
 import { cutLine, type CutCall, type CutKind } from "@/modules/turns/cut-calls.ts";
-import type { ApprovalRequest, MessageEnvelope } from "@nouride/shared";
 import { SCHEDULED, type TurnRecord, type TurnsPort } from "@/modules/turns/turns.store.ts";
 import { SYSTEM_SENDER } from "./deps.ts";
 import { INBOX_FRESH_MS } from "./inbox.store.ts";
@@ -71,7 +71,7 @@ export type Cut = { kind: CutKind; call: CutCall };
 
 /**
  * What the agent is told: what it was doing, and to carry on — checking what was cut off before repeating it. With
- * `waiting`, the approvals it was cut off waiting on, which the restart kept and asked again (D8): the same call made
+ * `waiting`, the approvals it was cut off waiting on, which the restart kept and asked again: the same call made
  * again waits on that question (`approvals-kept.ts`), so it is told to make it rather than to ask in words.
  */
 export function restartResumeEnvelope(
@@ -82,8 +82,7 @@ export function restartResumeEnvelope(
   waiting: readonly Pick<ApprovalRequest, "tool" | "params">[] = [],
   cut?: Cut,
 ): MessageEnvelope {
-  const asked = turn.prompt.trim().replace(/\s+/g, " ");
-  const quoted = asked.length > 200 ? `${asked.slice(0, 199)}…` : asked;
+  const quoted = clip(oneLine(turn.prompt), 200);
   const open = waiting.map((request) => `\`${request.tool}\`${describeApprovalParams(request) ? ` ${describeApprovalParams(request)}` : ""}`);
   const kept = open.length
     ? ` The approval you were waiting on (${open.join("; ")}) is still open, and has been put in front of them again. If it ` +

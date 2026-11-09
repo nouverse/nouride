@@ -18,7 +18,7 @@ beforeEach(async () => {
 
 afterEach(() => h.close());
 
-/** Twenty-four filed conversations, a day apart, sharing tags — so Gading's audience is settled (one new tag each). */
+/** Twenty-four filed conversations, a day apart, sharing tags — so the admin's audience is settled (one new tag each). */
 async function settle(): Promise<void> {
   for (let day = 1; day <= 24; day += 1) h.dm(GADING_DM, "nouva", `homelab note ${day}`, "Oke.", at(10, 0, day));
   h.clock.now = at(23, 0, 24);
@@ -36,7 +36,7 @@ describe("what the pass shows and files", () => {
     const backup = model.asked.find((ask) => ask.user.includes("Backup NAS"))!;
     const restore = model.asked.find((ask) => ask.user.includes("Restore NAS"))!;
 
-    // M3: each block ends in a breakpoint, so the second conversation reads both from the cache.
+    // Each block ends in a breakpoint, so the second conversation reads both from the cache.
     expect(backup.blocks).toHaveLength(2);
     expect(backup.blocks[0]!.cache).toBe(true);
     expect(backup.blocks[0]!.text).toStartWith("You file one finished conversation");

@@ -1,5 +1,5 @@
 /**
- * A collection made, or its settings changed (0.8.20, KNOWLEDGE_BASE §5): its name, the line agents read to know when
+ * A collection made, or its settings changed (0.8.20): its name, the line agents read to know when
  * to look in it, who may be answered from it, which agents look in it, and whom it is about.
  *
  * Who may be answered is closed until opened: "Only me" unless an admin says wider. Everyone, one group or chosen people

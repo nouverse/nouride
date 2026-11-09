@@ -270,8 +270,8 @@ export function inFolder(file: string, workdir: string): string {
 }
 
 /**
- * The Brief card's file and where it is (0.8.11): its own folder's `BRIEF.md`, or a file its goal names — the owner asked
- * to open a brief as a report is, by its file's name.
+ * The Brief card's file and where it is (0.8.11): its own folder's `BRIEF.md`, or a file its goal names, so a brief
+ * opens as a report does, by its file's name.
  */
 export function briefShown(path: string | null | undefined, missionId: string): { name: string; said: string } {
   const own = !path || path.endsWith(`/missions/${missionId}/BRIEF.md`);

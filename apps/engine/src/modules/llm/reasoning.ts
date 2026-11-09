@@ -14,6 +14,8 @@
  * to the model as its own previous words — it is a view for a human watching, and nothing else.
  */
 
+import { clip } from "@nouride/shared";
+
 /** Long enough for a thought, short enough for one terminal line. */
 const MAX_LINE = 120;
 
@@ -28,7 +30,7 @@ export function createReasoningStream(emit: (line: string) => void): ReasoningSt
 
   const send = (text: string): void => {
     const line = text.trim();
-    if (line !== "") emit(line.length > MAX_LINE ? `${line.slice(0, MAX_LINE - 1)}…` : line);
+    if (line !== "") emit(clip(line, MAX_LINE));
   };
 
   /**

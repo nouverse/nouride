@@ -126,7 +126,7 @@ export function retryAfterMs(headers: Headers, now: number = Date.now()): number
 const ATTEMPTS = new WeakMap<Response, number>();
 
 /**
- * The call's own numbers on the usage it reports (D2): the attempts `postJson` made for `res`, and the time since
+ * The call's own numbers on the usage it reports: the attempts `postJson` made for `res`, and the time since
  * `startedAt` — the whole call as the turn waited on it, retries and their waits included — and why the provider said
  * it ended (`TokenUsage.stopReason`), when it said.
  */
@@ -141,7 +141,7 @@ export function withCallStats(usage: TokenUsage, res: Response, startedAt: numbe
   };
 }
 
-/** What a gateway in between says answered the call — `x-nougate-provider`, `-model`, `-attempts` (G1) — or nothing. */
+/** What a gateway in between says answered the call — `x-nougate-provider`, `-model`, `-attempts` — or nothing. */
 export function servedBy(headers: Headers): TokenUsage["upstream"] | undefined {
   const provider = headers.get("x-nougate-provider")?.trim();
   const model = headers.get("x-nougate-model")?.trim();
@@ -152,7 +152,7 @@ export function servedBy(headers: Headers): TokenUsage["upstream"] | undefined {
 
 /**
  * What a gateway in between says about a call that failed: `servedBy`'s three, and which providers it tried, in
- * order (`x-nougate-tried`). Nougate sends them on an error response too since 0.7.11 — when every provider threw,
+ * order, as `x-nougate-tried`. Nougate sends them on an error response too since 0.7.11 — when every provider threw,
  * the response used to carry none, and "every provider failed" was the failure with no attribution. Or nothing.
  */
 export function failedVia(headers: Headers): LLMError["upstream"] {

@@ -1,6 +1,6 @@
 /**
  * Memory as an agent meets it — what the prompt recalls and what the tools return — asked from
- * Gading's DM, the family group, and Sam's DM with another agent. `docs/SPEC.md` §12.3.
+ * the admin's DM, the family group, and Sam's DM with another agent. `docs/SPEC.md` §12.3.
  */
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
@@ -228,7 +228,7 @@ describe("memory_write", () => {
     expect(await profile()).toContain("- Allergic to peanuts and shrimp. {gading}");
     expect(await profile()).not.toContain("- Allergic to peanuts. {");
 
-    // The family group may not read what was said in Gading's DM, so it cannot change it either.
+    // The family group may not read what was said in the admin's DM, so it cannot change it either.
     expect(await write().execute({ about: "person", change: "remove", current: "Allergic to peanuts and shrimp." }, toolCtx(FAMILY))).toMatchObject({ isError: true });
     expect(await write().execute({ about: "person", change: "update", current: "Allergic to peanuts and shrimp." }, toolCtx(GADING_DM))).toMatchObject({ isError: true });
 

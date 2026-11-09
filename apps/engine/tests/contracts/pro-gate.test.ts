@@ -5,7 +5,7 @@
  * The Box editions are built from `internals/pro` — pairing, licensing, onboarding, the update source, multi-user,
  * sign-in, flash — and until 0.7.9 no CI or release step tested, typechecked or linted any of it: `verify` checks out
  * no submodule, so about 215 Pro tests and the engine's drift tests against the plugins skipped, the lints globbed only
- * `{apps,packages}`, and `binaries` checked the code out only to build it (`pro-no-automated-gate`).
+ * `{apps,packages}`, and `binaries` checked the code out only to build it.
  */
 
 import { describe, expect, test } from "bun:test";

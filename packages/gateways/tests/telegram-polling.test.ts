@@ -49,7 +49,7 @@ describe("isConflict", () => {
 });
 
 /**
- * The health check asks Telegram nothing while polls are answering (E11).
+ * The health check asks Telegram nothing while polls are answering.
  *
  * It sent `getMe` every thirty seconds per bot beside a thirty-second long poll: four requests a minute at idle, two
  * of them to learn what the last poll already said. A poll answers at least every fifty seconds now, and is the proof.
@@ -127,8 +127,8 @@ describe("the health check, beside a long poll", () => {
 
 describe("what a poll asks Telegram for", () => {
   /**
-   * What the adapter handles, and nothing else (G10): messages, a person's edit of one, and a press on a button under
-   * ours (G11). Without the list Telegram sent every kind the bot may see — channel posts, member changes — over the
+   * What the adapter handles, and nothing else: messages, a person's edit of one, and a press on a button under
+   * ours. Without the list Telegram sent every kind the bot may see — channel posts, member changes — over the
    * card's network, to be dropped.
    */
   test("messages, their edits and presses only — and pending ones are kept, for the inbox to decide", () => {

@@ -47,7 +47,7 @@ export interface SqliteDb {
    * reported, so asking the size *was* a checkpoint — and the dashboard's Home page asks every ten
    * seconds, the CLI on every command. With a tab open every write was copied into the database file
    * within ten seconds instead of coalescing in the log, and on an SD card each of those is a write
-   * the card did not need (E3, 2026-10-15).
+   * the card did not need (2026-10-15).
    *
    * The file keeps its size after a checkpoint — SQLite rewinds the log rather than shrinking it — so
    * this is the high-water mark since the last reset, bounded by `journal_size_limit`. Past the health
@@ -166,7 +166,7 @@ export function openDatabase(path: string): SqliteDb {
   db.exec(`PRAGMA cache_size = -${PAGE_CACHE_KIB}`);
   db.exec("PRAGMA temp_store = MEMORY");
   /**
-   * The log's two bounds, chosen for the flash it lives on (E4, 2026-10-15).
+   * The log's two bounds, chosen for the flash it lives on (2026-10-15).
    *
    * `wal_autocheckpoint = 2000` pages — 8 MB at the default page size, twice SQLite's default. A
    * checkpoint copies each page once however many times the log rewrote it, so a longer log folds more

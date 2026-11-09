@@ -18,7 +18,7 @@
  * something does.
  */
 
-import { contained, createLogger } from "@nouride/shared";
+import { clip, contained, createLogger } from "@nouride/shared";
 import type { CronPort } from "@/modules/cron/cron.store.ts";
 import type { JobsPort } from "@/modules/jobs/jobs.store.ts";
 import type { UpdateToolOptions } from "@/modules/tools/builtins/update.ts";
@@ -63,7 +63,7 @@ const IDLE_WAIT_MS = 10 * 60_000;
  * be undefined where no job store exists: leaving it out is how an update came to kill background work, so a caller
  * has to say so out loud.
  *
- * An approval waiting for a person is not: a restart keeps it and asks it again (D8), where it used to answer it "deny"
+ * An approval waiting for a person is not: a restart keeps it and asks it again, where it used to answer it "deny"
  * — which is why a restart waited, up to ten minutes, for questions nobody was answering. A turn parked on one is
  * still running, and waited for until it stops waiting.
  */
@@ -117,7 +117,7 @@ function working(jobs: Pick<JobsPort, "listSnapshots">): boolean {
  * Except for `jobs`: a background job is waited for however long it takes. Cut off, a two-hour build or a
  * coding agent's run starts again from nothing, and a person who wants it stopped says `now`. A turn still
  * gives up at the cap: it is closed with what it did and taken up again after the restart, with any approval
- * it was waiting on kept and asked again (D8).
+ * it was waiting on kept and asked again.
  */
 export function restartWhenIdle(input: {
   busy: () => boolean;
@@ -158,7 +158,7 @@ export function restartWhenIdle(input: {
 /** `the background job \`make build\` (12m)`, or the first three of several — what a restart is waiting for. */
 export function describeJobs(jobs: readonly WorkingJob[], at: number = Date.now()): string {
   const one = (job: WorkingJob) => {
-    const command = job.command.length > 48 ? `${job.command.slice(0, 47)}…` : job.command;
+    const command = clip(job.command, 48);
     const seconds = Math.max(1, Math.round((at - job.startedAt) / 1000));
     return `\`${command}\` (${seconds < 60 ? `${seconds}s` : `${Math.round(seconds / 60)}m`})`;
   };

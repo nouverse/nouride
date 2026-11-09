@@ -99,7 +99,7 @@ describe("creating an agent from a preset", () => {
   });
 
   test("each preset has a starting SOUL, written when the form sends none, and the person's own kept (0.8.1)", async () => {
-    // The owner: nobody should have to write a system prompt to make an agent.
+    // Nobody should have to write a system prompt to make an agent.
     for (const preset of PRESETS) expect(preset.soul).toContain("Answer in the language you are spoken to in.");
     const { setup } = await service();
     await setup.createAgent(input("scout", { preset: "researcher", systemPrompt: "  " }));

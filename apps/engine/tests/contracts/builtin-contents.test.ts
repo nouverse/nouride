@@ -1,5 +1,5 @@
 /**
- * `content/` is a folder of this repository since 2026-11-06 (the owner: its own repository, `nouride-builtin-contents`,
+ * `content/` is a folder of this repository since 2026-11-06 (its own repository, `nouride-builtin-contents`,
  * a submodule from 0.8.12, went once Nouride itself was public). A built-in skill is the copy the installed release
  * carries (0.8.17): each one used to tell the model to read its newest version on that repository's `main`, so whatever
  * was pushed there changed every install's skill, whichever release it ran.

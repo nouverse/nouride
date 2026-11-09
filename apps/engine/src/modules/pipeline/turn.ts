@@ -273,7 +273,7 @@ export class TurnRunner {
       // Owed until it lands — except after `/stop`, which sends nothing (below), and a reply that went out in part
       // already: sent again after a restart, the record's whole reply would say its head twice (`boot/delivery.ts`).
       if (!stoppedByPerson && result.told === undefined) this.ctx.awaitDelivery(record?.id);
-      // And the message it answered is handled, in the same commit rather than one of its own after (E7).
+      // And the message it answered is handled, in the same commit rather than one of its own after.
       this.ctx.settleMessage?.(envelope);
     });
 
@@ -385,7 +385,7 @@ export class TurnRunner {
      * teach except that it did not work, and writing down a half-finished procedure is precisely
      * how a shared skill pool poisons itself.
      */
-    // Not a mission's turn: its work is remembered once, from its report, when it ends (MISSIONS §11).
+    // Not a mission's turn: its work is remembered once, from its report, when it ends.
     if (!shape) void this.ctx.deps.reflection?.observe({
       agentId: agent.config.id,
       gatewayId: envelope.gatewayId,

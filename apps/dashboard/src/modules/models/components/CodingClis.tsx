@@ -1,7 +1,7 @@
 /**
  * Coding CLIs on the Models page (0.8.1): each CLI this install knows, whether this box has it, and its accounts — the
  * sign-ins external agents answer with — with the agents on each and whether each can answer. Where sign-ins are
- * managed, apart from which account an agent uses (its Brain tab): the owner found them mixed together hard to follow.
+ * managed, apart from which account an agent uses (its Brain tab): mixed together, they were hard to follow.
  *
  * One rule for a person to learn: green answers, amber needs a sign-in, with the button beside it. A CLI that signs an
  * account in once (Claude Code) has the button on the account; any other has it on each agent, on its Brain tab.

@@ -1,5 +1,5 @@
 /**
- * The keys 0.8.0 made fixed values (SIMPLIFY §3): `[health]`, `[cron] tick_interval_ms`, `[queue] dedup_window_ms` and a
+ * The keys 0.8.0 made fixed values: `[health]`, `[cron] tick_interval_ms`, `[queue] dedup_window_ms` and a
  * gateway's `resilience` table. A file that still writes one loads — dropping the value keeps what the daemon does — and
  * each is named in a warning, which `config check` lists among its notes.
  */

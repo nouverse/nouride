@@ -81,12 +81,12 @@ export function telegramEnvelope(message: Message, self: TelegramSelf): MessageE
 }
 
 /**
- * An edited message — `edited_message` — as the edit it is (G11): what the message says now, the message it changes
+ * An edited message — `edited_message` — as the edit it is: what the message says now, the message it changes
  * (`edit.of`, its own id), and when that was sent (`date`; `edit_date` is the edit's). The id is the edit's own — the
  * message's and when it was edited — because an edit is not the message: the engine's claim, inbox and queue each know a
  * message by its id, and the same edit delivered twice is the same id.
  *
- * Words only: an edit's file is not sent again. A person's edit only — a bot's is never one (G11 is about people), and
+ * Words only: an edit's file is not sent again. A person's edit only — a bot's is never one, and
  * our own edits of our progress lines would otherwise come back as edits. One that leaves no words is not one either.
  */
 export function telegramEdit(message: Message, self: TelegramSelf): MessageEnvelope | null {

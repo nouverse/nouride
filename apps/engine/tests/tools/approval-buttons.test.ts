@@ -1,9 +1,9 @@
 /**
- * Approve and Deny buttons on an approval's prompt (G11, `modules/tools/approval-prompts.ts`).
+ * Approve and Deny buttons on an approval's prompt (`modules/tools/approval-prompts.ts`).
  *
  * The prompt carries them where the connection does (`Gateway.buttons`), and Always only where `/approve always` would
  * be honoured; it still says how to answer by command. A press is the command's answer — the same `resolve`, the same
- * rule for who may answer (S8) — and anybody else's press is refused to them alone and changes nothing. Once settled,
+ * rule for who may answer — and anybody else's press is refused to them alone and changes nothing. Once settled,
  * however it was, the prompt says how and by whom and its buttons go; a press after that — a second one, one after the
  * dashboard or the CLI answered, after it expired, or after a restart — says it is settled.
  */

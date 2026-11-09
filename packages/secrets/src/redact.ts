@@ -1,5 +1,5 @@
 /**
- * Scrubbing credentials out of a transcript before anything else looks at it — §7.1 of the RFC.
+ * Scrubbing credentials out of a transcript before anything else looks at it.
  *
  * The audit log, the turn's step log, memory's pass and reflection all use it, and a change made for one's deliberately
  * over-eager masking reaches the rest.

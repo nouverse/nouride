@@ -1,5 +1,5 @@
 /**
- * An attachment's download, opened and handed on unread (G9).
+ * An attachment's download, opened and handed on unread.
  *
  * Telegram and Discord both end in a plain GET for the file. What to do with the body — how big is too big,
  * where it goes, how long it may take — is the engine's (`attachments/store.ts`), one policy for every

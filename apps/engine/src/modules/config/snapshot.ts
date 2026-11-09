@@ -1,7 +1,7 @@
 /**
- * Snapshots of what the database, the vault and the packs did not hold (0.8.18, REVIEW B2): the daemon's own
+ * Snapshots of what the database, the vault and the packs did not hold (0.8.18): the daemon's own
  * `config.toml` and its people, whose only copies were the five `.bak` slots beside them; the install's MCP library;
- * the secret store, sealed to the backup passphrase when one is set (D5, `sealed-secrets.ts`); and the skill pool,
+ * the secret store, sealed to the backup passphrase when one is set (`sealed-secrets.ts`); and the skill pool,
  * where an approved improvement overwrote `SKILL.md` and kept nothing.
  *
  * `<backups>/config/<stamp>/` holds `config.toml`, `people/<key>.toml`, `mcp.toml` and `secrets.sealed`;

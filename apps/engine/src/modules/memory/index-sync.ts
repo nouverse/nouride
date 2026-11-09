@@ -8,7 +8,7 @@
  */
 
 import { join, listDir, readTextFileIfExists, relative, statFile } from "@nouride/runtime";
-import { createLogger } from "@nouride/shared";
+import { clipTrimmed, createLogger, oneLine } from "@nouride/shared";
 import { isoWeek } from "@/commons/clock.ts";
 import { parseEpisode, type Episode } from "./episode.ts";
 import { episodeFiles } from "./episodes.ts";
@@ -63,11 +63,11 @@ function previewOf(episode: Episode): string | undefined {
   const agents = new Set(episode.agents.map((agent) => agent.toLowerCase()));
   const blocks = episode.transcript.split(/\n{2,}/).map((block) => {
     const [header = "", ...lines] = block.split("\n");
-    return { speaker: header.split(" · ")[1]?.trim().toLowerCase() ?? "", text: lines.join(" ").replace(/\s+/g, " ").trim() };
+    return { speaker: header.split(" · ")[1]?.trim().toLowerCase() ?? "", text: oneLine(lines.join(" ")) };
   });
   const first = blocks.find((block) => block.text && !agents.has(block.speaker)) ?? blocks.find((block) => block.text);
   if (!first) return undefined;
-  return first.text.length > PREVIEW_CHARS ? `${first.text.slice(0, PREVIEW_CHARS - 1).trimEnd()}…` : first.text;
+  return clipTrimmed(first.text, PREVIEW_CHARS);
 }
 
 export function indexedEpisode(episode: Episode): IndexedEpisode {
@@ -139,7 +139,7 @@ export async function syncIndex(vault: Vault, index: MemoryIndexPort): Promise<S
   const report: SyncReport = { episodes: 0, profiles: 0, dropped: 0, problems: [] };
 
   // What each file was indexed at, in one read: a statement per file was a query for every file in the
-  // vault on every sync — at boot, before each pass, after each tidy (M10).
+  // vault on every sync — at boot, before each pass, after each tidy.
   const known = index.indexedFiles("episodes/");
   const present = new Set<string>();
   for (const { id, file } of episodeFiles(vault)) {
@@ -206,7 +206,7 @@ function unchangedFolder(now: ReadonlyMap<string, FileState>, recorded: Readonly
 
 /**
  * Tag aliases and which chat each group stub names. A folder is read again only when a stub in it was
- * added, removed or changed since the last read; it was read whole on every sync (M10).
+ * added, removed or changed since the last read; it was read whole on every sync.
  */
 async function syncStubs(vault: Vault, index: MemoryIndexPort): Promise<void> {
   const tagFiles = stubStates(vault, vault.tagsDir);

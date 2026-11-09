@@ -28,7 +28,7 @@ const DOT = { success: "bg-success", accent: "bg-accent", muted: "bg-base-conten
 
 /**
  * Each agent as a chip: its cat, its whole name, the crown on the orchestrator, and a dot for what it is doing, said in
- * words to whoever points at it or reads it aloud. Compact where a card each filled Home (the owner, 2026-11-08).
+ * words to whoever points at it or reads it aloud. Compact where a card each filled Home.
  */
 export function AgentChips({ agents, orchestrator, looks }: { agents: AgentSummary[]; orchestrator: string | null; looks: Map<string, Look> }) {
   return (

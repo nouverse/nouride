@@ -68,7 +68,7 @@ describe("several pages in one call", () => {
   });
 
   test("the batch is flagged as outside content, as one page is", async () => {
-    // The flag is what marks a memory write later in the turn as made after reading it (S13). Nothing
+    // The flag is what marks a memory write later in the turn as made after reading it. Nothing
     // asserted it on the batch path: setting it to false there left every test green.
     const { tool } = site({ "/a": "alpha body", "/b": "beta body" });
     const result = await tool.execute({ urls: ["https://x.test/a", "https://x.test/b"] }, ctx());

@@ -10,7 +10,7 @@
  * the comment says otherwise.
  */
 
-/** The three presets (EXTERNAL_AGENTS §5.1): free in its folder, ask for what is risky, ask for everything. */
+/** The three presets: free in its folder, ask for what is risky, ask for everything. */
 export type CliPreset = "folder" | "risky" | "all";
 
 export interface CliRow {

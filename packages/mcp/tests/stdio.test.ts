@@ -1,7 +1,7 @@
 /**
  * What a stdio server's process inherits from the daemon.
  *
- * Third-party code, so a short list — and since 0.7.9 not the ssh-agent socket (S11): every server of every agent got
+ * Third-party code, so a short list — and since 0.7.9 not the ssh-agent socket: every server of every agent got
  * `SSH_AUTH_SOCK`, which signs with every key the agent holds, for whoever asks. The engine puts it in `env` for an
  * agent that asked; this package hands on only what it is given.
  */

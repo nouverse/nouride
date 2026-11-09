@@ -1,5 +1,5 @@
 /**
- * Three model tiers — `small`, `default`, `high` (SIMPLIFY §3, 0.8.0).
+ * Three model tiers — `small`, `default`, `high` (0.8.0).
  *
  * `model` is the default for everything; `small_model` and `high_model` are optional, in `[llm.defaults]` and in a
  * pack's `[llm]`. The agent picks one per piece of work it starts — a helper, another agent's answer — with a `tier`

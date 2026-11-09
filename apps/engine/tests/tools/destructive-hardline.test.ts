@@ -9,7 +9,7 @@
  * The second half is knowing where to stop. A gate that fires on ordinary work is one an operator
  * learns to dismiss, and the executor already says so: asking about something routine "trains an
  * operator to click through prompts, which is how the gate stops working". So the line is
- * **irreversible and outside the workspace** (SIMPLIFY RFC §1, item 6), and the "not gated" tests below are as
+ * **irreversible and outside the workspace**, and the "not gated" tests below are as
  * load-bearing as the rest.
  */
 
@@ -157,7 +157,7 @@ describe("over ssh, where the machines worth breaking actually are", () => {
 
 describe("docker, deliberately narrowed", () => {
   test("force-removing a container is not gated", () => {
-    // Gading's call, and correct: on a compose-managed host `up -d` brings it back, and it is the
+    // Deliberate, and correct: on a compose-managed host `up -d` brings it back, and it is the
     // one docker verb likely to fire during routine work.
     expect(classifyHardline(["docker", "rm", "-f", "web"])).toBeNull();
     expect(classifyHardline(["docker", "rmi", "-f", "img"])).toBeNull();

@@ -5,7 +5,7 @@
  * dashboard, and the built SPA at `/dashboard/`. One process, one port, no reverse
  * proxy needed to try it locally.
  *
- * Bound first, served last (D1). The port is taken the moment boot has its config and its lock, and
+ * Bound first, served last. The port is taken the moment boot has its config and its lock, and
  * until the app is handed over everything on it says the daemon is starting and what it is doing —
  * `bindWebServer`. It used to be bound at the end of boot, so for the tens of seconds a Pi takes over
  * migrations, the database check, the vault and the MCP servers, a daemon that was running looked like
@@ -138,7 +138,7 @@ export const SECURITY_HEADERS: Record<string, string> = {
 };
 
 /**
- * The gateway's dashboard has a policy of its own (S9), written from what it loads rather than copied from this one.
+ * The gateway's dashboard has a policy of its own, written from what it loads rather than copied from this one.
  *
  * It is another product's frontend, served on this origin with this session, and it was served under the dashboard's
  * policy with `frame-ancestors` swapped — so whatever the dashboard ever needed, the gateway's page was allowed too,
@@ -254,7 +254,7 @@ export interface WebServer {
 }
 
 /**
- * Take the port now, and answer from it before there is anything to serve (D1).
+ * Take the port now, and answer from it before there is anything to serve.
  *
  * Until `serve`, `/health` says the daemon is starting and what it is doing, an API path answers 503 in the
  * `{ error, note }` shape the CLI and the dashboard already print, and a page reloads itself until the dashboard

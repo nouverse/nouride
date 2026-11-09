@@ -1,5 +1,5 @@
 /**
- * A CLI's new version is checked before its agent takes work (0.8.1, EXTERNAL_AGENTS §5.3), against a CLI started as a
+ * A CLI's new version is checked before its agent takes work (0.8.1), against a CLI started as a
  * real process: its handshake read for what Nouride uses (0.8.24, `handshake.ts`) — steering where its row relies on it,
  * the modes its presets set — in a session opened and let go, no prompt. A version that has them is kept and not asked
  * again; one that lacks one makes the agent unavailable, naming the version and the one to go back to; a CLI that is

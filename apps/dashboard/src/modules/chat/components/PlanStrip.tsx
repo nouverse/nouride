@@ -1,5 +1,5 @@
 /**
- * The plan beside the chat (0.8.0, SMART_AUTOMATION §3.5): the checklist the agent keeps for this conversation, and the
+ * The plan beside the chat (0.8.0): the checklist the agent keeps for this conversation, and the
  * missions working from it, above the composer — read only, the agent's to keep.
  *
  * Nobody saw a plan unless they opened the Notes drawer or a mission's page, so a person waiting on long work saw a

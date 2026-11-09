@@ -1,5 +1,5 @@
 /**
- * The context window a gateway states for a model (G2): what a turn is budgeted against, before the table of model
+ * The context window a gateway states for a model: what a turn is budgeted against, before the table of model
  * families and its 32k for a family it does not know — and after the pack's own `context_window`.
  *
  * Observed as what the request carries: a long conversation on a model the table does not know is cut to fit 32k, and

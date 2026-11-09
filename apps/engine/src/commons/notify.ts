@@ -16,9 +16,14 @@
  */
 
 import {
+  type ApprovalPreview,
+  type ApprovalRequest,
+  clip,
+  createLogger,
+  type Gateway,
+  type MessageButton,
   previewHeadline,
-  type ApprovalPreview, type ApprovalRequest, createLogger } from "@nouride/shared";
-import type { Gateway, MessageButton } from "@nouride/shared";
+} from "@nouride/shared";
 import { escapeMarkdown } from "@nouride/gateways";
 
 const log = createLogger("notify");
@@ -53,7 +58,7 @@ export interface NotifierOptions {
    */
   alertCooldownMs?: number;
   /**
-   * Where each alert's last send is kept, so a restart does not send again what its cooldown was holding back (D15).
+   * Where each alert's last send is kept, so a restart does not send again what its cooldown was holding back.
    * The map lived in this process alone: an alert sent a minute before a nightly update went out again a minute after.
    */
   cooldowns?: { load(): Record<string, number>; save(at: Record<string, number>): void };
@@ -103,7 +108,7 @@ export class Notifier {
 
   /**
    * Ask the person in this conversation something: as `toChat`, and the message carries `buttons` where the connection
-   * can (`Gateway.buttons`, G11). `text` is told whether they go, so it says how to answer without them. The ids of what
+   * can (`Gateway.buttons`). `text` is told whether they go, so it says how to answer without them. The ids of what
    * was posted and whether it has its buttons — or null when nothing was.
    */
   async ask(target: ChatTarget, text: (buttons: boolean) => string, buttons: MessageButton[]): Promise<{ ids: string[]; buttons: boolean } | null> {
@@ -235,7 +240,7 @@ export interface ApprovalNoticeLike {
    */
   queuedBehind?: number;
   /**
-   * Asked before a restart and kept across it (D8). Said in the first line: the person may already have seen this
+   * Asked before a restart and kept across it. Said in the first line: the person may already have seen this
    * question, and a second copy that does not say why reads as the agent asking twice.
    */
   kept?: boolean;
@@ -319,7 +324,7 @@ export function approvalPrompt(notice: ApprovalNoticeLike, shown: { buttons?: bo
   // `write` requests while scaffolding a project mistyped one, got "not waiting for an answer any
   // more", and had to find the right id in a wall of text. `/approve` on its own has always worked
   // when one request is waiting — nothing said so.
-  // With buttons under it (G11), the commands still: a client that shows no buttons is answered in words.
+  // With buttons under it, the commands still: a client that shows no buttons is answered in words.
   // The copy in an admin's own chat: a button, or the dashboard — `/approve` here would look for a question asked here.
   if (notice.elsewhere) {
     lines.push("", shown.buttons ? "Tap a button below, or answer it on the dashboard's Approvals." : "Answer it on the dashboard's Approvals, or in the chat it was asked in.", `id: \`${request.id}\``);
@@ -363,12 +368,11 @@ export function approvalPrompt(notice: ApprovalNoticeLike, shown: { buttons?: bo
 
 /** A mission's goal as a prompt names it: its first line, short. */
 function clipGoal(goal: string): string {
-  const first = goal.trim().split("\n")[0]!;
-  return first.length > 80 ? `${first.slice(0, 79)}…` : first;
+  return clip(goal.trim().split("\n")[0]!, 80);
 }
 
 /**
- * A prompt once its question is settled (G11): what was decided, by whom where that is known, and what it was about —
+ * A prompt once its question is settled: what was decided, by whom where that is known, and what it was about —
  * the buttons gone, so the chat keeps the answer where it kept the question rather than an invitation to press again.
  * `who` is a name a person reads; nobody is named for a request that expired.
  */
@@ -395,7 +399,7 @@ export function approvalSettledLine(
           : `⌛ No longer waiting: ${agent} did not run ${tool}`;
   // What it was about, on one short line: the summary a person decided from, else the command.
   const about = (request.preview ? previewHeadline(request.preview) : describeParams(request.params).split("\n")[0]!).replace(/`/g, "'");
-  return about ? `${head}\n\`${about.length > 120 ? `${about.slice(0, 119)}…` : about}\`` : head;
+  return about ? `${head}\n\`${clip(about, 120)}\`` : head;
 }
 
 /**
@@ -413,7 +417,6 @@ function describeParams(params: Record<string, unknown>): string {
       : JSON.stringify(params);
 
   const cwd = typeof params.cwd === "string" ? `\n(in ${params.cwd})` : "";
-  return rendered.length > MAX_COMMAND_CHARS
-    ? `${rendered.slice(0, MAX_COMMAND_CHARS)}… [clipped, see nouride approvals]${cwd}`
-    : `${rendered}${cwd}`;
+  const shown = clip(rendered, MAX_COMMAND_CHARS, MAX_COMMAND_CHARS);
+  return shown === rendered ? `${rendered}${cwd}` : `${shown} [clipped, see nouride approvals]${cwd}`;
 }

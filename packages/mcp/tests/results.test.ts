@@ -1,5 +1,5 @@
 /**
- * A tool's result as MCP 2025-06-18 shapes it, read the way the model will (G4).
+ * A tool's result as MCP 2025-06-18 shapes it, read the way the model will.
  *
  * `structuredContent` is the answer as data: a server is asked to put the same in a text block, so the text is what
  * the model reads when there is any, and a result with only the data has the data written out — it read as empty

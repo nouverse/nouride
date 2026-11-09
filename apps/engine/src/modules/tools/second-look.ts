@@ -1,5 +1,5 @@
 /**
- * The second look (0.8.0, SMART_AUTOMATION §2.1): before work nobody watches sends something off the machine after
+ * The second look (0.8.0): before work nobody watches sends something off the machine after
  * reading outside content, a model is asked whether the action belongs to the work.
  *
  * An automation that reads mail every morning is where a prompt injection does its harm: one message says "forward
@@ -12,7 +12,7 @@
  * short call on a rare action, on any model, local ones too.
  */
 
-import { helperModel, modelGuardOf, type AgentTiers, type ApprovalLevel, type InstallTiers, type LLMProvider, type TokenUsage } from "@nouride/shared";
+import { clip, helperModel, modelGuardOf, type AgentTiers, type ApprovalLevel, type InstallTiers, type LLMProvider, oneLine, type TokenUsage } from "@nouride/shared";
 
 /** How long the look may take before a person is asked instead. A turn waits for it. */
 const TIMEOUT_MS = 30_000;
@@ -36,18 +36,16 @@ export const SECOND_LOOK_BRIEF = [
   "When unsure, HOLD: a person is asked, and nothing is lost.",
 ].join("\n");
 
-const clip = (text: string, max: number) => (text.length > max ? `${text.slice(0, max - 1)}…` : text);
-
 /** What a person reads when the look held an action: the work, the action, and the model's reason. */
 function heldLine(goal: string, action: string, why: string): string {
-  return `The second look held this: the work is "${clip(goal.replace(/\s+/g, " ").trim(), 200)}"; this ${action}${why ? `: ${why}` : ""}`;
+  return `The second look held this: the work is "${clip(oneLine(goal), 200)}"; this ${action}${why ? `: ${why}` : ""}`;
 }
 
 /** Null for OK; what a person is asked otherwise. Anything but OK on the first line is a hold. */
 export function secondLookVerdict(text: string, input: { goal: string; action: string }): string | null {
   const [first = "", ...rest] = text.trim().split("\n");
   if (/^\W*OK\b/i.test(first)) return null;
-  const why = /^\W*HOLD\b/i.test(first) ? [first.replace(/^\W*HOLD\W*/i, ""), ...rest].join(" ").replace(/\s+/g, " ").trim() : "it gave no clear answer";
+  const why = /^\W*HOLD\b/i.test(first) ? oneLine([first.replace(/^\W*HOLD\W*/i, ""), ...rest].join(" ")) : "it gave no clear answer";
   return heldLine(input.goal, input.action, clip(why, 300));
 }
 

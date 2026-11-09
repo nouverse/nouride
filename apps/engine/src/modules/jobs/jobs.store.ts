@@ -165,9 +165,9 @@ export interface JobStoreOptions {
   /** Called when a job ends, so the pipeline can wake the agent. */
   onComplete?: (completion: JobCompletion) => void;
   now?: () => number;
-  /** The agent's credentials, as `exec` hands them to a command — masked out of its jobs' logs as they are written (S5). */
+  /** The agent's credentials, as `exec` hands them to a command — masked out of its jobs' logs as they are written. */
   secrets?: (agentId: string) => Record<string, string>;
-  /** `[security.exec]`, read when a job starts: the ceilings a foreground command gets, which a job now gets too (S5). */
+  /** `[security.exec]`, read when a job starts: the ceilings a foreground command gets, which a job now gets too. */
   limits?: () => Pick<ExecPolicySection, "maxMemoryMb" | "maxCpuSeconds">;
   /** `[security] job_max_ms`, read when a job starts: how long one that is not a service may run. `0` never stops one. */
   maxMs?: () => number;

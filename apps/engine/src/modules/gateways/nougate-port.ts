@@ -1,5 +1,5 @@
 /**
- * The hosted gateway's own port, once its dashboard is a page of this one: keys only, no sign-in (S9, G5).
+ * The hosted gateway's own port, once its dashboard is a page of this one: keys only, no sign-in.
  *
  * The gateway keeps a user table of its own and signs people in on its own port. Hosted, that was a second door to
  * every upstream account, with a second password: the first-run one the daemon lent it, which stayed good there after

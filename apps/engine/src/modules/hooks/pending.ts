@@ -53,12 +53,12 @@ export function noPendingReply(ctx: HookContext): string {
   );
 }
 
-/** Whether this sender may answer `request` from here (S8) — the rule a button press keeps too (`approval-answerers.ts`). */
+/** Whether this sender may answer `request` from here — the rule a button press keeps too (`approval-answerers.ts`). */
 function mayAnswer(ctx: HookContext, request: ApprovalRequest): boolean {
   return answerable({ chatType: ctx.envelope.chatType, senderId: ctx.senderId, isAdmin: () => ctx.deps.isAdmin?.(ctx.envelope) ?? false }, request);
 }
 
-/** Who answers from a chat: the id the gate records, and the name a settled prompt says (G11). */
+/** Who answers from a chat: the id the gate records, and the name a settled prompt says. */
 function answerer(ctx: HookContext): Answerer {
   return { id: ctx.senderId, ...(ctx.envelope.senderName ? { name: ctx.envelope.senderName } : {}) };
 }
@@ -129,7 +129,7 @@ export function drainCoveredPending(ctx: HookContext): { drained: number; notice
   // answer only while auto-approval excluded every entry of the fixed list. Now that `balanced` asks only
   // `BALANCED_ASKS`, a `terraform destroy` is ungrantable and perfectly coverable — reading `grantable`
   // here would leave it sitting in the queue after the operator said "stop asking".
-  // Only what this sender may answer: `/approvals balanced` in a room is a person's, not the room's (S8).
+  // Only what this sender may answer: `/approvals balanced` in a room is a person's, not the room's.
   const mine = pending.filter((request) => mayAnswer(ctx, request));
   const neverCovered = mine.filter((request) => request.autoCoverable === false);
   const coverable = mine.filter((request) => request.autoCoverable !== false);
@@ -177,7 +177,7 @@ export async function answerAllApprovals(
   // Every agent in this conversation, for the same reason `/approve` does — see `pendingHere`.
   const waiting = pendingHere(ctx);
   if (waiting.length === 0) return { handled: true, reply: noPendingReply(ctx) };
-  // In a room, everything this sender may answer: what they asked for, or all of it for an admin (S8).
+  // In a room, everything this sender may answer: what they asked for, or all of it for an admin.
   const pending = waiting.filter((request) => mayAnswer(ctx, request));
   const others = waiting.length - pending.length;
   // A change to an agent's persona or to People is an admin's to answer, the sender's own request too: said as that, not

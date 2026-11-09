@@ -1,5 +1,5 @@
 /**
- * Every fetch behind the SSRF guard connects to the address the guard judged — never to a second lookup (S12).
+ * Every fetch behind the SSRF guard connects to the address the guard judged — never to a second lookup.
  *
  * The check resolved a name and judged its addresses; the fetch then handed the URL to `fetch`, which resolved it
  * again. A resolver answering with a TTL of 0 gives the check a public address and the connection a private one, and

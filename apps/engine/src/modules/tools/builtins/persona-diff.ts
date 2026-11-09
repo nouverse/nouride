@@ -8,15 +8,15 @@
  *
  * It runs in the tool's gate, on the daemon's event loop, before anyone is asked: every step is linear in the file but
  * the comparison, which is bounded (`MAX_CELLS`), and a change too large to show is refused on its raw size before a
- * line of it is labelled, and on what it would show before a line of that is built (N21). Labelling every changed line
- * first made one 512 KiB call hold the daemon for minutes (Nox's third review).
+ * line of it is labelled, and on what it would show before a line of that is built. Labelling every changed line
+ * first made one 512 KiB call hold the daemon for minutes.
  */
 
-import type { ApprovalPreview, DiffLine } from "@nouride/shared";
+import { type ApprovalPreview, type DiffLine, plural } from "@nouride/shared";
 
 /**
  * The most a persona change may change at once: what a chat's prompt shows whole beside its question and buttons. Never
- * clipped, as other previews are — Nox's review (0.8.8): a rule changed past a line's 200th character, or removed after
+ * clipped, as other previews are: in 0.8.8 a rule changed past a line's 200th character, or removed after
  * the 24th changed line, was approved by an admin who was never shown it. A larger change goes a section at a time.
  */
 const MAX_LINES = 24;
@@ -40,7 +40,7 @@ interface Kept {
 /**
  * The two files line by line, in order: each line taken out, put in, or kept — by index. Kept lines are in it because a
  * line can change its place without changing its text: a heading moved up over two rules took them under "Free to do
- * without asking" with only the heading shown (Nox's fifth review).
+ * without asking" with only the heading shown.
  */
 function compare(a: readonly string[], b: readonly string[]): (Change | Kept)[] {
   let start = 0;
@@ -80,7 +80,7 @@ function compare(a: readonly string[], b: readonly string[]): (Change | Kept)[] 
   return [...found, ...each(rows, i).map(out), ...each(cols, j).map(into), ...tail];
 }
 
-/** An ATX heading, indented up to three spaces as markdown allows (Nox's fifth review). */
+/** An ATX heading, indented up to three spaces as markdown allows. */
 const HEADING = /^ {0,3}(#{1,6})(?:\s+\S|\s*$)/;
 /** A line that is only a bold label — `**Behavior:**`, `__Behavior__` — which groups the rules under it as a heading does. */
 const BOLD_LABEL = /^(\*\*|__)[^*_]+\1:?$/;
@@ -88,24 +88,24 @@ const FENCE = /^\s*(?:```|~~~)/;
 /**
  * A line that changes where the lines after it sit in a way the places are not read from: a code fence — one added line,
  * left open, turned every heading after it into code, and a rule moved under "Free to do" still read as under "Ask
- * first" (Nox's fourth review) — a heading's underline, an HTML heading. The owner changes a file's structure on the
+ * first" — a heading's underline, an HTML heading. The owner changes a file's structure on the
  * Files tab; a proposal that changes one of these is refused. An HTML comment's opening marker, and the tags that hide
- * what they wrap, anywhere in a line, too: the rules between them are kept, and would not be shown (Nox's fifth and sixth
- * reviews). Its closing marker is `COMMENT_END`.
+ * what they wrap, anywhere in a line, too: the rules between them are kept, and would not be shown. Its closing marker
+ * is `COMMENT_END`.
  */
 const STRUCTURE =
   /^\s*(?:```|~~~)|^\s*(?:=+|-{2,})\s*$|<!--|<\/?(?:h[1-6]|details|summary|div|span|p|template|style|script|noscript|iframe|object|section|font|small|del|s|strike|ins)\b[^>]*>/i;
 /**
  * `-->` ends an HTML comment, which only a file holding `<!--` has: there it could close one early and bring the rules
- * after it into view, and is refused; anywhere else it is an arrow in prose — `draft --> review` — refused for nothing
- * (N24). A changed line cannot open a comment (`STRUCTURE`), so the file as it stands decides.
+ * after it into view, and is refused; anywhere else it is an arrow in prose — `draft --> review` — refused for
+ * nothing. A changed line cannot open a comment (`STRUCTURE`), so the file as it stands decides.
  */
 const COMMENT_END = "-->";
 /** A list item, by its indent: the items above it with less indent are what it sits under. */
 const LIST_ITEM = /^(\s*)(?:[-*+]|\d+[.)])\s+\S/;
-/** A plain line that labels what follows it — `Ask Gading first:` — as a bold label does. */
+/** A plain line that labels what follows it — `Ask Sam first:` — as a bold label does. */
 const PLAIN_LABEL = /^\S.*:$/;
-/** A list item that labels the items after it at its own indent — `- Free to do:`, `- **Free to do:**` (Nox's seventh review). */
+/** A list item that labels the items after it at its own indent — `- Free to do:`, `- **Free to do:**`. */
 const LABEL_ITEM = /^(?:[-*+]|\d+[.)])\s+.*:(?:\*\*|__)?$/;
 /** A table's delimiter row — `|---|:--:|` — under its header row; a line of dashes alone is a rule or an underline. */
 const TABLE_RULE = /^\s*\|?\s*:?-+:?\s*(?:\|\s*:?-+:?\s*)*\|?\s*$/;
@@ -128,11 +128,10 @@ interface Item {
  * Where each line of a file sits, in one pass: the `#` headings above it, as a path, the bold label and the plain `…:`
  * label since the last of them, the header row of the table it is a row of, and the list items it is nested under — a
  * line inside a fenced block is never one. In a rules file, where a line is decides what it means: a rule moved from "Ask
- * Gading first, always" to "Free to do without asking" read as the same line taken out and put back (Nox's second
- * review); the path keeps a `### Git` under each of two parents apart, a `SOUL.md` groups its rules by bold labels
- * (Nox's third), a section may group them by a plain label line or a list item ending in a colon, over rules nested
- * under it (Nox's sixth) or beside it at its own indent (Nox's seventh), and a table's columns say what a row's cells
- * mean (N23). `]` in a label is escaped: it would close the label.
+ * Sam first, always" to "Free to do without asking" read as the same line taken out and put back; the path keeps a
+ * `### Git` under each of two parents apart, a `SOUL.md` groups its rules by bold labels, a section may group them by a
+ * plain label line or a list item ending in a colon, over rules nested under it or beside it at its own indent, and a
+ * table's columns say what a row's cells mean. `]` in a label is escaped: it would close the label.
  */
 function placesOf(lines: readonly string[]): Place[] {
   const path: string[] = [];
@@ -148,7 +147,7 @@ function placesOf(lines: readonly string[]): Place[] {
     const text = line.trim();
     const item = LIST_ITEM.test(line);
     // A label item heads the items after it at its indent — not itself, nor the next label item beside it, which the
-    // place of `- **Free to do:**` showed under `- Ask Gading first:` (N26).
+    // place of `- **Free to do:**` showed under `- Ask Sam first:`.
     const labelled = flat !== null && indent >= flat.indent && !(item && indent === flat.indent && LABEL_ITEM.test(text));
     // Outermost first: the items the label item is nested in, the label item, then the items it heads — a label nested in
     // a label read inside out, put after every item.
@@ -201,7 +200,7 @@ export function personaChange(before: string, after: string): DiffLine[] | { ref
   const found = lines.filter((line): line is Change => line.sign !== "=");
   const text = (change: Change) => (change.sign === "-" ? a : b)[change.at]!;
   const tooLarge = (lines: number, chars: number) =>
-    `this change shows ${lines} line${lines === 1 ? "" : "s"} and ${chars} characters, and an admin is shown every line of it whole, with where it sits: ` +
+    `this change shows ${lines} ${plural(lines, "line")} and ${chars} characters, and an admin is shown every line of it whole, with where it sits: ` +
     `at most ${MAX_LINES} lines and ${MAX_CHARS} characters at once. Propose it a section at a time`;
   const raw = found.reduce((sum, change) => sum + text(change).length, 0);
   if (found.length > MAX_LINES || raw > MAX_CHARS) return { refused: tooLarge(found.length, raw) };
@@ -234,7 +233,7 @@ export function personaChange(before: string, after: string): DiffLine[] | { ref
    * A kept line under a list item reworded where it stands — the item taken out and the one put in at the same place in a
    * run of changed lines: a wrapped rule's later lines, a rule nested under it — is shown once, as it is, after the item's
    * new line, rather than taken out and put back with each wording of the item in its place: a long rule's first line
-   * reworded repeated it on every line after it and went over what an admin is shown (N25). A line now under another
+   * reworded repeated it on every line after it and went over what an admin is shown. A line now under another
    * item — one that stays, or one put in at another place — is still shown out of one and into the other, by name.
    */
   const reworded = (from: Place, to: Place) =>
@@ -245,7 +244,7 @@ export function personaChange(before: string, after: string): DiffLine[] | { ref
       return a[x]!.trim() === b[y]!.trim() || (slotA.has(x) && slotA.get(x) === slotB.get(y));
     });
   // What a line is shown as, given to `emit`: in a first pass that only counts, so a change too large is refused before
-  // a line of it is built (N21), then in the one that builds it.
+  // a line of it is built, then in the one that builds it.
   const visit = (line: Change | Kept, emit: (sign: DiffLine["sign"], place: string | null, text: string) => void) => {
     if (line.sign !== "=") return emit(line.sign, (line.sign === "-" ? placesA : placesB)[line.at]!.shown, text(line));
     const from = placesA[line.from]!;

@@ -1,5 +1,5 @@
 /**
- * What an exec grant is bound to (S7): the command's argv in its directory, the secrets it is handed, and the digest
+ * What an exec grant is bound to: the command's argv in its directory, the secrets it is handed, and the digest
  * of every file it runs — each segment's script, and a program run by a path inside the agent's roots. Change any of
  * those files and the key changes, so the next run asks again: "allow always" for `./deploy.sh` is for that
  * deploy.sh, not for whatever the agent, or text in its context, writes there afterwards.

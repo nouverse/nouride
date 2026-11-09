@@ -1,5 +1,5 @@
 /**
- * A search box on Groups and Secrets (0.8.23, the owner: with many of either, the one to change was a long scroll away):
+ * A search box on Groups and Secrets (0.8.23: with many of either, the one to change was a long scroll away):
  * a room found by any name it goes by, its platform, who talks there or its agents; a secret by its name, what uses it
  * as the page words it, or what is said about it. The same box Missions, Jobs and MCP filter with, narrowing as it is
  * typed in. In a file of its own over the shared harness.

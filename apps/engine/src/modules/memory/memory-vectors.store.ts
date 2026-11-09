@@ -4,13 +4,13 @@
  * One row per item and model: an episode (by id) or a fact (by its fact id), under the key of the model that made it
  * (`vectorKey` in `semantic.ts`). Which items need a vector, which model ranks, and the arithmetic, are `semantic.ts`'s.
  * Two models' vectors of one item sit side by side, so a change of model does not leave search blind by meaning while
- * the new one catches up (M7); a hash of the text each was made from goes with it, so a rewritten summary is embedded
+ * the new one catches up; a hash of the text each was made from goes with it, so a rewritten summary is embedded
  * again rather than found by what it used to say. A vector is the Int8Array's own bytes, as a BLOB.
  *
  * ## Read once, then held here
  *
  * A search by meaning scores every candidate, and reading and decoding the candidates' vectors on each query was most
- * of what one cost (M5). So a model's vectors are read from SQLite once, the first time that model is asked for, and
+ * of what one cost. So a model's vectors are read from SQLite once, the first time that model is asked for, and
  * held here; every write below keeps what is held right, and a query never reads a vector from the database again.
  * That is sound because this store is the table's one writer: the daemon holds the one connection to the file, and no
  * command run beside it writes vectors.
@@ -131,13 +131,13 @@ export class MemoryVectorStore {
     return removed;
   }
 
-  /** Remove the vectors of items that are gone, whichever model made them — and no other (M7, `semantic.ts`). How many went. */
+  /** Remove the vectors of items that are gone, whichever model made them — and no other (`semantic.ts`). How many went. */
   pruneGone(keep: ReadonlySet<string>): number {
     const gone = this.db.prepare<{ item: string }>("SELECT DISTINCT item FROM memory_vectors").all().map((row) => row.item).filter((item) => !keep.has(item));
     return this.remove(gone);
   }
 
-  /** Every vector another model made, removed — once this one has every item (M7, `semantic.ts`). How many went. */
+  /** Every vector another model made, removed — once this one has every item (`semantic.ts`). How many went. */
   keepOnly(model: string): number {
     const others = [...this.counts().keys()].filter((key) => key !== model);
     if (others.length === 0) return 0;

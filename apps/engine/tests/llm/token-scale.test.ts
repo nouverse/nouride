@@ -1,5 +1,5 @@
 /**
- * The estimate the context guard decides by, scaled to what the provider counts (M8).
+ * The estimate the context guard decides by, scaled to what the provider counts.
  *
  * The estimator counts characters, and a log of timestamps and ids tokenized at 2.3x it on the box. Only the
  * compaction after a reply corrected for that. The window a turn started with and the guard before every

@@ -226,7 +226,7 @@ describe("the conversation carries a cache breakpoint too", () => {
   });
 
   test("the prompt's three cached blocks and the conversation's marker are the four the API takes", async () => {
-    // The shape Nouride sends since M2: the pack, the harness and the recall each cached, the request tier not.
+    // The shape Nouride sends: the pack, the harness and the recall each cached, the request tier not.
     const fetcher = fakeFetch(jsonResponse({ content: [{ type: "text", text: "hi" }] }));
     await provider(fetcher.fn).chat({
       model: "claude-sonnet-4-20250514",

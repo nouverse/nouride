@@ -13,13 +13,12 @@
  * different agent on a different task.
  */
 
+import { createLogger, cutAtWord, keepEnds, messageText, type ChatMessage, type LLMProvider, oneLine, type ToolDefinition } from "@nouride/shared";
 import { extractJson } from "@/modules/llm/json-answer.ts";
 import { outputCap } from "@/modules/llm/output-cap.ts";
-import { createLogger, messageText, type ChatMessage, type LLMProvider, type ToolDefinition } from "@nouride/shared";
 import { skillBodyIsEnglish, VALID_SKILL_NAME } from "@nouride/persona";
 import { AUTHOR_INSTRUCTION, REVISE_INSTRUCTION, TRIAGE_INSTRUCTION, renderCandidates, renderSkillList } from "./prompts.ts";
 import { redact } from "@nouride/secrets";
-import { cutAtWord } from "@/commons/cut-at-word.ts";
 import type { SkillFile, Trigger } from "./types.ts";
 
 const log = createLogger("reflection.synthesis");
@@ -236,7 +235,7 @@ export function parseTriage(text: string | null): Triage | null {
   }
 
   const decision = typeof parsed.decision === "string" ? parsed.decision.trim().toLowerCase() : "";
-  const why = typeof parsed.why === "string" ? cutAtWord(parsed.why.replace(/\s+/g, " ").trim(), 200) : "";
+  const why = typeof parsed.why === "string" ? cutAtWord(oneLine(parsed.why), 200) : "";
 
   if (decision === "skip") {
     log.info("reflection pass declined", { reason: String(parsed.reason ?? "no reason given") });
@@ -254,7 +253,7 @@ export function parseTriage(text: string | null): Triage | null {
 
   if (decision === "create") {
     const name = typeof parsed.name === "string" ? parsed.name.trim().toLowerCase() : "";
-    const description = typeof parsed.description === "string" ? parsed.description.replace(/\s+/g, " ").trim() : "";
+    const description = typeof parsed.description === "string" ? oneLine(parsed.description) : "";
     const recurs = typeof parsed.recurs === "string" ? parsed.recurs.trim().toLowerCase() : "";
     // Without a name and its "Use when" line there is nothing to hold until the work comes back.
     if (!VALID_SKILL_NAME.test(name) || !description) {
@@ -662,17 +661,13 @@ export function buildTranscript(messages: ChatMessage[]): { text: string; redact
   const dropped = older.length - kept.length;
   const lines = [
     ...(dropped > 0 ? [`[${dropped} earlier message(s) dropped for length]`] : []),
-    ...kept.map((m) => `${label(m)}: ${clip(messageText(m.content), width)}`),
-    ...recent.map((m) => `${label(m)}: ${clip(messageText(m.content), MAX_MESSAGE_CHARS)}`),
+    ...kept.map((m) => `${label(m)}: ${keepEnds(messageText(m.content), width, CUT)}`),
+    ...recent.map((m) => `${label(m)}: ${keepEnds(messageText(m.content), MAX_MESSAGE_CHARS, CUT)}`),
   ];
 
   const scrubbed = redact(lines.join("\n\n"));
   return { text: scrubbed.text, redactions: scrubbed.hits };
 }
 
-/** Head and tail of one message, because a command cut in half is worse than one with a gap. */
-function clip(content: string, width: number): string {
-  if (content.length <= width) return content;
-  const half = Math.floor(width / 2);
-  return `${content.slice(0, half)}\n…[${content.length - width} characters cut]…\n${content.slice(content.length - half)}`;
-}
+/** The line where a message's middle was cut. */
+const CUT = (left: number) => `…[${left} characters cut]…`;

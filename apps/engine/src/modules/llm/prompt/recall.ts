@@ -7,7 +7,7 @@
  *
  * Stable between nightly passes — nothing here carries a clock or a count that moves per request; the
  * week ahead moves once a day — so it is cached, as a block of its own after the harness (`index.ts`).
- * The order it lists people in is decided in `modules/memory` and is never who is speaking (M2).
+ * The order it lists people in is decided in `modules/memory` and is never who is speaking.
  */
 
 import type { RecalledFact } from "@/modules/memory/index.ts";
@@ -70,7 +70,7 @@ export function renderRecall(ctx: Pick<PromptContext, "recall">): string | undef
   if (recall.knowledge?.length) {
     parts.push(
       [
-        // Names only, so the prompt costs a line, not the documents (KNOWLEDGE_BASE §9): what is in them is searched for.
+        // Names only, so the prompt costs a line, not the documents: what is in them is searched for.
         "Documents kept for reference that you may search here with `memory_search`, by collection. Look in them when a question is about what they cover, and say which document and section an answer came from:",
         ...recall.knowledge.map((collection) => `- ${collection.name}${collection.about?.length ? ` (about ${collection.about.join(", ")})` : ""}${collection.description ? `: ${collection.description}` : ""}`),
       ].join("\n"),

@@ -1,6 +1,5 @@
 /**
- * A knowledge document cut into sections, the unit search finds and `memory_read` opens (KNOWLEDGE_BASE §7, 0.8.20;
- * the old RFC's §3 item 1).
+ * A knowledge document cut into sections, the unit search finds and `memory_read` opens (0.8.20).
  *
  * Cut at headings, and again at paragraph breaks past `SECTION_MAX` characters, so a section is about one thing and
  * small enough to rank. Each carries its trail: the document's title and the headings above it, which go into the index
@@ -10,7 +9,7 @@
  * Pure.
  */
 
-/** Characters past which a section is cut again at a paragraph break. A design value, set by the bench (§14 item 8). */
+/** Characters past which a section is cut again at a paragraph break. A design value, set by the bench. */
 const SECTION_MAX = 1_500;
 /** Rows of a table per section: enough to answer from, few enough to rank. */
 const ROWS_PER_SECTION = 200;
@@ -38,7 +37,7 @@ function withoutFrontmatter(text: string): { body: string; frontmatter: string }
 }
 
 /**
- * A document's frontmatter `tags:` as written (0.8.23, KNOWLEDGE_BASE §12): a list on one line (`[ops, backups]`), one
+ * A document's frontmatter `tags:` as written (0.8.23): a list on one line (`[ops, backups]`), one
  * per line (`- ops`), or words split by commas. What the memory graph joins it to, beside the conversations' tags.
  */
 export function tagsOf(text: string): string[] {

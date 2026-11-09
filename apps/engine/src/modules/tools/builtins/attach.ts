@@ -91,7 +91,7 @@ async function fetchRemote(
 ): Promise<{ bytes: Uint8Array; contentType: string } | { error: string }> {
   if (!options.urlPolicy) return { error: "Sending a file by URL is not available on this daemon." };
 
-  // From the addresses each hop's check judged, never from a second lookup of the name (S12).
+  // From the addresses each hop's check judged, never from a second lookup of the name.
   const doFetch = judgedFetch(options.fetchImpl);
   const check = options.checkUrlImpl ?? checkUrl;
   let target = url;

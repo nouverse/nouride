@@ -1,5 +1,5 @@
 /**
- * An approval asked in a turn a restart cut off is still there to answer after it, and its answer runs the call (D8).
+ * An approval asked in a turn a restart cut off is still there to answer after it, and its answer runs the call.
  *
  * Through two real pipelines on one database, wired as the daemon wires them: the first asks and is stopped as a
  * shutdown stops it (`stopTurns`, then `handOver`), or as a crash leaves it (no hand-over); the second boots as the

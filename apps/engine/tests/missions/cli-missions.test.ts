@@ -252,7 +252,7 @@ describe("the delete rule on its page", () => {
 
 describe("how a mission works, as the page tells its agent", () => {
   test("a CLI is told it remembers its earlier turns — an agent on a model that each turn starts from the page", async () => {
-    // HARDENING §5: the page told every agent "every turn starts from this page, not from your last turn"; a coding CLI
+    // The page told every agent "every turn starts from this page, not from your last turn"; a coding CLI
     // keeps one session for the whole mission, so it was told something untrue about itself.
     const h = await missionsHarness({ runsOnCli: cli, settings: { perAgent: 2, maxRunning: 4 } });
     const onCli = await h.start("for nova", { agentId: "nova" });

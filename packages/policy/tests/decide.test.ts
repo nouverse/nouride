@@ -73,7 +73,7 @@ describe("the daemon's own state", () => {
   test("is on the list where agents run as the daemon's user", () => {
     expect(decide(own("/srv/nouride/.nouride/config.toml"))).toMatchObject({ hardlineClass: "config", grantable: false });
     expect(decide(["sqlite3", "/srv/nouride/.nouride/data/nouride.db", ".tables"])).toMatchObject({ hardlineClass: "database" });
-    // An agent's persona is an admin's to change, by a shell as by the persona tool (0.8.13, C7); the rest of a pack is own state.
+    // An agent's persona is an admin's to change, by a shell as by the persona tool (0.8.13); the rest of a pack is own state.
     expect(decide(own("/srv/nouride/.nouride/agents/nix/SOUL.md"))).toMatchObject({ hardlineClass: "persona" });
     expect(decide(own("/srv/nouride/.nouride/agents/nix/skills.toml"))).toMatchObject({ hardlineClass: "own-state" });
     // An agent's pack config is a config.toml like the daemon's, and a script that names only the directory is the

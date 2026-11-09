@@ -94,11 +94,11 @@ function repliesToSelf(
 }
 
 /**
- * A message updated — `messageUpdate` — as the edit it is, when it is one (G11): what the message says now, the message
+ * A message updated — `messageUpdate` — as the edit it is, when it is one: what the message says now, the message
  * it changes (`edit.of`) and when that was sent. Discord updates a message for more than a person's edit — an embed
  * loading for a link in it, a pin — and only an edit moves `editedTimestamp`, so a message never edited is not one; an
  * embed loading after an edit carries the edit's time again, and the id made of it is the same one the engine already
- * holds. A bot's update is never one: G11 is about people, and our own progress lines are edited all the time.
+ * holds. A bot's update is never one: only a person's edit counts, and our own progress lines are edited all the time.
  *
  * Words only: an edit's file is not sent again. One that leaves no words is not one either.
  */

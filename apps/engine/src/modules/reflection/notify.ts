@@ -8,6 +8,7 @@
  * notification teaches people to ignore it.
  */
 
+import { plural } from "@nouride/shared";
 import type { Notifier } from "@/commons/notify.ts";
 import { lessonOf } from "./drafts.store.ts";
 import type { SkillDraft } from "./types.ts";
@@ -52,7 +53,7 @@ export async function announceDraft(deps: NotifyDeps, draft: SkillDraft, superse
     // Only when there is more in it than the sentence above says. This is the one line that changes
     // how big the decision is, so it survives the trim.
     ...(draft.carries.length > 0
-      ? [`Carries ${draft.carries.length} earlier lesson${draft.carries.length === 1 ? "" : "s"} too.`]
+      ? [`Carries ${draft.carries.length} earlier ${plural(draft.carries.length, "lesson")} too.`]
       : []),
     "",
     `\`/drafts approve ${draft.name}\`   ·   \`/drafts deny ${draft.name}\`   ·   \`/drafts show ${draft.name}\``,

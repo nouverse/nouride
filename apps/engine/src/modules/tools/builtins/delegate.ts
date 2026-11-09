@@ -31,13 +31,13 @@
  * ## What it cannot do
  *
  * Speak as its parent. It writes no memory — the tools whose writes every later prompt reads, by the
- * same mark S13 holds them at — and sends nothing into the chat: what is kept and what is said is the
+ * same `keepsInPrompt` mark — and sends nothing into the chat: what is kept and what is said is the
  * parent's call, from the handoff. And it cannot delegate: its toolset has this tool removed, so the
  * tree is one level deep. Recursion here would be an unbounded fan-out of provider calls started by a
  * model, which is the shape of a bill nobody meant to run up.
  */
 
-import { createLogger, type ModelTier, type Tool, type ToolContext, type ToolResult } from "@nouride/shared";
+import { createLogger, type ModelTier, plural, type Tool, type ToolContext, type ToolResult } from "@nouride/shared";
 import { renderHandoff, type SubAgentHandoff } from "@/modules/tools/handoff.ts";
 import { goalLine, parseBriefs, type HelperBrief } from "./delegate-brief.ts";
 import { duration } from "@/modules/jobs/wake-text.ts";
@@ -104,7 +104,7 @@ export interface DelegateToolOptions {
    */
   background?: (request: SubagentRequest) => BackgroundStart;
   /**
-   * A worktree of its own for a helper that writes, inside a mission's (MISSIONS §8): where it works and the branch it
+   * A worktree of its own for a helper that writes, inside a mission's: where it works and the branch it
    * hands back — or why it cannot have one. Absent where this process runs no missions.
    */
   isolate?: (ctx: ToolContext) => Promise<{ path: string; branch: string } | { refused: string }>;
@@ -293,7 +293,7 @@ function said(brief: HelperBrief, outcome: BackgroundStart): string {
       // Helpers and asks share the one limit (0.7.19): an agent asked with `ask_agent` that is still at work in the
       // background is one of what is running.
       return (
-        `Not started: ${goal}. You already have ${outcome.running.length} ${outcome.running.length === 1 ? "job" : "jobs"} ` +
+        `Not started: ${goal}. You already have ${outcome.running.length} ${plural(outcome.running.length, "job")} ` +
         `working in the background (helpers and asks), the most this agent may have (\`[delegate] max_background = ${outcome.limit}\`): ` +
         `${runningList(outcome.running)}. Wait for one to finish (its result comes to you as a message), stop one ` +
         `with \`nouride jobs kill <id>\`, or run this one in the foreground (leave \`background\` off).`

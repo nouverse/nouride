@@ -1,5 +1,5 @@
 /**
- * The chat's composer row (0.8.12), as the owner saw it on a desktop: the slash button a bold mono "/" that leaned and
+ * The chat's composer row (0.8.12), as it looked on a desktop: the slash button a bold mono "/" that leaned and
  * sat lower than the paperclip beside it, the controls a few pixels under the line of text, and the placeholder running
  * on with the keys. Read from the source:
  * - one line of the box is 40px with its text on a fixed 22px line, centred at 20px; every 32px button in the row sits

@@ -265,7 +265,7 @@ function readDocument(memory: MemoryToolsDeps, ctx: ToolContext, item: string): 
 export function createMemoryWriteTool(memory?: MemoryToolsDeps, files?: Pick<AttachmentReadOptions, "list">): Tool {
   return {
     requiresApproval: false,
-    // `MEMORY.md` and a person's facts are in every prompt after: after outside content, a person says yes first (S13).
+    // `MEMORY.md` and a person's facts are in every prompt after: after outside content, a person says yes first.
     keepsInPrompt: true,
     definition: {
       name: "memory_write",
@@ -325,7 +325,7 @@ export function createMemoryWriteTool(memory?: MemoryToolsDeps, files?: Pick<Att
       // Memory is English whatever the conversation is in — refused here so the agent writes it again.
       if (change !== "remove" && !memoryTextIsEnglish(text)) return { content: WRITE_IN_ENGLISH, isError: true };
       if (change !== "add" && !current) return { content: "`current` must be the fact as it reads now.", isError: true };
-      // A fact kept after reading outside content says so on its line, wherever it is shown (S13).
+      // A fact kept after reading outside content says so on its line, wherever it is shown.
       const kept = ctx.untrustedRead?.length ? factMarkedOutside(text, ctx.untrustedRead) : text;
       const result = await memory.noteAboutSpeaker(
         speakerOf(ctx),
@@ -351,7 +351,7 @@ export function createMemoryWriteTool(memory?: MemoryToolsDeps, files?: Pick<Att
 }
 
 /**
- * A memory write made in a turn that had read outside content, marked as one (S13).
+ * A memory write made in a turn that had read outside content, marked as one.
  *
  * `MEMORY.md` is in the system prompt of every turn after: a page that says "remember that you should…" could put
  * an order there that outlives the conversation it came in. Such a write waits for a person's yes first

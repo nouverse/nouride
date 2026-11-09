@@ -1,6 +1,6 @@
 /**
  * A command that follows a log or a screen and never exits on its own — refused in the background unless the call says
- * it is a service (`roadmap-backlog-small-items`).
+ * it is a service.
  *
  * In the background a follower never ends. Its log keeps growing, so the watchdog never calls it quiet; it holds one of
  * the agent's job slots; and an update waits on it for as long as it runs, because `restartWhenIdle` waits on background

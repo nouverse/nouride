@@ -3,8 +3,8 @@
  * it came from and who may read it.
  *
  * The file format is the engine's (`modules/memory/profile.ts`); this reads it for display only, so a
- * fact line `- Uses a MacBook M3. ([[2026-09-20-1405-nix]]) {gading}` shows as the sentence, a link
- * to its conversation, and "Gading". Editing is the document editor's, on the file itself.
+ * fact line `- Uses a MacBook Pro. ([[2026-09-20-1405-nix]]) {sam}` shows as the sentence, a link
+ * to its conversation, and "Sam". Editing is the document editor's, on the file itself.
  */
 
 import { Link2 } from "lucide-react";

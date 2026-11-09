@@ -1,6 +1,6 @@
 /**
  * No control token yet: a daemon of this install that is starting is waited for, and anything else is said as what it
- * is (`cli-no-token-while-booting`).
+ * is.
  *
  * Found in 0.7.10's end-to-end run: `/health` answered — `starting` — and the CLI, finding no token, said to start the
  * daemon once. The token is written when the control plane starts, near the end of boot, so on a first start that

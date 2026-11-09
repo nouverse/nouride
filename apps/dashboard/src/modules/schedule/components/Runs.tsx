@@ -62,7 +62,7 @@ export function Runs({ id, timezone, canEdit }: { id: string; timezone: string; 
             ) : run.status === "skipped" ? (
               <Clock size={14} className="mt-0.5 shrink-0 text-base-content/40" />
             ) : run.status === "interrupted" ? (
-              // Cut off by a restart: nothing about the job failed (P11), so not the error mark.
+              // Cut off by a restart: nothing about the job failed, so not the error mark.
               <RotateCcw size={14} className="mt-0.5 shrink-0 text-warning" aria-label="cut off by a restart" />
             ) : (
               <AlertTriangle size={14} className="text-error mt-0.5 shrink-0" />

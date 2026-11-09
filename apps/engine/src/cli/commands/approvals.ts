@@ -1,4 +1,4 @@
-import type { ApprovalRequest } from "@nouride/shared";
+import { type ApprovalRequest, clip } from "@nouride/shared";
 import type { AckResponse, ApprovalResponse, ApprovalsResponse } from "@/cli/wire.ts";
 import { BOLD, DIM, GREEN, RED, RESET, YELLOW, fail, say } from "@/cli/ui.ts";
 import type { Client } from "@/cli/client.ts";
@@ -88,7 +88,7 @@ const LISTED_CHARS = 160;
 
 function clipped(text: string, whole: boolean): string {
   const line = whole ? text : text.replace(/\s+/g, " ");
-  return whole || line.length <= LISTED_CHARS ? line : `${line.slice(0, LISTED_CHARS - 1)}…`;
+  return whole ? line : clip(line, LISTED_CHARS);
 }
 
 /**

@@ -131,8 +131,8 @@ export interface AgentLLMConfig {
    */
   contextWindow?: number;
   /**
-   * Who answers when this agent's model cannot, in order — each a provider profile and a model on it (SMART_AUTOMATION
-   * §3.1, which replaced 0.7's `fallback_model`). Tried after the provider's own retries: rate limited, overloaded, not
+   * Who answers when this agent's model cannot, in order — each a provider profile and a model on it (which
+   * replaced 0.7's `fallback_model`). Tried after the provider's own retries: rate limited, overloaded, not
    * served — and, on another profile, down, out of credit or refusing its key, which another endpoint is not.
    *
    * A turn that falls back stays on that pair for the rest of the turn — the model that refused would be asked again
@@ -335,7 +335,7 @@ export function isAgentAccess(value: unknown): value is AgentAccess {
   return typeof value === "string" && (AGENT_ACCESS as readonly string[]).includes(value);
 }
 
-/** One credential an agent's commands may receive, and which commands (`[security.exec_secrets]`, S6). */
+/** One credential an agent's commands may receive, and which commands (`[security.exec_secrets]`). */
 export interface ExecSecret {
   /** Its name in the secret store; the variable is that name upper-cased. */
   name: string;
@@ -344,7 +344,7 @@ export interface ExecSecret {
 }
 
 /**
- * An external agent's preset (0.8.1, EXTERNAL_AGENTS §5.1), turned into its CLI's own modes: `folder` — free in its
+ * An external agent's preset (0.8.1), turned into its CLI's own modes: `folder` — free in its
  * folder, the operating system its wall; `risky` — asks for what is risky; `all` — asks for every tool call.
  */
 export const EXTERNAL_PERMISSIONS = ["folder", "risky", "all"] as const;
@@ -466,14 +466,14 @@ export interface AgentConfig {
    * operator should have to answer deliberately. An empty list means the child gets the bare
    * environment allowlist and nothing else.
    *
-   * Each bound to the commands that need it (S6): `[security.exec_secrets] pypi_token = ["twine upload"]`.
+   * Each bound to the commands that need it: `[security.exec_secrets] pypi_token = ["twine upload"]`.
    */
   execSecrets: ExecSecret[];
   /**
    * `[security] ssh_agent = true` — this agent's commands and stdio MCP servers get the daemon's `SSH_AUTH_SOCK`.
    *
    * The socket signs with every key the ssh-agent holds, for whoever asks, so a command holding it can `git push` or
-   * `ssh` to any host those keys open. Until 0.7.9 every command of every agent got it (S11); now an agent whose work
+   * `ssh` to any host those keys open. Until 0.7.9 every command of every agent got it; now an agent whose work
    * is reaching other machines says so here, and the others do not hold it. A key named in `~/.ssh/config` is a file,
    * not the socket, and is not affected. Absent and `false` both mean off; only `false` says the pack decided.
    */

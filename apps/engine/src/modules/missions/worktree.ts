@@ -1,5 +1,5 @@
 /**
- * A mission's worktree (0.8.1, MISSIONS §8): where a mission's folder is in a git repository and the machine can hold
+ * A mission's worktree (0.8.1): where a mission's folder is in a git repository and the machine can hold
  * a second copy, it works in one of its own — on the branch `mission/<id>`, or the one its start named (0.8.7), from
  * the repository's last commit, in its own folder (`missions/<id>/worktree`). What is not committed in the agent's clone is neither taken nor touched, two
  * missions in one repository run side by side, and the mission ends with its branch: the daemon makes and removes

@@ -2820,7 +2820,7 @@ oscuro y texto claro. Guarda siempre los archivos de salida en el espacio de tra
   });
 
   test("English that talks *about* another language is still English", () => {
-    // The real near-miss: `contributing-gading-dev` on the live box explains how to write blog posts
+    // The real near-miss: a person's own contributing skill on the live box explains how to write blog posts
     // in Indonesian, and scores as ordinary English because the prose around it is English.
     expect(
       skillBodyIsEnglish(

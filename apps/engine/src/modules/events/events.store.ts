@@ -30,7 +30,7 @@
  * named on `/health`: logged at debug, a full disk emptied the stream with nothing on a default install saying so.
  */
 
-import { createLogger, EVENT_CONTRACT, eventProblems, type EventCut, type EventField, type TurnEventData, type TurnEventKind } from "@nouride/shared";
+import { clip, createLogger, EVENT_CONTRACT, eventProblems, type EventCut, type EventField, type TurnEventData, type TurnEventKind } from "@nouride/shared";
 import type { SqliteDb } from "@nouride/runtime";
 
 const log = createLogger("events");
@@ -446,7 +446,7 @@ function bounded(kind: string, data: Record<string, unknown>): Record<string, un
 }
 
 function shorten(value: unknown, limit: number): { value: unknown; cut: boolean } {
-  if (typeof value === "string") return value.length > limit ? { value: `${value.slice(0, limit)}…`, cut: true } : { value, cut: false };
+  if (typeof value === "string") return value.length > limit ? { value: clip(value, limit, limit), cut: true } : { value, cut: false };
   if (value === null || typeof value !== "object") return { value, cut: false };
   const entries = Array.isArray(value) ? value.map((item, index) => [index, item] as const) : Object.entries(value);
   let cut = false;

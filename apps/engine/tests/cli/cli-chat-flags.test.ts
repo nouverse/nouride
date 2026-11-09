@@ -48,7 +48,7 @@ describe("nouride chat with a flag", () => {
     }) as never);
     const error = spyOn(console, "error").mockImplementation(() => {});
     try {
-      // A flag where an agent id goes is asking wrongly: exit 2, not a failure (D5).
+      // A flag where an agent id goes is asking wrongly: exit 2, not a failure.
       await expect(chat(untouchable, ["--verbose"])).rejects.toThrow("exit 2");
     } finally {
       exit.mockRestore();

@@ -95,8 +95,8 @@ describe("a turn its provider ended", () => {
   });
 
   /**
-   * "Every provider failed" behind Nougate: its error response names the providers it tried (`x-nougate-tried`), and the
-   * turn's failure — the record an operator reads, and its end on the event stream — says them. The chat does not.
+   * "Every provider failed" behind Nougate: its error response names the providers it tried, in `x-nougate-tried`, and
+   * the turn's failure — the record an operator reads, and its end on the event stream — says them. The chat does not.
    */
   test("through a gateway that tried several providers, its failure names them — for the operator, not the chat", async () => {
     const b = await bench(502, { "x-nougate-tried": "antigravity,claudecode", "x-nougate-attempts": "2" });

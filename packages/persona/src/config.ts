@@ -28,6 +28,7 @@ import {
   type ExecSecret,
   type LLMDefaultsSection,
   type McpServerConfig,
+  oneLine,
   toolIterationsRefusal,
   turnSecondsRefusal,
 } from "@nouride/shared";
@@ -419,7 +420,7 @@ export function parseAgentConfig(
       return { maxBackgroundHelpers: declared };
     })(),
     // Missions it may have working at once (0.8.11): absent follows the daemon's `[missions] per_agent`, for the same
-    // reason. The owner asked for three or four, set per agent, and the setting was the box's alone.
+    // reason. One agent may need three or four, and the setting was the box's alone.
     ...(() => {
       const declared = num(raw?.missions?.per_agent, `${where} [missions] per_agent`);
       if (declared === undefined) return {};
@@ -438,7 +439,7 @@ export function parseAgentConfig(
     // `childEnvFor` (`apps/engine/src/boot/child-env.ts`) logs a warning naming the secret each time a command would have got it.
     execSecrets: execSecrets(raw?.security?.exec_secrets, `${where} [security] exec_secrets`),
     // Absent stays absent, as `approvals` does: both mean off, but only a pack that said `false` has decided — and
-    // the boot note about the socket an upgrade took away is for the packs that have not (S11).
+    // the boot note about the socket an upgrade took away is for the packs that have not.
     ...(() => {
       const declared = bool(raw?.security?.ssh_agent, `${where} [security] ssh_agent`);
       return declared === undefined ? {} : { sshAgent: declared };
@@ -539,7 +540,7 @@ function bool(value: unknown, where: string): boolean | undefined {
 }
 
 /**
- * `[security] exec_secrets`: a table binding each secret to the commands that need it (S6). A command is an argv prefix
+ * `[security] exec_secrets`: a table binding each secret to the commands that need it. A command is an argv prefix
  * written as the command line starts — `"twine upload"` — or `"*"`, and `*` beside anything else is a mistake about what
  * it means, refused here rather than read as either. The list it was until 0.7.4 — every command — 0.7.22 rewrote as
  * the table with `"*"`; 0.8.0 refuses it, naming that form.
@@ -555,7 +556,7 @@ function execSecrets(value: unknown, where: string): ExecSecret[] {
   return Object.entries(value as Record<string, unknown>).map(([name, commands], index) => {
     // Named by position: if the key is a pasted credential, no part of it goes into the message.
     secretName(name, `${where} (entry ${index + 1})`);
-    const list = strArray(commands, `${where}.${name}`).map((command) => command.trim().replace(/\s+/g, " "));
+    const list = strArray(commands, `${where}.${name}`).map((command) => oneLine(command));
     if (list.length === 0 || list.some((command) => command === "")) {
       throw new ConfigError(`${where}.${name} must name at least one command ("twine upload"), or "*" for every command`);
     }
@@ -581,7 +582,7 @@ export function parseMcpServers(value: unknown, where: string, block = "[[server
   if (!Array.isArray(value)) throw new ConfigError(`${where} ${block} must be a list`);
 
   /**
-   * Where each name was first written, so a second server of that name is refused at load (G12).
+   * Where each name was first written, so a second server of that name is refused at load.
    *
    * A server's tools are offered as `<name>__<tool>`, so two servers of one name offer tools of one name, and the
    * agent got whichever connected last — a different server's `search` on a different boot, and nothing said. The

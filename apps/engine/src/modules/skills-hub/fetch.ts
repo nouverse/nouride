@@ -42,7 +42,7 @@ export class HubError extends Error {
 }
 
 export async function hubBytes(url: string, deps: HubFetchDeps, request: HubRequest): Promise<Uint8Array> {
-  // From the addresses each hop's check judged, never from a second lookup of the name (S12).
+  // From the addresses each hop's check judged, never from a second lookup of the name.
   const doFetch = judgedFetch(deps.fetchImpl);
   const check = deps.checkUrlImpl ?? checkUrl;
   const controller = new AbortController();

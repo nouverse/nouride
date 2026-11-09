@@ -1,5 +1,5 @@
 /**
- * What a person's edit is, decided from the envelope alone (G11): whether a message is one, what a reply to it quotes,
+ * What a person's edit is, decided from the envelope alone: whether a message is one, what a reply to it quotes,
  * whether it changed anything a person can see, whether it is recent enough to answer again, and the words the agent
  * is told about it. Where the message edited is — and so what its edit does — is `edits.ts`.
  *
@@ -7,7 +7,7 @@
  * how Telegram, Discord and WhatsApp each say one happened stops in their adapters.
  */
 
-import type { MessageEnvelope } from "@nouride/shared";
+import { clip, type MessageEnvelope, oneLine } from "@nouride/shared";
 import type { TurnCause } from "@nouride/wire";
 import { EDITED } from "@/modules/turns/turns.store.ts";
 import { INBOX_FRESH_MS } from "./inbox.store.ts";
@@ -47,8 +47,7 @@ export function editCause(envelope: Pick<MessageEnvelope, "edit">): TurnCause | 
  * each as an edit with the same words; and a run of spaces or a line break is not something anybody is asking about.
  */
 export function sameWords(before: string, after: string): boolean {
-  const flat = (text: string) => text.replace(/\s+/g, " ").trim();
-  return flat(before) === flat(after);
+  return oneLine(before) === oneLine(after);
 }
 
 /**
@@ -76,8 +75,7 @@ export function reviseWaiting(waiting: MessageEnvelope, edit: MessageEnvelope): 
 
 /** What the message said before, short and on one line, for the line that frames its edit. */
 function before(was: string | undefined): string {
-  const flat = (was ?? "").replace(/\s+/g, " ").trim();
-  return flat.length > 160 ? `${flat.slice(0, 159)}…` : flat;
+  return clip(oneLine(was ?? ""), 160);
 }
 
 /**

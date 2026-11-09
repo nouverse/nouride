@@ -1,5 +1,5 @@
 /**
- * `/health` names the turn journal's lost writes (P8). A write that fails is swallowed so the turn carries on, and
+ * `/health` names the turn journal's lost writes. A write that fails is swallowed so the turn carries on, and
  * until this the only trace was one log line: a full disk turned durable turns back into the pre-0.7 kind with
  * nothing on the probe an operator watches. An issue, not a status — the daemon still answers, and restarting it
  * empties no disk.

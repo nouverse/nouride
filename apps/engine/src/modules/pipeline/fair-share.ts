@@ -1,5 +1,5 @@
 /**
- * How many of the queue's slots one conversation may hold at once (P12).
+ * How many of the queue's slots one conversation may hold at once.
  *
  * A one-to-one chat holds `max_concurrent_per_agent`: its turns write one conversation, and two at once interleave it.
  * A room's conversations are per agent, so a room runs several turns at once — and it used to be allowed all of them:

@@ -261,7 +261,7 @@ export class Pipeline {
     });
     for (const gateway of this.deps.gateways.values()) {
       /**
-       * One transaction for everything an arriving message writes before anything awaits (E7): the room's record of
+       * One transaction for everything an arriving message writes before anything awaits: the room's record of
        * it, its files, the inbox's row, and — when the queue takes it at once, as it does a quiet chat — its `placed`
        * and the turn's opening row. They were a commit each. Nothing here spans an await (`EventStore.batch` refuses).
        */
@@ -330,7 +330,7 @@ export class Pipeline {
 
   /**
    * Whether this sender is an admin by People (`senderIsAdmin`): in a room, who besides the person who asked may answer an
-   * approval — by `/approve` (the hooks) or by a press on its prompt (`tools/approval-prompts.ts`, G11).
+   * approval — by `/approve` (the hooks) or by a press on its prompt (`tools/approval-prompts.ts`).
    */
   isAdmin(who: { gatewayId: string; senderId: string }): boolean {
     return senderIsAdmin(this.deps.config.people, who, (id) => this.deps.users?.byId(id)?.role);

@@ -1,5 +1,5 @@
 /**
- * The TOOLS lines on model tiers (0.8.0, SIMPLIFY §3): the three models work an agent starts can run on, what each is
+ * The TOOLS lines on model tiers (0.8.0): the three models work an agent starts can run on, what each is
  * for, and what it costs against the others — said where `delegate` and `ask_agent` are, the tools that take `tier`.
  *
  * Said in words, never in money: Nouride does not know what a box's models cost (invariant 4). The tiers are the

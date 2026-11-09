@@ -1,5 +1,5 @@
 /**
- * What an agent and a person read about a scheduled command's quiet run (PLAN §1.1, 0.8.17): a run that prints nothing
+ * What an agent and a person read about a scheduled command's quiet run (0.8.17): a run that prints nothing
  * sends nothing, and `--then agent` wakes the agent only when the command printed something. A prompt is behaviour,
  * so the words that carry it are asserted where they are read: the schedule tool, `nouride help`, the docs, the
  * built-in skill that schedules a morning check. The homelab-ops skill said `--then agent` cost a model call on every

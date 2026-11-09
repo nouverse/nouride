@@ -27,7 +27,7 @@ const CLI_OWN = new Set(["exec", "read", "write", "edit", "multi_edit", "glob", 
 /**
  * The tools a skill can count on where a coding CLI answers: the CLI's own files, shell and web, and the agent's tools
  * Nouride lends it. Read for the copy, and by the Skills page — which counted an external agent's Nouride toolset, and
- * marked every skill needing `exec` as one it lacked (Kuro, on the live box).
+ * marked every skill needing `exec` as one it lacked (seen on a live box).
  */
 export function toolsOfCli(enabled: readonly string[]): string[] {
   return [...CLI_OWN, ...enabled.filter(lends)];

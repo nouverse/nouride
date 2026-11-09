@@ -40,7 +40,7 @@ export type { PlanStep, StepState };
  * managing the list instead of doing the work. Fifty-two documents to check are one step with a count.
  */
 const MAX_STEPS = 20;
-/** A mission's checklist runs longer — hours of work, one list (MISSIONS §4). */
+/** A mission's checklist runs longer — hours of work, one list. */
 const MAX_MISSION_STEPS = 30;
 const MAX_TEXT = 200;
 const MAX_REASON = 200;

@@ -3,8 +3,8 @@
  *
  * `GET /providers/:name/models` and the wizard's `GET /setup/models` probed with the base URL and the key alone. A
  * gateway that wants a header of its own beside the key — what `[providers.<name>] headers` is for — refused the
- * listing, and the model picker said the key was rejected while every turn through the same profile worked
- * (provider-models-headers). The gateway here is a real HTTP server that refuses exactly that.
+ * listing, and the model picker said the key was rejected while every turn through the same profile worked.
+ * The gateway here is a real HTTP server that refuses exactly that.
  */
 
 import { afterAll, afterEach, beforeAll, beforeEach, expect, test } from "bun:test";

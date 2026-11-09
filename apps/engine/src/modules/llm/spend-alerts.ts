@@ -1,5 +1,5 @@
 /**
- * What the operator hears as a day's spend nears its cap (SMART_AUTOMATION §3.3): twice a day at most — once past
+ * What the operator hears as a day's spend nears its cap: twice a day at most — once past
  * `cost_alert_threshold_pct`, once past 95% — each naming who spent it.
  *
  * The alert rode the `[alerts]` cooldown, five minutes, so past the threshold the operator heard it again every five

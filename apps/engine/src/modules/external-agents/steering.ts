@@ -1,17 +1,17 @@
 /**
- * A message for a coding CLI's turn, handed over while its prompt runs (0.8.10, RFC_MISSION_STEERING §2.2) — through
+ * A message for a coding CLI's turn, handed over while its prompt runs (0.8.10) — through
  * `_session/steering`, which claude-agent-acp and codex-acp offer. Before, a message sent while the CLI worked was its
  * next prompt, read once the running one ended: hours later, in a mission whose one prompt ran 2h42m — while the person
  * had been told "I'll read that before my next step".
  *
- * Never on top of a command (the owner, 2026-10-30): Claude's adapter moves a foreground tool call to the background
+ * Never on top of a command: Claude's adapter moves a foreground tool call to the background
  * when a steer lands on it, and a test run's result would then go unread. Held while a tool call is open,
  * `STEER_HOLD_MS` at most, then sent anyway. The CLI stops the generation it was in to read it — that is how its
  * steering works, and the prompt answers once it has answered the steer too.
  *
  * Held, too, while the line in the agent's own words is written for them (`pipeline/steer-reply.ts`, no longer than
  * `steer_reply_timeout_ms`): taken at once, the CLI read them before that line existed, the line was dropped as late,
- * and the person was left with an English "Got it" (live, Nix, 2026-10-31). Held, the line is said first and the CLI
+ * and the person was left with an English "Got it" (seen live, 2026-10-31). Held, the line is said first and the CLI
  * reads the words with it, as a model's turn does.
  *
  * What the CLI answers decides where the words went: `injected`, into this prompt; `startedNewTurn` (codex-acp, which
@@ -58,7 +58,7 @@ export class MidPrompt {
   /**
    * The last tool call open has ended: a held message looks again now rather than at its next poll. Live, Codex ran its
    * steps back to back, ten milliseconds apart; a look every half second found none of the gaps, and a question waited
-   * 82 s for a pause (Kuro, 2026-10-31).
+   * 82 s for a pause.
    */
   wake(): void {
     this.woken?.();

@@ -86,7 +86,7 @@ export interface PendingDocument {
   title: string;
   savedAt: number;
   agent: string;
-  /** Who and where, in words: "Gading, in a chat with Nouva". */
+  /** Who and where, in words: "Sam, in a chat with Nouva". */
   from: string;
   /** The web address it was read from, when it was a page. */
   source?: string;

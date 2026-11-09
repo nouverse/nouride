@@ -1,5 +1,5 @@
 /**
- * A person's edit of a message they sent (G11, `modules/pipeline/edits.ts`): where the message is decides what the edit
+ * A person's edit of a message they sent (`modules/pipeline/edits.ts`): where the message is decides what the edit
  * does. Still waiting — answered once, as corrected. Its turn running — read by that turn as a correction. Its turn
  * ended — a turn of its own, framed as an edit, only while recent. Never for an edit that changes nothing visible, never
  * as a command, and in a room only where routing says the edit is for an agent: otherwise it changes what the room

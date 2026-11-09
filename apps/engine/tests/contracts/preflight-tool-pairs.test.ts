@@ -68,7 +68,7 @@ describe("shell without the CLI tool", () => {
  * The same shape one file over, and the same live failure behind it.
  *
  * Somebody introduced themselves to `ren` on Telegram and the turn's only tool call was
- * `memory_write` with `## User — **Name:** Gading`. The pack listed `memory_write` and not
+ * `memory_write` with `## User — **Name:** Sam`. The pack listed `memory_write` and not
  * `person_record`, so the one place the name could go was the one place the identity line never
  * reads. Checked at boot rather than per turn: the fact is static, and the operator can only act on
  * it while they are looking at the terminal.

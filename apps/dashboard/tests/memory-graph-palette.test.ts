@@ -1,5 +1,5 @@
 /**
- * The memory graph's colours are the theme's (dash-practice-design-language-divergence).
+ * The memory graph's colours are the theme's.
  *
  * `palette.ts` repeated the theme's hex values, because a canvas cannot draw with `var(--…)`: the re-theme would
  * have changed every page and left the graph in the old neon. It now reads the variables off `<html>`. This runs

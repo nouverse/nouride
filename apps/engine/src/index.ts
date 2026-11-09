@@ -110,7 +110,7 @@ export async function runDaemon(): Promise<void> {
   // failure from its first relative path. `private/<id>/` is per-agent and created with the turn.
   ensureDir(join(config.daemon.workspaceDir, "shared"));
 
-  // The port, now: everything below can take a while on a Pi, and `/health` says "starting" and which step (D1).
+  // The port, now: everything below can take a while on a Pi, and `/health` says "starting" and which step.
   const progress: BootProgress = { phase: "preparing the toolchain" };
   const web = config.dashboard.enabled ? bindWebServer(config, startedAt, progress) : undefined;
 
@@ -146,7 +146,7 @@ export async function runDaemon(): Promise<void> {
     // Read on every reload rather than captured: the dashboard's global switch edits this array in
     // place and then reloads the packs, and a snapshot would leave the change waiting for a restart.
     skillsOffGlobally: () => config.skills.off,
-    // Kept in the database, so `/stop` holds through a restart (D15).
+    // Kept in the database, so `/stop` holds through a restart.
     pauses: pausedAgentsState(state),
     refuse: refusingExternalOrchestrator(config),
   });
@@ -285,7 +285,7 @@ export async function runDaemon(): Promise<void> {
   });
   const { memoryPass } = upkeep;
   // What a previous run left pending: kept when young enough to answer, expired when not — asked again, or said lost,
-  // once the gateways are up (D8, `boot/approvals-kept.ts`).
+  // once the gateways are up (`boot/approvals-kept.ts`).
   const keptApprovals = approvals.carryOver();
 
   const ctx: DaemonContext = {
@@ -376,7 +376,7 @@ export async function runDaemon(): Promise<void> {
     uptime_ms: Date.now() - startedAt,
   });
 
-  // What each agent's gateway says about its models, asked now so the first turns are budgeted by it (G2). In the
+  // What each agent's gateway says about its models, asked now so the first turns are budgeted by it. In the
   // background, after the bundled gateway is up: one that is down costs the boot nothing, and the table answers till then.
   for (const profile of new Set(registry.active().map((agent) => agent.config.llm.provider))) void providers.catalog.listing(profile);
 

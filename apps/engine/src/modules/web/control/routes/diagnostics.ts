@@ -17,7 +17,7 @@ import { helperTrouble } from "@/modules/llm/helper-trouble.ts";
 import { cachedShare, cacheWarnings, usdPerMillion } from "@/modules/llm/cache-routes.ts";
 import { INCOMPLETE, NO_SETTINGS, notSaved } from "../plain.ts";
 
-/** Days a route's cache is judged over, at least — a starting value (TOKEN_SAVINGS §3.1). */
+/** Days a route's cache is judged over, at least — a starting value. */
 const ROUTE_DAYS = 7;
 
 export function registerDiagnosticRoutes(control: ControlApp, deps: ControlDeps): void {
@@ -32,7 +32,7 @@ export function registerDiagnosticRoutes(control: ControlApp, deps: ControlDeps)
     if (!deps.usage) return c.json({ error: "usage recording is not available" }, 501);
     const days = Math.min(90, Math.max(1, Number.parseInt(c.req.query("days") ?? "1", 10) || 1));
     const from = Date.now() - days * 24 * 60 * 60 * 1000;
-    // Each route's cache over a week at least (TOKEN_SAVINGS §3.1): a day's few calls a route say little about it.
+    // Each route's cache over a week at least: a day's few calls a route say little about it.
     const routeDays = Math.max(days, ROUTE_DAYS);
     const routes = deps.usage.routes(Date.now() - routeDays * 24 * 60 * 60 * 1000);
     return c.json({
@@ -200,7 +200,7 @@ export function registerDiagnosticRoutes(control: ControlApp, deps: ControlDeps)
         activity: deps.pipeline.agentStatus(agent.config.id),
         provider: agent.config.llm.provider,
         model: agent.config.llm.model,
-        // Who answers when the model cannot, in order (§3.1) — empty for none.
+        // Who answers when the model cannot, in order — empty for none.
         fallbacks: agent.config.llm.fallbacks ?? [],
         // How long its model thinks, `[llm] effort` or `[llm.defaults] effort`, and the install's (0.8.17): the Model tab
         // chooses it, as an external agent's CLI tab does.
@@ -219,7 +219,7 @@ export function registerDiagnosticRoutes(control: ControlApp, deps: ControlDeps)
             },
           ]),
         ) as NonNullable<AgentSummary["tiers"]>,
-        // What its turns are budgeted at, and where the number comes from — `doctor` says when it is a 32k guess (G2).
+        // What its turns are budgeted at, and where the number comes from — `doctor` says when it is a 32k guess.
         contextWindow: contextWindowFor({
           model: agent.config.llm.model,
           packModel: agent.config.llm.model,

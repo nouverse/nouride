@@ -22,7 +22,7 @@ afterEach(() => {
   dir = "";
 });
 
-function clip(ref: string): AudioRefPart {
+function audioClip(ref: string): AudioRefPart {
   if (!dir) dir = mkdtempSync(join(tmpdir(), "audio-"));
   const localPath = join(dir, `${ref}.ogg`);
   writeFileSync(localPath, new Uint8Array([79, 103, 103, 83]));
@@ -38,9 +38,9 @@ const parts = (message: ChatMessage): ContentPart[] => (typeof message.content =
 describe("resolveAudio", () => {
   test("this turn's clip is sent as sound; an answered one becomes a line naming its ref", async () => {
     const history: ChatMessage[] = [
-      said("earlier", clip("old")),
+      said("earlier", audioClip("old")),
       { role: "assistant", content: "I heard you." },
-      said("now", clip("new")),
+      said("now", audioClip("new")),
     ];
     const out = await resolveAudio(history);
 
@@ -57,7 +57,7 @@ describe("resolveAudio", () => {
       { role: "user", content: "what did I say yesterday?" },
       { role: "assistant", content: "", toolCalls: [{ id: "c1", name: "attachment_read", arguments: {} }] },
       { role: "tool", content: "Opened it.", toolCallId: "c1" },
-      said("[opened]", clip("reopened")),
+      said("[opened]", audioClip("reopened")),
     ];
     const out = await resolveAudio(history);
     expect(parts(out[3]!).some((part) => part.type === "audio")).toBe(true);
@@ -72,7 +72,7 @@ describe("resolveAudio", () => {
 
   test("one request carries three clips at most — the newest — and the rest are named, not dropped", async () => {
     // Nothing tested the cap: raising it, or deleting it, left this file green.
-    const out = await resolveAudio([said("one", clip("c1")), said("two", clip("c2")), said("three", clip("c3")), said("four", clip("c4"))]);
+    const out = await resolveAudio([said("one", audioClip("c1")), said("two", audioClip("c2")), said("three", audioClip("c3")), said("four", audioClip("c4"))]);
     const sound = out.map((message) => parts(message).some((part) => part.type === "audio"));
     expect(sound).toEqual([false, true, true, true]);
     expect(parts(out[0]!).some((part) => part.type === "text" && part.text.includes("ref c1"))).toBe(true);
@@ -82,7 +82,7 @@ describe("resolveAudio", () => {
     // 20 MB of base64 per request: two 9 MB notes are 24 MB as base64, so the older one does not fit.
     // Sparse files — the size is read from the directory entry before any byte is.
     const big = (ref: string) => {
-      const part = clip(ref);
+      const part = audioClip(ref);
       truncateSync(part.localPath, 9 * 1024 * 1024);
       return part;
     };
@@ -93,7 +93,7 @@ describe("resolveAudio", () => {
   });
 
   test("withoutAudio leaves an instruction where the clip was, not a silence", () => {
-    const out = withoutAudio([said("now", clip("x"))]);
+    const out = withoutAudio([said("now", audioClip("x"))]);
     const texts = parts(out[0]!).filter((part) => part.type === "text").map((part) => (part as { text: string }).text);
     expect(texts.some((text) => text.includes("you have not heard it") && text.includes("Do not guess"))).toBe(true);
     expect(parts(out[0]!).some((part) => part.type === "audio" || part.type === "audio_ref")).toBe(false);
@@ -146,7 +146,7 @@ describe("a model that refuses a voice note", () => {
   test("the turn is answered once more without the clip, and the route is recorded", async () => {
     const { provider, seen } = refusing();
     let refused = 0;
-    const result = await run(provider, () => (refused += 1), [{ type: "text", text: "listen" }, clip("n")]);
+    const result = await run(provider, () => (refused += 1), [{ type: "text", text: "listen" }, audioClip("n")]);
 
     expect(result.text).toContain("could not listen");
     expect(refused).toBe(1);

@@ -1,5 +1,5 @@
 /**
- * A coding CLI's permission request, asked as a Nouride approval (0.8.1, EXTERNAL_AGENTS §5.1).
+ * A coding CLI's permission request, asked as a Nouride approval (0.8.1).
  *
  * The CLI asks for its own tools — its shell, its edits — through ACP; the person answers it where they answer every
  * approval, the same buttons on Telegram and Discord, the same audit, parked in a mission. The answer goes back as the

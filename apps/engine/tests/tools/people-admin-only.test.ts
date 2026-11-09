@@ -1,5 +1,5 @@
 /**
- * Who People says a person is, changed by an agent, is an admin's to answer (0.8.9, HARDENING §1, N5).
+ * Who People says a person is, changed by an agent, is an admin's to answer (0.8.9).
  *
  * A sender is an admin when the person in `[[people]]` holding their chat id also holds an admin's dashboard account
  * (`senderIsAdmin`). `nouride access approve <code> --as <key>` links the sender of a pairing code to that person, and
@@ -148,7 +148,7 @@ describe("only an admin answers it", () => {
     db.close();
   });
 
-  /** The question an agent's `nouride access approve … --as gading` puts, left waiting in Alice's DM. */
+  /** The question an agent's `nouride access approve … --as <person>` puts, left waiting in Alice's DM. */
   async function asked(): Promise<ApprovalRequest> {
     void gate
       .request({
@@ -332,14 +332,14 @@ describe("a persona change waiting across the upgrade", () => {
       await migrate(db, {}, MIGRATIONS.filter((migration) => migration.version <= 70));
       db.prepare("INSERT INTO approvals (id, agent_id, chat_id, gateway, tool, params, requested_at) VALUES ('apr_p', 'nix', 'c', 'telegram', 'persona', '{}', 1)").run();
       db.prepare("INSERT INTO approvals (id, agent_id, chat_id, gateway, tool, params, requested_at) VALUES ('apr_e', 'nix', 'c', 'telegram', 'exec', '{}', 1)").run();
-      // Asked under `access` by 0.8.8, still waiting (Nox's review, residual c) — and the same answered, and another verb.
+      // Asked under `access` by 0.8.8, still waiting — and the same answered, and another verb.
       const row = db.prepare("INSERT INTO approvals (id, agent_id, chat_id, gateway, tool, params, status, requested_at) VALUES (?, 'nix', 'c', 'telegram', 'nouride', ?, ?, 1)");
       row.run("apr_link", JSON.stringify({ args: ["access", "approve", "K7Q2MX", "--as=gading"] }), "pending");
       row.run("apr_set", JSON.stringify({ args: ["--json", "people", "set", "gading", "--name", "G"] }), "pending");
       row.run("apr_done", JSON.stringify({ args: ["people", "remove", "gading"] }), "approved");
       row.run("apr_gw", JSON.stringify({ args: ["gateway", "add", "--platform", "telegram"] }), "pending");
       row.run("apr_bad", "{not json", "pending");
-      // A program for every agent, waiting too: an admin's from 0.8.9 (Nox's review, round 2, F3).
+      // A program for every agent, waiting too: an admin's from 0.8.9.
       row.run("apr_tools", JSON.stringify({ args: ["tools", "run", "--", "npm", "i", "-g", "cowsay"] }), "pending");
       await migrate(db);
       const rows = db.prepare<{ id: string; hardline_class: string | null }>("SELECT id, hardline_class FROM approvals ORDER BY id").all();

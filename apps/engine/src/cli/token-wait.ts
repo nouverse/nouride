@@ -1,7 +1,7 @@
 /**
- * No control token yet, asked about rather than reported (`cli-no-token-while-booting`).
+ * No control token yet, asked about rather than reported.
  *
- * `/health` answers from the first second of boot (`web/server.ts`, D1), and the control token is written near its
+ * `/health` answers from the first second of boot (`web/server.ts`), and the control token is written near its
  * end, when the control plane starts — on a first start the file does not exist until then. A command run in that
  * window found no token and said to "start the daemon once": the daemon that was, at that moment, starting. So a
  * missing token is put to `/health` first. This install's daemon saying it is starting is waited for, a moment, until

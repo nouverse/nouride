@@ -1,5 +1,5 @@
 /**
- * What a minute's check finds about the missions (MISSIONS §7, §11) — one timer for all of them, started at boot:
+ * What a minute's check finds about the missions — one timer for all of them, started at boot:
  *
  * - a running mission past its hours or its tokens, while a long job holds it — or while a coding CLI's turn does: that
  *   turn stopped;
@@ -111,7 +111,7 @@ export class MissionTimers {
    */
   stopAtLimit(mission: Mission, now: number): boolean {
     const busy = this.missions.inFlight(mission);
-    // Not a turn that has just said done, ask or fail: it is ending, and stopped, what it said is lost (Nox's review). One
+    // Not a turn that has just said done, ask or fail: it is ending, and stopped, what it said is lost. One
     // that said it a while ago and works on is stopped like any other.
     const claimedAt = this.missions.claimedAt(mission.id);
     const ending = claimedAt !== null && now - claimedAt < CLAIM_GRACE_MS;

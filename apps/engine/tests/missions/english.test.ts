@@ -30,7 +30,7 @@ describe("an agent's mission is written in English", () => {
   });
 
   test("judged as working text: paths and commands in a goal are not words of another language", () => {
-    // Memory's own check counted `du` as French; a goal is working text, like a plan step (Nox, A5).
+    // Memory's own check counted `du` as French; a goal is working text, like a plan step.
     expect(startRefusal(request({ goal: "Keep du -sh /var/lib under 50G and fix the non-empty check in config.ini" }), deps)).toBeNull();
   });
 

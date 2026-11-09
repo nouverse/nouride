@@ -1,7 +1,7 @@
 /**
  * "Who does the work" (0.8.17): one block for doing it here, a helper (`delegate`), another agent (`ask_agent`) and a
  * mission, decided by whose work it is and how long it will take. The three lines it replaced, one beside each tool,
- * overlapped, and work of ten minutes was drafted as a mission (the owner, 2026-11-04). The bar between the background
+ * overlapped, and work of ten minutes was drafted as a mission. The bar between the background
  * and a mission is the hour a reply has. Each line is said only where the agent holds what it names.
  */
 

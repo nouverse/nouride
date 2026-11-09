@@ -49,7 +49,7 @@ import { loadConfig } from "@/cli/load-config.ts";
 export async function db(args: string[]): Promise<void> {
   const [action, ...rest] = bareArgs(args);
   // Bare, what the group does — said as help, as `nouride db --help` is: it is the answer to what was asked, and exit 0.
-  // It printed the same lines from a copy of its own, with nothing to say they were help (`lint-cli-exit-code-guard`).
+  // It printed the same lines from a copy of its own, with nothing to say they were help.
   if (action === undefined) return helpFor("db");
 
   const { config } = await loadConfig();

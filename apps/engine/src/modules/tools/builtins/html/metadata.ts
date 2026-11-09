@@ -36,6 +36,7 @@
  * the whole result as such, and this block sits inside that marker.
  */
 
+import { clipTrimmed } from "@nouride/shared";
 import { decodeEntities } from "@/modules/tools/builtins/html/entities.ts";
 import { contentChildren, isNoise } from "@/modules/tools/builtins/html/extract.ts";
 import { collapse, collect, findFirst, rawText, type ElementNode } from "@/modules/tools/builtins/html/parse.ts";
@@ -269,8 +270,7 @@ function pick(index: Record<string, string>, keys: string[]): string | undefined
  */
 function clean(value: string, limit: number): string {
   const flat = collapse(value.replace(/[\u0000-\u001F\u007F]/g, " ")).trim();
-  if (flat.length <= limit) return flat;
-  return `${flat.slice(0, limit).trimEnd()}…`;
+  return clipTrimmed(flat, limit, limit);
 }
 
 /**

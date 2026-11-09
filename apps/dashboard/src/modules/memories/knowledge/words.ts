@@ -1,6 +1,6 @@
 /**
  * The knowledge base in everyday words (0.8.20): who may be answered from a collection, which agents look in it, whom it
- * is about, and how each document reads. The people who use the dashboard are not technical (the owner, 2026-11-05), so
+ * is about, and how each document reads. The people who use the dashboard are not technical, so
  * a collection's settings are said as sentences, never as the values they are kept as.
  *
  * Pure.
@@ -9,7 +9,7 @@
 import type { KnowledgeDocument, KnowledgeReaders, KnowledgeSection } from "@nouride/wire";
 import { ago } from "@/commons/lib/format";
 
-/** "Gading", "Gading and Kak Sam", "Gading, Kak Sam and Raka". */
+/** "Dina", "Dina and Kak Sam", "Dina, Kak Sam and Raka". */
 export function listed(names: readonly string[]): string {
   if (names.length <= 1) return names[0] ?? "";
   return `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;

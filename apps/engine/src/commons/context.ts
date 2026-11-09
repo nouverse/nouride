@@ -31,7 +31,7 @@ export interface DaemonContext {
   agentCount: number;
   /**
    * The agent registry as `/health` reads it: how many answer, and which packs did not load — live, so a pack fixed
-   * and reloaded leaves the probe at once (`health-ok-with-agents-failed`). Absent in a context a test builds.
+   * and reloaded leaves the probe at once. Absent in a context a test builds.
    */
   readonly agents?: { active(): number; failed(): string[] };
   /** Tracks consecutive LLM failures per provider profile for health reporting. */

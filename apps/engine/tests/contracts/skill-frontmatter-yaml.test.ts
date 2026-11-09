@@ -1,7 +1,7 @@
 /**
  * Every shipped skill's frontmatter is YAML another parser reads too (0.8.12). Nouride's own reader splits each line at
  * its first colon and takes a value whole, so `description: …: …` passed here — and a strict YAML parser refused it,
- * "mapping values are not allowed in this context", for network-reach, nouclip and coding-agents: the owner saw it in
+ * "mapping values are not allowed in this context", for network-reach, nouclip and coding-agents: it showed in
  * a tool that reads skills as YAML. The rules a plain (unquoted) YAML scalar breaks are checked, with no YAML library.
  */
 

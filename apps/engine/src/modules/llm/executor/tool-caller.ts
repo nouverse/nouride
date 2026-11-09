@@ -49,7 +49,7 @@ export class ToolCaller {
   /**
    * Per turn, the tools whose results carried content from outside (`ToolResult.untrusted`), handed to every
    * later call of that turn as `ToolContext.untrustedRead` — a memory write after a fetched page is marked as
-   * one (S13). Keyed by the turn's request, so it ends with the turn.
+   * one. Keyed by the turn's request, so it ends with the turn.
    */
   private readonly untrustedRead = new WeakMap<TurnRequest, Set<string>>();
 
@@ -124,7 +124,7 @@ export class ToolCaller {
   }
 
   /**
-   * The second look (0.8.0, SMART_AUTOMATION §2.1): in work nobody watches that has read outside content, an action that
+   * The second look (0.8.0): in work nobody watches that has read outside content, an action that
    * sends something off the machine is weighed against what the work is for — by a model that sees the goal and the
    * action, never the content, so the content cannot argue with it. It may add a question, never remove one: a call the
    * gate refuses, or that a person will be asked about anyway, is left as it is.
@@ -199,7 +199,7 @@ export class ToolCaller {
     // The arguments the gate, the approval and the tool all see. See `coerceArguments`.
     call = { ...call, arguments: coerceArguments(call.arguments, tool.definition.parameters) };
 
-    // Arguments the tool can say are wrong — an MCP tool, against its server's schema (G4) — likewise before any gate:
+    // Arguments the tool can say are wrong — an MCP tool, against its server's schema — likewise before any gate:
     // asked first, a person approved a call that then failed, and was asked again for the corrected one.
     const malformed = tool.checkArguments?.(call.arguments);
     if (malformed) return { content: malformed, isError: true };
@@ -234,7 +234,7 @@ export class ToolCaller {
         ? { spoolPath: this.deps.spill.pathFor({ agentId: agent.config.id, sessionId: req.sessionId, callId: call.id }) }
         : {}),
       ...(this.deps.spill ? { resultChars: resultCharsFor(maxResultTokens) } : {}),
-      // What the prompt carried, then what the turn's tools brought (S13).
+      // Outside content: what the prompt carried, then what the turn's tools brought.
       ...untrustedFor(req.outsideContent, this.untrustedRead.get(req)),
       ...(req.unattended?.sendsTo ? { sendsTo: req.unattended.sendsTo } : {}),
       ...(req.unattended?.allowed?.length ? { allowed: req.unattended.allowed } : {}),
@@ -431,7 +431,7 @@ export class ToolCaller {
        */
       if (!this.deps.spill) return result;
       const spill = this.deps.spill;
-      // Smaller by kind first (TOKEN_SAVINGS §3.3), its whole text kept in this conversation's folder as a cleared one is.
+      // Smaller by kind first, its whole text kept in this conversation's folder as a cleared one is.
       const scope = { agentId: agent.config.id, sessionId: req.sessionId, callId: call.id };
       const byKind = compactResult(result, tool, (content) => spill.keepCleared(scope, content));
       const spilled = await spill.keep({

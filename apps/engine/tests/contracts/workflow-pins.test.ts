@@ -32,7 +32,7 @@ describe("the workflows", () => {
   });
 
   test("no workflow runs on a pull request: work is pushed to a release branch, never proposed (2026-10-29)", () => {
-    // The owner's call: no pull requests. And one back would be a fork's code run on the machine that builds and signs
+    // No pull requests: work is pushed. And one back would be a fork's code run on the machine that builds and signs
     // releases — every job here runs on it (`CI_RUNNER`) — or, routed to GitHub's runners, a run billing refuses.
     for (const [name, text] of workflows) expect({ name, pullRequest: /\n {2}pull_request(_target)?:/.test(text) }).toEqual({ name, pullRequest: false });
   });

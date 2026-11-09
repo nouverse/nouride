@@ -1,6 +1,6 @@
 /**
  * Whether a coding CLI's delete stays inside its mission's own folder (0.8.7) — the one case its permission request is
- * answered without a person. Gading's decision of 2026-10-28: a mission cleaning up after itself (`rm -rf build`, a
+ * answered without a person. The reason: a mission cleaning up after itself (`rm -rf build`, a
  * scratch file, a helper's worktree) asked every time, and the person approved dozens of deletes they could not judge
  * from a chat. Inside the folder the daemon made for the mission, nothing outlives the mission anyway.
  *

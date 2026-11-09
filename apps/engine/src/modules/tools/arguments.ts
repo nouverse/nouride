@@ -12,7 +12,7 @@
  * only for a string that parses as a JSON array. Anything else is left as sent for the tool to judge —
  * `[ -f x ]` is a shell test, not JSON, and does not parse.
  *
- * And the same slip in the other scalar shapes, since 0.7.13 holds an MCP call to its schema before it is sent (G4):
+ * And the same slip in the other scalar shapes, since 0.7.13 holds an MCP call to its schema before it is sent:
  * a number sent as its digits (`"5"` for an integer), a boolean as its word (`"true"`), an object as its JSON text. A
  * lenient server took each and went on, and refused locally each would cost the turn a round trip to fix a value
  * nobody doubts. Only where the schema declares exactly that one type, and only when the text is unambiguous — a

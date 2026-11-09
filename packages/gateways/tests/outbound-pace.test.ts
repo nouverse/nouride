@@ -1,5 +1,5 @@
 /**
- * What goes out, at the rate the platform takes it (G7) — and a token the platform refuses, given up on at once (G8).
+ * What goes out, at the rate the platform takes it — and a token the platform refuses, given up on at once.
  *
  * A twelve-part answer used to go to Telegram as fast as the API would take it: past its message-a-second limit
  * for a chat, into a 429 that was retried at once and then resent as plain text, into the same limit. And a wrong

@@ -1,6 +1,6 @@
 /**
  * What a conversation's provider counts for each token the estimator counts — learned from what the
- * provider reported, and applied wherever a limit is checked against an estimate (M8).
+ * provider reported, and applied wherever a limit is checked against an estimate.
  *
  * The estimator counts characters (`tokens.ts` in `@nouride/llm`), and some text tokenizes far denser
  * than it guesses: a pasted log of timestamps and ids came out at 2.3x the estimate on the box, so an

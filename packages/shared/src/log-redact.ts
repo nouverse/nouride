@@ -1,5 +1,5 @@
 /**
- * What a log line may not carry (D16): a value under a key named like a credential, and the parts of a string that
+ * What a log line may not carry: a value under a key named like a credential, and the parts of a string that
  * are one — an `Authorization` value, a URL's password, a parameter or a JSON field named like a key.
  *
  * Every line passes through `emit`, and from there to the journal, the log table the dashboard reads and, for an

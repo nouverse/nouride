@@ -1,5 +1,5 @@
 /**
- * `scripts/release/publish.ts` (0.8.18, REVIEW B1): what it refuses before a tag, every reason at once, and what it
+ * `scripts/release/publish.ts` (0.8.18): what it refuses before a tag, every reason at once, and what it
  * runs once nothing does. A long-term patch leaves the mains alone and is tagged `[lts]`; a quiet one `[quiet]`.
  */
 

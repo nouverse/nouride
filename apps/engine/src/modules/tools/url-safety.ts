@@ -10,7 +10,7 @@ import { fetchAt, isIP, resolveHostAddresses } from "@nouride/runtime";
  * Verified against our own code before this existed: `web_fetch` happily read a loopback service
  * and returned its body to the model.
  *
- * **DNS rebinding, closed in 0.7.9 (S12).** This file used to resolve and judge a name and then hand the URL to
+ * **DNS rebinding, closed in 0.7.9.** This file used to resolve and judge a name and then hand the URL to
  * `fetch`, which resolved it again — two answers, and a resolver answering with a TTL of 0 could give the check a
  * public address and the connection a private one. Now the check's answer is what is connected to: `fetchJudged`
  * reaches one of the addresses `checkUrl` judged, through `fetchAt`, which keeps the host's name in the `Host` header,
@@ -225,7 +225,7 @@ export function judgedFetch(double?: typeof fetch): JudgedFetch {
 }
 
 /**
- * Fetch a URL from one of the addresses its check judged — never from a second lookup of its name (S12).
+ * Fetch a URL from one of the addresses its check judged — never from a second lookup of its name.
  *
  * In the order the resolver gave them, as a connection by name would try them; the next only for a read, so a POST
  * that may have reached a server is never sent to a second one. No address means nothing was judged, and nothing is

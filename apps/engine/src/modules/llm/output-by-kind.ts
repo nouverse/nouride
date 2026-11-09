@@ -1,5 +1,5 @@
 /**
- * A tool result made smaller by what its text is, before it enters the context (TOKEN_SAVINGS §3.3, 0.8.17).
+ * A tool result made smaller by what its text is, before it enters the context (0.8.17).
  *
  * What a command prints carries bytes no model reads: a terminal's colour codes, a progress bar redrawn a hundred
  * times on one line, the same warning printed sixty times, JSON indented for a person. Each is paid for on the request

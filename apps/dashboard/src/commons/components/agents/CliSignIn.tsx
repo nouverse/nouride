@@ -30,7 +30,7 @@ export function CliSignIn(props: {
   const { what, cliName, admin, login } = props;
   const [answer, setAnswer] = useState("");
   const [sent, setSent] = useState<string | null>(null);
-  // Enter alone leaves the field as it was: a code pasted there and sent with Enter instead of Send was lost (Nox).
+  // Enter alone leaves the field as it was: a code pasted there and sent with Enter instead of Send was lost.
   const send = useMutation({ mutationFn: props.answer, onSuccess: (_, text) => { if (text) setAnswer(""); setSent(text ? "Sent" : "Sent Enter"); props.onChanged(); } });
   const stop = useMutation({ mutationFn: props.stop, onSuccess: props.onChanged });
   const signedIn = login.signedIn;

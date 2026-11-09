@@ -1,5 +1,5 @@
 /**
- * The keys marked advanced (SIMPLIFY §3, 0.8.0): rarely needed, so a power user loses nothing and nobody else has to
+ * The keys marked advanced (0.8.0): rarely needed, so a power user loses nothing and nobody else has to
  * read past them. Each still works exactly as before; what changes is where it is shown — in one appendix of the
  * docs (the site's config page, "Advanced settings"), in `nouride config explain`, and in the dashboard behind an
  * "Advanced" disclosure — and not in `config.example.toml` or on a settings page's first screen.

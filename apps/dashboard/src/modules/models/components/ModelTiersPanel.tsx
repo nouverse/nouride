@@ -1,5 +1,5 @@
 /**
- * The install's model tiers and each helper's tier (0.8.0, SIMPLIFY §3): `[llm.defaults] small_model` and
+ * The install's model tiers and each helper's tier (0.8.0): `[llm.defaults] small_model` and
  * `high_model` beside `model`, and the tier — or model — that compaction, the nightly pass, the steering reply, image
  * reading and skill learning each run on.
  *

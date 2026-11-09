@@ -1,6 +1,5 @@
 /**
- * A write to the control API or the hosted LLM gateway comes from this daemon's own pages, or from no browser at all
- * (S9).
+ * A write to the control API or the hosted LLM gateway comes from this daemon's own pages, or from no browser at all.
  *
  * Both are signed in by the dashboard's session cookie, and until 0.7.9 the only thing between another site and a
  * POST carrying it was `SameSite=Lax`: right for a cross-site form, and no help against a *same-site* one — a sibling

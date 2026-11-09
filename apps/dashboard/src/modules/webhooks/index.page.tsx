@@ -128,7 +128,7 @@ export default function WebhooksPage() {
   );
 }
 
-/** Where a hook's reply goes: its connection, and the chat as words where the daemon can name it ("DM · Gading"). */
+/** Where a hook's reply goes: its connection, and the chat as words where the daemon can name it ("DM · Sam"). */
 function replyTo(gatewayId: string, chatId: string, labelOf: (gatewayId: string, chatId: string) => string | undefined): string {
   const named = labelOf(gatewayId, chatId);
   return `${gatewayId} · ${named ? `${named} (${chatId})` : chatId}`;

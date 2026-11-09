@@ -1,5 +1,5 @@
 /**
- * The file launchd writes the daemon's output to, kept to one size (E14).
+ * The file launchd writes the daemon's output to, kept to one size.
  *
  * launchd has no journal, so the unit points stdout at `.nouride/data/nouride.log` — and nothing rotated it: a Mac
  * install's log grew for as long as the daemon ran. launchd holds the file open for appending, so it is copied aside

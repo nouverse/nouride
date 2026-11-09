@@ -127,7 +127,7 @@ export function startPeerTurn(ctx: TurnContext, request: PeerTurnRequest, option
   // is still answering, so it declines here rather than quietly running while the operator believes it
   // is stopped.
   if (ctx.deps.registry.isPaused(peer.config.id)) return refuse(`${peer.config.id} is asleep and takes no work until a person wakes it`);
-  // At work here already — its own turn, or another ask: two turns of one agent in one chat write over each other (P2).
+  // At work here already — its own turn, or another ask: two turns of one agent in one chat write over each other.
   if (ctx.isBusy(peer.config.id, request.ctx.chatId, request.ctx.gatewayId)) return refuse(busy(ctx, request, peer.config.id));
 
   const workspace = ctx.workspaceFor(peer.config.id);
@@ -230,7 +230,7 @@ export function startPeerTurn(ctx: TurnContext, request: PeerTurnRequest, option
     approvals: sayingWho(ctx.deps.approvals, () =>
       job ? `${peer.config.id}, working in the background on what ${request.from} asked (${job.id}: "${quotable(request.task)}"), wants to run this` : null,
     ),
-    // The *peer's* posture and the daemon's, and no person's (S14). Nobody is talking to the peer: its task was
+    // The *peer's* posture and the daemon's, and no person's. Nobody is talking to the peer: its task was
     // written by another agent's model, and a person's "stop asking me" was said to the agent they talk to. Read here,
     // it let that model hand work to an agent with tools the person never let run unasked — a page the caller read
     // could ask for it — and have it run unasked. The person is still the one asked, in their own chat.
@@ -273,7 +273,7 @@ export function startPeerTurn(ctx: TurnContext, request: PeerTurnRequest, option
     // Nobody can type a slash command at this turn — it is not reading the chat — so advertising them
     // would offer an escape hatch that leads nowhere.
     commands: [],
-    // The asking turn's: a peer's answer is part of what that turn cost (D2), waited on or behind it.
+    // The asking turn's: a peer's answer is part of what that turn cost, waited on or behind it.
     onUsage: (usage) =>
       meter(ctx.deps.usage, {
         agentId: usage.agentId,
@@ -310,7 +310,7 @@ export function startPeerTurn(ctx: TurnContext, request: PeerTurnRequest, option
       return outcome;
     };
     try {
-      // On the caller's lanes: it waits on this, so its slot is this one's first (P2, `lanes.ts`). One that moves to the
+      // On the caller's lanes: it waits on this, so its slot is this one's first (`lanes.ts`). One that moves to the
       // background keeps the lane it ran on until it ends — the asking turn's own, which the queue stops counting once
       // that turn is over, or one it borrowed from the ceiling, given back when it ends.
       const result = await ctx.inLane(request.ctx.turnId ?? request.ctx.sessionId, () => executor.run({

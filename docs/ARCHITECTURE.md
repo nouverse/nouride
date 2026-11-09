@@ -415,6 +415,11 @@ Nine hard rules, all enforced by `bun run lint:check`:
    their length, each with its reason, and ratchet as the budgets do. A callback handed to a call is
    its caller's. The function is read by the TypeScript parser, so a comment inside it costs nothing.
 
+   Comments are held the same way by `bun run lint:markers` (`scripts/check-markers.ts`): a comment says why, and one
+   that says instead which release a line came in, the day, who asked, or the id of a plan in a document the reader
+   has not got ages into something nobody can follow. Each file's count of those markers is recorded in
+   `scripts/comment-markers.json` and may fall, not rise.
+
 7. **No stray control characters in source.** `control-character` refuses the C0 range apart from tab
    and newline, and a bare carriage return. It is here because it happened twice in one afternoon and
    the second time it *disabled a rule while reporting success*: an edit script wrote a word-boundary

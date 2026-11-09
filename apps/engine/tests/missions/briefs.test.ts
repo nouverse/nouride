@@ -49,7 +49,7 @@ describe("the brief file a mission goal points at", () => {
     expect(briefFilesOf("Do what the brief at `/work/nix/notes/plan.md` says")).toEqual(["/work/nix/notes/plan.md"]);
     expect(briefFilesOf("Translate /home/rina/docs/panduan.md into English as /home/rina/docs/guide.md")).toEqual([]);
     expect(briefFilesOf('Read "/a/mission-brief.txt", then /a/BRIEF.md and /a/BRIEF.md again')).toEqual(["/a/mission-brief.txt", "/a/BRIEF.md"]);
-    // "brief" about length names the person's document, which is the work (Nox's review).
+    // "brief" about length names the person's document, which is the work.
     expect(briefFilesOf("Write a brief summary of /home/rina/laporan.md")).toEqual([]);
     expect(briefFilesOf("The brief at /a/plan.md, then a brief note in /a/notes.md")).toEqual(["/a/plan.md"]);
     expect(briefFilesOf("Keep it brief: translate /docs/panduan.md")).toEqual([]);
@@ -151,7 +151,7 @@ describe("a proposed job's prompt and mission", () => {
     expect((await propose({ prompt: 'Run `du -sh /var/lib` and tell Rina "disknya hampir penuh" if it is over 50G.' })).isError).toBe(false);
     expect((await propose({ mission: "The nightly backup of /srv/data is on the NAS and `restic check` passes." })).isError).toBe(false);
     expect((await propose({ text: "Selamat pagi, jangan lupa minum obat dan sarapan dulu sebelum ke kantor ya." })).isError).toBe(false);
-    // A review given with no mission is dropped with the call, so it is not judged either (Nox's review).
+    // A review given with no mission is dropped with the call, so it is not judged either.
     expect((await propose({ prompt: "Check the disks.", review: "Laporan sudah dikirim ke Rina dan Gading." })).isError).toBe(false);
     expect(store.list({ includeDisabled: true })).toHaveLength(4);
   });

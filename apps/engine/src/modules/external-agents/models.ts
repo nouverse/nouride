@@ -1,7 +1,7 @@
 /**
  * The models each external agent's CLI offered when its last session opened (0.8.1), kept by agent id: the Brain tab
  * suggests them, and the one it opened on says what the agent runs where its pack sets none. Lists showed the agent's
- * Nouride model there — its `[llm]`, which answers nothing of a CLI agent's (the owner, on the agent picker).
+ * Nouride model there — its `[llm]`, which answers nothing of a CLI agent's (seen on the agent picker).
  */
 
 import type { NewSessionResult, SessionConfigOption } from "@nouride/acp";

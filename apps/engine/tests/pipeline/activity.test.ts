@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { describeToolCall, describeToolResult, elide } from "@/commons/activity.ts";
+import { describeToolCall, describeToolResult } from "@/commons/activity.ts";
 
 describe("describeToolCall", () => {
   test.each([
@@ -59,24 +59,6 @@ describe("describeToolCall", () => {
     // And it is visibly a cut, rather than a command that happens to end there.
     expect(text).toContain("…");
     expect(text.length).toBeLessThan(200);
-  });
-});
-
-describe("elide", () => {
-  test("a line inside its budget is untouched", () => {
-    expect(elide("exec kubectl get pods -A", 140)).toBe("exec kubectl get pods -A");
-  });
-
-  test("a cut line never exceeds the budget it was given", () => {
-    // The ellipsis is part of the budget, so a cut line is never longer than one that fitted.
-    for (const max of [10, 40, 120, 140]) {
-      expect(elide("y".repeat(500), max).length).toBeLessThanOrEqual(max);
-    }
-  });
-
-  test("both ends survive", () => {
-    expect(elide(`START${"-".repeat(200)}END`, 40)).toStartWith("START");
-    expect(elide(`START${"-".repeat(200)}END`, 40)).toEndWith("END");
   });
 });
 

@@ -30,7 +30,7 @@ const RETRY_WORDS: Record<string, string> = {
 };
 
 /**
- * What `[llm] fallbacks` answers for (SMART_AUTOMATION §3.1), and how the line says it, by whether the next pair is on
+ * What `[llm] fallbacks` answers for, and how the line says it, by whether the next pair is on
  * the same profile. Another model there answers a model that cannot answer now — its retries spent — or is not served.
  * Another profile answers more: an endpoint down, out of credit or refusing its key, which another endpoint is not. A
  * refused request, a content policy or a window overflowed is not fallen back on: any model would meet the same.
@@ -198,7 +198,7 @@ export class ProviderCaller {
       }
 
       /**
-       * The model the turn is on cannot answer, and a pair further down the agent's list can (§3.1).
+       * The model the turn is on cannot answer, and a pair further down the agent's list can.
        *
        * After the provider's own retries, never instead of them: a rate limit that clears in two seconds is still
        * waited out on the model the agent was given. Through `call` again, so the fallback's request gets the same

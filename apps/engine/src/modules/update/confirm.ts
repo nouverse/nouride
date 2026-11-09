@@ -28,7 +28,7 @@ export const CONFIRM_WITHIN_MS = 10 * 60_000;
 const QUIET_PROOF_MS = 5 * 60_000;
 
 /**
- * Proof of life for a new version where no box service vouches for it (D7). It was `() => true`, so an update
+ * Proof of life for a new version where no box service vouches for it. It was `() => true`, so an update
  * confirmed itself at the first look, fifteen seconds into a boot it might not survive, and the guard's way back
  * was gone. Now: past boot; a chat gateway connected, when there are any; and a message handled since it started,
  * or five minutes up on an install that had none to handle. What a provider is doing is not asked — an outage
@@ -169,7 +169,7 @@ export function watchPendingUpdate(deps: ConfirmDeps): void {
   if (!marked) return;
 
   /**
-   * A half-written marker, read as far as it goes (`confirm-marker-half-written`). `to` is the update; `from` only says
+   * A half-written marker, read as far as it goes. `to` is the update; `from` only says
    * what it replaced. Without `to` the update is the version running — the marker exists only between a swap and the
    * new version proving itself, and the guard let this one start — so it is watched as that, and the guard's way back
    * stays. The one half marker that is plainly over: no `to`, and `from` is what runs. The update did not take.

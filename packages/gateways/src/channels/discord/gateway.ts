@@ -91,7 +91,7 @@ export interface DiscordGatewayOptions extends GatewayIdentity {
   cache?: DiscordCacheLimits;
 }
 
-/** A token Discord refused — malformed (`TokenInvalid`) or revoked (401) — rather than a network failure (G8). */
+/** A token Discord refused — malformed (`TokenInvalid`) or revoked (401) — rather than a network failure. */
 export function refusedToken(err: unknown): boolean {
   const failure = err as { code?: unknown; status?: unknown } | null;
   return failure?.code === "TokenInvalid" || failure?.status === 401 || /\b401\b|Unauthorized|Authentication failed|invalid token/i.test(String(err));
@@ -161,9 +161,9 @@ export class DiscordGateway extends BaseGateway {
   private client?: Client;
   /** Each thread's opening message, fetched once (`rooms.ts`, 0.7.24). */
   private readonly openers = new ThreadOpeners();
-  /** Discord's limit for a channel (G7): five messages in five seconds. Its client already waits out a 429 on its own. */
+  /** Discord's limit for a channel: five messages in five seconds. Its client already waits out a 429 on its own. */
   protected pacer = new Pacer({ perChat: () => ({ count: 5, perMs: 5_000 }) });
-  /** A row of buttons under a message, and a press on one an interaction — `Gateway.buttons` (G11). */
+  /** A row of buttons under a message, and a press on one an interaction — `Gateway.buttons`. */
   readonly buttons = true;
 
   constructor(private readonly options: DiscordGatewayOptions) {
@@ -191,7 +191,7 @@ export class DiscordGateway extends BaseGateway {
         GatewayIntentBits.DirectMessages,
       ],
       // DM channels arrive uncached; without this partial, DMs are dropped. Messages are never cached (below), and
-      // without theirs discord.js says nothing when one is edited — an edit is a message it holds (G11).
+      // without theirs discord.js says nothing when one is edited — an edit is a message it holds.
       partials: [Partials.Channel, Partials.Message],
       /**
        * Caches sized for what this adapter actually reads, which is almost nothing.
@@ -257,7 +257,7 @@ export class DiscordGateway extends BaseGateway {
         this.emitMessage(opener ? { ...envelope, threadOpener: opener } : envelope);
       }),
     );
-    // A person's edit of a message they sent (G11): reported as the edit it is, and the engine decides what it does.
+    // A person's edit of a message they sent: reported as the edit it is, and the engine decides what it does.
     client.on(
       Events.MessageUpdate,
       contained(this.log, "could not take in an edit", async (_before, message) => {
@@ -284,7 +284,7 @@ export class DiscordGateway extends BaseGateway {
       Events.InteractionCreate,
       contained(this.log, "could not answer an interaction", async (interaction) => {
         if (!current()) return;
-        // A press on one of our buttons (G11): the engine's answer, carried out inside the interaction's three seconds.
+        // A press on one of our buttons: the engine's answer, carried out inside the interaction's three seconds.
         if (interaction.isButton()) return await carryOut(interaction, this.answerPress(discordPress(interaction, this.id)), this.log);
         if (!interaction.isChatInputCommand()) return;
         await this.handleSlashCommand(interaction);
@@ -386,7 +386,7 @@ export class DiscordGateway extends BaseGateway {
   }
 
   /**
-   * A message we sent with buttons, settled (G11): rewritten, its components gone — or `keep` for a question still open.
+   * A message we sent with buttons, settled: rewritten, its components gone — or `keep` for a question still open.
    * Mentions parsed from nothing, as every edit of ours is — the text is ours, and an edit applies its own `allowedMentions`.
    */
   override async settleButtons(chatId: string, messageId: string, text: string, keep: readonly MessageButton[] = []): Promise<boolean> {
@@ -432,7 +432,7 @@ export class DiscordGateway extends BaseGateway {
           ...(index === 0 && msg.replyTo
             ? { reply: { messageReference: msg.replyTo, failIfNotExists: false } }
             : {}),
-          // Buttons under the last part: the one a person reads last, and the one a settled question rewrites (G11).
+          // Buttons under the last part: the one a person reads last, and the one a settled question rewrites.
           ...(msg.buttons?.length && index === textParts.length - 1 ? { components: buttonRow(msg.buttons) } : {}),
         });
         // One id per chunk: a long answer is several messages and a human can reply to any of them.
@@ -526,7 +526,7 @@ export class DiscordGateway extends BaseGateway {
 
   /**
    * Discord attachments are plain CDN URLs, so this is a GET whose body goes to the engine unread — the engine's
-   * store is the size guard, counting as it writes (G9).
+   * store is the size guard, counting as it writes.
    *
    * Still routed through the adapter rather than done in the engine: the URL came from the platform
    * and only the adapter knows that its links are directly fetchable, which is not true of every

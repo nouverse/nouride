@@ -1,6 +1,6 @@
 /**
- * The daemon's own memory, where an operator reads it: `/health` and `nouride doctor` (§8.5 of the review, the x64 half
- * of `roadmap-measurements-owed`). Nothing reported RSS before, so the footprint the docs publish could only be checked
+ * The daemon's own memory, where an operator reads it: `/health` and `nouride doctor`.
+ * Nothing reported RSS before, so the footprint the docs publish could only be checked
  * with a shell on the box.
  */
 

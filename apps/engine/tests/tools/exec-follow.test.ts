@@ -1,5 +1,5 @@
 /**
- * A follower sent to the background is refused unless the call says it is a service (`roadmap-backlog-small-items`).
+ * A follower sent to the background is refused unless the call says it is a service.
  *
  * In the background a `tail -f` never ends: it holds a job slot, its log never goes quiet for the watchdog, and an update
  * waits on it for as long as it runs. Through the tool, with the job store's spawn faked, because what matters is that

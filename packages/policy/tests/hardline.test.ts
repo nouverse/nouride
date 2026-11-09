@@ -222,7 +222,7 @@ describe("the daemon's own state", () => {
     [["python3", "-c", "import sqlite3\ncon = sqlite3.connect('/srv/nouride/.nouride/data/nouride.db')"], "database"],
     [["cat", "data/secrets.json"], "own-state"],
     [["cat", "data/.control-token"], "own-state"],
-    // A persona file is answered as the `persona` tool's change is, by an admin (C7) — the rest of a pack as before.
+    // A persona file is answered as the `persona` tool's change is, by an admin — the rest of a pack as before.
     [["cp", "-r", "/srv/nouride/.nouride/agents/nox/SOUL.md", "/tmp/x"], "persona"],
     [["sed", "-i", "s/Ask before/Skip/", "/srv/nouride/.nouride/agents/nix/SOUL.md"], "persona"],
     [["cp", "/srv/nouride/.nouride/agents/nox/skills.toml", "/tmp/x"], "own-state"],
@@ -237,7 +237,7 @@ describe("the daemon's own state", () => {
   });
 
   /**
-   * C7 (HARDENING §9): where agents run as the daemon's user, a shell reached an agent's own persona with no admin asked
+   * Where agents run as the daemon's user, a shell reached an agent's own persona with no admin asked
    * — and from its workspace, a relative path names the pack without the literal `.nouride/agents` the table matches.
    */
   test("a path from the command's folder is resolved: `../../../agents/nix/SOUL.md` from a workspace is a persona", () => {
@@ -445,7 +445,7 @@ describe("this daemon's own CLI", () => {
 
   test("this machine's packages changed as root, through nouride-pkg — on the list again (0.8.15)", () => {
     // The 0.8.0 list left it out: every new agent is `balanced`, and one installed packages as root with nobody asked —
-    // found when Nouride's image turned the package service on. The owner's answer: asked every time.
+    // found when Nouride's image turned the package service on. Now it is asked every time.
     for (const argv of [
       ["nouride", "pkg", "install", "jq"],
       ["nouride", "pkg", "remove", "jq"],

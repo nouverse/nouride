@@ -1,5 +1,5 @@
 /**
- * The database check at boot, and the marker a clean shutdown leaves so the next boot can skip it (E10).
+ * The database check at boot, and the marker a clean shutdown leaves so the next boot can skip it.
  *
  * `PRAGMA quick_check` reads every page. On the live box's 31 MB database that is a fraction of a second; on a
  * Pi with a few hundred MB on an SD card it is the longest single read boot does — and boot did it every time,

@@ -46,7 +46,7 @@ export function secureCookies(c: Context): boolean {
 
 export function controlGuard(deps: ControlDeps): MiddlewareHandler<{ Variables: { principal: Principal } }> {
   return async (c, next) => {
-    // Before anything else, the public routes included: a sign-in posted from another site is a login CSRF (S9).
+    // Before anything else, the public routes included: a sign-in posted from another site is a login CSRF.
     const crossSite = crossSiteWrite(c.req.raw);
     if (crossSite) {
       return c.json({ error: "forbidden", note: crossSite, plain: "Nouride turned this down: it came from another website. Open the dashboard at its own address, and try again." }, 403);

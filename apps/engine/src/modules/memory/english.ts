@@ -115,7 +115,7 @@ function delimiterRow(line: string): boolean {
  * `text` with its data blanked: a fenced code block, fences and all, and a markdown table — its header, its delimiter row
  * and the rows under it. A brief carries data in whatever language its work is about, the strings of a translation or a
  * log, and that is no more the brief's language than a quoted term is: an English brief with a table of Indonesian UI
- * strings was refused (D5). A block left open runs to the end, as markdown renders it. A line with no pipe ends a table,
+ * strings was refused. A block left open runs to the end, as markdown renders it. A line with no pipe ends a table,
  * where GFM would take it as one more row: it is a sentence written under the table, and it is judged.
  */
 function withoutData(text: string): string {

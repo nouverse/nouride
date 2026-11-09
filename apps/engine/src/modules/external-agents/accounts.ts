@@ -86,7 +86,7 @@ export class CliAccounts {
   /**
    * An account no agent uses, and its token with it — `tokenRemoved` says whether one was kept to remove, and
    * `tokenError` why it stayed: the account is off the list by then, so a store that failed is said, not thrown past the
-   * audit row (Nox's review, N5 — the account that vanished with its secret kept). Refused, `users` names the agents that
+   * audit row (an account once vanished with its secret still kept). Refused, `users` names the agents that
    * use it, for the dashboard's words at its route (0.8.20).
    */
   async remove(cli: string, name: string, agents: readonly LoadedAgent[]): Promise<{ ok: true; tokenRemoved: boolean; tokenError?: string } | { ok: false; error: string; users: string[] }> {

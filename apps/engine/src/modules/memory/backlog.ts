@@ -1,5 +1,5 @@
 /**
- * Whether the nightly pass keeps up (M4) — `docs/SPEC.md` §12.2.
+ * Whether the nightly pass keeps up — `docs/SPEC.md` §12.2.
  *
  * The pass files at most `pass_per_night` conversations per agent a night (`passQueue`), and the rest wait. An agent
  * whose conversations bring more than that a day falls further behind every night, and that was said only as a count

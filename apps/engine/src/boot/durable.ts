@@ -165,11 +165,11 @@ export function resumeAfterBoot(input: {
   turns: Pick<TurnsPort, "get" | "interruptedSince" | "startedFor">;
   notifier: Pick<Notifier, "toChat">;
   chatEvents: Pick<ChatEventsPort, "record">;
-  /** The approvals a turn taken up was cut off waiting on, which the restart kept (D8) — said in the words that take it up. */
+  /** The approvals a turn taken up was cut off waiting on, which the restart kept — said in the words that take it up. */
   keptFor?: (turn: TurnRecord) => ApprovalRequest[];
 }): Promise<void> {
   const warn = (what: string) => (err: unknown) => log.warn(`could not ${what}`, { error: String(err) });
-  // Chosen first, so a turn taken up again is not also told it is gone and to send it again (P6). Taken up below,
+  // Chosen first, so a turn taken up again is not also told it is gone and to send it again. Taken up below,
   // after the inbox.
   // A mission's conversation is the mission's to take up — from its page, with what was cut off (`modules/missions/`).
   const resuming = turnsToResume({ recovered: input.recovered, turns: input.turns, now: Date.now() }).filter((turn) => !isMissionChat(turn));

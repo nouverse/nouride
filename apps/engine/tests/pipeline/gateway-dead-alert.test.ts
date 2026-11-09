@@ -1,5 +1,5 @@
 /**
- * What the operator is told when a gateway gives up (G8): a refused token says so, and what to do about it — not
+ * What the operator is told when a gateway gives up: a refused token says so, and what to do about it — not
  * "gave up reconnecting", which sends somebody to look at the network.
  */
 

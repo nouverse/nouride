@@ -1,6 +1,6 @@
 /**
  * A tab older than the build the daemon serves (`commons/lib/new-build.ts`): its chunks are gone after an upgrade, and
- * nothing reloaded it — the memory graph failed to load until someone pressed F5.
+ * nothing reloaded it — the memory graph failed to load until someone reloaded the tab by hand.
  */
 
 import { describe, expect, test } from "bun:test";

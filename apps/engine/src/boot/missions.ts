@@ -73,14 +73,14 @@ export function agentCommand(workspaceDir: string, agentId: string): AsAgent {
 
 /**
  * How much of a brief file is read for its English check: a brief is a page or two, not a dataset. Kept small because
- * the check runs on the daemon's event loop, and its quote matching slows with what it is given (Nox's review, 0.8.8).
+ * the check runs on the daemon's event loop, and its quote matching slows with what it is given (0.8.8).
  */
 const BRIEF_READ_MAX = 64 * 1024;
 
 /**
  * A brief file a goal points at, as the daemon reads it — null where it is not a plain file of at most the cap, or
  * cannot be read. Through `readPlainTextFile`: a path an agent names, read on the daemon's own event loop, and a FIFO or
- * `/dev/zero` there stopped every agent and gateway (Nox's review, 0.8.8).
+ * `/dev/zero` there stopped every agent and gateway (0.8.8).
  */
 export function readBrief(path: string): string | null {
   try {
@@ -110,7 +110,7 @@ interface MissionsLate {
   /** Words into an agent's turn at work in a chat, and how they reach it (`Pipeline.steerInto`, `steerReach`). */
   steerInto: (agentId: string, chatId: string, gatewayId: string, envelope: MessageEnvelope) => "taken" | "full" | "ending" | "none";
   steerReach: (agentId: string) => "next_step" | "into_cli" | "after_prompt";
-  /** An admin by People (S8) — who besides a mission's starter may tell it something through an agent. */
+  /** An admin by People — who besides a mission's starter may tell it something through an agent. */
   isAdmin: (who: { gatewayId: string; senderId: string }) => boolean;
   /** `exec`, for the checks and the folder — the agents' own command path. */
   exec: () => Tool | undefined;
@@ -139,7 +139,7 @@ export function buildMissions(params: {
   memory?: Pick<Memory, "saveConversation">;
   /** What a person allowed a job's runs to send without asking again (`Job.allowed`). */
   jobAllowed?: (jobId: string) => readonly string[];
-  /** Whether the agents' commands have room for a coding CLI's session — a worktree's work needs as much (§8). */
+  /** Whether the agents' commands have room for a coding CLI's session — a worktree's work needs as much. */
   roomForCli?: () => boolean;
   /** A conversation's coding-CLI session let go (`ExternalAgents.forgetSession`). */
   forgetCliSession?: (agentId: string, gatewayId: string, chatId: string) => void;
@@ -277,7 +277,7 @@ export function buildMissions(params: {
       const own = ownFolderOf(privateWorkspace(params.config().daemon.workspaceDir, mission.agentId), mission.id);
       const made = await run(["mkdir", "-p", own]);
       if (!made.ok) throw new Error(made.out);
-      // In a repository, and where the machine can hold it, a worktree of its own (§8); else the folder it was given.
+      // In a repository, and where the machine can hold it, a worktree of its own; else the folder it was given.
       const moved = await makeWorktree({
         mission,
         own,
@@ -314,7 +314,7 @@ export function buildMissions(params: {
       if ((!inOwnFolder(mission.workdir, own) && mission.startedAt !== null) || !params.registry.get(mission.agentId)) return [];
       return await removeOwnFolder(own, asTheAgent(mission.agentId), how);
     },
-    // Where missions work — the workspace's disk — against the daemon's own disk warning, a starting value (§7).
+    // Where missions work — the workspace's disk — against the daemon's own disk warning, a starting value.
     diskLow: () => {
       const free = freeDiskBytes(params.config().daemon.workspaceDir);
       const freeMb = free === null ? null : Math.round(free / (1024 * 1024));
@@ -399,7 +399,7 @@ export function buildMissions(params: {
   params.registry.onWoke((agentId) => missions.woke(agentId));
 
   /**
-   * A worktree for a helper of the mission this turn is (`delegate` `isolated`, MISSIONS §8) — only where the mission
+   * A worktree for a helper of the mission this turn is (`delegate` `isolated`) — only where the mission
    * works in one of its own; refused, saying so, anywhere else.
    */
   const isolateHelper = async (ctx: ToolContext): Promise<{ path: string; branch: string } | { refused: string }> => {

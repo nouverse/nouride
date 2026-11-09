@@ -81,7 +81,7 @@ async function quotedContext(message: Message): Promise<QuotedContext> {
  * is the one they were talking about; the rest are usually citations.
  *
  * **The channel name travels with the author**, because a link is the one case where the quoted
- * message is somewhere else. `[Gading in #memory-monitoring]` tells the agent both who said it and
+ * message is somewhere else. `[Sam in #memory-monitoring]` tells the agent both who said it and
  * where the conversation lives — and where it lives is what decides whether this is its own business
  * or something to ask another agent about. Without it the quote reads as though it happened here.
  *

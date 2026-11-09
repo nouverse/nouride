@@ -6,7 +6,7 @@
  * It was advice. The identity section of the prompt has told agents for a while to run
  * `nouride people set <id> --name <name>`, and it says plainly that memory is not a substitute. On
  * 2026-09-02 somebody introduced themselves to `ren` on Telegram and the audit log shows exactly one
- * call: `memory_write` with `## User\n\n- **Name:** Gading`. The agent had the `nouride` tool. It
+ * call: `memory_write` with `## User\n\n- **Name:** Sam`. The agent had the `nouride` tool. It
  * had read the sentence. It reached for the typed tool sitting in its list instead.
  *
  * That is not the model being careless, it is the shape of the choice. `memory_write` is one
@@ -17,7 +17,7 @@
  *
  * ## Why it is not memory
  *
- * `[[people]]` is what the *harness* reads to open a turn with "You are talking to Gading". Memory is
+ * `[[people]]` is what the *harness* reads to open a turn with "You are talking to Sam". Memory is
  * never consulted for that, so a name written there leaves the next conversation still saying "I do
  * not know who you are" — which is what was actually observed. And `MEMORY.md` lives in a persona
  * pack that is usually a git repository: a household's platform ids do not belong in one.
@@ -29,12 +29,12 @@
  * Stopping a turn to ask before writing down a name somebody just volunteered would make the agent
  * hesitate to do the one thing this exists to make automatic.
  *
- * Except after outside content (S13): the name and the note open every later turn with that person,
+ * Except after outside content: the name and the note open every later turn with that person,
  * so in a turn that read a page, a forwarded message or a webhook's payload first, a person says yes
  * before they are written (`Tool.keepsInPrompt`) — unless the approval level is `trusted`.
  */
 
-import { createLogger, type Person, type Tool, type ToolResult } from "@nouride/shared";
+import { createLogger, oneLine, type Person, type Tool, type ToolResult } from "@nouride/shared";
 import { savePerson, updatePersonNotes, type PeopleWriteDeps } from "@/modules/config/settings/people.ts";
 import { canonicalPersonId, idFormsFor, idsOf } from "@/modules/people/match.ts";
 import { editNotes, type NotesChange, type NotesEdit } from "@/modules/people/notes.ts";
@@ -72,7 +72,7 @@ function senderId(ctx: { gatewayId: string; senderId: string }): string {
 export function createPersonRecordTool(options: PeopleToolOptions): Tool {
   return {
     requiresApproval: false,
-    // The name and note open every turn with them: written after outside content, a person says yes first (S13).
+    // The name and note open every turn with them: written after outside content, a person says yes first.
     keepsInPrompt: true,
     definition: {
       name: "person_record",
@@ -133,7 +133,7 @@ export function createPersonRecordTool(options: PeopleToolOptions): Tool {
         );
       }
 
-      const note = typeof args.note === "string" ? args.note.replace(/\s+/g, " ").trim() : "";
+      const note = typeof args.note === "string" ? oneLine(args.note) : "";
 
       /**
        * Notes somebody already has are a page, and a note from here never replaces them.
@@ -209,7 +209,7 @@ export function createPersonRecordTool(options: PeopleToolOptions): Tool {
 export function createPersonNotesTool(options: PeopleToolOptions): Tool {
   return {
     requiresApproval: false,
-    // Said to the agent on every turn with them: changed after outside content, a person says yes first (S13). Read freely.
+    // Said to the agent on every turn with them: changed after outside content, a person says yes first. Read freely.
     keepsInPrompt: (args) => args.change !== undefined,
     definition: {
       name: "person_notes",

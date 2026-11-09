@@ -5,7 +5,7 @@
  * `nouride update` and the Box's own updates replace the binary and never the unit, which only `install.sh` and
  * the Box flasher write. So a unit kept whatever it was installed with: a guard whose restore list lacked `frontend/` on
  * every box flashed before 2026-10-15, and none of the directives later releases add. `nouride doctor` noticed one of
- * them — a `KillMode` regex — and nothing noticed the rest (`config-ops-unit-never-refreshed-by-update`).
+ * them — a `KillMode` regex — and nothing noticed the rest.
  *
  * The expected unit is written with the installed one's own measurements — its user, directory, command, memory
  * ceiling, `/tmp` size and environment — so only what the template changed is a difference, not the machine.
@@ -90,7 +90,7 @@ export function installedUnitParams(text: string, systemdVersion?: number): Unit
 }
 
 /**
- * The sizes a unit was written with that this machine no longer has (D17): `MemoryHigh` and `/tmp`'s tmpfs are measured
+ * The sizes a unit was written with that this machine no longer has: `MemoryHigh` and `/tmp`'s tmpfs are measured
  * from its memory when the unit is written, and the comparison above carries them over on purpose — so a container
  * given more memory, or less, kept the ceiling it was installed with, and nothing said so. Off by more than a quarter
  * is said; closer is the same machine measured twice. Pure.

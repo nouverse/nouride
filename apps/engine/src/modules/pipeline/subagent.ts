@@ -76,7 +76,7 @@ export async function runSubagent(ctx: TurnContext, request: SubagentRequest): P
   // Run long, it is told to stop and report if stuck (`budget-nudges.ts`). The parent waits on it in a turn of its own.
   const nudges = watchTurn(nudgeBaseMs(ctx.deps.config.agents.nudgeAfterMinutes), delegateNote);
   try {
-    // On the parent's lanes: inside the ceiling, and never stuck waiting on it (P2, `lanes.ts`).
+    // On the parent's lanes: inside the ceiling, and never stuck waiting on it (`lanes.ts`).
     const result = await ctx.inLane(request.ctx.turnId ?? request.ctx.sessionId, () =>
       executor.run({
         ...helperTurn(ctx, blank, request, sessionId),
@@ -120,9 +120,10 @@ export function helperAgent(parent: LoadedAgent, mode: { budget: number; backgro
  *
  * `delegate` is removed, which keeps the tree one level deep — recursion would be an unbounded fan-out of provider calls
  * started by a model. `send_file` and `send_message` are removed: a file posted into the chat, or a message into another,
- * is the parent speaking, and what reaches anybody is the parent's call, from the handoff. And it writes no memory, by the mark S13 holds such a write at
- * (`writesWhatPromptsRead`): the tools that only write are not offered, and a write through one that also reads — a
- * change to a person's notes — is refused at the gate. The parent decides what is kept.
+ * is the parent speaking, and what reaches anybody is the parent's call, from the handoff. And it writes no memory, by
+ * the same test that holds such a write after outside content (`writesWhatPromptsRead`): the tools that only write are
+ * not offered, and a write through one that also reads — a change to a person's notes — is refused at the gate. The
+ * parent decides what is kept.
  */
 function helperToolset(toolset: AgentToolset, mode: { background: boolean }): AgentToolset {
   const withheld = (name: string): boolean => WITHHELD.has(name) || toolset.get(name)?.keepsInPrompt === true;
@@ -218,7 +219,7 @@ export function helperExecutor(
   run: Pick<ExecutorDeps, "onActivity"> & Partial<Pick<ExecutorDeps, "approvals" | "onRequest">>,
 ): TurnExecutor {
   /**
-   * The parent's level, resolved the way the parent's is (P5). With none the executor read `careful`: a person on
+   * The parent's level, resolved the way the parent's is. With none the executor read `careful`: a person on
    * `balanced` was asked again for every write a helper made, about work they had already let the turn do. In work nobody
    * watches, the level that turn runs at (0.8.1): a job's run is held below its agent's own, and its helper was not.
    */
@@ -263,7 +264,7 @@ export function helperExecutor(
     changesSharedTools: (agentId: string) => changesSharedTools(ctx.deps.config, ctx.deps.registry.get(agentId)),
     ...(ctx.deps.projectSkills ? { projectSkills: (a: LoadedAgent) => ctx.deps.projectSkills!.forAgent(a) } : {}),
     commands: [],
-    // The turn that started it: a helper's calls are part of what that turn cost (D2), in the foreground and behind it.
+    // The turn that started it: a helper's calls are part of what that turn cost, in the foreground and behind it.
     onUsage: (usage) =>
       meter(ctx.deps.usage, {
         agentId: usage.agentId,
@@ -352,7 +353,7 @@ export function helperTurn(
 }
 
 /**
- * The parent's clock, less the reserve the parent needs to answer with what the helper found (P5).
+ * The parent's clock, less the reserve the parent needs to answer with what the helper found.
  *
  * With no deadline a helper never wrapped up: it ran until the parent's abort cut it off, and handed back
  * `incomplete` with no summary. With the parent's own, it would wrap up into the very reserve the parent keeps for

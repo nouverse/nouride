@@ -1,5 +1,5 @@
 /**
- * The Knowledge tab, mounted (0.8.20, KNOWLEDGE_BASE §11): the menu's first tab, over the engine's own answers
+ * The Knowledge tab, mounted (0.8.20): the menu's first tab, over the engine's own answers
  * (`fixtures/wire.json`): a card per collection in sentences, a collection made by an operator for themselves and by an
  * admin for more, files dropped and shown as being read, a document that could not be read with why and the Ask button,
  * a document opened with its sections and its related ones, search on a button, what waits for an admin's yes, archive
@@ -96,7 +96,7 @@ describe("the Knowledge tab", () => {
     answer({ "/people/me": ok({ person: { key: "gading", name: "Gading" } }) });
     await renderPage("/memories", async () => {
       await shows("Old notes");
-      // The menu's name since the documents joined memory there (the owner, 2026-11-03), and the page's.
+      // The menu's name since the documents joined memory there, and the page's.
       expect([...body().querySelectorAll('a[href="/dashboard/memories"]')].map((link) => link.textContent?.trim())).toContain("Knowledge & Memory");
       expect(body().querySelector("h1")?.textContent).toBe("Knowledge & Memory");
       expect(body().querySelector('[role="tab"][aria-selected="true"]')?.textContent).toBe("Knowledge");
@@ -250,7 +250,7 @@ describe("documents", () => {
     });
   });
 
-  // A file just dropped landed where its name sorted, and nothing said which one was new (the owner, 2026-11-08).
+  // A file just dropped landed where its name sorted, and nothing said which one was new.
   test("newest first, each saying when it was added", async () => {
     const [porch, router, wifi] = HOUSE.documents as Record<string, unknown>[];
     const now = Date.now();

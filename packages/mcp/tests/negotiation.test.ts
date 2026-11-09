@@ -1,5 +1,5 @@
 /**
- * The handshake against real servers — a child process over stdio, a socket over Streamable HTTP (G4).
+ * The handshake against real servers — a child process over stdio, a socket over Streamable HTTP.
  *
  * The client asks for MCP 2025-06-18. A server that answers 2025-03-26 or 2024-11-05 is spoken to in that version; one
  * that answers anything else is refused, by name and with both versions, and let go. Until 0.7.13 it asked for

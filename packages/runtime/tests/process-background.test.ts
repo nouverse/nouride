@@ -1,5 +1,5 @@
 /**
- * Stopping a background job, and everything it started (P3/S5, 2026-10-15).
+ * Stopping a background job, and everything it started (2026-10-15).
  *
  * `kill` used to be one SIGTERM to the direct child. `nouride jobs kill` on `sh -c "npm run dev"` then
  * stopped `sh` and left `node` running with the pipes open, so the pump never saw EOF and the row said

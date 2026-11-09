@@ -1,5 +1,5 @@
 /**
- * What a save from the CLI says it did: applied, or saved and waiting for a restart (config-restart-ux).
+ * What a save from the CLI says it did: applied, or saved and waiting for a restart.
  *
  * Each command that writes a setting used to word this its own way — `gateway add` warned that nothing was connected
  * yet, `mcp add` said it was connecting, `access mode` said "no restart", and the rest said nothing — so a person, or

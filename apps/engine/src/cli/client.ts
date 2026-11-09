@@ -83,7 +83,7 @@ async function probeInstall(baseUrl: string): Promise<{ reached: boolean; instal
 }
 
 /**
- * How to start the daemon on this machine, for when it cannot be reached (D11).
+ * How to start the daemon on this machine, for when it cannot be reached.
  *
  * The hint was always "`nouride start`", which on a box where the install made it a service starts a second,
  * unsupervised copy beside the one systemd is restarting — the wrong advice exactly where most installs live.

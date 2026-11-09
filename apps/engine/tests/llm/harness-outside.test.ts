@@ -1,5 +1,5 @@
 /**
- * What the agent is told before a memory write waits for a person, after outside content (S13).
+ * What the agent is told before a memory write waits for a person, after outside content.
  *
  * The gate's reason and the tool result said it, but only once the call was made — and an agent that did not expect the
  * pause retried it, or apologised, instead of telling the person what it wanted to keep. So the harness says it first,

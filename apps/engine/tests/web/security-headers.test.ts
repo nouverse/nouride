@@ -65,7 +65,7 @@ describe("what the dashboard may load", () => {
 });
 
 /**
- * The gateway's dashboard, under a policy of its own (S9): another product's frontend, on this origin with this
+ * The gateway's dashboard, under a policy of its own: another product's frontend, on this origin with this
  * session, allowed what its bundle loads and nothing the dashboard happens to need. Checked in headless Chrome
  * against every gateway page, framed and in its own tab, with no violation in the console.
  */

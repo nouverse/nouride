@@ -6,7 +6,7 @@
 import { control, post, request } from "./api.client";
 import type { AgentCli, CliAccountsView, CliLoginView, CliPreset, CliProfile, CliRoom, ScannedCli } from "@nouride/wire";
 
-/** A coding CLI as it is listed: who makes it, then its name — "Anthropic: Claude Code" (the owner, 0.8.1). */
+/** A coding CLI as it is listed: who makes it, then its name — "Anthropic: Claude Code" (0.8.1). */
 export const cliLabel = (cli: { name: string; maker?: string }): string => (cli.maker ? `${cli.maker}: ${cli.name}` : cli.name);
 
 const account = (cli: string, name: string) => `${control}/cli-accounts/${encodeURIComponent(cli)}/${encodeURIComponent(name)}`;

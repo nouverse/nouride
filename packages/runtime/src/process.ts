@@ -479,7 +479,7 @@ function findChoom(): string | null {
 }
 
 /**
- * How much likelier than the daemon a spawned command is to be what the kernel kills when memory runs out (E8).
+ * How much likelier than the daemon a spawned command is to be what the kernel kills when memory runs out.
  *
  * 500 is half of the machine's memory added to the command's score. The daemon is left at what its unit gives it:
  * made unkillable, it would see NetworkManager and sshd killed before itself on a Box where it is the one leaking.

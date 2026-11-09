@@ -1,6 +1,6 @@
 /**
  * An approval's edit in the terminal (`renderPreview`): a line taken out red, put in green — and a kept line a persona
- * change shows (0.8.13, N25), what a reworded rule now covers, dim: green read it as put in.
+ * change shows (0.8.13), what a reworded rule now covers, dim: green read it as put in.
  */
 
 import { expect, test } from "bun:test";

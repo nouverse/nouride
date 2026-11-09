@@ -1,5 +1,5 @@
 /**
- * `tier`, on the tools that start work (0.8.0, SIMPLIFY §3): which of three models the work runs on — `small`, `default`
+ * `tier`, on the tools that start work (0.8.0): which of three models the work runs on — `small`, `default`
  * or `high` (`types/tiers.ts`). `delegate` picks among the agent's own; `ask_agent` among the asked agent's. What each
  * is for, and what it costs against the others, is said once in TOOLS (`llm/prompt/harness-tiers.ts`) — a schema is
  * re-sent with every request, and the words that choose a tier belong beside the rest of what the agent is told.

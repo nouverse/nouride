@@ -105,7 +105,7 @@ export function renderFiles({ ctx, toolNames }: HarnessView): string[] {
         : []),
       ...(harness.execSecrets?.length
         ? [
-            // Each with the commands it reaches (S6): told only the name, an agent tries `echo $PYPI_TOKEN`, finds it
+            // Each with the commands it reaches: told only the name, an agent tries `echo $PYPI_TOKEN`, finds it
             // empty, and concludes the secret is missing.
             `- These credentials reach your commands as environment variables: ${harness.execSecrets
               .map((secret) => {

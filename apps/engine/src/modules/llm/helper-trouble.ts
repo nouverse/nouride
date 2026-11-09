@@ -8,9 +8,9 @@
  * count of its own: a restart keeps what the day did, and there is no second table to sweep.
  */
 
-import { isModelTier, type GlobalConfig, type InstallTiers } from "@nouride/shared";
+import { clip, isModelTier, type GlobalConfig, type InstallTiers, oneLine } from "@nouride/shared";
 import type { LogsPort, StoredLog } from "@/commons/logs.store.ts";
-import { HELPER_ANSWERED, shorten } from "./helper-model.ts";
+import { HELPER_ANSWERED } from "./helper-model.ts";
 import type { HelperJob } from "@nouride/wire";
 
 /** What `summarize.ts` says when a summary did not come back — the fallback's too, when it had one. */
@@ -138,7 +138,7 @@ function describe(job: Job, line: StoredLog, count: number, config: Settings): H
     fallback: { issue: `helper model ${model} could not answer in the last 24 h, so the agents' own model stood in`, summary: `helper model ${model} could not answer in ${count} hour(s) of the last 24, so the agents' own model stood in` },
   }[job];
   // `String(err)` leads with the class name; the provider's words are what is worth the room.
-  const last = shorten(text(job === "fallback" ? "reason" : "error").replace(/^LLMError: /, ""), 240);
+  const last = clip(oneLine(text(job === "fallback" ? "reason" : "error").replace(/^LLMError: /, "")), 240);
   return { job, count, model, last, at: line.ts, fix, issue: `${said.issue}; ${fix}`, summary: said.summary };
 }
 

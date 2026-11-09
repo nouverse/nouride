@@ -1,5 +1,5 @@
 /**
- * System Logs on a phone (0.8.12). The owner's iPhone: each daemon log row was a desktop row squeezed — the message a
+ * System Logs on a phone (0.8.12). On an iPhone each daemon log row was a desktop row squeezed — the message a
  * column three letters wide ("poll / ing / sta / rte") beside a fixed-width time and the component — and the audit
  * trail a five-column table scrolling sideways inside its card. On a phone a log row is a block: the time and the
  * component on its first line, the message the whole width under them; an audit row the same. From `sm` up both are as

@@ -67,7 +67,7 @@ describe("the answer, arrived", () => {
   });
 
   test("in a mission's turn, the answer goes into the work and its report — nobody reads the reply", () => {
-    // A15 (Nox's review of msn_8cfcf6): "Pass THIS answer on to the person now" reached a mission's turn, whose reply
+    // "Pass THIS answer on to the person now" reached a mission's turn, whose reply
     // nobody reads, so the answer went nowhere.
     const text = wake({ job: asked({ gatewayId: "web:mission", chatId: "msn_1" }), tail: "" });
     expect(text).toContain("This turn is the mission's: nobody reads its reply. Use nox's answer in the work.");

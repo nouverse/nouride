@@ -65,7 +65,7 @@ export function startSnapshots(input: {
     startKnowledgeBackups(config),
     ...startConfigBackups(config, input.configPath, () => input.secrets.sealedCopyText()),
   ];
-  // launchd has no journal: its log is a file, kept to one size here (E14).
+  // launchd has no journal: its log is a file, kept to one size here.
   const logFileTimers = input.supervisor.kind === "launchd" ? [startLogFileRotation(join(process.cwd(), LAUNCHD_LOG_FILE))] : [];
   return [backupTimer, ...dbBackupTimers, ...logFileTimers];
 }

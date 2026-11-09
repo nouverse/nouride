@@ -1,7 +1,7 @@
 /**
- * Keys 0.8.0 took out of `config.toml` (SIMPLIFY RFC §1, §3), and what a file that still writes one gets.
+ * Keys 0.8.0 took out of `config.toml`, and what a file that still writes one gets.
  *
- * Two answers, and the rule that picks between them is the RFC's: a removed key whose absence would *loosen* what the
+ * Two answers, and one rule picks between them: a removed key whose absence would *loosen* what the
  * daemon does is refused at boot, naming the fix (`LOOSER`); one whose absence keeps or tightens it is ignored, with a
  * warning naming the key and what took its place. Never translated: 0.8.0 reads no old form.
  *

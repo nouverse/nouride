@@ -1,5 +1,5 @@
 /**
- * The Overview's warnings: the daemon's own issues, and each pack that did not load (`health-ok-with-agents-failed`).
+ * The Overview's warnings: the daemon's own issues, and each pack that did not load.
  *
  * A daemon whose one pack had failed showed "System Healthy" and nothing else: `/health` stays `ok` over a failed pack,
  * on purpose, so the page is where it has to be said.

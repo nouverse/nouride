@@ -158,7 +158,7 @@ function withoutSourcesIn(text: string, sources: ReadonlySet<string>): string {
 }
 
 /**
- * How much the transcript archive holds — §4.3, shown beside the archive switch. Nothing reads the
+ * How much the transcript archive holds, shown beside the archive switch. Nothing reads the
  * archive but a person re-filing, so without this it only ever grew out of sight.
  */
 export function archiveSize(vault: Pick<Vault, "archiveDir">): { files: number; bytes: number } {

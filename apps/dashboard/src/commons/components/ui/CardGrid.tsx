@@ -1,6 +1,6 @@
 /**
  * Cards side by side: one across on a phone, two on a tablet, three on a wide screen. The Knowledge tab's collections and
- * the Missions list use this one grid and `CARD` for each card's frame (0.8.20: the owner asked for missions laid out as
+ * the Missions list use this one grid and `CARD` for each card's frame (0.8.20: missions are laid out as
  * the collections are), so the two pages cannot drift apart.
  */
 

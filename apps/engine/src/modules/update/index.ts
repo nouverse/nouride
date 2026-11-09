@@ -49,7 +49,7 @@ export function setReleaseSource(source: import("nouride-update").ReleaseSource 
 }
 
 /**
- * Which releases this install follows, `[update] track` (0.8.18, PLAN §3.3), read at each check so a save on the
+ * Which releases this install follows, `[update] track` (0.8.18), read at each check so a save on the
  * dashboard counts at the next one. `latest` until boot hands over the running config.
  */
 let trackOf: () => import("nouride-update").UpdateTrack = () => "latest";
@@ -294,7 +294,7 @@ export async function installStagedDownload(deps: StagedInstallDeps): Promise<{ 
   });
   log.info("update installed", { replaced: report.replaced, sha256: report.sha256, backup: report.backupDir });
   // What was kept, by whom and when, so `nouride update --rollback` can name it, tell it is the build before this
-  // one, and find the snapshot this update takes (D7).
+  // one, and find the snapshot this update takes.
   recordKeptBuild(report.backupDir, { version: facts.version, by: staged.tag });
   await deps.download.discard();
   // Unconfirmed until the new version proves itself; the unit's guard restores the old one otherwise.

@@ -1,6 +1,6 @@
 /**
  * A markdown file opened to read, in a dialog (0.8.11): a mission's `report.md` on its page, and a `.md` file in a
- * chat. The report was folded into the page and a `.md` file was a download — the owner asked to open `report.md` in
+ * chat. The report was folded into the page and a `.md` file was a download; now `report.md` opens in
  * the dashboard as a preview. Rendered by `Markdown`, which writes no HTML of its own: a file is shown, never run.
  * **Save as PDF** prints the rendered file alone, black on white, where the browser's print dialog saves it as a PDF —
  * text a reader can select, and no PDF library in the dashboard.

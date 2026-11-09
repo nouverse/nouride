@@ -1,6 +1,6 @@
 /**
  * How the secrets are kept (0.8.19): locked, and how far the key that unlocks them is from them, which is what the
- * lock is worth. Said in plain words for people who are not technical (the owner, 2026-11-05); where the key is, and
+ * lock is worth. Said in plain words for people who are not technical; where the key is, and
  * what to do about it, is `nouride doctor`'s to say to whoever runs the server.
  */
 

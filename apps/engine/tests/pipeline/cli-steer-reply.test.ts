@@ -3,7 +3,7 @@
  * line in the agent's own words is said in the chat, and the CLI reads the message with it — and with the rule that a
  * question in it is answered.
  *
- * Live (Nix, 2026-10-31): "btw yg terkait artifacts tadi udah dipush ya?" went into Claude Code the moment it came — no
+ * Live (2026-10-31): "btw yg terkait artifacts tadi udah dipush ya?" went into Claude Code the moment it came — no
  * tool call was open — so the line, ready five seconds later, was dropped as late, and the person had an English
  * "Got it" and nothing in Nix's words. Claude Code looked into the question and its reply never answered it.
  */

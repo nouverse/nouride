@@ -3,7 +3,7 @@
  * by Obsidian as properties.
  *
  * Written in one shape only: `key: value`, strings double-quoted when they need it, lists in flow
- * style (`people: ["[[people/gading]]"]`). Read more leniently, because a person edits these files by
+ * style (`people: ["[[people/sam]]"]`). Read more leniently, because a person edits these files by
  * hand: block lists (`- item` lines), single quotes, bare words. Anything else in a line is skipped,
  * not fatal — one odd property must not make a conversation unreadable.
  *
@@ -127,7 +127,7 @@ export function frontList(front: Front, key: string): string[] {
   return Array.isArray(value) ? value : [String(value)];
 }
 
-/** `[[people/gading]]` → `people/gading`; anything that is not a wikilink is returned as it is. */
+/** `[[people/sam]]` → `people/sam`; anything that is not a wikilink is returned as it is. */
 export function unlink(value: string): string {
   const match = /^\[\[([^\]|]+)(?:\|[^\]]*)?\]\]$/.exec(value.trim());
   return match ? match[1]! : value.trim();

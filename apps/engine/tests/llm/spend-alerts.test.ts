@@ -1,6 +1,6 @@
 /**
  * A day's spend nearing its cap is said twice at most — past the threshold, past 95% — each naming who spent it, and a
- * restart does not say it again (SMART_AUTOMATION §3.3). It used to ride the `[alerts]` cooldown: every five minutes
+ * restart does not say it again. It used to ride the `[alerts]` cooldown: every five minutes
  * for the rest of the day.
  */
 

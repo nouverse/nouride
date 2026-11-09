@@ -1,7 +1,7 @@
 /**
- * Knowledge & Memory — the documents kept for the agents (0.8.20, KNOWLEDGE_BASE §11), what the agents learn about
+ * Knowledge & Memory — the documents kept for the agents (0.8.20), what the agents learn about
  * people, and the conversations they learn it from (`docs/SPEC.md` §12). "Memory" until 0.8.20, renamed with the
- * knowledge base it now holds too (the owner, 2026-11-03).
+ * knowledge base it now holds too.
  *
  * Tabs rather than pages, because it is one subject seen from the angles a person comes to it with:
  * the documents kept on purpose (Knowledge, first, as in the menu's name), what each agent keeps for

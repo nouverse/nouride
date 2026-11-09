@@ -436,7 +436,7 @@ describe("what came before turn records existed", () => {
 
   /**
    * A user message is stored as it was sent now, with the turn's clock note and reminders at its end
-   * (M1, 2026-10-15). The cut above matches the record's prompt at the *end* of the message — exactly
+   * (2026-10-15). The cut above matches the record's prompt at the *end* of the message — exactly
    * where those notes now sit — so without stripping them every conversation would show its first
    * question twice, once as the legacy bubble and once as the turn's prompt.
    */

@@ -1,5 +1,5 @@
 /**
- * A daemon that answers from its first second of boot (D1 in the engine): `/health` says "starting", and every other
+ * A daemon that answers from its first second of boot: `/health` says "starting", and every other
  * route is a 503 until boot is done. The dashboard used to see nothing at all in that window; now it sees an answer,
  * and has to read it as "not yet" — never as "back", and never as data.
  */

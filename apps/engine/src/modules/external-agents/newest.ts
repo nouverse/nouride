@@ -5,7 +5,7 @@
  *
  * Nothing is said of a package the registry did not answer for — no network, a refusal, an answer that is not a version:
  * a stale one shown as the newest would be a guess. Only the CLIs installed here are asked about, so a box with none
- * asks nothing (EXTERNAL_AGENTS §5.4).
+ * asks nothing.
  */
 
 import { createLogger } from "@nouride/shared";

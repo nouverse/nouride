@@ -1,5 +1,5 @@
 /**
- * `nouride turns` and `nouride turns show <id>` — one turn read whole (D2), as a person reads it at a terminal.
+ * `nouride turns` and `nouride turns show <id>` — one turn read whole, as a person reads it at a terminal.
  *
  * What matters in the rendering is what was invisible before: which call was slow, which one the provider made it
  * ask again, what the priced calls cost and that an unpriced one is not counted as free.

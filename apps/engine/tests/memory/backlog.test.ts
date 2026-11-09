@@ -1,5 +1,5 @@
 /**
- * Whether the nightly pass keeps up (M4, `modules/memory/backlog.ts`): what waits, each agent's pace, and the count
+ * Whether the nightly pass keeps up (`modules/memory/backlog.ts`): what waits, each agent's pace, and the count
  * that would file what waits within a week — and what doctor makes of it. The count stays the owner's limit; this is
  * what tells them it is the one holding a busy box back.
  */

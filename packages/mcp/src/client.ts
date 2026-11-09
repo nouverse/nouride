@@ -40,7 +40,7 @@ export interface McpTransport {
    * How long the peer may say nothing before it is asked `ping` — for a transport whose death is otherwise silent.
    *
    * The legacy SSE stream sits quiet between calls by design, and one a NAT or a proxy dropped without a word is
-   * noticed only when the next call's answer never comes back on it (G13): that call waits out its timeout, the
+   * noticed only when the next call's answer never comes back on it: that call waits out its timeout, the
    * transport is never reported lost, and nothing reconnects it. Absent, nothing is pinged.
    */
   idlePingMs?: number;
@@ -278,7 +278,7 @@ export class McpClient {
   async callTool(
     name: string,
     args: Record<string, unknown>,
-    /** The turn's: `/stop`, the deadline and a shutdown end the call at once, and the server is told (P4). */
+    /** The turn's: `/stop`, the deadline and a shutdown end the call at once, and the server is told. */
     options: { signal?: AbortSignal } = {},
   ): Promise<{ text: string; isError: boolean; images: McpImage[]; structured?: unknown }> {
     const result = (await this.send("tools/call", { name, arguments: args }, options.signal)) as McpToolCallResult;
@@ -304,7 +304,7 @@ export class McpClient {
   }
 
   /**
-   * One request, answered, timed out — or abandoned when `signal` fires (P4).
+   * One request, answered, timed out — or abandoned when `signal` fires.
    *
    * A call carried no signal: `/stop`, the turn's deadline and a shutdown each waited out the request timeout, and
    * a parallel group of MCP reads held the turn for the slowest. Abandoned, the waiter goes at once and the server
@@ -371,7 +371,7 @@ export class McpClient {
   }
 
   /**
-   * Ask a quiet peer whether it is still there, and call it lost when it does not answer (G13).
+   * Ask a quiet peer whether it is still there, and call it lost when it does not answer.
    *
    * Only while idle: a call in flight is already a question the peer has to answer, and anything it says counts as
    * an answer. A ping that times out — or fails — is the peer gone, said the way a stream that closed is, so the

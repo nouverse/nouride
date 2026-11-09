@@ -1,5 +1,5 @@
 /**
- * A pack that failed to load, reloaded by its id once it is fixed (`agent-reload-skips-failed-pack`).
+ * A pack that failed to load, reloaded by its id once it is fixed.
  *
  * Found in the 0.7.7 → 0.7.10 upgrade run: after fixing the pack, `nouride agent reload e2e` answered `no agent
  * "e2e"`, and only a restart brought it back — the route looked the id up among the agents that had loaded, while

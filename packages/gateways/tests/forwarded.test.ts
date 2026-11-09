@@ -1,5 +1,5 @@
 /**
- * A forwarded message is said to be one (S13): its words are somebody else's, passed on — outside content, which a
+ * A forwarded message is said to be one: its words are somebody else's, passed on — outside content, which a
  * memory write after it waits on a person for. Telegram marks a forward with `forward_origin` and keeps the forwarded
  * words in the message's own text, so nothing else on the envelope would tell.
  */

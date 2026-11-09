@@ -35,7 +35,7 @@ export interface ReleaseChannel {
 
 /**
  * A hundred a page, GitHub's most, so the whole mirror is still one request. Every updater before 0.8.18 read one page
- * of thirty and nothing past it, so a bridge release pushed off that page stranded every install below it (REVIEW A1);
+ * of thirty and nothing past it, so a bridge release pushed off that page stranded every install below it;
  * the mirror is kept short for them, and this reads every page.
  */
 export const DEFAULT_CHANNEL: ReleaseChannel = {
@@ -56,7 +56,7 @@ const pageUrl = (url: string, page: number) => (page === 1 ? url : `${url}${url.
 
 /**
  * Newest version first, whatever order the channel listed them in. The API lists by date, so a patch to an older line
- * published after a newer release came first and was taken as the newest (REVIEW B1). A tag that is not a version
+ * published after a newer release came first and was taken as the newest. A tag that is not a version
  * goes last, in the order it came.
  */
 export function newestFirst(releases: Release[]): Release[] {
@@ -315,7 +315,7 @@ export function githubSource(channel: ReleaseChannel = DEFAULT_CHANNEL, fetchImp
     releases: (options = {}) => fetchReleases(channel, fetchImpl, options),
     tarballUrl: (tag, artifact) => tarballUrl(channel, tag, artifact),
     checksumUrl: (tag, checksums) => checksumUrl(channel, tag, checksums),
-    // Beside the checksum file, from 0.7.4 on (D7). Asked for only where a release lists it (`planUpdate`).
+    // Beside the checksum file, from 0.7.4 on. Asked for only where a release lists it (`planUpdate`).
     signatureUrl: (tag, checksums) => checksumUrl(channel, tag, signatureName(checksums)),
     staleness: channelStaleness,
   };

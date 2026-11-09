@@ -81,7 +81,7 @@ export function runPreflightChecks(deps: {
   }
 
   /**
-   * An external agent is never the orchestrator, the agent anyone in a room reaches (EXTERNAL_AGENTS §5.2). Checked here
+   * An external agent is never the orchestrator, the agent anyone in a room reaches. Checked here
    * because it needs the loaded agents; said, and this start runs with no orchestrator, rather than refusing to start.
    * A save of a pack is refused it (`refusingExternalOrchestrator`, above), but a hand edit is not — and refused here, a file
    * the running daemon had taken crash-looped every agent at the next restart or update, over a role only one holds.
@@ -94,7 +94,7 @@ export function runPreflightChecks(deps: {
     delete config.daemon.orchestrator;
   }
 
-  // A secret bound to a bare interpreter: every command by another name (S6).
+  // A secret bound to a bare interpreter: every command by another name.
   for (const agent of registry.active()) {
     for (const warning of secretBindingWarnings(agent.config.execSecrets)) advise(warning, { agent_id: agent.config.id });
   }
@@ -293,7 +293,7 @@ function warnAboutPeopleWithoutNotes(registry: AgentRegistry, advise: Advise): v
 }
 
 /**
- * Agents that ran commands or MCP servers with the daemon's ssh-agent socket until 0.7.10 and do not now (S11).
+ * Agents that ran commands or MCP servers with the daemon's ssh-agent socket until 0.7.10 and do not now.
  *
  * Every command of every agent got `SSH_AUTH_SOCK`; since 0.7.10 an agent's pack has to say `[security] ssh_agent =
  * true`. A default that changes under an install that relied on it fails far from the cause — `git push` asking for a

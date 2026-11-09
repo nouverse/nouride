@@ -19,7 +19,7 @@
  * Pure.
  */
 
-import type { SystemBlock } from "@nouride/shared";
+import { oneLine, type SystemBlock } from "@nouride/shared";
 import { extractJson } from "@/modules/llm/json-answer.ts";
 import { WRITE_IN_ENGLISH, memoryTextIsEnglish } from "./english.ts";
 import { FOLLOW_UPS } from "./fact-dates.ts";
@@ -108,7 +108,7 @@ function renderFacts(facts: readonly PromptFact[], waiting: readonly string[]): 
 }
 
 /**
- * The question for one episode, in two system blocks that are each a cache breakpoint (M3): the rules, the same
+ * The question for one episode, in two system blocks that are each a cache breakpoint: the rules, the same
  * for every episode, then the audience's vocabulary, the same for every episode it shares — a run reads it once
  * per audience and files that audience's conversations back to back (`run.ts`). From the second call on, both
  * are read from the cache and only the episode is new.
@@ -186,7 +186,7 @@ export function buildPassPrompt(input: PassInput): PassPrompt {
 }
 
 function str(value: unknown): string | undefined {
-  return typeof value === "string" && value.trim() ? value.replace(/\s+/g, " ").trim() : undefined;
+  return typeof value === "string" && value.trim() ? oneLine(value) : undefined;
 }
 
 function operationOf(raw: Record<string, unknown>): FactOperation | string {

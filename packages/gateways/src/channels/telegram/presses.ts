@@ -1,5 +1,5 @@
 /**
- * Buttons on Telegram (G11): an inline keyboard under a message, and a press on one — a `callback_query` — as the
+ * Buttons on Telegram: an inline keyboard under a message, and a press on one — a `callback_query` — as the
  * engine reads it. What a press means is the engine's; carrying out its answer is the adapter's (`gateway.ts`).
  */
 

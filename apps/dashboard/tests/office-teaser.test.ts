@@ -16,7 +16,7 @@ describe("the Overview's office line", () => {
 });
 
 describe("Home's office picture", () => {
-  // On a phone the office was drawn at a 1 000 px guess, over the cards below it (the owner, 2026-11-07): the box it
+  // On a phone the office was drawn at a 1 000 px guess, over the cards below it: the box it
   // measures appears only once the agents have loaded, after the one look a mount-time ref got.
   test("is sized from its box whenever the box appears, and never from a guess", () => {
     const source = readFileSync(join(import.meta.dir, "../src/modules/home/components/OfficeTeaser.tsx"), "utf8");

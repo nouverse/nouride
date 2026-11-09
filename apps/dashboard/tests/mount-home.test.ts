@@ -82,7 +82,7 @@ describe("the page", () => {
     expect(at("Nix asks to use")).toBeLessThan(at("Moving now"));
     expect(at("Moving now")).toBeLessThan(at("Quick chat"));
     expect(at("Quick chat")).toBeLessThan(at("Your agents"));
-    // The box's state at the top, in the greeting's corner, before anything that needs you (the owner, 2026-11-08).
+    // The box's state at the top, in the greeting's corner, before anything that needs you.
     expect(at("Everything is working")).toBeGreaterThan(-1);
     expect(at("Everything is working")).toBeLessThan(at("Nix asks to use"));
     // Quick chat asks the orchestrator first, and says it is the orchestrator.

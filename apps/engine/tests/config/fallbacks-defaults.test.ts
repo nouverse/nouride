@@ -1,5 +1,5 @@
 /**
- * `[llm.defaults] fallbacks` (SMART_AUTOMATION §3.1): the install's list, for an agent whose pack names none — each a
+ * `[llm.defaults] fallbacks`: the install's list, for an agent whose pack names none — each a
  * provider and a model, every provider a profile, refused at load as a pack's are.
  */
 

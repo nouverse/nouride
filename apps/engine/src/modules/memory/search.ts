@@ -6,7 +6,7 @@
  * 2. **Keyword**: FTS5's BM25 over the word index (`memory-fts.store.ts`), the query built by `ftsQuery`.
  * 3. **Meaning**, when `[memory.semantic]` is on: cosine over the same visible items, by id — the ids this audience may
  *    see are asked of SQLite, their vectors are held in memory (`memory-vectors.store.ts`), and nothing is read whole
- *    until the end (M5).
+ *    until the end.
  * 4. The two orderings fused (RRF), then scored: relevance 0.5, importance 0.3, recency 0.2 — over the episodes either
  *    ranking put near its top, the only ones read whole.
  * 5. Two hops over `related`, either way round — what a hit continues and what continued it — at 0.7
@@ -45,11 +45,11 @@ const KEYWORD_CANDIDATES = 200;
 const RELATED_DEPTH = 2;
 const RELATED_DECAY = 0.7;
 const RELATED_PER_HIT = 5;
-/** What a document about someone named in the conversation is worth on top of its score (KNOWLEDGE_BASE §10). */
+/** What a document about someone named in the conversation is worth on top of its score. */
 const ABOUT_BONUS = 0.1;
 /**
  * Sections scored whole by meaning, at most: past it, documents are ranked by their sections' mean first and only the
- * sections of the nearest are scored (KNOWLEDGE_BASE §8). Measured on 2026-11-05: with 50,000 episodes, 10,000 sections
+ * sections of the nearest are scored. Measured on 2026-11-05: with 50,000 episodes, 10,000 sections
  * cost 17 ms a search warm and 50,000 cost 42, past memory's own bar; ranked by document first, 50,000 cost as 10,000.
  */
 const SECTIONS_SCORED_WHOLE = 10_000;
@@ -161,7 +161,7 @@ export async function searchMemory(deps: SearchDeps, request: SearchRequest): Pr
     const visible = new Set([...candidates, ...byWords.filter((item) => !item.startsWith("fact:") && !isSection(item))]);
     const meaning = await meaningOf(deps.semantic, request.query);
     if (meaning) {
-      // Every section of those collections: a document does not age, so none is left out for being old (§8).
+      // Every section of those collections: a document does not age, so none is left out for being old.
       let sections = collections.length && deps.knowledge ? deps.knowledge.itemsOf(collections) : [];
       if (sections.length > SECTIONS_SCORED_WHOLE && deps.knowledge) sections = nearestDocumentsSections(meaning, sections, deps.knowledge.revision());
       byMeaning = rankAgainst(meaning, [...visible, ...factsById.keys(), ...sections], limit * 3).map((hit) => hit.item);
@@ -189,7 +189,7 @@ export async function searchMemory(deps: SearchDeps, request: SearchRequest): Pr
     } else if (isSection(item)) {
       const section = sectionsFound.get(item);
       const scope = section ? scopeById.get(section.collection) : undefined;
-      // A document is what is known now, as a fact is; one about someone this conversation is about counts more (§10).
+      // A document is what is known now, as a fact is; one about someone this conversation is about counts more.
       if (section && scope) {
         const about = scope.about.some((key) => subjects.includes(key)) ? ABOUT_BONUS : 0;
         // Whom it is about, by name, for the line the model reads: without it the one found first could not be told apart
@@ -252,7 +252,7 @@ function piecesOfOneCut(a: IndexedEpisode, b: IndexedEpisode): boolean {
 }
 
 /**
- * The pieces of one conversation found together, as one hit (M12): the best-scoring piece, with the others' ids.
+ * The pieces of one conversation found together, as one hit: the best-scoring piece, with the others' ids.
  *
  * A long conversation is several pieces, each summarised alone, and a query about it finds one and the hop brings
  * the rest — so ten results could be three conversations, one of them four times. Grouped transitively, since a

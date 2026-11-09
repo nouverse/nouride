@@ -45,7 +45,7 @@ export interface Told {
   read?: number;
 }
 
-/** Who said it, as a page and a notice name them: "Gading", or "Gading via nouva". */
+/** Who said it, as a page and a notice name them: "Sam", or "Sam via nouva". */
 export function toldBy(one: Pick<Told, "by" | "via">): string {
   return one.via ? `${one.by} via ${one.via}` : one.by;
 }

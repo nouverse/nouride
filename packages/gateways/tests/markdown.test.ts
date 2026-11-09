@@ -55,7 +55,7 @@ describe("telegram html", () => {
   });
 
   test("…and the line break before it: the line above a block is not run into its first line (0.8.13)", () => {
-    // A persona change's question in Telegram read "SOUL.md · +2 −2- [# SOUL › ## Rules] - Ask Gading…".
+    // A persona change's question in Telegram read "SOUL.md · +2 −2- [# SOUL › ## Rules] - Ask Sam…".
     expect(html("SOUL.md · +1 −1\n```diff\n- a\n+ b\n```")).toBe('SOUL.md · +1 −1\n<pre><code class="language-diff">- a\n+ b</code></pre>');
     // A blank line before it keeps the one break it always kept; a block that opens the message gets none.
     expect(html("Run:\n\n```\nls\n```")).toBe("Run:\n<pre>ls</pre>");

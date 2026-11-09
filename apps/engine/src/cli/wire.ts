@@ -66,7 +66,7 @@ export interface StatusResponse {
     model: string;
     /** Who answers when the model cannot, in order (0.8.0), empty for none. */
     fallbacks?: { provider: string; model: string }[];
-    /** What its turns are budgeted at, and where the number comes from (G2). Absent from a daemon before 0.7.13. */
+    /** What its turns are budgeted at, and where the number comes from. Absent from a daemon before 0.7.13. */
     contextWindow?: { tokens: number; source: "pack" | "gateway" | "table" | "default" };
     tools: string[];
     approvals: string;

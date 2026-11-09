@@ -1,5 +1,5 @@
 /**
- * The ssh-agent socket reaches the stdio MCP servers of an agent that asked for it, and no others (S11).
+ * The ssh-agent socket reaches the stdio MCP servers of an agent that asked for it, and no others.
  *
  * A real server, started the way the daemon starts one: it reports `SSH_AUTH_SOCK` as it sees it in its one tool's
  * description, so what is asserted is the environment of the process the manager actually spawned.

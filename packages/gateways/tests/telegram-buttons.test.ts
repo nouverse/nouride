@@ -1,5 +1,5 @@
 /**
- * Buttons on Telegram (G11): an inline keyboard under the last part of a message, a press on one — a `callback_query`,
+ * Buttons on Telegram: an inline keyboard under the last part of a message, a press on one — a `callback_query`,
  * asked for by the poll — handed to the engine and always answered, and a message settled with its keyboard taken away.
  */
 

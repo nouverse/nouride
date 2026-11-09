@@ -15,13 +15,13 @@
  * ended: "2026-09-25T05:31:10+07:00"
  * day: "[[days/2026/09/2026-09-25]]"
  * agents: ["[[agents/nouva]]"]
- * people: ["[[people/gading]]"]
+ * people: ["[[people/sam]]"]
  * tags: ["[[tags/nouride]]"]
  * importance: 3
- * summary: "Gading asked whether Nouride runs on an old Android phone."
+ * summary: "Sam asked whether Nouride runs on an old Android phone."
  * ---
  *
- * 04:59 · Gading
+ * 04:59 · Sam
  * Nouride bisa dipakein di android lawas gak ya?
  * ```
  *

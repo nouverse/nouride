@@ -1,5 +1,5 @@
 /**
- * External agents (0.8.1, EXTERNAL_AGENTS RFC): a Nouride agent whose turns a coding CLI answers over the Agent Client
+ * External agents (0.8.1): a Nouride agent whose turns a coding CLI answers over the Agent Client
  * Protocol — Claude Code, Codex, or a CLI the person adds.
  *
  * From the outside it is any agent: its channel, rooms, schedules, missions, status, `ask_agent`. Inside, the CLI as it
@@ -74,7 +74,7 @@ const PROBE_MS = 60_000;
  * What one CLI holds with a session open, before it has done any work — measured 2026-10-26 on macOS arm64, signed
  * out, the process and all it started: Claude Code 324 MB, Codex 187 MB (and omp, no longer built in, 493 MB). A
  * working session holds more, so this is a floor rather than a fit: with less room than this for the agents' commands,
- * not one session opens, and external agents are not offered (EXTERNAL_AGENTS §6). Rounded up from the largest.
+ * not one session opens, and external agents are not offered. Rounded up from the largest.
  */
 const CLI_SESSION_BYTES = 512 * 1024 * 1024;
 
@@ -117,7 +117,7 @@ export interface ExternalAgentsDeps {
   interactive?: typeof spawnInteractive;
   /** The coding-CLI accounts added, and the secret store a shared one's token is kept in. */
   accounts?: AccountsDeps;
-  /** Where a shared account's sign-in that kept a token is written down, with who started it (HARDENING §8). */
+  /** Where a shared account's sign-in that kept a token is written down, with who started it. */
   audit?: Pick<AuditPort, "record">;
   /** Opens the page a sign-in sent the browser to, on this box. */
   openOnBox?: (url: URL) => Promise<string>;
@@ -285,7 +285,7 @@ export class ExternalAgents implements RunnerHost {
   /** Whether nothing asks before the agent deletes (0.8.8): its CLI in `folder`, where its user's rights are the limit. */
   freeToDelete(agent: LoadedAgent | undefined): boolean {
     const external = agent?.config.external;
-    // A CLI of the person's own with no `folder` mode keeps its default there, which may ask (Nox's review).
+    // A CLI of the person's own with no `folder` mode keeps its default there, which may ask.
     return external !== undefined && this.preset(external.permissions) === "folder" && this.row(external.cli)?.modes?.folder !== undefined;
   }
 
@@ -315,7 +315,7 @@ export class ExternalAgents implements RunnerHost {
   /**
    * Whether a session still owes its chat something of its own (0.8.8): words it said by itself that no turn has read,
    * or a command its prompt left running that the CLI still runs. Closed, the words go with it and the CLI ends the
-   * command, so it is let go for other instructions only at a turn where it owes nothing (Nox's review).
+   * command, so it is let go for other instructions only at a turn where it owes nothing.
    */
   owes(agentId: string, cli: CliConnection, sessionId: string): boolean {
     const key = ownKey(agentId, sessionId);

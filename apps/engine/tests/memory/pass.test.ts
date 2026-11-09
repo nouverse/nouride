@@ -100,8 +100,8 @@ describe("filing", () => {
         },
       ]).ask,
     );
-    // The update names a fact Sam's conversation was not shown (it came from Gading's DM): dropped.
-    // Sam's word about Gading is kept, readable only where she said it. The house rule waits: every
+    // The update names a fact Sam's conversation was not shown (it came from the admin's DM): dropped.
+    // Sam's word about the admin is kept, readable only where she said it. The house rule waits: every
     // agent reads shared knowledge in every chat.
     expect(report).toMatchObject({ applied: 1, proposed: 1, dropped: 1 });
     expect((await h.memory.proposals()).map((p) => [p.subject, p.why])).toEqual([["shared", "shared"]]);
@@ -231,7 +231,7 @@ describe("filing", () => {
 
 describe("one proposal per change", () => {
   // Rewrites wait only under `facts = "ask"` (and in shared knowledge), so that is where they stack.
-  /** Gading's laptop, learned in the family group so both his DM and the group may read it. */
+  /** The admin's laptop, learned in the family group so both his DM and the group may read it. */
   async function laptopFact() {
     h.group(FAMILY, "Aku pakai MacBook M3", at(8), { agentId: "nouva", text: "Oke." });
     h.clock.now = at(8, 30);
@@ -262,7 +262,7 @@ describe("one proposal per change", () => {
       episode: "2026-09-25-1600-nouva",
       current: "Uses a MacBook M3.",
       operation: { op: "update", n: 1, text: "Uses a MacBook M3 with 32GB RAM at 192.168.0.12." },
-      // Sam's word is in it, and so is Gading's DM: only Gading's DM may read both.
+      // Sam's word is in it, and so is the admin's DM: only the admin's DM may read both.
       provenance: { readers: { people: ["gading"] } },
     });
     expect(proposals[0]!.revisedAt).toBeNumber();
@@ -309,7 +309,7 @@ describe("one proposal per change", () => {
     await h.memory.pass(scripted([{ when: "kamera cctv", answer: { summary: "CCTV.", shared: [{ op: "add", section: "Homelab", text: camera("~/workspace/bin/ffmpeg") }] } }]).ask);
     const [first] = await h.memory.proposals();
 
-    // Sam's DM cannot see what waits from Gading's, so the model could not have been told.
+    // Sam's DM cannot see what waits from the admin's, so the model could not have been told.
     h.dm(SAM_DM, "nix", "ffmpeg pindah ke /srv/nouride/.nouride/bin", "Oke.", at(12));
     h.clock.now = at(12, 30);
     await h.memory.pass(

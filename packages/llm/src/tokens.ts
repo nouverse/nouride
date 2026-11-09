@@ -14,7 +14,7 @@
  *
  * Cheap enough to run every round, because it does. The context guard, truncation and compaction each
  * measure the whole conversation, several times a turn, and a regex test per character made that
- * millions of calls on a 160k-token context (E9). So a character is a comparison or two, and a message
+ * millions of calls on a 160k-token context. So a character is a comparison or two, and a message
  * is measured once and remembered.
  */
 

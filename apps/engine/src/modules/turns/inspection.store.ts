@@ -1,5 +1,5 @@
 /**
- * One turn, with everything recorded about it — what `nouride turns show` prints (D2).
+ * One turn, with everything recorded about it — what `nouride turns show` prints.
  *
  * The record says what was asked and answered, and its steps what the agent did. What the turn *cost*, and how
  * long its model calls took, is in `llm_usage`; its tool calls with their full arguments are in `audit_log`. Until
@@ -29,7 +29,7 @@ export interface ModelCall {
   /** Absent on a row from before 0.7.3, or from a provider that did not report it. */
   latencyMs?: number;
   attempts?: number;
-  /** Who answered, when a gateway in between said (G1, `069_baseline.sql`). */
+  /** Who answered, when a gateway in between said (`069_baseline.sql`). */
   upstream?: { provider?: string; model?: string; attempts?: number };
   /** What the call was for, and how it is billed (`069_baseline.sql`) — absent on a row from before 0.7.8. */
   purpose?: string;

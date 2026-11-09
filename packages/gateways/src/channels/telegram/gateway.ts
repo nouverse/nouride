@@ -33,7 +33,7 @@ const MAX_CAPTION_CHARS = 1024;
 /** What Telegram shows of an answer to a press, at most. */
 const MAX_PRESS_NOTICE_CHARS = 200;
 
-/** Telegram's own limits (G7): a message a second in one chat, twenty a minute in a group, thirty a second in all. */
+/** Telegram's own limits: a message a second in one chat, twenty a minute in a group, thirty a second in all. */
 const CHAT_RATE: Rate = { count: 1, perMs: 1_000 };
 const GROUP_RATE: Rate = { count: 20, perMs: 60_000 };
 const BOT_RATE: Rate = { count: 30, perMs: 1_000 };
@@ -64,13 +64,13 @@ const renderHtml = (part: string): string => toTelegramHtml(parseMarkdown(part))
  * How long Telegram is asked to hold an empty `getUpdates` open.
  *
  * Fifty, the most Telegram holds one, where grammY's default is thirty: an idle bot's poll returning is a wake-up and
- * a request over the box's radio, and at thirty seconds it was two a minute for nothing (E11). The HTTP request
+ * a request over the box's radio, and at thirty seconds it was two a minute for nothing. The HTTP request
  * timeout is derived from it — see `connect`.
  */
 const POLL_TIMEOUT_SECONDS = 50;
 
 /**
- * A poll that returned this recently is proof the connection works, and the health check asks no more (E11).
+ * A poll that returned this recently is proof the connection works, and the health check asks no more.
  *
  * Two poll windows: a healthy idle poll returns every fifty seconds. The health check used to send `getMe` every
  * thirty seconds beside it — two requests a minute per bot, at idle, to learn what the last poll already said.
@@ -125,7 +125,7 @@ export class TelegramGateway extends BaseGateway {
    */
   readonly echoesOwnMessages = false;
 
-  /** An inline keyboard under a message, and a press on it a `callback_query` — `Gateway.buttons` (G11). */
+  /** An inline keyboard under a message, and a press on it a `callback_query` — `Gateway.buttons`. */
   readonly buttons = true;
 
   get selfId(): string | undefined {
@@ -182,7 +182,7 @@ export class TelegramGateway extends BaseGateway {
         if (envelope) this.emitMessage(envelope);
       }),
     );
-    // A person's edit of a message they sent (G11): reported as the edit it is, and the engine decides what it does.
+    // A person's edit of a message they sent: reported as the edit it is, and the engine decides what it does.
     bot.on(
       "edited_message",
       contained(this.log, "could not take in an edit", (ctx) => {
@@ -191,7 +191,7 @@ export class TelegramGateway extends BaseGateway {
       }),
     );
     /**
-     * A press on a button under one of our messages (G11). Answered always — Telegram shows a spinner on the button until
+     * A press on a button under one of our messages. Answered always — Telegram shows a spinner on the button until
      * `answerCallbackQuery` — with the engine's notice for the presser alone, and the message settled when it says so.
      */
     bot.on(
@@ -235,7 +235,7 @@ export class TelegramGateway extends BaseGateway {
     try {
       await bot.init();
     } catch (err) {
-      // 401, or 404 for a token Telegram cannot even read: the token, not the network — given up on, not retried (G8).
+      // 401, or 404 for a token Telegram cannot even read: the token, not the network — given up on, not retried.
       if (err instanceof GrammyError && (err.error_code === 401 || err.error_code === 404)) {
         throw new GatewayAuthError(this.id, `Telegram refused the bot token: ${err.description}`);
       }
@@ -357,7 +357,7 @@ export class TelegramGateway extends BaseGateway {
   }
 
   /**
-   * A message we sent with buttons, settled (G11): rewritten — rendered as `deliver` renders, plain when Telegram refuses
+   * A message we sent with buttons, settled: rewritten — rendered as `deliver` renders, plain when Telegram refuses
    * the formatting — and given an empty keyboard, so its buttons go, or `keep` for a question still open: an edit
    * without a keyboard takes it away. `false` when Telegram would not have it.
    */
@@ -402,7 +402,7 @@ export class TelegramGateway extends BaseGateway {
         const options = {
           ...(threadId ? { message_thread_id: threadId } : {}),
           ...(msg.suppressPreview ? { link_preview_options: { is_disabled: true } } : {}),
-          // Buttons under the last part: the one a person reads last, and the one a settled question rewrites (G11).
+          // Buttons under the last part: the one a person reads last, and the one a settled question rewrites.
           ...(msg.buttons?.length && index === textParts.length - 1 ? { reply_markup: inlineKeyboard(msg.buttons) } : {}),
           // Only the first chunk quotes the triggering message; repeating the quote on every
           // part of a long answer is unreadable.
@@ -447,7 +447,7 @@ export class TelegramGateway extends BaseGateway {
   }
 
   /**
-   * A call Telegram answered 429 made again once the `retry_after` it named has passed — twice at most (G7). A 429
+   * A call Telegram answered 429 made again once the `retry_after` it named has passed — twice at most. A 429
    * used to fall into the plain-text resend with the formatting errors and go straight back into the limit.
    */
   private async afterRetryAfter<T>(call: () => Promise<T>): Promise<T> {
@@ -692,10 +692,10 @@ export function pollingOptions(): { drop_pending_updates: boolean; allowed_updat
      */
     drop_pending_updates: false,
     /**
-     * What this adapter handles, and nothing else (G10): `message`, and from 0.7.14 a person's edit of one
-     * (`edited_message`) and a press on a button under ours (`callback_query`, G11). Without the list Telegram sends every kind the bot is allowed — channel posts, member
-     * changes — each fetched over the card's network and then dropped. Said on every poll because Telegram remembers
-     * the last list it was given.
+     * What this adapter handles, and nothing else: `message`, and from 0.7.14 a person's edit of one (`edited_message`)
+     * and a press on a button under ours (`callback_query`). Without the list Telegram sends every kind the bot is
+     * allowed — channel posts, member changes — each fetched over the card's network and then dropped. Said on every
+     * poll because Telegram remembers the last list it was given.
      */
     allowed_updates: [...TELEGRAM_UPDATES],
     // Stated rather than left to grammY's default, because the client timeout the bot is built with is

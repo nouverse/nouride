@@ -1,6 +1,6 @@
 /**
- * `memory_write` about=knowledge: a document someone hands an agent to keep, into the knowledge base (KNOWLEDGE_BASE §9,
- * 0.8.20), with the English title search finds it by (0.8.23). Its own file since the title: the memory tools' file was
+ * `memory_write` about=knowledge: a document someone hands an agent to keep, into the knowledge base
+ * (0.8.20), with the English title search finds it by (0.8.23). Its own file since the title: the memory tools' file was
  * past its size, and keeping a document is the one part of `memory_write` that reads files and talks to collections.
  */
 
@@ -40,7 +40,7 @@ const KEEP_TITLE =
   "Give the document a `title` in English: what it is, with its own terms as they are, e.g. \"NIB, business registration certificate (Nomor Induk Berusaha)\". Search finds it by those words in any language.";
 
 /**
- * `memory_write` about=knowledge (KNOWLEDGE_BASE §9, 0.8.20): a document someone handed over to keep, into a collection.
+ * `memory_write` about=knowledge (0.8.20): a document someone handed over to keep, into a collection.
  * A new collection is for the people in this chat; one wider than them waits for an admin's yes, which the agent says.
  */
 export async function keepDocument(knowledge: Pick<Memory["knowledge"], "keep">, args: Record<string, unknown>, ctx: ToolContext, speaker: Speaker, files?: Pick<AttachmentReadOptions, "list">): Promise<ToolResult> {

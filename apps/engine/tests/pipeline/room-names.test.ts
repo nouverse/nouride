@@ -104,7 +104,7 @@ describe("the Groups page's rooms", () => {
     const { whatsapp, bench, names } = await setUp();
     names.setPlatformTitle("whatsapp", GROUP, "Keluarga Besar");
     whatsapp.receive(inGroup("halo"));
-    // Her second account: still one Mira in "who talks there" (live, it read "Kak Mira, Gading, Kak Mira").
+    // Her second account: still one Mira in "who talks there" (live, it read "Kak Mira, Sam, Kak Mira").
     whatsapp.receive(inGroup("oke", { senderId: "777@lid", senderName: "~" }));
     await bench.pipeline.idle();
 

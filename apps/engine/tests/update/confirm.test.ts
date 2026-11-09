@@ -255,7 +255,7 @@ describe("the new version confirming itself", () => {
 });
 
 /**
- * A marker missing one of its two fields (`confirm-marker-half-written`). The guard counts every start while the file is
+ * A marker missing one of its two fields. The guard counts every start while the file is
  * there, whatever it holds — so a marker read as none was left for it to count down to restoring a version nobody chose.
  * `to` is the update; without it the update is the version running, which the guard let start. `from` only describes.
  */

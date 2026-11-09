@@ -88,7 +88,7 @@ describe("the budget", () => {
 
   test("there is no count: every picture goes while they fit (0.8.12)", async () => {
     // Four was the most a request carried. Live, an agent reviewing a video lost each set of stills as it opened the next
-    // and re-read them, or decided they had never reached it. The owner: no limit on pictures.
+    // and re-read them, or decided they had never reached it. So there is no limit on pictures.
     const twelve = Array.from({ length: 12 }, (_, i) => opened(`still-${i}.png`));
     const out = await resolveImages([userWith(...twelve)]);
     expect(partsOf(out[0]!).filter((part) => part.type === "image")).toHaveLength(12);

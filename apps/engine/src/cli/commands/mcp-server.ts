@@ -28,7 +28,7 @@ const USAGE =
   `nouride mcp-server token list\n` +
   `nouride mcp-server token revoke <id>${RESET}`;
 
-/** When it stops working (G13) — or that it does not, which since 0.7.9 is something somebody asked for. */
+/** When it stops working — or that it does not, which since 0.7.9 is something somebody asked for. */
 function expiry(token: TokenView): string {
   if (token.expiresAt === undefined) return "";
   if (token.expiresAt === null) return " · never expires";
@@ -61,7 +61,7 @@ export async function mcpServerCommand(client: Client, args: string[]): Promise<
     const agents = flagValue(args, "--agents")?.split(",").map((id) => id.trim()).filter(Boolean) ?? [];
     const label = flagValue(args, "--label");
     const scopes = flagValue(args, "--scopes")?.split(",").map((scope) => scope.trim()).filter(Boolean);
-    // Days until it stops working: 90 when not given, 0 for never (G13). The daemon refuses anything else.
+    // Days until it stops working: 90 when not given, 0 for never. The daemon refuses anything else.
     const ttl = flagValue(args, "--ttl");
     if (!person || agents.length === 0 || !label) usageLines(USAGE);
     if (ttl !== undefined && !/^\d+$/.test(ttl)) usageError("--ttl is a whole number of days; 0 never expires", plain(USAGE));

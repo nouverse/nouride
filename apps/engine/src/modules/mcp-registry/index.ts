@@ -12,6 +12,7 @@
  * MCP page or `nouride mcp add --from` — an agent can find one and say where to add it, never add it itself.
  */
 
+import { oneLine } from "@nouride/shared";
 import { hubBytes, HubError, type HubFetchDeps } from "@/modules/skills-hub/fetch.ts";
 import { draftFor, routeOf, summaryOf, type DraftResult, type InstallDraft } from "./draft.ts";
 import { normalizeEntry, publisherOf, type CatalogEntry } from "./entry.ts";
@@ -164,7 +165,7 @@ export function createMcpCatalog(
   return {
     async search(query, limit = 20) {
       const params = new URLSearchParams({ limit: String(Math.min(Math.max(Math.trunc(limit), 1), 50)) });
-      const words = query.trim().replace(/\s+/g, " ").toLowerCase().slice(0, 100);
+      const words = oneLine(query).toLowerCase().slice(0, 100);
       if (words) params.set("search", words);
       const key = params.toString();
       const held = searched.get(key);

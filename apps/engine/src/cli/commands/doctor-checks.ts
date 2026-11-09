@@ -1,5 +1,5 @@
 /**
- * What `nouride doctor` checks beside the daemon's own report (D4).
+ * What `nouride doctor` checks beside the daemon's own report.
  *
  * Doctor read `/status` and the memory and skills routes, and left out the signals the daemon already computes:
  * `/health`'s issues — a dead gateway, a provider failing in a row, a write-ahead log past its threshold — the
@@ -10,7 +10,7 @@
  */
 
 import { dirname, join } from "@nouride/runtime";
-import { formatBytes } from "@nouride/shared";
+import { formatBytes, plural } from "@nouride/shared";
 
 export interface Check {
   level: "ok" | "warn" | "bad";
@@ -114,7 +114,7 @@ export function modeChecks(
 
 /**
  * A pack that failed to load: why, and that it comes back without a restart once fixed — `nouride agent reload <id>`
- * loads a failed pack by its id (`agent-reload-skips-failed-pack`), which it did not, so a restart was the only way.
+ * loads a failed pack by its id, which it did not, so a restart was the only way.
  */
 export function packFailureCheck(failure: { id: string; error: string }): Check {
   return { level: "bad", message: `agent pack "${failure.id}" failed to load`, hint: `${failure.error} (fix it, then \`nouride agent reload ${failure.id}\`)` };
@@ -164,7 +164,7 @@ interface Backlog {
 }
 
 /**
- * Whether the nightly pass keeps up (M4): nothing for a pass that is off or a daemon too old to say; a warning, with the
+ * Whether the nightly pass keeps up: nothing for a pass that is off or a daemon too old to say; a warning, with the
  * count to set, once what waits is more than a week of nights files at the count set — an agent whose conversations
  * bring more a day than that falls further behind every night, and its memory with it.
  */
@@ -211,7 +211,7 @@ export function healthIssues(issues: readonly string[], helpers: readonly { issu
 }
 
 /**
- * Each running agent whose model is budgeted at a guess (G2). The failure it causes is not an error: an agent whose
+ * Each running agent whose model is budgeted at a guess. The failure it causes is not an error: an agent whose
  * history is cut and whose tool output is trimmed every round, re-reading the file it just read — which cost a live
  * evening before anything said why. Said where an operator looks, not only once in a log. A daemon from before 0.7.13
  * reports no window, and says nothing here.
@@ -306,7 +306,7 @@ export function plainCopiesCheck(names: readonly string[]): Check | null {
   if (!plain.length) return null;
   return {
     level: "warn",
-    message: `secret store: ${plain.length} other cop${plain.length === 1 ? "y" : "ies"} beside it (${plain.join(", ")})`,
+    message: `secret store: ${plain.length} other ${plural(plain.length, "copy", "copies")} beside it (${plain.join(", ")})`,
     hint: "A secrets.json beside the encrypted store holds every value in plain text: remove it once you no longer need it, by hand. An .unopened file is a store whose key was not here.",
   };
 }

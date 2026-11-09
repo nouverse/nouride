@@ -18,7 +18,7 @@
  * reminder firing into an empty chat) is not an episode at all.
  */
 
-import type { Person } from "@nouride/shared";
+import { keepEnds, type Person } from "@nouride/shared";
 import { memoryChatKey } from "./access.ts";
 import { localTime } from "@/commons/clock.ts";
 import type { Episode } from "./episode.ts";
@@ -33,12 +33,6 @@ const EPISODE_MAX_CHARS = 24_000;
  * what it was; the middle of a 200 KB log is not what anyone remembers.
  */
 const ENTRY_MAX_CHARS = 6_000;
-
-function clipped(text: string): string {
-  if (text.length <= ENTRY_MAX_CHARS) return text;
-  const keep = ENTRY_MAX_CHARS / 2;
-  return `${text.slice(0, keep)}\n[… ${text.length - ENTRY_MAX_CHARS} characters left out …]\n${text.slice(-keep)}`;
-}
 
 export interface Entry {
   at: number;
@@ -117,7 +111,7 @@ function pieces(entries: readonly Entry[], timeZone: string, maxChars = EPISODE_
   let size = 0;
   let day = "";
   for (const whole of entries) {
-    const entry = { ...whole, text: clipped(whole.text) };
+    const entry = { ...whole, text: keepEnds(whole.text, ENTRY_MAX_CHARS) };
     const length = entry.text.length + entry.name.length + 10;
     const entryDay = localTime(entry.at, timeZone).day;
     if (current.length && (size + length > maxChars || entryDay !== day)) {

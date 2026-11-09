@@ -218,7 +218,7 @@ describe("a message sent while the agent works", () => {
   });
 
   test("a question in it is to be answered in the reply, not only acted on — said with it, and in the harness", async () => {
-    // Live (Nix, 2026-10-31): "btw, is it pushed?" was looked into mid-turn, and the reply never said.
+    // Live (2026-10-31): "btw, is it pushed?" was looked into mid-turn, and the reply never said.
     const b = await bench([{ toolCalls: [{ id: "c1", name: "slow", args: {} }] }, { text: "not yet — 3 of 7 steps" }]);
     b.say("m1", "why may an orchestrator not be external?");
     await b.stepStarted();
@@ -289,7 +289,7 @@ describe("a message sent while the agent works", () => {
 
 /**
  * Past what one turn reads (`STEER_CAP`), a message in a one-to-one chat waits for the turn to end — and waited in
- * silence, up to `queue_timeout_ms`, with no sign it had arrived at all (P9). Its sender is told once a turn now.
+ * silence, up to `queue_timeout_ms`, with no sign it had arrived at all. Its sender is told once a turn now.
  */
 describe("past what one turn reads", () => {
   test("the sender is told once that the message waits, and it is answered when the turn ends", async () => {

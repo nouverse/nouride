@@ -22,7 +22,7 @@ export function commandTurnMessage(job: Job, output: string): string {
 }
 
 
-/** What a webhook's payload is called where a turn that read it keeps something (S13, `memory.ts`'s marker). */
+/** What a webhook's payload is called where a turn that read it keeps something (`memory.ts`'s marker). */
 export const WEBHOOK_PAYLOAD = "a webhook payload";
 
 /** How much of a request body the model is shown. GitHub's push payloads run to tens of kilobytes. */

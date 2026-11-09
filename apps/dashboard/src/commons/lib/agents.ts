@@ -11,7 +11,7 @@ export function orchestratorFirst<T extends { id: string }>(agents: readonly T[]
 /**
  * The model an agent answers with, as lists show it. An external agent's is its CLI's — the pack's, or the CLI's own
  * default, named once a session has said it: "Claude Code · Opus 5.5 (default)". Its `model` is its `[llm]`, which
- * answers none of its turns, and the agent picker showed that as the agent's (the owner, 0.8.1).
+ * answers none of its turns, and the agent picker showed that as the agent's (0.8.1).
  */
 export function agentModel(agent: Pick<AgentSummary, "model" | "external">): string {
   const external = agent.external;

@@ -1,5 +1,5 @@
 /**
- * Keeping a document from a chat (0.8.20, KNOWLEDGE_BASE §9): `memory_write` about knowledge. Into a new collection, for
+ * Keeping a document from a chat (0.8.20): `memory_write` about knowledge. Into a new collection, for
  * the people in that chat; into one no wider than them, at once; into one wider, it waits for an admin's yes on the
  * dashboard, and the agent is told to say so. A page keeps its address; a file is one this turn may read.
  */
@@ -79,7 +79,7 @@ describe("keeping a document from a chat", () => {
     expect(existsSync(join(h.knowledgeRoot, "legal", "blank.txt"))).toBe(true);
   });
 
-  // Nestor, asked to put the owner's legal PDFs in the knowledge base, said it did not know whether a PDF's text could be
+  // Nestor, asked to put a person's legal PDFs in the knowledge base, said it did not know whether a PDF's text could be
   // read, and planned to take the text out first (2026-11-07): the words said "a file to keep as it is", and no more.
   test("agents are told a PDF or an Office file is read for its text, to give the file itself, and when one is not searched", async () => {
     const { h } = await home();
@@ -207,7 +207,7 @@ describe("keeping a document from a chat", () => {
     const { h, keep, found } = await home();
     mkdirSync(join(h.knowledgeRoot, "ops"), { recursive: true });
     writeFileSync(join(h.knowledgeRoot, "ops", "runbook.md"), "# Runbook\nVzdump at 02:00.\n");
-    // Gading is the household's one admin (the fixture's), so the admins' folder reaches nobody beyond this chat.
+    // The fixture's household has one admin, so the admins' folder reaches nobody beyond this chat.
     const kept = await keep({ collection: "ops", title: "Backups", content: "PBS at 03:00." });
     expect(kept.content).toBe('Kept in "ops" as Backups.md. It can be searched now.');
     expect(await found(GADING_DM, "pbs")).toEqual(["knowledge:ops/Backups.md#0"]);

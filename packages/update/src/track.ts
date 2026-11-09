@@ -1,7 +1,7 @@
 /**
- * Update tracks (0.8.18, PLAN §3.3): which releases an install is offered.
+ * Update tracks (0.8.18): which releases an install is offered.
  *
- * `latest` takes the newest release of all. `lts` stays on a long-term line: 1.0 is the first (the owner, 2026-11-03; 1.0 rather than 0.9 on 2026-11-05),
+ * `latest` takes the newest release of all. `lts` stays on a long-term line: 1.0 is the first, not 0.9,
  * and a person on it chooses on the dashboard whether to stay on 1.0 or move to 1.1. It ships before any 1.1 exists
  * because the updater of the version that runs decides what it is offered: a track added in 1.1 would never reach an
  * install on 1.0.

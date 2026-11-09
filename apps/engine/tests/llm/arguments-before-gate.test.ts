@@ -1,6 +1,6 @@
 /**
  * A tool that can say its arguments are wrong (`Tool.checkArguments` — an MCP tool, against its server's schema) is
- * asked before the gate, the way arguments that are not one JSON object are answered (G4).
+ * asked before the gate, the way arguments that are not one JSON object are answered.
  *
  * Asked after, a gated call was put to a person, approved, and failed — and the corrected call asked them again.
  */

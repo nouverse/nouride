@@ -470,7 +470,7 @@ export class CronStore {
   /**
    * Called after every write that can move a job's next run: create, update, enable, delete, settle.
    *
-   * The scheduler sleeps until `nextDueAt` rather than polling (E5, 2026-10-15), so a job created for two
+   * The scheduler sleeps until `nextDueAt` rather than polling (2026-10-15), so a job created for two
    * minutes from now would otherwise wait for whatever the timer was already set to — up to a minute
    * late. Here rather than at each caller because this store is the one place `next_run_at` moves.
    */

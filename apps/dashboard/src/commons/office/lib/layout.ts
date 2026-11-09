@@ -1,5 +1,5 @@
 /**
- * Where everything is in the Office (0.8.1, MISSIONS §9), in its own pixels: three rooms — the workroom, the lobby and
+ * Where everything is in the Office (0.8.1), in its own pixels: three rooms — the workroom, the lobby and
  * the bedroom — side by side over a hall, or, on a page too narrow for that, one above another beside a hall down the
  * left. Every agent has a home: its own desk, its own seat on a sofa and its own bed, three to a row, and it is at the
  * one its status says — working or waiting at its desk, idle on its seat, asleep in its bed. The orchestrator's desk

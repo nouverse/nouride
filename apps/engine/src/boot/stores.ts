@@ -138,7 +138,7 @@ export async function openStores(input: {
   // pipeline because the retention sweep starts before that point. Billing is read from the live profiles.
   const usage = new UsageStore(db, Date.now, events, (provider) => config.providers[provider]?.billing ?? "metered");
 
-  // Checked at boot, before anything writes — unless the last run stopped cleanly and a check ran this week (E10).
+  // Checked at boot, before anything writes — unless the last run stopped cleanly and a check ran this week.
   //
   // A corrupt page is silent until something reads it, so on a conversation store the failure
   // surfaces weeks later as turns that die for no visible reason — long after the backup that would

@@ -1,5 +1,5 @@
 /**
- * Who writes a compaction summary (M12): `[llm.context] summary_model` on the agent's profile, else `[memory]`'s pass
+ * Who writes a compaction summary: `[llm.context] summary_model` on the agent's profile, else `[memory]`'s pass
  * model on its own profile, else the turn's own — and the turn's executor, the path every chat turn takes, asks the
  * one chosen, metered under the profile that answered.
  */

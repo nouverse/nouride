@@ -7,7 +7,7 @@
  * stays light after the machine has turned dark at sunset.
  *
  * Only the toggle saves. The first visit used to save whatever the system said that day, and every later
- * change of the system's mind was ignored (dashboard-theme-saves-system-choice). Choosing the theme the system
+ * change of the system's mind was ignored. Choosing the theme the system
  * already gives saves nothing, and the page goes back to following it.
  *
  * `public/theme-boot.js` makes the same decision before the first paint, because this one waits for the

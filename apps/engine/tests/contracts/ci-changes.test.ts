@@ -1,5 +1,5 @@
 /**
- * What a push needs from CI (scripts/ci-changes.ts; the owner, 2026-11-06): the suite only when code changed, a light
+ * What a push needs from CI (scripts/ci-changes.ts): the suite only when code changed, a light
  * job for documentation and the site, and the root helper's job only when the helper changed. A guess never skips the
  * full run: what cannot be classified is code.
  */

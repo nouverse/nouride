@@ -7,10 +7,10 @@
  */
 
 import { missingFor, missingToolsFor } from "@nouride/persona";
+import { cutAtWord } from "@nouride/shared";
 import type { PromptContext } from "./types.ts";
 import { installedLine } from "./harness-toolchain.ts";
 import { localTime, safeTimeZone } from "@/commons/clock.ts";
-import { cutAtWord } from "@/commons/cut-at-word.ts";
 
 /** Join non-empty blocks with a blank line between them. */
 export function joinBlocks(...blocks: (string | undefined)[]): string {
@@ -123,7 +123,7 @@ export function renderRuntime(ctx: PromptContext): string {
   }
 
   // Here and not in the harness, which says what the directory is for: an install moves this line, and in the
-  // last block that costs the conversation's cache once, not the harness's (M12, `harness-toolchain.ts`).
+  // last block that costs the conversation's cache once, not the harness's (`harness-toolchain.ts`).
   const installed = ctx.tools.some((tool) => tool.name === "exec") ? installedLine(ctx.harness.binDir, ctx.harness.sharedBinDir) : undefined;
   if (installed) lines.push(installed);
 

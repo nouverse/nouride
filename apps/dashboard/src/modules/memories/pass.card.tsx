@@ -8,7 +8,7 @@ import { useToast } from "@/commons/components/ui/toast";
 import { Card } from "@/commons/components/ui/ui";
 
 /**
- * Whether the pass keeps up (M4): said once what waits is more than a week of nights files at the count set, with each
+ * Whether the pass keeps up: said once what waits is more than a week of nights files at the count set, with each
  * agent's pace and the count that would — `modules/memory/backlog.ts` on the daemon. Every number is a count, or an
  * average of counts over the days named.
  */

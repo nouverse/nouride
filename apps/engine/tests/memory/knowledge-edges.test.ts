@@ -1,5 +1,5 @@
 /**
- * The memory graph's conversation→document and document→tag edges (0.8.23, KNOWLEDGE_BASE §12), left out of 0.8.20:
+ * The memory graph's conversation→document and document→tag edges (0.8.23), left out of 0.8.20:
  * the documents a conversation opened with `memory_read`, read from the audit log and kept on its episode when it is
  * filed; a text document's frontmatter `tags:`, kept when it is read. Both drawn in the knowledge layer, a tag both a
  * conversation and a document have being one dot.

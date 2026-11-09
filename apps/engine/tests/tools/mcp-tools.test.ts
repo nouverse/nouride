@@ -237,7 +237,7 @@ describe("running one", () => {
 });
 
 /**
- * A call held to the schema its server declared, before it is sent (G4). Forwarded as the model wrote it until 0.7.13,
+ * A call held to the schema its server declared, before it is sent. Forwarded as the model wrote it until 0.7.13,
  * so a field left out came back as whatever the server made of it — often a JSON-RPC error the model could not act on.
  */
 describe("arguments that do not match the server's schema", () => {
@@ -473,7 +473,7 @@ describe("reloading a pack", () => {
 
 /**
  * Boot connected every agent's servers one after another, each waited out to the tool timeout — thirty seconds
- * for a server that did not answer, with `/health` unreachable the whole time (E10). Now: all at once, four
+ * for a server that did not answer, with `/health` unreachable the whole time. Now: all at once, four
  * handshakes at a time, ten seconds' wait for any one, and a slow one joins when it is ready.
  */
 describe("connecting at boot", () => {
@@ -545,7 +545,7 @@ describe("connecting at boot", () => {
 });
 
 /**
- * An MCP tool call is written down as a built-in's is (S10). Only the registry's built-ins were wrapped, so an issue
+ * An MCP tool call is written down as a built-in's is. Only the registry's built-ins were wrapped, so an issue
  * opened on GitHub through a server left no row saying who asked — and since 0.7.4, no `audit` event on the turn.
  */
 describe("what an MCP call leaves behind", () => {

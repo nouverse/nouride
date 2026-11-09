@@ -15,7 +15,7 @@ const GROUP = "telegram:nouva:-100";
 const group = { kind: "group" as const, chat: GROUP, present: ["gading", "sam"] };
 const dm = (person: string) => ({ kind: "dm" as const, chat: DM, person });
 
-/** A fact each for Gading and Sam said in the group, one shared, and one summarized conversation in every chat. */
+/** A fact each for both people, said in the group, one shared, and one summarized conversation in every chat. */
 const index = {
   facts: (subjects: readonly string[]) =>
     [

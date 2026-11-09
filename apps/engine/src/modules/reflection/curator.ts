@@ -19,7 +19,7 @@
  * decision, not a lesson.
  */
 
-import { createLogger, type LLMProvider } from "@nouride/shared";
+import { createLogger, cutAtWord, type LLMProvider, oneLine } from "@nouride/shared";
 import { parseFrontmatter, type SkillState } from "@nouride/persona";
 import { readTextFileIfExists } from "@nouride/runtime";
 import type { SkillRead } from "@/commons/audit.store.ts";
@@ -29,7 +29,6 @@ import type { DraftsPort } from "./drafts.store.ts";
 import { refusalOf } from "./gates.ts";
 import { listSkillFiles, readPool, readSkill, readSkillFile } from "./pool.ts";
 import { reviseSkill, type SynthesisResult } from "./synthesis.ts";
-import { cutAtWord } from "@/commons/cut-at-word.ts";
 
 const log = createLogger("reflection.review");
 const DAY_MS = 86_400_000;
@@ -123,7 +122,7 @@ async function mergeGroups(deps: ReviewDeps, eligible: Entry[]): Promise<{ into:
     const retire = [...new Set(skills.filter((name): name is string => typeof name === "string" && names.has(name) && name !== into && !taken.has(name)))];
     if (retire.length === 0) continue;
     for (const name of [into, ...retire]) taken.add(name);
-    groups.push({ into, retire, why: typeof why === "string" ? cutAtWord(why.replace(/\s+/g, " ").trim(), 200) : "" });
+    groups.push({ into, retire, why: typeof why === "string" ? cutAtWord(oneLine(why), 200) : "" });
     if (groups.length >= MAX_MERGES) break;
   }
   return groups;

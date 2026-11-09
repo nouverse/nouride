@@ -14,7 +14,7 @@
  * printed across the edge is hidden whole. Colours, modes, titles and the terminal queries a UI sends are dropped; what
  * moves the cursor or erases is followed: CR LF BS TAB, `CSI` A B C D E F G H d f J K X P @ s u, `ESC 7` and `ESC 8`.
  * A move is held to the screen it is made on (`HEIGHT` rows, `MAX_COLS` cells), so no escape costs more than a row's
- * work: a read of `ESC[20000d` cost seconds before (Nox's review, 0.8.8).
+ * work: a read of `ESC[20000d` cost seconds before (0.8.8).
  */
 
 /** Rows kept; the oldest go first, a hundred at a time. A sign-in prints a few dozen. */
@@ -100,7 +100,7 @@ export class Screen {
 
   /**
    * Every match of `pattern` (global) in a line, replaced by what `by` makes of it — what a token leaves behind. The
-   * line keeps the rows it had: a longer one is cut at their end, never grown past them (Nox's review: a line of bare
+   * line keeps the rows it had: a longer one is cut at their end, never grown past them (before: a line of bare
    * prefixes, each made a longer mark, grew one row without end).
    */
   redact(pattern: RegExp, by: (match: string) => string): void {

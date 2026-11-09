@@ -47,7 +47,7 @@ export function registerApprovalRoutes(control: ControlApp, deps: ControlDeps): 
     // The principal, not a hard-coded "cli". Every dashboard answer was attributed to the CLI, so with
     // named accounts in play "who approved this write" had exactly one answer for everybody — which is
     // the one question an audit log of approvals exists to answer.
-    // And how a person reads who that was, for the prompt in the chat that says it is settled (G11).
+    // And how a person reads who that was, for the prompt in the chat that says it is settled.
     const principal = c.get("principal");
     // A change to an agent's persona or to People is an admin's to answer (`approval-answerers.ts`): an operator's
     // dashboard account answers the rest, not these. The control token is the operator at the terminal, an admin.

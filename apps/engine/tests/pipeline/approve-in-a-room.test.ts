@@ -1,5 +1,5 @@
 /**
- * `/approve` in a room, through the pipeline as a platform delivers it (S8): the person who asked may answer, an
+ * `/approve` in a room, through the pipeline as a platform delivers it: the person who asked may answer, an
  * admin by People may, and another member of the room may not — however the id reached them.
  */
 

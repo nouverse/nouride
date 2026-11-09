@@ -1,5 +1,5 @@
 /**
- * The built-in `diagrams` skill (0.8.12), from the owner's own `draw-diagram`: what it learned in use — draw less first,
+ * The built-in `diagrams` skill (0.8.12), from an older `draw-diagram`: what it learned in use — draw less first,
  * look before sending, Graphviz rather than an online renderer — and a helper that turns a short JSON list of boxes and
  * arrows into Graphviz, so a small model writes data instead of DOT. The helper's checks run here without `dot`: they
  * come before it.

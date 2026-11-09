@@ -51,7 +51,7 @@ const FETCH_FORMATS = ["markdown", "html", "text"] as const;
 type FetchFormat = (typeof FETCH_FORMATS)[number];
 
 export function createWebFetchTool(options: WebToolOptions = {}): Tool {
-  // From the addresses the check judged, never from a second lookup of the name (S12).
+  // From the addresses the check judged, never from a second lookup of the name.
   const doFetch = judgedFetch(options.fetchImpl);
 
   /**
@@ -288,7 +288,7 @@ function renderBody(
  * rather than a tag in the document — so the question is how often to pay for it. Per fetch would
  * double the request count of a research loop reading twenty articles from one blog to re-learn the
  * same line twenty times. Only for the front page — which is what this did first — answers nothing
- * for `https://gading.dev/en/`, where the front page of a localised site is one path segment down
+ * for `https://example.com/en/`, where the front page of a localised site is one path segment down
  * and the agent lands there.
  *
  * So: once per host, cached with the answer *and* the absence, and the site's pages all carry it

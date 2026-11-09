@@ -198,8 +198,8 @@ export interface PromptContext {
    *
    * Separate from `senderName` because the two have completely different standing. This one was
    * written by the operator and matched on an id the sender cannot choose; that one is a string the
-   * sender types into their own profile. Collapsing them would mean a rename to "Gading" is
-   * indistinguishable from being Gading.
+   * sender types into their own profile. Collapsing them would mean a rename to "Sam" is
+   * indistinguishable from being Sam.
    */
   person?: { name: string; notes?: string };
   /**
@@ -310,7 +310,7 @@ export interface BuiltPrompt {
  *   - `capability` — derived from what the agent can do: the harness.
  *   - `chat`     — what is remembered about the people in this chat (recall): moved by a fact written
  *                  now, a cut, the nightly pass, midnight, and in a group by who has been speaking
- *                  lately — never by who is speaking now, and never per request (M2).
+ *                  lately — never by who is speaking now, and never per request.
  *   - `request`  — what a request can move: the date and the installed programs in runtime. Who is
  *                  speaking is `request` too, and is sent after the conversation (`BuiltPrompt.situation`).
  *

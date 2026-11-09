@@ -1,5 +1,5 @@
 /**
- * A conversation's event rows as an editor's ACP `session/update`s (ACP_PROTOCOL §4), for `nouride acp`. Pure: a row in,
+ * A conversation's event rows as an editor's ACP `session/update`s, for `nouride acp`. Pure: a row in,
  * what to send out — so the table is tested as a table, apart from any stream or editor.
  *
  * Paired by `callId`, never by order or name. The answer arrives as `reply` rows, each an offset and the text from there

@@ -3,7 +3,7 @@
  *
  * Updates replace the binary and never the unit, so a unit kept what it was installed with: boxes flashed before
  * 2026-10-15 have a guard that restores the binary and not the LLM gateway's dashboard, and no unit got a directive a
- * later release added. `doctor` checked one line of it, `KillMode` (`config-ops-unit-never-refreshed-by-update`).
+ * later release added. `doctor` checked one line of it, `KillMode`.
  */
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";

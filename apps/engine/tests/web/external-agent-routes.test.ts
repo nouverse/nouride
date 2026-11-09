@@ -166,13 +166,13 @@ describe("coding-CLI accounts (0.8.1)", () => {
   });
 
   test("an account added and removed is audited with who did it, and whether its token went — what failed is not (0.8.9)", async () => {
-    // HARDENING §8: an account vanished from the page with its secret still kept, and nothing said who or what.
+    // An account vanished from the page with its secret still kept, and nothing said who or what.
     const { call, audits } = app();
     expect((await call("POST", "/cli-accounts", { cli: "claude-code", name: "team" })).status).toBe(200);
     expect((await call("POST", "/cli-accounts", { cli: "claude-code", name: "Bad" })).status).toBe(400);
     expect((await call("DELETE", "/cli-accounts/claude-code/team")).status).toBe(409);
     expect((await call("DELETE", "/cli-accounts/claude-code/spare")).status).toBe(200);
-    // Off the list, its token kept by a store that failed: written down and said, not lost with a thrown error (N5).
+    // Off the list, its token kept by a store that failed: written down and said, not lost with a thrown error.
     const stuck = await call("DELETE", "/cli-accounts/claude-code/stuck");
     expect(stuck.status).toBe(500);
     expect(((await stuck.json()) as { error: string }).error).toBe("stuck is removed, but its token stayed in the secret store: read-only file system");

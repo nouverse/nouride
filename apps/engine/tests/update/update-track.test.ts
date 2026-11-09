@@ -1,5 +1,5 @@
 /**
- * `[update] track` (0.8.18, PLAN §3.3): the setting, the loader's refusal of a value the updater would misread, the
+ * `[update] track` (0.8.18): the setting, the loader's refusal of a value the updater would misread, the
  * engine reading it from the running config at each check, and the dashboard's route. Which releases each track takes
  * is the update package's (`packages/update/tests/track.test.ts`).
  */

@@ -1,6 +1,6 @@
 /**
  * The dashboard's graph of memory: conversations, and the people, tags and agents they link to — and, as a layer asked
- * for (0.8.20, KNOWLEDGE_BASE §12), the knowledge base's collections and documents.
+ * for (0.8.20), the knowledge base's collections and documents.
  *
  * Not the vault's own graph (`graph.ts` writes the stubs and day hubs a markdown editor draws). This
  * one is read from the index and built small on purpose — the browser lays it out, so the daemon
@@ -15,7 +15,7 @@
  *   vault — in practice once a night, after the pass — however often it is opened.
  */
 
-import type { Person } from "@nouride/shared";
+import { clipTrimmed, oneLine, type Person } from "@nouride/shared";
 import type { EpisodeFilter } from "./episode-filter.ts";
 import { documentKey, nearestEach } from "./knowledge/related.ts";
 import type { Facet, IndexedEpisode, MemoryIndexPort } from "./memory-index.store.ts";
@@ -88,8 +88,7 @@ const collectionNode = (id: string) => `c:${id}`;
 const documentNode = (key: string) => `d:${key}`;
 
 function short(text: string): string {
-  const line = text.replace(/\s+/g, " ").trim();
-  return line.length > LABEL_MAX ? `${line.slice(0, LABEL_MAX - 1).trimEnd()}…` : line;
+  return clipTrimmed(oneLine(text), LABEL_MAX);
 }
 
 /** A person by name when they have a profile; else their identity, which is all the index knows. */

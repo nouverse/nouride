@@ -175,7 +175,7 @@ describe("no prompt text names a language to reply or report in", () => {
     // Without these, a regex that matched nothing would pass every text above.
     expect(judge("- Answer in Indonesian unless they write in Bahasa Jawa.").named).toEqual(["Indonesian", "Bahasa"]);
     expect(judge("- Always reply to the person in English.").englishToAPerson).toEqual(["reply to the person in English"]);
-    // The phrasings the first version missed (Nox, A6).
+    // The phrasings the first version missed.
     for (const said of ["reply in bahasa", "Use Indonesia's language with them", "Use Indonesia’s language with them"]) expect(judge(said).named).not.toEqual([]);
     for (const said of [
       "Write to the person in English.",
@@ -183,12 +183,12 @@ describe("no prompt text names a language to reply or report in", () => {
       "Ask your ask question in English.",
       "Tell the person, in English, what you did.",
       "English is the language of your replies.",
-      // Nox, A14: the guard had stopped catching this one.
+      // The guard had stopped catching this one.
       "Message the person in English.",
     ]) {
       expect([said, judge(said).englishToAPerson.length]).toEqual([said, 1]);
     }
-    // Fine lines it must not fail on (Nox, A11): the country, and English for what goes to another agent.
+    // Fine lines it must not fail on: the country, and English for what goes to another agent.
     for (const fine of ["Plans and notes are written in English; polish the draft.", "Times are Asia/Jakarta (Indonesia).", "A message to another agent is in English."]) {
       expect([fine, judge(fine)]).toEqual([fine, { named: [], englishToAPerson: [] }]);
     }

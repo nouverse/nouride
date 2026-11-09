@@ -76,7 +76,7 @@ export type TurnStatus =
 /**
  * Why a turn was started other than by a message as it was sent. The daemon's own reasons, for a turn nobody typed: the
  * chat headed one by matching the wake-up message's words — rewording a sentence there changed what the chat said had
- * happened — so the reason travels as data. And a person's edit (`EDITED`, G11): the turn answers a message as edited.
+ * happened — so the reason travels as data. And a person's edit (`EDITED`): the turn answers a message as edited.
  */
 export interface TurnCause {
   /**
@@ -86,7 +86,7 @@ export interface TurnCause {
    */
   via: string;
   job?: string;
-  /** A delegate's own turn: the turn whose call started it — where its model calls and audit rows are counted (D2). */
+  /** A delegate's own turn: the turn whose call started it — where its model calls and audit rows are counted. */
   parent?: string;
   /** How the job ended, for a completion. */
   outcome?: "finished" | "failed" | "stopped" | "interrupted";

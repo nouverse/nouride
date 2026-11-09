@@ -4,7 +4,8 @@
  * The room's record of it, its files in the conversation's list, what kind of chat it is, the unattended budget
  * starting over; then `admit` and the inbox; then the read receipt, a steer into the turn already running, or the
  * batcher. Each placement fixed a bug, and each says so where it is. `Pipeline.attach` runs it for every message, in
- * one transaction (E7). It was the body of `attach()`, which kept the composition root at its budget.
+ * one transaction, so a message costs fewer commits. It was the body of `attach()`, which kept the composition root at
+ * its budget.
  */
 
 import { parseCommand, type HookRegistry } from "@/modules/hooks/registry.ts";
@@ -45,7 +46,7 @@ export function arrive(parts: ArrivalParts, gateway: Gateway, envelope: MessageE
   // Before anything keeps or reads it — the room's record, the inbox, a steer, a turn — and before the edit's own path,
   // which keeps one as well. The person is told once they are let in (`chat-secrets.ts`).
   const taken = parts.secrets?.take(envelope) ?? [];
-  // A person's edit of a message they sent: where that message is decides what it does (`edits.ts`, G11).
+  // A person's edit of a message they sent: where that message is decides what it does (`edits.ts`).
   if (isEdit(envelope)) return arriveEdit(parts, gateway, envelope, taken);
   // Before `admit`, and that placement is the feature rather than an oversight — see `observe`.
   parts.rooms.observe(envelope);

@@ -2,7 +2,7 @@
  * The full pages a person meets signed out (sign-in, welcome, setup) cannot be scrolled sideways. They had blurred
  * circles behind them, and `overflow-hidden` hid the circles but left a scroll box 482 px wide on a 393 px phone, which
  * a browser scrolls to show a field that takes the focus: on Nouride Home, opening the setup wizard's model picker slid
- * the whole page 89 px to the left with the keyboard (the owner, 2026-11-07). `overflow-clip` clips the same and is no
+ * the whole page 89 px to the left with the keyboard. `overflow-clip` clips the same and is no
  * scroll box. The soft look (0.8.24) draws no circles, and the root keeps its clip for whatever is wider next.
  */
 

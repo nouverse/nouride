@@ -1,6 +1,6 @@
 /**
  * A household for memory tests: a real database and vault, a turn log and room log to cut from, and
- * three places to speak from — Gading's DM, the family group, Sam's DM with another agent.
+ * three places to speak from — the admin's DM (`GADING_DM`), the family group, Sam's DM with another agent.
  *
  * The logs are in-memory stand-ins for `TurnStore` and `RoomMessageStore`, shaped exactly like the
  * adapter `boot/memory.ts` builds, so a test drives memory the way the daemon does: say things, cut,
@@ -79,7 +79,7 @@ export interface Household {
    */
   vault: Vault;
   config: Pick<GlobalConfig, "memory" | "people" | "daemon">;
-  /** The knowledge folder (0.8.20): a test writes collections and documents here, then syncs. Gading is the admin. */
+  /** The knowledge folder (0.8.20): a test writes collections and documents here, then syncs. The person of `GADING_DM` is its one admin. */
   knowledgeRoot: string;
   clock: { now: number };
   /** A DM question and its answer. */
@@ -92,7 +92,7 @@ export interface Household {
 
 export async function household(
   options: {
-    /** Embeddings, by the model asked — `[memory.semantic]` in use, or the one a vector key names (M7). */
+    /** Embeddings, by the model asked — `[memory.semantic]` in use, or the one a vector key names. */
     embed?: (texts: string[], semantic: { provider: string; model: string; dimensions: number }) => number[][] | null;
     /** The turn and room logs as memory sees them, changed — one that breaks for one chat, say. */
     source?: (logs: ActivitySource) => ActivitySource;

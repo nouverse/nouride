@@ -1,10 +1,10 @@
 /**
- * People, one file each (0.8.18, PLAN §2.1): `people/<key>.toml` beside `config.toml`, the person's key its file name,
+ * People, one file each (0.8.18): `people/<key>.toml` beside `config.toml`, the person's key its file name,
  * as an agent is `agents/<id>/config.toml`.
  *
  * ```toml
  * [person]
- * name = "Gading"
+ * name = "Sam"
  * ids = ["telegram:555", "web:usr_1"]
  * notes = "…"
  * ```
@@ -28,7 +28,7 @@ const log = createLogger("people");
 
 /** The one table of a person's file. */
 const PERSON_TABLE = "person";
-/** A person's file: their key, then `.toml`. A backup (`gading.toml.bak.1`) or an editor's swap file is not one. */
+/** A person's file: their key, then `.toml`. A backup (`sam.toml.bak.1`) or an editor's swap file is not one. */
 const PERSON_FILE = /^([a-z0-9][a-z0-9_-]{0,63})\.toml$/;
 
 /** Where a config's people live: `people/` beside it. */

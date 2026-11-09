@@ -109,7 +109,7 @@ describe("read, on a picture", () => {
   });
 
   test("one call opens every picture it is given — there is no count (0.8.12)", async () => {
-    // It opened four and named the rest; the owner: no limit on pictures.
+    // It opened four and named the rest; pictures have no limit.
     const names = Array.from({ length: 8 }, (_, i) => `still-${i}.png`);
     for (const name of names) await writeFileAtomic(join(dir, name), PNG);
     const result = await createReadTool(images("native")).execute({ paths: ["notes.md", ...names] }, ctx());

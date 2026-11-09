@@ -1,5 +1,5 @@
 /**
- * Where this install is, recorded, and the paths its database names followed when it moved (0.8.18, the review's B2).
+ * Where this install is, recorded, and the paths its database names followed when it moved (0.8.18).
  *
  * An install is one folder, `.nouride/`, meant to be moved or copied whole: to another disk, another machine, a
  * container's volume. Its database holds absolute paths into it: a job's log, an attachment, a mission's folder, the

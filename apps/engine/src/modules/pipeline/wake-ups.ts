@@ -98,7 +98,7 @@ export class WakeUps {
 
   /**
    * A turn a restart or its provider cut off, taken up again — `restart-resume.ts`, `provider-resume.ts`. `waiting`: the
-   * approvals it was cut off waiting on, which the restart kept (D8).
+   * approvals it was cut off waiting on, which the restart kept.
    */
   resumeTurn(turn: Pick<TurnRecord, "id" | "agentId" | "gatewayId" | "chatId" | "prompt">, why: ResumeWhy = "restart", waiting: readonly ApprovalRequest[] = [], cut?: Cut): boolean {
     const gateway = this.o.deps.gateways.get(turn.gatewayId);

@@ -38,12 +38,12 @@ async function forget(mode: "forget" | "anonymize", rewrite?: () => Promise<stri
 describe("what both modes do", () => {
   test("their conversations, archives, profile and the facts those conversations taught are gone", async () => {
     const report = await forget("anonymize");
-    // Her own fact, and the one about Gading she told in her DM: both came from her conversation.
+    // Her own fact, and the one about the admin she told in her DM: both came from her conversation.
     expect(report).toMatchObject({ episodesDeleted: 1, factsRemoved: 2 });
     expect(await h.memory.episode("2026-09-10-0900-nix")).toBeNull();
     expect(await readTextFileIfExists(h.vault.archive("2026-09-10-0900-nix"))).toBeNull();
     expect(await readTextFileIfExists(h.vault.person("sam"))).toBeNull();
-    // Gading's fact came from Sam's conversation, so it goes with it.
+    // The admin's fact came from Sam's conversation, so it goes with it.
     expect(await readTextFileIfExists(h.vault.person("gading"))).not.toContain("His older sister is Sam");
     expect(await readTextFileIfExists(h.vault.person("gading"))).toContain("Looking for a gift.");
   });
@@ -78,7 +78,7 @@ describe("what they said since their chat was last cut", () => {
 });
 
 describe("nothing is kept where Undo or a person could find it again", () => {
-  /** Gading's profile, edited once by hand: the version kept is the text that still holds what Sam's DM taught. */
+  /** The admin's profile, edited once by hand: the version kept is the text that still holds what Sam's DM taught. */
   async function versioned(): Promise<void> {
     const opened = await h.memory.readDocument("gading");
     if ("refused" in opened) throw new Error(opened.refused);
@@ -154,7 +154,7 @@ describe("what is searched by meaning", () => {
     await h.memory.pass(
       scripted([
         { when: "rendang", answer: { summary: "Sam likes rendang.", facts: [{ person: "sam", op: "add", section: "Food", text: "Likes rendang." }] } },
-        // Told about Sam in Gading's DM: a fact on her profile that none of her own conversations taught.
+        // Told about Sam in the admin's DM: a fact on her profile that none of her own conversations taught.
         { when: "Bandung", answer: { summary: "Gading is looking for a farewell gift for Sam.", mentions: ["sam"], facts: [{ person: "gading", op: "add", section: "Plans", text: "Looking for a gift." }, { person: "sam", op: "add", section: "Life", text: "Moving to Bandung." }] } },
       ]).ask,
     );

@@ -1,5 +1,5 @@
 /**
- * What an external agent's CLI reads about itself (EXTERNAL_AGENTS §3, §5.3): a block in the CLI's own instruction file
+ * What an external agent's CLI reads about itself: a block in the CLI's own instruction file
  * — in its profile folder where it reads one there in any folder (`profileInstructionFile`: Codex's), or else in the
  * agent's folder (`instructionFile`: Claude Code's) — between markers Nouride
  * owns — who it is, how a message reaches it, which CLI answers as it, and its persona pack: IDENTITY.md, SOUL.md,

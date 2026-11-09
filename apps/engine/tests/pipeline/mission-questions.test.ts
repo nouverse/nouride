@@ -1,7 +1,7 @@
 /**
  * A turn in a chat where the agent's own mission waits for the person's answer is told so (0.8.15).
  *
- * Nix's mission asked Gading for three keys; he sent them in Nix's chat, and Nix began "the key you just sent is the
+ * Nix's mission asked Sam for three keys; Sam sent them in Nix's chat, and Nix began "the key you just sent is the
  * same as before" — a repeat, not the answer its mission was waiting for (2026-11-02).
  */
 

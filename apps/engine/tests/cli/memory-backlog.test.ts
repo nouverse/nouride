@@ -1,5 +1,5 @@
 /**
- * Where a busy box learns its nightly pass falls behind (M4), in a terminal: `nouride memory` and `nouride doctor`,
+ * Where a busy box learns its nightly pass falls behind, in a terminal: `nouride memory` and `nouride doctor`,
  * spawned against a stand-in daemon whose `/memory/status` says so — and the count each names to set.
  */
 

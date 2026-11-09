@@ -1,5 +1,5 @@
 /**
- * A conversation's messages as rows (E2, `069_baseline.sql`): a save keeps every row that did not change.
+ * A conversation's messages as rows (`069_baseline.sql`): a save keeps every row that did not change.
  *
  * The point of the table is what a turn writes. The whole history went through the WAL on every turn while it was one
  * JSON column — a 300 KB conversation is some seventy pages, for the few kilobytes a turn adds. So the store is held

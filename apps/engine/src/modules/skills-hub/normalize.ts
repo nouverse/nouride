@@ -19,6 +19,7 @@
 
 import { parseYaml } from "@nouride/runtime";
 import { VALID_INSTALLED_PATH, VALID_SKILL_NAME } from "@nouride/persona";
+import { clip, oneLine, plural } from "@nouride/shared";
 import type { FetchedSkill } from "./sources.ts";
 
 export interface InstallCandidate {
@@ -79,7 +80,7 @@ export function normalizeSkill(fetched: FetchedSkill): InstallCandidate | { erro
     description = oneLine(body.replace(/^#.*$/gm, "").trim().split(/\n\s*\n/)[0] ?? "").slice(0, 300);
     notes.push("It had no description; the first paragraph is used. Edit it, since it is how agents find the skill.");
   }
-  if (description.length > MAX_DESCRIPTION) description = `${description.slice(0, MAX_DESCRIPTION - 1)}…`;
+  description = clip(description, MAX_DESCRIPTION);
 
   // Files first: what is kept decides what the scripts say about `requires`.
   const files: InstallCandidate["files"] = [];
@@ -108,7 +109,7 @@ export function normalizeSkill(fetched: FetchedSkill): InstallCandidate | { erro
     total += content.length;
     files.push({ path: file.path, content });
   }
-  if (left.length) notes.push(`Left out ${left.length} file${left.length === 1 ? "" : "s"} it cannot hold: ${left.slice(0, 12).join(", ")}${left.length > 12 ? ", …" : ""}.`);
+  if (left.length) notes.push(`Left out ${left.length} ${plural(left.length, "file")} it cannot hold: ${left.slice(0, 12).join(", ")}${left.length > 12 ? ", …" : ""}.`);
 
   const tools = needsTools(meta, files, body, notes);
   const requires = hostRequires(meta, files, notes);
@@ -186,10 +187,6 @@ function list(value: unknown): string[] {
 
 function str(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
-}
-
-function oneLine(text: string): string {
-  return text.replace(/\s+/g, " ").trim();
 }
 
 function slug(text: string): string {

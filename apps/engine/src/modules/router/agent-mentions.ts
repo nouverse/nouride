@@ -4,10 +4,10 @@
  * The shape the operator asked for, and it reads like people talking:
  *
  * ```
- * Nouva: "@nox kerjain ini, disuruh Gading"
+ * Nouva: "@nox kerjain ini, disuruh Sam"
  * Nox:   …work…
  * Nox:   "udah kelar @nouva, PR di xxx"
- * Nouva: "SIP okay Nox, nanti kita butuh review Gading dulu ya"
+ * Nouva: "SIP okay Nox, nanti kita butuh review Sam dulu ya"
  * ```
  *
  * The last line ends it, and nothing here makes that happen: the router only routes on a mention, so
@@ -32,8 +32,7 @@
  * budget is the honest limit: whatever they are doing, they get four turns of it.
  */
 
-import type { MessageEnvelope } from "@nouride/shared";
-import { cutAtWord } from "@/commons/cut-at-word.ts";
+import { cutAtWord, type MessageEnvelope } from "@nouride/shared";
 
 export interface AgentMentionPolicy {
   /** Whether agents may address each other at all. */

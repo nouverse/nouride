@@ -8,7 +8,17 @@
  */
 
 import type { DropReason } from "@nouride/queue";
-import type { ApprovalRequest, Attachment, AudioRefPart, ImageRefPart, MessageContent, MessageEnvelope, TakenSecret } from "@nouride/shared";
+import {
+  type ApprovalRequest,
+  type Attachment,
+  type AudioRefPart,
+  clip,
+  type ImageRefPart,
+  type MessageContent,
+  type MessageEnvelope,
+  plural,
+  type TakenSecret,
+} from "@nouride/shared";
 import { duration } from "@/modules/jobs/wake-text.ts";
 
 /**
@@ -48,8 +58,8 @@ export function composeQuestion(params: {
   events?: string;
   hasAttachments: boolean;
   /**
-   * The line in front of what was said when it is a person's edit of a message already answered (`edit-rules.ts`,
-   * G11) — after the room's blocks, so it reads as part of the question it frames.
+   * The line in front of what was said when it is a person's edit of a message already answered (`edit-rules.ts`),
+   * after the room's blocks, so it reads as part of the question it frames.
    */
   edit?: string;
   /**
@@ -98,12 +108,12 @@ const OPENER_CHARS = 2_000;
  */
 export function threadOpenerNote(opener: { name: string; text: string; where?: string | undefined }): string {
   const text = opener.text.trim();
-  const said = text.length > OPENER_CHARS ? `${text.slice(0, OPENER_CHARS)}…` : text;
+  const said = clip(text, OPENER_CHARS, OPENER_CHARS);
   return `[This thread was started from a message${opener.where ? ` in ${opener.where}` : ""} by ${opener.name}: ${said}]`;
 }
 
 /**
- * The question before the files sent with it are in (P6): its words, and those files by name. What a turn's journal
+ * The question before the files sent with it are in: its words, and those files by name. What a turn's journal
  * opens with, before the downloads — thirty seconds a file — so a crash among them closes a turn with its question
  * instead of leaving a record with nothing behind it. The composed question replaces it once there is one; a turn
  * taken up from this one is told what never arrived, and can ask for it again.
@@ -130,7 +140,7 @@ export function secretsNote(taken: readonly TakenSecret[] | undefined, options: 
   if (!taken?.length) return "";
   const list = taken.map((secret) => `${secret.handle} (${secret.label})`).join(", ");
   const handle = taken[0]!.handle;
-  const head = `[The daemon took ${taken.length === 1 ? "a credential" : "credentials"} out of the message below before you saw it: ${list}. `;
+  const head = `[The daemon took ${plural(taken.length, "a credential", "credentials")} out of the message below before you saw it: ${list}. `;
   if (options.ownShell) {
     return (
       head +
@@ -174,7 +184,7 @@ export function describeApprovalParams(request: Pick<ApprovalRequest, "params">)
   // A command arrives as argv or as one line for the shell — the same call either way.
   const line = typeof argv === "string" ? argv : Array.isArray(argv) && argv.every((part) => typeof part === "string") ? argv.join(" ") : null;
   if (line !== null) {
-    return `\`${line.length > 200 ? `${line.slice(0, 200)}…` : line}\``;
+    return `\`${clip(line, 200, 200)}\``;
   }
   const path = request.params?.path;
   return typeof path === "string" ? `\`${path}\`` : "";
@@ -189,7 +199,7 @@ export function mergeEnvelopes(base: MessageEnvelope, next: MessageEnvelope): Me
   const attachments = [...withOrigin(base), ...withOrigin(next)];
   const mentions = Array.from(new Set([...(base.mentions ?? []), ...(next.mentions ?? [])]));
 
-  // An edit is of one message: the several a burst became are not an edit of it (G11).
+  // An edit is of one message: the several a burst became are not an edit of it.
   const { edit: _edit, ...rest } = base;
   return {
     ...rest,
@@ -200,7 +210,7 @@ export function mergeEnvelopes(base: MessageEnvelope, next: MessageEnvelope): Me
     ...(attachments.length > 0 ? { attachments } : {}),
     ...(mentions.length > 0 ? { mentions } : {}),
     mentionsSelf: base.mentionsSelf || next.mentionsSelf,
-    // Outside content in either is outside content in the one they became (S13).
+    // Outside content in either is outside content in the one they became.
     ...(base.forwarded || next.forwarded ? { forwarded: true } : {}),
     // And a handle in either stands for what it did (`chat-secrets.ts`).
     ...(base.secrets || next.secrets ? { secrets: [...(base.secrets ?? []), ...(next.secrets ?? []).filter((secret) => !base.secrets?.some((had) => had.handle === secret.handle))] } : {}),
@@ -213,7 +223,7 @@ function withOrigin(envelope: MessageEnvelope): Attachment[] {
 }
 
 /**
- * What a message's own text carried from outside, named for the record a memory write after it carries (S13): a
+ * What a message's own text carried from outside, named for the record a memory write after it carries: a
  * forwarded message — the platform's word for it — and what the engine named where it built the message.
  */
 export function outsideOf(envelope: Pick<MessageEnvelope, "forwarded" | "outsideContent">): { outsideContent?: string[] } {

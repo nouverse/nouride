@@ -11,12 +11,11 @@
  * purpose: one of them rewriting a file silently changes how the other five behave.
  */
 
-import { createLogger } from "@nouride/shared";
+import { createLogger, cutAtWord, oneLine } from "@nouride/shared";
 import type { AuditPort } from "@/commons/audit.store.ts";
 import { readPool, shippedSkillRefusal } from "./pool.ts";
 import { announceDraft, type NotifyDeps } from "./notify.ts";
 import { redact } from "@nouride/secrets";
-import { cutAtWord } from "@/commons/cut-at-word.ts";
 import { REASON_SEPARATOR, lessonOf, type DraftsPort } from "./drafts.store.ts";
 import type { SkillDraft, SkillFile } from "./types.ts";
 
@@ -139,7 +138,7 @@ ${waiting.body}`,
     ...(input.chatId ? { chatId: input.chatId } : {}),
     ...(input.sessionId ? { sessionId: input.sessionId } : {}),
     triggerKind: "in_use",
-    triggerReason: [cutAtWord(input.why.replace(/\s+/g, " ").trim(), 200), ...(masked.length > 0 ? [`masked: ${masked.join(", ")}`] : [])].join(REASON_SEPARATOR),
+    triggerReason: [cutAtWord(oneLine(input.why), 200), ...(masked.length > 0 ? [`masked: ${masked.join(", ")}`] : [])].join(REASON_SEPARATOR),
     // Same bookkeeping the reflection path keeps: what this absorbed, so the reviewer sees the
     // size of the decision rather than only the newest sentence.
     ...(waiting ? { carries: [...waiting.carries, lessonOf(waiting.triggerReason)] } : {}),

@@ -1,6 +1,6 @@
 /**
  * Every diff the dashboard draws, one way (0.8.8): a skill's draft against the skill on disk, an approval's change to a
- * file or a persona — the owner: "semua diff harusnya pakai komponen yang sama aja". Each drew its own, and the skill's
+ * file or a persona, all with the one component. Each drew its own, and the skill's
  * ran its lines past the box that tinted them: unwrapped in a `<pre>`, the text was cut on the left and the colour
  * stopped halfway along a long line.
  *

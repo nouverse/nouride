@@ -1,5 +1,5 @@
 /**
- * When the database is snapshotted, and where (E1, 2026-10-15).
+ * When the database is snapshotted, and where (2026-10-15).
  *
  * Every boot took a full `VACUUM INTO` and read it back to verify — 62 MB of I/O on the live box's
  * 31 MB database — so a crash loop wrote 155 MB to an SD card in two minutes for five identical
@@ -124,7 +124,7 @@ describe("[daemon] backup_dir", () => {
 describe("a database nothing wrote to", () => {
   /**
    * A day of nobody using the box was a full copy written and read back from the SD card, and it pushed an older,
-   * different copy out of the rotation (E1). What the daemon writes about itself — its log lines — is not a write.
+   * different copy out of the rotation. What the daemon writes about itself — its log lines — is not a write.
    */
   test("is not copied again; a write makes the next weekly one due, a week after the newest and not a day", () => {
     jest.useFakeTimers();
@@ -159,7 +159,7 @@ describe("a database nothing wrote to", () => {
 });
 
 /**
- * Four kept by default (0.8.17, PLAN §3.5, the owner): a month back at one a week, one rule for the database, the vault
+ * Four kept by default (0.8.17): a month back at one a week, one rule for the database, the vault
  * and the packs, and for `nouride db backup`, which reads the same key. An install on the default prunes its older
  * snapshots to four at its first weekly one.
  */

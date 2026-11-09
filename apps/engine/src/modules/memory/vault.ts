@@ -8,7 +8,7 @@
  * episodes/2026/09/2026-09-25-0459-nouva.md   one conversation
  * archive/2026/09/2026-09-25-0459-nouva.md.gz its transcript, once the episode is compacted
  * days/2026/09/2026-09-25.md                  the day's hub, generated — by month, like episodes
- * people/gading.md                            a profile
+ * people/sam.md                               a profile
  * agents/nouva.md, groups/keluarga.md, tags/nouride.md   graph stubs, generated
  * shared.md                                   what every agent knows
  * .proposals/, .history/                      hidden: not memory, the machinery around it

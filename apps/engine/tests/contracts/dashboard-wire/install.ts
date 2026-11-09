@@ -255,7 +255,10 @@ async function missions(bench: Bench, notes: NotesStore): Promise<{ missions: Mi
   return { missions: service, working, stopped };
 }
 
-/** A Telegram group nouva talks in, named by Telegram and renamed by the operator, where Gading and a stranger spoke. */
+/**
+ * A Telegram group nouva talks in, named by Telegram and renamed by the operator, where a family member and a stranger
+ * spoke.
+ */
 function aGroup(bench: Bench): void {
   const where = { agentId: "nouva", gatewayId: "telegram:main", chatId: "-100200" };
   bench.sessions.save(where, [{ role: "user", content: "Gading: lampu teras mati", timestamp: INSTANT }, { role: "assistant", content: "Kucek." }], 10);

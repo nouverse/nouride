@@ -1,5 +1,5 @@
 /**
- * Where a press on a button goes (G11). A connection hands its presses to one handler (`Gateway.onPress`), and more
+ * Where a press on a button goes. A connection hands its presses to one handler (`Gateway.onPress`), and more
  * than one thing in the daemon asks with buttons — an approval's prompt, a proposal's card (0.8.0) — so this is that
  * handler: each press to whichever owns its data, and one nobody owns answered as a button no longer known.
  */

@@ -1,6 +1,6 @@
 /**
  * Who answers a new agent (0.8.1): a model, through Nouride's profiles, or a coding CLI this box has — one choice on the
- * New Agent form, where external agents had a form of their own the owner found hard to follow. A CLI that is not
+ * New Agent form, where external agents had a form of their own that was hard to follow. A CLI that is not
  * installed is shown with how to install it; a box with no room for a CLI's session says so and offers none.
  */
 
@@ -70,7 +70,7 @@ export function AnsweredBy({ value, onChange }: { value: string | null; onChange
 
 /**
  * Which account a CLI answers with: one of the CLI's accounts, with whether each is signed in. Accounts are added and
- * signed in on the Models page, which the field links to — the owner: not here too.
+ * signed in on the Models page, which the field links to: one place for it, not here too.
  */
 export function AccountPicker({ cli, value, onChange }: { cli: string; value: string; onChange: (account: string) => void }) {
   const accounts = useQuery({ queryKey: ["cli-accounts"], queryFn: () => api.cliAccounts(), staleTime: 60_000, retry: false });

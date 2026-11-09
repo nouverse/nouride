@@ -1,5 +1,5 @@
 /**
- * What a turn's helpers and peers run on — inside the ceiling, and never waiting on it (P2).
+ * What a turn's helpers and peers run on — inside the ceiling, and never waiting on it.
  *
  * `delegate` ran up to four helpers and `ask_agent` a peer per call, each a provider stream of its own, and none of
  * them was counted: eight turns each delegating four was forty streams with `max_concurrent_turns` reading eight.

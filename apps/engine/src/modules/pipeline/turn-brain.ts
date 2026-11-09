@@ -43,7 +43,7 @@ export function turnBrain(
     sessionId: session.id,
     ...(record ? { turnId: record.id } : {}),
   });
-  // Who writes a compaction summary, before the answer and after it alike — `[memory]`'s pass model when set (M12).
+  // Who writes a compaction summary, before the answer and after it alike — `[memory]`'s pass model when set.
   const summarize = summarizerFor(ctx.deps, { agentId: agent.config.id, profile: agent.config.llm.provider, sessionId: session.id, tiers: agent.config.llm, ...(record ? { turnId: record.id } : {}) });
   // Three layers, resolved fresh per call: the agent's own posture, then this person's — keyed by the person and not
   // the conversation, because pairing establishes that *they* are trusted and scoping it to a chat meant re-saying it

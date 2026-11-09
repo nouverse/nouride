@@ -42,7 +42,7 @@ interface Walk {
 }
 
 /**
- * What is drawn over a cat. In bed, one that cannot work sleeps like the rest (the owner, 2026-11-03); the alert is for
+ * What is drawn over a cat. In bed, one that cannot work sleeps like the rest; the alert is for
  * one still at work, or waiting, while it cannot.
  */
 export function bubbleFor(agent: Pick<SceneAgent, "status" | "unavailable">, walking: boolean): "alert" | "question" | "typing" | "zed" | null {

@@ -1,7 +1,7 @@
 /**
  * What `nouride tools run` runs (0.8.1), and why it will not run the rest: read by the command itself, and by the
  * `nouride` tool before its gate asks anyone — a call it would refuse is refused there, so nobody approves it first (on
- * the live box the owner said yes to an `ln -s` through it, which the command then refused).
+ * the live box a person said yes to an `ln -s` through it, which the command then refused).
  */
 
 const global = (rest: readonly string[]) => rest.includes("-g") || rest.includes("--global");

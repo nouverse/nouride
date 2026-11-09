@@ -2,7 +2,7 @@
  * Where the dashboard sends a visitor — the order of the first-run screens.
  *
  * It was wrong on the first Nouride Box: the setup wizard (models, agents) came before the screen
- * that replaces the first-login password, and the owner asked for the account to come first.
+ * that replaces the first-login password, and the account has to come first.
  */
 
 import { describe, expect, test } from "bun:test";

@@ -9,6 +9,7 @@
  * Pure: `memory-tags.ts` does the asking.
  */
 
+import { oneLine } from "@nouride/shared";
 import { extractJson } from "@/modules/llm/json-answer.ts";
 import { normalizeTag } from "./tags.ts";
 import type { TidyChange } from "./tidy.ts";
@@ -85,7 +86,7 @@ export function parseSuggestions(answer: string, counts: ReadonlyMap<string, num
     }
     from.forEach((tag) => used.add(tag));
     used.add(into!);
-    const said = typeof group.reason === "string" ? group.reason.replace(/\s+/g, " ").trim() : "";
+    const said = typeof group.reason === "string" ? oneLine(group.reason) : "";
     const big = [...from, into!].filter((tag) => (counts.get(tag) ?? 0) >= BIG).length >= 2;
     const reason = (big ? `Check first: two tags on ${BIG}+ conversations each, often two subjects. ${said}` : said).trim().slice(0, 140) || undefined;
     changes.push({ id: `model:${into}`, kind: "merge", from: from.sort(), into: into!, episodes: 0, why: "model", ...(reason ? { reason } : {}) });

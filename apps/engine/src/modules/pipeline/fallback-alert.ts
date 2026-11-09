@@ -1,6 +1,5 @@
 /**
- * What a turn that fell back to one of `[llm] fallbacks` tells the operator: once an outage, not once a turn
- * (SMART_AUTOMATION §3.1).
+ * What a turn that fell back to one of `[llm] fallbacks` tells the operator: once an outage, not once a turn.
  *
  * A provider down at three in the morning falls back on every turn until it is up, and an alert per turn — or per
  * five-minute cooldown — is the channel muted by four. One alert per model and profile while it keeps failing; an hour

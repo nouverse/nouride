@@ -1,5 +1,5 @@
 /**
- * The port is bound the moment boot has its config, and answers before there is anything to serve (D1).
+ * The port is bound the moment boot has its config, and answers before there is anything to serve.
  *
  * It was bound last, after migrations, the database check, the vault and every MCP server — on a Pi, tens of
  * seconds in which a daemon that was running looked like one that was not: `nouride status` asked whether it was,

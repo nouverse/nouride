@@ -6,7 +6,7 @@
  * were on PATH all along. And nothing said HOME persists and is shared, so a CLI got logged in again,
  * or configured inside a project where the next clone loses it.
  *
- * Two halves, in two places, because they change at different rates (M12). The rule — what is in the
+ * Two halves, in two places, because they change at different rates. The rule — what is in the
  * bin directory is on PATH, call it by name, HOME is where settings live — is the harness's and never
  * moves. What the directory holds is read from it each time (one `stat` while it is unchanged), so an
  * install shows up on the next request and a removal disappears — the prompt can never claim a program

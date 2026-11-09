@@ -1,5 +1,5 @@
 import { join, loadTomlIfExists } from "@nouride/runtime";
-import { holdLines } from "@nouride/shared";
+import { holdLines, plural } from "@nouride/shared";
 import { assertGatewayExecPosture, noteOf } from "@/modules/config/global/index.ts";
 import { assertUpgradeFloor, loadConfigPastTheFloor } from "@/boot/upgrade-floor.ts";
 import { configJsonSchema, describeConfig, fieldsIn, findField, lintConfig } from "@/modules/config/schema.ts";
@@ -26,7 +26,7 @@ export async function configCmd(args: string[]): Promise<void> {
   if (action === "explain") return configExplainCmd(args.slice(1));
   if (action !== "check") {
     if (action !== undefined) unknownAction("config", action);
-    // Bare, what the group does — said as help, as `--help` is (`lint-cli-exit-code-guard`).
+    // Bare, what the group does — said as help, as `--help` is.
     return helpFor("config");
   }
 
@@ -79,7 +79,7 @@ async function packEnabled(dir: string): Promise<boolean> {
  *
  * What the loading logs is held for the length of it (`holdLines`) and said here, as lines of the verdict: "agent pack
  * failed to load", written as JSON above "✓ this configuration would start", was the only place a pack that would not
- * load was said — and the release notes send people here before an upgrade (`config-check-hides-pack-failures`). Each
+ * load was said — and the release notes send people here before an upgrade. Each
  * enabled pack that will not load is a `✗` with why, and the check fails: the daemon would start, and that agent would
  * not. A disabled one is said, and fails nothing — nothing would run it.
  */
@@ -102,7 +102,7 @@ async function configCheck(target: string | undefined): Promise<void> {
   for (const failure of registry.loadFailures()) failures.push({ ...failure, enabled: await packEnabled(join(config.daemon.agentsDir, failure.id)) });
   const failed = failures.filter((failure) => failure.enabled);
   const parked = failures.filter((failure) => !failure.enabled);
-  const verdict = failed.length > 0 ? `this configuration would start, but ${failed.length} agent${failed.length === 1 ? "" : "s"} will not load` : null;
+  const verdict = failed.length > 0 ? `this configuration would start, but ${failed.length} ${plural(failed.length, "agent")} will not load` : null;
 
   if (verdict) {
     say(`${RED}✗${RESET} ${verdict}`);

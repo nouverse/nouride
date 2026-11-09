@@ -9,7 +9,7 @@
  * over the words tells them apart.
  */
 
-import type { ButtonPress, MessageButton, PressAnswer } from "@nouride/shared";
+import { type ButtonPress, clip, type MessageButton, type PressAnswer } from "@nouride/shared";
 import { pressRefusal } from "./actions.ts";
 import type { Missions } from "./missions.ts";
 import { shortId } from "./page.ts";
@@ -55,7 +55,7 @@ const DATA = /^mission:answer:(msn_[A-Za-z0-9]+):([0-9a-z]+):([A-F1-6])$/;
 export function optionButtons(missionId: string, options: readonly AnswerOption[], askedAt: number): MessageButton[] {
   return options.map((option) => {
     const label = `${option.key}: ${option.text}`;
-    return { label: label.length > LABEL_CHARS ? `${label.slice(0, LABEL_CHARS - 1)}…` : label, data: `mission:answer:${missionId}:${askedAt.toString(36)}:${option.key}` };
+    return { label: clip(label, LABEL_CHARS), data: `mission:answer:${missionId}:${askedAt.toString(36)}:${option.key}` };
   });
 }
 

@@ -72,7 +72,7 @@ export function chatQueue(parts: {
      *
      * The global ceiling (`maxConcurrentTurns`) still bounds the spend, which is what it is for —
      * the per-key cap looks like it is doing that job and is not. A room's share of it is its agents, at
-     * most half the ceiling, so one room cannot take every slot (`fair-share.ts`, P12).
+     * most half the ceiling, so one room cannot take every slot (`fair-share.ts`).
      */
     maxConcurrentPerKey: (envelope) => conversationSlots(envelope, deps),
     maxConcurrentTotal: deps.config.queue.maxConcurrentTurns,

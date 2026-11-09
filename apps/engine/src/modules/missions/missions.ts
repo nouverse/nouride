@@ -1,5 +1,5 @@
 /**
- * The missions: what starts one, what runs its turns, and what each turn's end leads to (MISSIONS §3, §7). Nothing
+ * The missions: what starts one, what runs its turns, and what each turn's end leads to. Nothing
  * starts by itself: a person or an agent starts a mission, and
  * this only runs what was started — one turn at a time, through the pipeline every chat uses, each from the mission's
  * page (`page.ts`), until the agent says it is done and its checks agree, it needs a person, or a limit is reached.
@@ -38,7 +38,7 @@ import { worktreeBranch } from "./worktree.ts";
 
 const log = createLogger("missions");
 
-/** How a mission's later turns name the outside content an earlier one read — the record a memory write carries (S13). */
+/** How a mission's later turns name the outside content an earlier one read — the record a memory write carries. */
 const OUTSIDE_EARLIER = "outside content this mission read earlier";
 
 /** What the agent said in a turn about the mission itself — acted on when the turn ends. */
@@ -224,7 +224,7 @@ export class Missions implements TurnShaper {
     const settings = this.deps.settings();
     // One started here is marked so in `open` itself: the next one is decided against it.
     for (const mission of open.filter((one) => one.status === "queued")) {
-      // An asleep agent's missions wait, marked so, and start when it wakes (§9).
+      // An asleep agent's missions wait, marked so, and start when it wakes.
       const blocked = this.deps.agents.asleep(mission.agentId) ? `${mission.agentId} is asleep` : blockedBy(mission, open, settings);
       if (blocked) {
         if (!this.toldQueued.has(mission.id)) {
@@ -393,7 +393,8 @@ export class Missions implements TurnShaper {
     const claim = state.claim;
     state.claim = undefined;
     state.claimedAt = undefined;
-    // Kept on the mission: its next turn starts fresh, and would otherwise forget the page it read (S13).
+    // Kept on the mission: its next turn starts fresh, and would otherwise forget the page it read, and with it the
+    // guard that makes a later memory write wait for a person.
     if (outcome.readOutside && !mission.untrusted) {
       mission.untrusted = true;
       log.info("a mission read outside content: its later turns are marked as having read it", { mission: id });
@@ -463,7 +464,7 @@ export class Missions implements TurnShaper {
   claim(missionId: string, claim: Claim): void {
     const state = this.turnState(missionId);
     state.claim = claim;
-    // The turn's first claim: one said again every few minutes does not keep putting off a limit (Nox's third review).
+    // The turn's first claim: one said again every few minutes does not keep putting off a limit.
     state.claimedAt ??= this.now();
   }
 
@@ -622,7 +623,7 @@ export class Missions implements TurnShaper {
   }
 
   /**
-   * A limit reached: its jobs stopped, and it waits for a person to continue or stop it (§7) — told what going on gives
+   * A limit reached: its jobs stopped, and it waits for a person to continue or stop it — told what going on gives
    * it. `raise`, where the caller read them with what is not counted yet (`timers.ts`); else read here.
    */
   limitHit(mission: Mission, which: string, raise: MissionLimit[] = limitsNear(mission, this.now(), this.inForce(mission))): void {
@@ -757,7 +758,7 @@ export class Missions implements TurnShaper {
         this.end(mission, "failed", `it was cut off by ${MAX_RESUMES} restarts in a row with no step finished in between`);
         continue;
       }
-      // The call it was cut off in decides (§7): one the gate asks about waits for a person; any other is named.
+      // The call it was cut off in decides: one the gate asks about waits for a person; any other is named.
       const cut = worstCut(cuts.get(mission.id) ?? []);
       if (cut?.kind === "asks") {
         this.wait(mission, "unknown_outcome", describeToolCall(cut.call.name, cut.call.arguments));

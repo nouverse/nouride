@@ -1,6 +1,6 @@
 /**
- * Changing the knowledge folder: a collection made, its settings written, a document added or removed (KNOWLEDGE_BASE
- * §9 and §11, 0.8.20). The dashboard, the command line and an agent's `memory_write` all come through here, so a name
+ * Changing the knowledge folder: a collection made, its settings written, a document added or removed (0.8.20).
+ * The dashboard, the command line and an agent's `memory_write` all come through here, so a name
  * that would walk out of the folder, or over a file already there, is refused or renamed in one place.
  *
  * The index follows the folder (`sync.ts`): each change here is followed by a sync of its collection by the caller.
@@ -107,7 +107,7 @@ export function removeCollection(root: string, id: string): boolean {
 }
 
 /**
- * Documents an agent saved from a chat into a collection wider than that chat (§9), waiting for an admin's yes: in the
+ * Documents an agent saved from a chat into a collection wider than that chat, waiting for an admin's yes: in the
  * collection's hidden `.pending/` folder, which the index never reads, each with what it is and where it came from.
  */
 const PENDING = ".pending";
@@ -125,7 +125,7 @@ export interface PendingDocument {
   title: string;
   savedAt: number;
   agent: string;
-  /** Who and where, in words: "Gading, in a chat with Nouva". */
+  /** Who and where, in words: "Sam, in a chat with Nouva". */
   from: string;
   source?: string;
   /** Absent on what waited from before 0.8.23: nobody is told of its answer. */

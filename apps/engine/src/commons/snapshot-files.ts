@@ -2,7 +2,7 @@
  * A snapshot of a set of files: `<root>/<stamp>/<relative path>`, each file that did not change since the previous
  * snapshot hard-linked to it rather than copied, the oldest past `keep` swept. The memory vault's way (`memory/backup.ts`),
  * shared since 0.8.18 with the snapshots of what a person or the skill-learning loop makes and the vault and the packs
- * did not hold (REVIEW B2): the daemon's config and its people, the skill pool.
+ * did not hold: the daemon's config and its people, the skill pool.
  */
 
 import { copyFileAtomic, join, linkFile, listDir, removePath, renamePath, statFile } from "@nouride/runtime";

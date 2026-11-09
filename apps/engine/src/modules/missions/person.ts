@@ -1,5 +1,5 @@
 /**
- * What a person says to a mission (MISSIONS §11): stop it, let it go on, answer its question, accept its result — or a
+ * What a person says to a mission: stop it, let it go on, answer its question, accept its result — or a
  * proposal, which their yes starts. The same four from a chat (`/mission`), the CLI and the dashboard, as the signed-in
  * person or the operator; never from an agent, which cannot raise its own limit.
  */

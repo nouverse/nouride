@@ -1,5 +1,5 @@
 /**
- * Documents close in meaning (0.8.20, KNOWLEDGE_BASE §11): a document's Related documents on the dashboard. A document
+ * Documents close in meaning (0.8.20): a document's Related documents on the dashboard. A document
  * is the mean of its sections' vectors, the ones memory holds for search, and its nearest are the three whose means
  * are closest, above a floor, never itself, never from an archived collection, and none while search by meaning is off.
  */

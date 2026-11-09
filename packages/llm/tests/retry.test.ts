@@ -162,7 +162,7 @@ describe("retryAfterMs", () => {
 });
 
 /**
- * What a call took, carried on the usage it reports (D2). The retries above happened, and nothing downstream knew:
+ * What a call took, carried on the usage it reports. The retries above happened, and nothing downstream knew:
  * a turn that waited half a minute on a provider's 429s looked like a slow model.
  */
 describe("what a call took, on its usage", () => {

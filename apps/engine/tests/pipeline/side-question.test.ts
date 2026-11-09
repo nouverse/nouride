@@ -1,9 +1,9 @@
 /**
- * `/btw` through the real pipeline (0.8.17, RFC_SIDE_QUESTIONS §3 with the owner's three answers; 0.8.20, the owner's
- * rule of 2026-11-05): a side question is answered beside the turn by one of its own, on the agent's own model at low
- * effort, as the agent itself in the person's language, seeing the conversation and the work in flight; it can do
- * nothing, and writes nothing back. Its answer reaches the chat marked, and the turn log as a `note` record memory
- * skips; neither the running turn nor the next one sees it. One at a time per chat.
+ * `/btw` through the real pipeline (0.8.17; 0.8.20, the rule of 2026-11-05): a side question is answered beside the
+ * turn by one of its own, on the agent's own model at low effort, as the agent itself in the person's language, seeing
+ * the conversation and the work in flight; it can do nothing, and writes nothing back. Its answer reaches the chat
+ * marked, and the turn log as a `note` record memory skips; neither the running turn nor the next one sees it. One at a
+ * time per chat.
  */
 
 import { afterEach, describe, expect, test } from "bun:test";
@@ -81,7 +81,7 @@ describe("/btw", () => {
     const h = await bench({ main: [{ text: "first answer" }, { text: "second answer" }], side: [{ text: "Port 18390." }] });
     await h.say("what are we doing");
     expect(await h.say("/btw what port was that?")).toBe("btw: Port 18390.");
-    // No tool at all, not even one that reads: it does nothing (the owner, 2026-11-05).
+    // No tool at all, not even one that reads: it does nothing.
     expect(offered(h.sideBodies[0]!)).toEqual([]);
     // At low effort: at the agent's own, Nix thought for 24 s before a word and its minute ran out (live, 2026-11-05).
     expect(h.sideBodies[0]!.reasoning_effort).toBe("low");

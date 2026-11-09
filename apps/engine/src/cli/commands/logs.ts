@@ -85,7 +85,7 @@ async function followStep(client: Pick<Client, "softGet">, path: string, since: 
  * Where a follower asks from next: past the newest line it was given — or from the start, when the daemon's sequence
  * went back. The ring is in memory, so a restarted daemon numbers from 1 again, and a follower still asking for lines
  * after the old one's 5000 was answered with nothing until the new one passed 5000: every boot line skipped, the ones
- * a restart is watched for (D17). `nouride chat`'s old poll of `/activity` learned this first. Pure.
+ * a restart is watched for. `nouride chat`'s old poll of `/activity` learned this first. Pure.
  */
 export function followFrom(since: number, page: { latest: number }): { since: number; restarted: boolean } {
   return page.latest < since ? { since: 0, restarted: true } : { since: page.latest, restarted: false };

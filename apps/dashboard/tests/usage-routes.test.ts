@@ -1,5 +1,5 @@
 /**
- * The usage card's routes (TOKEN_SAVINGS §3.1, 0.8.13): each profile and model with its cached share and cost a million
+ * The usage card's routes (0.8.13): each profile and model with its cached share and cost a million
  * input, and above them the daemon's warning when a route of a model caches far below another route of it. A provider
  * that never said what it cached shows "—", not 0 %.
  */

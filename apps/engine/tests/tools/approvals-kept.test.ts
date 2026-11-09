@@ -1,5 +1,5 @@
 /**
- * An approval that outlives a restart, and an answer that outlives the wait for it (D8).
+ * An approval that outlives a restart, and an answer that outlives the wait for it.
  *
  * A restart answered every pending approval "deny": the shutdown expired them all, and the boot what was left. A restart
  * here is what it is on a box — a second gate over the same database. What only the asking process knew (who asked, its

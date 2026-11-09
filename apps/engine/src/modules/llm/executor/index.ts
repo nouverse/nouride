@@ -21,8 +21,10 @@ import { groupParallelCalls } from "./tool-batching.ts";
 import { withUniqueIds } from "./call-ids.ts";
 import { estimateMessagesTokens } from "@nouride/llm";
 import {
+  clip,
   createLogger,
   messageText,
+  oneLine,
   resolveToolIterations,
   type ChatMessage,
   type AudioRefPart,
@@ -500,8 +502,8 @@ export class TurnExecutor {
           appendUserMessage(working, steer);
           req.journal?.record(working.at(-1)!);
           // Its words, so the dashboard's steps for this turn say what changed its course.
-          const said = messageText(steer.content).split("\n").slice(1).join(" ").replace(/\s+/g, " ").trim();
-          this.deps.onActivity?.("note", `read a message sent while working: "${said.length > 120 ? `${said.slice(0, 119)}…` : said}"`);
+          const said = oneLine(messageText(steer.content).split("\n").slice(1).join(" "));
+          this.deps.onActivity?.("note", `read a message sent while working: "${clip(said, 120)}"`);
         }
 
         /**

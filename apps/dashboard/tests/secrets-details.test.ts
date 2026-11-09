@@ -24,7 +24,7 @@ afterEach(() => {
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 
-/** What a person sees: words a non-technical reader would trip on are not on these parts (the owner, 2026-11-05). */
+/** What a person sees: words a non-technical reader would trip on are not on these parts. */
 const TECHNICAL = /daemon|snapshot|seal|passphrase|config|environment|route|gateway|nouride secret|--stdin|\.env|encryption\.key/i;
 
 async function mountTo(element: unknown) {

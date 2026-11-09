@@ -1,5 +1,5 @@
 /**
- * A brief its goal names, on the mission's page (0.8.11): the owner asked to see a mission's brief as they see its report,
+ * A brief its goal names, on the mission's page (0.8.11): a person looks for a mission's brief where they see its report,
  * and Nouva's audit for a person named "per …/audit_rina/BRIEF.md" in its goal, with no BRIEF.md of the mission's own.
  * The daemon reads it, so only a file inside the agent's private workspace — every link followed — is shown: a goal
  * naming a path through a linked folder must not put the daemon's own files, its control token, on a page.

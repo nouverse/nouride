@@ -1,6 +1,6 @@
 /**
  * The upgrade floor: 0.8.0, which every install starts once before this version (`docs/DEPLOY.md` § The upgrade
- * window). Every release after 0.8.0 has it — the owner's call once 0.8.0 shipped.
+ * window). Every release after 0.8.0 has it, decided once 0.8.0 shipped.
  *
  * That one start brought every form 0.8.0 still read forward — the database migrated to its schema, each pack's
  * `fallback_model` written as `fallbacks` — and this version carries none of those steps. Data in a form from before is

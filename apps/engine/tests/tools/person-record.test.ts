@@ -3,7 +3,7 @@
  *
  * The identity line had told agents to record a name for months. On 2026-09-02 somebody introduced
  * themselves to `ren` on Telegram and the audit log shows one call for the whole turn: `memory_write`
- * with `## User\n\n- **Name:** Gading`. So the assertions here are about the two things that made the
+ * with `## User\n\n- **Name:** Sam`. So the assertions here are about the two things that made the
  * difference — that the write is a *typed tool call*, and that it lands under the id the `[[people]]`
  * matcher will actually look for. A tool that records a name under the wrong id is the same bug with
  * a longer path to noticing it.

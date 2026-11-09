@@ -45,7 +45,7 @@ export default defineConfig(({ mode }) => {
       /**
        * Before `react()`, which the plugin requires. `autoCodeSplitting` puts each route's component in a
        * chunk of its own, loaded when the route is first opened: the whole dashboard was one 958 KB
-       * script, every page parsed on the first load of any of them (E16).
+       * script, every page parsed on the first load of any of them.
        */
       tanstackRouter({
         target: "react",

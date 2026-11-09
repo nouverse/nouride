@@ -648,7 +648,7 @@ describe("command payloads", () => {
   });
 
   /**
-   * A command that printed nothing (PLAN §1.1, 0.8.17): nothing to deliver, and nothing for the agent to read. A check
+   * A command that printed nothing (0.8.17): nothing to deliver, and nothing for the agent to read. A check
    * every five minutes that finds nothing costs no turn and sends nothing, `then: agentTurn` included, where the agent
    * was woken with an empty output each time. Its run says so. Printed is stdout or stderr, after masking and trimmed.
    */
@@ -946,7 +946,7 @@ describe("the ticker", () => {
 });
 
 /**
- * One timer, set for the soonest job — not a one-second ticker (E5, 2026-10-15).
+ * One timer, set for the soonest job — not a one-second ticker (2026-10-15).
  *
  * Both use a real clock and a ceiling of a minute, so the only thing that can fire the job inside the
  * window is the timer having been set for it. Under the old ticker both wait out the minute.

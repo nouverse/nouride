@@ -37,7 +37,7 @@ export function renderExecPolicy(
    */
   privileged = isRoot(),
   /**
-   * This conversation's approval level — what decides what asks (SIMPLIFY RFC §1). A prompt that said both "nothing
+   * This conversation's approval level — what decides what asks. A prompt that said both "nothing
    * asks" and "this always asks" once left the model to pick one.
    */
   approvals: ApprovalLevel = "careful",

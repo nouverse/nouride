@@ -1,5 +1,5 @@
 /**
- * The Nouride cat, as pixel maps (0.8.1, MISSIONS §9): one drawing per part and pose, in symbols rather than colours,
+ * The Nouride cat, as pixel maps (0.8.1): one drawing per part and pose, in symbols rather than colours,
  * so every fur and outfit is the same drawing under another palette. A 32×32 frame, front on: the head (with its eye
  * zone), a body per pose, the tail; outfits are laid on the body's torso and arm cells, hats and accessories on the
  * head's anchors. Drawn here, simple and consistent; a pixel artist can redraw any map without touching the code.

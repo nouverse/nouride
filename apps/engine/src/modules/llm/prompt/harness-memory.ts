@@ -8,13 +8,13 @@
 import type { HarnessView, PromptContext } from "./types.ts";
 
 /**
- * The tools whose writes every later prompt reads — `Tool.keepsInPrompt` on each (S13). Named here because the prompt
+ * The tools whose writes every later prompt reads — `Tool.keepsInPrompt` on each. Named here because the prompt
  * sees tool definitions, not tools; `harness-outside.test.ts` holds the list to the flags.
  */
 const KEEPS_IN_PROMPT = ["memory_write", "person_record", "person_notes"] as const;
 
 /**
- * That a write to memory waits for a person after outside content — said before the agent tries one (S13).
+ * That a write to memory waits for a person after outside content — said before the agent tries one.
  *
  * The gate's reason and the tool result already say it, but only once the call is made, and an agent that did not
  * expect the pause retried it or apologised instead of telling the person what it was waiting for. Said only where the
@@ -67,7 +67,7 @@ export function renderMemory({ ctx, toolNames }: HarnessView): string[] {
      * It said "a fact about the person", and that is where a name went.
      *
      * Watched live on 2026-09-02: somebody introduced themselves on Telegram and the agent's only
-     * call that turn was `memory_write` with `## User — **Name:** Gading`. It had `person_record` in
+     * call that turn was `memory_write` with `## User — **Name:** Sam`. It had `person_record` in
      * its list and the identity line telling it to use one. This sentence was the competing
      * instruction, and it was the one sitting next to the tool being called.
      *
@@ -125,7 +125,7 @@ export function renderMemory({ ctx, toolNames }: HarnessView): string[] {
       // The knowledge base (0.8.20): documents in their own language, cited where an answer comes from them; an English
       // title on each since 0.8.23, the pointer an English search finds.
       "- Documents people keep for reference (an SOP, a manual, a price list) are found by `memory_search` too, labelled `document`, and `memory_read` with `document` opens one. Each keeps its own language, with an English title: search in either. Answer from one with the document and section named.",
-      // Where things go (the owner, 2026-11-05): memory and the knowledge base are not to be mixed.
+      // Where things go: memory and the knowledge base are not to be mixed.
       "- Where things go: what a person says about themselves or their life is memory, filed each night or kept with `about: \"person\"`; a document, a file or a link someone hands you to keep for reference goes in the knowledge base with `about: \"knowledge\"`; how you work is your MEMORY.md. Never turn one into another. When it is not clear that something is to be kept as a document, ask once.",
     );
   }

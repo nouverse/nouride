@@ -1,6 +1,6 @@
 /**
- * The presets' names before 0.7.23 — `normal`, `risky`, `none` — refused in 0.8.0 wherever a file names a level
- * (SIMPLIFY §3's table): `[security] approvals` in `config.toml` and `[agent] approvals` in a pack. 0.7.23's boot
+ * The presets' names before 0.7.23 — `normal`, `risky`, `none` — refused in 0.8.0 wherever a file names a level:
+ * `[security] approvals` in `config.toml` and `[agent] approvals` in a pack. 0.7.23's boot
  * rewrote them; one back from git or by hand is refused naming the levels, never read as one of them. `risky` has its
  * own case beside each loader's tests; this holds all three, since `none` read as anything but a refusal would be the
  * one that loosens.

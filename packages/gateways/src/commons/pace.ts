@@ -1,5 +1,5 @@
 /**
- * Outbound pacing, per chat and per bot (G7).
+ * Outbound pacing, per chat and per bot.
  *
  * No adapter limited what it sent. A twelve-part answer went to Telegram as fast as the API would take it, past its
  * one-message-a-second limit for a chat, and the 429 that came back was retried at once — into the same limit — or,

@@ -6,7 +6,7 @@
  * On 2026-10-20/21 whether a nudge reached a delegate could not be read. Its steps were lines of its job's log and
  * nothing else: the turn that started it had ended, so they could not be that turn's rows.
  *
- * What stays where it was: its model calls and its tool calls' audit rows are counted in the turn that asked (D2), and
+ * What stays where it was: its model calls and its tool calls' audit rows are counted in the turn that asked, and
  * its job's log still has every step — what is left of it when a restart cuts it off. The two point at each other: the
  * record's cause names the job and the turn that asked (`job`, `parent`); the log's first line names the record.
  *
@@ -72,7 +72,7 @@ export function beginDelegated(turns: TurnsPort | undefined, start: DelegatedSta
   return {
     id: record.id,
     step: (kind, text, detail) => {
-      // A call's audit row is the asking turn's, where `audit_log` keeps it (D2) — the step goes without it.
+      // A call's audit row is the asking turn's, where `audit_log` keeps it — the step goes without it.
       const { audit: _audit, ...rest } = detail ?? {};
       record.step(kind, text, rest);
     },

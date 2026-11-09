@@ -122,7 +122,7 @@ const ENV_ALLOWLIST = [
   "LC_ALL",
   "TZ",
   "TERM",
-  // Not `SSH_AUTH_SOCK`, since 0.7.9 (S11). It was here, for every command of every agent: a socket whose other end
+  // Not `SSH_AUTH_SOCK`, since 0.7.9. It was here, for every command of every agent: a socket whose other end
   // signs with every key the ssh-agent holds, for whoever asks, so `git push` or `ssh` to any host those keys open was
   // an ordinary command for an agent that never needed SSH. An agent that does says `[security] ssh_agent = true`, and
   // `childEnvFor` (`apps/engine/src/boot/child-env.ts`) hands it the socket.
@@ -243,8 +243,8 @@ export function createExecTool(options: ExecToolOptions): Tool {
       const sent = credentialSent(command.argv, cwd.path);
       const guarded = bothAsks(guard.ask(ctx, [...handles.named, ...fed.named]), sent ? credentialSendAsk(sent) : null);
 
-      // Handed a credential it is bound to, it asks whatever else lets it run, and its grant names the credentials (S6).
-      // Every grant is bound to the files the command runs (S7).
+      // Handed a credential it is bound to, it asks whatever else lets it run, and its grant names the credentials.
+      // Every grant is bound to the files the command runs.
       const secrets = ctx.checkOnly ? [] : (options.childEnv?.forCommand(ctx.agentId, command.argv).bound ?? []);
       const binding = grantBinding(command.argv, cwd.path, ctx.workspaceRoots, ctx.agentId, secrets);
       const outcome = secretGate(
@@ -361,7 +361,7 @@ export function createExecTool(options: ExecToolOptions): Tool {
         ? printedOutput(source, { held: options.heldSecrets, ctx, known: { ...options.ownSecrets?.(), ...options.childEnv?.(ctx.agentId) } })
         : null;
 
-      // Only the secrets bound to this command (S6); its output is masked with every one the agent has.
+      // Only the secrets bound to this command; its output is masked with every one the agent has.
       const offered = options.childEnv?.forCommand(ctx.agentId, command.argv) ?? { env: {}, secrets: [], bound: [] };
       const handed = ctx.checkOnly ? withoutBound(offered) : offered;
       // Not for an agent another one asked: its job would report to that one, and it would hand back before the result.
@@ -520,7 +520,7 @@ export function createExecTool(options: ExecToolOptions): Tool {
           ...(result.oomKills ? { oomKills: result.oomKills } : {}),
           ...(result.activity ? { activity: result.activity } : {}),
           ...(result.aborted ? { aborted: true } : {}),
-          // The names it was handed, for its audit row (S6). Never a value.
+          // The names it was handed, for its audit row. Never a value.
           ...(handed.secrets.length ? { secrets: handed.secrets } : {}),
         },
       };
@@ -528,7 +528,7 @@ export function createExecTool(options: ExecToolOptions): Tool {
   };
 }
 
-/** A result that says which secrets its command was handed — `tool_exec` keeps the names (S6). */
+/** A result that says which secrets its command was handed — `tool_exec` keeps the names. */
 function withSecrets<R extends { metadata?: Record<string, unknown> }>(secrets: readonly string[], result: R): R {
   return secrets.length ? { ...result, metadata: { ...result.metadata, secrets } } : result;
 }
@@ -654,7 +654,7 @@ export function normalizeCommand(raw: unknown): { argv: string[] } | { error: st
  *
  * Filtered to exactly three names rather than spread: this value is handed over by a tool, and a
  * passthrough that took any key would be a way to set `PATH` or `LD_PRELOAD` on a child process
- * from inside a tool call. And taken only from the `nouride` tool (S16), which sets it from its own
+ * from inside a tool call. And taken only from the `nouride` tool, which sets it from its own
  * context: from a model's own `exec` call it would be the model saying which chat it calls from.
  */
 function callerEnv(value: unknown, ctx: Pick<ToolContext, "ownCliTool">): Record<string, string> {

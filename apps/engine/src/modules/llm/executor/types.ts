@@ -133,7 +133,7 @@ export interface TurnRequest {
   roomName?: string;
   sessionId: string;
   /**
-   * The turn's record (D2): handed to every tool call's context, so its audit row and the usage of a helper or a
+   * The turn's record: handed to every tool call's context, so its audit row and the usage of a helper or a
    * peer it starts carry it, and put on the executor's log lines. Absent for a run with no record — cron, a test.
    */
   turnId?: string;
@@ -228,7 +228,7 @@ export interface TurnRequest {
    */
   journal?: TurnJournal;
   /**
-   * What this turn's own prompt carried from outside — a forwarded message, a webhook's payload (S13). Read as outside
+   * What this turn's own prompt carried from outside — a forwarded message, a webhook's payload. Read as outside
    * content from the first step: every call is handed it in `ToolContext.untrustedRead`, before any tool brought more.
    */
   outsideContent?: readonly string[];
@@ -283,7 +283,7 @@ export interface ToolStep {
   spilledTo?: string;
   /**
    * Its result carried content from outside (`ToolResult.untrusted`): a page, a message, an MCP server's answer. What a
-   * mission keeps as its mark across turns, which each start fresh (S13).
+   * mission keeps as its mark across turns, which each start fresh.
    */
   outside?: true;
 }
@@ -442,7 +442,7 @@ export interface ExecutorDeps {
   onFallback?: (info: { from: string; fromProfile: string; to: string; toProfile: string; failure: LLMFailure }) => void;
   /**
    * The context window the agent's gateway states for a model, from its last listing — null when it has said nothing
-   * (G2, `llm/catalog.ts`). Read before the table of model families and after the pack's own `context_window`.
+   * (`llm/catalog.ts`). Read before the table of model families and after the pack's own `context_window`.
    */
   windowOf?: (model: string) => number | null;
   approvals: ApprovalGate;
@@ -463,7 +463,7 @@ export interface ExecutorDeps {
   onUsage?: (usage: TokenUsage & { model: string; agentId: string; purpose?: UsagePurpose; provider?: string }) => void;
   /**
    * Who writes a compaction summary for a turn on `model` — `summarizerFor` (`llm/summarizer.ts`), which may send it
-   * to `[memory]`'s pass model on another profile (M12), its provider already metered. Absent — a helper's or a peer's
+   * to `[memory]`'s pass model on another profile, its provider already metered. Absent — a helper's or a peer's
    * scratch turn — the turn's own provider writes it, with `[llm.context] summary_model` or the turn's model.
    */
   summarizer?: (model: string) => { provider: LLMProvider; model: string };

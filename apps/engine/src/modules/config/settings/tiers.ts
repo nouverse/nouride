@@ -1,5 +1,5 @@
 /**
- * The model tiers (0.8.0, SIMPLIFY §3) as the dashboard sets them: the install's `small_model` and `high_model`, each
+ * The model tiers (0.8.0) as the dashboard sets them: the install's `small_model` and `high_model`, each
  * helper key's tier — the install's settings — and one agent's own pair, in its pack.
  *
  * A helper key holds a model id, a tier's name, or nothing: nothing is the agent's own model, as every helper had before

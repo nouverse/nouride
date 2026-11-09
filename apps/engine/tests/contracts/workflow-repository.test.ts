@@ -1,5 +1,5 @@
 /**
- * Where each workflow runs (2026-11-06, the owner: Nouride developed in public, as `nouverse/nouride`). Every job says
+ * Where each workflow runs (2026-11-06: Nouride developed in public, as `nouverse/nouride`). Every job says
  * `github.repository_owner == 'nouverse'`: a fork carries these files, and without it a fork's own Actions would run
  * the release with nothing to sign it and no Pro code to build, or deploy a site it does not own.
  */

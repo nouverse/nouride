@@ -123,7 +123,7 @@ export interface PipelineDeps {
   atomically?: <T>(work: () => T) => T;
   /**
    * Whether this daemon is a Box — paired, and writing to its card. Asked when a turn starts, since the plugin that
-   * knows is loaded after the pipeline is built. A Box writes a partial answer less often (`APPLIANCE_REPLY_FLUSH`, E7).
+   * knows is loaded after the pipeline is built. A Box writes a partial answer less often (`APPLIANCE_REPLY_FLUSH`).
    */
   appliance?: () => boolean;
   /**

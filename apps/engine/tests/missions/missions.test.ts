@@ -797,7 +797,7 @@ describe("an ended mission", () => {
 
 describe("an ended mission's folder, with the disk low", () => {
   test("goes an hour after it ended, oldest first — only its own, and not over work nobody committed", async () => {
-    // HARDENING §7: sixteen ended missions' folders held 1.9 GB on the live box; a Box on a small eMMC cannot keep a week.
+    // Sixteen ended missions' folders held 1.9 GB on the live box; a Box on a small eMMC cannot keep a week.
     let freeMb: number | null = null;
     const h = await missionsHarness({ settings: { maxRunning: 4, perAgent: 4 }, diskLow: () => freeMb });
     const older = await h.start("older");
@@ -893,7 +893,7 @@ describe("the tool's answer to a start", () => {
   });
 
   test("an agent's own per_agent (0.8.11): nox at three runs three and queues its fourth; nova keeps the daemon's one", async () => {
-    // The owner asked for three or four missions at once, set per agent; the setting was the box's alone.
+    // Three or four missions at once were wanted, set per agent; the setting was the box's alone.
     const h = await missionsHarness({ settings: { maxRunning: 8, slotsOf: (agentId) => (agentId === "nox" ? 3 : 1) } });
     const nox = [await h.start("one", { agentId: "nox" }), await h.start("two", { agentId: "nox" }), await h.start("three", { agentId: "nox" })];
     expect(nox.map((one) => h.store.get(one.id)!.status)).toEqual(["running", "running", "running"]);

@@ -352,7 +352,7 @@ describe("a clone without the private submodules", () => {
 
 describe("Nouride Home, a related repository", () => {
   test("its path is absent here, with a clone of it or without: none of its files are this tree's, and a pointer into it is not judged", () => {
-    // A submodule from 2026-11-07 to 2026-11-08, then its own repository, linked from the README (the owner); a clone of
+    // A submodule from 2026-11-07 to 2026-11-08, then its own repository, linked from the README; a clone of
     // it beside Nouride is ignored, and a fresh clone of this one has none.
     for (const clone of [false, true]) {
       const root = mkdtempSync(join(tmpdir(), "nr-related-"));

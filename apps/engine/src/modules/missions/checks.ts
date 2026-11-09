@@ -1,5 +1,5 @@
 /**
- * Done means checked (MISSIONS §5): when the agent says a mission is done, **the daemon** runs its checks — through the
+ * Done means checked: when the agent says a mission is done, **the daemon** runs its checks — through the
  * same `exec` the agent's commands use, so the same sandbox, the same user, the same masking — in the mission's folder,
  * each with its own time limit.
  *

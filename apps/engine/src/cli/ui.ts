@@ -5,7 +5,7 @@
  * writes for a person watching, and "say what went wrong and stop" is the same act everywhere.
  * Anything polled in the background must *throw* instead; see `Client.softGet`.
  *
- * ## Exit codes, and `--json` (D5)
+ * ## Exit codes, and `--json`
  *
  * The CLI is an agent's control surface as much as a person's, and both read the exit code: 0 done, 1 failed,
  * 2 asked wrongly — an unknown command or action, an argument missing or malformed (`usageError`). Usage used to
@@ -16,6 +16,7 @@
  * formatting an agent had to read its way back through.
  */
 
+import { clip } from "@nouride/shared";
 import { crashReport } from "@/commons/crash.ts";
 
 export const RESET = "\x1b[0m";
@@ -130,7 +131,7 @@ export function usageLines(text: string): never {
 export function summarize(details: Record<string, unknown>, maxValue = 120): string {
   const shorten = (value: unknown): unknown => {
     if (typeof value === "string" && value.length > maxValue) {
-      return `${value.slice(0, maxValue)}…(+${value.length - maxValue} chars)`;
+      return `${clip(value, maxValue, maxValue)}(+${value.length - maxValue} chars)`;
     }
     if (value && typeof value === "object" && !Array.isArray(value)) {
       return Object.fromEntries(

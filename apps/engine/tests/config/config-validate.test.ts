@@ -584,7 +584,7 @@ describe("the level that decides whether anything asks at all", () => {
 });
 
 /**
- * The exec knobs 0.8.0 took into the approval levels (SIMPLIFY RFC §1). A file that still writes one is refused where
+ * The exec knobs 0.8.0 took into the approval levels. A file that still writes one is refused where
  * leaving it out would let more run without asking, and otherwise starts with a warning naming it — never translated.
  */
 describe("the exec knobs 0.8.0 took out", () => {

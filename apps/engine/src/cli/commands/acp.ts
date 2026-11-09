@@ -1,5 +1,5 @@
 /**
- * `nouride acp [--agent <id>]` — Nouride's agents in Zed and the editors that copied it (ACP_PROTOCOL RFC). The editor
+ * `nouride acp [--agent <id>]` — Nouride's agents in Zed and the editors that copied it. The editor
  * starts this as a subprocess and speaks ACP on its stdin and stdout; this speaks to the daemon as every command does.
  *
  * An adapter, not a second runtime: the agent runs where it always runs — in the daemon, with its workspace, sandbox,

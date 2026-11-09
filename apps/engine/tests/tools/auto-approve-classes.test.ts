@@ -1,8 +1,8 @@
 /**
  * What `balanced` answers by itself, and what it still puts to a person.
  *
- * `balanced` is the default level and the owner's everyday one. Since 0.8.0 it asks only `BALANCED_ASKS`
- * (SIMPLIFY RFC §7.4): a config.toml changed, someone given access, the daemon stopped, a stored secret
+ * `balanced` is the default level and the owner's everyday one. Since 0.8.0 it asks only `BALANCED_ASKS`:
+ * a config.toml changed, someone given access, the daemon stopped, a stored secret
  * replaced or deleted — and a credential leaving, and the daemon's own state where nothing else guards
  * it. Everything else on the fixed list is `careful`'s.
  *

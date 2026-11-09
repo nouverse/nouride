@@ -17,7 +17,7 @@ export interface McpToken {
   label: string;
   createdAt: number;
   lastUsedAt: number | null;
-  /** When it stops working (G13); null for one that never does — every token made before 0.7.9 among them. */
+  /** When it stops working; null for one that never does — every token made before 0.7.9 among them. */
   expiresAt: number | null;
 }
 
@@ -67,7 +67,7 @@ export class McpTokenStore {
 
   /**
    * The live token this value is, marking it used; null for anything else — a revoked one, and since 0.7.9 one past
-   * its time (G13). A token that never expired was a credential copied into an editor's settings that stayed good
+   * its time. A token that never expired was a credential copied into an editor's settings that stayed good
    * for as long as nobody remembered to revoke it.
    */
   use(value: string, now: number): McpToken | null {

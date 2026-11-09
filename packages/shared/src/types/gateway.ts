@@ -2,7 +2,7 @@
 
 import type { Attachment, ChatType, GatewayName, MessageButton, MessageEnvelope, OutboundMessage } from "./envelope.ts";
 
-/** Somebody pressed a button under a message this gateway sent (`OutboundMessage.buttons`, G11). */
+/** Somebody pressed a button under a message this gateway sent (`OutboundMessage.buttons`). */
 export interface ButtonPress {
   /** The connection the message is on — the instance it was sent through. */
   gatewayId: string;
@@ -29,7 +29,7 @@ export interface PressAnswer {
 }
 
 /**
- * An attachment's download, its body not yet read (G9) — what an adapter that fetches over the network hands the
+ * An attachment's download, its body not yet read — what an adapter that fetches over the network hands the
  * engine. The engine refuses a declared length past its cap before reading a byte, writes the body to disk as it
  * arrives, counting, and stops the moment the count passes the cap: a platform that did not say how big a file
  * is, or said wrong, can no longer put the whole of it in memory first.
@@ -73,7 +73,7 @@ export const DEFAULT_RESILIENCE: GatewayResilienceConfig = {
 
 export type GatewayEvent =
   | { type: "status"; gatewayId: string; status: GatewayStatus; error?: string }
-  /** `auth_failed`: the platform refused its credentials, so no reconnect was tried past the first (G8). */
+  /** `auth_failed`: the platform refused its credentials, so no reconnect was tried past the first. */
   | { type: "dead"; gatewayId: string; attempts: number; reason?: "auth_failed"; detail?: string }
   | { type: "session_expired"; gatewayId: string }
   /**
@@ -295,7 +295,7 @@ export interface Gateway {
 
   /**
    * True when a message this gateway sends can carry buttons (`OutboundMessage.buttons`) and a press on one comes back
-   * to `onPress` (G11). Absent means it cannot, and a message is sent as its text alone — so whoever asks something
+   * to `onPress`. Absent means it cannot, and a message is sent as its text alone — so whoever asks something
    * says how to answer it in words too.
    *
    * Declared by the adapter, like `progressStyle`: nothing in the engine may branch on which platform it is talking to.
@@ -311,7 +311,7 @@ export interface Gateway {
 
   /**
    * Rewrite a message this gateway sent with buttons to `text`, and take its buttons away: what it asked is settled,
-   * however it was answered (G11). `false` when it could not be done. Markdown, as `send` takes it.
+   * however it was answered. `false` when it could not be done. Markdown, as `send` takes it.
    *
    * `keep`, the buttons it goes on carrying: a question still open, said again — how many more wait behind it (0.8.7).
    * A plain `editMessage` cannot do that: Telegram drops a message's keyboard from any edit that does not repeat it.

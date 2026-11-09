@@ -1,5 +1,5 @@
 /**
- * A server's tools, taken up again when it says they changed (G4).
+ * A server's tools, taken up again when it says they changed.
  *
  * Until 0.7.13 every notification was dropped: an agent kept the tools its server listed at connect until a reload, and
  * a tool the server had taken away was still offered. Now a `tools/list_changed` from a server that declared it lists

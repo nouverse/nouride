@@ -257,8 +257,8 @@ export function isTrimmedToolResult(message: ChatMessage): boolean {
  * summarisation request there would add latency to the wait it exists to protect.
  *
  * Runs before every round, so it is measured once and then kept current: each replacement changes the
- * total by what it saved. Re-measuring the whole set after every trim was a full pass per trimmed result
- * (E9) — a turn trimming forty results measured its working set forty times.
+ * total by what it saved. Re-measuring the whole set after every trim was a full pass per trimmed result:
+ * a turn trimming forty results measured its working set forty times.
  */
 export function trimToolResults(
   messages: ChatMessage[],
@@ -270,7 +270,7 @@ export function trimToolResults(
   /**
    * The results of the last round — after the last assistant message — are never trimmed: the model has not read them
    * yet. Cleared, it reads "[cleared]" for the call it just made and makes it again; with a window nothing knows,
-   * budgeted at a guess its prompt and tools alone fill, that was every result of every turn (SMART_AUTOMATION §3.6).
+   * budgeted at a guess its prompt and tools alone fill, that was every result of every turn.
    * Too big for the window, the request says so, and the provider's overflow is answered as one.
    */
   const lastAnswer = messages.findLastIndex((message) => message.role === "assistant");
@@ -337,8 +337,8 @@ export interface PruneToolOutputsOptions {
   /** The newest tool output, in tokens, that is never touched. */
   protectTokens: number;
   /**
-   * The newest turns whose tool output is never touched, counted from the person's messages (0.8.13, TOKEN_SAVINGS
-   * §3.2): at a turn's start, output older than the last few turns goes, however little of it there is.
+   * The newest turns whose tool output is never touched, counted from the person's messages (0.8.13):
+   * at a turn's start, output older than the last few turns goes, however little of it there is.
    */
   protectTurns?: number;
   /** Below this saving nothing is changed — a prune rewrites the prefix and costs the cache. */

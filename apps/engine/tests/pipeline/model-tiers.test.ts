@@ -1,5 +1,5 @@
 /**
- * The three model tiers (0.8.0, SIMPLIFY §3), through the real pipeline: the agent picks one with `tier` on the work it
+ * The three model tiers (0.8.0), through the real pipeline: the agent picks one with `tier` on the work it
  * starts, and the work runs on that model — a helper on its own agent's, an asked agent on that agent's. The install
  * names `small_model` and `high_model` in `[llm.defaults]`; a pack's own beats them; unsaid is `default`, the agent's
  * model. And the agent is told the three, what each is for, and which models they are.

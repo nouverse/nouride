@@ -1,5 +1,5 @@
 /**
- * A credential's way into one command, and the question that comes with it (S6, RFC_SCOPED_EXEC_SECRETS).
+ * A credential's way into one command, and the question that comes with it.
  *
  * `@nouride/policy`'s `secretsFor` says which of an agent's secrets a command's argv is bound to. Binding alone does
  * not close the leak: `twine upload --repository-url https://elsewhere` is a bound command, and so is a bound script
@@ -9,6 +9,7 @@
  */
 
 import { autoApprovable, type PolicyAsk, type PolicyOutcome } from "@nouride/policy";
+import { clip } from "@nouride/shared";
 
 /** What one command is handed: its environment's secrets, and their names. */
 export interface CommandSecrets {
@@ -64,7 +65,7 @@ export function setSecretFields(read: (name: string) => Readonly<Record<string, 
 /** The fields shown with a credential's name: at most six, each cut to a line's length, so no field fills a prompt. */
 export function secretFieldsLine(name: string): string {
   const fields = Object.entries(fieldsOf(name) ?? {}).slice(0, 6);
-  return fields.map(([field, text]) => `${field}: ${text.length > 120 ? `${text.slice(0, 119)}…` : text}`).join(", ");
+  return fields.map(([field, text]) => `${field}: ${clip(text, 120)}`).join(", ");
 }
 
 /**

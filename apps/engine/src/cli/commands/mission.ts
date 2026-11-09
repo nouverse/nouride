@@ -1,3 +1,4 @@
+import { clip, plural } from "@nouride/shared";
 import type { MissionDeletedResponse, MissionDetailResponse, MissionListResponse, MissionResponse } from "@/cli/wire.ts";
 import { BOLD, DIM, GREEN, RED, RESET, say, usageError, YELLOW, emit } from "@/cli/ui.ts";
 import type { Client } from "@/cli/client.ts";
@@ -52,7 +53,7 @@ export async function mission(client: Client, args: string[]): Promise<void> {
     const force = hasFlag(args, "--force");
     const deleted = await client.del<MissionDeletedResponse>(`/missions/${encodeURIComponent(id)}${force ? "?force=1" : ""}`);
     emit(deleted);
-    return say(`${GREEN}✓${RESET} ${deleted.mission} deleted: its conversation (${deleted.turns} turn record${deleted.turns === 1 ? "" : "s"}), checklist and own folder`);
+    return say(`${GREEN}✓${RESET} ${deleted.mission} deleted: its conversation (${deleted.turns} turn ${plural(deleted.turns, "record")}), checklist and own folder`);
   }
 
   // Words for it while it works (0.8.10): said back with where they went.
@@ -87,7 +88,7 @@ export async function mission(client: Client, args: string[]): Promise<void> {
   if (open.length === 0) say(`${DIM}nothing running${RESET}`);
   for (const m of [...open, ...shown]) {
     const mark = m.seen === "needs_you" ? `${YELLOW}✋${RESET}` : m.seen === "working" ? `${YELLOW}●${RESET}` : m.seen === "done" ? `${GREEN}✓${RESET}` : `${RED}✗${RESET}`;
-    say(`${mark} ${BOLD}${m.goal.length > 90 ? `${m.goal.slice(0, 89)}…` : m.goal}${RESET}`);
+    say(`${mark} ${BOLD}${clip(m.goal, 90)}${RESET}`);
     say(`    ${DIM}${m.id} · ${m.agentId} · ${statusOf(m)} · turn ${m.turnsUsed}/${m.limits.turns}${RESET}`);
   }
   const hidden = ended.length - shown.length;

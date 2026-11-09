@@ -54,7 +54,7 @@ export interface PlanInput {
   channel?: ReleaseChannel;
   /**
    * The release's own files. A public edition is verified against a signature when the release carries one —
-   * from 0.7.4 on, each public checksum file is signed (D7) — and installs unsigned when it does not, as every
+   * from 0.7.4 on, each public checksum file is signed — and installs unsigned when it does not, as every
    * release before did; a private edition needs one either way.
    */
   assets?: readonly string[];

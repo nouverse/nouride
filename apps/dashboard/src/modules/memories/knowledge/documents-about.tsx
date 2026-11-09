@@ -1,5 +1,5 @@
 /**
- * "Documents about them" on a person in People (0.8.20, KNOWLEDGE_BASE §10): the documents of every collection whose
+ * "Documents about them" on a person in People (0.8.20): the documents of every collection whose
  * settings say it is about them. It says nothing of who may be answered from those documents, which is the
  * collection's own setting: being about somebody lets them read nothing.
  */

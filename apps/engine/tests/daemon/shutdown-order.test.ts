@@ -22,7 +22,7 @@ function harness() {
   let releasedBeforeDrain = false;
 
   const approvals = {
-    // Kept for the next process now (D8), not expired — but whoever waits on one is still let go of first.
+    // Kept for the next process now, not expired — but whoever waits on one is still let go of first.
     handOver: () => {
       order.push("handOver");
       releasedBeforeDrain = true;

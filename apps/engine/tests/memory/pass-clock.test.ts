@@ -81,7 +81,7 @@ describe("the pass on its clock", () => {
   }
 
   /**
-   * The log emptied after a pass (E4, 2026-10-15). Autocheckpoint bounds it while the day runs; the pass
+   * The log emptied after a pass (2026-10-15). Autocheckpoint bounds it while the day runs; the pass
    * is the one reliably idle moment to give its disk back — and only while no turn is running, because a
    * `TRUNCATE` waits for readers and this daemon's reads are on its own event loop.
    */

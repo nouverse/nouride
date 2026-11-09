@@ -1,5 +1,5 @@
 /**
- * Fusing the keyword and the meaning rankings (M11). The exact-match bonus was three rankings' worth: a
+ * Fusing the keyword and the meaning rankings. The exact-match bonus was three rankings' worth: a
  * keyword-only hit at second place outranked an item both rankings put near the top. In shares of a first
  * place, the two properties it is for both hold.
  */

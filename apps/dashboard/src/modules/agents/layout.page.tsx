@@ -60,7 +60,7 @@ const TABS: Tab[] = [
 
 /**
  * An external agent's tab (0.8.1): its brain — the coding CLI, its account, its model and how it runs, and below, the
- * model Nouride's own work around it runs on. One tab in place of CLI and Model, which the owner read as two answers.
+ * model Nouride's own work around it runs on. One tab in place of CLI and Model, which a person read as two answers.
  */
 const BRAIN_TAB: Tab = { to: "/agents/$agentId/cli", label: "Brain", icon: Terminal };
 

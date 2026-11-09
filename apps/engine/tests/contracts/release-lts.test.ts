@@ -1,5 +1,5 @@
 /**
- * A patch to a long-term line (0.8.18, PLAN §3.3, REVIEW B1): `[lts]` in the tag's message publishes it without moving
+ * A patch to a long-term line (0.8.18): `[lts]` in the tag's message publishes it without moving
  * `latest` anywhere, tags its images `lts`, starts the public half in the same mode, and refuses `[quiet]` beside it.
  * The release before it, which its notes are written against, is the highest version below it, not the highest tag:
  * for a 1.0.x cut after 1.1.0 that was 1.1.0.

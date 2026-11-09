@@ -1,6 +1,6 @@
 /**
  * A card's header on a phone (0.8.12). A mission's Brief, folded: "Named in its goal: /srv/nouride/.nouride/workspace/…/
- * BRIEF.md" ran past the card's edge and under the BRIEF.md button beside it on the owner's iPhone. A description breaks
+ * BRIEF.md" ran past the card's edge and under the BRIEF.md button beside it on an iPhone. A description breaks
  * anywhere it has to, and a folded card's title takes 16rem before its actions sit beside it — so on a phone they go under.
  */
 

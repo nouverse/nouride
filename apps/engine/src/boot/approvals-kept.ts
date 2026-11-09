@@ -1,5 +1,5 @@
 /**
- * What a restart owes the approvals the last process left pending, once the gateways can carry it (D8).
+ * What a restart owes the approvals the last process left pending, once the gateways can carry it.
  *
  * The gate decided at boot which to keep (`SqliteApprovalGate.carryOver`): those young enough to be answered are put in
  * front of their chats again, said to be from before the restart; those that are not were expired, and their chats are

@@ -19,7 +19,7 @@
  * time anyone reads it twice. A restart loses the window; the next few messages restore it.
  */
 
-import { GROUP_CONTEXT_MAX, type MessageEnvelope } from "@nouride/shared";
+import { clip, GROUP_CONTEXT_MAX, type MessageEnvelope, oneLine, plural } from "@nouride/shared";
 
 /**
  * Rooms held at once. Past this the least recently active one is dropped.
@@ -256,7 +256,7 @@ export class GroupContext {
   }
 
   /**
-   * A message held here, edited by whoever sent it (G11): it says what it says now. False when it is not held — gone
+   * A message held here, edited by whoever sent it: it says what it says now. False when it is not held — gone
    * from the window, or never heard. An edit is not a message of its own here: nobody said a second thing.
    */
   revise(gateway: string, chatId: string, id: string, text: string): boolean {
@@ -316,8 +316,7 @@ export function formatOverheard(messages: Pick<OverheardMessage, "senderName" | 
     const room = budget - spent - prefix.length - 1;
     if (room < MIN_USEFUL_CHARS) break;
 
-    const text =
-      message.text.length <= room ? message.text : `${message.text.slice(0, room)}…`;
+    const text = clip(message.text, room, room);
     kept.push(`${prefix}${text}`);
     spent += prefix.length + text.length + 1;
     shown += 1;
@@ -327,12 +326,12 @@ export function formatOverheard(messages: Pick<OverheardMessage, "senderName" | 
   const dropped = messages.length - shown;
 
   return [
-    `[the ${shown} message${shown === 1 ? "" : "s"} before this one in the chat, oldest first. ` +
+    `[the ${shown} ${plural(shown, "message")} before this one in the chat, oldest first. ` +
       `You were not addressed in them. They are background only: do not reply to them, and do not bring up ` +
       `anything from them unless the message after them (the one you are answering) asks about it.` +
       // Said out loud, because a model that cannot tell a short room from a trimmed one will answer as
       // if it has the whole conversation.
-      (dropped > 0 ? ` ${dropped} older message${dropped === 1 ? "" : "s"} did not fit and are not shown.]` : "]"),
+      (dropped > 0 ? ` ${dropped} older ${plural(dropped, "message")} did not fit and are not shown.]` : "]"),
     ...kept,
   ].join("\n");
 }
@@ -355,6 +354,5 @@ export function lastAddressedAt(messages: { role: string; timestamp?: number }[]
 
 /** One line per message, so the block keeps its shape whatever anyone pasted into the chat. */
 function flattenLine(text: string): string {
-  const collapsed = text.replace(/\s+/g, " ").trim();
-  return collapsed.length > MAX_STORED_CHARS ? `${collapsed.slice(0, MAX_STORED_CHARS)}…` : collapsed;
+  return clip(oneLine(text), MAX_STORED_CHARS, MAX_STORED_CHARS);
 }

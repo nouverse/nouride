@@ -1,5 +1,5 @@
 /**
- * `[update] track` (0.8.18, PLAN §3.3): which releases this install is offered, `latest` or `lts`. Live: the update
+ * `[update] track` (0.8.18): which releases this install is offered, `latest` or `lts`. Live: the update
  * check reads it from the running config each time (`followUpdateTrack`), so the next check follows a save.
  */
 

@@ -1,5 +1,5 @@
 /**
- * One mission as a card, laid out as the Knowledge tab lays out a collection (0.8.20, the owner's ask): its goal and how
+ * One mission as a card, laid out as the Knowledge tab lays out a collection (0.8.20): its goal and how
  * it stands, how far along its checklist is, and one line that says the most useful thing about it now — the step it is
  * on while it works, what it waits for while it needs you, how it ended once it has. The whole card opens its page.
  */

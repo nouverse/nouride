@@ -8,12 +8,14 @@
  * and is left as written when one is set.
  */
 
+import { oneLine } from "@nouride/shared";
+
 /** Longest a headline may be: a sentence, not a description — the owner's number (0.7.18). A peer's line fits it whole. */
 export const HEADLINE_MAX = 150;
 
 /** A headline as typed, made one line: whitespace runs to a space, trimmed; null when nothing is left or it is too long. */
 export function cleanHeadline(headline: string): string | null {
-  const line = headline.replace(/\s+/g, " ").trim();
+  const line = oneLine(headline);
   return line && line.length <= HEADLINE_MAX ? line : null;
 }
 

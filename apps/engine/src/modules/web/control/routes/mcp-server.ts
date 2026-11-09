@@ -19,7 +19,7 @@ const LABEL = /^[a-z0-9][a-z0-9_-]{0,31}$/;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
- * How long a new token lasts, in days (G13): 90 when the request does not say, 0 for never, at most ten years.
+ * How long a new token lasts, in days: 90 when the request does not say, 0 for never, at most ten years.
  *
  * A token used to last until somebody revoked it — a credential pasted into an editor's settings, good for as long
  * as nobody remembered it was there. Ninety days is a quarter: long enough that a client is not set up again every

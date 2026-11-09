@@ -1,6 +1,6 @@
 /**
- * The daemon's own small state that has to outlive the process, one row each in `daemon_state` (D15; in the database
- * since 0.8.18, D6). They were JSON files in the data directory, outside every snapshot and `nouride db restore`; the
+ * The daemon's own small state that has to outlive the process, one row each in `daemon_state` (in the database
+ * since 0.8.18). They were JSON files in the data directory, outside every snapshot and `nouride db restore`; the
  * first start that has the table moves them in (`boot/state-files.ts`).
  *
  * For what is too small for a table of its own and changes too rarely to matter: which agents are paused, when each alert

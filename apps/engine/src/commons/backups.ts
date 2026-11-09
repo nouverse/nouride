@@ -20,7 +20,7 @@ const HISTORY_VERSIONS = 20;
  * `config.toml` at 0640 had copies at 0644 beside it).
  *
  * `.bak.1` is always the version just before this save: `persona_edit` tells the model so. The older slots move along
- * at most once an hour (0.8.18, REVIEW B2): a save within the hour of `.bak.1` replaces it and leaves `.bak.2` to
+ * at most once an hour (0.8.18): a save within the hour of `.bak.1` replaces it and leaves `.bak.2` to
  * `.bak.5` as they were, so a burst of saves (People writes, the Memory page's selects, one save per change) no longer
  * pushes out what a file said yesterday. On the live box all five of `config.toml`'s were from one minute
  * (2026-11-01), and a setting changed a week before had none left. What falls off `.bak.5` goes to `history/`, twenty
@@ -61,8 +61,8 @@ async function keepInHistory(path: string, content: string, now: number, options
 }
 
 /**
- * The file as it was before this version's first start rewrote it: `<path>.before-<version>`, written once (REVIEW
- * B2). A boot that rewrites a file (the people's move, the keys it writes) is the change nobody asked for, and the
+ * The file as it was before this version's first start rewrote it: `<path>.before-<version>`, written once.
+ * A boot that rewrites a file (the people's move, the keys it writes) is the change nobody asked for, and the
  * way back to the previous version wants it as that version left it, whatever the five slots have seen since.
  */
 export async function keepBefore(path: string, version: string): Promise<void> {

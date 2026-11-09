@@ -7,8 +7,8 @@
  *
  * It was one JSON column, on the argument that a conversation is always read and written whole. Read
  * whole, yes; but writing it whole meant every turn rewrote the entire history — a 300 KB conversation
- * is some seventy pages through the WAL and again at the checkpoint, for the few kilobytes a turn adds
- * (E2). Callers still hand `save` the whole conversation; the store keeps every row that is unchanged
+ * is some seventy pages through the WAL and again at the checkpoint, for the few kilobytes a turn adds.
+ * Callers still hand `save` the whole conversation; the store keeps every row that is unchanged
  * and writes the rest (`planKeep`).
  */
 

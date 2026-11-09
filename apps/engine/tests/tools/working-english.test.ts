@@ -53,7 +53,7 @@ describe("plan", () => {
   });
 
   test("a step is judged before it is cut to length, and a task named for it is judged too", async () => {
-    // Cut at 200 characters first, a quote lost its closing mark and the person's words were counted as the step's (Nox, A4).
+    // Cut at 200 characters first, a quote lost its closing mark and the person's words were counted as the step's.
     const notes = store();
     const tool = createPlanTool(notes);
     const long = `Reply to Mira's question: "${"tolong cek dulu semua log di server yang lama ya, ".repeat(4)}" with the list of errors found`;

@@ -15,7 +15,7 @@ describe("a CLI's prompt, recorded", () => {
   });
 
   test("one that says only its total is not recorded as nothing — the total, as input, marked an estimate", () => {
-    // A2 (Nox's review of msn_3d28e0): a CLI reporting only `totalTokens` was recorded as 0 in and 0 out.
+    // A CLI reporting only `totalTokens` was recorded as 0 in and 0 out.
     const usage = cliUsage(said({ totalTokens: 5000 }));
     expect(usage).toEqual({ inputTokens: 5000, outputTokens: 0, estimated: true, cli: true });
   });

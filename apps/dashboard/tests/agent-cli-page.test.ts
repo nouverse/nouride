@@ -228,7 +228,7 @@ describe("an external agent's Brain tab", () => {
       button(host, "Enter")!.click();
       await eventually(() => posted.length > 0, 2_000, "Enter posted");
       expect(posted[0]).toEqual({ path: "/api/control/agents/coder/cli/login/answer", body: { text: "" } });
-      // What was typed stays for Send: pressed by mistake, Enter dropped a pasted code (Nox's review).
+      // What was typed stays for Send: pressed by mistake, Enter dropped a pasted code.
       expect(field.value).toBe("ABCD-1234");
       await eventually(() => (host.textContent ?? "").includes("Sent Enter. The terminal below shows what Codex does with it. If it does not move on within a minute, Stop and sign in again."), 2_000, "the note");
     } finally {

@@ -8,6 +8,7 @@
  */
 
 import { blockText, type PlanEntry, type SessionUpdate, type ToolCall, type ToolKind } from "@nouride/acp";
+import { clip } from "@nouride/shared";
 import type { ToolStep } from "@/modules/llm/executor/types.ts";
 import { PromptSpend } from "./usage.ts";
 
@@ -278,5 +279,5 @@ function resultLine(call: ToolCall): string {
   const content = call.content?.find((item) => item.type === "content");
   const text = content && content.type === "content" ? blockText(content.content) : typeof call.rawOutput === "string" ? call.rawOutput : "";
   const line = text.split("\n").map((entry) => entry.trim()).find((entry) => entry !== "" && !entry.startsWith("```")) ?? "";
-  return line.length > RESULT_LINE ? `${line.slice(0, RESULT_LINE - 1)}…` : line;
+  return clip(line, RESULT_LINE);
 }

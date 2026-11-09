@@ -1,5 +1,5 @@
 /**
- * Signing an external agent's CLI in (EXTERNAL_AGENTS §5.3): the row's `login` words, run in a terminal on the box as
+ * Signing an external agent's CLI in: the row's `login` words, run in a terminal on the box as
  * the agent's user, pointed at the agent's profile — so the sign-in lands where that agent's CLI reads it, and two
  * agents on one CLI hold two accounts. A box has no browser: the CLI prints a link, and a code where its flow has one,
  * and the person answers from the dashboard or `nouride agents login`, a line at a time.
@@ -57,7 +57,7 @@ const SAVED = "[saved to Nouride's secret store]";
 /**
  * On a sign-in that prints a token, a run of token characters this long is not shown either, outside a link: a token
  * whose prefix came apart — a cell the CLI skipped as already drawn, which the screen here does not hold — matches no
- * prefix, and its body would show (Nox's review, 0.8.8). A link's own long runs (`code_challenge`, `state`) stay, so it
+ * prefix, and its body would show (0.8.8). A link's own long runs (`code_challenge`, `state`) stay, so it
  * opens. Shorter than a token's tail could be after such a gap near its end.
  */
 const TOKEN_LIKE = new RegExp(`${LINK.source}|${TOKEN_CHARS}{24,}`, "g");
@@ -123,7 +123,7 @@ export class CliLogin implements SignIn {
     this.screen.write(this.proc.drain());
     if (!this.hidden) return;
     // Taken only where it ends its line, as the CLIs this knows print it: a cell inside it that this screen does not hold
-    // ends the match there, and the shortened token was kept as though it were the whole (Nox's review).
+    // ends the match there, and the shortened token was kept as though it were the whole.
     const found =
       [...this.screen.text().matchAll(this.hidden)]
         .filter((match) => match[0].length > (this.tokenPrefix?.length ?? 0) + 16 && /^[ \t]*(\n|$)/.test(match.input.slice(match.index + match[0].length)))

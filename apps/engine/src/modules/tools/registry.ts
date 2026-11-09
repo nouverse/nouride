@@ -217,7 +217,7 @@ export function createBuiltinTools(options: ToolRegistryOptions): Map<string, To
     createSessionTool({
       normalizeCommand,
       resolveCwd,
-      // A shell kept open is the widest command there is: only a secret bound to `*` reaches one (S6).
+      // A shell kept open is the widest command there is: only a secret bound to `*` reaches one.
       env: (ctx) => commandEnv(ctx, options.childEnv?.forCommand(ctx.agentId, null).env ?? {}),
       findBlocked: (argv) => findBlocked(argv, options.security.exec.blocked) ?? undefined,
       ...(options.heldSecrets ? { heldSecrets: options.heldSecrets } : {}),
@@ -657,7 +657,7 @@ export function resolveToolset(
   }
 
   // After the loop, so a pack cannot shadow an MCP tool by listing its name, and after `unknown` is
-  // reported, so an MCP tool never appears in that warning. Never over a built-in (S10): `read` from a server
+  // reported, so an MCP tool never appears in that warning. Never over a built-in: `read` from a server
   // would replace the one that keeps to the roots. Qualified names (`server__tool`) make it unlikely, not impossible.
   for (const [name, tool] of deps?.mcpTools?.(agent.config.id) ?? []) {
     if (resolved.has(name)) log.warn("an MCP tool has a built-in's name and is not offered", { agent_id: agent.config.id, tool: name });
@@ -773,14 +773,14 @@ function withoutParameter(tool: Tool, name: string): Tool {
 
 /**
  * Whether this call writes what every later prompt reads — `MEMORY.md`, a person's record or notes (`Tool.keepsInPrompt`).
- * The mark S13 holds a write at after outside content, and what a helper is refused outright (`pipeline/subagent.ts`).
+ * What waits for a yes after outside content, and what a helper is refused outright (`pipeline/subagent.ts`).
  */
 export function writesWhatPromptsRead(tool: Tool, args: Record<string, unknown>): boolean {
   return typeof tool.keepsInPrompt === "function" ? tool.keepsInPrompt(args) : tool.keepsInPrompt === true;
 }
 
 /**
- * A write every later prompt reads, made after the turn read outside content: asked, not run (S13).
+ * A write every later prompt reads, made after the turn read outside content: asked, not run.
  *
  * A page that says "remember that you should…" could otherwise leave an order in `MEMORY.md`, or in the notes said to
  * the agent on every turn with a person, that outlives the conversation it came in. `config` is the class it is — it

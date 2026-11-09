@@ -1,5 +1,5 @@
 /**
- * The reviewer (MISSIONS §5): a fresh context with only the tools that read, handed the report as a claim — and its
+ * The reviewer: a fresh context with only the tools that read, handed the report as a claim — and its
  * answer read strictly. Then what its verdict does to the mission.
  */
 
@@ -175,7 +175,7 @@ describe("what the review does", () => {
   });
 
   test("while it looks, the mission says which pass and since when — its page and `mission show` — and nothing once done", async () => {
-    // The page said "Running its checks" through ten minutes of a review, and the owner took the mission for stuck.
+    // The page said "Running its checks" through ten minutes of a review, and a person took the mission for stuck.
     const h = await missionsHarness();
     let finish: (review: Review) => void = () => {};
     h.setReview(() => new Promise<Review>((resolve) => (finish = resolve)));

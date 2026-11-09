@@ -3,7 +3,7 @@
  *
  * - The profile of each known person in the chat — in a DM its person, in a group those speaking in
  *   it — as far as this audience may read it. 60 facts a person and 120 in all: in a big group everyone
- *   present gets the same share, in the order of their keys, whoever is speaking (M2, below).
+ *   present gets the same share, in the order of their keys, whoever is speaking (below).
  * - `shared.md`, which every agent knows in every chat.
  * - The newest episode summaries this audience may see, each saying when it was another agent's, so
  *   an agent never claims a conversation it did not have.
@@ -23,7 +23,7 @@
  * the nightly pass — except the day, once, at midnight, a fact written now, and in a group who has
  * been speaking lately; so it is a cached block of its own, after the harness (`llm/prompt/index.ts`).
  *
- * **Never in the order people spoke (M2).** It was: the speaker first and in full, the rest in the order
+ * **Never in the order people spoke.** It was: the speaker first and in full, the rest in the order
  * they appear in the room's last 30 messages. So in a group every turn whose speaker was not the last
  * one's rewrote these bytes, and everything the cache held behind them went with them. Measured on the
  * x64 test box over two weeks of `llm_usage`: the first call of a group turn after a change of speaker
@@ -98,7 +98,7 @@ export function recallFor(input: {
   const present = audience.kind === "dm" ? [audience.person] : audience.present;
   const settings = { memory: { recall: input.recall ?? true }, people: input.people };
   const chatOn = audience.kind === "dm" && isKey(audience.person) ? recallOn(settings, audience.person) : settings.memory.recall;
-  // By key, whatever order the audience lists them in: the speaker first, then by who spoke last (M2).
+  // By key, whatever order the audience lists them in: the speaker first, then by who spoke last.
   const subjects = [...new Set(present.filter(isKey))].filter((subject) => recallOn(settings, subject)).sort();
   const facts = index.facts(subjects).filter((fact) => !isOver(fact.text, today));
   // Each meaning once: the same fact learned in several chats is a line for each (`same-fact.ts`).

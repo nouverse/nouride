@@ -1,7 +1,7 @@
 /**
  * The model each agent is listed with (0.8.1). An external agent's is its CLI's — the pack's, or the CLI's own default
  * as a session named it. The agent picker listed Nix, a Claude Code agent on its default, as `claude-sonnet-5-5` and
- * Kuro, on Codex, as `codex:gpt-5.6-luna`: their `[llm]`, which answers none of their turns (the owner).
+ * Kuro, on Codex, as `codex:gpt-5.6-luna`: their `[llm]`, which answers none of their turns.
  */
 
 import { describe, expect, test } from "bun:test";

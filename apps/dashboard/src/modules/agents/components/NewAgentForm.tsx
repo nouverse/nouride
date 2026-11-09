@@ -47,7 +47,7 @@ export function NewAgentForm({
   const presets = useQuery({ queryKey: ["agent-presets"], queryFn: api.agentPresets, staleTime: 5 * 60 * 1000 });
 
   /**
-   * The preset's headline and SOUL.md, filled in for the person to keep or change (0.8.1 — the owner: nobody should
+   * The preset's headline and SOUL.md, filled in for the person to keep or change (0.8.1: nobody should
    * have to write a system prompt to make an agent). Picking another preset swaps them, unless the person has written
    * their own: what they typed is never replaced.
    */
@@ -90,7 +90,7 @@ export function NewAgentForm({
 
   // The daemon's own rule for an id (`setup/service.ts`), so the button says what the save would refuse.
   const idOk = /^[a-z][a-z0-9-]{1,31}$/.test(id.trim().toLowerCase());
-  // Nothing to send until it has an id, a name and a model: the owner pressed Create on an empty form.
+  // Nothing to send until it has an id, a name and a model: Create was pressed on an empty form.
   const ready = idOk && displayName.trim() !== "" && (cli !== null ? /^[a-z0-9][a-z0-9-]{0,23}$/.test(account) : model.trim() !== "");
 
   const create = useMutation({

@@ -1,5 +1,5 @@
 /**
- * Reading flags and arguments out of an argv tail (D14).
+ * Reading flags and arguments out of an argv tail.
  *
  * Still not an option parser with a spec per command: a command asks for what it reads, as it always did. What
  * lives here are the three things every command got wrong by asking `args.indexOf(flag) + 1` for itself:
@@ -29,7 +29,7 @@ export function normalizeArgv(argv: readonly string[]): string[] {
 
 /**
  * The argv a command is dispatched on — `--flag=value` split, and `--json`, everybody's, taken off wherever it stands
- * before `--` (D5) — and whether `--json` was there. One function for `main.ts` and for the `nouride` tool, which
+ * before `--` — and whether `--json` was there. One function for `main.ts` and for the `nouride` tool, which
  * decides on the words the CLI will run: read at fixed positions, `["--json", "tools", "run", …]` had `--json` for
  * its verb and passed the tool's refusals, while the CLI ran `tools run`. `@nouride/policy` keeps a copy
  * (`own-cli.ts`), held to this one by `own-cli-verbs.test.ts`.

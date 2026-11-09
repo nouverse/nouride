@@ -1,7 +1,7 @@
 /**
  * The keyed lock.
  *
- * Exists because `write`/`edit` are read-modify-write and G3 gave two agents a shared workspace root,
+ * Exists because `write`/`edit` are read-modify-write and two agents may share a workspace root,
  * so two turns could read one file, both compute from the pre-edit text, and the second write would
  * silently discard the first. Atomic writes do not help: each is individually atomic and the lost
  * update happens *between* them.

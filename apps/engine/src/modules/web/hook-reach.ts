@@ -1,5 +1,5 @@
 /**
- * Whether a webhook can arrive from the internet (0.8.0, SMART_AUTOMATION §1.1).
+ * Whether a webhook can arrive from the internet (0.8.0).
  *
  * Most boxes sit behind a home router, where a call from GitHub or Stripe never arrives — and the Webhooks page said
  * nothing, so a person waited for something that would never come. Each hook now reads as one of three:

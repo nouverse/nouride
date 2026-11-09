@@ -1,5 +1,5 @@
 /**
- * The knowledge base's folders, sections and index (0.8.20, KNOWLEDGE_BASE §4 to §8): collections as folders, who may
+ * The knowledge base's folders, sections and index (0.8.20): collections as folders, who may
  * be answered from one, documents cut at headings with their trail, and the index kept in line with the files.
  */
 

@@ -1,5 +1,5 @@
 /**
- * `[daemon] backup_seal` (0.8.18, D5): the passphrase the snapshots' secrets are sealed to, kept only as the public half
+ * `[daemon] backup_seal` (0.8.18): the passphrase the snapshots' secrets are sealed to, kept only as the public half
  * of the key it derives (`config/sealed-secrets.ts`). Never the passphrase in a log, an audit row or an answer.
  *
  * A config snapshot is taken as it is set, so the person can open it straight away and know the passphrase works,

@@ -1,6 +1,6 @@
 /**
  * What a WhatsApp message from the bridge becomes before the engine sees it — `MessageEnvelope` — an edit of one
- * included (G11). Out of the adapter's file, which speaks the bridge's protocol: this is a decision about one event.
+ * included. Out of the adapter's file, which speaks the bridge's protocol: this is a decision about one event.
  */
 
 import { createLogger, type BridgeEvent, type MessageEnvelope } from "@nouride/shared";
@@ -75,7 +75,7 @@ export function whatsappEnvelope(event: Extract<BridgeEvent, { type: "message" }
           ],
         }
       : {}),
-    // A person's edit of a message they sent (G11): its id and time are the edit's, `edit.of` the message it changes.
+    // A person's edit of a message they sent: its id and time are the edit's, `edit.of` the message it changes.
     // WhatsApp allows one for fifteen minutes and does not say when the message was sent; the engine's inbox does.
     ...(event.edits ? { edit: { of: event.edits } } : {}),
     // Nothing platform-specific survives the bridge — the protocol IS the normalisation — so the

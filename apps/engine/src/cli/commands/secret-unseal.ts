@@ -1,5 +1,5 @@
 /**
- * `nouride secret unseal <file> --stdin --out <path>`: a snapshot's `secrets.sealed` (0.8.18, D5) opened with the
+ * `nouride secret unseal <file> --stdin --out <path>`: a snapshot's `secrets.sealed` (0.8.18) opened with the
  * backup passphrase into a file of its own, at 0600. Local, with no daemon: it is for the box being rebuilt.
  *
  * Never to the screen, for the reason `secret` has no read verb (`commands/secret.ts`); and never over a file that is

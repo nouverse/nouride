@@ -145,7 +145,7 @@ export function deriveKey(secret: Uint8Array, info: string, bytes = 32): Uint8Ar
 }
 
 /**
- * Sealing to a passphrase without keeping it (0.8.18, the owner's D5): the secrets go into snapshots, which may go to a
+ * Sealing to a passphrase without keeping it (0.8.18): the secrets go into snapshots, which may go to a
  * USB drive, sealed so that only the passphrase opens them. The daemon keeps the public half of a key pair derived
  * from it and never the passphrase or the private half, so it can seal every snapshot and open none.
  *

@@ -1,5 +1,5 @@
 /**
- * Less motion, for whoever asked their system for it (dash-practice-dead-animation-classes).
+ * Less motion, for whoever asked their system for it.
  *
  * `prefers-reduced-motion` appeared nowhere in the dashboard: the status dots and the streaming caret pulsed
  * forever and every press shrank what it touched, for everyone — while the design rules require motion to respect

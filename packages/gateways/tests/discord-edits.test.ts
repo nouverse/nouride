@@ -1,5 +1,5 @@
 /**
- * A person's edit on Discord (G11): `messageUpdate`, which discord.js emits for a message it never cached only with the
+ * A person's edit on Discord: `messageUpdate`, which discord.js emits for a message it never cached only with the
  * message partial on, handed to the engine as the edit it is. Discord updates a message for more than an edit — an embed
  * loading for a link — and only an edit moves `editedTimestamp`: a message never edited is not one.
  */

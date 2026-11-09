@@ -3,8 +3,8 @@
  * output becomes: every value a `$TMP_SECRET_…` handle, held for its conversation the way a credential sent in chat is
  * (`tools/held-secrets.ts`). So the agent can still use one, `psql "$TMP_SECRET_…"`, and never sees it.
  *
- * Found live (2026-10-21): `ssh proxmox "pct exec 106 -- cat /root/nougate/.env"` put a database password into the
- * conversation and the stored session. Never refused — the owner's call: the agent needs to know which variables are
+ * Found live (2026-10-21): `ssh host "cat /srv/app/.env"` put a database password into the
+ * conversation and the stored session. Never refused, by design: the agent needs to know which variables are
  * set and where things point, and a refusal sends it to a less careful way of reading the same file. Masked instead,
  * in the output as it streams, before anything keeps it: the spill file, the result, the session, the record.
  *
@@ -13,7 +13,7 @@
 
 import { PrintedCredentials, type PrintedKind, type TransientSecrets } from "@nouride/secrets";
 import type { TextFilter } from "@nouride/runtime";
-import type { ToolContext } from "@nouride/shared";
+import { plural, type ToolContext } from "@nouride/shared";
 import { commandWords, namedCredential } from "./credential-files.ts";
 import { secretScope } from "./held-secrets.ts";
 
@@ -139,7 +139,7 @@ export function printedOutput(
     filter: () => new PrintedCredentials(source.kind, swap),
     note: () => {
       if (swapped.size === 0) return null;
-      const n = `${swapped.size} value${swapped.size === 1 ? "" : "s"}`;
+      const n = `${swapped.size} ${plural(swapped.size, "value")}`;
       // Said, because an agent that saw a commit message masked took the commit for broken and rewrote it (2026-10-23).
       const unchanged = "Only this output is masked: nothing the command read, wrote or committed was changed";
       return scope

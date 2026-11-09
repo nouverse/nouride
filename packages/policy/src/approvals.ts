@@ -5,7 +5,7 @@
  * people actually want sit either side of that: an operator on their own homelab wants nothing asked,
  * and a shared room wants the policy honoured. One flag could not express both.
  *
- * ## The three levels (0.8.0: the presets, over one fixed list — SIMPLIFY RFC §1)
+ * ## The three levels (0.8.0: the presets, over one fixed list)
  *
  * - **`careful`** — a new command or a mutating tool asks once, and `allow-always` remembers it; everything on the
  *   fixed list (`HardlineClass`) asks every time. What a new install writes.

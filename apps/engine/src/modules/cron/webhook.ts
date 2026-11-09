@@ -6,7 +6,7 @@
  * credential exfiltration path that runs every hour and reports success. `[security.web] allow_private_urls` is the
  * one knob that opens it, for an operator who genuinely means to reach a service on their own network.
  *
- * Two things the guard did not cover until 0.7.9 (S12). The POST went to whatever the name resolved to a moment after
+ * Two things the guard did not cover until 0.7.9. The POST went to whatever the name resolved to a moment after
  * the check, so a resolver could answer public for one and private for the other; it goes to the address the check
  * judged now. And `fetch` followed a redirect on its own, to wherever it pointed and past the one check made — turning
  * the POST into a GET without its body on the way, so a run was recorded delivered that never was. A redirect is

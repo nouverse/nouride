@@ -1,5 +1,5 @@
 /**
- * A conversation's rows as an editor's ACP updates (ACP_PROTOCOL §4), as a table: each kind of row and what it sends,
+ * A conversation's rows as an editor's ACP updates, as a table: each kind of row and what it sends,
  * calls paired by `callId`, the answer sent as the chunks that extend it, a delegate's own turn left out, and every
  * kind of the contract mapped without throwing.
  */

@@ -23,7 +23,7 @@ const log = createLogger("pipeline.steering");
 /**
  * A one-to-one chat's door (`steering.ts`): a message for the turn at work there is taken into it — true, the message
  * is handled. Past what one turn reads it is left to wait for the turn to end, as before — false — and its sender is
- * told so once a turn, where the message used to wait in silence for up to `queue_timeout_ms` (P9).
+ * told so once a turn, where the message used to wait in silence for up to `queue_timeout_ms`.
  */
 export function steerOnArrival(
   ctx: TurnContext,
@@ -117,14 +117,14 @@ export function acceptSteer(
   }
   // A coding CLI's turn hands it over mid-prompt where its CLI can take it (0.8.10, `external-agents/steering.ts`) —
   // told after the line above is asked for, which it waits on: told first, a CLI with no tool call open took the words
-  // at once, and the line, ready seconds later, was dropped as late every time (live, Nix, 2026-10-31).
+  // at once, and the line, ready seconds later, was dropped as late every time (live, 2026-10-31).
   turn.onSteer?.();
   return acked;
 }
 
 /**
  * What the person said, as the turn's record draws it: without the address the dashboard's connection and a room put in
- * front — unless that was all there was — and an edit marked as one, with the message it changes (stream 1.3, G11).
+ * front — unless that was all there was — and an edit marked as one, with the message it changes (stream 1.3).
  */
 function drawSaid(ctx: TurnContext, turn: ActiveTurn, envelope: MessageEnvelope, draw: Draw): void {
   const agent = ctx.deps.registry.get(turn.agentId);
@@ -135,7 +135,7 @@ function drawSaid(ctx: TurnContext, turn: ActiveTurn, envelope: MessageEnvelope,
 
 /**
  * A message drawn on a turn it waits on — to be read at its next step, or past what one turn reads — edited before it
- * was read (G11): its line is taken back and drawn again as it now reads. What was said back to it stays.
+ * was read: its line is taken back and drawn again as it now reads. What was said back to it stays.
  */
 export function redrawSteer(ctx: TurnContext, envelope: MessageEnvelope): void {
   for (const turn of ctx.activeTurns.values()) {

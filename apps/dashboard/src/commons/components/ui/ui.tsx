@@ -57,7 +57,7 @@ export function Card({
   bodyClassName?: string;
   /**
    * A card that folds to its header (0.8.11): its title a button that opens and closes it, its body there only while it
-   * is open. A mission's brief, closed until asked for — the owner's word.
+   * is open. A mission's brief, closed until asked for.
    */
   folded?: { open: boolean; toggle: () => void };
 }) {

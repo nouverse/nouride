@@ -20,6 +20,7 @@
  */
 
 import { readTextFileIfExists } from "@nouride/runtime";
+import { oneLine } from "@nouride/shared";
 import { extractJson } from "@/modules/llm/json-answer.ts";
 import { changesOf, type MemoryChange } from "./changes.ts";
 import type { MemoryIndexPort } from "./memory-index.store.ts";
@@ -88,7 +89,7 @@ export function parseTidy(answer: string, facts: readonly Fact[]): Tidying | nul
   for (const raw of Array.isArray(parsed.merge) ? parsed.merge : []) {
     const merge = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
     const ns = Array.isArray(merge.n) ? merge.n.map(Number) : [];
-    const text = typeof merge.text === "string" ? merge.text.replace(/\s+/g, " ").trim() : "";
+    const text = typeof merge.text === "string" ? oneLine(merge.text) : "";
     const group = ns.map((n) => byN.get(n));
     // A merged fact is a fact like any other: English, or the tidying is not used.
     if (ns.length < 2 || !text || text.length > MAX_FACT_CHARS || !memoryTextIsEnglish(text) || group.some((fact) => !fact) || ns.some((n) => used.has(n))) return null;

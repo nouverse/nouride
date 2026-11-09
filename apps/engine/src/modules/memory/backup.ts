@@ -11,7 +11,7 @@
  *
  * "Unchanged" is decided from size and modification time, as `rsync` decides it, never by reading: each copy keeps
  * its source's time (`copyFileAtomic`), so the next snapshot compares two stats per file. Comparing contents read
- * every vault file and its previous copy on every boot, from an SD card (E10). A vault restored or synced from
+ * every vault file and its previous copy on every boot, from an SD card. A vault restored or synced from
  * elsewhere has new times on unchanged files, so its first snapshot copies them all once, and links from then on.
  */
 
@@ -28,7 +28,7 @@ export function vaultBackupDir(dataDir: string): string {
   return join(dataDir, "backups", "memory");
 }
 
-/** Where the daemon's own snapshots of the knowledge folder go (0.8.20, KNOWLEDGE_BASE §4). */
+/** Where the daemon's own snapshots of the knowledge folder go (0.8.20). */
 function knowledgeBackupDir(dataDir: string): string {
   return join(dataDir, "backups", "knowledge");
 }

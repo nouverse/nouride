@@ -1,7 +1,7 @@
 /**
  * No class name that draws nothing.
  *
- * 158 class tokens in the dashboard generated no CSS at all (dash-dead-phantom-classes). Most were
+ * 158 class tokens in the dashboard generated no CSS at all. Most were
  * daisyUI 4 names — `input-bordered` in 36 files, `form-control`, `label-text` — that daisyUI 5 dropped,
  * still being added in October because they are what a hand trained on v4 types. The rest came from
  * plugins this build has never had: `animate-in fade-in slide-in-from-left` for a drawer, a toast and the

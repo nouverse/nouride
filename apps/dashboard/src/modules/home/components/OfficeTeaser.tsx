@@ -1,5 +1,5 @@
 /**
- * Your agents on Home: the Office, small (the owner, 2026-11-03, and again on 2026-11-08 over a grid of agent cards
+ * Your agents on Home: the Office, small (in place of a grid of agent cards
  * that filled the page), with each agent beside it as a chip, its cat, its name and a dot for what it is doing. Who is
  * working, waiting for you, idle or asleep, at a glance, and the whole office a click away. Drawn still, once per
  * status: the Office page is where the cats walk.

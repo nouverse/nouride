@@ -203,7 +203,7 @@ describe("the hop in search", () => {
   });
 
   /**
-   * M12: a long conversation is cut into pieces linked both ways (`episodesOf`), each summarised alone, so one
+   * A long conversation is cut into pieces linked both ways (`episodesOf`), each summarised alone, so one
    * query found piece two and the hop brought one and three — three of ten results for one conversation.
    */
   test("the pieces of one conversation found together are one hit, the best match, naming the others in order", async () => {

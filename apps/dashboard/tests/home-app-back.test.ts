@@ -1,6 +1,6 @@
 /**
  * Inside Nouride Home (the Android app), the dashboard's own header has the way back to the app, so the app needs no
- * second bar above it, and the phone's back gesture is not the only way out (the owner, 2026-11-07).
+ * second bar above it, and the phone's back gesture is not the only way out.
  */
 
 import { describe, expect, test } from "bun:test";

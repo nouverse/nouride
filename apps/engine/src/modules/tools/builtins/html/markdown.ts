@@ -13,6 +13,7 @@
  * as anything but noise it has to skip.
  */
 
+import { joinLines } from "@nouride/shared";
 import { decodeEntities } from "@/modules/tools/builtins/html/entities.ts";
 import { contentChildren, isNoise } from "@/modules/tools/builtins/html/extract.ts";
 import { documentTitle } from "@/modules/tools/builtins/html/metadata.ts";
@@ -118,7 +119,7 @@ function render(node: Node, ctx: Context): string {
 
     case "a": {
       if (isPermalink(node)) return "";
-      const text = oneLine(inner());
+      const text = linkText(inner());
       const href = node.attrs.href?.trim() ?? "";
       if (!text) return "";
       // In-page and script hrefs carry nothing the model can act on, so the link text is kept and
@@ -165,8 +166,8 @@ function render(node: Node, ctx: Context): string {
  * flattening a cell: the structure cannot be expressed here, and the target is the part worth
  * keeping.
  */
-function oneLine(text: string): string {
-  return text.replace(/^#{1,6}\s+/gm, "").replace(/\s*\n+\s*/g, " ").trim();
+function linkText(text: string): string {
+  return joinLines(text.replace(/^#{1,6}\s+/gm, ""));
 }
 
 /**

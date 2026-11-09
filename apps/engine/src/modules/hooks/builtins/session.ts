@@ -6,6 +6,7 @@
  * memory vault and the persona as loaded, `/reset` re-reads both from disk.
  */
 
+import { plural } from "@nouride/shared";
 import { describeStatus } from "@/modules/pipeline/agent-status.ts";
 import { editionLabel } from "@/commons/build.ts";
 import type { Hook } from "../types.ts";
@@ -30,7 +31,7 @@ export const sessionHooks: Hook[] = [
           handled: true,
           reply:
             `New conversation started. Cleared ${clearedSize(existing.messages)}.` +
-            (kept > 0 ? ` Work notes kept (${kept} task${kept === 1 ? "" : "s"}); /notes clear empties them.` : "") +
+            (kept > 0 ? ` Work notes kept (${kept} ${plural(kept, "task")}); /notes clear empties them.` : "") +
             memoryNote(ended.cut),
         };
       },
@@ -152,7 +153,8 @@ export const sessionHooks: Hook[] = [
           (helpers === 0 ? "" : ` Stopped ${helpers === 1 ? "the helper" : `the ${helpers} helpers`} working in the background too.`) +
           (asked.length === 0 ? "" : ` Stopped what ${asked.join(" and ")} ${asked.length === 1 ? "was" : "were"} doing in the background for me too.`);
 
-        // "Until /start" says what changed in 0.7.11 (D15): a restart, a nightly update included, no longer resumes it.
+        // "Until /start" says what changed in 0.7.11, when a pause began to outlive a restart: a restart, a nightly
+        // update included, no longer resumes it.
         return {
           handled: true,
           reply: !paused

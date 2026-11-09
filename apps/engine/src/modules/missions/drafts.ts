@@ -6,6 +6,7 @@
  * needs-you and its start on a yes were there already.
  */
 
+import { plural } from "@nouride/shared";
 import { GAP } from "./notices.ts";
 import { shortId } from "./page.ts";
 import { briefFilesOf, briefRefusal, startRefusal, type StartRequest } from "./start.ts";
@@ -15,7 +16,7 @@ import { ownFolderOf } from "./worktree.ts";
 
 /**
  * A brief its goal names by its path — "audit KK 1.3a per /…/audit_rina/BRIEF.md" — where the mission has no `BRIEF.md`
- * of its own (0.8.11): the owner asked to see it on the mission's page, as its report is. Its real path, every link
+ * of its own (0.8.11): it is shown on the mission's page, as its report is. Its real path, every link
  * followed, and only inside the agent's private workspace: the daemon reads it, so a goal naming a path through a
  * linked folder must not put the daemon's own files — its control token — on a page. `real` is `realPathStrict`.
  */
@@ -56,7 +57,7 @@ export function signedOffBy(mission: Pick<Mission, "checks" | "reviewOn" | "acce
 export function draftNotice(mission: Pick<Mission, "id" | "goal" | "agentId" | "byAgent" | "checks" | "reviewOn" | "accept" | "jobId">, brief: boolean, changed: readonly string[] = []): string {
   const id = shortId(mission.id);
   const who = mission.byAgent && mission.byAgent !== mission.agentId ? `${mission.agentId}, drafted by ${mission.byAgent}` : mission.agentId;
-  const checks = mission.checks.length === 0 ? "no checks" : `${mission.checks.length} ${mission.checks.length === 1 ? "check" : "checks"}`;
+  const checks = mission.checks.length === 0 ? "no checks" : `${mission.checks.length} ${plural(mission.checks.length, "check")}`;
   return [
     ...(changed.length > 0 ? [`✎ Draft ${id} changed: ${changed.join(", ")}.`] : []),
     `📝 Draft ${id} · ${who}: ${mission.goal.trim()}`,

@@ -3,8 +3,8 @@
  * mission) beside doing it here, decided by two questions, whose work it is and how long it will take.
  *
  * The lines were three, one beside each tool, and they overlapped: a helper's "more than a minute or many steps" and a
- * mission's "many files, many steps or items" read alike, so work of ten minutes was drafted as a mission (the owner,
- * 2026-11-04). The bar between the background and a mission is the hour a reply has, which a helper and another agent
+ * mission's "many files, many steps or items" read alike, so work of ten minutes was drafted as a mission.
+ * The bar between the background and a mission is the hour a reply has, which a helper and another agent
  * asked in the background have too: work that may run past it cannot finish in one, and a mission's turns can. Each line
  * is said only where the agent holds what it names.
  */

@@ -1,5 +1,5 @@
 /**
- * A knowledge base past `SECTIONS_SCORED_WHOLE` sections (0.8.20, KNOWLEDGE_BASE §8): documents ranked by their sections'
+ * A knowledge base past `SECTIONS_SCORED_WHOLE` sections (0.8.20): documents ranked by their sections'
  * mean first, then the sections of the nearest scored, so a search over 50,000 sections costs what one over 10,000 does
  * (the bench, `search-bench.test.ts`). The section nearest the question is still found.
  */

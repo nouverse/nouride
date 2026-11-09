@@ -120,8 +120,8 @@ export async function saveAgentTurnSeconds(deps: SettingsDeps, input: {
 }
 
 /**
- * Who answers when an agent's model cannot — `[llm] fallbacks`, each a provider and a model, in order (SMART_AUTOMATION
- * §3.1) — or none, an empty list.
+ * Who answers when an agent's model cannot — `[llm] fallbacks`, each a provider and a model, in order — or none,
+ * an empty list.
  *
  * Empty removes the key: no fallback of its own, and the install's `[llm.defaults] fallbacks` if it has any. The pack's
  * own check refuses a profile that is not configured, the agent's own model and a pair twice — and 0.7's

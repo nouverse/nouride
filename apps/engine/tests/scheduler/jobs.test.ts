@@ -414,7 +414,7 @@ describe("jobWakeMessage", () => {
     // It enters the conversation as a message, so it has to be unmistakably the runtime talking.
     //
     // The opening line is now explicit about it. "[Background job …]" was not enough on its own: the
-    // model still answered conversationally — "Aman Gading, … ada hal lain yang bisa dibantu?" — a
+    // model still answered conversationally — "Aman Sam, … ada hal lain yang bisa dibantu?" — a
     // reply to a message nobody had sent. Saying *nobody is waiting on a reply* is what changed it.
     const text = jobWakeMessage({ job: { ...base, status: "succeeded", exitCode: 0 }, tail: "" });
     expect(text.startsWith("[System event")).toBe(true);

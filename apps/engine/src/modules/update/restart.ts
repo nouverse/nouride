@@ -83,7 +83,7 @@ export class DaemonRestart {
   /**
    * Ask for one. Answers at once; the process ends once nothing is running — a turn for ten minutes at most, a
    * background job however long it takes — or, with `now`, on the next tick, which still lets the answer to
-   * whoever asked leave first. An approval waiting for a person does not hold it: it is kept and asked again (D8).
+   * whoever asked leave first. An approval waiting for a person does not hold it: it is kept and asked again.
    *
    * A second request joins the first rather than starting another wait: its follow-up is armed with the
    * first one's, and its `now` ends the wait for both.

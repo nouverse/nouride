@@ -1,5 +1,5 @@
 /**
- * Routes that lose the provider's cache (TOKEN_SAVINGS §3.1, 0.8.13). Measured on the live box: Gemini Flash through
+ * Routes that lose the provider's cache (0.8.13). Measured on the live box: Gemini Flash through
  * one profile cached 1 % of its input at $0.77 a million, through another 94 % at $0.15 — half the spend went through
  * the two poor pairs, and nothing said so. Found from the usage rows: the same model, two routes, one far below.
  */

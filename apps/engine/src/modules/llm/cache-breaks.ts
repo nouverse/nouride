@@ -1,5 +1,5 @@
 /**
- * Whether a conversation's cached prefix is gone anyway (TOKEN_SAVINGS §3.2, 0.8.13) — the moment rewriting its
+ * Whether a conversation's cached prefix is gone anyway (0.8.13) — the moment rewriting its
  * history costs nothing more. Clearing old tool output out of a history changes every byte after it, and a provider
  * caches the prefix: done on every turn, it would turn each request into a cache write. Done when the system prompt,
  * the model or the tools changed since the conversation's last request, or nothing was asked of it for an hour, the

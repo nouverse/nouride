@@ -85,7 +85,7 @@ export class InboxStore {
 
   /**
    * A message as it was written down — what it said and when it was sent — whatever became of it since; null when it
-   * was never received or has been swept. What an edit of it is measured against (G11).
+   * was never received or has been swept. What an edit of it is measured against.
    */
   find(id: string): { envelope: MessageEnvelope; sentAt: number } | null {
     const row = this.db.prepare<Pick<Row, "envelope" | "sent_at">>("SELECT envelope, sent_at FROM inbox WHERE id = ?").get(id);
@@ -97,7 +97,7 @@ export class InboxStore {
     }
   }
 
-  /** A message still waiting, edited before a turn took it: the corrected one is what a restart answers (G11). */
+  /** A message still waiting, edited before a turn took it: the corrected one is what a restart answers. */
   revise(envelope: MessageEnvelope): void {
     const id = inboxId(envelope.gatewayId, envelope.chatId, envelope.id);
     this.write(() => this.db.prepare("UPDATE inbox SET envelope = ? WHERE id = ? AND status = 'queued'").run(JSON.stringify({ ...envelope, raw: null }), id), 1);

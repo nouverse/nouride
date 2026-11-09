@@ -62,7 +62,7 @@ export function renameFrontChat(text: string, from: string, to: string): string 
 }
 
 /**
- * Each fact's readers, `{gading, sam, in telegram:bot:-1001}`, moved to the new gateway. Only a bullet's trailing list
+ * Each fact's readers, `{alex, sam, in telegram:bot:-1001}`, moved to the new gateway. Only a bullet's trailing list
  * is read — the part `profile.ts` parses — so a fact whose text mentions a gateway keeps its words.
  */
 export function renameFactReaders(text: string, from: string, to: string): string {

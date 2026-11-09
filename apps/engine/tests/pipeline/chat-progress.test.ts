@@ -785,7 +785,7 @@ describe("a gateway that fails", () => {
 });
 
 describe("the model at work after its steps (0.8.7)", () => {
-  // The owner's bubble read `✓ 1 step · 166s` for a turn whose one step took 18 s: the other 148 s the model wrote a long
+  // A person's bubble read `✓ 1 step · 166s` for a turn whose one step took 18 s: the other 148 s the model wrote a long
   // reply, and nothing showed it — to a person waiting, a hang.
   const quietOn = (gateway: Gateway) => new ChatProgress({ gateway, chatId: "chat-1", agentLabel: "nix", minIntervalMs: 0, quietTickMs: 40 });
   const lastIs = (edits: string[], line: RegExp) => eventually(() => line.test(edits.at(-1) ?? ""), 2_000, `the bubble to read ${line}`);

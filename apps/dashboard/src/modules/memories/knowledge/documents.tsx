@@ -1,10 +1,10 @@
 /**
- * A collection's documents (0.8.20, KNOWLEDGE_BASE §6 and §11), each with how it reads: ready to search, being read, or
+ * A collection's documents (0.8.20), each with how it reads: ready to search, being read, or
  * could not be read and why. Where a program has to be installed first, the Ask button opens a chat with the
  * orchestrator, the request already written; the package's name is under Details.
  *
  * Newest first, each saying when it was added (0.8.23): sorted by name, a file just dropped landed somewhere down the
- * list, and nothing said which one was new (the owner, 2026-11-08). Its title, what search finds it by, is set on its row.
+ * list, and nothing said which one was new. Its title, what search finds it by, is set on its row.
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";

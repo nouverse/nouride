@@ -1,5 +1,5 @@
 /**
- * `fetchAt` connects to the address it is given and goes on naming the host everywhere else (S12).
+ * `fetchAt` connects to the address it is given and goes on naming the host everywhere else.
  *
  * Every test here uses a name that cannot resolve — `.invalid` never does (RFC 6761) — so a fetch that looked the name
  * up again would fail, and one that reached the server can only have gone to the address. The TLS half checks the

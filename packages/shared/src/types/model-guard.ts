@@ -1,5 +1,5 @@
 /**
- * `[security] model_guard` — the second look's setting (0.8.0, SMART_AUTOMATION §2.1), in the daemon's config and a
+ * `[security] model_guard` — the second look's setting (0.8.0), in the daemon's config and a
  * pack's. Loaded into one of three shapes, so nothing reads the string:
  *
  * - unset: **by the approval level** — on at `careful` and `balanced`, on the agent's `high` tier; off at `trusted`;

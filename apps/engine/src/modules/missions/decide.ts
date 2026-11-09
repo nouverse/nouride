@@ -1,9 +1,10 @@
 /**
- * The dispatcher's decisions, apart from what it does with them — pure, so each rule is one test (MISSIONS §7–8).
+ * The dispatcher's decisions, apart from what it does with them — pure, so each rule is one test.
  */
 
 import { dirname, fileExistsSync, join } from "@nouride/runtime";
 import type { MissionWaitKind } from "@nouride/wire";
+import { plural } from "@nouride/shared";
 import type { KeptPlan } from "@/modules/notes/store.ts";
 import { IDLE_TURNS, RETRY_AFTER_MS, RETRY_ATTEMPTS, WARN_AT } from "./limits.ts";
 import { hoursLimit, millions, workedMs } from "./page.ts";
@@ -12,7 +13,7 @@ import { isFinal, type Mission } from "./types.ts";
 
 /**
  * Where a mission's repository is: the nearest folder above its workdir holding `.git`, or the workdir itself. A
- * mission's worktree holds a `.git` of its own, so it is a repository apart, and two of them never share one (§8).
+ * mission's worktree holds a `.git` of its own, so it is a repository apart, and two of them never share one.
  */
 export function repositoryOf(workdir: string, exists: (path: string) => boolean = fileExistsSync): string {
   let dir = workdir;
@@ -54,7 +55,7 @@ function overlaps(a: string, b: string): boolean {
 /**
  * Why a queued mission cannot start yet, said as the queue notice says it — or null when it may, against the missions
  * open. Slots count missions with a turn or a job: one waiting for a person holds none. One repository, one mission at
- * a time (§8): its folder's repository against every one started and not ended — one waiting for a person still has
+ * a time: its folder's repository against every one started and not ended — one waiting for a person still has
  * its work there, and counted with the slots, a second was started over it.
  */
 export function blockedBy(
@@ -147,7 +148,7 @@ export function limitReached(mission: Mission, now: number, inForce: LimitsInFor
  */
 export function continueGives(reached: readonly MissionLimit[], settings: { limitTurns: number; limitTokens: number; limitHours: number }): string {
   const more = reached.map((limit) =>
-    limit === "turns" ? `${settings.limitTurns} more ${settings.limitTurns === 1 ? "turn" : "turns"}` : limit === "tokens" ? `${millions(settings.limitTokens)} more tokens` : `${hoursLimit(settings.limitHours)} more of work`,
+    limit === "turns" ? `${settings.limitTurns} more ${plural(settings.limitTurns, "turn")}` : limit === "tokens" ? `${millions(settings.limitTokens)} more tokens` : `${hoursLimit(settings.limitHours)} more of work`,
   );
   return more.join(" and ");
 }
@@ -181,7 +182,7 @@ export function answersWait(wait: MissionWaitKind | null, via: unknown): boolean
   return via === "approval resumed" && wait === "approval";
 }
 
-/** What a mission does once a turn that claimed nothing has ended (§7): go on, wait for a job, or need a person. */
+/** What a mission does once a turn that claimed nothing has ended: go on, wait for a job, or need a person. */
 export type Next =
   | { kind: "continue"; why: string }
   | { kind: "job" }

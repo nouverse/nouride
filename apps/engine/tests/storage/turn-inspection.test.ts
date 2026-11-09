@@ -1,5 +1,5 @@
 /**
- * One turn, read whole by its id — `069_baseline.sql` and `turns/inspection.store.ts` (D2).
+ * One turn, read whole by its id — `069_baseline.sql` and `turns/inspection.store.ts`.
  *
  * Usage knew the session and the audit log the chat, so two turns a minute apart in one conversation shared every
  * row and a turn's cost could only be guessed from timestamps. Each case is a way the join must hold: another turn's
@@ -158,7 +158,7 @@ describe("a turn read whole", () => {
 });
 
 /**
- * Who answered a call, when a gateway in between said (G1, `069_baseline.sql`): kept on the row, read back with the
+ * Who answered a call, when a gateway in between said (`069_baseline.sql`): kept on the row, read back with the
  * turn, and printed where it is news — the provider always, the model only when it is not the one asked for.
  */
 describe("what each call was for", () => {

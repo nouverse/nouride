@@ -227,7 +227,7 @@ export function renderSkillPolicy({ ctx }: HarnessView): string[] {
 /**
  * A project's own skills, and that they reach the list only from a root an admin named.
  *
- * Asked by the owner (2026-11-07): an agent set to work on or contribute to a repository should know its
+ * An agent set to work on or contribute to a repository should know its
  * `.agents/skills/` exists, that those skills are not in its list unless the repository is one of its `skill_roots`,
  * and that adding it is not the agent's to do — its `config.toml` is refused to it (`OWN_CONFIG_REFUSAL` in the file
  * tools). Read meanwhile as the project's conventions and not as the person's instructions, because a skill root is

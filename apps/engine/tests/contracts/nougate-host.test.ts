@@ -79,7 +79,7 @@ describe.skipIf(!AVAILABLE)("the hosted gateway, as Nouride uses it", () => {
 
   /**
    * Its database shares a Box's SD card with the daemon's, so a gateway booted with a host writes its usage rows and
-   * key counters on one 30-second beat rather than every 5 s (E15), and writes what the beat holds when stopped.
+   * key counters on one 30-second beat rather than every 5 s, and writes what the beat holds when stopped.
    */
   test("booted with a host, it writes on the 30-second beat", async () => {
     const specifier = join(BACKEND, "src/core/db/heartbeat.ts");

@@ -24,7 +24,7 @@ test("the Limits button says Close limits while they are open, and closes them",
 });
 
 test("what finished is the last 3, 7, 14 or 30 days — 3 unless chosen, no further, and never all (0.8.8)", async () => {
-  // The owner: "filternya 7 hari terbaru aja, terus max 1 bulan … jangan ditampilin semua".
+  // A short recent window by default, a month at most, and never everything.
   const asked: string[] = [];
   const harness = globalThis.fetch;
   globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {

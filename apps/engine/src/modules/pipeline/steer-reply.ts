@@ -12,8 +12,7 @@
  * (`aside-context.ts`), then the request the turn is working on, its last few steps, the message they replied to, and
  * the new message: a few thousand tokens in and one sentence out. Run beside the turn, never in its way. Without the
  * conversation it read "yg ini bisa ga sih kita akalim supaya diinstall armbian", a question about a TV box, as one
- * about Nouride's own OS, and the turn said so a step later (live, 2026-11-05); the owner asked for it to see what
- * `/btw` sees (v0.8.20_RFC item 1).
+ * about Nouride's own OS, and the turn said so a step later (live, 2026-11-05). So it sees what `/btw` sees.
  *
  * A turn quicker than its reply: the moment the turn reads the message, answers, or ends, the call is aborted
  * (`ActiveTurn.replyAbort`) — what the turn does with the message is the answer then, and a line arriving after it
@@ -28,7 +27,7 @@
  * the turn's record (`steer-accept.ts`).
  */
 
-import { createLogger, helperModel, type ChatParams, type LLMProvider, type MessageEnvelope, type TokenUsage } from "@nouride/shared";
+import { clipTrimmed, createLogger, helperModel, type ChatParams, type LLMProvider, type MessageEnvelope, oneLine, type TokenUsage } from "@nouride/shared";
 import { meter } from "@/modules/llm/metered.ts";
 import { conversationSoFar } from "./aside-context.ts";
 import { isSystemEvent } from "./deps.ts";
@@ -79,17 +78,12 @@ export interface SteerReplyInput {
   signal?: AbortSignal;
 }
 
-const oneLine = (text: string, max = LINE_MAX): string => {
-  const line = text.replace(/\s+/g, " ").trim();
-  return line.length > max ? `${line.slice(0, max - 1).trimEnd()}…` : line;
-};
-
 /** The request: who the agent is and what it was told not to do, then the turn and the message. */
 function steerReplyParams(input: Omit<SteerReplyInput, "provider" | "timeoutMs">): ChatParams {
   const steps = input.steps
     .filter((step) => step.kind === "tool" || step.kind === "tool_done" || step.kind === "note")
     .slice(-STEPS)
-    .map((step) => `- ${oneLine(step.text, 160)}`);
+    .map((step) => `- ${clipTrimmed(oneLine(step.text), 160)}`);
   const persona = input.persona.trim().slice(0, PERSONA_MAX);
   return {
     model: input.model,
@@ -110,13 +104,13 @@ function steerReplyParams(input: Omit<SteerReplyInput, "provider" | "timeoutMs">
         role: "user",
         content: [
           input.conversation ? `The conversation before this task:\n${input.conversation}` : "",
-          input.working ? `Working on: ${oneLine(input.working)}` : "Working on a task you started yourself.",
+          input.working ? `Working on: ${clipTrimmed(oneLine(input.working), LINE_MAX)}` : "Working on a task you started yourself.",
           steps.length ? `Latest steps:\n${steps.join("\n")}` : "",
           // What a reply points at — without it, "this one" or "you" in their message is a guess.
           input.repliedTo?.text.trim()
-            ? `Their message replies to this one${input.repliedTo.sender ? ` from ${input.repliedTo.sender}` : ""}: "${oneLine(input.repliedTo.text, 1000)}"`
+            ? `Their message replies to this one${input.repliedTo.sender ? ` from ${input.repliedTo.sender}` : ""}: "${clipTrimmed(oneLine(input.repliedTo.text), 1000)}"`
             : "",
-          `Their message: ${oneLine(input.said, 1000)}`,
+          `Their message: ${clipTrimmed(oneLine(input.said), 1000)}`,
         ]
           .filter(Boolean)
           .join("\n\n"),
@@ -138,7 +132,7 @@ async function steerReply(
     onUsage?.(response.usage, response.model);
     // A server, or a fetch, that finished anyway: late is late.
     if (signal.aborted) return { line: null, why: `no answer within ${input.timeoutMs} ms, or the turn moved on` };
-    const line = oneLine(response.text.replace(/^["“']|["”']$/g, ""));
+    const line = clipTrimmed(oneLine(response.text.replace(/^["“']|["”']$/g, "")), LINE_MAX);
     return line ? { line } : { line: null, why: `the model said nothing (stop: ${response.stopReason})` };
   } catch (err) {
     return { line: null, why: signal.aborted ? `no answer within ${input.timeoutMs} ms, or the turn moved on` : String(err) };
@@ -191,7 +185,7 @@ export function replyToSteer(ctx: TurnContext, turn: ActiveTurn, envelope: Messa
           timeoutMs: queue.steerReplyTimeoutMs,
           signal: AbortSignal.any([turn.controller.signal, abort.signal]),
         },
-        // The steered turn's, so a reply in the agent's words is counted with the turn it spoke for (D2).
+        // The steered turn's, so a reply in the agent's words is counted with the turn it spoke for.
         meter(ctx.deps.usage, { agentId: agent.config.id, provider, purpose: "steer_reply", ...(turn.recordId ? { turnId: turn.recordId } : {}) }),
       );
       const at = { agent_id: agent.config.id, chat_id: turn.chatId, ms: Date.now() - startedAt };

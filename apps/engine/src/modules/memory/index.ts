@@ -6,7 +6,7 @@
  * names exported below for what runs without one: the CLI and the config check find a vault and check
  * its format, back it up and rename a gateway in it; the memory tools hold a write to English;
  * the MCP surface caps a saved conversation. Nothing outside this directory imports one of its files
- * by path — `lint:arch` refuses it (`memory-past-its-barrel`), except boot and the daemon's
+ * by path — `lint:arch`'s rule `memory-past-its-barrel` refuses it, except boot and the daemon's
  * `index.ts`, which build the stores this module is given. So the access rule, the vault's layout and
  * the index are each decided once, here, and a change inside this directory that breaks a caller
  * shows at this file.
@@ -16,7 +16,7 @@
  */
 
 import { dirname, join } from "@nouride/runtime";
-import { createLogger, type ChatType, type MemorySection, type MemorySemanticSection, type Person } from "@nouride/shared";
+import { createLogger, type ChatType, type MemorySection, type MemorySemanticSection, oneLine, type Person } from "@nouride/shared";
 import { audienceOf, canSeeEpisode, canSeeFact, memoryChatKey, scopeOf, type Audience } from "./access.ts";
 import { analyze, type AnalyzeRequest } from "./analyze.ts";
 import { passBacklog, type PassBacklog } from "./backlog.ts";
@@ -55,7 +55,7 @@ export { checkVaultFormat, readVaultFormat, VaultFormatError } from "./format.ts
 export { backupKnowledge, backupVault, newestKnowledgeBackupAt, vaultBackupDir } from "./backup.ts";
 export { KnowledgeStore } from "./knowledge/knowledge.store.ts";
 
-/** The knowledge base's folder: `.nouride/knowledge/`, beside the install's data (KNOWLEDGE_BASE §4). */
+/** The knowledge base's folder: `.nouride/knowledge/`, beside the install's data. */
 export function knowledgeDirOf(dataDir: string): string {
   return join(dirname(dataDir), "knowledge");
 }
@@ -92,7 +92,7 @@ const ANALYZE_WINDOW_DAYS: Record<AnalyzeRequest["intent"], number> = { top: 30,
 
 /**
  * How long the model before a change is left alone after it failed to embed a query: searches meanwhile rank by the
- * model in use (M7). A quarter of an hour — a provider back up is used again soon, one gone costs a call that often.
+ * model in use. A quarter of an hour — a provider back up is used again soon, one gone costs a call that often.
  */
 const RETRY_BEFORE_MS = 15 * 60_000;
 
@@ -142,7 +142,7 @@ export function createMemory(deps: MemoryDeps) {
 
   /**
    * The model another vector key names, asked through the provider the key names — what ranks a search while a change of
-   * model is caught up (M7). Null for a key that names no size, and for a while after it failed: a provider removed or
+   * model is caught up. Null for a key that names no size, and for a while after it failed: a provider removed or
    * unreachable would otherwise cost every search a failed call before the model in use answered it.
    */
   function embedderFor(key: string): Embedder | null {
@@ -237,7 +237,7 @@ export function createMemory(deps: MemoryDeps) {
     recall(speaker: Speaker): Recall {
       const semantic = semanticNow();
       const recall = recallFor({ index, people: config.people, audience: situate(speaker).audience, agentId: speaker.agentId, recent: config.memory.promptRecent, recall: config.memory.recall, timeZone: timeZone(), now: now(), ...(semantic ? { vectors: rankingVectors(semantic) } : {}) });
-      // The collections it may search here, by name: never their documents (§9).
+      // The collections it may search here, by name: never their documents.
       return {
         ...recall,
         knowledge: knowledge.usable(who(speaker)).map((collection) => ({
@@ -314,7 +314,7 @@ export function createMemory(deps: MemoryDeps) {
       const { person, identity, audience } = situate(speaker);
       if (!person) return { refused: "The person you are talking to has no profile yet. If you know their name, record them with `person_record` first, then call this again. If you do not, keep it only for this conversation: do not put it in MEMORY.md." };
       const readers: Readers = audience.kind === "dm" ? { people: [identity] } : { people: [...audience.present], chat: audience.chat };
-      const same = (a: string, b: string) => a.replace(/\s+/g, " ").trim().toLowerCase() === b.replace(/\s+/g, " ").trim().toLowerCase();
+      const same = (a: string, b: string) => oneLine(a).toLowerCase() === oneLine(b).toLowerCase();
       const result = await editProfile({ vault, index, state, now }, person.key, {
         operations: (facts): FactOperation[] | { refused: string } => {
           if (change.op === "add") return [change];
@@ -384,7 +384,7 @@ export function createMemory(deps: MemoryDeps) {
       lastFinished: () => state.lastFinishedRun(),
     },
 
-    /** What waits for the pass, and whether it keeps up with what each agent's conversations bring — `backlog.ts` (M4). */
+    /** What waits for the pass, and whether it keeps up with what each agent's conversations bring — `backlog.ts`. */
     backlog(): PassBacklog {
       return passBacklog({ index, state, config, analytics }, now());
     },
@@ -425,7 +425,7 @@ export function createMemory(deps: MemoryDeps) {
 
     /**
      * Where search by meaning stands. `ranking` is there while another model's vectors rank searches — the model before
-     * a change, until the one in use has as many (M7) — and names it and how many it has.
+     * a change, until the one in use has as many — and names it and how many it has.
      */
     semanticStatus(): { enabled: boolean; model: string | null; items: number; running: boolean; reachable: boolean | null; ranking?: { model: string; items: number } } {
       const semantic = embedder();

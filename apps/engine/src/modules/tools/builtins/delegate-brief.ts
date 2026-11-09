@@ -15,6 +15,7 @@
  * person's words quoted as they were said, and none of those is the brief's language.
  */
 
+import { clip, oneLine } from "@nouride/shared";
 import { workTextIsEnglish, writeWorkInEnglish } from "@/modules/memory/index.ts";
 
 /**
@@ -145,8 +146,7 @@ export function renderBrief(brief: HelperBrief): string {
 
 /** The goal on one line, for a list or a heading. */
 export function goalLine(brief: Pick<HelperBrief, "goal">, max = 120): string {
-  const flat = brief.goal.replace(/\s+/g, " ").trim();
-  return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat;
+  return clip(oneLine(brief.goal), max);
 }
 
 /** The same goal said twice — what a helper already running is not started again for. */

@@ -145,7 +145,7 @@ async function runBackgroundHelper(ctx: TurnContext, parent: LoadedAgent, reques
       ...helperTurn(ctx, blank, request, sessionId, { notes: namedFiles(ctx, request), background: true }),
       signal: controller.signal,
       deadlineAt,
-      // The turn that started it, for its calls' audit rows and its usage (D2). Not its call ids: its steps are not
+      // The turn that started it, for its calls' audit rows and its usage. Not its call ids: its steps are not
       // that turn's rows, which ended when this started.
       ...(request.ctx.turnId ? { turnId: request.ctx.turnId } : {}),
       pause: () => ctx.paused,
@@ -199,7 +199,7 @@ async function roomFor(ctx: TurnContext, job: RunningHelper, jobMs: number): Pro
 /**
  * The approval gate, saying who asks: a helper nobody is watching, and what it is for. Its question goes to the
  * parent's chat like any of the parent's — answerable there, from the CLI and from the dashboard, and kept across a
- * restart (D8) — with the helper and its goal in the reason, which every surface shows and the row keeps.
+ * restart — with the helper and its goal in the reason, which every surface shows and the row keeps.
  */
 function askingFor(gate: ApprovalGate, jobId: string, goal: string): ApprovalGate {
   // The goal is the model's words, in a question a person answers: one line, short, and unable to close its own quotes.

@@ -1,5 +1,5 @@
 /**
- * The index sync reads a stub folder again only when a stub in it changed (M10). It read every tag and
+ * The index sync reads a stub folder again only when a stub in it changed. It read every tag and
  * group stub on every sync — at boot, before each pass, after each tidy — like it stats every episode,
  * but with no record of what it had read.
  */

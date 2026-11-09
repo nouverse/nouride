@@ -1,5 +1,5 @@
 /**
- * Every key a pack's `config.toml` reads, by table — and the ones a pack writes that nothing reads (SIMPLIFY §3).
+ * Every key a pack's `config.toml` reads, by table — and the ones a pack writes that nothing reads.
  *
  * The daemon's config has always warned about a key it does not know (`config/global/merge.ts`); a pack did not, so a
  * typo — `[llm] modle` — or a key a release deleted was silent: the agent loaded and the line did nothing. Warned about

@@ -207,7 +207,7 @@ export async function prepareTurn(
     model: requested,
     packModel: agent.config.llm.model,
     ...(agent.config.llm.contextWindow !== undefined ? { declared: agent.config.llm.contextWindow } : {}),
-    // What the gateway states for the model (G2) — a `/model` override's included: it is the gateway's own answer about
+    // What the gateway states for the model — a `/model` override's included: it is the gateway's own answer about
     // that model, unlike the pack's figure, which is about the model it was written against.
     stated: deps.windowOf?.(requested) ?? null,
   });
@@ -341,7 +341,7 @@ export async function prepareTurn(
   // is already the smaller number. First match wins for the ceiling: the agent, the operator, the
   // model's own figure.
   const toolsTokens = estimateToolsTokens(toolset.definitions);
-  // Who summarises: the runner's route (`llm/summarizer.ts`) — `[memory]`'s pass model when set (M12) — else the
+  // Who summarises: the runner's route (`llm/summarizer.ts`) — `[memory]`'s pass model when set — else the
   // turn's own provider, metered here as its compaction, with `summary_model` or the turn's model.
   const own = { profile: agent.config.llm.provider, model: requested };
   const route = summarizerRoute({ summaryModel: deps.llm.context.summaryModel }, own, { agent: agent.config.llm, install: deps.llm.defaults });
@@ -433,17 +433,17 @@ export async function prepareTurn(
   };
 }
 
-/** Turns whose tool output stays in the history whole — a starting value (TOKEN_SAVINGS §3.2). */
+/** Turns whose tool output stays in the history whole — a starting value. */
 const STALE_AFTER_TURNS = 2;
 /**
  * Tool output worth clearing even while the cache is warm: about what the rewrite costs, as one cache write of the
- * prefix after it — a starting value, which the measurement in TOKEN_SAVINGS §5 moves.
+ * prefix after it — a starting value, until a measurement moves it.
  */
 const CLEAR_WORTH_TOKENS = 16_000;
 const cacheBreaks = new CacheBreaks();
 
 /**
- * Tool output older than the last few turns, out of the history at a turn's start (TOKEN_SAVINGS §3.2, 0.8.13): the
+ * Tool output older than the last few turns, out of the history at a turn's start (0.8.13): the
  * same marker and kept file as a trim inside a turn, `read` bringing one back. On the live box tool output was 75 % of
  * the stored history and stayed whole until compaction, so requests grew to 100–200k first. Cleared when the cache was
  * lost anyway (`CacheBreaks`), or once there is enough of it to pay for the rewrite; once cleared it stays cleared, so

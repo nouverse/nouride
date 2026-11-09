@@ -60,7 +60,7 @@ describe("the system-packages plugin", () => {
 
   test("the gate is the engine's: a change is on the fixed list, asked every time at careful and balanced (0.8.15)", () => {
     // What a change may touch is `nouride-pkg`'s to decide, however it is asked for; whether a person sees it, the list's.
-    // 0.8.0's list left it out, and a balanced agent changed packages as root unasked: the owner put it back.
+    // 0.8.0's list left it out, and a balanced agent changed packages as root unasked, so it was put back.
     for (const op of ["install", "remove", "upgrade"]) expect(classifyHardline(["nouride", "pkg", op, "jq"])?.class).toBe("system-packages");
   });
 });

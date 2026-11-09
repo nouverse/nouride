@@ -1,6 +1,6 @@
 /**
  * Which of a profile's listed models embed and which chat, by name: `/v1/models` says neither. A model picker for an
- * agent offers chat models only — the owner was offered `bge-m3` as an agent's model — and the semantic-search one
+ * agent offers chat models only (it once offered `bge-m3` as an agent's model) and the semantic-search one
  * embedding models only. Suggestions either way: the field still takes any name typed.
  */
 

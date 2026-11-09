@@ -97,7 +97,7 @@ export function singleCallChainNote(previous: readonly RoundShape[], current: Ro
 }
 
 /**
- * The fourth reply in a row that sent one `exec` alone (0.7.17; v0.8.x_RFC_FEWER_ROUND_TRIPS §5.3).
+ * The fourth reply in a row that sent one `exec` alone (0.7.17).
  *
  * The biggest habit of the expensive turns: two weeks on the live box, runs of single `exec` round trips had a median
  * of five and a 90th percentile of thirteen, and nearly half of those calls were one `ssh` each. The fourth, not the
@@ -175,7 +175,7 @@ export function longWorkNotesNote(turn: { calls: number; offered: boolean; wrote
 export function longTurnHelperNote(turn: { calls: number; elapsedMs: number; offered: number; told: boolean; draft?: boolean }): string | null {
   if (turn.told || turn.offered <= 0) return null;
   if (turn.calls < LONG_TURN_CALLS && turn.elapsedMs < LONG_TURN_MS) return null;
-  // Where the turn can draft a mission (0.8.11, RFC MISSION_DRAFTS §2.8): long work is one, which the person sees and
+  // Where the turn can draft a mission (0.8.11): long work is one, which the person sees and
   // starts — this note offered a helper alone, and the work the rule had misjudged stayed in the chat.
   const draft = turn.draft
     ? " If what is left is long work (many files or steps, a long research, a wait on CI), draft a `mission` for it instead, then tell them what you drafted and stop here."

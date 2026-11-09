@@ -124,7 +124,7 @@ function heading({ job, stop }: JobCompletion, who: string): string {
  */
 function instruction({ job, stop }: JobCompletion, who: string, inMission: boolean): string {
   const close = "\n\nNo greeting, no name, no \"what else can I help with\".";
-  // A mission's turn has no person reading its reply (A15): "pass this on to the person now" sent the answer nowhere.
+  // A mission's turn has no person reading its reply: "pass this on to the person now" sent the answer nowhere.
   if (job.status === "succeeded" && inMission) {
     return (
       `This turn is the mission's: nobody reads its reply. Use ${who}'s answer in the work. What the person needs from it` +

@@ -279,7 +279,7 @@ describe("scopes: what a token does not name is neither offered nor answered", (
 
 describe("the protocol", () => {
   /**
-   * What `initialize` answers (G4). It sent back whatever string a client asked for, as though agreed — `2099-01-01`
+   * What `initialize` answers. It sent back whatever string a client asked for, as though agreed — `2099-01-01`
    * included — and 2024-11-05 to a client that asked for none.
    */
   test("initialize answers a version it speaks with that version, and anything else with the newest", async () => {
@@ -365,7 +365,7 @@ describe("making tokens", () => {
   });
 
   /**
-   * A token has an end (G13). One lasted until somebody revoked it — a credential pasted into an editor's settings,
+   * A token has an end. One lasted until somebody revoked it — a credential pasted into an editor's settings,
    * good for as long as nobody remembered it was there.
    */
   test("lasts 90 days unless it says otherwise, 0 is never, and a token past its time no longer opens the door", async () => {

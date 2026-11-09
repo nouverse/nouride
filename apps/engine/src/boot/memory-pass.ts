@@ -259,7 +259,7 @@ export function startMemoryPass(deps: MemoryPassDeps): MemoryPass {
     // Written before any work, so a restart halfway through does not start the same night over.
     const runId = deps.memory.passRuns.started({ startedAt, day: localTime(startedAt, config.daemon.timezone).day, scheduled });
     // The night's own budget, beside the day's: counted from this run's calls, read before each conversation — the
-    // count still bounds a night per agent (M4), and this bounds what a raised count may spend.
+    // count still bounds a night per agent, and this bounds what a raised count may spend.
     const spent: PassSpend = { tokens: 0, estimated: false };
     // Before each conversation, and each batch of the embedding after them, while the box is busy.
     const roomed = room ? () => room.wait() : undefined;

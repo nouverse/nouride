@@ -19,7 +19,7 @@ import type { CliAnswering } from "@/modules/pipeline/brain.ts";
 export function cliUsage(usage: PromptUsage): TokenUsage {
   const read = usage.cachedReadTokens;
   const written = usage.cachedWriteTokens;
-  // A CLI that says only its `totalTokens` was recorded as 0 in and 0 out (A2). The total is the whole prompt; how it
+  // A CLI that says only its `totalTokens` was recorded as 0 in and 0 out. The total is the whole prompt; how it
   // splits is not said, so it is counted as input and marked an estimate — a reader knows the split is ours.
   if (usage.inputTokens + usage.outputTokens + (read ?? 0) + (written ?? 0) === 0 && usage.totalTokens > 0) {
     return { inputTokens: usage.totalTokens, outputTokens: 0, estimated: true, cli: true };

@@ -71,7 +71,7 @@ export function registerAgentRoutes(control: ControlApp, deps: ControlDeps): voi
   });
 
   /**
-   * Who answers when an agent's model cannot — `{ fallbacks: [{ provider, model }] }`, in order; empty for none (§3.1).
+   * Who answers when an agent's model cannot — `{ fallbacks: [{ provider, model }] }`, in order; empty for none.
    */
   control.post("/agents/:id/fallbacks", async (c) => {
     if (!deps.settings || !deps.files) {
@@ -321,7 +321,7 @@ export function registerAgentRoutes(control: ControlApp, deps: ControlDeps): voi
         }
       /**
        * The pack's own setting, unlike `pause`/`resume` above — a mark the registry keeps in the data
-       * directory, which a restart keeps too (D15) but which changes nothing in the pack. This edits the
+       * directory, which a restart keeps too, but which changes nothing in the pack. This edits the
        * file the next boot reads — the capability the `agent_enable` tool held until the CLI became a
        * tool of its own.
        */
