@@ -11,24 +11,29 @@
 # release. A frame from a container (`/app/nouride.bundle.js:LINE:COL`) is read
 # back with `bun run symbolize --target image`.
 #
-# ## The three images
+# ## The two images
 #
-# One build arg, and it names an edition rather than a mechanism — the same three
+# One build arg, and it names an edition rather than a mechanism — the same
 # words the builds take (`build:binary`, and `build:pro` for Pro), each of which
 # produces an image:
 #
 # | `EDITION` | package | nougate | Nouverse sign-in | public |
 # |---|---|---|---|---|
-# | `basic` (default) | `ghcr.io/nouverse/nouride` | **absent** | **absent** | yes |
-# | `router` | `ghcr.io/nouverse/nouride-router` | in this process | **absent** | yes |
+# | `basic` (default) | `ghcr.io/nouverse/nouride` | in this process, off until asked | **absent** | yes |
 # | `pro` | `ghcr.io/nouverse/nouride-pro` | in this process, off until asked | in this process | no |
 #
-# `pro` is the same edition a Nouride Box runs from a tarball; in a pod it has no
-# appliance identity, so pairing stays inert. It carries the LLM gateway since Pro
-# Router became Pro (0.7.20), off until `[nougate] in_process = true` or
-# `NOUGATE_IN_PROCESS=1`: a pod that wants it no longer needs another image.
+# Both carry the LLM gateway, off until `[nougate] in_process = true` or
+# `NOUGATE_IN_PROCESS=1` — `basic` when `internals/nougate` is checked out, which
+# a release's always is (a public clone builds it without, and says so). `pro` is
+# the same edition a Nouride Box runs from a tarball; in a pod it has no
+# appliance identity, so pairing stays inert.
 #
-# **The two public images carry no Pro plugin.** Neither has
+# `ghcr.io/nouverse/nouride-router` is not built here any more: Router became part
+# of the free build (v0.8.29_RFC), and that package is the `basic` image again
+# with `NOURIDE_IMAGE_MOVED_TO` set (`scripts/release/router-image.Dockerfile`),
+# pushed by the public half of a release until 0.9.0 removes it.
+#
+# **The public image carries no Pro plugin.** It has no
 # `internals/pro/packages/oauth`, which is the difference between a feature switched off
 # and a feature that is not there. A `NOURIDE_OAUTH_ISSUER` set against one is
 # refused at boot with a sentence saying this build has no external sign-in,
@@ -50,7 +55,7 @@
 # stage 4, which is a different scope. That mistake fails as
 # `invalid reference format`, which does not name the cause.
 #
-# `basic`, `router` or `pro`. An empty value is not allowed for the same
+# `basic` or `pro`. An empty value is not allowed for the same
 # reason: `edition-` is not a valid image reference.
 ARG EDITION=basic
 # The Bun this image builds and runs on: `.bun-version`, the one CI tests on and the tarballs embed. A Dockerfile cannot
@@ -116,8 +121,8 @@ COPY --from=dashboard-builder /app/apps/dashboard/dist ./apps/dashboard/dist
 # The WhatsApp bridge is a workspace member, so `deps` installed Baileys with everything else.
 # What follows is for the private extensions, which keep their own lockfiles.
 
-# `nougate` only when it is checked out, because only `router` and `pro` carry it and a build
-# without the private submodule has an empty directory here.
+# `nougate` only when it is checked out: both editions carry it, and a build without the
+# private submodule has an empty directory here — `basic` is then built without the gateway.
 #
 # Missing until 2026-09-16, and nothing noticed: no image edition bundled nougate, because
 # `EDITION=router` fell through an `if cloud … else` and silently produced a **basic** bundle. The
@@ -148,10 +153,10 @@ RUN if [ -f /app/internals/nougate/apps/backend/package.json ]; then \
 #
 # Every edition needs its own case. There was an `if cloud … else` here, so `EDITION=router` fell to
 # the else branch and produced a **basic** bundle wearing router's labels — an image that claimed to
-# carry the LLM gateway and did not.
+# carry the LLM gateway and did not. `router` is refused now like any unknown name: the build refuses
+# `--router` too, since the free build carries what it added.
 RUN case "$EDITION" in \
       basic)      SCRIPT=scripts/build-binary.ts;     FLAG="" ;; \
-      router)     SCRIPT=scripts/build-binary.ts;     FLAG="--router" ;; \
       pro)        SCRIPT=internals/pro/packages/build-pro/build.ts;  FLAG="--pro" ;; \
       *) echo "unknown EDITION: $EDITION" >&2; exit 1 ;; \
     esac && \
@@ -243,23 +248,21 @@ RUN mkdir -p /app/.nouride/data /app/.nouride/agents /app/.nouride/workspace/sha
 # `wa-bridge="1"` on every edition: it stopped being a switch on 2026-09-16.
 # The licence is the repository's own, for every edition: LICENSE is the Functional Source License 1.1 with Apache 2.0 as
 # its future licence, and this is its SPDX id, as the manifests say it. The public images once carried `LicenseRef-Nouride`, a placeholder no file defined.
+#
+# The free build carries the LLM gateway as Router did: its frontend beside the bundle and its port declared, though
+# nothing listens on it until the gateway is switched on. No `bundled.nougate` label: whether the bundle carries the
+# gateway is decided by whether `internals/nougate` was checked out, which a label written here cannot know — the
+# release's image always does (`--require-gateway` when its kit is made), and the bundle carries its own stamp of it
+# (`NOURIDE_BUILD_GATEWAY`). Built without it, the frontend directory is empty.
 FROM runtime-base AS edition-basic
 LABEL org.opencontainers.image.licenses="FSL-1.1-ALv2"
 LABEL tech.nouverse.nouride.edition="basic"
 LABEL tech.nouverse.nouride.bundled.wa-bridge="1"
 LABEL tech.nouverse.nouride.bundled.oauth="0"
-
-# The free build plus the LLM gateway, and nothing else.
-FROM runtime-base AS edition-router
-LABEL org.opencontainers.image.licenses="FSL-1.1-ALv2"
-LABEL tech.nouverse.nouride.edition="router"
-LABEL tech.nouverse.nouride.bundled.wa-bridge="1"
-LABEL tech.nouverse.nouride.bundled.nougate="1"
-LABEL tech.nouverse.nouride.bundled.oauth="0"
 COPY --from=engine-builder /app/internals/nougate/apps/frontend/dist /usr/local/bin/frontend
 EXPOSE 18256
 
-# Everything, the gateway included since 0.7.20. Its frontend is beside the bundle as Router's is,
+# Everything, the gateway included since 0.7.20. Its frontend is beside the bundle as the free build's is,
 # and its port is declared, though nothing listens on it until the gateway is switched on.
 FROM runtime-base AS edition-pro
 LABEL org.opencontainers.image.licenses="FSL-1.1-ALv2"

@@ -65,7 +65,9 @@ jobs:
   # plugins, which is the assertion below and the half that matters on a public download. The private
   # editions are built and checked in `release.yml`, where the token and the submodules belong.
   #
-  # `router` is not here for the same reason: public, but it bundles the private nougate.
+  # And `basic` is built here without the LLM gateway, which it carries from the private `internals/nougate`: this
+  # job checks out no submodule, so the build leaves it out and says so. The release's image carries it — its kit is
+  # made with `--require-gateway` (`release.yml`).
   image:
     if: github.repository_owner == 'nouverse'
     # runs-on: [self-hosted, build-runner]
