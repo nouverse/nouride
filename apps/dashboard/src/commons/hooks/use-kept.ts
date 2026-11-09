@@ -85,3 +85,4 @@ export function useKept<T>(key: string, fallback: T, valid: (value: unknown) => 
 }
 
 export const isBoolean = (value: unknown): value is boolean => typeof value === "boolean";
+export const isStrings = (value: unknown): value is string[] => Array.isArray(value) && value.every((item) => typeof item === "string");

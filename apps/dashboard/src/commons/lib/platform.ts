@@ -9,3 +9,10 @@ export function platformName(id: string): string {
   const platform = id.split(":")[0] ?? id;
   return NAMES[platform] ?? platform;
 }
+
+/** What a platform calls a conversation of many, as its people say it: a Discord channel, a Telegram group. */
+const ROOM_WORDS: Record<string, string> = { discord: "channel" };
+
+export function roomWord(id: string): string {
+  return ROOM_WORDS[id.split(":")[0] ?? id] ?? "group";
+}

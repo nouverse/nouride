@@ -49,7 +49,7 @@ describe("where a dropdown goes", () => {
   });
 
   test("no menu is a daisyUI dropdown tied to a button any more", () => {
-    for (const file of ["modules/agents/components/GatewayList.tsx", "modules/chat/components/ChatHeader.tsx", "modules/chat/components/RoomBar.tsx"]) {
+    for (const file of ["modules/agents/components/GatewayList.tsx", "modules/chat/components/AgentHeader.tsx", "modules/chat/components/RoomHeader.tsx", "modules/chat/components/StartMenu.tsx"]) {
       const source = readFileSync(join(import.meta.dir, "../src", file), "utf8");
       expect(source).not.toContain("dropdown-content");
       expect(source).toContain("<DropdownMenu");

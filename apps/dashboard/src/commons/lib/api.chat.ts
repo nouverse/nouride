@@ -6,7 +6,7 @@
  */
 
 import { control, post, request } from "./api.client";
-import type { ApprovalDecision, ApprovalRequest, LiveTurn, Room, RunningJob, SessionSummary, SlashCommand, Transcript, TurnAttachment, UploadedFile } from "@nouride/wire";
+import type { ApprovalDecision, ApprovalRequest, ChatListPayload, LiveTurn, Room, RunningJob, SessionSummary, SlashCommand, Transcript, TurnAttachment, UploadedFile } from "@nouride/wire";
 
 export const chatApi = {
   /**
@@ -25,7 +25,8 @@ export const chatApi = {
     // What the route answers. A 409 means it was answered elsewhere or expired, and changed nothing.
     post<{ ok: true; id: string; decision: ApprovalDecision }>(`${control}/approvals/${id}/${decision}`),
 
-  rooms: () => request<{ gatewayId?: string; rooms: Room[] }>(`${control}/rooms`),
+  /** The chat page's list in one read: each agent's newest conversation here, each room, each group on a chat app. */
+  chatList: () => request<ChatListPayload>(`${control}/chat-list`),
 
   room: (chatId: string) => request<{ room: Room }>(`${control}/rooms/${encodeURIComponent(chatId)}`),
 

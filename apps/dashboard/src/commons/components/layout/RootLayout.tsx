@@ -20,10 +20,10 @@ import { gatewayPage } from "@/commons/lib/bundled-gateway";
 import { isPairedBox } from "@/commons/lib/api.appliance";
 import { PAGE_BOTTOM } from "@/commons/components/ui/ScrollCard";
 import { Sidebar } from "@/commons/components/layout/Sidebar";
-import { TAB_BAR_SPACE, TabBar } from "@/commons/components/layout/TabBar";
+import { PHONE_CHAT_SPACE, TAB_BAR_SPACE, TabBar } from "@/commons/components/layout/TabBar";
 import { CompactSidebar } from "@/commons/components/layout/CompactSidebar";
 import { isBoolean, useKept } from "@/commons/hooks/use-kept";
-import { onChats } from "@/commons/lib/chat-place";
+import { chatOpen, onChats } from "@/commons/lib/chat-place";
 import { SectionTabs } from "@/commons/components/layout/SectionTabs";
 import { SettingsBack } from "@/commons/components/layout/SettingsBack";
 import { Mascot } from "@/commons/components/brand/Mascot";
@@ -129,9 +129,11 @@ export function RootLayout() {
   }
 
   const where = { admin: isAdmin(gate.principal), onBox, hostsGateway: gatewayPage(gate.setup) };
-  // On Chats the menu folds to its icons from a laptop up, unless it was expanded there (`chat-place.ts`).
+  // On Chats the menu folds to its icons from a laptop up, unless it was expanded there; on a phone a conversation is
+  // the whole screen (`chat-place.ts`).
   const chats = onChats(pathname);
   const compact = chats && !menuOpen;
+  const phoneChat = chatOpen(pathname, search);
 
   const sidebar = (
     <Sidebar
@@ -186,7 +188,7 @@ export function RootLayout() {
 
       <div className={cn("flex h-full min-h-0 flex-1 flex-col overflow-hidden", compact ? "lg:pl-[5.5rem]" : "lg:pl-64")}>
         {/* A phone's header: the name, and the way back to Nouride Home inside its app. The rest is the tab bar's. */}
-        <header className="z-20 flex h-[calc(3.25rem+env(safe-area-inset-top))] shrink-0 items-center gap-2 px-3 pt-[env(safe-area-inset-top)] lg:hidden">
+        <header className={cn("z-20 flex h-[calc(3.25rem+env(safe-area-inset-top))] shrink-0 items-center gap-2 px-3 pt-[env(safe-area-inset-top)] lg:hidden", phoneChat && "max-md:hidden")}>
           {inHomeApp() && (
             <a href={HOME_APP_BACK} className="btn btn-ghost btn-square -mr-1 size-11 text-secondary active:scale-90 transition-transform" aria-label="Back to Nouride Home">
               <ChevronLeft size={22} />
@@ -209,7 +211,7 @@ export function RootLayout() {
             same one, not moved, while it stays. */}
         {ownsViewport ? (
           /* Above the tab bar on a phone: a chat's composer sits on the page's foot. */
-          <main className={`flex min-h-0 flex-1 flex-col overflow-hidden *:animate-fade ${TAB_BAR_SPACE}`}>
+          <main className={cn("flex min-h-0 flex-1 flex-col overflow-hidden *:animate-fade", phoneChat ? PHONE_CHAT_SPACE : TAB_BAR_SPACE)}>
             <SettingsBack pathname={pathname} className="mx-4 mt-2 sm:mx-6 lg:mx-8 lg:mt-4" />
             <Outlet />
           </main>
@@ -236,7 +238,7 @@ export function RootLayout() {
         )}
       </div>
 
-      <TabBar pathname={pathname} more={moreOpen} onMore={() => setMoreOpen((open) => !open)} />
+      <TabBar pathname={pathname} more={moreOpen} onMore={() => setMoreOpen((open) => !open)} phoneChat={phoneChat} />
     </div>
   );
 }

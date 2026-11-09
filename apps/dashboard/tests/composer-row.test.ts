@@ -39,5 +39,5 @@ test("the slash button is an icon like the paperclip, not a character", () => {
 test("the placeholder names who is messaged; the keys are said under the box", () => {
   expect(composer).toContain('`Message ${currentAgent?.displayName || "agent"}…`');
   expect(composer).not.toContain("(Enter to send, Shift+Enter for newline)");
-  expect(composer).toContain('<span className="hidden sm:inline">Enter to send · Shift+Enter for a new line</span>');
+  expect(composer).toContain('<span className="hidden shrink-0 sm:inline">Enter to send · Shift+Enter for a new line</span>');
 });

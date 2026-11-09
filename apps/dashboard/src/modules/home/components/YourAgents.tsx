@@ -8,21 +8,8 @@ import { Crown } from "lucide-react";
 import type { Look } from "@/commons/cat/look";
 import type { AgentSummary } from "@nouride/wire";
 import { AgentAvatar } from "@/commons/components/agents/AgentAvatar";
+import { doingNow } from "@/commons/lib/agents";
 import { cn } from "@/commons/lib/utils";
-
-/** What an agent is doing, in a few words, and the dot's colour for it. */
-export function doingNow(agent: AgentSummary): { words: string; tone: "success" | "accent" | "muted" } {
-  if (!agent.enabled || agent.state !== "running") return { words: agent.enabled ? "Not running" : "Switched off", tone: "muted" };
-  const activity = agent.activity;
-  if (!activity) return { words: "Ready", tone: "success" };
-  if (activity.unavailable) return { words: activity.unavailable, tone: "muted" };
-  if (activity.activity === "waiting") return { words: "Waiting for you", tone: "accent" };
-  const missions = activity.missions ?? 0;
-  if (missions > 0) return { words: missions === 1 ? "1 mission running" : `${missions} missions running`, tone: "success" };
-  if (activity.activity === "working") return { words: "Working", tone: "success" };
-  if (activity.activity === "asleep") return { words: "Asleep", tone: "muted" };
-  return { words: "Idle", tone: "muted" };
-}
 
 const DOT = { success: "bg-success", accent: "bg-accent", muted: "bg-base-content/30" } as const;
 

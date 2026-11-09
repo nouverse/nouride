@@ -9,6 +9,7 @@
 
 import { useEffect, useRef, type ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
+import { cn } from "@/commons/lib/utils";
 
 /**
  * On a phone, one row that scrolls sideways: wrapped, four tabs left "Background jobs" alone on a second line under a
@@ -46,12 +47,36 @@ export interface Segment<T extends string> {
   title?: string;
 }
 
-export function SegmentedTabs<T extends string>({ tabs, value, onChange }: { tabs: readonly Segment<T>[]; value: T; onChange: (next: T) => void }) {
+/**
+ * `fill`: a two-way switch across its column, each tab half of it and a finger's height — the chat list's Chats and
+ * Groups — rather than a row of tabs as wide as their words.
+ */
+export function SegmentedTabs<T extends string>({
+  tabs,
+  value,
+  onChange,
+  fill = false,
+  label,
+}: {
+  tabs: readonly Segment<T>[];
+  value: T;
+  onChange: (next: T) => void;
+  fill?: boolean;
+  label?: string;
+}) {
   const bar = useSelectedInView<HTMLDivElement>(value);
   return (
-    <div ref={bar} role="tablist" className={SEGMENTED_BAR}>
+    <div ref={bar} role="tablist" aria-label={label} className={fill ? cn(SEGMENTED_BAR, "flex w-full sm:flex-nowrap") : SEGMENTED_BAR}>
       {tabs.map(({ value: tab, label, icon: Icon, after, title }) => (
-        <button key={tab} type="button" role="tab" aria-selected={tab === value} title={title} className={segmentClass(tab === value)} onClick={() => onChange(tab)}>
+        <button
+          key={tab}
+          type="button"
+          role="tab"
+          aria-selected={tab === value}
+          title={title}
+          className={fill ? cn(segmentClass(tab === value), "min-h-11 flex-1 justify-center font-sans text-[13px] sm:min-h-9") : segmentClass(tab === value)}
+          onClick={() => onChange(tab)}
+        >
           {Icon ? <Icon size={15} /> : null}
           <span>{label}</span>
           {after}

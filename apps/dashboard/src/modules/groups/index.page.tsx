@@ -9,6 +9,7 @@
  */
 
 import { platformName } from "@/commons/lib/platform";
+import { PlatformTag } from "@/commons/components/chat/PlatformBadge";
 import { isAdmin, useMe } from "@/commons/lib/session";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -136,7 +137,7 @@ function GroupRow({ group, editable, onChanged }: { group: GroupRecord; editable
           </form>
         ) : (
           <div className="flex items-start gap-2">
-            <span className="badge badge-sm badge-ghost font-semibold shrink-0 font-mono mt-0.5">{group.dashboard ? "Dashboard" : platformName(group.platform)}</span>
+            <span className="mt-0.5 shrink-0"><PlatformTag>{group.dashboard ? "Dashboard" : platformName(group.platform)}</PlatformTag></span>
             <div className="min-w-0">
               <div className="font-semibold text-sm text-base-content break-words">{group.name ?? <span className="text-base-content/65 font-normal">Unnamed</span>}</div>
               <div className="font-mono text-[11px] text-base-content/65 break-all" title={`${group.gatewayId}:${group.chatId}`}>

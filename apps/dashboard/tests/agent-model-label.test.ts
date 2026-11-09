@@ -22,12 +22,10 @@ describe("the model an agent is listed with", () => {
   });
 
   // Home lists no agents since 0.8.15: the Office teaser took its place.
-  test("every list of agents shows it so: the picker, the chat's badge, the Agents page and an agent's header", () => {
+  // The chat names no model since its list took the picker's place: who the conversation is with is its header.
+  test("every list of agents shows it so: the Agents page and an agent's header", () => {
     const source = (path: string) => readFileSync(join(import.meta.dir, "../src/modules", path), "utf8");
-    const header = source("chat/components/ChatHeader.tsx");
-    expect(header).toContain("{agentModel(agent)}</p>");
-    expect(header).toContain('{currentAgent ? agentModel(currentAgent) : "active"}');
-    expect(header).not.toContain("{agent.model}");
+    expect(source("chat/components/AgentHeader.tsx")).not.toContain("{agent.model}");
     expect(source("agents/index.page.tsx")).toContain("`${agentModel(agent)} · account ${agent.external.profile}`");
     expect(source("agents/layout.page.tsx")).toContain("<Terminal size={11} /> {agentModel(agent)}");
   });
