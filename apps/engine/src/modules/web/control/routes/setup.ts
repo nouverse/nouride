@@ -154,7 +154,7 @@ export function registerSetupRoutes(control: ControlApp, deps: ControlDeps): voi
 /**
  * The gateway this build carries: whether it runs, and whether it could.
  *
- * `available` is whether it runs, as it has always meant: `router` and `pro` *carried* nougate before every build did,
+ * `available` is whether it runs, as it has always meant: only some editions *carried* nougate before every build did,
  * and a dashboard older than the switch offers the gateway on `available` alone — an endpoint nothing answers on when it
  * is off. What a newer one needs to offer it while it is off is beside it: `carried`, and `mount`, which a dashboard
  * that reads `available` first ignores. `decidedBy` says the environment holds the switch, so the page shows it rather

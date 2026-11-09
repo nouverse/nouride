@@ -100,7 +100,7 @@ const GATEWAY_PACKAGE = "@nouverse/nougate-backend";
  * not, so a build with the edition's stamp and not this one does not carry it.
  *
  * A source checkout has neither stamp, and carries the gateway when the package resolves there: the dev loop links
- * it into `node_modules` (`scripts/dev-router.sh`), a plain checkout does not. Resolved, never imported: loading the
+ * it into `node_modules` (`scripts/dev-gateway.sh`), a plain checkout does not. Resolved, never imported: loading the
  * gateway costs its whole module graph in memory, and this is asked at every start.
  */
 export function gatewayCarried(build: { stamp: string | undefined; compiled: boolean; resolves: () => boolean }): boolean {

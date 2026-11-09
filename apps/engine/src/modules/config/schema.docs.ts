@@ -434,7 +434,7 @@ export const ANNOTATIONS: Record<string, Annotation> = {
 
   "nougate.in_process": {
     description:
-      "Run the LLM gateway inside this daemon instead of reaching one over the network. Needs the router or pro edition, which carry it.",
+      "Run the LLM gateway (Nougate) inside this daemon instead of reaching one over the network. Every official build carries it, off until this is true; the setup wizard's \"Use Nougate\" and the LLM Gateway page set it too.",
   },
   "nougate.port": { description: "Loopback port for the in-process gateway." },
   "update.track": { live: true,

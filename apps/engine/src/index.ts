@@ -198,7 +198,7 @@ export async function runDaemon(): Promise<void> {
   if (!(await resolveOauthSupport()) && oauthReady(config.dashboard)) {
     throw new ConfigError(
       `[dashboard.oauth] is configured, but this build has no external sign-in. ` +
-        `The Community and Router editions are built without it. Only the Pro editions carry ` +
+        `The Community edition is built without it. Only the Pro edition carries ` +
         `the flow. Either clear the issuer, or run a Pro build.`,
     );
   }

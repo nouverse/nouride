@@ -123,7 +123,7 @@ export type InitialAdminSharing =
 /**
  * One first-run password for both halves of a bundled build.
  *
- * A `router` or `pro` binary hosts the LLM gateway in this same process, and that gateway
+ * With its LLM gateway switched on, a build hosts it in this same process, and that gateway
  * bootstraps its own admin account exactly the way this one does: the same two variable names, the
  * same "both or neither" rule, and the same fallback to a password it generates and prints. On a
  * first run that leaves the operator reading two banners and typing two different passwords into

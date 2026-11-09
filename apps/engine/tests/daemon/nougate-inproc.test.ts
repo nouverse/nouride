@@ -53,8 +53,9 @@ describe("the gateway is reached only on demand", () => {
   test("a build without it fails with a sentence, not a resolver error", () => {
     const text = source("modules/gateways/nougate-inproc.ts");
     expect(text).toContain("does not carry the gateway");
-    // The two editions that carry it, by the flags that build them: `--pro` since 0.7.20.
-    expect(text).toContain("built without --router or --pro");
+    // Every official build carries it; one made where it was not checked out does not, and says so.
+    expect(text).toContain("built where it was not checked out");
+    expect(text).not.toContain("--router");
   });
 
   test("every other edition externalises it, and the artefact is checked", () => {

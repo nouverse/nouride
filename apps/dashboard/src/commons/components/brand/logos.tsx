@@ -1,6 +1,6 @@
 import { useId } from "react";
 /**
- * The Nougate mark — the LLM gateway a Router build carries, on its LLM Gateway page and in setup.
+ * The Nougate mark — the LLM gateway every build carries, on its LLM Gateway page and in setup.
  *
  * A gateway seen head-on: two arches drawn with the Nouverse "n" stroke, one inside the other, and
  * the nou mark's planet passing through. The same picture as nougate's own `favicon.svg` and

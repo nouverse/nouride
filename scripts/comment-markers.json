@@ -930,7 +930,6 @@
   "apps/engine/tests/daemon/identity-headline.test.ts": { "version": 1 },
   "apps/engine/tests/daemon/install-root.test.ts": { "version": 1 },
   "apps/engine/tests/daemon/last-run.test.ts": { "version": 2 },
-  "apps/engine/tests/daemon/nougate-inproc.test.ts": { "version": 1 },
   "apps/engine/tests/daemon/orchestrator.test.ts": { "version": 1 },
   "apps/engine/tests/daemon/secret-store-boot.test.ts": { "version": 2 },
   "apps/engine/tests/daemon/service.test.ts": { "version": 1 },

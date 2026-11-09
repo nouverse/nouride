@@ -1,7 +1,7 @@
 /**
  * The bundled gateway's own API, reached through this daemon at `<mount>/api/*`.
  *
- * On a `router` or `pro` build with the gateway on, the daemon hands these requests to the gateway in its own
+ * With the gateway on, the daemon hands these requests to the gateway in its own
  * process, as the person already signed in here (`engine/src/modules/web/llm-gateway.ts`) — so there
  * is no second login and no key. Only the calls the setup wizard's sign-in step needs live here; the
  * LLM Gateway page is the gateway's own frontend and makes its own.
