@@ -972,7 +972,7 @@ jobs:
         run: |
           error() { printf '::%s::%s\n' error "$*"; }
           mkdir -p public
-          gh release download "${GITHUB_REF_NAME}" --repo "nouverse/nouride" --pattern 'CHECKSUMS*' --dir public --clobber
+          sh scripts/release/gh-retry.sh gh release download "${GITHUB_REF_NAME}" --repo "nouverse/nouride" --pattern 'CHECKSUMS*' --dir public --clobber
           rm -f public/*.sig
           set -- public/CHECKSUMS*
           [ -e "$1" ] || { error "the public release has no checksum files — did binaries upload them?"; exit 1; }
@@ -994,7 +994,7 @@ jobs:
           RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
         run: |
           mkdir -p private
-          gh release download "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --pattern 'CHECKSUMS-*' --dir private --clobber || true
+          sh scripts/release/gh-retry.sh gh release download "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --pattern 'CHECKSUMS-*' --dir private --clobber || true
           rm -f private/*.sig
           set -- private/CHECKSUMS-*
           if [ ! -e "$1" ]; then
@@ -1071,7 +1071,7 @@ jobs:
           for sums in private/CHECKSUMS-*; do
             case "$sums" in *.sig) continue ;; esac
             edition="${sums#private/CHECKSUMS-}"
-            gh release download "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --pattern "nouride-${edition}-*.tar.gz" --dir private --clobber
+            sh scripts/release/gh-retry.sh gh release download "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --pattern "nouride-${edition}-*.tar.gz" --dir private --clobber
             # Presigned PUT URLs from the service: this job never holds an R2 credential.
             bun run internals/pro/packages/build-pro/publish-appliance-release.ts --tag "${GITHUB_REF_NAME}" --edition "${edition}" --dir private
           done
@@ -1373,7 +1373,7 @@ jobs:
           GH_TOKEN: ${{ secrets.RELEASES_REPO_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           rm -rf install-run && mkdir install-run
-          gh release download "${GITHUB_REF_NAME}" --repo nouverse/nouride --dir install-run \
+          sh scripts/release/gh-retry.sh gh release download "${GITHUB_REF_NAME}" --clobber --repo nouverse/nouride --dir install-run \
             --pattern nouride-linux-x64.tar.gz --pattern nouride-linux-arm64.tar.gz --pattern nouride-linux-x64-musl.tar.gz
       # QEMU for the Ubuntu arm64 run: a GitHub-hosted runner has no arm64 emulation of its own, and without it that
       # container dies on `exec format error` (0.8.20's release, the first on hosted runners since build-runner had it).

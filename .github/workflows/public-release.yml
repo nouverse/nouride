@@ -89,16 +89,16 @@ jobs:
           if [ "$EDITION" = basic ]; then file="nouride-${TARGET}.tar.gz"; suffix=""; else file="nouride-${EDITION}-${TARGET}.tar.gz"; suffix="-${EDITION}"; fi
           # `CHECKSUMS*` from 0.8.0; a rehearsal of an older release carries its `SHA256SUMS*`.
           sums="CHECKSUMS${suffix}"
-          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -qx "$sums" || sums="SHA256SUMS${suffix}"
+          sh scripts/release/gh-retry.sh gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -qx "$sums" || sums="SHA256SUMS${suffix}"
           mkdir -p assets
-          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "$sums" --pattern "$sums.sig" --dir assets
+          sh scripts/release/gh-retry.sh gh release download "$TAG" --clobber --repo "$GITHUB_REPOSITORY" --pattern "$sums" --pattern "$sums.sig" --dir assets
           # A target this release does not build is not in its checksum file: nothing to test, and said.
           if ! grep -q " \*\{0,1\}\(\./\)\{0,1\}${file}\$" "assets/$sums"; then
             echo "::notice::$file is not in $sums — this release does not build $TARGET"
             echo "skip=yes" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "$file" --dir assets
+          sh scripts/release/gh-retry.sh gh release download "$TAG" --clobber --repo "$GITHUB_REPOSITORY" --pattern "$file" --dir assets
           sh scripts/release/verify-sums.sh assets
           echo "file=assets/$file" >> "$GITHUB_OUTPUT"
       - name: Start it, and ask it what it is
@@ -153,9 +153,9 @@ jobs:
         run: |
           if [ "$EDITION" = basic ]; then kit=nouride-image-kit.tar.gz; suffix="-image-kit"; else kit="nouride-image-kit-${EDITION}.tar.gz"; suffix="-image-kit-${EDITION}"; fi
           sums="CHECKSUMS${suffix}"
-          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -qx "$sums" || sums="SHA256SUMS${suffix}"
+          sh scripts/release/gh-retry.sh gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -qx "$sums" || sums="SHA256SUMS${suffix}"
           mkdir -p assets kit
-          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "$kit" --pattern "$sums" --pattern "$sums.sig" --dir assets
+          sh scripts/release/gh-retry.sh gh release download "$TAG" --clobber --repo "$GITHUB_REPOSITORY" --pattern "$kit" --pattern "$sums" --pattern "$sums.sig" --dir assets
           sh scripts/release/verify-sums.sh assets
           tar -xzf "assets/$kit" -C kit
           jq -e --arg e "$EDITION" --arg v "${TAG#v}" '.edition == $e and .version == $v' kit/kit.json
