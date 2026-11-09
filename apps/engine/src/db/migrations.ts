@@ -59,6 +59,7 @@ import keptAcrossRestart from "./migrations/076_kept_across_restart.sql" with { 
 import daemonState from "./migrations/077_daemon_state.sql" with { type: "text" };
 import knowledge from "./migrations/078_knowledge.sql" with { type: "text" };
 import knowledgeEdges from "./migrations/079_knowledge_edges.sql" with { type: "text" };
+import chatMessagesKey from "./migrations/080_chat_messages_key.sql" with { type: "text" };
 
 export interface Migration {
   /** Parsed from the filename prefix, and what `user_version` is set to once applied. */
@@ -90,6 +91,7 @@ export const MIGRATIONS: readonly Migration[] = [
   { version: 77, name: "077_daemon_state.sql", sql: daemonState },
   { version: 78, name: "078_knowledge.sql", sql: knowledge },
   { version: 79, name: "079_knowledge_edges.sql", sql: knowledgeEdges },
+  { version: 80, name: "080_chat_messages_key.sql", sql: chatMessagesKey },
 ];
 
 /**
