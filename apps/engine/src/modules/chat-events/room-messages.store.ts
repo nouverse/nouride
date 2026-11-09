@@ -8,7 +8,9 @@
  *
  * Not a turn record for the same reason `chat_events` is not: a message nobody answered has no agent
  * and no session. It also fixes the mirror-image bug, a message answered by two agents drawn twice —
- * turns carry `message_id`, so a reply attaches to the message rather than restating it.
+ * turns carry `message_id`, so a reply attaches to the message rather than restating it. A message is
+ * its connection, its chat and its id together: a platform numbers messages per chat, so an id alone
+ * names one line in every group (`080_chat_messages_key.sql`).
  *
  * Only what people say. Agent replies are turns, with their steps and timings, and a second record of
  * one reply could disagree with the first; an agent's own message echoed back inbound is filtered on
@@ -50,6 +52,7 @@ interface Row {
   text: string;
   attachments: string | null;
   at: number;
+  ids_per_connection: number;
 }
 
 export class RoomMessageStore {
@@ -58,9 +61,10 @@ export class RoomMessageStore {
   /**
    * Record one, or leave the existing row alone.
    *
-   * `ON CONFLICT DO NOTHING` because on a platform that hands every bot its own copy of a message,
-   * this is reached once per connection with the same envelope id. The first write is the message;
-   * the rest are the same message seen again.
+   * Each connection keeps its own copy: on a platform that hands every bot its own copy of a message,
+   * this is reached once per connection, and each agent's log is what its own bot heard. Keyed by the
+   * id alone, the first bot's copy was kept and the rest dropped, and so was a second group's message
+   * of the same number. What the conflict still turns away is one connection handed a message again.
    */
   record(input: {
     id: string;
@@ -71,6 +75,8 @@ export class RoomMessageStore {
     text: string;
     attachments?: RoomMessageAttachment[];
     at?: number;
+    /** The id is this connection's own numbering (the envelope's `idsPerConnection`): see `inRoom`. */
+    idsPerConnection?: boolean;
   }): void {
     // An empty message with no files is not something somebody said. A bare tag arrives that way and
     // the *turn* records what the harness made of it; a blank bubble would say nothing.
@@ -80,9 +86,9 @@ export class RoomMessageStore {
       this.db
         .prepare(
           `INSERT INTO chat_messages (id, gateway_id, chat_id, sender_id, sender_name, text,
-                                      attachments, at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-           ON CONFLICT(id) DO NOTHING`,
+                                      attachments, at, ids_per_connection)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT(gateway_id, chat_id, id) DO NOTHING`,
         )
         .run(
           input.id,
@@ -93,6 +99,7 @@ export class RoomMessageStore {
           input.text,
           input.attachments?.length ? JSON.stringify(input.attachments) : null,
           input.at ?? Date.now(),
+          input.idsPerConnection ? 1 : 0,
         );
     } catch (err) {
       // A transcript row is not worth failing a turn over: the message is already being routed, and
@@ -119,14 +126,38 @@ export class RoomMessageStore {
 
   /** One room's messages, oldest first. */
   forChat(gatewayId: string, chatId: string, limit = 400): RoomMessage[] {
+    return this.newest(gatewayId, chatId, limit).reverse().map(toMessage);
+  }
+
+  /**
+   * One chat as several of our bots heard it — a group read as one room — its newest `limit` lines, oldest first.
+   *
+   * Each connection keeps its own copy, so a line two bots heard is two rows; here it is one. By its id in the chat,
+   * which every bot there shares on one platform — the connections are one platform's. Where the platform numbered a
+   * line for each bot apart (`ids_per_connection`, a Telegram basic group) the copies share no id, and are one line by
+   * who said it, when and what: `at` is the platform's own time for the message, the same in every bot's copy.
+   */
+  inRoom(gatewayIds: readonly string[], chatId: string, limit = 400): RoomMessage[] {
+    // One connection holds a line once, so the room's newest `limit` lines are among each one's newest `limit`. Read
+    // oldest first, and sorted stably: lines said in one second keep the order they were said in.
+    const lines = new Map<string, RoomMessage>();
+    for (const gatewayId of gatewayIds) {
+      for (const row of this.newest(gatewayId, chatId, limit).reverse()) {
+        const line = row.ids_per_connection ? `said\u0000${row.sender_id}\u0000${row.at}\u0000${row.text}` : `id\u0000${row.id}`;
+        if (!lines.has(line)) lines.set(line, toMessage(row));
+      }
+    }
+    return [...lines.values()].sort((a, b) => a.at - b.at).slice(-limit);
+  }
+
+  /** One connection's newest `limit` rows in a chat, newest first. */
+  private newest(gatewayId: string, chatId: string, limit: number): Row[] {
     return this.db
       .prepare<Row>(
         `SELECT * FROM chat_messages WHERE gateway_id = ? AND chat_id = ?
          ORDER BY at DESC LIMIT ?`,
       )
-      .all(gatewayId, chatId, limit)
-      .reverse()
-      .map(toMessage);
+      .all(gatewayId, chatId, limit);
   }
 
   /** One room's messages in a window, oldest first — the people's half of a group episode. */

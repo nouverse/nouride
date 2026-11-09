@@ -7,6 +7,7 @@
  * sit in is one room here, keyed as the platform sees it (platform + chat id), with every agent that talks there.
  */
 
+import type { RoomMessage } from "@/modules/chat-events/room-messages.store.ts";
 import { cronJobOfChat } from "@/modules/cron/session.ts";
 import { idsOf, personIdMatches } from "@/modules/people/match.ts";
 import { roomName } from "@/modules/rooms/room-names.store.ts";
@@ -18,6 +19,8 @@ import type { ChatTypes } from "./chat-types.ts";
 export const SESSIONS_READ = 200;
 /** People named for a group: who spoke there last. */
 const PRESENT = 6;
+/** A group's lines read for who spoke there lately. */
+export const SPOKEN = 50;
 /** Longer than any group name anyone gives; past it is a paste, not a name. */
 const MAX_TITLE = 100;
 
@@ -55,22 +58,25 @@ export function chatKind(deps: Pick<PipelineDeps, "rooms" | "roomMessages">, gat
   return said !== undefined && said !== "dm" ? "group" : "dm";
 }
 
+/** Who said these lines of a group, the latest speaker first, by `[[people]]` name where they are in it. */
+export function speakersOf(people: readonly Person[], lines: readonly RoomMessage[]): Who[] {
+  const seen = new Map<string, Who>();
+  for (const message of [...lines].reverse()) {
+    if (message.senderId === SYSTEM_SENDER) continue;
+    const person = personFor(people, message.gatewayId, message.senderId);
+    // One person on two accounts is one name: keyed by who they are, not which account wrote.
+    const who = person?.key ? `person:${person.key}` : `account:${message.senderId}`;
+    if (seen.has(who)) continue;
+    seen.set(who, person ?? { name: message.senderName ?? message.senderId });
+    if (seen.size >= PRESENT) break;
+  }
+  return [...seen.values()];
+}
+
 /** Who is in a chat, as far as the daemon knows: the person on the other end of a one-to-one, or who spoke in a group lately. */
 export function peopleIn(deps: Pick<PipelineDeps, "config" | "roomMessages" | "turns">, gatewayId: string, chatId: string, kind: "dm" | "group"): Who[] {
   const people = deps.config.people;
-  if (kind === "group") {
-    const seen = new Map<string, Who>();
-    for (const message of [...(deps.roomMessages?.forChat(gatewayId, chatId, 50) ?? [])].reverse()) {
-      if (message.senderId === SYSTEM_SENDER) continue;
-      const person = personFor(people, gatewayId, message.senderId);
-      // One person on two accounts is one name: keyed by who they are, not which account wrote.
-      const who = person?.key ? `person:${person.key}` : `account:${message.senderId}`;
-      if (seen.has(who)) continue;
-      seen.set(who, person ?? { name: message.senderName ?? message.senderId });
-      if (seen.size >= PRESENT) break;
-    }
-    return [...seen.values()];
-  }
+  if (kind === "group") return speakersOf(people, deps.roomMessages?.forChat(gatewayId, chatId, SPOKEN) ?? []);
   // The address of a one-to-one is the person's account on most platforms; where it is not, the turns there say who spoke.
   const senders = [chatId, ...(deps.turns?.forChat(gatewayId, chatId, 3) ?? []).map((turn) => turn.senderId ?? "")].filter((id) => id && id !== SYSTEM_SENDER);
   for (const id of senders) {

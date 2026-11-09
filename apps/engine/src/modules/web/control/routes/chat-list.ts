@@ -11,7 +11,7 @@ import { oneLine, type GatewayName, type Session } from "@nouride/shared";
 import type { ChatListAgent, ChatListGroup, ChatListLine, ChatListPayload, ChatListRoom } from "@nouride/wire";
 import { cronJobOfChat } from "@/modules/cron/session.ts";
 import { MISSION_GATEWAY_ID } from "@/modules/missions/gateway.ts";
-import { peopleIn, personFor, SESSIONS_READ } from "@/modules/pipeline/known-rooms.ts";
+import { personFor, SESSIONS_READ, speakersOf, SPOKEN } from "@/modules/pipeline/known-rooms.ts";
 import type { TurnRecord } from "@/modules/turns/turns.store.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 
@@ -57,24 +57,26 @@ function newer<T extends { at: number }>(a: T | undefined, b: T | undefined): T 
 const bare = (line: (ChatListLine & { at: number }) | undefined): { last?: ChatListLine } =>
   line ? { last: { from: line.from, ...(line.name ? { name: line.name } : {}), text: line.text } } : {};
 
-/** The person's latest words in a chat, from its room log, under the name the conversation shows them by (`senders.ts`). */
-function saidLast(deps: ControlDeps, gatewayId: string, chatId: string): (ChatListLine & { at: number }) | undefined {
-  const message = deps.roomMessages?.forChat(gatewayId, chatId, 1).at(-1);
+/**
+ * The person's latest words in a chat, from its room log as any of `connections` heard it, under the name the
+ * conversation shows them by (`senders.ts`).
+ */
+function saidLast(deps: ControlDeps, connections: readonly string[], chatId: string): (ChatListLine & { at: number }) | undefined {
+  const message = deps.roomMessages?.inRoom(connections, chatId, 1).at(-1);
   const text = message ? preview(message.text) : "";
-  const name = message ? (personFor(deps.ctx.config.people, gatewayId, message.senderId)?.name ?? message.senderName) : undefined;
+  const name = message ? (personFor(deps.ctx.config.people, message.gatewayId, message.senderId)?.name ?? message.senderName) : undefined;
   return message && text ? { from: "person", ...(name ? { name } : {}), text, at: message.at } : undefined;
 }
 
 /**
- * How many people spoke in a group lately, across each of our bots' copies of its log: a line is kept by whichever
- * bot's connection took it first, so one copy holds part of the group, and a count from one said "1 person" beside three.
+ * How many people spoke in a group lately: the ones the Groups page names, and whoever its log holds as any of our bots
+ * there heard it. Each bot keeps what it was handed, and one can be handed less than another (added later, or a Telegram
+ * bot handed only what tags it), so the log is read across them all, a line two of them heard once.
  */
-function peopleCount(deps: ControlDeps, connections: Iterable<string>, chatId: string, known: readonly { key?: string; name: string }[]): number {
-  const stores = { config: deps.ctx.config, roomMessages: deps.roomMessages, turns: deps.turns };
+function peopleCount(deps: ControlDeps, connections: readonly string[], chatId: string, known: readonly { key?: string; name: string }[]): number {
   const who = new Set(known.map((one) => (one.key ? `person:${one.key}` : one.name)));
-  for (const gatewayId of connections) {
-    for (const one of peopleIn(stores as Parameters<typeof peopleIn>[0], gatewayId, chatId, "group")) who.add(one.key ? `person:${one.key}` : one.name);
-  }
+  const lines = deps.roomMessages?.inRoom(connections, chatId, SPOKEN) ?? [];
+  for (const one of speakersOf(deps.ctx.config.people, lines)) who.add(one.key ? `person:${one.key}` : one.name);
   return who.size;
 }
 
@@ -115,7 +117,7 @@ function agentsOf(deps: ControlDeps, local: string, rooms: Set<string>, running:
 function roomsOf(deps: ControlDeps, local: string, platform: GatewayName): ChatListRoom[] {
   return (deps.rooms?.list(local) ?? []).map((room) => {
     const turn = deps.turns?.forChat(local, room.chatId, 1).at(-1) ?? null;
-    const line = newer(turnLine(turn), saidLast(deps, local, room.chatId));
+    const line = newer(turnLine(turn), saidLast(deps, [local], room.chatId));
     const untagged = deps.pipeline.untaggedAnswerer({ gateway: platform, gatewayId: local, chatId: room.chatId });
     return {
       chatId: room.chatId,
@@ -138,9 +140,9 @@ function groupsOf(deps: ControlDeps, running: Set<string>): ChatListGroup[] {
     .filter((group) => !group.dashboard)
     .map((group) => {
       const sessions = recent.filter((session) => session.chatId === group.chatId && session.sessionType === "main" && platformOf(session.gatewayId) === group.platform);
-      const connections = new Set([group.gatewayId, ...sessions.map((session) => session.gatewayId)]);
-      let line: (ChatListLine & { at: number }) | undefined;
-      for (const gatewayId of connections) line = newer(line, saidLast(deps, gatewayId, group.chatId));
+      // Every connection of ours there, all on the group's platform: what `inRoom` reads the group across.
+      const connections = [...new Set([group.gatewayId, ...sessions.map((session) => session.gatewayId)])];
+      let line = saidLast(deps, connections, group.chatId);
       for (const session of sessions) line = newer(line, turnLine(deps.turns?.latestForSession(session.id) ?? null));
       return {
         platform: group.platform,
