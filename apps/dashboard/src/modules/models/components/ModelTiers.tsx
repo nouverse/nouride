@@ -1,22 +1,24 @@
 /**
- * The install's model tiers and each helper's tier (0.8.0): `[llm.defaults] small_model` and
+ * The install's model tiers and each helper's tier: `[llm.defaults] small_model` and
  * `high_model` beside `model`, and the tier — or model — that compaction, the nightly pass, the steering reply, image
  * reading and skill learning each run on.
  *
- * On this page and collapsed, as the Skills page keeps its settings: it is the page's setting, not its content. A
- * helper names a tier with one word, and nothing changes until someone does — every helper is each agent's own model
- * until then. An agent's own pair is on its Model tab.
+ * A button in the Models page's header that opens them in a dialog: it is the page's setting, not its content, and as a
+ * panel between the tabs and the providers it pushed the list down and broke its scroll. A helper names a tier with one
+ * word, and nothing changes until someone does — every helper is each agent's own model until then. An agent's own pair
+ * is on its Model tab.
  *
  * **Live.** The daemon resolves a tier where it is used, so a save applies to the next piece of work.
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { Layers } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Layers, X } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import type { ModelTiersPatch, TierHelper } from "@nouride/wire";
 import { isAdmin, useMe } from "@/commons/lib/session";
 import { ErrorNote } from "@/commons/components/ui/ui";
+import { Leaving, overPage } from "@/commons/components/ui/OverPage";
 import { Details } from "@/commons/components/ui/Details";
 import { Combobox } from "@/commons/components/ui/Combobox";
 import { useSaved } from "@/commons/hooks/use-saved";
@@ -37,7 +39,34 @@ const TIER_OPTIONS = [
   { value: "high", label: "High tier (the strongest)" },
 ];
 
-export function ModelTiersPanel() {
+/** The header's button, shown where the daemon answers for its tiers, with the three of them in its tooltip. */
+export function ModelTiersButton() {
+  const [open, setOpen] = useState(false);
+  const view = useQuery({ queryKey: ["model-tiers"], queryFn: api.modelTiers, retry: false });
+  // A daemon with no config file to write, or one too old to have tiers: no control rather than a dead one.
+  if (view.error || !view.data) return null;
+  return (
+    <>
+      <button
+        type="button"
+        className="btn btn-ghost btn-sm rounded-xl gap-2 active:scale-95 transition-all"
+        onClick={() => setOpen(true)}
+        title={`Model tiers: ${tiersLine(view.data.defaults)}`}
+      >
+        <Layers size={16} aria-hidden="true" /> Model tiers
+      </button>
+      <Leaving value={open}>{() => <ModelTiersDialog onClose={() => setOpen(false)} />}</Leaving>
+    </>
+  );
+}
+
+/** The three tiers in a line: each one's model, or that all three are the default. */
+function tiersLine(defaults: { model: string; smallModel: string; highModel: string }): string {
+  if (!defaults.smallModel && !defaults.highModel) return "all three are the default model";
+  return `small ${defaults.smallModel || defaults.model || "—"} · default ${defaults.model || "—"} · high ${defaults.highModel || defaults.model || "—"}`;
+}
+
+function ModelTiersDialog({ onClose }: { onClose: () => void }) {
   const queryClient = useQueryClient();
   const me = useMe();
   const view = useQuery({ queryKey: ["model-tiers"], queryFn: api.modelTiers, retry: false });
@@ -62,7 +91,14 @@ export function ModelTiersPanel() {
     },
   });
 
-  // A daemon with no config file to write, or from before 0.8.0: no control rather than a dead one.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   if (view.error || !view.data) return null;
   const live = view.data;
   const editable = live.editable && isAdmin(me.data ?? null);
@@ -73,20 +109,22 @@ export function ModelTiersPanel() {
     const current = key === "smallModel" ? live.defaults.smallModel : key === "highModel" ? live.defaults.highModel : live.helpers[key as TierHelper];
     return (draft[key] ?? "").trim() !== current;
   });
-  const small = live.defaults.smallModel || live.defaults.model;
-  const high = live.defaults.highModel || live.defaults.model;
 
-  return (
-    <details className="collapse-arrow bg-base-100 border-base-content/10 collapse rounded-2xl border">
-      <summary className="collapse-title flex flex-wrap items-center gap-2 text-sm font-medium">
-        <Layers size={15} className="opacity-60" />
-        Model tiers
-        <span className="text-xs font-normal text-base-content/65">
-          {live.defaults.smallModel || live.defaults.highModel ? `small ${small || "—"} · default ${live.defaults.model || "—"} · high ${high || "—"}` : "all three are the default model"}
-        </span>
-      </summary>
+  return overPage(
+    <div className="modal modal-open" role="dialog" aria-label="Model tiers">
+      <div className="modal-box flex max-h-[90vh] max-w-3xl flex-col gap-5 overflow-y-auto overscroll-contain rounded-2xl">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 space-y-0.5">
+            <h3 className="flex items-center gap-2 font-semibold">
+              <Layers size={16} className="opacity-60" aria-hidden="true" /> Model tiers
+            </h3>
+            <p className="text-xs text-base-content/65">{tiersLine(live.defaults)}</p>
+          </div>
+          <button type="button" className="btn btn-ghost btn-sm rounded-xl" aria-label="Close" onClick={onClose}>
+            <X size={16} />
+          </button>
+        </div>
 
-      <div className="collapse-content space-y-5">
         <p className="text-xs text-base-content/65">
           An agent picks one of three models for the work it hands off (a helper, another agent's answer): small for
           quick, simple work, high for hard work that has to be right, default when it says nothing. Unset, a tier is the
@@ -145,7 +183,7 @@ export function ModelTiersPanel() {
             A tier is each agent's own model of it, on its own provider. Choosing one for the nightly pass clears its
             provider; a model of its own for the pass is set on the Knowledge & Memory page.
           </p>
-          {/* Where each is written, for whoever runs the server (0.8.19). */}
+          {/* Where each is written, for whoever runs the server. */}
           <Details>
             <ul className="space-y-0.5">
               <li className="font-mono">[llm.defaults] model: the default model</li>
@@ -174,6 +212,7 @@ export function ModelTiersPanel() {
           </span>
         </div>
       </div>
-    </details>
+      <button type="button" className="modal-backdrop" aria-label="Close" onClick={onClose} />
+    </div>,
   );
 }

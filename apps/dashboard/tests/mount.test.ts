@@ -998,7 +998,7 @@ describe("agents: orchestrator first, presets, and tools", () => {
     expect(sent).toEqual([{ path: "/agents/nouva/fallbacks", body: { fallbacks: [{ provider: "test", model: "spare-model" }, { provider: "test", model: "last-resort" }] } }]);
   });
 
-  test("an agent's three model tiers on its Model tab, inheriting until it names its own; the install's and each helper's on Models (0.8.0)", async () => {
+  test("an agent's three model tiers on its Model tab, inheriting until it names its own (0.8.0)", async () => {
     const text = (html: string) => html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ");
     // The engine's own answer (fixtures/wire.json): nothing named anywhere, so both follow the agent's model.
     const inheriting = text(await renderPage("/agents/nouva/model"));
@@ -1015,16 +1015,6 @@ describe("agents: orchestrator first, presets, and tools", () => {
     expect(text(own)).toContain("Inherits m-high.");
     expect(text(own)).toContain("Inherit both");
 
-    answer({});
-    const models = text(await renderPage("/models"));
-    expect(errors.filter((line) => /Error|error boundary|Cannot read/.test(line))).toEqual([]);
-    expect(models).toContain("Model tiers");
-    expect(models).toContain("all three are the default model");
-    for (const helper of ["[llm.context] summary_model", "[memory] pass_model", "[queue] steer_reply_model", "[media] image_model", "[skills.learning] model"]) {
-      expect(models).toContain(helper);
-    }
-    expect(models).toContain("Small tier (the cheapest)");
-    expect(models).toContain("High tier (the strongest)");
   });
 
   test("the mention hop limit is advanced: behind its disclosure on Agent Settings, not on the card's first line (0.8.0)", async () => {

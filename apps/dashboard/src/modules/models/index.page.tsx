@@ -18,7 +18,7 @@ import { isBundledEndpoint, nougateConsoleUrl } from "@/commons/lib/bundled-gate
 import { useSaved } from "@/commons/hooks/use-saved";
 import { FILL_PAGE, ScrollArea } from "@/commons/components/ui/ScrollCard";
 import { Count, SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
-import { ModelTiersPanel } from "./components/ModelTiersPanel";
+import { ModelTiersButton } from "./components/ModelTiers";
 import { CodingClis } from "./components/CodingClis";
 import { ListLoading } from "@/commons/components/ui/Spinner";
 
@@ -47,13 +47,18 @@ export default function ModelsPage({ tab }: { tab?: "clis" | undefined } = {}) {
         title="Models"
         description="Where your agents' answers come from: the AI providers and their keys, and the coding CLIs some agents work inside (Claude Code, Codex), with their accounts."
         actions={
-          source === "clis" ? undefined : <button
-            type="button"
-            className="btn btn-primary btn-sm rounded-xl gap-2 shadow-xs active:scale-95 transition-all"
-            onClick={() => setAdding(true)}
-          >
-            <Plus size={16} /> Add Provider
-          </button>
+          source === "clis" ? undefined : (
+            <div className="flex flex-wrap items-center gap-2">
+              <ModelTiersButton />
+              <button
+                type="button"
+                className="btn btn-primary btn-sm rounded-xl gap-2 shadow-xs active:scale-95 transition-all"
+                onClick={() => setAdding(true)}
+              >
+                <Plus size={16} /> Add Provider
+              </button>
+            </div>
+          )
         }
       />
 
@@ -82,8 +87,6 @@ export default function ModelsPage({ tab }: { tab?: "clis" | undefined } = {}) {
           }}
         />
       )}
-
-      {source === "providers" ? <ModelTiersPanel /> : null}
 
       {source !== "providers" ? null : providers.isPending ? (
         <ListLoading />
