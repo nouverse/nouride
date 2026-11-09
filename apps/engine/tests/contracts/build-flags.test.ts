@@ -374,7 +374,9 @@ describe("the public edition", () => {
 
   test("the release workflow publishes it, and decides that by a flag not by name", () => {
     const workflow = readFileSync(join(import.meta.dir, "../../../../.github/workflows/release.yml"), "utf8");
-    expect(workflow).toContain('("router", "--router", "nouride-router", "router", False, NOUGATE,');
+    // With the gateway required: a release never publishes the free build without it.
+    expect(workflow).toContain('("",       "--require-gateway", "nouride",     "basic", False, NOUGATE,');
+    expect(workflow).not.toContain('"--router"');
     // `matrix.variant == ''` would have kept it private for a reason nobody could point at. The
     // flag was called `gpl` until 2026-09-16, when every edition started bundling WhatsApp and the
     // name stopped describing what it decides — which is whether the artefact may be published.
@@ -382,23 +384,23 @@ describe("the public edition", () => {
     expect(workflow).not.toContain("matrix.gpl");
   });
 
-  test("and it is the only public row that needs anything private", () => {
+  test("and the private repository it needs is the gateway's alone", () => {
     /**
      * The last column names the private submodules a variant clones: `internals/pro` (everything the
      * private editions carry, one repository) and `internals/nougate`. A job that clones the wrong set
      * fails three minutes into a build; which features an edition carries is `edition.ts`'s decision.
      *
-     * The public rows are the point of asserting it here. `basic` must name nothing, or somebody
-     * without access to a private repository cannot build the free edition at all — and no public row
-     * may clone `internals/pro`, or it would carry what the private editions sell.
+     * The public row is the point of asserting it here. It clones the gateway, which it carries, and
+     * nothing else: a public row that cloned `internals/pro` would carry what the private editions sell.
+     * Somebody without access to a private repository still builds the free edition — without the
+     * gateway, which only the release requires (`build-gateway.test.ts`).
      */
     const workflow = readFileSync(join(import.meta.dir, "../../../../.github/workflows/release.yml"), "utf8");
-    expect(workflow).toContain('("",       "",         "nouride",        "basic",  False, "",                 "all"),');
-    expect(workflow).toContain('("router", "--router", "nouride-router", "router", False, NOUGATE,            "all"),');
+    expect(workflow).toContain('("",       "--require-gateway", "nouride",     "basic", False, NOUGATE,            "all"),');
     // Pro is one edition for every Box and pod (0.7.20): a tarball and the private `nouride-pro` image, with the
     // gateway in it. Every Linux target, which is what a Box and a pod are, and macOS on Apple Silicon from 0.8.3 — a
     // Pro server licensed by Nouverse may be a Mac. No Intel Mac, as for the public editions.
-    expect(workflow).toContain('("pro",    "--pro",    "nouride-pro",    "pro",    True,  f"{PRO} {NOUGATE}", PRO_TARGETS),');
+    expect(workflow).toContain('("pro",    "--pro",             "nouride-pro", "pro",   True,  f"{PRO} {NOUGATE}", PRO_TARGETS),');
     const proTargets = /^\s+PRO_TARGETS = "([^"]+)"$/m.exec(workflow)?.[1]?.split(",");
     // An Intel Mac too, for Pro alone (0.8.4): a buyer's Mac was one. The public editions stay Apple Silicon only.
     expect(proTargets).toEqual(["linux-x64", "linux-arm64", "linux-x64-musl", "linux-arm64-musl", "darwin-arm64", "darwin-x64"]);

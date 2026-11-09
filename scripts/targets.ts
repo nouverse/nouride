@@ -54,7 +54,8 @@ export const ALL_TARGETS = ["linux-x64", "linux-arm64", "linux-x64-musl", "linux
  *
  * The build makes two of them since Router became part of Community: `router` is a name, no longer a build. It stays
  * for what still carries it — Community's tarballs published again under Router's names for the Router installs out
- * there, and an older Router build's crash maps (`bun run symbolize`). 0.9.0 drops it.
+ * there (`scripts/release/router-alias.ts`), and an older Router build's crash maps (`bun run symbolize`). 0.9.0
+ * drops it.
  */
 export const EDITIONS = ["basic", "router", "pro"] as const;
 

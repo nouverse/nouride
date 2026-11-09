@@ -54,7 +54,7 @@ function containerPlan(edition: Edition, tag: string): string[] {
 describe("the image a container's update names", () => {
   test("the workflow pushes the version without its v, and its minor", () => {
     expect(pushedTags("v0.7.10")).toEqual(["0.7.10", "0.7"]);
-    expect(imageRows().map((row) => row.edition)).toEqual(["basic", "router", "pro"]);
+    expect(imageRows().map((row) => row.edition)).toEqual(["basic", "pro"]);
   });
 
   test("is the edition's own package, at a tag the release pushed — on every line that names one", () => {
