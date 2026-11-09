@@ -17,12 +17,17 @@
  * none. On a phone a list opened on focus was moved by the keyboard coming up and by every keystroke after, and the
  * owner picking a model in the setup wizard had it jump under their finger (2026-11-07). A field whose answer is picked
  * from what is listed, a chat or a stored secret's name, asks for `listOnFocus`: nobody knows a chat's id to type.
+ *
+ * The chevron at the end opens the whole list, whatever the field holds. Typing filters by what is in the box, so a
+ * field that already held a model offered only that model, and seeing the others meant deleting its name first. The
+ * chevron does not take the focus, so on a phone the keyboard stays down and the list stays where it opened.
  */
 
-import { useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
-import { CornerDownLeft, Loader2 } from "lucide-react";
+import { ChevronDown, CornerDownLeft, Loader2 } from "lucide-react";
 import { placeMenu } from "@/commons/lib/menu-place";
+import { cn } from "@/commons/lib/utils";
 
 export interface ComboboxProps {
   /** Suggestions. May be empty, stale, or wrong — see above. */
@@ -60,8 +65,11 @@ export function Combobox(props: ComboboxProps) {
   const [active, setActive] = useState(-1);
   /** The arrow keys asked for the whole list: the one way to see it with nothing typed. */
   const [browsing, setBrowsing] = useState(false);
+  /** The chevron asked for every option: not filtered by what the box holds, until something is typed. */
+  const [whole, setWhole] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
   const [place, setPlace] = useState<CSSProperties | null>(null);
 
   const text = draft ?? value;
@@ -74,7 +82,7 @@ export function Combobox(props: ComboboxProps) {
   // Only when it would say something the list does not already say: an exact hit is the same string
   // twice, and one of them pretending to be custom.
   const custom = query && !options.some((option) => option.toLowerCase() === lowered) ? query : null;
-  const rows = custom ? [custom, ...matches] : matches;
+  const rows = whole ? options : custom ? [custom, ...matches] : matches;
 
   /**
    * Where the list goes: under the field, or over it when the window has no room below.
@@ -84,7 +92,7 @@ export function Combobox(props: ComboboxProps) {
    * drawn *under* the next card whatever its z-index — the model picker on an agent's Model tab
    * opened behind the budget card below it.
    */
-  const showing = open && rows.length > 0 && (query !== "" || browsing);
+  const showing = open && rows.length > 0 && (query !== "" || browsing || whole);
   useLayoutEffect(() => {
     if (!showing) return;
     const measure = () => {
@@ -102,23 +110,41 @@ export function Combobox(props: ComboboxProps) {
     };
   }, [showing]);
 
-  const commit = (choice: string) => {
-    onChange(choice);
-    setDraft(null);
+  const close = () => {
     setActive(-1);
     setOpen(false);
     setBrowsing(false);
+    setWhole(false);
   };
+
+  const commit = (choice: string) => {
+    onChange(choice);
+    setDraft(null);
+    close();
+  };
+
+  /**
+   * A list the chevron opened while the field had no focus has no blur to close it, so a press anywhere else does.
+   * The list is on `document.body`, outside the field's wrapper, so a press on the list is not "anywhere else".
+   */
+  useEffect(() => {
+    if (!showing) return;
+    const away = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (target && (wrapperRef.current?.contains(target) || listRef.current?.contains(target))) return;
+      close();
+    };
+    document.addEventListener("pointerdown", away, true);
+    return () => document.removeEventListener("pointerdown", away, true);
+  }, [showing]);
 
   return (
     <div className="relative" ref={wrapperRef}>
       <input
         ref={inputRef}
         id={props.id}
-        className={
-          props.className ??
-          "input w-full font-mono text-sm rounded-xl focus:ring-2 focus:ring-primary/20"
-        }
+        // Room at the end for the chevron, so a long model name does not run under it.
+        className={cn(props.className ?? "input w-full font-mono text-sm rounded-xl focus:ring-2 focus:ring-primary/20", "pr-9")}
         value={text}
         disabled={props.disabled}
         required={props.required}
@@ -142,6 +168,7 @@ export function Combobox(props: ComboboxProps) {
           setActive(-1);
           setOpen(true);
           setBrowsing(false);
+          setWhole(false);
         }}
         onFocus={() => {
           if (!props.listOnFocus) return;
@@ -150,9 +177,7 @@ export function Combobox(props: ComboboxProps) {
         }}
         onKeyDown={(e) => {
           if (e.key === "Escape") {
-            setOpen(false);
-            setActive(-1);
-            setBrowsing(false);
+            close();
             return;
           }
           if (e.key === "ArrowDown" || e.key === "ArrowUp") {
@@ -183,20 +208,45 @@ export function Combobox(props: ComboboxProps) {
         onBlur={(e) => {
           if (wrapperRef.current?.contains(e.relatedTarget)) return;
           setDraft(null);
-          setActive(-1);
-          setOpen(false);
-          setBrowsing(false);
+          close();
         }}
       />
 
-      {loading && (
+      {loading ? (
         <div className="absolute right-3 top-1/2 -translate-y-1/2">
           <Loader2 size={15} className="text-primary animate-spin" />
         </div>
+      ) : (
+        <button
+          type="button"
+          // Out of the tab order: the arrow keys already open the list from the field.
+          tabIndex={-1}
+          aria-label={showing && whole ? "Hide the list" : "Show the whole list"}
+          aria-expanded={showing && whole}
+          disabled={props.disabled || options.length === 0}
+          className="absolute right-1.5 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded-lg text-base-content/65 transition-colors hover:bg-base-200 hover:text-base-content disabled:pointer-events-none disabled:opacity-40"
+          // Not the field's focus: on a phone that brings the keyboard up, and the list moves with it.
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => {
+            if (showing && whole) {
+              close();
+              return;
+            }
+            setActive(-1);
+            setOpen(true);
+            setWhole(true);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") close();
+          }}
+        >
+          <ChevronDown size={15} className={cn("transition-transform", showing && whole && "rotate-180")} />
+        </button>
       )}
 
       {showing && place && createPortal(
         <ul
+          ref={listRef}
           role="listbox"
           style={place}
           // The field keeps the focus while the list is scrolled or clicked, so its blur does not close it.
@@ -204,7 +254,7 @@ export function Combobox(props: ComboboxProps) {
           className="bg-base-100 border border-base-content/10 z-[1000] list-none overflow-y-auto rounded-2xl p-1.5 shadow-xl space-y-0.5"
         >
           {rows.map((row, index) => {
-            const isCustom = custom !== null && index === 0;
+            const isCustom = custom !== null && !whole && index === 0;
             const selected = row === value;
             return (
               <li key={isCustom ? `custom:${row}` : row} role="option" aria-selected={selected}>
