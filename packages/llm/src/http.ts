@@ -323,8 +323,9 @@ export function requireBody(res: Response): ReadableStream<Uint8Array> {
  * retry: the stream is half-consumed, its text has already been shown in the chat by the progress
  * line, and re-issuing the request would produce a second answer to a question that has visibly had
  * one started. Saying plainly what happened and letting the person send it again is the honest
- * version, and it is what they asked for. It is classified all the same, so a stream that failed before
- * its reply began is answered by a fallback; one that failed after is not (`provider-caller.ts`).
+ * version, and it is what they asked for. It is classified and marked a cut all the same, so a turn whose
+ * stream failed before its reply began asks the same model once more, then a fallback; one that failed
+ * after does neither (`provider-caller.ts`).
  */
 export async function* streamEvents(
   stream: ReadableStream<Uint8Array>,
@@ -350,6 +351,7 @@ export async function* streamEvents(
         userMessage: stalled
           ? "The model stopped sending part-way through my reply and never resumed. Send that again."
           : "My connection to the model dropped part-way through my reply. Send that again.",
+        streamCut: true,
       },
     );
   }
@@ -397,5 +399,6 @@ export function cutOff(): LLMError {
   return new LLMError("stream ended without a finish: the reply was cut off", 503, {
     failure: noAnswer("the provider's stream ended before its reply did."),
     userMessage: "My connection to the model ended before its reply did. Send that again.",
+    streamCut: true,
   });
 }

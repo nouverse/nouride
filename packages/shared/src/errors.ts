@@ -86,11 +86,17 @@ export class LLMError extends NourideError {
    * in between said. For the operator: the message carries it too, so the turn's `error` does, and never the chat.
    */
   readonly upstream?: { provider?: string; model?: string; attempts?: number; tried?: string[] };
+  /**
+   * The provider had begun to answer and its stream broke off — dropped, gone quiet, or ended without a finish — rather
+   * than the request failing, which the client has already retried. Said by the client that read the stream; a turn
+   * asks the same model once more when nothing of the reply had streamed yet (`provider-caller.ts`).
+   */
+  readonly streamCut?: true;
 
   constructor(
     message: string,
     status?: number,
-    options?: ErrorOptions & { failure?: LLMFailure; userMessage?: string; upstream?: LLMError["upstream"] },
+    options?: ErrorOptions & { failure?: LLMFailure; userMessage?: string; upstream?: LLMError["upstream"]; streamCut?: true },
   ) {
     // Status-derived retryability is kept as the fallback for errors raised before any classification
     // — a network timeout, an aborted stream. A classified error overrides it, which is the whole
@@ -109,6 +115,7 @@ export class LLMError extends NourideError {
     this.retryable = retryable;
     if (options?.failure) this.failure = options.failure;
     if (options?.upstream) this.upstream = options.upstream;
+    if (options?.streamCut) this.streamCut = true;
   }
 }
 

@@ -135,7 +135,9 @@ provider itu. Model lain di provider yang sama menjawab rate limit, provider yan
 model yang tidak dilayani; provider lain juga menjawab provider yang mati, kehabisan saldo, atau menolak
 kuncinya. Provider dianggap mati kalau tidak bisa dijangkau (koneksinya ditolak, tidak menjawab tepat
 waktu, stream yang putus sebelum balasannya mulai), dan cuma provider lain yang menjawabnya. Stream yang
-putus setelah balasan mulai tidak dialihkan ke fallback: sebagian jawabannya sudah tertulis. Panggilan
+putus sebelum balasannya mulai lebih dulu diminta sekali lagi ke model yang sama, karena belum ada yang
+ditampilkan dan belum ada yang dijalankan; fallback menjawab kalau putus lagi. Stream yang putus setelah
+balasan mulai tidak diminta ulang dan tidak dialihkan ke fallback: sebagian jawabannya sudah tertulis. Panggilan
 yang menutup sebuah turn, balasan yang ditulis saat turn harus berhenti memanggil tool, juga pindah ke
 fallback seperti panggilan lain. Request yang ditolak tidak pernah dicoba ulang ke fallback: model mana
 pun akan mendapat jawaban yang sama. `[llm.defaults] fallbacks` adalah daftar untuk semua agent yang
@@ -365,7 +367,8 @@ menunggu cuma akan menahan chat-nya, jadi request-nya langsung gagal.
 
 Provider yang sama sekali gak menjawab dicoba dua kali, bukan enam, karena tiap percobaan bisa makan
 dua menit. Dua menit itu batas sampai provider mulai menjawab: balasan yang sudah mulai mengalir boleh
-selama yang ia perlukan, dan baru diputus kalau diam satu setengah menit. `/stop` atau shutdown selama
+selama yang ia perlukan, dan baru diputus kalau diam satu setengah menit. Stream yang putus sebelum
+ada balasannya sama sekali diminta sekali lagi ke model yang sama. `/stop` atau shutdown selama
 menunggu langsung menghentikan giliran, dan `base_url` yang bukan URL valid langsung gagal: itu soal
 konfigurasi, bukan gangguan jaringan.
 

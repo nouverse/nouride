@@ -133,8 +133,10 @@ progress line says so, and its usage is charged to that provider. Another model 
 answers a rate limit, an overloaded provider or a model that is not served; another provider also
 answers one that is down, out of credit or refusing its key. A provider counts as down when it cannot
 be reached (the connection refused, no answer in time, a stream that dropped before its reply began),
-and only another provider answers that. A stream that drops once the reply has begun is not fallen back
-on: part of the answer has already been written. The call that closes a turn, the reply written when it
+and only another provider answers that. A stream that drops before its reply began is first asked
+once more of the same model, since nothing was shown and nothing ran; the fallback answers if it drops
+again. A stream that drops once the reply has begun is not asked again or fallen back on: part of the
+answer has already been written. The call that closes a turn, the reply written when it
 has to stop calling tools, falls back like the others. A refused request is never retried on a
 fallback: any model would get the same answer. `[llm.defaults] fallbacks` is the list for every agent
 that names none, and the agent's **Model** tab in the dashboard edits its own. The operator hears of an
@@ -355,7 +357,8 @@ waiting would only hold the chat, so the request fails at once.
 
 A provider that does not answer at all is tried twice, not six times, because each attempt can take
 two minutes. Those two minutes are for the provider to start answering: a reply that has started
-streams for as long as it needs, and is cut only when it goes quiet for a minute and a half.
+streams for as long as it needs, and is cut only when it goes quiet for a minute and a half. A
+stream cut before any of its reply is asked again once, on the same model.
 `/stop` or a shutdown during a wait stops the turn at once, and a `base_url` that is not a valid URL
 fails at once: that is configuration, not a network blip.
 
