@@ -55,7 +55,8 @@ Memory
 Settings
   Models and keys
     Models          Model providers: endpoint, wire format, kredensial;       (admin)
-                    Coding CLIs: akun tiap CLI dan login-nya
+                    Coding CLIs: akun tiap CLI dan login-nya;
+                    Model tiers (tombol): tiga tingkat, milik tiap helper
     Secrets         kredensial, untuk apa masing-masing, password backup      (admin)
     LLM Gateway     Nougate di dalam daemon: akun, key, pemakaian (Router)    (admin)
   Reaching out

@@ -307,7 +307,7 @@ lewat `ask_agent` menjawab pakai modelnya sendiri.
 Sebuah pack bisa menyebut pasangan miliknya sendiri di `[llm]`. Kalau gak, ia mewarisi milik instalasi selama ia
 jalan di `provider` instalasi (id model gak ada artinya di endpoint lain), dan selain itu semua tingkatnya ya
 `model`-nya. Dashboard menampilkan ketiga tingkat sebuah agent di tab Model-nya, dan milik instalasi beserta tingkat
-tiap helper di halaman Models.
+tiap helper di halaman Models, lewat tombol **Model tiers**.
 
 Tiap kunci helper juga menerima nama tingkat: `summary_model`, `[memory] pass_model`, `[media] image_model`,
 `[skills.learning] model`, dan `[queue] steer_reply_model`. `summary_model = "small"` berarti model small milik tiap

@@ -299,7 +299,8 @@ the asking agent's model of that tier; an agent asked with `ask_agent` answers o
 
 A pack can name its own pair in its `[llm]`. Without one it inherits the install's while it runs on the install's
 `provider` (a model id means nothing on another endpoint), and otherwise its tiers are its `model`. The dashboard
-shows an agent's three on its Model tab, and the install's with each helper's on the Models page.
+shows an agent's three on its Model tab, and the install's with each helper's on the Models page, behind its
+**Model tiers** button.
 
 Each helper key also takes a tier's name: `summary_model`, `[memory] pass_model`, `[media] image_model`,
 `[skills.learning] model` and `[queue] steer_reply_model`. `summary_model = "small"` is each agent's own small model,

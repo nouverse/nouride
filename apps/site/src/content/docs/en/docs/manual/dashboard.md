@@ -55,7 +55,8 @@ Memory
 Settings
   Models and keys
     Models          Model providers: endpoint, wire format, credential;       (admin)
-                    Coding CLIs: each CLI's accounts and their sign-ins
+                    Coding CLIs: each CLI's accounts and their sign-ins;
+                    Model tiers (a button): the three tiers, each helper's
     Secrets         the credentials, what each is for, the backup password    (admin)
     LLM Gateway     the in-process Nougate: accounts, keys, usage (Router)    (admin)
   Reaching out
