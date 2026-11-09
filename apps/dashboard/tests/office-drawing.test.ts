@@ -127,11 +127,12 @@ describe("the mascot's parts: tuxedo, the helmet, the photochromic glasses", () 
 
   test("the helmet is its own grey over any outfit colour, and the ears stand out above it", () => {
     const grey = CAT.COMMON.H!;
-    expect(count(compose(MASCOT, "stand"), grey)).toBeGreaterThan(30);
+    expect(count(compose(MASCOT, "stand"), grey)).toBeGreaterThan(10);
     expect(count(compose({ ...MASCOT, outfitColor: "lime" }, "stand"), grey)).toBe(count(compose(MASCOT, "stand"), grey));
     expect(count(compose({ ...MASCOT, hat: "cap" }, "stand"), grey)).toBe(0);
-    // The pink inside each ear is still seen.
-    expect(count(compose(MASCOT, "stand"), CAT.COMMON.p!)).toBeGreaterThan(1);
+    // Both ears stand clear of it: every pink pixel inside them is still seen, as many as with no hat at all. The first
+    // helmet's dome covered the ears' lower half, and only their tips showed.
+    expect(count(compose(MASCOT, "stand"), CAT.COMMON.p!)).toBe(count(compose({ ...MASCOT, hat: "none" }, "stand"), CAT.COMMON.p!));
   });
 
   test("photochromic lenses are darker above than below, and only on a cat that wears them", () => {

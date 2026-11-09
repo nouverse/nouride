@@ -180,17 +180,17 @@ export const HATS: Record<"beanie" | "cap" | "beret" | "headband" | "headphones"
       ".oooo........",
     ]),
   },
-  // The mascot's: a grey half-helmet between the ears, which stand out above it, a white N on its front, the brim
-  // just over the glasses and a pad down each side of the head. Its own grey rather than the outfit's colour, as the
-  // mascot's is grey over a purple hoodie. Drawn 22 wide from x −1, so the pads sit just outside the head.
+  // The mascot's: a grey half-helmet whose dome sits between the ears, so both stand clear of it pink and all, a white
+  // N on its front, the brim across the forehead just over the glasses and a pad down each side of the head. Its own
+  // grey rather than the outfit's colour, as the mascot's is grey over a purple hoodie. Drawn 22 wide from x −1, so the
+  // pads sit just outside the head.
   helmet: {
     at: { x: -1, y: 1 },
     rows: [
       "........oooooo........",
-      "......oJJwJJwJHo......",
-      ".....oJHHwwHwHHHo.....",
-      "..oJHHHHHwHwwHHHHHjo..",
-      ".oJHHHHHHwHHwHHHHHHjo.",
+      ".......oJwwJwHo.......",
+      ".......oJwHwwHo.......",
+      "......oJHwHHwHjo......",
       "ojjjjjjjjjjjjjjjjjjjjo",
       "oHjo..............oHjo",
       "oHjo..............oHjo",
