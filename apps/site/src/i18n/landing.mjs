@@ -17,7 +17,7 @@ export const en = {
     description:
       'Nouride runs a few AI agents on a small box you own, and uses very little of it. Chat with them on Telegram, Discord, WhatsApp or in your browser.',
   },
-  nav: { docs: 'Docs', pro: 'Pro', github: 'GitHub', other: 'Bahasa Indonesia', otherShort: 'ID', otherLang: 'id', install: 'Install' },
+  nav: { docs: 'Docs', pro: 'Pro', other: 'Bahasa Indonesia', otherShort: 'ID', otherLang: 'id', install: 'Install' },
   hero: {
     lines: ['AI agents that live', 'on your box'],
     tagline:
@@ -146,7 +146,7 @@ export const id = {
     description:
       'Nouride menjalankan beberapa agent AI di box kecil milikmu, dan cuma butuh sedikit resource. Ngobrol dengan mereka lewat Telegram, Discord, WhatsApp, atau browser.',
   },
-  nav: { docs: 'Dokumentasi', pro: 'Pro', github: 'GitHub', other: 'English', otherShort: 'EN', otherLang: 'en', install: 'Pasang' },
+  nav: { docs: 'Dokumentasi', pro: 'Pro', other: 'English', otherShort: 'EN', otherLang: 'en', install: 'Pasang' },
   hero: {
     lines: ['Agent AI yang', 'tinggal di mesinmu'],
     tagline:
