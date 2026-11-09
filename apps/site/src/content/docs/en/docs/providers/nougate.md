@@ -88,6 +88,11 @@ models those accounts can serve. Claude, ChatGPT and Gemini sign in by OAuth: th
 ends on a `localhost` page that does not load, and you paste its address back. Copilot and Kiro give
 you a short code to enter on their site, and the wizard finishes by itself.
 
+**Models come from the accounts.** Nougate asks each provider which models it serves: when it starts, when an
+account is added, and every six hours. A model the provider releases shows up in the agent's model list without an
+update of Nouride, and one it retires leaves. The last list is kept on disk, so a restart or an outage of the
+provider does not empty the list. A provider with no account signed in lists no models.
+
 **One dashboard.** After setup the gateway is the **LLM Gateway** page in the Nouride dashboard, for
 admins: accounts, gateway keys, usage and cost, the playground, custom providers. It opens with your
 Nouride sign-in; there is no second password. Since 0.7.10 port `18256` takes gateway keys only: its

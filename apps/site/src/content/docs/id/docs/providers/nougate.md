@@ -90,6 +90,11 @@ OAuth: tab tempat kamu menyetujui berakhir di halaman `localhost` yang tidak ter
 kamu tempel kembali. Copilot dan Kiro memberi kode pendek untuk dimasukkan di situs mereka, dan wizard
 selesai sendiri.
 
+**Model datang dari akunnya.** Nougate menanyakan ke tiap provider model apa saja yang dilayaninya: saat start,
+saat akun ditambahkan, dan tiap enam jam. Model baru dari provider langsung muncul di daftar model agent tanpa perlu
+update Nouride, dan model yang dipensiunkan hilang dari daftar. Daftar terakhir disimpan di disk, jadi restart atau
+provider yang sedang down tidak mengosongkan daftar. Provider yang belum ada akunnya tidak menampilkan model.
+
 **Satu dashboard.** Setelah setup, gateway menjadi halaman **LLM Gateway** di dashboard Nouride, untuk
 admin: akun, key gateway, pemakaian dan biaya, playground, provider kustom. Halaman itu terbuka dengan
 login Nouride-mu; tidak ada password kedua. Sejak 0.7.10 port `18256` hanya menerima key gateway:
