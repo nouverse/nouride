@@ -2,6 +2,8 @@
  * The phone's tab bar (0.8.24): Home, Chats, Work and Agents under a thumb, and More for the rest, where a phone had
  * only a menu button at the top and a drawer. It floats above the page's foot, inside the home indicator's inset, and
  * each tab is a finger's size (44px). Work carries the count of what waits for an answer, as it does in the sidebar.
+ * Under it the page's own ground runs to the screen's foot, so a scrolled page does not show in the strip below the
+ * bar, where a phone's browser draws its own toolbar.
  */
 
 import { Link } from "@tanstack/react-router";
@@ -19,6 +21,8 @@ export function TabBar({ pathname, more, onMore }: { pathname: string; more: boo
   const { approvals, missions } = useNeedsYou();
   const waiting = approvals + missions;
   return (
+    <>
+    <div aria-hidden="true" className="bg-app-foot pointer-events-none fixed inset-x-0 bottom-0 z-40 h-[calc(2.75rem+env(safe-area-inset-bottom))] lg:hidden" />
     <nav
       aria-label="Tabs"
       className="fixed inset-x-3 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] z-40 grid grid-cols-5 gap-1 rounded-[22px] border border-base-content/[0.08] bg-base-100 p-1.5 shadow-soft lg:hidden"
@@ -49,5 +53,6 @@ export function TabBar({ pathname, more, onMore }: { pathname: string; more: boo
         <span>More</span>
       </button>
     </nav>
+    </>
   );
 }

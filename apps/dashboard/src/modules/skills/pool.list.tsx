@@ -137,6 +137,9 @@ export function PoolList({ skills, editable }: { skills: CatalogSkill[]; editabl
   );
 }
 
+/** A badge that grows a line for long words rather than spilling out of daisyUI's fixed height (a skill's tool list). */
+const WRAPS = "h-auto min-h-5 py-0.5 text-left whitespace-normal [overflow-wrap:anywhere]";
+
 function SkillRow({
   skill,
   expanded,
@@ -166,7 +169,7 @@ function SkillRow({
 
   return (
     <li className="py-3">
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-2 sm:gap-3">
         <button
           type="button"
           onClick={onExpand}
@@ -177,22 +180,22 @@ function SkillRow({
           {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         </button>
 
-        <Icon size={16} className="mt-1 shrink-0 opacity-50" />
+        <Icon size={16} className="mt-1 hidden shrink-0 opacity-50 sm:block" />
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="truncate text-sm font-medium">{skill.name}</span>
+            <span className="text-sm font-medium [overflow-wrap:anywhere]">{skill.name}</span>
             {skill.scope === "builtin" ? (
               <span className="badge badge-ghost badge-sm shrink-0 font-mono" title="Ships with Nouride.">
                 Built in
               </span>
             ) : null}
             {skill.missing.length > 0 ? (
-              <span className="badge badge-warning badge-sm shrink-0 gap-1 font-mono">
+              <span className={`badge badge-warning badge-sm gap-1 font-mono ${WRAPS}`}>
                 <TriangleAlert size={11} /> needs {skill.missing.join(", ")}
               </span>
             ) : skill.requires.length > 0 ? (
-              <span className="badge badge-ghost badge-sm shrink-0 gap-1 font-mono">
+              <span className={`badge badge-ghost badge-sm gap-1 font-mono ${WRAPS}`}>
                 <CircleCheck size={11} /> {skill.requires.join(", ")}
               </span>
             ) : null}
@@ -202,56 +205,9 @@ function SkillRow({
               the agent's own chip below, where the decision about that agent is made.
             */}
             {skill.needsTools.length > 0 ? (
-              <span className="badge badge-ghost badge-sm shrink-0 gap-1 font-mono" title="Nouride tools this skill calls">
+              <span className={`badge badge-ghost badge-sm gap-1 font-mono ${WRAPS}`} title="Nouride tools this skill calls">
                 <Wrench size={11} /> {skill.needsTools.join(", ")}
               </span>
-            ) : null}
-          </div>
-          <p className="mt-0.5 text-xs text-base-content/65">{skill.description || "No description."}</p>
-
-          {/*
-            Toggles, one per agent, on the row itself. A matrix column per agent looked tidier and
-            broke at four agents on a phone — and this is a page an operator opens from a phone.
-          */}
-          <div className="mt-2 flex flex-wrap gap-2">
-            {agents.map((agent) =>
-              // A coding CLI's agent that is never given a tool this needs (0.8.13): not a warning to act on — no pack
-              // edit changes it, and its CLI is not given the skill — so a quiet mark, not a switch.
-              agent.notForCli && agent.notForCli.length > 0 ? (
-                <span
-                  key={agent.id}
-                  className="badge badge-sm badge-ghost gap-1 font-mono text-base-content/65"
-                  title={`${agent.displayName} answers through a coding CLI, which is never given ${agent.notForCli.join(", ")}: this skill is not given to it.`}
-                >
-                  – <AgentName id={agent.id} orchestrator={orchestrator} size={10} />
-                </span>
-              ) : (
-                <button
-                  key={agent.id}
-                  type="button"
-                  disabled={!editable || busy}
-                  onClick={() => onToggle(agent.id, !agent.enabled)}
-                  className={`badge badge-sm cursor-pointer gap-1 ${
-                    agent.enabled
-                      ? agent.missingTools.length > 0
-                        ? "badge-warning"
-                        : "badge-primary"
-                      : "badge-ghost text-base-content/65"
-                  }`}
-                  title={
-                    agent.missingTools.length > 0 && agent.enabled
-                      ? `${agent.displayName} has this skill but not ${agent.missingTools.join(", ")}, so it will fail partway through. Add the tool to its pack, or switch the skill off here.`
-                      : agent.enabled
-                        ? `On for ${agent.displayName}${agent.decided ? " (chosen)" : " (default)"}. Click to switch off`
-                        : `Off for ${agent.displayName}. Click to switch on`
-                  }
-                >
-                  {switching === agent.id ? <Spinner className="size-2.5" /> : agent.enabled ? (agent.missingTools.length > 0 ? "!" : "✓") : "✕"} <AgentName id={agent.id} orchestrator={orchestrator} size={10} />
-                </button>
-              ),
-            )}
-            {skill.agents.length === 0 ? (
-              <span className="text-xs text-base-content/65">No agents are loaded.</span>
             ) : null}
           </div>
         </div>
@@ -308,6 +264,14 @@ function SkillRow({
         )}
       </div>
 
+      {/* Below the name and its switches, across the row from the chevron on: beside them, a phone left it a third of
+          its width. */}
+      <div className="pl-8 sm:pl-16">
+        <p className="mt-0.5 text-xs text-base-content/65">{skill.description || "No description."}</p>
+
+        <SkillAgents skill={skill} agents={agents} orchestrator={orchestrator} editable={editable} busy={busy} switching={switching} onToggle={onToggle} />
+      </div>
+
       {expanded ? (
         <>
           <SkillSource name={skill.name} editable={editable && skill.scope !== "builtin"} />
@@ -315,6 +279,78 @@ function SkillRow({
         </>
       ) : null}
     </li>
+  );
+}
+
+/**
+ * The row's switches, one per agent: on, off, or a quiet mark for a coding CLI's agent that is never given a tool the
+ * skill needs.
+ */
+function SkillAgents({
+  skill,
+  agents,
+  orchestrator,
+  editable,
+  busy,
+  switching,
+  onToggle,
+}: {
+  skill: CatalogSkill;
+  agents: CatalogSkill["agents"];
+  orchestrator: ReturnType<typeof useOrchestrator>;
+  editable: boolean;
+  busy: boolean;
+  switching?: string;
+  onToggle: (agent: string, enabled: boolean) => void;
+}) {
+  return (
+    <>
+      {/*
+        Toggles, one per agent, on the row itself. A matrix column per agent looked tidier and
+        broke at four agents on a phone — and this is a page an operator opens from a phone.
+      */}
+      <div className="mt-2 flex flex-wrap gap-2">
+        {agents.map((agent) =>
+          // A coding CLI's agent that is never given a tool this needs (0.8.13): not a warning to act on — no pack
+          // edit changes it, and its CLI is not given the skill — so a quiet mark, not a switch.
+          agent.notForCli && agent.notForCli.length > 0 ? (
+            <span
+              key={agent.id}
+              className="badge badge-sm badge-ghost gap-1 font-mono text-base-content/65"
+              title={`${agent.displayName} answers through a coding CLI, which is never given ${agent.notForCli.join(", ")}: this skill is not given to it.`}
+            >
+              – <AgentName id={agent.id} orchestrator={orchestrator} size={10} />
+            </span>
+          ) : (
+            <button
+              key={agent.id}
+              type="button"
+              disabled={!editable || busy}
+              onClick={() => onToggle(agent.id, !agent.enabled)}
+              className={`badge badge-sm cursor-pointer gap-1 ${
+                agent.enabled
+                  ? agent.missingTools.length > 0
+                    ? "badge-warning"
+                    : "badge-primary"
+                  : "badge-ghost text-base-content/65"
+              }`}
+              title={
+                agent.missingTools.length > 0 && agent.enabled
+                  ? `${agent.displayName} has this skill but not ${agent.missingTools.join(", ")}, so it will fail partway through. Add the tool to its pack, or switch the skill off here.`
+                  : agent.enabled
+                    ? `On for ${agent.displayName}${agent.decided ? " (chosen)" : " (default)"}. Click to switch off`
+                    : `Off for ${agent.displayName}. Click to switch on`
+              }
+            >
+              {switching === agent.id ? <Spinner className="size-2.5" /> : agent.enabled ? (agent.missingTools.length > 0 ? "!" : "✓") : "✕"} <AgentName id={agent.id} orchestrator={orchestrator} size={10} />
+            </button>
+          ),
+        )}
+        {skill.agents.length === 0 ? (
+          <span className="text-xs text-base-content/65">No agents are loaded.</span>
+        ) : null}
+      </div>
+    </>
   );
 }
 

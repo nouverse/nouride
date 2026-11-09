@@ -32,16 +32,17 @@ export function BoxLine({ health }: { health: HealthPayload }) {
   const state = stateOf(health, healthWarnings(health).length);
   return (
     <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-      <span className="flex items-center gap-2 rounded-full border border-base-content/[0.08] bg-base-100/70 px-3 py-1.5 text-xs">
+      {/* Two pieces that wrap between them, each kept on one line: in one pill, a phone broke both halves in two. */}
+      <span className="flex items-center gap-2 whitespace-nowrap rounded-full border border-base-content/[0.08] bg-base-100/70 px-3 py-1.5 text-xs">
         <span className={`status size-2 rounded-full ${state.well ? "status-success" : "status-warning"}`} aria-hidden="true" />
         <span className="font-semibold text-base-content">{state.words}</span>
-        <span className="text-base-content/65">
-          <span className="font-mono">
-            v{health.version}
-            {health.edition && health.edition !== "unknown" ? ` · ${editionLabel(health.edition)}` : ""}
-          </span>{" "}
-          · Up for {uptime(health.uptime)}
-        </span>
+      </span>
+      <span className="whitespace-nowrap px-1 text-xs text-base-content/65">
+        <span className="font-mono">
+          v{health.version}
+          {health.edition && health.edition !== "unknown" ? ` · ${editionLabel(health.edition)}` : ""}
+        </span>{" "}
+        · Up for {uptime(health.uptime)}
       </span>
       <UpdateBadge />
       <RestartButton />

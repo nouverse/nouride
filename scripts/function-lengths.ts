@@ -44,7 +44,6 @@ export const LONG_FUNCTIONS: Record<string, Record<string, Budget>> = {
   "apps/dashboard/src/modules/schedule/index.page.tsx": { SchedulePage: { lines: 302, why: COMPONENT("the schedule page, its jobs, their runs and a job a link names") } },
   "apps/dashboard/src/modules/secrets/index.page.tsx": { SecretsPage: { lines: 160, why: COMPONENT("the secrets page") } },
   "apps/dashboard/src/modules/setup/index.page.tsx": { KeyForm: { lines: 155, why: COMPONENT("setup's form for a provider's key") } },
-  "apps/dashboard/src/modules/skills/pool.list.tsx": { SkillRow: { lines: 152, why: COMPONENT("one skill's row in the pool, with its actions") } },
   "apps/dashboard/src/modules/users/index.page.tsx": { UsersPage: { lines: 211, why: COMPONENT("the dashboard's users") } },
   "apps/dashboard/src/modules/web-search/index.page.tsx": { WebSearchPage: { lines: 164, why: COMPONENT("the web search settings") } },
   "apps/dashboard/src/modules/webhooks/components/WebhookForm.tsx": { WebhookForm: { lines: 177, why: COMPONENT("the form for a webhook") } },

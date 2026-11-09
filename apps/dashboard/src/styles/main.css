@@ -283,6 +283,12 @@
     color-mix(in oklab, var(--color-base-200) 50%, var(--color-base-100));
 }
 
+/* The same ground under a phone's floating tab bar, fading up into the page: without it the page showed through the
+   strip between the bar and the screen's foot, under a browser's own floating toolbar. */
+@utility bg-app-foot {
+  background: linear-gradient(to top, color-mix(in oklab, var(--color-base-200) 50%, var(--color-base-100)) 65%, transparent);
+}
+
 /* A live state's halo: a soft ring in the dot's own colour, as the Nouverse signal dot has, where the
    dashboard had a neon blur in a fixed rgba. `currentColor`, so it is the theme's success, warning or error —
    whichever `status-*` the dot wears. */
