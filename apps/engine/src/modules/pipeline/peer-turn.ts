@@ -48,6 +48,7 @@ import type { HelperOutcome, RunningHelper } from "@/modules/jobs/helper-jobs.ts
 import { logLine, quotable, sayingWho, stopped } from "./background-turn.ts";
 import { delegateNote, leadNudgeText, nudgeBaseMs, sinceSaid, watchTurn } from "./budget-nudges.ts";
 import { ChatProgress } from "./chat-progress.ts";
+import { endedAlready, type MovableTurn } from "./background-move.ts";
 import type { TurnContext } from "./turn-context.ts";
 import { beginDelegated, type DelegatedEnd, type DelegatedTurn } from "./delegated-turn.ts";
 import { meter } from "@/modules/llm/metered.ts";
@@ -86,24 +87,6 @@ function askedBy(tool: Tool | undefined, asker: string): Tool | undefined {
   return tool ? { ...tool, execute: (args, ctx) => tool.execute(args, { ...ctx, askedBy: asker }) } : undefined;
 }
 
-/** One peer turn under way: how it ends, and how it leaves the asking turn for the background (`background-ask.ts`). */
-export interface PeerTurn {
-  /** When it was asked — what its job, once it has one, says it started at. */
-  startedAt: number;
-  /** How it ended: its handoff, and whether a shutdown stopped it at a step — then the next boot reports it. */
-  ended: Promise<HelperOutcome>;
-  /** Over already: its answer is in hand, or it was refused before it began. */
-  done(): boolean;
-  /**
-   * Behind the asking turn from now on: stopped by its job — not by the asking turn, which ends without it — its steps
-   * the job's log, a question it puts to a person saying whose work it is, its bubble in the chat sealed. False when it
-   * has already ended.
-   */
-  detach(job: RunningHelper): boolean;
-  /** Waited on to the end after all — it could not move: what it does stays the asking turn's, and no log is gathered for it. */
-  stay(): void;
-}
-
 /** Run one peer turn to completion, as the peer, while the asking turn waits for it. */
 export async function runPeerTurn(ctx: TurnContext, request: PeerTurnRequest): Promise<PeerTurnResult> {
   return (await startPeerTurn(ctx, request).ended).report;
@@ -113,10 +96,10 @@ export async function runPeerTurn(ctx: TurnContext, request: PeerTurnRequest): P
  * Start one peer turn, as the peer. `detachable`: it may move to the background (`background-ask.ts`) — so, like any
  * job's turn, a shutdown stops it at a step, and `[security] job_max_ms` is its clock where it is the shorter one.
  */
-export function startPeerTurn(ctx: TurnContext, request: PeerTurnRequest, options: { detachable?: boolean } = {}): PeerTurn {
+export function startPeerTurn(ctx: TurnContext, request: PeerTurnRequest, options: { detachable?: boolean } = {}): MovableTurn {
   const startedAt = Date.now();
   /** A refusal that never reached a model: no metrics to report, and a reason that is the whole answer. */
-  const refuse = (reason: string): PeerTurn => over(startedAt, buildHandoff({ agentId: request.to, startedAt, error: reason }));
+  const refuse = (reason: string): MovableTurn => endedAlready(startedAt, buildHandoff({ agentId: request.to, startedAt, error: reason }));
 
   const peer = ctx.deps.registry.get(request.to);
   // Checked again here even though the tool resolved the name against the live list: agents reload
@@ -397,6 +380,7 @@ export function startPeerTurn(ctx: TurnContext, request: PeerTurnRequest, option
     startedAt,
     ended,
     done: () => settled,
+    // Behind the asking turn from now on (`background-move.ts`), its bubble in the chat sealed.
     detach: (to) => {
       if (settled) return false;
       job = to;
@@ -428,11 +412,6 @@ export function startPeerTurn(ctx: TurnContext, request: PeerTurnRequest, option
       before.length = 0;
     },
   };
-}
-
-/** A turn that is over before it began. */
-function over(startedAt: number, report: PeerTurnResult): PeerTurn {
-  return { startedAt, ended: Promise.resolve({ report }), done: () => true, detach: () => false, stay: () => {} };
 }
 
 /**

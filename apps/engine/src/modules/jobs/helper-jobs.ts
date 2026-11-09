@@ -62,13 +62,18 @@ export interface StartHelper {
   limit: number;
   /** The helper's turn. Resolves when it ends; throwing is a helper that failed. */
   run: (job: RunningHelper) => Promise<HelperOutcome>;
+  /**
+   * When it began, for one adopted already running: a helper in the foreground that outlasted `delegate`'s wait. Its job
+   * is counted from then, as an ask's is, so `job_max_ms` bounds the whole of it.
+   */
+  startedAt?: number;
 }
 
 /**
  * An ask that outlasted its wait, taken into the background (0.7.19): the asking agent's row, with the other agent's turn
  * in it. `run` adopts that turn — it is already running — and `startedAt` is when it was asked.
  */
-export interface StartAsk extends Omit<StartHelper, "brief"> {
+export interface StartAsk extends Omit<StartHelper, "brief" | "startedAt"> {
   ask: AskedWork;
   startedAt: number;
 }
@@ -159,11 +164,12 @@ export class HelperJobs {
    *
    * Synchronous from the count to the insert, so two `delegate` calls in one batch cannot both see room for one more.
    * The same goal already running is refused rather than started twice: the harness says to look before starting, and
-   * this is what holds when a model did not.
+   * this is what holds when a model did not. Not one adopted (`startedAt`): its work is under way already, and refusing
+   * the move would only keep the person waiting on it.
    */
   start(params: StartHelper): HelperStart {
     const running = this.deps.running(params.agentId);
-    const twin = running.find((job) => job.brief && sameGoal(job.brief, params.brief));
+    const twin = params.startedAt === undefined ? running.find((job) => job.brief && sameGoal(job.brief, params.brief)) : undefined;
     if (twin) return { refused: "duplicate", running: twin };
     return this.begin(params, running, params.agentId, {
       kind: "helper",
@@ -236,7 +242,8 @@ export class HelperJobs {
       ...(params.turnId ? { turnId: params.turnId } : {}),
       details: { job: id, command, ...(work.kind === "ask" ? { asked: worker } : { helper: true }) },
     });
-    log.info(work.kind === "ask" ? "an ask moved to the background" : "background helper started", { job: id, agent_id: params.agentId, goal: work.says });
+    const said = work.kind === "ask" ? "an ask moved to the background" : params.startedAt === undefined ? "background helper started" : "a helper moved to the background";
+    log.info(said, { job: id, agent_id: params.agentId, goal: work.says });
 
     // Not awaited — that is the point, as for a command. Everything it can throw is caught here, because nothing holds
     // this promise: a turn that threw is a helper that failed, and a settle that throws is a line in the log. Started

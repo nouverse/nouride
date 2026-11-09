@@ -419,6 +419,13 @@ an hour (research across files or hosts, a long build, a migration rehearsal), s
 two only for two independent pieces; work that may run past an hour is a mission's. Not for a quick
 answer, and not for something you are waiting on now.
 
+A helper the agent waits for, without `background`, is for a quick question: the agent waits for its
+answer for up to a minute. A helper still working after that carries on in the background, just as if it
+had been started there: the agent tells you what is still being worked on, and what the helpers that
+already answered found, and you can keep talking to it. The result comes back as a message when it is
+ready. If the agent already has as many helpers working in the background as it may, that helper stays,
+the agent waits for it to finish, and its answer says why it took so long.
+
 - **What it hands over is a brief**, in English whatever language you speak: the goal, the context the
   helper cannot know (paths, hosts, what was already tried), the constraints, and what to hand back. A
   brief with no context is refused with what to add.
@@ -426,7 +433,8 @@ answer, and not for something you are waiting on now.
   skills), but not who it is: no persona, no memory. It writes no memory, sends nothing to the chat and
   starts no helper of its own; it says what is worth keeping, and the agent decides.
 - **How many at once** is `[delegate] max_background`: 2 by default, 0 turns them off, set per agent on
-  its **Settings** tab, from the next helper on.
+  its **Settings** tab, from the next helper on. A helper that moved there after its minute counts too. At
+  0, a helper the agent waits for is waited for to the end.
 - **Each helper is a job**: in `nouride jobs` and under Work → Helpers in the dashboard, with its goal,
   and in the chat's strip while it runs. `/stop` in the chat stops the agent's helpers there; `nouride jobs
   kill <id>` stops one.

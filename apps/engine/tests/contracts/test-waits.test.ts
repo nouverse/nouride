@@ -39,7 +39,9 @@ const FIXED_SLEEPS: Record<string, number> = {
   // and the fake CLI's `script` mode keeps the pace it is given between its updates. 211 → 212 for a tool that never
   // stops (`stuck-tool.test.ts`): a deadline on a turn that, broken, hangs rather than fails. 212 → 213 for a provider's
   // promised retry across a restart (`provider-resume.test.ts`): the third process shown not to take the turn up again.
-  "apps/engine": 213,
+  // 213 → 215 for a helper in the foreground that moves after the wait (`waited-helpers.test.ts`): two pace a fake past
+  // the wait, the race under test, in a call whose move is refused and in a scheduled turn's, where nothing may move.
+  "apps/engine": 215,
   "apps/dashboard": 37,
   "packages/gateways": 11,
   "packages/llm": 2,

@@ -230,7 +230,8 @@ export const ANNOTATIONS: Record<string, Annotation> = {
       "helper's result wakes the agent as that helper finishes. One is the habit for a long task, two for two " +
       "independent pieces. 0 turns them off; at most 4. An agent can have its own in its pack's `[delegate]`, set " +
       "from its Settings page in the dashboard, which applies to the next helper it starts. Since 0.7.19 it counts the " +
-      "agent's asks in the background too (an `ask_agent` past its minute), and at 0 every ask waits for its answer.",
+      "agent's asks in the background too (an `ask_agent` past its minute), and a helper it waited for that is still " +
+      "working after a minute, which moves there; at 0 every ask and every helper is waited for to the end.",
     caveat:
       "A helper does not take a slot under `[queue] max_concurrent_turns` (it exists so the agent stays free for the " +
       "person), so this number, per agent, is what bounds them. Each one spends like a turn of its own, against " +

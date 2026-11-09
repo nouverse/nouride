@@ -10,8 +10,10 @@
  *
  * - **Foreground** is parallelism. Four questions that do not depend on each other — "what does this
  *   config do", "what is in these logs", "which of these hosts is unhealthy" — are four turns' worth of
- *   round-trips done serially, or one call done at once. The turn waits for every answer: it is for
- *   work the agent needs before it can answer.
+ *   round-trips done serially, or one call done at once. The turn waits for the answers: it is for
+ *   work the agent needs before it can answer. It waits a minute (`wait-then-move.ts`), as an ask does: a
+ *   helper still working then carries on in the background, a job as if it had been started there, and the
+ *   turn ends. Waiting to the end let three helpers of five or ten minutes each hold the person's chat for eight.
  * - **Background** (0.7.15) is staying free. A task that takes a while goes to a helper that works as a
  *   job of its own; the turn ends at once, the person can talk to the agent meanwhile, and each helper's
  *   result wakes the agent as it arrives — the first to finish is reported first, with no barrier
@@ -37,11 +39,12 @@
  * model, which is the shape of a bill nobody meant to run up.
  */
 
-import { createLogger, type ModelTier, plural, type Tool, type ToolContext, type ToolResult } from "@nouride/shared";
+import { createLogger, type ModelTier, plural, type Tool, type ToolContext, type ToolDefinition, type ToolResult } from "@nouride/shared";
 import { renderHandoff, type SubAgentHandoff } from "@/modules/tools/handoff.ts";
 import { goalLine, parseBriefs, type HelperBrief } from "./delegate-brief.ts";
 import { duration } from "@/modules/jobs/wake-text.ts";
 import { tierArg, tierParameter } from "./tier-arg.ts";
+import { FOREGROUND_WAIT_MS, stayed, within, withWaiting, type MovableRun, type Moved } from "./wait-then-move.ts";
 
 const log = createLogger("tools.delegate");
 
@@ -99,6 +102,14 @@ export interface DelegateToolOptions {
    */
   run: (request: SubagentRequest) => Promise<SubagentResult>;
   /**
+   * Starts one helper in the foreground so it can move: waited on until the wait runs out, then a job of the agent's
+   * where there is room (`pipeline/background-helper.ts`). Absent where this process runs no jobs: then every helper in
+   * the foreground is waited for to the end, with `run`.
+   */
+  start?: (request: SubagentRequest) => MovableRun;
+  /** How long the foreground waits before its helpers still working move: `FOREGROUND_WAIT_MS`. A test's is shorter. */
+  waitMs?: number;
+  /**
    * Starts one helper as a job, and returns at once. Absent where this process runs no jobs — then `background` is
    * refused with what to do instead.
    */
@@ -110,133 +121,214 @@ export interface DelegateToolOptions {
   isolate?: (ctx: ToolContext) => Promise<{ path: string; branch: string } | { refused: string }>;
 }
 
-export function createDelegateTool(options: DelegateToolOptions): Tool {
+/** What every form of the tool says it is. */
+const DESCRIPTION =
+  "Hand work to helpers, each with a brief written in English. A helper starts with no memory of this " +
+  "conversation; it has your tools and workspace, but writes no memory, sends nothing to the chat and cannot " +
+  "delegate further. It is not another agent: to reach one, use `ask_agent`.";
+
+/**
+ * `delegate` as a turn that may hold work in the background has it, and — `mayDetach` false — as one that may not: no
+ * `background`, and every helper waited for to the end (`waitingForm`).
+ */
+function definitionOf(mayDetach: boolean): ToolDefinition {
   return {
-    // Not gated. Every tool the subagent then calls is gated exactly as it would be in the parent's
-    // own turn — approving the delegation as well would be asking twice for one decision, and the
-    // second prompt is the one people stop reading.
-    requiresApproval: false,
-    definition: {
-      name: "delegate",
-      description:
-        "Hand work to helpers, each with a brief written in English. A helper starts with no memory of this " +
-        "conversation; it has your tools and workspace, but writes no memory, sends nothing to the chat and cannot " +
-        "delegate further. It is not another agent: to reach one, use `ask_agent`.",
-      parameters: {
-        type: "object",
-        properties: {
-          tasks: {
-            type: "array",
-            description: `Up to ${MAX_PARALLEL} briefs, one per helper.`,
-            items: {
-              type: "object",
-              properties: {
-                goal: { type: "string", description: "What it is to achieve, in one sentence." },
-                context: {
-                  type: "string",
-                  description: "What it needs and cannot know: paths, hosts, decisions made, what was tried. An empty one is refused.",
-                },
-                constraints: { type: "string", description: "What it must not do, or must keep to." },
-                deliverable: { type: "string", description: "What it hands back, and in what shape." },
+    name: "delegate",
+    // The minute is said where it holds: told only "you wait", a model sent work of ten minutes to the foreground.
+    description: mayDetach
+      ? `${DESCRIPTION} Without \`background\` it is for quick questions: you wait up to a minute, then a helper still working moves to the background.`
+      : DESCRIPTION,
+    parameters: {
+      type: "object",
+      properties: {
+        tasks: {
+          type: "array",
+          description: `Up to ${MAX_PARALLEL} briefs, one per helper.`,
+          items: {
+            type: "object",
+            properties: {
+              goal: { type: "string", description: "What it is to achieve, in one sentence." },
+              context: {
+                type: "string",
+                description: "What it needs and cannot know: paths, hosts, decisions made, what was tried. An empty one is refused.",
               },
-              required: ["goal", "context", "deliverable"],
+              constraints: { type: "string", description: "What it must not do, or must keep to." },
+              deliverable: { type: "string", description: "What it hands back, and in what shape." },
             },
-          },
-          background: {
-            type: "boolean",
-            description:
-              "Each brief becomes a helper job: your turn ends now, and each helper's result comes to you as a message " +
-              "when it finishes. Over your limit is refused, with what is running. Off: you wait for every answer.",
-          },
-          tier: tierParameter("your"),
-          isolated: {
-            type: "boolean",
-            description:
-              "Each helper gets a worktree of the mission's, on a branch of its own, so helpers that write do not write " +
-              "over each other. Merge the branches you keep into the mission's.",
+            required: ["goal", "context", "deliverable"],
           },
         },
-        required: ["tasks"],
+        ...(mayDetach
+          ? {
+              background: {
+                type: "boolean",
+                description:
+                  "For work you know takes more than a minute: each brief becomes a helper job, your turn ends now, and each " +
+                  "helper's result comes to you as a message when it finishes. Over your limit is refused, with what is running. " +
+                  "Off: you wait up to a minute, then the same for any still working.",
+              },
+            }
+          : {}),
+        tier: tierParameter("your"),
+        isolated: {
+          type: "boolean",
+          description:
+            "Each helper gets a worktree of the mission's, on a branch of its own, so helpers that write do not write " +
+            "over each other. Merge the branches you keep into the mission's.",
+        },
       },
-    },
-
-    async execute(args, ctx): Promise<ToolResult> {
-      const parsed = parseBriefs(args.tasks, MAX_PARALLEL);
-      if ("error" in parsed) return { content: parsed.error, isError: true };
-      const tier = tierArg(args.tier);
-      if ("error" in tier) return { content: tier.error, isError: true };
-      let briefs = parsed.briefs;
-      const branches: string[] = [];
-      if (args.isolated === true) {
-        if (!options.isolate) return { content: "`isolated` is not available in this process. Run the helpers without it.", isError: true };
-        const isolated: HelperBrief[] = [];
-        // One after another: each takes the next free folder and branch.
-        for (const brief of briefs) {
-          const place = await options.isolate(ctx);
-          if ("refused" in place) return { content: place.refused, isError: true };
-          branches.push(place.branch);
-          isolated.push(inWorktree(brief, place));
-        }
-        briefs = isolated;
-      }
-      const result = args.background === true ? inBackground(options, briefs, ctx, tier.tier) : await inForeground(options, briefs, ctx, tier.tier);
-      if (branches.length === 0) return result;
-      const said = branches.map((branch, index) => `task ${index + 1}: ${branch}`).join(", ");
-      return { ...result, content: `${result.content}\n\nEach helper's work is on its own branch (${said}). Merge the ones you keep into the mission's branch, in the mission's folder.` };
+      required: ["tasks"],
     },
   };
 }
 
-async function inForeground(options: DelegateToolOptions, briefs: HelperBrief[], ctx: ToolContext, tier: ModelTier): Promise<ToolResult> {
+export function createDelegateTool(options: DelegateToolOptions): Tool {
+  const form = (mayDetach: boolean): Tool => ({
+    // Not gated. Every tool the subagent then calls is gated exactly as it would be in the parent's
+    // own turn — approving the delegation as well would be asking twice for one decision, and the
+    // second prompt is the one people stop reading.
+    requiresApproval: false,
+    definition: definitionOf(mayDetach),
+    execute: (args, ctx) => delegate(options, args, ctx, mayDetach),
+  });
+  // A turn that may hold no work in the background — a helper's, a peer's, a scheduled one, an agent whose limit is 0 —
+  // is offered the second (`waitingForm`). A `background` sent to it anyway is not acted on.
+  return withWaiting(form(true), form(false));
+}
+
+/** One call: the briefs checked, a worktree each where asked, then the helpers — in the background, or waited for. */
+async function delegate(options: DelegateToolOptions, args: Record<string, unknown>, ctx: ToolContext, mayDetach: boolean): Promise<ToolResult> {
+  const parsed = parseBriefs(args.tasks, MAX_PARALLEL);
+  if ("error" in parsed) return { content: parsed.error, isError: true };
+  const tier = tierArg(args.tier);
+  if ("error" in tier) return { content: tier.error, isError: true };
+  let briefs = parsed.briefs;
+  const branches: string[] = [];
+  if (args.isolated === true) {
+    if (!options.isolate) return { content: "`isolated` is not available in this process. Run the helpers without it.", isError: true };
+    const isolated: HelperBrief[] = [];
+    // One after another: each takes the next free folder and branch.
+    for (const brief of briefs) {
+      const place = await options.isolate(ctx);
+      if ("refused" in place) return { content: place.refused, isError: true };
+      branches.push(place.branch);
+      isolated.push(inWorktree(brief, place));
+    }
+    briefs = isolated;
+  }
+  const result = mayDetach && args.background === true ? inBackground(options, briefs, ctx, tier.tier) : await inForeground(options, briefs, ctx, tier.tier, mayDetach);
+  if (branches.length === 0) return result;
+  const said = branches.map((branch, index) => `task ${index + 1}: ${branch}`).join(", ");
+  return { ...result, content: `${result.content}\n\nEach helper's work is on its own branch (${said}). Merge the ones you keep into the mission's branch, in the mission's folder.` };
+}
+
+/** One brief's end in the foreground: its handoff — with why it was waited on past the wait, if it was — or its job. */
+type ForegroundTask = { index: number; brief: HelperBrief } & ({ handoff: SubagentResult; stayed?: string } | { job: string });
+
+/**
+ * Every brief at once, and waited for: to the end, where this turn may hold no work in the background; else up to the
+ * wait, and each helper still working then moves there — a job of the agent's, as if `background` had started it at
+ * that moment — and the turn ends, so the person can talk to the agent meanwhile. One with no room to move is waited for
+ * to the end, and its answer says why it took so long.
+ */
+async function inForeground(options: DelegateToolOptions, briefs: HelperBrief[], ctx: ToolContext, tier: ModelTier, mayDetach: boolean): Promise<ToolResult> {
   log.info("delegating", { agent_id: ctx.agentId, tasks: briefs.length, tier });
+  const start = mayDetach ? options.start : undefined;
+  const waitMs = options.waitMs ?? FOREGROUND_WAIT_MS;
 
   // All at once. Running them in sequence would make this a loop the model could have written
   // itself, and the parallelism is the entire reason it exists.
-  const results = await Promise.all(
-    briefs.map(async (brief, index) => {
-      try {
-        return { index, brief, handoff: await options.run({ brief, ctx, tier }) };
-      } catch (err) {
-        // One helper failing is not the others failing. Reported in place so the model sees which
-        // question went unanswered rather than losing the whole batch.
-        return {
-          index,
-          brief,
-          handoff: {
-            agentId: ctx.agentId,
-            status: "failed" as const,
-            summary: "",
-            files: [],
-            spills: [],
-            metrics: { toolCalls: 0, steps: 0, ms: 0 },
-            reason: String(err instanceof Error ? err.message : err),
-          },
-        };
-      }
+  const runs = briefs.map((brief) => begin(options, start, { brief, ctx, tier }));
+  const answers = Promise.all(runs.map((run) => run.answer));
+  // Each still working moves — one after another, so the limit counts the ones this call moved too.
+  const moved: (Moved | null)[] = start && (await within(answers, waitMs)) === null ? runs.map((run) => run.detach()) : runs.map(() => null);
+  const tasks = await Promise.all(
+    runs.map(async (run, index): Promise<ForegroundTask> => {
+      const brief = briefs[index]!;
+      const move = moved[index];
+      if (move && "job" in move) return { index, brief, job: move.job };
+      return { index, brief, handoff: await run.answer, ...(move && "refused" in move ? { stayed: stayed(move.refused, waitMs) } : {}) };
     }),
   );
+  return foregroundResult(tasks, waitMs, ctx);
+}
 
+/** One helper under way: started so it can move, where it may; else run to the end. Its answer is never a rejection. */
+function begin(options: DelegateToolOptions, start: DelegateToolOptions["start"], request: SubagentRequest): MovableRun {
+  const failed = (err: unknown): SubagentResult => failedToRun(request.ctx, err);
+  try {
+    if (start) {
+      const run = start(request);
+      return { answer: run.answer.catch(failed), detach: () => run.detach() };
+    }
+    return { answer: options.run(request).catch(failed), detach: () => ({ answered: true }) };
+  } catch (err) {
+    return { answer: Promise.resolve(failed(err)), detach: () => ({ answered: true }) };
+  }
+}
+
+/**
+ * One helper failing is not the others failing. Reported in place so the model sees which
+ * question went unanswered rather than losing the whole batch.
+ */
+function failedToRun(ctx: ToolContext, err: unknown): SubagentResult {
+  return {
+    agentId: ctx.agentId,
+    status: "failed",
+    summary: "",
+    files: [],
+    spills: [],
+    metrics: { toolCalls: 0, steps: 0, ms: 0 },
+    reason: String(err instanceof Error ? err.message : err),
+  };
+}
+
+/** What the model reads of a call in the foreground: each answer under its task, each helper that moved, and what then. */
+function foregroundResult(tasks: ForegroundTask[], waitMs: number, ctx: ToolContext): ToolResult {
   // The task line stays: with four running at once, a status without the question it answers is
   // not attributable to anything. The envelope's own header names the agent; this names the job.
-  const rendered = results
-    .map(({ index, brief, handoff }) => [`── task ${index + 1}: ${goalLine(brief)}`, renderHandoff(handoff)].join("\n"))
+  const rendered = tasks
+    .map((task) => {
+      const said = "job" in task ? `Still working after ${duration(waitMs)}, now in the background as ${task.job}.` : [renderHandoff(task.handoff), task.stayed].filter(Boolean).join("\n");
+      return [`── task ${task.index + 1}: ${goalLine(task.brief)}`, said].join("\n");
+    })
     .join("\n\n");
-
-  const failed = results.filter((r) => r.handoff.status === "failed").length;
+  const answered = tasks.flatMap((task) => ("handoff" in task ? [task.handoff] : []));
+  const moved = tasks.flatMap((task) => ("job" in task ? [task] : []));
+  const failed = answered.filter((handoff) => handoff.status === "failed").length;
+  if (moved.length > 0) log.info("helpers moved to the background", { agent_id: ctx.agentId, moved: moved.length, answered: answered.length });
   return {
-    content: rendered,
+    content: moved.length > 0 ? `${rendered}\n\n${stillWorking(moved, answered.length > 0)}` : rendered,
     // Not an error unless every one failed: a batch where three of four answered is a batch the
     // model can work with, and flagging it as failed would invite it to throw away the three.
-    isError: failed === results.length,
+    isError: failed === tasks.length,
     metadata: {
-      tasks: results.length,
+      tasks: tasks.length,
       failed,
       // Every status, not just the failures. `requires_human` on one of four is the fact an
       // operator reading the audit log needs, and it is not visible in a count of failures.
-      statuses: results.map((r) => r.handoff.status),
-      toolCalls: results.reduce((sum, r) => sum + r.handoff.metrics.toolCalls, 0),
+      statuses: tasks.map((task) => ("job" in task ? "background" : task.handoff.status)),
+      toolCalls: answered.reduce((sum, handoff) => sum + handoff.metrics.toolCalls, 0),
+      // The turn ends (`helper_moved`): another round would only invite the model to poke at work it will hear about.
+      ...(moved.length > 0 ? { moved: moved.map((task) => task.job), control: { finishTurn: "wrap_up", note: "helper_moved" } } : {}),
     },
   };
+}
+
+/**
+ * The helpers that moved: where they are, and where their results will come from. The agent has not seen those — the one
+ * thing its reply must not do is say what they will be — and what the others found is what it can tell the person now.
+ */
+function stillWorking(moved: { job: string; brief: HelperBrief }[], someAnswered: boolean): string {
+  return [
+    `Still working, now in the background: ${moved.map((task) => `${task.job} "${goalLine(task.brief)}"`).join("; ")}.`,
+    "Your turn ends now, so the person can talk to you meanwhile. Each result comes to you as a message of its own when " +
+      "that helper finishes: you have not seen it, so do not say what it will find. " +
+      (someAnswered
+        ? "Tell the person what the helpers that answered found, and that the rest is still being worked on and you will report it when it comes."
+        : "Tell the person it is still being worked on, and that you will report each result when it comes."),
+    "Stop one with `nouride jobs kill <id>` if the person asks.",
+  ].join("\n");
 }
 
 /**
@@ -331,13 +423,7 @@ export function helperRole(mode: { background: boolean }): string {
     "You are a helper doing one piece of work for another agent.",
     "",
     "You have no memory of any conversation and nobody is reading your output but the agent that asked.",
-    ...(mode.background
-      ? [
-          "You work in the background: the agent that asked is talking to the person meanwhile, and reads your answer when you finish.",
-          "Every command you run is in the foreground and you read what it prints. A long one (a build, a slow check) may",
-          "run up to thirty minutes: give it `timeout_ms`.",
-        ]
-      : ["Every command you run is in the foreground, up to four minutes each; work that needs longer is for the agent that asked."]),
+    ...(mode.background ? IN_THE_BACKGROUND : ["Every command you run is in the foreground, up to four minutes each; work that needs longer is for the agent that asked."]),
     "Your brief comes in parts: GOAL, CONTEXT, CONSTRAINTS, DELIVERABLE. Do the work with your tools, then answer",
     "with exactly what DELIVERABLE asks for, in English, and nothing else: no preamble, no offer to help further.",
     "If you could not do it, say what stopped you. If a call you need is refused or not approved, stop there and",
@@ -347,6 +433,20 @@ export function helperRole(mode: { background: boolean }): string {
     "Where the instructions below speak of 'the person', read 'the agent that asked'.",
   ].join("\n");
 }
+
+/** What a helper working in the background is told of it: in its role from the start, or once it has moved there. */
+const IN_THE_BACKGROUND = [
+  "You work in the background: the agent that asked is talking to the person meanwhile, and reads your answer when you finish.",
+  "Every command you run is in the foreground and you read what it prints. A long one (a build, a slow check) may",
+  "run up to thirty minutes: give it `timeout_ms`.",
+];
+
+/**
+ * What a helper waited on reads before its next step once it has moved to the background (`pipeline/subagent.ts`). Its
+ * role, written when it started, says it is in the foreground with four minutes a command, and that no longer holds:
+ * the work it was given is the same, the time it may take is not.
+ */
+export const MOVED_NOTE = `[harness] The agent that asked could not wait any longer, so you now work in the background. Carry on with the same brief. ${IN_THE_BACKGROUND.join(" ")}`;
 
 /** A brief, told where its worktree is and that its work is a branch to commit to. */
 function inWorktree(brief: HelperBrief, place: { path: string; branch: string }): HelperBrief {

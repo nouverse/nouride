@@ -1,6 +1,6 @@
 /**
  * One subagent, run as its parent — in the foreground here; in the background, `background-helper.ts`, from the same
- * parts.
+ * parts. One waited on may move there once it outlasts `delegate`'s wait (`startSubagent`).
  *
  * Separate from the ordinary turn because almost nothing is shared: no session, no persona, no
  * history, no slash commands. What it *does* share is the parent's identity — the same agent id, so
@@ -17,11 +17,15 @@ import { TurnExecutor } from "@/modules/llm/executor/index.ts";
 import { wrapUpReserveMs } from "@/modules/llm/executor/deadline.ts";
 import type { ExecutorDeps, TurnRequest } from "@/modules/llm/executor/types.ts";
 import { resolveToolset, writesWhatPromptsRead, type AgentToolset } from "@/modules/tools/registry.ts";
-import { helperRole, type SubagentRequest, type SubagentResult } from "@/modules/tools/builtins/delegate.ts";
+import { helperRole, MOVED_NOTE, type SubagentRequest, type SubagentResult } from "@/modules/tools/builtins/delegate.ts";
 import { renderBrief } from "@/modules/tools/builtins/delegate-brief.ts";
 import { buildHandoff } from "@/modules/tools/handoff.ts";
+import type { HelperOutcome, RunningHelper } from "@/modules/jobs/helper-jobs.ts";
 import type { TurnContext } from "./turn-context.ts";
-import { delegateNote, nudgeBaseMs, watchTurn } from "./budget-nudges.ts";
+import { delegateNote, leadNudgeText, nudgeBaseMs, sinceSaid, watchTurn } from "./budget-nudges.ts";
+import { helperAsking, logLine, quotable, sayingWho, stopped } from "./background-turn.ts";
+import { endedAlready, type MovableTurn } from "./background-move.ts";
+import { beginDelegated, type DelegatedEnd, type DelegatedTurn } from "./delegated-turn.ts";
 import { meter } from "@/modules/llm/metered.ts";
 import { contextInto, stepsInto } from "@/modules/turns/recorder.ts";
 import { alertOnFallback } from "@/modules/pipeline/fallback-alert.ts";
@@ -37,15 +41,34 @@ import { secondLookFor } from "@/modules/tools/second-look.ts";
  * persona and memory are replaced with a role, and the history starts empty.
  */
 export async function runSubagent(ctx: TurnContext, request: SubagentRequest): Promise<SubagentResult> {
+  return (await startSubagent(ctx, request).ended).report;
+}
+
+/** Where a helper works: waited on, or in the background. Its `exec` reads it at each command, so one that moved runs as it now may. */
+export interface HelperMode {
+  background: boolean;
+}
+
+/**
+ * Start one subagent, as its parent, while the parent's turn waits for it. `detachable`: it may move to the background
+ * once it outlasts `delegate`'s wait (`background-helper.ts`), and is from then on what a helper started there is:
+ *
+ * - **Its job's stop, and a clock of its own.** The parent's turn ends without it, so a stop of its job — `/stop`, a
+ *   kill, `job_max_ms`, a shutdown — stops it, and its clock is a background helper's (`helperDeadline`). Waited on, it
+ *   wraps up a reserve before the parent's, as it always did.
+ * - **Its steps are its job's log**, and a turn record of its own; before the move they are the parent turn's rows, and
+ *   its job's log begins with them.
+ * - **A question it puts to a person names it**, and the parent hears when it has run long.
+ * - **It is told it moved**, before its next step (`MOVED_NOTE`): its role said four minutes a command, and its commands
+ *   may now take thirty, as a background helper's may.
+ *
+ * Its round trips stay half the parent's: the number its prompt gave it, which its loop counts from the first round. At
+ * the default that is over a hundred, more than work that was a quick question a minute ago will spend.
+ */
+export function startSubagent(ctx: TurnContext, request: SubagentRequest, options: { detachable?: boolean } = {}): MovableTurn {
   const startedAt = Date.now();
   const parent = ctx.deps.registry.get(request.ctx.agentId);
-  if (!parent) {
-    return buildHandoff({
-      agentId: request.ctx.agentId,
-      startedAt,
-      error: "the parent agent is no longer loaded",
-    });
-  }
+  if (!parent) return endedAlready(startedAt, buildHandoff({ agentId: request.ctx.agentId, startedAt, error: "the parent agent is no longer loaded" }));
 
   /**
    * Half of what the parent gets, floored at 3.
@@ -57,10 +80,18 @@ export async function runSubagent(ctx: TurnContext, request: SubagentRequest): P
    */
   const budget = Math.max(3, Math.floor(resolveToolIterations(parent.config.llm.maxToolIterations, ctx.deps.config.llm.limits.maxToolIterations) / 2));
   const blank = helperAgent(parent, { budget, background: false });
+  const mode: HelperMode = { background: false };
 
+  /** The job it runs as once it moved, and its own turn record from then. */
+  let job: RunningHelper | undefined;
+  let record: DelegatedTurn | undefined;
+  /** Its steps while it is waited on, which its job's log begins with if it gets one — until it is known it will not. */
+  const before: string[] = [];
+  let gathering = options.detachable === true;
   /**
    * Its steps are the parent turn's: written into that turn's stream, marked as a helper's — so the dashboard, `nouride
    * events` and `nouride turns show` account for its calls, where they used to see one opaque `delegate` for minutes.
+   * Once it moved, its job's log and its own record: that turn has ended.
    */
   const steps = stepsInto(ctx.deps.turns, request.ctx.turnId, { via: "delegate", by: parent.config.id });
   // And what each of its requests carried, beside them (0.7.26).
@@ -68,35 +99,125 @@ export async function runSubagent(ctx: TurnContext, request: SubagentRequest): P
   const executor = helperExecutor(ctx, parent, request, {
     // Shown in the parent's conversation, marked as coming from a helper. A tool call the operator
     // did not ask for appearing unattributed is worse than one line of noise.
-    onActivity: (kind, text, detail) => steps?.(kind, text, detail),
-    ...(lines ? { onRequest: lines } : {}),
+    onActivity: (kind, text, detail) => {
+      const line = logLine(kind, text);
+      if (job) {
+        if (line) job.log(line);
+        record?.step(kind, text, detail);
+        return;
+      }
+      if (gathering && line) before.push(line);
+      steps?.(kind, text, detail);
+    },
+    onRequest: (line) => (job ? record?.context(line) : lines?.(line)),
+    approvals: sayingWho(ctx.deps.approvals, () => (job ? helperAsking(job.id, request.brief.goal) : null)),
   });
 
   const sessionId = childSessionId(request.ctx.sessionId, "sub");
-  // Run long, it is told to stop and report if stuck (`budget-nudges.ts`). The parent waits on it in a turn of its own.
-  const nudges = watchTurn(nudgeBaseMs(ctx.deps.config.agents.nudgeAfterMinutes), delegateNote);
-  try {
-    // On the parent's lanes: inside the ceiling, and never stuck waiting on it (`lanes.ts`).
-    const result = await ctx.inLane(request.ctx.turnId ?? request.ctx.sessionId, () =>
-      executor.run({
-        ...helperTurn(ctx, blank, request, sessionId),
-        // The parent's signal, so stopping the turn stops everything it started.
-        signal: request.ctx.signal,
-        // The parent turn's: its calls' audit rows carry it, and their ids are drawn from the turn's own, since their
-        // rows are that turn's.
-        ...(request.ctx.turnId ? { turnId: request.ctx.turnId, callIds: ctx.callIdsOf(request.ctx.turnId) } : {}),
-        ...helperDeadline(ctx, parent, request.ctx.deadlineAt),
-        ...(nudges ? { harnessNote: nudges.take } : {}),
-      }),
-    );
-    // Under the parent's id, because that is who a subagent runs as — the same id its grants, its
-    // approvals and its audit rows are keyed on. See `tools/handoff.ts`.
-    return buildHandoff({ agentId: blank.config.id, startedAt, result, aborted: request.ctx.signal.aborted });
-  } catch (err) {
-    return buildHandoff({ agentId: blank.config.id, startedAt, error: toUserMessage(err) });
-  } finally {
-    nudges?.stop();
-  }
+  // Its own stop, which follows the parent turn's — so stopping the turn stops everything it started — until it moves;
+  // then its job's.
+  const controller = new AbortController();
+  const follow = () => controller.abort(request.ctx.signal.reason);
+  if (request.ctx.signal.aborted) follow();
+  else request.ctx.signal.addEventListener("abort", follow, { once: true });
+  /** When it must be done: the parent's clock less the parent's reserve while it is waited on, its own once it moved. */
+  const clock = { at: waitedDeadline(ctx, parent, request.ctx.deadlineAt) };
+  /** `MOVED_NOTE`, from the move until its next step reads it. */
+  let moved: string | null = null;
+  /**
+   * Run long, it is told to stop and report if stuck (`budget-nudges.ts`). Waited on, the parent waits in a turn of its
+   * own, on its own clock and nudges; once it moved, the parent hears how long it has run.
+   */
+  const nudges = watchTurn(nudgeBaseMs(ctx.deps.config.agents.nudgeAfterMinutes), delegateNote, (nudge) => {
+    if (!job) return;
+    job.log(`· ${sinceSaid(nudge.dueMs)} in: asked to report if stuck`);
+    ctx.nudgeLead?.(job.id, leadNudgeText({ who: "Your background helper", task: quotable(request.brief.goal), ms: nudge.dueMs, job: job.id }));
+  });
+  const turn: TurnRequest = {
+    ...helperTurn(ctx, blank, request, sessionId, { mode }),
+    signal: controller.signal,
+    // The parent turn's: its calls' audit rows carry it, and their ids are drawn from the turn's own, since their
+    // rows are that turn's.
+    ...(request.ctx.turnId ? { turnId: request.ctx.turnId, callIds: ctx.callIdsOf(request.ctx.turnId) } : {}),
+    // Read at each step and each call (`TurnRequest.deadlineAt`), so a move gives it its own clock.
+    get deadlineAt() {
+      return clock.at;
+    },
+    // A shutdown stops one that may move at a step, as it stops any job's turn: one that moved is reported by the next boot.
+    ...(options.detachable ? { pause: () => ctx.paused } : {}),
+    harnessNote: () => {
+      const note = moved ?? nudges?.take() ?? null;
+      moved = null;
+      return note;
+    },
+  };
+
+  let settled = false;
+  const ended = (async (): Promise<HelperOutcome> => {
+    /** How it ended — written to its own record too, once it moved and has one. */
+    const close = (outcome: HelperOutcome, result?: DelegatedEnd["result"]): HelperOutcome => {
+      record?.finish(outcome, { ...(result ? { result } : {}), model: helperRunsOn(ctx, parent, request), stopped: controller.signal.aborted });
+      return outcome;
+    };
+    try {
+      // On the parent's lanes: inside the ceiling, and never stuck waiting on it (`lanes.ts`). One that moves keeps the
+      // lane it ran on until it ends, as an asked agent's turn does (`peer-turn.ts`).
+      const result = await ctx.inLane(request.ctx.turnId ?? request.ctx.sessionId, () => executor.run(turn));
+      // Under the parent's id, because that is who a subagent runs as — the same id its grants, its
+      // approvals and its audit rows are keyed on. See `tools/handoff.ts`.
+      const report = buildHandoff({ agentId: blank.config.id, startedAt, result, aborted: controller.signal.aborted });
+      // Stopped at a step for a shutdown: what it did is kept, and it says it was not finished.
+      if (result.paused) return close({ report: { ...report, status: "incomplete", reason: "a restart stopped it before it finished" }, paused: true }, result);
+      return close({ report }, result);
+    } catch (err) {
+      // Stopped in the middle of a call once it is a job — a stop, its clock, a shutdown: what happened is the stop, not
+      // the abort the call threw on its way out, which would read as the helper having failed.
+      if (job && controller.signal.aborted) return close({ report: stopped(parent.config.id, startedAt, controller.signal.reason) });
+      return close({ report: buildHandoff({ agentId: blank.config.id, startedAt, error: toUserMessage(err) }) });
+    } finally {
+      settled = true;
+      nudges?.stop();
+      request.ctx.signal.removeEventListener("abort", follow);
+    }
+  })();
+
+  return {
+    startedAt,
+    ended,
+    done: () => settled,
+    // Behind the parent's turn from now on (`background-move.ts`), as if it had been started in the background now.
+    detach: (to) => {
+      if (settled) return false;
+      job = to;
+      request.ctx.signal.removeEventListener("abort", follow);
+      const stop = () => controller.abort(to.signal.reason);
+      if (to.signal.aborted) stop();
+      else to.signal.addEventListener("abort", stop, { once: true });
+      clock.at = helperDeadline({ queuedAt: startedAt, startedAt, turnMs: turnMsOf(ctx, parent), jobMs: ctx.deps.config.security.jobMaxMs });
+      mode.background = true;
+      moved = MOVED_NOTE;
+      for (const line of before.splice(0)) to.log(line);
+      gathering = false;
+      // Its own turn from here, read like a chat turn: what it does now is no row of the parent's.
+      record = beginDelegated(ctx.deps.turns, {
+        via: "delegate",
+        by: parent.config.id,
+        job: to,
+        ...(request.ctx.turnId ? { parent: request.ctx.turnId } : {}),
+        sessionId,
+        gatewayId: request.ctx.gatewayId,
+        chatId: request.ctx.chatId,
+        senderId: request.ctx.senderId,
+        prompt: renderBrief(request.brief),
+      });
+      record?.step("note", `moved to the background as ${to.id}${request.ctx.turnId ? ` (its steps before this are turn ${request.ctx.turnId}'s)` : ""}`);
+      return true;
+    },
+    stay: () => {
+      gathering = false;
+      before.length = 0;
+    },
+  };
 }
 
 /**
@@ -125,7 +246,7 @@ export function helperAgent(parent: LoadedAgent, mode: { budget: number; backgro
  * not offered, and a write through one that also reads — a change to a person's notes — is refused at the gate. The
  * parent decides what is kept.
  */
-function helperToolset(toolset: AgentToolset, mode: { background: boolean }): AgentToolset {
+function helperToolset(toolset: AgentToolset, mode: HelperMode): AgentToolset {
   const withheld = (name: string): boolean => WITHHELD.has(name) || toolset.get(name)?.keepsInPrompt === true;
   // Without `delegate` there is nothing to start in the background, and its prompt says nothing of it.
   const { backgroundHelpers: _none, ...rest } = toolset;
@@ -167,9 +288,10 @@ const BACKGROUND_COMMAND_MAX_MS = 30 * 60_000;
  * whole report was "exec ok · 5ms". A helper is the work nobody waits on; it has no background of its own. So the
  * options that would start a job are not offered, one asked for anyway is refused with what to do instead, and a
  * command that waits stays in the foreground: up to `BACKGROUND_COMMAND_MAX_MS` in the background, where a long build
- * is what a helper is for, and `exec`'s usual 240 seconds in the foreground, inside a turn somebody is waiting on.
+ * is what a helper is for, and `exec`'s usual 240 seconds in the foreground, inside a turn somebody is waiting on. Read
+ * at each command: a helper waited on that moved to the background may wait as one started there.
  */
-function foregroundExec(tool: Tool, mode: { background: boolean }): Tool {
+function foregroundExec(tool: Tool, mode: HelperMode): Tool {
   return {
     ...tool,
     definition: inTheForeground(tool.definition, mode),
@@ -191,7 +313,7 @@ function foregroundExec(tool: Tool, mode: { background: boolean }): Tool {
 }
 
 /** `exec`'s definition without the options that start a job, and with the wait a helper in the background may ask for. */
-function inTheForeground(definition: ToolDefinition, mode: { background: boolean }): ToolDefinition {
+function inTheForeground(definition: ToolDefinition, mode: HelperMode): ToolDefinition {
   const parameters = definition.parameters as { properties?: Record<string, { description?: string }> };
   const properties = Object.fromEntries(Object.entries(parameters.properties ?? {}).filter(([key]) => !JOB_OPTIONS.has(key)));
   if (mode.background && properties.timeout_ms) {
@@ -285,7 +407,7 @@ export function helperTurn(
   blank: LoadedAgent,
   request: SubagentRequest,
   sessionId: string,
-  extra: { notes?: string[]; background?: boolean } = {},
+  extra: { notes?: string[]; mode?: HelperMode } = {},
 ): Omit<TurnRequest, "signal"> {
   const model = helperRunsOn(ctx, blank, request);
   return {
@@ -296,9 +418,9 @@ export function helperTurn(
     ...(model !== blank.config.llm.model ? { model } : {}),
     // Resolved as a turn that holds no background work: a helper starts no helper, and its `ask_agent` waits for the
     // answer however long it takes (0.7.19) — one in the background that moved an ask behind itself would leave a turn
-    // nobody watches waiting on nothing, with the answer bound for a conversation it is not in (`waitingAsk`).
+    // nobody watches waiting on nothing, with the answer bound for a conversation it is not in (`waitingForm`).
     toolset: (request.readOnly ? readOnlyToolset : (toolset: AgentToolset) => toolset)(
-      helperToolset(resolveToolset(blank, ctx.tools, ctx.deps.config.security, { ...ctx.toolsetDeps(), backgroundHelpers: () => 0 }), { background: extra.background === true }),
+      helperToolset(resolveToolset(blank, ctx.tools, ctx.deps.config.security, { ...ctx.toolsetDeps(), backgroundHelpers: () => 0 }), extra.mode ?? { background: false }),
     ),
     history: [],
     // With a read-only copy of the task in the parent's work notes this is part of (`workNotesCopy`).
@@ -359,8 +481,22 @@ export function helperTurn(
  * `incomplete` with no summary. With the parent's own, it would wrap up into the very reserve the parent keeps for
  * its last call. One reserve earlier, the helper's summary and the parent's answer both fit.
  */
-function helperDeadline(ctx: TurnContext, parent: LoadedAgent, parentDeadline: number | undefined): { deadlineAt?: number } {
-  if (parentDeadline === undefined) return {};
-  const parentMs = resolveTurnDurationMs(parent.config.llm.maxTurnDurationMs, ctx.deps.config.llm.limits.maxTurnDurationMs);
-  return { deadlineAt: parentDeadline - wrapUpReserveMs(parentMs) };
+function waitedDeadline(ctx: TurnContext, parent: LoadedAgent, parentDeadline: number | undefined): number | undefined {
+  if (parentDeadline === undefined) return undefined;
+  return parentDeadline - wrapUpReserveMs(turnMsOf(ctx, parent));
+}
+
+/** How long a turn of the parent's may run: its own `max_turn_duration_ms`, or the daemon's. */
+function turnMsOf(ctx: TurnContext, parent: LoadedAgent): number {
+  return resolveTurnDurationMs(parent.config.llm.maxTurnDurationMs, ctx.deps.config.llm.limits.maxTurnDurationMs);
+}
+
+/**
+ * When a helper in the background must be done — started there, or moved there from the foreground: its turn's whole
+ * duration from when it started — a wait for room is not taken from it — and never past `job_max_ms` from when its job
+ * did, the deadline the job itself keeps, so it wraps up before that stops it. Pure.
+ */
+export function helperDeadline(at: { queuedAt: number; startedAt: number; turnMs: number; jobMs: number }): number {
+  const own = at.startedAt + at.turnMs;
+  return at.jobMs > 0 ? Math.min(own, at.queuedAt + at.jobMs) : own;
 }

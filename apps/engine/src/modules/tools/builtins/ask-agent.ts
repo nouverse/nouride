@@ -28,36 +28,27 @@
  * ## An ask that does not hold the asking turn hostage (0.7.19)
  *
  * It ran the peer's whole turn inside the asking agent's tool call. A deploy or an audit then held that turn — its time
- * budget, and the person, who could not talk to the asking agent meanwhile. Now it waits for the answer as it always
- * did, up to `ASK_WAIT_MS`; past that, the peer's turn carries on as a job of the asking agent's
- * (`pipeline/background-ask.ts`), the call returns saying so, and the answer wakes the asking agent in this chat when it
- * comes. `background: true` returns at once. Only where the turn asking may hold work in the background — its own chat
- * turn, with `[delegate] max_background` above 0, the one limit helpers and asks share: a helper's ask, and a scheduled
- * turn's, wait to the end (`waitingAsk`). A peer has no `ask_agent` at all.
+ * budget, and the person, who could not talk to the asking agent meanwhile. Now it waits for the answer for a minute,
+ * then the peer's turn carries on as a job of the asking agent's (`pipeline/background-ask.ts`), the call returns saying
+ * so, and the answer wakes the asking agent in this chat when it comes — the wait and the move `delegate`'s helpers in
+ * the foreground have too (`wait-then-move.ts`). `background: true` returns at once. Only where the turn asking may hold
+ * work in the background — its own chat turn, with `[delegate] max_background` above 0, the one limit helpers and asks
+ * share: a helper's ask, and a scheduled turn's, wait to the end (`waitingForm`). A peer has no `ask_agent` at all.
  */
 
-import { createLogger, type LoadedAgent, type ModelTier, plural, type Tool, type ToolContext, type ToolResult } from "@nouride/shared";
+import { createLogger, type LoadedAgent, type ModelTier, type Tool, type ToolContext, type ToolResult } from "@nouride/shared";
 import { isHandoffError, renderHandoff, type SubAgentHandoff } from "@/modules/tools/handoff.ts";
 import { describePeers } from "@/modules/router/agent-mentions.ts";
 import { duration } from "@/modules/jobs/wake-text.ts";
-import { runningList, type HelperView } from "./delegate.ts";
+import { runningList } from "./delegate.ts";
 import { BRIEF_SCOPE } from "./delegate-brief.ts";
+import { FOREGROUND_WAIT_MS, limitReached, stayed, within, withWaiting, type MovableRun, type MoveRefusal } from "./wait-then-move.ts";
 import { tierArg, tierParameter } from "./tier-arg.ts";
 import { workTextIsEnglish, writeWorkInEnglish } from "@/modules/memory/index.ts";
 
 const log = createLogger("tools.ask_agent");
 
 const MAX_TASK_CHARS = 4000;
-
-/**
- * How long an ask waits for its answer before the other agent's turn moves to the background (0.7.19).
- *
- * Long enough for an answer the other agent gives from what it knows, or from a command or two, to come back inside the
- * asking turn as it always did. Short enough that a deploy or an audit does not hold the asking turn, its time budget
- * and the person with it: past this, the person hears that the other agent is on it, and can talk to the asking agent
- * meanwhile.
- */
-const ASK_WAIT_MS = 60_000;
 
 export interface PeerTurnRequest {
   /** The agent being asked. */
@@ -76,20 +67,8 @@ export interface PeerTurnRequest {
  */
 export type PeerTurnResult = SubAgentHandoff;
 
-/** Why an ask did not move to the background: no room under the asking agent's limit, or no way to run one here. */
-export type AskRefusal = { why: "limit"; limit: number; running: HelperView[] } | { why: "unavailable"; reason: string };
-
-/** Moving one to the background: the job it now runs as — or it stays waited on, answered already or refused. */
-export type AskDetached = { job: string } | { answered: true } | { refused: AskRefusal };
-
-/** An ask under way that need not hold the asking turn (`pipeline/background-ask.ts`): its answer, and its way out. */
-export interface AskRun {
-  answer: Promise<PeerTurnResult>;
-  detach(): AskDetached;
-}
-
 /** Started — or, asked for in the background, refused before anything of it ran. */
-export type AskStart = { run: AskRun } | { refused: AskRefusal };
+export type AskStart = { run: MovableRun } | { refused: MoveRefusal };
 
 export interface AskAgentToolOptions {
   /**
@@ -105,7 +84,7 @@ export interface AskAgentToolOptions {
    * process runs no jobs: then every ask waits for its answer, and the schema offers no `background`.
    */
   start?: (request: PeerTurnRequest, background: boolean) => AskStart;
-  /** How long an ask waits before it moves: `ASK_WAIT_MS`. A test's is shorter. */
+  /** How long an ask waits before it moves: `FOREGROUND_WAIT_MS`. A test's is shorter. */
   waitMs?: number;
   /**
    * Who can be asked right now, excluding the caller.
@@ -147,22 +126,6 @@ function availableLines(ids: string[], about: Record<string, string>): string {
   if (ids.length === 0) return "There are none.";
   if (!ids.some((id) => about[id])) return `Available: ${ids.join(", ")}.`;
   return ["Available:", ...ids.map((id) => (about[id] ? `- ${id}: ${about[id]}` : `- ${id}`))].join("\n");
-}
-
-/** What a turn that may hold no background work is offered, by the tool every other turn is offered — `waitingAsk`. */
-const WAITING = new WeakMap<Tool, Tool>();
-
-/**
- * `ask_agent` as a turn that may hold no work in the background has it: no `background`, and every ask waits for its
- * answer however long it takes. `resolveToolset` gives it to a helper's turn, a scheduled turn and wherever
- * `[delegate] max_background` is 0 — the turns whose toolset is resolved with no background helpers.
- *
- * Not ping-pong, said where it is decided: a helper working in the background that could move an ask behind itself
- * would leave a turn nobody watches waiting on nothing, with a second job's answer bound for a conversation the helper
- * is not in. A peer — a background ask's own turn included — has no `ask_agent` at all (`pipeline/peer-turn.ts`).
- */
-export function waitingAsk(tool: Tool): Tool {
-  return WAITING.get(tool) ?? tool;
 }
 
 export function createAskAgentTool(options: AskAgentToolOptions): Tool {
@@ -244,8 +207,9 @@ export function createAskAgentTool(options: AskAgentToolOptions): Tool {
     },
     execute: (args, ctx) => ask(options, args, ctx, true),
   };
-  WAITING.set(detachable, waiting);
-  return detachable;
+  // A turn that may hold no work in the background is offered `waiting` (`waitingForm`). A peer — a background ask's own
+  // turn included — has no `ask_agent` at all (`pipeline/peer-turn.ts`).
+  return withWaiting(detachable, waiting);
 }
 
 /** One ask: the name and the task checked, then the answer — waited on, or moved to the background where it may be. */
@@ -290,7 +254,7 @@ async function ask(options: AskAgentToolOptions, args: Record<string, unknown>, 
   const started = options.start(request, background);
   if ("refused" in started) return { content: notStarted(match, started.refused), isError: true };
   const { run } = started;
-  const waitMs = options.waitMs ?? ASK_WAIT_MS;
+  const waitMs = options.waitMs ?? FOREGROUND_WAIT_MS;
   if (!background) {
     const first = await within(run.answer, waitMs);
     if (first) return answered(ctx.agentId, first);
@@ -299,19 +263,6 @@ async function ask(options: AskAgentToolOptions, args: Record<string, unknown>, 
   if ("job" in moved) return inTheBackground(match, moved.job, background ? null : waitMs);
   // Answered as it was about to move, or no room for it: waited on to the end, as an ask always was.
   return answered(ctx.agentId, await run.answer, "refused" in moved ? stayed(moved.refused, waitMs) : undefined);
-}
-
-/** The answer, or null once `ms` have passed without one — the wait an ask gives before it moves. */
-async function within<T>(answer: Promise<T>, ms: number): Promise<T | null> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const late = new Promise<null>((resolve) => {
-    timer = setTimeout(() => resolve(null), ms);
-  });
-  try {
-    return await Promise.race([answer, late]);
-  } finally {
-    clearTimeout(timer);
-  }
 }
 
 /**
@@ -362,25 +313,10 @@ function inTheBackground(agent: string, job: string, waitedMs: number | null): T
 }
 
 /** `background` asked for, and no room: nothing started — what is running instead, and what to do. */
-function notStarted(agent: string, refused: AskRefusal): string {
+function notStarted(agent: string, refused: MoveRefusal): string {
   if (refused.why === "unavailable") return `Not started in the background: ${refused.reason} Leave \`background\` off to wait for ${agent}'s answer.`;
   return (
     `Not started: ${limitReached(refused)}: ${runningList(refused.running)}. Wait for one to finish (its result comes ` +
     `to you as a message), stop one with \`nouride jobs kill <id>\`, or leave \`background\` off to wait for ${agent}'s answer.`
-  );
-}
-
-/** Waited on past the wait because it could not move: said, so the time it took is not taken for a stuck agent. */
-function stayed(refused: AskRefusal, waitMs: number): string {
-  const why = refused.why === "limit" ? limitReached(refused) : refused.reason.replace(/\.$/, "");
-  return `(This took longer than ${duration(waitMs)} and stayed in the foreground: ${why}.)`;
-}
-
-/** The limit, named — the one helpers and asks share. */
-function limitReached(refused: Extract<AskRefusal, { why: "limit" }>): string {
-  const n = refused.running.length;
-  return (
-    `you already have ${n} ${plural(n, "job")} working in the background (helpers and asks), the most this ` +
-    `agent may have (\`[delegate] max_background = ${refused.limit}\`)`
   );
 }

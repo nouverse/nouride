@@ -340,7 +340,10 @@ service jalan sampai dihentikan.
 ## Subagent
 
 `delegate` memulai subagent: tanpa riwayat chat, tanpa perintah slash, dan setengah anggaran iterasi.
-Ia berbagi tool dan izin milik induknya, dan sampai empat bisa jalan sekaligus. Di misi yang kerja di worktree,
+Ia berbagi tool dan izin milik induknya, dan sampai empat bisa jalan sekaligus. Agent menunggu mereka
+paling lama semenit; yang masih bekerja setelah itu lanjut di latar belakang sebagai job milik agent, dan
+hasilnya membangunkan agent begitu datang, langsung dengan `background: true`
+([Helper di latar belakang](/id/docs/architecture/agents/#helper-di-latar-belakang)). Di misi yang kerja di worktree,
 `isolated` memberi tiap helper worktree dari worktree misi itu di branch sendiri, `mission/<id>-helper-<n>`, untuk
 di-merge oleh misinya; di luar itu ditolak.
 [Misi di dalam repo →](/id/docs/manual/missions/#di-dalam-repo)
