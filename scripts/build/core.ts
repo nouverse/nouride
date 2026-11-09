@@ -21,11 +21,12 @@
  *
  * An edition names who a build is for, not which switches it sets: the free build is free because the
  * code that would make it otherwise is not compiled into it, and a reader should be able to tell which
- * build they hold without reading a flag matrix. This script makes the two published ones — `basic`
- * (no flag) and `--router`, which carries the LLM gateway in this process. The third, `--pro`, is
- * `bun run build:pro`, whose recipe is private (`internals/pro/packages/build-pro`) and imports this same core; it
- * carries the gateway too, since Pro Router became Pro in 0.7.20. `--target` and `--no-smol` are orthogonal to all
- * of them.
+ * build they hold without reading a flag matrix. This script makes the published one — `basic` (no flag), which
+ * carries the LLM gateway in this process when `internals/nougate` is checked out, and is built without it otherwise
+ * unless `--require-gateway` says it must not be. `--router`, which used to add the gateway as an edition of its own,
+ * is refused by name. The other, `--pro`, is `bun run build:pro`, whose recipe is private
+ * (`internals/pro/packages/build-pro`) and imports this same core; it always carries the gateway. `--target` and
+ * `--no-smol` are orthogonal to all of them.
  *
  * **WhatsApp is not an edition**: every build carries the bridge in this process, with no second
  * executable (`ALWAYS` in `edition.ts`). It was an edition switch until 2026-09-16.
@@ -49,6 +50,7 @@ import {
   editionFlags,
   NOUGATE,
   OPTIONAL,
+  resolveEdition,
   selectEdition,
   type EditionSpec,
   type PluginSpec,
@@ -257,7 +259,7 @@ async function withPluginsResolvable<T>(edition: EditionSpec, run: () => Promise
 async function linkPlugin(edition: EditionSpec, plugin: PluginSpec): Promise<string> {
   const target = join(ROOT, plugin.pkgDir ?? plugin.dir);
   const name = plugin.pkg;
-  if (!existsSync(join(target, "package.json"))) {
+  if (!checkedOut(plugin)) {
     // `relative`, not `slice(ROOT.length + 1)`. ROOT already ends in a separator, so that ate the
     // first character of the path and printed `lugins/oauth` — in an error whose only job is to
     // give somebody a command they can paste.
@@ -274,6 +276,11 @@ async function linkPlugin(edition: EditionSpec, plugin: PluginSpec): Promise<str
   await rm(link, { recursive: true, force: true });
   await symlink(target, link);
   return link;
+}
+
+/** Whether a plugin's source is here to link: the test `linkPlugin` refuses on, and what `resolveEdition` asks. */
+function checkedOut(plugin: PluginSpec): boolean {
+  return existsSync(join(ROOT, plugin.pkgDir ?? plugin.dir, "package.json"));
 }
 
 /**
@@ -506,26 +513,32 @@ async function readArtefact(binary: string): Promise<string> {
  * `--device-nougate` is on the list for the same reason it was renamed on 2026-09-15: the bundle an
  * edition carries is expected to grow, and a flag called after one of its contents has to be renamed
  * again or lie.
+ *
+ * A flag whose edition went into another says where it went, in the sentence after "is gone".
  */
-const RETIRED_FLAGS = [
-  "--bundle-wa-bridge",
-  "--bundle-nougate",
-  "--embed-wa-bridge",
-  "--embed-nougate",
-  "--device-nougate",
+const RETIRED_FLAGS: Record<string, string> = {
+  "--bundle-wa-bridge": "",
+  "--bundle-nougate": "",
+  "--embed-wa-bridge": "",
+  "--embed-nougate": "",
+  "--device-nougate": "",
   // Renamed 2026-09-30 when Device and Cloud became one edition: `--pro`, `--pro-router`.
-  "--device",
-  "--device-pro",
-  "--cloud",
+  "--device": "",
+  "--device-pro": "",
+  "--cloud": "",
   // 0.7.20: Pro Router became Pro, which carries the gateway (owner, 2026-10-19).
-  "--pro-router",
-];
+  "--pro-router": "",
+  // Router became part of Community (v0.8.29_RFC): the free build carries what `--router` added.
+  "--router":
+    "The LLM gateway is part of the free build since 0.8.29: `bun run build:binary` carries it, " +
+    "and `[nougate] in_process = true` switches it on.",
+};
 
 function refuseRetiredFlags(argv: string[], editions: EditionSpec[]): void {
-  for (const gone of RETIRED_FLAGS) {
+  for (const [gone, instead] of Object.entries(RETIRED_FLAGS)) {
     if (!argv.includes(gone)) continue;
     const offered = editions.map((e) => e.flag || "(none)").join(" | ");
-    console.error(`✗ ${gone} is gone. This build script makes: ${offered}\n  see docs/ARCHITECTURE.md §10`);
+    console.error(`✗ ${gone} is gone.${instead ? ` ${instead}` : ""} This build script makes: ${offered}\n  see docs/ARCHITECTURE.md §10`);
     process.exit(1);
   }
 }
@@ -642,6 +655,13 @@ export function bundleFlags(edition: EditionSpec): string[] {
     "--define",
     `NOURIDE_BUILD_EDITION=${JSON.stringify(edition.id)}`,
     /**
+     * Whether the LLM gateway is in this build, for the daemon to say so (`apps/engine/src/commons/build.ts`). The edition
+     * stopped answering it once the free build carried the gateway only when its submodule is checked out: a Community
+     * binary from a public clone has none. Defined only when it was linked — absent, the identifier is undeclared, as an
+     * unstamped edition's is, and the reader's `typeof` says so.
+     */
+    ...(edition.bundles.includes(NOUGATE) ? ["--define", `NOURIDE_BUILD_GATEWAY=${JSON.stringify("bundled")}`] : []),
+    /**
      * And no path of the checkout it was built in: `__dirname` and `__filename`, which Bun writes as a dependency's
      * absolute path, are defined to one that names no machine (`build-path.ts`). Without it every artefact named its
      * build directory and reproduced only there — a map rebuilt elsewhere was off on those lines.
@@ -661,6 +681,30 @@ export function compileFlags(edition: EditionSpec): string[] {
     ...(SMOL ? ["--compile-exec-argv=--smol"] : []),
     ...bundleFlags(edition),
   ];
+}
+
+/**
+ * The edition as this checkout can build it (`resolveEdition`), or an exit naming what a required plugin lacks.
+ *
+ * Its frontend too, for the gateway: a tarball made without `internals/nougate/apps/frontend/dist` carries a gateway
+ * whose page is a 404, and a release build (`--require-gateway`) is refused rather than shipped that way. The image's
+ * kit says the same for the bundle (`scripts/release/image-kit.ts`).
+ */
+function editionToBuild(selected: EditionSpec, argv: string[], bundleOnly: boolean): EditionSpec {
+  try {
+    const { edition, notes, required } = resolveEdition(selected, argv, checkedOut);
+    for (const note of notes) console.log(note);
+    if (required.includes(NOUGATE) && !bundleOnly && !existsSync(NOUGATE_FRONTEND_DIST)) {
+      throw new Error(
+        `the LLM gateway's frontend is not built (${relative(ROOT, NOUGATE_FRONTEND_DIST)}), and this build must carry it.\n` +
+          "  cd internals/nougate/apps/frontend && bun install --frozen-lockfile && bun run build",
+      );
+    }
+    return edition;
+  } catch (error) {
+    console.error(`✗ ${error instanceof Error ? error.message : String(error)}`);
+    process.exit(1);
+  }
 }
 
 /**
@@ -685,14 +729,13 @@ refuseRetiredFlags(argv, editions);
 const KNOWN_FLAGS = [...editionFlags(editions), "--no-smol", "--bundle-only"];
 
 assertKnownFlags(argv, KNOWN_FLAGS);
-const edition = selectEdition(argv, editions);
 const targets = parseTargets(argv);
+const BUNDLE_ONLY = argv.includes("--bundle-only");
+const edition = editionToBuild(selectEdition(argv, editions), argv, BUNDLE_ONLY);
 
 await assertDashboardBuilt();
 await buildApplianceSetupUi(edition);
 await mkdir(DIST, { recursive: true });
-
-const BUNDLE_ONLY = argv.includes("--bundle-only");
 
 /** The lines under the artefact size, which are the edition's own. */
 const banner = edition.banner.map((line) => `\n    ${line}`).join("");

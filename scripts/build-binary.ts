@@ -1,15 +1,15 @@
 #!/usr/bin/env bun
 /**
- * Build the standalone `nouride` executable — the public editions.
+ * Build the standalone `nouride` executable — the public edition.
  *
- * `basic` and `router`, and nothing else. The third, `pro`, is built by
- * `internals/pro/packages/build-pro/build.ts`, a private submodule, because which plugins it links and which
- * markers prove it is commercial information about a product that is not published. Both entry
- * points import the same `scripts/build/core.ts`, so there is one build and two lists.
+ * `basic`, and nothing else: Community, with the LLM gateway in it when `internals/nougate` is checked out. The other,
+ * `pro`, is built by `internals/pro/packages/build-pro/build.ts`, a private submodule, because which plugins it links
+ * and which markers prove it is commercial information about a product that is not published. Both entry points import
+ * the same `scripts/build/core.ts`, so there is one build and two lists.
  *
  * Usage:
  *   bun run build:binary                          # this machine, → dist/nouride
- *   bun run build:binary --router                 # + the LLM gateway in this process
+ *   bun run build:binary --require-gateway        # fail rather than build without the LLM gateway (a release)
  *   bun run build:binary --target linux-x64       # cross-compiled, → dist/nouride-linux-x64/
  *   bun run build:binary --target linux-x64,linux-arm64
  *   bun run build:binary --target all

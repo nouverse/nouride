@@ -21,7 +21,7 @@ import { join } from "node:path";
 import { editionLabel } from "@/commons/build.ts";
 import { sleep } from "../wait.ts";
 
-const KNOWN = ["--pro", "--router", "--no-smol"] as const;
+const KNOWN = ["--pro", "--require-gateway", "--no-smol"] as const;
 
 describe("unknownFlags", () => {
   test("the renamed flag that caused this is caught", () => {
@@ -269,17 +269,15 @@ describe("the release workflow looks for assets the build actually makes", () =>
 });
 
 /**
- * `router` — the free build plus the LLM gateway, and nothing else.
+ * The public edition — the free build, with the LLM gateway in it, as the Router edition had it.
  *
- * It and `pro` carry the same gateway; `pro` adds multi-user on top. The distinction
- * matters because `router` is a public download and `pro` is not, so the line that decides
- * which plugins each one links is the line that decides what gets published.
- *
- * A nougate-only edition existed once and was removed. These assertions are what stop it being
- * quietly dropped a second time.
+ * It and `pro` carry the same gateway; `pro` adds multi-user on top. The distinction matters
+ * because the free build is a public download and `pro` is not, so the line that decides which
+ * plugins each one links is the line that decides what gets published. Router is a name now, not a
+ * build: its artefact names carry Community's bytes for the Router installs already out there.
  */
-describe("the router edition", () => {
-  test("is a known edition with its own artefact name", () => {
+describe("the public edition", () => {
+  test("router is a name the build no longer makes, with the artefact name the alias publishes", () => {
     expect([...EDITIONS]).toContain("router");
     expect(artifactName("router", "linux-x64")).toBe("nouride-router-linux-x64");
     // `basic` is the only one without an infix; two public builds sharing a name would be
@@ -287,15 +285,17 @@ describe("the router edition", () => {
     expect(artifactName("basic", "linux-x64")).toBe("nouride-linux-x64");
   });
 
-  test("it bundles the gateway, and the public list is the only place that says so", () => {
+  test("it carries the gateway when checked out, and the public list is the only place that says so", () => {
     /**
      * Asserted as source because what it decides cannot be read back off a binary — and asserted
      * against `scripts/build/editions.ts` because that file is now the whole public recipe. The
      * five `BUNDLE_*` booleans it replaced had to be edited together and nothing made them agree.
      */
     const editions = readFileSync(join(import.meta.dir, "../../../../scripts/build/editions.ts"), "utf8");
-    expect(editions).toContain('id: "router"');
-    expect(editions).toContain("bundles: [NOUGATE]");
+    expect(editions).toContain('id: "basic"');
+    expect(editions).toContain("plugin: NOUGATE,");
+    expect(editions).toContain('require: "--require-gateway",');
+    expect(editions).not.toContain('id: "router"');
     // WhatsApp is in `ALWAYS`, not in an edition: it stopped being a switch on 2026-09-16.
     expect(readFileSync(join(import.meta.dir, "../../../../scripts/build/core.ts"), "utf8"))
       .not.toContain("BUNDLE_BRIDGE");
@@ -333,7 +333,7 @@ describe("the router edition", () => {
 
   test("it is public, so it is proven to carry no private plugin", () => {
     /**
-     * `router` shares a bundle with `pro` and is still grouped with `basic`, because what
+     * The free build shares the gateway with `pro` and is still public, because what
      * makes an edition publishable is what it does **not** carry.
      *
      * One field decides it. `bundles` drives the linking, the `--external` flags, and both artefact
@@ -503,7 +503,8 @@ describe("the router edition", () => {
      * survived made `lint:types` follow into nougate's source and fail on a clean tree.
      */
     const build = readFileSync(join(import.meta.dir, "../../../../scripts/build/core.ts"), "utf8");
-    expect(build).toContain('if (!existsSync(join(target, "package.json")))');
+    expect(build).toContain("if (!checkedOut(plugin)) {");
+    expect(build).toContain('return existsSync(join(ROOT, plugin.pkgDir ?? plugin.dir, "package.json"));');
     expect(build).toContain('process.on("exit", cleanup);');
     // Before the linking loop, or the throw leaves whatever was linked before it.
     expect(build.indexOf('process.on("exit", cleanup);')).toBeLessThan(
