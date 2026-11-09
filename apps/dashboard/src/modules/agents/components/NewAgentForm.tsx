@@ -18,7 +18,7 @@ import { chatModels } from "@/commons/lib/model-kind";
  * provider at all. Whichever profile happened to resolve first got the agent, and a model that does
  * not exist there fails on the first turn with a 404 from an endpoint nobody chose.
  *
- * What it may do is a preset (`presets.ts` in the engine), Pilot unless another is picked: it decides
+ * What it may do is a preset (`presets.ts` in the engine), Nourider unless another is picked: it decides
  * the first tools and a few lines in `AGENTS.md`, and is not shown again — the tools are switched on
  * the agent's Settings tab afterwards. The two checkboxes that were here ("Allow Terminal Command
  * Execution", "Enable Auto-Approval Mode") are gone: the first is what a preset decides, and the
@@ -38,7 +38,7 @@ export function NewAgentForm({
   const [headline, setHeadline] = useState("");
   const [model, setModel] = useState("");
   const [provider, setProvider] = useState("");
-  const [preset, setPreset] = useState<PresetId>("pilot");
+  const [preset, setPreset] = useState<PresetId>("nourider");
   /** The coding CLI that answers it, or null for a model. */
   const [cli, setCli] = useState<string | null>(null);
   /** The account the CLI answers with — its `[external] profile`. */

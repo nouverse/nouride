@@ -39,7 +39,7 @@ export const setupApi = {
     headline?: string;
     allow_exec?: boolean;
     auto_on?: boolean;
-    /** What it starts as; absent is Pilot, which is what the wizard makes. */
+    /** What it starts as; absent is Nourider, which is what the wizard makes. */
     preset?: PresetId;
     /** For `custom`: the tools picked. */
     tools?: string[];

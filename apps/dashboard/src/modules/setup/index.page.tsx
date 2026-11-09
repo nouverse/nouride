@@ -268,26 +268,26 @@ function AgentStep() {
 
   const models = cachedModels?.length ? cachedModels : fetched ?? [];
 
-  // The first agent is a Pilot named NouridePilot, as `nouride setup` makes it (`FIRST_AGENT`).
-  const [id, setId] = useState("nouridepilot");
-  const [displayName, setDisplayName] = useState("NouridePilot");
+  // The first agent is a Nourider named Nourider, as `nouride setup` makes it (`FIRST_AGENT`).
+  const [id, setId] = useState("nourider");
+  const [displayName, setDisplayName] = useState("Nourider");
   // Empty until the person types: the first model on the list was chosen for them, and rarely the one they wanted.
   const [model, setModel] = useState("");
   const [systemPrompt, setSystemPrompt] = useState("");
   const [headline, setHeadline] = useState("");
   const presets = useQuery({ queryKey: ["agent-presets"], queryFn: api.agentPresets, staleTime: 5 * 60 * 1000, retry: false });
   /**
-   * The Pilot's headline and SOUL.md, filled in once they arrive, for the person to keep or change, as the New Agent form
-   * fills a Pilot's. It had "My First Agent" and a generic prompt of its own. Once: a refetch never refills a field the
-   * person emptied. Left empty when the presets do not come, the daemon writes the Pilot's (`service.ts`).
+   * The Nourider's headline and SOUL.md, filled in once they arrive, for the person to keep or change, as the New Agent form
+   * fills a Nourider's. It had "My First Agent" and a generic prompt of its own. Once: a refetch never refills a field the
+   * person emptied. Left empty when the presets do not come, the daemon writes the Nourider's (`service.ts`).
    */
   const filled = useRef(false);
   useEffect(() => {
-    const pilot = presets.data?.presets.find((option) => option.id === "pilot");
-    if (!pilot || filled.current) return;
+    const first = presets.data?.presets.find((option) => option.id === "nourider");
+    if (!first || filled.current) return;
     filled.current = true;
-    setHeadline((current) => current || (pilot.headline ?? ""));
-    setSystemPrompt((current) => current || (pilot.soul ?? ""));
+    setHeadline((current) => current || (first.headline ?? ""));
+    setSystemPrompt((current) => current || (first.soul ?? ""));
   }, [presets.data]);
   const create = useMutation({
     mutationFn: () =>
@@ -296,7 +296,7 @@ function AgentStep() {
         display_name: displayName,
         system_prompt: systemPrompt,
         model,
-        preset: "pilot",
+        preset: "nourider",
         ...(headline.trim() ? { headline: headline.trim() } : {}),
       }),
     // On to the memory step: the setup state now says there is an agent.
@@ -321,7 +321,7 @@ function AgentStep() {
 
         <div>
           <h2 className="text-lg font-bold tracking-tight text-base-content">Create your first agent</h2>
-          {/* No switches: the first agent is always a Pilot (`presets.ts`), and tools can be changed on
+          {/* No switches: the first agent is always a Nourider (`presets.ts`), and tools can be changed on
               its page later. What it may do is said in one line rather than asked. */}
           <p className="text-base-content/65 text-sm mt-0.5">
             It can handle anything you ask and checks with you before anything risky.
@@ -382,7 +382,7 @@ function AgentStep() {
           <label htmlFor="setup-headline" className="block text-[11px] font-bold uppercase tracking-wider text-base-content/70 font-mono">
             Headline
           </label>
-          <HeadlineField value={headline} onChange={setHeadline} placeholder={presets.data?.presets.find((option) => option.id === "pilot")?.headline ?? "What to bring this agent"} id="setup-headline" />
+          <HeadlineField value={headline} onChange={setHeadline} placeholder={presets.data?.presets.find((option) => option.id === "nourider")?.headline ?? "What to bring this agent"} id="setup-headline" />
         </div>
 
         <label className="block space-y-1">
@@ -392,7 +392,7 @@ function AgentStep() {
             value={systemPrompt}
             onChange={(e) => setSystemPrompt(e.target.value)}
           />
-          <span className="block text-xs text-base-content/65">The Pilot's own personality, filled in. Change it now or any time on its Files tab.</span>
+          <span className="block text-xs text-base-content/65">The Nourider's own personality, filled in. Change it now or any time on its Files tab.</span>
         </label>
 
         {create.isError && (

@@ -10,18 +10,18 @@
  * "full access" and "asks only before risky actions" are the same agent. Set on the agent rather than
  * left to follow each person, so it is one answer for everyone who talks to it.
  *
- * The first agent, from the setup wizard, is always `pilot`.
+ * The first agent, from the setup wizard, is always `nourider`, the preset named for Nouride.
  *
  * Pure.
  */
 
-const PRESET_IDS = ["pilot", "researcher", "assistant", "developer", "custom"] as const;
+const PRESET_IDS = ["nourider", "researcher", "assistant", "developer", "custom"] as const;
 
 /**
- * The first agent's id and name when the person setting up gives none: a Pilot, named for it.
+ * The first agent's id and name when the person setting up gives none: a Nourider, named for it.
  * The dashboard's wizard fills its form with the same two.
  */
-export const FIRST_AGENT = { id: "nouridepilot", name: "NouridePilot" } as const;
+export const FIRST_AGENT = { id: "nourider", name: "Nourider" } as const;
 export type PresetId = (typeof PRESET_IDS)[number];
 
 export function isPresetId(value: unknown): value is PresetId {
@@ -50,8 +50,8 @@ const MEMORY = ["memory_read", "memory_write", "memory_search", "memory_analyze"
 
 export const PRESETS: readonly AgentPreset[] = [
   {
-    id: "pilot",
-    label: "Pilot",
+    id: "nourider",
+    label: "Nourider",
     summary: "Full access: files, terminal, web and the daemon itself. Asks before anything risky.",
     headline: "Takes a task to the end: files, terminal, web and this daemon",
     tools: "all",

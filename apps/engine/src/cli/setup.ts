@@ -172,7 +172,7 @@ export async function setup(args: string[]): Promise<void> {
     say(`${DIM}  config.toml holds the NAME, never the value${RESET}`);
 
     // ── first agent ─────────────────────────────────────────────────────────
-    // A Pilot named NouridePilot unless told otherwise, as the dashboard's wizard makes it.
+    // A Nourider named Nourider unless told otherwise, as the dashboard's wizard makes it.
     const agentId = flag(args, "agent") ?? (await ask("agent id ", FIRST_AGENT.id));
     const displayName = flag(args, "name") ?? (agentId === FIRST_AGENT.id ? FIRST_AGENT.name : agentId);
 
@@ -204,8 +204,8 @@ export async function setup(args: string[]): Promise<void> {
     // merely calling the same code. They already shared `SetupService`; what differed was what got
     // *asked*, and a CLI install that silently skipped the persona produced an agent with a generic
     // SOUL.md — the same service, a different agent. (Who the operator is is not asked: People holds that.)
-    // Empty is the Pilot's own SOUL.md, the one the wizard fills in.
-    const systemPrompt = flag(args, "prompt") ?? (await ask("persona  one line (enter for the Pilot's)", ""));
+    // Empty is the Nourider's own SOUL.md, the one the wizard fills in.
+    const systemPrompt = flag(args, "prompt") ?? (await ask("persona  one line (enter for the Nourider's)", ""));
 
     // What its peers read to decide whom to ask — one short line, not the persona. Empty is the preset's.
     const headline = flag(args, "headline") ?? (await ask("headline  one short line, what to bring it (enter for the default)", ""));

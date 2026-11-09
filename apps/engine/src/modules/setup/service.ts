@@ -398,7 +398,7 @@ export class SetupService {
     allowExec?: boolean;
     /** Automatically enable standing auto-approval for command/tool execution. */
     autoOn?: boolean;
-    /** What it starts as (`presets.ts`). Absent is `pilot`: every tool, which is what the wizard makes. */
+    /** What it starts as (`presets.ts`). Absent is `nourider`: every tool, which is what the wizard makes. */
     preset?: PresetId;
     /** For `custom`: the tools picked. */
     tools?: readonly string[];
@@ -442,7 +442,7 @@ export class SetupService {
     // Checked before anything is written: a headline too long is a form to correct, not a pack half made.
     const headline = input.headline?.trim() ? cleanHeadline(input.headline) : null;
     if (input.headline?.trim() && !headline) return { ok: false, error: `A headline is one short line, ${HEADLINE_MAX} characters at most.` };
-    const preset = presetOf(input.preset ?? "pilot");
+    const preset = presetOf(input.preset ?? "nourider");
     const tools = toolsFor(preset.id, this.availableTools(), input.tools).filter((name) => !withoutShell.has(name));
     /**
      * Every tool, written as `"*"`: this one and every one a later release adds. A list spelled out here

@@ -170,7 +170,7 @@ nouride setup --yes --provider anthropic \
 | `--provider` | `anthropic` or `openai` — the wire format |
 | `--base-url` | defaults to the provider's public endpoint |
 | `--api-key-from-env VAR` | read the key from that environment variable |
-| `--agent`, `--name`, `--model` | the first agent's id, display name and model: `nouridepilot`, `NouridePilot` unless given |
+| `--agent`, `--name`, `--model` | the first agent's id, display name and model: `nourider`, `Nourider` unless given |
 | `--prompt` | its persona (→ `SOUL.md`); the Pilot's unless given |
 | `--headline` | one short line, 150 characters at most, that the other agents read to decide whom to ask (→ `IDENTITY.md`); empty is its preset's |
 | `--config` | write somewhere other than `./.nouride/config.toml` |

@@ -51,8 +51,8 @@ const toolsOf = (registry: AgentRegistry, id: string) => registry.get(id)?.confi
 
 describe("presets", () => {
   test("five at most, Pilot first with everything, and Custom last with nothing picked for you", () => {
-    expect(PRESETS.map((preset) => preset.label)).toEqual(["Pilot", "Researcher", "Assistant", "Developer", "Custom"]);
-    expect(toolsFor("pilot", FALLBACK_TOOLS)).toEqual([...FALLBACK_TOOLS]);
+    expect(PRESETS.map((preset) => preset.label)).toEqual(["Nourider", "Researcher", "Assistant", "Developer", "Custom"]);
+    expect(toolsFor("nourider", FALLBACK_TOOLS)).toEqual([...FALLBACK_TOOLS]);
     expect(toolsFor("custom", FALLBACK_TOOLS)).toEqual([]);
   });
 

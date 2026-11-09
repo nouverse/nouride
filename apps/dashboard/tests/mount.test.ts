@@ -1106,7 +1106,7 @@ describe("agents: orchestrator first, presets, and tools", () => {
     expect(deletes[0]).toEndWith("/secrets/nougate");
   });
 
-  test("New Agent offers the five presets, Pilot chosen, and none of the old checkboxes", async () => {
+  test("New Agent offers the five presets, Nourider chosen, and none of the old checkboxes", async () => {
     let html = "";
     await renderPage("/agents", async (host) => {
       const button = [...host.querySelectorAll("button")].find((b) => b.textContent?.includes("New Agent")) as HTMLElement;
@@ -1114,8 +1114,8 @@ describe("agents: orchestrator first, presets, and tools", () => {
       for (let i = 0; i < 6; i += 1) await sleep(10);
       html = host.innerHTML;
     });
-    for (const label of ["Pilot", "Researcher", "Assistant", "Developer", "Custom"]) expect(html).toContain(label);
-    expect(html).toMatch(/<button[^>]*role="radio"[^>]*aria-checked="true"[^>]*><span[^>]*>Pilot</);
+    for (const label of ["Nourider", "Researcher", "Assistant", "Developer", "Custom"]) expect(html).toContain(label);
+    expect(html).toMatch(/<button[^>]*role="radio"[^>]*aria-checked="true"[^>]*><span[^>]*>Nourider</);
     expect(html).not.toContain("Allow Terminal Command Execution");
     expect(html).not.toContain("Auto-Approval");
   });

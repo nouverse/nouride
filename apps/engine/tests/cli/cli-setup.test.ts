@@ -128,9 +128,9 @@ describe("nouride setup", () => {
     }
   });
 
-  // The owner, 2026-11-06: the first agent is a Pilot named NouridePilot, with the Pilot's headline and SOUL.md, made
+  // The owner, 2026-11-06: the first agent is a Nourider named Nourider, with the Nourider's headline and SOUL.md, made
   // from a terminal as on the dashboard's wizard. A terminal's default was `nouva`, "You are a helpful assistant.".
-  test("asked nothing about the agent, it makes the wizard's: a Pilot named NouridePilot, with its headline and personality", async () => {
+  test("asked nothing about the agent, it makes the wizard's: a Nourider named Nourider, with its headline and personality", async () => {
     const server = serveHttp({
       port: 0,
       hostname: "127.0.0.1",
@@ -141,10 +141,10 @@ describe("nouride setup", () => {
       await setup(["--yes", "--provider", "openai", "--base-url", `http://127.0.0.1:${server.port}`, "--api-key-from-env", "NOURIDE_TEST_KEY"]);
       expect(process.exitCode).toBeFalsy();
       const { presetOf } = await import("@/modules/setup/presets.ts");
-      const pilot = presetOf("pilot");
-      const pack = join(root, ".nouride", "agents", "nouridepilot");
+      const pilot = presetOf("nourider");
+      const pack = join(root, ".nouride", "agents", "nourider");
       const identity = await readTextFile(join(pack, "IDENTITY.md"));
-      expect(identity).toContain("- **Name:** NouridePilot");
+      expect(identity).toContain("- **Name:** Nourider");
       expect(identity).toContain(`- **Headline:** ${pilot.headline}`);
       expect(await readTextFile(join(pack, "SOUL.md"))).toContain(pilot.soul);
       expect(await readTextFile(join(pack, "AGENTS.md"))).toContain(pilot.guidance);

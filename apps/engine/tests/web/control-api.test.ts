@@ -429,7 +429,7 @@ describe("an agent's preset, tools and default, from the dashboard", () => {
     const { app: scoped } = withSetup();
     const res = await scoped.request("/api/control/setup/presets", { headers: { "x-nouride-token": CONTROL_TOKEN } }, { clientAddress: "203.0.113.10" });
     const body = (await res.json()) as { presets: { id: string; tools: string[]; soul: string }[]; groups: { label: string; tools: string[] }[] };
-    expect(body.presets.find((preset) => preset.id === "pilot")?.tools).toEqual(["read", "exec", "web_search"]);
+    expect(body.presets.find((preset) => preset.id === "nourider")?.tools).toEqual(["read", "exec", "web_search"]);
     // Its starting SOUL, which the New Agent form fills in (0.8.1).
     expect(body.presets.find((preset) => preset.id === "researcher")?.soul).toContain("You are a careful researcher.");
     expect(body.presets.find((preset) => preset.id === "researcher")?.tools).toEqual(["read", "web_search"]);

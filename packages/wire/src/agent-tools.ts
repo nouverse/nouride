@@ -2,7 +2,7 @@
  * What a new agent starts as, and an existing one's tools and default (`routes/agent-tools.ts`).
  */
 
-export type PresetId = "pilot" | "researcher" | "assistant" | "developer" | "custom";
+export type PresetId = "nourider" | "researcher" | "assistant" | "developer" | "custom";
 
 export interface AgentPresetView {
   id: PresetId;

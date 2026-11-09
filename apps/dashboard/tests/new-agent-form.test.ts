@@ -28,7 +28,7 @@ afterEach(() => {
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 
 const PRESETS = [
-  { id: "pilot", label: "Pilot", summary: "Full access.", headline: "Takes a task to the end", soul: "You are a capable, calm operator.", tools: [] },
+  { id: "nourider", label: "Nourider", summary: "Full access.", headline: "Takes a task to the end", soul: "You are a capable, calm operator.", tools: [] },
   { id: "researcher", label: "Researcher", summary: "Reads the web.", headline: "Research, with links", soul: "You are a careful researcher.", tools: [] },
 ];
 
@@ -90,7 +90,7 @@ describe("the New Agent form", () => {
       await eventually(() => soul().value === "You are a careful researcher.", 2_000, "Researcher's SOUL");
       expect(headline().value).toBe("Research, with links");
       type(soul(), "My own words.");
-      pick("Pilot");
+      pick("Nourider");
       await eventually(() => headline().value === "Takes a task to the end", 2_000, "Pilot's headline");
       expect(soul().value).toBe("My own words.");
     } finally {
