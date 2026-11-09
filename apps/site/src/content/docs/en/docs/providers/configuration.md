@@ -257,6 +257,11 @@ Anthropic. What is cleared is not lost: the whole output is first written to the
 `data/tool-output/` directory (kept as long as `[retention] tool_output_days`), and the marker names
 that file, so the agent opens it with `read` instead of running the command again.
 
+When clearing old results is not enough, the text old `write`, `edit` and `multi_edit` calls carried
+goes next, oldest first: the call stays with its path and its result, and the text becomes a line
+saying how big it was and that the file holds it now. The calls of the latest step are never
+shortened. Without this a long coding turn carried every file it wrote until the window was full.
+
 A tool's result is also made smaller by what it is before it enters the conversation: a terminal's colour codes are
 taken out, a line a progress bar redrew is kept at its last state, three or more identical lines become one counted
 `[× N]`, and JSON loses the spaces between its parts. A diff and a file read with `read` are kept exactly. The whole

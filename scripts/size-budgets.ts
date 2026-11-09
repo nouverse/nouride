@@ -59,8 +59,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "the exec tool's gate and run: each check a command passes before it starts, made in its order and rechecked in `execute` in the same order; the checks themselves live beside it",
   },
   "apps/engine/src/modules/tools/builtins/files.ts": {
-    lines: 425,
-    why: "the file tools (`read`, `write`, `edit`, `multi_edit`) and the one `resolve` every path goes through, so the root and path guards are read in one place; the parts that stand alone are beside it",
+    lines: 428,
+    why: "the file tools (`read`, `write`, `edit`, `multi_edit`) with what each declares to the executor, and the one `resolve` every path goes through, so the path guards are read in one place",
   },
   "apps/engine/src/modules/tools/approvals.store.ts": {
     lines: 523,

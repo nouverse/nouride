@@ -8,7 +8,7 @@
  */
 
 import { compactionLimitInfo, estimateMessageTokens, estimateMessagesTokens } from "@nouride/llm";
-import { messageText, type ChatMessage } from "@nouride/shared";
+import { messageText, type ChatMessage, type ToolCall } from "@nouride/shared";
 
 export interface TruncateOptions {
   /** Budget for the conversation alone; the system prompt and tools are already deducted. */
@@ -195,12 +195,16 @@ export interface TrimToolResultsOptions {
   keepRecent: number;
   /** Where a trimmed result's content is kept, so the marker can name it. Absent: dropped, as before. */
   keep?: KeepCleared;
+  /** The arguments a tool of this name carries a file's text in (`Tool.bulkArguments`). Absent: no call is shortened. */
+  bulkArguments?: (name: string) => readonly string[] | undefined;
 }
 
 export interface TrimToolResultsResult {
   messages: ChatMessage[];
-  /** How many tool results were replaced. Zero means the input is returned unchanged. */
+  /** How many tool results were replaced. Zero, with `shortened`, means the input is returned unchanged. */
   trimmed: number;
+  /** How many old calls had the text they carried shortened (`shortenCall`). */
+  shortened?: number;
   /** The messages' estimate as returned — what the line was compared against. */
   tokens: number;
   /**
@@ -246,7 +250,8 @@ export function isTrimmedToolResult(message: ChatMessage): boolean {
  *
  * A tool result is replaced with a marker; it is never removed. Removing it would orphan the
  * `tool_use` that asked for it, which Anthropic rejects outright — the failure this whole module is
- * arranged to make impossible. Shrinking the content keeps the pairing intact by construction.
+ * arranged to make impossible. Shrinking the content keeps the pairing intact by construction. An old
+ * call is shortened the same way: the file text it carried goes, the call and its id stay.
  *
  * ## Oldest first, and only as far as needed
  *
@@ -324,13 +329,84 @@ export function trimToolResults(
    * oldest of them first. Nothing changes in the ordinary case, where trimming the older results is
    * enough. What changes is that "does not fit" is no longer a state the trimmer is forbidden to leave.
    */
-  if (!trimThrough(candidates) && protectedIndexes.length > 0) {
+  let shortened = 0;
+  /**
+   * Then the text old calls carried: a `write`'s content, an `edit`'s strings (`Tool.bulkArguments`), oldest first,
+   * stopping the moment the set fits. A long coding turn is mostly that, and a result trimmer cannot touch it: a write's
+   * result is one line. Only a call answered by a result before the last round, so the pair stays whole and the round
+   * the model has not read yet is as it sent it.
+   */
+  const shortenThrough = (): boolean => {
+    const bulkOf = options.bulkArguments;
+    if (!bulkOf) return tokens <= options.maxTokens;
+    const answered = new Set(out.flatMap((message) => (message.role === "tool" && message.toolCallId ? [message.toolCallId] : [])));
+    for (let index = 0; index < lastAnswer; index += 1) {
+      for (const call of out[index]?.toolCalls ?? []) {
+        const bulk = bulkOf(call.name);
+        if (!bulk?.length || !answered.has(call.id)) continue;
+        const shorter = shortenCall(call, bulk);
+        if (shorter === call) continue;
+        const message = out[index]!;
+        const next: ChatMessage = { ...message, toolCalls: message.toolCalls!.map((each) => (each === call ? shorter : each)) };
+        tokens += estimateMessageTokens(next) - estimateMessageTokens(message);
+        out[index] = next;
+        shortened += 1;
+        if (tokens <= options.maxTokens) return true;
+      }
+    }
+    return tokens <= options.maxTokens;
+  };
+
+  if (!trimThrough(candidates) && !shortenThrough() && protectedIndexes.length > 0) {
     const before = trimmed;
     trimThrough(protectedIndexes);
     reachedProtected = trimmed > before;
   }
 
-  return trimmed > 0 ? { messages: out, trimmed, tokens, reachedProtected } : { messages, trimmed: 0, tokens };
+  return trimmed + shortened > 0
+    ? { messages: out, trimmed, ...(shortened > 0 ? { shortened } : {}), tokens, reachedProtected }
+    : { messages, trimmed: 0, tokens };
+}
+
+/**
+ * What a long string an old call carried is replaced with. It says the call ran and points at its result, so the model
+ * neither takes the call for a failure nor sends it again; and where the text is now, the file.
+ */
+const SHORTENED_ARGUMENT = /^\[sent with this call and left out of the context to make room once it ran: \d+ characters, \d+ lines\. The call's result says what it did; read the file to see it as it is now\]$/;
+
+function shortenedArgument(text: string): string {
+  return `[sent with this call and left out of the context to make room once it ran: ${text.length} characters, ${text.split("\n").length} lines. The call's result says what it did; read the file to see it as it is now]`;
+}
+
+/** A call with every long string in its bulk arguments shortened — a `multi_edit`'s list keeps its shape. The call itself when none is long. */
+function shortenCall(call: ToolCall, bulk: readonly string[]): ToolCall {
+  let changed = false;
+  const shorten = (value: unknown): unknown => {
+    if (typeof value === "string") {
+      if (value.length < MIN_TRIMMABLE_CHARS) return value;
+      changed = true;
+      return shortenedArgument(value);
+    }
+    if (Array.isArray(value)) return value.map(shorten);
+    if (value !== null && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, shorten(item)]));
+    return value;
+  };
+  const args = Object.fromEntries(Object.entries(call.arguments).map(([key, value]) => [key, bulk.includes(key) ? shorten(value) : value]));
+  return changed ? { ...call, arguments: args } : call;
+}
+
+/**
+ * Whether a call sends the marker of an earlier call's text back as text of its own — copied from the context, it
+ * would write the marker into the file. Only a whole string that is the marker: a file may quote it.
+ */
+export function sendsShortenedArgument(args: Record<string, unknown>, bulk: readonly string[]): boolean {
+  const holds = (value: unknown): boolean =>
+    typeof value === "string"
+      ? SHORTENED_ARGUMENT.test(value)
+      : Array.isArray(value)
+        ? value.some(holds)
+        : value !== null && typeof value === "object" && Object.values(value).some(holds);
+  return bulk.some((key) => holds(args[key]));
 }
 
 export interface PruneToolOutputsOptions {

@@ -482,6 +482,8 @@ function writesConfig(args: Record<string, unknown>, ctx: ToolContext): { class:
 export const writeTool: Tool = {
   requiresApproval: true,
   fixedList: writesConfig,
+  // The file's text, carried as its size once the call is old and the context full. See `Tool.bulkArguments`.
+  bulkArguments: ["content"],
   definition: {
     name: "write",
     description:
@@ -545,6 +547,7 @@ export const writeTool: Tool = {
 export const editTool: Tool = {
   requiresApproval: true,
   fixedList: writesConfig,
+  bulkArguments: ["old_string", "new_string"],
   definition: {
     name: "edit",
     description:
@@ -648,6 +651,7 @@ function countOccurrences(haystack: string, needle: string): number {
 export const multiEditTool: Tool = {
   requiresApproval: true,
   fixedList: writesConfig,
+  bulkArguments: ["edits"],
   definition: {
     name: "multi_edit",
     description:

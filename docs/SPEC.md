@@ -614,7 +614,12 @@ only its content — because an orphaned `tool_use` is rejected outright by Anth
 involved: this runs inside a turn somebody is waiting on. The content is not lost (0.7.25): it is written
 whole to the conversation's spill directory first (`ToolOutputSpill.keepCleared`; a result already
 spilled points at its existing file), and the marker names the path for `read`. Only a failed write
-falls back to the old "read it again" marker, with a warning in the log.
+falls back to the old "read it again" marker, with a warning in the log. When the older results are not
+enough, the text old calls carried goes next, oldest first: the arguments a tool declares as a file's
+text (`Tool.bulkArguments`: `write`'s content, `edit`'s and `multi_edit`'s strings), each long one
+replaced by a line giving its size and saying the call ran. Only a call already answered and older than
+the latest round; the call, its id and its result stay. A call that sends that line back as its text is
+answered with an error and not run.
 
 **Sliding window:**
 1. Token count all messages (system + conversation history + current user message)
@@ -707,7 +712,7 @@ harness section now describes what already happened instead.
 
 **`preserve_recent_tool_results` is a preference, not a guarantee.**
 Keeping the newest results whole is right — they are what the model is still working from — but `keepRecent × the per-result cap` can exceed the whole budget on a small window.
-So `trimToolResults` trims the older results first and, only if the set still does not fit, squeezes the protected ones oldest-first.
+So `trimToolResults` trims the older results first, then shortens the text old `write` and `edit` calls carried, and only if the set still does not fit squeezes the protected ones oldest-first.
 Nothing changes in the ordinary case.
 When the last resort fires it is logged as a warning naming the model, the budget and both knobs, because it is a statement about the configuration rather than about that turn.
 

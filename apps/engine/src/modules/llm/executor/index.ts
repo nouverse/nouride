@@ -195,13 +195,17 @@ export class TurnExecutor {
           keepRecent: this.deps.llm.context.preserveRecentToolResults,
           // Each one cleared is kept in a file first, and its marker says where — `ToolOutputSpill.keepCleared`.
           ...(keepCleared ? { keep: keepCleared } : {}),
+          // And what old `write` and `edit` calls carried, which no result trimming reaches — `Tool.bulkArguments`.
+          bulkArguments: (name) => req.toolset.get(name)?.bulkArguments,
         });
-        if (room.trimmed > 0) {
+        const shortened = room.shortened ?? 0;
+        if (room.trimmed + shortened > 0) {
           working.splice(0, working.length, ...room.messages);
           log.info("trimmed tool output to make room", {
             agent_id: agent.config.id, turn_id: req.turnId,
             chat_id: req.chatId,
             trimmed: room.trimmed,
+            ...(shortened > 0 ? { shortened_calls: shortened } : {}),
             // Both in the estimator's tokens: times the scale, they are the provider's.
             budget: ceilings.compactAt,
             tokens: room.tokens,
@@ -222,7 +226,8 @@ export class TurnExecutor {
               per_result_cap: ceilings.toolResultCap,
             });
           }
-          this.deps.onActivity?.("compact", `context full: cleared ${room.trimmed} earlier tool result(s) to make room`, { phase: "pruned", pruned: room.trimmed });
+          const cleared = [room.trimmed > 0 ? `cleared ${room.trimmed} earlier tool result(s)` : "", shortened > 0 ? `shortened the text of ${shortened} earlier write(s)` : ""].filter(Boolean).join(" and ");
+          this.deps.onActivity?.("compact", `context full: ${cleared} to make room`, { phase: "pruned", pruned: room.trimmed });
         }
 
         this.deps.onActivity?.("thinking", iterations === 1 ? "thinking" : `thinking (step ${iterations})`);

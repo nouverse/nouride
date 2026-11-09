@@ -262,8 +262,11 @@ that trimmed away its own tool output every iteration and eventually answered no
 **`preserve_recent_tool_results` yields when it cannot be honoured.** An absolute protection multiplies —
 `keepRecent × the per-result cap` is a floor no pass can remove, and at 3 × 25k that is three quarters of
 a 128k model's budget and more than all of a 200k one once the knob is raised to 6. `trimToolResults`
-trims candidates first and squeezes the protected ones only if the set still does not fit; the last
-resort logs a warning naming the model, the budget and both knobs, because the cause is configuration.
+trims candidates first, then shortens the file text old answered calls carried (`Tool.bulkArguments`:
+`write`, `edit`, `multi_edit`; never the latest round), and squeezes the protected ones only if the set
+still does not fit; the last resort logs a warning naming the model, the budget and both knobs, because
+the cause is configuration. A tool whose arguments carry a file's text declares them, or a long turn of
+it fills the window with nothing able to drop it.
 
 **Do not put a per-tool cap in a tool.** That is a rule twenty tools have to remember and the one that
 forgets is the one that ends a turn. `exec` is the obvious offender and not the only one: `read` at its

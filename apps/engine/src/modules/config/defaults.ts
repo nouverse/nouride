@@ -297,8 +297,9 @@ export const DEFAULT_CONFIG: GlobalConfig = {
       maxTokensPerTurn: 32_000,
       /**
        * 250, so one turn can carry a long piece of work through — a refactor, a debugging session —
-       * the way a coding agent does, instead of stopping at 25 to ask whether to go on. The context
-       * is compacted as it grows within the turn, and `/stop` ends one at once.
+       * the way a coding agent does, instead of stopping at 25 to ask whether to go on. Within the turn,
+       * as the context fills, old tool output and the text old writes and edits carried are cleared from
+       * it, oldest first (`trimToolResults`); `/stop` ends one at once.
        */
       maxToolIterations: 250,
       /**
