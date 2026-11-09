@@ -100,6 +100,25 @@ describe("release.yml", () => {
   }
 });
 
+describe("the Pro half's release.yml", () => {
+  // Found on a release: ci.yml had passed on the tagged commit, so the Pro half skipped `verify`, and GitHub then skipped
+  // every job downstream of it that had no condition of its own. `build` had one and ran; `sign` and `boxes` did not, so
+  // CHECKSUMS-pro went out with no signature and no box would install the release.
+  const proRelease = "internals/pro/.github/workflows/release.yml";
+  const pro = existsSync(join(ROOT, proRelease)) ? jobs(read(proRelease)) : null;
+
+  test.skipIf(!pro)("signs and publishes to boxes after a build that ran with verify skipped", () => {
+    expect(pro!.get("build")).toContain("needs.verify.result == 'skipped'");
+    for (const [name, upstream] of [["sign", "build"], ["boxes", "sign"]] as const) {
+      const job = pro!.get(name) ?? "";
+      expect({ name, condition: /^ {4}if: .*$/m.exec(job)?.[0] ?? "" }).toEqual({
+        name,
+        condition: expect.stringContaining(`!cancelled() && needs.${upstream}.result == 'success'`),
+      });
+    }
+  });
+});
+
 describe("the lints", () => {
   test("read the Pro code when it is there, and never the LLM gateway's", async () => {
     const files = (await lintedFiles(ROOT, ["ts", "tsx"])).map((path) => path.slice(ROOT.length + 1));
