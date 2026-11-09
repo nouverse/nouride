@@ -92,4 +92,26 @@ describe("an agent at work", () => {
     expect(seen.earlier).toBe("Show 3 earlier steps");
     expect(seen.scrolls).toBe(false);
   });
+
+  test("an answer with no steps: its pill says its time, no count, and still opens to the model, the round trips and the tokens", async () => {
+    const transcript = WIRE["/sessions/ses_1/turns"] as { turns: Record<string, unknown>[] } & Record<string, unknown>;
+    const plain = { ...transcript.turns[0], toolCalls: 0, steps: [], durationMs: 4_000, iterations: 1, model: "test-model", inputTokens: 120, outputTokens: 8 };
+    answer({
+      "/sessions/ses_1/turns": { status: 200, body: { ...transcript, turns: [plain] } },
+      "/sessions/ses_1/live": { status: 200, body: { turn: null, jobs: [] } },
+      "/turns/turn_1": { status: 404, body: { error: "no record" } },
+    });
+    const seen: Record<string, unknown> = {};
+    await renderPage("/chat/ses_1", async (host) => {
+      const pill = () => [...host.querySelectorAll<HTMLButtonElement>("[data-agent] button")].find((button) => (button.textContent ?? "").startsWith("✓"));
+      await eventually(() => pill() !== undefined, 3_000, "the pill");
+      seen.pill = pill()!.textContent;
+      pill()!.click();
+      await eventually(() => (host.textContent ?? "").includes("model: test-model"), 2_000, "opened");
+      seen.opened = host.querySelector("[data-agent]")?.textContent;
+    });
+    expect(seen.pill).toBe("✓4s");
+    expect(seen.opened).toContain("1 model round trip");
+    expect(seen.opened).toMatch(/120/);
+  });
 });

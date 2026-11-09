@@ -8,7 +8,7 @@ import { renderToString } from "react-dom/server";
 import { createElement } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { formatDuration, formatElapsed, saidWhileWorking, turnTokens, workSteps } from "@/commons/lib/steps";
-import { StepFeed } from "@/commons/components/turns/Steps";
+import { StepFeed, StepPill } from "@/commons/components/turns/Steps";
 import { LiveTurnView, TurnView } from "@/modules/chat/components/Turn";
 import type { ChatTurn, LiveTurn, TurnStep } from "@nouride/wire";
 
@@ -44,6 +44,26 @@ describe("the live feed", () => {
     expect(html).toContain("web_search query 6<");
     expect(html).toContain("web_search query 11<");
     expect(html).not.toMatch(/<div class="[^"]*overflow-y-auto/);
+  });
+});
+
+describe("the finished pill", () => {
+  // Every plain answer, and every reply in a group, read "✓ 0 steps · 5ms", which looked like a glitch.
+  const pill = (props: Partial<Parameters<typeof StepPill>[0]>) =>
+    renderToString(createElement(StepPill, { status: "done", steps: [], toolCalls: 0, ...props })).replaceAll("<!-- -->", "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+
+  test("an answer with no steps says its mark and its time, and no count", () => {
+    expect(pill({ durationMs: 4_000 })).toBe("✓ 4s");
+    expect(pill({ durationMs: 4_000, status: "failed" })).toBe("✕ 4s · failed");
+  });
+
+  test("one with neither steps nor a time says there are details to open", () => {
+    expect(pill({})).toBe("✓ details");
+  });
+
+  test("one with steps counts them, as it did", () => {
+    const steps: TurnStep[] = [{ seq: 1, at: 0, kind: "tool", text: "exec ls", ms: 0 }, { seq: 2, at: 1, kind: "tool_done", text: "exec ok", ms: 3 }];
+    expect(pill({ steps, durationMs: 4_000 })).toBe("✓ 1 step · 4s");
   });
 });
 

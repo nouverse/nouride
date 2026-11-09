@@ -185,6 +185,12 @@ export function StepPill({
 }) {
   const [open, setOpen] = useState(false);
   const counted = countedSteps(steps).length || toolCalls;
+  /**
+   * What it took, said only when it took something: "0 steps" on every plain answer read as a glitch. With no steps it
+   * is the mark and the time, "✓ 4s"; with neither (a turn from before durations were kept), "details", so the pill
+   * still says what a press opens: the model, the round trips and the tokens.
+   */
+  const took = counted > 0 ? `${counted} ${counted === 1 ? "step" : "steps"}` : durationMs === undefined ? "details" : null;
   const tokens = turnTokens(inputTokens, outputTokens);
   const { mark, tone, label } = statusMark(status);
 
@@ -196,12 +202,10 @@ export function StepPill({
         className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-base-200/80 hover:bg-base-300/80 border border-base-content/[0.08] text-[11px] font-mono text-base-content/70 hover:text-base-content transition-all active:scale-95 shadow-2xs group"
       >
         <span className={`font-bold ${tone}`}>{mark}</span>
-        <span className="font-semibold text-base-content/85">
-          {counted} {counted === 1 ? "step" : "steps"}
-        </span>
+        {took ? <span className="font-semibold text-base-content/85">{took}</span> : null}
         {durationMs !== undefined && (
           <>
-            <span aria-hidden="true" className="text-base-content/40">·</span>
+            {took ? <span aria-hidden="true" className="text-base-content/40">·</span> : null}
             <span>{formatDuration(durationMs)}</span>
           </>
         )}
