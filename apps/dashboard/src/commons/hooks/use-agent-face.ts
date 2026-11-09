@@ -18,6 +18,8 @@ export interface AgentFace {
    * or a charcoal outfit still reads on a light page and a dark one.
    */
   tint?: string;
+  /** The orchestrator (`[daemon] orchestrator`): the one agent whose cat is ringed, as the mockup the owner signed off marks it. */
+  orchestrator?: boolean;
 }
 
 export function useAgentFace(agentId: string | undefined): AgentFace | null {
@@ -27,6 +29,7 @@ export function useAgentFace(agentId: string | undefined): AgentFace | null {
   if (!agentId) return null;
   const name = agents?.find((agent) => agent.id === agentId)?.displayName || agentId;
   const look = looks.get(agentId);
-  if (!look) return { name };
-  return { name, look, tint: `color-mix(in oklab, ${COLORS[look.outfitColor].q} 60%, var(--color-base-content))` };
+  const orchestrator = status.data?.orchestrator === agentId ? { orchestrator: true } : {};
+  if (!look) return { name, ...orchestrator };
+  return { name, look, tint: `color-mix(in oklab, ${COLORS[look.outfitColor].q} 60%, var(--color-base-content))`, ...orchestrator };
 }

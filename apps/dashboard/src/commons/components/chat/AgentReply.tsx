@@ -1,11 +1,14 @@
 /**
- * An agent's side of a conversation: its own cat on the left, ringed in its colour, and beside it a column with its
- * name, its steps and its answer. The same row as a person's (`PersonMessage`): the face the same size, the same gap,
+ * An agent's side of a conversation: its own cat on the left, and beside it a column with its name, its steps and its
+ * answer. The same row as a person's (`PersonMessage`): the face the same size, the same gap,
  * so a group reads in one rhythm — person, agent, person.
  *
  * The cat is back beside the reply. It was taken out when every agent shared one mascot and the picture said only "an
  * agent"; each agent now wears its own Office look, so the face says which agent before the name is read, and the
- * name and the ring in its colour tell three voices in a room apart at a glance.
+ * name in its colour tells three voices in a room apart at a glance.
+ *
+ * Only the orchestrator's cat is ringed, in its colour: the one a message that names nobody goes to, marked as the
+ * signed-off mockup marks it. A ring on every cat said nothing, and a charcoal one sat heavy on the light theme.
  */
 
 import type { CSSProperties, ReactNode } from "react";
@@ -39,7 +42,7 @@ export function AgentReply({
       {face?.look ? (
         // The name says who beside it; the cat is the picture of the same thing, not a second label to read out.
         <span aria-hidden="true" className="shrink-0">
-          <AgentAvatar look={face.look} name="" size="xs" className="ring-2 ring-[color:var(--agent-tint)] max-sm:size-7 max-sm:rounded-[9px]" />
+          <AgentAvatar look={face.look} name="" size="xs" className={`${face.orchestrator ? "ring-2 ring-[color:var(--agent-tint)] " : ""}max-sm:size-7 max-sm:rounded-[9px]`} />
         </span>
       ) : (
         <span aria-hidden="true" className="size-7 shrink-0 sm:size-8" />

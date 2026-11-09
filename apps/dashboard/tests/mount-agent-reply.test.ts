@@ -1,6 +1,6 @@
 /**
- * An agent's reply beside its own cat, as a person's words sit beside their initials (`AgentReply`): the cat ringed in
- * the agent's colour, its name in that colour above, and the steps, the answer and Copy in the column beside it. A
+ * An agent's reply beside its own cat, as a person's words sit beside their initials (`AgentReply`): the cat (ringed in
+ * its colour when it is the orchestrator), its name in that colour above, and the steps, the answer and Copy in the column beside it. A
  * person's row and an agent's share the face's size and the gap, so a group reads in one rhythm.
  */
 
@@ -14,7 +14,12 @@ const classes = (element: Element | null | undefined) => (element?.getAttribute(
 
 describe("an agent's reply", () => {
   test("sits beside the agent's cat, its name in its colour above, the steps, the answer and Copy in one column", async () => {
-    answer({ "/sessions/ses_1/live": { status: 200, body: { turn: null, jobs: [] } }, "/turns/turn_1": { status: 404, body: { error: "no record" } } });
+    const STATUS = WIRE["/status"] as Record<string, unknown>;
+    answer({
+      "/status": { status: 200, body: { ...STATUS, orchestrator: "nouva" } },
+      "/sessions/ses_1/live": { status: 200, body: { turn: null, jobs: [] } },
+      "/turns/turn_1": { status: 404, body: { error: "no record" } },
+    });
     const seen: Record<string, unknown> = {};
     await renderPage("/chat/ses_1", async (host) => {
       const reply = () => host.querySelector('[data-agent="nouva"]');
@@ -45,6 +50,23 @@ describe("an agent's reply", () => {
     expect(column.at(-1)).toContain("Copy");
     // Its icon where the answer's words start: drawn back by the padding it has.
     expect(seen.copy).toEqual(expect.arrayContaining(["px-2", "-ml-2"]));
+  });
+
+  test("only the orchestrator's cat is ringed: another agent's reply has its cat bare", async () => {
+    const STATUS = WIRE["/status"] as Record<string, unknown>;
+    answer({
+      "/status": { status: 200, body: { ...STATUS, orchestrator: "nestor" } },
+      "/sessions/ses_1/live": { status: 200, body: { turn: null, jobs: [] } },
+      "/turns/turn_1": { status: 404, body: { error: "no record" } },
+    });
+    let ring: string[] = [];
+    await renderPage("/chat/ses_1", async (host) => {
+      const reply = () => host.querySelector('[data-agent="nouva"]');
+      await eventually(() => reply()?.querySelector("canvas") != null, 3_000, "the reply");
+      ring = classes(reply()!.firstElementChild?.firstElementChild);
+    });
+    expect(ring).toEqual(expect.arrayContaining(["size-8", "max-sm:size-7"]));
+    expect(ring).not.toContain("ring-2");
   });
 
   test("in a group, a person's row and an agent's share the face's size and the gap", async () => {
