@@ -31,6 +31,7 @@ import { sendsShortenedArgument } from "@/modules/llm/context.ts";
 import { scratchpadFor } from "@nouride/persona";
 import { countFileLines, workspaceView } from "./workspace-view.ts";
 import { arrivedEmpty, malformedArguments, withCutNote } from "./cut-off.ts";
+import { STOPPED_CALL_GRACE_MS, untilStopped } from "./stopped-call.ts";
 import type { ApprovalAsk } from "@/modules/tools/approval.ts";
 import type { ExecutorDeps, ToolControl, TurnRequest } from "./types.ts";
 
@@ -419,7 +420,13 @@ export class ToolCaller {
     req.journal?.started([call.id]);
     const startedAt = Date.now();
     try {
-      const result = await tool.execute(call.arguments, approved ? { ...ctx, approved } : ctx);
+      // Raced against the turn's stop: a tool that ignores its signal no longer holds the chat (`stopped-call.ts`).
+      const result = await untilStopped(
+        tool.execute(call.arguments, approved ? { ...ctx, approved } : ctx),
+        req.signal,
+        this.deps.stoppedCallGraceMs ?? STOPPED_CALL_GRACE_MS,
+        { tool: call.name, agentId: agent.config.id, ...(req.turnId ? { turnId: req.turnId } : {}) },
+      );
       if (result.untrusted) this.untrustedRead.set(req, (this.untrustedRead.get(req) ?? new Set()).add(call.name));
 
       log.debug("tool executed", {

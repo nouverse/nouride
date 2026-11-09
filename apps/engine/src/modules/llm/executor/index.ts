@@ -11,6 +11,7 @@
  *   types.ts           the request, the result, what the executor is wired to, the token shares
  *   prepare.ts         everything decided before the first call: window, prompt, budget, history
  *   tool-caller.ts     one tool call: gate, sandbox, cap, and the two facts the loop reads after
+ *   stopped-call.ts    a tool call that does not stop with its turn, left to finish without it
  *   provider-caller.ts one model call: streaming, the overflow retry, usage, and the tools-withheld wrap-up
  *   settle.ts          when a round may start, and what a turn owes before it is allowed to end
  *   workspace-view.ts  where a turn's files are — derived once, for the prompt and the sandbox

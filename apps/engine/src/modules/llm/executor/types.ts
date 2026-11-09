@@ -457,6 +457,11 @@ export interface ExecutorDeps {
    */
   typingRefreshMs?: number;
   /**
+   * How long a tool has, once its turn is stopped, to stop by itself before the turn goes on without it
+   * (`STOPPED_CALL_GRACE_MS`). Injectable so a test of a tool that never stops does not wait real seconds.
+   */
+  stoppedCallGraceMs?: number;
+  /**
    * Each model call the turn makes, as the provider reported it: its own, and the compaction before the first, which
    * says so (`purpose: "compaction"`) — the summary is a call of its own, and it used to be metered by nobody.
    */

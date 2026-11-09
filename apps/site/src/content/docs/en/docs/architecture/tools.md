@@ -158,7 +158,9 @@ rather than a warning in a log nobody reads.
 | `command_timeout_ms` | 10 min | a scheduled `--command` payload |
 
 The two turn budgets are large on purpose, so one turn can carry a long piece of work through the way
-a coding agent does. The conversation is compacted as it grows, and `/stop` ends a turn at once.
+a coding agent does. The conversation is compacted as it grows, and `/stop` ends a turn at once. A
+tool that does not stop when its turn is stopped, by `/stop` or by the clock, is given five seconds;
+then the turn ends without it, and its result says it may still be running in the background.
 `max_turn_duration_ms` is separate from the per-request and per-tool timeouts, which each bound a
 single step. While a turn runs, other chats do not wait for it, and in a one-to-one chat a message
 sent meanwhile is read by the turn at its next step. An agent's pack can set its own budgets with
