@@ -60,6 +60,8 @@ export interface InstallInput {
   host?: PlatformArch;
   /** Injected so tests do not reach the network. */
   fetchImpl: typeof fetch;
+  /** The pauses before each try again of the checksum file and its signature (`RETRY_WAITS_MS`); a test passes none. */
+  retryWaitsMs?: readonly number[];
 }
 
 export interface ApplyReport {
@@ -92,12 +94,13 @@ export async function installStaged(input: InstallInput): Promise<ApplyReport> {
 
   const { bytes, sha256 } = await digestFile(input.tarball);
 
-  const checksums = await fetchText(input.checksumUrl, input.fetchImpl);
+  const waits = input.retryWaitsMs ?? RETRY_WAITS_MS;
+  const checksums = await fetchText(input.checksumUrl, input.fetchImpl, waits);
 
   // The checksum file is only as good as whoever published it — see `signing.ts`. Checked before
   // it is used for anything, and for a private edition a missing signature is a refusal.
   if (input.signatureUrl) {
-    const signature = await fetchText(input.signatureUrl, input.fetchImpl);
+    const signature = await fetchText(input.signatureUrl, input.fetchImpl, waits);
     if (!verifyChecksums(checksums, signature, input.trustedKeys)) {
       throw new Error("the release's checksum file is not signed by Nouverse; refusing to install it");
     }
@@ -143,10 +146,37 @@ export async function installStaged(input: InstallInput): Promise<ApplyReport> {
   }
 }
 
-async function fetchText(url: string, fetchImpl: typeof fetch): Promise<string> {
-  const response = await fetchImpl(url);
-  if (!response.ok) throw new Error(`fetching checksums answered ${response.status} (${url})`);
-  return await response.text();
+/**
+ * The pauses before each try again of a release's checksum file or signature: four tries in about twelve seconds. GitHub's
+ * release downloads answer a passing 500 or 504 now and then, for minutes and for other projects' releases too, and a
+ * single try made an update whose download had finished fail at Install.
+ */
+const RETRY_WAITS_MS: readonly number[] = [1_000, 3_000, 8_000];
+
+/** An answer worth asking again: the server, or one in front of it, failing for a moment, or asking to slow down. */
+function passing(status: number): boolean {
+  return status === 429 || (status >= 500 && status <= 599);
+}
+
+const pause = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+async function fetchText(url: string, fetchImpl: typeof fetch, waits: readonly number[]): Promise<string> {
+  for (let tries = 1; ; tries += 1) {
+    const last = tries > waits.length;
+    let response: Response;
+    try {
+      response = await fetchImpl(url);
+    } catch (error) {
+      if (last) throw error;
+      await pause(waits[tries - 1]!);
+      continue;
+    }
+    if (response.ok) return await response.text();
+    if (last || !passing(response.status)) {
+      throw new Error(`fetching checksums answered ${response.status} (${url})${tries > 1 ? `, ${tries} tries` : ""}`);
+    }
+    await pause(waits[tries - 1]!);
+  }
 }
 
 /**

@@ -76,6 +76,8 @@ const URLS = {
   swap: SWAP,
   // The machine the artefact is for, whichever one runs the suite: the platform guard is `platform-guard.test.ts`'s.
   host: { platform: "linux", arch: "x64" },
+  // No pause between tries of a checksum fetch that fails: a server that answers 500 forever is tried four times.
+  retryWaitsMs: [0, 0, 0],
 };
 
 describe("the checksum file parser", () => {
