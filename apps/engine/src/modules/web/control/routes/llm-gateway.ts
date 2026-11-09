@@ -66,8 +66,8 @@ export function registerLlmGatewayRoutes(control: ControlApp, deps: ControlDeps)
         return c.json({ error: on.error, plain: DID_NOT_START }, 500);
       }
       const answer: LlmGatewaySwitched = on.saved
-        ? { on: true, saved: true, plain: "Nougate is on." }
-        : { on: true, saved: false, plain: "Nougate is on, but the setting was not saved, so it is off again after Nouride restarts." };
+        ? { on: true, saved: true, said: "Nougate is on." }
+        : { on: true, saved: false, said: "Nougate is on, but the setting was not saved, so it is off again after Nouride restarts." };
       return c.json(answer);
     }
 
@@ -77,32 +77,31 @@ export function registerLlmGatewayRoutes(control: ControlApp, deps: ControlDeps)
       if (off.why === "not-carried") return c.json({ error: off.error, plain: NOT_CARRIED }, 409);
       return c.json({ error: off.error, plain: NOT_SAVED }, 400);
     }
-    if (!off.running) return c.json({ on: false, saved: true, plain: "Nougate is off." } satisfies LlmGatewaySwitched);
-    if (!deps.restart) return c.json({ on: true, saved: true, plain: "Saved. Nougate stops the next time Nouride starts." } satisfies LlmGatewaySwitched);
+    if (!off.running) return c.json({ on: false, saved: true, said: "Nougate is off." } satisfies LlmGatewaySwitched);
+    if (!deps.restart) return c.json({ on: true, saved: true, said: "Saved. Nougate stops the next time Nouride starts." } satisfies LlmGatewaySwitched);
 
     const restart = deps.restart.request({ by: principal.actor });
-    if (!restart.ok) {
-      // Worded for the page from why it was refused: its own note names a service, a container and a flag.
-      return c.json({
-        on: true,
-        saved: true,
-        ...(restart.note ? { note: restart.note } : {}),
-        plain:
-          restart.why === "no-restarter"
-            ? "Saved. Nougate stops the next time Nouride starts: nothing on this server would start Nouride again by itself, so it was not restarted now. Whoever runs the server can restart it there."
-            : "Saved. Nougate stops the next time Nouride starts; it was not restarted now.",
-      });
-    }
-    const answer: LlmGatewaySwitched = {
-      on: true,
-      saved: true,
-      restart: { waiting: restart.waiting, note: restart.note },
-      plain: restart.waitingFor
-        ? "Nougate stops as Nouride restarts, once its background work is done."
-        : restart.waiting
-          ? "Nougate stops as Nouride restarts, as soon as nothing is running."
-          : "Nougate stops as Nouride restarts now.",
-    };
+    // Worded for the page from what the restart said: its own note names a service, a container and a flag, for a CLI
+    // this route does not have.
+    const answer: LlmGatewaySwitched = !restart.ok
+      ? {
+          on: true,
+          saved: true,
+          said:
+            restart.why === "no-restarter"
+              ? "Saved. Nougate stops the next time Nouride starts: nothing on this server would start Nouride again by itself, so it was not restarted now. Whoever runs the server can restart it there."
+              : "Saved. Nougate stops the next time Nouride starts; it was not restarted now.",
+        }
+      : {
+          on: true,
+          saved: true,
+          restart: { waiting: restart.waiting },
+          said: restart.waitingFor
+            ? "Nougate stops as Nouride restarts, once its background work is done."
+            : restart.waiting
+              ? "Nougate stops as Nouride restarts, as soon as nothing is running."
+              : "Nougate stops as Nouride restarts now.",
+        };
     return c.json(answer);
   });
 }

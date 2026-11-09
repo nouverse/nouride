@@ -56,7 +56,8 @@ export interface SetupState {
    *
    * `carried`: the build carries it, on or off — absent from a daemon older than the switch, which offered the gateway
    * only while it ran; then `available` is all there is to go on, and there is no switch to turn. `decidedBy`: the
-   * server's environment holds the switch, and the dashboard shows it without being able to move it.
+   * server's environment holds the switch, and the dashboard shows it without being able to move it. `stopping`: it
+   * runs, and stops at the next start, the setting being off.
    */
   bundledGateway?: {
     available: boolean;
@@ -66,6 +67,7 @@ export interface SetupState {
     dashboard?: boolean;
     carried?: boolean;
     decidedBy?: "environment";
+    stopping?: boolean;
   };
   /**
    * Whether to draw the password form.

@@ -30,7 +30,7 @@ export interface LlmGatewaySwitched {
   /** The setting is written, so the next start keeps it. */
   saved: boolean;
   /** Turning it off: the restart asked for, and whether it waits for running work first. Absent when none was. */
-  restart?: { waiting: boolean; note: string };
-  /** What happened, in the dashboard's words. */
-  plain: string;
+  restart?: { waiting: boolean };
+  /** What happened, and when it takes effect, in the dashboard's words. */
+  said: string;
 }

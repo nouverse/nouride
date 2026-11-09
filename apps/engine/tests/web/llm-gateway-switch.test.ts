@@ -102,14 +102,14 @@ describe("PUT /llm-gateway, on", () => {
     const { put, restarts } = app({ gateway: gateway.port, restart: () => ({ ok: true, supervisor: "systemd", waiting: false, note: "" }) });
     const res = await put({ on: true });
     expect(res.status).toBe(200);
-    expect((await res.json()) as LlmGatewaySwitched).toEqual({ on: true, saved: true, plain: "Nougate is on." });
+    expect((await res.json()) as LlmGatewaySwitched).toEqual({ on: true, saved: true, said: "Nougate is on." });
     expect(gateway.asked).toEqual(["on"]);
     expect(restarts).toEqual([]);
   });
 
   test("on but not saved says it is off again after a restart", async () => {
     const { put } = app({ gateway: gatewaySwitch({ on: { ok: true, started: true, saved: false, error: "read-only" } }).port });
-    expect(await (await put({ on: true })).json()).toEqual({ on: true, saved: false, plain: "Nougate is on, but the setting was not saved, so it is off again after Nouride restarts." });
+    expect(await (await put({ on: true })).json()).toEqual({ on: true, saved: false, said: "Nougate is on, but the setting was not saved, so it is off again after Nouride restarts." });
   });
 
   test("each refusal in the page's words, its own under them", async () => {
@@ -150,8 +150,8 @@ describe("PUT /llm-gateway, off", () => {
     expect(await res.json()).toEqual({
       on: true,
       saved: true,
-      restart: { waiting: false, note: "restarting now: systemd is expected to start it again" },
-      plain: "Nougate stops as Nouride restarts now.",
+      restart: { waiting: false },
+      said: "Nougate stops as Nouride restarts now.",
     });
     expect(gateway.asked).toEqual(["off"]);
     expect(restarts.map((request) => request.by)).toEqual(["gading"]);
@@ -159,9 +159,9 @@ describe("PUT /llm-gateway, off", () => {
 
   test("while something runs, it says it waits for it", async () => {
     const waiting = app({ gateway: gatewaySwitch({ running: true }).port, restart: () => ({ ok: true, supervisor: "systemd", waiting: true, note: "n" }) });
-    expect(await (await waiting.put({ on: false })).json()).toMatchObject({ restart: { waiting: true }, plain: "Nougate stops as Nouride restarts, as soon as nothing is running." });
+    expect(await (await waiting.put({ on: false })).json()).toMatchObject({ restart: { waiting: true }, said: "Nougate stops as Nouride restarts, as soon as nothing is running." });
     const jobs = app({ gateway: gatewaySwitch({ running: true }).port, restart: () => ({ ok: true, supervisor: "systemd", waiting: false, note: "n", waitingFor: "one background job" }) });
-    expect(await (await jobs.put({ on: false })).json()).toMatchObject({ plain: "Nougate stops as Nouride restarts, once its background work is done." });
+    expect(await (await jobs.put({ on: false })).json()).toMatchObject({ said: "Nougate stops as Nouride restarts, once its background work is done." });
   });
 
   test("where nothing would start Nouride again, the setting is kept and the page says who restarts it", async () => {
@@ -174,15 +174,14 @@ describe("PUT /llm-gateway, off", () => {
     expect(await res.json()).toEqual({
       on: true,
       saved: true,
-      note: "inside a container: use `docker restart <container>`",
-      plain:
+      said:
         "Saved. Nougate stops the next time Nouride starts: nothing on this server would start Nouride again by itself, so it was not restarted now. Whoever runs the server can restart it there.",
     });
   });
 
   test("already off: written, and no restart asked for nothing", async () => {
     const { put, restarts } = app({ gateway: gatewaySwitch({ running: false }).port, restart: () => ({ ok: true, supervisor: "systemd", waiting: false, note: "" }) });
-    expect(await (await put({ on: false })).json()).toEqual({ on: false, saved: true, plain: "Nougate is off." });
+    expect(await (await put({ on: false })).json()).toEqual({ on: false, saved: true, said: "Nougate is off." });
     expect(restarts).toEqual([]);
   });
 

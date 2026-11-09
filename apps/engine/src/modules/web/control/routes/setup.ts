@@ -199,5 +199,10 @@ function bundledGatewayState(deps: ControlDeps): NonNullable<SetupState["bundled
     ...(deps.llmGatewayMount ? { mount: deps.llmGatewayMount, dashboard: running.dashboardEmbeddable() } : {}),
     carried: true,
     ...decided,
+    /**
+     * Running, and the file has it off: turned off where nothing restarts Nouride, or on where the setting could not be
+     * written. Either way it stops at the next start, and the page says so rather than offering Turn off again.
+     */
+    ...(!gateway?.decidedBy && deps.ctx.config?.nougate?.inProcess === false ? { stopping: true } : {}),
   };
 }

@@ -607,6 +607,15 @@ describe("what `/setup/state` says about the bundled gateway", () => {
     expect(await state({ llmGateway: gatewaySwitch({ decidedBy: "environment" }) })).toMatchObject({ bundledGateway: { available: true, decidedBy: "environment" } });
   });
 
+  test("running with the setting off says it stops at the next start, so the page does not offer Turn off again", async () => {
+    // Turned off where nothing restarts Nouride: written off, still serving until somebody restarts the server.
+    const withFile = (inProcess: boolean) => ({ ...deps().ctx, config: { nougate: { inProcess, port: 18256 } } });
+    expect(await state({ llmGateway: gatewaySwitch(), ctx: withFile(false) })).toMatchObject({ bundledGateway: { available: true, stopping: true } });
+    expect(((await state({ llmGateway: gatewaySwitch(), ctx: withFile(true) })).bundledGateway as Record<string, unknown>).stopping).toBeUndefined();
+    // The environment holds it: the file says nothing that will happen.
+    expect(((await state({ llmGateway: gatewaySwitch({ decidedBy: "environment" }), ctx: withFile(false) })).bundledGateway as Record<string, unknown>).stopping).toBeUndefined();
+  });
+
   test("a build that does not carry it says so, and offers nowhere to find it", async () => {
     const body = (await state({ llmGateway: gatewaySwitch({ carried: false, running: false }), llmGatewayMount: "/llm-gateway" })).bundledGateway;
     expect(body).toEqual({ available: false, carried: false });
