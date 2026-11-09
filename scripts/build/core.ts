@@ -209,7 +209,7 @@ async function withPluginsResolvable<T>(edition: EditionSpec, run: () => Promise
    * `process.exit(code)`, and `linkPlugin` throws on a private submodule that is not checked out.
    * The links that had already been made survived both — and the next `lint:types` followed them
    * into nougate's source and failed with sixteen errors on a tree where nothing was wrong. The
-   * same bug `dev-router.sh` documents at its own `trap`, reached from the other direction.
+   * same bug `dev-gateway.sh` documents at its own `trap`, reached from the other direction.
    *
    * Registering it after the linking loop fixed the first way out and not the second: the throw
    * happens mid-loop, so the handler was never installed and `packages/wa-bridge` stayed linked.
