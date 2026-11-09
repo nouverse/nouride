@@ -50,12 +50,16 @@ dua agent kembar dalam satu kantor.
 | Bagian | Key | Kata |
 |---|---|---|
 | Fur | `fur` | ginger, grey, black, white, brown, cream |
-| Pattern | `pattern` | plain, tabby |
+| Pattern | `pattern` | plain, tabby, tuxedo |
 | Outfit | `outfit` | none, hoodie, tee, jacket |
-| Outfit colour | `outfit_color` | blue, lime, peach, charcoal, sage, lilac, white; topi dan syal ikut warna ini; white hanya kalau dipilih |
-| Hat | `hat` | none, beanie, cap, beret, headband, headphones |
-| Accessory | `accessory` | none, glasses, sunglasses, scarf |
+| Outfit colour | `outfit_color` | blue, lime, peach, charcoal, sage, lilac, white; topi (kecuali helm) dan syal ikut warna ini; white hanya kalau dipilih |
+| Hat | `hat` | none, beanie, cap, beret, headband, headphones, helmet |
+| Accessory | `accessory` | none, glasses, sunglasses, scarf, photochromic |
 | Eyes | `eyes` | round, sleepy, sparkly |
+
+Tuxedo, helm (selalu abu-abu) dan kacamata photochromic adalah milik maskot: kucing tuxedo hitam dengan ketiganya dan
+hoodie lilac berpakaian seperti maskot, dan begitulah **Nourider** baru mulai. Agent yang dibuat sebelumnya tetap dengan
+tampilannya sampai kamu memilih ini di tab Look-nya.
 
 Tampilan disimpan di `[look]` dalam `config.toml` agent itu, jadi ikut terbawa bersama pack-nya:
 

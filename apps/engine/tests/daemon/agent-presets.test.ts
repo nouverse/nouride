@@ -111,6 +111,19 @@ describe("creating an agent from a preset", () => {
     expect(await readTextFile(join(agentsDir, "titled", "SOUL.md"))).toBe("# SOUL.md - Titled\n\nBe brief.\n");
   });
 
+  test("a Nourider is dressed as the mascot, in its pack and loaded; another preset keeps the look its id gives", async () => {
+    const mascot = { fur: "black", pattern: "tuxedo", outfit: "hoodie", outfitColor: "lilac", hat: "helmet", accessory: "photochromic", eyes: "round" };
+    const { setup, registry } = await service();
+    await setup.createAgent(input("nouva"));
+    await setup.createAgent(input("scout", { preset: "researcher" }));
+    expect(registry.get("nouva")?.config.look).toEqual(mascot as never);
+    // Under the keys the Look tab writes, so it is changed there like any other.
+    const written = parseToml<{ look: Record<string, string> }>(await readTextFile(join(agentsDir, "nouva", "config.toml"))).look;
+    expect(written).toEqual({ fur: "black", pattern: "tuxedo", outfit: "hoodie", outfit_color: "lilac", hat: "helmet", accessory: "photochromic", eyes: "round" });
+    expect(await readTextFile(join(agentsDir, "scout", "config.toml"))).not.toContain("[look]");
+    expect(registry.get("scout")?.config.look ?? {}).toEqual({});
+  });
+
   test("Custom gets exactly what was picked, and no lines of its own", async () => {
     const { setup, registry } = await service();
     await setup.createAgent(input("mine", { preset: "custom", tools: ["web_search", "read"] }));

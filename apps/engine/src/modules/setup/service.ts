@@ -29,7 +29,7 @@ import { STARTER_AGENTS, STARTER_MEMORY, STARTER_README } from "@/modules/setup/
 import { namingOrchestrator, setAgentAccess, setAgentTools, setOrchestrator } from "./agent-access.ts";
 import { externalAgentLlm, setAnsweredBy, setExternal, type ExternalSettings } from "./external-agent.ts";
 import { setEffort } from "./agent-effort.ts";
-import { setLook, type LookChange } from "./agent-look.ts";
+import { lookLines, setLook, type LookChange } from "./agent-look.ts";
 import type { EmbeddedGateway } from "@/modules/gateways/nougate-inproc.ts";
 import { presetOf, toolsFor, type PresetId } from "./presets.ts";
 
@@ -519,6 +519,7 @@ export class SetupService {
           : ["# Written out in full rather than left to the default, so what this agent may do is visible", "# here rather than in the loader. Removing a name takes the capability away."]),
         `enabled = ${JSON.stringify(written)}`,
         "",
+        ...lookLines(preset.look),
         ...(input.external
           ? [
               "# Its turns are answered by this coding CLI, run as this agent, signed in on this profile (the Brain tab).",

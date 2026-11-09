@@ -49,7 +49,8 @@ async function service() {
 describe("an agent's look", () => {
   test("each part picked is a [look] key the loader reads; an emptied one is removed", async () => {
     const { registry, setup } = await service();
-    await setup.createAgent({ id: "nouva", displayName: "Nouva", systemPrompt: "", model: "gpt-4o", actor: "t" });
+    // A preset with no look of its own (a Nourider starts dressed as the mascot: agent-presets.test.ts).
+    await setup.createAgent({ id: "nouva", displayName: "Nouva", systemPrompt: "", model: "gpt-4o", actor: "t", preset: "assistant" });
     expect(await setup.setLook({ agentId: "nouva", look: { fur: "ginger", outfitColor: "lime", hat: "beanie" }, actor: "t" })).toEqual({ ok: true });
     expect(registry.get("nouva")?.config.look).toEqual({ fur: "ginger", outfitColor: "lime", hat: "beanie" });
     expect(await readTextFileIfExists(join(root, "agents", "nouva", "config.toml"))).toContain('outfit_color = "lime"');
@@ -62,7 +63,7 @@ describe("an agent's look", () => {
     await setup.createAgent({ id: "nouva", displayName: "Nouva", systemPrompt: "", model: "gpt-4o", actor: "t" });
     const before = await readTextFileIfExists(join(root, "agents", "nouva", "config.toml"));
     // The part refused, which the Look tab names (0.8.23).
-    expect(await setup.setLook({ agentId: "nouva", look: { hat: "crown" }, actor: "t" })).toEqual({ ok: false, field: "hat", error: "hat must be one of none, beanie, cap, beret, headband, headphones, or empty for its own" });
+    expect(await setup.setLook({ agentId: "nouva", look: { hat: "crown" }, actor: "t" })).toEqual({ ok: false, field: "hat", error: "hat must be one of none, beanie, cap, beret, headband, headphones, helmet, or empty for its own" });
     expect(await setup.setLook({ agentId: "nouva", look: { outfitColor: "gold" }, actor: "t" })).toMatchObject({ ok: false, field: "outfitColor" });
     expect(await readTextFileIfExists(join(root, "agents", "nouva", "config.toml"))).toBe(before);
   });
