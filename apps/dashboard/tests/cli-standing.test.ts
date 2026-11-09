@@ -21,7 +21,15 @@ beforeAll(() => {
   realFetch = globalThis.fetch;
 });
 
+/**
+ * Every root a test draws, unmounted after it. Left mounted, a component's queries kept their timers (a 30 s
+ * staleness among them), which fired once this file's window was gone and failed whichever test ran then.
+ */
+const mounted: { unmount(): void }[] = [];
+const mountRoot = <R extends { unmount(): void }>(root: R): R => (mounted.push(root), root);
+
 afterEach(() => {
+  for (const root of mounted.splice(0)) root.unmount();
   globalThis.fetch = realFetch;
   dom.document.body.innerHTML = "";
 });
@@ -74,7 +82,7 @@ describe("the Models page", () => {
     const router = createRouter({ routeTree: root.addChildren([route]), history: createMemoryHistory({ initialEntries: ["/"] }) });
     const host = dom.document.createElement("div") as unknown as HTMLElement;
     dom.document.body.appendChild(host as never);
-    createRoot(host).render(React.createElement(QueryClientProvider, { client: new QueryClient({ defaultOptions: { queries: { retry: false } } }) }, React.createElement(RouterProvider, { router } as never)));
+    mountRoot(createRoot(host)).render(React.createElement(QueryClientProvider, { client: new QueryClient({ defaultOptions: { queries: { retry: false } } }) }, React.createElement(RouterProvider, { router } as never)));
     await eventually(() => host.querySelectorAll("[data-standing]").length === clis.length, 3_000, "the standings");
     return { host, asked };
   }
@@ -137,7 +145,7 @@ describe("the Brain tab of an agent that works in it", () => {
     const router = createRouter({ routeTree: routes.addChildren([page]), history: createMemoryHistory({ initialEntries: ["/"] }) });
     const host = dom.document.createElement("div") as unknown as HTMLElement;
     dom.document.body.appendChild(host as never);
-    createRoot(host).render(React.createElement(QueryClientProvider, { client: new QueryClient({ defaultOptions: { queries: { retry: false } } }) }, React.createElement(RouterProvider, { router } as never)));
+    mountRoot(createRoot(host)).render(React.createElement(QueryClientProvider, { client: new QueryClient({ defaultOptions: { queries: { retry: false } } }) }, React.createElement(RouterProvider, { router } as never)));
     await eventually(() => (host.textContent ?? "").includes("Codex answers Coder"), 3_000, "the Brain tab");
     return host;
   }
@@ -175,7 +183,7 @@ describe("the Brain tab of an agent that works in it", () => {
     const router = createRouter({ routeTree: routes.addChildren([page]), history: createMemoryHistory({ initialEntries: ["/"] }) });
     const host = dom.document.createElement("div") as unknown as HTMLElement;
     dom.document.body.appendChild(host as never);
-    createRoot(host).render(React.createElement(QueryClientProvider, { client: new QueryClient({ defaultOptions: { queries: { retry: false } } }) }, React.createElement(RouterProvider, { router } as never)));
+    mountRoot(createRoot(host)).render(React.createElement(QueryClientProvider, { client: new QueryClient({ defaultOptions: { queries: { retry: false } } }) }, React.createElement(RouterProvider, { router } as never)));
     await eventually(() => host.querySelector("[data-standing]") !== null, 3_000, "the standing");
     expect(plainText(host.querySelector("[data-standing] > p")!).replace(/\s+/g, " ").trim()).toBe("too old This Codex is older than this Nouride supports. Update it.");
     // One Details in the card: its numbers beside the command it starts, not a second one under the standing.

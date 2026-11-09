@@ -18,7 +18,15 @@ beforeAll(() => {
   realFetch = globalThis.fetch;
 });
 
+/**
+ * Every root a test draws, unmounted after it. Left mounted, a component's queries kept their timers (a 30 s
+ * staleness among them), which fired once this file's window was gone and failed whichever test ran then.
+ */
+const mounted: { unmount(): void }[] = [];
+const mountRoot = <R extends { unmount(): void }>(root: R): R => (mounted.push(root), root);
+
 afterEach(() => {
+  for (const root of mounted.splice(0)) root.unmount();
   globalThis.fetch = realFetch;
   dom.document.body.innerHTML = "";
 });
@@ -63,7 +71,7 @@ async function mount(): Promise<HTMLElement> {
   const host = dom.document.createElement("div") as unknown as HTMLElement;
   dom.document.body.appendChild(host as never);
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  createRoot(host).render(React.createElement(QueryClientProvider, { client }, React.createElement(ToastProvider, null, React.createElement(SkillRootsCard, { agentId: "nova" }))));
+  mountRoot(createRoot(host)).render(React.createElement(QueryClientProvider, { client }, React.createElement(ToastProvider, null, React.createElement(SkillRootsCard, { agentId: "nova" }))));
   await eventually(() => (host.textContent ?? "").includes("/srv/projects/home-app"), 2_000, "the folders");
   return host;
 }
