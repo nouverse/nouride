@@ -16,7 +16,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runCommand } from "@nouride/runtime";
 import { bundleFlags, compileFlags } from "../../../../scripts/build/core.ts";
-import { NOUGATE, OAUTH, resolveEdition, type PluginSpec } from "../../../../scripts/build/edition.ts";
+import { NOUGATE, OAUTH, OPTIONAL, resolveEdition, type PluginSpec } from "../../../../scripts/build/edition.ts";
 import { PUBLIC_EDITIONS } from "../../../../scripts/build/editions.ts";
 
 const ROOT = join(import.meta.dir, "../../../..");
@@ -64,6 +64,9 @@ describe("which build the free edition is", () => {
     const without = bundleFlags(resolveEdition(BASIC, [], present()).edition).join(" ");
     expect(without).not.toContain("NOURIDE_BUILD_GATEWAY");
     expect(without).toContain(`--external ${NOUGATE.pkg}`);
+    // Pro, built by its own entry point through the same core, bundles every optional plugin and is stamped the same.
+    const pro = { id: "pro", flag: "--pro", bundles: OPTIONAL, banner: [], public: false };
+    expect(bundleFlags(resolveEdition(pro, ["--pro"], present()).edition).join(" ")).toContain('--define NOURIDE_BUILD_GATEWAY="bundled"');
   });
 });
 
