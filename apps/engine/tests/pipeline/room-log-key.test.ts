@@ -121,11 +121,45 @@ describe("two of our bots in one group", () => {
     expect(room.map((message) => [message.id, message.text])).toEqual([["77", "who is on call tonight?"]]);
   });
 
+  test("in a supergroup, two lines alike from one person in one second are two lines: only their ids tell them apart", async () => {
+    const h = await daemon({ bots: ["nouva", "nestor"], mention: true });
+    const second = 1_762_000_000_000;
+    for (const bot of h.bots) {
+      await h.said(bot, { id: "500", chatId: "-100", text: "ok", timestamp: second });
+      await h.said(bot, { id: "501", chatId: "-100", text: "ok", timestamp: second });
+    }
+    expect(h.roomMessages.inRoom(["telegram:nouva", "telegram:nestor"], "-100").map((message) => message.id)).toEqual(["500", "501"]);
+  });
+
   test("the same connection handed the same line again keeps it once", async () => {
     const h = await daemon({ bots: ["nouva"], mention: true });
     await h.said(h.bots[0]!, { id: "77", chatId: "-100", text: "who is on call tonight?" });
     await h.said(h.bots[0]!, { id: "77", chatId: "-100", text: "who is on call tonight?" });
     expect(h.lines("telegram:nouva", "-100")).toEqual([["77", "who is on call tonight?"]]);
+  });
+});
+
+describe("two of our bots in a Telegram basic group, which numbers a line for each bot apart", () => {
+  test("each bot keeps its copy under its own id, and the group read across both has each line once", async () => {
+    const h = await daemon({ bots: ["nouva", "nestor"], mention: true });
+    const second = 1_762_000_000_000;
+    // One line is 57 to one bot and 102 to the other, sent at one moment the platform states for both.
+    const copies = [
+      { bot: 0, id: "57", text: "who is on call tonight?", timestamp: second },
+      { bot: 1, id: "102", text: "who is on call tonight?", timestamp: second },
+      // The same words again a second later: another line.
+      { bot: 0, id: "58", text: "who is on call tonight?", timestamp: second + 1_000 },
+      { bot: 1, id: "103", text: "who is on call tonight?", timestamp: second + 1_000 },
+    ];
+    for (const copy of copies) await h.said(h.bots[copy.bot]!, { id: copy.id, chatId: "-300", text: copy.text, timestamp: copy.timestamp, idsPerConnection: true });
+
+    expect(h.lines("telegram:nouva", "-300").map(([id]) => id)).toEqual(["57", "58"]);
+    expect(h.lines("telegram:nestor", "-300").map(([id]) => id)).toEqual(["102", "103"]);
+    const room = h.roomMessages.inRoom(["telegram:nouva", "telegram:nestor"], "-300");
+    expect(room.map((message) => [message.text, message.at])).toEqual([
+      ["who is on call tonight?", second],
+      ["who is on call tonight?", second + 1_000],
+    ]);
   });
 });
 
@@ -175,6 +209,29 @@ describe("a database of 0.8.28, its room log keyed by the id alone", () => {
       ["table", "chat_messages", ""],
     ]);
     expect(db.prepare("SELECT name FROM sqlite_master WHERE name LIKE 'chat_messages_rebuild%'").all()).toEqual([]);
+    db.close();
+  });
+
+  test("a basic group's copies, two rows under two ids already, are marked and read as one line", async () => {
+    const db = openDatabase(":memory:");
+    await migrate(db, {}, MIGRATIONS.filter((one) => one.version <= 79));
+    const insert = db.prepare(`INSERT INTO chat_messages (${COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
+    insert.run("57", "telegram:nouva", "-300", "814", "Gading", "who is on call tonight?", null, 1_000);
+    insert.run("102", "telegram:nestor", "-300", "814", "Gading", "who is on call tonight?", null, 1_000);
+    // Heard by one bot only, and one bot's line of the same words a second later: neither has a copy to be one with.
+    insert.run("58", "telegram:nouva", "-300", "814", "Gading", "who is on call tonight?", null, 2_000);
+    insert.run("412", "telegram:nouva", "-100", "814", "Gading", "is the deploy done?", null, 1_000);
+
+    await migrate(db);
+    const marked = db.prepare<{ gateway_id: string; id: string; ids_per_connection: number }>("SELECT gateway_id, id, ids_per_connection FROM chat_messages ORDER BY chat_id, at, gateway_id").all();
+    expect(marked.map((row) => [row.gateway_id, row.id, row.ids_per_connection])).toEqual([
+      ["telegram:nouva", "412", 0],
+      ["telegram:nestor", "102", 1],
+      ["telegram:nouva", "57", 1],
+      ["telegram:nouva", "58", 0],
+    ]);
+    const room = new RoomMessageStore(db).inRoom(["telegram:nouva", "telegram:nestor"], "-300");
+    expect(room.map((message) => message.at)).toEqual([1_000, 2_000]);
     db.close();
   });
 });

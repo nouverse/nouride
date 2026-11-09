@@ -181,21 +181,29 @@ describe("GET /chat-list", () => {
     expect(office.working).toBe(false);
   });
 
-  test("a line both our bots heard is one line of the group: who spoke lately is read from its newest lines, not its newest rows", async () => {
-    const groups = [{ gatewayId: "telegram:nestor", platform: "telegram", chatId: "-100", name: "Nouverse Office", dashboard: false, agents: ["nouva", "nestor"], people: [], lastActive: 1 }];
-    const h = await mount({ groups });
-    h.talk("nouva", "telegram:nouva", "-100", "@nouva deploy?", "Done.");
-    h.talk("nestor", "telegram:nestor", "-100", "@nestor and you?", "Reading.");
-    tick();
-    // Sam once, then thirty lines from Rani, each handed to both bots: two rows a line.
-    const lines = [{ id: "g0", senderId: "903", senderName: "Sam", text: "morning" }, ...Array.from({ length: 30 }, (_, n) => ({ id: `g${n + 1}`, senderId: "902", senderName: "Rani", text: `note ${n + 1}` }))];
-    lines.forEach((line, n) => {
-      for (const gatewayId of ["telegram:nouva", "telegram:nestor"]) h.roomMessages.record({ ...line, gatewayId, chatId: "-100", at: Date.now() + n });
-    });
+  // A supergroup numbers a line once for every bot in it; a basic group numbers it for each bot apart (`idsPerConnection`).
+  for (const group of [
+    { kind: "one id in both bots", idOn: (n: number) => `g${n}`, idsPerConnection: false },
+    { kind: "each bot its own id", idOn: (n: number, gatewayId: string) => `${gatewayId}#${n}`, idsPerConnection: true },
+  ]) {
+    test(`a line both our bots heard is one line of the group (${group.kind}): who spoke lately is read from its newest lines, not its rows`, async () => {
+      const groups = [{ gatewayId: "telegram:nestor", platform: "telegram", chatId: "-100", name: "Nouverse Office", dashboard: false, agents: ["nouva", "nestor"], people: [], lastActive: 1 }];
+      const h = await mount({ groups });
+      h.talk("nouva", "telegram:nouva", "-100", "@nouva deploy?", "Done.");
+      h.talk("nestor", "telegram:nestor", "-100", "@nestor and you?", "Reading.");
+      tick();
+      // Sam once, then thirty lines from Rani, each handed to both bots: two rows a line.
+      const lines = [{ senderId: "903", senderName: "Sam", text: "morning" }, ...Array.from({ length: 30 }, (_, n) => ({ senderId: "902", senderName: "Rani", text: `note ${n + 1}` }))];
+      lines.forEach((line, n) => {
+        for (const gatewayId of ["telegram:nouva", "telegram:nestor"]) {
+          h.roomMessages.record({ ...line, id: group.idOn(n, gatewayId), gatewayId, chatId: "-100", at: Date.now() + n * 1_000, idsPerConnection: group.idsPerConnection });
+        }
+      });
 
-    const office = (await h.list()).body.groups[0]!;
-    expect(office.last).toEqual({ from: "person", name: "Rani", text: "note 30" });
-    // Thirty-one lines are within the fifty read; counted as rows, Sam's would have fallen out.
-    expect(office.people).toBe(2);
-  });
+      const office = (await h.list()).body.groups[0]!;
+      expect(office.last).toEqual({ from: "person", name: "Rani", text: "note 30" });
+      // Thirty-one lines are within the fifty read; counted as rows, Sam's would have fallen out.
+      expect(office.people).toBe(2);
+    });
+  }
 });

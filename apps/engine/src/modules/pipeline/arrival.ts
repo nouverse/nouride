@@ -83,6 +83,7 @@ export function arrive(parts: ArrivalParts, gateway: Gateway, envelope: MessageE
           }
         : {}),
       at: envelope.timestamp,
+      ...(envelope.idsPerConnection ? { idsPerConnection: true } : {}),
     });
   }
   /**
