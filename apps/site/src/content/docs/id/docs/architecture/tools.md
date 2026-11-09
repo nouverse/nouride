@@ -36,7 +36,7 @@ dan `skill_install` bersamanya, dan `send_file` membawa `send_message`.
 `web_search` punya satu pengecualian yang layak diketahui. Tanpa search key sama sekali, ia jatuh ke
 sumber tanpa key alih-alih menghilang, karena agent tanpa tool pencarian gak berhenti mencari: ia
 menulis scraper lalu menjalankannya lewat `exec`. Ia cuma ditarik kalau backend yang kamu pilih gak
-bisa jalan, misalnya SearXNG tanpa alamat.
+bisa jalan, misalnya SearXNG tanpa alamat, atau Exa tanpa key.
 
 ## Sejauh mana sebuah tool boleh menjangkau
 
@@ -234,9 +234,22 @@ Menyalakannya adalah yang membuat agent bisa memeriksa layanan yang baru saja di
 server itu mengubah `web_fetch` menjadi pembaca setiap layanan internal di mesin itu, dan agent
 mengambil instruksinya dari chat.
 
-Atur lewat halaman **Web Search** di dashboard (di bawah Settings): pilih provider, ikuti langkah untuk mendapatkan key atau server-nya, tes, lalu simpan. `web_search` punya tiga backend: Brave (butuh key, ada free tier), SearXNG (self-hosted, tanpa key), dan
-fallback scraping tanpa key. Pada kegagalan runtime, 429, 5xx, timeout, yang utama jatuh ke fallback
-daripada membuat agent kehilangan pencarian di tengah tugas.
+Atur lewat halaman **Web Search** di dashboard (di bawah Settings): pilih provider, ikuti langkah untuk mendapatkan key atau server-nya, tes, lalu simpan. `web_search` punya empat backend: Brave (butuh key, ada free tier), Exa (butuh key, pencarian yang dibuat
+untuk agent AI: tiap hasil datang dengan beberapa baris dari halamannya), SearXNG (self-hosted, tanpa key),
+dan fallback scraping tanpa key. Exa diatur seperti Brave, dengan key di bawah namanya sendiri:
+
+```toml
+[security.web]
+search_kind = "exa"
+search_api_key = "exa_api_key"   # nama secret-nya; key-nya sendiri di Secrets atau sebagai EXA_API_KEY
+```
+
+Cuma Brave, yang default, yang jatuh ke sumber tanpa key selama key-nya belum ada. Exa tanpa key membuat
+agent gak punya pencarian web sama sekali, dan `nouride config check` menyebutnya.
+
+Pada kegagalan runtime, 429, 5xx, timeout, yang utama jatuh ke fallback daripada membuat agent kehilangan
+pencarian di tengah tugas. Kalau layanannya menolak, agent diberi tahu artinya: key yang gak diterima
+(401), akun yang kreditnya habis (402), atau terlalu banyak pencarian untuk saat ini (429).
 
 Sumber tanpa key ditanya sekaligus, masing-masing dengan batas waktu 6 detik, dan pencarian kembali
 sebentar setelah mesin umum pertama menjawab, jadi sumber yang macet paling banyak memakan beberapa detik,
@@ -259,7 +272,7 @@ kata dari query, dan ditinggalkan.
 
 Pencarian gambar menumpang tool yang sama (`kind = "image"`) dan mengembalikan URL gambar langsung yang
 bisa diambil `send_file`, dan itulah seluruh alur "cari gambar lalu kirim" tanpa browser di mana pun.
-Cuma dua backend terkonfigurasi yang bisa melakukannya; fallback tanpa key men-scrape *halaman* hasil
+Cuma Brave dan SearXNG yang bisa melakukannya: Exa mengembalikan halaman, bukan gambar. Fallback tanpa key men-scrape *halaman* hasil
 dan gak punya mode gambar, jadi ia menolak dan menyebut kedua pengaturannya alih-alih menyerahkan URL
 halaman yang bukan gambar.
 

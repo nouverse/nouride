@@ -46,7 +46,7 @@ export const LONG_FUNCTIONS: Record<string, Record<string, Budget>> = {
   "apps/dashboard/src/modules/secrets/index.page.tsx": { SecretsPage: { lines: 161, why: COMPONENT("the secrets page") } },
   "apps/dashboard/src/modules/setup/index.page.tsx": { KeyForm: { lines: 155, why: COMPONENT("setup's form for a provider's key") } },
   "apps/dashboard/src/modules/users/index.page.tsx": { UsersPage: { lines: 211, why: COMPONENT("the dashboard's users") } },
-  "apps/dashboard/src/modules/web-search/index.page.tsx": { WebSearchPage: { lines: 165, why: COMPONENT("the web search settings") } },
+  "apps/dashboard/src/modules/web-search/index.page.tsx": { WebSearchPage: { lines: 172, why: COMPONENT("the web search settings: five services, and the key name each one keeps") } },
   "apps/dashboard/src/modules/webhooks/components/WebhookForm.tsx": { WebhookForm: { lines: 177, why: COMPONENT("the form for a webhook") } },
   "apps/engine/src/boot/control-plane.ts": { startControlPlane: { lines: 273, why: "boot's wiring of the control API and the dashboard: every port their routes take, built in the order they need each other" } },
   "apps/engine/src/boot/memory-pass.ts": { startMemoryPass: { lines: 154, why: "the nightly memory pass wired at boot: its clock, its model and its budget, and the run its timer starts" } },

@@ -26,6 +26,7 @@
 import { LLM_EFFORTS, MAX_BACKGROUND_HELPERS, MOST_MISSIONS_PER_AGENT, UPDATE_TRACKS, type GlobalConfig } from "@nouride/shared";
 import { DEFAULT_CONFIG } from "@/modules/config/defaults.ts";
 import { ADVANCED_KEYS } from "@/modules/config/advanced.ts";
+import { isSearchKind, resolveSearch, SEARCH_BACKENDS, SEARCH_KINDS } from "@/modules/tools/builtins/search-backends.ts";
 
 /** TOML is snake_case; the config object is camelCase. One conversion, used everywhere here. */
 export function snakeCase(key: string): string {
@@ -54,7 +55,8 @@ export const CONFIG_ENUMS = {
   "security.approvals": ["careful", "balanced", "trusted"],
   "security.exec.landlock": ["off", "auto", "require"],
   "security.access.mode": ["open", "allowlist", "pair"],
-  "security.web.search_kind": ["brave", "searxng"],
+  // The search tool's own list, so a service it gains is accepted here without a second edit.
+  "security.web.search_kind": SEARCH_KINDS,
   "daemon.log_level": ["debug", "info", "warn", "error"],
   "llm.context.truncation_strategy": ["sliding_window", "summary"],
   "rollover.mode": ["none", "daily", "idle"],
@@ -75,11 +77,11 @@ export const CONFIG_ENUMS = {
  * Names accepted in `[security.web] fallback_backends`.
  *
  * A superset of the search kinds, because `duckduckgo` is not one: it is the keyless scraping chain,
- * which needs no endpoint and no credential and therefore cannot be a `search_kind` the way the other
- * two are. It is also the default fallback, so leaving it out of the accepted set would reject the
+ * which needs no endpoint and no credential and therefore cannot be a `search_kind` the way the others
+ * are. It is also the default fallback, so leaving it out of the accepted set would reject the
  * shipped configuration.
  */
-export const FALLBACK_BACKEND_NAMES = ["duckduckgo", "brave", "searxng"] as const;
+export const FALLBACK_BACKEND_NAMES = ["duckduckgo", ...SEARCH_KINDS] as const;
 export type FallbackBackendName = (typeof FALLBACK_BACKEND_NAMES)[number];
 
 export type ConfigType = "string" | "number" | "boolean" | "string[]" | "table[]";
@@ -429,6 +431,19 @@ export function lintConfig(config: GlobalConfig): ConfigLint[] {
     });
   }
 
+  // Any other service that needs a key is not offered at all without one: only the default falls back, above. Asked of
+  // `resolveSearch` itself, so this says what the tool will do rather than a second opinion on it.
+  const chosen = isSearchKind(web.searchKind)
+    ? resolveSearch({ kind: web.searchKind, endpoint: web.searchEndpoint, apiKey: web.searchApiKey || undefined })
+    : null;
+  if (chosen && "unavailable" in chosen && chosen.needs === "key") {
+    out.push({
+      level: "bad",
+      message: `[security.web] search_kind = "${web.searchKind}" has no search_api_key`,
+      hint: "Set `search_api_key` to the name of the secret that holds its key. Until then the agents have no web search.",
+    });
+  }
+
   if (web.searchKind === "searxng" && !web.searchEndpoint) {
     out.push({
       level: "bad",
@@ -446,12 +461,15 @@ export function lintConfig(config: GlobalConfig): ConfigLint[] {
       });
     }
   }
-  if (web.fallbackBackends?.includes("brave") && web.searchKind !== "brave" && !web.searchApiKey) {
-    out.push({
-      level: "warn",
-      message: "[security.web] fallback_backends lists brave, which has no credential to use",
-      hint: "Set `search_api_key`, or drop brave from the chain. As it stands it is skipped, so the chain is shorter than it looks.",
-    });
+  for (const name of SEARCH_KINDS) {
+    if (name === web.searchKind || !web.fallbackBackends?.includes(name)) continue;
+    if (SEARCH_BACKENDS[name].requiresApiKey && !web.searchApiKey) {
+      out.push({
+        level: "warn",
+        message: `[security.web] fallback_backends lists ${name}, which has no credential to use`,
+        hint: `Set \`search_api_key\`, or drop ${name} from the chain. As it stands it is skipped, so the chain is shorter than it looks.`,
+      });
+    }
   }
 
   if (web.fallbackBackends?.includes("searxng") && web.searchKind !== "searxng") {

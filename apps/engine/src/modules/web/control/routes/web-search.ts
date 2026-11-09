@@ -8,7 +8,7 @@
 
 import { atLeast } from "@/modules/users/auth.ts";
 import { createWebSearchTool } from "@/modules/tools/builtins/web/index.ts";
-import { DEFAULT_SEARCH_SECRET, type WebSearchField, type WebSearchPatch, type WebSearchSettings } from "@/modules/config/settings/web.ts";
+import { defaultSearchSecret, type WebSearchField, type WebSearchPatch, type WebSearchSettings } from "@/modules/config/settings/web.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { jsonBody } from "../payloads.ts";
 import { NO_SETTINGS, notSaved } from "../plain.ts";
@@ -80,14 +80,15 @@ export function registerWebSearchRoutes(control: ControlApp, deps: ControlDeps):
     const usesEndpoint = patch.mode === "searxng" || patch.mode === "custom";
     if (usesEndpoint && !patch.endpoint?.trim()) return c.json({ ok: false, error: "enter the endpoint first" });
 
-    const usesKey = patch.mode === "brave" || patch.mode === "custom";
+    const needsKey = patch.mode === "brave" || patch.mode === "exa";
+    const usesKey = needsKey || patch.mode === "custom";
     const apiKey = usesKey
-      ? patch.apiKeyValue || deps.secrets.resolve(patch.apiKeySecret?.trim() || DEFAULT_SEARCH_SECRET)
+      ? patch.apiKeyValue || deps.secrets.resolve(patch.apiKeySecret?.trim() || defaultSearchSecret(patch.mode))
       : undefined;
-    if (patch.mode === "brave" && !apiKey) return c.json({ ok: false, error: "no API key to test with: paste one or pick a secret that is set" });
+    if (needsKey && !apiKey) return c.json({ ok: false, error: "no API key to test with: paste one or pick a secret that is set" });
 
     const tool = createWebSearchTool({
-      searchKind: patch.mode === "searxng" ? "searxng" : "brave",
+      searchKind: patch.mode === "searxng" || patch.mode === "exa" ? patch.mode : "brave",
       ...(usesEndpoint ? { searchEndpoint: patch.endpoint!.trim() } : {}),
       ...(apiKey ? { searchApiKey: apiKey } : {}),
       // The question is whether *this* backend answers. A fallback would answer for it.

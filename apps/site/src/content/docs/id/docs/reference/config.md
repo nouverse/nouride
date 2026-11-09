@@ -187,7 +187,7 @@ yang harus ditulis.
 
 ```toml
 allow_private_urls = false
-search_kind = "brave"               # brave | searxng
+search_kind = "brave"               # brave | searxng | exa
 search_api_key = "brave_search_api_key"
 search_endpoint = ""
 fallback_enabled = true
@@ -562,6 +562,10 @@ WA_ENCRYPTION_KEY=
 # [security.web] search_api_key = "brave_search_api_key". Tanpa ini, web_search kembali ke rantai
 # DuckDuckGo yang gak butuh key.
 BRAVE_SEARCH_API_KEY=
+
+# Atau Exa: [security.web] search_kind = "exa", search_api_key = "exa_api_key". Exa gak punya
+# fallback tanpa key: tanpa key-nya, web_search gak ditawarkan.
+EXA_API_KEY=
 ```
 
 Gak ada daftar tetap. Setiap variabel ada karena sesuatu di `config.toml` kamu menyebutnya, hapus

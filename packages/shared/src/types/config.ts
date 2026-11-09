@@ -143,7 +143,7 @@ export interface WebPolicySection {
    */
   allowPrivateUrls: boolean;
   /**
-   * Which search service `web_search` uses: `brave` or `searxng`.
+   * Which search service `web_search` uses: `brave`, `searxng` or `exa`.
    *
    * Typed as a string rather than the union, because config arrives from a file an operator wrote and
    * an unknown value has to reach a validator that can name it — not fail to parse with a type error
@@ -168,7 +168,7 @@ export interface WebPolicySection {
    *
    * Only consulted when `fallbackEnabled` is true and the primary configured backend fails
    * at runtime. `"duckduckgo"` means the keyless provider chain (same as what runs when no
-   * API key is configured). Other search kinds (`"brave"`, `"searxng"`) can be listed if
+   * API key is configured). Other search kinds (`"brave"`, `"searxng"`, `"exa"`) can be listed if
    * the operator has multiple backends configured — but that is a future extension.
    */
   fallbackBackends: string[];

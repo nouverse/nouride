@@ -18,7 +18,7 @@ import {
 import { boundsOf, CONFIG_ENUMS, UNSET_NUMBERS } from "@/modules/config/schema.ts";
 import { DEFAULT_CONFIG } from "@/modules/config/defaults.ts";
 import { isWritableDir, statFile } from "@nouride/runtime";
-import { isSearchKind } from "@/modules/tools/builtins/search-backends.ts";
+import { isSearchKind, SEARCH_KINDS } from "@/modules/tools/builtins/search-backends.ts";
 import { asWritten, isPlainObject, typeProblems } from "./merge.ts";
 import { validateMemory } from "./validate-memory.ts";
 import { validatePeople } from "./validate-people.ts";
@@ -326,7 +326,7 @@ export function validate(config: GlobalConfig): void {
   // not offered, and "the agent cannot search" gives no hint that a config line is the reason.
   if (!isSearchKind(config.security.web.searchKind)) {
     throw new ConfigError(
-      `[security.web] search_kind must be "brave" or "searxng": got "${config.security.web.searchKind}"`,
+      `[security.web] search_kind must be one of ${SEARCH_KINDS.map((kind) => `"${kind}"`).join(", ")}: got "${config.security.web.searchKind}"`,
     );
   }
 

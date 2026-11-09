@@ -2,7 +2,7 @@
  * `[security.web]` as the dashboard's Web Search page edits it: which search service `web_search`
  * uses, where it is, and which credential it authenticates with.
  *
- * Four choices, not the file's five keys, because the keys combine in ways nobody should have to
+ * Five choices, not the file's keys, because the keys combine in ways nobody should have to
  * reason about — a Brave `search_kind` with a custom `search_endpoint` is "a proxy", the same kind
  * with an unresolved key and no endpoint is "the free sources". The page asks which one you want and
  * this writes the keys that mean it:
@@ -12,6 +12,7 @@
  * | `free` | brave | "" | "" |
  * | `brave` | brave | "" | a secret name, which must resolve |
  * | `searxng` | searxng | the instance | "" |
+ * | `exa` | exa | "" | a secret name, which must resolve |
  * | `custom` | brave | the proxy | a secret name, or "" when the proxy authenticates |
  *
  * As everywhere in settings: a key's *value* goes to the secret store and only its name to the file.
@@ -21,16 +22,26 @@
 import { assertSecretName } from "@nouride/secrets";
 import type { WebPolicySection } from "@nouride/shared";
 import { upsertTomlTable } from "@/modules/config/edit.ts";
-import { resolveSearch } from "@/modules/tools/builtins/search-backends.ts";
+import { isSearchKind, resolveSearch } from "@/modules/tools/builtins/search-backends.ts";
 import { editConfigFile } from "./file.ts";
 import { setSecret } from "./secrets.ts";
 import type { FieldRefusal, SaveResult, SettingsDeps } from "./types.ts";
 
-export type WebSearchMode = "free" | "brave" | "searxng" | "custom";
-const WEB_SEARCH_MODES: WebSearchMode[] = ["free", "brave", "searxng", "custom"];
+export type WebSearchMode = "free" | "brave" | "searxng" | "exa" | "custom";
+const WEB_SEARCH_MODES: WebSearchMode[] = ["free", "brave", "searxng", "exa", "custom"];
 
-/** The name a new Brave key is stored under when the page is not told another. */
-export const DEFAULT_SEARCH_SECRET = "brave_search_api_key";
+/** The services a key is required for, by the name the page's refusal gives them. */
+const NEEDS_KEY: Partial<Record<WebSearchMode, string>> = { brave: "Brave", exa: "Exa" };
+
+/**
+ * The name a new key is stored under when the page is not told another.
+ *
+ * Exa's is its own, so a key pasted for one service never replaces the other's: switching back finds the first
+ * key where it was. Brave's is the name the stock config has always held.
+ */
+export function defaultSearchSecret(mode: WebSearchMode): string {
+  return mode === "exa" ? "exa_api_key" : "brave_search_api_key";
+}
 
 export interface WebSearchSettings {
   mode: WebSearchMode;
@@ -42,7 +53,7 @@ export interface WebSearchSettings {
   fallbackEnabled: boolean;
   allowPrivateUrls: boolean;
   /** What `web_search` would use with these settings: a backend, the free sources, or nothing. */
-  effective: "brave" | "searxng" | "free" | "unavailable";
+  effective: "brave" | "searxng" | "exa" | "free" | "unavailable";
   /** Why `effective` is `unavailable`, in the operator's words. */
   problem?: string;
   /** What is missing then (0.8.23): the page asks for it in its own words, `problem` naming the file's keys. */
@@ -56,10 +67,11 @@ export function webSearchSettings(deps: SettingsDeps): WebSearchSettings {
   const origin = key ? deps.secrets.origin(key) : undefined;
   const resolved = key ? deps.secrets.resolve(key) : undefined;
   const outcome = describe(web, resolved);
+  const mode = modeOf(web, Boolean(resolved));
   return {
-    mode: modeOf(web, Boolean(resolved)),
+    mode,
     endpoint: web.searchEndpoint,
-    apiKeySecret: key || DEFAULT_SEARCH_SECRET,
+    apiKeySecret: key || defaultSearchSecret(mode),
     apiKeyOrigin: origin ?? "missing",
     fallbackEnabled: web.fallbackEnabled,
     allowPrivateUrls: web.allowPrivateUrls,
@@ -68,20 +80,21 @@ export function webSearchSettings(deps: SettingsDeps): WebSearchSettings {
 }
 
 /**
- * Which of the four the file currently says.
+ * Which of the five the file currently says.
  *
  * A Brave kind whose key does not resolve and has no endpoint *is* the free sources — that is what
  * `resolveSearch` does with it — so it reads as `free`, not as a Brave setup with a problem. The
- * stock config is exactly this: the name `brave_search_api_key`, set by nobody.
+ * stock config is exactly this: the name `brave_search_api_key`, set by nobody. Exa without its key
+ * is not: only the default kind falls back, so it reads as Exa, and as not working.
  */
 function modeOf(web: WebPolicySection, keyResolves: boolean): WebSearchMode {
-  if (web.searchKind === "searxng") return "searxng";
+  if (web.searchKind === "searxng" || web.searchKind === "exa") return web.searchKind;
   if (web.searchEndpoint.trim()) return "custom";
   return keyResolves ? "brave" : "free";
 }
 
 function describe(web: WebPolicySection, apiKey: string | undefined): Pick<WebSearchSettings, "effective" | "problem" | "needs"> {
-  const kind = web.searchKind === "searxng" ? "searxng" : "brave";
+  const kind = isSearchKind(web.searchKind) ? web.searchKind : "brave";
   const resolved = resolveSearch({ kind, endpoint: web.searchEndpoint, apiKey });
   if ("keyless" in resolved) return { effective: "free" };
   if ("unavailable" in resolved) return { effective: "unavailable", problem: resolved.unavailable, needs: resolved.needs };
@@ -91,7 +104,7 @@ function describe(web: WebPolicySection, apiKey: string | undefined): Pick<WebSe
 export interface WebSearchPatch {
   mode: WebSearchMode;
   endpoint?: string;
-  /** The secret name to use. For `brave`, and optionally `custom`. */
+  /** The secret name to use. For `brave` and `exa`, and optionally `custom`. */
   apiKeySecret?: string;
   /** A key typed into the page: stored under `apiKeySecret` before anything is written. */
   apiKeyValue?: string;
@@ -120,15 +133,16 @@ function checkWebSearchPatch(deps: SettingsDeps, patch: WebSearchPatch): FieldRe
   const name = patch.apiKeySecret?.trim() ?? "";
   if (name || patch.apiKeyValue) {
     try {
-      assertSecretName(name || DEFAULT_SEARCH_SECRET, "secret name");
+      assertSecretName(name || defaultSearchSecret(patch.mode), "secret name");
     } catch (err) {
       return { field: "secret", error: err instanceof Error ? err.message : String(err) };
     }
   }
-  if (patch.mode === "brave" && !patch.apiKeyValue && !(name && deps.secrets.resolve(name))) {
+  const service = NEEDS_KEY[patch.mode];
+  if (service && !patch.apiKeyValue && !(name && deps.secrets.resolve(name))) {
     return name
       ? { field: "secret", error: `the secret "${name}" is not set: paste the key, or pick a secret that holds it` }
-      : { field: "key", error: "Brave needs an API key: paste it, or pick the secret that holds it" };
+      : { field: "key", error: `${service} needs an API key: paste it, or pick the secret that holds it` };
   }
   return null;
 }
@@ -142,13 +156,13 @@ export async function setWebSearchSettings(
   const problem = checkWebSearchPatch(deps, patch);
   if (problem) return { ok: false, ...problem };
 
-  const usesKey = patch.mode === "brave" || patch.mode === "custom";
+  const usesKey = Boolean(NEEDS_KEY[patch.mode]) || patch.mode === "custom";
   let secretName = usesKey ? (patch.apiKeySecret?.trim() ?? "") : "";
-  if (usesKey && patch.apiKeyValue) secretName ||= DEFAULT_SEARCH_SECRET;
+  if (usesKey && patch.apiKeyValue) secretName ||= defaultSearchSecret(patch.mode);
 
   const web = deps.config.security.web;
   const next = {
-    search_kind: patch.mode === "searxng" ? "searxng" : "brave",
+    search_kind: patch.mode === "searxng" || patch.mode === "exa" ? patch.mode : "brave",
     search_endpoint: patch.mode === "searxng" || patch.mode === "custom" ? (patch.endpoint?.trim() ?? "") : "",
     search_api_key: secretName,
     fallback_enabled: patch.fallbackEnabled ?? web.fallbackEnabled,

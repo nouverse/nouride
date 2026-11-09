@@ -21,6 +21,7 @@ import { mountControlRoutes } from "@/modules/web/control/index.ts";
 import type { ControlDeps } from "@/modules/web/control/types.ts";
 
 const KEY = "BSA-live-looking-brave-key-0123456789abcdef";
+const EXA_KEY = "exa-live-looking-key-0123456789abcdef";
 const TOKEN = "control-token-for-tests-0000000000";
 
 let dir: string;
@@ -122,6 +123,27 @@ describe("saving", () => {
     expect(settings.webSearchSettings()).toMatchObject({ mode: "searxng", effective: "searxng" });
   });
 
+  test("Exa: a typed key goes to the store under Exa's own name, so Brave's key stays where it was", async () => {
+    await secrets.set("brave_search_api_key", KEY);
+    const result = await settings.setWebSearchSettings({ patch: { mode: "exa", apiKeyValue: EXA_KEY } });
+
+    expect(result).toEqual({ ok: true, restartRequired: true });
+    expect(secrets.resolve("exa_api_key")).toBe(EXA_KEY);
+    expect(secrets.resolve("brave_search_api_key")).toBe(KEY);
+    expect(file()).not.toContain(EXA_KEY);
+    expect(file()).toContain('search_kind = "exa"');
+    expect(file()).toContain('search_api_key = "exa_api_key"');
+    expect(file()).toContain('search_endpoint = ""');
+    expect(settings.webSearchSettings()).toMatchObject({ mode: "exa", apiKeySecret: "exa_api_key", apiKeyOrigin: "store", effective: "exa" });
+  });
+
+  test("Exa without its key reads as Exa and not working, not as the free sources", () => {
+    // Only Brave, the default, falls back to the free sources: an Exa with no key leaves the agents no search.
+    config.security.web.searchKind = "exa";
+    config.security.web.searchApiKey = "";
+    expect(settings.webSearchSettings()).toMatchObject({ mode: "exa", apiKeySecret: "exa_api_key", apiKeyOrigin: "missing", effective: "unavailable", needs: "key" });
+  });
+
   test("a custom endpoint is a Brave-compatible proxy, with or without a key", async () => {
     await settings.setWebSearchSettings({ patch: { mode: "custom", endpoint: "https://search.example/res/v1/web/search" } });
     expect(settings.webSearchSettings()).toMatchObject({ mode: "custom", effective: "brave", endpoint: "https://search.example/res/v1/web/search" });
@@ -146,17 +168,21 @@ describe("saving", () => {
       settings.setWebSearchSettings({ patch: { mode: "custom", endpoint: "ftp://x.example/" } }),
       // The key pasted into the name field.
       settings.setWebSearchSettings({ patch: { mode: "brave", apiKeySecret: "sk-live-0123456789abcdef0123456789abcdef", apiKeyValue: KEY } }),
+      settings.setWebSearchSettings({ patch: { mode: "exa" } }),
+      settings.setWebSearchSettings({ patch: { mode: "exa", apiKeySecret: "nobody_set_this" } }),
     ]);
     expect(refusals.map((r) => (r.ok ? "ok" : r.error))).toEqual([
-      expect.stringContaining("needs an API key"),
+      "Brave needs an API key: paste it, or pick the secret that holds it",
       expect.stringContaining('"nobody_set_this" is not set'),
       expect.stringContaining("address of your instance"),
       expect.stringContaining("is not a URL"),
       expect.stringContaining("http:// or https://"),
       expect.stringContaining("looks like a credential"),
+      "Exa needs an API key: paste it, or pick the secret that holds it",
+      expect.stringContaining('"nobody_set_this" is not set'),
     ]);
     // And the field each is about, which the page names (0.8.23).
-    expect(refusals.map((r) => (r.ok ? "ok" : r.field))).toEqual(["key", "secret", "endpoint", "endpoint", "endpoint", "secret"]);
+    expect(refusals.map((r) => (r.ok ? "ok" : r.field))).toEqual(["key", "secret", "endpoint", "endpoint", "endpoint", "secret", "key", "secret"]);
     expect(await settings.setWebSearchSettings({ patch: { mode: "gopher" as never } })).toMatchObject({ ok: false, field: "mode" });
     expect(file()).toBe(before);
   });
@@ -184,6 +210,17 @@ describe("the routes", () => {
     expect(broken.effective).toBe("unavailable");
     expect(broken.problem).toContain("search_endpoint");
     expect(broken.plain).toBe("It needs the address of your search service.");
+    // Exa with no key: the page asks for the key.
+    config.security.web.searchKind = "exa";
+    const keyless = (await (await call("/web-search")).json()) as { effective: string; plain: string };
+    expect(keyless).toMatchObject({ effective: "unavailable", plain: "It needs the key for your search service." });
+  });
+
+  test("the Exa key never comes back in an answer either", async () => {
+    await call("/web-search", { mode: "exa", apiKeyValue: EXA_KEY });
+    const shown = JSON.stringify(await (await call("/web-search")).json());
+    expect(shown).toContain('"mode":"exa"');
+    expect(shown).not.toContain(EXA_KEY);
   });
 
   test("a save refused says which field on the page, and the server's own reason for the CLI", async () => {
@@ -201,5 +238,8 @@ describe("the routes", () => {
   test("a test without what it needs says so instead of searching", async () => {
     expect(await (await call("/web-search/test", { mode: "searxng" })).json()).toMatchObject({ ok: false, error: "enter the endpoint first" });
     expect(await (await call("/web-search/test", { mode: "brave" })).json()).toMatchObject({ ok: false, error: expect.stringContaining("no API key") });
+    // Exa's own name is where its key is looked for: Brave's key, set, is not one to test Exa with.
+    await secrets.set("brave_search_api_key", KEY);
+    expect(await (await call("/web-search/test", { mode: "exa" })).json()).toMatchObject({ ok: false, error: expect.stringContaining("no API key") });
   });
 });

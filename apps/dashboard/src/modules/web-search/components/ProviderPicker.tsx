@@ -1,9 +1,9 @@
 /**
- * The four ways `web_search` can be set up, as cards rather than a dropdown: the choice is the whole
+ * The five ways `web_search` can be set up, as cards rather than a dropdown: the choice is the whole
  * page, and what each one costs (a key, a server, nothing) is what decides it — so it is on the card.
  */
 
-import { Globe, Server, Sparkles, Waypoints, type LucideIcon } from "lucide-react";
+import { Globe, Server, Sparkles, Telescope, Waypoints, type LucideIcon } from "lucide-react";
 import type { WebSearchMode } from "@nouride/wire";
 import { cn } from "@/commons/lib/utils";
 
@@ -29,6 +29,13 @@ const CHOICES: Choice[] = [
     icon: Sparkles,
     badge: "Recommended",
     description: "The steadiest results, and image search. Needs an API key; Brave has a free plan.",
+  },
+  {
+    mode: "exa",
+    title: "Exa",
+    icon: Telescope,
+    badge: "API key",
+    description: "Search made for AI agents: each result comes with a few lines from the page. Needs an API key. No image search.",
   },
   {
     mode: "searxng",

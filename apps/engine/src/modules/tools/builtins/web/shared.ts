@@ -40,7 +40,7 @@ export interface WebToolOptions {
   /**
    * The search service's credential, if it has one.
    *
-   * Brave requires it; a self-hosted SearXNG does not. Whether its absence means "not configured" is
+   * Brave and Exa require it; a self-hosted SearXNG does not. Whether its absence means "not configured" is
    * the backend's answer, not this file's.
    */
   searchApiKey?: string;

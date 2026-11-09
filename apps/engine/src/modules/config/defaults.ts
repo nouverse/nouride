@@ -166,9 +166,10 @@ export const DEFAULT_CONFIG: GlobalConfig = {
       /**
        * Which search service `web_search` talks to.
        *
-       * Brave because it is the one with a public endpoint and a free tier, so it is the only choice
-       * that can have a default at all. `searxng` is the self-hosted alternative and needs no key —
-       * see `tools/builtins/search-backends.ts` for the compose service and the two settings a fresh
+       * Brave because it has a public endpoint and a free tier, and the default is the one kind that
+       * falls back to the free sources while it has no key. `exa` is another search API with a key;
+       * `searxng` is the self-hosted alternative and needs no key — see
+       * `tools/builtins/search-backends.ts` for the compose service and the two settings a fresh
        * instance gets wrong.
        */
       searchKind: "brave",

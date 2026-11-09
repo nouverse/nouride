@@ -184,7 +184,7 @@ refused, each naming what to write instead.
 
 ```toml
 allow_private_urls = false
-search_kind = "brave"               # brave | searxng
+search_kind = "brave"               # brave | searxng | exa
 search_api_key = "brave_search_api_key"
 search_endpoint = ""
 fallback_enabled = true
@@ -550,6 +550,10 @@ WA_ENCRYPTION_KEY=
 # [security.web] search_api_key = "brave_search_api_key". Without it, web_search falls back to the
 # keyless DuckDuckGo chain.
 BRAVE_SEARCH_API_KEY=
+
+# Or Exa: [security.web] search_kind = "exa", search_api_key = "exa_api_key". Exa has no keyless
+# fallback: without its key, web_search is not offered.
+EXA_API_KEY=
 ```
 
 There is no fixed list. Every variable exists because something in your `config.toml` names it, 

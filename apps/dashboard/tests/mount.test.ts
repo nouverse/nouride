@@ -309,7 +309,7 @@ describe("Skills Explore", () => {
 });
 
 /**
- * Web Search: four providers as cards, the steps for the one picked, and a key that can be pasted or
+ * Web Search: five providers as cards, the steps for the one picked, and a key that can be pasted or
  * picked from Secrets.
  */
 describe("Web Search", () => {
@@ -320,11 +320,11 @@ describe("Web Search", () => {
     for (let i = 0; i < 4; i += 1) await sleep(10);
   };
 
-  test("says what the agents search with now, and offers the four providers", async () => {
+  test("says what the agents search with now, and offers the five providers", async () => {
     const html = await renderPage("/web-search");
     expect(errors.filter((line) => /Error|error boundary|Cannot read/.test(line))).toEqual([]);
     expect(html).toContain("Agents search with");
-    for (const title of ["Free sources", "Brave Search API", "SearXNG", "Another search service"]) expect(html).toContain(title);
+    for (const title of ["Free sources", "Brave Search API", "Exa", "SearXNG", "Another search service"]) expect(html).toContain(title);
     expect(html).toContain("In use");
     expect(html).toContain("How the free sources work");
     // Nothing changed yet: nothing to save.

@@ -87,9 +87,10 @@ describe("resolveSearch", () => {
     expect(resolved).toMatchObject({ fallbackEnabled: true, fallbackBackends: ["duckduckgo"] });
   });
 
-  test("only the two known kinds are kinds", () => {
+  test("only the known kinds are kinds", () => {
     expect(isSearchKind("brave")).toBe(true);
     expect(isSearchKind("searxng")).toBe(true);
+    expect(isSearchKind("exa")).toBe(true);
     expect(isSearchKind("google")).toBe(false);
     expect(isSearchKind(undefined)).toBe(false);
   });
@@ -590,7 +591,7 @@ describe("the fallback chain honours every name in it", () => {
 
     const result = await tool!.execute({ query: "test" }, ctx);
     expect(result.content).toContain("[fallback:");
-    expect(result.content).toContain("brave failed (HTTP 429)");
+    expect(result.content).toContain("brave failed (HTTP 429: too many searches for now");
     expect(result.metadata?.fallbackApplied).toBe(true);
     expect(braveEmpty).toBeDefined();
   });

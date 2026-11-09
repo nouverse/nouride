@@ -26,6 +26,7 @@ export function ApiKeyField({
   loadingSecrets,
   optional,
   disabled,
+  exampleName,
 }: {
   source: KeySource;
   onSource: (next: KeySource) => void;
@@ -38,6 +39,8 @@ export function ApiKeyField({
   /** A custom endpoint may authenticate upstream and need no key at all. */
   optional?: boolean;
   disabled?: boolean;
+  /** The secret's usual name for this service, shown in an empty name field. */
+  exampleName: string;
 }) {
   const stored = secrets.filter((entry) => entry.origin !== "missing");
   const picked = secrets.find((entry) => entry.name === secretName.trim());
@@ -92,7 +95,7 @@ export function ApiKeyField({
             onChange={onSecretName}
             loading={loadingSecrets}
             disabled={disabled}
-            placeholder="brave_search_api_key" // plain-words-ok: an example of what this field takes
+            placeholder={exampleName}
             customHint="use this name"
             listOnFocus
           />

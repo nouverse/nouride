@@ -36,7 +36,7 @@ there is another agent to ask, `attachment_read`, and the agent's MCP tools. `sk
 `web_search` has one exception worth knowing. With no search key at all it falls back to keyless
 sources rather than disappearing, because an agent without a search tool does not stop searching: it
 writes a scraper and runs it through `exec`. It is withdrawn only when a backend you chose cannot
-work, a SearXNG with no address, say.
+work, a SearXNG with no address, say, or Exa with no key.
 
 ## Where a tool may reach
 
@@ -229,9 +229,22 @@ Turning it on is what lets an agent check a service it just started, `http://loc
 after running a dev server. It is off by default because on a server it turns `web_fetch` into a
 reader of every internal service on the box, and the agent takes its instructions from chat.
 
-Set it up on the dashboard's **Web Search** page (under Settings): pick a provider, follow the steps to get its key or server, test it, save. `web_search` has three backends: Brave (a key, a free tier), SearXNG (self-hosted, no key), and a
-keyless scraping fallback. On a runtime failure, 429, 5xx, a timeout, the primary falls back rather
-than losing an agent's search mid-task.
+Set it up on the dashboard's **Web Search** page (under Settings): pick a provider, follow the steps to get its key or server, test it, save. `web_search` has four backends: Brave (a key, a free tier), Exa (a key, a search made for AI agents:
+each result comes with a few lines from the page), SearXNG (self-hosted, no key), and a keyless scraping
+fallback. Exa is set up like Brave, its key under its own name:
+
+```toml
+[security.web]
+search_kind = "exa"
+search_api_key = "exa_api_key"   # the secret's name; the key itself in Secrets or as EXA_API_KEY
+```
+
+Only Brave, the default, falls back to the keyless sources while it has no key. Exa with no key leaves
+the agents no web search, and `nouride config check` says so.
+
+On a runtime failure, 429, 5xx, a timeout, the primary falls back rather than losing an agent's search
+mid-task. When the service refuses, the agent is told what that means: a key it did not accept (401),
+an account with no credit left (402), or too many searches for now (429).
 
 The keyless sources are asked all at once, each with its own 6-second deadline, and the search returns
 shortly after the first general engine answers: a source that hangs costs a few seconds at most, not
@@ -253,7 +266,7 @@ is recognised by none of them mentioning the query, and left out.
 
 Image search rides on the same tool (`kind = "image"`) and returns direct image URLs that `send_file`
 can take, which is the whole "find a picture and send it" path with no browser anywhere in it. Only
-the two configured backends can do it; the keyless fallback scrapes result *pages* and has no image
+Brave and SearXNG can do it: Exa returns pages, not pictures. The keyless fallback the keyless fallback scrapes result *pages* and has no image
 mode, so it refuses and names both settings rather than handing back page URLs that are not images.
 
 ## Rate limiting

@@ -1,7 +1,7 @@
 /**
  * Web Search — which service `web_search` asks, set up without opening `config.toml`.
  *
- * Four choices (see `ProviderPicker`), the steps to get what each one needs beside it, and a Test
+ * Five choices (see `ProviderPicker`), the steps to get what each one needs beside it, and a Test
  * that runs a real search through the same tool the agents use, with what the form holds rather than
  * what is saved. A key can be pasted — it goes to Secrets on save, and only its name to the config —
  * or picked from Secrets.
@@ -15,14 +15,14 @@ import { useEffect, useState } from "react";
 import { FlaskConical, Save, Search } from "lucide-react";
 import { useRestartsFinished } from "@/commons/lib/restart";
 import { api } from "@/commons/lib/api";
-import type { WebSearchMode, WebSearchPatch, WebSearchSettings, WebSearchTest } from "@nouride/wire";
+import type { SecretEntry, WebSearchMode, WebSearchPatch, WebSearchSettings, WebSearchTest } from "@nouride/wire";
 import { isAdmin, useMe } from "@/commons/lib/session";
 import { ToggleRow } from "@/commons/components/ui/ToggleRow";
 import { Card, ErrorNote, Field, PageHeader } from "@/commons/components/ui/ui";
 import { Details } from "@/commons/components/ui/Details";
 import { cn } from "@/commons/lib/utils";
 import { ApiKeyField, type KeySource } from "./components/ApiKeyField";
-import { BraveGuide, CustomGuide, FreeGuide, SearxngGuide } from "./components/Guides";
+import { BraveGuide, CustomGuide, ExaGuide, FreeGuide, SearxngGuide } from "./components/Guides";
 import { ProviderPicker } from "./components/ProviderPicker";
 import { TestResult } from "./components/TestResult";
 import { RestartNeeded } from "@/commons/components/box/RestartNeeded";
@@ -51,8 +51,26 @@ function draftFrom(settings: WebSearchSettings): Draft {
   };
 }
 
+/**
+ * The name the server keeps a pasted key under for each service that takes one, when it is given no other
+ * (`settings/web.ts`). Exa's is its own, so a key pasted for Exa never replaces the one Brave uses.
+ */
+const KEY_NAMES: Partial<Record<WebSearchMode, string>> = { brave: "brave_search_api_key", exa: "exa_api_key", custom: "brave_search_api_key" };
+
+/**
+ * Picking another service carries its usual key name with it, and drops a key pasted for the one left: Exa's key saved
+ * under Brave's name would be Brave's key gone. A name somebody typed themselves stays as they typed it.
+ */
+function switchTo(draft: Draft, mode: WebSearchMode, stored: SecretEntry[]): Partial<Draft> {
+  const usual = KEY_NAMES[mode];
+  const name = draft.secretName.trim();
+  if (!usual || name === usual || (name && !Object.values(KEY_NAMES).includes(name))) return { mode };
+  const held = stored.some((entry) => entry.name === usual && entry.origin !== "missing");
+  return { mode, secretName: usual, keyValue: "", keySource: held ? "secret" : "paste" };
+}
+
 function patchFrom(draft: Draft): WebSearchPatch {
-  const usesKey = draft.mode === "brave" || draft.mode === "custom";
+  const usesKey = draft.mode === "brave" || draft.mode === "exa" || draft.mode === "custom";
   const usesEndpoint = draft.mode === "searxng" || draft.mode === "custom";
   return {
     mode: draft.mode,
@@ -83,6 +101,7 @@ const EFFECTIVE_LABEL: Record<WebSearchSettings["effective"], string> = {
   free: "Free sources",
   brave: "Brave Search API",
   searxng: "SearXNG",
+  exa: "Exa",
   unavailable: "Not working",
 };
 
@@ -197,13 +216,19 @@ export default function WebSearchPage() {
       {draft && current ? (
         <>
           <Card title="Provider" description="Pick one. You can test it before saving, and switch back at any time.">
-            <ProviderPicker value={draft.mode} active={current.mode} disabled={!editable || busy} onChange={(mode) => update({ mode })} />
+            <ProviderPicker
+              value={draft.mode}
+              active={current.mode}
+              disabled={!editable || busy}
+              onChange={(mode) => update(switchTo(draft, mode, secrets.data?.secrets ?? []))}
+            />
           </Card>
 
           <Card title={draft.mode === "free" ? "About the free sources" : "Set up"}>
             <div className="space-y-5">
               {draft.mode === "free" ? <FreeGuide /> : null}
               {draft.mode === "brave" ? <BraveGuide /> : null}
+              {draft.mode === "exa" ? <ExaGuide /> : null}
               {draft.mode === "searxng" ? <SearxngGuide /> : null}
               {draft.mode === "custom" ? <CustomGuide /> : null}
 
@@ -232,7 +257,7 @@ export default function WebSearchPage() {
                 />
               ) : null}
 
-              {draft.mode === "brave" || draft.mode === "custom" ? (
+              {KEY_NAMES[draft.mode] ? (
                 <ApiKeyField
                   source={draft.keySource}
                   onSource={(keySource) => update({ keySource })}
@@ -244,6 +269,7 @@ export default function WebSearchPage() {
                   loadingSecrets={secrets.isLoading}
                   optional={draft.mode === "custom"}
                   disabled={!editable || busy}
+                  exampleName={KEY_NAMES[draft.mode]!}
                 />
               ) : null}
 

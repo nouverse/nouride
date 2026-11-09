@@ -7,9 +7,10 @@
  * (invariant 2): the *kind* selects an implementation, and nothing downstream asks which service
  * answered.
  *
- * Adding one is three functions and a row in `SEARCH_BACKENDS`. It deliberately does not try to be a
- * plugin system — a search API is a URL, a header and a JSON path, and an abstraction bigger than
- * that would be larger than the thing it abstracts.
+ * Adding one is three functions, a row in `SEARCH_BACKENDS` and its name in `SEARCH_KINDS`, plus a
+ * `body` when the service is searched with a POST (Exa). It deliberately does not try to be a plugin
+ * system — a search API is a URL, a header and a JSON path, and an abstraction bigger than that would
+ * be larger than the thing it abstracts.
  *
  * ## Using SearXNG instead of Brave
  *
@@ -48,12 +49,22 @@ import { KEYLESS_PROVIDERS } from "@/modules/tools/builtins/keyless-sources.ts";
 import type { KeylessProvider } from "@/modules/tools/builtins/keyless-types.ts";
 
 /**
- * The backends an operator can *choose*. Both want a key or an endpoint.
+ * The backends an operator can *choose*. Each wants a key or an endpoint.
  *
  * The keyless chain (`keyless-sources.ts`) is deliberately not one of these: it is what happens when nothing is
- * configured, not something to configure.
+ * configured, not something to configure. The one list the loader, the schema and the fallback chain all read, so a
+ * service added here is accepted everywhere at once.
  */
-export type SearchKind = "brave" | "searxng";
+export const SEARCH_KINDS = ["brave", "searxng", "exa"] as const;
+export type SearchKind = (typeof SEARCH_KINDS)[number];
+
+/**
+ * How much of each page Exa sends back with a result: a few sentences, about the length of a search snippet.
+ *
+ * Exa returns no snippet unless asked for page contents. Without one the agent has a title and a link and must open
+ * every page to learn anything; the whole page per result would put eight pages into one tool answer.
+ */
+const EXA_HIGHLIGHT_CHARACTERS = 400;
 
 /** What `[security.web] search_kind` means when nobody set it. */
 const DEFAULT_SEARCH_KIND: SearchKind = "brave";
@@ -108,6 +119,13 @@ export interface SearchBackend {
   requiresApiKey: boolean;
   /** Query string for one search. */
   buildUrl(endpoint: string, query: string, limit: number): string;
+  /**
+   * The JSON body, for a service searched with a POST. Absent: a GET of `buildUrl`.
+   *
+   * Exa takes its query and its options in a body; the others take them in the URL. Which one is the backend's
+   * answer, so the call site never asks which service it is talking to.
+   */
+  body?(query: string, limit: number): unknown;
   headers(apiKey: string | undefined): Record<string, string>;
   /** Pull results out of the parsed body. An unfamiliar shape yields an empty list, never a throw. */
   parse(body: unknown): SearchResult[];
@@ -252,10 +270,40 @@ export const SEARCH_BACKENDS: Record<SearchKind, SearchBackend> = {
     },
   },
 
+  /**
+   * Exa: a search API made for AI agents, with a key (https://docs.exa.ai/reference/search).
+   *
+   * No `images`: Exa returns pages, and an image search here would hand back page URLs, so it refuses instead, as the
+   * tool does for any backend without one.
+   */
+  exa: {
+    defaultEndpoint: "https://api.exa.ai/search",
+    requiresApiKey: true,
+    // Everything is in the body; the endpoint is the whole address.
+    buildUrl: (endpoint) => endpoint,
+    body(query, limit) {
+      return { query, numResults: limit, contents: { highlights: { maxCharacters: EXA_HIGHLIGHT_CHARACTERS } } };
+    },
+    headers(apiKey) {
+      return { accept: "application/json", "x-api-key": apiKey ?? "" };
+    },
+    parse(body) {
+      const results = (body as { results?: unknown })?.results;
+      if (!Array.isArray(results)) return [];
+      return results.map((entry) => {
+        const r = entry as Record<string, unknown>;
+        const highlights = Array.isArray(r.highlights) ? r.highlights.filter((h): h is string => typeof h === "string") : [];
+        // Highlights are page text with its line breaks and headings, and a result is one indented line in what the
+        // tool returns: the breaks would read as the next result's lines.
+        const snippet = (highlights.length > 0 ? highlights.join(" … ") : text(r.text) || text(r.summary)).replace(/\s+/g, " ").trim();
+        return { title: text(r.title), url: text(r.url), snippet };
+      });
+    },
+  },
 };
 
 export function isSearchKind(value: unknown): value is SearchKind {
-  return value === "brave" || value === "searxng";
+  return (SEARCH_KINDS as readonly unknown[]).includes(value);
 }
 
 /**

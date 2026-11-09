@@ -61,7 +61,7 @@ Settings
     Secrets         kredensial, untuk apa masing-masing, password backup      (admin)
   Reaching out
     Integrations    aplikasi AI lain yang menjangkau memori, satu key per aplikasi (admin)
-    Web Search      tempat agent mencari: sumber gratis, Brave, SearXNG, sendiri (admin)
+    Web Search      tempat agent mencari: sumber gratis, Brave, Exa, SearXNG, sendiri (admin)
   People and sign-in
     Access          siapa yang boleh bicara dengan agent: Pending · Approved · Denied · Blocked · History
     Users           akun dan peran (edisi Pro)                                (admin)

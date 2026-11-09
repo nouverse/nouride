@@ -19,7 +19,7 @@ import {
   FALLBACK_BACKEND_NAMES,
 } from "@/modules/config/schema.ts";
 import { DEFAULT_CONFIG } from "@/modules/config/defaults.ts";
-import { parseConfig } from "@/modules/config/global/index.ts";
+import { configProblem, parseConfig } from "@/modules/config/global/index.ts";
 
 describe("the described surface matches the real one", () => {
   test("every described key resolves to a real place in the config", () => {
@@ -206,6 +206,25 @@ describe("the semantic lint", () => {
     const lints = lintConfig(base({ security: { web: { search_kind: "brave", search_api_key: "" } } }));
     const hit = lints.find((l) => l.message.includes("neither"));
     expect(hit?.level).toBe("warn");
+  });
+
+  test("exa loads, and with no key's name it cannot work and says so", () => {
+    // Unlike Brave it does not fall back to the free sources: the agents would have no web search at all.
+    const missing = lintConfig(base({ security: { web: { search_kind: "exa", search_api_key: "" } } }));
+    expect(missing.find((l) => l.message.includes('search_kind = "exa"'))).toMatchObject({
+      level: "bad",
+      message: '[security.web] search_kind = "exa" has no search_api_key',
+    });
+    const named = lintConfig(base({ security: { web: { search_kind: "exa", search_api_key: "exa_api_key" } } }));
+    expect(named.filter((l) => l.message.includes("exa"))).toEqual([]);
+    // The loader's own steps: accepted, and a typo refused naming every kind there is.
+    expect(configProblem('[security.web]\nsearch_kind = "exa"\nsearch_api_key = "exa_api_key"\n')).toBeNull();
+    expect(configProblem('[security.web]\nsearch_kind = "gogle"\n')).toContain('search_kind must be one of "brave", "searxng", "exa"');
+  });
+
+  test("exa as a fallback with no key to use is reported", () => {
+    const lints = lintConfig(base({ security: { web: { search_api_key: "", fallback_backends: ["exa", "duckduckgo"] } } }));
+    expect(lints.some((l) => l.message === "[security.web] fallback_backends lists exa, which has no credential to use")).toBe(true);
   });
 
   test("an unusable name in the fallback chain is reported rather than skipped in silence", () => {

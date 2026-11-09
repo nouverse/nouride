@@ -62,6 +62,26 @@ export function BraveGuide() {
   );
 }
 
+export function ExaGuide() {
+  return (
+    <Guide title="Getting an Exa API key">
+      <Steps>
+        <li>
+          Open <Link href="https://dashboard.exa.ai">dashboard.exa.ai</Link> and sign in, or create an account.
+        </li>
+        <li>
+          Exa charges per search, with some free credit each month and no card needed for it. Check the current
+          prices and limits on their <Link href="https://exa.ai/pricing">pricing page</Link>.
+        </li>
+        <li>
+          In the <Link href="https://dashboard.exa.ai/api-keys">API keys</Link> section, create a key and copy it.
+        </li>
+        <li>Paste it below and press Test. It is stored in Secrets when you save.</li>
+      </Steps>
+    </Guide>
+  );
+}
+
 export function SearxngGuide() {
   return (
     <Guide title="Running SearXNG beside Nouride">

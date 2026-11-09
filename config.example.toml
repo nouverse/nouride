@@ -402,6 +402,15 @@ fallback_backends = ["duckduckgo"]     # the keyless sources, asked in parallel 
 #     so by name when this happens.
 #   - the rate limiter is on, and answers 429 to a server-side caller. Turn it
 #     off for a private instance.
+#
+# Exa — a search API made for AI agents, with a key (dashboard.exa.ai). Put the
+# key in .env as EXA_API_KEY, then:
+#
+#   search_kind = "exa"
+#   search_api_key = "exa_api_key"
+#
+# Without the key the tool is not offered: only Brave falls back to the free
+# sources. Exa has no image search, so an image search refuses and says so.
 
 [security.rate_limit]
 messages_per_minute = 10            # per sender, per gateway

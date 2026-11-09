@@ -66,7 +66,7 @@ interface SearchAttempt {
  * than one that does not offer it.
  *
  * `duckduckgo` is the keyless scraping chain, which is why it is not a `search_kind`: no endpoint, no
- * credential. The other two reuse this section's endpoint and key, so one with nothing to authenticate
+ * credential. The search kinds reuse this section's key, so one with nothing to authenticate
  * with is dropped from the chain here and reported by `nouride doctor` — trying it would spend a
  * round-trip to earn a 401.
  */
@@ -122,12 +122,14 @@ async function callBackend(
   apiKey: string | undefined,
 ): Promise<SearchOutcome> {
   const signal = AbortSignal.timeout(SEARCH_TIMEOUT_MS);
-  const res = await untilAborted(
-    doFetch(backend.buildUrl(endpoint, query, MAX_SEARCH_RESULTS), { headers: backend.headers(apiKey), signal }),
-    signal,
-  );
+  const payload = backend.body?.(query, MAX_SEARCH_RESULTS);
+  const init: RequestInit =
+    payload === undefined
+      ? { headers: backend.headers(apiKey), signal }
+      : { method: "POST", headers: { ...backend.headers(apiKey), "content-type": "application/json" }, body: JSON.stringify(payload), signal };
+  const res = await untilAborted(doFetch(backend.buildUrl(endpoint, query, MAX_SEARCH_RESULTS), init), signal);
 
-  if (!res.ok) return { error: `HTTP ${res.status}` };
+  if (!res.ok) return { error: httpError(res.status) };
 
   // A self-hosted instance answering HTML — the usual sign that its `json` format is off — fails here.
   // Reported as a content-type problem rather than a bare parse error, because the fix is one line in
@@ -211,9 +213,28 @@ async function searchBackend(
   };
 }
 
+/**
+ * What a refusal means, beside its status.
+ *
+ * The agent reads this and tells the person, and "HTTP 401" leaves both guessing whether the service is down or the
+ * key is wrong. These four are what a search API answers when the fix is on the person's side: the key, the account,
+ * or waiting.
+ */
+const STATUS_MEANING: Record<number, string> = {
+  401: "the search service did not accept the key",
+  402: "the search service account has no credit left",
+  403: "the search service refused this key",
+  429: "too many searches for now, or the plan's limit is used up",
+};
+
+function httpError(status: number): string {
+  const meaning = STATUS_MEANING[status];
+  return meaning ? `HTTP ${status}: ${meaning}` : `HTTP ${status}`;
+}
+
 /** Worth trying somewhere else, as opposed to worth telling the operator about. */
 function isTransientError(error: string): boolean {
-  const status = /^HTTP (\d{3})$/.exec(error)?.[1];
+  const status = /^HTTP (\d{3})\b/.exec(error)?.[1];
   if (status) {
     const code = Number(status);
     return code === 429 || code >= 500;

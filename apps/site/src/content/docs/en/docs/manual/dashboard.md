@@ -61,7 +61,7 @@ Settings
     Secrets         the credentials, what each is for, the backup password    (admin)
   Reaching out
     Integrations    other AI apps reaching memory, one key per app            (admin)
-    Web Search      where agents search: free sources, Brave, SearXNG, own    (admin)
+    Web Search      where agents search: free sources, Brave, Exa, SearXNG, own (admin)
   People and sign-in
     Access          who may talk to the agents: Pending · Approved · Denied · Blocked · History
     Users           accounts and roles (Pro editions)                         (admin)

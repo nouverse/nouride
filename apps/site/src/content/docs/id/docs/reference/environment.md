@@ -242,6 +242,8 @@ DISCORD_MAIN=
 
 # Web search: [security.web] search_api_key = "brave_search_api_key"
 BRAVE_SEARCH_API_KEY=
+# Atau Exa: [security.web] search_kind = "exa", search_api_key = "exa_api_key"
+EXA_API_KEY=
 
 # Enkripsi sesi WhatsApp, 64 karakter hex: openssl rand -hex 32
 #   [gateways.whatsapp.main]  encryption_key = "wa-encryption-key"

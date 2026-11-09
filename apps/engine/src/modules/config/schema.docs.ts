@@ -150,9 +150,9 @@ export const ANNOTATIONS: Record<string, Annotation> = {
     example: 'allow_private_urls = true   # needed for search_endpoint = "http://192.0.2.10:8080/…"',
   },
   "security.web.search_kind": {
-    description: "Which search backend `web_search` talks to.",
+    description: "Which search backend `web_search` talks to: `brave`, `searxng` or `exa`.",
     caveat:
-      "`searxng` has no public default and must be given a `search_endpoint`. With no usable backend the tool falls back to keyless scraping rather than disappearing: an agent with no search does not stop searching, it writes a scraper.",
+      "`searxng` has no public default and must be given a `search_endpoint`; `exa` needs `search_api_key`, and without it the tool is not offered. `brave` without a key falls back to keyless scraping rather than disappearing: an agent with no search does not stop searching, it writes a scraper.",
   },
   "security.web.search_endpoint": {
     description: "Base URL of the search API or the proxy in front of it. Empty uses the backend's own default.",
@@ -164,8 +164,8 @@ export const ANNOTATIONS: Record<string, Annotation> = {
     description: "Name of the credential holding the search API key.",
     secretRef: true,
     caveat:
-      "The *name*, never the key. Resolved from the secret store or the environment at call time, so the value never enters this file.",
-    example: 'search_api_key = "brave_search_api_key"',
+      "The *name*, never the key. Resolved from the secret store or the environment at call time, so the value never enters this file. It belongs to `search_kind`: Brave's key is refused by Exa, and the other way round.",
+    example: 'search_api_key = "brave_search_api_key"   # or "exa_api_key" with search_kind = "exa"',
   },
   "security.web.fallback_enabled": {
     description: "On a 429, a 5xx or a timeout from the primary backend, try the fallback chain before giving up.",
@@ -173,7 +173,7 @@ export const ANNOTATIONS: Record<string, Annotation> = {
   "security.web.fallback_backends": {
     description: "Backends to try, in order, when the primary fails at runtime.",
     caveat:
-      "`duckduckgo` is the keyless scraping chain: no endpoint, no credential, which is why it is not a `search_kind`. A named search kind falls back on its *own* default endpoint, never this section's: a SearXNG URL is not a Brave URL. So `searxng` cannot be a fallback (it has no public default) and `brave` needs `search_api_key` set. Both are reported by `nouride doctor` rather than dialled to earn a 404 or a 401.",
+      "`duckduckgo` is the keyless scraping chain: no endpoint, no credential, which is why it is not a `search_kind`. A named search kind falls back on its *own* default endpoint, never this section's: a SearXNG URL is not a Brave URL. So `searxng` cannot be a fallback (it has no public default), and `brave` and `exa` need `search_api_key` set. Both are reported by `nouride doctor` rather than dialled to earn a 404 or a 401.",
     example: 'fallback_backends = ["duckduckgo"]',
   },
 
