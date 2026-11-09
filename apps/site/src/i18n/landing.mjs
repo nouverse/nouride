@@ -15,13 +15,13 @@ export const en = {
   meta: {
     title: 'Nouride: AI agents that live on your box',
     description:
-      'Nouride runs a few AI agents on a small computer you own: a Raspberry Pi, a mini PC, a Mac or an Android phone. Chat with them on Telegram, Discord, WhatsApp or in your browser.',
+      'Nouride runs a few AI agents on a small box you own, and uses very little of it. Chat with them on Telegram, Discord, WhatsApp or in your browser.',
   },
   nav: { docs: 'Docs', pro: 'Pro', github: 'GitHub', other: 'Bahasa Indonesia', otherShort: 'ID', otherLang: 'id', install: 'Install' },
   hero: {
     lines: ['AI agents that live', 'on your box'],
     tagline:
-      'Nouride runs a few AI agents on a small computer you own. Chat with them on Telegram, Discord, WhatsApp or right in your browser.',
+      'Nouride runs a few AI agents on a small box you own, and uses very little of it. Chat with them on Telegram, Discord, WhatsApp or right in your browser.',
     primary: 'Install Nouride',
     secondary: 'What is it?',
     mascotAlt: 'The Nouride cat, waving hello',
@@ -144,13 +144,13 @@ export const id = {
   meta: {
     title: 'Nouride: agent AI yang tinggal di mesinmu',
     description:
-      'Nouride menjalankan beberapa agent AI di komputer kecil milikmu sendiri: Raspberry Pi, mini PC, Mac, atau HP Android. Ngobrol dengan mereka lewat Telegram, Discord, WhatsApp, atau browser.',
+      'Nouride menjalankan beberapa agent AI di box kecil milikmu, dan cuma butuh sedikit resource. Ngobrol dengan mereka lewat Telegram, Discord, WhatsApp, atau browser.',
   },
   nav: { docs: 'Dokumentasi', pro: 'Pro', github: 'GitHub', other: 'English', otherShort: 'EN', otherLang: 'en', install: 'Pasang' },
   hero: {
     lines: ['Agent AI yang', 'tinggal di mesinmu'],
     tagline:
-      'Nouride menjalankan beberapa agent AI di komputer kecil milikmu sendiri. Ajak mereka ngobrol lewat Telegram, Discord, WhatsApp, atau langsung di browser.',
+      'Nouride menjalankan beberapa agent AI di box kecil milikmu, dan cuma butuh sedikit resource. Ajak mereka ngobrol lewat Telegram, Discord, WhatsApp, atau langsung di browser.',
     primary: 'Pasang Nouride',
     secondary: 'Kenalan dulu',
     mascotAlt: 'Kucing Nouride melambaikan tangan',
