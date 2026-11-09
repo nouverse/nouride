@@ -117,14 +117,18 @@ function GroupView({ group, data }: { group: ChatListGroup; data: ChatListData }
       </header>
 
       <div ref={scrollRef} className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 sm:px-6">
-        {loading ? (
-          <div className="mx-auto w-full max-w-3xl py-6">
+        {/*
+          One element from the first paint, loading or not: the sticky scroll watches it from mount. Drawn only once the
+          transcript came, it was never watched, and a group with more than a screen of history opened at its oldest
+          line (live on the box: a Discord channel at 09:20 when its last word was at 10:11).
+        */}
+        <div ref={streamRef} data-stream="" className={cn("mx-auto w-full max-w-3xl py-6", !loading && stream.length === 0 ? "my-auto" : "space-y-5")}>
+          {loading ? (
             <ListLoading count={3} />
-          </div>
-        ) : stream.length === 0 ? (
-          <EmptyState icon={MessagesSquare} className="my-auto" title="Nothing said here yet" description={`What people say in this ${roomWord(group.platform)} on ${app}, and what the agents answer, shows here.`} />
-        ) : (
-          <div ref={streamRef} className="mx-auto w-full max-w-3xl space-y-5 py-6">
+          ) : stream.length === 0 ? (
+            <EmptyState icon={MessagesSquare} title="Nothing said here yet" description={`What people say in this ${roomWord(group.platform)} on ${app}, and what the agents answer, shows here.`} />
+          ) : (
+            <>
             {/* People on the left under their names: in a group on a chat app, none of it is the reader's own. */}
             {stream.map((entry) =>
               entry.kind === "message" ? (
@@ -136,8 +140,9 @@ function GroupView({ group, data }: { group: ChatListGroup; data: ChatListData }
               ),
             )}
             {stream.every((entry) => entry.kind === "message") ? <p className="text-center text-xs text-base-content/65">No agent has said anything here yet.</p> : null}
-          </div>
-        )}
+            </>
+          )}
+        </div>
       </div>
 
       <ReadOnlyNote platform={group.platform} kind={roomWord(group.platform)} />

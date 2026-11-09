@@ -137,6 +137,19 @@ describe("a conversation from a chat app", () => {
     expect(seen.mark).toBe(true);
   });
 
+  // Live on the box, a channel with more than a screen of history opened at its oldest line: the transcript's element
+  // was drawn only once its words came, after the sticky scroll had looked for it at mount and found nothing to follow.
+  test("a group's transcript is in the element the view follows from the first paint, while its words are on their way", async () => {
+    answer({ ...list, "/sessions/ses_g1/turns": { status: 200, body: {}, hold: true } });
+    let waiting: { stream: boolean; loading: boolean } | undefined;
+    await renderPage("/chat/group/telegram/-100", async (host) => {
+      await eventually(() => host.querySelector("header h2") !== null, 3_000, "the group's header");
+      const stream = host.querySelector("[data-stream]");
+      waiting = { stream: stream !== null, loading: (stream?.children.length ?? 0) > 0 };
+    });
+    expect(waiting).toEqual({ stream: true, loading: true });
+  });
+
   test("a group: read-only, nothing to write in, and Pin to Chats keeps it in this browser", async () => {
     answer(list);
     const seen: Record<string, unknown> = {};
