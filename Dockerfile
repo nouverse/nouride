@@ -29,7 +29,7 @@
 # appliance identity, so pairing stays inert.
 #
 # `ghcr.io/nouverse/nouride-router` is not built here any more: Router became part
-# of the free build (v0.8.29_RFC), and that package is the `basic` image again
+# of the free build (v0.8.28_RFC), and that package is the `basic` image again
 # with `NOURIDE_IMAGE_MOVED_TO` set (`scripts/release/router-image.Dockerfile`),
 # pushed by the public half of a release until 0.9.0 removes it.
 #

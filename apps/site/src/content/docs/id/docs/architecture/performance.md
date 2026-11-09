@@ -157,7 +157,7 @@ Satu edisi dirilis, Community, dan ia membawa WhatsApp dan Nougate di dalam bina
 | Build | Binary | Tarball | RSS idle | |
 |---|---|---|---|---|
 | Tanpa Nougate | 88,6 MB | 40,0 MB | 58,0 MB | Daemon-nya saja |
-| Dengan Nougate, mati | 88,9 MB | 40,2 MB | 59,7 MB | Community sejak 0.8.29 |
+| Dengan Nougate, mati | 88,9 MB | 40,2 MB | 59,7 MB | Community sejak 0.8.28 |
 
 `RSS idle` di sini adalah daemon yang membawa kodenya dengan fiturnya **dimatikan**: biaya untuk
 memiliki opsinya.

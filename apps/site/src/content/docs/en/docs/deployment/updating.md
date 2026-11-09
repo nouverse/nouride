@@ -213,7 +213,7 @@ when there is something new, and only the layers that changed: the runtime and t
 underneath stay as they are. The volume keeps everything; recreating the container loses nothing.
 
 A container that ran `@@DOCKER_IMAGE@@-router` is moving to `@@DOCKER_IMAGE@@`: the Router edition is part of
-Community since 0.8.29, and the old name receives each release until 0.9. Its first start on Community keeps
+Community since 0.8.28, and the old name receives each release until 0.9. Its first start on Community keeps
 Nougate on. [Coming from nouride-router →](/en/docs/deployment/docker/#coming-from-nouride-router)
 
 On Kubernetes, with `imagePullPolicy: Always` on the container, a restart pulls the new `latest`:

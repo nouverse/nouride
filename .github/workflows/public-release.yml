@@ -15,7 +15,7 @@
 #              or a long-term patch, which gets `lts` instead
 #   publish    the draft becomes the release, once everything above passed
 #
-# Router became part of the free build (v0.8.29_RFC): what is published under its names — the tarballs
+# Router became part of the free build (v0.8.28_RFC): what is published under its names — the tarballs
 # `nouride-router-<target>.tar.gz` with `CHECKSUMS-router`, and the image `nouride-router` — is the free build again,
 # so the Router installs and containers already out there keep getting releases. Each is tested here as what it is,
 # edition `basic`. Every 0.8.x release; 0.9.0 removes them.
@@ -109,7 +109,7 @@ jobs:
           echo "file=assets/$file" >> "$GITHUB_OUTPUT"
       # Router's tarballs are Community's under Router's names (`scripts/release/router-alias.ts`), so they answer
       # `basic`: a Router build there would be one the release was not meant to carry. Rehearsing a release from before
-      # the alias, they are Router's own and this row fails; 0.9.0 removes the row (v0.8.29_RFC).
+      # the alias, they are Router's own and this row fails; 0.9.0 removes the row (v0.8.28_RFC).
       - name: Start it, and ask it what it is
         if: steps.fetch.outputs.skip != 'yes'
         env:
@@ -187,7 +187,7 @@ jobs:
       # The free image again under Router's name, for the compose files and `docker run` lines that pull
       # `nouride-router`: the image just pushed, with `NOURIDE_IMAGE_MOVED_TO` set so the dashboard tells whoever runs it
       # which image to pull from now on (`scripts/release/router-image.Dockerfile`). Its bundle, its labels and its
-      # edition are the free image's, and it is held to that before it is pushed. 0.9.0 removes this (v0.8.29_RFC).
+      # edition are the free image's, and it is held to that before it is pushed. 0.9.0 removes this (v0.8.28_RFC).
       - name: The Router image's name, for the Router containers out there
         if: inputs.rehearsal != 'yes'
         env:
@@ -216,7 +216,7 @@ jobs:
       fail-fast: false
       matrix:
         # `router`: the package `nouride-router`, which holds the free image under Router's name (`images` above).
-        # 0.9.0 removes it (v0.8.29_RFC).
+        # 0.9.0 removes it (v0.8.28_RFC).
         edition: [basic, router]
     runs-on: ubuntu-24.04
     timeout-minutes: 10

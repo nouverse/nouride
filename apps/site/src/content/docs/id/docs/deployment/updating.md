@@ -222,7 +222,7 @@ yang baru, dan hanya layer yang berubah: runtime dan paket sistem di bawahnya te
 Volume menyimpan semuanya; membuat ulang container gak menghilangkan apa pun.
 
 Container yang menjalankan `@@DOCKER_IMAGE@@-router` sedang pindah ke `@@DOCKER_IMAGE@@`: edisi Router sudah
-menjadi bagian dari Community sejak 0.8.29, dan nama lamanya menerima setiap rilis sampai 0.9. Start pertamanya di
+menjadi bagian dari Community sejak 0.8.28, dan nama lamanya menerima setiap rilis sampai 0.9. Start pertamanya di
 Community menjaga Nougate tetap menyala. [Pindah dari nouride-router →](/id/docs/deployment/docker/#pindah-dari-nouride-router)
 
 Di Kubernetes, dengan `imagePullPolicy: Always` di container-nya, restart menarik `latest` yang baru:

@@ -25,7 +25,7 @@ import { routerChecksums } from "../../../../scripts/release/router-alias.ts";
 const ROOT = join(import.meta.dir, "../../../..");
 const SH = existsSync("/bin/sh") ? "/bin/sh" : "sh";
 const OPENSSL_3 = spawnSync(SH, ["-c", "openssl pkeyutl -help 2>&1 | grep -q -- -rawin"]).status === 0;
-const TAG = "v0.8.29";
+const TAG = "v0.8.28";
 const TARGETS = ["linux-x64", "linux-arm64"];
 const FLOOR = "0.8.0";
 const sha = (bytes: Buffer | string) => createHash("sha256").update(bytes).digest("hex");
@@ -189,7 +189,7 @@ describe("the release workflow", () => {
 
   test("says that it goes at 0.9.0", () => {
     const step = workflow.slice(workflow.lastIndexOf("\n\n", at("Router's names, for the Router installs out there")), at("Router's names, for the Router installs out there"));
-    expect(step).toContain("0.9.0 removes this step (v0.8.29_RFC).");
-    expect(readFileSync(join(ROOT, "scripts/release/router-alias.ts"), "utf8")).toContain("0.9.0 removes this, with Router's other names (v0.8.29_RFC).");
+    expect(step).toContain("0.9.0 removes this step (v0.8.28_RFC).");
+    expect(readFileSync(join(ROOT, "scripts/release/router-alias.ts"), "utf8")).toContain("0.9.0 removes this, with Router's other names (v0.8.28_RFC).");
   });
 });

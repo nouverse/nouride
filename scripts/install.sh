@@ -189,10 +189,10 @@ case "$VARIANT" in
 esac
 # <<< editions
 # >>> gateway on
-# Router is part of Nouride since 0.8.29 (v0.8.29_RFC): the free build carries the LLM gateway, off until
+# Router is part of Nouride since 0.8.28 (v0.8.28_RFC): the free build carries the LLM gateway, off until
 # `[nougate] in_process = true`. `--variant router`, which older docs and Nouride Home still run, installs it with the
 # gateway switched on, as a Router install had it. It still downloads Router's names, which every 0.8.x release
-# carries — Router's own build up to 0.8.27, the free build under those names from 0.8.29
+# carries — Router's own build up to 0.8.27, the free build under those names from 0.8.28
 # (scripts/release/router-alias.ts) — so a --version from either line, or a release not yet out, installs what
 # switching the gateway on needs. 0.9.0 removes this, with those names.
 GATEWAY_ON=0

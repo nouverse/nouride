@@ -20,7 +20,7 @@ is in the same process and stays off until you choose **Use Nougate** in setup o
 dashboard's **LLM Gateway** page (`[nougate] in_process = true`). Carried and off, it costs about 0.5 MB of
 binary and 1.3 MB of memory; on and idle, about 3.6 MB more. It is not a second process.
 
-The Router edition, which was Community with the gateway on, is part of Community since 0.8.29. Until 0.9 each
+The Router edition, which was Community with the gateway on, is part of Community since 0.8.28. Until 0.9 each
 release still carries its old names, `nouride-router-*` and `@@DOCKER_IMAGE@@-router`, so a Router install
 updates onto Community by itself, with Nougate kept on.
 

@@ -164,7 +164,7 @@ services:
 
 ### Coming from nouride-router
 
-The Router image, Community with Nougate on, is part of this image since 0.8.29. Until 0.9,
+The Router image, Community with Nougate on, is part of this image since 0.8.28. Until 0.9,
 `@@DOCKER_IMAGE@@-router` still receives each release: it is this image, so its first start keeps Nougate on and
 its accounts as they are, and the dashboard asks you to switch the name. Switch it whenever you like, and before 0.9,
 when the old name stops receiving releases: change `image:` to `@@DOCKER_IMAGE@@` and run `docker compose up -d`.

@@ -4,7 +4,7 @@
  *
  *   bun run scripts/release/router-alias.ts dist        after the `CHECKSUMS` of Community's tarballs is written
  *
- * Router became part of Community (v0.8.29_RFC): the free build carries the LLM gateway, off until
+ * Router became part of Community (v0.8.28_RFC): the free build carries the LLM gateway, off until
  * `[nougate] in_process = true`, and no Router build is made. But a Router binary from before asks the public release
  * for its own files, by name — `nouride-router-<target>.tar.gz` and `CHECKSUMS-router` with its `.sig`
  * (`packages/update`: `newestCarrying` picks the newest release carrying both, `planUpdate` wants the signature,
@@ -16,7 +16,7 @@
  * them, as it is. The release workflow's `sign` job signs it with the others (it signs every `CHECKSUMS*`). Once
  * updated, the daemon reports `basic` and asks for Community's names from then on.
  *
- * 0.9.0 removes this, with Router's other names (v0.8.29_RFC).
+ * 0.9.0 removes this, with Router's other names (v0.8.28_RFC).
  *
  * Self-contained on purpose: `node:` and the build's own names only, so a test runs it on a fake release.
  */

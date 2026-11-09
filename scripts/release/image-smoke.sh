@@ -2,7 +2,7 @@
 # Starts a public image on a port of its own and checks it answers as the release and edition it says it is, and that
 # its CLI finds the daemon from inside the container, as a person asking `docker exec <container> nouride status` would.
 #
-#   sh scripts/release/image-smoke.sh <image> <version> <edition>    e.g. ghcr.io/nouverse/nouride:0.8.29-amd64 0.8.29 basic
+#   sh scripts/release/image-smoke.sh <image> <version> <edition>    e.g. ghcr.io/nouverse/nouride:0.8.28-amd64 0.8.28 basic
 #
 # `public-release.yml` runs it on each image it built before it pushes it: the free image, and the same image under
 # Router's name, which must answer `basic` too.

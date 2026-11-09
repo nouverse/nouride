@@ -167,7 +167,7 @@ services:
 
 ### Pindah dari nouride-router
 
-Image Router, yaitu Community dengan Nougate menyala, sudah menjadi bagian dari image ini sejak 0.8.29. Sampai 0.9,
+Image Router, yaitu Community dengan Nougate menyala, sudah menjadi bagian dari image ini sejak 0.8.28. Sampai 0.9,
 `@@DOCKER_IMAGE@@-router` masih menerima setiap rilis: isinya image ini, jadi start pertamanya menjaga Nougate tetap
 menyala dan akun-akunnya tetap ada, dan dashboard memintamu mengganti namanya. Ganti kapan saja, asal sebelum 0.9,
 saat nama lama berhenti menerima rilis: ubah `image:` menjadi `@@DOCKER_IMAGE@@` lalu jalankan

@@ -2,9 +2,9 @@
 #
 # Install or upgrade Nouride on a Linux host with its LLM gateway switched on, then hand over to the browser.
 #
-# Fetches the official Nouride installer and runs it with `--variant router`. Router is part of Nouride since 0.8.29,
+# Fetches the official Nouride installer and runs it with `--variant router`. Router is part of Nouride since 0.8.28,
 # and that variant now installs Nouride with `[nougate] in_process = true` (install.sh, "gateway on"). Kept for the
-# links that name it, through 0.8.x; 0.9.0 decides what it becomes with the rest of Router's names (v0.8.29_RFC).
+# links that name it, through 0.8.x; 0.9.0 decides what it becomes with the rest of Router's names (v0.8.28_RFC).
 #
 # Usage:
 #   curl -fsSL https://get.nouride.com/install-bundle-router.sh | sudo sh

@@ -207,7 +207,7 @@ kind = "openai"
 base_url = "http://127.0.0.1:18256/openai/v1"   # or /anthropic/v1
 ```
 
-**Coming from the Router edition?** Router is part of Community since 0.8.29. A Router install updates onto
+**Coming from the Router edition?** Router is part of Community since 0.8.28. A Router install updates onto
 Community by itself and keeps Nougate on. Until 0.9 the `nouride-router` image still receives each release; change
 `image:` to `ghcr.io/nouverse/nouride` whenever you like before then.
 

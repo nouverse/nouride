@@ -20,7 +20,7 @@ di proses yang sama dan mati sampai kamu memilih **Use Nougate** di setup atau m
 **LLM Gateway** di dashboard (`[nougate] in_process = true`). Selama ikut tapi mati, biayanya sekitar 0,5 MB binary
 dan 1,3 MB memori; saat menyala dan idle, sekitar 3,6 MB lagi. Ia bukan proses kedua.
 
-Edisi Router, yaitu Community dengan gateway menyala, sudah menjadi bagian dari Community sejak 0.8.29. Sampai 0.9
+Edisi Router, yaitu Community dengan gateway menyala, sudah menjadi bagian dari Community sejak 0.8.28. Sampai 0.9
 setiap rilis masih membawa nama lamanya, `nouride-router-*` dan `@@DOCKER_IMAGE@@-router`, jadi instalasi Router
 pindah ke Community sendiri lewat update-nya, dengan Nougate tetap menyala.
 

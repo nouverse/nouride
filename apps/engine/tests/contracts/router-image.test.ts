@@ -29,7 +29,7 @@ describe("the Router image", () => {
   test("is the image it is given, with the one line that says where it moved, and nothing else", () => {
     const instructions = ALIAS.split("\n").filter((line) => line.trim() && !line.startsWith("#"));
     expect(instructions).toEqual(["ARG BASE", "FROM ${BASE}", "ENV NOURIDE_IMAGE_MOVED_TO=ghcr.io/nouverse/nouride"]);
-    expect(ALIAS).toContain("0.9.0 removes this, and stops pushing `nouride-router` (v0.8.29_RFC).");
+    expect(ALIAS).toContain("0.9.0 removes this, and stops pushing `nouride-router` (v0.8.28_RFC).");
   });
 
   test("is built from the free image this run just pushed, held to it, and pushed under the same tag", () => {
@@ -50,7 +50,7 @@ describe("the Router image", () => {
       expect(alias.indexOf(check)).toBeGreaterThan(-1);
       expect(alias.indexOf(check)).toBeLessThan(alias.indexOf('docker push "$ref"'));
     }
-    expect(WORKFLOW).toContain("it is held to that before it is pushed. 0.9.0 removes this (v0.8.29_RFC).");
+    expect(WORKFLOW).toContain("it is held to that before it is pushed. 0.9.0 removes this (v0.8.28_RFC).");
   });
 
   test("gets the multi-arch tags the free image gets, and Router's tarballs are smoked as the free build", () => {
@@ -75,7 +75,7 @@ describe("image-smoke.sh", () => {
   const smoke = (health: string) => {
     const calls = join(dir, `calls-${Math.random()}`);
     writeFileSync(calls, "");
-    const run = spawnSync("sh", [join(ROOT, "scripts/release/image-smoke.sh"), "img:0.8.29-amd64", "0.8.29", "basic"], {
+    const run = spawnSync("sh", [join(ROOT, "scripts/release/image-smoke.sh"), "img:0.8.28-amd64", "0.8.28", "basic"], {
       encoding: "utf8",
       env: { PATH: `${join(dir, "bin")}:${process.env.PATH ?? "/usr/bin:/bin"}`, HEALTH: health, CALLS: calls },
     });
@@ -83,18 +83,18 @@ describe("image-smoke.sh", () => {
   };
 
   test("passes an image that answers as the version and edition it is held to, and asks its CLI too", () => {
-    const run = smoke('{"status":"ok","version":"0.8.29","edition":"basic"}');
+    const run = smoke('{"status":"ok","version":"0.8.28","edition":"basic"}');
     expect(run.status).toBe(0);
-    expect(run.out).toContain("smoke: img:0.8.29-amd64 ok (basic 0.8.29)");
+    expect(run.out).toContain("smoke: img:0.8.28-amd64 ok (basic 0.8.28)");
     expect(run.calls).toMatch(/^exec smoke-\d+ nouride status$/m);
     // And the container is gone after, whatever happened.
     expect(run.calls).toMatch(/^rm -f smoke-\d+$/m);
   });
 
   test("fails an image that answers as another edition — a Router build where the free one should be", () => {
-    const run = smoke('{"status":"ok","version":"0.8.29","edition":"router"}');
+    const run = smoke('{"status":"ok","version":"0.8.28","edition":"router"}');
     expect(run.status).toBe(1);
-    expect(run.out).toContain("::error::img:0.8.29-amd64 did not answer as basic 0.8.29");
+    expect(run.out).toContain("::error::img:0.8.28-amd64 did not answer as basic 0.8.28");
     expect(run.calls).toMatch(/^rm -f smoke-\d+$/m);
   });
 

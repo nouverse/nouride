@@ -153,7 +153,7 @@ One edition is published, Community, and it carries WhatsApp and Nougate in the 
 | Build | Binary | Tarball | RSS idle | |
 |---|---|---|---|---|
 | Without Nougate | 88.6 MB | 40.0 MB | 58.0 MB | The daemon on its own |
-| With Nougate, off | 88.9 MB | 40.2 MB | 59.7 MB | Community since 0.8.29 |
+| With Nougate, off | 88.9 MB | 40.2 MB | 59.7 MB | Community since 0.8.28 |
 
 `RSS idle` here is the daemon carrying the code with the feature switched **off**: what it costs to
 have the option.

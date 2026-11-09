@@ -52,7 +52,7 @@ That is the free edition: WhatsApp and the LLM gateway compiled in (the gateway 
 `[nougate] in_process = true`, which setup's **Use Nougate** and the LLM Gateway page write), one account, no
 external sign-in. Built from a clone without `internals/nougate`, it has no gateway. `pro` adds multi-user
 accounts, Nouverse sign-in and Box pairing. The Router edition, the free one with the gateway on, is the free
-edition since 0.8.29.
+edition since 0.8.28.
 
 Once a release exists, the tarball step goes away: `sh install.sh` downloads the right build itself.
 

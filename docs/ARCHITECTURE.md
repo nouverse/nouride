@@ -195,7 +195,7 @@ the WhatsApp bridge in-process (§6). The LLM gateway is otherwise a separate se
 HTTP; every official build compiles it into this binary and runs it inside, on `18256`, once
 `[nougate] in_process = true` says so (setup's **Use Nougate** and the LLM Gateway page write it, and start it
 without a restart). The Router edition, the free build with it on by default, was folded into the free build in
-0.8.29:
+0.8.28:
 
 | build | what it carries |
 |---|---|

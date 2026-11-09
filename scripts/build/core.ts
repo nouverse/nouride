@@ -528,9 +528,9 @@ const RETIRED_FLAGS: Record<string, string> = {
   "--cloud": "",
   // 0.7.20: Pro Router became Pro, which carries the gateway (owner, 2026-10-19).
   "--pro-router": "",
-  // Router became part of Community (v0.8.29_RFC): the free build carries what `--router` added.
+  // Router became part of Community (v0.8.28_RFC): the free build carries what `--router` added.
   "--router":
-    "The LLM gateway is part of the free build since 0.8.29: `bun run build:binary` carries it, " +
+    "The LLM gateway is part of the free build since 0.8.28: `bun run build:binary` carries it, " +
     "and `[nougate] in_process = true` switches it on.",
 };
 

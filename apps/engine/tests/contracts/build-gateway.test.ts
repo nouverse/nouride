@@ -162,7 +162,7 @@ describe("the entry point, in a tree where the test decides what is checked out"
         env: process.env as Record<string, string>,
       });
       expect({ entry, exit: result.exitCode }).toEqual({ entry, exit: 1 });
-      expect(result.stderr).toContain("✗ --router is gone. The LLM gateway is part of the free build since 0.8.29");
+      expect(result.stderr).toContain("✗ --router is gone. The LLM gateway is part of the free build since 0.8.28");
       expect(result.stderr).toContain("`[nougate] in_process = true` switches it on");
     }
   }, 60_000);
