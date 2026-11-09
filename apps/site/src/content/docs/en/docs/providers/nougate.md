@@ -73,17 +73,15 @@ antigravity, claudecode)`, for whoever reads the turn; the chat is told only tha
 
 ## Running it inside the daemon
 
-Nougate is normally a separate service reached over HTTP. The **Router** edition carries it inside
-the Nouride daemon instead, on its own port:
-
-```bash
-@@ROUTER_INSTALL_CMD@@
-```
-
-or the `@@DOCKER_IMAGE@@-router` image. There it is on by default, on port `18256`.
+Nougate is normally a separate service reached over HTTP. Every Nouride install also carries it inside
+the daemon, on its own port, `18256`, and it stays off until you ask for it. Choosing it in setup, or
+**Turn on** on the dashboard's **LLM Gateway** page, starts it at once, without a restart, and keeps it on
+from then on. **Turn off** on the same page names the agents that use it, then restarts Nouride once nothing is
+running. Until 0.9 the Router edition's old install command (`--variant router`) and image
+(`@@DOCKER_IMAGE@@-router`) give you the same build with it already on.
 
 **No API key needed to start.** The setup wizard's first step still takes an API key, and under it
-offers **Use Nougate LLM Gateway**: sign in to an account you already have, one of Claude (Pro or Max),
+offers **Use Nougate**: sign in to an account you already have, one of Claude (Pro or Max),
 ChatGPT (through Codex), GitHub Copilot, Google Gemini (through Antigravity) or Kiro, and the daemon
 connects itself to the gateway with a key it mints and never shows you. The agent step then lists the
 models those accounts can serve. Claude, ChatGPT and Gemini sign in by OAuth: the tab you approve in
@@ -110,9 +108,10 @@ base_url = "http://127.0.0.1:18256/anthropic/v1"
 api_key = "nougate"
 ```
 
-To move it or switch it off, use `[nougate]` in `.nouride/config.toml`, or set
-`NOUGATE_IN_PROCESS=false` in `.env`. In an edition without the gateway it is off, and turning it on
-there stops the daemon at boot, with a sentence saying this build does not carry it:
+The switch on the page writes `[nougate] in_process` in `.nouride/config.toml`; to move the port, edit the same
+table. `NOUGATE_IN_PROCESS=true` or `false` in `.env` decides it for the server, and the page then shows the
+switch as set there. A build without the gateway (one compiled from the public source alone) does not offer
+it, and turning it on there stops the daemon at boot, with a sentence saying this build does not carry it:
 
 ```toml
 [nougate]

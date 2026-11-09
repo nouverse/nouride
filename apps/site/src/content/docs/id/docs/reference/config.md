@@ -513,12 +513,15 @@ pengaturan.
 ## `[nougate]`
 
 ```toml
-in_process = false                  # bawaannya true di edisi Router
+in_process = false                  # diatur dari halaman LLM Gateway di dashboard
 ```
 
-Edisi Router dan Pro membawa gateway ini; di Router `in_process` bawaannya `true`, di Pro `false`.
-Di edisi lain, menyalakannya membuat daemon gak mau start, dengan pesan bahwa build
-itu gak membawa gateway-nya. `$NOUGATE_IN_PROCESS` menimpanya.
+Setiap build resmi membawa gateway ini, mati secara bawaan. Memilih **Use Nougate** di setup atau **Turn on** di
+halaman LLM Gateway menulis `true` dan menyalakannya tanpa restart; **Turn off** menulis `false` lalu me-restart
+Nouride. Start pertama instalasi Router di Community menulis `true` kalau file-nya belum punya `in_process` dan
+gateway-nya punya data, jadi ia tetap menyala. Di build tanpa gateway (dikompilasi dari source publik saja),
+menyalakannya membuat daemon gak mau start, dengan pesan bahwa build itu gak membawa gateway-nya.
+`$NOUGATE_IN_PROCESS` menimpanya.
 [Nougate →](/id/docs/providers/nougate/)
 
 ---

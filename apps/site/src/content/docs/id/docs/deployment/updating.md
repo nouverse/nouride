@@ -221,9 +221,9 @@ docker run -d --name nouride ... @@DOCKER_IMAGE@@
 yang baru, dan hanya layer yang berubah: runtime dan paket sistem di bawahnya tetap seperti semula.
 Volume menyimpan semuanya; membuat ulang container gak menghilangkan apa pun.
 
-Tiap edisi punya image sendiri. Container Router diperbarui dari `@@DOCKER_IMAGE@@-router`: kalau
-di-pull dari `@@DOCKER_IMAGE@@`, ia kembali sebagai Community, tanpa gateway yang diharapkan
-config-nya.
+Container yang menjalankan `@@DOCKER_IMAGE@@-router` sedang pindah ke `@@DOCKER_IMAGE@@`: edisi Router sudah
+menjadi bagian dari Community sejak 0.8.29, dan nama lamanya menerima setiap rilis sampai 0.9. Start pertamanya di
+Community menjaga Nougate tetap menyala. [Pindah dari nouride-router →](/id/docs/deployment/docker/#pindah-dari-nouride-router)
 
 Di Kubernetes, dengan `imagePullPolicy: Always` di container-nya, restart menarik `latest` yang baru:
 
@@ -318,8 +318,9 @@ yang baru jalan.
 Bagian ini layak dibaca dua kali, karena alternatifnya adalah sebuah install ditawari sesuatu yang
 gak akan pernah bisa dia dapat.
 
-Tiap edisi dibangun dan diterbitkan terpisah. Channel publik menerima tarball edisi **Community** dan
-**Router** dan gak yang lain, jadi sebuah rilis bisa ada tanpa ada untuk build kamu. Yang di-resolve
+Tiap edisi dibangun dan diterbitkan terpisah. Channel publik menerima tarball edisi **Community** dan gak
+yang lain (sampai 0.9, sekali lagi dengan nama lama edisi Router, supaya instalasi Router pindah ke Community
+sendiri), jadi sebuah rilis bisa ada tanpa ada untuk build kamu. Yang di-resolve
 daemon karenanya bukan "tag terbaru", melainkan **rilis terbaru yang benar-benar membawa build untuk
 edisi ini, dan yang file checksum-nya mencakupnya**.
 
@@ -381,12 +382,11 @@ release channel`), bukan melaporkan bahwa semuanya sudah paling baru.
 
 ## Yang diperiksa sebelum apa pun berpindah
 
-- **Checksum-nya**, terhadap file checksum milik rilis itu (`CHECKSUMS`, atau `CHECKSUMS-router`; `SHA256SUMS…` sampai 0.7.x),
+- **Checksum-nya**, terhadap file checksum milik rilis itu (`CHECKSUMS`; `SHA256SUMS…` sampai 0.7.x),
   sebelum satu file pun disentuh. Unduhan terpotong tetap bisa di-untar; binary yang gak jalan baru
   ketahuan setelah yang lama hilang.
-- **Tanda tangan, untuk edisi Pro.** File checksum-nya harus ditandatangani dengan key yang
-  dikompilasi ke dalam binary. Channel publik gak menerbitkan tanda tangan, jadi Community dan Router
-  mengandalkan checksum dan HTTPS.
+- **Tanda tangan.** File checksum-nya harus ditandatangani dengan key yang dikompilasi ke dalam binary: selalu
+  untuk Pro, dan di channel publik untuk setiap rilis sejak 0.7.4, rilis pertama yang ditandatangani.
 - **Bahwa tarball-nya memang berisi executable `nouride`.**
 - **Bahwa artefaknya memang ada.** Edisi yang tarball-nya gak diterbitkan diberi tahu saat
   *pengecekan*, bukan saat sudah mencoba mengambilnya.

@@ -48,16 +48,17 @@ scp dist/nouride-linux-x64.tar.gz scripts/install.sh root@server:/tmp/
 sh /tmp/install.sh --tarball /tmp/nouride-linux-x64.tar.gz
 ```
 
-That is the free edition: WhatsApp compiled in, no LLM gateway, one account, no external sign-in.
-The other editions add one or more of those: `router` the LLM gateway, in the daemon's own process and on
-by default; `pro` multi-user accounts, Nouverse sign-in, Box pairing and the same gateway, on when
-`[nougate] in_process = true` says so.
+That is the free edition: WhatsApp and the LLM gateway compiled in (the gateway off until
+`[nougate] in_process = true`, which setup's **Use Nougate** and the LLM Gateway page write), one account, no
+external sign-in. Built from a clone without `internals/nougate`, it has no gateway. `pro` adds multi-user
+accounts, Nouverse sign-in and Box pairing. The Router edition, the free one with the gateway on, is the free
+edition since 0.8.29.
 
 Once a release exists, the tarball step goes away: `sh install.sh` downloads the right build itself.
 
 ```bash
 sh install.sh                            # the free edition
-sh install.sh --variant router           # + the LLM gateway
+sh install.sh --variant router           # the same, with the gateway on (accepted until 0.9)
 ```
 
 `pro` is licensed rather than a public download, so for it the script needs `--tarball`. `--variant`
@@ -80,7 +81,7 @@ carries Apple Silicon builds only (`darwin-arm64`); an Intel Mac builds its own 
 |---|---|
 | `--tarball PATH` | install from a tarball already on this machine |
 | `--version TAG`, `--base-url URL`, `--repo OWNER/NAME` | which release to download, and from where |
-| `--variant NAME` | `router` or `pro`; omitted, the free edition |
+| `--variant NAME` | `pro`; omitted, the free edition. `router` until 0.9: the free edition with the gateway on |
 | `--dir PATH`, `--user NAME` | install directory and service account — `/srv/nouride` and `nouride` |
 | `--host ADDR`, `--port PORT` | where the dashboard listens — `127.0.0.1:18254` |
 | `--allow-packages`, `--no-packages` | let agents install system packages through `nouride-pkg`, asking a person each time unless an agent is `trusted` — or remove it (`CLI.md`, `nouride pkg`) |
@@ -132,7 +133,7 @@ dashboard/            the built SPA, which the binary serves from beside itself
 skills/               the skills that ship with the daemon — the `builtin` scope
 pkg/                  nouride-pkg, the root service `--allow-packages` installs — scripts, so they can be read
 config.example.toml   every setting, annotated. A reference; the daemon boots without it
-frontend/             the LLM gateway's UI — in the router editions only
+frontend/             the LLM gateway's UI, in a build that carries the gateway
 ```
 
 The dashboard is a directory of hash-named assets, which cannot be named as imports and so cannot be
@@ -503,7 +504,7 @@ Warned about and ignored, since each held the value nearly every install had: `[
 ### The upgrade floor
 
 What enforces the window: a release can say which version must have run on an install's data before it may be
-installed there. The line is in its checksum files — `CHECKSUMS`, `CHECKSUMS-router` and the Pro ones (`SHA256SUMS…` up to 0.7.x) —
+installed there. The line is in its checksum files — `CHECKSUMS` (and until 0.9 `CHECKSUMS-router`, its copy under the Router edition's name) and the Pro ones (`SHA256SUMS…` up to 0.7.x) —
 
 ```
 # nouride-min-version: 0.7.14
@@ -565,9 +566,11 @@ being told which:
 
 | Package | Edition | LLM gateway | Multi-user, Nouverse sign-in | Public |
 |---|---|---|---|---|
-| `ghcr.io/nouverse/nouride` | `basic` | **absent** | **absent** | yes |
-| `ghcr.io/nouverse/nouride-router` | `router` | in this process | **absent** | yes |
-| `ghcr.io/nouverse/nouride-pro` | `pro` | **absent** | in this process | no |
+| `ghcr.io/nouverse/nouride` | `basic` | in this process, off until asked | **absent** | yes |
+| `ghcr.io/nouverse/nouride-pro` | `pro` | in this process, off until asked | in this process | no |
+
+Until 0.9, `ghcr.io/nouverse/nouride-router` is `nouride` pushed a second time with `NOURIDE_IMAGE_MOVED_TO` set,
+so a Router container keeps updating and its dashboard asks for the new name.
 
 **`nouride` is the one to deploy.** `nouride-pro` is the licensed
 edition, and Nouverse's managed pods are where its "Continue with Nouverse" button has an issuer to
@@ -583,8 +586,8 @@ that verified only one of them would be claiming something it had not checked.
 git tag v0.2.0 && git push origin v0.2.0
 ```
 
-A tag needs four secrets: `SUBMODULE_TOKEN` reads the private submodules the Router and Pro editions
-build from, `RELEASES_REPO_TOKEN` publishes the public tarballs and images, `RELEASE_SIGNING_KEY` signs
+A tag needs four secrets: `SUBMODULE_TOKEN` reads the private submodules the free edition (the gateway)
+and Pro build from, `RELEASES_REPO_TOKEN` publishes the public tarballs and images, `RELEASE_SIGNING_KEY` signs
 every checksum file, and `NOUVERSE_RELEASE_TOKEN` publishes the Pro editions for boxes. The first two
 are tried in the workflow's first job, before anything is built. `GITHUB_TOKEN` pushes the private
 image, with `packages: write`. **Pulling needs a credential too**, while the package is private:

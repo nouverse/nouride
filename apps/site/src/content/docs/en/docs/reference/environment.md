@@ -102,8 +102,8 @@ environment once read, so nothing it runs inherits it. [Secrets →](/en/docs/ar
 |---|---|
 | `TZ` | IANA timezone for the agent's sense of time, and for cron. Default UTC |
 | `LOG_LEVEL` | `debug`, `info`, `warn` or `error` |
-| `NOUGATE_IN_PROCESS` | `true` or `false`, overrides `[nougate] in_process`. Only the Router edition has a gateway to start |
-| `NOUGATE_HOME` | Router edition: the bundled gateway keeps its state in `$NOUGATE_HOME/data`. Default `.nouride/nougate` |
+| `NOUGATE_IN_PROCESS` | `true` or `false`, overrides `[nougate] in_process`, and the dashboard's switch then shows it as set here. A build compiled from the public source alone has no gateway to start |
+| `NOUGATE_HOME` | The bundled gateway keeps its state in `$NOUGATE_HOME/data`. Default `.nouride/nougate` |
 | `NOURIDE_SUPERVISOR_MODE` | Any value says something outside Nouride (pm2, supervisord, runit) restarts the daemon when it exits, so `nouride restart` and an update go ahead. Set it only if that is true. Not read inside a container |
 | `NOURIDE_WA_LOG_LEVEL` | `debug` turns the WhatsApp bridge's own logging all the way up, on stderr. Default `warn` |
 | `NOURIDE_WA_SEND_TIMEOUT_MS` | How long one WhatsApp send may take before it counts as failed. Default `60000` |
@@ -141,9 +141,9 @@ on *that* login page.
 
 :::caution[Only the Pro edition reads these]
 These variables exist in every build, but only the **Pro** edition has the flow
-behind them. On a Community or Router build, setting `NOURIDE_OAUTH_ISSUER` makes the
+behind them. On a Community build, setting `NOURIDE_OAUTH_ISSUER` makes the
 daemon **refuse to boot** rather than ignore it, the code is not compiled in, so there is nothing to
-configure. [The editions →](/en/docs/deployment/binaries/#nouride-variants)
+configure. [The editions →](/en/docs/deployment/binaries/#editions)
 :::
 
 ### What you need

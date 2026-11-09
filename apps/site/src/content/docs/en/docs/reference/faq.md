@@ -31,8 +31,8 @@ OpenRouter, a company gateway, a local Ollama, or your own proxy.
 
 **Can I use my Claude or ChatGPT subscription?**
 Two ways. An [external agent](/en/docs/manual/external-agents/) is answered by Claude Code or Codex itself, signed in
-with your subscription, through the official ACP adapters that Zed and JetBrains use. In the Router edition,
-[Nougate](/en/docs/providers/nougate/#running-it-inside-the-daemon) signs in to a Claude, ChatGPT, Copilot, Gemini or
+with your subscription, through the official ACP adapters that Zed and JetBrains use. Or switch on
+[Nougate](/en/docs/providers/nougate/#running-it-inside-the-daemon), which signs in to a Claude, ChatGPT, Copilot, Gemini or
 Kiro account and serves its models to any agent as a provider. What a subscription allows is its maker's terms to say.
 
 **Does anything phone home?**

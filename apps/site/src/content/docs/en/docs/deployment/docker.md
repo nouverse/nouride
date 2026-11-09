@@ -125,52 +125,54 @@ and point `workspace_dir` at it. The three paths are separate config keys for ex
 
 ## Which image
 
-Two are public, and this page names the first throughout. The third is private:
+One is public, and this page names it throughout. The other is private:
 
 | Package | What it carries | Notes |
 |---|---|---|
-| `@@DOCKER_IMAGE@@` | The Community edition | The standard image for self-hosting |
-| `@@DOCKER_IMAGE@@-router` | Community plus the Nougate gateway, in the same process | Gateway on port 18256, on by default |
+| `@@DOCKER_IMAGE@@` | The Community edition, with the Nougate gateway in the same process, off until chosen | The standard image for self-hosting |
 | `@@DOCKER_IMAGE@@-pro` | The Pro edition: multi-user accounts and Nouverse sign-in | **Private**, not pullable without access |
 
-The router image keeps the gateway's state, its accounts, providers and `nougate.db`, in
-`./nouride/nougate/data/`, inside the same single volume mount.
-
-Setting `NOURIDE_OAUTH_ISSUER` against either public image is **refused at boot**, with a sentence
+Setting `NOURIDE_OAUTH_ISSUER` against the public image is **refused at boot**, with a sentence
 saying this build has no external sign-in. It is not ignored, and there is no environment variable
 that turns it on: the code is not in there.
 
 [Variants and specifications →](/en/docs/deployment/binaries/)
 
-### Running the Router variant
+### Nougate in the container
 
-When deploying `@@DOCKER_IMAGE@@-router`, the gateway's dashboard is the **LLM Gateway** page
-of the Nouride dashboard on `@@PORT@@`, behind the same sign-in. Publish port `18256` as well only for
-what calls the gateway directly: other tools with a gateway key, or its standalone console at
+Nougate is off until you choose **Use Nougate** in setup or turn it on from the **LLM Gateway** page. Its
+dashboard is that page, behind the same sign-in, and it keeps its state, its accounts, providers and
+`nougate.db`, in `./nouride/nougate/data/`, inside the same single volume mount. Publish port `18256` as well only
+for what calls the gateway directly: other tools with a gateway key, or its standalone console at
 `http://<your-ip>:18256/frontend/`:
 
 ```yaml
 services:
   nouride:
-    image: @@DOCKER_IMAGE@@-router
+    image: @@DOCKER_IMAGE@@
     container_name: nouride
     restart: unless-stopped
     stop_grace_period: 45s
     ports:
       - "127.0.0.1:@@PORT@@:@@PORT@@"
-      - "127.0.0.1:18256:18256"   # Nougate AI Router & Web Console (/frontend/)
+      - "127.0.0.1:18256:18256"   # Nougate, for tools with a gateway key and its console (/frontend/)
     volumes:
       - ./nouride:/app/.nouride
 ```
 
-In the Router edition the in-process gateway is **on by default** on port `18256`, so no
-`config.toml` is needed for it. The setup wizard connects to it without an API key; sign in to a
-Claude, ChatGPT, Copilot, Gemini or Kiro account under **Use Nougate LLM Gateway**.
 [The Nougate page →](/en/docs/providers/nougate/#running-it-inside-the-daemon)
+
+### Coming from nouride-router
+
+The Router image, Community with Nougate on, is part of this image since 0.8.29. Until 0.9,
+`@@DOCKER_IMAGE@@-router` still receives each release: it is this image, so its first start keeps Nougate on and
+its accounts as they are, and the dashboard asks you to switch the name. Switch it whenever you like, and before 0.9,
+when the old name stops receiving releases: change `image:` to `@@DOCKER_IMAGE@@` and run `docker compose up -d`.
+Nothing else changes.
 
 ## The registry
 
-Both public images pull without a login. A private package, or an image you build and push to a
+The public image pulls without a login. A private package, or an image you build and push to a
 private registry yourself, needs one:
 
 ```bash

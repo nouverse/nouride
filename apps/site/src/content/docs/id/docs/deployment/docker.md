@@ -128,52 +128,54 @@ dan arahkan `workspace_dir` ke situ. Ketiga path itu kunci config terpisah justr
 
 ## Image yang mana
 
-Dua yang publik, dan halaman ini memakai yang pertama di seluruh contohnya. Yang ketiga privat:
+Satu yang publik, dan halaman ini memakainya di seluruh contohnya. Yang lain privat:
 
 | Package | Isinya | Keterangan |
 |---|---|---|
-| `@@DOCKER_IMAGE@@` | Edisi Community | Image standar untuk self-hosting |
-| `@@DOCKER_IMAGE@@-router` | Community plus gateway Nougate, dalam proses yang sama | Gateway di port 18256, langsung aktif |
+| `@@DOCKER_IMAGE@@` | Edisi Community, dengan gateway Nougate di proses yang sama, mati sampai dipilih | Image standar untuk self-hosting |
 | `@@DOCKER_IMAGE@@-pro` | Edisi Pro: akun multi-user dan masuk dengan Nouverse | **Privat**, gak bisa di-pull tanpa akses |
 
-Image router menyimpan state gateway-nya, yaitu akun, provider, dan `nougate.db`, di
-`./nouride/nougate/data/`, tetap di dalam satu volume mount yang sama.
-
-Menyetel `NOURIDE_OAUTH_ISSUER` pada salah satu image publik **ditolak saat boot**, dengan kalimat yang
+Menyetel `NOURIDE_OAUTH_ISSUER` pada image publik **ditolak saat boot**, dengan kalimat yang
 menyatakan build ini gak punya sign-in eksternal. Ia gak diabaikan, dan gak ada environment variable
 yang bisa menyalakannya: kodenya memang gak ada di dalam.
 
 [Varian dan spesifikasi masing-masing →](/id/docs/deployment/binaries/)
 
-### Menjalankan varian Router
+### Nougate di dalam container
 
-Kalau menjalankan `@@DOCKER_IMAGE@@-router`, dashboard gateway-nya adalah halaman **LLM Gateway**
-di dashboard Nouride pada `@@PORT@@`, dengan login yang sama. Publish port `18256` juga hanya untuk yang
-memanggil gateway secara langsung: tool lain dengan key gateway, atau console mandirinya di
+Nougate mati sampai kamu memilih **Use Nougate** di setup atau menyalakannya dari halaman **LLM Gateway**.
+Dashboard-nya adalah halaman itu, dengan login yang sama, dan ia menyimpan state-nya, yaitu akun, provider, dan
+`nougate.db`, di `./nouride/nougate/data/`, tetap di dalam satu volume mount yang sama. Publish port `18256` juga
+hanya untuk yang memanggil gateway secara langsung: tool lain dengan key gateway, atau console mandirinya di
 `http://<ip-kamu>:18256/frontend/`:
 
 ```yaml
 services:
   nouride:
-    image: @@DOCKER_IMAGE@@-router
+    image: @@DOCKER_IMAGE@@
     container_name: nouride
     restart: unless-stopped
     stop_grace_period: 45s
     ports:
       - "127.0.0.1:@@PORT@@:@@PORT@@"
-      - "127.0.0.1:18256:18256"   # Nougate AI Router & Web Console (/frontend/)
+      - "127.0.0.1:18256:18256"   # Nougate, untuk tool dengan key gateway dan console-nya (/frontend/)
     volumes:
       - ./nouride:/app/.nouride
 ```
 
-Di edisi Router, gateway in-process **langsung aktif secara default** di port `18256`, jadi gak perlu
-`config.toml` untuknya. Wizard setup menyambung ke gateway tanpa API key: masuk dengan akun Claude,
-ChatGPT, Copilot, Gemini atau Kiro lewat **Use Nougate LLM Gateway**.
 [Halaman Nougate →](/id/docs/providers/nougate/#menjalankannya-di-dalam-daemon)
+
+### Pindah dari nouride-router
+
+Image Router, yaitu Community dengan Nougate menyala, sudah menjadi bagian dari image ini sejak 0.8.29. Sampai 0.9,
+`@@DOCKER_IMAGE@@-router` masih menerima setiap rilis: isinya image ini, jadi start pertamanya menjaga Nougate tetap
+menyala dan akun-akunnya tetap ada, dan dashboard memintamu mengganti namanya. Ganti kapan saja, asal sebelum 0.9,
+saat nama lama berhenti menerima rilis: ubah `image:` menjadi `@@DOCKER_IMAGE@@` lalu jalankan
+`docker compose up -d`. Selain itu gak ada yang berubah.
 
 ## Registry
 
-Kedua image publik bisa di-pull tanpa login. Paket privat, atau image yang kamu build dan push sendiri
+Image publik bisa di-pull tanpa login. Paket privat, atau image yang kamu build dan push sendiri
 ke registry privat, butuh login:
 
 ```bash
