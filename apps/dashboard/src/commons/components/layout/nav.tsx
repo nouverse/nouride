@@ -168,9 +168,32 @@ export function visible(items: NavItem[], where: { admin: boolean; onBox: boolea
 
 const ITEM = "flex min-h-11 items-center gap-3 rounded-[14px] px-3 text-sm transition-colors duration-150 active:scale-[0.98] lg:min-h-10";
 
-function NavLink({ item, pathname, small = false }: { item: NavItem; pathname: string; small?: boolean }) {
+/** Folded to its icon (`CompactSidebar`): the icon over a short name, and what waits there as a count on its corner. */
+const TILE = "relative flex w-16 flex-col items-center gap-1 rounded-[14px] py-2 text-[10px] transition-colors duration-150 active:scale-[0.98]";
+
+function NavLink({ item, pathname, small = false, compact = false }: { item: NavItem; pathname: string; small?: boolean; compact?: boolean }) {
   const { to, label, icon: Icon, badge: Badge } = item;
   const current = isCurrent(item, pathname);
+  if (compact) {
+    return (
+      <Link
+        to={to}
+        activeOptions={{ exact: to === "/" }}
+        aria-current={current ? "page" : undefined}
+        aria-label={label}
+        title={label}
+        className={cn(TILE, current ? "font-semibold text-secondary" : "font-medium text-base-content/70 hover:bg-base-content/[0.05] hover:text-base-content")}
+      >
+        <Icon size={18} className="shrink-0" aria-hidden="true" />
+        <span aria-hidden="true" className="max-w-full truncate px-1">{label}</span>
+        {Badge ? (
+          <span className="absolute -top-0.5 right-1 [&_.badge]:ml-0">
+            <Badge />
+          </span>
+        ) : null}
+      </Link>
+    );
+  }
   return (
     <Link
       to={to}
@@ -189,10 +212,20 @@ function NavLink({ item, pathname, small = false }: { item: NavItem; pathname: s
  * The menu itself, the sidebar's and More's: the page you are on is marked by the one highlight under the items, which
  * moves to the item you open. In More, the daily four are left out: the tab bar under it has them.
  */
-export function SidebarNav({ pathname, where }: { pathname: string; where: { admin: boolean; onBox: boolean; hostsGateway: boolean } }) {
+export function SidebarNav({ pathname, where, compact = false }: { pathname: string; where: { admin: boolean; onBox: boolean; hostsGateway: boolean }; compact?: boolean }) {
   const nav = useRef<HTMLElement>(null);
   const settings = SETTINGS.map((group) => ({ ...group, items: visible(group.items, where) })).filter((group) => group.items.length > 0);
   const inSettings = pathname === SETTINGS_HOME || settings.some((group) => group.items.some((item) => isCurrent(item, pathname)));
+  if (compact) {
+    return (
+      <nav ref={nav} aria-label="Menu" className="relative isolate flex w-full flex-1 flex-col items-center gap-0.5 overflow-y-auto px-2 py-3">
+        <NavHighlight nav={nav} />
+        {[...DAILY, ...OCCASIONAL, { to: SETTINGS_HOME, label: "Settings", icon: Settings, badge: AccessBadge }].map((item) => (
+          <NavLink key={item.to} item={item} pathname={pathname} compact />
+        ))}
+      </nav>
+    );
+  }
   return (
     <nav ref={nav} aria-label="Menu" className="relative isolate flex-1 space-y-4 overflow-y-auto px-3 py-4">
       <NavHighlight nav={nav} />

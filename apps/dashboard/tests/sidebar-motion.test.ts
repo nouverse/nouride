@@ -69,8 +69,8 @@ describe("the page you are on", () => {
     await renderPage("/missions", async (host, app) => {
       await eventually(() => host.querySelector(`${MENU} a[aria-current="page"]`) !== null, 4_000, "the current item");
       laidOut(host);
-      (host.querySelector(`${MENU} a[href$="/chat"]`) as HTMLElement).click();
-      await eventually(() => app.location().endsWith("/chat") && (mark(host)?.style.translate ?? "") !== "", 4_000, "the mark placed");
+      (host.querySelector(`${MENU} a[href$="/work"]`) as HTMLElement).click();
+      await eventually(() => app.location().endsWith("/work") && (mark(host)?.style.translate ?? "") !== "", 4_000, "the mark placed");
       seen.first = mark(host)!.style.translate;
       laidOut(host);
       (host.querySelector(`${MENU} a[href$="/skills"]`) as HTMLElement).click();
