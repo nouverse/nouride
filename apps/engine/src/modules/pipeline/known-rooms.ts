@@ -117,10 +117,19 @@ export function knownRooms(deps: RoomSources, chatTypes?: Pick<ChatTypes, "of">)
     });
   };
 
-  for (const session of deps.sessions.list({ limit: SESSIONS_READ })) {
-    if (session.sessionType !== "main" || cronJobOfChat(session.chatId) !== null) continue;
-    if (chatKind(deps, session.gatewayId, session.chatId, chatTypes) !== "group") continue;
-    add(session.gatewayId, session.chatId, session.agentId, session.updatedAt);
+  const conversations = deps.sessions.list({ limit: SESSIONS_READ }).filter((session) => session.sessionType === "main" && cronJobOfChat(session.chatId) === null);
+  const elsewhere: typeof conversations = [];
+  for (const session of conversations) {
+    if (chatKind(deps, session.gatewayId, session.chatId, chatTypes) === "group") add(session.gatewayId, session.chatId, session.agentId, session.updatedAt);
+    else elsewhere.push(session);
+  }
+  // A bot whose own connection says nothing of a chat another of ours knows as a group is in that group all the same:
+  // the platform and the chat say so. Before the room log kept each connection's copy, only the first bot's was kept,
+  // and a second agent's conversation in a group read as a one-to-one: its answer was the group's last line while the
+  // group's agents left it out.
+  for (const session of elsewhere) {
+    const platform = deps.gateways.get(session.gatewayId)?.platform;
+    if (platform && found.has(`${platform}\u0000${session.chatId}`)) add(session.gatewayId, session.chatId, session.agentId, session.updatedAt);
   }
   // A dashboard room nobody has spoken in yet is still a room somebody made.
   for (const gatewayId of deps.gateways.keys()) {

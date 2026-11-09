@@ -117,6 +117,23 @@ describe("the Groups page's rooms", () => {
     expect(bench.pipeline.renameRoom("whatsapp:main", GROUP, "")).toEqual({ ok: true, name: "Keluarga Besar" });
     expect(bench.pipeline.renameRoom("nowhere:x", GROUP, "x")).toMatchObject({ ok: false, why: "connection" });
   });
+
+  test("a second bot there is among its agents though its own connection kept none of the room log", async () => {
+    // Live on the box: Nexa answered in a Discord channel whose room log only Nouva's connection had kept (one row per
+    // message, until each connection kept its own copy), so its conversation read as a one-to-one — its "tag received"
+    // was the channel's last line in Groups while the channel's agents were "Nouva" alone.
+    const { whatsapp, bench } = await setUp();
+    bench.gateways.set("whatsapp:second", new FakeGateway("whatsapp:second", "whatsapp"));
+    whatsapp.receive(inGroup("halo"));
+    await bench.pipeline.idle();
+    bench.sessions.save({ agentId: "nexa", gatewayId: "whatsapp:second", chatId: GROUP }, [{ role: "assistant", content: "tag received" }], 5);
+    // The same chat id on another platform is another chat: never this group's.
+    bench.sessions.save({ agentId: "nero", gatewayId: "telegram:main", chatId: GROUP }, [{ role: "assistant", content: "hi" }], 5);
+
+    const rooms = bench.pipeline.knownRooms();
+    expect(rooms).toHaveLength(1);
+    expect(rooms[0]?.agents.sort()).toEqual(["nexa", "nouva"]);
+  });
 });
 
 describe("a room that has no name yet", () => {
