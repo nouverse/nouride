@@ -26,6 +26,7 @@ import { AuditLog } from "./components/AuditLog";
 import { BackgroundJobs } from "./components/BackgroundJobs";
 import { DaemonLog } from "./components/DaemonLog";
 import { ScheduleRuns } from "./components/ScheduleRuns";
+import { PAGE_ASKS } from "@/commons/components/agents/page-asks";
 
 type Tab = "daemon" | "audit" | "schedule" | "jobs";
 
@@ -53,6 +54,7 @@ export default function LogsPage() {
     <div className={`flex h-full flex-col gap-4 overflow-y-auto overflow-x-hidden px-4 pt-4 sm:px-6 sm:pt-6 lg:overflow-hidden lg:px-8 lg:pt-8 ${PAGE_BOTTOM} *:animate-fade`}>
       <div className="shrink-0 space-y-4">
         <PageHeader
+          ask={PAGE_ASKS.logs}
           title="Logs"
           description="For whoever runs the server: what Nouride has been doing, who did what, what ran on a schedule and what still runs in the background, to find out why something went wrong."
         />

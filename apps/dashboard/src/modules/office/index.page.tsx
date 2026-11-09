@@ -20,6 +20,7 @@ import { roster } from "@/commons/office/lib/roster";
 import { statusOf } from "@/commons/office/lib/status";
 import { AgentCard } from "./components/AgentCard";
 import { useOfficeTheme, useReducedMotion, useVisible } from "@/commons/office/lib/hooks";
+import { PAGE_ASKS } from "@/commons/components/agents/page-asks";
 
 /** How often the page reads the statuses while it is seen: a few hundred bytes. */
 const POLL_MS = 5_000;
@@ -122,6 +123,7 @@ export default function OfficePage() {
   return (
     <div className="space-y-5">
       <PageHeader
+        ask={PAGE_ASKS.office}
         title="Office"
         description="Your agents at work: at a desk when working, a hand up when waiting for you, on the sofa when idle, in bed when asleep or when it cannot work."
         actions={

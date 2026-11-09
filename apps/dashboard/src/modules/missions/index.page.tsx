@@ -29,6 +29,7 @@ import { MissionSettingsCard } from "./components/MissionSettingsCard";
 import { NewMissionForm } from "./components/NewMissionForm";
 import { anyOpen, grouped, searchedIn, tabOf, type MissionTab } from "./lib/mission";
 import { ListLoading } from "@/commons/components/ui/Spinner";
+import { PAGE_ASKS } from "@/commons/components/agents/page-asks";
 
 /** While something is working or waiting on a person; a finished list changes only when somebody starts one. */
 const OPEN_MS = 5_000;
@@ -171,6 +172,7 @@ export default function MissionsPage({ agent }: { agent?: string }) {
   return (
     <div className={FILL_PAGE}>
       <PageHeader
+        ask={PAGE_ASKS.missions}
         title="Missions"
         description="Long work an agent finishes alone. It reports to the chat it began in, and stops to ask when it needs you."
         actions={

@@ -36,6 +36,7 @@ import { DecidedStrip, DraftList } from "./drafts.panel";
 import { LearningSettingsPanel } from "./learning-settings";
 import { ExplorePanel } from "./explore.panel";
 import { Count, SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
+import { PAGE_ASKS } from "@/commons/components/agents/page-asks";
 
 type Tab = "live" | "pending" | "explore";
 
@@ -71,6 +72,7 @@ export default function SkillWorkshopPage() {
   return (
     <div className={FILL_PAGE}>
       <PageHeader
+        ask={PAGE_ASKS.skills}
         title="Skills Workshop"
         description="One pool of skills, shared by every agent. Each agent holds a switch; nothing here is copied per agent."
       />

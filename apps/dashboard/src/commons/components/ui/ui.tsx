@@ -14,16 +14,21 @@ import { AlertCircle, ChevronDown } from "lucide-react";
 import { failureWords } from "@/commons/lib/api.client";
 import { cn } from "@/commons/lib/utils";
 import { Details } from "./Details";
+import { AskAgentButton } from "@/commons/components/agents/AskAgentButton";
+import type { PageAsk } from "@/commons/components/agents/page-asks";
 
 export function PageHeader({
   title,
   description,
   actions,
+  ask,
   className,
 }: {
   title: string;
   description?: string;
   actions?: ReactNode;
+  /** The page's "Ask Nouva" button, before its own actions: the page's job asked of the orchestrator in a chat. */
+  ask?: PageAsk;
   className?: string;
 }) {
   return (
@@ -34,7 +39,12 @@ export function PageHeader({
           <p className="text-base-content/65 max-w-2xl text-sm leading-relaxed">{description}</p>
         )}
       </div>
-      {actions && <div className="flex flex-wrap items-center gap-2.5">{actions}</div>}
+      {(actions || ask) && (
+        <div className="flex flex-wrap items-center gap-2.5">
+          {ask && <AskAgentButton task={ask.task} message={ask.message} variant="soft" />}
+          {actions}
+        </div>
+      )}
     </header>
   );
 }

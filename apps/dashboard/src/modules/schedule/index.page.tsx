@@ -24,6 +24,7 @@ import { Count, SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
 import { useConfirm } from "@/commons/components/ui/confirm";
 import { jobCardId } from "./search";
 import { ListLoading } from "@/commons/components/ui/Spinner";
+import { PAGE_ASKS } from "@/commons/components/agents/page-asks";
 
 type Filter = "all" | "active" | "paused" | "failing";
 
@@ -177,6 +178,7 @@ export default function SchedulePage({ job: linked }: { job?: string }) {
     <div className={FILL_PAGE}>
       {dialog}
       <PageHeader
+        ask={PAGE_ASKS.schedule}
         title="Schedule"
         description={`Work that runs on a schedule, again and again or once. Times are in the server's time zone (${timezone}) unless a job names its own.`}
         actions={

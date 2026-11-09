@@ -20,6 +20,7 @@ import { FILL_PAGE, ScrollCard } from "@/commons/components/ui/ScrollCard";
 import { useSaved } from "@/commons/hooks/use-saved";
 import { useTextFilter } from "@/commons/lib/use-text-filter";
 import { ListLoading } from "@/commons/components/ui/Spinner";
+import { PAGE_ASKS } from "@/commons/components/agents/page-asks";
 
 /** A room nobody named, by a short form of its id: what there is to tell two of them apart. */
 function shortChatId(chatId: string): string {
@@ -41,6 +42,7 @@ export default function GroupsPage() {
   return (
     <div className={FILL_PAGE}>
       <PageHeader
+        ask={PAGE_ASKS.groups}
         title="Groups"
         description="The rooms your agents talk in: each group, channel, thread and dashboard room, with its own conversation. A room is called what its platform calls it; rename it here, and that is the name agents use for it."
       />

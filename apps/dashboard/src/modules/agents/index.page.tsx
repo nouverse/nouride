@@ -20,6 +20,7 @@ import { NewAgentForm } from "./components/NewAgentForm";
 import { ListLoading } from "@/commons/components/ui/Spinner";
 import { LIFTS } from "@/commons/components/ui/CardGrid";
 import { cn } from "@/commons/lib/utils";
+import { PAGE_ASKS } from "@/commons/components/agents/page-asks";
 
 export default function AgentListPage() {
   // Polled while the page is open, so what each agent is doing stays true; not in a hidden tab.
@@ -47,6 +48,7 @@ export default function AgentListPage() {
   return (
     <div className={FILL_PAGE}>
       <PageHeader
+        ask={PAGE_ASKS.agents}
         title="Agents"
         description="Each agent has its own personality, AI model, chat connections and tools."
         actions={

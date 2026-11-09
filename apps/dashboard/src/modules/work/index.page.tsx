@@ -11,6 +11,7 @@ import { EmptyState, ErrorNote, PageHeader } from "@/commons/components/ui/ui";
 import { WaitingLink } from "@/commons/components/approvals/WaitingLink";
 import { useAnswerApproval } from "@/commons/hooks/use-answer-approval";
 import { MOVING_MISSIONS, missionsWaiting } from "@/commons/hooks/use-needs-you";
+import { PAGE_ASKS } from "@/commons/components/agents/page-asks";
 
 export default function WorkPage() {
   const approvals = useQuery({ queryKey: ["approvals"], queryFn: api.approvals, refetchInterval: 5_000, retry: false });
@@ -23,7 +24,7 @@ export default function WorkPage() {
   const name = (id: string) => status.data?.agents.find((agent) => agent.id === id)?.displayName || id;
   return (
     <div className="space-y-5">
-      <PageHeader title="Work" description="What your agents are doing on their own, and what they are waiting for you to answer." />
+      <PageHeader ask={PAGE_ASKS.work} title="Work" description="What your agents are doing on their own, and what they are waiting for you to answer." />
       {approvals.error ? (
         <ErrorNote error={approvals.error} />
       ) : approvals.isPending ? null : pending.length + asking.length === 0 ? (

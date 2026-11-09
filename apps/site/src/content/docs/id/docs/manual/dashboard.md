@@ -128,6 +128,15 @@ bawahnya. Lalu, berurutan:
 
 Kalau gak ada yang menunggu dan gak ada yang jalan, kucing yang tidur bilang *Nothing is waiting for you*.
 
+## Tanya orchestrator dari halaman mana pun
+
+Kebanyakan halaman punya tombol di header-nya, **Ask** dan nama orchestrator-mu: *Ask Nouva to create an agent* di
+Agents, *to set up a webhook* di Webhooks, *to schedule something* di Schedule, *to add a model* di Models, dan
+seterusnya. Tombol itu membuka chat dengan orchestrator, dengan permintaan untuk halaman itu sudah tertulis dan bagian
+kosong (…) untuk yang kamu mau. Lengkapi lalu kirim: tidak ada yang terkirim sebelum kamu menekan kirim, dan agent
+tetap minta izin untuk hal yang berisiko. Tombolnya ada untuk yang boleh chat (admin atau operator), dan hanya kalau
+orchestrator sudah dipilih. Di HP tulisannya **Ask Nouva**.
+
 ## Agent adalah modulnya
 
 Ini satu keputusan struktural yang layak dijelaskan. Semua tentang satu agent, file, model, bot, siapa

@@ -124,6 +124,15 @@ this order:
 
 When nothing waits and nothing moves, a sleeping cat says *Nothing is waiting for you*.
 
+## Ask your orchestrator, from any page
+
+Most pages carry a button in their header, **Ask** and your orchestrator's name: *Ask Nouva to create an agent* on
+Agents, *to set up a webhook* on Webhooks, *to schedule something* on Schedule, *to add a model* on Models, and so on.
+It opens a chat with the orchestrator with a request for that page already written, with a gap (…) for what you
+want. Finish it and send it: nothing is sent until you do, and the agent still asks before anything risky. It is
+there for whoever may chat (an admin or an operator), and only once an orchestrator is set. On a phone it says
+**Ask Nouva**.
+
 ## An agent is the module
 
 This is the one structural decision worth explaining. Everything about one agent, its files, its

@@ -28,6 +28,7 @@ import { useToast } from "@/commons/components/ui/toast";
 import { useSaved } from "@/commons/hooks/use-saved";
 import { Leaving } from "@/commons/components/ui/OverPage";
 import { ListLoading } from "@/commons/components/ui/Spinner";
+import { PAGE_ASKS } from "@/commons/components/agents/page-asks";
 
 export default function PeoplePage() {
   const queryClient = useQueryClient();
@@ -43,6 +44,7 @@ export default function PeoplePage() {
   return (
     <div className={FILL_PAGE}>
       <PageHeader
+        ask={PAGE_ASKS.people}
         title="People"
         description="Everyone your agents know, with the chat accounts each writes from. Add someone by name: their accounts can be added now, or approved as theirs when they first message an agent."
         actions={

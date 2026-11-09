@@ -42,6 +42,7 @@ import { useToast } from "@/commons/components/ui/toast";
 import { runOutcomeToast } from "@/commons/lib/run-outcome";
 import { FILL_PAGE, ScrollArea } from "@/commons/components/ui/ScrollCard";
 import { Count, SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
+import { PAGE_ASKS } from "@/commons/components/agents/page-asks";
 
 type Filter = "all" | "active" | "paused" | "failing";
 const FILTERS: { id: Filter; label: string }[] = [
@@ -75,6 +76,7 @@ export default function WebhooksPage() {
   return (
     <div className={FILL_PAGE}>
       <PageHeader
+        ask={PAGE_ASKS.webhooks}
         title="Webhooks"
         description="Addresses that start an agent's work when something calls them: a failed test run, a new issue, an alert, anything that can call a web address."
         actions={

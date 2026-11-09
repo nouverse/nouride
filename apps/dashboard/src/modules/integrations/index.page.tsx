@@ -26,6 +26,7 @@ import { CopyButton } from "@/commons/components/ui/CopyButton";
 import { Details } from "@/commons/components/ui/Details";
 import { McpClients, RecallTip } from "./clients";
 import { useSaved } from "@/commons/hooks/use-saved";
+import { PAGE_ASKS } from "@/commons/components/agents/page-asks";
 
 /** Each scope as a person reads it. The engine's `modules/mcp-server/scopes.ts` is the rule. */
 const SCOPES: { value: McpScope; label: string; hint: string }[] = [
@@ -235,6 +236,7 @@ export default function IntegrationsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        ask={PAGE_ASKS.integrations}
         title="Integrations"
         description="Let other AI apps, like Claude Code or Cursor, read your agents' memory and who they are."
       />

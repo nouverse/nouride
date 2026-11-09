@@ -19,6 +19,7 @@ import { McpExplore } from "@/commons/components/mcp/McpExplore";
 import { McpServerForm } from "@/commons/components/mcp/McpServerForm";
 import { LibraryServerCard } from "./components/LibraryServerCard";
 import { ListLoading } from "@/commons/components/ui/Spinner";
+import { PAGE_ASKS } from "@/commons/components/agents/page-asks";
 
 export default function McpLibraryPage({ install, agent }: { install?: string; agent?: string }) {
   const me = useMe();
@@ -56,6 +57,7 @@ export default function McpLibraryPage({ install, agent }: { install?: string; a
   return (
     <div className={FILL_PAGE}>
       <PageHeader
+        ask={PAGE_ASKS.connectors}
         title="Connectors"
         description="Extra tools for your agents from other services, like GitHub or Notion. Add one once and switch it on for the agents that should have it; its key is shared unless an agent brings its own."
         actions={

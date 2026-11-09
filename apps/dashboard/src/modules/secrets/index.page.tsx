@@ -36,6 +36,7 @@ import { BackupPasswordCard } from "./components/BackupPasswordCard";
 import { LockNote } from "./components/LockNote";
 import { SecretForm } from "./components/SecretForm";
 import { plainUse, SecretRow } from "./components/SecretRow";
+import { PAGE_ASKS } from "@/commons/components/agents/page-asks";
 
 /**
  * What deleting a stored value does, said before it is done — and the part people read is that it cannot be put
@@ -123,6 +124,7 @@ export default function SecretsPage() {
     <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
     <div className={`mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 pt-4 sm:px-6 sm:pt-6 lg:h-full lg:p-8 ${PAGE_BOTTOM}`}>
       <PageHeader
+        ask={PAGE_ASKS.secrets}
         className="shrink-0"
         title="Secrets"
         description="The passwords and keys your agents and connections use. Add or replace one here; once saved, nobody can read it back, not even you."

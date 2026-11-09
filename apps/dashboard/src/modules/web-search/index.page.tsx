@@ -27,6 +27,7 @@ import { ProviderPicker } from "./components/ProviderPicker";
 import { TestResult } from "./components/TestResult";
 import { RestartNeeded } from "@/commons/components/box/RestartNeeded";
 import { useSaved } from "@/commons/hooks/use-saved";
+import { PAGE_ASKS } from "@/commons/components/agents/page-asks";
 
 interface Draft {
   mode: WebSearchMode;
@@ -151,6 +152,7 @@ export default function WebSearchPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        ask={PAGE_ASKS.webSearch}
         title="Web Search"
         description="Where your agents look things up. The free sources work with no setup; a search API gives steadier results and image search."
       />

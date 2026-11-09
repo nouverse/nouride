@@ -21,6 +21,7 @@ import { Count, SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
 import { ModelTiersButton } from "./components/ModelTiers";
 import { CodingClis } from "./components/CodingClis";
 import { ListLoading } from "@/commons/components/ui/Spinner";
+import { PAGE_ASKS } from "@/commons/components/agents/page-asks";
 
 const KINDS = [
   { id: "anthropic", label: "Anthropic", baseUrl: "https://api.anthropic.com/v1" },
@@ -44,6 +45,7 @@ export default function ModelsPage({ tab }: { tab?: "clis" | undefined } = {}) {
   return (
     <div className={FILL_PAGE}>
       <PageHeader
+        ask={PAGE_ASKS.models}
         title="Models"
         description="Where your agents' answers come from: the AI providers and their keys, and the coding CLIs some agents work inside (Claude Code, Codex), with their accounts."
         actions={

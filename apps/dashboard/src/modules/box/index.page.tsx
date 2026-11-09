@@ -38,6 +38,7 @@ import { CodesCard } from "./components/CodesCard";
 import { LocalCard } from "./components/LocalCard";
 import { UpdatesCard } from "./components/UpdatesCard";
 import { Card, ErrorNote, PageHeader } from "@/commons/components/ui/ui";
+import { PAGE_ASKS } from "@/commons/components/agents/page-asks";
 
 const BENEFITS: { icon: typeof Cloud; title: string; body: string }[] = [
   {
@@ -121,6 +122,7 @@ export default function BoxPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        ask={PAGE_ASKS.box}
         title="My Box"
         description="This Nouride Box, its link to your Nouverse account, and the codes printed on it."
         actions={

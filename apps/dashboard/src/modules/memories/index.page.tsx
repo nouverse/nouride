@@ -30,6 +30,7 @@ import { TagsCard, TidyTagsButton } from "./tags-card";
 import { TimelineTab } from "./timeline.tab";
 import { KnowledgeTab } from "./knowledge/knowledge.tab";
 import { SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
+import { PAGE_ASKS } from "@/commons/components/agents/page-asks";
 
 export type MemoryTab = "knowledge" | "notes" | "people" | "timeline" | "shared" | "proposals" | "settings";
 type Tab = MemoryTab;
@@ -61,6 +62,7 @@ export default function MemoriesPage({ tab: opened }: { tab?: MemoryTab } = {}) 
     // A tab's panel fades in as it is drawn (`*:animate-fade`), as every section that appears here does.
     <div className="space-y-6 *:animate-fade">
       <PageHeader
+        ask={PAGE_ASKS.memory}
         title="Knowledge & Memory"
         description="The documents you keep for your agents, and what they remember from conversations."
         actions={operator ? <TidyTagsButton /> : null}

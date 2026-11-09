@@ -25,6 +25,7 @@ import { HistoryTab } from "./history.tab";
 import { PendingTab } from "./pending.tab";
 import type { AccessSearch, AccessTab } from "./search";
 import { ListLoading } from "@/commons/components/ui/Spinner";
+import { PAGE_ASKS } from "@/commons/components/agents/page-asks";
 
 const count = (n: number, tone = "badge-ghost") => (n > 0 ? <span className={`badge badge-xs ${tone} font-semibold`}>{n}</span> : null);
 
@@ -53,6 +54,7 @@ export default function AccessPage({ search, onSearch }: { search: AccessSearch;
     // A tab's panel fades in as it is drawn (`*:animate-fade`), as every section that appears here does.
     <div className="space-y-6 *:animate-fade">
       <PageHeader
+        ask={PAGE_ASKS.access}
         title="Access"
         description="Who may talk to your agents: who is waiting for an answer, who is in, who is kept out, and what was decided."
       />
