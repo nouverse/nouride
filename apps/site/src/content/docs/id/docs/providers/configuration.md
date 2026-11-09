@@ -269,8 +269,8 @@ membukanya dengan `read` alih-alih menjalankan ulang perintahnya.
 
 Kalau membersihkan hasil lama belum cukup, teks yang dibawa panggilan `write`, `edit` dan `multi_edit`
 lama yang menyusul, dari yang paling lama: panggilannya tetap ada bersama path dan hasilnya, dan
-teksnya jadi satu baris yang bilang seberapa besar teks itu dan bahwa file-nya sekarang yang
-menyimpannya. Panggilan di langkah terakhir gak pernah dipendekkan. Tanpa ini, giliran coding yang
+teksnya jadi satu baris yang bilang seberapa besar teks itu, bahwa panggilannya sudah jalan, dan
+untuk membaca file-nya kalau perlu isinya sekarang. Panggilan di langkah terakhir gak pernah dipendekkan. Tanpa ini, giliran coding yang
 panjang membawa setiap file yang ia tulis sampai jendelanya penuh.
 
 Hasil tool juga diperkecil sesuai jenisnya sebelum masuk percakapan: kode warna terminal dibuang, baris yang
