@@ -282,8 +282,8 @@ export const COLORS: Record<"blue" | "lime" | "peach" | "charcoal" | "sage" | "l
 /** What every cat shares. */
 export const COMMON: Palette = {
   o: "#1e1b24", p: "#f2a2b0", n: "#e57a8e", k: "#1e1b24", w: "#ffffff", g: "#2a2d35", s: "#26272c",
-  // The helmet's grey, light enough to read against black fur.
-  H: "#8a9099", j: "#5f656e", J: "#b3b9c2",
+  // The helmet's dark grey, as the mascot's: darker than grey fur and lighter than black, so it reads on either.
+  H: "#5c616b", j: "#41454d", J: "#7f858f",
   // A photochromic lens: purple-grey, darker above.
   u: "#3a3150", v: "#5d5080",
 };

@@ -57,8 +57,8 @@ dua agent kembar dalam satu kantor.
 | Accessory | `accessory` | none, glasses, sunglasses, scarf, photochromic |
 | Eyes | `eyes` | round, sleepy, sparkly |
 
-Tuxedo, helm (selalu abu-abu) dan kacamata photochromic adalah milik maskot: kucing tuxedo hitam dengan ketiganya dan
-hoodie lilac berpakaian seperti maskot, dan begitulah **Nourider** baru mulai. Agent yang dibuat sebelumnya tetap dengan
+Tuxedo, helm (selalu abu-abu tua) dan kacamata photochromic adalah milik maskot: kucing tuxedo dengan ketiganya dan
+hoodie lilac berpakaian seperti maskot, dan begitulah **Nourider** baru mulai, dengan bulu abu-abu. Agent yang dibuat sebelumnya tetap dengan
 tampilannya sampai kamu memilih ini di tab Look-nya.
 
 Tampilan disimpan di `[look]` dalam `config.toml` agent itu, jadi ikut terbawa bersama pack-nya:
