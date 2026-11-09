@@ -1,9 +1,19 @@
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 import { unified } from '@astrojs/markdown-remark';
 import { remarkConsts } from './src/plugins/remark-consts.mjs';
 import { GITHUB_REPO, SITE_URL, UMAMI_SCRIPT_URL, UMAMI_WEBSITE_ID } from './src/consts.mjs';
+
+/**
+ * The social preview's address, with the picture's own hash in it.
+ *
+ * X, WhatsApp, Telegram and Facebook keep a link's preview by the image's address. A new og.png served at the same
+ * `/og.png` went on showing the old picture wherever the link had been shared, so a changed picture is a new address.
+ */
+const OG_IMAGE = `${SITE_URL}/og.png?v=${createHash('sha256').update(readFileSync(new URL('./public/og.png', import.meta.url))).digest('hex').slice(0, 12)}`;
 
 /**
  * The brand assets, which live once in `packages/shared/assets` and are used by every surface.
@@ -144,6 +154,7 @@ const languageless = Object.fromEntries(
 export default defineConfig({
   site: SITE_URL,
   vite: {
+    define: { 'import.meta.env.OG_IMAGE': JSON.stringify(OG_IMAGE) },
     resolve: {
       alias: { '@brand': brand, '@fonts': fonts },
     },
@@ -182,14 +193,14 @@ export default defineConfig({
           tag: 'meta',
           attrs: {
             property: 'og:image',
-            content: `${SITE_URL}/og.png`,
+            content: OG_IMAGE,
           },
         },
         {
           tag: 'meta',
           attrs: {
             property: 'og:image:secure_url',
-            content: `${SITE_URL}/og.png`,
+            content: OG_IMAGE,
           },
         },
         {
@@ -231,7 +242,7 @@ export default defineConfig({
           tag: 'meta',
           attrs: {
             name: 'twitter:image',
-            content: `${SITE_URL}/og.png`,
+            content: OG_IMAGE,
           },
         },
         {

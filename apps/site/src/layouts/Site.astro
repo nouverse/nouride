@@ -35,20 +35,15 @@ import { SITE_URL, UMAMI_SCRIPT_URL, UMAMI_WEBSITE_ID } from '../consts.mjs';
 
 interface Props {
   locale?: string;
-  title?: string;
-  description?: string;
-  image?: string;
+  title: string;
+  description: string;
 }
 
-const {
-  locale = 'en',
-  title = 'Nouride, Serious Agents. Tiny Runtime.',
-  description = 'Self-hosted multi-agent AI engine running directly on your own machine. Native Discord, Telegram, and WhatsApp support. One binary, runs in 64 MB of RAM (measured 2026-10-17).',
-  image = '/og.png',
-} = Astro.props;
+const { locale = 'en', title, description } = Astro.props;
+/** `og.png` with its hash, from `astro.config.mjs`: the address changes when the picture does. */
+const ogImage: string = import.meta.env.OG_IMAGE;
 
 const canonical = new URL(Astro.url.pathname, SITE_URL).href;
-const ogImage = new URL(image, SITE_URL).href;
 const ogLocale = locale === 'id' ? 'id_ID' : 'en_US';
 ---
 

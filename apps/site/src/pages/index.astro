@@ -1,13 +1,11 @@
 ---
 import Site from '../layouts/Site.astro';
+import { en } from '../i18n/landing.mjs';
+// What a link to nouride.com shows where it is shared, so the English page's own words: a preview never runs the
+// redirect below, it reads this page.
 ---
 
-<Site
-  locale="en"
-  title="Nouride, Serious Agents. Tiny Runtime."
-  description="Self-hosted multi-agent AI engine running directly on your own hardware. Native Telegram, Discord, and WhatsApp support. One binary, runs in 64 MB of RAM (measured 2026-10-17)."
-  image="/og.png"
->
+<Site locale="en" title={en.meta.title} description={en.meta.description}>
   <script is:inline>
     (function () {
       var lang = (navigator.language || '').toLowerCase().startsWith('id') ? '/id' : '/en';
