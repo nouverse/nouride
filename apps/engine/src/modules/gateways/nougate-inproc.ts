@@ -73,10 +73,16 @@ export interface HostRequest {
  */
 const vouched = new WeakMap<Request, HostRequest>();
 
-/** `<install>/.nouride/nougate` — a folder of its own, still inside the one directory an operator mounts and backs up. */
+/**
+ * `<install>/.nouride/nougate` — a folder of its own, still inside the one directory an operator mounts and backs up —
+ * or wherever `NOUGATE_HOME` already says. The gateway puts its state in `data` under it.
+ */
+export function gatewayHome(dataDir: string, env: Record<string, string | undefined> = process.env): string {
+  return env.NOUGATE_HOME ?? join(dirname(resolve(dataDir)), "nougate");
+}
+
 function pointGatewayHome(dataDir: string): void {
-  // The gateway puts its state in `$NOUGATE_HOME/data`.
-  process.env.NOUGATE_HOME ??= join(dirname(resolve(dataDir)), "nougate");
+  process.env.NOUGATE_HOME = gatewayHome(dataDir);
 }
 
 export interface EmbeddedGateway {

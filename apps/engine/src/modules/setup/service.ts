@@ -126,10 +126,10 @@ export interface SetupDeps {
    */
   builtinToolNames?: () => string[];
   /**
-   * The gateway this process hosts, on a `router` or `pro` build with it switched on — what
-   * lets setup connect to it without anybody typing a key (`useBundledGateway`).
+   * The gateway this process hosts, when the build carries it and it is switched on — what lets setup connect to it
+   * without anybody typing a key (`useBundledGateway`). Asked at each use: the wizard turns it on after boot.
    */
-  bundledGateway?: Pick<EmbeddedGateway, "url" | "ensureHostKey" | "connectedModels">;
+  bundledGateway?: () => Pick<EmbeddedGateway, "url" | "ensureHostKey" | "connectedModels"> | null;
   fetchImpl?: typeof fetch;
 }
 
@@ -285,7 +285,7 @@ export class SetupService {
    * gateway's API Keys page does not fill up with copies.
    */
   async useBundledGateway(input: { actor: string }): Promise<{ ok: true; models: string[] } | { ok: false; error: string }> {
-    const gateway = this.deps.bundledGateway;
+    const gateway = this.deps.bundledGateway?.() ?? null;
     if (!gateway) return { ok: false, error: "This build has no LLM gateway running." };
 
     const models = gateway.connectedModels();
@@ -325,7 +325,7 @@ export class SetupService {
 
     // The hosted gateway's `/models` lists every model of every provider, signed in or not, and the
     // picker's first entry would then be one no account serves. The gateway knows which it can.
-    const gateway = this.deps.bundledGateway;
+    const gateway = this.deps.bundledGateway?.() ?? null;
     if (gateway && entry.baseUrl.startsWith(gateway.url)) {
       const connected = gateway.connectedModels();
       if (connected.length > 0) return { ok: true, models: connected };

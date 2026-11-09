@@ -56,7 +56,7 @@ export const LONG_FUNCTIONS: Record<string, Record<string, Budget>> = {
   "apps/engine/src/cli/commands/service.ts": { service: { lines: 152, why: "`nouride service`: status, diff, install and uninstall, branches of one dispatch over the supervisor and unit it finds first" } },
   "apps/engine/src/cli/main.ts": { main: { lines: 158, why: "the CLI's dispatch: one case per command, behind the flags every command shares" } },
   "apps/engine/src/cli/usage.ts": { usageText: { lines: 253, why: "the whole of `nouride help`, one template a person reads top to bottom: its lines are the help, not logic" } },
-  "apps/engine/src/index.ts": { runDaemon: { lines: 181, why: "the boot order, one step after another; the stores, the timers and the turn machine are in `boot/` already, and what is left is the sequence" } },
+  "apps/engine/src/index.ts": { runDaemon: { lines: 180, why: "the boot order, one step after another; the stores, the timers and the turn machine are in `boot/` already, and what is left is the sequence" } },
   "apps/engine/src/modules/config/global/validate.ts": { validate: { lines: 193, why: "every refusal of the daemon's config that its schema cannot make, each naming its field, in one pass at load" } },
   "apps/engine/src/modules/config/toml-lines.ts": { readToml: { lines: 207, why: "a TOML file read as its lines in one pass: strings, arrays and inline tables tracked across lines, so editors get spans" } },
   "apps/engine/src/modules/external-agents/runner.ts": { "ExternalTurnRunner.run": { lines: 204, why: "one turn prompted to a coding CLI and read back as the executor's result, over the session and the updates the CLI streams" } },

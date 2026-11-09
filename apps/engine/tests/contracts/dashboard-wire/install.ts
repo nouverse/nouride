@@ -38,6 +38,7 @@ import { RoomNameStore } from "@/modules/rooms/room-names.store.ts";
 import { buildHealth, installFingerprint } from "@/modules/web/health.ts";
 import { mountControlRoutes } from "@/modules/web/control/index.ts";
 import type { ControlDeps } from "@/modules/web/control/types.ts";
+import { GatewaySwitch } from "@/boot/gateway-switch.ts";
 import { cheapPasswords } from "../../helpers.ts";
 import { GADING_DM, SAM_DM, at, household, scripted, type Household } from "../../memory/fixture.ts";
 import { pipelineBench, type Bench } from "../../pipeline-bench.ts";
@@ -356,6 +357,8 @@ export async function wireAnswers(): Promise<Record<string, unknown>> {
       notes,
       missions: work.missions,
       local: { id: "web:dashboard" },
+      // As the boot hands it out on a build without the gateway, which the suite runs as: off, and nothing to switch.
+      llmGateway: new GatewaySwitch({ carried: false, decidedBy: null, start: async () => { throw new Error("not carried"); }, save: async () => ({ ok: true }) }),
     } as unknown as ControlDeps);
 
     const ids = conversation(bench);

@@ -60,7 +60,7 @@ import type { McpManager } from "@/modules/tools/mcp.ts";
 import type { ApprovalReach } from "@/modules/tools/reachability.ts";
 import type { ToolGrantsPort } from "@/modules/tools/tool-grants.store.ts";
 import { ensureInitialAdmin, firstRunBanner } from "@/modules/users/bootstrap.ts";
-import type { CredentialSharing } from "@/boot/embedded-gateway.ts";
+import type { GatewayPort } from "@/boot/gateway-switch.ts";
 import { UserStore } from "@/modules/users/users.store.ts";
 import { ensureControlToken, mountControlRoutes } from "@/modules/web/control/index.ts";
 import { resolveOauthSupport } from "@/modules/users/oidc.ts";
@@ -74,7 +74,6 @@ import { McpTokenStore } from "@/modules/mcp-server/tokens.store.ts";
 import { VERSION } from "@/cli/version.ts";
 import type { WebServer } from "@/modules/web/server.ts";
 import { LLM_GATEWAY_PREFIX, mountLlmGateway } from "@/modules/web/llm-gateway.ts";
-import type { EmbeddedGateway } from "@/modules/gateways/nougate-inproc.ts";
 import type { SupervisorInfo } from "@/service/supervisor.ts";
 import { join, localIPv4Addresses } from "@nouride/runtime";
 import { TurnInspector } from "@/modules/turns/inspection.store.ts";
@@ -97,15 +96,12 @@ export async function startControlPlane(deps: {
    * created with the same one — see `seedSharedInitialAdmin`.
    */
   initialAdminPassword?: string;
-  /** Where that gateway answers, so the first-run banner can say the credential reaches both. */
-  gatewayUrl?: string;
   /**
-   * The gateway itself, when this process hosts one: its dashboard becomes the LLM Gateway page
-   * (`web/llm-gateway.ts`), and the setup wizard can connect the daemon to it without a typed key.
+   * The LLM gateway this build carries, on or off (`boot/gateway-switch.ts`): its dashboard is the LLM Gateway page
+   * (`web/llm-gateway.ts`), the setup wizard connects the daemon to it without a typed key, and either turns it on.
+   * The first-run banner says the credential reaches it too, when it came up with this boot.
    */
-  gateway?: EmbeddedGateway;
-  /** How that gateway came to hold the same credential, for the sentence the wizard draws. */
-  credentialSharing?: CredentialSharing;
+  gateway?: GatewayPort;
   ctx: DaemonContext;
   db: SqliteDb;
   /** Nouverse's MCP catalog, for the Explore tab and `nouride mcp search` (0.7.19). Undefined: turned off. */
@@ -288,7 +284,7 @@ export async function startControlPlane(deps: {
         // The live map, so the first agent created from the dashboard is offered every tool this
         // build actually has — including one added after this line was written.
         builtinToolNames: () => [...builtinTools.keys()],
-        ...(deps.gateway ? { bundledGateway: deps.gateway } : {}),
+        ...(deps.gateway ? { bundledGateway: () => deps.gateway?.current() ?? null } : {}),
       })
     : undefined;
 
@@ -361,11 +357,9 @@ export async function startControlPlane(deps: {
             mountControlRoutes(app, {
               ctx,
               token: controlToken,
-              ...(deps.credentialSharing ? { sharedGatewayCredential: deps.credentialSharing } : {}),
-              // Said only where it is mounted below — both need the gateway and the users store.
-              ...(deps.gateway && users
-                ? { llmGatewayMount: LLM_GATEWAY_PREFIX, llmGatewayDashboard: () => deps.gateway!.dashboardEmbeddable() }
-                : {}),
+              ...(deps.gateway ? { llmGateway: deps.gateway } : {}),
+              // Said only where it is mounted below — both need a build that carries the gateway and the users store.
+              ...(deps.gateway?.carried && users ? { llmGatewayMount: LLM_GATEWAY_PREFIX } : {}),
               // For `auth/oauth/callback`, which presents a client secret to the identity
               // provider. Config names the secret; this resolves it.
               secrets,
@@ -432,10 +426,10 @@ export async function startControlPlane(deps: {
     ...(config.cron.enabled
       ? { mountHooks: (app) => mountHooks(app, { cron: { store: cron, scheduler }, tests: hookTests }) }
       : {}),
-    // The bundled gateway's dashboard, as the LLM Gateway page. Needs a session to check, so it
-    // goes where the users store does.
-    ...(deps.gateway && users
-      ? { mountLlmGateway: (app) => mountLlmGateway(app, { gateway: deps.gateway!, users }) }
+    // The bundled gateway's dashboard, as the LLM Gateway page — on or off, so turning it on needs no restart. Needs a
+    // session to check, so it goes where the users store does.
+    ...(deps.gateway?.carried && users
+      ? { mountLlmGateway: (app) => mountLlmGateway(app, { gateway: () => deps.gateway?.current() ?? null, users }) }
       : {}),
     // Always mounted, and off until `[mcp_server] enabled` — checked per request, so turning it on
     // from the dashboard needs no restart.
@@ -467,7 +461,7 @@ export async function startControlPlane(deps: {
         username: bootstrap.username ?? "admin",
         password: bootstrap.generatedPassword,
         ...firstRunUrls(ctx.config.dashboard, server.port),
-        ...(deps.gatewayUrl ? { gatewayUrl: deps.gatewayUrl } : {}),
+        ...(deps.gateway?.current() ? { gatewayUrl: deps.gateway.current()!.url } : {}),
       }),
     );
   }

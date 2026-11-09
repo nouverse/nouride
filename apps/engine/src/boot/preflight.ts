@@ -24,6 +24,7 @@ import { openAdvisories, type Advise } from "./advisories.ts";
 import { lintConfig } from "@/modules/config/schema.ts";
 import type { ProviderRegistry } from "@/modules/llm/providers.ts";
 import type { StateRows } from "@/commons/daemon-state.store.ts";
+import { imageMovedTo } from "@/modules/web/health.ts";
 
 const log = createLogger("daemon");
 
@@ -126,6 +127,10 @@ export function runPreflightChecks(deps: {
   warnAboutDisabledApprovals(registry, config, advise);
   reportConfigAdvisories(config, advise);
   advisories.save();
+
+  // Every start, for whoever reads the container's log: the image this runs from stops getting updates under its name.
+  const movedTo = imageMovedTo();
+  if (movedTo) log.warn("this image has a new name: pull that one instead, before 0.9, which this name does not get", { image: movedTo });
 }
 
 /**

@@ -51,7 +51,9 @@ import { startGateways } from "@/boot/gateways-start.ts";
 import { SkillsWatch } from "@/boot/skills-watch.ts";
 import { startControlPlane } from "@/boot/control-plane.ts";
 import { maskOutbound } from "@/commons/egress.ts";
-import { startBundledGateway } from "@/boot/embedded-gateway.ts";
+import { bootGatewaySwitch } from "@/boot/gateway-switch.ts";
+import { keepRouterGatewayOn } from "@/boot/router-gateway.ts";
+import { EDITION, GATEWAY_CARRIED } from "@/commons/build.ts";
 import { installShutdown } from "@/boot/shutdown.ts";
 import { startExternalAgents } from "@/boot/external-agents.ts";
 import { takeDataDirLock } from "@/boot/lock.ts";
@@ -100,6 +102,8 @@ export async function runDaemon(): Promise<void> {
   // (`boot/upgrade-floor.ts`).
   await assertUpgradeFloor(config.daemon.dataDir);
   const lock = takeDataDirLock(config.daemon.dataDir);
+  // Holding the lock, so no second daemon writes beside it: a Router install's gateway kept on (`boot/router-gateway.ts`).
+  if (source) await keepRouterGatewayOn({ configPath: source, config, carried: GATEWAY_CARRIED, edition: EDITION });
   ensureDir(config.daemon.agentsDir);
   // The skill pool, so a fresh install has the directory a human is told to drop skills into. Created
   // rather than left to `skill_create`: an empty directory answers "where do these go", and a missing
@@ -172,10 +176,11 @@ export async function runDaemon(): Promise<void> {
 
   // Everything that has to be true before a message can arrive — see `boot/preflight.ts`.
   /**
-   * The in-process LLM gateway, before anything asks a model anything — see `boot/embedded-gateway.ts`
-   * for why it starts here, and for the first-run password it shares with the dashboard.
+   * The in-process LLM gateway, before anything asks a model anything — see `boot/embedded-gateway.ts` for why it
+   * starts here, and for the first-run password it shares with the dashboard. A switch rather than the gateway: off
+   * now, it can be turned on later without a restart (`boot/gateway-switch.ts`).
    */
-  const { gateway: nougate, initialAdminPassword, credentialSharing } = await startBundledGateway({ config, db });
+  const { gateway: nougate, initialAdminPassword } = await bootGatewaySwitch({ config, configPath, db, audit });
 
   /**
    * An edition that cannot do external sign-in, asked to do external sign-in.
@@ -356,9 +361,7 @@ export async function runDaemon(): Promise<void> {
   const controlPlane = await startControlPlane({
     ...(web ? { web } : {}),
     initialAdminPassword,
-    gatewayUrl: nougate?.url,
-    ...(nougate ? { gateway: nougate } : {}),
-    ...(credentialSharing ? { credentialSharing } : {}),
+    gateway: nougate,
     ctx, db, config, configSource: source, secrets, registry, providers, pipeline, approvals,
     grants, toolGrants, access, memory, memoryPass, jobs, notifier, audit, logs, logStore, mcp, reach, projectSkills, skillRoots,
     builtinSkillsDir, autoApprove, sessions, notes, missions: missions.missions, externalAgents, turns, events, chatEvents, roomMessages, attachmentIndex, rooms, usage, uploads, cron, scheduler, proposals: proposals.cards, localGateway,
@@ -380,7 +383,8 @@ export async function runDaemon(): Promise<void> {
   // background, after the bundled gateway is up: one that is down costs the boot nothing, and the table answers till then.
   for (const profile of new Set(registry.active().map((agent) => agent.config.llm.provider))) void providers.catalog.listing(profile);
 
-  await startApplianceIfPresent(ctx, VERSION, nougate, { pipeline, jobs, requestRestart });
+  // The gateway as this boot left it: one turned on later reaches the Box's console at the next start.
+  await startApplianceIfPresent(ctx, VERSION, nougate.current(), { pipeline, jobs, requestRestart });
 
   installShutdown(ctx, db, pipeline, audit, approvals, jobs, server, lock, scheduler, nougate, logStore, streams);
 }

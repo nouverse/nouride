@@ -58,7 +58,7 @@ const users = {
 function app(reachable = true) {
   const { gateway, seen } = fakeGateway(reachable);
   const web = new Hono();
-  mountLlmGateway(web, { gateway, users });
+  mountLlmGateway(web, { gateway: () => gateway, users });
   return { web, seen };
 }
 
@@ -175,5 +175,32 @@ describe("what is not reachable through it", () => {
     const res = await web.request(`${BOX}${LLM_GATEWAY_PREFIX}`, as("admin"));
     expect(res.status).toBe(302);
     expect(res.headers.get("location")).toBe("/llm-gateway/frontend/");
+  });
+});
+
+describe("mounted on or off", () => {
+  test("off, it answers in plain words without a status that reads as Nouride gone, and turned on, the same mount serves it", async () => {
+    // Mounted whenever the build carries the gateway, so the setup wizard can turn it on and go straight to its sign-in
+    // step with no restart. A 503 would have the dashboard wait for Nouride to come back from a restart nobody asked for.
+    const { gateway, seen } = fakeGateway();
+    let running: EmbeddedGateway | null = null;
+    const web = new Hono();
+    mountLlmGateway(web, { gateway: () => running, users });
+
+    const off = await web.request(`${BOX}${LLM_GATEWAY_PREFIX}/api/providers`, as("admin"));
+    expect(off.status).toBe(409);
+    expect(await off.json()).toEqual({ error: "the LLM gateway is off", plain: "Nougate is off. An admin can turn it on in the dashboard." });
+
+    running = gateway;
+    const on = await web.request(`${BOX}${LLM_GATEWAY_PREFIX}/api/providers`, as("admin"));
+    expect(on.status).toBe(200);
+    expect(seen).toHaveLength(1);
+  });
+
+  test("off says nothing to somebody not signed in: who asks is checked first", async () => {
+    const web = new Hono();
+    mountLlmGateway(web, { gateway: () => null, users });
+    expect((await web.request(`${BOX}${LLM_GATEWAY_PREFIX}/api/providers`)).status).toBe(401);
+    expect((await web.request(`${BOX}${LLM_GATEWAY_PREFIX}/api/providers`, as("viewer"))).status).toBe(403);
   });
 });

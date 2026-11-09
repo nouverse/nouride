@@ -1,7 +1,7 @@
 /**
  * `/llm-gateway/*` — the bundled gateway's dashboard, as a page of this one.
  *
- * On a `router` or `pro` build the LLM gateway runs in this process (`nougate-inproc.ts`) and
+ * Where the build carries the LLM gateway and it is switched on, it runs in this process (`nougate-inproc.ts`) and
  * has a dashboard of its own: accounts, keys, usage. It used to be a second site on a second port with
  * a second password. Now the daemon's dashboard shows it as "LLM Gateway", and this file is the whole
  * of the join: the prefix, the session check, and the hand-over.
@@ -71,7 +71,11 @@ const STREAM_SECONDS = 0;
 const LONG_SECONDS = 255;
 
 export interface LlmGatewayDeps {
-  gateway: EmbeddedGateway;
+  /**
+   * The gateway running now, or null while it is off. Asked per request: mounted whenever the build carries it, so
+   * turning it on from the setup wizard needs no restart before its sign-in step can be reached here.
+   */
+  gateway: () => EmbeddedGateway | null;
   users: UsersPort;
 }
 
@@ -100,6 +104,10 @@ export function mountLlmGateway(app: Hono, deps: LlmGatewayDeps): void {
     if (!user) return c.json({ error: "unauthorized" }, 401);
     if (user.role !== "admin") return c.json({ error: "admin only" }, 403);
 
+    // Not a 503: the dashboard reads that as Nouride itself not answering, and waits for it to come back.
+    const gateway = deps.gateway();
+    if (!gateway) return c.json({ error: "the LLM gateway is off", plain: "Nougate is off. An admin can turn it on in the dashboard." }, 409);
+
     const outer = new URL(c.req.url);
     const path = outer.pathname.slice(LLM_GATEWAY_PREFIX.length) || "/";
     if (BLOCKED.some((pattern) => pattern.test(path))) return c.json({ error: "not found" }, 404);
@@ -123,10 +131,10 @@ export function mountLlmGateway(app: Hono, deps: LlmGatewayDeps): void {
       path === "/api/sse" ? STREAM_SECONDS : LONG_SECONDS,
     );
 
-    const apiOrigin = apiOriginFor(outer, deps.gateway);
+    const apiOrigin = apiOriginFor(outer, gateway);
     let response: Response;
     try {
-      response = await deps.gateway.serveAs(request, {
+      response = await gateway.serveAs(request, {
         username: user.username,
         basePath: LLM_GATEWAY_PREFIX,
         ...(apiOrigin ? { apiOrigin } : {}),

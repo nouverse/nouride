@@ -1,5 +1,5 @@
 /**
- * Bringing up the gateway a bundled build carries, and agreeing a first-run password with it.
+ * Bringing up the gateway a build carries, and agreeing a first-run password with it.
  *
  * Separate from `index.ts` because the two things here are one decision, not two: the gateway
  * bootstraps its own admin account while it boots, so the only moment at which the daemon can make
@@ -25,8 +25,7 @@ import { UserStore } from "@/modules/users/users.store.ts";
 export type CredentialSharing = "environment" | "generated";
 
 export interface BundledGateway {
-  /** Null on every build and config that does not host the gateway in this process. */
-  gateway: EmbeddedGateway | null;
+  gateway: EmbeddedGateway;
   /**
    * The password the gateway was given, when this is a first run and nobody chose one.
    *
@@ -34,29 +33,38 @@ export interface BundledGateway {
    * travels as a value rather than as `INITIAL_ADMIN_PASSWORD`, still marked for a forced change.
    */
   initialAdminPassword?: string;
-  /** Null when the gateway is not hosted here, or came up holding a credential of its own. */
+  /** Absent when the gateway came up holding a credential of its own. */
   credentialSharing?: CredentialSharing;
 }
 
 /**
- * Start it, or report that there is nothing to start.
+ * Whether the gateway runs at this start, and whether the environment decided it.
  *
- * Started after `providers` is built rather than beside the other listeners: a provider profile may
- * point at this port, and bringing it up any later would let the first turn race the thing it
- * depends on. Off unless `[nougate] in_process` says otherwise — `nougate-inproc.ts` has what that
- * trades.
+ * `NOUGATE_IN_PROCESS` over `[nougate] in_process`: set, it decides for the whole life of the process, and the
+ * dashboard's switch shows what it decided without being able to move it — a value written to the file would change
+ * nothing while the variable is there.
+ */
+export function gatewayDecision(config: GlobalConfig, env: Record<string, string | undefined> = process.env): { on: boolean; decidedBy: "environment" | null } {
+  const override = env.NOUGATE_IN_PROCESS;
+  if (override !== undefined) return { on: override === "true" || override === "1", decidedBy: "environment" };
+  return { on: config.nougate.inProcess, decidedBy: null };
+}
+
+/**
+ * Start it — at boot when the config says so, or later when the dashboard turns it on (`gateway-switch.ts`).
+ *
+ * At boot it starts after `providers` is built rather than beside the other listeners: a provider profile may point
+ * at this port, and bringing it up any later would let the first turn race the thing it depends on. `nougate-inproc.ts`
+ * has what hosting it here trades.
+ *
+ * Started from the dashboard, an account already exists, so this is no first run and nothing is lent: the gateway
+ * creates its own admin as it always does on a first boot of its own, which nobody needs, because its console is the
+ * LLM Gateway page and that is signed in through this daemon.
  */
 export async function startBundledGateway(input: {
   config: GlobalConfig;
   db: SqliteDb;
 }): Promise<BundledGateway> {
-  const envOverride = process.env.NOUGATE_IN_PROCESS;
-  const inProcess = envOverride !== undefined
-    ? envOverride === "true" || envOverride === "1"
-    : input.config.nougate.inProcess;
-
-  if (!inProcess) return { gateway: null };
-
   /**
    * Both facts from one call, which is the point of it answering with a mode.
    *

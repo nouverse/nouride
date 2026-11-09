@@ -38,7 +38,6 @@ export const MAPS_RETIRED_EDITIONS: Readonly<Record<string, string>> = {
   "internals/pro/packages/build-pro/flash/install.ts": "the box a bug was found on, by the edition it was then",
   "internals/pro/packages/appliance/src/ui/lib/messages.ts": "why the badge was renamed by hand, and what that broke",
   // Pro Router, retired in 0.7.20 and read as nothing since 0.8.0.
-  "apps/engine/src/modules/config/defaults.ts": "Pro Router's gateway default, and where it went",
   "apps/dashboard/tests/bundled-gateway.test.ts": "holds that no dashboard source reads the name, the label included",
   "docs/SYSTEM_REQUIREMENTS.md": "a measurement, labelled by the edition's name when it was taken",
   "docs/SYSTEM_REQUIREMENTS.id.md": "a measurement, labelled by the edition's name when it was taken",

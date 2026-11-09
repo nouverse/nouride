@@ -34,6 +34,8 @@ import type { AgentRegistry } from "@nouride/persona";
 import { mountControlRoutes } from "@/modules/web/control/index.ts";
 import type { ControlDeps } from "@/modules/web/control/types.ts";
 import type { DaemonContext } from "@/commons/context.ts";
+import type { GatewayPort } from "@/boot/gateway-switch.ts";
+import type { EmbeddedGateway } from "@/modules/gateways/nougate-inproc.ts";
 import { cheapPasswords } from "../helpers.ts";
 
 const CONTROL_TOKEN = "control-token-for-tests-0000000000";
@@ -526,23 +528,32 @@ describe("creating an agent from the dashboard", () => {
 });
 
 /**
- * What the provider step is told about the gateway a `router` build carries.
+ * What the provider step is told about the gateway the build carries, on or off.
  *
  * `sharedCredential` is the one field on this route that is a **boot** fact rather than a config
  * one, and it cannot be recomputed later: it is true only when the gateway came up in the same boot
- * that created this daemon's first account. Switching `[nougate] in_process` on afterwards leaves a
- * gateway holding a password of its own, and the wizard telling the operator to reuse Nouride's
- * would send them to a login form with a password that was never set there.
+ * that created this daemon's first account. Switching it on afterwards leaves a gateway holding a
+ * password of its own, and the wizard telling the operator to reuse Nouride's would send them to a
+ * login form with a password that was never set there.
  */
 describe("what `/setup/state` says about the bundled gateway", () => {
+  /** A switch as the boot hands it out (`boot/gateway-switch.ts`), saying what a test needs. */
+  function gatewaySwitch(over: { carried?: boolean; running?: boolean; decidedBy?: "environment" | null; sharing?: "environment" | "generated"; embeddable?: boolean } = {}): GatewayPort {
+    const running = over.running ?? true;
+    const gateway = { url: "http://127.0.0.1:18256", dashboardEmbeddable: () => over.embeddable ?? true } as unknown as EmbeddedGateway;
+    return {
+      carried: over.carried ?? true,
+      decidedBy: over.decidedBy ?? null,
+      current: () => (running ? gateway : null),
+      credentialSharing: () => over.sharing,
+      turnOn: async () => ({ ok: true, started: false, saved: true }),
+      turnOff: async () => ({ ok: true, running }),
+    };
+  }
+
   async function state(overrides: Record<string, unknown>): Promise<Record<string, unknown>> {
     const scoped = new Hono();
-    const base = deps();
-    mountControlRoutes(scoped, {
-      ...base,
-      ctx: { ...base.ctx, config: { nougate: { inProcess: true, port: 18256 } } },
-      ...overrides,
-    } as unknown as ControlDeps);
+    mountControlRoutes(scoped, { ...deps(), ...overrides } as unknown as ControlDeps);
     const res = await scoped.request("/api/control/setup/state", {}, { ip: "10.0.0.1" });
     return (await res.json()) as Record<string, unknown>;
   }
@@ -550,47 +561,60 @@ describe("what `/setup/state` says about the bundled gateway", () => {
   test("passes through which of the two ways the credential is shared", async () => {
     // Not a boolean. The wizard's sentence differs: an `INITIAL_ADMIN_*` password is one the reader
     // still holds, a generated one is the one they replaced on the way in.
-    expect(await state({ sharedGatewayCredential: "environment" })).toMatchObject({
+    expect(await state({ llmGateway: gatewaySwitch({ sharing: "environment" }) })).toMatchObject({
       bundledGateway: { available: true, baseUrl: "http://127.0.0.1:18256", sharedCredential: "environment" },
     });
-    expect(await state({ sharedGatewayCredential: "generated" })).toMatchObject({
+    expect(await state({ llmGateway: gatewaySwitch({ sharing: "generated" }) })).toMatchObject({
       bundledGateway: { sharedCredential: "generated" },
     });
   });
 
   test("says nothing when the gateway came up holding a password of its own", async () => {
-    // Switching `[nougate] in_process` on after the first run. The field is absent rather than
-    // false, and the wizard treats absent as "do not claim anything".
-    const body = (await state({})).bundledGateway as Record<string, unknown>;
-    expect(body).toEqual({ available: true, baseUrl: "http://127.0.0.1:18256" });
+    // Switched on after the first run. The field is absent rather than false, and the wizard treats absent as "do not
+    // claim anything".
+    const body = (await state({ llmGateway: gatewaySwitch() })).bundledGateway as Record<string, unknown>;
+    expect(body).toEqual({ available: true, baseUrl: "http://127.0.0.1:18256", carried: true });
   });
 
   test("names where its dashboard and API are served through this one, and whether the page can show it", async () => {
     // The sign-in step needs only `mount` — the gateway's API, in the binary. The LLM Gateway page
     // also needs the bundle beside it, which an older update left behind.
-    expect(await state({ llmGatewayMount: "/llm-gateway", llmGatewayDashboard: () => true })).toMatchObject({
+    expect(await state({ llmGateway: gatewaySwitch(), llmGatewayMount: "/llm-gateway" })).toMatchObject({
       bundledGateway: { available: true, mount: "/llm-gateway", dashboard: true },
     });
-    expect(await state({ llmGatewayMount: "/llm-gateway", llmGatewayDashboard: () => false })).toMatchObject({
+    expect(await state({ llmGateway: gatewaySwitch({ embeddable: false }), llmGatewayMount: "/llm-gateway" })).toMatchObject({
       bundledGateway: { mount: "/llm-gateway", dashboard: false },
     });
   });
 
   test("no mount, no promise of one", async () => {
-    const body = (await state({ llmGatewayDashboard: () => true })).bundledGateway as Record<string, unknown>;
+    const body = (await state({ llmGateway: gatewaySwitch() })).bundledGateway as Record<string, unknown>;
     expect(body.mount).toBeUndefined();
     expect(body.dashboard).toBeUndefined();
   });
 
-  test("says nothing at all about a build with the gateway switched off", async () => {
-    const scoped = new Hono();
-    mountControlRoutes(scoped, {
-      ...deps(),
-      sharedGatewayCredential: "generated",
-    } as unknown as ControlDeps);
-    const res = await scoped.request("/api/control/setup/state", {}, { ip: "10.0.0.1" });
-    const body = (await res.json()) as Record<string, unknown>;
-    expect(body.bundledGateway).toEqual({ available: false });
+  test("carried and off: not available, which is what an older dashboard reads, and where it would be, for a newer one to offer", async () => {
+    // An older dashboard offers the gateway on `available && mount`: off, it must read nothing to offer, or its sign-in
+    // step would call an API that is not answering. A newer one offers it on `carried`, and turns it on first.
+    const body = (await state({ llmGateway: gatewaySwitch({ running: false }), llmGatewayMount: "/llm-gateway" })).bundledGateway;
+    expect(body).toEqual({ available: false, carried: true, mount: "/llm-gateway" });
+  });
+
+  test("an environment that holds the switch is said, on or off, so the page shows it rather than offers it", async () => {
+    expect((await state({ llmGateway: gatewaySwitch({ running: false, decidedBy: "environment" }), llmGatewayMount: "/llm-gateway" })).bundledGateway).toEqual({
+      available: false, carried: true, mount: "/llm-gateway", decidedBy: "environment",
+    });
+    expect(await state({ llmGateway: gatewaySwitch({ decidedBy: "environment" }) })).toMatchObject({ bundledGateway: { available: true, decidedBy: "environment" } });
+  });
+
+  test("a build that does not carry it says so, and offers nowhere to find it", async () => {
+    const body = (await state({ llmGateway: gatewaySwitch({ carried: false, running: false }), llmGatewayMount: "/llm-gateway" })).bundledGateway;
+    expect(body).toEqual({ available: false, carried: false });
+  });
+
+  test("a bench with no gateway at all answers as a daemon older than the switch did", async () => {
+    const body = (await state({})).bundledGateway as Record<string, unknown>;
+    expect(body).toEqual({ available: false });
   });
 });
 

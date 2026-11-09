@@ -47,7 +47,7 @@ const noNetwork = (async () => {
   throw new Error("the network was used");
 }) as unknown as typeof fetch;
 
-async function service(gateway?: ReturnType<typeof fakeGateway>["gateway"]) {
+async function service(gateway?: ReturnType<typeof fakeGateway>["gateway"] | (() => ReturnType<typeof fakeGateway>["gateway"] | null)) {
   const config = structuredClone(DEFAULT_CONFIG);
   config.daemon.dataDir = dataDir;
   config.daemon.agentsDir = agentsDir;
@@ -59,7 +59,7 @@ async function service(gateway?: ReturnType<typeof fakeGateway>["gateway"]) {
     config, configPath, dataDir, agentsDir, secrets, providers, registry,
     userCount: () => 1,
     fetchImpl: noNetwork,
-    ...(gateway ? { bundledGateway: gateway } : {}),
+    ...(gateway ? { bundledGateway: typeof gateway === "function" ? gateway : () => gateway } : {}),
   });
   return { setup, secrets, config };
 }
@@ -79,6 +79,16 @@ describe("Use Nougate LLM Gateway", () => {
   test("a build without the gateway says so", async () => {
     const { setup } = await service();
     expect(await setup.useBundledGateway({ actor: "owner" })).toEqual({ ok: false, error: "This build has no LLM gateway running." });
+  });
+
+  test("a gateway turned on after the wizard opened is the one it connects to", async () => {
+    // Off at boot, on from the wizard's "Use Nougate": the service was built before it ran, and asks for it at each use.
+    const fake = fakeGateway(["codex:gpt-5.1"]);
+    let running: typeof fake.gateway | null = null;
+    const { setup } = await service(() => running);
+    expect(await setup.useBundledGateway({ actor: "owner" })).toEqual({ ok: false, error: "This build has no LLM gateway running." });
+    running = fake.gateway;
+    expect(await setup.useBundledGateway({ actor: "owner" })).toEqual({ ok: true, models: ["codex:gpt-5.1"] });
   });
 
   test("refused until an account is signed in, and nothing is written", async () => {
