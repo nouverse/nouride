@@ -330,7 +330,9 @@ untuk mengganti nama, mengeluarkan agent, atau menghapus room.
 
 **Semua yang dari aplikasi chat hanya bisa dibaca di sini.** Grup, atau chat pribadi dengan agent di Telegram, Discord,
 atau WhatsApp, menampilkan tanda aplikasinya dan **Read-only**, dan di tempat kotak ketik ada catatan: balasnya di
-aplikasinya sendiri. **Pin to Chats** menyimpan grup yang sering kamu baca di Chats, di browser ini.
+aplikasinya sendiri. Orang-orang di sana tampil di kiri, masing-masing dengan namanya (nama di People, kalau tidak ada,
+nama dari aplikasinya), dan grup menampilkan pesan orang meski tidak ada agent yang menjawab. **Pin to Chats** menyimpan
+grup yang sering kamu baca di Chats, di browser ini.
 
 ![Chat dashboard dengan langkah giliran langsung](/media/dashboard-chat.png)
 

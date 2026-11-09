@@ -14,6 +14,7 @@ import type { ChatListGroup, ChatTurn, LiveTurn } from "@nouride/wire";
 import { GroupAvatar } from "@/commons/components/chat/Avatars";
 import { PlatformTag } from "@/commons/components/chat/PlatformBadge";
 import { ReadOnlyNote } from "@/commons/components/chat/ReadOnlyNote";
+import { PersonMessage } from "@/commons/components/chat/PersonMessage";
 import { ListLoading } from "@/commons/components/ui/Spinner";
 import { EmptyState } from "@/commons/components/ui/ui";
 import { useStickyScroll } from "@/commons/hooks/use-sticky-scroll";
@@ -77,8 +78,10 @@ function GroupView({ group, data }: { group: ChatListGroup; data: ChatListData }
     })),
   });
   const turns: ChatTurn[] = transcripts.flatMap((query) => query.data?.turns ?? []);
+  // What people said there, kept by each of our bots' connections: one line once, whichever kept it (`groupStream`).
+  const said = transcripts.flatMap((query) => query.data?.messages ?? []);
   const running = lives.flatMap((query) => (group.working && query.data?.turn?.status === "running" ? [query.data.turn as LiveTurn] : []));
-  const stream = groupStream(turns, running);
+  const stream = groupStream(turns, running, said);
   const loading = transcripts.some((query) => query.isPending);
 
   useStickyScroll({ container: scrollRef, content: streamRef, resetKey: key });
@@ -119,16 +122,20 @@ function GroupView({ group, data }: { group: ChatListGroup; data: ChatListData }
             <ListLoading count={3} />
           </div>
         ) : stream.length === 0 ? (
-          <EmptyState icon={MessagesSquare} className="my-auto" title="No agent has said anything here yet" description={`What the agents are asked and answer in this ${roomWord(group.platform)} on ${app} shows here.`} />
+          <EmptyState icon={MessagesSquare} className="my-auto" title="Nothing said here yet" description={`What people say in this ${roomWord(group.platform)} on ${app}, and what the agents answer, shows here.`} />
         ) : (
           <div ref={streamRef} className="mx-auto w-full max-w-3xl space-y-5 py-6">
+            {/* People on the left under their names: in a group on a chat app, none of it is the reader's own. */}
             {stream.map((entry) =>
-              entry.live ? (
-                <LiveTurnView key={entry.turn.id} turn={entry.turn as LiveTurn} sessionId={entry.turn.sessionId ?? ""} showPrompt={entry.showPrompt} />
+              entry.kind === "message" ? (
+                <PersonMessage key={entry.key} name={entry.message.senderName} text={entry.message.text} />
+              ) : entry.live ? (
+                <LiveTurnView key={entry.key} turn={entry.turn as LiveTurn} sessionId={entry.turn.sessionId ?? ""} showPrompt={entry.showPrompt} asker={entry.turn.senderName ?? ""} />
               ) : (
-                <TurnView key={entry.turn.id} turn={entry.turn} sessionId={entry.turn.sessionId ?? ""} showPrompt={entry.showPrompt} />
+                <TurnView key={entry.key} turn={entry.turn} sessionId={entry.turn.sessionId ?? ""} showPrompt={entry.showPrompt} asker={entry.turn.senderName ?? ""} />
               ),
             )}
+            {stream.every((entry) => entry.kind === "message") ? <p className="text-center text-xs text-base-content/65">No agent has said anything here yet.</p> : null}
           </div>
         )}
       </div>

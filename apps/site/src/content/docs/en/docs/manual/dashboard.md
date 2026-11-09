@@ -320,7 +320,9 @@ it, takes an agent out, or deletes it.
 
 **Anything from a chat app is read-only here.** A group, or a private chat with an agent on Telegram, Discord or
 WhatsApp, shows that app's mark and **Read-only**, and where you would type there is a note: it is answered on its own
-app. **Pin to Chats** keeps a group you read often in Chats, in this browser.
+app. The people there are on the left, each under their name (the one under People, else the name their app shows), and
+a group shows what people said even when no agent answered. **Pin to Chats** keeps a group you read often in Chats, in
+this browser.
 
 ![Dashboard chat with live turn steps](/media/dashboard-chat.png)
 

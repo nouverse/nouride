@@ -20,11 +20,12 @@ import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { api } from "@/commons/lib/api";
-import type { SlashCommand } from "@nouride/wire";
+import type { ChatTurn, SlashCommand } from "@nouride/wire";
 import { ApprovalStrip } from "./ApprovalStrip.tsx";
 import { useStickyScroll } from "@/commons/hooks/use-sticky-scroll";
 import { DropOverlay, useFileDrop } from "@/commons/components/ui/FileDrop";
 import { ReadOnlyNote } from "@/commons/components/chat/ReadOnlyNote";
+import { PersonMessage } from "@/commons/components/chat/PersonMessage";
 import { useConversation } from "@/commons/hooks/use-conversation";
 import { useAttachments } from "../hooks/use-attachments";
 import { useOpenChat } from "../hooks/use-open-chat";
@@ -45,6 +46,7 @@ import { useAnswerApproval } from "@/commons/hooks/use-answer-approval";
 import { NotesPanel } from "./NotesPanel";
 import { PlanStrip } from "./PlanStrip";
 import { startWith } from "../lib/start-with";
+import { askedInLog, oldestLine } from "../lib/group-stream";
 import { useWorkNotes } from "@/commons/hooks/use-notes";
 import { ENTER, useMotionList } from "@/commons/hooks/use-motion-list";
 import { doingNow, orchestratorFirst } from "@/commons/lib/agents";
@@ -334,6 +336,9 @@ export function Conversation(
 
   /** A private chat on a chat app: read here, answered on its app, and its composer is a note saying so. */
   const elsewhere = !writable && conversation.session ? conversation.session.gatewayId : undefined;
+  // In a room, and in a group on a chat app whose lines are kept, what was asked is a message of its own in the stream.
+  const oldest = oldestLine(conversation.messages);
+  const prompted = (turn: ChatTurn) => !room && !(elsewhere && askedInLog(turn, oldest));
   const helpers = conversation.jobs.filter((job) => job.kind === "helper").length;
   const roomEntry = room ? data.list.data?.rooms.find((one) => one.chatId === room.chatId) : undefined;
   const working = workingWords(busy, helpers);
@@ -417,7 +422,7 @@ export function Conversation(
                       so a message two agents answered is one bubble and a message nobody answered
                       is still a bubble.
                     */
-                    return <UserBubble key={key} text={entry.message.text} sessionId={transcriptId} motion={motion} />;
+                    return elsewhere ? <PersonMessage key={key} name={entry.message.senderName} text={entry.message.text} motion={motion} /> : <UserBubble key={key} text={entry.message.text} sessionId={transcriptId} motion={motion} />;
                   }
                   if (entry.kind === "event") {
                     return <EventPill key={key} event={entry.event} motion={motion} />;
@@ -428,7 +433,8 @@ export function Conversation(
                         key={key}
                         turn={entry.turn}
                         sessionId={transcriptId}
-                        showPrompt={!room}
+                        showPrompt={prompted(entry.turn)}
+                        asker={elsewhere ? (entry.turn.senderName ?? "") : undefined}
                         onStop={(agentId) => conversation.stop(agentId)}
                         motion={motion}
                       />
@@ -440,7 +446,8 @@ export function Conversation(
                       turn={entry.turn}
                       sessionId={transcriptId}
                       // In a room the question is a message of its own, above.
-                      showPrompt={!room}
+                      showPrompt={prompted(entry.turn)}
+                      asker={elsewhere ? (entry.turn.senderName ?? "") : undefined}
                       motion={motion}
                     />
                   );

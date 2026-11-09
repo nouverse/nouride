@@ -16,6 +16,7 @@ import { answersAnEdit, saidAsDrawn, systemHeading } from "@/commons/lib/turn-di
 import { StepPill } from "@/commons/components/turns/Steps";
 import { LiveStepLine } from "@/commons/components/turns/StepLine";
 import { CopyButton } from "@/commons/components/ui/CopyButton";
+import { PersonMessage } from "@/commons/components/chat/PersonMessage";
 
 export function UserBubble({
   text,
@@ -181,14 +182,41 @@ function SaidWhileWorking({ steps, quote }: { steps: TurnStep[]; quote: boolean 
   );
 }
 
+/**
+ * What a turn was asked: a wake-up as the daemon's note, a person on a chat app on the left under their name, and in the
+ * dashboard's own conversation the reader's own bubble.
+ */
+function Asked({ turn, sessionId, asker }: { turn: ChatTurn; sessionId: string; asker: string | undefined }) {
+  if (turn.system) return <SystemNote text={turn.prompt} cause={turn.cause} />;
+  if (asker !== undefined) {
+    const inbound = (turn.attachments ?? []).filter((file) => file.direction !== "out");
+    return (
+      <PersonMessage name={asker} text={turn.prompt} files={sessionId && inbound.length > 0 ? <AttachmentList sessionId={sessionId} files={inbound} /> : null}>
+        {answersAnEdit(turn) ? <EditedMark /> : null}
+      </PersonMessage>
+    );
+  }
+  return (
+    <UserBubble
+      text={turn.prompt}
+      sessionId={sessionId}
+      edited={answersAnEdit(turn)}
+      {...(turn.attachments?.length ? { attachments: turn.attachments } : {})}
+    />
+  );
+}
+
 /** A turn that is over. */
 export function TurnView({
   turn,
   sessionId,
   showPrompt,
+  asker,
   motion = "",
 }: {
   turn: ChatTurn;
+  /** In a conversation on a chat app: who asked, drawn on the left under their name rather than as the reader's own. */
+  asker?: string | undefined;
   sessionId: string;
   /**
    * How its answer arrives (`useMotionList`). On the answer only: the question above it was drawn as it was sent, and
@@ -220,16 +248,7 @@ export function TurnView({
 
   return (
     <div className="space-y-3">
-      {showPrompt === false ? null : turn.system ? (
-        <SystemNote text={turn.prompt} cause={turn.cause} />
-      ) : (
-        <UserBubble
-          text={turn.prompt}
-          sessionId={sessionId}
-          edited={answersAnEdit(turn)}
-          {...(turn.attachments?.length ? { attachments: turn.attachments } : {})}
-        />
-      )}
+      {showPrompt === false ? null : <Asked turn={turn} sessionId={sessionId} asker={asker} />}
       <div className={`flex flex-col items-start w-full space-y-1.5 origin-top-left ${motion}`}>
         <StepPill
           turnId={turn.id}
@@ -316,10 +335,13 @@ export function LiveTurnView({
   turn,
   sessionId,
   showPrompt,
+  asker,
   onStop,
   motion = "",
 }: {
   turn: LiveTurn;
+  /** Who asked, on a chat app — see `TurnView`. */
+  asker?: string | undefined;
   sessionId: string;
   /** How its answer arrives — see `TurnView`. */
   motion?: string;
@@ -341,16 +363,7 @@ export function LiveTurnView({
 
   return (
     <div className="space-y-3">
-      {showPrompt === false ? null : turn.system ? (
-        <SystemNote text={turn.prompt} cause={turn.cause} />
-      ) : (
-        <UserBubble
-          text={turn.prompt}
-          sessionId={sessionId}
-          edited={answersAnEdit(turn)}
-          {...(turn.attachments?.length ? { attachments: turn.attachments } : {})}
-        />
-      )}
+      {showPrompt === false ? null : <Asked turn={turn} sessionId={sessionId} asker={asker} />}
       <div className={`flex flex-col items-start w-full space-y-2 origin-top-left ${motion}`}>
         {/*
           Whose work this is, above the steps.

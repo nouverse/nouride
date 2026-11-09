@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import type { AgentSummary, ChatListGroup, ChatListPayload, ChatTurn, LiveTurn } from "@nouride/wire";
+import type { AgentSummary, ChatListGroup, ChatListPayload, ChatTurn, LiveTurn, RoomMessage } from "@nouride/wire";
 import { chatsView, groupsView, QUIET_AFTER_MS } from "@/modules/chat/lib/chat-list";
 import { chatOpen, onChats } from "@/commons/lib/chat-place";
 import { groupStream } from "@/modules/chat/lib/group-stream";
@@ -116,23 +116,47 @@ describe("a group read here", () => {
   const turn = (id: string, agentId: string, prompt: string, startedAt: number, status: ChatTurn["status"] = "done") =>
     ({ id, agentId, chatId: "-100", prompt, reply: `${agentId} answers`, status, toolCalls: 0, startedAt, steps: [] }) as ChatTurn;
 
+  const line = (id: string, senderName: string, text: string, at: number, gatewayId = "tg-nouva"): RoomMessage => ({ id, gatewayId, chatId: "-100", senderId: senderName.toLowerCase(), senderName, text, at });
+  const turnsOf = (stream: ReturnType<typeof groupStream>) => stream.flatMap((entry) => (entry.kind === "turn" ? [entry] : []));
+  const shape = (stream: ReturnType<typeof groupStream>) => stream.map((entry) => (entry.kind === "message" ? `${entry.message.senderName}: ${entry.message.text}` : `${entry.turn.agentId} ${entry.showPrompt ? "asked+" : ""}answers`));
+
   test("each agent's turns there in the order they happened, a message two agents answered drawn once", () => {
     const stream = groupStream(
       [turn("t3", "nix", "and the build?", 9_000), turn("t1", "nouva", "@nouva @nestor deploy?", 1_000), turn("t2", "nestor", "@nouva @nestor deploy?", 1_500)],
       [],
     );
-    expect(stream.map((entry) => [entry.turn.id, entry.showPrompt])).toEqual([["t1", true], ["t2", false], ["t3", true]]);
+    expect(turnsOf(stream).map((entry) => [entry.turn.id, entry.showPrompt])).toEqual([["t1", true], ["t2", false], ["t3", true]]);
   });
 
   test("the same words asked again later, or by the same agent, are drawn again", () => {
     const later = groupStream([turn("a", "nouva", "status?", 0), turn("b", "nestor", "status?", 120_000), turn("c", "nestor", "status?", 121_000)], []);
-    expect(later.map((entry) => entry.showPrompt)).toEqual([true, true, true]);
+    expect(turnsOf(later).map((entry) => entry.showPrompt)).toEqual([true, true, true]);
   });
 
   test("a turn at work is the live feed's until the transcript has it finished", () => {
     const live = { ...turn("t9", "nouva", "go", 5_000, "running"), cursor: 3 } as LiveTurn;
-    expect(groupStream([], [live]).map((entry) => entry.live)).toEqual([true]);
-    expect(groupStream([turn("t9", "nouva", "go", 5_000)], [live]).map((entry) => entry.live)).toEqual([false]);
+    expect(turnsOf(groupStream([], [live])).map((entry) => entry.live)).toEqual([true]);
+    expect(turnsOf(groupStream([turn("t9", "nouva", "go", 5_000)], [live])).map((entry) => entry.live)).toEqual([false]);
+  });
+
+  test("what people said is in it whether or not an agent answered, and an answered line is not drawn again in the turn", () => {
+    const stream = groupStream(
+      [turn("t1", "nouva", "@nouva deploy?", 1_200), turn("t2", "nestor", "@nouva deploy?", 1_400)],
+      [],
+      [line("m1", "Gading", "@nouva deploy?", 1_000), line("m2", "Rani", "thanks everyone", 5_000)],
+    );
+    expect(shape(stream)).toEqual(["Gading: @nouva deploy?", "nouva answers", "nestor answers", "Rani: thanks everyone"]);
+  });
+
+  test("a line two of our bots each kept is drawn once, and a line said with the turn it started comes first", () => {
+    const stream = groupStream([turn("t1", "nouva", "hi", 1_000)], [], [line("m1", "Gading", "hi", 1_000, "tg-nouva"), line("m1-b", "Gading", "hi", 1_000, "tg-nestor")]);
+    expect(shape(stream)).toEqual(["Gading: hi", "nouva answers"]);
+  });
+
+  test("a turn from before the oldest kept line, and a wake-up, draw what they were asked", () => {
+    const wake = { ...turn("t3", "nix", "Your background job finished.", 9_000), system: true } as ChatTurn;
+    const stream = groupStream([turn("t0", "nouva", "older question", 500), turn("t1", "nouva", "@nouva deploy?", 1_200), wake], [], [line("m1", "Gading", "@nouva deploy?", 1_000)]);
+    expect(shape(stream)).toEqual(["nouva asked+answers", "Gading: @nouva deploy?", "nouva answers", "nix asked+answers"]);
   });
 });
 

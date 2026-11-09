@@ -68,6 +68,15 @@ function initials(name: string): string {
   return letters.join("").toUpperCase() || "?";
 }
 
+/** A person in a conversation on a chat app: their initials in a circle, where an agent has its cat. */
+export function PersonAvatar({ name }: { name: string }) {
+  return (
+    <span aria-hidden="true" className="grid size-8 shrink-0 place-items-center rounded-full bg-base-200 font-display text-xs font-medium text-base-content/80">
+      {initials(name)}
+    </span>
+  );
+}
+
 /** A group's own face: its initials in a tile, and the mark of the app it lives on. */
 export function GroupAvatar({ name, platform, className }: { name: string; platform: string; className?: string }) {
   return (

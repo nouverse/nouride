@@ -31,8 +31,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "one annotation per setting, the list `config explain` and the dashboard read; it grows by an entry when the config gains a key, and splitting it would hide the list it is",
   },
   "apps/engine/src/modules/web/control/routes/chat.ts": {
-    lines: 487,
-    why: "the dashboard chat's routes, one domain's handlers registered together: upload, send, the live streams, the transcripts, files, delete; what a session id names is `web/control/conversation.ts`",
+    lines: 489,
+    why: "the dashboard chat's routes, one domain's handlers registered together: upload, send, live streams, transcripts and who asked, files, delete; what a session id names is `web/control/conversation.ts`",
   },
   "apps/engine/src/modules/external-agents/index.ts": {
     lines: 531,

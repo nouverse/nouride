@@ -144,6 +144,86 @@ describe("a conversation from a chat app", () => {
     expect(seen.header).toContain("Agents here: Nouva, Nestor");
     expect(seen.kept).toBe(JSON.stringify(["telegram:-100"]));
   });
+
+  // Every person in a chat app's conversation was drawn as the reader's own right-hand bubble, with no name: in a group
+  // of three, all three read as "you".
+  const turn = (id: string, prompt: string, startedAt: number, senderName?: string) => ({
+    id, agentId: "nouva", chatId: "-100", sessionId: "ses_g1", prompt, reply: "Deployed to the box.", status: "done", toolCalls: 0, startedAt, endedAt: startedAt + 5_000, steps: [], ...(senderName ? { senderName } : {}),
+  });
+  /** Each person's line in the conversation, as `name: words`; and how many lines read as the reader's own. */
+  const people = (host: HTMLElement) => [...host.querySelectorAll("[data-person]")].map((row) => `${row.getAttribute("data-person")}: ${row.querySelector(".rounded-tl-xs")?.textContent ?? ""}`);
+  const own = (host: HTMLElement) => host.querySelectorAll(".rounded-tr-xs").length;
+
+  test("a private chat on Telegram: what the person asked is on the left under their name, not the reader's own", async () => {
+    const transcript = { session: { id: "ses_dm", agentId: "nouva", chatId: "555", gatewayId: "telegram:nouva", updatedAt: NOW, writable: false }, earlier: [], turns: [turn("t1", "is the disk full?", NOW - 60_000, "Gading")], events: [], messages: [] };
+    answer({ ...list, "/sessions/ses_dm/turns": { status: 200, body: transcript }, "/sessions/ses_dm/notes": { status: 404, body: { error: "no notes" } } });
+    const seen: Record<string, unknown> = {};
+    await renderPage("/chat/ses_dm", async (host) => {
+      await eventually(() => host.querySelector("[data-person]") !== null, 3_000, "the person");
+      seen.people = people(host);
+      seen.own = own(host);
+    });
+    expect(seen.people).toEqual(["Gading: is the disk full?"]);
+    expect(seen.own).toBe(0);
+  });
+
+  // The group's kept lines, and a turn from before the oldest of them: its question is drawn by the turn itself.
+  const GROUP = {
+    session: { id: "ses_g1", agentId: "nouva", chatId: "-100", gatewayId: "telegram:nouva", updatedAt: NOW, writable: false },
+    earlier: [],
+    turns: [turn("t0", "who is on call?", NOW - 600_000, "Sam"), turn("t1", "@nouva gimana deploy ke box?", NOW - 119_000, "Gading")],
+    events: [],
+    messages: [
+      { id: "m1", gatewayId: "telegram:nouva", chatId: "-100", senderId: "814", senderName: "Gading", text: "@nouva gimana deploy ke box?", at: NOW - 120_000 },
+      { id: "m2", gatewayId: "telegram:nouva", chatId: "-100", senderId: "902", senderName: "Rani", text: "thanks everyone", at: NOW - 30_000 },
+    ],
+  };
+  const GROUP_PEOPLE = ["Sam: who is on call?", "Gading: @nouva gimana deploy ke box?", "Rani: thanks everyone"];
+
+  test("a group: each person on the left under their name, a line nobody answered too, and an answered line once", async () => {
+    answer({ ...list, "/sessions/ses_g1/turns": { status: 200, body: GROUP } });
+    const seen: Record<string, unknown> = {};
+    await renderPage("/chat/group/telegram/-100", async (host) => {
+      await eventually(() => host.querySelectorAll("[data-person]").length >= 3, 3_000, "the people");
+      seen.people = people(host);
+      seen.own = own(host);
+      seen.answers = host.textContent?.split("Deployed to the box.").length;
+    });
+    expect(seen.people).toEqual(GROUP_PEOPLE);
+    expect(seen.own).toBe(0);
+    expect(seen.answers).toBe(3);
+  });
+
+  test("a group with no kept lines, an agent at work: whoever asked is on the left under their name while it runs", async () => {
+    const working = { ...LIST, groups: LIST.groups.map((one) => (one.chatId === "-100" ? { ...one, working: true } : one)) };
+    const running = { ...turn("t2", "is the box up?", NOW - 2_000, "Rani"), status: "running", reply: "", endedAt: undefined, cursor: 1 };
+    answer({
+      ...list,
+      "/chat-list": { status: 200, body: working },
+      "/sessions/ses_g1/turns": { status: 200, body: { ...GROUP, turns: [], messages: [] } },
+      "/sessions/ses_g1/live": { status: 200, body: { turn: running, jobs: [] } },
+    });
+    const seen: Record<string, unknown> = {};
+    await renderPage("/chat/group/telegram/-100", async (host) => {
+      await eventually(() => host.querySelector("[data-person]") !== null, 3_000, "the person");
+      seen.people = people(host);
+      seen.own = own(host);
+    });
+    expect(seen.people).toEqual(["Rani: is the box up?"]);
+    expect(seen.own).toBe(0);
+  });
+
+  test("the same group opened as its agent's conversation reads the same", async () => {
+    answer({ ...list, "/sessions/ses_g1/turns": { status: 200, body: GROUP }, "/sessions/ses_g1/notes": { status: 404, body: { error: "no notes" } } });
+    const seen: Record<string, unknown> = {};
+    await renderPage("/chat/ses_g1", async (host) => {
+      await eventually(() => host.querySelectorAll("[data-person]").length >= 3, 3_000, "the people");
+      seen.people = people(host);
+      seen.own = own(host);
+    });
+    expect(seen.people).toEqual(GROUP_PEOPLE);
+    expect(seen.own).toBe(0);
+  });
 });
 
 describe("an agent's History", () => {

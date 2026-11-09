@@ -121,6 +121,11 @@ export interface ChatTurn {
   sessionId?: string;
   /** Nobody typed this: a background job finishing woke the agent. Not drawn as the operator's words. */
   system?: boolean;
+  /**
+   * Who asked, in a conversation on a chat app: their name under People, else the name their app shows. Absent in the
+   * dashboard's own conversations, where the one asking is the person reading, and from a daemon older than the field.
+   */
+  senderName?: string;
   /** Why the daemon started it, as data — absent on a turn from before 0.7.8. */
   cause?: TurnCause;
   /** Files sent with the question. Metadata only — the bytes live in the agent's attachment store. */
