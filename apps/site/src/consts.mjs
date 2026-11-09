@@ -83,7 +83,7 @@ export const DOCKER_RUN_COMMAND = `docker run -d --name nouride --restart unless
 /** Default install directory the Linux installer creates. */
 export const INSTALL_DIR = '/srv/nouride';
 
-export const VERSION = '0.8.26';
+export const VERSION = '0.8.27';
 
 /** Umami Cloud Analytics */
 export const UMAMI_WEBSITE_ID = 'cffbb7be-1ec9-4a59-9466-f7ead9c732ac';
