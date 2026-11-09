@@ -112,7 +112,7 @@ async function configCheck(target: string | undefined): Promise<void> {
     say(`${GREEN}✓${RESET} this configuration would start`);
   }
   say(`${DIM}  source    ${source ?? "built-in defaults"}${RESET}`);
-  say(`${DIM}  agents    ${registry.active().length} enabled${failed.length > 0 ? `, ${failed.length} will not load` : ""}${RESET}`);
+  say(`${DIM}  agents    ${registry.enabled().length} enabled${failed.length > 0 ? `, ${failed.length} will not load` : ""}${RESET}`);
   say(`${DIM}  gateways  ${config.gateways.filter((g) => g.enabled).map((g) => g.id).join(", ") || "none"}${RESET}`);
 
   // Booting and working are different questions. Everything above answers the first; these are the

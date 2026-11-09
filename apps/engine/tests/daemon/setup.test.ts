@@ -724,6 +724,21 @@ describe("state", () => {
     expect(setup.state()).toMatchObject({ hasProvider: true, hasAgent: true, complete: true });
   });
 
+  test("agents all asleep still count as set up, so the dashboard does not send every page to the wizard", async () => {
+    // Two agents put to sleep for the night (/sleep, or Put to sleep on the dashboard): the pauses outlive a restart,
+    // and setup counted only the agents taking work, so the install read as one with no agent at all.
+    const { setup, registry } = await service();
+    await setup.saveProvider({ kind: "openai", baseUrl: "https://x/v1", apiKey: LIVE_KEY, actor: "t" });
+    for (const id of ["nouva", "kuro"]) {
+      await setup.createAgent({ id, displayName: id, systemPrompt: "hi", model: "gpt-4o", actor: "t" });
+    }
+    expect(registry.pause("nouva")).toBe(true);
+    expect(setup.state()).toMatchObject({ hasAgent: true, complete: true });
+    expect(registry.pause("kuro")).toBe(true);
+    expect(registry.active()).toHaveLength(0);
+    expect(setup.state()).toMatchObject({ hasAgent: true, complete: true });
+  });
+
   test("a provider profile with no credential does not count as configured", async () => {
     // The state a half-finished setup leaves behind. Reporting it as done sends the operator to a chat
     // window that fails on the first message.

@@ -189,7 +189,9 @@ export class SetupService {
     // the state a half-finished setup leaves behind, and treating it as done sends the operator to a
     // chat window that fails on the first message.
     const hasProvider = this.deps.providers.available().some((p) => p.hasCredential);
-    const hasAgent = this.deps.registry.active().length > 0;
+    // Any agent there is, asleep or switched off: the wizard is for an install with none. Counted as only those taking
+    // work, an install whose agents were all put to sleep for the night sent every page of the dashboard to setup.
+    const hasAgent = this.deps.registry.all().length > 0;
 
     return { hasUser, hasProvider, hasAgent, complete: hasUser && hasProvider && hasAgent };
   }
