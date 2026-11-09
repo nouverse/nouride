@@ -30,7 +30,7 @@ export function BackgroundJobs() {
     <Panel
       title="Helpers"
       retention="jobLogs"
-      description="Commands started with exec background: true, helpers started with delegate background: true, and helpers waited for or agents asked with ask_agent that were still working after a minute (the turn that launched one is long over while it runs). A row opens its page under Helpers: its output, or a helper's or an asked agent's steps."
+      description="Commands started with exec background: true, helpers started with delegate background: true, and helpers waited for or agents asked with ask_agent that were still working after 45 seconds (the turn that launched one is long over while it runs). A row opens its page under Helpers: its output, or a helper's or an asked agent's steps."
     >
       {jobs.isPending ? (
         <ListLoading count={5} />

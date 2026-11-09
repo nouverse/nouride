@@ -1,6 +1,6 @@
 /**
  * A helper in the foreground that runs long, through the real pipeline: `delegate` without `background` waits for its
- * helpers up to a minute — a test's wait is shorter — and a helper still working then carries on in the background as a
+ * helpers up to 45 seconds — a test's wait is shorter — and a helper still working then carries on in the background as a
  * job of the agent's, as if `background: true` had started it at that moment. The turn ends, so the person can talk to
  * the agent meanwhile, and the helper's result wakes the agent when it comes.
  *

@@ -26,8 +26,12 @@ import type { HelperView } from "./delegate.ts";
  * Long enough for an answer given from what the worker knows, or from a command or two, to come back inside the turn as
  * it always did. Short enough that long work does not hold the turn, its time budget and the person with it: past this,
  * the person hears that the work is under way, and can talk to the agent meanwhile.
+ *
+ * And well under a minute, because an external agent's CLI reaches these tools over MCP, whose clients give one call
+ * 60 seconds by default: at exactly a minute the CLI gave up first, and the agent read "The operation timed out."
+ * where the tool had just said its helper moved.
  */
-export const FOREGROUND_WAIT_MS = 60_000;
+export const FOREGROUND_WAIT_MS = 45_000;
 
 /** Why work did not move to the background: no room under the calling agent's limit, or no way to run one here. */
 export type MoveRefusal = { why: "limit"; limit: number; running: HelperView[] } | { why: "unavailable"; reason: string };

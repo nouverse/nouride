@@ -16,7 +16,7 @@ import { createDelegateTool, helperRole, type BackgroundStart, type HelperView, 
 import { parseBriefs, renderBrief } from "@/modules/tools/builtins/delegate-brief.ts";
 import { filesNamedIn } from "@/modules/pipeline/background-helper.ts";
 import type { SubAgentHandoff } from "@/modules/tools/handoff.ts";
-import { waitingForm, type MovableRun, type Moved } from "@/modules/tools/builtins/wait-then-move.ts";
+import { FOREGROUND_WAIT_MS, waitingForm, type MovableRun, type Moved } from "@/modules/tools/builtins/wait-then-move.ts";
 import { eventually, sleep } from "../wait.ts";
 
 /**
@@ -293,7 +293,14 @@ describe("delegate in the background", () => {
   });
 });
 
-describe("delegate in the foreground, waited on for a minute", () => {
+describe("delegate in the foreground, waited on for 45 seconds", () => {
+  test("the wait comes back well inside the minute an external agent's MCP client gives one call", () => {
+    // Found live: a Claude Code agent's call to `delegate` was given up by its CLI at 60 s, the same moment the wait
+    // ended, and the agent read "The operation timed out." where the tool said its helper had moved. 60 s is the MCP
+    // clients' default; ten seconds of room covers the move and the answer's way back.
+    expect(FOREGROUND_WAIT_MS).toBeLessThanOrEqual(60_000 - 10_000);
+  });
+
   /** A helper that answers when `finish` is called, or never — and moves when asked, the way `start` answers. */
   function helper(moveTo: Moved) {
     let finish: (summary: string) => void = () => {};
@@ -379,8 +386,8 @@ describe("delegate in the foreground, waited on for a minute", () => {
     const waiting = waitingForm(t.subject);
     expect(waiting).not.toBe(t.subject);
     expect(Object.keys((waiting.definition.parameters as { properties: object }).properties)).toEqual(["tasks", "tier", "isolated"]);
-    expect(t.subject.definition.description).toContain("Without `background` it is for quick questions: you wait up to a minute, then a helper still working moves to the background.");
-    expect(waiting.definition.description).not.toContain("a minute");
+    expect(t.subject.definition.description).toContain("Without `background` it is for quick questions: you wait up to 45 seconds, then a helper still working moves to the background.");
+    expect(waiting.definition.description).not.toContain("45 seconds");
     // Asked for the background anyway, it waits for its helper to the end.
     const said = await waiting.execute({ tasks: [task("Rebuild the index")], background: true }, ctx());
     expect(said.content).toContain("waited for");
@@ -391,8 +398,8 @@ describe("delegate in the foreground, waited on for a minute", () => {
   test("the `background` parameter says what it is for, and what happens without it", () => {
     const tool = createDelegateTool({ run: async () => handoff("ok") });
     const background = (tool.definition.parameters as { properties: Record<string, { description: string }> }).properties.background!.description;
-    expect(background).toStartWith("For work you know takes more than a minute: each brief becomes a helper job, your turn ends now");
-    expect(background).toEndWith("Off: you wait up to a minute, then the same for any still working.");
+    expect(background).toStartWith("For work you know takes more than 45 seconds: each brief becomes a helper job, your turn ends now");
+    expect(background).toEndWith("Off: you wait up to 45 seconds, then the same for any still working.");
   });
 });
 

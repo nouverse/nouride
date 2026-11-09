@@ -87,7 +87,7 @@ masing-masing bot token sendiri dan mereka punya identitas terpisah di platform 
 Bisa, dan caranya berbeda tergantung di mana. Di grup, mereka saling nge-tag dan tag itulah serah
 terimanya. Di chat satu lawan satu itu gak bisa, tiap bot punya percakapan pribadinya sendiri dengan
 kamu, jadi agent memakai tool `ask_agent`, dan yang sedang kamu ajak bicara tetap satu-satunya yang
-berbicara. Pekerjaan yang butuh lebih dari semenit lanjut di latar belakang, dan jawabannya kamu dengar
+berbicara. Pekerjaan yang butuh lebih dari 45 detik lanjut di latar belakang, dan jawabannya kamu dengar
 begitu datang. [Detail →](/id/docs/manual/chatting/#dua-agent-dalam-satu-ruangan)
 
 ## Menjalankannya

@@ -70,7 +70,7 @@ Empat hal terjadi di luar jalur itu:
 - **Agent saling menghubungi** lewat mention di chat bersama, di-routing seperti pesan biasa dengan
   batas lompatan (`[agents] mention_max_hops`, 5), atau lewat `ask_agent` di chat empat mata, yang
   menjalankan agent lain di belakang percakapan lalu mengembalikan jawabannya, atau, kalau itu makan
-  lebih dari semenit, membiarkannya lanjut sebagai background job yang jawabannya membangunkan agent
+  lebih dari 45 detik, membiarkannya lanjut sebagai background job yang jawabannya membangunkan agent
   yang meminta.
 - **Gerbang approval** memarkir sebuah tool call sampai manusia menjawab, di chat atau di dashboard.
   Pertanyaannya berupa baris di SQLite, dan restart membuatnya kedaluwarsa, bukan membiarkan tool call

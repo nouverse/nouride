@@ -144,10 +144,11 @@ const PER_TOOL = 3_400;
 // found nothing in Indonesian documents. `memory_search`'s words about documents got shorter.
 // 48,200 for the mascot's look (~33): the harness tool's look takes tuxedo, helmet and photochromic, the words the Look
 // tab takes, so an agent can make another dressed as the mascot; an enum the tab has and the tool lacks is refused.
-// 48,360 for `delegate`'s minute (~155): its description and `background` say the foreground is for quick questions,
-// waited for up to a minute, after which a helper still working moves to the background. Told only "you wait", an agent
-// sent three tasks of five to ten minutes each to the foreground and held the person's chat for eight.
-const TOTAL = 48_360;
+// 48,360 for `delegate`'s wait (~155): its description and `background` say the foreground is for quick questions,
+// waited for up to a short while, after which a helper still working moves to the background. Told only "you wait", an
+// agent sent three tasks of five to ten minutes each to the foreground and held the person's chat for eight. 48,370:
+// the wait is now said as 45 seconds, which an external agent's MCP client gives a call room to come back inside.
+const TOTAL = 48_370;
 
 describe("tool schema budget", () => {
   test("every conditional tool was built, so the total means what it says", () => {

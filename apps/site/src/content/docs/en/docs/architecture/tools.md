@@ -342,6 +342,6 @@ mission to merge; anywhere else it is refused.
 `ask_agent` is the other shape, a different *persona*, with its own skills, tools and permissions,
 running behind the conversation. Its progress appears labelled with its name and its answer comes
 back to the agent that asked. The agent you are talking to stays the only one that speaks. An ask
-waits up to a minute; work that takes longer carries on in the background as a job of the asking
+waits up to 45 seconds; work that takes longer carries on in the background as a job of the asking
 agent's, and its answer wakes that agent when it comes, at once with `background: true`
 ([Asks that run long](/en/docs/architecture/agents/#asks-that-run-long)).

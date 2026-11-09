@@ -203,7 +203,7 @@ export function buildTools(deps: {
     runSubagent: pipeline.subagentRunner(),
     // A helper as a job of its own (0.7.15): its turn ends at once, and its end wakes the agent — `background-helper.ts`.
     startHelper: pipeline.backgroundHelpers(),
-    // And one waited on that runs long: it moves to the background after a minute, as an ask does.
+    // And one waited on that runs long: it moves to the background after 45 seconds, as an ask does.
     waitedHelper: { start: pipeline.waitedHelpers() },
     ...(deps.isolateHelper ? { isolateHelper: deps.isolateHelper } : {}),
     /**

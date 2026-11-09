@@ -82,7 +82,7 @@ own bot token and they have separate identities on the same platform.
 Yes, and in two different ways depending on where. In a group, they tag each other and the tag *is*
 the handover. In a one-to-one chat that cannot work, each bot has its own private conversation with
 you, so an agent uses the `ask_agent` tool instead, and the one you are talking to stays the only
-one that speaks. Work that takes the other agent more than a minute goes on in the background, and
+one that speaks. Work that takes the other agent more than 45 seconds goes on in the background, and
 you hear the answer when it comes. [Details →](/en/docs/manual/chatting/#two-agents-in-one-room)
 
 ## Running it

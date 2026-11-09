@@ -809,7 +809,7 @@ cut at 100 characters; `nouride jobs log <id>` prints it whole, with the same he
 
 **A helper is a job too** (0.7.15): `delegate` with `background: true` hands a task to a helper that works
 on its own while the agent stays free to talk, and its handoff wakes the agent when it finishes — each
-helper as it finishes. A helper the agent waits for, without `background`, is waited for up to a minute; one still
+helper as it finishes. A helper the agent waits for, without `background`, is waited for up to 45 seconds; one still
 working then becomes a job the same way. It is listed as `helper: <goal>`, marked `helper at work` while this daemon runs
 it; its log is its steps as it takes them and, at the end, what it reported. `nouride jobs kill <id>`
 stops one, and `/stop` in its chat stops the agent's helpers there. How many one agent may run at once is
@@ -843,7 +843,7 @@ reviewer; the goal, checks and limits do not change ([SPEC.md](./SPEC.md), missi
 ([SPEC.md §13.5](./SPEC.md#135-a-mission-in-a-repository-081)). Operator and up. The limits are `[missions]` in
 `config.toml`.
 
-**So is an ask that runs long** (0.7.19): `ask_agent` waits for the other agent's answer up to a minute, then
+**So is an ask that runs long** (0.7.19): `ask_agent` waits for the other agent's answer up to 45 seconds, then
 lets it carry on as a job of the asking agent's — listed as `ask <agent>: <task>`, marked `ask at work` —
 and the answer wakes the asking agent in that chat when it comes; `background: true` moves it at once.
 `nouride jobs kill <id>` and `/stop` in that chat stop it. It counts with the agent's helpers against

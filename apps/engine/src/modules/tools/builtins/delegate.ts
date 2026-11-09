@@ -11,7 +11,7 @@
  * - **Foreground** is parallelism. Four questions that do not depend on each other — "what does this
  *   config do", "what is in these logs", "which of these hosts is unhealthy" — are four turns' worth of
  *   round-trips done serially, or one call done at once. The turn waits for the answers: it is for
- *   work the agent needs before it can answer. It waits a minute (`wait-then-move.ts`), as an ask does: a
+ *   work the agent needs before it can answer. It waits 45 seconds (`wait-then-move.ts`), as an ask does: a
  *   helper still working then carries on in the background, a job as if it had been started there, and the
  *   turn ends. Waiting to the end let three helpers of five or ten minutes each hold the person's chat for eight.
  * - **Background** (0.7.15) is staying free. A task that takes a while goes to a helper that works as a
@@ -134,9 +134,9 @@ const DESCRIPTION =
 function definitionOf(mayDetach: boolean): ToolDefinition {
   return {
     name: "delegate",
-    // The minute is said where it holds: told only "you wait", a model sent work of ten minutes to the foreground.
+    // The wait is said where it holds: told only "you wait", a model sent work of ten minutes to the foreground.
     description: mayDetach
-      ? `${DESCRIPTION} Without \`background\` it is for quick questions: you wait up to a minute, then a helper still working moves to the background.`
+      ? `${DESCRIPTION} Without \`background\` it is for quick questions: you wait up to 45 seconds, then a helper still working moves to the background.`
       : DESCRIPTION,
     parameters: {
       type: "object",
@@ -163,9 +163,9 @@ function definitionOf(mayDetach: boolean): ToolDefinition {
               background: {
                 type: "boolean",
                 description:
-                  "For work you know takes more than a minute: each brief becomes a helper job, your turn ends now, and each " +
+                  "For work you know takes more than 45 seconds: each brief becomes a helper job, your turn ends now, and each " +
                   "helper's result comes to you as a message when it finishes. Over your limit is refused, with what is running. " +
-                  "Off: you wait up to a minute, then the same for any still working.",
+                  "Off: you wait up to 45 seconds, then the same for any still working.",
               },
             }
           : {}),

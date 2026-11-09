@@ -1,6 +1,6 @@
 /**
  * Helpers & jobs (0.8.12): the work an agent left running in the background — helpers it handed a piece to, commands it
- * did not wait for, agents it asked that took longer than a minute — each opening to what it did, as a mission does.
+ * did not wait for, agents it asked that took longer than 45 seconds — each opening to what it did, as a mission does.
  * Before this a helper's steps were only `nouride jobs log` on the box; a person looks for them here.
  *
  * Laid out as Missions is: a tab per way it ended with its count, a search and an agent filter over the list, and the

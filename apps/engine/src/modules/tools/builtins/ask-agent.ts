@@ -28,7 +28,7 @@
  * ## An ask that does not hold the asking turn hostage (0.7.19)
  *
  * It ran the peer's whole turn inside the asking agent's tool call. A deploy or an audit then held that turn — its time
- * budget, and the person, who could not talk to the asking agent meanwhile. Now it waits for the answer for a minute,
+ * budget, and the person, who could not talk to the asking agent meanwhile. Now it waits for the answer for 45 seconds,
  * then the peer's turn carries on as a job of the asking agent's (`pipeline/background-ask.ts`), the call returns saying
  * so, and the answer wakes the asking agent in this chat when it comes — the wait and the move `delegate`'s helpers in
  * the foreground have too (`wait-then-move.ts`). `background: true` returns at once. Only where the turn asking may hold
@@ -200,7 +200,7 @@ export function createAskAgentTool(options: AskAgentToolOptions): Tool {
             type: "boolean",
             description:
               "Return at once instead of waiting: they keep working and their answer comes to you as a message. For work " +
-              "you know is long: a deploy, an audit. Without it you wait up to a minute, then the same.",
+              "you know is long: a deploy, an audit. Without it you wait up to 45 seconds, then the same.",
           },
         },
       },
