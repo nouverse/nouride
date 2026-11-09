@@ -388,38 +388,71 @@ check_floor() {
 }
 # <<< upgrade floor
 
-fetch() {
-  if command -v curl >/dev/null 2>&1; then curl -fsSL "$1" -o "$2"; else wget -qO "$2" "$1"; fi
-}
-# fetch_status <url> <file> — downloads, and prints how it went: `ok`, `missing` (a 404 or 410, or a file:// that is
-# not there), or what failed instead (`HTTP 504`, `no answer`). A release's checksum file that GitHub failed to serve
-# for a moment was reported as one the release does not have, which reads as an unsigned release (2026-11-08): only a
-# file that is not there is said to be missing. Whatever was written for a failure is removed.
-fetch_status() {
+# >>> downloads
+# Every download is tried again when it fails for a moment: five tries, 2, 5, 10 and 20 seconds apart (NOURIDE_FETCH_WAITS
+# sets the pauses; the tests give none). A transfer that stalls is cut so it can be tried again, and the tarball goes on
+# from the bytes it already has. Phones on a home Wi-Fi lost the 57 MB tarball midway on every first start, and one try
+# ended the install there. A 404 or 410 is an answer, and is not tried again.
+FETCH_WAITS="${NOURIDE_FETCH_WAITS:-2 5 10 20}"
+
+# fetch_once <url> <file> [resume] — one try. Prints `ok`, `missing` (a 404 or 410, or a file:// that is not there), or
+# what failed instead (`HTTP 504`, `no answer`, `cut off midway`). With `resume`, it goes on from the file's bytes and
+# keeps what came if it fails; otherwise what was written for a failure is removed. A server's error page is never
+# written into the file (`--fail`), so going on from it never appends one.
+fetch_once() {
+  fo_exit=0
+  fo_resume=""
   if command -v curl >/dev/null 2>&1; then
-    fs_code="$(curl -sSL -o "$2" -w '%{http_code}' "$1" 2>/dev/null)"
-    fs_exit=$?
+    [ "${3:-}" = "resume" ] && [ -s "$2" ] && fo_resume="-C -"
+    # shellcheck disable=SC2086
+    fo_code="$(curl -sSLf --connect-timeout 20 --speed-limit 1024 --speed-time 30 $fo_resume -o "$2" -w '%{http_code}' "$1" 2>/dev/null)" || fo_exit=$?
   else
-    wget -S -O "$2" "$1" 2>"$2.headers"
-    fs_exit=$?
-    fs_code="$(awk '/^ *HTTP\//{c=$2} END{print c}' "$2.headers" 2>/dev/null)"
+    [ "${3:-}" = "resume" ] && [ -s "$2" ] && fo_resume="-c"
+    # shellcheck disable=SC2086
+    wget -S -T 30 -t 1 $fo_resume -O "$2" "$1" 2>"$2.headers" || fo_exit=$?
+    fo_code="$(awk '/^ *HTTP\//{c=$2} END{print c}' "$2.headers" 2>/dev/null)"
     rm -f "$2.headers"
   fi
-  case "$fs_code" in
-    2??) [ "$fs_exit" -eq 0 ] && { echo ok; return 0; } ;;
+  case "$fo_code" in
+    2??) [ "$fo_exit" -eq 0 ] && { echo ok; return 0; } ;;
     404 | 410) rm -f "$2"; echo missing; return 1 ;;
+    # Asked to go on from a file that was already whole.
+    416) [ -n "$fo_resume" ] && { echo ok; return 0; } ;;
   esac
-  if [ "$fs_exit" -eq 0 ] && { [ -z "$fs_code" ] || [ "$fs_code" = "000" ]; }; then echo ok; return 0; fi
-  rm -f "$2"
-  case "$1" in file://*) echo missing; return 1 ;; esac
-  case "$fs_code" in "" | 000) echo "no answer" ;; *) echo "HTTP $fs_code" ;; esac
+  if [ "$fo_exit" -eq 0 ] && { [ -z "$fo_code" ] || [ "$fo_code" = "000" ]; }; then echo ok; return 0; fi
+  [ "${3:-}" = "resume" ] || rm -f "$2"
+  case "$1" in file://*) rm -f "$2"; echo missing; return 1 ;; esac
+  case "$fo_code" in
+    2??) echo "cut off midway" ;;
+    "" | 000) echo "no answer" ;;
+    *) echo "HTTP $fo_code" ;;
+  esac
+  return 1
+}
+
+# fetch_status <url> <file> [resume] — the download, tried again on any failure but `missing`, each failed try said on
+# one line. Prints `ok`, `missing`, or the last failure and how many tries it took (`HTTP 504, 5 tries`). A release's
+# checksum file that GitHub failed to serve for a moment was once reported as one the release does not have, which
+# reads as an unsigned release: only a file that is not there is said to be missing.
+fetch_status() {
+  fr_try=1
+  for fr_wait in $FETCH_WAITS ""; do
+    fr_how="$(fetch_once "$1" "$2" "${3:-}")" && { echo ok; return 0; }
+    [ "$fr_how" = "missing" ] && { echo missing; return 1; }
+    [ -z "$fr_wait" ] && break
+    warn "download try $fr_try failed ($fr_how): $1; trying again in ${fr_wait}s"
+    sleep "$fr_wait"
+    fr_try=$((fr_try + 1))
+  done
+  if [ "$fr_try" -gt 1 ]; then echo "$fr_how, $fr_try tries"; else echo "$fr_how"; fi
   return 1
 }
 # The refusal for a download that failed, as against one that is not there: the release is not at fault, and the same
 # command a few minutes later usually works.
 fetch_failed() {
-  die "could not download $1 ($2), so nothing was installed. GitHub sometimes fails for a moment: run the same command again in a few minutes"
+  die "could not download $1 ($2), so nothing was installed. The connection or GitHub failed for a moment: run the same command again in a few minutes"
 }
+# <<< downloads
 
 # >>> checksum names
 # sums_base_for <tag> — the name of a release's checksum files: `SHA256SUMS` through 0.7.x, `CHECKSUMS` from 0.8.0, and
@@ -493,7 +526,10 @@ else
   say "downloading $url"
   command -v curl >/dev/null 2>&1 || command -v wget >/dev/null 2>&1 || die "neither curl nor wget is installed"
   if [ "$OS" = "Darwin" ]; then dl_hint="a release before macOS builds were published carries none for a Mac: build one here (\`bun run build:binary --target ${TARGET}\`) and pass --tarball"; else dl_hint="if no release exists yet, build one and pass --tarball"; fi
-  fetch "$url" "$STAGE/nouride.tar.gz" || die "download failed: $dl_hint"
+  if ! dl_how="$(fetch_status "$url" "$STAGE/nouride.tar.gz" resume)"; then
+    [ "$dl_how" = "missing" ] && die "there is no ${ARTIFACT}.tar.gz at $url: $dl_hint"
+    fetch_failed "$url" "$dl_how"
+  fi
   # The release's checksum file and its signature, from beside the tarball.
   fetch_sums "${url%/*}" "$VERSION" "$VARIANT" "$STAGE"
   sig=""

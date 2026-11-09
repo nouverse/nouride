@@ -18,7 +18,7 @@ import { checksumName } from "../../../../packages/update/src/edition.ts";
 const INSTALL = readFileSync(join(import.meta.dir, "../../../../scripts/install.sh"), "utf8");
 const between = (from: string, to: string) => INSTALL.slice(INSTALL.indexOf(from) + from.length, INSTALL.indexOf(to));
 const NAMES = between("# >>> checksum names\n", "# <<< checksum names");
-const FETCH = INSTALL.slice(INSTALL.indexOf("fetch() {"), INSTALL.indexOf("# >>> checksum names"));
+const FETCH = INSTALL.slice(INSTALL.indexOf("# >>> downloads\n"), INSTALL.indexOf("# <<< downloads"));
 const LISTING = INSTALL.slice(INSTALL.indexOf("sums_listing() {"), INSTALL.indexOf("# Whether a release must be signed"));
 const SH = existsSync("/bin/sh") ? "/bin/sh" : "sh";
 
@@ -28,8 +28,8 @@ afterEach(() => {
 });
 
 function run(body: string): { out: string; status: number } {
-  const script = `die() { echo "DIE: $*"; exit 1; }\n${FETCH}\n${NAMES}\n${LISTING}\n${body}`;
-  const result = spawnSync(SH, ["-c", script], { encoding: "utf8" });
+  const script = `set -eu\nwarn() { echo "WARN: $*" >&2; }\ndie() { echo "DIE: $*"; exit 1; }\n${FETCH}\n${NAMES}\n${LISTING}\n${body}`;
+  const result = spawnSync(SH, ["-c", script], { encoding: "utf8", env: { ...process.env, NOURIDE_FETCH_WAITS: "0 0 0 0" } });
   return { out: (result.stdout + result.stderr).trim(), status: result.status ?? -1 };
 }
 
