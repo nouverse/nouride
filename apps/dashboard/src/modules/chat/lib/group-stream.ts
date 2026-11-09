@@ -11,6 +11,17 @@
 
 import type { ChatTurn, LiveTurn, RoomMessage } from "@nouride/wire";
 
+/**
+ * A group's text with each of our agents' tags read as the agent's name: on Discord a tag is markup, `<@1001…>`, and
+ * drawn as it was written it said nothing about who was meant. The tags come from the daemon (`ChatListGroup.tags`),
+ * matched as written, so no platform's markup is known here.
+ */
+export function readTags(tags: Record<string, string> | undefined, nameOf: (agentId: string) => string): (text: string) => string {
+  const known = Object.entries(tags ?? {});
+  if (known.length === 0) return (text) => text;
+  return (text) => known.reduce((read, [tag, agentId]) => (read.includes(tag) ? read.split(tag).join(`@${nameOf(agentId)}`) : read), text);
+}
+
 /** How far apart two agents' turns can start and still be answers to one message. */
 const SAME_MESSAGE_MS = 60_000;
 

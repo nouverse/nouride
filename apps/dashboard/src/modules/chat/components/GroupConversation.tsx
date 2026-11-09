@@ -24,7 +24,7 @@ import { cn } from "@/commons/lib/utils";
 import type { ChatListData } from "../hooks/use-chat-list";
 import { usePinnedGroups } from "../hooks/use-pinned";
 import { groupKey } from "../lib/chat-list";
-import { groupStream } from "../lib/group-stream";
+import { groupStream, readTags } from "../lib/group-stream";
 import { HEADER_BUTTON } from "./AgentHeader";
 import { groupName } from "./ListRows";
 import { LiveTurnView, TurnView } from "./Turn";
@@ -77,10 +77,12 @@ function GroupView({ group, data }: { group: ChatListGroup; data: ChatListData }
       refetchInterval: group.working ? 1_500 : false,
     })),
   });
-  const turns: ChatTurn[] = transcripts.flatMap((query) => query.data?.turns ?? []);
+  // A tag in what was said there, read as the agent it tags: `<@1001…>` on Discord is `@Nexa` here (`readTags`).
+  const untag = readTags(group.tags, data.nameOf);
+  const turns: ChatTurn[] = transcripts.flatMap((query) => query.data?.turns ?? []).map((turn) => ({ ...turn, prompt: untag(turn.prompt), reply: untag(turn.reply) }));
   // What people said there, kept by each of our bots' connections: one line once, whichever kept it (`groupStream`).
-  const said = transcripts.flatMap((query) => query.data?.messages ?? []);
-  const running = lives.flatMap((query) => (group.working && query.data?.turn?.status === "running" ? [query.data.turn as LiveTurn] : []));
+  const said = transcripts.flatMap((query) => query.data?.messages ?? []).map((message) => ({ ...message, text: untag(message.text) }));
+  const running = lives.flatMap((query) => (group.working && query.data?.turn?.status === "running" ? [{ ...query.data.turn, reply: untag(query.data.turn.reply ?? "") } as LiveTurn] : []));
   const stream = groupStream(turns, running, said);
   const loading = transcripts.some((query) => query.isPending);
 

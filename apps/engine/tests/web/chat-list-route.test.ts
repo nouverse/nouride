@@ -35,7 +35,7 @@ afterEach(() => {
   for (const fn of cleanup.splice(0).reverse()) fn();
 });
 
-async function mount(options: { untagged?: (chatId: string) => string | null; groups?: unknown[]; helpers?: { agentId: string; chatId: string }[] } = {}) {
+async function mount(options: { untagged?: (chatId: string) => string | null; groups?: unknown[]; helpers?: { agentId: string; chatId: string }[]; tags?: Record<string, Record<string, string>> } = {}) {
   const dataDir = tempDir("chat-list");
   cleanup.push(() => removePath(dataDir));
   const db = await openAndMigrate(join(dataDir, "test.db"));
@@ -58,6 +58,7 @@ async function mount(options: { untagged?: (chatId: string) => string | null; gr
     },
     pipeline: {
       knownRooms: () => options.groups ?? [],
+      agentTags: (platform: string) => options.tags?.[platform] ?? {},
       untaggedAnswerer: (where: { gateway: string; gatewayId: string; chatId: string }) => {
         asked.push(where);
         return options.untagged?.(where.chatId) ?? null;
@@ -179,6 +180,17 @@ describe("GET /chat-list", () => {
     // The two the Groups page knew from one bot's copy, and one more from the other's.
     expect(office.people).toBe(3);
     expect(office.working).toBe(false);
+  });
+
+  test("a group carries each agent's tag as its platform writes it, the tag to the agent; a platform where none has one, none", async () => {
+    const groups = [
+      { gatewayId: "discord:nouva", platform: "discord", chatId: "881", name: "#general", dashboard: false, agents: ["nouva", "nexa"], people: [], lastActive: 2 },
+      { gatewayId: "telegram:nouva", platform: "telegram", chatId: "-100", name: "Office", dashboard: false, agents: ["nouva"], people: [], lastActive: 1 },
+    ];
+    const h = await mount({ groups, tags: { discord: { nouva: "<@100000000000000001>", nexa: "<@100000000000000002>" } } });
+    const { body } = await h.list();
+    expect(body.groups.find((group) => group.chatId === "881")?.tags).toEqual({ "<@100000000000000001>": "nouva", "<@100000000000000002>": "nexa" });
+    expect(body.groups.find((group) => group.chatId === "-100")).not.toHaveProperty("tags");
   });
 
   // A supergroup numbers a line once for every bot in it; a basic group numbers it for each bot apart (`idsPerConnection`).

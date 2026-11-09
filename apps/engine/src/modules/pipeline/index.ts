@@ -413,6 +413,8 @@ export class Pipeline {
   knownRooms() { return this.chats.knownRooms(); }
   /** Who answers a room message that tags nobody — the router's own answer (`inbound.ts`), for the dashboard to say. */
   untaggedAnswerer(...args: Parameters<InboundRouter["untaggedAnswerer"]>) { return this.inbound.untaggedAnswerer(...args); }
+  /** Each agent's tag as a platform writes it (`voice.ts`), for the dashboard to read a tag in a group as the agent's name. */
+  agentTags(...args: Parameters<Voice["agentMentionTokens"]>) { return this.voice.agentMentionTokens(...args); }
   renameRoom(...args: Parameters<ChatDirectory["renameRoom"]>) { return this.chats.renameRoom(...args); }
   sayInChat(...args: Parameters<ChatDirectory["sayInChat"]>) { return this.chats.sayInChat(...args); }
 

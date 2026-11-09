@@ -222,6 +222,25 @@ describe("a conversation from a chat app", () => {
     expect(seen.answers).toBe(3);
   });
 
+  // Live on the box, a Discord channel drew a tag as its markup, `<@` and a long number: it said nothing of who was meant.
+  test("a tag in a group reads as the agent it tags, in a person's line and in an agent's answer", async () => {
+    const tagged = { ...LIST, groups: LIST.groups.map((one) => (one.chatId === "-100" ? { ...one, tags: { "<@1001>": "nestor" } } : one)) };
+    const said = {
+      ...GROUP,
+      turns: [{ ...turn("t1", "<@1001> are you there?", NOW - 119_000, "Gading"), reply: "<@1001> answer Gading please" }],
+      messages: [{ id: "m1", gatewayId: "telegram:nouva", chatId: "-100", senderId: "814", senderName: "Gading", text: "<@1001> are you there?", at: NOW - 120_000 }],
+    };
+    answer({ ...list, "/chat-list": { status: 200, body: tagged }, "/sessions/ses_g1/turns": { status: 200, body: said } });
+    let text = "";
+    await renderPage("/chat/group/telegram/-100", async (host) => {
+      await eventually(() => (host.textContent ?? "").includes("answer Gading please"), 3_000, "the answer");
+      text = host.querySelector("[data-stream]")?.textContent ?? "";
+    });
+    expect(text).toContain("@Nestor are you there?");
+    expect(text).toContain("@Nestor answer Gading please");
+    expect(text).not.toContain("<@1001>");
+  });
+
   test("a group with no kept lines, an agent at work: whoever asked is on the left under their name while it runs", async () => {
     const working = { ...LIST, groups: LIST.groups.map((one) => (one.chatId === "-100" ? { ...one, working: true } : one)) };
     const running = { ...turn("t2", "is the box up?", NOW - 2_000, "Rani"), status: "running", reply: "", endedAt: undefined, cursor: 1 };

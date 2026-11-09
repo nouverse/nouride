@@ -131,6 +131,12 @@ function roomsOf(deps: ControlDeps, local: string, platform: GatewayName): ChatL
   });
 }
 
+/** Each agent's tag on a platform, the tag to the agent, where any has one: `<@1001…>` read as the agent it tags. */
+function tagsOn(deps: ControlDeps, platform: string): { tags?: Record<string, string> } {
+  const tags = Object.fromEntries(Object.entries(deps.pipeline.agentTags(platform as GatewayName)).map(([agentId, tag]) => [tag, agentId]));
+  return Object.keys(tags).length > 0 ? { tags } : {};
+}
+
 /** The groups on chat apps: the Groups page's rooms (one per chat on its platform), with each agent's conversation there. */
 function groupsOf(deps: ControlDeps, running: Set<string>): ChatListGroup[] {
   const platformOf = (gatewayId: string) => deps.ctx.gateways.get(gatewayId)?.platform ?? gatewayId.split(":")[0] ?? gatewayId;
@@ -154,6 +160,7 @@ function groupsOf(deps: ControlDeps, running: Set<string>): ChatListGroup[] {
         ...bare(line),
         working: sessions.some((session) => running.has(session.id)),
         people: peopleCount(deps, connections, group.chatId, group.people),
+        ...tagsOn(deps, group.platform),
       };
     })
     .sort((a, b) => b.at - a.at);

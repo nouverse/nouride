@@ -59,6 +59,11 @@ export interface ChatListGroup {
   working: boolean;
   /** How many people spoke there lately, as far as the daemon heard. */
   people: number;
+  /**
+   * Each of our agents' tag as this platform writes it, the tag to the agent: Discord's `<@1001…>` is markup, and the
+   * dashboard reads it as `@Nexa`. Absent where no agent of ours has one there.
+   */
+  tags?: Record<string, string>;
 }
 
 export interface ChatListPayload {
