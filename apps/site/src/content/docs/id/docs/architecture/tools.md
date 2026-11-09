@@ -161,7 +161,9 @@ kegagalan boot alih-alih peringatan di log yang gak dibaca siapa pun.
 
 Dua anggaran giliran ini sengaja besar, supaya satu giliran bisa menuntaskan pekerjaan panjang seperti
 yang dilakukan coding agent. Percakapan dipadatkan selagi tumbuh, dan `/stop` menghentikan giliran saat
-itu juga. `max_turn_duration_ms` terpisah dari timeout per-permintaan dan per-tool, yang masing-masing
+itu juga. Tool yang gak berhenti waktu gilirannya dihentikan, lewat `/stop` atau karena waktunya habis,
+diberi lima detik; setelah itu giliran berakhir tanpa menunggunya, dan hasilnya bilang tool itu mungkin
+masih jalan di latar belakang. `max_turn_duration_ms` terpisah dari timeout per-permintaan dan per-tool, yang masing-masing
 membatasi satu langkah. Selama sebuah giliran berjalan, chat lain tidak menunggunya, dan di chat satu
 lawan satu pesan yang dikirim di tengahnya dibaca giliran itu di langkah berikutnya. Pack sebuah agent
 bisa mengatur anggarannya sendiri lewat `[llm] max_tool_iterations` dan `max_turn_seconds`.

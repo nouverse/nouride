@@ -264,6 +264,13 @@ export interface Tool {
    */
   verbatim?: true;
   /**
+   * The arguments that carry a file's text rather than say what to do with it: `write`'s content, `edit`'s two strings.
+   * Once a call has run and is no longer in the newest round, and the turn's context is full, each long string in them
+   * is carried as its size instead (`trimToolResults`). Without it a long coding turn carried every file it wrote until
+   * the window ran out, and nothing could drop them: they are the running turn's own.
+   */
+  bulkArguments?: readonly string[];
+  /**
    * Decide per *call*: run, ask, or refuse.
    *
    * Some tools are only conditionally dangerous — `exec` running `ls` and `exec` running

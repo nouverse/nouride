@@ -294,6 +294,8 @@ export interface PipelineDeps {
    * default 5s interval, and it is the one this knob is here to keep fixed.
    */
   typingRefreshMs?: number;
+  /** A stopped turn's grace for a tool to stop by itself (`ExecutorDeps.stoppedCallGraceMs`). For a test, as above. */
+  stoppedCallGraceMs?: number;
   /** Replaced via `setTools` once built — see the note there. */
   tools: Map<string, Tool>;
   gateways: Map<string, Gateway>;

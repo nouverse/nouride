@@ -187,9 +187,16 @@ function parse(turnId: string, rows: readonly JournalRow[]): UnsettledTurn | nul
   const head = first && typeof first.head === "object" && first.head !== null ? (first.head as JournalHead) : null;
   if (!head) return null;
   const entries: JournalEntry[] = [];
-  for (const entry of rest) {
+  let unread = 0;
+  for (const [index, entry] of rest.entries()) {
     if (entry && typeof entry.message === "object" && entry.message !== null) entries.push({ message: entry.message as ChatMessage });
     else if (entry && Array.isArray(entry.started)) entries.push({ started: entry.started.filter((id): id is string => typeof id === "string") });
+    else {
+      // A row that does not read is a hole as surely as one never written: what it held is not here, and a closing that
+      // read past it would say a call it named never began. Its number, never its content — that is somebody's words.
+      log.warn("skipped a turn journal row that could not be read", { turn_id: turnId, seq: rows[index + 1]!.seq });
+      unread += 1;
+    }
   }
-  return { turnId, head, entries, complete: rows.every((row, index) => row.seq === index) };
+  return { turnId, head, entries, complete: unread === 0 && rows.every((row, index) => row.seq === index) };
 }

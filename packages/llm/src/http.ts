@@ -207,11 +207,15 @@ export async function postJson(
     }
 
     // A fresh deadline per attempt, combined with any caller signal so a cancelled turn still
-    // aborts immediately.
-    const deadline = AbortSignal.timeout(requestTimeoutMs(deps));
-    const combined = signal ? AbortSignal.any([signal, deadline]) : deadline;
+    // aborts immediately. A timer cleared once the headers are in, not `AbortSignal.timeout`: fetch
+    // keeps its signal on the body, so a fixed deadline cut a healthy reply still streaming when it
+    // fired. Past the headers the stream answers to the idle watchdog (`streamEvents`) and the caller.
+    const deadline = new AbortController();
+    const timer = setTimeout(() => deadline.abort(), requestTimeoutMs(deps));
+    const combined = signal ? AbortSignal.any([signal, deadline.signal]) : deadline.signal;
 
     let res: Response;
+    let detail = "";
     try {
       res = await doFetch(url, {
         method: "POST",
@@ -219,11 +223,13 @@ export async function postJson(
         body: JSON.stringify(body),
         signal: combined,
       });
+      // A refusal's body is read under the same deadline: a status followed by silence must not hold the turn.
+      if (!res.ok) detail = await safeText(res);
     } catch (err) {
       // A caller-initiated abort is a decision, not a failure to retry around.
       if (signal?.aborted) throw new LLMError("request aborted", undefined, { cause: err });
 
-      if (deadline.aborted) {
+      if (deadline.signal.aborted) {
         // Retryable: a provider that did not answer in time may answer the next one, and this is
         // the case that used to hang forever.
         lastError = new LLMError(
@@ -245,6 +251,8 @@ export async function postJson(
       failure = "network";
       status = undefined;
       continue;
+    } finally {
+      clearTimeout(timer);
     }
 
     if (res.ok) {
@@ -252,7 +260,6 @@ export async function postJson(
       return res;
     }
 
-    const detail = await safeText(res);
     // Classified from the body first, the status second: `model_prefix_required` and a malformed-JSON
     // complaint are both 400 and need opposite responses. The old code saw only the status, retried a
     // permanent config error three times, and reported it as the model not responding.
@@ -316,8 +323,9 @@ export function requireBody(res: Response): ReadableStream<Uint8Array> {
  * retry: the stream is half-consumed, its text has already been shown in the chat by the progress
  * line, and re-issuing the request would produce a second answer to a question that has visibly had
  * one started. Saying plainly what happened and letting the person send it again is the honest
- * version, and it is what they asked for. It is classified all the same, so a stream that failed before
- * its reply began is answered by a fallback; one that failed after is not (`provider-caller.ts`).
+ * version, and it is what they asked for. It is classified and marked a cut all the same, so a turn whose
+ * stream failed before its reply began asks the same model once more, then a fallback; one that failed
+ * after does neither (`provider-caller.ts`).
  */
 export async function* streamEvents(
   stream: ReadableStream<Uint8Array>,
@@ -343,6 +351,7 @@ export async function* streamEvents(
         userMessage: stalled
           ? "The model stopped sending part-way through my reply and never resumed. Send that again."
           : "My connection to the model dropped part-way through my reply. Send that again.",
+        streamCut: true,
       },
     );
   }
@@ -390,5 +399,6 @@ export function cutOff(): LLMError {
   return new LLMError("stream ended without a finish: the reply was cut off", 503, {
     failure: noAnswer("the provider's stream ended before its reply did."),
     userMessage: "My connection to the model ended before its reply did. Send that again.",
+    streamCut: true,
   });
 }

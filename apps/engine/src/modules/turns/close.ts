@@ -174,9 +174,18 @@ export function keptSentence(closed: ClosedTurn): string | null {
   return closed.done.length + closed.cut.length > 0 ? `What I did so far is kept: say "continue" and I will pick up from there.` : null;
 }
 
+/** What a turn its provider ended promises its person, last in its reply — `pipeline/provider-resume.ts`. */
+const RETRY_PROMISE = `I'll try again in a few minutes, or say "continue".`;
+
 /** The same, for a turn its provider ended that will be tried again by itself — `pipeline/provider-resume.ts`. */
 export function retrySentence(closed: ClosedTurn): string {
-  return closed.done.length + closed.cut.length > 0
-    ? `What I did so far is kept, and I'll try again in a few minutes, or say "continue".`
-    : `I'll try again in a few minutes, or say "continue".`;
+  return closed.done.length + closed.cut.length > 0 ? `What I did so far is kept, and ${RETRY_PROMISE}` : RETRY_PROMISE;
+}
+
+/**
+ * Whether a turn's stored reply made that promise. Read at boot: the timer that kept it lived in the process a restart
+ * ended, and the reply is what the person was told.
+ */
+export function promisedRetry(reply: string): boolean {
+  return reply.endsWith(RETRY_PROMISE);
 }

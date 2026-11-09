@@ -133,8 +133,10 @@ progress line says so, and its usage is charged to that provider. Another model 
 answers a rate limit, an overloaded provider or a model that is not served; another provider also
 answers one that is down, out of credit or refusing its key. A provider counts as down when it cannot
 be reached (the connection refused, no answer in time, a stream that dropped before its reply began),
-and only another provider answers that. A stream that drops once the reply has begun is not fallen back
-on: part of the answer has already been written. The call that closes a turn, the reply written when it
+and only another provider answers that. A stream that drops before its reply began is first asked
+once more of the same model, since nothing was shown and nothing ran; the fallback answers if it drops
+again. A stream that drops once the reply has begun is not asked again or fallen back on: part of the
+answer has already been written. The call that closes a turn, the reply written when it
 has to stop calling tools, falls back like the others. A refused request is never retried on a
 fallback: any model would get the same answer. `[llm.defaults] fallbacks` is the list for every agent
 that names none, and the agent's **Model** tab in the dashboard edits its own. The operator hears of an
@@ -257,6 +259,11 @@ Anthropic. What is cleared is not lost: the whole output is first written to the
 `data/tool-output/` directory (kept as long as `[retention] tool_output_days`), and the marker names
 that file, so the agent opens it with `read` instead of running the command again.
 
+When clearing old results is not enough, the text old `write`, `edit` and `multi_edit` calls carried
+goes next, oldest first: the call stays with its path and its result, and the text becomes a line
+saying how big it was, that the call ran, and to read the file for what it holds now. The calls of
+the latest step are never shortened. Without this a long coding turn carried every file it wrote until the window was full.
+
 A tool's result is also made smaller by what it is before it enters the conversation: a terminal's colour codes are
 taken out, a line a progress bar redrew is kept at its last state, three or more identical lines become one counted
 `[× N]`, and JSON loses the spaces between its parts. A diff and a file read with `read` are kept exactly. The whole
@@ -349,8 +356,11 @@ longer, up to a minute. A provider asking for longer than that has usually run o
 waiting would only hold the chat, so the request fails at once.
 
 A provider that does not answer at all is tried twice, not six times, because each attempt can take
-two minutes. `/stop` or a shutdown during a wait stops the turn at once, and a `base_url` that is not
-a valid URL fails at once: that is configuration, not a network blip.
+two minutes. Those two minutes are for the provider to start answering: a reply that has started
+streams for as long as it needs, and is cut only when it goes quiet for a minute and a half. A
+stream cut before any of its reply is asked again once, on the same model.
+`/stop` or a shutdown during a wait stops the turn at once, and a `base_url` that is not a valid URL
+fails at once: that is configuration, not a network blip.
 
 If the provider is down for longer than that, the turn ends, keeps what it did, and says so:
 
@@ -360,5 +370,5 @@ About three minutes later, plus up to a minute so a burst of failed chats spread
 tries the turn once more and carries on from where it stopped. It does not when someone has said
 anything in that chat since, for a scheduled run, for a turn that was itself a second try, or for a
 failure no wait fixes: an expired or refused key, an empty balance, a bad request. Those are yours
-to fix. The second try lives only in the running daemon, so a restart within those minutes drops it,
-and "continue" still works.
+to fix. A restart within those minutes does not drop it: the daemon that comes back finds the turn by
+what it told you, and tries it once, when the few minutes are up. "Continue" works too.

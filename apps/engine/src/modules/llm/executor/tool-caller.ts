@@ -27,9 +27,11 @@ import { coerceArguments } from "@/modules/tools/arguments.ts";
 import { logToolThrow } from "@/modules/tools/audited.ts";
 import { resultCharsFor } from "@/modules/llm/spill.ts";
 import { compactResult } from "@/modules/llm/output-by-kind.ts";
+import { sendsShortenedArgument } from "@/modules/llm/context.ts";
 import { scratchpadFor } from "@nouride/persona";
 import { countFileLines, workspaceView } from "./workspace-view.ts";
 import { arrivedEmpty, malformedArguments, withCutNote } from "./cut-off.ts";
+import { STOPPED_CALL_GRACE_MS, untilStopped } from "./stopped-call.ts";
 import type { ApprovalAsk } from "@/modules/tools/approval.ts";
 import type { ExecutorDeps, ToolControl, TurnRequest } from "./types.ts";
 
@@ -203,6 +205,13 @@ export class ToolCaller {
     // asked first, a person approved a call that then failed, and was asked again for the corrected one.
     const malformed = tool.checkArguments?.(call.arguments);
     if (malformed) return { content: malformed, isError: true };
+    // What an old call's text was shortened to (`trimToolResults`), sent back as text: run, it is what the file holds.
+    if (tool.bulkArguments && sendsShortenedArgument(call.arguments, tool.bulkArguments)) {
+      return {
+        content: "Not run: that is the note left in place of an earlier call's text, not the text. Read the file to see what it holds, then send the text itself.",
+        isError: true,
+      };
+    }
 
     // Built before the gate runs, not after: the decision needs the resolved workspace roots to
     // work out which directory a command would run in, and that is the same context `execute`
@@ -411,7 +420,13 @@ export class ToolCaller {
     req.journal?.started([call.id]);
     const startedAt = Date.now();
     try {
-      const result = await tool.execute(call.arguments, approved ? { ...ctx, approved } : ctx);
+      // Raced against the turn's stop: a tool that ignores its signal no longer holds the chat (`stopped-call.ts`).
+      const result = await untilStopped(
+        tool.execute(call.arguments, approved ? { ...ctx, approved } : ctx),
+        req.signal,
+        this.deps.stoppedCallGraceMs ?? STOPPED_CALL_GRACE_MS,
+        { tool: call.name, agentId: agent.config.id, ...(req.turnId ? { turnId: req.turnId } : {}) },
+      );
       if (result.untrusted) this.untrustedRead.set(req, (this.untrustedRead.get(req) ?? new Set()).add(call.name));
 
       log.debug("tool executed", {

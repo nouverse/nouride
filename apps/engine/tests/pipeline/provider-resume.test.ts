@@ -7,7 +7,8 @@
  */
 
 import { afterEach, describe, expect, test } from "bun:test";
-import { scheduleProviderResume, type ResumableTurn } from "@/modules/pipeline/provider-resume.ts";
+import { resumeAfterBoot } from "@/boot/durable.ts";
+import { providerResumesOwed, scheduleProviderResume, type ResumableTurn } from "@/modules/pipeline/provider-resume.ts";
 import { envelope, FakeGateway } from "../helpers.ts";
 import { pipelineBench, type Bench } from "../pipeline-bench.ts";
 import { eventually, sleep } from "../wait.ts";
@@ -136,5 +137,75 @@ describe("a turn its provider ended", () => {
     // m2's own failure schedules its own second try; m1's is dropped, because m2 came after it.
     expect(ids.filter((id) => id.startsWith("resume:"))).toHaveLength(1);
     expect(ids.slice(0, 2)).toEqual(["m1", "m2"]);
+  });
+});
+
+/**
+ * The promise outlives the process. The timer lived in memory, and the turn was closed `failed`, where the boot's own
+ * resume looks only at `interrupted` ones: a restart inside those minutes — an update, a crash — left a person told
+ * "I'll try again in a few minutes" with nothing coming.
+ */
+describe("a turn its provider ended, across a restart", () => {
+  const MINUTE = 60_000;
+  /** Turns that took another up, by their message id. */
+  const resumptions = (made: Bench): string[] =>
+    made.db.prepare<{ message_id: string }>("SELECT message_id FROM turn_records WHERE message_id LIKE 'resume:%'").all().map((row) => row.message_id);
+
+  /** The next process over the same install, booted as `index.ts` boots one: gateways up, then what the restart owes. */
+  async function restart(previous: Bench): Promise<Bench> {
+    // The shutdown's first step, which stops the last process's timers from taking anything up.
+    previous.pipeline.pause();
+    const next = await previous.reboot({ turns: [{ text: "deployed" }], maxAttempts: 1, gateway: new FakeGateway("telegram:nouva"), deps: { providerResumeMs: 40 } });
+    next.pipeline.attach();
+    await resumeAfterBoot({
+      recovered: [], orphaned: [], stores: next.durable, startedAt: Date.now(), pipeline: next.pipeline, turns: next.turns,
+      notifier: { toChat: async () => true }, chatEvents: { record: () => null },
+    });
+    return next;
+  }
+
+  test("is taken up by the next process, once, however many restarts follow", async () => {
+    const failing = (async () =>
+      new Response(JSON.stringify({ error: { message: "upstream unavailable" } }), { status: 503, headers: { "content-type": "application/json" } })) as unknown as typeof fetch;
+    // The first process would wait a minute: it is restarted long before its own timer fires.
+    const first = await pipelineBench({ fetch: () => failing, maxAttempts: 1, gateway: new FakeGateway("telegram:nouva"), deps: { providerResumeMs: MINUTE } });
+    benches.push(first);
+    first.pipeline.attach();
+    first.gateway.receive(envelope({ id: "m1", gatewayId: "telegram:nouva", chatId: "814", text: "deploy the site", timestamp: Date.now() }));
+    await first.pipeline.idle();
+    expect(first.gateway.sent.at(-1)?.text).toContain("I'll try again in a few minutes");
+    const failed = first.db.prepare<{ id: string }>("SELECT id FROM turn_records WHERE message_id = 'm1'").get()!.id;
+
+    const second = await restart(first);
+    await eventually(() => resumptions(second).length === 1, 2_000, "the turn taken up after the restart");
+    await second.pipeline.idle();
+    expect(resumptions(second)).toEqual([`resume:${failed}`]);
+    expect(second.gateway.sent.at(-1)?.text).toBe("deployed");
+
+    // And a restart after that does not take it up again.
+    const third = await restart(second);
+    await sleep(150);
+    await third.pipeline.idle();
+    expect(resumptions(third)).toEqual([`resume:${failed}`]);
+  });
+
+  test("only within the timer's window, only a reply that promised it, and only once", async () => {
+    const made = await pipelineBench({ gateway: new FakeGateway("telegram:nouva") });
+    benches.push(made);
+    const { turns } = made;
+    const ended = (reply: string, chatId = "814"): string => {
+      const id = turns.begin({ sessionId: `ses_nouva:telegram:nouva:${chatId}`, agentId: "nouva", gatewayId: "telegram:nouva", chatId, prompt: "deploy the site" });
+      turns.finish(id, { status: "failed", reply, error: "503" });
+      return id;
+    };
+    const promised = ended(`The model is not responding right now. I'll try again in a few minutes, or say "continue".`);
+    ended("The model's provider refused my key. Ask whoever runs me to check it.", "815");
+
+    expect(providerResumesOwed(turns, Date.now()).map((turn) => turn.id)).toEqual([promised]);
+    // Past the most the timer waits (three minutes and up to one more), it is not taken up.
+    expect(providerResumesOwed(turns, Date.now() + 5 * MINUTE)).toEqual([]);
+    // Taken up already, by the last process's timer or a boot before this one.
+    turns.begin({ sessionId: "ses_x", agentId: "nouva", gatewayId: "telegram:nouva", chatId: "814", prompt: "[system] carry on", messageId: `resume:${promised}` });
+    expect(providerResumesOwed(turns, Date.now())).toEqual([]);
   });
 });

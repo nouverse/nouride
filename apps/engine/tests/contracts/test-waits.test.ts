@@ -36,8 +36,10 @@ const FIXED_SLEEPS: Record<string, number> = {
   // write shown not to happen while another writer holds the file's lock, and compaction's archive copy shown not made.
   // 204 → 211 for the bubble's line while a model works after its steps (0.8.7, `chat-progress.test.ts`,
   // `quiet-after-steps.test.ts`): five show no line drawn in a tick's time, one holds a fake provider past a few ticks,
-  // and the fake CLI's `script` mode keeps the pace it is given between its updates.
-  "apps/engine": 211,
+  // and the fake CLI's `script` mode keeps the pace it is given between its updates. 211 → 212 for a tool that never
+  // stops (`stuck-tool.test.ts`): a deadline on a turn that, broken, hangs rather than fails. 212 → 213 for a provider's
+  // promised retry across a restart (`provider-resume.test.ts`): the third process shown not to take the turn up again.
+  "apps/engine": 213,
   "apps/dashboard": 37,
   "packages/gateways": 11,
   "packages/llm": 2,

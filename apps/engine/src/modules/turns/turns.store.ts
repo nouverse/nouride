@@ -366,6 +366,11 @@ export abstract class TurnStore {
     return this.db.prepare<TurnRow>(`SELECT * FROM turn_records WHERE started_at >= ? AND status = 'interrupted' AND ended_at >= ? AND ${OWN} ORDER BY started_at`).all(since - TURN_SECONDS_MAX * 1000, since).map(toRecord);
   }
 
+  /** Turns that failed and ended since `since` — at boot, for one whose reply promised another try (`provider-resume.ts`). */
+  failedSince(since: number): TurnRecord[] {
+    return this.db.prepare<TurnRow>(`SELECT * FROM turn_records WHERE started_at >= ? AND status = 'failed' AND ended_at >= ? AND ${OWN} ORDER BY started_at`).all(since - TURN_SECONDS_MAX * 1000, since).map(toRecord);
+  }
+
   /** Whether a turn started since `since` with this message id — a resumption, `resume:<turn>`, already ran. */
   startedFor(messageId: string, since: number): boolean {
     return Boolean(this.db.prepare<{ n: number }>("SELECT 1 AS n FROM turn_records WHERE started_at >= ? AND message_id = ? LIMIT 1").get(since, messageId));

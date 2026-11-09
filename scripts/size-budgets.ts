@@ -59,15 +59,15 @@ export const BUDGET: Record<string, Budget> = {
     why: "the exec tool's gate and run: each check a command passes before it starts, made in its order and rechecked in `execute` in the same order; the checks themselves live beside it",
   },
   "apps/engine/src/modules/tools/builtins/files.ts": {
-    lines: 425,
-    why: "the file tools (`read`, `write`, `edit`, `multi_edit`) and the one `resolve` every path goes through, so the root and path guards are read in one place; the parts that stand alone are beside it",
+    lines: 428,
+    why: "the file tools (`read`, `write`, `edit`, `multi_edit`) with what each declares to the executor, and the one `resolve` every path goes through, so the path guards are read in one place",
   },
   "apps/engine/src/modules/tools/approvals.store.ts": {
     lines: 523,
     why: "the approval gate: one table and the requests in flight, asked, queued per chat, answered once and kept across a restart, over one set of maps every step reads and writes",
   },
   "apps/engine/src/modules/turns/turns.store.ts": {
-    lines: 442,
+    lines: 445,
     why: "the turn record and its columns, the causes it names, and the clause every read of a conversation uses to leave a delegate's own turns out, beside the queries that use it",
   },
   "apps/engine/src/modules/missions/missions.ts": {

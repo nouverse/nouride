@@ -173,11 +173,33 @@ export class ProviderCaller {
     messages: ChatMessage[],
     usage: TokenUsage,
     budget?: number,
+    /** This model's stream was cut once already in this call, and asked again — see below. */
+    cutOnce = false,
   ): Promise<ProviderAnswer> {
     try {
       return await this.attemptProvider(req, prompt, messages, usage);
     } catch (err) {
       const failure = err instanceof LLMError ? err.failure : undefined;
+
+      /**
+       * The stream broke off before any of the reply had streamed: the same model, once more, before anything else.
+       *
+       * Nothing was shown and nothing ran — tool calls are acted on only once the stream finishes, so arguments that
+       * were streaming are safe to ask for again. Without this, an agent with no fallback ended the turn on one dropped
+       * socket and was taken up again minutes later. Once: a second cut is answered as any failure is, by a fallback or
+       * by the turn ending. Not after the reply began (`midReply`), and not when the turn itself was stopped.
+       */
+      if (!cutOnce && err instanceof LLMError && err.streamCut && !this.midReply.has(err) && req.signal?.aborted !== true) {
+        this.deps.onActivity?.("retry", `${this.modelFor(req)}'s stream was cut before its reply began: asking it again`, {
+          // A provider asked again, as the request's own retries are: the event stream's `reason` is a fixed list.
+          reason: "provider",
+          ...(failure ? { failure: failure.class } : {}),
+        });
+        log.warn("the model's stream was cut before its reply began; asking it again", {
+          agent_id: req.agent.config.id, turn_id: req.turnId, model: this.modelFor(req), error: err.message,
+        });
+        return await this.call(req, prompt, messages, usage, budget, true);
+      }
 
       /**
        * The model or its gateway refused a voice note. Once more without it, saying so.

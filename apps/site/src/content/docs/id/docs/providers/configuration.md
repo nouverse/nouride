@@ -135,7 +135,9 @@ provider itu. Model lain di provider yang sama menjawab rate limit, provider yan
 model yang tidak dilayani; provider lain juga menjawab provider yang mati, kehabisan saldo, atau menolak
 kuncinya. Provider dianggap mati kalau tidak bisa dijangkau (koneksinya ditolak, tidak menjawab tepat
 waktu, stream yang putus sebelum balasannya mulai), dan cuma provider lain yang menjawabnya. Stream yang
-putus setelah balasan mulai tidak dialihkan ke fallback: sebagian jawabannya sudah tertulis. Panggilan
+putus sebelum balasannya mulai lebih dulu diminta sekali lagi ke model yang sama, karena belum ada yang
+ditampilkan dan belum ada yang dijalankan; fallback menjawab kalau putus lagi. Stream yang putus setelah
+balasan mulai tidak diminta ulang dan tidak dialihkan ke fallback: sebagian jawabannya sudah tertulis. Panggilan
 yang menutup sebuah turn, balasan yang ditulis saat turn harus berhenti memanggil tool, juga pindah ke
 fallback seperti panggilan lain. Request yang ditolak tidak pernah dicoba ulang ke fallback: model mana
 pun akan mendapat jawaban yang sama. `[llm.defaults] fallbacks` adalah daftar untuk semua agent yang
@@ -265,6 +267,12 @@ Yang dipangkas gak hilang: output utuhnya ditulis dulu ke direktori `data/tool-o
 (disimpan selama `[retention] tool_output_days`), dan penandanya menyebut file itu, jadi agent
 membukanya dengan `read` alih-alih menjalankan ulang perintahnya.
 
+Kalau membersihkan hasil lama belum cukup, teks yang dibawa panggilan `write`, `edit` dan `multi_edit`
+lama yang menyusul, dari yang paling lama: panggilannya tetap ada bersama path dan hasilnya, dan
+teksnya jadi satu baris yang bilang seberapa besar teks itu, bahwa panggilannya sudah jalan, dan
+untuk membaca file-nya kalau perlu isinya sekarang. Panggilan di langkah terakhir gak pernah dipendekkan. Tanpa ini, giliran coding yang
+panjang membawa setiap file yang ia tulis sampai jendelanya penuh.
+
 Hasil tool juga diperkecil sesuai jenisnya sebelum masuk percakapan: kode warna terminal dibuang, baris yang
 digambar ulang progress bar disisakan keadaan terakhirnya, tiga baris identik atau lebih jadi satu dengan hitungan
 `[× N]`, dan JSON kehilangan spasi di antara bagian-bagiannya. Diff dan file yang dibaca dengan `read` dibiarkan
@@ -358,8 +366,11 @@ panjang, paling lama semenit. Provider yang minta lebih lama dari itu biasanya k
 menunggu cuma akan menahan chat-nya, jadi request-nya langsung gagal.
 
 Provider yang sama sekali gak menjawab dicoba dua kali, bukan enam, karena tiap percobaan bisa makan
-dua menit. `/stop` atau shutdown selama menunggu langsung menghentikan giliran, dan `base_url` yang
-bukan URL valid langsung gagal: itu soal konfigurasi, bukan gangguan jaringan.
+dua menit. Dua menit itu batas sampai provider mulai menjawab: balasan yang sudah mulai mengalir boleh
+selama yang ia perlukan, dan baru diputus kalau diam satu setengah menit. Stream yang putus sebelum
+ada balasannya sama sekali diminta sekali lagi ke model yang sama. `/stop` atau shutdown selama
+menunggu langsung menghentikan giliran, dan `base_url` yang bukan URL valid langsung gagal: itu soal
+konfigurasi, bukan gangguan jaringan.
 
 Kalau provider-nya mati lebih lama dari itu, gilirannya berakhir, menyimpan apa yang sudah dikerjakan,
 dan bilang begitu:
@@ -370,6 +381,6 @@ Sekitar tiga menit kemudian, ditambah sampai semenit supaya chat-chat yang gagal
 serentak, daemon mencoba giliran itu sekali lagi dan melanjutkan dari tempat ia berhenti. Itu gak
 terjadi kalau ada yang bilang sesuatu di chat itu sejak gagal, untuk run terjadwal, untuk giliran yang
 justru percobaan kedua, atau untuk kegagalan yang gak beres dengan menunggu: key kedaluwarsa atau
-ditolak, saldo habis, request yang salah. Yang seperti itu harus kamu bereskan sendiri. Percobaan
-kedua ini cuma ada di daemon yang sedang jalan, jadi restart dalam beberapa menit itu membatalkannya,
-dan "continue" tetap jalan.
+ditolak, saldo habis, request yang salah. Yang seperti itu harus kamu bereskan sendiri. Restart dalam
+beberapa menit itu gak membatalkannya: daemon yang kembali menemukan giliran itu dari apa yang ia
+bilang ke kamu, dan mencobanya sekali, waktu beberapa menit itu habis. "Continue" juga tetap jalan.

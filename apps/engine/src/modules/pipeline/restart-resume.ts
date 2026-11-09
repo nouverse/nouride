@@ -54,8 +54,13 @@ export function turnsToResume(input: {
       !isResumption(turn.messageId) &&
       // Taken up already, by a boot before this one in the same quarter of an hour: two restarts in a row
       // would otherwise take the same turn up twice.
-      !input.turns.startedFor(`${RESUME_PREFIX}${turn.id}`, since),
+      !input.turns.startedFor(resumptionId(turn.id), since),
   );
+}
+
+/** The message id of the turn that takes `turnId` up — what marks it as taken. */
+export function resumptionId(turnId: string): string {
+  return `${RESUME_PREFIX}${turnId}`;
 }
 
 /** A turn that was itself taking another up — `resume:<turn>` as its message id. Never taken up again. */
@@ -93,7 +98,7 @@ export function restartResumeEnvelope(
       ? `The daemon restarted while you were working on "${quoted}", and it is back.${cut ? ` ${cutLine(cut)}` : ""}${kept}`
       : `Your model provider failed while you were working on "${quoted}", and it has had a few minutes to recover.`;
   return {
-    id: `${RESUME_PREFIX}${turn.id}`,
+    id: resumptionId(turn.id),
     timestamp: Date.now(),
     gateway: platform,
     gatewayId: turn.gatewayId,

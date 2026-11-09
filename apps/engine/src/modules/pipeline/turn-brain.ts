@@ -126,6 +126,7 @@ export function turnBrain(
       : {}),
 
     commands: with_.hooks.list().filter((hook) => !hook.hidden).map((hook) => hook.command),
+    ...(ctx.deps.stoppedCallGraceMs === undefined ? {} : { stoppedCallGraceMs: ctx.deps.stoppedCallGraceMs }),
     // Refreshed from inside the turn, so the indicator stays alive across tool calls instead
     // of expiring after the first one. Omitted entirely when the config turns it off —
     // passing a no-op would still start the 5s refresh timer.

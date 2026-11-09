@@ -1,4 +1,6 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
+import { createServer, type Server, type ServerResponse } from "node:http";
+import type { AddressInfo } from "node:net";
 import { OpenAIProvider } from "../src/openai.ts";
 import { parseSse } from "@nouride/shared";
 import { noSleep } from "./helpers.ts";
@@ -61,6 +63,72 @@ describe("request timeout", () => {
     // Cancelling a turn is a decision, not a transient failure to retry around.
     await expect(promise).rejects.toThrow(/aborted/);
     expect(attempts).toBe(1);
+  });
+});
+
+/**
+ * The request deadline is for the headers, not the reply. A real server and the real `fetch`, because the failure was
+ * fetch's own: it keeps the request's signal on the body, so a deadline that fired while a healthy reply was still
+ * streaming cut it with a `TimeoutError` — a long answer lost at two minutes however steadily it arrived.
+ */
+describe("request deadline against a real server", () => {
+  const servers: Server[] = [];
+  afterEach(() => {
+    for (const server of servers.splice(0)) {
+      server.closeAllConnections();
+      server.close();
+    }
+  });
+
+  async function listen(handler: (res: ServerResponse) => void): Promise<string> {
+    const server = createServer((_req, res) => handler(res));
+    servers.push(server);
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    return `http://127.0.0.1:${(server.address() as AddressInfo).port}/v1`;
+  }
+
+  test("a reply that keeps streaming past the deadline is read to its end", async () => {
+    const url = await listen((res) => {
+      res.writeHead(200, { "content-type": "text/event-stream" });
+      const words = ["one ", "two ", "three ", "four ", "five"];
+      let sent = 0;
+      // Five chunks 100ms apart: the whole reply takes twice the 250ms deadline, no gap comes near the 2s idle limit.
+      const tick = setInterval(() => {
+        if (sent < words.length) {
+          res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: words[sent++] } }] })}\n\n`);
+          return;
+        }
+        clearInterval(tick);
+        res.end(`data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: "stop" }] })}\n\ndata: [DONE]\n\n`);
+      }, 100);
+    });
+    const provider = new OpenAIProvider({ baseUrl: url, apiKey: "k", http: { sleep: noSleep, timeoutMs: 250, streamIdleTimeoutMs: 2_000, maxAttempts: 1 } });
+
+    const started = Date.now();
+    let text = "";
+    for await (const chunk of provider.stream({ model: "m", messages: [{ role: "user", content: "hi" }] })) {
+      if (chunk.type === "text") text += chunk.delta;
+    }
+    expect(text).toBe("one two three four five");
+    // It did outlive the deadline — the property under test, not a fast server.
+    expect(Date.now() - started).toBeGreaterThan(250);
+  });
+
+  test("a server that sends no headers still times out", async () => {
+    let asked = 0;
+    const url = await listen(() => {
+      asked += 1;
+      // Never answers: no status, no headers.
+    });
+    const provider = new OpenAIProvider({ baseUrl: url, apiKey: "k", http: { sleep: noSleep, timeoutMs: 150, maxAttempts: 2 } });
+
+    const drain = async () => {
+      for await (const _ of provider.stream({ model: "m", messages: [{ role: "user", content: "hi" }] })) {
+        // nothing arrives
+      }
+    };
+    await expect(drain()).rejects.toThrow(/no response within 150ms/);
+    expect(asked).toBe(2);
   });
 });
 
