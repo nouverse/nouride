@@ -35,7 +35,7 @@ office (a door at the end of the hall says how many), and the line over the offi
 many of those elsewhere are waiting for you.
 
 Click a cat to see what its agent is doing and where, with a link to each chat and mission, and to put it to sleep or
-wake it, open the chat, or change its look.
+wake it, open its latest chat (as its line in Chats does), or change its look.
 
 The page asks for the agents' statuses every five seconds while it is open and in view, and nothing while it is not.
 It moves nothing if your system asks for reduced motion, and on a phone it shrinks to fit.

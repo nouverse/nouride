@@ -4,6 +4,7 @@ import { MessageSquare, Moon, Palette, Sun, Target, X } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import type { AgentSummary } from "@nouride/wire";
 import { canWrite, useMe } from "@/commons/lib/session";
+import { useAgentChatLink } from "@/commons/hooks/use-agent-chat";
 import { AgentStatusBadge } from "@/commons/components/agents/agent-status-badge";
 import { ErrorNote } from "@/commons/components/ui/ui";
 import { OrchestratorBadge, useOrchestrator } from "@/commons/components/agents/AgentName";
@@ -25,6 +26,7 @@ export function AgentCard({ agent, status, onClose }: { agent: AgentSummary; sta
     mutationFn: (action: "sleep" | "wake") => api.agentAction(agent.id, action),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["status"] }),
   });
+  const chat = useAgentChatLink(agent.id);
   const working = agent.activity?.working ?? [];
   const asleep = status === "asleep";
 
@@ -74,8 +76,8 @@ export function AgentCard({ agent, status, onClose }: { agent: AgentSummary; sta
         <button type="button" className="btn btn-sm gap-1.5" disabled={!editable || act.isPending} onClick={() => act.mutate(asleep ? "wake" : "sleep")}>
           {asleep ? <Sun size={14} aria-hidden="true" /> : <Moon size={14} aria-hidden="true" />} {asleep ? "Wake" : "Sleep"}
         </button>
-        {/* A new chat with this agent: `/chat` alone started one with the orchestrator, whoever was picked. */}
-        <Link to="/chat" search={{ agent: agent.id }} className="btn btn-sm gap-1.5">
+        {/* This agent's newest conversation, as its row in the chat list opens; a new chat with it when it has none. */}
+        <Link {...chat} className="btn btn-sm gap-1.5">
           <MessageSquare size={14} aria-hidden="true" /> Open chat
         </Link>
         <Link to="/agents/$agentId/look" params={{ agentId: agent.id }} className="btn btn-sm gap-1.5">

@@ -7,6 +7,7 @@ import type { ChatListGroup, ChatListLine, ChatListRoom } from "@nouride/wire";
 import { AgentAvatar } from "@/commons/components/agents/AgentAvatar";
 import { GroupAvatar, MiniAvatars, StackedAvatars } from "@/commons/components/chat/Avatars";
 import { ConversationRow, RowTag } from "@/commons/components/chat/ConversationRow";
+import { agentChatLink } from "@/commons/hooks/use-agent-chat";
 import { platformName } from "@/commons/lib/platform";
 import { shortWhen } from "@/commons/lib/when";
 import type { ChatListData } from "../hooks/use-chat-list";
@@ -32,7 +33,7 @@ function AgentRow({ row, data, current, unread }: { row: Extract<ChatRow, { kind
   const working = workingWords(Boolean(entry?.working), entry?.helpers ?? 0);
   return (
     <ConversationRow
-      link={entry?.sessionId ? { to: "/chat/$sessionId", params: { sessionId: entry.sessionId } } : { to: "/chat", search: { agent: agent.id } }}
+      link={agentChatLink(agent.id, entry?.sessionId)}
       avatar={look ? <AgentAvatar look={look} name={name} size="sm" /> : undefined}
       name={name}
       tag={agent.id === data.orchestrator ? <RowTag>Orchestrator</RowTag> : undefined}
