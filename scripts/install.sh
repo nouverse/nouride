@@ -52,12 +52,13 @@ Usage: install.sh [options]
   --version TAG    release to download instead, e.g. v0.1.0. Default: latest
   --base-url URL   where to download from. Default: https://get.nouride.com
   --repo OWNER/N   download from GitHub releases instead of --base-url
-  --variant NAME   which edition: `basic` (the default, the free one), `router` or `pro`
-                   There are only these three; any other name is refused.
-                   `router` is the free build plus the LLM gateway, also a public download.
-                   `pro` adds multi-user accounts, Nouverse sign-in, Box pairing and the
-                   LLM gateway (on with `[nougate] in_process = true`). It is licensed, not
-                   public: it needs --tarball. WhatsApp is in all of them.
+  --variant NAME   which edition: `basic` (the default, the free one) or `pro`
+                   Both carry the LLM gateway, on with `[nougate] in_process = true`.
+                   `router` is still taken: Router is part of Nouride now, and this
+                   installs Nouride with its LLM gateway switched on.
+                   `pro` adds multi-user accounts, Nouverse sign-in and Box pairing. It is
+                   licensed, not public: it needs --tarball. WhatsApp is in all of them.
+                   Any other name is refused.
   --identity FILE  a Pro server's licence: the device.json Nouverse's admin made for it.
                    With --variant pro. Its updates then come from Nouverse, as a box's do.
   --dir PATH       install directory. Default: /srv/nouride
@@ -187,6 +188,65 @@ case "$VARIANT" in
   *) die "unknown --variant: $VARIANT (the editions are basic, router and pro)" ;;
 esac
 # <<< editions
+# >>> gateway on
+# Router is part of Nouride since 0.8.29 (v0.8.29_RFC): the free build carries the LLM gateway, off until
+# `[nougate] in_process = true`. `--variant router`, which older docs and Nouride Home still run, installs it with the
+# gateway switched on, as a Router install had it. It still downloads Router's names, which every 0.8.x release
+# carries — Router's own build up to 0.8.27, the free build under those names from 0.8.29
+# (scripts/release/router-alias.ts) — so a --version from either line, or a release not yet out, installs what
+# switching the gateway on needs. 0.9.0 removes this, with those names.
+GATEWAY_ON=0
+case "$VARIANT" in router) GATEWAY_ON=1 ;; esac
+
+# gateway_config <install dir> — the config.toml the daemon reads there, in the order its loader looks:
+# `.nouride/config.toml`, then a bare `config.toml` beside the install; the first when neither is there yet.
+gateway_config() {
+  if [ -f "$1/.nouride/config.toml" ] || [ ! -f "$1/config.toml" ]; then printf '%s' "$1/.nouride/config.toml"; else printf '%s' "$1/config.toml"; fi
+}
+
+# gateway_state <config file> — `set` when it says `in_process` for [nougate] either way, `table` when it has the
+# [nougate] table without the key, `other` when it writes the gateway's settings in a form this does not edit (a
+# dotted key or an inline table at the top), `none` when it says nothing of the gateway.
+gateway_state() {
+  awk '
+    /^[[:space:]]*\[\[/ { table = "[]"; next }
+    /^[[:space:]]*\[/ {
+      t = $0; sub(/^[[:space:]]*\[[[:space:]]*/, "", t); sub(/[[:space:]]*\].*$/, "", t); table = t
+      if (t == "nougate") has = 1
+      next
+    }
+    table == "" && /^[[:space:]]*nougate[[:space:]]*\.[[:space:]]*in_process[[:space:]]*=/ { set = 1 }
+    table == "" && /^[[:space:]]*nougate[[:space:]]*=.*in_process/ { set = 1 }
+    table == "" && /^[[:space:]]*nougate[[:space:]]*[.=]/ { other = 1 }
+    table == "nougate" && /^[[:space:]]*in_process[[:space:]]*=/ { set = 1 }
+    END { if (set) print "set"; else if (other) print "other"; else if (has) print "table"; else print "none" }
+  ' "$1"
+}
+
+# gateway_on <config file> <owner> <group> — `in_process = true` for [nougate], unless the file already says either
+# way: an operator who switched it off keeps it off. A file made here starts `careful` as well, as the setup wizard
+# starts the one it makes (`beginInstall`, apps/engine/src/modules/setup/service.ts) — which it leaves alone once a file
+# is there. An edit goes through `cat >`, so the file keeps its owner and its mode.
+gateway_on() {
+  go_file="$1"
+  if [ ! -f "$go_file" ]; then
+    install -o "$2" -g "$3" -m 640 /dev/null "$go_file"
+    printf '[security]\napprovals = "careful"\n\n[nougate]\nin_process = true\n' > "$go_file"
+    say "on: $go_file says [nougate] in_process = true"
+    return 0
+  fi
+  go_tmp="$go_file.install.$$"
+  case "$(gateway_state "$go_file")" in
+    set) say "$go_file already says whether it is on ([nougate] in_process), left as it is"; return 0 ;;
+    other) warn "$go_file sets the gateway in a form this does not edit: add in_process = true to its [nougate] by hand"; return 0 ;;
+    table) awk 'done != 1 && /^[[:space:]]*\[[[:space:]]*nougate[[:space:]]*\][[:space:]]*(#.*)?$/ { print; print "in_process = true"; done = 1; next } { print }' "$go_file" > "$go_tmp" ;;
+    none) { cat "$go_file"; [ -z "$(tail -c 1 "$go_file")" ] || echo; printf '\n[nougate]\nin_process = true\n'; } > "$go_tmp" ;;
+  esac
+  cat "$go_tmp" > "$go_file"
+  rm -f "$go_tmp"
+  say "on: $go_file says [nougate] in_process = true"
+}
+# <<< gateway on
 # Pro builds are licensed and published only to the internal repository, never to the public
 # download: fetching one here always 404'd, reading like a missing release rather than the wrong door.
 case "$VARIANT" in
@@ -231,7 +291,7 @@ say "build          ${ARTIFACT}"
 # has one status.
 case "$VARIANT" in
   pro) say "bundled        LLM gateway + multi-user accounts, Nouverse sign-in, Box pairing" ;;
-  router) say "bundled        LLM gateway" ;;
+  router) say "Router is part of Nouride now: this installs Nouride, with its LLM gateway switched on" ;;
 esac
 
 command -v systemctl >/dev/null 2>&1 && HAS_SYSTEMD=1 || HAS_SYSTEMD=0
@@ -890,6 +950,12 @@ if [ -n "$carried" ]; then
   say "HOME is $AGENT_HOME; copied across:$carried"
 else
   say "HOME is $AGENT_HOME"
+fi
+
+# The gateway, for `--variant router` (above, "gateway on"): before the unit starts the daemon, which reads it then.
+if [ "$GATEWAY_ON" = "1" ]; then
+  step "The LLM gateway"
+  gateway_on "$(gateway_config "$INSTALL_DIR")" "$SERVICE_USER" "$SERVICE_GROUP"
 fi
 
 # ── Each agent its own user ──────────────────────────────────────────────────

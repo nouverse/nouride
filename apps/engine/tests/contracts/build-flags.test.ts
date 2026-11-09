@@ -564,10 +564,10 @@ describe("the public edition", () => {
     expect(workflow).not.toContain("${{ matrix.package == 'nouride'");
   });
 
-  test("the installer accepts it and says what it carries", () => {
+  test("the installer still takes `--variant router`, and says plainly what it does now", () => {
     const installer = readFileSync(join(import.meta.dir, "../../../../scripts/install.sh"), "utf8");
     expect(installer).toContain('""|router|pro)');
-    // What it carries that the free build does not — WhatsApp is in both, so it is not the answer.
-    expect(installer).toContain('router) say "bundled        LLM gateway"');
+    // What it does is `install-gateway.test.ts`'s: the free build, with the gateway switched on.
+    expect(installer).toContain('router) say "Router is part of Nouride now: this installs Nouride, with its LLM gateway switched on" ;;');
   });
 });
