@@ -1,18 +1,20 @@
 #!/bin/sh
 #
-# Run the `router` edition from source: Nouride with nougate answering in-process.
+# Run Nouride from source with its LLM gateway switched on: nougate answering in this process, as an installed
+# build does once `[nougate] in_process = true` is set.
 #
 # ## Why this exists and `bun run dev` does not do it
 #
 # The gateway is behind a dynamic `import("@nouverse/nougate-backend")`, and that package is not a
 # workspace member — the build (`scripts/build/core.ts`) symlinks it into `node_modules` for the duration of a build
 # and the symlink is not otherwise there. So from a plain source checkout the import fails, and the
-# daemon refuses `[nougate] in_process = true` with a message about the build flag. This makes the
-# same symlink the builder makes, so the source tree can run the shape a `--router` binary has.
+# daemon refuses `[nougate] in_process = true` as a build without the gateway does. This makes the
+# same symlink the builder makes, so the source tree runs the shape a built binary has with the gateway on.
 #
-# It is the dev loop, not the artefact. To check what actually ships, build one:
+# It is the dev loop, not the artefact. To check what actually ships, build one — with internals/nougate checked
+# out, the free build carries the gateway:
 #
-#   bun run build:binary --router
+#   bun run build:binary --require-gateway
 #
 # ## What it does not do
 #
@@ -22,7 +24,7 @@
 set -eu
 
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-HOME_DIR="${NOURIDE_DEV_HOME:-${TMPDIR:-/tmp}/nouride-dev-router}"
+HOME_DIR="${NOURIDE_DEV_HOME:-${TMPDIR:-/tmp}/nouride-dev-gateway}"
 PORT="${PORT:-18254}"
 NOUGATE_PORT="${NOUGATE_PORT:-18256}"
 
@@ -34,11 +36,11 @@ while [ $# -gt 0 ]; do
     --fresh) rm -rf "$HOME_DIR"; shift ;;
     -h|--help)
       cat <<'USAGE'
-nouride dev — the router edition, from source
+nouride dev — from source, with the LLM gateway on
 
-  scripts/dev-router.sh [--home PATH] [--port N] [--nougate-port N] [--fresh]
+  scripts/dev-gateway.sh [--home PATH] [--port N] [--nougate-port N] [--fresh]
 
-  --home PATH        where the scratch install lives. Default: $TMPDIR/nouride-dev-router
+  --home PATH        where the scratch install lives. Default: $TMPDIR/nouride-dev-gateway
   --port N           the daemon's own port. Default: 18254
   --nougate-port N   the in-process gateway's port. Default: 18256
   --fresh            delete the scratch install first and set it up again
@@ -121,7 +123,7 @@ echo "  loopback only  — the gateway binds 127.0.0.1 by design; a browser else
 echo
 
 # `--watch` so editing the engine restarts it. The gateway restarts with it, which is the same thing
-# a `--router` binary does on `nouride restart`.
+# a built binary with the gateway on does on `nouride restart`.
 #
 # **Not `exec`.** That replaces this shell, and the `trap` above goes with it — the symlink would
 # then survive every session and `lint:types` would fail on a clean tree until somebody found it by

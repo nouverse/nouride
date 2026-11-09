@@ -6,7 +6,8 @@
  *
  * Symbols: `.` nothing · `o` outline · `F` fur · `f` fur in shade · `h` fur in light · `t` a tabby stripe (fur where
  * plain) · `m` muzzle and belly · `p` pink of an ear · `n` nose · `k` dark (mouth) · `e` an eye, in the fur's eye colour · `w` white · `B` torso and
- * `A` arm (fur, or the outfit over it) · `O` `q` `l` outfit, in shade, in light · `g` glass · `s` a strap or frame.
+ * `A` arm (fur, or the outfit over it) · `O` `q` `l` outfit, in shade, in light · `g` glass · `s` a strap or frame ·
+ * `H` `j` `J` the helmet, in shade, in light · `u` `v` a photochromic lens, dark at the top and lighter below.
  */
 
 /** Rows of symbols; a half is mirrored into the whole, the way a face is. */
@@ -115,8 +116,8 @@ export const OUTFITS: Record<"hoodie" | "tee" | "jacket", { torso: boolean; bell
   },
 };
 
-/** The hats, placed on the head's top left (`HEAD_AT`), in the outfit's colours. */
-export const HATS: Record<"beanie" | "cap" | "beret" | "headband" | "headphones", { at: { x: number; y: number }; rows: string[] }> = {
+/** The hats, placed on the head's top left (`HEAD_AT`), in the outfit's colours — the helmet in its own grey. */
+export const HATS: Record<"beanie" | "cap" | "beret" | "headband" | "headphones" | "helmet", { at: { x: number; y: number }; rows: string[] }> = {
   beanie: {
     at: { x: 1, y: -3 },
     rows: [
@@ -179,10 +180,29 @@ export const HATS: Record<"beanie" | "cap" | "beret" | "headband" | "headphones"
       ".oooo........",
     ]),
   },
+  // The mascot's: a grey half-helmet whose dome sits between the ears, so both stand clear of it pink and all, a white
+  // N on its front, the brim across the forehead just over the glasses and a pad down each side of the head. Its own
+  // grey rather than the outfit's colour, as the mascot's is grey over a purple hoodie. Drawn 22 wide from x −1, so the
+  // pads sit just outside the head.
+  helmet: {
+    at: { x: -1, y: 1 },
+    rows: [
+      "........oooooo........",
+      ".......oJwwJwHo.......",
+      ".......oJwHwwHo.......",
+      "......oJHwHHwHjo......",
+      "ojjjjjjjjjjjjjjjjjjjjo",
+      "oHjo..............oHjo",
+      "oHjo..............oHjo",
+      "oHjo..............oHjo",
+      "ojjo..............ojjo",
+      ".oo................oo.",
+    ],
+  },
 };
 
 /** The accessories, placed on the head (`HEAD_AT`) — the scarf on the body (`BODY_AT`). */
-export const ACCESSORIES: Record<"glasses" | "sunglasses" | "scarf", { on: "head" | "body"; at: { x: number; y: number }; rows: string[] }> = {
+export const ACCESSORIES: Record<"glasses" | "sunglasses" | "scarf" | "photochromic", { on: "head" | "body"; at: { x: number; y: number }; rows: string[] }> = {
   // A lens around each eye zone (`EYES_AT`, x 3–5 and 14–16), the bridge between them.
   glasses: {
     on: "head",
@@ -194,11 +214,44 @@ export const ACCESSORIES: Record<"glasses" | "sunglasses" | "scarf", { on: "head
     at: { x: 2, y: 6 },
     rows: ["sssss......sssss", "swggssssssssgwgs", "sgggs......sgggs", "sssss......sssss"],
   },
+  // The mascot's: lenses tinted purple-grey, darker at the top as a photochromic lens is in the sun, a glint in each.
+  photochromic: {
+    on: "head",
+    at: { x: 2, y: 6 },
+    rows: ["sssss......sssss", "suuwssssssssuuws", "svvvs......svvvs", "sssss......sssss"],
+  },
   scarf: {
     on: "body",
     at: { x: 2, y: -1 },
     rows: ["..oooooooooooooo..", ".oOlOlOlOlOlOlOlo.", ".oOOOOOOOOOOOOOOo.", "..oooooooooOlo....", "..........oOOo....", "..........oOlo....", "...........oo....."],
   },
+};
+
+/**
+ * The tuxedo coat: white where `x` is, over any fur — a bib from the muzzle down and a blaze between the eyes on the
+ * head (mirrored, as the head is), the hands, the feet (the last `paws` rows of a body with legs), and the tail's tip
+ * (its first `tailTip` rows). The belly is white too, as the coat's muzzle colour.
+ */
+export const TUXEDO = {
+  head: mirrored([
+    "..........",
+    "..........",
+    "..........",
+    "..........",
+    "..........",
+    "..........",
+    ".........x",
+    ".........x",
+    ".........x",
+    "......xxxx",
+    "......xxxx",
+    "......xxxx",
+    "......xxxx",
+    "......xxxx",
+    "..........",
+  ]),
+  paws: 3,
+  tailTip: 3,
 };
 
 export type Palette = Record<string, string>;
@@ -227,4 +280,10 @@ export const COLORS: Record<"blue" | "lime" | "peach" | "charcoal" | "sage" | "l
 };
 
 /** What every cat shares. */
-export const COMMON: Palette = { o: "#1e1b24", p: "#f2a2b0", n: "#e57a8e", k: "#1e1b24", w: "#ffffff", g: "#2a2d35", s: "#26272c" };
+export const COMMON: Palette = {
+  o: "#1e1b24", p: "#f2a2b0", n: "#e57a8e", k: "#1e1b24", w: "#ffffff", g: "#2a2d35", s: "#26272c",
+  // The helmet's dark grey, as the mascot's: darker than grey fur and lighter than black, so it reads on either.
+  H: "#5c616b", j: "#41454d", J: "#7f858f",
+  // A photochromic lens: purple-grey, darker above.
+  u: "#3a3150", v: "#5d5080",
+};

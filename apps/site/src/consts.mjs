@@ -33,12 +33,6 @@ export const TARBALL_BASE_URL = `${DOWNLOAD_BASE_URL}/${RELEASE_CHANNEL}`;
  */
 export const INSTALL_COMMAND = `curl -fsSL ${INSTALL_SCRIPT_URL} | sudo sh`;
 
-/**
- * The Router edition: the same installer, told which edition. `install-bundle-router.sh` still serves, for the links
- * that name it, and runs exactly this — but every page names the one script, so there is one thing to read.
- */
-export const ROUTER_INSTALL_COMMAND = `curl -fsSL ${INSTALL_SCRIPT_URL} | sudo sh -s -- --variant router`;
-
 /** A Mac installs as the user who will run it: a LaunchAgent, no root, so no `sudo`. */
 export const MAC_INSTALL_COMMAND = `curl -fsSL ${INSTALL_SCRIPT_URL} | sh`;
 
@@ -95,7 +89,6 @@ export const TOKENS = {
   DOWNLOAD_BASE: DOWNLOAD_BASE_URL,
   INSTALL_URL: INSTALL_SCRIPT_URL,
   INSTALL_CMD: INSTALL_COMMAND,
-  ROUTER_INSTALL_CMD: ROUTER_INSTALL_COMMAND,
   INSPECT_CMD: INSPECT_COMMAND,
   TARBALL_BASE: TARBALL_BASE_URL,
   SITE_URL,

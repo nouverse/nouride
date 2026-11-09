@@ -29,13 +29,18 @@ export function reinstallByHand(edition: Edition, target: string, tag: string): 
   ];
 }
 
-/** Building this edition for a target no release publishes, and installing what that makes. */
+/**
+ * Building this edition for a target no release publishes, and installing what that makes.
+ *
+ * `--pro` on the private entry point; the public one takes no edition flag. Router's `--router` is refused by name: the
+ * free build carries the gateway it added, so a Router install builds the free one, named as it is, and installs it
+ * with `--variant router`, which switches the gateway on.
+ */
 export function buildFromSource(edition: Edition, target: string): string[] {
-  // The edition's own build flag: `--router` on the public entry point, `--pro` on the private one.
-  const flag = variantFor(edition) ? ` --${variantFor(edition)}` : "";
-  const build = isPrivateEdition(edition) ? `bun run build:pro${flag}` : `bun run build:binary${flag}`;
+  const built: Edition = isPrivateEdition(edition) ? edition : "basic";
+  const build = isPrivateEdition(edition) ? `bun run build:pro --${variantFor(edition)}` : "bun run build:binary";
   return [
     `build it from source: ${build} --target ${target}`,
-    `then: sh scripts/install.sh --tarball dist/${artifactName(edition, target)}.tar.gz${variantArg(edition)}`,
+    `then: sh scripts/install.sh --tarball dist/${artifactName(built, target)}.tar.gz${variantArg(edition)}`,
   ];
 }

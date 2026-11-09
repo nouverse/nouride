@@ -2,13 +2,15 @@ name: nouride
 
 # Pulls the published image. Nothing is built on the box that serves traffic.
 #
-# Three images are published, and this file names the first. They differ only in
+# Two images are published, and this file names the first. They differ only in
 # what is compiled into them — see the Dockerfile header, and docs/DEPLOY.md's
 # "From the registry":
 #
-#   ghcr.io/nouverse/nouride          the free build
-#   ghcr.io/nouverse/nouride-router   + the LLM gateway, in this process
+#   ghcr.io/nouverse/nouride          the free build, the LLM gateway in it (off until switched on)
 #   ghcr.io/nouverse/nouride-pro      + Nouverse sign-in and multi-user — private
+#
+# `ghcr.io/nouverse/nouride-router` still gets every 0.8.x release, as the free
+# image under Router's old name; a file that names it is better pointed here.
 
 #
 # The Pro image is what Nouverse pods run; it is not for handing out. Swap the

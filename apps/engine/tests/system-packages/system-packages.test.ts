@@ -6,8 +6,8 @@
 import { describe, expect, test } from "bun:test";
 import { installLadder } from "@/modules/llm/prompt/harness-skills.ts";
 import { enableAdvice, INSTALLER_URL, packageSetup, type PackageFacts } from "@/modules/system-packages/setup.ts";
-// @ts-expect-error — a plain .mjs module, read for its two URLs
-import { INSTALL_SCRIPT_URL, ROUTER_INSTALL_COMMAND } from "../../../site/src/consts.mjs";
+// @ts-expect-error — a plain .mjs module, read for its installer's URL
+import { INSTALL_SCRIPT_URL } from "../../../site/src/consts.mjs";
 
 const box: PackageFacts = {
   platform: "linux",
@@ -24,8 +24,9 @@ describe("is it on", () => {
     expect(packageSetup(box)).toEqual({ state: "off", command: "curl -fsSL https://get.nouride.com/install.sh | sudo sh -s -- --allow-packages" });
 
     const router = packageSetup({ ...box, edition: "router" });
-    // The same installer, told the edition — never the old wrapper's address.
-    expect(router.state === "off" && router.command).toBe("curl -fsSL https://get.nouride.com/install.sh | sudo sh -s -- --variant router --allow-packages");
+    // The same line for the name no build makes now: `--variant router` would also switch the gateway on, and this
+    // command is about packages alone.
+    expect(router.state === "off" && router.command).toBe("curl -fsSL https://get.nouride.com/install.sh | sudo sh -s -- --allow-packages");
 
     const elsewhere = packageSetup({ ...box, installDir: "/opt/nr" });
     expect(elsewhere.state === "off" && elsewhere.command).toEndWith("--allow-packages --dir /opt/nr");
@@ -72,9 +73,8 @@ describe("is it on", () => {
     expect(packageSetup(container).state).toBe("not-applicable");
   });
 
-  test("the installer is the one the site publishes, and the site names it for Router too", () => {
+  test("the installer is the one the site publishes", () => {
     expect(INSTALLER_URL).toBe(INSTALL_SCRIPT_URL);
-    expect(ROUTER_INSTALL_COMMAND).toBe(`curl -fsSL ${INSTALL_SCRIPT_URL} | sudo sh -s -- --variant router`);
   });
 });
 

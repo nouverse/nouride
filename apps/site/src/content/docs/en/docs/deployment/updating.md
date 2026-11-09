@@ -212,8 +212,9 @@ docker run -d --name nouride ... @@DOCKER_IMAGE@@
 when there is something new, and only the layers that changed: the runtime and the system packages
 underneath stay as they are. The volume keeps everything; recreating the container loses nothing.
 
-Each edition is its own image. A Router container is updated from `@@DOCKER_IMAGE@@-router`: pulled
-from `@@DOCKER_IMAGE@@`, it would come back as Community, without the gateway its config expects.
+A container that ran `@@DOCKER_IMAGE@@-router` is moving to `@@DOCKER_IMAGE@@`: the Router edition is part of
+Community since 0.8.29, and the old name receives each release until 0.9. Its first start on Community keeps
+Nougate on. [Coming from nouride-router →](/en/docs/deployment/docker/#coming-from-nouride-router)
 
 On Kubernetes, with `imagePullPolicy: Always` on the container, a restart pulls the new `latest`:
 
@@ -306,8 +307,9 @@ starts.
 This is the part worth reading twice, because the alternative is an install being offered something
 it can never have.
 
-Editions are built and published separately. The public channel receives the **Community** and
-**Router** editions' tarballs and nothing else, so a release can exist without existing for your
+Editions are built and published separately. The public channel receives the **Community** edition's
+tarballs and nothing else (until 0.9, a second time under the Router edition's old names, so a Router install
+updates onto Community by itself), so a release can exist without existing for your
 build. What the daemon resolves is therefore not "the newest tag" but **the newest release that
 actually carries a build for this edition, and whose checksum file covers it**.
 
@@ -367,12 +369,11 @@ channel`) rather than reporting that everything is up to date.
 
 ## What is checked before anything moves
 
-- **The checksum**, against the release's own checksum file (`CHECKSUMS`, or `CHECKSUMS-router`; `SHA256SUMS…` up to 0.7.x),
+- **The checksum**, against the release's own checksum file (`CHECKSUMS`; `SHA256SUMS…` up to 0.7.x),
   before a single file is touched. A truncated download still untars; a binary that does not run is
   only discovered after the old one is gone.
-- **A signature, on the Pro editions.** Their checksum file must be signed with a key compiled into
-  the binary. The public channel publishes no signature, so Community and Router rely on the checksum
-  and HTTPS.
+- **A signature.** The checksum file must be signed with a key compiled into the binary: always on Pro, and on
+  the public channel for every release from 0.7.4, the first one signed.
 - **That the tarball has a `nouride` executable in it.**
 - **That the artifact exists at all.** An edition whose tarballs are not published is told so during
   the *check*, not at the moment it tries to take one.

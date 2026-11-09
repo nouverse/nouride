@@ -54,7 +54,7 @@ function containerPlan(edition: Edition, tag: string): string[] {
 describe("the image a container's update names", () => {
   test("the workflow pushes the version without its v, and its minor", () => {
     expect(pushedTags("v0.7.10")).toEqual(["0.7.10", "0.7"]);
-    expect(imageRows().map((row) => row.edition)).toEqual(["basic", "router", "pro"]);
+    expect(imageRows().map((row) => row.edition)).toEqual(["basic", "pro"]);
   });
 
   test("is the edition's own package, at a tag the release pushed — on every line that names one", () => {
@@ -68,5 +68,16 @@ describe("the image a container's update names", () => {
         expect(pushedTags("v0.7.10")).toContain(ref.slice(at + 1));
       }
     }
+  });
+
+  test("a Router container's names `nouride-router`, which the public half still pushes, with the free image's tags", () => {
+    // No row builds it: it is the free image under Router's name, tagged by the public workflow's manifest job the way
+    // the free image is — the version without its v, and its minor.
+    const named = containerPlan("router", "v0.8.29").flatMap((line) => [...line.matchAll(/ghcr\.io\/nouverse\/[\w-]+:\S+/g)].map((m) => m[0]));
+    expect(named).toEqual(["ghcr.io/nouverse/nouride-router:0.8.29", "ghcr.io/nouverse/nouride-router:0.8.29", "ghcr.io/nouverse/nouride-router:0.8.29"]);
+    const pub = readFileSync(join(import.meta.dir, "../../../../.github/workflows/public-release.yml"), "utf8");
+    const manifest = pub.slice(pub.indexOf("\n  manifest:"), pub.indexOf("\n  publish:"));
+    expect(manifest).toContain("edition: [basic, router]");
+    expect(manifest).toContain('tags="-t ${base}:${version} -t ${base}:${version%.*}"');
   });
 });

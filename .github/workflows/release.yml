@@ -7,18 +7,22 @@
 #
 # ## What comes out
 #
-# Three editions — scripts/build/ makes them, docs/ARCHITECTURE.md §10 — and NOT as a cross product: each
+# Two editions — scripts/build/ makes them, docs/ARCHITECTURE.md §10 — and NOT as a cross product: each
 # row below is something somebody receives, and the combinations nobody
-# receives are not built. Pro is one edition for every Nouride Box (the tarball) and
-# pod (the image), and carries the LLM gateway, off unless `[nougate] in_process = true`.
+# receives are not built. Both carry the LLM gateway, off unless `[nougate] in_process = true`:
+# Pro is one edition for every Nouride Box (the tarball) and pod (the image), and the free one is
+# what Router was, since Router became part of it (v0.8.29_RFC).
 # WhatsApp is in every one of them, in-process, so it is not a column. (Device, Device Pro
 # and Cloud were the names until 2026-09-30; Pro Router became Pro in 0.7.20.)
 #
 # | edition | flag | nougate | multi-user, sign-in, pairing | tarball | image | public |
 # |---|---|---|---|---|---|---|
-# | free | *(none)* | absent | absent | yes | `nouride` (built in nouverse/nouride) | yes |
-# | Router | `--router` | bundled | absent | yes | `nouride-router` (built in nouverse/nouride) | yes |
+# | free | `--require-gateway` | bundled | absent | yes | `nouride` (built in nouverse/nouride) | yes |
 # | Pro | `--pro` | bundled | bundled | Linux | `nouride-pro` | no |
+#
+# Router is not a row: its tarballs (`nouride-router-<target>.tar.gz`, `CHECKSUMS-router`) and its image
+# (`nouride-router`) are the free edition's again, under the names a Router install already out there asks for
+# (`scripts/release/router-alias.ts`, and `public-release.yml`), every 0.8.x release until 0.9.0 removes them.
 #
 # This table was the old naming — `-`, `nougate`, `wa`, `wa-nougate` — for a
 # while after the editions were renamed on 2026-09-15, and the asset check at
@@ -39,7 +43,7 @@
 #
 # `SUBMODULE_TOKEN` — a token that can read `nouverse/nougate` and
 # `nouverse/nouride-pro`, private repositories and therefore invisible to
-# `GITHUB_TOKEN`. Router and both Pro editions build from them, and
+# `GITHUB_TOKEN`. The free edition builds from the first and Pro from both, and
 # `verify-private` tests the Pro code with them before either Pro edition is
 # built. A tag builds every edition, so on a tag a missing secret fails the run;
 # a dispatch drops the rows that need it and says so.
@@ -236,14 +240,14 @@ jobs:
           python3 - <<'PY' >> "$GITHUB_OUTPUT"
           import json, os, sys
 
-          # Seven artefacts, not a cross product. Each row is a thing somebody
-          # receives — a free download, a Box tarball, a Pro container — and
-          # the combinations nobody receives are not built.
+          # Not a cross product. Each row is a thing somebody receives — a free
+          # download, a Box tarball, a Pro container — and the combinations nobody
+          # receives are not built.
           #
-          # `router` is the second public row, and the only one that is public
-          # *and* needs a private submodule: it is the free build plus the LLM
-          # gateway, and nothing else. Its nougate source stays private; only the
-          # compiled bundle ships.
+          # The free row is public *and* needs a private submodule: it carries the
+          # LLM gateway, as the Router row it replaced did (v0.8.29_RFC). Its nougate
+          # source stays private; only the compiled bundle ships. `--require-gateway`
+          # makes a build without it fail rather than publish Community with no gateway.
           #
           # The last field is the **private submodules** that variant needs, space
           # separated, and it used to be a bare "needs nougate" boolean. Two more
@@ -265,25 +269,24 @@ jobs:
           # Two private submodules: `internals/pro` (build-pro, multi-user, oauth, appliance
           # and the internal docs, one repository) and `internals/nougate`. Which features an
           # edition carries is the build's decision (`scripts/build/edition.ts`); this only
-          # decides what is checked out, and the public rows check out neither.
+          # decides what is checked out, and the public row never checks out `internals/pro`.
           PRO = "internals/pro"
           NOUGATE = "internals/nougate"
           PRO_TARGETS = "linux-x64,linux-arm64,linux-x64-musl,linux-arm64-musl,darwin-arm64,darwin-x64"
           ROWS = [
-              ("",       "",         "nouride",        "basic",  False, "",                 "all"),
-              ("router", "--router", "nouride-router", "router", False, NOUGATE,            "all"),
-              ("pro",    "--pro",    "nouride-pro",    "pro",    True,  f"{PRO} {NOUGATE}", PRO_TARGETS),
+              ("",       "--require-gateway", "nouride",     "basic", False, NOUGATE,            "all"),
+              ("pro",    "--pro",             "nouride-pro", "pro",   True,  f"{PRO} {NOUGATE}", PRO_TARGETS),
           ]
           want = os.environ["WANT"]
           keep = [r for r in ROWS if want == "all" or (want == "public") != r[4]]
 
-          # Without a token for the private repositories, three of the four cannot be
-          # built. What to do about that depends on why we are here:
+          # Without a token for the private repositories, no row can be built: each
+          # carries the gateway. What to do about that depends on why we are here:
           #
           #   a tag  — fail. A release that quietly ships half of what it advertises is
           #            worse than one that stops and says which half is missing.
           #   a dispatch — drop them and warn. This is the run somebody uses to check the
-          #            pipeline works, and the two that CAN build are worth checking.
+          #            pipeline works, and it says plainly that it checked nothing.
           if os.environ.get("HAS_NOUGATE_TOKEN") != "yes" and os.environ.get("IS_TAG") != "yes":
               # `r[5]`: the submodule paths — a row is seven long, and indexing past them was an IndexError on the
               # one path this exists for, a dispatch run with no submodule token, which nobody watches closely.
@@ -306,13 +309,16 @@ jobs:
                   "private": g,
                   "submodules": n,
                   "name": v or "default",
-                  # Which entry point. The public one refuses `--pro` and the private one refuses `--router`, so the
+                  # Which entry point. The public one refuses `--pro` and the private one `--require-gateway`, so the
                   # wrong pairing fails loudly at the flag check rather than building the wrong thing.
                   "script": "build:pro" if g else "build:binary",
                   "targets": t,
                   # A public edition with an image also makes that image's kit, in the same job: the same checkout,
                   # install and dashboard build, which a job of its own did again (0.7.21). Empty for Pro.
                   "kit": e if p is not None and not g else "",
+                  # The free edition's tarballs published again under Router's names, for the Router installs out
+                  # there (`scripts/release/router-alias.ts`). Every 0.8.x release; 0.9.0 removes it (v0.8.29_RFC).
+                  "router_alias": e == "basic",
               }
               for v, f, p, e, g, n, t in keep
               if f is not None
@@ -387,10 +393,10 @@ jobs:
         env:
           RELEASES_TOKEN: ${{ secrets.RELEASES_REPO_TOKEN }}
           SUBMODULE_TOKEN: ${{ secrets.SUBMODULE_TOKEN }}
-          # Any variant that names a private submodule. `basic` names none, so a
-          # public-only run still needs no token — and this used to key on one
-          # edition's name, which stopped covering the set the moment another
-          # private edition needed something other than nougate.
+          # Any variant that names a private submodule — every row, since the free
+          # one carries the gateway. This used to key on one edition's name, which
+          # stopped covering the set the moment another private edition needed
+          # something other than nougate.
           # Both lists, so a variant that produced only an image could not be
           # invisible in `binaries` alone.
           WANT_PRIVATE: ${{ (contains(steps.plan.outputs.binaries, 'internals/') || contains(steps.plan.outputs.images, 'internals/')) && 'yes' || 'no' }}
@@ -685,8 +691,9 @@ jobs:
     permissions:
       contents: write # upload assets to the release
     needs: [verify, verify-private, guard-visibility]
-    # `verify` is skipped when CI already passed on this commit; skipped is as good as passed here.
-    if: ${{ !cancelled() && needs.guard-visibility.result == 'success' && (needs.verify.result == 'success' || needs.verify.result == 'skipped') && github.repository_owner == 'nouverse' }}
+    # `verify` is skipped when CI already passed on this commit; skipped is as good as passed here. And skipped with
+    # nothing planned — a dispatch with no SUBMODULE_TOKEN, every row needing it — as an empty matrix fails the job.
+    if: ${{ !cancelled() && needs.guard-visibility.result == 'success' && needs.guard-visibility.outputs.binaries != '[]' && (needs.verify.result == 'success' || needs.verify.result == 'skipped') && github.repository_owner == 'nouverse' }}
     # On the runner CI_RUNNER names, as every job is. GitHub's own runners were tried for this job in 0.7.21's rehearsal
     # and refused to start: this private repository has no Actions minutes to spend ("spending limit"), which is why the
     # whole release moved to the build runner on 2026-10-18.
@@ -731,8 +738,8 @@ jobs:
         run: if git config --get-regexp '^submodule\.' >/dev/null; then git submodule deinit --force --all; fi
 
       # Private, so `GITHUB_TOKEN` cannot see them. Which ones depends on the
-      # variant — `matrix.submodules` names them, and the public `basic` build
-      # names none and skips this entirely.
+      # variant — `matrix.submodules` names them: the gateway's for the free
+      # build, and Pro's as well for Pro.
       #
       # One `insteadOf` and one `update` for all of them: the token is the same,
       # and a step per repository was three copies of the same five lines that
@@ -768,7 +775,7 @@ jobs:
 
       - name: Build nougate frontend
         if: contains(matrix.submodules, 'internals/nougate')
-        # Frozen, as every install in a release is: this build ships in the public Router tarball and image, and a plain
+        # Frozen, as every install in a release is: this build ships in the public tarballs and image, and a plain
         # install resolves afresh whenever the manifest and the lockfile disagree.
         run: |
           bun install --frozen-lockfile
@@ -818,10 +825,21 @@ jobs:
           if [ "${GITHUB_REF_TYPE}" = "tag" ]; then bun run ../scripts/release/release-floor.ts --tag "${GITHUB_REF_NAME}" "$name"; fi
           cat "$name"
 
+      # Router's names for the free build, so a Router install out there — 0.8.27 and before — is still offered every
+      # 0.8.x release: its updater asks for `nouride-router-<target>.tar.gz` and `CHECKSUMS-router` by name. The same
+      # bytes, and a checksum file of their own with the floor line above as it is; `sign` signs it with the others.
+      # After the checksums, so `CHECKSUMS` lists Community's names alone; before the upload, whose glob takes them.
+      # 0.9.0 removes this step (v0.8.29_RFC).
+      - name: Router's names, for the Router installs out there
+        if: matrix.router_alias
+        run: |
+          bun run scripts/release/router-alias.ts dist
+          cat dist/CHECKSUMS-router
+
       # Upload directly to the respective release page to avoid consuming GitHub Actions artifact storage.
       # Keyed on `private`, not on the variant name. The question this answers is "may this leave the
-      # private repository", and the licence is what decides it — `router` bundles the LLM gateway
-      # and nothing private, so it is publishable, and a condition naming `''` would have kept
+      # private repository", and the licence is what decides it — the free build carries the LLM
+      # gateway and nothing private, so it is publishable, and a condition naming `''` would have kept
       # it private for no reason anyone could point at.
       - name: Upload public Linux binaries to distribution repository
         if: startsWith(github.ref, 'refs/tags/v') && !matrix.private
@@ -1016,8 +1034,9 @@ jobs:
       # The public half, once everything it is built from is signed: nouverse/nouride tests each public
       # tarball on its own platform, builds the public images from their kits, and turns the draft into the release
       # (its `release.yml`). Started, not waited on — it reports on its own run, and this runner is not held for it.
-      # Started when both public kits are on the draft, not when every `binaries` row passed: a Pro row that failed is
+      # Started when the public kit is on the draft, not when every `binaries` row passed: a Pro row that failed is
       # the private half's to answer for, and must not hold back the public one (it had a job of its own until 0.7.21).
+      # One kit: the Router image is the free one's with a line added (`public-release.yml`), and needs none of its own.
       # And before the boxes are published, for the same reason: v0.8.0's first run stopped there, the update gate
       # refusing `CHECKSUMS-pro`, and the public half was never started.
       - name: Start the public half of the release
@@ -1028,7 +1047,7 @@ jobs:
         run: |
           error() { printf '::%s::%s\n' error "$*"; }
           assets=$(gh release view "${GITHUB_REF_NAME}" --repo nouverse/nouride --json assets --jq '.assets[].name')
-          for kit in nouride-image-kit.tar.gz nouride-image-kit-router.tar.gz; do
+          for kit in nouride-image-kit.tar.gz; do
             echo "$assets" | grep -qx "$kit" || { error "the public draft has no $kit — its binaries row failed — so the public half is not started."; exit 1; }
           done
           gh workflow run public-release.yml --repo nouverse/nouride -f tag="${GITHUB_REF_NAME}" -f quiet="${QUIET:-no}" -f lts="${LTS:-no}"

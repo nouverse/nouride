@@ -73,17 +73,15 @@ chat cukup dibilang modelnya sedang tidak merespons.
 
 ## Menjalankannya di dalam daemon
 
-Nougate biasanya layanan terpisah yang dijangkau lewat HTTP. Edisi **Router** membawanya di dalam
-daemon Nouride, di port-nya sendiri:
-
-```bash
-@@ROUTER_INSTALL_CMD@@
-```
-
-atau image `@@DOCKER_IMAGE@@-router`. Di sana ia langsung aktif secara default di port `18256`.
+Nougate biasanya layanan terpisah yang dijangkau lewat HTTP. Setiap instalasi Nouride juga membawanya di dalam
+daemon, di port-nya sendiri, `18256`, dan ia mati sampai kamu memintanya. Memilihnya di setup, atau **Turn on** di
+halaman **LLM Gateway** di dashboard, langsung menyalakannya tanpa restart, dan ia tetap menyala sejak itu.
+**Turn off** di halaman yang sama menyebutkan agent yang memakainya, lalu me-restart Nouride begitu tidak ada yang
+sedang berjalan. Sampai 0.9, perintah install lama edisi Router (`--variant router`) dan image-nya
+(`@@DOCKER_IMAGE@@-router`) memberi build yang sama dengan Nougate sudah menyala.
 
 **Tidak perlu API key untuk mulai.** Langkah pertama wizard setup tetap menerima API key, dan di
-bawahnya ada **Use Nougate LLM Gateway**: masuk dengan akun yang sudah kamu punya: Claude (Pro atau
+bawahnya ada **Use Nougate**: masuk dengan akun yang sudah kamu punya: Claude (Pro atau
 Max), ChatGPT (lewat Codex), GitHub Copilot, Google Gemini (lewat Antigravity) atau Kiro. Lalu daemon
 menyambungkan dirinya ke gateway dengan key yang ia buat sendiri dan tidak pernah ditampilkan. Langkah
 agent lalu menampilkan model yang bisa dilayani akun-akun itu. Claude, ChatGPT dan Gemini masuk lewat
@@ -111,9 +109,11 @@ base_url = "http://127.0.0.1:18256/anthropic/v1"
 api_key = "nougate"
 ```
 
-Untuk memindahkan atau mematikannya, pakai `[nougate]` di `.nouride/config.toml`, atau set
-`NOUGATE_IN_PROCESS=false` di `.env`. Di edisi tanpa gateway ia mati, dan menyalakannya di sana membuat
-daemon berhenti saat boot, dengan kalimat yang menyatakan build ini gak membawanya:
+Saklar di halaman itu menulis `[nougate] in_process` di `.nouride/config.toml`; untuk memindahkan port-nya, ubah
+tabel yang sama. `NOUGATE_IN_PROCESS=true` atau `false` di `.env` menentukannya dari sisi server, dan halaman itu lalu
+menampilkan saklarnya sebagai sudah diatur di sana. Build tanpa gateway (yang dikompilasi dari source publik saja)
+gak menawarkannya, dan menyalakannya di sana membuat daemon berhenti saat boot, dengan kalimat yang menyatakan
+build ini gak membawanya:
 
 ```toml
 [nougate]

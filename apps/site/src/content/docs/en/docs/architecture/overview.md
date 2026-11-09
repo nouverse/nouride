@@ -110,7 +110,7 @@ Two parts that look like they want their own process run inside this one by defa
 | | |
 |---|---|
 | **The WhatsApp bridge** | Hosted in the daemon. It still speaks newline-delimited JSON, only the pipe is memory. One WhatsApp number per daemon |
-| **The LLM gateway (nougate)** | Optional. Reached over HTTP, or hosted in the daemon by the Router edition (`[nougate] in_process`, port 18256) |
+| **The LLM gateway (nougate)** | Optional. Reached over HTTP, or hosted in the daemon, off until switched on (`[nougate] in_process`, port 18256) |
 
 A second process cannot share the Bun runtime, so it pays about 36 MB again. Hosting them here is
 what saves it.

@@ -31,8 +31,8 @@ OpenRouter, gateway perusahaan, Ollama lokal, atau proxy kamu sendiri.
 
 **Bisa pakai langganan Claude atau ChatGPT saya?**
 Ada dua cara. [Agent eksternal](/id/docs/manual/external-agents/) dijawab langsung oleh Claude Code atau Codex, login
-pakai langganan kamu, lewat adapter ACP resmi yang juga dipakai Zed dan JetBrains. Di edisi Router,
-[Nougate](/id/docs/providers/nougate/#menjalankannya-di-dalam-daemon) login ke akun Claude, ChatGPT, Copilot, Gemini,
+pakai langganan kamu, lewat adapter ACP resmi yang juga dipakai Zed dan JetBrains. Atau nyalakan
+[Nougate](/id/docs/providers/nougate/#menjalankannya-di-dalam-daemon), yang login ke akun Claude, ChatGPT, Copilot, Gemini,
 atau Kiro dan menyajikan model-modelnya ke agent mana pun sebagai provider. Apa yang boleh dilakukan sebuah langganan
 tetap ditentukan oleh ketentuan pembuatnya.
 

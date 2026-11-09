@@ -62,7 +62,7 @@
     "lint:site": "bun run --cwd apps/site astro check",
     "symbolize": "bun run scripts/symbolize.ts",
     "mutate:helper": "bun run scripts/mutate-helper.ts",
-    "dev:router": "sh scripts/dev-router.sh"
+    "dev:gateway": "sh scripts/dev-gateway.sh"
   },
   "devDependencies": {
     "@types/bun": "1.4.4",

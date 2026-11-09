@@ -29,7 +29,7 @@ describe("[look]", () => {
 
   test("takes headphones for a hat, and no longer for an accessory (0.8.1)", () => {
     expect(parse({ hat: "headphones" }).look).toEqual({ hat: "headphones" });
-    expect(() => parse({ accessory: "headphones" })).toThrow("[look] accessory must be one of none, glasses, sunglasses, scarf");
+    expect(() => parse({ accessory: "headphones" })).toThrow("[look] accessory must be one of none, glasses, sunglasses, scarf, photochromic");
   });
 
   test("takes white for an outfit's colour (0.8.1)", () => {

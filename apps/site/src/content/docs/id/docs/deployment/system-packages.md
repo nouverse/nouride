@@ -28,7 +28,7 @@ juga. **Fitur ini mati kecuali kamu menyalakannya.**
 curl -fsSL @@INSTALL_URL@@ | sudo sh -s -- --allow-packages
 ```
 
-Untuk edisi Router, tambahkan `--variant router` ke perintah yang sama. Kalau instalasinya gak ada di
+Kalau instalasinya gak ada di
 `@@INSTALL_DIR@@`, tambahkan `--dir` dengan path-nya, karena tanpa itu installer malah bikin instalasi
 kedua di sana. Di instalasi yang sudah ada, perintah ini aman dijalankan: agent, memory, dan setting
 tetap. Menjalankan installer lagi nanti tanpa flag ini tetap mempertahankannya, jadi update gak pernah

@@ -3,23 +3,26 @@ title: Builds & Downloads
 description: Nouride release variants, resource footprints, and direct download links for standalone deployments.
 ---
 
-Two editions are public, each as Linux tarballs and as a container image. Both carry WhatsApp in the
-binary itself.
+One edition is public, Community, as Linux and macOS tarballs and as a container image. It carries WhatsApp
+and the [Nougate LLM gateway](/en/docs/providers/nougate/) in the binary itself.
 
-## Nouride Variants
+## Editions
 
-| Variant | Binary | Tarball | Idle RSS | Bundle | Description |
-|---|---|---|---|---|---|
-| **Community** | ~89 MB | ~40 MB | ~58 MB | *None* | The free self-hosted edition. Runs on any Linux server, VM or local computer. |
-| **Router** | ~89 MB | ~40 MB | ~60 MB | Nougate | Community plus the [Nougate AI Gateway](/en/docs/providers/nougate/) running inside the daemon on port `18256`. |
+| Edition | Binary | Tarball | Idle RSS | Description |
+|---|---|---|---|---|
+| **Community** | ~89 MB | ~40 MB | ~58 MB | The free self-hosted edition. Runs on any Linux server, VM or local computer. |
 
-Sizes are approximate, measured on `linux-x64` builds of 0.7. The idle RSS figures come from an older
-release and have not been re-measured since.
+Sizes are approximate, measured on `linux-x64` builds of 0.7. The idle RSS figure comes from an older
+release and has not been re-measured since.
 
-### Variant Overview
+Community is one account with a local password, an in-process SQLite database, and TOML configuration. Nougate
+is in the same process and stays off until you choose **Use Nougate** in setup or turn it on from the
+dashboard's **LLM Gateway** page (`[nougate] in_process = true`). Carried and off, it costs about 0.5 MB of
+binary and 1.3 MB of memory; on and idle, about 3.6 MB more. It is not a second process.
 
-- **Community (Self-Hosted):** The standard edition for running AI agents entirely on your own infrastructure. One account with a local password, an in-process SQLite database, and TOML configuration.
-- **Router:** The same daemon with the Nougate LLM gateway compiled in, so a provider profile can point at `localhost` instead of a gateway on the network. `[nougate] in_process` defaults to `true` in this edition.
+The Router edition, which was Community with the gateway on, is part of Community since 0.8.29. Until 0.9 each
+release still carries its old names, `nouride-router-*` and `@@DOCKER_IMAGE@@-router`, so a Router install
+updates onto Community by itself, with Nougate kept on.
 
 Pro adds multi-user accounts, Nouverse sign-in and Nouride Box pairing, and carries the same LLM gateway,
 off until `[nougate] in_process = true`. It is not public: there is no public download or image for it.
@@ -32,7 +35,7 @@ Tarballs come from `@@DOWNLOAD_DOMAIN@@`, one per target. Each holds the `nourid
 dashboard, the built-in skills, `config.example.toml`, and `pkg/`, the root service that
 [`--allow-packages`](/en/docs/deployment/system-packages/) sets up. A Linux tarball also holds `run/`, the
 `nouride-run` helper `install.sh` sets up so [each agent's commands run as its own user](/en/docs/architecture/overview/#each-agent-its-own-user).
-A Router tarball adds `frontend/`, the gateway's own console.
+It also holds `frontend/`, the gateway's own console.
 
 ### Quick Install via CLI
 
@@ -44,14 +47,6 @@ The simplest way to install or update Nouride on Linux:
 
 The installer picks the build for this machine's CPU and C library (glibc or musl), and stops on
 32-bit ARM, which has no build.
-
-For the Router edition:
-
-```bash
-@@ROUTER_INSTALL_CMD@@
-```
-
-That wrapper runs the same installer with `--variant router`.
 
 ### Direct Binary Downloads
 
@@ -65,18 +60,17 @@ Download release tarballs directly for your target system:
 | Linux (Alpine) | `aarch64` | musl | [`nouride-linux-arm64-musl.tar.gz`](@@TARBALL_BASE@@/nouride-linux-arm64-musl.tar.gz) |
 | macOS | Apple Silicon | not applicable | [`nouride-darwin-arm64.tar.gz`](@@TARBALL_BASE@@/nouride-darwin-arm64.tar.gz) |
 
-Router tarballs use the same targets with a `router` infix: `nouride-router-linux-x64.tar.gz`, `nouride-router-linux-arm64-musl.tar.gz`, and so on. macOS tarballs are for Apple Silicon (`darwin-arm64`).
+macOS tarballs are for Apple Silicon (`darwin-arm64`).
 
 ### Container Image (Docker)
 
 For containerized deployments:
 
 ```bash
-docker pull @@DOCKER_IMAGE@@          # Community
-docker pull @@DOCKER_IMAGE@@-router   # Router
+docker pull @@DOCKER_IMAGE@@
 ```
 
- Both images provide multi-arch support for both `linux/amd64` and `linux/arm64`. Refer to [Docker & Compose](/en/docs/deployment/docker/) for container configuration.
+The image provides multi-arch support for both `linux/amd64` and `linux/arm64`. Refer to [Docker & Compose](/en/docs/deployment/docker/) for container configuration.
 
 ---
 
@@ -90,4 +84,5 @@ bun run build:binary --target linux-arm64             # cross-compile for a spec
 bun run build:release                                 # build all four Linux targets
 ```
 
-`--router` builds the Router edition, and needs the Nougate gateway's source, which is not public.
+The Nougate gateway is built in when its source, `internals/nougate`, is checked out. It is not public: without
+it the build is the same daemon without the gateway, and setup does not offer it.

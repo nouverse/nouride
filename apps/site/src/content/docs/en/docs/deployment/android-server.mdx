@@ -7,7 +7,7 @@ import { Steps, Aside, LinkCard } from '@astrojs/starlight/components';
 
 There is no Android build of Nouride. It ships for Linux (glibc and musl) and macOS, and Android has a
 C library of its own. So the phone runs a Debian userland inside [Termux](https://termux.dev) with
-[proot-distro](https://github.com/termux/proot-distro), and the `linux-arm64` build of the Router edition
+[proot-distro](https://github.com/termux/proot-distro), and the `linux-arm64` build of Nouride
 runs inside that Debian. The phone does not need to be rooted.
 
 <Aside type="tip" title="The easy way: Nouride Home">
@@ -20,7 +20,7 @@ A Redmi Note 12 (HyperOS on Android 15, 6 GB of RAM) with Termux 0.118.3 from Gi
 proot-distro 5.10, and Nouride 0.8.18 (the Community edition), on 2026-11-05. The daemon was ready in
 under two seconds, the dashboard opened from a computer on the same Wi-Fi, an agent answered on
 Telegram, and the daemon kept running for almost eight hours overnight. Not tried yet: other phones,
-the Router edition on the phone, a restart of the phone, starting it on boot, and updating Nouride on
+the Nougate gateway on the phone, a restart of the phone, starting it on boot, and updating Nouride on
 the phone.
 </Aside>
 
@@ -52,9 +52,8 @@ things do not:
 - **A charger.** The phone runs all the time, so keep it plugged in.
 - **The same Wi-Fi** as the computer you will open the dashboard from, if you want to open it from
   anywhere but the phone.
-- **A model account or an API key.** The Router edition installed below signs in to an account you
-  already have (Claude Pro or Max, ChatGPT, GitHub Copilot, Google Gemini or Kiro) through its built-in
-  Nougate gateway; a provider's endpoint and API key work as well. The
+- **A model account or an API key.** Nouride signs in to an account you already have (Claude Pro or Max,
+  ChatGPT, GitHub Copilot, Google Gemini or Kiro) through its built-in Nougate gateway; a provider's endpoint and API key work as well. The
   [First run](/en/docs/start/first-run/) wizard asks at the end.
 - **Optional: a computer with `adb`** ([Android's platform tools](https://developer.android.com/tools/releases/platform-tools)),
   for one setting that some phones have no switch for. See [the phantom process killer](#android-12-and-later-the-phantom-process-killer).
@@ -120,13 +119,13 @@ things do not:
 
    ```bash
    apt update && apt install -y curl ca-certificates procps
-   curl -fsSL @@INSTALL_URL@@ | sh -s -- --host 0.0.0.0 --variant router
+   curl -fsSL @@INSTALL_URL@@ | sh -s -- --host 0.0.0.0
    ```
 
-   `--variant router` installs the Router edition: Nouride with the [Nougate](/en/docs/providers/nougate/)
-   LLM gateway inside the same daemon, on port `18256`. The setup wizard can then sign in to a model
-   account you already have instead of asking for an API key, and the phone is both your Nouride server
-   and a model gateway for your other devices.
+   Nouride carries the [Nougate](/en/docs/providers/nougate/) LLM gateway inside the same daemon, on port
+   `18256`. Choose **Use Nougate** in the setup wizard and it signs in to a model account you already have
+   instead of asking for an API key, and the phone is both your Nouride server and a model gateway for your
+   other devices.
 
    `--host 0.0.0.0` lets other devices on your Wi-Fi open the dashboard, and use the gateway with a
    gateway key. Do that on a network you trust, such as your home Wi-Fi. Leave it out to keep both on

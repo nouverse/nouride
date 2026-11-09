@@ -105,8 +105,8 @@ yang mewarisinya. [Secret →](/id/docs/architecture/storage/#secret)
 |---|---|
 | `TZ` | Timezone IANA untuk waktu agent dan cron. Default UTC |
 | `LOG_LEVEL` | `debug`, `info`, `warn`, atau `error` |
-| `NOUGATE_IN_PROCESS` | `true` atau `false`, menimpa `[nougate] in_process`. Hanya edisi Router yang punya gateway untuk dijalankan |
-| `NOUGATE_HOME` | Edisi Router: gateway bawaan menyimpan state-nya di `$NOUGATE_HOME/data`. Default `.nouride/nougate` |
+| `NOUGATE_IN_PROCESS` | `true` atau `false`, menimpa `[nougate] in_process`, dan saklar di dashboard lalu menampilkannya sebagai sudah diatur di sini. Build yang dikompilasi dari source publik saja gak punya gateway untuk dijalankan |
+| `NOUGATE_HOME` | Gateway bawaan menyimpan state-nya di `$NOUGATE_HOME/data`. Default `.nouride/nougate` |
 | `NOURIDE_SUPERVISOR_MODE` | Nilai apa pun berarti ada yang di luar Nouride (pm2, supervisord, runit) yang menyalakan ulang daemon saat dia keluar, jadi `nouride restart` dan update boleh jalan. Isi hanya kalau itu memang benar. Gak dibaca di dalam container |
 | `NOURIDE_WA_LOG_LEVEL` | `debug` menaikkan log bridge WhatsApp sampai paling detail, di stderr. Default `warn` |
 | `NOURIDE_WA_SEND_TIMEOUT_MS` | Berapa lama satu pengiriman WhatsApp boleh berjalan sebelum dianggap gagal. Default `60000` |
@@ -145,9 +145,9 @@ orangnya memilih provider di halaman login **issuer tersebut**.
 
 :::caution[Hanya edisi Pro yang membacanya]
 Variabel-variabel ini ada di semua build, tapi hanya edisi **Pro** yang
-punya alurnya. Di build Community atau Router, menyetel `NOURIDE_OAUTH_ISSUER` membuat daemon
+punya alurnya. Di build Community, menyetel `NOURIDE_OAUTH_ISSUER` membuat daemon
 **menolak boot**, bukan mengabaikannya, kodenya gak ikut dikompilasi, jadi gak ada yang bisa
-dikonfigurasi. [Edisinya →](/id/docs/deployment/binaries/#varian-nouride)
+dikonfigurasi. [Edisinya →](/id/docs/deployment/binaries/#edisi)
 :::
 
 ### Yang dibutuhkan

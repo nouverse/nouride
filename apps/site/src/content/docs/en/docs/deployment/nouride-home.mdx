@@ -11,8 +11,8 @@ background. There is nothing to type in a terminal, and the phone does not need 
 devices on the same Wi-Fi open the dashboard from the phone.
 
 It does what [An Android phone as a server](/en/docs/deployment/android-server/) does by hand with Termux:
-the same Linux build of Nouride, the Router edition, with the [Nougate](/en/docs/providers/nougate/) LLM
-gateway inside.
+the same Linux build of Nouride, with the [Nougate](/en/docs/providers/nougate/) LLM gateway inside, switched
+on.
 
 <Aside type="note" title="Tested on one phone">
 A Redmi Note 12 (HyperOS 2 on Android 15, 6 GB of RAM) with Nouride 0.8.22, on 2026-11-07 and 08: the
@@ -31,7 +31,7 @@ Android's limit on child processes has not been raised (see [Keep it running](#k
   the time, so keep it plugged in.
 - **The same Wi-Fi** as the devices you will open the dashboard from, if you want to open it anywhere but
   on the phone.
-- **A model account or an API key.** The Router edition signs in to an account you already have (Claude
+- **A model account or an API key.** Nouride signs in to an account you already have (Claude
   Pro or Max, ChatGPT, GitHub Copilot, Google Gemini or Kiro) through its built-in Nougate gateway; a
   provider's endpoint and API key work as well. The setup wizard asks.
 

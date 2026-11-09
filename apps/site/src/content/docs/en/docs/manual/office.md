@@ -48,12 +48,16 @@ gives, so an agent nobody styled keeps the look it always had, and no two agents
 | Part | Key | Words |
 |---|---|---|
 | Fur | `fur` | ginger, grey, black, white, brown, cream |
-| Pattern | `pattern` | plain, tabby |
+| Pattern | `pattern` | plain, tabby, tuxedo |
 | Outfit | `outfit` | none, hoodie, tee, jacket |
-| Outfit colour | `outfit_color` | blue, lime, peach, charcoal, sage, lilac, white. A hat and a scarf wear it too; white only when picked |
-| Hat | `hat` | none, beanie, cap, beret, headband, headphones |
-| Accessory | `accessory` | none, glasses, sunglasses, scarf |
+| Outfit colour | `outfit_color` | blue, lime, peach, charcoal, sage, lilac, white. A hat (but the helmet) and a scarf wear it too; white only when picked |
+| Hat | `hat` | none, beanie, cap, beret, headband, headphones, helmet |
+| Accessory | `accessory` | none, glasses, sunglasses, scarf, photochromic |
 | Eyes | `eyes` | round, sleepy, sparkly |
+
+Tuxedo, the helmet (always dark grey) and the photochromic glasses are the mascot's: a tuxedo cat in all three and a
+lilac hoodie is dressed as it, and a new **Nourider** starts that way, its coat grey. An agent made before keeps its look until you
+pick these on its Look tab.
 
 The look is kept under `[look]` in the agent's `config.toml`, so it travels with the pack:
 

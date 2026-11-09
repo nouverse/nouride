@@ -152,24 +152,24 @@ tetapi `bun run build:binary --no-smol` membangun tanpanya untuk host yang memor
 
 ## Edisi
 
-Dua edisi dirilis, dan keduanya membawa WhatsApp di dalam binary.
+Satu edisi dirilis, Community, dan ia membawa WhatsApp dan Nougate di dalam binary.
 
-| Edisi | Binary | Tarball | RSS idle | |
+| Build | Binary | Tarball | RSS idle | |
 |---|---|---|---|---|
-| Community *(default)* | 88,6 MB | 40,0 MB | 58,0 MB | Daemon-nya saja |
-| Router | 88,9 MB | 40,2 MB | 59,7 MB | Community dengan Nougate di proses yang sama |
+| Tanpa Nougate | 88,6 MB | 40,0 MB | 58,0 MB | Daemon-nya saja |
+| Dengan Nougate, mati | 88,9 MB | 40,2 MB | 59,7 MB | Community sejak 0.8.29 |
 
 `RSS idle` di sini adalah daemon yang membawa kodenya dengan fiturnya **dimatikan**: biaya untuk
 memiliki opsinya.
 
-Binary dan tarball adalah build `linux-x64`, Community di 0.7.0 dan Router di 0.6.0. Angka RSS-nya
-lebih tua dari nama edisinya: diambil pada bentuk build yang sekarang dimiliki edisi-edisi itu, dan
-belum diukur ulang sejak itu. Ukuran bergeser mengikuti runtime Bun, jadi ukur lagi sebelum
-mengandalkannya.
+Binary dan tarball adalah build `linux-x64`, diambil di 0.7.0 dan 0.6.0, saat baris kedua masih edisi Router.
+Angka RSS-nya diambil pada bentuk build yang sama dan belum diukur ulang sejak itu. Ukuran bergeser mengikuti
+runtime Bun, jadi ukur lagi sebelum mengandalkannya. Diukur lagi untuk Pro di 0.7.20, di Docker arm64: membawa
+gateway dalam keadaan mati memakan sekitar 1,3 MB heap, dan menyalakannya sekitar 3,6 MB lagi saat idle.
 
 **Bundle yang gak kamu nyalakan gak gratis.** Import dinamis berarti kodenya gak pernah
-*dieksekusi*, tetapi graf modulnya tetap terdaftar, itulah sebabnya build Community gak menyertakan
-Nougate alih-alih mengandalkan import saja.
+*dieksekusi*, tetapi graf modulnya tetap terdaftar: itulah 1,7 MB di antara dua baris itu, harga untuk
+menawarkan Nougate ke semua orang yang mungkin memilihnya.
 
 [Build & unduhan →](/id/docs/deployment/binaries/)
 
@@ -181,8 +181,7 @@ Nougate alih-alih mengandalkan import saja.
 | Gateway LLM (nougate) | 44,6 MB | +6,0 MB | **38,6 MB** |
 | keduanya | 106,8 MB | +27,3 MB | **79,5 MB** |
 
-Itu sebabnya bridge jalan di dalam daemon di setiap edisi, dan sebabnya edisi Router menjalankan
-Nougate dengan cara yang sama. Kenapa hematnya sekitar 36 MB di keduanya: proses terpisah gak bisa
+Itu sebabnya bridge jalan di dalam daemon, dan sebabnya Nougate dijalankan dengan cara yang sama. Kenapa hematnya sekitar 36 MB di keduanya: proses terpisah gak bisa
 berbagi runtime Bun. Diukur dengan menjalankan satu binary dua kali: **~36 MB halaman runtime dan
 bundle dibagi antar proses dari executable yang sama, dan ~14,5 MB heap bersifat privat untuk
 masing-masing.** Jadi proses kedua membayar 36 MB itu lagi; listener kedua atau modul yang di-bundle

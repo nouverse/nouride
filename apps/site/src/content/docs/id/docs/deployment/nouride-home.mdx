@@ -7,7 +7,7 @@ import { Steps, Aside, LinkCard } from '@astrojs/starlight/components';
 
 Nouride Home adalah aplikasi Android yang menjalankan Nouride di HP itu sendiri. Di dalamnya ada sistem Debian kecil, installer resmi Nouride dijalankan di situ waktu start pertama, lalu aplikasinya menjaga Nouride tetap jalan di latar belakang. Gak ada yang perlu diketik di terminal, dan HP-nya gak perlu di-root. Perangkat lain di Wi-Fi yang sama bisa membuka dashboard dari HP itu.
 
-Hasilnya sama dengan [HP Android jadi server](/id/docs/deployment/android-server/) yang dikerjakan manual lewat Termux: build Linux Nouride yang sama, edisi Router, dengan LLM gateway [Nougate](/id/docs/providers/nougate/) di dalamnya.
+Hasilnya sama dengan [HP Android jadi server](/id/docs/deployment/android-server/) yang dikerjakan manual lewat Termux: build Linux Nouride yang sama, dengan LLM gateway [Nougate](/id/docs/providers/nougate/) di dalamnya, sudah menyala.
 
 <Aside type="note" title="Diuji di satu HP">
 Redmi Note 12 (HyperOS 2 di Android 15, RAM 6 GB) dengan Nouride 0.8.22, pada 2026-11-07 dan 08: start pertama, dashboard di HP dan dari komputer di Wi-Fi yang sama, aplikasi meng-update dirinya sendiri (0.1.3 ke 0.1.4 ke 0.1.5), dan HP di-restart. Yang belum diuji: HP lain, dan HP yang batas child process Android-nya belum dinaikkan (lihat [Biar tetap jalan](#biar-tetap-jalan)).
@@ -19,7 +19,7 @@ Redmi Note 12 (HyperOS 2 di Android 15, RAM 6 GB) dengan Nouride 0.8.22, pada 20
 - **Ruang kosong sekitar 1,5 GB.** Aplikasi, Debian dan Nouride memakai 1,3 GB di HP uji setelah sehari dipakai. Yang diunduh dan di-build agent kamu nanti di luar itu.
 - **Internet untuk start pertama**, karena Nouride diunduh waktu itu, dan **charger**: HP-nya jalan terus, jadi biarkan tercolok.
 - **Wi-Fi yang sama** dengan perangkat yang mau membuka dashboard, kalau dashboard-nya mau dibuka selain dari HP itu.
-- **Akun model atau API key.** Edisi Router bisa masuk pakai akun yang sudah kamu punya (Claude Pro atau Max, ChatGPT, GitHub Copilot, Google Gemini atau Kiro) lewat gateway Nougate bawaannya; endpoint dan API key provider juga bisa. Setup wizard yang menanyakannya.
+- **Akun model atau API key.** Nouride bisa masuk pakai akun yang sudah kamu punya (Claude Pro atau Max, ChatGPT, GitHub Copilot, Google Gemini atau Kiro) lewat gateway Nougate bawaannya; endpoint dan API key provider juga bisa. Setup wizard yang menanyakannya.
 
 ## Pasang
 

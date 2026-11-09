@@ -77,10 +77,30 @@ export interface EditionSpec {
    * that must agree are two lists that will not.
    */
   bundles: PluginSpec[];
+  /**
+   * Plugins this edition carries when their source is checked out, and builds without otherwise.
+   *
+   * The LLM gateway in the free build: its source is `internals/nougate`, a private submodule, and a public clone has
+   * to build Community all the same — `bun run build:binary` needs no submodule. `resolveEdition` moves each one that
+   * is checked out into `bundles` before anything else reads the spec, so the four things `bundles` decides are decided
+   * the one way for these too. A release must never leave one out silently: its `require` flag makes a missing checkout
+   * fail the build, and the release workflow passes it.
+   */
+  ifCheckedOut?: IfCheckedOut[];
   /** The lines printed under the artefact size, in order. */
   banner: string[];
   /** Whether this artefact may be published. The release workflow keys its uploads on the same fact. */
   public: boolean;
+}
+
+/** One plugin an edition carries only when it is checked out — see `EditionSpec.ifCheckedOut`. */
+export interface IfCheckedOut {
+  plugin: PluginSpec;
+  /** The flag that makes it required: without its source the build fails rather than leaving it out. */
+  require: string;
+  /** The banner line when it is carried, and when it is not. */
+  carried: string;
+  missing: string;
 }
 
 /**
@@ -117,9 +137,9 @@ export const ALWAYS: PluginSpec[] = [
 ];
 
 /**
- * The gateway, named here rather than in a list, because two editions share it and one of them is
- * public — `router`, and `pro` since 0.7.20. The marker is its database filename — `provider:model-id` was the first choice and was
- * wrong, since `packages/llm/src/classify.ts` explains that namespacing in an error message, so the
+ * The gateway, named here rather than in a list, because both editions carry it: the free one when its submodule is
+ * checked out (`ifCheckedOut`), Pro always. The marker is its database filename — `provider:model-id` was the first
+ * choice and was wrong, since `packages/llm/src/classify.ts` explains that namespacing in an error message, so the
  * marker was present in every build and the check could never fail.
  */
 export const NOUGATE: PluginSpec = {
@@ -210,7 +230,52 @@ export function selectEdition(argv: string[], editions: EditionSpec[]): EditionS
   return edition;
 }
 
-/** Every flag these editions answer to, for `assertKnownFlags`. */
+/** Every flag these editions answer to, for `assertKnownFlags`: the editions' own, and the ones that require a plugin. */
 export function editionFlags(editions: EditionSpec[]): string[] {
-  return editions.filter((e) => e.flag).map((e) => e.flag);
+  const requires = editions.flatMap((e) => (e.ifCheckedOut ?? []).map((optional) => optional.require));
+  return [...editions.filter((e) => e.flag).map((e) => e.flag), ...new Set(requires)];
+}
+
+/** What `resolveEdition` makes of an edition for this build. */
+export interface ResolvedEdition {
+  /** The spec as built: every plugin that is carried in `bundles`, its banner line first, `ifCheckedOut` gone. */
+  edition: EditionSpec;
+  /** One plain line for each plugin left out because it is not checked out — what the build says before it starts. */
+  notes: string[];
+  /** The plugins `argv` asked to be required, each of them carried. */
+  required: PluginSpec[];
+}
+
+/**
+ * The edition as this build makes it, from what is checked out (`checkedOut`) and what `argv` requires.
+ *
+ * Throws, naming the flag and the command that fetches it, when a required plugin is not checked out: a release that
+ * quietly built Community without its gateway would publish a download that refuses `[nougate] in_process = true` to
+ * everyone who switches it on.
+ */
+export function resolveEdition(edition: EditionSpec, argv: string[], checkedOut: (plugin: PluginSpec) => boolean): ResolvedEdition {
+  const bundles = [...edition.bundles];
+  const lines: string[] = [];
+  const notes: string[] = [];
+  const required: PluginSpec[] = [];
+  for (const optional of edition.ifCheckedOut ?? []) {
+    const require = argv.includes(optional.require);
+    if (checkedOut(optional.plugin)) {
+      bundles.push(optional.plugin);
+      lines.push(optional.carried);
+      if (require) required.push(optional.plugin);
+      continue;
+    }
+    if (require) {
+      throw new Error(
+        `${optional.require}: ${optional.plugin.dir} is not checked out, and this build must carry ${optional.plugin.pkg}.\n` +
+          `  git submodule update --init ${optional.plugin.dir}\n` +
+          `  (private — you need read access to it. Without ${optional.require} the ${edition.id} edition is built without it.)`,
+      );
+    }
+    lines.push(optional.missing);
+    notes.push(`! ${optional.missing} (\`git submodule update --init ${optional.plugin.dir}\` carries it)`);
+  }
+  const { ifCheckedOut: _resolved, ...rest } = edition;
+  return { edition: { ...rest, bundles, banner: [...lines, ...edition.banner] }, notes, required };
 }

@@ -148,24 +148,24 @@ allocation, but `bun run build:binary --no-smol` builds without it for a host wi
 
 ## Editions
 
-Two editions are published, and both carry WhatsApp in the binary.
+One edition is published, Community, and it carries WhatsApp and Nougate in the binary.
 
-| Edition | Binary | Tarball | RSS idle | |
+| Build | Binary | Tarball | RSS idle | |
 |---|---|---|---|---|
-| Community *(default)* | 88.6 MB | 40.0 MB | 58.0 MB | The daemon on its own |
-| Router | 88.9 MB | 40.2 MB | 59.7 MB | Community with Nougate in the same process |
+| Without Nougate | 88.6 MB | 40.0 MB | 58.0 MB | The daemon on its own |
+| With Nougate, off | 88.9 MB | 40.2 MB | 59.7 MB | Community since 0.8.29 |
 
 `RSS idle` here is the daemon carrying the code with the feature switched **off**: what it costs to
 have the option.
 
-Binary and tarball are `linux-x64` builds, Community at 0.7.0 and Router at 0.6.0. The RSS figures
-are older than the editions' names: they were taken on the build shapes the editions now have, and
-have not been re-measured since. Sizes drift with the Bun runtime, so take them again before relying
-on them.
+Binary and tarball are `linux-x64` builds, taken at 0.7.0 and 0.6.0, when the second row was the Router edition.
+The RSS figures were taken on the same build shapes and have not been re-measured since. Sizes drift with the Bun
+runtime, so take them again before relying on them. Measured again for Pro in 0.7.20, in Docker on arm64: carrying
+the gateway off costs about 1.3 MB of heap, and switching it on about 3.6 MB more at idle.
 
 **A bundle you do not switch on is not free.** The dynamic import means the code is never
-*evaluated*, but a bundled module graph is registered either way, which is why the Community build
-leaves Nougate out rather than relying on the import alone.
+*evaluated*, but a bundled module graph is registered either way: that is the 1.7 MB between the two rows, the
+price of offering Nougate to everyone who might choose it.
 
 [Builds & downloads →](/en/docs/deployment/binaries/)
 
@@ -177,8 +177,7 @@ leaves Nougate out rather than relying on the import alone.
 | LLM gateway (nougate) | 44.6 MB | +6.0 MB | **38.6 MB** |
 | both | 106.8 MB | +27.3 MB | **79.5 MB** |
 
-This is why the bridge runs inside the daemon in every edition, and why the Router edition hosts
-Nougate the same way. Why the saving is roughly 36 MB either way: a separate process cannot share the
+This is why the bridge runs inside the daemon, and why Nougate is hosted the same way. Why the saving is roughly 36 MB either way: a separate process cannot share the
 Bun runtime. Measured by running one binary twice, **~36 MB of runtime and
 bundle pages are shared between processes of the same executable, and ~14.5 MB of heap is private to
 each**. So a second process pays the 36 MB again; a second listener or a bundled module pays none of

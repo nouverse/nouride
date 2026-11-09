@@ -19,26 +19,18 @@ Script installer sengaja ditulis dalam POSIX `sh` polos dan bisa dibaca dari ata
 <Tabs syncKey="platform">
   <TabItem label="Linux" icon="linux">
 
-    #### Edisi Standar
-
-    Memasang daemon Nouride mandiri (edisi dasar):
-
     ```bash
     @@INSTALL_CMD@@
     ```
 
-    #### Edisi Router (dengan Nougate AI Router)
-
-    Memasang daemon lengkap dengan Nougate AI Router in-process. Setup cukup masuk ke akun AI, tanpa API key, dan gateway-nya menjadi halaman **LLM Gateway** di dashboard:
-
-    ```bash
-    @@ROUTER_INSTALL_CMD@@
-    ```
+    [Nougate](/id/docs/providers/nougate/), LLM gateway yang membuat setup cukup masuk ke akun AI yang sudah kamu
+    bayar alih-alih meminta API key, ikut di setiap instalasi. Ia mati sampai kamu memilih **Use Nougate** di setup,
+    atau menyalakannya dari halaman **LLM Gateway** di dashboard.
 
     #### Membuka ke LAN
 
     Secara default dashboard cuma bind ke loopback (`127.0.0.1:@@PORT@@`). Untuk melayaninya di
-    jaringan lokal, kasih `--host` ke installer mana pun:
+    jaringan lokal, kasih `--host`:
 
     ```bash
     curl -fsSL @@INSTALL_URL@@ | sudo sh -s -- --host 0.0.0.0
@@ -65,7 +57,7 @@ Script installer sengaja ditulis dalam POSIX `sh` polos dan bisa dibaca dari ata
     |---|---|---|
     | `--host ADDR` | `127.0.0.1` | Alamat yang di-bind dashboard |
     | `--port PORT` | `@@PORT@@` | Port dashboard |
-    | `--variant NAME` | (basic) | `router` menambahkan Nougate AI Router. `pro` berlisensi dan cuma bisa dipasang lewat `--tarball` |
+    | `--variant NAME` | (basic) | `pro` berlisensi dan cuma bisa dipasang lewat `--tarball`. `router` masih diterima sampai 0.9: memasang build yang sama dengan Nougate langsung menyala |
     | `--allow-packages` | mati | Izinkan agent memasang paket sistem dari repositori sistem ini sendiri, dengan bertanya ke kamu sebelum tiap perubahan, kecuali agent-nya `trusted`. Tanpanya, agent cuma memasang ke direktori bin miliknya sendiri. Dipertahankan oleh run berikutnya |
     | `--no-packages` | | Mematikan `--allow-packages` lagi |
     | `--dir PATH` | `@@INSTALL_DIR@@` | Direktori instalasi |
@@ -99,18 +91,10 @@ Script installer sengaja ditulis dalam POSIX `sh` polos dan bisa dibaca dari ata
 
   <TabItem label="macOS" icon="apple">
 
-    #### Edisi Standar
-
     Di Mac dengan Apple Silicon (M1 ke atas), sebagai dirimu sendiri, **tanpa `sudo`**:
 
     ```bash
     curl -fsSL @@INSTALL_URL@@ | sh
-    ```
-
-    #### Edisi Router (dengan Nougate AI Router)
-
-    ```bash
-    curl -fsSL @@INSTALL_URL@@ | sh -s -- --variant router
     ```
 
     #### Yang dilakukan installer di Mac
@@ -151,9 +135,7 @@ Script installer sengaja ditulis dalam POSIX `sh` polos dan bisa dibaca dari ata
 
   <TabItem label="Docker" icon="seti:docker">
 
-    Buat file `docker-compose.yml`.
-
-    #### Edisi Standar
+    Buat file `docker-compose.yml`:
 
     ```yaml
     services:
@@ -171,26 +153,16 @@ Script installer sengaja ditulis dalam POSIX `sh` polos dan bisa dibaca dari ata
           - ./nouride:/app/.nouride
     ```
 
-    #### Edisi Router
+    Nougate juga ada di image ini, mati sampai kamu memilihnya di setup atau di halaman **LLM Gateway**, tempat
+    dashboard-nya berada. Buka port `18256` juga (`- "127.0.0.1:18256:18256"`) hanya untuk tool yang memanggil gateway
+    secara langsung.
 
-    Dashboard gateway-nya adalah halaman **LLM Gateway** di `@@PORT@@`. Buka port `18256` juga untuk tool yang memanggil gateway secara langsung, atau console mandirinya (`/frontend/`):
-
-    ```yaml
-    services:
-      nouride:
-        image: @@DOCKER_IMAGE@@-router
-        container_name: nouride
-        restart: unless-stopped
-        stop_grace_period: 45s
-        ports:
-          - "127.0.0.1:@@PORT@@:@@PORT@@"
-          - "127.0.0.1:18256:18256"   # Nougate AI Router & Web Console (/frontend/)
-        env_file:
-          - path: .env
-            required: false
-        volumes:
-          - ./nouride:/app/.nouride
-    ```
+    <Aside type="note" title="Sebelumnya pakai nouride-router?">
+    Image Router sekarang adalah image ini. `@@DOCKER_IMAGE@@-router` tetap mendapat setiap rilis 0.8.x, dengan
+    Nougate tetap menyala, dan dashboard mengingatkanmu untuk mengganti namanya; ia berhenti di 0.9. Ganti `image:`
+    menjadi `@@DOCKER_IMAGE@@` lalu jalankan `docker compose up -d`: volume, Nougate dan akun-akunnya tetap seperti
+    semula.
+    </Aside>
 
     Jalankan container-nya:
 
@@ -222,8 +194,6 @@ Setiap rilis adalah tarball berisi executable (WhatsApp ada di dalamnya), dashbo
 `nouride-pkg` untuk `--allow-packages`, di Linux `run/nouride-run` untuk user milik tiap agent, dan
 `config.example.toml` yang lengkap dengan penjelasan.
 
-### Edisi Standar
-
 | Platform | Arsitektur | Libc | Unduhan |
 |---|---|---|---|
 | Linux | `x86_64` | glibc | [`nouride-linux-x64.tar.gz`](@@TARBALL_BASE@@/nouride-linux-x64.tar.gz) |
@@ -232,15 +202,8 @@ Setiap rilis adalah tarball berisi executable (WhatsApp ada di dalamnya), dashbo
 | Linux (Alpine) | `aarch64` | musl | [`nouride-linux-arm64-musl.tar.gz`](@@TARBALL_BASE@@/nouride-linux-arm64-musl.tar.gz) |
 | macOS | Apple Silicon | tidak berlaku | [`nouride-darwin-arm64.tar.gz`](@@TARBALL_BASE@@/nouride-darwin-arm64.tar.gz) |
 
-### Edisi Router (dengan Nougate AI Router)
-
-| Platform | Arsitektur | Libc | Unduhan |
-|---|---|---|---|
-| Linux | `x86_64` | glibc | [`nouride-router-linux-x64.tar.gz`](@@TARBALL_BASE@@/nouride-router-linux-x64.tar.gz) |
-| Linux | `aarch64` | glibc | [`nouride-router-linux-arm64.tar.gz`](@@TARBALL_BASE@@/nouride-router-linux-arm64.tar.gz) |
-| Linux (Alpine) | `x86_64` | musl | [`nouride-router-linux-x64-musl.tar.gz`](@@TARBALL_BASE@@/nouride-router-linux-x64-musl.tar.gz) |
-| Linux (Alpine) | `aarch64` | musl | [`nouride-router-linux-arm64-musl.tar.gz`](@@TARBALL_BASE@@/nouride-router-linux-arm64-musl.tar.gz) |
-| macOS | Apple Silicon | tidak berlaku | [`nouride-router-darwin-arm64.tar.gz`](@@TARBALL_BASE@@/nouride-router-darwin-arm64.tar.gz) |
+Setiap rilis sampai 0.9 juga membawa tarball yang sama dengan nama lama edisi Router (`nouride-router-*`), jadi
+instalasi Router pindah ke build ini sendiri lewat update-nya.
 
 Kalau kamu sudah punya tarball di mesin, installer bakal memakainya dan melewati unduhan sama sekali:
 

@@ -87,8 +87,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "whether a message gets a turn at all, and whose: every early return together, in the order that is the point of the file",
   },
   "scripts/build/core.ts": {
-    lines: 405,
-    why: "the release build in the order a tarball is made: compile, check what is embedded, stage what goes beside the binary, pack, say what was built; the staging list is the seam when it grows",
+    lines: 432,
+    why: "the release build in the order a tarball is made: the edition this checkout can build, compile, check what is embedded, stage what goes beside the binary, pack, say what was built; staging is the seam",
   },
   "scripts/check-sql.ts": {
     lines: 492,

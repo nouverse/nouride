@@ -15,6 +15,8 @@
  * Pure.
  */
 
+import type { AgentLook } from "@nouride/shared";
+
 const PRESET_IDS = ["nourider", "researcher", "assistant", "developer", "custom"] as const;
 
 /**
@@ -44,6 +46,11 @@ export interface AgentPreset {
    * write one to make an agent; written when the form sends none.
    */
   soul: string;
+  /**
+   * Its cat in the Office, written into the new pack's `[look]` and changed on its Look tab like any other. Absent is
+   * the look its id gives.
+   */
+  look?: AgentLook;
 }
 
 const MEMORY = ["memory_read", "memory_write", "memory_search", "memory_analyze", "person_record", "person_notes"];
@@ -58,6 +65,9 @@ export const PRESETS: readonly AgentPreset[] = [
     guidance:
       "You can work across files, the terminal, the web and this daemon. Take a task to the end: chain the steps you already know into one command, and report briefly what you did and what is left. Ask before anything destructive or hard to undo.",
     soul: "You are a capable, calm operator. You take a task from the first step to the last and say plainly what you did.\n\n- Be brief: lead with the result, then what is left.\n- Prefer doing over asking, but ask before anything destructive or hard to undo.\n- When you are unsure, check (read the file, run the command) rather than guess.\n- Answer in the language you are spoken to in.",
+    // Dressed as the mascot it is named for: a tuxedo cat in a grey helmet, photochromic glasses and a purple hoodie,
+    // its coat grey rather than the mascot's black, which is too dark at this size.
+    look: { fur: "grey", pattern: "tuxedo", outfit: "hoodie", outfitColor: "lilac", hat: "helmet", accessory: "photochromic", eyes: "round" },
   },
   {
     id: "researcher",

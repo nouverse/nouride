@@ -116,14 +116,6 @@ By default the dashboard listens on loopback (`127.0.0.1:18254`). To expose it a
 curl -fsSL https://get.nouride.com/install.sh | sudo sh -s -- --host 0.0.0.0
 ```
 
-For the **Router edition**, with the in-process Nougate LLM Gateway and its web admin console:
-
-```bash
-curl -fsSL https://get.nouride.com/install.sh | sudo sh -s -- --variant router
-# or expose on LAN:
-curl -fsSL https://get.nouride.com/install.sh | sudo sh -s -- --variant router --host 0.0.0.0
-```
-
 To update a native install later, use the dashboard's Update page or `nouride update`.
 
 Once installed, open `http://127.0.0.1:18254/` on that machine (or `http://<your-ip>:18254/` if you installed with
@@ -141,8 +133,6 @@ On a Mac with Apple Silicon (M1 and later), since 0.7.20:
 
 ```bash
 curl -fsSL https://get.nouride.com/install.sh | sh
-# the Router variant:
-curl -fsSL https://get.nouride.com/install.sh | sh -s -- --variant router
 ```
 
 It installs into `~/nouride` and runs as a LaunchAgent while you are logged in. The first-run password is in
@@ -198,45 +188,18 @@ An install older than 0.7.28 updates in two steps:
 </details>
 
 <details>
-<summary><b>The Router edition</b>: the Nougate AI Router in the same process</summary>
+<summary><b>Nougate</b>: sign in with an AI account instead of an API key</summary>
 
 <br>
 
-`nouride-router` is the same build **plus the Nougate AI Router in the same process**: model calls answered from inside
-the daemon, with no second container and no network hop. Useful on a Pi, an LXC container, or anywhere that has to
-answer without a gateway in front of it.
+Every install carries the Nougate LLM gateway in the same process: model calls answered from inside the daemon, with
+no second container and no network hop. It stays off until you choose **Use Nougate** in setup, or turn it on from the
+dashboard's **LLM Gateway** page; then setup signs in to a Claude, ChatGPT, Copilot, Gemini or Kiro account you
+already have instead of asking for an API key. Off, it costs about 1.3 MB of memory.
 
-```bash
-mkdir -p ~/nouride && cd ~/nouride
-docker run -d \
-  --name nouride \
-  --restart unless-stopped \
-  -p 127.0.0.1:18254:18254 \
-  -p 127.0.0.1:18256:18256 \
-  -v "$PWD/nouride:/app/.nouride" \
-  ghcr.io/nouverse/nouride-router
-```
-
-Docker Compose:
-
-```yaml
-services:
-  nouride:
-    image: ghcr.io/nouverse/nouride-router
-    container_name: nouride
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:18254:18254"
-      - "127.0.0.1:18256:18256"
-    volumes:
-      - ./nouride:/app/.nouride
-```
-
-In the Router edition the in-process Nougate gateway is **enabled by default** on port `18256` and keeps its state
-(accounts, providers, `nougate.db`) in a folder of its own inside the same volume: `./nouride/nougate/data/`. Nothing
-else to mount. Its web admin console is at `/frontend/` on port 18256.
-
-Point a provider at it in `.nouride/config.toml`:
+On, it listens on port `18256` and keeps its state (accounts, providers, `nougate.db`) in a folder of its own inside
+the same volume: `./nouride/nougate/data/`. Publish `18256` only for other tools that call it with a gateway key. To
+point a provider at it by hand, in `.nouride/config.toml`:
 
 ```toml
 [providers.local]
@@ -244,21 +207,9 @@ kind = "openai"
 base_url = "http://127.0.0.1:18256/openai/v1"   # or /anthropic/v1
 ```
 
-To configure it or switch it off, use `[nougate]` in `.nouride/config.toml` (or set `NOUGATE_IN_PROCESS=false` in the
-daemon's environment):
-
-```toml
-[nougate]
-in_process = false
-port = 18256
-```
-
-To see which variant an image is without pulling it:
-
-```bash
-docker image inspect ghcr.io/nouverse/nouride-router \
-  --format '{{index .Config.Labels "tech.nouverse.nouride.edition"}}'
-```
+**Coming from the Router edition?** Router is part of Community since 0.8.29. A Router install updates onto
+Community by itself and keeps Nougate on. Until 0.9 the `nouride-router` image still receives each release; change
+`image:` to `ghcr.io/nouverse/nouride` whenever you like before then.
 
 </details>
 
@@ -278,20 +229,10 @@ latest directly, or browse every version on the [Releases](https://github.com/no
 | Linux (Alpine) | `aarch64` | musl | [`nouride-linux-arm64-musl.tar.gz`](https://get.nouride.com/latest/nouride-linux-arm64-musl.tar.gz) |
 | macOS | Apple Silicon | not applicable | [`nouride-darwin-arm64.tar.gz`](https://get.nouride.com/latest/nouride-darwin-arm64.tar.gz) |
 
-The Router variant ships the same targets, named `nouride-router-*`:
-
-| Platform | Architecture | C Library | Download |
-|---|---|---|---|
-| Linux | `x86_64` | glibc | [`nouride-router-linux-x64.tar.gz`](https://get.nouride.com/latest/nouride-router-linux-x64.tar.gz) |
-| Linux | `aarch64` | glibc | [`nouride-router-linux-arm64.tar.gz`](https://get.nouride.com/latest/nouride-router-linux-arm64.tar.gz) |
-| Linux (Alpine) | `x86_64` | musl | [`nouride-router-linux-x64-musl.tar.gz`](https://get.nouride.com/latest/nouride-router-linux-x64-musl.tar.gz) |
-| Linux (Alpine) | `aarch64` | musl | [`nouride-router-linux-arm64-musl.tar.gz`](https://get.nouride.com/latest/nouride-router-linux-arm64-musl.tar.gz) |
-| macOS | Apple Silicon | not applicable | [`nouride-router-darwin-arm64.tar.gz`](https://get.nouride.com/latest/nouride-router-darwin-arm64.tar.gz) |
-
 > **Alpine / musl:** the `-musl` build needs `libstdc++` (`apk add libstdc++`).
 
-Every release carries its checksum files, signed: `CHECKSUMS` for the standard build and `CHECKSUMS-router` for the
-Router variant, each with its `.sig`. The installer checks both before it installs anything.
+Every release carries its checksum file, signed: `CHECKSUMS`, with its `.sig`. The installer checks both before it
+installs anything.
 
 </details>
 

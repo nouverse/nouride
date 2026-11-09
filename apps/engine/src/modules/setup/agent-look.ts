@@ -12,6 +12,16 @@ import type { SetupDeps } from "./service.ts";
 
 const log = createLogger("setup");
 
+/**
+ * A new pack's `[look]`, as the lines of its config.toml: each part its preset gives, under the key the Look tab writes
+ * (`outfit_color`, not `outfitColor`), and nothing at all for a preset that gives none.
+ */
+export function lookLines(look: AgentLook | undefined): string[] {
+  const parts = Object.entries(look ?? {}).filter((entry): entry is [keyof AgentLook, string] => entry[0] in LOOK_PARTS && typeof entry[1] === "string");
+  if (parts.length === 0) return [];
+  return ["# Its cat in the Office: change it on its Look tab.", "[look]", ...parts.map(([part, value]) => `${LOOK_PARTS[part].key} = ${JSON.stringify(value)}`), ""];
+}
+
 /** Each part as the Look tab sends it: a word of the part, or empty for the hash's. Parts left out stay as they are. */
 export type LookChange = Partial<Record<keyof AgentLook, string>>;
 

@@ -5,7 +5,7 @@ description: "Menjalankan Nouride di HP Android bekas dengan Termux dan Debian, 
 
 import { Steps, Aside, LinkCard } from '@astrojs/starlight/components';
 
-Nouride gak punya build khusus Android. Rilisnya cuma untuk Linux (glibc dan musl) dan macOS, sementara Android punya C library sendiri, Bionic. Jadi HP-nya menjalankan Debian di dalam [Termux](https://termux.dev/) lewat [proot-distro](https://github.com/termux/proot-distro), dan build `linux-arm64` edisi Router jalan di dalam Debian itu. HP-nya gak perlu di-root.
+Nouride gak punya build khusus Android. Rilisnya cuma untuk Linux (glibc dan musl) dan macOS, sementara Android punya C library sendiri, Bionic. Jadi HP-nya menjalankan Debian di dalam [Termux](https://termux.dev/) lewat [proot-distro](https://github.com/termux/proot-distro), dan build `linux-arm64` Nouride jalan di dalam Debian itu. HP-nya gak perlu di-root.
 
 <Aside type="tip" title="Cara gampangnya: Nouride Home">
 [Nouride Home](/id/docs/deployment/nouride-home/) adalah aplikasi Android yang mengerjakan semua ini untukmu, tanpa ada yang perlu diketik di terminal. Halaman ini cara manualnya, lewat Termux.
@@ -31,7 +31,7 @@ Daemon, dashboard, aplikasi chat (yang diuji Telegram), agent dan tool-nya jalan
 - **RAM.** HP pengujian punya RAM 6 GB. Nouride sendiri cuma butuh sedikit ([Konsumsi Sumber Daya](/id/docs/architecture/performance/)); dengan RAM lebih kecil, Android lebih cepat menutup aplikasi di background, termasuk Termux.
 - **Charger.** HP-nya jalan terus sebagai server, jadi biarkan tetap tercolok.
 - **Wi-Fi yang sama** dengan komputer yang kamu pakai untuk membuka dashboard, kalau mau membukanya dari selain HP itu.
-- **Akun model atau API key.** Edisi Router yang dipasang di bawah bisa masuk pakai akun yang sudah kamu punya (Claude Pro atau Max, ChatGPT, GitHub Copilot, Google Gemini atau Kiro) lewat gateway Nougate bawaannya; endpoint dan API key provider juga bisa. Wizard [Menyalakan Pertama Kali](/id/docs/start/first-run/) menanyakannya di akhir.
+- **Akun model atau API key.** Nouride bisa masuk pakai akun yang sudah kamu punya (Claude Pro atau Max, ChatGPT, GitHub Copilot, Google Gemini atau Kiro) lewat gateway Nougate bawaannya; endpoint dan API key provider juga bisa. Wizard [Menyalakan Pertama Kali](/id/docs/start/first-run/) menanyakannya di akhir.
 - **Opsional: komputer dengan `adb`** ([platform tools Android](https://developer.android.com/tools/releases/platform-tools)), untuk satu setelan yang di sebagian HP gak ada tombolnya. Lihat [phantom process killer](#android-12-ke-atas-phantom-process-killer).
 
 ## Langkah instalasi
@@ -84,10 +84,10 @@ Daemon, dashboard, aplikasi chat (yang diuji Telegram), agent dan tool-nya jalan
 
    ```bash
    apt update && apt install -y curl ca-certificates procps
-   curl -fsSL @@INSTALL_URL@@ | sh -s -- --host 0.0.0.0 --variant router
+   curl -fsSL @@INSTALL_URL@@ | sh -s -- --host 0.0.0.0
    ```
 
-   `--variant router` memasang edisi Router: Nouride dengan gateway LLM [Nougate](/id/docs/providers/nougate/) di dalam daemon yang sama, di port `18256`. Jadi wizard setup bisa masuk pakai akun model yang sudah kamu punya, gak harus API key, dan HP-nya jadi server Nouride sekaligus gateway model untuk perangkat kamu yang lain.
+   Nouride membawa gateway LLM [Nougate](/id/docs/providers/nougate/) di dalam daemon yang sama, di port `18256`. Pilih **Use Nougate** di wizard setup, jadi ia masuk pakai akun model yang sudah kamu punya, gak harus API key, dan HP-nya jadi server Nouride sekaligus gateway model untuk perangkat kamu yang lain.
 
    `--host 0.0.0.0` membuat perangkat lain di Wi-Fi kamu bisa membuka dashboard, dan memakai gateway-nya dengan key gateway. Pakai di jaringan yang kamu percaya, misalnya Wi-Fi rumah. Hilangkan kalau dua-duanya cukup dipakai dari HP itu saja.
 

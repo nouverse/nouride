@@ -4,7 +4,7 @@
  * only copies it.
  */
 
-import { ACCESSORIES, BODIES, BODY_AT, COLORS, COMMON, EYES, EYES_AT, FURS, HATS, HEAD, HEAD_AT, OUTFITS, RAISED_ARM, TAIL } from "./art";
+import { ACCESSORIES, BODIES, BODY_AT, COLORS, COMMON, EYES, EYES_AT, FURS, HATS, HEAD, HEAD_AT, OUTFITS, RAISED_ARM, TAIL, TUXEDO } from "./art";
 import type { Look } from "./look";
 
 export type Pose = "stand" | "step" | "sit" | "wave" | "sleep";
@@ -16,8 +16,10 @@ export const FRAME = 32;
 export function compose(look: Look, pose: Pose, blink = false): Grid {
   const grid: Grid = Array.from({ length: FRAME }, () => Array<string | null>(FRAME).fill(null));
   const palette: Record<string, string> = { ...COMMON, ...FURS[look.fur], ...COLORS[look.outfitColor] };
-  // A plain coat's stripes are its fur.
-  if (look.pattern === "plain") palette.t = palette.F!;
+  // Only a tabby has stripes; a plain coat's are its fur, and so are a tuxedo's, whose muzzle and belly are white.
+  if (look.pattern !== "tabby") palette.t = palette.F!;
+  const tuxedo = look.pattern === "tuxedo";
+  if (tuxedo) palette.m = COMMON.w!;
   const outfit = look.outfit === "none" ? null : OUTFITS[look.outfit];
   const put = (x: number, y: number, symbol: string) => {
     if (x < 0 || y < 0 || x >= FRAME || y >= FRAME || symbol === ".") return;
@@ -28,7 +30,7 @@ export function compose(look: Look, pose: Pose, blink = false): Grid {
   };
 
   if (pose !== "sleep") {
-    if (pose !== "sit") lay(TAIL.at, TAIL.rows);
+    if (pose !== "sit") lay(TAIL.at, TAIL.rows, (symbol, _x, y) => (tuxedo && symbol === "F" && y < TUXEDO.tailTip ? "m" : symbol));
     // What an outfit covers becomes its colour; the rest stays fur, shaded where it meets the outline.
     const body = BODIES[pose];
     const covered = (symbol: string, row: number): string => {
@@ -37,17 +39,29 @@ export function compose(look: Look, pose: Pose, blink = false): Grid {
       if (symbol === "m") return !outfit ? "m" : outfit.belly === "outfit" ? "O" : outfit.belly === "shirt" ? "w" : "m";
       return symbol;
     };
-    lay(BODY_AT, body, (symbol, x, y) => shaded(covered(symbol, y), body[y]!, x));
+    // A tuxedo's paws are white: its hands, and its feet in the last rows of a body that has legs (one behind a desk
+    // has none, and the bottom of its torso stays its fur).
+    const paws = pose === "sit" ? body.length : body.length - TUXEDO.paws;
+    lay(BODY_AT, body, (symbol, x, y) => {
+      const cell = shaded(covered(symbol, y), body[y]!, x);
+      if (!tuxedo) return cell;
+      return symbol === "h" || (y >= paws && (cell === "F" || cell === "f" || cell === "h")) ? "m" : cell;
+    });
     if (outfit) {
       for (const { x, y, c } of outfit.details) {
         const cell = body[y]?.[x];
         if (cell === "B" || cell === "m" || cell === "A") put(BODY_AT.x + x, BODY_AT.y + y, c);
       }
     }
-    if (pose === "wave") lay(RAISED_ARM.at, RAISED_ARM.rows, (symbol) => (symbol === "A" ? (outfit && outfit.sleeves > 2 ? "O" : "F") : symbol));
+    if (pose === "wave") lay(RAISED_ARM.at, RAISED_ARM.rows, (symbol) => (symbol === "A" ? (outfit && outfit.sleeves > 2 ? "O" : "F") : tuxedo && symbol === "h" ? "m" : symbol));
   }
 
-  lay(HEAD_AT, HEAD, (symbol) => (symbol === "E" ? "F" : symbol));
+  // A tuxedo's bib and blaze are white over the fur and the muzzle; the outline, nose, mouth and eyes stay.
+  lay(HEAD_AT, HEAD, (symbol, x, y) => {
+    if (symbol === "E") return "F";
+    if (tuxedo && TUXEDO.head[y]![x] === "x" && !"onk".includes(symbol)) return "m";
+    return symbol;
+  });
   const eyes = EYES[pose === "sleep" || blink ? "closed" : look.eyes];
   lay({ x: HEAD_AT.x + EYES_AT[0].x, y: HEAD_AT.y + EYES_AT[0].y }, eyes);
   lay({ x: HEAD_AT.x + EYES_AT[1].x, y: HEAD_AT.y + EYES_AT[1].y }, eyes.map((row) => [...row].reverse().join("")));

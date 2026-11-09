@@ -27,7 +27,7 @@ turn it on.**
 curl -fsSL @@INSTALL_URL@@ | sudo sh -s -- --allow-packages
 ```
 
-For the Router edition, add `--variant router` to the same command. If the install is not in
+If the install is not in
 `@@INSTALL_DIR@@`, add `--dir` with its path, or the installer makes a second install there. On an
 existing install this is safe to run: agents, memory and settings stay. A later run of the installer
 without the flag keeps it on, so updating never turns it off; `--no-packages` does.

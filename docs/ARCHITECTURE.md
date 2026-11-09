@@ -18,7 +18,7 @@ nouride/
 │   └── site/                   # @nouride/site      — the public website: landing + the manual
 ├── internals/                  # two private git submodules — not needed for the free edition (§2)
 │   ├── pro/                    # nouride-pro: appliance, multi-user, Nouverse sign-in, the private build
-│   └── nougate/                # the LLM gateway, bundled into the router editions
+│   └── nougate/                # the LLM gateway, bundled into every official build
 ├── packages/
 │   ├── shared/                 # @nouride/shared    — types, envelope, logger, errors, ids
 │   ├── runtime/                # @nouride/runtime   — the ONLY place `Bun.*`/`node:*` is used (TD-001)
@@ -190,15 +190,17 @@ because it is a nouride component — nouride *consumes* it over HTTP like any o
 tests are excluded from `bun run test` for that reason: it has its own root, its own tsconfig and its
 own `bun run test`, and running them from here fails on paths that are correct in their own repo.
 
-**The bridge is always compiled in; the gateway is in Router and Pro.** Every edition carries
+**The bridge is always compiled in; so is the gateway, wherever its source is.** Every edition carries
 the WhatsApp bridge in-process (§6). The LLM gateway is otherwise a separate service reached over
-HTTP, and Router and Pro compile it into this binary and run it inside, on `18256` — Router by default,
-Pro when `[nougate] in_process = true` says so:
+HTTP; every official build compiles it into this binary and runs it inside, on `18256`, once
+`[nougate] in_process = true` says so (setup's **Use Nougate** and the LLM Gateway page write it, and start it
+without a restart). The Router edition, the free build with it on by default, was folded into the free build in
+0.8.29:
 
 | build | what it carries |
 |---|---|
-| `build:binary` | the bridge, in-process |
-| `build:binary --router` (and the private `build:pro --pro`) | + the gateway, on `18256` |
+| `build:binary` on a public clone | the bridge, in-process |
+| `build:binary` with `internals/nougate` (every release), and the private `build:pro --pro` | + the gateway, on `18256`, off until asked |
 
 The reason is measured: a second *process* pays for a second Bun runtime — ~36 MB of shared pages
 plus ~14.5 MB of private heap — while a second *listener* or a second module pays neither.
@@ -484,8 +486,8 @@ Four properties, and all four are load-bearing:
 3. It imports nothing from `packages/*` or `apps/*`. The engine reaches a plugin by a dynamic import
    of its package name, against a declaration kept on the engine's side
    (`modules/users/nouride-multi-user.d.ts` and its siblings), and a test fails when the two drift;
-   it reaches the gateway over HTTP, or in-process in the router editions.
-4. The daemon runs correctly without it. The free edition is built and tested without either, and a
+   it reaches the gateway over HTTP, or in-process where the build carries it.
+4. The daemon runs correctly without it. A public clone builds and tests the free edition without either, and a
    build that names an absent plugin's feature — an OAuth issuer, say — is refused at boot.
 
 `check-arch.ts` scans `apps/` and `packages/` only, because the rules above describe imports between
@@ -857,7 +859,7 @@ code with a phone, or attaching a debugger.
 │         ├─ Discord gateway  (outbound WS)               │
 │         ├─ Telegram gateway (long poll)                 │
 │         ├─ WhatsApp bridge  (in-process)                │
-│         ├─ LLM gateway      :18256 (router image only)  │
+│         ├─ LLM gateway      :18256 (when switched on)   │
 │         └─ cron ticker, nightly memory pass             │
 │  volume: .nouride/ (config, data, agents, workspace,    │
 │          memory, the agents' bin/opt/home)              │
@@ -1032,7 +1034,7 @@ Two artefacts from one build script, `scripts/build-binary.ts` (the editions are
      Cached until a manifest changes.
   2. **dashboard-builder** — copy dashboard source, `vite build` → `dist/`.
   3. **engine-builder** — the same build script with `--bundle-only`: one `nouride.bundle.js` for the
-     edition named by `EDITION` (`basic`, `router`, `pro`).
+     edition named by `EDITION` (`basic`, `pro`).
   4. **runtime** — `oven/bun:${BUN_VERSION}-alpine@${BUN_DIGEST}` (`.bun-version`, and the image pinned by digest
      beside the tag; each stage refuses a Bun that is not that version) with `bash`, `openssh-client`, `util-linux`, `ripgrep`,
      `su-exec`, `socat` and any `EXTRA_PACKAGES`; the bundle, the built dashboard, the built-in skills, and

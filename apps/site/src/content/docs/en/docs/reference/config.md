@@ -501,12 +501,15 @@ setting.
 ## `[nougate]`
 
 ```toml
-in_process = false                  # true by default in the Router edition
+in_process = false                  # the dashboard's LLM Gateway page switches it
 ```
 
-The Router and Pro editions carry the gateway; on Router `in_process` defaults to `true`, on Pro to
-`false`. On any other edition, turning it on stops the daemon from starting, with a message
-saying the build does not carry the gateway. `$NOUGATE_IN_PROCESS` overrides it.
+Every official build carries the gateway, off by default. Choosing **Use Nougate** in setup or **Turn on** on the
+LLM Gateway page writes `true` and starts it without a restart; **Turn off** writes `false` and restarts Nouride.
+A Router install's first start on Community writes `true` when the file has no `in_process` and the gateway has
+data, so it stays on. On a build without the gateway (compiled from the public source alone), turning it on stops
+the daemon from starting, with a message saying the build does not carry the gateway. `$NOUGATE_IN_PROCESS`
+overrides it.
 [Nougate →](/en/docs/providers/nougate/)
 
 ---
