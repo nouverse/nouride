@@ -60,6 +60,10 @@ describe("what a person may see", () => {
     expect(shown({ admin: true, onBox: true, hostsGateway: true })).toEqual(expect.arrayContaining(["My Box", "LLM Gateway", "Models", "Secrets"]));
   });
 
+  test("the LLM Gateway comes first among models and keys, above Models", () => {
+    expect(SETTINGS[0]!.items.map((one) => one.label)).toEqual(["LLM Gateway", "Models", "Secrets"]);
+  });
+
   test("every page of Settings says what it is for, in a line", () => {
     for (const one of settings) expect({ page: one.label, about: (one.about ?? "").length > 20 }).toEqual({ page: one.label, about: true });
   });
