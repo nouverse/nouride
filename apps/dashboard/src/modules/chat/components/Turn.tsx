@@ -73,9 +73,10 @@ function EditedMark() {
 /**
  * The copy button under a reply: smaller and quieter than the shared one's default. Shown on hover from a tablet's width
  * up, and always on a phone, which has no hover to show it — it was there and could not be seen (0.8.12). So is a
- * conversation's delete in the history drawer.
+ * conversation's delete in the history drawer. Drawn back by its own padding, so its icon starts where the answer's
+ * words do, in the column beside the agent's cat, rather than a step to the right of them.
  */
-const COPY_CLASS = "btn btn-ghost btn-xs h-6 max-sm:h-8 px-2 rounded-lg gap-1 text-[11px] text-base-content/65 hover:text-base-content";
+const COPY_CLASS = "btn btn-ghost btn-xs h-6 max-sm:h-8 px-2 -ml-2 rounded-lg gap-1 text-[11px] text-base-content/65 hover:text-base-content";
 
 /**
  * A turn the daemon started, not a person.

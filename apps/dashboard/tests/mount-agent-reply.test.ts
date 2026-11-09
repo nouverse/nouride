@@ -28,6 +28,7 @@ describe("an agent's reply", () => {
       seen.name = column?.firstElementChild?.textContent;
       seen.nameClass = classes(column?.firstElementChild?.firstElementChild);
       seen.column = [...(column?.children ?? [])].map((part) => part.textContent ?? "");
+      seen.copy = classes(column?.lastElementChild?.querySelector("button"));
     });
     expect(seen.face).toBe(true);
     expect(seen.faceHidden).toBe("true");
@@ -42,6 +43,8 @@ describe("an agent's reply", () => {
     expect(column.findIndex((part) => part.includes("step"))).toBeGreaterThan(0);
     expect(column.findIndex((part) => part.includes("40% used"))).toBeGreaterThan(column.findIndex((part) => part.includes("step")));
     expect(column.at(-1)).toContain("Copy");
+    // Its icon where the answer's words start: drawn back by the padding it has.
+    expect(seen.copy).toEqual(expect.arrayContaining(["px-2", "-ml-2"]));
   });
 
   test("in a group, a person's row and an agent's share the face's size and the gap", async () => {
