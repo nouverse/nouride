@@ -329,7 +329,10 @@ waited for: they run until they are stopped.
 ## Subagents
 
 `delegate` starts a subagent: no chat history, no slash commands, and half the iteration budget. It
-shares the parent's tools and permissions, and up to four run at once. In a mission that works in a worktree,
+shares the parent's tools and permissions, and up to four run at once. The agent waits for them up to a
+minute; one still working then carries on in the background as a job of the agent's, and its result wakes
+the agent when it comes, at once with `background: true`
+([Helpers in the background](/en/docs/architecture/agents/#helpers-in-the-background)). In a mission that works in a worktree,
 `isolated` gives each helper a worktree of the mission's on a branch of its own, `mission/<id>-helper-<n>`, for the
 mission to merge; anywhere else it is refused.
 [Missions in a repository →](/en/docs/manual/missions/#in-a-repository)

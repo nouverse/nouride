@@ -435,6 +435,13 @@ dari sejam (riset lintas file atau host, build panjang, gladi migrasi) supaya ia
 cuma untuk dua bagian yang saling lepas; kerja yang mungkin lewat dari sejam adalah urusan misi. Bukan
 untuk jawaban cepat, dan bukan untuk hal yang sedang kamu tunggu sekarang.
 
+Helper yang ditunggu agent, tanpa `background`, untuk pertanyaan cepat: agent menunggu jawabannya paling
+lama semenit. Helper yang masih bekerja setelah itu lanjut di latar belakang, sama persis seperti kalau
+dimulai di sana: agent memberitahumu apa yang masih dikerjakan, dan apa yang ditemukan helper yang sudah
+menjawab, dan kamu tetap bisa mengajaknya ngobrol. Hasilnya kembali sebagai pesan begitu siap. Kalau helper
+agent di latar belakang sudah sebanyak yang dibolehkan, helper itu tetap di depan, agent menunggunya sampai
+selesai, dan jawabannya menyebut kenapa lama.
+
 - **Yang diserahkan adalah sebuah brief**, dalam bahasa Inggris apa pun bahasamu: tujuannya, konteks
   yang gak mungkin diketahui helper (path, host, apa yang sudah dicoba), batasannya, dan apa yang harus
   dikembalikan. Brief tanpa konteks ditolak, beserta apa yang perlu ditambahkan.
@@ -443,7 +450,8 @@ untuk jawaban cepat, dan bukan untuk hal yang sedang kamu tunggu sekarang.
   apa pun ke chat, dan gak memulai helper sendiri; ia menyebut apa yang layak disimpan, dan agent yang
   memutuskan.
 - **Berapa sekaligus** diatur `[delegate] max_background`: 2 secara default, 0 mematikannya, bisa diatur
-  per agent di tab **Settings**-nya, berlaku mulai helper berikutnya.
+  per agent di tab **Settings**-nya, berlaku mulai helper berikutnya. Helper yang pindah ke sana setelah
+  semenitnya ikut dihitung. Kalau 0, helper yang ditunggu agent ditunggu sampai selesai.
 - **Tiap helper adalah sebuah job**: muncul di `nouride jobs` dan di Work → Helpers di dashboard
   dengan tujuannya, dan di strip chat selama berjalan. `/stop` di chat menghentikan helper agent di
   chat itu; `nouride jobs kill <id>` menghentikan satu.

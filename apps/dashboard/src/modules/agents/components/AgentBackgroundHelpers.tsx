@@ -59,7 +59,7 @@ export function AgentBackgroundHelpers({ agent, editable }: { agent: AgentSummar
   return (
     <Card
       title="Helpers in the background"
-      description="How many helpers this agent may have working at once while it stays free to talk, each a job of its own, whose result it reports as that helper finishes. An agent it asked that is still working after a minute counts here too: its answer comes back the same way."
+      description="How many helpers this agent may have working at once while it stays free to talk, each a job of its own, whose result it reports as that helper finishes. A helper it was waiting for, or an agent it asked, that is still working after a minute counts here too: its result comes back the same way."
     >
       <label className="flex items-center gap-3 cursor-pointer">
         <input

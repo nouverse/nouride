@@ -809,7 +809,8 @@ cut at 100 characters; `nouride jobs log <id>` prints it whole, with the same he
 
 **A helper is a job too** (0.7.15): `delegate` with `background: true` hands a task to a helper that works
 on its own while the agent stays free to talk, and its handoff wakes the agent when it finishes — each
-helper as it finishes. It is listed as `helper: <goal>`, marked `helper at work` while this daemon runs
+helper as it finishes. A helper the agent waits for, without `background`, is waited for up to a minute; one still
+working then becomes a job the same way. It is listed as `helper: <goal>`, marked `helper at work` while this daemon runs
 it; its log is its steps as it takes them and, at the end, what it reported. `nouride jobs kill <id>`
 stops one, and `/stop` in its chat stops the agent's helpers there. How many one agent may run at once is
 `[delegate] max_background` (2 by default, 0 off), its own on its Settings page in the dashboard; one over
@@ -1230,8 +1231,8 @@ its tool calls; the answer. Everything is joined by the turn's id, which
 it cost. A turn that answered a person's edit is marked `edited ·` before its question in the list, and
 `show` says which message it was.
 
-Work a turn handed to the background — a helper started with `delegate` and `background: true`, an agent asked with
-`ask_agent` once its turn moved there — is a turn of its own (since 0.7.26): `show` of the turn that started it lists
+Work a turn handed to the background — a helper started with `delegate` and `background: true` or moved there after
+the minute it was waited for, an agent asked with `ask_agent` once its turn moved there — is a turn of its own (since 0.7.26): `show` of the turn that started it lists
 each under `handed off`; `show` of one prints its steps, each nudge it read, and the report it handed back as its
 answer, with the job it ran as and the turn that asked — whose `model calls` and `audit` hold its calls. In the list it
 says `↳ delegate for <turn>` where a turn says its calls and cost. Its job's log names it on its first line.
