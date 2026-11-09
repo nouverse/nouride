@@ -13,7 +13,7 @@
 #
 #   MAP_DIR    where `--target source-map` exported to: exactly one map, named for the edition
 #   IMAGE      the image, by the reference it was pushed (or loaded) under
-#   EDITION    the edition it was built as: basic, router or pro
+#   EDITION    the edition it was built as: basic or pro
 #   VERSION    the version being built, without a `v`
 #   PLATFORMS  the platforms to read, space-separated (default: linux/amd64 linux/arm64)
 #   PULL       `no` for an image that is only local (`ci-image.yml` loads it rather than pushing it)

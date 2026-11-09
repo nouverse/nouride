@@ -866,7 +866,6 @@
   "apps/engine/tests/contracts/git-hooks.test.ts": { "version": 1 },
   "apps/engine/tests/contracts/helper-build-ownership.test.ts": { "version": 1, "date": 1 },
   "apps/engine/tests/contracts/home-ops-mail-skills.test.ts": { "version": 2, "date": 1 },
-  "apps/engine/tests/contracts/image-kit.test.ts": { "version": 1 },
   "apps/engine/tests/contracts/image-tsconfig.test.ts": { "version": 2 },
   "apps/engine/tests/contracts/install-checksum-names.test.ts": { "version": 4 },
   "apps/engine/tests/contracts/install-download-failed.test.ts": { "version": 1 },

@@ -1,9 +1,12 @@
 #!/usr/bin/env bun
 /**
- * A public edition's container image, as a kit another repository can build without this one's source.
+ * The public edition's container image, as a kit another repository can build without this one's source.
  *
- *   bun run build:binary --bundle-only [--router]               dist/nouride.bundle.js and its private map, first
- *   bun run scripts/release/image-kit.ts --edition basic|router  dist/nouride-image-kit[-router].tar.gz
+ *   bun run build:binary --bundle-only --require-gateway     dist/nouride.bundle.js and its private map, first
+ *   bun run scripts/release/image-kit.ts --edition basic     dist/nouride-image-kit.tar.gz
+ *
+ * One kit. Router had its own until it became part of the free build; its image is the free one's now, with a line
+ * added after it is built (`scripts/release/router-image.Dockerfile`), and needs no kit.
  *
  * The public images were built here, on the one build runner, under emulation for arm64 — the longest part of a
  * release (2026-10-19: 19 of the 37 minutes of work). They are built now in `nouverse/nouride`, on GitHub's
@@ -19,17 +22,18 @@
  * the build stages. A second Dockerfile written by hand would drift from this one — a package added to the image here
  * and not there — and nothing would say so; a `COPY --from=` this does not know how to map is refused instead.
  *
- * Self-contained on purpose: `node:` only, so a test runs it on fixtures.
+ * Self-contained on purpose: `node:` and the build's plugin list only, so a test runs it on fixtures.
  */
 
 import { createHash } from "node:crypto";
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
+import { NOUGATE } from "../build/edition.ts";
 
 const ROOT = new URL("../../", import.meta.url).pathname;
 
-export type PublicEdition = "basic" | "router";
+export type PublicEdition = "basic";
 
 /** What each build-stage `COPY` of the runtime becomes in the kit: its file in the kit's root. */
 const COPY_MAP: [from: RegExp, to: string][] = [
@@ -87,11 +91,23 @@ const sha256 = (path: string) => createHash("sha256").update(readFileSync(path))
 /** The kit's file name, as the checksum file and the public workflow know it. */
 export const kitName = (edition: PublicEdition) => (edition === "basic" ? "nouride-image-kit.tar.gz" : `nouride-image-kit-${edition}.tar.gz`);
 
+/**
+ * Where the kit's `frontend/` comes from: the gateway's built frontend when the bundle carries the gateway — required
+ * then, or the image would serve a gateway whose page is a 404 — and an empty directory when it does not, since the
+ * image's `COPY frontend` is there either way. Read off the bundle by the gateway's own marker, as the build's
+ * `assertEmbedded` reads it, so the kit cannot disagree with the bytes it ships.
+ */
+export function kitFrontend(bundle: string, frontendBuilt: boolean): "copy" | "empty" {
+  if (!bundle.includes(NOUGATE.marker)) return "empty";
+  if (!frontendBuilt) throw new Error("the bundle carries the LLM gateway, and its frontend is not built: build internals/nougate/apps/frontend first");
+  return "copy";
+}
+
 function main(argv: string[]): void {
   const at = argv.indexOf("--edition");
   const edition = argv[at + 1] as PublicEdition;
-  if (at < 0 || (edition !== "basic" && edition !== "router")) {
-    console.error("usage: image-kit.ts --edition basic|router   (after `build:binary --bundle-only [--router]`)");
+  if (at < 0 || edition !== "basic") {
+    console.error("usage: image-kit.ts --edition basic   (after `build:binary --bundle-only`)");
     process.exit(2);
   }
   const dist = join(ROOT, "dist");
@@ -116,11 +132,9 @@ function main(argv: string[]): void {
   cpSync(join(ROOT, "scripts/docker-entrypoint.sh"), join(kit, "docker-entrypoint.sh"));
   cpSync(join(ROOT, "scripts/docker-nouride.sh"), join(kit, "docker-nouride.sh"));
   cpSync(join(ROOT, "packages/system-packages/root"), join(kit, "nouride-pkg"), { recursive: true });
-  if (edition === "router") {
-    const frontend = join(ROOT, "internals/nougate/apps/frontend/dist");
-    if (!existsSync(frontend)) throw new Error("the Router image carries the gateway's frontend: build internals/nougate/apps/frontend first");
-    cpSync(frontend, join(kit, "frontend"), { recursive: true });
-  }
+  const frontend = join(ROOT, "internals/nougate/apps/frontend/dist");
+  if (kitFrontend(readFileSync(bundle, "latin1"), existsSync(frontend)) === "copy") cpSync(frontend, join(kit, "frontend"), { recursive: true });
+  else mkdirSync(join(kit, "frontend"));
   writeFileSync(join(kit, "Dockerfile"), kitDockerfile(readFileSync(join(ROOT, "Dockerfile"), "utf8"), edition));
   // What the public workflow holds the built image to: the bundle in it must be this one, byte for byte.
   writeFileSync(join(kit, "kit.json"), `${JSON.stringify({ edition, version: stamp.version, bundleSha256: bundleSha }, null, 2)}\n`);

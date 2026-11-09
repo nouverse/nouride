@@ -4,8 +4,8 @@
  * Off unless asked for. `install.sh --allow-packages` sets up `nouride-pkg`, the root service agents
  * install through; an ordinary install does not have it, and nothing nags about that. It comes up
  * only when an agent actually needs a system package: then this names the command to pass on, for
- * the edition that is installed — the free build's installer on a Router install would make it the
- * free one.
+ * the edition that is installed. One line for every public build: the free build carries the LLM gateway,
+ * and a re-run of the installer leaves whatever `[nougate] in_process` the install has as it is.
  *
  * Re-running the installer without the flag keeps what an earlier run enabled, so an update never
  * turns it off; `--no-packages` does.
@@ -13,7 +13,7 @@
  * Pure: the facts are read by the caller.
  */
 
-/** The installer, as published — `apps/site/src/consts.mjs`, held equal by a test. One for every public edition: Router is `--variant router`. */
+/** The installer, as published — `apps/site/src/consts.mjs`, held equal by a test. */
 export const INSTALLER_URL = "https://get.nouride.com/install.sh";
 
 const DEFAULT_INSTALL_DIR = "/srv/nouride";
@@ -60,11 +60,15 @@ export function packageSetup(facts: PackageFacts): PackageSetup {
   return { state: "off", command: enableCommand(facts.edition, facts.installDir) };
 }
 
+/**
+ * The free build's installer for every public edition. `router` is a name no build makes now; still known, it is given
+ * the same line rather than `--variant router`, which would also switch the gateway on: this command is about packages
+ * and nothing else.
+ */
 function enableCommand(edition: string, installDir: string): string | null {
   if (edition !== "router" && edition !== "basic" && edition !== "unknown") return null;
-  const variant = edition === "router" ? " --variant router" : "";
   const dir = installDir === DEFAULT_INSTALL_DIR ? "" : ` --dir ${installDir}`;
-  return `curl -fsSL ${INSTALLER_URL} | sudo sh -s --${variant} --allow-packages${dir}`;
+  return `curl -fsSL ${INSTALLER_URL} | sudo sh -s -- --allow-packages${dir}`;
 }
 
 /** What to tell a person who needs a system package here, or null when there is nothing to do. */

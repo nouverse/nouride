@@ -51,6 +51,11 @@ export const ALL_TARGETS = ["linux-x64", "linux-arm64", "linux-x64-musl", "linux
  * Three since 0.7.20: Pro Router became Pro (owner, 2026-10-19). Every Pro build carries the LLM gateway, off until
  * `[nougate] in_process = true`, so a Box and a pod run one edition, and `--pro-router` is refused by name
  * (`scripts/build/core.ts`).
+ *
+ * The build makes two of them since Router became part of Community: `router` is a name, no longer a build. It stays
+ * for what still carries it — Community's tarballs published again under Router's names for the Router installs out
+ * there (`scripts/release/router-alias.ts`), and an older Router build's crash maps (`bun run symbolize`). 0.9.0
+ * drops it.
  */
 export const EDITIONS = ["basic", "router", "pro"] as const;
 
@@ -60,9 +65,9 @@ export type Edition = (typeof EDITIONS)[number];
  * `nouride-linux-x64`, `nouride-router-linux-arm64` — the free edition carries no infix.
  *
  * `basic` has none because its names are the ones on the public download page and they predate the
- * other editions. `router` takes an infix like the rest, even though it is published alongside
+ * other editions. `router` took an infix like the rest, even though it was published alongside
  * `basic`: two public artefacts that differed only by what is inside them and not by name would be
- * indistinguishable in a release listing and in a download directory.
+ * indistinguishable in a release listing and in a download directory. Its names now carry Community's bytes.
  */
 export function artifactName(edition: Edition, target: string): string {
   return edition === "basic" ? `nouride-${target}` : `nouride-${edition}-${target}`;

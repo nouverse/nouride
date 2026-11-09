@@ -8,11 +8,17 @@
 #
 #   tarballs   each public tarball, started on the platform it is for — native x64 and arm64 runners, Alpine for the
 #              musl builds, macOS for darwin — and asked /health, --version and `nouride status`
-#   images     `nouride` and `nouride-router`, from the signed image kit, natively per architecture (no emulation),
-#              pushed as `<version>-amd64` and `<version>-arm64`; the image's bundle must be the kit's, byte for byte
-#   manifest   one multi-arch tag per edition — `<version>`, `<major>.<minor>`, and `latest` unless the release is quiet
+#   images     `nouride`, from the signed image kit, natively per architecture (no emulation), pushed as
+#              `<version>-amd64` and `<version>-arm64`; the image's bundle must be the kit's, byte for byte. Then
+#              `nouride-router`, the same image with `NOURIDE_IMAGE_MOVED_TO` set, under the same tags
+#   manifest   one multi-arch tag per package — `<version>`, `<major>.<minor>`, and `latest` unless the release is quiet
 #              or a long-term patch, which gets `lts` instead
 #   publish    the draft becomes the release, once everything above passed
+#
+# Router became part of the free build (v0.8.29_RFC): what is published under its names — the tarballs
+# `nouride-router-<target>.tar.gz` with `CHECKSUMS-router`, and the image `nouride-router` — is the free build again,
+# so the Router installs and containers already out there keep getting releases. Each is tested here as what it is,
+# edition `basic`. Every 0.8.x release; 0.9.0 removes them.
 #
 # Why it is here: GitHub's runners are free for public repositories, native arm64 and macOS included, and the
 # images were the longest part of a release on the private side's single build runner, under emulation.
@@ -101,11 +107,14 @@ jobs:
           sh scripts/release/gh-retry.sh gh release download "$TAG" --clobber --repo "$GITHUB_REPOSITORY" --pattern "$file" --dir assets
           sh scripts/release/verify-sums.sh assets
           echo "file=assets/$file" >> "$GITHUB_OUTPUT"
+      # Router's tarballs are Community's under Router's names (`scripts/release/router-alias.ts`), so they answer
+      # `basic`: a Router build there would be one the release was not meant to carry. Rehearsing a release from before
+      # the alias, they are Router's own and this row fails; 0.9.0 removes the row (v0.8.29_RFC).
       - name: Start it, and ask it what it is
         if: steps.fetch.outputs.skip != 'yes'
         env:
           FILE: ${{ steps.fetch.outputs.file }}
-          EDITION: ${{ matrix.edition }}
+          EDITION: ${{ matrix.edition == 'router' && 'basic' || matrix.edition }}
           ALPINE: ${{ matrix.alpine }}
         run: |
           version="${VERSION_IN:-${TAG#v}}"
@@ -124,50 +133,46 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        edition: [basic, router]
         arch: [amd64, arm64]
         include:
           - { arch: amd64, os: ubuntu-24.04 }
           - { arch: arm64, os: ubuntu-24.04-arm }
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
-    name: image (${{ matrix.edition }}, ${{ matrix.arch }})
+    name: image (${{ matrix.arch }})
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Rehearsal — the published release's own image, re-tagged
+      - name: Rehearsal — the published release's own images, re-tagged
         if: inputs.rehearsal == 'yes'
         env:
-          EDITION: ${{ matrix.edition }}
           ARCH: ${{ matrix.arch }}
         run: |
-          if [ "$EDITION" = basic ]; then pkg=nouride; else pkg="nouride-${EDITION}"; fi
           echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
-          docker pull --platform "linux/${ARCH}" "ghcr.io/nouverse/${pkg}:${VERSION_IN}"
-          docker tag "ghcr.io/nouverse/${pkg}:${VERSION_IN}" "ghcr.io/nouverse/${pkg}:rehearsal-${ARCH}"
-          docker push "ghcr.io/nouverse/${pkg}:rehearsal-${ARCH}"
+          for pkg in nouride nouride-router; do
+            docker pull --platform "linux/${ARCH}" "ghcr.io/nouverse/${pkg}:${VERSION_IN}"
+            docker tag "ghcr.io/nouverse/${pkg}:${VERSION_IN}" "ghcr.io/nouverse/${pkg}:rehearsal-${ARCH}"
+            docker push "ghcr.io/nouverse/${pkg}:rehearsal-${ARCH}"
+          done
       - name: Download the image kit and check its signature
         if: inputs.rehearsal != 'yes'
         env:
           GH_TOKEN: ${{ github.token }}
-          EDITION: ${{ matrix.edition }}
         run: |
-          if [ "$EDITION" = basic ]; then kit=nouride-image-kit.tar.gz; suffix="-image-kit"; else kit="nouride-image-kit-${EDITION}.tar.gz"; suffix="-image-kit-${EDITION}"; fi
-          sums="CHECKSUMS${suffix}"
-          sh scripts/release/gh-retry.sh gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -qx "$sums" || sums="SHA256SUMS${suffix}"
+          kit=nouride-image-kit.tar.gz
+          sums=CHECKSUMS-image-kit
+          sh scripts/release/gh-retry.sh gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -qx "$sums" || sums=SHA256SUMS-image-kit
           mkdir -p assets kit
           sh scripts/release/gh-retry.sh gh release download "$TAG" --clobber --repo "$GITHUB_REPOSITORY" --pattern "$kit" --pattern "$sums" --pattern "$sums.sig" --dir assets
           sh scripts/release/verify-sums.sh assets
           tar -xzf "assets/$kit" -C kit
-          jq -e --arg e "$EDITION" --arg v "${TAG#v}" '.edition == $e and .version == $v' kit/kit.json
+          jq -e --arg v "${TAG#v}" '.edition == "basic" and .version == $v' kit/kit.json
       - name: Build and push
         if: inputs.rehearsal != 'yes'
         env:
-          EDITION: ${{ matrix.edition }}
           ARCH: ${{ matrix.arch }}
         run: |
           error() { printf '::%s::%s\n' error "$*"; }
-          if [ "$EDITION" = basic ]; then pkg=nouride; else pkg="nouride-${EDITION}"; fi
-          ref="ghcr.io/nouverse/${pkg}:${TAG#v}-${ARCH}"
+          ref="ghcr.io/nouverse/nouride:${TAG#v}-${ARCH}"
           echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
           docker buildx build kit --platform "linux/${ARCH}" --provenance=false --load -t "$ref" \
             --label "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
@@ -177,12 +182,29 @@ jobs:
           got=$(docker run --rm --entrypoint sha256sum "$ref" /app/nouride.bundle.js | cut -d' ' -f1)
           [ "$got" = "$want" ] || { error "the image's bundle is $got, the kit's is $want"; exit 1; }
           # It starts, on a port of its own, and its CLI finds it from inside the container as a user would ask.
-          docker run -d --name smoke -e PORT=18301 -p 127.0.0.1:18301:18301 "$ref" >/dev/null
-          for _ in $(seq 1 60); do h=$(curl -fsS http://127.0.0.1:18301/health 2>/dev/null || true); case "$h" in *'"version"'*) case "$h" in *starting*) ;; *) break ;; esac ;; esac; sleep 1; done
-          echo "/health: $h"
-          case "$h" in *"\"version\":\"${TAG#v}\""*"\"edition\":\"${EDITION}\""*|*"\"edition\":\"${EDITION}\""*"\"version\":\"${TAG#v}\""*) ;; *) docker logs smoke | tail -20; error "the image did not answer as ${EDITION} ${TAG#v}"; exit 1 ;; esac
-          docker exec smoke nouride status
-          docker rm -f smoke >/dev/null
+          sh scripts/release/image-smoke.sh "$ref" "${TAG#v}" basic
+          docker push "$ref"
+      # The free image again under Router's name, for the compose files and `docker run` lines that pull
+      # `nouride-router`: the image just pushed, with `NOURIDE_IMAGE_MOVED_TO` set so the dashboard tells whoever runs it
+      # which image to pull from now on (`scripts/release/router-image.Dockerfile`). Its bundle, its labels and its
+      # edition are the free image's, and it is held to that before it is pushed. 0.9.0 removes this (v0.8.29_RFC).
+      - name: The Router image's name, for the Router containers out there
+        if: inputs.rehearsal != 'yes'
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          error() { printf '::%s::%s\n' error "$*"; }
+          base="ghcr.io/nouverse/nouride:${TAG#v}-${ARCH}"
+          ref="ghcr.io/nouverse/nouride-router:${TAG#v}-${ARCH}"
+          docker buildx build --platform "linux/${ARCH}" --provenance=false --load -t "$ref" --build-arg "BASE=${base}" - < scripts/release/router-image.Dockerfile
+          moved=$(docker run --rm --entrypoint printenv "$ref" NOURIDE_IMAGE_MOVED_TO)
+          [ "$moved" = "ghcr.io/nouverse/nouride" ] || { error "the Router image says NOURIDE_IMAGE_MOVED_TO=${moved}, not ghcr.io/nouverse/nouride"; exit 1; }
+          want=$(jq -r .bundleSha256 kit/kit.json)
+          got=$(docker run --rm --entrypoint sha256sum "$ref" /app/nouride.bundle.js | cut -d' ' -f1)
+          [ "$got" = "$want" ] || { error "the Router image's bundle is $got, the free image's is $want"; exit 1; }
+          label=$(docker image inspect "$ref" --format '{{ index .Config.Labels "tech.nouverse.nouride.edition" }}')
+          [ "$label" = basic ] || { error "the Router image is labelled edition '${label}', not basic"; exit 1; }
+          sh scripts/release/image-smoke.sh "$ref" "${TAG#v}" basic
           docker push "$ref"
 
   manifest:
@@ -193,6 +215,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # `router`: the package `nouride-router`, which holds the free image under Router's name (`images` above).
+        # 0.9.0 removes it (v0.8.29_RFC).
         edition: [basic, router]
     runs-on: ubuntu-24.04
     timeout-minutes: 10

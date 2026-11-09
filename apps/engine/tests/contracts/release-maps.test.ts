@@ -159,8 +159,8 @@ describe("scripts/release/image-map-fits.sh", () => {
     }
     if (opts.extra) writeFileSync(join(fake, "fs-arm64", opts.extra), "{}");
     mkdirSync(join(fake, "maps"), { recursive: true });
-    const stamp = { version: "0.7.10", edition: "router", target: "image", codeSha256: sha(bundle), ...opts.stamp };
-    writeFileSync(join(fake, "maps", "nouride-router-image.map"), JSON.stringify({ version: 3, x_nouride: stamp }));
+    const stamp = { version: "0.7.10", edition: "pro", target: "image", codeSha256: sha(bundle), ...opts.stamp };
+    writeFileSync(join(fake, "maps", "nouride-pro-image.map"), JSON.stringify({ version: 3, x_nouride: stamp }));
     return fake;
   }
 
@@ -173,8 +173,8 @@ describe("scripts/release/image-map-fits.sh", () => {
         PATH: `${join(dir, "bin")}:${process.env.PATH ?? "/usr/bin:/bin"}`,
         FAKE: fake,
         MAP_DIR: join(fake, "maps"),
-        IMAGE: "ghcr.io/nouverse/nouride-router:0.7.10",
-        EDITION: "router",
+        IMAGE: "ghcr.io/nouverse/nouride-pro:0.7.10",
+        EDITION: "pro",
         VERSION: "0.7.10",
       },
     });
@@ -183,8 +183,8 @@ describe("scripts/release/image-map-fits.sh", () => {
   test("passes a map whose stamp is this build and whose hash is the bundle on every platform", async () => {
     const ok = await check(image("ok"));
     expect(ok.stdout.trim().split("\n")).toEqual([
-      `linux/amd64: /app/nouride.bundle.js is the bundle nouride-router-image.map maps (sha256 ${sha(bundle)}), and the image carries no source map`,
-      `linux/arm64: /app/nouride.bundle.js is the bundle nouride-router-image.map maps (sha256 ${sha(bundle)}), and the image carries no source map`,
+      `linux/amd64: /app/nouride.bundle.js is the bundle nouride-pro-image.map maps (sha256 ${sha(bundle)}), and the image carries no source map`,
+      `linux/arm64: /app/nouride.bundle.js is the bundle nouride-pro-image.map maps (sha256 ${sha(bundle)}), and the image carries no source map`,
     ]);
     expect(ok.exitCode).toBe(0);
   });
@@ -193,7 +193,7 @@ describe("scripts/release/image-map-fits.sh", () => {
     const other = await check(image("other-arm64", { arm64: "#!/usr/bin/env bun\n// @bun\nvar b=2;\n" }));
     expect({ code: other.exitCode, out: other.stdout }).toEqual({
       code: 1,
-      out: expect.stringContaining("(linux/arm64) carries a bundle that is not the one nouride-router-image.map maps"),
+      out: expect.stringContaining("(linux/arm64) carries a bundle that is not the one nouride-pro-image.map maps"),
     });
     const leaked = await check(image("leaked", { extra: "app/nouride.bundle.js.map" }));
     expect({ code: leaked.exitCode, out: leaked.stdout }).toEqual({ code: 1, out: expect.stringContaining("(linux/arm64) carries a source map: ./app/nouride.bundle.js.map") });
@@ -203,7 +203,7 @@ describe("scripts/release/image-map-fits.sh", () => {
     const stamps: Record<string, string>[] = [{ version: "0.7.9" }, { edition: "basic" }, { target: "linux-x64" }];
     for (const stamp of stamps) {
       const wrong = await check(image(`stamp-${Object.values(stamp)[0]}`, { stamp }));
-      expect({ code: wrong.exitCode, out: wrong.stdout }).toEqual({ code: 1, out: expect.stringContaining("nouride-router-image.map is stamped") });
+      expect({ code: wrong.exitCode, out: wrong.stdout }).toEqual({ code: 1, out: expect.stringContaining("nouride-pro-image.map is stamped") });
     }
   });
 
@@ -211,6 +211,6 @@ describe("scripts/release/image-map-fits.sh", () => {
     const fake = image("two-maps");
     writeFileSync(join(fake, "maps", "nouride-image.map"), "{}");
     const two = await check(fake);
-    expect({ code: two.exitCode, out: two.stdout }).toEqual({ code: 1, out: expect.stringContaining("the router image's map is nouride-router-image.map, and only it") });
+    expect({ code: two.exitCode, out: two.stdout }).toEqual({ code: 1, out: expect.stringContaining("the pro image's map is nouride-pro-image.map, and only it") });
   });
 });

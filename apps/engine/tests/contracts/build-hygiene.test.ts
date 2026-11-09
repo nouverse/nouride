@@ -106,7 +106,7 @@ describe("the licence id", () => {
 
   test("is on every image the Dockerfile makes, every image the release pushes, and what CI checks", () => {
     const labels = [...read("Dockerfile").matchAll(/^LABEL org\.opencontainers\.image\.licenses="([^"]+)"$/gm)].map((match) => match[1]);
-    expect(labels.length).toBe(3);
+    expect(labels.length).toBe(2);
     for (const label of labels) expect(label).toBe(declared);
     expect(read(".github/workflows/release.yml")).toContain(`"licence": "${declared}",`);
     expect(read(".github/workflows/ci-image.yml")).toContain(`[ "$label" = "${declared}" ]`);

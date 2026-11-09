@@ -70,9 +70,12 @@ describe("a release's artefact names", () => {
 
   test("the checksum file the updater fetches is the one the release workflow writes for that edition", () => {
     const workflow = read(".github/workflows/release.yml");
-    // The workflow's rows, by variant — the first field of each.
+    // The workflow's rows, by variant — the first field of each — and Router's, which no row builds: the free row's
+    // files again under its names (`router-alias.ts`), with the checksum file its updater asks for.
     const variants = [...workflow.matchAll(/^\s+\("([a-z-]*)",\s+"/gm)].map((match) => match[1]);
-    expect(variants.sort()).toEqual(BUILT.map(variantFor).sort());
+    const alias = read("scripts/release/router-alias.ts");
+    expect(alias).toContain('export const ROUTER_SUMS = "CHECKSUMS-router";');
+    expect([...variants, variantFor("router")].sort()).toEqual(BUILT.map(variantFor).sort());
     // Its one naming rule: the variant after a dash, or nothing.
     expect(workflow).toContain(`name="CHECKSUMS\${{ matrix.variant && format('-{0}', matrix.variant) || '' }}"`);
     // A release is built by its own tag's workflow, so this one publishes this version's name: `CHECKSUMS` from 0.8.0
