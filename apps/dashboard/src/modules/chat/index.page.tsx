@@ -41,7 +41,9 @@ export default function ChatPage({
           open && "max-md:hidden",
         )}
       />
-      <section aria-label="Conversation" className={cn("flex h-full min-h-0 min-w-0 flex-1 flex-col bg-base-100/30", !open && "max-md:hidden")}>
+      {/* A region, not a `<section>`: a page's sections are its cards, and the phone check wants room under the last card,
+          where this is the whole pane down to the box to write in. */}
+      <div role="region" aria-label="Conversation" className={cn("flex h-full min-h-0 min-w-0 flex-1 flex-col bg-base-100/30", !open && "max-md:hidden")}>
         {group ? (
           <GroupConversation key={groupKey(group)} platform={group.platform} chatId={group.chatId} data={data} />
         ) : (
@@ -53,7 +55,7 @@ export default function ChatPage({
             data={data}
           />
         )}
-      </section>
+      </div>
     </div>
   );
 }

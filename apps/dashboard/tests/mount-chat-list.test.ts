@@ -104,6 +104,21 @@ describe("the list beside the chat", () => {
   });
 });
 
+describe("the conversation pane", () => {
+  // The box's phone check reads a page's `<section>`s as its cards and wants 24 px under the last one; the pane is the
+  // whole height down to the box to write in, so as a section every conversation failed it with no room at all.
+  test("is a region, not a card: no section in the page around it", async () => {
+    answer(list);
+    const seen: Record<string, unknown> = {};
+    await renderPage("/chat/ses_1", async (host) => {
+      await eventually(() => host.querySelector('[role="region"][aria-label="Conversation"]') !== null, 3_000, "the pane");
+      // Around the pane: a section inside it (a work note, a day of History) is a card of its own.
+      seen.sections = [...host.querySelectorAll("main section")].filter((one) => one.contains(host.querySelector('[aria-label="Conversation"]'))).length;
+    });
+    expect(seen.sections).toBe(0);
+  });
+});
+
 describe("a conversation from a chat app", () => {
   test("a private chat on Telegram: its app on the cat and in the header, and a note where the box would be", async () => {
     const transcript = { session: { id: "ses_dm", agentId: "nouva", chatId: "555", gatewayId: "telegram:nouva", updatedAt: NOW, writable: false }, earlier: [], turns: [], events: [], messages: [] };
