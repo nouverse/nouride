@@ -19,7 +19,7 @@ import {
   type MessageEnvelope,
   type SessionKey, sessionIdFor, toUserMessage} from "@nouride/shared";
 import { mentionedAgents, routeMessage, stripAddressPrefix } from "@/modules/router/index.ts";
-import { frontDeskFor } from "@/modules/router/front-desk.ts";
+import { frontDeskFor, unaddressedFallback } from "@/modules/router/front-desk.ts";
 import {
   agentMayAnswer,
   type AgentMessageVerdict,
@@ -142,6 +142,7 @@ export class InboundRouter {
     const answerUnaddressed =
       envelope.chatType === "dm" ||
       (!groupsRequireMention && this.couldAnswerUnaddressed(envelope, instance).size <= 1);
+    const members = this.ctx.roomAgents(envelope);
     // Where nobody may answer an unaddressed message, the orchestrator is the one who does — the room's front desk. Not
     // for a slash command: `/new` clears one agent's history and `/model` changes one agent's model, so the room is told
     // which names would work rather than having one chosen for it.
@@ -150,10 +151,12 @@ export class InboundRouter {
       chatType: envelope.chatType,
       answerUnaddressed,
       groupsRequireMention,
-      members: answerUnaddressed ? null : this.ctx.roomAgents(envelope),
+      members: answerUnaddressed ? null : members,
     });
+    // The last fallback, kept to the room where it has members: the orchestrator only as one of them, a room of one its member.
+    const fallback = unaddressedFallback(this.ctx.deps.config.daemon.orchestrator, members);
     return routeMessage(envelope, this.ctx.deps.registry, {
-      ...(this.ctx.deps.config.daemon.orchestrator ? { orchestrator: this.ctx.deps.config.daemon.orchestrator } : {}),
+      ...(fallback ? { orchestrator: fallback } : {}),
       ...(instance?.agent ? { gatewayOwner: instance.agent } : {}),
       answerUnaddressed,
       ...(repliedTo ? { repliedToAgent: repliedTo } : {}),

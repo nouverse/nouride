@@ -70,12 +70,25 @@ describe("who answers an untagged message in a room", () => {
     expect(await h.answered("strict")).toEqual([]);
   });
 
-  test("a room of one: whoever the router picks is named, and it is the one that answers", async () => {
+  test("a room of one the orchestrator is not in: its member answers, never the orchestrator", async () => {
     const h = await daemon({ orchestrator: "nouva" });
     h.room("solo", ["nero"]);
-    const named = h.said("solo");
-    expect(named).not.toBeNull();
-    expect(await h.answered("solo")).toEqual([named!]);
+    expect(h.said("solo")).toBe("nero");
+    expect(await h.answered("solo")).toEqual(["nero"]);
+  });
+
+  test("a room of one that is the orchestrator: the orchestrator", async () => {
+    const h = await daemon({ orchestrator: "nouva" });
+    h.room("desk", ["nouva"]);
+    expect(h.said("desk")).toBe("nouva");
+    expect(await h.answered("desk")).toEqual(["nouva"]);
+  });
+
+  test("a room of one with no orchestrator named: its member", async () => {
+    const h = await daemon();
+    h.room("alone", ["nox"]);
+    expect(h.said("alone")).toBe("nox");
+    expect(await h.answered("alone")).toEqual(["nox"]);
   });
 
   test("no orchestrator named and several agents: nobody", async () => {

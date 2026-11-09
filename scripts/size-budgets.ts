@@ -83,7 +83,7 @@ export const BUDGET: Record<string, Budget> = {
     why: "the one place a message's files become what the agent gets (stored, shown, described, heard or transcribed) and the note that says which, so the note and the parts cannot disagree",
   },
   "apps/engine/src/modules/pipeline/inbound.ts": {
-    lines: 420,
+    lines: 422,
     why: "whether a message gets a turn at all, and whose: every early return together, in the order that is the point of the file, and the one routing call the dashboard's room line asks too",
   },
   "scripts/build/core.ts": {
