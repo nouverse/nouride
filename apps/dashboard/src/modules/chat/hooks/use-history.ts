@@ -19,6 +19,7 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/commons/lib/api";
 import type { Room, SessionSummary } from "@nouride/wire";
+import { useToast } from "@/commons/components/ui/toast";
 
 /** Conversations per page. A list somebody scrolls, not a report. */
 const SESSION_PAGE = 50;
@@ -47,6 +48,8 @@ export interface ChatHistory {
   room: Room | null;
   deleteSession: (id: string) => void;
   deleteRoom: (chatId: string) => void;
+  /** Deletes what is on screen: the room when one is open, else the conversation. Nothing on a new chat. */
+  deleteOnScreen: () => void;
   /** The id or chat id currently being deleted, for the row's own spinner. */
   deleting: string | undefined;
   /** Asks both lists to catch up now rather than at their next tick. */
@@ -61,6 +64,7 @@ export function useChatHistory(input: {
   onLeave: () => void;
 }): ChatHistory {
   const queryClient = useQueryClient();
+  const toast = useToast();
   const { searchTerm, sessionId, roomChatId, onLeave } = input;
 
   const roomsQuery = useQuery({
@@ -110,6 +114,7 @@ export function useChatHistory(input: {
       void queryClient.invalidateQueries({ queryKey: ["sessions"] });
       if (id === sessionId) onLeave();
     },
+    onError: (error: unknown) => toast.error("Could not delete the conversation", error),
   });
 
   /**
@@ -121,11 +126,13 @@ export function useChatHistory(input: {
    */
   const removeRoom = useMutation({
     mutationFn: (chatId: string) => api.deleteRoom(chatId),
-    onSuccess: (_result, chatId) => {
+    onSuccess: (result, chatId) => {
       void queryClient.invalidateQueries({ queryKey: ["rooms"] });
       void queryClient.invalidateQueries({ queryKey: ["sessions"] });
+      toast.success("Room deleted", `${result.turns} answer(s) and every member's conversation here went with it.`);
       if (chatId === roomChatId) onLeave();
     },
+    onError: (error: unknown) => toast.error("Could not delete the room", error),
   });
 
   const pages = sessions.data?.pages ?? [];
@@ -141,6 +148,10 @@ export function useChatHistory(input: {
     room: roomQuery.data?.room ?? null,
     deleteSession: (id) => removeSession.mutate(id),
     deleteRoom: (chatId) => removeRoom.mutate(chatId),
+    deleteOnScreen: () => {
+      if (roomChatId) removeRoom.mutate(roomChatId);
+      else if (sessionId) removeSession.mutate(sessionId);
+    },
     deleting:
       (removeSession.isPending ? removeSession.variables : undefined) ??
       (removeRoom.isPending ? removeRoom.variables : undefined),

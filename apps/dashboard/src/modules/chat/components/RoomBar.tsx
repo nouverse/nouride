@@ -11,9 +11,8 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { Check, Plus, Trash2, Users, X } from "lucide-react";
+import { Check, Plus, Users, X } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import type { Room } from "@nouride/wire";
 import { useConfirm } from "@/commons/components/ui/confirm";
@@ -21,7 +20,6 @@ import { useToast } from "@/commons/components/ui/toast";
 import { DropdownMenu } from "@/commons/components/ui/DropdownMenu";
 
 export function RoomBar({ room }: { room: Room }) {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const toast = useToast();
   const { ask, dialog } = useConfirm();
@@ -59,20 +57,6 @@ export function RoomBar({ room }: { room: Room }) {
       if (result.added) toast.success(`${agentId} joined the room`);
     },
     onError: (error: unknown) => toast.error("Could not add the agent", error),
-  });
-
-  const deleteRoom = useMutation({
-    mutationFn: () => api.deleteRoom(room.chatId),
-    onSuccess: (result) => {
-      void queryClient.invalidateQueries({ queryKey: ["rooms"] });
-      void queryClient.invalidateQueries({ queryKey: ["sessions"] });
-      toast.success(
-        "Room deleted",
-        `${result.turns} answer(s) and every member's conversation here went with it.`,
-      );
-      void navigate({ to: "/chat" });
-    },
-    onError: (error: unknown) => toast.error("Could not delete the room", error),
   });
 
   const removeMember = useMutation({
@@ -197,31 +181,6 @@ export function RoomBar({ room }: { room: Room }) {
             }
           </DropdownMenu>
         )}
-
-        <button
-          type="button"
-          className="btn btn-ghost btn-xs btn-square rounded-lg text-base-content/65 hover:text-error"
-          aria-label="Delete this room"
-          title="Delete this room"
-          disabled={deleteRoom.isPending}
-          onClick={async () => {
-            const confirmed = await ask({
-              title: `Delete this room?`,
-              body: (
-                <>
-                  The room, its history, and every member&apos;s conversation in it are deleted:
-                  {" "}
-                  {room.members.map((member) => member.agentId).join(", ")}. Anything running here is
-                  cancelled. There is no undo.
-                </>
-              ),
-              confirmLabel: "Delete room",
-            });
-            if (confirmed) deleteRoom.mutate();
-          }}
-        >
-          <Trash2 size={12} />
-        </button>
       </div>
 
       {dialog}

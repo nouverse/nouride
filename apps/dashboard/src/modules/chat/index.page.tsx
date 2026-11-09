@@ -419,9 +419,7 @@ export default function ChatPage(
         currentAgent={currentAgent}
         orchestrator={status.data?.orchestrator ?? undefined}
         pickAgent={pickAgent}
-        onDelete={() => {
-          if (sessionId) history.deleteSession(sessionId);
-        }}
+        onDelete={history.deleteOnScreen}
         deleting={Boolean(history.deleting)}
         newChat={() => {
           setHistoryOpen(false);

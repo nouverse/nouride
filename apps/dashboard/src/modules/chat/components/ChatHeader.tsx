@@ -1,6 +1,6 @@
 /**
- * The bar across the top: history, which agent this conversation belongs to, and the two ways to
- * start a new one.
+ * The bar across the top: history, which agent this conversation belongs to, the two ways to start a
+ * new one, and a menu with what is done to this conversation or room as a whole: deleting it.
  *
  * Extracted from `index.page.tsx` with the composer. What is left in the page is the part that is
  * genuinely about *this* conversation — its data, its scroll position, what happens on send.
@@ -12,7 +12,7 @@
  * could not do.
  */
 
-import { Check, ChevronDown, Crown, Lock, NotebookPen, PanelLeft, Plus, Trash2 } from "lucide-react";
+import { Check, ChevronDown, Crown, Ellipsis, Lock, NotebookPen, PanelLeft, Plus, Trash2 } from "lucide-react";
 import type { AgentSummary, Room } from "@nouride/wire";
 import { agentModel } from "@/commons/lib/agents";
 import { useConfirm } from "@/commons/components/ui/confirm";
@@ -35,7 +35,7 @@ export interface ChatHeaderProps {
   orchestrator: string | undefined;
   pickAgent: (agentId: string) => void;
   newChat: () => void;
-  /** Deletes the conversation on screen. Offered only for a one-to-one chat; a room has its own. */
+  /** Deletes the conversation or the room on screen, once the person has confirmed it. */
   onDelete: () => void;
   deleting: boolean;
   /**
@@ -115,38 +115,6 @@ export function ChatHeader({
         </span>
       ) : null}
 
-      {/*
-        The same delete a room has in its own bar, in the same place, for the same reason: a
-        conversation you are reading is the one you most often want to be rid of, and the only way to
-        do it was to open the history drawer and find the row you were already looking at.
-
-        Confirmed, and the wording says what goes — a transcript with its turns and steps. Rooms warn
-        about more because they delete more.
-      */}
-      {sessionId && !room ? (
-        <button
-          type="button"
-          className="btn btn-ghost btn-xs btn-square rounded-lg text-base-content/65 hover:text-error"
-          aria-label="Delete this conversation"
-          title="Delete this conversation"
-          disabled={deleting}
-          onClick={async () => {
-            const confirmed = await ask({
-              title: "Delete this conversation?",
-              body: (
-                <>
-                  The conversation goes, with everything in it. Anything running is cancelled.
-                  There is no undo.
-                </>
-              ),
-              confirmLabel: "Delete",
-            });
-            if (confirmed) onDelete();
-          }}
-        >
-          <Trash2 size={12} />
-        </button>
-      ) : null}
       <div className={room || sessionId ? "hidden" : "contents"}>
         <DropdownMenu
           trigger={<>
@@ -245,8 +213,74 @@ export function ChatHeader({
       </button>
 
       <NewRoomButton />
+      {sessionId || room ? <DeleteMenu room={room} disabled={deleting} ask={ask} onDelete={onDelete} /> : null}
     </div>
     {dialog}
   </header>
+  );
+}
+
+/**
+ * Delete, in a menu at the end of the bar rather than as a bin beside the other buttons: on a phone the bin sat against
+ * Notes, one slip from the other, and a delete with no undo is the one press a page should not make easy to hit by
+ * mistake. The same menu for a chat and a room, so both are deleted from the same place; the history drawer keeps its
+ * own delete on each row. Confirmed, and the words say what goes: a room takes every member's conversation with it.
+ */
+function DeleteMenu({
+  room,
+  disabled,
+  ask,
+  onDelete,
+}: {
+  room: Room | null;
+  disabled: boolean;
+  ask: ReturnType<typeof useConfirm>["ask"];
+  onDelete: () => void;
+}) {
+  const what = room ? "room" : "conversation";
+  return (
+    <DropdownMenu
+      trigger={<Ellipsis size={16} aria-hidden="true" />}
+      triggerClassName="btn btn-ghost btn-xs btn-square h-8 w-8 rounded-xl text-base-content/70 hover:text-base-content"
+      ariaLabel={`More for this ${what}`}
+      width={220}
+      menuClassName="rounded-xl border border-base-content/[0.08] bg-base-100 p-1.5 shadow-lg"
+    >
+      {(close) => (
+        <li>
+          <button
+            type="button"
+            className="text-sm text-error"
+            disabled={disabled}
+            onClick={async () => {
+              close();
+              const confirmed = await ask(
+                room
+                  ? {
+                      title: "Delete this room?",
+                      body: (
+                        <>
+                          The room, its history, and every member&apos;s conversation in it are deleted:{" "}
+                          {room.members.map((member) => member.agentId).join(", ")}. Anything running here is cancelled.
+                          There is no undo.
+                        </>
+                      ),
+                      confirmLabel: "Delete room",
+                    }
+                  : {
+                      title: "Delete this conversation?",
+                      body: <>The conversation goes, with everything in it. Anything running is cancelled. There is no undo.</>,
+                      confirmLabel: "Delete",
+                    },
+              );
+              if (confirmed) onDelete();
+            }}
+          >
+            <Trash2 size={14} aria-hidden="true" />
+            Delete {what}
+          </button>
+        </li>
+      )}
+    </DropdownMenu>
   );
 }
