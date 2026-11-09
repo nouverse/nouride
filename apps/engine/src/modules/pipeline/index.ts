@@ -411,6 +411,8 @@ export class Pipeline {
   chatTypeOf(...args: Parameters<ChatDirectory["chatTypeOf"]>) { return this.chats.chatTypeOf(...args); }
   reachableChats() { return this.chats.reachableChats(); }
   knownRooms() { return this.chats.knownRooms(); }
+  /** Who answers a room message that tags nobody — the router's own answer (`inbound.ts`), for the dashboard to say. */
+  untaggedAnswerer(...args: Parameters<InboundRouter["untaggedAnswerer"]>) { return this.inbound.untaggedAnswerer(...args); }
   renameRoom(...args: Parameters<ChatDirectory["renameRoom"]>) { return this.chats.renameRoom(...args); }
   sayInChat(...args: Parameters<ChatDirectory["sayInChat"]>) { return this.chats.sayInChat(...args); }
 

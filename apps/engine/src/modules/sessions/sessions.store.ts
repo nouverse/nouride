@@ -59,6 +59,8 @@ export interface SessionListOptions {
   query?: string;
   /** Leave out one connection's conversations — the missions' own, which are not a person's chats. */
   notGateway?: string;
+  /** Only one connection's conversations: an agent's newest in the dashboard, past a busy bot's chats elsewhere. */
+  gateway?: string;
 }
 
 export class SessionStore {
@@ -291,6 +293,10 @@ export class SessionStore {
     if (options.notGateway) {
       clauses.push("s.gateway <> ?");
       params.push(options.notGateway);
+    }
+    if (options.gateway) {
+      clauses.push("s.gateway = ?");
+      params.push(options.gateway);
     }
     if (options.before !== undefined) {
       clauses.push("s.updated_at < ?");

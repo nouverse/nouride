@@ -66,7 +66,6 @@ export const LONG_FUNCTIONS: Record<string, Record<string, Budget>> = {
   "apps/engine/src/modules/mcp-server/surface.ts": { createSurface: { lines: 175, why: "what Nouride's MCP server offers one token: each tool over the daemon's ports, held to the token's person, agents and scopes" } },
   "apps/engine/src/modules/memory/index.ts": { createMemory: { lines: 246, why: "memory's surface: one closure per operation over the stores it is built with; the operations' logic is in the files beside it" } },
   "apps/engine/src/modules/memory/knowledge/surface.ts": { createKnowledge: { lines: 231, why: "the knowledge base's surface: one closure per operation over its folder and its index" } },
-  "apps/engine/src/modules/pipeline/inbound.ts": { "InboundRouter.handle": { lines: 159, why: "whether a message gets a turn, and whose: every early return together, in the order that is the point of the file" } },
   "apps/engine/src/modules/pipeline/job-turns.ts": { "JobTurns.run": { lines: 190, why: "one background job's turn, from its start to its report, over the job's row and the clock it runs under" } },
   "apps/engine/src/modules/pipeline/peer-turn.ts": { startPeerTurn: { lines: 213, why: "one peer turn as the peer, from its start to the answer handed back, with its move to the background and its clock" } },
   "apps/engine/src/modules/reflection/index.ts": { "ReflectionEngine.look": { lines: 168, why: "one reflection over a turn: what it records, the checks that hold a draft back, the skill synthesized and the draft written, in order" } },

@@ -73,6 +73,7 @@ const ASKED: Record<string, (ids: { session: string; mission: string }) => strin
   "/people": () => "/people",
   "/groups": () => "/groups",
   "/chats": () => "/chats",
+  "/chat-list": () => "/chat-list",
   "/memory/settings": () => "/memory/settings",
   "/llm/tiers": () => "/llm/tiers",
   "/memory/status": () => "/memory/status",
@@ -351,6 +352,8 @@ export async function wireAnswers(): Promise<Record<string, unknown>> {
       sessions: bench.sessions,
       turns: bench.turns,
       events: bench.events,
+      // The group's log, as the daemon hands the control plane the one the pipeline writes: what a group last heard.
+      roomMessages: new RoomMessageStore(db),
       memory: home.memory,
       memoryPass: pass,
       mcpTokens,

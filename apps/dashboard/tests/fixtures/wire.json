@@ -1048,6 +1048,47 @@
       }
     ]
   },
+  "/chat-list": {
+    "agents": [
+      {
+        "agentId": "nouva",
+        "sessionId": "ses_1",
+        "at": 1760000000000,
+        "last": {
+          "from": "person",
+          "text": "clean the build"
+        },
+        "working": true,
+        "helpers": 0
+      }
+    ],
+    "rooms": [],
+    "groups": [
+      {
+        "platform": "telegram",
+        "chatId": "-100200",
+        "name": "Rumah",
+        "agents": [
+          "nouva"
+        ],
+        "sessions": [
+          {
+            "agentId": "nouva",
+            "sessionId": "ses_nouva:telegram:main:-100200",
+            "gatewayId": "telegram:main"
+          }
+        ],
+        "at": 1760000000000,
+        "last": {
+          "from": "person",
+          "name": "gading_n",
+          "text": "lampu teras mati"
+        },
+        "working": false,
+        "people": 2
+      }
+    ]
+  },
   "/memory/settings": {
     "pass": true,
     "passAt": "01:00",

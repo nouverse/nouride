@@ -122,6 +122,55 @@ export class InboundRouter {
     return candidates;
   }
 
+  /**
+   * Whose message this is, by everything the router weighs: a tag, a reply, the connection's owner, the front desk.
+   *
+   * May an unaddressed message be answered here at all? Yes for one bot on a platform — everything it receives is its
+   * agent's — and yes in a DM, where a private message to Nero's bot is unambiguously Nero's however many other bots
+   * exist. No in a room shared by several of our own bots. The platform hands every message to every one of them, so
+   * any rule that does not name an agent fires once per connection: "my owner answers anything here" is true six times
+   * over, and so is "fall back to the orchestrator". Both shipped, both produced six replies to one message. In that
+   * arrangement a channel message has to be addressed — by a platform tag, by name in the text, or by replying to what
+   * an agent said — or it goes to the front desk.
+   *
+   * One method for `handle` and for `untaggedAnswerer`, so what the dashboard says about a room cannot drift from what
+   * happens in it.
+   */
+  private route(envelope: MessageEnvelope, instance: GatewayInstanceConfig | undefined, repliedTo?: string): ReturnType<typeof routeMessage> {
+    // The group's own `/mention`, then this connection's setting, then the daemon's (`room-mention.ts`).
+    const groupsRequireMention = requireMentionHere(this.ctx.deps, envelope).requireMention;
+    const answerUnaddressed =
+      envelope.chatType === "dm" ||
+      (!groupsRequireMention && this.couldAnswerUnaddressed(envelope, instance).size <= 1);
+    // Where nobody may answer an unaddressed message, the orchestrator is the one who does — the room's front desk. Not
+    // for a slash command: `/new` clears one agent's history and `/model` changes one agent's model, so the room is told
+    // which names would work rather than having one chosen for it.
+    const frontDesk = frontDeskFor({
+      orchestrator: parseCommand(envelope.text) ? undefined : this.ctx.deps.config.daemon.orchestrator,
+      chatType: envelope.chatType,
+      answerUnaddressed,
+      groupsRequireMention,
+      members: answerUnaddressed ? null : this.ctx.roomAgents(envelope),
+    });
+    return routeMessage(envelope, this.ctx.deps.registry, {
+      ...(this.ctx.deps.config.daemon.orchestrator ? { orchestrator: this.ctx.deps.config.daemon.orchestrator } : {}),
+      ...(instance?.agent ? { gatewayOwner: instance.agent } : {}),
+      answerUnaddressed,
+      ...(repliedTo ? { repliedToAgent: repliedTo } : {}),
+      ...(frontDesk ? { frontDesk } : {}),
+    });
+  }
+
+  /**
+   * Who answers a message in this room that tags nobody and replies to nothing, or null when nobody does: what the
+   * dashboard says under a room's members. Routed as such a message is, so the sentence is the router's own answer.
+   */
+  untaggedAnswerer(input: { gateway: GatewayName; gatewayId: string; chatId: string }): string | null {
+    const envelope: MessageEnvelope = { id: "", timestamp: 0, ...input, chatType: "group", senderId: "", senderName: "", text: "", raw: null };
+    const instance = this.ctx.deps.config.gateways.find((gateway) => gateway.id === input.gatewayId);
+    return this.route(envelope, instance).agent?.config.id ?? null;
+  }
+
   async handle(envelope: MessageEnvelope): Promise<void> {
     // Handed to a running turn and never read (`TurnContext.releaseTurn`): its agent's next turn. Routed and
     // claimed once already — doing either again would drop it, or answer it twice in a room that named two.
@@ -181,41 +230,7 @@ export class InboundRouter {
     // nobody, which reads as the agent ignoring them.
     const repliedTo = verdict.kind === "human" ? this.ctx.voice.replyAuthor(envelope, instance?.agent) : undefined;
 
-    /**
-     * May an unaddressed message be answered here at all?
-     *
-     * Yes for one bot on a platform — everything it receives is its agent's — and yes in a DM, where
-     * a private message to Nero's bot is unambiguously Nero's however many other bots exist.
-     *
-     * No in a room shared by several of our own bots. The platform hands every message to every one
-     * of them, so any rule that does not name an agent fires once per connection: "my owner answers
-     * anything here" is true six times over, and so is "fall back to the orchestrator". Both shipped,
-     * both produced six replies to one message. In that arrangement a channel message has to be
-     * addressed — by a platform tag, by name in the text, or by replying to what an agent said.
-     */
-    // The group's own `/mention`, then this connection's setting, then the daemon's (`room-mention.ts`).
-    const groupsRequireMention = requireMentionHere(this.ctx.deps, envelope).requireMention;
-    const answerUnaddressed =
-      envelope.chatType === "dm" ||
-      (!groupsRequireMention && this.couldAnswerUnaddressed(envelope, instance).size <= 1);
-    // Where nobody may answer an unaddressed message, the orchestrator is the one who does — the room's front desk. Not
-    // for a slash command: `/new` clears one agent's history and `/model` changes one agent's model, so the room is told
-    // which names would work rather than having one chosen for it.
-    const frontDesk = frontDeskFor({
-      orchestrator: parseCommand(enriched.text) ? undefined : this.ctx.deps.config.daemon.orchestrator,
-      chatType: envelope.chatType,
-      answerUnaddressed,
-      groupsRequireMention,
-      members: answerUnaddressed ? null : this.ctx.roomAgents(envelope),
-    });
-
-    const decision = routeMessage(enriched, this.ctx.deps.registry, {
-      ...(this.ctx.deps.config.daemon.orchestrator ? { orchestrator: this.ctx.deps.config.daemon.orchestrator } : {}),
-      ...(instance?.agent ? { gatewayOwner: instance.agent } : {}),
-      answerUnaddressed,
-      ...(repliedTo ? { repliedToAgent: repliedTo } : {}),
-      ...(frontDesk ? { frontDesk } : {}),
-    });
+    const decision = this.route(enriched, instance, repliedTo);
     // What this copy knows of whom the message is for, left for the other copies — the front desk's (`noteRouted`).
     if (decision.agent && (decision.reason === "mention" || decision.reason === "reply")) this.admission.noteRouted(envelope, decision.agent.config.id);
     if (repliedTo) this.admission.noteRouted(envelope, repliedTo);
