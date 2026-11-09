@@ -15,7 +15,7 @@ import { join } from "node:path";
 import { readTextFileIfExists } from "@nouride/runtime";
 import type { ApprovalRequest, Tool } from "@nouride/shared";
 import type { BoxBusy } from "@/commons/box-load.ts";
-import { helperDeadline } from "@/modules/pipeline/background-helper.ts";
+import { helperDeadline } from "@/modules/pipeline/subagent.ts";
 import { JobStore } from "@/modules/jobs/jobs.store.ts";
 import { createBuiltinTools } from "@/modules/tools/registry.ts";
 import type { ApprovalAsk, ApprovalGate, ApprovalOutcome } from "@/modules/tools/approval.ts";

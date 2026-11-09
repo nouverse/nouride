@@ -36,8 +36,10 @@ const FIXED_SLEEPS: Record<string, number> = {
   // write shown not to happen while another writer holds the file's lock, and compaction's archive copy shown not made.
   // 204 → 211 for the bubble's line while a model works after its steps (0.8.7, `chat-progress.test.ts`,
   // `quiet-after-steps.test.ts`): five show no line drawn in a tick's time, one holds a fake provider past a few ticks,
-  // and the fake CLI's `script` mode keeps the pace it is given between its updates.
-  "apps/engine": 211,
+  // and the fake CLI's `script` mode keeps the pace it is given between its updates. 211 → 213 for a helper in the
+  // foreground that moves after the wait (`waited-helpers.test.ts`): two pace a fake past the wait, the race under test,
+  // in a call whose move is refused and in a scheduled turn's, where nothing may move.
+  "apps/engine": 213,
   "apps/dashboard": 37,
   "packages/gateways": 11,
   "packages/llm": 2,

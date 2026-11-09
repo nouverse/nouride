@@ -15,6 +15,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { join } from "node:path";
 import { readTextFileIfExists } from "@nouride/runtime";
 import type { ApprovalRequest, GlobalConfig, Tool, ToolContext } from "@nouride/shared";
+import { AuditLog } from "@/commons/audit.store.ts";
 import { JobStore } from "@/modules/jobs/jobs.store.ts";
 import { ASKED_TO_SAY } from "@/modules/pipeline/peer-turn.ts";
 import { createWorkTool } from "@/modules/tools/builtins/work.ts";
@@ -178,6 +179,8 @@ async function daemon(options: {
     startHelper: bench.pipeline.backgroundHelpers(),
     // As `boot/tools.ts` wires it, with a wait a test can sit through.
     askAgent: { run: bench.pipeline.peerTurnRunner(), start: bench.pipeline.askRunner(), waitMs: options.waitMs ?? WAIT_MS, ...peersFrom(bench.registry, () => true) },
+    // Audited, as boot does: the wrapper once cost a helper's turn the `ask_agent` that waits (`wrapBoth`).
+    audit: new AuditLog(bench.db),
   });
   tools.set("probe", probe(ran, askers));
   bench.pipeline.setTools(tools);

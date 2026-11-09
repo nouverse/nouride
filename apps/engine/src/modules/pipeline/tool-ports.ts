@@ -11,6 +11,7 @@ import type { ModelOverrides } from "@/modules/hooks/registry.ts";
 import type { SessionStatus } from "@/modules/tools/registry.ts";
 import type { BackgroundStart, SubagentRequest, SubagentResult } from "@/modules/tools/builtins/delegate.ts";
 import type { AskStart, PeerTurnRequest, PeerTurnResult } from "@/modules/tools/builtins/ask-agent.ts";
+import type { MovableRun } from "@/modules/tools/builtins/wait-then-move.ts";
 import type { AttachmentReadOptions, OpenedAttachment } from "@/modules/tools/builtins/attachment.ts";
 import type { SendMessageOptions } from "@/modules/tools/builtins/send-message.ts";
 import type { ChatAttachment } from "@/modules/attachments/chat-attachments.store.ts";
@@ -23,7 +24,7 @@ import { attachmentReadOptions } from "./attachment-reader.ts";
 import type { RoomSources } from "./known-rooms.ts";
 import { postMessage, sendTargets, tellChat } from "./send-message.ts";
 import { runSubagent } from "./subagent.ts";
-import { startBackgroundHelper } from "./background-helper.ts";
+import { startBackgroundHelper, startWaitedHelper } from "./background-helper.ts";
 import { runPeerTurn } from "./peer-turn.ts";
 import { startAsk } from "./background-ask.ts";
 
@@ -148,6 +149,11 @@ export class ToolPorts {
   /** `delegate`'s background half: a helper started as a job, whose end wakes its agent (`background-helper.ts`). */
   backgroundHelpers(): (request: SubagentRequest) => BackgroundStart {
     return (request) => startBackgroundHelper(this.o.turnContext, request);
+  }
+
+  /** A helper in the foreground that moves to the background when it runs long — `background-helper.ts`. */
+  waitedHelpers(): (request: SubagentRequest) => MovableRun {
+    return (request) => startWaitedHelper(this.o.turnContext, request);
   }
 
   /**

@@ -37,7 +37,8 @@ import {
 } from "@/modules/tools/builtins/exec.ts";
 import { createSessionTool } from "@/modules/tools/builtins/sessions.ts";
 import { createDelegateTool, type DelegateToolOptions } from "@/modules/tools/builtins/delegate.ts";
-import { createAskAgentTool, waitingAsk, type AskAgentToolOptions } from "@/modules/tools/builtins/ask-agent.ts";
+import { createAskAgentTool, type AskAgentToolOptions } from "@/modules/tools/builtins/ask-agent.ts";
+import { waitingForm, wrapBoth } from "@/modules/tools/builtins/wait-then-move.ts";
 import { createReadTool, editTool, multiEditTool, writeTool } from "@/modules/tools/builtins/files.ts";
 import { readImagesFrom } from "@/modules/tools/builtins/read-image.ts";
 import { globTool, grepTool } from "@/modules/tools/builtins/search.ts";
@@ -106,6 +107,11 @@ export interface ToolRegistryOptions extends ToolsetDeps {
   runSubagent?: DelegateToolOptions["run"];
   /** Starts a helper in the background, as a job. Absent: `delegate` refuses `background` and runs in the foreground only. */
   startHelper?: DelegateToolOptions["background"];
+  /**
+   * Starts a helper in the foreground that moves to the background once it outlasts the wait, and how long that is. Absent:
+   * a helper in the foreground is waited for to the end.
+   */
+  waitedHelper?: Pick<DelegateToolOptions, "start" | "waitMs">;
   /** A worktree for a writing helper of a mission in one (`delegate` `isolated`, 0.8.1). */
   isolateHelper?: DelegateToolOptions["isolate"];
   /**
@@ -266,6 +272,7 @@ export function createBuiltinTools(options: ToolRegistryOptions): Map<string, To
       createDelegateTool({
         run: options.runSubagent,
         ...(options.startHelper ? { background: options.startHelper } : {}),
+        ...options.waitedHelper,
         ...(options.isolateHelper ? { isolate: options.isolateHelper } : {}),
       }),
     );
@@ -294,8 +301,9 @@ export function createBuiltinTools(options: ToolRegistryOptions): Map<string, To
   const registry = new Map(tools.map((tool) => [tool.definition.name, tool]));
 
   // Auditing wraps every tool once, here, rather than being repeated in each implementation —
-  // a tool added later cannot forget to record itself.
-  return options.audit ? new Map([...registry].map(([name, tool]) => [name, audited(name, tool, options.audit!)])) : registry;
+  // a tool added later cannot forget to record itself. Its waiting form too (`wrapBoth`), or a turn that may hold no work
+  // in the background would be offered the form that moves it there.
+  return options.audit ? new Map([...registry].map(([name, tool]) => [name, wrapBoth(tool, (form) => audited(name, form, options.audit!))])) : registry;
 }
 
 function createSessionStatusTool(
@@ -581,16 +589,18 @@ export function resolveToolset(
    */
   const backgroundHelpers = deps?.backgroundHelpers?.(agent.config.id) ?? 0;
   // An ask that runs long moves to the background (0.7.19) only where this turn may hold background work: elsewhere it
-  // waits to the end, with no `background` in its schema (`waitingAsk`).
-  if (peers.length > 0 && askAgent) resolved.set("ask_agent", backgroundHelpers > 0 ? askAgent : waitingAsk(askAgent));
+  // waits to the end, with no `background` in its schema (`waitingForm`).
+  if (peers.length > 0 && askAgent) resolved.set("ask_agent", backgroundHelpers > 0 ? askAgent : waitingForm(askAgent));
   else resolved.delete("ask_agent");
 
   /**
    * `delegate`'s `background`, offered only where this agent may run helpers that way (0.7.15). Taken off the schema
-   * rather than left to be refused: a parameter the model sees is one it will try, and a refusal costs a round trip.
+   * rather than left to be refused: a parameter the model sees is one it will try, and a refusal costs a round trip. And
+   * its helpers in the foreground move to the background after the wait only there: elsewhere they are waited for to the
+   * end (`waitingForm`).
    */
   const delegate = resolved.get("delegate");
-  if (delegate && backgroundHelpers === 0) resolved.set("delegate", withoutParameter(resolved.get("delegate")!, "background"));
+  if (delegate && backgroundHelpers === 0) resolved.set("delegate", waitingForm(delegate));
   // `isolated` the same way, offered only where it is not refused: a mission's turn in a worktree of its own (0.8.1).
   if (delegate && !deps?.helperWorktrees) resolved.set("delegate", withoutParameter(resolved.get("delegate")!, "isolated"));
 
@@ -755,7 +765,7 @@ export function resolveToolset(
 
 /**
  * `delegate` without one of its parameters: its schema drops it, and a call that sends it anyway runs as if it had not —
- * without `background` in the foreground, without `isolated` in the mission's folder.
+ * without `isolated` in the mission's folder.
  */
 function withoutParameter(tool: Tool, name: string): Tool {
   const parameters = tool.definition.parameters as { properties?: Record<string, unknown> };

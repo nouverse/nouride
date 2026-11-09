@@ -110,6 +110,9 @@ export interface TurnRequest {
    * to block needs. Without it the approval gate could only be bounded by its own timeout, and since
    * both default to 300s and the turn starts first, the turn always died before the model could react
    * to a refused call.
+   *
+   * Read at each step and each call, never copied out of the request: a helper that moves to the background has a
+   * getter here, its parent's clock until it moves and its own after (`pipeline/subagent.ts`).
    */
   deadlineAt?: number;
   /**

@@ -16,7 +16,8 @@ import { createDelegateTool, helperRole, type BackgroundStart, type HelperView, 
 import { parseBriefs, renderBrief } from "@/modules/tools/builtins/delegate-brief.ts";
 import { filesNamedIn } from "@/modules/pipeline/background-helper.ts";
 import type { SubAgentHandoff } from "@/modules/tools/handoff.ts";
-import { sleep } from "../wait.ts";
+import { waitingForm, type MovableRun, type Moved } from "@/modules/tools/builtins/wait-then-move.ts";
+import { eventually, sleep } from "../wait.ts";
 
 /**
  * What a subagent hands back. `runSubagent` derives these with `buildHandoff`; a test states one.
@@ -289,6 +290,109 @@ describe("delegate in the background", () => {
     const result = await subject.execute({ tasks: [task("x")], background: true }, ctx());
     expect(result.isError).toBe(true);
     expect(result.content).toContain("Leave `background` off");
+  });
+});
+
+describe("delegate in the foreground, waited on for a minute", () => {
+  /** A helper that answers when `finish` is called, or never — and moves when asked, the way `start` answers. */
+  function helper(moveTo: Moved) {
+    let finish: (summary: string) => void = () => {};
+    let detached = 0;
+    const run: MovableRun = {
+      answer: new Promise<SubAgentHandoff>((resolve) => (finish = (summary) => resolve(handoff(summary)))),
+      detach: () => ((detached += 1), moveTo),
+    };
+    return { run, finish: (summary: string) => finish(summary), detached: () => detached };
+  }
+
+  function tool(helpers: Record<string, ReturnType<typeof helper>>, waitMs = 30) {
+    let ran = 0;
+    const subject = createDelegateTool({
+      run: async () => ((ran += 1), handoff("waited for")),
+      start: ({ brief }) => helpers[brief.goal]!.run,
+      waitMs,
+    });
+    return { subject, ran: () => ran };
+  }
+
+  test("a helper that answers inside the wait is answered in the turn, and nothing moves", async () => {
+    const quick = helper({ job: "job_never" });
+    const t = tool({ "Check the disks": quick });
+    const result = t.subject.execute({ tasks: [task("Check the disks")] }, ctx());
+    quick.finish("The disks are fine.");
+    const said = await result;
+    expect(said.content).toContain("The disks are fine.");
+    expect(quick.detached()).toBe(0);
+    expect(said.metadata?.control).toBeUndefined();
+    expect(said.metadata?.moved).toBeUndefined();
+    expect(t.ran()).toBe(0);
+  });
+
+  test("one still working after the wait moves; the agent is told which answered, which moved, and where the result will come from", async () => {
+    const quick = helper({ answered: true });
+    const slow = helper({ job: "job_slow" });
+    const t = tool({ "Check the disks": quick, "Rebuild the index": slow });
+    const result = t.subject.execute({ tasks: [task("Check the disks"), task("Rebuild the index")] }, ctx());
+    quick.finish("The disks are fine.");
+    const said = await result;
+
+    expect(slow.detached()).toBe(1);
+    expect(said.isError).toBe(false);
+    expect(said.content).toContain("── task 1: Check the disks\n[nouva · success]\nThe disks are fine.");
+    expect(said.content).toContain("── task 2: Rebuild the index\nStill working after 30ms, now in the background as job_slow.");
+    expect(said.content).toContain('Still working, now in the background: job_slow "Rebuild the index".');
+    expect(said.content).toContain(
+      "Your turn ends now, so the person can talk to you meanwhile. Each result comes to you as a message of its own when that helper finishes: you have not seen it, so do not say what it will find.",
+    );
+    expect(said.content).toContain("Tell the person what the helpers that answered found, and that the rest is still being worked on and you will report it when it comes.");
+    expect(said.content).toContain("Stop one with `nouride jobs kill <id>` if the person asks.");
+    // The turn ends, as one that started a helper in the background does.
+    expect(said.metadata).toMatchObject({ tasks: 2, failed: 0, statuses: ["success", "background"], moved: ["job_slow"], control: { finishTurn: "wrap_up", note: "helper_moved" } });
+  });
+
+  test("with no room to move, it stays: waited for to the end, and the answer says why it took so long", async () => {
+    const full = helper({ refused: { why: "limit", limit: 2, running: [{ id: "job_a", goal: "a", startedAt: Date.now(), here: true }, { id: "job_b", goal: "b", startedAt: Date.now(), here: true }] } });
+    const broke = helper({ refused: { why: "unavailable", reason: "Today's spending limit for this agent has been reached." } });
+    const t = tool({ "Rebuild the index": full, "Check the disks": broke });
+    const result = t.subject.execute({ tasks: [task("Rebuild the index"), task("Check the disks")] }, ctx());
+    // Both still at work when the wait runs out: each asked to move, each refused — and the call waits on.
+    await eventually(() => full.detached() === 1 && broke.detached() === 1, 2_000, "the moves tried");
+    full.finish("The index is rebuilt.");
+    broke.finish("The disks are fine.");
+    const said = await result;
+
+    // Each under its own task, after its answer.
+    const [first, second] = said.content.split("\n\n── task 2: ");
+    expect(first).toContain("The index is rebuilt.");
+    expect(first).toEndWith(
+      "\n(This took longer than 30ms and stayed in the foreground: you already have 2 jobs working in the background (helpers and asks), the most this agent may have (`[delegate] max_background = 2`).)",
+    );
+    expect(second).toContain("The disks are fine.");
+    expect(second).toEndWith("\n(This took longer than 30ms and stayed in the foreground: Today's spending limit for this agent has been reached.)");
+    expect(said.metadata?.control).toBeUndefined();
+    expect(said.content).not.toContain("now in the background");
+  });
+
+  test("a turn that may hold nothing in the background is offered the form that waits: no `background`, nothing moves", async () => {
+    const slow = helper({ job: "job_slow" });
+    const t = tool({ "Rebuild the index": slow });
+    const waiting = waitingForm(t.subject);
+    expect(waiting).not.toBe(t.subject);
+    expect(Object.keys((waiting.definition.parameters as { properties: object }).properties)).toEqual(["tasks", "tier", "isolated"]);
+    expect(t.subject.definition.description).toContain("Without `background` it is for quick questions: you wait up to a minute, then a helper still working moves to the background.");
+    expect(waiting.definition.description).not.toContain("a minute");
+    // Asked for the background anyway, it waits for its helper to the end.
+    const said = await waiting.execute({ tasks: [task("Rebuild the index")], background: true }, ctx());
+    expect(said.content).toContain("waited for");
+    expect(t.ran()).toBe(1);
+    expect(slow.detached()).toBe(0);
+  });
+
+  test("the `background` parameter says what it is for, and what happens without it", () => {
+    const tool = createDelegateTool({ run: async () => handoff("ok") });
+    const background = (tool.definition.parameters as { properties: Record<string, { description: string }> }).properties.background!.description;
+    expect(background).toStartWith("For work you know takes more than a minute: each brief becomes a helper job, your turn ends now");
+    expect(background).toEndWith("Off: you wait up to a minute, then the same for any still working.");
   });
 });
 

@@ -27,7 +27,7 @@ export const BUDGET: Record<string, Budget> = {
     why: "a security classifier: the list of what an agent may never do without a human. It grows by a rule and nothing else; a helper or a second way of classifying goes in a file of its own",
   },
   "apps/engine/src/modules/config/schema.docs.ts": {
-    lines: 472,
+    lines: 473,
     why: "one annotation per setting, the list `config explain` and the dashboard read; it grows by an entry when the config gains a key, and splitting it would hide the list it is",
   },
   "apps/engine/src/modules/web/control/routes/chat.ts": {
@@ -51,7 +51,7 @@ export const BUDGET: Record<string, Budget> = {
     why: "the background job table: a command's, a helper's and a background ask's rows, every write to `jobs.status` in one class; the wake-up text and a helper's runtime half are beside it",
   },
   "apps/engine/src/modules/tools/registry.ts": {
-    lines: 443,
+    lines: 446,
     why: "the built-in tools and one agent's toolset made of them: what it is offered, how each is gated, what each result is masked of, in the one place to read what an agent can do",
   },
   "apps/engine/src/modules/tools/builtins/exec.ts": {

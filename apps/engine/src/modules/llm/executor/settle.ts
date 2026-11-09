@@ -163,6 +163,19 @@ export function wrapUpPrompt(reason: string, turn: { asked?: boolean } = {}): st
       " not greet."
     );
   }
+  if (reason === "helper_moved") {
+    /**
+     * Helpers `delegate` waited on outlasted the wait and work on in the background, and the turn ends so the person can
+     * talk to the agent meanwhile. What the ones that answered found is in hand, and said now; what the others will find
+     * is not, and must not be guessed.
+     */
+    return (
+      "[system] A helper you were waiting on is still working, now in the background, and this turn ends now so the person" +
+      " can talk to you meanwhile. In one short reply, in the person's language: say what the helpers that answered found," +
+      " if any did, what is still being worked on, and that you will report it when it is done. Its result comes to you as" +
+      " a message of its own, so do not guess what it will find. Do not call more tools and do not greet."
+    );
+  }
   if (reason === "ask_in_background") {
     /**
      * An agent this one asked is still working, now in the background (`ask_agent`, 0.7.19), and the turn ends so the

@@ -21,7 +21,8 @@ export function renderWork({ ctx, toolNames }: HarnessView): string[] {
   const inBackground = [delegates && "`delegate` with `background: true` for yours", asks && "`ask_agent` with `background: true` for theirs"].filter(Boolean).join(", ");
   return [
     "- **Who does the work** is two questions: whose work is it, and how long will it take? Decide before your first call, not halfway through.",
-    `  - A few minutes, and yours: do it here.${delegates ? " Several independent questions you need before you can answer (four hosts to check, three logs to read): `delegate` them in one call; up to four run at once and you wait." : ""}`,
+    // The wait has an end only where a helper may move to the background: a minute, then one still working goes there.
+    `  - A few minutes, and yours: do it here.${delegates ? ` Several independent questions you need before you can answer (four hosts to check, three logs to read): \`delegate\` them in one call; up to four run at once and you wait${background ? ", up to a minute: a helper still working then moves to the background" : ""}.` : ""}`,
     ...(asks ? ["  - Another agent's (their skills, tools or access; OTHER AGENTS says what each is for): `ask_agent`, and you report their answer."] : []),
     ...(background
       ? [

@@ -31,8 +31,12 @@ describe("who does the work", () => {
     expect(all()).toContain("- **Who does the work** is two questions: whose work is it, and how long will it take? Decide before your first call, not halfway through.");
   });
 
-  test("a few minutes and yours: here; independent questions to helpers at once, waited for", () => {
-    expect(all()).toContain("  - A few minutes, and yours: do it here. Several independent questions you need before you can answer (four hosts to check, three logs to read): `delegate` them in one call; up to four run at once and you wait.");
+  test("a few minutes and yours: here; independent questions to helpers at once, waited for up to a minute", () => {
+    expect(all()).toContain(
+      "  - A few minutes, and yours: do it here. Several independent questions you need before you can answer (four hosts to check, three logs to read): `delegate` them in one call; up to four run at once and you wait, up to a minute: a helper still working then moves to the background.",
+    );
+    // Where none may move — the background off — the wait has no end to name.
+    expect(harness(["delegate"], { background: 0 })).toContain("`delegate` them in one call; up to four run at once and you wait.");
   });
 
   test("another agent's work: ask_agent, and the answer reported", () => {

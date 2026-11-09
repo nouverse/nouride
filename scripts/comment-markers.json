@@ -664,7 +664,7 @@
   "apps/engine/src/modules/tools/approvals.store.ts": { "version": 9 },
   "apps/engine/src/modules/tools/arguments.ts": { "version": 1 },
   "apps/engine/src/modules/tools/audited.ts": { "version": 2 },
-  "apps/engine/src/modules/tools/builtins/ask-agent.ts": { "version": 3 },
+  "apps/engine/src/modules/tools/builtins/ask-agent.ts": { "version": 2 },
   "apps/engine/src/modules/tools/builtins/attach.ts": { "version": 1 },
   "apps/engine/src/modules/tools/builtins/attachment.ts": { "version": 1 },
   "apps/engine/src/modules/tools/builtins/cli-model.ts": { "version": 1 },

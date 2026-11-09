@@ -36,9 +36,10 @@
  *   inbound.ts           whether this message gets a turn at all, and whose
  *   turn.ts              running one, from executor to reply
  *   subagent.ts          one helper turn, run as its parent
- *   background-helper.ts one helper as a job of its own, whose end wakes its parent
+ *   background-helper.ts one helper as a job of its own, whose end wakes its parent — from the start, or once it runs long
  *   peer-turn.ts         one OTHER agent's turn, run behind the chat
  *   background-ask.ts    that turn moved to a job of its own when it runs long, whose answer wakes the agent that asked
+ *   background-move.ts   the one road a helper or an asked agent waited on takes into the background
  *   render-prompt.ts     the diagnostic that shows a prompt without running a turn
  */
 
@@ -412,6 +413,7 @@ export class Pipeline {
   attachmentReader() { return this.toolPorts.attachmentReader(); }
   subagentRunner() { return this.toolPorts.subagentRunner(); }
   backgroundHelpers() { return this.toolPorts.backgroundHelpers(); }
+  waitedHelpers() { return this.toolPorts.waitedHelpers(); }
   peerTurnRunner() { return this.toolPorts.peerTurnRunner(); }
   askRunner() { return this.toolPorts.askRunner(); }
   sessionStatus(...args: Parameters<ToolPorts["sessionStatus"]>) { return this.toolPorts.sessionStatus(...args); }

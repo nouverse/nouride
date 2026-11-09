@@ -24,15 +24,17 @@
  *   for, and never waits.
  */
 
-import { childSessionId, createLogger, resolveMaxBackground, resolveToolIterations, resolveTurnDurationMs, toUserMessage, type LoadedAgent, type ToolContext } from "@nouride/shared";
+import { childSessionId, createLogger, resolveMaxBackground, resolveToolIterations, resolveTurnDurationMs, toUserMessage, type LoadedAgent } from "@nouride/shared";
 import type { ApprovalGate } from "@/modules/tools/approval.ts";
 import type { BackgroundStart, HelperView, SubagentRequest } from "@/modules/tools/builtins/delegate.ts";
-import { goalLine, renderBrief, type HelperBrief } from "@/modules/tools/builtins/delegate-brief.ts";
+import type { MovableRun } from "@/modules/tools/builtins/wait-then-move.ts";
+import { renderBrief, type HelperBrief } from "@/modules/tools/builtins/delegate-brief.ts";
 import { buildHandoff } from "@/modules/tools/handoff.ts";
 import type { HelperOutcome, RunningHelper } from "@/modules/jobs/helper-jobs.ts";
 import type { JobRecord } from "@/modules/jobs/jobs.store.ts";
-import { logLine, quotable, sayingWho, stopped } from "./background-turn.ts";
-import { helperAgent, helperExecutor, helperRunsOn, helperTurn } from "./subagent.ts";
+import { helperAsking, logLine, quotable, sayingWho, stopped } from "./background-turn.ts";
+import { helperView, moveToBackground } from "./background-move.ts";
+import { helperAgent, helperDeadline, helperExecutor, helperRunsOn, helperTurn, startSubagent } from "./subagent.ts";
 import { delegateNote, leadNudgeText, nudgeBaseMs, sinceSaid, watchTurn } from "./budget-nudges.ts";
 import type { TurnContext } from "./turn-context.ts";
 import { beginDelegated, type DelegatedEnd } from "./delegated-turn.ts";
@@ -78,11 +80,21 @@ export function startBackgroundHelper(ctx: TurnContext, request: SubagentRequest
 }
 
 /**
- * A running helper — or an ask in the background, by its job line — as a tool says it, and whether it was started from
- * the conversation asking: `delegate`'s list and refusals, and `ask_agent`'s (`background-ask.ts`).
+ * A helper in the foreground (`delegate` without `background`): waited on, and once it outlasts the tool's wait, moved
+ * here — a job of the parent's from that moment, as if it had been started in the background then: its row, the one
+ * limit, its log, its stop, the nudges and the wake-up when it ends (`background-move.ts`). Its turn is the foreground
+ * helper's (`subagent.ts`), which changes what it must once it moves.
  */
-export function helperView(job: JobRecord, at: Pick<ToolContext, "gatewayId" | "chatId">): HelperView {
-  return { id: job.id, goal: job.brief ? goalLine(job.brief) : job.command, startedAt: job.startedAt, here: job.gatewayId === at.gatewayId && job.chatId === at.chatId };
+export function startWaitedHelper(ctx: TurnContext, request: SubagentRequest): MovableRun {
+  const parent = ctx.deps.registry.get(request.ctx.agentId);
+  const turn = startSubagent(ctx, request, { detachable: true });
+  return {
+    answer: turn.ended.then((outcome) => outcome.report),
+    detach: () =>
+      moveToBackground(ctx, request.ctx, parent, turn, (jobs, adopted) =>
+        jobs.startHelper({ ...adopted, cwd: ctx.workspaceFor(request.ctx.agentId).shared, brief: request.brief }),
+      ),
+  };
 }
 
 /**
@@ -142,7 +154,7 @@ async function runBackgroundHelper(ctx: TurnContext, parent: LoadedAgent, reques
   };
   try {
     const result = await executor.run({
-      ...helperTurn(ctx, blank, request, sessionId, { notes: namedFiles(ctx, request), background: true }),
+      ...helperTurn(ctx, blank, request, sessionId, { notes: namedFiles(ctx, request), mode: { background: true } }),
       signal: controller.signal,
       deadlineAt,
       // The turn that started it, for its calls' audit rows and its usage. Not its call ids: its steps are not
@@ -171,16 +183,6 @@ async function runBackgroundHelper(ctx: TurnContext, parent: LoadedAgent, reques
 }
 
 /**
- * When its turn's clock runs out: the turn's whole duration from when it started — a wait for room is not taken from
- * it — and never past `job_max_ms` from when its job did, the deadline the job itself keeps, so it wraps up before that
- * stops it. Pure.
- */
-export function helperDeadline(at: { queuedAt: number; startedAt: number; turnMs: number; jobMs: number }): number {
-  const own = at.startedAt + at.turnMs;
-  return at.jobMs > 0 ? Math.min(own, at.queuedAt + at.jobMs) : own;
-}
-
-/**
  * Room on the box before it starts: waits while the machine is busy, its log saying why and when it goes on. True to
  * start; false when it was stopped while it waited — a kill, the deadline, a shutdown.
  */
@@ -202,8 +204,7 @@ async function roomFor(ctx: TurnContext, job: RunningHelper, jobMs: number): Pro
  * restart — with the helper and its goal in the reason, which every surface shows and the row keeps.
  */
 function askingFor(gate: ApprovalGate, jobId: string, goal: string): ApprovalGate {
-  // The goal is the model's words, in a question a person answers: one line, short, and unable to close its own quotes.
-  const who = `a background task (${jobId}: "${quotable(goal)}") wants to run this`;
+  const who = helperAsking(jobId, goal);
   return sayingWho(gate, () => who);
 }
 

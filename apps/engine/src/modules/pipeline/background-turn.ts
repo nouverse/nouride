@@ -47,6 +47,15 @@ export function quotable(words: string): string {
 }
 
 /**
+ * Who a helper's question is from, once it works in the background: nobody is watching it, and a question with no name on
+ * it reads as the parent asking. The goal is the model's words, in a question a person answers: one line, short, and
+ * unable to close its own quotes.
+ */
+export function helperAsking(jobId: string, goal: string): string {
+  return `a background task (${jobId}: "${quotable(goal)}") wants to run this`;
+}
+
+/**
  * The approval gate, saying whose work a question is for — `who()`, when it has an answer, put in front of the reason,
  * which every surface shows and the row keeps. Read per question: an ask says it only once it is in the background.
  */
@@ -56,6 +65,9 @@ export function sayingWho(gate: ApprovalGate, who: () => string | null): Approva
       return gate.available;
     },
     ...(gate.canAsk ? { canAsk: () => gate.canAsk!() } : {}),
+    // What a question showed, for a tool whose write depends on it (`persona`): dropped here, a write a person approved
+    // went ahead without the check that the file is still the one they were shown.
+    ...(gate.previewOf ? { previewOf: (id: string) => gate.previewOf!(id) } : {}),
     pending: (agentId) => gate.pending(agentId),
     expireAll: (agentId, chat) => gate.expireAll(agentId, chat),
     request: (ask) => {
