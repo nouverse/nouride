@@ -17,6 +17,7 @@ import { StepPill } from "@/commons/components/turns/Steps";
 import { LiveStepLine } from "@/commons/components/turns/StepLine";
 import { CopyButton } from "@/commons/components/ui/CopyButton";
 import { PersonMessage } from "@/commons/components/chat/PersonMessage";
+import { AgentReply } from "@/commons/components/chat/AgentReply";
 
 export function UserBubble({
   text,
@@ -105,41 +106,6 @@ function SystemNote({ text, cause }: { text: string; cause?: TurnCause | undefin
           {text}
         </pre>
       )}
-    </div>
-  );
-}
-
-/**
- * An agent's side of the conversation, with a name above it when there is more than one agent.
- *
- * In a one-to-one chat the name is noise: the header already says who this is, and repeating it over
- * every reply is a label that never varies. In a room it is the only thing that makes the transcript
- * readable — three agents answering under one avatar is three anonymous voices, and the tag someone
- * needs to reply to a particular one is exactly the name being withheld.
- *
- * Passed in rather than derived from a "current agent", because in a room there is no such thing.
- */
-function AgentBody({ agentId, children }: { agentId?: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col items-start gap-1 w-full group">
-      {/*
-        The name, and no avatar — and the name is not optional.
-
-        Every agent shared one mascot, so the picture said "an agent" where the name says which, and
-        at 20 pixels beside a paragraph it was decoration costing width the reply wanted. Removing it
-        while the name was still behind a `showAgent` flag left finished turns with *neither*: an
-        anonymous paragraph where there had at least been a face. The name replaced the avatar, so it
-        carries the identity and there is no case where it is switched off.
-
-        Bold and at full contrast rather than the muted label it started as. In a room it is the only
-        thing distinguishing three voices, which is not a caption.
-      */}
-      {agentId ? (
-        <p className="font-mono text-[11px] font-bold uppercase tracking-wide text-base-content">
-          {agentId}
-        </p>
-      ) : null}
-      <div className="w-full min-w-0 space-y-2">{children}</div>
     </div>
   );
 }
@@ -249,7 +215,9 @@ export function TurnView({
   return (
     <div className="space-y-3">
       {showPrompt === false ? null : <Asked turn={turn} sessionId={sessionId} asker={asker} />}
-      <div className={`flex flex-col items-start w-full space-y-1.5 origin-top-left ${motion}`}>
+      {/* Whose answer this is, by its cat and its name, with its steps and its words in the column beside them. The
+          agent is passed in rather than taken from a "current agent": in a room there is no such thing. */}
+      <AgentReply agentId={turn.agentId} motion={motion}>
         <StepPill
           turnId={turn.id}
           status={turn.status}
@@ -264,23 +232,21 @@ export function TurnView({
           {...(turn.error ? { error: turn.error } : {})}
         />
         <SaidWhileWorking steps={turn.steps} quote={showPrompt === false} />
-        <AgentBody agentId={turn.agentId}>
-          <div className="text-sm leading-relaxed text-base-content/90 min-w-0 [overflow-wrap:anywhere]">
-            <Markdown source={content || fallback} />
+        <div className="w-full min-w-0 text-sm leading-relaxed text-base-content/90 [overflow-wrap:anywhere]">
+          <Markdown source={content || fallback} />
+        </div>
+        {/* What the agent sent back with `send_file`. Under the answer, because that is where the
+            sentence about it is. */}
+        <AttachmentList
+          sessionId={turn.sessionId ?? sessionId}
+          files={(turn.attachments ?? []).filter((file) => file.direction === "out")}
+        />
+        {content && (
+          <div className="sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex items-center gap-2">
+            <CopyButton text={content} className={COPY_CLASS} />
           </div>
-          {/* What the agent sent back with `send_file`. Under the answer, because that is where the
-              sentence about it is. */}
-          <AttachmentList
-            sessionId={turn.sessionId ?? sessionId}
-            files={(turn.attachments ?? []).filter((file) => file.direction === "out")}
-          />
-          {content && (
-            <div className="sm:opacity-0 sm:group-hover:opacity-100 transition-opacity pt-1 flex items-center gap-2">
-              <CopyButton text={content} className={COPY_CLASS} />
-            </div>
-          )}
-        </AgentBody>
-      </div>
+        )}
+      </AgentReply>
     </div>
   );
 }
@@ -364,37 +330,29 @@ export function LiveTurnView({
   return (
     <div className="space-y-3">
       {showPrompt === false ? null : <Asked turn={turn} sessionId={sessionId} asker={asker} />}
-      <div className={`flex flex-col items-start w-full space-y-2 origin-top-left ${motion}`}>
-        {/*
-          Whose work this is, above the steps.
-
-          The name lives on `AgentBody`, which only renders once there is text to show — so a room
-          with two agents mid-turn drew two anonymous `WORKING` cards and nothing said which was
-          which. Most of a turn's visible life is spent before its first word, and that is exactly
-          when the reader needs to know who is thinking.
-        */}
-        <div className="flex w-full items-center gap-2">
-          {turn.agentId ? (
-            <p className="font-mono text-[11px] font-bold uppercase tracking-wide text-base-content">
-              {turn.agentId}
-            </p>
-          ) : null}
-          {/*
-            Stopping *this* agent, from the card that is showing its work.
-            A room can have several turns at once, so the composer's single button had to mean "stop
-            everything" — which is rarely what somebody watching one card wants.
-          */}
-          {onStop && turn.status === "running" ? (
+      {/*
+        Whose work this is, by its cat and its name above the steps, from before its first word: most of a turn's visible
+        life is spent there, and in a room with two agents at work that is when the reader needs to know who is thinking.
+      */}
+      <AgentReply
+        agentId={turn.agentId}
+        motion={motion}
+        aside={
+          // Stopping *this* agent, from the card that is showing its work. A room can have several turns at once, so
+          // the composer's single button had to mean "stop everything", which is rarely what somebody watching one
+          // card wants.
+          onStop && turn.status === "running" ? (
             <button
               type="button"
               onClick={() => onStop(turn.agentId)}
-              className="btn btn-ghost btn-xs h-5 max-sm:h-8 min-h-0 gap-1 rounded-lg px-1.5 text-[10px] text-base-content/65 hover:text-error"
+              className="btn btn-ghost btn-xs h-5 max-sm:h-8 min-h-0 gap-1 rounded-lg px-1.5 text-[10px] max-sm:text-xs text-base-content/65 hover:text-error"
               title={`Stop ${turn.agentId}`}
             >
               <Square size={9} className="fill-current" /> stop
             </button>
-          ) : null}
-        </div>
+          ) : null
+        }
+      >
         <LiveStepLine
           steps={turn.steps}
           running={turn.status === "running"}
@@ -406,8 +364,8 @@ export function LiveTurnView({
         />
         <SaidWhileWorking steps={turn.steps} quote={showPrompt === false} />
         {revealed && (
-          <AgentBody agentId={turn.agentId}>
-            <div className="text-sm leading-relaxed text-base-content/90 min-w-0 [overflow-wrap:anywhere]">
+          <>
+            <div className="w-full min-w-0 text-sm leading-relaxed text-base-content/90 [overflow-wrap:anywhere]">
               <Markdown source={revealed} />
               {running && (
                 <span className="inline-block w-1.5 h-4 bg-primary rounded-xs ml-1 animate-pulse align-middle" />
@@ -417,9 +375,9 @@ export function LiveTurnView({
               sessionId={turn.sessionId ?? sessionId}
               files={(turn.attachments ?? []).filter((file) => file.direction === "out")}
             />
-          </AgentBody>
+          </>
         )}
-      </div>
+      </AgentReply>
     </div>
   );
 }
@@ -431,16 +389,16 @@ export function EarlierMessage({
   message: { role: "user" | "assistant"; content: string; steps?: { text: string }[] };
 }) {
   if (message.role === "user") return <UserBubble text={message.content} />;
-  // No name: these predate turn records, which is where the agent id lives. Labelling them would
-  // mean guessing, and a room's transcript is the one place a wrong name matters most.
+  // No face and no name: these predate turn records, which is where the agent id lives. Drawing one would mean
+  // guessing, and a room's transcript is the one place a wrong name matters most. The column keeps its place.
   return (
-    <AgentBody>
-      <div className="text-sm leading-relaxed text-base-content/90 min-w-0 [overflow-wrap:anywhere]">
+    <AgentReply>
+      <div className="w-full min-w-0 text-sm leading-relaxed text-base-content/90 [overflow-wrap:anywhere]">
         <Markdown source={message.content} />
       </div>
-      <div className="sm:opacity-0 sm:group-hover:opacity-100 transition-opacity pt-1 flex items-center gap-2">
+      <div className="sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex items-center gap-2">
         <CopyButton text={message.content} className={COPY_CLASS} />
       </div>
-    </AgentBody>
+    </AgentReply>
   );
 }

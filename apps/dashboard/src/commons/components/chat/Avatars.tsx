@@ -71,7 +71,7 @@ function initials(name: string): string {
 /** A person in a conversation on a chat app: their initials in a circle, where an agent has its cat. */
 export function PersonAvatar({ name }: { name: string }) {
   return (
-    <span aria-hidden="true" className="grid size-8 shrink-0 place-items-center rounded-full bg-base-200 font-display text-xs font-medium text-base-content/80">
+    <span aria-hidden="true" className="grid size-7 shrink-0 place-items-center rounded-full bg-base-200 font-display text-xs font-medium text-base-content/80 sm:size-8">
       {initials(name)}
     </span>
   );

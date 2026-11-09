@@ -6,6 +6,7 @@
 
 import type { ReactNode } from "react";
 import { PersonAvatar } from "@/commons/components/chat/Avatars";
+import { FACE_GAP } from "@/commons/components/chat/AgentReply";
 
 export function PersonMessage({
   name,
@@ -24,7 +25,7 @@ export function PersonMessage({
 }) {
   const who = name?.trim() || "Someone";
   return (
-    <div className={`flex w-full items-start gap-2.5 origin-top-left ${motion}`} data-person={who}>
+    <div className={`flex w-full items-start ${FACE_GAP} origin-top-left ${motion}`} data-person={who}>
       <PersonAvatar name={who} />
       <div className="flex min-w-0 max-w-[85%] flex-col items-start gap-1 sm:max-w-[75%]">
         <span className="max-w-full truncate text-xs font-semibold text-base-content/80">{who}</span>

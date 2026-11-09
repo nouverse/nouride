@@ -6,6 +6,7 @@
 import { describe, expect, test } from "bun:test";
 import { renderToString } from "react-dom/server";
 import { createElement } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { formatDuration, formatElapsed, saidWhileWorking, turnTokens, workSteps } from "@/commons/lib/steps";
 import { StepFeed } from "@/commons/components/turns/Steps";
 import { LiveTurnView, TurnView } from "@/modules/chat/components/Turn";
@@ -118,7 +119,9 @@ describe("what was said while it worked", () => {
     ...overrides,
   });
   // Without the comments React puts between adjacent text nodes, so "1 step" reads as it does on screen.
-  const html = (element: Parameters<typeof renderToString>[0]) => renderToString(element).replaceAll("<!-- -->", "");
+  // A reply reads its agent's face from the status query: a client with nothing in it draws the column without one.
+  const html = (element: Parameters<typeof renderToString>[0]) =>
+    renderToString(createElement(QueryClientProvider, { client: new QueryClient() }, element)).replaceAll("<!-- -->", "");
   /** Both drawn, in this order. A bare `indexOf` comparison passes when the first is missing: -1 is before anything. */
   const inOrder = (page: string, ...texts: string[]) => {
     const at = texts.map((text) => page.indexOf(text));
