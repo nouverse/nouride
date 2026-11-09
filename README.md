@@ -1,45 +1,122 @@
+<div align="center">
+
+<img src="packages/shared/assets/mascot/standing/01-waving.webp" alt="The Nouride cat, waving hello" width="200">
+
 # Nouride
 
-> The source code, official binary releases and container images of [Nouride](https://nouride.com).
-> Use it, change it and share it for anything but a competing product, under the
-> [Functional Source License 1.1](#licence); each version becomes Apache 2.0 two years after its release.
+### AI agents that live on your box
 
+Nouride runs a few AI agents on a small box you own, and uses very little of it.<br>
+Chat with them on Telegram, Discord, WhatsApp or right in your browser.
 
-[![License: FSL-1.1-ALv2](https://img.shields.io/badge/License-FSL--1.1--ALv2-blue.svg?style=flat-square)](https://fsl.software)
-[![GitHub Sponsors](https://img.shields.io/badge/Sponsor-GitHub-ea4aaa?style=flat-square&logo=githubsponsors&logoColor=white)](https://github.com/sponsors/gadingnst) [![Ko-fi](https://img.shields.io/badge/Support-Ko--fi-29abe0?style=flat-square&logo=kofi&logoColor=white)](https://ko-fi.com/gadingnst) [![Trakteer](https://img.shields.io/badge/Support-Trakteer-red?style=flat-square)](https://trakteer.id/gadingnst) [![KaryaKarsa](https://img.shields.io/badge/Support-KaryaKarsa-ffb800?style=flat-square)](https://karyakarsa.com/gadingnst)
+[**Website**](https://nouride.com) · [**Docs**](https://nouride.com/en/docs/start/what-is-nouride/) · [**Getting started**](https://nouride.com/en/docs/start/first-run/) · [**Releases**](https://github.com/nouverse/nouride/releases)
 
-[Nouride](https://nouride.com) is an ultra-lightweight, zero-bloat multi-agent AI engine in a single binary daemon. Built for servers, homelabs, and edge/mini devices (Raspberry Pi, Orange Pi, Geekom, NUC, LXC, Docker, a Mac with Apple Silicon), it connects multiple chat platforms (Discord, Telegram, WhatsApp) to isolated AI agents with individual personas, shared skill pools, tool execution approval gates, scheduled work, long missions an agent finishes on its own, and a web dashboard.
+[![License: FSL-1.1-ALv2](https://img.shields.io/badge/License-FSL--1.1--ALv2-blue.svg?style=flat-square)](#licence)
+[![GitHub Sponsors](https://img.shields.io/badge/Sponsor-GitHub-ea4aaa?style=flat-square&logo=githubsponsors&logoColor=white)](https://github.com/sponsors/gadingnst)
+[![Ko-fi](https://img.shields.io/badge/Support-Ko--fi-29abe0?style=flat-square&logo=kofi&logoColor=white)](https://ko-fi.com/gadingnst)
+[![Trakteer](https://img.shields.io/badge/Support-Trakteer-red?style=flat-square)](https://trakteer.id/gadingnst)
+[![KaryaKarsa](https://img.shields.io/badge/Support-KaryaKarsa-ffb800?style=flat-square)](https://karyakarsa.com/gadingnst)
 
-- 🌐 **Website:** [nouride.com](https://nouride.com)
-- 📖 **Documentation:** [nouride.com/docs](https://nouride.com/en/docs/start/what-is-nouride/)
-- 🚀 **Getting Started:** [nouride.com/docs/start/first-run](https://nouride.com/en/docs/start/first-run/)
-- 📦 **Docker Container:** `ghcr.io/nouverse/nouride`, or `ghcr.io/nouverse/nouride-router` with the Nougate AI Router built in
+<br>
 
----
+<img src="apps/site/public/media/dashboard-overview.png" alt="Nouride's dashboard: Home, with what needs you, what is moving and a quick line to an agent" width="880">
 
-## Installation & Quickstart
+</div>
 
-### 1. Automated Linux Install (Recommended)
+<br>
 
-Nouride runs as a standalone self-contained binary with its own embedded runtime. On any supported Linux machine (Debian, Ubuntu, RHEL, Alpine, Arch, Raspberry Pi OS), run:
+## What it does
+
+<table>
+<tr>
+<td width="110" align="center"><img src="packages/shared/assets/mascot/standing/05-laptop.webp" alt="" width="96"></td>
+<td><b>A few agents, each its own.</b> Every agent has its own personality, model, chat apps and tools. They all run in
+one small daemon from a single binary, which starts in 64 MB of memory and sits under 1% of one CPU core while it
+waits.</td>
+</tr>
+<tr>
+<td align="center"><img src="packages/shared/assets/mascot/standing/10-pointing.webp" alt="" width="96"></td>
+<td><b>Say hi from the apps you already use.</b> Telegram, Discord, WhatsApp, or the web dashboard. Put several agents in
+one room and tag the one you mean.</td>
+</tr>
+<tr>
+<td align="center"><img src="packages/shared/assets/mascot/states/05-security.webp" alt="" width="96"></td>
+<td><b>Risky stuff waits for your yes.</b> A command that changes the system, touches credentials or cannot be undone
+asks first: allow it once, always, or not at all, from the chat or the dashboard.</td>
+</tr>
+<tr>
+<td align="center"><img src="packages/shared/assets/mascot/states/09-schedule.webp" alt="" width="96"></td>
+<td><b>Give it a goal, go to bed.</b> Missions an agent works through on its own, with a checklist you can follow;
+scheduled jobs; webhooks that wake an agent when something happens elsewhere.</td>
+</tr>
+<tr>
+<td align="center"><img src="packages/shared/assets/mascot/states/03-knowledge.webp" alt="" width="96"></td>
+<td><b>It remembers.</b> People, facts and your documents, kept on the box and found again in any language. A nightly
+pass tidies what it learned.</td>
+</tr>
+<tr>
+<td align="center"><img src="packages/shared/assets/mascot/states/02-searching.webp" alt="" width="96"></td>
+<td><b>Skills and connectors.</b> One pool of skills every agent can switch on, skills learned from work it did,
+connectors to the services you use, and web search.</td>
+</tr>
+<tr>
+<td align="center"><img src="packages/shared/assets/mascot/standing/12-head.webp" alt="" width="80"></td>
+<td><b>Claude Code and Codex as agents.</b> An agent can work inside a coding CLI on your own subscription, with the
+same chats, approvals and missions as the rest.</td>
+</tr>
+<tr>
+<td align="center"><img src="packages/shared/assets/mascot/standing/02-thumbs-up.webp" alt="" width="96"></td>
+<td><b>Your box, your data.</b> Conversations, memory and keys stay on your machine, keys encrypted at rest. What leaves
+is what an agent sends to the models and services you chose.</td>
+</tr>
+</table>
+
+<br>
+
+## Get it running
+
+**Linux** (Debian, Ubuntu, RHEL, Alpine, Arch, Raspberry Pi OS), one line:
 
 ```bash
 curl -fsSL https://get.nouride.com/install.sh | sudo sh
 ```
 
-To review the script before piping it to a shell:
+**macOS** (Apple Silicon), as yourself, no `sudo`:
+
+```bash
+curl -fsSL https://get.nouride.com/install.sh | sh
+```
+
+**Docker**:
+
+```bash
+mkdir -p ~/nouride && cd ~/nouride
+docker run -d --name nouride --restart unless-stopped \
+  -p 127.0.0.1:18254:18254 -v "$PWD/nouride:/app/.nouride" \
+  ghcr.io/nouverse/nouride
+```
+
+Then open `http://127.0.0.1:18254/` on that machine and follow the setup: connect a model, name your first agent, done.
+The first-run password is printed by the installer (and in `docker logs nouride`).
+
+<details>
+<summary><b>More on the Linux install</b></summary>
+
+<br>
+
+Nouride runs as a standalone binary with its own embedded runtime. To review the script before piping it to a shell:
 
 ```bash
 curl -fsSL https://get.nouride.com/install.sh | less
 ```
 
-By default, the installer binds the web dashboard to loopback (`127.0.0.1:18254`). To expose it across your local network immediately:
+By default the dashboard listens on loopback (`127.0.0.1:18254`). To expose it across your local network:
 
 ```bash
 curl -fsSL https://get.nouride.com/install.sh | sudo sh -s -- --host 0.0.0.0
 ```
 
-For the **Router edition** (bundled with the in-process Nougate LLM Gateway and Web Admin Console):
+For the **Router edition**, with the in-process Nougate LLM Gateway and its web admin console:
 
 ```bash
 curl -fsSL https://get.nouride.com/install.sh | sudo sh -s -- --variant router
@@ -49,13 +126,18 @@ curl -fsSL https://get.nouride.com/install.sh | sudo sh -s -- --variant router -
 
 To update a native install later, use the dashboard's Update page or `nouride update`.
 
-Once installed, open `http://127.0.0.1:18254/` on that machine (or `http://<your-ip>:18254/` if you
-installed with `--host 0.0.0.0`) to complete setup. The first-run password is printed by the installer
-and in the service log (`journalctl -u nouride | grep -A6 'Nouride is ready'`).
+Once installed, open `http://127.0.0.1:18254/` on that machine (or `http://<your-ip>:18254/` if you installed with
+`--host 0.0.0.0`) to complete setup. The first-run password is printed by the installer and in the service log
+(`journalctl -u nouride | grep -A6 'Nouride is ready'`).
 
-### macOS (Apple Silicon)
+</details>
 
-On a Mac with Apple Silicon (M1 and later), since 0.7.20, as yourself, **no `sudo`**:
+<details>
+<summary><b>More on macOS</b></summary>
+
+<br>
+
+On a Mac with Apple Silicon (M1 and later), since 0.7.20:
 
 ```bash
 curl -fsSL https://get.nouride.com/install.sh | sh
@@ -66,25 +148,14 @@ curl -fsSL https://get.nouride.com/install.sh | sh -s -- --variant router
 It installs into `~/nouride` and runs as a LaunchAgent while you are logged in. The first-run password is in
 `~/nouride/.nouride/data/nouride.log`. Intel Macs are not a published target.
 
----
+</details>
 
-### 2. Docker Container
+<details>
+<summary><b>More on Docker</b>: Compose, the network, packages and updates</summary>
 
-The official multi-arch container image (`linux/amd64` and `linux/arm64`) is published to GitHub Container Registry:
+<br>
 
-```bash
-mkdir -p ~/nouride && cd ~/nouride
-docker run -d \
-  --name nouride \
-  --restart unless-stopped \
-  -p 127.0.0.1:18254:18254 \
-  -v "$PWD/nouride:/app/.nouride" \
-  ghcr.io/nouverse/nouride
-
-docker logs -f nouride          # the first-run password is printed here
-```
-
-Docker Compose:
+The official multi-arch image (`linux/amd64` and `linux/arm64`) is on GitHub Container Registry. With Docker Compose:
 
 ```yaml
 services:
@@ -109,11 +180,31 @@ and you approve each change unless the agent is `trusted`. What they installed i
 when the container is recreated, as every update does; nothing the image ships can be removed.
 `NOURIDE_SYSTEM_PACKAGES=off` turns it off.
 
-#### Variant: Nougate AI Router
+To update, pull it again and recreate the container. The volume keeps everything:
 
-`nouride-router` is the same build **plus the Nougate AI Router in the same process**: model calls
-answered from inside the daemon, with no second container and no network hop. Useful on a Pi, an LXC
-container, or anywhere that has to answer without a gateway in front of it.
+```bash
+docker compose pull && docker compose up -d
+```
+
+To check your configuration against a new image before you switch:
+
+```bash
+docker run --rm -v ./nouride:/app/.nouride ghcr.io/nouverse/nouride nouride config check
+```
+
+An install older than 0.7.28 updates in two steps:
+[Updating](https://nouride.com/en/docs/deployment/updating/) has how.
+
+</details>
+
+<details>
+<summary><b>The Router edition</b>: the Nougate AI Router in the same process</summary>
+
+<br>
+
+`nouride-router` is the same build **plus the Nougate AI Router in the same process**: model calls answered from inside
+the daemon, with no second container and no network hop. Useful on a Pi, an LXC container, or anywhere that has to
+answer without a gateway in front of it.
 
 ```bash
 mkdir -p ~/nouride && cd ~/nouride
@@ -141,7 +232,9 @@ services:
       - ./nouride:/app/.nouride
 ```
 
-In the Router edition (`ghcr.io/nouverse/nouride-router`), the in-process Nougate gateway is **enabled by default** on port `18256` and keeps its state (accounts, providers, `nougate.db`) in a folder of its own inside the same volume: `./nouride/nougate/data/`. Nothing else to mount. Its web admin console is at `/frontend/` on port 18256.
+In the Router edition the in-process Nougate gateway is **enabled by default** on port `18256` and keeps its state
+(accounts, providers, `nougate.db`) in a folder of its own inside the same volume: `./nouride/nougate/data/`. Nothing
+else to mount. Its web admin console is at `/frontend/` on port 18256.
 
 Point a provider at it in `.nouride/config.toml`:
 
@@ -151,28 +244,14 @@ kind = "openai"
 base_url = "http://127.0.0.1:18256/openai/v1"   # or /anthropic/v1
 ```
 
-To explicitly configure or switch it off, use `[nougate]` in `.nouride/config.toml` (or set `NOUGATE_IN_PROCESS=false` in the daemon's environment):
+To configure it or switch it off, use `[nougate]` in `.nouride/config.toml` (or set `NOUGATE_IN_PROCESS=false` in the
+daemon's environment):
 
 ```toml
 [nougate]
 in_process = false
 port = 18256
 ```
-
-To update, pull it again and recreate the container. The volume keeps everything:
-
-```bash
-docker compose pull && docker compose up -d
-```
-
-To check your configuration against a new image before you switch:
-
-```bash
-docker run --rm -v ./nouride:/app/.nouride ghcr.io/nouverse/nouride nouride config check
-```
-
-An install older than 0.7.28 updates in two steps:
-[Updating](https://nouride.com/en/docs/deployment/updating/) has how.
 
 To see which variant an image is without pulling it:
 
@@ -181,11 +260,15 @@ docker image inspect ghcr.io/nouverse/nouride-router \
   --format '{{index .Config.Labels "tech.nouverse.nouride.edition"}}'
 ```
 
----
+</details>
 
-### 3. Standalone Binary Downloads
+<details>
+<summary><b>Standalone downloads</b>: every platform's tarball</summary>
 
-Standalone tarballs include the executable, built-in skills, example configuration, and web dashboard assets. You can download the latest release directly or browse specific versions on the [Releases](https://github.com/nouverse/nouride/releases) page.
+<br>
+
+Standalone tarballs include the executable, built-in skills, example configuration and the dashboard. Download the
+latest directly, or browse every version on the [Releases](https://github.com/nouverse/nouride/releases) page.
 
 | Platform | Architecture | C Library | Download |
 |---|---|---|---|
@@ -205,20 +288,23 @@ The Router variant ships the same targets, named `nouride-router-*`:
 | Linux (Alpine) | `aarch64` | musl | [`nouride-router-linux-arm64-musl.tar.gz`](https://get.nouride.com/latest/nouride-router-linux-arm64-musl.tar.gz) |
 | macOS | Apple Silicon | not applicable | [`nouride-router-darwin-arm64.tar.gz`](https://get.nouride.com/latest/nouride-router-darwin-arm64.tar.gz) |
 
-Or let the installer fetch it:
+> **Alpine / musl:** the `-musl` build needs `libstdc++` (`apk add libstdc++`).
 
-```bash
-curl -fsSL https://get.nouride.com/install.sh | sudo sh -s -- --variant router
-```
+Every release carries its checksum files, signed: `CHECKSUMS` for the standard build and `CHECKSUMS-router` for the
+Router variant, each with its `.sig`. The installer checks both before it installs anything.
 
-> **Note on Alpine / Musl:** The `-musl` build requires `libstdc++` (`apk add libstdc++`).
+</details>
 
-SHA256 checksums are attached to every release: `SHA256SUMS` for the standard build,
-`SHA256SUMS-router` for the Router variant.
+<br>
 
----
+## Nouride Home, on a phone
 
-## Source code
+**[nouverse/nouride-android-appliance](https://github.com/nouverse/nouride-android-appliance)** is Nouride Home, the
+Android app that runs Nouride on a phone, with no terminal and no root. It has its own releases and updates itself; the
+APK is on its [Releases](https://github.com/nouverse/nouride-android-appliance/releases) page, and how to use it is in
+the [Nouride Home guide](https://nouride.com/en/docs/deployment/nouride-home/).
+
+## The source
 
 This repository holds Nouride's source: the daemon (`apps/engine`), the dashboard (`apps/dashboard`), the documentation
 site (`apps/site`) and the packages they share (`packages/`). Nouride Pro's components are not in it.
@@ -227,25 +313,15 @@ site (`apps/site`) and the packages they share (`packages/`). Nouride Pro's comp
 - [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md): how it is built, and why.
 - [docs/CONTRIBUTING.md](./docs/CONTRIBUTING.md): the conventions, and how a change is tested.
 
----
+## Contributing and issues
 
-## Related repositories
-
-- **[nouverse/nouride-android-appliance](https://github.com/nouverse/nouride-android-appliance)**: Nouride Home, the
-  Android app that runs Nouride on a phone, with no terminal and no root. It has its own releases and updates itself;
-  the APK is on its [Releases](https://github.com/nouverse/nouride-android-appliance/releases) page, and how to use it is
-  in the [Nouride Home guide](https://nouride.com/en/docs/deployment/nouride-home/).
-
----
-
-## Contributing & Issues
-
-- **Found a bug or crash?** Please **[Open an Issue](https://github.com/nouverse/nouride/issues)**. Include your OS version, architecture (`uname -m`), deployment method (native or Docker), and relevant terminal output.
-- **Feature Proposals:** Have ideas for new homelab integrations, agent tools, or chat adapters? Open an issue with your proposal and rationale.
-- **Pull requests** are welcome. Before the first one is merged, its author agrees to the [Contributor Licence Agreement](./docs/CLA.md): you keep your copyright, and Nouverse may use your contribution in every edition, under any terms.
-- **Security Inquiries:** For sensitive security concerns, reach out directly to security@nouverse.tech.
-
----
+- **Found a bug or crash?** [Open an issue](https://github.com/nouverse/nouride/issues) with your OS version,
+  architecture (`uname -m`), how you run it (native or Docker), and the output you saw.
+- **An idea?** New chat apps, agent tools, homelab integrations: open an issue with what it is for.
+- **Pull requests** are welcome. Before the first one is merged, its author agrees to the
+  [Contributor Licence Agreement](./docs/CLA.md): you keep your copyright, and Nouverse may use your contribution in
+  every edition, under any terms.
+- **Security:** for anything sensitive, write to security@nouverse.tech.
 
 ## Licence
 
@@ -262,3 +338,11 @@ short:
 Licensed separately: the WhatsApp bridge in `packages/wa-bridge` and the built-in skills and agent templates in
 `content/` are MIT, so the agents and skills you run are yours to change. [LICENSE](./LICENSE) lists every exception.
 The licence text governs; this summary does not replace it.
+
+<br>
+
+<div align="center">
+<img src="packages/shared/assets/mascot/standing/06-sleeping.webp" alt="The Nouride cat, asleep" width="140">
+<br>
+<sub>Nothing is waiting for you. Made by <a href="https://nouverse.com">Nouverse</a>.</sub>
+</div>
