@@ -14,6 +14,14 @@
  * the range and replies 200 is detected by the status code and the file is started again
  * rather than being appended to and silently corrupted.
  *
+ * ## A transfer that stops moving is picked up again
+ *
+ * A connection can go quiet without closing: headers that never come, or a body that stops at some byte and holds
+ * the socket open. With nothing to end it the status stayed "downloading" for ever, and a second press of Update
+ * returned that same status (a phone's update sat at 0 bytes until someone noticed). Each try is watched: no headers,
+ * or no new bytes, for `STALL_MS` cuts it, and it is tried again from what is on disk, a few times, before it fails
+ * with a plain sentence. A pause is still not a failure.
+ *
  * ## Downloading is not installing
  *
  * Nothing here touches the running install. The `.part` becomes a whole file and stops there;
@@ -45,7 +53,21 @@ export interface DownloadRequest {
   tag: string;
   artifact: string;
   fetchImpl: typeof fetch;
+  /** How long a try may go without headers or new bytes before it is cut (`STALL_MS`); a test passes less. */
+  stallMs?: number;
+  /** The pauses before each try again (`RETRY_WAITS_MS`); a test passes none. */
+  retryWaitsMs?: readonly number[];
 }
+
+/** No headers, or no new bytes, for this long and a try is cut: a release asset streams far faster than this. */
+const STALL_MS = 30_000;
+/** Five tries in about forty seconds of waiting, each going on from what is on disk. */
+const RETRY_WAITS_MS: readonly number[] = [2_000, 5_000, 10_000, 20_000];
+
+/** A failure worth another try: the transfer stopped moving, the connection broke, or the server failed for a moment. */
+class PassingFailure extends Error {}
+
+const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 /** Where a partly-downloaded release waits. One directory, cleared when a different tag arrives. */
 export function stagingDir(installDir: string): string {
@@ -156,44 +178,108 @@ export class ReleaseDownload {
     return this.snapshot();
   }
 
+  /** Tries until the file is whole, the person pauses, or a failure is not one to try again; then says how many it took. */
   private async pump(request: DownloadRequest, path: string): Promise<void> {
+    const waits = request.retryWaitsMs ?? RETRY_WAITS_MS;
+    const stallMs = request.stallMs ?? STALL_MS;
+    for (let tries = 1; ; tries += 1) {
+      try {
+        await this.attempt(request, path, stallMs);
+        return;
+      } catch (error) {
+        if (this.paused()) return;
+        const failure = error instanceof Error ? error : new Error(String(error));
+        if (tries > waits.length || !(failure instanceof PassingFailure)) {
+          throw tries > 1 ? new Error(`${failure.message}, ${tries} tries`) : failure;
+        }
+      }
+      await wait(waits[tries - 1]!);
+      if (this.paused()) return;
+    }
+  }
+
+  /** Read afresh each time: a pause can come during any wait, which a narrowed `this.status` would not see. */
+  private paused(): boolean {
+    return this.status === "paused";
+  }
+
+  /** One try: from what is on disk to the end, cut when it goes `stallMs` without headers or bytes. */
+  private async attempt(request: DownloadRequest, path: string, stallMs: number): Promise<void> {
     const headers: Record<string, string> = {};
     if (this.received > 0) headers.range = `bytes=${this.received}-`;
 
-    const response = await request.fetchImpl(request.url, {
-      headers,
-      signal: this.abort?.signal ?? null,
-    });
-    if (!response.ok) throw new Error(`downloading ${request.url} answered ${response.status}`);
+    // Its own controller, so a stall ends this try alone; a pause ends it too, through the transfer's.
+    const tryAbort = new AbortController();
+    const onPause = () => tryAbort.abort();
+    this.abort?.signal.addEventListener("abort", onPause, { once: true });
+    let stalled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const arm = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        stalled = true;
+        tryAbort.abort();
+      }, stallMs);
+    };
+    const why = (error: unknown): Error => {
+      if (stalled) return new PassingFailure(`downloading ${request.url} stopped moving: nothing came for ${Math.round(stallMs / 1000)} s`);
+      if (this.status === "paused") return error instanceof Error ? error : new Error(String(error));
+      return new PassingFailure(`downloading ${request.url} failed: ${error instanceof Error ? error.message : String(error)}`);
+    };
 
-    /**
-     * A server that ignored the range answers 200 with the whole file.
-     *
-     * Appending that to what is already on disk produces a file of the right size for nothing
-     * and a checksum failure with no explanation, so the partial is dropped and this becomes a
-     * fresh transfer.
-     */
-    const resuming = this.received > 0 && response.status === 206;
-    if (this.received > 0 && !resuming) {
-      removePath(path);
-      this.received = 0;
-    }
-
-    const length = Number(response.headers.get("content-length") ?? "");
-    this.total = Number.isFinite(length) && length > 0 ? this.received + length : this.total;
-
-    const body = response.body;
-    if (!body) throw new Error("the release channel returned no body");
-
-    const file = openFileWriter(path, { append: resuming });
+    arm();
     try {
-      for await (const chunk of body) {
-        const bytes = chunk as Uint8Array;
-        await file.write(bytes);
-        this.received += bytes.byteLength;
+      let response: Response;
+      try {
+        response = await request.fetchImpl(request.url, { headers, signal: tryAbort.signal });
+      } catch (error) {
+        throw why(error);
+      }
+      if (!response.ok) {
+        const said = `downloading ${request.url} answered ${response.status}`;
+        throw response.status === 429 || response.status >= 500 ? new PassingFailure(said) : new Error(said);
+      }
+      arm();
+
+      /**
+       * A server that ignored the range answers 200 with the whole file.
+       *
+       * Appending that to what is already on disk produces a file of the right size for nothing
+       * and a checksum failure with no explanation, so the partial is dropped and this becomes a
+       * fresh transfer.
+       */
+      const resuming = this.received > 0 && response.status === 206;
+      if (this.received > 0 && !resuming) {
+        removePath(path);
+        this.received = 0;
+      }
+
+      const length = Number(response.headers.get("content-length") ?? "");
+      this.total = Number.isFinite(length) && length > 0 ? this.received + length : this.total;
+
+      const body = response.body;
+      if (!body) throw new Error("the release channel returned no body");
+
+      const file = openFileWriter(path, { append: resuming });
+      try {
+        for await (const chunk of body) {
+          arm();
+          const bytes = chunk as Uint8Array;
+          await file.write(bytes);
+          this.received += bytes.byteLength;
+        }
+      } catch (error) {
+        throw why(error);
+      } finally {
+        await file.close();
+      }
+      // A body that ended early is a try that broke: the length said more was coming.
+      if (this.total !== null && this.received < this.total && this.status !== "paused") {
+        throw new PassingFailure(`downloading ${request.url} ended at ${this.received} of ${this.total} bytes`);
       }
     } finally {
-      await file.close();
+      if (timer) clearTimeout(timer);
+      this.abort?.signal.removeEventListener("abort", onPause);
     }
 
     if (this.status === "paused") return;
