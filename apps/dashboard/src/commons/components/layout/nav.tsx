@@ -122,9 +122,10 @@ export const SETTINGS: { group: string; items: NavItem[] }[] = [
   {
     group: "Models and keys",
     items: [
+      // The gateway above Models: where it runs, the models are reached through it.
+      { to: "/llm-gateway", label: "LLM Gateway", icon: NougateGlyph, adminOnly: true, gatewayOnly: true, about: "The AI accounts this box shares, and what they cost." }, // plain-words-ok: the admin page's own name, which keeps its terms
       { to: "/models", label: "Models", icon: Cpu, adminOnly: true, about: "Which AI each agent thinks with, and the accounts it is reached through." },
       { to: "/secrets", label: "Secrets", icon: KeyRound, adminOnly: true, about: "Passwords and keys the agents use, kept encrypted on this box." },
-      { to: "/llm-gateway", label: "LLM Gateway", icon: NougateGlyph, adminOnly: true, gatewayOnly: true, about: "The AI accounts this box shares, and what they cost." }, // plain-words-ok: the admin page's own name, which keeps its terms
     ],
   },
   {

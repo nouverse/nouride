@@ -54,11 +54,11 @@ Memory
 
 Settings
   Models and keys
+    LLM Gateway     the in-process Nougate: on or off, accounts, usage        (admin)
     Models          Model providers: endpoint, wire format, credential;       (admin)
                     Coding CLIs: each CLI's accounts and their sign-ins;
                     Model tiers (a button): the three tiers, each helper's
     Secrets         the credentials, what each is for, the backup password    (admin)
-    LLM Gateway     the in-process Nougate: accounts, keys, usage (Router)    (admin)
   Reaching out
     Integrations    other AI apps reaching memory, one key per app            (admin)
     Web Search      where agents search: free sources, Brave, SearXNG, own    (admin)

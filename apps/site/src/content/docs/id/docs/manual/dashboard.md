@@ -54,11 +54,11 @@ Memory
 
 Settings
   Models and keys
+    LLM Gateway     Nougate di dalam daemon: nyala atau mati, akun, pemakaian (admin)
     Models          Model providers: endpoint, wire format, kredensial;       (admin)
                     Coding CLIs: akun tiap CLI dan login-nya;
                     Model tiers (tombol): tiga tingkat, milik tiap helper
     Secrets         kredensial, untuk apa masing-masing, password backup      (admin)
-    LLM Gateway     Nougate di dalam daemon: akun, key, pemakaian (Router)    (admin)
   Reaching out
     Integrations    aplikasi AI lain yang menjangkau memori, satu key per aplikasi (admin)
     Web Search      tempat agent mencari: sumber gratis, Brave, SearXNG, sendiri (admin)
