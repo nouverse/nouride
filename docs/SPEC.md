@@ -531,7 +531,7 @@ the `fallbacks` line to write (`packages/persona/src/fallbacks.ts`).
 
 **A turn its provider ended** is tried again once (`pipeline/provider-resume.ts`): ~3 min later, plus up to 1 min so a burst of failed chats spreads out, carrying on from where it stopped. Its error reply ends "…I'll try again in a few minutes, or say "continue"."
 Not when a turn has started in that chat since (the person moved on), for a cron run, for a turn that was itself a resumption, or for a failure waiting cannot fix: an expired or refused key, an empty balance, a bad request — the operator's to fix.
-Held in memory only: a restart within those minutes drops it, and "continue" still picks the turn up.
+The timer is in memory; the promise is the turn's stored reply. At boot, a turn that failed within the timer's window (4 min) with that reply, and was not taken up yet (`resume:<turn>`), is set again from when it failed (`providerResumesOwed`, `boot/durable.ts`). "Continue" still picks the turn up.
 
 ### 6.3 System Prompt Builder
 

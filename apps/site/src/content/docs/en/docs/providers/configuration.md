@@ -370,5 +370,5 @@ About three minutes later, plus up to a minute so a burst of failed chats spread
 tries the turn once more and carries on from where it stopped. It does not when someone has said
 anything in that chat since, for a scheduled run, for a turn that was itself a second try, or for a
 failure no wait fixes: an expired or refused key, an empty balance, a bad request. Those are yours
-to fix. The second try lives only in the running daemon, so a restart within those minutes drops it,
-and "continue" still works.
+to fix. A restart within those minutes does not drop it: the daemon that comes back finds the turn by
+what it told you, and tries it once, when the few minutes are up. "Continue" works too.

@@ -66,7 +66,7 @@ import { InboxDesk } from "./inbox-desk.ts";
 import { InboundRouter } from "./inbound.ts";
 import { renderPrompt } from "./render-prompt.ts";
 import { JobTurns } from "./job-turns.ts";
-import { scheduleProviderResume } from "./provider-resume.ts";
+import { scheduleProviderResume, type ResumableTurn } from "./provider-resume.ts";
 import { arrive, type ArrivalParts } from "./arrival.ts";
 import { ChatSecrets } from "./chat-secrets.ts";
 import { EditLedger } from "./edits.ts";
@@ -186,13 +186,7 @@ export class Pipeline {
       if (released > 0) log.info("an agent woke: what was kept for it goes on", { agent_id: agentId, messages: released });
     });
     this.turnContext.borrowSlot = () => this.queue.borrow();
-    this.turnContext.resumeLater = (turn) =>
-      scheduleProviderResume(turn, {
-        resume: (taken) => this.wakes.resumeTurn(taken, "provider"),
-        movedOn: (taken, since) => this.deps.turns?.startedInChatSince(taken.gatewayId, taken.chatId, since) ?? false,
-        stopping: () => this.turnContext.paused,
-        ...(deps.providerResumeMs === undefined ? {} : { delayMs: deps.providerResumeMs }),
-      });
+    this.turnContext.resumeLater = (turn) => this.resumeLater(turn);
     this.inbox = new InboxDesk(deps, this.batcher, (envelope) => this.turnContext.holds(envelope));
     this.turnContext.settleMessage = (envelope) => this.inbox.settleWithTurn(envelope);
     // A delegate in the background that has run long, said to the agent it reports to — the road a quiet job's notice takes.
@@ -385,6 +379,20 @@ export class Pipeline {
   wakeForCliStopped(...args: Parameters<WakeUps["wakeForCliStopped"]>) { return this.wakes.wakeForCliStopped(...args); }
   resumeAfterApproval(...args: Parameters<WakeUps["resumeAfterApproval"]>) { return this.wakes.resumeAfterApproval(...args); }
   resumeTurn(...args: Parameters<WakeUps["resumeTurn"]>) { return this.wakes.resumeTurn(...args); }
+
+  /** A turn its provider ended, tried again a few minutes after `failedAt` — now, or before a restart (`provider-resume.ts`). */
+  resumeLater(turn: ResumableTurn, failedAt?: number): boolean {
+    return scheduleProviderResume(
+      turn,
+      {
+        resume: (taken) => this.wakes.resumeTurn(taken, "provider"),
+        movedOn: (taken, since) => this.deps.turns?.startedInChatSince(taken.gatewayId, taken.chatId, since) ?? false,
+        stopping: () => this.turnContext.paused,
+        ...(this.deps.providerResumeMs === undefined ? {} : { delayMs: this.deps.providerResumeMs }),
+      },
+      failedAt,
+    );
+  }
 
   // The turns at work, from outside them — `turn-control.ts`.
   cancelTurnFor(...args: Parameters<TurnControl["cancelTurnFor"]>) { return this.control.cancelTurnFor(...args); }

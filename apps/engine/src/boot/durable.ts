@@ -18,6 +18,7 @@ import { capStoredTurns } from "@/modules/llm/context.ts";
 import type { ChatEventsPort } from "@/modules/chat-events/chat-events.store.ts";
 import { InboxStore } from "@/modules/pipeline/inbox.store.ts";
 import { turnsToResume } from "@/modules/pipeline/restart-resume.ts";
+import { providerResumesOwed } from "@/modules/pipeline/provider-resume.ts";
 import type { Pipeline } from "@/modules/pipeline/index.ts";
 import type { EventsPort } from "@/modules/events/events.store.ts";
 import { DeliveryStore, type DeliveryPort } from "@/modules/turns/delivery.store.ts";
@@ -160,9 +161,9 @@ export function resumeAfterBoot(input: {
    * marked a question being answered as interrupted.
    */
   startedAt: number;
-  pipeline: Pick<Pipeline, "inbox" | "resumeTurn">;
-  /** For the turns a restart cut off, which are taken up again — `pipeline/restart-resume.ts`. */
-  turns: Pick<TurnsPort, "get" | "interruptedSince" | "startedFor">;
+  pipeline: Pick<Pipeline, "inbox" | "resumeTurn" | "resumeLater">;
+  /** For the turns a restart cut off, and those a provider ended, which are taken up again — `pipeline/restart-resume.ts`. */
+  turns: Pick<TurnsPort, "get" | "interruptedSince" | "startedFor" | "failedSince">;
   notifier: Pick<Notifier, "toChat">;
   chatEvents: Pick<ChatEventsPort, "record">;
   /** The approvals a turn taken up was cut off waiting on, which the restart kept — said in the words that take it up. */
@@ -194,6 +195,11 @@ export function resumeAfterBoot(input: {
     if (input.pipeline.resumeTurn(turn, "restart", waiting, cut ?? undefined)) {
       log.info("taking up a turn a restart cut off", { turn_id: turn.id, agent_id: turn.agentId, ...(waiting.length ? { approvals_still_open: waiting.map((request) => request.id) } : {}) });
     }
+  }
+  // A turn its provider ended and its person was told would be tried again in a few minutes: the timer for that died
+  // with the last process, so it is set again from when the turn failed (`pipeline/provider-resume.ts`).
+  for (const turn of providerResumesOwed(input.turns, Date.now())) {
+    if (input.pipeline.resumeLater(turn, turn.endedAt)) log.info("will take up a turn its provider ended before the restart", { turn_id: turn.id, agent_id: turn.agentId });
   }
   const chats = new Map([...input.recovered, ...input.orphaned].map((turn) => [`${turn.gatewayId} ${turn.chatId}`, turn]));
   for (const chat of chats.values()) {

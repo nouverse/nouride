@@ -381,6 +381,6 @@ Sekitar tiga menit kemudian, ditambah sampai semenit supaya chat-chat yang gagal
 serentak, daemon mencoba giliran itu sekali lagi dan melanjutkan dari tempat ia berhenti. Itu gak
 terjadi kalau ada yang bilang sesuatu di chat itu sejak gagal, untuk run terjadwal, untuk giliran yang
 justru percobaan kedua, atau untuk kegagalan yang gak beres dengan menunggu: key kedaluwarsa atau
-ditolak, saldo habis, request yang salah. Yang seperti itu harus kamu bereskan sendiri. Percobaan
-kedua ini cuma ada di daemon yang sedang jalan, jadi restart dalam beberapa menit itu membatalkannya,
-dan "continue" tetap jalan.
+ditolak, saldo habis, request yang salah. Yang seperti itu harus kamu bereskan sendiri. Restart dalam
+beberapa menit itu gak membatalkannya: daemon yang kembali menemukan giliran itu dari apa yang ia
+bilang ke kamu, dan mencobanya sekali, waktu beberapa menit itu habis. "Continue" juga tetap jalan.
