@@ -93,6 +93,8 @@ describe("a step's row", () => {
     const call = /<div class="([^"]*)">exec ls -la/.exec(html)?.[1] ?? "";
     expect(call).toContain("flex-1");
     expect(call).not.toContain("max-sm:order-last");
+    // And nothing beside it: an empty outcome took half a phone's row, the call broken every sixteen letters.
+    expect(html).not.toContain("sm:max-w-[45%]");
   });
 });
 

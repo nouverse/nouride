@@ -86,20 +86,24 @@ function StepRow({ row, active }: { row: StepRowModel; active?: boolean }) {
           phone that width was still a column of twelve letters — a command broken every few characters beside
           "Bash ok: …" (0.8.12) — so there the outcome is the row's first line and the call is the whole width under it. */}
       <div className={`min-w-20 flex-1 break-all leading-relaxed ${said ? "max-sm:order-last max-sm:basis-full" : ""}`}>{row.text}</div>
-      <span className="flex min-w-0 items-baseline gap-1.5 font-mono text-[10px] mt-0.5 max-sm:flex-1 sm:max-w-[45%]">
-        {row.waitedMs !== undefined && (
-          // The model deciding what to call, which is most of a slow turn and was previously shown in
-          // the duration column as though the call itself had taken that long.
-          <span className="shrink-0 text-base-content/65" title="the model was deciding for this long first">
-            +{formatDuration(row.waitedMs)}
+      {/* Nothing said yet, nothing beside it: an empty outcome still took half a phone's row, and a call at work beside the
+          agent's cat was broken every sixteen letters. */}
+      {said ? (
+        <span className="flex min-w-0 items-baseline gap-1.5 font-mono text-[10px] mt-0.5 max-sm:flex-1 sm:max-w-[45%]">
+          {row.waitedMs !== undefined && (
+            // The model deciding what to call, which is most of a slow turn and was previously shown in
+            // the duration column as though the call itself had taken that long.
+            <span className="shrink-0 text-base-content/65" title="the model was deciding for this long first">
+              +{formatDuration(row.waitedMs)}
+            </span>
+          )}
+          {/* A coding CLI's says what its call returned, a line long: cut here, whole on hover — two lines on a phone,
+              which has no hover. */}
+          <span className={`min-w-0 max-sm:line-clamp-2 max-sm:[overflow-wrap:anywhere] sm:truncate ${row.failed ? "text-error/70" : "text-base-content/65"}`} title={row.outcome}>
+            {row.outcome ?? ""}
           </span>
-        )}
-        {/* A coding CLI's says what its call returned, a line long: cut here, whole on hover — two lines on a phone,
-            which has no hover. */}
-        <span className={`min-w-0 max-sm:line-clamp-2 max-sm:[overflow-wrap:anywhere] sm:truncate ${row.failed ? "text-error/70" : "text-base-content/65"}`} title={row.outcome}>
-          {row.outcome ?? ""}
         </span>
-      </span>
+      ) : null}
     </div>
   );
 }
