@@ -5,7 +5,7 @@
  * earlier agent already has moves its outfit colour on, then its fur, where the pack left those to the hash.
  *
  * The hash reads look-v1's words, whatever a part takes now: it takes the remainder of the part's word count, so a word
- * more or fewer would have changed nearly every cat nobody styled. A word added since (white) is one a person picks;
+ * more or fewer would have changed nearly every cat nobody styled. A word added since (white; tuxedo, the helmet, the photochromic glasses) is one a person picks;
  * one that moved (headphones, a hat since 0.8.1, an accessory before) stays where the hash put it, as what it is now.
  */
 
@@ -17,6 +17,7 @@ export type Look = Required<AgentLook>;
 const VERSION = "look-v1";
 /** look-v1's words, where a part's have changed since: the ones the hash gives, and a twin moves among. */
 const V1_WORDS: Partial<Record<keyof Look, readonly string[]>> = {
+  pattern: ["plain", "tabby"],
   outfitColor: ["blue", "lime", "peach", "charcoal", "sage", "lilac"],
   hat: ["none", "beanie", "cap", "beret", "headband"],
   accessory: ["none", "glasses", "sunglasses", "headphones", "scarf"],

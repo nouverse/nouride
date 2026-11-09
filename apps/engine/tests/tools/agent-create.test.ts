@@ -197,7 +197,7 @@ describe("agent_create, an external agent or a look (0.8.1)", () => {
   test("a look's word not on its part's list is refused with the list, and nothing written (0.8.1)", async () => {
     // The loader refused "solid", then "yellow", one part a try, after each pack was written and removed again.
     const refused = await make().execute({ ...args, look: { fur: "black", pattern: "solid" } }, ctx);
-    expect([refused.isError, String(refused.content)]).toEqual([true, 'look\'s pattern is one of plain, tabby, not "solid".']);
+    expect([refused.isError, String(refused.content)]).toEqual([true, 'look\'s pattern is one of plain, tabby, tuxedo, not "solid".']);
     expect(existsSync(join(agentsDir, "helper"))).toBe(false);
     const look = (make().definition.parameters as { properties: { look: { properties: Record<string, { enum: string[] }> } } }).properties.look;
     expect(look.properties.eyes!.enum).toEqual(["round", "sleepy", "sparkly"]);

@@ -94,6 +94,57 @@ describe("headphones", () => {
   });
 });
 
+describe("the mascot's parts: tuxedo, the helmet, the photochromic glasses", () => {
+  const white = CAT.COMMON.w!;
+  const MASCOT: Look = { fur: "black", pattern: "tuxedo", outfit: "hoodie", outfitColor: "lilac", hat: "helmet", accessory: "photochromic", eyes: "round" };
+
+  test("the tuxedo's map is the head's size, so its bib and blaze sit where they are drawn", () => {
+    expect(CAT.TUXEDO.head).toHaveLength(CAT.HEAD.length);
+    expect(CAT.TUXEDO.head.every((row, y) => row.length === CAT.HEAD[y]!.length)).toBe(true);
+  });
+
+  test("a tuxedo is white at the bib, the paws and the tail's tip, on any fur, with no stripes", () => {
+    for (const fur of ["black", "ginger"] as const) {
+      const plain = compose({ ...LOOK, fur }, "stand");
+      const tuxedo = compose({ ...LOOK, fur, pattern: "tuxedo" }, "stand");
+      // The bib under the nose, a paw, the tail's tip: fur on a plain coat, white on a tuxedo.
+      for (const [x, y] of [[CAT.HEAD_AT.x + 7, CAT.HEAD_AT.y + 12], [CAT.BODY_AT.x + 5, CAT.BODY_AT.y + 10], [CAT.TAIL.at.x + 2, CAT.TAIL.at.y + 1]] as const) {
+        expect(plain[y]![x]).not.toBe(white);
+        expect(tuxedo[y]![x]).toBe(white);
+      }
+      expect(count(compose({ ...LOOK, fur, pattern: "tuxedo" }, "stand"), CAT.FURS[fur].t!)).toBe(0);
+    }
+    // Its hands too, the waving one included.
+    const waving = compose({ ...LOOK, pattern: "tuxedo" }, "wave");
+    expect(waving[CAT.RAISED_ARM.at.y + 1]![CAT.RAISED_ARM.at.x + 1]).toBe(white);
+    expect(compose(LOOK, "wave")[CAT.RAISED_ARM.at.y + 1]![CAT.RAISED_ARM.at.x + 1]).not.toBe(white);
+    // Behind a desk there are no feet: the bottom of the torso is its fur, not white.
+    const sitting = compose({ ...LOOK, fur: "black", pattern: "tuxedo" }, "sit");
+    // A torso cell between two others, so neither outline shades it.
+    const torso = CAT.BODIES.sit[CAT.BODIES.sit.length - 1]!.indexOf("BBB") + 1;
+    expect(sitting[CAT.BODY_AT.y + CAT.BODIES.sit.length - 1]![CAT.BODY_AT.x + torso]).toBe(CAT.FURS.black.F!);
+  });
+
+  test("the helmet is its own grey over any outfit colour, and the ears stand out above it", () => {
+    const grey = CAT.COMMON.H!;
+    expect(count(compose(MASCOT, "stand"), grey)).toBeGreaterThan(30);
+    expect(count(compose({ ...MASCOT, outfitColor: "lime" }, "stand"), grey)).toBe(count(compose(MASCOT, "stand"), grey));
+    expect(count(compose({ ...MASCOT, hat: "cap" }, "stand"), grey)).toBe(0);
+    // The pink inside each ear is still seen.
+    expect(count(compose(MASCOT, "stand"), CAT.COMMON.p!)).toBeGreaterThan(1);
+  });
+
+  test("photochromic lenses are darker above than below, and only on a cat that wears them", () => {
+    const grid = compose(MASCOT, "stand");
+    expect(count(grid, CAT.COMMON.u!)).toBeGreaterThan(2);
+    expect(count(grid, CAT.COMMON.v!)).toBeGreaterThan(2);
+    const top = grid.findIndex((row) => row.includes(CAT.COMMON.u!));
+    const bottom = grid.findIndex((row) => row.includes(CAT.COMMON.v!));
+    expect(top).toBeLessThan(bottom);
+    expect(count(compose({ ...MASCOT, accessory: "sunglasses" }, "stand"), CAT.COMMON.u!)).toBe(0);
+  });
+});
+
 describe("a colour added after look-v1", () => {
   test("is one a person picks: the hash gives none, so every cat nobody styled looks as it did", () => {
     // Recorded before white was added (0.8.1): each id's colour from the hash, and forty agents' after twins moved on.
