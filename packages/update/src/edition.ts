@@ -21,7 +21,13 @@ export type Edition = "basic" | "router" | "pro";
 
 export type Delivery = "tarball" | "container";
 
-/** Held to the build's own list, `scripts/targets.ts`, by `apps/engine/tests/contracts/artifact-names.test.ts`. */
+/**
+ * Held to the build's own list, `scripts/targets.ts`, by `apps/engine/tests/contracts/artifact-names.test.ts`.
+ *
+ * `router` is built no more — the free build carries the LLM gateway it added — but a Router build already installed
+ * runs this same code to update, and every public release still carries its names, the free build's files under them
+ * (`scripts/release/router-alias.ts`), so what this module derives for it stays right until the name goes.
+ */
 export const EDITIONS: readonly Edition[] = ["basic", "router", "pro"];
 
 /**
