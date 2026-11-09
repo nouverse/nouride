@@ -11,7 +11,7 @@ import { oneLine, type GatewayName, type Session } from "@nouride/shared";
 import type { ChatListAgent, ChatListGroup, ChatListLine, ChatListPayload, ChatListRoom } from "@nouride/wire";
 import { cronJobOfChat } from "@/modules/cron/session.ts";
 import { MISSION_GATEWAY_ID } from "@/modules/missions/gateway.ts";
-import { SESSIONS_READ } from "@/modules/pipeline/known-rooms.ts";
+import { peopleIn, personFor, SESSIONS_READ } from "@/modules/pipeline/known-rooms.ts";
 import type { TurnRecord } from "@/modules/turns/turns.store.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 
@@ -57,11 +57,25 @@ function newer<T extends { at: number }>(a: T | undefined, b: T | undefined): T 
 const bare = (line: (ChatListLine & { at: number }) | undefined): { last?: ChatListLine } =>
   line ? { last: { from: line.from, ...(line.name ? { name: line.name } : {}), text: line.text } } : {};
 
-/** The person's latest words in a chat, from its room log. */
+/** The person's latest words in a chat, from its room log, under the name the conversation shows them by (`senders.ts`). */
 function saidLast(deps: ControlDeps, gatewayId: string, chatId: string): (ChatListLine & { at: number }) | undefined {
   const message = deps.roomMessages?.forChat(gatewayId, chatId, 1).at(-1);
   const text = message ? preview(message.text) : "";
-  return message && text ? { from: "person", ...(message.senderName ? { name: message.senderName } : {}), text, at: message.at } : undefined;
+  const name = message ? (personFor(deps.ctx.config.people, gatewayId, message.senderId)?.name ?? message.senderName) : undefined;
+  return message && text ? { from: "person", ...(name ? { name } : {}), text, at: message.at } : undefined;
+}
+
+/**
+ * How many people spoke in a group lately, across each of our bots' copies of its log: a line is kept by whichever
+ * bot's connection took it first, so one copy holds part of the group, and a count from one said "1 person" beside three.
+ */
+function peopleCount(deps: ControlDeps, connections: Iterable<string>, chatId: string, known: readonly { key?: string; name: string }[]): number {
+  const stores = { config: deps.ctx.config, roomMessages: deps.roomMessages, turns: deps.turns };
+  const who = new Set(known.map((one) => (one.key ? `person:${one.key}` : one.name)));
+  for (const gatewayId of connections) {
+    for (const one of peopleIn(stores as Parameters<typeof peopleIn>[0], gatewayId, chatId, "group")) who.add(one.key ? `person:${one.key}` : one.name);
+  }
+  return who.size;
 }
 
 /**
@@ -137,7 +151,7 @@ function groupsOf(deps: ControlDeps, running: Set<string>): ChatListGroup[] {
         at: Math.max(group.lastActive, line?.at ?? 0),
         ...bare(line),
         working: sessions.some((session) => running.has(session.id)),
-        people: group.people.length,
+        people: peopleCount(deps, connections, group.chatId, group.people),
       };
     })
     .sort((a, b) => b.at - a.at);

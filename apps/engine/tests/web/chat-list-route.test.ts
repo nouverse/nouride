@@ -63,7 +63,10 @@ async function mount(options: { untagged?: (chatId: string) => string | null; gr
         return options.untagged?.(where.chatId) ?? null;
       },
     },
-    ctx: { gateways: new Map([["telegram:nouva", { platform: "telegram" }], ["telegram:nestor", { platform: "telegram" }]]) },
+    ctx: {
+      gateways: new Map([["telegram:nouva", { platform: "telegram" }], ["telegram:nestor", { platform: "telegram" }]]),
+      config: { people: [{ key: "gading", name: "Gading", ids: ["telegram:814"] }] },
+    },
   };
   const app = new Hono<{ Variables: { principal: unknown } }>();
   app.use("*", async (c, next) => {
@@ -153,7 +156,7 @@ describe("GET /chat-list", () => {
 
   test("a group two of our bots sit in is one row with both conversations, its last line the newest of what people and agents said; a dashboard room is not a group", async () => {
     const groups = [
-      { gatewayId: "telegram:nestor", platform: "telegram", chatId: "-100", name: "Nouverse Office", dashboard: false, agents: ["nouva", "nestor"], people: [{ name: "Gading" }, { name: "Sam" }], lastActive: 1 },
+      { gatewayId: "telegram:nestor", platform: "telegram", chatId: "-100", name: "Nouverse Office", dashboard: false, agents: ["nouva", "nestor"], people: [{ key: "gading", name: "Gading" }, { name: "Sam" }], lastActive: 1 },
       { gatewayId: LOCAL, platform: "web", chatId: "room-1", name: "A room", dashboard: true, agents: ["nouva"], people: [], lastActive: 2 },
       { gatewayId: "telegram:nouva", platform: "telegram", chatId: "-200", name: "Quiet", dashboard: false, agents: ["nouva"], people: [], lastActive: 1 },
     ];
@@ -162,15 +165,19 @@ describe("GET /chat-list", () => {
     tick();
     const nestorThere = h.talk("nestor", "telegram:nestor", "-100", "@nestor and you?", "Reading.");
     tick();
-    h.roomMessages.record({ id: "g1", gatewayId: "telegram:nouva", chatId: "-100", senderId: "814", senderName: "Gading", text: "thanks both", at: Date.now() });
+    // Each line kept by the bot whose connection took it first: one line in each bot's copy of the log.
+    h.roomMessages.record({ id: "g0", gatewayId: "telegram:nestor", chatId: "-100", senderId: "902", senderName: "Rani", text: "hi all", at: Date.now() - 1_000 });
+    h.roomMessages.record({ id: "g1", gatewayId: "telegram:nouva", chatId: "-100", senderId: "814", senderName: "gading_n", text: "thanks both", at: Date.now() });
 
     const { body } = await h.list();
     expect(body.groups.map((group) => group.chatId)).toEqual(["-100", "-200"]);
     const office = body.groups[0]!;
     expect(office.name).toBe("Nouverse Office");
     expect(office.sessions.map((session) => session.sessionId).sort()).toEqual([nouvaThere, nestorThere].sort());
+    // Under People's name, as the conversation shows them, not the name their app gave.
     expect(office.last).toEqual({ from: "person", name: "Gading", text: "thanks both" });
-    expect(office.people).toBe(2);
+    // The two the Groups page knew from one bot's copy, and one more from the other's.
+    expect(office.people).toBe(3);
     expect(office.working).toBe(false);
   });
 });
