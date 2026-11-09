@@ -6,7 +6,7 @@
  * which is the point: what you watched happen is what you can still read afterwards.
  */
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useState } from "react";
 import { ChevronDown, ChevronRight, Loader2 } from "lucide-react";
 import type { TurnStatus, TurnStep } from "@nouride/wire";
 import { TurnRecord } from "@/commons/components/turns/TurnRecord";
@@ -23,28 +23,34 @@ import {
   type StepRowModel,
 } from "@/commons/lib/steps";
 
+/** How many of the newest calls an opened list shows before the earlier ones are asked for. */
+const NEWEST_SHOWN = 6;
+
 /**
- * The tool calls, in a box that scrolls rather than grows: a turn of forty calls used to push the
- * answer and the composer off the screen. Pinned to the newest row while the turn runs, unless the
- * reader has scrolled up to look at an earlier one.
+ * The tool calls, each row whole: the newest few, and the earlier ones a press away, so a turn of forty calls does not
+ * push the answer and the composer off the screen. They were a box that scrolled to its newest row, and its top showed a
+ * sliver of a cut-off row under the heading above it, however wide the screen: a row's height varies with what it says,
+ * so no box height holds whole rows.
  */
-function StepList({ follow, children }: { follow?: unknown; children: ReactNode }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const pinned = useRef(true);
-  useEffect(() => {
-    const box = ref.current;
-    if (box && pinned.current) box.scrollTop = box.scrollHeight;
-  }, [follow]);
+function WholeRows({ rows, activeSeq }: { rows: StepRowModel[]; activeSeq?: number | undefined }) {
+  const [all, setAll] = useState(false);
+  const earlier = all ? 0 : Math.max(0, rows.length - NEWEST_SHOWN);
   return (
-    <div
-      ref={ref}
-      onScroll={(event) => {
-        const box = event.currentTarget;
-        pinned.current = box.scrollHeight - box.scrollTop - box.clientHeight < 24;
-      }}
-      className="max-h-72 space-y-1.5 overflow-y-auto overscroll-contain pr-1"
-    >
-      {children}
+    <div className="space-y-1.5">
+      {earlier > 0 ? (
+        <button
+          type="button"
+          onClick={() => setAll(true)}
+          className="flex h-10 w-full items-center rounded-lg border border-dashed border-base-content/[0.12] px-2.5 font-sans text-xs font-semibold text-secondary outline-none transition-colors hover:bg-base-100/60 focus-visible:ring-2 focus-visible:ring-secondary/60 sm:h-8"
+        >
+          {`Show ${earlier} earlier ${earlier === 1 ? "step" : "steps"}`}
+        </button>
+      ) : null}
+      {rows.slice(earlier).map((row) => (
+        // A call with nothing closing it yet carries `running` from `stepRows`, so the spinner does not depend on the
+        // row happening to be last — which was wrong the moment a second call started in the same round trip.
+        <StepRow key={row.seq} row={row} active={row.seq === activeSeq} />
+      ))}
     </div>
   );
 }
@@ -139,11 +145,7 @@ function Breakdown({
           <span>Answered without using a tool</span>
         </div>
       ) : (
-        <StepList>
-          {visible.map((row) => (
-            <StepRow key={row.seq} row={row} active={row.seq === activeSeq} />
-          ))}
-        </StepList>
+        <WholeRows rows={visible} activeSeq={activeSeq} />
       )}
     </div>
   );
@@ -319,16 +321,7 @@ export function StepFeed({
         </details>
       )}
 
-      {acted.length > 0 && (
-        <StepList follow={acted.length}>
-          {acted.map((row) => (
-            // A call with nothing closing it yet carries `running` from `stepRows`, so the spinner no
-            // longer depends on the row happening to be last — which was wrong the moment a second
-            // call started in the same round trip.
-            <StepRow key={row.seq} row={row} />
-          ))}
-        </StepList>
-      )}
+      {acted.length > 0 ? <WholeRows rows={acted} /> : null}
 
       {/*
         The gap between steps, which is most of a turn.

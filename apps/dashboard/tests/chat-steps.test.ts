@@ -1,6 +1,6 @@
 /**
  * The live "Working" card: whole seconds on the clock, the reasoning before the calls, and the calls
- * in a box that scrolls rather than grows.
+ * as whole rows, the newest few with the earlier ones a press away, rather than a list that grows.
  */
 
 import { describe, expect, test } from "bun:test";
@@ -32,17 +32,17 @@ describe("the live feed", () => {
     ]).flat(),
   ];
 
-  test("reasoning comes before the calls, every call is kept, and the list scrolls inside", () => {
+  test("reasoning comes before the calls, the newest are whole rows, and the earlier ones are a press away", () => {
     const html = renderToString(createElement(StepFeed, { steps, elapsedMs: 4_400, running: true }));
     expect(html).toContain("Working");
     expect(html).toContain("4s");
     expect(html).not.toContain("4.4s");
-    expect(html.indexOf("Reasoning")).toBeLessThan(html.indexOf("web_search query 0"));
-    // No "show earlier": the whole list is there, in a bounded box.
-    expect(html).toContain("web_search query 0");
-    expect(html).toContain("web_search query 11");
-    expect(html).not.toContain("earlier");
-    expect(html).toMatch(/max-h-72[^"]*overflow-y-auto/);
+    expect(html.indexOf("Reasoning")).toBeLessThan(html.indexOf("Show 6 earlier steps"));
+    // A box scrolled to its newest row cut the row at its top in half; whole rows, and the rest on a press.
+    expect(html).not.toContain("web_search query 5<");
+    expect(html).toContain("web_search query 6<");
+    expect(html).toContain("web_search query 11<");
+    expect(html).not.toMatch(/<div class="[^"]*overflow-y-auto/);
   });
 });
 

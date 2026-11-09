@@ -327,9 +327,9 @@ this browser.
 ![Dashboard chat with live turn steps](/media/dashboard-chat.png)
 
 While an agent works, its steps fold into one line: what it is doing now, how many steps it has taken and for how long.
-Press the line to open every step, with how long each took and the model's reasoning; press it again to fold them. Once
-the turn is done the steps stay readable under the answer. It is the fastest way to see *why* an answer took the shape it
-did.
+Press the line to open the newest steps, with how long each took and the model's reasoning; the earlier ones are one
+more press away. Press the line again to fold them. Once the turn is done the steps stay readable under the answer. It
+is the fastest way to see *why* an answer took the shape it did.
 
 The turn lives on Nouride, not in the browser, so a reload or a second tab picks up a turn still running. Approvals wait
 under the conversation, background jobs show while they run, and typing `/` lists the slash commands. `/stop` and

@@ -337,9 +337,9 @@ grup yang sering kamu baca di Chats, di browser ini.
 ![Chat dashboard dengan langkah giliran langsung](/media/dashboard-chat.png)
 
 Selagi agent bekerja, langkah-langkahnya dilipat jadi satu baris: apa yang sedang ia kerjakan, sudah berapa langkah, dan
-berapa lama. Tekan barisnya untuk membuka semua langkah, dengan durasi tiap langkah dan reasoning model; tekan lagi untuk
-melipatnya. Begitu gilirannya selesai, langkahnya tetap bisa dibaca di bawah jawabannya. Ini cara tercepat melihat
-*mengapa* sebuah jawaban berbentuk seperti itu.
+berapa lama. Tekan barisnya untuk membuka langkah-langkah terbaru, dengan durasi tiap langkah dan reasoning model; yang
+lebih awal tinggal satu tekan lagi. Tekan barisnya lagi untuk melipatnya. Begitu gilirannya selesai, langkahnya tetap
+bisa dibaca di bawah jawabannya. Ini cara tercepat melihat *mengapa* sebuah jawaban berbentuk seperti itu.
 
 Gilirannya tinggal di Nouride, bukan di browser, jadi reload atau tab kedua tetap melihat giliran yang masih jalan.
 Approval menunggu di bawah percakapan, background job tampil selama jalan, dan mengetik `/` menampilkan perintah slash.
