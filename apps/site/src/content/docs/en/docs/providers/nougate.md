@@ -75,9 +75,9 @@ antigravity, claudecode)`, for whoever reads the turn; the chat is told only tha
 
 Nougate is normally a separate service reached over HTTP. Every Nouride install also carries it inside
 the daemon, on its own port, `18256`, and it stays off until you ask for it. Choosing it in setup, or
-**Turn on** on the dashboard's **LLM Gateway** page, starts it at once, without a restart, and keeps it on
-from then on. **Turn off** on the same page names the agents that use it, then restarts Nouride once nothing is
-running. Until 0.9 the Router edition's old install command (`--variant router`) and image
+**Turn on Nougate** on the dashboard's **LLM Gateway** page (under Settings), starts it at once, without a restart, and keeps it on
+from then on. **Turn off** on the same page names the agents that stop answering, then restarts Nouride once nothing is
+running; where nothing would start Nouride again, it is saved and stops at the next start. Until 0.9 the Router edition's old install command (`--variant router`) and image
 (`@@DOCKER_IMAGE@@-router`) give you the same build with it already on.
 
 **No API key needed to start.** The setup wizard's first step still takes an API key, and under it

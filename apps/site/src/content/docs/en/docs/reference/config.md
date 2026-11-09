@@ -504,7 +504,7 @@ setting.
 in_process = false                  # the dashboard's LLM Gateway page switches it
 ```
 
-Every official build carries the gateway, off by default. Choosing **Use Nougate** in setup or **Turn on** on the
+Every official build carries the gateway, off by default. Choosing **Use Nougate** in setup or **Turn on Nougate** on the
 LLM Gateway page writes `true` and starts it without a restart; **Turn off** writes `false` and restarts Nouride.
 A Router install's first start on Community writes `true` when the file has no `in_process` and the gateway has
 data, so it stays on. On a build without the gateway (compiled from the public source alone), turning it on stops

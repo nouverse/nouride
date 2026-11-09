@@ -516,7 +516,7 @@ pengaturan.
 in_process = false                  # diatur dari halaman LLM Gateway di dashboard
 ```
 
-Setiap build resmi membawa gateway ini, mati secara bawaan. Memilih **Use Nougate** di setup atau **Turn on** di
+Setiap build resmi membawa gateway ini, mati secara bawaan. Memilih **Use Nougate** di setup atau **Turn on Nougate** di
 halaman LLM Gateway menulis `true` dan menyalakannya tanpa restart; **Turn off** menulis `false` lalu me-restart
 Nouride. Start pertama instalasi Router di Community menulis `true` kalau file-nya belum punya `in_process` dan
 gateway-nya punya data, jadi ia tetap menyala. Di build tanpa gateway (dikompilasi dari source publik saja),

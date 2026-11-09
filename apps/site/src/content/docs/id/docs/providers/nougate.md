@@ -74,10 +74,11 @@ chat cukup dibilang modelnya sedang tidak merespons.
 ## Menjalankannya di dalam daemon
 
 Nougate biasanya layanan terpisah yang dijangkau lewat HTTP. Setiap instalasi Nouride juga membawanya di dalam
-daemon, di port-nya sendiri, `18256`, dan ia mati sampai kamu memintanya. Memilihnya di setup, atau **Turn on** di
-halaman **LLM Gateway** di dashboard, langsung menyalakannya tanpa restart, dan ia tetap menyala sejak itu.
-**Turn off** di halaman yang sama menyebutkan agent yang memakainya, lalu me-restart Nouride begitu tidak ada yang
-sedang berjalan. Sampai 0.9, perintah install lama edisi Router (`--variant router`) dan image-nya
+daemon, di port-nya sendiri, `18256`, dan ia mati sampai kamu memintanya. Memilihnya di setup, atau **Turn on Nougate** di
+halaman **LLM Gateway** di dashboard (di bawah Settings), langsung menyalakannya tanpa restart, dan ia tetap menyala sejak itu.
+**Turn off** di halaman yang sama menyebutkan agent yang berhenti menjawab, lalu me-restart Nouride begitu tidak ada
+yang sedang berjalan; kalau tidak ada yang akan menyalakan Nouride lagi, setelannya disimpan dan ia mati di start
+berikutnya. Sampai 0.9, perintah install lama edisi Router (`--variant router`) dan image-nya
 (`@@DOCKER_IMAGE@@-router`) memberi build yang sama dengan Nougate sudah menyala.
 
 **Tidak perlu API key untuk mulai.** Langkah pertama wizard setup tetap menerima API key, dan di
