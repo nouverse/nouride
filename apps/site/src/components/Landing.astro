@@ -46,8 +46,16 @@ import delivery from '@brand/mascot/riding/08-delivery.webp';
 import laptop from '@brand/mascot/standing/05-laptop.webp';
 import pointing from '@brand/mascot/standing/10-pointing.webp';
 import reading from '@brand/mascot/states/03-knowledge.webp';
+import searching from '@brand/mascot/states/02-searching.webp';
+import goodNight from '@brand/mascot/states/12-good-night.webp';
+import schedule from '@brand/mascot/states/09-schedule.webp';
+import thumbsUp from '@brand/mascot/standing/02-thumbs-up.webp';
+import security from '@brand/mascot/states/05-security.webp';
 
 /** Nouride Home is its own repository; its latest release carries the APK. */
+/** The cat for each thing they keep, by the `pose` its row names in the copy. */
+const KEEP_POSES = { searching, goodNight, reading, schedule, thumbsUp, laptop, security, head } as const;
+
 const HOME_RELEASES = 'https://github.com/nouverse/nouride-android-appliance/releases/latest';
 
 /**
@@ -302,27 +310,26 @@ const year = new Date().getFullYear();
     </div>
   </section>
 
-  <!-- What they keep: the page's own cream, a rest in colour. The list pushed right, the reading cat on the left. -->
+  <!-- What they keep: the page's own cream, each thing a card with the cat doing it. -->
   <section class="chapter learn" data-reveal>
     <h2 class="display lines-static">
       {t.learn.lines.map((line: string, i: number) => <span class={`l l-${i}`} style={`--i:${i}`}>{line}</span>)}
     </h2>
-    <div class="learn-body">
-      <img class="learn-cat" src={reading.src} alt={t.learn.mascotAlt} width="512" height="512" loading="lazy" style="--i:3" />
-      <p class="learn-name" style="--i:2">{t.learn.table}</p>
-      <ul class="rows">
-        {t.learn.rows.map((row: { kind: string; text: string; link?: string }, i: number) => (
-          <li class:list={['row', { gap: i === 4 }]} style={`--i:${i + 3}`}>
-            <span class="kind">{row.kind}</span>
-            {row.link ? (
-              <a class="what" href={href(row.link)}>{row.text}<span class="arrow" aria-hidden="true">→</span></a>
-            ) : (
-              <span class="what">{row.text}</span>
-            )}
+    <ul class="keeps">
+      {t.learn.rows.map((row: { kind: string; text: string; link?: string; pose: keyof typeof KEEP_POSES }, i: number) => {
+        const Card = row.link ? 'a' : 'div';
+        return (
+          <li style={`--i:${i + 2}`}>
+            <Card class="keep" {...(row.link ? { href: href(row.link) } : {})}>
+              <img class="keep-cat" src={KEEP_POSES[row.pose].src} alt="" width="512" height="512" loading="lazy" />
+              <h3 class="keep-kind">{row.kind}</h3>
+              <p class="keep-what">{row.text}</p>
+              {row.link && <span class="keep-arrow" aria-hidden="true">→</span>}
+            </Card>
           </li>
-        ))}
-      </ul>
-    </div>
+        );
+      })}
+    </ul>
   </section>
 
   <!-- The footprint: one measured number, with its date, owns the screen. -->
@@ -1302,76 +1309,66 @@ const year = new Date().getFullYear();
     }
   }
 
-  /* ── What they keep: a statement, the list pushed right ───────────────────────────────────────────────────────── */
+  /* ── What they keep: a statement, then a card for each, with the cat doing it ──────────────────────────────────── */
   .learn h2 .l {
     display: block;
   }
   .learn h2 .l-0 {
     padding-left: 3vw;
   }
-  .learn-body {
-    display: grid;
-    grid-template-columns: repeat(12, minmax(0, 1fr));
-    column-gap: 1.5rem;
-    margin-top: clamp(3rem, 7vw, 6rem);
-    align-items: end;
-  }
-  .learn-cat {
-    grid-column: 1 / 5;
-    grid-row: 1;
-    width: min(100%, 22rem);
-    height: auto;
-    align-self: end;
-  }
-  .learn-name {
-    grid-column: 6 / 8;
-    grid-row: 1;
-    align-self: start;
-    color: var(--soft);
-    font-weight: 700;
-  }
-  .rows {
-    grid-column: 8 / 13;
-    grid-row: 1;
+  .keeps {
     list-style: none;
-    margin: 0;
+    margin: clamp(2.5rem, 6vw, 5rem) 0 0;
     padding: 0;
     display: grid;
-    gap: 1.4rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1.25rem;
   }
-  .row {
-    display: grid;
-    grid-template-columns: 7.5rem minmax(0, 1fr);
-    gap: 1rem;
-    align-items: baseline;
-  }
-  .row.gap {
-    margin-top: 1.25rem;
-  }
-  .kind {
-    color: var(--soft);
-    font-weight: 700;
-  }
-  .what {
+  .keep {
     display: flex;
-    justify-content: space-between;
-    gap: 1rem;
+    flex-direction: column;
+    gap: 0.5rem;
+    height: 100%;
+    padding: 1.25rem 1.375rem 1.5rem;
+    border-radius: 1.5rem;
+    background: var(--nr-card);
+    box-shadow: var(--nr-shadow);
     color: var(--ink);
     text-decoration: none;
+    transition: transform 180ms var(--ease-out), box-shadow 180ms ease;
+  }
+  .keep-cat {
+    width: 6.5rem;
+    height: auto;
+    margin-bottom: 0.25rem;
+  }
+  .keep-kind {
+    margin: 0;
+    font-family: 'Fredoka', ui-rounded, system-ui, sans-serif;
+    font-weight: 500;
+    font-size: 1.375rem;
+    line-height: 1.2;
+  }
+  .keep-what {
+    margin: 0;
+    color: var(--soft);
     text-wrap: pretty;
   }
-  a.what .arrow {
-    flex-shrink: 0;
+  .keep-arrow {
+    margin-top: auto;
+    padding-top: 0.5rem;
     font-weight: 700;
     color: var(--nr-peach);
     transition: transform 180ms var(--ease-out);
   }
+  a.keep:active {
+    transform: scale(0.98);
+  }
   @media (hover: hover) and (pointer: fine) {
-    a.what:hover {
-      text-decoration: underline;
-      text-underline-offset: 0.2em;
+    a.keep:hover {
+      transform: translateY(-3px);
     }
-    a.what:hover .arrow {
+    a.keep:hover .keep-arrow {
       transform: translateX(4px);
     }
   }
@@ -1637,11 +1634,8 @@ const year = new Date().getFullYear();
       grid-template-columns: minmax(0, 1fr);
       min-height: 0;
     }
-    .learn-name {
-      display: none;
-    }
-    .rows {
-      grid-column: 6 / 13;
+    .keeps {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 
@@ -1786,22 +1780,26 @@ const year = new Date().getFullYear();
     .learn h2 .l-0 {
       padding-left: 0;
     }
-    .learn-body {
+    .keeps {
       grid-template-columns: minmax(0, 1fr);
-      row-gap: 2rem;
+      gap: 0.875rem;
     }
-    .rows,
-    .learn-cat {
-      grid-column: 1;
-      grid-row: auto;
+    /* The cat beside the words: a column of tall cards was a long scroll of white. */
+    .keep {
+      display: grid;
+      grid-template-columns: 4.5rem minmax(0, 1fr);
+      column-gap: 1rem;
+      row-gap: 0.25rem;
+      align-items: start;
+      padding: 1rem 1.125rem;
     }
-    .learn-cat {
-      width: 60%;
-      justify-self: end;
+    .keep-cat {
+      grid-row: 1 / span 3;
+      width: 4.5rem;
+      margin: 0;
     }
-    .row {
-      grid-template-columns: minmax(0, 1fr);
-      gap: 0.15rem;
+    .keep-arrow {
+      padding-top: 0;
     }
 
     .box {
