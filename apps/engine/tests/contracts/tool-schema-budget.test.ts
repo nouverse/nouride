@@ -142,7 +142,9 @@ const PER_TOOL = 3_400;
 // 48,150 for a kept document's English title (0.8.23, ~135): `memory_write`'s `title` says what the document is, in
 // English with its own terms, the words search finds it by in any language; on a box searching by words alone, English
 // found nothing in Indonesian documents. `memory_search`'s words about documents got shorter.
-const TOTAL = 48_150;
+// 48,200 for the mascot's look (~33): the harness tool's look takes tuxedo, helmet and photochromic, the words the Look
+// tab takes, so an agent can make another dressed as the mascot; an enum the tab has and the tool lacks is refused.
+const TOTAL = 48_200;
 
 describe("tool schema budget", () => {
   test("every conditional tool was built, so the total means what it says", () => {
