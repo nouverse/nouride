@@ -17,7 +17,7 @@ const ROUTES = (what: string): string =>
 const COMPONENT = (what: string): string => `${what}: its state, its handlers and its markup in one component; a part with state of its own, as a component beside it, is the seam`;
 
 export const LONG_FUNCTIONS: Record<string, Record<string, Budget>> = {
-  "apps/dashboard/src/commons/components/layout/RootLayout.tsx": { RootLayout: { lines: 161, why: COMPONENT("the shell every signed-in page renders in, its sidebar and tab bar") } },
+  "apps/dashboard/src/commons/components/layout/RootLayout.tsx": { RootLayout: { lines: 163, why: COMPONENT("the shell every signed-in page renders in: sidebar, tab bar, notices") } },
   "apps/dashboard/src/commons/components/mcp/McpServerForm.tsx": { McpServerForm: { lines: 267, why: COMPONENT("the form that adds or edits one MCP server, by hand or from the catalog") } },
   "apps/dashboard/src/commons/components/ui/Combobox.tsx": { Combobox: { lines: 172, why: "a text field that suggests: the typed text, the filtered list and the keyboard over one open state, as one control every model picker uses" } },
   "apps/dashboard/src/commons/components/ui/Markdown.tsx": { Markdown: { lines: 235, why: "the markdown renderer: each block kind read in one pass over the lines, with the flushes that close a list, a quote, a table or a code block" } },

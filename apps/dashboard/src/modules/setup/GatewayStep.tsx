@@ -15,18 +15,32 @@ import type { SetupState } from "@nouride/wire";
 import { ConnectAccounts } from "./ConnectAccounts";
 import { gatewayApi } from "./gateway-api";
 import { offerSentence } from "./gateway-providers";
-import { gatewayMount } from "@/commons/lib/bundled-gateway";
+import { gatewayOffer } from "@/commons/lib/bundled-gateway";
+import { ErrorNote } from "@/commons/components/ui/ui";
 
-/** The card under the API-key form that leads here. Nothing on a build without the gateway. */
+/**
+ * The card under the API-key form that leads here, wherever the build carries the gateway. Off, choosing it turns the
+ * gateway on first, a few seconds with no restart, and then goes on to the sign-in step; not choosing it leaves it off.
+ * Nothing on a build without the gateway, or where only the server can turn it on.
+ */
 export function GatewayOffer({ state, onUse }: { state: SetupState | undefined; onUse: () => void }) {
-  const mount = gatewayMount(state);
-  return mount ? <OfferCard mount={mount} onUse={onUse} /> : null;
+  const offer = gatewayOffer(state);
+  return offer ? <OfferCard mount={offer.mount} on={offer.on} onUse={onUse} /> : null;
 }
 
-function OfferCard({ mount, onUse }: { mount: string; onUse: () => void }) {
+function OfferCard({ mount, on, onUse }: { mount: string; on: boolean; onUse: () => void }) {
+  const queryClient = useQueryClient();
   // The same read the sign-in step makes, so opening it costs nothing more — and the sentence names
-  // what this gateway actually offers rather than a list written here.
-  const providers = useQuery({ queryKey: ["llm-gateway", "providers"], queryFn: gatewayApi(mount).providers });
+  // what this gateway actually offers rather than a list written here. Off, there is nobody to ask yet.
+  const providers = useQuery({ queryKey: ["llm-gateway", "providers"], queryFn: gatewayApi(mount).providers, enabled: on });
+  const turnOn = useMutation({
+    mutationFn: () => api.switchLlmGateway(true),
+    // The setup state read again first, so the step it goes on to finds the gateway running.
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["setup"] });
+      onUse();
+    },
+  });
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3 text-[11px] font-semibold uppercase tracking-wider text-base-content/65 font-mono">
@@ -34,16 +48,25 @@ function OfferCard({ mount, onUse }: { mount: string; onUse: () => void }) {
       </div>
       <button
         type="button"
-        onClick={onUse}
-        className="group w-full text-left rounded-2xl border border-primary/30 bg-primary/[0.06] hover:bg-primary/[0.1] px-4 py-3.5 flex items-center gap-3 transition-colors active:scale-[0.99]"
+        onClick={() => (on ? onUse() : turnOn.mutate())}
+        disabled={turnOn.isPending}
+        aria-busy={turnOn.isPending}
+        className="group w-full text-left rounded-2xl border border-primary/30 bg-primary/[0.06] hover:bg-primary/[0.1] disabled:opacity-100 px-4 py-3.5 flex items-center gap-3 transition-colors active:scale-[0.99]"
       >
         <NougateMark className="size-10 shrink-0 drop-shadow-sm" />
         <span className="min-w-0 flex-1">
-          <span className="block text-sm font-bold text-base-content">Use Nougate</span>
-          <span className="block text-xs text-base-content/65">{offerSentence(providers.data)}</span>
+          <span className="block text-sm font-bold text-base-content">{turnOn.isPending ? "Turning on Nougate…" : "Use Nougate"}</span>
+          <span className="block text-xs text-base-content/65">
+            {turnOn.isPending ? "It starts on this server. This takes a few seconds." : offerSentence(providers.data)}
+          </span>
         </span>
-        <ArrowRight size={16} className="text-primary shrink-0 transition-transform group-hover:translate-x-0.5" />
+        {turnOn.isPending ? (
+          <Loader2 size={16} className="text-primary shrink-0 animate-spin" aria-hidden="true" />
+        ) : (
+          <ArrowRight size={16} className="text-primary shrink-0 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+        )}
       </button>
+      <ErrorNote error={turnOn.error} />
     </div>
   );
 }

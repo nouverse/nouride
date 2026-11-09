@@ -57,9 +57,9 @@ export interface NavItem {
    */
   boxOnly?: boolean;
   /**
-   * Shown only where this daemon hosts the LLM gateway and serves its dashboard (`router` or `pro`, with `[nougate]
-   * in_process`), and only once the dashboard bundle beside the binary can be shown in a frame — `gatewayDashboard` has
-   * why.
+   * Shown only where the build carries the LLM gateway, on or off: off, the page is where it is turned on. On a daemon
+   * older than the switch, only where it runs and the dashboard bundle beside the binary can be shown in a frame —
+   * `gatewayPage` and `gatewayDashboard` have why.
    */
   gatewayOnly?: boolean;
   /** A line under its name on the Settings page: what the page is for, in a person's words. */

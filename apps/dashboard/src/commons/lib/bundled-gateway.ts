@@ -1,6 +1,6 @@
 /**
- * The LLM gateway a `router` or `pro` build carries, as the dashboard sees it — from what the daemon says it is
- * running (`bundledGateway` in the setup state), never from which edition it is.
+ * The LLM gateway a build carries, as the dashboard sees it — from what the daemon says it carries and runs
+ * (`bundledGateway` in the setup state), never from which edition it is.
  *
  * The daemon runs it in its own process and serves its dashboard through this one, under
  * `bundledGateway.mount` (`/llm-gateway`) — that is the LLM Gateway page, and the API the setup
@@ -36,6 +36,38 @@ export function gatewayMount(state: SetupState | null | undefined): string | nul
  */
 export function gatewayDashboard(state: SetupState | null | undefined): string | null {
   return state?.bundledGateway?.dashboard === true ? gatewayMount(state) : null;
+}
+
+/**
+ * The switch, where the daemon has one: whether the gateway runs, where it would be served, and whether the server's
+ * environment holds the switch — or null.
+ *
+ * Null for a daemon that does not say `carried`: one older than the switch, which offered the gateway only while it
+ * ran and has no route to turn it, so a page drawn against it during an update offers nothing to switch. Null too for
+ * a build that does not carry it.
+ */
+export function gatewaySwitch(
+  state: SetupState | null | undefined,
+): { on: boolean; mount: string | null; locked: boolean; stopping: boolean } | null {
+  const gateway = state?.bundledGateway;
+  if (gateway?.carried !== true) return null;
+  return { on: gateway.available, mount: gateway.mount ?? null, locked: gateway.decidedBy === "environment", stopping: gateway.stopping === true };
+}
+
+/**
+ * The setup wizard's "Use Nougate": where the gateway is reached, and whether it has to be turned on first — or null
+ * where there is nothing to offer: no gateway, or one that is off where only the server can turn it on.
+ */
+export function gatewayOffer(state: SetupState | null | undefined): { mount: string; on: boolean } | null {
+  const running = gatewayMount(state);
+  if (running) return { mount: running, on: true };
+  const offered = gatewaySwitch(state);
+  return offered?.mount && !offered.locked && !offered.on ? { mount: offered.mount, on: false } : null;
+}
+
+/** Whether the LLM Gateway page is in the menu: it can show the gateway, or there is a switch on it to turn. */
+export function gatewayPage(state: SetupState | null | undefined): boolean {
+  return gatewayDashboard(state) !== null || gatewaySwitch(state) !== null;
 }
 
 /**

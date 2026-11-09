@@ -252,10 +252,23 @@ const browser: RestartIo = {
  * route's own reason. A second press while one is followed joins it.
  */
 export async function restartDaemon(): Promise<void> {
+  await restartThrough(async () => {
+    const ack = await api.restartDaemon();
+    return { waiting: ack.waiting, note: ack.plain ?? ack.note };
+  });
+}
+
+/**
+ * A restart another request asks for, followed as Restart's is: `ask` makes the request and answers the restart it
+ * started, or null when it started none — turning the LLM gateway off, which restarts only where something runs.
+ * Rejects with the request's own refusal.
+ */
+export async function restartThrough(ask: () => Promise<{ waiting: boolean; note: string } | null>): Promise<void> {
   if (following()) return;
   const before = await api.health().then((health) => health.uptime).catch(() => null);
-  const ack = await api.restartDaemon();
-  void follow(browser, { kind: "restart", before, note: ack.waiting ? (ack.plain ?? ack.note) : null, held: !ack.waiting });
+  const ack = await ask();
+  if (!ack) return;
+  void follow(browser, { kind: "restart", before, note: ack.waiting ? ack.note : null, held: !ack.waiting });
 }
 
 /** Stop waiting for running work: the daemon restarts on its next look. A refusal means it is already going down. */

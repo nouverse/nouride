@@ -29,6 +29,7 @@ import { jobsApi } from "./api.jobs";
 import { memoryApi } from "./api.memory";
 import { knowledgeApi } from "./api.knowledge";
 import { mcpServerApi } from "./api.mcp-server";
+import { llmGatewayApi } from "./api.llm-gateway";
 import { peopleApi } from "./api.people";
 import { groupsApi } from "./api.groups";
 import { accessApi } from "./api.access";
@@ -75,6 +76,7 @@ export const api = {
   ...memoryApi,
   ...knowledgeApi,
   ...mcpServerApi,
+  ...llmGatewayApi,
   ...peopleApi,
   ...groupsApi,
   ...accessApi,
