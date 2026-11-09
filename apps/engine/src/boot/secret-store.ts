@@ -63,6 +63,20 @@ export async function openCommandSecretStore(paths: { dataDir: string; configPat
   return await SecretStore.open(paths.dataDir, commandStoreEnv(), { layout: commandKeyLayout(paths) });
 }
 
+/**
+ * Whether a secret name holds a value, for a command's checks of the config — never the value. Nothing when the store
+ * will not open here (its key is root's, say): a check that cannot see the store says nothing rather than call a key
+ * that is there missing.
+ */
+export async function commandSecretLookup(paths: { dataDir: string; configPath: string }): Promise<((name: string) => boolean) | undefined> {
+  try {
+    const store = await openCommandSecretStore(paths);
+    return (name) => store.has(name);
+  } catch {
+    return undefined;
+  }
+}
+
 /** The key's variables as this command was started with them, out of its environment since (`keepStoreKeyAside`). */
 let keptKey: Record<string, string> = {};
 

@@ -22,7 +22,7 @@
 import { assertSecretName } from "@nouride/secrets";
 import type { WebPolicySection } from "@nouride/shared";
 import { upsertTomlTable } from "@/modules/config/edit.ts";
-import { isSearchKind, resolveSearch } from "@/modules/tools/builtins/search-backends.ts";
+import { isSearchKind, resolveSearch, SEARCH_BACKENDS } from "@/modules/tools/builtins/search-backends.ts";
 import { editConfigFile } from "./file.ts";
 import { setSecret } from "./secrets.ts";
 import type { FieldRefusal, SaveResult, SettingsDeps } from "./types.ts";
@@ -36,11 +36,12 @@ const NEEDS_KEY: Partial<Record<WebSearchMode, string>> = { brave: "Brave", exa:
 /**
  * The name a new key is stored under when the page is not told another.
  *
- * Exa's is its own, so a key pasted for one service never replaces the other's: switching back finds the first
- * key where it was. Brave's is the name the stock config has always held.
+ * Each service's own (`keyName`), so a key pasted for one never replaces the other's, switching back finds the first
+ * where it was, and a service in the fallback chain finds its key where the page put it. Brave's is the name the stock
+ * config has always held; a custom endpoint speaks Brave's API, so it takes Brave's.
  */
 export function defaultSearchSecret(mode: WebSearchMode): string {
-  return mode === "exa" ? "exa_api_key" : "brave_search_api_key";
+  return SEARCH_BACKENDS[mode === "exa" ? "exa" : "brave"].keyName!;
 }
 
 export interface WebSearchSettings {

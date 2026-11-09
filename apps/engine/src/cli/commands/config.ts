@@ -1,6 +1,7 @@
 import { join, loadTomlIfExists } from "@nouride/runtime";
 import { holdLines, plural } from "@nouride/shared";
-import { assertGatewayExecPosture, noteOf } from "@/modules/config/global/index.ts";
+import { assertGatewayExecPosture, defaultConfigPath, noteOf } from "@/modules/config/global/index.ts";
+import { commandSecretLookup } from "@/boot/secret-store.ts";
 import { assertUpgradeFloor, loadConfigPastTheFloor } from "@/boot/upgrade-floor.ts";
 import { configJsonSchema, describeConfig, fieldsIn, findField, lintConfig } from "@/modules/config/schema.ts";
 import { AgentRegistry } from "@nouride/persona";
@@ -119,7 +120,8 @@ async function configCheck(target: string | undefined): Promise<void> {
   // combinations that start fine and then fail at the first call — an endpoint the SSRF guard
   // refuses, a queue timeout below the turn deadline. Reported, never fatal: this command's verdict
   // is about whether the daemon comes up.
-  const lints = lintConfig(config);
+  const secretSet = await commandSecretLookup({ dataDir: config.daemon.dataDir, configPath: source ?? defaultConfigPath() });
+  const lints = lintConfig(config, secretSet ? { secretSet } : {});
   const said = [...notes, ...held.map((line) => ({ ...noteOf(line), agent: line.agent_id }))];
   if (failures.length > 0 || lints.length > 0 || said.length > 0) say("");
   for (const failure of failed) say(`${RED}✗${RESET} agent ${failure.id} will not load: ${failure.error}`);

@@ -24,7 +24,7 @@ import { secretKeepingFor } from "@/boot/secret-keeping.ts";
 import type { ProviderRegistry } from "@/modules/llm/providers.ts";
 import type { Pipeline } from "@/modules/pipeline/index.ts";
 import type { Memory } from "@/modules/memory/index.ts";
-import { isSearchKind } from "@/modules/tools/builtins/search-backends.ts";
+import { isSearchKind, resolveFallbackKeys } from "@/modules/tools/builtins/search-backends.ts";
 import type { GrantsPort } from "@/modules/tools/grants.store.ts";
 import type { ToolGrantsPort } from "@/modules/tools/tool-grants.store.ts";
 import type { SqliteApprovalGate } from "@/modules/tools/approvals.store.ts";
@@ -123,6 +123,8 @@ export function buildTools(deps: {
   // The secret's NAME comes from config; only the value is resolved here. A backend that needs no
   // credential — a self-hosted SearXNG — simply finds nothing, which is not an error.
   const searchKey = secrets.resolve(config.security.web.searchApiKey);
+  // A fallback's own key, under the name its service's key is kept by: `search_api_key` is the primary's alone.
+  const fallbackKeys = resolveFallbackKeys(config.security.web, (name) => secrets.resolve(name));
   const attachmentRead = pipeline.attachmentReader();
   // A picture an MCP server returns is shown the way one `read` opens is: the same `[media]` answers.
   if (attachmentRead) deps.mcp?.showImagesWith(readImagesFrom(attachmentRead));
@@ -172,6 +174,7 @@ export function buildTools(deps: {
         : {}),
       fallbackEnabled: config.security.web.fallbackEnabled,
       fallbackBackends: config.security.web.fallbackBackends,
+      fallbackApiKeys: fallbackKeys,
     },
     sendFile: {
       send: (toolCtx, attachment) => pipeline.sendAttachment(toolCtx, attachment),

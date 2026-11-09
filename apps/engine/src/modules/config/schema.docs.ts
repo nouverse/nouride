@@ -164,7 +164,7 @@ export const ANNOTATIONS: Record<string, Annotation> = {
     description: "Name of the credential holding the search API key.",
     secretRef: true,
     caveat:
-      "The *name*, never the key. Resolved from the secret store or the environment at call time, so the value never enters this file. It belongs to `search_kind`: Brave's key is refused by Exa, and the other way round.",
+      "The *name*, never the key. Resolved from the secret store or the environment at call time, so the value never enters this file. It is the primary's alone: a service in `fallback_backends` uses its own key.",
     example: 'search_api_key = "brave_search_api_key"   # or "exa_api_key" with search_kind = "exa"',
   },
   "security.web.fallback_enabled": {
@@ -173,7 +173,7 @@ export const ANNOTATIONS: Record<string, Annotation> = {
   "security.web.fallback_backends": {
     description: "Backends to try, in order, when the primary fails at runtime.",
     caveat:
-      "`duckduckgo` is the keyless scraping chain: no endpoint, no credential, which is why it is not a `search_kind`. A named search kind falls back on its *own* default endpoint, never this section's: a SearXNG URL is not a Brave URL. So `searxng` cannot be a fallback (it has no public default), and `brave` and `exa` need `search_api_key` set. Both are reported by `nouride doctor` rather than dialled to earn a 404 or a 401.",
+      "`duckduckgo` is the keyless scraping chain: no endpoint, no credential, which is why it is not a `search_kind`. A named search kind falls back on its *own* default endpoint and its *own* key, never this section's: a SearXNG URL is not a Brave URL, and Exa's key is not Brave's. So `searxng` cannot be a fallback (it has no public default), and `brave` and `exa` use the secrets `brave_search_api_key` and `exa_api_key`, where the dashboard keeps their keys; one whose key is not set is skipped. Both are reported by `nouride config check` rather than dialled to earn a 404 or a 401.",
     example: 'fallback_backends = ["duckduckgo"]',
   },
 

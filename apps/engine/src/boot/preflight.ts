@@ -48,6 +48,8 @@ export function runPreflightChecks(deps: {
   credentialsDir: string;
   /** Where the last boot's advisories are remembered (`daemon_state`). */
   state: StateRows;
+  /** Whether a secret name holds a value: for the lint on a search fallback with no key of its own. */
+  secretSet?: (name: string) => boolean;
 }): void {
   const { config, registry, providers, credentialsDir } = deps;
 
@@ -75,7 +77,7 @@ export function runPreflightChecks(deps: {
   // it is new (`advisories.ts`) — `nouride doctor` and the dashboard's Overview list the whole set the last boot said.
   const advisories = openAdvisories(deps.state, log);
   const { advise } = advisories;
-  for (const lint of lintConfig(config)) {
+  for (const lint of lintConfig(config, deps.secretSet ? { secretSet: deps.secretSet } : {})) {
     if (lint.level === "bad") log.error(lint.message, { hint: lint.hint });
     else if (lint.deliberate) log.info(lint.message, { hint: lint.hint });
     else advise(lint.message, { hint: lint.hint });

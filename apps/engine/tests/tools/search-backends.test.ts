@@ -470,18 +470,22 @@ describe("the keyless fallback", () => {
 describe("the fallback chain honours every name in it", () => {
   const braveEmpty = JSON.stringify({ web: { results: [] } });
 
-  test("a named search kind is actually tried, on its own endpoint", async () => {
+  test("a named search kind is actually tried, on its own endpoint and with its own key", async () => {
     // SearXNG primary, Brave fallback — the shape that works, because Brave has a public default to
-    // fall back onto. The reverse cannot: a fallback never borrows the primary's `search_endpoint`.
+    // fall back onto. The reverse cannot: a fallback never borrows the primary's `search_endpoint`,
+    // and never its key either: "k" is the SearXNG proxy's token, not something to hand Brave.
     const dialled: string[] = [];
+    const tokens: (string | undefined)[] = [];
     const tool = createWebSearchTool({
       searchApiKey: "k",
       searchKind: "searxng",
       searchEndpoint: "https://searx.example.com/search",
       fallbackEnabled: true,
       fallbackBackends: ["brave"],
-      fetchImpl: (async (url: string) => {
+      fallbackApiKeys: { brave: "brave-own" },
+      fetchImpl: (async (url: string, init: RequestInit = {}) => {
         dialled.push(String(url));
+        tokens.push((init.headers as Record<string, string>)["x-subscription-token"]);
         if (String(url).includes("searx.example.com")) return new Response("{}", { status: 503 });
         return new Response(
           JSON.stringify({ web: { results: [{ title: "Brave hit", url: "https://b.example.com", description: "via brave" }] } }),
@@ -495,6 +499,7 @@ describe("the fallback chain honours every name in it", () => {
     expect(result.content).toContain("Brave hit");
     expect(dialled).toHaveLength(2);
     expect(dialled[1]).toContain("api.search.brave.com");
+    expect(tokens[1]).toBe("brave-own");
   });
 
   test("the order in the list is the order tried", async () => {
@@ -505,6 +510,7 @@ describe("the fallback chain honours every name in it", () => {
       searchApiKey: "k",
       fallbackEnabled: true,
       fallbackBackends: ["duckduckgo", "brave"],
+      fallbackApiKeys: { brave: "brave-own" },
       fetchImpl: (async (url: string) => {
         dialled.push(String(url));
         return new Response("{}", { status: 429 });
@@ -555,12 +561,14 @@ describe("the fallback chain honours every name in it", () => {
     expect(calls).toBe(1);
   });
 
-  test("a backend with no credential to use is dropped rather than dialled for a 401", async () => {
-    // Brave in the chain with no key and no proxy would spend a round-trip to earn an auth failure.
+  test("a backend with no credential of its own is dropped rather than dialled for a 401", async () => {
+    // Brave in the chain with no key of its own would spend a round-trip to earn an auth failure. The
+    // primary's token is not one: it is the SearXNG proxy's, and it was once sent to Brave.
     const dialled: string[] = [];
     const tool = createWebSearchTool({
       searchKind: "searxng",
       searchEndpoint: "https://searx.example.com/search",
+      searchApiKey: "proxy-token",
       fallbackEnabled: true,
       fallbackBackends: ["brave"],
       fetchImpl: (async (url: string) => {

@@ -66,9 +66,10 @@ interface SearchAttempt {
  * than one that does not offer it.
  *
  * `duckduckgo` is the keyless scraping chain, which is why it is not a `search_kind`: no endpoint, no
- * credential. The search kinds reuse this section's key, so one with nothing to authenticate
- * with is dropped from the chain here and reported by `nouride doctor` — trying it would spend a
- * round-trip to earn a 401.
+ * credential. A search kind in the chain uses its own key, never the primary's: `search_api_key` once
+ * went to every service in the chain, so with Exa first and Brave after it, Brave was sent Exa's key. One
+ * with no key of its own is dropped from the chain here, and `nouride config check` says so — trying it
+ * would spend a round-trip to earn a 401.
  */
 function buildChain(
   resolved: ResolvedSearch,
@@ -76,6 +77,7 @@ function buildChain(
   intent: SearchIntent,
   doFetch: typeof fetch,
   apiKey: string | undefined,
+  fallbackKeys: Partial<Record<SearchKind, string>>,
 ): SearchAttempt[] {
   const chain: SearchAttempt[] = [
     {
@@ -101,13 +103,14 @@ function buildChain(
      * `search_endpoint` belongs to the configured `search_kind` — a SearXNG URL is not a Brave URL,
      * and handing one to the other buys a 404 that reads as the fallback being broken. Which means a
      * backend with no public default (SearXNG) cannot serve as a fallback at all while there is only
-     * one endpoint field to configure, and one that needs a credential cannot serve without one.
+     * one endpoint field to configure, and one that needs a credential cannot serve without its own.
      * Both are dropped here and reported by `lintConfig`, rather than dialled to earn a 404 or a 401.
      */
     if (!backend.defaultEndpoint) continue;
-    if (backend.requiresApiKey && !apiKey) continue;
+    const key = fallbackKeys[name as SearchKind];
+    if (backend.requiresApiKey && !key) continue;
     const endpoint = backend.defaultEndpoint;
-    chain.push({ name, run: () => callBackend(backend, endpoint, query, doFetch, apiKey) });
+    chain.push({ name, run: () => callBackend(backend, endpoint, query, doFetch, key) });
   }
 
   return chain;
@@ -158,8 +161,9 @@ async function searchBackend(
   intent: SearchIntent,
   doFetch: typeof fetch,
   apiKey: string | undefined,
+  fallbackKeys: Partial<Record<SearchKind, string>>,
 ): Promise<SearchOutcome> {
-  const chain = buildChain(resolved, query, intent, doFetch, apiKey);
+  const chain = buildChain(resolved, query, intent, doFetch, apiKey, fallbackKeys);
   /**
    * Kept apart, because they mean opposite things at the end of the chain.
    *
@@ -442,7 +446,7 @@ export function createWebSearchTool(options: WebToolOptions = {}): Tool | null {
     try {
       const results = keyless
         ? await searchKeyless(keyless, query, intent, doFetch)
-        : await searchBackend(resolved as ResolvedSearch, query, intent, doFetch, options.searchApiKey);
+        : await searchBackend(resolved as ResolvedSearch, query, intent, doFetch, options.searchApiKey, options.fallbackApiKeys ?? {});
 
       if ("error" in results) return { ok: false, error: results.error };
       if (results.hits.length === 0) return { ok: true, text: "No results.", metadata: { count: 0 } };

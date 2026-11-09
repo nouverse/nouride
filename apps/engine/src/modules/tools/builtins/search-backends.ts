@@ -117,6 +117,12 @@ export interface SearchBackend {
   defaultEndpoint: string | null;
   /** Whether a missing credential means the tool cannot work at all. */
   requiresApiKey: boolean;
+  /**
+   * The secret name this service's key is kept under when nothing names another: where the Web Search page stores
+   * one, and where a fallback looks for its own. `search_api_key` is the primary's alone, and a key sent to another
+   * service is a 401 at best and the primary's key handed to a stranger at worst.
+   */
+  keyName?: string;
   /** Query string for one search. */
   buildUrl(endpoint: string, query: string, limit: number): string;
   /**
@@ -141,6 +147,7 @@ export const SEARCH_BACKENDS: Record<SearchKind, SearchBackend> = {
   brave: {
     defaultEndpoint: "https://api.search.brave.com/res/v1/web/search",
     requiresApiKey: true,
+    keyName: "brave_search_api_key",
     buildUrl(endpoint, query, limit) {
       const url = new URL(endpoint);
       url.searchParams.set("q", query);
@@ -279,6 +286,7 @@ export const SEARCH_BACKENDS: Record<SearchKind, SearchBackend> = {
   exa: {
     defaultEndpoint: "https://api.exa.ai/search",
     requiresApiKey: true,
+    keyName: "exa_api_key",
     // Everything is in the body; the endpoint is the whole address.
     buildUrl: (endpoint) => endpoint,
     body(query, limit) {
@@ -304,6 +312,32 @@ export const SEARCH_BACKENDS: Record<SearchKind, SearchBackend> = {
 
 export function isSearchKind(value: unknown): value is SearchKind {
   return (SEARCH_KINDS as readonly unknown[]).includes(value);
+}
+
+/**
+ * The services in the fallback chain that need a key of their own, each with the secret name it is looked for under.
+ *
+ * Not the primary: it has `search_api_key`. Not one without a `keyName`: SearXNG is reached by address, and as a
+ * fallback not at all (it has no public default).
+ */
+export function fallbackKeyNames(web: { searchKind: string; fallbackBackends: readonly string[] }): { kind: SearchKind; name: string }[] {
+  return SEARCH_KINDS.flatMap((kind) => {
+    const name = SEARCH_BACKENDS[kind].keyName;
+    return name && kind !== web.searchKind && web.fallbackBackends?.includes(kind) ? [{ kind, name }] : [];
+  });
+}
+
+/** Each fallback service's own key, resolved from its own name; one that resolves to nothing is left out. */
+export function resolveFallbackKeys(
+  web: { searchKind: string; fallbackBackends: readonly string[] },
+  resolve: (name: string) => string | undefined,
+): Partial<Record<SearchKind, string>> {
+  const keys: Partial<Record<SearchKind, string>> = {};
+  for (const { kind, name } of fallbackKeyNames(web)) {
+    const value = resolve(name);
+    if (value) keys[kind] = value;
+  }
+  return keys;
 }
 
 /**

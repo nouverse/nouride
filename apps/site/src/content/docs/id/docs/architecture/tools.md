@@ -248,8 +248,11 @@ Cuma Brave, yang default, yang jatuh ke sumber tanpa key selama key-nya belum ad
 agent gak punya pencarian web sama sekali, dan `nouride config check` menyebutnya.
 
 Pada kegagalan runtime, 429, 5xx, timeout, yang utama jatuh ke fallback daripada membuat agent kehilangan
-pencarian di tengah tugas. Kalau layanannya menolak, agent diberi tahu artinya: key yang gak diterima
-(401), akun yang kreditnya habis (402), atau terlalu banyak pencarian untuk saat ini (429).
+pencarian di tengah tugas. Layanan pencarian di `fallback_backends` memakai key-nya sendiri, gak pernah
+key milik yang utama: Brave dari `brave_search_api_key`, Exa dari `exa_api_key`, tempat halaman Web Search
+menyimpannya. Yang key-nya belum diisi dilewati, dan `nouride config check` menyebutnya. Kalau layanannya
+menolak, agent diberi tahu artinya: key yang gak diterima (401), akun yang kreditnya habis (402), atau
+terlalu banyak pencarian untuk saat ini (429).
 
 Sumber tanpa key ditanya sekaligus, masing-masing dengan batas waktu 6 detik, dan pencarian kembali
 sebentar setelah mesin umum pertama menjawab, jadi sumber yang macet paling banyak memakan beberapa detik,

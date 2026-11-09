@@ -218,7 +218,7 @@ export async function runDaemon(): Promise<void> {
   // The same, for the plugins every edition links: a failure is a broken build, not a mode.
   await resolveLinkedPlugins(config);
 
-  runPreflightChecks({ config, registry, providers, credentialsDir, state });
+  runPreflightChecks({ config, registry, providers, credentialsDir, state, secretSet: (name) => secrets.has(name) });
 
   const gateways = await createGateways(
     config.gateways,

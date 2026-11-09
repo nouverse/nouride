@@ -19,6 +19,8 @@ import { toolchainChecks } from "@/cli/commands/doctor-toolchain.ts";
 import { agentUserChecks, agentUsersChecks, commandProbeCheck, readAccounts, rootReachCheck } from "@/cli/commands/doctor-isolation.ts";
 import { canHaveOwnUser, findHelper, helperFolders } from "@/boot/agent-users.ts";
 import { keptFolders } from "@/boot/kept-folders.ts";
+import { commandSecretLookup } from "@/boot/secret-store.ts";
+import { defaultConfigPath } from "@/modules/config/global/index.ts";
 import { DISK_WARN_MB } from "@/boot/maintenance.ts";
 import { clientPrefix } from "@nouride/isolation";
 import { groupAdvisories, readAdvisories } from "@/boot/advisories.ts";
@@ -48,7 +50,8 @@ export async function doctor(args: string[] = []): Promise<void> {
   // Before the daemon check, because this is the half that works when nothing is running — and a
   // config broken enough to matter is usually why nothing is running. The daemon check below returns
   // early on failure, so anything placed after it is invisible in exactly that case.
-  const lints = lintConfig(config);
+  const secretSet = await commandSecretLookup({ dataDir: config.daemon.dataDir, configPath: source ?? defaultConfigPath() });
+  const lints = lintConfig(config, secretSet ? { secretSet } : {});
   for (const lint of lints) {
     add(lint.level === "bad" ? "bad" : "warn", lint.message, lint.hint);
   }

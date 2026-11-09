@@ -379,6 +379,8 @@ search_endpoint = ""                      # empty = the backend's own default
 # a transient upstream failure.
 fallback_enabled = true
 fallback_backends = ["duckduckgo"]     # the keyless sources, asked in parallel — see the site's architecture/tools page
+# A search service listed here ("brave", "exa") uses its own key, never search_api_key
+# above: the secret brave_search_api_key or exa_api_key. One without it is skipped.
 
 # SearXNG — self-hosted, no key, genuinely free. Add it beside the daemon:
 #

@@ -222,9 +222,23 @@ describe("the semantic lint", () => {
     expect(configProblem('[security.web]\nsearch_kind = "gogle"\n')).toContain('search_kind must be one of "brave", "searxng", "exa"');
   });
 
-  test("exa as a fallback with no key to use is reported", () => {
-    const lints = lintConfig(base({ security: { web: { search_api_key: "", fallback_backends: ["exa", "duckduckgo"] } } }));
-    expect(lints.some((l) => l.message === "[security.web] fallback_backends lists exa, which has no credential to use")).toBe(true);
+  test("a fallback with no key of its own is a warning, whatever the primary's key is", () => {
+    // Exa first with its key set, Brave after it: Brave's own key is what counts, and it is not set.
+    const web = { search_kind: "exa", search_api_key: "exa_api_key", fallback_backends: ["brave", "duckduckgo"] };
+    const held = (names: string[]) => ({ secretSet: (name: string) => names.includes(name) });
+    const missing = lintConfig(base({ security: { web } }), held(["exa_api_key"]));
+    expect(missing.filter((l) => l.message.includes("fallback_backends"))).toEqual([
+      {
+        level: "warn",
+        message: "[security.web] fallback_backends lists brave, but there is no brave key, so searches never fall back to it",
+        hint: 'A fallback uses its own key, never the one in search_api_key. Keep brave\'s key as the secret "brave_search_api_key", or take brave out of the list.',
+      },
+    ]);
+    // Set under Brave's own name: nothing to say.
+    expect(lintConfig(base({ security: { web } }), held(["exa_api_key", "brave_search_api_key"])).some((l) => l.message.includes("fallback_backends"))).toBe(false);
+    // The fallback switched off, or no way to read the store: nothing either, rather than a guess.
+    expect(lintConfig(base({ security: { web: { ...web, fallback_enabled: false } } }), held([])).some((l) => l.message.includes("fallback_backends"))).toBe(false);
+    expect(lintConfig(base({ security: { web } })).some((l) => l.message.includes("fallback_backends"))).toBe(false);
   });
 
   test("an unusable name in the fallback chain is reported rather than skipped in silence", () => {

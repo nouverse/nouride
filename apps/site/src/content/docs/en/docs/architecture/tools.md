@@ -243,8 +243,11 @@ Only Brave, the default, falls back to the keyless sources while it has no key. 
 the agents no web search, and `nouride config check` says so.
 
 On a runtime failure, 429, 5xx, a timeout, the primary falls back rather than losing an agent's search
-mid-task. When the service refuses, the agent is told what that means: a key it did not accept (401),
-an account with no credit left (402), or too many searches for now (429).
+mid-task. A search service in `fallback_backends` uses its own key, never the primary's: Brave's from
+`brave_search_api_key`, Exa's from `exa_api_key`, where the Web Search page keeps them. One whose key is
+not set is skipped, and `nouride config check` says so. When the service refuses, the agent is told what
+that means: a key it did not accept (401), an account with no credit left (402), or too many searches for
+now (429).
 
 The keyless sources are asked all at once, each with its own 6-second deadline, and the search returns
 shortly after the first general engine answers: a source that hangs costs a few seconds at most, not

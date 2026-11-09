@@ -26,7 +26,7 @@
 import { LLM_EFFORTS, MAX_BACKGROUND_HELPERS, MOST_MISSIONS_PER_AGENT, UPDATE_TRACKS, type GlobalConfig } from "@nouride/shared";
 import { DEFAULT_CONFIG } from "@/modules/config/defaults.ts";
 import { ADVANCED_KEYS } from "@/modules/config/advanced.ts";
-import { isSearchKind, resolveSearch, SEARCH_BACKENDS, SEARCH_KINDS } from "@/modules/tools/builtins/search-backends.ts";
+import { fallbackKeyNames, isSearchKind, resolveSearch, SEARCH_KINDS } from "@/modules/tools/builtins/search-backends.ts";
 
 /** TOML is snake_case; the config object is camelCase. One conversion, used everywhere here. */
 export function snakeCase(key: string): string {
@@ -387,8 +387,11 @@ function hostOf(url: string): string | null {
  * `config check` already answers "would this boot". These are the ones that boot fine and then fail
  * at the first call, which is a worse place to find out: the endpoint is set, the key is set, and the
  * SSRF guard silently refuses every request because the companion flag is still false.
+ *
+ * `secretSet` answers whether a secret name holds a value, for the one lint that turns on a key the file only names by
+ * convention (a fallback's own). Absent, where the store cannot be opened, that lint says nothing rather than guess.
  */
-export function lintConfig(config: GlobalConfig): ConfigLint[] {
+export function lintConfig(config: GlobalConfig, options: { secretSet?: (name: string) => boolean } = {}): ConfigLint[] {
   const out: ConfigLint[] = [];
 
   /**
@@ -461,15 +464,14 @@ export function lintConfig(config: GlobalConfig): ConfigLint[] {
       });
     }
   }
-  for (const name of SEARCH_KINDS) {
-    if (name === web.searchKind || !web.fallbackBackends?.includes(name)) continue;
-    if (SEARCH_BACKENDS[name].requiresApiKey && !web.searchApiKey) {
-      out.push({
-        level: "warn",
-        message: `[security.web] fallback_backends lists ${name}, which has no credential to use`,
-        hint: `Set \`search_api_key\`, or drop ${name} from the chain. As it stands it is skipped, so the chain is shorter than it looks.`,
-      });
-    }
+  // A fallback uses its own key, never the primary's `search_api_key`, and one without it is skipped at search time.
+  for (const { kind, name } of options.secretSet && web.fallbackEnabled ? fallbackKeyNames(web) : []) {
+    if (options.secretSet!(name)) continue;
+    out.push({
+      level: "warn",
+      message: `[security.web] fallback_backends lists ${kind}, but there is no ${kind} key, so searches never fall back to it`,
+      hint: `A fallback uses its own key, never the one in search_api_key. Keep ${kind}'s key as the secret "${name}", or take ${kind} out of the list.`,
+    });
   }
 
   if (web.fallbackBackends?.includes("searxng") && web.searchKind !== "searxng") {

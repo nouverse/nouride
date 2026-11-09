@@ -52,7 +52,7 @@ export const LONG_FUNCTIONS: Record<string, Record<string, Budget>> = {
   "apps/engine/src/boot/memory-pass.ts": { startMemoryPass: { lines: 154, why: "the nightly memory pass wired at boot: its clock, its model and its budget, and the run its timer starts" } },
   "apps/engine/src/boot/missions.ts": { buildMissions: { lines: 312, why: "boot's wiring of the missions: the service and every port it takes, built where the stores and the turn machine are in reach" } },
   "apps/engine/src/cli/commands/chat.ts": { chat: { lines: 151, why: "the interactive chat: a line read, sent through the local gateway and its turn followed to the reply, in one loop over the terminal" } },
-  "apps/engine/src/cli/commands/doctor.ts": { doctor: { lines: 255, why: "`nouride doctor`: every check that stops a fresh install from working, in the order its report reads them" } },
+  "apps/engine/src/cli/commands/doctor.ts": { doctor: { lines: 256, why: "`nouride doctor`: every check that stops a fresh install from working, the config read against its secrets too, in the order its report reads them" } },
   "apps/engine/src/cli/commands/service.ts": { service: { lines: 152, why: "`nouride service`: status, diff, install and uninstall, branches of one dispatch over the supervisor and unit it finds first" } },
   "apps/engine/src/cli/main.ts": { main: { lines: 158, why: "the CLI's dispatch: one case per command, behind the flags every command shares" } },
   "apps/engine/src/cli/usage.ts": { usageText: { lines: 253, why: "the whole of `nouride help`, one template a person reads top to bottom: its lines are the help, not logic" } },

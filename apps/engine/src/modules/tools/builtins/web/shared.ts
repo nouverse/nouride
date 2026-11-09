@@ -52,4 +52,9 @@ export interface WebToolOptions {
   fallbackEnabled?: boolean;
   /** Fallback chain. `"duckduckgo"` means the keyless scraping chain. */
   fallbackBackends?: string[];
+  /**
+   * Each fallback service's own key, by kind (`fallbackKeyNames` says where each is looked for). Never `searchApiKey`:
+   * that is the primary's, and a service in the chain without its own key is left out of it.
+   */
+  fallbackApiKeys?: Partial<Record<SearchKind, string>>;
 }

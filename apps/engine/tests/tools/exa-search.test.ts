@@ -8,7 +8,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { createWebSearchTool } from "@/modules/tools/builtins/web/index.ts";
-import { resolveSearch, SEARCH_BACKENDS } from "@/modules/tools/builtins/search-backends.ts";
+import { resolveFallbackKeys, resolveSearch, SEARCH_BACKENDS } from "@/modules/tools/builtins/search-backends.ts";
 
 const KEY = "exa-test-key-not-real-0000";
 const ctx = {} as never;
@@ -166,6 +166,66 @@ describe("exa", () => {
     expect(resolveSearch({ kind: "exa" })).toMatchObject({ unavailable: expect.stringContaining('"exa"'), needs: "key" });
     expect(createWebSearchTool({ searchKind: "exa" })).toBeNull();
     expect(resolveSearch({ kind: "exa", apiKey: KEY })).toMatchObject({ kind: "exa", endpoint: "https://api.exa.ai/search" });
+  });
+
+  test("with Brave as its fallback, Brave is called with Brave's own key, never Exa's", async () => {
+    const seen: { url: string; braveToken?: string; exaKey?: string }[] = [];
+    const tool = createWebSearchTool({
+      searchKind: "exa",
+      searchApiKey: KEY,
+      fallbackEnabled: true,
+      fallbackBackends: ["brave", "duckduckgo"],
+      fallbackApiKeys: { brave: "brave-own-key" },
+      fetchImpl: (async (url: string, init: RequestInit = {}) => {
+        const headers = (init.headers ?? {}) as Record<string, string>;
+        seen.push({ url: String(url), braveToken: headers["x-subscription-token"], exaKey: headers["x-api-key"] });
+        if (String(url).includes("api.exa.ai")) return new Response("{}", { status: 503 });
+        return new Response(JSON.stringify({ web: { results: [{ title: "Brave hit", url: "https://b.example.com", description: "via brave" }] } }), { status: 200 });
+      }) as unknown as typeof fetch,
+    });
+
+    const result = await tool!.execute({ query: "x" }, ctx);
+
+    expect(result.content).toContain("Brave hit");
+    expect(seen.map((s) => new URL(s.url).host)).toEqual(["api.exa.ai", "api.search.brave.com"]);
+    expect(seen[0]!.exaKey).toBe(KEY);
+    expect(seen[1]!.braveToken).toBe("brave-own-key");
+    expect(JSON.stringify(seen[1])).not.toContain(KEY);
+  });
+
+  test("a fallback with no key of its own is not called, though the primary has one", async () => {
+    const dialled: string[] = [];
+    const tool = createWebSearchTool({
+      searchKind: "exa",
+      searchApiKey: KEY,
+      fallbackEnabled: true,
+      fallbackBackends: ["brave", "duckduckgo"],
+      fetchImpl: (async (url: string) => {
+        dialled.push(String(url));
+        if (String(url).includes("api.exa.ai")) return new Response("{}", { status: 503 });
+        return new Response('<div class="result"><a class="result__a" href="https://ddg.example.com">DDG hit</a></div>', { status: 200 });
+      }) as unknown as typeof fetch,
+    });
+
+    const result = await tool!.execute({ query: "x" }, ctx);
+
+    expect(result.content).toContain("DDG hit");
+    expect(dialled.some((url) => url.includes("api.search.brave.com"))).toBe(false);
+  });
+
+  test("each fallback's key is looked for under its own service's name, never the primary's", () => {
+    const asked: string[] = [];
+    const keys = resolveFallbackKeys(
+      { searchKind: "exa", fallbackBackends: ["exa", "brave", "searxng", "duckduckgo"] },
+      (name) => {
+        asked.push(name);
+        return ({ exa_api_key: "E", brave_search_api_key: "B" } as Record<string, string>)[name];
+      },
+    );
+    // The primary (exa) is not a fallback of itself; SearXNG has no key of its own to look for.
+    expect(asked).toEqual(["brave_search_api_key"]);
+    expect(keys).toEqual({ brave: "B" });
+    expect(resolveFallbackKeys({ searchKind: "brave", fallbackBackends: ["exa"] }, () => undefined)).toEqual({});
   });
 
   test("an image search refuses rather than handing back pages", async () => {
