@@ -65,7 +65,9 @@ const STALL_MS = 30_000;
 const RETRY_WAITS_MS: readonly number[] = [2_000, 5_000, 10_000, 20_000];
 
 /** A failure worth another try: the transfer stopped moving, the connection broke, or the server failed for a moment. */
-class PassingFailure extends Error {}
+class PassingFailure extends Error {
+  override name = "PassingFailure";
+}
 
 const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
