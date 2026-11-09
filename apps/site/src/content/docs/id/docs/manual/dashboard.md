@@ -23,7 +23,7 @@ Menunya diurutkan menurut seberapa sering halamannya dibuka: **Home, Chats, Work
 
 ```
 Home                yang butuh kamu · yang sedang jalan · Quick chat · agent kamu · box-nya · pemakaian AI hari ini
-Chats               satu agent, atau room berisi beberapa, dengan setiap langkah tampil langsung
+Chats               agent dan room kamu dalam satu daftar, plus grup tempat mereka ada di aplikasi chat
 Work
   Waiting for you   tool call yang ditunggu agent, dan misi yang menunggu jawabanmu
   Missions          kerjaan panjang yang diselesaikan agent sendiri: yang butuh kamu, yang jalan, yang selesai; Limits
@@ -92,6 +92,10 @@ memberi tahu.
 
 **Di HP**, ada bar tab di bagian bawah berisi Home, Chats, Work, dan Agents, dengan angka milik Work di situ, plus
 **More**, yang membuka sisa menunya sebagai lembar yang naik dari bawah.
+
+**Di Chats** menunya dilipat jadi ikon saja, supaya daftar chat dan percakapannya muat berdampingan. **Expand** di bawah
+menu yang terlipat membukanya lagi, dan browser mengingat pilihan itu. Halaman lain tetap dengan menu penuh, dan HP tetap
+dengan bar tab-nya.
 
 **Tampilannya** krem lembut di siang hari dan ungu keabuan di malam hari. Ia mengikuti setelan perangkatmu sampai kamu
 memilih sendiri lewat tombol matahari atau bulan di sebelah namamu. Kucing Nouride menyapa kamu di Home dan menemani
@@ -299,20 +303,47 @@ terakhir gak bisa diturunkan, jadi selalu ada yang tersisa untuk mengelola akun.
 
 ## Chat
 
-Bicara dengan satu agent, atau buat **room** berisi beberapa: pilih agent-nya dulu, lalu tag yang kamu
-maksud (`@nox`), karena di room, tag adalah satu-satunya cara sebuah pesan sampai ke agent tertentu.
-Langkah setiap giliran terbuka langsung saat agent bekerja, dengan durasi tiap langkah dan reasoning
-model, dan tetap bisa dibaca sesudahnya. Ini cara tercepat melihat *mengapa* sebuah jawaban berbentuk
-seperti itu.
+**Chats** adalah satu daftar di sebelah percakapan yang sedang kamu buka. Di HP, daftarnya tampil dulu, dan percakapan
+terbuka memenuhi layar dengan panah untuk kembali ke daftar.
+
+Daftarnya punya dua bagian, dipilih di atasnya:
+
+- **Chats** berisi semua yang bisa kamu ajak bicara dari dashboard. Orchestrator kamu selalu paling atas. Sesudahnya
+  agent dan room yang pernah kamu ajak bicara, yang terbaru di atas, masing-masing dengan kucingnya, pesan terakhir, dan
+  jamnya. **Working** tampil selagi agent bekerja, plus berapa helper yang sedang jalan, dan titik menandai balasan yang
+  belum kamu baca. Agent yang belum pernah kamu ajak bicara menunggu di bawah, di **Not talked to yet**.
+- **Groups** berisi grup tempat agent kamu ada di Telegram, Discord, dan WhatsApp: satu baris per grup, meski beberapa
+  bot agent kamu ada di grup yang sama. Chip per aplikasi menyaring daftarnya, dan grup yang diam dua minggu atau lebih
+  dilipat jadi satu baris di bawah. Titik di **Groups** artinya ada grup yang ramai sejak terakhir kamu lihat.
+
+Tombol **+** di atas memulai chat dengan agent atau membuat room, dan kolom cari menemukan chat dari namanya atau pesan
+terakhirnya.
+
+**Chat dengan agent** membuka percakapan terakhirnya, jadi kamu lanjut dari yang tadi. **History** di header-nya hanya
+berisi percakapan agent itu: yang di dashboard, dan chat pribadinya di aplikasi chat, masing-masing dengan asalnya.
+**New chat** memulai yang baru.
+
+**Room** adalah satu percakapan dengan beberapa agent. Pilih agent-nya waktu membuat room, lalu tag yang kamu maksud
+(`@nox`): tag adalah cara sebuah pesan sampai ke agent tertentu. Header room menampilkan anggotanya sebagai tag yang kamu
+ketik, dan bilang siapa yang menjawab pesan tanpa tag, kalau memang ada. **Add agent** memasukkan agent lain; menu room
+untuk mengganti nama, mengeluarkan agent, atau menghapus room.
+
+**Semua yang dari aplikasi chat hanya bisa dibaca di sini.** Grup, atau chat pribadi dengan agent di Telegram, Discord,
+atau WhatsApp, menampilkan tanda aplikasinya dan **Read-only**, dan di tempat kotak ketik ada catatan: balasnya di
+aplikasinya sendiri. **Pin to Chats** menyimpan grup yang sering kamu baca di Chats, di browser ini.
 
 ![Chat dashboard dengan langkah giliran langsung](/media/dashboard-chat.png)
 
-Gilirannya tinggal di daemon, bukan di browser, jadi reload atau tab kedua tetap melihat giliran yang
-masih jalan, dan daftar percakapan menandai percakapan mana yang sedang bekerja, dari mana pun ia
-dimulai. Approval menunggu di bawah percakapan, background job tampil selama jalan, dan mengetik `/`
-menampilkan perintah slash. `/stop` dan `/approve` langsung bertindak, gak menunggu di belakang giliran
-yang mau dihentikan atau dijawabnya. Di chat satu lawan satu, **Send** tetap ada di sebelah **Stop**
-selagi agent bekerja: yang kamu kirim saat itu dibaca giliran yang sedang jalan di langkah berikutnya.
+Selagi agent bekerja, langkah-langkahnya dilipat jadi satu baris: apa yang sedang ia kerjakan, sudah berapa langkah, dan
+berapa lama. Tekan barisnya untuk membuka semua langkah, dengan durasi tiap langkah dan reasoning model; tekan lagi untuk
+melipatnya. Begitu gilirannya selesai, langkahnya tetap bisa dibaca di bawah jawabannya. Ini cara tercepat melihat
+*mengapa* sebuah jawaban berbentuk seperti itu.
+
+Gilirannya tinggal di Nouride, bukan di browser, jadi reload atau tab kedua tetap melihat giliran yang masih jalan.
+Approval menunggu di bawah percakapan, background job tampil selama jalan, dan mengetik `/` menampilkan perintah slash.
+`/stop` dan `/approve` langsung bertindak, gak menunggu di belakang giliran yang mau dihentikan atau dijawabnya. Di chat
+satu lawan satu, **Send** tetap ada di sebelah **Stop** selagi agent bekerja: yang kamu kirim saat itu dibaca giliran
+yang sedang jalan di langkah berikutnya.
 
 Di atas kotak ketik, plan agent untuk percakapan itu tampil selagi ia bekerja: berapa langkah yang sudah
 selesai dan langkah yang sedang dikerjakan, dengan daftar lengkapnya sekali tekan. Mission yang dimulai
