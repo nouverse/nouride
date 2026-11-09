@@ -414,7 +414,8 @@
     },
     "passwordLogin": true,
     "bundledGateway": {
-      "available": false
+      "available": false,
+      "carried": false
     }
   },
   "/auth/me": {

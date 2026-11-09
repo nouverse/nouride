@@ -30,6 +30,11 @@ export interface HealthPayload {
   issues?: string[];
   /** The packs that did not load, by id — absent when none failed, and from a daemon older than 0.7.11. */
   failedAgents?: string[];
+  /**
+   * The image name to move to, where this daemon runs in a container under a name that stops getting updates: what
+   * the image sets in `NOURIDE_IMAGE_MOVED_TO`. Absent otherwise, and from a daemon older than the rename.
+   */
+  imageMovedTo?: string;
 }
 
 export interface SetupState {
@@ -45,10 +50,25 @@ export interface SetupState {
    */
   oauth?: { available: boolean; label: string };
   /**
-   * The bundled LLM gateway, when switched on. Loopback — see `bundled-gateway.ts`. `sharedCredential`: how
-   * the gateway came to hold this daemon's admin credential, if it did.
+   * The LLM gateway this build carries. `available`: it runs, and `baseUrl` is where (loopback — see
+   * `bundled-gateway.ts`). `sharedCredential`: how it came to hold this daemon's admin credential, if it did.
+   * `mount`: where its dashboard and API are served through this one; `dashboard`: whether the page can show it.
+   *
+   * `carried`: the build carries it, on or off — absent from a daemon older than the switch, which offered the gateway
+   * only while it ran; then `available` is all there is to go on, and there is no switch to turn. `decidedBy`: the
+   * server's environment holds the switch, and the dashboard shows it without being able to move it. `stopping`: it
+   * runs, and stops at the next start, the setting being off.
    */
-  bundledGateway?: { available: boolean; baseUrl?: string; sharedCredential?: "environment" | "generated"; mount?: string; dashboard?: boolean };
+  bundledGateway?: {
+    available: boolean;
+    baseUrl?: string;
+    sharedCredential?: "environment" | "generated";
+    mount?: string;
+    dashboard?: boolean;
+    carried?: boolean;
+    decidedBy?: "environment";
+    stopping?: boolean;
+  };
   /**
    * Whether to draw the password form.
    *

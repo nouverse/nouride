@@ -627,7 +627,8 @@ max_size_mb = 50
 #
 # 0 on either one keeps everything — the off position, not "delete all".
 # ── The bundled LLM gateway ──────────────────────────────────────────────────
-# Only in the Router and Pro editions — on by default in Router, off in Pro; the free edition refuses
+# Every official build carries it, off until switched on: here, by the setup wizard's "Use Nougate", or on
+# the dashboard's LLM Gateway page (which turns it on without a restart). A build made without it refuses
 # `in_process = true`, having no gateway to start. The gateway then
 # runs inside this daemon on 127.0.0.1:18256 instead of being reached over the network, so a provider
 # profile can point at localhost and nothing leaves the box to pick a model.

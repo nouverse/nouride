@@ -59,6 +59,7 @@ import { registerKnowledgeRoutes } from "./routes/knowledge.ts";
 import { registerTurnRoutes } from "./routes/turns.ts";
 import { registerEventRoutes } from "./routes/events.ts";
 import { registerMcpServerRoutes } from "./routes/mcp-server.ts";
+import { registerLlmGatewayRoutes } from "./routes/llm-gateway.ts";
 import { registerAgentRoutes } from "./routes/agents.ts";
 import { registerAgentToolRoutes } from "./routes/agent-tools.ts";
 import { registerExternalAgentRoutes } from "./routes/external-agents.ts";
@@ -77,6 +78,8 @@ export function mountControlRoutes(app: Hono, deps: ControlDeps): void {
   control.use("*", controlGuard(deps));
 
   registerSetupRoutes(control, deps);
+  // `/llm-gateway` — the switch the setup wizard and the LLM Gateway page turn; its own prefix.
+  registerLlmGatewayRoutes(control, deps);
   // Before `registerAgentRoutes`: `/agents/:id/files` has to be matched before that module's
   // catch-all `POST /agents/:id/:action`.
   registerFileRoutes(control, deps);

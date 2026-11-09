@@ -11,11 +11,12 @@ import { api } from "@/commons/lib/api";
 import { HOME_APP_BACK, inHomeApp } from "@/commons/lib/home-app";
 import { ReconnectingBanner, ReconnectingScreen, RestartedToast, RestartPendingBar } from "./Reconnecting";
 import { UpdatedBanner } from "./UpdatedBanner";
+import { ImageMovedBanner } from "./ImageMovedBanner";
 import { bundleVersion, staleBundle } from "@/commons/lib/bundle";
 import { isAdmin, MCP_LOGIN_CALLBACK, useGate } from "@/commons/lib/session";
 import { useTheme } from "@/commons/lib/theme";
 import { useSignOut } from "@/commons/components/layout/sign-out";
-import { gatewayDashboard } from "@/commons/lib/bundled-gateway";
+import { gatewayPage } from "@/commons/lib/bundled-gateway";
 import { isPairedBox } from "@/commons/lib/api.appliance";
 import { PAGE_BOTTOM } from "@/commons/components/ui/ScrollCard";
 import { SidebarNav } from "@/commons/components/layout/nav";
@@ -121,7 +122,7 @@ export function RootLayout() {
     );
   }
 
-  const where = { admin: isAdmin(gate.principal), onBox, hostsGateway: gatewayDashboard(gate.setup) !== null };
+  const where = { admin: isAdmin(gate.principal), onBox, hostsGateway: gatewayPage(gate.setup) };
   const person = gate.principal?.user;
   const label = person?.displayName?.trim() ?? "";
 
@@ -214,6 +215,8 @@ export function RootLayout() {
         <RestartPendingBar />
         <RestartedToast />
         {!gate.offline && health.data && staleBundle(bundleVersion(), health.data.version) && <UpdatedBanner running={health.data.version} />}
+        {/* For whoever can change how the server runs: the image's new name is theirs to switch to. */}
+        {where.admin && health.data?.imageMovedTo && <ImageMovedBanner to={health.data.imageMovedTo} />}
 
         {/* A page fades in as it is drawn (`*:animate-fade`): its root is a new element when the page changes, and the
             same one, not moved, while it stays. */}

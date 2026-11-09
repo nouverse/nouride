@@ -85,3 +85,43 @@ export function editionLabel(edition: BuildEdition = EDITION): string | null {
  * `build:binary` produced, so its presence is the answer.
  */
 export const COMPILED: boolean = EDITION !== "unknown";
+
+declare const NOURIDE_BUILD_GATEWAY: string;
+
+/** The package a build bundles the LLM gateway from, and the one `nougate-inproc.ts` imports. */
+const GATEWAY_PACKAGE = "@nouverse/nougate-backend";
+
+/**
+ * Whether a build carries the LLM gateway, from its stamp, and for a source checkout from whether the package resolves.
+ *
+ * Its own stamp, not the edition's: since Router folded into Community the edition no longer says it. Every official
+ * build carries the gateway, switched off until asked, and a build from a public clone, which has no gateway to bundle,
+ * is stamped `basic` all the same. The build stamps `"bundled"` where it bundled the package and nothing where it did
+ * not, so a build with the edition's stamp and not this one does not carry it.
+ *
+ * A source checkout has neither stamp, and carries the gateway when the package resolves there: the dev loop links
+ * it into `node_modules` (`scripts/dev-gateway.sh`), a plain checkout does not. Resolved, never imported: loading the
+ * gateway costs its whole module graph in memory, and this is asked at every start.
+ */
+export function gatewayCarried(build: { stamp: string | undefined; compiled: boolean; resolves: () => boolean }): boolean {
+  if (build.stamp !== undefined) return build.stamp === "bundled";
+  if (build.compiled) return false;
+  return build.resolves();
+}
+
+function gatewayResolves(): boolean {
+  try {
+    import.meta.resolve(GATEWAY_PACKAGE);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Whether this build carries the LLM gateway, on or off — see `gatewayCarried`. */
+export const GATEWAY_CARRIED: boolean = gatewayCarried({
+  // `typeof`, as `readStamp` reads the edition: without the define the identifier does not exist.
+  stamp: typeof NOURIDE_BUILD_GATEWAY === "string" ? NOURIDE_BUILD_GATEWAY : undefined,
+  compiled: COMPILED,
+  resolves: gatewayResolves,
+});

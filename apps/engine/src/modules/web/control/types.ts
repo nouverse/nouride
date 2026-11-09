@@ -37,7 +37,7 @@ import type { LogBuffer } from "@/commons/log-buffer.ts";
 import type { LogsPort } from "@/commons/logs.store.ts";
 import type { StateRows } from "@/commons/daemon-state.store.ts";
 import type { DaemonContext } from "@/commons/context.ts";
-import type { CredentialSharing } from "@/boot/embedded-gateway.ts";
+import type { GatewayPort } from "@/boot/gateway-switch.ts";
 import type { LocalGateway } from "@/modules/gateways/local.ts";
 import type { ProviderRegistry } from "@/modules/llm/providers.ts";
 import type { Pipeline } from "@/modules/pipeline/index.ts";
@@ -90,27 +90,18 @@ export interface ControlDeps {
   ctx: DaemonContext;
   token: string;
   /**
-   * How the bundled gateway came to hold this daemon's admin credential — see `CredentialSharing`.
-   *
-   * A boot fact, not a config one, and it cannot be derived later: it depends on what was in the
-   * environment and what was in the users table at the moment the gateway came up. Absent when the
-   * gateway is not hosted here, or came up holding a password of its own, and the wizard must not
-   * claim otherwise.
+   * The LLM gateway this build carries, on or off (`boot/gateway-switch.ts`): whether it runs, how it came to hold this
+   * daemon's admin credential, and the switch the setup wizard and the LLM Gateway page turn. Absent where nothing
+   * hosts one, and the routes then say there is no gateway.
    */
-  sharedGatewayCredential?: CredentialSharing;
+  llmGateway?: GatewayPort;
   /**
-   * Where the bundled gateway's dashboard is served on this port (`/llm-gateway`), when it is.
+   * Where the bundled gateway's dashboard is served on this port (`/llm-gateway`), whenever the build carries it.
    *
-   * What the dashboard draws its LLM Gateway page and the wizard's sign-in step on. Absent on every
-   * build and config that does not host the gateway here — and on one that hosts it with no users
-   * store to check a session against, which cannot mount it.
+   * What the dashboard draws its LLM Gateway page and the wizard's sign-in step on. Absent on a build that does not
+   * carry the gateway — and on one that does with no users store to check a session against, which cannot mount it.
    */
   llmGatewayMount?: string;
-  /**
-   * Whether that dashboard can be shown inside this one — `EmbeddedGateway.dashboardEmbeddable`.
-   * A function, so a bundle replaced under a running daemon is read as it is now.
-   */
-  llmGatewayDashboard?: () => boolean;
   /**
    * Named credentials, for the one route that needs one.
    *

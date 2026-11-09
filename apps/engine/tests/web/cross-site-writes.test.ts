@@ -73,7 +73,7 @@ describe("a write to the hosted gateway's page", () => {
     const gateway = { serveAs: async () => (asked++, new Response("{}")), reachableFromNetwork: false, port: 18256 } as unknown as EmbeddedGateway;
     const users = { sessionUser: () => ({ username: "gading", role: "admin" }) } as unknown as UsersPort;
     const web = new Hono();
-    mountLlmGateway(web, { gateway, users });
+    mountLlmGateway(web, { gateway: () => gateway, users });
     const post = (site: string) =>
       web.request(`${BOX}${LLM_GATEWAY_PREFIX}/api/accounts/reset-all`, { method: "POST", headers: { cookie: "nouride_session=admin", "sec-fetch-site": site } });
 

@@ -68,6 +68,8 @@ export const PAGE_WORDS: Readonly<Record<string, readonly string[]>> = {
   "GET /agents/:id/cli": ["unavailable"],
   // Why the search service saved is not working: the line on the Web Search page.
   "GET /web-search": ["problem"],
+  // What turning Nougate on or off did, and when it takes effect: the toast on the LLM Gateway page.
+  "PUT /llm-gateway": ["said"],
 };
 
 /** One body a reply can answer with, and the words in it. */

@@ -8,7 +8,6 @@
  */
 
 import type { GlobalConfig, ProviderProfile } from "@nouride/shared";
-import { EDITION } from "@/commons/build.ts";
 
 /**
  * No profiles by default — each one is created explicitly by the operator, either through
@@ -457,10 +456,10 @@ export const DEFAULT_CONFIG: GlobalConfig = {
    * then one stack frame from the agent daemon.
    */
   nougate: {
-    // On for Router, whose whole point it is. Off for Pro, which carries it since Pro Router became Pro (0.7.20) and
-    // hosts it on a box that asks: 0.7.20–0.7.28 wrote `in_process = true` into the file of an install that ran it on
-    // Pro Router's default.
-    inProcess: EDITION === "router",
+    // Off on every build, whichever edition carries it: switched on by the setup wizard's "Use Nougate", the LLM
+    // Gateway page, or this key. An install that ran it on Router's default has the key written for it
+    // (`boot/router-gateway.ts`).
+    inProcess: false,
     // Beside the daemon's own 18254 rather than nougate's usual 3000: a gateway hosted here is part
     // of this install, and its port should read like one.
     port: 18256,

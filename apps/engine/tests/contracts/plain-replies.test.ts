@@ -43,6 +43,7 @@ const NO_ONE_FIELD: Record<string, string> = {
   "POST /agents/:id/files/:name": "a whole file, edited as text: what was entered is all of it",
   "POST /config": "the whole settings file, edited as text",
   "PUT /mcp-server": "a switch",
+  "PUT /llm-gateway": "a switch",
   "PUT /memory/people/:key/facts": "a choice the route has already checked",
   "PUT /memory/people/:key/recall": "a switch",
   "POST /mentions": "its switch; the hop limit beside it is named",

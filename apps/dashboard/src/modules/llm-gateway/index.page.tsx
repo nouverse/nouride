@@ -16,8 +16,11 @@ import { useEffect, useRef, useState } from "react";
 import { ExternalLink } from "lucide-react";
 import { NougateGlyph, NougateMark } from "@/commons/components/brand/logos";
 import { api } from "@/commons/lib/api";
-import { gatewayDashboard, gatewayMount } from "@/commons/lib/bundled-gateway";
+import { gatewayDashboard, gatewayMount, gatewaySwitch } from "@/commons/lib/bundled-gateway";
 import { frameSource, type GatewaySearch } from "./search";
+import { GatewayOff } from "./components/GatewayOff";
+import { SetByServer } from "./components/SetByServer";
+import { StopsAtNextStart, TurnOff } from "./components/TurnOff";
 
 /** The sidebar's theme, read off the document root it sets — `nouride-light` or `nouride`. */
 function currentTheme(): "light" | "dark" {
@@ -27,6 +30,8 @@ function currentTheme(): "light" | "dark" {
 export default function LlmGatewayPage({ search, onPage }: { search: GatewaySearch; onPage: (page: string) => void }) {
   const { data: state, isPending } = useQuery({ queryKey: ["setup"], queryFn: api.setupState });
   const mount = gatewayDashboard(state);
+  // Null from a daemon older than the switch: the page as it was, with nothing to turn.
+  const switched = gatewaySwitch(state);
   const frame = useRef<HTMLIFrameElement>(null);
   // The first address only. Later pages are the gateway's own navigation inside the frame — setting
   // `src` again on every report would reload it under the person's feet.
@@ -64,6 +69,8 @@ export default function LlmGatewayPage({ search, onPage }: { search: GatewaySear
     );
   }
 
+  if (switched && !switched.on) return <GatewayOff locked={switched.locked} />;
+
   if (!mount && gatewayMount(state)) return <OlderBundle baseUrl={state?.bundledGateway?.baseUrl} />;
 
   if (!mount) {
@@ -71,10 +78,8 @@ export default function LlmGatewayPage({ search, onPage }: { search: GatewaySear
       <div className="flex flex-1 items-center justify-center p-8">
         <div className="max-w-sm text-center space-y-2">
           <NougateGlyph size={28} className="mx-auto text-base-content/30" />
-          <h1 className="text-base font-bold">No LLM gateway on this server</h1>
-          <p className="text-sm text-base-content/65">
-            The Router editions carry one. On this build, models are reached through the providers on the Models page.
-          </p>
+          <h1 className="text-base font-bold">Nougate is not part of this version</h1>
+          <p className="text-sm text-base-content/65">Your agents reach their AI through the services on the Models page.</p>
         </div>
       </div>
     );
@@ -85,21 +90,24 @@ export default function LlmGatewayPage({ search, onPage }: { search: GatewaySear
       <div className="flex h-12 shrink-0 items-center justify-between gap-3 border-b border-base-content/[0.08] bg-base-100/70 px-4 backdrop-blur-xl">
         <div className="flex items-center gap-2 min-w-0">
           <NougateMark className="size-5 shrink-0" />
-          <h1 className="text-sm font-bold tracking-tight truncate">LLM Gateway</h1>
+          <h1 className="text-sm font-bold tracking-tight shrink-0">LLM Gateway</h1>
           {/* The one plain line on an admin page (0.8.19): what it is for, on a phone too. */}
           <span className="text-xs text-base-content/65 truncate">The AI accounts and keys your agents use, and what they cost</span>
         </div>
-        {/* The same page, full width — the frame is this origin's, so it carries this session. */}
-        <a
-          href={`${mount}/frontend${search.page ?? "/"}`}
-          target="_blank"
-          rel="noreferrer noopener"
-          className="btn btn-ghost btn-xs rounded-lg gap-1.5 text-base-content/65 hover:text-base-content"
-          title="Open in a new tab"
-        >
-          <ExternalLink size={13} />
-          <span className="hidden sm:inline">New tab</span>
-        </a>
+        <div className="flex shrink-0 items-center gap-1.5">
+          {switched && (switched.locked ? <SetByServer on compact /> : switched.stopping ? <StopsAtNextStart /> : <TurnOff />)}
+          {/* The same page, full width — the frame is this origin's, so it carries this session. */}
+          <a
+            href={`${mount}/frontend${search.page ?? "/"}`}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="btn btn-ghost btn-xs rounded-lg gap-1.5 text-base-content/65 hover:text-base-content"
+            title="Open in a new tab"
+          >
+            <ExternalLink size={13} />
+            <span className="hidden sm:inline">New tab</span>
+          </a>
+        </div>
       </div>
       {src && (
         <iframe

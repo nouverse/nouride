@@ -78,6 +78,8 @@ export interface HealthPayload {
    * to every probe. Reported, not a status: an update that rolled back over it could not undo the migration it ran.
    */
   failedAgents?: string[];
+  /** Where an image under a retired name says to move to — `imageMovedTo`. Absent everywhere else. */
+  imageMovedTo?: string;
 }
 
 export interface HealthResult {
@@ -95,6 +97,16 @@ export interface HealthResult {
  */
 export function installFingerprint(dataDir: string): string {
   return sha256Text(dataDir).slice(0, 12);
+}
+
+/**
+ * The image to move to, where this daemon runs from a container image whose name stops getting updates: the image
+ * says so itself, in `NOURIDE_IMAGE_MOVED_TO`, and the dashboard tells whoever runs it on every page. Only an image
+ * reference is passed on — this is `/health`, which answers anyone who can reach the port.
+ */
+export function imageMovedTo(env: Record<string, string | undefined> = process.env): string | null {
+  const to = (env.NOURIDE_IMAGE_MOVED_TO ?? "").trim();
+  return /^[a-z0-9][a-z0-9._/:@-]{0,199}$/.test(to) ? to : null;
 }
 
 /**
@@ -178,6 +190,7 @@ export function buildHealth(ctx: DaemonContext, readMemory: () => HealthPayload[
   const degraded = issues.some((i) => i.endsWith("dead")) || walMb > WAL_WARN_MB || providerDown;
   // Named, and deliberately not read by `degraded`: the update's confirmation and Docker's healthcheck go on as before.
   const failedAgents = ctx.agents?.failed() ?? [];
+  const movedTo = imageMovedTo();
 
   return {
     payload: {
@@ -195,6 +208,7 @@ export function buildHealth(ctx: DaemonContext, readMemory: () => HealthPayload[
       ...(ctx.agentUsers ? { agentUsers: ctx.agentUsers } : {}),
       ...(issues.length > 0 ? { issues } : {}),
       ...(failedAgents.length > 0 ? { failedAgents } : {}),
+      ...(movedTo ? { imageMovedTo: movedTo } : {}),
     },
     httpStatus: shuttingDown || degraded ? 503 : 200,
   };

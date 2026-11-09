@@ -12,7 +12,7 @@ import { useState } from "react";
 import { ArrowUpRight, BookOpen, Download } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import { isPairedBox } from "@/commons/lib/api.appliance";
-import { gatewayDashboard } from "@/commons/lib/bundled-gateway";
+import { gatewayPage } from "@/commons/lib/bundled-gateway";
 import { DOCS_URL } from "@/commons/lib/docs";
 import { isAdmin, useMe } from "@/commons/lib/session";
 import { SETTINGS, visible, type NavItem } from "@/commons/components/layout/nav";
@@ -35,7 +35,7 @@ export default function SettingsPage() {
   const me = useMe();
   const setup = useQuery({ queryKey: ["setup"], queryFn: api.setupState });
   const health = useQuery({ queryKey: ["health"], queryFn: api.health, staleTime: 60_000 });
-  const where = { admin: isAdmin(me.data ?? null), onBox: isPairedBox(health.data), hostsGateway: gatewayDashboard(setup.data ?? null) !== null };
+  const where = { admin: isAdmin(me.data ?? null), onBox: isPairedBox(health.data), hostsGateway: gatewayPage(setup.data ?? null) };
   const [query, setQuery] = useState("");
   const words = query.trim().toLowerCase();
   const groups = SETTINGS.map((group) => ({ group: group.group, items: visible([...group.items, ...(EXTRA[group.group] ?? [])], where).filter((item) => matches(item, words)) })).filter((group) => group.items.length > 0);

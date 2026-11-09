@@ -77,6 +77,7 @@ function ProviderStep() {
   // Its own read of the same query, not a prop: this is cached by key, so it costs nothing, and
   // threading a field through one component to reach one button is how props start meaning nothing.
   const { data: state } = useQuery({ queryKey: ["setup"], queryFn: api.setupState });
+  // Running, not merely carried: "Use Nougate" turns it on before it comes here (`GatewayOffer`).
   const mount = gatewayMount(state);
   const [viaGateway, setViaGateway] = useState(false);
   if (viaGateway && mount) return <GatewayStep mount={mount} onBack={() => setViaGateway(false)} />;

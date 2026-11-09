@@ -7,6 +7,7 @@
 
 import { atLeast } from "@/modules/users/auth.ts";
 import { oauthReady, oauthSupported } from "@/modules/users/oidc.ts";
+import type { SetupState } from "@nouride/wire";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { isPresetId } from "@/modules/setup/presets.ts";
 import { jsonBody } from "../payloads.ts";
@@ -42,55 +43,7 @@ export function registerSetupRoutes(control: ControlApp, deps: ControlDeps): voi
      * nor a button is unanswerable.
      */
     const passwordLogin = dashboard?.passwordLogin !== false;
-    /**
-     * The gateway this build carries, if it is running.
-     *
-     * Both halves again, and for the same reason as `oauth.available`: `router` and `pro`
-     * *carry* nougate, and `[nougate] in_process` decides whether it is listening. Offering it on a
-     * build that has it switched off is offering an endpoint nothing answers on.
-     *
-     * The URL is **loopback** and that is not an oversight — `nougate-inproc.ts` binds `127.0.0.1`
-     * deliberately, because a gateway hosted inside the daemon exists to serve that daemon and
-     * binding it wider publishes an LLM proxy from a process nobody expected to be one. So this is
-     * the right value for the **daemon** to call and the wrong one for a browser to open: the
-     * wizard fills a provider with it, and nothing links to it.
-     *
-     * Read defensively, like everything else on this route. It answers before anyone can sign in and even when the setup service is absent, so it is
-     * reached with configs that are not fully populated — a test bench builds one, and so does a
-     * daemon whose config predates a section. An unconditional read here turned every such call
-     * into a 500, which on this route is a login page that cannot render at all.
-     */
-    const nougate = deps.ctx.config?.nougate;
-    const bundledGateway = nougate?.inProcess
-      ? {
-          available: true,
-          baseUrl: `http://127.0.0.1:${nougate.port}`,
-          /**
-           * Which password opens the gateway's console — `"environment"`, `"generated"`, or absent.
-           *
-           * Two ways, and the wizard needs to know which, because the sentences are not the same.
-           * The operator's own `INITIAL_ADMIN_*` is still the password they know. A generated one is
-           * not: `mustChangePassword` sends a first login through `/welcome` before this wizard
-           * renders, so by the time the provider step is on screen they have replaced theirs and the
-           * gateway still holds the original.
-           */
-          ...(deps.sharedGatewayCredential
-            ? { sharedCredential: deps.sharedGatewayCredential }
-            : {}),
-          /**
-           * Where its dashboard is reachable through this one — the LLM Gateway page, and the API
-           * the wizard's "Use Nougate LLM Gateway" step signs accounts in through. Absent when not
-           * mounted, and then neither is offered.
-           */
-          ...(deps.llmGatewayMount ? { mount: deps.llmGatewayMount } : {}),
-          /**
-           * Whether the LLM Gateway page can show the gateway's dashboard. The sign-in step needs
-           * only the gateway's API, which is in the binary; the page needs the bundle beside it,
-           * which an older update left behind (`EmbeddedGateway.dashboardEmbeddable`).
-           */
-          ...(deps.llmGatewayMount ? { dashboard: deps.llmGatewayDashboard?.() === true } : {}),
-        }
-      : { available: false };
+    const bundledGateway = bundledGatewayState(deps);
     if (!deps.setup) {
       return c.json({
         hasUser: true,
@@ -196,4 +149,60 @@ export function registerSetupRoutes(control: ControlApp, deps: ControlDeps): voi
     });
     return result.ok ? c.json(result) : c.json({ error: result.error, plain: "The agent was not made. Check what you entered, and try again." }, 400);
   });
+}
+
+/**
+ * The gateway this build carries: whether it runs, and whether it could.
+ *
+ * `available` is whether it runs, as it has always meant: only some editions *carried* nougate before every build did,
+ * and a dashboard older than the switch offers the gateway on `available` alone — an endpoint nothing answers on when it
+ * is off. What a newer one needs to offer it while it is off is beside it: `carried`, and `mount`, which a dashboard
+ * that reads `available` first ignores. `decidedBy` says the environment holds the switch, so the page shows it rather
+ * than offers it.
+ *
+ * The URL is **loopback** and that is not an oversight — `nougate-inproc.ts` binds `127.0.0.1` deliberately, because a
+ * gateway hosted inside the daemon exists to serve that daemon and binding it wider publishes an LLM proxy from a
+ * process nobody expected to be one. So this is the right value for the **daemon** to call and the wrong one for a
+ * browser to open: the wizard fills a provider with it, and nothing links to it.
+ *
+ * Read defensively, like everything else on this route: it answers before anyone can sign in, and a test bench builds
+ * deps with no gateway at all. Any throw here is a login page that cannot render.
+ */
+function bundledGatewayState(deps: ControlDeps): NonNullable<SetupState["bundledGateway"]> {
+  const gateway = deps.llmGateway;
+  const running = gateway?.current() ?? null;
+  const decided = gateway?.decidedBy ? { decidedBy: gateway.decidedBy } : {};
+  if (!running) {
+    if (!gateway?.carried) return gateway ? { available: false, carried: false } : { available: false };
+    return { available: false, carried: true, ...(deps.llmGatewayMount ? { mount: deps.llmGatewayMount } : {}), ...decided };
+  }
+  /**
+   * Which password opens the gateway's console — `"environment"`, `"generated"`, or absent.
+   *
+   * Two ways, and the wizard needs to know which, because the sentences are not the same. The operator's own
+   * `INITIAL_ADMIN_*` is still the password they know. A generated one is not: `mustChangePassword` sends a first login
+   * through `/welcome` before this wizard renders, so by the time the provider step is on screen they have replaced
+   * theirs and the gateway still holds the original. A boot fact: it depends on what the environment and the users
+   * table held as the gateway came up.
+   */
+  const sharedCredential = gateway?.credentialSharing();
+  return {
+    available: true,
+    baseUrl: running.url,
+    ...(sharedCredential ? { sharedCredential } : {}),
+    /**
+     * Where its dashboard is reachable through this one — the LLM Gateway page, and the API the wizard's sign-in step
+     * signs accounts in through — and whether the page can show it. The sign-in step needs only the gateway's API,
+     * which is in the binary; the page needs the bundle beside it, which an older update left behind
+     * (`EmbeddedGateway.dashboardEmbeddable`). Asked as it is now, so a bundle replaced under a running daemon counts.
+     */
+    ...(deps.llmGatewayMount ? { mount: deps.llmGatewayMount, dashboard: running.dashboardEmbeddable() } : {}),
+    carried: true,
+    ...decided,
+    /**
+     * Running, and the file has it off: turned off where nothing restarts Nouride, or on where the setting could not be
+     * written. Either way it stops at the next start, and the page says so rather than offering Turn off again.
+     */
+    ...(!gateway?.decidedBy && deps.ctx.config?.nougate?.inProcess === false ? { stopping: true } : {}),
+  };
 }

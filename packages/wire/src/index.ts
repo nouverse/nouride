@@ -25,6 +25,7 @@ export type * from "./external-agents.ts";
 export type * from "./groups.ts";
 export type * from "./jobs.ts";
 export type * from "./knowledge.ts";
+export type * from "./llm-gateway.ts";
 export type * from "./logs.ts";
 export type * from "./look.ts";
 export type * from "./mcp.ts";

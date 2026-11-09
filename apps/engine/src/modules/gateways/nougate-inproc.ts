@@ -33,11 +33,11 @@
  * hosting it puts a bug in a provider adapter one stack frame from the agent loop. Restarting to
  * update the gateway drops every chat connection with it.
  *
- * ## Loaded on demand, and left out of most builds
+ * ## Loaded on demand, and left out of a build that cannot carry it
  *
- * The import is dynamic so nougate is never *evaluated* on a build that does not bundle it, and
- * the build (`scripts/build/core.ts`) externalises the package unless `--router` or `--pro` was passed, so it is not in
- * the artefact either. Both matter: the WhatsApp bridge taught us that a dynamic import alone still
+ * The import is dynamic so nougate is never *evaluated* while it is off, and the build (`scripts/build/core.ts`)
+ * externalises the package where it is not checked out (a public clone without `internals/nougate`), so it is not in
+ * that artefact either. Both matter: the WhatsApp bridge taught us that a dynamic import alone still
  * costs 9 to 11 MB of RSS for the module graph.
  */
 
@@ -73,10 +73,16 @@ export interface HostRequest {
  */
 const vouched = new WeakMap<Request, HostRequest>();
 
-/** `<install>/.nouride/nougate` — a folder of its own, still inside the one directory an operator mounts and backs up. */
+/**
+ * `<install>/.nouride/nougate` — a folder of its own, still inside the one directory an operator mounts and backs up —
+ * or wherever `NOUGATE_HOME` already says. The gateway puts its state in `data` under it.
+ */
+export function gatewayHome(dataDir: string, env: Record<string, string | undefined> = process.env): string {
+  return env.NOUGATE_HOME ?? join(dirname(resolve(dataDir)), "nougate");
+}
+
 function pointGatewayHome(dataDir: string): void {
-  // The gateway puts its state in `$NOUGATE_HOME/data`.
-  process.env.NOUGATE_HOME ??= join(dirname(resolve(dataDir)), "nougate");
+  process.env.NOUGATE_HOME = gatewayHome(dataDir);
 }
 
 export interface EmbeddedGateway {
@@ -142,7 +148,7 @@ export async function startEmbeddedNougate(
 ): Promise<EmbeddedGateway> {
   if (options?.dataDir) pointGatewayHome(options.dataDir);
   /**
-   * Absent in a build made without `--router` or `--pro`, where the package is externalised.
+   * Absent in a build made where the gateway was not checked out, where the package is externalised.
    *
    * Named rather than left as a resolver error: the operator wrote `[nougate] in_process = true` and
    * needs to know the build cannot honour it, not the name of a package they never mentioned.
@@ -153,9 +159,8 @@ export async function startEmbeddedNougate(
   } catch (err) {
     throw new Error(
       `[nougate] in_process = true, but this build does not carry the gateway ` +
-        `(built without --router or --pro). Point a provider at a nougate running ` +
-        `elsewhere, or use a ` +
-        `build that includes it. Underlying error: ${String(err)}`,
+        `(built where it was not checked out). Point a provider at a nougate running ` +
+        `elsewhere, or use an official build, which includes it. Underlying error: ${String(err)}`,
     );
   }
 
@@ -168,7 +173,7 @@ export async function startEmbeddedNougate(
    * trace names the failure without naming the thing to do about it.
    */
   // The daemon's own exposure, on purpose: the console is reached the way the dashboard is — on a
-  // Box or in the Router image, from the LAN. Every route behind it asks for a key or a sign-in.
+  // Box or in the container image, from the LAN. Every route behind it asks for a key or a sign-in.
   const hostname = process.env.HOST ?? "127.0.0.1";
   /**
    * Its own sign-in off once its dashboard is a page of this one: a second password to every upstream account,

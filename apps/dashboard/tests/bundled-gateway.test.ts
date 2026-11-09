@@ -9,7 +9,7 @@
 import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { gatewayDashboard, gatewayMount, isBundledEndpoint, nougateConsoleUrl } from "@/commons/lib/bundled-gateway";
+import { gatewayDashboard, gatewayMount, gatewayOffer, gatewayPage, gatewaySwitch, isBundledEndpoint, nougateConsoleUrl } from "@/commons/lib/bundled-gateway";
 
 describe("gatewayMount", () => {
   test("a running, mounted gateway answers its mount", () => {
@@ -45,6 +45,43 @@ describe("gatewayDashboard", () => {
 
   test("a daemon that does not say is not believed", () => {
     expect(gatewayDashboard({ ...base, bundledGateway: { available: true, mount: "/llm-gateway" } })).toBeNull();
+  });
+});
+
+describe("the switch, and what is offered by it", () => {
+  const base = { hasUser: true, hasProvider: false, hasAgent: false, complete: false };
+  const off = { available: false, carried: true, mount: "/llm-gateway" };
+  const on = { available: true, baseUrl: "http://127.0.0.1:18256", mount: "/llm-gateway", dashboard: true, carried: true };
+
+  test("carried and off: a switch to turn, and an offer that turns it on first", () => {
+    expect(gatewaySwitch({ ...base, bundledGateway: off })).toEqual({ on: false, mount: "/llm-gateway", locked: false, stopping: false });
+    expect(gatewayOffer({ ...base, bundledGateway: off })).toEqual({ mount: "/llm-gateway", on: false });
+    expect(gatewayPage({ ...base, bundledGateway: off })).toBe(true);
+  });
+
+  test("running: offered as it always was, straight to the sign-in", () => {
+    expect(gatewayOffer({ ...base, bundledGateway: on })).toEqual({ mount: "/llm-gateway", on: true });
+    expect(gatewaySwitch({ ...base, bundledGateway: on })).toEqual({ on: true, mount: "/llm-gateway", locked: false, stopping: false });
+  });
+
+  test("off where the server holds the switch: shown, never offered", () => {
+    const held = { ...off, decidedBy: "environment" as const };
+    expect(gatewaySwitch({ ...base, bundledGateway: held })).toEqual({ on: false, mount: "/llm-gateway", locked: true, stopping: false });
+    expect(gatewayOffer({ ...base, bundledGateway: held })).toBeNull();
+    expect(gatewayPage({ ...base, bundledGateway: held })).toBe(true);
+  });
+
+  test("a daemon older than the switch has none: offered while it runs, as before, and nothing to turn", () => {
+    const older = { available: true, baseUrl: "http://127.0.0.1:18256", mount: "/llm-gateway", dashboard: true };
+    expect(gatewaySwitch({ ...base, bundledGateway: older })).toBeNull();
+    expect(gatewayOffer({ ...base, bundledGateway: older })).toEqual({ mount: "/llm-gateway", on: true });
+    expect(gatewayOffer({ ...base, bundledGateway: { available: false } })).toBeNull();
+    expect(gatewayPage({ ...base, bundledGateway: { available: false } })).toBe(false);
+  });
+
+  test("a build that does not carry it: no switch, no offer, no page", () => {
+    const none = { available: false, carried: false };
+    expect([gatewaySwitch({ ...base, bundledGateway: none }), gatewayOffer({ ...base, bundledGateway: none }), gatewayPage({ ...base, bundledGateway: none })]).toEqual([null, null, false]);
   });
 });
 
