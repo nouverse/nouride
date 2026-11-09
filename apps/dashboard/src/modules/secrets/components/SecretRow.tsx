@@ -11,6 +11,7 @@ import { useState } from "react";
 import { AlertTriangle, KeyRound, ListPlus, Pencil, Trash2 } from "lucide-react";
 import type { FieldChange, SecretEntry } from "@nouride/wire";
 import { changeFrom, FieldsEditor, type Row, rowsOf } from "./FieldsEditor";
+import { BADGE_WRAPS } from "@/commons/components/ui/Tag";
 
 /** Where the value comes from, in everyday words. */
 const ORIGIN: Record<SecretEntry["origin"], { label: string; className: string }> = {
@@ -103,7 +104,7 @@ export function SecretRow({
       {Object.keys(fields).length > 0 && editing === null ? (
         <ul className="mt-2 flex flex-wrap gap-1.5 ps-7" aria-label={`Details of ${entry.name}`}>
           {Object.entries(fields).map(([name, text]) => (
-            <li key={name} className="badge badge-sm badge-ghost max-w-full truncate rounded-md font-mono" title={`${name}: ${text}`}>
+            <li key={name} className={`badge badge-sm badge-ghost max-w-full rounded-md font-mono ${BADGE_WRAPS}`}>
               <span className="text-base-content/70">{name}:</span>&nbsp;{text}
             </li>
           ))}

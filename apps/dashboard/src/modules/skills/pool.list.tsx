@@ -21,6 +21,7 @@ import { Details } from "@/commons/components/ui/Details";
 import { useConfirm } from "@/commons/components/ui/confirm";
 import { SkillFiles } from "./pool.files";
 import { useSaved } from "@/commons/hooks/use-saved";
+import { BADGE_WRAPS } from "@/commons/components/ui/Tag";
 
 export function PoolList({ skills, editable }: { skills: CatalogSkill[]; editable: boolean }) {
   const queryClient = useQueryClient();
@@ -137,9 +138,6 @@ export function PoolList({ skills, editable }: { skills: CatalogSkill[]; editabl
   );
 }
 
-/** A badge that grows a line for long words rather than spilling out of daisyUI's fixed height (a skill's tool list). */
-const WRAPS = "h-auto min-h-5 py-0.5 text-left whitespace-normal [overflow-wrap:anywhere]";
-
 function SkillRow({
   skill,
   expanded,
@@ -191,11 +189,11 @@ function SkillRow({
               </span>
             ) : null}
             {skill.missing.length > 0 ? (
-              <span className={`badge badge-warning badge-sm gap-1 font-mono ${WRAPS}`}>
+              <span className={`badge badge-warning badge-sm gap-1 font-mono ${BADGE_WRAPS}`}>
                 <TriangleAlert size={11} /> needs {skill.missing.join(", ")}
               </span>
             ) : skill.requires.length > 0 ? (
-              <span className={`badge badge-ghost badge-sm gap-1 font-mono ${WRAPS}`}>
+              <span className={`badge badge-ghost badge-sm gap-1 font-mono ${BADGE_WRAPS}`}>
                 <CircleCheck size={11} /> {skill.requires.join(", ")}
               </span>
             ) : null}
@@ -205,7 +203,7 @@ function SkillRow({
               the agent's own chip below, where the decision about that agent is made.
             */}
             {skill.needsTools.length > 0 ? (
-              <span className={`badge badge-ghost badge-sm gap-1 font-mono ${WRAPS}`} title="Nouride tools this skill calls">
+              <span className={`badge badge-ghost badge-sm gap-1 font-mono ${BADGE_WRAPS}`} title="Nouride tools this skill calls">
                 <Wrench size={11} /> {skill.needsTools.join(", ")}
               </span>
             ) : null}

@@ -177,7 +177,7 @@ function ProfileCard({
               LLM Gateway {/* plain-words-ok: the admin page's own name, as the menu has it */}
             </Link>
           )}
-          <span className={`badge badge-sm font-semibold ${profile.hasCredential ? "badge-success shadow-xs" : "badge-error shadow-xs"}`}>
+          <span className={`badge badge-sm shrink-0 whitespace-nowrap font-semibold ${profile.hasCredential ? "badge-success shadow-xs" : "badge-error shadow-xs"}`}>
             {profile.hasCredential ? "Key Active" : "No Key Set"}
           </span>
           <button

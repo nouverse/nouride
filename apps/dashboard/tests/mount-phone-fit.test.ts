@@ -3,13 +3,15 @@
  * - a skill's tool list spilled out of its badge's fixed height over the description, and the description and the
  *   agents' switches ran in the third of the row the chevron, the icon and the two switches left;
  * - Home's "Everything is working · v… · Pro · Up for …" was one pill, and a phone broke both halves in two;
- * - the page showed in the strip between the floating tab bar and the screen's foot, under the browser's toolbar.
+ * - the page showed in the strip between the floating tab bar and the screen's foot, under the browser's toolbar;
+ * - a secret's note was cut to an ellipsis whose rest only a mouse's tooltip showed, and a provider's "Key Active" broke
+ *   in two inside its badge.
  */
 
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { answer, renderPage, useMountHarness } from "./mount-harness.ts";
+import { answer, renderPage, useMountHarness, WIRE } from "./mount-harness.ts";
 import { eventually } from "./wait.ts";
 
 useMountHarness();
@@ -75,5 +77,31 @@ describe("on a phone, nothing spills out of its box", () => {
     expect(ground).toEqual(expect.arrayContaining(["bg-app-foot", "fixed", "bottom-0", "lg:hidden", "pointer-events-none"]));
     const css = readFileSync(join(import.meta.dir, "../src/styles/main.css"), "utf8");
     expect(css).toMatch(/@utility bg-app-foot \{\s*background: linear-gradient\(to top, color-mix\(in oklab, var\(--color-base-200\) 50%, var\(--color-base-100\)\)/);
+  });
+
+  test("a secret's note grows a line, whole, and a provider's key badge stays on one", async () => {
+    const secrets = WIRE["/secrets"] as { secrets: Record<string, unknown>[] };
+    const note = "Telegram bot for agent Reno on the Nouride box, made for the support group";
+    answer({
+      "/secrets": ok({ ...secrets, secrets: [{ ...secrets.secrets[0], fields: { "used for": note } }] }),
+      "/providers": ok({ providers: [{ name: "test", kind: "openai", baseUrl: "https://fake.test/v1", apiKeySecret: "testkey", hasCredential: true, builtIn: false }] }),
+    });
+    let secret: string[] = [];
+    let whole = false;
+    await renderPage("/secrets", async (host) => {
+      await eventually(() => host.textContent?.includes("support group") === true, 2_000, "the note");
+      const badge = [...host.querySelectorAll("li")].find((li) => li.textContent?.includes(note));
+      secret = classes(badge);
+      whole = badge?.textContent?.includes(note) === true;
+    });
+    expect(whole).toBe(true);
+    expect(secret).toEqual(expect.arrayContaining(["h-auto", "whitespace-normal"]));
+    expect(secret).not.toContain("truncate");
+    let key: string[] = [];
+    await renderPage("/models", async (host) => {
+      await eventually(() => host.textContent?.includes("Key Active") === true, 2_000, "the badge");
+      key = classes([...host.querySelectorAll("span")].find((span) => span.textContent?.trim() === "Key Active"));
+    });
+    expect(key).toEqual(expect.arrayContaining(["whitespace-nowrap", "shrink-0"]));
   });
 });

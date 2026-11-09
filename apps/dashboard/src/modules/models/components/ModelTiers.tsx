@@ -160,7 +160,7 @@ function ModelTiersDialog({ onClose }: { onClose: () => void }) {
             const current = helper(key);
             const named = current !== "" && !TIER_OPTIONS.some((option) => option.value === current);
             return (
-              <label key={key} className="grid grid-cols-1 gap-1 sm:grid-cols-[1fr_minmax(0,18rem)] sm:items-center">
+              <label key={key} className="grid grid-cols-1 gap-1 sm:grid-cols-[1fr_minmax(0,24rem)] sm:items-center">
                 <span className="text-sm">{label}</span>
                 <select
                   className="select select-sm w-full rounded-xl"
