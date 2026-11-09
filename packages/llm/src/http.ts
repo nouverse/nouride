@@ -207,11 +207,15 @@ export async function postJson(
     }
 
     // A fresh deadline per attempt, combined with any caller signal so a cancelled turn still
-    // aborts immediately.
-    const deadline = AbortSignal.timeout(requestTimeoutMs(deps));
-    const combined = signal ? AbortSignal.any([signal, deadline]) : deadline;
+    // aborts immediately. A timer cleared once the headers are in, not `AbortSignal.timeout`: fetch
+    // keeps its signal on the body, so a fixed deadline cut a healthy reply still streaming when it
+    // fired. Past the headers the stream answers to the idle watchdog (`streamEvents`) and the caller.
+    const deadline = new AbortController();
+    const timer = setTimeout(() => deadline.abort(), requestTimeoutMs(deps));
+    const combined = signal ? AbortSignal.any([signal, deadline.signal]) : deadline.signal;
 
     let res: Response;
+    let detail = "";
     try {
       res = await doFetch(url, {
         method: "POST",
@@ -219,11 +223,13 @@ export async function postJson(
         body: JSON.stringify(body),
         signal: combined,
       });
+      // A refusal's body is read under the same deadline: a status followed by silence must not hold the turn.
+      if (!res.ok) detail = await safeText(res);
     } catch (err) {
       // A caller-initiated abort is a decision, not a failure to retry around.
       if (signal?.aborted) throw new LLMError("request aborted", undefined, { cause: err });
 
-      if (deadline.aborted) {
+      if (deadline.signal.aborted) {
         // Retryable: a provider that did not answer in time may answer the next one, and this is
         // the case that used to hang forever.
         lastError = new LLMError(
@@ -245,6 +251,8 @@ export async function postJson(
       failure = "network";
       status = undefined;
       continue;
+    } finally {
+      clearTimeout(timer);
     }
 
     if (res.ok) {
@@ -252,7 +260,6 @@ export async function postJson(
       return res;
     }
 
-    const detail = await safeText(res);
     // Classified from the body first, the status second: `model_prefix_required` and a malformed-JSON
     // complaint are both 400 and need opposite responses. The old code saw only the status, retried a
     // permanent config error three times, and reported it as the model not responding.

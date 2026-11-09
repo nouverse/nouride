@@ -349,8 +349,10 @@ longer, up to a minute. A provider asking for longer than that has usually run o
 waiting would only hold the chat, so the request fails at once.
 
 A provider that does not answer at all is tried twice, not six times, because each attempt can take
-two minutes. `/stop` or a shutdown during a wait stops the turn at once, and a `base_url` that is not
-a valid URL fails at once: that is configuration, not a network blip.
+two minutes. Those two minutes are for the provider to start answering: a reply that has started
+streams for as long as it needs, and is cut only when it goes quiet for a minute and a half.
+`/stop` or a shutdown during a wait stops the turn at once, and a `base_url` that is not a valid URL
+fails at once: that is configuration, not a network blip.
 
 If the provider is down for longer than that, the turn ends, keeps what it did, and says so:
 

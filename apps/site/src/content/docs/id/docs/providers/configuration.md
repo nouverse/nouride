@@ -358,8 +358,10 @@ panjang, paling lama semenit. Provider yang minta lebih lama dari itu biasanya k
 menunggu cuma akan menahan chat-nya, jadi request-nya langsung gagal.
 
 Provider yang sama sekali gak menjawab dicoba dua kali, bukan enam, karena tiap percobaan bisa makan
-dua menit. `/stop` atau shutdown selama menunggu langsung menghentikan giliran, dan `base_url` yang
-bukan URL valid langsung gagal: itu soal konfigurasi, bukan gangguan jaringan.
+dua menit. Dua menit itu batas sampai provider mulai menjawab: balasan yang sudah mulai mengalir boleh
+selama yang ia perlukan, dan baru diputus kalau diam satu setengah menit. `/stop` atau shutdown selama
+menunggu langsung menghentikan giliran, dan `base_url` yang bukan URL valid langsung gagal: itu soal
+konfigurasi, bukan gangguan jaringan.
 
 Kalau provider-nya mati lebih lama dari itu, gilirannya berakhir, menyimpan apa yang sudah dikerjakan,
 dan bilang begitu:
