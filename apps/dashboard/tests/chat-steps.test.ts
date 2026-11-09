@@ -1,13 +1,14 @@
 /**
  * The live "Working" card: whole seconds on the clock, the reasoning before the calls, and the calls
- * in a box that scrolls rather than grows.
+ * as whole rows, the newest few with the earlier ones a press away, rather than a list that grows.
  */
 
 import { describe, expect, test } from "bun:test";
 import { renderToString } from "react-dom/server";
 import { createElement } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { formatDuration, formatElapsed, saidWhileWorking, turnTokens, workSteps } from "@/commons/lib/steps";
-import { StepFeed } from "@/commons/components/turns/Steps";
+import { StepFeed, StepPill } from "@/commons/components/turns/Steps";
 import { LiveTurnView, TurnView } from "@/modules/chat/components/Turn";
 import type { ChatTurn, LiveTurn, TurnStep } from "@nouride/wire";
 
@@ -32,17 +33,37 @@ describe("the live feed", () => {
     ]).flat(),
   ];
 
-  test("reasoning comes before the calls, every call is kept, and the list scrolls inside", () => {
+  test("reasoning comes before the calls, the newest are whole rows, and the earlier ones are a press away", () => {
     const html = renderToString(createElement(StepFeed, { steps, elapsedMs: 4_400, running: true }));
     expect(html).toContain("Working");
     expect(html).toContain("4s");
     expect(html).not.toContain("4.4s");
-    expect(html.indexOf("Reasoning")).toBeLessThan(html.indexOf("web_search query 0"));
-    // No "show earlier": the whole list is there, in a bounded box.
-    expect(html).toContain("web_search query 0");
-    expect(html).toContain("web_search query 11");
-    expect(html).not.toContain("earlier");
-    expect(html).toMatch(/max-h-72[^"]*overflow-y-auto/);
+    expect(html.indexOf("Reasoning")).toBeLessThan(html.indexOf("Show 6 earlier steps"));
+    // A box scrolled to its newest row cut the row at its top in half; whole rows, and the rest on a press.
+    expect(html).not.toContain("web_search query 5<");
+    expect(html).toContain("web_search query 6<");
+    expect(html).toContain("web_search query 11<");
+    expect(html).not.toMatch(/<div class="[^"]*overflow-y-auto/);
+  });
+});
+
+describe("the finished pill", () => {
+  // Every plain answer, and every reply in a group, read "✓ 0 steps · 5ms", which looked like a glitch.
+  const pill = (props: Partial<Parameters<typeof StepPill>[0]>) =>
+    renderToString(createElement(StepPill, { status: "done", steps: [], toolCalls: 0, ...props })).replaceAll("<!-- -->", "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+
+  test("an answer with no steps says its mark and its time, and no count", () => {
+    expect(pill({ durationMs: 4_000 })).toBe("✓ 4s");
+    expect(pill({ durationMs: 4_000, status: "failed" })).toBe("✕ 4s · failed");
+  });
+
+  test("one with neither steps nor a time says there are details to open", () => {
+    expect(pill({})).toBe("✓ details");
+  });
+
+  test("one with steps counts them, as it did", () => {
+    const steps: TurnStep[] = [{ seq: 1, at: 0, kind: "tool", text: "exec ls", ms: 0 }, { seq: 2, at: 1, kind: "tool_done", text: "exec ok", ms: 3 }];
+    expect(pill({ steps, durationMs: 4_000 })).toBe("✓ 1 step · 4s");
   });
 });
 
@@ -72,6 +93,8 @@ describe("a step's row", () => {
     const call = /<div class="([^"]*)">exec ls -la/.exec(html)?.[1] ?? "";
     expect(call).toContain("flex-1");
     expect(call).not.toContain("max-sm:order-last");
+    // And nothing beside it: an empty outcome took half a phone's row, the call broken every sixteen letters.
+    expect(html).not.toContain("sm:max-w-[45%]");
   });
 });
 
@@ -118,7 +141,9 @@ describe("what was said while it worked", () => {
     ...overrides,
   });
   // Without the comments React puts between adjacent text nodes, so "1 step" reads as it does on screen.
-  const html = (element: Parameters<typeof renderToString>[0]) => renderToString(element).replaceAll("<!-- -->", "");
+  // A reply reads its agent's face from the status query: a client with nothing in it draws the column without one.
+  const html = (element: Parameters<typeof renderToString>[0]) =>
+    renderToString(createElement(QueryClientProvider, { client: new QueryClient() }, element)).replaceAll("<!-- -->", "");
   /** Both drawn, in this order. A bare `indexOf` comparison passes when the first is missing: -1 is before anything. */
   const inOrder = (page: string, ...texts: string[]) => {
     const at = texts.map((text) => page.indexOf(text));

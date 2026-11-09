@@ -6,7 +6,7 @@
  * which is the point: what you watched happen is what you can still read afterwards.
  */
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useState } from "react";
 import { ChevronDown, ChevronRight, Loader2 } from "lucide-react";
 import type { TurnStatus, TurnStep } from "@nouride/wire";
 import { TurnRecord } from "@/commons/components/turns/TurnRecord";
@@ -23,28 +23,34 @@ import {
   type StepRowModel,
 } from "@/commons/lib/steps";
 
+/** How many of the newest calls an opened list shows before the earlier ones are asked for. */
+const NEWEST_SHOWN = 6;
+
 /**
- * The tool calls, in a box that scrolls rather than grows: a turn of forty calls used to push the
- * answer and the composer off the screen. Pinned to the newest row while the turn runs, unless the
- * reader has scrolled up to look at an earlier one.
+ * The tool calls, each row whole: the newest few, and the earlier ones a press away, so a turn of forty calls does not
+ * push the answer and the composer off the screen. They were a box that scrolled to its newest row, and its top showed a
+ * sliver of a cut-off row under the heading above it, however wide the screen: a row's height varies with what it says,
+ * so no box height holds whole rows.
  */
-function StepList({ follow, children }: { follow?: unknown; children: ReactNode }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const pinned = useRef(true);
-  useEffect(() => {
-    const box = ref.current;
-    if (box && pinned.current) box.scrollTop = box.scrollHeight;
-  }, [follow]);
+function WholeRows({ rows, activeSeq }: { rows: StepRowModel[]; activeSeq?: number | undefined }) {
+  const [all, setAll] = useState(false);
+  const earlier = all ? 0 : Math.max(0, rows.length - NEWEST_SHOWN);
   return (
-    <div
-      ref={ref}
-      onScroll={(event) => {
-        const box = event.currentTarget;
-        pinned.current = box.scrollHeight - box.scrollTop - box.clientHeight < 24;
-      }}
-      className="max-h-72 space-y-1.5 overflow-y-auto overscroll-contain pr-1"
-    >
-      {children}
+    <div className="space-y-1.5">
+      {earlier > 0 ? (
+        <button
+          type="button"
+          onClick={() => setAll(true)}
+          className="flex h-10 w-full items-center rounded-lg border border-dashed border-base-content/[0.12] px-2.5 font-sans text-xs font-semibold text-secondary outline-none transition-colors hover:bg-base-100/60 focus-visible:ring-2 focus-visible:ring-secondary/60 sm:h-8"
+        >
+          {`Show ${earlier} earlier ${earlier === 1 ? "step" : "steps"}`}
+        </button>
+      ) : null}
+      {rows.slice(earlier).map((row) => (
+        // A call with nothing closing it yet carries `running` from `stepRows`, so the spinner does not depend on the
+        // row happening to be last — which was wrong the moment a second call started in the same round trip.
+        <StepRow key={row.seq} row={row} active={row.seq === activeSeq} />
+      ))}
     </div>
   );
 }
@@ -80,20 +86,24 @@ function StepRow({ row, active }: { row: StepRowModel; active?: boolean }) {
           phone that width was still a column of twelve letters — a command broken every few characters beside
           "Bash ok: …" (0.8.12) — so there the outcome is the row's first line and the call is the whole width under it. */}
       <div className={`min-w-20 flex-1 break-all leading-relaxed ${said ? "max-sm:order-last max-sm:basis-full" : ""}`}>{row.text}</div>
-      <span className="flex min-w-0 items-baseline gap-1.5 font-mono text-[10px] mt-0.5 max-sm:flex-1 sm:max-w-[45%]">
-        {row.waitedMs !== undefined && (
-          // The model deciding what to call, which is most of a slow turn and was previously shown in
-          // the duration column as though the call itself had taken that long.
-          <span className="shrink-0 text-base-content/65" title="the model was deciding for this long first">
-            +{formatDuration(row.waitedMs)}
+      {/* Nothing said yet, nothing beside it: an empty outcome still took half a phone's row, and a call at work beside the
+          agent's cat was broken every sixteen letters. */}
+      {said ? (
+        <span className="flex min-w-0 items-baseline gap-1.5 font-mono text-[10px] mt-0.5 max-sm:flex-1 sm:max-w-[45%]">
+          {row.waitedMs !== undefined && (
+            // The model deciding what to call, which is most of a slow turn and was previously shown in
+            // the duration column as though the call itself had taken that long.
+            <span className="shrink-0 text-base-content/65" title="the model was deciding for this long first">
+              +{formatDuration(row.waitedMs)}
+            </span>
+          )}
+          {/* A coding CLI's says what its call returned, a line long: cut here, whole on hover — two lines on a phone,
+              which has no hover. */}
+          <span className={`min-w-0 max-sm:line-clamp-2 max-sm:[overflow-wrap:anywhere] sm:truncate ${row.failed ? "text-error/70" : "text-base-content/65"}`} title={row.outcome}>
+            {row.outcome ?? ""}
           </span>
-        )}
-        {/* A coding CLI's says what its call returned, a line long: cut here, whole on hover — two lines on a phone,
-            which has no hover. */}
-        <span className={`min-w-0 max-sm:line-clamp-2 max-sm:[overflow-wrap:anywhere] sm:truncate ${row.failed ? "text-error/70" : "text-base-content/65"}`} title={row.outcome}>
-          {row.outcome ?? ""}
         </span>
-      </span>
+      ) : null}
     </div>
   );
 }
@@ -139,11 +149,7 @@ function Breakdown({
           <span>Answered without using a tool</span>
         </div>
       ) : (
-        <StepList>
-          {visible.map((row) => (
-            <StepRow key={row.seq} row={row} active={row.seq === activeSeq} />
-          ))}
-        </StepList>
+        <WholeRows rows={visible} activeSeq={activeSeq} />
       )}
     </div>
   );
@@ -183,6 +189,12 @@ export function StepPill({
 }) {
   const [open, setOpen] = useState(false);
   const counted = countedSteps(steps).length || toolCalls;
+  /**
+   * What it took, said only when it took something: "0 steps" on every plain answer read as a glitch. With no steps it
+   * is the mark and the time, "✓ 4s"; with neither (a turn from before durations were kept), "details", so the pill
+   * still says what a press opens: the model, the round trips and the tokens.
+   */
+  const took = counted > 0 ? `${counted} ${counted === 1 ? "step" : "steps"}` : durationMs === undefined ? "details" : null;
   const tokens = turnTokens(inputTokens, outputTokens);
   const { mark, tone, label } = statusMark(status);
 
@@ -194,12 +206,10 @@ export function StepPill({
         className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-base-200/80 hover:bg-base-300/80 border border-base-content/[0.08] text-[11px] font-mono text-base-content/70 hover:text-base-content transition-all active:scale-95 shadow-2xs group"
       >
         <span className={`font-bold ${tone}`}>{mark}</span>
-        <span className="font-semibold text-base-content/85">
-          {counted} {counted === 1 ? "step" : "steps"}
-        </span>
+        {took ? <span className="font-semibold text-base-content/85">{took}</span> : null}
         {durationMs !== undefined && (
           <>
-            <span aria-hidden="true" className="text-base-content/40">·</span>
+            {took ? <span aria-hidden="true" className="text-base-content/40">·</span> : null}
             <span>{formatDuration(durationMs)}</span>
           </>
         )}
@@ -266,11 +276,14 @@ export function StepFeed({
   steps,
   elapsedMs,
   running,
+  bare = false,
 }: {
   steps: TurnStep[];
   elapsedMs: number;
   /** False for the moment between a turn ending and the history catching up — nothing is working then. */
   running: boolean;
+  /** Under a line that already says it (`LiveStepLine`): no heading of its own. */
+  bare?: boolean;
 }) {
   const acted = stepRows(steps);
   const thought = reasoningText(steps);
@@ -292,15 +305,17 @@ export function StepFeed({
 
   return (
     <div className="w-full max-w-xl rounded-2xl bg-base-200/50 border border-base-content/[0.08] p-2 sm:p-3 space-y-1.5 font-mono text-xs">
-      <div className="flex items-center justify-between gap-2 mb-1">
-        <span className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-base-content/65 font-mono">
-          <span
-            className={`size-1.5 rounded-full ${running ? "bg-primary animate-pulse" : "bg-success"}`}
-          />
-          {running ? "Working" : "Finished"} · {counted} {counted === 1 ? "step" : "steps"} ·{" "}
-          {formatElapsed(elapsedMs)}
-        </span>
-      </div>
+      {bare ? null : (
+        <div className="flex items-center justify-between gap-2 mb-1">
+          <span className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-base-content/65 font-mono">
+            <span
+              className={`size-1.5 rounded-full ${running ? "bg-primary animate-pulse" : "bg-success"}`}
+            />
+            {running ? "Working" : "Finished"} · {counted} {counted === 1 ? "step" : "steps"} ·{" "}
+            {formatElapsed(elapsedMs)}
+          </span>
+        </div>
+      )}
 
       {/* Reasoning first — the plan — then the calls that carry it out. */}
       {thought && (
@@ -314,16 +329,7 @@ export function StepFeed({
         </details>
       )}
 
-      {acted.length > 0 && (
-        <StepList follow={acted.length}>
-          {acted.map((row) => (
-            // A call with nothing closing it yet carries `running` from `stepRows`, so the spinner no
-            // longer depends on the row happening to be last — which was wrong the moment a second
-            // call started in the same round trip.
-            <StepRow key={row.seq} row={row} />
-          ))}
-        </StepList>
-      )}
+      {acted.length > 0 ? <WholeRows rows={acted} /> : null}
 
       {/*
         The gap between steps, which is most of a turn.

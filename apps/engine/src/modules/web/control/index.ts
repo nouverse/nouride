@@ -23,6 +23,7 @@ import { registerFileRoutes } from "./routes/files.ts";
 import { registerSkillRootRoutes } from "./routes/skill-roots.ts";
 import { registerDiagnosticRoutes } from "./routes/diagnostics.ts";
 import { registerConversationRoutes } from "./routes/conversations.ts";
+import { registerChatListRoutes } from "./routes/chat-list.ts";
 import { registerChatRoutes } from "./routes/chat.ts";
 import { registerNotesRoutes } from "./routes/notes.ts";
 import { registerMissionRoutes } from "./routes/missions.ts";
@@ -87,6 +88,7 @@ export function mountControlRoutes(app: Hono, deps: ControlDeps): void {
   registerSkillRootRoutes(control, deps);
   registerDiagnosticRoutes(control, deps);
   registerConversationRoutes(control, deps);
+  registerChatListRoutes(control, deps);
   registerChatRoutes(control, deps);
   registerNotesRoutes(control, deps);
   registerMissionRoutes(control, deps);

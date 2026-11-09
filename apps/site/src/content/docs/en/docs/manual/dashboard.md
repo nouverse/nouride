@@ -23,7 +23,7 @@ and **Memory** now and then, and everything you set up once behind **Settings**.
 
 ```
 Home                what needs you · what is moving · Quick chat · your agents · the box · today's AI use
-Chats               one agent, or a room of several, with each step live as it works
+Chats               your agents and rooms in one list, and the groups they are in on chat apps
 Work
   Waiting for you   tool calls an agent waits on, and missions waiting for your answer
   Missions          long work agents finish alone: what needs you, what runs, what ended; Limits
@@ -91,6 +91,10 @@ you.
 
 **On a phone**, a tab bar along the bottom holds Home, Chats, Work and Agents, with Work's count on it, and **More**,
 which slides the rest of the menu up as a sheet.
+
+**On Chats** the menu folds to its icons, so the list of chats and the conversation fit side by side. **Expand**, at
+the foot of the folded menu, gives it back, and the browser remembers which way you left it. Every other page keeps the
+whole menu, and a phone keeps its tab bar.
 
 **The look** is a soft cream by day and a violet grey by night. It follows your device until you choose with the sun or
 moon button beside your name. The Nouride cat greets you on Home and keeps you company on an empty page.
@@ -289,19 +293,48 @@ be demoted, so there is always someone left to manage accounts.
 
 ## Chat
 
-Talk to one agent, or make a **room** with several: pick the agents first, then tag the one you mean
-(`@nox`), because in a room a tag is the only way a message reaches a particular agent. Each turn's
-steps open live as the agent works, with how long each took and the model's reasoning, and stay
-readable afterwards. It is the fastest way to see *why* an answer took the shape it did.
+**Chats** is one list beside the conversation you have open. On a phone the list comes first, and a conversation
+opens over the whole screen with an arrow back to the list.
+
+The list has two halves, switched at its top:
+
+- **Chats** is everything you can talk to from the dashboard. Your orchestrator is always first. Then come the agents
+  and rooms you talked to, the latest first, each with its cat, the last thing said and when. **Working** shows while an
+  agent works, with how many helpers it has at work, and a dot marks a reply you have not read yet. Agents you have not
+  talked to yet wait at the end, under **Not talked to yet**.
+- **Groups** is the groups your agents are in on Telegram, Discord and WhatsApp: one line per group, even when several of
+  your agents' bots sit in it. A chip per app narrows the list to it, and groups quiet for two weeks or more are folded
+  into one line at the end. A dot on **Groups** says a group heard something since you last looked.
+
+The **+** at the top starts a chat with an agent or makes a room, and the search finds a chat by its name or its last
+message.
+
+**An agent's chat** opens its latest conversation, to carry on where you left off. **History**, in its header, lists
+only that agent's conversations: the ones in the dashboard, and its private chats on chat apps, each saying where it is
+from. **New chat** starts a fresh one.
+
+**A room** is one conversation with several agents. Pick the agents when you make it, then tag the one you mean
+(`@nox`): a tag is how a message reaches a particular agent. The room's header shows its members as the tags you type,
+and says who answers a message with no tag, if anyone does. **Add agent** brings another one in; the room's menu renames
+it, takes an agent out, or deletes it.
+
+**Anything from a chat app is read-only here.** A group, or a private chat with an agent on Telegram, Discord or
+WhatsApp, shows that app's mark and **Read-only**, and where you would type there is a note: it is answered on its own
+app. The people there are on the left, each under their name (the one under People, else the name their app shows), and
+a group shows what people said even when no agent answered. **Pin to Chats** keeps a group you read often in Chats, in
+this browser.
 
 ![Dashboard chat with live turn steps](/media/dashboard-chat.png)
 
-The turn lives on the daemon, not in the browser, so a reload or a second tab picks up a turn still
-running, and the conversation list marks which conversations are working, wherever they started.
-Approvals wait under the conversation, background jobs show while they run, and typing `/` lists
-the slash commands. `/stop` and `/approve` act at once rather than waiting behind the turn they are
-meant to stop or answer. In a one-to-one chat, **Send** stays next to **Stop** while the agent works:
-what you send then is read by the running turn at its next step.
+While an agent works, its steps fold into one line: what it is doing now, how many steps it has taken and for how long.
+Press the line to open the newest steps, with how long each took and the model's reasoning; the earlier ones are one
+more press away. Press the line again to fold them. Once the turn is done the steps stay readable under the answer. It
+is the fastest way to see *why* an answer took the shape it did.
+
+The turn lives on Nouride, not in the browser, so a reload or a second tab picks up a turn still running. Approvals wait
+under the conversation, background jobs show while they run, and typing `/` lists the slash commands. `/stop` and
+`/approve` act at once rather than waiting behind the turn they are meant to stop or answer. In a one-to-one chat,
+**Send** stays next to **Stop** while the agent works: what you send then is read by the running turn at its next step.
 
 Above the box you type in, the agent's plan for the conversation shows while it works: how many steps
 are done and the one in hand, with the whole list a press away. Missions started from the conversation

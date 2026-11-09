@@ -31,3 +31,14 @@ export function frontDeskFor(input: {
   if (input.members && !input.members.includes(input.orchestrator)) return undefined;
   return input.orchestrator;
 }
+
+/**
+ * Who answers, as the router's last fallback, a message that names nobody where an unaddressed message may be answered:
+ * the orchestrator — but in a room with a member list only when it is one of the members, and a room of one answers with
+ * its member. With no member list, which is every platform chat, the orchestrator as before.
+ */
+export function unaddressedFallback(orchestrator: string | undefined, members: readonly string[] | null): string | undefined {
+  if (!members) return orchestrator;
+  if (orchestrator && members.includes(orchestrator)) return orchestrator;
+  return members.length === 1 ? members[0] : undefined;
+}

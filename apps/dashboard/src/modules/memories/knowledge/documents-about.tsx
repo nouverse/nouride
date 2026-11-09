@@ -8,7 +8,7 @@ import { useQueries, useQuery } from "@tanstack/react-query";
 import { FileText } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import type { OpenDocument } from "./document.dialog";
-import { listed } from "./words";
+import { listed } from "@/commons/lib/listed";
 
 export function DocumentsAbout({ person, onOpen }: { person: string; onOpen: (at: OpenDocument) => void }) {
   const collections = useQuery({ queryKey: ["knowledge"], queryFn: api.knowledge, retry: false });

@@ -51,7 +51,8 @@ export interface ComposerProps {
   textareaRef: RefObject<HTMLTextAreaElement | null>;
   room: Room | null;
   agentName: string | undefined;
-  senderName: string | undefined;
+  /** In a room, who answers a message that tags nobody, in words (`untaggedWords`). */
+  untaggedHint?: string | undefined;
   slash: MenuState<SlashCommand> & { open: boolean; toggle: () => void };
   mention: MenuState<MentionCandidate> & { index: number };
   attachments: {
@@ -81,7 +82,7 @@ export function Composer(props: ComposerProps) {
     textareaRef,
     room,
     agentName,
-    senderName,
+    untaggedHint,
     attachments,
     conversation,
   } = props;
@@ -110,13 +111,6 @@ export function Composer(props: ComposerProps) {
     <div className="p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:p-4 sm:pb-[max(1rem,env(safe-area-inset-bottom))] bg-base-100/90 backdrop-blur-xl border-t border-base-content/[0.08] shrink-0 mt-auto">
       <div className="max-w-3xl mx-auto space-y-2">
         <ErrorNote error={conversation.error} />
-
-        {!writable && (
-          <p className="text-[11px] text-base-content/65 px-2">
-            This conversation happened on <b className="font-mono">{conversation.session?.gatewayId}</b>.
-            You can read it here; replies have to be sent from there.
-          </p>
-        )}
 
         <AttachmentTray files={attachments.files} onRemove={attachments.remove} />
 
@@ -171,7 +165,7 @@ export function Composer(props: ComposerProps) {
               !writable
                 ? "Read-only: this conversation belongs to another chat app"
                 : room
-                  ? "Message the room. Tag an agent with @ to ask one of them"
+                  ? "Message the room"
                   : `Message ${currentAgent?.displayName || "agent"}…`
             }
             rows={1}
@@ -290,25 +284,11 @@ export function Composer(props: ComposerProps) {
           </button>
         </div>
 
-        <div className="flex items-center justify-between gap-3 text-[11px] text-base-content/65 px-2">
-          <span>
-            {room ? (
-              <>
-                Room: <b>{room.title ?? room.members.map((m) => m.agentId).join(", ")}</b>
-              </>
-            ) : (
-              <>
-                Agent: <b>{currentAgent?.displayName}</b>
-              </>
-            )}
-          </span>
+        <div className="flex min-h-4 items-center justify-between gap-3 px-2 text-[11px] text-base-content/65">
+          {/* In a room, who answers a message that tags nobody: the router's own answer, never a guess. */}
+          <span className="min-w-0 truncate">{room ? untaggedHint : null}</span>
           {/* The keys, out of the placeholder: there they ran on past the box and read as part of the message. */}
-          {writable && <span className="hidden sm:inline">Enter to send · Shift+Enter for a new line</span>}
-          {senderName && (
-            <span>
-              Signed in as <b className="text-base-content/65">{senderName}</b>
-            </span>
-          )}
+          {writable && <span className="hidden shrink-0 sm:inline">Enter to send · Shift+Enter for a new line</span>}
         </div>
       </div>
     </div>

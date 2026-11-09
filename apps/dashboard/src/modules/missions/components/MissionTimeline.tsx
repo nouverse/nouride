@@ -27,7 +27,8 @@ import {
 } from "lucide-react";
 import type { ChatTurn, LiveTurn, TurnStatus } from "@nouride/wire";
 import { Markdown } from "@/commons/components/ui/Markdown";
-import { StepFeed, StepPill } from "@/commons/components/turns/Steps";
+import { StepPill } from "@/commons/components/turns/Steps";
+import { LiveStepLine } from "@/commons/components/turns/StepLine";
 import { formatDuration, splitThinking } from "@/commons/lib/steps";
 import { cn } from "@/commons/lib/utils";
 import { reasonOf, timelineOf, type ReasonKind, type TimelineEntry } from "../lib/timeline";
@@ -214,7 +215,7 @@ export function MissionTimeline({ turns, live }: { turns: ChatTurn[]; live: Live
         <Item first last={entries.length === 0} status={live.status} icon={REASON_ICON[reason.kind]}>
           <Head mark={{ status: live.status, icon: REASON_ICON[reason.kind] }} title={`Turn ${turns.length + 1}`} reason={reason.text} icon={REASON_ICON[reason.kind]} said={REASON_SAID[reason.kind]} at={live.startedAt} />
           <div className="mt-2">
-            <StepFeed steps={live.steps} running={live.status === "running"} elapsedMs={live.status === "running" ? Math.max(0, Date.now() - live.startedAt) : (live.durationMs ?? 0)} />
+            <LiveStepLine steps={live.steps} running={live.status === "running"} elapsedMs={live.status === "running" ? Math.max(0, Date.now() - live.startedAt) : (live.durationMs ?? 0)} />
           </div>
         </Item>
       )}

@@ -101,12 +101,16 @@ describe("a tab", () => {
 describe("the chat's drawers", () => {
   test("slide over a shade that is always there: faded out and out of reach until one opens, then faded in", async () => {
     let seen = { closed: [] as string[], open: [] as string[], kept: false };
-    await renderPage("/chat", async (host) => {
+    await renderPage("/chat/ses_1", async (host) => {
       const shade = () => host.querySelector('button[aria-label="Close drawer"]');
-      await eventually(() => shade() !== null, 4_000, "the shade");
+      await eventually(() => shade() !== null && host.querySelector('button[aria-label="More for this conversation"]') !== null, 4_000, "the shade");
       const before = shade();
       const closed = before!.className.split(/\s+/);
-      (host.querySelector('button[aria-label^="History"]') as HTMLElement).click();
+      // The work notes, from the conversation's menu: the menu is drawn on the body.
+      (host.querySelector('button[aria-label="More for this conversation"]') as HTMLElement).click();
+      const notes = () => [...host.ownerDocument.body.querySelectorAll("button")].find((button) => button.textContent?.includes("Work notes"));
+      await eventually(() => notes() !== undefined, 2_000, "the menu");
+      notes()!.click();
       await eventually(() => shade()!.className.split(/\s+/).includes("opacity-100"), 2_000, "the shade to show");
       seen = { closed, open: shade()!.className.split(/\s+/), kept: shade() === before };
     });

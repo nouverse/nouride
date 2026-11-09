@@ -34,6 +34,7 @@ import type { Session } from "@nouride/shared";
 import { MAX_FILES_PER_REQUEST, refuseUpload } from "../uploads.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { CHAT_OFF, NOT_RUNNING } from "../plain.ts";
+import { askedBy, groupLog } from "../senders.ts";
 
 /** What a client sends. `sessionId` is what it has; everything else is optional. */
 interface SendBody {
@@ -605,6 +606,7 @@ export function registerChatRoutes(control: ControlApp, deps: ControlDeps): void
       jobs: runningJobs(deps, sessionId, turn),
       turn: {
         ...toTurnPayload({ ...turn, steps: [] }),
+        ...askedBy(deps, turn),
         steps: withDurations(steps, anchor?.at ?? turn.startedAt),
         /** The client's next `after`. Sent rather than inferred, so an empty batch is unambiguous. */
         cursor: window.length > 0 ? window[window.length - 1]!.seq : after,
@@ -875,12 +877,13 @@ function transcript(
      *
      * It also fixes the mirror-image problem: a message two agents answered produced two turn
      * records, and a client drawing each turn's prompt drew the same message twice. The bubble comes
-     * from here now and a turn carries only the reply, joined back by `messageId`.
+     * from here now and a turn carries only the reply, joined back by `messageId`. A group on a chat app reads its own
+     * log the same way, with each person under the name the dashboard knows them by (`senders.ts`).
      */
     const messages =
       isRoom && roomChat && deps.local && deps.roomMessages
         ? deps.roomMessages.forChat(deps.local.id, roomChat)
-        : [];
+        : groupLog(deps, session);
 
     /**
      * The earlier part, older than the oldest turn the log keeps — and **never for a room**.
@@ -959,6 +962,6 @@ function transcript(
         : null,
       earlier,
       messages,
-      turns: turns.map(toTurnPayload),
+      turns: turns.map((turn) => ({ ...toTurnPayload(turn), ...askedBy(deps, turn) })),
     };
   }

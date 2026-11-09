@@ -1531,9 +1531,18 @@ describe("which pages own the viewport", () => {
   });
 
   test("chat, Logs, Secrets and the LLM Gateway fill it", async () => {
-    for (const path of ["/chat", "/chat/ses_1", "/chat/room/room_1", "/logs", "/secrets", "/llm-gateway"]) {
+    for (const path of ["/chat", "/logs", "/secrets", "/llm-gateway"]) {
       const html = await renderPage(path);
       expect({ path, fills: html.includes(FILLS) }).toEqual({ path, fills: true });
+    }
+  });
+
+  // A conversation open on a phone is the whole screen, the tab bar stepped aside: only a tablet keeps the bar's room.
+  test("a conversation, a room and a group fill it, above the tab bar on a tablet only", async () => {
+    const PHONE_CHAT = '<main class="flex min-h-0 flex-1 flex-col overflow-hidden *:animate-fade md:max-lg:pb-[calc(4.75rem+env(safe-area-inset-bottom))]">';
+    for (const path of ["/chat/ses_1", "/chat/room/room_1", "/chat/group/telegram/-100200", "/chat?agent=nouva"]) {
+      const html = await renderPage(path);
+      expect({ path, fills: html.includes(PHONE_CHAT) }).toEqual({ path, fills: true });
     }
   });
 });
@@ -1741,22 +1750,24 @@ describe("Groups", () => {
 
 /** The chat's work notes (0.7.26): a conversation's header counts the tasks and opens them; a new chat and a room have none. */
 describe("the chat's work notes", () => {
-  const toggle = (host: HTMLElement) => host.querySelector<HTMLButtonElement>('button[aria-label^="Work notes"]');
+  const menu = (host: HTMLElement) => host.querySelector<HTMLButtonElement>('button[aria-label="More for this conversation"]');
+  /** The menu is drawn on the body, outside the page's host. */
+  const item = (host: HTMLElement) => [...host.ownerDocument.body.querySelectorAll("button")].find((button) => button.textContent?.includes("ork notes"));
   const drawer = (host: HTMLElement) => host.querySelector<HTMLElement>('aside[aria-label="Work notes"]')!;
 
-  test("the toggle counts the tasks and opens them beside the conversation, with Edit for an admin — the history drawer closes it", async () => {
+  test("the conversation's menu counts the tasks and opens them beside the conversation, with Edit for an admin", async () => {
     const seen: Record<string, string | boolean> = {};
     await renderPage("/chat/ses_1", async (host) => {
-      await eventually(() => toggle(host) !== null, 2_000, "the toggle");
-      seen.label = toggle(host)!.getAttribute("aria-label") ?? "";
+      await eventually(() => menu(host) !== null, 2_000, "the menu");
       seen.inertClosed = drawer(host).hasAttribute("inert");
-      toggle(host)!.click();
-      await eventually(() => toggle(host)!.getAttribute("aria-expanded") === "true" && !drawer(host).hasAttribute("inert"), 2_000, "the drawer to open");
+      menu(host)!.click();
+      await eventually(() => item(host) !== undefined, 2_000, "the menu open");
+      seen.label = item(host)!.textContent?.trim() ?? "";
+      item(host)!.click();
+      await eventually(() => !drawer(host).hasAttribute("inert"), 2_000, "the drawer to open");
       seen.opened = drawer(host).textContent ?? "";
-      (host.querySelector('button[title="Show or hide past conversations"]') as HTMLElement).click();
-      await eventually(() => toggle(host)!.getAttribute("aria-expanded") === "false", 2_000, "the history drawer to take its place");
     });
-    expect(seen.label).toBe("Work notes, 1 task");
+    expect(seen.label).toBe("Work notes · 1 task");
     expect(seen.inertClosed).toBe(true);
     for (const words of ["Clean the build", "Free space on the build disk.", "2 of 4 done", "Edit"]) expect(seen.opened).toContain(words);
   });

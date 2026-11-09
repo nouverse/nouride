@@ -77,11 +77,22 @@ const STATUS = {
   pendingApprovals: 1,
 };
 
+/** Who has talked to whom: Nouva has a conversation to carry on, the rest none yet. */
+const CHAT_LIST = {
+  agents: [
+    { agentId: "nouva", sessionId: "ses_nouva_newest", at: 1, last: { from: "agent", name: "nouva", text: "done" }, working: false, helpers: 0 },
+    { agentId: "wren", working: false, helpers: 0 },
+  ],
+  rooms: [],
+  groups: [],
+};
+
 function serve(status: unknown = STATUS): { posted: { path: string; body: unknown }[] } {
   const posted: { path: string; body: unknown }[] = [];
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const path = new URL(String(input), "http://localhost").pathname;
     if (path === "/api/control/status") return json(status);
+    if (path === "/api/control/chat-list") return json(CHAT_LIST);
     if (path === "/api/control/auth/me") return json({ id: "u1", username: "mira", role: "admin" });
     if (init?.method === "POST") {
       posted.push({ path, body: JSON.parse(String(init.body ?? "{}")) });
@@ -140,9 +151,12 @@ describe("the Office", () => {
       // Its card wears the orchestrator's badge too (0.8.15); Wren's, below, does not.
       const card = () => host.querySelector("aside")?.textContent ?? "";
       expect(card()).toContain("orchestrator");
-      // Open chat starts a chat with the cat that was picked: it opened `/chat`, and that chat was the orchestrator's.
-      (host.querySelector('button[aria-label="Wren, waiting for you"]') as HTMLButtonElement).click();
+      // Open chat carries on the cat's newest conversation, as its row in the chat list does: it started a new one every
+      // time, and the conversation the person was in was left behind.
       const openChat = () => [...host.querySelectorAll("a")].find((link) => (link.textContent ?? "").includes("Open chat"));
+      await eventually(() => (openChat()?.getAttribute("href") ?? "").endsWith("/chat/ses_nouva_newest"), 2_000, "Nouva's newest conversation");
+      // One nobody has talked to starts a chat with the cat that was picked: `/chat` alone was the orchestrator's.
+      (host.querySelector('button[aria-label="Wren, waiting for you"]') as HTMLButtonElement).click();
       await eventually(() => (openChat()?.getAttribute("href") ?? "").includes("agent=wren"), 2_000, "Wren's Open chat");
       expect(openChat()!.getAttribute("href")).toMatch(/\/chat\/?\?agent=wren$/);
       expect(card()).not.toContain("orchestrator");

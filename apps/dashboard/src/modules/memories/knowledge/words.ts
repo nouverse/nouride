@@ -8,12 +8,7 @@
 
 import type { KnowledgeDocument, KnowledgeReaders, KnowledgeSection } from "@nouride/wire";
 import { ago } from "@/commons/lib/format";
-
-/** "Dina", "Dina and Kak Sam", "Dina, Kak Sam and Raka". */
-export function listed(names: readonly string[]): string {
-  if (names.length <= 1) return names[0] ?? "";
-  return `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
-}
+import { listed } from "@/commons/lib/listed";
 
 /** How the page names who a collection's settings name. */
 export interface Names {

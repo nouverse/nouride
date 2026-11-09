@@ -10,7 +10,7 @@
 
 import { afterEach, describe, expect, test } from "bun:test";
 import type { MessageEnvelope } from "@nouride/shared";
-import { frontDeskFor } from "@/modules/router/front-desk.ts";
+import { frontDeskFor, unaddressedFallback } from "@/modules/router/front-desk.ts";
 import { envelope as envelopeAt, FakeGateway } from "../helpers.ts";
 import { pipelineBench } from "../pipeline-bench.ts";
 
@@ -158,5 +158,20 @@ describe("who sits at the desk", () => {
   test("nobody in a room whose members do not include the orchestrator", () => {
     expect(frontDeskFor({ ...base, members: ["nouva", "nero"] })).toBeUndefined();
     expect(frontDeskFor({ ...base, members: ["nouva", "nox"] })).toBe("nox");
+  });
+});
+
+describe("the last fallback, where an unaddressed message may be answered", () => {
+  test("a chat with no member list — every platform chat — keeps the orchestrator, or nobody without one", () => {
+    expect(unaddressedFallback("nox", null)).toBe("nox");
+    expect(unaddressedFallback(undefined, null)).toBeUndefined();
+  });
+
+  test("in a room, the orchestrator only as a member; a room of one, its member; otherwise nobody", () => {
+    expect(unaddressedFallback("nox", ["nox", "nero"])).toBe("nox");
+    expect(unaddressedFallback("nox", ["nero"])).toBe("nero");
+    expect(unaddressedFallback(undefined, ["nero"])).toBe("nero");
+    expect(unaddressedFallback("nox", ["nouva", "nero"])).toBeUndefined();
+    expect(unaddressedFallback("nox", [])).toBeUndefined();
   });
 });

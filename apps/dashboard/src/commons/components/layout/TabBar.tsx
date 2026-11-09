@@ -14,18 +14,21 @@ import { cn } from "@/commons/lib/utils";
 
 /** How far the bar reaches up from the screen's foot: what a page or a composer stays above. */
 export const TAB_BAR_SPACE = "max-lg:pb-[calc(4.75rem+env(safe-area-inset-bottom))]";
+/** The same while a conversation is the whole of a phone's screen and the bar steps aside: only a tablet keeps it. */
+export const PHONE_CHAT_SPACE = "md:max-lg:pb-[calc(4.75rem+env(safe-area-inset-bottom))]";
 
 const TAB = "relative flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-2xl text-xs font-medium transition-colors active:scale-95";
 
-export function TabBar({ pathname, more, onMore }: { pathname: string; more: boolean; onMore: () => void }) {
+/** `phoneChat`: a conversation is open on a phone, the whole screen with its own way back, so the bar is not drawn there. */
+export function TabBar({ pathname, more, onMore, phoneChat = false }: { pathname: string; more: boolean; onMore: () => void; phoneChat?: boolean }) {
   const { approvals, missions } = useNeedsYou();
   const waiting = approvals + missions;
   return (
     <>
-    <div aria-hidden="true" className="bg-app-foot pointer-events-none fixed inset-x-0 bottom-0 z-40 h-[calc(2.75rem+env(safe-area-inset-bottom))] lg:hidden" />
+    <div aria-hidden="true" className={cn("bg-app-foot pointer-events-none fixed inset-x-0 bottom-0 z-40 h-[calc(2.75rem+env(safe-area-inset-bottom))] lg:hidden", phoneChat && "max-md:hidden")} />
     <nav
       aria-label="Tabs"
-      className="fixed inset-x-3 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] z-40 grid grid-cols-5 gap-1 rounded-[22px] border border-base-content/[0.08] bg-base-100 p-1.5 shadow-soft lg:hidden"
+      className={cn("fixed inset-x-3 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] z-40 grid grid-cols-5 gap-1 rounded-[22px] border border-base-content/[0.08] bg-base-100 p-1.5 shadow-soft lg:hidden", phoneChat && "max-md:hidden")}
     >
       {DAILY.map((item) => {
         const current = !more && isCurrent(item, pathname);

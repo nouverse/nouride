@@ -8,6 +8,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { createElement } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderToString } from "react-dom/server";
 import { answersAnEdit, saidAsDrawn } from "../src/commons/lib/turn-display.ts";
 import { TurnView } from "../src/modules/chat/components/Turn.tsx";
@@ -26,7 +27,8 @@ const turn = (extra: Partial<ChatTurn> = {}): ChatTurn => ({
   ...extra,
 });
 
-const drawn = (value: ChatTurn) => renderToString(createElement(TurnView, { turn: value, sessionId: "s1" }));
+// A reply reads its agent's face from the status query: a client with nothing in it draws the column without one.
+const drawn = (value: ChatTurn) => renderToString(createElement(QueryClientProvider, { client: new QueryClient() }, createElement(TurnView, { turn: value, sessionId: "s1" })));
 
 describe("is this an edit", () => {
   test("a turn whose cause is a person's edit is one — edited while it waited or after it was answered", () => {

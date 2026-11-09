@@ -10,7 +10,7 @@ import { join } from "node:path";
 import { answer, renderPage, type, useMountHarness } from "./mount-harness.ts";
 import { eventually } from "./wait.ts";
 import { greetingAt } from "@/modules/home/components/Hero";
-import { doingNow } from "@/modules/home/components/YourAgents";
+import { doingNow } from "@/commons/lib/agents";
 import { summaryLine } from "@/modules/home/index.page";
 import type { AgentSummary } from "@nouride/wire";
 

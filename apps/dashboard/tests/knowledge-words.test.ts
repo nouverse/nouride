@@ -7,7 +7,8 @@
 import { describe, expect, test } from "bun:test";
 import { readersOf } from "@/modules/memories/knowledge/collection-form";
 import { addedLine } from "@/modules/memories/knowledge/uploads";
-import { aboutLine, agentsLine, countsLine, groupKey, installMessage, listed, pagesLine, readersLine, statusOf, type Names } from "@/modules/memories/knowledge/words";
+import { listed } from "@/commons/lib/listed";
+import { aboutLine, agentsLine, countsLine, groupKey, installMessage, pagesLine, readersLine, statusOf, type Names } from "@/modules/memories/knowledge/words";
 
 const NAMES: Names = {
   person: (key) => ({ gading: "Gading", sam: "Kak Sam", raka: "Raka" })[key] ?? key,

@@ -6,7 +6,7 @@
 import { Link, Outlet, useMatches, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, LogOut, Moon, Sun, X } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import { HOME_APP_BACK, inHomeApp } from "@/commons/lib/home-app";
 import { ReconnectingBanner, ReconnectingScreen, RestartedToast, RestartPendingBar } from "./Reconnecting";
@@ -19,15 +19,19 @@ import { useSignOut } from "@/commons/components/layout/sign-out";
 import { gatewayPage } from "@/commons/lib/bundled-gateway";
 import { isPairedBox } from "@/commons/lib/api.appliance";
 import { PAGE_BOTTOM } from "@/commons/components/ui/ScrollCard";
-import { SidebarNav } from "@/commons/components/layout/nav";
-import { SidebarVersion } from "@/commons/components/layout/SidebarVersion";
-import { BoxCard } from "@/commons/components/layout/BoxCard";
-import { TAB_BAR_SPACE, TabBar } from "@/commons/components/layout/TabBar";
+import { Sidebar } from "@/commons/components/layout/Sidebar";
+import { PHONE_CHAT_SPACE, TAB_BAR_SPACE, TabBar } from "@/commons/components/layout/TabBar";
+import { CompactSidebar } from "@/commons/components/layout/CompactSidebar";
+import { isBoolean, useKept } from "@/commons/hooks/use-kept";
+import { chatOpen, onChats } from "@/commons/lib/chat-place";
 import { SectionTabs } from "@/commons/components/layout/SectionTabs";
 import { SettingsBack } from "@/commons/components/layout/SettingsBack";
 import { Mascot } from "@/commons/components/brand/Mascot";
 import { useNeedsYou } from "@/commons/hooks/use-needs-you";
 import { cn } from "@/commons/lib/utils";
+
+/** Where this browser keeps whether the menu is expanded beside Chats. */
+const CHAT_MENU_KEY = "nouride-chat-menu-open";
 
 /** The browser tab says how many things wait for you, so a tab in the background still tells you. */
 function useTitle(total: number) {
@@ -70,6 +74,8 @@ export function RootLayout() {
   const [theme, toggleTheme] = useTheme();
   /** More, on a phone: the menu's other pages, as a sheet that slides up over the page. */
   const [moreOpen, setMoreOpen] = useState(false);
+  /** The menu expanded beside Chats, where it is folded to icons unless this browser chose otherwise (`CompactSidebar`). */
+  const [menuOpen, setMenuOpen] = useKept(CHAT_MENU_KEY, false, isBoolean);
   const { total } = useNeedsYou();
   useTitle(total);
   // Whether this is a paired Box decides whether My Box exists (see `NavItem.boxOnly`). Stale for a
@@ -123,57 +129,31 @@ export function RootLayout() {
   }
 
   const where = { admin: isAdmin(gate.principal), onBox, hostsGateway: gatewayPage(gate.setup) };
-  const person = gate.principal?.user;
-  const label = person?.displayName?.trim() ?? "";
+  // On Chats the menu folds to its icons from a laptop up, unless it was expanded there; on a phone a conversation is
+  // the whole screen (`chat-place.ts`).
+  const chats = onChats(pathname);
+  const compact = chats && !menuOpen;
+  const phoneChat = chatOpen(pathname, search);
 
   const sidebar = (
-    <div className="flex h-full w-full flex-col lg:w-64">
-      <div className="flex h-16 shrink-0 items-center justify-between px-5">
-        <Link to="/" className="group flex items-center gap-2.5">
-          <Mascot pose="head" decorative className="w-9 transition-transform duration-150 group-active:scale-95" />
-          <div className="leading-tight">
-            <p className="font-display text-lg font-medium tracking-tight text-base-content">Nouride</p>
-            <SidebarVersion />
-          </div>
-        </Link>
-        <button
-          type="button"
-          className="btn btn-ghost btn-square size-11 text-base-content/70 hover:text-base-content lg:hidden"
-          onClick={() => setMoreOpen(false)}
-          aria-label="Close menu"
-        >
-          <X size={18} />
-        </button>
-      </div>
-
-      <SidebarNav pathname={pathname} where={where} />
-
-      <div className="shrink-0 space-y-2 p-3">
-        <BoxCard />
-        <div className="flex items-center gap-2 px-1">
-          <span className="grid size-8 shrink-0 place-items-center rounded-full bg-secondary/10 text-xs font-bold text-secondary">
-            {(label || gate.principal?.actor || "?").slice(0, 1).toUpperCase()}
-          </span>
-          <div className="min-w-0 flex-1 leading-tight">
-            <p className="truncate text-xs font-semibold text-base-content">{label || gate.principal?.actor}</p>
-            <p className="text-xs font-medium capitalize text-base-content/65">{gate.principal?.role}</p>
-          </div>
-          <button type="button" className="btn btn-ghost btn-square size-10 text-base-content/70 hover:text-base-content" onClick={toggleTheme} aria-label={theme === "dark" ? "Switch to the day look" : "Switch to the night look"} title={theme === "dark" ? "Day look" : "Night look"}>
-            {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
-          <button type="button" className="btn btn-ghost btn-square size-10 text-base-content/70 hover:bg-error/10 hover:text-error" onClick={signOut} aria-label="Sign out" title="Sign out">
-            <LogOut size={16} />
-          </button>
-          {signOutDialog}
-        </div>
-      </div>
-    </div>
+    <Sidebar
+      pathname={pathname}
+      where={where}
+      principal={gate.principal}
+      theme={theme}
+      toggleTheme={toggleTheme}
+      signOut={signOut}
+      onClose={() => setMoreOpen(false)}
+      {...(chats ? { onFold: () => setMenuOpen(false) } : {})}
+    />
   );
 
   return (
     /* The page's edges kept clear of a phone's notch, side and top, with `viewport-fit=cover` in index.html: on a
        desktop each inset is 0. The bottom is each page's own (`PAGE_BOTTOM`), past the tab bar that floats there. */
     <div className="bg-app flex h-screen h-[100dvh] flex-col overflow-hidden pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] text-base-content selection:bg-secondary/20">
+      {/* Beside the menu, not in it: folded on Chats, the menu that holds Sign out on a phone is not drawn on a laptop. */}
+      {signOutDialog}
       {/* The sidebar, drawn once: fixed beside the page from a laptop's width up, and on a phone More, a sheet that slides
           up over a shade that fades, and slides back down. It stays drawn so it can be seen to go: drawn only while
           open, it came and went at once. Hidden once down (`invisible`), it and the shade take no click and no focus.
@@ -194,12 +174,21 @@ export function RootLayout() {
           moreOpen ? "visible translate-y-0" : "invisible translate-y-full",
         )}
       >
-        {sidebar}
+        {compact ? (
+          <>
+            <div className="hidden h-full lg:flex">
+              <CompactSidebar pathname={pathname} where={where} onExpand={() => setMenuOpen(true)} theme={theme} toggleTheme={toggleTheme} signOut={signOut} />
+            </div>
+            <div className="contents lg:hidden">{sidebar}</div>
+          </>
+        ) : (
+          sidebar
+        )}
       </div>
 
-      <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden lg:pl-64">
+      <div className={cn("flex h-full min-h-0 flex-1 flex-col overflow-hidden", compact ? "lg:pl-[5.5rem]" : "lg:pl-64")}>
         {/* A phone's header: the name, and the way back to Nouride Home inside its app. The rest is the tab bar's. */}
-        <header className="z-20 flex h-[calc(3.25rem+env(safe-area-inset-top))] shrink-0 items-center gap-2 px-3 pt-[env(safe-area-inset-top)] lg:hidden">
+        <header className={cn("z-20 flex h-[calc(3.25rem+env(safe-area-inset-top))] shrink-0 items-center gap-2 px-3 pt-[env(safe-area-inset-top)] lg:hidden", phoneChat && "max-md:hidden")}>
           {inHomeApp() && (
             <a href={HOME_APP_BACK} className="btn btn-ghost btn-square -mr-1 size-11 text-secondary active:scale-90 transition-transform" aria-label="Back to Nouride Home">
               <ChevronLeft size={22} />
@@ -222,7 +211,7 @@ export function RootLayout() {
             same one, not moved, while it stays. */}
         {ownsViewport ? (
           /* Above the tab bar on a phone: a chat's composer sits on the page's foot. */
-          <main className={`flex min-h-0 flex-1 flex-col overflow-hidden *:animate-fade ${TAB_BAR_SPACE}`}>
+          <main className={cn("flex min-h-0 flex-1 flex-col overflow-hidden *:animate-fade", phoneChat ? PHONE_CHAT_SPACE : TAB_BAR_SPACE)}>
             <SettingsBack pathname={pathname} className="mx-4 mt-2 sm:mx-6 lg:mx-8 lg:mt-4" />
             <Outlet />
           </main>
@@ -249,7 +238,7 @@ export function RootLayout() {
         )}
       </div>
 
-      <TabBar pathname={pathname} more={moreOpen} onMore={() => setMoreOpen((open) => !open)} />
+      <TabBar pathname={pathname} more={moreOpen} onMore={() => setMoreOpen((open) => !open)} phoneChat={phoneChat} />
     </div>
   );
 }
