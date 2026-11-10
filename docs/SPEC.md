@@ -531,7 +531,7 @@ the `fallbacks` line to write (`packages/persona/src/fallbacks.ts`).
 
 **A turn its provider ended** is tried again once (`pipeline/provider-resume.ts`): ~3 min later, plus up to 1 min so a burst of failed chats spreads out, carrying on from where it stopped. Its error reply ends "…I'll try again in a few minutes, or say "continue"."
 Not when a turn has started in that chat since (the person moved on), for a cron run, for a turn that was itself a resumption, or for a failure waiting cannot fix: an expired or refused key, an empty balance, a bad request — the operator's to fix.
-The timer is in memory; the promise is the turn's stored reply. At boot, a turn that failed within the timer's window (4 min) with that reply, and was not taken up yet (`resume:<turn>`), is set again from when it failed (`providerResumesOwed`, `boot/durable.ts`). "Continue" still picks the turn up.
+The timer is in memory; the promise is a mark on the turn's record (`turn_records.retry_promised`), written as the turn tells its person. At boot, a turn that failed within the timer's window (4 min) with that mark, and was not taken up yet (`resume:<turn>`), is set again from when it failed (`providerResumesOwed`, `boot/durable.ts`). The mark, not the reply's last sentence, which the boot used to read: a promise made before that sentence was reworded would not have been found. A turn closed before the mark existed is still found by the sentence it was told in, kept as it was for that (`RETRY_PROMISE_BEFORE_THE_MARK`). "Continue" still picks the turn up.
 
 ### 6.3 System Prompt Builder
 
@@ -2421,6 +2421,7 @@ CREATE TABLE inbox (
 );
 
 -- turn_records.delivered_at: when the platform accepted the reply, NULL until then.
+-- turn_records.retry_promised: 1 when the reply told its person the turn will be tried again, NULL otherwise.
 ```
 
 ---

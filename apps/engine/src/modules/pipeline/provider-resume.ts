@@ -13,14 +13,17 @@
  * - **Not if somebody moved on**: a turn started in the chat since the failure — the person said something —
  *   and it is theirs again.
  *
- * The timer is in memory, and the promise is not: the person was told "I'll try again in a few minutes", and that is
- * the turn's stored reply. A restart inside those minutes used to drop it, with the turn closed `failed` where the
+ * The timer is in memory, and the promise is not: the person was told "I'll try again in a few minutes", and the
+ * turn's record says so. A restart inside those minutes used to drop it, with the turn closed `failed` where the
  * boot's own resume looks only at `interrupted` ones. So at boot the turns that failed within the timer's window and
  * promised it are set again, from when they failed (`providerResumesOwed`) — once each, by the same mark.
+ *
+ * The promise is read off the record (`FinishTurn.retryPromised`), not off the reply's last sentence: found by the
+ * sentence, a promise made before the sentence was reworded was never found again.
  */
 
 import { createLogger } from "@nouride/shared";
-import { promisedRetry } from "@/modules/turns/close.ts";
+import { promisedRetryBeforeTheMark } from "@/modules/turns/close.ts";
 import type { TurnRecord, TurnsPort } from "@/modules/turns/turns.store.ts";
 import { isResumption, resumptionId } from "./restart-resume.ts";
 
@@ -74,9 +77,15 @@ export function scheduleProviderResume(
 
 /**
  * The turns a restart left with a promise to try again: failed within the timer's window — the most it waits — with
- * the promise as their reply, and not taken up already, by the last process's timer or a boot before this one.
+ * the promise marked on their record, and not taken up already, by the last process's timer or a boot before this one.
+ * And a turn closed before a record carried the mark, by the words it was told in: the restart that brings the mark
+ * is the one that meets it.
  */
-export function providerResumesOwed(turns: Pick<TurnsPort, "failedSince" | "startedFor">, now: number): TurnRecord[] {
+export function providerResumesOwed(turns: Pick<TurnsPort, "retryPromisedSince" | "failedSince" | "startedFor">, now: number): TurnRecord[] {
   const since = now - PROVIDER_RESUME_MS - SPREAD_MS;
-  return turns.failedSince(since).filter((turn) => promisedRetry(turn.reply) && !turns.startedFor(resumptionId(turn.id), since));
+  const marked = new Set(turns.retryPromisedSince(since).map((turn) => turn.id));
+  return turns
+    .failedSince(since)
+    .filter((turn) => marked.has(turn.id) || promisedRetryBeforeTheMark(turn.reply))
+    .filter((turn) => !turns.startedFor(resumptionId(turn.id), since));
 }

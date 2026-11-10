@@ -67,7 +67,8 @@ export async function endEarly(
         : [input.message, keptSentence(ending)].filter(Boolean).join(" ");
   const status = input.cause.kind === "restart" ? "interrupted" : input.cause.kind === "error" ? "failed" : "cancelled";
   const closed = ctx.closeUnfinished(input, (ending) => {
-    input.close({ status, reply: told(ending), error: input.error });
+    // The promise as data on the turn, beside the words that make it: what the boot after a restart reads.
+    input.close({ status, reply: told(ending), error: input.error, ...(retrying ? { retryPromised: true as const } : {}) });
     // Owed until it lands, like an answer — after `/stop` nothing is sent, so nothing is owed.
     if (input.cause.kind !== "stopped") ctx.awaitDelivery(input.turnId);
   });

@@ -163,7 +163,7 @@ export function resumeAfterBoot(input: {
   startedAt: number;
   pipeline: Pick<Pipeline, "inbox" | "resumeTurn" | "resumeLater">;
   /** For the turns a restart cut off, and those a provider ended, which are taken up again — `pipeline/restart-resume.ts`. */
-  turns: Pick<TurnsPort, "get" | "interruptedSince" | "startedFor" | "failedSince">;
+  turns: Pick<TurnsPort, "get" | "interruptedSince" | "startedFor" | "failedSince" | "retryPromisedSince">;
   notifier: Pick<Notifier, "toChat">;
   chatEvents: Pick<ChatEventsPort, "record">;
   /** The approvals a turn taken up was cut off waiting on, which the restart kept — said in the words that take it up. */

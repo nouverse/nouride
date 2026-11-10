@@ -174,8 +174,19 @@ export function keptSentence(closed: ClosedTurn): string | null {
   return closed.done.length + closed.cut.length > 0 ? `What I did so far is kept: say "continue" and I will pick up from there.` : null;
 }
 
-/** What a turn its provider ended promises its person, last in its reply — `pipeline/provider-resume.ts`. */
+/**
+ * What a turn its provider ended promises its person, last in its reply — `pipeline/provider-resume.ts`. Only said:
+ * that a turn promised it is a mark on its record (`FinishTurn.retryPromised`), so these words are free to change.
+ */
 const RETRY_PROMISE = `I'll try again in a few minutes, or say "continue".`;
+
+/**
+ * The words that promise was made in before a turn's record carried the mark, and the only trace of one made then.
+ * Never reworded, whatever `RETRY_PROMISE` becomes: a turn that failed under them minutes before the update that
+ * brought the mark is found by them at that update's own restart, and by nothing else. The next minor deletes this
+ * and its reader: a promise is kept within the few minutes its timer waits, so none made then is still owed.
+ */
+const RETRY_PROMISE_BEFORE_THE_MARK = `I'll try again in a few minutes, or say "continue".`;
 
 /** The same, for a turn its provider ended that will be tried again by itself — `pipeline/provider-resume.ts`. */
 export function retrySentence(closed: ClosedTurn): string {
@@ -183,9 +194,9 @@ export function retrySentence(closed: ClosedTurn): string {
 }
 
 /**
- * Whether a turn's stored reply made that promise. Read at boot: the timer that kept it lived in the process a restart
- * ended, and the reply is what the person was told.
+ * Whether a turn's stored reply made that promise in the words it had before the record carried a mark. Read at boot,
+ * for a turn the mark does not find: the timer that kept the promise lived in the process a restart ended.
  */
-export function promisedRetry(reply: string): boolean {
-  return reply.endsWith(RETRY_PROMISE);
+export function promisedRetryBeforeTheMark(reply: string): boolean {
+  return reply.endsWith(RETRY_PROMISE_BEFORE_THE_MARK);
 }
