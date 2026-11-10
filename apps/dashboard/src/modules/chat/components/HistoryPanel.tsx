@@ -17,7 +17,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { Ellipsis, Loader2, Monitor, Plus, Trash2 } from "lucide-react";
 import type { ChatListPayload, SessionSummary } from "@nouride/wire";
 import { ConversationRow, ListHeading } from "@/commons/components/chat/ConversationRow";
-import { PlatformRowTag } from "@/commons/components/chat/PlatformBadge";
+import { PlatformTag } from "@/commons/components/chat/PlatformBadge";
 import { useConfirm } from "@/commons/components/ui/confirm";
 import { Drawer, DrawerHead } from "@/commons/components/ui/Drawer";
 import { DropdownMenu } from "@/commons/components/ui/DropdownMenu";
@@ -115,7 +115,7 @@ function HistoryBody({ agentId, agentName, current, list, onClose }: { agentId: 
                     key={session.id}
                     link={{ to: "/chat/$sessionId", params: { sessionId: session.id } }}
                     name={session.title?.trim() || "A conversation"}
-                    tag={local ? undefined : <PlatformRowTag platform={session.gatewayId} />}
+                    tag={local ? undefined : <PlatformTag platform={session.gatewayId} size="row" />}
                     time={shortWhen(session.updatedAt)}
                     line={
                       session.running ? (

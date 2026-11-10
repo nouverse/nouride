@@ -62,7 +62,7 @@ export function AgentHeader({
           <h2 className="min-w-0 truncate font-display text-lg font-medium tracking-tight text-base-content">{name}</h2>
           {readOnly ? (
             <span className="hidden shrink-0 items-center gap-1.5 sm:flex">
-              <PlatformTag>{`${platformName(readOnly.platform)} chat`}</PlatformTag>
+              <PlatformTag platform={readOnly.platform}>{`${platformName(readOnly.platform)} chat`}</PlatformTag>
               <PlatformTag>Read-only</PlatformTag>
             </span>
           ) : null}

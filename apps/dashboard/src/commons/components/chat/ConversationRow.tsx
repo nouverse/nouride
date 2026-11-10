@@ -105,7 +105,10 @@ export function ConversationRow({
   );
 }
 
-/** A small word after a row's name, the same pill everywhere: what the row is, never a count. */
+/**
+ * A small word after a row's name, the same pill everywhere: what the row is, never a count. An app's name is
+ * `PlatformTag`, this size in the app's colour.
+ */
 export function RowTag({ children }: { children: ReactNode }) {
   return <span className="shrink-0 rounded-full bg-secondary/10 px-2 py-0.5 text-[10px] font-bold leading-none whitespace-nowrap text-secondary">{children}</span>;
 }

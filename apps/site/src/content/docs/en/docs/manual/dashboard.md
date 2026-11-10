@@ -303,9 +303,10 @@ The list has two halves, switched at its top:
   agent works, with how many helpers it has at work, and a dot marks a reply you have not read yet. Agents you have not
   talked to yet wait at the end, under **Not talked to yet**.
 - **Groups** is the groups your agents are in on Telegram, Discord and WhatsApp, one line per group even when several of
-  your agents' bots sit in it, each with its app's name, and the rooms you made in the dashboard. A chip per app narrows
-  the list to it, **Dashboard** to your rooms, and anything quiet for two weeks or more is folded into one line at the
-  end. A dot on **Groups** says a group heard something since you last looked.
+  your agents' bots sit in it, each with its app's name in that app's colour (WhatsApp green, Telegram blue, Discord
+  indigo), and the rooms you made in the dashboard. A chip per app narrows the list to it, **Dashboard** to your rooms,
+  and anything quiet for two weeks or more is folded into one line at the end. A dot on **Groups** says a group heard
+  something since you last looked.
 
 The **+** at the top starts a chat with an agent or makes a room, and the search finds a chat by its name or its last
 message.

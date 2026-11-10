@@ -1,7 +1,7 @@
 /**
  * The faces of a conversation with more than one agent in it, in the same tiles as one agent's (`AgentAvatar`): a room's
  * members stacked in one tile's square, a group's agents in a short row, and a group's own face, its initials. Which app
- * a group lives on is said in words beside its name (`PlatformRowTag`), not marked on its face.
+ * a group lives on is said in words beside its name (`PlatformTag`), not marked on its face.
  */
 
 import type { Look } from "@/commons/cat/look";
