@@ -8,10 +8,10 @@
  * asked in the background have too: work that may run past it cannot finish in one, and a mission's turns can. Each line
  * is said only where the agent holds what it names.
  *
- * And the machine under it. An agent was told how to hand work over and nothing of what the box could carry: the same
- * fan-out on a phone as on a server, and the limits met only as a refusal. Every figure in the machine's line was read
- * at boot or from the config, so the line is the same on every turn and stays in the cached part of the prompt; what is
- * running now is said on the message instead (`pipeline/messages.ts`).
+ * And the machine under it, with one rule for working in parallel. An agent was told how to hand work over and nothing
+ * of what the box could carry: the same fan-out on a phone as on a server, and the limits met only as a refusal. Every
+ * figure in the machine's line was read at boot or from the config, so the line is the same on every turn and stays in
+ * the cached part of the prompt; what is running now is said on the message instead (`pipeline/messages.ts`).
  */
 
 import { plural } from "@nouride/shared";
@@ -44,6 +44,13 @@ function machineLine({ ctx, toolNames }: HarnessView): string[] {
   return [`- **This machine** has ${machine.words}, shared by every agent on it.${limits.length ? ` At once: ${limits.join(", and ")}.` : ""}`];
 }
 
+/**
+ * One rule for working in parallel. No figure in it: how much a build takes is the project's, and the line above says
+ * what the machine has.
+ */
+const IN_PARALLEL =
+  "- **In parallel or in order**: parts that do not depend on each other run at once, and in the background where they are long; parts that need another's result run in order. Heavy commands (a build, a test suite, an install) are the exception on a small machine: each takes cores and memory from everything else on it, so run no more of them at once than the machine above carries, and one after another when in doubt.";
+
 export function renderWork(view: HarnessView): string[] {
   const { ctx, toolNames } = view;
   const delegates = toolNames.includes("delegate");
@@ -51,7 +58,7 @@ export function renderWork(view: HarnessView): string[] {
   const missions = ctx.harness.startsMissions === true;
   const background = (ctx.harness.backgroundHelpers ?? 0) > 0 && (delegates || asks);
   const hands = delegates || asks || missions;
-  // The machine matters to whoever can load it: a turn that hands work over, or runs commands itself.
+  // The machine and the rule matter to whoever can load it: a turn that hands work over, or runs commands itself.
   const loads = hands || toolNames.includes("exec");
   if (!loads) return [];
   const inBackground = [delegates && "`delegate` with `background: true` for yours", asks && "`ask_agent` with `background: true` for theirs"].filter(Boolean).join(", ");
@@ -71,5 +78,7 @@ export function renderWork(view: HarnessView): string[] {
           ...(missions ? [`  - ${MISSION_IS_FOR}${asks ? " `agent` names who does it when it is another agent's work." : ""}`] : []),
         ]
       : []),
+    // Only where the machine was said: the rule points at that line for what "small" means.
+    ...(ctx.harness.machine ? [IN_PARALLEL] : []),
   ];
 }

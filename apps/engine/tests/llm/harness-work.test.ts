@@ -5,7 +5,7 @@
  * and a mission is the hour a reply has. Each line is said only where the agent holds what it names.
  *
  * And the machine under it: its cores and memory and what this turn may have running on it at once, each figure handed
- * in as it was read. A limit is said only to a turn that can use it.
+ * in as it was read, with one rule for working in parallel. A limit is said only to a turn that can use it.
  */
 
 import { describe, expect, test } from "bun:test";
@@ -126,5 +126,33 @@ describe("the machine it runs on", () => {
     expect(harness(["read", "web_search"], { machine: BOX })).not.toContain("This machine");
     const unsaid = harness(["delegate", "exec"], { background: 2 });
     expect(unsaid).not.toContain("This machine");
+    expect(unsaid).not.toContain("In parallel or in order");
+  });
+});
+
+describe("working in parallel", () => {
+  const all = harness(["delegate", "ask_agent", "mission", "exec"], { missions: true, background: 4, machine: BOX });
+  const rule = all.split("\n").find((line) => line.startsWith("- **In parallel or in order**")) ?? "";
+
+  test("independent parts at once and in the background, dependent parts in order", () => {
+    expect(rule).toStartWith("- **In parallel or in order**: parts that do not depend on each other run at once, and in the background where they are long; parts that need another's result run in order.");
+  });
+
+  test("heavy commands are not stacked on a small machine, and the machine's own line is what small means", () => {
+    expect(rule).toEndWith(
+      "Heavy commands (a build, a test suite, an install) are the exception on a small machine: each takes cores and memory from everything else on it, so run no more of them at once than the machine above carries, and one after another when in doubt.",
+    );
+    // After the machine and the two questions, in the same block.
+    expect(all.indexOf("**This machine**")).toBeLessThan(all.indexOf("**Who does the work**"));
+    expect(all.indexOf("**Who does the work**")).toBeLessThan(all.indexOf("**In parallel or in order**"));
+    // No figure of its own: what a build takes is the project's, and the line above has the machine's.
+    expect(rule).not.toMatch(/\d/);
+  });
+
+  test("said once, to whoever can load the machine: an agent with a shell and nothing to hand work to, and a helper", () => {
+    expect(all.split("**In parallel or in order**")).toHaveLength(2);
+    expect(harness(["read", "exec"], { machine: BOX })).toContain(rule);
+    expect(harness(["read", "exec"], { helper: true, machine: BOX })).toContain(rule);
+    expect(harness(["read", "web_search"], { machine: BOX })).not.toContain("In parallel or in order");
   });
 });

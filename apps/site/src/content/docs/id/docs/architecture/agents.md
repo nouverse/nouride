@@ -431,14 +431,16 @@ dalam bahasamu. Dua helper dilaporkan satu per satu, masing-masing begitu selesa
 gak ditahan menunggu yang kedua.
 
 Agent diberi tahu kebiasaannya: satu helper untuk tugas yang lebih lama dari beberapa menit dan kurang
-dari sejam (riset lintas file atau host, build panjang, gladi migrasi) supaya ia tetap siaga untukmu; dua
-cuma untuk dua bagian yang saling lepas; kerja yang mungkin lewat dari sejam adalah urusan misi. Bukan
+dari sejam (riset lintas file atau host, build panjang, gladi migrasi) supaya ia tetap siaga untukmu; lebih
+dari satu cuma untuk bagian yang saling lepas; kerja yang mungkin lewat dari sejam adalah urusan misi. Bukan
 untuk jawaban cepat, dan bukan untuk hal yang sedang kamu tunggu sekarang.
 
 Agent juga diberi tahu mesin tempat ia jalan: jumlah core dan memorinya, seperti yang dibaca daemon waktu
 mulai, berapa helper yang boleh dijalankannya di latar belakang, dan berapa misi yang jalan bersamaan. Yang
 sedang jalan saat ini disebut di tiap pesan selama masih ada yang jalan, jadi ia bisa membedakan box yang
-lowong dari yang sibuk sebelum memulai yang baru.
+lowong dari yang sibuk sebelum memulai yang baru. Dan ia punya satu aturan untuk kerja paralel: bagian
+yang saling lepas dijalankan sekaligus, bagian yang butuh hasil bagian lain dijalankan berurutan, dan
+perintah berat (build, test suite) gak ditumpuk di mesin kecil.
 
 Helper yang ditunggu agent, tanpa `background`, untuk pertanyaan cepat: agent menunggu jawabannya paling
 lama 45 detik. Helper yang masih bekerja setelah itu lanjut di latar belakang, sama persis seperti kalau
