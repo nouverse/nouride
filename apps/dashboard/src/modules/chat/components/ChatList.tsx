@@ -46,6 +46,7 @@ export function ChatList({ data, open, className }: { data: ChatListData; open: 
   const [pinnedGroups] = usePinnedGroups();
   const seen = useSeen();
   const groups = data.list.data?.groups ?? [];
+  const rooms = data.list.data?.rooms ?? [];
   const view = useMemo(
     () => chatsView({ agents: data.agents, orchestrator: data.orchestrator, list: data.list.data, pinnedGroups, query, nameOf: data.nameOf }),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `nameOf` reads `agents`, which is here
@@ -91,7 +92,8 @@ export function ChatList({ data, open, className }: { data: ChatListData; open: 
               label: "Groups",
               after: (
                 <>
-                  {groups.length > 0 ? <Count n={groups.length} /> : null}
+                  {/* As many as Groups' All: the groups, and the rooms made here. */}
+                  {groups.length + rooms.length > 0 ? <Count n={groups.length + rooms.length} /> : null}
                   {tab !== "groups" && seen.groupsNew(latestGroup) ? <span role="img" aria-label="New activity" className="size-2 rounded-full bg-accent" /> : null}
                 </>
               ),
@@ -106,7 +108,7 @@ export function ChatList({ data, open, className }: { data: ChatListData; open: 
             <ListLoading count={5} />
           </div>
         ) : tab === "groups" ? (
-          <GroupsTab data={data} query={query} openGroup={open.group} seen={seen} />
+          <GroupsTab data={data} query={query} openRow={open.roomChatId ? `room:${open.roomChatId}` : open.group ? `group:${open.group}` : undefined} seen={seen} />
         ) : data.agents.length === 0 ? (
           <EmptyState icon={MessagesSquare} title="No agents yet" description="Make an agent on Agents, and you can talk to it here." />
         ) : !view.pinned && view.recent.length === 0 && view.untouched.length === 0 ? (

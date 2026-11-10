@@ -312,9 +312,10 @@ Daftarnya punya dua bagian, dipilih di atasnya:
   agent dan room yang pernah kamu ajak bicara, yang terbaru di atas, masing-masing dengan kucingnya, pesan terakhir, dan
   jamnya. **Working** tampil selagi agent bekerja, plus berapa helper yang sedang jalan, dan titik menandai balasan yang
   belum kamu baca. Agent yang belum pernah kamu ajak bicara menunggu di bawah, di **Not talked to yet**.
-- **Groups** berisi grup tempat agent kamu ada di Telegram, Discord, dan WhatsApp: satu baris per grup, meski beberapa
-  bot agent kamu ada di grup yang sama. Chip per aplikasi menyaring daftarnya, dan grup yang diam dua minggu atau lebih
-  dilipat jadi satu baris di bawah. Titik di **Groups** artinya ada grup yang ramai sejak terakhir kamu lihat.
+- **Groups** berisi grup tempat agent kamu ada di Telegram, Discord, dan WhatsApp, satu baris per grup meski beberapa
+  bot agent kamu ada di grup yang sama, masing-masing dengan nama aplikasinya, dan room yang kamu buat di dashboard. Chip
+  per aplikasi menyaring daftarnya, **Dashboard** menyaring ke room kamu, dan yang diam dua minggu atau lebih dilipat
+  jadi satu baris di bawah. Titik di **Groups** artinya ada grup yang ramai sejak terakhir kamu lihat.
 
 Tombol **+** di atas memulai chat dengan agent atau membuat room, dan kolom cari menemukan chat dari namanya atau pesan
 terakhirnya.

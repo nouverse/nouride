@@ -12,7 +12,7 @@ import { agentChatLink } from "@/commons/hooks/use-agent-chat";
 import { platformName } from "@/commons/lib/platform";
 import { shortWhen } from "@/commons/lib/when";
 import type { ChatListData } from "../hooks/use-chat-list";
-import { groupKey, lastLine, type ChatRow } from "../lib/chat-list";
+import { lastLine, type ChatRow } from "../lib/chat-list";
 
 /** "Working", and how many helpers are at it in the background. */
 export function workingWords(working: boolean, helpers: number): string | undefined {
@@ -63,7 +63,7 @@ function RoomRow({ room, data, current, unread }: { room: ChatListRoom; data: Ch
   );
 }
 
-export function GroupRow({ group, data, current, unread }: { group: ChatListGroup; data: ChatListData; current: boolean; unread: boolean }) {
+function GroupRow({ group, data, current, unread }: { group: ChatListGroup; data: ChatListData; current: boolean; unread: boolean }) {
   return (
     <ConversationRow
       link={{ to: "/chat/group/$platform/$chatId", params: { platform: group.platform, chatId: group.chatId } }}
@@ -86,6 +86,3 @@ export function ChatsRow({ row, data, current, unread }: { row: ChatRow; data: C
   if (row.kind === "room") return <RoomRow room={row.room} data={data} current={current} unread={unread} />;
   return <GroupRow group={row.group} data={data} current={current} unread={unread} />;
 }
-
-/** The key a group is pinned and marked by. */
-export const groupRowKey = (group: ChatListGroup) => `group:${groupKey(group)}`;

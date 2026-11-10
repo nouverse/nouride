@@ -5,8 +5,9 @@
  * mixed, newest first, because "what was I doing" does not care which kind of conversation the answer is; then the
  * agents nobody has talked to here yet, at the end and still reachable.
  *
- * Groups: the conversations agents are in on chat apps, one row per group, newest first, narrowed to one app by a chip
- * that counts it; a group quiet for two weeks or more folded into one row at the end.
+ * Groups: the conversations agents are in on chat apps, one row per group, and the rooms made here, newest first,
+ * narrowed by a chip that counts each — an app's, or the dashboard's for its rooms; one quiet for two weeks or more
+ * folded into one row at the end.
  */
 
 import type { AgentSummary, ChatListAgent, ChatListGroup, ChatListPayload, ChatListRoom } from "@nouride/wire";
@@ -75,33 +76,46 @@ export function chatsView(input: {
   return { pinned, recent, untouched };
 }
 
+/** The Groups tab's chip for the rooms made in the dashboard, after the apps'. */
+export const DASHBOARD = "dashboard";
+
+/** A row of Groups: a group on a chat app, or a room made here — the same rows, and keys, as Chats draws them. */
+export type GroupsRow = Extract<ChatRow, { kind: "room" | "group" }>;
+
 export interface GroupsView {
-  /** "All" and each app there is a group on, each with how many: only apps the list holds. */
+  /** "All", each app there is a group on, and the dashboard where it has rooms, each with how many. */
   chips: { value: string; label: string; count: number }[];
   /** Groups heard from in the last two weeks, newest first. */
-  active: ChatListGroup[];
+  active: GroupsRow[];
   /** The rest, newest first: folded into one row. */
-  quiet: ChatListGroup[];
+  quiet: GroupsRow[];
 }
 
 export function groupsView(
   groups: readonly ChatListGroup[],
+  rooms: readonly ChatListRoom[],
   input: { platform: string; query: string; now: number; nameOf: (agentId: string) => string; platformName: (platform: string) => string },
 ): GroupsView {
   const counts = new Map<string, number>();
   for (const group of groups) counts.set(group.platform, (counts.get(group.platform) ?? 0) + 1);
   const chips = [
-    { value: "all", label: "All", count: groups.length },
+    { value: "all", label: "All", count: groups.length + rooms.length },
     ...[...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([platform, count]) => ({ value: platform, label: input.platformName(platform), count })),
+    ...(rooms.length > 0 ? [{ value: DASHBOARD, label: "Dashboard", count: rooms.length }] : []),
   ];
-  const shown = groups
-    .filter((group) => input.platform === "all" || group.platform === input.platform)
+  const all = input.platform === "all";
+  const groupRows = groups
+    .filter((group) => all || group.platform === input.platform)
     .filter((group) => finds(input.query, [group.name, group.last?.text, group.last?.name, ...group.agents.map(input.nameOf)]))
-    .sort((a, b) => b.at - a.at);
+    .map((group): GroupsRow => ({ kind: "group", key: `group:${groupKey(group)}`, at: group.at, group }));
+  const roomRows = (all || input.platform === DASHBOARD ? rooms : [])
+    .filter((room) => finds(input.query, [room.title, room.last?.text, room.last?.name, ...room.members.map(input.nameOf), ...room.members]))
+    .map((room): GroupsRow => ({ kind: "room", key: `room:${room.chatId}`, at: room.at, room }));
+  const shown = [...groupRows, ...roomRows].sort((a, b) => b.at - a.at || a.key.localeCompare(b.key));
   return {
     chips,
-    active: shown.filter((group) => input.now - group.at < QUIET_AFTER_MS),
-    quiet: shown.filter((group) => input.now - group.at >= QUIET_AFTER_MS),
+    active: shown.filter((row) => input.now - row.at < QUIET_AFTER_MS),
+    quiet: shown.filter((row) => input.now - row.at >= QUIET_AFTER_MS),
   };
 }
 

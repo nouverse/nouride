@@ -66,7 +66,7 @@ describe("the list beside the chat", () => {
     expect(hrefs.room).toBe("/dashboard/chat/room/room_1");
   });
 
-  test("Groups: one row each, newest first, a chip per app with its count, and the quiet ones folded until asked", async () => {
+  test("Groups: one row each and the rooms made here, newest first, a chip per app and the dashboard's, the quiet ones folded", async () => {
     answer(list);
     const seen: Record<string, unknown> = {};
     await renderPage("/chat", async (host) => {
@@ -74,6 +74,7 @@ describe("the list beside the chat", () => {
       byText(aside(host)!, "Groups")!.click();
       await eventually(() => aside(host)!.textContent?.includes("Nouverse Office") === true, 2_000, "Groups");
       seen.rows = rowNames(host);
+      seen.switch = byText(aside(host)!, "Groups")!.textContent;
       seen.chips = [...aside(host)!.querySelectorAll('[role="group"] button')].map((chip) => chip.textContent);
       byText(aside(host)!, "1 quiet group")!.click();
       await eventually(() => rowNames(host).includes("#bookmarks"), 2_000, "the quiet group");
@@ -81,11 +82,23 @@ describe("the list beside the chat", () => {
       byText(aside(host)!, "Discord")!.click();
       await eventually(() => !rowNames(host).includes("Nouverse Office"), 2_000, "Discord only");
       seen.discord = rowNames(host);
+      byText(aside(host)!, "Dashboard")!.click();
+      await eventually(() => rowNames(host).includes("Harness research") && !rowNames(host).includes("#general"), 2_000, "the dashboard's rooms");
+      seen.dashboard = rowNames(host);
+      const room = [...aside(host)!.querySelectorAll("a")].find((a) => a.textContent?.includes("Harness research"))!;
+      seen.href = room.getAttribute("href");
+      // A room's row has no tag in Chats, and none here: the chip is the filter.
+      seen.roomLine = [...room.querySelector(".truncate.font-display")!.parentElement!.children].map((part) => part.textContent?.trim()).filter(Boolean);
     });
-    expect(seen.rows).toEqual(["Nouverse Office", "#general", "1 quiet group"]);
-    expect(seen.chips).toEqual(["All3", "Discord2", "Telegram1"]);
-    expect(seen.opened).toEqual(["Nouverse Office", "#general", "1 quiet group", "#bookmarks"]);
+    expect(seen.rows).toEqual(["Nouverse Office", "Harness research", "#general", "1 quiet group"]);
+    expect(seen.chips).toEqual(["All4", "Discord2", "Telegram1", "Dashboard1"]);
+    // The switch counts what All does.
+    expect(seen.switch).toBe("Groups4");
+    expect(seen.opened).toEqual(["Nouverse Office", "Harness research", "#general", "1 quiet group", "#bookmarks"]);
     expect(seen.discord).toEqual(["#general", "1 quiet group", "#bookmarks"]);
+    expect(seen.dashboard).toEqual(["Harness research"]);
+    expect(seen.href).toBe("/dashboard/chat/room/room_1");
+    expect((seen.roomLine as string[]).length).toBe(2);
   });
 
   // A small mark on a group's face said which app it lived on, and read as noise where the word is plain.
