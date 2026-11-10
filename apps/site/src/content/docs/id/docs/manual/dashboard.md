@@ -345,7 +345,7 @@ aplikasinya sendiri. Orang-orang di sana tampil di kiri, masing-masing dengan na
 nama dari aplikasinya), dan grup menampilkan pesan orang meski tidak ada agent yang menjawab. **Pin to Chats** menyimpan
 grup yang sering kamu baca di Chats, di browser ini.
 
-![Chat dashboard dengan langkah giliran langsung](/media/dashboard-chat.png)
+![Chats: daftar di samping percakapan, jawaban dengan langkahnya terbuka](/media/dashboard-chat.png)
 
 Selagi agent bekerja, langkah-langkahnya dilipat jadi satu baris: apa yang sedang ia kerjakan, sudah berapa langkah, dan
 berapa lama. Tekan barisnya untuk membuka langkah-langkah terbaru, dengan durasi tiap langkah dan reasoning model; yang

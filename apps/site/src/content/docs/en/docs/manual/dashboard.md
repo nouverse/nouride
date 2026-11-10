@@ -334,7 +334,7 @@ app. The people there are on the left, each under their name (the one under Peop
 a group shows what people said even when no agent answered. **Pin to Chats** keeps a group you read often in Chats, in
 this browser.
 
-![Dashboard chat with live turn steps](/media/dashboard-chat.png)
+![Chats: the list beside a conversation, an answer with its steps open](/media/dashboard-chat.png)
 
 While an agent works, its steps fold into one line: what it is doing now, how many steps it has taken and for how long.
 Press the line to open the newest steps, with how long each took and the model's reasoning; the earlier ones are one
