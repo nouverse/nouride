@@ -7,7 +7,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { AcpClient, type PermissionOutcome, type RequestPermissionParams, type SessionUpdate } from "@nouride/acp";
-import { serveAcp } from "@/cli/commands/acp.ts";
+import { serveAcp } from "../../../cli/src/commands/acp.ts";
 import { LOCAL_GATEWAY_ID } from "@/modules/gateways/local.ts";
 import { eventually } from "../wait.ts";
 
@@ -73,7 +73,7 @@ function editor(d: ReturnType<typeof daemon>, permission: (request: RequestPermi
     permission,
     unclaimed: (_sessionId, update) => void updates.push(update),
   });
-  adapter = serveAcp({ daemon: d.fake as never, send: (line) => later(() => client.receive(line)), settleMs: 200 });
+  adapter = serveAcp({ daemon: d.fake as never, version: "0.0.0", send: (line) => later(() => client.receive(line)), settleMs: 200 });
   return { client, updates };
 }
 

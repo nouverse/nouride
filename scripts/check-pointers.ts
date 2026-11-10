@@ -28,7 +28,7 @@
  * - **links** — a relative markdown link resolves, and its `#anchor` is a heading of the target (GitHub's
  *   slugs); a link into the site's docs as the site serves it, `/en/docs/…` or `https://nouride.com/en/docs/…`, in
  *   markdown or a component's `href`, names a page the site has and a heading of that page (the site's slugs);
- * - **commands** — `` `nouride <verb>` `` is a verb `cli/main.ts` dispatches, and a `nouride` line in a doc, a skill
+ * - **commands** — `` `nouride <verb>` `` is a verb the CLI dispatches (`apps/cli/src/run.ts`), and a `nouride` line in a doc, a skill
  *   or a comment takes only the words and flags its command reads (`pointers/commands.ts`);
  * - **retired edition names** — the editions' names before 2026-09-30 appear only where they are mapped to the
  *   names now (`pointers/editions.ts`);
@@ -224,7 +224,7 @@ export function buildIndex(root = ROOT): Index {
   for (const dir of PRIVATE) if (![...files].some((rel) => rel.startsWith(dir)) && !absent.includes(dir)) absent.push(dir);
   for (const dir of ELSEWHERE) if (!absent.includes(dir)) absent.push(dir);
   const { dirs, byBase } = indexOf(files);
-  const main = readFileSync(join(root, "apps/engine/src/cli/main.ts"), "utf8");
+  const main = readFileSync(join(root, "apps/cli/src/run.ts"), "utf8");
   const verbs = new Set([...main.matchAll(/^\s*case "([a-z][a-z-]*)":/gm)].map((m) => m[1]!));
   return {
     files,
@@ -374,7 +374,7 @@ export function pointerProblems(index: Index, text: string, from: string, offset
   }
 
   for (const m of text.matchAll(VERB)) {
-    if (!index.verbs.has(m[1]!)) add(m.index!, "command", `\`nouride ${m[1]}\` is not a command cli/main.ts dispatches`);
+    if (!index.verbs.has(m[1]!)) add(m.index!, "command", `\`nouride ${m[1]}\` is not a command the CLI dispatches`);
   }
   return out;
 }

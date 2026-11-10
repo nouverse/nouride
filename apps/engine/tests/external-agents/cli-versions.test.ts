@@ -8,8 +8,8 @@
 
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { BUILT_IN_CLIS, cliStanding, type CliRow } from "@nouride/acp";
-import type { Client } from "@nouride/cli-kit";
-import { cliVersionChecks, scanClis } from "@/cli/commands/external-clis.ts";
+import { cliVersionChecks, type Client } from "@nouride/cli-kit";
+import { scanClis } from "../../../cli/src/commands/external-clis.ts";
 import { ExternalAgents } from "@/modules/external-agents/index.ts";
 import { NewestVersions, type NewestRead } from "@/modules/external-agents/newest.ts";
 import type { ScannedCli } from "@/modules/external-agents/scan.ts";

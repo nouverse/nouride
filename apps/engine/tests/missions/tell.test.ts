@@ -7,7 +7,7 @@
 import { describe, expect, spyOn, test } from "bun:test";
 import { Hono } from "hono";
 import type { Client } from "@nouride/cli-kit";
-import { mission as missionCommand } from "@/cli/commands/mission.ts";
+import { mission as missionCommand } from "../../../cli/src/commands/mission.ts";
 import { missionHooks } from "@/modules/hooks/builtins/mission.ts";
 import type { HookContext } from "@/modules/hooks/types.ts";
 import type { SteerOutcome } from "@/modules/missions/tell.ts";

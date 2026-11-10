@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { followChat, type FollowedLine } from "@/cli/chat-follow.ts";
+import { followChat, type FollowedLine } from "../../../cli/src/chat-follow.ts";
 import { eventually } from "../wait.ts";
 
 describe("a step as one line", () => {

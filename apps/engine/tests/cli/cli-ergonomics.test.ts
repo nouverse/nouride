@@ -14,7 +14,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterOptions, bareArgs, flagValue, hasFlag, normalizeArgv, takeFlag, progressOf, waitBack, waitUntilBack, type Seen } from "@nouride/cli-kit";
 import { restartHint, startHint } from "@/service/hints.ts";
-import { followFrom } from "@/cli/commands/logs.ts";
+import { followFrom } from "../../../cli/src/commands/logs.ts";
 import { installFingerprint } from "@/modules/web/health.ts";
 import { credentialChecks, databaseCheck, diskCheck, guardedFiles, healthIssues, modeChecks, packagesCheck } from "@/cli/commands/doctor-checks.ts";
 import { openDatabase } from "@nouride/runtime";

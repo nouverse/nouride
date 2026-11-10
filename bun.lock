@@ -9,6 +9,18 @@
         "typescript": "6.0.3",
       },
     },
+    "apps/cli": {
+      "name": "@nouride/cli",
+      "version": "0.1.0",
+      "dependencies": {
+        "@nouride/acp": "workspace:*",
+        "@nouride/cli-kit": "workspace:*",
+        "@nouride/policy": "workspace:*",
+        "@nouride/runtime": "workspace:*",
+        "@nouride/shared": "workspace:*",
+        "@nouride/wire": "workspace:*",
+      },
+    },
     "apps/dashboard": {
       "name": "@nouride/dashboard",
       "version": "0.1.0",
@@ -46,6 +58,7 @@
       },
       "dependencies": {
         "@nouride/acp": "workspace:*",
+        "@nouride/cli": "workspace:*",
         "@nouride/cli-kit": "workspace:*",
         "@nouride/gateways": "workspace:*",
         "@nouride/isolation": "workspace:*",
@@ -502,6 +515,8 @@
     "@napi-rs/wasm-runtime": ["@napi-rs/wasm-runtime@1.2.3", "", { "dependencies": { "@tybys/wasm-util": "^0.10.3" }, "peerDependencies": { "@emnapi/core": "^1.7.1 || ^2.0.0-alpha.4", "@emnapi/runtime": "^1.7.1 || ^2.0.0-alpha.4" } }, "sha512-UMduMbqO5s5zF2NkNacMT/yK5Y5QiKvWr2+50bzIIxFDwVJ2h49b+oyjaCGPhJxd2/gC2x39EHv/gHVuu36x2Q=="],
 
     "@nouride/acp": ["@nouride/acp@workspace:packages/acp"],
+
+    "@nouride/cli": ["@nouride/cli@workspace:apps/cli"],
 
     "@nouride/cli-kit": ["@nouride/cli-kit@workspace:packages/cli-kit"],
 

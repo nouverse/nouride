@@ -9,7 +9,7 @@ import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { BUILT_IN_CLIS, handshakeProblem } from "@nouride/acp";
 import type { LoadedAgent } from "@nouride/shared";
 import type { Client } from "@nouride/cli-kit";
-import { updateCli, type UpdateSteps } from "@/cli/commands/agents-update.ts";
+import { updateCli, type UpdateSteps } from "../../../cli/src/commands/agents-update.ts";
 import { CliUpdates, type UpdateHost } from "@/modules/external-agents/cli-update.ts";
 import { mountControlRoutes } from "@/modules/web/control/index.ts";
 import type { ControlDeps } from "@/modules/web/control/types.ts";

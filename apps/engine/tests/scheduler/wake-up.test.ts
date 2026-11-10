@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { parseWakeUp, wakeUpUsage } from "@/cli/wake-up.ts";
+import { parseWakeUp, wakeUpUsage } from "../../../cli/src/wake-up.ts";
 import { auditableArgs } from "@/modules/tools/audited.ts";
 
 describe("reading --then", () => {

@@ -17,6 +17,7 @@ on:
       - "tsconfig.base.json"
       - "config.example.toml"
       - "apps/engine/**"
+      - "apps/cli/**"
       - "apps/dashboard/**"
       - "packages/**"
       - "scripts/**"

@@ -11,10 +11,10 @@ import { describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { COMMAND_ALIASES, flagName, GRAMMAR, unreadFlag, unreadWord, VERBATIM } from "@/cli/grammar.ts";
+import { COMMAND_ALIASES, flagName, GRAMMAR, unreadFlag, unreadWord, VERBATIM } from "../../../cli/src/grammar.ts";
 import { runCli } from "../cli-harness.ts";
 
-const MAIN = join(import.meta.dir, "../../src/cli/main.ts");
+const MAIN = join(import.meta.dir, "../../../cli/src/run.ts");
 /** Flags, not commands — answered before dispatch. */
 const NOT_COMMANDS = new Set(["-h", "--help", "--version"]);
 const BOGUS = "--no-such-flag";

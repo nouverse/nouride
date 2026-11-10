@@ -98,7 +98,7 @@ the commands that answer without a daemon — `doctor`, `db`, `users reset`, `co
 
 **A flag a command does not read is refused**, naming it and what the command does read, with
 exit 2: `nouride memory pass --dry-run` used to run a real pass. The list of what each command takes is
-`apps/engine/src/cli/grammar.ts`, and `nouride help` shows all of it. A daemon that answers with something that is
+`apps/cli/src/grammar.ts`, and `nouride help` shows all of it. A daemon that answers with something that is
 not JSON — a proxy's HTML 502 while it restarts — is exit 1 with that said, and under `--json` still one
 envelope. `chat`, `start`, `setup`, `logs -f` and `events -f` keep the terminal rather than answering
 once, and refuse `--json`.

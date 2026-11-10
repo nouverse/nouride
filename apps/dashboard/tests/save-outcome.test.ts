@@ -13,7 +13,7 @@ import { dirname, join, relative } from "node:path";
 import { APPLIED, RESTART_NEEDED, needsRestart } from "@/commons/hooks/use-saved";
 
 const SRC = join(dirname(import.meta.path), "..", "src");
-const CLI_SAVED = join(dirname(import.meta.path), "..", "..", "engine", "src", "cli", "saved.ts");
+const CLI_SAVED = join(dirname(import.meta.path), "..", "..", "cli", "src", "saved.ts");
 
 function sources(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {

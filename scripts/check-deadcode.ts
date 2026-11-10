@@ -63,7 +63,7 @@ const PRO_KNOWN_DEAD: Record<string, readonly string[]> = {};
  * imported was a warning nobody read, and 22 had gathered.
  */
 export const TEST_ONLY_EXPORTS: Readonly<Record<string, Readonly<Record<string, string>>>> = {
-  "apps/engine/src/cli/commands/access.ts": {
+  "apps/cli/src/commands/access.ts": {
     ACCESS_CHANGES: "the verbs that change somebody's standing; own-cli-verbs.test.ts holds @nouride/policy's copy to it",
   },
   "apps/engine/src/db/keys.ts": {

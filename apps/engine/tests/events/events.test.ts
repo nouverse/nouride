@@ -22,7 +22,7 @@ import { UsageStore } from "@/modules/llm/usage.store.ts";
 import { UserStore } from "@/modules/users/users.store.ts";
 import { mountControlRoutes } from "@/modules/web/control/index.ts";
 import type { ControlDeps } from "@/modules/web/control/types.ts";
-import { eventLine, readFrames } from "@/cli/commands/events.ts";
+import { eventLine, readFrames } from "../../../cli/src/commands/events.ts";
 
 /** The rows of a stream, its control frames left out — what `nouride events` prints a line for. */
 async function* readStream(body: ReadableStream<Uint8Array>) {

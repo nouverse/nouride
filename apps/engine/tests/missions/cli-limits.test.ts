@@ -6,7 +6,7 @@
 
 import { describe, expect, spyOn, test } from "bun:test";
 import type { Client } from "@nouride/cli-kit";
-import { mission as missionCommand } from "@/cli/commands/mission.ts";
+import { mission as missionCommand } from "../../../cli/src/commands/mission.ts";
 import { limitReached, nearLimit } from "@/modules/missions/decide.ts";
 import { hoursLimit, limitsLine } from "@/modules/missions/page.ts";
 import { outcomeOf } from "@/modules/pipeline/turn-shape.ts";

@@ -11,6 +11,7 @@
  */
 
 import { dirname, join, relative, resolve } from "node:path";
+import { cliFindings } from "./cli-rules.ts";
 import { MODULE_SPECIFIER, PRO } from "./lint-sources.ts";
 import { WIRE, wireExports, wireFindings } from "./wire-rules.ts";
 
@@ -84,7 +85,7 @@ const NODE_CORE = new Set([
 function isNodeBuiltin(specifier: string): boolean {
   return specifier.startsWith("node:") || NODE_CORE.has(specifier);
 }
-const APPS_IMPORT = /from\s+["'](?:[^"']*\/apps\/|@nouride\/(?:engine|dashboard))/;
+const APPS_IMPORT = /from\s+["'](?:[^"']*\/apps\/|@nouride\/(?:engine|dashboard|cli)(?=["'/]))/;
 
 // ---------------------------------------------------------------------------
 // Which package may import which is each package's own `package.json`: `lint:deps` (check-deps.ts) holds every member's
@@ -443,6 +444,9 @@ async function main(): Promise<void> {
 
     const source = stripComments(await Bun.file(path).text());
     const lines = source.split("\n");
+
+    // The line around the CLI: it imports nothing of the engine, and the engine takes it in at its entry alone.
+    for (const finding of cliFindings(rel, source)) violations.push({ file: rel, ...finding });
 
     // Rule 1b: node builtins only in packages/runtime, and not in tests or build config.
     //

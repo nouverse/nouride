@@ -26,7 +26,7 @@ import { UserStore } from "@/modules/users/users.store.ts";
 import { mountControlRoutes } from "@/modules/web/control/index.ts";
 import type { ControlDeps } from "@/modules/web/control/types.ts";
 import { TurnRecorder, stepsInto } from "@/modules/turns/recorder.ts";
-import { followChat, type FollowedLine } from "@/cli/chat-follow.ts";
+import { followChat, type FollowedLine } from "../../../cli/src/chat-follow.ts";
 import { eventually, sleep } from "../wait.ts";
 
 const TOKEN = "control-token-for-tests-0000000000";

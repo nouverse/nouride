@@ -93,7 +93,7 @@ describe("lint:deps", () => {
 function archOver(files: Record<string, string>): { code: number; out: string } {
   const root = mkdtempSync(join(tmpdir(), "nouride-arch-"));
   try {
-    for (const script of ["check-arch.ts", "lint-sources.ts", "wire-rules.ts"]) {
+    for (const script of ["check-arch.ts", "cli-rules.ts", "lint-sources.ts", "wire-rules.ts"]) {
       mkdirSync(join(root, "scripts"), { recursive: true });
       copyFileSync(join(ROOT, "scripts", script), join(root, "scripts", script));
     }

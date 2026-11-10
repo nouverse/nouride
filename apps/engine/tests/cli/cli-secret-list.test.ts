@@ -9,7 +9,7 @@
 
 import { expect, spyOn, test } from "bun:test";
 import type { Client } from "@nouride/cli-kit";
-import { secret } from "@/cli/commands/secret.ts";
+import { secret } from "../../../cli/src/commands/secret.ts";
 import type { SecretEntry } from "@/modules/config/settings/secrets.ts";
 
 const plain = (text: string) => text.replace(/\u001b\[[0-9;]*m/g, "");

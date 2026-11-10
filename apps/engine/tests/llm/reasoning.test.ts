@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createReasoningStream } from "@/modules/llm/reasoning.ts";
-import { formatActivityLine, formatElapsed } from "@/cli/activity-view.ts";
+import { formatActivityLine, formatElapsed } from "../../../cli/src/activity-view.ts";
 
 /** Collect what a stream emits, driving it with fragments the way a provider does. */
 function collect(fragments: string[], flush = true): string[] {

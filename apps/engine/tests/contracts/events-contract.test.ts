@@ -16,7 +16,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { SqliteDb } from "@nouride/runtime";
 import { EVENT_CONTRACT, EVENT_KINDS, EVENT_PROTOCOL_VERSION, eventProblems, type EventField, type Tool } from "@nouride/shared";
-import { eventLine } from "@/cli/commands/events.ts";
+import { eventLine } from "../../../cli/src/commands/events.ts";
 import { AuditLog } from "@/commons/audit.store.ts";
 import type { EventRow } from "@/modules/events/events.store.ts";
 import { compactionEnded, compactionStarted } from "@/modules/llm/compaction-steps.ts";

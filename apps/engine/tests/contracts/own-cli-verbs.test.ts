@@ -8,8 +8,8 @@
 import { describe, expect, test } from "bun:test";
 import { classifyHardline } from "@nouride/policy";
 import { dispatchedArgv } from "@nouride/cli-kit";
-import { ACCESS_CHANGES } from "@/cli/commands/access.ts";
-import { APPROVAL_ACTIONS } from "@/cli/commands/approvals.ts";
+import { ACCESS_CHANGES } from "../../../cli/src/commands/access.ts";
+import { APPROVAL_ACTIONS } from "../../../cli/src/commands/approvals.ts";
 
 const gated = (args: string[]) => classifyHardline(["nouride", ...args]) !== null;
 

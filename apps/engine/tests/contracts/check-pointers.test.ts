@@ -132,7 +132,7 @@ describe("nouride lines", () => {
   test("in markdown, a fenced line that runs nouride is read, and a file listing is not", () => {
     const doc = "```sh\n$ sudo nouride service uninstall --dir /x   # prints it\nnouride               the executable\n```\n";
     expect(said(doc, true)).toEqual(["`nouride service` does not read --dir here — the CLI refuses it with exit 2"]);
-    expect(said("```sh\nnouride activity\n```\n", true)).toEqual(["`nouride activity` is not a command cli/main.ts dispatches"]);
+    expect(said("```sh\nnouride activity\n```\n", true)).toEqual(["`nouride activity` is not a command the CLI dispatches"]);
     expect(said(doc, false)).toEqual([]);
   });
 });
@@ -215,7 +215,7 @@ describe("sections", () => {
 
 describe("commands", () => {
   test("a verb the CLI dispatches passes; one it does not is named", () => {
-    expect(rules(TREE, "run `nouride status`, then `nouride activity`")).toEqual(["command: `nouride activity` is not a command cli/main.ts dispatches"]);
+    expect(rules(TREE, "run `nouride status`, then `nouride activity`")).toEqual(["command: `nouride activity` is not a command the CLI dispatches"]);
   });
 });
 
@@ -338,8 +338,8 @@ describe("a clone without the private submodules", () => {
     try {
       const git = (...args: string[]) => spawnSync("git", args, { cwd: root, env: Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_"))) });
       git("init", "-q");
-      spawnSync("mkdir", ["-p", join(root, "apps/engine/src/cli")]);
-      writeFileSync(join(root, "apps/engine/src/cli/main.ts"), "");
+      spawnSync("mkdir", ["-p", join(root, "apps/cli/src")]);
+      writeFileSync(join(root, "apps/cli/src/run.ts"), "");
       writeFileSync(join(root, "README.md"), "see `internals/pro/docs/x.md`\n");
       git("add", "-A");
       const index = buildIndex(root);
@@ -360,8 +360,8 @@ describe("Nouride Home, a related repository", () => {
         const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_")));
         const git = (cwd: string, ...args: string[]) => spawnSync("git", args, { cwd, env });
         git(root, "init", "-q");
-        spawnSync("mkdir", ["-p", join(root, "apps/engine/src/cli")]);
-        writeFileSync(join(root, "apps/engine/src/cli/main.ts"), "");
+        spawnSync("mkdir", ["-p", join(root, "apps/cli/src")]);
+        writeFileSync(join(root, "apps/cli/src/run.ts"), "");
         writeFileSync(join(root, ".gitignore"), "/apps/android-appliance/\n");
         if (clone) {
           spawnSync("mkdir", ["-p", join(root, "apps/android-appliance/scripts")]);
@@ -387,8 +387,8 @@ describe("another product in a submodule", () => {
     try {
       const git = (...args: string[]) => spawnSync("git", args, { cwd: root, env: Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_"))) });
       git("init", "-q");
-      spawnSync("mkdir", ["-p", join(root, "apps/engine/src/cli")]);
-      writeFileSync(join(root, "apps/engine/src/cli/main.ts"), "");
+      spawnSync("mkdir", ["-p", join(root, "apps/cli/src")]);
+      writeFileSync(join(root, "apps/cli/src/run.ts"), "");
       git("add", "-A");
       git("update-index", "--add", "--cacheinfo", "160000,0123456789012345678901234567890123456789,apps/other-product");
       const index = buildIndex(root);

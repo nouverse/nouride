@@ -22,7 +22,9 @@ import { Hono } from "hono";
 import { mountControlRoutes } from "@/modules/web/control/index.ts";
 import type { ControlDeps } from "@/modules/web/control/types.ts";
 
-const CLI_DIR = join(dirname(import.meta.path), "..", "..", "src", "cli");
+/** Where a command's calls are: the commands that ask the daemon, and the engine's own that ask it too. */
+const REPO = join(dirname(import.meta.path), "..", "..", "..", "..");
+const CLI_DIRS = [join(REPO, "apps", "cli", "src"), join(REPO, "apps", "engine", "src", "cli")];
 
 /** One path as segments, with anything variable marked. `null` matches any one segment. */
 type Shape = (string | null)[];
@@ -69,12 +71,12 @@ function sources(dir: string): string[] {
  */
 function called(): { shape: Shape; raw: string; file: string }[] {
   const pattern = /client\.(?:get|post)\s*(?:<[^>]*>)?\s*\(\s*[`"']([^`"']*)[`"']/g;
-  return sources(CLI_DIR).flatMap((file) => {
+  return CLI_DIRS.flatMap(sources).flatMap((file) => {
     const text = readFileSync(file, "utf8");
     return [...text.matchAll(pattern)]
       .map((match) => match[1] as string)
       .filter((raw) => raw.startsWith("/"))
-      .map((raw) => ({ shape: shapeOf(raw), raw, file: file.slice(file.indexOf("src/cli")) }));
+      .map((raw) => ({ shape: shapeOf(raw), raw, file: file.slice(REPO.length + 1) }));
   });
 }
 

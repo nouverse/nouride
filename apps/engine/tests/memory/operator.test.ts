@@ -9,7 +9,7 @@ import { Hono } from "hono";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { readTextFileIfExists, serveHttp, writeTextFile, type HttpServer } from "@nouride/runtime";
-import { memoryCommand } from "@/cli/commands/memory.ts";
+import { memoryCommand } from "../../../cli/src/commands/memory.ts";
 import { setMemorySettings } from "@/modules/config/settings/memory.ts";
 import type { SettingsDeps } from "@/modules/config/settings/types.ts";
 import { registerMemoryRoutes } from "@/modules/web/control/routes/memory.ts";

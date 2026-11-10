@@ -15,7 +15,7 @@ const engine = join(import.meta.dir, "..", "..");
 /** `chat` in a fresh process with `script` on its stdin, against a daemon that takes a while over each answer. */
 function chatWith(script: string): { sent: string[] | null; opened: string[]; ended: boolean; stdout: string } {
   const body = `
-    import { chat } from "@/cli/commands/chat.ts";
+    import { chat } from "../cli/src/commands/chat.ts";
     const sent = [];
     const opened = [];
     let push = () => {};

@@ -22,7 +22,7 @@ import { normalizeEntry, publisherOf } from "@/modules/mcp-registry/entry.ts";
 import { draftFor, routeOf, summaryOf } from "@/modules/mcp-registry/draft.ts";
 import { createMcpSearchTool } from "@/modules/tools/builtins/mcp-search.ts";
 import type { Client } from "@nouride/cli-kit";
-import { mcp } from "@/cli/commands/mcp.ts";
+import { mcp } from "../../../cli/src/commands/mcp.ts";
 import { cheapPasswords } from "../helpers.ts";
 import { plain } from "../cli-harness.ts";
 

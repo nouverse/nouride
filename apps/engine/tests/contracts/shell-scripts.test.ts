@@ -55,7 +55,7 @@ describe("shell scripts", () => {
 
 describe("what install.sh tells a person to run", () => {
   test("names commands the CLI has: it said `./nouride run` until 0.8.18, which answers Unknown command", async () => {
-    const { GRAMMAR } = await import("@/cli/grammar.ts");
+    const { GRAMMAR } = await import("../../../cli/src/grammar.ts");
     const text = readFileSync(join(import.meta.dir, "../../../../scripts/install.sh"), "utf8");
     const named = [...text.matchAll(/\.\/nouride ([a-z][a-z-]*)/g)].map((match) => match[1]!);
     expect(named.length).toBeGreaterThan(0);

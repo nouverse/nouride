@@ -8,17 +8,17 @@
 
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import type { Client } from "@nouride/cli-kit";
-import { access } from "@/cli/commands/access.ts";
-import { agentAction } from "@/cli/commands/agents.ts";
-import { gateway } from "@/cli/commands/gateway.ts";
-import { mcp } from "@/cli/commands/mcp.ts";
-import { mcpServerCommand } from "@/cli/commands/mcp-server.ts";
-import { memoryCommand } from "@/cli/commands/memory.ts";
-import { peopleCommand } from "@/cli/commands/people.ts";
-import { provider } from "@/cli/commands/provider.ts";
-import { skills } from "@/cli/commands/skills.ts";
-import { toolBudget } from "@/cli/commands/tool-budget.ts";
-import { turnBudget } from "@/cli/commands/turn-budget.ts";
+import { access } from "../../../cli/src/commands/access.ts";
+import { agentAction } from "../../../cli/src/commands/agents.ts";
+import { gateway } from "../../../cli/src/commands/gateway.ts";
+import { mcp } from "../../../cli/src/commands/mcp.ts";
+import { mcpServerCommand } from "../../../cli/src/commands/mcp-server.ts";
+import { memoryCommand } from "../../../cli/src/commands/memory.ts";
+import { peopleCommand } from "../../../cli/src/commands/people.ts";
+import { provider } from "../../../cli/src/commands/provider.ts";
+import { skills } from "../../../cli/src/commands/skills.ts";
+import { toolBudget } from "../../../cli/src/commands/tool-budget.ts";
+import { turnBudget } from "../../../cli/src/commands/turn-budget.ts";
 import { plain } from "../cli-harness.ts";
 
 /** A daemon that answers every write with `answer`, and every read with what the verbs ask before writing. */

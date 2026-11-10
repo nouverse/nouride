@@ -34,7 +34,7 @@ export interface CliExitFinding {
 
 const ROOT = new URL("../", import.meta.url).pathname;
 /** Where a command's code is: the commands themselves, and what every one of them speaks through. */
-const CLI = ["apps/engine/src/cli", "packages/cli-kit/src"];
+const CLI = ["apps/cli/src", "apps/engine/src/cli", "packages/cli-kit/src"];
 
 /** What ends a command with a non-zero exit (`packages/cli-kit`: `ui.ts`, `usage.ts`). */
 const FAILS = new Set(["fail", "usageError", "usageLines", "unknownAction", "crashed"]);

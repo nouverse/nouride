@@ -1,0 +1,22 @@
+{
+  "name": "@nouride/cli",
+  "description": "Nouride's CLI: the commands that ask a running daemon over its control API, their grammar and what they draw. It imports nothing of the engine: the binary's entry hands it the install it runs in.",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint:check": "bun x tsc --noEmit --skipLibCheck",
+    "test": "bun test tests"
+  },
+  "dependencies": {
+    "@nouride/acp": "workspace:*",
+    "@nouride/cli-kit": "workspace:*",
+    "@nouride/policy": "workspace:*",
+    "@nouride/runtime": "workspace:*",
+    "@nouride/shared": "workspace:*",
+    "@nouride/wire": "workspace:*"
+  }
+}

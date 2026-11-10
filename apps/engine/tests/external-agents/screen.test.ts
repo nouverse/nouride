@@ -11,7 +11,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { Screen } from "@/modules/external-agents/screen.ts";
 import { CliLogin } from "@/modules/external-agents/login.ts";
-import { newOutput } from "@/cli/commands/external-clis.ts";
+import { newOutput } from "../../../cli/src/commands/external-clis.ts";
 
 const fixture = (name: string) => readFileSync(join(import.meta.dir, "fixtures", name), "utf8");
 const LF = fixture("claude-setup-token-lf.out");

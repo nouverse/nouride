@@ -16,7 +16,7 @@
  */
 
 import { normalizeArgv } from "../../packages/cli-kit/src/args.ts";
-import { COMMAND_ALIASES, GRAMMAR, unreadFlag, unreadWord } from "../../apps/engine/src/cli/grammar.ts";
+import { COMMAND_ALIASES, GRAMMAR, unreadFlag, unreadWord } from "../../apps/cli/src/grammar.ts";
 
 export interface CommandLine {
   /** Offset of the line in the text it was read from. */
@@ -78,7 +78,7 @@ export function variants(words: readonly string[]): string[][] {
 
 /** What the CLI would refuse in `line`, said for a reader — or null when it runs, or says `exit 2` because it should not. */
 export function commandProblem(line: CommandLine, verbs: ReadonlySet<string>): string | null {
-  if (!verbs.has(line.verb)) return `\`nouride ${line.verb}\` is not a command cli/main.ts dispatches`;
+  if (!verbs.has(line.verb)) return `\`nouride ${line.verb}\` is not a command the CLI dispatches`;
   if (/\bexit 2\b/.test(line.line) || !(GRAMMAR[COMMAND_ALIASES[line.verb] ?? line.verb])) return null;
   for (const listed of variants(shellWords(line.rest))) {
     const head = normalizeArgv(listed);

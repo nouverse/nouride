@@ -4,7 +4,7 @@
  * Since 0.7.10 every command refuses, with exit 2, a flag it does not read — and the reference, in English and in
  * Indonesian, still showed `nouride service uninstall [--dir <path>]` (exit 2), so a person copying the line got a refusal
  * instead of what the page promised. Each `nouride` line of both pages, in a code block or in backticks, is run
- * through the CLI's own grammar (`apps/engine/src/cli/grammar.ts`): a command `main.ts` dispatches, an action that
+ * through the CLI's own grammar (`apps/cli/src/grammar.ts`): a command `main.ts` dispatches, an action that
  * command has, and only the flags that action reads. The pages' notation is read as a person reads it — `[…]` is
  * optional, and each side of an `a|b` is tried on its own.
  */
@@ -12,7 +12,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { COMMAND_ALIASES, GRAMMAR, unreadFlag } from "@/cli/grammar.ts";
+import { COMMAND_ALIASES, GRAMMAR, unreadFlag } from "../../../cli/src/grammar.ts";
 
 const DOCS = join(import.meta.dir, "../../../../apps/site/src/content/docs");
 const PAGES = ["en/docs/cli/reference.md", "id/docs/cli/reference.md"];

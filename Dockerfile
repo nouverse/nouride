@@ -78,6 +78,7 @@ RUN test "$(bun --version)" = "$BUN_VERSION" || { echo "BUN_DIGEST is not oven/b
 WORKDIR /app
 COPY package.json bun.lock ./
 COPY apps/engine/package.json ./apps/engine/
+COPY apps/cli/package.json ./apps/cli/
 COPY apps/dashboard/package.json ./apps/dashboard/
 # The whole packages tree, not each manifest.
 #
@@ -111,6 +112,7 @@ FROM deps AS engine-builder
 WORKDIR /app
 ARG EDITION=basic
 COPY apps/engine ./apps/engine
+COPY apps/cli ./apps/cli
 COPY internals ./internals
 # The private plugins' tsconfigs extend the root one too (0.7.9), and the setup console's Vite build reads them: without
 # it the Pro image stopped at `Tsconfig not found /app/tsconfig.base.json` — on the v0.7.9 tag.

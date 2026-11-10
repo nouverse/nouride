@@ -7,6 +7,7 @@
  */
 
 export * from "./args.ts";
+export * from "./cli-versions.ts";
 export * from "./client.ts";
 export * from "./diagnose.ts";
 export type * from "./records.ts";

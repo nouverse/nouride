@@ -351,7 +351,9 @@ apps/
     boot/           what boot does but does not order: its three long steps (stores,
                       timers, turn-machine), preflight, maintenance, tools,
                       control-plane, shutdown
-    cli/            main.ts is a dispatch table; commands/<name>.ts is one command
+    cli/            main.ts is the binary's entry: it hands apps/cli the install it runs in.
+                      commands/<name>.ts here is a command that works on the install itself
+                      (db, doctor, config, setup, service), daemon up or down
     db/             open SQLite, apply migrations, and the migrations themselves.
                       Storage, not a domain — the whole directory would be the same
                       in any product with a SQLite file
@@ -373,6 +375,9 @@ apps/
                       the local gateway
       web/          Hono: /health, static dashboard, and control/ — one file per
                       route domain, wired in control/index.ts
+  cli/src/          the commands that ask a running daemon over the control API: run.ts is
+                      the dispatch table, commands/<name>.ts one command, install.ts what the
+                      binary's entry hands in. Imports nothing of the engine (lint:arch)
   dashboard/        React 19 + Vite + TanStack + daisyUI, base /dashboard/
 
 internals/          private, two submodules, never workspace members
@@ -384,6 +389,8 @@ packages/
   update/    checking for and installing a release
   system-packages/  nouride-pkg: system packages through a root service
   shared/    types, envelope, logger, errors — imports nothing
+  cli-kit/   what a command speaks on either side: output, arguments, help text, the
+               client, the answers the CLI expects — imports nothing of the engine
   runtime/   the only Bun.* and node:* in the codebase
   secrets/   named credentials: env, or a writable store
   llm/       OpenAI + Anthropic clients, SSE, token estimation, price book

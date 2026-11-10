@@ -14,7 +14,7 @@ import { join } from "node:path";
 import { Hono } from "hono";
 import { openWithPassphrase } from "@nouride/runtime";
 import type { Client } from "@nouride/cli-kit";
-import { secret } from "@/cli/commands/secret.ts";
+import { secret } from "../../../cli/src/commands/secret.ts";
 import { DEFAULT_CONFIG } from "@/modules/config/defaults.ts";
 import { readConfigText } from "@/modules/config/global/index.ts";
 import { backupSealFor, parseBackupSeal, sealedSecretsCopy } from "@/modules/config/sealed-secrets.ts";
@@ -237,7 +237,7 @@ function cli(script: string, input: string) {
 
 describe("nouride secret unseal", () => {
   const unseal = (args: string[], input: string) =>
-    cli(`import { unsealSecrets } from "@/cli/commands/secret-unseal.ts"; await unsealSecrets(${JSON.stringify(args)});`, input);
+    cli(`import { unsealSecrets } from "../cli/src/commands/secret-unseal.ts"; await unsealSecrets(${JSON.stringify(args)});`, input);
 
   test("opens a snapshot's copy into a file at 0600 and shows none of it", () => {
     const at = install();
@@ -269,7 +269,7 @@ describe("nouride secret unseal", () => {
 describe("nouride secret seal", () => {
   const seal = (args: string[], input = "") =>
     cli(
-      `import { secret } from "@/cli/commands/secret.ts";
+      `import { secret } from "../cli/src/commands/secret.ts";
        const client = { post: async (path, body) => { console.log("POST " + path + " " + JSON.stringify(body)); return { snapshot: "/b/config/2026" }; } };
        await secret(client, ${JSON.stringify(["seal", ...args])});`,
       input,

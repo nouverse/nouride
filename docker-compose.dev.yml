@@ -70,6 +70,7 @@ services:
       # seven of them, and a member without one shared its host install with the container.
       - root_node_modules:/app/node_modules
       - engine_node_modules:/app/apps/engine/node_modules
+      - cli_node_modules:/app/apps/cli/node_modules
       - dashboard_node_modules:/app/apps/dashboard/node_modules
       - site_node_modules:/app/apps/site/node_modules
       - ui_graph_node_modules:/app/packages/ui-graph/node_modules
@@ -97,6 +98,7 @@ services:
 volumes:
   root_node_modules:
   engine_node_modules:
+  cli_node_modules:
   dashboard_node_modules:
   site_node_modules:
   ui_graph_node_modules:

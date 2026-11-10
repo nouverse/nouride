@@ -13,7 +13,7 @@ import { join } from "node:path";
 import { SecretStore } from "@nouride/secrets";
 import { commandKeyLayout } from "@/boot/secret-store.ts";
 import type { Client } from "@nouride/cli-kit";
-import { secret } from "@/cli/commands/secret.ts";
+import { secret } from "../../../cli/src/commands/secret.ts";
 import { backupSealFor, sealedSecretsCopy } from "@/modules/config/sealed-secrets.ts";
 import { runCli } from "../cli-harness.ts";
 

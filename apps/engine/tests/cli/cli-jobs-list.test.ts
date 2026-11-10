@@ -8,7 +8,7 @@
 import { expect, spyOn, test } from "bun:test";
 import { Hono } from "hono";
 import type { Client } from "@nouride/cli-kit";
-import { jobs } from "@/cli/commands/jobs.ts";
+import { jobs } from "../../../cli/src/commands/jobs.ts";
 import { registerJobRoutes } from "@/modules/web/control/routes/jobs.ts";
 
 const plain = (text: string) => text.replace(/\u001b\[[0-9;]*m/g, "");

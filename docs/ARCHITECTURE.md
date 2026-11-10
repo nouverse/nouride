@@ -14,6 +14,7 @@ Monorepo (Bun workspaces) during development, one image for deployment — per T
 nouride/
 ├── apps/
 │   ├── engine/                 # @nouride/engine    — the daemon (the one resident process; MCP servers and coding CLIs are its children, §8)
+│   ├── cli/                    # @nouride/cli       — the commands that ask a running daemon; imports nothing of the engine (§3)
 │   ├── dashboard/              # @nouride/dashboard — React SPA, built to static assets
 │   └── site/                   # @nouride/site      — the public website: landing + the manual
 ├── internals/                  # two private git submodules — not needed for the free edition (§2)
@@ -21,6 +22,7 @@ nouride/
 │   └── nougate/                # the LLM gateway, bundled into every official build
 ├── packages/
 │   ├── shared/                 # @nouride/shared    — types, envelope, logger, errors, ids
+│   ├── cli-kit/                # @nouride/cli-kit   — what a command speaks on either side: output, arguments, help, the client
 │   ├── runtime/                # @nouride/runtime   — the ONLY place `Bun.*`/`node:*` is used (TD-001)
 │   ├── llm/                    # @nouride/llm       — OpenAI + Anthropic clients, SSE, tokens, cost
 │   ├── queue/                  # @nouride/queue     — keyed work queue: ordered per key, parallel across
@@ -244,10 +246,13 @@ own `src/` (same convention as Nougate).
 ## 3. Dependency Rules
 
 One-way. `bun run lint:deps` enforces the arrows between packages, and `lint:arch` what a manifest cannot
-state: that `packages/shared` imports nothing, the dashboard's line, and that `packages/wire` is types only.
+state: that `packages/shared` imports nothing, the dashboard's line, that `packages/wire` is types only, and the
+line around the CLI (below).
 
 ```
 apps/engine ──────┬──> packages/wire     ──> packages/shared, packages/acp (types only)
+                  ├──> apps/cli, from the binary's entry alone (`apps/engine/src/cli/main.ts`)
+                  ├──> packages/cli-kit  ──> packages/wire, packages/runtime, packages/shared
                   ├──> packages/persona  ──> packages/secrets, packages/policy, packages/runtime, packages/shared
                   ├──> packages/secrets  ──> packages/runtime ──> packages/shared
                   ├──> packages/policy   ──> packages/runtime, packages/shared
@@ -264,7 +269,23 @@ apps/engine ──────┬──> packages/wire     ──> packages/shar
 apps/dashboard ───> packages/ui-* ──> packages/ui-* only
        ├──────────> packages/wire, by `import type` alone — nothing of it reaches the bundle
        └──────────> (HTTP only — never imports engine code)
+
+apps/cli ─────────> packages/cli-kit, packages/wire, packages/shared, packages/runtime, packages/acp, packages/policy
+       └──────────> (HTTP only — never imports engine code)
 ```
+
+**The CLI's line.** A command that asks a running daemon lives in `apps/cli` and reaches it over the control API,
+as the dashboard does: it imports no engine file, by its alias, by a path or by its package, so a change inside a
+domain cannot break it. What it needs of the install it is part of is handed to it by the binary's entry
+(`Install`, `apps/cli/src/install.ts`): the build's version, where the daemon is, the daemon's start, and the
+commands that work on the install itself. Those read its files with the daemon down or before it boots (`setup`,
+`db`, `doctor`, `config`, `service` and the rest), so they are the engine's and stay in `apps/engine/src/cli`.
+Both kinds say things the same way, so what they speak is a package under both, `packages/cli-kit`: the output and
+exit codes, the argument reading, the help text, the HTTP client (handed where the daemon is, it opens no config),
+and the answers the CLI expects of the control API. Where one of those answers is a record the engine keeps, the
+kit holds its own copy of the fields the CLI reads, and `lint:seams` holds the engine's type to it
+(`scripts/seam-pairs.ts`). `lint:arch` holds the line (`scripts/cli-rules.ts`): nothing under `apps/cli/src` or
+`packages/cli-kit/src` names the engine, and in the engine only the entry imports the CLI.
 
 The arrows between packages are each package's own `dependencies`, and `lint:deps` holds every
 workspace member to its manifest both ways — an import it does not declare, in any spelling, and a
@@ -528,12 +549,11 @@ apps/engine/src/
 │   ├── tools.ts         #   the built-in toolset, wired to this daemon's stores
 │   ├── control-plane.ts #   accounts, setup wizard, config editing, the HTTP server
 │   └── shutdown.ts      #   signal handlers + drain order (§14.1 SPEC)
-├── cli/
-│   ├── main.ts          # dispatch table: one case per command, each call checked against grammar.ts first
-│   ├── grammar.ts       # each command's actions and the flags each reads — an unknown one is exit 2
-│   ├── usage.ts         # `nouride help` — the one list of commands (lint:cli)
-│   ├── client.ts        # the control-API client every command is handed
-│   └── commands/        # chat.ts, doctor.ts, cron.ts, … — one file per command
+├── cli/                 # the binary's entry, and the commands that work on the install itself
+│   ├── main.ts          # the entry: hands the CLI (`apps/cli`) the install it runs in; its path is in service units
+│   ├── connect.ts       # where this install's daemon is, read from the config it read
+│   ├── setup.ts         # `nouride setup`
+│   └── commands/        # db.ts, doctor.ts, config.ts, service.ts, … — they read the install's files, daemon up or down
 ├── db/                  # open SQLite via @nouride/runtime, and the migrations
 │   ├── index.ts         #   openAndMigrate: capability check, fingerprint, snapshot, migrate, compact
 │   ├── backup.ts        #   snapshots: daily, before a migration, `nouride db`

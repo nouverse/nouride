@@ -49,10 +49,9 @@ export const LONG_FUNCTIONS: Record<string, Record<string, Budget>> = {
   "apps/engine/src/boot/control-plane.ts": { startControlPlane: { lines: 273, why: "boot's wiring of the control API and the dashboard: every port their routes take, built in the order they need each other" } },
   "apps/engine/src/boot/memory-pass.ts": { startMemoryPass: { lines: 154, why: "the nightly memory pass wired at boot: its clock, its model and its budget, and the run its timer starts" } },
   "apps/engine/src/boot/missions.ts": { buildMissions: { lines: 313, why: "boot's wiring of the missions: the service and every port it takes, the machine its slots follow among them, built where the stores and the turn machine are in reach" } },
-  "apps/engine/src/cli/commands/chat.ts": { chat: { lines: 151, why: "the interactive chat: a line read, sent through the local gateway and its turn followed to the reply, in one loop over the terminal" } },
+  "apps/cli/src/commands/chat.ts": { chat: { lines: 151, why: "the interactive chat: a line read, sent through the local gateway and its turn followed to the reply, in one loop over the terminal" } },
   "apps/engine/src/cli/commands/doctor.ts": { doctor: { lines: 256, why: "`nouride doctor`: every check that stops a fresh install from working, the config read against its secrets too, in the order its report reads them" } },
   "apps/engine/src/cli/commands/service.ts": { service: { lines: 152, why: "`nouride service`: status, diff, install and uninstall, branches of one dispatch over the supervisor and unit it finds first" } },
-  "apps/engine/src/cli/main.ts": { main: { lines: 158, why: "the CLI's dispatch: one case per command, behind the flags every command shares" } },
   "packages/cli-kit/src/usage.ts": { usageText: { lines: 253, why: "the whole of `nouride help`, one template a person reads top to bottom: its lines are the help, not logic" } },
   "apps/engine/src/index.ts": { runDaemon: { lines: 183, why: "the boot order, one step after another; the stores, the timers, the turn machine, the machine's reading and each config brought forward are in `boot/`: what is left is the sequence" } },
   "apps/engine/src/modules/config/global/validate.ts": { validate: { lines: 193, why: "every refusal of the daemon's config that its schema cannot make, each naming its field, in one pass at load" } },
@@ -88,5 +87,5 @@ export const LONG_FUNCTIONS: Record<string, Record<string, Budget>> = {
   "packages/mcp/src/http.ts": { streamableHttpTransport: { lines: 156, why: "MCP's streamable HTTP transport: one endpoint, a JSON or event-stream answer per POST, and the session they share, in one closure" } },
   "packages/mcp/tests/fixtures/oauth-servers.ts": { oauthServers: { lines: 210, why: "a test fixture: an MCP server and the OAuth server in front of it, started together for the tests that sign in" } },
   "packages/persona/src/config.ts": { parseAgentConfig: { lines: 165, why: "a pack's `config.toml` mapped field by field, so each refusal names its file and field; its readers are helpers beside it already" } },
-  "scripts/check-arch.ts": { main: { lines: 179, why: "the import rules over every file in one loop that reads each file once; a rule as a function of its own is the seam" } },
+  "scripts/check-arch.ts": { main: { lines: 180, why: "the import rules over every file in one loop that reads each file once; a rule as a function of its own is the seam" } },
 };

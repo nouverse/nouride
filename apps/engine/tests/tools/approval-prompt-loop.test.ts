@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { createApprovalPoller, type PendingApproval } from "@/cli/approvals.ts";
+import { createApprovalPoller, type PendingApproval } from "../../../cli/src/approvals.ts";
 import { sleep } from "../wait.ts";
 
 /**

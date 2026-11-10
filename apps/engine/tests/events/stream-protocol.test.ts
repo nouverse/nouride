@@ -26,7 +26,7 @@ import { mountControlRoutes } from "@/modules/web/control/index.ts";
 import { wireRow } from "@/modules/web/control/routes/events.ts";
 import type { ControlDeps } from "@/modules/web/control/types.ts";
 import { buildHealth } from "@/modules/web/health.ts";
-import { controlLine } from "@/cli/commands/events.ts";
+import { controlLine } from "../../../cli/src/commands/events.ts";
 import type { DaemonContext } from "@/commons/context.ts";
 import { sleep } from "../wait.ts";
 

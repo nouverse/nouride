@@ -12,7 +12,7 @@ import { installFingerprint } from "@/modules/web/health.ts";
 import { startHint } from "@/service/hints.ts";
 
 /** Where this install's daemon is, as its config says. */
-async function daemonPlace(options: { soft?: boolean } = {}): Promise<DaemonPlace> {
+export async function daemonPlace(options: { soft?: boolean } = {}): Promise<DaemonPlace> {
   // As a client: `PORT` and `HOST` are the daemon's, and a web project's `.env` sets both (`applyEnvOverrides`).
   const { config } = await loadConfig({ client: true, ...(options.soft ? { soft: true } : {}) });
   // The port the daemon takes: `NOURIDE_PORT` when the caller names one, else its install's `.env` (`installEnvPort`),

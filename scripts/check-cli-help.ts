@@ -25,7 +25,7 @@
  * outlives its key — and this is the cheap equivalent for verbs, not a replacement for it.
  */
 
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const ROOT = new URL("..", import.meta.url).pathname;
@@ -51,7 +51,7 @@ const ALIASES: Record<string, string> = {
 };
 
 function dispatched(): string[] {
-  const source = read("apps/engine/src/cli/main.ts");
+  const source = read("apps/cli/src/run.ts");
   return [...source.matchAll(/^\s*case "([a-z][a-z-]*)":/gm)].map((m) => m[1] as string);
 }
 
@@ -121,7 +121,7 @@ const FLAG_IS_READ = [
 ];
 
 /** Where a command's code is: the commands themselves, and what every one of them speaks through. */
-const CLI_DIRS = ["apps/engine/src/cli", "packages/cli-kit/src"];
+const CLI_DIRS = ["apps/cli/src", "apps/engine/src/cli", "packages/cli-kit/src"];
 
 function cliSource(): string {
   const out: string[] = [];
@@ -165,7 +165,7 @@ if (invented.length > 0) {
 /**
  * ── What each command takes (`cli/grammar.ts`) ──────────────────────────────
  *
- * `main.ts` refuses a flag the grammar does not give a command, before the command runs — so the grammar has to be
+ * The dispatch (`run.ts`) refuses a flag the grammar does not give a command, before the command runs — so the grammar has to be
  * the truth in both directions, and `help` has to show it:
  *
  * - every dispatched command has a grammar, or a flag given to it would go unchecked;
@@ -179,8 +179,14 @@ if (invented.length > 0) {
  * Per command, not per action: which branch reads a flag is control flow, and a reading of it would be guesswork.
  * The grammar says per action, by hand, where a reviewer reads it.
  */
-const { GRAMMAR, COMMAND_ALIASES, VERBATIM, flagName } = await import("../apps/engine/src/cli/grammar.ts");
+const { GRAMMAR, COMMAND_ALIASES, VERBATIM, flagName } = await import("../apps/cli/src/grammar.ts");
 const { usageFor } = await import("../packages/cli-kit/src/usage.ts");
+
+/** A command's file, by its name under the CLI's folder or — a command that works on the install itself — the engine's. */
+function commandFile(file: string): string {
+  const client = join(ROOT, "apps/cli/src", file);
+  return existsSync(client) ? client : join(ROOT, "apps/engine/src/cli", file);
+}
 
 /** The files whose flag reads are a command's, where the command is not named by one file of its own. */
 const FILES: Record<string, string[]> = {
@@ -191,13 +197,13 @@ const FILES: Record<string, string[]> = {
   secret: ["commands/secret.ts", "commands/secret-unseal.ts", "commands/secret-decrypt.ts", "commands/secret-restore.ts"],
   doctor: ["commands/doctor.ts", "commands/doctor-checks.ts", "commands/doctor-toolchain.ts"],
   update: ["commands/update.ts", "commands/rollback.ts"],
-  restart: ["main.ts", "wake-up.ts"],
+  restart: ["run.ts", "wake-up.ts"],
   setup: ["setup.ts"],
   config: ["commands/config.ts"],
 };
-/** Read by `main.ts` for every command, not by `restart`: answered before a command runs. */
+/** Read by the dispatch (`run.ts`) for every command, not by `restart`: answered before a command runs. */
 const MAIN_ONLY = new Set(["help", "h", "json", "rollback", "follow", "f"]);
-/** Commands with nothing to read, or answered entirely in `main.ts` before dispatch. */
+/** Commands with nothing to read, or answered entirely in the dispatch (`run.ts`). */
 const NO_FILES = new Set(["help", "version", "start", "stop"]);
 
 const flagsReadIn = (text: string): Set<string> =>
@@ -237,9 +243,9 @@ for (const [command, grammar] of Object.entries(GRAMMAR)) {
   }
   if (NO_FILES.has(command)) continue;
   const files = FILES[command] ?? [`commands/${command}.ts`];
-  const reads = new Set(files.flatMap((file) => [...flagsReadIn(readFileSync(join(ROOT, "apps/engine/src/cli", file), "utf8"))]));
+  const reads = new Set(files.flatMap((file) => [...flagsReadIn(readFileSync(commandFile(file), "utf8"))]));
   if (command === "restart") for (const name of MAIN_ONLY) reads.delete(name);
-  // `update --rollback` is dispatched to `rollback.ts` by `main.ts`, which reads the flag to choose it.
+  // `update --rollback` is dispatched to `rollback.ts` by `run.ts`, which reads the flag to choose it.
   if (command === "update") reads.add("rollback");
   for (const name of reads) {
     if (!declared.has(name)) problems.push(`nouride ${command}: reads --${name} (${files.join(", ")}), which its grammar does not declare — it would be refused`);
@@ -252,7 +258,7 @@ for (const [command, grammar] of Object.entries(GRAMMAR)) {
 if (problems.length > 0) {
   console.error(`✗ ${problems.length} problem(s) with what the commands take:\n`);
   for (const problem of problems) console.error(`  ${problem}`);
-  console.error(`\nThe grammar is apps/engine/src/cli/grammar.ts; the help is packages/cli-kit/src/usage.ts.`);
+  console.error(`\nThe grammar is apps/cli/src/grammar.ts; the help is packages/cli-kit/src/usage.ts.`);
   process.exit(1);
 }
 

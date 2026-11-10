@@ -1,9 +1,8 @@
 import type { ExternalClisResponse, McpResponse, SkillCatalogResponse, StatusResponse } from "@nouride/cli-kit";
-import { cliVersionChecks } from "@/cli/commands/external-clis.ts";
+import { cliVersionChecks, BOLD, DIM, GREEN, RED, RESET, YELLOW, emit, say, hasFlag } from "@nouride/cli-kit";
 import { formatBytes, type GlobalConfig } from "@nouride/shared";
 import { MCP_SCHEMA_WARN_BYTES } from "@/modules/tools/mcp.ts";
 import { lintConfig } from "@/modules/config/schema.ts";
-import { BOLD, DIM, GREEN, RED, RESET, YELLOW, emit, say, hasFlag } from "@nouride/cli-kit";
 import { connect } from "@/cli/connect.ts";
 import { startHint } from "@/service/hints.ts";
 import { loadConfig } from "@/cli/load-config.ts";

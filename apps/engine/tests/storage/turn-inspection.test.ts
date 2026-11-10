@@ -15,7 +15,7 @@ import { AuditLog } from "@/commons/audit.store.ts";
 import { LogStore } from "@/commons/logs.store.ts";
 import { UsageStore, reportedCounts } from "@/modules/llm/usage.store.ts";
 import { TurnInspector } from "@/modules/turns/inspection.store.ts";
-import { servedBy } from "@/cli/commands/turns.ts";
+import { servedBy } from "../../../cli/src/commands/turns.ts";
 import { createBuiltinTools } from "@/modules/tools/registry.ts";
 import { DEFAULT_CONFIG } from "@/modules/config/defaults.ts";
 import { tempDir, turnStore } from "../helpers.ts";
