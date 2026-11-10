@@ -320,15 +320,14 @@ Daftarnya punya dua bagian, dipilih di atasnya:
 Tombol **+** di atas memulai chat dengan agent atau membuat room, dan kolom cari menemukan chat dari namanya atau pesan
 terakhirnya.
 
-**Chat dengan agent** membuka percakapan terakhirnya, jadi kamu lanjut dari yang tadi. **History** di header-nya muncul
-dari kiri, hanya berisi percakapan agent itu: yang di dashboard, dan chat pribadinya di aplikasi chat, masing-masing
-dengan asalnya. **New chat** memulai yang baru, dan **Delete** menghapus percakapan yang sedang dibuka, setelah kamu
-mengiyakan.
+**Chat dengan agent** membuka percakapan terakhirnya, jadi kamu lanjut dari yang tadi. **History** di header-nya hanya
+berisi percakapan agent itu: yang di dashboard, dan chat pribadinya di aplikasi chat, masing-masing dengan asalnya.
+**New chat** memulai yang baru.
 
 **Room** adalah satu percakapan dengan beberapa agent. Pilih agent-nya waktu membuat room, lalu tag yang kamu maksud
 (`@nox`): tag adalah cara sebuah pesan sampai ke agent tertentu. Header room menampilkan anggotanya sebagai tag yang kamu
 ketik, dan bilang siapa yang menjawab pesan tanpa tag, kalau memang ada. **Add agent** memasukkan agent lain; menu room
-untuk mengganti nama atau mengeluarkan agent, dan **Delete** menghapus room.
+untuk mengganti nama, mengeluarkan agent, atau menghapus room.
 
 **Semua yang dari aplikasi chat hanya bisa dibaca di sini.** Grup, atau chat pribadi dengan agent di Telegram, Discord,
 atau WhatsApp, menampilkan nama aplikasinya dan **Read-only**, dan di tempat kotak ketik ada catatan: balasnya di
