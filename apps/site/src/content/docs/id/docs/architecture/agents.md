@@ -499,6 +499,11 @@ tahu pekerjaannya bakal lama meminta dengan `background: true` dan gak menunggu 
   keterangan itu pekerjaan siapa.
 - Cuma agent yang kamu ajak bicara yang memindahkan permintaan ke latar belakang: permintaan dari helper
   dan dari job terjadwal selalu menunggu jawabannya.
+- **Beberapa agent dalam satu panggilan.** Agent yang butuh lebih dari satu meminta mereka sekaligus
+  (`asks`, paling banyak empat): mereka bekerja bersamaan dan jawabannya kembali dalam satu hasil, masing-masing
+  di bawah nama agentnya. Tiap permintaan tetap mengikuti semua aturan di atas sendiri-sendiri. Lewat 45 detik,
+  yang masih bekerja lanjut di latar belakang dan yang sudah menjawab langsung dilaporkan; yang gagal, sedang
+  tidur, atau sedang sibuk disebut di samping jawaban yang lain.
 
 ## Pekerjaan yang lama diingatkan, bukan dihentikan
 

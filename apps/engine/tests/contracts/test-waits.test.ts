@@ -41,7 +41,9 @@ const FIXED_SLEEPS: Record<string, number> = {
   // promised retry across a restart (`provider-resume.test.ts`): the third process shown not to take the turn up again.
   // 213 → 215 for a helper in the foreground that moves after the wait (`waited-helpers.test.ts`): two pace a fake past
   // the wait, the race under test, in a call whose move is refused and in a scheduled turn's, where nothing may move.
-  "apps/engine": 215,
+  // 215 → 216 for several agents asked in one call by a helper (`background-asks.test.ts`): one paces the asked agents
+  // past the wait, which a turn that may move nothing must sit through, and nothing marks that moment to wait on.
+  "apps/engine": 216,
   "apps/dashboard": 37,
   "packages/gateways": 11,
   "packages/llm": 2,

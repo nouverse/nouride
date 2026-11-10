@@ -47,8 +47,10 @@ describe("who does the work", () => {
     expect(harness(["delegate"], { background: 0 })).toContain("`delegate` them in one call; up to four run at once and you wait.");
   });
 
-  test("another agent's work: ask_agent, and the answer reported", () => {
-    expect(all()).toContain("  - Another agent's (their skills, tools or access; OTHER AGENTS says what each is for): `ask_agent`, and you report their answer.");
+  test("another agent's work: ask_agent, and the answer reported; several agents in one call, at the same time", () => {
+    expect(all()).toContain(
+      "  - Another agent's (their skills, tools or access; OTHER AGENTS says what each is for): `ask_agent`, and you report their answer. Work for several agents goes in one call, with `asks`: they work at the same time.\n",
+    );
   });
 
   test("under an hour: the background, a helper for yours and the other agent for theirs; past it, a mission", () => {

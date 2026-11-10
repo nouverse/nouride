@@ -69,7 +69,8 @@ export function renderWork(view: HarnessView): string[] {
           "- **Who does the work** is two questions: whose work is it, and how long will it take? Decide before your first call, not halfway through.",
           // The wait has an end only where a helper may move to the background: a minute, then one still working goes there.
           `  - A few minutes, and yours: do it here.${delegates ? ` Several independent questions you need before you can answer (four hosts to check, three logs to read): \`delegate\` them in one call; up to four run at once and you wait${background ? ", up to a minute: a helper still working then moves to the background" : ""}.` : ""}`,
-          ...(asks ? ["  - Another agent's (their skills, tools or access; OTHER AGENTS says what each is for): `ask_agent`, and you report their answer."] : []),
+          // Several in one call: asked a reply apart, three agents were three waits one after another.
+          ...(asks ? ["  - Another agent's (their skills, tools or access; OTHER AGENTS says what each is for): `ask_agent`, and you report their answer. Work for several agents goes in one call, with `asks`: they work at the same time."] : []),
           ...(background
             ? [
                 `  - Longer, but under an hour, with nothing to decide midway: in the background, so the person can keep talking to you: ${inBackground}. The result comes to you as a message; report it when it arrives.${missions ? " A helper has the hour a reply has, so work that may run past it is a mission's." : ""}`,

@@ -288,7 +288,8 @@ export function busConventionLines(input: {
     ? [
         ...head,
         "- To hand work to one of them, call `ask_agent`. It runs them for real (their own skills,",
-        "  tools and permissions) and returns what they say to YOU, not to this chat.",
+        "  tools and permissions) and returns what they say to YOU, not to this chat. To ask several",
+        "  at once, send them in one call with `asks`.",
         "- You are the only voice in this conversation. When `ask_agent` comes back, report the result",
         "  yourself, in your own words, and say who did the work.",
         "",

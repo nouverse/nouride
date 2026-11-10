@@ -478,6 +478,10 @@ at all.
 - **An approval the other agent needs** after that is still asked in your chat, in its name, saying whose work
   it is.
 - Only the agent you talk to moves an ask: a helper's asks, and a scheduled job's, always wait for the answer.
+- **Several agents in one call.** An agent that needs more than one asks them together (`asks`, up to four):
+  they work at the same time and their answers come back in one result, each under its agent. Each ask is held
+  to everything above on its own. Past 45 seconds the ones still working carry on in the background and the ones
+  that answered are reported at once; one that fails, is asleep or is busy is said beside the others' answers.
 
 ## Work that runs long is nudged, not stopped
 

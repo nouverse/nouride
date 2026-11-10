@@ -34,21 +34,33 @@
  * the foreground have too (`wait-then-move.ts`). `background: true` returns at once. Only where the turn asking may hold
  * work in the background — its own chat turn, with `[delegate] max_background` above 0, the one limit helpers and asks
  * share: a helper's ask, and a scheduled turn's, wait to the end (`waitingForm`). A peer has no `ask_agent` at all.
+ *
+ * ## Several agents in one call
+ *
+ * Asking three agents was three calls, and a model that made them a reply apart waited for each in turn. With `asks`,
+ * one call starts them together and brings every answer back in one result, each under its agent: the shape `delegate`
+ * has for helpers. Each ask is the single ask it would have been, checked by the same rules and started through the same
+ * door, so the hop limit, the waiting form, the one background limit and a busy or sleeping agent hold for each on its
+ * own. One that fails or is refused is said in its place, beside the others' answers. The single call is as it was: its
+ * arguments and its result's words are what models know and stored transcripts hold.
  */
 
-import { createLogger, type LoadedAgent, type ModelTier, type Tool, type ToolContext, type ToolResult } from "@nouride/shared";
+import { clip, createLogger, type LoadedAgent, type ModelTier, type Tool, type ToolContext, type ToolResult } from "@nouride/shared";
 import { isHandoffError, renderHandoff, type SubAgentHandoff } from "@/modules/tools/handoff.ts";
 import { describePeers } from "@/modules/router/agent-mentions.ts";
 import { duration } from "@/modules/jobs/wake-text.ts";
 import { runningList } from "./delegate.ts";
 import { BRIEF_SCOPE } from "./delegate-brief.ts";
-import { FOREGROUND_WAIT_MS, limitReached, stayed, within, withWaiting, type MovableRun, type MoveRefusal } from "./wait-then-move.ts";
+import { FOREGROUND_WAIT_MS, limitReached, stayed, within, withWaiting, type MovableRun, type Moved, type MoveRefusal } from "./wait-then-move.ts";
 import { tierArg, tierParameter } from "./tier-arg.ts";
 import { workTextIsEnglish, writeWorkInEnglish } from "@/modules/memory/index.ts";
 
 const log = createLogger("tools.ask_agent");
 
 const MAX_TASK_CHARS = 4000;
+
+/** The most agents one call asks: the fan-out one `delegate` call has. */
+const MAX_ASKS = 4;
 
 export interface PeerTurnRequest {
   /** The agent being asked. */
@@ -179,9 +191,13 @@ export function createAskAgentTool(options: AskAgentToolOptions): Tool {
               "you want back from them. " +
               BRIEF_SCOPE,
           },
+          asks: {
+            type: "array",
+            description: `Several agents at once, in place of \`agent\` and \`task\`: up to ${MAX_ASKS}, each with its own task. They work at the same time, and every answer comes back in this result under its agent.`,
+            items: { type: "object", properties: { agent: { type: "string" }, task: { type: "string" } }, required: ["agent", "task"] },
+          },
           tier: tierParameter("their"),
         },
-        required: ["agent", "task"],
       },
     },
     execute: (args, ctx) => ask(options, args, ctx, false),
@@ -212,40 +228,41 @@ export function createAskAgentTool(options: AskAgentToolOptions): Tool {
   return withWaiting(detachable, waiting);
 }
 
-/** One ask: the name and the task checked, then the answer — waited on, or moved to the background where it may be. */
-async function ask(options: AskAgentToolOptions, args: Record<string, unknown>, ctx: ToolContext, mayDetach: boolean): Promise<ToolResult> {
-  const to = typeof args.agent === "string" ? args.agent.trim().replace(/^@/, "") : "";
-  const task = typeof args.task === "string" ? args.task.trim() : "";
+/** Who an ask reaches and what it carries, once its name and its task pass — or why it does not go, and the name it gave. */
+function checked(options: AskAgentToolOptions, asking: { agent?: unknown; task?: unknown }, ctx: ToolContext): { to: string; task: string } | { refused: string; named: string } {
+  const to = typeof asking.agent === "string" ? asking.agent.trim().replace(/^@/, "") : "";
+  const task = typeof asking.task === "string" ? asking.task.trim() : "";
+  const refused = (why: string) => ({ refused: why, named: to });
 
   const reachable = options.peers(ctx.agentId);
   const naming = availableLines(reachable, options.about?.(reachable) ?? {});
 
-  if (!to) return { content: `Name the agent to ask. ${naming}`, isError: true };
-  if (to === ctx.agentId) {
-    // Worth its own message rather than falling into "unknown agent": a model that asks itself is
-    // usually about to loop, and telling it the shape of the mistake is what stops the retry.
-    return {
-      content: "That is you. Do the work yourself, or ask a different agent.",
-      isError: true,
-    };
-  }
+  if (!to) return refused(`Name the agent to ask. ${naming}`);
+  // Worth its own message rather than falling into "unknown agent": a model that asks itself is
+  // usually about to loop, and telling it the shape of the mistake is what stops the retry.
+  if (to === ctx.agentId) return refused("That is you. Do the work yourself, or ask a different agent.");
   // Compared case-insensitively, then resolved to the real id: the prompt lists ids, but a model
   // writing a sentence capitalises names.
   const match = reachable.find((id) => id.toLowerCase() === to.toLowerCase());
-  if (!match) return { content: `There is no agent called "${to}". ${naming}`, isError: true };
-  if (!task) return { content: `Say what you want ${match} to do.`, isError: true };
-  if (task.length > MAX_TASK_CHARS) {
-    return {
-      content: `That task is ${task.length} characters; the limit is ${MAX_TASK_CHARS}. Send the essentials and let them ask.`,
-      isError: true,
-    };
-  }
+  if (!match) return refused(`There is no agent called "${to}". ${naming}`);
+  if (!task) return refused(`Say what you want ${match} to do.`);
+  if (task.length > MAX_TASK_CHARS) return refused(`That task is ${task.length} characters; the limit is ${MAX_TASK_CHARS}. Send the essentials and let them ask.`);
   // The other agent works in English whatever the person speaks; a person's words quoted in the task stay as they were.
-  if (!workTextIsEnglish(task)) return { content: writeWorkInEnglish("The task"), isError: true };
+  if (!workTextIsEnglish(task)) return refused(writeWorkInEnglish("The task"));
+  return { to: match, task };
+}
+
+/** One call: several asks where `asks` is sent, else the one — checked, then answered, waited on, or moved to the background where it may be. */
+async function ask(options: AskAgentToolOptions, args: Record<string, unknown>, ctx: ToolContext, mayDetach: boolean): Promise<ToolResult> {
+  const several = args.asks !== undefined;
+  const one = several ? null : checked(options, args, ctx);
+  if (one && "refused" in one) return { content: one.refused, isError: true };
 
   const tier = tierArg(args.tier);
   if ("error" in tier) return { content: tier.error, isError: true };
+  if (!one) return askSeveral(options, args, ctx, mayDetach, tier.tier);
 
+  const { to: match, task } = one;
   const background = mayDetach && args.background === true;
   log.info("agent asking agent", { from: ctx.agentId, to: match, tier: tier.tier, ...(background ? { background: true } : {}) });
   const request: PeerTurnRequest = { to: match, from: ctx.agentId, task, ctx, tier: tier.tier };
@@ -319,4 +336,129 @@ function notStarted(agent: string, refused: MoveRefusal): string {
     `Not started: ${limitReached(refused)}: ${runningList(refused.running)}. Wait for one to finish (its result comes ` +
     `to you as a message), stop one with \`nouride jobs kill <id>\`, or leave \`background\` off to wait for ${agent}'s answer.`
   );
+}
+
+/** One of several asks at its end: its answer, with why it was waited on past the wait if it was; its job, once it moved; or why it never went. */
+type AskEnd = { agent: string; task: string } & ({ handoff: PeerTurnResult; stayed?: string } | { job: string } | { refused: string });
+
+/** One of several asks under way, or refused before it began. */
+type Begun = { agent: string; task: string } & ({ run: MovableRun } | { refused: string });
+
+/** Why `asks` cannot be read as a list of asks, or null when it can. */
+function shapeRefusal(args: Record<string, unknown>): string | null {
+  if (args.agent !== undefined || args.task !== undefined) return "Send `asks` for several agents, or `agent` and `task` for one: not both.";
+  if (!Array.isArray(args.asks) || args.asks.length === 0) return `\`asks\` is a list of up to ${MAX_ASKS} asks, each an \`agent\` and its \`task\`.`;
+  if (args.asks.length > MAX_ASKS) return `That is ${args.asks.length} asks; one call asks at most ${MAX_ASKS} agents. Send the rest in a second call.`;
+  return null;
+}
+
+/** An ask that could not run, as its answer: one agent failing is not the others failing. */
+function failedToRun(agent: string, err: unknown): PeerTurnResult {
+  return { agentId: agent, status: "failed", summary: "", files: [], spills: [], metrics: { toolCalls: 0, steps: 0, ms: 0 }, reason: String(err instanceof Error ? err.message : err) };
+}
+
+/** One of several started as a single ask is: so it can move, where this turn may hold work in the background; else run to its end. */
+function begin(options: AskAgentToolOptions, request: PeerTurnRequest, mayDetach: boolean, background: boolean): Begun {
+  const said = { agent: request.to, task: request.task };
+  const failed = (err: unknown) => failedToRun(request.to, err);
+  try {
+    if (mayDetach && options.start) {
+      const started = options.start(request, background);
+      if ("refused" in started) return { ...said, refused: notStarted(request.to, started.refused) };
+      return { ...said, run: { answer: started.run.answer.catch(failed), detach: () => started.run.detach() } };
+    }
+    return { ...said, run: { answer: options.run(request).catch(failed), detach: () => ({ answered: true }) } };
+  } catch (err) {
+    return { ...said, run: { answer: Promise.resolve(failed(err)), detach: () => ({ answered: true }) } };
+  }
+}
+
+/** One ask's end, once it was asked to move or never was: its job, or its answer. */
+async function endOf(begun: Begun, moved: Moved | null, waitMs: number): Promise<AskEnd> {
+  const { agent, task } = begun;
+  if ("refused" in begun) return { agent, task, refused: begun.refused };
+  if (moved && "job" in moved) return { agent, task, job: moved.job };
+  return { agent, task, handoff: await begun.run.answer, ...(moved && "refused" in moved ? { stayed: stayed(moved.refused, waitMs) } : {}) };
+}
+
+/**
+ * Every ask at once. With `background` each moves as it starts, one after another, so the limit counts the ones this
+ * call moved; without it all are waited on together, and past the wait each still working moves the same way. A turn
+ * that may hold no work in the background waits for every answer to the end.
+ */
+async function askSeveral(options: AskAgentToolOptions, args: Record<string, unknown>, ctx: ToolContext, mayDetach: boolean, tier: ModelTier): Promise<ToolResult> {
+  const shape = shapeRefusal(args);
+  if (shape) return { content: shape, isError: true };
+  const background = mayDetach && args.background === true;
+  const waitMs = options.waitMs ?? FOREGROUND_WAIT_MS;
+  const entries = (args.asks as unknown[]).map((entry) => (entry !== null && typeof entry === "object" ? (entry as Record<string, unknown>) : {}));
+  log.info("agent asking agents", { from: ctx.agentId, asks: entries.length, tier, ...(background ? { background: true } : {}) });
+
+  const moved: (Moved | null)[] = entries.map(() => null);
+  const begun = entries.map((entry, index): Begun => {
+    const one = checked(options, entry, ctx);
+    if ("refused" in one) return { agent: one.named || "(no agent named)", task: typeof entry.task === "string" ? entry.task.trim() : "", refused: `Not asked: ${one.refused}` };
+    const started = begin(options, { to: one.to, from: ctx.agentId, task: one.task, ctx, tier }, mayDetach, background);
+    if (background && "run" in started) moved[index] = started.run.detach();
+    return started;
+  });
+  if (!background && mayDetach && options.start) {
+    const answers = Promise.all(begun.map((one) => ("run" in one ? one.run.answer : null)));
+    // Each still working moves, one after another, so the limit counts the ones this call moved too.
+    if ((await within(answers, waitMs)) === null) for (const [index, one] of begun.entries()) if ("run" in one) moved[index] = one.run.detach();
+  }
+  const ends = await Promise.all(begun.map((one, index) => endOf(one, moved[index] ?? null, waitMs)));
+  return severalResult(ends, background ? null : waitMs, ctx);
+}
+
+/** What the model reads of several asks: each answer under its agent, each agent still at work, and what to do then. */
+function severalResult(ends: AskEnd[], waitedMs: number | null, ctx: ToolContext): ToolResult {
+  const rendered = ends
+    .map((end) => {
+      const said =
+        "refused" in end
+          ? end.refused
+          : "job" in end
+            ? waitedMs === null
+              ? `Working on it in the background, as ${end.job}.`
+              : `No answer after ${duration(waitedMs)}: still working on it, now in the background, as ${end.job}.`
+            : [renderHandoff(end.handoff), end.stayed].filter(Boolean).join("\n");
+      // The agent, and the ask it answers: two asks of one agent are told apart by it.
+      return [`── ${end.agent}: ${clip(end.task.split("\n", 1)[0] ?? "", 80)}`, said].join("\n");
+    })
+    .join("\n\n");
+  const answers = ends.flatMap((end) => ("handoff" in end ? [end.handoff] : []));
+  const working = ends.flatMap((end) => ("job" in end ? [end] : []));
+  const failed = ends.filter((end) => "refused" in end || ("handoff" in end && end.handoff.status === "failed")).length;
+  log.info("handoffs returned", { from: ctx.agentId, answered: answers.length, moved: working.length, failed });
+  return {
+    content: working.length > 0 ? `${rendered}\n\n${stillWorking(working, answers.length > 0)}` : rendered,
+    // An error only when nobody answered and nobody is working on it: three answers of four are three to work with.
+    isError: failed === ends.length,
+    metadata: {
+      asks: ends.length,
+      agents: ends.map((end) => end.agent),
+      failed,
+      statuses: ends.map((end) => ("job" in end ? "background" : "refused" in end ? "refused" : end.handoff.status)),
+      toolCalls: answers.reduce((sum, handoff) => sum + handoff.metrics.toolCalls, 0),
+      // The turn ends, as a single ask's does once it moved: another round would only poke at work it will hear about.
+      ...(working.length > 0 ? { background: true, moved: working.map((end) => end.job), control: { finishTurn: "wrap_up", note: "ask_in_background" } } : {}),
+    },
+  };
+}
+
+/**
+ * The agents still at work: where they are, and where their answers will come from. The asking agent has not seen those,
+ * so the one thing its reply must not do is say what they will be; what the others said it can say now.
+ */
+function stillWorking(working: { agent: string; job: string }[], someAnswered: boolean): string {
+  return [
+    `Still working, now in the background: ${working.map((end) => `${end.agent} as ${end.job}`).join("; ")}.`,
+    "Your turn ends now, so the person can talk to you meanwhile. Each answer comes to you as a message of its own when " +
+      "that agent finishes: you have not seen it, so do not say what it will be. " +
+      (someAnswered
+        ? "Tell the person what the agents that answered said, and that the others are still on it and you will pass each answer on when it comes."
+        : "Tell the person who is on what, and that you will pass each answer on when it comes."),
+    "Stop one with `nouride jobs kill <id>` if the person asks.",
+  ].join("\n");
 }

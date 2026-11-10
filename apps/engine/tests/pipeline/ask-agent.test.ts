@@ -186,6 +186,123 @@ describe("ask_agent", () => {
   });
 });
 
+describe("ask_agent with one agent, as it always was", () => {
+  test("the same arguments give the same result, word for word: models know it and stored transcripts hold it", async () => {
+    const tool = createAskAgentTool({ peers, run: async () => handoff({ files: ["/w/build.ts"] }) });
+    const result = await tool.execute({ agent: "nox", task: "fix the build" }, ctx());
+    expect(result.content).toBe("[nox · success]\nbuild fixed, PR is up\n\nFiles it changed: /w/build.ts\n\n3 tool calls · 2 steps · 17s");
+    expect(result.metadata).toEqual({ agent: "nox", status: "success", toolCalls: 3, files: ["/w/build.ts"] });
+    // And each refusal as it was said.
+    const said = async (args: Record<string, unknown>) => (await tool.execute(args, ctx())).content;
+    expect(await said({ task: "fix the build" })).toBe("Name the agent to ask. Available: nox, nera.");
+    expect(await said({ agent: "nouva", task: "fix the build" })).toBe("That is you. Do the work yourself, or ask a different agent.");
+    expect(await said({ agent: "noxx", task: "fix the build" })).toBe('There is no agent called "noxx". Available: nox, nera.');
+    expect(await said({ agent: "nox" })).toBe("Say what you want nox to do.");
+    expect(await said({ agent: "nox", task: "x".repeat(4001) })).toBe("That task is 4001 characters; the limit is 4000. Send the essentials and let them ask.");
+    expect(await said({ agent: "nox", task: "fix the build", tier: "huge" })).toContain("`tier` is one of");
+  });
+
+  test("its schema still takes `agent` and `task`, and now `asks` beside them: neither is required, since one of the two is sent", () => {
+    const { properties, required } = createAskAgentTool({ peers, run: async () => handoff() }).definition.parameters as { properties: Record<string, { description?: string }>; required?: string[] };
+    expect(Object.keys(properties)).toEqual(["agent", "task", "asks", "tier"]);
+    expect(required).toBeUndefined();
+    expect(properties.asks!.description).toBe(
+      "Several agents at once, in place of `agent` and `task`: up to 4, each with its own task. They work at the same time, and every answer comes back in this result under its agent.",
+    );
+  });
+});
+
+describe("ask_agent with several agents", () => {
+  const BUILD = { agent: "nox", task: "fix the build" };
+  const DOCS = { agent: "nera", task: "update the docs\nand the changelog" };
+
+  test("every ask is started before any answers, and each answer comes back under its agent and its ask", async () => {
+    const started: string[] = [];
+    let release: () => void = () => {};
+    const held = new Promise<void>((resolve) => (release = resolve));
+    const tool = createAskAgentTool({
+      peers,
+      run: async (request) => {
+        started.push(request.to);
+        await held;
+        return handoff({ agentId: request.to, summary: `${request.to} did it` });
+      },
+    });
+
+    const pending = tool.execute({ asks: [BUILD, DOCS], tier: "small" }, ctx());
+    // Both at work before either has answered: at the same time, not one after the other.
+    expect(started).toEqual(["nox", "nera"]);
+    release();
+    const result = await pending;
+
+    expect(result.isError).toBe(false);
+    expect(result.content).toBe(
+      "── nox: fix the build\n[nox · success]\nnox did it\n\n3 tool calls · 2 steps · 17s\n\n" +
+        // The ask's first line names it: two asks of one agent are told apart by it.
+        "── nera: update the docs\n[nera · success]\nnera did it\n\n3 tool calls · 2 steps · 17s",
+    );
+    expect(result.metadata).toEqual({ asks: 2, agents: ["nox", "nera"], failed: 0, statuses: ["success", "success"], toolCalls: 6 });
+  });
+
+  test("each ask carries the tier and its own task, as a single ask does", async () => {
+    const seen: PeerTurnRequest[] = [];
+    const tool = createAskAgentTool({ peers, run: async (request) => (seen.push(request), handoff({ agentId: request.to })) });
+    await tool.execute({ asks: [BUILD, { agent: "@Nera", task: "  update the docs  " }], tier: "high" }, ctx());
+    expect(seen.map((request) => [request.to, request.from, request.task, request.tier])).toEqual([
+      ["nox", "nouva", "fix the build", "high"],
+      ["nera", "nouva", "update the docs", "high"],
+    ]);
+  });
+
+  test("one that throws, one that fails and one that is refused do not lose the answer that came", async () => {
+    const tool = createAskAgentTool({
+      peers: () => ["nox", "nera", "nero"],
+      run: async (request) => {
+        if (request.to === "nera") throw new Error("the provider hung up");
+        if (request.to === "nero") return handoff({ agentId: "nero", status: "failed", summary: "", reason: "nero is disabled" });
+        return handoff();
+      },
+    });
+
+    const result = await tool.execute({ asks: [BUILD, DOCS, { agent: "nero", task: "count the incidents" }, { agent: "ghost", task: "anything" }] }, ctx());
+
+    // Not an error: one answered, and that answer is whole.
+    expect(result.isError).toBe(false);
+    expect(result.content).toContain("── nox: fix the build\n[nox · success]\nbuild fixed, PR is up");
+    expect(result.content).toContain("── nera: update the docs\n[nera · failed]\n(no report)\n\nthe provider hung up");
+    expect(result.content).toContain("── nero: count the incidents\n[nero · failed]\n(no report)\n\nnero is disabled");
+    expect(result.content).toContain('── ghost: anything\nNot asked: There is no agent called "ghost". Available: nox, nera, nero.');
+    expect(result.metadata).toMatchObject({ asks: 4, failed: 3, statuses: ["success", "failed", "failed", "refused"] });
+  });
+
+  test("an error only when nobody answered", async () => {
+    const tool = createAskAgentTool({ peers, run: async (request) => handoff({ agentId: request.to, status: "failed", summary: "", reason: "down" }) });
+    expect((await tool.execute({ asks: [BUILD, DOCS] }, ctx())).isError).toBe(true);
+    expect((await tool.execute({ asks: [BUILD, { agent: "nouva", task: "do it" }] }, ctx())).isError).toBe(true);
+  });
+
+  test("a list that is not one, both shapes at once, or more than four, is refused before anybody is asked", async () => {
+    let ran = 0;
+    const tool = createAskAgentTool({ peers, run: async () => ((ran += 1), handoff()) });
+    const said = async (args: Record<string, unknown>) => {
+      const result = await tool.execute(args, ctx());
+      expect(result.isError).toBe(true);
+      return result.content;
+    };
+    expect(await said({ asks: [] })).toBe("`asks` is a list of up to 4 asks, each an `agent` and its `task`.");
+    expect(await said({ asks: "nox" })).toBe("`asks` is a list of up to 4 asks, each an `agent` and its `task`.");
+    expect(await said({ asks: [BUILD], agent: "nera", task: "update the docs" })).toBe("Send `asks` for several agents, or `agent` and `task` for one: not both.");
+    expect(await said({ asks: [BUILD, DOCS, BUILD, DOCS, BUILD] })).toBe("That is 5 asks; one call asks at most 4 agents. Send the rest in a second call.");
+    expect(await said({ asks: [BUILD], tier: "huge" })).toContain("`tier` is one of");
+    expect(ran).toBe(0);
+    // An entry that is no ask at all is said in its place, and the one beside it still runs.
+    const mixed = await tool.execute({ asks: ["nox", BUILD] }, ctx());
+    expect(mixed.content).toStartWith("── (no agent named): \nNot asked: Name the agent to ask. Available: nox, nera.");
+    expect(mixed.content).toContain("── nox: fix the build\n[nox · success]");
+    expect(ran).toBe(1);
+  });
+});
+
 /**
  * Whether the room hears about a handover.
  *
