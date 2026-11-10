@@ -232,7 +232,7 @@ export const ANNOTATIONS: Record<string, Annotation> = {
       "the agents' commands may use, whichever is lower, at least 1 and at most 4 (`nouride doctor` says the number " +
       "in force). 0 turns them off; at most 4. An agent can have its own in its pack's `[delegate]`, set " +
       "from its Settings page in the dashboard, which applies to the next helper it starts. Since 0.7.19 it counts the " +
-      "agent's asks in the background too (an `ask_agent` past its minute), and a helper it waited for that is still " +
+      "agent's asks in the background too (an `ask_agent` past its 45 seconds), and a helper it waited for that is still " +
       "working after 45 seconds, which moves there; at 0 every ask and every helper is waited for to the end.",
     caveat:
       "A helper does not take a slot under `[queue] max_concurrent_turns` (it exists so the agent stays free for the " +

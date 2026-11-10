@@ -332,7 +332,7 @@ quiet_after_minutes = 5
 # use, whichever is lower, at least 1 and at most 4. `nouride doctor` says the number in force and where it came from.
 # 0 turns them off; at most 4. An agent can set its own under [delegate] in its config.toml — from its Settings page
 # in the dashboard, too. It counts the agent's asks in the background as well (0.7.19): an `ask_agent` still waiting
-# after a minute moves there, and at 0 every ask waits for its answer.
+# after 45 seconds moves there, and at 0 every ask waits for its answer.
 # max_background = 2
 
 [missions]

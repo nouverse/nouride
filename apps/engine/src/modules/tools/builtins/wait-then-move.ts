@@ -1,5 +1,5 @@
 /**
- * Waited on for a minute, then moved behind the turn: what `ask_agent` and `delegate` in the foreground do with work they
+ * Waited on for 45 seconds, then moved behind the turn: what `ask_agent` and `delegate` in the foreground do with work they
  * handed over that runs long.
  *
  * The call waits for the answer as it always did, up to `FOREGROUND_WAIT_MS`. Past that, the work carries on as a job of
