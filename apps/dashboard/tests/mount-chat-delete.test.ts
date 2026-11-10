@@ -132,6 +132,40 @@ describe("deleting the chat or room on screen", () => {
     expect(recorded.deletes).toEqual(["/sessions/ses_old"]);
   });
 
+  // After one conversation was deleted from History, Delete on the next row did nothing: the question is one kept
+  // object, asked again unchanged, and the dialog opened only when its question changed.
+  test("a second row deleted from History is asked about too, and deleted", async () => {
+    const at = Date.now() - 60_000;
+    const row = (id: string, title: string, ago: number) => ({ id, agentId: "nouva", chatId: `web-${id}`, gatewayId: "web:dashboard", updatedAt: at - ago, title });
+    const sessions = [row("ses_1", "on screen", 0), row("ses_a", "the first to go", 1_000), row("ses_b", "the second to go", 2_000)];
+    answer({ "/sessions?agent=nouva": { status: 200, body: { sessions, total: 3 } } });
+    const recorded = recordDeletes({ ok: true, turns: 1, stopped: 0 });
+    const asked: string[] = [];
+    try {
+      await renderPage("/chat/ses_1", async (host) => {
+        await eventually(() => host.querySelector('button[aria-label$="\'s conversations"]') !== null, 3_000, "History");
+        (host.querySelector('button[aria-label$="\'s conversations"]') as HTMLElement).click();
+        for (const [title, count] of [["the first to go", 1], ["the second to go", 2]] as const) {
+          const rowMenu = () => dom.document.body.querySelector(`[data-drawer] button[aria-label="More for “${title}”"]`) as HTMLButtonElement | null;
+          await eventually(() => rowMenu() !== null, 3_000, `the menu of "${title}"`);
+          rowMenu()!.click();
+          await eventually(() => bodyButton("Delete conversation") !== undefined, 2_000, "the menu open");
+          bodyButton("Delete conversation")!.click();
+          const dialog = () => dom.document.body.querySelector("dialog[open]");
+          const confirmButton = () => [...(dialog()?.querySelectorAll("button") ?? [])].find((button) => button.textContent?.trim() === "Delete");
+          await eventually(() => confirmButton() !== undefined, 2_000, `the confirmation for "${title}"`);
+          asked.push(dialog()?.querySelector("h3")?.textContent?.trim() ?? "");
+          confirmButton()!.click();
+          await eventually(() => recorded.deletes.length === count && dialog() === null, 2_000, `"${title}" deleted and its dialog closed`);
+        }
+      });
+    } finally {
+      recorded.restore();
+    }
+    expect(asked).toEqual(["Delete this conversation?", "Delete this conversation?"]);
+    expect(recorded.deletes).toEqual(["/sessions/ses_a", "/sessions/ses_b"]);
+  });
+
   test("a new chat has nothing to delete, so no menu", async () => {
     const html = await renderPage("/chat");
     expect(html).not.toContain('aria-label="More for this');

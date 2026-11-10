@@ -79,7 +79,10 @@ export function useConfirm(): Confirmation {
         // promise — an awaited call that never settles is a click that silently does nothing.
         resolve.current?.(false);
         resolve.current = done;
-        setRequest(next);
+        // A copy, so every question is a new one to React: the dialog is opened by the effect below when the request
+        // changes, and a caller that asks with one kept object (a conversation's delete does) asked the same value
+        // twice. The second time nothing changed, the dialog stayed shut, and the click did nothing.
+        setRequest({ ...next });
       }),
     [],
   );
