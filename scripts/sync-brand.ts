@@ -47,6 +47,19 @@ const COPIES = [
    * the bundler never sees it. It was a committed copy of `nouride.png`, beside a second one nothing used.
    */
   { from: "packages/shared/assets/nouride.png", to: "apps/site/public/logo.png" },
+  /**
+   * The dashboard's app icons, for a phone's home screen and an installed app: the favicon's head, the mascot's own
+   * (`mascot/standing/12-head.webp`, 512px), cut without the sparks beside it. Two to show, clear around the head as the
+   * favicon is; one to be masked and the iPhone's, on the night theme's lavender to every edge, since a mask cuts its own
+   * shape and an iPhone fills anything clear with black. Made with `magick 12-head.webp -crop 395x512+20+0 +repage -trim
+   * +repage -background none -gravity center -extent "%[fx:max(w,h)]x%[fx:max(w,h)]" head.png`, then `magick head.png
+   * -filter Lanczos -resize <head>x<head> -background <none|#a99af0> -gravity center -extent <size>x<size>`: 176 in 192,
+   * 472 in 512, 300 in the masked 512 (inside the circle every mask keeps), 150 in the iPhone's 180.
+   */
+  { from: "packages/shared/assets/app-icons/icon-192.png", to: "apps/dashboard/public/icons/icon-192.png" },
+  { from: "packages/shared/assets/app-icons/icon-512.png", to: "apps/dashboard/public/icons/icon-512.png" },
+  { from: "packages/shared/assets/app-icons/icon-maskable-512.png", to: "apps/dashboard/public/icons/icon-maskable-512.png" },
+  { from: "packages/shared/assets/app-icons/apple-touch-icon.png", to: "apps/dashboard/public/icons/apple-touch-icon.png" },
 ];
 
 for (const { from } of COPIES) {

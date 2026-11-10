@@ -5,8 +5,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun run ../../scripts/sync-brand.ts && bun run scripts/app-icons.ts && vite",
-    "build": "bun run ../../scripts/sync-brand.ts && bun run scripts/app-icons.ts && vite build",
+    "dev": "bun run ../../scripts/sync-brand.ts && vite",
+    "build": "bun run ../../scripts/sync-brand.ts && vite build",
     "preview": "vite preview",
     "lint:check": "bun x tsc --noEmit --skipLibCheck",
     "test": "bun test tests"

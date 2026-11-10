@@ -226,8 +226,8 @@ Favicons are the exception and are **generated**: `index.html` and Starlight's `
 go through the bundler, so the bytes must exist under `public/`. `scripts/sync-brand.ts` copies them
 there before each build and both copies are gitignored — generated rather than committed, which is
 how the five duplicates happened. The dashboard's app icons, which its manifest and `index.html` name,
-are generated the same way: `apps/dashboard/scripts/app-icons.ts` draws them from the cat's pixel art
-into `public/icons/` before each build.
+are copied the same way: the favicon's head, from `packages/shared/assets/app-icons/` into
+`public/icons/` before each build.
 
 Internal packages use the short `@nouride/*` scope so imports read as
 `import { MessageEnvelope } from "@nouride/shared"` rather than

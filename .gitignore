@@ -39,7 +39,7 @@ plugins/
 # Generated from packages/shared/assets by scripts/sync-brand.ts — one source of truth for the
 # brand, and a favicon cannot be imported the way the logo can.
 apps/dashboard/public/favicon.png
-# Drawn from the cat's pixel art by apps/dashboard/scripts/app-icons.ts at every dashboard build.
+# Copied from packages/shared/assets/app-icons by scripts/sync-brand.ts at every dashboard build.
 apps/dashboard/public/icons/
 apps/site/public/favicon.png
 apps/site/public/logo.png
