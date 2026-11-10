@@ -1,19 +1,20 @@
 /**
  * One agent's History, from its chat's header: only that agent's conversations — the dashboard's, and its private chats
  * on Telegram, Discord or WhatsApp, each saying where it is from — newest first, under the day they belong to, and
- * searchable by what was first asked in them. Under its button on a laptop, a sheet from the foot of a phone.
+ * searchable by what was first asked in them. A drawer from the left of the conversation (`Drawer`), the work notes'
+ * twin on the other side, at every width.
  *
  * A private chat on a chat app opens read-only here: it is answered on its app.
  */
 
-import { useState, type RefObject } from "react";
+import { useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Loader2, Monitor, Plus } from "lucide-react";
 import type { ChatListPayload, SessionSummary } from "@nouride/wire";
 import { ConversationRow, ListHeading } from "@/commons/components/chat/ConversationRow";
 import { PlatformTag } from "@/commons/components/chat/PlatformBadge";
-import { PopoverSheet } from "@/commons/components/ui/PopoverSheet";
+import { Drawer, DrawerHead } from "@/commons/components/ui/Drawer";
 import { SearchInput } from "@/commons/components/ui/SearchInput";
 import { ListLoading } from "@/commons/components/ui/Spinner";
 import { useDebounced } from "@/commons/hooks/use-debounced";
@@ -33,7 +34,6 @@ function from(session: SessionSummary): string {
 export function HistoryPanel({
   open,
   onClose,
-  anchor,
   agentId,
   agentName,
   current,
@@ -41,17 +41,19 @@ export function HistoryPanel({
 }: {
   open: boolean;
   onClose: () => void;
-  anchor: RefObject<HTMLElement | null>;
   agentId: string;
   agentName: string;
   /** The conversation on screen, marked in the list. */
   current: string | undefined;
   list: ChatListPayload | undefined;
 }) {
+  const label = `${agentName}'s conversations`;
   return (
-    <PopoverSheet open={open} onClose={onClose} anchor={anchor} label={`${agentName}'s conversations`} width={420}>
+    // Its list is read when it is first opened, not with every conversation on screen.
+    <Drawer open={open} onClose={onClose} side="left" label={label} lazy>
+      <DrawerHead title={label} closeLabel="Close History" onClose={onClose} />
       <HistoryBody agentId={agentId} agentName={agentName} current={current} list={list} onClose={onClose} />
-    </PopoverSheet>
+    </Drawer>
   );
 }
 
@@ -69,8 +71,7 @@ function HistoryBody({ agentId, agentName, current, list, onClose }: { agentId: 
 
   return (
     <>
-      <div className="flex shrink-0 flex-col gap-2.5 px-4 pt-3 pb-2">
-        <h2 className="font-display text-lg font-medium tracking-tight">{agentName}'s conversations</h2>
+      <div className="flex shrink-0 flex-col gap-2.5 px-4 pb-2">
         <SearchInput value={search} onChange={setSearch} placeholder="Search by what was asked" label={`Search ${agentName}'s conversations`} className="input-md h-11 w-full sm:h-10" />
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-2">

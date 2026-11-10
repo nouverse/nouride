@@ -16,7 +16,7 @@ import { AgentHeader } from "./AgentHeader.tsx";
 import { RoomHeader } from "./RoomHeader.tsx";
 import { EmptyState } from "./EmptyState.tsx";
 import { Composer } from "./Composer.tsx";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { api } from "@/commons/lib/api";
@@ -44,6 +44,7 @@ import { applyCommand, matchCommands, slashToken } from "./SlashMenu";
 import { canWrite, useMe } from "@/commons/lib/session";
 import { useAnswerApproval } from "@/commons/hooks/use-answer-approval";
 import { NotesPanel } from "./NotesPanel";
+import { HistoryPanel } from "./HistoryPanel";
 import { PlanStrip } from "./PlanStrip";
 import { startWith } from "../lib/start-with";
 import { askedInLog, oldestLine } from "../lib/group-stream";
@@ -86,6 +87,10 @@ export function Conversation(
   const [notesFor, setNotesFor] = useState<string | null>(null);
   const notesOpen = notesFor !== null && notesFor === sessionId && Boolean(workNotes.data);
   const closeNotes = () => setNotesFor(null);
+  // History and the notes are drawers either side of the pane, one open at a time; a conversation picked in History opens
+  // where it was, and the drawer is done.
+  const [historyOpen, setHistoryOpen] = useState(false);
+  useEffect(() => setHistoryOpen(false), [sessionId]);
   const toggleNotes = () => {
     // Opened, read again: what the agent wrote in a turn on another connection is there without waiting for one here.
     if (!notesOpen) void workNotes.refetch();
@@ -357,8 +362,8 @@ export function Conversation(
           status={working ? { words: working, ...(helpers > 0 ? { more: " in the background" } : {}), tone: "working" } : { words: now?.words ?? "", tone: now?.tone ?? "muted" }}
           sessionId={sessionId}
           {...(elsewhere ? { readOnly: { platform: elsewhere } } : {})}
-          list={data.list.data}
-          {...(workNotes.data ? { notes: { open: notesOpen, count: workNotes.data.tasks.length, toggle: toggleNotes } } : {})}
+          history={{ open: historyOpen, toggle: () => { closeNotes(); setHistoryOpen((was) => !was); } }}
+          {...(workNotes.data ? { notes: { open: notesOpen, count: workNotes.data.tasks.length, toggle: () => { setHistoryOpen(false); toggleNotes(); } } } : {})}
           onDelete={open.deleteOnScreen}
           deleting={open.deleting}
         />
@@ -377,16 +382,9 @@ export function Conversation(
           />
         ) : null}
 
-        {/* Always there, so it fades as the drawer slides: drawn only while it was open, it came and went at once.
-            Hidden once faded (`invisible`), it takes no click and no focus. */}
-        <button
-          type="button"
-          className={`absolute inset-0 bg-black/30 backdrop-blur-xs z-20 transition-[opacity,visibility] duration-200 ease-out ${
-            notesOpen ? "visible opacity-100" : "invisible opacity-0"
-          }`}
-          onClick={closeNotes}
-          aria-label="Close drawer"
-        />
+        {room ? null : (
+          <HistoryPanel open={historyOpen} onClose={() => setHistoryOpen(false)} agentId={selectedAgent} agentName={currentAgent?.displayName || selectedAgent || "Agent"} current={sessionId} list={data.list.data} />
+        )}
 
         <div className="relative flex-1 min-h-0 flex flex-col h-full overflow-hidden" {...drop.handlers}>
           {/* Anywhere in the conversation, not just over the input: a file being dragged is aimed at

@@ -1,5 +1,5 @@
 /**
- * The agent's work notes for this conversation, in a drawer on the right — the history drawer's twin on the other side.
+ * The agent's work notes for this conversation, in a drawer on the right (`Drawer`) — History's twin on the other side.
  *
  * The agent reads these at every step, so a wrong fact in them is repeated until somebody takes it out: the panel shows
  * each task with the plan kept under it, and an operator can correct the whole file in place. Read again when a turn
@@ -12,10 +12,11 @@
 
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Archive, Pencil, Save, X } from "lucide-react";
+import { Archive, Pencil, Save } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import type { WorkNotes } from "@nouride/wire";
 import { ago } from "@/commons/lib/format";
+import { Drawer, DrawerHead } from "@/commons/components/ui/Drawer";
 import { Markdown } from "@/commons/components/ui/Markdown";
 import { Spinner } from "@/commons/components/ui/Spinner";
 import { useToast } from "@/commons/components/ui/toast";
@@ -76,37 +77,25 @@ export function NotesPanel({
 
   const count = notes.tasks.length;
   return (
-    <aside
-      aria-label="Work notes"
-      // Out of the tab order and away from screen readers while it is off-screen.
-      inert={!open}
-      className={`absolute inset-y-0 right-0 z-30 w-full sm:w-96 bg-base-100/95 backdrop-blur-2xl border-l border-base-content/[0.08] shadow-xl flex flex-col transition-transform duration-200 ease-out ${
-        open ? "translate-x-0" : "translate-x-full"
-      }`}
-    >
-      <div className="p-3 border-b border-base-content/[0.08] space-y-1">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-xs font-bold uppercase tracking-wider text-base-content/65 px-1 font-mono">
-            Work notes
-            {count > 0 && <span className="ml-1.5 font-mono font-medium text-base-content/65">{count}</span>}
-          </span>
-          <div className="flex items-center gap-1">
-            {editable && !editing ? (
-              <button type="button" className="btn btn-ghost btn-xs rounded-lg gap-1 text-base-content/70 hover:text-base-content" onClick={startEdit}>
-                <Pencil size={12} aria-hidden="true" /> Edit
-              </button>
-            ) : null}
-            <button
-              type="button"
-              className="btn btn-ghost btn-xs btn-square text-base-content/65 hover:text-base-content"
-              onClick={onClose}
-              aria-label="Close work notes"
-            >
-              <X size={15} />
+    <Drawer open={open} onClose={onClose} side="right" label="Work notes">
+      <div className="shrink-0 border-b border-base-content/[0.08] pb-2">
+        <DrawerHead
+          title={
+            <>
+              Work notes
+              {count > 0 && <span className="ml-1.5 text-base text-base-content/65">{count}</span>}
+            </>
+          }
+          closeLabel="Close work notes"
+          onClose={onClose}
+        >
+          {editable && !editing ? (
+            <button type="button" className="btn btn-ghost btn-sm h-9 rounded-[12px] gap-1 text-base-content/70 hover:text-base-content max-sm:h-11" onClick={startEdit}>
+              <Pencil size={14} aria-hidden="true" /> Edit
             </button>
-          </div>
-        </div>
-        <p className="px-1 text-[11px] text-base-content/65">The agent reads these at every step of this conversation.</p>
+          ) : null}
+        </DrawerHead>
+        <p className="px-4 text-xs text-base-content/65">The agent reads these at every step of this conversation.</p>
       </div>
 
       {editing ? (
@@ -172,6 +161,6 @@ export function NotesPanel({
           )}
         </div>
       )}
-    </aside>
+    </Drawer>
   );
 }

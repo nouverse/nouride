@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { renderPage, useMountHarness } from "./mount-harness.ts";
+import { dom, renderPage, useMountHarness } from "./mount-harness.ts";
 import { eventually } from "./wait.ts";
 
 useMountHarness();
@@ -99,23 +99,78 @@ describe("a tab", () => {
 });
 
 describe("the chat's drawers", () => {
-  test("slide over a shade that is always there: faded out and out of reach until one opens, then faded in", async () => {
-    let seen = { closed: [] as string[], open: [] as string[], kept: false };
+  // History opened under its button on a laptop and as a sheet on a phone, while the notes slid in from the side: two
+  // motions for two panels of one conversation. Now both are the one drawer (`Drawer`), from either side, and the phone's
+  // sheets rise the way the app's More does.
+  const classes = (element: Element | null | undefined) => (element?.getAttribute("class") ?? "").split(/\s+/);
+  const MOTION = ["transition-[translate,visibility]", "duration-200", "ease-out"];
+
+  test("History from the left and the notes from the right: twins, one open at a time, each over a shade, Escape closing", async () => {
+    const seen: Record<string, unknown> = {};
     await renderPage("/chat/ses_1", async (host) => {
-      const shade = () => host.querySelector('button[aria-label="Close drawer"]');
-      await eventually(() => shade() !== null && host.querySelector('button[aria-label="More for this conversation"]') !== null, 4_000, "the shade");
-      const before = shade();
-      const closed = before!.className.split(/\s+/);
-      // The work notes, from the conversation's menu: the menu is drawn on the body.
+      const history = () => host.querySelector('[data-drawer="left"]');
+      const notes = () => host.querySelector('[data-drawer="right"]');
+      const button = () => host.querySelector<HTMLButtonElement>('button[aria-label="Nouva\'s conversations"]');
+      const shade = () => host.querySelector('button[aria-label="Close Nouva\'s conversations"]');
+      await eventually(() => history() !== null && notes() !== null && button() !== null, 4_000, "the drawers");
+      seen.closed = { history: classes(history()), notes: classes(notes()), inert: [history()!.hasAttribute("inert"), notes()!.hasAttribute("inert")], shade: classes(shade()) };
+      button()!.focus();
+      button()!.click();
+      await eventually(() => classes(history()).includes("translate-x-0"), 2_000, "History open");
+      seen.open = { history: classes(history()), inert: history()!.hasAttribute("inert"), shade: classes(shade()), notes: classes(notes()), list: history()!.textContent };
+      // The notes, from the conversation's menu, close History as they open.
       (host.querySelector('button[aria-label="More for this conversation"]') as HTMLElement).click();
-      const notes = () => [...host.ownerDocument.body.querySelectorAll("button")].find((button) => button.textContent?.includes("Work notes"));
-      await eventually(() => notes() !== undefined, 2_000, "the menu");
-      notes()!.click();
-      await eventually(() => shade()!.className.split(/\s+/).includes("opacity-100"), 2_000, "the shade to show");
-      seen = { closed, open: shade()!.className.split(/\s+/), kept: shade() === before };
+      const item = () => [...host.ownerDocument.body.querySelectorAll("button")].find((one) => one.textContent?.includes("ork notes"));
+      await eventually(() => item() !== undefined, 2_000, "the menu");
+      item()!.click();
+      await eventually(() => classes(notes()).includes("translate-x-0"), 2_000, "the notes open");
+      seen.swapped = { history: classes(history()), notes: classes(notes()) };
+      host.ownerDocument.dispatchEvent(new (host.ownerDocument.defaultView as unknown as { KeyboardEvent: typeof KeyboardEvent }).KeyboardEvent("keydown", { key: "Escape" }));
+      await eventually(() => classes(notes()).includes("translate-x-full"), 2_000, "Escape to close");
+      seen.escaped = true;
     });
-    expect(seen.closed).toEqual(expect.arrayContaining(["invisible", "opacity-0", "transition-[opacity,visibility]"]));
-    expect(seen.open).toEqual(expect.arrayContaining(["visible", "opacity-100"]));
-    expect(seen.kept).toBe(true);
+    const closed = seen.closed as { history: string[]; notes: string[]; inert: boolean[]; shade: string[] };
+    expect(closed.history).toEqual(expect.arrayContaining([...MOTION, "invisible", "-translate-x-full"]));
+    expect(closed.notes).toEqual(expect.arrayContaining([...MOTION, "invisible", "translate-x-full"]));
+    expect(closed.inert).toEqual([true, true]);
+    expect(closed.shade).toEqual(expect.arrayContaining(["invisible", "opacity-0"]));
+    // Twins: the same width, from either side.
+    const width = closed.history.find((one) => one.startsWith("w-"));
+    expect(width).toBeDefined();
+    expect(closed.notes).toContain(width!);
+    const open = seen.open as { history: string[]; inert: boolean; shade: string[]; notes: string[]; list: string };
+    expect(open.history).toEqual(expect.arrayContaining(["visible", "translate-x-0"]));
+    expect(open.inert).toBe(false);
+    expect(open.shade).toEqual(expect.arrayContaining(["visible", "opacity-100"]));
+    expect(open.notes).toContain("translate-x-full");
+    expect(open.list).toContain("Nouva's conversations");
+    const swapped = seen.swapped as { history: string[]; notes: string[] };
+    expect(swapped.history).toContain("-translate-x-full");
+    expect(swapped.notes).toContain("translate-x-0");
+    expect(seen.escaped).toBe(true);
+  });
+
+  test("a phone's sheets rise as the app's More does: the same corners, ground and motion", async () => {
+    const { Drawer, SHEET_BOX, DRAWER_MOTION } = await import("@/commons/components/ui/Drawer");
+    const React = await import("react");
+    const seen: Record<string, string[]> = {};
+    await renderPage("/", async (host) => {
+      // More: the sidebar drawn as a sheet below a laptop's width.
+      const more = [...host.querySelectorAll("div")].find((one) => classes(one).includes("lg:inset-y-0"));
+      seen.more = classes(more);
+    });
+    const holder = dom.document.createElement("div");
+    dom.document.body.appendChild(holder as never);
+    const { createRoot } = await import("react-dom/client");
+    const { flushSync } = await import("react-dom");
+    const root = createRoot(holder as never);
+    flushSync(() => root.render(React.createElement(Drawer, { open: true, onClose: () => undefined, side: "bottom", label: "A sheet", children: "in it" })));
+    seen.sheet = (dom.document.body.querySelector('[data-drawer="bottom"]')?.getAttribute("class") ?? "").split(/\s+/);
+    flushSync(() => root.unmount());
+    holder.remove();
+    for (const token of [...SHEET_BOX.split(" "), ...DRAWER_MOTION.split(" ")]) {
+      expect(seen.more).toContain(token);
+      expect(seen.sheet).toContain(token);
+    }
   });
 });

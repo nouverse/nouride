@@ -7,10 +7,8 @@
  * beside the name.
  */
 
-import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ChevronLeft, Ellipsis, History, NotebookPen, Plus, Trash2 } from "lucide-react";
-import type { ChatListPayload } from "@nouride/wire";
 import type { Look } from "@/commons/cat/look";
 import { AgentAvatar } from "@/commons/components/agents/AgentAvatar";
 import { PlatformTag } from "@/commons/components/chat/PlatformBadge";
@@ -18,7 +16,6 @@ import { useConfirm } from "@/commons/components/ui/confirm";
 import { DropdownMenu } from "@/commons/components/ui/DropdownMenu";
 import { platformName } from "@/commons/lib/platform";
 import { cn } from "@/commons/lib/utils";
-import { HistoryPanel } from "./HistoryPanel";
 
 /** A header's button: a word beside its icon from a phone's width up, the icon alone on a phone. */
 export const HEADER_BUTTON = "btn btn-ghost h-11 min-h-11 gap-1.5 rounded-[14px] px-3 text-[13px] font-semibold text-base-content/80 hover:bg-base-content/[0.06] max-sm:w-11 max-sm:px-0 sm:h-9 sm:min-h-9";
@@ -32,7 +29,7 @@ export function AgentHeader({
   status,
   sessionId,
   readOnly,
-  list,
+  history,
   notes,
   onDelete,
   deleting,
@@ -45,17 +42,14 @@ export function AgentHeader({
   sessionId: string | undefined;
   /** A private chat on a chat app: read here, answered there. */
   readOnly?: { platform: string };
-  list: ChatListPayload | undefined;
+  /** History's drawer, drawn by the conversation's pane under this bar; its toggle is here. */
+  history: { open: boolean; toggle: () => void };
   /** The work notes drawer's toggle; absent where there are none to show. */
   notes?: { open: boolean; count: number; toggle: () => void };
   onDelete: () => void;
   deleting: boolean;
 }) {
-  const [historyOpen, setHistoryOpen] = useState(false);
-  const historyButton = useRef<HTMLButtonElement>(null);
   const { ask, dialog } = useConfirm();
-  // A conversation picked in History opens where the History was: the panel is done.
-  useEffect(() => setHistoryOpen(false), [sessionId]);
 
   return (
     <header className="z-20 flex h-[4.25rem] shrink-0 items-center gap-1.5 border-b border-base-content/[0.08] bg-base-100/80 px-2 backdrop-blur-xl sm:gap-2.5 sm:px-5">
@@ -82,7 +76,7 @@ export function AgentHeader({
         </p>
       </div>
 
-      <button ref={historyButton} type="button" className={cn(HEADER_BUTTON, historyOpen && "bg-secondary/10 text-secondary")} aria-expanded={historyOpen} aria-label={`${name}'s conversations`} onClick={() => setHistoryOpen((was) => !was)}>
+      <button type="button" className={cn(HEADER_BUTTON, history.open && "bg-secondary/10 text-secondary")} aria-expanded={history.open} aria-label={`${name}'s conversations`} onClick={history.toggle}>
         <History size={17} aria-hidden="true" />
         <span className="max-sm:hidden">History</span>
       </button>
@@ -133,7 +127,6 @@ export function AgentHeader({
         </DropdownMenu>
       ) : null}
 
-      <HistoryPanel open={historyOpen} onClose={() => setHistoryOpen(false)} anchor={historyButton} agentId={agentId} agentName={name} current={sessionId} list={list} />
       {dialog}
     </header>
   );

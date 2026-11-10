@@ -85,7 +85,7 @@ async function mountPanel(editable: boolean): Promise<{ host: HTMLElement; unmou
   const root = createRoot(host);
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   root.render(React.createElement(QueryClientProvider, { client }, React.createElement(ToastProvider, null, React.createElement(Page))));
-  await eventually(() => host.querySelector("aside") !== null, 2_000, "the panel");
+  await eventually(() => host.querySelector('[role="dialog"][aria-label="Work notes"]') !== null, 2_000, "the panel");
   return {
     host,
     unmount: () => {

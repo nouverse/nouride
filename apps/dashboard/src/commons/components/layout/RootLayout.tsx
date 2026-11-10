@@ -19,6 +19,7 @@ import { useSignOut } from "@/commons/components/layout/sign-out";
 import { gatewayPage } from "@/commons/lib/bundled-gateway";
 import { isPairedBox } from "@/commons/lib/api.appliance";
 import { PAGE_BOTTOM } from "@/commons/components/ui/ScrollCard";
+import { DRAWER_MOTION, DRAWER_SHADE, SHADE_PLACE, SHEET_BOX, SHEET_PLACE } from "@/commons/components/ui/Drawer";
 import { Sidebar } from "@/commons/components/layout/Sidebar";
 import { PHONE_CHAT_SPACE, TAB_BAR_SPACE, TabBar } from "@/commons/components/layout/TabBar";
 import { CompactSidebar } from "@/commons/components/layout/CompactSidebar";
@@ -160,18 +161,18 @@ export function RootLayout() {
           Only their place and opacity move. */}
       <button
         type="button"
-        className={cn(
-          "fixed inset-0 z-40 bg-black/40 transition-[opacity,visibility] duration-200 ease-out lg:hidden",
-          moreOpen ? "visible opacity-100" : "invisible opacity-0",
-        )}
+        className={cn("fixed inset-0 z-40 lg:hidden", DRAWER_SHADE, moreOpen ? SHADE_PLACE.open : SHADE_PLACE.closed)}
         onClick={() => setMoreOpen(false)}
         aria-label="Close menu"
       />
       <div
         className={cn(
-          "fixed inset-x-0 bottom-0 z-50 flex max-h-[85dvh] flex-col rounded-t-[22px] bg-base-200 pb-[env(safe-area-inset-bottom)] shadow-soft transition-[translate,visibility] duration-200 ease-out",
+          // A phone's More is a sheet as every drawer is (`Drawer`): the same corners, ground and motion.
+          "fixed inset-x-0 bottom-0 z-50 flex flex-col",
+          SHEET_BOX,
+          DRAWER_MOTION,
           "lg:visible lg:inset-y-0 lg:right-auto lg:left-0 lg:z-30 lg:max-h-none lg:translate-y-0 lg:rounded-none lg:border-r lg:border-base-content/[0.06] lg:p-0 lg:shadow-none",
-          moreOpen ? "visible translate-y-0" : "invisible translate-y-full",
+          moreOpen ? SHEET_PLACE.open : SHEET_PLACE.closed,
         )}
       >
         {compact ? (
