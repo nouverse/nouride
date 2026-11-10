@@ -8,6 +8,7 @@
  */
 
 import type { MissionsSection } from "@nouride/shared";
+import { atOnceBy, machineWords, type Machine, type MachineFacts } from "@/commons/machine.ts";
 
 /**
  * The most `max_running` may be set to: every agent at its own `per_agent` at once — `slots`, one for each agent that is
@@ -48,4 +49,14 @@ interface PackSlots {
  */
 export function inForceFor(missions: MissionsSection, byMachine: number, registry: { enabled(): readonly PackSlots[]; get(agentId: string): PackSlots | undefined }): MissionsInForce {
   return inForce(missions, byMachine, registry.enabled().map((agent) => agent.config.id), (agentId) => registry.get(agentId)?.config.missionsPerAgent);
+}
+
+/**
+ * The machine as `agentId`'s prompt says it: its cores and memory in words, the missions it runs at once, and how many
+ * of those may be this agent's, which is never more than the box runs. Read from the machine as boot found it and from
+ * the config, so the same on every turn.
+ */
+export function machineFacts(machine: Machine, missions: MissionsSection, registry: Parameters<typeof inForceFor>[2], agentId: string): MachineFacts {
+  const slots = inForceFor(missions, atOnceBy(machine), registry);
+  return { words: machineWords(machine), missions: { atOnce: slots.maxRunning, own: Math.min(slots.maxRunning, slots.slotsOf?.(agentId) ?? slots.perAgent) } };
 }

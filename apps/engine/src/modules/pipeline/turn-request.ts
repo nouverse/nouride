@@ -214,7 +214,7 @@ export function turnRequest(
     // seen — worse than an error, because nothing in the reply shows it happened.
     userMessage: ask.asked,
     reminders: [
-      ...turnReminders(turn.text, toolset.definitions, { running: ctx.helpersRunning(agent.config.id, envelope), now: Date.now() }),
+      ...turnReminders(turn.text, toolset.definitions, { running: ctx.helpersRunning(agent.config.id, envelope), now: Date.now() }, ctx.loadNow(agent)),
       // What its own missions in this chat wait for the person to answer (`mission-questions.ts`).
       ...missionQuestions(ctx.deps.missionCommands?.forChat(envelope.gatewayId, envelope.chatId) ?? [], agent.config.id, toolset.definitions),
     ],

@@ -16,6 +16,7 @@ import type {
   ToolDefinition,
 } from "@nouride/shared";
 import type { Recall } from "@/modules/memory/index.ts";
+import type { MachineFacts } from "@/commons/machine.ts";
 
 
 /**
@@ -153,6 +154,11 @@ export interface HarnessFacts {
    * says nothing about the background.
    */
   backgroundHelpers?: number;
+  /**
+   * The machine under this agent and the missions it runs at once (`AgentToolset.machine`), every figure read at boot or
+   * from the config: the same on every turn, so it is said in the cached part of the prompt. Absent: nothing is said.
+   */
+  machine?: MachineFacts;
   /**
    * The models this agent's three tiers name, resolved for this turn (`tierModel`) — what `tier` on `delegate` and
    * `ask_agent` chooses between (0.8.0). Absent: neither tool is held, and TOOLS says nothing of tiers.

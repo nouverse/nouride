@@ -9,7 +9,7 @@
 import { agentCommandsHaveOwnUsers, dirname, join } from "@nouride/runtime";
 import { agentBins } from "@/modules/toolchain/env.ts";
 import { resolveToolIterations, resolveTurnDurationMs, type MessageEnvelope } from "@nouride/shared";
-import { buildSystemPrompt } from "@/modules/llm/prompt/index.ts";
+import { buildSystemPrompt, workFacts } from "@/modules/llm/prompt/index.ts";
 import type { BuiltPrompt } from "@/modules/llm/prompt/types.ts";
 import { idFormsFor } from "@/modules/people/match.ts";
 import { resolveToolset } from "@/modules/tools/registry.ts";
@@ -73,6 +73,8 @@ envelope: MessageEnvelope,
       },
       // A chat's prompt, as a turn's: where `mission` can start one, the rule for when (0.8.5).
       ...(toolset.definitions.some((t) => t.name === "mission") ? { startsMissions: true } : {}),
+      // What the toolset was resolved with, as a turn's prompt has it: the background lines and the machine.
+      ...workFacts(toolset),
       /**
        * The same two directories a turn actually gets, from the same place a turn gets them.
        *

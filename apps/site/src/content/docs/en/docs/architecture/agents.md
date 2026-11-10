@@ -419,6 +419,11 @@ an hour (research across files or hosts, a long build, a migration rehearsal), s
 two only for two independent pieces; work that may run past an hour is a mission's. Not for a quick
 answer, and not for something you are waiting on now.
 
+The agent is also told the machine it runs on: its cores and memory, as the daemon read them when it
+started, how many helpers it may have in the background and how many missions run at once. What is
+running now is said on each message while anything runs, so it can tell a free box from a busy one
+before it starts more.
+
 A helper the agent waits for, without `background`, is for a quick question: the agent waits for its
 answer for up to 45 seconds. A helper still working after that carries on in the background, just as if it
 had been started there: the agent tells you what is still being worked on, and what the helpers that

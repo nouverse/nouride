@@ -58,6 +58,15 @@ export function machineWords(machine: Machine): string {
   return `${machine.cores} ${plural(machine.cores, "core")}${memory}${memory ? commands : ""}`;
 }
 
+/**
+ * The machine as an agent's prompt says it (`llm/prompt/harness-work.ts`): its cores and memory in words, and how many
+ * missions run on it at once, of which how many may be this agent's. Nothing here moves from turn to turn.
+ */
+export interface MachineFacts {
+  words: string;
+  missions: { atOnce: number; own: number };
+}
+
 /** A limit as it holds now, and who said it: the agent's own pack, the daemon's config, or nobody, so the machine. */
 export interface InForce {
   limit: number;

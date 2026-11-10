@@ -20,7 +20,7 @@ import { metered } from "@/modules/llm/metered.ts";
 import { orOwnModel } from "@/modules/llm/helper-model.ts";
 import { compactionEnded, compactionStarted } from "@/modules/llm/compaction-steps.ts";
 import { idFormsFor } from "@/modules/people/match.ts";
-import { buildSystemPrompt } from "@/modules/llm/prompt/index.ts";
+import { buildSystemPrompt, workFacts } from "@/modules/llm/prompt/index.ts";
 import { contextWindowFor, warnOnceAboutContextWindow } from "./context-window.ts";
 import { workspaceView } from "./workspace-view.ts";
 import { agentCommandsHaveOwnUsers, sha256Text } from "@nouride/runtime";
@@ -257,7 +257,7 @@ export async function prepareTurn(
       // A chat's turn that can start one — not a mission's own, nor a schedule's, which asks the person first.
       ...(toolset.definitions.some((t) => t.name === "mission") && !req.unattended ? { startsMissions: true } : {}),
       // What the toolset was resolved with for this turn, so the prompt and the tool's schema say the same thing.
-      ...(toolset.backgroundHelpers ? { backgroundHelpers: toolset.backgroundHelpers } : {}),
+      ...workFacts(toolset),
       // The models `tier` chooses between, from the same function the helper and the peer are started with.
       ...(toolset.definitions.some((t) => t.name === "delegate" || t.name === "ask_agent")
         ? { modelTiers: { small: tierModel(agent.config.llm, deps.llm.defaults, "small"), default: agent.config.llm.model, high: tierModel(agent.config.llm, deps.llm.defaults, "high") } }

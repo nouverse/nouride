@@ -5,7 +5,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { DEFAULT_CONFIG } from "@/modules/config/defaults.ts";
-import { autoRunning, inForce, inForceFor, mostRunning } from "@/modules/missions/slots.ts";
+import { autoRunning, inForce, inForceFor, machineFacts, mostRunning } from "@/modules/missions/slots.ts";
 
 /** `n` agents that are on, by id. */
 const agents = (n: number) => Array.from({ length: n }, (_, at) => `agent-${at}`);
@@ -65,5 +65,29 @@ describe("the slots on the box", () => {
     // One agent turned off, on a machine with room for four: the one left runs its one.
     delete packs.nix;
     expect(inForceFor(structuredClone(DEFAULT_CONFIG.missions), 4, registry).maxRunning).toBe(1);
+  });
+});
+
+describe("the machine as an agent's prompt says it", () => {
+  const GiB = 1024 ** 3;
+  const packs: Record<string, { config: { id: string; missionsPerAgent?: number } }> = {
+    nix: { config: { id: "nix", missionsPerAgent: 3 } },
+    nouva: { config: { id: "nouva" } },
+    nero: { config: { id: "nero" } },
+  };
+  const registry = { enabled: () => Object.values(packs), get: (agentId: string) => packs[agentId] };
+  const missions = structuredClone(DEFAULT_CONFIG.missions);
+
+  test("its cores and memory as read, the missions it runs at once, and how many of them may be this agent's", () => {
+    const box = { cores: 6, memoryBytes: 8 * GiB };
+    expect(machineFacts(box, missions, registry, "nouva")).toEqual({ words: "6 cores, 8.0GB of memory", missions: { atOnce: 4, own: 1 } });
+    expect(machineFacts(box, missions, registry, "nix").missions).toEqual({ atOnce: 4, own: 3 });
+  });
+
+  test("an agent's own number is never said above what the box runs: on a small machine, one", () => {
+    const small = { cores: 4, memoryBytes: 2 * GiB };
+    expect(machineFacts(small, missions, registry, "nix")).toEqual({ words: "4 cores, 2.0GB of memory", missions: { atOnce: 1, own: 1 } });
+    // And a number set for the box is the one said, on any machine.
+    expect(machineFacts(small, { ...missions, maxRunning: 2 }, registry, "nix").missions).toEqual({ atOnce: 2, own: 2 });
   });
 });

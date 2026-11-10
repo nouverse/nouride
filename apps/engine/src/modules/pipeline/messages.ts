@@ -332,12 +332,36 @@ const RECENT = /\b(latest|newest|news|today|this week|price|prices|release[sd]?|
  * Each reminder is triggered by the message itself and cheap to decide — no model call. Add one only
  * for a rule that a live turn showed the prompt alone does not hold.
  */
-export function turnReminders(text: string, tools: { name: string }[], helpers?: { running: readonly RunningHelper[]; now: number }): string[] {
+export function turnReminders(text: string, tools: { name: string }[], helpers?: { running: readonly RunningHelper[]; now: number }, load?: LoadNow): string[] {
   const reminders: string[] = [];
   if (tools.some((tool) => tool.name === "web_search") && RECENT.test(text) && !/\bnou(ride|gate)\b/i.test(text)) reminders.push(WEB_CHECK);
   const working = helpers ? helpersNote(helpers.running, helpers.now) : null;
   if (working) reminders.push(working);
+  const running = load ? loadNote(load) : null;
+  if (running) reminders.push(running);
   return reminders;
+}
+
+/** What runs now against what may: this agent's helpers and asks in the background, in every chat, and the box's missions. */
+export interface LoadNow {
+  background: { running: number; limit: number };
+  missions?: { running: number; atOnce: number };
+}
+
+/**
+ * How much of what the machine carries is taken, on every turn while anything is (`harness-work.ts` says the limits).
+ *
+ * On the message, never in the prompt: the count moves by the minute, and one figure moving in the harness block would
+ * write the whole cached prefix again on every turn. Here it is kept with the message as it was sent, so the next
+ * request repeats it byte for byte, and it reads as what it is: the load at that moment. Nothing is said when nothing
+ * runs.
+ */
+function loadNote(load: LoadNow): string | null {
+  const parts = [
+    ...(load.background.running > 0 ? [`${load.background.running} of the ${load.background.limit} helpers and asks you may have in the background`] : []),
+    ...(load.missions && load.missions.running > 0 ? [`${load.missions.running} of the ${load.missions.atOnce} ${plural(load.missions.atOnce, "mission")} this machine runs at once`] : []),
+  ];
+  return parts.length > 0 ? `(Running now: ${parts.join("; ")}.)` : null;
 }
 
 /** A helper still working in the background, as the next turn in its conversation is told about it. */

@@ -558,7 +558,8 @@ The system prompt is assembled in a deterministic order with clear section bound
 
 [6] Harness Block
     └── How Nouride works, written by Nouride: files and roots, tools and what asks,
-        where installed programs go, memory, the `nouride` CLI, large output
+        where installed programs go, memory, the `nouride` CLI, large output; the machine
+        (its cores and memory, as read at boot) and how much this agent may run on it at once
 
 [7] Recall Block (RECALL)
     └── What is remembered about the people in this chat, in the order of their keys,
@@ -578,6 +579,7 @@ Each block is fenced with a delimiter the engine controls, so a persona file can
 The order is the prompt cache's, and each tier ends in a cache boundary: blocks 1–5 change only when the pack does; the harness when the toolset or the exec posture does; recall when memory does — a fact written now, a cut, the nightly pass, midnight — and in a group when somebody new has spoken, never with who is speaking now (since 0.7.11); runtime and dynamic come last, because a new day, an install and a change of speaker move them.
 On Anthropic that is three system breakpoints and the conversation's, the four the API allows; on an OpenAI-compatible endpoint, whose cache matches the longest unchanged prefix, it is the same order doing the same work.
 `/prompt` prints the operator's own blocks and elides Nouride's.
+How many helpers and missions are running now moves by the minute, so it is said on the message, beside the clock, and only while something runs: the harness block is byte for byte the same from turn to turn.
 
 **Priority order:** If the prompt is over its ceiling, blocks are dropped in this order: Dynamic Context, Recall, Memory, Skills. Identity, User, Agent Awareness, Harness and Runtime are never trimmed.
 

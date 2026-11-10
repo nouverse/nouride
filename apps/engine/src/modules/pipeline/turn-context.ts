@@ -23,6 +23,7 @@ import { startJobFor } from "@/modules/jobs/jobs.store.ts";
 import { goalLine } from "@/modules/tools/builtins/delegate-brief.ts";
 import { agentCommandsHaveOwnUsers, ensureDir, readFileBytes } from "@nouride/runtime";
 import { backgroundInForce, type InForce } from "@/commons/machine.ts";
+import { machineFacts } from "@/modules/missions/slots.ts";
 import { createLogger, type Attachment, type ChatMessage, type LoadedAgent, type MessageEnvelope, type SessionKey, type ToolContext, type Tool } from "@nouride/shared";
 import { projectSkillReadRoots, skillsDirFor } from "@nouride/persona";
 import { privateWorkspace, scratchpadFor, sharedWorkspace } from "@nouride/persona";
@@ -36,6 +37,7 @@ import { roomName as nameOfRoom } from "@/modules/rooms/room-names.store.ts";
 import type { Recall } from "@/modules/memory/index.ts";
 import { isStored } from "@/modules/attachments/store.ts";
 import type { PipelineDeps } from "./deps.ts";
+import type { LoadNow } from "./messages.ts";
 import type { Voice } from "./voice.ts";
 import type { ChatTypes } from "./chat-types.ts";
 import type { ResumableTurn } from "./provider-resume.ts";
@@ -577,6 +579,14 @@ export class TurnContext extends ActiveTurns {
     return backgroundInForce(this.deps.config.delegate, this.deps.machine, agent.config.maxBackgroundHelpers);
   }
 
+  /** What runs now against what may, as a turn's message says it while anything does (`turnReminders`). */
+  loadNow(agent: LoadedAgent): LoadNow {
+    return {
+      background: { running: this.deps.jobs?.backgroundTurns(agent.config.id).length ?? 0, limit: this.backgroundLimit(agent).limit },
+      ...(this.deps.missionCommands ? { missions: this.deps.missionCommands.load() } : {}),
+    };
+  }
+
   /**
    * This agent's helpers and asks working in the background for this conversation, oldest first — `turnReminders` says
    * them. An ask's goal is its job line, `ask <agent>: <task>`.
@@ -634,6 +644,9 @@ export class TurnContext extends ActiveTurns {
       ...(this.deps.jobs
         ? { backgroundHelpers: (agentId: string) => backgroundInForce(this.deps.config.delegate, this.deps.machine, this.deps.registry.get(agentId)?.config.maxBackgroundHelpers).limit }
         : {}),
+      // The machine and the missions it runs at once, as the prompt says them: read at boot and from the config, so
+      // the cached part of the prompt holds from turn to turn.
+      machine: (agentId: string) => machineFacts(this.deps.machine, this.deps.config.missions, this.deps.registry, agentId),
     };
   }
 

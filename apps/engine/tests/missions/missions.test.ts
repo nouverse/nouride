@@ -968,4 +968,21 @@ describe("an agent's missions, for its status (0.8.15)", () => {
     expect(h.missions.forStatus("nova")).toEqual({ atWork: 0, waiting: 1 });
     expect(h.missions.forStatus("nox")).toEqual({ atWork: 1, waiting: 0 });
   });
+
+  test("the box's load, as a chat's turn is told it: the missions holding a slot now, running or being checked, of how many may", async () => {
+    const h = await missionsHarness({ agents: ["nova", "nox"], settings: { perAgent: 2, maxRunning: 3 } });
+    const set = (mission: Mission, status: Mission["status"], waitKind: Mission["waitKind"] = null) => h.store.save({ ...h.store.get(mission.id)!, status, waitKind });
+    expect(h.missions.load()).toEqual({ running: 0, atOnce: 3 });
+    const first = await h.start("one");
+    const second = await h.start("two");
+    const third = await h.start("three", { agentId: "nox" });
+    set(first, "running");
+    set(second, "checking");
+    set(third, "queued");
+    expect(h.missions.load()).toEqual({ running: 2, atOnce: 3 });
+    // One waiting for a person holds no slot, and one that ended holds none.
+    set(second, "waiting", "input");
+    set(first, "done");
+    expect(h.missions.load()).toEqual({ running: 0, atOnce: 3 });
+  });
 });

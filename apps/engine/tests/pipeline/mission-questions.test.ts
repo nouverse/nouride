@@ -64,7 +64,7 @@ describe("a chat turn", () => {
         },
       }),
     };
-    const missionCommands = { forChat: (gatewayId: string, chatId: string) => (gatewayId === "telegram:main" && chatId === "814" ? [waiting({ agentId: "nouva", gatewayId, chatId })] : []) };
+    const missionCommands = { load: () => ({ running: 0, atOnce: 2 }), forChat: (gatewayId: string, chatId: string) => (gatewayId === "telegram:main" && chatId === "814" ? [waiting({ agentId: "nouva", gatewayId, chatId })] : []) };
     const bench: Bench = await pipelineBench({ agentToml: '[llm]\nprovider = "test"\n\n[external]\ncli = "fake"\n', deps: { externalAgents: cli, missionCommands } as never });
     cleanups.push(bench.dispose);
     bench.pipeline.attach();

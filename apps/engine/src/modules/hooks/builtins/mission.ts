@@ -13,7 +13,7 @@ import { isFinal, seenAs, type Mission } from "@/modules/missions/types.ts";
 import type { Hook, HookContext } from "../types.ts";
 
 /** What `/mission` reaches of the missions. */
-export type MissionCommands = Pick<Missions, "start" | "stop" | "continueMission" | "answer" | "accept" | "acceptOutside" | "tell" | "find" | "forChat" | "now" | "limitsLine" | "forStatus">;
+export type MissionCommands = Pick<Missions, "start" | "stop" | "continueMission" | "answer" | "accept" | "acceptOutside" | "tell" | "find" | "forChat" | "now" | "limitsLine" | "forStatus" | "load">;
 
 const VERBS = ["stop", "continue", "accept", "answer", "tell", "show"] as const;
 

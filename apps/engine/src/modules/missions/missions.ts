@@ -167,6 +167,12 @@ export class Missions implements TurnShaper {
     return { atWork, waiting };
   }
 
+  /** The missions holding a slot on the box now, of how many may: what a chat's turn is told while any does. */
+  load(): { running: number; atOnce: number } {
+    const running = this.deps.store.open().filter((mission) => mission.status === "running" || mission.status === "checking").length;
+    return { running, atOnce: this.deps.settings().maxRunning };
+  }
+
   forChat(gatewayId: string, chatId: string): Mission[] {
     return this.deps.store.forChat(gatewayId, chatId);
   }
