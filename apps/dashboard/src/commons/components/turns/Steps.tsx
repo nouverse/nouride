@@ -195,6 +195,11 @@ export function StepPill({
    * still says what a press opens: the model, the round trips and the tokens.
    */
   const took = counted > 0 ? `${counted} ${counted === 1 ? "step" : "steps"}` : durationMs === undefined ? "details" : null;
+  /**
+   * And with no steps, under a second is "instant": "✓ 0ms" under a `/prompt` or a command answered at once read as a
+   * fault, and "46ms" is a figure nobody reads. A second and more keeps its time, and so does any turn with steps.
+   */
+  const time = durationMs === undefined ? undefined : counted === 0 && durationMs < 1000 ? "instant" : formatDuration(durationMs);
   const tokens = turnTokens(inputTokens, outputTokens);
   const { mark, tone, label } = statusMark(status);
 
@@ -207,10 +212,10 @@ export function StepPill({
       >
         <span className={`font-bold ${tone}`}>{mark}</span>
         {took ? <span className="font-semibold text-base-content/85">{took}</span> : null}
-        {durationMs !== undefined && (
+        {time !== undefined && (
           <>
             {took ? <span aria-hidden="true" className="text-base-content/40">·</span> : null}
-            <span>{formatDuration(durationMs)}</span>
+            <span>{time}</span>
           </>
         )}
         {label && (

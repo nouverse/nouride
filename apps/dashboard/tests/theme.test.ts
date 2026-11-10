@@ -18,7 +18,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Window } from "happy-dom";
-import { DAISY } from "@/commons/lib/theme";
+import { DAISY, GROUNDS } from "@/commons/lib/theme";
 import { sleep } from "./wait.ts";
 
 const ROOT = join(dirname(import.meta.path), "..");
@@ -132,13 +132,23 @@ function systemFor(browser: Browser) {
   };
 }
 
-/** What `public/theme-boot.js` writes on `<html>`, run as the browser runs it: against its globals. */
-function bootScript(browser: Browser): string | undefined {
+/** `index.html`'s two theme-color metas as the boot script finds them: each its own content, as the page loads it. */
+const metasAsLoaded = () => [
+  { media: "(prefers-color-scheme: light)", content: GROUNDS.light },
+  { media: "(prefers-color-scheme: dark)", content: GROUNDS.dark },
+];
+
+/** What `public/theme-boot.js` writes on `<html>` and on the theme-color metas, run as the browser runs it: against its globals. */
+function runBoot(browser: Browser) {
   const attributes: Record<string, string> = {};
   const documentElement = { setAttribute: (name: string, value: string) => void (attributes[name] = value) };
-  new Function("localStorage", "matchMedia", "document", boot)(storageFor(browser), systemFor(browser).matchMedia, { documentElement });
-  return attributes["data-theme"];
+  const metas = metasAsLoaded().map((meta) => ({ ...meta, setAttribute: (name: string, value: string) => void (name === "content" && (meta.content = value)), meta }));
+  const querySelectorAll = (selector: string) => (selector === 'meta[name="theme-color"]' ? metas : []);
+  new Function("localStorage", "matchMedia", "document", boot)(storageFor(browser), systemFor(browser).matchMedia, { documentElement, querySelectorAll });
+  return { theme: attributes["data-theme"], bar: metas.map(({ meta }) => meta.content) };
 }
+
+const bootScript = (browser: Browser): string | undefined => runBoot(browser).theme;
 
 const GLOBALS = ["window", "document", "navigator", "HTMLElement", "Element", "Node", "localStorage"] as const;
 let dom: Window;
@@ -233,6 +243,44 @@ describe("the theme a page opens on", () => {
     expect(bootScript({ choice: "dark", prefersLight: true, storageThrows: true })).toBe("nouride-light");
     // What 0.7.10 saved on every first visit was the system's answer that day, not a choice: it is not read.
     expect(bootScript({ legacy: "dark", prefersLight: true })).toBe("nouride-light");
+  });
+});
+
+/**
+ * The browser's own bar, and an installed app's status bar: `index.html`'s theme-color metas follow the system by their
+ * `media`, so a theme chosen against it left a dark bar over a cream page. The boot script and `useTheme` set both to
+ * the theme the page wears.
+ */
+describe("the browser's bar", () => {
+  test("the boot script colours it for a choice made against the system, and leaves the system's to the metas", () => {
+    expect(runBoot({ choice: "light", prefersLight: false }).bar).toEqual([GROUNDS.light, GROUNDS.light]);
+    expect(runBoot({ choice: "dark", prefersLight: true }).bar).toEqual([GROUNDS.dark, GROUNDS.dark]);
+    expect(runBoot({ choice: null, prefersLight: true }).bar).toEqual([GROUNDS.light, GROUNDS.dark]);
+    expect(runBoot({ choice: "light", prefersLight: false, storageThrows: true }).bar).toEqual([GROUNDS.light, GROUNDS.dark]);
+  });
+
+  test("React keeps it the theme's colour: as the system turns, and after a choice", async () => {
+    const metas = metasAsLoaded().map(({ media, content }) => {
+      const meta = dom.document.createElement("meta");
+      meta.setAttribute("name", "theme-color");
+      meta.setAttribute("media", media);
+      meta.setAttribute("content", content);
+      dom.document.head.appendChild(meta);
+      return meta;
+    });
+    const bar = () => metas.map((meta) => meta.getAttribute("content"));
+    const page = await mountTheme({ prefersLight: true });
+    try {
+      expect(bar()).toEqual([GROUNDS.light, GROUNDS.light]);
+      await page.turnSystem(false);
+      expect(bar()).toEqual([GROUNDS.dark, GROUNDS.dark]);
+      await page.press();
+      expect(page.wears()).toBe("nouride-light");
+      expect(bar()).toEqual([GROUNDS.light, GROUNDS.light]);
+    } finally {
+      page.unmount();
+      for (const meta of metas) meta.remove();
+    }
   });
 });
 

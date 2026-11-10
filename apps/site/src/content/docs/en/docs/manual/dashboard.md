@@ -92,6 +92,12 @@ you.
 **On a phone**, a tab bar along the bottom holds Home, Chats, Work and Agents, with Work's count on it, and **More**,
 which slides the rest of the menu up as a sheet.
 
+**On your phone's home screen**, the dashboard opens like an app: the Nouride cat as its icon, Chats first, in a window
+of its own. Open the dashboard at its `https://` address. Chrome or Edge offers **Install** (in the address bar, or in
+the browser's menu as **Add to Home screen**). On an iPhone, open it in Safari, press **Share**, then **Add to Home
+Screen**. The app keeps its own sign-in, so you sign in once inside it. After the box updates, it opens on the new
+version, as the browser does.
+
 **On Chats** the menu folds to its icons, so the list of chats and the conversation fit side by side. **Expand**, at
 the foot of the folded menu, gives it back, and the browser remembers which way you left it. Every other page keeps the
 whole menu, and a phone keeps its tab bar.
@@ -303,9 +309,10 @@ The list has two halves, switched at its top:
   agent works, with how many helpers it has at work, and a dot marks a reply you have not read yet. Agents you have not
   talked to yet wait at the end, under **Not talked to yet**.
 - **Groups** is the groups your agents are in on Telegram, Discord and WhatsApp, one line per group even when several of
-  your agents' bots sit in it, each with its app's name, and the rooms you made in the dashboard. A chip per app narrows
-  the list to it, **Dashboard** to your rooms, and anything quiet for two weeks or more is folded into one line at the
-  end. A dot on **Groups** says a group heard something since you last looked.
+  your agents' bots sit in it, each with its app's name in that app's colour (WhatsApp green, Telegram blue, Discord
+  indigo), and the rooms you made in the dashboard. A chip per app narrows the list to it, **Dashboard** to your rooms,
+  and anything quiet for two weeks or more is folded into one line at the end. A dot on **Groups** says a group heard
+  something since you last looked.
 
 The **+** at the top starts a chat with an agent or makes a room, and the search finds a chat by its name or its last
 message.

@@ -57,6 +57,22 @@ describe("the finished pill", () => {
     expect(pill({ durationMs: 4_000, status: "failed" })).toBe("✕ 4s · failed");
   });
 
+  // A `/prompt` or a command answered at once read "✓ 0ms", and a quick one "✓ 46ms": a fault, and a figure nobody reads.
+  test("one with no steps under a second is instant; a second and more keeps its time", () => {
+    expect(pill({ durationMs: 0 })).toBe("✓ instant");
+    expect(pill({ durationMs: 46 })).toBe("✓ instant");
+    expect(pill({ durationMs: 999 })).toBe("✓ instant");
+    expect(pill({ durationMs: 1_000 })).toBe("✓ 1s");
+    expect(pill({ durationMs: 46, status: "failed" })).toBe("✕ instant · failed");
+  });
+
+  test("one with steps keeps its time however short", () => {
+    const steps: TurnStep[] = [{ seq: 1, at: 0, kind: "tool", text: "exec ls", ms: 0 }, { seq: 2, at: 1, kind: "tool_done", text: "exec ok", ms: 3 }];
+    expect(pill({ steps, durationMs: 46 })).toBe("✓ 1 step · 46ms");
+    // Counted from the turn's own tool calls where its steps were not kept.
+    expect(pill({ toolCalls: 2, durationMs: 46 })).toBe("✓ 2 steps · 46ms");
+  });
+
   test("one with neither steps nor a time says there are details to open", () => {
     expect(pill({})).toBe("✓ details");
   });

@@ -102,7 +102,7 @@ function GroupView({ group, data }: { group: ChatListGroup; data: ChatListData }
           <div className="flex min-w-0 items-center gap-2">
             <h2 className="min-w-0 truncate font-display text-lg font-medium tracking-tight text-base-content">{name}</h2>
             <span className="hidden shrink-0 items-center gap-1.5 sm:flex">
-              <PlatformTag>{`${app} ${roomWord(group.platform)}`}</PlatformTag>
+              <PlatformTag platform={group.platform}>{`${app} ${roomWord(group.platform)}`}</PlatformTag>
               <PlatformTag>Read-only</PlatformTag>
             </span>
           </div>

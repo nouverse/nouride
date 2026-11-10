@@ -31,6 +31,16 @@ export const DAISY: Record<Theme, string> = {
   light: "nouride-light",
 };
 
+/**
+ * Each theme's ground (`bg-app`: base-200 halfway into base-100), for what the browser draws around the page: its bar,
+ * and an installed app's status bar and splash. `index.html`'s two `theme-color` metas and the manifest say the same,
+ * and `tests/app-manifest.test.ts` works each out from `main.css`.
+ */
+export const GROUNDS: Record<Theme, string> = {
+  dark: "#1f1d29",
+  light: "#f9f7f3",
+};
+
 /** The theme the person chose in this browser, or null when they have not. */
 function savedChoice(): Theme | null {
   try {
@@ -78,6 +88,9 @@ export function useTheme(): [Theme, () => void] {
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", DAISY[theme]);
+    // The metas follow the system by their `media`; a theme chosen against it would leave an installed app's status bar
+    // dark over a cream page. Both say this theme's ground, whichever one the browser reads.
+    for (const meta of document.querySelectorAll('meta[name="theme-color"]')) meta.setAttribute("content", GROUNDS[theme]);
   }, [theme]);
 
   const toggle = () => {

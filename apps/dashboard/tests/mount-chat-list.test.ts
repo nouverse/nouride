@@ -6,6 +6,7 @@
 
 import { describe, expect, test } from "bun:test";
 import type { ChatListPayload } from "@nouride/wire";
+import { platformTint } from "@/commons/lib/platform";
 import { answer, dom, renderPage, useMountHarness, WIRE } from "./mount-harness.ts";
 import { eventually } from "./wait.ts";
 
@@ -35,6 +36,9 @@ const aside = (host: HTMLElement) => host.querySelector('aside[aria-label="Chats
 /** The names of the list's rows, in order. */
 const rowNames = (host: HTMLElement) => [...(aside(host)?.querySelectorAll("a, button[aria-expanded]") ?? [])].map((row) => row.querySelector(".truncate.font-display")?.textContent?.trim()).filter(Boolean);
 const byText = (root: ParentNode, text: string) => [...root.querySelectorAll("button, a")].find((el) => el.textContent?.trim().startsWith(text)) as HTMLElement | undefined;
+/** The tags beside a header's name, each as its words and the app colour it wears ("" for none). */
+const headerTags = (host: HTMLElement) =>
+  [...(host.querySelector("header h2")?.parentElement?.querySelectorAll("span.rounded-full") ?? [])].map((tag) => [tag.textContent, (tag as HTMLElement).style.getPropertyValue("--tag")]);
 
 describe("the list beside the chat", () => {
   test("the orchestrator first and tagged, then the newest, then the agents nobody has talked to yet", async () => {
@@ -114,34 +118,49 @@ describe("the list beside the chat", () => {
       seen.office = [...nameLine("Nouverse Office").children].map((part) => part.textContent?.trim()).filter(Boolean);
       seen.general = [...nameLine("#general").children].map((part) => part.textContent?.trim()).filter(Boolean);
       seen.marks = aside(host)!.querySelectorAll('[role="img"][aria-label="Telegram"], [role="img"][aria-label="Discord"]').length;
-      seen.tagClass = (nameLine("Nouverse Office").children[1]?.getAttribute("class") ?? "").split(/\s+/);
+      const tag = (name: string) => nameLine(name).children[1] as HTMLElement;
+      seen.tagClass = (tag("Nouverse Office").getAttribute("class") ?? "").split(/\s+/);
+      seen.tints = [tag("Nouverse Office"), tag("#general")].map((one) => one.style.getPropertyValue("--tag"));
       byText(aside(host)!, "Chats")!.click();
       await eventually(() => rowNames(host).includes("Nouva"), 2_000, "Chats");
       const nouva = [...aside(host)!.querySelectorAll("a")].find((a) => a.textContent?.includes("Orchestrator"))!;
-      seen.orchestratorTag = (nouva.querySelector(".truncate.font-display")!.parentElement!.children[1]?.getAttribute("class") ?? "").split(/\s+/);
+      const orchestrator = nouva.querySelector(".truncate.font-display")!.parentElement!.children[1] as HTMLElement;
+      seen.orchestratorTag = (orchestrator.getAttribute("class") ?? "").split(/\s+/);
+      seen.orchestratorTint = orchestrator.style.getPropertyValue("--tag");
     });
     // The name, the app, then when.
     expect((seen.office as string[]).slice(0, 2)).toEqual(["Nouverse Office", "Telegram"]);
     expect((seen.general as string[]).slice(0, 2)).toEqual(["#general", "Discord"]);
     expect(seen.marks).toBe(0);
-    // The same pill as Orchestrator, kept whole: a long name gives way before it.
-    expect(seen.tagClass).toEqual(seen.orchestratorTag);
-    expect(seen.tagClass).toEqual(expect.arrayContaining(["shrink-0", "whitespace-nowrap"]));
+    // As small as Orchestrator's pill, kept whole: a long name gives way before it.
+    const shape = ["shrink-0", "whitespace-nowrap", "rounded-full", "text-[10px]", "font-bold", "leading-none"];
+    expect(seen.tagClass).toEqual(expect.arrayContaining(shape));
+    expect(seen.orchestratorTag).toEqual(expect.arrayContaining(shape));
+    // Each app in its own colour, which Orchestrator's lilac is not: three apps' groups read as one app in one lilac.
+    expect(seen.tints).toEqual([platformTint("telegram"), platformTint("discord")]);
+    expect(seen.tagClass).toContain("text-[color:var(--tag)]");
+    expect(seen.orchestratorTag).toEqual(expect.arrayContaining(["bg-secondary/10", "text-secondary"]));
+    expect(seen.orchestratorTint).toBe("");
   });
 
   test("a group pinned to Chats in this browser is in Chats, by when it moved", async () => {
     answer(list);
     dom.localStorage.setItem("nouride-chat-pinned-groups", JSON.stringify(["telegram:-100"]));
     let names: unknown[] = [];
+    let tint = "";
     try {
       await renderPage("/chat", async (host) => {
         await eventually(() => rowNames(host).includes("Nouverse Office"), 3_000, "the pinned group");
         names = rowNames(host);
+        const row = [...aside(host)!.querySelectorAll("a")].find((a) => a.textContent?.includes("Nouverse Office"))!;
+        tint = (row.querySelector(".truncate.font-display")!.parentElement!.children[1] as HTMLElement).style.getPropertyValue("--tag");
       });
     } finally {
       dom.localStorage.removeItem("nouride-chat-pinned-groups");
     }
     expect(names).toEqual(["Nouva", "Nouverse Office", "Nestor", "Harness research", "Nix", "Kuro"]);
+    // In Chats as in Groups: its app's colour on its tag.
+    expect(tint).toBe(platformTint("telegram")!);
   });
 });
 
@@ -171,12 +190,15 @@ describe("a conversation from a chat app", () => {
       seen.box = host.querySelector("textarea") !== null;
       seen.header = host.querySelector("header h2")?.closest("header")?.textContent;
       seen.mark = host.querySelector('header [role="img"][aria-label="Telegram"]') !== null;
+      seen.tags = headerTags(host);
     });
     expect(seen.box).toBe(false);
     expect(seen.note).toContain("Read-only here. This chat lives on Telegram");
     expect(seen.header).toContain("Telegram chat");
     expect(seen.header).toContain("Read-only");
     expect(seen.mark).toBe(false);
+    // The app in its colour; Read-only neutral beside it.
+    expect(seen.tags).toEqual([["Telegram chat", platformTint("telegram")], ["Read-only", ""]]);
   });
 
   // Live on the box, a channel with more than a screen of history opened at its oldest line: the transcript's element
@@ -201,6 +223,7 @@ describe("a conversation from a chat app", () => {
         seen.note = host.querySelector('[role="note"]')!.textContent;
         seen.box = host.querySelector("textarea") !== null;
         seen.header = host.querySelector("header h2")?.closest("header")?.textContent;
+        seen.tags = headerTags(host);
         (host.querySelector('button[aria-label="Pin to Chats"]') as HTMLElement).click();
         await eventually(() => host.querySelector('button[aria-label="Unpin from Chats"]') !== null, 2_000, "pinned");
         seen.kept = dom.localStorage.getItem("nouride-chat-pinned-groups");
@@ -211,6 +234,7 @@ describe("a conversation from a chat app", () => {
     expect(seen.box).toBe(false);
     expect(seen.note).toContain("This group lives on Telegram: write there, and the agents answer there.");
     expect(seen.header).toContain("Telegram group");
+    expect(seen.tags).toEqual([["Telegram group", platformTint("telegram")], ["Read-only", ""]]);
     expect(seen.header).toContain("Agents here: Nouva, Nestor");
     expect(seen.kept).toBe(JSON.stringify(["telegram:-100"]));
   });
@@ -372,17 +396,27 @@ describe("an agent's History", () => {
     const sessions = [mine("ses_1", "web-1", "web:dashboard", "is the disk full?"), mine("ses_dm", "555", "telegram:nouva", "a private chat"), mine("ses_r", "room_1", "web:dashboard", "in the room"), mine("ses_g1", "-100", "telegram:nouva", "in the group")];
     answer({ ...list, "/sessions?agent=nouva": { status: 200, body: { sessions, total: 4 } } });
     let rows: string[] = [];
+    let dmNameLine: string[] = [];
+    let dmTint = "";
     await renderPage("/chat/ses_1", async (host) => {
       await eventually(() => host.querySelector(`button[aria-label="Nouva's conversations"]`) !== null, 3_000, "History");
       (host.querySelector(`button[aria-label="Nouva's conversations"]`) as HTMLElement).click();
       const panel = () => dom.document.body.querySelector(`[data-drawer][aria-label="Nouva's conversations"]`);
       await eventually(() => (panel()?.textContent ?? "").includes("a private chat"), 3_000, "the History");
-      rows = [...panel()!.querySelectorAll("a[href*='/chat/ses']")].map((row) => row.textContent ?? "");
+      const links = [...panel()!.querySelectorAll("a[href*='/chat/ses']")];
+      rows = links.map((row) => row.textContent ?? "");
+      const dm = links.find((row) => row.textContent?.includes("a private chat"))!;
+      dmNameLine = [...dm.querySelector(".truncate.font-display")!.parentElement!.children].map((part) => part.textContent?.trim() ?? "").filter(Boolean);
+      dmTint = (dm.querySelector(".truncate.font-display")!.parentElement!.children[1] as unknown as HTMLElement).style.getPropertyValue("--tag");
     });
     expect(rows).toHaveLength(2);
     expect(rows[0]).toContain("is the disk full?");
     expect(rows[1]).toContain("a private chat");
-    expect(rows[1]).toContain("Telegram · read-only");
+    expect(rows[1]).toContain("A private chat on Telegram");
+    // The app's name alone after the title: "Telegram · read-only" took the room a phone needed for the title.
+    expect(dmNameLine.slice(0, 2)).toEqual(["a private chat", "Telegram"]);
+    expect(rows[1]).not.toContain("read-only");
+    expect(dmTint).toBe(platformTint("telegram")!);
   });
 });
 

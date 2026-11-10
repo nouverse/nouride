@@ -27,4 +27,10 @@
     }
   }
   document.documentElement.setAttribute("data-theme", theme === "light" ? "nouride-light" : "nouride");
+  // A theme chosen against the system colours the browser's own bar too (an installed app's status bar): the two
+  // theme-color metas above this script follow the system by their media. The colours are theme.ts's GROUNDS.
+  if (chosen === "light" || chosen === "dark") {
+    var metas = document.querySelectorAll('meta[name="theme-color"]');
+    for (var i = 0; i < metas.length; i++) metas[i].setAttribute("content", theme === "light" ? "#f9f7f3" : "#1f1d29");
+  }
 })();

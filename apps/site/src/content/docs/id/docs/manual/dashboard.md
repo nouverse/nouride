@@ -93,6 +93,12 @@ memberi tahu.
 **Di HP**, ada bar tab di bagian bawah berisi Home, Chats, Work, dan Agents, dengan angka milik Work di situ, plus
 **More**, yang membuka sisa menunya sebagai lembar yang naik dari bawah.
 
+**Di layar utama HP**, dashboard terbuka seperti aplikasi: ikonnya kucing Nouride, Chats tampil duluan, di jendelanya
+sendiri. Buka dashboard di alamat `https://`-nya. Chrome atau Edge menawarkan **Install** (di bilah alamat, atau di menu
+browser sebagai **Add to Home screen**). Di iPhone, buka di Safari, tekan **Share**, lalu **Add to Home Screen**.
+Aplikasinya punya login sendiri, jadi kamu login sekali di dalamnya. Setelah box di-update, aplikasinya langsung membuka
+versi baru, sama seperti di browser.
+
 **Di Chats** menunya dilipat jadi ikon saja, supaya daftar chat dan percakapannya muat berdampingan. **Expand** di bawah
 menu yang terlipat membukanya lagi, dan browser mengingat pilihan itu. Halaman lain tetap dengan menu penuh, dan HP tetap
 dengan bar tab-nya.
@@ -313,9 +319,10 @@ Daftarnya punya dua bagian, dipilih di atasnya:
   jamnya. **Working** tampil selagi agent bekerja, plus berapa helper yang sedang jalan, dan titik menandai balasan yang
   belum kamu baca. Agent yang belum pernah kamu ajak bicara menunggu di bawah, di **Not talked to yet**.
 - **Groups** berisi grup tempat agent kamu ada di Telegram, Discord, dan WhatsApp, satu baris per grup meski beberapa
-  bot agent kamu ada di grup yang sama, masing-masing dengan nama aplikasinya, dan room yang kamu buat di dashboard. Chip
-  per aplikasi menyaring daftarnya, **Dashboard** menyaring ke room kamu, dan yang diam dua minggu atau lebih dilipat
-  jadi satu baris di bawah. Titik di **Groups** artinya ada grup yang ramai sejak terakhir kamu lihat.
+  bot agent kamu ada di grup yang sama, masing-masing dengan nama aplikasinya dalam warna aplikasi itu (WhatsApp hijau,
+  Telegram biru, Discord nila), dan room yang kamu buat di dashboard. Chip per aplikasi menyaring daftarnya,
+  **Dashboard** menyaring ke room kamu, dan yang diam dua minggu atau lebih dilipat jadi satu baris di bawah. Titik di
+  **Groups** artinya ada grup yang ramai sejak terakhir kamu lihat.
 
 Tombol **+** di atas memulai chat dengan agent atau membuat room, dan kolom cari menemukan chat dari namanya atau pesan
 terakhirnya.

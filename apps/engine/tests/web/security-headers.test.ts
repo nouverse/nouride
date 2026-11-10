@@ -41,6 +41,13 @@ describe("what the dashboard may load", () => {
     expect(directive("script-src")).not.toContain("unsafe-inline");
   });
 
+  test("its own app manifest, by default-src: no manifest-src of its own to narrow it", () => {
+    // The browser fetches `manifest.webmanifest` to offer Install; refused, there is no Install and only a console
+    // line says why. `manifest-src` falls back to `default-src`, which is this origin.
+    expect(directive("default-src")).toBe("default-src 'self'");
+    expect(directive("manifest-src")).toBe("");
+  });
+
   test("inline styles are allowed and inline scripts are not", () => {
     // Vite emits an inline style tag for critical CSS; a style attribute carries no equivalent risk.
     expect(directive("style-src")).toContain("'unsafe-inline'");

@@ -137,7 +137,7 @@ function GroupRow({ group, editable, onChanged }: { group: GroupRecord; editable
           </form>
         ) : (
           <div className="flex items-start gap-2">
-            <span className="mt-0.5 shrink-0"><PlatformTag>{group.dashboard ? "Dashboard" : platformName(group.platform)}</PlatformTag></span>
+            <span className="mt-0.5 shrink-0"><PlatformTag platform={group.dashboard ? undefined : group.platform}>{group.dashboard ? "Dashboard" : platformName(group.platform)}</PlatformTag></span>
             <div className="min-w-0">
               <div className="font-semibold text-sm text-base-content break-words">{group.name ?? <span className="text-base-content/65 font-normal">Unnamed</span>}</div>
               <div className="font-mono text-[11px] text-base-content/65 break-all" title={`${group.gatewayId}:${group.chatId}`}>
