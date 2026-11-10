@@ -192,18 +192,24 @@ sedang jalan berhenti di langkah berikutnya, menyimpan semua yang sudah dikerjak
 di chat-nya sebelum daemon mati:
 
 > ⚠️ I was interrupted by a restart while working on "deploy the site". Done: `read site.toml`,
-> `git status`. Cut off: `exec ./deploy.sh` (it may have partly run). Everything I did is kept, and
-> I'll carry on once I'm back. If I don't, say "continue".
+> `git status`. Cut off: `exec ./deploy.sh` (it may have partly run). Everything I did is kept. If
+> I'm back within 15 minutes I'll carry on by myself; after that I'll ask you first.
 
-Daemon gak bisa membedakan upgrade dari shutdown, jadi pesannya gak menebak-nebak. Kalau daemon
-kembali dalam 15 menit, agent melanjutkan sendiri, sekali; kalau lebih lama dari itu, orangnya
-tinggal bilang "continue". Kalau mau kerjanya benar-benar berhenti, pakai `/stop`, bukan restart.
+Daemon gak bisa membedakan upgrade dari shutdown, dan gak tahu berapa lama ia akan mati, jadi
+pesannya menyebut apa yang terjadi di tiap kasus. Kalau daemon kembali dalam 15 menit, agent
+melanjutkan sendiri, sekali. Kalau lebih lama dari itu, gak: start berikutnya bertanya ke chat itu
+apakah kerjanya dilanjutkan, sekali, dengan tombol Continue kalau platform-nya punya tombol, dan
+orangnya bilang "continue" atau menekan tombol itu. Giliran yang terpotong lebih dari dua hari lalu
+gak ditanyakan, begitu juga giliran di chat yang sudah ditulisi lagi oleh orangnya. Kalau mau
+kerjanya benar-benar berhenti, pakai `/stop`, bukan restart.
 [Yang mereka lihat →](/id/docs/manual/chatting/)
 
 Kalau daemon dimatikan paksa, `kill -9`, OOM killer, listrik mati, gak ada pesan yang bisa dikirim
 saat itu, jadi boot **berikutnya** menutup giliran itu dengan cara yang sama dan memberi tahu
-percakapan yang sama begitu gateway sudah nyala. Pesan yang masuk selama daemon mati tetap dijawab
-kalau dikirim dalam 15 menit terakhir.
+percakapan yang sama begitu gateway sudah nyala: apa yang sudah selesai, apa yang terpotong, lalu
+bahwa ia melanjutkan (terpotong dalam 15 menit terakhir) atau pertanyaan yang sama (terpotong lebih
+lama dari itu). Pesan yang masuk selama daemon mati tetap dijawab kalau dikirim dalam 15 menit
+terakhir.
 
 Unit service memberi daemon 45 detik untuk melakukan ini, dan hanya mengirim sinyal ke daemon, supaya
 ia bisa menghentikan perintahnya sendiri. Instalasi binary dari sebelum 0.7.0 yang di-update dengan

@@ -123,7 +123,7 @@ describe("closing a turn, at every boundary", () => {
 
   test("the report says what finished and what was cut off, in the person's own words", () => {
     const closed = closeTurn(SCRIPTED.slice(0, 7), { kind: "restart" });
-    const report = interruptionReport(closed, "deploy the site");
+    const report = interruptionReport(closed, "deploy the site", { kind: "now" });
     expect(report).toContain('while working on "deploy the site"');
     expect(report).toContain("Done: `read site.toml`, `grep deploy`.");
     expect(report).toContain("Cut off: `exec ./build.sh` (it may have partly run).");
@@ -406,7 +406,7 @@ describe("a crash while the files that came with a message download (P6)", () =>
       inbox: { reopen: () => ({ redelivered: 0, stale: 0, interrupted: 0 }) },
       resumeTurn: (turn: { id: string }) => (resumed.push(turn.id), true),
     } as unknown as Parameters<typeof resumeAfterBoot>[0]["pipeline"];
-    const notifier = { toChat: async (target: { chatId: string }) => (told.push(target.chatId), true) };
+    const notifier = { toChat: async (target: { chatId: string }) => (told.push(target.chatId), true), ask: async (target: { chatId: string }) => (told.push(target.chatId), { ids: [], buttons: false }) };
     const durable = durableStores(r.db, new EventStore(r.db));
     await resumeAfterBoot({ recovered: [], orphaned, stores: durable, startedAt: Date.now(), pipeline, turns: r.turns, notifier, chatEvents: { record: () => null } });
     await sleep(10);
@@ -615,7 +615,7 @@ describe("a reply is recorded before it is sent, and marked once it lands", () =
       delivery.awaiting(id);
     });
     const sent: string[] = [];
-    const notifier = { toChat: async (_target: unknown, text: string) => (sent.push(text), true) };
+    const notifier = { toChat: async (_target: unknown, text: string) => (sent.push(text), true), ask: async (_target: unknown, text: (buttons: boolean) => string) => (sent.push(text(false)), { ids: [], buttons: false }) };
 
     expect(await deliverUndelivered({ delivery, notifier })).toBe(1);
     expect(await deliverUndelivered({ delivery, notifier })).toBe(0);
@@ -643,7 +643,7 @@ describe("a reply is recorded before it is sent, and marked once it lands", () =
     ended("cancelled", "What I did so far is kept", false);
     turns.note({ sessionId: "ses_x", agentId: "nouva", gatewayId: "telegram:main", chatId: "chat-1", messageId: "m9", prompt: "/reset", reply: "Reset. Context cleared, config reloaded." });
     const sent: string[] = [];
-    const notifier = { toChat: async (_target: unknown, text: string) => (sent.push(text), true) };
+    const notifier = { toChat: async (_target: unknown, text: string) => (sent.push(text), true), ask: async (_target: unknown, text: (buttons: boolean) => string) => (sent.push(text(false)), { ids: [], buttons: false }) };
 
     expect(await deliverUndelivered({ delivery, notifier })).toBe(2);
     // Begun in the same millisecond, so in either order.
@@ -726,7 +726,7 @@ describe("a journal a dead process left behind", () => {
     const durable = durableStores(s.db, s.events);
     const recovered = recoverTurns({ ...durable, sessions: s.sessions, turns: s.turns, maxTurns: 200 });
     const sent: string[] = [];
-    const notifier = { toChat: async (_target: unknown, text: string) => (sent.push(text), true) };
+    const notifier = { toChat: async (_target: unknown, text: string) => (sent.push(text), true), ask: async (_target: unknown, text: (buttons: boolean) => string) => (sent.push(text(false)), { ids: [], buttons: false }) };
     const resumed: string[] = [];
     const pipeline = {
       inbox: { reopen: () => ({ redelivered: 0, stale: 0, interrupted: 0 }) },
@@ -737,7 +737,8 @@ describe("a journal a dead process left behind", () => {
 
     expect(sent).toHaveLength(1);
     expect(sent[0]).toContain("Cut off: `exec ./deploy.sh`");
-    expect(sent[0]).toContain("I'll carry on once I'm back");
+    // Lost a moment ago, so it is taken up: the report says so, and promises nothing a longer wait would break.
+    expect(sent[0]).toEndWith(`Everything I did is kept, and I'm carrying on now. If I don't, say "continue".`);
     expect(s.db.prepare<{ delivered_at: number | null }>("SELECT delivered_at FROM turn_records WHERE id = ?").get(turnId)?.delivered_at).toBeGreaterThan(0);
     // And it is taken up again, once the report is on its way — `restart-resume.ts`.
     expect(resumed).toEqual([turnId]);
@@ -753,7 +754,7 @@ describe("a journal a dead process left behind", () => {
     const recovered = recoverTurns({ ...durable, sessions: s.sessions, turns: s.turns, maxTurns: 200 });
     expect(recovered[0]!.cut).toEqual([{ name: "exec", arguments: { command: "rm -rf /srv/site-old" } }]);
     const sent: string[] = [];
-    const notifier = { toChat: async (_target: unknown, text: string) => (sent.push(text), true) };
+    const notifier = { toChat: async (_target: unknown, text: string) => (sent.push(text), true), ask: async (_target: unknown, text: (buttons: boolean) => string) => (sent.push(text(false)), { ids: [], buttons: false }) };
     const resumed: string[] = [];
     const pipeline = {
       inbox: { reopen: () => ({ redelivered: 0, stale: 0, interrupted: 0 }) },
@@ -779,7 +780,7 @@ describe("a journal a dead process left behind", () => {
     expect(s.turns.get(turnId)).toMatchObject({ status: "done", reply: "Deployed." });
     expect(s.sessions.load(KEY).messages.at(-1)?.content).toBe("Deployed.");
     const sent: string[] = [];
-    const notifier = { toChat: async (_target: unknown, text: string) => (sent.push(text), true) };
+    const notifier = { toChat: async (_target: unknown, text: string) => (sent.push(text), true), ask: async (_target: unknown, text: (buttons: boolean) => string) => (sent.push(text(false)), { ids: [], buttons: false }) };
     expect(await deliverUndelivered({ delivery, notifier })).toBe(1);
     expect(sent).toEqual(["Deployed."]);
   });

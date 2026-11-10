@@ -370,7 +370,24 @@ export abstract class TurnStore {
    * is the recent index and not the table: a turn starts at most `TURN_SECONDS_MAX` before it is cut.
    */
   interruptedSince(since: number): TurnRecord[] {
-    return this.db.prepare<TurnRow>(`SELECT * FROM turn_records WHERE started_at >= ? AND status = 'interrupted' AND ended_at >= ? AND ${OWN} ORDER BY started_at`).all(since - TURN_SECONDS_MAX * 1000, since).map(toRecord);
+    // Not one its person was asked about (`resume_asked_at`): that turn is theirs to take up, whenever a boot finds it.
+    return this.db.prepare<TurnRow>(`SELECT * FROM turn_records WHERE started_at >= ? AND status = 'interrupted' AND ended_at >= ? AND resume_asked_at IS NULL AND ${OWN} ORDER BY started_at`).all(since - TURN_SECONDS_MAX * 1000, since).map(toRecord);
+  }
+
+  /**
+   * Turns a restart closed from `from` up to `until`, whose person has not been asked whether to carry on — at boot,
+   * for the ones cut off too long ago to take up unasked (`pipeline/resume-ask.ts`). Bounded like `interruptedSince`.
+   */
+  interruptedBetween(from: number, until: number): TurnRecord[] {
+    return this.db
+      .prepare<TurnRow>(`SELECT * FROM turn_records WHERE started_at >= ? AND status = 'interrupted' AND ended_at >= ? AND ended_at < ? AND resume_asked_at IS NULL AND ${OWN} ORDER BY started_at`)
+      .all(from - TURN_SECONDS_MAX * 1000, from, until)
+      .map(toRecord);
+  }
+
+  /** Its person was asked whether to carry on, at `at`: never asked again, and never taken up without their word. */
+  markResumeAsked(turnId: string, at: number): void {
+    this.db.prepare("UPDATE turn_records SET resume_asked_at = ? WHERE id = ? AND resume_asked_at IS NULL").run(at, turnId);
   }
 
   /**

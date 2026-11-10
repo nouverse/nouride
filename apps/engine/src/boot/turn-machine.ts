@@ -21,6 +21,7 @@ import { CronScheduler } from "@/modules/cron/scheduler.ts";
 import type { ExternalAgents } from "@/modules/external-agents/index.ts";
 import { LOCAL_GATEWAY_ID } from "@/modules/gateways/local.ts";
 import { routePresses } from "@/modules/gateways/presses.ts";
+import { continuePresses } from "@/modules/pipeline/resume-ask.ts";
 import { todaysVerdict } from "@/modules/llm/budget.ts";
 import { SpendAlerts } from "@/modules/llm/spend-alerts.ts";
 import { McpLogins } from "@/modules/mcp-oauth/index.ts";
@@ -392,7 +393,9 @@ export async function buildTurnMachine(
   pipeline.setTools(tools);
   missions.connect(pipeline, tools, usage);
   pipeline.attach();
-  // Every connection's presses: an approval's to its prompt, a proposal's to its card.
-  routePresses(input.gateways.values(), [parts.prompts, proposals.cards, ...missions.presses(pipeline)]);
+  // Every connection's presses: an approval's to its prompt, a proposal's to its card, and Continue under the question
+  // a boot asks about a turn cut off a while ago.
+  const carryOn = continuePresses({ turns: stores.turns, resume: (turn) => pipeline.resumeTurn(turn, "asked"), isAdmin: (who) => pipeline.isAdmin(who) });
+  routePresses(input.gateways.values(), [parts.prompts, proposals.cards, ...missions.presses(pipeline), carryOn]);
   return { mcp, mcpLogins, mcpCatalog, skillRoots, pipeline, scheduler, tools };
 }

@@ -248,8 +248,8 @@ Kalau daemon berhenti di tengah jalan, karena update, crash, atau listrik mati, 
 kerja giliran itu, dan agent memberi tahu sampai mana ia tadi:
 
 > ⚠️ I was interrupted by a restart while working on "deploy the site". Done: `read site.toml`,
-> `git status`. Cut off: `exec ./deploy.sh` (it may have partly run). Everything I did is kept, and
-> I'll carry on once I'm back. If I don't, say "continue".
+> `git status`. Cut off: `exec ./deploy.sh` (it may have partly run). Everything I did is kept. If
+> I'm back within 15 minutes I'll carry on by myself; after that I'll ask you first.
 
 Kalau daemon kembali dalam 15 menit, agent melanjutkan sendiri dengan semua yang sudah dimilikinya.
 Tool yang terpotong ditandai begitu, jadi agent mengecek dulu apa yang sudah dikerjakan tool itu
@@ -258,9 +258,22 @@ pun, agent bilang begitu dan menjawab pesan kamu setelah daemon kembali.
 
 Ia melanjutkan sekali saja. Giliran yang justru sedang melanjutkan kerja yang terpotong gak
 dilanjutkan lagi, jadi giliran yang bikin daemon crash gak bisa berputar terus, dan run terjadwal
-gak dilanjutkan sama sekali. Kalau daemon baru kembali lebih dari 15 menit kemudian, gak ada yang
-jalan sendiri: bilang "continue". Kalau mau kerjanya benar-benar berhenti, pakai `/stop`, bukan
-restart.
+gak dilanjutkan sama sekali.
+
+Kalau daemon baru kembali lebih dari 15 menit kemudian, gak ada yang jalan sendiri: perintah yang
+dijalankan sejam terlambat bisa jadi sudah bukan yang kamu mau. Sebagai gantinya agent bertanya ke
+kamu, sekali, di chat tempat kerja itu berlangsung:
+
+> I was cut off 1 hour ago while working on "deploy the site". I have not carried on by myself,
+> since it was a while ago. Say "continue" and I will pick it up.
+
+Bilang "continue" dan ia melanjutkan dari yang sudah disimpannya. Di Telegram dan Discord
+pertanyaannya punya tombol **Continue** yang melakukan hal yang sama; di grup, yang menekannya orang
+yang meminta kerja itu atau admin. Setelah listrik mati atau crash, gak ada yang bisa disampaikan
+saat itu, jadi pertanyaannya datang bersama daftar apa yang sudah selesai dan apa yang terpotong.
+Pertanyaan itu gak diajukan kalau kamu sudah menulis lagi di chat itu, kalau kerjanya run terjadwal,
+atau kalau terpotongnya sudah lebih dari dua hari. Kalau mau kerjanya benar-benar berhenti, pakai
+`/stop`, bukan restart.
 
 Pesan dicatat begitu tiba, jadi pesan yang dikirim selama restart juga gak hilang. Yang dikirim dalam
 15 menit terakhir dijawab begitu daemon kembali; yang lebih lama mendapat catatan singkat bahwa pesan

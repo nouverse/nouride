@@ -61,6 +61,7 @@ import knowledge from "./migrations/078_knowledge.sql" with { type: "text" };
 import knowledgeEdges from "./migrations/079_knowledge_edges.sql" with { type: "text" };
 import chatMessagesKey from "./migrations/080_chat_messages_key.sql" with { type: "text" };
 import retryPromised from "./migrations/081_retry_promised.sql" with { type: "text" };
+import resumeAsked from "./migrations/082_resume_asked.sql" with { type: "text" };
 
 export interface Migration {
   /** Parsed from the filename prefix, and what `user_version` is set to once applied. */
@@ -94,6 +95,7 @@ export const MIGRATIONS: readonly Migration[] = [
   { version: 79, name: "079_knowledge_edges.sql", sql: knowledgeEdges },
   { version: 80, name: "080_chat_messages_key.sql", sql: chatMessagesKey },
   { version: 81, name: "081_retry_promised.sql", sql: retryPromised },
+  { version: 82, name: "082_resume_asked.sql", sql: resumeAsked },
 ];
 
 /**

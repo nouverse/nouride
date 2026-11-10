@@ -151,22 +151,85 @@ function list(items: readonly string[]): string {
 }
 
 /**
- * What the person is told about a turn a restart cut off — built from the journal, never asked of the
- * model, so it cannot claim work that did not happen.
+ * How a turn a restart cut off goes on from there, which is what its report ends on. It used to end on one promise
+ * whatever came next, "I'll carry on once I'm back": true of a daemon back in minutes, and after a power cut of an
+ * hour the last thing its person heard.
  */
-export function interruptionReport(closed: ClosedTurn, prompt: string): string {
+export type Onward =
+  /** Said as the daemon stops: it cannot know how long it will be down, so it says what each case brings. */
+  | { kind: "if-soon"; withinMs: number }
+  /** Said at boot of a turn lost moments ago, which is being taken up. */
+  | { kind: "now" }
+  /** Said at boot of a turn cut off too long ago to take up unasked: its person is asked. */
+  | { kind: "asked"; agoMs: number }
+  /** Said at boot of a turn that is neither: a mission's, a schedule's, one left for a person to check, or one too old to ask about. */
+  | { kind: "kept"; agoMs?: number };
+
+/** A stretch of time as a person says it: "20 minutes", "1 hour", "2 days". */
+function span(ms: number): string {
+  const said = (count: number, unit: string) => `${count} ${unit}${count === 1 ? "" : "s"}`;
+  const minutes = Math.max(1, Math.round(ms / 60_000));
+  if (minutes < 60) return said(minutes, "minute");
+  const hours = Math.round(minutes / 60);
+  return hours < 24 ? said(hours, "hour") : said(Math.round(hours / 24), "day");
+}
+
+/** How a report or a question opens: by what cut the turn off, or, once that is a while ago, by how long ago. */
+function opening(agoMs: number | undefined): string {
+  return agoMs === undefined ? "I was interrupted by a restart" : `I was cut off ${span(agoMs)} ago`;
+}
+
+const ASK_TO_CARRY_ON = `I have not carried on by myself, since it was a while ago. Say "continue" and I will pick it up.`;
+
+/**
+ * What the person is told about a turn a restart cut off — built from the journal, never asked of the
+ * model, so it cannot claim work that did not happen. It ends on what happens next (`Onward`), and promises
+ * nothing that may not.
+ */
+export function interruptionReport(closed: ClosedTurn, prompt: string, onward: Onward): string {
   const quoted = clip(oneLine(prompt), 80);
   const unrecorded = closed.incomplete ? ` Part of what I did could not be recorded, so this may not be all of it. Check before running anything again.` : "";
+  const ago = onward.kind === "asked" || onward.kind === "kept" ? onward.agoMs : undefined;
   if (closed.done.length + closed.cut.length === 0) {
-    return `⚠️ I was interrupted by a restart before I could answer "${quoted}".${unrecorded} Your message is kept, and I'll answer it once I'm back. If I don't, say "continue".`;
+    const next =
+      onward.kind === "if-soon"
+        ? `Your message is kept. If I'm back within ${span(onward.withinMs)} I'll answer it by myself; after that I'll ask you first.`
+        : onward.kind === "now"
+          ? `Your message is kept, and I'm answering it now. If I don't, say "continue".`
+          : onward.kind === "asked"
+            ? `Your message is kept. I have not answered it by myself, since it was a while ago. Say "continue" and I will.`
+            : "Your message is kept.";
+    return `⚠️ ${opening(ago)} before I could answer "${quoted}".${unrecorded} ${next}`;
   }
-  const parts = [`⚠️ I was interrupted by a restart while working on "${quoted}".`];
+  const parts = [`⚠️ ${opening(ago)} while working on "${quoted}".`];
   if (closed.done.length) parts.push(`Done: ${list(closed.done)}.`);
   if (closed.cut.length) parts.push(`Cut off: ${list(closed.cut)} (${closed.cut.length === 1 ? "it" : "they"} may have partly run).`);
   if (closed.notStarted.length) parts.push(`Not started: ${list(closed.notStarted)}.`);
   if (unrecorded) parts.push(unrecorded.trim());
-  parts.push(`Everything I did is kept, and I'll carry on once I'm back. If I don't, say "continue".`);
+  parts.push(
+    onward.kind === "if-soon"
+      ? `Everything I did is kept. If I'm back within ${span(onward.withinMs)} I'll carry on by myself; after that I'll ask you first.`
+      : onward.kind === "now"
+        ? `Everything I did is kept, and I'm carrying on now. If I don't, say "continue".`
+        : onward.kind === "asked"
+          ? `Everything I did is kept. ${ASK_TO_CARRY_ON}`
+          : "Everything I did is kept.",
+  );
   return parts.join(" ");
+}
+
+/**
+ * What a chat is asked at boot about a turn the last process's shutdown stopped longer ago than a turn is taken up
+ * unasked. Its person was told what it had done as it stopped, so this says only what, how long ago, and how to go on.
+ */
+export function resumeQuestion(prompt: string, agoMs: number): string {
+  return `${opening(agoMs)} while working on "${clip(oneLine(prompt), 80)}". ${ASK_TO_CARRY_ON}`;
+}
+
+/** What that question's message reads once its Continue was pressed: taken up now, or already taken up before. */
+export function resumeSettled(prompt: string, now: boolean): string {
+  const quoted = clip(oneLine(prompt), 80);
+  return now ? `I was cut off while working on "${quoted}". Carrying on now, as asked.` : `I was cut off while working on "${quoted}". I have carried on with it already.`;
 }
 
 /** The sentence added to an error reply when the turn had done work worth keeping. */

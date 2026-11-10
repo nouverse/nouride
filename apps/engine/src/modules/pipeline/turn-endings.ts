@@ -10,6 +10,7 @@
 
 import type { ChatMessage, MessageEnvelope, SessionKey } from "@nouride/shared";
 import { interruptionReport, keptSentence, retrySentence, type ClosedTurn, type InterruptCause } from "@/modules/turns/close.ts";
+import { INBOX_FRESH_MS } from "./inbox.store.ts";
 import type { TurnJournal } from "@/modules/turns/journal.store.ts";
 import type { FinishTurn } from "@/modules/turns/turns.store.ts";
 import type { ChatProgress } from "./chat-progress.ts";
@@ -61,7 +62,8 @@ export async function endEarly(
     ctx.resumeLater?.({ id: input.turnId, agentId: input.agentId, gatewayId: input.envelope.gatewayId, chatId: input.envelope.chatId, prompt: input.prompt, messageId: input.envelope.id }) === true;
   const told = (ending: ClosedTurn): string =>
     input.cause.kind === "restart"
-      ? interruptionReport(ending, input.prompt)
+      ? // The daemon is going down and cannot know for how long: what it says holds either way (`restart-resume.ts`).
+        interruptionReport(ending, input.prompt, { kind: "if-soon", withinMs: INBOX_FRESH_MS })
       : retrying
         ? [withoutRetryAdvice(input.message), retrySentence(ending)].filter(Boolean).join(" ")
         : [input.message, keptSentence(ending)].filter(Boolean).join(" ");

@@ -162,7 +162,7 @@ describe("a turn its provider ended, across a restart", () => {
     next.pipeline.attach();
     await resumeAfterBoot({
       recovered: [], orphaned: [], stores: next.durable, startedAt: Date.now(), pipeline: next.pipeline, turns: next.turns,
-      notifier: { toChat: async () => true }, chatEvents: { record: () => null },
+      notifier: { toChat: async () => true, ask: async () => ({ ids: [], buttons: false }) }, chatEvents: { record: () => null },
     });
     return next;
   }
@@ -301,7 +301,7 @@ describe("a database at the schema before the mark", () => {
     insert.run("turn_done", "m3", "done", "Deployed.", null, now - 2_000, now - 1_000);
     const before = db.prepare<Record<string, unknown>>("SELECT * FROM turn_records ORDER BY id").all();
 
-    await migrate(db);
+    await migrate(db, {}, MIGRATIONS.filter((one) => one.version <= 81));
     expect(db.userVersion()).toBe(81);
     const after = db.prepare<Record<string, unknown>>("SELECT * FROM turn_records ORDER BY id").all();
     // Every row as it was, with the one column more and nothing in it.
