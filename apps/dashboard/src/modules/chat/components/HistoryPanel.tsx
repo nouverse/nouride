@@ -5,23 +5,30 @@
  * twin on the other side, at every width.
  *
  * A private chat on a chat app opens read-only here: it is answered on its app.
+ *
+ * Each row has a menu at its end with Delete, asked as the conversation's own bar asks it (`DELETE_CONVERSATION`): the
+ * owner looked for it on the rows, as History had it before the chat page was rebuilt, not only on the conversation
+ * open on screen.
  */
 
 import { useState } from "react";
-import { useInfiniteQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
-import { Loader2, Monitor, Plus } from "lucide-react";
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { Ellipsis, Loader2, Monitor, Plus, Trash2 } from "lucide-react";
 import type { ChatListPayload, SessionSummary } from "@nouride/wire";
 import { ConversationRow, ListHeading } from "@/commons/components/chat/ConversationRow";
 import { PlatformRowTag } from "@/commons/components/chat/PlatformBadge";
+import { useConfirm } from "@/commons/components/ui/confirm";
 import { Drawer, DrawerHead } from "@/commons/components/ui/Drawer";
+import { DropdownMenu } from "@/commons/components/ui/DropdownMenu";
+import { useToast } from "@/commons/components/ui/toast";
 import { SearchInput } from "@/commons/components/ui/SearchInput";
 import { ListLoading } from "@/commons/components/ui/Spinner";
 import { useDebounced } from "@/commons/hooks/use-debounced";
 import { api } from "@/commons/lib/api";
 import { platformName } from "@/commons/lib/platform";
 import { shortWhen } from "@/commons/lib/when";
-import { groupByDate, ownConversations } from "../lib/history";
+import { DELETE_CONVERSATION, groupByDate, ownConversations } from "../lib/history";
 
 const PAGE = 50;
 const LOCAL = "web:";
@@ -68,6 +75,20 @@ function HistoryBody({ agentId, agentName, current, list, onClose }: { agentId: 
   });
   const own = ownConversations((sessions.data?.pages ?? []).flatMap((page) => page.sessions), list);
   const groups = groupByDate(own);
+  const { ask, dialog } = useConfirm();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const toast = useToast();
+  const remove = useMutation({
+    mutationFn: (id: string) => api.deleteSession(id),
+    onSuccess: (_, id) => {
+      void queryClient.invalidateQueries({ queryKey: ["sessions"] });
+      void queryClient.invalidateQueries({ queryKey: ["chat-list"] });
+      // The one on screen leaves it, where its bar's Delete goes (`useOpenChat`).
+      if (id === current) void navigate({ to: "/chat" });
+    },
+    onError: (error: unknown) => toast.error("Could not delete the conversation", error),
+  });
 
   return (
     <>
@@ -108,6 +129,31 @@ function HistoryBody({ agentId, agentName, current, list, onClose }: { agentId: 
                     }
                     tone={session.running ? "working" : "said"}
                     current={session.id === current}
+                    menu={
+                      <DropdownMenu
+                        trigger={<Ellipsis size={16} aria-hidden="true" />}
+                        triggerClassName="btn btn-ghost btn-square size-11 rounded-xl text-base-content/65 hover:text-base-content sm:size-9"
+                        ariaLabel={`More for “${session.title?.trim() || "A conversation"}”`}
+                        width={220}
+                        menuClassName="rounded-2xl border border-base-content/[0.08] bg-base-100 p-1.5 shadow-soft"
+                      >
+                        {(close) => (
+                          <li>
+                            <button
+                              type="button"
+                              className="min-h-11 gap-3 rounded-xl text-sm text-error"
+                              disabled={remove.isPending}
+                              onClick={async () => {
+                                close();
+                                if (await ask(DELETE_CONVERSATION)) remove.mutate(session.id);
+                              }}
+                            >
+                              <Trash2 size={16} aria-hidden="true" /> Delete conversation
+                            </button>
+                          </li>
+                        )}
+                      </DropdownMenu>
+                    }
                   />
                 );
               })}
@@ -126,6 +172,7 @@ function HistoryBody({ agentId, agentName, current, list, onClose }: { agentId: 
           <Plus size={16} aria-hidden="true" /> New chat with {agentName}
         </Link>
       </div>
+      {dialog}
     </>
   );
 }

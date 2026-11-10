@@ -49,3 +49,10 @@ export function ownConversations(sessions: readonly SessionSummary[], list: Chat
   const groups = new Set((list?.groups ?? []).flatMap((group) => group.sessions.map((session) => session.sessionId)));
   return sessions.filter((session) => !rooms.has(session.chatId) && !groups.has(session.id));
 }
+
+/** What is asked before a conversation goes: the same from its bar's menu and from its row in History. */
+export const DELETE_CONVERSATION = {
+  title: "Delete this conversation?",
+  body: "The conversation goes, with everything in it. Anything running is cancelled. There is no undo.",
+  confirmLabel: "Delete",
+} as const;

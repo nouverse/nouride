@@ -33,6 +33,7 @@ export function ConversationRow({
   unread = false,
   current = false,
   label,
+  menu,
 }: {
   /** Where the row goes; or, with `onToggle` instead, a row that opens what it folds (a list's quiet groups). */
   link?: LinkProps;
@@ -51,11 +52,17 @@ export function ConversationRow({
   current?: boolean;
   /** What a screen reader says for the whole row, where the parts alone would not. */
   label?: string;
+  /**
+   * What can be done to what the row stands for, at its end (History's Delete): beside the row's link, not inside it,
+   * since a button in a link is pressed as the link. The row's ground and its hover take both in.
+   */
+  menu?: ReactNode;
 }) {
+  const ground = current ? "bg-secondary/10" : "hover:bg-base-content/[0.04]";
   const className = cn(
     "group flex min-h-16 w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition-colors duration-150",
     "outline-none focus-visible:ring-2 focus-visible:ring-secondary/60",
-    current ? "bg-secondary/10" : "hover:bg-base-content/[0.04]",
+    menu ? "min-w-0 flex-1 pr-1" : ground,
   );
   const body = (
     <>
@@ -84,10 +91,17 @@ export function ConversationRow({
       </button>
     );
   }
-  return (
+  const row = (
     <Link {...link} aria-current={current ? "page" : undefined} aria-label={label} className={className}>
       {body}
     </Link>
+  );
+  if (!menu) return row;
+  return (
+    <div className={cn("flex items-center rounded-2xl transition-colors duration-150", ground)}>
+      {row}
+      <div className="shrink-0 pr-1.5">{menu}</div>
+    </div>
   );
 }
 

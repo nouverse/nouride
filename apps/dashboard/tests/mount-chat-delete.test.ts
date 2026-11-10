@@ -96,6 +96,42 @@ describe("deleting the chat or room on screen", () => {
     expect(recorded.deletes).toEqual(["/rooms/room_1"]);
   });
 
+  // The owner looked for Delete on History's rows, as History had it before the chat page was rebuilt.
+  test("a row in History has its own menu that deletes that conversation, asked as the bar asks it", async () => {
+    const at = Date.now() - 60_000;
+    const sessions = [
+      { id: "ses_1", agentId: "nouva", chatId: "web-1", gatewayId: "web:dashboard", updatedAt: at, title: "on screen" },
+      { id: "ses_old", agentId: "nouva", chatId: "web-2", gatewayId: "web:dashboard", updatedAt: at - 1_000, title: "an older one" },
+    ];
+    answer({ "/sessions?agent=nouva": { status: 200, body: { sessions, total: 2 } } });
+    const recorded = recordDeletes({ ok: true, turns: 1, stopped: 0 });
+    const seen: Record<string, unknown> = {};
+    try {
+      await renderPage("/chat/ses_1", async (host) => {
+        await eventually(() => host.querySelector('button[aria-label$="\'s conversations"]') !== null, 3_000, "History");
+        (host.querySelector('button[aria-label$="\'s conversations"]') as HTMLElement).click();
+        const rowMenu = () => dom.document.body.querySelector('[data-drawer] button[aria-label="More for “an older one”"]') as HTMLButtonElement | null;
+        await eventually(() => rowMenu() !== null, 3_000, "the row's menu");
+        seen.rows = dom.document.body.querySelectorAll('[data-drawer] button[aria-label^="More for “"]').length;
+        rowMenu()!.click();
+        await eventually(() => bodyButton("Delete conversation") !== undefined, 2_000, "the menu open");
+        bodyButton("Delete conversation")!.click();
+        const dialog = () => dom.document.body.querySelector("dialog[open]");
+        const confirmButton = () => [...(dialog()?.querySelectorAll("button") ?? [])].find((button) => button.textContent?.trim() === "Delete");
+        await eventually(() => confirmButton() !== undefined, 2_000, "the confirmation");
+        seen.said = dialog()?.textContent ?? "";
+        confirmButton()!.click();
+        await eventually(() => recorded.deletes.length > 0, 2_000, "the delete sent");
+      });
+    } finally {
+      recorded.restore();
+    }
+    expect(seen.rows).toBe(2);
+    expect(seen.said).toContain("Delete this conversation?");
+    expect(seen.said).toContain("There is no undo.");
+    expect(recorded.deletes).toEqual(["/sessions/ses_old"]);
+  });
+
   test("a new chat has nothing to delete, so no menu", async () => {
     const html = await renderPage("/chat");
     expect(html).not.toContain('aria-label="More for this');

@@ -312,7 +312,8 @@ message.
 
 **An agent's chat** opens its latest conversation, to carry on where you left off. **History**, in its header, lists
 only that agent's conversations: the ones in the dashboard, and its private chats on chat apps, each saying where it is
-from. **New chat** starts a fresh one.
+from. **New chat** starts a fresh one. To delete a conversation, use the menu (**…**) on its row in History, or the
+chat's own menu while it is open; you are asked first, and nothing undoes it.
 
 **A room** is one conversation with several agents. Pick the agents when you make it, then tag the one you mean
 (`@nox`): a tag is how a message reaches a particular agent. The room's header shows its members as the tags you type,

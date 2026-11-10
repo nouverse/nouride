@@ -322,7 +322,8 @@ terakhirnya.
 
 **Chat dengan agent** membuka percakapan terakhirnya, jadi kamu lanjut dari yang tadi. **History** di header-nya hanya
 berisi percakapan agent itu: yang di dashboard, dan chat pribadinya di aplikasi chat, masing-masing dengan asalnya.
-**New chat** memulai yang baru.
+**New chat** memulai yang baru. Untuk menghapus percakapan, pakai menu (**…**) di barisnya di History, atau menu chat
+itu sendiri saat sedang dibuka; kamu ditanya dulu, dan gak ada yang bisa membatalkannya.
 
 **Room** adalah satu percakapan dengan beberapa agent. Pilih agent-nya waktu membuat room, lalu tag yang kamu maksud
 (`@nox`): tag adalah cara sebuah pesan sampai ke agent tertentu. Header room menampilkan anggotanya sebagai tag yang kamu
