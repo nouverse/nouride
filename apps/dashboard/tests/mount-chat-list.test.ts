@@ -274,10 +274,16 @@ describe("a conversation from a chat app", () => {
     };
     answer({ ...list, "/chat-list": { status: 200, body: tagged }, "/sessions/ses_g1/turns": { status: 200, body: said } });
     let text = "";
+    const tags: Record<string, string[]> = {};
     await renderPage("/chat/group/telegram/-100", async (host) => {
       await eventually(() => (host.textContent ?? "").includes("answer Gading please"), 3_000, "the answer");
       text = host.querySelector("[data-stream]")?.textContent ?? "";
+      // In the agent's colour, in the person's line and in the answer alike.
+      tags.person = [...host.querySelectorAll("[data-person] [data-agent-tag]")].map((tag) => `${tag.textContent}=${tag.getAttribute("data-agent-tag")}`);
+      tags.answer = [...host.querySelectorAll("[data-agent] [data-agent-tag]")].map((tag) => `${tag.textContent}=${tag.getAttribute("data-agent-tag")}`);
     });
+    expect(tags.person).toEqual(["@Nestor=nestor"]);
+    expect(tags.answer).toEqual(["@Nestor=nestor"]);
     expect(text).toContain("@Nestor are you there?");
     expect(text).toContain("@Nestor answer Gading please");
     expect(text).not.toContain("<@1001>");
@@ -330,6 +336,33 @@ describe("a room's opening line", () => {
       line = host.querySelector('[data-event-kind="joined"]')!.textContent ?? "";
     });
     expect(line).toBe("You started this room with Nouva, Nestor and Nix.");
+  });
+});
+
+describe("an agent's tag", () => {
+  // A room's message to three agents read as one grey line, and the room's chips as plain white.
+  test("in its colour in a person's bubble, an answer and the room's chips; an email, an unknown @ and code stay as written", async () => {
+    const room = { gatewayId: "web:dashboard", chatId: "room_1", title: "Harness research", createdAt: NOW, members: ["nouva", "nix"].map((agentId) => ({ agentId, addedAt: NOW })) };
+    const said = { id: "m1", gatewayId: "web:dashboard", chatId: "room_1", senderId: "tester", text: "@nouva @nix cek ini, mail a@nouva.com, @nobody", at: NOW - 30_000 };
+    const answered = { id: "t1", agentId: "nix", chatId: "room_1", sessionId: "ses_nix_room", prompt: said.text, reply: "Siap, @nouva: lihat `@nix` dan a@nix.dev", status: "done", toolCalls: 0, startedAt: NOW - 29_000, endedAt: NOW - 25_000, durationMs: 4_000, steps: [] };
+    const transcript = { session: null, room, earlier: [], turns: [answered], events: [], messages: [said] };
+    answer({ ...list, "/rooms/room_1": { status: 200, body: { room } }, "/rooms/room_1/turns": { status: 200, body: transcript }, "/turns/t1": { status: 404, body: { error: "no record" } } });
+    const seen: Record<string, unknown> = {};
+    await renderPage("/chat/room/room_1", async (host) => {
+      await eventually(() => host.querySelector("[data-agent] [data-agent-tag]") !== null, 3_000, "the answer's tag");
+      const bubble = [...host.querySelectorAll(".rounded-tr-xs")].find((one) => one.textContent?.includes("cek ini"))!;
+      seen.bubble = [...bubble.querySelectorAll("[data-agent-tag]")].map((tag) => `${tag.textContent}=${tag.getAttribute("data-agent-tag")}`);
+      seen.bubbleStyle = (bubble.querySelector('[data-agent-tag="nouva"]') as HTMLElement).style.getPropertyValue("--tag");
+      const reply = host.querySelector('[data-agent="nix"]')!;
+      seen.answer = [...reply.querySelectorAll("[data-agent-tag]")].map((tag) => tag.textContent);
+      seen.code = reply.querySelector("code")?.querySelector("[data-agent-tag]") ?? null;
+      seen.chips = [...host.querySelectorAll('ul[aria-label="In this room"] [data-agent-tag]')].map((tag) => tag.getAttribute("data-agent-tag"));
+    });
+    expect(seen.bubble).toEqual(["@nouva=nouva", "@nix=nix"]);
+    expect(seen.bubbleStyle).toContain("color-mix");
+    expect(seen.answer).toEqual(["@nouva"]);
+    expect(seen.code).toBeNull();
+    expect(seen.chips).toEqual(["nouva", "nix"]);
   });
 });
 

@@ -13,6 +13,7 @@ import { useState } from "react";
 import { Check, ChevronLeft, Ellipsis, Pencil, Trash2, UserMinus, UserPlus, X } from "lucide-react";
 import type { Room } from "@nouride/wire";
 import { AgentAvatar } from "@/commons/components/agents/AgentAvatar";
+import { AgentTag } from "@/commons/components/chat/AgentTag";
 import { StackedAvatars } from "@/commons/components/chat/Avatars";
 import { useConfirm } from "@/commons/components/ui/confirm";
 import { DropdownMenu } from "@/commons/components/ui/DropdownMenu";
@@ -105,7 +106,9 @@ export function RoomHeader({ room, data, untagged, onDelete, deleting }: { room:
           return (
             <li key={agentId} className="inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-full border border-base-content/[0.08] bg-base-100 py-0.5 pr-2.5 pl-0.5 text-xs">
               {look ? <AgentAvatar look={look} name={data.nameOf(agentId)} size="xxs" className="rounded-full" /> : null}
-              <span className="truncate font-mono font-semibold text-base-content/85">@{agentId}</span>
+              <AgentTag agentId={agentId} bare className="truncate font-mono">
+                @{agentId}
+              </AgentTag>
               {untagged === agentId ? <span className="shrink-0 text-secondary">answers when nobody is tagged</span> : null}
             </li>
           );

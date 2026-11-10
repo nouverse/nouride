@@ -13,6 +13,7 @@
 
 import type { CSSProperties, ReactNode } from "react";
 import { AgentAvatar } from "@/commons/components/agents/AgentAvatar";
+import { TagsInMarkdown } from "@/commons/components/chat/AgentTag";
 import { useAgentFace } from "@/commons/hooks/use-agent-face";
 
 /** The face's place in a row, a person's and an agent's alike: smaller on a phone, where the column needs the width. */
@@ -54,7 +55,8 @@ export function AgentReply({
             {aside}
           </div>
         ) : null}
-        {children}
+        {/* Its answer's tags of agents in their colours, as in a person's words. */}
+        <TagsInMarkdown>{children}</TagsInMarkdown>
       </div>
     </div>
   );
