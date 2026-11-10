@@ -9,7 +9,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { CalendarDays, ChevronDown, RotateCcw, Search } from "lucide-react";
+import { ChevronDown, RotateCcw, Search } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import type { EpisodeFilter, EpisodeStatus } from "@nouride/wire";
 import { useToast } from "@/commons/components/ui/toast";
@@ -31,6 +31,7 @@ import {
 import { PassCard } from "./pass.card";
 import { TranscriptsCard } from "./transcripts.card";
 import { Leaving } from "@/commons/components/ui/OverPage";
+import { ListLoading } from "@/commons/components/ui/Spinner";
 
 const LABEL = "text-base-content/85 text-xs font-semibold uppercase tracking-wider font-mono";
 
@@ -184,8 +185,10 @@ export function TimelineTab({ editable }: { editable: boolean }) {
       </Card>
 
       {episodes.error ? <ErrorNote error={episodes.error} /> : null}
-      {!episodes.isLoading && list.length === 0 ? (
-        <EmptyState icon={CalendarDays} title="No conversations" description="Each conversation shows up here after /new, /reset, or the nightly pass." />
+      {episodes.isLoading ? (
+        <ListLoading />
+      ) : list.length === 0 ? (
+        <EmptyState pose="sleeping" title="No conversations" description="Each conversation shows up here after /new, /reset, or the nightly pass." />
       ) : null}
 
       {list.length > 0 ? (

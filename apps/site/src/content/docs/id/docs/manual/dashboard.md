@@ -104,8 +104,9 @@ menu yang terlipat membukanya lagi, dan browser mengingat pilihan itu. Halaman l
 dengan bar tab-nya.
 
 **Tampilannya** krem lembut di siang hari dan ungu keabuan di malam hari. Ia mengikuti setelan perangkatmu sampai kamu
-memilih sendiri lewat tombol matahari atau bulan di sebelah namamu. Kucing Nouride menyapa kamu di Home dan menemani
-di halaman yang masih kosong.
+memilih sendiri lewat tombol matahari atau bulan di sebelah namamu. Kucing Nouride menyapa kamu di Home, menemani
+di halaman yang masih kosong, dan duduk di sebelah judul halaman seperti Schedule dan Secrets. Selama halaman dimuat,
+kamu melihat kerangkanya: bentuk abu-abu di tempat isinya nanti muncul.
 
 **Update** adalah kartu di Settings, bukan entri menu. Versi di bawah logo menampilkan titik kalau ada rilis yang lebih
 baru, dan badge di bagian atas Home atau tombol di **Your box** membuka halamannya. Cek, unduh, dan pasang adalah tiga
@@ -136,7 +137,9 @@ bawahnya. Lalu, berurutan:
 - Lalu pemakaian AI hari ini, dilipat jadi satu baris, dan catatan setup kalau saat terakhir dinyalakan ada yang
   ditemukan.
 
-Kalau gak ada yang menunggu dan gak ada yang jalan, kucing yang tidur bilang *Nothing is waiting for you*.
+Kalau gak ada yang menunggu dan gak ada yang jalan, kucingnya bilang *Nothing is waiting for you*: lagi tidur, lagi
+ngopi, atau bersandar di skuternya, gambarnya beda tiap kali kamu buka Home. Selama ada misi yang jalan, ia naik skuter
+di sebelah daftarnya.
 
 ## Tanya orchestrator dari halaman mana pun
 

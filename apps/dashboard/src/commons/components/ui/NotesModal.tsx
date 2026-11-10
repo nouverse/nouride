@@ -22,6 +22,7 @@ import { useToast } from "./toast";
 import { ErrorNote } from "./ui";
 import { Markdown } from "./Markdown";
 import { overPage } from "./OverPage";
+import { TextLoading } from "@/commons/components/ui/Skeleton";
 
 export function NotesModal({
   title,
@@ -156,9 +157,7 @@ export function NotesModal({
 
         {content === undefined ? (
           error ? null : (
-            <div className="flex justify-center py-12">
-              <span className="loading loading-spinner loading-md opacity-60" />
-            </div>
+            <TextLoading lines={10} className="py-3" />
           )
         ) : mode === "edit" && editable ? (
           <textarea

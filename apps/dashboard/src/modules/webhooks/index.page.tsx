@@ -43,6 +43,8 @@ import { runOutcomeToast } from "@/commons/lib/run-outcome";
 import { FILL_PAGE, ScrollArea } from "@/commons/components/ui/ScrollCard";
 import { Count, SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
 import { PAGE_ASKS } from "@/commons/components/agents/page-asks";
+import { TextLoading } from "@/commons/components/ui/Skeleton";
+import { ListLoading } from "@/commons/components/ui/Spinner";
 
 type Filter = "all" | "active" | "paused" | "failing";
 const FILTERS: { id: Filter; label: string }[] = [
@@ -77,6 +79,7 @@ export default function WebhooksPage() {
     <div className={FILL_PAGE}>
       <PageHeader
         ask={PAGE_ASKS.webhooks}
+        pose={hooks.isPending || webhooks.length > 0 ? "sent" : undefined}
         title="Webhooks"
         description="Addresses that start an agent's work when something calls them: a failed test run, a new issue, an alert, anything that can call a web address."
         actions={
@@ -110,14 +113,16 @@ export default function WebhooksPage() {
         onChange={setFilter}
       />
 
-      {webhooks.length === 0 && !adding ? (
+      {hooks.isPending ? (
+        <ListLoading />
+      ) : webhooks.length === 0 && !adding ? (
         <EmptyState
-          pose="sleeping"
+          pose="sent"
           title="No webhooks yet"
           description="A webhook gives one agent job a URL. Whatever calls that URL starts the job, and the request body is handed to the agent."
         />
       ) : shown.length === 0 ? (
-        <EmptyState pose="sleeping" title={`No ${filter} webhooks`} />
+        <EmptyState pose="searching" title={`No ${filter} webhooks`} />
       ) : (
         // Its own scroll, so the filters stay put over a long list. Keyed by the filter, to fade in anew (`FILL_PAGE`).
         <ScrollArea key={filter} fill className="space-y-4 pr-1">
@@ -356,7 +361,7 @@ function Deliveries({ id, admin }: { id: string; admin: boolean }) {
   });
   const runs = detail.data?.runs ?? [];
 
-  if (detail.isPending) return <span className="loading loading-spinner loading-xs" />;
+  if (detail.isPending) return <TextLoading lines={2} className="max-w-sm" />;
   if (runs.length === 0) {
     return <p className="text-base-content/65 text-xs">Nothing has called this yet.</p>;
   }

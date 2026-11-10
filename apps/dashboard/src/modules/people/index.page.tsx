@@ -74,7 +74,7 @@ export default function PeoplePage() {
       ) : list.length === 0 ? (
         <Card>
           <EmptyState
-            pose="sleeping"
+            pose="ready"
             title="Nobody yet"
             description="Add the people in your household by name. Their WhatsApp, Telegram or Discord accounts can be added now, or approved as theirs when they first message an agent."
           />

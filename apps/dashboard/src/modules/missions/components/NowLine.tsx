@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import type { LiveTurn, MissionView, Reviewing, RunningJob } from "@nouride/wire";
 import { formatElapsed, stepIcon, stepNow } from "@/commons/lib/steps";
+import { Mascot } from "@/commons/components/brand/Mascot";
 
 /** The line, as words: what is happening, and whether it is happening now (a spinner) or waiting on something. */
 export function nowSaid(
@@ -56,6 +57,8 @@ export function NowLine({ mission, live, jobs, reviewing }: { mission: MissionVi
           {said.text}
         </p>
       </div>
+      {/* The cat at its laptop while the mission works: the page's one picture (`mission.page.tsx`). */}
+      <Mascot pose="working" decorative className="-my-2 w-14 max-sm:hidden" />
     </div>
   );
 }

@@ -13,6 +13,7 @@ import { useConfirm } from "@/commons/components/ui/confirm";
 import { useToast } from "@/commons/components/ui/toast";
 import { ErrorNote } from "@/commons/components/ui/ui";
 import { overPage } from "@/commons/components/ui/OverPage";
+import { TextLoading } from "@/commons/components/ui/Skeleton";
 
 const STATUS: Record<string, string> = {
   raw: "Waiting for the nightly pass",
@@ -79,6 +80,7 @@ export function EpisodeView({ id, editable, nameOf, onOpen, onClose }: { id: str
         </div>
 
         {episode.error ? <ErrorNote error={episode.error} /> : null}
+        {episode.isPending ? <TextLoading lines={8} className="py-3" /> : null}
         {data?.summary ? <p className="bg-base-200/50 mb-3 rounded-xl p-3 text-sm leading-relaxed">{data.summary}</p> : null}
         {data?.mentions.length ? <p className="text-base-content/65 mb-2 text-xs">Talked about: {data.mentions.map(nameOf).join(", ")}</p> : null}
 

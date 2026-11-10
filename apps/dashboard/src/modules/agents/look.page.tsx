@@ -14,6 +14,7 @@ import { Card, ErrorNote, Field } from "@/commons/components/ui/ui";
 import { looksOf, type Look } from "@/commons/cat/look";
 import { CatPortrait } from "@/commons/cat/CatPortrait";
 import type { Pose } from "@/commons/cat/compose";
+import { CardLoading } from "@/commons/components/ui/Skeleton";
 
 type Part = keyof AgentLook;
 const PARTS: { part: Part; label: string }[] = [
@@ -68,7 +69,7 @@ export default function AgentLookPage({ agentId }: { agentId: string }) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["status"] }),
   });
 
-  if (status.isPending) return <span className="loading loading-spinner loading-md text-primary opacity-60" />;
+  if (status.isPending) return <CardLoading lines={4} />;
   if (!agent || !look) return <ErrorNote error={status.error} />;
 
   return (

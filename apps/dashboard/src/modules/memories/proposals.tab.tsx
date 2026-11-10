@@ -10,7 +10,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Check, Inbox, X } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import type { Proposal } from "@nouride/wire";
 import { useToast } from "@/commons/components/ui/toast";
@@ -19,6 +19,7 @@ import { ScrollCard } from "@/commons/components/ui/ScrollCard";
 import { EpisodeView } from "./episode-view";
 import { useNames } from "./names";
 import { Leaving } from "@/commons/components/ui/OverPage";
+import { ListLoading } from "@/commons/components/ui/Spinner";
 
 const WHY: Record<Proposal["why"], string> = {
   shared: "Shared knowledge: every agent reads it, in every chat",
@@ -64,8 +65,10 @@ export function ProposalsTab({ editable }: { editable: boolean }) {
   return (
     <div className="space-y-4">
       {proposals.error ? <ErrorNote error={proposals.error} /> : null}
-      {!proposals.isLoading && list.length === 0 ? (
-        <EmptyState icon={Inbox} title="Nothing waiting" description="Changes to facts already kept, facts about someone who wasn't there, and shared knowledge wait here for you." />
+      {proposals.isLoading ? (
+        <ListLoading />
+      ) : list.length === 0 ? (
+        <EmptyState pose="approved" title="Nothing waiting" description="Changes to facts already kept, facts about someone who wasn't there, and shared knowledge wait here for you." />
       ) : null}
       {list.length > 0 ? (
         <ScrollCard title={`${list.length} waiting`}>

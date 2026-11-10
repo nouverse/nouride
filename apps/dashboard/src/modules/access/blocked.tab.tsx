@@ -5,7 +5,7 @@
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Ban, Unlock } from "lucide-react";
+import { Unlock } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import type { SenderRecord } from "@nouride/wire";
 import { canWrite, useMe } from "@/commons/lib/session";
@@ -31,7 +31,7 @@ export function BlockedTab({ senders, agentOf }: { senders: SenderRecord[]; agen
     <ScrollCard title={`Blocked (${senders.length})`} description="Ignored, with no reply, until you unblock them." {...search}>
       <ErrorNote error={unblock.error} />
       {senders.length === 0 ? (
-        <EmptyState icon={Ban} title="Nobody is blocked" />
+        <EmptyState pose="security" title="Nobody is blocked" />
       ) : visible.length === 0 ? (
         <NoMatch query={query} />
       ) : (

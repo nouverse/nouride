@@ -9,7 +9,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, FolderOpen, ListChecks, Square, TriangleAlert } from "lucide-react";
+import { ArrowLeft, FolderOpen, Square, TriangleAlert } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import type { BackgroundJob, JobReport } from "@nouride/wire";
 import { ApiError } from "@/commons/lib/api.client";
@@ -21,6 +21,7 @@ import { formatDuration } from "@/commons/lib/steps";
 import { canWrite, useMe } from "@/commons/lib/session";
 import { KindBadge, StatusBadge } from "./components/JobRow";
 import { jobTitle, kindOf, ownTurnOf, ranFor } from "./lib/job";
+import { DetailLoading } from "@/commons/components/ui/Skeleton";
 
 const RUNNING_MS = 3_000;
 
@@ -126,19 +127,13 @@ export default function JobPage({ jobId }: { jobId: string }) {
     onSettled: () => void queryClient.invalidateQueries({ queryKey: ["jobs"] }),
   });
 
-  if (found.isLoading) {
-    return (
-      <div className="flex justify-center p-16">
-        <span className="loading loading-spinner loading-lg text-primary opacity-60" />
-      </div>
-    );
-  }
+  if (found.isLoading) return <DetailLoading cards={3} />;
   if (!found.data) {
     if (found.error instanceof ApiError && found.error.status === 404) {
       return (
         <Card>
           <EmptyState
-            icon={ListChecks}
+            pose="lost"
             title="No such job"
             description={`There is no job called ${jobId} here.`}
             action={

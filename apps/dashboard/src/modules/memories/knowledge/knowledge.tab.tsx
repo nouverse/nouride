@@ -18,6 +18,7 @@ import { KnowledgeSearch } from "./search";
 import { useUploads } from "./uploads";
 import { CardGrid } from "@/commons/components/ui/CardGrid";
 import { Leaving } from "@/commons/components/ui/OverPage";
+import { ListLoading } from "@/commons/components/ui/Spinner";
 
 export function KnowledgeTab({ editable, admin }: { editable: boolean; admin: boolean }) {
   const collections = useQuery({ queryKey: ["knowledge"], queryFn: api.knowledge });
@@ -72,6 +73,7 @@ export function KnowledgeTab({ editable, admin }: { editable: boolean; admin: bo
             {newCollection}
           </div>
           {list.length ? <KnowledgeSearch onOpen={setReading} /> : null}
+          {collections.isPending ? <ListLoading shape="cards" /> : null}
           {list.length === 0 && collections.data ? (
             <EmptyState pose="knowledge" title="No collections yet" description="Make one, then drop files on it or write a document in it." action={newCollection} />
           ) : null}

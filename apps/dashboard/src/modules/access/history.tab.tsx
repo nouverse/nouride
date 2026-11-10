@@ -6,7 +6,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import type { LucideIcon } from "lucide-react";
-import { Ban, Check, Clock, History, RotateCcw, Unlock, UserPlus, UserX, X } from "lucide-react";
+import { Ban, Check, Clock, RotateCcw, Unlock, UserPlus, UserX, X } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import type { AccessEvent, SenderRecord } from "@nouride/wire";
 import { EmptyState, ErrorNote } from "@/commons/components/ui/ui";
@@ -65,7 +65,7 @@ export function HistoryTab({
       {history.isPending ? (
         <ListLoading />
       ) : entries.length === 0 ? (
-        <EmptyState icon={History} title="Nothing yet" description="Requests and answers appear here as they happen." />
+        <EmptyState pose="sleeping" title="Nothing yet" description="Requests and answers appear here as they happen." />
       ) : visible.length === 0 ? (
         <NoMatch query={query} />
       ) : (

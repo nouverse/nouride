@@ -22,6 +22,7 @@ import type { SkillDraft } from "@nouride/wire";
 import { ErrorNote } from "@/commons/components/ui/ui";
 import { DiffCounts, DiffView } from "@/commons/components/ui/DiffView";
 import { diffCounts, diffLines } from "@/commons/lib/diff";
+import { TextLoading } from "@/commons/components/ui/Skeleton";
 
 /** What the trigger badge says. The kind is a slug; this is the sentence it stands for. */
 const TRIGGER_LABEL: Record<SkillDraft["triggerKind"], string> = {
@@ -341,13 +342,7 @@ function SkillDiff({ name, proposed }: { name: string; proposed: string }) {
     retry: false,
   });
 
-  if (source.isPending) {
-    return (
-      <div className="flex items-center gap-2 text-xs text-base-content/65">
-        <span className="loading loading-spinner loading-xs" /> Reading the current version…
-      </div>
-    );
-  }
+  if (source.isPending) return <TextLoading lines={5} />;
   if (source.error) return <ErrorNote error={source.error} />;
 
   // The body only: the frontmatter is regenerated on write, so diffing it would show churn the

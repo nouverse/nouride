@@ -21,6 +21,7 @@ import { frameSource, type GatewaySearch } from "./search";
 import { GatewayOff } from "./components/GatewayOff";
 import { SetByServer } from "./components/SetByServer";
 import { StopsAtNextStart, TurnOff } from "./components/TurnOff";
+import { DetailLoading } from "@/commons/components/ui/Skeleton";
 
 /** The sidebar's theme, read off the document root it sets — `nouride-light` or `nouride`. */
 function currentTheme(): "light" | "dark" {
@@ -63,9 +64,7 @@ export default function LlmGatewayPage({ search, onPage }: { search: GatewaySear
 
   if (isPending) {
     return (
-      <div className="flex flex-1 items-center justify-center">
-        <span className="loading loading-spinner loading-md text-primary opacity-60" />
-      </div>
+      <DetailLoading cards={2} />
     );
   }
 

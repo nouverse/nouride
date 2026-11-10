@@ -37,7 +37,7 @@ export function ScheduleRuns() {
       {runs.isPending ? (
         <ListLoading count={5} />
       ) : list.length === 0 ? (
-        <EmptyState icon={Clock} title="Nothing has fired yet" />
+        <EmptyState pose="schedule" title="Nothing has fired yet" />
       ) : (
         <div className="space-y-1">
           {list.map((run) => (

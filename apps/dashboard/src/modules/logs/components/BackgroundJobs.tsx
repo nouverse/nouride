@@ -35,7 +35,7 @@ export function BackgroundJobs() {
       {jobs.isPending ? (
         <ListLoading count={5} />
       ) : list.length === 0 ? (
-        <EmptyState icon={Terminal} title="Nothing running or recently finished" />
+        <EmptyState pose="sleeping" title="Nothing running or recently finished" />
       ) : (
         <div className="space-y-1.5">
           {list.map((job) => (

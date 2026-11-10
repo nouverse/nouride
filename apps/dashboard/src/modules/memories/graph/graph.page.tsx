@@ -147,7 +147,7 @@ export default function MemoryGraphPage({ search, onSearch }: { search: GraphSea
         />
       </div>
 
-      {!operator && me.data ? <EmptyState icon={Waypoints} title="Operators only" description="Memory holds what agents know about people, so only an operator can open it." /> : null}
+      {!operator && me.data ? <EmptyState pose="security" title="Operators only" description="Memory holds what agents know about people, so only an operator can open it." /> : null}
 
       {operator ? (
         <>
@@ -220,7 +220,7 @@ export default function MemoryGraphPage({ search, onSearch }: { search: GraphSea
             {data && data.nodes.length === 0 ? (
               <div className="absolute inset-0 grid place-items-center p-6">
                 <EmptyState
-                  icon={Waypoints}
+                  pose={filtered ? "searching" : "sleeping"}
                   title={filtered ? "Nothing matches" : "Nothing remembered yet"}
                   description={filtered ? "No conversation fits this filter. Clear it to see everything." : "Conversations show here once the nightly pass has filed them."}
                 />

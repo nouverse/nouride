@@ -37,6 +37,7 @@ import { LockNote } from "./components/LockNote";
 import { SecretForm } from "./components/SecretForm";
 import { plainUse, SecretRow } from "./components/SecretRow";
 import { PAGE_ASKS } from "@/commons/components/agents/page-asks";
+import { ListLoading } from "@/commons/components/ui/Spinner";
 
 /**
  * What deleting a stored value does, said before it is done — and the part people read is that it cannot be put
@@ -126,6 +127,7 @@ export default function SecretsPage() {
       <PageHeader
         ask={PAGE_ASKS.secrets}
         className="shrink-0"
+        pose={secrets.isPending || entries.length > 0 ? "security" : undefined}
         title="Secrets"
         description="The passwords and keys your agents and connections use. Add or replace one here; once saved, nobody can read it back, not even you."
         actions={
@@ -197,7 +199,9 @@ export default function SecretsPage() {
         }
         {...(entries.length > 0 ? { search: { value: filter, onChange: setFilter, placeholder: "Search secrets" } } : {})}
       >
-        {entries.length === 0 ? (
+        {secrets.isPending ? (
+          <ListLoading />
+        ) : entries.length === 0 ? (
           <EmptyState
             pose="security"
             title="No secrets yet"

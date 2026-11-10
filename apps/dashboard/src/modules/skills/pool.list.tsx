@@ -22,6 +22,7 @@ import { useConfirm } from "@/commons/components/ui/confirm";
 import { SkillFiles } from "./pool.files";
 import { useSaved } from "@/commons/hooks/use-saved";
 import { BADGE_WRAPS } from "@/commons/components/ui/Tag";
+import { TextLoading } from "@/commons/components/ui/Skeleton";
 
 export function PoolList({ skills, editable }: { skills: CatalogSkill[]; editable: boolean }) {
   const queryClient = useQueryClient();
@@ -383,13 +384,7 @@ function SkillSource({ name, editable }: { name: string; editable: boolean }) {
     },
   });
 
-  if (source.isPending) {
-    return (
-      <div className="mt-3 ml-10 flex items-center gap-2 text-xs text-base-content/65">
-        <span className="loading loading-spinner loading-xs" /> Reading the skill…
-      </div>
-    );
-  }
+  if (source.isPending) return <TextLoading lines={5} className="mt-3 ml-10" />;
   if (source.error) return <div className="mt-3 ml-10"><ErrorNote error={source.error} /></div>;
 
   const saved = source.data?.source ?? "";

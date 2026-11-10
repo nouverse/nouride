@@ -103,7 +103,8 @@ the foot of the folded menu, gives it back, and the browser remembers which way 
 whole menu, and a phone keeps its tab bar.
 
 **The look** is a soft cream by day and a violet grey by night. It follows your device until you choose with the sun or
-moon button beside your name. The Nouride cat greets you on Home and keeps you company on an empty page.
+moon button beside your name. The Nouride cat greets you on Home, keeps you company on an empty page, and sits beside the title of pages such as
+Schedule and Secrets. While a page loads you see its outline, grey shapes where its content will be.
 
 **Update** is a card on Settings rather than a menu entry. The version under the logo shows a dot when a newer release
 exists, and the badge at the top of Home or the button on **Your box** opens the page. Check, download and install are
@@ -132,7 +133,8 @@ this order:
   orchestrator and a dot for what it is doing. A chip opens the agent; the picture opens the Office.
 - Then today's AI use, folded to one line, and setup notes when the last start found something.
 
-When nothing waits and nothing moves, a sleeping cat says *Nothing is waiting for you*.
+When nothing waits and nothing moves, the cat says *Nothing is waiting for you*: asleep, with a coffee, or leaning on
+its scooter, a different picture each time you open Home. While a mission is moving, it rides beside the list.
 
 ## Ask your orchestrator, from any page
 

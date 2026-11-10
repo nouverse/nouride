@@ -13,7 +13,8 @@
 import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, FolderOpen, ScrollText, ShieldCheck, TriangleAlert } from "lucide-react";
+import { ArrowLeft, FolderOpen, ShieldCheck } from "lucide-react";
+import { Mascot } from "@/commons/components/brand/Mascot";
 import { api } from "@/commons/lib/api";
 import type { MissionDetail } from "@nouride/wire";
 import { ApiError } from "@/commons/lib/api.client";
@@ -38,6 +39,7 @@ import { useMissionDelete } from "./hooks/use-mission-delete";
 import { Goal } from "./components/Goal";
 import { DraftForm } from "./components/DraftForm";
 import { briefShown, meters, missionTitle, needsYouSaid, shortId } from "./lib/mission";
+import { DetailLoading } from "@/commons/components/ui/Skeleton";
 
 const OPEN_MS = 5_000;
 const SETTLED_MS = 60_000;
@@ -109,18 +111,12 @@ export default function MissionPage({ missionId }: { missionId: string }) {
     if (finished > 0) void queryClient.invalidateQueries({ queryKey: ["missions", "detail", missionId] });
   }, [finished, missionId, queryClient]);
 
-  if (found.isLoading) {
-    return (
-      <div className="flex justify-center p-16">
-        <span className="loading loading-spinner loading-lg text-primary opacity-60" />
-      </div>
-    );
-  }
+  if (found.isLoading) return <DetailLoading cards={3} />;
   if (!detail) {
     if (found.error instanceof ApiError && found.error.status === 404) {
       return (
         <Card>
-          <EmptyState pose="confused" title="No such mission" description={`There is no mission called ${missionId} here.`} action={<Link to="/missions" className="btn btn-sm btn-ghost">All missions</Link>} />
+          <EmptyState pose="lost" title="No such mission" description={`There is no mission called ${missionId} here.`} action={<Link to="/missions" className="btn btn-sm btn-ghost">All missions</Link>} />
         </Card>
       );
     }
@@ -163,7 +159,7 @@ export default function MissionPage({ missionId }: { missionId: string }) {
 
       {mission.seen === "needs_you" && (
         <div role="status" className="alert alert-soft alert-warning grid-cols-[auto_minmax(0,1fr)] items-start rounded-2xl">
-          <TriangleAlert size={18} className="mt-0.5 shrink-0" aria-hidden="true" />
+          <Mascot pose="waiting" decorative className="w-12 sm:w-14" />
           <div className="w-full min-w-0 space-y-3">
             <p className="text-sm leading-relaxed text-base-content">
               <span className="mr-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-warning">Needs you</span>
@@ -212,7 +208,11 @@ export default function MissionPage({ missionId }: { missionId: string }) {
       {mission.seen === "working" && <NowLine mission={mission} live={live?.status === "running" ? live : undefined} jobs={conversation.jobs} {...(detail.reviewing ? { reviewing: detail.reviewing } : {})} />}
 
       {(mission.report || mission.files.length > 0) && (
-        <Card title="Result" description={mission.seen === "done" ? "What it handed back." : "What it handed back so far."}>
+        <Card
+          title="Result"
+          description={mission.seen === "done" ? "What it handed back." : "What it handed back so far."}
+          {...(mission.seen === "done" ? { actions: <Mascot pose="trophy" decorative className="-my-3 w-16" /> } : {})}
+        >
           <MissionResult report={mission.report} files={mission.files} workdir={mission.workdir} />
         </Card>
       )}
@@ -250,8 +250,9 @@ export default function MissionPage({ missionId }: { missionId: string }) {
           </Card>
           {mission.seen === "ended" && mission.reason && (
             <Card title="Why it ended">
-              <p className="flex items-start gap-1.5 text-sm text-base-content/80 [overflow-wrap:anywhere]">
-                <ScrollText size={14} className="mt-0.5 shrink-0" aria-hidden="true" /> {mission.reason}
+              <p className="flex items-center gap-3 text-sm text-base-content/80 [overflow-wrap:anywhere]">
+                <Mascot pose="stuck" decorative className="w-14" />
+                <span className="min-w-0">{mission.reason}</span>
               </p>
             </Card>
           )}

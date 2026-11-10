@@ -23,6 +23,7 @@ import { RestartNeeded } from "@/commons/components/box/RestartNeeded";
 import { Details } from "@/commons/components/ui/Details";
 import { useSaved } from "@/commons/hooks/use-saved";
 import { useRestartsFinished } from "@/commons/lib/restart";
+import { TextLoading } from "@/commons/components/ui/Skeleton";
 
 export function DaemonConfigEditor() {
   const me = useMe();
@@ -108,9 +109,7 @@ export function DaemonConfigEditor() {
       {open && (
         <div className="space-y-3">
           {file.isPending ? (
-            <div className="flex justify-center py-10">
-              <span className="loading loading-spinner loading-md text-primary opacity-60" />
-            </div>
+            <TextLoading lines={8} className="py-3" />
           ) : (
             <>
               <textarea

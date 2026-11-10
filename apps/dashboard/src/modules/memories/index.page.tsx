@@ -16,7 +16,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Lock, Waypoints } from "lucide-react";
+import { Waypoints } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import { canWrite, isAdmin, useMe } from "@/commons/lib/session";
 import { EmptyState, PageHeader } from "@/commons/components/ui/ui";
@@ -68,7 +68,7 @@ export default function MemoriesPage({ tab: opened }: { tab?: MemoryTab } = {}) 
         actions={operator ? <TidyTagsButton /> : null}
       />
 
-      {!operator && me.data ? <EmptyState icon={Lock} title="Operators only" description="This holds what agents know about people, and the documents kept for them, so only an operator can open it." /> : null}
+      {!operator && me.data ? <EmptyState pose="security" title="Operators only" description="This holds what agents know about people, and the documents kept for them, so only an operator can open it." /> : null}
 
       {operator ? <MemorySummary waiting={waiting} /> : null}
       {operator ? <TagsCard /> : null}

@@ -5,7 +5,7 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ArrowUpRight, Plug } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import { isAdmin, useMe } from "@/commons/lib/session";
 import { Card, EmptyState, ErrorNote } from "@/commons/components/ui/ui";
@@ -59,7 +59,7 @@ export default function AgentMcpPage({ agentId }: { agentId: string }) {
         <ListLoading />
       ) : servers.length === 0 ? (
         <Card>
-          <EmptyState icon={Plug} title="No connectors yet" description="Add one in Configure → Connectors (from the catalog, or by hand) and switch it on here." />
+          <EmptyState pose="delivery" title="No connectors yet" description="Add one in Configure → Connectors (from the catalog, or by hand) and switch it on here." />
         </Card>
       ) : (
         <div className="space-y-3">

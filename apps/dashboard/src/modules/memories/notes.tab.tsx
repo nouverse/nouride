@@ -17,6 +17,7 @@ import { EmptyState, ErrorNote } from "@/commons/components/ui/ui";
 import { ScrollCard } from "@/commons/components/ui/ScrollCard";
 import { OrchestratorBadge, useOrchestrator, useOrchestratorFirst } from "@/commons/components/agents/AgentName";
 import { Leaving } from "@/commons/components/ui/OverPage";
+import { ListLoading } from "@/commons/components/ui/Spinner";
 
 function NoteView({ id, editable, onClose }: { id: string; editable: boolean; onClose: () => void }) {
   const queryClient = useQueryClient();
@@ -52,8 +53,10 @@ export function NotesTab({ editable }: { editable: boolean }) {
     <div className="space-y-4">
       {notes.error ? <ErrorNote error={notes.error} /> : null}
       <ScrollCard title="Agent notes" description="What each agent keeps for itself. Part of who it is, and never changed by the nightly pass.">
-        {list.length === 0 && !notes.isLoading ? (
-          <EmptyState icon={NotebookText} title="No agents" description="Each agent's notes show up here." />
+        {notes.isLoading ? (
+          <ListLoading />
+        ) : list.length === 0 ? (
+          <EmptyState pose="sleeping" title="No agents" description="Each agent's notes show up here." />
         ) : (
           <ul className="divide-base-content/[0.06] divide-y">
             {list.map((agent) => (

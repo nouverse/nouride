@@ -58,6 +58,7 @@ export default function McpLibraryPage({ install, agent }: { install?: string; a
     <div className={FILL_PAGE}>
       <PageHeader
         ask={PAGE_ASKS.connectors}
+        pose={library.isPending || servers.length > 0 ? "delivery" : undefined}
         title="Connectors"
         description="Extra tools for your agents from other services, like GitHub or Notion. Add one once and switch it on for the agents that should have it; its key is shared unless an agent brings its own."
         actions={
@@ -120,7 +121,7 @@ export default function McpLibraryPage({ install, agent }: { install?: string; a
           {...(servers.length > 0 ? { search: { value: filter, onChange: setFilter, placeholder: "Filter connectors" } } : {})}
         >
           {servers.length === 0 ? (
-            <EmptyState pose="sleeping" title="No connectors yet" description="Find one in Explore, or add one by hand, then switch it on for the agents that should use it." />
+            <EmptyState pose="delivery" title="No connectors yet" description="Find one in Explore, or add one by hand, then switch it on for the agents that should use it." />
           ) : visible.length === 0 ? (
             <p className="py-6 text-center text-sm text-base-content/65">Nothing matches “{filter}”.</p>
           ) : (

@@ -179,6 +179,7 @@ export default function SchedulePage({ job: linked }: { job?: string }) {
       {dialog}
       <PageHeader
         ask={PAGE_ASKS.schedule}
+        pose={jobs.isPending || list.length > 0 ? "schedule" : undefined}
         title="Schedule"
         description={`Work that runs on a schedule, again and again or once. Times are in the server's time zone (${timezone}) unless a job names its own.`}
         actions={
@@ -233,7 +234,7 @@ export default function SchedulePage({ job: linked }: { job?: string }) {
         </Card>
       ) : shown.length === 0 ? (
         <Card>
-          <EmptyState pose="schedule" title={`No ${filter} jobs`} />
+          <EmptyState pose="searching" title={`No ${filter} jobs`} />
         </Card>
       ) : null}
 

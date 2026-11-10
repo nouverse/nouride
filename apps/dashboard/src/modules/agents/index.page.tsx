@@ -109,7 +109,7 @@ export default function AgentListPage() {
       ) : agents.length === 0 ? (
         <Card>
           <EmptyState
-            pose="sleeping"
+            pose="ready"
             title="No agents yet"
             description="Make your first agent to start talking with it, here or in your chat apps."
             action={
@@ -131,7 +131,7 @@ export default function AgentListPage() {
           value={filter}
           onChange={setFilter}
         />
-        {shown.length === 0 ? <EmptyState pose="sleeping" title={`No ${filter} agents`} /> : null}
+        {shown.length === 0 ? <EmptyState pose="searching" title={`No ${filter} agents`} /> : null}
         {/* Its own scroll, so the tabs stay put over a long list. Keyed by the tab, to fade in anew (`FILL_PAGE`). */}
         <ScrollArea key={filter} fill className="pr-1">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

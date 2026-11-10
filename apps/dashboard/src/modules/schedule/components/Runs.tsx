@@ -9,6 +9,7 @@ import { AlertTriangle, Check, Clock, RotateCcw } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import { RunResult } from "@/commons/components/jobs/RunResult";
 import { HeldActions } from "@/commons/components/jobs/Allowances";
+import { TextLoading } from "@/commons/components/ui/Skeleton";
 
 /** Local time in the daemon's zone */
 export function inZone(ms: number | undefined, timezone: string): string {
@@ -32,7 +33,7 @@ export function Runs({ id, timezone, canEdit }: { id: string; timezone: string; 
     refetchInterval: (query) => (query.state.data?.runs.some((run) => run.status === "running") ? 2_000 : false),
   });
 
-  if (detail.isLoading) return <span className="loading loading-dots loading-sm opacity-50" />;
+  if (detail.isLoading) return <TextLoading lines={2} className="max-w-sm py-2" />;
   const runs = detail.data?.runs ?? [];
   if (runs.length === 0) return <p className="text-base-content/65 text-xs py-2">No execution runs recorded yet.</p>;
 

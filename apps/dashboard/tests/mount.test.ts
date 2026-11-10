@@ -1665,11 +1665,11 @@ describe("a page older than its daemon", () => {
  * an unstyled "Something went wrong!", and a mistyped address showed a bare "Not Found" — no way back but the URL bar.
  */
 describe("a page that is not there, or that throws", () => {
-  test("an unknown address says so, with the puzzled cat, and links back to Home", async () => {
+  test("an unknown address says so, with the cat lost over its map, and links back to Home", async () => {
     const html = await renderPage("/no-such-page");
     expect(html).toContain("No page here");
     expect(html).toContain("Go to Home");
-    expect(html).toContain("07-confused");
+    expect(html).toContain("13-lost");
   });
 
   test("a page that throws while drawing shows what failed, with a way to reload", async () => {

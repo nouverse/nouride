@@ -14,7 +14,7 @@
 import { AgentName, useOrchestrator, useOrchestratorFirst } from "@/commons/components/agents/AgentName";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { KeyRound, Lock, Trash2 } from "lucide-react";
+import { KeyRound, Trash2 } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import type { McpScope } from "@nouride/wire";
 import { isAdmin, useMe } from "@/commons/lib/session";
@@ -241,7 +241,7 @@ export default function IntegrationsPage() {
         description="Let other AI apps, like Claude Code or Cursor, read your agents' memory and who they are."
       />
       {me.data && !admin ? (
-        <EmptyState icon={Lock} title="Admins only" description="A key opens what is kept about a person, so only an admin can make one." />
+        <EmptyState pose="security" title="Admins only" description="A key opens what is kept about a person, so only an admin can make one." />
       ) : admin ? (
         <Tokens />
       ) : null}
