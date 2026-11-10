@@ -12,7 +12,7 @@
 import { estimateTokens, estimateToolsTokens } from "@nouride/llm";
 import { createLogger, type ChatMessage, type Skill, type SystemBlock , resolveToolIterations, resolveTurnDurationMs, tierModel } from "@nouride/shared";
 import { compactionThreshold, conversationBudget, pruneToolOutputs, resolveCompactionLimit, truncateContext } from "@/modules/llm/context.ts";
-import { CacheBreaks } from "@/modules/llm/cache-breaks.ts";
+import { ASSUMED_CACHE_LIFETIME_MS, CacheBreaks } from "@/modules/llm/cache-breaks.ts";
 import { compactHistory } from "@/modules/llm/summarize.ts";
 import { outputCap, plannedOutputTokens } from "@/modules/llm/output-cap.ts";
 import { summarizerRoute, summarizerWindowFor } from "@/modules/llm/summarizer.ts";
@@ -458,7 +458,8 @@ const cacheBreaks = new CacheBreaks();
  */
 function clearStaleOutput(deps: ExecutorDeps, req: TurnRequest, history: ChatMessage[], prefix: string, now: number): ChatMessage[] {
   const lastAt = history.findLast((message) => message.timestamp !== undefined)?.timestamp;
-  const lost = cacheBreaks.lost(req.sessionId, prefix, lastAt, now);
+  // The lifetime is the endpoint's, as its client declares it: five minutes idle loses one cache and not another.
+  const lost = cacheBreaks.lost(req.sessionId, prefix, lastAt, now, req.provider.cacheLifetimeMs ?? ASSUMED_CACHE_LIFETIME_MS);
   const stale = pruneToolOutputs(history, {
     protectTokens: 0,
     protectTurns: STALE_AFTER_TURNS,

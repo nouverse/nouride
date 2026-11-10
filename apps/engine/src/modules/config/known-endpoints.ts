@@ -23,10 +23,19 @@ interface KnownEndpoint {
   keys: Readonly<Record<string, string>>;
   /** Why, in a line for whoever reads where it is written (`config check`, the boot's log). */
   why?: string;
+  /**
+   * Minutes the endpoint keeps a cached prompt after its last request, where its vendor states one figure: what a
+   * profile on it is read with when it has no `cache_minutes` of its own. Read at load and never written, so a
+   * better figure reaches every install that did not set one.
+   */
+  cacheMinutes?: number;
 }
 
 const KNOWN_ENDPOINTS: readonly KnownEndpoint[] = [
-  { kind: "anthropic", baseUrl: "https://api.anthropic.com/v1", keys: {} },
+  // Five minutes: the lifetime Anthropic documents for the cache marker the client sends, which asks for no longer one.
+  { kind: "anthropic", baseUrl: "https://api.anthropic.com/v1", keys: {}, cacheMinutes: 5 },
+  // No lifetime here: OpenAI documents from minutes to a day, by model and by the organization's retention, so a
+  // profile on it is read as any endpoint that does not say, unless its `cache_minutes` does.
   {
     kind: "openai",
     baseUrl: "https://api.openai.com/v1",
@@ -54,6 +63,11 @@ function address(url: unknown): string | null {
 function endpointAt(kind: unknown, baseUrl: unknown): KnownEndpoint | undefined {
   const at = address(baseUrl);
   return at ? KNOWN_ENDPOINTS.find((endpoint) => endpoint.kind === kind && address(endpoint.baseUrl) === at) : undefined;
+}
+
+/** How long a profile's endpoint keeps a cached prompt, in minutes, where it is known by its address and states one. */
+export function knownCacheMinutes(kind: unknown, baseUrl: unknown): number | undefined {
+  return endpointAt(kind, baseUrl)?.cacheMinutes;
 }
 
 /** The `[providers]` tables as the file holds them. */

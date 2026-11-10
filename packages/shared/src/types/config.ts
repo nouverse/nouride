@@ -97,6 +97,12 @@ export interface ProviderProfile {
    * may know only `max_tokens`. Absent is `max_tokens`, what every such server reads.
    */
   maxTokensField?: MaxTokensField;
+  /**
+   * Minutes this endpoint keeps a conversation's cached prompt after its last request (`cache_minutes`), from the
+   * profile or, for an endpoint known by its address, from the known endpoints' table. Idle past it, the cache is
+   * gone, and that is the moment old tool output is cleared from the history for nothing. Absent: not known.
+   */
+  cacheMinutes?: number;
 }
 
 /** Where an OpenAI-shaped request puts its output ceiling (`ProviderProfile.maxTokensField`). */

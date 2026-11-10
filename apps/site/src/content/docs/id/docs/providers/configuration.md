@@ -85,6 +85,16 @@ update menuliskannya ke profil yang dibuat sebelumnya, sekali, dan mencatatnya d
 dikirim di `max_completion_tokens`, dan bilang kalau start berikutnya akan menulis key ini. Format Anthropic cuma
 punya satu field, `max_tokens`, jadi profil Anthropic yang minta `max_completion_tokens` gak bisa dimuat.
 
+`cache_minutes` adalah berapa lama endpoint menyimpan cache prompt sebuah percakapan setelah request terakhirnya.
+Nouride membersihkan output tool lama dari riwayat percakapan saat itu gak makan biaya, dan salah satu saatnya adalah
+ketika percakapan sudah diam lebih lama daripada umur cache endpoint-nya: request berikutnya toh dibaca penuh. Profil
+di `https://api.anthropic.com/v1` dibaca `cache_minutes = 5` tanpa perlu kamu tulis, yaitu umur cache yang
+didokumentasikan Anthropic untuk jenis cache yang diminta Nouride. Endpoint lain dibaca `60` kecuali key ini kamu isi:
+menganggap cache masih ada padahal sudah hilang cuma membuat output lama tinggal sedikit lebih lama, sedangkan
+sebaliknya membuang cache yang lebih murah dibaca. API OpenAI sendiri termasuk di situ, karena dokumentasinya menyebut
+umur cache dari beberapa menit sampai sehari, tergantung model dan pengaturan organisasinya. Isi `cache_minutes` kalau
+kamu tahu angkanya; `0` untuk endpoint yang gak menyimpan cache sama sekali.
+
 ## Mengelolanya
 
 Dari dashboard: **Models** (khusus admin), endpoint, wire format, kredensial. Atau:

@@ -50,6 +50,8 @@ export interface OpenAIProviderOptions {
   identify?: boolean;
   /** The field the output ceiling goes in (`ProviderProfile.maxTokensField`); absent, `max_tokens`. */
   maxTokensField?: MaxTokensField;
+  /** Minutes the endpoint keeps a cached prompt (`ProviderProfile.cacheMinutes`): declared, not acted on here. */
+  cacheMinutes?: number;
   http?: HttpDeps;
 }
 
@@ -133,10 +135,12 @@ interface WireStreamChunk {
 export class OpenAIProvider implements LLMProvider {
   readonly kind = "openai" as const;
   readonly baseUrl: string;
+  readonly cacheLifetimeMs?: number;
   private readonly effort = new EffortGuard();
 
   constructor(private readonly options: OpenAIProviderOptions) {
     this.baseUrl = options.baseUrl.replace(/\/$/, "");
+    if (options.cacheMinutes !== undefined) this.cacheLifetimeMs = options.cacheMinutes * 60_000;
   }
 
   async embed(params: EmbedParams): Promise<EmbedResponse> {

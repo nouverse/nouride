@@ -106,12 +106,20 @@ api_key = "nougate"                 # NAMA sebuah secret
 # identify = true                   # sebutkan agent dan percakapan untuk tiap request
 # billing = "included"              # langganan: gak ada biaya per token
 # max_tokens_field = "max_completion_tokens"   # API OpenAI sendiri: tempat batas output balasan
+# cache_minutes = 5                 # berapa lama endpoint ini menyimpan cache prompt sebuah percakapan
 ```
 
 `max_tokens_field` untuk `kind = "openai"`: `max_tokens` kalau gak ditulis, atau `max_completion_tokens`, yang
 dibutuhkan API OpenAI sendiri untuk model-model barunya. Setup menuliskannya untuk profil di
 `https://api.openai.com/v1`, dan start pertama setelah update menambahkannya ke profil yang dibuat sebelumnya. Untuk
 server lain, gak usah ditulis.
+
+`cache_minutes` adalah berapa lama endpoint menyimpan cache prompt sebuah percakapan setelah request terakhirnya,
+dalam menit bulat. Percakapan yang diam lebih lama dari itu sudah kehilangan cache-nya, jadi saat itulah output tool
+lama dibersihkan dari riwayatnya: menulis ulang riwayat gak makan biaya apa-apa lagi. Kalau gak ditulis, profil di
+`https://api.anthropic.com/v1` dibaca `5`, umur cache yang didokumentasikan Anthropic, dan profil lain `60`. Isi kalau
+kamu tahu umur cache endpoint-mu; `0` untuk yang gak menyimpan cache sama sekali. `nouride config check` menampilkan
+angka yang berlaku untuk tiap profil yang punya.
 
 Gak ada profil secara default. Setup wizard, dashboard, atau file ini yang membuat profil pertama,
 dan `[llm.defaults] provider` tetap kosong sampai saat itu. [Profil provider →](/id/docs/providers/configuration/)

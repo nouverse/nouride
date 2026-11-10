@@ -389,6 +389,11 @@ export type StreamChunk =
 export interface LLMProvider {
   readonly kind: ProviderKind;
   readonly baseUrl: string;
+  /**
+   * How long the endpoint keeps a cached prompt prefix after its last request, where its profile says
+   * (`ProviderProfile.cacheMinutes`). Absent: not known, and whoever asks takes it for still warm.
+   */
+  readonly cacheLifetimeMs?: number;
 
   chat(params: ChatParams): Promise<ChatResponse>;
   stream(params: ChatParams): AsyncIterable<StreamChunk>;

@@ -83,6 +83,16 @@ keeps what it says. `nouride config check` lists a profile whose limit goes in `
 the next start will write the key. The Anthropic wire has one field, `max_tokens`, so an Anthropic profile that asks
 for `max_completion_tokens` does not load.
 
+`cache_minutes` is how long the endpoint keeps a conversation's cached prompt after its last request. Nouride clears
+old tool output from a conversation's history when that costs nothing, and one such moment is when the conversation
+has been idle for longer than its endpoint keeps a cache: the next request would be read in full anyway. A profile on
+`https://api.anthropic.com/v1` is read as `cache_minutes = 5` without your writing it, which is the lifetime Anthropic
+documents for the kind of cache Nouride asks for. Every other endpoint is read as `60` unless you set the key: taking a
+cache for alive when it is gone only leaves old output in place a while longer, and the other way round would throw
+away a cache you are paying less to read. OpenAI's own API is among those, since it documents lifetimes from a few
+minutes to a day depending on the model and the organization's settings. Set `cache_minutes` where you know better;
+`0` is for an endpoint that caches nothing.
+
 ## Managing them
 
 From the dashboard: **Models** (admin only), endpoint, wire format, credential. Or:

@@ -19,6 +19,7 @@ import { assertSecretName } from "@nouride/secrets";
 
 const log = createLogger("config.gateways");
 import { FIXED_KEY_HINT, FIXED_KEY_IGNORED } from "./gone-keys.ts";
+import { knownCacheMinutes } from "../known-endpoints.ts";
 import {
   isPlainObject,
   requireBoolean,
@@ -37,7 +38,7 @@ const PLATFORMS: ConfigurableGatewayName[] = ["discord", "telegram", "whatsapp"]
  * The keys each open table reads. Any other is a typo the generic merge cannot see here — the names are the operator's
  * — and `enable = true` left a gateway off with nothing said. Warned about as the merge warns about its own.
  */
-const PROVIDER_KEYS = new Set(["kind", "base_url", "api_key", "headers", "identify", "billing", "max_tokens_field"]);
+const PROVIDER_KEYS = new Set(["kind", "base_url", "api_key", "headers", "identify", "billing", "max_tokens_field", "cache_minutes"]);
 const GATEWAY_KEYS = new Set([
   "token", "enabled", "agent", "mode", "session_dir", "encryption_key", "bridge_transport",
   "bridge_command", "groups_require_mention", "group_context_messages", "cache",
@@ -47,6 +48,15 @@ function warnUnknown(value: Record<string, unknown>, known: ReadonlySet<string>,
   for (const key of Object.keys(value)) {
     if (!known.has(key)) log.warn("unknown config key ignored", { key: `${where} ${key}` });
   }
+}
+
+/** Whole minutes, none included: an endpoint that caches nothing says 0. Refused otherwise, never rounded. */
+function requireMinutes(value: unknown, where: string): number | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
+    throw new ConfigError(`${where} must be a whole number of minutes, 0 or more`);
+  }
+  return value;
 }
 
 export function parseProviders(raw: unknown): Record<string, ProviderProfile> {
@@ -87,6 +97,8 @@ export function parseProviders(raw: unknown): Record<string, ProviderProfile> {
     if (kind === "anthropic" && maxTokensField === "max_completion_tokens") {
       throw new ConfigError(`${where} max_tokens_field = "max_completion_tokens" is for kind = "openai": Anthropic's API takes max_tokens only`);
     }
+    // The profile's own answer first; without one, what its endpoint is known to keep; else not known.
+    const cacheMinutes = requireMinutes(value.cache_minutes, `${where} cache_minutes`) ?? base?.cacheMinutes ?? knownCacheMinutes(kind, baseUrl);
     profiles[name] = {
       kind,
       baseUrl,
@@ -99,6 +111,7 @@ export function parseProviders(raw: unknown): Record<string, ProviderProfile> {
       ...(identify ? { identify } : {}),
       ...(billing === "included" ? { billing } : {}),
       ...(maxTokensField === "max_completion_tokens" ? { maxTokensField } : {}),
+      ...(cacheMinutes !== undefined ? { cacheMinutes } : {}),
     };
   }
 

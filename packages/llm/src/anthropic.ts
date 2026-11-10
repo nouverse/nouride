@@ -50,6 +50,8 @@ export interface AnthropicProviderOptions {
   headers?: Record<string, string>;
   /** Send who is asking, as `metadata.user_id` (`ChatParams.identity`). */
   identify?: boolean;
+  /** Minutes the endpoint keeps a cached prompt (`ProviderProfile.cacheMinutes`): declared, not acted on here. */
+  cacheMinutes?: number;
   http?: HttpDeps;
 }
 
@@ -179,10 +181,12 @@ function laterCounts(earlier: InputCounts | undefined, later: InputCounts | unde
 export class AnthropicProvider implements LLMProvider {
   readonly kind = "anthropic" as const;
   readonly baseUrl: string;
+  readonly cacheLifetimeMs?: number;
   private readonly effort = new EffortGuard();
 
   constructor(private readonly options: AnthropicProviderOptions) {
     this.baseUrl = options.baseUrl.replace(/\/$/, "");
+    if (options.cacheMinutes !== undefined) this.cacheLifetimeMs = options.cacheMinutes * 60_000;
   }
 
   async chat(params: ChatParams): Promise<ChatResponse> {
