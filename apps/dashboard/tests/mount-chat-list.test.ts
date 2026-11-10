@@ -88,6 +88,34 @@ describe("the list beside the chat", () => {
     expect(seen.discord).toEqual(["#general", "1 quiet group", "#bookmarks"]);
   });
 
+  // A small mark on a group's face said which app it lived on, and read as noise where the word is plain.
+  test("a group's row says its app in words after its name, as the orchestrator's says Orchestrator, with no mark on its face", async () => {
+    answer(list);
+    const seen: Record<string, unknown> = {};
+    await renderPage("/chat", async (host) => {
+      await eventually(() => byText(aside(host)!, "Groups") !== undefined, 3_000, "the switch");
+      byText(aside(host)!, "Groups")!.click();
+      await eventually(() => aside(host)!.textContent?.includes("Nouverse Office") === true, 2_000, "Groups");
+      const row = (name: string) => [...aside(host)!.querySelectorAll("a")].find((a) => a.textContent?.includes(name))!;
+      const nameLine = (name: string) => row(name).querySelector(".truncate.font-display")!.parentElement!;
+      seen.office = [...nameLine("Nouverse Office").children].map((part) => part.textContent?.trim()).filter(Boolean);
+      seen.general = [...nameLine("#general").children].map((part) => part.textContent?.trim()).filter(Boolean);
+      seen.marks = aside(host)!.querySelectorAll('[role="img"][aria-label="Telegram"], [role="img"][aria-label="Discord"]').length;
+      seen.tagClass = (nameLine("Nouverse Office").children[1]?.getAttribute("class") ?? "").split(/\s+/);
+      byText(aside(host)!, "Chats")!.click();
+      await eventually(() => rowNames(host).includes("Nouva"), 2_000, "Chats");
+      const nouva = [...aside(host)!.querySelectorAll("a")].find((a) => a.textContent?.includes("Orchestrator"))!;
+      seen.orchestratorTag = (nouva.querySelector(".truncate.font-display")!.parentElement!.children[1]?.getAttribute("class") ?? "").split(/\s+/);
+    });
+    // The name, the app, then when.
+    expect((seen.office as string[]).slice(0, 2)).toEqual(["Nouverse Office", "Telegram"]);
+    expect((seen.general as string[]).slice(0, 2)).toEqual(["#general", "Discord"]);
+    expect(seen.marks).toBe(0);
+    // The same pill as Orchestrator, kept whole: a long name gives way before it.
+    expect(seen.tagClass).toEqual(seen.orchestratorTag);
+    expect(seen.tagClass).toEqual(expect.arrayContaining(["shrink-0", "whitespace-nowrap"]));
+  });
+
   test("a group pinned to Chats in this browser is in Chats, by when it moved", async () => {
     answer(list);
     dom.localStorage.setItem("nouride-chat-pinned-groups", JSON.stringify(["telegram:-100"]));
@@ -120,7 +148,7 @@ describe("the conversation pane", () => {
 });
 
 describe("a conversation from a chat app", () => {
-  test("a private chat on Telegram: its app on the cat and in the header, and a note where the box would be", async () => {
+  test("a private chat on Telegram: its app in words in the header, no mark on the cat, and a note where the box would be", async () => {
     const transcript = { session: { id: "ses_dm", agentId: "nouva", chatId: "555", gatewayId: "telegram:nouva", updatedAt: NOW, writable: false }, earlier: [], turns: [], events: [], messages: [] };
     answer({ ...list, "/sessions/ses_dm/turns": { status: 200, body: transcript }, "/sessions/ses_dm/notes": { status: 404, body: { error: "no notes" } } });
     const seen: Record<string, unknown> = {};
@@ -133,8 +161,9 @@ describe("a conversation from a chat app", () => {
     });
     expect(seen.box).toBe(false);
     expect(seen.note).toContain("Read-only here. This chat lives on Telegram");
+    expect(seen.header).toContain("Telegram chat");
     expect(seen.header).toContain("Read-only");
-    expect(seen.mark).toBe(true);
+    expect(seen.mark).toBe(false);
   });
 
   // Live on the box, a channel with more than a screen of history opened at its oldest line: the transcript's element

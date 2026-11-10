@@ -7,6 +7,7 @@ import type { ChatListGroup, ChatListLine, ChatListRoom } from "@nouride/wire";
 import { AgentAvatar } from "@/commons/components/agents/AgentAvatar";
 import { GroupAvatar, MiniAvatars, StackedAvatars } from "@/commons/components/chat/Avatars";
 import { ConversationRow, RowTag } from "@/commons/components/chat/ConversationRow";
+import { PlatformRowTag } from "@/commons/components/chat/PlatformBadge";
 import { agentChatLink } from "@/commons/hooks/use-agent-chat";
 import { platformName } from "@/commons/lib/platform";
 import { shortWhen } from "@/commons/lib/when";
@@ -66,8 +67,9 @@ export function GroupRow({ group, data, current, unread }: { group: ChatListGrou
   return (
     <ConversationRow
       link={{ to: "/chat/group/$platform/$chatId", params: { platform: group.platform, chatId: group.chatId } }}
-      avatar={<GroupAvatar name={groupName(group)} platform={group.platform} />}
+      avatar={<GroupAvatar name={groupName(group)} />}
       name={groupName(group)}
+      tag={<PlatformRowTag platform={group.platform} />}
       time={shortWhen(group.at)}
       line={group.working ? "Working" : (lastLine(group.last, saidBy(data)) ?? "No agent has said anything here yet")}
       tone={group.working ? "working" : group.last ? "said" : "quiet"}

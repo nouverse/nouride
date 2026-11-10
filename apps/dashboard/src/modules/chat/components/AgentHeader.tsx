@@ -3,8 +3,7 @@
  * the work notes in a menu where there are some, and Delete, at the end of the bar where a person looks for it. On a phone a way back to the list comes first, and the
  * buttons keep their icons only, each a finger's size and named for whoever cannot see it.
  *
- * A private chat on a chat app says where it lives and that it is read here: its app's mark on the cat, and the words
- * beside the name.
+ * A private chat on a chat app says where it lives and that it is read here, in the words beside the name.
  */
 
 import { Link } from "@tanstack/react-router";
@@ -56,7 +55,7 @@ export function AgentHeader({
       <Link to="/chat" className="btn btn-ghost btn-square size-11 shrink-0 rounded-[14px] md:hidden" aria-label="Back to chats">
         <ChevronLeft size={22} aria-hidden="true" />
       </Link>
-      {look ? <AgentAvatar look={look} name={name} size="sm" {...(readOnly ? { platform: readOnly.platform } : {})} /> : null}
+      {look ? <AgentAvatar look={look} name={name} size="sm" /> : null}
       <div className="flex min-w-0 flex-1 flex-col gap-0.5 pl-1">
         <div className="flex min-w-0 items-center gap-2">
           <h2 className="min-w-0 truncate font-display text-lg font-medium tracking-tight text-base-content">{name}</h2>

@@ -1,12 +1,11 @@
 /**
  * The faces of a conversation with more than one agent in it, in the same tiles as one agent's (`AgentAvatar`): a room's
- * members stacked in one tile's square, a group's agents in a short row, and a group's own face — its initials, and the
- * mark of the app it lives on.
+ * members stacked in one tile's square, a group's agents in a short row, and a group's own face, its initials. Which app
+ * a group lives on is said in words beside its name (`PlatformRowTag`), not marked on its face.
  */
 
 import type { Look } from "@/commons/cat/look";
 import { AgentAvatar } from "@/commons/components/agents/AgentAvatar";
-import { PlatformMark } from "@/commons/components/chat/PlatformBadge";
 import { cn } from "@/commons/lib/utils";
 
 export interface Face {
@@ -77,14 +76,11 @@ export function PersonAvatar({ name }: { name: string }) {
   );
 }
 
-/** A group's own face: its initials in a tile, and the mark of the app it lives on. */
-export function GroupAvatar({ name, platform, className }: { name: string; platform: string; className?: string }) {
+/** A group's own face: its initials in a tile. */
+export function GroupAvatar({ name, className }: { name: string; className?: string }) {
   return (
-    <span className={cn("relative inline-grid shrink-0", className)}>
-      <span aria-hidden="true" className="grid size-10 place-items-center rounded-[12px] bg-base-200 font-display text-sm font-medium text-base-content/80">
-        {initials(name)}
-      </span>
-      <PlatformMark platform={platform} className="absolute -right-1 -bottom-1" />
+    <span aria-hidden="true" className={cn("grid size-10 shrink-0 place-items-center rounded-[12px] bg-base-200 font-display text-sm font-medium text-base-content/80", className)}>
+      {initials(name)}
     </span>
   );
 }

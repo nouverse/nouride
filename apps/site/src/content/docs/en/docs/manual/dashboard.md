@@ -320,7 +320,7 @@ and says who answers a message with no tag, if anyone does. **Add agent** brings
 it or takes an agent out, and **Delete** deletes the room.
 
 **Anything from a chat app is read-only here.** A group, or a private chat with an agent on Telegram, Discord or
-WhatsApp, shows that app's mark and **Read-only**, and where you would type there is a note: it is answered on its own
+WhatsApp, says its app's name and **Read-only**, and where you would type there is a note: it is answered on its own
 app. The people there are on the left, each under their name (the one under People, else the name their app shows), and
 a group shows what people said even when no agent answered. **Pin to Chats** keeps a group you read often in Chats, in
 this browser.

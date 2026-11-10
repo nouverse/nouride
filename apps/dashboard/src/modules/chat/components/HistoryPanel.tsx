@@ -13,7 +13,7 @@ import { Link } from "@tanstack/react-router";
 import { Loader2, Monitor, Plus } from "lucide-react";
 import type { ChatListPayload, SessionSummary } from "@nouride/wire";
 import { ConversationRow, ListHeading } from "@/commons/components/chat/ConversationRow";
-import { PlatformTag } from "@/commons/components/chat/PlatformBadge";
+import { PlatformRowTag } from "@/commons/components/chat/PlatformBadge";
 import { Drawer, DrawerHead } from "@/commons/components/ui/Drawer";
 import { SearchInput } from "@/commons/components/ui/SearchInput";
 import { ListLoading } from "@/commons/components/ui/Spinner";
@@ -94,7 +94,7 @@ function HistoryBody({ agentId, agentName, current, list, onClose }: { agentId: 
                     key={session.id}
                     link={{ to: "/chat/$sessionId", params: { sessionId: session.id } }}
                     name={session.title?.trim() || "A conversation"}
-                    tag={local ? undefined : <PlatformTag>{`${platformName(session.gatewayId)} · read-only`}</PlatformTag>}
+                    tag={local ? undefined : <PlatformRowTag platform={session.gatewayId} readOnly />}
                     time={shortWhen(session.updatedAt)}
                     line={
                       session.running ? (
