@@ -20,7 +20,7 @@ import {
 } from "@/modules/config/settings/people.ts";
 import { readPeopleDir } from "@/modules/people/files.ts";
 import type { SettingsDeps } from "@/modules/config/settings/types.ts";
-import { VERSION } from "@/cli/version.ts";
+import { VERSION } from "@/commons/version.ts";
 
 /** A household as the live box's config holds it: comments, a person by name only, notes over lines, a morning line. */
 const REAL = `[daemon]

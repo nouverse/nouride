@@ -361,7 +361,7 @@
   "apps/engine/src/cli/nearest.ts": { "version": 1 },
   "apps/engine/src/cli/retired.ts": { "version": 5 },
   "apps/engine/src/cli/setup.ts": { "version": 2 },
-  "apps/engine/src/cli/version.ts": { "version": 2 },
+  "apps/engine/src/commons/version.ts": { "version": 2 },
   "apps/engine/src/cli/wait-back.ts": { "version": 3 },
   "apps/engine/src/cli/wire.ts": { "version": 17 },
   "apps/engine/src/commons/activity.ts": { "version": 2 },

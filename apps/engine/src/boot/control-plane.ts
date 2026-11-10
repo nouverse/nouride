@@ -71,7 +71,7 @@ import { mountMcp } from "@/modules/web/mcp/index.ts";
 import { mountAgentMcp } from "@/modules/web/mcp/agent.ts";
 import { createSurface } from "@/modules/mcp-server/surface.ts";
 import { McpTokenStore } from "@/modules/mcp-server/tokens.store.ts";
-import { VERSION } from "@/cli/version.ts";
+import { VERSION } from "@/commons/version.ts";
 import type { WebServer } from "@/modules/web/server.ts";
 import { LLM_GATEWAY_PREFIX, mountLlmGateway } from "@/modules/web/llm-gateway.ts";
 import type { SupervisorInfo } from "@/service/supervisor.ts";

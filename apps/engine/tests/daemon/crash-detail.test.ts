@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { ConfigError } from "@nouride/shared";
-import { crashDetail, crashReport } from "@/commons/crash.ts";
+import { crashDetail, crashReport } from "@nouride/shared";
 
 describe("what a crash leaves in the log", () => {
   test("names the error's class, not only its message, and keeps the stack for symbolize", () => {

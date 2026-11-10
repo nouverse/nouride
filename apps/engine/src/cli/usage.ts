@@ -5,7 +5,7 @@
  */
 
 import { BOLD, DIM, RESET, emit, plain, say, usageError } from "@/cli/ui.ts";
-import { VERSION } from "@/cli/version.ts";
+import { VERSION } from "@/commons/version.ts";
 
 /**
  * `nouride <command> <action>` with an action the command does not have: exit 2, with the command's own lines of

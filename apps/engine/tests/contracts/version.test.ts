@@ -3,7 +3,7 @@
  *
  * It lived in five places: `apps/engine/package.json`, the root `package.json`,
  * `apps/site/src/consts.mjs`, and hardcoded constants in `src/index.ts`,
- * `src/cli/version.ts` and `modules/web/health.ts`. Releasing `0.1.1` bumped two
+ * `src/commons/version.ts` and `modules/web/health.ts`. Releasing `0.1.1` bumped two
  * of them, so the image shipped code that told `/health` and `nouride --version`
  * it was `0.1.0` — the two things an operator reads to find out what is running.
  *
@@ -13,7 +13,7 @@
 import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { VERSION } from "@/cli/version.ts";
+import { VERSION } from "@/commons/version.ts";
 
 const ROOT = new URL("../../../..", import.meta.url).pathname;
 
@@ -39,7 +39,7 @@ describe("the version", () => {
      * The guard, and the reason this file exists.
      *
      * Any `VERSION = "1.2.3"` in the engine is a fourth copy waiting to go
-     * stale. `cli/version.ts` is the one home and it derives the value rather
+     * stale. `commons/version.ts` is the one home and it derives the value rather
      * than stating it, so a literal there would fail this too.
      */
     const offenders: string[] = [];

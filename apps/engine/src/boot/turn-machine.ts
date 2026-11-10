@@ -12,7 +12,7 @@
 
 import { privateWorkspace, type AgentRegistry, type ProjectSkills } from "@nouride/persona";
 import { createLogger, type Gateway, type GlobalConfig } from "@nouride/shared";
-import { VERSION } from "@/cli/version.ts";
+import { VERSION } from "@/commons/version.ts";
 import type { DaemonContext } from "@/commons/context.ts";
 import { alertCooldownsState, spendAlertsState } from "@/commons/daemon-state.ts";
 import { Notifier } from "@/commons/notify.ts";

@@ -8,6 +8,7 @@
 export * from "./approval-preview.ts";
 export * from "./contained.ts";
 export * from "./errors.ts";
+export * from "./crash.ts";
 export * from "./ids.ts";
 export * from "./logger.ts";
 export * from "./bytes.ts";

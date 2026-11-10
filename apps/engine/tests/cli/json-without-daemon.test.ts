@@ -13,7 +13,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { openRecorded } from "@/boot/last-run.ts";
-import { VERSION } from "@/cli/version.ts";
+import { VERSION } from "@/commons/version.ts";
 import type { PackageAnswer } from "nouride-system-packages";
 import { pkgAnswer } from "@/cli/commands/pkg.ts";
 import { spawnCli } from "../cli-harness.ts";

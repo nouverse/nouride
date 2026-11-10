@@ -41,7 +41,7 @@ import { crashed, DIM, emit, fail, finish, GREEN, jsonOutput, plain, RESET, say,
 import { usage, usageFor } from "@/cli/usage.ts";
 import { meantCommand, refuseUnread } from "@/cli/grammar.ts";
 import { lookAtHealth, waitBack } from "@/cli/wait-back.ts";
-import { VERSION } from "@/cli/version.ts";
+import { VERSION } from "@/commons/version.ts";
 
 import { access } from "@/cli/commands/access.ts";
 import { agentAction, agentsCommand } from "@/cli/commands/agents.ts";

@@ -18,7 +18,7 @@ import { setModifiedTime, writeTextFile } from "@nouride/runtime";
 import { sessionIdFor } from "@nouride/shared";
 import { SecretStore } from "@nouride/secrets";
 import { startMemoryPass } from "@/boot/memory-pass.ts";
-import { VERSION } from "@/cli/version.ts";
+import { VERSION } from "@/commons/version.ts";
 import { AuditLog } from "@/commons/audit.store.ts";
 import type { DaemonContext } from "@/commons/context.ts";
 import { SettingsService } from "@/modules/config/settings/index.ts";

@@ -19,7 +19,7 @@ import { AuditLog } from "@/commons/audit.store.ts";
 import { backupDatabase } from "@/db/backup.ts";
 import { UserStore } from "@/modules/users/users.store.ts";
 import { bareArgs } from "@/cli/args.ts";
-import { startHint } from "@/cli/client.ts";
+import { startHint } from "@/service/hints.ts";
 import { loadConfig } from "@/cli/load-config.ts";
 import { refuseWhileRunning } from "@/cli/commands/db.ts";
 import { BOLD, DIM, GREEN, RESET, emit, fail, say } from "@/cli/ui.ts";

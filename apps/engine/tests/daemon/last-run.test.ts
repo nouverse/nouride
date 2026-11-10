@@ -13,7 +13,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { addLogSink, type LogEntry } from "@nouride/shared";
 import { LAST_RUN_FILE, recordLastRun } from "@/boot/last-run.ts";
-import { VERSION } from "@/cli/version.ts";
+import { VERSION } from "@/commons/version.ts";
 import { eventually } from "../wait.ts";
 
 const entries: LogEntry[] = [];

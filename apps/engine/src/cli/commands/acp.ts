@@ -17,7 +17,7 @@ import { AcpError, AcpServer, INTERNAL_ERROR, INVALID_PARAMS, type ContentBlock,
 import { randomUuid, resolve } from "@nouride/runtime";
 import { connect, type Client } from "@/cli/client.ts";
 import { flagValue } from "@/cli/args.ts";
-import { VERSION } from "@/cli/version.ts";
+import { VERSION } from "@/commons/version.ts";
 import { readFrames } from "@/cli/commands/events.ts";
 import { TurnUpdates, type EventRow, type WaitingCall } from "@/cli/acp-updates.ts";
 import type { ApprovalsResponse, MessageResponse, StatusResponse } from "@/cli/wire.ts";

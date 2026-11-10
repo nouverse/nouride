@@ -12,7 +12,7 @@ import { dirname, join } from "node:path";
 import { openDatabase } from "@nouride/runtime";
 import { openAndMigrate } from "@/db/index.ts";
 import { MIGRATIONS } from "@/db/migrations.ts";
-import { startHint } from "@/cli/client.ts";
+import { startHint } from "@/service/hints.ts";
 import { runCli } from "../cli-harness.ts";
 
 let root: string;

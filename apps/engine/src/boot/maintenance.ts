@@ -9,13 +9,12 @@
  */
 
 import { INBOX_KEEP_MS } from "@/modules/pipeline/inbox.store.ts";
-import { contained, createLogger } from "@nouride/shared";
+import { contained, createLogger, crashDetail } from "@nouride/shared";
 import { copyFileAtomic, freeDiskBytes, statFile, truncateFile, type SqliteDb } from "@nouride/runtime";
 import type { GlobalConfig } from "@nouride/shared";
 import { backupAgents, newestAgentBackupAt, prepareBackupDir } from "@nouride/persona";
 import { backupDatabase, newestBackupAt } from "@/db/backup.ts";
 import { scheduledBackupDir } from "@/commons/backup-dir.ts";
-import { crashDetail } from "@/commons/crash.ts";
 import { backupKnowledge, backupVault, newestKnowledgeBackupAt, newestVaultBackupAt } from "@/modules/memory/backup.ts";
 import { knowledgeDirOf } from "@/modules/memory/index.ts";
 import { backupConfig, backupSkillPool, newestSnapshotOf } from "@/modules/config/snapshot.ts";

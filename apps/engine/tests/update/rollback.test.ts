@@ -12,7 +12,7 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, st
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { openDatabase } from "@nouride/runtime";
-import { VERSION } from "@/cli/version.ts";
+import { VERSION } from "@/commons/version.ts";
 import { restoreDatabase } from "@/db/backup.ts";
 import { offBoxHealthy } from "@/boot/appliance.ts";
 import type { DaemonContext } from "@/commons/context.ts";

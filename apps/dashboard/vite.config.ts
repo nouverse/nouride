@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => {
   const backend = env.VITE_BACKEND_URL || `http://localhost:${env.PORT || 18254}`;
 
   // The release this bundle was built for — read where the daemon reads the version it reports on `/health`
-  // (`apps/engine/src/cli/version.ts`). A tab left open across an update compares the two (`commons/lib/bundle.ts`).
+  // (`apps/engine/src/commons/version.ts`). A tab left open across an update compares the two (`commons/lib/bundle.ts`).
   const version = (JSON.parse(readFileSync(new URL("../engine/package.json", import.meta.url), "utf8")) as { version: string }).version;
 
   return {

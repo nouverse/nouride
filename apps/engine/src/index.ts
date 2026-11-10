@@ -62,7 +62,7 @@ import { assertUpgradeFloor, loadConfigPastTheFloor } from "@/boot/upgrade-floor
 import { startApplianceIfPresent } from "@/boot/appliance.ts";
 import { resumeAfterBoot } from "@/boot/durable.ts";
 import { askKeptApprovals } from "@/boot/approvals-kept.ts";
-import { VERSION } from "@/cli/version.ts";
+import { VERSION } from "@/commons/version.ts";
 import { settleAgentHome } from "@/boot/agent-home.ts";
 import { settleToolchain } from "@/boot/toolchain.ts";
 import { openStores } from "@/boot/stores.ts";

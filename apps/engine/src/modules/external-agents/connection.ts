@@ -7,7 +7,7 @@
  * What the CLI writes on stderr is kept, its last lines, for the reason an agent shows when its CLI will not start.
  */
 
-import { VERSION } from "@/cli/version.ts";
+import { VERSION } from "@/commons/version.ts";
 import { AcpClient, AcpError, AUTH_REQUIRED, type CliRow, type ContentBlock, type InitializeResult, type McpServer, type NewSessionResult, type PermissionOutcome, type RequestPermissionParams, type SessionConfigOption, type SessionUpdate, type PromptAnswer, type SteerOutcome } from "@nouride/acp";
 import { createLogger } from "@nouride/shared";
 import type { LongLivedProcess } from "@nouride/runtime";

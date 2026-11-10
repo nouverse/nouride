@@ -9,7 +9,7 @@
 import { ConfigError, createLogger } from "@nouride/shared";
 import { ensureDir, parseToml, readTextFileIfExists, sha256Text } from "@nouride/runtime";
 import { keepBefore } from "@/commons/backups.ts";
-import { VERSION } from "@/cli/version.ts";
+import { VERSION } from "@/commons/version.ts";
 import type { FactsMode, Person } from "@nouride/shared";
 import { addMissingPeopleKeys, removePerson as removePersonFromToml, upsertPerson } from "@/modules/config/edit-blocks.ts";
 import { canonicalPersonId, idsOf, refusePersonId } from "@/modules/people/match.ts";

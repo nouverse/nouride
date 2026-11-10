@@ -19,7 +19,7 @@ import { tmpdir } from "node:os";
 import { readTextFile, readTextFileIfExists, serveHttp, writeTextFileAtomic } from "@nouride/runtime";
 import { MuteableOutput } from "@nouride/runtime";
 import { setup } from "@/cli/setup.ts";
-import { restartHint } from "@/cli/client.ts";
+import { restartHint } from "@/service/hints.ts";
 
 let root: string;
 let cwd: string;

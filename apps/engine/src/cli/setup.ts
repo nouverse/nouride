@@ -39,7 +39,7 @@ import { FIRST_AGENT } from "@/modules/setup/presets.ts";
 import { SetupService } from "@/modules/setup/service.ts";
 import type { ProviderKind } from "@/modules/setup/probe.ts";
 import { flagValue, hasFlag } from "@/cli/args.ts";
-import { restartHint } from "@/cli/client.ts";
+import { restartHint } from "@/service/hints.ts";
 import { runningDaemon } from "@/cli/daemon-lock.ts";
 
 const RESET = "\x1b[0m";

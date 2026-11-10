@@ -1,4 +1,4 @@
-import { NourideError } from "@nouride/shared";
+import { NourideError } from "./errors.ts";
 
 /**
  * What a crash leaves in the log, for an error nobody caught.

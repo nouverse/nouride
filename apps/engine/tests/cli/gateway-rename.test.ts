@@ -13,7 +13,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { openDatabase } from "@nouride/runtime";
 import { openRecorded } from "@/boot/last-run.ts";
-import { VERSION } from "@/cli/version.ts";
+import { VERSION } from "@/commons/version.ts";
 import { runCli } from "../cli-harness.ts";
 
 let root: string;

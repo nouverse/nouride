@@ -8,7 +8,7 @@
  */
 
 import { dirname, fileExists, isWritableDir, runningPlatform } from "@nouride/runtime";
-import { VERSION } from "@/cli/version.ts";
+import { VERSION } from "@/commons/version.ts";
 import { COMPILED, EDITION } from "@/commons/build.ts";
 import { detectSupervisor } from "@/service/supervisor.ts";
 

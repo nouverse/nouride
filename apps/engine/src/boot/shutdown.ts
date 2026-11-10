@@ -6,7 +6,7 @@
  * wrong loses a turn's context silently, which is why `drain` is exported and tested on its own.
  */
 
-import { createLogger } from "@nouride/shared";
+import { createLogger, crashDetail } from "@nouride/shared";
 import { exitProcess, onShutdownSignal, type SqliteDb } from "@nouride/runtime";
 import { markCleanShutdown } from "./integrity.ts";
 import type { DaemonContext } from "@/commons/context.ts";
@@ -17,7 +17,6 @@ import type { JobsPort } from "@/modules/jobs/jobs.store.ts";
 import type { CronScheduler } from "@/modules/cron/scheduler.ts";
 import { closeAllSessions } from "@/modules/tools/builtins/sessions.ts";
 import { stopTurns } from "@/boot/interrupted.ts";
-import { crashDetail } from "@/commons/crash.ts";
 
 const log = createLogger("daemon");
 

@@ -16,8 +16,7 @@
  * formatting an agent had to read its way back through.
  */
 
-import { clip } from "@nouride/shared";
-import { crashReport } from "@/commons/crash.ts";
+import { clip, crashReport } from "@nouride/shared";
 
 export const RESET = "\x1b[0m";
 export const DIM = "\x1b[90m";

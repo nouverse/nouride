@@ -42,7 +42,7 @@ import { UPGRADE_FLOOR } from "@/commons/upgrade-floor.ts";
 import { BOLD, DIM, GREEN, RED, RESET, YELLOW, emit, fail, say, usageError } from "@/cli/ui.ts";
 import { helpFor, unknownAction } from "@/cli/usage.ts";
 import { bareArgs } from "@/cli/args.ts";
-import { startHint } from "@/cli/client.ts";
+import { startHint } from "@/service/hints.ts";
 import { runningDaemon } from "@/cli/daemon-lock.ts";
 import { loadConfig } from "@/cli/load-config.ts";
 

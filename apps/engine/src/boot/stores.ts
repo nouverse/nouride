@@ -10,7 +10,7 @@
 import { ensureDir, join, setFileMode } from "@nouride/runtime";
 import { TransientSecrets } from "@nouride/secrets";
 import { addLogSink, type GlobalConfig, type LoadedAgent } from "@nouride/shared";
-import { VERSION } from "@/cli/version.ts";
+import { VERSION } from "@/commons/version.ts";
 import { databaseEpoch } from "@/db/epoch.ts";
 import { AuditLog } from "@/commons/audit.store.ts";
 import { DaemonStateStore } from "@/commons/daemon-state.store.ts";

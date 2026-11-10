@@ -3,7 +3,7 @@
 import { processMemory, sha256Text, type CommandIsolation } from "@nouride/runtime";
 import { EVENT_PROTOCOL_VERSION, type GatewayStatus } from "@nouride/shared";
 import type { DaemonContext } from "@/commons/context.ts";
-import { VERSION } from "@/cli/version.ts";
+import { VERSION } from "@/commons/version.ts";
 import { EDITION } from "@/commons/build.ts";
 
 /**
