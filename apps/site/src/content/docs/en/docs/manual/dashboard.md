@@ -309,14 +309,15 @@ The list has two halves, switched at its top:
 The **+** at the top starts a chat with an agent or makes a room, and the search finds a chat by its name or its last
 message.
 
-**An agent's chat** opens its latest conversation, to carry on where you left off. **History**, in its header, lists
-only that agent's conversations: the ones in the dashboard, and its private chats on chat apps, each saying where it is
-from. **New chat** starts a fresh one.
+**An agent's chat** opens its latest conversation, to carry on where you left off. **History**, in its header, slides
+in from the left with only that agent's conversations: the ones in the dashboard, and its private chats on chat apps,
+each saying where it is from. **New chat** starts a fresh one, and **Delete** deletes the one on screen, once you say
+yes.
 
 **A room** is one conversation with several agents. Pick the agents when you make it, then tag the one you mean
 (`@nox`): a tag is how a message reaches a particular agent. The room's header shows its members as the tags you type,
 and says who answers a message with no tag, if anyone does. **Add agent** brings another one in; the room's menu renames
-it, takes an agent out, or deletes it.
+it or takes an agent out, and **Delete** deletes the room.
 
 **Anything from a chat app is read-only here.** A group, or a private chat with an agent on Telegram, Discord or
 WhatsApp, shows that app's mark and **Read-only**, and where you would type there is a note: it is answered on its own

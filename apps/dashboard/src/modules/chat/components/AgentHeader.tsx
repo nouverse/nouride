@@ -1,6 +1,6 @@
 /**
  * The bar over a conversation with one agent: its cat, its name, what it is doing now, its History, a new chat with it,
- * and a menu with what is done to this conversation as a whole. On a phone a way back to the list comes first, and the
+ * the work notes in a menu where there are some, and Delete, at the end of the bar where a person looks for it. On a phone a way back to the list comes first, and the
  * buttons keep their icons only, each a finger's size and named for whoever cannot see it.
  *
  * A private chat on a chat app says where it lives and that it is read here: its app's mark on the cat, and the words
@@ -84,7 +84,7 @@ export function AgentHeader({
         <Plus size={17} aria-hidden="true" />
         <span className="max-sm:hidden">New chat</span>
       </Link>
-      {notes || sessionId ? (
+      {notes ? (
         <DropdownMenu
           trigger={<Ellipsis size={17} aria-hidden="true" />}
           triggerClassName={cn(HEADER_BUTTON, "w-11 px-0 sm:w-9")}
@@ -93,38 +93,33 @@ export function AgentHeader({
           menuClassName="rounded-2xl border border-base-content/[0.08] bg-base-100 p-1.5 shadow-soft"
         >
           {(close) => (
-            <>
-              {notes ? (
-                <li>
-                  <button type="button" className="min-h-11 gap-3 rounded-xl text-sm" onClick={() => { close(); notes.toggle(); }}>
-                    <NotebookPen size={16} aria-hidden="true" />
-                    {notes.open ? "Hide work notes" : notes.count > 0 ? `Work notes · ${notes.count} ${notes.count === 1 ? "task" : "tasks"}` : "Work notes"}
-                  </button>
-                </li>
-              ) : null}
-              {sessionId ? (
-                <li>
-                  <button
-                    type="button"
-                    className="min-h-11 gap-3 rounded-xl text-sm text-error"
-                    disabled={deleting}
-                    onClick={async () => {
-                      close();
-                      const confirmed = await ask({
-                        title: "Delete this conversation?",
-                        body: <>The conversation goes, with everything in it. Anything running is cancelled. There is no undo.</>,
-                        confirmLabel: "Delete",
-                      });
-                      if (confirmed) onDelete();
-                    }}
-                  >
-                    <Trash2 size={16} aria-hidden="true" /> Delete conversation
-                  </button>
-                </li>
-              ) : null}
-            </>
+            <li>
+              <button type="button" className="min-h-11 gap-3 rounded-xl text-sm" onClick={() => { close(); notes.toggle(); }}>
+                <NotebookPen size={16} aria-hidden="true" />
+                {notes.open ? "Hide work notes" : notes.count > 0 ? `Work notes · ${notes.count} ${notes.count === 1 ? "task" : "tasks"}` : "Work notes"}
+              </button>
+            </li>
           )}
         </DropdownMenu>
+      ) : null}
+      {sessionId ? (
+        <button
+          type="button"
+          className={cn(HEADER_BUTTON, "hover:bg-error/10 hover:text-error")}
+          aria-label="Delete this conversation"
+          disabled={deleting}
+          onClick={async () => {
+            const confirmed = await ask({
+              title: "Delete this conversation?",
+              body: <>The conversation goes, with everything in it. Anything running is cancelled. There is no undo.</>,
+              confirmLabel: "Delete",
+            });
+            if (confirmed) onDelete();
+          }}
+        >
+          <Trash2 size={17} aria-hidden="true" />
+          <span className="max-sm:hidden">Delete</span>
+        </button>
       ) : null}
 
       {dialog}

@@ -1,7 +1,7 @@
 /**
  * A room's bar: its name, its members as the `@name` a person types to reach each, who answers a message that tags
- * nobody (the router's own answer, from `/chat-list`), adding an agent, and a menu to rename it, take an agent out, or
- * delete it.
+ * nobody (the router's own answer, from `/chat-list`), adding an agent, a menu to rename it or take an agent out, and
+ * Delete, at the end of the bar.
  *
  * Members are shown as their tags rather than faces alone: a tag is typed, and `@nero` here is the same string the router
  * matches. On a phone the tags give way to their names in a line under the room's.
@@ -93,9 +93,8 @@ export function RoomHeader({ room, data, untagged, onDelete, deleting }: { room:
                 setDraft(room.title ?? "");
                 setRenaming(true);
               }}
-              onDelete={onDelete}
-              deleting={deleting}
             />
+            <DeleteRoomButton members={members} onDelete={onDelete} deleting={deleting} />
           </>
         )}
       </div>
@@ -162,8 +161,39 @@ function AddAgentMenu({ room, data, refresh }: { room: Room; data: ChatListData;
   );
 }
 
-/** The room's menu: rename it, take an agent out, delete it — each asked first where it cannot be undone. */
-function RoomMenu({ room, data, refresh, onRename, onDelete, deleting }: { room: Room; data: ChatListData; refresh: () => void; onRename: () => void; onDelete: () => void; deleting: boolean }) {
+/** Delete, in the bar: the room, its history and every member's conversation in it, asked first. */
+function DeleteRoomButton({ members, onDelete, deleting }: { members: string[]; onDelete: () => void; deleting: boolean }) {
+  const { ask, dialog } = useConfirm();
+  return (
+    <>
+      <button
+        type="button"
+        className={cn(HEADER_BUTTON, "hover:bg-error/10 hover:text-error")}
+        aria-label="Delete this room"
+        disabled={deleting}
+        onClick={async () => {
+          const confirmed = await ask({
+            title: "Delete this room?",
+            body: (
+              <>
+                The room, its history, and every member&apos;s conversation in it are deleted: {members.join(", ")}. Anything running here is cancelled. There is no undo.
+              </>
+            ),
+            confirmLabel: "Delete room",
+          });
+          if (confirmed) onDelete();
+        }}
+      >
+        <Trash2 size={17} aria-hidden="true" />
+        <span className="max-sm:hidden">Delete</span>
+      </button>
+      {dialog}
+    </>
+  );
+}
+
+/** The room's menu: rename it, take an agent out — asked first, as it cannot be undone. */
+function RoomMenu({ room, data, refresh, onRename }: { room: Room; data: ChatListData; refresh: () => void; onRename: () => void }) {
   const toast = useToast();
   const { ask, dialog } = useConfirm();
   const members = room.members.map((member) => member.agentId);
@@ -207,28 +237,6 @@ function RoomMenu({ room, data, refresh, onRename, onDelete, deleting }: { room:
                   </li>
                 ))
               : null}
-            <li>
-              <button
-                type="button"
-                className="min-h-11 gap-3 rounded-xl text-sm text-error"
-                disabled={deleting}
-                onClick={async () => {
-                  close();
-                  const confirmed = await ask({
-                    title: "Delete this room?",
-                    body: (
-                      <>
-                        The room, its history, and every member&apos;s conversation in it are deleted: {members.join(", ")}. Anything running here is cancelled. There is no undo.
-                      </>
-                    ),
-                    confirmLabel: "Delete room",
-                  });
-                  if (confirmed) onDelete();
-                }}
-              >
-                <Trash2 size={16} aria-hidden="true" /> Delete room
-              </button>
-            </li>
           </>
         )}
       </DropdownMenu>
