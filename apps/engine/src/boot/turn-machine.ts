@@ -17,6 +17,7 @@ import type { DaemonContext } from "@/commons/context.ts";
 import { alertCooldownsState, spendAlertsState } from "@/commons/daemon-state.ts";
 import { Notifier } from "@/commons/notify.ts";
 import type { BoxBusy } from "@/commons/box-load.ts";
+import type { Machine } from "@/commons/machine.ts";
 import { CronScheduler } from "@/modules/cron/scheduler.ts";
 import type { ExternalAgents } from "@/modules/external-agents/index.ts";
 import { LOCAL_GATEWAY_ID } from "@/modules/gateways/local.ts";
@@ -70,6 +71,8 @@ export function buildTurnParts(
     config: GlobalConfig;
     /** The context's config, read when a link is made, a preview judged or a mission reads it: the context comes later. */
     contextConfig: () => GlobalConfig;
+    /** The machine as boot read it: the missions' slots follow it while none is set. */
+    machine: Machine;
     registry: AgentRegistry;
     gateways: Map<string, Gateway>;
     memory: Memory;
@@ -89,7 +92,7 @@ export function buildTurnParts(
   });
   // Long work an agent finishes alone (0.8.0): built before the pipeline, which shapes their turns — `boot/missions.ts`.
   const missions = buildMissions({
-    db, config: input.contextConfig, registry, notes: stores.notes, jobs: stores.jobs, approvals: () => approvals, notifier: { toChat: (to, text) => notifier.toChat(to, text), ask: (to, text, buttons) => notifier.ask(to, text, buttons), edit: (to, id, text) => notifier.edit(to, id, text) }, chatEvents: stores.chatEvents, memory: input.memory,
+    db, config: input.contextConfig, machine: input.machine, registry, notes: stores.notes, jobs: stores.jobs, approvals: () => approvals, notifier: { toChat: (to, text) => notifier.toChat(to, text), ask: (to, text, buttons) => notifier.ask(to, text, buttons), edit: (to, id, text) => notifier.edit(to, id, text) }, chatEvents: stores.chatEvents, memory: input.memory,
     jobAllowed: (jobId) => cron.get(jobId)?.allowed?.flatMap((allowance) => allowance.keys) ?? [],
     roomForCli: () => externalAgents.room().enough,
     forgetCliSession: (agentId, gatewayId, chatId) => externalAgents.forgetSession(agentId, gatewayId, chatId),
@@ -228,6 +231,8 @@ export async function buildTurnMachine(
   input: {
     ctx: DaemonContext;
     config: GlobalConfig;
+    /** The machine as boot read it: what an agent is told of it, and its helpers' limit where none is set. */
+    machine: Machine;
     configPath: string;
     progress: BootProgress;
     registry: AgentRegistry;
@@ -292,6 +297,7 @@ export async function buildTurnMachine(
     cronJobs: stores.cron,
     jobWakes: stores.jobWakes,
     config,
+    machine: input.machine,
     registry,
     providers: stores.providers,
     sessions: stores.sessions,

@@ -447,15 +447,16 @@ lipat lagi. Gak ada yang dihentikan karena diam (yang menghentikan job yang jala
 ```toml
 [missions]
 per_agent = 1                       # yang bekerja bersamaan untuk satu agent; yang sedang dicek tidak dihitung
-# max_running = 3                   # yang jalan bersamaan di box ini; kosong: setengah jumlah agent, 1 sampai 8
+# max_running = 3                   # yang jalan bersamaan di box ini; kosong: sesuai kemampuan mesin, 1 sampai 4
 limit_hours = 8                     # jam kerja; waktu menunggu kamu gak dihitung
 limit_turns = 100                   # tiap giliran sampai [llm.limits] max_tool_iterations langkah
 limit_tokens = 100000000            # input dan output, termasuk milik pemeriksa
 ```
 
 Misi mengambil batasnya saat dimulai; kalau satu batas tercapai, ia bertanya mau lanjut atau berhenti. Misi yang
-menunggu kamu gak memakai slot. Kalau `max_running` gak diisi, nilainya ikut agent yang aktif (setengahnya, dibulatkan
-ke bawah, minimal 1 dan maksimal 8), dan bisa diisi sampai sebanyak semua agent. Bisa diatur dari pengaturan di
+menunggu kamu gak memakai slot. Kalau `max_running` gak diisi, nilainya ikut mesin (satu untuk tiap core selain satu,
+dan satu untuk tiap GiB memori yang boleh dipakai perintah agent, diambil yang lebih kecil, minimal 1 dan maksimal 4),
+dan bisa diisi sampai sebanyak semua agent. Bisa diatur dari pengaturan di
 dashboard juga. [Misi →](/id/docs/manual/missions/)
 
 ## `[[external_clis]]`

@@ -137,7 +137,7 @@ enabled = ["read", "web_search", "web_fetch", "memory_read", "memory_write", "pe
 approval_required = ["exec", "write", "edit"]
 blocked = ["rm", "shutdown", "reboot"]   # commands exec refuses outright
 
-# Helpers it may have working in the background at once (absent: the daemon's [delegate], 2). 0 is off.
+# Helpers it may have working in the background at once (absent: the daemon's [delegate]). 0 is off.
 [delegate]
 max_background = 1
 
@@ -432,9 +432,12 @@ the agent waits for it to finish, and its answer says why it took so long.
 - **A helper inherits what the agent may do** (its tools, its grants and approvals, its MCP servers, its
   skills), but not who it is: no persona, no memory. It writes no memory, sends nothing to the chat and
   starts no helper of its own; it says what is worth keeping, and the agent decides.
-- **How many at once** is `[delegate] max_background`: 2 by default, 0 turns them off, set per agent on
-  its **Settings** tab, from the next helper on. A helper that moved there after its 45 seconds counts too. At
-  0, a helper the agent waits for is waited for to the end.
+- **How many at once** is `[delegate] max_background`: 0 turns them off, set per agent on its **Settings**
+  tab, from the next helper on. Left unset it follows the machine: one for each core but one and one for each
+  GiB of memory the agents' commands may use, whichever is lower, at least 1 and at most 4. A 4-core 2 GB box
+  gets 1, a 4-core 4 GB box 2, a 6-core 8 GB box 4; `nouride doctor` says the number in force and where it
+  came from. A helper that moved there after its 45 seconds counts too. At 0, a helper the agent waits for
+  is waited for to the end.
 - **Each helper is a job**: in `nouride jobs` and under Work → Helpers in the dashboard, with its goal,
   and in the chat's strip while it runs. `/stop` in the chat stops the agent's helpers there; `nouride jobs
   kill <id>` stops one.

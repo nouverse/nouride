@@ -911,6 +911,11 @@ describe("the tool's answer to a start", () => {
     const first = await h.start("one");
     const answer = await createMissionTools(h.missions).chat.execute({ action: "start", goal: "two", agent: "nox", ...atOnce }, ctx);
     expect(answer.content).toContain(`It waits because the box already runs ${first.id.slice(0, 10)} (max_running 1);`);
+    // Where nobody set it, it is said as the machine's: no file holds a setting of that value to look up.
+    const unset = await missionsHarness({ settings: { maxRunning: 1, auto: true } });
+    const running = await unset.start("one");
+    const waits = await createMissionTools(unset.missions).chat.execute({ action: "start", goal: "two", agent: "nox", ...atOnce }, ctx);
+    expect(waits.content).toContain(`It waits because the box already runs ${running.id.slice(0, 10)} (1 at once on this machine: max_running is not set);`);
   });
 
   test("started at once, it says nothing about waiting", async () => {

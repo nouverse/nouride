@@ -42,6 +42,7 @@ import type { ChatAttachmentsPort } from "@/modules/attachments/chat-attachments
 import type { Memory } from "@/modules/memory/index.ts";
 import type { Notifier } from "@/commons/notify.ts";
 import type { BoxBusy } from "@/commons/box-load.ts";
+import type { Machine } from "@/commons/machine.ts";
 import type { UsersPort } from "@/modules/users/users.store.ts";
 import type { ChildEnv } from "@/modules/tools/exec-secrets.ts";
 import type { TransientSecrets } from "@nouride/secrets";
@@ -84,6 +85,11 @@ export const DROP_NOTICE_CAP = 1000;
 
 export interface PipelineDeps {
   config: GlobalConfig;
+  /**
+   * The machine as boot read it (`commons/machine.ts`): what an agent is told of it, and how many helpers it may have
+   * in the background where no number is set. Given, never read here: a test names the machine it is about.
+   */
+  machine: Machine;
   registry: AgentRegistry;
   /**
    * Read-only, for one question: where does a reply in a cron session go? A follow-up there — a background

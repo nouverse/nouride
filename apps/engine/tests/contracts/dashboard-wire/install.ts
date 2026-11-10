@@ -41,7 +41,7 @@ import type { ControlDeps } from "@/modules/web/control/types.ts";
 import { GatewaySwitch } from "@/boot/gateway-switch.ts";
 import { cheapPasswords } from "../../helpers.ts";
 import { GADING_DM, SAM_DM, at, household, scripted, type Household } from "../../memory/fixture.ts";
-import { pipelineBench, type Bench } from "../../pipeline-bench.ts";
+import { BENCH_MACHINE, pipelineBench, type Bench } from "../../pipeline-bench.ts";
 
 /** One instant every clock reads as. */
 const INSTANT = 1_760_000_000_000;
@@ -333,7 +333,8 @@ export async function wireAnswers(): Promise<Record<string, unknown>> {
 
     const notes = await workNotes(dataDir);
     const work = await missions(bench, notes);
-    const ctx = { config, db, gateways: bench.gateways, startedAt: Date.now(), configSource: configPath, status: "ready", agentCount: 1, providerErrors: new Map() } as unknown as DaemonContext;
+    // On the bench's machine, as its pipeline is: the fixture says how much runs at once, and must not say this laptop's.
+    const ctx = { config, db, gateways: bench.gateways, startedAt: Date.now(), configSource: configPath, status: "ready", agentCount: 1, providerErrors: new Map(), machine: BENCH_MACHINE } as unknown as DaemonContext;
     const app = new Hono();
     mountControlRoutes(app, {
       ctx,

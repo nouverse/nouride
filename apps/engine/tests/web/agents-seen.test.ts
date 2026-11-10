@@ -40,9 +40,9 @@ describe("when each agent was first seen", () => {
     const app = new Hono();
     const token = "control-token-for-tests-0000000000";
     mountControlRoutes(app, {
-      ctx: { config: { daemon: {}, llm: { defaults: {} }, security: {} }, gateways: new Map(), startedAt: Date.now(), status: "ready", providerErrors: new Map() } as unknown as DaemonContext,
+      ctx: { config: { daemon: {}, llm: { defaults: {} }, security: {}, delegate: {}, missions: { perAgent: 1 } }, gateways: new Map(), startedAt: Date.now(), status: "ready", providerErrors: new Map() } as unknown as DaemonContext,
       token,
-      registry: { all: () => [anything], status: () => "running", loadFailures: () => [] } as unknown as AgentRegistry,
+      registry: { all: () => [anything], status: () => "running", loadFailures: () => [], enabled: () => [] } as unknown as AgentRegistry,
       pipeline: anything,
       providers: anything,
       approvals: anything,

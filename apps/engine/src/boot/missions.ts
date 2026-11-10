@@ -26,6 +26,7 @@ import { shortId } from "@/modules/missions/page.ts";
 import { isFinal, toldBy } from "@/modules/missions/types.ts";
 import { SYSTEM_SENDER } from "@/modules/pipeline/deps.ts";
 import { inForceFor } from "@/modules/missions/slots.ts";
+import { atOnceBy, type Machine } from "@/commons/machine.ts";
 import type { Mission } from "@/modules/missions/types.ts";
 import type { NotesPort } from "@/modules/notes/store.ts";
 import type { CutCall } from "@/modules/turns/cut-calls.ts";
@@ -129,6 +130,8 @@ interface MissionsLate {
 export function buildMissions(params: {
   db: SqliteDb;
   config: () => GlobalConfig;
+  /** The machine as boot read it: the slots on the box follow it while `max_running` is unset. */
+  machine: Machine;
   registry: Pick<AgentRegistry, "get" | "enabled" | "isPaused" | "onWoke">;
   notes: NotesPort;
   jobs: JobsPort;
@@ -207,9 +210,9 @@ export function buildMissions(params: {
   const missions = new Missions({
     store,
     ...(params.jobAllowed ? { jobAllowed: params.jobAllowed } : {}),
-    // The agents that are on, counted at each decision: unset, the slots on the box follow them (`missions/slots.ts`).
-    // Each agent's own `per_agent` is its pack's, read as the pack is now — a save from its page reloads it (0.8.11).
-    settings: () => inForceFor(params.config().missions, params.registry),
+    // Read at each decision: unset, the slots on the box are the machine's, held to the agents that are on
+    // (`missions/slots.ts`). Each agent's own `per_agent` is its pack's as loaded now, so a save from its page counts.
+    settings: () => inForceFor(params.config().missions, atOnceBy(params.machine), params.registry),
     agents: {
       exists: (agentId) => params.registry.get(agentId)?.config.enabled === true,
       asleep: (agentId) => params.registry.isPaused(agentId),

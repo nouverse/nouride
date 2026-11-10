@@ -7,7 +7,7 @@
  * the next start, the limits for each mission started after it, since a mission takes its limits when it starts.
  *
  * A key sent empty (`null`) is taken out of the file, which is how the page goes back to a default: written, the
- * default's value today would stop following the default tomorrow — and `max_running` unset follows the agents.
+ * default's value today would stop following the default tomorrow — and `max_running` unset follows the machine.
  */
 
 import { createLogger, missionsPerAgentRefusal, type MissionsSection } from "@nouride/shared";
@@ -44,17 +44,19 @@ function boundsFor(name: MissionSetting, agents: AgentSlots, perAgent: number): 
 }
 
 /**
- * What the page shows, with `agents` the agents that are on: the values in force, each one's default — the box's slots
- * as many as the agents give it now — whether those slots follow the agents (`auto`), and the bounds each keeps.
+ * What the page shows, with `agents` the agents that are on and `byMachine` what the machine has room for
+ * (`commons/machine.ts`): the values in force, each one's default — the box's slots as many as the machine and the
+ * agents give it now — whether those slots follow the machine (`auto`), and the bounds each keeps.
  */
-export function missionSettings(deps: Pick<SettingsDeps, "config">, agents: AgentSlots) {
+export function missionSettings(deps: Pick<SettingsDeps, "config">, agents: AgentSlots, byMachine: number) {
   const missions = deps.config.missions;
   const bounds = Object.fromEntries((Object.keys(KEYS) as MissionSetting[]).map((name) => [name, boundsFor(name, agents, missions.perAgent)]));
+  const auto = autoRunning(byMachine, agents.map((own) => own ?? missions.perAgent));
   return {
     ...missions,
-    maxRunning: missions.maxRunning ?? autoRunning(agents.length),
+    maxRunning: missions.maxRunning ?? auto,
     auto: missions.maxRunning === undefined,
-    defaults: { ...DEFAULT_CONFIG.missions, maxRunning: autoRunning(agents.length) },
+    defaults: { ...DEFAULT_CONFIG.missions, maxRunning: auto },
     bounds: bounds as Record<MissionSetting, Bounds>,
   };
 }

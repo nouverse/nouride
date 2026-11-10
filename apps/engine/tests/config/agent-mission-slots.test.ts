@@ -58,7 +58,7 @@ describe("the box's max_running, with agents at their own numbers", () => {
   test("may be set as high as every agent at its own per_agent at once — nix at four, two at the daemon's one: six", async () => {
     const config = structuredClone(DEFAULT_CONFIG);
     const agents = [4, undefined, undefined];
-    expect(missionSettings({ config }, agents).bounds.maxRunning).toMatchObject({ min: 1, max: 6 });
+    expect(missionSettings({ config }, agents, 4).bounds.maxRunning).toMatchObject({ min: 1, max: 6 });
     dir = mkdtempSync(join(tmpdir(), "agent-mission-slots-"));
     const configPath = join(dir, "config.toml");
     writeFileSync(configPath, '[daemon]\nname = "t"\n');

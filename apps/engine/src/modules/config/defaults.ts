@@ -220,13 +220,13 @@ export const DEFAULT_CONFIG: GlobalConfig = {
     quietAfterMinutes: 5,
   },
   delegate: {
-    // Two (2026-10-18): one is the habit for a long task, so the agent stays free for the person,
-    // and two is for two independent pieces. 0 turns background helpers off.
-    maxBackground: 2,
+    // Unset: what the machine has room for, four at most (`commons/machine.ts`). A number written here would hold a
+    // phone and a server to the same one. 0 turns background helpers off.
+    maxBackground: undefined,
   },
   missions: {
-    // One mission per agent. On the box, unset: half the agents, at least one and at most eight (`missions/slots.ts`) —
-    // a box of six runs three, one of thirty still eight, and a person may set it as high as every agent at once.
+    // One mission per agent. On the box, unset: what the machine has room for, four at most, and no more than its
+    // agents could run (`missions/slots.ts`). A person may set it as high as every agent at once.
     perAgent: 1,
     maxRunning: undefined,
     // A working day, a hundred turns of up to `max_tool_iterations` steps each, and 100 million tokens — a million a turn,

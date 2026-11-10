@@ -24,7 +24,7 @@
  *   for, and never waits.
  */
 
-import { childSessionId, createLogger, resolveMaxBackground, resolveToolIterations, resolveTurnDurationMs, toUserMessage, type LoadedAgent } from "@nouride/shared";
+import { childSessionId, createLogger, resolveToolIterations, resolveTurnDurationMs, toUserMessage, type LoadedAgent } from "@nouride/shared";
 import type { ApprovalGate } from "@/modules/tools/approval.ts";
 import type { BackgroundStart, HelperView, SubagentRequest } from "@/modules/tools/builtins/delegate.ts";
 import type { MovableRun } from "@/modules/tools/builtins/wait-then-move.ts";
@@ -56,7 +56,8 @@ export function startBackgroundHelper(ctx: TurnContext, request: SubagentRequest
   if (!jobs || !parent) return { refused: "unavailable", reason: "This process cannot run background helpers. Leave `background` off to run it in the foreground." };
 
   // Read now, so a change from the dashboard applies to the next one started.
-  const limit = resolveMaxBackground(parent.config.maxBackgroundHelpers, ctx.deps.config.delegate.maxBackground);
+  const inForce = ctx.backgroundLimit(parent);
+  const { limit } = inForce;
   if (limit === 0) return { refused: "off" };
   // Counted against the day's caps like any turn: refused before it starts rather than discovered after it spent.
   const budget = ctx.checkSpend();
@@ -76,7 +77,7 @@ export function startBackgroundHelper(ctx: TurnContext, request: SubagentRequest
   });
   if ("started" in outcome) return { started: here(outcome.started), running: jobs.backgroundTurns(parent.config.id).map(here) };
   if (outcome.refused === "duplicate") return { refused: "duplicate", running: here(outcome.running) };
-  return { refused: "limit", limit: outcome.limit, running: outcome.running.map(here) };
+  return { refused: "limit", limit: { ...inForce, limit: outcome.limit }, running: outcome.running.map(here) };
 }
 
 /**

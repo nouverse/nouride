@@ -11,6 +11,7 @@
 
 import { dirname, join } from "@nouride/runtime";
 import { formatBytes, plural } from "@nouride/shared";
+import { atOnceWords, type AtOnce } from "@/commons/machine.ts";
 
 export interface Check {
   level: "ok" | "warn" | "bad";
@@ -182,6 +183,15 @@ export function passBacklogCheck(pass: { enabled?: unknown } | null | undefined,
       `${pace || "no conversations"} ${over}, and the pass files ${backlog.perNight} per agent a night`,
     hint: `\`nouride memory set pass_per_night ${backlog.enough}\` files what waits within a week at this pace; \`nouride memory set pass_max_tokens <n>\` caps what a night may spend.`,
   };
+}
+
+/**
+ * How many helpers and missions run at once, and whether a setting or the machine decided each (`/status`). The
+ * daemon's own reading: it knows the cgroup its agents' commands run in, which a command run beside it does not.
+ * Nothing from a daemon too old to say.
+ */
+export function atOnceChecks(atOnce: AtOnce | undefined): Check[] {
+  return atOnce ? [{ level: "ok", message: `work at once: ${atOnceWords(atOnce)}` }] : [];
 }
 
 /**

@@ -347,11 +347,11 @@ describe("the limit", () => {
     await eventually(() => d.jobs.backgroundTurns("nouva").length === 2, 4_000, "two running");
     const running = d.jobs.backgroundTurns("nouva").map((job) => job.id);
 
-    // A third, at the daemon's 2: refused, naming both.
+    // A third, with nothing set: refused at the two the bench's machine has room for, said as the machine's, naming both.
     say(d.gateway, "and a third", "m2");
     await eventually(() => replies(d.gateway).includes("noted"), 4_000, "the refusal read");
     const refusal = textOf(d.asked.findLast((request) => request.body.messages.at(-1)?.role === "tool")!.body.messages.at(-1)!.content);
-    expect(refusal).toContain('Not started: "Piece 3". You already have 2 jobs working in the background (helpers and asks), the most this agent may have (`[delegate] max_background = 2`)');
+    expect(refusal).toContain('Not started: "Piece 3". You already have 2 jobs working in the background (helpers and asks), the most this agent may have (2, what this machine has room for: `[delegate] max_background` is not set)');
     for (const id of running) expect(refusal).toContain(id);
     expect(d.jobs.backgroundTurns("nouva")).toHaveLength(2);
 

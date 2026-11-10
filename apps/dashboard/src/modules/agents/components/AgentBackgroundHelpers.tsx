@@ -4,6 +4,9 @@
  *
  * The same two states as `AgentJobQuiet`, for the same reason: typing today's default into the field pins it, and the
  * difference only shows the day somebody moves the daemon's. Live: the next helper the agent starts is held to it.
+ *
+ * The default is the daemon's number where one is set, and otherwise what the server has room for (`auto`): said as
+ * that, since "the default" with nothing behind it reads as a number somebody chose.
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -29,6 +32,8 @@ export function AgentBackgroundHelpers({ agent, editable }: { agent: AgentSummar
   const own = agent.maxBackgroundHelpers ?? null;
   const daemon = policy.data?.maxBackground;
   const max = policy.data?.max ?? 4;
+  // Where nobody set a number, the server's own room decides it.
+  const why = policy.data?.auto ? "what this server has room for" : "and it tracks changes to it";
 
   const [overriding, setOverriding] = useState<boolean | null>(null);
   const [draft, setDraft] = useState<string | null>(null);
@@ -45,13 +50,13 @@ export function AgentBackgroundHelpers({ agent, editable }: { agent: AgentSummar
       saved(
         result,
         value === null ? `${name} follows the default again` : value === 0 ? `${name} runs no helpers in the background` : `${name} may run ${value} in the background`,
-        value === null ? `Currently ${daemon ?? 2}, and it tracks changes to that.` : "Live from the next helper it starts.",
+        value === null ? (daemon === undefined ? "It tracks changes to the default." : `Currently ${daemon === 0 ? "off" : daemon}, ${why}.`) : "Live from the next helper it starts.",
       );
     },
   });
 
   const isOverriding = overriding ?? own !== null;
-  const value = draft ?? String(own ?? daemon ?? 2);
+  const value = draft ?? String(own ?? daemon ?? 1);
   const parsed = Number(value);
   const outOfRange = !Number.isInteger(parsed) || parsed < 0 || parsed > max;
   const unchanged = isOverriding ? own === parsed : own === null;
@@ -75,7 +80,7 @@ export function AgentBackgroundHelpers({ agent, editable }: { agent: AgentSummar
         <span className="text-sm">
           {isOverriding ? "This agent has its own limit" : "Follows the default"}
           {!isOverriding && daemon !== undefined && (
-            <span className="text-base-content/65"> (currently {daemon === 0 ? "off" : daemon}, and it tracks changes to it)</span>
+            <span className="text-base-content/65"> (currently {daemon === 0 ? "off" : daemon}, {why})</span>
           )}
         </span>
       </label>
@@ -123,7 +128,7 @@ export function AgentBackgroundHelpers({ agent, editable }: { agent: AgentSummar
       </div>
 
       <p className="text-xs text-base-content/65 mt-3">
-        {isOverriding && !outOfRange ? helpersSaid(parsed) : `0 (off) to ${max}. ${helpersSaid(own ?? daemon ?? 2)}`}
+        {isOverriding && !outOfRange ? helpersSaid(parsed) : `0 (off) to ${max}.${(own ?? daemon) === undefined ? "" : ` ${helpersSaid((own ?? daemon)!)}`}`}
       </p>
       <ErrorNote error={save.error} />
     </Card>

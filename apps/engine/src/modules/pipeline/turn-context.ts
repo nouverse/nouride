@@ -22,7 +22,8 @@ import type { TurnJournal } from "@/modules/turns/journal.store.ts";
 import { startJobFor } from "@/modules/jobs/jobs.store.ts";
 import { goalLine } from "@/modules/tools/builtins/delegate-brief.ts";
 import { agentCommandsHaveOwnUsers, ensureDir, readFileBytes } from "@nouride/runtime";
-import { createLogger, resolveMaxBackground, type Attachment, type ChatMessage, type LoadedAgent, type MessageEnvelope, type SessionKey, type ToolContext, type Tool } from "@nouride/shared";
+import { backgroundInForce, type InForce } from "@/commons/machine.ts";
+import { createLogger, type Attachment, type ChatMessage, type LoadedAgent, type MessageEnvelope, type SessionKey, type ToolContext, type Tool } from "@nouride/shared";
 import { projectSkillReadRoots, skillsDirFor } from "@nouride/persona";
 import { privateWorkspace, scratchpadFor, sharedWorkspace } from "@nouride/persona";
 import { hostReadRoots } from "@/modules/toolchain/facts.ts";
@@ -569,6 +570,14 @@ export class TurnContext extends ActiveTurns {
   }
 
   /**
+   * How many helpers and asks `agent` may have in the background, read as it is needed, and who set it: a change from
+   * the dashboard applies to the next one started.
+   */
+  backgroundLimit(agent: LoadedAgent): InForce {
+    return backgroundInForce(this.deps.config.delegate, this.deps.machine, agent.config.maxBackgroundHelpers);
+  }
+
+  /**
    * This agent's helpers and asks working in the background for this conversation, oldest first — `turnReminders` says
    * them. An ask's goal is its job line, `ask <agent>: <task>`.
    */
@@ -623,7 +632,7 @@ export class TurnContext extends ActiveTurns {
       ...(this.deps.ownSecrets ? { ownSecrets: this.deps.ownSecrets } : {}),
       // Read per turn, so a limit set from the dashboard is the next turn's. None where this process runs no jobs.
       ...(this.deps.jobs
-        ? { backgroundHelpers: (agentId: string) => resolveMaxBackground(this.deps.registry.get(agentId)?.config.maxBackgroundHelpers, this.deps.config.delegate.maxBackground) }
+        ? { backgroundHelpers: (agentId: string) => backgroundInForce(this.deps.config.delegate, this.deps.machine, this.deps.registry.get(agentId)?.config.maxBackgroundHelpers).limit }
         : {}),
     };
   }

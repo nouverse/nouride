@@ -163,8 +163,8 @@ export interface MissionLimits {
 
 /**
  * `[missions]`: the values in force, each one's default, and the bounds each keeps — the schema's, so the form and the
- * loader agree. The slots on the box follow the agents that are on while unset (`auto`): their default and their most
- * are worked out from those agents.
+ * loader agree. The slots on the box follow the machine while unset (`auto`), held to what the agents that are on could
+ * run: their default and their most are worked out from both.
  */
 export interface MissionSettings extends MissionLimits {
   auto: boolean;

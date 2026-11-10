@@ -140,7 +140,7 @@ enabled = ["read", "web_search", "web_fetch", "memory_read", "memory_write", "pe
 approval_required = ["exec", "write", "edit"]
 blocked = ["rm", "shutdown", "reboot"]   # perintah yang langsung ditolak exec
 
-# Helper yang boleh dijalankannya di latar belakang sekaligus (tanpa nilai: [delegate] milik daemon, 2). 0 = mati.
+# Helper yang boleh dijalankannya di latar belakang sekaligus (tanpa nilai: [delegate] milik daemon). 0 = mati.
 [delegate]
 max_background = 1
 
@@ -449,9 +449,12 @@ selesai, dan jawabannya menyebut kenapa lama.
   skill-nya), tapi bukan siapa dirinya: tanpa persona, tanpa memori. Ia gak menulis memori, gak mengirim
   apa pun ke chat, dan gak memulai helper sendiri; ia menyebut apa yang layak disimpan, dan agent yang
   memutuskan.
-- **Berapa sekaligus** diatur `[delegate] max_background`: 2 secara default, 0 mematikannya, bisa diatur
-  per agent di tab **Settings**-nya, berlaku mulai helper berikutnya. Helper yang pindah ke sana setelah
-  45 detiknya ikut dihitung. Kalau 0, helper yang ditunggu agent ditunggu sampai selesai.
+- **Berapa sekaligus** diatur `[delegate] max_background`: 0 mematikannya, bisa diatur per agent di tab
+  **Settings**-nya, berlaku mulai helper berikutnya. Kalau gak diisi, nilainya ikut mesin: satu untuk tiap
+  core selain satu, dan satu untuk tiap GiB memori yang boleh dipakai perintah agent, diambil yang lebih
+  kecil, minimal 1 dan maksimal 4. Box 4 core 2 GB dapat 1, 4 core 4 GB dapat 2, 6 core 8 GB dapat 4;
+  `nouride doctor` menyebut angka yang berlaku dan asalnya. Helper yang pindah ke sana setelah 45 detiknya
+  ikut dihitung. Kalau 0, helper yang ditunggu agent ditunggu sampai selesai.
 - **Tiap helper adalah sebuah job**: muncul di `nouride jobs` dan di Work → Helpers di dashboard
   dengan tujuannya, dan di strip chat selama berjalan. `/stop` di chat menghentikan helper agent di
   chat itu; `nouride jobs kill <id>` menghentikan satu.

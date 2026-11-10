@@ -437,15 +437,15 @@ in its `[jobs]`. [Scheduled work →](/en/docs/manual/schedule/)
 ```toml
 [missions]
 per_agent = 1                       # working at once for one agent; one being checked is not counted
-# max_running = 3                   # running at once on this box; unset: half the agents, 1 to 8
+# max_running = 3                   # running at once on this box; unset: what the machine has room for, 1 to 4
 limit_hours = 8                     # hours of work; time waiting for you is not counted
 limit_turns = 100                   # each turn up to [llm.limits] max_tool_iterations steps
 limit_tokens = 100000000            # input and output, the reviewer's included
 ```
 
 A mission takes its limits when it starts; reaching one asks you to continue or stop. A mission waiting for you holds
-no slot. Left unset, `max_running` follows the agents that are on (half of them, rounded down, at least 1 and at most
-8), and it can be set as high as all of them. Set from the dashboard's settings too. [Missions →](/en/docs/manual/missions/)
+no slot. Left unset, `max_running` follows the machine (one for each core but one and one for each GiB of memory the
+agents' commands may use, whichever is lower, at least 1 and at most 4), and it can be set as high as every agent at once. Set from the dashboard's settings too. [Missions →](/en/docs/manual/missions/)
 
 ## `[[external_clis]]`
 

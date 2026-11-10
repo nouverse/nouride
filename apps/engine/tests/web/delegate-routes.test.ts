@@ -16,21 +16,24 @@ import { UserStore } from "@/modules/users/users.store.ts";
 import { DEFAULT_CONFIG } from "@/modules/config/defaults.ts";
 import { mountControlRoutes } from "@/modules/web/control/index.ts";
 import type { ControlDeps } from "@/modules/web/control/types.ts";
+import type { GlobalConfig } from "@nouride/shared";
 
 const TOKEN = "control-token-for-tests-0000000000";
 let dir = "";
 let db: SqliteDb;
 let app: Hono;
 let calls: Record<string, unknown>[];
+let config: GlobalConfig;
 
 beforeEach(async () => {
   dir = mkdtempSync(join(tmpdir(), "delegate-routes-"));
   db = openDatabase(join(dir, "t.db"));
   await migrate(db);
   calls = [];
-  const config = structuredClone(DEFAULT_CONFIG);
+  config = structuredClone(DEFAULT_CONFIG);
   const deps = {
-    ctx: { config, db, gateways: new Map(), startedAt: Date.now(), status: "ready", agentCount: 1, providerErrors: new Map() },
+    // A machine with room for two: four cores, 4 GiB.
+    ctx: { config, db, gateways: new Map(), startedAt: Date.now(), status: "ready", agentCount: 1, providerErrors: new Map(), machine: { cores: 4, memoryBytes: 4 * 1024 ** 3 } },
     token: TOKEN,
     audit: new AuditLog(db),
     users: new UserStore({ db }),
@@ -60,8 +63,15 @@ const call = (path: string, body?: unknown) =>
     { clientAddress: "203.0.113.10" },
   );
 
-test("the daemon's limit is read with its ceiling", async () => {
-  expect(await (await call("/policy/delegate")).json()).toEqual({ maxBackground: 2, max: 4, editable: true });
+test("the daemon's limit is read with its ceiling: what the machine has room for while nobody set one, said as that", async () => {
+  expect(await (await call("/policy/delegate")).json()).toEqual({ maxBackground: 2, auto: true, max: 4, editable: true });
+});
+
+test("a limit set in the config is the one read, on any machine, 0 included", async () => {
+  config.delegate.maxBackground = 4;
+  expect(await (await call("/policy/delegate")).json()).toEqual({ maxBackground: 4, auto: false, max: 4, editable: true });
+  config.delegate.maxBackground = 0;
+  expect(await (await call("/policy/delegate")).json()).toEqual({ maxBackground: 0, auto: false, max: 4, editable: true });
 });
 
 describe("one agent's limit", () => {

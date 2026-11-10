@@ -18,6 +18,7 @@
 import { plural, type Tool } from "@nouride/shared";
 import type { SubAgentHandoff } from "@/modules/tools/handoff.ts";
 import { duration } from "@/modules/jobs/wake-text.ts";
+import { backgroundLimitWords, type InForce } from "@/commons/machine.ts";
 import type { HelperView } from "./delegate.ts";
 
 /**
@@ -34,7 +35,7 @@ import type { HelperView } from "./delegate.ts";
 export const FOREGROUND_WAIT_MS = 45_000;
 
 /** Why work did not move to the background: no room under the calling agent's limit, or no way to run one here. */
-export type MoveRefusal = { why: "limit"; limit: number; running: HelperView[] } | { why: "unavailable"; reason: string };
+export type MoveRefusal = { why: "limit"; limit: InForce; running: HelperView[] } | { why: "unavailable"; reason: string };
 
 /** Moving one to the background: the job it now runs as — or it stays waited on, answered already or refused. */
 export type Moved = { job: string } | { answered: true } | { refused: MoveRefusal };
@@ -69,7 +70,7 @@ export function limitReached(refused: Extract<MoveRefusal, { why: "limit" }>): s
   const n = refused.running.length;
   return (
     `you already have ${n} ${plural(n, "job")} working in the background (helpers and asks), the most this ` +
-    `agent may have (\`[delegate] max_background = ${refused.limit}\`)`
+    `agent may have (${backgroundLimitWords(refused.limit)})`
   );
 }
 
