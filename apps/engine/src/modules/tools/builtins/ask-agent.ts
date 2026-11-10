@@ -252,9 +252,16 @@ function checked(options: AskAgentToolOptions, asking: { agent?: unknown; task?:
   return { to: match, task };
 }
 
+/**
+ * Whether a parameter was sent. Some models write every parameter a schema has, the ones they do not use as null, an
+ * empty string or an empty list: read as sent, an empty `asks` beside `agent` refused the call every model already makes.
+ */
+const sent = (value: unknown): boolean => value !== undefined && value !== null && value !== "" && !(Array.isArray(value) && value.length === 0);
+
 /** One call: several asks where `asks` is sent, else the one — checked, then answered, waited on, or moved to the background where it may be. */
 async function ask(options: AskAgentToolOptions, args: Record<string, unknown>, ctx: ToolContext, mayDetach: boolean): Promise<ToolResult> {
-  const several = args.asks !== undefined;
+  // An empty list with no agent beside it is still the several shape, said as the list it should have been.
+  const several = sent(args.asks) || (Array.isArray(args.asks) && !sent(args.agent));
   const one = several ? null : checked(options, args, ctx);
   if (one && "refused" in one) return { content: one.refused, isError: true };
 
@@ -346,7 +353,7 @@ type Begun = { agent: string; task: string } & ({ run: MovableRun } | { refused:
 
 /** Why `asks` cannot be read as a list of asks, or null when it can. */
 function shapeRefusal(args: Record<string, unknown>): string | null {
-  if (args.agent !== undefined || args.task !== undefined) return "Send `asks` for several agents, or `agent` and `task` for one: not both.";
+  if (sent(args.agent) || sent(args.task)) return "Send `asks` for several agents, or `agent` and `task` for one: not both.";
   if (!Array.isArray(args.asks) || args.asks.length === 0) return `\`asks\` is a list of up to ${MAX_ASKS} asks, each an \`agent\` and its \`task\`.`;
   if (args.asks.length > MAX_ASKS) return `That is ${args.asks.length} asks; one call asks at most ${MAX_ASKS} agents. Send the rest in a second call.`;
   return null;

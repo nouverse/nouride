@@ -202,6 +202,17 @@ describe("ask_agent with one agent, as it always was", () => {
     expect(await said({ agent: "nox", task: "fix the build", tier: "huge" })).toContain("`tier` is one of");
   });
 
+  test("`asks` written as nothing beside `agent` is the single call still, and `agent` written as nothing beside `asks` is several", async () => {
+    // Some models write every parameter a schema has, the unused ones as null, "" or an empty list.
+    const tool = createAskAgentTool({ peers, run: async (request) => handoff({ agentId: request.to }) });
+    const single = (await tool.execute({ agent: "nox", task: "fix the build" }, ctx())).content;
+    for (const asks of [null, []]) expect((await tool.execute({ agent: "nox", task: "fix the build", asks }, ctx())).content).toBe(single);
+    const several = await tool.execute({ asks: [{ agent: "nox", task: "fix the build" }], agent: null, task: "" }, ctx());
+    expect(several.content).toStartWith("── nox: fix the build\n[nox · success]");
+    // Nothing of either shape: asked for the agent, as it always was.
+    expect((await tool.execute({ asks: null }, ctx())).content).toBe("Name the agent to ask. Available: nox, nera.");
+  });
+
   test("its schema still takes `agent` and `task`, and now `asks` beside them: neither is required, since one of the two is sent", () => {
     const { properties, required } = createAskAgentTool({ peers, run: async () => handoff() }).definition.parameters as { properties: Record<string, { description?: string }>; required?: string[] };
     expect(Object.keys(properties)).toEqual(["agent", "task", "asks", "tier"]);
