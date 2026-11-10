@@ -49,6 +49,7 @@
     "build:release": "bun run build:binary --target all",
     "prepare": "git rev-parse --git-dir >/dev/null 2>&1 && git config core.hooksPath .githooks || true",
     "verify": "bun run lint:check && bun run lint:site && bun run test",
+    "audit": "bun audit --audit-level=critical",
     "sync:brand": "bun run scripts/sync-brand.ts",
     "lint:sql": "bun run scripts/check-sql.ts",
     "lint:timers": "bun run scripts/check-timers.ts",

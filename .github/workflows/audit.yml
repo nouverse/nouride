@@ -1,0 +1,30 @@
+# Are the packages Nouride is built from known to be unsafe? Asked once a day, and by hand before a release.
+
+name: audit
+
+# On a schedule, not on a push: an advisory is published on its own day, against a package somebody else maintains, so
+# on a push it would turn `ci` red for a change that did nothing wrong, and stay red for every push after it until the
+# package is moved. Here it fails once, on the day the advisory comes out, and says which package. Critical only: the
+# lower levels are what dependabot's proposals are for.
+on:
+  schedule:
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    if: github.repository_owner == 'nouverse'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+      # Reads `bun.lock` alone: nothing is installed, so no package's own scripts run here.
+      - run: bun run audit

@@ -93,7 +93,12 @@ bun test ./apps/engine/ -t "silences"           # by name
 ```bash
 bun run lint:check    # every lint below
 bun run verify        # lint:check, then the whole test suite — what CI runs
+bun run audit         # the packages in bun.lock against published advisories, critical only
 ```
+
+`audit` is not part of `verify` or of a push's checks: an advisory against somebody else's package comes out on its own
+day, and would turn a push red that did nothing wrong. It runs once a day (`.github/workflows/audit.yml`) and before a
+release.
 
 | Script | Holds |
 |---|---|
