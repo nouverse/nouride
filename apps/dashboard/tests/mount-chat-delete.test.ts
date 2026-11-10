@@ -38,7 +38,7 @@ const header = (host: HTMLElement) =>
   (host.querySelector('button[title="Show or hide past conversations"]')?.closest("header") ?? host) as HTMLElement;
 const byLabel = (root: ParentNode, label: string) => root.querySelector(`button[aria-label="${label}"]`) as HTMLButtonElement | null;
 
-/** What a bar's menu holds, opened and read; closed again by Escape. */
+/** What a bar's menu holds, opened and read; closed again by its button. */
 async function menuItems(host: HTMLElement, menuLabel: string): Promise<string[]> {
   await eventually(() => byLabel(header(host), menuLabel) !== null, 2_000, "the menu's button");
   byLabel(header(host), menuLabel)!.click();
