@@ -40,7 +40,7 @@ export function ConversationRow({
   onToggle?: { expanded: boolean; toggle: () => void };
   avatar?: ReactNode;
   name: string;
-  /** A word on what this is, after the name: "Orchestrator", "WhatsApp", "Telegram · read-only". */
+  /** A word on what this is, after the name: "Orchestrator", "WhatsApp", "Telegram". */
   tag?: ReactNode;
   time?: string;
   line?: ReactNode;

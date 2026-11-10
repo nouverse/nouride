@@ -115,7 +115,7 @@ function HistoryBody({ agentId, agentName, current, list, onClose }: { agentId: 
                     key={session.id}
                     link={{ to: "/chat/$sessionId", params: { sessionId: session.id } }}
                     name={session.title?.trim() || "A conversation"}
-                    tag={local ? undefined : <PlatformRowTag platform={session.gatewayId} readOnly />}
+                    tag={local ? undefined : <PlatformRowTag platform={session.gatewayId} />}
                     time={shortWhen(session.updatedAt)}
                     line={
                       session.running ? (

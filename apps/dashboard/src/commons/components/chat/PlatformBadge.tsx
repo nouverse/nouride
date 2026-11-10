@@ -7,9 +7,13 @@
 import { RowTag } from "@/commons/components/chat/ConversationRow";
 import { platformName } from "@/commons/lib/platform";
 
-/** After a row's name: the app, and for a private chat there that it is read here, not written. */
-export function PlatformRowTag({ platform, readOnly = false }: { platform: string; readOnly?: boolean }) {
-  return <RowTag>{readOnly ? `${platformName(platform)} · read-only` : platformName(platform)}</RowTag>;
+/**
+ * After a row's name: the app, and only the app. History's private chats said "Telegram · read-only", and on a phone
+ * the tag took the room the title needed ("sip tul…"); the line under the name already says it is a private chat
+ * there, and opening it says it is read-only.
+ */
+export function PlatformRowTag({ platform }: { platform: string }) {
+  return <RowTag>{platformName(platform)}</RowTag>;
 }
 
 /** A tag beside a header's name: where it lives, and that it is read here, not written. */

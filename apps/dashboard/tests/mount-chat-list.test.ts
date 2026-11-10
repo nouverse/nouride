@@ -372,17 +372,24 @@ describe("an agent's History", () => {
     const sessions = [mine("ses_1", "web-1", "web:dashboard", "is the disk full?"), mine("ses_dm", "555", "telegram:nouva", "a private chat"), mine("ses_r", "room_1", "web:dashboard", "in the room"), mine("ses_g1", "-100", "telegram:nouva", "in the group")];
     answer({ ...list, "/sessions?agent=nouva": { status: 200, body: { sessions, total: 4 } } });
     let rows: string[] = [];
+    let dmNameLine: string[] = [];
     await renderPage("/chat/ses_1", async (host) => {
       await eventually(() => host.querySelector(`button[aria-label="Nouva's conversations"]`) !== null, 3_000, "History");
       (host.querySelector(`button[aria-label="Nouva's conversations"]`) as HTMLElement).click();
       const panel = () => dom.document.body.querySelector(`[data-drawer][aria-label="Nouva's conversations"]`);
       await eventually(() => (panel()?.textContent ?? "").includes("a private chat"), 3_000, "the History");
-      rows = [...panel()!.querySelectorAll("a[href*='/chat/ses']")].map((row) => row.textContent ?? "");
+      const links = [...panel()!.querySelectorAll("a[href*='/chat/ses']")];
+      rows = links.map((row) => row.textContent ?? "");
+      const dm = links.find((row) => row.textContent?.includes("a private chat"))!;
+      dmNameLine = [...dm.querySelector(".truncate.font-display")!.parentElement!.children].map((part) => part.textContent?.trim() ?? "").filter(Boolean);
     });
     expect(rows).toHaveLength(2);
     expect(rows[0]).toContain("is the disk full?");
     expect(rows[1]).toContain("a private chat");
-    expect(rows[1]).toContain("Telegram · read-only");
+    expect(rows[1]).toContain("A private chat on Telegram");
+    // The app's name alone after the title: "Telegram · read-only" took the room a phone needed for the title.
+    expect(dmNameLine.slice(0, 2)).toEqual(["a private chat", "Telegram"]);
+    expect(rows[1]).not.toContain("read-only");
   });
 });
 
