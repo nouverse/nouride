@@ -80,6 +80,10 @@ membalas siapa pun (yang salinannya diterima tiap bot) dijawab olehnya saja, sek
 room itu mewajibkan mention (`groups_require_mention`, atau `/mention on` di grup itu). Pesan yang menyapa seseorang
 tetap diarahkan seperti biasa, dan DM gak terpengaruh. Agent pertama yang kamu buat otomatis jadi orchestrator.
 
+`groups_require_mention` itu soal grup di Telegram, Discord, dan WhatsApp. Room yang kamu buat di dashboard menjawab
+sesuai anggotanya: orchestrator kalau ia ada di room itu, atau satu-satunya agent di room itu, dan selain itu gak ada
+yang menjawab. Room itu baru menunggu tag kalau di dalamnya diketik `/mention on`.
+
 ## `[agents]`
 
 ```toml
@@ -99,7 +103,15 @@ kind = "anthropic"                  # wire format-nya, bukan vendornya
 base_url = "https://nougate.nouverse.tech/anthropic/v1"
 api_key = "nougate"                 # NAMA sebuah secret
 # headers = { "HTTP-Referer" = "https://nouverse.tech" }
+# identify = true                   # sebutkan agent dan percakapan untuk tiap request
+# billing = "included"              # langganan: gak ada biaya per token
+# max_tokens_field = "max_completion_tokens"   # API OpenAI sendiri: tempat batas output balasan
 ```
+
+`max_tokens_field` untuk `kind = "openai"`: `max_tokens` kalau gak ditulis, atau `max_completion_tokens`, yang
+dibutuhkan API OpenAI sendiri untuk model-model barunya. Setup menuliskannya untuk profil di
+`https://api.openai.com/v1`, dan start pertama setelah update menambahkannya ke profil yang dibuat sebelumnya. Untuk
+server lain, gak usah ditulis.
 
 Gak ada profil secara default. Setup wizard, dashboard, atau file ini yang membuat profil pertama,
 dan `[llm.defaults] provider` tetap kosong sampai saat itu. [Profil provider →](/id/docs/providers/configuration/)

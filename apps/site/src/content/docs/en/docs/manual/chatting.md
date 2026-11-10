@@ -263,8 +263,10 @@ twice.
 
 Two settings decide how an agent behaves in a room it is not being spoken to directly in:
 
-- **`groups_require_mention`**: off by default. On, an agent ignores unaddressed group chatter
-  entirely. DMs still answer everything.
+- **`groups_require_mention`**: off by default. On, an agent ignores unaddressed chatter in groups on
+  Telegram, Discord and WhatsApp. DMs still answer everything, and so do the rooms you make in the
+  dashboard, which follow their members instead: a message with no tag is answered by the orchestrator
+  when it is in the room, or by the room's only agent, and otherwise by nobody.
 - **`group_context_messages`**: 20 by default. When an agent *is* addressed, this many recent
   messages come along, so `@nouva ini gimana?` arrives with the exchange it points at.
 
@@ -281,9 +283,11 @@ either, and the group-context field on a connection's form says out loud that it
 
 A group can also decide `groups_require_mention` for itself, from inside the group:
 
-- `/mention` says this group's setting and where it comes from: this group, the gateway, or the daemon.
+- `/mention` says this group's setting and where it comes from: this group, the gateway, or the daemon
+  (in a room made in the dashboard: the room's own rule above).
 - `/mention off`: in this group no mention is needed. `/mention on`: a mention is required again.
-- `/mention default` removes the group's own setting, so the gateway and the daemon decide again.
+- `/mention default` removes the group's own setting, so the gateway and the daemon decide again, or,
+  in a dashboard room, its members.
 
 The group's own setting wins over the connection's and the daemon's, and it is kept across restarts.
 It belongs to the group, not to one bot: with several of our bots in the group, each one reads the

@@ -1,6 +1,7 @@
-import { join, loadTomlIfExists } from "@nouride/runtime";
-import { holdLines, plural } from "@nouride/shared";
-import { assertGatewayExecPosture, defaultConfigPath, noteOf } from "@/modules/config/global/index.ts";
+import { join, loadTomlIfExists, readTextFileIfExists } from "@nouride/runtime";
+import { holdLines, plural, type GlobalConfig } from "@nouride/shared";
+import { assertGatewayExecPosture, defaultConfigPath, noteOf, type ConfigNote } from "@/modules/config/global/index.ts";
+import { profilesBehind } from "@/modules/config/known-endpoints.ts";
 import { commandSecretLookup } from "@/boot/secret-store.ts";
 import { assertUpgradeFloor, loadConfigPastTheFloor } from "@/boot/upgrade-floor.ts";
 import { configJsonSchema, describeConfig, fieldsIn, findField, lintConfig } from "@/modules/config/schema.ts";
@@ -65,6 +66,25 @@ async function loadForCheck(target: string | undefined) {
   return { config, source, notes, registry };
 }
 
+/**
+ * Each profile, and for one on the OpenAI wire whose output limit goes in another field than `max_tokens`, that field:
+ * a profile on OpenAI's own API that sends `max_tokens` fails every reply on its newer models, so it is said where it
+ * differs.
+ */
+function providersLine(providers: GlobalConfig["providers"]): string {
+  const named = Object.entries(providers).map(([name, profile]) => (profile.maxTokensField ? `${name} (output limit as ${profile.maxTokensField})` : name));
+  return named.join(", ") || "none";
+}
+
+/** What the next start writes into a profile on a known endpoint (`boot/endpoint-keys.ts`), said before it does. */
+async function broughtForward(source: string): Promise<ConfigNote[]> {
+  const text = await readTextFileIfExists(source);
+  return profilesBehind(text ?? "").map((behind) => ({
+    message: `[providers.${behind.profile}] will be given ${Object.entries(behind.set).map(([key, value]) => `${key} = "${value}"`).join(", ")} at the next start`,
+    ...(behind.why ? { hint: behind.why } : {}),
+  }));
+}
+
 /** Whether a pack that did not load is one the daemon would run: `[agent] enabled` unless it says `false` — or does not parse. */
 async function packEnabled(dir: string): Promise<boolean> {
   try {
@@ -115,6 +135,7 @@ async function configCheck(target: string | undefined): Promise<void> {
   say(`${DIM}  source    ${source ?? "built-in defaults"}${RESET}`);
   say(`${DIM}  agents    ${registry.enabled().length} enabled${failed.length > 0 ? `, ${failed.length} will not load` : ""}${RESET}`);
   say(`${DIM}  gateways  ${config.gateways.filter((g) => g.enabled).map((g) => g.id).join(", ") || "none"}${RESET}`);
+  say(`${DIM}  providers ${providersLine(config.providers)}${RESET}`);
 
   // Booting and working are different questions. Everything above answers the first; these are the
   // combinations that start fine and then fail at the first call — an endpoint the SSRF guard
@@ -122,7 +143,7 @@ async function configCheck(target: string | undefined): Promise<void> {
   // is about whether the daemon comes up.
   const secretSet = await commandSecretLookup({ dataDir: config.daemon.dataDir, configPath: source ?? defaultConfigPath() });
   const lints = lintConfig(config, secretSet ? { secretSet } : {});
-  const said = [...notes, ...held.map((line) => ({ ...noteOf(line), agent: line.agent_id }))];
+  const said = [...notes, ...(source ? await broughtForward(source) : []), ...held.map((line) => ({ ...noteOf(line), agent: line.agent_id }))];
   if (failures.length > 0 || lints.length > 0 || said.length > 0) say("");
   for (const failure of failed) say(`${RED}✗${RESET} agent ${failure.id} will not load: ${failure.error}`);
   for (const failure of parked) say(`${YELLOW}!${RESET} agent ${failure.id} is disabled, and would not load: ${failure.error}`);
@@ -141,6 +162,11 @@ async function configCheck(target: string | undefined): Promise<void> {
     source: source ?? null,
     agents: registry.active().map((agent) => agent.config.id),
     gateways: config.gateways.filter((g) => g.enabled).map((g) => g.id),
+    providers: Object.entries(config.providers).map(([name, profile]) => ({
+      name,
+      kind: profile.kind,
+      ...(profile.kind === "openai" ? { maxTokensField: profile.maxTokensField ?? "max_tokens" } : {}),
+    })),
     failed: failed.map(({ id, error }) => ({ id, error })),
     disabledFailed: parked.map(({ id, error }) => ({ id, error })),
     lints,

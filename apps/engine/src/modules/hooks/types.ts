@@ -70,12 +70,15 @@ export interface SecretsHookPort {
   putBack(envelope: MessageEnvelope, handle?: string): boolean;
 }
 
-/** Where a group's `groups_require_mention` comes from: its own `/mention`, the connection, or the daemon. */
-export type MentionSource = "group" | "gateway" | "daemon";
+/**
+ * Where a group's `groups_require_mention` comes from: its own `/mention`, the connection, the daemon — or, for a room
+ * made in the dashboard, that room's own rule, which the daemon's setting for chat-app groups does not reach.
+ */
+export type MentionSource = "group" | "gateway" | "daemon" | "room";
 
 /** A group's own mention setting, for `/mention` (`builtins/mention.ts`) — built by `pipeline/room-mention.ts`. */
 export interface GroupMentionHookPort {
-  /** What this chat's unaddressed messages need, and which of the three said so. */
+  /** What this chat's unaddressed messages need, and which place said so. */
   here(envelope: MessageEnvelope): { requireMention: boolean; source: MentionSource };
   /** Set this group's own value, or `null` to remove it. False when `null` found nothing to remove. */
   set(envelope: MessageEnvelope, requireMention: boolean | null, actor: string): boolean;

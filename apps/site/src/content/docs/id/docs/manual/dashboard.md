@@ -327,8 +327,10 @@ itu sendiri saat sedang dibuka; kamu ditanya dulu, dan gak ada yang bisa membata
 
 **Room** adalah satu percakapan dengan beberapa agent. Pilih agent-nya waktu membuat room, lalu tag yang kamu maksud
 (`@nox`): tag adalah cara sebuah pesan sampai ke agent tertentu. Header room menampilkan anggotanya sebagai tag yang kamu
-ketik, dan bilang siapa yang menjawab pesan tanpa tag, kalau memang ada. **Add agent** memasukkan agent lain; menu room
-untuk mengganti nama, mengeluarkan agent, atau menghapus room.
+ketik, dan bilang siapa yang menjawab pesan tanpa tag, kalau memang ada: orchestrator kalau ia ada di room itu, atau
+satu-satunya agent di room itu. Setelan yang membuat grup di aplikasi chat menunggu tag gak berlaku di sini; `/mention on`
+di room itu yang berlaku. **Add agent** memasukkan agent lain; menu room untuk mengganti nama, mengeluarkan agent, atau
+menghapus room.
 
 **Semua yang dari aplikasi chat hanya bisa dibaca di sini.** Grup, atau chat pribadi dengan agent di Telegram, Discord,
 atau WhatsApp, menampilkan nama aplikasinya dan **Read-only**, dan di tempat kotak ketik ada catatan: balasnya di

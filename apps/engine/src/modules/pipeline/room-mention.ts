@@ -6,6 +6,11 @@
  * (`[gateways.<platform>.<name>] groups_require_mention`), the daemon (`[agents] groups_require_mention`). A group with
  * no row of its own is decided exactly as before the row could exist.
  *
+ * A room made in the dashboard is not held to the daemon's: that setting is for groups on the chat apps, where every one
+ * of our bots gets a copy of everything. A dashboard room has a member list, so the router can answer an untagged
+ * message there by it — the orchestrator when it is a member, else a room of one's member, else nobody — and an owner
+ * who asked for tags in Telegram groups had their own rooms fall silent. The room's own `/mention` still wins.
+ *
  * `/mention` is about the group, not about an agent, and that changes how it has to arrive. Every one of our bots in
  * the group is handed its own copy, and in a room several of them share an untagged message reaches nobody
  * (`answerUnaddressed`, `inbound.ts`) — so the one command that changes the tagging rule would itself need a tag. It
@@ -21,11 +26,14 @@ import type { GroupMentionHookPort, MentionSource } from "@/modules/hooks/types.
 import { parseCommand } from "@/modules/hooks/parse.ts";
 import { isEdit } from "./edit-rules.ts";
 import { isSystemEvent } from "./deps.ts";
+import type { RoomsPort } from "@/modules/rooms/rooms.store.ts";
 import type { RoomMentionPort } from "./room-mention.store.ts";
 
 interface Sources {
   config: Pick<GlobalConfig, "agents" | "gateways">;
   roomMention?: Pick<RoomMentionPort, "get">;
+  /** The rooms made in the dashboard: one of them is not a chat-app group, whatever the daemon says of those. */
+  rooms?: Pick<RoomsPort, "get">;
 }
 
 /**
@@ -42,6 +50,8 @@ export function requireMentionHere(
   if (own) return { requireMention: own.requireMention, source: "group" };
   const instance = sources.config.gateways.find((gateway) => gateway.id === envelope.gatewayId)?.groupsRequireMention;
   if (instance !== undefined) return { requireMention: instance, source: "gateway" };
+  // Keyed by the connection, as the room was made on it: only the dashboard's own makes one.
+  if (sources.rooms?.get(envelope.gatewayId, envelope.chatId)) return { requireMention: false, source: "room" };
   return { requireMention: sources.config.agents.groupsRequireMention ?? false, source: "daemon" };
 }
 
@@ -55,11 +65,12 @@ export function requireMentionHere(
 export function groupMentionHookPort(o: {
   config: Sources["config"];
   store: RoomMentionPort;
+  rooms?: Sources["rooms"];
   mayChange: (envelope: MessageEnvelope) => boolean;
   claim: (envelope: MessageEnvelope, key: string) => boolean;
 }): GroupMentionHookPort {
   return {
-    here: (envelope) => requireMentionHere({ config: o.config, roomMention: o.store }, envelope),
+    here: (envelope) => requireMentionHere({ config: o.config, roomMention: o.store, ...(o.rooms ? { rooms: o.rooms } : {}) }, envelope),
     set: (envelope, requireMention, actor) =>
       requireMention === null
         ? o.store.clear(envelope.gateway, envelope.chatId)

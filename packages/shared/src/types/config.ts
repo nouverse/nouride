@@ -91,7 +91,16 @@ export interface ProviderProfile {
    * spend says so instead of showing a list price as money spent. Absent is `metered`, priced from the price book.
    */
   billing?: "metered" | "included";
+  /**
+   * The request field that carries a reply's output ceiling on the OpenAI wire. OpenAI's own API refuses `max_tokens`
+   * for its newer models and takes `max_completion_tokens` for every chat model; a server that speaks the same format
+   * may know only `max_tokens`. Absent is `max_tokens`, what every such server reads.
+   */
+  maxTokensField?: MaxTokensField;
 }
+
+/** Where an OpenAI-shaped request puts its output ceiling (`ProviderProfile.maxTokensField`). */
+export type MaxTokensField = "max_tokens" | "max_completion_tokens";
 
 export interface RateLimitSection {
   messagesPerMinute: number;

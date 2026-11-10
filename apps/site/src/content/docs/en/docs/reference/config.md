@@ -79,6 +79,10 @@ is answered by it alone, once, through its own bot, unless the room requires a m
 `/mention on` in that group). A message that addresses someone routes exactly as before, and DMs are unaffected. The
 first agent you make becomes it.
 
+`groups_require_mention` is about groups on Telegram, Discord and WhatsApp. A room you make in the dashboard answers as
+its members say: the orchestrator when it is in the room, or the room's only agent, and otherwise nobody. Only
+`/mention on` in that room makes it wait for a tag.
+
 ## `[agents]`
 
 ```toml
@@ -98,7 +102,14 @@ kind = "anthropic"                  # the wire format, not the vendor
 base_url = "https://nougate.nouverse.tech/anthropic/v1"
 api_key = "nougate"                 # a secret NAME
 # headers = { "HTTP-Referer" = "https://nouverse.tech" }
+# identify = true                   # say which agent and conversation each request is for
+# billing = "included"              # a subscription: no cost per token
+# max_tokens_field = "max_completion_tokens"   # OpenAI's own API: where a reply's output limit goes
 ```
+
+`max_tokens_field` is for `kind = "openai"`: `max_tokens` when it is left out, or `max_completion_tokens`, which
+OpenAI's own API needs for its newer models. Setup writes it for a profile on `https://api.openai.com/v1`, and the first
+start after an update adds it to one made before. Leave it out for any other server.
 
 No profiles exist by default. The setup wizard, the dashboard or this file creates the first one,
 and `[llm.defaults] provider` stays empty until then.

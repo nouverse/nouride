@@ -32,6 +32,7 @@ import {
 import { openCommandSecretStore } from "@/boot/secret-store.ts";
 import { AgentRegistry } from "@nouride/persona";
 import { defaultConfigPath } from "@/modules/config/global/index.ts";
+import { defaultEndpoint } from "@/modules/config/known-endpoints.ts";
 import { loadConfig } from "@/cli/load-config.ts";
 import { ProviderRegistry } from "@/modules/llm/providers.ts";
 import { FIRST_AGENT } from "@/modules/setup/presets.ts";
@@ -59,12 +60,6 @@ function flag(args: string[], name: string): string | undefined {
 function has(args: string[], name: string): boolean {
   return hasFlag(args, `--${name}`);
 }
-
-/** Endpoints that come with the wire format, so nobody has to look them up. */
-const KNOWN_ENDPOINTS: Record<ProviderKind, string> = {
-  anthropic: "https://api.anthropic.com/v1",
-  openai: "https://api.openai.com/v1",
-};
 
 export async function setup(args: string[]): Promise<void> {
   const cwd = process.cwd();
@@ -143,7 +138,8 @@ export async function setup(args: string[]): Promise<void> {
       return;
     }
     const kind: ProviderKind = kindInput;
-    const baseUrl = flag(args, "base-url") ?? (await ask("base_url ", KNOWN_ENDPOINTS[kind]));
+    // The wire format's own vendor, so nobody has to look it up: from the table that says what a profile there needs.
+    const baseUrl = flag(args, "base-url") ?? (await ask("base_url ", defaultEndpoint(kind)));
 
     const envVar = flag(args, "api-key-from-env");
     const apiKey = envVar ? process.env[envVar] : await askSecret(prompt, "api key ");

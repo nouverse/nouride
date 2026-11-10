@@ -270,6 +270,37 @@ describe("saveProvider", () => {
     expect(parsed.providers[SETUP_PROFILE].kind).toBe("anthropic");
   });
 
+  test("OpenAI's own API is written with max_tokens_field = max_completion_tokens, live; another OpenAI-shaped server is not", async () => {
+    // Its newer models refuse `max_tokens`; OpenRouter, a local server or Nougate may know nothing else.
+    const { setup, config } = await service();
+    await setup.saveProvider({ kind: "openai", baseUrl: "https://api.openai.com/v1/", apiKey: LIVE_KEY, actor: "t" });
+    await setup.saveProvider({ kind: "openai", name: "openrouter", baseUrl: "https://openrouter.ai/api/v1", apiKey: LIVE_KEY, actor: "t" });
+    await setup.saveProvider({ kind: "openai", name: "nougate", baseUrl: "http://127.0.0.1:8090/openai/v1", apiKey: LIVE_KEY, actor: "t" });
+
+    const parsed = parseToml<{ providers: Record<string, Record<string, unknown>> }>(await readTextFile(configPath));
+    expect(parsed.providers[SETUP_PROFILE]?.max_tokens_field).toBe("max_completion_tokens");
+    expect(parsed.providers.openrouter).not.toHaveProperty("max_tokens_field");
+    expect(parsed.providers.nougate).not.toHaveProperty("max_tokens_field");
+    expect(config.providers[SETUP_PROFILE]?.maxTokensField).toBe("max_completion_tokens");
+    expect(config.providers.openrouter?.maxTokensField).toBeUndefined();
+  });
+
+  test("a field the operator wrote is kept on a save; the one OpenAI's entry wrote goes when the profile moves off it", async () => {
+    const { setup, config } = await service();
+    const profile = async () => parseToml<{ providers: Record<string, Record<string, unknown>> }>(await readTextFile(configPath)).providers[SETUP_PROFILE];
+    await setup.saveProvider({ kind: "openai", baseUrl: "https://api.openai.com/v1", apiKey: LIVE_KEY, actor: "t" });
+    await writeTextFileAtomic(configPath, (await readTextFile(configPath)).replace('max_tokens_field = "max_completion_tokens"', 'max_tokens_field = "max_tokens"'));
+    await setup.saveProvider({ kind: "openai", baseUrl: "https://api.openai.com/v1", apiKey: LIVE_KEY, actor: "t" });
+    expect((await profile())?.max_tokens_field).toBe("max_tokens");
+
+    await writeTextFileAtomic(configPath, (await readTextFile(configPath)).replace('max_tokens_field = "max_tokens"', 'max_tokens_field = "max_completion_tokens"'));
+    // Moved to Anthropic's wire, where the field would not even load.
+    await setup.saveProvider({ kind: "anthropic", baseUrl: "https://api.anthropic.com/v1", apiKey: LIVE_KEY, actor: "t" });
+    expect(await profile()).not.toHaveProperty("max_tokens_field");
+    expect(config.providers[SETUP_PROFILE]?.kind).toBe("anthropic");
+    expect(config.providers[SETUP_PROFILE]?.maxTokensField).toBeUndefined();
+  });
+
   test("a custom name creates a profile under that name, not 'default'", async () => {
     const { setup, providers } = await service();
     const result = await setup.saveProvider({

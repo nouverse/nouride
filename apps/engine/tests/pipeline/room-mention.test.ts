@@ -75,6 +75,18 @@ describe("which setting decides", () => {
     expect(requireMentionHere({ config: config(undefined, true), roomMention: { get: () => undefined } }, where)).toEqual({ requireMention: true, source: "daemon" });
   });
 
+  test("a room made in the dashboard is not held to the daemon's setting; its own `/mention` still wins", () => {
+    const dashboard = { gateway: "web" as const, gatewayId: "web:dashboard", chatId: "web-1" };
+    const daemonRequires = { agents: { groupsRequireMention: true } as never, gateways: [] as never };
+    const rooms = { get: (gatewayId: string, chatId: string) => (gatewayId === "web:dashboard" && chatId === "web-1" ? ({ gatewayId, chatId, createdAt: 1, members: [] }) : null) };
+    expect(requireMentionHere({ config: daemonRequires, rooms }, dashboard)).toEqual({ requireMention: false, source: "room" });
+    const ownOn: Pick<RoomMentionPort, "get"> = { get: (platform, chatId) => (platform === "web" && chatId === "web-1" ? { requireMention: true, setBy: "x", setAt: 1 } : undefined) };
+    expect(requireMentionHere({ config: daemonRequires, rooms, roomMention: ownOn }, dashboard)).toEqual({ requireMention: true, source: "group" });
+    // A chat the rooms do not know — every chat-app group — reads the daemon's, as before.
+    expect(requireMentionHere({ config: daemonRequires, rooms }, { ...dashboard, chatId: "web-2" })).toEqual({ requireMention: true, source: "daemon" });
+    expect(requireMentionHere({ config: config(undefined, true), rooms }, where)).toEqual({ requireMention: true, source: "daemon" });
+  });
+
   test("no override, and no store at all, are both exactly what config says", () => {
     for (const instance of [undefined, true, false]) {
       for (const daemon of [true, false]) {

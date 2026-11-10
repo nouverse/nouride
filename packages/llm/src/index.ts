@@ -7,7 +7,7 @@
  * engine, because that loop needs approval gates and a tool registry.
  */
 
-import { ConfigError, type LLMProvider, type ProviderKind } from "@nouride/shared";
+import { ConfigError, type LLMProvider, type MaxTokensField, type ProviderKind } from "@nouride/shared";
 import { AnthropicProvider } from "./anthropic.ts";
 import type { HttpDeps } from "./http.ts";
 import { OpenAIProvider } from "./openai.ts";
@@ -33,6 +33,8 @@ export interface ProviderSpec {
   headers?: Record<string, string>;
   /** Send `ChatParams.identity` — `ProviderProfile.identify`. */
   identify?: boolean;
+  /** Where the OpenAI wire puts the output ceiling — `ProviderProfile.maxTokensField`. Anthropic's has one field. */
+  maxTokensField?: MaxTokensField;
   http?: HttpDeps;
 }
 

@@ -40,7 +40,7 @@ export const ANNOTATIONS: Record<string, Annotation> = {
     description:
       "The agent that answers a message addressed to nobody and, in a room several of our bots share, the front desk: a message there that tags, names or replies to nobody is answered by it alone, through its own bot, and it hands on to the peer whose headline fits. Set to the first agent made; `default_agent` until 0.7.18.",
     caveat:
-      "A room that requires a mention (`groups_require_mention`, or `/mention on` in that group) stays quiet for it too. A message that addresses someone routes as it always did, and DMs are unaffected. Never an external agent (0.8.1): Nouride's approval level, fixed list and tool switches do not reach a coding CLI's own commands, and the orchestrator is the agent anyone in a room reaches. Making one the orchestrator from the dashboard is refused; a save of its pack that adds `[external]` is put back; a start that finds one anyway runs with no orchestrator and says so.",
+      "A chat-app group that requires a mention (`groups_require_mention`, or `/mention on` in that group) stays quiet for it too; a room made in the dashboard does only after its own `/mention on`. A message that addresses someone routes as it always did, and DMs are unaffected. Never an external agent (0.8.1): Nouride's approval level, fixed list and tool switches do not reach a coding CLI's own commands, and the orchestrator is the agent anyone in a room reaches. Making one the orchestrator from the dashboard is refused; a save of its pack that adds `[external]` is put back; a start that finds one anyway runs with no orchestrator and says so.",
   },
   "daemon.backup_keep": { description: "How many snapshots of each kind to keep (the database, the vault, the packs), the oldest deleted first: taken at boot and weekly, so four is a month back." },
   "daemon.backup_seal": { live: true,
@@ -71,8 +71,8 @@ export const ANNOTATIONS: Record<string, Annotation> = {
     example: "nudge_after_minutes = 5",
   },
   "agents.groups_require_mention": {
-    description: "In a group, answer only when tagged, named, or replied to. DMs are unaffected.",
-    caveat: "Can be overridden per connection with `groups_require_mention` on a `[gateways.*]` entry, and per group with `/mention`.",
+    description: "In a group on Telegram, Discord or WhatsApp, answer only when tagged, named, or replied to. DMs are unaffected, and so are the rooms made in the dashboard: there a message with no tag is answered by the orchestrator when it is in the room, or by the room's only agent, and otherwise by nobody.",
+    caveat: "Can be overridden per connection with `groups_require_mention` on a `[gateways.*]` entry, and per group with `/mention`, which a dashboard room takes too.",
   },
   "agents.group_context_messages": { live: true,
     description:

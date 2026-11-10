@@ -24,6 +24,15 @@ const FROM: Record<MentionSource, string> = {
   group: "set for this group with /mention",
   gateway: "from the gateway's `groups_require_mention`",
   daemon: "from the daemon's `[agents] groups_require_mention`",
+  room: "a room made in the dashboard: the orchestrator answers when it is in the room, or the room's only agent",
+};
+
+/** What a group follows once its own setting is gone, as `/mention default` says it. */
+const FOLLOWS: Record<MentionSource, string> = {
+  group: "its own setting",
+  gateway: "the gateway",
+  daemon: "the daemon",
+  room: "the room's own rule",
 };
 
 const sentence = (requireMention: boolean) =>
@@ -60,7 +69,7 @@ function reply(ctx: HookContext): { reply?: string } {
   const now = port.here(ctx.envelope);
   if (wanted !== null) return { reply: `Done. ${sentence(now.requireMention)}` };
   return {
-    reply: `${removed ? `Done. This group follows the ${now.source} again.` : `This group had no setting of its own; it follows the ${now.source}.`} ${sentence(now.requireMention)}`,
+    reply: `${removed ? `Done. This group follows ${FOLLOWS[now.source]} again.` : `This group had no setting of its own; it follows ${FOLLOWS[now.source]}.`} ${sentence(now.requireMention)}`,
   };
 }
 
