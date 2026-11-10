@@ -29,14 +29,20 @@ export const DRAWER_MOTION = "transition-[translate,visibility] duration-200 eas
 export const DRAWER_SHADE = "bg-black/40 transition-[opacity,visibility] duration-200 ease-out";
 /** A sheet from the foot of a phone: its corners, its ground, and the room it leaves the home bar. */
 export const SHEET_BOX = "max-h-[85dvh] rounded-t-[22px] bg-base-200 pb-[env(safe-area-inset-bottom)] shadow-soft";
+/**
+ * Put away, it takes no tap from the moment it starts to go, not only once it is hidden: it
+ * stays visible for the 200 ms it slides, and a tap in that time landed on whatever of it was passing under the finger.
+ * A phone's More slid down over the tab bar, and a quick tap on a tab opened a page from the menu instead.
+ */
+const GONE = "invisible pointer-events-none";
 /** Open or put away, along the edge it comes from. */
-export const SHEET_PLACE = { open: "visible translate-y-0", closed: "invisible translate-y-full" } as const;
-export const SHADE_PLACE = { open: "visible opacity-100", closed: "invisible opacity-0" } as const;
+export const SHEET_PLACE = { open: "visible translate-y-0", closed: `${GONE} translate-y-full` } as const;
+export const SHADE_PLACE = { open: "visible opacity-100", closed: `${GONE} opacity-0` } as const;
 
 const SIDES = {
   // A phone keeps a strip of the conversation beside it: a tap there closes it, and it reads as over the chat.
-  left: { box: "inset-y-0 left-0 w-[min(24rem,calc(100%-2.5rem))] border-r border-base-content/[0.08] bg-base-100 shadow-xl", open: "visible translate-x-0", closed: "invisible -translate-x-full" },
-  right: { box: "inset-y-0 right-0 w-[min(24rem,calc(100%-2.5rem))] border-l border-base-content/[0.08] bg-base-100 shadow-xl", open: "visible translate-x-0", closed: "invisible translate-x-full" },
+  left: { box: "inset-y-0 left-0 w-[min(24rem,calc(100%-2.5rem))] border-r border-base-content/[0.08] bg-base-100 shadow-xl", open: "visible translate-x-0", closed: `${GONE} -translate-x-full` },
+  right: { box: "inset-y-0 right-0 w-[min(24rem,calc(100%-2.5rem))] border-l border-base-content/[0.08] bg-base-100 shadow-xl", open: "visible translate-x-0", closed: `${GONE} translate-x-full` },
   bottom: { box: cn("inset-x-0 bottom-0", SHEET_BOX), ...SHEET_PLACE },
 } as const;
 

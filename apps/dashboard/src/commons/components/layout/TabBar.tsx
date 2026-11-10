@@ -19,8 +19,14 @@ export const PHONE_CHAT_SPACE = "md:max-lg:pb-[calc(4.75rem+env(safe-area-inset-
 
 const TAB = "relative flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-2xl text-xs font-medium transition-colors active:scale-95";
 
-/** `phoneChat`: a conversation is open on a phone, the whole screen with its own way back, so the bar is not drawn there. */
-export function TabBar({ pathname, more, onMore, phoneChat = false }: { pathname: string; more: boolean; onMore: () => void; phoneChat?: boolean }) {
+/**
+ * `phoneChat`: a conversation is open on a phone, the whole screen with its own way back, so the bar is not drawn there.
+ *
+ * While More is open the bar stays over its sheet (`z-[60]`, the sheet leaving it room at its foot), so More closes
+ * what it opened and a tab goes where it says (`onTab` closes the sheet, the tab of the page you are on included). Under
+ * the sheet, the place of More was the sheet's Sign out, and the other tabs' the account's line, which did nothing.
+ */
+export function TabBar({ pathname, more, onMore, onTab, phoneChat = false }: { pathname: string; more: boolean; onMore: () => void; onTab: () => void; phoneChat?: boolean }) {
   const { approvals, missions } = useNeedsYou();
   const waiting = approvals + missions;
   return (
@@ -28,7 +34,7 @@ export function TabBar({ pathname, more, onMore, phoneChat = false }: { pathname
     <div aria-hidden="true" className={cn("bg-app-foot pointer-events-none fixed inset-x-0 bottom-0 z-40 h-[calc(2.75rem+env(safe-area-inset-bottom))] lg:hidden", phoneChat && "max-md:hidden")} />
     <nav
       aria-label="Tabs"
-      className={cn("fixed inset-x-3 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] z-40 grid grid-cols-5 gap-1 rounded-[22px] border border-base-content/[0.08] bg-base-100 p-1.5 shadow-soft lg:hidden", phoneChat && "max-md:hidden")}
+      className={cn("fixed inset-x-3 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] grid grid-cols-5 gap-1 rounded-[22px] border border-base-content/[0.08] bg-base-100 p-1.5 shadow-soft lg:hidden", more ? "z-[60]" : "z-40", phoneChat && "max-md:hidden")}
     >
       {DAILY.map((item) => {
         const current = !more && isCurrent(item, pathname);
@@ -39,6 +45,7 @@ export function TabBar({ pathname, more, onMore, phoneChat = false }: { pathname
             to={item.to}
             activeOptions={{ exact: item.to === "/" }}
             aria-current={current ? "page" : undefined}
+            onClick={onTab}
             className={cn(TAB, current ? "bg-secondary/10 text-secondary" : "text-base-content/70")}
           >
             <Icon size={20} aria-hidden="true" />

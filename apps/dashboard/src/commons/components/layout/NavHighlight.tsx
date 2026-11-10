@@ -18,7 +18,8 @@ interface Place {
 
 /** Over the nav's current item, or nowhere when the page is none of its items. */
 function placeOf(nav: HTMLElement | null): Place | null {
-  const current = nav?.querySelector<HTMLElement>('a[aria-current="page"]');
+  // The first one drawn: an item kept for another width (a phone's Settings line, on a laptop) is marked and not shown.
+  const current = [...(nav?.querySelectorAll<HTMLElement>('a[aria-current="page"]') ?? [])].find((item) => getComputedStyle(item).display !== "none");
   return current ? { top: current.offsetTop, left: current.offsetLeft, width: current.offsetWidth, height: current.offsetHeight } : null;
 }
 

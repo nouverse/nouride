@@ -173,8 +173,10 @@ export function RootLayout() {
           // A phone's More is a sheet as every drawer is (`Drawer`): the same corners, ground and motion.
           "fixed inset-x-0 bottom-0 z-50 flex flex-col",
           SHEET_BOX,
+          // Room at its foot for the tab bar, which stays over it while it is open (`TabBar`).
+          TAB_BAR_SPACE,
           DRAWER_MOTION,
-          "lg:visible lg:inset-y-0 lg:right-auto lg:left-0 lg:z-30 lg:max-h-none lg:translate-y-0 lg:rounded-none lg:border-r lg:border-base-content/[0.06] lg:p-0 lg:shadow-none",
+          "lg:pointer-events-auto lg:visible lg:inset-y-0 lg:right-auto lg:left-0 lg:z-30 lg:max-h-none lg:translate-y-0 lg:rounded-none lg:border-r lg:border-base-content/[0.06] lg:p-0 lg:shadow-none",
           moreOpen ? SHEET_PLACE.open : SHEET_PLACE.closed,
         )}
       >
@@ -242,7 +244,7 @@ export function RootLayout() {
         )}
       </div>
 
-      <TabBar pathname={pathname} more={moreOpen} onMore={() => setMoreOpen((open) => !open)} phoneChat={phoneChat} />
+      <TabBar pathname={pathname} more={moreOpen} onMore={() => setMoreOpen((open) => !open)} onTab={() => setMoreOpen(false)} phoneChat={phoneChat} />
     </div>
   );
 }

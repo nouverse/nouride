@@ -53,7 +53,126 @@ describe("on a phone, More", () => {
   });
 });
 
+// On a phone, More opened from Agents and Settings chosen in it, the tab bar then took some taps and not others: the
+// sheet lay over the bar while open (More's place was Sign out, the tabs' the account's line), grew with Settings' pages
+// as it slid away, and for the 200 ms it slid, a tap on a tab landed on one of those pages.
+describe("on a phone, More and the tab bar", () => {
+  const tabs = (host: HTMLElement) => host.querySelector<HTMLElement>('nav[aria-label="Tabs"]');
+  const tab = (host: HTMLElement, name: string) => [...(tabs(host)?.querySelectorAll<HTMLElement>("a") ?? [])].find((one) => one.textContent?.trim().startsWith(name)) ?? null;
+
+  test("the bar stays over the open sheet, which leaves it room, and goes back under what opens over the page once closed", async () => {
+    let seen = { closedBar: [] as string[], openBar: [] as string[], sheet: [] as string[] };
+    await renderPage("/agents", async (host) => {
+      await eventually(() => moreButton(host) !== null, 4_000, "the tab bar's More");
+      seen.closedBar = words(tabs(host));
+      moreButton(host)!.click();
+      await eventually(() => moreButton(host)!.getAttribute("aria-expanded") === "true", 2_000, "More to open");
+      seen = { ...seen, openBar: words(tabs(host)), sheet: words(drawer(host)) };
+    });
+    expect(seen.closedBar).toContain("z-40");
+    expect(seen.closedBar).not.toContain("z-[60]");
+    // Over the sheet (z-50) while it is open.
+    expect(seen.openBar).toContain("z-[60]");
+    expect(seen.sheet).toContain("z-50");
+    expect(seen.sheet).toContain("max-lg:pb-[calc(4.75rem+env(safe-area-inset-bottom))]");
+  });
+
+  test("put away, the sheet and its shade take no tap at once, not only when hidden; from a laptop up the menu takes them", async () => {
+    let seen = { drawer: [] as string[], shade: [] as string[] };
+    await renderPage("/agents", async (host) => {
+      await eventually(() => host.querySelector(MENU) !== null, 4_000, "the sidebar");
+      seen = { drawer: words(drawer(host)), shade: words(shade(host)) };
+    });
+    expect(seen.drawer).toEqual(expect.arrayContaining(["pointer-events-none", "lg:pointer-events-auto"]));
+    expect(seen.shade).toContain("pointer-events-none");
+  });
+
+  test("a tab closes More, the tab of the page you are on too, and More closes what it opened", async () => {
+    const seen: Record<string, string | null> = {};
+    await renderPage("/agents", async (host, app) => {
+      await eventually(() => moreButton(host) !== null, 4_000, "the tab bar's More");
+      const expanded = () => moreButton(host)!.getAttribute("aria-expanded");
+      moreButton(host)!.click();
+      await eventually(() => expanded() === "true", 2_000, "More to open");
+      // The page is Agents already: its address does not change, so only the tab's own press can close the sheet.
+      tab(host, "Agents")!.click();
+      await eventually(() => expanded() === "false", 2_000, "More to close on the current page's tab");
+      seen.sameTab = expanded();
+      moreButton(host)!.click();
+      await eventually(() => expanded() === "true", 2_000, "More to open again");
+      moreButton(host)!.click();
+      await eventually(() => expanded() === "false", 2_000, "More to close itself");
+      seen.more = expanded();
+      seen.at = app.location();
+    });
+    expect(seen.sameTab).toBe("false");
+    expect(seen.more).toBe("false");
+    expect(seen.at).toMatch(/\/agents$/);
+  });
+
+  test("among Settings' pages, the sheet's Settings is one line and the one marked; the pages are listed from a laptop up only", async () => {
+    let seen = { phone: [] as string[], phoneCurrent: null as string | null, laptop: [] as string[], laptopCurrent: null as string | null, pages: [] as string[], listed: 0 };
+    await renderPage("/models", async (host) => {
+      await eventually(() => host.querySelectorAll(`${MENU} a[href$="/settings"]`).length === 2, 4_000, "the menu's Settings");
+      const [phone, laptop] = [...host.querySelectorAll<HTMLElement>(`${MENU} a[href$="/settings"]`)];
+      const models = host.querySelector<HTMLElement>(`${MENU} a[href$="/models"]`);
+      seen = {
+        phone: words(phone),
+        phoneCurrent: phone!.getAttribute("aria-current"),
+        laptop: words(laptop),
+        laptopCurrent: laptop!.getAttribute("aria-current"),
+        pages: words(models?.parentElement),
+        listed: models ? 1 : 0,
+      };
+    });
+    expect(seen.phone).toContain("lg:hidden");
+    expect(seen.phoneCurrent).toBe("page");
+    expect(seen.laptop).toContain("max-lg:hidden");
+    // From a laptop up the page itself is the one marked, as before.
+    expect(seen.laptopCurrent).toBeNull();
+    expect(seen.listed).toBe(1);
+    expect(seen.pages).toContain("max-lg:hidden");
+  });
+});
+
 describe("the page you are on", () => {
+  test("is marked on the item that is drawn: one kept for another width is passed over", async () => {
+    const React = await import("react");
+    const { createRoot } = await import("react-dom/client");
+    const { flushSync } = await import("react-dom");
+    const { NavHighlight } = await import("@/commons/components/layout/NavHighlight");
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const Nav = () => {
+      const nav = React.useRef<HTMLElement>(null);
+      return React.createElement(
+        "nav",
+        { ref: nav },
+        React.createElement(NavHighlight, { nav }),
+        React.createElement("a", { href: "/settings", "aria-current": "page", style: { display: "none" }, "data-kept": "" }, "Settings"),
+        React.createElement("a", { href: "/models", "aria-current": "page", "data-drawn": "" }, "Models"),
+      );
+    };
+    const root = createRoot(host);
+    try {
+      flushSync(() => root.render(React.createElement(Nav)));
+      for (const [selector, top] of [["[data-kept]", 0], ["[data-drawn]", 80]] as const) {
+        const link = host.querySelector<HTMLElement>(selector)!;
+        for (const [name, value] of [["offsetTop", top], ["offsetLeft", 12], ["offsetWidth", selector === "[data-kept]" ? 0 : 232], ["offsetHeight", selector === "[data-kept]" ? 0 : 36]] as const) {
+          Object.defineProperty(link, name, { configurable: true, get: () => value });
+        }
+      }
+      flushSync(() => root.render(React.createElement(Nav)));
+      await eventually(() => (host.querySelector<HTMLElement>("[data-current-mark]")?.style.translate ?? "") !== "", 2_000, "the mark placed");
+      const mark = host.querySelector<HTMLElement>("[data-current-mark]")!;
+      expect(mark.style.translate).toContain("80px");
+      expect(mark.style.width).toBe("232px");
+    } finally {
+      flushSync(() => root.unmount());
+      host.remove();
+    }
+  });
+
   /** Each nav link given a place, as a browser would lay them out: one under another, 40px apart. */
   function laidOut(host: HTMLElement): void {
     [...host.querySelectorAll<HTMLElement>(`${MENU} a`)].forEach((link, at) => {

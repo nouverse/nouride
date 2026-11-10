@@ -171,7 +171,7 @@ const ITEM = "flex min-h-11 items-center gap-3 rounded-[14px] px-3 text-sm trans
 /** Folded to its icon (`CompactSidebar`): the icon over a short name, and what waits there as a count on its corner. */
 const TILE = "relative flex w-16 flex-col items-center gap-1 rounded-[14px] py-2 text-[10px] transition-colors duration-150 active:scale-[0.98]";
 
-function NavLink({ item, pathname, small = false, compact = false }: { item: NavItem; pathname: string; small?: boolean; compact?: boolean }) {
+function NavLink({ item, pathname, small = false, compact = false, className }: { item: NavItem; pathname: string; small?: boolean; compact?: boolean; className?: string }) {
   const { to, label, icon: Icon, badge: Badge } = item;
   const current = isCurrent(item, pathname);
   if (compact) {
@@ -199,7 +199,7 @@ function NavLink({ item, pathname, small = false, compact = false }: { item: Nav
       to={to}
       activeOptions={{ exact: to === "/" }}
       aria-current={current ? "page" : undefined}
-      className={cn(ITEM, small && "min-h-9 pl-10 text-[13px] lg:min-h-8", current ? "font-semibold text-secondary" : "font-medium text-base-content/70 hover:bg-base-content/[0.05] hover:text-base-content")}
+      className={cn(ITEM, small && "min-h-9 pl-10 text-[13px] lg:min-h-8", current ? "font-semibold text-secondary" : "font-medium text-base-content/70 hover:bg-base-content/[0.05] hover:text-base-content", className)}
     >
       {!small && <Icon size={17} className="shrink-0" aria-hidden="true" />}
       <span className="min-w-0 flex-1 truncate">{label}</span>
@@ -216,6 +216,8 @@ export function SidebarNav({ pathname, where, compact = false }: { pathname: str
   const nav = useRef<HTMLElement>(null);
   const settings = SETTINGS.map((group) => ({ ...group, items: visible(group.items, where) })).filter((group) => group.items.length > 0);
   const inSettings = pathname === SETTINGS_HOME || settings.some((group) => group.items.some((item) => isCurrent(item, pathname)));
+  /** Every address among Settings' pages: what a phone's one Settings line is marked on. */
+  const settingsPages = settings.flatMap((group) => group.items).flatMap((item) => [item.to, ...(item.holds ?? [])]);
   if (compact) {
     return (
       <nav ref={nav} aria-label="Menu" className="relative isolate flex w-full flex-1 flex-col items-center gap-0.5 overflow-y-auto px-2 py-3">
@@ -238,11 +240,17 @@ export function SidebarNav({ pathname, where, compact = false }: { pathname: str
         {OCCASIONAL.map((item) => (
           <NavLink key={item.to} item={item} pathname={pathname} />
         ))}
+        {/*
+          On a phone, in More, Settings is one line and stays one: its pages are listed on the Settings page itself, and
+          among them it is Settings that is marked. Listed in the sheet too, they made it grow as it slid away (to most
+          of the screen, over the tab bar), and a tap meant for a tab opened one of them.
+        */}
+        <NavLink className="lg:hidden" item={{ to: SETTINGS_HOME, label: "Settings", icon: Settings, badge: AccessBadge, holds: settingsPages }} pathname={pathname} />
         {/* Its list folded away, a request to talk to the agents is counted on Settings, as it is on Access once open. */}
-        <NavLink item={{ to: SETTINGS_HOME, label: "Settings", icon: Settings, ...(inSettings ? {} : { badge: AccessBadge }) }} pathname={pathname} />
+        <NavLink className="max-lg:hidden" item={{ to: SETTINGS_HOME, label: "Settings", icon: Settings, ...(inSettings ? {} : { badge: AccessBadge }) }} pathname={pathname} />
         {/* Settings' own pages, while you are among them: the page you are on is marked as one of them, not as Settings. */}
         {inSettings && (
-          <div className="space-y-0.5 animate-fade">
+          <div className="space-y-0.5 animate-fade max-lg:hidden">
             {settings.flatMap((group) => group.items).map((item) => (
               <NavLink key={item.to} item={item} pathname={pathname} small />
             ))}
