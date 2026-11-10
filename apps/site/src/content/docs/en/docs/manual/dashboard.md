@@ -92,6 +92,12 @@ you.
 **On a phone**, a tab bar along the bottom holds Home, Chats, Work and Agents, with Work's count on it, and **More**,
 which slides the rest of the menu up as a sheet.
 
+**On your phone's home screen**, the dashboard opens like an app: the Nouride cat as its icon, Chats first, in a window
+of its own. Open the dashboard at its `https://` address. Chrome or Edge offers **Install** (in the address bar, or in
+the browser's menu as **Add to Home screen**). On an iPhone, open it in Safari, press **Share**, then **Add to Home
+Screen**. The app keeps its own sign-in, so you sign in once inside it. After the box updates, it opens on the new
+version, as the browser does.
+
 **On Chats** the menu folds to its icons, so the list of chats and the conversation fit side by side. **Expand**, at
 the foot of the folded menu, gives it back, and the browser remembers which way you left it. Every other page keeps the
 whole menu, and a phone keeps its tab bar.

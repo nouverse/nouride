@@ -6,6 +6,21 @@
     <title>Nouride Dashboard</title>
     <link rel="icon" type="image/png" href="/favicon.png"
     />
+    <!--
+      Installable as an app: added to a phone's home screen, or installed from a desktop browser. The icons are drawn
+      by scripts/app-icons.ts. No service worker: the browsers install without one, and a cache is how an installed
+      dashboard stays on an old build after an update.
+    -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <!-- Each theme's ground, for the browser's bar and an installed app's status bar; theme-boot.js follows a choice. -->
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f9f7f3" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1f1d29" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <!-- The page starts below the status bar, not behind it: a chat's own header leaves no room for one. -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Nouride" />
     <!-- Before the stylesheet, and not a module, so it runs before the first paint. -->
     <script src="/theme-boot.js"></script>
   </head>

@@ -93,6 +93,12 @@ memberi tahu.
 **Di HP**, ada bar tab di bagian bawah berisi Home, Chats, Work, dan Agents, dengan angka milik Work di situ, plus
 **More**, yang membuka sisa menunya sebagai lembar yang naik dari bawah.
 
+**Di layar utama HP**, dashboard terbuka seperti aplikasi: ikonnya kucing Nouride, Chats tampil duluan, di jendelanya
+sendiri. Buka dashboard di alamat `https://`-nya. Chrome atau Edge menawarkan **Install** (di bilah alamat, atau di menu
+browser sebagai **Add to Home screen**). Di iPhone, buka di Safari, tekan **Share**, lalu **Add to Home Screen**.
+Aplikasinya punya login sendiri, jadi kamu login sekali di dalamnya. Setelah box di-update, aplikasinya langsung membuka
+versi baru, sama seperti di browser.
+
 **Di Chats** menunya dilipat jadi ikon saja, supaya daftar chat dan percakapannya muat berdampingan. **Expand** di bawah
 menu yang terlipat membukanya lagi, dan browser mengingat pilihan itu. Halaman lain tetap dengan menu penuh, dan HP tetap
 dengan bar tab-nya.
