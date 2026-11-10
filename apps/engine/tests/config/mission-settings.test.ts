@@ -1,7 +1,7 @@
 /**
  * `[missions]` as the dashboard saves it (0.8.0): into the file, in force at once, and refused outside the schema's
  * bounds — every value checked before anything is written, so a form with one bad field saves none of them. An empty
- * value takes its key out, back to the default; the slots on the box follow the agents that are on while unset.
+ * value takes its key out, back to the default; the slots on the box follow the machine while unset.
  */
 
 import { afterEach, describe, expect, test } from "bun:test";
@@ -74,23 +74,29 @@ describe("[missions] from the dashboard", () => {
   });
 
   test("read back with the bounds the form keeps to: hours may be a fraction, the rest are whole", () => {
-    const view = missionSettings({ config: structuredClone(DEFAULT_CONFIG) }, following(6));
+    const view = missionSettings({ config: structuredClone(DEFAULT_CONFIG) }, following(6), 3);
     expect(view).toMatchObject({ perAgent: 1, maxRunning: 3, limitHours: 8, limitTurns: 100, limitTokens: 100_000_000 });
     expect(view.bounds.limitHours).toEqual({ min: 0.25, max: 168, integer: false });
     expect(view.bounds.perAgent).toEqual({ min: 1, max: 4, integer: true });
     expect(view.bounds.limitTokens).toEqual({ min: 100_000, integer: true });
   });
 
-  test("the slots on the box, unset, follow the agents that are on — and may be set as high as all of them", () => {
+  test("the slots on the box, unset, follow the machine, held to the agents that are on — and may be set as high as all of them", () => {
     const config = structuredClone(DEFAULT_CONFIG);
-    expect(missionSettings({ config }, following(6))).toMatchObject({ maxRunning: 3, auto: true, bounds: { maxRunning: { min: 1, max: 6, integer: true } } });
-    expect(missionSettings({ config }, following(30))).toMatchObject({ maxRunning: 8, auto: true, bounds: { maxRunning: { max: 30 } } });
-    expect(missionSettings({ config }, following(1))).toMatchObject({ maxRunning: 1, auto: true, bounds: { maxRunning: { max: 1 } } });
-    // Each default as the page offers it, the slots as many as the agents give now.
-    expect(missionSettings({ config }, following(6)).defaults).toEqual({ perAgent: 1, maxRunning: 3, limitHours: 8, limitTurns: 100, limitTokens: 100_000_000 });
+    // A machine with room for four: four on a box of six and of thirty, one on a box of one.
+    expect(missionSettings({ config }, following(6), 4)).toMatchObject({ maxRunning: 4, auto: true, bounds: { maxRunning: { min: 1, max: 6, integer: true } } });
+    expect(missionSettings({ config }, following(30), 4)).toMatchObject({ maxRunning: 4, auto: true, bounds: { maxRunning: { max: 30 } } });
+    expect(missionSettings({ config }, following(1), 4)).toMatchObject({ maxRunning: 1, auto: true, bounds: { maxRunning: { max: 1 } } });
+    // A small machine runs one, whatever its agents; the most it may be set to is still theirs.
+    expect(missionSettings({ config }, following(6), 1)).toMatchObject({ maxRunning: 1, auto: true, bounds: { maxRunning: { max: 6 } } });
+    // Each default as the page offers it, the slots as many as the machine gives now.
+    expect(missionSettings({ config }, following(6), 3).defaults).toEqual({ perAgent: 1, maxRunning: 3, limitHours: 8, limitTurns: 100, limitTokens: 100_000_000 });
+    // A set value is kept on any machine: above what it would give, and below.
     config.missions.maxRunning = 5;
     config.missions.perAgent = 2;
-    expect(missionSettings({ config }, following(6))).toMatchObject({ maxRunning: 5, auto: false, defaults: { maxRunning: 3 }, bounds: { maxRunning: { max: 12 } } });
+    expect(missionSettings({ config }, following(6), 3)).toMatchObject({ maxRunning: 5, auto: false, defaults: { maxRunning: 3 }, bounds: { maxRunning: { max: 12 } } });
+    config.missions.maxRunning = 1;
+    expect(missionSettings({ config }, following(6), 4)).toMatchObject({ maxRunning: 1, auto: false, defaults: { maxRunning: 4 } });
   });
 
   test("set as high as every agent at the per_agent the same save leaves — thirty agents take thirty", async () => {
@@ -103,7 +109,7 @@ describe("[missions] from the dashboard", () => {
     expect(await setMissionSettings(d, { patch: { perAgent: null, maxRunning: 2 }, agents: following(1) })).toMatchObject({ ok: false, error: expect.stringContaining("from 1 to 1, got 2") });
   });
 
-  test("an empty value takes its key out of the file — back to the default, and the box's slots back to following the agents", async () => {
+  test("an empty value takes its key out of the file — back to the default, and the box's slots back to following the machine", async () => {
     const d = deps();
     expect((await setMissionSettings(d, { patch: { maxRunning: 5, limitHours: 12, limitTurns: 80 }, agents: following(6) })).ok).toBe(true);
     expect(d.config.missions).toMatchObject({ maxRunning: 5, limitHours: 12, limitTurns: 80 });
@@ -114,6 +120,6 @@ describe("[missions] from the dashboard", () => {
     expect(file).not.toContain("limit_hours");
     expect(file).toContain("limit_turns = 80");
     expect(d.config.missions).toEqual({ ...DEFAULT_CONFIG.missions, limitTurns: 80 });
-    expect(missionSettings(d, following(6))).toMatchObject({ maxRunning: 3, auto: true, limitHours: 8 });
+    expect(missionSettings(d, following(6), 3)).toMatchObject({ maxRunning: 3, auto: true, limitHours: 8 });
   });
 });

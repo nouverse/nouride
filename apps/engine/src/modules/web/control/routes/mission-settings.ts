@@ -7,6 +7,7 @@
  */
 
 import { join } from "@nouride/runtime";
+import { atOnceBy, machineAtBoot } from "@/commons/machine.ts";
 import { missionSettings, type MissionSetting } from "@/modules/config/settings/missions.ts";
 import { atLeast } from "@/modules/users/auth.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
@@ -27,10 +28,12 @@ export function registerMissionSettingsRoutes(control: ControlApp, deps: Control
   // The agents that are on, now, each by its own `per_agent`: the slots on the box follow them unset, and may be set as
   // high as all of them at once.
   const agents = () => deps.registry.enabled().map((agent) => agent.config.missionsPerAgent);
+  // What the machine has room for: the slots on the box while nothing is set.
+  const byMachine = () => atOnceBy(deps.ctx.machine ?? machineAtBoot());
 
   control.get("/policy/missions", (c) => {
-    if (!deps.settings) return c.json({ ...missionSettings({ config: deps.ctx.config }, agents()), editable: false });
-    return c.json({ ...deps.settings.missionSettings(agents()), editable: true });
+    if (!deps.settings) return c.json({ ...missionSettings({ config: deps.ctx.config }, agents(), byMachine()), editable: false });
+    return c.json({ ...deps.settings.missionSettings(agents(), byMachine()), editable: true });
   });
 
   control.post("/policy/missions", async (c) => {
@@ -44,7 +47,7 @@ export function registerMissionSettingsRoutes(control: ControlApp, deps: Control
     if (!result.ok) return c.json({ error: result.error, plain: notSaved(result.field && MISSION_FIELDS[result.field]) }, 400);
     // Whole, as the GET answers: the page puts this in place of what it read, and without `editable` its form went
     // read-only after the first save.
-    return c.json({ ok: true, ...deps.settings.missionSettings(agents()), editable: true });
+    return c.json({ ok: true, ...deps.settings.missionSettings(agents(), byMachine()), editable: true });
   });
 
   // One agent's own `per_agent` (0.8.11), from its Settings page: `null` follows the daemon's. The same shape as

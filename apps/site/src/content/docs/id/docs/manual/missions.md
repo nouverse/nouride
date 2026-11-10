@@ -176,7 +176,7 @@ yang berakhir menarik apa yang ia parkir. Ia jalan di level approval kamu, atas 
 | | Default | Yang dibatasi |
 |---|---|---|
 | `per_agent` | 1 | misi yang bekerja bersamaan untuk satu agent; yang sedang dicek tidak dihitung, karena pemeriksanya bukan agent itu. Tiap agent bisa punya angkanya sendiri, 1 sampai 4 |
-| `max_running` | setengah jumlah agent, 1 sampai 8 | misi yang jalan bersamaan di box |
+| `max_running` | sesuai kemampuan mesin, 1 sampai 4 | misi yang jalan bersamaan di box |
 | `limit_hours` | 8 | jam kerja; waktu menunggu kamu gak dihitung |
 | `limit_turns` | 100 | giliran (tiap giliran sampai `max_tool_iterations` langkah), termasuk milik pemeriksa dan cek yang gagal |
 | `limit_tokens` | 100.000.000 | token input dan output, termasuk milik pemeriksa |
@@ -189,9 +189,10 @@ yang menunggu kamu gak memakai slot; yang berikutnya menunggu di antrean dan bil
 untuk yang lain. `max_running` milik box tetap membatasi semuanya, jadi naikkan juga. Dua misi di satu repo tetap
 bergantian, berapa pun angkanya: mereka bisa saling menimpa file.
 
-Kalau `max_running` gak diisi, nilainya ikut agent yang aktif: setengahnya, dibulatkan ke bawah (satu di box dengan
-satu atau dua agent, tiga di box dengan enam agent), dan gak pernah lebih dari delapan. Isi sendiri kalau mau lebih,
-sampai sebanyak semua agent. Di form Limits, kotak yang kosong berarti default-nya, yang tampil abu-abu; **Back to
+Kalau `max_running` gak diisi, nilainya ikut mesin: satu untuk tiap core selain satu, dan satu untuk tiap GiB memori
+yang boleh dipakai perintah agent, diambil yang lebih kecil, minimal 1 dan maksimal 4, dan gak pernah lebih dari yang
+bisa dijalankan agent-agentnya sekaligus. Box 4 core 2 GB menjalankan 1, 4 core 4 GB menjalankan 2, 6 core 8 GB
+menjalankan 4. Isi sendiri kalau mau lebih, sampai sebanyak semua agent. Di form Limits, kotak yang kosong berarti default-nya, yang tampil abu-abu; **Back to
 defaults** mengosongkan semuanya.
 
 Kalau satu batas tercapai, job-job misi dihentikan dan ia bertanya: `/mission continue <id>` menaikkan batas yang

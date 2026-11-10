@@ -549,7 +549,18 @@
       "completed": 0
     },
     "pendingApprovals": 0,
-    "helpers": []
+    "helpers": [],
+    "atOnce": {
+      "machine": "4 cores, 4.0GB of memory",
+      "helpers": {
+        "limit": 2,
+        "auto": true
+      },
+      "missions": {
+        "limit": 1,
+        "auto": true
+      }
+    }
   },
   "/health": {
     "status": "ok",

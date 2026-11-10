@@ -8,7 +8,9 @@
  * wakes the asking agent — never the asked one — saying what it answers; a failure, the time limit, a stop and a restart
  * wake it too, saying which; a wake waits for the turn the asking agent is in; the one limit counts asks with helpers;
  * a helper's ask, and the asked agent's own turn, never move one behind them; an approval the asked agent needs after
- * the asking turn ended still reaches the chat and works.
+ * the asking turn ended still reaches the chat and works. And several agents asked in one call: they work at the same
+ * time and answer in one result; one failing or refused is said beside the others; past the wait the unfinished move and
+ * the finished are in the result; the one limit holds for each; a turn that may hold no work in the background waits.
  */
 
 import { afterEach, describe, expect, test } from "bun:test";
@@ -140,6 +142,8 @@ async function daemon(options: {
   approvals?: ApprovalGate;
   /** Each agent's `config.toml`, where it is not `PACK`. */
   packs?: Record<string, string>;
+  /** The agents on the daemon, where they are not nouva, nox and nera. */
+  agents?: string[];
   waitMs?: number;
   configure?: (config: GlobalConfig) => void;
   /** A process over the same install, after a restart. */
@@ -160,7 +164,7 @@ async function daemon(options: {
     : await pipelineBench({
         fetch: () => fetchImpl,
         gateway,
-        agents: ["nouva", "nox", "nera"].map((id) => ({ id, configToml: options.packs?.[id] ?? PACK })),
+        agents: (options.agents ?? ["nouva", "nox", "nera"]).map((id) => ({ id, configToml: options.packs?.[id] ?? PACK })),
         config: { daemon: { orchestrator: "nouva" }, agents: { mentions_enabled: true } },
         configure: (config) => {
           // A steering reply is its own model call, and the script here answers by who asks, not by turn.
@@ -580,16 +584,16 @@ describe("no ping-pong", () => {
     // One job: the helper's. Its ask never became one.
     expect(d.jobs.list({}).map((job) => job.kind)).toEqual(["helper"]);
     const helper = d.asked.find((request) => request.who.kind === "helper")!;
-    expect(offered(helper.body, "ask_agent")).toEqual(["agent", "task", "tier"]);
+    expect(offered(helper.body, "ask_agent")).toEqual(["agent", "task", "asks", "tier"]);
     // And the asking agent's own turn was offered the parameter.
-    expect(offered(nouvas(d)[0]!.body, "ask_agent")).toEqual(["agent", "task", "tier", "background"]);
+    expect(offered(nouvas(d)[0]!.body, "ask_agent")).toEqual(["agent", "task", "asks", "tier", "background"]);
   });
 
   test("a scheduled turn's ask waits too: nobody to stay free for, and no chat an answer could wake", async () => {
     const d = await daemon({ answer: async () => ({ text: "done" }) });
     const job = { id: "job_report", name: "report", agentId: "nouva", session: "isolated", trigger: { kind: "every", everyMs: 60_000 }, payload: { kind: "agentTurn", message: "check" }, target: { gatewayId: "telegram:main", chatId: "chat-1" }, delivery: { mode: "none" }, enabled: true };
     await d.bench.pipeline.cronExecutors().runTurn({ job: job as never, session: { gatewayId: "telegram:main", chatId: "cron:job_report" }, message: "check", signal: new AbortController().signal });
-    expect(offered(nouvas(d)[0]!.body, "ask_agent")).toEqual(["agent", "task", "tier"]);
+    expect(offered(nouvas(d)[0]!.body, "ask_agent")).toEqual(["agent", "task", "asks", "tier"]);
   });
 
   test("the asked agent's tools are told who asked it — `exec` keeps its commands in the foreground by it (0.8.8)", async () => {
@@ -759,5 +763,242 @@ describe("once in the background", () => {
     expect(d.jobs.get(detached.job)?.status).toBe("running");
     expect(d.jobs.kill(detached.job, "cli")).toBe(true);
     await eventually(() => d.jobs.get(detached.job)?.status === "killed", 4_000, "stopped by its job");
+  });
+});
+
+describe("several agents asked in one call", () => {
+  const FOUR = ["nouva", "nox", "nera", "nero"];
+  const HEALTH = "Check staging answers on /health.";
+  const LOGS = "Rotate the staging logs.";
+  const INCIDENTS = "Count the open incidents.";
+  const THREE = [{ agent: "nox", task: HEALTH }, { agent: "nera", task: LOGS }, { agent: "nero", task: INCIDENTS }];
+  const askSeveral = (asks: { agent: string; task: string }[], args: Record<string, unknown> = {}): Said => ({ toolCalls: [{ id: "s1", name: "ask_agent", args: { asks, ...args } }] });
+  /** The asking agent says what its tool result was, so a test reads it off the chat. */
+  const seen = (body: Body): Said | null => (conversationOf(body.messages).at(-1)?.role === "tool" ? { text: `seen: ${toolResults(body).at(-1)}` } : null);
+  const peer = (who: Who): string | null => (who.kind === "agent" && who.id !== "nouva" ? who.id : null);
+
+  test("three asked at once work at the same time, and their answers come back in one result, each under its agent", async () => {
+    const working = new Set<string>();
+    const began: number[] = [];
+    const ended: number[] = [];
+    const d = await daemon({
+      agents: FOUR,
+      // Longer than the test: nothing moves to the background here.
+      waitMs: 60_000,
+      answer: async (who, body) => {
+        const id = peer(who);
+        if (id) {
+          working.add(id);
+          began.push(performance.now());
+          // Each answers only once all three are at work: asked one after another, the first would wait for ever.
+          await eventually(() => working.size === 3, 4_000, `${id} waiting for the other two to be asked`);
+          ended.push(performance.now());
+          return { text: `${id} is done.` };
+        }
+        return seen(body) ?? askSeveral(THREE);
+      },
+    });
+
+    say(d.gateway, "check staging", "m1");
+    await eventually(() => replies(d.gateway).some((text) => text.startsWith("seen: ")), 8_000, "the three answers");
+    // At the same time: the last to begin began before the first to end.
+    expect(Math.max(...began)).toBeLessThan(Math.min(...ended));
+    // One call and one result, each answer under its agent and the ask it answers, in the order asked.
+    const result = replies(d.gateway).at(-1)!.slice("seen: ".length);
+    expect(toolResults(nouvas(d).at(-1)!.body)).toHaveLength(1);
+    const blocks = result.split("\n\n── ");
+    expect(blocks).toHaveLength(3);
+    expect(blocks[0]).toStartWith(`── nox: ${HEALTH}\n[nox · success]\nnox is done.`);
+    expect(blocks[1]).toStartWith(`nera: ${LOGS}\n[nera · success]\nnera is done.`);
+    expect(blocks[2]).toStartWith(`nero: ${INCIDENTS}\n[nero · success]\nnero is done.`);
+    // Waited for and answered: nothing became a job, and the turn went on to its reply.
+    expect(d.jobs.list({})).toEqual([]);
+  });
+
+  test("one that fails, one that is asleep, the asking agent itself and a name nobody has are each said in place, beside the answer that came", async () => {
+    const d = await daemon({
+      agents: FOUR,
+      waitMs: 60_000,
+      answer: async (who, body) => {
+        const id = peer(who);
+        if (id === "nera") throw new Error("upstream unavailable");
+        if (id) return { text: `${id} is done.` };
+        return (
+          seen(body) ??
+          askSeveral([
+            { agent: "nox", task: HEALTH },
+            { agent: "nera", task: LOGS },
+            { agent: "nero", task: INCIDENTS },
+            { agent: "nouva", task: "Summarise it." },
+          ])
+        );
+      },
+    });
+    d.bench.registry.pause("nero");
+
+    say(d.gateway, "check staging", "m1");
+    await eventually(() => replies(d.gateway).some((text) => text.startsWith("seen: ")), 8_000, "the result");
+    const result = replies(d.gateway).at(-1)!;
+    // The answer that came is whole, and the three that did not are each said for what they are.
+    expect(result).toContain(`── nox: ${HEALTH}\n[nox · success]\nnox is done.`);
+    expect(result).toContain(`── nera: ${LOGS}\n[nera · failed]\n(no report)\n\nThe model is not responding right now.`);
+    expect(result).toContain(`── nero: ${INCIDENTS}\n[nero · failed]\n(no report)\n\nnero is asleep and takes no work until a person wakes it`);
+    expect(result).toContain("── nouva: Summarise it.\nNot asked: That is you. Do the work yourself, or ask a different agent.");
+    // The asleep one and the asking agent itself were never run.
+    expect(d.asked.some((request) => peer(request.who) === "nero")).toBe(false);
+
+    // And a name nobody has is answered with the ones there are, beside the rest.
+    const ghost = createBuiltinTools({ security: d.bench.config.security, askAgent: { run: d.bench.pipeline.peerTurnRunner(), ...peersFrom(d.bench.registry, () => true) } }).get("ask_agent")!;
+    const ctx = { agentId: "nouva", sessionId: "ses_x", chatId: "chat-9", gateway: "telegram", gatewayId: "telegram:main", senderId: "u", chatType: "dm", signal: new AbortController().signal } as unknown as ToolContext;
+    const answer = await ghost.execute({ asks: [{ agent: "ghost", task: "Anything." }, { agent: "nox", task: HEALTH }] }, ctx);
+    expect(answer.isError).toBe(false);
+    expect(answer.content).toContain('── ghost: Anything.\nNot asked: There is no agent called "ghost". Available:');
+    expect(answer.content).toContain(`── nox: ${HEALTH}\n[nox · success]`);
+    expect(answer.metadata).toMatchObject({ asks: 2, agents: ["ghost", "nox"], failed: 1, statuses: ["refused", "success"] });
+  });
+
+  test("the same agent asked twice in one call takes the first and is busy for the second", async () => {
+    const d = await daemon({
+      waitMs: 60_000,
+      answer: async (who, body) => (peer(who) ? { text: "Done." } : (seen(body) ?? askSeveral([{ agent: "nox", task: HEALTH }, { agent: "nox", task: LOGS }]))),
+    });
+    say(d.gateway, "check staging", "m1");
+    await eventually(() => replies(d.gateway).some((text) => text.startsWith("seen: ")), 8_000, "the result");
+    const result = replies(d.gateway).at(-1)!;
+    expect(result).toContain(`── nox: ${HEALTH}\n[nox · success]\nDone.`);
+    expect(result).toContain(`── nox: ${LOGS}\n[nox · failed]\n(no report)\n\nnox is already working in this chat. Ask again once it is done, or put both in one ask`);
+  });
+
+  test("past the wait, the ones still working move to the background and the ones that answered are in the result", async () => {
+    const finish = { nera: gate(), nero: gate() };
+    const d = await daemon({
+      agents: FOUR,
+      answer: async (who, body) => {
+        const id = peer(who);
+        if (id === "nox") return { text: "Staging answers 200." };
+        if (id === "nera" || id === "nero") {
+          await finish[id].opened;
+          return { text: `${id} is done.` };
+        }
+        const asked = lastUser(body);
+        if (!body.stream) return { text: `wrapped up: ${toolResults(body).at(-1)}` };
+        if (asked.includes("[System event")) return { text: `passed on: ${/The answer from (\w+) has arrived/.exec(asked)?.[1] ?? "?"}` };
+        return askSeveral(THREE);
+      },
+    });
+
+    say(d.gateway, "check staging", "m1");
+    await eventually(() => replies(d.gateway).some((text) => text.startsWith("wrapped up: ")), 6_000, "the asking turn's reply");
+    // Two jobs of the asking agent's, one for each agent still at work.
+    const jobs = d.jobs.backgroundTurns("nouva");
+    expect(jobs.map((job) => [job.kind, job.ask?.agent, job.status])).toEqual([["ask", "nera", "running"], ["ask", "nero", "running"]]);
+    const [nera, nero] = jobs;
+    const result = replies(d.gateway).at(-1)!;
+    // The one that answered is in the result, whole; the two still at work say where they went.
+    expect(result).toContain(`── nox: ${HEALTH}\n[nox · success]\nStaging answers 200.`);
+    expect(result).toContain(`── nera: ${LOGS}\nNo answer after 300ms: still working on it, now in the background, as ${nera!.id}.`);
+    expect(result).toContain(`── nero: ${INCIDENTS}\nNo answer after 300ms: still working on it, now in the background, as ${nero!.id}.`);
+    expect(result).toContain(`Still working, now in the background: nera as ${nera!.id}; nero as ${nero!.id}.`);
+    expect(result).toContain("Each answer comes to you as a message of its own when that agent finishes: you have not seen it, so do not say what it will be.");
+    expect(result).toContain("Tell the person what the agents that answered said, and that the others are still on it and you will pass each answer on when it comes.");
+    // The turn ended on it, as a single ask's does.
+    expect(lastUser(nouvas(d).find((request) => !request.body.stream)!.body)).toContain("An agent you asked is still working, now in the background");
+
+    // Each answer wakes the asking agent as it comes, one by one.
+    finish.nero.open();
+    await eventually(() => replies(d.gateway).includes("passed on: nero"), 6_000, "nero's answer");
+    expect(d.jobs.get(nera!.id)?.status).toBe("running");
+    finish.nera.open();
+    await eventually(() => replies(d.gateway).includes("passed on: nera"), 6_000, "nera's answer");
+  });
+
+  test("the one limit holds for each: with room for one, the first still working moves and the next is waited for, saying why", async () => {
+    const finish = { nera: gate(), nero: gate() };
+    const d = await daemon({
+      agents: FOUR,
+      packs: { nouva: `${PACK}\n[delegate]\nmax_background = 1\n` },
+      answer: async (who, body) => {
+        const id = peer(who);
+        if (id === "nox") return { text: "Staging answers 200." };
+        if (id === "nera" || id === "nero") {
+          await finish[id].opened;
+          return { text: `${id} is done.` };
+        }
+        if (!body.stream) return { text: `wrapped up: ${toolResults(body).at(-1)}` };
+        return askSeveral(THREE);
+      },
+    });
+
+    say(d.gateway, "check staging", "m1");
+    await eventually(() => d.jobs.backgroundTurns("nouva").length === 1, 6_000, "the first to move");
+    const [nera] = d.jobs.backgroundTurns("nouva");
+    expect(nera).toMatchObject({ kind: "ask", ask: { agent: "nera" } });
+    // The call is still waiting on nero, which had no room to move: no reply yet.
+    expect(replies(d.gateway)).toEqual([]);
+    finish.nero.open();
+    await eventually(() => replies(d.gateway).some((text) => text.startsWith("wrapped up: ")), 6_000, "the asking turn's reply");
+    const result = replies(d.gateway).at(-1)!;
+    expect(result).toContain(`── nera: ${LOGS}\nNo answer after 300ms: still working on it, now in the background, as ${nera!.id}.`);
+    expect(result).toContain(
+      `── nero: ${INCIDENTS}\n[nero · success]\nnero is done.`,
+    );
+    expect(result).toContain("(This took longer than 300ms and stayed in the foreground: you already have 1 job working in the background (helpers and asks), the most this agent may have (`[delegate] max_background = 1`).)");
+    expect(d.jobs.backgroundTurns("nouva").map((job) => job.ask?.agent)).toEqual(["nera"]);
+    finish.nera.open();
+  });
+
+  test("`background: true` starts each at once, one after another, and the one over the limit is not started, said with what is running", async () => {
+    const d = await daemon({
+      agents: FOUR,
+      waitMs: 60_000,
+      answer: async (who, body) => {
+        if (peer(who)) return await never();
+        if (!body.stream) return { text: `wrapped up: ${toolResults(body).at(-1)}` };
+        return askSeveral(THREE, { background: true });
+      },
+    });
+
+    say(d.gateway, "check staging", "m1");
+    await eventually(() => replies(d.gateway).some((text) => text.startsWith("wrapped up: ")), 6_000, "the asking turn's reply");
+    // Nothing set, so the bench's machine gives two: nox and nera started, nero did not.
+    const jobs = d.jobs.backgroundTurns("nouva");
+    expect(jobs.map((job) => job.ask?.agent)).toEqual(["nox", "nera"]);
+    const result = replies(d.gateway).at(-1)!;
+    expect(result).toContain(`── nox: ${HEALTH}\nWorking on it in the background, as ${jobs[0]!.id}.`);
+    expect(result).toContain(`── nera: ${LOGS}\nWorking on it in the background, as ${jobs[1]!.id}.`);
+    expect(result).toContain(
+      `── nero: ${INCIDENTS}\nNot started: you already have 2 jobs working in the background (helpers and asks), the most this agent may have (2, what this machine has room for: \`[delegate] max_background\` is not set): `,
+    );
+    expect(result).toContain("leave `background` off to wait for nero's answer.");
+    expect(result).toContain("Tell the person who is on what, and that you will pass each answer on when it comes.");
+    expect(d.asked.some((request) => peer(request.who) === "nero")).toBe(false);
+  });
+
+  test("a turn that may hold no work in the background waits for every answer to the end: a helper's asks move nothing", async () => {
+    const d = await daemon({
+      answer: async (who, body) => {
+        if (who.kind === "helper") {
+          if (toolResults(body).length === 0) return askSeveral([{ agent: "nox", task: "Which version runs on staging?" }, { agent: "nera", task: "Which version runs on production?" }]);
+          return { text: `They say: ${toolResults(body)[0]!.replaceAll("\n", " | ")}` };
+        }
+        const id = peer(who);
+        if (id) {
+          // A fixed sleep, pacing the fake: well past the wait an ask gives, which a helper's asks must sit through.
+          await sleep(WAIT_MS * 3);
+          return { text: `${id} runs v1.9.` };
+        }
+        if (!body.stream) return { text: "The helper is on it." };
+        if (lastUser(body).includes("[System event")) return { text: `Report: ${/They say: [^\n]+/.exec(lastUser(body))?.[0] ?? "?"}` };
+        return { toolCalls: [{ id: "d1", name: "delegate", args: { tasks: [{ goal: "Find the versions", context: "Nox runs staging, Nera production.", deliverable: "Both versions." }], background: true } }] };
+      },
+    });
+    say(d.gateway, "which versions run?", "m1");
+    await eventually(() => replies(d.gateway).some((text) => text.startsWith("Report: ")), 8_000, "the helper's report");
+    const report = replies(d.gateway).at(-1)!;
+    expect(report).toContain("[nox · success] | nox runs v1.9.");
+    expect(report).toContain("[nera · success] | nera runs v1.9.");
+    expect(report).not.toContain("in the background");
+    // One job: the helper's. Neither ask became one.
+    expect(d.jobs.list({}).map((job) => job.kind)).toEqual(["helper"]);
   });
 });

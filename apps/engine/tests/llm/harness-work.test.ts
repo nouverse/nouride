@@ -3,12 +3,18 @@
  * mission, decided by whose work it is and how long it will take. The three lines it replaced, one beside each tool,
  * overlapped, and work of ten minutes was drafted as a mission. The bar between the background
  * and a mission is the hour a reply has. Each line is said only where the agent holds what it names.
+ *
+ * And the machine under it: its cores and memory and what this turn may have running on it at once, each figure handed
+ * in as it was read, with one rule for working in parallel. A limit is said only to a turn that can use it.
  */
 
 import { describe, expect, test } from "bun:test";
 import { renderTools } from "@/modules/llm/prompt/harness-tools.ts";
 
-function harness(toolNames: string[], opts: { missions?: boolean; background?: number } = {}): string {
+/** A 6-core box with 8 GB, its agents' commands in a cgroup of their own: four missions at once, one of this agent's. */
+const BOX = { words: "6 cores, 8.0GB of memory (5.9GB of it for the agents' commands)", missions: { atOnce: 4, own: 1 } };
+
+function harness(toolNames: string[], opts: { missions?: boolean; background?: number; machine?: typeof BOX; helper?: boolean } = {}): string {
   return renderTools({
     ctx: {
       harness: {
@@ -16,6 +22,8 @@ function harness(toolNames: string[], opts: { missions?: boolean; background?: n
         approvalAvailable: true,
         ...(opts.missions ? { startsMissions: true } : {}),
         ...(opts.background === undefined ? {} : { backgroundHelpers: opts.background }),
+        ...(opts.machine ? { machine: opts.machine } : {}),
+        ...(opts.helper ? { helper: true } : {}),
       },
     },
     toolNames,
@@ -39,8 +47,10 @@ describe("who does the work", () => {
     expect(harness(["delegate"], { background: 0 })).toContain("`delegate` them in one call; up to four run at once and you wait.");
   });
 
-  test("another agent's work: ask_agent, and the answer reported", () => {
-    expect(all()).toContain("  - Another agent's (their skills, tools or access; OTHER AGENTS says what each is for): `ask_agent`, and you report their answer.");
+  test("another agent's work: ask_agent, and the answer reported; several agents in one call, at the same time", () => {
+    expect(all()).toContain(
+      "  - Another agent's (their skills, tools or access; OTHER AGENTS says what each is for): `ask_agent`, and you report their answer. Work for several agents goes in one call, with `asks`: they work at the same time.\n",
+    );
   });
 
   test("under an hour: the background, a helper for yours and the other agent for theirs; past it, a mission", () => {
@@ -81,5 +91,70 @@ describe("who does the work", () => {
     expect(noMissions).not.toContain("more than about an hour");
     expect(noMissions).not.toContain("is a mission's");
     expect(harness(["read", "exec"], { background: 2 })).not.toContain("Who does the work");
+  });
+});
+
+describe("the machine it runs on", () => {
+  const MACHINE = "- **This machine** has 6 cores, 8.0GB of memory (5.9GB of it for the agents' commands), shared by every agent on it.";
+
+  test("its cores and memory, and what this agent may have running at once: helpers and asks in the background, missions on the box and its own", () => {
+    const text = harness(["delegate", "ask_agent", "mission", "exec"], { missions: true, background: 4, machine: BOX });
+    expect(text).toContain(`${MACHINE} At once: at most 4 of your helpers and asks in the background, and at most 4 missions on this machine (1 of yours).\n`);
+    // Read before the two questions it is the ground for.
+    expect(text.indexOf("**This machine**")).toBeLessThan(text.indexOf("**Who does the work**"));
+  });
+
+  test("each limit only where this turn can use it", () => {
+    // No ask_agent: its helpers alone.
+    expect(harness(["delegate"], { background: 2, machine: BOX })).toContain(`${MACHINE} At once: at most 2 of your helpers in the background.\n`);
+    // The background off: the missions alone, one said as one.
+    expect(harness(["delegate", "mission"], { missions: true, background: 0, machine: { ...BOX, missions: { atOnce: 1, own: 1 } } })).toContain(
+      `${MACHINE} At once: at most 1 mission on this machine (1 of yours).\n`,
+    );
+    // A turn that starts no mission (a mission's own, a schedule's) is told nothing of missions.
+    const noMissions = harness(["delegate", "ask_agent", "mission"], { background: 2, machine: BOX });
+    expect(noMissions).toContain(`${MACHINE} At once: at most 2 of your helpers and asks in the background.\n`);
+    expect(noMissions).not.toContain("on this machine (");
+  });
+
+  test("a helper is told the machine its commands run on, and no limit: it starts no helper and no mission", () => {
+    const text = harness(["read", "exec"], { helper: true, machine: BOX });
+    expect(text).toContain(`${MACHINE}\n`);
+    expect(text).not.toContain("At once:");
+    expect(text).not.toContain("Who does the work");
+  });
+
+  test("nothing of it to a turn that can load nothing, or where the daemon was given no machine", () => {
+    expect(harness(["read", "web_search"], { machine: BOX })).not.toContain("This machine");
+    const unsaid = harness(["delegate", "exec"], { background: 2 });
+    expect(unsaid).not.toContain("This machine");
+    expect(unsaid).not.toContain("In parallel or in order");
+  });
+});
+
+describe("working in parallel", () => {
+  const all = harness(["delegate", "ask_agent", "mission", "exec"], { missions: true, background: 4, machine: BOX });
+  const rule = all.split("\n").find((line) => line.startsWith("- **In parallel or in order**")) ?? "";
+
+  test("independent parts at once and in the background, dependent parts in order", () => {
+    expect(rule).toStartWith("- **In parallel or in order**: parts that do not depend on each other run at once, and in the background where they are long; parts that need another's result run in order.");
+  });
+
+  test("heavy commands are not stacked on a small machine, and the machine's own line is what small means", () => {
+    expect(rule).toEndWith(
+      "Heavy commands (a build, a test suite, an install) are the exception on a small machine: each takes cores and memory from everything else on it, so run no more of them at once than the machine above carries, and one after another when in doubt.",
+    );
+    // After the machine and the two questions, in the same block.
+    expect(all.indexOf("**This machine**")).toBeLessThan(all.indexOf("**Who does the work**"));
+    expect(all.indexOf("**Who does the work**")).toBeLessThan(all.indexOf("**In parallel or in order**"));
+    // No figure of its own: what a build takes is the project's, and the line above has the machine's.
+    expect(rule).not.toMatch(/\d/);
+  });
+
+  test("said once, to whoever can load the machine: an agent with a shell and nothing to hand work to, and a helper", () => {
+    expect(all.split("**In parallel or in order**")).toHaveLength(2);
+    expect(harness(["read", "exec"], { machine: BOX })).toContain(rule);
+    expect(harness(["read", "exec"], { helper: true, machine: BOX })).toContain(rule);
+    expect(harness(["read", "web_search"], { machine: BOX })).not.toContain("In parallel or in order");
   });
 });

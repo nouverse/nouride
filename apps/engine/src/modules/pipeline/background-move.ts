@@ -10,7 +10,7 @@
  * the end.
  */
 
-import { resolveMaxBackground, type LoadedAgent, type ToolContext } from "@nouride/shared";
+import type { LoadedAgent, ToolContext } from "@nouride/shared";
 import type { MoveRefusal, Moved } from "@/modules/tools/builtins/wait-then-move.ts";
 import type { HelperView } from "@/modules/tools/builtins/delegate.ts";
 import { goalLine } from "@/modules/tools/builtins/delegate-brief.ts";
@@ -69,7 +69,7 @@ export function moveToBackground(
     chatId: at.chatId,
     ...(at.turnId ? { turnId: at.turnId } : {}),
     senderId: at.senderId,
-    limit: limitOf(ctx, owner),
+    limit: ctx.backgroundLimit(owner).limit,
     startedAt: turn.startedAt,
     // Adopted: the turn is running already, and from here it is the job's.
     run: (job) => {
@@ -79,7 +79,8 @@ export function moveToBackground(
   });
   if ("started" in outcome) return { job: outcome.started.id };
   turn.stay();
-  return { refused: { why: "limit", limit: "limit" in outcome ? outcome.limit : limitOf(ctx, owner), running: views(ctx, at, owner) } };
+  const inForce = ctx.backgroundLimit(owner);
+  return { refused: { why: "limit", limit: "limit" in outcome ? { ...inForce, limit: outcome.limit } : inForce, running: views(ctx, at, owner) } };
 }
 
 const UNAVAILABLE: MoveRefusal = { why: "unavailable", reason: "This process cannot run work in the background." };
@@ -91,13 +92,8 @@ export function roomFor(ctx: TurnContext, at: ToolContext, owner: LoadedAgent | 
   // Counted against the day's caps like any turn: refused before it moves rather than discovered after it spent.
   const budget = ctx.checkSpend();
   if (budget.action === "refuse") return { why: "unavailable", reason: budget.message };
-  const limit = limitOf(ctx, owner);
-  return jobs.backgroundTurns(owner.config.id).length >= limit ? { why: "limit", limit, running: views(ctx, at, owner) } : null;
-}
-
-/** The agent's limit — helpers and asks together — read as it is needed. */
-function limitOf(ctx: TurnContext, owner: LoadedAgent): number {
-  return resolveMaxBackground(owner.config.maxBackgroundHelpers, ctx.deps.config.delegate.maxBackground);
+  const limit = ctx.backgroundLimit(owner);
+  return jobs.backgroundTurns(owner.config.id).length >= limit.limit ? { why: "limit", limit, running: views(ctx, at, owner) } : null;
 }
 
 /** What it has running in the background, as a refusal names it: here by id and goal, elsewhere counted. */

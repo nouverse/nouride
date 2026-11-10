@@ -953,6 +953,7 @@ describe("agents: orchestrator first, presets, and tools", () => {
     expect(settings).toContain("Up to 2 at once: one for a task that takes a while, more only for independent pieces.");
   });
 
+
   test("the Model tab says the window its turns are budgeted at and where that comes from, and lists its fallbacks in order (G2, 0.8.0)", async () => {
     // The engine's own answer for an agent on a model nothing knows (fixtures/wire.json): the guess, said as one.
     const guessed = await renderPage("/agents/nouva/model");
@@ -2087,7 +2088,7 @@ describe("missions", () => {
       { value: "", placeholder: "50" },
       { value: "", placeholder: "50" },
     ]);
-    expect(limits).toContain("default 3 (half the agents, at most 8)");
+    expect(limits).toContain("default 3 (what this server has room for, at most 4)");
     expect(limits).toContain("default 50M");
     expect(limits).toContain("0.1M or more");
     expect(limits).toContain("1–6");

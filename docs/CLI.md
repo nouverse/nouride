@@ -324,6 +324,7 @@ what to do about it. Exits 1 on a real problem, so it works in a healthcheck; `-
 ✓ sqlite: 3.51.0, with FTS5
 ✓ daemon reachable at http://localhost:18254 (up 41s)
 ✓ daemon memory: 72.8MB resident, 8.7MB of it JavaScript heap in use
+✓ work at once: 4 helpers in the background for each agent (from this machine), 4 missions at once (from this machine); this machine: 6 cores, 8.0GB of memory (5.9GB of it for the agents' commands)
 ✓ memory index: FTS5 integrity check passed
 ✓ providers with credentials: nougate-anthropic
 ! provider "openai" has no credential
@@ -372,6 +373,11 @@ A bare `nouride config` is its help: these lines, exit 0, and `{ help }` under `
 `check` runs the same validation the daemon runs at boot, then reports the semantic problems above.
 The distinction matters: `check` answers *would it start*, and a semantic finding never changes that
 verdict — it starts, and then fails at the first call.
+
+Its `at once` line says how many helpers each agent may have in the background and how many missions run at
+once, and for each whether the file set the number or the machine decides it (`atOnce` under `--json`). It
+reads the machine itself, with no daemon to ask; `nouride doctor` says the running daemon's own figure, which
+also knows the cgroup its agents' commands run in.
 
 An agent pack that will not load does change it (since 0.7.11), because the daemon would start without that agent.
 Each enabled one is `✗ agent <id> will not load:` with why, the verdict is `this configuration would start, but 1 agent will not load`, and the exit code is 1, with the packs under `failed` in `--json`.
@@ -813,7 +819,7 @@ helper as it finishes. A helper the agent waits for, without `background`, is wa
 working then becomes a job the same way. It is listed as `helper: <goal>`, marked `helper at work` while this daemon runs
 it; its log is its steps as it takes them and, at the end, what it reported. `nouride jobs kill <id>`
 stops one, and `/stop` in its chat stops the agent's helpers there. How many one agent may run at once is
-`[delegate] max_background` (2 by default, 0 off), its own on its Settings page in the dashboard; one over
+`[delegate] max_background` (unset: what the machine has room for, 4 at most; 0 off), its own on its Settings page in the dashboard; one over
 it is refused with what is running. A restart closes it as interrupted, and its agent is told what it had
 done and that it is not resumed ([SPEC.md §13.3](./SPEC.md#133-helpers-in-the-background-0715)).
 

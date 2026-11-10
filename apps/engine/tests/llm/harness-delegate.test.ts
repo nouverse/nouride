@@ -3,7 +3,7 @@
  *
  * A prompt is behaviour, so the wording that carries a rule is asserted directly. The rules: one helper in the
  * background is the habit for a task that takes a while, so the agent stays free for
- * the person; two only for two independent pieces; not for a quick answer or a question the person is waiting on;
+ * the person; more than one only for independent pieces; not for a quick answer or a question the person is waiting on;
  * look at what is running first; the brief in English, with its context; and each result reported as it arrives.
  */
 
@@ -47,9 +47,10 @@ describe("the harness on delegate", () => {
     expect(text).toContain("Not for a quick answer, and not for a question the person is waiting on now: answer those yourself.");
   });
 
-  test("two only for two independent pieces, with the limit; look first; each result reported as it arrives", () => {
+  test("more than one only for independent pieces, with the limit; look first; each result reported as it arrives", () => {
     const text = harness(["delegate"], 2);
-    expect(text).toContain("Two at once only for two independent pieces; at most 2 running.");
+    expect(text).toContain("More than one at once only for independent pieces; at most 2 running.");
+    expect(harness(["delegate"], 4)).toContain("More than one at once only for independent pieces; at most 4 running.");
     expect(text).toContain("Before starting one, look at what is already running (the message you are answering lists any), so the same work is not started twice.");
     expect(text).toContain("Each result reaches you as that helper finishes: report each one when it arrives, in the person's language, and wait for the next.");
     expect(harness(["delegate"], 1)).toContain("you may have one running");

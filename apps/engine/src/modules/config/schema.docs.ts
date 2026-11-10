@@ -227,10 +227,12 @@ export const ANNOTATIONS: Record<string, Annotation> = {
     description:
       "Helpers one agent may have working in the background at once (`delegate` with `background: true`). Each is a " +
       "job of its own: the turn that started it ends at once, the person can talk to the agent meanwhile, and each " +
-      "helper's result wakes the agent as that helper finishes. One is the habit for a long task, two for two " +
-      "independent pieces. 0 turns them off; at most 4. An agent can have its own in its pack's `[delegate]`, set " +
+      "helper's result wakes the agent as that helper finishes. One is the habit for a long task, more for " +
+      "independent pieces. Unset, it follows the machine: one for each core but one and one for each GiB of memory " +
+      "the agents' commands may use, whichever is lower, at least 1 and at most 4 (`nouride doctor` says the number " +
+      "in force). 0 turns them off; at most 4. An agent can have its own in its pack's `[delegate]`, set " +
       "from its Settings page in the dashboard, which applies to the next helper it starts. Since 0.7.19 it counts the " +
-      "agent's asks in the background too (an `ask_agent` past its minute), and a helper it waited for that is still " +
+      "agent's asks in the background too (an `ask_agent` past its 45 seconds), and a helper it waited for that is still " +
       "working after 45 seconds, which moves there; at 0 every ask and every helper is waited for to the end.",
     caveat:
       "A helper does not take a slot under `[queue] max_concurrent_turns` (it exists so the agent stays free for the " +
@@ -251,8 +253,8 @@ export const ANNOTATIONS: Record<string, Annotation> = {
   },
   "missions.max_running": { live: true,
     description:
-      "Missions running at once on this box, across every agent. Unset, it follows the agents that are on: half of them, " +
-      "rounded down, at least 1, and at most 8 however many there are. A box of six runs three.",
+      "Missions running at once on this box, across every agent. Unset, it follows the machine as `delegate.max_background` " +
+      "does (its cores and memory, at least 1 and at most 4), and never more than its agents could run at once.",
     caveat: "It may be set as high as every agent running its `per_agent` at once. More could never run.",
     example: "max_running = 3",
   },

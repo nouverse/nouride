@@ -33,12 +33,14 @@ describe("the daemon's", () => {
     return (await loadGlobalConfig(dir)).config;
   }
 
-  test("is 2 unless said, and 0 to 4 whole — refused at load otherwise", async () => {
-    expect(DEFAULT_CONFIG.delegate.maxBackground).toBe(2);
-    expect((await load("")).delegate.maxBackground).toBe(2);
+  test("is unset unless said, so it follows the machine, and 0 to 4 whole — refused at load otherwise", async () => {
+    expect(DEFAULT_CONFIG.delegate.maxBackground).toBeUndefined();
+    expect((await load("")).delegate.maxBackground).toBeUndefined();
+    // An install that set it keeps its number: the old default written out, as the example file had it.
+    expect((await load("[delegate]\nmax_background = 2\n")).delegate.maxBackground).toBe(2);
     expect((await load("[delegate]\nmax_background = 0\n")).delegate.maxBackground).toBe(0);
     expect((await load("[delegate]\nmax_background = 4\n")).delegate.maxBackground).toBe(4);
-    for (const bad of ["5", "-1", "1.5"]) {
+    for (const bad of ["5", "-1", "1.5", '"2"']) {
       await expect(load(`[delegate]\nmax_background = ${bad}\n`)).rejects.toThrow("max_background");
     }
   });

@@ -112,7 +112,7 @@ describe("an ask that may move to the background", () => {
   test("where the turn may hold background work: offered, with `background`", async () => {
     const went: string[] = [];
     const toolset = resolveToolset(enumeratingPack(), detaching(went), security, { peerAgents: () => ["nox"], backgroundHelpers: () => 2 });
-    expect(params(toolset)).toEqual(["agent", "task", "tier", "background"]);
+    expect(params(toolset)).toEqual(["agent", "task", "asks", "tier", "background"]);
     await toolset.get("ask_agent")!.execute({ agent: "nox", task: "check the build" }, ctx);
     expect(went).toEqual(["may move"]);
   });
@@ -120,7 +120,7 @@ describe("an ask that may move to the background", () => {
   test("where it may hold none — a helper's, a peer's, a scheduled turn, or a limit of 0: no `background`, and the ask waits to the end", async () => {
     const went: string[] = [];
     const toolset = resolveToolset(enumeratingPack(), detaching(went), security, { peerAgents: () => ["nox"], backgroundHelpers: () => 0 });
-    expect(params(toolset)).toEqual(["agent", "task", "tier"]);
+    expect(params(toolset)).toEqual(["agent", "task", "asks", "tier"]);
     // Sent anyway, it is not heard: nothing in this turn can move behind it.
     await toolset.get("ask_agent")!.execute({ agent: "nox", task: "check the build", background: true }, ctx);
     expect(went).toEqual(["waited to the end"]);

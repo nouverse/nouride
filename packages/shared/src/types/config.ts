@@ -388,13 +388,13 @@ export function resolveQuietAfterMs(perAgentMinutes: number | undefined, daemonM
  */
 export interface DelegateSection {
   /**
-   * How many background helpers one agent may have running at once. 2 by default: one is the
-   * habit for a long task, so the agent stays free for the person; two is for two independent pieces. 0 turns them
-   * off — `delegate` then works only in the foreground, where the agent waits for its helpers.
+   * How many background helpers one agent may have running at once. Unset, it follows the machine: four at most, fewer
+   * where its cores or memory are few (the engine's `commons/machine.ts`). 0 turns them off — `delegate` then works
+   * only in the foreground, where the agent waits for its helpers.
    *
    * An agent can set its own in its pack's `[delegate] max_background`.
    */
-  maxBackground: number;
+  maxBackground: number | undefined;
 }
 
 /**
@@ -406,8 +406,8 @@ export interface MissionsSection {
   /** Missions working at once for one agent — one being checked runs its reviewer, not the agent, and is not counted (0.8.11). 1. */
   perAgent: number;
   /**
-   * Missions running at once on the box. Unset, it follows the agents: half of them, rounded down — at least one, and no
-   * more than eight however many there are (`missions/slots.ts`).
+   * Missions running at once on the box. Unset, it follows the machine, four at most, and never more than every agent
+   * at its own `per_agent` could run (`missions/slots.ts`).
    */
   maxRunning: number | undefined;
   /** Hours a mission may work, waits on a person left out. 8. */

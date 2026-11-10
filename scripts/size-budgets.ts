@@ -27,8 +27,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "a security classifier: the list of what an agent may never do without a human. It grows by a rule and nothing else; a helper or a second way of classifying goes in a file of its own",
   },
   "apps/engine/src/modules/config/schema.docs.ts": {
-    lines: 473,
-    why: "one annotation per setting, the list `config explain` and the dashboard read; it grows by an entry when the config gains a key, and splitting it would hide the list it is",
+    lines: 475,
+    why: "one annotation per setting, the list `config explain` and the dashboard read; it grows by an entry, or a rule an entry must say, and splitting it would hide the list it is",
   },
   "apps/engine/src/modules/web/control/routes/chat.ts": {
     lines: 489,
@@ -51,8 +51,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "the background job table: a command's, a helper's and a background ask's rows, every write to `jobs.status` in one class; the wake-up text and a helper's runtime half are beside it",
   },
   "apps/engine/src/modules/tools/registry.ts": {
-    lines: 446,
-    why: "the built-in tools and one agent's toolset made of them: what it is offered, how each is gated, what each result is masked of, in the one place to read what an agent can do",
+    lines: 450,
+    why: "the built-in tools and one agent's toolset made of them: what it is offered, how each is gated and masked, and what its prompt is told it was resolved with, in the one place to read it",
   },
   "apps/engine/src/modules/tools/builtins/exec.ts": {
     lines: 426,
@@ -71,8 +71,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "the turn record and its columns, the causes it names, and the clause every read of a conversation uses to leave a delegate's own turns out, beside the queries that use it",
   },
   "apps/engine/src/modules/missions/missions.ts": {
-    lines: 575,
-    why: "the missions' one service (start, the dispatcher, a turn's shape and end, stop, continue) over turn state this class alone holds; its pure rules are apart: `decide.ts`, `page.ts`, `counts.ts`",
+    lines: 579,
+    why: "the missions' one service (start, the dispatcher, a turn's shape and end, stop, continue, how many hold a slot) over state this class alone holds; its pure rules are apart: `decide.ts`, `counts.ts`",
   },
   "packages/gateways/src/channels/discord/gateway.ts": {
     lines: 426,

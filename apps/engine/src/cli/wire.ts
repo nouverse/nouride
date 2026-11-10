@@ -5,6 +5,7 @@ import type { AgentStatus } from "@/modules/pipeline/agent-status.ts";
 import type { BufferedLog } from "@/commons/log-buffer.ts";
 import type { LocalTurnResult } from "@/modules/gateways/local.ts";
 import type { AuditEntry } from "@/commons/audit.store.ts";
+import type { AtOnce } from "@/commons/machine.ts";
 import type { ExecGrantRecord } from "@/modules/tools/grants.store.ts";
 import type { ToolGrantRecord } from "@/modules/tools/tool-grants.store.ts";
 import type { SenderRecord } from "@/modules/access/access.store.ts";
@@ -50,6 +51,8 @@ import type { CliRoom } from "@/modules/external-agents/index.ts";
 export interface StatusResponse {
   status: string;
   uptime: number;
+  /** How much work runs at once, and whether a setting or the machine decided it. Absent from an older daemon. */
+  atOnce?: AtOnce;
   /** Absent from a daemon older than 0.7.0. */
   supervisor?: { kind: string; restartsOnExit: boolean };
   configSource: string;

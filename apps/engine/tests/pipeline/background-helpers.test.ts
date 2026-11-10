@@ -323,6 +323,64 @@ describe("a long task, handed to a helper in the background", () => {
   });
 });
 
+describe("the machine an agent is told about", () => {
+  test("is said in its prompt, which does not change with what is running; the load is said on the message, only while something runs", async () => {
+    const helperFinishes = gate();
+    const d = await daemon({
+      // With a shell, so its helper has one too: the machine is said to whoever can load it.
+      agentToml: PACK.replace('"read"]', '"read", "exec"]'),
+      answer: async (who, body) => {
+        if (who.kind === "helper") {
+          await helperFinishes.opened;
+          return { text: "Found nothing broken." };
+        }
+        const asked = lastUser(body);
+        if (!body.stream) return { text: "On it." };
+        if (asked.includes("[System event")) return { text: "Reported." };
+        if (asked.includes("what time") || asked.includes("and now")) return { text: "Noon." };
+        return { toolCalls: [{ id: "d1", name: "delegate", args: { tasks: [brief("Find every broken link on the docs site")], background: true } }] };
+      },
+    });
+    const system = (request: Asked) => textOf(request.body.messages[0]?.content);
+    const parent = (words: string) => d.asked.find((request) => request.who.kind === "parent" && lastUser(request.body).includes(words))!;
+
+    say(d.gateway, "check every link on the docs site", "m1");
+    await eventually(() => replies(d.gateway).includes("On it."), 4_000, "the parent's reply");
+    say(d.gateway, "what time is it?", "m2");
+    await eventually(() => replies(d.gateway).includes("Noon."), 4_000, "the answer while the helper works");
+    helperFinishes.open();
+    await eventually(() => replies(d.gateway).includes("Reported."), 4_000, "the report");
+    say(d.gateway, "and now?", "m3");
+    await eventually(() => replies(d.gateway).filter((text) => text === "Noon.").length === 2, 4_000, "the answer with nothing running");
+
+    const idle = parent("check every link");
+    const busy = parent("what time is it?");
+    const after = parent("and now?");
+
+    // The cached prefix: the same bytes with a helper running as with none, before and after.
+    expect(system(busy)).toBe(system(idle));
+    expect(system(after)).toBe(system(idle));
+    // In it, the bench's machine (four cores, 4 GiB), every figure as it was read, and the limit it gives: two.
+    const MACHINE = "- **This machine** has 4 cores, 4.0GB of memory, shared by every agent on it. At once: at most 2 of your helpers in the background.";
+    expect(system(idle)).toContain(MACHINE);
+    // And `/prompt` builds the same block: the diagnostic is told what a turn is.
+    const shown = await d.bench.pipeline.renderPrompt("nouva", envelope({ id: "p1", chatType: "dm", text: "x" }));
+    expect(typeof shown === "string" ? shown : shown.text).toContain(MACHINE);
+
+    // What runs now is on the message, at its end, and only while something runs.
+    expect(lastUser(busy.body)).toEndWith("(Running now: 1 of the 2 helpers and asks you may have in the background.)");
+    expect(lastUser(idle.body)).not.toContain("Running now");
+    expect(lastUser(after.body)).not.toContain("Running now");
+    // Kept with the message as it was sent: the next request repeats it, so the conversation's cache holds too.
+    expect(textOf(after.body.messages.find((message) => message.role === "user" && textOf(message.content).includes("what time is it?"))?.content)).toBe(lastUser(busy.body));
+
+    // A helper is told the machine it runs commands on, and no limit: it starts no helper of its own.
+    const helper = system(d.asked.find((request) => request.who.kind === "helper")!);
+    expect(helper).toContain("- **This machine** has 4 cores, 4.0GB of memory, shared by every agent on it.\n");
+    expect(helper).not.toContain("of your helpers");
+  });
+});
+
 describe("the limit", () => {
   test("refuses the one over it with what is running — and the dashboard's setting applies to the next turn", async () => {
     const hold = gate();
@@ -347,11 +405,11 @@ describe("the limit", () => {
     await eventually(() => d.jobs.backgroundTurns("nouva").length === 2, 4_000, "two running");
     const running = d.jobs.backgroundTurns("nouva").map((job) => job.id);
 
-    // A third, at the daemon's 2: refused, naming both.
+    // A third, with nothing set: refused at the two the bench's machine has room for, said as the machine's, naming both.
     say(d.gateway, "and a third", "m2");
     await eventually(() => replies(d.gateway).includes("noted"), 4_000, "the refusal read");
     const refusal = textOf(d.asked.findLast((request) => request.body.messages.at(-1)?.role === "tool")!.body.messages.at(-1)!.content);
-    expect(refusal).toContain('Not started: "Piece 3". You already have 2 jobs working in the background (helpers and asks), the most this agent may have (`[delegate] max_background = 2`)');
+    expect(refusal).toContain('Not started: "Piece 3". You already have 2 jobs working in the background (helpers and asks), the most this agent may have (2, what this machine has room for: `[delegate] max_background` is not set)');
     for (const id of running) expect(refusal).toContain(id);
     expect(d.jobs.backgroundTurns("nouva")).toHaveLength(2);
 

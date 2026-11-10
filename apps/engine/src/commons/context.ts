@@ -9,6 +9,7 @@
 
 import type { Gateway, GlobalConfig } from "@nouride/shared";
 import type { CommandIsolation, SqliteDb } from "@nouride/runtime";
+import type { Machine } from "./machine.ts";
 import type { ApplianceRunner } from "nouride-appliance";
 
 export type DaemonStatus = "starting" | "ready" | "degraded" | "shutting_down";
@@ -47,6 +48,11 @@ export interface DaemonContext {
   readonly helpers?: () => readonly { issue: string }[];
   /** Whether agents' commands run in a cgroup of their own, below the daemon's (`isolateCommands`), for `/health`. */
   readonly commands?: CommandIsolation;
+  /**
+   * The machine as boot read it: what the prompt says of it, and both limits on work at once where none is set
+   * (`machine.ts`). Absent in a context a test builds, where a route reads it when asked.
+   */
+  readonly machine?: Machine;
   /** How agents' commands reach their own users, as boot found it (`boot/agent-users.ts`), for `/health`. */
   readonly agentUsers?: { through: "socket" | "local" | null; reason: string };
   /**

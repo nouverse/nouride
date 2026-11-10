@@ -173,8 +173,8 @@ export class SettingsService {
   }
 
   /** `[missions]`, as the Missions page shows it — the values in force, their defaults and the bounds each keeps. */
-  missionSettings(agents: missions.AgentSlots): ReturnType<typeof missions.missionSettings> {
-    return missions.missionSettings(this.deps, agents);
+  missionSettings(agents: missions.AgentSlots, byMachine: number): ReturnType<typeof missions.missionSettings> {
+    return missions.missionSettings(this.deps, agents, byMachine);
   }
 
   /** `[missions] per_agent` in one agent's pack — how many missions it may have working at once (0.8.11). */

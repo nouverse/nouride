@@ -344,4 +344,5 @@ running behind the conversation. Its progress appears labelled with its name and
 back to the agent that asked. The agent you are talking to stays the only one that speaks. An ask
 waits up to 45 seconds; work that takes longer carries on in the background as a job of the asking
 agent's, and its answer wakes that agent when it comes, at once with `background: true`
-([Asks that run long](/en/docs/architecture/agents/#asks-that-run-long)).
+([Asks that run long](/en/docs/architecture/agents/#asks-that-run-long)). Several agents are asked in one
+call (`asks`, up to four): they work at the same time and answer in one result, each under its name.

@@ -181,6 +181,8 @@ describe("the convention in a one-to-one chat", () => {
     expect(lines).toContain("ask_agent");
     // The half the operator asked for: one voice in the conversation.
     expect(lines).toContain("report the result");
+    // Several at once are one call: asked a reply apart, each was waited for in turn.
+    expect(lines).toContain("To ask several\n  at once, send them in one call with `asks`.");
   });
 
   test("never names the tool when the agent does not have it", () => {
@@ -190,6 +192,7 @@ describe("the convention in a one-to-one chat", () => {
     const lines = busConventionLines({ others: ["nox"], hasTool: false }).join("\n");
 
     expect(lines).not.toContain("ask_agent");
+    expect(lines).not.toContain("`asks`");
     expect(lines).toContain("no way to reach them");
     // And the dead end is closed by name, because that is the door the model actually tried.
     expect(lines).toContain("delegate");

@@ -7,7 +7,7 @@ import { BOLD, DIM, GREEN, RED, RESET, YELLOW, emit, say } from "@/cli/ui.ts";
 import { connect, startHint } from "@/cli/client.ts";
 import { loadConfig } from "@/cli/load-config.ts";
 import { hasFlag } from "@/cli/args.ts";
-import { commandsCheck, credentialChecks, databaseCheck, diskCheck, guardedFiles, guessedWindows, healthIssues, helperChecks, memoryCheck, modeChecks, packagesCheck, packFailureCheck, passBacklogCheck, plainCopiesCheck, secretStoreChecks, sshReuseCheck } from "@/cli/commands/doctor-checks.ts";
+import { atOnceChecks, commandsCheck, credentialChecks, databaseCheck, diskCheck, guardedFiles, guessedWindows, healthIssues, helperChecks, memoryCheck, modeChecks, packagesCheck, packFailureCheck, passBacklogCheck, plainCopiesCheck, secretStoreChecks, sshReuseCheck } from "@/cli/commands/doctor-checks.ts";
 import { EDITION } from "@/commons/build.ts";
 import { installDirFor } from "@/modules/update/facts.ts";
 import { localPackageSetup, resolveSystemPackages } from "@/modules/system-packages/index.ts";
@@ -185,7 +185,7 @@ export async function doctor(args: string[] = []): Promise<void> {
   // The helper models' trouble from `/status`, with the count and the provider's words; `/health` says the same lines
   // without them, so each is said once.
   const helpers = status.helpers ?? [];
-  for (const check of [...healthIssues(health?.issues ?? [], helpers), ...helperChecks(helpers, Date.now())]) add(check.level, check.message, check.hint);
+  for (const check of [...atOnceChecks(status.atOnce), ...healthIssues(health?.issues ?? [], helpers), ...helperChecks(helpers, Date.now())]) add(check.level, check.message, check.hint);
 
   // The keyword index's own check (FTS5 `integrity-check`). It is a cache of the vault, so the fix is a
   // rebuild, not a restore. Skipped quietly by a daemon too old to report it.

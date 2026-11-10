@@ -14,6 +14,7 @@ const VIEW = { ...DEFAULT_CONFIG.missions, bounds: { perAgent: { min: 1, max: 4,
 function app(role: "admin" | "operator" | "viewer", options: { refuse?: string; settings?: false } = {}) {
   const calls: Record<string, unknown>[] = [];
   const asked: number[] = [];
+  const machines: number[] = [];
   const control = new Hono<{ Variables: { principal: unknown } }>();
   control.use("*", async (c, next) => {
     c.set("principal", { kind: "user", actor: role, role, user: { username: role } });
@@ -22,13 +23,14 @@ function app(role: "admin" | "operator" | "viewer", options: { refuse?: string; 
   // Six agents loaded, one of them turned off: five are on — nix with its own three missions at once (0.8.11).
   const agents = ["nouva", "nero", "nestor", "nexa", "nix"].map((id) => ({ config: { id, enabled: true, ...(id === "nix" ? { missionsPerAgent: 3 } : {}) } }));
   registerMissionSettingsRoutes(control as never, {
-    ctx: { config: structuredClone(DEFAULT_CONFIG) },
+    // A machine with room for two: four cores, 4 GiB.
+    ctx: { config: structuredClone(DEFAULT_CONFIG), machine: { cores: 4, memoryBytes: 4 * 1024 ** 3 } },
     registry: { enabled: () => agents },
     settings:
       options.settings === false
         ? undefined
         : {
-            missionSettings: (on: readonly (number | undefined)[]) => (asked.push(on.length), VIEW),
+            missionSettings: (on: readonly (number | undefined)[], byMachine: number) => (asked.push(on.length), machines.push(byMachine), VIEW),
             setMissionSettings: async (args: Record<string, unknown>) => {
               calls.push(args);
               return options.refuse ? { ok: false, error: options.refuse } : { ok: true, restartRequired: false };
@@ -36,7 +38,7 @@ function app(role: "admin" | "operator" | "viewer", options: { refuse?: string; 
           },
   } as never);
   const post = (body: unknown) => control.request("/policy/missions", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
-  return { control, calls, asked, post };
+  return { control, calls, asked, machines, post };
 }
 
 describe("the mission settings", () => {
@@ -45,9 +47,11 @@ describe("the mission settings", () => {
     const response = await viewer.control.request("/policy/missions");
     expect(await response.json()).toEqual({ ...VIEW, editable: true });
     expect(viewer.asked).toEqual([5]);
+    // And for the machine it runs on: what it has room for is what the slots follow while unset.
+    expect(viewer.machines).toEqual([2]);
   });
 
-  test("a daemon that cannot change them still shows them whole: the slots its agents give it, the defaults and the bounds", async () => {
+  test("a daemon that cannot change them still shows them whole: the slots its machine gives it, the defaults and the bounds", async () => {
     const response = await app("viewer", { settings: false }).control.request("/policy/missions");
     // As high as every agent at its own per_agent at once: four at the daemon's one, nix at its three.
     expect(await response.json()).toMatchObject({ maxRunning: 2, auto: true, defaults: { maxRunning: 2 }, bounds: { maxRunning: { min: 1, max: 7 } }, editable: false });

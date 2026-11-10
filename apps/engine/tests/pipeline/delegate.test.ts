@@ -252,12 +252,16 @@ describe("delegate in the background", () => {
   });
 
   test("over the limit is refused with what is running — those from another conversation counted, not described", async () => {
-    const t = tool([{ refused: "limit", limit: 2, running: [view("job_a", "Find broken links"), view("job_b", "Private thing from another chat", false)] }]);
+    const running = [view("job_a", "Find broken links"), view("job_b", "Private thing from another chat", false)];
+    const t = tool([{ refused: "limit", limit: { limit: 2, from: "config" }, running }]);
     const result = await t.subject.execute({ tasks: [task("Check the disks")], background: true }, ctx());
 
     expect(result.isError).toBe(true);
     expect(result.metadata?.control).toBeUndefined();
-    expect(result.content).toContain("`[delegate] max_background = 2`");
+    expect(result.content).toContain("the most this agent may have (`[delegate] max_background = 2`)");
+    // Where nobody set it, the refusal says so: the agent is not sent to look for a setting that is in no file.
+    const unset = await tool([{ refused: "limit", limit: { limit: 2, from: "machine" }, running }]).subject.execute({ tasks: [task("Check the disks")], background: true }, ctx());
+    expect(unset.content).toContain("the most this agent may have (2, what this machine has room for: `[delegate] max_background` is not set)");
     expect(result.content).toContain('job_a "Find broken links" (4m so far)');
     expect(result.content).toContain("1 in another conversation");
     expect(result.content).not.toContain("Private thing");
@@ -270,7 +274,7 @@ describe("delegate in the background", () => {
   test("the one over the limit is refused, and the ones that fit still start", async () => {
     const t = tool([
       { started: view("job_a", "First"), running: [view("job_a", "First")] },
-      { refused: "limit", limit: 1, running: [view("job_a", "First")] },
+      { refused: "limit", limit: { limit: 1, from: "agent" }, running: [view("job_a", "First")] },
     ]);
     const result = await t.subject.execute({ tasks: [task("First"), task("Second")], background: true }, ctx());
     expect(result.isError).toBe(false);
@@ -358,7 +362,7 @@ describe("delegate in the foreground, waited on for 45 seconds", () => {
   });
 
   test("with no room to move, it stays: waited for to the end, and the answer says why it took so long", async () => {
-    const full = helper({ refused: { why: "limit", limit: 2, running: [{ id: "job_a", goal: "a", startedAt: Date.now(), here: true }, { id: "job_b", goal: "b", startedAt: Date.now(), here: true }] } });
+    const full = helper({ refused: { why: "limit", limit: { limit: 2, from: "config" }, running: [{ id: "job_a", goal: "a", startedAt: Date.now(), here: true }, { id: "job_b", goal: "b", startedAt: Date.now(), here: true }] } });
     const broke = helper({ refused: { why: "unavailable", reason: "Today's spending limit for this agent has been reached." } });
     const t = tool({ "Rebuild the index": full, "Check the disks": broke });
     const result = t.subject.execute({ tasks: [task("Rebuild the index"), task("Check the disks")] }, ctx());

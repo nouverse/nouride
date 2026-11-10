@@ -187,6 +187,11 @@ export interface StatusPayload {
   gateways: { id: string; platform: string; status: string }[];
   /** What the helper model's work ran into in the last 24 h — none is none. Absent from a daemon before 0.7.25. */
   helpers?: HelperTrouble[];
+  /**
+   * How much work runs at once: the machine in words, and the helpers each agent may have in the background
+   * and the missions on the box, each with whether nobody set it (`auto`), so the machine decided. Absent before.
+   */
+  atOnce?: { machine: string; helpers: { limit: number; auto: boolean }; missions: { limit: number; auto: boolean } };
 }
 
 export interface FileSummary {

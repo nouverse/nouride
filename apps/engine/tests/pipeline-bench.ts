@@ -21,6 +21,7 @@ import { SecretStore } from "@nouride/secrets";
 import type { Gateway, GlobalConfig } from "@nouride/shared";
 import { durableStores } from "@/boot/durable.ts";
 import { pausedAgentsState } from "@/commons/daemon-state.ts";
+import type { Machine } from "@/commons/machine.ts";
 import { DaemonStateStore } from "@/commons/daemon-state.store.ts";
 import { openAndMigrate } from "@/db/index.ts";
 import { AccessStore } from "@/modules/access/access.store.ts";
@@ -36,6 +37,13 @@ import { RoomNameStore } from "@/modules/rooms/room-names.store.ts";
 import type { TurnJournalStore } from "@/modules/turns/journal.store.ts";
 import { SessionStore } from "@/modules/sessions/sessions.store.ts";
 import { AutoApprovalGate, FakeGateway, isolateInstallPaths, noSleep, scriptedOpenAI, tempDir, writeAgentPack, type AgentPackSpec } from "./helpers.ts";
+
+/**
+ * The machine every bench runs on unless a test names its own (`deps.machine`): four cores and 4 GiB, which gives two
+ * helpers in the background and two missions where nothing is set. Never the machine the tests run on: its cores and
+ * memory would decide the result.
+ */
+export const BENCH_MACHINE: Machine = { cores: 4, memoryBytes: 4 * 1024 ** 3 };
 
 /** The bench's own provider, which every pack names unless told otherwise: answered by `scriptedOpenAI`. */
 const BASE_CONFIG = {
@@ -170,6 +178,7 @@ async function boot(install: Install, options: RebootOptions): Promise<Bench> {
   const given = typeof options.deps === "function" ? await options.deps(made) : options.deps;
   const pipeline = new Pipeline({
     config,
+    machine: BENCH_MACHINE,
     access,
     registry,
     providers,

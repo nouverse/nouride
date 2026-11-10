@@ -353,4 +353,6 @@ belakang percakapan. Progresnya muncul berlabel namanya dan jawabannya kembali k
 Agent yang sedang kamu ajak bicara tetap satu-satunya yang berbicara. Permintaan ditunggu paling lama
 45 detik; pekerjaan yang lebih lama lanjut di latar belakang sebagai job milik agent yang meminta, dan
 jawabannya membangunkan agent itu begitu datang, langsung dengan `background: true`
-([Permintaan yang makan waktu](/id/docs/architecture/agents/#permintaan-yang-makan-waktu)).
+([Permintaan yang makan waktu](/id/docs/architecture/agents/#permintaan-yang-makan-waktu)). Beberapa agent
+diminta dalam satu panggilan (`asks`, paling banyak empat): mereka bekerja bersamaan dan menjawab dalam satu
+hasil, masing-masing di bawah namanya.

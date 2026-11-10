@@ -96,7 +96,7 @@ describe("what the pipeline reads it from", () => {
       agents: ["nix", "nox", "nouva"],
       deps: {
         externalAgents: { runnerFor: () => null, working: () => left } as never,
-        missionCommands: { forStatus: (agentId: string) => atWork.get(agentId) ?? { atWork: 0, waiting: 0 } } as never,
+        missionCommands: { load: () => ({ running: 0, atOnce: 2 }), forStatus: (agentId: string) => atWork.get(agentId) ?? { atWork: 0, waiting: 0 } } as never,
       },
     });
     expect(bench.pipeline.agentStatus("nix")).toMatchObject({ activity: "working", jobs: 1, missions: 0 });

@@ -148,7 +148,11 @@ const PER_TOOL = 3_400;
 // waited for up to a short while, after which a helper still working moves to the background. Told only "you wait", an
 // agent sent three tasks of five to ten minutes each to the foreground and held the person's chat for eight. 48,370:
 // the wait is now said as 45 seconds, which an external agent's MCP client gives a call room to come back inside.
-const TOTAL = 48_370;
+// 48,680 for `ask_agent`'s `asks` (~310): several agents asked in one call, at work at the same time, every answer in
+// one result under its agent. Asking three was three calls, and a model that made them a reply apart waited for each in
+// turn. The parameter says it stands in place of `agent` and `task`, how many it takes and where the answers come back:
+// unsaid, a model sends both shapes, or waits for three results where one comes.
+const TOTAL = 48_680;
 
 describe("tool schema budget", () => {
   test("every conditional tool was built, so the total means what it says", () => {

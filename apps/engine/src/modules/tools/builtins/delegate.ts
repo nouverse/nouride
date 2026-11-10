@@ -40,6 +40,7 @@
  */
 
 import { createLogger, type ModelTier, plural, type Tool, type ToolContext, type ToolDefinition, type ToolResult } from "@nouride/shared";
+import { backgroundLimitWords, type InForce } from "@/commons/machine.ts";
 import { renderHandoff, type SubAgentHandoff } from "@/modules/tools/handoff.ts";
 import { goalLine, parseBriefs, type HelperBrief } from "./delegate-brief.ts";
 import { duration } from "@/modules/jobs/wake-text.ts";
@@ -89,7 +90,7 @@ export interface HelperView {
 export type BackgroundStart =
   | { started: HelperView; running: HelperView[] }
   | { refused: "off" }
-  | { refused: "limit"; limit: number; running: HelperView[] }
+  | { refused: "limit"; limit: InForce; running: HelperView[] }
   | { refused: "duplicate"; running: HelperView }
   | { refused: "unavailable"; reason: string };
 
@@ -386,7 +387,7 @@ function said(brief: HelperBrief, outcome: BackgroundStart): string {
       // background is one of what is running.
       return (
         `Not started: ${goal}. You already have ${outcome.running.length} ${plural(outcome.running.length, "job")} ` +
-        `working in the background (helpers and asks), the most this agent may have (\`[delegate] max_background = ${outcome.limit}\`): ` +
+        `working in the background (helpers and asks), the most this agent may have (${backgroundLimitWords(outcome.limit)}): ` +
         `${runningList(outcome.running)}. Wait for one to finish (its result comes to you as a message), stop one ` +
         `with \`nouride jobs kill <id>\`, or run this one in the foreground (leave \`background\` off).`
       );

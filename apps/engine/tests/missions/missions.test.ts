@@ -911,6 +911,11 @@ describe("the tool's answer to a start", () => {
     const first = await h.start("one");
     const answer = await createMissionTools(h.missions).chat.execute({ action: "start", goal: "two", agent: "nox", ...atOnce }, ctx);
     expect(answer.content).toContain(`It waits because the box already runs ${first.id.slice(0, 10)} (max_running 1);`);
+    // Where nobody set it, it is said as the machine's: no file holds a setting of that value to look up.
+    const unset = await missionsHarness({ settings: { maxRunning: 1, auto: true } });
+    const running = await unset.start("one");
+    const waits = await createMissionTools(unset.missions).chat.execute({ action: "start", goal: "two", agent: "nox", ...atOnce }, ctx);
+    expect(waits.content).toContain(`It waits because the box already runs ${running.id.slice(0, 10)} (1 at once on this machine: max_running is not set);`);
   });
 
   test("started at once, it says nothing about waiting", async () => {
@@ -962,5 +967,22 @@ describe("an agent's missions, for its status (0.8.15)", () => {
     set(first, "done");
     expect(h.missions.forStatus("nova")).toEqual({ atWork: 0, waiting: 1 });
     expect(h.missions.forStatus("nox")).toEqual({ atWork: 1, waiting: 0 });
+  });
+
+  test("the box's load, as a chat's turn is told it: the missions holding a slot now, running or being checked, of how many may", async () => {
+    const h = await missionsHarness({ agents: ["nova", "nox"], settings: { perAgent: 2, maxRunning: 3 } });
+    const set = (mission: Mission, status: Mission["status"], waitKind: Mission["waitKind"] = null) => h.store.save({ ...h.store.get(mission.id)!, status, waitKind });
+    expect(h.missions.load()).toEqual({ running: 0, atOnce: 3 });
+    const first = await h.start("one");
+    const second = await h.start("two");
+    const third = await h.start("three", { agentId: "nox" });
+    set(first, "running");
+    set(second, "checking");
+    set(third, "queued");
+    expect(h.missions.load()).toEqual({ running: 2, atOnce: 3 });
+    // One waiting for a person holds no slot, and one that ended holds none.
+    set(second, "waiting", "input");
+    set(first, "done");
+    expect(h.missions.load()).toEqual({ running: 0, atOnce: 3 });
   });
 });

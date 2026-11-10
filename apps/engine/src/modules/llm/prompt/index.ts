@@ -34,6 +34,7 @@ import { renderHarness } from "./harness.ts";
 import { renderRecall } from "./recall.ts";
 
 export type { BuiltPrompt, HarnessFacts, PromptContext } from "./types.ts";
+export { workFacts } from "./harness-work.ts";
 
 /** The section sent after the conversation rather than in the system prompt (`BuiltPrompt.situation`). */
 const SITUATION = "dynamic";

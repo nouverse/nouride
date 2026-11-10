@@ -44,6 +44,28 @@ describe("which reminders a message gets", () => {
   });
 });
 
+describe("what is running now, said on the message", () => {
+  const load = (background: number, missions?: number) => ({ background: { running: background, limit: 4 }, ...(missions === undefined ? {} : { missions: { running: missions, atOnce: 2 } }) });
+
+  test("this agent's helpers and asks in the background and the box's missions, each against what may run", () => {
+    expect(turnReminders("hello", [], undefined, load(2, 1))).toEqual(["(Running now: 2 of the 4 helpers and asks you may have in the background; 1 of the 2 missions this machine runs at once.)"]);
+  });
+
+  test("only what is running is said, and nothing at all when nothing is", () => {
+    expect(turnReminders("hello", [], undefined, load(1, 0))).toEqual(["(Running now: 1 of the 4 helpers and asks you may have in the background.)"]);
+    expect(turnReminders("hello", [], undefined, load(0, 2))).toEqual(["(Running now: 2 of the 2 missions this machine runs at once.)"]);
+    expect(turnReminders("hello", [], undefined, load(0, 0))).toEqual([]);
+    expect(turnReminders("hello", [], undefined, load(0))).toEqual([]);
+    expect(turnReminders("hello", [])).toEqual([]);
+  });
+
+  test("after the other notes of the turn, so it is the last thing read", () => {
+    const notes = turnReminders("harga emas hari ini?", search, { running: [{ id: "job_1", goal: "Check the links", startedAt: 0 }], now: 60_000 }, load(1));
+    expect(notes).toHaveLength(3);
+    expect(notes.at(-1)).toStartWith("(Running now: ");
+  });
+});
+
 /** A provider that records every request and answers each with the same short reply. */
 function recording() {
   const calls: ChatParams[] = [];

@@ -159,7 +159,7 @@ const CONFIG_BOUNDS: Record<string, { min?: number; max?: number; fraction?: tru
  * Numbers with no default — absent is "worked out", not zero — so the walk has no value to read their type from. Each is
  * still a number, described as one and held to its bounds when set.
  */
-export const UNSET_NUMBERS: ReadonlySet<string> = new Set(["llm.context.compact_at_tokens", "missions.max_running"]);
+export const UNSET_NUMBERS: ReadonlySet<string> = new Set(["llm.context.compact_at_tokens", "delegate.max_background", "missions.max_running"]);
 
 /** The bounds a number at `path` keeps: its own, over the rule every number keeps. */
 export function boundsOf(path: string): { min: number; max?: number; integer: boolean } {

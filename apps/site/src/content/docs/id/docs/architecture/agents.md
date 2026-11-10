@@ -140,7 +140,7 @@ enabled = ["read", "web_search", "web_fetch", "memory_read", "memory_write", "pe
 approval_required = ["exec", "write", "edit"]
 blocked = ["rm", "shutdown", "reboot"]   # perintah yang langsung ditolak exec
 
-# Helper yang boleh dijalankannya di latar belakang sekaligus (tanpa nilai: [delegate] milik daemon, 2). 0 = mati.
+# Helper yang boleh dijalankannya di latar belakang sekaligus (tanpa nilai: [delegate] milik daemon). 0 = mati.
 [delegate]
 max_background = 1
 
@@ -431,9 +431,16 @@ dalam bahasamu. Dua helper dilaporkan satu per satu, masing-masing begitu selesa
 gak ditahan menunggu yang kedua.
 
 Agent diberi tahu kebiasaannya: satu helper untuk tugas yang lebih lama dari beberapa menit dan kurang
-dari sejam (riset lintas file atau host, build panjang, gladi migrasi) supaya ia tetap siaga untukmu; dua
-cuma untuk dua bagian yang saling lepas; kerja yang mungkin lewat dari sejam adalah urusan misi. Bukan
+dari sejam (riset lintas file atau host, build panjang, gladi migrasi) supaya ia tetap siaga untukmu; lebih
+dari satu cuma untuk bagian yang saling lepas; kerja yang mungkin lewat dari sejam adalah urusan misi. Bukan
 untuk jawaban cepat, dan bukan untuk hal yang sedang kamu tunggu sekarang.
+
+Agent juga diberi tahu mesin tempat ia jalan: jumlah core dan memorinya, seperti yang dibaca daemon waktu
+mulai, berapa helper yang boleh dijalankannya di latar belakang, dan berapa misi yang jalan bersamaan. Yang
+sedang jalan saat ini disebut di tiap pesan selama masih ada yang jalan, jadi ia bisa membedakan box yang
+lowong dari yang sibuk sebelum memulai yang baru. Dan ia punya satu aturan untuk kerja paralel: bagian
+yang saling lepas dijalankan sekaligus, bagian yang butuh hasil bagian lain dijalankan berurutan, dan
+perintah berat (build, test suite) gak ditumpuk di mesin kecil.
 
 Helper yang ditunggu agent, tanpa `background`, untuk pertanyaan cepat: agent menunggu jawabannya paling
 lama 45 detik. Helper yang masih bekerja setelah itu lanjut di latar belakang, sama persis seperti kalau
@@ -449,9 +456,12 @@ selesai, dan jawabannya menyebut kenapa lama.
   skill-nya), tapi bukan siapa dirinya: tanpa persona, tanpa memori. Ia gak menulis memori, gak mengirim
   apa pun ke chat, dan gak memulai helper sendiri; ia menyebut apa yang layak disimpan, dan agent yang
   memutuskan.
-- **Berapa sekaligus** diatur `[delegate] max_background`: 2 secara default, 0 mematikannya, bisa diatur
-  per agent di tab **Settings**-nya, berlaku mulai helper berikutnya. Helper yang pindah ke sana setelah
-  45 detiknya ikut dihitung. Kalau 0, helper yang ditunggu agent ditunggu sampai selesai.
+- **Berapa sekaligus** diatur `[delegate] max_background`: 0 mematikannya, bisa diatur per agent di tab
+  **Settings**-nya, berlaku mulai helper berikutnya. Kalau gak diisi, nilainya ikut mesin: satu untuk tiap
+  core selain satu, dan satu untuk tiap GiB memori yang boleh dipakai perintah agent, diambil yang lebih
+  kecil, minimal 1 dan maksimal 4. Box 4 core 2 GB dapat 1, 4 core 4 GB dapat 2, 6 core 8 GB dapat 4;
+  `nouride doctor` menyebut angka yang berlaku dan asalnya. Helper yang pindah ke sana setelah 45 detiknya
+  ikut dihitung. Kalau 0, helper yang ditunggu agent ditunggu sampai selesai.
 - **Tiap helper adalah sebuah job**: muncul di `nouride jobs` dan di Work → Helpers di dashboard
   dengan tujuannya, dan di strip chat selama berjalan. `/stop` di chat menghentikan helper agent di
   chat itu; `nouride jobs kill <id>` menghentikan satu.
@@ -471,7 +481,7 @@ selesai, dan jawabannya menyebut kenapa lama.
 ## Permintaan yang makan waktu
 
 Saat sebuah agent meminta tolong agent lain lewat `ask_agent` (0.7.19), ia menunggu jawabannya paling lama
-semenit, seperti sebelumnya. Kalau agent lain itu masih bekerja setelahnya (deploy, audit), pekerjaannya
+45 detik. Kalau agent lain itu masih bekerja setelahnya (deploy, audit), pekerjaannya
 lanjut di latar belakang, agent yang sedang kamu ajak bicara bilang begitu, dan kamu tetap bisa ngobrol
 dengannya. Begitu jawabannya datang, agent itu dibangunkan di chat yang sama, dengan keterangan itu jawaban
 untuk permintaan apa dan kapan dimintanya, jadi tetap nyambung walau kamu sudah pindah topik. Agent yang
@@ -489,6 +499,11 @@ tahu pekerjaannya bakal lama meminta dengan `background: true` dan gak menunggu 
   keterangan itu pekerjaan siapa.
 - Cuma agent yang kamu ajak bicara yang memindahkan permintaan ke latar belakang: permintaan dari helper
   dan dari job terjadwal selalu menunggu jawabannya.
+- **Beberapa agent dalam satu panggilan.** Agent yang butuh lebih dari satu meminta mereka sekaligus
+  (`asks`, paling banyak empat): mereka bekerja bersamaan dan jawabannya kembali dalam satu hasil, masing-masing
+  di bawah nama agentnya. Tiap permintaan tetap mengikuti semua aturan di atas sendiri-sendiri. Lewat 45 detik,
+  yang masih bekerja lanjut di latar belakang dan yang sudah menjawab langsung dilaporkan; yang gagal, sedang
+  tidur, atau sedang sibuk disebut di samping jawaban yang lain.
 
 ## Pekerjaan yang lama diingatkan, bukan dihentikan
 

@@ -16,9 +16,23 @@ import { contextWindowFor } from "@/modules/llm/executor/context-window.ts";
 import { helperTrouble } from "@/modules/llm/helper-trouble.ts";
 import { cachedShare, cacheWarnings, usdPerMillion } from "@/modules/llm/cache-routes.ts";
 import { INCOMPLETE, NO_SETTINGS, notSaved } from "../plain.ts";
+import { atOnceBy, backgroundInForce, machineAtBoot, machineWords, type AtOnce } from "@/commons/machine.ts";
+import { inForceFor } from "@/modules/missions/slots.ts";
 
 /** Days a route's cache is judged over, at least — a starting value. */
 const ROUTE_DAYS = 7;
+
+/** Both limits as they hold now for the whole daemon, read as the dispatcher and a turn read them. */
+function atOnceNow(deps: ControlDeps): AtOnce {
+  const machine = deps.ctx.machine ?? machineAtBoot();
+  const helpers = backgroundInForce(deps.ctx.config.delegate, machine, undefined);
+  const missions = inForceFor(deps.ctx.config.missions, atOnceBy(machine), deps.registry);
+  return {
+    machine: machineWords(machine),
+    helpers: { limit: helpers.limit, auto: helpers.from === "machine" },
+    missions: { limit: missions.maxRunning, auto: missions.auto === true },
+  };
+}
 
 export function registerDiagnosticRoutes(control: ControlApp, deps: ControlDeps): void {
   /**
@@ -296,6 +310,8 @@ export function registerDiagnosticRoutes(control: ControlApp, deps: ControlDeps)
       // What compaction and the memory pass ran into with their models in the last day, the provider's own words
       // included — doctor says each with its fix. `/health` says them without those words: anybody reaches it.
       helpers: deps.logStore ? helperTrouble(deps.logStore, deps.ctx.config, Date.now()) : [],
+      // How much work runs at once and who decided it, a setting or the machine: `doctor` says it.
+      atOnce: atOnceNow(deps),
     };
     return c.json(body satisfies StatusPayload);
   });

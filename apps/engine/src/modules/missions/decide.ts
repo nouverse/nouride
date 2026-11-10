@@ -61,7 +61,7 @@ function overlaps(a: string, b: string): boolean {
 export function blockedBy(
   mission: Mission,
   open: readonly Mission[],
-  settings: Pick<MissionsInForce, "perAgent" | "maxRunning" | "slotsOf">,
+  settings: Pick<MissionsInForce, "perAgent" | "maxRunning" | "auto" | "slotsOf">,
   repoOf: (workdir: string) => string = repositoryOf,
 ): string | null {
   const busy = open.filter((other) => other.status === "running" || other.status === "checking");
@@ -74,7 +74,9 @@ export function blockedBy(
     return `${mission.agentId} already runs ${mine.map((other) => other.id.slice(0, 10)).join(", ")} (per_agent ${slots})`;
   }
   if (busy.length >= settings.maxRunning) {
-    return `the box already runs ${busy.map((other) => other.id.slice(0, 10)).join(", ")} (max_running ${settings.maxRunning})`;
+    // Where nobody set it, said so: `max_running 2` reads as a setting, and one looked for it in a file that has none.
+    const limit = settings.auto ? `${settings.maxRunning} at once on this machine: max_running is not set` : `max_running ${settings.maxRunning}`;
+    return `the box already runs ${busy.map((other) => other.id.slice(0, 10)).join(", ")} (${limit})`;
   }
   const repo = repoOf(mission.workdir);
   const same = open.find((other) => other.startedAt !== null && !isFinal(other.status) && overlaps(repoOf(other.workdir), repo));

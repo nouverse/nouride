@@ -73,6 +73,7 @@ import { createSendMessageTool, type SendMessageOptions } from "@/modules/tools/
 import { withSecretMask } from "@/modules/tools/secret-mask.ts";
 import { audited } from "@/modules/tools/audited.ts";
 import type { ChildEnv } from "@/modules/tools/exec-secrets.ts";
+import type { MachineFacts } from "@/commons/machine.ts";
 import {
   createAttachmentReadTool,
   type AttachmentReadOptions,
@@ -370,6 +371,8 @@ export interface AgentToolset {
    * `[delegate] max_background`. 0, or absent: `delegate`'s schema has no `background`, and the harness says nothing of it.
    */
   backgroundHelpers?: number;
+  /** The machine under this agent, as its prompt says it. Absent where the daemon was not given one. */
+  machine?: MachineFacts;
 }
 
 /**
@@ -426,6 +429,8 @@ export interface ToolsetDeps {
    * cannot use with it is not offered with it.
    */
   backgroundHelpers?: (agentId: string) => number;
+  /** The machine and the missions it runs at once, for the prompt (`commons/machine.ts`). */
+  machine?: (agentId: string) => MachineFacts;
   /**
    * `mission`, as this turn holds it (0.8.0): `start` in a chat's turn, the mission's own actions in a mission's — handed
    * per turn by what runs it. Absent: no `mission` — a helper's turn, a peer's, a scheduled one.
@@ -760,6 +765,7 @@ export function resolveToolset(
     },
     blockedPatterns: blocked,
     ...(delegate && backgroundHelpers > 0 ? { backgroundHelpers } : {}),
+    ...(deps?.machine ? { machine: deps.machine(agent.config.id) } : {}),
   };
 }
 

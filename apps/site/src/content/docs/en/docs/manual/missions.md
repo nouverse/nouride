@@ -164,7 +164,7 @@ withdraws what it parked. It runs at your approval level, as you.
 | | Default | What it bounds |
 |---|---|---|
 | `per_agent` | 1 | missions working at once for one agent. One being checked does not count, since its reviewer is not the agent. An agent may have its own, 1 to 4 |
-| `max_running` | half the agents, 1 to 8 | missions running at once on the box |
+| `max_running` | what the machine has room for, 1 to 4 | missions running at once on the box |
 | `limit_hours` | 8 | hours of work; time waiting for you is not counted |
 | `limit_turns` | 100 | turns (each up to `max_tool_iterations` steps), the reviewer's and failed checks' included |
 | `limit_tokens` | 100,000,000 | input and output tokens, the reviewer's included |
@@ -177,8 +177,9 @@ in its own `config.toml`: three for an agent that does long work, one for the re
 holds them all, so raise it too. Two missions in one repository take turns, whatever the numbers are: they would write
 over each other's files.
 
-`max_running` left unset follows the agents that are on: half of them, rounded down (one on a box of one or two
-agents, three on a box of six), and never more than eight. Set it yourself to go higher, as far as every agent at once.
+`max_running` left unset follows the machine: one for each core but one and one for each GiB of memory the agents'
+commands may use, whichever is lower, at least 1 and at most 4, and never more than its agents could run at once. A
+4-core 2 GB box runs 1, a 4-core 4 GB box 2, a 6-core 8 GB box 4. Set it yourself to go higher, as far as every agent at once.
 On the Limits form an empty field is its default, shown in grey; **Back to defaults** empties them all.
 
 Reaching a limit stops the mission's jobs and asks you: `/mission continue <id>` raises the limit it reached by its

@@ -383,7 +383,8 @@ export function validate(config: GlobalConfig): void {
     );
   }
   // Zero is off; the ceiling is the most one agent may run at once, whatever it asks for (`MAX_BACKGROUND_HELPERS`).
-  const helpers = maxBackgroundRefusal(config.delegate.maxBackground, "[delegate] max_background");
+  // Unset follows the machine (`commons/machine.ts`).
+  const helpers = config.delegate.maxBackground === undefined ? null : maxBackgroundRefusal(config.delegate.maxBackground, "[delegate] max_background");
   if (helpers) throw new ConfigError(helpers);
   positiveInt(config.queue.maxQueueDepth, "[queue] max_queue_depth");
   positiveInt(config.queue.steerReplyTimeoutMs, "[queue] steer_reply_timeout_ms");

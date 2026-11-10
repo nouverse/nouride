@@ -9,6 +9,8 @@ import { AgentRegistry } from "@nouride/persona";
 import { BOLD, DIM, GREEN, RED, RESET, YELLOW, emit, fail, say, usageError } from "@/cli/ui.ts";
 import { helpFor, unknownAction } from "@/cli/usage.ts";
 import { unreadableConfig } from "@/cli/load-config.ts";
+import { atOnceBy, atOnceWords, backgroundInForce, machineAtBoot, machineWords, type AtOnce } from "@/commons/machine.ts";
+import { inForceFor } from "@/modules/missions/slots.ts";
 
 /**
  * `nouride config check [file]` — would this configuration start?
@@ -116,6 +118,17 @@ async function configCheck(target: string | undefined): Promise<void> {
     fail(unreadableConfig(err) ?? `this configuration would NOT start:\n${err instanceof Error ? err.message : String(err)}`);
   }
   const { config, source, notes, registry } = loaded;
+  // How many helpers and missions would run at once, and whether the file or the machine decides it. Read by this
+  // command, with no daemon to ask: where the daemon's unit gives the agents' commands a cgroup of their own, `doctor`
+  // says the daemon's figure.
+  const machine = machineAtBoot();
+  const helpers = backgroundInForce(config.delegate, machine, undefined);
+  const missions = inForceFor(config.missions, atOnceBy(machine), registry);
+  const atOnce: AtOnce = {
+    machine: machineWords(machine),
+    helpers: { limit: helpers.limit, auto: helpers.from === "machine" },
+    missions: { limit: missions.maxRunning, auto: missions.auto === true },
+  };
   // The registry's own line for each pack that did not load is said below, with its pack; what else was logged is a note.
   const held = release().filter((line) => line.message !== "agent pack failed to load");
 
@@ -136,6 +149,7 @@ async function configCheck(target: string | undefined): Promise<void> {
   say(`${DIM}  agents    ${registry.enabled().length} enabled${failed.length > 0 ? `, ${failed.length} will not load` : ""}${RESET}`);
   say(`${DIM}  gateways  ${config.gateways.filter((g) => g.enabled).map((g) => g.id).join(", ") || "none"}${RESET}`);
   say(`${DIM}  providers ${providersLine(config.providers)}${RESET}`);
+  say(`${DIM}  at once   ${atOnceWords(atOnce)}${RESET}`);
 
   // Booting and working are different questions. Everything above answers the first; these are the
   // combinations that start fine and then fail at the first call — an endpoint the SSRF guard
@@ -162,6 +176,7 @@ async function configCheck(target: string | undefined): Promise<void> {
     source: source ?? null,
     agents: registry.active().map((agent) => agent.config.id),
     gateways: config.gateways.filter((g) => g.enabled).map((g) => g.id),
+    atOnce,
     providers: Object.entries(config.providers).map(([name, profile]) => ({
       name,
       kind: profile.kind,

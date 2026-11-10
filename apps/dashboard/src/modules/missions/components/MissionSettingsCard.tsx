@@ -93,7 +93,7 @@ export function MissionSettingsCard() {
               </span>
               <span className="block text-[11px] leading-snug text-base-content/65">
                 default {fallback}
-                {key === "maxRunning" ? " (half the agents, at most 8)" : ""}
+                {key === "maxRunning" ? " (what this server has room for, at most 4)" : ""}
               </span>
             </label>
           );

@@ -39,7 +39,7 @@ import { detectSupervisor } from "@/service/supervisor.ts";
 import { agentsSeenState, pausedAgentsState } from "@/commons/daemon-state.ts";
 import { AgentsSeen } from "@/commons/agents-seen.ts";
 import { bootMemory } from "@/boot/memory.ts";
-import { reportCommandIsolation } from "@/boot/commands-cgroup.ts";
+import { machineFor, reportCommandIsolation } from "@/boot/commands-cgroup.ts";
 import { VaultFormatError } from "@/modules/memory/format.ts";
 import { refusingExternalOrchestrator, runPreflightChecks } from "@/boot/preflight.ts";
 import { oauthReady, resolveOauthSupport } from "@/modules/users/oidc.ts";
@@ -92,6 +92,7 @@ export async function runDaemon(): Promise<void> {
     data_dir: config.daemon.dataDir,
   });
   reportCommandIsolation(commands);
+  const machine = machineFor(commands);
   if (!sealed && process.platform === "linux") {
     log.warn("could not make the daemon non-dumpable: the commands it runs may read its environment through /proc", {
       hint: "the exec gate still asks about /proc/<pid>/environ when it can see the path",
@@ -277,7 +278,7 @@ export async function runDaemon(): Promise<void> {
 
   // Building the turn machine, its parts first (`boot/turn-machine.ts`): the timers below sweep and alert through them.
   // The context and the pipeline come after them, so each is read through its name only once it is used.
-  const parts = buildTurnParts(stores, { config, contextConfig: () => ctx.config, registry, gateways, memory, externalAgents, builtinSkillsDir, pipeline: () => pipeline });
+  const parts = buildTurnParts(stores, { config, contextConfig: () => ctx.config, machine, registry, gateways, memory, externalAgents, builtinSkillsDir, pipeline: () => pipeline });
   const { missions, notifier, reflection, reach, proposals, approvals } = parts;
 
   if (!integrity.ok) {
@@ -311,6 +312,7 @@ export async function runDaemon(): Promise<void> {
     events,
     helpers: () => helperTrouble(logStore, config, Date.now()),
     commands,
+    machine,
     agentUsers: { through: agentUsers.finding.users?.through ?? null, reason: agentUsers.finding.reason },
     backgroundTimers: [...snapshotTimers, ...upkeep.timers],
   };
@@ -321,7 +323,7 @@ export async function runDaemon(): Promise<void> {
 
   // The machine itself: the MCP servers, the pipeline, the scheduler and the toolset, joined.
   const { mcp, mcpLogins, mcpCatalog, skillRoots, pipeline, scheduler, tools } = await buildTurnMachine(stores, parts, {
-    ctx, config, configPath, progress, registry, gateways, memory, load: upkeep.load, externalAgents, projectSkills, builtinSkillsDir, supervisor: supervisorInfo, startedAt,
+    ctx, config, machine, configPath, progress, registry, gateways, memory, load: upkeep.load, externalAgents, projectSkills, builtinSkillsDir, supervisor: supervisorInfo, startedAt,
   });
 
   // Gateways start concurrently and independently, and the boot waits for them a bounded time: one slow to connect
