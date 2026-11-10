@@ -22,6 +22,18 @@ describe("the machine's cores and memory", () => {
     expect(real.memoryBytes).toBeGreaterThan(0);
   });
 
+  test("a process whose `navigator` was taken away still reads its cores", () => {
+    // What a DOM stand-in in another test file of the same run leaves behind: the full suite met it, no file alone did.
+    const kept = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+    Reflect.deleteProperty(globalThis, "navigator");
+    try {
+      expect((globalThis as { navigator?: unknown }).navigator).toBeUndefined();
+      expect(readMachine().cores).toBeGreaterThanOrEqual(1);
+    } finally {
+      if (kept) Object.defineProperty(globalThis, "navigator", kept);
+    }
+  });
+
   test("a container held below its host is its own limits: the host's sixty-four cores and gigabytes are not its", () => {
     const docker = { "/proc/self/cgroup": "0::/\n", "/sys/fs/cgroup/memory.max": `${2 * GiB}\n`, "/sys/fs/cgroup/cpu.max": "200000 100000\n" };
     expect(readMachine(source(64, 64, docker))).toEqual({ cores: 2, memoryBytes: 2 * GiB });

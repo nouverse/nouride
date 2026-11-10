@@ -8,7 +8,7 @@
  */
 
 import { readFileSync } from "node:fs";
-import { availableParallelism } from "node:os";
+import { availableParallelism, cpus } from "node:os";
 import { totalMemoryBytes } from "./process.ts";
 
 export interface MachineSpec {
@@ -26,8 +26,21 @@ export interface MachineSource {
   read(path: string): string | null;
 }
 
+/**
+ * The cores this process may run on. Bun answers `availableParallelism` from `navigator`, and a process whose global
+ * was taken away (a DOM stand-in does that) has none: it threw, and every caller with it. The CPU list is the same
+ * count where no affinity narrows it.
+ */
+function systemCores(): number {
+  try {
+    return availableParallelism();
+  } catch {
+    return cpus().length;
+  }
+}
+
 const SYSTEM: MachineSource = {
-  cores: () => availableParallelism(),
+  cores: systemCores,
   memoryBytes: () => totalMemoryBytes(),
   read: (path) => {
     try {
