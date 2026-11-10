@@ -1,0 +1,416 @@
+---
+/**
+ * The landing page's look around the dashboard: six real pages, one at a time, and the cat beside them saying what
+ * each is for.
+ *
+ * Radios and labels, as the hero's picker: with no script every page is still one tap away, and the arrow keys move
+ * between them. The script only adds what a script must: the pages turning by themselves until somebody picks one,
+ * and the plate leaning toward the pointer.
+ *
+ * The screenshots are the docs' own (`public/media`), so a page reshot for the manual is reshot here. They are built
+ * to WebP at the widths this plate draws them: a 2560px PNG each would be the heaviest thing on the page six times.
+ * Which shot and which pose a tab takes is here; its words are in `i18n/landing.mjs`, by the tab's id.
+ */
+
+import { Image } from 'astro:assets';
+import home from '../../../public/media/dashboard-overview.png';
+import chats from '../../../public/media/dashboard-chat.png';
+import agents from '../../../public/media/dashboard-agents.png';
+import memory from '../../../public/media/memory-graph.png';
+import skills from '../../../public/media/dashboard-skills.png';
+import schedule from '../../../public/media/dashboard-schedule.png';
+import waving from '@brand/mascot/standing/01-waving.webp';
+import thumbsUp from '@brand/mascot/standing/02-thumbs-up.webp';
+import laptop from '@brand/mascot/standing/05-laptop.webp';
+import reading from '@brand/mascot/states/03-knowledge.webp';
+import searching from '@brand/mascot/states/02-searching.webp';
+import calendar from '@brand/mascot/states/09-schedule.webp';
+
+/** The tabs, in the dashboard's own menu order. */
+const tabs = [
+  { id: 'home', shot: home, pose: waving },
+  { id: 'chats', shot: chats, pose: thumbsUp },
+  { id: 'agents', shot: agents, pose: laptop },
+  { id: 'memory', shot: memory, pose: reading },
+  { id: 'skills', shot: skills, pose: searching },
+  { id: 'schedule', shot: schedule, pose: calendar },
+] as const;
+
+interface Props {
+  /** The `tour` part of one dictionary from `i18n/landing.mjs`. */
+  t: Record<string, any>;
+  /** Where "Tour the dashboard" goes: the manual's page, in this language. */
+  more: string;
+}
+
+const { t, more } = Astro.props;
+---
+
+<section class="tour" id="tour" data-reveal data-tour>
+  <div class="tour-head">
+    <h2 style="--i:0">{t.title}</h2>
+    <p style="--i:1">{t.lead} <a href={more}>{t.link}</a></p>
+  </div>
+
+  <div class="tour-stage" style="--i:2">
+    {tabs.map((tab, i) => (
+      <input type="radio" name="tour" id={`tour-${tab.id}`} class="tour-radio" checked={i === 0} />
+    ))}
+    <div class="tour-tabs" role="presentation">
+      {tabs.map((tab) => (
+        <label for={`tour-${tab.id}`} class={`tour-tab tour-tab-${tab.id}`}>
+          {t.tabs[tab.id].label}
+          <span class="tour-fill" aria-hidden="true"></span>
+        </label>
+      ))}
+    </div>
+
+    <div class="tour-view">
+      <div class="tour-plate" data-tilt>
+        {tabs.map((tab, i) => (
+          <Image
+            class={`tour-shot tour-shot-${tab.id}`}
+            src={tab.shot}
+            alt={t.tabs[tab.id].alt}
+            widths={[720, 1280, 1920]}
+            sizes="(max-width: 68.75rem) 94vw, 62vw"
+            format="webp"
+            quality={82}
+            loading={i === 0 ? 'eager' : 'lazy'}
+          />
+        ))}
+      </div>
+      <div class="tour-guide">
+        {tabs.map((tab) => (
+          <div class={`tour-say tour-say-${tab.id}`}>
+            <img src={tab.pose.src} alt="" width="512" height="512" loading="lazy" />
+            <p><strong>{t.tabs[tab.id].label}</strong>{t.tabs[tab.id].text}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  /**
+   * The pages turn by themselves while the tour is on screen, and stop for good once somebody picks one: a page that
+   * keeps turning under a reader is taking the choice back.
+   *
+   * The timer is the fill in the current tab, a CSS animation: when it ends, the next page comes. So what is drawn
+   * and what is counted cannot disagree, hovering pauses both, and with reduced motion there is no animation and so
+   * no turning.
+   */
+  for (const tour of document.querySelectorAll<HTMLElement>('[data-tour]')) {
+    const radios = [...tour.querySelectorAll<HTMLInputElement>('.tour-radio')];
+    const labels = [...tour.querySelectorAll<HTMLElement>('.tour-tab')];
+    const mark = () => radios.forEach((radio, i) => labels[i]?.classList.toggle('is-current', radio.checked));
+    mark();
+
+    tour.addEventListener('animationend', (event) => {
+      if (!(event.target as HTMLElement).classList.contains('tour-fill')) return;
+      const next = radios[(radios.findIndex((radio) => radio.checked) + 1) % radios.length];
+      if (next) next.checked = true;
+      mark();
+    });
+    // A person's own choice: a click on a tab or an arrow key on the radios. Setting `checked` above fires neither.
+    tour.addEventListener('change', () => {
+      tour.classList.add('is-picked');
+      mark();
+    });
+
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(([entry]) => tour.classList.toggle('is-auto', !!entry?.isIntersecting), {
+        threshold: 0.45,
+      }).observe(tour);
+    }
+
+    // The plate leans a few degrees toward a mouse. Not for a finger: there is no hover to follow.
+    const plate = tour.querySelector<HTMLElement>('[data-tilt]');
+    const still = matchMedia('(prefers-reduced-motion: reduce)').matches || !matchMedia('(hover: hover) and (pointer: fine)').matches;
+    if (plate && !still) {
+      plate.addEventListener('pointermove', (event) => {
+        const box = plate.getBoundingClientRect();
+        plate.style.setProperty('--ry', `${(((event.clientX - box.left) / box.width - 0.5) * 7).toFixed(2)}deg`);
+        plate.style.setProperty('--rx', `${((0.5 - (event.clientY - box.top) / box.height) * 5).toFixed(2)}deg`);
+      });
+      plate.addEventListener('pointerleave', () => {
+        plate.style.setProperty('--ry', '0deg');
+        plate.style.setProperty('--rx', '0deg');
+      });
+    }
+  }
+</script>
+
+<style>
+  .tour {
+    padding: clamp(3.5rem, 6vw, 5.5rem) var(--m) clamp(4.5rem, 9vw, 8.5rem);
+    background: var(--nr-page);
+  }
+  .tour-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 26rem);
+    align-items: end;
+    gap: 1.25rem clamp(2rem, 5vw, 6rem);
+    margin-bottom: clamp(1.5rem, 3vw, 2.25rem);
+  }
+  h2 {
+    margin: 0;
+    font-family: var(--nr-font-display);
+    font-weight: 500;
+    font-synthesis-weight: none;
+    font-size: var(--s-display);
+    line-height: 1;
+    letter-spacing: -0.025em;
+    max-width: 14ch;
+    text-wrap: balance;
+  }
+  .tour-head p {
+    margin: 0;
+    font-size: var(--s-lead);
+    line-height: 1.5;
+    color: var(--nr-body);
+    text-wrap: pretty;
+  }
+  .tour-head a {
+    color: var(--ink);
+    font-weight: 700;
+    text-underline-offset: 0.22em;
+    text-decoration-thickness: 0.08em;
+  }
+
+  .tour-radio {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .tour-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 1.25rem;
+  }
+  .tour-tab {
+    position: relative;
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+    padding: 0.4rem 1.15rem;
+    border-radius: 999px;
+    background: var(--nr-sunk);
+    color: var(--nr-soft);
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 180ms ease, color 180ms ease, transform 140ms var(--ease-out);
+  }
+  .tour-tab:hover {
+    color: var(--nr-ink);
+  }
+  .tour-tab:active {
+    transform: scale(0.97);
+  }
+  #tour-home:checked ~ .tour-tabs .tour-tab-home,
+  #tour-chats:checked ~ .tour-tabs .tour-tab-chats,
+  #tour-agents:checked ~ .tour-tabs .tour-tab-agents,
+  #tour-memory:checked ~ .tour-tabs .tour-tab-memory,
+  #tour-skills:checked ~ .tour-tabs .tour-tab-skills,
+  #tour-schedule:checked ~ .tour-tabs .tour-tab-schedule {
+    background: var(--nr-tint-lavender);
+    color: var(--nr-lavender);
+  }
+  #tour-home:focus-visible ~ .tour-tabs .tour-tab-home,
+  #tour-chats:focus-visible ~ .tour-tabs .tour-tab-chats,
+  #tour-agents:focus-visible ~ .tour-tabs .tour-tab-agents,
+  #tour-memory:focus-visible ~ .tour-tabs .tour-tab-memory,
+  #tour-skills:focus-visible ~ .tour-tabs .tour-tab-skills,
+  #tour-schedule:focus-visible ~ .tour-tabs .tour-tab-schedule {
+    outline: 3px solid var(--nr-lavender);
+    outline-offset: 2px;
+  }
+  /* The time left on the current page, washing across its tab. Only while the pages turn by themselves. */
+  .tour-fill {
+    position: absolute;
+    inset: 0;
+    background: currentColor;
+    opacity: 0.14;
+    transform: scaleX(0);
+    transform-origin: left;
+  }
+
+  /* The plate is no taller than two thirds of the window (a page is 16:10), so a page and its tabs are seen whole. */
+  .tour-view {
+    display: grid;
+    grid-template-columns: minmax(0, calc(62svh * 1.6)) minmax(15rem, 1fr);
+    gap: clamp(1.5rem, 3vw, 3rem);
+    align-items: end;
+    perspective: 100rem;
+  }
+  .tour-guide {
+    max-width: 21rem;
+  }
+  /* The pages lie on one another in a single cell, so the plate is as tall as one of them and nothing jumps. */
+  .tour-plate {
+    display: grid;
+    border-radius: var(--nr-radius-card);
+    border: 1px solid var(--nr-line);
+    background: var(--nr-card);
+    box-shadow: 0 1px 2px var(--nr-shade), 0 24px 60px var(--nr-shade);
+    overflow: hidden;
+    transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+    transition: transform 260ms var(--ease-out);
+  }
+  .tour-shot {
+    grid-area: 1 / 1;
+    display: block;
+    width: 100%;
+    height: auto;
+    opacity: 0;
+    visibility: hidden;
+  }
+  .tour-say {
+    display: none;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .tour-say img {
+    width: clamp(8rem, 13vw, 12rem);
+    height: auto;
+    transform-origin: 50% 90%;
+  }
+  /* What the cat says: a card with its corner toward the cat, as a chat bubble. */
+  .tour-say p {
+    margin: 0;
+    display: grid;
+    gap: 0.2rem;
+    padding: 1rem 1.15rem 1.1rem;
+    border-radius: 0.35rem 1.25rem 1.25rem 1.25rem;
+    background: var(--nr-card);
+    border: 1px solid var(--nr-line);
+    box-shadow: var(--nr-shadow);
+    color: var(--nr-body);
+    text-wrap: pretty;
+  }
+  .tour-say strong {
+    font-family: var(--nr-font-display);
+    font-weight: 500;
+    font-size: var(--s-lead);
+    color: var(--nr-ink);
+  }
+  #tour-home:checked ~ .tour-view .tour-shot-home,
+  #tour-chats:checked ~ .tour-view .tour-shot-chats,
+  #tour-agents:checked ~ .tour-view .tour-shot-agents,
+  #tour-memory:checked ~ .tour-view .tour-shot-memory,
+  #tour-skills:checked ~ .tour-view .tour-shot-skills,
+  #tour-schedule:checked ~ .tour-view .tour-shot-schedule {
+    opacity: 1;
+    visibility: visible;
+  }
+  #tour-home:checked ~ .tour-view .tour-say-home,
+  #tour-chats:checked ~ .tour-view .tour-say-chats,
+  #tour-agents:checked ~ .tour-view .tour-say-agents,
+  #tour-memory:checked ~ .tour-view .tour-say-memory,
+  #tour-skills:checked ~ .tour-view .tour-say-skills,
+  #tour-schedule:checked ~ .tour-view .tour-say-schedule {
+    display: flex;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    /* A page leaves by fading under the one that comes; the one that comes settles from a little larger. */
+    .tour-shot {
+      transform: scale(1.03);
+      transition: opacity 520ms var(--ease-out), transform 900ms var(--ease-out), visibility 0s 520ms;
+    }
+    #tour-home:checked ~ .tour-view .tour-shot-home,
+    #tour-chats:checked ~ .tour-view .tour-shot-chats,
+    #tour-agents:checked ~ .tour-view .tour-shot-agents,
+    #tour-memory:checked ~ .tour-view .tour-shot-memory,
+    #tour-skills:checked ~ .tour-view .tour-shot-skills,
+    #tour-schedule:checked ~ .tour-view .tour-shot-schedule {
+      transform: none;
+      transition-delay: 0s;
+    }
+    /* The cat hops in with each page, then its words. `display` turning on is what starts these. */
+    .tour-say img {
+      animation: tour-hop 620ms var(--ease-out) both;
+    }
+    .tour-say p {
+      animation: tour-word 520ms var(--ease-out) 120ms both;
+    }
+    .tour.is-auto:not(.is-picked) .tour-tab.is-current .tour-fill {
+      animation: tour-fill 6s linear forwards;
+    }
+    .tour-stage:hover .tour-fill {
+      animation-play-state: paused;
+    }
+
+    /* The chapter's own entrance, as every chapter's: its parts rise in reading order once it is on screen. */
+    :global(html.js) .tour [style*='--i'] {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 700ms var(--ease-out), transform 900ms var(--ease-out);
+      transition-delay: calc(var(--i) * 75ms);
+    }
+    :global(html.js) .tour.is-in [style*='--i'] {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes tour-hop {
+    0% { opacity: 0; transform: translateY(18px) scale(0.92) rotate(-5deg); }
+    60% { opacity: 1; transform: translateY(-6px) scale(1.02) rotate(2deg); }
+    100% { opacity: 1; transform: none; }
+  }
+  @keyframes tour-word {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes tour-fill {
+    to { transform: scaleX(1); }
+  }
+
+  /* Below 1100px the cat and its words go under the plate, side by side. */
+  @media (max-width: 68.75rem) {
+    .tour-head {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .tour-view {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .tour-guide {
+      max-width: none;
+    }
+    .tour-say {
+      flex-direction: row;
+      align-items: flex-end;
+      gap: 1rem;
+    }
+    .tour-say img {
+      width: 7rem;
+      flex-shrink: 0;
+    }
+    .tour-say p {
+      border-radius: 1.25rem 1.25rem 1.25rem 0.35rem;
+      max-width: 34rem;
+    }
+  }
+  /* A phone: the tabs are one row to swipe, so six of them do not push the page down three lines. */
+  @media (max-width: 47.99rem) {
+    .tour-tabs {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      margin-inline: calc(var(--m) * -1);
+      padding-inline: var(--m);
+      scrollbar-width: none;
+    }
+    .tour-tab {
+      flex-shrink: 0;
+    }
+    .tour-plate {
+      border-radius: var(--nr-radius-field);
+    }
+    .tour-say img {
+      width: 5.5rem;
+    }
+  }
+</style>

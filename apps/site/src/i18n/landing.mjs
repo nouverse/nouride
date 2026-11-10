@@ -24,7 +24,7 @@ export const en = {
       'Nouride runs a few AI agents on a small box you own, and uses very little of it. Chat with them on Telegram, Discord, WhatsApp or right in your browser.',
     primary: 'Install Nouride',
     secondary: 'What is it?',
-    mascotAlt: 'The Nouride cat, waving hello',
+    mascotAlt: 'The Nouride cat on its scooter, waving hello',
     /** The folder tabs, back to front. Each one names a chapter below and lends it its colour. */
     folders: { office: 'Office', approvals: 'Approvals', missions: 'Missions', chats: 'Chats', start: 'Start here' },
     pick: 'Where will it live?',
@@ -42,6 +42,20 @@ export const en = {
     },
     copy: 'Copy',
     copied: 'Copied',
+  },
+  /** The look around the dashboard. A tab's label is the dashboard's own word for that page, in English on both pages. */
+  tour: {
+    title: 'Look around before you install',
+    lead: 'The dashboard is served by your own box. These are its pages, as they look today.',
+    link: 'Tour the dashboard',
+    tabs: {
+      home: { label: 'Home', text: 'What needs you, what is moving, and a quick chat, on one page.', alt: "The dashboard's Home: a greeting, what needs you, what is moving and a quick chat" },
+      chats: { label: 'Chats', text: 'Talk to any agent, and see each step it took to answer.', alt: 'A chat with an agent in the dashboard, with the steps it took' },
+      agents: { label: 'Agents', text: 'Each agent has its own model, its own tools and its own chat connections.', alt: 'The Agents page: a card for each agent with its model, connections and tools' },
+      memory: { label: 'Memory', text: 'Every conversation they remember, joined to the people in it and its tags.', alt: 'The memory graph: conversations joined to people, tags and agents' },
+      skills: { label: 'Skills', text: 'One pool of skills for every agent, and a switch for each.', alt: 'The Skills page: the list of skills and which agents have each switched on' },
+      schedule: { label: 'Schedule', text: 'Jobs that run again and again or just once, each with its next run.', alt: 'The Schedule page: jobs with their times and next runs' },
+    },
   },
   chats: {
     title: 'Say hi from the apps you already use',
@@ -157,7 +171,7 @@ export const id = {
       'Nouride menjalankan beberapa agent AI di box kecil milikmu, dan cuma butuh sedikit resource. Ajak mereka ngobrol lewat Telegram, Discord, WhatsApp, atau langsung di browser.',
     primary: 'Pasang Nouride',
     secondary: 'Kenalan dulu',
-    mascotAlt: 'Kucing Nouride melambaikan tangan',
+    mascotAlt: 'Kucing Nouride naik skuter sambil melambaikan tangan',
     folders: { office: 'Office', approvals: 'Izin', missions: 'Misi', chats: 'Chat', start: 'Mulai di sini' },
     pick: 'Mau dipasang di mana?',
     platforms: { linux: 'Linux', macos: 'Mac', docker: 'Docker', android: 'Android' },
@@ -174,6 +188,19 @@ export const id = {
     },
     copy: 'Salin',
     copied: 'Tersalin',
+  },
+  tour: {
+    title: 'Lihat-lihat dulu sebelum pasang',
+    lead: 'Dashboard-nya disajikan oleh mesinmu sendiri. Ini halaman-halamannya, seperti tampilannya sekarang.',
+    link: 'Keliling dashboard',
+    tabs: {
+      home: { label: 'Home', text: 'Yang butuh kamu, yang sedang jalan, dan chat cepat, dalam satu halaman.', alt: 'Home di dashboard: sapaan, yang butuh kamu, yang sedang jalan, dan chat cepat' },
+      chats: { label: 'Chats', text: 'Ngobrol dengan agent mana pun, dan lihat tiap langkah yang dia ambil untuk menjawab.', alt: 'Chat dengan agent di dashboard, lengkap dengan langkah-langkahnya' },
+      agents: { label: 'Agents', text: 'Tiap agent punya model, tool, dan sambungan chat sendiri.', alt: 'Halaman Agents: kartu tiap agent dengan model, sambungan, dan tool-nya' },
+      memory: { label: 'Memory', text: 'Semua percakapan yang mereka ingat, terhubung ke orang-orangnya dan tag-nya.', alt: 'Graf memori: percakapan yang terhubung ke orang, tag, dan agent' },
+      skills: { label: 'Skills', text: 'Satu kumpulan skill untuk semua agent, dengan sakelar untuk tiap agent.', alt: 'Halaman Skills: daftar skill dan agent mana yang menyalakannya' },
+      schedule: { label: 'Schedule', text: 'Tugas yang jalan berulang atau sekali saja, lengkap dengan jadwal berikutnya.', alt: 'Halaman Schedule: tugas dengan waktu dan jadwal berikutnya' },
+    },
   },
   chats: {
     title: 'Sapa dari aplikasi yang biasa kamu pakai',

@@ -20,9 +20,11 @@ your work.
 
 ## Which ones the landing page uses
 
-`dashboard-office` only, in the Office chapter, drawn at half the page's width. It is the one screenshot
-a visitor sees before the docs, so it is worth replacing first; the rest are referenced from the manual,
-where a reader already knows what they are looking at.
+Seven. The tour under the hero turns through six (`dashboard-overview`, `dashboard-chat`, `dashboard-agents`,
+`memory-graph`, `dashboard-skills`, `dashboard-schedule`), and the Office chapter draws `dashboard-office` at half the
+page's width. They are what a visitor sees before the docs, so they are worth keeping current first; the tour builds
+its own smaller WebP copies from these files, so replacing one here is all it takes. The rest are referenced from the
+manual, where a reader already knows what they are looking at.
 
 ## Adding a slot
 

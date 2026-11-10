@@ -65,8 +65,26 @@ state and is used for that state only:
   an update, a delivery); good night: the Night greeting;
 - the head alone: the logo, the favicon and the app icon.
 
+What it stands for (the owner's reading, 2026-11-10), so a new pose or a line of copy keeps to it:
+
+- **The rider.** The name holds "ride". Where other products call theirs an assistant or a copilot that waits in a
+  corner for an order, this one drives: it runs the daemon on your machine, carries missions in the background and
+  goes along on the long jobs. Draw it doing something, on its way somewhere.
+- **The helmet is protection.** It is Nouride's core values worn on the head: safety, self-contained, kept apart on
+  your own hardware with its own storage and no outside server to lean on. It also says tough: ready for whatever
+  machine it is put on, a homelab server, a Mac, a cheap set-top box in a corner of the house. The cat never takes it
+  off.
+- **A relaxed cat in a protective helmet.** A cat is independent, easygoing and nimble; a helmet is functional and
+  protective. Together: relaxed but tough. Keep both in a pose; neither a mascot that is only cute nor one that is
+  only armoured.
+
+On the landing page it also moves: it rides into the hero, rides along the window's foot as the page scrolls and wags
+its tail at the footer. Those are the page's own (`apps/site/src/components/landing/`), cut from the sheets in
+`docs/design/mascot/grids` by `apps/site/scripts/cut-mascot-motion.ts`.
+
 At most one mascot per view, beside the content it explains and never on top of it; Home is the one
-exception its mockup draws, a small one beside the card it explains. No mascot in a table, a form or a
+exception its mockup draws, a small one beside the card it explains. The landing page is the other: a chapter has
+its own cat, and the rider at the window's foot is beside them. No mascot in a table, a form or a
 dialog's body. A view that reads as plain information gets none. In the dashboard a pose is `<Mascot
 pose=…>` or `<EmptyState pose=…>`; which state takes which pose is the table in v0.8.24's RFC
 ("The new look, as built").

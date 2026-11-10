@@ -1,0 +1,171 @@
+---
+/**
+ * The cat rides along the foot of the window as the page is read: where it is, is how far down the page you are.
+ *
+ * Scrolling is what moves it. Its six drawn frames step with the distance scrolled, not with a clock, so it rides
+ * while the page moves and holds still when it does not; scrolling back up turns it round. It is decoration: hidden
+ * from a screen reader, never in the way of a click, absent with reduced motion and with no script.
+ *
+ * The frames are one strip (`mascot/motion/ride.webp`, cut by `scripts/cut-mascot-motion.ts`), shown one cell at a
+ * time by moving the background.
+ */
+
+import ride from '@brand/mascot/motion/ride.webp';
+
+/** The frames in the strip. The script and the stylesheet both read it from the element. */
+const FRAMES = 6;
+---
+
+<div
+  class="rider"
+  aria-hidden="true"
+  data-rider
+  data-frames={FRAMES}
+  style={`--strip:url(${ride.src});--frames:${FRAMES};--cell:${ride.width / FRAMES / ride.height}`}
+>
+  <span class="rider-road"><span class="rider-done"></span></span>
+  <span class="rider-cat">
+    <span class="rider-puff"></span>
+    <span class="rider-puff"></span>
+    <span class="rider-sprite"></span>
+  </span>
+</div>
+
+<script>
+  /** How far the page scrolls for the drawing to step one frame. */
+  const STEP = 42;
+
+  const rider = document.querySelector<HTMLElement>('[data-rider]');
+  if (rider && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const frames = Number(rider.dataset.frames);
+    let last = window.scrollY;
+    let queued = false;
+    let resting: ReturnType<typeof setTimeout> | undefined;
+
+    const draw = () => {
+      queued = false;
+      const y = window.scrollY;
+      const room = document.documentElement.scrollHeight - window.innerHeight;
+      // It comes out once the hero's greeting has gone by: two riders on one screen is one too many.
+      rider.classList.toggle('is-on', y > window.innerHeight * 0.6);
+      rider.style.setProperty('--p', (room > 0 ? Math.min(1, y / room) : 0).toFixed(4));
+      rider.style.setProperty('--f', String(Math.floor(y / STEP) % frames));
+      if (y !== last) {
+        rider.classList.toggle('is-back', y < last);
+        rider.classList.add('is-riding');
+        clearTimeout(resting);
+        resting = setTimeout(() => rider.classList.remove('is-riding'), 160);
+      }
+      last = y;
+    };
+    const queue = () => {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(draw);
+    };
+    window.addEventListener('scroll', queue, { passive: true });
+    window.addEventListener('resize', queue);
+    draw();
+  }
+</script>
+
+<style>
+  .rider {
+    --h: 4.75rem;
+    --w: calc(var(--h) * var(--cell));
+    position: fixed;
+    inset: auto 0 0 0;
+    z-index: 5;
+    height: calc(var(--h) + 0.5rem);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 320ms ease;
+  }
+  .rider.is-on {
+    opacity: 1;
+  }
+  /* The road: a hairline along the window's foot, lavender up to where the cat is. */
+  .rider-road {
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 3px;
+    background: color-mix(in oklab, var(--nr-ink) 10%, transparent);
+  }
+  .rider-done {
+    display: block;
+    height: 100%;
+    background: var(--nr-fill-lavender);
+    transform: scaleX(var(--p, 0));
+    transform-origin: left;
+  }
+  .rider-cat {
+    position: absolute;
+    left: 0;
+    bottom: 1px;
+    width: var(--w);
+    height: var(--h);
+    transform: translate3d(calc(var(--p, 0) * (100vw - var(--w))), 0, 0);
+  }
+  .rider-sprite {
+    position: absolute;
+    inset: 0;
+    background-image: var(--strip);
+    background-size: calc(var(--frames) * 100%) 100%;
+    background-position: calc(var(--f, 0) * 100% / (var(--frames) - 1)) 0;
+    filter: drop-shadow(0 2px 3px rgb(0 0 0 / 0.18));
+    transform-origin: 50% 100%;
+    transition: transform 240ms var(--ease-out);
+  }
+  .rider.is-back .rider-sprite {
+    transform: scaleX(-1);
+  }
+  /* Leaning into it while the page moves. */
+  .rider.is-riding .rider-sprite {
+    transform: rotate(-4deg);
+  }
+  .rider.is-riding.is-back .rider-sprite {
+    transform: scaleX(-1) rotate(-4deg);
+  }
+  /* Dust behind the back wheel, only while it rides. */
+  .rider-puff {
+    position: absolute;
+    left: -0.2rem;
+    bottom: 0.1rem;
+    width: 0.7rem;
+    height: 0.7rem;
+    border-radius: 50%;
+    background: color-mix(in oklab, var(--nr-ink) 22%, transparent);
+    opacity: 0;
+  }
+  .rider.is-back .rider-puff {
+    left: auto;
+    right: -0.2rem;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .rider.is-riding .rider-puff {
+      animation: rider-puff 520ms ease-out infinite;
+    }
+    .rider.is-riding .rider-puff + .rider-puff {
+      animation-delay: 260ms;
+    }
+  }
+  @keyframes rider-puff {
+    0% { opacity: 0.7; transform: translate(0, 0) scale(0.6); }
+    100% { opacity: 0; transform: translate(-1.1rem, -0.7rem) scale(1.5); }
+  }
+  .rider.is-back .rider-puff {
+    scale: -1 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rider {
+      display: none;
+    }
+  }
+  @media (max-width: 47.99rem) {
+    .rider {
+      --h: 3.5rem;
+    }
+  }
+</style>
