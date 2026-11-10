@@ -9,9 +9,11 @@
  * takes the focus as it opens — its first field from a tablet's width up, the panel itself on a phone, where a field
  * would bring the keyboard up over it — and gives it back to whatever had it.
  *
- * A side drawer is placed in its parent, which is `relative`: the conversation's pane, under its bar. A sheet is drawn at
- * the body, where no card's glass can hold a `fixed` box inside it (`OverPage`). It is not a dialog a page draws and
- * stops drawing, so it needs no `Leaving`: it is always drawn, and moves.
+ * A side drawer is placed in its parent, which is `relative`: the conversation's pane, under its bar. It is a panel
+ * beside the conversation (`<aside>`), as History and the notes always were, not a dialog: the page around it stays
+ * where it was, and a phone's checks read it as no card of the page. A sheet is a dialog, drawn at the body, where no
+ * card's glass can hold a `fixed` box inside it (`OverPage`). Neither is drawn and undrawn by its page, so neither
+ * needs `Leaving`: each is always drawn, and moves.
  */
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -92,6 +94,7 @@ export function Drawer({
 
   const place = SIDES[side];
   const sheet = side === "bottom";
+  const Panel = sheet ? "div" : "aside";
   const drawer = (
     <>
       <button
@@ -101,18 +104,18 @@ export function Drawer({
         onClick={onClose}
         className={cn(sheet ? "fixed z-40" : "absolute z-20", "inset-0", DRAWER_SHADE, open ? SHADE_PLACE.open : SHADE_PLACE.closed)}
       />
-      <div
+      <Panel
         ref={panel}
-        role="dialog"
+        {...(sheet ? { role: "dialog" } : {})}
         aria-label={label}
         tabIndex={-1}
         inert={!open}
         data-drawer={side}
         data-open={open ? "" : undefined}
-        className={cn(sheet ? "fixed z-50" : "absolute z-30", "flex flex-col overflow-hidden outline-none", place.box, DRAWER_MOTION, open ? place.open : place.closed, className)}
+        className={cn(sheet ? "fixed z-50" : "absolute z-30 pb-[env(safe-area-inset-bottom)]", "flex flex-col overflow-hidden outline-none", place.box, DRAWER_MOTION, open ? place.open : place.closed, className)}
       >
         {drawn ? children : null}
-      </div>
+      </Panel>
     </>
   );
   return sheet ? createPortal(drawer, document.body) : drawer;

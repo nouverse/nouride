@@ -375,7 +375,7 @@ describe("an agent's History", () => {
     await renderPage("/chat/ses_1", async (host) => {
       await eventually(() => host.querySelector(`button[aria-label="Nouva's conversations"]`) !== null, 3_000, "History");
       (host.querySelector(`button[aria-label="Nouva's conversations"]`) as HTMLElement).click();
-      const panel = () => dom.document.body.querySelector(`[role="dialog"][aria-label="Nouva's conversations"]`);
+      const panel = () => dom.document.body.querySelector(`[data-drawer][aria-label="Nouva's conversations"]`);
       await eventually(() => (panel()?.textContent ?? "").includes("a private chat"), 3_000, "the History");
       rows = [...panel()!.querySelectorAll("a[href*='/chat/ses']")].map((row) => row.textContent ?? "");
     });

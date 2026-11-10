@@ -114,6 +114,8 @@ describe("the chat's drawers", () => {
       const shade = () => host.querySelector('button[aria-label="Close Nouva\'s conversations"]');
       await eventually(() => history() !== null && notes() !== null && button() !== null, 4_000, "the drawers");
       seen.closed = { history: classes(history()), notes: classes(notes()), inert: [history()!.hasAttribute("inert"), notes()!.hasAttribute("inert")], shade: classes(shade()) };
+      // Panels beside the conversation, not dialogs: the phone's checks read a page's dialogs as its cards.
+      seen.kinds = [history()!.tagName, notes()!.tagName, history()!.getAttribute("role"), notes()!.getAttribute("role")];
       button()!.focus();
       button()!.click();
       await eventually(() => classes(history()).includes("translate-x-0"), 2_000, "History open");
@@ -133,6 +135,7 @@ describe("the chat's drawers", () => {
     expect(closed.history).toEqual(expect.arrayContaining([...MOTION, "invisible", "-translate-x-full"]));
     expect(closed.notes).toEqual(expect.arrayContaining([...MOTION, "invisible", "translate-x-full"]));
     expect(closed.inert).toEqual([true, true]);
+    expect(seen.kinds).toEqual(["ASIDE", "ASIDE", null, null]);
     expect(closed.shade).toEqual(expect.arrayContaining(["invisible", "opacity-0"]));
     // Twins: the same width, from either side.
     const width = closed.history.find((one) => one.startsWith("w-"));
@@ -166,8 +169,11 @@ describe("the chat's drawers", () => {
     const root = createRoot(holder as never);
     flushSync(() => root.render(React.createElement(Drawer, { open: true, onClose: () => undefined, side: "bottom", label: "A sheet", children: "in it" })));
     seen.sheet = (dom.document.body.querySelector('[data-drawer="bottom"]')?.getAttribute("class") ?? "").split(/\s+/);
+    // A sheet over the page is a dialog, drawn at the body.
+    seen.sheetRole = [dom.document.body.querySelector('[data-drawer="bottom"]')?.getAttribute("role") ?? ""];
     flushSync(() => root.unmount());
     holder.remove();
+    expect(seen.sheetRole).toEqual(["dialog"]);
     for (const token of [...SHEET_BOX.split(" "), ...DRAWER_MOTION.split(" ")]) {
       expect(seen.more).toContain(token);
       expect(seen.sheet).toContain(token);
