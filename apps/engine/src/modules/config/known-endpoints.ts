@@ -10,19 +10,28 @@
  * and every compaction, and takes `max_completion_tokens` for every chat model. A server that speaks the same format
  * (OpenRouter, Ollama, vLLM, llama.cpp, Groq, Nougate) may know only `max_tokens`, so the field is written for the
  * endpoint known to need it and for no other. A key the profile already says, either way, is the operator's answer.
+ *
+ * `identify` is off unless a profile says it, because a strict server rejects a field it does not know. The two
+ * vendors' own APIs take the fields it sends, and on OpenAI's one of them keeps a conversation's requests on the
+ * cache its prefix is already in, so a profile on either is written with it. What it sends names no person: the
+ * conversation goes as a digest (`executor/provider-caller.ts`).
  */
 
 import { parseToml } from "@nouride/runtime";
 import type { ProviderKind } from "@nouride/shared";
 import { isPlainObject } from "./global/merge.ts";
 
+/** A value a profile is written with, and why: a line for whoever reads where it is written (`config check`, the boot's log). */
+interface EndpointKey {
+  value: string | boolean;
+  why: string;
+}
+
 interface KnownEndpoint {
   kind: ProviderKind;
   baseUrl: string;
   /** What a profile on it is written with, as `config.toml` spells it. */
-  keys: Readonly<Record<string, string>>;
-  /** Why, in a line for whoever reads where it is written (`config check`, the boot's log). */
-  why?: string;
+  keys: Readonly<Record<string, EndpointKey>>;
   /**
    * Minutes the endpoint keeps a cached prompt after its last request, where its vendor states one figure: what a
    * profile on it is read with when it has no `cache_minutes` of its own. Read at load and never written, so a
@@ -33,14 +42,21 @@ interface KnownEndpoint {
 
 const KNOWN_ENDPOINTS: readonly KnownEndpoint[] = [
   // Five minutes: the lifetime Anthropic documents for the cache marker the client sends, which asks for no longer one.
-  { kind: "anthropic", baseUrl: "https://api.anthropic.com/v1", keys: {}, cacheMinutes: 5 },
+  {
+    kind: "anthropic",
+    baseUrl: "https://api.anthropic.com/v1",
+    keys: { identify: { value: true, why: "Anthropic's own API takes metadata.user_id, which tells one conversation's requests from another's" } },
+    cacheMinutes: 5,
+  },
   // No lifetime here: OpenAI documents from minutes to a day, by model and by the organization's retention, so a
   // profile on it is read as any endpoint that does not say, unless its `cache_minutes` does.
   {
     kind: "openai",
     baseUrl: "https://api.openai.com/v1",
-    keys: { max_tokens_field: "max_completion_tokens" },
-    why: "OpenAI's own API takes a reply's output limit only as max_completion_tokens for its newer models",
+    keys: {
+      max_tokens_field: { value: "max_completion_tokens", why: "OpenAI's own API takes a reply's output limit only as max_completion_tokens for its newer models" },
+      identify: { value: true, why: "OpenAI's own API takes user and prompt_cache_key, which keeps a conversation's requests on the cache its prefix is in" },
+    },
   },
 ];
 
@@ -83,14 +99,15 @@ function profileTables(text: string): Record<string, unknown> {
  *
  * `now` is where the profile is being pointed; absent, where the file already points it.
  */
-export function endpointKeys(text: string, profile: string, now?: { kind: unknown; baseUrl: unknown }): { set: Record<string, string>; remove: string[] } {
+export function endpointKeys(text: string, profile: string, now?: { kind: unknown; baseUrl: unknown }): { set: Record<string, string | boolean>; remove: string[]; why: string[] } {
   const found = profileTables(text)[profile];
   const table = isPlainObject(found) ? found : undefined;
   const was = table ? endpointAt(table.kind, table.base_url) : undefined;
   const to = now ? endpointAt(now.kind, now.baseUrl) : was;
-  const remove = was && was !== to ? Object.entries(was.keys).filter(([key, value]) => table?.[key] === value && to?.keys[key] !== value).map(([key]) => key) : [];
-  const set = Object.fromEntries(Object.entries(to?.keys ?? {}).filter(([key]) => table?.[key] === undefined || remove.includes(key)));
-  return { set, remove };
+  const remove = was && was !== to ? Object.entries(was.keys).filter(([key, { value }]) => table?.[key] === value && to?.keys[key]?.value !== value).map(([key]) => key) : [];
+  // Only what the table does not say: a key written either way, `identify = false` included, is the operator's answer.
+  const lacking = Object.entries(to?.keys ?? {}).filter(([key]) => table?.[key] === undefined || remove.includes(key));
+  return { set: Object.fromEntries(lacking.map(([key, { value }]) => [key, value])), remove, why: lacking.map(([, { why }]) => why) };
 }
 
 /**
@@ -98,11 +115,11 @@ export function endpointKeys(text: string, profile: string, now?: { kind: unknow
  * profile named in TOML's bare letters: the config editor addresses a table by a dotted path, which a quoted name with
  * a dot in it would split.
  */
-export function profilesBehind(text: string): { profile: string; set: Record<string, string>; why: string }[] {
+export function profilesBehind(text: string): { profile: string; set: Record<string, string | boolean>; why: string }[] {
   return Object.entries(profileTables(text)).flatMap(([profile, table]) => {
     if (!/^[A-Za-z0-9_-]+$/.test(profile) || !isPlainObject(table)) return [];
-    const { set } = endpointKeys(text, profile);
+    const { set, why } = endpointKeys(text, profile);
     if (Object.keys(set).length === 0) return [];
-    return [{ profile, set, why: endpointAt(table.kind, table.base_url)?.why ?? "" }];
+    return [{ profile, set, why: why.join("; ") }];
   });
 }

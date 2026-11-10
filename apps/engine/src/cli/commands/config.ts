@@ -87,7 +87,7 @@ function providersLine(providers: GlobalConfig["providers"]): string {
 async function broughtForward(source: string): Promise<ConfigNote[]> {
   const text = await readTextFileIfExists(source);
   return profilesBehind(text ?? "").map((behind) => ({
-    message: `[providers.${behind.profile}] will be given ${Object.entries(behind.set).map(([key, value]) => `${key} = "${value}"`).join(", ")} at the next start`,
+    message: `[providers.${behind.profile}] will be given ${Object.entries(behind.set).map(([key, value]) => `${key} = ${JSON.stringify(value)}`).join(", ")} at the next start`,
     ...(behind.why ? { hint: behind.why } : {}),
   }));
 }

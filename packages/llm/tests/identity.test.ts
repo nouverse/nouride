@@ -13,7 +13,7 @@ import { LLMError } from "@nouride/shared";
 import { failedVia, postJson, servedBy } from "../src/http.ts";
 import { fakeFetch, jsonResponse, noSleep, sseResponse } from "./helpers.ts";
 
-const identity = { agentId: "nouva", conversation: "ses_nouva:telegram:main:814" };
+const identity = { agentId: "nouva", conversation: "5f0c1d2e3a4b5c6d7e8f9a0b1c2d3e4f" };
 const asked = { model: "m", messages: [{ role: "user" as const, content: "hi" }], identity };
 
 describe("OpenAI-compatible", () => {
@@ -22,7 +22,7 @@ describe("OpenAI-compatible", () => {
   test("identified: the agent and conversation in `user`, the conversation as the cache key, the agent as the client", async () => {
     const fetcher = fakeFetch(answer());
     await new OpenAIProvider({ baseUrl: "https://gw.test/v1", apiKey: "k", identify: true, http: { fetchImpl: fetcher.fn, sleep: noSleep } }).chat(asked);
-    expect(fetcher.last().body).toMatchObject({ user: "nouva:ses_nouva:telegram:main:814", prompt_cache_key: "ses_nouva:telegram:main:814" });
+    expect(fetcher.last().body).toMatchObject({ user: "nouva:5f0c1d2e3a4b5c6d7e8f9a0b1c2d3e4f", prompt_cache_key: "5f0c1d2e3a4b5c6d7e8f9a0b1c2d3e4f" });
     expect(fetcher.last().headers["x-client-id"]).toBe("nouride/nouva");
   });
 
@@ -41,7 +41,7 @@ describe("Anthropic", () => {
   test("identified: `metadata.user_id`, the Messages API's own field for it; not identified: nothing", async () => {
     const on = fakeFetch(answer());
     await new AnthropicProvider({ baseUrl: "https://gw.test/v1", apiKey: "k", identify: true, http: { fetchImpl: on.fn, sleep: noSleep } }).chat(asked);
-    expect(on.last().body.metadata).toEqual({ user_id: "nouva:ses_nouva:telegram:main:814" });
+    expect(on.last().body.metadata).toEqual({ user_id: "nouva:5f0c1d2e3a4b5c6d7e8f9a0b1c2d3e4f" });
 
     const off = fakeFetch(answer());
     await new AnthropicProvider({ baseUrl: "https://gw.test/v1", apiKey: "k", http: { fetchImpl: off.fn, sleep: noSleep } }).chat(asked);

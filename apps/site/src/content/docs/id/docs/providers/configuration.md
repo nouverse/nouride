@@ -44,12 +44,14 @@ ada di engine yang perlu peduli. Sebuah proxy bisa melayani salah satu format.
 kind = "anthropic"
 base_url = "https://api.anthropic.com/v1"
 api_key = "anthropic_api_key"
+identify = true                              # ditulis untuk API milik kedua vendor; lihat di bawah
 
 [providers.openai]
 kind = "openai"
 base_url = "https://api.openai.com/v1"
 api_key = "openai_api_key"
 max_tokens_field = "max_completion_tokens"   # khusus API OpenAI sendiri; lihat di bawah
+identify = true
 
 [providers.openrouter]
 kind = "openai"
@@ -73,6 +75,17 @@ agent diperiksa dan ditolak kalau nilainya terlihat seperti kredensial; milik pr
 Gateway seperti Nougate membedakan klien dan sesinya dengan itu, dan OpenAI mengirim request sebuah
 percakapan ke cache tempat awalannya sudah ada. Mati kecuali diisi, karena server yang ketat menolak
 field yang gak dikenalnya.
+
+API OpenAI sendiri dan API Anthropic sendiri menerima field-field itu, jadi kamu gak perlu menulisnya untuk keduanya:
+setup, dashboard, dan `nouride provider add` menulis `identify = true` untuk profil di `https://api.openai.com/v1` atau
+`https://api.anthropic.com/v1`, dan start pertama setelah update menuliskannya ke profil yang dibuat sebelumnya,
+sekali, dan mencatatnya di log. `nouride config check` bilang kalau start berikutnya akan menulisnya. Supaya tetap
+mati, tulis `identify = false`: profil yang sudah menulis `identify`, apa pun nilainya, tetap dengan nilainya. Server
+lain tetap seperti yang kamu atur, termasuk Nougate, yang kamu nyalakan sendiri.
+
+Yang dikirim gak menyebut orang. Agent disebut dengan id-nya, seperti nama yang kamu beri di pack-nya. Percakapan
+disebut dengan id yang gak bermakna, 32 huruf dan angka yang dibuat dari id percakapan itu dengan hash satu arah, sama di
+setiap request percakapan itu: gak ada id chat, nomor telepon, username, atau nama di dalamnya.
 
 `max_tokens_field` adalah field tempat batas output sebuah balasan dikirim, di format OpenAI. API OpenAI sendiri
 menolak `max_tokens` untuk model-model barunya (keluarga GPT-5 salah satunya) dengan `Unsupported parameter:

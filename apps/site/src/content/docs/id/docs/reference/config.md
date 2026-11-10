@@ -103,7 +103,8 @@ kind = "anthropic"                  # wire format-nya, bukan vendornya
 base_url = "https://nougate.nouverse.tech/anthropic/v1"
 api_key = "nougate"                 # NAMA sebuah secret
 # headers = { "HTTP-Referer" = "https://nouverse.tech" }
-# identify = true                   # sebutkan agent dan percakapan untuk tiap request
+# identify = true                   # sebutkan agent dan percakapan untuk tiap request; ditulis otomatis
+                                    # untuk API OpenAI dan Anthropic sendiri
 # billing = "included"              # langganan: gak ada biaya per token
 # max_tokens_field = "max_completion_tokens"   # API OpenAI sendiri: tempat batas output balasan
 # cache_minutes = 5                 # berapa lama endpoint ini menyimpan cache prompt sebuah percakapan

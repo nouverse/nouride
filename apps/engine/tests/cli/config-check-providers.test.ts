@@ -37,8 +37,9 @@ describe("nouride config check, on provider profiles", () => {
     const run = await check();
     expect(run.code).toBe(0);
     expect(run.out).toContain("providers openai, gate (output limit as max_completion_tokens), nougate");
-    expect(run.out).toContain('! [providers.openai] will be given max_tokens_field = "max_completion_tokens" at the next start');
+    expect(run.out).toContain('! [providers.openai] will be given max_tokens_field = "max_completion_tokens", identify = true at the next start');
     expect(run.out).toContain("OpenAI's own API takes a reply's output limit only as max_completion_tokens for its newer models");
+    expect(run.out).toContain("OpenAI's own API takes user and prompt_cache_key, which keeps a conversation's requests on the cache its prefix is in");
     expect(run.out).not.toContain("[providers.nougate] will be given");
     // A check, not a start: the file is the next start's to change.
     expect(readFileSync(configPath, "utf8")).toBe(before);
@@ -52,11 +53,20 @@ describe("nouride config check, on provider profiles", () => {
       { name: "gate", kind: "openai", maxTokensField: "max_completion_tokens" },
       { name: "nougate", kind: "openai", maxTokensField: "max_tokens" },
     ]);
-    expect(envelope.data.notes.map((note) => note.message)).toContain('[providers.openai] will be given max_tokens_field = "max_completion_tokens" at the next start');
+    expect(envelope.data.notes.map((note) => note.message)).toContain('[providers.openai] will be given max_tokens_field = "max_completion_tokens", identify = true at the next start');
+  });
+
+  test("a profile that has the field and not identify is told identify alone; identify = false is an answer", async () => {
+    const withField = readFileSync(configPath, "utf8").replace('api_key = "openai_api_key"\n', 'api_key = "openai_api_key"\nmax_tokens_field = "max_completion_tokens"\n');
+    writeFileSync(configPath, withField);
+    expect((await check()).out).toContain("! [providers.openai] will be given identify = true at the next start");
+
+    writeFileSync(configPath, withField.replace('max_tokens_field = "max_completion_tokens"\n\n[providers.gate]', 'max_tokens_field = "max_completion_tokens"\nidentify = false\n\n[providers.gate]'));
+    expect((await check()).out).not.toContain("will be given");
   });
 
   test("once the profile says it, nothing is left to write", async () => {
-    writeFileSync(configPath, readFileSync(configPath, "utf8").replace('api_key = "openai_api_key"\n', 'api_key = "openai_api_key"\nmax_tokens_field = "max_completion_tokens"\n'));
+    writeFileSync(configPath, readFileSync(configPath, "utf8").replace('api_key = "openai_api_key"\n', 'api_key = "openai_api_key"\nmax_tokens_field = "max_completion_tokens"\nidentify = true\n'));
     const run = await check();
     expect(run.out).toContain("providers openai (output limit as max_completion_tokens), gate (output limit as max_completion_tokens), nougate");
     expect(run.out).not.toContain("will be given");

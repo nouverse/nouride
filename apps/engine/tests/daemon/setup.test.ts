@@ -285,6 +285,42 @@ describe("saveProvider", () => {
     expect(config.providers.openrouter?.maxTokensField).toBeUndefined();
   });
 
+  test("the two vendors' own APIs are written with identify = true, live; OpenRouter, a local server and Nougate are not", async () => {
+    // They take the fields it sends; a server that only speaks the format may refuse one it does not know.
+    const { setup, config } = await service();
+    await setup.saveProvider({ kind: "openai", baseUrl: "https://api.openai.com/v1", apiKey: LIVE_KEY, actor: "t" });
+    await setup.saveProvider({ kind: "anthropic", name: "anthropic", baseUrl: "https://api.anthropic.com/v1", apiKey: LIVE_KEY, actor: "t" });
+    await setup.saveProvider({ kind: "openai", name: "openrouter", baseUrl: "https://openrouter.ai/api/v1", apiKey: LIVE_KEY, actor: "t" });
+    await setup.saveProvider({ kind: "openai", name: "ollama", baseUrl: "http://127.0.0.1:11434/v1", apiKey: LIVE_KEY, actor: "t" });
+    await setup.saveProvider({ kind: "openai", name: "nougate", baseUrl: "http://127.0.0.1:8090/openai/v1", apiKey: LIVE_KEY, actor: "t" });
+    await setup.saveProvider({ kind: "anthropic", name: "nougate-anthropic", baseUrl: "http://127.0.0.1:8090/anthropic/v1", apiKey: LIVE_KEY, actor: "t" });
+
+    const parsed = parseToml<{ providers: Record<string, Record<string, unknown>> }>(await readTextFile(configPath));
+    expect(parsed.providers[SETUP_PROFILE]?.identify).toBe(true);
+    expect(parsed.providers.anthropic?.identify).toBe(true);
+    expect(config.providers[SETUP_PROFILE]?.identify).toBe(true);
+    expect(config.providers.anthropic?.identify).toBe(true);
+    for (const other of ["openrouter", "ollama", "nougate", "nougate-anthropic"]) {
+      expect(parsed.providers[other]).not.toHaveProperty("identify");
+      expect(config.providers[other]?.identify).toBeUndefined();
+    }
+  });
+
+  test("identify = false written by the operator is kept on a save; the one the entry wrote goes when the profile moves to another server", async () => {
+    const { setup, config } = await service();
+    const profile = async () => parseToml<{ providers: Record<string, Record<string, unknown>> }>(await readTextFile(configPath)).providers[SETUP_PROFILE];
+    await setup.saveProvider({ kind: "anthropic", baseUrl: "https://api.anthropic.com/v1", apiKey: LIVE_KEY, actor: "t" });
+    await writeTextFileAtomic(configPath, (await readTextFile(configPath)).replace("identify = true", "identify = false"));
+    await setup.saveProvider({ kind: "anthropic", baseUrl: "https://api.anthropic.com/v1", apiKey: LIVE_KEY, actor: "t" });
+    expect((await profile())?.identify).toBe(false);
+
+    await writeTextFileAtomic(configPath, (await readTextFile(configPath)).replace("identify = false", "identify = true"));
+    // Moved to a server nothing is known about: what the vendor's entry wrote does not follow it there.
+    await setup.saveProvider({ kind: "anthropic", baseUrl: "https://gate.example.com/anthropic/v1", apiKey: LIVE_KEY, actor: "t" });
+    expect(await profile()).not.toHaveProperty("identify");
+    expect(config.providers[SETUP_PROFILE]?.identify).toBeUndefined();
+  });
+
   test("a field the operator wrote is kept on a save; the one OpenAI's entry wrote goes when the profile moves off it", async () => {
     const { setup, config } = await service();
     const profile = async () => parseToml<{ providers: Record<string, Record<string, unknown>> }>(await readTextFile(configPath)).providers[SETUP_PROFILE];

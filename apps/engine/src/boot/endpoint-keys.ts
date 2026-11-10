@@ -4,11 +4,13 @@
  *
  * OpenAI's own API refuses `max_tokens` for its newer models. Setup now writes `max_tokens_field` for a profile on it;
  * one written before that says nothing, so every reply and every compaction on such a model failed with a 400 until
- * somebody edited the file. Brought forward on disk, and in the running config, so the update is all it takes.
+ * somebody edited the file. Brought forward on disk, and in the running config, so the update is all it takes. The
+ * same for `identify` on the two vendors' own APIs: a profile made before setup wrote it sends no cache key, and
+ * its conversations' requests are not kept on the cache their prefix is in.
  *
  * Safe for the way back: the release before this one warns about a provider key it does not know and loads the file,
- * so going back to it still starts. A profile that names the key either way is left as it is; one on any other
- * endpoint is never touched. The next minor deletes this file and its call: an install reaches it through a release
+ * so going back to it still starts. A profile that names the key either way is left as it is, `identify = false`
+ * included; one on any other endpoint is never touched. The next minor deletes this file and its call: an install reaches it through a release
  * that ran this.
  */
 

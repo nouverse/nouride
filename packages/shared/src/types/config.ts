@@ -82,7 +82,8 @@ export interface ProviderProfile {
   /**
    * Say which agent and conversation each request is for — the fields a gateway such as Nougate tells its
    * clients and sessions apart by, and that route a conversation to the cache its prefix is already in. Off unless
-   * set: a strict server rejects a field it does not know.
+   * set: a strict server rejects a field it does not know. A profile on OpenAI's or Anthropic's own API is written
+   * with it (`known-endpoints.ts`). The conversation goes as a digest, the agent by its id.
    */
   identify?: boolean;
   /**

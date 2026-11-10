@@ -102,7 +102,8 @@ kind = "anthropic"                  # the wire format, not the vendor
 base_url = "https://nougate.nouverse.tech/anthropic/v1"
 api_key = "nougate"                 # a secret NAME
 # headers = { "HTTP-Referer" = "https://nouverse.tech" }
-# identify = true                   # say which agent and conversation each request is for
+# identify = true                   # say which agent and conversation each request is for; written for you on
+                                    # OpenAI's and Anthropic's own APIs
 # billing = "included"              # a subscription: no cost per token
 # max_tokens_field = "max_completion_tokens"   # OpenAI's own API: where a reply's output limit goes
 # cache_minutes = 5                 # how long this endpoint keeps a conversation's cached prompt

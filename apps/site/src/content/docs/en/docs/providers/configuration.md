@@ -43,12 +43,14 @@ in the engine needs to care. A proxy can serve either format.
 kind = "anthropic"
 base_url = "https://api.anthropic.com/v1"
 api_key = "anthropic_api_key"
+identify = true                              # written for the two vendors' own APIs; see below
 
 [providers.openai]
 kind = "openai"
 base_url = "https://api.openai.com/v1"
 api_key = "openai_api_key"
 max_tokens_field = "max_completion_tokens"   # OpenAI's own API only; see below
+identify = true
 
 [providers.openrouter]
 kind = "openai"
@@ -71,6 +73,17 @@ config, so a credential belongs in `api_key` (a secret name), not here. (A per-a
 `x-client-id` header on the OpenAI wire, `metadata.user_id` on Anthropic's. A gateway such as Nougate tells
 its clients and sessions apart by them, and OpenAI sends a conversation's requests to the cache its prefix is
 already in. It is off unless set, because a strict server rejects a field it does not know.
+
+OpenAI's own API and Anthropic's own API take those fields, so you do not need to write it for them: setup, the
+dashboard and `nouride provider add` write `identify = true` for a profile on `https://api.openai.com/v1` or
+`https://api.anthropic.com/v1`, and the first start after an update writes it into a profile made before, once, and
+says so in the log. `nouride config check` says when the next start will write it. To keep it off, write
+`identify = false`: a profile that says `identify` either way keeps what it says. Any other server stays as you
+configured it, Nougate included, where you turn it on yourself.
+
+What is sent names no person. The agent goes by its id, as you named it in its pack. The conversation goes as an
+opaque id, 32 letters and digits made from the conversation's own id by a one-way hash, the same on every request of
+that conversation: it holds no chat id, phone number, username or name.
 
 `max_tokens_field` is the field a reply's output limit is sent in, on the OpenAI wire. OpenAI's own API refuses
 `max_tokens` for its newer models (the GPT-5 family among them) with `Unsupported parameter: 'max_tokens'`, and
