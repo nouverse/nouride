@@ -133,6 +133,27 @@ const ogLocale = locale === 'id' ? 'id_ID' : 'en_US';
     margin: 0;
     -webkit-font-smoothing: antialiased;
   }
+  /*
+   * The reset the page is written against, said here. It used to arrive by accident: the build puts Starlight's reset
+   * in a stylesheet this page happens to share, and the dev server does not, so in dev every padded box was its
+   * padding larger (the landing page's cards ran into each other). In a layer, so any rule of a page's own wins.
+   */
+  @layer reset {
+    *,
+    ::before,
+    ::after {
+      box-sizing: border-box;
+    }
+    * {
+      margin: 0;
+    }
+    input,
+    button,
+    textarea,
+    select {
+      font: inherit;
+    }
+  }
 
   /* ── Loading overlay ──────────────────────────────────────────────────── */
   #site-loader {
