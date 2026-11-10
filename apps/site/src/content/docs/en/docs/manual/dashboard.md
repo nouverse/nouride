@@ -302,24 +302,26 @@ The list has two halves, switched at its top:
   and rooms you talked to, the latest first, each with its cat, the last thing said and when. **Working** shows while an
   agent works, with how many helpers it has at work, and a dot marks a reply you have not read yet. Agents you have not
   talked to yet wait at the end, under **Not talked to yet**.
-- **Groups** is the groups your agents are in on Telegram, Discord and WhatsApp: one line per group, even when several of
-  your agents' bots sit in it. A chip per app narrows the list to it, and groups quiet for two weeks or more are folded
-  into one line at the end. A dot on **Groups** says a group heard something since you last looked.
+- **Groups** is the groups your agents are in on Telegram, Discord and WhatsApp, one line per group even when several of
+  your agents' bots sit in it, each with its app's name, and the rooms you made in the dashboard. A chip per app narrows
+  the list to it, **Dashboard** to your rooms, and anything quiet for two weeks or more is folded into one line at the
+  end. A dot on **Groups** says a group heard something since you last looked.
 
 The **+** at the top starts a chat with an agent or makes a room, and the search finds a chat by its name or its last
 message.
 
-**An agent's chat** opens its latest conversation, to carry on where you left off. **History**, in its header, lists
-only that agent's conversations: the ones in the dashboard, and its private chats on chat apps, each saying where it is
-from. **New chat** starts a fresh one.
+**An agent's chat** opens its latest conversation, to carry on where you left off. **History**, in its header, slides
+in from the left with only that agent's conversations: the ones in the dashboard, and its private chats on chat apps,
+each saying where it is from. **New chat** starts a fresh one, and **Delete** deletes the one on screen, once you say
+yes.
 
 **A room** is one conversation with several agents. Pick the agents when you make it, then tag the one you mean
 (`@nox`): a tag is how a message reaches a particular agent. The room's header shows its members as the tags you type,
 and says who answers a message with no tag, if anyone does. **Add agent** brings another one in; the room's menu renames
-it, takes an agent out, or deletes it.
+it or takes an agent out, and **Delete** deletes the room.
 
 **Anything from a chat app is read-only here.** A group, or a private chat with an agent on Telegram, Discord or
-WhatsApp, shows that app's mark and **Read-only**, and where you would type there is a note: it is answered on its own
+WhatsApp, says its app's name and **Read-only**, and where you would type there is a note: it is answered on its own
 app. The people there are on the left, each under their name (the one under People, else the name their app shows), and
 a group shows what people said even when no agent answered. **Pin to Chats** keeps a group you read often in Chats, in
 this browser.

@@ -7,6 +7,7 @@
 import type { ReactNode } from "react";
 import { PersonAvatar } from "@/commons/components/chat/Avatars";
 import { FACE_GAP } from "@/commons/components/chat/AgentReply";
+import { TaggedText } from "@/commons/components/chat/AgentTag";
 
 export function PersonMessage({
   name,
@@ -32,7 +33,7 @@ export function PersonMessage({
         {files}
         {text ? (
           <div className="max-w-full rounded-2xl rounded-tl-xs border border-base-content/[0.06] bg-base-200/70 px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap text-base-content [overflow-wrap:anywhere]">
-            {text}
+            <TaggedText text={text} />
           </div>
         ) : null}
         {children}

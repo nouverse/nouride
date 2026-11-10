@@ -1,7 +1,6 @@
 /**
- * Deleting the chat or the room on screen, from a menu at the end of the bar. The bin sat in the bar beside Notes, and
- * on a phone the two touched: a delete with no undo one slip from the notes. Both kinds are
- * deleted from the same menu, confirmed with words that say what goes, and the bar keeps no bin of its own.
+ * Deleting the chat or the room on screen, from Delete at the end of its bar: the owner looked for it there and found
+ * it behind a menu. Both kinds are confirmed with words that say what goes, and neither menu holds a delete any more.
  */
 
 import { describe, expect, test } from "bun:test";
@@ -38,16 +37,22 @@ function recordDeletes(body: unknown) {
 const header = (host: HTMLElement) =>
   (host.querySelector('button[title="Show or hide past conversations"]')?.closest("header") ?? host) as HTMLElement;
 const byLabel = (root: ParentNode, label: string) => root.querySelector(`button[aria-label="${label}"]`) as HTMLButtonElement | null;
-/** The menu and the dialog are drawn on the document's body, outside the page's host. */
-const bodyButton = (text: string) =>
-  [...dom.document.body.querySelectorAll("button")].find((button) => button.textContent?.trim() === text) as HTMLButtonElement | undefined;
 
-/** Opens the bar's menu, presses its delete, and confirms; returns what the dialog said. */
-async function deleteFromMenu(host: HTMLElement, menuLabel: string, item: string, confirm: string): Promise<string> {
+/** What a bar's menu holds, opened and read; closed again by its button. */
+async function menuItems(host: HTMLElement, menuLabel: string): Promise<string[]> {
   await eventually(() => byLabel(header(host), menuLabel) !== null, 2_000, "the menu's button");
   byLabel(header(host), menuLabel)!.click();
-  await eventually(() => bodyButton(item) !== undefined, 2_000, "the menu open");
-  bodyButton(item)!.click();
+  const items = () => [...dom.document.body.querySelectorAll('[role="menu"] button, ul.menu button')].map((button) => button.textContent?.trim() ?? "");
+  await eventually(() => items().length > 0, 2_000, "the menu open");
+  const seen = items();
+  byLabel(header(host), menuLabel)!.click();
+  return seen;
+}
+
+/** Presses the bar's Delete and confirms; returns what the dialog said. */
+async function deleteFromBar(host: HTMLElement, label: string, confirm: string): Promise<string> {
+  await eventually(() => byLabel(header(host), label) !== null, 2_000, "the bar's Delete");
+  byLabel(header(host), label)!.click();
   const dialog = () => dom.document.body.querySelector("dialog[open]");
   const confirmButton = () => [...(dialog()?.querySelectorAll("button") ?? [])].find((button) => button.textContent?.trim() === confirm);
   await eventually(() => confirmButton() !== undefined, 2_000, "the confirmation");
@@ -57,47 +62,61 @@ async function deleteFromMenu(host: HTMLElement, menuLabel: string, item: string
 }
 
 describe("deleting the chat or room on screen", () => {
-  test("a conversation: no bin in the bar, its menu deletes it once confirmed, and the dialog says there is no undo", async () => {
+  test("a conversation: Delete in the bar, a word beside its bin, deletes it once confirmed; the menu holds no delete", async () => {
     const recorded = recordDeletes({ ok: true, turns: 2, stopped: 0 });
-    const seen: Record<string, string | boolean> = {};
+    const seen: Record<string, unknown> = {};
     try {
       await renderPage("/chat/ses_1", async (host) => {
-        await eventually(() => byLabel(header(host), "More for this conversation") !== null, 2_000, "the bar");
-        seen.bin = byLabel(header(host), "Delete this conversation") !== null;
-        seen.said = await deleteFromMenu(host, "More for this conversation", "Delete conversation", "Delete");
+        await eventually(() => byLabel(header(host), "Delete this conversation") !== null, 2_000, "the bar");
+        seen.word = byLabel(header(host), "Delete this conversation")!.textContent?.trim();
+        seen.menu = await menuItems(host, "More for this conversation");
+        seen.said = await deleteFromBar(host, "Delete this conversation", "Delete");
         await eventually(() => recorded.deletes.length > 0, 2_000, "the delete sent");
       });
     } finally {
       recorded.restore();
     }
-    expect(seen.bin).toBe(false);
+    expect(seen.word).toBe("Delete");
+    expect((seen.menu as string[]).some((item) => item.includes("Delete"))).toBe(false);
     expect(seen.said).toContain("Delete this conversation?");
     expect(seen.said).toContain("There is no undo.");
     expect(recorded.deletes).toEqual(["/sessions/ses_1"]);
   });
 
-  test("a room: the room's bar has no bin, the same menu deletes the room, naming every member whose conversation goes", async () => {
+  test("a room: Delete in the bar deletes the room once confirmed, naming every member whose conversation goes", async () => {
     answer({ "/rooms/room_1": { status: 200, body: { room } } });
     const recorded = recordDeletes({ ok: true, turns: 3, events: 0, messages: 1, stopped: 0 });
-    const seen: Record<string, string | boolean> = {};
+    const seen: Record<string, unknown> = {};
     try {
       await renderPage("/chat/room/room_1", async (host) => {
         await eventually(() => host.textContent?.includes("@nix") === true || host.textContent?.includes("nix") === true, 2_000, "the room's members");
-        seen.bin = byLabel(header(host), "Delete this room") !== null;
-        seen.said = await deleteFromMenu(host, "More for this room", "Delete room", "Delete room");
+        seen.menu = await menuItems(host, "More for this room");
+        seen.said = await deleteFromBar(host, "Delete this room", "Delete room");
         await eventually(() => recorded.deletes.length > 0, 2_000, "the delete sent");
       });
     } finally {
       recorded.restore();
     }
-    expect(seen.bin).toBe(false);
+    expect((seen.menu as string[]).some((item) => item.includes("Delete"))).toBe(false);
+    expect(seen.menu).toEqual(expect.arrayContaining(["Rename room"]));
     expect(seen.said).toContain("Delete this room?");
     expect(seen.said).toContain("nouva, nix");
     expect(recorded.deletes).toEqual(["/rooms/room_1"]);
   });
 
-  test("a new chat has nothing to delete, so no menu", async () => {
+  test("a conversation with no work notes: Delete in the bar, and no menu left with nothing in it", async () => {
+    answer({ "/sessions/ses_1/notes": { status: 404, body: { error: "no notes" } } });
+    const seen: Record<string, boolean> = {};
+    await renderPage("/chat/ses_1", async (host) => {
+      await eventually(() => byLabel(header(host), "Delete this conversation") !== null, 2_000, "the bar");
+      seen.menu = byLabel(header(host), "More for this conversation") !== null;
+    });
+    expect(seen.menu).toBe(false);
+  });
+
+  test("a new chat has nothing to delete, so no Delete and no menu", async () => {
     const html = await renderPage("/chat");
     expect(html).not.toContain('aria-label="More for this');
+    expect(html).not.toContain('aria-label="Delete this');
   });
 });

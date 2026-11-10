@@ -6,8 +6,8 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import type { AgentSummary, ChatListGroup, ChatListPayload, ChatTurn, LiveTurn, RoomMessage } from "@nouride/wire";
-import { chatsView, groupsView, QUIET_AFTER_MS } from "@/modules/chat/lib/chat-list";
+import type { AgentSummary, ChatListGroup, ChatListPayload, ChatListRoom, ChatTurn, LiveTurn, RoomMessage } from "@nouride/wire";
+import { chatsView, DASHBOARD, groupsView, QUIET_AFTER_MS, type GroupsRow } from "@/modules/chat/lib/chat-list";
 import { chatOpen, onChats } from "@/commons/lib/chat-place";
 import { groupStream } from "@/modules/chat/lib/group-stream";
 
@@ -87,13 +87,19 @@ describe("Groups", () => {
     group("d", "discord", NOW - 3 * QUIET_AFTER_MS, "#bookmarks"),
     group("e", "telegram", NOW - 120_000),
   ];
-  const groups = (over: Partial<Parameters<typeof groupsView>[1]> = {}) =>
-    groupsView(GROUPS, { platform: "all", query: "", now: NOW, nameOf: (id) => id, platformName: (id) => id[0]!.toUpperCase() + id.slice(1), ...over });
+  const ROOMS: ChatListRoom[] = [
+    { chatId: "r1", title: "Harness research", members: ["nouva", "nix"], at: NOW - 30_000, working: false },
+    { chatId: "r2", title: "Old plans", members: ["nero"], at: NOW - 2 * QUIET_AFTER_MS, working: false },
+  ];
+  const groups = (over: Partial<Parameters<typeof groupsView>[2]> = {}, rooms: ChatListRoom[] = []) =>
+    groupsView(GROUPS, rooms, { platform: "all", query: "", now: NOW, nameOf: (id) => id, platformName: (id) => id[0]!.toUpperCase() + id.slice(1), ...over });
+  /** A row by what it is: a group's chat id, a room's `room:` chat id. */
+  const id = (row: GroupsRow) => (row.kind === "group" ? row.group.chatId : `room:${row.room.chatId}`);
 
   test("newest first, and two weeks of quiet folds a group away, newest first there too", () => {
     const view = groups();
-    expect(view.active.map((one) => one.chatId)).toEqual(["b", "a", "e"]);
-    expect(view.quiet.map((one) => one.chatId)).toEqual(["c", "d"]);
+    expect(view.active.map(id)).toEqual(["b", "a", "e"]);
+    expect(view.quiet.map(id)).toEqual(["c", "d"]);
   });
 
   test("a chip for All and for each app there is a group on, with how many: the busiest app first", () => {
@@ -105,10 +111,36 @@ describe("Groups", () => {
   });
 
   test("a chip narrows the list to its app; a search narrows it further, the chips' counts unchanged", () => {
-    expect(groups({ platform: "telegram" }).active.map((one) => one.chatId)).toEqual(["a", "e"]);
+    expect(groups({ platform: "telegram" }).active.map(id)).toEqual(["a", "e"]);
     const searched = groups({ platform: "discord", query: "bookmarks" });
-    expect([...searched.active, ...searched.quiet].map((one) => one.chatId)).toEqual(["d"]);
+    expect([...searched.active, ...searched.quiet].map(id)).toEqual(["d"]);
     expect(searched.chips[0]).toEqual({ value: "all", label: "All", count: 5 });
+  });
+
+  test("the rooms made here: a Dashboard chip after the apps', counted, and All counting them with the groups", () => {
+    expect(groups({}, ROOMS).chips).toEqual([
+      { value: "all", label: "All", count: 7 },
+      { value: "telegram", label: "Telegram", count: 3 },
+      { value: "discord", label: "Discord", count: 2 },
+      { value: DASHBOARD, label: "Dashboard", count: 2 },
+    ]);
+    // None made here, no chip that leads to nothing.
+    expect(groups().chips.map((chip) => chip.value)).not.toContain(DASHBOARD);
+  });
+
+  test("All mixes the rooms in with the groups by when they moved, and two weeks of quiet folds a room away too", () => {
+    const view = groups({}, ROOMS);
+    expect(view.active.map(id)).toEqual(["b", "room:r1", "a", "e"]);
+    expect(view.quiet.map(id)).toEqual(["c", "room:r2", "d"]);
+  });
+
+  test("the Dashboard chip lists the rooms alone, an app's chip none of them, and a search finds a room by its members", () => {
+    const dashboard = groups({ platform: DASHBOARD }, ROOMS);
+    expect([...dashboard.active, ...dashboard.quiet].map(id)).toEqual(["room:r1", "room:r2"]);
+    const telegram = groups({ platform: "telegram" }, ROOMS);
+    expect([...telegram.active, ...telegram.quiet].map(id)).toEqual(["a", "e", "c"]);
+    const nero = groups({ query: "nero" }, ROOMS);
+    expect([...nero.active, ...nero.quiet].map(id)).toEqual(["room:r2"]);
   });
 });
 

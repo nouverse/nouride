@@ -97,7 +97,7 @@ function GroupView({ group, data }: { group: ChatListGroup; data: ChatListData }
         <Link to="/chat" className="btn btn-ghost btn-square size-11 shrink-0 rounded-[14px] md:hidden" aria-label="Back to chats">
           <ChevronLeft size={22} aria-hidden="true" />
         </Link>
-        <GroupAvatar name={name} platform={group.platform} />
+        <GroupAvatar name={name} />
         <div className="flex min-w-0 flex-1 flex-col gap-0.5 pl-1">
           <div className="flex min-w-0 items-center gap-2">
             <h2 className="min-w-0 truncate font-display text-lg font-medium tracking-tight text-base-content">{name}</h2>

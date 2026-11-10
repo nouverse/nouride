@@ -13,6 +13,7 @@
  */
 
 import type { Room } from "@nouride/wire";
+import { AgentTag } from "@/commons/components/chat/AgentTag";
 
 export interface MentionCandidate {
   agentId: string;
@@ -136,7 +137,9 @@ export function MentionMenu({
                 : "hover:bg-base-200/60"
           }`}
         >
-          <span className="font-mono text-xs font-semibold">@{candidate.agentId}</span>
+          <AgentTag agentId={candidate.agentId} bare className="font-mono text-xs">
+            @{candidate.agentId}
+          </AgentTag>
           <span className="truncate text-[11px] text-base-content/65">{candidate.displayName}</span>
           {candidate.busy ? (
             <span className="ml-auto shrink-0 text-[10px] font-medium text-base-content/65">

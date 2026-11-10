@@ -1753,7 +1753,7 @@ describe("the chat's work notes", () => {
   const menu = (host: HTMLElement) => host.querySelector<HTMLButtonElement>('button[aria-label="More for this conversation"]');
   /** The menu is drawn on the body, outside the page's host. */
   const item = (host: HTMLElement) => [...host.ownerDocument.body.querySelectorAll("button")].find((button) => button.textContent?.includes("ork notes"));
-  const drawer = (host: HTMLElement) => host.querySelector<HTMLElement>('aside[aria-label="Work notes"]')!;
+  const drawer = (host: HTMLElement) => host.querySelector<HTMLElement>('[data-drawer][aria-label="Work notes"]')!;
 
   test("the conversation's menu counts the tasks and opens them beside the conversation, with Edit for an admin", async () => {
     const seen: Record<string, string | boolean> = {};

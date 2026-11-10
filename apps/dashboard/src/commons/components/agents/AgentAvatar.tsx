@@ -1,14 +1,10 @@
 /**
  * An agent's face (0.8.24): its own pixel cat, the Look it wears in the Office, head and shoulders in a soft rounded
  * tile. Every agent keeps its Look; the soft mascot is Nouride's, not an agent's.
- *
- * With `platform`, the conversation it stands for lives on that chat app, and its mark sits on the tile's corner — the
- * same mark a group's avatar carries (`PlatformMark`).
  */
 
 import { CatPortrait } from "@/commons/cat/CatPortrait";
 import type { Look } from "@/commons/cat/look";
-import { PlatformMark } from "@/commons/components/chat/PlatformBadge";
 import { cn } from "@/commons/lib/utils";
 
 /**
@@ -26,26 +22,17 @@ export function AgentAvatar({
   look,
   name,
   size = "md",
-  platform,
   className,
 }: {
   look: Look;
   name: string;
   size?: keyof typeof AVATAR_SIZES;
-  platform?: string;
   className?: string;
 }) {
   const { tile, scale } = AVATAR_SIZES[size];
-  const face = (
+  return (
     <span className={cn("grid shrink-0 place-items-center overflow-hidden bg-secondary/10", tile, className)}>
       <CatPortrait look={look} scale={scale} label={name} />
-    </span>
-  );
-  if (!platform) return face;
-  return (
-    <span className="relative inline-grid shrink-0">
-      {face}
-      <PlatformMark platform={platform} className="absolute -right-1 -bottom-1" />
     </span>
   );
 }

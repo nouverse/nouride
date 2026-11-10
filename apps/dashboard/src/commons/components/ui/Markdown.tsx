@@ -4,8 +4,19 @@
  * Bold, Italic, Code, Markdown Links [label](url), and Auto-linked Bare URLs (https://...).
  */
 
-import type { ReactNode } from "react";
+import { createContext, useContext, type ReactNode } from "react";
 import { ExternalLink } from "lucide-react";
+
+/**
+ * How a block's plain words are drawn: as written, or as the page around it says (an agent's answer draws its agents'
+ * tags in their colours, `TagsInMarkdown`). Code is never plain words, so a code span or block stays as it was written.
+ */
+export const PlainWords = createContext<((text: string) => ReactNode) | null>(null);
+
+function Plain({ text }: { text: string }) {
+  const draw = useContext(PlainWords);
+  return draw ? draw(text) : text;
+}
 
 /** Inline spans. Ordered so that code wins — backticks inside code are literal. */
 function inline(text: string, keyPrefix: string): ReactNode[] {
@@ -17,7 +28,7 @@ function inline(text: string, keyPrefix: string): ReactNode[] {
   let n = 0;
 
   while ((match = pattern.exec(text)) !== null) {
-    if (match.index > last) out.push(text.slice(last, match.index));
+    if (match.index > last) out.push(<Plain key={`${keyPrefix}-t${n}`} text={text.slice(last, match.index)} />);
     const token = match[0];
     const key = `${keyPrefix}-i${n++}`;
 
@@ -101,7 +112,7 @@ function inline(text: string, keyPrefix: string): ReactNode[] {
     last = match.index + token.length;
   }
 
-  if (last < text.length) out.push(text.slice(last));
+  if (last < text.length) out.push(<Plain key={`${keyPrefix}-tail`} text={text.slice(last)} />);
   return out;
 }
 

@@ -39,7 +39,7 @@ export function ConversationRow({
   onToggle?: { expanded: boolean; toggle: () => void };
   avatar?: ReactNode;
   name: string;
-  /** A word on what this is, after the name: "Orchestrator", "Telegram · read-only". */
+  /** A word on what this is, after the name: "Orchestrator", "WhatsApp", "Telegram · read-only". */
   tag?: ReactNode;
   time?: string;
   line?: ReactNode;
@@ -93,7 +93,7 @@ export function ConversationRow({
 
 /** A small word after a row's name, the same pill everywhere: what the row is, never a count. */
 export function RowTag({ children }: { children: ReactNode }) {
-  return <span className="shrink-0 rounded-full bg-secondary/10 px-2 py-0.5 text-[10px] font-bold leading-none text-secondary">{children}</span>;
+  return <span className="shrink-0 rounded-full bg-secondary/10 px-2 py-0.5 text-[10px] font-bold leading-none whitespace-nowrap text-secondary">{children}</span>;
 }
 
 /** The small heading over a part of a list: "Not talked to yet", "Quiet for two weeks or more", a History's "Today". */

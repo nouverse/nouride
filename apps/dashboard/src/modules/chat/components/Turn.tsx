@@ -18,6 +18,7 @@ import { LiveStepLine } from "@/commons/components/turns/StepLine";
 import { CopyButton } from "@/commons/components/ui/CopyButton";
 import { PersonMessage } from "@/commons/components/chat/PersonMessage";
 import { AgentReply } from "@/commons/components/chat/AgentReply";
+import { TaggedText } from "@/commons/components/chat/AgentTag";
 
 export function UserBubble({
   text,
@@ -45,7 +46,7 @@ export function UserBubble({
       {text && (
         // Mist, not the brand blue: the blue is for signals and actions, and a message is neither (the Nouverse design rules).
         <div className="max-w-[85%] sm:max-w-[75%] rounded-2xl rounded-tr-xs bg-secondary/20 text-base-content px-4 py-3 text-sm shadow-xs font-normal leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere]">
-          {text}
+          <TaggedText text={text} />
         </div>
       )}
       {edited && <EditedMark />}
@@ -131,7 +132,7 @@ function SaidWhileWorking({ steps, quote }: { steps: TurnStep[]; quote: boolean 
             key={step.seq}
             className="w-fit max-w-[85%] sm:max-w-[75%] rounded-2xl rounded-tl-xs border border-base-content/[0.06] bg-base-200/70 px-3.5 py-2 text-[13px] leading-relaxed text-base-content/75 whitespace-pre-wrap [overflow-wrap:anywhere]"
           >
-            {step.text}
+            <TaggedText text={step.text} />
           </p>
         ) : quote ? (
           <p
@@ -139,7 +140,7 @@ function SaidWhileWorking({ steps, quote }: { steps: TurnStep[]; quote: boolean 
             className="max-w-[85%] sm:max-w-[75%] line-clamp-2 border-l-2 border-primary/40 pl-2.5 text-xs leading-relaxed text-base-content/65 [overflow-wrap:anywhere]"
           >
             {edited && <span className="font-mono text-[10px] uppercase tracking-wider">edited · </span>}
-            {text}
+            <TaggedText text={text} />
           </p>
         ) : (
           <UserBubble key={step.seq} text={text} edited={edited} />
