@@ -17,7 +17,7 @@ export const en = {
     description:
       'Nouride runs a few AI agents on a small box you own, and uses very little of it. Chat with them on Telegram, Discord, WhatsApp or in your browser.',
   },
-  nav: { docs: 'Docs', pro: 'Pro', other: 'Bahasa Indonesia', otherShort: 'ID', otherLang: 'id', install: 'Install' },
+  nav: { docs: 'Docs', cloud: 'Cloud', other: 'Bahasa Indonesia', otherShort: 'ID', otherLang: 'id', install: 'Install' },
   hero: {
     lines: ['AI agents that live', 'on your box'],
     tagline:
@@ -113,9 +113,15 @@ export const en = {
       name: 'Community',
       for: 'Everything on this page, for your own box.',
       body:
-        'One account with a password. The Router build adds the Nougate gateway, so your agents can use an AI subscription you already have.',
+        'One account with a password, and the Nougate gateway built in, so your agents can use an AI subscription you already have.',
       price: 'Free',
       action: 'Install',
+    },
+    cloud: {
+      name: 'Cloud',
+      for: 'Nouride, run for you.',
+      body: 'Nothing to install and no box to keep: we run it and keep it up to date, with everything Pro has.',
+      action: 'See Cloud',
     },
     pro: {
       name: 'Pro',
@@ -144,7 +150,7 @@ export const id = {
     description:
       'Nouride menjalankan beberapa agent AI di box kecil milikmu, dan cuma butuh sedikit resource. Ngobrol dengan mereka lewat Telegram, Discord, WhatsApp, atau browser.',
   },
-  nav: { docs: 'Dokumentasi', pro: 'Pro', other: 'English', otherShort: 'EN', otherLang: 'en', install: 'Pasang' },
+  nav: { docs: 'Dokumentasi', cloud: 'Cloud', other: 'English', otherShort: 'EN', otherLang: 'en', install: 'Pasang' },
   hero: {
     lines: ['Agent AI yang', 'tinggal di mesinmu'],
     tagline:
@@ -239,9 +245,15 @@ export const id = {
       name: 'Community',
       for: 'Semua yang ada di halaman ini, untuk mesinmu sendiri.',
       body:
-        'Satu akun dengan password. Versi Router menambahkan gateway Nougate, jadi agent bisa pakai langganan AI yang sudah kamu punya.',
+        'Satu akun dengan password, dan gateway Nougate sudah ada di dalamnya, jadi agent bisa pakai langganan AI yang sudah kamu punya.',
       price: 'Gratis',
       action: 'Pasang',
+    },
+    cloud: {
+      name: 'Cloud',
+      for: 'Nouride yang kami jalankan untukmu.',
+      body: 'Tanpa instalasi dan tanpa mesin yang harus dirawat: kami yang menjalankan dan meng-update-nya, dengan semua yang ada di Pro.',
+      action: 'Lihat Cloud',
     },
     pro: {
       name: 'Pro',

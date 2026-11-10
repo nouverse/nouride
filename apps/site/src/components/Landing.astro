@@ -39,6 +39,7 @@ import {
   INSPECT_COMMAND,
   GITHUB_REPO,
   CLOUD_URL,
+  PRO_CONTACT,
 } from '../consts.mjs';
 import head from '@brand/mascot/standing/12-head.webp';
 import waving from '@brand/mascot/standing/01-waving.webp';
@@ -102,7 +103,7 @@ const year = new Date().getFullYear();
       </a>
       <nav aria-label="Site">
         <a href={href('docs/start/what-is-nouride')}>{t.nav.docs}</a>
-        <a class="wide-only" href={CLOUD_URL} target="_blank" rel="noopener noreferrer">{t.nav.pro}</a>
+        <a href={CLOUD_URL} target="_blank" rel="noopener noreferrer">{t.nav.cloud}</a>
         <a class="nav-lang" href={`/${t.nav.otherLang}/`} hreflang={t.nav.otherLang} lang={t.nav.otherLang} aria-label={t.nav.other}>{t.nav.otherShort}</a>
         <a class="nav-action" href={href('docs/start/install')}>{t.nav.install}</a>
       </nav>
@@ -342,7 +343,7 @@ const year = new Date().getFullYear();
     <a class="text-link box-source" href={href('docs/architecture/performance')} style="--i:3">{t.footprint.source}</a>
   </section>
 
-  <!-- Editions: two fields, the free one wider. -->
+  <!-- Editions: three fields, the free one wider; Cloud is Nouride run for you, Pro a licence asked for by email. -->
   <section class="editions" aria-label={t.editions.title}>
     <div class="ed ed-community" data-reveal>
       <div>
@@ -355,6 +356,16 @@ const year = new Date().getFullYear();
         <a class="btn primary" href={href('docs/start/install')}>{t.editions.community.action}</a>
       </div>
     </div>
+    <div class="ed ed-cloud" data-reveal>
+      <div>
+        <h2 class="display" style="--i:0">{t.editions.cloud.name}</h2>
+        <p class="lead" style="--i:1">{t.editions.cloud.for}</p>
+        <p class="ed-body" style="--i:2">{t.editions.cloud.body}</p>
+      </div>
+      <div class="ed-foot" style="--i:3">
+        <a class="btn primary" href={CLOUD_URL} target="_blank" rel="noopener noreferrer">{t.editions.cloud.action}</a>
+      </div>
+    </div>
     <div class="ed ed-pro on-dark" data-reveal>
       <div>
         <h2 class="display" style="--i:0">{t.editions.pro.name}</h2>
@@ -362,7 +373,7 @@ const year = new Date().getFullYear();
         <p class="ed-body" style="--i:2">{t.editions.pro.body}</p>
       </div>
       <div class="ed-foot" style="--i:3">
-        <a class="btn light" href={CLOUD_URL} target="_blank" rel="noopener noreferrer">{t.editions.pro.action}</a>
+        <a class="btn light" href={PRO_CONTACT}>{t.editions.pro.action}</a>
       </div>
     </div>
   </section>
@@ -1409,10 +1420,10 @@ const year = new Date().getFullYear();
     bottom: clamp(4.5rem, 9vw, 8.5rem);
   }
 
-  /* ── Editions: two fields ─────────────────────────────────────────────────────────────────────────────────────── */
+  /* ── Editions: three fields ───────────────────────────────────────────────────────────────────────────────────── */
   .editions {
     display: grid;
-    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    grid-template-columns: minmax(0, 6fr) minmax(0, 5fr) minmax(0, 5fr);
   }
   .ed {
     min-height: 64svh;
@@ -1424,6 +1435,9 @@ const year = new Date().getFullYear();
   }
   .ed-community {
     background: var(--ch-community);
+  }
+  .ed-cloud {
+    background: var(--ch-box);
   }
   .ed-pro {
     background: var(--ch-pro);
@@ -1444,6 +1458,7 @@ const year = new Date().getFullYear();
     justify-content: space-between;
     gap: 1.25rem;
   }
+  .ed-cloud .ed-foot,
   .ed-pro .ed-foot {
     justify-content: flex-end;
   }
@@ -1644,9 +1659,6 @@ const year = new Date().getFullYear();
     .page {
       --s-display: clamp(2.1rem, 9.4vw, 3rem);
     }
-    .wide-only {
-      display: none;
-    }
     .nav nav {
       gap: 1rem;
     }
@@ -1845,10 +1857,10 @@ const year = new Date().getFullYear();
   /*
    * A phone's header: the cat alone stands for the name, and the install button is slimmer. With the word beside the
    * cat, Indonesian's "Dokumentasi" and "Pasang" pushed the button past a 390px screen's edge (the owner's iPhone), and
-   * English's ran past 360px. The word stays for a screen reader. Narrower still, the language link steps out of the
-   * bar: the footer carries it too.
+   * English's ran past 360px. The word stays for a screen reader. Below 400px the language link steps out of the bar,
+   * which the footer carries too, so Docs, Cloud and Install fit in either language.
    */
-  @media (max-width: 29.99rem) {
+  @media (max-width: 30.99rem) {
     .brand span {
       position: absolute;
       width: 1px;
@@ -1864,9 +1876,23 @@ const year = new Date().getFullYear();
       padding: 0.45rem 0.9rem;
     }
   }
-  @media (max-width: 22.49rem) {
+  @media (max-width: 24.99rem) {
     .nav .nav-lang {
       display: none;
+    }
+  }
+  /* The narrowest phones (320px): a smaller cat and closer, smaller links, or "Dokumentasi" still ran 28px over. */
+  @media (max-width: 21.24rem) {
+    .brand img {
+      width: 2rem;
+      height: 2rem;
+    }
+    .nav nav {
+      gap: 0.6rem;
+      font-size: 0.9375rem;
+    }
+    .nav .nav-action {
+      padding: 0.4rem 0.75rem;
     }
   }
 </style>

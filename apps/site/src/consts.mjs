@@ -57,6 +57,9 @@ export const SITE_URL = 'https://nouride.com';
 /** Nouride Cloud managed platform URL */
 export const CLOUD_URL = 'https://app.nouverse.tech/pod/products/nouride';
 
+/** Where Pro is asked about until it is sold as a licence: an email to Nouverse. */
+export const PRO_CONTACT = 'mailto:contact@nouverse.tech?subject=Nouride%20Pro';
+
 /** Where the container image is published from `.github/workflows/release.yml`. */
 export const DOCKER_IMAGE = 'ghcr.io/nouverse/nouride';
 
