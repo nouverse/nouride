@@ -53,6 +53,7 @@ import { startControlPlane } from "@/boot/control-plane.ts";
 import { maskOutbound } from "@/commons/egress.ts";
 import { bootGatewaySwitch } from "@/boot/gateway-switch.ts";
 import { keepRouterGatewayOn } from "@/boot/router-gateway.ts";
+import { bringEndpointKeysForward } from "@/boot/endpoint-keys.ts";
 import { EDITION, GATEWAY_CARRIED } from "@/commons/build.ts";
 import { installShutdown } from "@/boot/shutdown.ts";
 import { startExternalAgents } from "@/boot/external-agents.ts";
@@ -104,6 +105,8 @@ export async function runDaemon(): Promise<void> {
   const lock = takeDataDirLock(config.daemon.dataDir);
   // Holding the lock, so no second daemon writes beside it: a Router install's gateway kept on (`boot/router-gateway.ts`).
   if (source) await keepRouterGatewayOn({ configPath: source, config, carried: GATEWAY_CARRIED, edition: EDITION });
+  // And a profile on a known endpoint given what it needs, before any client is built from it (`boot/endpoint-keys.ts`).
+  if (source) await bringEndpointKeysForward({ configPath: source, config });
   ensureDir(config.daemon.agentsDir);
   // The skill pool, so a fresh install has the directory a human is told to drop skills into. Created
   // rather than left to `skill_create`: an empty directory answers "where do these go", and a missing

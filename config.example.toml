@@ -105,6 +105,16 @@ backup_keep = 4
 # api_key = "openrouter"
 # headers = { "HTTP-Referer" = "https://nouverse.tech" }
 
+# OpenAI's own API refuses `max_tokens` for its newer models, so a reply's output limit goes in
+# max_completion_tokens there. Setup writes the line, and the first start after an update adds it to
+# a profile made before. Leave it out for any other server: one that speaks the format may know
+# max_tokens alone.
+# [providers.openai]
+# kind = "openai"
+# base_url = "https://api.openai.com/v1"
+# api_key = "openai_api_key"
+# max_tokens_field = "max_completion_tokens"
+
 # Agents addressing each other.
 #
 # Two agents in one channel can hand work over by tagging: Nouva writes "@nox benerin build ini",

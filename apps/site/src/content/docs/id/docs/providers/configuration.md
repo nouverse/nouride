@@ -49,6 +49,7 @@ api_key = "anthropic_api_key"
 kind = "openai"
 base_url = "https://api.openai.com/v1"
 api_key = "openai_api_key"
+max_tokens_field = "max_completion_tokens"   # khusus API OpenAI sendiri; lihat di bawah
 
 [providers.openrouter]
 kind = "openai"
@@ -72,6 +73,17 @@ agent diperiksa dan ditolak kalau nilainya terlihat seperti kredensial; milik pr
 Gateway seperti Nougate membedakan klien dan sesinya dengan itu, dan OpenAI mengirim request sebuah
 percakapan ke cache tempat awalannya sudah ada. Mati kecuali diisi, karena server yang ketat menolak
 field yang gak dikenalnya.
+
+`max_tokens_field` adalah field tempat batas output sebuah balasan dikirim, di format OpenAI. API OpenAI sendiri
+menolak `max_tokens` untuk model-model barunya (keluarga GPT-5 salah satunya) dengan `Unsupported parameter:
+'max_tokens'`, dan menerima `max_completion_tokens` untuk semua model chat-nya. Server lain yang bicara format yang
+sama (OpenRouter, Ollama, vLLM, llama.cpp, Nougate) bisa jadi cuma kenal `max_tokens`, dan itulah yang dikirim kalau
+key ini gak ditulis. Kamu gak perlu menulisnya sendiri: setup, dashboard, dan `nouride provider add` menulis
+`max_tokens_field = "max_completion_tokens"` untuk profil di `https://api.openai.com/v1`, dan start pertama setelah
+update menuliskannya ke profil yang dibuat sebelumnya, sekali, dan mencatatnya di log. Profil yang sudah menulis
+`max_tokens_field`, apa pun nilainya, tetap dengan nilainya. `nouride config check` menampilkan profil yang batasnya
+dikirim di `max_completion_tokens`, dan bilang kalau start berikutnya akan menulis key ini. Format Anthropic cuma
+punya satu field, `max_tokens`, jadi profil Anthropic yang minta `max_completion_tokens` gak bisa dimuat.
 
 ## Mengelolanya
 

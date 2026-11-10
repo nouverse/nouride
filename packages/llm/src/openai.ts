@@ -25,6 +25,7 @@ import {
   type EmbedResponse,
   type MessageContent,
   type LLMProvider,
+  type MaxTokensField,
   type StopReason,
   type StreamChunk,
   type TokenUsage,
@@ -47,6 +48,8 @@ export interface OpenAIProviderOptions {
   headers?: Record<string, string>;
   /** Send who is asking (`ChatParams.identity`); off for a server that rejects fields it does not know. */
   identify?: boolean;
+  /** The field the output ceiling goes in (`ProviderProfile.maxTokensField`); absent, `max_tokens`. */
+  maxTokensField?: MaxTokensField;
   http?: HttpDeps;
 }
 
@@ -376,7 +379,9 @@ export class OpenAIProvider implements LLMProvider {
         ...(params.tools?.length ? { tools: params.tools.map(toWireTool) } : {}),
         ...(params.tools?.length && params.toolChoice === "none" ? { tool_choice: "none" } : {}),
         ...(params.temperature !== undefined ? { temperature: params.temperature } : {}),
-        ...(params.maxTokens !== undefined ? { max_tokens: params.maxTokens } : {}),
+        // In the field the profile names: OpenAI's own API refuses `max_tokens` for its newer models, and a server
+        // that only speaks the format may know nothing else. One field, never both: a strict server refuses a pair.
+        ...(params.maxTokens !== undefined ? { [this.options.maxTokensField ?? "max_tokens"]: params.maxTokens } : {}),
         // The level as the operator wrote it: an endpoint that does not know `xhigh` says so on the first call.
         ...(params.effort ? { reasoning_effort: params.effort } : {}),
         // `false` said outright: a proxy that defaults to streaming when the field is absent — 9Router does —

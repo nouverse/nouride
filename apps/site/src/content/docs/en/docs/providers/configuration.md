@@ -48,6 +48,7 @@ api_key = "anthropic_api_key"
 kind = "openai"
 base_url = "https://api.openai.com/v1"
 api_key = "openai_api_key"
+max_tokens_field = "max_completion_tokens"   # OpenAI's own API only; see below
 
 [providers.openrouter]
 kind = "openai"
@@ -70,6 +71,17 @@ config, so a credential belongs in `api_key` (a secret name), not here. (A per-a
 `x-client-id` header on the OpenAI wire, `metadata.user_id` on Anthropic's. A gateway such as Nougate tells
 its clients and sessions apart by them, and OpenAI sends a conversation's requests to the cache its prefix is
 already in. It is off unless set, because a strict server rejects a field it does not know.
+
+`max_tokens_field` is the field a reply's output limit is sent in, on the OpenAI wire. OpenAI's own API refuses
+`max_tokens` for its newer models (the GPT-5 family among them) with `Unsupported parameter: 'max_tokens'`, and
+takes `max_completion_tokens` for every chat model. Other servers that speak the same shape (OpenRouter,
+Ollama, vLLM, llama.cpp, Nougate) may only know `max_tokens`, which is what is sent when the key is left out. You do
+not need to write it yourself: setup, the dashboard and `nouride provider add` write `max_tokens_field =
+"max_completion_tokens"` for a profile on `https://api.openai.com/v1`, and the first start after an update writes it
+into a profile made before, once, and says so in the log. A profile that already says `max_tokens_field` either way
+keeps what it says. `nouride config check` lists a profile whose limit goes in `max_completion_tokens`, and says when
+the next start will write the key. The Anthropic wire has one field, `max_tokens`, so an Anthropic profile that asks
+for `max_completion_tokens` does not load.
 
 ## Managing them
 

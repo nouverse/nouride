@@ -4,7 +4,8 @@
 
 import { createLogger } from "@nouride/shared";
 import type { ProviderKind } from "@nouride/shared";
-import { upsertTomlTable, removeTomlTable } from "@/modules/config/edit.ts";
+import { removeTomlKey, upsertTomlTable, removeTomlTable } from "@/modules/config/edit.ts";
+import { endpointKeys } from "@/modules/config/known-endpoints.ts";
 import { editConfigFile } from "./file.ts";
 import {
   NAME_PATTERN,
@@ -64,14 +65,20 @@ export async function saveProvider(deps: Pick<SettingsDeps, "config" | "configPa
   const apiKey = input.apiKey?.trim();
   if (!apiKey && !existing) return { ok: false, field: "apiKey", error: "an API key is required" };
 
-  const saved = await editConfigFile(deps, (source) =>
-    upsertTomlTable(source, `providers.${name}`, {
+  const saved = await editConfigFile(deps, (source) => {
+    // What its endpoint needs beyond the wire format, from the one table (`known-endpoints.ts`): OpenAI's own API
+    // takes the output ceiling only as `max_completion_tokens` for its newer models. Read under the file lock, so a
+    // key the operator wrote by hand is seen and kept.
+    const keys = endpointKeys(source, name, { kind, baseUrl });
+    const cleared = keys.remove.reduce((text, key) => removeTomlKey(text, `providers.${name}`, key), source);
+    return upsertTomlTable(cleared, `providers.${name}`, {
       kind,
       base_url: baseUrl,
       // The NAME again. Same rule, same reason.
       api_key: apiKeySecret,
-    }),
-  );
+      ...keys.set,
+    });
+  });
   if (!saved.ok) return saved;
   // Once the save is through, so a refused one leaves the key that works in place.
   if (apiKey) await deps.secrets.set(apiKeySecret, apiKey);

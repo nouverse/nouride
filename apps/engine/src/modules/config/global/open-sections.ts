@@ -37,7 +37,7 @@ const PLATFORMS: ConfigurableGatewayName[] = ["discord", "telegram", "whatsapp"]
  * The keys each open table reads. Any other is a typo the generic merge cannot see here — the names are the operator's
  * — and `enable = true` left a gateway off with nothing said. Warned about as the merge warns about its own.
  */
-const PROVIDER_KEYS = new Set(["kind", "base_url", "api_key", "headers", "identify", "billing"]);
+const PROVIDER_KEYS = new Set(["kind", "base_url", "api_key", "headers", "identify", "billing", "max_tokens_field"]);
 const GATEWAY_KEYS = new Set([
   "token", "enabled", "agent", "mode", "session_dir", "encryption_key", "bridge_transport",
   "bridge_command", "groups_require_mention", "group_context_messages", "cache",
@@ -78,6 +78,15 @@ export function parseProviders(raw: unknown): Record<string, ProviderProfile> {
     if (billing !== undefined && billing !== "metered" && billing !== "included") {
       throw new ConfigError(`${where} billing must be "metered" or "included", got "${billing}"`);
     }
+    const maxTokensField = requireString(value.max_tokens_field, `${where} max_tokens_field`) ?? base?.maxTokensField;
+    if (maxTokensField !== undefined && maxTokensField !== "max_tokens" && maxTokensField !== "max_completion_tokens") {
+      throw new ConfigError(`${where} max_tokens_field must be "max_tokens" or "max_completion_tokens", got "${maxTokensField}"`);
+    }
+    // Said rather than ignored: the Anthropic wire has the one field, so a profile that asks for the other would have
+    // its operator believe something the request never does.
+    if (kind === "anthropic" && maxTokensField === "max_completion_tokens") {
+      throw new ConfigError(`${where} max_tokens_field = "max_completion_tokens" is for kind = "openai": Anthropic's API takes max_tokens only`);
+    }
     profiles[name] = {
       kind,
       baseUrl,
@@ -89,6 +98,7 @@ export function parseProviders(raw: unknown): Record<string, ProviderProfile> {
           : {}),
       ...(identify ? { identify } : {}),
       ...(billing === "included" ? { billing } : {}),
+      ...(maxTokensField === "max_completion_tokens" ? { maxTokensField } : {}),
     };
   }
 

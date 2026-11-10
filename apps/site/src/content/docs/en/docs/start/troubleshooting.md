@@ -105,6 +105,12 @@ agent's list. The agent's **Settings** tab in the dashboard shows which tools it
 `nouride doctor` names the profile; `nouride secret` lists which credential names exist, never their
 values.
 
+**Every reply fails on OpenAI with `Unsupported parameter: 'max_tokens'`.** The profile points at OpenAI's own API
+with one of its newer models, and sends the output limit in the old field. Update Nouride and start it again: the
+first start writes `max_tokens_field = "max_completion_tokens"` into that profile and says so in the log, and
+`nouride config check` says beforehand that it will.
+[Provider profiles](/en/docs/providers/configuration/#common-profiles)
+
 ## Commands and files
 
 **A command is refused however it is spelled.** The directory is not a workspace root for that agent.

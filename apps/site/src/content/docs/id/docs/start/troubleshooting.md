@@ -110,6 +110,12 @@ itu. Tab **Settings** milik agent itu di dashboard menampilkan tool apa saja yan
 `nouride doctor` menyebutkan profilnya; `nouride secret` menampilkan nama kredensial yang ada, gak
 pernah nilainya.
 
+**Setiap balasan gagal di OpenAI dengan `Unsupported parameter: 'max_tokens'`.** Profilnya mengarah ke API OpenAI
+sendiri dengan salah satu model barunya, dan mengirim batas output di field yang lama. Update Nouride lalu jalankan
+lagi: start pertama menulis `max_tokens_field = "max_completion_tokens"` ke profil itu dan mencatatnya di log, dan
+`nouride config check` sudah bilang sebelumnya bahwa ia akan begitu.
+[Profil provider](/id/docs/providers/configuration/#profil-yang-umum)
+
 ## Perintah dan file
 
 **Sebuah perintah ditolak bagaimanapun ditulisnya.** Direktori itu bukan workspace root bagi agent

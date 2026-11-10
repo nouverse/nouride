@@ -64,6 +64,7 @@ export class ProviderRegistry {
       apiKey,
       ...(profile.headers ? { headers: profile.headers } : {}),
       ...(profile.identify ? { identify: true } : {}),
+      ...(profile.maxTokensField ? { maxTokensField: profile.maxTokensField } : {}),
       ...(this.http ? { http: this.http } : {}),
     });
 
