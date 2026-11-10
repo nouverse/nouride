@@ -58,7 +58,7 @@ export const SITE_URL = 'https://nouride.com';
 export const CLOUD_URL = 'https://app.nouverse.tech/pod/products/nouride';
 
 /** The community: the Discord server, linked from the landing page's footer and from the dashboard's Settings. */
-export const COMMUNITY_URL = 'https://discord.gg/egh2hBj6v';
+export const COMMUNITY_URL = 'https://discord.gg/syRGnY3GEg';
 
 /** Where Pro is asked about until it is sold as a licence: an email to Nouverse. */
 export const PRO_CONTACT = 'mailto:contact@nouverse.tech?subject=Nouride%20Pro';

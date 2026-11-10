@@ -5,4 +5,4 @@
 export const DOCS_URL = "https://nouride.com";
 
 /** Where people who run Nouride talk to each other and to its makers: the Discord server, beside the manual in Settings. */
-export const COMMUNITY_URL = "https://discord.gg/egh2hBj6v";
+export const COMMUNITY_URL = "https://discord.gg/syRGnY3GEg";
