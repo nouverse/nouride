@@ -43,6 +43,7 @@ import { join, relative, resolve } from "node:path";
 import { BRIDGE_EXTERNALS, NATIVE_LOADER_MARKERS } from "../bridge-externals.ts";
 import { checkoutPathsIn, noBuildPathFlags } from "./build-path.ts";
 import { nourideRunFor, rustTarget } from "./nouride-run.ts";
+import { copySkills } from "./skills.ts";
 import { artifactName as name, assertKnownFlags, parseTargets, type Edition } from "../targets.ts";
 import {
   ALWAYS,
@@ -71,16 +72,6 @@ const ROOT = new URL("../..", import.meta.url).pathname;
 const DIST = join(ROOT, "dist");
 const DASHBOARD_DIST = join(ROOT, "apps/dashboard/dist");
 const NOUGATE_FRONTEND_DIST = join(ROOT, "internals/nougate/apps/frontend/dist");
-/**
- * Skills that ship with the daemon — the `builtin` scope.
- *
- * Travels with the binary because `resolveBuiltinSkillsDir()` looks for `skills/` beside the
- * executable, and an install without it is not a broken daemon: it is a daemon that has quietly
- * forgotten how to do things, with nothing in the log to connect that to a missing directory. A
- * source checkout has it under `content/` and so never noticed. Staged as plain `skills/`: the
- * tarball has nothing to group it with, and the resolver looks for both names.
- */
-const BUILTIN_SKILLS = join(ROOT, "content/skills");
 const ENTRY = join(ROOT, "apps/engine/src/cli/main.ts");
 
 async function run(
@@ -766,7 +757,7 @@ if (targets.length === 0) {
   await rm(join(DIST, "dashboard"), { recursive: true, force: true });
   await cp(DASHBOARD_DIST, join(DIST, "dashboard"), { recursive: true });
   await rm(join(DIST, "skills"), { recursive: true, force: true });
-  await cp(BUILTIN_SKILLS, join(DIST, "skills"), { recursive: true });
+  await copySkills(join(DIST, "skills"));
   const hasHostNougateFrontend = edition.bundles.includes(NOUGATE) && existsSync(NOUGATE_FRONTEND_DIST);
   if (hasHostNougateFrontend) {
     await rm(join(DIST, "frontend"), { recursive: true, force: true });
@@ -800,7 +791,7 @@ for (const target of targets) {
   // of the file every setting is documented in — it lives in the repo, and the repo is not on the
   // server. The daemon boots without it (built-in defaults), so this is a reference, not a step.
   await cp(join(ROOT, "config.example.toml"), join(stage, "config.example.toml"));
-  await cp(BUILTIN_SKILLS, join(stage, "skills"), { recursive: true });
+  await copySkills(join(stage, "skills"));
   // `nouride-pkg` and its units — the root half of `packages/system-packages` — which `install.sh
   // --allow-packages` installs as root. Scripts, not compiled: they are what runs as root, so they
   // ship in a form an operator can read before running the installer.

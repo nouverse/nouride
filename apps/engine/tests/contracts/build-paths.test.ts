@@ -15,6 +15,7 @@ import { join } from "node:path";
 import { runCommand } from "@nouride/runtime";
 import { BUNDLED_DIR, checkoutPathsIn } from "../../../../scripts/build/build-path.ts";
 import { bundleFlags, compileFlags } from "../../../../scripts/build/core.ts";
+import { isSkillFile } from "../../../../scripts/build/skills.ts";
 import { PUBLIC_EDITIONS } from "../../../../scripts/build/editions.ts";
 
 const run = (argv: string[], cwd: string) =>
@@ -86,5 +87,17 @@ describe("the build's check for a checkout path", () => {
   test("finds nothing in an artefact that names none — and the image's own /app/data is not its checkout", () => {
     expect(checkoutPathsIn('const legacy=["/app/data"];const root="/$bunfs/root";', ["/app/"])).toEqual([]);
     expect(checkoutPathsIn("plain code", ["/srv/checkout/nouride"])).toEqual([]);
+  });
+});
+
+describe("the skills a build carries", () => {
+  test("are the tracked ones: Python's cache beside a script stays behind", () => {
+    const skills = "/checkout/content/skills";
+    expect(isSkillFile(skills)).toBe(true);
+    expect(isSkillFile(`${skills}/data-sheets/scripts`)).toBe(true);
+    expect(isSkillFile(`${skills}/data-sheets/scripts/chart.py`)).toBe(true);
+    expect(isSkillFile(`${skills}/data-sheets/scripts/__pycache__`)).toBe(false);
+    expect(isSkillFile(`${skills}/data-sheets/scripts/__pycache__/chart.cpython-312.pyc`)).toBe(false);
+    expect(isSkillFile(`${skills}/diagrams/scripts/diagram.pyc`)).toBe(false);
   });
 });
