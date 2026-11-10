@@ -9,7 +9,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
-import { Archive, ArchiveRestore, ArrowLeft, FilePlus2, PenLine, Settings2, Trash2, Upload } from "lucide-react";
+import { Archive, ArchiveRestore, ArrowLeft, PenLine, Settings2, Trash2, Upload } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import type { KnowledgeCollection } from "@nouride/wire";
 import { useConfirm } from "@/commons/components/ui/confirm";
@@ -164,7 +164,7 @@ export function CollectionView({
               reading={reading}
               editable={editable}
               onOpen={(path) => onOpen({ collection: collection.id, path })}
-              empty={<EmptyState icon={FilePlus2} title="No documents yet" description={editable ? "Drop files here, or write one." : "Nothing has been added to it yet."} />}
+              empty={<EmptyState pose="knowledge" title="No documents yet" description={editable ? "Drop files here, or write one." : "Nothing has been added to it yet."} />}
             />
           )}
         </Card>

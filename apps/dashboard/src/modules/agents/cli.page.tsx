@@ -19,6 +19,7 @@ import { Details } from "@/commons/components/ui/Details";
 import { byInstaller, goBackMessage, setUpMessage } from "@/commons/lib/set-up";
 import { CliProfiles } from "./components/CliProfiles";
 import AgentModelPage from "./model.page";
+import { CardLoading } from "@/commons/components/ui/Skeleton";
 
 const PRESETS: { id: CliPreset; label: string; summary: string }[] = [
   { id: "folder", label: "Free in its folder", summary: "Works without asking inside its own folder. Where agents are not their own users, this asks as Risky does." },
@@ -55,7 +56,7 @@ export default function AgentCliPage({ agentId }: { agentId: string }) {
     was.current = signingIn;
   }, [signingIn, askAgain]);
 
-  if (cli.isPending) return <span className="loading loading-spinner loading-md text-primary opacity-60" />;
+  if (cli.isPending) return <CardLoading lines={4} />;
   if (cli.error || !cli.data) return <ErrorNote error={cli.error} />;
   const data = cli.data;
   const cliName = row?.name ?? data.cli;

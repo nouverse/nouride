@@ -47,7 +47,7 @@ export function RouteError({ error }: ErrorComponentProps) {
 
 export function NotFound() {
   return (
-    <Panel pose="confused" title="No page here">
+    <Panel pose="lost" title="No page here">
       <p className="text-sm text-base-content/70">
         This address is not a page of the dashboard: a mistyped link, or one from an older version.
       </p>

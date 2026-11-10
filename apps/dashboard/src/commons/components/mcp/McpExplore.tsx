@@ -96,7 +96,7 @@ export function McpExplore({
       {results.isFetching ? <ListLoading /> : null}
 
       {debounced && entries.length === 0 && !results.isFetching ? (
-        <EmptyState icon={Package} title="Nothing matches" description={`No connector in the catalog matches “${debounced}”.`} />
+        <EmptyState pose="searching" title="Nothing matches" description={`No connector in the catalog matches “${debounced}”.`} />
       ) : null}
 
       <ul className={`grid grid-cols-1 gap-3 lg:grid-cols-2 ${results.isFetching ? "hidden" : ""}`}>

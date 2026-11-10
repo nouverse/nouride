@@ -56,14 +56,34 @@ Dashboard work keeps it that way:
 ## The mascot
 
 The chibi tuxedo cat (helmet with the "N", see-through lavender sunglasses, lavender hoodie, cream
-scooter). Its poses are transparent images in `docs/design/mascot/` (`standing/`, `riding/`, `states/`) until the dashboard uses them; a pose it uses moves to `packages/shared/assets/`, where every file must be named by code (`brand-assets.test.ts`). Each pose means one
-state and is used for that state only:
+scooter). Its poses are transparent images in `docs/design/mascot/` (`standing/`, `riding/`, `states/`) until the dashboard uses them; a pose it uses moves to `packages/shared/assets/`, where every file must be named by code (`brand-assets.test.ts`) and every pose in the dashboard's table drawn by a page (`mascot-poses.test.ts`). Each pose means one
+state and is used for that state only. The table is `POSES` in the dashboard's `Mascot.tsx`; in short:
 
-- waving: the greeting; pointing: what needs the person; typing on a laptop: an agent at work;
-- sleeping: an empty list; confused: a question or something unclear; sad with a broken plug: an error or
-  offline; trophy or celebrating: a mission done; riding the scooter: something on its way (loading,
-  an update, a delivery); good night: the Night greeting;
+- waving: the greeting; good night: the Night greeting; pointing: what needs the person; holding a watch: a mission
+  that waits for an answer;
+- sleeping: a list that fills by itself and has nothing in it yet; standing by the scooter: a list that waits for the
+  person to make the first (agents, people, providers);
+- lost over a map: an address that leads nowhere; confused: something that was there and is gone; sad with a broken
+  plug: an error or offline; under a crossed-out signal: no chat app connected;
+- the magnifying glass held up: a search or a filter that finds nothing; walking with it: a record nothing is written
+  in yet;
+- typing on a laptop: an agent at work; the trophy: a mission done; pushing the scooter: a mission that ended short;
+- a page's own subject: the shield (access, secrets), the calendar, the book, the star (skills), the paper plane
+  (webhooks), the box, the delivery (connectors), the wrench (an update), headphones at a laptop (coding CLIs);
+- riding the scooter: something on its way (the dashboard loading, missions moving on Home);
 - the head alone: the logo, the favicon and the app icon.
+
+Where the cat goes in the dashboard:
+
+- **An empty list** that is what the page or the tab is about: `<EmptyState pose=…>`. A filter or a search that
+  matches nothing is the magnifying glass, whatever the page. An empty card among others keeps its icon.
+- **Beside a page's title**, in the pose that is the page's subject, while the page has something to show
+  (`<PageHeader pose=…>`): empty, the same cat is the empty list's, so a view still has one. Not on a phone.
+- **Home changes its second picture each visit**, so the page opened most is not the same every time: one of several
+  resting poses when nothing waits and nothing moves, one of several riding poses beside what is moving
+  (`modules/home/moments.ts`). The greeting's cat does not change. A new resting or riding pose is one line there.
+
+The poses on the later sheets (`grids/nourider-4.jpeg`, `-5.jpeg`) are cut by `apps/site/scripts/cut-mascot-poses.ts`.
 
 What it stands for (the owner's reading, 2026-11-10), so a new pose or a line of copy keeps to it:
 
@@ -108,6 +128,10 @@ pose=…>` or `<EmptyState pose=…>`; which state takes which pose is the table
   define it.
 - Motion in native CSS/Tailwind only, and only where something changed (the dashboard's motion
   conventions: keyframes in `main.css`, dialogs through `Leaving`, lists through `useMotionList`).
+- What is loading is drawn as its shape, never a spinner in the middle of a blank page: `ListLoading` for a list,
+  `DetailLoading`, `CardLoading` and `TextLoading` (`Skeleton.tsx`) for a page about one thing, a card and a file
+  being read. A list never shows its empty state before the answer says it is empty. A spinner is for one thing
+  being done in a button (`list-loading.test.ts`).
 
 ## Anti-slop pre-flight
 

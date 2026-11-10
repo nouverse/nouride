@@ -25,6 +25,7 @@ import { CliStanding } from "@/commons/components/agents/CliStanding";
 import { Details } from "@/commons/components/ui/Details";
 import { isAdmin, useMe } from "@/commons/lib/session";
 import { byInstaller, setUpMessage } from "@/commons/lib/set-up";
+import { ListLoading } from "@/commons/components/ui/Spinner";
 
 const ACCOUNT_NAME = /^[a-z0-9][a-z0-9-]{0,23}$/;
 /**
@@ -79,9 +80,9 @@ export function CodingClis() {
         </button>
       </div>
       {accounts.isPending ? (
-        <p className="text-base-content/65 flex items-center gap-2 text-xs"><span className="loading loading-spinner loading-xs" aria-hidden="true" /> Checking which accounts are signed in…</p>
+        <ListLoading count={2} />
       ) : clis.length === 0 ? (
-        <Card><EmptyState icon={Terminal} title="No coding CLIs on this server" /></Card>
+        <Card><EmptyState pose="coding" title="No coding CLIs on this server" /></Card>
       ) : (
         clis.map((cli) => <CliCard key={cli.id} cli={cli} admin={admin} onChanged={() => void queryClient.invalidateQueries({ queryKey: ["cli-accounts"] })} onRecheck={() => recheck.mutate()} />)
       )}

@@ -39,6 +39,7 @@ import { LocalCard } from "./components/LocalCard";
 import { UpdatesCard } from "./components/UpdatesCard";
 import { Card, ErrorNote, PageHeader } from "@/commons/components/ui/ui";
 import { PAGE_ASKS } from "@/commons/components/agents/page-asks";
+import { CardLoading } from "@/commons/components/ui/Skeleton";
 
 const BENEFITS: { icon: typeof Cloud; title: string; body: string }[] = [
   {
@@ -123,6 +124,7 @@ export default function BoxPage() {
     <div className="space-y-6">
       <PageHeader
         ask={PAGE_ASKS.box}
+        pose={box.isPending || state ? "box" : undefined}
         title="My Box"
         description="This Nouride Box, its link to your Nouverse account, and the codes printed on it."
         actions={
@@ -140,8 +142,9 @@ export default function BoxPage() {
       />
 
       {box.isPending && (
-        <div className="flex items-center gap-2.5 py-6 text-sm text-base-content/65">
-          <Loader2 size={16} className="animate-spin text-primary" /> Reading your box…
+        <div className="grid gap-6">
+          <CardLoading lines={4} />
+          <CardLoading lines={3} />
         </div>
       )}
 

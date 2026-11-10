@@ -6,7 +6,7 @@
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Ban, RotateCcw, ShieldOff } from "lucide-react";
+import { Ban, RotateCcw } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import type { SenderAnswer, SenderRecord } from "@nouride/wire";
 import { canWrite, useMe } from "@/commons/lib/session";
@@ -37,7 +37,7 @@ export function DeniedTab({ senders, agentOf }: { senders: SenderRecord[]; agent
     >
       <ErrorNote error={answer.error} />
       {senders.length === 0 ? (
-        <EmptyState icon={ShieldOff} title="Nobody is waiting out a denial" />
+        <EmptyState pose="security" title="Nobody is waiting out a denial" />
       ) : visible.length === 0 ? (
         <NoMatch query={query} />
       ) : (

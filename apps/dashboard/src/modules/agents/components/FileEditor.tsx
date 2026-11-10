@@ -17,6 +17,7 @@ import { FileCode, FileText, Save } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import { Card, EmptyState, ErrorNote } from "@/commons/components/ui/ui";
 import { EditPreviewSwitch, MarkdownArea, type MarkdownMode } from "@/commons/components/ui/MarkdownEditor";
+import { TextLoading } from "@/commons/components/ui/Skeleton";
 
 export function FileEditor({ agent, editable }: { agent: string; editable: boolean }) {
   const queryClient = useQueryClient();
@@ -98,9 +99,7 @@ export function FileEditor({ agent, editable }: { agent: string; editable: boole
           {!selected ? (
             <EmptyState icon={FileText} title="Choose a file to edit or inspect" description="Select any file from the navigator on the left." />
           ) : content.isPending ? (
-            <div className="flex justify-center py-20">
-              <span className="loading loading-spinner loading-md text-primary opacity-60" />
-            </div>
+            <TextLoading lines={12} className="py-3" />
           ) : (
             <>
               <div className="flex flex-wrap items-center justify-between gap-3 bg-base-200/50 p-2.5 rounded-xl border border-base-content/[0.06]">

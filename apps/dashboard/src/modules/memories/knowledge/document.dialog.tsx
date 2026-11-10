@@ -10,6 +10,7 @@ import { api } from "@/commons/lib/api";
 import { overPage } from "@/commons/components/ui/OverPage";
 import { ErrorNote } from "@/commons/components/ui/ui";
 import { pagesLine, statusOf } from "./words";
+import { TextLoading } from "@/commons/components/ui/Skeleton";
 
 /** A document by its collection and its path in it. */
 export interface OpenDocument {
@@ -87,9 +88,7 @@ export function DocumentDialog({ at, onOpen, onClose }: { at: OpenDocument; onOp
 
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain pr-1">
           {opened.isPending ? (
-            <div className="flex justify-center py-10">
-              <span className="loading loading-spinner loading-md opacity-60" />
-            </div>
+            <TextLoading lines={8} className="py-3" />
           ) : null}
           {document && sections.length === 0 ? <p className="text-base-content/65 text-sm">Nothing in it is searched.</p> : null}
           {sections.length ? (

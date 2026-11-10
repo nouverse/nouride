@@ -1,6 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
 import QRCode from "qrcode";
-import { Loader2 } from "lucide-react";
 
 function useQrImage(payload: string | null, width = 220): string | null {
   const [image, setImage] = useState<string | null>(null);
@@ -28,8 +27,9 @@ export function QrTile({ payload, title, caption }: { payload: string | null; ti
         {image ? (
           <img src={image} alt={title} width={180} height={180} className="block h-[180px] w-[180px]" />
         ) : (
-          <div className="flex h-[180px] w-[180px] items-center justify-center">
-            <Loader2 size={18} className="animate-spin text-base-content/40" />
+          // On the tile's white in both themes, as the code will be: a grey of its own, not the theme's.
+          <div aria-busy="true" aria-label="loading" className="h-[180px] w-[180px]">
+            <div className="h-full w-full animate-pulse rounded-lg bg-neutral-200" />
           </div>
         )}
       </div>

@@ -1,7 +1,6 @@
 /** Logs → Audit: one row per decision, with the actor who made it. */
 
 import { useQuery } from "@tanstack/react-query";
-import { Check } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import { EmptyState } from "@/commons/components/ui/ui";
 import { Panel } from "./Panel";
@@ -25,7 +24,7 @@ export function AuditLog() {
       {audit.isPending ? (
         <ListLoading count={5} />
       ) : entries.length === 0 ? (
-        <EmptyState icon={Check} title="Nothing recorded yet" />
+        <EmptyState pose="inspecting" title="Nothing recorded yet" />
       ) : (
         // A table from a tablet's width up. On a phone its five columns scrolled sideways inside the card, so there each
         // row is a block: when, the action, who and which agent on one line, the details the whole width under them.

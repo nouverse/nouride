@@ -9,6 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import QRCode from "qrcode";
 import { CheckCircle2, Loader2, QrCode } from "lucide-react";
 import { api } from "@/commons/lib/api";
+import { TextLoading } from "@/commons/components/ui/Skeleton";
 
 export function WhatsAppPairing({ gatewayId }: { gatewayId: string }) {
   const pairing = useQuery({
@@ -39,13 +40,7 @@ export function WhatsAppPairing({ gatewayId }: { gatewayId: string }) {
     };
   }, [qr]);
 
-  if (pairing.isPending) {
-    return (
-      <div className="flex items-center gap-2.5 py-4 text-xs font-medium text-base-content/65">
-        <Loader2 size={15} className="animate-spin text-primary" /> Checking WhatsApp link status…
-      </div>
-    );
-  }
+  if (pairing.isPending) return <TextLoading lines={2} className="max-w-sm py-4" />;
 
   if (pairing.error) {
     return (

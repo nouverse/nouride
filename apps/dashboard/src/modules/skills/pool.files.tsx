@@ -12,6 +12,7 @@ import { Trash2 } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import { ErrorNote } from "@/commons/components/ui/ui";
 import { useConfirm } from "@/commons/components/ui/confirm";
+import { TextLoading } from "@/commons/components/ui/Skeleton";
 
 /**
  * What a skill ships beside its body.
@@ -124,7 +125,7 @@ function SkillFileBody({ name, path, editable }: { name: string; path: string; e
     },
   });
 
-  if (file.isPending) return <p className="mt-1 text-xs text-base-content/65">Reading…</p>;
+  if (file.isPending) return <TextLoading lines={5} className="mt-2" />;
   if (file.error) return <div className="mt-1"><ErrorNote error={file.error} /></div>;
 
   const value = text ?? file.data?.source ?? "";

@@ -1,17 +1,19 @@
 /**
  * Home (0.8.24, where Overview was): an inbox before a dashboard, in the design rules' order — what needs you, what is
- * moving, Quick chat, the agents — and the cat, waving by day and saying good night late, asleep where the cards would be
- * when nothing waits and nothing moves. The menu's count and the browser tab's title are the same count.
+ * moving, Quick chat, the agents — and the cat, waving by day and saying good night late, resting where the cards would
+ * be when nothing waits and nothing moves and riding beside what moves: another picture each visit
+ * (`home-moments.test.ts`). The menu's count and the browser tab's title are the same count.
  */
 
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { answer, renderPage, type, useMountHarness } from "./mount-harness.ts";
+import { answer, dom, renderPage, type, useMountHarness } from "./mount-harness.ts";
 import { eventually } from "./wait.ts";
 import { greetingAt } from "@/modules/home/components/Hero";
 import { doingNow } from "@/commons/lib/agents";
 import { summaryLine } from "@/modules/home/index.page";
+import { QUIET } from "@/modules/home/moments";
 import type { AgentSummary } from "@nouride/wire";
 
 useMountHarness();
@@ -93,6 +95,9 @@ describe("the page", () => {
     // The greeting's waving or good-night cat, and nothing asleep: something waits.
     expect(html).toMatch(/01-waving|12-good-night/);
     expect(html).not.toContain("Nothing is waiting for you");
+    // One cat beside the cards, the one pointing at the approval: none rides beside what is moving as well.
+    expect(html).toContain("10-pointing");
+    expect(html).not.toMatch(/mascot\/riding\//);
     // One count: the approval, the mission, the harness's request, its skill draft and its fact to review.
     expect(html).toContain("A fact waits for your yes or no");
     expect(html).toContain('href="/dashboard/memories?tab=proposals"');
@@ -100,7 +105,67 @@ describe("the page", () => {
     expect(title).toBe("(5) Nouride");
   });
 
-  test("nothing waiting and nothing moving: the cat asleep where the cards were", async () => {
+  test("missions moving and nothing to answer: the cat rides beside them", async () => {
+    answer({
+      "/approvals": ok({ pending: [] }),
+      "/missions": ok({ missions: [mission("m1", "running")] }),
+      "/access": ok({ senders: [] }),
+      "/skills/drafts": ok({ enabled: true, pending: [], recent: [] }),
+      "/memory/proposals": ok({ proposals: [] }),
+      "/knowledge": ok({ collections: [] }),
+    });
+    let card = "";
+    await renderPage("/", async (host) => {
+      await eventually(() => host.textContent?.includes("Moving now") === true, 3_000, "what is moving");
+      card = [...host.querySelectorAll("section")].find((section) => section.textContent?.includes("Moving now"))?.innerHTML ?? "";
+    });
+    expect(card).toMatch(/mascot\/riding\/(01-wheelie|04-speeding|09-night-ride|19-turbo|27-zoom)/);
+    expect(card.split("<img").length - 1).toBe(1);
+  });
+
+  test("nothing waiting and nothing moving: the cat rests where the cards were, and not as it did last visit", async () => {
+    const quiet = {
+      "/approvals": ok({ pending: [] }),
+      "/missions": ok({ missions: [] }),
+      "/access": ok({ senders: [] }),
+      "/skills/drafts": ok({ enabled: true, pending: [], recent: [] }),
+      "/memory/proposals": ok({ proposals: [] }),
+      "/knowledge": ok({ collections: [] }),
+    };
+    const PICTURES: Record<string, string> = { sleeping: "06-sleeping", meditating: "11-voice", coffee: "09-coffee", parked: "15-parked", coffeeBreak: "11-coffee-break" };
+    expect(Object.keys(PICTURES).sort()).toEqual(QUIET.map((moment) => moment.pose).sort());
+    /** The quiet card of one visit: which moment it drew, and what the browser now remembers as shown. */
+    const visit = async () => {
+      answer(quiet);
+      let card = "";
+      let kept = "";
+      await renderPage("/", async (host) => {
+        await eventually(() => host.textContent?.includes("Nothing is waiting for you") === true, 3_000, "the quiet card");
+        card = [...host.querySelectorAll("section")].find((section) => section.textContent?.includes("Nothing is waiting for you"))?.innerHTML ?? "";
+        kept = dom.localStorage.getItem("nouride.home.quiet") ?? "";
+      });
+      const at = QUIET.findIndex((moment) => card.includes(PICTURES[moment.pose]!));
+      return { at, card, kept };
+    };
+    try {
+      // Asleep was shown last: this visit shows another, with the line that goes with its picture, and remembers it.
+      dom.localStorage.setItem("nouride.home.quiet", "0");
+      const first = await visit();
+      expect(first.at).toBeGreaterThan(0);
+      expect(first.card).toContain(QUIET[first.at]!.line);
+      expect(first.card).not.toContain("06-sleeping");
+      expect(first.kept).toBe(String(first.at));
+      // And the visit after that, another again.
+      const second = await visit();
+      expect(second.at).toBeGreaterThanOrEqual(0);
+      expect(second.at).not.toBe(first.at);
+    } finally {
+      dom.localStorage.removeItem("nouride.home.quiet");
+      dom.localStorage.removeItem("nouride.home.moving");
+    }
+  });
+
+  test("nothing waiting and nothing moving: no card of what moves, and the tab's title without a count", async () => {
     answer({
       "/approvals": ok({ pending: [] }),
       "/missions": ok({ missions: [] }),
@@ -116,7 +181,6 @@ describe("the page", () => {
       html = host.innerHTML;
       title = host.ownerDocument.title;
     });
-    expect(html).toContain("06-sleeping");
     expect(html).not.toContain("Moving now");
     expect(title).toBe("Nouride");
   });

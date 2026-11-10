@@ -31,7 +31,6 @@ import {
   ArrowUpCircle,
   CheckCircle2,
   Download,
-  Loader2,
   Pause,
   Play,
   RefreshCw,
@@ -50,6 +49,7 @@ import { RestartingCard } from "./RestartingCard";
 import { UPDATE_QUERY_KEY, useUpdate } from "@/commons/hooks/use-update";
 import { formatBytes } from "@/commons/lib/format";
 import { UPDATE_PROGRESS_KEY, useDownloadProgress, useInstall } from "./useUpdate";
+import { CardLoading } from "@/commons/components/ui/Skeleton";
 
 export default function UpdatePage() {
   const status = useUpdate();
@@ -86,10 +86,8 @@ export default function UpdatePage() {
   if (status.isLoading) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Update" description="Checking for updates…" />
-        <Card title="" description="">
-          <Loader2 size={18} className="animate-spin opacity-60" />
-        </Card>
+        <PageHeader title="Update" description="Which version of Nouride runs here, and whether a newer one is out." />
+        <CardLoading lines={3} />
       </div>
     );
   }
@@ -108,6 +106,7 @@ export default function UpdatePage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        pose="update"
         title="Update"
         description="Which version of Nouride runs here, and whether a newer one is out."
         actions={

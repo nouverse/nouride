@@ -137,7 +137,7 @@ export function DaemonLog() {
         <ListLoading count={5} />
       ) : entries.length === 0 ? (
         <EmptyState
-          icon={ScrollText}
+          pose={search || level || component ? "searching" : "inspecting"}
           title="Nothing matches"
           description={search || level || component ? "Loosen the filters." : "The daemon has logged nothing yet."}
         />

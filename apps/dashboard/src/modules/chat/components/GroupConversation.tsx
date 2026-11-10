@@ -9,7 +9,7 @@
 import { useRef } from "react";
 import { useQueries } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ChevronLeft, MessagesSquare, Pin, PinOff } from "lucide-react";
+import { ChevronLeft, Pin, PinOff } from "lucide-react";
 import type { ChatListGroup, ChatTurn, LiveTurn } from "@nouride/wire";
 import { GroupAvatar } from "@/commons/components/chat/Avatars";
 import { PlatformTag } from "@/commons/components/chat/PlatformBadge";
@@ -44,7 +44,7 @@ export function GroupConversation({ platform, chatId, data }: { platform: string
             <ListLoading count={3} />
           </div>
         ) : (
-          <EmptyState icon={Pin} title="This group is not here any more" description="No agent has talked in it lately, or it was left. Pick another from Groups." />
+          <EmptyState pose="confused" title="This group is not here any more" description="No agent has talked in it lately, or it was left. Pick another from Groups." />
         )}
       </div>
     );
@@ -128,7 +128,7 @@ function GroupView({ group, data }: { group: ChatListGroup; data: ChatListData }
           {loading ? (
             <ListLoading count={3} />
           ) : stream.length === 0 ? (
-            <EmptyState icon={MessagesSquare} title="Nothing said here yet" description={`What people say in this ${roomWord(group.platform)} on ${app}, and what the agents answer, shows here.`} />
+            <EmptyState pose="sleeping" title="Nothing said here yet" description={`What people say in this ${roomWord(group.platform)} on ${app}, and what the agents answer, shows here.`} />
           ) : (
             <>
             {/* People on the left under their names: in a group on a chat app, none of it is the reader's own. */}

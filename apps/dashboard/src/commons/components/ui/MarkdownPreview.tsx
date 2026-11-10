@@ -10,6 +10,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Download, FileDown, X } from "lucide-react";
 import { Markdown } from "./Markdown";
 import { overPage } from "./OverPage";
+import { TextLoading } from "@/commons/components/ui/Skeleton";
 
 /** Whether a file is markdown, by its type or its name — a platform's file often comes as `application/octet-stream`. */
 export function isMarkdownFile(name: string, mimeType = ""): boolean {
@@ -139,9 +140,7 @@ export function MarkdownPreview({ name, source, url, onClose }: { name: string; 
           </div>
         </div>
         {read === null ? (
-          <div className="flex justify-center py-12">
-            <span className="loading loading-spinner loading-md opacity-60" />
-          </div>
+          <TextLoading lines={10} className="py-3" />
         ) : "failure" in read ? (
           <p className="text-error text-sm">Could not show {name}: {read.failure}.</p>
         ) : (

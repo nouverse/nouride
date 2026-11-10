@@ -7,7 +7,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { defaultConnectionName } from "@/modules/agents/components/connection-name";
-import { Plus, Radio, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { useSaved } from "@/commons/hooks/use-saved";
 import { api } from "@/commons/lib/api";
 import type { GatewayInstance } from "@nouride/wire";
@@ -123,7 +123,7 @@ export function GatewayList({ agentId }: { agentId: string }) {
       ) : mine.length === 0 ? (
         <Card>
           <EmptyState
-            icon={Radio}
+            pose="noSignal"
             title="No connections configured"
             description="Link a Telegram bot, Discord bot, or WhatsApp account to start chatting with this agent."
           />

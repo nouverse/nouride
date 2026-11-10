@@ -105,8 +105,11 @@ export function RootLayout() {
   const arriving = redirectedTo.current !== null && drawnPath !== redirectedTo.current;
   if (gate.loading || gate.redirectTo || arriving) {
     return (
-      <div className="bg-base-200/60 flex min-h-screen items-center justify-center">
-        <span className="loading loading-spinner loading-lg text-primary opacity-60" />
+      // The cat on its way, where a spinner stood alone: which page comes next (the dashboard, the sign-in, the
+      // setup) is not known yet, so no page's shape can be drawn. Its box is sized, and nothing moves when it arrives.
+      <div className="bg-base-200/60 flex min-h-screen flex-col items-center justify-center gap-2" aria-busy="true" aria-label="loading">
+        <Mascot pose="speeding" decorative className="w-32" />
+        <span className="loading loading-dots loading-md text-primary opacity-60" />
       </div>
     );
   }

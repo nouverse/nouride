@@ -24,7 +24,7 @@
 import { ListLoading } from "@/commons/components/ui/Spinner";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Lightbulb, Wrench } from "lucide-react";
+import { Lightbulb } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import { canWrite, useMe } from "@/commons/lib/session";
 import { EmptyState, ErrorNote, PageHeader } from "@/commons/components/ui/ui";
@@ -73,6 +73,7 @@ export default function SkillWorkshopPage() {
     <div className={FILL_PAGE}>
       <PageHeader
         ask={PAGE_ASKS.skills}
+        pose={catalog.isPending || skills.length > 0 ? "star" : undefined}
         title="Skills Workshop"
         description="One pool of skills, shared by every agent. Each agent holds a switch; nothing here is copied per agent."
       />
@@ -128,7 +129,7 @@ export default function SkillWorkshopPage() {
         >
           {skills.length === 0 ? (
             <EmptyState
-              icon={Wrench}
+              pose="star"
               title="The pool is empty"
               description="An agent writes one when it works out how to do something, or you can find one on the Explore tab."
             />

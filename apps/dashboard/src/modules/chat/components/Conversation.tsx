@@ -14,6 +14,7 @@
 import { useDraft } from "../hooks/use-draft.ts";
 import { AgentHeader } from "./AgentHeader.tsx";
 import { RoomHeader } from "./RoomHeader.tsx";
+import { ChatLoading } from "./ChatLoading.tsx";
 import { EmptyState } from "./EmptyState.tsx";
 import { Composer } from "./Composer.tsx";
 import { useEffect, useRef, useState } from "react";
@@ -391,7 +392,9 @@ export function Conversation(
               the chat, and a target the size of a text box is a target people miss. */}
           {drop.dragging && <DropOverlay />}
           <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 flex flex-col">
-            {empty && !conversation.loading ? (
+            {conversation.loading ? (
+              <ChatLoading />
+            ) : empty ? (
               <EmptyState
                 agentName={currentAgent?.displayName}
                 look={currentAgent ? looks.get(currentAgent.id) : undefined}

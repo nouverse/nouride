@@ -13,7 +13,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Ban, ShieldCheck, UserCheck, Users, UserX } from "lucide-react";
+import { Ban, ShieldCheck, Users, UserX } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import type { PersonRecord, SenderAnswer, SenderRecord } from "@nouride/wire";
 import { canWrite, useMe } from "@/commons/lib/session";
@@ -106,7 +106,7 @@ export function ApprovedTab({
       >
         <ErrorNote error={answer.error} />
         {senders.length === 0 ? (
-          <EmptyState icon={UserCheck} title="Nobody approved yet" />
+          <EmptyState pose="security" title="Nobody approved yet" />
         ) : visible.length === 0 ? (
           <NoMatch query={query} />
         ) : (

@@ -130,7 +130,7 @@ export default function UsersPage() {
         {users.isPending ? (
           <ListLoading />
         ) : list.length === 0 ? (
-          <EmptyState pose="sleeping" title="No user accounts registered" />
+          <EmptyState pose="ready" title="No user accounts registered" />
         ) : (
           <div className="overflow-x-auto -mx-4 -my-2 sm:-mx-6">
             {/* A card per account on a phone, the table from `sm` up, as People draws its rows. */}

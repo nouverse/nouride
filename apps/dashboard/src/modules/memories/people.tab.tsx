@@ -19,7 +19,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Brain, ChevronDown, NotebookText, Pencil, UserX } from "lucide-react";
+import { ChevronDown, NotebookText, Pencil, UserX } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import type { FactsMode, PersonSummary } from "@nouride/wire";
 import { PersonNotes } from "@/commons/components/people/PersonNotes";
@@ -34,6 +34,7 @@ import { useSaved } from "@/commons/hooks/use-saved";
 import { Leaving, overPage } from "@/commons/components/ui/OverPage";
 import { DocumentDialog, type OpenDocument } from "./knowledge/document.dialog";
 import { DocumentsAbout } from "./knowledge/documents-about";
+import { ListLoading } from "@/commons/components/ui/Spinner";
 
 const FACTS: { value: FactsMode; label: string }[] = [
   { value: "auto", label: "Save and update facts on their own" },
@@ -234,8 +235,10 @@ export function PeopleTab({ editable, admin }: { editable: boolean; admin: boole
       <EveryoneFacts editable={editable} />
       <RecentChanges nameOf={nameOf} onOpenEpisode={setEpisode} />
 
-      {list.length === 0 && !people.isLoading ? (
-        <EmptyState icon={Brain} title="Nobody is known yet" description="People show up here after you add them on the People page or approve them in a chat." />
+      {people.isLoading ? (
+        <ListLoading />
+      ) : list.length === 0 ? (
+        <EmptyState pose="sleeping" title="Nobody is known yet" description="People show up here after you add them on the People page or approve them in a chat." />
       ) : null}
 
       {list.length > 0 ? (

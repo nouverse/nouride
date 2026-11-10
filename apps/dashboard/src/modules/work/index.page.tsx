@@ -12,6 +12,7 @@ import { WaitingLink } from "@/commons/components/approvals/WaitingLink";
 import { useAnswerApproval } from "@/commons/hooks/use-answer-approval";
 import { MOVING_MISSIONS, missionsWaiting } from "@/commons/hooks/use-needs-you";
 import { PAGE_ASKS } from "@/commons/components/agents/page-asks";
+import { ListLoading } from "@/commons/components/ui/Spinner";
 
 export default function WorkPage() {
   const approvals = useQuery({ queryKey: ["approvals"], queryFn: api.approvals, refetchInterval: 5_000, retry: false });
@@ -27,7 +28,9 @@ export default function WorkPage() {
       <PageHeader ask={PAGE_ASKS.work} title="Work" description="What your agents are doing on their own, and what they are waiting for you to answer." />
       {approvals.error ? (
         <ErrorNote error={approvals.error} />
-      ) : approvals.isPending ? null : pending.length + asking.length === 0 ? (
+      ) : approvals.isPending ? (
+        <ListLoading shape="cards" count={2} />
+      ) : pending.length + asking.length === 0 ? (
         <EmptyState pose="approved" title="Nothing is waiting for you" description="When an agent needs your yes before it goes on, it shows here and in its chat." />
       ) : (
         <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">

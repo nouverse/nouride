@@ -29,6 +29,7 @@ import { agentModel } from "@/commons/lib/agents";
 import { canWrite, isAdmin, useMe } from "@/commons/lib/session";
 import { ErrorNote } from "@/commons/components/ui/ui";
 import { SEGMENTED_BAR, segmentClass, useSelectedInView } from "@/commons/components/ui/SegmentedTabs";
+import { DetailLoading } from "@/commons/components/ui/Skeleton";
 
 interface Tab {
   to:
@@ -85,13 +86,7 @@ export default function AgentLayoutPage({ agentId }: { agentId: string }) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["status"] }),
   });
 
-  if (status.isPending) {
-    return (
-      <div className="flex justify-center py-20">
-        <span className="loading loading-spinner loading-lg text-primary opacity-60" />
-      </div>
-    );
-  }
+  if (status.isPending) return <DetailLoading />;
 
   if (!agent) {
     return (

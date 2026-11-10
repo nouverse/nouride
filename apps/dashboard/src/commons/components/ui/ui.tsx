@@ -22,6 +22,7 @@ export function PageHeader({
   description,
   actions,
   ask,
+  pose,
   className,
 }: {
   title: string;
@@ -29,15 +30,25 @@ export function PageHeader({
   actions?: ReactNode;
   /** The page's "Ask Nouva" button, before its own actions: the page's job asked of the orchestrator in a chat. */
   ask?: PageAsk;
+  /**
+   * The cat beside the title, in the pose that is the page's own subject (a calendar on Schedule, a shield on Secrets).
+   * Given while the page has something to show or does not know yet: once it knows it is empty, the same cat is the
+   * empty list's, and a view has one. While it loads the cat is already there, so the title does not move when the
+   * list comes. Not on a phone, where the title needs the width.
+   */
+  pose?: Pose | undefined;
   className?: string;
 }) {
   return (
     <header className={cn("flex flex-wrap items-start justify-between gap-4 pb-1", className)}>
-      <div className="space-y-1">
-        <h1 className="text-2xl text-base-content sm:text-3xl">{title}</h1>
-        {description && (
-          <p className="text-base-content/65 max-w-2xl text-sm leading-relaxed">{description}</p>
-        )}
+      <div className="flex min-w-0 items-center gap-4">
+        {pose && <Mascot pose={pose} decorative className="-my-2 w-16 max-sm:hidden" />}
+        <div className="min-w-0 space-y-1">
+          <h1 className="text-2xl text-base-content sm:text-3xl">{title}</h1>
+          {description && (
+            <p className="text-base-content/65 max-w-2xl text-sm leading-relaxed">{description}</p>
+          )}
+        </div>
       </div>
       {(actions || ask) && (
         <div className="flex flex-wrap items-center gap-2.5">

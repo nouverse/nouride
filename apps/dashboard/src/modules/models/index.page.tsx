@@ -9,7 +9,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Check, Cpu, ExternalLink, Plus, Trash2 } from "lucide-react";
+import { Check, ExternalLink, Plus, Trash2 } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import type { ProviderProfileView } from "@nouride/wire";
 import { Card, EmptyState, ErrorNote, Field, PageHeader } from "@/commons/components/ui/ui";
@@ -94,7 +94,7 @@ export default function ModelsPage({ tab }: { tab?: "clis" | undefined } = {}) {
         <ListLoading />
       ) : list.length === 0 ? (
         <Card>
-          <EmptyState icon={Cpu} title="No providers yet" />
+          <EmptyState pose="ready" title="No providers yet" />
         </Card>
       ) : (
         <>
@@ -107,7 +107,7 @@ export default function ModelsPage({ tab }: { tab?: "clis" | undefined } = {}) {
           value={wire}
           onChange={setWire}
         />
-        {shown.length === 0 ? <EmptyState icon={Cpu} title="No provider of this kind" /> : null}
+        {shown.length === 0 ? <EmptyState pose="searching" title="No provider of this kind" /> : null}
         {/* Its own scroll, so the tabs stay put over a long list. Keyed by the tab, to fade in anew (`FILL_PAGE`). */}
         <ScrollArea key={wire} fill className="space-y-4 pr-1">
           {shown.map((profile) => (
