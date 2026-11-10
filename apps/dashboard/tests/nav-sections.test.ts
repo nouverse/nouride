@@ -38,6 +38,23 @@ test("the menu leaves the dashboard nowhere: the manual is at the foot of Settin
   expect(read("modules/settings/index.page.tsx")).toContain("href={`${DOCS_URL}/docs`}");
 });
 
+test("the community is beside the manual at the foot of Settings, and the landing page's footer goes to the same place", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { join } = await import("node:path");
+  const { COMMUNITY_URL } = await import("@/commons/lib/docs");
+  const read = (file: string) => readFileSync(join(import.meta.dir, "..", file), "utf8");
+  const settings = read("src/modules/settings/index.page.tsx");
+  expect(COMMUNITY_URL).toMatch(/^https:\/\/discord\.gg\/\w+$/);
+  // After the manual's link, in the same row, opened in a tab of its own.
+  expect(settings).toMatch(/Documentation[\s\S]{0,200}<\/a>\s*<a href=\{COMMUNITY_URL\} target="_blank" rel="noreferrer noopener"[\s\S]{0,160}Community/);
+  // One address, written in the site's constants too: the two are built apart.
+  expect(read("../site/src/consts.mjs")).toContain(`export const COMMUNITY_URL = '${COMMUNITY_URL}';`);
+  expect(read("../site/src/components/Landing.astro")).toContain("<a href={COMMUNITY_URL} target=\"_blank\" rel=\"noopener noreferrer\">{t.footer.links.community}</a>");
+  const copy = read("../site/src/i18n/landing.mjs");
+  expect(copy).toContain("community: 'Community'");
+  expect(copy).toContain("community: 'Komunitas'");
+});
+
 describe("a section's tabs", () => {
   test("over its list pages, and none over one mission or one agent", () => {
     expect(sectionTabs("/jobs")?.map((tab) => tab.label)).toEqual(["Waiting for you", "Missions", "Helpers", "Schedule", "Webhooks"]);

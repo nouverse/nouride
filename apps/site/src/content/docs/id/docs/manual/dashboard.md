@@ -77,8 +77,8 @@ Setiap tab tetap punya alamat sendiri, jadi link ke salah satunya tetap membukan
 you**, dan angka di sebelah Work di menu adalah jumlah yang menunggu di sana.
 
 **Settings** adalah halaman berisi kartu dalam empat kelompok, tiap kartu dengan satu baris tentang gunanya halaman
-itu, plus kotak pencarian yang menemukan halaman dari namanya atau baris itu. **Restart** dan **Documentation** ada di
-bagian bawahnya. Di sidebar, halaman-halaman milik Settings cuma tampil di bawahnya selagi kamu sedang di Settings atau
+itu, plus kotak pencarian yang menemukan halaman dari namanya atau baris itu. **Restart**, **Documentation**, dan
+**Community** (server Discord Nouride) ada di bagian bawahnya. Di sidebar, halaman-halaman milik Settings cuma tampil di bawahnya selagi kamu sedang di Settings atau
 di salah satunya.
 
 Halaman khusus admin **gak muncul** di menu maupun di Settings bagi yang gak boleh memakainya, bukan muncul lalu

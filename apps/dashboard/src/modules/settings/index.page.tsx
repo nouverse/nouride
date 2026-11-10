@@ -9,11 +9,11 @@ import { cn } from "@/commons/lib/utils";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { ArrowUpRight, BookOpen, Download } from "lucide-react";
+import { ArrowUpRight, BookOpen, Download, MessagesSquare } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import { isPairedBox } from "@/commons/lib/api.appliance";
 import { gatewayPage } from "@/commons/lib/bundled-gateway";
-import { DOCS_URL } from "@/commons/lib/docs";
+import { COMMUNITY_URL, DOCS_URL } from "@/commons/lib/docs";
 import { isAdmin, useMe } from "@/commons/lib/session";
 import { SETTINGS, visible, type NavItem } from "@/commons/components/layout/nav";
 import { EmptyState, PageHeader } from "@/commons/components/ui/ui";
@@ -71,13 +71,18 @@ export default function SettingsPage() {
           </section>
         ))
       )}
-      {/* Not a page: a restart (shown to whoever may restart, as on Home), and the manual, which leaves the dashboard. */}
+      {/* Not a page: a restart (shown to whoever may restart, as on Home), and the manual and the community, which leave the dashboard. */}
       {!words && (
         <div className="flex flex-wrap items-center gap-2.5">
           <RestartButton />
           <a href={`${DOCS_URL}/docs`} target="_blank" rel="noreferrer noopener" className="btn btn-ghost btn-sm gap-1.5">
             <BookOpen size={15} aria-hidden="true" />
             Documentation
+            <ArrowUpRight size={13} aria-label="opens in a new tab" />
+          </a>
+          <a href={COMMUNITY_URL} target="_blank" rel="noreferrer noopener" className="btn btn-ghost btn-sm gap-1.5">
+            <MessagesSquare size={15} aria-hidden="true" />
+            Community
             <ArrowUpRight size={13} aria-label="opens in a new tab" />
           </a>
         </div>

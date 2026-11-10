@@ -77,7 +77,7 @@ address, so a link to one still opens it. Work opens on **Waiting for you**, and
 what waits there.
 
 **Settings** is a page of cards in four groups, each card with a line on what its page is for, and a search box that
-finds one by its name or that line. **Restart** and **Documentation** sit at its foot. In the sidebar, Settings' own
+finds one by its name or that line. **Restart**, **Documentation** and **Community** (Nouride's Discord server) sit at its foot. In the sidebar, Settings' own
 pages are listed under it only while you are on Settings or one of them.
 
 Admin-only pages are **absent** from the menu and from Settings for anyone who cannot use them, rather than present
