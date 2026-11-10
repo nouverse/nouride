@@ -44,12 +44,14 @@ ada di engine yang perlu peduli. Sebuah proxy bisa melayani salah satu format.
 kind = "anthropic"
 base_url = "https://api.anthropic.com/v1"
 api_key = "anthropic_api_key"
+identify = true                              # ditulis untuk API milik kedua vendor; lihat di bawah
 
 [providers.openai]
 kind = "openai"
 base_url = "https://api.openai.com/v1"
 api_key = "openai_api_key"
 max_tokens_field = "max_completion_tokens"   # khusus API OpenAI sendiri; lihat di bawah
+identify = true
 
 [providers.openrouter]
 kind = "openai"
@@ -74,6 +76,17 @@ Gateway seperti Nougate membedakan klien dan sesinya dengan itu, dan OpenAI meng
 percakapan ke cache tempat awalannya sudah ada. Mati kecuali diisi, karena server yang ketat menolak
 field yang gak dikenalnya.
 
+API OpenAI sendiri dan API Anthropic sendiri menerima field-field itu, jadi kamu gak perlu menulisnya untuk keduanya:
+setup, dashboard, dan `nouride provider add` menulis `identify = true` untuk profil di `https://api.openai.com/v1` atau
+`https://api.anthropic.com/v1`, dan start pertama setelah update menuliskannya ke profil yang dibuat sebelumnya,
+sekali, dan mencatatnya di log. `nouride config check` bilang kalau start berikutnya akan menulisnya. Supaya tetap
+mati, tulis `identify = false`: profil yang sudah menulis `identify`, apa pun nilainya, tetap dengan nilainya. Server
+lain tetap seperti yang kamu atur, termasuk Nougate, yang kamu nyalakan sendiri.
+
+Yang dikirim gak menyebut orang. Agent disebut dengan id-nya, seperti nama yang kamu beri di pack-nya. Percakapan
+disebut dengan id yang gak bermakna, 32 huruf dan angka yang dibuat dari id percakapan itu dengan hash satu arah, sama di
+setiap request percakapan itu: gak ada id chat, nomor telepon, username, atau nama di dalamnya.
+
 `max_tokens_field` adalah field tempat batas output sebuah balasan dikirim, di format OpenAI. API OpenAI sendiri
 menolak `max_tokens` untuk model-model barunya (keluarga GPT-5 salah satunya) dengan `Unsupported parameter:
 'max_tokens'`, dan menerima `max_completion_tokens` untuk semua model chat-nya. Server lain yang bicara format yang
@@ -84,6 +97,16 @@ update menuliskannya ke profil yang dibuat sebelumnya, sekali, dan mencatatnya d
 `max_tokens_field`, apa pun nilainya, tetap dengan nilainya. `nouride config check` menampilkan profil yang batasnya
 dikirim di `max_completion_tokens`, dan bilang kalau start berikutnya akan menulis key ini. Format Anthropic cuma
 punya satu field, `max_tokens`, jadi profil Anthropic yang minta `max_completion_tokens` gak bisa dimuat.
+
+`cache_minutes` adalah berapa lama endpoint menyimpan cache prompt sebuah percakapan setelah request terakhirnya.
+Nouride membersihkan output tool lama dari riwayat percakapan saat itu gak makan biaya, dan salah satu saatnya adalah
+ketika percakapan sudah diam lebih lama daripada umur cache endpoint-nya: request berikutnya toh dibaca penuh. Profil
+di `https://api.anthropic.com/v1` dibaca `cache_minutes = 5` tanpa perlu kamu tulis, yaitu umur cache yang
+didokumentasikan Anthropic untuk jenis cache yang diminta Nouride. Endpoint lain dibaca `60` kecuali key ini kamu isi:
+menganggap cache masih ada padahal sudah hilang cuma membuat output lama tinggal sedikit lebih lama, sedangkan
+sebaliknya membuang cache yang lebih murah dibaca. API OpenAI sendiri termasuk di situ, karena dokumentasinya menyebut
+umur cache dari beberapa menit sampai sehari, tergantung model dan pengaturan organisasinya. Isi `cache_minutes` kalau
+kamu tahu angkanya; `0` untuk endpoint yang gak menyimpan cache sama sekali.
 
 ## Mengelolanya
 
@@ -278,6 +301,11 @@ model; ia gak pernah jadi klaim tentang apa yang sebaiknya dibawa untuk menjawab
 Yang dipangkas gak hilang: output utuhnya ditulis dulu ke direktori `data/tool-output/` percakapan itu
 (disimpan selama `[retention] tool_output_days`), dan penandanya menyebut file itu, jadi agent
 membukanya dengan `read` alih-alih menjalankan ulang perintahnya.
+
+Begitu sebuah giliran melewati batasnya, hasil lama dibersihkan sekaligus, sampai jauh di bawah batas
+itu, dan langkah-langkah berikutnya gak membersihkan apa-apa sampai gilirannya tumbuh lagi. Membersihkan
+satu hasil tiap langkah mengubah awal percakapan di setiap langkah, dan cache prompt provider gak
+terbaca lagi.
 
 Kalau membersihkan hasil lama belum cukup, teks yang dibawa panggilan `write`, `edit` dan `multi_edit`
 lama yang menyusul, dari yang paling lama: panggilannya tetap ada bersama path dan hasilnya, dan

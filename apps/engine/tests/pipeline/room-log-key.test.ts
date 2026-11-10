@@ -179,7 +179,7 @@ describe("a database of 0.8.28, its room log keyed by the id alone", () => {
     // What the old key did to a second group's message 412.
     expect(() => insert.run("412", "telegram:nouva", "-200", "902", "Rani", "who has the keys?", null, 4_000)).toThrow();
 
-    await migrate(db);
+    await migrate(db, {}, MIGRATIONS.filter((one) => one.version <= 80));
     expect(db.userVersion()).toBe(80);
     const all = () => db.prepare<Record<string, unknown>>(`SELECT ${COLUMNS} FROM chat_messages ORDER BY at`).all();
     expect(all()).toEqual(rows.map(([id, gateway_id, chat_id, sender_id, sender_name, text, attachments, at]) => ({ id, gateway_id, chat_id, sender_id, sender_name, text, attachments, at })));

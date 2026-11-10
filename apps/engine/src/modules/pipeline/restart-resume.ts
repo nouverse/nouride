@@ -68,8 +68,11 @@ export function isResumption(messageId: string | null | undefined): boolean {
   return messageId?.startsWith(RESUME_PREFIX) === true;
 }
 
-/** What cut a turn off: the daemon restarting, or its model provider failing for longer than a retry rides out. */
-export type ResumeWhy = "restart" | "provider";
+/**
+ * Why a turn is taken up: the daemon restarted and is back within the window, its model provider failed for longer
+ * than a retry rides out, or a restart cut it off a while ago and its person has now said to carry on (`resume-ask.ts`).
+ */
+export type ResumeWhy = "restart" | "provider" | "asked";
 
 /** The call a restart cut the turn off in, read for what it may have done (`turns/cut-calls.ts`). */
 export type Cut = { kind: CutKind; call: CutCall };
@@ -96,7 +99,9 @@ export function restartResumeEnvelope(
   const what =
     why === "restart"
       ? `The daemon restarted while you were working on "${quoted}", and it is back.${cut ? ` ${cutLine(cut)}` : ""}${kept}`
-      : `Your model provider failed while you were working on "${quoted}", and it has had a few minutes to recover.`;
+      : why === "asked"
+        ? `The daemon restarted a while ago while you were working on "${quoted}", and they have now asked you to carry on.`
+        : `Your model provider failed while you were working on "${quoted}", and it has had a few minutes to recover.`;
   return {
     id: resumptionId(turn.id),
     timestamp: Date.now(),
@@ -112,6 +117,6 @@ export function restartResumeEnvelope(
       `[system] ${what} What you had done, and what was cut off, is in the conversation above. Carry on from ` +
       "where you stopped: check what a cut-off step did before you repeat it. If the work is already done, or " +
       "something said since has changed what is wanted, say so in one line instead.",
-    raw: { via: `${why} resumed`, turn: turn.id },
+    raw: { via: `${why === "asked" ? "restart" : why} resumed`, turn: turn.id },
   };
 }

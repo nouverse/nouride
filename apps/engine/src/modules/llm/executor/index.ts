@@ -193,6 +193,7 @@ export class TurnExecutor {
         // and can only drop history.
         const room = trimToolResults(working, {
           maxTokens: ceilings.compactAt,
+          targetTokens: ceilings.trimTo,
           keepRecent: this.deps.llm.context.preserveRecentToolResults,
           // Each one cleared is kept in a file first, and its marker says where — `ToolOutputSpill.keepCleared`.
           ...(keepCleared ? { keep: keepCleared } : {}),
@@ -209,6 +210,7 @@ export class TurnExecutor {
             ...(shortened > 0 ? { shortened_calls: shortened } : {}),
             // Both in the estimator's tokens: times the scale, they are the provider's.
             budget: ceilings.compactAt,
+            target: ceilings.trimTo,
             tokens: room.tokens,
             token_scale: scale,
             // Said out loud when it happens: the agent has lost output it was still working from, and

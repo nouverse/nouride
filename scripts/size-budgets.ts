@@ -67,8 +67,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "the approval gate: one table and the requests in flight, asked, queued per chat, answered once and kept across a restart, over one set of maps every step reads and writes",
   },
   "apps/engine/src/modules/turns/turns.store.ts": {
-    lines: 445,
-    why: "the turn record and its columns, the causes it names, and the clause every read of a conversation uses to leave a delegate's own turns out, beside the queries that use it",
+    lines: 463,
+    why: "the turn record and its columns, the causes it names, the clause every read of a conversation uses to leave a delegate's own turns out, and the queries that use it, a restart's two marks among them",
   },
   "apps/engine/src/modules/missions/missions.ts": {
     lines: 579,

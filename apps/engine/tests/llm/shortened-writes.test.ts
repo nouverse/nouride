@@ -49,7 +49,7 @@ describe("shortening old calls", () => {
 
   test("the oldest first, only as far as needed, and every call keeps its id, its path and its result", () => {
     const messages = conversation();
-    const result = trimToolResults(messages, { maxTokens: estimateMessagesTokens(messages) - 100, keepRecent: 3, bulkArguments: bulkOf });
+    const result = trimToolResults(messages, { maxTokens: estimateMessagesTokens(messages) - 100, targetTokens: estimateMessagesTokens(messages) - 100, keepRecent: 3, bulkArguments: bulkOf });
 
     expect(result.shortened).toBe(1);
     expect(result.trimmed).toBe(0);
@@ -70,7 +70,7 @@ describe("shortening old calls", () => {
   });
 
   test("the newest round is as the model sent it, however full the context", () => {
-    const result = trimToolResults(conversation(), { maxTokens: 0, keepRecent: 0, bulkArguments: bulkOf });
+    const result = trimToolResults(conversation(), { maxTokens: 0, targetTokens: 0, keepRecent: 0, bulkArguments: bulkOf });
     const calls = result.messages.flatMap((message) => message.toolCalls ?? []);
     expect(SHORTENED.test(String(calls[0]!.arguments.content))).toBe(true);
     expect(SHORTENED.test(String(calls[1]!.arguments.content))).toBe(true);
@@ -83,7 +83,7 @@ describe("shortening old calls", () => {
       { role: "assistant", content: "", toolCalls: [{ id: "w1", name: "write", arguments: { path: "a.ts", content: fileText("A", 8_000) } }] },
       { role: "assistant", content: "next" },
     ];
-    const result = trimToolResults(messages, { maxTokens: 0, keepRecent: 0, bulkArguments: bulkOf });
+    const result = trimToolResults(messages, { maxTokens: 0, targetTokens: 0, keepRecent: 0, bulkArguments: bulkOf });
     expect(result.messages[1]!.toolCalls![0]!.arguments.content).toBe(fileText("A", 8_000));
   });
 
@@ -101,7 +101,7 @@ describe("shortening old calls", () => {
       { role: "tool", content: "Applied 1 edit(s) to b.ts.", toolCallId: "m1" },
       ...written("w9", "c.ts", "tiny"),
     ];
-    const calls = trimToolResults(messages, { maxTokens: 0, keepRecent: 0, bulkArguments: bulkOf }).messages.flatMap((message) => message.toolCalls ?? []);
+    const calls = trimToolResults(messages, { maxTokens: 0, targetTokens: 0, keepRecent: 0, bulkArguments: bulkOf }).messages.flatMap((message) => message.toolCalls ?? []);
 
     expect(SHORTENED.test(String(calls[0]!.arguments.old_string))).toBe(true);
     expect(SHORTENED.test(String(calls[0]!.arguments.new_string))).toBe(true);
@@ -120,13 +120,13 @@ describe("shortening old calls", () => {
       ...written("w1", "a.ts", fileText("A", 8_000)),
       ...written("w2", "b.ts", "tiny"),
     ];
-    const fits = trimToolResults(messages, { maxTokens: estimateMessagesTokens(messages) - 100, keepRecent: 0, bulkArguments: bulkOf });
+    const fits = trimToolResults(messages, { maxTokens: estimateMessagesTokens(messages) - 100, targetTokens: estimateMessagesTokens(messages) - 100, keepRecent: 0, bulkArguments: bulkOf });
     expect(fits.trimmed).toBe(1);
     expect(fits.shortened).toBeUndefined();
   });
 
   test("without the tools' declaration no call is shortened — the result trimmer as it was", () => {
-    const result = trimToolResults(conversation(), { maxTokens: 0, keepRecent: 0 });
+    const result = trimToolResults(conversation(), { maxTokens: 0, targetTokens: 0, keepRecent: 0 });
     expect(result.shortened).toBeUndefined();
     expect(result.messages.flatMap((message) => message.toolCalls ?? []).every((call) => !SHORTENED.test(String(call.arguments.content)))).toBe(true);
   });
@@ -134,7 +134,7 @@ describe("shortening old calls", () => {
 
 describe("the note sent back as text", () => {
   const note = (): string => {
-    const result = trimToolResults(written("w1", "a.ts", fileText("A", 1_000)).concat(written("w2", "b.ts", "x")), { maxTokens: 0, keepRecent: 0, bulkArguments: bulkOf });
+    const result = trimToolResults(written("w1", "a.ts", fileText("A", 1_000)).concat(written("w2", "b.ts", "x")), { maxTokens: 0, targetTokens: 0, keepRecent: 0, bulkArguments: bulkOf });
     return String(result.messages[0]!.toolCalls![0]!.arguments.content);
   };
 

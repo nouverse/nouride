@@ -531,7 +531,7 @@ the `fallbacks` line to write (`packages/persona/src/fallbacks.ts`).
 
 **A turn its provider ended** is tried again once (`pipeline/provider-resume.ts`): ~3 min later, plus up to 1 min so a burst of failed chats spreads out, carrying on from where it stopped. Its error reply ends "…I'll try again in a few minutes, or say "continue"."
 Not when a turn has started in that chat since (the person moved on), for a cron run, for a turn that was itself a resumption, or for a failure waiting cannot fix: an expired or refused key, an empty balance, a bad request — the operator's to fix.
-The timer is in memory; the promise is the turn's stored reply. At boot, a turn that failed within the timer's window (4 min) with that reply, and was not taken up yet (`resume:<turn>`), is set again from when it failed (`providerResumesOwed`, `boot/durable.ts`). "Continue" still picks the turn up.
+The timer is in memory; the promise is a mark on the turn's record (`turn_records.retry_promised`), written as the turn tells its person. At boot, a turn that failed within the timer's window (4 min) with that mark, and was not taken up yet (`resume:<turn>`), is set again from when it failed (`providerResumesOwed`, `boot/durable.ts`). The mark, not the reply's last sentence, which the boot used to read: a promise made before that sentence was reworded would not have been found. A turn closed before the mark existed is still found by the sentence it was told in, kept as it was for that (`RETRY_PROMISE_BEFORE_THE_MARK`). "Continue" still picks the turn up.
 
 ### 6.3 System Prompt Builder
 
@@ -610,8 +610,12 @@ and sometimes several turns late.
 
 **Making room inside a turn:** the steps below run once, before the tool loop. A long turn also grows
 *during* the loop, with an assistant message and a tool result per iteration, so before each provider
-call the working set is measured again and older tool results are replaced with a short marker until it
-fits, keeping the most recent `preserve_recent_tool_results` verbatim. The message is never removed —
+call the working set is measured again and, once it is over the line, older tool results are replaced
+with a short marker, keeping the most recent `preserve_recent_tool_results` verbatim. A trim goes down to
+three fifths of the line in one go (`TRIM_TO_SHARE`, a starting value), not only back under it: stopping
+the moment the set fit trimmed one more result on every round after, each rewriting the start of the
+conversation, so a provider's prompt cache read nothing back for the rest of the turn. Now the rounds
+after a trim send the same prefix until the set has grown back to the line. The message is never removed —
 only its content — because an orphaned `tool_use` is rejected outright by Anthropic. No provider call is
 involved: this runs inside a turn somebody is waiting on. The content is not lost (0.7.25): it is written
 whole to the conversation's spill directory first (`ToolOutputSpill.keepCleared`; a result already
@@ -714,7 +718,7 @@ harness section now describes what already happened instead.
 
 **`preserve_recent_tool_results` is a preference, not a guarantee.**
 Keeping the newest results whole is right — they are what the model is still working from — but `keepRecent × the per-result cap` can exceed the whole budget on a small window.
-So `trimToolResults` trims the older results first, then shortens the text old `write` and `edit` calls carried, and only if the set still does not fit squeezes the protected ones oldest-first.
+So `trimToolResults` trims the older results first, then shortens the text old `write` and `edit` calls carried, and only if the set still does not fit squeezes the protected ones oldest-first, as far as the line and no further.
 Nothing changes in the ordinary case.
 When the last resort fires it is logged as a warning naming the model, the budget and both knobs, because it is a statement about the configuration rather than about that turn.
 
@@ -2057,15 +2061,17 @@ Daemon starts
 When a turn ends, however it ends, the journal is folded into the conversation's messages (`session_messages`) and deleted in the same transaction, so a journal found at boot is a turn whose process died without a signal: a power cut, the OOM killer, `kill -9`.
 The journal opens before the files that came with a message download (0.7.7) — with its words and the names of what is still arriving, replaced by the composed question once it exists — so a crash during a download, thirty seconds a file, closes the turn with its question rather than leaving a record with nothing behind it.
 It is closed into its conversation the way a turn cut short at shutdown is: every finished call keeps its result, a call that was running is marked cut off — so the agent checks before repeating anything that changes something — and the assistant has the last word.
-The person is told what was done and what was cut off, and a turn cut off recently — at shutdown or in a crash — is taken up again by itself (step 4 below).
+The person is told what was done and what was cut off, and a turn cut off recently — at shutdown or in a crash — is taken up again by itself (step 4 below); one cut off longer ago is asked about (step 5).
+What the report ends on is what happens next (`Onward`, `turns/close.ts`). At shutdown the daemon cannot know how long it will be down, so it says both: "If I'm back within 15 minutes I'll carry on by myself; after that I'll ask you first." At boot, of a turn lost in a crash, it says it is carrying on, or asks, or for a turn nobody is asked about only that everything is kept.
 A journal write that fails is swallowed so the turn carries on, but not silently (0.7.7): it is counted for `/health`, and every write takes its row's number whether it lands or not, so the journal it leaves has a gap. A turn closed past one says part of it could not be recorded, and no call in it is said not to have started — it may have run.
 
 Once the gateways are up, in this order, without holding up `ready`:
 1. Each closed turn tells its chat what it had done, however long the daemon was down; a turn left `running` with no journal gets a plain notice, unless step 4 takes it up again.
 2. A reply the last process wrote and never got delivered is sent — once, and only if its turn started in the last 30 minutes. A reply that landed in part is not sent again.
 3. Messages it received and never answered are answered when sent in the last 15 minutes, or told they came in while the daemon was offline; a platform's second delivery of one is answered once.
-4. A conversation's turn cut off in the last 15 minutes is taken up again, once (`pipeline/restart-resume.ts`): the agent is told the daemon restarted and carries on from where it stopped, checking what a cut-off step did before repeating it. A turn that was itself taking one up is not taken up again, so a turn that crashes the daemon cannot loop, and a cron run is left to the scheduler (§8.5). Cut off longer ago, nothing runs by itself, and "continue" picks it up.
-5. The dashboard's timeline of each touched chat marks where the restart happened.
+4. A conversation's turn cut off in the last 15 minutes is taken up again, once (`pipeline/restart-resume.ts`): the agent is told the daemon restarted and carries on from where it stopped, checking what a cut-off step did before repeating it. A turn that was itself taking one up is not taken up again, so a turn that crashes the daemon cannot loop, and a cron run is left to the scheduler (§8.5). Cut off longer ago, nothing runs by itself.
+5. A conversation's turn cut off longer ago than that, and within two days (`ASK_WITHIN_MS`, as long as the inbox keeps a chat's messages; a starting value), has its chat asked whether to carry on, once (`pipeline/resume-ask.ts`): "I was cut off 1 hour ago while working on "…". I have not carried on by myself, since it was a while ago. Say "continue" and I will pick it up." Built from the record, never asked of a model. For a turn lost in a crash the question is the end of its report in step 1; for one the shutdown stopped it is a line of its own, after the reports, and on the chat's timeline for the dashboard. Where the connection carries buttons it has one, Continue: a press takes the turn up as step 4 would (`continuePresses`), for the person in a one-to-one chat, and in a room the person whose turn it was or an admin. Once per turn across any number of boots: the time it was asked is on its record (`turn_records.resume_asked_at`), set when the question was said, and a turn with one is never taken up by a later boot either — one closed at a boot after a crash would otherwise look freshly cut off to the boot after it. A turn left for its person over a call the gate asks about is marked the same way. Not asked: a scheduled run or a `cron:` session, a mission's turn (it goes on from its page), a helper's own turn (its job reports to the agent that started it), a turn already taken up or itself a resumption, and a chat where anything started since the cut or a message is waiting from before the restart.
+6. The dashboard's timeline of each touched chat marks where the restart happened.
 
 Background jobs the restart killed wake their agents after that, and a scheduled job's interrupted run is reconciled by the scheduler (§8.5).
 A restart that is asked for — `nouride restart`, an update, the dashboard, `/daemon-restart` — waits for turns ten minutes at most and for background jobs however long they take — a command an external agent's CLI left running in the background too, and half a minute past its end for what the CLI says of it (0.8.6, `Pipeline.cliCommands`) — so the jobs killed are those of a stop, a crash or a `now`. An approval waiting for a person does not hold it: the restart keeps it and asks it again.
@@ -2420,6 +2426,8 @@ CREATE TABLE inbox (
 );
 
 -- turn_records.delivered_at: when the platform accepted the reply, NULL until then.
+-- turn_records.retry_promised: 1 when the reply told its person the turn will be tried again, NULL otherwise.
+-- turn_records.resume_asked_at: when its person was asked whether to carry on with a turn a restart cut off, NULL if never.
 ```
 
 ---

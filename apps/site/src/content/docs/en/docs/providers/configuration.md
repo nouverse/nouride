@@ -43,12 +43,14 @@ in the engine needs to care. A proxy can serve either format.
 kind = "anthropic"
 base_url = "https://api.anthropic.com/v1"
 api_key = "anthropic_api_key"
+identify = true                              # written for the two vendors' own APIs; see below
 
 [providers.openai]
 kind = "openai"
 base_url = "https://api.openai.com/v1"
 api_key = "openai_api_key"
 max_tokens_field = "max_completion_tokens"   # OpenAI's own API only; see below
+identify = true
 
 [providers.openrouter]
 kind = "openai"
@@ -72,6 +74,17 @@ config, so a credential belongs in `api_key` (a secret name), not here. (A per-a
 its clients and sessions apart by them, and OpenAI sends a conversation's requests to the cache its prefix is
 already in. It is off unless set, because a strict server rejects a field it does not know.
 
+OpenAI's own API and Anthropic's own API take those fields, so you do not need to write it for them: setup, the
+dashboard and `nouride provider add` write `identify = true` for a profile on `https://api.openai.com/v1` or
+`https://api.anthropic.com/v1`, and the first start after an update writes it into a profile made before, once, and
+says so in the log. `nouride config check` says when the next start will write it. To keep it off, write
+`identify = false`: a profile that says `identify` either way keeps what it says. Any other server stays as you
+configured it, Nougate included, where you turn it on yourself.
+
+What is sent names no person. The agent goes by its id, as you named it in its pack. The conversation goes as an
+opaque id, 32 letters and digits made from the conversation's own id by a one-way hash, the same on every request of
+that conversation: it holds no chat id, phone number, username or name.
+
 `max_tokens_field` is the field a reply's output limit is sent in, on the OpenAI wire. OpenAI's own API refuses
 `max_tokens` for its newer models (the GPT-5 family among them) with `Unsupported parameter: 'max_tokens'`, and
 takes `max_completion_tokens` for every chat model. Other servers that speak the same shape (OpenRouter,
@@ -82,6 +95,16 @@ into a profile made before, once, and says so in the log. A profile that already
 keeps what it says. `nouride config check` lists a profile whose limit goes in `max_completion_tokens`, and says when
 the next start will write the key. The Anthropic wire has one field, `max_tokens`, so an Anthropic profile that asks
 for `max_completion_tokens` does not load.
+
+`cache_minutes` is how long the endpoint keeps a conversation's cached prompt after its last request. Nouride clears
+old tool output from a conversation's history when that costs nothing, and one such moment is when the conversation
+has been idle for longer than its endpoint keeps a cache: the next request would be read in full anyway. A profile on
+`https://api.anthropic.com/v1` is read as `cache_minutes = 5` without your writing it, which is the lifetime Anthropic
+documents for the kind of cache Nouride asks for. Every other endpoint is read as `60` unless you set the key: taking a
+cache for alive when it is gone only leaves old output in place a while longer, and the other way round would throw
+away a cache you are paying less to read. OpenAI's own API is among those, since it documents lifetimes from a few
+minutes to a day depending on the model and the organization's settings. Set `cache_minutes` where you know better;
+`0` is for an endpoint that caches nothing.
 
 ## Managing them
 
@@ -270,6 +293,10 @@ it should carry to answer well.
 Anthropic. What is cleared is not lost: the whole output is first written to the conversation's
 `data/tool-output/` directory (kept as long as `[retention] tool_output_days`), and the marker names
 that file, so the agent opens it with `read` instead of running the command again.
+
+Once a turn is over the line, old results are cleared in one go, down to well under it, and the steps
+after that clear nothing until the turn has grown back. Clearing one result a step would change the
+start of the conversation at every step, and a provider's prompt cache would read nothing back.
 
 When clearing old results is not enough, the text old `write`, `edit` and `multi_edit` calls carried
 goes next, oldest first: the call stays with its path and its result, and the text becomes a line

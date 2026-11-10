@@ -82,7 +82,8 @@ export interface ProviderProfile {
   /**
    * Say which agent and conversation each request is for — the fields a gateway such as Nougate tells its
    * clients and sessions apart by, and that route a conversation to the cache its prefix is already in. Off unless
-   * set: a strict server rejects a field it does not know.
+   * set: a strict server rejects a field it does not know. A profile on OpenAI's or Anthropic's own API is written
+   * with it (`known-endpoints.ts`). The conversation goes as a digest, the agent by its id.
    */
   identify?: boolean;
   /**
@@ -97,6 +98,12 @@ export interface ProviderProfile {
    * may know only `max_tokens`. Absent is `max_tokens`, what every such server reads.
    */
   maxTokensField?: MaxTokensField;
+  /**
+   * Minutes this endpoint keeps a conversation's cached prompt after its last request (`cache_minutes`), from the
+   * profile or, for an endpoint known by its address, from the known endpoints' table. Idle past it, the cache is
+   * gone, and that is the moment old tool output is cleared from the history for nothing. Absent: not known.
+   */
+  cacheMinutes?: number;
 }
 
 /** Where an OpenAI-shaped request puts its output ceiling (`ProviderProfile.maxTokensField`). */

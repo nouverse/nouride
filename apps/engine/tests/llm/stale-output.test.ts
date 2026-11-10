@@ -8,7 +8,7 @@
 
 import { describe, expect, test } from "bun:test";
 import type { ChatMessage, ChatParams, LLMProvider } from "@nouride/shared";
-import { CacheBreaks, IDLE_MS } from "@/modules/llm/cache-breaks.ts";
+import { ASSUMED_CACHE_LIFETIME_MS, CacheBreaks } from "@/modules/llm/cache-breaks.ts";
 import { pruneToolOutputs, TRIMMED_TOOL_PREFIX } from "@/modules/llm/context.ts";
 import { TurnExecutor } from "@/modules/llm/executor/index.ts";
 import type { AgentToolset } from "@/modules/tools/registry.ts";
@@ -49,12 +49,12 @@ describe("the prune, by turns", () => {
 describe("whether the cache was lost anyway", () => {
   test("unknown first, then the same prefix not, a changed one or an hour idle yes", () => {
     const breaks = new CacheBreaks();
-    expect(breaks.lost("ses_1", "a", 1_000, 2_000)).toBe(false);
-    expect(breaks.lost("ses_1", "a", 1_000, 2_000)).toBe(false);
-    expect(breaks.lost("ses_1", "b", 1_000, 2_000)).toBe(true);
-    expect(breaks.lost("ses_1", "b", 1_000, 1_000 + IDLE_MS)).toBe(true);
+    expect(breaks.lost("ses_1", "a", 1_000, 2_000, ASSUMED_CACHE_LIFETIME_MS)).toBe(false);
+    expect(breaks.lost("ses_1", "a", 1_000, 2_000, ASSUMED_CACHE_LIFETIME_MS)).toBe(false);
+    expect(breaks.lost("ses_1", "b", 1_000, 2_000, ASSUMED_CACHE_LIFETIME_MS)).toBe(true);
+    expect(breaks.lost("ses_1", "b", 1_000, 1_000 + ASSUMED_CACHE_LIFETIME_MS, ASSUMED_CACHE_LIFETIME_MS)).toBe(true);
     // Another conversation's prefix is its own.
-    expect(breaks.lost("ses_2", "a", 1_000, 2_000)).toBe(false);
+    expect(breaks.lost("ses_2", "a", 1_000, 2_000, ASSUMED_CACHE_LIFETIME_MS)).toBe(false);
   });
 });
 
@@ -104,7 +104,7 @@ describe("at a turn's start", () => {
   });
 
   test("an hour idle — the cache gone anyway — the output older than the last two turns goes", async () => {
-    const { sent } = await firstRequest(earlier(4, 2_000, Date.now() - 2 * IDLE_MS), { sessionId: "ses_idle" });
+    const { sent } = await firstRequest(earlier(4, 2_000, Date.now() - 2 * ASSUMED_CACHE_LIFETIME_MS), { sessionId: "ses_idle" });
     expect(sent[0]).toStartWith(TRIMMED_TOOL_PREFIX);
     expect(sent[1]).toStartWith(TRIMMED_TOOL_PREFIX);
     expect(sent[2]).toStartWith("output 2: ");

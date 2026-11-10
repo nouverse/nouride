@@ -71,10 +71,17 @@ async function loadForCheck(target: string | undefined) {
 /**
  * Each profile, and for one on the OpenAI wire whose output limit goes in another field than `max_tokens`, that field:
  * a profile on OpenAI's own API that sends `max_tokens` fails every reply on its newer models, so it is said where it
- * differs.
+ * differs. And how long its endpoint keeps a cached prompt, where the profile or its endpoint says: it decides when
+ * old tool output is cleared from an idle conversation, so the figure in force is shown, not looked up.
  */
 function providersLine(providers: GlobalConfig["providers"]): string {
-  const named = Object.entries(providers).map(([name, profile]) => (profile.maxTokensField ? `${name} (output limit as ${profile.maxTokensField})` : name));
+  const named = Object.entries(providers).map(([name, profile]) => {
+    const says = [
+      ...(profile.maxTokensField ? [`output limit as ${profile.maxTokensField}`] : []),
+      ...(profile.cacheMinutes !== undefined ? [`prompt cache kept ${profile.cacheMinutes} min`] : []),
+    ];
+    return says.length ? `${name} (${says.join(", ")})` : name;
+  });
   return named.join(", ") || "none";
 }
 
@@ -82,7 +89,7 @@ function providersLine(providers: GlobalConfig["providers"]): string {
 async function broughtForward(source: string): Promise<ConfigNote[]> {
   const text = await readTextFileIfExists(source);
   return profilesBehind(text ?? "").map((behind) => ({
-    message: `[providers.${behind.profile}] will be given ${Object.entries(behind.set).map(([key, value]) => `${key} = "${value}"`).join(", ")} at the next start`,
+    message: `[providers.${behind.profile}] will be given ${Object.entries(behind.set).map(([key, value]) => `${key} = ${JSON.stringify(value)}`).join(", ")} at the next start`,
     ...(behind.why ? { hint: behind.why } : {}),
   }));
 }
@@ -181,6 +188,7 @@ async function configCheck(target: string | undefined): Promise<void> {
       name,
       kind: profile.kind,
       ...(profile.kind === "openai" ? { maxTokensField: profile.maxTokensField ?? "max_tokens" } : {}),
+      ...(profile.cacheMinutes !== undefined ? { cacheMinutes: profile.cacheMinutes } : {}),
     })),
     failed: failed.map(({ id, error }) => ({ id, error })),
     disabledFailed: parked.map(({ id, error }) => ({ id, error })),

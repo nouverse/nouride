@@ -35,6 +35,8 @@ export interface ProviderSpec {
   identify?: boolean;
   /** Where the OpenAI wire puts the output ceiling — `ProviderProfile.maxTokensField`. Anthropic's has one field. */
   maxTokensField?: MaxTokensField;
+  /** How long the endpoint keeps a cached prompt, in minutes — `ProviderProfile.cacheMinutes`. */
+  cacheMinutes?: number;
   http?: HttpDeps;
 }
 

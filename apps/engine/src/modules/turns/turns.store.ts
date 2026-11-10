@@ -170,6 +170,11 @@ export interface FinishTurn {
   iterations?: number;
   inputTokens?: number;
   outputTokens?: number;
+  /**
+   * The turn's reply told its person it will be tried again (`pipeline/provider-resume.ts`). On the record, so the
+   * boot after a restart finds the promise whatever words it was made in.
+   */
+  retryPromised?: true;
 }
 
 export abstract class TurnStore {
@@ -336,7 +341,8 @@ export abstract class TurnStore {
            tool_calls = COALESCE(?, tool_calls),
            iterations = COALESCE(?, iterations),
            input_tokens = COALESCE(?, input_tokens),
-           output_tokens = COALESCE(?, output_tokens)
+           output_tokens = COALESCE(?, output_tokens),
+           retry_promised = COALESCE(?, retry_promised)
          WHERE id = ?`,
       )
       .run(
@@ -349,6 +355,7 @@ export abstract class TurnStore {
         patch.iterations ?? null,
         patch.inputTokens ?? null,
         patch.outputTokens ?? null,
+        patch.retryPromised ? 1 : null,
         turnId,
       );
   }
@@ -363,10 +370,38 @@ export abstract class TurnStore {
    * is the recent index and not the table: a turn starts at most `TURN_SECONDS_MAX` before it is cut.
    */
   interruptedSince(since: number): TurnRecord[] {
-    return this.db.prepare<TurnRow>(`SELECT * FROM turn_records WHERE started_at >= ? AND status = 'interrupted' AND ended_at >= ? AND ${OWN} ORDER BY started_at`).all(since - TURN_SECONDS_MAX * 1000, since).map(toRecord);
+    // Not one its person was asked about (`resume_asked_at`): that turn is theirs to take up, whenever a boot finds it.
+    return this.db.prepare<TurnRow>(`SELECT * FROM turn_records WHERE started_at >= ? AND status = 'interrupted' AND ended_at >= ? AND resume_asked_at IS NULL AND ${OWN} ORDER BY started_at`).all(since - TURN_SECONDS_MAX * 1000, since).map(toRecord);
   }
 
-  /** Turns that failed and ended since `since` — at boot, for one whose reply promised another try (`provider-resume.ts`). */
+  /**
+   * Turns a restart closed from `from` up to `until`, whose person has not been asked whether to carry on — at boot,
+   * for the ones cut off too long ago to take up unasked (`pipeline/resume-ask.ts`). Bounded like `interruptedSince`.
+   */
+  interruptedBetween(from: number, until: number): TurnRecord[] {
+    return this.db
+      .prepare<TurnRow>(`SELECT * FROM turn_records WHERE started_at >= ? AND status = 'interrupted' AND ended_at >= ? AND ended_at < ? AND resume_asked_at IS NULL AND ${OWN} ORDER BY started_at`)
+      .all(from - TURN_SECONDS_MAX * 1000, from, until)
+      .map(toRecord);
+  }
+
+  /** Its person was asked whether to carry on, at `at`: never asked again, and never taken up without their word. */
+  markResumeAsked(turnId: string, at: number): void {
+    this.db.prepare("UPDATE turn_records SET resume_asked_at = ? WHERE id = ? AND resume_asked_at IS NULL").run(at, turnId);
+  }
+
+  /**
+   * Turns that failed and ended since `since` with the mark that their reply promised another try — at boot, for the
+   * timer the last process took with it (`provider-resume.ts`). Bounded like `interruptedSince`.
+   */
+  retryPromisedSince(since: number): TurnRecord[] {
+    return this.db
+      .prepare<TurnRow>(`SELECT * FROM turn_records WHERE started_at >= ? AND status = 'failed' AND ended_at >= ? AND retry_promised = 1 AND ${OWN} ORDER BY started_at`)
+      .all(since - TURN_SECONDS_MAX * 1000, since)
+      .map(toRecord);
+  }
+
+  /** Turns that failed and ended since `since` — at boot, for one closed before a record carried that mark, read by its reply. */
   failedSince(since: number): TurnRecord[] {
     return this.db.prepare<TurnRow>(`SELECT * FROM turn_records WHERE started_at >= ? AND status = 'failed' AND ended_at >= ? AND ${OWN} ORDER BY started_at`).all(since - TURN_SECONDS_MAX * 1000, since).map(toRecord);
   }

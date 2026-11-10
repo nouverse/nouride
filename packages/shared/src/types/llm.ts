@@ -210,7 +210,10 @@ export interface ChatParams {
    * so a caller that does not care about caching passes a string and every provider still works.
    */
   system?: string | SystemBlock[];
-  /** Who is asking, sent only to a profile that says `identify`: the agent, and the conversation it is in. */
+  /**
+   * Who is asking, sent only to a profile that says `identify`: the agent, and the conversation it is in.
+   * `conversation` is an opaque id made by the caller: never a chat's id, a person's name or a number.
+   */
   identity?: { agentId: string; conversation: string };
   /**
    * Said after everything else, for this request only: the conversation's work notes (0.7.26), read fresh at every step.
@@ -389,6 +392,11 @@ export type StreamChunk =
 export interface LLMProvider {
   readonly kind: ProviderKind;
   readonly baseUrl: string;
+  /**
+   * How long the endpoint keeps a cached prompt prefix after its last request, where its profile says
+   * (`ProviderProfile.cacheMinutes`). Absent: not known, and whoever asks takes it for still warm.
+   */
+  readonly cacheLifetimeMs?: number;
 
   chat(params: ChatParams): Promise<ChatResponse>;
   stream(params: ChatParams): AsyncIterable<StreamChunk>;

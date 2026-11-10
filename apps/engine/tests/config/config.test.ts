@@ -90,6 +90,8 @@ describe("parseConfig — provider profiles", () => {
       kind: "anthropic",
       baseUrl: "https://api.anthropic.com/v1",
       apiKeySecret: "anthropic_api_key",
+      // What its endpoint is known to keep a cached prompt for: read off the address, not written in the file.
+      cacheMinutes: 5,
     });
   });
 

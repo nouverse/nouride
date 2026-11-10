@@ -9,6 +9,7 @@
 
 import { LLMError, createLogger, resolveToolIterations, type ChatMessage, type ChatParams, type ChatResponse, type LlmEffort, type LoadedAgent, type RetryInfo, type StopReason, type SystemBlock, type TokenUsage, type ToolCall, rootSessionOf } from "@nouride/shared";
 import { estimateMessagesTokens } from "@nouride/llm";
+import { sha256Text } from "@nouride/runtime";
 import { truncateContext } from "@/modules/llm/context.ts";
 import { outputCap } from "@/modules/llm/output-cap.ts";
 import { carriesAudio, resolveAudio, withoutAudio } from "@/modules/llm/audio.ts";
@@ -72,6 +73,15 @@ interface ProviderAnswer {
    * that said nothing teaches nothing.
    */
   counted?: { input: number; messages: number };
+}
+
+/**
+ * The conversation as a provider is told it: a digest of its root session's id, never the id. A session's id is built
+ * from the agent, the gateway and the chat, and a chat's id is a person's account or phone number on its platform.
+ * What a provider asks for in these fields is an opaque id, and a profile on a vendor's own API sends them.
+ */
+function conversationKey(sessionId: string): string {
+  return sha256Text(rootSessionOf(sessionId)).slice(0, 32);
 }
 
 export class ProviderCaller {
@@ -313,7 +323,7 @@ export class ProviderCaller {
       system: prompt.blocks,
       messages: resolved,
       // The conversation is the root one: a `delegate` helper's requests share its parent's prefix, and its cache.
-      identity: { agentId: agent.config.id, conversation: rootSessionOf(req.sessionId) },
+      identity: { agentId: agent.config.id, conversation: conversationKey(req.sessionId) },
       // Read now, at every request, so a note written in the step before is in this one (`ChatParams.tail`) — after who
       // is speaking, which is sent there too, out of the cached prefix (`BuiltPrompt.situation`).
       ...tailOf(prompt, req),

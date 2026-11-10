@@ -191,6 +191,11 @@ const MIN_TRIMMABLE_CHARS = 400;
 export interface TrimToolResultsOptions {
   /** Trimming starts once the messages are above this. */
   maxTokens: number;
+  /**
+   * How far down a trim goes once it starts: old results, then old calls' text, until the messages are at or under
+   * this. Below `maxTokens`, so the rounds after a trim change nothing until the set has grown back to the line.
+   */
+  targetTokens: number;
   /** Most recent tool results left verbatim, however large. */
   keepRecent: number;
   /** Where a trimmed result's content is kept, so the marker can name it. Absent: dropped, as before. */
@@ -253,10 +258,16 @@ export function isTrimmedToolResult(message: ChatMessage): boolean {
  * arranged to make impossible. Shrinking the content keeps the pairing intact by construction. An old
  * call is shortened the same way: the file text it carried goes, the call and its id stay.
  *
- * ## Oldest first, and only as far as needed
+ * ## Oldest first, and in one go
  *
- * Stops as soon as the set fits. The newest results are what the model is still working from; the
- * oldest have been read, acted on, and are being carried only because nothing removed them.
+ * The newest results are what the model is still working from; the oldest have been read, acted on, and
+ * are being carried only because nothing removed them. Once the set is over the line it is brought down to
+ * `targetTokens`, well under it, and then left alone until it has grown back.
+ *
+ * It used to stop the moment the set fit. Each round's results then put it over again and one more old
+ * result went: every round of a long turn changed bytes early in the conversation, and a provider that
+ * caches the prefix read none of it back. A trim costs that cache once; the rounds after it send the
+ * same prefix.
  *
  * No provider call, deliberately — this runs in the middle of a turn somebody is waiting on, and a
  * summarisation request there would add latency to the wait it exists to protect.
@@ -289,8 +300,11 @@ export function trimToolResults(
   let trimmed = 0;
   let reachedProtected = false;
 
-  /** Trim oldest-first through one group, stopping the moment the set fits. */
-  const trimThrough = (indexes: number[]): boolean => {
+  // Never above the line: a target past it would leave the set over what it was trimmed for.
+  const target = Math.min(options.targetTokens, options.maxTokens);
+
+  /** Trim oldest-first through one group, stopping once the set is down to `goal`. */
+  const trimThrough = (indexes: number[], goal: number): boolean => {
     for (const index of indexes) {
       const message = out[index];
       if (!message || isTrimmedToolResult(message)) continue;
@@ -303,11 +317,11 @@ export function trimToolResults(
       tokens += estimateMessageTokens(notice) - estimateMessageTokens(message);
       out[index] = notice;
       trimmed += 1;
-      // Checked after each one rather than estimated up front: stopping at the first point that fits
-      // keeps the maximum amount of real output in the request.
-      if (tokens <= options.maxTokens) return true;
+      // Checked after each one rather than estimated up front: no more real output leaves the request
+      // than reaching the goal takes.
+      if (tokens <= goal) return true;
     }
-    return tokens <= options.maxTokens;
+    return tokens <= goal;
   };
 
   /**
@@ -328,17 +342,20 @@ export function trimToolResults(
    * So: candidates first, and only if the set still does not fit do the protected ones get squeezed,
    * oldest of them first. Nothing changes in the ordinary case, where trimming the older results is
    * enough. What changes is that "does not fit" is no longer a state the trimmer is forbidden to leave.
+   *
+   * Squeezed only as far as the line, never on to the target: the target buys quiet rounds with output the
+   * model has finished with, and these it has not.
    */
   let shortened = 0;
   /**
    * Then the text old calls carried: a `write`'s content, an `edit`'s strings (`Tool.bulkArguments`), oldest first,
-   * stopping the moment the set fits. A long coding turn is mostly that, and a result trimmer cannot touch it: a write's
+   * down to the same target. A long coding turn is mostly that, and a result trimmer cannot touch it: a write's
    * result is one line. Only a call answered by a result before the last round, so the pair stays whole and the round
    * the model has not read yet is as it sent it.
    */
-  const shortenThrough = (): boolean => {
+  const shortenThrough = (goal: number): boolean => {
     const bulkOf = options.bulkArguments;
-    if (!bulkOf) return tokens <= options.maxTokens;
+    if (!bulkOf) return tokens <= goal;
     const answered = new Set(out.flatMap((message) => (message.role === "tool" && message.toolCallId ? [message.toolCallId] : [])));
     for (let index = 0; index < lastAnswer; index += 1) {
       for (const call of out[index]?.toolCalls ?? []) {
@@ -351,15 +368,15 @@ export function trimToolResults(
         tokens += estimateMessageTokens(next) - estimateMessageTokens(message);
         out[index] = next;
         shortened += 1;
-        if (tokens <= options.maxTokens) return true;
+        if (tokens <= goal) return true;
       }
     }
-    return tokens <= options.maxTokens;
+    return tokens <= goal;
   };
 
-  if (!trimThrough(candidates) && !shortenThrough() && protectedIndexes.length > 0) {
+  if (!trimThrough(candidates, target) && !shortenThrough(target) && tokens > options.maxTokens && protectedIndexes.length > 0) {
     const before = trimmed;
-    trimThrough(protectedIndexes);
+    trimThrough(protectedIndexes, options.maxTokens);
     reachedProtected = trimmed > before;
   }
 

@@ -123,6 +123,57 @@ describe("a turn's identity", () => {
       senderId: "814",
     });
 
-    expect(asked[0]?.identity).toEqual({ agentId: agent.config.id, conversation: "ses_nouva:telegram:main:814" });
+    // The helper's requests say its parent's conversation, as the parent's own do.
+    const own = (await askedOnce(() => {}, "ses_nouva:telegram:main:814"))[0]?.identity;
+    expect(asked[0]?.identity).toEqual(own!);
+    expect(own?.agentId).toBe(agent.config.id);
+  });
+
+  test("the conversation is an opaque id: no chat id, phone number or name in it, one per conversation", async () => {
+    // A WhatsApp chat's id is a phone number; a session's id is built from it.
+    const whatsapp = (await askedOnce(() => {}, "ses_nouva:whatsapp:main:6281234567890@s.whatsapp.net"))[0]?.identity;
+    const telegram = (await askedOnce(() => {}, "ses_nouva:telegram:main:7700112233"))[0]?.identity;
+    for (const identity of [whatsapp, telegram]) {
+      expect(identity?.conversation).toMatch(/^[0-9a-f]{32}$/);
+    }
+    expect(whatsapp?.conversation).not.toContain("6281234567890");
+    expect(telegram?.conversation).not.toContain("7700112233");
+    expect(whatsapp?.conversation).not.toBe(telegram?.conversation);
+    // The same conversation, the same id on every turn: what a cache is kept by.
+    expect((await askedOnce(() => {}, "ses_nouva:telegram:main:7700112233"))[0]?.identity).toEqual(telegram!);
+    // Another agent in the same chat is another conversation.
+    expect((await askedOnce(() => {}, "ses_nix:telegram:main:7700112233"))[0]?.identity?.conversation).not.toBe(telegram?.conversation);
+  });
+
+  test("on both wires, what a vendor is sent holds the agent's id and that opaque id, and nothing of the chat", async () => {
+    const identity = (await askedOnce(() => {}, "ses_nouva:whatsapp:main:6281234567890@s.whatsapp.net"))[0]!.identity!;
+    const sent: { headers: Record<string, string>; body: string }[] = [];
+    const fetchImpl = (async (url: string, init: RequestInit) => {
+      sent.push({ headers: init.headers as Record<string, string>, body: String(init.body) });
+      return String(url).includes("/messages")
+        ? Response.json({ id: "m", model: "c", content: [{ type: "text", text: "ok" }], stop_reason: "end_turn", usage: { input_tokens: 1, output_tokens: 1 } })
+        : Response.json({ choices: [{ message: { content: "ok" }, finish_reason: "stop" }] });
+    }) as unknown as typeof fetch;
+    const config = parseConfig({
+      providers: {
+        openai: { kind: "openai", base_url: "https://api.openai.com/v1", api_key: "openai_api_key", identify: true },
+        anthropic: { kind: "anthropic", base_url: "https://api.anthropic.com/v1", api_key: "anthropic_api_key", identify: true },
+      },
+    });
+    const providers = new ProviderRegistry(config.providers, await SecretStore.open(tempDir("secrets"), { OPENAI_API_KEY: "k", ANTHROPIC_API_KEY: "k" }), { fetchImpl });
+    const ask = { model: "m", messages: [{ role: "user" as const, content: "hi" }], identity };
+    await providers.get("openai").chat(ask);
+    await providers.get("anthropic").chat(ask);
+
+    const [openai, anthropic] = sent.map((one) => ({ headers: one.headers, body: JSON.parse(one.body) as Record<string, unknown> }));
+    expect(openai!.body.user).toBe(`nouva:${identity.conversation}`);
+    expect(openai!.body.prompt_cache_key).toBe(identity.conversation);
+    expect(openai!.headers["x-client-id"]).toBe("nouride/nouva");
+    expect(anthropic!.body.metadata).toEqual({ user_id: `nouva:${identity.conversation}` });
+    for (const one of sent) {
+      expect(one.body).not.toContain("6281234567890");
+      expect(one.body).not.toContain("whatsapp");
+      expect(JSON.stringify(one.headers)).not.toContain("6281234567890");
+    }
   });
 });

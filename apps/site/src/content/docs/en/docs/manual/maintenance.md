@@ -189,18 +189,22 @@ meant to run all day, and a long outage means it was stopped or something is wro
 everything it did, and says so in its chat before the daemon goes:
 
 > ⚠️ I was interrupted by a restart while working on "deploy the site". Done: `read site.toml`,
-> `git status`. Cut off: `exec ./deploy.sh` (it may have partly run). Everything I did is kept, and
-> I'll carry on once I'm back. If I don't, say "continue".
+> `git status`. Cut off: `exec ./deploy.sh` (it may have partly run). Everything I did is kept. If
+> I'm back within 15 minutes I'll carry on by myself; after that I'll ask you first.
 
-It cannot tell an upgrade from a shutdown, so the message does not guess. If the daemon is back
-within 15 minutes, the agent carries on by itself, once; after longer than that, the person says
-"continue". To stop the work for good, use `/stop`, not a restart.
+It cannot tell an upgrade from a shutdown, or how long it will be down, so the message says what
+each case brings. If the daemon is back within 15 minutes, the agent carries on by itself, once.
+After longer than that it does not: the next start asks the chat whether to carry on, once, with a
+Continue button where the platform has buttons, and the person says "continue" or presses it. A
+turn cut off more than two days ago is not asked about, nor one in a chat the person has written in
+since. To stop the work for good, use `/stop`, not a restart.
 [What they see →](/en/docs/manual/chatting/)
 
 If the daemon is killed outright instead, `kill -9`, the OOM killer, a power cut, no message can
 be sent at the time, so the *next* boot closes those turns the same way and tells the same
-conversations once the gateways are up. Messages that arrived while it was down are answered if they
-were sent in the last 15 minutes.
+conversations once the gateways are up: what was done, what was cut off, and either that it is
+carrying on (cut off in the last 15 minutes) or the same question (cut off longer ago). Messages
+that arrived while it was down are answered if they were sent in the last 15 minutes.
 
 The service unit gives the daemon 45 seconds to do this, and signals only the daemon, so it can stop
 its own commands. A binary install from before 0.7.0 that was updated with `nouride update` still has its

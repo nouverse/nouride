@@ -65,6 +65,7 @@ export class ProviderRegistry {
       ...(profile.headers ? { headers: profile.headers } : {}),
       ...(profile.identify ? { identify: true } : {}),
       ...(profile.maxTokensField ? { maxTokensField: profile.maxTokensField } : {}),
+      ...(profile.cacheMinutes !== undefined ? { cacheMinutes: profile.cacheMinutes } : {}),
       ...(this.http ? { http: this.http } : {}),
     });
 

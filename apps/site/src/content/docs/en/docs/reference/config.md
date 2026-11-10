@@ -102,14 +102,22 @@ kind = "anthropic"                  # the wire format, not the vendor
 base_url = "https://nougate.nouverse.tech/anthropic/v1"
 api_key = "nougate"                 # a secret NAME
 # headers = { "HTTP-Referer" = "https://nouverse.tech" }
-# identify = true                   # say which agent and conversation each request is for
+# identify = true                   # say which agent and conversation each request is for; written for you on
+                                    # OpenAI's and Anthropic's own APIs
 # billing = "included"              # a subscription: no cost per token
 # max_tokens_field = "max_completion_tokens"   # OpenAI's own API: where a reply's output limit goes
+# cache_minutes = 5                 # how long this endpoint keeps a conversation's cached prompt
 ```
 
 `max_tokens_field` is for `kind = "openai"`: `max_tokens` when it is left out, or `max_completion_tokens`, which
 OpenAI's own API needs for its newer models. Setup writes it for a profile on `https://api.openai.com/v1`, and the first
 start after an update adds it to one made before. Leave it out for any other server.
+
+`cache_minutes` is how long the endpoint keeps a conversation's cached prompt after its last request, in whole
+minutes. A conversation that has been idle for longer has lost its cache, so that is when old tool output is cleared
+from its history: the rewrite costs nothing then. Left out, a profile on `https://api.anthropic.com/v1` is read as `5`,
+the lifetime Anthropic documents, and any other as `60`. Set it where you know your endpoint's; `0` is for one that
+caches nothing. `nouride config check` shows the figure in force for each profile that has one.
 
 No profiles exist by default. The setup wizard, the dashboard or this file creates the first one,
 and `[llm.defaults] provider` stays empty until then.

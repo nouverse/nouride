@@ -240,8 +240,8 @@ result. If the daemon stops in the middle, for an update, a crash or a power cut
 did is lost, and the agent tells you where it got to:
 
 > ⚠️ I was interrupted by a restart while working on "deploy the site". Done: `read site.toml`,
-> `git status`. Cut off: `exec ./deploy.sh` (it may have partly run). Everything I did is kept, and
-> I'll carry on once I'm back. If I don't, say "continue".
+> `git status`. Cut off: `exec ./deploy.sh` (it may have partly run). Everything I did is kept. If
+> I'm back within 15 minutes I'll carry on by myself; after that I'll ask you first.
 
 If the daemon is back within 15 minutes, the agent carries on by itself with everything it had. A
 tool that was cut off is marked as such, so the agent checks what it did before repeating anything
@@ -249,9 +249,20 @@ that changes something. If the turn was cut off before it did anything, the agen
 answers your message once the daemon is back.
 
 It carries on once. A turn that was itself carrying on after a restart is not taken up again, so a
-turn that crashes the daemon cannot loop, and a scheduled run is not taken up at all. Back after
-longer than 15 minutes, nothing runs by itself: say "continue". To stop the work for good, use
-`/stop`, not a restart.
+turn that crashes the daemon cannot loop, and a scheduled run is not taken up at all.
+
+Back after longer than 15 minutes, nothing runs by itself: a command run an hour late may no longer
+be what you want. The agent asks you instead, once, in the chat the work was in:
+
+> I was cut off 1 hour ago while working on "deploy the site". I have not carried on by myself,
+> since it was a while ago. Say "continue" and I will pick it up.
+
+Say "continue" and it picks the work up from what it kept. On Telegram and Discord the question has
+a **Continue** button that does the same; in a group, the person who asked for the work or an admin
+presses it. After a power cut or a crash nothing could be said at the time, so that question comes
+with the list of what was done and what was cut off. It is not asked if you have written in that
+chat since, if the work was a scheduled run, or if it was cut off more than two days ago. To stop
+the work for good, use `/stop`, not a restart.
 
 Messages are written down the moment they arrive, so nothing sent during a restart is lost either.
 One sent in the last 15 minutes is answered once the daemon is back; an older one gets a short note

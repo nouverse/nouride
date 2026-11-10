@@ -197,14 +197,14 @@ describe("trimToolResults", () => {
 
   test("leaves everything alone when it already fits", () => {
     const messages = conversation();
-    const result = trimToolResults(messages, { maxTokens: 1_000_000, keepRecent: 1 });
+    const result = trimToolResults(messages, { maxTokens: 1_000_000, targetTokens: 1_000_000, keepRecent: 1 });
 
     expect(result.trimmed).toBe(0);
     expect(result.messages).toBe(messages);
   });
 
   test("drops the oldest output first and keeps the recent ones", () => {
-    const result = trimToolResults(conversation(), { maxTokens: 1500, keepRecent: 1 });
+    const result = trimToolResults(conversation(), { maxTokens: 1500, targetTokens: 1500, keepRecent: 1 });
 
     expect(result.trimmed).toBeGreaterThan(0);
     const tools = result.messages.filter((m) => m.role === "tool");
@@ -217,23 +217,57 @@ describe("trimToolResults", () => {
     // The failure this exists to make impossible: an orphaned `tool_use` is rejected outright by
     // Anthropic. Content shrinks; the message and its `toolCallId` stay.
     const before = conversation();
-    const after = trimToolResults(before, { maxTokens: 10, keepRecent: 0 }).messages;
+    const after = trimToolResults(before, { maxTokens: 10, targetTokens: 10, keepRecent: 0 }).messages;
 
     expect(after).toHaveLength(before.length);
     expect(after.map((m) => m.role)).toEqual(before.map((m) => m.role));
     expect(after.filter((m) => m.role === "tool").map((m) => m.toolCallId)).toEqual(["c1", "c2", "c3"]);
   });
 
-  test("stops as soon as it fits rather than trimming everything it may", () => {
-    // Trimming past the point of fitting throws away context for nothing.
-    const result = trimToolResults(conversation(), { maxTokens: 2200, keepRecent: 0 });
+  test("stops at its target rather than trimming everything it may", () => {
+    // Trimming past the target throws away context for nothing.
+    const result = trimToolResults(conversation(), { maxTokens: 2200, targetTokens: 2200, keepRecent: 0 });
 
     const intact = result.messages.filter((m) => m.role === "tool" && !isTrimmedToolResult(m));
     expect(intact.length).toBeGreaterThan(0);
   });
 
+  test("over the line it goes down to the target, not only back under the line", () => {
+    const messages = conversation();
+    const total = estimateMessagesTokens(messages);
+    // One trim is enough to be back under this line; the target is two results lower.
+    const justFits = trimToolResults(messages, { maxTokens: total - 200, targetTokens: total - 200, keepRecent: 0 });
+    expect(justFits.trimmed).toBe(1);
+
+    const toTarget = trimToolResults(messages, { maxTokens: total - 200, targetTokens: Math.floor(total / 2), keepRecent: 0 });
+    expect(toTarget.trimmed).toBe(2);
+    expect(toTarget.tokens).toBeLessThanOrEqual(Math.floor(total / 2));
+  });
+
+  test("under the line nothing is touched, however far above the target the set is", () => {
+    const messages = conversation();
+    const result = trimToolResults(messages, { maxTokens: estimateMessagesTokens(messages), targetTokens: 10, keepRecent: 0 });
+    expect(result.trimmed).toBe(0);
+    expect(result.messages).toBe(messages);
+  });
+
+  test("the kept results are squeezed to get under the line, never further to reach the target", () => {
+    const messages = conversation();
+    const total = estimateMessagesTokens(messages);
+    // Nothing but protected results, and a line one of them clears: the target would take all three.
+    const result = trimToolResults(messages, { maxTokens: total - 200, targetTokens: 10, keepRecent: 10 });
+    expect(result.trimmed).toBe(1);
+    expect(result.reachedProtected).toBe(true);
+
+    // Under the line once the older one went: the kept one stays, though the target is not reached.
+    const kept = trimToolResults(messages, { maxTokens: total - 200, targetTokens: 10, keepRecent: 1 });
+    expect(kept.trimmed).toBe(1);
+    expect(kept.reachedProtected).toBeFalsy();
+    expect(kept.messages.find((m) => m.toolCallId === "c2")!.content).toContain("SECOND");
+  });
+
   test("says what went, so an empty result is not mistaken for an empty file", () => {
-    const result = trimToolResults(conversation(), { maxTokens: 10, keepRecent: 0 });
+    const result = trimToolResults(conversation(), { maxTokens: 10, targetTokens: 10, keepRecent: 0 });
     const first = result.messages.find((m) => m.role === "tool")!;
 
     expect(first.content).toStartWith(TRIMMED_TOOL_PREFIX);
@@ -247,14 +281,14 @@ describe("trimToolResults", () => {
       ...exchange("c1", "done"),
       ...exchange("c2", big("SECOND")),
     ];
-    const result = trimToolResults(messages, { maxTokens: 10, keepRecent: 0 });
+    const result = trimToolResults(messages, { maxTokens: 10, targetTokens: 10, keepRecent: 0 });
 
     expect(result.messages.find((m) => m.toolCallId === "c1")!.content).toBe("done");
   });
 
   test("the total it reports is the set's estimate as returned — kept current trim by trim, not measured again", () => {
     for (const [maxTokens, keepRecent] of [[1_000_000, 1], [2_200, 0], [1_500, 1], [10, 0], [10, 10]] as const) {
-      const result = trimToolResults(conversation(), { maxTokens, keepRecent });
+      const result = trimToolResults(conversation(), { maxTokens, targetTokens: maxTokens, keepRecent });
       expect(result.tokens).toBe(estimateMessagesTokens(result.messages));
     }
   });
@@ -262,8 +296,8 @@ describe("trimToolResults", () => {
   test("an already-trimmed result is not trimmed again", () => {
     // Called on every iteration, so this runs many times over the same messages. Re-trimming would
     // grow the marker into a marker about a marker.
-    const once = trimToolResults(conversation(), { maxTokens: 10, keepRecent: 0 });
-    const twice = trimToolResults(once.messages, { maxTokens: 10, keepRecent: 0 });
+    const once = trimToolResults(conversation(), { maxTokens: 10, targetTokens: 10, keepRecent: 0 });
+    const twice = trimToolResults(once.messages, { maxTokens: 10, targetTokens: 10, keepRecent: 0 });
 
     expect(twice.trimmed).toBe(0);
     expect(twice.messages).toBe(once.messages);
@@ -274,6 +308,7 @@ describe("trimToolResults", () => {
     const messages = conversation();
     const result = trimToolResults(messages, {
       maxTokens: estimateMessagesTokens(messages),
+      targetTokens: 0,
       keepRecent: 10,
     });
     expect(result.trimmed).toBe(0);
@@ -289,7 +324,7 @@ describe("trimToolResults", () => {
      * overflows and every pass is forbidden to help. The reactive net cannot either — it drops
      * *history* and preserves the running turn, which is exactly where these live.
      */
-    const result = trimToolResults(conversation(), { maxTokens: 10, keepRecent: 10 });
+    const result = trimToolResults(conversation(), { maxTokens: 10, targetTokens: 10, keepRecent: 10 });
 
     expect(result.trimmed).toBeGreaterThan(0);
     // Reported, because it is a statement about the configuration rather than about this turn: the
@@ -306,6 +341,7 @@ describe("trimToolResults", () => {
     // A budget that only one trim can satisfy: the oldest goes, the newest is left alone.
     const result = trimToolResults(messages, {
       maxTokens: estimateMessagesTokens(messages) - 200,
+      targetTokens: estimateMessagesTokens(messages) - 200,
       keepRecent: 1,
     });
 
