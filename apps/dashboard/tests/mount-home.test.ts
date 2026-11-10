@@ -132,7 +132,7 @@ describe("the page", () => {
       "/memory/proposals": ok({ proposals: [] }),
       "/knowledge": ok({ collections: [] }),
     };
-    const PICTURES: Record<string, string> = { sleeping: "06-sleeping", meditating: "11-voice", coffee: "09-coffee", parked: "15-parked", coffeeBreak: "11-coffee-break" };
+    const PICTURES: Record<string, string> = { sleeping: "06-sleeping", meditating: "11-voice", coffee: "09-coffee", ready: "03-scooter-lean", coffeeBreak: "11-coffee-break" };
     expect(Object.keys(PICTURES).sort()).toEqual(QUIET.map((moment) => moment.pose).sort());
     /** The quiet card of one visit: which moment it drew, and what the browser now remembers as shown. */
     const visit = async () => {
@@ -153,6 +153,9 @@ describe("the page", () => {
       const first = await visit();
       expect(first.at).toBeGreaterThan(0);
       expect(first.card).toContain(QUIET[first.at]!.line);
+      // The cat after its words, at the card's far side: the greeting's cat over it stands before its words.
+      expect(first.card.indexOf("<img")).toBeGreaterThan(first.card.indexOf(QUIET[first.at]!.line));
+      expect(first.card.split("<img").length - 1).toBe(1);
       expect(first.card).not.toContain("06-sleeping");
       expect(first.kept).toBe(String(first.at));
       // And the visit after that, another again.

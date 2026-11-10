@@ -15,7 +15,7 @@ export const QUIET: readonly { pose: Pose; line: string }[] = [
   { pose: "sleeping", line: "Your agents nap until something comes in." },
   { pose: "meditating", line: "All quiet. Your agents are listening for the next message." },
   { pose: "coffee", line: "A calm stretch. Nothing needs an answer." },
-  { pose: "parked", line: "Parked and ready. The next message starts the ride." },
+  { pose: "ready", line: "Parked and ready. The next message starts the ride." },
   { pose: "coffeeBreak", line: "Between rides. Your agents start again when something comes in." },
 ];
 

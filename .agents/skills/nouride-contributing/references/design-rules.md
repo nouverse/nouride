@@ -82,6 +82,11 @@ Where the cat goes in the dashboard:
 - **Home changes its second picture each visit**, so the page opened most is not the same every time: one of several
   resting poses when nothing waits and nothing moves, one of several riding poses beside what is moving
   (`modules/home/moments.ts`). The greeting's cat does not change. A new resting or riding pose is one line there.
+  The resting cat stands after its words, at the card's far side, where the greeting's stands before them: two cats
+  on one side of the page read as one picture twice.
+
+`standing/15-parked` stays in the waiting set and is not drawn: it has two scooters in it. The cat parked by its
+scooter is `standing/03-scooter-lean`.
 
 The poses on the later sheets (`grids/nourider-4.jpeg`, `-5.jpeg`) are cut by `apps/site/scripts/cut-mascot-poses.ts`.
 

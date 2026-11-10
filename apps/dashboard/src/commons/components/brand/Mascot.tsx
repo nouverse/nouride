@@ -30,7 +30,6 @@ import pointing from "@brand/mascot/standing/10-pointing.webp";
 import box from "@brand/mascot/standing/11-box.webp";
 import head from "@brand/mascot/standing/12-head.webp";
 import coding from "@brand/mascot/standing/13-deep-work.webp";
-import parked from "@brand/mascot/standing/15-parked.webp";
 import searching from "@brand/mascot/states/02-searching.webp";
 import knowledge from "@brand/mascot/states/03-knowledge.webp";
 import approved from "@brand/mascot/states/04-approved.webp";
@@ -60,7 +59,8 @@ const POSES = {
   // What needs the person: an answer an agent is blocked on, and a mission that waits for one.
   pointing: [pointing, "The Nouride cat, pointing at what needs you"],
   waiting: [waiting, "The Nouride cat, holding a pocket watch"],
-  // A list that fills by itself and has nothing in it yet, and one that waits for the person to make the first.
+  // A list that fills by itself and has nothing in it yet, and one that waits for the person to make the first. Both
+  // are among a quiet Home's moments too (`modules/home/moments.ts`).
   sleeping: [sleeping, "The Nouride cat, asleep"],
   ready: [ready, "The Nouride cat, standing by its scooter, ready to go"],
   // Not there: an address that leads nowhere, and something that was there and is gone.
@@ -99,7 +99,6 @@ const POSES = {
   // A quiet Home, between one thing and the next (`modules/home/moments.ts`).
   meditating: [meditating, "The Nouride cat, sitting cross-legged with headphones on"],
   coffee: [coffee, "The Nouride cat, holding a coffee"],
-  parked: [parked, "The Nouride cat, leaning on its parked scooter"],
   coffeeBreak: [coffeeBreak, "The Nouride cat, having a coffee on its scooter"],
   head: [head, "Nouride"],
 } as const;

@@ -82,12 +82,13 @@ export default function HomePage() {
         {/* One cat beside the cards: where an approval waits it is the one pointing at it. */}
         {movingNow.length > 0 && <MovingNow missions={movingNow} looks={looks} names={names} {...(pendingApprovals.length === 0 ? { pose: riding } : {})} />}
         {quiet && (
-          <section className="flex items-center gap-4 rounded-[22px] border border-base-content/[0.08] bg-base-100 p-4 shadow-soft sm:p-5 lg:col-span-2">
-            <Mascot pose={resting.pose} decorative className="w-24 sm:w-28" />
+          <section className="flex items-center justify-between gap-4 rounded-[22px] border border-base-content/[0.08] bg-base-100 p-4 shadow-soft sm:p-5 lg:col-span-2">
             <div className="space-y-1">
               <p className="font-display text-lg font-medium text-base-content">Nothing is waiting for you</p>
               <p className="text-sm text-base-content/65">{resting.line}</p>
             </div>
+            {/* After the words, at the card's far side: the greeting's cat over it stands before its words. */}
+            <Mascot pose={resting.pose} decorative className="w-24 sm:w-28" />
           </section>
         )}
         <QuickChat agents={agents} orchestrator={status.data?.orchestrator ?? null} />
