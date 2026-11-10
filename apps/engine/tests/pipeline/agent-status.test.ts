@@ -5,7 +5,7 @@
  */
 
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
-import type { Client } from "@/cli/client.ts";
+import type { Client } from "@nouride/cli-kit";
 import { agentsCommand } from "@/cli/commands/agents.ts";
 import { plain } from "../cli-harness.ts";
 import { agentStatus, describeStatus } from "@/modules/pipeline/agent-status.ts";

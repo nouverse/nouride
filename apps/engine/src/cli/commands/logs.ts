@@ -1,8 +1,5 @@
-import type { LogsResponse } from "@/cli/wire.ts";
-import { flagValue, hasFlag } from "@/cli/args.ts";
-import { DIM, fail, RED, RESET, YELLOW, say, summarize } from "@/cli/ui.ts";
-import type { Client } from "@/cli/client.ts";
-import { wholeNumber } from "@/cli/usage.ts";
+import type { LogsResponse, Client } from "@nouride/cli-kit";
+import { flagValue, hasFlag, DIM, fail, RED, RESET, YELLOW, say, summarize, wholeNumber } from "@nouride/cli-kit";
 
 /**
  * `nouride logs` — the recent log, from the daemon rather than the platform.

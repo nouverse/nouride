@@ -1,9 +1,7 @@
 import { readStdin } from "@nouride/runtime";
-import { BOLD, DIM, GREEN, RED, RESET, YELLOW, fail, say, usageError, usageLines } from "@/cli/ui.ts";
+import { BOLD, DIM, GREEN, RED, RESET, YELLOW, fail, say, usageError, usageLines, flagValue, hasFlag } from "@nouride/cli-kit";
 import { parseWakeUp, scheduleWakeUp, wakeUpUsage } from "@/cli/wake-up.ts";
-import type { Client } from "@/cli/client.ts";
-import type { StatusResponse , AckResponse} from "@/cli/wire.ts";
-import { flagValue, hasFlag } from "@/cli/args.ts";
+import type { Client, StatusResponse, AckResponse } from "@nouride/cli-kit";
 import { saidSaved } from "@/cli/saved.ts";
 
 export async function gateway(client: Client, args: string[]): Promise<void> {

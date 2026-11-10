@@ -7,8 +7,7 @@
  */
 
 import { fileExistsSync, openWithPassphrase, readBytesSync, readStdin, writeBytesSync } from "@nouride/runtime";
-import { flagValue, hasFlag } from "@/cli/args.ts";
-import { BOLD, DIM, GREEN, RESET, fail, say, usageError } from "@/cli/ui.ts";
+import { flagValue, hasFlag, BOLD, DIM, GREEN, RESET, fail, say, usageError } from "@nouride/cli-kit";
 
 export async function unsealSecrets(args: string[]): Promise<void> {
   const out = flagValue(args, "--out");

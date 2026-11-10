@@ -28,10 +28,8 @@
  * for it — while still being free to answer "are we current?" unprompted.
  */
 
-import { BOLD, CYAN, DIM, GREEN, RESET, YELLOW, fail, say, usageError, usageLines } from "@/cli/ui.ts";
-import type { Client } from "@/cli/client.ts";
-import { lookAtHealth, waitBack } from "@/cli/wait-back.ts";
-import { flagValue, hasFlag } from "@/cli/args.ts";
+import { BOLD, CYAN, DIM, GREEN, RESET, YELLOW, fail, say, usageError, usageLines, lookAtHealth, waitBack, flagValue, hasFlag } from "@nouride/cli-kit";
+import type { Client } from "@nouride/cli-kit";
 
 interface InstallView {
   version: string;

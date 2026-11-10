@@ -6,7 +6,7 @@
 
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import type { LinePrompt } from "@nouride/runtime";
-import type { Client } from "@/cli/client.ts";
+import type { Client } from "@nouride/cli-kit";
 import { mcp } from "@/cli/commands/mcp.ts";
 
 const LOGIN_URL = "https://auth.example.com/authorize?client_id=c&state=s";

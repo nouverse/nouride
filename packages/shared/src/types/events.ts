@@ -318,6 +318,14 @@ export type TurnStepKind = (typeof TURN_STEP_KINDS)[number];
 const EXECUTOR_STEP_KINDS = ["reasoning", "tool", "tool_done", "note", "waiting", "retry", "compact"] as const satisfies readonly TurnStepKind[];
 export type ExecutorStepKind = (typeof EXECUTOR_STEP_KINDS)[number];
 
+/**
+ * What the executor says, by kind: `thinking` — waiting on the provider, a frame and never a step — and the step kinds
+ * a turn's own work writes (`EXECUTOR_STEP_KINDS`). One list, where each kind's meaning is its comment in
+ * `EVENT_CONTRACT`; a map that draws them is `satisfies Record<ActivityKind, …>`, so a kind added there and drawn
+ * nowhere does not compile.
+ */
+export type ActivityKind = "thinking" | ExecutorStepKind;
+
 type ValueOf<F> = F extends { values: readonly (infer V)[] }
   ? V
   : F extends { type: "string" }

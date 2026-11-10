@@ -8,7 +8,7 @@ import { describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { notAnInstall } from "@/modules/toolchain/installers.ts";
-import { usageFor } from "@/cli/usage.ts";
+import { usageFor } from "@nouride/cli-kit";
 import { runCli } from "../cli-harness.ts";
 import { tempDir } from "../helpers.ts";
 

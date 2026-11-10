@@ -1,9 +1,7 @@
-import type { Client } from "@/cli/client.ts";
+import type { Client } from "@nouride/cli-kit";
 import { saidSaved } from "@/cli/saved.ts";
-import { BOLD, DIM, GREEN, RED, RESET, say, usageError, usageLines, YELLOW } from "@/cli/ui.ts";
+import { BOLD, DIM, GREEN, RED, RESET, say, usageError, usageLines, YELLOW, flagValue, hasFlag, knownAction, unknownAction, wholeNumber } from "@nouride/cli-kit";
 import { memoryTags } from "./memory-tags.ts";
-import { flagValue, hasFlag } from "@/cli/args.ts";
-import { knownAction, unknownAction, wholeNumber } from "@/cli/usage.ts";
 import { isModelTier } from "@nouride/shared";
 
 /**

@@ -1,8 +1,5 @@
-import type { PeopleResponse, SenderRow } from "@/cli/wire.ts";
-import { BOLD, DIM, GREEN, RESET, say, usageError, usageLines, YELLOW } from "@/cli/ui.ts";
-import type { Client } from "@/cli/client.ts";
-import { flagValue, hasFlag } from "@/cli/args.ts";
-import { knownAction } from "@/cli/usage.ts";
+import type { PeopleResponse, SenderRow, Client } from "@nouride/cli-kit";
+import { BOLD, DIM, GREEN, RESET, say, usageError, usageLines, YELLOW, flagValue, hasFlag, knownAction } from "@nouride/cli-kit";
 import { saidSaved } from "@/cli/saved.ts";
 
 /**

@@ -19,7 +19,7 @@
  * Shipped as one binary: `bun build --compile` (see `bun run build:binary`).
  */
 
-import type { AckResponse } from "@/cli/wire.ts";
+import type { AckResponse } from "@nouride/cli-kit";
 import {
   fileExistsSync,
   isProcessAlive,
@@ -34,13 +34,10 @@ import { loadInstallEnv } from "@/modules/config/global/dotenv.ts";
 import { executableRoot } from "@/modules/config/global/paths.ts";
 import { keepStoreKeyAside } from "@/boot/secret-store.ts";
 import { describeStop, stopDaemon } from "@/cli/stop.ts";
-import { connect } from "@/cli/client.ts";
+import { dispatchedArgv, hasFlag, crashed, DIM, emit, fail, finish, GREEN, jsonOutput, plain, RESET, say, setJsonOutput, usageError, usageLines, usage, usageFor, lookAtHealth, waitBack } from "@nouride/cli-kit";
+import { connect } from "@/cli/connect.ts";
 import { loadConfig } from "@/cli/load-config.ts";
-import { dispatchedArgv, hasFlag } from "@/cli/args.ts";
-import { crashed, DIM, emit, fail, finish, GREEN, jsonOutput, plain, RESET, say, setJsonOutput, usageError, usageLines } from "@/cli/ui.ts";
-import { usage, usageFor } from "@/cli/usage.ts";
 import { meantCommand, refuseUnread } from "@/cli/grammar.ts";
-import { lookAtHealth, waitBack } from "@/cli/wait-back.ts";
 import { VERSION } from "@/commons/version.ts";
 
 import { access } from "@/cli/commands/access.ts";
@@ -158,7 +155,7 @@ async function main(): Promise<void> {
     case "help":
     case "--help":
     case "-h":
-      return usage();
+      return usage(VERSION);
 
     case "version":
     case "--version":

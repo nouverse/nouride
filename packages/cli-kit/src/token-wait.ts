@@ -11,7 +11,7 @@
  * boot that takes its time, one that never finishes, and one that dies halfway.
  */
 
-import type { Seen } from "@/cli/wait-back.ts";
+import type { Seen } from "./wait-back.ts";
 
 /** Long enough for a boot to reach its control plane — a first start's is quick — and short enough not to hang a script. */
 const WAIT_MS = 30_000;

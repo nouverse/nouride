@@ -13,7 +13,7 @@
  */
 
 import { describe, expect, spyOn, test } from "bun:test";
-import type { Client } from "@/cli/client.ts";
+import type { Client } from "@nouride/cli-kit";
 import { update } from "@/cli/commands/update.ts";
 
 /** A daemon that is behind and can take the update, so every branch below is reachable. */

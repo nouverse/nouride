@@ -30,7 +30,7 @@ style preferences.
 > a token". That is wrong about the mechanism, and it was checked. Run the CLI inside `exec`'s exact
 > sandbox — argv array, the `PATH HOME LANG TZ TERM` allowlist, no `NOURIDE_TOKEN` — and
 > `nouride agents` prints the live agent list. The agent never needs to be handed the token, because
-> `cli/client.ts` reads `dataDir/.control-token` itself and `HOME` is in the allowlist. What actually
+> the CLI's client (`packages/cli-kit`) reads `dataDir/.control-token` itself and `HOME` is in the allowlist. What actually
 > stands in front of it is that `nouride` is not in the default exec allowlist — which the default
 > `mode = "full"` never consults. One `exec` approval reaches it, and `classifyHardline` returns
 > nothing for `nouride approvals allow-always` or `nouride config set security.exec.ask off` (a verb gone since: exit 2).

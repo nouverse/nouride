@@ -20,10 +20,8 @@
  * back.
  */
 
-import type { CronJobRow } from "@/cli/wire.ts";
-import { BOLD, DIM, GREEN, RESET, say, usageError } from "@/cli/ui.ts";
-import type { Client } from "@/cli/client.ts";
-import { flagValue } from "@/cli/args.ts";
+import type { CronJobRow, Client } from "@nouride/cli-kit";
+import { BOLD, DIM, GREEN, RESET, say, usageError, flagValue } from "@nouride/cli-kit";
 
 /** Long enough for the service to be listening again, short enough to feel like the same breath. */
 const DEFAULT_DELAY_SECONDS = 10;

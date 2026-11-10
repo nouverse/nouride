@@ -2,7 +2,7 @@
  * A command that prints its usage, or a ✗ line, and exits 0 (`lint-cli-exit-code-guard`) — `lint:cli`'s second rule.
  *
  * The exit code is how the `nouride` tool tells a model that a call failed, and how a script does: 0 done, 1 failed,
- * 2 asked wrongly (`cli/ui.ts`). 0.7.10 found about twenty paths that printed their usage or a refusal with `say` and
+ * 2 asked wrongly (`packages/cli-kit`, `ui.ts`). 0.7.10 found about twenty paths that printed their usage or a refusal with `say` and
  * returned — "restart needs --then", "no such draft", "refusing a root unit" reached the agent as successes, and
  * `--json` said `ok: true` — and fixed each one with a test of its own. Nothing stopped the twenty-first; this does,
  * from the source:
@@ -22,7 +22,7 @@
  * those are other branches. A `say` in a loop is a listing, and counts.
  */
 
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import ts from "typescript";
 
@@ -33,9 +33,10 @@ export interface CliExitFinding {
 }
 
 const ROOT = new URL("../", import.meta.url).pathname;
-const CLI = "apps/engine/src/cli";
+/** Where a command's code is: the commands themselves, and what every one of them speaks through. */
+const CLI = ["apps/engine/src/cli", "packages/cli-kit/src"];
 
-/** What ends a command with a non-zero exit (`cli/ui.ts`, `cli/usage.ts`). */
+/** What ends a command with a non-zero exit (`packages/cli-kit`: `ui.ts`, `usage.ts`). */
 const FAILS = new Set(["fail", "usageError", "usageLines", "unknownAction", "crashed"]);
 
 /** The text a `say` opens with, as far as it is written down: the head of a template, or a string. */
@@ -212,10 +213,9 @@ function failsLater(say: ts.Node): boolean {
 
 /** Every `.ts` file of the CLI, relative to `root`. */
 function cliFiles(root: string): string[] {
-  const dir = join(root, CLI);
-  return (readdirSync(dir, { recursive: true }) as string[])
-    .filter((file) => file.endsWith(".ts"))
-    .map((file) => relative(root, join(dir, file)))
+  return CLI.map((folder) => join(root, folder))
+    .filter((dir) => existsSync(dir))
+    .flatMap((dir) => (readdirSync(dir, { recursive: true }) as string[]).filter((file) => file.endsWith(".ts")).map((file) => relative(root, join(dir, file))))
     .sort();
 }
 

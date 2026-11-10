@@ -6,7 +6,7 @@
 import { describe, expect, spyOn, test } from "bun:test";
 import { Hono } from "hono";
 import type { Tool } from "@nouride/shared";
-import type { Client } from "@/cli/client.ts";
+import type { Client } from "@nouride/cli-kit";
 import { mission as missionCommand } from "@/cli/commands/mission.ts";
 import type { Review } from "@/modules/missions/checking.ts";
 import { registerMissionRoutes } from "@/modules/web/control/routes/missions.ts";

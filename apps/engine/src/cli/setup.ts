@@ -38,7 +38,7 @@ import { ProviderRegistry } from "@/modules/llm/providers.ts";
 import { FIRST_AGENT } from "@/modules/setup/presets.ts";
 import { SetupService } from "@/modules/setup/service.ts";
 import type { ProviderKind } from "@/modules/setup/probe.ts";
-import { flagValue, hasFlag } from "@/cli/args.ts";
+import { flagValue, hasFlag } from "@nouride/cli-kit";
 import { restartHint } from "@/service/hints.ts";
 import { runningDaemon } from "@/cli/daemon-lock.ts";
 

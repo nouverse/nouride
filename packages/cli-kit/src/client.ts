@@ -2,18 +2,16 @@
  * The client every command that talks to a running daemon is handed.
  *
  * Port and data directory come from the same config the daemon read, so the CLI does not need its
- * own settings — and `$NOURIDE_URL` / `$NOURIDE_TOKEN` override for a remote daemon.
+ * own settings — and `$NOURIDE_URL` / `$NOURIDE_TOKEN` override for a remote daemon. Reading that config is the
+ * install's business: whoever builds a client hands in where the daemon is (`Locate`), and nothing here opens a
+ * config file.
  */
 
 import { fileExists, join, readTextFile } from "@nouride/runtime";
-import { installEnvPort } from "@/modules/config/global/dotenv.ts";
-import { loadConfig } from "@/cli/load-config.ts";
-import { installFingerprint } from "@/modules/web/health.ts";
-import { unauthorizedMessage } from "@/cli/diagnose.ts";
-import { awaitControlToken } from "@/cli/token-wait.ts";
-import { aside, fail, heard } from "@/cli/ui.ts";
-import { lookAtHealth } from "@/cli/wait-back.ts";
-import { startHint } from "@/service/hints.ts";
+import { unauthorizedMessage } from "./diagnose.ts";
+import { awaitControlToken } from "./token-wait.ts";
+import { aside, fail, heard } from "./ui.ts";
+import { lookAtHealth } from "./wait-back.ts";
 
 /**
  * The wire, typed at the point of use.
@@ -82,13 +80,30 @@ async function probeInstall(baseUrl: string): Promise<{ reached: boolean; instal
   }
 }
 
+/** Where this install's daemon is, as the config it read says. */
+export interface DaemonPlace {
+  /** The port it listens on. */
+  port: number;
+  /** Its data directory, where it writes the control token. */
+  dataDir: string;
+  /** This install's fingerprint, as its daemon's `/health` names it. */
+  install: string;
+  /** Whether the config has the control API on. */
+  controlEnabled: boolean;
+  /** How to start the daemon on this machine, for when it cannot be reached. */
+  startHint(): string;
+}
+
+/** Reads where the daemon is. `soft`: throw what went wrong rather than exit, for a caller that reports it. */
+export type Locate = (options: { soft?: boolean }) => Promise<DaemonPlace>;
+
 /**
- * Build a client against the running daemon.
+ * Build a client against the running daemon, found by `locate`.
  *
  * Port and data directory come from the same config the daemon read, so the CLI does not need
  * its own settings — and `$NOURIDE_URL` / `$NOURIDE_TOKEN` override for a remote daemon.
  */
-export async function connect(options: { soft?: boolean } = {}): Promise<Client> {
+export async function connectTo(locate: Locate, options: { soft?: boolean } = {}): Promise<Client> {
   /**
    * Exit for a command the user typed; throw for `doctor`, which has its offline checks on screen by
    * now and reports them before saying it could not get in. The hint rides on the error, as in `bail`.
@@ -97,15 +112,11 @@ export async function connect(options: { soft?: boolean } = {}): Promise<Client>
     if (options.soft) throw Object.assign(new Error(message), { hint });
     return fail(message, hint);
   };
-  // As a client: `PORT` and `HOST` are the daemon's, and a web project's `.env` sets both (`applyEnvOverrides`).
-  const { config } = await loadConfig({ client: true, ...(options.soft ? { soft: true } : {}) });
-  // The port the daemon takes: `NOURIDE_PORT` when the caller names one, else its install's `.env` (`installEnvPort`),
-  // else the config's.
-  const port = process.env.NOURIDE_PORT ? config.dashboard.port : (installEnvPort(config.daemon.dataDir) ?? config.dashboard.port);
+  const place = await locate(options);
   // `||`, not `??`: `NOURIDE_URL= nouride status` means "not set", and an empty string is no URL to fetch.
-  const baseUrl = process.env.NOURIDE_URL || `http://localhost:${port}`;
+  const baseUrl = process.env.NOURIDE_URL || `http://localhost:${place.port}`;
 
-  const tokenPath = join(config.daemon.dataDir, ".control-token");
+  const tokenPath = join(place.dataDir, ".control-token");
   let token = process.env.NOURIDE_TOKEN;
   if (!token) {
     const path = tokenPath;
@@ -115,11 +126,11 @@ export async function connect(options: { soft?: boolean } = {}): Promise<Client>
         look: () => lookAtHealth(baseUrl),
         tokenExists: () => fileExists(path),
         say: aside,
-        install: installFingerprint(config.daemon.dataDir),
+        install: place.install,
         path,
         baseUrl,
-        controlEnabled: config.control.enabled,
-        startHint: () => startHint(),
+        controlEnabled: place.controlEnabled,
+        startHint: () => place.startHint(),
       });
       if (why) stop(why.message, why.hint);
     }
@@ -158,8 +169,8 @@ export async function connect(options: { soft?: boolean } = {}): Promise<Client>
     (checked ??= (async () => {
       if (process.env.NOURIDE_TOKEN) return null;
       const answering = await probeInstall(baseUrl);
-      const mine = installFingerprint(config.daemon.dataDir);
-      if (!answering.reached) return { message: `Cannot reach the daemon at ${baseUrl}.`, hint: `Is it running? ${startHint()}` };
+      const mine = place.install;
+      if (!answering.reached) return { message: `Cannot reach the daemon at ${baseUrl}.`, hint: `Is it running? ${place.startHint()}` };
       if (answering.install === mine) return null;
       return {
         message:
@@ -217,7 +228,7 @@ export async function connect(options: { soft?: boolean } = {}): Promise<Client>
           "Asking again while it runs is refused, not repeated. `nouride logs -n 30` shows what it is doing.",
         );
       }
-      bail(`Cannot reach the daemon at ${baseUrl}.`, `Is it running? ${startHint()} (${String(err)})`);
+      bail(`Cannot reach the daemon at ${baseUrl}.`, `Is it running? ${place.startHint()} (${String(err)})`);
     }
 
     if (res.status === 401) {
@@ -225,7 +236,7 @@ export async function connect(options: { soft?: boolean } = {}): Promise<Client>
       // matters when something has already gone wrong.
       const { message, hint } = unauthorizedMessage({
         baseUrl,
-        localInstall: installFingerprint(config.daemon.dataDir),
+        localInstall: place.install,
         daemonInstall: await daemonInstall(baseUrl),
         tokenPath,
       });

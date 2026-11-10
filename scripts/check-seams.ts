@@ -21,6 +21,9 @@ import { dirname, join, relative } from "node:path";
 import ts from "typescript";
 import { ALWAYS, OPTIONAL, type PluginSpec } from "./build/edition.ts";
 import { notInstalled, uninstalledAt } from "./uninstalled.ts";
+import { PAIRS, type Pair, type Side } from "./seam-pairs.ts";
+
+export { PAIRS };
 
 const ROOT = join(import.meta.dir, "..");
 const PLUGINS: readonly PluginSpec[] = [...ALWAYS, ...OPTIONAL];
@@ -34,81 +37,6 @@ export interface Declaration {
   /** The types it names. A generic one is checked through the values that use it. */
   types: { name: string; generic: boolean }[];
 }
-
-/** A type written on two sides of a seam. `$` in `type` is the file's exports; without one, a name is looked up there. */
-interface Side {
-  file: string;
-  type: string;
-}
-
-interface Pair {
-  what: string;
-  /** The side that makes the value. */
-  from: Side;
-  /** The side that reads it. */
-  to: Side;
-  /** `equal`: two copies of one definition, neither of which may add to it. `into`: what one side makes, the other reads. */
-  relation: "equal" | "into";
-}
-
-const PRO = "internals/pro/packages";
-
-export const PAIRS: Pair[] = [
-  {
-    what: "a command to the WhatsApp bridge",
-    from: { file: "packages/shared/src/types/bridge.ts", type: "BridgeCommand" },
-    to: { file: "packages/wa-bridge/src/protocol.ts", type: "BridgeCommand" },
-    relation: "equal",
-  },
-  {
-    what: "an event from the WhatsApp bridge",
-    from: { file: "packages/wa-bridge/src/protocol.ts", type: "BridgeEvent" },
-    to: { file: "packages/shared/src/types/bridge.ts", type: "BridgeEvent" },
-    relation: "equal",
-  },
-  {
-    what: "the bridge protocol's version",
-    from: { file: "packages/wa-bridge/src/protocol.ts", type: "typeof $.BRIDGE_PROTOCOL_VERSION" },
-    to: { file: "packages/shared/src/types/bridge.ts", type: "typeof $.BRIDGE_PROTOCOL_VERSION" },
-    relation: "equal",
-  },
-  {
-    what: "the dashboard's sign-in section, as the plugin reads it",
-    from: { file: "packages/shared/src/types/config.ts", type: "DashboardOAuthSection" },
-    to: { file: `${PRO}/oauth/src/index.ts`, type: "OauthSettings" },
-    relation: "equal",
-  },
-  {
-    what: "a box's state, as My Box reads it",
-    from: { file: `${PRO}/appliance/src/core/box.ts`, type: "BoxState" },
-    to: { file: "packages/wire/src/appliance.ts", type: "BoxState" },
-    relation: "into",
-  },
-  {
-    what: "the box's release source, as the updater reads it",
-    from: { file: `${PRO}/appliance/src/core/updates.ts`, type: "ReturnType<typeof $.createReleaseSource>" },
-    to: { file: "packages/update/src/release.ts", type: "ReleaseSource" },
-    relation: "into",
-  },
-  {
-    what: "a release the box's source lists",
-    from: { file: `${PRO}/appliance/src/core/updates.ts`, type: "Release" },
-    to: { file: "packages/update/src/release.ts", type: "Release" },
-    relation: "into",
-  },
-  {
-    what: "the roles an account can hold",
-    from: { file: `${PRO}/multi-user/src/index.ts`, type: "MultiUserRole" },
-    to: { file: "packages/wire/src/status.ts", type: "UserRole" },
-    relation: "equal",
-  },
-  {
-    what: "the setup console's state, as its page reads it",
-    from: { file: `${PRO}/appliance/src/core/onboard/portal.ts`, type: "PortalState" },
-    to: { file: `${PRO}/appliance/src/ui/lib/api.ts`, type: "BoxState" },
-    relation: "into",
-  },
-];
 
 function walk(dir: string, visit: (path: string) => void): void {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {

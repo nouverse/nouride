@@ -1,23 +1,17 @@
-import type { AgentLook, ApprovalRequest, Job, Person, Session } from "@nouride/shared";
-import type { MissionSeen } from "@nouride/wire";
-import type { DraftResult } from "@/modules/mcp-registry/index.ts";
-import type { AgentStatus } from "@/modules/pipeline/agent-status.ts";
-import type { BufferedLog } from "@/commons/log-buffer.ts";
-import type { LocalTurnResult } from "@/modules/gateways/local.ts";
-import type { AuditEntry } from "@/commons/audit.store.ts";
-import type { AtOnce } from "@/commons/machine.ts";
-import type { ExecGrantRecord } from "@/modules/tools/grants.store.ts";
-import type { ToolGrantRecord } from "@/modules/tools/tool-grants.store.ts";
-import type { SenderRecord } from "@/modules/access/access.store.ts";
-import type { JobSnapshot } from "@/modules/jobs/jobs.store.ts";
-import type { HookReach } from "@/modules/web/hook-reach.ts";
-import type { SkillDraft } from "@/modules/reflection/types.ts";
-import type { HelperTrouble } from "@/modules/llm/helper-trouble.ts";
-import type { Mission } from "@/modules/missions/types.ts";
-import type { KeptPlan } from "@/modules/notes/store.ts";
-import type { LoginView } from "@/modules/external-agents/login.ts";
-import type { ScannedCli } from "@/modules/external-agents/scan.ts";
-import type { CliRoom } from "@/modules/external-agents/index.ts";
+import type { AgentLook, AgentStatus, ApprovalRequest, Job, Person, Session } from "@nouride/shared";
+import type {
+  BackgroundJob,
+  CatalogDraft,
+  CliLoginView,
+  CliRoom,
+  MissionView as WireMissionView,
+  NotesPlan,
+  ScannedCli,
+  SenderRecord,
+  SkillDraft,
+  WebhookReach,
+} from "@nouride/wire";
+import type { AtOnce, HelperTroubleLine, AuditLine, BufferedLog, LocalTurnResult, ExecGrantRecord, ToolGrantRecord } from "./records.ts";
 
 /**
  * What the CLI expects each control route to answer.
@@ -93,7 +87,7 @@ export interface StatusResponse {
   queue: { running: number; waiting: number };
   pendingApprovals: number;
   /** What compaction and the memory pass ran into with their models in the last day (`helper-trouble.ts`). Absent before 0.7.25. */
-  helpers?: Pick<HelperTrouble, "issue" | "summary" | "last" | "at" | "fix">[];
+  helpers?: HelperTroubleLine[];
 }
 
 /**
@@ -219,16 +213,15 @@ export interface CronDetailResponse {
 /**
  * `GET /jobs` and `GET /jobs/:id/log` — background commands.
  *
- * `JobSnapshot` is the store's own type, reached the same way `Job` is: the CLI's dependency is on
- * what the daemon already defines, not on a restatement of it.
+ * A job as `@nouride/wire` says it, which the store's own `JobSnapshot` is held to (`check-seams`).
  */
 export interface JobListResponse {
-  jobs: JobSnapshot[];
+  jobs: BackgroundJob[];
 }
 
 export interface JobLogResponse {
   id: string;
-  job: JobSnapshot;
+  job: BackgroundJob;
   /** Bounded server-side — a build log is megabytes and this is a JSON body. */
   log: string;
 }
@@ -286,13 +279,11 @@ export interface ApprovalResponse {
 /**
  * `GET /audit` — what the agents did.
  *
- * `AuditEntry & { timestamp }` because the store's own type omits it: `recent()` reads the column and
- * hands it back, but the interface it returns does not declare it. That is a gap in the store's type
- * rather than in this one, and worth leaving visible here instead of widening the store to match a
- * caller.
+ * A row with its `timestamp`: the store's own `AuditEntry` omits it, and `recent()` reads the column and hands it
+ * back all the same. That is a gap in the store's type rather than in this one (`AuditLine`).
  */
 export interface AuditResponse {
-  entries: (AuditEntry & { timestamp: number })[];
+  entries: AuditLine[];
 }
 
 /** `GET /grants` — durable permissions, exec commands and whole tools. */
@@ -401,7 +392,7 @@ export type WebhookRow = Job & {
   path: string;
   url: string;
   urlGuessed: boolean;
-  reach: HookReach;
+  reach: WebhookReach;
 };
 
 /**
@@ -444,11 +435,11 @@ export interface McpCatalogResponse {
 
 /** `GET /mcp/catalog/entry` — one entry, and the form adding it would fill in. */
 export interface McpCatalogEntryResponse extends McpCatalogCard {
-  result?: DraftResult;
+  result?: { draft: CatalogDraft } | { unsupported: string; blocked: NonNullable<McpCatalogCard["blocked"]> };
 }
 
 /** A mission as `/missions` sends it: the record, what a person sees it as, and the time it has worked (0.8.0). */
-export type MissionView = Mission & { seen: MissionSeen; workedMs: number };
+export type MissionView = WireMissionView;
 
 export interface MissionListResponse {
   missions: MissionView[];
@@ -457,7 +448,7 @@ export interface MissionListResponse {
 export interface MissionDetailResponse {
   mission: MissionView;
   sessionId: string;
-  plan: KeptPlan | null;
+  plan: NotesPlan | null;
   parked: ApprovalRequest[];
   /** The reviewer at work (0.8.10): which pass, of how many, since when. */
   reviewing?: { pass: number; of: number; since: number };
@@ -484,12 +475,12 @@ export interface ExternalClisResponse {
 
 /** `POST /agents/:id/cli/login`, and `…/answer` — the sign-in as the terminal shows it. */
 export interface CliLoginResponse {
-  login: LoginView;
+  login: CliLoginView;
 }
 
 /** `GET /agents/:id/cli` — an external agent's CLI, and its sign-in where one was started. */
 export interface AgentCliResponse {
   cli: string;
   unavailable: string | null;
-  login: LoginView | null;
+  login: CliLoginView | null;
 }

@@ -31,7 +31,7 @@
  * has nothing to do with another's.
  */
 
-import { contained, createLogger, type LoadedAgent, type McpServerConfig, type Tool } from "@nouride/shared";
+import { contained, createLogger, MCP_SCHEMA_WARN_BYTES, type LoadedAgent, type McpServerConfig, type Tool } from "@nouride/shared";
 import { McpAuthRequiredError, McpClient, McpError, type McpAuth, type McpTool, type McpTransportFactory } from "@nouride/mcp";
 import type { ReadImages } from "./builtins/read-image.ts";
 import { audited } from "./audited.ts";
@@ -70,15 +70,7 @@ const CONNECT_CONCURRENCY = 4;
  */
 const CONNECT_WAIT_MS = 10_000;
 
-/**
- * Past this, one server's tool schemas are said at warn when it connects, and by `nouride doctor`.
- *
- * Half of what every built-in tool together comes to — `tool-schema-budget.test.ts` holds them under 33,900
- * characters — so a server past it costs the agent holding it more of the window than most of its built-ins, on every
- * request of every tool iteration. The built-ins' budget is a test; a server's schemas are somebody else's, arrive at
- * runtime, and can only be said.
- */
-export const MCP_SCHEMA_WARN_BYTES = 16_000;
+export { MCP_SCHEMA_WARN_BYTES };
 
 export interface McpManagerOptions {
   /** Per-call ceiling, so a silent server cannot park a turn. Defaults to the tool timeout. */

@@ -7,10 +7,9 @@
  * and names the version to go back to. The Update button asks the orchestrator to run this; it is not typed by people.
  */
 
-import { BOLD, DIM, GREEN, RESET, emit, fail, say, usageError } from "@/cli/ui.ts";
-import type { Client } from "@/cli/client.ts";
-import type { ExternalClisResponse } from "@/cli/wire.ts";
-import type { UpdateChecked } from "@/modules/external-agents/cli-update.ts";
+import { BOLD, DIM, GREEN, RESET, emit, fail, say, usageError } from "@nouride/cli-kit";
+import type { Client, ExternalClisResponse } from "@nouride/cli-kit";
+import type { UpdateChecked } from "@nouride/cli-kit";
 import { runShared } from "./tools.ts";
 
 const USAGE = "Usage: nouride agents update <cli> [<version>] (`nouride agents scan` lists them)";

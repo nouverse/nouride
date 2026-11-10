@@ -7,7 +7,7 @@
 
 import { expect, spyOn, test } from "bun:test";
 import { Hono } from "hono";
-import type { Client } from "@/cli/client.ts";
+import type { Client } from "@nouride/cli-kit";
 import { jobs } from "@/cli/commands/jobs.ts";
 import { registerJobRoutes } from "@/modules/web/control/routes/jobs.ts";
 

@@ -1,8 +1,7 @@
 import { TOOL_ITERATIONS_ADVISED } from "@nouride/shared";
-import { BOLD, DIM, RESET, YELLOW, say, usageError } from "@/cli/ui.ts";
-import type { Client } from "@/cli/client.ts";
+import { BOLD, DIM, RESET, YELLOW, say, usageError } from "@nouride/cli-kit";
+import type { Client, StatusResponse } from "@nouride/cli-kit";
 import { saidSaved } from "@/cli/saved.ts";
-import type { StatusResponse } from "@/cli/wire.ts";
 
 /**
  * `nouride tool-budget` — how many tool round-trips one reply may spend.

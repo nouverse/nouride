@@ -37,8 +37,7 @@ import { packProblem, planPackRenames, type PackCheck, type PackRename } from "@
 import { applyVaultRename, planVaultRename, checkVaultFormat, VaultFormatError, backupVault, vaultBackupDir, vaultAt, type VaultRename } from "@/modules/memory/index.ts";
 import { FLOOR_SCHEMA, MIGRATIONS } from "@/db/migrations.ts";
 import { UPGRADE_FLOOR } from "@/commons/upgrade-floor.ts";
-import { BOLD, DIM, GREEN, RED, RESET, YELLOW, emit, fail, say, usageError } from "@/cli/ui.ts";
-import { hasFlag } from "@/cli/args.ts";
+import { BOLD, DIM, GREEN, RED, RESET, YELLOW, emit, fail, say, usageError, hasFlag } from "@nouride/cli-kit";
 import { loadConfig } from "@/cli/load-config.ts";
 import { runningDaemon } from "@/cli/daemon-lock.ts";
 

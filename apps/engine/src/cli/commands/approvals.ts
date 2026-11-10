@@ -1,10 +1,6 @@
-import { type ApprovalRequest, clip } from "@nouride/shared";
-import type { AckResponse, ApprovalResponse, ApprovalsResponse } from "@/cli/wire.ts";
-import { BOLD, DIM, GREEN, RED, RESET, YELLOW, fail, say } from "@/cli/ui.ts";
-import type { Client } from "@/cli/client.ts";
-import { knownAction } from "@/cli/usage.ts";
-import { hasFlag } from "@/cli/args.ts";
-import { adminOnly, adminOnlyChanges } from "@/modules/tools/approval-answerers.ts";
+import { type ApprovalRequest, clip, adminOnly, adminOnlyChanges } from "@nouride/shared";
+import type { AckResponse, ApprovalResponse, ApprovalsResponse, Client } from "@nouride/cli-kit";
+import { BOLD, DIM, GREEN, RED, RESET, YELLOW, fail, say, knownAction, hasFlag } from "@nouride/cli-kit";
 
 /** The answers. Each must reach a person when an agent gives it — `@nouride/policy`'s `own-cli.ts` copies this list. */
 export const APPROVAL_ACTIONS = ["allow-once", "allow-always", "always", "deny"] as const;

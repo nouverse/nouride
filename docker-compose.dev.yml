@@ -74,6 +74,7 @@ services:
       - site_node_modules:/app/apps/site/node_modules
       - ui_graph_node_modules:/app/packages/ui-graph/node_modules
       - acp_node_modules:/app/packages/acp/node_modules
+      - cli_kit_node_modules:/app/packages/cli-kit/node_modules
       - gateways_node_modules:/app/packages/gateways/node_modules
       - isolation_node_modules:/app/packages/isolation/node_modules
       - llm_node_modules:/app/packages/llm/node_modules
@@ -100,6 +101,7 @@ volumes:
   site_node_modules:
   ui_graph_node_modules:
   acp_node_modules:
+  cli_kit_node_modules:
   gateways_node_modules:
   isolation_node_modules:
   llm_node_modules:

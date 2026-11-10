@@ -9,8 +9,8 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { awaitControlToken, type TokenWaitDeps } from "@/cli/token-wait.ts";
-import type { Seen } from "@/cli/wait-back.ts";
+import { awaitControlToken, type TokenWaitDeps } from "@nouride/cli-kit";
+import type { Seen } from "@nouride/cli-kit";
 
 const MINE = "aaaaaaaaaaaa";
 const starting = (phase: string, install = MINE): Seen => ({ reachable: true, status: "starting", phase, install });

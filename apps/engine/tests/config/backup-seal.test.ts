@@ -13,7 +13,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Hono } from "hono";
 import { openWithPassphrase } from "@nouride/runtime";
-import type { Client } from "@/cli/client.ts";
+import type { Client } from "@nouride/cli-kit";
 import { secret } from "@/cli/commands/secret.ts";
 import { DEFAULT_CONFIG } from "@/modules/config/defaults.ts";
 import { readConfigText } from "@/modules/config/global/index.ts";

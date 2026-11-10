@@ -9,7 +9,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { usageFor } from "@/cli/usage.ts";
+import { usageFor } from "@nouride/cli-kit";
 import { createScheduleTool } from "@/modules/tools/builtins/schedule.ts";
 
 const ROOT = join(import.meta.dir, "..", "..", "..", "..");

@@ -17,7 +17,7 @@
  * a value, which is skipped rather than read as a flag, so `--arg -y` passes `-y` to a server.
  */
 
-import { usageError, plain } from "@/cli/ui.ts";
+import { usageError, plain } from "@nouride/cli-kit";
 import { refuseRetired } from "@/cli/retired.ts";
 import { nearest } from "@/cli/nearest.ts";
 

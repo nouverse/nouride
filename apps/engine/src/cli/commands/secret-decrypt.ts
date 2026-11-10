@@ -10,9 +10,8 @@
 
 import { fileExistsSync, writeBytesSync } from "@nouride/runtime";
 import { SecretError } from "@nouride/secrets";
-import { flagValue } from "@/cli/args.ts";
+import { flagValue, BOLD, DIM, GREEN, RESET, fail, say, usageError } from "@nouride/cli-kit";
 import { loadConfig } from "@/cli/load-config.ts";
-import { BOLD, DIM, GREEN, RESET, fail, say, usageError } from "@/cli/ui.ts";
 import { openCommandSecretStore } from "@/boot/secret-store.ts";
 import { defaultConfigPath } from "@/modules/config/global/index.ts";
 

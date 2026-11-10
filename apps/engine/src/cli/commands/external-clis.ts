@@ -4,10 +4,9 @@
  */
 
 import { openLinePrompt } from "@nouride/runtime";
-import { BOLD, DIM, GREEN, RESET, YELLOW, fail, say } from "@/cli/ui.ts";
-import type { ScannedCli } from "@/modules/external-agents/scan.ts";
-import type { Client } from "@/cli/client.ts";
-import type { AgentCliResponse, CliLoginResponse, ExternalClisResponse } from "@/cli/wire.ts";
+import { BOLD, DIM, GREEN, RESET, YELLOW, fail, say } from "@nouride/cli-kit";
+import type { ScannedCli } from "@nouride/wire";
+import type { Client, AgentCliResponse, CliLoginResponse, ExternalClisResponse } from "@nouride/cli-kit";
 
 /**
  * Looked at now, every time: who asks in a terminal has usually just installed one. From the last minute's answer — the

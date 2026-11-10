@@ -13,7 +13,7 @@
  * Off unless the box was installed with `--allow-packages`; then this says how to turn it on.
  */
 
-import { BOLD, DIM, GREEN, RED, RESET, YELLOW, emit, fail, say, usageError } from "@/cli/ui.ts";
+import { BOLD, DIM, GREEN, RED, RESET, YELLOW, emit, fail, say, usageError } from "@nouride/cli-kit";
 import { EDITION } from "@/commons/build.ts";
 import { loadConfig } from "@/cli/load-config.ts";
 import { installDirFor } from "@/modules/update/facts.ts";

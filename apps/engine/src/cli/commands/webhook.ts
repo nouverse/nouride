@@ -1,8 +1,5 @@
-import type { WebhookRow } from "@/cli/wire.ts";
-import { BOLD, DIM, GREEN, RESET, say, usageError, usageLines } from "@/cli/ui.ts";
-import type { Client } from "@/cli/client.ts";
-import { flagValue, hasFlag, sessionMode } from "@/cli/args.ts";
-import { knownAction } from "@/cli/usage.ts";
+import type { WebhookRow, Client } from "@nouride/cli-kit";
+import { BOLD, DIM, GREEN, RESET, say, usageError, usageLines, flagValue, hasFlag, sessionMode, knownAction } from "@nouride/cli-kit";
 
 /**
  * `nouride webhook` — endpoints that run a job when something calls them.

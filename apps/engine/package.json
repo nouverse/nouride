@@ -21,6 +21,7 @@
     "@nouride/isolation": "workspace:*",
     "@nouride/llm": "workspace:*",
     "@nouride/acp": "workspace:*",
+    "@nouride/cli-kit": "workspace:*",
     "@nouride/mcp": "workspace:*",
     "@nouride/persona": "workspace:*",
     "@nouride/policy": "workspace:*",

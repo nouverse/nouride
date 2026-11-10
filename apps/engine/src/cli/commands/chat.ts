@@ -1,13 +1,12 @@
-import type { ApprovalsResponse, MessageResponse, StatusResponse } from "@/cli/wire.ts";
+import type { ApprovalsResponse, MessageResponse, StatusResponse, Client } from "@nouride/cli-kit";
 import { openLinePrompt, resolve } from "@nouride/runtime";
 import { createApprovalPoller } from "@/cli/approvals.ts";
 import { MARKS, followChat } from "@/cli/chat-follow.ts";
 import { formatActivityLine } from "@/cli/activity-view.ts";
-import { LOCAL_GATEWAY_ID } from "@/modules/gateways/local.ts";
+import { LOCAL_GATEWAY_ID } from "@nouride/shared";
 import { renderPreview } from "@/cli/preview-view.ts";
-import { BOLD, CYAN, DIM, GREEN, RESET, YELLOW, fail, say, usageError } from "@/cli/ui.ts";
+import { BOLD, CYAN, DIM, GREEN, RESET, YELLOW, fail, say, usageError } from "@nouride/cli-kit";
 import { decisionFromAnswer } from "./approvals.ts";
-import type { Client } from "@/cli/client.ts";
 
 /**
  * Interactive chat against a running daemon.

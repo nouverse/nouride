@@ -11,6 +11,7 @@
     "apps/site",
     "packages/ui-graph",
     "packages/acp",
+    "packages/cli-kit",
     "packages/gateways",
     "packages/isolation",
     "packages/llm",

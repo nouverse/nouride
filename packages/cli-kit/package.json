@@ -1,0 +1,15 @@
+{
+  "name": "@nouride/cli-kit",
+  "description": "What a Nouride command speaks, whichever side of the daemon it runs on: its output and exit codes, its argument reading, the help text, the HTTP client to the daemon, and the answers the CLI expects of the control API.",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@nouride/runtime": "workspace:*",
+    "@nouride/shared": "workspace:*",
+    "@nouride/wire": "workspace:*"
+  }
+}

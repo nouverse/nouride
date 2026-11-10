@@ -1,12 +1,8 @@
-import type { AckResponse, McpCatalogEntryResponse, McpCatalogResponse, McpLibraryResponse, McpLoginFinishResponse, McpLoginStartResponse, McpResponse, McpToolsResponse, StatusResponse } from "@/cli/wire.ts";
+import type { AckResponse, McpCatalogEntryResponse, McpCatalogResponse, McpLibraryResponse, McpLoginFinishResponse, McpLoginStartResponse, McpResponse, McpToolsResponse, StatusResponse, Client } from "@nouride/cli-kit";
 import { openLinePrompt, readStdin, type LinePrompt } from "@nouride/runtime";
-import { formatBytes } from "@nouride/shared";
-import { BOLD, DIM, GREEN, RED, RESET, YELLOW, say, usageError, usageLines, fail } from "@/cli/ui.ts";
-import { MCP_SCHEMA_WARN_BYTES } from "@/modules/tools/mcp.ts";
-import type { Client } from "@/cli/client.ts";
-import { flagValue, hasFlag } from "@/cli/args.ts";
+import { formatBytes, MCP_SCHEMA_WARN_BYTES } from "@nouride/shared";
+import { BOLD, DIM, GREEN, RED, RESET, YELLOW, say, usageError, usageLines, fail, flagValue, hasFlag, knownAction } from "@nouride/cli-kit";
 import { saidSaved } from "@/cli/saved.ts";
-import { knownAction } from "@/cli/usage.ts";
 
 /**
  * `nouride mcp` — the install's MCP servers (0.7.19): one library (`agents/mcp.toml`), each server switched on per

@@ -8,7 +8,7 @@
  */
 
 import { expect, spyOn, test } from "bun:test";
-import type { Client } from "@/cli/client.ts";
+import type { Client } from "@nouride/cli-kit";
 import { secret } from "@/cli/commands/secret.ts";
 import type { SecretEntry } from "@/modules/config/settings/secrets.ts";
 

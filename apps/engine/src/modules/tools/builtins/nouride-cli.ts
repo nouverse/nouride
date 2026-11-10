@@ -36,7 +36,7 @@
 
 import type { Tool, ToolContext } from "@nouride/shared";
 import { notAnInstall } from "@/modules/toolchain/installers.ts";
-import { dispatchedArgv } from "@/cli/args.ts";
+import { dispatchedArgv } from "@nouride/cli-kit";
 
 export interface NourideCliOptions {
   /** The real `exec` tool. Its gate and sandbox are used verbatim. */

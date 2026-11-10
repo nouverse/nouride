@@ -1,7 +1,6 @@
-import { BOLD, DIM, RESET, YELLOW, say, usageError } from "@/cli/ui.ts";
-import type { Client } from "@/cli/client.ts";
+import { BOLD, DIM, RESET, YELLOW, say, usageError } from "@nouride/cli-kit";
+import type { Client, StatusResponse } from "@nouride/cli-kit";
 import { saidSaved } from "@/cli/saved.ts";
-import type { StatusResponse } from "@/cli/wire.ts";
 
 /**
  * `nouride turn-budget` — how long one reply may take, in seconds.

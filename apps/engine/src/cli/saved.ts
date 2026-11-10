@@ -8,7 +8,7 @@
  * without it changed nothing the daemon reads at boot, so the save applied.
  */
 
-import { DIM, GREEN, RESET, YELLOW, emit, say } from "@/cli/ui.ts";
+import { DIM, GREEN, RESET, YELLOW, emit, say } from "@nouride/cli-kit";
 
 interface SaveAnswer {
   restartRequired?: boolean;

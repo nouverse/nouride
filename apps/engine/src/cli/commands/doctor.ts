@@ -1,13 +1,12 @@
-import type { ExternalClisResponse, McpResponse, SkillCatalogResponse, StatusResponse } from "@/cli/wire.ts";
+import type { ExternalClisResponse, McpResponse, SkillCatalogResponse, StatusResponse } from "@nouride/cli-kit";
 import { cliVersionChecks } from "@/cli/commands/external-clis.ts";
 import { formatBytes, type GlobalConfig } from "@nouride/shared";
 import { MCP_SCHEMA_WARN_BYTES } from "@/modules/tools/mcp.ts";
 import { lintConfig } from "@/modules/config/schema.ts";
-import { BOLD, DIM, GREEN, RED, RESET, YELLOW, emit, say } from "@/cli/ui.ts";
-import { connect } from "@/cli/client.ts";
+import { BOLD, DIM, GREEN, RED, RESET, YELLOW, emit, say, hasFlag } from "@nouride/cli-kit";
+import { connect } from "@/cli/connect.ts";
 import { startHint } from "@/service/hints.ts";
 import { loadConfig } from "@/cli/load-config.ts";
-import { hasFlag } from "@/cli/args.ts";
 import { atOnceChecks, commandsCheck, credentialChecks, databaseCheck, diskCheck, guardedFiles, guessedWindows, healthIssues, helperChecks, memoryCheck, modeChecks, packagesCheck, packFailureCheck, passBacklogCheck, plainCopiesCheck, secretStoreChecks, sshReuseCheck } from "@/cli/commands/doctor-checks.ts";
 import { EDITION } from "@/commons/build.ts";
 import { installDirFor } from "@/modules/update/facts.ts";

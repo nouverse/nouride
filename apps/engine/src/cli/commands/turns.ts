@@ -6,13 +6,10 @@
  * together: the question, every model call with its tokens, cost, latency and retries, the steps, the tool calls.
  */
 
-import { clip, oneLine, plural } from "@nouride/shared";
-import type { Client } from "@/cli/client.ts";
-import { flagValue } from "@/cli/args.ts";
-import { BOLD, DIM, RESET, YELLOW, say, summarize, usageError } from "@/cli/ui.ts";
-import type { ModelCall, TurnInspection, TurnSummary } from "@/modules/turns/inspection.store.ts";
-import { EDITED, isDelegated } from "@/modules/turns/turns.store.ts";
-import { knownAction, wholeNumber } from "@/cli/usage.ts";
+import { clip, oneLine, plural, EDITED, isDelegated } from "@nouride/shared";
+import type { Client } from "@nouride/cli-kit";
+import { flagValue, BOLD, DIM, RESET, YELLOW, say, summarize, usageError, knownAction, wholeNumber } from "@nouride/cli-kit";
+import type { ModelCall, TurnInspection, TurnSummary } from "@nouride/cli-kit";
 
 export async function turns(client: Client, args: string[]): Promise<void> {
   knownAction("turns", args[0], ["show", "list"]);

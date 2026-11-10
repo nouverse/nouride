@@ -18,12 +18,10 @@ import { basename, join, openDatabase, statFile } from "@nouride/runtime";
 import { AuditLog } from "@/commons/audit.store.ts";
 import { backupDatabase } from "@/db/backup.ts";
 import { UserStore } from "@/modules/users/users.store.ts";
-import { bareArgs } from "@/cli/args.ts";
+import { bareArgs, BOLD, DIM, GREEN, RESET, emit, fail, say, helpFor, unknownAction } from "@nouride/cli-kit";
 import { startHint } from "@/service/hints.ts";
 import { loadConfig } from "@/cli/load-config.ts";
 import { refuseWhileRunning } from "@/cli/commands/db.ts";
-import { BOLD, DIM, GREEN, RESET, emit, fail, say } from "@/cli/ui.ts";
-import { helpFor, unknownAction } from "@/cli/usage.ts";
 
 export async function users(args: string[]): Promise<void> {
   const [action] = bareArgs(args);

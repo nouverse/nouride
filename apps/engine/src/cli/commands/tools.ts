@@ -8,7 +8,7 @@
  */
 
 import { dirname, ensureDir, join, runCommand } from "@nouride/runtime";
-import { DIM, GREEN, RESET, YELLOW, emit, fail, say, usageError } from "@/cli/ui.ts";
+import { DIM, GREEN, RESET, YELLOW, emit, fail, say, usageError } from "@nouride/cli-kit";
 import { loadConfig } from "@/cli/load-config.ts";
 import { composePath, pythonEnvDir, toolchainEnv } from "@/modules/toolchain/env.ts";
 import { notAnInstall } from "@/modules/toolchain/installers.ts";

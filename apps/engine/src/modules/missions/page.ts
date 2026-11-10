@@ -8,7 +8,9 @@
  */
 
 import type { MissionTokens } from "@nouride/wire";
-import { clip, oneLine, plural } from "@nouride/shared";
+import { clip, hoursAndMinutes, hoursLimit, oneLine, turnsSaid } from "@nouride/shared";
+
+export { hoursLimit, turnsSaid };
 import { worktreeBranch } from "./worktree.ts";
 import type { KeptPlan } from "@/modules/notes/store.ts";
 import { toldBy, type Mission, type Told } from "./types.ts";
@@ -73,21 +75,6 @@ export function shortId(id: string): string {
   return id.slice(0, 10);
 }
 
-function hours(ms: number): string {
-  const minutes = Math.max(0, Math.round(ms / 60_000));
-  const h = Math.floor(minutes / 60);
-  return h > 0 ? `${h}h${String(minutes % 60).padStart(2, "0")}m` : `${minutes}m`;
-}
-
-/**
- * A limit in hours, written as the page writes time worked: `8h`, `8h58m`, `45m`. Printed as it was kept, one raised from
- * where a mission stood read "of 8.960713333333333h" (msn_3d28e0, 0.8.8).
- */
-export function hoursLimit(limit: number): string {
-  const minutes = Math.round(limit * 60);
-  return minutes % 60 === 0 ? `${minutes / 60}h` : hours(minutes * 60_000);
-}
-
 export function millions(tokens: number): string {
   return tokens >= 1_000_000 ? `${(tokens / 1_000_000).toFixed(1).replace(/\.0$/, "")}M` : `${Math.round(tokens / 1000)}k`;
 }
@@ -115,17 +102,6 @@ export interface LimitsShown {
 }
 
 /**
- * Its turns against its limit, as the page, `show` and `work` say them — and `nouride mission show`. An ended mission none
- * of whose turns finished — stopped in the first, or a draft dropped — read "0 turns ran", and the CLI
- * "turn 0 of 100".
- */
-export function turnsSaid(mission: Pick<Mission, "turnsUsed" | "limits" | "startedAt" | "endedAt">, limited = true): string {
-  const none = mission.endedAt !== null && mission.turnsUsed === 0;
-  const count = mission.endedAt === null ? `turn ${mission.turnsUsed + 1}` : none ? (mission.startedAt === null ? "ended before it started" : "ended before a turn finished") : `${mission.turnsUsed} ${plural(mission.turnsUsed, "turn")} ran`;
-  return !limited ? `${count} (a coding CLI's: turns not limited)` : none ? `${count} (at most ${mission.limits.turns} turns)` : `${count} of at most ${mission.limits.turns}`;
-}
-
-/**
  * Where a mission stands against its limits, and which are in force — the page's first line, `show` and `work`. An
  * ended one counts the turns that ran: "turn 3" named the next turn of a mission whose two had run and that had ended
  * (0.8.8).
@@ -136,7 +112,7 @@ export function limitsLine(mission: Pick<Mission, "turnsUsed" | "limits" | "toke
     shown.tokens === "unknown"
       ? `tokens unknown (the CLI reports none) of ${millions(mission.limits.tokens)}`
       : `${shown.tokens === "partial" ? "at least " : ""}${millions(mission.tokensUsed)} of ${millions(mission.limits.tokens)} tokens`;
-  return `${turns} · ${hours(workedMs(mission, now))} of ${hoursLimit(mission.limits.hours)} · ${tokens}`;
+  return `${turns} · ${hoursAndMinutes(workedMs(mission, now))} of ${hoursLimit(mission.limits.hours)} · ${tokens}`;
 }
 
 /** How a mission is judged done, in one sentence — the same on the page and in the start notice. */

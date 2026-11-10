@@ -4,9 +4,8 @@
  * backs the vault up before it writes.
  */
 
-import type { Client } from "@/cli/client.ts";
-import { flagValue, hasFlag } from "@/cli/args.ts";
-import { BOLD, DIM, GREEN, RESET, YELLOW, fail, say, usageError } from "@/cli/ui.ts";
+import type { Client } from "@nouride/cli-kit";
+import { flagValue, hasFlag, BOLD, DIM, GREEN, RESET, YELLOW, fail, say, usageError } from "@nouride/cli-kit";
 
 interface TagList {
   tags: { tag: string; n: number; aliases: string[] }[];

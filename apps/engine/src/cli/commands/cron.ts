@@ -1,14 +1,6 @@
 import { plural } from "@nouride/shared";
-import type {
-  CronDetailResponse,
-  CronJobRow,
-  CronListResponse,
-  CronRunOutcome,
-} from "@/cli/wire.ts";
-import { BOLD, DIM, GREEN, RED, RESET, say, usageError, usageLines, YELLOW } from "@/cli/ui.ts";
-import type { Client } from "@/cli/client.ts";
-import { flagValue, hasFlag, sessionMode } from "@/cli/args.ts";
-import { knownAction } from "@/cli/usage.ts";
+import type { CronDetailResponse, CronJobRow, CronListResponse, CronRunOutcome, Client } from "@nouride/cli-kit";
+import { BOLD, DIM, GREEN, RED, RESET, say, usageError, usageLines, YELLOW, flagValue, hasFlag, sessionMode, knownAction } from "@nouride/cli-kit";
 
 /**
  * `nouride cron` — the operator's side of the scheduler.

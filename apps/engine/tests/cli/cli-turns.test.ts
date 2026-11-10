@@ -7,7 +7,7 @@
 
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { Hono } from "hono";
-import type { Client } from "@/cli/client.ts";
+import type { Client } from "@nouride/cli-kit";
 import { turns } from "@/cli/commands/turns.ts";
 import { registerTurnRoutes } from "@/modules/web/control/routes/turns.ts";
 import type { TurnInspection, TurnSummary } from "@/modules/turns/inspection.store.ts";

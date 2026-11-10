@@ -20,11 +20,9 @@
  * that passphrase opens (`secret-unseal.ts`). It arrives on stdin for the reason a value does.
  */
 
-import type { AckResponse } from "@/cli/wire.ts";
+import type { AckResponse, Client } from "@nouride/cli-kit";
 import { readStdin } from "@nouride/runtime";
-import { BOLD, DIM, GREEN, RED, RESET, YELLOW, fail, say, usageError, usageLines } from "@/cli/ui.ts";
-import type { Client } from "@/cli/client.ts";
-import { flagValue, hasFlag } from "@/cli/args.ts";
+import { BOLD, DIM, GREEN, RED, RESET, YELLOW, fail, say, usageError, usageLines, flagValue, hasFlag } from "@nouride/cli-kit";
 
 export async function secret(client: Client, args: string[]): Promise<void> {
   const [action, name] = args;

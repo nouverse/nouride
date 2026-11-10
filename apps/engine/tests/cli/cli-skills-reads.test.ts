@@ -6,7 +6,7 @@
  */
 
 import { expect, spyOn, test } from "bun:test";
-import type { Client } from "@/cli/client.ts";
+import type { Client } from "@nouride/cli-kit";
 import { skills } from "@/cli/commands/skills.ts";
 
 const plain = (text: string) => text.replace(/\u001b\[[0-9;]*m/g, "");

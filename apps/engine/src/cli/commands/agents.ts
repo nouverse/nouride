@@ -1,9 +1,7 @@
-import { describeStatus } from "@/modules/pipeline/agent-status.ts";
-import { BOLD, DIM, GREEN, RED, RESET, YELLOW, say, usageError } from "@/cli/ui.ts";
-import type { Client } from "@/cli/client.ts";
-import type { StatusResponse } from "@/cli/wire.ts";
+import { describeStatus } from "@nouride/shared";
+import { BOLD, DIM, GREEN, RED, RESET, YELLOW, say, usageError, knownAction } from "@nouride/cli-kit";
+import type { Client, StatusResponse } from "@nouride/cli-kit";
 import { loginCli, scanClis } from "@/cli/commands/external-clis.ts";
-import { knownAction } from "@/cli/usage.ts";
 import { saidSaved } from "@/cli/saved.ts";
 import { answeredBy } from "@/cli/commands/agent-cli.ts";
 import { updateCli } from "@/cli/commands/agents-update.ts";

@@ -11,10 +11,8 @@
  */
 
 import { EVENT_KINDS, EVENT_PROTOCOL_VERSION, eventJson, parseSse, type StreamFrameData, type StreamFrameName, type StreamRow } from "@nouride/shared";
-import { flagValue, hasFlag } from "@/cli/args.ts";
-import type { Client } from "@/cli/client.ts";
-import { DIM, RESET, YELLOW, emit, fail, say, usageError } from "@/cli/ui.ts";
-import { wholeNumber } from "@/cli/usage.ts";
+import { flagValue, hasFlag, DIM, RESET, YELLOW, emit, fail, say, usageError, wholeNumber } from "@nouride/cli-kit";
+import type { Client } from "@nouride/cli-kit";
 
 /**
  * A row as the daemon sends it: the envelope the contract fixes (`StreamRow`, `@nouride/shared`), its kind and data

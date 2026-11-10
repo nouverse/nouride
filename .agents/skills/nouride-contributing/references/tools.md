@@ -309,7 +309,7 @@ moved anyway — by closing each gap first.
   the guard became "a human reads the `exec` prompt" instead of "the tool cannot express it".
 - It could not create a `command` payload at all — argv on the host with no model and no approval
   gate. SPEC said that was safe because such a job "has to come from an operator … which require the
-  operator role", and that was **checked and found false**: `cli/client.ts` reads the control token
+  operator role", and that was **checked and found false**: the CLI's client (`packages/cli-kit`) reads the control token
   off disk, `HOME` is in exec's env allowlist, and a bare token is `role: "admin"`. So the boundary
   was already open before the tool was deleted. It is closed now by classifying
   `nouride cron add … --command` as the command it schedules, or `unattended` — never grantable, and

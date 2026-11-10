@@ -1,6 +1,6 @@
 import { expandHome, resolve } from "@nouride/runtime";
-import { GREEN, RESET, DIM, emit, say, usageError } from "@/cli/ui.ts";
-import type { Client } from "@/cli/client.ts";
+import { GREEN, RESET, DIM, emit, say, usageError } from "@nouride/cli-kit";
+import type { Client } from "@nouride/cli-kit";
 
 const USAGE = "Usage: nouride agent skill-root <add|rm> <id> <path>";
 

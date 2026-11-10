@@ -15,13 +15,13 @@
 
 import { AcpError, AcpServer, INTERNAL_ERROR, INVALID_PARAMS, type ContentBlock, type PermissionOption, type SessionChannel, type SessionUpdate } from "@nouride/acp";
 import { randomUuid, resolve } from "@nouride/runtime";
-import { connect, type Client } from "@/cli/client.ts";
-import { flagValue } from "@/cli/args.ts";
+import { type Client, flagValue } from "@nouride/cli-kit";
+import { connect } from "@/cli/connect.ts";
 import { VERSION } from "@/commons/version.ts";
 import { readFrames } from "@/cli/commands/events.ts";
 import { TurnUpdates, type EventRow, type WaitingCall } from "@/cli/acp-updates.ts";
-import type { ApprovalsResponse, MessageResponse, StatusResponse } from "@/cli/wire.ts";
-import { LOCAL_GATEWAY_ID } from "@/modules/gateways/local.ts";
+import type { ApprovalsResponse, MessageResponse, StatusResponse } from "@nouride/cli-kit";
+import { LOCAL_GATEWAY_ID } from "@nouride/shared";
 
 /** How long a turn's end may trail `/message`'s answer on the stream before the prompt is answered without it. */
 const SETTLE_MS = 3_000;

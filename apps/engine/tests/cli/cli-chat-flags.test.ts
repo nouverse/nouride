@@ -8,7 +8,7 @@
 
 import { describe, expect, spyOn, test } from "bun:test";
 import { chat } from "@/cli/commands/chat.ts";
-import { usageFor } from "@/cli/usage.ts";
+import { usageFor } from "@nouride/cli-kit";
 
 const plain = (text: string | null) => (text ?? "").replace(/\x1b\[[0-9;]*m/g, "");
 

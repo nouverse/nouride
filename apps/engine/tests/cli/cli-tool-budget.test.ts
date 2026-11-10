@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import type { Client } from "@/cli/client.ts";
+import type { Client } from "@nouride/cli-kit";
 import { toolBudget } from "@/cli/commands/tool-budget.ts";
 
 function fakeClient(): Client & { posts: [string, unknown][]; gets: string[] } {

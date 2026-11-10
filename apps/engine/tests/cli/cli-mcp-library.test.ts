@@ -5,7 +5,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
-import type { Client } from "@/cli/client.ts";
+import type { Client } from "@nouride/cli-kit";
 import { mcp } from "@/cli/commands/mcp.ts";
 
 interface Sent {

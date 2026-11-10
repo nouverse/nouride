@@ -7,7 +7,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
-import type { Client } from "@/cli/client.ts";
+import type { Client } from "@nouride/cli-kit";
 import { access } from "@/cli/commands/access.ts";
 import { agentAction } from "@/cli/commands/agents.ts";
 import { gateway } from "@/cli/commands/gateway.ts";

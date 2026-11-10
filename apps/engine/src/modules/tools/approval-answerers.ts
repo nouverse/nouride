@@ -16,15 +16,9 @@
  * machine's packages (`system-packages`, 0.8.15): changed as root.
  */
 
-import type { ApprovalRequest, ChatType, HardlineClass } from "@nouride/shared";
+import { adminOnly, adminOnlyChanges, adminOnlyNotice, type ApprovalRequest, type ChatType } from "@nouride/shared";
 
-/** The classes whose approval only an admin answers, and what each changes — said to someone who may not answer it. */
-const ADMIN_ANSWERS: ReadonlyMap<HardlineClass, string> = new Map<HardlineClass, string>([
-  ["persona", "an agent's persona"],
-  ["people", "who People says a person is, and an admin is one"],
-  ["shared-tools", "a program every agent runs, installed as the daemon's user"],
-  ["system-packages", "this machine's system packages, as root"],
-]);
+export { adminOnly, adminOnlyChanges, adminOnlyNotice };
 
 export function mayAnswer(
   who: { chatType: ChatType; senderId: string; isAdmin: () => boolean },
@@ -33,20 +27,4 @@ export function mayAnswer(
   if (adminOnly(request)) return who.isAdmin();
   if (who.chatType === "dm") return true;
   return request.requestedBy === who.senderId || who.isAdmin();
-}
-
-/** Whether only an admin answers this request — never an agent, whatever it may reach (`cli/commands/approvals.ts`). */
-export function adminOnly(request: Pick<ApprovalRequest, "hardlineClass">): boolean {
-  return request.hardlineClass !== undefined && ADMIN_ANSWERS.has(request.hardlineClass);
-}
-
-/** What it changes, where only an admin answers it — "an agent's persona" — or null for any other request. */
-export function adminOnlyChanges(request: Pick<ApprovalRequest, "hardlineClass">): string | null {
-  return request.hardlineClass === undefined ? null : (ADMIN_ANSWERS.get(request.hardlineClass) ?? null);
-}
-
-/** What someone who may not answer it is told, where only an admin may; null for any other request. */
-export function adminOnlyNotice(request: Pick<ApprovalRequest, "hardlineClass">): string | null {
-  const changes = adminOnlyChanges(request);
-  return changes ? `Only an admin can answer this one: it changes ${changes}.` : null;
 }

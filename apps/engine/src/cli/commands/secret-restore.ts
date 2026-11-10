@@ -10,10 +10,9 @@
 
 import { fileExistsSync, join, openWithPassphrase, readBytesSync, readStdin } from "@nouride/runtime";
 import { SecretError, SecretStore, secretsOf } from "@nouride/secrets";
-import { hasFlag } from "@/cli/args.ts";
+import { hasFlag, BOLD, DIM, GREEN, RESET, YELLOW, fail, say, usageError } from "@nouride/cli-kit";
 import { runningDaemon } from "@/cli/daemon-lock.ts";
 import { loadConfig } from "@/cli/load-config.ts";
-import { BOLD, DIM, GREEN, RESET, YELLOW, fail, say, usageError } from "@/cli/ui.ts";
 import { commandKeyLayout, commandStoreEnv } from "@/boot/secret-store.ts";
 import { defaultConfigPath } from "@/modules/config/global/index.ts";
 

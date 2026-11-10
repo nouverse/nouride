@@ -10,7 +10,7 @@
  * to ten minutes, and the old process answers "ok" all that time.
  */
 
-import { DIM, GREEN, RESET, emit, fail, say } from "@/cli/ui.ts";
+import { DIM, GREEN, RESET, emit, fail, say } from "./ui.ts";
 
 /** One look at `/health`. */
 export interface Seen {

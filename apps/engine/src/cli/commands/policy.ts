@@ -1,6 +1,5 @@
-import { BOLD, DIM, GREEN, RESET, YELLOW, emit, say, usageError } from "@/cli/ui.ts";
-import type { Client } from "@/cli/client.ts";
-import { afterOptions } from "@/cli/args.ts";
+import { BOLD, DIM, GREEN, RESET, YELLOW, emit, say, usageError, afterOptions } from "@nouride/cli-kit";
+import type { Client } from "@nouride/cli-kit";
 
 /**
  * `nouride policy` — what always asks, at which approval level, and whether a given command would.

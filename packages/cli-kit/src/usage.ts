@@ -4,8 +4,7 @@
  * One screen, grouped the way the commands are actually reached for rather than alphabetically.
  */
 
-import { BOLD, DIM, RESET, emit, plain, say, usageError } from "@/cli/ui.ts";
-import { VERSION } from "@/commons/version.ts";
+import { BOLD, DIM, RESET, emit, plain, say, usageError } from "./ui.ts";
 
 /**
  * `nouride <command> <action>` with an action the command does not have: exit 2, with the command's own lines of
@@ -27,8 +26,9 @@ export function wholeNumber(command: string, value: string): number {
   return n;
 }
 
-export function usage(): void {
-  const text = usageText();
+/** The whole of `nouride help`, under the version of the build that prints it. */
+export function usage(version: string): void {
+  const text = usageText(version);
   emit({ help: plain(text) });
   say(text);
 }
@@ -65,8 +65,9 @@ export function usageFor(command: string): string | null {
   return picked.length > 0 ? picked.join("\n") : null;
 }
 
-function usageText(): string {
-  return `${BOLD}nouride${RESET} ${DIM}v${VERSION}${RESET}: multi-agent AI engine
+/** The help text. Its first line names the version; a reader of one command's lines has no use for it. */
+function usageText(version = ""): string {
+  return `${BOLD}nouride${RESET} ${DIM}v${version}${RESET}: multi-agent AI engine
 
 ${BOLD}Setting one up${RESET} ${DIM}(a first run, or another machine, not this daemon)${RESET}
   nouride setup                    Turn an EMPTY directory into a working install. Refuses

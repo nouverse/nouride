@@ -10,7 +10,7 @@
  */
 
 import { describe, expect, spyOn, test } from "bun:test";
-import type { Client } from "@/cli/client.ts";
+import type { Client } from "@nouride/cli-kit";
 import { approvals } from "@/cli/commands/approvals.ts";
 
 const PENDING = [

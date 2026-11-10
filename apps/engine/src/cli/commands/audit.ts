@@ -1,7 +1,5 @@
-import type { AuditResponse } from "@/cli/wire.ts";
-import { BOLD, DIM, RESET, say, summarize } from "@/cli/ui.ts";
-import type { Client } from "@/cli/client.ts";
-import { wholeNumber } from "@/cli/usage.ts";
+import type { AuditResponse, Client } from "@nouride/cli-kit";
+import { BOLD, DIM, RESET, say, summarize, wholeNumber } from "@nouride/cli-kit";
 
 export async function audit(client: Client, args: string[]): Promise<void> {
   const limit = args[0] ? wholeNumber("audit", args[0]) : 25;

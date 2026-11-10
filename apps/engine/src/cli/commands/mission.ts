@@ -1,10 +1,6 @@
-import { clip, plural } from "@nouride/shared";
-import type { MissionDeletedResponse, MissionDetailResponse, MissionListResponse, MissionResponse } from "@/cli/wire.ts";
-import { BOLD, DIM, GREEN, RED, RESET, say, usageError, YELLOW, emit } from "@/cli/ui.ts";
-import type { Client } from "@/cli/client.ts";
-import { hasFlag } from "@/cli/args.ts";
-import { knownAction } from "@/cli/usage.ts";
-import { hoursLimit, turnsSaid } from "@/modules/missions/page.ts";
+import { clip, plural, hoursLimit, turnsSaid } from "@nouride/shared";
+import type { MissionDeletedResponse, MissionDetailResponse, MissionListResponse, MissionResponse, Client } from "@nouride/cli-kit";
+import { BOLD, DIM, GREEN, RED, RESET, say, usageError, YELLOW, emit, hasFlag, knownAction } from "@nouride/cli-kit";
 
 /**
  * `nouride mission` — long work an agent finishes alone (0.8.0): what runs and what needs you, one mission in full, and

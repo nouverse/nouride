@@ -1,10 +1,8 @@
 import { expandHome, fileExists, join, readTextFileIfExists, runningPlatform, statFile, writeTextFileAtomic, totalMemoryBytes } from "@nouride/runtime";
 import { SYSTEM_KEY_FILE } from "@nouride/secrets";
-import { flagValue, hasFlag } from "@/cli/args.ts";
-import { connect } from "@/cli/client.ts";
-import type { StatusResponse } from "@/cli/wire.ts";
-import { BOLD, DIM, GREEN, RED, RESET, YELLOW, emit, fail, say, usageError } from "@/cli/ui.ts";
-import { unknownAction } from "@/cli/usage.ts";
+import { flagValue, hasFlag, BOLD, DIM, GREEN, RED, RESET, YELLOW, emit, fail, say, usageError, unknownAction } from "@nouride/cli-kit";
+import { connect } from "@/cli/connect.ts";
+import type { StatusResponse } from "@nouride/cli-kit";
 
 /**
  * `nouride service` — install, remove or inspect the unit that keeps the daemon alive.

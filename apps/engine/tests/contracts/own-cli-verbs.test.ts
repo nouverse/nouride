@@ -7,7 +7,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { classifyHardline } from "@nouride/policy";
-import { dispatchedArgv } from "@/cli/args.ts";
+import { dispatchedArgv } from "@nouride/cli-kit";
 import { ACCESS_CHANGES } from "@/cli/commands/access.ts";
 import { APPROVAL_ACTIONS } from "@/cli/commands/approvals.ts";
 

@@ -51,7 +51,7 @@ describe("reaching the install directory", () => {
     /**
      * The bug this closes. `resolveCwd` allows only the agent's workspace roots, and the install is
      * not one — so `exec` with `cwd: <installDir>` was refused, and the prompt spent ~1,500 tokens
-     * telling the agent to do exactly that. Running from there is what lets `cli/client.ts` find
+     * telling the agent to do exactly that. Running from there is what lets the CLI's client find
      * `data/.control-token` by itself, which is why the agent never needs to read it.
      */
     const result = await build().execute({ args: ["agents"] }, ctx);

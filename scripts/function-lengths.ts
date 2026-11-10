@@ -53,7 +53,7 @@ export const LONG_FUNCTIONS: Record<string, Record<string, Budget>> = {
   "apps/engine/src/cli/commands/doctor.ts": { doctor: { lines: 256, why: "`nouride doctor`: every check that stops a fresh install from working, the config read against its secrets too, in the order its report reads them" } },
   "apps/engine/src/cli/commands/service.ts": { service: { lines: 152, why: "`nouride service`: status, diff, install and uninstall, branches of one dispatch over the supervisor and unit it finds first" } },
   "apps/engine/src/cli/main.ts": { main: { lines: 158, why: "the CLI's dispatch: one case per command, behind the flags every command shares" } },
-  "apps/engine/src/cli/usage.ts": { usageText: { lines: 253, why: "the whole of `nouride help`, one template a person reads top to bottom: its lines are the help, not logic" } },
+  "packages/cli-kit/src/usage.ts": { usageText: { lines: 253, why: "the whole of `nouride help`, one template a person reads top to bottom: its lines are the help, not logic" } },
   "apps/engine/src/index.ts": { runDaemon: { lines: 183, why: "the boot order, one step after another; the stores, the timers, the turn machine, the machine's reading and each config brought forward are in `boot/`: what is left is the sequence" } },
   "apps/engine/src/modules/config/global/validate.ts": { validate: { lines: 193, why: "every refusal of the daemon's config that its schema cannot make, each naming its field, in one pass at load" } },
   "apps/engine/src/modules/config/toml-lines.ts": { readToml: { lines: 207, why: "a TOML file read as its lines in one pass: strings, arrays and inline tables tracked across lines, so editors get spans" } },

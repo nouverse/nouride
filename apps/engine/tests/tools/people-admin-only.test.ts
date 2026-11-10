@@ -23,7 +23,7 @@ import { migrate } from "@/db/index.ts";
 import { MIGRATIONS } from "@/db/migrations.ts";
 import { AuditLog } from "@/commons/audit.store.ts";
 import { approvals as approvalsCommand } from "@/cli/commands/approvals.ts";
-import type { Client } from "@/cli/client.ts";
+import type { Client } from "@nouride/cli-kit";
 import { DEFAULT_CONFIG } from "@/modules/config/defaults.ts";
 import { answerAllApprovals, answerApproval } from "@/modules/hooks/pending.ts";
 import type { HookContext } from "@/modules/hooks/registry.ts";

@@ -8,7 +8,7 @@
  * asked anything. 0.9.0 deletes this file, and an old spelling is then a word the command does not read like any other.
  */
 
-import { usageError } from "@/cli/ui.ts";
+import { usageError } from "@nouride/cli-kit";
 
 /** An old flag and what replaced it — named only where the form reads the replacement: `cron add`, not `cron update`. */
 const FLAGS: Readonly<Record<string, string>> = {

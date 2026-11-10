@@ -57,7 +57,7 @@ function dispatched(): string[] {
 
 function documented(): Set<string> {
   // The word after `nouride ` in the help text, which is how a reader finds a command in it.
-  const source = read("apps/engine/src/cli/usage.ts");
+  const source = read("packages/cli-kit/src/usage.ts");
   return new Set([...source.matchAll(/\bnouride ([a-z][a-z-]*)/g)].map((m) => m[1] as string));
 }
 
@@ -72,7 +72,7 @@ if (missing.length > 0) {
     console.error(`  nouride ${cmd}`);
   }
   console.error(
-    `\nAdd a line to apps/engine/src/cli/usage.ts. An agent finds commands by running \`help\` and` +
+    `\nAdd a line to packages/cli-kit/src/usage.ts. An agent finds commands by running \`help\` and` +
       `\nnothing else — the system prompt does not list them, on purpose — so a command that is not` +
       `\nthere is a command it cannot use.`,
   );
@@ -116,12 +116,14 @@ const FLAG_IS_READ = [
   /args\.(?:includes|indexOf)\(\s*"--([a-z][a-z-]*)"/g,
   /flagValue\(\s*args\s*,\s*"-{0,2}([a-z][a-z-]*)"/g,
   /\b(?:flag|has|opt|value|take|every)\(\s*(?:args\s*,\s*)?"-{0,2}([a-z][a-z-]*)"/g,
-  // `cli/args.ts`'s readers, which take a flag's other names after it — each of them is read.
+  // `cli-kit`'s argument readers, which take a flag's other names after it — each of them is read.
   /\b(?:hasFlag|flagValue|takeFlag)\(\s*(?:args|argv)\s*,((?:\s*"-{1,2}[a-z][a-z-]*"\s*,?)+)/g,
 ];
 
+/** Where a command's code is: the commands themselves, and what every one of them speaks through. */
+const CLI_DIRS = ["apps/engine/src/cli", "packages/cli-kit/src"];
+
 function cliSource(): string {
-  const dir = join(ROOT, "apps/engine/src/cli");
   const out: string[] = [];
   const walk = (d: string): void => {
     for (const entry of readdirSync(d, { withFileTypes: true })) {
@@ -130,7 +132,7 @@ function cliSource(): string {
       else if (entry.name.endsWith(".ts")) out.push(readFileSync(p, "utf8"));
     }
   };
-  walk(dir);
+  for (const dir of CLI_DIRS) walk(join(ROOT, dir));
   return out.join("\n");
 }
 
@@ -144,7 +146,7 @@ const readFlags = new Set(
     }),
   ),
 );
-const helpText = read("apps/engine/src/cli/usage.ts");
+const helpText = read("packages/cli-kit/src/usage.ts");
 const invented = [...new Set([...helpText.matchAll(/--([a-z][a-z-]*)/g)].map((m) => m[1] as string))]
   .filter((flag) => !readFlags.has(flag))
   .sort();
@@ -178,7 +180,7 @@ if (invented.length > 0) {
  * The grammar says per action, by hand, where a reviewer reads it.
  */
 const { GRAMMAR, COMMAND_ALIASES, VERBATIM, flagName } = await import("../apps/engine/src/cli/grammar.ts");
-const { usageFor } = await import("../apps/engine/src/cli/usage.ts");
+const { usageFor } = await import("../packages/cli-kit/src/usage.ts");
 
 /** The files whose flag reads are a command's, where the command is not named by one file of its own. */
 const FILES: Record<string, string[]> = {
@@ -250,7 +252,7 @@ for (const [command, grammar] of Object.entries(GRAMMAR)) {
 if (problems.length > 0) {
   console.error(`✗ ${problems.length} problem(s) with what the commands take:\n`);
   for (const problem of problems) console.error(`  ${problem}`);
-  console.error(`\nThe grammar is apps/engine/src/cli/grammar.ts; the help is apps/engine/src/cli/usage.ts.`);
+  console.error(`\nThe grammar is apps/engine/src/cli/grammar.ts; the help is packages/cli-kit/src/usage.ts.`);
   process.exit(1);
 }
 

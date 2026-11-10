@@ -11,8 +11,7 @@
  * not only by `dft_` and twenty characters of base32.
  */
 
-import { plural } from "@nouride/shared";
-import { approvedSentence, draftVerb } from "@/modules/reflection/moves.ts";
+import { plural, approvedSentence, draftVerb } from "@nouride/shared";
 import type { SkillDraft } from "@/modules/reflection/types.ts";
 import type { Hook } from "../types.ts";
 

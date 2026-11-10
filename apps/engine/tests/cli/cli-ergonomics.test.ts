@@ -12,12 +12,11 @@ import { chmodSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, s
 import { createServer, type Server } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterOptions, bareArgs, flagValue, hasFlag, normalizeArgv, takeFlag } from "@/cli/args.ts";
+import { afterOptions, bareArgs, flagValue, hasFlag, normalizeArgv, takeFlag, progressOf, waitBack, waitUntilBack, type Seen } from "@nouride/cli-kit";
 import { restartHint, startHint } from "@/service/hints.ts";
 import { followFrom } from "@/cli/commands/logs.ts";
 import { installFingerprint } from "@/modules/web/health.ts";
 import { credentialChecks, databaseCheck, diskCheck, guardedFiles, healthIssues, modeChecks, packagesCheck } from "@/cli/commands/doctor-checks.ts";
-import { progressOf, waitBack, waitUntilBack, type Seen } from "@/cli/wait-back.ts";
 import { openDatabase } from "@nouride/runtime";
 import { migrate } from "@/db/index.ts";
 import { DaemonStateStore } from "@/commons/daemon-state.store.ts";

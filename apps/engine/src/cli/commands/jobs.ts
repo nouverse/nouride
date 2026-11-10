@@ -1,9 +1,6 @@
 import { clip, formatBytes, plural } from "@nouride/shared";
-import type { JobListResponse, JobLogResponse } from "@/cli/wire.ts";
-import { BOLD, DIM, GREEN, RED, RESET, say, usageError, YELLOW } from "@/cli/ui.ts";
-import type { Client } from "@/cli/client.ts";
-import { hasFlag } from "@/cli/args.ts";
-import { knownAction } from "@/cli/usage.ts";
+import type { JobListResponse, JobLogResponse, Client } from "@nouride/cli-kit";
+import { BOLD, DIM, GREEN, RED, RESET, say, usageError, YELLOW, hasFlag, knownAction } from "@nouride/cli-kit";
 
 /**
  * `nouride jobs` — background work: commands an agent started with `exec`, helpers it handed work to with `delegate`

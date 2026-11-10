@@ -10,11 +10,10 @@
 import { fileExistsSync, join, runCommand } from "@nouride/runtime";
 import { SecretError } from "@nouride/secrets";
 import { openCommandSecretStore } from "@/boot/secret-store.ts";
-import { hasFlag } from "@/cli/args.ts";
+import { hasFlag, BOLD, DIM, GREEN, RESET, YELLOW, emit, fail, say } from "@nouride/cli-kit";
 import { startHint } from "@/service/hints.ts";
 import { loadConfig } from "@/cli/load-config.ts";
 import { refuseWhileRunning } from "@/cli/commands/db.ts";
-import { BOLD, DIM, GREEN, RESET, YELLOW, emit, fail, say } from "@/cli/ui.ts";
 import { VERSION } from "@/commons/version.ts";
 import { backupDirFor } from "@/commons/backup-dir.ts";
 import { listBackups, restoreDatabase } from "@/db/backup.ts";

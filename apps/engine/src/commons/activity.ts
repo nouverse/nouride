@@ -12,15 +12,9 @@
  * replaced it.
  */
 
-import { elide, type ExecutorStepKind } from "@nouride/shared";
+import { elide, type ActivityKind } from "@nouride/shared";
 
-/**
- * What the executor says, by kind: `thinking` — waiting on the provider, a frame and never a step — and the step kinds
- * a turn's own work writes (`EXECUTOR_STEP_KINDS`). One list, in `@nouride/shared`, where each kind's meaning is its
- * comment in `EVENT_CONTRACT`; a map that draws them is `satisfies Record<ActivityKind, …>`, so a kind added there and
- * drawn nowhere does not compile. It was its own union here, beside seven other copies.
- */
-export type ActivityKind = "thinking" | ExecutorStepKind;
+export type { ActivityKind };
 
 /** What one tool call's arguments get, before the tool's own name is put in front; `elide` keeps both of its ends. */
 const DETAIL_MAX = 120;

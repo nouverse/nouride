@@ -5,7 +5,7 @@
  */
 
 import { expect, test } from "bun:test";
-import { isTimeout } from "@/cli/client.ts";
+import { isTimeout } from "@nouride/cli-kit";
 
 test("a wait that ran out is told apart from a daemon that is not there", () => {
   expect(isTimeout(new DOMException("The operation timed out.", "TimeoutError"))).toBe(true);

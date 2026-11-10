@@ -4,7 +4,7 @@
  */
 
 import { expect, spyOn, test } from "bun:test";
-import type { Client } from "@/cli/client.ts";
+import type { Client } from "@nouride/cli-kit";
 import { mission as missionCommand } from "@/cli/commands/mission.ts";
 
 test("nouride mission delete <id> [--force] asks the daemon to delete it, and says what went with it", async () => {

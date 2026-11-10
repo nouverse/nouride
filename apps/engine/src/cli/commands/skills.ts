@@ -1,15 +1,8 @@
-import { clip, plural } from "@nouride/shared";
-import type {
-  DraftListResponse,
-  SkillCatalogResponse,
-  SkillsByAgentResponse,
-} from "@/cli/wire.ts";
-import { approvedSentence, draftVerb } from "@/modules/reflection/moves.ts";
-import type { SkillDraft } from "@/modules/reflection/types.ts";
-import { BOLD, CYAN, DIM, GREEN, RED, RESET, fail, say, usageError, usageLines, YELLOW } from "@/cli/ui.ts";
-import type { Client } from "@/cli/client.ts";
+import { clip, plural, approvedSentence, draftVerb } from "@nouride/shared";
+import type { DraftListResponse, SkillCatalogResponse, SkillsByAgentResponse, Client } from "@nouride/cli-kit";
+import type { SkillDraft } from "@nouride/wire";
+import { BOLD, CYAN, DIM, GREEN, RED, RESET, fail, say, usageError, usageLines, YELLOW, flagValue, hasFlag } from "@nouride/cli-kit";
 import { saidSaved } from "@/cli/saved.ts";
-import { flagValue, hasFlag } from "@/cli/args.ts";
 
 /**
  * `nouride skills` — what an agent is offered, what exists, and who has it.
@@ -290,7 +283,8 @@ async function draftList(client: Client): Promise<void> {
 async function draftShow(client: Client, id: string | undefined): Promise<void> {
   if (!id) usageError(`usage: nouride skills draft <id>`);
 
-  const draft = await client.get<SkillDraft>(`/skills/drafts/${encodeURIComponent(id)}`);
+  // One draft is sent whole: with the conversation it was drawn from, which a list leaves out.
+  const draft = await client.get<SkillDraft & { transcript?: string | null }>(`/skills/drafts/${encodeURIComponent(id)}`);
   say(`${BOLD}${draft.name}${RESET}  ${DIM}${draft.status}${RESET}${draft.target ? `  ${YELLOW}improves ${draft.target}${RESET}` : ""}`);
   say(`${DIM}${draft.description}${RESET}`);
   if (draft.requires) say(`${DIM}needs: ${draft.requires}${RESET}`);

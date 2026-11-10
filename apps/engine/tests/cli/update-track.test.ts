@@ -4,7 +4,7 @@
  */
 
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
-import type { Client } from "@/cli/client.ts";
+import type { Client } from "@nouride/cli-kit";
 import { update } from "@/cli/commands/update.ts";
 
 const INSTALL = { version: "1.0.5", edition: "basic", installDir: "/srv/nouride", supervisor: "systemd", compiled: true, platform: "linux", arch: "x64", musl: false };

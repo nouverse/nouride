@@ -15,7 +15,7 @@
  * placeholder — `<id>`, `…` — where an action goes leaves the words unjudged, since any action could stand there.
  */
 
-import { normalizeArgv } from "../../apps/engine/src/cli/args.ts";
+import { normalizeArgv } from "../../packages/cli-kit/src/args.ts";
 import { COMMAND_ALIASES, GRAMMAR, unreadFlag, unreadWord } from "../../apps/engine/src/cli/grammar.ts";
 
 export interface CommandLine {

@@ -1,7 +1,6 @@
-import { DIM, RESET, say, usageError } from "@/cli/ui.ts";
-import type { Client } from "@/cli/client.ts";
+import { DIM, RESET, say, usageError, flagValue } from "@nouride/cli-kit";
+import type { Client } from "@nouride/cli-kit";
 import { saidSaved } from "@/cli/saved.ts";
-import { flagValue } from "@/cli/args.ts";
 
 /**
  * `nouride agent external <id> <cli> [--profile <p>]` — a coding CLI answers an agent that exists — and `nouride agent

@@ -210,7 +210,7 @@ export async function checkSize(root: string, tables: SizeTables = { BUDGET, TES
           rule: "explicit-any",
           detail:
             "`any` disables checking rather than describing anything — use `unknown` and narrow, or a " +
-            "generic parameter so the caller says what it expects (see `cli/client.ts` and `cli/wire.ts`)" +
+            "generic parameter so the caller says what it expects (see `client.ts` and `wire.ts` in `packages/cli-kit`)" +
             (allowed > 0 ? `. This file is budgeted ${allowed} and has ${anys.length}` : ""),
         });
       }

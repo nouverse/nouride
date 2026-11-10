@@ -1,7 +1,5 @@
-import type { SessionListResponse } from "@/cli/wire.ts";
-import { BOLD, DIM, RESET, say } from "@/cli/ui.ts";
-import type { Client } from "@/cli/client.ts";
-import { wholeNumber } from "@/cli/usage.ts";
+import type { SessionListResponse, Client } from "@nouride/cli-kit";
+import { BOLD, DIM, RESET, say, wholeNumber } from "@nouride/cli-kit";
 
 /** `nouride sessions` — what conversations exist, newest first. */
 export async function sessions(client: Client, args: string[]): Promise<void> {

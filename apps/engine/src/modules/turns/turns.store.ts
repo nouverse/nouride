@@ -17,7 +17,9 @@
  * `EventedTurnStore` (`modules/events/turn-events.store.ts`).
  */
 
-import { createLogger, newId, TURN_SECONDS_MAX, type Port, type TurnEventData, type TurnStepKind } from "@nouride/shared";
+import { createLogger, DELEGATED, EDITED, isDelegated, newId, TURN_SECONDS_MAX, type Port, type TurnEventData, type TurnStepKind } from "@nouride/shared";
+
+export { EDITED, isDelegated };
 import type { SqliteDb } from "@nouride/runtime";
 import type { TurnCause, TurnStatus } from "@nouride/wire";
 
@@ -38,18 +40,6 @@ export interface InterruptedTurns {
    * again — the jobs they ran as are (`JobStore.interruptOrphaned`).
    */
   delegated: string[];
-}
-
-/**
- * The causes of a delegate's own turn (`pipeline/delegated-turn.ts`, 0.7.26): a helper `delegate` started in the
- * background, an agent `ask_agent` asked once its turn moved there. Recorded in the chat they work for, and no turn of
- * its conversation.
- */
-const DELEGATED = ["delegate", "ask_agent"] as const;
-
-/** Whether a turn is a delegate's own, by its cause. */
-export function isDelegated(cause: TurnCause | undefined): cause is TurnCause & { via: (typeof DELEGATED)[number] } {
-  return (DELEGATED as readonly string[]).includes(cause?.via ?? "");
 }
 
 /** `?, ?, …` for an `IN` list — bound, never spliced. */
@@ -146,9 +136,6 @@ export interface TurnView extends TurnRecord {
 
 /** The cause of a scheduled job's own turn (`pipeline/job-turns.ts`): its `job` is the job's id. */
 export const SCHEDULED = "schedule";
-/** The cause of a turn answering a person's edit (`pipeline/edits.ts`): `of` is the message edited. */
-export const EDITED = "edit";
-
 export interface BeginTurn {
   sessionId: string;
   agentId: string;

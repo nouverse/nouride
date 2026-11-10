@@ -6,10 +6,8 @@
 
 import { basename, readFileBytes, readStdinBytes } from "@nouride/runtime";
 import { clip, oneLine } from "@nouride/shared";
-import type { Client } from "@/cli/client.ts";
-import { flagValue } from "@/cli/args.ts";
-import { BOLD, DIM, RESET, YELLOW, emit, fail, say, usageError } from "@/cli/ui.ts";
-import { knownAction } from "@/cli/usage.ts";
+import type { Client } from "@nouride/cli-kit";
+import { flagValue, BOLD, DIM, RESET, YELLOW, emit, fail, say, usageError, knownAction } from "@nouride/cli-kit";
 
 interface CollectionRow {
   id: string;

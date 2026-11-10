@@ -1,8 +1,5 @@
-import type { AckResponse, GrantsResponse } from "@/cli/wire.ts";
-import { BOLD, DIM, GREEN, RESET, say, usageError } from "@/cli/ui.ts";
-import type { Client } from "@/cli/client.ts";
-import { flagValue, hasFlag } from "@/cli/args.ts";
-import { knownAction } from "@/cli/usage.ts";
+import type { AckResponse, GrantsResponse, Client } from "@nouride/cli-kit";
+import { BOLD, DIM, GREEN, RESET, say, usageError, flagValue, hasFlag, knownAction } from "@nouride/cli-kit";
 
 export async function grants(client: Client, args: string[]): Promise<void> {
   const [action, target] = args;

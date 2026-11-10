@@ -14,7 +14,7 @@
  */
 
 import { joinLines, type StreamFrameData } from "@nouride/shared";
-import type { ActivityKind } from "@/commons/activity.ts";
+import type { ActivityKind } from "@nouride/shared";
 import { readFrames } from "@/cli/commands/events.ts";
 
 /** One line to draw: a step's kind and line, or `thinking`. */

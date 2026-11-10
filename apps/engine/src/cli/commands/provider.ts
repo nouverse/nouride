@@ -11,12 +11,10 @@
  * `argv` is kept in the exec grant, the audit table and the daemon's log table, permanently.
  */
 
-import type { ProbeResponse, ProvidersResponse } from "@/cli/wire.ts";
+import type { ProbeResponse, ProvidersResponse, Client } from "@nouride/cli-kit";
 import { readStdin } from "@nouride/runtime";
-import { BOLD, DIM, GREEN, RED, RESET, YELLOW, fail, say, usageError, usageLines } from "@/cli/ui.ts";
-import type { Client } from "@/cli/client.ts";
+import { BOLD, DIM, GREEN, RED, RESET, YELLOW, fail, say, usageError, usageLines, flagValue, hasFlag } from "@nouride/cli-kit";
 import { saidSaved } from "@/cli/saved.ts";
-import { flagValue, hasFlag } from "@/cli/args.ts";
 
 export async function provider(client: Client, args: string[]): Promise<void> {
   const [action, name] = args;

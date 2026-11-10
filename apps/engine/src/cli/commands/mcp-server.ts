@@ -5,10 +5,9 @@
  * an admin's on the daemon's side; a token's value is printed once, here, and kept nowhere else.
  */
 
-import type { Client } from "@/cli/client.ts";
-import { flagValue } from "@/cli/args.ts";
+import type { Client } from "@nouride/cli-kit";
+import { flagValue, BOLD, DIM, GREEN, RESET, YELLOW, say, usageError, usageLines, plain } from "@nouride/cli-kit";
 import { saidSaved } from "@/cli/saved.ts";
-import { BOLD, DIM, GREEN, RESET, YELLOW, say, usageError, usageLines, plain } from "@/cli/ui.ts";
 
 interface TokenView {
   id: string;

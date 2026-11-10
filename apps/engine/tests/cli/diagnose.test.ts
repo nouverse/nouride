@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { unauthorizedMessage } from "@/cli/diagnose.ts";
+import { unauthorizedMessage } from "@nouride/cli-kit";
 import { installFingerprint } from "@/modules/web/health.ts";
 
 const base = {

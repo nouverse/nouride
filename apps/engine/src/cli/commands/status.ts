@@ -1,6 +1,5 @@
-import { BOLD, DIM, RED, RESET, YELLOW, say } from "@/cli/ui.ts";
-import type { Client } from "@/cli/client.ts";
-import type { StatusResponse } from "@/cli/wire.ts";
+import { BOLD, DIM, RED, RESET, YELLOW, say } from "@nouride/cli-kit";
+import type { Client, StatusResponse } from "@nouride/cli-kit";
 
 export async function status(client: Client): Promise<void> {
   const s = await client.get<StatusResponse>("/status");

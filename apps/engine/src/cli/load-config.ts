@@ -8,7 +8,7 @@
  */
 
 import { loadGlobalConfig, type LoadedConfig } from "@/modules/config/global/index.ts";
-import { fail } from "@/cli/ui.ts";
+import { fail } from "@nouride/cli-kit";
 
 /**
  * Exit 1 with the line on a config this user may not read — or, `soft`, throw it, for a caller that says it its own way
