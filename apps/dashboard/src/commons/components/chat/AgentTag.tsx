@@ -63,12 +63,13 @@ function useTagNames(): TagName[] {
 }
 
 /**
- * One tag, in its agent's colour: the tint its name wears over its replies, drawn a step further towards the text so it
- * reads on a person's lilac bubble and on the page alike, on a pill of the same colour faintly behind it.
+ * One tag, in its agent's colour: the tint its name wears over its replies, already drawn towards the text so it reads
+ * on a person's lilac bubble and on the page alike, on a pill of the same colour faintly behind it. Drawn further
+ * towards the text, a lilac tag read as near black on a light page.
  */
 export function AgentTag({ agentId, bare = false, children, className }: { agentId: string; /** The colour alone, inside a chip of its own. */ bare?: boolean; children: ReactNode; className?: string }) {
   const face = useAgentFace(agentId);
-  const style = face?.tint ? ({ "--tag": `color-mix(in oklab, ${face.tint} 75%, var(--color-base-content))` } as CSSProperties) : undefined;
+  const style = face?.tint ? ({ "--tag": face.tint } as CSSProperties) : undefined;
   return (
     <span
       data-agent-tag={agentId}
