@@ -317,8 +317,9 @@ chat's own menu while it is open; you are asked first, and nothing undoes it.
 
 **A room** is one conversation with several agents. Pick the agents when you make it, then tag the one you mean
 (`@nox`): a tag is how a message reaches a particular agent. The room's header shows its members as the tags you type,
-and says who answers a message with no tag, if anyone does. **Add agent** brings another one in; the room's menu renames
-it, takes an agent out, or deletes it.
+and says who answers a message with no tag, if anyone does: the orchestrator when it is in the room, or the room's only
+agent. The setting that makes chat-app groups wait for a tag does not apply here; `/mention on` in the room does. **Add
+agent** brings another one in; the room's menu renames it, takes an agent out, or deletes it.
 
 **Anything from a chat app is read-only here.** A group, or a private chat with an agent on Telegram, Discord or
 WhatsApp, says its app's name and **Read-only**, and where you would type there is a note: it is answered on its own

@@ -137,7 +137,8 @@ export class InboundRouter {
    * happens in it.
    */
   private route(envelope: MessageEnvelope, instance: GatewayInstanceConfig | undefined, repliedTo?: string): ReturnType<typeof routeMessage> {
-    // The group's own `/mention`, then this connection's setting, then the daemon's (`room-mention.ts`).
+    // The group's own `/mention`, then this connection's setting, then the daemon's — which a room made in the dashboard
+    // is not held to: its members decide, below (`room-mention.ts`).
     const groupsRequireMention = requireMentionHere(this.ctx.deps, envelope).requireMention;
     const answerUnaddressed =
       envelope.chatType === "dm" ||

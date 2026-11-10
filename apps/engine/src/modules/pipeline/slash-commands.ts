@@ -21,7 +21,7 @@ export function slashCommands(parts: {
     PipelineDeps,
     | "registry" | "sessions" | "approvals" | "notes" | "missionCommands" | "scheduleCommands" | "grants" | "startedAt"
     | "version" | "externalAgents" | "agentEffort" | "autoApprove" | "config" | "gateways" | "usage" | "reflection"
-    | "roomMention" | "secretKeeping"
+    | "roomMention" | "rooms" | "secretKeeping"
   >;
   admission: Pick<Admission, "admitsByName" | "claim">;
   modelOverrides: ModelOverrides;
@@ -77,7 +77,7 @@ export function slashCommands(parts: {
     ...(deps.usage ? { sessionUsage: (sessionId: string, since: number, onlyCli?: boolean) => deps.usage!.forSession(sessionId, since, onlyCli) } : {}),
     ...(deps.reflection ? { drafts: deps.reflection } : {}),
     ...(deps.roomMention
-      ? { groupMention: groupMentionHookPort({ config: deps.config, store: deps.roomMention, mayChange, claim: (envelope, key) => admission.claim(envelope, key) }) }
+      ? { groupMention: groupMentionHookPort({ config: deps.config, store: deps.roomMention, ...(deps.rooms ? { rooms: deps.rooms } : {}), mayChange, claim: (envelope, key) => admission.claim(envelope, key) }) }
       : {}),
     ...(parts.secrets
       ? { secrets: secretsHookPort({ secrets: parts.secrets, keeping: deps.secretKeeping, registry: deps.registry, mayManage: mayChange, deliver: parts.deliver }) }

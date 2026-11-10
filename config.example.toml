@@ -66,8 +66,9 @@ backup_keep = 4
 # gateway with no owner, and matches no channel binding — and the front desk of a room
 # several of our bots share: a message there that tags, names or replies to nobody is
 # answered by it, once, through its own bot, and it hands on to the agent whose headline
-# fits. A room that requires a mention (groups_require_mention, or /mention on in that group)
-# stays quiet for it too. Set to the first agent you make. `default_agent` before 0.7.18.
+# fits. A chat-app group that requires a mention (groups_require_mention, or /mention on in that
+# group) stays quiet for it too; a room made in the dashboard only after its own /mention on.
+# Set to the first agent you make. `default_agent` before 0.7.18.
 # orchestrator = "nouva"
 
 # ── Providers ────────────────────────────────────────────────────────────────
@@ -131,7 +132,9 @@ mentions_enabled = true    # false = every bot message is ignored, as it was bef
 # background hears how long it has run, so it can wait, tell you, or `nouride jobs kill` it. A reply you are waiting on
 # is asked for a one-line status. 0 = off.
 nudge_after_minutes = 5
-groups_require_mention = false  # true = ignore unaddressed group chatter; DMs still answer all messages
+groups_require_mention = false  # true = ignore unaddressed chatter in Telegram, Discord and WhatsApp groups;
+                                # DMs still answer all messages, and a room made in the dashboard answers
+                                # as its members say (the orchestrator if it is in it, or its one agent)
 group_context_messages = 20     # recent group messages replayed when an agent IS addressed, so "@nouva ini"
                                 # arrives with the exchange it points at. 0 = off, 100 = ceiling. Chatter
                                 # still triggers nothing — it is remembered, not answered. Note that this

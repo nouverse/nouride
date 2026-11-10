@@ -271,8 +271,10 @@ kali oleh platform dijawab sekali, dan balasan yang terputus di tengah gak dikir
 
 Dua pengaturan menentukan perilaku agent di ruangan tempat ia gak sedang diajak bicara langsung:
 
-- **`groups_require_mention`**: mati secara default. Kalau dinyalakan, agent mengabaikan obrolan grup
-  yang gak menyebutnya. DM tetap menjawab semuanya.
+- **`groups_require_mention`**: mati secara default. Kalau dinyalakan, agent mengabaikan obrolan di grup
+  Telegram, Discord, dan WhatsApp yang gak menyebutnya. DM tetap menjawab semuanya, begitu juga room yang
+  kamu buat di dashboard, yang ikut anggotanya: pesan tanpa tag dijawab orchestrator kalau ia ada di room
+  itu, atau oleh satu-satunya agent di room itu, dan selain itu gak dijawab siapa pun.
 - **`group_context_messages`**: 20 secara default. Ketika agent *memang* dipanggil, sekian pesan
   terakhir ikut serta, sehingga `@nouva ini gimana?` tiba bersama percakapan yang ditunjuknya.
 
@@ -289,9 +291,11 @@ keduanya, dan kolom group context di form koneksi menyatakan dengan jelas bahwa 
 
 Sebuah grup juga bisa menentukan `groups_require_mention` untuk dirinya sendiri, dari dalam grup itu:
 
-- `/mention` memberi tahu setelan grup ini dan asalnya: dari grup ini, dari gateway, atau dari daemon.
+- `/mention` memberi tahu setelan grup ini dan asalnya: dari grup ini, dari gateway, atau dari daemon
+  (di room yang dibuat di dashboard: aturan room itu sendiri, di atas).
 - `/mention off`: di grup ini gak perlu mention. `/mention on`: mention wajib lagi.
-- `/mention default` menghapus setelan milik grup, jadi gateway dan daemon yang menentukan lagi.
+- `/mention default` menghapus setelan milik grup, jadi gateway dan daemon yang menentukan lagi, atau,
+  di room dashboard, anggotanya.
 
 Setelan milik grup menang atas setelan koneksi dan daemon, dan tetap tersimpan setelah restart. Ia milik
 grupnya, bukan milik satu bot: kalau ada beberapa bot kita di grup itu, semuanya membaca setelan yang

@@ -80,6 +80,10 @@ membalas siapa pun (yang salinannya diterima tiap bot) dijawab olehnya saja, sek
 room itu mewajibkan mention (`groups_require_mention`, atau `/mention on` di grup itu). Pesan yang menyapa seseorang
 tetap diarahkan seperti biasa, dan DM gak terpengaruh. Agent pertama yang kamu buat otomatis jadi orchestrator.
 
+`groups_require_mention` itu soal grup di Telegram, Discord, dan WhatsApp. Room yang kamu buat di dashboard menjawab
+sesuai anggotanya: orchestrator kalau ia ada di room itu, atau satu-satunya agent di room itu, dan selain itu gak ada
+yang menjawab. Room itu baru menunggu tag kalau di dalamnya diketik `/mention on`.
+
 ## `[agents]`
 
 ```toml
