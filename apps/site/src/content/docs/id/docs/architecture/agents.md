@@ -481,7 +481,7 @@ selesai, dan jawabannya menyebut kenapa lama.
 ## Permintaan yang makan waktu
 
 Saat sebuah agent meminta tolong agent lain lewat `ask_agent` (0.7.19), ia menunggu jawabannya paling lama
-semenit, seperti sebelumnya. Kalau agent lain itu masih bekerja setelahnya (deploy, audit), pekerjaannya
+45 detik. Kalau agent lain itu masih bekerja setelahnya (deploy, audit), pekerjaannya
 lanjut di latar belakang, agent yang sedang kamu ajak bicara bilang begitu, dan kamu tetap bisa ngobrol
 dengannya. Begitu jawabannya datang, agent itu dibangunkan di chat yang sama, dengan keterangan itu jawaban
 untuk permintaan apa dan kapan dimintanya, jadi tetap nyambung walau kamu sudah pindah topik. Agent yang

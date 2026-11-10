@@ -358,15 +358,23 @@ of wake-ups with no person in it (`[agents] job_wake_max_chain`):
 - a command, `exec` with `background: true`;
 - a helper, `delegate` with `background: true` (0.7.15, `pipeline/background-helper.ts`);
 - another agent's turn an `ask_agent` moved there (0.7.19, `pipeline/background-ask.ts`): the ask waits up to
-  `ASK_WAIT_MS` (a minute), then the peer turn is adopted by a job of the *asking* agent's — its limit, its `/stop`,
-  its chat — and stops following the asking turn's signal. Its answer wakes the asking agent, never the asked one, with
-  what it answers (`jobs/ask-wake-text.ts`).
+  `FOREGROUND_WAIT_MS` (45 seconds, `tools/builtins/wait-then-move.ts`), then the peer turn is adopted by a job of the
+  *asking* agent's — its limit, its `/stop`, its chat — and stops following the asking turn's signal. Its answer wakes
+  the asking agent, never the asked one, with what it answers (`jobs/ask-wake-text.ts`). Several agents asked in one
+  call (`asks`) are each that same ask, started together.
 
 Helpers and asks share one limit, `[delegate] max_background`, counted by `JobStore.backgroundTurns`. Only a turn whose
 toolset was resolved with that limit above 0 may move work behind itself: a helper's, a peer's and a scheduled turn are
 resolved with `backgroundHelpers: () => 0`, so their `delegate` has no `background` and their `ask_agent` is the
-waiting variant (`waitingAsk`). That is the rule against ping-pong — keep it one rule: a new kind of turn that should
+waiting form (`waitingForm`). That is the rule against ping-pong — keep it one rule: a new kind of turn that should
 not leave work behind resolves its toolset the same way.
+
+**That limit, and `[missions] max_running`, follow the machine where no number is set** (`commons/machine.ts`,
+`atOnceBy`): four at most, fewer where the cores or the memory are few; a number that was set wins, 0 included. The
+machine is read once at boot and handed down (`PipelineDeps.machine`, `DaemonContext.machine`), never read where it is
+used: a test names the machine it is about (`BENCH_MACHINE` in the pipeline bench), or its result is the laptop's. An
+agent is told the machine in its harness block, and every figure there was read at boot or from the config, so the
+cached prefix does not move; what is running now is a note on the message (`turnReminders`), the way the clock is.
 
 ## Sessions
 
