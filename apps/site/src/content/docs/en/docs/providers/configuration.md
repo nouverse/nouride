@@ -271,6 +271,10 @@ Anthropic. What is cleared is not lost: the whole output is first written to the
 `data/tool-output/` directory (kept as long as `[retention] tool_output_days`), and the marker names
 that file, so the agent opens it with `read` instead of running the command again.
 
+Once a turn is over the line, old results are cleared in one go, down to well under it, and the steps
+after that clear nothing until the turn has grown back. Clearing one result a step would change the
+start of the conversation at every step, and a provider's prompt cache would read nothing back.
+
 When clearing old results is not enough, the text old `write`, `edit` and `multi_edit` calls carried
 goes next, oldest first: the call stays with its path and its result, and the text becomes a line
 saying how big it was, that the call ran, and to read the file for what it holds now. The calls of

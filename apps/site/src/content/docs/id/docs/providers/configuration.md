@@ -279,6 +279,11 @@ Yang dipangkas gak hilang: output utuhnya ditulis dulu ke direktori `data/tool-o
 (disimpan selama `[retention] tool_output_days`), dan penandanya menyebut file itu, jadi agent
 membukanya dengan `read` alih-alih menjalankan ulang perintahnya.
 
+Begitu sebuah giliran melewati batasnya, hasil lama dibersihkan sekaligus, sampai jauh di bawah batas
+itu, dan langkah-langkah berikutnya gak membersihkan apa-apa sampai gilirannya tumbuh lagi. Membersihkan
+satu hasil tiap langkah mengubah awal percakapan di setiap langkah, dan cache prompt provider gak
+terbaca lagi.
+
 Kalau membersihkan hasil lama belum cukup, teks yang dibawa panggilan `write`, `edit` dan `multi_edit`
 lama yang menyusul, dari yang paling lama: panggilannya tetap ada bersama path dan hasilnya, dan
 teksnya jadi satu baris yang bilang seberapa besar teks itu, bahwa panggilannya sudah jalan, dan

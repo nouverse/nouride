@@ -21,6 +21,7 @@ function clearedFrom(messages: ChatMessage[]): ChatMessage[] {
   let n = 0;
   return trimToolResults([...messages, { role: "assistant", content: "next", timestamp: 2 }], {
     maxTokens: 50,
+    targetTokens: 50,
     keepRecent: 0,
     keep: () => ({ path: `/data/spill/s1/cleared-call_${++n}-ab12.txt`, lines: 120, kb: 9 }),
   }).messages;

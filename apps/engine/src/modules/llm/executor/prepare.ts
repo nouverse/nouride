@@ -31,6 +31,7 @@ import {
   MIN_TOOL_RESULT_TOKENS,
   PROMPT_SHARE,
   TOOL_RESULT_SHARE,
+  TRIM_TO_SHARE,
   type CompactionPlan,
   type ExecutorDeps,
   type TurnRequest,
@@ -84,6 +85,11 @@ export interface TurnCeilings {
    * output the first round produced and nothing else is measuring it.
    */
   compactAt: number;
+  /**
+   * How far that drop goes once it starts: a share of `compactAt`, so the rounds after it send the same
+   * prefix until the set has grown back to the line (`TRIM_TO_SHARE`).
+   */
+  trimTo: number;
   /** What compaction is measured against, kept for the pass that runs after the reply. */
   compaction: CompactionPlan;
 }
@@ -157,6 +163,7 @@ export function ceilingsAt(facts: WindowFacts, scale: number): TurnCeilings {
     budget,
     toolResultCap,
     compactAt,
+    trimTo: Math.floor(compactAt * TRIM_TO_SHARE),
     compaction: {
       threshold: compactAt,
       limit: compactAt,

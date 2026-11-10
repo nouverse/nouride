@@ -44,7 +44,7 @@ const KEPT = /kept at (\S+?); read it with `read` \(offset\/limit\) instead of r
 
 describe("trimming inside a turn", () => {
   test("the cleared result is in a file named by its call id, whole, and the marker says where", async () => {
-    const result = trimToolResults(conversation(), { maxTokens: 10, keepRecent: 1, keep: spill.keeperFor(scope) });
+    const result = trimToolResults(conversation(), { maxTokens: 10, targetTokens: 10, keepRecent: 1, keep: spill.keeperFor(scope) });
     const first = result.messages.find((m) => m.toolCallId === "c1")!;
     const text = String(first.content);
 
@@ -60,13 +60,13 @@ describe("trimming inside a turn", () => {
   });
 
   test("with no store, the old marker — nothing claims a file that does not exist", () => {
-    const result = trimToolResults(conversation(), { maxTokens: 10, keepRecent: 1 });
+    const result = trimToolResults(conversation(), { maxTokens: 10, targetTokens: 10, keepRecent: 1 });
     expect(String(result.messages.find((m) => m.toolCallId === "c1")!.content)).toStartWith(TRIMMED_TOOL_PREFIX);
   });
 
   test("the same result cleared twice, in two turns' worth of history, is one file", () => {
-    trimToolResults(conversation(), { maxTokens: 10, keepRecent: 1, keep: spill.keeperFor(scope) });
-    trimToolResults(conversation(), { maxTokens: 10, keepRecent: 1, keep: spill.keeperFor(scope) });
+    trimToolResults(conversation(), { maxTokens: 10, targetTokens: 10, keepRecent: 1, keep: spill.keeperFor(scope) });
+    trimToolResults(conversation(), { maxTokens: 10, targetTokens: 10, keepRecent: 1, keep: spill.keeperFor(scope) });
     expect(listDir(spill.rootFor(scope)).filter((entry) => entry.name.startsWith("cleared-c1-"))).toHaveLength(1);
   });
 
@@ -115,7 +115,7 @@ describe("when the file cannot be written", () => {
   test("the old marker is used, and nothing throws", () => {
     // The agent's directory is a file: nothing can be created under it.
     writeFileSync(join(root, "nouva"), "in the way");
-    const result = trimToolResults(conversation(), { maxTokens: 10, keepRecent: 1, keep: spill.keeperFor(scope) });
+    const result = trimToolResults(conversation(), { maxTokens: 10, targetTokens: 10, keepRecent: 1, keep: spill.keeperFor(scope) });
     expect(String(result.messages.find((m) => m.toolCallId === "c1")!.content)).toStartWith(TRIMMED_TOOL_PREFIX);
   });
 });

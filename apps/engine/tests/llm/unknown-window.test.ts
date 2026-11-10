@@ -37,7 +37,7 @@ describe("a window nobody knows", () => {
 
   test("at that budget the older results are cleared, and the ones the model has not read yet are kept", () => {
     const turn: ChatMessage[] = [{ role: "user", content: "read them", timestamp: 1 }, call("a"), result("a"), call("b"), result("b"), call("c"), result("c")];
-    const after = trimToolResults(turn, { maxTokens: 0, keepRecent: 3 }).messages;
+    const after = trimToolResults(turn, { maxTokens: 0, targetTokens: 0, keepRecent: 3 }).messages;
     const said = after.filter((message) => message.role === "tool").map((message) => String(message.content));
     expect(said[0]).toStartWith(TRIMMED_TOOL_PREFIX);
     expect(said[1]).toStartWith(TRIMMED_TOOL_PREFIX);

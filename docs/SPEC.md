@@ -608,8 +608,12 @@ and sometimes several turns late.
 
 **Making room inside a turn:** the steps below run once, before the tool loop. A long turn also grows
 *during* the loop, with an assistant message and a tool result per iteration, so before each provider
-call the working set is measured again and older tool results are replaced with a short marker until it
-fits, keeping the most recent `preserve_recent_tool_results` verbatim. The message is never removed —
+call the working set is measured again and, once it is over the line, older tool results are replaced
+with a short marker, keeping the most recent `preserve_recent_tool_results` verbatim. A trim goes down to
+three fifths of the line in one go (`TRIM_TO_SHARE`, a starting value), not only back under it: stopping
+the moment the set fit trimmed one more result on every round after, each rewriting the start of the
+conversation, so a provider's prompt cache read nothing back for the rest of the turn. Now the rounds
+after a trim send the same prefix until the set has grown back to the line. The message is never removed —
 only its content — because an orphaned `tool_use` is rejected outright by Anthropic. No provider call is
 involved: this runs inside a turn somebody is waiting on. The content is not lost (0.7.25): it is written
 whole to the conversation's spill directory first (`ToolOutputSpill.keepCleared`; a result already
@@ -712,7 +716,7 @@ harness section now describes what already happened instead.
 
 **`preserve_recent_tool_results` is a preference, not a guarantee.**
 Keeping the newest results whole is right — they are what the model is still working from — but `keepRecent × the per-result cap` can exceed the whole budget on a small window.
-So `trimToolResults` trims the older results first, then shortens the text old `write` and `edit` calls carried, and only if the set still does not fit squeezes the protected ones oldest-first.
+So `trimToolResults` trims the older results first, then shortens the text old `write` and `edit` calls carried, and only if the set still does not fit squeezes the protected ones oldest-first, as far as the line and no further.
 Nothing changes in the ordinary case.
 When the last resort fires it is logged as a warning naming the model, the budget and both knobs, because it is a statement about the configuration rather than about that turn.
 

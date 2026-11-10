@@ -57,6 +57,16 @@ export const PROMPT_SHARE = 0.5;
 export const TOOL_RESULT_SHARE = 0.25;
 
 /**
+ * How far a trim inside a turn brings the working set down, as a share of the line it starts at (`TurnCeilings.trimTo`).
+ *
+ * Three fifths, the share a compaction leaves of its limit at most (`compactionShape`), and for its reason: what
+ * is left just under the line is over it again one round later. Lower costs the model output it may still want,
+ * though each cleared result is one `read` away; higher brings the next trim, and the cache it costs, sooner. A
+ * starting value, until a measurement of cache reads over long turns moves it.
+ */
+export const TRIM_TO_SHARE = 0.6;
+
+/**
  * Hard ceiling on one tool result, whatever the window allows.
  *
  * 12k, down from 25k. A result is paid for again on every request left in the turn, and the newest
