@@ -103,7 +103,7 @@ const year = new Date().getFullYear();
       <nav aria-label="Site">
         <a href={href('docs/start/what-is-nouride')}>{t.nav.docs}</a>
         <a class="wide-only" href={CLOUD_URL} target="_blank" rel="noopener noreferrer">{t.nav.pro}</a>
-        <a href={`/${t.nav.otherLang}/`} hreflang={t.nav.otherLang} lang={t.nav.otherLang} aria-label={t.nav.other}>{t.nav.otherShort}</a>
+        <a class="nav-lang" href={`/${t.nav.otherLang}/`} hreflang={t.nav.otherLang} lang={t.nav.otherLang} aria-label={t.nav.other}>{t.nav.otherShort}</a>
         <a class="nav-action" href={href('docs/start/install')}>{t.nav.install}</a>
       </nav>
     </header>
@@ -1839,6 +1839,34 @@ const year = new Date().getFullYear();
     }
     .f-year {
       justify-self: start;
+    }
+  }
+
+  /*
+   * A phone's header: the cat alone stands for the name, and the install button is slimmer. With the word beside the
+   * cat, Indonesian's "Dokumentasi" and "Pasang" pushed the button past a 390px screen's edge (the owner's iPhone), and
+   * English's ran past 360px. The word stays for a screen reader. Narrower still, the language link steps out of the
+   * bar: the footer carries it too.
+   */
+  @media (max-width: 29.99rem) {
+    .brand span {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+    .nav nav {
+      gap: 0.85rem;
+    }
+    .nav .nav-action {
+      padding: 0.45rem 0.9rem;
+    }
+  }
+  @media (max-width: 22.49rem) {
+    .nav .nav-lang {
+      display: none;
     }
   }
 </style>
