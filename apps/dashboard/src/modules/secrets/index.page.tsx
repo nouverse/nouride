@@ -30,7 +30,7 @@ import type { FieldChange, SecretEntry } from "@nouride/wire";
 import { isAdmin, useMe } from "@/commons/lib/session";
 import { Card, EmptyState, ErrorNote, PageHeader } from "@/commons/components/ui/ui";
 import { useConfirm } from "@/commons/components/ui/confirm";
-import { PAGE_BOTTOM, ScrollCard } from "@/commons/components/ui/ScrollCard";
+import { HELD_BOTTOM, ScrollCard } from "@/commons/components/ui/ScrollCard";
 import { useTextFilter } from "@/commons/lib/use-text-filter";
 import { BackupPasswordCard } from "./components/BackupPasswordCard";
 import { LockNote } from "./components/LockNote";
@@ -123,7 +123,7 @@ export default function SecretsPage() {
    */
   return (
     <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
-    <div className={`mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 pt-4 sm:px-6 sm:pt-6 lg:h-full lg:p-8 ${PAGE_BOTTOM}`}>
+    <div className={`mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 pt-4 sm:px-6 sm:pt-6 lg:h-full lg:p-8 ${HELD_BOTTOM}`}>
       <PageHeader
         ask={PAGE_ASKS.secrets}
         className="shrink-0"

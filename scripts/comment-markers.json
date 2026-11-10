@@ -39,7 +39,6 @@
   "apps/dashboard/src/commons/components/ui/PasswordInput.tsx": { "version": 1, "date": 1 },
   "apps/dashboard/src/commons/components/ui/ProgressBar.tsx": { "version": 1 },
   "apps/dashboard/src/commons/components/ui/RetentionControl.tsx": { "version": 1 },
-  "apps/dashboard/src/commons/components/ui/ScrollCard.tsx": { "version": 2 },
   "apps/dashboard/src/commons/components/ui/SegmentedTabs.tsx": { "version": 1 },
   "apps/dashboard/src/commons/components/ui/Tag.tsx": { "version": 1 },
   "apps/dashboard/src/commons/components/ui/toast.tsx": { "version": 2 },

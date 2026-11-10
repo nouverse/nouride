@@ -18,7 +18,7 @@ import { useTheme } from "@/commons/lib/theme";
 import { useSignOut } from "@/commons/components/layout/sign-out";
 import { gatewayPage } from "@/commons/lib/bundled-gateway";
 import { isPairedBox } from "@/commons/lib/api.appliance";
-import { PAGE_BOTTOM } from "@/commons/components/ui/ScrollCard";
+import { HELD_BOTTOM, PAGE_BOTTOM } from "@/commons/components/ui/ScrollCard";
 import { DRAWER_MOTION, DRAWER_SHADE, SHADE_PLACE, SHEET_BOX, SHEET_PLACE } from "@/commons/components/ui/Drawer";
 import { Sidebar } from "@/commons/components/layout/Sidebar";
 import { PHONE_CHAT_SPACE, TAB_BAR_SPACE, TabBar } from "@/commons/components/layout/TabBar";
@@ -227,7 +227,7 @@ export function RootLayout() {
           <main className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
             {/* Held to the window from a laptop's width up; on a phone it scrolls as a document, as the page beside it
                 does — a list scrolling inside a card inside a scrolling page, under a header, is a sliver there. */}
-            <div className={`mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 pt-2 sm:px-6 sm:pt-4 lg:h-full lg:p-8 ${PAGE_BOTTOM} *:animate-fade`}>
+            <div className={`mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 pt-2 sm:px-6 sm:pt-4 lg:h-full lg:p-8 ${HELD_BOTTOM} *:animate-fade`}>
               <SectionTabs pathname={pathname} />
               <SettingsBack pathname={pathname} />
               <Outlet />
