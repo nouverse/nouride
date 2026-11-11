@@ -1,17 +1,21 @@
 /**
  * What waits for the person, first on Home (0.8.24). A tool call an agent is blocked on is answered right here, as it
- * was on Overview. A mission waiting for an answer, a skill to review, a person asking to talk to the agents, a fact to
- * keep or drop and a document to add each say what they are and open the page that decides them: approving a stranger is not undone by looking away, so it is
- * never a button on a page people skim (`mount.test.ts`, "pending work is announced").
+ * was on Overview, and so is a step of an automation that waits for a yes. A mission waiting for an answer, a skill to
+ * review, a person asking to talk to the agents, a fact to keep or drop and a document to add each say what they are and
+ * open the page that decides them: approving a stranger is not undone by looking away, so it is never a button on a
+ * page people skim (`mount.test.ts`, "pending work is announced").
  */
 
-import type { ApprovalRequest, MissionView } from "@nouride/wire";
+import type { ApprovalRequest, MissionView, WaitingStep } from "@nouride/wire";
 import { ApprovalCard } from "@/commons/components/approvals/ApprovalCard";
 import { WaitingLink } from "@/commons/components/approvals/WaitingLink";
+import { WaitingStepCard } from "@/commons/components/jobs/WaitingStepCard";
 import { useAnswerApproval } from "@/commons/hooks/use-answer-approval";
 
 export function NeedsYouCards({
   approvals,
+  steps,
+  canAnswer,
   missions,
   requests,
   skills,
@@ -20,6 +24,9 @@ export function NeedsYouCards({
   names,
 }: {
   approvals: ApprovalRequest[];
+  /** Steps of automations that wait for a yes, and whether this account may give one. */
+  steps: WaitingStep[];
+  canAnswer: boolean;
   missions: MissionView[];
   requests: number;
   skills: number;
@@ -33,6 +40,9 @@ export function NeedsYouCards({
     <>
       {approvals.map((request, at) => (
         <ApprovalCard key={request.id} request={request} mascot={at === 0} pending={answer.isPending} onAnswer={(request, decision) => answer.mutate({ request, decision })} />
+      ))}
+      {steps.map((step) => (
+        <WaitingStepCard key={step.runId} step={step} agent={names.get(step.agentId) ?? step.agentId} canAnswer={canAnswer} />
       ))}
       {missions.map((mission) => (
         <WaitingLink key={mission.id} to="/missions/$missionId" params={{ missionId: mission.id }} tag={`Mission · ${names.get(mission.agentId) ?? mission.agentId}`} title={mission.goal} line="Waiting for your answer" />

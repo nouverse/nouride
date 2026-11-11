@@ -10,7 +10,8 @@ import { api } from "@/commons/lib/api";
 import type { HealthPayload } from "@nouride/wire";
 import { orchestratorFirst } from "@/commons/lib/agents";
 import { looksOf } from "@/commons/cat/look";
-import { useMe } from "@/commons/lib/session";
+import { canWrite, useMe } from "@/commons/lib/session";
+import { useWaitingSteps } from "@/commons/hooks/use-waiting-steps";
 import { MOVING_MISSIONS, missionsWaiting, needsYouWords, useNeedsYou } from "@/commons/hooks/use-needs-you";
 import { EmptyState } from "@/commons/components/ui/ui";
 import { Mascot } from "@/commons/components/brand/Mascot";
@@ -42,6 +43,7 @@ export default function HomePage() {
   const approvals = useQuery({ queryKey: ["approvals"], queryFn: api.approvals, refetchInterval: 5_000, retry: false });
   const missions = useQuery({ queryKey: MOVING_MISSIONS, queryFn: () => api.missions(), refetchInterval: 15_000, retry: false });
   const needs = useNeedsYou();
+  const waitingSteps = useWaitingSteps();
   const me = useMe();
   // This visit's two pictures, picked once: the page polls, and neither changes under the person's eyes.
   const [resting] = useState(() => QUIET[pickMoment("quiet", QUIET.length)] ?? QUIET[0]!);
@@ -78,7 +80,7 @@ export default function HomePage() {
       <BoxWarnings health={health.data} />
 
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
-        <NeedsYouCards approvals={pendingApprovals} missions={waiting} requests={needs.requests} skills={needs.skills} facts={needs.facts} documents={needs.documents} names={names} />
+        <NeedsYouCards approvals={pendingApprovals} steps={waitingSteps.data?.waiting ?? []} canAnswer={canWrite(me.data ?? null)} missions={waiting} requests={needs.requests} skills={needs.skills} facts={needs.facts} documents={needs.documents} names={names} />
         {/* One cat beside the cards: where an approval waits it is the one pointing at it. */}
         {movingNow.length > 0 && <MovingNow missions={movingNow} looks={looks} names={names} {...(pendingApprovals.length === 0 ? { pose: riding } : {})} />}
         {quiet && (

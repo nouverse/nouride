@@ -76,8 +76,8 @@ function NeedsBadge({ n, label }: { n: number; label: string }) {
 }
 
 function WorkBadge() {
-  const { approvals, missions } = useNeedsYou();
-  const waiting = approvals + missions;
+  const { approvals, missions, steps } = useNeedsYou();
+  const waiting = approvals + missions + steps;
   return <NeedsBadge n={waiting} label={`${waiting} waiting for your answer`} />;
 }
 

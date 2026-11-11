@@ -23,7 +23,8 @@ const request = (id: string, command: string, queued?: true) => ({
 });
 
 test("Home marks the pending approval the chat has not been asked yet, and only that one", async () => {
-  answer({ "/approvals": { status: 200, body: { pending: [request("apr_1", "git push"), request("apr_2", "ls /tmp", true)] } } });
+  // Tool calls alone wait here: no step of an automation, which the engine's own fixture has one of.
+  answer({ "/approvals": { status: 200, body: { pending: [request("apr_1", "git push"), request("apr_2", "ls /tmp", true)] } }, "/automations/waiting": { status: 200, body: { waiting: [] } } });
   let cards: { command: string; marked: boolean }[] = [];
   await renderPage("/", async (host) => {
     await eventually(() => host.textContent?.includes("ls /tmp") === true, 2_000, "the approvals");

@@ -20,6 +20,8 @@ useMountHarness();
 
 const ok = (body: unknown) => ({ status: 200, body });
 const agent = (id: string, extra: Partial<AgentSummary> = {}) => ({ id, displayName: id[0]!.toUpperCase() + id.slice(1), enabled: true, state: "running", provider: "p", model: "m", tools: [], approvals: "careful", ...extra });
+/** No step of an automation waits: these cases say what else does, and the engine's own fixture has one waiting (`mount-waiting-steps.test.ts`). */
+const NO_STEPS = { "/automations/waiting": ok({ waiting: [] }) };
 const approval = { id: "ap1", agentId: "nix", chatId: "web:usr_1", tool: "exec", params: { command: "git push" }, grantable: false, requestedAt: 0, timeoutMs: 60_000 };
 const mission = (id: string, status: string, extra: Record<string, unknown> = {}) => ({ id, agentId: "nix", goal: `Goal ${id}`, status, seen: status === "waiting" ? "needs_you" : "working", waitKind: null, checklist: null, ...extra });
 
@@ -61,6 +63,7 @@ describe("the words", () => {
 describe("the page", () => {
   test("in order: the greeting, what needs you answered in place, what is moving, Quick chat, then the agents", async () => {
     answer({
+      ...NO_STEPS,
       "/status": ok({ status: "ready", gateways: [], providers: [], uptimeMs: 1000, orchestrator: "nouva", agents: [agent("nouva"), agent("nix", { headline: "engineer" })] }),
       "/approvals": ok({ pending: [approval] }),
       "/missions": ok({ missions: [mission("m1", "running", { checklist: { done: 2, total: 5, active: null } }), mission("m2", "waiting", { waitKind: "input" })] }),
@@ -125,6 +128,7 @@ describe("the page", () => {
 
   test("nothing waiting and nothing moving: the cat rests where the cards were, and not as it did last visit", async () => {
     const quiet = {
+      ...NO_STEPS,
       "/approvals": ok({ pending: [] }),
       "/missions": ok({ missions: [] }),
       "/access": ok({ senders: [] }),
@@ -170,6 +174,7 @@ describe("the page", () => {
 
   test("nothing waiting and nothing moving: no card of what moves, and the tab's title without a count", async () => {
     answer({
+      ...NO_STEPS,
       "/approvals": ok({ pending: [] }),
       "/missions": ok({ missions: [] }),
       "/access": ok({ senders: [] }),
@@ -219,6 +224,7 @@ describe("what waits in Memory", () => {
 
   test("a document an agent saved for a collection is a card on Home and a count on Memory, and opens Knowledge", async () => {
     answer({
+      ...NO_STEPS,
       "/approvals": ok({ pending: [] }),
       "/missions": ok({ missions: [] }),
       "/access": ok({ senders: [] }),
@@ -255,6 +261,7 @@ describe("what waits in Memory", () => {
 describe("Work's first tab", () => {
   test("lists every thing its badge counts: a tool call to answer, and a mission waiting for an answer", async () => {
     answer({
+      ...NO_STEPS,
       "/approvals": ok({ pending: [approval] }),
       "/missions": ok({ missions: [mission("m2", "waiting", { waitKind: "input" }), mission("m3", "waiting", { waitKind: "approval" }), mission("m1", "running")] }),
     });
