@@ -71,8 +71,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "the turn record and its columns, the causes it names, the clause every read of a conversation uses to leave a delegate's own turns out, and the queries that use it, a restart's two marks among them",
   },
   "apps/engine/src/modules/missions/missions.ts": {
-    lines: 579,
-    why: "the missions' one service (start, the dispatcher, a turn's shape and end, stop, continue, how many hold a slot) over state this class alone holds; its pure rules are apart: `decide.ts`, `counts.ts`",
+    lines: 581,
+    why: "the missions' one service (start, the dispatcher, a turn's shape and end, stop, continue, which hold a slot) over state this class alone holds; its pure rules are apart: `decide.ts`, `counts.ts`",
   },
   "packages/gateways/src/channels/discord/gateway.ts": {
     lines: 426,

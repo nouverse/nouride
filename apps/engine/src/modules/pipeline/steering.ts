@@ -160,7 +160,7 @@ export function busyNotice(
   },
 ): string {
   const started = turn?.trigger;
-  const about = started && !isSystemEvent(started) ? quoted(started.text, [agent.id, agent.displayName]) : "";
+  const about = started && !isSystemEvent(started) ? requestQuote(started.text, [agent.id, agent.displayName]) : "";
   const since = turn?.startedAt === undefined ? "" : ` (${formatDuration(Math.max(0, Math.round(((o.now ?? Date.now()) - turn.startedAt) / 1000)))} so far)`;
   const waiting = o.parked ? ", and is waiting for an approval here" : "";
   const then = o.queued ? "this message waits for it, and is answered next" : "ask again once it's done";
@@ -170,8 +170,11 @@ export function busyNotice(
 /** At most this much of the request, on one line. */
 const QUOTE_MAX = 80;
 
-/** The request as a short, inert quote: its address off, nobody's name made into a mention, one line. */
-function quoted(text: string, names: readonly string[]): string {
+/**
+ * The request as a short, inert quote: its address off, nobody's name made into a mention, one line. Also what a turn
+ * is told another agent is at work on (`work-now.ts`).
+ */
+export function requestQuote(text: string, names: readonly string[]): string {
   return clipTrimmed(oneLine(inert(unaddressed(text, ...names))), QUOTE_MAX);
 }
 

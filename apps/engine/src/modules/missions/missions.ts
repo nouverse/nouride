@@ -169,8 +169,12 @@ export class Missions implements TurnShaper {
 
   /** The missions holding a slot on the box now, of how many may: what a chat's turn is told while any does. */
   load(): { running: number; atOnce: number } {
-    const running = this.deps.store.open().filter((mission) => mission.status === "running" || mission.status === "checking").length;
-    return { running, atOnce: this.deps.settings().maxRunning };
+    return { running: this.running().length, atOnce: this.deps.settings().maxRunning };
+  }
+
+  /** The missions holding a slot now, each with its goal and its folder: what a turn is told is at work beside it (`pipeline/work-now.ts`). */
+  running(): Mission[] {
+    return this.deps.store.open().filter((mission) => mission.status === "running" || mission.status === "checking");
   }
 
   forChat(gatewayId: string, chatId: string): Mission[] {
