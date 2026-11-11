@@ -326,11 +326,12 @@ pengirim yang di-block ditolak, bukan malah membuka atau melunakkan block-nya.
 
 ```bash
 nouride cron [--all]
-nouride cron add --name <n> (--at 2h | --every 15m | --cron "0 9 * * *") \
-  --gateway <id> --chat <id> --agent <id> [--message <prompt> | --text <pesan> | --command <sh> | --mission <goal>] \
+nouride cron add --name <n> (--manual | --at 2h | --every 15m | --cron "0 9 * * *") \
+  --gateway <id> --chat <id> --agent <id> [--message <prompt> | --text <pesan> | --command <sh> | --mission <goal> | --steps <file.json>] \
   [--then agent] [--session fresh|isolated|chat] [--tz <zona>] [--quiet] [--keep]
-nouride cron update <id> [--name …] [--at|--every|--cron …] [--tz <zona>] [--text|--message …] [--agent <id>]
+nouride cron update <id> [--name …] [--at|--every|--cron …] [--tz <zona>] [--text|--message|--steps …] [--agent <id>]
 nouride cron run|runs|enable|disable|rm <id>
+nouride cron continue|stop <run id>
 
 nouride webhook
 nouride webhook add --name <n> --agent <id> --gateway <id> --chat <id> --message <prompt>

@@ -418,7 +418,7 @@ singkat.
 job: tujuan yang disebutnya (chat itu, tool MCP itu, host itu, alamat itu, remote itu) diizinkan untuk
 run job itu mulai saat itu, dan yang lain tidak. Di mission, pertanyaannya punya tombol **Always for this
 job**. Run terjadwal gak bisa menunggu, jadi aksi yang ditahan disimpan di run-nya, dan riwayat run job itu
-di halaman Schedule atau Webhooks menawarkan **Always allow for this job** di sebelahnya. Yang diizinkan
+di halaman Automations-nya menawarkan **Always allow for this job** di sebelahnya. Yang diizinkan
 untuk sebuah job tercantum di kartunya, masing-masing dengan **Take back**. Perintah yang gak menyebut ke
 mana ia mengirim (kode inline, `nc`, CLI cloud) gak pernah bisa diizinkan dengan cara ini: ia selalu ditanya.
 

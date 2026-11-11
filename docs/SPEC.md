@@ -1375,7 +1375,7 @@ Either way `exec` still meets the blocked lists first.
 |---|---|---|---|
 | `nouride cron` CLI (`nouride webhook` for webhook jobs) | An operator, or an agent through the gate | Yes — hardline for an agent | Yes |
 | `POST /api/control/cron` | An operator or the dashboard | Yes | Yes |
-| Dashboard `/schedule` and `/webhooks` | An operator | Yes | Yes |
+| Dashboard `/automations` | An operator; a webhook, an admin | Yes | Yes |
 
 ### 8.9 Use Cases
 

@@ -400,7 +400,7 @@ runs after it, only on these actions, at the cost of one short call.
 destination it named (that chat, that MCP tool, that host, that address, that remote) is allowed for
 the job's runs from then on, and nothing else is. In a mission the question has an **Always for this
 job** button. A scheduled run cannot wait, so what its guards held is kept on the run instead, and the
-job's run history on the Schedule or Webhooks page offers **Always allow for this job** beside it. What
+job's run history on its Automations page offers **Always allow for this job** beside it. What
 a job is allowed is listed on its card, each with **Take back**. A command that does not say where it
 sends (inline code, `nc`, a cloud CLI) is never allowed this way: it is asked every time.
 
