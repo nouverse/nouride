@@ -23,8 +23,8 @@ export interface Budget {
 /** Source files over `MAX_CODE_LINES`. */
 export const BUDGET: Record<string, Budget> = {
   "packages/policy/src/hardline.ts": {
-    lines: 551,
-    why: "a security classifier: the list of what an agent may never do without a human. It grows by a rule and nothing else; a helper or a second way of classifying goes in a file of its own",
+    lines: 553,
+    why: "a security classifier: what an agent may never do without a human, and the credential paths read word by word. It grows by a rule; a second way of classifying goes in a file of its own",
   },
   "apps/engine/src/modules/config/schema.docs.ts": {
     lines: 475,

@@ -125,7 +125,59 @@ describe("everyday programs", () => {
   });
 
   test("leave out what prints the environment or mutates through flags", () => {
-    for (const program of ["env", "printenv", "find", "xargs", "sed", "awk", "git"]) expect(EVERYDAY_PROGRAMS).not.toContain(program);
+    for (const program of ["env", "printenv", "find", "xargs", "sed", "awk", "git"]) expect(Object.keys(EVERYDAY_PROGRAMS)).not.toContain(program);
+  });
+
+  /**
+   * A flag that writes a file or runs a program makes an everyday program's command a new one. Until this was read per
+   * program, `rg --pre=sh x notes.txt` ran a file as a script at `careful`, and `tree -o ~/.profile` overwrote the file
+   * every login shell `exec` starts reads (found by a review, run against `decideExec` itself).
+   */
+  test("with a flag that runs a program or writes a file, is asked as a new command — however the flag is written", () => {
+    const cases: string[][] = [
+      ["rg", "--pre", "sh", "x", "."],
+      ["rg", "--pre=sh", "x", "."],
+      ["bash", "-lc", "rg --pre=sh x ./notes.txt"],
+      ["rg", "--hostname-bin", "./x", "a"],
+      ["rg", "-z", "a"],
+      ["rg", "-nz", "a"],
+      ["rg", "--search-zip", "a"],
+      ["bash", "-lc", "tree -o ~/.profile"],
+      ["tree", "-ao", "out.txt"],
+      ["tree", "-R", "-L", "1"],
+      ["date", "-s", "2020-01-01"],
+      ["date", "--set=2020-01-01"],
+      ["date", "--se", "2020-01-01"],
+      ["date", "-us", "2020-01-01"],
+      ["file", "-C", "-m", "magic"],
+      ["file", "-z", "archive.gz"],
+      ["bash", "-lc", "ls && tree -o /tmp/x"],
+    ];
+    for (const argv of cases) expect({ argv, outcome: decide(argv) }).toMatchObject({ argv, outcome: { action: "ask", grantable: true } });
+  });
+
+  test("and without one, runs as before: the flags that only read are not caught by a letter they share", () => {
+    const cases: string[][] = [
+      ["rg", "-n", "foo"],
+      ["rg", "-e", "z", "."],
+      ["rg", "-ez", "."],
+      ["rg", "--pre-glob", "*.pdf", "x"],
+      ["tree", "-L", "2"],
+      ["date", "+%s"],
+      ["date", "-Iseconds"],
+      ["date", "-d", "yesterday"],
+      ["file", "-m", "magic", "x"],
+      ["bash", "-lc", "rg -n foo && tree -L 2 && date -u"],
+    ];
+    for (const argv of cases) expect({ argv, outcome: decide(argv) }).toEqual({ argv, outcome: { action: "run", via: "allowlist" } });
+  });
+
+  test("every program on the list was read for such flags: one added later lists them, or an empty list says it has none", () => {
+    const programs = Object.keys(EVERYDAY_PROGRAMS);
+    expect(programs.length).toBeGreaterThanOrEqual(20);
+    for (const program of programs) expect({ program, flags: EVERYDAY_PROGRAMS[program]!.every((flag) => /^--?[A-Za-z]/.test(flag)) }).toEqual({ program, flags: true });
+    // The ones that have them, each asked about in the table above.
+    expect(programs.filter((program) => EVERYDAY_PROGRAMS[program]!.length > 0).sort()).toEqual(["date", "file", "rg", "tree"]);
   });
 
   test("touching a credential path is a new command, whatever the program — asked once, grantable", () => {
@@ -136,6 +188,14 @@ describe("everyday programs", () => {
     }
     const argv = ["cat", ".env"];
     expect(decide(argv, { grants: [keyFor(argv)] })).toEqual({ action: "run", via: "grant" });
+  });
+
+  test("a credential path inside a shell's script, or after a flag's =, is read as one too", () => {
+    // Read whole, `cat .env` held `.env` after a space, and the patterns anchored at a word's start did not see it.
+    for (const argv of [["bash", "-lc", "cat .env"], ["bash", "-lc", "ls && cat ~/.ssh/id_ed25519"], ["grep", "--file=.env", "x"]]) {
+      expect({ argv, outcome: decide(argv) }).toMatchObject({ argv, outcome: { action: "ask", grantable: true } });
+    }
+    expect(decide(["bash", "-lc", "cat environment.md && ls .envrc-notes"])).toEqual({ action: "run", via: "allowlist" });
   });
 });
 

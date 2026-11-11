@@ -54,18 +54,83 @@ export interface DecideInput {
 }
 
 /**
- * Programs where every invocation is harmless, so asking is pure friction. Fixed since 0.8.0 — it was a key nobody
- * tuned. Deliberately excluded, and worth knowing why:
+ * Programs whose every invocation is harmless — but for the flags beside each, which write a file or run another
+ * program, and make the command a new one, asked like any other. Fixed since 0.8.0: it was a key nobody tuned.
+ *
+ * Every program here was read against its manual for such flags, and one with none says so with an empty list: a
+ * program added later has to be read the same way before it lists anything (`decide.test.ts`). Until then this was a
+ * list of names, arguments ignored, and three of them ran a program of the caller's choosing, overwrote a file, or set
+ * the clock without a question: `rg --pre=sh x notes.txt` ran a file as a script at `careful`.
+ *
+ * Deliberately left out, and worth knowing why:
  *   env, printenv — print the process environment, which holds every provider key
  *   find, xargs   — `-delete` and `-exec` make them arbitrary-mutation tools
  *   sed, awk      — `-i` rewrites in place, `system()` shells out
- *   git           — `status` is safe, `push --force` is not, and this list cannot tell them
- *                   apart; a durable grant on the exact command is the right tool for git
+ *   git           — `status` is safe, `push --force` is not, and too many of its flags and subcommands decide which;
+ *                   a durable grant on the exact command is the right tool for git
  */
-export const EVERYDAY_PROGRAMS: readonly string[] = [
-  "ls", "pwd", "cat", "head", "tail", "wc", "date", "echo", "which", "file", "stat",
-  "grep", "rg", "tree", "df", "du", "uname", "whoami", "basename", "dirname",
-];
+export const EVERYDAY_PROGRAMS: Readonly<Record<string, readonly string[]>> = {
+  ls: [],
+  pwd: [],
+  cat: [],
+  head: [],
+  tail: [],
+  wc: [],
+  echo: [],
+  which: [],
+  stat: [],
+  grep: [],
+  df: [],
+  du: [],
+  uname: [],
+  whoami: [],
+  basename: [],
+  dirname: [],
+  // `--set` sets the system clock, which certificates, schedules and logs all read.
+  date: ["-s", "--set"],
+  // `--compile` writes a compiled magic file; `--uncompress` may run a decompressor.
+  file: ["-C", "--compile", "-z", "-Z", "--uncompress", "--uncompress-noreport"],
+  // `--pre` and `--hostname-bin` run a program of the caller's choosing; `--search-zip` runs decompressors.
+  rg: ["--pre", "--hostname-bin", "-z", "--search-zip"],
+  // `-o` writes the listing to a file of the caller's choosing; `-R` writes `00Tree.html` into every directory listed.
+  tree: ["-o", "-R"],
+};
+
+/**
+ * The short options of a program that take the rest of their word as their value (`-Iseconds`, `-e pattern` written
+ * `-epattern`): letters after one of these are its value, not options. Programs not here read every letter as one,
+ * which can only ask more, never less.
+ */
+const ATTACHED_VALUE: Readonly<Record<string, string>> = { date: "dfIr", file: "efmFP", rg: "ABCdeEfgjmMrtT" };
+
+/**
+ * Whether these words hold one of the program's flags that write or run something. A long flag counts however it is
+ * written — whole, with `=value`, or shortened as GNU tools take it (`--se` is `--set`); a short one wherever it sits
+ * in a cluster (`-ao`). Every word is read, operands too: a file called `--pre` asks, which costs nothing.
+ */
+function writesOrRuns(program: string, words: readonly string[]): boolean {
+  const flags = EVERYDAY_PROGRAMS[program] ?? [];
+  if (flags.length === 0) return false;
+  const attached = ATTACHED_VALUE[program] ?? "";
+  return words.some((word) => {
+    if (word.startsWith("--")) {
+      const name = word.slice(2).split("=")[0]!;
+      return name.length > 0 && flags.some((flag) => flag.startsWith("--") && flag.slice(2).startsWith(name));
+    }
+    if (!word.startsWith("-") || word.length < 2) return false;
+    for (const letter of word.slice(1)) {
+      if (flags.includes(`-${letter}`)) return true;
+      if (attached.includes(letter)) return false;
+    }
+    return false;
+  });
+}
+
+/** One command, its program and the words after it: everyday when the program is, and none of the words says otherwise. */
+function everydayCommand(words: readonly string[]): boolean {
+  const program = programName(words[0] ?? "");
+  return Object.hasOwn(EVERYDAY_PROGRAMS, program) && !writesOrRuns(program, words.slice(1));
+}
 
 function hasGrant(grants: DecideInput["grants"], key: string): boolean {
   // Discriminated on `has` rather than `Array.isArray`: the latter narrows its true branch but
@@ -82,19 +147,19 @@ function matchesBlocked(argv: readonly string[], blocked: readonly string[]): st
 }
 
 /**
- * An everyday program, by name, arguments ignored.
+ * An everyday program, by name, with none of its flags that write or run something.
  *
  * A shell launcher (`bash -lc "ls -la && wc -l x"`) counts when every segment of its script
  * runs one — otherwise a chain asks where the same steps sent one per turn would
  * not, and that is the incentive that produced one-command-per-turn. `scriptSegments` returns
- * `null` for anything it cannot read with certainty, and then only `argv[0]` counts, as before.
+ * `null` for anything it cannot read with certainty, and then only `argv` itself counts, as before.
  */
 function everyday(argv: readonly string[]): boolean {
-  if (EVERYDAY_PROGRAMS.includes(programName(argv[0] ?? ""))) return true;
+  if (everydayCommand(argv)) return true;
   const script = launchedScript(argv);
   if (script === null) return false;
   const segments = scriptSegments(script);
-  return segments !== null && segments.every((words) => EVERYDAY_PROGRAMS.includes(programName(words[0]!)));
+  return segments !== null && segments.every((words) => everydayCommand(words));
 }
 
 export function decideExec(input: DecideInput): PolicyOutcome {

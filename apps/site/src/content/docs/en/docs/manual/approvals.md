@@ -232,14 +232,17 @@ nouride policy       # what always asks, and what never does
 
 ## Everyday programs
 
-A few programs never ask, by basename, because every invocation of them is harmless, unless a credential path
-is among the arguments:
+A few programs never ask, by basename, because what they do is read and print, unless a credential path is among
+the arguments, in the command or anywhere in a shell's script:
 
 ```
 ls pwd cat head tail wc date echo which file stat grep rg tree df du uname whoami basename dirname
 ```
 
-The list is fixed since 0.8.0. Left off on purpose: `env` and `printenv` print the process environment, `find`
+Four of them have flags that do more than that, and with one of those the command asks like any new one: `rg --pre`
+and `--hostname-bin` run a program you name and `--search-zip` runs decompressors, `tree -o` and `-R` write files,
+`date --set` sets the clock, and `file --compile` and `--uncompress` write a file or run a decompressor. The list is
+fixed since 0.8.0. Left off on purpose: `env` and `printenv` print the process environment, `find`
 and `xargs` mutate through `-delete` and `-exec`, `sed` and `awk` rewrite in place, and `git status` and
 `git push --force` share a basename.
 

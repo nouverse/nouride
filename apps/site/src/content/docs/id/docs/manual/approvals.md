@@ -243,14 +243,17 @@ nouride policy       # apa yang selalu bertanya, dan apa yang gak pernah
 
 ## Program sehari-hari
 
-Beberapa program gak pernah bertanya, berdasarkan basename, karena setiap pemakaiannya gak berbahaya, kecuali ada
-path kredensial di argumennya:
+Beberapa program gak pernah bertanya, berdasarkan basename, karena yang dilakukannya hanya membaca dan mencetak,
+kecuali ada path kredensial di argumennya, di perintahnya atau di mana pun dalam script shell:
 
 ```
 ls pwd cat head tail wc date echo which file stat grep rg tree df du uname whoami basename dirname
 ```
 
-Daftarnya tetap sejak 0.8.0. Yang sengaja gak dimasukkan: `env` dan `printenv` mencetak environment proses, `find`
+Empat di antaranya punya flag yang melakukan lebih dari itu, dan dengan salah satu flag itu perintahnya bertanya
+seperti perintah baru: `rg --pre` dan `--hostname-bin` menjalankan program yang kamu sebut dan `--search-zip`
+menjalankan dekompresor, `tree -o` dan `-R` menulis file, `date --set` mengubah jam, dan `file --compile` serta
+`--uncompress` menulis file atau menjalankan dekompresor. Daftarnya tetap sejak 0.8.0. Yang sengaja gak dimasukkan: `env` dan `printenv` mencetak environment proses, `find`
 dan `xargs` bisa mengubah lewat `-delete` dan `-exec`, `sed` dan `awk` menulis ulang di tempat, dan `git status`
 serta `git push --force` punya basename yang sama.
 

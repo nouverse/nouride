@@ -994,10 +994,19 @@ function resolvedFrom(cwd: string, path: string): string {
   return `/${parts.join("/")}`;
 }
 
-/** The argument naming a credential path, clipped for a prompt — or `null`. See `CREDENTIAL_PATTERNS`. */
+/**
+ * The argument naming a credential path, clipped for a prompt — or `null`. See `CREDENTIAL_PATTERNS`.
+ *
+ * Read word by word as well as whole: `bash -lc "cat .env"` is one argument, `.env` in the middle of it, and the
+ * patterns anchored at a word's end did not see it — `cat .env` asked at `careful` and the same read through a shell ran.
+ * A word is what a shell or a flag's `=` separates.
+ */
 export function credentialPath(argv: readonly string[]): string | null {
-  const hit = argv.slice(1).find((arg) => !isFlag(arg) && CREDENTIAL_PATTERNS.some((pattern) => pattern.test(arg)));
-  return hit === undefined ? null : matchedLine(hit);
+  const names = (arg: string) => [arg, ...arg.split(/[\s;&|()<>"'`=,]+/)].filter((word) => word !== "" && !isFlag(word));
+  const hit = argv.slice(1).find((arg) => !isFlag(arg) && names(arg).some((word) => CREDENTIAL_PATTERNS.some((pattern) => pattern.test(word))));
+  if (hit !== undefined) return matchedLine(hit);
+  const inside = argv.slice(1).find((arg) => isFlag(arg) && arg.includes("=") && names(arg.slice(arg.indexOf("=") + 1)).some((word) => CREDENTIAL_PATTERNS.some((pattern) => pattern.test(word))));
+  return inside === undefined ? null : matchedLine(inside);
 }
 
 /**
