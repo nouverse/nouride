@@ -149,6 +149,8 @@ interface Room {
   gateway: FakeGateway;
   second: FakeGateway;
   requests: { messages: { role: string; content: unknown }[] }[];
+  /** What the daemon still owes an answer, as a restart would read it. */
+  owed: () => { id: string; status: string; text: string }[];
 }
 
 /** A room two of our bots share on one platform, each agent answering through its own connection. */
@@ -178,7 +180,8 @@ async function room(options: { turns: Parameters<typeof scriptedOpenAI>[0] }, to
   cleanup.push(bench.dispose);
   bench.pipeline.setTools(tools);
   bench.pipeline.attach();
-  return { pipeline: bench.pipeline, gateway, second, requests: bench.requests };
+  const owed = () => bench.inbox.open(Date.now() + 1).map((row) => ({ id: row.id, status: row.status, text: row.envelope.text }));
+  return { pipeline: bench.pipeline, gateway, second, requests: bench.requests, owed };
 }
 
 /** What a person said in the room, as the connection it reached hands it over. */
@@ -246,6 +249,30 @@ describe("a hand-over to an agent at work in the room", () => {
     // Said once, in Nox's voice, and never as a refusal.
     expect(said(h).filter((text) => text.includes("this message waits for it"))).toHaveLength(1);
     expect(h.second.sent.some((message) => message.text.includes("Nox is still working") || message.text.includes("nox is still working"))).toBe(true);
+  });
+
+  test("while it waits it is still owed, so a restart puts it back; once its turn ran, nothing is", async () => {
+    const step = heldStep();
+    const h = await room({
+      turns: [{ toolCalls: [{ id: "c1", name: "slow", args: {} }] }, { text: "nox: also restart the cache" }, { text: "Deployed." }, { text: "Cache restarted." }],
+    }, step.tools);
+    h.second.receive(inRoom("m1", "nox: deploy the shop", "telegram:second"));
+    await eventually(step.began, 4_000, "Nox's long step");
+    h.gateway.receive(inRoom("m2", "nouva: have nox restart the cache too"));
+    await eventually(() => h.gateway.sent.some((message) => message.text.includes("also restart the cache")), 4_000, "Nouva's hand-over");
+    echo(h, h.gateway);
+    await eventually(() => said(h).some((text) => text.includes("this message waits for it")), 4_000, "the room told that it waits");
+
+    // Its handler has returned, and it is neither handled nor a dead turn's: a restart reads it as waiting and
+    // delivers it again, where one marked handled would be owed to nobody.
+    const handover = () => h.owed().filter((row) => row.text.includes("also restart the cache"));
+    await eventually(() => handover().some((row) => row.status === "queued"), 4_000, "the hand-over left waiting in the inbox");
+    expect(handover().map((row) => row.status)).toEqual(["queued"]);
+
+    step.finish();
+    await h.pipeline.idle();
+    expect(h.second.sent.map((message) => message.text)).toContain("Cache restarted.");
+    await eventually(() => h.owed().length === 0, 4_000, "nothing owed once its turn ran");
   });
 
   test("a second hand-over from the same agent joins the first: said once, one turn, both asked", async () => {
