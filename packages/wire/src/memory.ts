@@ -309,6 +309,9 @@ export interface FailedEpisode {
 }
 
 export interface ForgetReport {
+  /** Who was forgotten, by key, and how: rewritten out of what mentions them, or only their name hidden. */
+  person: string;
+  mode: "forget" | "anonymize";
   episodesDeleted: number;
   factsRemoved: number;
   summariesRewritten: number;

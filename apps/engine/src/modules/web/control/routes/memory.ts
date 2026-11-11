@@ -9,9 +9,10 @@
  * reindexing are an operator's; what cannot be undone (`forget`) is an admin's.
  */
 
+import type { FailedEpisode, ForgetReport, MemoryChange, MemorySettings, MemoryStatus, PassReport, Proposal } from "@nouride/wire";
 import type { FactsMode } from "@nouride/shared";
 import { atLeast } from "@/modules/users/auth.ts";
-import { MEMORY_KEYS, type MemorySettings } from "@/modules/config/settings/memory.ts";
+import { MEMORY_KEYS, type MemorySettings as StoredMemorySettings } from "@/modules/config/settings/memory.ts";
 import type { MemoryField } from "@/modules/config/global/validate-memory.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { jsonBody } from "../payloads.ts";
@@ -45,7 +46,7 @@ const MEMORY_FIELDS: Record<MemoryField, string> = {
 export const LONG_REQUEST_SECONDS = 0;
 
 /** What each setting's JSON value must be. The value itself is checked by `validateMemory`. */
-const SETTING_TYPES: Record<keyof MemorySettings, "boolean" | "number" | "string" | "semantic"> = {
+const SETTING_TYPES: Record<keyof StoredMemorySettings, "boolean" | "number" | "string" | "semantic"> = {
   pass: "boolean",
   passAt: "string",
   passPerNight: "number",
@@ -66,7 +67,7 @@ const NESTED_TYPES: Record<"semantic", Record<string, "boolean" | "string" | "nu
   semantic: { enabled: "boolean", provider: "string", model: "string", dimensions: "number" },
 };
 
-function settingOk(type: (typeof SETTING_TYPES)[keyof MemorySettings], value: unknown): boolean {
+function settingOk(type: (typeof SETTING_TYPES)[keyof StoredMemorySettings], value: unknown): boolean {
   if (type === "semantic") {
     return Boolean(value) && typeof value === "object" && !Array.isArray(value) &&
       Object.entries(value as Record<string, unknown>).every(([key, item]) => NESTED_TYPES[type][key] === typeof item);
@@ -87,11 +88,12 @@ export function registerMemoryRoutes(control: ControlApp, deps: ControlDeps): vo
    * The settings, and `[llm.context] summary_model` beside them, read-only: the model `pass_model` sets summarizes
    * long conversations too unless that one is set (`summarizerRoute`), and the card that sets it says which.
    */
-  const view = (settings: NonNullable<ControlDeps["settings"]>) => ({ ...settings.memorySettings(), summaryModel: deps.ctx.config.llm.context.summaryModel ?? "" });
+  // `semantic` whole, from the config it is read from: the settings' own type is a change's, where it may be part.
+  const view = (settings: NonNullable<ControlDeps["settings"]>) => ({ ...settings.memorySettings(), semantic: deps.ctx.config.memory.semantic, summaryModel: deps.ctx.config.llm.context.summaryModel ?? "" });
 
   control.get("/memory/settings", (c) => {
     if (!deps.settings) return c.json({ error: "there is no config file to read", plain: NO_SETTINGS }, 409);
-    return c.json(view(deps.settings));
+    return c.json(view(deps.settings) satisfies MemorySettings);
   });
 
   control.put("/memory/settings", async (c) => {
@@ -103,7 +105,7 @@ export function registerMemoryRoutes(control: ControlApp, deps: ControlDeps): vo
 
     const patch: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(body)) {
-      const type = SETTING_TYPES[key as keyof MemorySettings];
+      const type = SETTING_TYPES[key as keyof StoredMemorySettings];
       if (!type || !(key in MEMORY_KEYS)) return c.json({ error: `unknown memory setting "${key}"` }, 400);
       if (!settingOk(type, value)) {
         const want = type === "semantic" ? "an object of enabled, provider, model and dimensions" : `a ${type}`;
@@ -111,12 +113,12 @@ export function registerMemoryRoutes(control: ControlApp, deps: ControlDeps): vo
       }
       patch[key] = value;
     }
-    const result = await deps.settings.setMemorySettings({ patch: patch as Partial<MemorySettings>, actor: principal.actor });
+    const result = await deps.settings.setMemorySettings({ patch: patch as Partial<StoredMemorySettings>, actor: principal.actor });
     if (!result.ok) {
       const plain = result.probe ? "The embedding model did not answer, so search by meaning stays off. Check its provider and its name, and save again." : notSaved(result.field && MEMORY_FIELDS[result.field]);
       return c.json({ error: result.error, plain }, 400);
     }
-    return c.json(view(deps.settings));
+    return c.json(view(deps.settings) satisfies MemorySettings);
   });
 
   /** One person's `facts` over `[memory] facts` — `null` follows it again. An operator's, like the rest. */
@@ -130,7 +132,7 @@ export function registerMemoryRoutes(control: ControlApp, deps: ControlDeps): vo
     }
     const result = await deps.settings.setPersonFacts({ key: c.req.param("key"), facts: body.facts as FactsMode | null, actor: principal.actor });
     if (!result.ok) return c.json({ error: result.error, plain: NOT_SAVED }, 400);
-    return c.json({ ok: true });
+    return c.json({ ok: true } satisfies { ok: true });
   });
 
   /** Whether one person's memory goes into prompts, over `[memory] recall` — `null` follows it again. */
@@ -144,7 +146,7 @@ export function registerMemoryRoutes(control: ControlApp, deps: ControlDeps): vo
     }
     const result = await deps.settings.setPersonRecall({ key: c.req.param("key"), recall: body.recall as boolean | null, actor: principal.actor });
     if (!result.ok) return c.json({ error: result.error, plain: NOT_SAVED }, 400);
-    return c.json({ ok: true });
+    return c.json({ ok: true } satisfies { ok: true });
   });
 
   /** Where memory stands: the pass, what waits for it and whether it keeps up, semantic search. */
@@ -160,7 +162,7 @@ export function registerMemoryRoutes(control: ControlApp, deps: ControlDeps): vo
       semantic: deps.memory!.semanticStatus(),
       archive: deps.memory!.archiveSize(),
       index: deps.memory!.indexCheck(),
-    });
+    } satisfies MemoryStatus);
   });
 
   control.post("/memory/pass", async (c) => {
@@ -180,7 +182,7 @@ export function registerMemoryRoutes(control: ControlApp, deps: ControlDeps): vo
       return c.json({ error: result.refused, plain }, 409);
     }
     deps.audit?.record({ action: "memory_pass_run", actor: principal.actor, details: { cut: result.report.cut, filed: result.report.filed, failed: result.report.failed.length } });
-    return c.json(result.report);
+    return c.json(result.report satisfies PassReport);
   });
 
   /** Embed what has no vector yet — after turning semantic search on, or a night the embedder was down. */
@@ -201,14 +203,14 @@ export function registerMemoryRoutes(control: ControlApp, deps: ControlDeps): vo
     // minutes, and a request held that long is closed by the server's idle timeout.
     deps.audit?.record({ action: "memory_embed_started", actor: principal.actor });
     void deps.memory!.embedCatchUp().catch(() => null);
-    return c.json({ started: true, ...deps.memory!.semanticStatus() }, 202);
+    return c.json({ started: true, ...deps.memory!.semanticStatus() } satisfies { started: boolean; items: number }, 202);
   });
 
   // Operator-only: a proposal is a fact about a person, not yet approved.
   control.get("/memory/proposals", async (c) => {
     const no = refusal(c.get("principal"), "operator");
     if (no) return c.json({ error: no[0] }, no[1]);
-    return c.json({ proposals: await deps.memory!.proposals() });
+    return c.json({ proposals: await deps.memory!.proposals() } satisfies { proposals: Proposal[] });
   });
 
   for (const verb of ["approve", "deny"] as const) {
@@ -235,13 +237,13 @@ export function registerMemoryRoutes(control: ControlApp, deps: ControlDeps): vo
     if (no) return c.json({ error: no[0] }, no[1]);
     const subject = c.req.query("subject") || undefined;
     const limit = Math.min(500, Math.max(1, Number(c.req.query("limit") ?? 100) || 100));
-    return c.json({ changes: deps.memory!.changes({ ...(subject ? { subject } : {}), limit }) });
+    return c.json({ changes: deps.memory!.changes({ ...(subject ? { subject } : {}), limit }) } satisfies { changes: MemoryChange[] });
   });
 
   control.get("/memory/failed", (c) => {
     const no = refusal(c.get("principal"), "operator");
     if (no) return c.json({ error: no[0] }, no[1]);
-    return c.json({ failed: deps.memory!.failed() });
+    return c.json({ failed: deps.memory!.failed() } satisfies { failed: FailedEpisode[] });
   });
 
   control.post("/memory/retry", async (c) => {
@@ -252,7 +254,7 @@ export function registerMemoryRoutes(control: ControlApp, deps: ControlDeps): vo
     const episode = typeof body.episode === "string" && body.episode ? body.episode : undefined;
     deps.memory!.retry(episode);
     deps.audit?.record({ action: "memory_retry", actor: principal.actor, details: { episode: episode ?? null } });
-    return c.json({ episode: episode ?? null });
+    return c.json({ episode: episode ?? null } satisfies { episode: string | null });
   });
 
   control.post("/memory/reindex", async (c) => {
@@ -277,6 +279,6 @@ export function registerMemoryRoutes(control: ControlApp, deps: ControlDeps): vo
     const result = await deps.memory!.forget(body.person, mode, mode === "forget" ? deps.memoryPass?.ask : undefined);
     if ("refused" in result) return c.json({ error: result.refused, plain: "Nothing was forgotten: Nouride does not know that person." }, 400);
     deps.audit?.record({ action: "memory_forgotten", actor: principal.actor, details: { person: body.person, mode, episodes: result.episodesDeleted, rewritten: result.summariesRewritten } });
-    return c.json({ person: body.person, mode, ...result });
+    return c.json({ person: body.person, mode, ...result } satisfies ForgetReport);
   });
 }

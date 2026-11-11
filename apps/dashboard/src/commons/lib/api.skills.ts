@@ -28,6 +28,7 @@ export const skillsApi = {
       path: string;
       requires: string[];
       missing: string[];
+      needsTools: string[];
       source: string;
     }>(`${control}/skills/${encodeURIComponent(name)}/source`),
   /** What a skill ships beside its body — see the note on the panel that renders it. */
@@ -49,9 +50,9 @@ export const skillsApi = {
       `${control}/skills/${encodeURIComponent(name)}/files/read?path=${encodeURIComponent(path)}`,
     ),
   saveSkillFile: (name: string, path: string, source: string) =>
-    post<{ ok: true; path: string }>(`${control}/skills/${encodeURIComponent(name)}/files/write`, { path, source }),
+    post<{ ok: true; skill: string; path: string }>(`${control}/skills/${encodeURIComponent(name)}/files/write`, { path, source }),
   deleteSkillFile: (name: string, path: string) =>
-    request<{ ok: true; path: string; wasReferenced: boolean }>(
+    request<{ ok: true; skill: string; path: string; wasReferenced: boolean }>(
       `${control}/skills/${encodeURIComponent(name)}/files?path=${encodeURIComponent(path)}`,
       { method: "DELETE" },
     ),
@@ -84,7 +85,7 @@ export const skillsApi = {
   // One cell of the matrix, because that is what the operator clicks. The daemon merges it into the
   // agent's whole map before writing, so this cannot drop a decision made in another tab.
   setSkillForAgent: (name: string, agent: string, enabled: boolean) =>
-    post<{ ok: true }>(
+    post<{ ok: true; skill: string; agentId: string; enabled: boolean }>(
       `${control}/skills/${encodeURIComponent(name)}/agents/${encodeURIComponent(agent)}`,
       { enabled },
     ),

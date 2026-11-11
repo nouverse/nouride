@@ -12,6 +12,7 @@
  * is the rule this file keeps rather than an accident of position.
  */
 
+import type { CatalogSkill, SoftwareCheck } from "@nouride/wire";
 import { readTextFileIfExists } from "@nouride/runtime";
 import { agentSkillPool, parseFrontmatter, skillEnabled, skillsDirFor, type PoolSkill } from "@nouride/persona";
 import type { LoadedAgent, Skill } from "@nouride/shared";
@@ -132,7 +133,7 @@ export function registerSkillRoutes(control: ControlApp, deps: ControlDeps): voi
       software: checkSkillSoftware(flat),
       poolDir: skillsDirFor(deps.ctx.config.daemon.agentsDir),
       editable: Boolean(deps.settings),
-    });
+    } satisfies { skills: CatalogSkill[]; software: SoftwareCheck[]; poolDir: string; editable: boolean });
   });
 
   /**
@@ -159,7 +160,7 @@ export function registerSkillRoutes(control: ControlApp, deps: ControlDeps): voi
       missing: missingFor(found),
       needsTools: found.needsTools ?? [],
       source,
-    });
+    } satisfies { name: string; description: string; scope: string; path: string; requires: string[]; missing: string[]; needsTools: string[]; source: string });
   });
 
   /**
@@ -241,7 +242,7 @@ export function registerSkillRoutes(control: ControlApp, deps: ControlDeps): voi
       actor: principal.actor,
       details: { skill: name, path: written.path, bytes: source.length },
     });
-    return c.json({ ok: true, skill: name, path: written.path });
+    return c.json({ ok: true, skill: name, path: written.path } satisfies { ok: true; skill: string; path: string });
   });
 
   /**
@@ -277,7 +278,7 @@ export function registerSkillRoutes(control: ControlApp, deps: ControlDeps): voi
     } catch (err) {
       return c.json({ error: `saved but reloading the agents failed: ${String(err)}`, plain: "Saved, but the agents could not load it yet. Whoever looks after them can see why." }, 400);
     }
-    return c.json({ ok: true, skill: name, off: payload.off });
+    return c.json({ ok: true, skill: name, off: payload.off } satisfies { ok: true; skill: string; off: boolean });
   });
 
   /**
@@ -299,7 +300,7 @@ export function registerSkillRoutes(control: ControlApp, deps: ControlDeps): voi
       // they live inside the executable's directory and an upgrade would undo the change.
       editable: found.scope !== "builtin" && Boolean(deps.settings),
       files: await listSupportFiles(deps.ctx.config.daemon.agentsDir, name),
-    });
+    } satisfies { name: string; scope: string; editable: boolean; files: { path: string; bytes: number; kind: "markdown" | "script" | "text" | "binary"; editable: boolean; referenced: boolean }[] });
   });
 
   /** One support file as text. Binaries are listed and deleted, never read. */
@@ -310,7 +311,7 @@ export function registerSkillRoutes(control: ControlApp, deps: ControlDeps): voi
       return c.json({ error: "no such skill", name }, 404);
     }
     const result = await readSupportFile(deps.ctx.config.daemon.agentsDir, name, path);
-    return result.ok ? c.json({ name, path, kind: result.kind, source: result.text }) : c.json({ error: result.error, plain: "This file could not be opened." }, 400);
+    return result.ok ? c.json({ name, path, kind: result.kind, source: result.text } satisfies { name: string; path: string; kind: string; source: string }) : c.json({ error: result.error, plain: "This file could not be opened." }, 400);
   });
 
   /**
@@ -350,7 +351,7 @@ export function registerSkillRoutes(control: ControlApp, deps: ControlDeps): voi
       actor: principal.actor,
       details: { skill: name, path, bytes: source.length },
     });
-    return c.json({ ok: true, skill: name, path });
+    return c.json({ ok: true, skill: name, path } satisfies { ok: true; skill: string; path: string });
   });
 
   /**
@@ -386,7 +387,7 @@ export function registerSkillRoutes(control: ControlApp, deps: ControlDeps): voi
       actor: principal.actor,
       details: { skill: name, path, was_referenced: removed.wasReferenced },
     });
-    return c.json({ ok: true, skill: name, path, wasReferenced: removed.wasReferenced });
+    return c.json({ ok: true, skill: name, path, wasReferenced: removed.wasReferenced } satisfies { ok: true; skill: string; path: string; wasReferenced: boolean });
   });
 
   /**
@@ -441,7 +442,7 @@ export function registerSkillRoutes(control: ControlApp, deps: ControlDeps): voi
       actor: principal.actor,
       details: { skill: name, path: removed.path },
     });
-    return c.json({ ok: true, skill: name, path: removed.path });
+    return c.json({ ok: true, skill: name, path: removed.path } satisfies { ok: true; skill: string; path: string });
   });
 
   /**
@@ -479,7 +480,7 @@ export function registerSkillRoutes(control: ControlApp, deps: ControlDeps): voi
       actor: principal.actor,
     });
     if (!result.ok) return c.json({ error: result.error, plain: NOT_SAVED }, 400);
-    return c.json({ ok: true, skill: name, agentId, enabled: body.enabled });
+    return c.json({ ok: true, skill: name, agentId, enabled: body.enabled } satisfies { ok: true; skill: string; agentId: string; enabled: boolean });
   });
 }
 

@@ -7,6 +7,7 @@
  * Registered before `agents.ts`: `POST /agents/:id/:action` would otherwise take `POST /agents/:id/skill-roots`.
  */
 
+import type { SkillRoot } from "@nouride/wire";
 import { atLeast } from "@/modules/users/auth.ts";
 import type { SkillRootRefusal } from "@/modules/setup/skill-roots.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
@@ -33,7 +34,7 @@ export function registerSkillRootRoutes(control: ControlApp, deps: ControlDeps):
     const id = c.req.param("id");
     const roots = await deps.skillRoots.list(id);
     if (!roots) return c.json({ error: `no agent "${id}"` }, 404);
-    return c.json({ roots, editable: atLeast(c.get("principal"), "admin") });
+    return c.json({ roots, editable: atLeast(c.get("principal"), "admin") } satisfies { roots: SkillRoot[]; editable: boolean });
   });
 
   control.post("/agents/:id/skill-roots", async (c) => {
@@ -44,7 +45,7 @@ export function registerSkillRootRoutes(control: ControlApp, deps: ControlDeps):
     if (typeof body.path !== "string" || !body.path.trim()) return c.json({ error: "path must be a folder's full path", plain: REFUSED.path.plain }, 400);
     const result = await deps.skillRoots.add({ agentId: c.req.param("id"), path: body.path, actor: principal.actor });
     if (!result.ok) return c.json({ error: result.error, plain: REFUSED[result.refused].plain }, REFUSED[result.refused].status);
-    return c.json(result);
+    return c.json(result satisfies { ok: true; path: string; skills: string[] });
   });
 
   control.delete("/agents/:id/skill-roots", async (c) => {
@@ -55,6 +56,6 @@ export function registerSkillRootRoutes(control: ControlApp, deps: ControlDeps):
     if (!path.trim()) return c.json({ error: "path must name one of the agent's skill roots", plain: REFUSED.unknown.plain }, 400);
     const result = await deps.skillRoots.remove({ agentId: c.req.param("id"), path, actor: principal.actor });
     if (!result.ok) return c.json({ error: result.error, plain: REFUSED[result.refused].plain }, REFUSED[result.refused].status);
-    return c.json(result);
+    return c.json(result satisfies { ok: true; path: string });
   });
 }

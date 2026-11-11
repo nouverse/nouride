@@ -6,12 +6,13 @@
  * as an edit on People is: it is what `send_message` takes a group's name as.
  */
 
+import type { GroupRecord } from "@nouride/wire";
 import { atLeast } from "@/modules/users/auth.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { jsonBody } from "../payloads.ts";
 
 export function registerGroupRoutes(control: ControlApp, deps: ControlDeps): void {
-  control.get("/groups", (c) => c.json({ groups: deps.pipeline.knownRooms() }));
+  control.get("/groups", (c) => c.json({ groups: deps.pipeline.knownRooms() } satisfies { groups: GroupRecord[] }));
 
   /** Rename one: `{ gatewayId, chatId, title }`. An empty title clears the rename, and the platform's name is back. */
   control.post("/groups", async (c) => {
@@ -32,6 +33,6 @@ export function registerGroupRoutes(control: ControlApp, deps: ControlDeps): voi
       return c.json({ error: renamed.reason, plain }, 400);
     }
     deps.audit.record({ action: "room_renamed", actor: c.get("principal").actor, details: { gatewayId, chatId, title: body.title.trim() || null } });
-    return c.json({ ok: true, ...(renamed.name ? { name: renamed.name } : {}) });
+    return c.json({ ok: true, ...(renamed.name ? { name: renamed.name } : {}) } satisfies { ok: boolean; name?: string });
   });
 }

@@ -17,6 +17,7 @@
  * button that did both would be asking one question about two different things.
  */
 
+import type { UpdateCheck, UpdateDownload, UpdateStatus, UpdateTrack } from "@nouride/wire";
 import type { Context } from "hono";
 import { atLeast, type Principal } from "@/modules/users/auth.ts";
 import {
@@ -101,7 +102,7 @@ export function registerUpdateRoutes(control: ControlApp, deps: ControlDeps): vo
     if (!ops.updateSupported()) {
       // 200, not an error: "this build cannot check" is an answer about the build, and the
       // dashboard renders it as a state rather than as a failed request.
-      return c.json({ supported: false, install, download: ops.downloadState() });
+      return c.json({ supported: false, install, download: ops.downloadState() } satisfies UpdateStatus);
     }
     try {
       return c.json({
@@ -111,7 +112,7 @@ export function registerUpdateRoutes(control: ControlApp, deps: ControlDeps): vo
         // `?force=1` is the Check again button. A poll must never force — that is the
         // rate-limit outage the cache exists to prevent, wearing a query parameter.
         check: await ops.checkForUpdate(dataDir(), c.req.query("force") === "1"),
-      });
+      } satisfies UpdateStatus);
     } catch (err) {
       /**
        * The channel being unreachable is not a server error here — it is the answer, and it is
@@ -140,7 +141,7 @@ export function registerUpdateRoutes(control: ControlApp, deps: ControlDeps): vo
    *
    * Nothing here touches the channel — it reads a counter the download is already keeping.
    */
-  control.get("/update/progress", (c) => c.json({ download: ops.downloadState() }));
+  control.get("/update/progress", (c) => c.json({ download: ops.downloadState() } satisfies { download: UpdateDownload }));
 
   /**
    * The track (0.8.18): `latest` or `lts`. Admin, as everything that decides what replaces the binary is. The answer
@@ -154,9 +155,9 @@ export function registerUpdateRoutes(control: ControlApp, deps: ControlDeps): vo
     const result = await deps.settings.setUpdateTrack({ track: typeof body.track === "string" ? body.track : "", actor: principal.actor });
     if (!result.ok) return c.json({ error: result.error, plain: NOT_SAVED }, 400);
     const track = deps.ctx.config.update.track;
-    if (!ops.updateSupported()) return c.json({ ok: true, track });
+    if (!ops.updateSupported()) return c.json({ ok: true, track } satisfies { ok: true; track: UpdateTrack; check?: UpdateCheck; error?: string });
     try {
-      return c.json({ ok: true, track, check: await ops.checkForUpdate(dataDir()) });
+      return c.json({ ok: true, track, check: await ops.checkForUpdate(dataDir()) } satisfies { ok: true; track: UpdateTrack; check?: UpdateCheck; error?: string });
     } catch (err) {
       return c.json({ ok: true, track, error: err instanceof Error ? err.message : String(err), plain: "Saved, but Nouride could not check for updates just now. Try again in a moment." });
     }
@@ -173,7 +174,7 @@ export function registerUpdateRoutes(control: ControlApp, deps: ControlDeps): vo
         actor: c.get("principal").actor,
         details: { to: started.check.latest },
       });
-      return c.json({ ok: true, ...started });
+      return c.json({ ok: true, ...started } satisfies { ok: true; check: UpdateCheck; download: UpdateDownload });
     } catch (err) {
       return c.json({ error: err instanceof Error ? err.message : String(err), plain: "The update did not download. Try again in a moment." }, 409);
     }
@@ -182,14 +183,14 @@ export function registerUpdateRoutes(control: ControlApp, deps: ControlDeps): vo
   control.post("/update/pause", (c) => {
     const denied = guard(c, ops);
     if (denied) return denied;
-    return c.json({ ok: true, download: ops.pauseDownload() });
+    return c.json({ ok: true, download: ops.pauseDownload() } satisfies { ok: true; download: UpdateDownload });
   });
 
   /** Throw the partial away. Separate from pause: one is "later", the other is "no". */
   control.post("/update/discard", async (c) => {
     const denied = guard(c, ops);
     if (denied) return denied;
-    return c.json({ ok: true, download: await ops.discardDownload() });
+    return c.json({ ok: true, download: await ops.discardDownload() } satisfies { ok: true; download: UpdateDownload });
   });
 
   /**

@@ -8,6 +8,7 @@
  * only whether one is set.
  */
 
+import type { AgentMcpTool, McpLibraryServer, McpServer } from "@nouride/wire";
 import { readMcpLibrary, SHARED_LOGIN } from "@nouride/persona";
 import type { McpServerConfig } from "@nouride/shared";
 import { atLeast } from "@/modules/users/auth.ts";
@@ -107,7 +108,7 @@ export function registerMcpRoutes(control: ControlApp, deps: ControlDeps): void 
           };
         }),
       })),
-    });
+    } satisfies { servers: McpLibraryServer[]; error?: string });
   });
 
   control.post("/mcp/library", async (c) => {
@@ -124,7 +125,7 @@ export function registerMcpRoutes(control: ControlApp, deps: ControlDeps): void 
       ...(envSecrets ? { envSecrets } : {}),
       ...(Array.isArray(body.enable) ? { enable: body.enable.map(String) } : {}),
     });
-    return result.ok ? c.json(result) : c.json({ error: result.error, plain: notSaved(result.field && MCP_FIELDS[result.field]) }, 400);
+    return result.ok ? c.json(result satisfies { ok: true; restartRequired: boolean }) : c.json({ error: result.error, plain: notSaved(result.field && MCP_FIELDS[result.field]) }, 400);
   });
 
   control.delete("/mcp/library/:name", async (c) => {
@@ -137,7 +138,7 @@ export function registerMcpRoutes(control: ControlApp, deps: ControlDeps): void 
     // Its logins go with it: tokens kept for a server nothing uses are credentials kept for nothing.
     await deps.mcpLogins?.forget(SHARED_LOGIN, name);
     for (const id of result.users ?? []) await deps.mcpLogins?.forget(id, name);
-    return c.json({ ok: true, restartRequired: false });
+    return c.json({ ok: true, restartRequired: false } satisfies { ok: true; restartRequired: boolean });
   });
 
   // ── One agent's switches ─────────────────────────────────────────────────
@@ -162,8 +163,8 @@ export function registerMcpRoutes(control: ControlApp, deps: ControlDeps): void 
       return {
         ...shown(effective ?? server, hasSecret),
         on: Boolean(choice?.on),
-        credential: choice?.envSecrets || choice?.authSecret || choice?.login ? "own" : "library",
-        loginAs: holder === SHARED_LOGIN ? "library" : "own",
+        credential: choice?.envSecrets || choice?.authSecret || choice?.login ? ("own" as const) : ("library" as const),
+        loginAs: holder === SHARED_LOGIN ? ("library" as const) : ("own" as const),
         ...(login ? { login } : {}),
         needsLogin: Boolean(state?.needsLogin),
         connected: state?.connected ?? false,
@@ -180,7 +181,7 @@ export function registerMcpRoutes(control: ControlApp, deps: ControlDeps): void 
     return c.json({
       ...(library.error ? { error: library.error, plain: "The list of connectors could not be read in full: some may be missing." } : {}),
       servers: library.servers.map(row),
-    });
+    } satisfies { servers: McpServer[]; error?: string });
   });
 
   /**
@@ -196,7 +197,7 @@ export function registerMcpRoutes(control: ControlApp, deps: ControlDeps): void 
     if (!tools) return c.json({ error: `${name} is not connected for ${id}. Switch it on, and its tools are listed once it is up` }, 409);
     const chosen = agent.config.mcpServers.find((server) => server.name === name)?.tools;
     const unknown = chosen ? chosen.filter((tool) => !tools.some((row) => row.name === tool)) : [];
-    return c.json({ tools, all: !chosen, ...(unknown.length > 0 ? { unknown } : {}) });
+    return c.json({ tools, all: !chosen, ...(unknown.length > 0 ? { unknown } : {}) } satisfies { tools: AgentMcpTool[]; all: boolean; unknown?: string[] });
   });
 
   /** Switch a library server on or off for this agent, or set the credential it uses here. */
@@ -227,7 +228,7 @@ export function registerMcpRoutes(control: ControlApp, deps: ControlDeps): void 
       // A list chooses the server's tools for this agent (0.7.21); null gives it all of them again.
       ...(body.tools === null ? { tools: null } : Array.isArray(body.tools) ? { tools: body.tools.map(String) } : {}),
     });
-    return result.ok ? c.json(result) : c.json({ error: result.error, plain: notSaved(result.field && MCP_FIELDS[result.field]) }, 400);
+    return result.ok ? c.json(result satisfies { ok: true; restartRequired: boolean }) : c.json({ error: result.error, plain: notSaved(result.field && MCP_FIELDS[result.field]) }, 400);
   });
 
   /** Add a server for this agent: into the library, switched on here — `nouride mcp add --agent`, and older pages. */

@@ -6,7 +6,7 @@
  */
 
 import { control, post, request } from "./api.client";
-import type { ApprovalDecision, ApprovalRequest, ChatListPayload, LiveTurn, Room, RunningJob, SessionSummary, SlashCommand, Transcript, TurnAttachment, UploadedFile } from "@nouride/wire";
+import type { ApprovalDecision, ApprovalRequest, ChatListPayload, ChatTurn, LiveTurn, Room, RunningJob, SessionSummary, SlashCommand, Transcript, TurnAttachment, UploadedFile } from "@nouride/wire";
 
 export const chatApi = {
   /**
@@ -19,7 +19,7 @@ export const chatApi = {
   stop: (chatId: string, agent?: string) =>
     post<{ stopped: number }>(`${control}/stop`, { chatId, ...(agent ? { agent } : {}) }),
 
-  approvals: () => request<{ pending: ApprovalRequest[] }>(`${control}/approvals`),
+  approvals: () => request<{ pending: ApprovalRequest[]; settled?: ApprovalRequest[] }>(`${control}/approvals`),
 
   answerApproval: (id: string, decision: ApprovalDecision) =>
     // What the route answers. A 409 means it was answered elsewhere or expired, and changed nothing.
@@ -46,7 +46,7 @@ export const chatApi = {
     ),
 
   deleteRoom: (chatId: string) =>
-    request<{ ok: true; turns: number; events: number; messages: number; stopped: number }>(
+    request<{ ok: true; turns: number; events: number; messages: number; files: number; stopped: number }>(
       `${control}/rooms/${encodeURIComponent(chatId)}`,
       { method: "DELETE" },
     ),
@@ -66,7 +66,7 @@ export const chatApi = {
    * a list whose membership changes as agents finish.
    */
   roomLive: (chatId: string) =>
-    request<{ turns: LiveTurn[]; jobs: RunningJob[] }>(
+    request<{ turns: ChatTurn[]; jobs: RunningJob[] }>(
       `${control}/rooms/${encodeURIComponent(chatId)}/live`,
     ),
 

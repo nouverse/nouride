@@ -5,6 +5,7 @@
  * would otherwise swallow every three-segment agent route declared after it.
  */
 
+import type { FileSummary } from "@nouride/wire";
 import { atLeast } from "@/modules/users/auth.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { jsonBody } from "../payloads.ts";
@@ -15,13 +16,13 @@ export function registerFileRoutes(control: ControlApp, deps: ControlDeps): void
     if (!deps.files) return c.json({ error: "file editing is not available on this daemon", plain: NOT_RUNNING }, 501);
     const files = await deps.files.listForAgent(c.req.param("id"));
     if (!files) return c.json({ error: "no such agent" }, 404);
-    return c.json({ files });
+    return c.json({ files } satisfies { files: FileSummary[] });
   });
 
   control.get("/agents/:id/files/:name", async (c) => {
     if (!deps.files) return c.json({ error: "file editing is not available on this daemon", plain: NOT_RUNNING }, 501);
     const result = await deps.files.read(c.req.param("id"), c.req.param("name"));
-    return "error" in result ? c.json({ error: result.error, plain: "This file cannot be opened here." }, 400) : c.json(result);
+    return "error" in result ? c.json({ error: result.error, plain: "This file cannot be opened here." }, 400) : c.json(result satisfies { content: string });
   });
 
   control.post("/agents/:id/files/:name", async (c) => {
@@ -43,12 +44,12 @@ export function registerFileRoutes(control: ControlApp, deps: ControlDeps): void
     }
     // The one file a coding CLI reads that its sessions are not compared by — the agent's own notes (`writeInstruction`).
     if (c.req.param("name") === "MEMORY.md") deps.externalAgents?.renew(c.req.param("id"));
-    return c.json(result);
+    return c.json(result satisfies { ok: true });
   });
 
   control.get("/config", async (c) => {
     if (!deps.files) return c.json({ error: "file editing is not available on this daemon", plain: NOT_RUNNING }, 501);
-    return c.json({ content: await deps.files.readDaemonConfig(), path: deps.files.daemonConfigPath() });
+    return c.json({ content: await deps.files.readDaemonConfig(), path: deps.files.daemonConfigPath() } satisfies { content: string; path: string });
   });
 
   control.post("/config", async (c) => {
@@ -63,7 +64,7 @@ export function registerFileRoutes(control: ControlApp, deps: ControlDeps): void
 
     const expected = typeof body.expected === "string" ? body.expected : undefined;
     const result = await deps.files.writeDaemonConfig(body.content, principal.actor, expected);
-    if (result.ok) return c.json(result);
+    if (result.ok) return c.json(result satisfies { ok: true; restartRequired: true });
     return c.json({ error: result.error, ...(result.conflict ? { conflict: true } : {}), plain: result.conflict ? CHANGED_MEANWHILE : NOT_SAVED }, result.conflict ? 409 : 400);
   });
 }

@@ -11,6 +11,7 @@
  * never names a path; `modules/memory/manage.ts` maps a subject to its file.
  */
 
+import type { AgentNotes, Episode, EpisodeSummary, PersonSummary } from "@nouride/wire";
 import { gzipText, join, readTextFileIfExists, statFile } from "@nouride/runtime";
 import type { EpisodeStatus } from "@/modules/memory/index.ts";
 import { atLeast } from "@/modules/users/auth.ts";
@@ -48,7 +49,7 @@ export function registerMemoryDocumentRoutes(control: ControlApp, deps: ControlD
   control.get("/memory/people", (c) => {
     const no = refusal(c.get("principal"));
     if (no) return c.json({ error: no[0] }, no[1]);
-    return c.json({ people: deps.memory!.people() });
+    return c.json({ people: deps.memory!.people() } satisfies { people: PersonSummary[] });
   });
 
   control.get("/memory/documents/:subject", async (c) => {
@@ -120,7 +121,7 @@ export function registerMemoryDocumentRoutes(control: ControlApp, deps: ControlD
       },
       limit,
     );
-    return c.json({ episodes });
+    return c.json({ episodes } satisfies { episodes: EpisodeSummary[] });
   });
 
   /**
@@ -168,7 +169,7 @@ export function registerMemoryDocumentRoutes(control: ControlApp, deps: ControlD
     const no = refusal(c.get("principal"));
     if (no) return c.json({ error: no[0] }, no[1]);
     const result = await deps.memory!.episode(c.req.param("id"));
-    return result ? c.json(result) : c.json({ error: "no such conversation" }, 404);
+    return result ? c.json(result satisfies { episode: Episode; archived?: string }) : c.json({ error: "no such conversation" }, 404);
   });
 
   /** Delete one conversation, its archive copy and the facts it sourced. Final, and said so by the dashboard. */
@@ -180,7 +181,7 @@ export function registerMemoryDocumentRoutes(control: ControlApp, deps: ControlD
     const result = await deps.memory!.deleteEpisode(id);
     if (result.episodes === 0) return c.json({ error: "no such conversation" }, 404);
     deps.audit?.record({ action: "memory_episode_deleted", actor: principal.actor, details: { id, facts: result.facts } });
-    return c.json({ id, ...result });
+    return c.json({ id, ...result } satisfies { id: string; episodes: number; facts: number });
   });
 
   // ─── agent notes ───
@@ -193,7 +194,7 @@ export function registerMemoryDocumentRoutes(control: ControlApp, deps: ControlD
         const stat = statFile(join(agent.dir, "MEMORY.md"));
         return { id: agent.config.id, name: agent.config.displayName, bytes: stat?.size ?? 0, updatedAt: stat ? Math.round(stat.mtimeMs) : null };
       }),
-    });
+    } satisfies { agents: AgentNotes[] });
   });
 
   control.get("/memory/agents/:id", async (c) => {
@@ -202,6 +203,6 @@ export function registerMemoryDocumentRoutes(control: ControlApp, deps: ControlD
     const agent = deps.registry.get(c.req.param("id"));
     if (!agent) return c.json({ error: "no such agent" }, 404);
     const content = await readTextFileIfExists(join(agent.dir, "MEMORY.md"));
-    return c.json({ id: agent.config.id, name: agent.config.displayName, content: content ?? "", exists: content !== null });
+    return c.json({ id: agent.config.id, name: agent.config.displayName, content: content ?? "", exists: content !== null } satisfies { id: string; name: string; content: string; exists: boolean });
   });
 }

@@ -45,7 +45,7 @@ export const authApi = {
   createUser: (input: { username: string; password?: string; role: string }) =>
     post<{ user: User }>(`${control}/users`, { ...input, must_change_password: true }),
 
-  deleteUser: (id: string) => request<{ ok: true }>(`${control}/users/${id}`, { method: "DELETE" }),
+  deleteUser: (id: string) => request<{ ok: true; warning?: string }>(`${control}/users/${id}`, { method: "DELETE" }),
 
   setUserRole: (id: string, role: string) => post<{ ok: true }>(`${control}/users/${id}/role`, { role }),
 };

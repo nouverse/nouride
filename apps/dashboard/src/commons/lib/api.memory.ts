@@ -45,7 +45,7 @@ export const memoryApi = {
   },
   memoryFacets: () => request<MemoryFacets>(`${control}/memory/facets`),
   memoryEpisode: (id: string) => request<{ episode: Episode; archived?: string }>(`${control}/memory/episodes/${encodeURIComponent(id)}`),
-  deleteEpisode: (id: string) => request<{ episodes: number; facts: number }>(`${control}/memory/episodes/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  deleteEpisode: (id: string) => request<{ id: string; episodes: number; facts: number }>(`${control}/memory/episodes/${encodeURIComponent(id)}`, { method: "DELETE" }),
 
   agentNotes: () => request<{ agents: AgentNotes[] }>(`${control}/memory/agents`),
   agentNote: (id: string) => request<{ id: string; name: string; content: string; exists: boolean }>(`${control}/memory/agents/${encodeURIComponent(id)}`),

@@ -2,6 +2,7 @@
  * Provider profiles: the endpoints agents run against, and what they offer.
  */
 
+import type { ProviderProfileView } from "@nouride/wire";
 import type { ProviderKind } from "@nouride/shared";
 import { atLeast } from "@/modules/users/auth.ts";
 import type { ProviderField } from "@/modules/config/settings/providers.ts";
@@ -19,8 +20,8 @@ const PROVIDER_FIELDS: Record<ProviderField, string> = {
 
 export function registerProviderRoutes(control: ControlApp, deps: ControlDeps): void {
   control.get("/providers", (c) => {
-    if (!deps.settings) return c.json({ providers: [], editable: false });
-    return c.json({ providers: deps.settings.providerProfiles(), editable: true });
+    if (!deps.settings) return c.json({ providers: [], editable: false } satisfies { providers: ProviderProfileView[]; editable: boolean });
+    return c.json({ providers: deps.settings.providerProfiles(), editable: true } satisfies { providers: ProviderProfileView[]; editable: boolean });
   });
 
   control.post("/providers", async (c) => {
@@ -36,7 +37,7 @@ export function registerProviderRoutes(control: ControlApp, deps: ControlDeps): 
       actor: principal.actor,
       ...(typeof body.apiKey === "string" ? { apiKey: body.apiKey } : {}),
     });
-    return result.ok ? c.json(result) : c.json({ error: result.error, plain: notSaved(result.field && PROVIDER_FIELDS[result.field]) }, 400);
+    return result.ok ? c.json(result satisfies { ok: true; restartRequired: boolean }) : c.json({ error: result.error, plain: notSaved(result.field && PROVIDER_FIELDS[result.field]) }, 400);
   });
 
   control.delete("/providers/:name", async (c) => {
@@ -51,7 +52,7 @@ export function registerProviderRoutes(control: ControlApp, deps: ControlDeps): 
         .filter((agent) => agent.config.llm.provider === name)
         .map((agent) => agent.config.id),
     );
-    return result.ok ? c.json(result) : c.json({ error: result.error, plain: NOT_CHANGED }, 400);
+    return result.ok ? c.json(result satisfies { ok: true }) : c.json({ error: result.error, plain: NOT_CHANGED }, 400);
   });
 
   /**
@@ -71,7 +72,7 @@ export function registerProviderRoutes(control: ControlApp, deps: ControlDeps): 
       baseUrl: String(body.baseUrl ?? ""),
       apiKey: String(body.apiKey ?? ""),
     });
-    return c.json(probed(result));
+    return c.json(probed(result) satisfies { ok: boolean; models: string[]; error?: string; plain?: string });
   });
 
   /**
@@ -93,6 +94,6 @@ export function registerProviderRoutes(control: ControlApp, deps: ControlDeps): 
       return c.json({ ok: false, error: `Unknown or uncredentialed provider profile "${name}"` }, 404);
     }
 
-    return c.json(probed(await deps.setup.probe(endpoint)));
+    return c.json(probed(await deps.setup.probe(endpoint)) satisfies { ok: boolean; models: string[]; error?: string; plain?: string });
   });
 }

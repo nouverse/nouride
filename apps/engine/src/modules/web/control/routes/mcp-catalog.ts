@@ -6,6 +6,7 @@
  * admin-only `POST /agents/:id/mcp`, unchanged. Nothing here writes a pack.
  */
 
+import type { CatalogDraft, McpCatalogCard, McpCatalogPage } from "@nouride/wire";
 import { atLeast } from "@/modules/users/auth.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 
@@ -21,7 +22,7 @@ export function registerMcpCatalogRoutes(control: ControlApp, deps: ControlDeps)
     const limit = Math.min(Number(c.req.query("limit") ?? 20) || 20, 50);
     try {
       const page = await catalog.search(query, limit);
-      return c.json({ entries: page.cards, total: page.total, syncedAt: page.syncedAt });
+      return c.json({ entries: page.cards, total: page.total, syncedAt: page.syncedAt } satisfies McpCatalogPage);
     } catch (err) {
       return c.json({ error: `the MCP catalog did not answer: ${reason(err)}`, plain: "The list of connectors could not be reached. Try again in a moment." }, 502);
     }
@@ -36,7 +37,7 @@ export function registerMcpCatalogRoutes(control: ControlApp, deps: ControlDeps)
     try {
       const opened = name ? await catalog.open(name) : undefined;
       if (!opened) return c.json({ error: `no "${name}" in the MCP catalog`, plain: "That connector is not in the list any more." }, 404);
-      return c.json({ ...opened.card, result: opened.result });
+      return c.json({ ...opened.card, result: opened.result } satisfies McpCatalogCard & { result?: { draft: CatalogDraft } | { unsupported: string } });
     } catch (err) {
       return c.json({ error: `the MCP catalog did not give ${name}: ${reason(err)}`, plain: "That connector could not be fetched. Try again in a moment." }, 502);
     }

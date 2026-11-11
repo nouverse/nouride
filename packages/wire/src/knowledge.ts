@@ -7,7 +7,7 @@ export type KnowledgeReaders =
   | { kind: "everyone" }
   /** The people whose dashboard account is an admin's: a folder made by hand, until somebody says otherwise. */
   | { kind: "admins" }
-  | { kind: "people"; people: string[] }
+  | { kind: "people"; people: readonly string[] }
   /** One group chat, by memory's key for it: `<connection>:<chat>`. */
   | { kind: "group"; chat: string };
 
@@ -18,9 +18,9 @@ export interface KnowledgeCollection {
   description: string;
   readers: KnowledgeReaders;
   /** The agents that look in it; null for every agent. */
-  agents: string[] | null;
+  agents: readonly string[] | null;
   /** Whom it is about, by person key. It lets nobody read it. */
-  about: string[];
+  about: readonly string[];
   /** Kept, never searched. */
   archived: boolean;
   documents: number;

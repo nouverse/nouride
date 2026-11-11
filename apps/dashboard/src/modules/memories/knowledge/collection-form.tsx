@@ -84,8 +84,8 @@ export function CollectionForm({ collection, names, admin, onClose, onSaved }: {
   const [choice, setChoice] = useState<Choice>(start.choice);
   const [group, setGroup] = useState(start.group);
   const [people, setPeople] = useState<string[]>(start.people);
-  const [agents, setAgents] = useState<string[] | null>(collection?.agents ?? null);
-  const [about, setAbout] = useState<string[]>(collection?.about ?? []);
+  const [agents, setAgents] = useState<string[] | null>(collection?.agents ? [...collection.agents] : null);
+  const [about, setAbout] = useState<string[]>([...(collection?.about ?? [])]);
 
   const readers = readersOf(choice, { group, people, me: names.me }, making);
   const problem = !name.trim()

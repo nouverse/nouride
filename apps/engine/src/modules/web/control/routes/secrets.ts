@@ -18,6 +18,7 @@
  * on its own (`PATCH /secrets/:name/fields`), which leaves the value as it is.
  */
 
+import type { SecretEntry, SecretLock } from "@nouride/wire";
 import { atLeast } from "@/modules/users/auth.ts";
 import { assertSecretName, type FieldChange, SecretError, type SecretPart } from "@nouride/secrets";
 import type { ControlApp, ControlDeps } from "../types.ts";
@@ -36,7 +37,7 @@ export function registerSecretRoutes(control: ControlApp, deps: ControlDeps): vo
     if (!deps.settings) return c.json({ error: "the secret store is not available" }, 501);
     // Whether the snapshots hold them, sealed, and whether the store is encrypted and where its key is (0.8.19):
     // said beside the names, where somebody looks. Where the key is, never the key.
-    return c.json({ secrets: deps.settings.secretInventory(), sealedInSnapshots: Boolean(deps.ctx.config.daemon.backupSeal), lock: deps.settings.secretLock() });
+    return c.json({ secrets: deps.settings.secretInventory(), sealedInSnapshots: Boolean(deps.ctx.config.daemon.backupSeal), lock: deps.settings.secretLock() } satisfies { secrets: SecretEntry[]; sealedInSnapshots?: boolean; lock?: SecretLock });
   });
 
   /** The backup passphrase (0.8.18): `{ passphrase }` sets it, `{ off: true }` keeps secrets out of snapshots. Admin. */
@@ -50,7 +51,7 @@ export function registerSecretRoutes(control: ControlApp, deps: ControlDeps): vo
     const result = await deps.settings.setBackupSeal({ passphrase, actor: principal.actor });
     if (!result.ok) return c.json({ error: result.error, plain: "The backup password was not set. Check it, and try again." }, 400);
     // The snapshot taken with it, to open and check; never the passphrase, nor what it derived.
-    return c.json({ ok: true, sealedInSnapshots: passphrase !== null, ...(result.snapshot ? { snapshot: result.snapshot } : {}), ...(result.skipped ? { skipped: result.skipped } : {}) });
+    return c.json({ ok: true, sealedInSnapshots: passphrase !== null, ...(result.snapshot ? { snapshot: result.snapshot } : {}), ...(result.skipped ? { skipped: result.skipped } : {}) } satisfies { ok: true; sealedInSnapshots: boolean; snapshot?: string; skipped?: string });
   });
 
   control.put("/secrets/:name", async (c) => {
@@ -91,7 +92,7 @@ export function registerSecretRoutes(control: ControlApp, deps: ControlDeps): vo
      * shadowed succeeds and changes nothing — a silent no-op that looks exactly like success. Said
      * back so the caller can act on it.
      */
-    return c.json({ ok: true, name, shadowedByEnv: deps.settings.secretShadowedByEnv(name) });
+    return c.json({ ok: true, name, shadowedByEnv: deps.settings.secretShadowedByEnv(name) } satisfies { ok: true; name: string; shadowedByEnv: boolean });
   });
 
   /** What is said about a stored secret, changed: `{ set: { name: text }, remove: [names] }`. The value untouched. Admin. */
@@ -103,7 +104,7 @@ export function registerSecretRoutes(control: ControlApp, deps: ControlDeps): vo
     if (!change || change === "bad") return c.json({ error: "give `set` with names and texts, or `remove` with names" }, 400);
     const result = await deps.settings.changeSecretFields({ name: c.req.param("name"), change, actor: principal.user?.username ?? principal.kind });
     if (!result.ok) return c.json({ error: result.error, plain: notSaved(result.field && SECRET_PARTS[result.field]) }, 400);
-    return c.json({ ok: true, fields: result.fields ?? {} });
+    return c.json({ ok: true, fields: result.fields ?? {} } satisfies { ok: true; fields: Record<string, string> });
   });
 
   control.delete("/secrets/:name", async (c) => {
@@ -115,7 +116,7 @@ export function registerSecretRoutes(control: ControlApp, deps: ControlDeps): vo
       name: c.req.param("name"),
       actor: principal.user?.username ?? principal.kind,
     });
-    return c.json({ deleted });
+    return c.json({ deleted } satisfies { deleted: boolean });
   });
 }
 

@@ -7,6 +7,7 @@
  * once and nowhere else.
  */
 
+import type { McpTokenView } from "@nouride/wire";
 import { atLeast } from "@/modules/users/auth.ts";
 import { DEFAULT_SCOPES, parseScopes } from "@/modules/mcp-server/scopes.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
@@ -44,7 +45,7 @@ export function registerMcpServerRoutes(control: ControlApp, deps: ControlDeps):
   control.get("/mcp-server", (c) => {
     const no = refusal(c.get("principal"));
     if (no) return c.json({ error: no[0], plain: no[2] }, no[1]);
-    return c.json({ enabled: deps.ctx.config.mcpServer.enabled, tokens: deps.mcpTokens!.list() });
+    return c.json({ enabled: deps.ctx.config.mcpServer.enabled, tokens: deps.mcpTokens!.list() } satisfies { enabled: boolean; tokens: McpTokenView[] });
   });
 
   control.put("/mcp-server", async (c) => {
@@ -56,7 +57,7 @@ export function registerMcpServerRoutes(control: ControlApp, deps: ControlDeps):
     if (typeof body?.enabled !== "boolean") return c.json({ error: "enabled must be true or false" }, 400);
     const result = await deps.settings.setMcpServerEnabled({ enabled: body.enabled, actor: principal.actor });
     if (!result.ok) return c.json({ error: result.error, plain: NOT_SAVED }, 400);
-    return c.json({ enabled: deps.ctx.config.mcpServer.enabled });
+    return c.json({ enabled: deps.ctx.config.mcpServer.enabled } satisfies { enabled: boolean });
   });
 
   control.post("/mcp-server/tokens", async (c) => {
@@ -83,7 +84,7 @@ export function registerMcpServerRoutes(control: ControlApp, deps: ControlDeps):
     const expiresAt = ttl === 0 ? null : now + ttl * DAY_MS;
     const made = deps.mcpTokens!.create({ person, agents, scopes, label, now, expiresAt });
     deps.audit?.record({ action: "mcp_token_created", actor: principal.actor, details: { id: made.token.id, person, agents, scopes, label, expires_at: expiresAt } });
-    return c.json({ ...made, enabled: deps.ctx.config.mcpServer.enabled }, 201);
+    return c.json({ ...made, enabled: deps.ctx.config.mcpServer.enabled } satisfies { token: McpTokenView; value: string; enabled: boolean }, 201);
   });
 
   control.delete("/mcp-server/tokens/:id", (c) => {
@@ -93,6 +94,6 @@ export function registerMcpServerRoutes(control: ControlApp, deps: ControlDeps):
     const id = c.req.param("id");
     if (!deps.mcpTokens!.revoke(id, Date.now())) return c.json({ error: `no live token ${id}`, plain: "That key is not there any more. Reload the page." }, 404);
     deps.audit?.record({ action: "mcp_token_revoked", actor: principal.actor, details: { id } });
-    return c.json({ id, revoked: true });
+    return c.json({ id, revoked: true } satisfies { id: string; revoked: boolean });
   });
 }

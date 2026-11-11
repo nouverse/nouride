@@ -2,6 +2,7 @@
  * Conversations: what has been said, what is being said now, and how to stop it.
  */
 
+import type { SessionSummary } from "@nouride/wire";
 import type { Session } from "@nouride/shared";
 import { TurnContext } from "@/modules/pipeline/turn-context.ts";
 import { MISSION_GATEWAY_ID } from "@/modules/missions/gateway.ts";
@@ -98,7 +99,7 @@ export function registerConversationRoutes(control: ControlApp, deps: ControlDep
       ...(agentId ? { agentId } : {}),
       details: { stopped, ...(agentId ? { agent: agentId } : {}) },
     });
-    return c.json({ stopped });
+    return c.json({ stopped } satisfies { stopped: number });
   });
 
   /**
@@ -159,7 +160,7 @@ export function registerConversationRoutes(control: ControlApp, deps: ControlDep
       ...(sessions.length === limit
         ? { nextBefore: sessions[sessions.length - 1]!.updatedAt }
         : {}),
-    });
+    } satisfies { sessions: SessionSummary[]; total: number; nextBefore?: number });
   });
 
   /**

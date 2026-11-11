@@ -310,6 +310,10 @@ function stepRows(db: SqliteDb, turnIds: readonly string[]): StepEventRow[] {
     .all(JSON.stringify(turnIds), STEP_ROWS);
 }
 
+/** How a tool's call ended, as the stream names it. A row is text: a word that is none of these is not handed on. */
+const OUTCOMES = ["ok", "exit", "failed", "timed_out", "killed"] as const satisfies readonly NonNullable<TurnStep["outcome"]>[];
+const outcomeOf = (word: unknown): TurnStep["outcome"] => OUTCOMES.find((known) => known === word);
+
 /**
  * One turn's step rows, in the order they were written, as its steps. An `unstep` takes back only what came
  * before it — a number handed out again after it is a new step — and a row that does not parse is skipped, not
@@ -332,7 +336,7 @@ function assemble(rows: readonly StepEventRow[]): TurnStep[] {
         ...(typeof data.callId === "string" ? { callId: data.callId } : {}),
         ...(typeof data.name === "string" ? { name: data.name } : {}),
         ...(typeof data.error === "boolean" ? { error: data.error } : {}),
-        ...(typeof data.outcome === "string" ? { outcome: data.outcome } : {}),
+        ...(outcomeOf(data.outcome) ? { outcome: outcomeOf(data.outcome) } : {}),
         ...(typeof data.editOf === "string" ? { editOf: data.editOf } : {}),
       });
     }

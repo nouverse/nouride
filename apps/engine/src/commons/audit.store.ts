@@ -32,6 +32,12 @@ export interface AuditEntry {
   details?: Record<string, unknown>;
 }
 
+/** A row as it is read back: what was recorded, with the id and the time the log gave it. */
+export interface StoredAudit extends AuditEntry {
+  id: string;
+  timestamp: number;
+}
+
 /** When a skill was last read, and since when its reads have been kept (`skill_reads`). */
 export interface SkillRead {
   /** The last read; null when there has been none since `since`. */
@@ -221,7 +227,7 @@ export class AuditLog {
   }
 
   /** Recent entries, newest first — for the CLI and the dashboard. */
-  recent(limit = 50, agentId?: string): AuditEntry[] {
+  recent(limit = 50, agentId?: string): StoredAudit[] {
     this.flush();
     const rows = agentId
       ? this.db
@@ -241,13 +247,14 @@ export class AuditLog {
    * Walks `idx_audit_ts` newest first and stops at `limit`: rare actions in a table of tool calls cost a
    * longer walk, never a sort.
    */
-  ofActions(actions: readonly string[], limit = 200): (AuditEntry & { timestamp: number })[] {
+  ofActions<A extends string>(actions: readonly A[], limit = 200): (StoredAudit & { action: A })[] {
     if (actions.length === 0) return [];
     this.flush();
+    // Each row's action is one of those asked for: the query selects by them and nothing else.
     return this.db
       .prepare<Row>(`SELECT * FROM audit_log WHERE action IN (${marks(actions)}) ORDER BY timestamp DESC LIMIT ?`)
       .all(...actions, limit)
-      .map(toEntry);
+      .map(toEntry) as (StoredAudit & { action: A })[];
   }
 
   /**
@@ -285,6 +292,7 @@ function openedDocument(details: string | null): string | null {
 }
 
 interface Row {
+  id: string;
   timestamp: number;
   agent_id: string | null;
   actor: string | null;
@@ -297,8 +305,9 @@ interface Row {
 /** `?, ?, …`, one per value. */
 const marks = (values: readonly unknown[]) => values.map(() => "?").join(", ");
 
-function toEntry(row: Row): AuditEntry & { timestamp: number } {
+function toEntry(row: Row): StoredAudit {
   return {
+    id: row.id,
     action: row.action,
     ...(row.agent_id ? { agentId: row.agent_id } : {}),
     ...(row.actor ? { actor: row.actor } : {}),

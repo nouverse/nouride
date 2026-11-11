@@ -13,6 +13,7 @@
  * is the history, with the steps and the timings that used to be lost. Nothing here waits for a model.
  */
 
+import type { ChatTurn, LiveTurn, RunningJob, SlashCommand, Transcript, UploadedFile } from "@nouride/wire";
 import { sessionIdFor } from "@nouride/shared";
 import type { SessionsPort } from "@/modules/sessions/sessions.store.ts";
 import { MISSION_GATEWAY_ID } from "@/modules/missions/gateway.ts";
@@ -170,7 +171,7 @@ function runningJobs(
    * out of nowhere" exactly when the agent stopped, and only in new conversations (2026-10-07).
    */
   fallback?: { agentId: string; gatewayId: string; chatId: string },
-): { id: string; command: string; startedAt: number; kind: string }[] {
+): RunningJob[] {
   const session = deps.sessions?.find(sessionId) ?? fallback;
   if (!session || !deps.jobs) return [];
   return deps.jobs
@@ -195,7 +196,7 @@ function roomJobs(
   gatewayId: string,
   chatId: string,
   members: string[],
-): { id: string; command: string; startedAt: number; kind: string }[] {
+): RunningJob[] {
   if (!deps.jobs) return [];
   return members.flatMap((agentId) =>
     deps
@@ -265,7 +266,7 @@ export function registerChatRoutes(control: ControlApp, deps: ControlDeps): void
       details: { files: files.map((f) => ({ name: f.name, bytes: f.bytes })) },
     });
 
-    return c.json({ files });
+    return c.json({ files } satisfies { files: UploadedFile[] });
   });
 
   /**
@@ -276,7 +277,7 @@ export function registerChatRoutes(control: ControlApp, deps: ControlDeps): void
    * one that disagrees with itself, and the copy people read is always the stale one.
    */
   control.get("/commands", (c) => {
-    return c.json({ commands: deps.pipeline.commands() });
+    return c.json({ commands: deps.pipeline.commands() } satisfies { commands: SlashCommand[] });
   });
 
   /**
@@ -462,7 +463,7 @@ export function registerChatRoutes(control: ControlApp, deps: ControlDeps): void
       details: { session: sessionId, message: messageId },
     });
 
-    return c.json({ sessionId, chatId, messageId, agentId: agent.config.id });
+    return c.json({ sessionId, chatId, messageId, agentId: agent.config.id } satisfies { sessionId: string; chatId: string; messageId: string; agentId: string });
   });
 
   /**
@@ -478,7 +479,7 @@ export function registerChatRoutes(control: ControlApp, deps: ControlDeps): void
       transcript(deps, { turns: deps.turns, sessions: deps.sessions }, {
         session: deps.sessions.find(id) ?? null,
         fallbackId: id,
-      }),
+      }) satisfies Transcript,
     );
   });
 
@@ -519,7 +520,7 @@ export function registerChatRoutes(control: ControlApp, deps: ControlDeps): void
         session,
         fallbackId: chatId,
         room: { chatId },
-      }),
+      }) satisfies Transcript,
     );
   });
 
@@ -553,7 +554,7 @@ export function registerChatRoutes(control: ControlApp, deps: ControlDeps): void
         steps: withDurations(view.steps, view.startedAt),
       })),
       jobs: roomJobs(deps, deps.local.id, chatId, deps.rooms.membersOf(deps.local.id, chatId)),
-    });
+    } satisfies { turns: ChatTurn[]; jobs: RunningJob[] });
   });
 
   /**
@@ -579,7 +580,7 @@ export function registerChatRoutes(control: ControlApp, deps: ControlDeps): void
     const asked = Number.parseInt(c.req.query("after") ?? "0", 10) || 0;
 
     const turn = deps.turns.latestForSession(sessionId);
-    if (!turn) return c.json({ turn: null, jobs: runningJobs(deps, sessionId) });
+    if (!turn) return c.json({ turn: null, jobs: runningJobs(deps, sessionId) } satisfies { turn: LiveTurn | null; jobs?: RunningJob[] });
     const after = resolveCursor({ requested, latest: turn.id, asked });
 
     /**
@@ -611,7 +612,7 @@ export function registerChatRoutes(control: ControlApp, deps: ControlDeps): void
         /** The client's next `after`. Sent rather than inferred, so an empty batch is unambiguous. */
         cursor: window.length > 0 ? window[window.length - 1]!.seq : after,
       },
-    });
+    } satisfies { turn: LiveTurn | null; jobs?: RunningJob[] });
   });
 
   /**
@@ -720,7 +721,7 @@ export function registerChatRoutes(control: ControlApp, deps: ControlDeps): void
       details: { session: session.id, turns, stopped },
     });
 
-    return c.json({ ok: true, turns, stopped });
+    return c.json({ ok: true, turns, stopped } satisfies { ok: true; turns: number; stopped: number });
   });
 }
 
@@ -824,7 +825,7 @@ function transcript(
     /** Set by the room route, so a room with no session yet is still read as a room. */
     room?: { chatId: string };
   },
-): Record<string, unknown> {
+): Transcript {
   const sessionId = input.session?.id ?? input.fallbackId;
   /**
    * A conversation whose first turn is still running has no row yet (it is written when that turn ends): its session is

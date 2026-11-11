@@ -50,7 +50,7 @@ export const cronApi = {
   cronUpdate: (id: string, patch: JobPatch) =>
     post<{ job: JobSummary }>(`${control}/cron/${id}`, patch),
 
-  cronDelete: (id: string) => request<{ ok: true }>(`${control}/cron/${id}`, { method: "DELETE" }),
+  cronDelete: (id: string) => request<{ ok: true; id: string }>(`${control}/cron/${id}`, { method: "DELETE" }),
 
   // Webhooks are cron jobs with a different trigger, so everything except listing and rotation is
   // done through the `cron*` calls above — enable, disable, run, delete and the run history are the

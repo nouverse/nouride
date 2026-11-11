@@ -88,7 +88,7 @@ export const settingsApi = {
    * Answers at once; the daemon restarts once nothing is running — or at once, with `now`. Followed back by `restart.ts`.
    * `plain`: when it restarts, in the page's words (0.8.20); absent from an older daemon, whose `note` is said instead.
    */
-  restartDaemon: (options: { now?: boolean } = {}) => post<{ ok: boolean; waiting: boolean; note: string; plain?: string }>(`${control}/restart`, options),
+  restartDaemon: (options: { now?: boolean } = {}) => post<{ ok: boolean; supervisor: string; waiting: boolean; note: string; plain?: string }>(`${control}/restart`, options),
 
   readConfig: () => request<{ content: string; path: string }>(`${control}/config`),
 

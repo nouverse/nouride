@@ -2,7 +2,7 @@
  * Pending approvals and the standing grants they can turn into.
  */
 
-import type { ApprovalDecision } from "@nouride/shared";
+import type { ApprovalDecision, ApprovalRequest } from "@nouride/wire";
 import { atLeast } from "@/modules/users/auth.ts";
 import { adminOnly, adminOnlyNotice } from "@/modules/tools/approval-answerers.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
@@ -19,8 +19,8 @@ export function registerApprovalRoutes(control: ControlApp, deps: ControlDeps): 
     const agent = c.req.query("agent");
     const pending = deps.approvals.pending(agent);
     // `all=1`: what was answered too, from the rows the gate keeps until its sweep — `nouride approvals --all`.
-    if (c.req.query("all") !== "1") return c.json({ pending });
-    return c.json({ pending, settled: deps.approvals.settled({ ...(agent ? { agentId: agent } : {}), limit: SETTLED_LISTED }) });
+    if (c.req.query("all") !== "1") return c.json({ pending } satisfies { pending: ApprovalRequest[]; settled?: ApprovalRequest[] });
+    return c.json({ pending, settled: deps.approvals.settled({ ...(agent ? { agentId: agent } : {}), limit: SETTLED_LISTED }) } satisfies { pending: ApprovalRequest[]; settled?: ApprovalRequest[] });
   });
 
   control.get("/approvals/:id", (c) => {
@@ -62,7 +62,7 @@ export function registerApprovalRoutes(control: ControlApp, deps: ControlDeps): 
       // changed nothing", and conflating them with success would be a lie.
       return c.json({ error: "not pending", id }, 409);
     }
-    return c.json({ ok: true, id, decision: resolvedDecision });
+    return c.json({ ok: true, id, decision: resolvedDecision } satisfies { ok: true; id: string; decision: ApprovalDecision });
   });
 
   // Grants are listed and revoked over the control API rather than only in the database, because

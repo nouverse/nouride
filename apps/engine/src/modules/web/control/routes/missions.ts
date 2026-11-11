@@ -13,6 +13,7 @@
  * Limits are not set here: they are `[missions]`, a person's from the settings, never an agent's.
  */
 
+import type { MissionDetail, MissionView } from "@nouride/wire";
 import { sessionIdFor } from "@nouride/shared";
 import { stepsDone } from "@/modules/missions/decide.ts";
 import { MISSION_GATEWAY_ID } from "@/modules/missions/gateway.ts";
@@ -156,7 +157,7 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
       .filter((mission) => all || mission.endedAt === null || now - mission.endedAt < days * DAY_MS)
       .map((mission) => ({ ...view(missions, mission), checklist: checklistOf(deps.notes, mission) }));
     rows.sort((a, b) => ORDER[a.seen] - ORDER[b.seen] || b.createdAt - a.createdAt);
-    return c.json({ missions: rows });
+    return c.json({ missions: rows } satisfies { missions: MissionView[] });
   });
 
   control.get("/missions/:id", (c) => {
@@ -187,7 +188,7 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
       plan: plan ?? null,
       notes: deps.notes?.tasks(key) ?? [],
       parked,
-    });
+    } satisfies MissionDetail);
   });
 
   control.post("/missions", async (c) => {
@@ -211,7 +212,7 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
     });
     if ("refused" in started) return c.json({ error: started.refused, plain: "The mission was not started. Check its goal, its checks and its folder, and try again." }, 400);
     deps.audit.record({ action: "mission_started", actor: principal.actor, agentId: started.mission.agentId, details: { mission: started.mission.id } });
-    return c.json({ mission: view(missions, started.mission) }, 201);
+    return c.json({ mission: view(missions, started.mission) } satisfies { mission: MissionView }, 201);
   });
 
   /**
@@ -251,7 +252,7 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
     // What changed is the chat's list (a folder by its path among it), and a brief's failure an exception's message: the
     // page says what it means (0.8.23), and the chat it began in has the list.
     const plain = edited.briefFailed ? "Saved, but its brief could not be written, so it has none for now. Whoever runs the server can see why." : "Saved. The chat it began in is told what changed.";
-    return c.json({ mission: view(missions, edited.mission), changed: edited.changed, ...(edited.briefFailed ? { briefFailed: edited.briefFailed } : {}), plain });
+    return c.json({ mission: view(missions, edited.mission), changed: edited.changed, ...(edited.briefFailed ? { briefFailed: edited.briefFailed } : {}), plain } satisfies { mission: MissionView; changed: string[]; briefFailed?: string; plain?: string });
   });
 
   /**
@@ -285,7 +286,7 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
       "delete",
     );
     deps.audit.record({ action: "mission_deleted", actor: principal.actor, agentId, details: { mission: id, turns, ...(force ? { force } : {}) } });
-    return c.json({ ok: true, mission: id, turns });
+    return c.json({ ok: true, mission: id, turns } satisfies { ok: true; mission: string; turns: number });
   });
 
   control.post("/missions/:id/:verb", async (c) => {
@@ -303,7 +304,7 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
       const told = missions.tell(id, text ?? "", by);
       if ("refused" in told) return c.json({ error: told.refused, plain: refusedPlain(told, "tell") }, 409);
       deps.audit.record({ action: "mission_tell", actor: principal.actor, agentId: told.mission.agentId, details: { mission: told.mission.id, chars: (text ?? "").trim().length } });
-      return c.json({ mission: view(missions, told.mission), said: told.said, plain: toldPlain(told.where) });
+      return c.json({ mission: view(missions, told.mission), said: told.said, plain: toldPlain(told.where) } satisfies { mission: MissionView; said?: string; plain?: string });
     }
     const acted =
       verb === "stop"
@@ -320,6 +321,6 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
     if (!acted) return c.json({ error: "stop, continue, accept, answer or tell" }, 404);
     if ("refused" in acted) return c.json({ error: acted.refused, plain: refusedPlain(acted, verb) }, 409);
     deps.audit.record({ action: `mission_${verb}`, actor: principal.actor, agentId: acted.mission.agentId, details: { mission: acted.mission.id, ...(typeof body.outside === "string" ? { outside: body.outside } : {}) } });
-    return c.json({ mission: view(missions, acted.mission) });
+    return c.json({ mission: view(missions, acted.mission) } satisfies { mission: MissionView; said?: string; plain?: string });
   });
 }

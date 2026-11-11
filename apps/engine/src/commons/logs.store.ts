@@ -39,10 +39,13 @@ const LEVEL_ORDER: Record<LogLevel, number> = { debug: 0, info: 1, warn: 2, erro
 /** Below this is not written down. See the note above. */
 const STORED_FLOOR = LEVEL_ORDER.info;
 
+/** A level a line is kept at: every one but `debug`, which is never stored. */
+export type StoredLevel = Exclude<LogLevel, "debug">;
+
 export interface StoredLog {
   id: number;
   ts: number;
-  level: LogLevel;
+  level: StoredLevel;
   component: string;
   message: string;
   data?: Record<string, unknown>;
@@ -281,7 +284,7 @@ function toStored(row: Row): StoredLog {
   return {
     id: row.id,
     ts: row.ts,
-    level: (row.level as LogLevel) ?? "info",
+    level: (row.level as StoredLevel) ?? "info",
     component: row.component,
     message: row.message,
     ...(data ? { data } : {}),

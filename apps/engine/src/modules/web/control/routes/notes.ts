@@ -6,6 +6,7 @@
  * way the agent's own writes are (size, credentials), and recorded in the audit log.
  */
 
+import type { WorkNotes } from "@nouride/wire";
 import { NotesRefused } from "@/modules/notes/store.ts";
 import { renderNotes } from "@/modules/notes/format.ts";
 import { atLeast } from "@/modules/users/auth.ts";
@@ -32,7 +33,7 @@ export function registerNotesRoutes(control: ControlApp, deps: ControlDeps): voi
     if (!key) return c.json({ error: "no such session" }, 404);
     const tasks = deps.notes.tasks(key);
     const plan = deps.notes.plan(key);
-    return c.json({ text: renderNotes(tasks), tasks, ...(plan ? { plan } : {}), setAside: deps.notes.setAside(key) ?? null });
+    return c.json({ text: renderNotes(tasks), tasks, ...(plan ? { plan } : {}), setAside: deps.notes.setAside(key) ?? null } satisfies WorkNotes);
   });
 
   control.put("/sessions/:id/notes", async (c) => {
@@ -47,7 +48,7 @@ export function registerNotesRoutes(control: ControlApp, deps: ControlDeps): voi
     try {
       const tasks = await deps.notes.replace(key, body.text);
       deps.audit.record({ action: "notes_edited", actor: principal.actor, agentId: key.agentId, chatId: key.chatId, details: { tasks: tasks.length } });
-      return c.json({ text: renderNotes(tasks), tasks });
+      return c.json({ text: renderNotes(tasks), tasks } satisfies Pick<WorkNotes, "text" | "tasks">);
     } catch (err) {
       if (err instanceof NotesRefused) return c.json({ error: err.message, plain: "The notes were not saved: they are too long, hold a password or a key, or a task has no title. Change that, and save again." }, 400);
       throw err;

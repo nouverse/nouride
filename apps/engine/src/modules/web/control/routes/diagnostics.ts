@@ -9,7 +9,7 @@ import { isRetentionScope } from "@/modules/config/settings/memory.ts";
 import { atLeast } from "@/modules/users/auth.ts";
 import { statFile } from "@nouride/runtime";
 import { groupAdvisories, readAdvisories } from "@/boot/advisories.ts";
-import type { AgentSummary, StatusPayload } from "@nouride/wire";
+import type { AdvisoryLine, AgentSummary, AuditEntry, RetentionScope, StatusPayload, StoredLogEntry } from "@nouride/wire";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { jsonBody } from "../payloads.ts";
 import { contextWindowFor } from "@/modules/llm/executor/context-window.ts";
@@ -64,7 +64,7 @@ export function registerDiagnosticRoutes(control: ControlApp, deps: ControlDeps)
    * agents it was said about. Said at warn once and at info after, an advisory is otherwise only in the journal.
    */
   control.get("/advisories", (c) => {
-    return c.json({ advisories: groupAdvisories(readAdvisories(deps.state?.get("advisories") ?? null)) });
+    return c.json({ advisories: groupAdvisories(readAdvisories(deps.state?.get("advisories") ?? null)) } satisfies { advisories: AdvisoryLine[] });
   });
 
   /**
@@ -137,7 +137,7 @@ export function registerDiagnosticRoutes(control: ControlApp, deps: ControlDeps)
       components: deps.logStore.components(),
       span: deps.logStore.span(),
       retentionDays: deps.ctx.config.retention.logDays,
-    });
+    } satisfies { entries: StoredLogEntry[]; total: number; nextBefore?: number; components: { component: string; entries: number }[]; span: { oldest: number | null; newest: number | null }; retentionDays: number });
   });
 
   /**
@@ -151,7 +151,7 @@ export function registerDiagnosticRoutes(control: ControlApp, deps: ControlDeps)
    */
   control.get("/retention", (c) => {
     if (!deps.settings) return c.json({ error: "config editing is not available", plain: NO_SETTINGS }, 501);
-    return c.json({ windows: deps.settings.retentionWindows() });
+    return c.json({ windows: deps.settings.retentionWindows() } satisfies { windows: Record<RetentionScope, number> });
   });
 
   control.put("/retention/:scope", async (c) => {
@@ -173,7 +173,7 @@ export function registerDiagnosticRoutes(control: ControlApp, deps: ControlDeps)
       actor: principal.user?.username ?? principal.kind,
     });
     if (!result.ok) return c.json({ error: result.error, plain: notSaved("the number of days") }, 400);
-    return c.json({ windows: deps.settings.retentionWindows() });
+    return c.json({ windows: deps.settings.retentionWindows() } satisfies { windows: Record<RetentionScope, number> });
   });
 
   /** Which MCP servers connected, and what they offered. */
@@ -320,7 +320,7 @@ export function registerDiagnosticRoutes(control: ControlApp, deps: ControlDeps)
     const limit = Number.parseInt(c.req.query("limit") ?? "50", 10);
     return c.json({
       entries: deps.audit.recent(Number.isNaN(limit) ? 50 : Math.min(limit, 500), c.req.query("agent")),
-    });
+    } satisfies { entries: AuditEntry[] });
   });
 
   /**
@@ -367,6 +367,6 @@ export function registerDiagnosticRoutes(control: ControlApp, deps: ControlDeps)
           ? "Nouride restarts as soon as nothing is running, within ten minutes."
           : "Nouride is restarting now.",
       ...(outcome.followUpSeconds ? { wake_in_seconds: outcome.followUpSeconds } : {}),
-    });
+    } satisfies { ok: boolean; supervisor: string; waiting: boolean; note: string; plain?: string });
   });
 }

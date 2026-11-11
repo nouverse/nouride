@@ -37,7 +37,7 @@ export const peopleApi = {
   setMorningLine: (key: string, at: string | null, to?: string | null) =>
     post<{ ok: true; at: string | null; to: string | null }>(`${control}/people/${encodeURIComponent(key)}/morning`, { at, ...(to !== undefined ? { to } : {}) }),
   deletePerson: (key: string) =>
-    request<{ ok: boolean; people: PersonRecord[] }>(
+    request<{ ok: boolean; people: PersonRecord[]; tokensRevoked: number }>(
       `${control}/people?key=${encodeURIComponent(key)}`,
       { method: "DELETE" },
     ),

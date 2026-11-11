@@ -2,6 +2,7 @@
  * Dashboard accounts. Every route here is admin-only: minting an account is minting a role.
  */
 
+import type { User } from "@nouride/wire";
 import { atLeast } from "@/modules/users/auth.ts";
 import { accountIdentity } from "@/modules/config/settings/identities.ts";
 import { multiUserSupported, userPolicy } from "@/modules/users/multi-user.ts";
@@ -11,8 +12,8 @@ import { NOT_RUNNING } from "../plain.ts";
 
 export function registerUserRoutes(control: ControlApp, deps: ControlDeps): void {
   control.get("/users", (c) => {
-    if (!deps.users) return c.json({ users: [], multiUser: false });
-    return c.json({ users: deps.users.list(), multiUser: multiUserSupported() });
+    if (!deps.users) return c.json({ users: [], multiUser: false } satisfies { users: User[]; multiUser?: boolean });
+    return c.json({ users: deps.users.list(), multiUser: multiUserSupported() } satisfies { users: User[]; multiUser?: boolean });
   });
 
   control.post("/users", async (c) => {
@@ -62,7 +63,7 @@ export function registerUserRoutes(control: ControlApp, deps: ControlDeps): void
         createdBy: principal.actor,
         mustChangePassword: body.must_change_password === true,
       });
-      return c.json({ user });
+      return c.json({ user } satisfies { user: User });
     } catch (err) {
       return c.json({ error: String(err instanceof Error ? err.message : err), plain: "No account was added. Check the name and the password, and try again." }, 400);
     }
@@ -97,7 +98,7 @@ export function registerUserRoutes(control: ControlApp, deps: ControlDeps): void
     }
 
     deps.users.setRole(id, admission.role, principal.actor);
-    return c.json({ ok: true });
+    return c.json({ ok: true } satisfies { ok: true });
   });
 
   control.delete("/users/:id", async (c) => {
@@ -118,7 +119,7 @@ export function registerUserRoutes(control: ControlApp, deps: ControlDeps): void
     }
     // The account's `web:<id>` off the person it was linked to: it named an account that no longer exists.
     const unlinked = await deps.settings?.unlinkIdentity({ identity: accountIdentity(id), actor: principal.actor });
-    if (unlinked && !unlinked.ok) return c.json({ ok: true, warning: `the account is deleted, but its link to a person stays: ${unlinked.error}` });
-    return c.json({ ok: true });
+    if (unlinked && !unlinked.ok) return c.json({ ok: true, warning: `the account is deleted, but its link to a person stays: ${unlinked.error}` } satisfies { ok: true; warning?: string });
+    return c.json({ ok: true } satisfies { ok: true; warning?: string });
   });
 }

@@ -12,5 +12,5 @@ export const mcpServerApi = {
     request<{ enabled: boolean }>(`${control}/mcp-server`, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ enabled }) }),
   createMcpToken: (input: { person: string; agents: string[]; label: string; scopes: McpScope[] }) =>
     post<{ token: McpTokenView; value: string; enabled: boolean }>(`${control}/mcp-server/tokens`, input),
-  revokeMcpToken: (id: string) => request<{ revoked: boolean }>(`${control}/mcp-server/tokens/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  revokeMcpToken: (id: string) => request<{ id: string; revoked: boolean }>(`${control}/mcp-server/tokens/${encodeURIComponent(id)}`, { method: "DELETE" }),
 };

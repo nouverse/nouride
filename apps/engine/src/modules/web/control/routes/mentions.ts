@@ -23,7 +23,7 @@ export function registerMentionRoutes(control: ControlApp, deps: ControlDeps): v
       mentionsEnabled: deps.ctx.config.agents.mentionsEnabled,
       mentionMaxHops: deps.ctx.config.agents.mentionMaxHops,
       editable: Boolean(deps.settings),
-    });
+    } satisfies { mentionsEnabled: boolean; mentionMaxHops: number; editable: boolean });
   });
 
   /**
@@ -64,6 +64,6 @@ export function registerMentionRoutes(control: ControlApp, deps: ControlDeps): v
       ok: true,
       mentionsEnabled: deps.ctx.config.agents.mentionsEnabled,
       mentionMaxHops: deps.ctx.config.agents.mentionMaxHops,
-    });
+    } satisfies { ok: true; mentionsEnabled: boolean; mentionMaxHops: number });
   });
 }

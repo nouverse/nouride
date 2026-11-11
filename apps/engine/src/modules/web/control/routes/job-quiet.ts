@@ -4,6 +4,7 @@
  * operator for an agent's, and `null` on an agent meaning "follow the daemon".
  */
 
+import type { JobQuietPolicy } from "@nouride/wire";
 import { join } from "@nouride/runtime";
 import { JOB_QUIET_MINUTES_MAX } from "@/modules/config/settings/jobs.ts";
 import { atLeast } from "@/modules/users/auth.ts";
@@ -20,7 +21,7 @@ export function registerJobQuietRoutes(control: ControlApp, deps: ControlDeps): 
       minutes: deps.ctx.config.jobs.quietAfterMinutes,
       max: JOB_QUIET_MINUTES_MAX,
       editable: Boolean(deps.settings),
-    }),
+    } satisfies JobQuietPolicy),
   );
 
   control.post("/policy/job-quiet", async (c) => {
@@ -33,7 +34,7 @@ export function registerJobQuietRoutes(control: ControlApp, deps: ControlDeps): 
 
     const result = await deps.settings.setJobQuietMinutes({ minutes: body.minutes, actor: principal.actor });
     if (!result.ok) return c.json({ error: result.error, plain: notSaved(MINUTES) }, 400);
-    return c.json({ ok: true, minutes: deps.ctx.config.jobs.quietAfterMinutes });
+    return c.json({ ok: true, minutes: deps.ctx.config.jobs.quietAfterMinutes } satisfies { ok: true; minutes: number });
   });
 
   control.post("/agents/:id/job-quiet", async (c) => {
@@ -59,6 +60,6 @@ export function registerJobQuietRoutes(control: ControlApp, deps: ControlDeps): 
       agentId: id,
     });
     if (!result.ok) return c.json({ error: result.error, plain: notSaved(MINUTES) }, 400);
-    return c.json({ ok: true });
+    return c.json({ ok: true } satisfies { ok: true });
   });
 }

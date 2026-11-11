@@ -4,6 +4,7 @@
  * A different question from `access.ts`, which is whose messages are answered.
  */
 
+import type { GatewayInstance } from "@nouride/wire";
 import { atLeast } from "@/modules/users/auth.ts";
 import type { GatewayField } from "@/modules/config/settings/gateways.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
@@ -20,14 +21,14 @@ const GATEWAY_FIELDS: Record<GatewayField, string> = {
 
 export function registerGatewayRoutes(control: ControlApp, deps: ControlDeps): void {
   control.get("/gateways", (c) => {
-    if (!deps.settings) return c.json({ gateways: [], editable: false });
+    if (!deps.settings) return c.json({ gateways: [], editable: false } satisfies { gateways: GatewayInstance[]; editable: boolean; groupContextDefault?: number });
     return c.json({
       gateways: deps.settings.gateways(),
       editable: true,
       // What a connection with no override of its own inherits, so the form can show it instead of
       // hard-coding a placeholder that drifts from `defaults.ts`.
       groupContextDefault: deps.settings.groupContextDefault(),
-    });
+    } satisfies { gateways: GatewayInstance[]; editable: boolean; groupContextDefault?: number });
   });
 
   control.post("/gateways", async (c) => {
@@ -53,7 +54,7 @@ export function registerGatewayRoutes(control: ControlApp, deps: ControlDeps): v
         ? { groupContextMessages: body.groupContextMessages }
         : {}),
     });
-    return result.ok ? c.json(result) : c.json({ error: result.error, plain: notSaved(result.field && GATEWAY_FIELDS[result.field]) }, 400);
+    return result.ok ? c.json(result satisfies { ok: true; restartRequired: boolean }) : c.json({ error: result.error, plain: notSaved(result.field && GATEWAY_FIELDS[result.field]) }, 400);
   });
 
   control.delete("/gateways/:id", async (c) => {
@@ -62,7 +63,7 @@ export function registerGatewayRoutes(control: ControlApp, deps: ControlDeps): v
     if (!atLeast(principal, "admin")) return c.json({ error: "admin only" }, 403);
 
     const result = await deps.settings.removeGateway(c.req.param("id"), principal.actor);
-    return result.ok ? c.json(result) : c.json({ error: result.error, plain: NOT_CHANGED }, 400);
+    return result.ok ? c.json(result satisfies { ok: true; restartRequired?: boolean }) : c.json({ error: result.error, plain: NOT_CHANGED }, 400);
   });
 
   /**
@@ -94,7 +95,7 @@ export function registerGatewayRoutes(control: ControlApp, deps: ControlDeps): v
       // Null while connecting and once linked. The dashboard shows those as states of their own
       // rather than as an empty QR.
       ...(code ? { qr: code.qr, at: code.at } : { qr: null }),
-    });
+    } satisfies { status: string; linked: boolean; qr: string | null; at?: number });
   });
 
   control.post("/gateways/:id/restart", async (c) => {

@@ -53,9 +53,9 @@ export function registerSetupRoutes(control: ControlApp, deps: ControlDeps): voi
         oauth: external,
         passwordLogin,
         bundledGateway,
-      });
+      } satisfies SetupState);
     }
-    return c.json({ ...deps.setup.state(), oauth: external, passwordLogin, bundledGateway });
+    return c.json({ ...deps.setup.state(), oauth: external, passwordLogin, bundledGateway } satisfies SetupState);
   });
 
   /** Try an endpoint without saving it, so the wizard can fill its model picker before committing. */
@@ -70,7 +70,7 @@ export function registerSetupRoutes(control: ControlApp, deps: ControlDeps): voi
           baseUrl: typeof body.base_url === "string" ? body.base_url : "",
           apiKey: typeof body.api_key === "string" ? body.api_key : "",
         }),
-      ),
+      ) satisfies { ok: boolean; models: string[]; error?: string; plain?: string },
     );
   });
 
@@ -88,7 +88,7 @@ export function registerSetupRoutes(control: ControlApp, deps: ControlDeps): voi
       actor: principal.actor,
       skipProbe: body.skip_probe === true,
     });
-    return result.ok ? c.json(result) : c.json({ error: result.error, plain: "The AI service was not saved. Check its address and its key, and try again." }, 400);
+    return result.ok ? c.json(result satisfies { ok: true; models: string[] }) : c.json({ error: result.error, plain: "The AI service was not saved. Check its address and its key, and try again." }, 400);
   });
 
   /**
@@ -105,7 +105,7 @@ export function registerSetupRoutes(control: ControlApp, deps: ControlDeps): voi
     if (!atLeast(principal, "admin")) return c.json({ error: "admin only" }, 403);
 
     const result = await deps.setup.useBundledGateway({ actor: principal.actor });
-    return result.ok ? c.json(result) : c.json({ error: result.error, plain: NOT_SAVED }, 400);
+    return result.ok ? c.json(result satisfies { ok: true; models: string[] }) : c.json({ error: result.error, plain: NOT_SAVED }, 400);
   });
 
   control.get("/setup/models", async (c) => {
@@ -114,7 +114,7 @@ export function registerSetupRoutes(control: ControlApp, deps: ControlDeps): voi
     if (!atLeast(principal, "admin")) return c.json({ error: "admin only" }, 403);
 
     const result = await deps.setup.listModels();
-    return result.ok ? c.json(result) : c.json({ error: result.error, plain: "The list of models could not be read. Check the AI service's address and its key." }, 400);
+    return result.ok ? c.json(result satisfies { ok: true; models: string[] }) : c.json({ error: result.error, plain: "The list of models could not be read. Check the AI service's address and its key." }, 400);
   });
 
   control.post("/setup/agent", async (c) => {
@@ -147,7 +147,7 @@ export function registerSetupRoutes(control: ControlApp, deps: ControlDeps): voi
         return { external: { cli: external.cli, ...(typeof external.profile === "string" ? { profile: external.profile } : {}) } };
       })(),
     });
-    return result.ok ? c.json(result) : c.json({ error: result.error, plain: "The agent was not made. Check what you entered, and try again." }, 400);
+    return result.ok ? c.json(result satisfies { ok: true; id: string; provider: string }) : c.json({ error: result.error, plain: "The agent was not made. Check what you entered, and try again." }, 400);
   });
 }
 

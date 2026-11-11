@@ -176,6 +176,6 @@ export function registerChatListRoutes(control: ControlApp, deps: ControlDeps): 
       rooms,
       groups: groupsOf(deps, running),
     };
-    return c.json(payload);
+    return c.json(payload satisfies ChatListPayload);
   });
 }

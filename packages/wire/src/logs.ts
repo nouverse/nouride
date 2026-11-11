@@ -33,7 +33,8 @@ export interface AuditEntry {
   id: string;
   timestamp: number;
   action: string;
-  actor: string;
+  /** Who caused it; absent on a row that recorded nobody. */
+  actor?: string;
   agentId?: string | null;
   gatewayId?: string | null;
   chatId?: string | null;

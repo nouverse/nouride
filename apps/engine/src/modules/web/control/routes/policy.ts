@@ -4,6 +4,7 @@
  * the exec knob that lived here, `sensitive_paths`, went into the levels.
  */
 
+import type { ToolIterationsPolicy, TurnSecondsPolicy } from "@nouride/wire";
 import { TOOL_ITERATIONS_MAX, TOOL_ITERATIONS_MIN, TURN_SECONDS_MAX, TURN_SECONDS_MIN } from "@nouride/shared";
 import { startOfLocalDay } from "@/commons/clock.ts";
 import { atLeast } from "@/modules/users/auth.ts";
@@ -35,7 +36,7 @@ export function registerPolicyRoutes(control: ControlApp, deps: ControlDeps): vo
       // A figure that omits calls on unpriced models is one people make decisions on and should not.
       unpricedRequests: today?.unpricedRequests ?? 0,
       editable: Boolean(deps.settings),
-    });
+    } satisfies { maxDailyCostUsd: number; alertThresholdPct: number; spentTodayUsd: number | null; unpricedRequests: number; editable: boolean });
   });
 
   /**
@@ -61,7 +62,7 @@ export function registerPolicyRoutes(control: ControlApp, deps: ControlDeps): vo
       actor: principal.actor,
     });
     if (!result.ok) return c.json({ error: result.error, plain: notSaved("the daily spend cap") }, 400);
-    return c.json({ ok: true, maxDailyCostUsd: deps.ctx.config.llm.limits.maxDailyCostUsd });
+    return c.json({ ok: true, maxDailyCostUsd: deps.ctx.config.llm.limits.maxDailyCostUsd } satisfies { ok: true; maxDailyCostUsd: number });
   });
 
   /**
@@ -77,7 +78,7 @@ export function registerPolicyRoutes(control: ControlApp, deps: ControlDeps): vo
       min: TOOL_ITERATIONS_MIN,
       max: TOOL_ITERATIONS_MAX,
       editable: Boolean(deps.settings),
-    }),
+    } satisfies ToolIterationsPolicy),
   );
 
   control.post("/policy/tool-iterations", async (c) => {
@@ -97,7 +98,7 @@ export function registerPolicyRoutes(control: ControlApp, deps: ControlDeps): vo
       actor: principal.actor,
     });
     if (!result.ok) return c.json({ error: result.error, plain: notSaved("the tool budget") }, 400);
-    return c.json({ ok: true, maxToolIterations: deps.ctx.config.llm.limits.maxToolIterations });
+    return c.json({ ok: true, maxToolIterations: deps.ctx.config.llm.limits.maxToolIterations } satisfies { ok: true; maxToolIterations: number });
   });
 
   /**
@@ -115,7 +116,7 @@ export function registerPolicyRoutes(control: ControlApp, deps: ControlDeps): vo
       min: TURN_SECONDS_MIN,
       max: TURN_SECONDS_MAX,
       editable: Boolean(deps.settings),
-    }),
+    } satisfies TurnSecondsPolicy),
   );
 
   control.post("/policy/turn-seconds", async (c) => {
@@ -137,6 +138,6 @@ export function registerPolicyRoutes(control: ControlApp, deps: ControlDeps): vo
     return c.json({
       ok: true,
       turnSeconds: Math.round(deps.ctx.config.llm.limits.maxTurnDurationMs / 1000),
-    });
+    } satisfies { ok: true; turnSeconds: number });
   });
 }

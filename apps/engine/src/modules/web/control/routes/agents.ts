@@ -7,6 +7,7 @@
  * reached — and the same rule is why `files.ts` is registered before this module.
  */
 
+import type { AgentSkill } from "@nouride/wire";
 import { join, readTextFileIfExists, writeTextFileAtomic } from "@nouride/runtime";
 import { cleanHeadline, HEADLINE_MAX, withHeadline } from "@/modules/setup/identity-headline.ts";
 import { agentSkillPool, skillsDirFor } from "@nouride/persona";
@@ -50,7 +51,7 @@ export function registerAgentRoutes(control: ControlApp, deps: ControlDeps): voi
       agentId: id,
     });
     if (!result.ok) return c.json({ error: result.error, plain: notSaved(result.field && MODEL_FIELDS[result.field]) }, 400);
-    return c.json({ ok: true });
+    return c.json({ ok: true } satisfies { ok: true });
   });
 
   /**
@@ -67,7 +68,7 @@ export function registerAgentRoutes(control: ControlApp, deps: ControlDeps): voi
     if (!isEffortChoice(body.effort)) return c.json({ error: `effort is one of ${EFFORT_CHOICES.join(", ")}` }, 400);
     const result = await deps.setup.setEffort({ agentId: id, effort: body.effort, actor: principal.actor });
     if (!result.ok) return c.json({ error: result.error, plain: NOT_SAVED }, 400);
-    return c.json({ ok: true });
+    return c.json({ ok: true } satisfies { ok: true });
   });
 
   /**
@@ -99,7 +100,7 @@ export function registerAgentRoutes(control: ControlApp, deps: ControlDeps): voi
       agentId: id,
     });
     if (!result.ok) return c.json({ error: result.error, plain: notSaved("the fallbacks") }, 400);
-    return c.json({ ok: true });
+    return c.json({ ok: true } satisfies { ok: true });
   });
 
   /**
@@ -130,7 +131,7 @@ export function registerAgentRoutes(control: ControlApp, deps: ControlDeps): voi
       agentId: id,
     });
     if (!result.ok) return c.json({ error: result.error, plain: notSaved("the turn budget") }, 400);
-    return c.json({ ok: true });
+    return c.json({ ok: true } satisfies { ok: true });
   });
 
   /**
@@ -169,7 +170,7 @@ export function registerAgentRoutes(control: ControlApp, deps: ControlDeps): voi
       ok: true,
       maxToolIterations: deps.registry.get(id)?.config.llm.maxToolIterations ?? null,
       daemonDefault: deps.ctx.config.llm.limits.maxToolIterations,
-    });
+    } satisfies { ok: true; maxToolIterations: number | null; daemonDefault: number });
   });
 
   /**
@@ -233,7 +234,7 @@ export function registerAgentRoutes(control: ControlApp, deps: ControlDeps): voi
           })),
       ],
       editable: Boolean(deps.settings),
-    });
+    } satisfies { skills: AgentSkill[]; editable: boolean });
   });
 
   /**
@@ -270,7 +271,7 @@ export function registerAgentRoutes(control: ControlApp, deps: ControlDeps): voi
       actor: principal.actor,
     });
     if (!result.ok) return c.json({ error: result.error, plain: NOT_SAVED }, 400);
-    return c.json({ ok: true });
+    return c.json({ ok: true } satisfies { ok: true });
   });
 
   /**
@@ -291,7 +292,7 @@ export function registerAgentRoutes(control: ControlApp, deps: ControlDeps): voi
     await writeTextFileAtomic(path, withHeadline((await readTextFileIfExists(path)) ?? "# IDENTITY\n", headline));
     await deps.registry.reload(id);
     deps.audit.record({ action: "agent_headline_changed", actor: principal.actor, agentId: id, details: { headline } });
-    return c.json({ ok: true, headline });
+    return c.json({ ok: true, headline } satisfies { ok: true; headline: string });
   });
 
   control.post("/agents/:id/:action", async (c) => {

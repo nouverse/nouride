@@ -107,7 +107,7 @@ test("a job the deadline stopped keeps that reason — the row says only `killed
     orphanedJobs: [],
     pipeline: { wakeForJob: (completion) => void woken.push(completion) },
     wakes: { unwoken: () => ["timed", "chosen"] },
-    audit: { ofActions: () => [{ action: "job_deadline", details: { job: "timed", command: "make", max_ms: 7_200_000 }, timestamp: NOW }] },
+    audit: { ofActions: <A extends string>() => [{ id: "audit_1", action: "job_deadline" as A, details: { job: "timed", command: "make", max_ms: 7_200_000 }, timestamp: NOW }] },
     now: NOW,
   });
   await sleep(0);

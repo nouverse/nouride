@@ -7,6 +7,7 @@
  */
 
 import type { Attachment, Job, JobDelivery, JobPayload, JobSessionMode } from "@nouride/shared";
+import type { WebhookSummary } from "@nouride/wire";
 import { attachmentTypeFor } from "@nouride/gateways";
 import type { JobInput } from "@/modules/cron/cron.store.ts";
 import { CronValidationError, type CronField } from "@/modules/cron/validate.ts";
@@ -125,10 +126,11 @@ function cronDeliveryFrom(raw: unknown): JobDelivery | undefined {
  * luxury and would otherwise print the bind address. `urlGuessed` says which of the two `url` is,
  * so a caller showing it to a person can say so rather than asserting an address that reaches nobody.
  */
-export function webhookView(job: Job, deps: ControlDeps): Record<string, unknown> {
+export function webhookView(job: Job, deps: ControlDeps): WebhookSummary {
   const built = webhookUrl(deps.ctx.config.dashboard, job.webhookToken ?? "");
   return {
     ...job,
+    webhookToken: job.webhookToken ?? "",
     path: `/hooks/${job.webhookToken}`,
     url: built.url,
     urlGuessed: built.guessed,

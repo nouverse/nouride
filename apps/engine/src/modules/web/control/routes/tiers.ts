@@ -4,6 +4,7 @@
  * `null` on an agent meaning "inherit the install's". What each answers is `settings/tiers.ts`.
  */
 
+import type { ModelTiersView } from "@nouride/wire";
 import { join } from "@nouride/runtime";
 import { atLeast } from "@/modules/users/auth.ts";
 import type { TierField } from "@/modules/config/settings/tiers.ts";
@@ -25,7 +26,7 @@ const TIER_FIELDS: Record<TierField, string> = {
 export function registerTierRoutes(control: ControlApp, deps: ControlDeps): void {
   control.get("/llm/tiers", (c) => {
     if (!deps.settings) return c.json({ error: "config editing is not available", plain: NO_SETTINGS }, 501);
-    return c.json({ ...deps.settings.modelTiers(), editable: true });
+    return c.json({ ...deps.settings.modelTiers(), editable: true } satisfies ModelTiersView);
   });
 
   /** Admin: which model the install's work runs on is what it spends. */
@@ -38,7 +39,7 @@ export function registerTierRoutes(control: ControlApp, deps: ControlDeps): void
     if (!body) return c.json({ error: "send the settings to change, as an object" }, 400);
     const result = await deps.settings.setModelTiers({ patch: body as Record<string, string>, actor: principal.actor });
     if (!result.ok) return c.json({ error: result.error, plain: notSaved(result.field && TIER_FIELDS[result.field]) }, 400);
-    return c.json({ ok: true, ...deps.settings.modelTiers() });
+    return c.json({ ok: true, ...deps.settings.modelTiers() } satisfies { ok: true } & Omit<ModelTiersView, "editable">);
   });
 
   control.post("/agents/:id/tiers", async (c) => {
@@ -67,6 +68,6 @@ export function registerTierRoutes(control: ControlApp, deps: ControlDeps): void
       agentId: id,
     });
     if (!result.ok) return c.json({ error: result.error, plain: notSaved(result.field && TIER_FIELDS[result.field]) }, 400);
-    return c.json({ ok: true });
+    return c.json({ ok: true } satisfies { ok: true });
   });
 }

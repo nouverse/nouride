@@ -9,6 +9,7 @@
  * with its secret still kept could not be told from a failed delete without them.
  */
 
+import type { AgentCli, CliAccountsView, CliLoginView, CliProfile, CliRoom, ScannedCli } from "@nouride/wire";
 import { PROFILE_NAME } from "@nouride/persona";
 import { EXTERNAL_PERMISSIONS, LLM_EFFORTS, type ExternalAgentConfig, type LoadedAgent } from "@nouride/shared";
 import type { ExternalSettings } from "@/modules/setup/external-agent.ts";
@@ -31,7 +32,7 @@ export function registerExternalAgentRoutes(control: ControlApp, deps: ControlDe
     // A box with no room for a CLI's session is told so, and offered nothing to add.
     const room = deps.externalAgents.room();
     // `check` asks the npm registry for the newest now, where it is otherwise asked once a day (0.8.24).
-    return c.json({ room, clis: room.enough ? await deps.externalAgents.scan(c.req.query("fresh") === "1", c.req.query("check") === "1") : [] });
+    return c.json({ room, clis: room.enough ? await deps.externalAgents.scan(c.req.query("fresh") === "1", c.req.query("check") === "1") : [] } satisfies { room: CliRoom; clis: ScannedCli[] });
   });
 
   /**
@@ -75,7 +76,7 @@ export function registerExternalAgentRoutes(control: ControlApp, deps: ControlDe
   control.get("/cli-accounts", async (c) => {
     if (!deps.externalAgents) return c.json({ error: "external agents are not available on this daemon", plain: NOT_RUNNING }, 501);
     if (!atLeast(c.get("principal"), "operator")) return c.json({ error: "operator only" }, 403);
-    return c.json({ clis: await deps.externalAgents.accountList(deps.registry.all(), c.req.query("fresh") === "1") });
+    return c.json({ clis: await deps.externalAgents.accountList(deps.registry.all(), c.req.query("fresh") === "1") } satisfies { clis: CliAccountsView[] });
   });
 
   /** An account added by name, before any agent uses it. Admin only. */
@@ -89,7 +90,7 @@ export function registerExternalAgentRoutes(control: ControlApp, deps: ControlDe
     const added = deps.externalAgents.accounts.add(body.cli, name);
     if (!added.ok) return c.json({ error: added.error, plain: "The account was not added. Its name takes small letters, digits and dashes, 24 at most." }, 400);
     deps.audit.record({ action: "cli_account_added", actor: principal.actor, details: { cli: body.cli, account: name } });
-    return c.json(added);
+    return c.json(added satisfies { ok: true });
   });
 
   /** An account no agent uses, and its token. Admin only. */
@@ -184,7 +185,7 @@ export function registerExternalAgentRoutes(control: ControlApp, deps: ControlDe
       // The sign-in's terminal, to an admin only, as the sign-in is: what it prints can be the code that signs in (a
       // device code), and an operator read it here.
       login: atLeast(principal, "admin") ? ops.login(agent.config.id) : null,
-    });
+    } satisfies AgentCli);
   });
 
   /** Its profile, preset and model, written to `[external]` in its pack. Admin only: it is how it runs. */
@@ -211,7 +212,7 @@ export function registerExternalAgentRoutes(control: ControlApp, deps: ControlDe
       const set = await deps.setup.setEffort({ agentId: c.req.param("id"), effort: String(body.effort), actor: principal.actor });
       if (!set.ok) return c.json({ error: set.error, plain: NOT_SAVED }, 400);
     }
-    return c.json({ ok: true });
+    return c.json({ ok: true } satisfies { ok: true });
   });
 
   /**
@@ -245,7 +246,7 @@ export function registerExternalAgentRoutes(control: ControlApp, deps: ControlDe
     const found = externalAgent(deps, c.req.param("id"));
     if ("error" in found) return c.json({ error: found.error, plain: found.plain }, found.status);
     const profiles = await found.ops.profiles(found.agent, c.req.query("fresh") === "1");
-    return c.json({ profiles, separate: Boolean(found.ops.row(found.external.cli)?.profileEnv), models: found.ops.models.of(found.agent.config.id) });
+    return c.json({ profiles, separate: Boolean(found.ops.row(found.external.cli)?.profileEnv), models: found.ops.models.of(found.agent.config.id) } satisfies { profiles: CliProfile[]; separate: boolean; models: { value: string; name?: string }[] });
   });
 
   /** A sign-in on the profile it answers with, or on the one `profile` names — a new name is a new profile. */
@@ -258,7 +259,7 @@ export function registerExternalAgentRoutes(control: ControlApp, deps: ControlDe
       return c.json({ error: "profile must be lowercase letters, digits and dashes, at most 24" }, 400);
     }
     try {
-      return c.json({ login: found.ops.startLogin(found.agent, body.profile) });
+      return c.json({ login: found.ops.startLogin(found.agent, body.profile) } satisfies { login: CliLoginView });
     } catch (err) {
       return c.json({ error: err instanceof Error ? err.message : String(err), plain: "Signing in could not start. Try again in a moment." }, 400);
     }
@@ -271,7 +272,7 @@ export function registerExternalAgentRoutes(control: ControlApp, deps: ControlDe
     const body = ((await jsonBody(c)) ?? {}) as { text?: unknown };
     if (typeof body.text !== "string" || body.text.length > ANSWER_MAX) return c.json({ error: `text must be a line of at most ${ANSWER_MAX} characters` }, 400);
     try {
-      return c.json({ login: await found.ops.answerLogin(found.agent.config.id, body.text) });
+      return c.json({ login: await found.ops.answerLogin(found.agent.config.id, body.text) } satisfies { login: CliLoginView });
     } catch (err) {
       return c.json({ error: err instanceof Error ? err.message : String(err), plain: "That sign-in has ended. Start it again." }, 409);
     }
@@ -282,7 +283,7 @@ export function registerExternalAgentRoutes(control: ControlApp, deps: ControlDe
     const found = externalAgent(deps, c.req.param("id"));
     if ("error" in found) return c.json({ error: found.error, plain: found.plain }, found.status);
     found.ops.stopLogin(found.agent.config.id);
-    return c.json({ ok: true });
+    return c.json({ ok: true } satisfies { ok: true });
   });
 }
 

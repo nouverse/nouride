@@ -9,7 +9,8 @@ import type { SkillLearningMode } from "@nouride/shared";
 export interface CatalogSkill {
   name: string;
   description: string;
-  scope: "shared" | "builtin";
+  /** `project`: from a folder an agent was given as a skill root, its own and no other agent's. */
+  scope: "shared" | "project" | "builtin";
   path: string;
   requires: string[];
   missing: string[];
@@ -61,11 +62,15 @@ export interface SkillDraft {
   name: string;
   description: string;
   requires: string;
+  /** Nouride tools the procedure calls, comma-separated. */
+  needsTools: string;
   body: string;
   /** The skill this improves, or null when it proposes a new one. */
   target: string | null;
   /** Files to ship beside SKILL.md — `references/…`, `scripts/…`, `templates/…`. */
   files: { path: string; content: string }[];
+  /** Files of the skill it improves that approving it deletes: the counterpart to `files`. */
+  removeFiles: string[];
   /** Earlier lessons this draft absorbed, oldest first — see the note on the card that renders it. */
   carries: string[];
   /** Skills archived when this is approved: a merge's others, or the skill itself for an archive. Absent before 0.7.27. */
@@ -110,6 +115,8 @@ export interface SkillHubHit {
 
 export interface SkillHubSearch {
   hits: SkillHubHit[];
+  /** Every hub a search can ask, by id. */
+  sources: readonly string[];
   /** A hub that did not answer, said beside the results rather than instead of them. */
   errors: { source: string; error: string }[];
 }

@@ -6,6 +6,7 @@
  * take longer than the server's idle timeout.
  */
 
+import type { TagTidyChange, TagTidyPlan } from "@nouride/wire";
 import { backupVault, type TidyChange } from "@/modules/memory/index.ts";
 import { atLeast } from "@/modules/users/auth.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
@@ -44,7 +45,7 @@ export function registerMemoryTagRoutes(control: ControlApp, deps: ControlDeps):
   control.get("/memory/tags/tidy", async (c) => {
     const no = refusal(c.get("principal"));
     if (no) return c.json({ error: no[0] }, no[1]);
-    return c.json({ ...deps.memory!.tags.plan(), last: await deps.memory!.tags.last() });
+    return c.json({ ...deps.memory!.tags.plan(), last: await deps.memory!.tags.last() } satisfies TagTidyPlan);
   });
 
   control.post("/memory/tags/tidy/model", async (c) => {
@@ -57,7 +58,7 @@ export function registerMemoryTagRoutes(control: ControlApp, deps: ControlDeps):
     // Why each group the model proposed was not offered is the checks' own words (a tag not in use, one in two groups):
     // the page says what to do instead (0.8.23).
     const plain = result.dropped.length === 0 ? null : "Some of the groups it proposed named tags that are not in use or were already grouped. Try again, or set a stronger model for the pass.";
-    return c.json({ ...result, plain });
+    return c.json({ ...result, plain } satisfies { changes: TagTidyChange[]; dropped?: { from: string[]; into: string; why: string }[]; readable?: boolean; plain?: string | null });
   });
 
   control.post("/memory/tags/tidy", async (c) => {
@@ -72,7 +73,7 @@ export function registerMemoryTagRoutes(control: ControlApp, deps: ControlDeps):
     const result = await deps.memory!.tags.apply(ids, model, principal.actor, backup);
     if ("refused" in result) return c.json(...refused(result.refused));
     deps.audit?.record({ action: "memory_tags_tidied", actor: principal.actor, details: { changes: result.changes.length, episodes: Object.keys(result.episodes).length } });
-    return c.json({ at: result.at, changes: result.changes.length, episodes: Object.keys(result.episodes).length });
+    return c.json({ at: result.at, changes: result.changes.length, episodes: Object.keys(result.episodes).length } satisfies { at: string; changes: number; episodes: number });
   });
 
   control.post("/memory/tags/merge", async (c) => {
@@ -86,7 +87,7 @@ export function registerMemoryTagRoutes(control: ControlApp, deps: ControlDeps):
     const result = await deps.memory!.tags.merge(from, body.into, principal.actor, backup);
     if ("refused" in result) return c.json(...refused(result.refused));
     deps.audit?.record({ action: "memory_tags_tidied", actor: principal.actor, details: { merged: from, into: body.into, episodes: Object.keys(result.episodes).length } });
-    return c.json({ at: result.at, episodes: Object.keys(result.episodes).length });
+    return c.json({ at: result.at, episodes: Object.keys(result.episodes).length } satisfies { at: string; episodes: number });
   });
 
   control.post("/memory/tags/tidy/undo", async (c) => {
@@ -97,6 +98,6 @@ export function registerMemoryTagRoutes(control: ControlApp, deps: ControlDeps):
     const result = await deps.memory!.tags.undo();
     if ("refused" in result) return c.json(...refused(result.refused));
     deps.audit?.record({ action: "memory_tags_tidy_undone", actor: principal.actor, details: { restored: result.restored, skipped: result.skipped.length } });
-    return c.json(result);
+    return c.json(result satisfies { restored: number; skipped: string[] });
   });
 }

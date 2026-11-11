@@ -4,6 +4,7 @@
  * Settings page, operator and up, and `null` means "follow the daemon" — the same shape as the quiet-job wait beside it.
  */
 
+import type { DelegatePolicy } from "@nouride/wire";
 import { join } from "@nouride/runtime";
 import { MAX_BACKGROUND_HELPERS } from "@nouride/shared";
 import { backgroundInForce, machineAtBoot } from "@/commons/machine.ts";
@@ -21,7 +22,7 @@ export function registerDelegateRoutes(control: ControlApp, deps: ControlDeps): 
       auto: daemon.from === "machine",
       max: MAX_BACKGROUND_HELPERS,
       editable: Boolean(deps.settings),
-    });
+    } satisfies DelegatePolicy);
   });
 
   control.post("/agents/:id/delegate", async (c) => {
@@ -47,6 +48,6 @@ export function registerDelegateRoutes(control: ControlApp, deps: ControlDeps): 
       agentId: id,
     });
     if (!result.ok) return c.json({ error: result.error, plain: notSaved("the number of helpers in the background") }, 400);
-    return c.json({ ok: true });
+    return c.json({ ok: true } satisfies { ok: true });
   });
 }

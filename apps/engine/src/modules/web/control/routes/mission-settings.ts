@@ -6,6 +6,7 @@
  * value may be is the schema's (`settings/missions.ts`).
  */
 
+import type { MissionSettings } from "@nouride/wire";
 import { join } from "@nouride/runtime";
 import { atOnceBy, machineAtBoot } from "@/commons/machine.ts";
 import { missionSettings, type MissionSetting } from "@/modules/config/settings/missions.ts";
@@ -32,8 +33,8 @@ export function registerMissionSettingsRoutes(control: ControlApp, deps: Control
   const byMachine = () => atOnceBy(deps.ctx.machine ?? machineAtBoot());
 
   control.get("/policy/missions", (c) => {
-    if (!deps.settings) return c.json({ ...missionSettings({ config: deps.ctx.config }, agents(), byMachine()), editable: false });
-    return c.json({ ...deps.settings.missionSettings(agents(), byMachine()), editable: true });
+    if (!deps.settings) return c.json({ ...missionSettings({ config: deps.ctx.config }, agents(), byMachine()), editable: false } satisfies MissionSettings);
+    return c.json({ ...deps.settings.missionSettings(agents(), byMachine()), editable: true } satisfies MissionSettings);
   });
 
   control.post("/policy/missions", async (c) => {
@@ -47,7 +48,7 @@ export function registerMissionSettingsRoutes(control: ControlApp, deps: Control
     if (!result.ok) return c.json({ error: result.error, plain: notSaved(result.field && MISSION_FIELDS[result.field]) }, 400);
     // Whole, as the GET answers: the page puts this in place of what it read, and without `editable` its form went
     // read-only after the first save.
-    return c.json({ ok: true, ...deps.settings.missionSettings(agents(), byMachine()), editable: true });
+    return c.json({ ok: true, ...deps.settings.missionSettings(agents(), byMachine()), editable: true } satisfies MissionSettings & { ok: true });
   });
 
   // One agent's own `per_agent` (0.8.11), from its Settings page: `null` follows the daemon's. The same shape as
@@ -73,6 +74,6 @@ export function registerMissionSettingsRoutes(control: ControlApp, deps: Control
       agentId: id,
     });
     if (!result.ok) return c.json({ error: result.error, plain: notSaved("the number of missions at once") }, 400);
-    return c.json({ ok: true });
+    return c.json({ ok: true } satisfies { ok: true });
   });
 }

@@ -92,7 +92,7 @@ export interface TurnStep {
   name?: string;
   /** A result: whether it failed, and how (`tool_done.outcome`, 1.1). */
   error?: boolean;
-  outcome?: string;
+  outcome?: TurnEventData["tool_done"]["outcome"];
   /** A `steer` that is a person's edit: the message it changes (`steer.editOf`, 1.3). */
   editOf?: string;
 }

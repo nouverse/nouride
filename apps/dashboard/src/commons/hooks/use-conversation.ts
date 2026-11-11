@@ -255,8 +255,8 @@ export function useConversation(input: {
           }
           setJobs(running ?? []);
           // Replaced whole rather than extended: every poll carries each turn's steps in full, so
-          // merging would double them.
-          setLiveTurns(turns);
+          // merging would double them. A room's turns come with no cursor, since nothing is asked "since": none is kept.
+          setLiveTurns(turns.map((turn) => ({ ...turn, cursor: 0 })));
 
           if (turns.length > 0 || pendingRef.current) wait = streamed.current ? STREAMED_LIVE_MS : LIVE_MS;
 

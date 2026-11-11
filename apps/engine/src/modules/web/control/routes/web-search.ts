@@ -6,9 +6,10 @@
  * answers it. A typed key is used for that one call and not stored.
  */
 
+import type { WebSearchSettings, WebSearchTest } from "@nouride/wire";
 import { atLeast } from "@/modules/users/auth.ts";
 import { createWebSearchTool } from "@/modules/tools/builtins/web/index.ts";
-import { defaultSearchSecret, type WebSearchField, type WebSearchPatch, type WebSearchSettings } from "@/modules/config/settings/web.ts";
+import { defaultSearchSecret, type WebSearchField, type WebSearchPatch, type WebSearchSettings as StoredWebSearch } from "@/modules/config/settings/web.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { jsonBody } from "../payloads.ts";
 import { NO_SETTINGS, notSaved } from "../plain.ts";
@@ -22,7 +23,7 @@ const WEB_SEARCH_FIELDS: Record<WebSearchField, string> = {
 };
 
 /** What a search that is not working is missing, as the Web Search page asks for it. */
-const NEEDS: Record<NonNullable<WebSearchSettings["needs"]>, string> = {
+const NEEDS: Record<NonNullable<StoredWebSearch["needs"]>, string> = {
   address: "It needs the address of your search service.",
   key: "It needs the key for your search service.",
 };
@@ -44,17 +45,19 @@ export function registerWebSearchRoutes(control: ControlApp, deps: ControlDeps):
   const atBoot =
     deps.ctx?.config?.security?.web && typeof deps.settings?.webSearchSettings === "function" ? live() : undefined;
 
+  /** The settings as the page reads them: what searching needs in its words, and whether a restart is waited on. */
+  const asRead = (view: StoredWebSearch) => ({
+    ...view,
+    // Why searching is not working is said in the settings file's words (0.8.23): the page says what it needs.
+    plain: view.needs ? NEEDS[view.needs] : null,
+    restartPending: atBoot !== undefined && live() !== atBoot,
+    editable: true,
+  });
+
   control.get("/web-search", (c) => {
     if (!atLeast(c.get("principal"), "admin")) return c.json({ error: "admin only" }, 403);
     if (!deps.settings) return c.json({ error: "config editing is not available", plain: NO_SETTINGS }, 501);
-    const view = deps.settings.webSearchSettings();
-    return c.json({
-      ...view,
-      // Why searching is not working is said in the settings file's words (0.8.23): the page says what it needs.
-      plain: view.needs ? NEEDS[view.needs] : null,
-      restartPending: atBoot !== undefined && live() !== atBoot,
-      editable: true,
-    });
+    return c.json(asRead(deps.settings.webSearchSettings()) satisfies WebSearchSettings);
   });
 
   control.post("/web-search", async (c) => {
@@ -66,7 +69,7 @@ export function registerWebSearchRoutes(control: ControlApp, deps: ControlDeps):
     if (typeof patch === "string") return c.json({ error: patch }, 400);
     const result = await deps.settings.setWebSearchSettings({ patch, actor: principal.actor });
     if (!result.ok) return c.json({ error: result.error, plain: notSaved(result.field && WEB_SEARCH_FIELDS[result.field]) }, 400);
-    return c.json({ ok: true, restartRequired: result.restartRequired, settings: deps.settings.webSearchSettings() });
+    return c.json({ ok: true, restartRequired: result.restartRequired, settings: asRead(deps.settings.webSearchSettings()) } satisfies { ok: true; restartRequired: boolean; settings: WebSearchSettings });
   });
 
   control.post("/web-search/test", async (c) => {
@@ -111,7 +114,7 @@ export function registerWebSearchRoutes(control: ControlApp, deps: ControlDeps):
       source: typeof result.metadata?.source === "string" ? result.metadata.source : undefined,
       results,
       ...(results.length === 0 ? { error: "it answered, but with no results" } : {}),
-    });
+    } satisfies WebSearchTest);
   });
 }
 

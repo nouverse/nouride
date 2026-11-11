@@ -6,6 +6,7 @@
  * Registered before `registerSkillRoutes`, whose `/skills/:name` would otherwise take `hub`.
  */
 
+import type { SkillHubHit, SkillHubInstall, SkillHubSearch } from "@nouride/wire";
 import { atLeast } from "@/modules/users/auth.ts";
 import { hubErrorMessage, SOURCE_IDS, type InstallResult, type SourceId } from "@/modules/skills-hub/index.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
@@ -38,7 +39,7 @@ export function registerSkillHubRoutes(control: ControlApp, deps: ControlDeps): 
       .filter((s): s is SourceId => (SOURCE_IDS as string[]).includes(s));
     const limit = Number(c.req.query("limit") ?? 8) || 8;
     const result = await deps.skillHub.search(query, { sources, limit });
-    return c.json({ ...result, sources: SOURCE_IDS });
+    return c.json({ ...result, sources: SOURCE_IDS } satisfies SkillHubSearch);
   });
 
   /** The most used skills, for Explore before anything is typed. A hub that does not answer is said, not an error page. */
@@ -46,7 +47,7 @@ export function registerSkillHubRoutes(control: ControlApp, deps: ControlDeps): 
     if (!deps.skillHub) return c.json({ error: "the skills hub is not available" }, 501);
     if (!atLeast(c.get("principal"), "operator")) return c.json({ error: "operator only" }, 403);
     try {
-      return c.json({ hits: await deps.skillHub.popular() });
+      return c.json({ hits: await deps.skillHub.popular() } satisfies { hits: SkillHubHit[]; error?: string; plain?: string });
     } catch (err) {
       return c.json({ hits: [], error: hubErrorMessage(err), plain: "The list of popular skills could not be reached. Try again in a moment." });
     }
@@ -72,7 +73,7 @@ export function registerSkillHubRoutes(control: ControlApp, deps: ControlDeps): 
       : { agentId: principal.actor ?? "operator", byAgent: false };
     try {
       const result = await deps.skillHub.install(body.ref, who);
-      return c.json({ ok: result.drafts.length > 0, drafts: result.drafts, refused: result.refused, notes: result.notes, plain: installedPlain(result) });
+      return c.json({ ok: result.drafts.length > 0, drafts: result.drafts, refused: result.refused, notes: result.notes, plain: installedPlain(result) } satisfies SkillHubInstall);
     } catch (err) {
       return c.json({ ok: false, error: hubErrorMessage(err), plain: "The skill was not installed. Check where it is from, and try again." }, 400);
     }

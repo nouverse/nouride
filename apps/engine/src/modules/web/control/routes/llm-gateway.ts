@@ -47,7 +47,7 @@ function view(deps: ControlDeps): LlmGatewayView {
 export function registerLlmGatewayRoutes(control: ControlApp, deps: ControlDeps): void {
   control.get("/llm-gateway", (c) => {
     if (!atLeast(c.get("principal"), "admin")) return c.json({ error: "admin only" }, 403);
-    return c.json(view(deps));
+    return c.json(view(deps) satisfies LlmGatewayView);
   });
 
   control.put("/llm-gateway", async (c) => {
@@ -68,7 +68,7 @@ export function registerLlmGatewayRoutes(control: ControlApp, deps: ControlDeps)
       const answer: LlmGatewaySwitched = on.saved
         ? { on: true, saved: true, said: "Nougate is on." }
         : { on: true, saved: false, said: "Nougate is on, but the setting was not saved, so it is off again after Nouride restarts." };
-      return c.json(answer);
+      return c.json(answer satisfies LlmGatewaySwitched);
     }
 
     const off = await gateway.turnOff(principal.actor);
@@ -102,6 +102,6 @@ export function registerLlmGatewayRoutes(control: ControlApp, deps: ControlDeps)
               ? "Nougate stops as Nouride restarts, as soon as nothing is running."
               : "Nougate stops as Nouride restarts now.",
         };
-    return c.json(answer);
+    return c.json(answer satisfies LlmGatewaySwitched);
   });
 }

@@ -17,8 +17,9 @@
  * accident of position.
  */
 
+import type { LearningSettings, SkillDraft } from "@nouride/wire";
 import { atLeast } from "@/modules/users/auth.ts";
-import type { SkillDraft } from "@/modules/reflection/types.ts";
+import type { SkillDraft as StoredDraft } from "@/modules/reflection/types.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { jsonBody } from "../payloads.ts";
 import { LONG_REQUEST_SECONDS } from "./memory.ts";
@@ -33,7 +34,7 @@ const LEARNING_FIELDS: Record<LearningField, string> = {
 };
 
 /** The draft as a client sees it. Same fields, minus nothing — there is nothing secret in a draft. */
-function toJson(draft: SkillDraft): Record<string, unknown> {
+function toJson(draft: StoredDraft): SkillDraft {
   return {
     id: draft.id,
     createdAt: draft.createdAt,
@@ -70,7 +71,7 @@ export function registerDraftRoutes(control: ControlApp, deps: ControlDeps): voi
    * first paint of every page load.
    */
   control.get("/skills/drafts", (c) => {
-    if (!deps.reflection) return c.json({ enabled: false, pending: [], recent: [] });
+    if (!deps.reflection) return c.json({ enabled: false, pending: [], recent: [] } satisfies { enabled: boolean; pending: SkillDraft[]; recent: SkillDraft[] });
 
     const recent = deps.reflection.recent(50);
     return c.json({
@@ -79,7 +80,7 @@ export function registerDraftRoutes(control: ControlApp, deps: ControlDeps): voi
       // Decided rows only — the pending ones are already above, and repeating them would double
       // every row in a table that is meant to be read at a glance.
       recent: recent.filter((draft) => draft.status !== "pending").map(toJson),
-    });
+    } satisfies { enabled: boolean; pending: SkillDraft[]; recent: SkillDraft[] });
   });
 
   /**
@@ -100,7 +101,7 @@ export function registerDraftRoutes(control: ControlApp, deps: ControlDeps): voi
       editable: Boolean(deps.settings),
       /** Pending right now, so the form can say what the current setting has actually produced. */
       pending: deps.reflection?.pending().length ?? 0,
-    });
+    } satisfies LearningSettings);
   });
 
   /**
@@ -117,7 +118,7 @@ export function registerDraftRoutes(control: ControlApp, deps: ControlDeps): voi
     const result = await deps.settings.setSkillLearning({ patch: body, actor: principal.actor });
     if (!result.ok) return c.json({ error: result.error, plain: notSaved(result.field && LEARNING_FIELDS[result.field]) }, 400);
 
-    return c.json({ ok: true, ...deps.ctx.config.skills.learning });
+    return c.json({ ok: true, ...deps.ctx.config.skills.learning } satisfies { ok: true });
   });
 
   /** The weekly review of the library, now. Operator: it only proposes — every proposal waits as a draft. */
@@ -136,7 +137,7 @@ export function registerDraftRoutes(control: ControlApp, deps: ControlDeps): voi
             : "Reviewing skills is not running on this server.";
       return c.json({ error: outcome.refused, plain }, 409);
     }
-    return c.json(outcome);
+    return c.json(outcome satisfies NonNullable<LearningSettings["lastReview"]>["report"]);
   });
 
   /** One draft, with the scrubbed transcript the synthesis pass actually read. */
@@ -145,7 +146,7 @@ export function registerDraftRoutes(control: ControlApp, deps: ControlDeps): voi
 
     const draft = deps.reflection.get(c.req.param("id"));
     if (!draft) return c.json({ error: "no such draft" }, 404);
-    return c.json({ ...toJson(draft), transcript: draft.transcript });
+    return c.json({ ...toJson(draft), transcript: draft.transcript } satisfies SkillDraft & { transcript: string | null });
   });
 
   /**
@@ -166,7 +167,7 @@ export function registerDraftRoutes(control: ControlApp, deps: ControlDeps): voi
     const result = await deps.reflection.approve(c.req.param("id"), principal.actor, readEdits(body));
     if (!result.ok) return c.json({ error: result.error, plain: "The skill was not kept. Check its name and what you changed, and try again." }, 400);
 
-    return c.json({ ok: true, skill: result.draft.name, path: result.path });
+    return c.json({ ok: true, skill: result.draft.name, path: result.path } satisfies { ok: true; skill: string; path: string });
   });
 
   /** Discard. The row and its transcript are deleted, leaving nothing of the draft behind. */
@@ -177,7 +178,7 @@ export function registerDraftRoutes(control: ControlApp, deps: ControlDeps): voi
 
     const gone = deps.reflection.deny(c.req.param("id"), principal.actor);
     if (!gone) return c.json({ error: "no such draft, or it has already been decided" }, 404);
-    return c.json({ ok: true });
+    return c.json({ ok: true } satisfies { ok: true });
   });
 }
 

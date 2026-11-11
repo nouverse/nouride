@@ -4,6 +4,7 @@
  * signed in reads it, as they read People and Groups, which say the same names.
  */
 
+import type { KnownChat } from "@nouride/wire";
 import type { ControlApp, ControlDeps } from "../types.ts";
 
 export function registerKnownChatRoutes(control: ControlApp, deps: ControlDeps): void {
@@ -18,6 +19,6 @@ export function registerKnownChatRoutes(control: ControlApp, deps: ControlDeps):
         people: chat.people.map((person) => person.name),
         lastActive: chat.lastActive,
       })),
-    }),
+    } satisfies { chats: KnownChat[] }),
   );
 }

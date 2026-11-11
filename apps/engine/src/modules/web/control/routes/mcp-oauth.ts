@@ -52,7 +52,7 @@ export function registerMcpOAuthRoutes(control: ControlApp, deps: ControlDeps): 
     const body = ((await jsonBody(c)) ?? {}) as Record<string, unknown>;
     const finished = await deps.mcpLogins.finish({ code: body.code, state: body.state, url: body.url }, whoIs(principal), principal.actor);
     if ("error" in finished) return c.json({ error: finished.error, plain: "Signing in did not finish. Start it again from the connector." }, finished.status);
-    return c.json(finished);
+    return c.json(finished satisfies { ok: true; holder: string; server: string; scope?: string });
   });
 
   const logout = async (c: ControlContext, agentId: string | undefined) => {

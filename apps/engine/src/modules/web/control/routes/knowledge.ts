@@ -9,6 +9,7 @@
  * admin's (opened on purpose, by someone who may).
  */
 
+import type { KnowledgeCollection, KnowledgeDocument, KnowledgeHit, KnowledgeSection, PendingDocument, RelatedDocument, SavedDocument } from "@nouride/wire";
 import { idsOf } from "@/modules/people/match.ts";
 import { collectionIdOf, TITLE_MAX, type CollectionSettings, type CollectionView, type KnowledgeReaders } from "@/modules/memory/index.ts";
 import { atLeast, type Principal } from "@/modules/users/auth.ts";
@@ -142,7 +143,7 @@ export function registerKnowledgeRoutes(control: ControlApp, deps: ControlDeps):
   control.get("/knowledge", (c) => {
     const no = refusal(c.get("principal"), "operator");
     if (no) return c.json({ error: no[0] }, no[1]);
-    return c.json({ collections: memory().knowledge.collections().map(viewOf) });
+    return c.json({ collections: memory().knowledge.collections().map(viewOf) } satisfies { collections: KnowledgeCollection[] });
   });
 
   /**
@@ -167,7 +168,7 @@ export function registerKnowledgeRoutes(control: ControlApp, deps: ControlDeps):
     if ("refused" in made) return c.json({ error: made.refused, plain: refusedWords(made.why) }, 409);
     deps.audit.record({ action: "knowledge_collection_created", actor: principal.actor, details: { collection: made.id, readers: settings.readers.kind } });
     const view = memory().knowledge.collections().find((collection) => collection.id === made.id);
-    return c.json({ collection: view ? viewOf(view) : null }, 201);
+    return c.json({ collection: view ? viewOf(view) : null } satisfies { collection: KnowledgeCollection | null }, 201);
   });
 
   control.patch("/knowledge/:id", async (c) => {
@@ -187,7 +188,7 @@ export function registerKnowledgeRoutes(control: ControlApp, deps: ControlDeps):
     if ("refused" in written) return c.json({ error: written.refused, plain: refusedWords(written.why) }, 409);
     deps.audit.record({ action: "knowledge_collection_changed", actor: principal.actor, details: { collection: current.id, fields: Object.keys(body) } });
     const view = memory().knowledge.collections().find((collection) => collection.id === current.id);
-    return c.json({ collection: view ? viewOf(view) : null });
+    return c.json({ collection: view ? viewOf(view) : null } satisfies { collection: KnowledgeCollection | null });
   });
 
   control.delete("/knowledge/:id", async (c) => {
@@ -197,7 +198,7 @@ export function registerKnowledgeRoutes(control: ControlApp, deps: ControlDeps):
     const id = c.req.param("id");
     if (!(await memory().knowledge.removeCollection(id))) return c.json({ error: `no collection "${id}"` }, 404);
     deps.audit.record({ action: "knowledge_collection_deleted", actor: principal.actor, details: { collection: id } });
-    return c.json({ ok: true });
+    return c.json({ ok: true } satisfies { ok: true });
   });
 
   control.get("/knowledge/:id/documents", (c) => {
@@ -205,7 +206,7 @@ export function registerKnowledgeRoutes(control: ControlApp, deps: ControlDeps):
     if (no) return c.json({ error: no[0] }, no[1]);
     const id = c.req.param("id");
     if (!memory().knowledge.collection(id)) return c.json({ error: `no collection "${id}"` }, 404);
-    return c.json({ documents: memory().knowledge.documents(id) });
+    return c.json({ documents: memory().knowledge.documents(id) } satisfies { documents: KnowledgeDocument[] });
   });
 
   /** One document and its sections, as search sees them. */
@@ -216,7 +217,7 @@ export function registerKnowledgeRoutes(control: ControlApp, deps: ControlDeps):
     const path = c.req.query("path") ?? "";
     const document = memory().knowledge.document(id, path);
     if (!document) return c.json({ error: `no document "${path}" in "${id}"` }, 404);
-    return c.json({ document, sections: memory().knowledge.sectionsOf(id, path) });
+    return c.json({ document, sections: memory().knowledge.sectionsOf(id, path) } satisfies { document: KnowledgeDocument; sections: KnowledgeSection[] });
   });
 
   /**
@@ -229,7 +230,7 @@ export function registerKnowledgeRoutes(control: ControlApp, deps: ControlDeps):
     const id = c.req.param("id");
     const path = c.req.query("path") ?? "";
     if (!memory().knowledge.document(id, path)) return c.json({ error: `no document "${path}" in "${id}"` }, 404);
-    return c.json(memory().knowledge.related(id, path));
+    return c.json(memory().knowledge.related(id, path) satisfies { byMeaning: boolean; related: RelatedDocument[] });
   });
 
   /** Files dropped on a collection, or a document written on the page (`name` and `text`). */
@@ -282,7 +283,7 @@ export function registerKnowledgeRoutes(control: ControlApp, deps: ControlDeps):
       saved.push({ path: added.path, status: added.document?.status ?? "indexed", ...(added.document?.reason ? { reason: added.document.reason } : {}) });
     }
     deps.audit.record({ action: "knowledge_documents_added", actor: principal.actor, details: { collection: id, documents: saved.map((file) => file.path) } });
-    return c.json({ saved }, 201);
+    return c.json({ saved } satisfies { saved: SavedDocument[] }, 201);
   });
 
   control.delete("/knowledge/:id/documents", async (c) => {
@@ -293,7 +294,7 @@ export function registerKnowledgeRoutes(control: ControlApp, deps: ControlDeps):
     const path = c.req.query("path") ?? "";
     if (!(await memory().knowledge.remove(id, path))) return c.json({ error: `no document "${path}" in "${id}"` }, 404);
     deps.audit.record({ action: "knowledge_document_removed", actor: principal.actor, details: { collection: id, document: path } });
-    return c.json({ ok: true });
+    return c.json({ ok: true } satisfies { ok: true });
   });
 
   /**
@@ -313,7 +314,7 @@ export function registerKnowledgeRoutes(control: ControlApp, deps: ControlDeps):
     const done = await memory().knowledge.retitle(id, path, title);
     if ("refused" in done) return c.json({ error: done.refused, plain: refusedWords(done.why) }, done.why === "missing" ? 404 : 400);
     deps.audit.record({ action: "knowledge_document_titled", actor: principal.actor, details: { collection: id, document: path, titled: title !== null } });
-    return c.json({ document: done.document });
+    return c.json({ document: done.document } satisfies { document: KnowledgeDocument | null });
   });
 
   /** Documents saved from a chat into a collection wider than that chat, waiting for an admin's yes. */
@@ -322,7 +323,7 @@ export function registerKnowledgeRoutes(control: ControlApp, deps: ControlDeps):
     if (no) return c.json({ error: no[0] }, no[1]);
     const id = c.req.param("id");
     if (!memory().knowledge.collection(id)) return c.json({ error: `no collection "${id}"` }, 404);
-    return c.json({ pending: memory().knowledge.pending(id) });
+    return c.json({ pending: memory().knowledge.pending(id) } satisfies { pending: PendingDocument[] });
   });
 
   control.post("/knowledge/:id/pending/:decision", async (c) => {
@@ -346,7 +347,7 @@ export function registerKnowledgeRoutes(control: ControlApp, deps: ControlDeps):
       if (!memory().knowledge.decline(id, path)) return c.json({ error: `nothing called "${path}" waits in "${id}"` }, 404);
       deps.audit.record({ action: "knowledge_document_declined", actor: principal.actor, details: { collection: id, document: path } });
       if (waiting) tell(declinedLine(waiting.title, collection));
-      return c.json({ ok: true });
+      return c.json({ ok: true } satisfies { ok: true });
     }
     const joined = await memory().knowledge.approve(id, path);
     if (!joined) return c.json({ error: `nothing called "${path}" waits in "${id}"` }, 404);
@@ -372,6 +373,6 @@ export function registerKnowledgeRoutes(control: ControlApp, deps: ControlDeps):
     const query = c.req.query("q")?.trim() ?? "";
     if (!query) return c.json({ error: "q is the words to search for" }, 400);
     const only = c.req.query("collection")?.trim();
-    return c.json({ hits: await memory().knowledge.search(query, only || undefined) });
+    return c.json({ hits: await memory().knowledge.search(query, only || undefined) } satisfies { hits: KnowledgeHit[] });
   });
 }

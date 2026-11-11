@@ -7,6 +7,7 @@
  * dashboard whose whole purpose is an agent that can run commands.
  */
 
+import type { Principal, User } from "@nouride/wire";
 import { createLogger, rateLimit } from "@nouride/shared";
 import { atLeast } from "@/modules/users/auth.ts";
 import {
@@ -155,7 +156,7 @@ export function registerAuthRoutes(control: ControlApp, deps: ControlDeps): void
     const session = deps.users.startSession(user.id);
     c.header("set-cookie", sessionCookie(session.token, session.expiresAt, secureCookies(c)));
     deps.audit.record({ action: "login", actor: user.username });
-    return c.json({ user });
+    return c.json({ user } satisfies { user: User });
   });
 
   /**
@@ -291,14 +292,14 @@ export function registerAuthRoutes(control: ControlApp, deps: ControlDeps): void
     });
     if (!result.ok) return c.json({ error: result.error, plain: NOT_SAVED }, 400);
 
-    return c.json({ passwordLogin: body.enabled });
+    return c.json({ passwordLogin: body.enabled } satisfies { passwordLogin: boolean });
   });
 
   control.post("/auth/logout", (c) => {
     const token = readCookie(c.req.header("cookie"), SESSION_COOKIE);
     if (token) deps.users?.endSession(token);
     c.header("set-cookie", clearedSessionCookie(secureCookies(c)));
-    return c.json({ ok: true });
+    return c.json({ ok: true } satisfies { ok: true });
   });
 
   control.get("/auth/me", (c) => {
@@ -310,7 +311,7 @@ export function registerAuthRoutes(control: ControlApp, deps: ControlDeps): void
       role: principal.role,
       actor: principal.actor,
       user: principal.user ?? null,
-    });
+    } satisfies Principal);
   });
 
   /**
@@ -359,7 +360,7 @@ export function registerAuthRoutes(control: ControlApp, deps: ControlDeps): void
     deps.users.endAllSessions(principal.user.id);
     const session = deps.users.startSession(principal.user.id);
     c.header("set-cookie", sessionCookie(session.token, session.expiresAt, secureCookies(c)));
-    return c.json({ ok: true });
+    return c.json({ ok: true } satisfies { ok: true });
   });
 
   /**
@@ -399,6 +400,8 @@ export function registerAuthRoutes(control: ControlApp, deps: ControlDeps): void
       c.header("set-cookie", sessionCookie(session.token, session.expiresAt, secureCookies(c)));
     }
 
-    return c.json({ ok: true, user: deps.users.byId(principal.user.id) });
+    const user = deps.users.byId(principal.user.id);
+    if (!user) return c.json({ error: "that account is gone" }, 404);
+    return c.json({ ok: true, user } satisfies { ok: true; user: User });
   });
 }

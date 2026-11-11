@@ -2,6 +2,7 @@
  * The people an agent is told about by name.
  */
 
+import type { PersonRecord } from "@nouride/wire";
 import { atLeast } from "@/modules/users/auth.ts";
 import { accountIdentity, personOf, type LinkTarget } from "@/modules/config/settings/identities.ts";
 import type { MorningField, PersonField } from "@/modules/config/settings/people.ts";
@@ -24,7 +25,7 @@ const MORNING_FIELDS: Record<MorningField, string> = {
 
 export function registerPeopleRoutes(control: ControlApp, deps: ControlDeps): void {
   // As loaded: every account in the platform's spelling, which the loader holds `[[people]]` to.
-  control.get("/people", (c) => c.json({ people: deps.ctx.config.people ?? [] }));
+  control.get("/people", (c) => c.json({ people: deps.ctx.config.people ?? [] } satisfies { people: PersonRecord[] }));
 
   /**
    * Add a person, or change one.
@@ -90,7 +91,7 @@ export function registerPeopleRoutes(control: ControlApp, deps: ControlDeps): vo
       const conflict = "conflict" in result && result.conflict === true;
       return c.json({ error: result.error, plain: conflict ? CHANGED_MEANWHILE : notSaved(result.field && PERSON_FIELDS[result.field]) }, conflict ? 409 : 400);
     }
-    return c.json({ ok: true, person: result.person, people: deps.ctx.config.people });
+    return c.json({ ok: true, person: result.person, people: deps.ctx.config.people } satisfies { ok: boolean; person: PersonRecord; people: PersonRecord[] });
   });
 
   /**
@@ -112,7 +113,7 @@ export function registerPeopleRoutes(control: ControlApp, deps: ControlDeps): vo
     if (!result.ok) return c.json({ error: result.error, plain: NOT_CHANGED }, 400);
     const revoked = deps.mcpTokens?.revokeFor(result.person.key, Date.now()) ?? [];
     for (const id of revoked) deps.audit?.record({ action: "mcp_token_revoked", actor: principal.actor, details: { id, person: result.person.key, why: "removed from People" } });
-    return c.json({ ok: true, people: deps.ctx.config.people, tokensRevoked: revoked.length });
+    return c.json({ ok: true, people: deps.ctx.config.people, tokensRevoked: revoked.length } satisfies { ok: boolean; people: PersonRecord[]; tokensRevoked: number });
   });
 
   /** A body's target: `{ person: key | id }` for somebody already known, `{ name }` for somebody new. */
@@ -137,15 +138,15 @@ export function registerPeopleRoutes(control: ControlApp, deps: ControlDeps): vo
     if (to !== undefined && to !== null && typeof to !== "string") return c.json({ error: "`to` is one of their accounts, or null" }, 400);
     const result = await deps.settings.writePersonMorning(c.req.param("key"), { at, ...(to !== undefined ? { to } : {}) }, principal.actor);
     if (!result.ok) return c.json({ error: result.error, plain: notSaved(result.field && MORNING_FIELDS[result.field]) }, 400);
-    return c.json({ ok: true, at, to: at === null ? null : (to ?? deps.ctx.config.people.find((one) => one.key === c.req.param("key"))?.morningTo ?? null) });
+    return c.json({ ok: true, at, to: at === null ? null : (to ?? deps.ctx.config.people.find((one) => one.key === c.req.param("key"))?.morningTo ?? null) } satisfies { ok: true; at: string | null; to: string | null });
   });
 
   /** Who this account is to the agents. */
   control.get("/people/me", (c) => {
     const principal = c.get("principal");
-    if (!principal.user) return c.json({ person: null });
+    if (!principal.user) return c.json({ person: null } satisfies { person: PersonRecord | null });
     const person = personOf(deps.ctx.config.people, accountIdentity(principal.user.id)) ?? null;
-    return c.json({ person });
+    return c.json({ person } satisfies { person: PersonRecord | null });
   });
 
   /**
@@ -160,7 +161,7 @@ export function registerPeopleRoutes(control: ControlApp, deps: ControlDeps): vo
     if (!target) return c.json({ error: "person (a key or id) or name is required" }, 400);
     const result = await deps.settings.linkIdentity({ identity: accountIdentity(principal.user.id), target, actor: principal.actor });
     if (!result.ok) return c.json({ error: result.error, plain: "The account was not linked. Pick the person again, and try again." }, 400);
-    return c.json({ person: result.person });
+    return c.json({ person: result.person } satisfies { person: PersonRecord });
   });
 
   /** Link another dashboard account to a person. An admin's, for the same reason. */
@@ -175,6 +176,6 @@ export function registerPeopleRoutes(control: ControlApp, deps: ControlDeps): vo
     if (!target) return c.json({ error: "person (a key or id) or name is required" }, 400);
     const result = await deps.settings.linkIdentity({ identity: accountIdentity(user.id), target, actor: principal.actor });
     if (!result.ok) return c.json({ error: result.error, plain: "The account was not linked. Pick the person again, and try again." }, 400);
-    return c.json({ person: result.person });
+    return c.json({ person: result.person } satisfies { person: PersonRecord });
   });
 }

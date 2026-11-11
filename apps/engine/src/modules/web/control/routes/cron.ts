@@ -2,6 +2,8 @@
  * Scheduled jobs and webhooks — one store, two views.
  */
 
+import type { CronRunEntry, JobRunSummary, JobSummary, RunNowOutcome, WebhookSummary } from "@nouride/wire";
+import type { Job } from "@nouride/shared";
 import { describeTrigger } from "@/modules/cron/parse.ts";
 import { atLeast } from "@/modules/users/auth.ts";
 import { webhookUrl } from "@/modules/web/hooks.ts";
@@ -58,7 +60,7 @@ export function registerCronRoutes(control: ControlApp, deps: ControlDeps): void
         .filter((job) => job.trigger.kind !== "webhook")
         .map((job) => ({ ...job, describes: describeTrigger(job.trigger, deps.cron!.timezone) })),
       timezone: deps.cron.timezone,
-    });
+    } satisfies { jobs: JobSummary[]; timezone: string });
   });
 
   /**
@@ -78,7 +80,7 @@ export function registerCronRoutes(control: ControlApp, deps: ControlDeps): void
       webhooks: jobs
         .filter((job) => job.trigger.kind === "webhook")
         .map((job) => webhookView(job, deps)),
-    });
+    } satisfies { webhooks: WebhookSummary[] });
   });
 
   control.post("/webhooks", async (c) => {
@@ -106,7 +108,7 @@ export function registerCronRoutes(control: ControlApp, deps: ControlDeps): void
         actor: principal.actor,
         details: { job: job.id, name: job.name, payload_kind: job.payload.kind },
       });
-      return c.json({ webhook: webhookView(job, deps) });
+      return c.json({ webhook: webhookView(job, deps) } satisfies { webhook: WebhookSummary });
     } catch (err) {
       if (isCronRefusal(err)) return c.json({ error: (err as Error).message, plain: refusalWords(err) }, 400);
       throw err;
@@ -129,7 +131,7 @@ export function registerCronRoutes(control: ControlApp, deps: ControlDeps): void
     }
     const test = await sendReachTest(deps.cron.tests, deps.ctx.config.dashboard, job);
     deps.cron.store.recordReachTest(job.id, test);
-    return c.json({ webhook: webhookView({ ...job, reachTest: test }, deps) });
+    return c.json({ webhook: webhookView({ ...job, reachTest: test }, deps) } satisfies { webhook: WebhookSummary });
   });
 
   /** Mint a new token. The old URL stops working the moment this returns. */
@@ -140,7 +142,7 @@ export function registerCronRoutes(control: ControlApp, deps: ControlDeps): void
 
     const job = deps.cron.store.rotateWebhookToken(c.req.param("id"), principal.actor);
     if (!job) return c.json({ error: "no such webhook" }, 404);
-    return c.json({ webhook: webhookView(job, deps) });
+    return c.json({ webhook: webhookView(job, deps) } satisfies { webhook: WebhookSummary });
   });
 
   /**
@@ -156,7 +158,7 @@ export function registerCronRoutes(control: ControlApp, deps: ControlDeps): void
     return c.json({
       runs: deps.cron.store.recentRuns(Number.isFinite(limit) ? limit : 100),
       timezone: deps.cron.timezone,
-    });
+    } satisfies { runs: CronRunEntry[]; timezone: string });
   });
 
   control.get("/cron/:id", (c) => {
@@ -167,7 +169,7 @@ export function registerCronRoutes(control: ControlApp, deps: ControlDeps): void
       job: { ...job, describes: describeTrigger(job.trigger, deps.cron.timezone) },
       runs: deps.cron.store.runs(job.id, 20),
       timezone: deps.cron.timezone,
-    });
+    } satisfies { job: JobSummary; runs: JobRunSummary[]; timezone: string });
   });
 
   control.post("/cron", async (c) => {
@@ -188,7 +190,7 @@ export function registerCronRoutes(control: ControlApp, deps: ControlDeps): void
         actor: principal.actor,
         details: { job: job.id, name: job.name, payload_kind: job.payload.kind },
       });
-      return c.json({ job });
+      return c.json({ job: summaryOf(job, deps.cron.timezone) } satisfies { job: JobSummary });
     } catch (err) {
       // A refusal here is the caller's mistake, not a server fault, and the message is written for
       // them — 500 with a stack trace would hide the one sentence that says which field is wrong.
@@ -208,7 +210,8 @@ export function registerCronRoutes(control: ControlApp, deps: ControlDeps): void
       const unknown = patch.agentId !== undefined ? unknownAgent(deps, patch.agentId) : null;
       if (unknown) return c.json({ error: unknown }, 400);
       const job = deps.cron.store.update(existing.id, patch, c.get("principal").actor);
-      return c.json({ job });
+      if (!job) return c.json({ error: "no such job" }, 404);
+      return c.json({ job: summaryOf(job, deps.cron.timezone) } satisfies { job: JobSummary });
     } catch (err) {
       if (isCronRefusal(err)) return c.json({ error: (err as Error).message, plain: refusalWords(err) }, 400);
       throw err;
@@ -227,10 +230,14 @@ export function registerCronRoutes(control: ControlApp, deps: ControlDeps): void
     if (!job) return c.json({ error: "no such job" }, 404);
     if (!atLeast(principal, job.trigger.kind === "webhook" ? "admin" : "operator")) return c.json({ error: job.trigger.kind === "webhook" ? "admin only" : "operator only" }, 403);
     const body = ((await jsonBody(c)) ?? {}) as { add?: { keys?: unknown; label?: unknown }; remove?: unknown };
-    if (typeof body.remove === "string") return c.json({ job: deps.cron.store.disallow(job.id, body.remove, principal.actor) });
+    const changed = typeof body.remove === "string" ? deps.cron.store.disallow(job.id, body.remove, principal.actor) : undefined;
+    if (changed === null) return c.json({ error: "no such job" }, 404);
+    if (changed) return c.json({ job: summaryOf(changed, deps.cron.timezone) } satisfies { job: JobSummary });
     const keys = Array.isArray(body.add?.keys) ? body.add.keys.filter((key): key is string => typeof key === "string" && key.length > 0) : [];
     if (keys.length === 0 || typeof body.add?.label !== "string") return c.json({ error: "send { add: { keys, label } } or { remove: key }" }, 400);
-    return c.json({ job: deps.cron.store.allow(job.id, { keys, label: body.add.label }, principal.actor) });
+    const allowed = deps.cron.store.allow(job.id, { keys, label: body.add.label }, principal.actor);
+    if (!allowed) return c.json({ error: "no such job" }, 404);
+    return c.json({ job: summaryOf(allowed, deps.cron.timezone) } satisfies { job: JobSummary });
   });
 
   control.post("/cron/:id/:action", async (c) => {
@@ -251,26 +258,28 @@ export function registerCronRoutes(control: ControlApp, deps: ControlDeps): void
       const turned = turnOnProposal(deps.cron.store, id, { actor, as: principal.user?.id ?? actor });
       if ("refused" in turned) return c.json({ error: turned.refused, plain: NOT_CHANGED }, 409);
       deps.cron.proposals?.settled(id, settledCard(job, true, principal.user?.displayName?.trim() || actor));
-      return c.json({ job: turned.job });
+      return c.json({ job: summaryOf(turned.job, deps.cron.timezone) } satisfies { job: JobSummary });
     }
 
     switch (action) {
       case "enable":
       case "disable":
-        return c.json({ job: deps.cron.store.setEnabled(id, action === "enable", actor) });
+        const set = deps.cron.store.setEnabled(id, action === "enable", actor);
+        if (!set) return c.json({ error: "no such job" }, 404);
+        return c.json({ job: summaryOf(set, deps.cron.timezone) } satisfies { job: JobSummary });
       case "run": {
         // Awaited: the caller typed `nouride cron run` to find out whether the job works, and an
         // immediate 200 that says nothing about the outcome is the answer they did not ask for.
         const run = deps.cron.scheduler.runNow(id, actor);
         const wait = asyncWait(c.req.header("prefer"));
-        if (wait === null) return c.json({ outcome: await run });
+        if (wait === null) return c.json({ outcome: await run } satisfies { outcome: RunNowOutcome });
         // A browser asks to be answered within `wait` (RFC 7240): an agent turn can take an hour, and a request held
         // open that long is cut off by its own timeout or a proxy, which read a run still going as a failure. The run
         // goes on either way, and its runs list says how it ended.
         const outcome = await within(run, wait * 1000);
-        if (outcome) return c.json({ outcome });
+        if (outcome) return c.json({ outcome } satisfies { outcome: RunNowOutcome });
         c.header("Preference-Applied", "respond-async");
-        return c.json({ outcome: { status: "running" } }, 202);
+        return c.json({ outcome: { status: "running" } } satisfies { outcome: RunNowOutcome }, 202);
       }
       default:
         return c.json({ error: `unknown action "${action}"` }, 400);
@@ -285,8 +294,13 @@ export function registerCronRoutes(control: ControlApp, deps: ControlDeps): void
     if (!job || !deps.cron.store.delete(id, principal.actor)) return c.json({ error: "no such job" }, 404);
     // A proposal deleted is a proposal discarded: its card in the chat says so, and its buttons go.
     if (job.proposal) deps.cron.proposals?.settled(id, settledCard(job, false, principal.user?.displayName?.trim() || principal.actor));
-    return c.json({ ok: true, id });
+    return c.json({ ok: true, id } satisfies { ok: true; id: string });
   });
+}
+
+/** A job as every route here answers it: the stored job, with when it runs in one line of words. */
+function summaryOf(job: Job, timezone: string): JobSummary {
+  return { ...job, describes: describeTrigger(job.trigger, timezone) };
 }
 
 /** Why `agentId` cannot own a job, or null. Empty is the store's to refuse, with its own sentence. */

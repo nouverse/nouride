@@ -2,6 +2,7 @@
  * Whose messages are answered, and how much of a group an agent reads.
  */
 
+import type { AccessEvent, AccessMode, SenderRecord } from "@nouride/wire";
 import { atLeast } from "@/modules/users/auth.ts";
 import { ACCESS_ACTIONS } from "@/modules/access/access.store.ts";
 import { accountIdentity, personOf, type LinkTarget } from "@/modules/config/settings/identities.ts";
@@ -58,7 +59,7 @@ export function registerAccessRoutes(control: ControlApp, deps: ControlDeps): vo
       senders: deps.access.list(
         status === "pending" || status === "approved" || status === "denied" || status === "blocked" ? status : undefined,
       ),
-    });
+    } satisfies { mode: AccessMode; editable?: boolean; allowlist: string[]; senders: SenderRecord[] });
   });
 
   /**
@@ -69,7 +70,7 @@ export function registerAccessRoutes(control: ControlApp, deps: ControlDeps): vo
    */
   control.get("/access/history", (c) => {
     const limit = Number.parseInt(c.req.query("limit") ?? "200", 10);
-    return c.json({ entries: deps.audit.ofActions(ACCESS_ACTIONS, Number.isNaN(limit) ? 200 : Math.min(limit, 500)) });
+    return c.json({ entries: deps.audit.ofActions(ACCESS_ACTIONS, Number.isNaN(limit) ? 200 : Math.min(limit, 500)) } satisfies { entries: AccessEvent[] });
   });
 
   /**
@@ -80,8 +81,8 @@ export function registerAccessRoutes(control: ControlApp, deps: ControlDeps): vo
    * same reason `/access/mode` is: it changes what reaches a model on every connection at once.
    */
   control.get("/group-context", (c) => {
-    if (!deps.settings) return c.json({ messages: 0, editable: false });
-    return c.json({ messages: deps.settings.groupContextDefault(), editable: true });
+    if (!deps.settings) return c.json({ messages: 0, editable: false } satisfies { messages: number; editable: boolean });
+    return c.json({ messages: deps.settings.groupContextDefault(), editable: true } satisfies { messages: number; editable: boolean });
   });
 
   control.post("/group-context", async (c) => {
@@ -100,7 +101,7 @@ export function registerAccessRoutes(control: ControlApp, deps: ControlDeps): vo
       messages: body.messages,
       actor: principal.actor,
     });
-    return result.ok ? c.json(result) : c.json({ error: result.error, plain: notSaved("the number of messages replayed") }, 400);
+    return result.ok ? c.json(result satisfies { ok: true; restartRequired: boolean }) : c.json({ error: result.error, plain: notSaved("the number of messages replayed") }, 400);
   });
 
   /**
@@ -128,7 +129,7 @@ export function registerAccessRoutes(control: ControlApp, deps: ControlDeps): vo
       actor: principal.actor,
     });
     if (!result.ok) return c.json({ error: result.error, plain: NOT_SAVED }, 400);
-    return c.json({ ok: true, mode: deps.ctx.config.security.access.mode });
+    return c.json({ ok: true, mode: deps.ctx.config.security.access.mode } satisfies { ok: true; mode: AccessMode });
   });
 
   control.post("/access/:action", async (c) => {

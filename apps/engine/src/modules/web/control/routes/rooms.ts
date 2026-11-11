@@ -16,6 +16,7 @@
  * `roomAgents` already handles.
  */
 
+import type { Room } from "@nouride/wire";
 import { newId } from "@nouride/shared";
 import { atLeast } from "@/modules/users/auth.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
@@ -95,7 +96,7 @@ export function registerRoomRoutes(control: ControlApp, deps: ControlDeps): void
     if (!deps.rooms || !local) return c.json({ error: "rooms are not available" }, 501);
     const room = deps.rooms.get(local, c.req.param("chatId"));
     if (!room) return c.json({ error: "no such room" }, 404);
-    return c.json({ room });
+    return c.json({ room } satisfies { room: Room });
   });
 
   /**
@@ -176,7 +177,7 @@ export function registerRoomRoutes(control: ControlApp, deps: ControlDeps): void
       details: { members: requested, ...(title ? { title } : {}) },
     });
 
-    return c.json({ room }, 201);
+    return c.json({ room } satisfies { room: Room }, 201);
   });
 
   /** Add an agent to a room that already exists. */
@@ -224,7 +225,9 @@ export function registerRoomRoutes(control: ControlApp, deps: ControlDeps): void
       });
     }
 
-    return c.json({ room: deps.rooms.get(local!, chatId), added });
+    const room = deps.rooms.get(local!, chatId);
+    if (!room) return c.json({ error: "no such room" }, 404);
+    return c.json({ room, added } satisfies { room: Room; added: boolean });
   });
 
   /**
@@ -268,7 +271,9 @@ export function registerRoomRoutes(control: ControlApp, deps: ControlDeps): void
       deps.audit.record({ action: "room_member_removed", actor: principal.actor, agentId, chatId });
     }
 
-    return c.json({ room: deps.rooms.get(local!, chatId), removed });
+    const room = deps.rooms.get(local!, chatId);
+    if (!room) return c.json({ error: "no such room" }, 404);
+    return c.json({ room, removed } satisfies { room: Room; removed: boolean });
   });
 
   /**
@@ -323,7 +328,7 @@ export function registerRoomRoutes(control: ControlApp, deps: ControlDeps): void
       details: { members: room.members.map((member) => member.agentId), turns, events, messages, files, stopped },
     });
 
-    return c.json({ ok: true, turns, events, messages, files, stopped });
+    return c.json({ ok: true, turns, events, messages, files, stopped } satisfies { ok: true; turns: number; events: number; messages: number; files: number; stopped: number });
   });
 
   /** Rename it. An empty title clears the name and the client falls back to the member list. */
@@ -360,7 +365,9 @@ export function registerRoomRoutes(control: ControlApp, deps: ControlDeps): void
       details: { title },
     });
 
-    return c.json({ room: deps.rooms.get(local!, chatId) });
+    const room = deps.rooms.get(local!, chatId);
+    if (!room) return c.json({ error: "no such room" }, 404);
+    return c.json({ room } satisfies { room: Room });
   });
 
 }
