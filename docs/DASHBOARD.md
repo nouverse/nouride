@@ -332,6 +332,7 @@ reaches the daemon over HTTP only (`ARCHITECTURE.md` §3).
 | `src/commons/components/layout/RootLayout.tsx` | the sidebar: its groups, and which entries are admin-only |
 | `src/commons/components/ui/ui.tsx` | `Card`, `Field`, `PageHeader`, `EmptyState`, `StatusDot`, `ErrorNote` |
 | `src/commons/components/ui/confirm.tsx` | `useConfirm()` — the one "are you sure?", promise-shaped |
+| `src/commons/components/ui/SearchSelect.tsx` | pick one of a long list: a button that opens it, with a field to narrow it (whose chats, on Chats) |
 | `src/commons/components/ui/Markdown.tsx` | the deliberately small, HTML-free renderer |
 | `src/commons/lib/api.ts` and `api.*.ts` | every control-API call, typed by `@nouride/wire`; cookie auth, same-origin |
 | `src/commons/lib/session.ts` | the single description of who may be where, and the redirects |
