@@ -10,9 +10,18 @@ import type { GroupRecord } from "@nouride/wire";
 import { atLeast } from "@/modules/users/auth.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { jsonBody } from "../payloads.ts";
+import { mayOpen, readerOf, Spoke } from "../whose.ts";
 
 export function registerGroupRoutes(control: ControlApp, deps: ControlDeps): void {
-  control.get("/groups", (c) => c.json({ groups: deps.pipeline.knownRooms() } satisfies { groups: GroupRecord[] }));
+  /** Every group for an admin; for anyone else the ones their person spoke in, and the rooms they may open (`whose.ts`). */
+  control.get("/groups", (c) => {
+    const reader = readerOf(c.get("principal"), deps.ctx.config.people);
+    const spoke = new Spoke(deps, reader);
+    const groups = deps.pipeline
+      .knownRooms()
+      .filter((group) => reader.everyone || (group.dashboard ? mayOpen(deps, reader, group, spoke) : spoke.in(group.gatewayId, group.chatId)));
+    return c.json({ groups } satisfies { groups: GroupRecord[] });
+  });
 
   /** Rename one: `{ gatewayId, chatId, title }`. An empty title clears the rename, and the platform's name is back. */
   control.post("/groups", async (c) => {

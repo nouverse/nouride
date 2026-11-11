@@ -73,7 +73,12 @@ test("--all asks for every job the daemon keeps and lists every ended one", asyn
 test("the route takes a limit for --all, and keeps the store's default without one", async () => {
   const asked: unknown[] = [];
   const app = new Hono();
-  registerJobRoutes(app as never, { jobs: { listSnapshots: (options: unknown) => (asked.push(options), []) } } as never);
+  // The command line's token, as `nouride` asks: it reads every conversation (`whose.ts`).
+  app.use("*", async (c, next) => {
+    c.set("principal" as never, { kind: "token", actor: "cli", role: "admin" } as never);
+    await next();
+  });
+  registerJobRoutes(app as never, { jobs: { listSnapshots: (options: unknown) => (asked.push(options), []) }, ctx: { config: { people: [] } } } as never);
   await app.request("/jobs?limit=100");
   await app.request("/jobs");
   await app.request("/jobs?limit=abc");

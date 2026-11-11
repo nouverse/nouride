@@ -54,7 +54,8 @@ async function daemon(options: { bots: string[]; answers?: string[]; mention: bo
 async function transcriptOf(h: Awaited<ReturnType<typeof daemon>>, where: { agentId: string; gatewayId: string; chatId: string }): Promise<Transcript> {
   const app = new Hono<{ Variables: { principal: unknown } }>();
   app.use("*", async (c, next) => {
-    c.set("principal", { kind: "user", actor: "viewer", role: "viewer", user: { username: "viewer" } });
+    // An admin, who reads every group: which an account reads is `whose-doors.test.ts`.
+    c.set("principal", { kind: "user", actor: "admin", role: "admin", user: { id: "u0", username: "admin" } });
     await next();
   });
   const deps = {

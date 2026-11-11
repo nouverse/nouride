@@ -10,7 +10,8 @@ import type { WorkNotes } from "@nouride/wire";
 import { NotesRefused } from "@/modules/notes/store.ts";
 import { renderNotes } from "@/modules/notes/format.ts";
 import { atLeast } from "@/modules/users/auth.ts";
-import { conversationNamed } from "../conversation.ts";
+import { conversationFor } from "../conversation.ts";
+import { readerOf } from "../whose.ts";
 import { jsonBody } from "../payloads.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 
@@ -22,14 +23,15 @@ export function registerNotesRoutes(control: ControlApp, deps: ControlDeps): voi
    * The session row, or the turn record of a first turn still running: a new conversation has no row until that turn
    * ends. Found live in 0.8.0 — the plan beside a new chat answered 404 for its whole first turn, so it never showed.
    */
-  const keyOf = (id: string) => {
-    const named = conversationNamed(deps, id);
+  const keyOf = (principal: Parameters<typeof readerOf>[0], id: string) => {
+    // Another person's conversation is not there to read or edit the notes of (`whose.ts`).
+    const named = conversationFor(deps, readerOf(principal, deps.ctx.config.people), id);
     return named ? { agentId: named.agentId, gatewayId: named.gatewayId, chatId: named.chatId } : null;
   };
 
   control.get("/sessions/:id/notes", (c) => {
     if (!deps.notes || !deps.sessions) return c.json({ error: "not available" }, 501);
-    const key = keyOf(c.req.param("id"));
+    const key = keyOf(c.get("principal"), c.req.param("id"));
     if (!key) return c.json({ error: "no such session" }, 404);
     const tasks = deps.notes.tasks(key);
     const plan = deps.notes.plan(key);
@@ -40,7 +42,7 @@ export function registerNotesRoutes(control: ControlApp, deps: ControlDeps): voi
     if (!deps.notes || !deps.sessions) return c.json({ error: "not available" }, 501);
     const principal = c.get("principal");
     if (!atLeast(principal, "operator")) return c.json({ error: "operator only" }, 403);
-    const key = keyOf(c.req.param("id"));
+    const key = keyOf(principal, c.req.param("id"));
     if (!key) return c.json({ error: "no such session" }, 404);
     const body = await jsonBody(c);
     if (!body || typeof body.text !== "string") return c.json({ error: "send { text }" }, 400);

@@ -1,18 +1,18 @@
 /**
- * `/groups` over HTTP — what the Groups page sends (0.7.24). Anyone signed in reads the list; a rename is an admin's,
- * as an edit on People is, and is audited.
+ * `/groups` over HTTP — what the Groups page sends (0.7.24). An admin reads every group, anyone else the ones their
+ * person spoke in (`whose.ts`); a rename is an admin's, as an edit on People is, and is audited.
  */
 
 import { describe, expect, test } from "bun:test";
 import { Hono } from "hono";
 import { registerGroupRoutes } from "@/modules/web/control/routes/groups.ts";
 
-function app(role: "admin" | "operator" | "viewer") {
+function app(role: "admin" | "operator" | "viewer", spoke: string[] = []) {
   const renamed: unknown[] = [];
   const audited: string[] = [];
   const control = new Hono<{ Variables: { principal: unknown } }>();
   control.use("*", async (c, next) => {
-    c.set("principal", { kind: "user", actor: role, role, user: { username: role } });
+    c.set("principal", { kind: "user", actor: role, role, user: { id: `u-${role}`, username: role } });
     await next();
   });
   registerGroupRoutes(control as never, {
@@ -24,16 +24,25 @@ function app(role: "admin" | "operator" | "viewer") {
           : (renamed.push({ gatewayId, chatId, title }), title ? { ok: true, name: title } : { ok: true, name: "Keluarga" }),
     },
     audit: { record: (row: { action: string }) => void audited.push(row.action) },
+    ctx: { config: { people: [{ key: "mira", name: "Mira", ids: ["web:u-viewer", "telegram:77"] }] } },
+    // Where Mira's accounts spoke, as the room log keeps it (`chatPlace`: the platform and the chat).
+    roomMessages: { spokeIn: (ids: string[]) => new Set(ids.includes("telegram:77") ? spoke.map((chat) => `telegram\u0000${chat}`) : []) },
   } as never);
   const rename = (body: unknown) => control.request("/groups", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
   return { control, renamed, audited, rename };
 }
 
 describe("/groups", () => {
-  test("lists the rooms for anyone signed in", async () => {
-    const response = await app("viewer").control.request("/groups");
-    expect(response.status).toBe(200);
-    expect(((await response.json()) as { groups: { name: string }[] }).groups.map((group) => group.name)).toEqual(["Keluarga"]);
+  test("lists every group for an admin, and for anyone else the groups their person spoke in", async () => {
+    const names = async (role: "admin" | "viewer", spoke: string[] = []) => {
+      const response = await app(role, spoke).control.request("/groups");
+      expect(response.status).toBe(200);
+      return ((await response.json()) as { groups: { name: string }[] }).groups.map((group) => group.name);
+    };
+    expect(await names("admin")).toEqual(["Keluarga"]);
+    expect(await names("viewer")).toEqual([]);
+    // From any of their person's accounts: Mira's Telegram spoke there, and her dashboard account reads it.
+    expect(await names("viewer", ["-100"])).toEqual(["Keluarga"]);
   });
 
   test("a rename is an admin's, and audited", async () => {

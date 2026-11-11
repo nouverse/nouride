@@ -28,6 +28,7 @@
 import { contained, createLogger, EVENT_PROTOCOL_VERSION, STREAM_ROW_KEYS, type StreamFrameData, type StreamFrameName, type StreamRow } from "@nouride/shared";
 import type { EventFilter, EventRow, Pulse } from "@/modules/events/events.store.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
+import { eventsFor, readerNow, readerOf, sameReader } from "../whose.ts";
 
 const log = createLogger("control.events");
 
@@ -74,7 +75,9 @@ export function registerEventRoutes(control: ControlApp, deps: ControlDeps): voi
   control.get("/events", (c) => {
     const store = deps.events;
     if (!store) return c.json({ error: "the event stream is not available" }, 501);
-    const rows = store.list(eventFilter(c.req.query()));
+    // A chat's rows are read by whoever may open it (`whose.ts`); the daemon's own, of no chat, by everyone.
+    const visible = eventsFor(deps, readerOf(c.get("principal"), deps.ctx.config.people));
+    const rows = store.list(eventFilter(c.req.query())).filter(visible);
     c.header("x-event-protocol", EVENT_PROTOCOL_VERSION);
     return c.json({
       version: EVENT_PROTOCOL_VERSION,
@@ -88,6 +91,9 @@ export function registerEventRoutes(control: ControlApp, deps: ControlDeps): voi
   control.get("/events/stream", (c) => {
     const store = deps.events;
     if (!store) return c.json({ error: "the event stream is not available" }, 501);
+    const principal = c.get("principal");
+    const reader = readerOf(principal, deps.ctx.config.people);
+    const visible = eventsFor(deps, reader);
     const asked = eventFilter(c.req.query(), c.req.header("last-event-id"));
     const frames = c.req.query("frames") === "1";
     const latest = store.latest();
@@ -152,8 +158,17 @@ export function registerEventRoutes(control: ControlApp, deps: ControlDeps): voi
         // A model call under way (`thinking`, 1.2), in order with the rows — to a reader that asked for frames, and not
         // while it replays the past: a pulse is now or never.
         const unsubscribe = store.subscribe(filter, take, frames ? (pulse) => void (!replaying && take(pulse)) : undefined);
-        // `write` catches the reader going away; contained besides, since a throw out of a timer ends the daemon.
-        const beat = setInterval(contained(log, "could not keep an event stream alive", () => write(": keep-alive\n\n")), HEARTBEAT_MS);
+        // `write` catches the reader going away; contained besides, since a throw out of a timer ends the daemon. Each beat
+        // reads the account again: demoted, moved to another person or removed, the stream ends, and comes back as
+        // what it is now.
+        const beat = setInterval(
+          contained(log, "could not keep an event stream alive", () => {
+            const now = readerNow(deps, principal);
+            if (!now || !sameReader(reader, now)) return end();
+            write(": keep-alive\n\n");
+          }),
+          HEARTBEAT_MS,
+        );
         // Ended by a shutdown too, or the server's graceful stop would wait on it until the deadline (`OpenStreams`).
         const release = deps.streams?.add(() => end("shutdown")) ?? (() => {});
         stop = () => {
@@ -173,7 +188,8 @@ export function registerEventRoutes(control: ControlApp, deps: ControlDeps): voi
         if (closed) return;
         if (replaying) {
           const page = store.list({ ...filter, since: last, limit: REPLAY_PAGE });
-          if (page.length > 0) write(page.map(frame).join(""));
+          const shown = page.filter(visible);
+          if (shown.length > 0) write(shown.map(frame).join(""));
           last = page.at(-1)?.seq ?? last;
           replayed += page.length;
           if (page.length < REPLAY_PAGE) replaying = false;
@@ -185,7 +201,12 @@ export function registerEventRoutes(control: ControlApp, deps: ControlDeps): voi
             replaying = false;
             write(`id: ${last}\n\n`);
           }
-          if (page.length > 0) return;
+          // Rows the reader may not see moved the cursor on: the next pull reads on from there.
+          if (shown.length > 0) return;
+          if (page.length > 0) {
+            write(`id: ${last}\n\n`);
+            return;
+          }
         }
         for (;;) {
           while (queue.length === 0 && !closed) await new Promise<void>((resolve) => (wake = resolve));
@@ -193,6 +214,10 @@ export function registerEventRoutes(control: ControlApp, deps: ControlDeps): voi
           // What the replay already sent is in the queue too: only what is newer goes.
           let out = "";
           for (const item of queue.splice(0)) {
+            if (!visible(item)) {
+              if ("seq" in item && item.seq > last) last = item.seq;
+              continue;
+            }
             if (!("seq" in item)) out += named("thinking", { turnId: item.turnId, text: item.text });
             else if (item.seq > last) {
               out += frame(item);

@@ -29,6 +29,7 @@ import {
 } from "@/modules/turns/transcript.ts";
 import { jsonBody, parseAttachments } from "../payloads.ts";
 import { conversationNamed } from "../conversation.ts";
+import { mayOpen, readerOf, type Reader } from "../whose.ts";
 import type { Room } from "@/modules/rooms/rooms.store.ts";
 import type { Principal } from "@/modules/users/auth.ts";
 import type { Session } from "@nouride/shared";
@@ -206,7 +207,17 @@ function roomJobs(
   );
 }
 
+/**
+ * A conversation this reader may not open is answered as one that is not there (`whose.ts`): a transcript of nothing,
+ * a feed with no turn, a 404 where a missing one gets a 404.
+ */
+const NOTHING: Transcript = { events: [], room: null, session: null, earlier: [], messages: [], turns: [] };
+const NOT_THERE = { error: "no such conversation", plain: "That conversation is not there any more." } as const;
+
 export function registerChatRoutes(control: ControlApp, deps: ControlDeps): void {
+  const readerIn = (c: { get(key: "principal"): Principal }): Reader => readerOf(c.get("principal"), deps.ctx.config.people);
+  /** A room of the dashboard's this reader may open: one they made or spoke in, or any for an admin. */
+  const roomFor = (reader: Reader, chatId: string) => Boolean(deps.local && deps.rooms?.hasMembers(deps.local.id, chatId) && mayOpen(deps, reader, { gatewayId: deps.local.id, chatId }));
   /**
    * Take files from a browser and put them somewhere a turn can reach.
    *
@@ -334,6 +345,9 @@ export function registerChatRoutes(control: ControlApp, deps: ControlDeps): void
      */
     const asked = body.sessionId?.trim();
     const existing = asked ? conversationNamed(deps, asked) : body.chatId?.trim() ? deps.sessions?.find(body.chatId.trim()) : null;
+    // Never into a conversation the sender may not open: another person's chat is not there to send into.
+    const reader = readerIn(c);
+    if (existing && !mayOpen(deps, reader, existing)) return c.json(NOT_THERE, 404);
 
     /**
      * A room, or a one-to-one chat with one agent — decided by whether the chat has a membership
@@ -354,6 +368,7 @@ export function registerChatRoutes(control: ControlApp, deps: ControlDeps): void
     const room =
       roomChatId && deps.rooms ? deps.rooms.get(deps.local.id, roomChatId) : null;
 
+    if (room && !mayOpen(deps, reader, { gatewayId: deps.local.id, chatId: room.chatId })) return c.json(NOT_THERE, 404);
     if (room) {
       const sent = sendToRoom(deps, {
         room,
@@ -475,6 +490,8 @@ export function registerChatRoutes(control: ControlApp, deps: ControlDeps): void
   control.get("/sessions/:id/turns", (c) => {
     if (!deps.turns || !deps.sessions) return c.json({ error: "not available" }, 501);
     const id = c.req.param("id");
+    const named = conversationNamed(deps, id);
+    if (named && !mayOpen(deps, readerIn(c), named)) return c.json(NOTHING satisfies Transcript);
     return c.json(
       transcript(deps, { turns: deps.turns, sessions: deps.sessions }, {
         session: deps.sessions.find(id) ?? null,
@@ -498,7 +515,7 @@ export function registerChatRoutes(control: ControlApp, deps: ControlDeps): void
     if (!deps.turns || !deps.sessions) return c.json({ error: "not available" }, 501);
     if (!deps.local) return c.json({ error: "the local gateway is not enabled", plain: CHAT_OFF }, 409);
     const chatId = c.req.param("chatId");
-    if (!deps.rooms?.hasMembers(deps.local.id, chatId)) {
+    if (!deps.rooms || !roomFor(readerIn(c), chatId)) {
       return c.json({ error: "no such room" }, 404);
     }
     /**
@@ -541,7 +558,7 @@ export function registerChatRoutes(control: ControlApp, deps: ControlDeps): void
     if (!deps.turns) return c.json({ error: "turn records are not available" }, 501);
     if (!deps.local) return c.json({ error: "the local gateway is not enabled", plain: CHAT_OFF }, 409);
     const chatId = c.req.param("chatId");
-    if (!deps.rooms?.hasMembers(deps.local.id, chatId)) {
+    if (!deps.rooms || !roomFor(readerIn(c), chatId)) {
       return c.json({ error: "no such room" }, 404);
     }
 
@@ -568,6 +585,8 @@ export function registerChatRoutes(control: ControlApp, deps: ControlDeps): void
   control.get("/sessions/:id/live", (c) => {
     if (!deps.turns) return c.json({ error: "turn records are not available" }, 501);
     const id = c.req.param("id");
+    const named = conversationNamed(deps, id);
+    if (named && !mayOpen(deps, readerIn(c), named)) return c.json({ turn: null, jobs: [] } satisfies { turn: LiveTurn | null; jobs?: RunningJob[] });
     const sessionId = deps.sessions?.find(id)?.id ?? id;
     /**
      * The cursor, and the turn it belongs to.
@@ -633,6 +652,8 @@ export function registerChatRoutes(control: ControlApp, deps: ControlDeps): void
   control.get("/sessions/:id/turns/:turnId/files/:index", async (c) => {
     if (!deps.turns) return c.json({ error: "turn records are not available" }, 501);
 
+    const named = conversationNamed(deps, c.req.param("id"));
+    if (named && !mayOpen(deps, readerIn(c), named)) return c.json({ error: "no such file" }, 404);
     const sessionId = deps.sessions?.find(c.req.param("id"))?.id ?? c.req.param("id");
     const turn = deps.turns.get(c.req.param("turnId"));
     // Both checks, and the second is the one that matters: without it any session id would serve any
@@ -702,7 +723,7 @@ export function registerChatRoutes(control: ControlApp, deps: ControlDeps): void
     if (!deps.sessions) return c.json({ error: "not available" }, 501);
     const id = c.req.param("id");
     const session = deps.sessions.find(id);
-    if (!session) return c.json({ error: "no such session" }, 404);
+    if (!session || !mayOpen(deps, readerIn(c), session)) return c.json({ error: "no such session" }, 404);
 
     // A mission's own conversation (0.8.0) takes the mission with it: stopped while its conversation is still there to
     // say so, then removed. Left alone, it went on working with its checklist deleted.

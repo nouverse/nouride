@@ -31,8 +31,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "one annotation per setting, the list `config explain` and the dashboard read; it grows by an entry, or a rule an entry must say, and splitting it would hide the list it is",
   },
   "apps/engine/src/modules/web/control/routes/chat.ts": {
-    lines: 490,
-    why: "the dashboard chat's routes, one domain's handlers together: upload, send, live streams, transcripts, who asked, files, delete, each answer held to the wire's type; session ids are `conversation.ts`",
+    lines: 505,
+    why: "the dashboard chat's routes together: upload, send, live, transcripts, files, delete, each answer held to the wire's type and to whose the conversation is (`whose.ts`)",
   },
   "apps/engine/src/modules/external-agents/index.ts": {
     lines: 531,
@@ -91,8 +91,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "the release build in the order a tarball is made: the edition this checkout can build, compile, check what is embedded, stage what goes beside the binary, pack, say what was built; staging is the seam",
   },
   "scripts/check-sql.ts": {
-    lines: 492,
-    why: "the SQL lint: one reader of the code's SQL and three judges of what it read (the text rules, the query plans, the floors); the plan half (`planFindings`, `forPlanning`) is the seam when it grows",
+    lines: 495,
+    why: "the SQL lint: one reader of the code's SQL and three judges of it (text rules, plans, floors), and the list of constant clauses it lets through; the plan half is the seam when it grows",
   },
   "packages/gateways/src/channels/whatsapp/gateway.ts": {
     lines: 417,

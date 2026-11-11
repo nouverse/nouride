@@ -18,8 +18,9 @@
 
 import type { Room } from "@nouride/wire";
 import { newId } from "@nouride/shared";
-import { atLeast } from "@/modules/users/auth.ts";
+import { atLeast, type Principal } from "@/modules/users/auth.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
+import { mayOpen, readerOf, Spoke } from "../whose.ts";
 import { jsonBody } from "../payloads.ts";
 import { CHAT_OFF } from "../plain.ts";
 
@@ -35,6 +36,11 @@ export function registerRoomRoutes(control: ControlApp, deps: ControlDeps): void
    * on the transcript payload.
    */
   const localId = () => deps.local?.id ?? null;
+  /** A room this account may open: one it made or spoke in, or any for an admin. */
+  const yours = (principal: Principal, chatId: string) => {
+    const local = localId();
+    return Boolean(local && mayOpen(deps, readerOf(principal, deps.ctx.config.people), { gatewayId: local, chatId }));
+  };
 
   function guard(gatewayId: string): string | null {
     const local = localId();
@@ -63,7 +69,9 @@ export function registerRoomRoutes(control: ControlApp, deps: ControlDeps): void
   control.get("/rooms", (c) => {
     const local = localId();
     if (!deps.rooms || !local) return c.json({ rooms: [] });
-    const rooms = deps.rooms.list(local).map((room) => {
+    const reader = readerOf(c.get("principal"), deps.ctx.config.people);
+    const spoke = new Spoke(deps, reader);
+    const rooms = deps.rooms.list(local).filter((room) => mayOpen(deps, reader, { gatewayId: local, chatId: room.chatId }, spoke)).map((room) => {
       const said = deps.roomMessages?.forChat(local, room.chatId, 1) ?? [];
       const turn = deps.turns?.forChat(local, room.chatId, 1) ?? [];
       return {
@@ -95,7 +103,7 @@ export function registerRoomRoutes(control: ControlApp, deps: ControlDeps): void
     const local = localId();
     if (!deps.rooms || !local) return c.json({ error: "rooms are not available" }, 501);
     const room = deps.rooms.get(local, c.req.param("chatId"));
-    if (!room) return c.json({ error: "no such room" }, 404);
+    if (!room || !yours(c.get("principal"), room.chatId)) return c.json({ error: "no such room" }, 404);
     return c.json({ room } satisfies { room: Room });
   });
 
@@ -193,6 +201,8 @@ export function registerRoomRoutes(control: ControlApp, deps: ControlDeps): void
     if (refusal) return c.json({ error: refusal, plain: local ? "Rooms are made in the dashboard's own chat, not in a chat app." : CHAT_OFF }, local ? 400 : 501);
 
     const chatId = c.req.param("chatId");
+    // A room the account did not make and never spoke in is not there to change (`whose.ts`).
+    if (!yours(c.get("principal"), chatId)) return c.json({ error: "no such room" }, 404);
     if (!deps.rooms.get(local!, chatId)) return c.json({ error: "no such room" }, 404);
 
     const body = ((await jsonBody(c)) ?? {}) as Record<string, unknown>;
@@ -246,6 +256,8 @@ export function registerRoomRoutes(control: ControlApp, deps: ControlDeps): void
     if (refusal) return c.json({ error: refusal, plain: local ? "Rooms are made in the dashboard's own chat, not in a chat app." : CHAT_OFF }, local ? 400 : 501);
 
     const chatId = c.req.param("chatId");
+    // A room the account did not make and never spoke in is not there to change (`whose.ts`).
+    if (!yours(c.get("principal"), chatId)) return c.json({ error: "no such room" }, 404);
     const agentId = c.req.param("agentId");
     const principal = c.get("principal");
     const actor = principal.user?.username ?? principal.actor;
@@ -297,6 +309,8 @@ export function registerRoomRoutes(control: ControlApp, deps: ControlDeps): void
     if (refusal) return c.json({ error: refusal, plain: local ? "Rooms are made in the dashboard's own chat, not in a chat app." : CHAT_OFF }, local ? 400 : 501);
 
     const chatId = c.req.param("chatId");
+    // A room the account did not make and never spoke in is not there to change (`whose.ts`).
+    if (!yours(c.get("principal"), chatId)) return c.json({ error: "no such room" }, 404);
     const room = deps.rooms.get(local!, chatId);
     if (!room) return c.json({ error: "no such room" }, 404);
 
@@ -344,6 +358,8 @@ export function registerRoomRoutes(control: ControlApp, deps: ControlDeps): void
     if (refusal) return c.json({ error: refusal, plain: local ? "Rooms are made in the dashboard's own chat, not in a chat app." : CHAT_OFF }, local ? 400 : 501);
 
     const chatId = c.req.param("chatId");
+    // A room the account did not make and never spoke in is not there to change (`whose.ts`).
+    if (!yours(c.get("principal"), chatId)) return c.json({ error: "no such room" }, 404);
     const body = ((await jsonBody(c)) ?? {}) as Record<string, unknown>;
     const title = isString(body.title) && body.title.trim() ? body.title.trim() : null;
     if (title && title.length > 200) return c.json({ error: "title is too long" }, 400);

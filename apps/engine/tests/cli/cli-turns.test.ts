@@ -188,7 +188,12 @@ describe("nouride turns", () => {
 describe("the route", () => {
   const app = (inspector: { inspect(id: string): TurnInspection | null; recent(o: { limit: number; agentId?: string }): TurnSummary[] }) => {
     const control = new Hono();
-    registerTurnRoutes(control as never, { turnInspector: inspector } as never);
+    // The command line's token, as `nouride turns` asks: it reads every turn (`whose.ts`).
+    control.use("*", async (c, next) => {
+      c.set("principal" as never, { kind: "token", actor: "cli", role: "admin" } as never);
+      await next();
+    });
+    registerTurnRoutes(control as never, { turnInspector: inspector, ctx: { config: { people: [] } } } as never);
     return control;
   };
 

@@ -45,7 +45,7 @@ async function mount() {
       isPaused: () => false,
     },
     audit: { record: () => undefined },
-    ctx: { config: { daemon: { defaultAgent: "ren" } } },
+    ctx: { config: { daemon: { defaultAgent: "ren" }, people: [] } },
   };
   const app = new Hono<{ Variables: { principal: unknown } }>();
   app.use("*", async (c, next) => {
@@ -65,7 +65,8 @@ describe("a message sent during a new conversation's first turn", () => {
     const h = await mount();
     const key = { agentId: "ren", chatId: "web-1", gatewayId: "web:dashboard" };
     const sessionId = sessionIdFor(key);
-    h.turns.begin({ sessionId, ...key, prompt: "lu bisa cari deepseek flash v4 vs gpt luna 5.6?" });
+    // Begun by this account, as the dashboard begins one: the turn names who said it.
+    h.turns.begin({ sessionId, ...key, senderId: "u1", prompt: "lu bisa cari deepseek flash v4 vs gpt luna 5.6?" });
     expect(h.sessions.find(sessionId)).toBeNull();
 
     const sent = await h.send({ sessionId, agent: "ren", text: "cari juga haiku 5.5 deh" });
@@ -74,6 +75,18 @@ describe("a message sent during a new conversation's first turn", () => {
     expect(h.dispatched[0]?.chatId).toBe("web-1");
     // The same conversation, so the page stays on it rather than following the answer somewhere new.
     expect(sent.body.sessionId).toBe(sessionId);
+  });
+
+  test("another account's first turn is not there to send into: nothing is sent", async () => {
+    const h = await mount();
+    const key = { agentId: "ren", chatId: "web-2", gatewayId: "web:dashboard" };
+    const sessionId = sessionIdFor(key);
+    h.turns.begin({ sessionId, ...key, senderId: "u2", prompt: "rahasia" });
+
+    const sent = await h.send({ sessionId, agent: "ren", text: "boleh ikut?" });
+
+    expect(sent.status).toBe(404);
+    expect(h.dispatched).toEqual([]);
   });
 
   test("an id that names no conversation at all still starts a new one, as before", async () => {

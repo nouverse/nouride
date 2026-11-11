@@ -28,6 +28,10 @@ export interface SessionSummary {
   running?: boolean;
   /** The first thing asked in it. `web-1757003921` names nothing; the question does. */
   title?: string;
+  /** What it is, which decides who reads it: a person's private chat, a group's or a room's, or a scheduled job's own. */
+  kind?: "private" | "group" | "room" | "job";
+  /** The person a private chat is with, by People: what an admin's Everyone sets it apart under. Absent for nobody's. */
+  person?: { key: string; name: string };
 }
 
 /**

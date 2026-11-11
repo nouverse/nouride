@@ -200,6 +200,7 @@ describe("deleting a conversation from the dashboard", () => {
     });
     registerChatRoutes(app as never, {
       sessions,
+      ctx: { config: { people: [] } },
       audit: { record: () => {} },
       pipeline: { endConversation: (conversation: Parameters<typeof endConversation>[1], mode: EndMode) => endConversation(deps, conversation, mode) },
     } as never);

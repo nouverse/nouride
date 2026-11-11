@@ -174,6 +174,33 @@ export class RoomMessageStore {
   }
 
   /**
+   * The rooms these people spoke in, each as `chatPlace` writes it: whose groups and rooms an account reads. An id is
+   * `[[people]]`'s, `platform:account`; a line counts where its connection is on that platform, since a person's
+   * account is theirs whichever of our bots heard it. By `idx_chat_messages_sender`, so a list reads only their lines.
+   */
+  spokeIn(ids: readonly string[]): Set<string> {
+    const platforms = new Map<string, Set<string>>();
+    for (const id of ids) {
+      const at = id.indexOf(":");
+      if (at < 1 || at === id.length - 1) continue;
+      const account = id.slice(at + 1);
+      platforms.set(account, (platforms.get(account) ?? new Set()).add(id.slice(0, at)));
+    }
+    const places = new Set<string>();
+    if (platforms.size === 0) return places;
+    const accounts = [...platforms.keys()];
+    const rows = this.db
+      .prepare<{ gateway_id: string; chat_id: string; sender_id: string }>(
+        `SELECT DISTINCT gateway_id, chat_id, sender_id FROM chat_messages WHERE sender_id IN (${marks(accounts)})`,
+      )
+      .all(...accounts);
+    for (const row of rows) {
+      if (platforms.get(row.sender_id)?.has(platformOf(row.gateway_id))) places.add(chatPlace(row.gateway_id, row.chat_id));
+    }
+    return places;
+  }
+
+  /**
    * The name somebody last wrote under on this connection, if they have written in a room it reads.
    *
    * For an account let in ahead (`nouride access allow`) — an id from config.toml carries no name, and
@@ -209,6 +236,22 @@ export class RoomMessageStore {
       .run(gatewayId, chatId);
     return Number(result.changes ?? 0);
   }
+}
+
+/** `?, ?, …` for an `IN` list — bound, never spliced. */
+const marks = (values: readonly unknown[]) => values.map(() => "?").join(", ");
+
+/** The platform a connection is on: `telegram` of `telegram:nouva`. */
+function platformOf(gatewayId: string): string {
+  return gatewayId.split(":")[0] ?? gatewayId;
+}
+
+/**
+ * A chat as one place on its platform, whichever of our bots is in it: a group two of them sit in is one room to a
+ * person, and one key here.
+ */
+export function chatPlace(gatewayId: string, chatId: string): string {
+  return `${platformOf(gatewayId)}\u0000${chatId}`;
 }
 
 function toMessage(row: Row): RoomMessage {

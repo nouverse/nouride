@@ -71,7 +71,8 @@ async function mount(options: { untagged?: (chatId: string) => string | null; gr
   };
   const app = new Hono<{ Variables: { principal: unknown } }>();
   app.use("*", async (c, next) => {
-    c.set("principal", { kind: "user", actor: "viewer", role: "viewer", user: { username: "viewer" } });
+    // The control token reads every chat, as an admin does: what is the reader's own is `chat-list-whose.test.ts`.
+    c.set("principal", { kind: "token", actor: "cli", role: "admin" });
     await next();
   });
   registerChatListRoutes(app as never, deps as never);

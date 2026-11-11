@@ -1,0 +1,98 @@
+/**
+ * Who is reading, and what each conversation is (`web/control/whose.ts`): an account is its person, every account of
+ * theirs on every app; a conversation's kind decides who reads it; a stream's reader is read again as it runs.
+ */
+
+import { describe, expect, test } from "bun:test";
+import { eventsFor, kindOf, mayOpen, readerNow, readerOf, sameReader, wantsEveryone } from "@/modules/web/control/whose.ts";
+
+const PEOPLE = [{ key: "rina", name: "Rina", ids: ["web:u2", "telegram:nouva:555"] }];
+const rina = { kind: "user" as const, role: "operator" as const, user: { id: "u2", username: "rina" } };
+
+describe("the reader", () => {
+  test("is their person, every account of theirs in today's spelling; an account no person holds is itself", () => {
+    expect(readerOf(rina as never, PEOPLE)).toEqual({ everyone: false, ids: ["web:u2", "telegram:555"], username: "rina", person: "rina" });
+    expect(readerOf({ kind: "user", role: "viewer", user: { id: "u3", username: "tamu" } } as never, PEOPLE)).toEqual({ everyone: false, ids: ["web:u3"], username: "tamu" });
+  });
+
+  test("reads everyone's as an admin or the command line's token — and only asks for it where it may", () => {
+    const admin = readerOf({ kind: "user", role: "admin", user: { id: "u1", username: "gading" } } as never, PEOPLE);
+    const token = readerOf({ kind: "token", role: "admin" } as never, PEOPLE);
+    expect([admin.everyone, token.everyone]).toEqual([true, true]);
+    expect([wantsEveryone(admin, "everyone"), wantsEveryone(admin, undefined), wantsEveryone(readerOf(rina as never, PEOPLE), "everyone")]).toEqual([true, false, false]);
+  });
+
+  test("is read again as it is now: demoted, moved to another person, or gone, it is not the reader the stream opened for", () => {
+    let account: { id: string; username: string; role: string } | null = { id: "u2", username: "rina", role: "admin" };
+    const people = { current: PEOPLE as { key: string; name: string; ids: string[] }[] };
+    const deps = { users: { byId: () => account }, ctx: { config: { get people() { return people.current; } } } };
+    const opened = readerNow(deps as never, rina as never)!;
+    expect(opened.everyone).toBe(true);
+    expect(sameReader(opened, readerNow(deps as never, rina as never)!)).toBe(true);
+    account = { id: "u2", username: "rina", role: "operator" };
+    expect(sameReader(opened, readerNow(deps as never, rina as never)!)).toBe(false);
+    account = { id: "u2", username: "rina", role: "admin" };
+    people.current = [{ key: "rina", name: "Rina", ids: ["web:u2"] }];
+    expect(sameReader(opened, readerNow(deps as never, rina as never)!)).toBe(false);
+    account = null;
+    expect(readerNow(deps as never, rina as never)).toBeNull();
+  });
+});
+
+describe("what a conversation is", () => {
+  const deps = {
+    rooms: { get: (_: string, chatId: string) => (chatId === "room-1" ? { createdBy: "rina" } : null) },
+    roomMessages: { isRoom: (_: string, chatId: string) => chatId === "-100", spokeIn: () => new Set<string>() },
+    pipeline: { chatTypeOf: (_: string, chatId: string) => (chatId === "-200" ? "group" : chatId === "814" ? "dm" : undefined) },
+  };
+
+  test("a mission's, a scheduled job's, a room made here, a group with a log or one its messages called one, or private", () => {
+    expect(kindOf(deps as never, "web:mission", "msn_1")).toBe("mission");
+    expect(kindOf(deps as never, "telegram:nouva", "cron:cron_1")).toBe("job");
+    expect(kindOf(deps as never, "web:dashboard", "room-1")).toBe("room");
+    expect(kindOf(deps as never, "telegram:nouva", "-100")).toBe("group");
+    expect(kindOf(deps as never, "telegram:nouva", "-200")).toBe("group");
+    expect(kindOf(deps as never, "telegram:nouva", "814")).toBe("private");
+    expect(kindOf({ ...deps, pipeline: undefined } as never, "web:dashboard", "web-1")).toBe("private");
+  });
+
+  test("opens, for someone not an admin: theirs, the rooms they made, and what nobody owns; never a chat nobody opened", () => {
+    const reader = readerOf(rina as never, PEOPLE);
+    const open = (gatewayId: string, chatId: string, openedBy?: string) => mayOpen(deps as never, reader, { gatewayId, chatId, openedBy });
+    expect(open("telegram:nix", "555", "telegram:555")).toBe(true);
+    expect(open("web:dashboard", "web-1", "web:u1")).toBe(false);
+    expect(open("web:dashboard", "web-1")).toBe(false);
+    expect(open("web:dashboard", "room-1")).toBe(true);
+    expect(open("telegram:nouva", "cron:cron_1")).toBe(true);
+    expect(open("web:mission", "msn_1")).toBe(true);
+    expect(open("telegram:nouva", "-100", "telegram:555")).toBe(false);
+  });
+});
+
+describe("a stream's rows", () => {
+  test("a chat is decided once, and again a little later: a group spoken in from now on is theirs from then", () => {
+    let spoke = new Set<string>();
+    let asked = 0;
+    let now = 0;
+    const deps = {
+      rooms: { get: () => null },
+      roomMessages: { isRoom: () => true, spokeIn: () => (asked++, spoke) },
+      sessions: { openerOfChat: () => undefined },
+    };
+    const visible = eventsFor(deps as never, readerOf(rina as never, PEOPLE), () => now);
+    const row = { gatewayId: "telegram:nouva", chatId: "-100" };
+    expect(visible(row)).toBe(false);
+    spoke = new Set(["telegram\u0000-100"]);
+    expect(visible(row)).toBe(false);
+    now += 10_000;
+    expect(visible(row)).toBe(true);
+    expect(visible({ gatewayId: null, chatId: null })).toBe(true);
+    expect(visible({ gatewayId: null, chatId: "-100" })).toBe(false);
+    expect(asked).toBe(2);
+  });
+
+  test("are every row for an admin", () => {
+    const visible = eventsFor({} as never, readerOf({ kind: "token", role: "admin" } as never, PEOPLE));
+    expect(visible({ gatewayId: "telegram:nouva", chatId: "anything" })).toBe(true);
+  });
+});

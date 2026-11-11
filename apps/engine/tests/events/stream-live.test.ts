@@ -32,7 +32,12 @@ async function served(): Promise<{ events: EventStore; db: SqliteDb; url: string
   cleanup.push(() => db.close());
   const events = new EventStore(db);
   const app = new Hono() as unknown as ControlApp;
-  registerEventRoutes(app, { events, streams: new OpenStreams() } as unknown as ControlDeps);
+  // The command line's token, which reads every row: whose rows an account reads is `events-whose.test.ts`.
+  app.use("*", async (c, next) => {
+    c.set("principal", { kind: "token", actor: "cli", role: "admin" });
+    await next();
+  });
+  registerEventRoutes(app, { events, streams: new OpenStreams(), ctx: { config: { people: [] } } } as unknown as ControlDeps);
   const server = serveHttp({ port: 0, hostname: "127.0.0.1", fetch: (req, info) => app.fetch(req, { keepOpen: info.keepOpen }) });
   cleanup.push(() => server.stop(true));
   return { events, db, url: `http://127.0.0.1:${server.port}` };

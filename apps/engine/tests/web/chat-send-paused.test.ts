@@ -48,7 +48,7 @@ async function mount() {
     },
     pipeline: { answersWhilePaused: (text: string) => hooks.answersWhilePaused(text) },
     audit: { record: () => undefined },
-    ctx: { config: { daemon: { defaultAgent: "ren" } } },
+    ctx: { config: { daemon: { defaultAgent: "ren" }, people: [] } },
   };
   const app = new Hono<{ Variables: { principal: unknown } }>();
   app.use("*", async (c, next) => {

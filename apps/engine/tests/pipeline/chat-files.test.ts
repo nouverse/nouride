@@ -344,8 +344,13 @@ describe("serving the bytes", () => {
       }),
     ]);
 
-    const app = new Hono();
-    registerChatRoutes(app as never, { turns } as never);
+    // The command line's token, which opens every conversation: whose a conversation is, is `whose-doors.test.ts`.
+    const app = new Hono<{ Variables: { principal: unknown } }>();
+    app.use("*", async (c, next) => {
+      c.set("principal", { kind: "token", actor: "cli", role: "admin" });
+      await next();
+    });
+    registerChatRoutes(app as never, { turns, ctx: { config: { people: [] } } } as never);
     return { app, url: `/sessions/${SESSION}/turns/${id}/files/0` };
   };
 

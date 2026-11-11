@@ -540,4 +540,9 @@ export interface Session {
   /** When the *current* conversation began. Reset by `/new`; this is what a rollover policy reads. */
   startedAt: number;
   updatedAt: number;
+  /**
+   * The first person who said something in it, as `[[people]]` writes an id (`web:<account id>`, `telegram:814…`).
+   * A private chat is theirs; in a group it is only who spoke first. Absent until somebody has.
+   */
+  openedBy?: string;
 }

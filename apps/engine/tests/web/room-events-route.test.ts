@@ -32,6 +32,7 @@ async function mount() {
     local: { id: "web:dashboard" },
     rooms,
     chatEvents,
+    ctx: { config: { people: [] } },
     audit: { record: () => undefined },
     registry: { get: (id: string) => (agents.includes(id) ? { config: { id } } : undefined), enabled: () => agents.map((id) => ({ config: { id } })) },
   };

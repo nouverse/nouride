@@ -12,8 +12,10 @@ import type { ChatListAgent, ChatListGroup, ChatListLine, ChatListPayload, ChatL
 import { cronJobOfChat } from "@/modules/cron/session.ts";
 import { MISSION_GATEWAY_ID } from "@/modules/missions/gateway.ts";
 import { personFor, SESSIONS_READ, speakersOf, SPOKEN } from "@/modules/pipeline/known-rooms.ts";
+import { personWhoOpened } from "@/modules/sessions/sessions.store.ts";
 import type { TurnRecord } from "@/modules/turns/turns.store.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
+import { isMine, readerOf, Spoke, wantsEveryone, type Reader } from "../whose.ts";
 
 /** A preview is one line of a list: longer than any row is wide, and nothing past it is ever drawn. */
 const LINE = 160;
@@ -81,20 +83,25 @@ function peopleCount(deps: ControlDeps, connections: readonly string[], chatId: 
 }
 
 /**
- * Each agent's newest conversation in the dashboard: not a room's (a room is its own row), not a scheduled job's. One
- * whose first turn is still running has no row yet, so it is read from that turn, as `/sessions` reads it.
+ * Each agent's newest conversation in the dashboard that the reader opened: not a room's (a room is its own row), not a
+ * scheduled job's. Each account has its own with each agent; the control token, with no account, reads the newest of
+ * anyone's. One whose first turn is still running has no row yet, so it is read from that turn, as `/sessions` reads it.
  */
-function agentsOf(deps: ControlDeps, local: string, rooms: Set<string>, running: Set<string>): ChatListAgent[] {
+function agentsOf(deps: ControlDeps, local: string, rooms: Set<string>, running: Set<string>, reader: Reader): ChatListAgent[] {
   const own = (chatId: string) => !rooms.has(chatId) && cronJobOfChat(chatId) === null;
+  const anyone = reader.ids.length === 0 && reader.everyone;
+  const opened = (by: string | undefined) => anyone || (by !== undefined && reader.ids.includes(by));
   const opening = new Map<string, TurnRecord>();
   for (const id of running) {
     if (deps.sessions?.find(id)) continue;
     const turn = deps.turns?.latestForSession(id);
-    if (turn?.status === "running" && turn.gatewayId === local && own(turn.chatId)) opening.set(turn.agentId, turn);
+    if (turn?.status === "running" && turn.gatewayId === local && own(turn.chatId) && opened(personWhoOpened(turn))) opening.set(turn.agentId, turn);
   }
   return deps.registry.all().map((agent) => {
     const agentId = agent.config.id;
-    const row = deps.sessions?.list({ agentId, gateway: local, limit: OWN_READ }).find((session) => own(session.chatId));
+    const row = deps.sessions
+      ?.list({ agentId, gateway: local, limit: OWN_READ, ...(anyone ? {} : { openedBy: reader.ids }) })
+      .find((session) => own(session.chatId));
     const first = opening.get(agentId);
     const sessionId = first && (!row || first.startedAt > row.updatedAt) ? first.sessionId : row?.id;
     if (!sessionId) return { agentId, working: false, helpers: 0 };
@@ -167,14 +174,24 @@ function groupsOf(deps: ControlDeps, running: Set<string>): ChatListGroup[] {
 }
 
 export function registerChatListRoutes(control: ControlApp, deps: ControlDeps): void {
+  /**
+   * The reader's own (`whose.ts`): their conversation with each agent, the rooms they made or spoke in, the groups they
+   * spoke in. `?whose=everyone`, an admin's alone, lists every room and group; the agents' rows stay their own.
+   */
   control.get("/chat-list", (c) => {
     const local = deps.local?.id;
     const running = deps.turns?.runningSessions() ?? new Set<string>();
+    const reader = readerOf(c.get("principal"), deps.ctx.config.people);
+    const all = wantsEveryone(reader, c.req.query("whose")) || (reader.everyone && reader.ids.length === 0);
+    const spoke = new Spoke(deps, reader);
+    const mine = (gatewayId: string, chatId: string) => all || isMine(deps, reader, { gatewayId, chatId }, spoke);
+    // Every room keeps its conversations off the agents' rows, the reader's or not.
     const rooms = local ? roomsOf(deps, local, deps.local?.platform ?? "web") : [];
     const payload: ChatListPayload = {
-      agents: local ? agentsOf(deps, local, new Set(rooms.map((room) => room.chatId)), running) : [],
-      rooms,
-      groups: groupsOf(deps, running),
+      agents: local ? agentsOf(deps, local, new Set(rooms.map((room) => room.chatId)), running, reader) : [],
+      rooms: rooms.filter((room) => mine(local!, room.chatId)),
+      // A group is the reader's where their person spoke, on whichever of our bots heard it.
+      groups: groupsOf(deps, running).filter((group) => all || spoke.in(group.platform, group.chatId)),
     };
     return c.json(payload satisfies ChatListPayload);
   });

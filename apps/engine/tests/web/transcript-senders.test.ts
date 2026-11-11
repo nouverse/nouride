@@ -41,7 +41,8 @@ async function mount() {
   };
   const app = new Hono<{ Variables: { principal: unknown } }>();
   app.use("*", async (c, next) => {
-    c.set("principal", { kind: "user", actor: "viewer", role: "viewer", user: { username: "viewer" } });
+    // An admin, who reads every conversation: which an account reads is the doors' test (`whose-doors.test.ts`).
+    c.set("principal", { kind: "user", actor: "admin", role: "admin", user: { id: "u0", username: "admin" } });
     await next();
   });
   registerChatRoutes(app as never, deps as never);

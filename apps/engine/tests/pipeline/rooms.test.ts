@@ -344,7 +344,7 @@ async function mountSend(input: {
       isPaused: (id: string) => paused.has(id),
     },
     audit: { record: () => undefined },
-    ctx: { config: { daemon: { defaultAgent: "nouva" } } },
+    ctx: { config: { daemon: { defaultAgent: "nouva" }, people: [] } },
   };
 
   /**
@@ -355,9 +355,11 @@ async function mountSend(input: {
    */
   const app = new Hono<{ Variables: { principal: unknown } }>();
   app.use("*", async (c, next) => {
+    // An admin, who opens every room: which rooms an account opens is `whose-doors.test.ts`.
     c.set("principal", {
       kind: "user",
       actor: "gading",
+      role: "admin",
       user: { id: "u1", username: "gading", displayName: "Gading" },
     });
     await next();
@@ -642,7 +644,7 @@ describe("opening a room", () => {
 
     const app = new Hono<{ Variables: { principal: unknown } }>();
     app.use("*", async (c, next) => {
-      c.set("principal", { kind: "user", actor: "gading" });
+      c.set("principal", { kind: "user", actor: "gading", role: "admin" });
       await next();
     });
     registerChatRoutes(app as never, {

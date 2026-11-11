@@ -36,6 +36,28 @@ interface SessionRow {
   created_at: number;
   started_at: number;
   updated_at: number;
+  opened_by: string | null;
+}
+
+/**
+ * The first person who said something in a conversation, as `[[people]]` writes an id (`web:<account id>`,
+ * `telegram:814…`), from its turn records: a turn with no cause, from a sender that is neither the daemon's own nor
+ * another agent's. `083_conversation_opener.sql` filled the rows from before with the same words.
+ */
+const PERSON = "substr(t.gateway_id, 1, instr(t.gateway_id, ':') - 1) || ':' || t.sender_id";
+const A_PERSON = `t.cause IS NULL AND t.sender_id IS NOT NULL AND t.sender_id <> ''
+    AND t.sender_id <> 'nouride:system' AND t.sender_id NOT LIKE 'agent:%' AND instr(t.gateway_id, ':') > 1`;
+const FIRST_PERSON = `(SELECT ${PERSON} FROM turn_records t WHERE t.session_id = ? AND ${A_PERSON} ORDER BY t.started_at, t.rowid LIMIT 1)`;
+
+/**
+ * The same question of one turn, for a conversation whose row is not written yet: its first turn is still running.
+ * `FIRST_PERSON`'s rule in code; a test holds the two to one answer.
+ */
+export function personWhoOpened(turn: { gatewayId: string; senderId?: string | undefined; cause?: unknown }): string | undefined {
+  const at = turn.gatewayId.indexOf(":");
+  const sender = turn.senderId ?? "";
+  if (turn.cause || at < 1 || !sender || sender === "nouride:system" || sender.startsWith("agent:")) return undefined;
+  return `${turn.gatewayId.slice(0, at)}:${sender}`;
 }
 
 export interface LoadedSession extends Session {
@@ -61,6 +83,8 @@ export interface SessionListOptions {
   notGateway?: string;
   /** Only one connection's conversations: an agent's newest in the dashboard, past a busy bot's chats elsewhere. */
   gateway?: string;
+  /** Only the conversations one of these opened (`opened_by`): a reader's own. None given is none of them. */
+  openedBy?: readonly string[];
 }
 
 export class SessionStore {
@@ -185,15 +209,18 @@ export class SessionStore {
     this.db.transaction(() => {
       this.db
         .prepare(
+          // Who opened it, once a person has said something in it — the turn this save ends is recorded already — and
+          // never anyone after: a second person in a chat does not make it theirs.
           `INSERT INTO sessions (id, agent_id, chat_id, gateway, context_token_count,
-                                 session_type, status, created_at, started_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, 'main', 'active', ?, ?, ?)
+                                 session_type, status, created_at, started_at, updated_at, opened_by)
+           VALUES (?, ?, ?, ?, ?, 'main', 'active', ?, ?, ?, ${FIRST_PERSON})
            ON CONFLICT(id) DO UPDATE SET
              context_token_count = excluded.context_token_count,
              started_at = CASE WHEN ? OR sessions.started_at = 0 THEN excluded.started_at ELSE sessions.started_at END,
-             updated_at = excluded.updated_at`,
+             updated_at = excluded.updated_at,
+             opened_by = COALESCE(sessions.opened_by, excluded.opened_by)`,
         )
-        .run(id, key.agentId, key.chatId, key.gatewayId, tokenCount, now, started, now, restart ? 1 : 0);
+        .run(id, key.agentId, key.chatId, key.gatewayId, tokenCount, now, started, now, id, restart ? 1 : 0);
 
       const stored = this.db
         .prepare<{ seq: number; hash: string | null }>("SELECT seq, hash FROM session_messages WHERE session_id = ? ORDER BY seq")
@@ -298,6 +325,13 @@ export class SessionStore {
       clauses.push("s.gateway = ?");
       params.push(options.gateway);
     }
+    if (options.openedBy) {
+      if (options.openedBy.length === 0) clauses.push("0");
+      else {
+        clauses.push(`s.opened_by IN (${options.openedBy.map(() => "?").join(", ")})`);
+        params.push(...options.openedBy);
+      }
+    }
     if (options.before !== undefined) {
       clauses.push("s.updated_at < ?");
       params.push(options.before);
@@ -316,6 +350,23 @@ export class SessionStore {
     }
 
     return { where: clauses.length ? `WHERE ${clauses.join(" AND ")}` : "", params };
+  }
+
+  /**
+   * Who opened a chat, whichever agent's conversation there says it: one person's private chat is theirs with every
+   * agent. From a turn while no conversation there has a row yet. What decides who may stop a turn in a chat, or read a
+   * helper's work in it.
+   */
+  openerOfChat(gatewayId: string, chatId: string): string | undefined {
+    const row = this.db
+      .prepare<{ opener: string | null }>(
+        `SELECT COALESCE(
+           (SELECT opened_by FROM sessions WHERE gateway = ? AND chat_id = ? AND opened_by IS NOT NULL ORDER BY created_at LIMIT 1),
+           (SELECT ${PERSON} FROM turn_records t WHERE t.gateway_id = ? AND t.chat_id = ? AND ${A_PERSON} ORDER BY t.started_at, t.rowid LIMIT 1)
+         ) AS opener`,
+      )
+      .get(gatewayId, chatId, gatewayId, chatId);
+    return row?.opener ?? undefined;
   }
 
   /**
@@ -400,6 +451,7 @@ function toSession(row: SessionRow): Session {
     createdAt: row.created_at,
     startedAt: row.started_at,
     updatedAt: row.updated_at,
+    ...(row.opened_by ? { openedBy: row.opened_by } : {}),
   };
 }
 

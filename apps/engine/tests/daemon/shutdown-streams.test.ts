@@ -32,7 +32,12 @@ async function served(): Promise<{ server: HttpServer; streams: OpenStreams; db:
   cleanup.push(() => db.close());
   const streams = new OpenStreams();
   const app = new Hono() as unknown as ControlApp;
-  registerEventRoutes(app, { events: new EventStore(db), streams } as unknown as ControlDeps);
+  // The command line's token, as `nouride` asks: it reads every conversation (`whose.ts`).
+  app.use("*", async (c, next) => {
+    c.set("principal" as never, { kind: "token", actor: "cli", role: "admin" } as never);
+    await next();
+  });
+  registerEventRoutes(app, { events: new EventStore(db), streams, ctx: { config: { people: [] } } } as unknown as ControlDeps);
   // A request that never answers, which is not a stream anybody registered: what the grace is a net for.
   app.get("/never", () => new Promise<Response>(() => {}));
   const server = serveHttp({ port: 0, hostname: "127.0.0.1", fetch: (req, info) => app.fetch(req, { keepOpen: info.keepOpen }) });
