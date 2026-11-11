@@ -166,8 +166,17 @@ agent gets a short answer instead of silence, once per turn:
 It quotes the request the turn is working on, on one line and with every `@` taken out, so the reply
 wakes nobody. It adds when the turn is waiting on an approval, and it never suggests `/stop`, which
 pauses the agent in every chat. A message that does not address the agent, people talking among
-themselves in a room with one bot, gets nothing, as before. Another agent handing work to a busy one
-is told the same way, and never steers it.
+themselves in a room with one bot, gets nothing, as before.
+
+Another agent handing work to a busy one never steers it either, but its hand-over is kept (0.8.33).
+The room is told once:
+
+> `⏳ Nox is still working on "deploy the shop" (4m so far): this message waits for it, and is answered next.`
+
+When the turn ends, the busy agent takes the hand-over as its next turn. A second hand-over from the
+same agent meanwhile joins the first, so both are done in one turn. One that has waited longer than a
+message may wait in the queue (`queue_timeout_ms`, an hour by default) is left, and the agent it was
+for says so in the room.
 
 ## Editing a message you sent
 
@@ -350,10 +359,25 @@ naturally. That soft brake depends on a model choosing not to tag, so there is a
 mention routes a message from an agent, never a channel binding, never the gateway owner, never the
 orchestrator, and after `mention_max_hops` handovers (5 by default) the daemon says so in the chat
 and stops delivering. A human saying anything resets the count, because the limit exists to bound
-*unattended* chatter.
+*unattended* chatter. Where the chat app has buttons (Telegram, Discord), that line carries
+**Continue** (0.8.33): a press delivers the hand-over that was stopped and starts the count again.
 
 Both agents share a working directory (`workspace/shared/`), which is what makes the handover
 meaningful: the build Nox was asked to fix is somewhere Nox can actually open.
+
+**Each agent is told what the others are doing (0.8.33).** In a room, the message an agent answers
+says which of the other agents are at work there, on which request and for how long, and which are
+asleep. So it knows before it tags one that the work will wait. It is also told what else runs on the
+box: its own turns in other chats, helpers, missions and background commands with their folder, six
+at most and the rest counted. Work somebody else asked for in a private chat is named without its
+words, only its kind, its folder and its time. This tells the agent and locks nothing: avoiding a
+clash is still the agent's call.
+
+**When handed-over work fails.** If the agent that took the work fails or runs out of time, the line
+it leaves carries **Continue** and **Hand to** for up to three other agents of the room (0.8.33).
+Continue has the same agent take it up again. Hand to gives another agent what the first was asked.
+Anyone who may talk to that agent in the room can press, once, and the line then says who chose what.
+Without buttons the line says the same in words: say "continue", or tag another agent.
 
 **In a one-to-one chat this is not how it works, and it cannot be.** Each bot has its own private
 conversation with you, so a tag written in a DM reaches nobody, the other agent's bot never sees the

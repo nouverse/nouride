@@ -438,7 +438,9 @@ untuk jawaban cepat, dan bukan untuk hal yang sedang kamu tunggu sekarang.
 Agent juga diberi tahu mesin tempat ia jalan: jumlah core dan memorinya, seperti yang dibaca daemon waktu
 mulai, berapa helper yang boleh dijalankannya di latar belakang, dan berapa misi yang jalan bersamaan. Yang
 sedang jalan saat ini disebut di tiap pesan selama masih ada yang jalan, jadi ia bisa membedakan box yang
-lowong dari yang sibuk sebelum memulai yang baru. Dan ia punya satu aturan untuk kerja paralel: bagian
+lowong dari yang sibuk sebelum memulai yang baru. Sejak 0.8.33 itu mencakup agent lain juga: di room,
+siapa yang sedang bekerja di situ dan mengerjakan apa, dan di seluruh box, giliran, helper, misi, dan
+perintah latar yang jalan selain miliknya, dengan pekerjaan pribadi orang lain disebut tanpa isinya. Dan ia punya satu aturan untuk kerja paralel: bagian
 yang saling lepas dijalankan sekaligus, bagian yang butuh hasil bagian lain dijalankan berurutan, dan
 perintah berat (build, test suite) gak ditumpuk di mesin kecil.
 

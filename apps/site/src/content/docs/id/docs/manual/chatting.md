@@ -173,9 +173,17 @@ Orang lain yang menyapa agent yang sedang sibuk dapat jawaban singkat, bukan dia
 Yang dikutip adalah permintaan yang sedang dikerjakan giliran itu, satu baris dan tanpa `@`, jadi
 balasannya gak membangunkan siapa pun. Ia menyebut kalau giliran itu sedang menunggu approval, dan gak
 pernah menyarankan `/stop`, yang menjeda agent di semua chat. Pesan yang gak menyapa agent, orang-orang
-yang ngobrol sendiri di room dengan satu bot, gak dapat apa-apa, seperti sebelumnya. Agent lain yang
-menyerahkan pekerjaan ke agent yang sibuk dikabari dengan cara yang sama, dan gak pernah
-mengarahkannya.
+yang ngobrol sendiri di room dengan satu bot, gak dapat apa-apa, seperti sebelumnya.
+
+Agent lain yang menyerahkan pekerjaan ke agent yang sibuk juga gak pernah mengarahkannya, tapi serah
+terimanya disimpan (0.8.33). Room dikabari sekali:
+
+> ⏳ Nox is still working on "deploy the shop" (4m so far): this message waits for it, and is answered next.
+
+Begitu giliran itu selesai, agent yang tadi sibuk mengambil serah terima itu sebagai giliran
+berikutnya. Serah terima kedua dari agent yang sama digabung ke yang pertama, jadi dua-duanya
+dikerjakan dalam satu giliran. Yang menunggu lebih lama dari batas tunggu pesan di antrean
+(`queue_timeout_ms`, satu jam secara default) ditinggal, dan agent yang dituju mengatakannya di room.
 
 ## Mengedit pesan yang sudah kamu kirim
 
@@ -360,10 +368,27 @@ pertukaran berakhir dengan wajar. Rem lunak itu bergantung pada model yang memil
 jadi ada rem kerasnya juga: hanya sebuah mention yang merutekan pesan dari agent, bukan channel
 binding, bukan pemilik gateway, bukan orchestrator, dan setelah `mention_max_hops` serah terima (5
 secara default) daemon mengatakannya di chat lalu berhenti mengantarkan. Manusia yang bicara apa pun
-mereset hitungannya, karena batas ini ada untuk membatasi obrolan *tanpa pengawasan*.
+mereset hitungannya, karena batas ini ada untuk membatasi obrolan *tanpa pengawasan*. Di aplikasi chat
+yang punya tombol (Telegram, Discord), baris itu membawa tombol **Continue** (0.8.33): sekali tekan,
+serah terima yang tadi dihentikan diantarkan dan hitungannya mulai lagi.
 
 Kedua agent berbagi direktori kerja (`workspace/shared/`), dan itulah yang membuat serah terima
 bermakna: build yang diminta diperbaiki Nox ada di tempat yang benar-benar bisa dibuka Nox.
+
+**Tiap agent diberi tahu apa yang sedang dikerjakan yang lain (0.8.33).** Di room, pesan yang dijawab
+sebuah agent menyebut agent lain mana yang sedang bekerja di situ, permintaan apa dan sudah berapa
+lama, dan mana yang sedang tidur. Jadi sebelum nge-tag, ia sudah tahu pekerjaannya bakal menunggu. Ia
+juga diberi tahu apa lagi yang jalan di box: gilirannya sendiri di chat lain, helper, misi, dan
+perintah latar beserta foldernya, paling banyak enam dan sisanya dihitung. Pekerjaan yang diminta
+orang lain di chat pribadi disebut tanpa isinya, cuma jenisnya, foldernya, dan lamanya. Ini memberi
+tahu agent dan gak mengunci apa pun: menghindari tabrakan tetap keputusan agent.
+
+**Kalau pekerjaan hasil serah terima gagal.** Kalau agent yang menerima pekerjaan gagal atau kehabisan
+waktu, baris yang ditinggalkannya membawa tombol **Continue** dan **Hand to** untuk paling banyak tiga
+agent lain di room (0.8.33). Continue membuat agent yang sama melanjutkannya. Hand to memberi agent
+lain apa yang tadi diminta ke agent pertama. Siapa pun yang boleh bicara dengan agent itu di room
+bisa menekannya, sekali, dan baris itu lalu menyebut siapa memilih apa. Tanpa tombol, baris itu
+mengatakan hal yang sama dengan kata-kata: bilang "continue", atau tag agent lain.
 
 **Di chat satu lawan satu ini gak bekerja begitu, dan memang gak bisa.** Setiap bot punya
 percakapan pribadinya sendiri dengan kamu, jadi tag yang ditulis di DM gak sampai ke siapa pun, bot

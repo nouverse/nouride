@@ -422,7 +422,9 @@ answer, and not for something you are waiting on now.
 The agent is also told the machine it runs on: its cores and memory, as the daemon read them when it
 started, how many helpers it may have in the background and how many missions run at once. What is
 running now is said on each message while anything runs, so it can tell a free box from a busy one
-before it starts more. And it has one rule for working in parallel: parts that do not depend on each
+before it starts more. From 0.8.33 that covers the other agents too: in a room, which of them are at
+work there and on what, and across the box, the turns, helpers, missions and background commands
+running besides its own, with another person's private work named without its words. And it has one rule for working in parallel: parts that do not depend on each
 other run at once, parts that need another's result run in order, and heavy commands (a build, a test
 suite) are not stacked on a small machine.
 
