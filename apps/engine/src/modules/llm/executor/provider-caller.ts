@@ -356,6 +356,14 @@ export class ProviderCaller {
     // model is producing something", and the argument stream is the one that goes quiet for eighty seconds
     // while a file is written.
     const progress = createGenerationProgress((text) => this.deps.onActivity?.("thinking", text));
+    // Said once, when a call's arguments begin to arrive or a whole call does: from here the model is not writing
+    // its reply, whatever words came before (`onCallBegun`).
+    let calling = false;
+    const callBegun = (): void => {
+      if (calling) return;
+      calling = true;
+      this.deps.onCallBegun?.();
+    };
 
     try {
       for await (const chunk of provider.stream(params)) {
@@ -371,9 +379,11 @@ export class ProviderCaller {
             progress.add(chunk.delta);
             break;
           case "tool_call":
+            callBegun();
             toolCalls.push(chunk.call);
             break;
           case "progress":
+            callBegun();
             // An absolute total from the client, not an increment, so a reconnect or a re-sent chunk cannot
             // double-count.
             progress.setBytes(chunk.bytes);

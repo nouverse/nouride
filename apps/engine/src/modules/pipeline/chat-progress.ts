@@ -178,8 +178,10 @@ export class ChatProgress {
   private running = 0;
   /** When the last call ended with none running: the model at work since, thinking or writing, with no step to show. */
   private quietSince: number | undefined;
-  /** Whether it has written any of its reply since then — what the quiet line says it is doing. */
-  private writing = false;
+  /** When the last piece of the reply came (`wrote`): the quiet line says a reply is written only while pieces come. */
+  private wroteAt = 0;
+  /** The model is writing a tool call now, not its reply (`calling`): the quiet line says so. */
+  private preparing = false;
   private ticker: ReturnType<typeof setTimeout> | undefined;
   /** Serialises writes: two edits in flight can land out of order and show a stale step. */
   private inFlight: Promise<void> = Promise.resolve();
@@ -279,14 +281,32 @@ export class ChatProgress {
     this.schedule();
   }
 
-  /** A piece of the reply, as it is written. Cheap: it only marks that the model is writing now, for the quiet line. */
+  /** A piece of the reply, as it is written. Cheap: it only marks when the model last wrote, for the quiet line. */
   wrote(): void {
-    this.writing = true;
+    this.wroteAt = Date.now();
+  }
+
+  /**
+   * Whether the reply is being written now: a piece of it came within half a tick. Words and then silence are not a
+   * reply being written. A model says a line and then composes a call, and some send the call whole at its end: for
+   * that half minute nothing arrives, and "writing a reply" was said of it until another step ran.
+   */
+  private get writing(): boolean {
+    return Date.now() - this.wroteAt <= (this.options.quietTickMs ?? QUIET_TICK_MS) / 2;
+  }
+
+  /**
+   * The model began a tool call: what it writes now is the call, whatever words came first. A model that said a line
+   * and then wrote a long command had the bubble say "writing a reply" for half a minute, and then run another step.
+   */
+  calling(): void {
+    this.preparing = true;
   }
 
   /**
    * The model at work again with no call running — thinking, or writing its answer — and nothing on the bubble but the
-   * last step. Said once that has gone on for a tick, then every tick, with how long: `⏳ ✍️ writing a reply… 40s`.
+   * last step. Said once that has gone on for a tick, then every tick, with how long: `⏳ ✍️ writing a reply… 40s`, or
+   * `⏳ 🛠️ preparing the next step… 40s` once what it writes is a call.
    *
    * A person's bubble read `✓ 1 step · 166s` for a turn whose one step took 18 s: the other 148 s Claude Code wrote a
    * long reply, and nothing said so — to a person waiting it looked like a hang (0.8.7). Its own timer, at the tick, so
@@ -296,7 +316,8 @@ export class ChatProgress {
     this.hush();
     if (this.closed || this.summaryOnly) return;
     this.quietSince = Date.now();
-    this.writing = false;
+    this.wroteAt = 0;
+    this.preparing = false;
     this.arm();
   }
 
@@ -311,7 +332,7 @@ export class ChatProgress {
     if (this.closed || this.quietSince === undefined || this.steps === 0) return;
     const seconds = Math.round((Date.now() - this.quietSince) / 1000);
     const prefix = this.options.agentLabel ? `[${this.options.agentLabel}] ` : "";
-    this.pending = `${prefix}⏳ ${this.writing ? "✍️ writing a reply" : "💭 thinking"}… ${seconds}s`;
+    this.pending = `${prefix}⏳ ${this.preparing ? "🛠️ preparing the next step" : this.writing ? "✍️ writing a reply" : "💭 thinking"}… ${seconds}s`;
     this.schedule();
     this.arm();
   }

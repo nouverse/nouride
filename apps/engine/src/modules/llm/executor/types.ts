@@ -540,6 +540,12 @@ export interface ExecutorDeps {
    */
   onText?: (delta: string) => void;
   /**
+   * The model began a tool call in this request: what it writes from here is the call, not the reply. Once a request,
+   * as its arguments start to arrive. A model that says a few words and then writes a long call (a script to run)
+   * looked, to whoever watched for text alone, as if it had been writing its reply all that time.
+   */
+  onCallBegun?: () => void;
+  /**
    * A model step came back with words *and* tool calls — the opening line before work ("aku cek dulu ya"). Called with
    * those words before the step's tools run, and awaited, so what it posts lands above anything the tools post. The
    * caller decides whether it reaches the chat (`pipeline/preamble.ts`); the words stay in the conversation either way.

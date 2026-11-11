@@ -789,6 +789,9 @@ describe("the model at work after its steps (0.8.7)", () => {
   // reply, and nothing showed it — to a person waiting, a hang.
   const quietOn = (gateway: Gateway) => new ChatProgress({ gateway, chatId: "chat-1", agentLabel: "nix", minIntervalMs: 0, quietTickMs: 40 });
   const lastIs = (edits: string[], line: RegExp) => eventually(() => line.test(edits.at(-1) ?? ""), 2_000, `the bubble to read ${line}`);
+  /** The same, while the reply keeps arriving: a piece of it each time the bubble is looked at. */
+  const whileWriting = (progress: ChatProgress, edits: string[], line: RegExp) =>
+    eventually(() => (progress.wrote(), line.test(edits.at(-1) ?? "")), 2_000, `the bubble to read ${line} while the reply is written`);
 
   test("is said on the bubble once it has gone on for a tick, thinking and then writing, with how long", async () => {
     const { gateway, sent, edits } = fakeGateway();
@@ -797,11 +800,44 @@ describe("the model at work after its steps (0.8.7)", () => {
     await settle();
     progress.show("tool_done", "ask_agent ok · 18000ms");
     await lastIs(edits, /^\[nix\] ⏳ 💭 thinking… \d+s$/);
-    progress.wrote();
-    await lastIs(edits, /^\[nix\] ⏳ ✍️ writing a reply… \d+s$/);
+    await whileWriting(progress, edits, /^\[nix\] ⏳ ✍️ writing a reply… \d+s$/);
     await progress.finish("ok");
     expect(sent).toHaveLength(1);
     expect(edits.at(-1)).toMatch(/^\[nix\] ✓ 1 step · \d+s$/);
+  });
+
+  test("once what the model writes is a call, it is preparing the next step, whatever words came first", async () => {
+    const { gateway, edits } = fakeGateway();
+    const progress = quietOn(gateway);
+    progress.show("tool", "exec gh api repos", { like: "exec" });
+    await settle();
+    progress.show("tool_done", "exec ok · 3000ms");
+    // A line of its own first, which reads as a reply being written.
+    await whileWriting(progress, edits, /^\[nix\] ⏳ ✍️ writing a reply… \d+s$/);
+    // Then a long command to run: no reply is being written, and the bubble stops saying one is.
+    progress.calling();
+    await lastIs(edits, /^\[nix\] ⏳ 🛠️ preparing the next step… \d+s$/);
+    progress.wrote();
+    await lastIs(edits, /preparing the next step/);
+    // The step runs and ends: the model at work again starts from thinking, not from the call before.
+    progress.show("tool", "exec python3 chart.py", { like: "exec" });
+    await settle();
+    progress.show("tool_done", "exec ok · 3000ms");
+    await lastIs(edits, /^\[nix\] ⏳ 💭 thinking… \d+s$/);
+    await progress.finish("ok");
+    expect(edits.at(-1)).toMatch(/^\[nix\] ✓ 2 steps · \d+s$/);
+  });
+
+  test("a few words and then silence is thinking again: no reply is being written", async () => {
+    const { gateway, edits } = fakeGateway();
+    const progress = quietOn(gateway);
+    progress.show("tool", "exec gh api repos", { like: "exec" });
+    await settle();
+    progress.show("tool_done", "exec ok · 3000ms");
+    await whileWriting(progress, edits, /writing a reply/);
+    // Nothing more arrives: the model composes a call it will send whole. The bubble stops saying a reply is written.
+    await lastIs(edits, /^\[nix\] ⏳ 💭 thinking… \d+s$/);
+    await progress.finish("ok");
   });
 
   test("says nothing more once the answer is going out, and the bubble closes on its count", async () => {

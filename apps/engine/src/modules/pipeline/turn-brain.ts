@@ -108,6 +108,8 @@ export function turnBrain(
       record?.delta(delta);
       progress?.wrote();
     },
+    // And when what it writes turns out to be a call: the bubble stops saying a reply is being written.
+    onCallBegun: () => progress?.calling(),
     ...(record ? { onRequest: (line: ContextLine) => record.context(line) } : {}),
     ...(preamble ? { onPreamble: (words: string, said?: { own?: boolean }) => preamble.offer(words, said) } : {}),
     execPolicy: (agentId) => ({
