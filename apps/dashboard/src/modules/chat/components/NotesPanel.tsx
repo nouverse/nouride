@@ -22,8 +22,8 @@ import { Spinner } from "@/commons/components/ui/Spinner";
 import { useToast } from "@/commons/components/ui/toast";
 import { ErrorNote } from "@/commons/components/ui/ui";
 import { notesKey } from "@/commons/hooks/use-notes";
-import { withPlans } from "../lib/notes";
-import { PlanSteps } from "./PlanSteps";
+import { withPlans } from "@/commons/lib/notes";
+import { PlanSteps } from "@/commons/components/chat/PlanSteps";
 
 export function NotesPanel({
   open,

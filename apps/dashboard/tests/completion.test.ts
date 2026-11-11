@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { completionKey } from "../src/modules/chat/lib/completion.ts";
+import { completionKey } from "../src/commons/lib/completion.ts";
 
 const press = (key: string, over: { count?: number; active?: number; startAt?: -1 | 0 } = {}) =>
   completionKey({

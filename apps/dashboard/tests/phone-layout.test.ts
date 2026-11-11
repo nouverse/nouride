@@ -98,18 +98,19 @@ describe("the bottom of a page", () => {
     for (const page of ["modules/logs/index.page.tsx", "modules/secrets/index.page.tsx"]) expect(read(page)).toContain("${HELD_BOTTOM}");
   });
 
-  test("Home's last card ends above its floating Chat button, not under it", () => {
-    const button = read("modules/home/components/NewChatButton.tsx");
-    // Where the button's top is, up from the safe area: its place and its height (`h-12` is 3rem).
-    const place = Number(/bottom-\[calc\((\d+(?:\.\d+)?)rem\+env\(safe-area-inset-bottom\)\)\]/.exec(button)?.[1] ?? Number.NaN);
-    expect(button).toMatch(/\bh-12\b/);
-    const top = place + 3;
-    // What Home adds under its last card: `max-lg:pb-N`, a quarter of a rem a step.
-    const room = Number(/export const CHAT_BUTTON_ROOM = "max-lg:pb-(\d+)"/.exec(button)?.[1] ?? Number.NaN) / 4;
-    expect(read("modules/home/index.page.tsx")).toContain("${CHAT_BUTTON_ROOM}");
-    // The last card's foot, up from the safe area, against the button's top: 2rem of air or more, as cards have
-    // between them and the bar.
-    expect(phoneRem(PAGE_BOTTOM) + room).toBeGreaterThanOrEqual(top + 2);
+  // The floating chat's button stands over the tab bar's right end on every page but Chats, where Home's "+ Chat" stood
+  // on Home alone: so every page's foot leaves it the room Home's did.
+  test("a page's last card ends above the floating chat's button, not under it; the button stands clear of the tab bar", () => {
+    const place = /const BUTTON_PLACE = "([^"]+)"/.exec(read("commons/components/floating-chat/FloatingChat.tsx"))?.[1] ?? "";
+    // Where the button's foot is, up from the safe area, and its height (`size-12` is 3rem): below a laptop's width.
+    const foot = Number(/(?:^| )bottom-\[calc\((\d+(?:\.\d+)?)rem\+env\(safe-area-inset-bottom\)\)\](?: |$)/.exec(place)?.[1] ?? Number.NaN);
+    expect(place.split(" ")).toContain("size-12");
+    expect(foot).toBeGreaterThan(BAR_REM);
+    // The last card's foot against the button's top: 2rem of air or more, as cards have between them and the bar.
+    expect(phoneRem(PAGE_BOTTOM)).toBeGreaterThanOrEqual(foot + 3 + 2);
+    // From a laptop up it is in the window's corner, under where a page that scrolls ends: 2.75rem tall, 0.625rem up.
+    expect(place.split(" ")).toEqual(expect.arrayContaining(["lg:bottom-2.5", "lg:size-11"]));
+    expect(PAGE_BOTTOM.split(" ")).toContain("lg:pb-20");
   });
 
   test("a toast stands above the tab bar on a phone, where it lay over the tabs and took their taps", () => {
@@ -121,7 +122,7 @@ describe("the bottom of a page", () => {
   });
 
   test("the chat's composer, which sits at the bottom, keeps clear of the home indicator", () => {
-    expect(read("modules/chat/components/Composer.tsx")).toContain("pb-[max(0.75rem,env(safe-area-inset-bottom))]");
+    expect(read("commons/components/chat/Composer.tsx")).toContain("pb-[max(0.75rem,env(safe-area-inset-bottom))]");
   });
 
   test("the viewport reports the safe area, and keeps its zoom", () => {

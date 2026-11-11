@@ -6,7 +6,7 @@
  */
 
 import { control, post, request } from "./api.client";
-import type { ApprovalDecision, ApprovalRequest, ChatListPayload, ChatTurn, LiveTurn, Room, RunningJob, SessionSummary, SlashCommand, Transcript, TurnAttachment, UploadedFile } from "@nouride/wire";
+import type { ApprovalDecision, ApprovalRequest, ChatListPayload, ChatTurn, LiveTurn, OpenPage, Room, RunningJob, SessionSummary, SlashCommand, Transcript, TurnAttachment, UploadedFile } from "@nouride/wire";
 
 export const chatApi = {
   /**
@@ -163,6 +163,8 @@ export const chatApi = {
     senderName?: string;
     senderId?: string;
     attachments?: { path: string; mimeType: string; filename: string }[];
+    /** The page it is written from, which the agent is then told: the floating chat's, and nothing else sends one. */
+    page?: OpenPage;
   }) =>
     post<{ sessionId: string; chatId: string; messageId: string; agentId: string }>(
       `${control}/chat/send`,

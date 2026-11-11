@@ -7,96 +7,114 @@
  * the double-send on refresh, `1 step · 1s` after a reload, steps that vanished, and a running turn that no reopened
  * tab could see.
  *
- * Who it is with comes from the address, not from a picker: an agent's row in the list opens its newest conversation,
- * and a new chat is `/chat?agent=…`.
+ * Who it is with is its caller's to say, and never a picker of its own: on the Chats page the address (an agent's row
+ * in the list opens its newest conversation, and a new chat is `/chat?agent=…`), in the floating chat the agent picked
+ * in its bar. So is where it goes: the bar over it, the panels beside it and what becomes of a new conversation's id
+ * are handed in, and the same conversation is drawn in both places.
  */
 
-import { useDraft } from "../hooks/use-draft.ts";
-import { AgentHeader } from "./AgentHeader.tsx";
-import { RoomHeader } from "./RoomHeader.tsx";
-import { ChatLoading } from "./ChatLoading.tsx";
-import { EmptyState } from "./EmptyState.tsx";
-import { Composer } from "./Composer.tsx";
-import { useEffect, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
-import { api } from "@/commons/lib/api";
-import type { ChatTurn, SlashCommand } from "@nouride/wire";
-import { ApprovalStrip } from "./ApprovalStrip.tsx";
-import { useStickyScroll } from "@/commons/hooks/use-sticky-scroll";
-import { DropOverlay, useFileDrop } from "@/commons/components/ui/FileDrop";
-import { ReadOnlyNote } from "@/commons/components/chat/ReadOnlyNote";
+import { useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import type { ChatTurn, OpenPage, Room, SlashCommand } from "@nouride/wire";
+import type { Look } from "@/commons/cat/look";
 import { PersonMessage } from "@/commons/components/chat/PersonMessage";
-import { useConversation } from "@/commons/hooks/use-conversation";
-import { useAttachments } from "../hooks/use-attachments";
-import { useOpenChat } from "../hooks/use-open-chat";
-import type { ChatListData } from "../hooks/use-chat-list";
-import { EventPill } from "./EventPill";
-import { interleave } from "../interleave";
-import { EarlierMessage, LiveTurnView, TurnView, UserBubble } from "./Turn";
-import { JobStrip } from "./Jobs";
-import {
-  applyMention,
-  matchMentions,
-  mentionToken,
-  orderMentions,
-} from "./MentionMenu";
-import { applyCommand, matchCommands, slashToken } from "./SlashMenu";
-import { canWrite, useMe } from "@/commons/lib/session";
+import { ReadOnlyNote } from "@/commons/components/chat/ReadOnlyNote";
+import { DropOverlay, useFileDrop } from "@/commons/components/ui/FileDrop";
 import { useAnswerApproval } from "@/commons/hooks/use-answer-approval";
-import { NotesPanel } from "./NotesPanel";
-import { HistoryPanel } from "./HistoryPanel";
-import { PlanStrip } from "./PlanStrip";
-import { startWith } from "../lib/start-with";
-import { askedInLog, oldestLine } from "../lib/group-stream";
-import { eventWords } from "../lib/event-words";
-import { useWorkNotes } from "@/commons/hooks/use-notes";
+import { useAttachments } from "@/commons/hooks/use-attachments";
+import type { ChatAgents } from "@/commons/hooks/use-chat-agents";
+import { useConversation } from "@/commons/hooks/use-conversation";
+import { useDraft } from "@/commons/hooks/use-draft";
 import { ENTER, useMotionList } from "@/commons/hooks/use-motion-list";
-import { doingNow, orchestratorFirst } from "@/commons/lib/agents";
-import { workingWords } from "./ListRows";
+import { useWorkNotes } from "@/commons/hooks/use-notes";
+import { useStickyScroll } from "@/commons/hooks/use-sticky-scroll";
+import { doingNow, orchestratorFirst, workingWords } from "@/commons/lib/agents";
+import { api } from "@/commons/lib/api";
+import { refreshChatLists } from "@/commons/lib/chat-lists";
+import { eventWords } from "@/commons/lib/event-words";
+import { askedInLog, oldestLine } from "@/commons/lib/group-stream";
+import { interleave } from "@/commons/lib/interleave";
+import { useMe } from "@/commons/lib/session";
+import { startWith } from "@/commons/lib/start-with";
+import { ApprovalStrip } from "./ApprovalStrip";
+import { ChatLoading } from "./ChatLoading";
+import { Composer } from "./Composer";
+import { EmptyState } from "./EmptyState";
+import { EventPill } from "./EventPill";
+import { JobStrip } from "./Jobs";
+import { applyMention, matchMentions, mentionToken, orderMentions } from "./MentionMenu";
+import { PlanStrip } from "./PlanStrip";
+import { applyCommand, matchCommands, slashToken } from "./SlashMenu";
+import { EarlierMessage, LiveTurnView, TurnView, UserBubble } from "./Turn";
 
 /** What the composer says under a room's box about a message that tags nobody: the router's answer, in words. */
 function untaggedWords(untagged: string | undefined, nameOf: (agentId: string) => string): string {
   return untagged ? `Type @ to tag an agent. No tag: ${nameOf(untagged)} answers.` : "Type @ to tag an agent. No tag: nobody answers here.";
 }
 
-export function Conversation(
-  { sessionId, roomChatId, agent, draft, data }: { sessionId?: string; roomChatId?: string; agent?: string; draft?: string; data: ChatListData },
-) {
-  const navigate = useNavigate();
+/** The colour of what an agent is doing, in the bar over its conversation. */
+export const STATUS_TONES = { working: "text-success", success: "text-base-content/65", accent: "text-accent", muted: "text-base-content/65" } as const;
+
+/** What a conversation knows of itself now, for the bar over it and the panels beside it, which its caller draws. */
+export interface ConversationNow {
+  /** The agent it is with: the daemon's answer, and in a new chat the one it starts with. */
+  agentId: string;
+  agentName: string;
+  look: Look | undefined;
+  /** What that agent is doing, and a longer tail of it for where there is room ("in the background"). */
+  status: { words: string; more?: string; tone: keyof typeof STATUS_TONES };
+  /** The room, when it is one: nobody may have spoken in it yet. */
+  room: Room | null;
+  /** The chat app a private chat lives on: read here, answered there. */
+  elsewhere: string | undefined;
+}
+
+export interface ConversationProps {
+  sessionId?: string;
+  roomChatId?: string;
+  /** The agent a new chat starts with (`lib/start-with.ts`). */
+  agent?: string;
+  agents: ChatAgents;
+  /**
+   * A new chat's first message has a conversation, and the daemon says which agent's: the Chats page goes to its
+   * address, the floating chat keeps its id.
+   */
+  onSession: (sessionId: string, agentId: string) => void;
+  header: (now: ConversationNow) => ReactNode;
+  /** Panels beside it, under its bar: an agent's History, its work notes. */
+  aside?: (now: ConversationNow) => ReactNode;
+  /** A message written for the person to send (`useDraft`), and its giver letting go of it once it is in the box. */
+  draft?: { text: string | undefined; onTaken: () => void };
+  /** In a room, who answers a message that tags nobody, as the chat list says it. */
+  untagged?: string | undefined;
+  /** The page each message is written from, read as it is sent: the floating chat's, so the agent is told (`OpenPage`). */
+  page?: () => OpenPage;
+  /** The box's text, where its caller keeps it past the conversation's own life: the floating chat, while it is closed. */
+  box?: [string, Dispatch<SetStateAction<string>>];
+  /** Drawn in a panel a phone's width at any window's: what lays itself out by the window's width is told. */
+  narrow?: boolean;
+}
+
+export function Conversation({ sessionId, roomChatId, agent, agents: chat, onSession, header, aside, draft, untagged, page, box, narrow = false }: ConversationProps) {
+  const queryClient = useQueryClient();
   const me = useMe();
 
-  const open = useOpenChat({
-    ...(sessionId ? { sessionId } : {}),
-    ...(roomChatId ? { roomChatId } : {}),
-    onLeave: () => void navigate({ to: "/chat" }),
-  });
-  const room = open.room;
-
-  const orchestrator = data.orchestrator;
-  /** The orchestrator first, as every list of agents has it: the one a new chat opens with when none is named. */
-  const agents = orchestratorFirst(data.agents, orchestrator);
-  // In a new chat, the agent the link named (`lib/start-with.ts`).
-  const chosenAgent = startWith(agent, sessionId, agents);
-  const [input, setInput] = useState("");
   /**
-   * The agent's work notes, in a drawer on the right — a one-to-one conversation's, once the daemon has answered for
-   * them: a room has a session per member, and a daemon that keeps none (501), or predates them (404), offers no toggle.
+   * The room, fetched by id rather than read out of the transcript: the bar has to be right before anybody has spoken,
+   * and a room created a second ago has no turns and no sessions, only its name and its members.
    */
+  const roomQuery = useQuery({ queryKey: ["rooms", roomChatId], queryFn: () => api.room(roomChatId!), enabled: Boolean(roomChatId) });
+  const room = roomQuery.data?.room ?? null;
+
+  const orchestrator = chat.orchestrator;
+  /** The orchestrator first, as every list of agents has it: the one a new chat opens with when none is named. */
+  const agents = orchestratorFirst(chat.agents, orchestrator);
+  // In a new chat, the agent its caller named (`lib/start-with.ts`).
+  const chosenAgent = startWith(agent, sessionId, agents);
+  const own = useState("");
+  const [input, setInput] = box ?? own;
+  /** The agent's work notes: the plan kept in them is drawn over the box (`PlanStrip`). */
   const workNotes = useWorkNotes(sessionId);
-  /** Which conversation the drawer was opened in, so a new chat's first answer does not open it. */
-  const [notesFor, setNotesFor] = useState<string | null>(null);
-  const notesOpen = notesFor !== null && notesFor === sessionId && Boolean(workNotes.data);
-  const closeNotes = () => setNotesFor(null);
-  // History and the notes are drawers either side of the pane, one open at a time; a conversation picked in History opens
-  // where it was, and the drawer is done.
-  const [historyOpen, setHistoryOpen] = useState(false);
-  useEffect(() => setHistoryOpen(false), [sessionId]);
-  const toggleNotes = () => {
-    // Opened, read again: what the agent wrote in a turn on another connection is there without waiting for one here.
-    if (!notesOpen) void workNotes.refetch();
-    setNotesFor(notesOpen ? null : (sessionId ?? null));
-  };
 
   const user = me.data?.user;
   /**
@@ -109,8 +127,7 @@ export function Conversation(
     ...(sessionId ? { sessionId } : {}),
     ...(roomChatId ? { roomChatId } : {}),
     agentId: chosenAgent,
-    onSession: (id) =>
-      void navigate({ to: "/chat/$sessionId", params: { sessionId: id }, replace: true }),
+    onSession,
   });
 
   /**
@@ -120,7 +137,7 @@ export function Conversation(
   const sessionAgent = conversation.session?.agentId ?? conversation.liveTurns[0]?.agentId;
   const selectedAgent = sessionAgent || chosenAgent || orchestrator || agents[0]?.id || "";
   const currentAgent = agents.find((a) => a.id === selectedAgent) ?? agents[0];
-  const looks = data.looks;
+  const looks = chat.looks;
 
   const writable = conversation.session?.writable ?? true;
   /**
@@ -159,7 +176,7 @@ export function Conversation(
   const streamRef = useRef<HTMLDivElement>(null);
 
   // A message written for the person to send (`AskAgentButton`): in the box once, never sent from here.
-  useDraft({ draft, agent, setInput, textareaRef });
+  useDraft({ draft: draft?.text, onTaken: () => draft?.onTaken(), setInput, textareaRef });
 
   /**
    * Opens at the newest message, follows the answer as it is written, and lets go the moment the
@@ -304,7 +321,7 @@ export function Conversation(
 
   const submit = () => {
     if (!canSend) return;
-    conversation.send(input.trim(), attachments.ready);
+    conversation.send(input.trim(), attachments.ready, page?.());
     /**
      * The sidebar is asked to catch up immediately, not at its next tick.
      *
@@ -314,7 +331,7 @@ export function Conversation(
      * having gone nowhere. The refetch that follows this may still be a moment early; the interval
      * above then catches it, and by then it is quick because something is running.
      */
-    open.refresh();
+    refreshChatLists(queryClient);
     setInput("");
     attachments.clear();
     if (textareaRef.current) textareaRef.current.style.height = "auto";
@@ -347,45 +364,23 @@ export function Conversation(
   const oldest = oldestLine(conversation.messages);
   const prompted = (turn: ChatTurn) => !room && !(elsewhere && askedInLog(turn, oldest));
   const helpers = conversation.jobs.filter((job) => job.kind === "helper").length;
-  const roomEntry = room ? data.list.data?.rooms.find((one) => one.chatId === room.chatId) : undefined;
   const working = workingWords(busy, helpers);
-  const now = currentAgent ? doingNow(currentAgent) : undefined;
+  const doing = currentAgent ? doingNow(currentAgent) : undefined;
+  const now: ConversationNow = {
+    agentId: selectedAgent,
+    agentName: currentAgent?.displayName || selectedAgent || "Agent",
+    look: looks.get(selectedAgent),
+    status: working ? { words: working, ...(helpers > 0 ? { more: " in the background" } : {}), tone: "working" } : { words: doing?.words ?? "", tone: doing?.tone ?? "muted" },
+    room,
+    elsewhere,
+  };
 
   return (
     <div className="relative flex flex-col h-full w-full overflow-hidden">
-      {room ? (
-        <RoomHeader room={room} data={data} untagged={roomEntry?.untagged} onDelete={open.deleteOnScreen} deleting={open.deleting} />
-      ) : (
-        <AgentHeader
-          agentId={selectedAgent}
-          name={currentAgent?.displayName || selectedAgent || "Agent"}
-          look={looks.get(selectedAgent)}
-          status={working ? { words: working, ...(helpers > 0 ? { more: " in the background" } : {}), tone: "working" } : { words: now?.words ?? "", tone: now?.tone ?? "muted" }}
-          sessionId={sessionId}
-          {...(elsewhere ? { readOnly: { platform: elsewhere } } : {})}
-          history={{ open: historyOpen, toggle: () => { closeNotes(); setHistoryOpen((was) => !was); } }}
-          {...(workNotes.data ? { notes: { open: notesOpen, count: workNotes.data.tasks.length, toggle: () => { setHistoryOpen(false); toggleNotes(); } } } : {})}
-          onDelete={open.deleteOnScreen}
-          deleting={open.deleting}
-        />
-      )}
+      {header(now)}
 
       <div className="relative flex-1 min-h-0 flex overflow-hidden">
-        {sessionId && workNotes.data ? (
-          <NotesPanel
-            key={sessionId}
-            open={notesOpen}
-            sessionId={sessionId}
-            notes={workNotes.data}
-            error={workNotes.error}
-            editable={canWrite(me.data ?? null)}
-            onClose={closeNotes}
-          />
-        ) : null}
-
-        {room ? null : (
-          <HistoryPanel open={historyOpen} onClose={() => setHistoryOpen(false)} agentId={selectedAgent} agentName={currentAgent?.displayName || selectedAgent || "Agent"} current={sessionId} list={data.list.data} />
-        )}
+        {aside?.(now)}
 
         <div className="relative flex-1 min-h-0 flex flex-col h-full overflow-hidden" {...drop.handlers}>
           {/* Anywhere in the conversation, not just over the input: a file being dragged is aimed at
@@ -400,6 +395,7 @@ export function Conversation(
                 look={currentAgent ? looks.get(currentAgent.id) : undefined}
                 room={room}
                 senderName={senderName}
+                narrow={narrow}
                 onPick={(prompt) => {
                   setInput(prompt);
                   textareaRef.current?.focus();
@@ -427,7 +423,7 @@ export function Conversation(
                     return elsewhere ? <PersonMessage key={key} name={entry.message.senderName} text={entry.message.text} motion={motion} /> : <UserBubble key={key} text={entry.message.text} sessionId={transcriptId} motion={motion} />;
                   }
                   if (entry.kind === "event") {
-                    return <EventPill key={key} event={entry.event} words={eventWords(entry.event, { viewer: user?.username, nameOf: data.nameOf })} motion={motion} />;
+                    return <EventPill key={key} event={entry.event} words={eventWords(entry.event, { viewer: user?.username, nameOf: chat.nameOf })} motion={motion} />;
                   }
                   if (entry.kind === "live") {
                     return (
@@ -484,7 +480,7 @@ export function Conversation(
             textareaRef={textareaRef}
             room={room}
             agentName={currentAgent?.displayName}
-            {...(room ? { untaggedHint: untaggedWords(roomEntry?.untagged, data.nameOf) } : {})}
+            {...(room ? { untaggedHint: untaggedWords(untagged, chat.nameOf) } : {})}
             attachments={attachments}
             conversation={conversation}
             slash={{

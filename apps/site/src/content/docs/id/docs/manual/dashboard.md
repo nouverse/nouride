@@ -131,7 +131,7 @@ bawahnya. Lalu, berurutan:
   admin atau operator.
 - **Yang sedang jalan.** Tiap misi yang sedang dikerjakan, dengan seberapa jauh checklist-nya.
 - **Quick chat**, di laptop: satu baris ke sebuah agent, orchestrator lebih dulu dan diberi tanda, lalu chat-nya
-  terbuka dengan jawabannya. Di HP, tombol **+ Chat** melayang di atas bar tab sebagai gantinya.
+  terbuka dengan jawabannya. Di HP, tombol chat yang melayang di setiap halaman ada di tempatnya, di atas bar tab.
 - **Your agents.** Office versi kecil, dan di sebelahnya tiap agent sebagai chip: kucingnya, namanya, mahkota di
   orchestrator, dan titik untuk apa yang sedang ia kerjakan. Chip membuka agent-nya; gambarnya membuka Office.
 - Lalu pemakaian AI hari ini, dilipat jadi satu baris, dan catatan setup kalau saat terakhir dinyalakan ada yang
@@ -141,14 +141,38 @@ Kalau gak ada yang menunggu dan gak ada yang jalan, kucingnya bilang *Nothing is
 ngopi, atau bersandar di skuternya, gambarnya beda tiap kali kamu buka Home. Selama ada misi yang jalan, ia naik skuter
 di sebelah daftarnya.
 
+## Chat di setiap halaman
+
+Di setiap halaman selain Chats, ada tombol bulat bergambar wajah agent di pojok jendela; di HP letaknya di atas bar
+tab. Tekan, dan chat kecil terbuka di atas halaman: kartu di pojok kalau di laptop atau tablet, lembar yang naik dari
+bawah layar kalau di HP. Halamannya tetap di tempat, jadi kamu bisa sambil melihatnya waktu bertanya. Tekan tombolnya
+lagi, tekan Escape, atau pakai tombol tutup di panel untuk menutupnya. Yang sudah kamu tulis tapi belum dikirim masih
+ada di kotaknya waktu kamu buka lagi.
+
+- **Agent yang mana.** Pertama kali, chat terbuka dengan orchestrator-mu; setelah itu dengan agent yang terakhir kamu
+  pakai di situ. Di halaman milik satu agent, chat terbuka dengan agent itu. Tekan nama agent di atas panel untuk
+  memilih yang lain.
+- **Percakapan yang sama dengan di Chats.** Untuk tiap agent, panel menampilkan percakapan satu-lawan-satu terbarumu
+  dengannya, yang dibuka barisnya di Chats, dan memulai yang baru kalau belum ada. Yang kamu kirim di panel ada di
+  Chats, begitu juga sebaliknya, lengkap dengan langkah agent, file-nya, izin yang ia tunggu, dan **Stop**, seperti di
+  Chats. Tombol panah di atas panel membuka percakapan yang sama di halaman Chats. Room dan grup tetap di Chats.
+- **Agent tahu halaman mana yang sedang kamu buka.** Tiap pesan dari panel memberi tahu agent halaman tempat pesan itu
+  ditulis: nama halamannya, alamatnya, dan tentang apa halaman itu kalau memang tentang satu hal, misalnya sebuah misi
+  atau sebuah agent. Jadi "yang ini lagi nunggu apa?" yang ditanyakan di halaman sebuah misi artinya misi itu. Pesan
+  yang ditulis di halaman Chats tidak menyebut halaman apa pun.
+
+Tombolnya ada untuk yang boleh chat (admin atau operator). Selama panelnya tertutup, ia tidak meminta apa pun ke
+server.
+
 ## Tanya orchestrator dari halaman mana pun
 
 Kebanyakan halaman punya tombol di header-nya, **Ask** dan nama orchestrator-mu: *Ask Nouva to create an agent* di
 Agents, *to set up a webhook* di Webhooks, *to schedule something* di Schedule, *to add a model* di Models, dan
-seterusnya. Tombol itu membuka chat dengan orchestrator, dengan permintaan untuk halaman itu sudah tertulis dan bagian
-kosong (…) untuk yang kamu mau. Lengkapi lalu kirim: tidak ada yang terkirim sebelum kamu menekan kirim, dan agent
-tetap minta izin untuk hal yang berisiko. Tombolnya ada untuk yang boleh chat (admin atau operator), dan hanya kalau
-orchestrator sudah dipilih. Di HP tulisannya **Ask Nouva**.
+seterusnya. Tombol itu membuka chat di atas halaman yang sedang kamu buka, dengan orchestrator-mu, dan menaruh
+permintaan untuk halaman itu di kotaknya, dengan bagian kosong (…) untuk yang kamu mau. Kamu tetap di halaman itu.
+Lengkapi lalu kirim: tidak ada yang terkirim sebelum kamu menekan kirim, dan agent tetap minta izin untuk hal yang
+berisiko. Kalau kamu sudah menulis sesuatu di kotaknya, permintaannya ditambahkan di bawahnya. Tombolnya ada untuk
+yang boleh chat (admin atau operator), dan hanya kalau orchestrator sudah dipilih. Di HP tulisannya **Ask Nouva**.
 
 ## Agent adalah modulnya
 

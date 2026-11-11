@@ -4,18 +4,20 @@
  * reads it, changes it if they like, and presses send; and the agent still asks before it installs anything, as it
  * always does. It replaces a command printed for a person to type, which a person who is not technical cannot use.
  *
- * The chat takes the message from its address once and drops it from there (`modules/chat/lib/start-with.ts`). Drawn
- * once the orchestrator is known, since its name is on the button: "Ask your orchestrator" asks a person to know the word.
- * Not for a viewer, who may read the dashboard but send nothing, a chat message included.
+ * The chat it opens is the one that floats over the page (`lib/floating-chat.ts`), so the person stays on the page
+ * they are asking about, and the agent is told which page that is. It went to the Chats page, and the page asked
+ * about was left behind. What the box already holds is kept, the message under it (`withDraft`). Drawn once the
+ * orchestrator is known, since its name is on the button: "Ask your orchestrator" asks a person to know the word.
+ * Not for a viewer, who may read the dashboard but send nothing, a chat message included, and has no floating chat.
  *
  * `soft` is the one in a page's header (`PageHeader`'s `ask`, words in `page-asks.ts`): beside the page's own main
  * button it is the quieter of the two, and on a phone it says only "Ask Nouva", the rest in its title.
  */
 
-import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { MessageSquare } from "lucide-react";
 import { api } from "@/commons/lib/api";
+import { openFloatingChat } from "@/commons/lib/floating-chat";
 import { canWrite, useMe } from "@/commons/lib/session";
 import { cn } from "@/commons/lib/utils";
 
@@ -38,7 +40,7 @@ export function AskAgentButton({
   if (!orchestrator || !name || !canWrite(me.data ?? null)) return null;
   const look = variant === "soft" ? "btn btn-sm gap-1.5 rounded-xl border-0 bg-secondary/10 text-secondary hover:bg-secondary/20" : "btn btn-primary btn-sm gap-1.5 rounded-xl";
   return (
-    <Link to="/chat" search={{ agent: orchestrator, draft: message }} title={`Ask ${name} ${task}`} className={cn(look, className)}>
+    <button type="button" title={`Ask ${name} ${task}`} className={cn(look, className)} onClick={() => openFloatingChat({ agent: orchestrator, draft: message })}>
       <MessageSquare size={14} aria-hidden="true" />
       {variant === "soft" ? (
         <>
@@ -52,6 +54,6 @@ export function AskAgentButton({
           Ask {name} {task}
         </>
       )}
-    </Link>
+    </button>
   );
 }

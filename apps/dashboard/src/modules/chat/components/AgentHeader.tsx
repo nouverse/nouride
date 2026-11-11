@@ -10,6 +10,7 @@ import { Link } from "@tanstack/react-router";
 import { ChevronLeft, Ellipsis, History, NotebookPen, Plus, Trash2 } from "lucide-react";
 import type { Look } from "@/commons/cat/look";
 import { AgentAvatar } from "@/commons/components/agents/AgentAvatar";
+import { STATUS_TONES } from "@/commons/components/chat/Conversation";
 import { PlatformTag } from "@/commons/components/chat/PlatformBadge";
 import { useConfirm } from "@/commons/components/ui/confirm";
 import { DropdownMenu } from "@/commons/components/ui/DropdownMenu";
@@ -19,8 +20,6 @@ import { DELETE_CONVERSATION } from "../lib/history";
 
 /** A header's button: a word beside its icon from a phone's width up, the icon alone on a phone. */
 export const HEADER_BUTTON = "btn btn-ghost h-11 min-h-11 gap-1.5 rounded-[14px] px-3 text-[13px] font-semibold text-base-content/80 hover:bg-base-content/[0.06] max-sm:w-11 max-sm:px-0 sm:h-9 sm:min-h-9";
-
-const TONES = { working: "text-success", success: "text-base-content/65", accent: "text-accent", muted: "text-base-content/65" } as const;
 
 export function AgentHeader({
   agentId,
@@ -38,7 +37,7 @@ export function AgentHeader({
   name: string;
   look: Look | undefined;
   /** What it is doing, and a longer tail of it for where there is room ("in the background"). */
-  status: { words: string; more?: string; tone: keyof typeof TONES };
+  status: { words: string; more?: string; tone: keyof typeof STATUS_TONES };
   sessionId: string | undefined;
   /** A private chat on a chat app: read here, answered there. */
   readOnly?: { platform: string };
@@ -67,7 +66,7 @@ export function AgentHeader({
             </span>
           ) : null}
         </div>
-        <p className={cn("truncate text-xs font-semibold", TONES[status.tone])}>
+        <p className={cn("truncate text-xs font-semibold", STATUS_TONES[status.tone])}>
           {readOnly ? <span className="sm:hidden">Read-only · {platformName(readOnly.platform)}</span> : null}
           <span className={readOnly ? "max-sm:hidden" : undefined}>
             {status.words}

@@ -235,8 +235,24 @@ export interface MessageEnvelope {
    * so the agent knows what the thread is about. Never for a message that is itself the thread's start.
    */
   threadOpener?: ThreadOpener;
+  /**
+   * The dashboard page its sender had open as they wrote it: the chat that floats over every page sends it, so the agent
+   * knows what "this one" is. The sender's browser's own claim, said to the model as one short line on this message and
+   * never in the prompt (`pageNote` in the engine's `pipeline/messages.ts`). The engine's to set, from the control API.
+   */
+  page?: OpenPage;
   /** Original platform payload, for gateway-specific features. Never sent to the LLM. */
   raw: unknown;
+}
+
+/** A dashboard page as a message says it was written from (`MessageEnvelope.page`). */
+export interface OpenPage {
+  /** Its address, as the browser shows it. */
+  path: string;
+  /** What the dashboard calls the page: "Missions". */
+  title: string;
+  /** The one thing the page is about, where it is about one: a mission's goal, an agent's name. */
+  subject?: string;
 }
 
 /** What a thread was started from (`MessageEnvelope.threadOpener`). */

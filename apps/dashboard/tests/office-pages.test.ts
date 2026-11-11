@@ -240,7 +240,7 @@ describe("a fresh chat greets you with the agent's own cat", () => {
   async function greet(props: Record<string, unknown>): Promise<{ host: HTMLElement; unmount: () => void }> {
     const React = await import("react");
     const { createRoot } = await import("react-dom/client");
-    const { EmptyState } = await import("@/modules/chat/components/EmptyState");
+    const { EmptyState } = await import("@/commons/components/chat/EmptyState");
     const host = document.createElement("div");
     document.body.appendChild(host);
     const reactRoot = createRoot(host);
