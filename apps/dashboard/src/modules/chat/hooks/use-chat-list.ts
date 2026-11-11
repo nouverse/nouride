@@ -12,6 +12,7 @@ import type { AgentSummary, ChatListPayload } from "@nouride/wire";
 import { api } from "@/commons/lib/api";
 import { looksOf } from "@/commons/cat/look";
 import type { Face } from "@/commons/components/chat/Avatars";
+import { useWhose } from "./use-whose";
 
 const BUSY_MS = 2_000;
 const IDLE_MS = 5_000;
@@ -21,9 +22,10 @@ const working = (list: ChatListPayload | undefined) =>
 
 export function useChatList() {
   const status = useQuery({ queryKey: ["status"], queryFn: api.status });
+  const { whose } = useWhose();
   const list = useQuery({
-    queryKey: ["chat-list"],
-    queryFn: api.chatList,
+    queryKey: ["chat-list", whose],
+    queryFn: () => api.chatList(whose),
     retry: false,
     refetchInterval: (query) => (working(query.state.data) ? BUSY_MS : IDLE_MS),
   });
@@ -38,7 +40,7 @@ export function useChatList() {
     return look ? { id: agentId, name: nameOf(agentId), look } : null;
   };
   const faces = (ids: readonly string[]) => ids.map(faceOf).filter((face): face is Face => face !== null);
-  return { status, list, agents, orchestrator, looks, byId, nameOf, faceOf, faces };
+  return { status, list, agents, orchestrator, looks, byId, nameOf, faceOf, faces, whose };
 }
 
 export type ChatListData = ReturnType<typeof useChatList>;

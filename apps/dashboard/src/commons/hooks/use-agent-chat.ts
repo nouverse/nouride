@@ -12,8 +12,11 @@ export function agentChatLink(agentId: string, sessionId: string | undefined): L
   return sessionId ? { to: "/chat/$sessionId", params: { sessionId } } : { to: "/chat", search: { agent: agentId } };
 }
 
-/** The same, for a page without the chat list: its newest conversation is the list's (`/chat-list`), one query for both. */
+/**
+ * The same, for a page without the chat list: its newest conversation is the list's (`/chat-list`), one query for both.
+ * The reader's own, which is what an agent's row is whoever asks.
+ */
 export function useAgentChatLink(agentId: string): LinkProps {
-  const list = useQuery({ queryKey: ["chat-list"], queryFn: api.chatList, retry: false });
+  const list = useQuery({ queryKey: ["chat-list", "mine"], queryFn: () => api.chatList("mine"), retry: false });
   return agentChatLink(agentId, list.data?.agents.find((entry) => entry.agentId === agentId)?.sessionId);
 }

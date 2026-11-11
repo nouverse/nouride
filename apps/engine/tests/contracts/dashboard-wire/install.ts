@@ -184,14 +184,15 @@ async function kept(h: Household): Promise<void> {
 }
 
 /** A conversation with one finished turn and one at work: a call, a helper's call, a wait on an approval. */
-function conversation(bench: Bench): { session: string; done: string; working: string } {
+/** The tester's own conversation with nouva: begun by their account, as the dashboard begins one, so it is theirs to read. */
+function conversation(bench: Bench, account: string): { session: string; done: string; working: string } {
   const session = bench.sessions.load({ agentId: "nouva", gatewayId: "web:dashboard", chatId: "web-1" });
   const where = { sessionId: session.id, agentId: "nouva", gatewayId: "web:dashboard", chatId: "web-1" };
-  const done = TurnRecorder.begin(bench.turns, { ...where, prompt: "is the disk full?" })!;
+  const done = TurnRecorder.begin(bench.turns, { ...where, senderId: account, prompt: "is the disk full?" })!;
   done.step("tool", "exec df -h", { callId: "c1", name: "exec" });
   done.step("tool_done", "exec ok · 12ms", { callId: "c1", name: "exec", error: false, outcome: "ok" });
   done.finish({ status: "done", reply: "No — 40% used.", model: "test-model", toolCalls: 1, inputTokens: 120, outputTokens: 8 });
-  const working = TurnRecorder.begin(bench.turns, { ...where, prompt: "clean the build" })!;
+  const working = TurnRecorder.begin(bench.turns, { ...where, senderId: account, prompt: "clean the build" })!;
   working.step("reasoning", "The build directory is large; a helper can check the cache.");
   working.step("tool", "delegate 1 task", { callId: "c2", name: "delegate" });
   stepsInto(bench.turns, working.id, { via: "delegate", by: "nouva" })!("tool", "du -sh cache", { callId: "c3", name: "exec" });
@@ -327,6 +328,10 @@ export async function wireAnswers(): Promise<Record<string, unknown>> {
     await registry.reload("nouva");
     const users = new UserStore({ db, passwords: cheapPasswords, audit });
     const tester = await users.create({ username: "tester", password: "tester-password-1", role: "admin", createdBy: "test" });
+    // The tester's account is one of a household person's, as each account is someone in People: what that person said
+    // here and on the apps is the tester's to read.
+    const gading = config.people.find((person) => person.key === "gading")!;
+    gading.ids = [...(gading.ids ?? []), `web:${tester.id}`];
     const cookie = `${SESSION_COOKIE}=${users.startSession(tester.id).token}`;
     const mcpTokens = new McpTokenStore(db);
     const token = mcpTokens.create({ person: "gading", agents: ["nouva"], scopes: ["memory", "personas"], label: "zed", now: INSTANT, expiresAt: null }).token;
@@ -365,7 +370,7 @@ export async function wireAnswers(): Promise<Record<string, unknown>> {
       llmGateway: new GatewaySwitch({ carried: false, decidedBy: null, start: async () => { throw new Error("not carried"); }, save: async () => ({ ok: true }) }),
     } as unknown as ControlDeps);
 
-    const ids = conversation(bench);
+    const ids = conversation(bench, tester.id);
     aGroup(bench);
     const names = new Map<string, string>([
       [ids.session, "ses_1"],
@@ -375,6 +380,7 @@ export async function wireAnswers(): Promise<Record<string, unknown>> {
       [work.stopped, "msn_2"],
       [sessionIdFor({ agentId: "nouva", gatewayId: "web:mission", chatId: work.working }), "ses_msn_1"],
       [tester.id, "usr_1"],
+      [`web:${tester.id}`, "web:usr_1"],
       [token.id, "tok_1"],
       [installFingerprint(dataDir), "install_1"],
       [VERSION, "0.7.10"],

@@ -299,6 +299,11 @@ not exist.
 **Nobody can lock the instance out.** Nobody can delete their own account, and the last admin cannot
 be demoted, so there is always someone left to manage accounts.
 
+**Every account is someone in People.** Making an account asks **Who is this?**: someone already in People who has no
+account yet, or someone new, named after the account. Accounts made before this are each given a person of their own
+when Nouride starts; none is matched to a person by name, so link it to the right one on Users if it is someone you
+already had.
+
 ## Chat
 
 **Chats** is one list beside the conversation you have open. On a phone the list comes first, and a conversation
@@ -318,6 +323,14 @@ The list has two halves, switched at its top:
 
 The **+** at the top starts a chat with an agent or makes a room, and the search finds a chat by its name or its last
 message.
+
+**Your chats are yours.** Each account sees its own: its conversations with each agent here, its private chats with the
+agents on Telegram, Discord and WhatsApp (by the person it is under People), the groups that person spoke in, and the
+rooms it made or spoke in. Two accounts talking to the same agent each have their own conversation. An operator or a
+viewer never sees anyone else's: not in the list, not by its link. An admin picks **Mine** or **Everyone** at the top of
+the list and in History: **Everyone** lists every conversation set apart by person, then what scheduled jobs said on
+their own, then the private chats of people not yet under People (**Not known**). A scheduled job's conversation and a
+mission's are not held by person yet: everyone sees them as before.
 
 **An agent's chat** opens its latest conversation, to carry on where you left off. **History**, in its header, lists
 only that agent's conversations: the ones in the dashboard, and its private chats on chat apps, each saying where it is

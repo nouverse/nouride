@@ -25,8 +25,11 @@ export const chatApi = {
     // What the route answers. A 409 means it was answered elsewhere or expired, and changed nothing.
     post<{ ok: true; id: string; decision: ApprovalDecision }>(`${control}/approvals/${id}/${decision}`),
 
-  /** The chat page's list in one read: each agent's newest conversation here, each room, each group on a chat app. */
-  chatList: () => request<ChatListPayload>(`${control}/chat-list`),
+  /**
+   * The chat page's list in one read: each agent's newest conversation here, each room, each group on a chat app — the
+   * reader's own; `everyone`, an admin's alone, every room and group too.
+   */
+  chatList: (whose: "mine" | "everyone" = "mine") => request<ChatListPayload>(`${control}/chat-list${whose === "everyone" ? "?whose=everyone" : ""}`),
 
   room: (chatId: string) => request<{ room: Room }>(`${control}/rooms/${encodeURIComponent(chatId)}`),
 
@@ -97,8 +100,9 @@ export const chatApi = {
    * nine hundred conversations. `nextBefore` is the daemon's own cursor; absent means this was the
    * last page.
    */
-  sessions: (options: { q?: string; limit?: number; before?: number; agent?: string } = {}) => {
+  sessions: (options: { q?: string; limit?: number; before?: number; agent?: string; whose?: "mine" | "everyone" } = {}) => {
     const params = new URLSearchParams();
+    if (options.whose === "everyone") params.set("whose", "everyone");
     if (options.q?.trim()) params.set("q", options.q.trim());
     if (options.limit) params.set("limit", String(options.limit));
     if (options.before) params.set("before", String(options.before));

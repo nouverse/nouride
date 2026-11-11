@@ -47,7 +47,39 @@ export function groupByDate(sessions: readonly SessionSummary[], now = Date.now(
 export function ownConversations(sessions: readonly SessionSummary[], list: ChatListPayload | undefined): SessionSummary[] {
   const rooms = new Set((list?.rooms ?? []).map((room) => room.chatId));
   const groups = new Set((list?.groups ?? []).flatMap((group) => group.sessions.map((session) => session.sessionId)));
-  return sessions.filter((session) => !rooms.has(session.chatId) && !groups.has(session.id));
+  // What the daemon says each is decides it where it says; the lists above, for one that says nothing.
+  return sessions.filter((session) => (session.kind ? session.kind === "private" || session.kind === "job" : !rooms.has(session.chatId) && !groups.has(session.id)));
+}
+
+/** A heading of an admin's Everyone, and the conversations under it. */
+export interface PersonGroup {
+  key: string;
+  label: string;
+  sessions: SessionSummary[];
+}
+
+/**
+ * Everyone's conversations, set apart by person, as an admin reads them: each person under their name, in the order
+ * their newest conversation is in; then the scheduled jobs' own, which are nobody's; then the private chats nobody in
+ * People is known for. Within each, newest first, as the daemon sends them.
+ */
+export function groupByPerson(sessions: readonly SessionSummary[], words: { jobs: string; unknown: string }): PersonGroup[] {
+  const people = new Map<string, PersonGroup>();
+  const jobs: SessionSummary[] = [];
+  const unknown: SessionSummary[] = [];
+  for (const session of sessions) {
+    if (session.person) {
+      const group = people.get(session.person.key) ?? { key: `person:${session.person.key}`, label: session.person.name, sessions: [] };
+      group.sessions.push(session);
+      people.set(session.person.key, group);
+    } else if (session.kind === "job") jobs.push(session);
+    else unknown.push(session);
+  }
+  return [
+    ...people.values(),
+    ...(jobs.length > 0 ? [{ key: "jobs", label: words.jobs, sessions: jobs }] : []),
+    ...(unknown.length > 0 ? [{ key: "unknown", label: words.unknown, sessions: unknown }] : []),
+  ];
 }
 
 /** What is asked before a conversation goes: the same from its bar's menu and from its row in History. */

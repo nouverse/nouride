@@ -9,6 +9,9 @@
  * Each row has a menu at its end with Delete, asked as the conversation's own bar asks it (`DELETE_CONVERSATION`): the
  * owner looked for it on the rows, as History had it before the chat page was rebuilt, not only on the conversation
  * open on screen.
+ *
+ * The reader's own conversations with the agent. An admin can read everyone's too, set apart by person (`useWhose`),
+ * the same choice as on the chat list.
  */
 
 import { useState } from "react";
@@ -28,7 +31,10 @@ import { useDebounced } from "@/commons/hooks/use-debounced";
 import { api } from "@/commons/lib/api";
 import { platformName } from "@/commons/lib/platform";
 import { shortWhen } from "@/commons/lib/when";
-import { DELETE_CONVERSATION, groupByDate, ownConversations } from "../lib/history";
+import { SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
+import { DELETE_CONVERSATION, groupByDate, groupByPerson, ownConversations } from "../lib/history";
+import { useWhose } from "../hooks/use-whose";
+import { EVERYONE_WORDS } from "./EveryoneList";
 
 const PAGE = 50;
 const LOCAL = "web:";
@@ -67,14 +73,16 @@ export function HistoryPanel({
 function HistoryBody({ agentId, agentName, current, list, onClose }: { agentId: string; agentName: string; current: string | undefined; list: ChatListPayload | undefined; onClose: () => void }) {
   const [search, setSearch] = useState("");
   const term = useDebounced(search, 250);
+  const { whose, setWhose, canPick } = useWhose();
   const sessions = useInfiniteQuery({
-    queryKey: ["sessions", "agent", agentId, term],
-    queryFn: ({ pageParam }) => api.sessions({ agent: agentId, limit: PAGE, ...(term ? { q: term } : {}), ...(pageParam ? { before: pageParam } : {}) }),
+    queryKey: ["sessions", "agent", agentId, whose, term],
+    queryFn: ({ pageParam }) => api.sessions({ agent: agentId, whose, limit: PAGE, ...(term ? { q: term } : {}), ...(pageParam ? { before: pageParam } : {}) }),
     initialPageParam: 0,
     getNextPageParam: (page) => page.nextBefore ?? undefined,
   });
   const own = ownConversations((sessions.data?.pages ?? []).flatMap((page) => page.sessions), list);
-  const groups = groupByDate(own);
+  // Under the day each belongs to; everyone's under the person each is with.
+  const groups = whose === "everyone" ? groupByPerson(own, EVERYONE_WORDS) : groupByDate(own).map((group) => ({ ...group, key: group.label }));
   const { ask, dialog } = useConfirm();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -94,6 +102,18 @@ function HistoryBody({ agentId, agentName, current, list, onClose }: { agentId: 
     <>
       <div className="flex shrink-0 flex-col gap-2.5 px-4 pb-2">
         <SearchInput value={search} onChange={setSearch} placeholder="Search by what was asked" label={`Search ${agentName}'s conversations`} className="input-md h-11 w-full sm:h-10" />
+        {canPick ? (
+          <SegmentedTabs
+            fill
+            label="Whose conversations"
+            value={whose}
+            onChange={setWhose}
+            tabs={[
+              { value: "mine", label: "Mine" },
+              { value: "everyone", label: "Everyone" },
+            ]}
+          />
+        ) : null}
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-2">
         {sessions.isPending ? (
@@ -106,7 +126,7 @@ function HistoryBody({ agentId, agentName, current, list, onClose }: { agentId: 
           </p>
         ) : (
           groups.map((group) => (
-            <section key={group.label} aria-label={group.label}>
+            <section key={group.key} aria-label={group.label}>
               <ListHeading className="sticky top-0 z-10 bg-base-100 pt-2">{group.label}</ListHeading>
               {group.sessions.map((session) => {
                 const local = session.gatewayId.startsWith(LOCAL);

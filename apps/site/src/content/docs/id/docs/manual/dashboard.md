@@ -310,6 +310,11 @@ yang gak ada.
 **Gak ada yang bisa mengunci instance ini.** Gak ada yang bisa menghapus akunnya sendiri, dan admin
 terakhir gak bisa diturunkan, jadi selalu ada yang tersisa untuk mengelola akun.
 
+**Tiap akun adalah seseorang di People.** Membuat akun menanyakan **Who is this?**: seseorang yang sudah ada di People dan
+belum punya akun, atau orang baru yang namanya diambil dari akun itu. Akun yang dibuat sebelumnya masing-masing diberi
+orangnya sendiri saat Nouride start; tidak ada yang dicocokkan ke orang lewat nama, jadi tautkan ke orang yang benar di
+Users kalau ternyata orang yang sudah ada.
+
 ## Chat
 
 **Chats** adalah satu daftar di sebelah percakapan yang sedang kamu buka. Di HP, daftarnya tampil dulu, dan percakapan
@@ -329,6 +334,14 @@ Daftarnya punya dua bagian, dipilih di atasnya:
 
 Tombol **+** di atas memulai chat dengan agent atau membuat room, dan kolom cari menemukan chat dari namanya atau pesan
 terakhirnya.
+
+**Chat kamu milik kamu.** Tiap akun melihat miliknya sendiri: percakapannya dengan tiap agent di sini, chat pribadinya
+dengan agent di Telegram, Discord, dan WhatsApp (lewat orang yang jadi akun itu di People), grup tempat orang itu pernah
+bicara, dan room yang ia buat atau pernah bicara di dalamnya. Dua akun yang bicara dengan agent yang sama masing-masing
+punya percakapan sendiri. Operator atau viewer tidak pernah melihat milik orang lain: tidak di daftar, tidak juga lewat
+link-nya. Admin memilih **Mine** atau **Everyone** di atas daftar dan di History: **Everyone** menampilkan semua
+percakapan dipisah per orang, lalu yang dikatakan jadwal sendirian, lalu chat pribadi orang yang belum ada di People
+(**Not known**). Percakapan jadwal dan mission belum dipisah per orang: semua orang tetap melihatnya seperti sebelumnya.
 
 **Chat dengan agent** membuka percakapan terakhirnya, jadi kamu lanjut dari yang tadi. **History** di header-nya hanya
 berisi percakapan agent itu: yang di dashboard, dan chat pribadinya di aplikasi chat, masing-masing dengan asalnya.
