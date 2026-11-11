@@ -35,6 +35,7 @@ import { SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
 import { DELETE_CONVERSATION, groupByDate, groupByPerson, ownConversations } from "../lib/history";
 import { useWhose } from "../hooks/use-whose";
 import { EVERYONE_WORDS } from "./EveryoneList";
+import { PeopleFilter } from "./PeopleFilter";
 
 const PAGE = 50;
 const LOCAL = "web:";
@@ -73,10 +74,10 @@ export function HistoryPanel({
 function HistoryBody({ agentId, agentName, current, list, onClose }: { agentId: string; agentName: string; current: string | undefined; list: ChatListPayload | undefined; onClose: () => void }) {
   const [search, setSearch] = useState("");
   const term = useDebounced(search, 250);
-  const { whose, setWhose, canPick } = useWhose();
+  const { whose, setWhose, of, setOf, asked, canPick } = useWhose();
   const sessions = useInfiniteQuery({
-    queryKey: ["sessions", "agent", agentId, whose, term],
-    queryFn: ({ pageParam }) => api.sessions({ agent: agentId, whose, limit: PAGE, ...(term ? { q: term } : {}), ...(pageParam ? { before: pageParam } : {}) }),
+    queryKey: ["sessions", "agent", agentId, asked, term],
+    queryFn: ({ pageParam }) => api.sessions({ agent: agentId, whose: asked, limit: PAGE, ...(term ? { q: term } : {}), ...(pageParam ? { before: pageParam } : {}) }),
     initialPageParam: 0,
     getNextPageParam: (page) => page.nextBefore ?? undefined,
   });
@@ -114,6 +115,7 @@ function HistoryBody({ agentId, agentName, current, list, onClose }: { agentId: 
             ]}
           />
         ) : null}
+        {canPick && whose === "everyone" ? <PeopleFilter value={of} onChange={setOf} /> : null}
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-2">
         {sessions.isPending ? (

@@ -147,7 +147,7 @@ async function house() {
     const response = await app.request(path, { method, headers: { "content-type": "application/json" }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
     return { status: response.status, body: (await response.json()) as Record<string, unknown> };
   };
-  return { ask, sessions, rooms, dispatched, ended, killed, gadingTurn };
+  return { ask, sessions, turns, rooms, dispatched, ended, killed, gadingTurn };
 }
 
 const listed = (body: Record<string, unknown>) => (body.sessions as SessionSummary[]).map((one) => one.chatId).sort();
@@ -261,6 +261,34 @@ describe("an admin", () => {
       "web-r private Rina",
     ]);
     expect(((await h.ask("GET", `/sessions/${sessionIdFor(RINA)}/turns`)).body as unknown as Transcript).turns).toHaveLength(1);
+  });
+
+  test("narrows everyone's to one person's, by every account of theirs, or to the private chats nobody is known for", async () => {
+    const h = await house();
+    as = "gading";
+    expect(listed((await h.ask("GET", "/sessions?whose=person:rina")).body)).toEqual(["web-r"]);
+    expect(listed((await h.ask("GET", "/sessions?whose=person:gading")).body)).toEqual(["-100", "814", "web-g"]);
+    expect(listed((await h.ask("GET", "/sessions?whose=person:nobody")).body)).toEqual([]);
+    // Nobody spoke yet in a scheduled job's own: it is nobody's, not somebody unknown's.
+    expect(listed((await h.ask("GET", "/sessions?whose=unknown")).body)).toEqual([]);
+    const rinas = (await h.ask("GET", "/chat-list?whose=person:rina")).body as unknown as ChatListPayload;
+    expect({ rooms: rinas.rooms, groups: rinas.groups, agent: rinas.agents[0]?.sessionId }).toEqual({ rooms: [], groups: [], agent: sessionIdFor(GADING) });
+    const gadings = (await h.ask("GET", "/chat-list?whose=person:gading")).body as unknown as ChatListPayload;
+    expect(gadings.groups.map((group) => group.chatId)).toEqual(["-100"]);
+  });
+
+  test("a private chat nobody in People is known for is listed under nobody known", async () => {
+    const h = await house();
+    as = "gading";
+    const stranger = { agentId: "nouva", gatewayId: "telegram:nouva", chatId: "999" };
+    const turns = h.turns;
+    const turn = turns.begin({ sessionId: sessionIdFor(stranger), ...stranger, senderId: "999", prompt: "siapa ini" })!;
+    turns.finish(turn, { status: "done", reply: "halo" });
+    h.sessions.save(stranger, [{ role: "user", content: "siapa ini", timestamp: Date.now() }], 1);
+    const unknown = (await h.ask("GET", "/sessions?whose=unknown")).body.sessions as SessionSummary[];
+    expect(unknown.map((one) => `${one.chatId} ${one.kind} ${one.person?.name ?? "-"}`)).toEqual(["999 private -"]);
+    as = "rina";
+    expect(listed((await h.ask("GET", "/sessions?whose=unknown")).body)).toEqual(["web-r"]);
   });
 });
 

@@ -8,8 +8,10 @@ import { describe, expect, test } from "bun:test";
 import type { SessionSummary } from "@nouride/wire";
 import { groupByPerson, ownConversations } from "@/modules/chat/lib/history";
 import { EVERYONE_WORDS } from "@/modules/chat/components/EveryoneList";
-import { answer, renderPage, useMountHarness, WIRE } from "./mount-harness.ts";
+import { peopleOptions } from "@/modules/chat/components/PeopleFilter";
+import { answer, renderPage, type, useMountHarness, WIRE } from "./mount-harness.ts";
 import { eventually } from "./wait.ts";
+
 
 useMountHarness();
 
@@ -59,6 +61,39 @@ describe("the chat list", () => {
     });
     expect(lists).toContain("Whose chats");
     expect(headings).toEqual(["Rina", "Gading", "Scheduled jobs", "Not known"]);
+  });
+
+  test("narrows everyone's to one person, found by typing part of their name", async () => {
+    const sams = [row("ses_s1", { title: "jadwal arisan", person: { key: "sam", name: "Kak Sam" } })];
+    answer({
+      "/auth/me": { status: 200, body: signedIn("admin") },
+      "/sessions": { status: 200, body: { sessions: EVERYONE, total: EVERYONE.length } },
+      "/sessions?whose=person:sam": { status: 200, body: { sessions: sams, total: 1 } },
+    });
+    let offered: string[] = [];
+    let headings: string[] = [];
+    await renderPage("/chat", async (host) => {
+      await eventually(() => tabs(host).includes("Whose chats"), 3_000, "the choice");
+      ([...host.querySelectorAll('[role="tab"]')].find((tab) => tab.textContent?.trim() === "Everyone") as HTMLElement).click();
+      await eventually(() => host.querySelector('input[aria-label="Whose chats, by person"]') !== null, 3_000, "the person filter");
+      const field = host.querySelector('input[aria-label="Whose chats, by person"]') as HTMLInputElement;
+      field.focus();
+      type(field, "sam");
+      await eventually(() => document.querySelectorAll('[role="listbox"][aria-label="People"] [role="option"]').length > 0, 3_000, "the people listed");
+      offered = [...document.querySelectorAll('[role="listbox"][aria-label="People"] [role="option"]')].map((option) => option.textContent?.trim() ?? "");
+      (document.querySelector('[role="listbox"][aria-label="People"] [role="option"] button') as HTMLElement).click();
+      await eventually(() => (host.querySelector('aside[aria-label="Chats"]')?.textContent ?? "").includes("jadwal arisan"), 3_000, "her chats");
+      headings = [...host.querySelectorAll('aside[aria-label="Chats"] section')].map((section) => section.getAttribute("aria-label") ?? "");
+      // Put back: the choices are kept in this browser, and the next test opens on Mine.
+      (host.querySelector('button[aria-label="All people"]') as HTMLElement | null)?.click();
+      ([...host.querySelectorAll('[role="tab"]')].find((tab) => tab.textContent?.trim() === "Mine") as HTMLElement).click();
+    });
+    expect(offered).toEqual(["Kak Sam"]);
+    expect(headings).toEqual(["Kak Sam"]);
+  });
+
+  test("lists every person, by name, between all of them and nobody known", () => {
+    expect(peopleOptions([{ key: "raka", name: "Raka" }, { key: "sam", name: "Kak Sam" }]).map((option) => `${option.value}=${option.label}`)).toEqual(["=All people", "person:sam=Kak Sam", "person:raka=Raka", "unknown=Not known"]);
   });
 
   test("offers nothing to pick to anyone else", async () => {

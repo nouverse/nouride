@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { eventsFor, kindOf, mayOpen, readerNow, readerOf, sameReader, wantsEveryone } from "@/modules/web/control/whose.ts";
+import { eventsFor, kindOf, mayOpen, readerNow, readerOf, sameReader, whoseAsked } from "@/modules/web/control/whose.ts";
 
 const PEOPLE = [{ key: "rina", name: "Rina", ids: ["web:u2", "telegram:nouva:555"] }];
 const rina = { kind: "user" as const, role: "operator" as const, user: { id: "u2", username: "rina" } };
@@ -19,7 +19,15 @@ describe("the reader", () => {
     const admin = readerOf({ kind: "user", role: "admin", user: { id: "u1", username: "gading" } } as never, PEOPLE);
     const token = readerOf({ kind: "token", role: "admin" } as never, PEOPLE);
     expect([admin.everyone, token.everyone]).toEqual([true, true]);
-    expect([wantsEveryone(admin, "everyone"), wantsEveryone(admin, undefined), wantsEveryone(readerOf(rina as never, PEOPLE), "everyone")]).toEqual([true, false, false]);
+    const rinaReads = readerOf(rina as never, PEOPLE);
+    expect(whoseAsked(admin, undefined, PEOPLE)).toEqual({ kind: "mine" });
+    expect(whoseAsked(admin, "everyone", PEOPLE)).toEqual({ kind: "everyone" });
+    expect(whoseAsked(admin, "person:rina", PEOPLE)).toEqual({ kind: "person", ids: ["web:u2", "telegram:555"] });
+    expect(whoseAsked(admin, "person:nobody", PEOPLE)).toEqual({ kind: "person", ids: [] });
+    expect(whoseAsked(admin, "unknown", PEOPLE)).toEqual({ kind: "unknown", known: ["web:u2", "telegram:555"] });
+    // The token is nobody: its own is everyone's.
+    expect(whoseAsked(token, undefined, PEOPLE)).toEqual({ kind: "everyone" });
+    for (const asked of ["everyone", "person:rina", "unknown"]) expect(whoseAsked(rinaReads, asked, PEOPLE)).toEqual({ kind: "mine" });
   });
 
   test("is read again as it is now: demoted, moved to another person, or gone, it is not the reader the stream opened for", () => {

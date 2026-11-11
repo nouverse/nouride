@@ -108,9 +108,28 @@ export function mayOpen(deps: KindSources, reader: Reader, where: Where, spoke: 
   return isMine(deps, reader, where, spoke);
 }
 
-/** What `?whose=` asks of a list: the reader's own, or everyone's — an admin's alone to ask. */
-export function wantsEveryone(reader: Reader, asked: string | undefined): boolean {
-  return reader.everyone && asked === "everyone";
+/**
+ * Whose conversations a list is asked for (`?whose=`): the reader's own; everyone's; one person's, `person:<key>`, by
+ * every account of theirs; or the private chats nobody in People is known for, `unknown`. Every one but the first is an
+ * admin's to ask: anyone else is answered with their own, whatever they ask. The control token, which is nobody,
+ * reads everyone's when it asks for its own.
+ */
+export type Whose = { kind: "mine" | "everyone" } | { kind: "person"; ids: readonly string[] } | { kind: "unknown"; known: readonly string[] };
+
+export function whoseAsked(reader: Reader, asked: string | undefined, people: readonly Person[]): Whose {
+  if (!reader.everyone) return { kind: "mine" };
+  if (asked === "everyone" || (reader.ids.length === 0 && (asked === undefined || asked === "mine"))) return { kind: "everyone" };
+  if (asked?.startsWith("person:")) {
+    const person = people.find((one) => one.key === asked.slice("person:".length));
+    return { kind: "person", ids: person ? idsOf(person) : [] };
+  }
+  if (asked === "unknown") return { kind: "unknown", known: people.flatMap((one) => idsOf(one)) };
+  return { kind: "mine" };
+}
+
+/** The reader a list of one person's is read as: that person, by every account of theirs. */
+export function readerAs(whose: Whose, reader: Reader): Reader {
+  return whose.kind === "person" ? { everyone: false, ids: whose.ids } : reader;
 }
 
 /**

@@ -29,7 +29,7 @@ export const chatApi = {
    * The chat page's list in one read: each agent's newest conversation here, each room, each group on a chat app — the
    * reader's own; `everyone`, an admin's alone, every room and group too.
    */
-  chatList: (whose: "mine" | "everyone" = "mine") => request<ChatListPayload>(`${control}/chat-list${whose === "everyone" ? "?whose=everyone" : ""}`),
+  chatList: (whose = "mine") => request<ChatListPayload>(`${control}/chat-list${whose !== "mine" ? `?${new URLSearchParams({ whose })}` : ""}`),
 
   room: (chatId: string) => request<{ room: Room }>(`${control}/rooms/${encodeURIComponent(chatId)}`),
 
@@ -100,9 +100,9 @@ export const chatApi = {
    * nine hundred conversations. `nextBefore` is the daemon's own cursor; absent means this was the
    * last page.
    */
-  sessions: (options: { q?: string; limit?: number; before?: number; agent?: string; whose?: "mine" | "everyone" } = {}) => {
+  sessions: (options: { q?: string; limit?: number; before?: number; agent?: string; whose?: string } = {}) => {
     const params = new URLSearchParams();
-    if (options.whose === "everyone") params.set("whose", "everyone");
+    if (options.whose && options.whose !== "mine") params.set("whose", options.whose);
     if (options.q?.trim()) params.set("q", options.q.trim());
     if (options.limit) params.set("limit", String(options.limit));
     if (options.before) params.set("before", String(options.before));

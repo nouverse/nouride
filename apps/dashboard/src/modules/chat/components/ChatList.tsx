@@ -20,6 +20,7 @@ import { useSeen } from "../hooks/use-seen";
 import { chatsView, groupKey, type ChatRow } from "../lib/chat-list";
 import { useWhose } from "../hooks/use-whose";
 import { EveryoneList } from "./EveryoneList";
+import { PeopleFilter } from "./PeopleFilter";
 import { ChatsRow } from "./ListRows";
 import { GroupsTab } from "./GroupsTab";
 import { StartMenu } from "./StartMenu";
@@ -45,7 +46,7 @@ const fromAgent = (row: ChatRow) => (row.kind === "agent" ? row.entry?.last?.fro
 export function ChatList({ data, open, className }: { data: ChatListData; open: OpenNow; className?: string }) {
   const [tab, setTab] = useState<"chats" | "groups">(open.group ? "groups" : "chats");
   // An admin reads their own by default, and everyone's set apart by person when they pick it.
-  const { whose, setWhose, canPick } = useWhose();
+  const { whose, setWhose, of, setOf, asked, canPick } = useWhose();
   const [query, setQuery] = useState("");
   const [pinnedGroups] = usePinnedGroups();
   const seen = useSeen();
@@ -96,6 +97,7 @@ export function ChatList({ data, open, className }: { data: ChatListData; open: 
             ]}
           />
         ) : null}
+        {canPick && whose === "everyone" ? <PeopleFilter value={of} onChange={setOf} /> : null}
         <SegmentedTabs
           fill
           label="What to list"
@@ -126,7 +128,7 @@ export function ChatList({ data, open, className }: { data: ChatListData; open: 
         ) : tab === "groups" ? (
           <GroupsTab data={data} query={query} openRow={open.roomChatId ? `room:${open.roomChatId}` : open.group ? `group:${open.group}` : undefined} seen={seen} />
         ) : whose === "everyone" ? (
-          <EveryoneList data={data} query={query} current={open.sessionId} />
+          <EveryoneList data={data} query={query} whose={asked} current={open.sessionId} />
         ) : data.agents.length === 0 ? (
           <EmptyState icon={MessagesSquare} title="No agents yet" description="Make an agent on Agents, and you can talk to it here." />
         ) : !view.pinned && view.recent.length === 0 && view.untouched.length === 0 ? (

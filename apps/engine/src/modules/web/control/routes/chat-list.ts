@@ -15,7 +15,7 @@ import { personFor, SESSIONS_READ, speakersOf, SPOKEN } from "@/modules/pipeline
 import { personWhoOpened } from "@/modules/sessions/sessions.store.ts";
 import type { TurnRecord } from "@/modules/turns/turns.store.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
-import { isMine, readerOf, Spoke, wantsEveryone, type Reader } from "../whose.ts";
+import { isMine, readerAs, readerOf, Spoke, whoseAsked, type Reader } from "../whose.ts";
 
 /** A preview is one line of a list: longer than any row is wide, and nothing past it is ever drawn. */
 const LINE = 160;
@@ -182,9 +182,13 @@ export function registerChatListRoutes(control: ControlApp, deps: ControlDeps): 
     const local = deps.local?.id;
     const running = deps.turns?.runningSessions() ?? new Set<string>();
     const reader = readerOf(c.get("principal"), deps.ctx.config.people);
-    const all = wantsEveryone(reader, c.req.query("whose")) || (reader.everyone && reader.ids.length === 0);
-    const spoke = new Spoke(deps, reader);
-    const mine = (gatewayId: string, chatId: string) => all || isMine(deps, reader, { gatewayId, chatId }, spoke);
+    const whose = whoseAsked(reader, c.req.query("whose"), deps.ctx.config.people);
+    // Everyone's rooms and groups for everyone's, and for the chats nobody is known for: a group is nobody's private
+    // chat. One person's are where that person spoke, as the reader's own are where the reader did.
+    const all = whose.kind === "everyone" || whose.kind === "unknown";
+    const asReader = readerAs(whose, reader);
+    const spoke = new Spoke(deps, asReader);
+    const mine = (gatewayId: string, chatId: string) => all || isMine(deps, asReader, { gatewayId, chatId }, spoke);
     // Every room keeps its conversations off the agents' rows, the reader's or not.
     const rooms = local ? roomsOf(deps, local, deps.local?.platform ?? "web") : [];
     const payload: ChatListPayload = {

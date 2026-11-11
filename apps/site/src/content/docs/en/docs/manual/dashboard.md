@@ -329,7 +329,8 @@ agents on Telegram, Discord and WhatsApp (by the person it is under People), the
 rooms it made or spoke in. Two accounts talking to the same agent each have their own conversation. An operator or a
 viewer never sees anyone else's: not in the list, not by its link. An admin picks **Mine** or **Everyone** at the top of
 the list and in History: **Everyone** lists every conversation set apart by person, then what scheduled jobs said on
-their own, then the private chats of people not yet under People (**Not known**). A scheduled job's conversation and a
+their own, then the private chats of people not yet under People (**Not known**). The field under it narrows the list to
+one person: type part of their name and pick them, or pick **Not known**. A scheduled job's conversation and a
 mission's are not held by person yet: everyone sees them as before.
 
 **An agent's chat** opens its latest conversation, to carry on where you left off. **History**, in its header, lists

@@ -12,7 +12,7 @@ import { personFor } from "@/modules/pipeline/known-rooms.ts";
 import { personWhoOpened } from "@/modules/sessions/sessions.store.ts";
 import { jsonBody, parseAttachments } from "../payloads.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
-import { kindOf, mayOpen, readerOf, wantsEveryone } from "../whose.ts";
+import { kindOf, mayOpen, readerOf, whoseAsked } from "../whose.ts";
 
 /** A query parameter read as a number, with a default for absent and for nonsense. */
 function clampNumber(raw: string | undefined, fallback: number, min: number, max: number): number {
@@ -38,7 +38,7 @@ export function silenceNote(deps: Pick<ControlDeps, "registry">, agent: string |
  * working in it. Each is read from its running turn, held to the list's own filters: the agent, the search (the first
  * thing asked, or the chat id, as the rows are searched), who opened it, and never a mission's conversation.
  */
-function firstTurnsAtWork(deps: ControlDeps, running: Set<string>, filter: { agent?: string; query?: string; openedBy?: readonly string[] }): Session[] {
+function firstTurnsAtWork(deps: ControlDeps, running: Set<string>, filter: { agent?: string; query?: string; openedBy?: readonly string[]; notOpenedBy?: readonly string[] }): Session[] {
   if (!deps.turns || !deps.sessions) return [];
   const needle = filter.query?.toLowerCase();
   const found: Session[] = [];
@@ -50,6 +50,7 @@ function firstTurnsAtWork(deps: ControlDeps, running: Set<string>, filter: { age
     if (needle && !turn.prompt.toLowerCase().includes(needle) && !turn.chatId.toLowerCase().includes(needle)) continue;
     const openedBy = personWhoOpened(turn);
     if (filter.openedBy && !(openedBy && filter.openedBy.includes(openedBy))) continue;
+    if (filter.notOpenedBy && openedBy && filter.notOpenedBy.includes(openedBy)) continue;
     found.push({
       id,
       agentId: turn.agentId,
@@ -125,12 +126,14 @@ export function registerConversationRoutes(control: ControlApp, deps: ControlDep
     const agent = c.req.query("agent");
     const query = c.req.query("q")?.trim();
     /**
-     * The reader's own (`whose.ts`): the conversations they opened. `?whose=everyone`, an admin's alone, is every one,
-     * each saying what it is and whose: the page sets them apart by person. The control token, which is no person,
-     * reads every one as before.
+     * The reader's own (`whose.ts`): the conversations they opened. An admin may ask for everyone's, one person's or
+     * the ones nobody is known for, each row saying what it is and whose: the page sets them apart by person. The
+     * control token, which is no person, reads every one as before.
      */
     const reader = readerOf(c.get("principal"), deps.ctx.config.people);
-    const everyone = wantsEveryone(reader, c.req.query("whose")) || (reader.everyone && reader.ids.length === 0);
+    const whose = whoseAsked(reader, c.req.query("whose"), deps.ctx.config.people);
+    const narrowed =
+      whose.kind === "mine" ? { openedBy: reader.ids } : whose.kind === "person" ? { openedBy: whose.ids } : whose.kind === "unknown" ? { notOpenedBy: whose.known } : {};
     /**
      * A page, not the whole history.
      *
@@ -149,16 +152,16 @@ export function registerConversationRoutes(control: ControlApp, deps: ControlDep
       ...(agent ? { agentId: agent } : {}),
       ...(query ? { query } : {}),
       ...(before > 0 ? { before } : {}),
-      ...(everyone ? {} : { openedBy: reader.ids }),
+      ...narrowed,
     };
     const sessions = deps.sessions?.list({ ...options, limit }) ?? [];
     const running = deps.turns?.runningSessions() ?? new Set<string>();
     const titles = deps.turns?.titles() ?? new Map<string, string>();
     // Newest of all, so only on the first page; a later page is read from rows alone.
-    const firsts = before > 0 ? [] : firstTurnsAtWork(deps, running, { ...(agent ? { agent } : {}), ...(query ? { query } : {}), ...(everyone ? {} : { openedBy: reader.ids }) });
+    const firsts = before > 0 ? [] : firstTurnsAtWork(deps, running, { ...(agent ? { agent } : {}), ...(query ? { query } : {}), ...narrowed });
     const people = deps.ctx.config.people;
     /** What each is, and the person a private one is with: the rows an admin's Everyone sets apart. */
-    const whose = (session: Session) => {
+    const described = (session: Session) => {
       const kind = kindOf(deps, session.gatewayId, session.chatId);
       const listed = kind === "mission" ? "private" : kind;
       const opener = listed === "private" && session.openedBy ? personFor(people, session.gatewayId, session.openedBy.slice(session.openedBy.indexOf(":") + 1)) : undefined;
@@ -167,16 +170,17 @@ export function registerConversationRoutes(control: ControlApp, deps: ControlDep
 
     return c.json({
       sessions: [
-        ...firsts.map((session) => ({ ...session, ...whose(session), running: true, title: (titles.get(session.id) ?? "").slice(0, 120) })),
+        ...firsts.map((session) => ({ ...session, ...described(session), running: true, title: (titles.get(session.id) ?? "").slice(0, 120) })),
         ...sessions.map((session) => ({
           ...session,
-          ...whose(session),
+          ...described(session),
           running: running.has(session.id),
           ...(titles.has(session.id)
             ? { title: titles.get(session.id)!.slice(0, 120) }
             : {}),
         })),
-      ],
+        // Nobody known for is a private chat's: a group, a room and a scheduled job's own are nobody's anyway.
+      ].filter((session) => whose.kind !== "unknown" || session.kind === "private"),
       total: (deps.sessions?.count(options) ?? 0) + firsts.length,
       /**
        * The cursor for the next page, or nothing when this was the last one.

@@ -25,11 +25,12 @@ const LOCAL = "web:";
 /** What the headings of nobody's conversations say. */
 export const EVERYONE_WORDS = { jobs: "Scheduled jobs", unknown: "Not known" } as const;
 
-export function EveryoneList({ data, query, current }: { data: ChatListData; query: string; current: string | undefined }) {
+/** `whose`: everyone's, one person's (`person:<key>`) or nobody known's (`unknown`), as the people filter picks. */
+export function EveryoneList({ data, query, whose, current }: { data: ChatListData; query: string; whose: string; current: string | undefined }) {
   const term = useDebounced(query.trim(), 250);
   const sessions = useInfiniteQuery({
-    queryKey: ["sessions", "everyone", term],
-    queryFn: ({ pageParam }) => api.sessions({ whose: "everyone", limit: PAGE, ...(term ? { q: term } : {}), ...(pageParam ? { before: pageParam } : {}) }),
+    queryKey: ["sessions", "everyone", whose, term],
+    queryFn: ({ pageParam }) => api.sessions({ whose, limit: PAGE, ...(term ? { q: term } : {}), ...(pageParam ? { before: pageParam } : {}) }),
     initialPageParam: 0,
     getNextPageParam: (page) => page.nextBefore ?? undefined,
   });
@@ -45,7 +46,7 @@ export function EveryoneList({ data, query, current }: { data: ChatListData; que
     );
   }
   if (groups.length === 0) {
-    return <p className="px-3 py-8 text-center text-sm text-base-content/65">{term ? `Nothing matches “${term}”.` : "Nobody has talked to the agents yet."}</p>;
+    return <p className="px-3 py-8 text-center text-sm text-base-content/65">{term ? `Nothing matches “${term}”.` : whose === "everyone" ? "Nobody has talked to the agents yet." : "No chats here yet."}</p>;
   }
   return (
     <div className="flex flex-col gap-0.5">

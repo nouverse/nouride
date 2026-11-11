@@ -85,6 +85,8 @@ export interface SessionListOptions {
   gateway?: string;
   /** Only the conversations one of these opened (`opened_by`): a reader's own. None given is none of them. */
   openedBy?: readonly string[];
+  /** Only the conversations none of these opened, or nobody did: the ones nobody in People is known for. */
+  notOpenedBy?: readonly string[];
 }
 
 export class SessionStore {
@@ -324,6 +326,10 @@ export class SessionStore {
     if (options.gateway) {
       clauses.push("s.gateway = ?");
       params.push(options.gateway);
+    }
+    if (options.notOpenedBy && options.notOpenedBy.length > 0) {
+      clauses.push(`(s.opened_by IS NULL OR s.opened_by NOT IN (${options.notOpenedBy.map(() => "?").join(", ")}))`);
+      params.push(...options.notOpenedBy);
     }
     if (options.openedBy) {
       if (options.openedBy.length === 0) clauses.push("0");

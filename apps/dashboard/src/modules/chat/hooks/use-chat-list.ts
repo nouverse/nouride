@@ -22,10 +22,10 @@ const working = (list: ChatListPayload | undefined) =>
 
 export function useChatList() {
   const status = useQuery({ queryKey: ["status"], queryFn: api.status });
-  const { whose } = useWhose();
+  const { whose, asked } = useWhose();
   const list = useQuery({
-    queryKey: ["chat-list", whose],
-    queryFn: () => api.chatList(whose),
+    queryKey: ["chat-list", asked],
+    queryFn: () => api.chatList(asked),
     retry: false,
     refetchInterval: (query) => (working(query.state.data) ? BUSY_MS : IDLE_MS),
   });
