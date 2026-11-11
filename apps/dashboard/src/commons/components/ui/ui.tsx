@@ -12,6 +12,7 @@ import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { AlertCircle, ChevronDown } from "lucide-react";
 import { failureWords } from "@/commons/lib/api.client";
+import { usePageTitle } from "@/commons/hooks/use-page-subject";
 import { cn } from "@/commons/lib/utils";
 import { Details } from "./Details";
 import { AskAgentButton } from "@/commons/components/agents/AskAgentButton";
@@ -39,6 +40,8 @@ export function PageHeader({
   pose?: Pose | undefined;
   className?: string;
 }) {
+  // What the page is called, for the chat that floats over it: an agent asked from here is told which page is open.
+  usePageTitle(title);
   return (
     <header className={cn("flex flex-wrap items-start justify-between gap-4 pb-1", className)}>
       <div className="flex min-w-0 items-center gap-4">

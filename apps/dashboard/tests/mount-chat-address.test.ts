@@ -5,6 +5,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
+import { withDraft } from "@/commons/hooks/use-draft";
 import { answer, recordPosts, renderPage, type, useMountHarness, WIRE } from "./mount-harness.ts";
 import { eventually } from "./wait.ts";
 
@@ -13,6 +14,25 @@ useMountHarness();
 const STATUS = { ...(WIRE["/status"] as Record<string, unknown>), orchestrator: "nouva" };
 const box = (host: HTMLElement) => host.querySelector("textarea") as HTMLTextAreaElement | null;
 const send = (host: HTMLElement) => host.querySelector('button[aria-label="Send message"]') as HTMLButtonElement | null;
+
+describe("a message written for the person, put in the box", () => {
+  const ASK = "Find a skill, or write one, so my agents can …";
+
+  test("an empty box is the message; a box of spaces is an empty one", () => {
+    expect(withDraft("", ASK)).toBe(ASK);
+    expect(withDraft("  \n ", ASK)).toBe(ASK);
+  });
+
+  test("what the person had typed stays, and the message goes under it on a line of its own", () => {
+    expect(withDraft("before I forget: the printer", ASK)).toBe(`before I forget: the printer\n${ASK}`);
+    expect(withDraft("two lines\nof mine\n\n", ASK)).toBe(`two lines\nof mine\n${ASK}`);
+  });
+
+  test("a button pressed twice writes it once, and so does one pressed again after the person typed under it", () => {
+    expect(withDraft(ASK, ASK)).toBe(ASK);
+    expect(withDraft(`mine\n${ASK}\nand more of mine`, ASK)).toBe(`mine\n${ASK}\nand more of mine`);
+  });
+});
 
 describe("the Chats page's conversation", () => {
   test("a new chat's first message goes to the address of the conversation it started", async () => {

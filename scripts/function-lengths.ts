@@ -18,12 +18,12 @@ const COMPONENT = (what: string): string => `${what}: its state, its handlers an
 
 export const LONG_FUNCTIONS: Record<string, Record<string, Budget>> = {
   "apps/dashboard/src/commons/components/chat/Composer.tsx": { Composer: { lines: 174, why: COMPONENT("everything below the transcript: the box, two menus, files, send") } },
-  "apps/dashboard/src/commons/components/chat/Conversation.tsx": { Conversation: { lines: 269, why: COMPONENT("one conversation: its data, two completion menus, scroll, send, people") } },
+  "apps/dashboard/src/commons/components/chat/Conversation.tsx": { Conversation: { lines: 271, why: COMPONENT("one conversation, wherever drawn: data, two menus, scroll, send") } },
   "apps/dashboard/src/commons/components/mcp/McpServerForm.tsx": { McpServerForm: { lines: 267, why: COMPONENT("the form that adds or edits one MCP server, by hand or from the catalog") } },
   "apps/dashboard/src/commons/components/ui/Combobox.tsx": { Combobox: { lines: 207, why: "a text field that suggests: the typed text, the filtered list, the whole list on its chevron and the keyboard over one open state, as one control every model picker uses" } },
   "apps/dashboard/src/commons/components/ui/Markdown.tsx": { Markdown: { lines: 235, why: "the markdown renderer: each block kind read in one pass over the lines, with the flushes that close a list, a quote, a table or a code block" } },
   "apps/dashboard/src/commons/components/ui/NotesModal.tsx": { NotesModal: { lines: 156, why: COMPONENT("the one dialog for notes, to read and to edit") } },
-  "apps/dashboard/src/commons/hooks/use-conversation.ts": { useConversation: { lines: 294, why: "one conversation as the daemon sees it: the live feed's loop, its turns and its sends over two refs the loop and the page share" } },
+  "apps/dashboard/src/commons/hooks/use-conversation.ts": { useConversation: { lines: 296, why: "one conversation as the daemon sees it: the live feed's loop, its turns and its sends, each with the page it is written from, over two refs the loop and the page share" } },
   "apps/dashboard/src/modules/access/pending.tab.tsx": { PendingTab: { lines: 158, why: COMPONENT("who is waiting to be let in, and the answers to one") } },
   "apps/dashboard/src/modules/agents/components/NewAgentForm.tsx": { NewAgentForm: { lines: 200, why: COMPONENT("the form that creates an agent") } },
   "apps/dashboard/src/modules/agents/index.page.tsx": { AgentListPage: { lines: 173, why: COMPONENT("every agent and the state each is in") } },

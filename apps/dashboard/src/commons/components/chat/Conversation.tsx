@@ -13,9 +13,9 @@
  * are handed in, and the same conversation is drawn in both places.
  */
 
-import { useRef, useState, type ReactNode } from "react";
+import { useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { ChatTurn, Room, SlashCommand } from "@nouride/wire";
+import type { ChatTurn, OpenPage, Room, SlashCommand } from "@nouride/wire";
 import type { Look } from "@/commons/cat/look";
 import { PersonMessage } from "@/commons/components/chat/PersonMessage";
 import { ReadOnlyNote } from "@/commons/components/chat/ReadOnlyNote";
@@ -52,6 +52,9 @@ function untaggedWords(untagged: string | undefined, nameOf: (agentId: string) =
   return untagged ? `Type @ to tag an agent. No tag: ${nameOf(untagged)} answers.` : "Type @ to tag an agent. No tag: nobody answers here.";
 }
 
+/** The colour of what an agent is doing, in the bar over its conversation. */
+export const STATUS_TONES = { working: "text-success", success: "text-base-content/65", accent: "text-accent", muted: "text-base-content/65" } as const;
+
 /** What a conversation knows of itself now, for the bar over it and the panels beside it, which its caller draws. */
 export interface ConversationNow {
   /** The agent it is with: the daemon's answer, and in a new chat the one it starts with. */
@@ -59,7 +62,7 @@ export interface ConversationNow {
   agentName: string;
   look: Look | undefined;
   /** What that agent is doing, and a longer tail of it for where there is room ("in the background"). */
-  status: { words: string; more?: string; tone: "working" | "success" | "accent" | "muted" };
+  status: { words: string; more?: string; tone: keyof typeof STATUS_TONES };
   /** The room, when it is one: nobody may have spoken in it yet. */
   room: Room | null;
   /** The chat app a private chat lives on: read here, answered there. */
@@ -72,8 +75,11 @@ export interface ConversationProps {
   /** The agent a new chat starts with (`lib/start-with.ts`). */
   agent?: string;
   agents: ChatAgents;
-  /** A new chat's first message has a conversation: the Chats page goes to its address, the floating chat keeps its id. */
-  onSession: (sessionId: string) => void;
+  /**
+   * A new chat's first message has a conversation, and the daemon says which agent's: the Chats page goes to its
+   * address, the floating chat keeps its id.
+   */
+  onSession: (sessionId: string, agentId: string) => void;
   header: (now: ConversationNow) => ReactNode;
   /** Panels beside it, under its bar: an agent's History, its work notes. */
   aside?: (now: ConversationNow) => ReactNode;
@@ -81,9 +87,15 @@ export interface ConversationProps {
   draft?: { text: string | undefined; onTaken: () => void };
   /** In a room, who answers a message that tags nobody, as the chat list says it. */
   untagged?: string | undefined;
+  /** The page each message is written from, read as it is sent: the floating chat's, so the agent is told (`OpenPage`). */
+  page?: () => OpenPage;
+  /** The box's text, where its caller keeps it past the conversation's own life: the floating chat, while it is closed. */
+  box?: [string, Dispatch<SetStateAction<string>>];
+  /** Drawn in a panel a phone's width at any window's: what lays itself out by the window's width is told. */
+  narrow?: boolean;
 }
 
-export function Conversation({ sessionId, roomChatId, agent, agents: chat, onSession, header, aside, draft, untagged }: ConversationProps) {
+export function Conversation({ sessionId, roomChatId, agent, agents: chat, onSession, header, aside, draft, untagged, page, box, narrow = false }: ConversationProps) {
   const queryClient = useQueryClient();
   const me = useMe();
 
@@ -99,7 +111,8 @@ export function Conversation({ sessionId, roomChatId, agent, agents: chat, onSes
   const agents = orchestratorFirst(chat.agents, orchestrator);
   // In a new chat, the agent its caller named (`lib/start-with.ts`).
   const chosenAgent = startWith(agent, sessionId, agents);
-  const [input, setInput] = useState("");
+  const own = useState("");
+  const [input, setInput] = box ?? own;
   /** The agent's work notes: the plan kept in them is drawn over the box (`PlanStrip`). */
   const workNotes = useWorkNotes(sessionId);
 
@@ -308,7 +321,7 @@ export function Conversation({ sessionId, roomChatId, agent, agents: chat, onSes
 
   const submit = () => {
     if (!canSend) return;
-    conversation.send(input.trim(), attachments.ready);
+    conversation.send(input.trim(), attachments.ready, page?.());
     /**
      * The sidebar is asked to catch up immediately, not at its next tick.
      *
@@ -382,6 +395,7 @@ export function Conversation({ sessionId, roomChatId, agent, agents: chat, onSes
                 look={currentAgent ? looks.get(currentAgent.id) : undefined}
                 room={room}
                 senderName={senderName}
+                narrow={narrow}
                 onPick={(prompt) => {
                   setInput(prompt);
                   textareaRef.current?.focus();

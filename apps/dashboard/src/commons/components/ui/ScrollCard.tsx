@@ -11,18 +11,19 @@ import { SearchInput } from "./SearchInput";
 
 /**
  * The space under a page's last card. On a phone and a tablet the tab bar floats over the page's foot (`TabBar`), with
- * the browser's toolbar and the home indicator under it: 9rem past the safe area, the bar's 4.75rem and room to see the
- * last card clear of it. It was 7rem, and the last line of a page sat a finger's width above the bar, read as under it.
- * From a laptop up, a page that scrolls ends 5rem above the window's foot, where it ended 2rem above it and the last
- * card looked cut by the window's edge.
+ * the browser's toolbar and the home indicator under it, and the floating chat's button stands over the bar's right end
+ * (`FloatingChat`): 11rem past the safe area, the button's top at 8.5rem and room to see the last card clear of it.
+ * It was 7rem, and the last line of a page sat a finger's width above the bar, read as under it. From a laptop up, a
+ * page that scrolls ends 5rem above the window's foot, over the button in its corner, where it ended 2rem above the
+ * foot and the last card looked cut by the window's edge.
  */
-export const PAGE_BOTTOM = "pb-[calc(9rem+env(safe-area-inset-bottom))] lg:pb-20";
+export const PAGE_BOTTOM = "pb-[calc(11rem+env(safe-area-inset-bottom))] lg:pb-20";
 
 /**
  * The same under a page held to the window from a laptop up (`fillsViewport`, System Logs, Secrets): nothing scrolls
  * under its last card there, the card's own list does, so it keeps the 2rem the page has on its other sides.
  */
-export const HELD_BOTTOM = "pb-[calc(9rem+env(safe-area-inset-bottom))] lg:pb-8";
+export const HELD_BOTTOM = "pb-[calc(11rem+env(safe-area-inset-bottom))] lg:pb-8";
 
 /**
  * A page laid out to fill the window (`staticData: { fillsViewport: true }`): its root, a column the list takes the rest

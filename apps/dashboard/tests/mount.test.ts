@@ -155,8 +155,10 @@ describe("the memory graph", () => {
     answer({ "/memory/graph": { status: 200, body: { nodes: [], links: [], episodes: 0, total: 0 } } });
     const html = await renderPage("/memories/graph", frames);
     expect(crashes()).toEqual([]);
-    expect(html).toContain("Nothing remembered yet");
-    expect(html).not.toContain("<canvas");
+    // The page itself: the shell around it draws an agent's cat on the floating chat's button, on a canvas of its own.
+    const page = html.slice(html.indexOf("<main"), html.indexOf("</main>"));
+    expect(page).toContain("Nothing remembered yet");
+    expect(page).not.toContain("<canvas");
   });
 
   test("says what failed when the graph cannot be read", async () => {

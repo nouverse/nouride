@@ -159,7 +159,6 @@
   "apps/dashboard/src/modules/home/components/Hero.tsx": { "version": 1 },
   "apps/dashboard/src/modules/home/components/MovingNow.tsx": { "version": 1 },
   "apps/dashboard/src/modules/home/components/NeedsYou.tsx": { "version": 1 },
-  "apps/dashboard/src/modules/home/components/NewChatButton.tsx": { "version": 1 },
   "apps/dashboard/src/modules/home/components/QuickChat.tsx": { "version": 1 },
   "apps/dashboard/src/modules/home/components/UpdateBadge.tsx": { "version": 1 },
   "apps/dashboard/src/modules/home/components/UsageRoutes.tsx": { "version": 1 },
