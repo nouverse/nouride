@@ -38,6 +38,28 @@ export function pressKey(key: string): void {
   at.dispatchEvent(new view.KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }));
 }
 
+/**
+ * What an Ask button just asked of the floating chat (`lib/floating-chat.ts`): read the way a page reads it, and the
+ * chat then closed. For a test that mounts one card with no shell around it to draw the panel: the store is the whole
+ * process's, and a chat left open here would be open on the next file's page.
+ */
+export async function floatingChatAsked(): Promise<{ open: boolean; agent: string; draft: string | null }> {
+  const React = await import("react");
+  const { createRoot } = await import("react-dom/client");
+  const { flushSync } = await import("react-dom");
+  const { closeFloatingChat, useFloatingChat } = await import("@/commons/lib/floating-chat");
+  let seen: { open: boolean; agent: string; draft: string | null } = { open: false, agent: "", draft: null };
+  const Probe = () => {
+    seen = useFloatingChat();
+    return null;
+  };
+  const root = createRoot(document.createElement("div"));
+  flushSync(() => root.render(React.createElement(Probe)));
+  root.unmount();
+  closeFloatingChat();
+  return seen;
+}
+
 /** An `EventSource` that only writes down that it was opened, where, and whether it was closed. */
 export class FakeEventSource {
   static readonly CLOSED = 2;

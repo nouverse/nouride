@@ -11,6 +11,7 @@
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { answer, dom, renderPage, RESPONSES, type, useMountHarness, WIRE } from "./mount-harness.ts";
+import { boxIn, card as chatCard } from "./floating-chat-harness.ts";
 import { eventually } from "./wait.ts";
 
 useMountHarness();
@@ -196,7 +197,7 @@ describe("documents", () => {
   test("a document that could not be read says why; where a program is missing, the orchestrator is asked to install it", async () => {
     const pdf = { ...HOUSE.documents[1], path: "lab.pdf", title: "lab", status: "unreadable", reason: "A program that reads PDF files is not installed, so it is kept here but not searched.", needs: "poppler-utils", sections: 0 };
     answer({ "/status": ok({ ...STATUS, orchestrator: "nouva" }), "/knowledge/house/documents": ok({ documents: [...HOUSE.documents, pdf] }) });
-    await renderPage("/memories", async (host, app) => {
+    await renderPage("/memories", async (_host, app) => {
       await open("House");
       await shows("A program that reads PDF files is not installed");
       const row = (title: string) => [...body().querySelectorAll("li")].find((candidate) => candidate.querySelector("button")?.textContent === title)!;
@@ -211,13 +212,16 @@ describe("documents", () => {
       const porch = row("porch");
       expect(porch.textContent).toContain("Kept, not searched");
       expect(porch.textContent).toContain("Nouride does not read this kind of file, so it is kept here but not searched.");
-      expect(porch.querySelector("a")).toBeNull();
-      // The Ask button opens the chat with Nouva, the request in the box for the person to send.
-      const ask = lab.querySelector("a") as HTMLAnchorElement;
-      expect(ask.textContent?.trim()).toBe("Ask Nouva to install it");
-      ask.click();
-      await eventually(() => app.location().endsWith("/chat"), 3_000, "the chat");
-      await eventually(() => host.querySelector("textarea")?.value === 'Please install the poppler-utils package, so the knowledge base can read "lab" in House.', 3_000, "the request in the box");
+      const asksIn = (one: Element) => [...one.querySelectorAll("button")].filter((button) => button.textContent?.trim().startsWith("Ask "));
+      expect(asksIn(porch)).toEqual([]);
+      // The Ask button opens the chat over the page with Nouva, the request in the box for the person to send.
+      const [ask] = asksIn(lab) as HTMLButtonElement[];
+      expect(ask!.textContent?.trim()).toBe("Ask Nouva to install it");
+      ask!.click();
+      await eventually(() => boxIn(chatCard())?.value === 'Please install the poppler-utils package, so the knowledge base can read "lab" in House.', 3_000, "the request in the box");
+      expect(chatCard()!.getAttribute("aria-label")).toBe("Chat with Nouva");
+      // The collection is still the page.
+      expect(app.location()).toBe("/memories");
     });
   });
 

@@ -1,7 +1,8 @@
 /**
- * A message written for the person (`AskAgentButton`, 0.8.19): put in the box to read, change and send, and never sent
- * from here. Then handed back to whoever gave it (`onTaken`), which lets go of it, so it is not put back over what the
- * person changed: the address once carried a message that was sent again on every reload (`lib/start-with.ts`).
+ * A message written for the person (`AskAgentButton` in the floating chat, a `?draft=` link on Chats; 0.8.19): put in
+ * the box to read, change and send, and never sent from here. Then handed back to whoever gave it (`onTaken`), which
+ * lets go of it, so it is not put back over what the person changed: the address once carried a message that was sent
+ * again on every reload (`lib/start-with.ts`).
  */
 
 import { useEffect, useRef, type Dispatch, type RefObject, type SetStateAction } from "react";
