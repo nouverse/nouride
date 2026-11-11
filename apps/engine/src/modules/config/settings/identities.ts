@@ -48,6 +48,19 @@ export async function unlinkIdentity(deps: SettingsDeps, params: { identity: str
   });
 }
 
+/**
+ * A dashboard account's person: the one an admin named (a key in People), or — nobody named — a new one, named as the
+ * account is. Whose chats an account reads is read through its person. Never somebody already in People by their name:
+ * a wrong guess would hand one person's chats to another.
+ */
+export async function linkAccount(
+  deps: SettingsDeps,
+  params: { account: { id: string; username: string; displayName: string }; person?: string; actor?: string },
+): Promise<LinkResult> {
+  const target: LinkTarget = params.person ? { person: params.person } : { name: params.account.displayName.trim() || params.account.username };
+  return await linkIdentity(deps, { identity: accountIdentity(params.account.id), target, ...(params.actor ? { actor: params.actor } : {}) });
+}
+
 /** Make `identity` one of `target`'s ids — an existing person by key or id, or a new one by name. */
 export async function linkIdentity(
   deps: SettingsDeps,

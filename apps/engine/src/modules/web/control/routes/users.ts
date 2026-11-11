@@ -2,9 +2,10 @@
  * Dashboard accounts. Every route here is admin-only: minting an account is minting a role.
  */
 
-import type { User } from "@nouride/wire";
+import type { PersonRecord, User } from "@nouride/wire";
 import { atLeast } from "@/modules/users/auth.ts";
 import { accountIdentity } from "@/modules/config/settings/identities.ts";
+import { personByHandle } from "@/modules/config/settings/people.ts";
 import { multiUserSupported, userPolicy } from "@/modules/users/multi-user.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { jsonBody } from "../payloads.ts";
@@ -24,6 +25,14 @@ export function registerUserRoutes(control: ControlApp, deps: ControlDeps): void
     if (!atLeast(principal, "admin")) return c.json({ error: "admin only" }, 403);
 
     const body = ((await jsonBody(c)) ?? {}) as Record<string, unknown>;
+    /**
+     * Who the account is: someone already in People (`person`, a key), or — given no one — a new person named after
+     * it. Checked before anything is made, so a person who is not there leaves no account behind.
+     */
+    const person = typeof body.person === "string" && body.person.trim() ? body.person.trim() : null;
+    if (person && !personByHandle(deps.ctx.config.people, person)) {
+      return c.json({ error: `no person "${person}"`, plain: "That person is not in People any more. Pick again." }, 400);
+    }
 
     /**
      * Whether a second account may exist, and holding which role, is not decided here.
@@ -63,7 +72,10 @@ export function registerUserRoutes(control: ControlApp, deps: ControlDeps): void
         createdBy: principal.actor,
         mustChangePassword: body.must_change_password === true,
       });
-      return c.json({ user } satisfies { user: User });
+      // The account is made either way: a person that could not be written is said, and linked on People after.
+      const linked = await deps.settings?.linkAccount({ account: user, ...(person ? { person } : {}), actor: principal.actor });
+      if (linked && !linked.ok) return c.json({ user, warning: `the account is made, but not linked to a person: ${linked.error}` } satisfies { user: User; person?: PersonRecord; warning?: string });
+      return c.json({ user, ...(linked?.ok ? { person: linked.person } : {}) } satisfies { user: User; person?: PersonRecord; warning?: string });
     } catch (err) {
       return c.json({ error: String(err instanceof Error ? err.message : err), plain: "No account was added. Check the name and the password, and try again." }, 400);
     }

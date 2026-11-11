@@ -36,6 +36,7 @@ const SAVES = [
 const SAID_ELSEWHERE: Record<string, string> = {
   "modules/setup/MemoryStep.tsx": "a step of the setup wizard, which moves on when it is done — the step is the outcome",
   "commons/components/people/PersonNotes.tsx": "notes, saved through NotesModal, which says Saved itself and keeps the text open",
+  "modules/welcome/index.page.tsx": "the first sign-in's form, which names the account's person and goes on to Home when it is done — the page moving on is the outcome",
 };
 
 describe("a save says what happened", () => {

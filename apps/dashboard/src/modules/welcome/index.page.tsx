@@ -52,6 +52,8 @@ export default function WelcomePage() {
         await api.saveProfile({ displayName: name.trim() });
         const self = await api.peopleMe();
         if (!self.person) await api.linkMe({ name: name.trim() });
+        // The person the account was given when it was made, named after it: they say who they are now.
+        else if (self.person.name !== name.trim()) await api.savePerson({ key: self.person.key, name: name.trim() });
       }
     },
     onSuccess: async () => {

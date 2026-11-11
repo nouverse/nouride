@@ -6,7 +6,7 @@
  */
 
 import { control, post, request } from "./api.client";
-import type { Principal, User } from "@nouride/wire";
+import type { PersonRecord, Principal, User } from "@nouride/wire";
 
 export const authApi = {
   login: (username: string, password: string) =>
@@ -41,9 +41,11 @@ export const authApi = {
    * Omitted means an account with no password at all — provider sign-in only.
    * An empty string is rejected by the daemon as too short, which is what this
    * used to send and why "add somebody by email" was not expressible.
+   *
+   * `person` is the key of someone in People the account is; with none, a person is made, named after it.
    */
-  createUser: (input: { username: string; password?: string; role: string }) =>
-    post<{ user: User }>(`${control}/users`, { ...input, must_change_password: true }),
+  createUser: (input: { username: string; password?: string; role: string; person?: string }) =>
+    post<{ user: User; person?: PersonRecord; warning?: string }>(`${control}/users`, { ...input, must_change_password: true }),
 
   deleteUser: (id: string) => request<{ ok: true; warning?: string }>(`${control}/users/${id}`, { method: "DELETE" }),
 

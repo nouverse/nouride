@@ -17,6 +17,7 @@ import { SignInMethods } from "./components/SignInMethods";
 import { useMe } from "@/commons/lib/session";
 import { PasswordInput } from "@/commons/components/ui/PasswordInput";
 import { ListLoading } from "@/commons/components/ui/Spinner";
+import { useToast } from "@/commons/components/ui/toast";
 
 /** The person an account is linked to: `web:<id>`. */
 function personOfAccount(people: PersonRecord[], userId: string): PersonRecord | undefined {
@@ -24,9 +25,9 @@ function personOfAccount(people: PersonRecord[], userId: string): PersonRecord |
 }
 
 const ROLES = [
-  { id: "admin", label: "Admin", blurb: "Can do everything, including accounts, AI providers and Nouride's own settings." },
-  { id: "operator", label: "Operator", blurb: "Runs the day to day: agents, their files, and approvals. Cannot change accounts." },
-  { id: "viewer", label: "Viewer", blurb: "Can look at everything, the agents and their settings included, and change nothing." },
+  { id: "admin", label: "Admin", blurb: "Can do everything, including accounts, AI providers, Nouride's own settings, and reading everyone's chats." },
+  { id: "operator", label: "Operator", blurb: "Runs the day to day: agents, their files, and approvals. Reads only their own chats. Cannot change accounts." },
+  { id: "viewer", label: "Viewer", blurb: "Can look at the agents and their settings, and read their own chats. Changes nothing." },
 ];
 
 export default function UsersPage() {
@@ -44,7 +45,8 @@ export default function UsersPage() {
     },
   });
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["users"] });
+  // People too: a new account is someone in People, and a deleted one is no longer theirs.
+  const invalidate = () => Promise.all([queryClient.invalidateQueries({ queryKey: ["users"] }), queryClient.invalidateQueries({ queryKey: ["people"] })]);
   const remove = useMutation({ mutationFn: (id: string) => api.deleteUser(id), onSuccess: invalidate });
   const setRole = useMutation({
     mutationFn: (input: { id: string; role: string }) => api.setUserRole(input.id, input.role),
@@ -104,6 +106,7 @@ export default function UsersPage() {
 
       {multiUser && adding && (
         <NewUserForm
+          people={people.data?.people ?? []}
           onClose={() => setAdding(false)}
           onSaved={() => {
             setAdding(false);
@@ -257,10 +260,14 @@ export default function UsersPage() {
   );
 }
 
-function NewUserForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+function NewUserForm({ onClose, onSaved, people }: { onClose: () => void; onSaved: () => void; people: PersonRecord[] }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("operator");
+  /** Who the account is: someone in People with no account yet, or — left empty — someone new, named after it. */
+  const [person, setPerson] = useState("");
+  const toast = useToast();
+  const unlinked = people.filter((one) => !(one.ids ?? []).some((id) => id.startsWith("web:")));
 
   // The same query the gate and the login page run, so this costs no request.
   const setup = useQuery({ queryKey: ["setup"], queryFn: api.setupState, staleTime: 2_000 });
@@ -284,8 +291,11 @@ function NewUserForm({ onClose, onSaved }: { onClose: () => void; onSaved: () =>
 
   const create = useMutation({
     mutationFn: () =>
-      api.createUser({ username, role, ...(usePassword ? { password } : {}) }),
-    onSuccess: onSaved,
+      api.createUser({ username, role, ...(usePassword ? { password } : {}), ...(person ? { person } : {}) }),
+    onSuccess: (made) => {
+      if (made.warning) toast.error("The account is made, but not linked to a person", "Pick who they are in the account's row.");
+      onSaved();
+    },
   });
 
   return (
@@ -352,6 +362,17 @@ function NewUserForm({ onClose, onSaved }: { onClose: () => void; onSaved: () =>
             </select>
           </Field>
         </div>
+
+        <Field label="Who is this?" hint="Their chats are theirs: the agents know them by this person, here and on every other app.">
+          <select className="select w-full rounded-xl text-sm sm:max-w-sm" value={person} onChange={(e) => setPerson(e.target.value)}>
+            <option value="">Someone new, named after the account</option>
+            {unlinked.map((one) => (
+              <option key={one.key} value={one.key}>
+                {one.name}
+              </option>
+            ))}
+          </select>
+        </Field>
 
         {external?.available && passwordLogin && (
           <label className="flex cursor-pointer items-center gap-2 text-xs text-base-content/70">

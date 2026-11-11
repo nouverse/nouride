@@ -209,6 +209,7 @@ const ROWS: Row[] = [
   { method: "writePersonMorning", via: "a morning line set (0.8.0)", write: ({ settings }) => settings.writePersonMorning("gading", { at: "07:00" }, actor) },
   { method: "linkIdentity", via: "a dashboard account linked to a person", write: ({ settings }) => settings.linkIdentity({ identity: "web:usr_1", target: { person: "gading" }, actor }) },
   { method: "unlinkIdentity", via: "an account unlinked", write: ({ settings }) => settings.unlinkIdentity({ identity: "telegram:814", actor }) },
+  { method: "linkAccount", via: "a new account made someone in People", write: ({ settings }) => settings.linkAccount({ account: { id: "usr_2", username: "rina", displayName: "" }, actor }) },
 
   // ── the other writers of the same file ──
   {

@@ -60,6 +60,7 @@ import type { McpManager } from "@/modules/tools/mcp.ts";
 import type { ApprovalReach } from "@/modules/tools/reachability.ts";
 import type { ToolGrantsPort } from "@/modules/tools/tool-grants.store.ts";
 import { ensureInitialAdmin, firstRunBanner } from "@/modules/users/bootstrap.ts";
+import { personForEachAccount } from "./account-people.ts";
 import type { GatewayPort } from "@/boot/gateway-switch.ts";
 import { UserStore } from "@/modules/users/users.store.ts";
 import { ensureControlToken, mountControlRoutes } from "@/modules/web/control/index.ts";
@@ -349,6 +350,13 @@ export async function startControlPlane(deps: {
     keyHeld: (key: string) => memory.keyHeld(key) ?? (mcpTokens.list().some((token) => token.person === key) ? "a live MCP token is still theirs" : null),
     audit,
   });
+
+  // Each account someone in People: whose chats an account reads is read by its person (`account-people.ts`).
+  if (users && source) {
+    await personForEachAccount({ accounts: users.list(), people: () => config.people, link: (params) => settings.linkAccount(params) }).catch((err: unknown) =>
+      log.warn("could not give each account its person", { error: String(err) }),
+    );
+  }
 
   deps.web?.serve(ctx, {
     ...(controlToken

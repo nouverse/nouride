@@ -326,6 +326,11 @@ export class SettingsService {
     return await identities.linkIdentity(this.deps, ...args);
   }
 
+  /** A dashboard account's person: the one named, or a new one named as it is. See `settings/identities.ts`. */
+  async linkAccount(...args: Rest<typeof identities.linkAccount>): Promise<identities.LinkResult> {
+    return await identities.linkAccount(this.deps, ...args);
+  }
+
   /** The identity off whoever holds it — a deleted dashboard account's. See `settings/identities.ts`. */
   async unlinkIdentity(...args: Rest<typeof identities.unlinkIdentity>): Promise<SaveResult> {
     return await identities.unlinkIdentity(this.deps, ...args);
