@@ -131,9 +131,12 @@ function FloatingCard({ open, label, button, onClose, children }: { open: boolea
 
   useEffect(() => {
     if (!open) return undefined;
-    const before = document.activeElement as HTMLElement | null;
-    // The card now, and the box to write in once the conversation is drawn (`FloatingPanel`).
-    box.current?.focus();
+    // What had the focus before it opened: the button most often, in a browser that focuses a button it is pressed with.
+    const at = document.activeElement as HTMLElement | null;
+    const before = at && !box.current?.contains(at) ? at : null;
+    // The box to write in, where the conversation is drawn already (from what was read last); else the card itself,
+    // and the box once the conversation is drawn (`FloatingPanel`).
+    (box.current?.querySelector<HTMLElement>("textarea:not(:disabled)") ?? box.current)?.focus();
     const escape = (event: KeyboardEvent) => {
       // One a menu of the box took (`Composer`) is not the card's; nor one for a picture or a question open over the
       // page, which closes first, by its own; nor one pressed in a field of the page under it.

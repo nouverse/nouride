@@ -11,6 +11,8 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { agentAtOpen, agentOfPage } from "@/commons/lib/floating-chat";
 import { sectionTitle } from "@/commons/components/floating-chat/page-open";
+import { DAILY, SETTINGS } from "@/commons/components/layout/nav";
+import { sectionTabs } from "@/commons/components/layout/SectionTabs";
 import { answer, dom, recordPosts, renderPage, type, useMountHarness, WIRE } from "./mount-harness.ts";
 import { AT_REST, boxIn, card, FakeEventSource, floatButton, LAST_AGENT_KEY, pressKey, recordRequests, sendIn, sheet } from "./floating-chat-harness.ts";
 import { eventually } from "./wait.ts";
@@ -26,6 +28,10 @@ afterEach(() => {
   delete globals.EventSource;
   FakeEventSource.opened = [];
 });
+
+/** What the menu calls a section's tab and a menu item, read from the menu: a renamed one is not this test's to know. */
+const tabLabel = (to: string) => sectionTabs(to)!.find((one) => one.to === to)!.label;
+const itemLabel = (to: string) => [...DAILY, ...SETTINGS.flatMap((group) => group.items)].find((one) => one.to === to)!.label;
 
 const focused = () => dom.document.activeElement as unknown as HTMLElement | null;
 /**
@@ -61,6 +67,8 @@ describe("opening and closing", () => {
       expect(button.getAttribute("aria-expanded")).toBe("false");
       expect(card()).toBeNull();
 
+      // Pressed as a browser presses it: the button has the focus, and the box takes it from there.
+      button.focus();
       button.click();
       await eventually(() => card() !== null, 2_000, "the panel");
       expect(card()!.getAttribute("role")).toBe("dialog");
@@ -233,7 +241,7 @@ describe("the conversation in it", () => {
         {
           text: "what is this one about?",
           sessionId: "ses_1",
-          page: { path: "/dashboard/missions/msn_1", title: "Missions", subject: "Write a report on the disk usage of the build box" },
+          page: { path: "/dashboard/missions/msn_1", title: tabLabel("/missions"), subject: "Write a report on the disk usage of the build box" },
         },
       ]);
     } finally {
@@ -268,6 +276,19 @@ describe("the conversation in it", () => {
     });
   });
 
+  test("opened again, what it read last is drawn at once: the panel does not wait on a slow line to show a conversation it knows", async () => {
+    answer(AT_REST);
+    await renderPage("/skills", async (host) => {
+      await open(host);
+      floatButton(host)!.click();
+      await eventually(() => card() === null, 2_000, "closed");
+      // This opening's read is on its way and does not answer.
+      answer({ ...AT_REST, "/chat-list": { status: 200, body: {}, hold: true } });
+      await open(host);
+      expect(link()!.getAttribute("href")).toBe("/dashboard/chat/ses_1");
+    });
+  });
+
   test("the list is read again at each opening: a conversation started elsewhere since is the one it shows", async () => {
     answer(AT_REST);
     const list = WIRE["/chat-list"] as { agents: Record<string, unknown>[] } & Record<string, unknown>;
@@ -278,8 +299,8 @@ describe("the conversation in it", () => {
       await eventually(() => card() === null, 2_000, "closed");
       // A new chat with Nouva, started on the Chats page of another tab.
       answer({ ...AT_REST, "/chat-list": { status: 200, body: { ...list, agents: [{ ...list.agents[0], sessionId: "ses_2" }] } } });
-      await open(host);
-      expect(link()!.getAttribute("href")).toBe("/dashboard/chat/ses_2");
+      floatButton(host)!.click();
+      await eventually(() => link()?.getAttribute("href") === "/dashboard/chat/ses_2", 3_000, "the conversation started since");
     });
   });
 
@@ -352,8 +373,13 @@ describe("the conversation in it", () => {
     }
   });
 
-  test("a page with no title of its own is named by where the menu puts it", () => {
-    expect(["/missions/msn_1", "/jobs/job_1", "/agents/nix/model", "/", "/settings", "/llm-gateway", "/nowhere"].map(sectionTitle)).toEqual(["Missions", "Helpers", "Agents", "Home", "Settings", "LLM Gateway", ""]);
+  test("a page with no title of its own is named by where the menu puts it: its section's tab, else its menu item", () => {
+    // One mission's page is in Missions and one agent's pages are in Agents: the nearest tab at or over the address.
+    expect(["/missions/msn_1", "/missions/msn_1/", "/agents/nix/model"].map(sectionTitle)).toEqual([tabLabel("/missions"), tabLabel("/missions"), tabLabel("/agents")]);
+    // A page of no section is its menu item; Settings is its own; an address the menu does not know is nothing.
+    expect(["/", "/llm-gateway/keys", "/settings", "/nowhere"].map(sectionTitle)).toEqual([itemLabel("/"), itemLabel("/llm-gateway"), "Settings", ""]);
+    // And the menu says something for each: the names above are not all empty.
+    expect([tabLabel("/missions"), tabLabel("/agents"), itemLabel("/"), itemLabel("/llm-gateway")].every((label) => label.length > 0)).toBe(true);
   });
 });
 

@@ -59,25 +59,25 @@ export function FloatingPanel({
   /** The conversations a first message here started, by agent: used until the list below knows them. */
   const [started, setStarted] = useState<Record<string, string>>({});
   /**
-   * The person's newest conversation with each agent, as the Chats page lists them, read again at every opening: one
-   * started or deleted elsewhere since is known before a message goes into the wrong one.
+   * The person's newest conversation with each agent, as the Chats page lists them. Read again at every opening, so one
+   * started or deleted elsewhere since is the one shown; what was read last is drawn meanwhile, so the panel opens at
+   * once on a slow line too.
    */
   const list = useQuery({ queryKey: ["chat-list", "mine"], queryFn: () => api.chatList("mine"), retry: false, refetchOnMount: "always" });
   const sessionId = list.data?.agents.find((entry) => entry.agentId === agentId)?.sessionId ?? started[agentId];
-  /** The list was read for this opening: from then on the conversation stays drawn, whatever a later read of it does. */
-  const [read, setRead] = useState(false);
-  const fresh = list.isFetchedAfterMount && !list.isError;
-  useEffect(() => {
-    if (fresh) setRead(true);
-  }, [fresh]);
+  /**
+   * Nothing can be written before the list was read once: the panel would not know the conversation the person
+   * already has with the agent, and their message would start a second one beside it.
+   */
+  const ready = list.data !== undefined;
 
   useEffect(() => {
-    if (!read || !focusBox || picking) return;
+    if (!ready || !focusBox || picking) return;
     // Only while the focus is in the panel or nowhere: by now the person may be in a field of the page under it.
     const at = document.activeElement;
     if (at && at !== document.body && !at.closest("[data-floating-chat]")) return;
     root.current?.querySelector<HTMLTextAreaElement>("textarea:not(:disabled)")?.focus();
-  }, [read, focusBox, agentId, picking]);
+  }, [ready, focusBox, agentId, picking]);
 
   const agents = orchestratorFirst(chat.agents, chat.orchestrator);
   const name = chat.nameOf(agentId);
@@ -122,7 +122,7 @@ export function FloatingPanel({
         setPicking(false);
       }}
     >
-      {read ? (
+      {ready ? (
         <Conversation
           {...(sessionId ? { sessionId } : {})}
           agent={agentId}
