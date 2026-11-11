@@ -7,7 +7,7 @@
  */
 
 import { holdsDashboardLink } from "@/modules/web/links.ts";
-import { createLogger, newId, type Gateway, type GatewayName, type MessageEnvelope } from "@nouride/shared";
+import { createLogger, newId, type Gateway, type GatewayName, type MessageButton, type MessageEnvelope } from "@nouride/shared";
 import { OutboundRegistry } from "@nouride/persona";
 import { isSystemEvent, type PipelineDeps } from "./deps.ts";
 import { quotedId } from "./edit-rules.ts";
@@ -212,7 +212,7 @@ export class Voice {
     envelope: MessageEnvelope,
     text: string,
     fromAgent?: string,
-    delivery?: { onDelivered?: () => void; onSent?: (gatewayId: string, ids: readonly string[]) => void },
+    delivery?: { onDelivered?: () => void; onSent?: (gatewayId: string, ids: readonly string[]) => void; buttons?: MessageButton[] },
   ): Promise<boolean> {
     const cronJob = cronJobOfChat(envelope.chatId);
     if (cronJob !== null) return await this.replyFromCronSession(cronJob, envelope, text, fromAgent, delivery);
@@ -236,6 +236,9 @@ export class Voice {
         // An agent's reply that holds a dashboard link, as the daemon's notices do: no card of the login page (0.8.11).
         ...(holdsDashboardLink(this.deps.config.dashboard, text) ? { suppressPreview: true } : {}),
         ...(delivery?.onDelivered ? { onDelivered: delivery.onDelivered } : {}),
+        // Buttons under a line that offers a way on (`way-on.ts`), where the connection it goes out on carries them:
+        // its words say how to answer without.
+        ...(delivery?.buttons?.length && via.gateway.buttons === true ? { buttons: delivery.buttons } : {}),
         // Quoting the trigger is what keeps a group chat readable when several people are
         // talking to the same agent.
         //

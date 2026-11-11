@@ -36,7 +36,7 @@ export const ASK_WITHIN_MS = INBOX_KEEP_MS;
 const PRESS = "carry-on:";
 
 /** The button under the question. Its data names the turn, so a press needs nothing this process remembers. */
-function continueButton(turnId: string): MessageButton {
+export function continueButton(turnId: string): MessageButton {
   return { label: "Continue", data: `${PRESS}${turnId}`, style: "positive" };
 }
 
@@ -105,14 +105,27 @@ export function continuePresses(deps: {
   /** Take the turn up — `Pipeline.resumeTurn`. False where its connection is gone. */
   resume: (turn: TurnRecord) => boolean;
   isAdmin: (who: { gatewayId: string; senderId: string }) => boolean;
+  /**
+   * Work another agent handed over that ended early, its line still waiting (`way-on.ts`): Continue is under it too,
+   * and whoever may talk to its agent there may press, since no one person's turn it was. `settle` once pressed.
+   */
+  handedOver?: { waits(turnId: string): boolean; mayAsk(press: ButtonPress, agentId: string): boolean; settle(turnId: string): void };
   // The shape a connection's presses are routed by (`gateways/presses.ts`), said here so this domain needs no other's type.
 }): { owns(data: string): boolean; press(press: ButtonPress): Promise<PressAnswer> } {
   return {
     owns: (data) => data.startsWith(PRESS),
     async press(press: ButtonPress): Promise<PressAnswer> {
       const turn = deps.turns.get(press.data.slice(PRESS.length));
-      if (!turn || turn.status !== "interrupted" || turn.gatewayId !== press.gatewayId || turn.chatId !== press.chatId) {
+      const handed = turn !== null && turn !== undefined && turn.status !== "interrupted" && deps.handedOver?.waits(turn.id) === true;
+      if (!turn || !(turn.status === "interrupted" || handed) || turn.gatewayId !== press.gatewayId || turn.chatId !== press.chatId) {
         return { notice: "That is not waiting any more." };
+      }
+      if (handed) {
+        if (!deps.handedOver!.mayAsk(press, turn.agentId)) return { notice: "Only someone who may talk to that agent here can say that." };
+        if (!deps.resume(turn)) return { notice: `I could not pick that up from here. Say "continue" instead.` };
+        deps.handedOver!.settle(turn.id);
+        log.info("taking up handed-over work its room asked to carry on", { turn_id: turn.id, agent_id: turn.agentId });
+        return { notice: "Carrying on.", settled: `${turn.reply}\n\nContinued by ${press.senderName}.` };
       }
       const who = { chatType: press.chatType, senderId: press.senderId, isAdmin: () => deps.isAdmin(press) };
       if (!mayAnswer(who, { requestedBy: turn.senderId ?? "" })) return { notice: "Only the person who asked for it, or an admin, can say that here." };

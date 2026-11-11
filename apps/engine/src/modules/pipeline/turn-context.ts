@@ -46,6 +46,7 @@ import { describePeers } from "@/modules/router/agent-mentions.ts";
 import type { HarnessFacts } from "@/modules/llm/prompt/types.ts";
 import { ActiveTurns } from "./active-turns.ts";
 import { Asleep } from "./asleep.ts";
+import { WaysOn } from "./way-on.ts";
 import { FallbackOutages } from "./fallback-alert.ts";
 
 export { RESTARTING, STOPPED_BY_PERSON, type ActiveTurn } from "./active-turns.ts";
@@ -97,6 +98,8 @@ export class TurnContext extends ActiveTurns {
   readonly tokenScales = new TokenScales();
   /** What an asleep agent is sent meanwhile — `asleep.ts`. Its requeue is the pipeline's. */
   readonly asleep = new Asleep();
+  /** What the buttons under a stopped chain and under handed-over work that ended early need (`way-on.ts`). */
+  readonly waysOn = new WaysOn();
   /** Which models are falling back now, so the operator hears of each outage once (`fallback-alert.ts`). */
   readonly outages = new FallbackOutages();
   /** The daemon's hint under `careful`, counted per person per day — `tools/careful-hint.ts`. */

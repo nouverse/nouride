@@ -367,7 +367,10 @@ export class InboundRouter {
       // Attributed to the agent that would have answered: it is speaking about itself, and a human
       // replying to it should reach it rather than whoever carried the message.
       const maxHops = this.admission.mentionPolicy().maxHops;
-      await this.ctx.voice.reply(envelope, exhaustedNotice(verdict.from, maxHops), decision.agent.config.id);
+      const notice = exhaustedNotice(verdict.from, maxHops);
+      // Continue under it delivers what was not, the count begun again (`way-on.ts`): what a person speaking does.
+      const carryOn = this.ctx.waysOn.keepChain({ envelope: { ...envelope, fromAgent: verdict.from }, to: decision.agent.config.id, from: verdict.from, notice });
+      await this.ctx.voice.reply(envelope, notice, decision.agent.config.id, { buttons: [carryOn] });
       /**
        * Written down, because being unmissable is the entire job of this line.
        *

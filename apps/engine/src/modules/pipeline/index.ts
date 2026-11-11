@@ -44,7 +44,7 @@
  */
 
 import type { KeyedQueue } from "@nouride/queue";
-import { createLogger, type MessageEnvelope, type Tool } from "@nouride/shared";
+import { createLogger, type ButtonPress, type LoadedAgent, type MessageEnvelope, type Tool } from "@nouride/shared";
 import { HookRegistry, ModelOverrides } from "@/modules/hooks/registry.ts";
 import type { CronExecutors } from "@/modules/cron/scheduler.ts";
 import type { DaemonRestart } from "@/modules/update/restart.ts";
@@ -53,6 +53,7 @@ import { senderIsAdmin } from "@/modules/people/match.ts";
 
 import type { PipelineDeps } from "./deps.ts";
 import { Voice } from "./voice.ts";
+import { wayOnPresses } from "./way-on.ts";
 import { Admission } from "./admission.ts";
 import { RoomMemory } from "./room-memory.ts";
 import { Batcher } from "./batcher.ts";
@@ -322,6 +323,35 @@ export class Pipeline {
   rateLimitEntries(): number { return this.admission.rateLimitEntries(); }
   groupContextRooms(): number { return this.rooms.groupContextRooms(); }
   claimEntries(): number { return this.admission.claimEntries(); }
+
+  /**
+   * The buttons under work that stopped in a room (`way-on.ts`): Continue under a chain at its hop budget, Hand to
+   * under handed-over work that ended early, and what Continue under that work asks of the press that carries on.
+   */
+  waysOn() {
+    const agent = (id: string) => (this.deps.registry.isPaused(id) ? undefined : this.deps.registry.enabled().find((one) => one.config.id === id));
+    // Whoever may write to the agent in that chat may press: an admin, or a sender its allowlist takes.
+    const mayAsk = (press: ButtonPress, to: LoadedAgent) =>
+      this.isAdmin(press) || this.admission.senderAuthorized(to, { gatewayId: press.gatewayId, senderId: press.senderId } as MessageEnvelope);
+    return {
+      presses: wayOnPresses({
+        ctx: this.turnContext,
+        turns: { get: (id) => this.deps.turns?.get(id) ?? null },
+        agent,
+        mayAsk,
+        ownGateway: (agentId, gatewayId) => this.voice.voiceGatewayId(agentId, gatewayId),
+        platform: (gatewayId) => this.deps.gateways.get(gatewayId)?.platform,
+      }),
+      handedOver: {
+        waits: (turnId: string) => this.turnContext.waysOn.waits(turnId),
+        mayAsk: (press: ButtonPress, agentId: string) => {
+          const to = agent(agentId);
+          return to !== undefined && mayAsk(press, to);
+        },
+        settle: (turnId: string) => this.turnContext.waysOn.settle(turnId),
+      },
+    };
+  }
 
   /**
    * Whether this sender is an admin by People (`senderIsAdmin`): in a room, who besides the person who asked may answer an

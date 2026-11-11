@@ -401,7 +401,10 @@ export async function buildTurnMachine(
   pipeline.attach();
   // Every connection's presses: an approval's to its prompt, a proposal's to its card, and Continue under the question
   // a boot asks about a turn cut off a while ago.
-  const carryOn = continuePresses({ turns: stores.turns, resume: (turn) => pipeline.resumeTurn(turn, "asked"), isAdmin: (who) => pipeline.isAdmin(who) });
-  routePresses(input.gateways.values(), [parts.prompts, proposals.cards, ...missions.presses(pipeline), carryOn]);
+  // And the ways on for work that stopped in a room: Continue under a chain at its budget, Continue and Hand to under
+  // handed-over work that ended early.
+  const waysOn = pipeline.waysOn();
+  const carryOn = continuePresses({ turns: stores.turns, resume: (turn) => pipeline.resumeTurn(turn, "asked"), isAdmin: (who) => pipeline.isAdmin(who), handedOver: waysOn.handedOver });
+  routePresses(input.gateways.values(), [parts.prompts, proposals.cards, ...missions.presses(pipeline), carryOn, waysOn.presses]);
   return { mcp, mcpLogins, mcpCatalog, skillRoots, pipeline, scheduler, tools };
 }

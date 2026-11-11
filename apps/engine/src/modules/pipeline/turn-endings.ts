@@ -8,13 +8,15 @@
  * off, after a restart.
  */
 
-import type { ChatMessage, MessageEnvelope, SessionKey } from "@nouride/shared";
+import type { ChatMessage, MessageButton, MessageEnvelope, SessionKey } from "@nouride/shared";
 import { interruptionReport, keptSentence, retrySentence, type ClosedTurn, type InterruptCause } from "@/modules/turns/close.ts";
 import { INBOX_FRESH_MS } from "./inbox.store.ts";
 import type { TurnJournal } from "@/modules/turns/journal.store.ts";
 import type { FinishTurn } from "@/modules/turns/turns.store.ts";
 import type { ChatProgress } from "./chat-progress.ts";
+import { continueButton } from "./resume-ask.ts";
 import { RESTARTING, STOPPED_BY_PERSON, type TurnContext } from "./turn-context.ts";
+import { handToButtons } from "./way-on.ts";
 
 /**
  * Why the turn's signal says it ended — or the error, when nothing aborted it.
@@ -60,13 +62,15 @@ export async function endEarly(
     input.retryable === true &&
     input.turnId !== undefined &&
     ctx.resumeLater?.({ id: input.turnId, agentId: input.agentId, gatewayId: input.envelope.gatewayId, chatId: input.envelope.chatId, prompt: input.prompt, messageId: input.envelope.id }) === true;
+  // Work another agent handed over, ended with nobody to take it up: the room is offered a way on (`way-on.ts`).
+  const wayOn = !retrying && wayOnFor(ctx, input);
   const told = (ending: ClosedTurn): string =>
     input.cause.kind === "restart"
       ? // The daemon is going down and cannot know for how long: what it says holds either way (`restart-resume.ts`).
         interruptionReport(ending, input.prompt, { kind: "if-soon", withinMs: INBOX_FRESH_MS })
       : retrying
         ? [withoutRetryAdvice(input.message), retrySentence(ending)].filter(Boolean).join(" ")
-        : [input.message, keptSentence(ending)].filter(Boolean).join(" ");
+        : [input.message, keptSentence(ending), wayOn ? HAND_ON_WORDS : null].filter(Boolean).join(" ");
   const status = input.cause.kind === "restart" ? "interrupted" : input.cause.kind === "error" ? "failed" : "cancelled";
   const closed = ctx.closeUnfinished(input, (ending) => {
     // The promise as data on the turn, beside the words that make it: what the boot after a restart reads.
@@ -81,7 +85,28 @@ export async function endEarly(
   // A restart's report is the agent's own account of its work; an error is the daemon speaking. Either is
   // what the person is waiting to hear, so one that never lands is sent after the restart.
   const delivered = (): void => ctx.markDelivered(input.turnId);
-  if (await ctx.voice.reply(input.envelope, told(closed), input.cause.kind === "restart" ? input.agentId : undefined, { onDelivered: delivered })) delivered();
+  if (wayOn && input.turnId) ctx.waysOn.offer(input.turnId);
+  if (await ctx.voice.reply(input.envelope, told(closed), input.cause.kind === "restart" ? input.agentId : undefined, { onDelivered: delivered, ...(wayOn ? { buttons: wayOn } : {}) })) delivered();
+}
+
+/** Said with the buttons, and instead of them where a connection has none. */
+const HAND_ON_WORDS = "Or tag another agent to hand it on.";
+
+/**
+ * Continue and Hand to, for a turn in a room that one of our agents' hand-overs began and that a failure or its
+ * deadline ended: nobody is waiting on it the way a person waits on their own question, so the room is asked.
+ * Null for any other turn, which says what it always said.
+ */
+function wayOnFor(
+  ctx: TurnContext,
+  input: { cause: InterruptCause; envelope: MessageEnvelope; agentId: string; turnId: string | undefined },
+): MessageButton[] | null {
+  const ended = input.cause.kind === "error" || input.cause.kind === "deadline";
+  // A bot's message that got a turn is one of our agents': a stranger's bot never does (`classifyInbound`).
+  const handedOver = input.envelope.senderIsBot === true || input.envelope.fromAgent !== undefined;
+  if (!ended || !input.turnId || !handedOver || input.envelope.chatType === "dm") return null;
+  const others = (ctx.otherAgentsFor(input.agentId, input.envelope)?.names ?? []).map((id) => ({ id, name: ctx.deps.registry.get(id)?.config.displayName || id }));
+  return [continueButton(input.turnId), ...handToButtons(input.turnId, others)];
 }
 
 /** A provider error's own "try again", dropped where the daemon says in the same breath that it will. */
