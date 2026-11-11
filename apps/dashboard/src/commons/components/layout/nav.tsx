@@ -3,8 +3,7 @@
  * always sees, two now and then, and everything set up once behind Settings:
  *
  * - **Home, Chats, Work, Agents.** Work holds what agents do without anyone in the chat: what waits for an answer,
- *   missions, helpers, the schedule and webhooks (work a clock starts, and work another app starts by calling), under
- *   one badge. Agents holds the Office, the same agents drawn as cats.
+ *   automations (work a clock, another app or a person starts), missions and helpers, under one badge. Agents holds the Office, the same agents drawn as cats.
  * - **Skills, Connectors, Memory.** Connectors is the library of outside tools, switched on per agent as skills are.
  *   Memory holds what the agents know, and the people and groups they know it about.
  * - **Settings**, a page of its own that lists every other page, and opens its list here only while one of them is the
@@ -78,7 +77,8 @@ function NeedsBadge({ n, label }: { n: number; label: string }) {
 
 function WorkBadge() {
   const { approvals, missions } = useNeedsYou();
-  return <NeedsBadge n={approvals + missions} label={`${approvals + missions} waiting for your answer`} />;
+  const waiting = approvals + missions;
+  return <NeedsBadge n={waiting} label={`${waiting} waiting for your answer`} />;
 }
 
 function SkillsBadge() {
@@ -101,7 +101,7 @@ function AccessBadge() {
 export const DAILY: NavItem[] = [
   { to: "/", label: "Home", icon: House },
   { to: "/chat", label: "Chats", icon: MessageSquare },
-  { to: "/work", label: "Work", icon: Target, holds: ["/missions", "/jobs", "/schedule", "/webhooks"], badge: WorkBadge },
+  { to: "/work", label: "Work", icon: Target, holds: ["/automations", "/missions", "/jobs"], badge: WorkBadge },
   // A cat, as every agent is one here, where it was a robot.
   { to: "/agents", label: "Agents", icon: Cat, holds: ["/office"] },
 ];

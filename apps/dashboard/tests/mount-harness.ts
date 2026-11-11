@@ -381,6 +381,11 @@ export const PAGES: [name: string, path: string][] = [
   // A conversation and a room are their own routes, each handing the page an id the index never does.
   ["chat, a conversation", "/chat/ses_1"],
   ["chat, a room", "/chat/room/room_1"],
+  ["automations", "/automations"],
+  ["automations, the webhooks", "/automations?start=webhook"],
+  ["an automation", "/automations/cron_1"],
+  ["a new automation", "/automations/new"],
+  // The addresses Schedule and Webhooks had: each lands on Automations.
   ["schedule", "/schedule"],
   ["webhooks", "/webhooks"],
   ["skills", "/skills"],

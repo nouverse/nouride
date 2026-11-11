@@ -71,7 +71,6 @@ describe("the dashboard's calls", () => {
     const shape = (start: string) => dashboardCalls().find((call) => call.raw.startsWith(start))?.shape;
     expect(shape("/sessions${query")).toEqual(["sessions"]);
     expect(shape("/missions${query")).toEqual(["missions"]);
-    expect(shape("/cron${all")).toEqual(["cron"]);
     expect(shape("/memory/changes${subject")).toEqual(["memory", "changes"]);
   });
 

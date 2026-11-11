@@ -57,8 +57,8 @@ describe("the cat a page draws", () => {
     expect(html).not.toContain("06-sleeping");
   });
 
-  test("Webhooks with none yet: throwing a paper plane, not asleep", async () => {
-    answer({ "/webhooks": ok({ webhooks: [] }) });
+  test("Automations with no webhooks yet: throwing a paper plane, not asleep", async () => {
+    answer({ "/automations": ok({ automations: [], timezone: "UTC" }) });
     const html = await renderPage("/webhooks", async (host) => {
       await eventually(() => host.textContent?.includes("No webhooks yet") === true, 3_000, "the empty list");
     });

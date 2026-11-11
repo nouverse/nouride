@@ -108,7 +108,21 @@ describe("every route has a way in", () => {
     // A layout route has no page of its own to link to: it is reached when one of its children is.
     const reached = (url: string) => linked(url) || urls.some((other) => other.startsWith(`${url}/`) && linked(other));
 
-    const stranded = files.filter((file) => !reached(urlOf(pathFromFilename(file))));
+    const stranded = files.filter((file) => !reached(urlOf(pathFromFilename(file))) && !(file in MOVED));
     expect(stranded).toEqual([]);
+  });
+
+  /**
+   * An address that was a page and is one no longer: nothing in the dashboard leads to it, and it is kept for what leads
+   * to it from outside (a bookmark, a link an agent sent in a chat before). Such a route is a redirect and nothing else,
+   * so the allowance cannot hide a page nobody opens.
+   */
+  const MOVED: Record<string, string> = { "schedule.tsx": "/automations", "webhooks.tsx": "/automations" };
+
+  test("an address kept for old links only sends its visitor on: it has no page of its own", () => {
+    for (const [file, to] of Object.entries(MOVED)) {
+      const source = readFileSync(join(ROUTES, file), "utf8");
+      expect({ file, redirects: source.includes(`redirect({ to: "${to}"`), page: /component\s*:|@\/modules\//.test(source) }).toEqual({ file, redirects: true, page: false });
+    }
   });
 });

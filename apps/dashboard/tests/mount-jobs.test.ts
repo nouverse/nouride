@@ -63,18 +63,18 @@ const TURNS = {
   }),
 };
 
-test("it is Work's third tab, between Missions and Schedule, and the menu marks Work while it is open (0.8.24)", async () => {
+test("it is Work's last tab, after Automations and Missions, and the menu marks Work while it is open (0.8.24)", async () => {
   answer({ "/jobs": ok({ jobs: [] }) });
   let seen = { tabs: [] as string[], current: [] as string[] };
   await renderPage("/jobs", async (host) => {
-    await eventually(() => host.querySelector('main a[href="/dashboard/schedule"]') !== null, 2_000, "Work's tabs");
+    await eventually(() => host.querySelector('main a[href="/dashboard/automations"]') !== null, 2_000, "Work's tabs");
     seen = {
-      tabs: [...host.querySelectorAll("main a")].filter((a) => /\/dashboard\/(work|missions|jobs|schedule|webhooks)$/.test(a.getAttribute("href") ?? "")).map((a) => a.textContent?.trim() ?? ""),
+      tabs: [...host.querySelectorAll("main a")].filter((a) => /\/dashboard\/(work|automations|missions|jobs|schedule|webhooks)$/.test(a.getAttribute("href") ?? "")).map((a) => a.textContent?.trim() ?? ""),
       // The item's name, without the count of what waits there.
       current: [...host.querySelectorAll('nav[aria-label="Menu"] a[aria-current="page"]')].map((a) => a.querySelector("span")?.textContent?.trim() ?? ""),
     };
   });
-  expect(seen.tabs).toEqual(["Waiting for you", "Missions", "Helpers", "Schedule", "Webhooks"]);
+  expect(seen.tabs).toEqual(["Waiting for you", "Automations", "Missions", "Helpers"]);
   expect(seen.current).toEqual(["Work"]);
 });
 

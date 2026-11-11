@@ -1,4 +1,551 @@
 {
+  "/automations": {
+    "automations": [
+      {
+        "id": "cron_3",
+        "agentId": "nouva",
+        "name": "Morning brief",
+        "enabled": true,
+        "trigger": {
+          "kind": "cron",
+          "expr": "0 7 * * *"
+        },
+        "payload": {
+          "kind": "agentTurn",
+          "message": "Sum up what came in overnight, in five lines."
+        },
+        "delivery": {
+          "mode": "announce"
+        },
+        "target": {
+          "gatewayId": "telegram:main",
+          "chatId": "-100200"
+        },
+        "session": "fresh",
+        "keepAfterRun": false,
+        "createdBy": "usr_1",
+        "createdAt": 1760000000000,
+        "nextRunAt": 1760000000000,
+        "runCount": 0,
+        "failCount": 0,
+        "failStreak": 0,
+        "describes": "cron `0 7 * * *` (Asia/Jakarta)",
+        "start": "scheduled",
+        "lastRun": {
+          "id": "run_2",
+          "jobId": "cron_3",
+          "startedAt": 1760000000000,
+          "finishedAt": 1760000000000,
+          "status": "success",
+          "result": "The payment service was restarting after its update. It answers again now, and nothing else is down."
+        }
+      },
+      {
+        "id": "cron_1",
+        "agentId": "nouva",
+        "name": "Shop health check",
+        "enabled": true,
+        "trigger": {
+          "kind": "every",
+          "everyMs": 0
+        },
+        "payload": {
+          "kind": "steps",
+          "steps": [
+            {
+              "id": "check",
+              "kind": "command",
+              "argv": [
+                "sh",
+                "-lc",
+                "echo 'the shop answered 503' >&2; exit 22"
+              ],
+              "then": "end",
+              "whenFailed": "next"
+            },
+            {
+              "id": "find",
+              "kind": "agentTurn",
+              "name": "Find out why",
+              "message": "The shop's health check failed. Find out why and say what you found."
+            },
+            {
+              "id": "ok",
+              "kind": "approval",
+              "ask": "Send what was found to the group?",
+              "whenFailed": "end"
+            },
+            {
+              "id": "tell",
+              "kind": "systemEvent",
+              "name": "Tell the group",
+              "text": "The shop was down. What we found is above."
+            }
+          ]
+        },
+        "delivery": {
+          "mode": "announce"
+        },
+        "target": {
+          "gatewayId": "telegram:main",
+          "chatId": "-100200"
+        },
+        "session": "fresh",
+        "keepAfterRun": false,
+        "createdBy": "usr_1",
+        "createdAt": 1760000000000,
+        "runCount": 0,
+        "failCount": 0,
+        "failStreak": 0,
+        "describes": "every 10m",
+        "start": "scheduled",
+        "lastRun": {
+          "id": "run_1",
+          "jobId": "cron_1",
+          "startedAt": 1760000000000,
+          "status": "waiting",
+          "steps": [
+            {
+              "id": "check",
+              "kind": "command",
+              "startedAt": 1760000000000,
+              "status": "failed",
+              "said": "exit 22\nthe shop answered 503",
+              "ms": 0
+            },
+            {
+              "id": "find",
+              "kind": "agentTurn",
+              "startedAt": 1760000000000,
+              "status": "done",
+              "said": "The payment service was restarting after its update. It answers again now, and nothing else is down.",
+              "ms": 0
+            },
+            {
+              "id": "ok",
+              "kind": "approval",
+              "startedAt": 1760000000000,
+              "status": "waiting",
+              "said": "Send what was found to the group?"
+            }
+          ],
+          "waiting": {
+            "kind": "approval",
+            "step": "ok",
+            "since": 1760000000000,
+            "until": 1760000000000,
+            "ask": "Send what was found to the group?"
+          }
+        },
+        "suggested": "cron_2"
+      },
+      {
+        "id": "cron_2",
+        "agentId": "nouva",
+        "name": "Shop health check",
+        "enabled": false,
+        "trigger": {
+          "kind": "every",
+          "everyMs": 0
+        },
+        "payload": {
+          "kind": "steps",
+          "steps": [
+            {
+              "id": "check",
+              "kind": "command",
+              "argv": [
+                "sh",
+                "-lc",
+                "echo 'the shop answered 503' >&2; exit 22"
+              ],
+              "then": "end",
+              "whenFailed": "next"
+            },
+            {
+              "id": "find",
+              "kind": "agentTurn",
+              "name": "Find out why",
+              "message": "The shop's health check failed. Find out why and say what you found."
+            },
+            {
+              "id": "ok",
+              "kind": "approval",
+              "ask": "Send what was found to the group?",
+              "whenFailed": "end"
+            },
+            {
+              "id": "tell",
+              "kind": "systemEvent",
+              "name": "Tell the group",
+              "text": "The shop was down. What we found is above."
+            },
+            {
+              "id": "log",
+              "kind": "command",
+              "name": "Note it down",
+              "argv": [
+                "sh",
+                "-lc",
+                "date >> outages.log"
+              ]
+            }
+          ]
+        },
+        "delivery": {
+          "mode": "announce"
+        },
+        "target": {
+          "gatewayId": "telegram:main",
+          "chatId": "-100200"
+        },
+        "session": "fresh",
+        "keepAfterRun": false,
+        "createdBy": "usr_1",
+        "createdAt": 1760000000000,
+        "runCount": 0,
+        "failCount": 0,
+        "failStreak": 0,
+        "proposal": {
+          "by": "nouva",
+          "gatewayId": "telegram:main",
+          "chatId": "-100200",
+          "for": "usr_1",
+          "at": 1760000000000,
+          "replaces": "cron_1"
+        },
+        "describes": "every 10m",
+        "start": "scheduled"
+      },
+      {
+        "id": "cron_4",
+        "agentId": "nouva",
+        "name": "New order",
+        "enabled": true,
+        "trigger": {
+          "kind": "webhook"
+        },
+        "payload": {
+          "kind": "agentTurn",
+          "message": "A new order came in. Read what was sent and say who ordered what."
+        },
+        "delivery": {
+          "mode": "announce"
+        },
+        "target": {
+          "gatewayId": "telegram:main",
+          "chatId": "-100200"
+        },
+        "session": "fresh",
+        "keepAfterRun": false,
+        "createdBy": "usr_1",
+        "createdAt": 1760000000000,
+        "runCount": 0,
+        "failCount": 0,
+        "failStreak": 0,
+        "webhookToken": "hook_1",
+        "describes": "when its webhook is called",
+        "start": "webhook",
+        "hook": {
+          "webhookToken": "hook_1",
+          "path": "/hooks/hook_1",
+          "url": "http://127.0.0.1:18254/hooks/hook_1",
+          "urlGuessed": true,
+          "reach": {
+            "state": "local",
+            "why": "No public address is set, so only this network can call it."
+          }
+        }
+      },
+      {
+        "id": "cron_5",
+        "agentId": "nouva",
+        "name": "Backup check",
+        "enabled": false,
+        "trigger": {
+          "kind": "manual"
+        },
+        "payload": {
+          "kind": "steps",
+          "steps": [
+            {
+              "id": "s1",
+              "kind": "command",
+              "argv": [
+                "sh",
+                "-lc",
+                "ls backups | tail -1"
+              ],
+              "whenEmpty": "next"
+            },
+            {
+              "id": "s2",
+              "kind": "agentTurn",
+              "message": "Say whether last night's backup is there."
+            }
+          ]
+        },
+        "delivery": {
+          "mode": "announce"
+        },
+        "target": {
+          "gatewayId": "telegram:main",
+          "chatId": "-100200"
+        },
+        "session": "fresh",
+        "keepAfterRun": false,
+        "createdBy": "usr_1",
+        "createdAt": 1760000000000,
+        "runCount": 0,
+        "failCount": 0,
+        "failStreak": 0,
+        "proposal": {
+          "by": "nouva",
+          "gatewayId": "telegram:main",
+          "chatId": "-100200",
+          "for": "usr_1",
+          "at": 1760000000000
+        },
+        "describes": "when somebody starts it",
+        "start": "manual"
+      }
+    ],
+    "timezone": "Asia/Jakarta"
+  },
+  "/automations/cron_1": {
+    "automation": {
+      "id": "cron_1",
+      "agentId": "nouva",
+      "name": "Shop health check",
+      "enabled": true,
+      "trigger": {
+        "kind": "every",
+        "everyMs": 0
+      },
+      "payload": {
+        "kind": "steps",
+        "steps": [
+          {
+            "id": "check",
+            "kind": "command",
+            "argv": [
+              "sh",
+              "-lc",
+              "echo 'the shop answered 503' >&2; exit 22"
+            ],
+            "then": "end",
+            "whenFailed": "next"
+          },
+          {
+            "id": "find",
+            "kind": "agentTurn",
+            "name": "Find out why",
+            "message": "The shop's health check failed. Find out why and say what you found."
+          },
+          {
+            "id": "ok",
+            "kind": "approval",
+            "ask": "Send what was found to the group?",
+            "whenFailed": "end"
+          },
+          {
+            "id": "tell",
+            "kind": "systemEvent",
+            "name": "Tell the group",
+            "text": "The shop was down. What we found is above."
+          }
+        ]
+      },
+      "delivery": {
+        "mode": "announce"
+      },
+      "target": {
+        "gatewayId": "telegram:main",
+        "chatId": "-100200"
+      },
+      "session": "fresh",
+      "keepAfterRun": false,
+      "createdBy": "usr_1",
+      "createdAt": 1760000000000,
+      "runCount": 0,
+      "failCount": 0,
+      "failStreak": 0,
+      "describes": "every 10m",
+      "start": "scheduled",
+      "lastRun": {
+        "id": "run_1",
+        "jobId": "cron_1",
+        "startedAt": 1760000000000,
+        "status": "waiting",
+        "steps": [
+          {
+            "id": "check",
+            "kind": "command",
+            "startedAt": 1760000000000,
+            "status": "failed",
+            "said": "exit 22\nthe shop answered 503",
+            "ms": 0
+          },
+          {
+            "id": "find",
+            "kind": "agentTurn",
+            "startedAt": 1760000000000,
+            "status": "done",
+            "said": "The payment service was restarting after its update. It answers again now, and nothing else is down.",
+            "ms": 0
+          },
+          {
+            "id": "ok",
+            "kind": "approval",
+            "startedAt": 1760000000000,
+            "status": "waiting",
+            "said": "Send what was found to the group?"
+          }
+        ],
+        "waiting": {
+          "kind": "approval",
+          "step": "ok",
+          "since": 1760000000000,
+          "until": 1760000000000,
+          "ask": "Send what was found to the group?"
+        }
+      },
+      "suggested": "cron_2"
+    },
+    "runs": [
+      {
+        "id": "run_1",
+        "jobId": "cron_1",
+        "startedAt": 1760000000000,
+        "status": "waiting",
+        "steps": [
+          {
+            "id": "check",
+            "kind": "command",
+            "startedAt": 1760000000000,
+            "status": "failed",
+            "said": "exit 22\nthe shop answered 503",
+            "ms": 0
+          },
+          {
+            "id": "find",
+            "kind": "agentTurn",
+            "startedAt": 1760000000000,
+            "status": "done",
+            "said": "The payment service was restarting after its update. It answers again now, and nothing else is down.",
+            "ms": 0
+          },
+          {
+            "id": "ok",
+            "kind": "approval",
+            "startedAt": 1760000000000,
+            "status": "waiting",
+            "said": "Send what was found to the group?"
+          }
+        ],
+        "waiting": {
+          "kind": "approval",
+          "step": "ok",
+          "since": 1760000000000,
+          "until": 1760000000000,
+          "ask": "Send what was found to the group?"
+        }
+      }
+    ],
+    "suggested": {
+      "id": "cron_2",
+      "agentId": "nouva",
+      "name": "Shop health check",
+      "enabled": false,
+      "trigger": {
+        "kind": "every",
+        "everyMs": 0
+      },
+      "payload": {
+        "kind": "steps",
+        "steps": [
+          {
+            "id": "check",
+            "kind": "command",
+            "argv": [
+              "sh",
+              "-lc",
+              "echo 'the shop answered 503' >&2; exit 22"
+            ],
+            "then": "end",
+            "whenFailed": "next"
+          },
+          {
+            "id": "find",
+            "kind": "agentTurn",
+            "name": "Find out why",
+            "message": "The shop's health check failed. Find out why and say what you found."
+          },
+          {
+            "id": "ok",
+            "kind": "approval",
+            "ask": "Send what was found to the group?",
+            "whenFailed": "end"
+          },
+          {
+            "id": "tell",
+            "kind": "systemEvent",
+            "name": "Tell the group",
+            "text": "The shop was down. What we found is above."
+          },
+          {
+            "id": "log",
+            "kind": "command",
+            "name": "Note it down",
+            "argv": [
+              "sh",
+              "-lc",
+              "date >> outages.log"
+            ]
+          }
+        ]
+      },
+      "delivery": {
+        "mode": "announce"
+      },
+      "target": {
+        "gatewayId": "telegram:main",
+        "chatId": "-100200"
+      },
+      "session": "fresh",
+      "keepAfterRun": false,
+      "createdBy": "usr_1",
+      "createdAt": 1760000000000,
+      "runCount": 0,
+      "failCount": 0,
+      "failStreak": 0,
+      "proposal": {
+        "by": "nouva",
+        "gatewayId": "telegram:main",
+        "chatId": "-100200",
+        "for": "usr_1",
+        "at": 1760000000000,
+        "replaces": "cron_1"
+      },
+      "describes": "every 10m",
+      "start": "scheduled"
+    },
+    "timezone": "Asia/Jakarta"
+  },
+  "/automations/waiting": {
+    "waiting": [
+      {
+        "runId": "run_1",
+        "jobId": "cron_1",
+        "jobName": "Shop health check",
+        "agentId": "nouva",
+        "ask": "Send what was found to the group?",
+        "said": "The payment service was restarting after its update. It answers again now, and nothing else is down.",
+        "since": 1760000000000,
+        "until": 1760000000000
+      }
+    ]
+  },
   "/sessions/ses_1/turns": {
     "events": [],
     "room": null,

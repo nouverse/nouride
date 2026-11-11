@@ -1,6 +1,6 @@
 /**
  * A mission job's fields (0.8.0): the goal each run works to, the commands that tell it is done, and how the reviewer
- * judges it — on the Schedule form and the Webhooks form, which set the same kind of job.
+ * judges it. Drawn in an automation's step that starts a mission, whatever starts the automation.
  *
  * Each run is a mission: it survives a restart, asks when it needs someone, and ends at the reviewer rather than at a
  * person's accept, since whoever made the job accepted the work then. The reviewer costs a turn a run, so a run whose
@@ -20,7 +20,7 @@ export interface MissionDraft {
   criteria: string;
 }
 
-/** The form's draft of a stored mission payload — or an empty one. */
+/** The form's draft of a stored mission, or an empty one. */
 export function missionDraft(payload?: { kind: string; [key: string]: unknown }): MissionDraft {
   const mission = payload?.kind === "mission" ? (payload as unknown as MissionPayload) : undefined;
   const review = mission?.review;
@@ -29,17 +29,6 @@ export function missionDraft(payload?: { kind: string; [key: string]: unknown })
     checks: (mission?.checks ?? []).join("\n"),
     review: review === false ? "off" : typeof review === "string" ? "criteria" : "goal",
     criteria: typeof review === "string" ? review : "",
-  };
-}
-
-/** The payload the daemon reads (`cronPayloadFrom`), from the draft. */
-export function missionPayload(draft: MissionDraft): MissionPayload {
-  const checks = draft.checks.split("\n").map((line) => line.trim()).filter(Boolean);
-  return {
-    kind: "mission",
-    goal: draft.goal.trim(),
-    ...(checks.length > 0 ? { checks } : {}),
-    ...(draft.review === "off" ? { review: false } : draft.review === "criteria" && draft.criteria.trim() ? { review: draft.criteria.trim() } : {}),
   };
 }
 

@@ -15,8 +15,7 @@ const PAGES: [path: string, key: keyof typeof PAGE_ASKS][] = [
   ["/agents", "agents"],
   ["/skills", "skills"],
   ["/mcp", "connectors"],
-  ["/schedule", "schedule"],
-  ["/webhooks", "webhooks"],
+  ["/automations", "automations"],
   ["/missions", "missions"],
   ["/work", "work"],
   ["/memories", "memory"],
@@ -75,8 +74,8 @@ describe("Ask Nouva on each page", () => {
   test("a viewer, who can send nothing, is not offered it; nor is a box with no orchestrator", async () => {
     answer({ ...withOrchestrator, ...asViewer });
     let viewer: ReturnType<typeof askOf> = null;
-    await renderPage("/webhooks", async (host) => {
-      await eventually(() => host.textContent?.includes("Webhooks") === true, 2_000, "the page");
+    await renderPage("/automations", async (host) => {
+      await eventually(() => host.textContent?.includes("Automations") === true, 2_000, "the page");
       viewer = askOf(host);
     });
     expect(viewer).toBeNull();
