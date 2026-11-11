@@ -1,6 +1,7 @@
 import { plural } from "@nouride/shared";
 import type { CronDetailResponse, CronJobRow, CronListResponse, CronRunOutcome, Client } from "@nouride/cli-kit";
-import { BOLD, DIM, GREEN, RED, RESET, say, usageError, usageLines, YELLOW, flagValue, hasFlag, sessionMode, knownAction } from "@nouride/cli-kit";
+import { BOLD, DIM, GREEN, RED, RESET, say, usageError, usageLines, flagValue, hasFlag, sessionMode, knownAction } from "@nouride/cli-kit";
+import { answerStep, runMark, sayRunSteps, stepsFromFile } from "./cron-steps.ts";
 
 /**
  * `nouride cron` — the operator's side of the scheduler.
@@ -16,70 +17,11 @@ import { BOLD, DIM, GREEN, RED, RESET, say, usageError, usageLines, YELLOW, flag
  */
 export async function cron(client: Client, args: string[]): Promise<void> {
   const [action, id] = args;
-  knownAction("cron", action, ["add", "update", "rm", "remove", "enable", "disable", "run", "runs", "list"]);
+  knownAction("cron", action, ["add", "update", "rm", "remove", "enable", "disable", "run", "runs", "continue", "stop", "list"]);
   const flag = (name: string): string | undefined => flagValue(args, `--${name}`);
   const has = (name: string): boolean => hasFlag(args, `--${name}`);
 
-  if (action === "add") {
-    const name = flag("name");
-    if (!name) {
-      usageLines(
-        `${DIM}nouride cron add --name <name> (--at <2h|timestamp> | --every <15m> | --cron "0 9 * * *")\n` +
-          `  --gateway <id> --chat <id>          where it goes (from an agent: this conversation)\n` +
-          `  --agent <id>                        which agent runs it (from an agent: that agent)\n` +
-          `  --text <message>                    a plain reminder, no model call\n` +
-          `  --message <prompt>                  wake the agent with this instead\n` +
-          `  --command <shell>                   run a command, no model call; a run that prints nothing sends nothing\n` +
-          `  --then agent                        …and wake the agent with what it printed, when it printed something\n` +
-          `  --mission <goal>                    long work: each run a mission, ended at the reviewer\n` +
-          `  --check <command>                   …a command whose exit says a run is done\n` +
-          `  --no-review                         …and no reviewer: the check is the whole answer\n` +
-          `  --session <fresh|isolated|chat>     history: none (default), private, or the chat's\n` +
-          `  --tz <zone> --quiet --keep${RESET}`,
-      );
-    }
-
-    const command = flag("command");
-    const message = flag("message");
-    const text = flag("text");
-    const goal = flag("mission");
-    const payload = goal
-      ? { kind: "mission", goal, ...(flag("check") ? { checks: [flag("check")] } : {}), ...(has("no-review") ? { review: false } : {}) }
-      : command
-      ? {
-          kind: "command",
-          // `sh -lc` because an operator typing `--command` means a shell line, not an argv. The
-          // agent reaching this argv meets a hardline gate — see `schedulesAShellCommand` in @nouride/policy.
-          argv: ["sh", "-lc", command],
-          then: flag("then") === "agent" ? "agentTurn" : "deliver",
-          ...(flag("cwd") ? { cwd: flag("cwd") } : {}),
-        }
-      : message
-        ? { kind: "agentTurn", message }
-        : { kind: "systemEvent", text: text ?? name };
-
-    const { job } = await client.post<{ job: CronJobRow }>("/cron", {
-      // From an agent's own turn the daemon sets these, the way `wake-up` and `update` already read
-      // them: an agent scheduling something for itself should not have to name itself to be heard.
-      agentId: flag("agent") ?? process.env.NOURIDE_AGENT_ID ?? "",
-      name,
-      ...(flag("at") ? { at: flag("at") } : {}),
-      ...(flag("every") ? { every: flag("every") } : {}),
-      ...(flag("cron") ? { cron: flag("cron") } : {}),
-      ...(flag("tz") ? { tz: flag("tz") } : {}),
-      payload,
-      target: {
-        gatewayId: flag("gateway") ?? process.env.NOURIDE_GATEWAY_ID ?? "",
-        chatId: flag("chat") ?? process.env.NOURIDE_CHAT_ID ?? "",
-      },
-      session: sessionMode(flag("session")),
-      delivery: { mode: has("quiet") ? "none" : "announce" },
-      keepAfterRun: has("keep"),
-    });
-
-    say(`${GREEN}✓${RESET} scheduled ${BOLD}${job.name}${RESET} ${DIM}${job.id}${RESET}`);
-    return say(`${DIM}  next ${job.nextRunAt ? new Date(job.nextRunAt).toISOString() : "never"}${RESET}`);
-  }
+  if (action === "add") return await addJob(client, args);
 
   /**
    * `update` — the last verb the deleted `cron_manage` had that this did not.
@@ -97,11 +39,12 @@ export async function cron(client: Client, args: string[]): Promise<void> {
     const text = flag("text");
     const message = flag("message");
     const agent = flag("agent");
+    const steps = flag("steps");
 
-    if (!id || (!at && !every && !cronExpr && !name && !text && !message && !agent)) {
+    if (!id || (!at && !every && !cronExpr && !name && !text && !message && !agent && !steps)) {
       usageLines(
         `${DIM}nouride cron update <id> [--name <name>] [--at <2h|timestamp> | --every <15m> | --cron "0 9 * * *"]\n` +
-          `  [--tz <zone>] [--text <message> | --message <prompt>] [--agent <id>]${RESET}`,
+          `  [--tz <zone>] [--text <message> | --message <prompt> | --steps <file.json>] [--agent <id>]${RESET}`,
       );
     }
 
@@ -112,8 +55,9 @@ export async function cron(client: Client, args: string[]): Promise<void> {
       ...(every ? { every } : {}),
       ...(cronExpr ? { cron: cronExpr } : {}),
       ...(flag("tz") ? { tz: flag("tz") } : {}),
-      ...(message ? { payload: { kind: "agentTurn", message } } : {}),
-      ...(text && !message ? { payload: { kind: "systemEvent", text } } : {}),
+      ...(steps ? { payload: { kind: "steps", steps: await stepsFromFile(steps) } } : {}),
+      ...(message && !steps ? { payload: { kind: "agentTurn", message } } : {}),
+      ...(text && !message && !steps ? { payload: { kind: "systemEvent", text } } : {}),
     });
 
     say(`${GREEN}✓${RESET} updated ${BOLD}${job.name}${RESET} ${DIM}${job.id}${RESET}`);
@@ -138,10 +82,11 @@ export async function cron(client: Client, args: string[]): Promise<void> {
     const { outcome } = await client.post<{ outcome: CronRunOutcome }>(
       `/cron/${encodeURIComponent(id)}/run`,
     );
-    const mark = outcome.status === "success" ? `${GREEN}✓${RESET}` : `${RED}✗${RESET}`;
-    say(`${mark} ${outcome.status}`);
+    say(`${runMark(outcome.status as Parameters<typeof runMark>[0])} ${outcome.status}`);
     return outcome.result ? say(`${DIM}${outcome.result}${RESET}`) : undefined;
   }
+
+  if (action === "continue" || action === "stop") return await answerStep(client, action, id);
 
   if (action === "runs") {
     if (!id) usageError(`usage: nouride cron runs <id>`);
@@ -149,11 +94,10 @@ export async function cron(client: Client, args: string[]): Promise<void> {
     say(`${BOLD}${job.name}${RESET} ${DIM}${job.id} · ${job.describes}${RESET}`);
     if (!runs || runs.length === 0) return say(`${DIM}no runs yet${RESET}`);
     for (const run of runs) {
-      const mark =
-        run.status === "success" ? `${GREEN}✓${RESET}` : run.status === "skipped" ? `${DIM}–${RESET}` : run.status === "interrupted" ? `${YELLOW}↻${RESET}` : `${RED}✗${RESET}`;
-      const took = run.finishedAt ? `${Math.round((run.finishedAt - run.startedAt) / 1000)}s` : "unfinished";
-      say(`${mark} ${new Date(run.startedAt).toISOString()} ${DIM}${took}${RESET}`);
+      const took = run.finishedAt ? `${Math.round((run.finishedAt - run.startedAt) / 1000)}s` : run.status === "waiting" ? `waiting · ${run.id}` : "unfinished";
+      say(`${runMark(run.status)} ${new Date(run.startedAt).toISOString()} ${DIM}${took}${RESET}`);
       if (run.result) say(`${DIM}    ${String(run.result).split("\n")[0]?.slice(0, 160) ?? ""}${RESET}`);
+      sayRunSteps(run);
     }
     return;
   }
@@ -171,7 +115,9 @@ export async function cron(client: Client, args: string[]): Promise<void> {
     const mark = job.enabled ? `${GREEN}●${RESET}` : `${DIM}○${RESET}`;
     const next = job.nextRunAt
       ? new Date(job.nextRunAt).toLocaleString("sv-SE", { timeZone: timezone })
-      : job.disabledReason
+      : job.trigger.kind === "manual" && job.enabled
+        ? "when started"
+        : job.disabledReason
         ? // Red for what went wrong; `fired` is a one-shot kept by `--keep` after it ran, which did not.
           `${job.disabledReason === "fired" ? DIM : RED}${job.disabledReason}${RESET}`
         : "paused";
@@ -180,10 +126,82 @@ export async function cron(client: Client, args: string[]): Promise<void> {
     say(
       `    ${DIM}${job.agentId} → ${job.target.gatewayId} ${job.target.chatId}` +
         ` · ${job.session}` +
+        `${job.payload.kind === "steps" ? ` · ${job.payload.steps.length} ${plural(job.payload.steps.length, "step")}` : ""}` +
         ` · ${job.runCount} ${plural(job.runCount, "run")}` +
         `${job.failCount > 0 ? `, ${job.failCount} failed` : ""}${RESET}`,
     );
   }
   say();
   say(`${DIM}nouride cron run <id>  ·  runs <id>  ·  update <id>  ·  disable <id>  ·  rm <id>  ·  --all${RESET}`);
+  say(`${DIM}a run that waits for a person: nouride cron continue <run id>  ·  stop <run id>${RESET}`);
+}
+
+/** `nouride cron add`: one thing, or with `--steps` a list of them, on a schedule or started by hand. */
+async function addJob(client: Client, args: string[]): Promise<void> {
+  const flag = (name: string): string | undefined => flagValue(args, `--${name}`);
+  const has = (name: string): boolean => hasFlag(args, `--${name}`);
+  const name = flag("name");
+  if (!name) {
+    usageLines(
+      `${DIM}nouride cron add --name <name> (--at <2h|timestamp> | --every <15m> | --cron "0 9 * * *" | --manual)\n` +
+        `  --gateway <id> --chat <id>          where it goes (from an agent: this conversation)\n` +
+        `  --agent <id>                        which agent runs it (from an agent: that agent)\n` +
+        `  --text <message>                    a plain reminder, no model call\n` +
+        `  --message <prompt>                  wake the agent with this instead\n` +
+        `  --command <shell>                   run a command, no model call; a run that prints nothing sends nothing\n` +
+        `  --then agent                        …and wake the agent with what it printed, when it printed something\n` +
+        `  --mission <goal>                    long work: each run a mission, ended at the reviewer\n` +
+        `  --check <command>                   …a command whose exit says a run is done\n` +
+        `  --no-review                         …and no reviewer: the check is the whole answer\n` +
+        `  --steps <file.json>                 several of these in a fixed order: the list, as JSON\n` +
+        `  --manual                            no time: it runs when somebody starts it\n` +
+        `  --session <fresh|isolated|chat>     history: none (default), private, or the chat's\n` +
+        `  --tz <zone> --quiet --keep${RESET}`,
+    );
+  }
+
+  const command = flag("command");
+  const message = flag("message");
+  const text = flag("text");
+  const goal = flag("mission");
+  const steps = flag("steps");
+  const payload = steps
+    ? { kind: "steps", steps: await stepsFromFile(steps) }
+    : goal
+    ? { kind: "mission", goal, ...(flag("check") ? { checks: [flag("check")] } : {}), ...(has("no-review") ? { review: false } : {}) }
+    : command
+    ? {
+        kind: "command",
+        // `sh -lc` because an operator typing `--command` means a shell line, not an argv. The
+        // agent reaching this argv meets a hardline gate — see `schedulesAShellCommand` in @nouride/policy.
+        argv: ["sh", "-lc", command],
+        then: flag("then") === "agent" ? "agentTurn" : "deliver",
+        ...(flag("cwd") ? { cwd: flag("cwd") } : {}),
+      }
+    : message
+      ? { kind: "agentTurn", message }
+      : { kind: "systemEvent", text: text ?? name };
+
+  const { job } = await client.post<{ job: CronJobRow }>("/cron", {
+    // From an agent's own turn the daemon sets these, the way `wake-up` and `update` already read
+    // them: an agent scheduling something for itself should not have to name itself to be heard.
+    agentId: flag("agent") ?? process.env.NOURIDE_AGENT_ID ?? "",
+    name,
+    ...(flag("at") ? { at: flag("at") } : {}),
+    ...(flag("every") ? { every: flag("every") } : {}),
+    ...(flag("cron") ? { cron: flag("cron") } : {}),
+    ...(flag("tz") ? { tz: flag("tz") } : {}),
+    ...(has("manual") ? { manual: true } : {}),
+    payload,
+    target: {
+      gatewayId: flag("gateway") ?? process.env.NOURIDE_GATEWAY_ID ?? "",
+      chatId: flag("chat") ?? process.env.NOURIDE_CHAT_ID ?? "",
+    },
+    session: sessionMode(flag("session")),
+    delivery: { mode: has("quiet") ? "none" : "announce" },
+    keepAfterRun: has("keep"),
+  });
+
+  say(`${GREEN}✓${RESET} scheduled ${BOLD}${job.name}${RESET} ${DIM}${job.id}${RESET}`);
+  return say(`${DIM}  next ${job.nextRunAt ? new Date(job.nextRunAt).toISOString() : "never"}${RESET}`);
 }

@@ -184,16 +184,19 @@ ${BOLD}Talking to a running daemon${RESET}
   nouride mission delete <id> [--force]
                                    Delete an ended mission: its conversation, checklist and own folder;
                                    --force also loses work nobody committed in that folder
-  nouride cron [--all]             Scheduled jobs
-  nouride cron add --name … (--at 2h|--every 15m|--cron "0 9 * * *") --gateway <id> --chat <id>
+  nouride cron [--all]             Scheduled jobs, and the ones started by hand
+  nouride cron add --name … (--at 2h|--every 15m|--cron "0 9 * * *"|--manual) --gateway <id> --chat <id>
                                    --text <message> a plain reminder, no model call; --message <prompt>
                                    wakes the agent; --command <shell> runs a command (--cwd <dir>, and
                                    --then agent to wake the agent with what it printed; a run that
                                    prints nothing sends nothing); --mission <goal>
-                                   runs each time as a mission (--check <command>, --no-review).
+                                   runs each time as a mission (--check <command>, --no-review);
+                                   --steps <file.json> runs several of these in a fixed order.
                                    --agent <id>, --tz <zone>, --session fresh|isolated|chat, --quiet, --keep
-  nouride cron update <id> [--name …] [--at|--every|--cron …] [--tz <zone>] [--text <message> | --message <prompt>] [--agent <id>]
+  nouride cron update <id> [--name …] [--at|--every|--cron …] [--tz <zone>] [--text <message> | --message <prompt> | --steps <file.json>] [--agent <id>]
   nouride cron run|runs|enable|disable|rm <id>
+  nouride cron continue|stop <run id>
+                                   Answer a run whose step waits for a person: go on, or stop there
   nouride webhook                  Endpoints that run a job when called, not on a clock
   nouride webhook add --name … --agent <id> --gateway <id> --chat <id> --message <prompt>
                                    --text <message> instead, no model call; --session fresh|isolated|chat; --quiet

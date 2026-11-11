@@ -1,4 +1,4 @@
-import type { AgentLook, AgentStatus, ApprovalRequest, Job, Person, Session } from "@nouride/shared";
+import type { AgentLook, AgentStatus, ApprovalRequest, Job, JobRun, Person, Session } from "@nouride/shared";
 import type {
   BackgroundJob,
   CatalogDraft,
@@ -201,13 +201,7 @@ export interface CronListResponse {
 
 export interface CronDetailResponse {
   job: CronJobRow;
-  runs: {
-    id: string;
-    startedAt: number;
-    finishedAt?: number | null;
-    status: string;
-    result?: string | null;
-  }[];
+  runs: JobRun[];
 }
 
 /**
