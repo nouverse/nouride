@@ -119,6 +119,42 @@ describe("the chat list", () => {
     ]);
   });
 
+  test("leaves the reader's own person out of the names: Mine is theirs already", async () => {
+    expect(peopleOptions([{ key: "raka", name: "Raka" }, { key: "gading", name: "Gading" }], "gading").map((option) => option.label)).toEqual(["Mine", "Everyone", "Raka", "Not known"]);
+    // Nobody to leave out for an account that is no person, or one whose person is not in the list.
+    expect(peopleOptions([{ key: "gading", name: "Gading" }], undefined).map((option) => option.label)).toEqual(["Mine", "Everyone", "Gading", "Not known"]);
+
+    answer({
+      "/auth/me": { status: 200, body: signedIn("admin") },
+      "/sessions": { status: 200, body: { sessions: EVERYONE, total: EVERYONE.length } },
+      "/people/me": { status: 200, body: { person: { key: "gading", name: "Gading" } } },
+    });
+    let list: string[] = [];
+    await renderPage("/chat", async (host) => {
+      await eventually(() => trigger(host) !== null, 3_000, "the dropdown");
+      trigger(host)!.click();
+      await eventually(() => offered().length > 0 && !offered().includes("Gading"), 3_000, "the list without the reader's own name");
+      list = offered();
+    });
+    expect(list).toEqual(["Mine", "Everyone", "Kak Sam", "Raka", "Not known"]);
+  });
+
+  test("a choice of their own name, kept from before, is Mine", async () => {
+    localStorage.setItem("nouride-chat-whose", JSON.stringify("person:gading"));
+    answer({
+      "/auth/me": { status: 200, body: signedIn("admin") },
+      "/sessions": { status: 200, body: { sessions: EVERYONE, total: EVERYONE.length } },
+      "/people/me": { status: 200, body: { person: { key: "gading", name: "Gading" } } },
+    });
+    let label = null as string | null;
+    await renderPage("/chat", async (host) => {
+      await eventually(() => trigger(host)?.getAttribute("aria-label") === "Whose chats: Mine", 3_000, "the dropdown reading Mine");
+      label = trigger(host)!.getAttribute("aria-label");
+    });
+    expect(label).toBe("Whose chats: Mine");
+    expect(JSON.parse(localStorage.getItem("nouride-chat-whose") ?? "null")).toBe("mine");
+  });
+
   test("offers nothing to pick to anyone else", async () => {
     answer({ "/auth/me": { status: 200, body: signedIn("operator") } });
     let present = true;
