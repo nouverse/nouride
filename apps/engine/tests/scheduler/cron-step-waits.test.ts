@@ -226,6 +226,27 @@ describe("a mission as a step", () => {
     await h.scheduler.stop();
   });
 
+  test("a job changed while its run waits is not found due every second: its time is taken back until the run ends", async () => {
+    const made = job([mission("fix", "Fix it.")], { trigger: { kind: "every", everyMs: 60_000 } });
+    const h = hands();
+    h.scheduler.start();
+    clock += 61_000;
+    await eventually(() => store.runs(made.id).length === 1 && run(made.id).status === "waiting", 4_000, "the scheduled run to wait");
+
+    // A person renames it on its page: any change gives a job its next time again.
+    store.update(made.id, { name: "weekly, renamed" }, "tester");
+    expect(store.get(made.id)!.nextRunAt).toBe(clock + 60_000);
+    clock += 61_000;
+    await eventually(() => store.get(made.id)!.nextRunAt === undefined, 4_000, "the job's time to be taken back");
+    // And no second run was started beside the one that waits.
+    expect(store.runs(made.id)).toHaveLength(1);
+
+    h.finish("msn_1", { said: "Done." });
+    await over(made.id);
+    expect(store.get(made.id)).toMatchObject({ runCount: 1, nextRunAt: clock + 60_000 });
+    await h.scheduler.stop();
+  });
+
   test("a run forced by hand that waits takes its job's time, and gives it back uncounted when it ends", async () => {
     const made = job([mission("fix", "Fix it.")], { trigger: { kind: "every", everyMs: 60_000 } });
     const h = hands();
