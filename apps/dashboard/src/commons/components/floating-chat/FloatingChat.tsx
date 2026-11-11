@@ -47,6 +47,8 @@ export function FloatingChat({ pathname }: { pathname: string }) {
   const [last, setLast] = useKept(LAST_AGENT_KEY, "", isString);
   /** What is written in the box and not sent: kept here, so putting the panel away does not throw it away. */
   const box = useState("");
+  /** The conversations a first message in the panel started, by agent: kept here for the same reason (`FloatingPanel`). */
+  const started = useState<Record<string, string>>({});
   const button = useRef<HTMLButtonElement>(null);
 
   // Gone with the shell around it (Chats, a sign-out): closed, so it is not open again on the page after.
@@ -68,7 +70,7 @@ export function FloatingChat({ pathname }: { pathname: string }) {
   const name = chat.nameOf(shown);
   const look = chat.looks.get(shown);
   const label = `Chat with ${name}`;
-  const panel = <FloatingPanel agentId={state.agent} chat={chat} box={box} draft={state.draft} focusBox={wide} onClose={closeFloatingChat} />;
+  const panel = <FloatingPanel agentId={state.agent} chat={chat} box={box} started={started} draft={state.draft} focusBox={wide} onClose={closeFloatingChat} />;
 
   return (
     <>

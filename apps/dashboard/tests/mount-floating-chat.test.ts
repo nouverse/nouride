@@ -339,6 +339,11 @@ describe("the conversation in it", () => {
         await eventually(() => sendIn(card())?.disabled === false, 2_000, "send enabled again");
         sendIn(card())!.click();
         await eventually(() => sent(posted.posts).length === 2, 3_000, "the second message");
+        // Closed and opened before the list knows the conversation (here it never does): still that one, not a new chat.
+        floatButton(host)!.click();
+        await eventually(() => card() === null, 2_000, "closed");
+        await open(host);
+        expect(link()!.getAttribute("href")).toBe("/dashboard/chat/ses_nix");
       });
       // The page says its own title (`PageHeader`), and nothing it is about: it is a list.
       const page = { path: "/dashboard/skills", title: "Skills Workshop" };

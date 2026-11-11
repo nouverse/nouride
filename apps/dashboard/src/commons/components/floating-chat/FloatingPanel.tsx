@@ -36,6 +36,7 @@ export function FloatingPanel({
   agentId,
   chat,
   box,
+  started: [started, setStarted],
   draft,
   focusBox,
   onClose,
@@ -44,6 +45,12 @@ export function FloatingPanel({
   chat: ReturnType<typeof useChatAgents>;
   /** What is written in the box and not sent, kept by the shell: the panel is not drawn while the chat is closed. */
   box: [string, Dispatch<SetStateAction<string>>];
+  /**
+   * The conversations a first message here started, by agent, kept by the shell too: used where the list below does
+   * not know one yet. The daemon writes a conversation down as its first turn starts, a moment after the list was
+   * read again for it, and closed and opened in that moment the panel drew a new chat where one had just begun.
+   */
+  started: [Record<string, string>, Dispatch<SetStateAction<Record<string, string>>>];
   /** A message written for the person to send (`AskAgentButton`). */
   draft: string | null;
   /**
@@ -56,8 +63,6 @@ export function FloatingPanel({
   const router = useRouter();
   const root = useRef<HTMLDivElement>(null);
   const [picking, setPicking] = useState(false);
-  /** The conversations a first message here started, by agent: used until the list below knows them. */
-  const [started, setStarted] = useState<Record<string, string>>({});
   /**
    * The person's newest conversation with each agent, as the Chats page lists them. Read again at every opening, so one
    * started or deleted elsewhere since is the one shown; what was read last is drawn meanwhile, so the panel opens at
