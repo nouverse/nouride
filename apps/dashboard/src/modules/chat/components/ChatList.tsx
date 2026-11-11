@@ -45,8 +45,8 @@ const fromAgent = (row: ChatRow) => (row.kind === "agent" ? row.entry?.last?.fro
 
 export function ChatList({ data, open, className }: { data: ChatListData; open: OpenNow; className?: string }) {
   const [tab, setTab] = useState<"chats" | "groups">(open.group ? "groups" : "chats");
-  // An admin reads their own by default, and everyone's set apart by person when they pick it.
-  const { whose, setWhose, of, setOf, asked, canPick } = useWhose();
+  // An admin reads their own by default; everyone's, one person's or nobody known's when they pick it beside the search.
+  const { whose, setWhose, canPick } = useWhose();
   const [query, setQuery] = useState("");
   const [pinnedGroups] = usePinnedGroups();
   const seen = useSeen();
@@ -84,20 +84,10 @@ export function ChatList({ data, open, className }: { data: ChatListData; open: 
           <h1 className="font-display text-2xl font-medium tracking-tight text-base-content">Chats</h1>
           <StartMenu data={data} />
         </div>
-        <SearchInput value={query} onChange={setQuery} placeholder={tab === "chats" ? "Search chats" : "Search groups"} className="input-md h-11 w-full sm:h-10" />
-        {canPick ? (
-          <SegmentedTabs
-            fill
-            label="Whose chats"
-            value={whose}
-            onChange={setWhose}
-            tabs={[
-              { value: "mine", label: "Mine" },
-              { value: "everyone", label: "Everyone" },
-            ]}
-          />
-        ) : null}
-        {canPick && whose === "everyone" ? <PeopleFilter value={of} onChange={setOf} /> : null}
+        <div className="flex items-center gap-2">
+          <SearchInput value={query} onChange={setQuery} placeholder={tab === "chats" ? "Search chats" : "Search groups"} className="input-md h-11 w-full min-w-0 flex-1 sm:h-10" />
+          {canPick ? <PeopleFilter value={whose} onChange={setWhose} /> : null}
+        </div>
         <SegmentedTabs
           fill
           label="What to list"
@@ -127,8 +117,8 @@ export function ChatList({ data, open, className }: { data: ChatListData; open: 
           </div>
         ) : tab === "groups" ? (
           <GroupsTab data={data} query={query} openRow={open.roomChatId ? `room:${open.roomChatId}` : open.group ? `group:${open.group}` : undefined} seen={seen} />
-        ) : whose === "everyone" ? (
-          <EveryoneList data={data} query={query} whose={asked} current={open.sessionId} />
+        ) : whose !== "mine" ? (
+          <EveryoneList data={data} query={query} whose={whose} current={open.sessionId} />
         ) : data.agents.length === 0 ? (
           <EmptyState icon={MessagesSquare} title="No agents yet" description="Make an agent on Agents, and you can talk to it here." />
         ) : !view.pinned && view.recent.length === 0 && view.untouched.length === 0 ? (

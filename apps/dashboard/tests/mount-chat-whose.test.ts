@@ -43,66 +43,89 @@ describe("everyone's, set apart", () => {
 
 const ME = WIRE["/auth/me"] as { user: Record<string, unknown> } & Record<string, unknown>;
 const signedIn = (role: string) => ({ ...ME, role, user: { ...ME.user, role } });
-const tabs = (host: HTMLElement) => [...host.querySelectorAll('[role="tablist"]')].map((list) => list.getAttribute("aria-label"));
+const tablists = (host: HTMLElement) => [...host.querySelectorAll('[role="tablist"]')].map((list) => list.getAttribute("aria-label"));
+const trigger = (host: HTMLElement) => host.querySelector('button[aria-label^="Whose chats:"]') as HTMLButtonElement | null;
+const offered = () => [...document.querySelectorAll('[role="listbox"][aria-label="Whose chats"] [role="option"]')].map((option) => option.textContent?.trim() ?? "");
+const choose = (label: string) => ([...document.querySelectorAll('[role="listbox"][aria-label="Whose chats"] [role="option"] button')].find((button) => button.textContent?.trim() === label) as HTMLElement).click();
+const headings = (host: HTMLElement) => [...host.querySelectorAll('aside[aria-label="Chats"] section')].map((section) => section.getAttribute("aria-label") ?? "");
 
 describe("the chat list", () => {
-  test("offers an admin Mine and Everyone, and Everyone lists each person's chats under their name", async () => {
+  test("gives an admin one dropdown beside the search, Mine first, and no second bar of tabs", async () => {
     answer({ "/auth/me": { status: 200, body: signedIn("admin") }, "/sessions": { status: 200, body: { sessions: EVERYONE, total: EVERYONE.length } } });
+    let label = null as string | null;
     let lists: (string | null)[] = [];
-    let headings: string[] = [];
+    let list: string[] = [];
+    let after: string[] = [];
+    let sameRow = false;
     await renderPage("/chat", async (host) => {
-      await eventually(() => tabs(host).includes("Whose chats"), 3_000, "the choice");
-      lists = tabs(host);
-      ([...host.querySelectorAll('[role="tab"]')].find((tab) => tab.textContent?.trim() === "Everyone") as HTMLElement).click();
+      await eventually(() => trigger(host) !== null, 3_000, "the dropdown");
+      label = trigger(host)!.getAttribute("aria-label");
+      lists = tablists(host);
+      // In the search's row, right after it: not a row of its own under it.
+      const before = trigger(host)!.previousElementSibling;
+      sameRow = before?.tagName === "LABEL" && before.querySelector(':scope > input[type="search"]') !== null;
+      trigger(host)!.click();
+      await eventually(() => offered().length > 0, 3_000, "the list");
+      list = offered();
+      choose("Everyone");
       await eventually(() => (host.querySelector('aside[aria-label="Chats"]')?.textContent ?? "").includes("Not known"), 3_000, "everyone's");
-      headings = [...host.querySelectorAll('aside[aria-label="Chats"] section')].map((section) => section.getAttribute("aria-label") ?? "");
+      after = headings(host);
       // Put back: the choice is kept in this browser, and the next test opens on Mine.
-      ([...host.querySelectorAll('[role="tab"]')].find((tab) => tab.textContent?.trim() === "Mine") as HTMLElement).click();
+      trigger(host)!.click();
+      await eventually(() => offered().length > 0, 3_000, "the list again");
+      choose("Mine");
     });
-    expect(lists).toContain("Whose chats");
-    expect(headings).toEqual(["Rina", "Gading", "Scheduled jobs", "Not known"]);
+    expect(label).toBe("Whose chats: Mine");
+    expect(sameRow).toBe(true);
+    expect(lists).toEqual(["What to list"]);
+    expect(list).toEqual(["Mine", "Everyone", "Gading", "Kak Sam", "Raka", "Not known"]);
+    expect(after).toEqual(["Rina", "Gading", "Scheduled jobs", "Not known"]);
   });
 
-  test("narrows everyone's to one person, found by typing part of their name", async () => {
+  test("finds a person as their name is typed, and picking them lists only theirs", async () => {
     const sams = [row("ses_s1", { title: "jadwal arisan", person: { key: "sam", name: "Kak Sam" } })];
     answer({
       "/auth/me": { status: 200, body: signedIn("admin") },
       "/sessions": { status: 200, body: { sessions: EVERYONE, total: EVERYONE.length } },
       "/sessions?whose=person:sam": { status: 200, body: { sessions: sams, total: 1 } },
     });
-    let offered: string[] = [];
-    let headings: string[] = [];
+    let found: string[] = [];
+    let shown: string[] = [];
     await renderPage("/chat", async (host) => {
-      await eventually(() => tabs(host).includes("Whose chats"), 3_000, "the choice");
-      ([...host.querySelectorAll('[role="tab"]')].find((tab) => tab.textContent?.trim() === "Everyone") as HTMLElement).click();
-      await eventually(() => host.querySelector('input[aria-label="Whose chats, by person"]') !== null, 3_000, "the person filter");
-      const field = host.querySelector('input[aria-label="Whose chats, by person"]') as HTMLInputElement;
-      field.focus();
-      type(field, "sam");
-      await eventually(() => document.querySelectorAll('[role="listbox"][aria-label="People"] [role="option"]').length > 0, 3_000, "the people listed");
-      offered = [...document.querySelectorAll('[role="listbox"][aria-label="People"] [role="option"]')].map((option) => option.textContent?.trim() ?? "");
-      (document.querySelector('[role="listbox"][aria-label="People"] [role="option"] button') as HTMLElement).click();
+      await eventually(() => trigger(host) !== null, 3_000, "the dropdown");
+      trigger(host)!.click();
+      await eventually(() => document.querySelector('input[aria-label="Find a person"]') !== null, 3_000, "the field");
+      type(document.querySelector('input[aria-label="Find a person"]') as HTMLInputElement, "sam");
+      await eventually(() => offered().length === 1, 3_000, "one person found");
+      found = offered();
+      choose("Kak Sam");
       await eventually(() => (host.querySelector('aside[aria-label="Chats"]')?.textContent ?? "").includes("jadwal arisan"), 3_000, "her chats");
-      headings = [...host.querySelectorAll('aside[aria-label="Chats"] section')].map((section) => section.getAttribute("aria-label") ?? "");
-      // Put back: the choices are kept in this browser, and the next test opens on Mine.
-      (host.querySelector('button[aria-label="All people"]') as HTMLElement | null)?.click();
-      ([...host.querySelectorAll('[role="tab"]')].find((tab) => tab.textContent?.trim() === "Mine") as HTMLElement).click();
+      shown = headings(host);
+      trigger(host)!.click();
+      await eventually(() => offered().length > 0, 3_000, "the list again");
+      choose("Mine");
     });
-    expect(offered).toEqual(["Kak Sam"]);
-    expect(headings).toEqual(["Kak Sam"]);
+    expect(found).toEqual(["Kak Sam"]);
+    expect(shown).toEqual(["Kak Sam"]);
   });
 
-  test("lists every person, by name, between all of them and nobody known", () => {
-    expect(peopleOptions([{ key: "raka", name: "Raka" }, { key: "sam", name: "Kak Sam" }]).map((option) => `${option.value}=${option.label}`)).toEqual(["=All people", "person:sam=Kak Sam", "person:raka=Raka", "unknown=Not known"]);
+  test("lists Mine, Everyone, each person by name, then nobody known", () => {
+    expect(peopleOptions([{ key: "raka", name: "Raka" }, { key: "sam", name: "Kak Sam" }]).map((option) => `${option.value}=${option.label}`)).toEqual([
+      "mine=Mine",
+      "everyone=Everyone",
+      "person:sam=Kak Sam",
+      "person:raka=Raka",
+      "unknown=Not known",
+    ]);
   });
 
   test("offers nothing to pick to anyone else", async () => {
     answer({ "/auth/me": { status: 200, body: signedIn("operator") } });
-    let lists: (string | null)[] = [];
+    let present = true;
     await renderPage("/chat", async (host) => {
-      await eventually(() => tabs(host).includes("What to list"), 3_000, "the list");
-      lists = tabs(host);
+      await eventually(() => tablists(host).includes("What to list"), 3_000, "the list");
+      present = trigger(host) !== null;
     });
-    expect(lists).not.toContain("Whose chats");
+    expect(present).toBe(false);
   });
 });

@@ -339,10 +339,9 @@ terakhirnya.
 dengan agent di Telegram, Discord, dan WhatsApp (lewat orang yang jadi akun itu di People), grup tempat orang itu pernah
 bicara, dan room yang ia buat atau pernah bicara di dalamnya. Dua akun yang bicara dengan agent yang sama masing-masing
 punya percakapan sendiri. Operator atau viewer tidak pernah melihat milik orang lain: tidak di daftar, tidak juga lewat
-link-nya. Admin memilih **Mine** atau **Everyone** di atas daftar dan di History: **Everyone** menampilkan semua
-percakapan dipisah per orang, lalu yang dikatakan jadwal sendirian, lalu chat pribadi orang yang belum ada di People
-(**Not known**). Kolom di bawahnya menyaring daftar ke satu orang: ketik sebagian namanya lalu pilih, atau pilih **Not
-known**. Percakapan jadwal dan mission belum dipisah per orang: semua orang tetap melihatnya seperti sebelumnya.
+link-nya. Admin memilih chat siapa lewat dropdown di sebelah kolom cari, di daftar dan di History: **Mine** (bawaannya),
+**Everyone**, yang menampilkan semua percakapan dipisah per orang, lalu yang dikatakan jadwal sendirian, lalu chat
+pribadi orang yang belum ada di People, satu orang (ketik sebagian namanya untuk mencarinya), atau **Not known**. Percakapan jadwal dan mission belum dipisah per orang: semua orang tetap melihatnya seperti sebelumnya.
 
 **Chat dengan agent** membuka percakapan terakhirnya, jadi kamu lanjut dari yang tadi. **History** di header-nya hanya
 berisi percakapan agent itu: yang di dashboard, dan chat pribadinya di aplikasi chat, masing-masing dengan asalnya.
