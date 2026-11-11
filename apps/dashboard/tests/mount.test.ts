@@ -27,7 +27,7 @@
  */
 
 import { afterEach, describe, expect, test } from "bun:test";
-import { answer, buttons, enabled, errors, overrides, PAGES, painted, press, recordPosts, renderPage, RESPONSES, type, useMountHarness, WIRE } from "./mount-harness.ts";
+import { answer, buttons, dropdown, enabled, errors, overrides, PAGES, painted, press, recordPosts, renderPage, RESPONSES, type, useMountHarness, WIRE } from "./mount-harness.ts";
 import { eventually, sleep } from "./wait.ts";
 
 useMountHarness();
@@ -1902,10 +1902,9 @@ describe("missions", () => {
     let chosen = "";
     try {
       await renderPage("/missions?agent=nouva", async (host) => {
-        const select = host.querySelector('select[aria-label="Agent"]') as HTMLSelectElement;
-        chosen = select.value;
-        select.value = "";
-        select.dispatchEvent(new (host.ownerDocument.defaultView as unknown as typeof globalThis).Event("change", { bubbles: true }));
+        const agent = dropdown(host, "Agent");
+        chosen = agent.holds() ?? "";
+        await agent.pick("Every agent");
         // With the 3 days the list shows of what finished unless chosen (0.8.8): `days` goes with every ask.
         await eventually(() => asked.includes("?days=3"), 2_000, "every agent's list");
       });

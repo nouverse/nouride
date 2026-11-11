@@ -35,7 +35,6 @@ export const LONG_FUNCTIONS: Record<string, Record<string, Budget>> = {
   "apps/dashboard/src/modules/memories/settings.tab.tsx": { SettingsTab: { lines: 194, why: COMPONENT("memory's settings") } },
   "apps/dashboard/src/modules/memories/timeline.tab.tsx": { TimelineTab: { lines: 188, why: COMPONENT("memory's timeline, its list while it loads") } },
   "apps/dashboard/src/modules/missions/mission.page.tsx": { MissionPage: { lines: 164, why: COMPONENT("one mission's page") } },
-  "apps/dashboard/src/modules/missions/index.page.tsx": { MissionsPage: { lines: 151, why: COMPONENT("every mission, its filters and its empty states") } },
   "apps/dashboard/src/modules/office/index.page.tsx": { OfficePage: { lines: 159, why: COMPONENT("the Office, the agents at their desks") } },
   "apps/dashboard/src/modules/people/index.page.tsx": { PersonForm: { lines: 178, why: COMPONENT("the form for one person") } },
   "apps/dashboard/src/modules/schedule/components/JobForm.tsx": { JobForm: { lines: 238, why: COMPONENT("the form for a scheduled job") } },

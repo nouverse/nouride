@@ -16,6 +16,8 @@ import type { BackgroundJob } from "@nouride/wire";
 import { useTextFilter } from "@/commons/lib/use-text-filter";
 import { useOrchestrator, useOrchestratorFirst } from "@/commons/components/agents/AgentName";
 import { FILL_PAGE, ScrollCard } from "@/commons/components/ui/ScrollCard";
+import { SearchSelect } from "@/commons/components/ui/SearchSelect";
+import { agentOptions } from "@/commons/lib/agents";
 import { Count, SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
 import { EmptyState, ErrorNote, PageHeader } from "@/commons/components/ui/ui";
 import { RetentionControl } from "@/commons/components/ui/RetentionControl";
@@ -87,32 +89,20 @@ export default function JobsPage({ agent }: { agent?: string }) {
   const matched = new Set(found);
 
   const kindFilter = (
-    <select className="select select-sm w-36 rounded-xl" aria-label="Kind" value={kind} onChange={(event) => setKind(event.target.value as JobKindFilter)}>
-      {KINDS.map((entry) => (
-        <option key={entry.id} value={entry.id}>
-          {entry.label}
-        </option>
-      ))}
-    </select>
+    <SearchSelect small label="Kind" options={KINDS.map((entry) => ({ value: entry.id, label: entry.label }))} value={kind} onChange={setKind} width={176} />
   );
 
   // The address's `?agent=`, as Missions does — the daemon then sends that agent's only.
   const agentFilter =
     agents.length > 1 || agent ? (
-      <select
-        className="select select-sm w-40 rounded-xl"
-        aria-label="Agent"
+      <SearchSelect
+        small
+        label="Agent"
+        options={agentOptions(agents.map((entry) => entry.id), orchestrator, agent)}
         value={agent ?? ""}
-        onChange={(event) => void navigate({ to: "/jobs", search: event.target.value ? { agent: event.target.value } : {} })}
-      >
-        <option value="">Every agent</option>
-        {agents.map((entry) => (
-          <option key={entry.id} value={entry.id}>
-            {entry.id === orchestrator ? `${entry.id} (orchestrator)` : entry.id}
-          </option>
-        ))}
-        {agent && !agents.some((entry) => entry.id === agent) ? <option value={agent}>{agent}</option> : null}
-      </select>
+        onChange={(next) => void navigate({ to: "/jobs", search: next ? { agent: next } : {} })}
+        width={208}
+      />
     ) : null;
 
   return (

@@ -7,6 +7,7 @@ import { api } from "@/commons/lib/api";
 import type { StoredLogEntry } from "@nouride/wire";
 import { Card, EmptyState } from "@/commons/components/ui/ui";
 import { useDebounced } from "@/commons/hooks/use-debounced";
+import { SearchSelect } from "@/commons/components/ui/SearchSelect";
 import { Panel } from "./Panel";
 import { ListLoading } from "@/commons/components/ui/Spinner";
 
@@ -17,6 +18,13 @@ const LEVEL_STYLE: Record<StoredLogEntry["level"], { badge: string; icon: typeof
   warn: { badge: "text-warning", icon: TriangleAlert },
   error: { badge: "text-error", icon: AlertTriangle },
 };
+
+const LEVELS = [
+  { value: "", label: "All levels" },
+  { value: "info", label: "Info and above" },
+  { value: "warn", label: "Warnings and errors" },
+  { value: "error", label: "Errors only" },
+];
 
 export function DaemonLog() {
   const [level, setLevel] = useState("");
@@ -95,29 +103,19 @@ export function DaemonLog() {
               )}
             </div>
 
-            <select
-              className="select select-sm rounded-xl text-xs"
-              value={level}
-              onChange={(e) => setLevel(e.target.value)}
-            >
-              <option value="">All levels</option>
-              <option value="info">Info and above</option>
-              <option value="warn">Warnings and errors</option>
-              <option value="error">Errors only</option>
-            </select>
+            <SearchSelect small label="Level" options={LEVELS} value={level} onChange={setLevel} width={208} />
 
-            <select
-              className="select select-sm rounded-xl font-mono text-xs max-w-[220px] max-sm:min-w-0 max-sm:flex-1"
+            {/* A box names a few dozen parts of itself: this one keeps its field, to find one by typing. */}
+            <SearchSelect
+              small
+              label="Component"
+              searchLabel="Find a component"
+              options={[{ value: "", label: "All components" }, ...(head?.components ?? []).map((entry) => ({ value: entry.component, label: entry.component, detail: String(entry.entries) }))]}
               value={component}
-              onChange={(e) => setComponent(e.target.value)}
-            >
-              <option value="">All components</option>
-              {(head?.components ?? []).map((entry) => (
-                <option key={entry.component} value={entry.component}>
-                  {entry.component} ({entry.entries})
-                </option>
-              ))}
-            </select>
+              onChange={setComponent}
+              width={280}
+              className="max-w-[220px] font-mono max-sm:min-w-0 max-sm:flex-1"
+            />
 
             <button
               type="button"

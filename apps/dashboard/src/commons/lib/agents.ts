@@ -8,6 +8,18 @@ export function orchestratorFirst<T extends { id: string }>(agents: readonly T[]
   return [...agents].sort((a, b) => Number(b.id === orchestrator) - Number(a.id === orchestrator));
 }
 
+/**
+ * A list's agent filter as a dropdown's options: every agent first, then each, the orchestrator said as one, and the
+ * agent the address names where the list does not hold it, so the filter never shows a choice it does not have.
+ */
+export function agentOptions(agents: readonly string[], orchestrator: string | null, chosen?: string): { value: string; label: string }[] {
+  return [
+    { value: "", label: "Every agent" },
+    ...agents.map((id) => ({ value: id, label: id === orchestrator ? `${id} (orchestrator)` : id })),
+    ...(chosen && !agents.includes(chosen) ? [{ value: chosen, label: chosen }] : []),
+  ];
+}
+
 /** What an agent is doing, in a few words, and the dot's colour for it: Home's chips and a chat's header say the same. */
 export function doingNow(agent: AgentSummary): { words: string; tone: "success" | "accent" | "muted" } {
   if (!agent.enabled || agent.state !== "running") return { words: agent.enabled ? "Not running" : "Switched off", tone: "muted" };
