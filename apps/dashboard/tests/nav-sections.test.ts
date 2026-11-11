@@ -38,7 +38,7 @@ test("the menu leaves the dashboard nowhere: the manual is at the foot of Settin
   expect(read("modules/settings/index.page.tsx")).toContain("href={`${DOCS_URL}/docs`}");
 });
 
-test("the community is beside the manual at the foot of Settings, and the landing page's footer goes to the same place", async () => {
+test("the community is beside the manual at the foot of Settings, and only there: the landing page does not link it", async () => {
   const { readFileSync } = await import("node:fs");
   const { join } = await import("node:path");
   const { COMMUNITY_URL } = await import("@/commons/lib/docs");
@@ -47,12 +47,12 @@ test("the community is beside the manual at the foot of Settings, and the landin
   expect(COMMUNITY_URL).toMatch(/^https:\/\/discord\.gg\/\w+$/);
   // After the manual's link, in the same row, opened in a tab of its own.
   expect(settings).toMatch(/Documentation[\s\S]{0,200}<\/a>\s*<a href=\{COMMUNITY_URL\} target="_blank" rel="noreferrer noopener"[\s\S]{0,160}Community/);
-  // One address, written in the site's constants too: the two are built apart.
-  expect(read("../site/src/consts.mjs")).toContain(`export const COMMUNITY_URL = '${COMMUNITY_URL}';`);
-  expect(read("../site/src/components/Landing.astro")).toContain("<a href={COMMUNITY_URL} target=\"_blank\" rel=\"noopener noreferrer\">{t.footer.links.community}</a>");
-  const copy = read("../site/src/i18n/landing.mjs");
-  expect(copy).toContain("community: 'Community'");
-  expect(copy).toContain("community: 'Komunitas'");
+  // The landing page's footer linked it too; it is the dashboard's alone now. The site names Discord as a place to
+  // chat with agents, never its server.
+  for (const file of ["../site/src/consts.mjs", "../site/src/components/Landing.astro", "../site/src/i18n/landing.mjs"]) {
+    const text = read(file);
+    expect({ file, named: text.includes(COMMUNITY_URL) || text.includes("COMMUNITY_URL") || /discord\.(gg|com\/invite)/i.test(text) }).toEqual({ file, named: false });
+  }
 });
 
 describe("a section's tabs", () => {

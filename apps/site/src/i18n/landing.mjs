@@ -153,7 +153,7 @@ export const en = {
   },
   footer: {
     what: 'Nouride, by',
-    links: { docs: 'Docs', github: 'GitHub', community: 'Community', home: 'Nouride Home' },
+    links: { docs: 'Docs', github: 'GitHub', home: 'Nouride Home' },
   },
 };
 
@@ -298,6 +298,6 @@ export const id = {
   },
   footer: {
     what: 'Nouride, dari',
-    links: { docs: 'Dokumentasi', github: 'GitHub', community: 'Komunitas', home: 'Nouride Home' },
+    links: { docs: 'Dokumentasi', github: 'GitHub', home: 'Nouride Home' },
   },
 };

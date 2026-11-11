@@ -46,7 +46,6 @@ import {
   INSPECT_COMMAND,
   GITHUB_REPO,
   CLOUD_URL,
-  COMMUNITY_URL,
   PRO_CONTACT,
 } from '../consts.mjs';
 import head from '@brand/mascot/standing/12-head.webp';
@@ -412,7 +411,6 @@ const year = new Date().getFullYear();
     <p class="f-links">
       <a href={href('docs/start/what-is-nouride')}>{t.footer.links.docs}</a>
       <a href={`https://github.com/${GITHUB_REPO}`} target="_blank" rel="noopener noreferrer">{t.footer.links.github}</a>
-      <a href={COMMUNITY_URL} target="_blank" rel="noopener noreferrer">{t.footer.links.community}</a>
       <a href={href('docs/deployment/nouride-home')}>{t.footer.links.home}</a>
       <a href={`/${t.nav.otherLang}/`} hreflang={t.nav.otherLang} lang={t.nav.otherLang}>{t.nav.other}</a>
     </p>
