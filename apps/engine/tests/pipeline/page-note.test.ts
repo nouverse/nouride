@@ -10,7 +10,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import type { MessageEnvelope, OpenPage } from "@nouride/shared";
 import { LocalGateway } from "@/modules/gateways/local.ts";
-import { pageNote } from "@/modules/pipeline/messages.ts";
+import { mergeEnvelopes, pageNote } from "@/modules/pipeline/messages.ts";
 import { steerMessage } from "@/modules/pipeline/steering.ts";
 import { pageOf } from "@/modules/web/control/page.ts";
 import { conversationOf, envelope, FakeGateway } from "../helpers.ts";
@@ -129,4 +129,13 @@ describe("on a turn's message, through the pipeline", () => {
     // And the line is kept with the message as it was sent, so the next request repeats it byte for byte.
     expect(textOf(without.messages.find((one) => one.role === "user" && textOf(one.content).includes("what does this one do?"))?.content)).toBe(lastUser(withPage));
   });
+});
+
+test("several messages read as one name the page of the newest: where the person is now", () => {
+  const first = envelope({ id: "a", text: "one", page: { path: "/dashboard/skills", title: "Skills Workshop" } });
+  const second = envelope({ id: "b", text: "two", page: PAGE });
+  expect(mergeEnvelopes(first, second).page).toEqual(PAGE);
+  // Written last from a page that names none (Chats itself): no page is said, not the one before it.
+  expect(mergeEnvelopes(second, envelope({ id: "c", text: "three" })).page).toBeUndefined();
+  expect(mergeEnvelopes(envelope({ id: "d", text: "four" }), second).page).toEqual(PAGE);
 });

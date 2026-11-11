@@ -202,10 +202,12 @@ export function mergeEnvelopes(base: MessageEnvelope, next: MessageEnvelope): Me
   const attachments = [...withOrigin(base), ...withOrigin(next)];
   const mentions = Array.from(new Set([...(base.mentions ?? []), ...(next.mentions ?? [])]));
 
-  // An edit is of one message: the several a burst became are not an edit of it.
-  const { edit: _edit, ...rest } = base;
+  // An edit is of one message: the several a burst became are not an edit of it. And the page is where the person is
+  // now, which is the newest message's: an earlier one's would name a page they have left.
+  const { edit: _edit, page: _page, ...rest } = base;
   return {
     ...rest,
+    ...(next.page ? { page: next.page } : {}),
     id: next.id,
     mergedIds: [...(base.mergedIds ?? []), base.id],
     timestamp: next.timestamp,
