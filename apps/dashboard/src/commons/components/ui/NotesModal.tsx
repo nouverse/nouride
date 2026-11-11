@@ -131,7 +131,7 @@ export function NotesModal({
 
   return overPage(
     <div className="modal modal-open" role="dialog" aria-label={title}>
-      <div className="modal-box flex max-h-[90vh] max-w-3xl flex-col gap-3 rounded-2xl">
+      <div className="modal-box flex max-h-[90dvh] max-w-3xl flex-col gap-3 rounded-2xl">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 space-y-0.5">
             <h3 className="truncate font-semibold">{title}</h3>
@@ -161,7 +161,7 @@ export function NotesModal({
           )
         ) : mode === "edit" && editable ? (
           <textarea
-            className="textarea h-[55vh] w-full rounded-xl font-mono text-sm"
+            className="textarea h-[55dvh] w-full rounded-xl font-mono text-sm"
             value={text}
             spellCheck={false}
             aria-label="Notes"
@@ -169,7 +169,7 @@ export function NotesModal({
             onChange={(event) => setDraft(event.target.value)}
           />
         ) : (
-          <div className="bg-base-200/40 max-h-[55vh] min-h-40 overflow-auto overscroll-contain rounded-xl p-4 text-sm">
+          <div className="bg-base-200/40 max-h-[55dvh] min-h-40 overflow-auto overscroll-contain rounded-xl p-4 text-sm">
             {text.trim() ? <Markdown source={text} /> : <p className="text-base-content/65">Nothing written yet.</p>}
           </div>
         )}

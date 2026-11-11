@@ -85,7 +85,7 @@ export function EpisodeView({ id, editable, nameOf, onOpen, onClose }: { id: str
         {data?.mentions.length ? <p className="text-base-content/65 mb-2 text-xs">Talked about: {data.mentions.map(nameOf).join(", ")}</p> : null}
 
         {transcript ? (
-          <pre className="bg-base-200/40 max-h-[50vh] overflow-auto rounded-xl p-4 font-sans text-sm whitespace-pre-wrap">{transcript}</pre>
+          <pre className="bg-base-200/40 max-h-[50dvh] overflow-auto rounded-xl p-4 font-sans text-sm whitespace-pre-wrap">{transcript}</pre>
         ) : data ? (
           <p className="text-base-content/65 text-sm">{data.kind === "archive" ? "A day summary from the old memory. It never had a transcript." : "The transcript is no longer kept."}</p>
         ) : null}

@@ -65,7 +65,7 @@ export default function LoginPage() {
   });
 
   return (
-    <div className="relative flex min-h-screen min-h-dvh items-center justify-center p-4 selection:bg-primary/20 overflow-clip">
+    <div className="relative flex min-h-dvh items-center justify-center p-4 selection:bg-primary/20 overflow-clip">
 
       <div className="relative w-full max-w-sm rounded-[22px] border border-base-content/[0.08] bg-base-100 p-7 sm:p-8 shadow-soft transition-all duration-200">
         <form

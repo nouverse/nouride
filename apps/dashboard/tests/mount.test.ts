@@ -196,7 +196,7 @@ describe("pages that keep their lists in bounds", () => {
   test("Memory: an open profile scrolls inside itself, under a header that stays", async () => {
     const html = await renderPage("/memories", (host) => clickText(host, '[role="tab"]', "People"));
     expect(html).toMatch(/<summary class="[^"]*sticky top-0/);
-    expect(html).toMatch(/max-h-\[55vh\] overflow-y-auto/);
+    expect(html).toMatch(/max-h-\[55dvh\] overflow-y-auto/);
   });
 
   test("Memory: Agent notes, Proposals and Timeline scroll inside their cards", async () => {

@@ -62,7 +62,7 @@ export function NotFound() {
 
 function Panel({ pose, title, role, children }: { pose: Pose; title: string; role?: "alert"; children: React.ReactNode }) {
   return (
-    <div className="mx-auto flex min-h-[50vh] w-full max-w-xl flex-col items-center justify-center gap-2 p-4">
+    <div className="mx-auto flex min-h-[50dvh] w-full max-w-xl flex-col items-center justify-center gap-2 p-4">
       <Mascot pose={pose} decorative className="w-36" />
       <div role={role} className="w-full space-y-3 rounded-[22px] border border-base-content/[0.08] bg-base-100 p-5 shadow-soft">
         <h1 className="text-xl text-base-content">{title}</h1>

@@ -125,6 +125,11 @@ pose=…>` or `<EmptyState pose=…>`; which state takes which pose is the table
   once behind Settings, a page of grouped cards with a search. A section's other pages are tabs over it.
 - An approval is answered where it is asked: in the chat as well as on its page.
 - Every multi-column layout collapses explicitly below 768px.
+- A height taken from the screen is `dvh` (`h-dvh`, `max-h-[90dvh]`), never `vh` or `h-screen`: a phone
+  browser's `vh` is the screen with its toolbar put away, taller than what is seen. Two height classes on
+  one element are not a fallback: the one written later in the stylesheet wins, whatever their order in
+  the class.
+- Nothing lies over the phone's tab bar: a toast stands above it.
 
 ## Implementation constraints
 

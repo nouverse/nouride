@@ -29,7 +29,7 @@ export default function McpLoginCallbackPage() {
 
   const done = finish.data;
   return (
-    <div className="flex min-h-screen items-center justify-center p-6">
+    <div className="flex min-h-dvh items-center justify-center p-6">
       <div className="card bg-base-100 border border-base-content/[0.08] shadow-xs rounded-2xl max-w-lg w-full">
         <div className="card-body gap-4">
           {done ? (

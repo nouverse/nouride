@@ -36,7 +36,7 @@ export const FILL_PAGE = "flex min-h-0 flex-1 flex-col gap-6 [&>*]:shrink-0 *:an
 
 /** The bounded, scrolling region on its own — for a list that is not one card, like Schedule's jobs. */
 export function ScrollArea({
-  maxHeight = "max-h-[70vh]",
+  maxHeight = "max-h-[70dvh]",
   fill = false,
   className,
   children,

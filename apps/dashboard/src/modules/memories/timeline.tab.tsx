@@ -194,7 +194,7 @@ export function TimelineTab({ editable }: { editable: boolean }) {
       {list.length > 0 ? (
         <ScrollCard title={`${list.length} conversation(s)`} description="Newest first. Open a day to see its conversations.">
           {/* Its own scroll, so the page stays put and a long history is a list of days, not a wall. */}
-          <div className="-mx-2 max-h-[65vh] space-y-1 overflow-y-auto px-2">
+          <div className="-mx-2 max-h-[65dvh] space-y-1 overflow-y-auto px-2">
             {byDay(list).map(([day, dayEpisodes]) => (
               // Closed by default; a filter's results open, so what was searched for is in sight.
               <details key={`${day}:${filtered}`} open={filtered} className="group rounded-xl border border-base-content/[0.06]">

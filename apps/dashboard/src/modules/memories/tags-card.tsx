@@ -209,7 +209,7 @@ function ReviewDialog({ changes, onClose, onDone }: { changes: TagTidyChange[]; 
             <X size={16} />
           </button>
         </div>
-        <div className="max-h-[55vh] space-y-1 overflow-y-auto">
+        <div className="max-h-[55dvh] space-y-1 overflow-y-auto">
           {!changes.length && !suggested.length ? (
             <p className="text-base-content/65 px-2 py-3 text-sm">The rules find nothing to tidy. The model can still look for tags that mean one subject: spellings the rules cannot see, synonyms, a narrow tag that only ever means a broad one.</p>
           ) : null}

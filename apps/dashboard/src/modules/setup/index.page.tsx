@@ -34,7 +34,7 @@ export default function SetupPage() {
   const step = !state?.hasProvider ? 1 : !state.hasAgent ? 2 : 3;
 
   return (
-    <div className="relative min-h-screen py-10 px-4 flex flex-col items-center justify-center selection:bg-primary/20 overflow-clip">
+    <div className="relative min-h-dvh py-10 px-4 flex flex-col items-center justify-center selection:bg-primary/20 overflow-clip">
 
       <div className="relative w-full max-w-xl space-y-6">
         <header className="text-center space-y-2">

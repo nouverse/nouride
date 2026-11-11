@@ -126,7 +126,7 @@ export function CollectionForm({ collection, names, admin, onClose, onSaved }: {
   return overPage(
     <div className="modal modal-open" role="dialog" aria-label={making ? "New collection" : `Settings of ${collection.name}`}>
       <form
-        className="modal-box max-h-[90vh] max-w-lg space-y-4 overflow-y-auto rounded-2xl"
+        className="modal-box max-h-[90dvh] max-w-lg space-y-4 overflow-y-auto rounded-2xl"
         onSubmit={(event) => {
           event.preventDefault();
           if (!problem) save.mutate();

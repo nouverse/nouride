@@ -119,7 +119,7 @@ export function MarkdownPreview({ name, source, url, onClose }: { name: string; 
 
   return overPage(
     <div className="modal modal-open" role="dialog" aria-label={name}>
-      <div className="modal-box flex max-h-[90vh] max-w-3xl flex-col gap-3 rounded-2xl">
+      <div className="modal-box flex max-h-[90dvh] max-w-3xl flex-col gap-3 rounded-2xl">
         <div className="flex items-center justify-between gap-3">
           <h3 className="min-w-0 truncate font-mono text-sm font-semibold">{name}</h3>
           <div className="flex shrink-0 items-center gap-1">

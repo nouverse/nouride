@@ -100,7 +100,7 @@ export function ReconnectingScreen() {
   // The one pose built into the bundle (`Mascot`'s `offline`): nothing more can be fetched from a daemon that does not
   // answer, so a picture it had to serve would be a broken image here.
   return (
-    <div className="bg-app flex min-h-screen items-center justify-center p-4">
+    <div className="bg-app flex min-h-dvh items-center justify-center p-4">
       <div role="status" aria-live="polite" className="flex w-full max-w-sm flex-col items-center gap-3 rounded-[22px] border border-base-content/[0.08] bg-base-100 p-6 text-center shadow-soft">
         <Mascot pose="offline" decorative className="w-32" />
         <h1 className="text-xl text-base-content">Waiting for Nouride</h1>

@@ -164,7 +164,7 @@ export function DocumentEditor({
 
             {mode === "edit" && editable ? (
               <textarea
-                className="textarea h-[50vh] w-full rounded-xl font-mono text-sm"
+                className="textarea h-[50dvh] w-full rounded-xl font-mono text-sm"
                 value={text}
                 spellCheck={false}
                 aria-label="Document text"
@@ -172,7 +172,7 @@ export function DocumentEditor({
                 onChange={(event) => setDraft(event.target.value)}
               />
             ) : (
-              <div className="bg-base-200/40 max-h-[50vh] min-h-32 overflow-auto rounded-xl p-4 text-sm">
+              <div className="bg-base-200/40 max-h-[50dvh] min-h-32 overflow-auto rounded-xl p-4 text-sm">
                 {text.trim() ? <Markdown source={text} /> : <p className="text-base-content/65">Empty.</p>}
               </div>
             )}

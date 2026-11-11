@@ -4,7 +4,8 @@
  *   safe area, which the viewport reports only with `viewport-fit=cover` — and the layout keeps clear of a notch then;
  * - a grid that sets its columns at a breakpoint sets the phone's too: without `grid-cols-1` its one track is as wide as
  *   its widest unbreakable line, and a job's name in a cut-off line pushed Overview past the screen's edge;
- * - a button a finger can hit: one held to 20–24px by its own height is 32px or more there.
+ * - a button a finger can hit: one held to 20–24px by its own height is 32px or more there;
+ * - a page is as tall as what is seen (`dvh`), never the screen with the browser's toolbar put away (`vh`).
  */
 
 import { describe, expect, test } from "bun:test";
@@ -82,6 +83,14 @@ describe("the bottom of a page", () => {
     expect(phoneRem(PAGE_BOTTOM) + room).toBeGreaterThanOrEqual(top + 2);
   });
 
+  test("a toast stands above the tab bar on a phone, where it lay over the tabs and took their taps", () => {
+    const reach = Number(/export const TAB_BAR_SPACE = "max-lg:pb-\[calc\(([\d.]+)rem\+env\(safe-area-inset-bottom\)\)\]"/.exec(read("commons/components/layout/TabBar.tsx"))?.[1]);
+    const stack = /className="(toast [^"]+)"/.exec(read("commons/components/ui/toast.tsx"))?.[1] ?? "";
+    const lifted = Number(/(?:^| )max-lg:bottom-\[calc\(([\d.]+)rem\+env\(safe-area-inset-bottom\)\)\]!(?: |$)/.exec(stack)?.[1]);
+    expect(reach).toBeGreaterThan(4);
+    expect(lifted).toBeGreaterThanOrEqual(reach);
+  });
+
   test("the chat's composer, which sits at the bottom, keeps clear of the home indicator", () => {
     expect(read("modules/chat/components/Composer.tsx")).toContain("pb-[max(0.75rem,env(safe-area-inset-bottom))]");
   });
@@ -95,6 +104,45 @@ describe("the bottom of a page", () => {
   test("covered, the layout keeps its header and sides clear of a notch", () => {
     const layout = read("commons/components/layout/RootLayout.tsx");
     for (const inset of ["pl-[env(safe-area-inset-left)]", "pr-[env(safe-area-inset-right)]", "pt-[env(safe-area-inset-top)]"]) expect(layout).toContain(inset);
+  });
+});
+
+describe("the height of a page", () => {
+  /** `md:!min-h-screen` is `min-h-screen`: a variant or `!` in front does not change what the class measures. */
+  const bare = (word: string) => word.replace(/^(?:[^:\s[]+:)+/, "").replace(/^!/, "");
+
+  test("is the screen as it is seen, never the screen with the browser's toolbar put away", () => {
+    // Live, on a phone: the shell said `h-screen h-[100dvh]`, and in the stylesheet `h-screen` is written after the
+    // other, so it won whatever the order of the two in the class. A phone browser's `100vh` is the screen without its
+    // toolbar, taller than what is seen: the foot of the Chats list sat under the tab bar with nothing left to scroll,
+    // and the document itself scrolled, which puts the toolbar away, after which the browser takes the next tap near
+    // the screen's foot to bring it back, so a tab did nothing.
+    const all = literals();
+    expect(all.length).toBeGreaterThan(3000);
+    const tall = all.flatMap(({ file, words }) => words.filter((w) => /^(h|min-h|max-h)-screen$/.test(bare(w)) || /\d(vh|lvh)\b/.test(w)).map((w) => `${file}: ${w}`));
+    expect(tall).toEqual([]);
+  });
+
+  test("the shell, which holds every page to the window, is one of them", () => {
+    const shell = /<div className="(bg-app flex [^"]+)"/.exec(read("commons/components/layout/RootLayout.tsx"))?.[1] ?? "";
+    expect(shell.split(" ")).toContain("h-dvh");
+    expect(shell.split(" ")).toContain("overflow-hidden");
+  });
+
+  test("a dialog's box is held to what is seen, under a class that says a height of its own", () => {
+    // daisyUI holds `modal-box` to `100vh - 5em`. The rule here sits in a layer inside the utilities', which daisyUI's
+    // is too: later than daisyUI's, so it wins there, and under the utilities themselves, so `max-h-[90dvh]` still does.
+    const css = readFileSync(join(SRC, "styles", "main.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(css).toMatch(/@layer utilities \{\s*@layer held \{\s*\.modal-box \{\s*max-height: calc\(100dvh - 5em\);\s*\}\s*\}\s*\}/);
+    expect(css).not.toMatch(/\d(vh|lvh)\b/);
+  });
+
+  test("the check sees a tall class behind a variant, and leaves `dvh` alone", () => {
+    expect(bare("md:!min-h-screen")).toBe("min-h-screen");
+    expect(bare("h-[calc(100dvh-17rem)]")).toBe("h-[calc(100dvh-17rem)]");
+    expect(/\d(vh|lvh)\b/.test("h-[calc(100dvh-17rem)]")).toBe(false);
+    expect(/\d(vh|lvh)\b/.test("max-h-[85dvh]")).toBe(false);
+    expect(/\d(vh|lvh)\b/.test("lg:h-[calc(100vh-4rem)]")).toBe(true);
   });
 });
 

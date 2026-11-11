@@ -112,7 +112,7 @@ function ModelTiersDialog({ onClose }: { onClose: () => void }) {
 
   return overPage(
     <div className="modal modal-open" role="dialog" aria-label="Model tiers">
-      <div className="modal-box flex max-h-[90vh] max-w-3xl flex-col gap-5 overflow-y-auto overscroll-contain rounded-2xl">
+      <div className="modal-box flex max-h-[90dvh] max-w-3xl flex-col gap-5 overflow-y-auto overscroll-contain rounded-2xl">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 space-y-0.5">
             <h3 className="flex items-center gap-2 font-semibold">

@@ -17,7 +17,7 @@ describe("a full page a person meets signed out", () => {
     test(`${page} clips what is wider without becoming a scroll box, and draws no glow of the old look`, () => {
       const source = readFileSync(join(import.meta.dir, "../src/modules", page), "utf8");
       expect(source).not.toContain("blur-3xl");
-      const root = source.split("\n").find((line) => line.includes("min-h-screen")) ?? "";
+      const root = source.split("\n").find((line) => line.includes("min-h-dvh")) ?? "";
       expect(root).toContain("overflow-clip");
       expect(root).not.toContain("overflow-hidden");
     });

@@ -243,7 +243,7 @@ export function PeopleTab({ editable, admin }: { editable: boolean; admin: boole
 
       {list.length > 0 ? (
         // Its own scroll, one row per person, closed until opened: a household of ten is ten lines.
-        <div className="max-h-[70vh] space-y-2 overflow-y-auto">
+        <div className="max-h-[70dvh] space-y-2 overflow-y-auto">
           {list.map((person) => (
             <details key={person.key} className="group border-base-content/[0.08] bg-base-100/80 rounded-2xl border">
               {/* Sticky, and the body below bounded: an open profile scrolls inside itself, so its header —
@@ -274,7 +274,7 @@ export function PeopleTab({ editable, admin }: { editable: boolean; admin: boole
                   ) : null}
                 </span>
               </summary>
-              <div className="border-base-content/[0.06] max-h-[55vh] overflow-y-auto overscroll-contain border-t px-5 py-4">
+              <div className="border-base-content/[0.06] max-h-[55dvh] overflow-y-auto overscroll-contain border-t px-5 py-4">
                 <div className="space-y-3">
                   <PersonFacts person={person} fallback={everyone} editable={editable} />
                   <PersonRecall person={person} fallback={recallEveryone} editable={editable} />

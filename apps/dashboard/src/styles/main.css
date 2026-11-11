@@ -321,6 +321,17 @@
   animation: var(--animate-fade) reverse forwards;
 }
 
+/* A dialog's box is held to what is seen. daisyUI measures it from `vh`, which on a phone is the screen with the
+   browser's toolbar put away, so the buttons of a tall dialog ended under the toolbar. In a layer inside the utilities',
+   after daisyUI's own there: over daisyUI's rule, and under a class that says a height (`max-h-[90dvh]`). */
+@layer utilities {
+  @layer held {
+    .modal-box {
+      max-height: calc(100dvh - 5em);
+    }
+  }
+}
+
 /* ── Less motion, for whoever asked their system for it ───────────────────────────────────────────
    Nothing pulses, nothing fades or slides in, and a press or a hover no longer shrinks, nudges or tilts what it
    touches. Animations and transitions are cut to 0.01ms rather than removed, so whatever waits on their end

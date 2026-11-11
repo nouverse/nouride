@@ -76,11 +76,11 @@ function Lightbox({ src, name, onClose }: { src: string; name: string; onClose: 
       {/* The backdrop is the close button, which is what everybody tries first. */}
       <button type="button" className="absolute inset-0 cursor-zoom-out" onClick={onClose} aria-label="Close" />
 
-      <div className="relative z-10 max-w-[92vw] max-h-[88vh] flex flex-col items-center gap-2 animate-enter">
+      <div className="relative z-10 max-w-[92vw] max-h-[88dvh] flex flex-col items-center gap-2 animate-enter">
         <img
           src={src}
           alt={name}
-          className="max-w-full max-h-[80vh] rounded-xl shadow-2xl object-contain bg-base-100"
+          className="max-w-full max-h-[80dvh] rounded-xl shadow-2xl object-contain bg-base-100"
         />
         <div className="flex items-center gap-2 text-[11px] text-white/80 font-mono">
           <span className="truncate max-w-[60vw]">{name}</span>

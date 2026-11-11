@@ -67,7 +67,7 @@ export function DocumentDialog({ at, onOpen, onClose }: { at: OpenDocument; onOp
 
   return overPage(
     <div className="modal modal-open" role="dialog" aria-label={document?.title ?? "Document"}>
-      <div className="modal-box flex max-h-[90vh] max-w-3xl flex-col gap-4 rounded-2xl">
+      <div className="modal-box flex max-h-[90dvh] max-w-3xl flex-col gap-4 rounded-2xl">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 space-y-1">
             <h3 className="font-semibold">{document?.title ?? at.path}</h3>

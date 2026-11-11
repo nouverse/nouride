@@ -45,7 +45,7 @@ export function WriteDialog({ collection, onClose }: { collection: KnowledgeColl
   return overPage(
     <div className="modal modal-open" role="dialog" aria-label={`Write a document in ${collection.name}`}>
       <form
-        className="modal-box flex max-h-[90vh] max-w-3xl flex-col gap-3 rounded-2xl"
+        className="modal-box flex max-h-[90dvh] max-w-3xl flex-col gap-3 rounded-2xl"
         onSubmit={(event) => {
           event.preventDefault();
           if (title.trim() && text.trim()) save.mutate();
@@ -69,7 +69,7 @@ export function WriteDialog({ collection, onClose }: { collection: KnowledgeColl
         </div>
         <MarkdownArea
           mode={mode}
-          className="h-[45vh] min-h-48 overflow-auto"
+          className="h-[45dvh] min-h-48 overflow-auto"
           value={text}
           label="The document"
           placeholder={"## Steps\n1. …"}

@@ -46,7 +46,7 @@ export function RecentChanges({ nameOf, onOpenEpisode }: { nameOf: (key: string)
           {secondhand ? <span className="badge badge-ghost badge-xs font-mono">{secondhand} told by someone else</span> : null}
         </span>
       </summary>
-      <ul className="border-base-content/[0.06] max-h-[50vh] divide-y divide-base-content/[0.06] overflow-y-auto border-t px-5">
+      <ul className="border-base-content/[0.06] max-h-[50dvh] divide-y divide-base-content/[0.06] overflow-y-auto border-t px-5">
         {list.map((change, index) => (
           <li key={`${change.at}-${index}`} className="space-y-1 py-2.5">
             <p className="text-base-content/65 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">

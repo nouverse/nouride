@@ -107,7 +107,7 @@ export function RootLayout() {
     return (
       // The cat on its way, where a spinner stood alone: which page comes next (the dashboard, the sign-in, the
       // setup) is not known yet, so no page's shape can be drawn. Its box is sized, and nothing moves when it arrives.
-      <div className="bg-base-200/60 flex min-h-screen flex-col items-center justify-center gap-2" aria-busy="true" aria-label="loading">
+      <div className="bg-base-200/60 flex min-h-dvh flex-col items-center justify-center gap-2" aria-busy="true" aria-label="loading">
         <Mascot pose="speeding" decorative className="w-32" />
         <span className="loading loading-dots loading-md text-primary opacity-60" />
       </div>
@@ -125,7 +125,7 @@ export function RootLayout() {
 
   if (chromeless) {
     return (
-      <div className="bg-base-200/50 min-h-screen text-base-content selection:bg-primary/20 *:animate-fade">
+      <div className="bg-base-200/50 min-h-dvh text-base-content selection:bg-primary/20 *:animate-fade">
         <ReconnectingBanner offline={gate.offline} />
         <Outlet />
       </div>
@@ -155,7 +155,7 @@ export function RootLayout() {
   return (
     /* The page's edges kept clear of a phone's notch, side and top, with `viewport-fit=cover` in index.html: on a
        desktop each inset is 0. The bottom is each page's own (`PAGE_BOTTOM`), past the tab bar that floats there. */
-    <div className="bg-app flex h-screen h-[100dvh] flex-col overflow-hidden pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] text-base-content selection:bg-secondary/20">
+    <div className="bg-app flex h-dvh flex-col overflow-hidden pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] text-base-content selection:bg-secondary/20">
       {/* Beside the menu, not in it: folded on Chats, the menu that holds Sign out on a phone is not drawn on a laptop. */}
       {signOutDialog}
       {/* The sidebar, drawn once: fixed beside the page from a laptop's width up, and on a phone More, a sheet that slides
