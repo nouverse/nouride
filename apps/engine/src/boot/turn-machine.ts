@@ -18,7 +18,7 @@ import { alertCooldownsState, spendAlertsState } from "@/commons/daemon-state.ts
 import { Notifier } from "@/commons/notify.ts";
 import type { BoxBusy } from "@/commons/box-load.ts";
 import type { Machine } from "@/commons/machine.ts";
-import { CronScheduler } from "@/modules/cron/scheduler.ts";
+import { buildScheduler } from "./scheduler.ts";
 import type { ExternalAgents } from "@/modules/external-agents/index.ts";
 import { LOCAL_GATEWAY_ID } from "@/modules/gateways/local.ts";
 import { routePresses } from "@/modules/gateways/presses.ts";
@@ -368,13 +368,7 @@ export async function buildTurnMachine(
   // Constructed here and started much later. It needs the pipeline (to run turns) and the tool
   // registry needs it (so a job can be forced to run), which is a cycle only if construction and
   // starting are the same act. They are not: building it touches nothing.
-  const scheduler = new CronScheduler({
-    store: stores.cron,
-    config: config.cron,
-    // A `mission` job's run starts a mission (0.8.0); the rest run through the pipeline.
-    executors: { ...pipeline.cronExecutors(), startMission: missions.runJob },
-    audit,
-  });
+  const { scheduler, stepAsks } = buildScheduler({ cron: stores.cron, config: () => ctx.config, notifier: parts.notifier, pipeline, missions, audit });
 
   // Built after the pipeline and handed back to it: `session_status` needs live session facts
   // while the pipeline needs the tool map. See `boot/tools.ts`.
@@ -405,6 +399,6 @@ export async function buildTurnMachine(
   // handed-over work that ended early.
   const waysOn = pipeline.waysOn();
   const carryOn = continuePresses({ turns: stores.turns, resume: (turn) => pipeline.resumeTurn(turn, "asked"), isAdmin: (who) => pipeline.isAdmin(who), handedOver: waysOn.handedOver });
-  routePresses(input.gateways.values(), [parts.prompts, proposals.cards, ...missions.presses(pipeline), carryOn, waysOn.presses]);
+  routePresses(input.gateways.values(), [parts.prompts, proposals.cards, stepAsks, ...missions.presses(pipeline), carryOn, waysOn.presses]);
   return { mcp, mcpLogins, mcpCatalog, skillRoots, pipeline, scheduler, tools };
 }

@@ -47,6 +47,7 @@ import { registerGroupRoutes } from "./routes/groups.ts";
 import { registerKnownChatRoutes } from "./routes/known-chats.ts";
 import { registerJobRoutes } from "./routes/jobs.ts";
 import { registerCronRoutes } from "./routes/cron.ts";
+import { registerAutomationRoutes } from "./routes/automations.ts";
 import { registerDraftRoutes } from "./routes/drafts.ts";
 import { registerSkillHubRoutes } from "./routes/skills-hub.ts";
 import { registerMcpCatalogRoutes } from "./routes/mcp-catalog.ts";
@@ -114,6 +115,7 @@ export function mountControlRoutes(app: Hono, deps: ControlDeps): void {
   registerKnownChatRoutes(control, deps);
   registerJobRoutes(control, deps);
   registerCronRoutes(control, deps);
+  registerAutomationRoutes(control, deps);
   // `/update*` — its own prefix, and registered before the agent module for the rule this file
   // keeps rather than for a collision that exists today.
   registerUpdateRoutes(control, deps);

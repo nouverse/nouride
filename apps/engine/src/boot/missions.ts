@@ -16,14 +16,14 @@ import type { JobsPort } from "@/modules/jobs/jobs.store.ts";
 import { checkRefusal, runChecks } from "@/modules/missions/checks.ts";
 import { MISSION_GATEWAY_ID, MissionGateway } from "@/modules/missions/gateway.ts";
 import { Missions } from "@/modules/missions/missions.ts";
-import { startJobRun } from "@/modules/missions/job-runs.ts";
+import { jobMissionEnd, startJobRun } from "@/modules/missions/job-runs.ts";
 import { MissionStore } from "@/modules/missions/missions.store.ts";
-import { similarKind, similarLabel, SimilarAllowed } from "@/modules/missions/similar.ts";
+import { SimilarAllowed } from "@/modules/missions/similar.ts";
+import { gateSide } from "@/modules/missions/gate-side.ts";
 import { OptionPresses } from "@/modules/missions/options.ts";
 import { ActionPresses } from "@/modules/missions/actions.ts";
 import { ProgressLines } from "@/modules/missions/progress-line.ts";
-import { shortId } from "@/modules/missions/page.ts";
-import { isFinal, toldBy } from "@/modules/missions/types.ts";
+import { toldBy } from "@/modules/missions/types.ts";
 import { SYSTEM_SENDER } from "@/modules/pipeline/deps.ts";
 import { inForceFor } from "@/modules/missions/slots.ts";
 import { atOnceBy, type Machine } from "@/commons/machine.ts";
@@ -207,8 +207,11 @@ export function buildMissions(params: {
     };
   };
 
+  /** Who else hears a mission change: the scheduler, for a job's step that waits for one. Named once it exists. */
+  let heard: ((mission: Mission) => void) | undefined;
   const missions = new Missions({
     store,
+    changed: (mission) => heard?.(mission),
     ...(params.jobAllowed ? { jobAllowed: params.jobAllowed } : {}),
     // Read at each decision: unset, the slots on the box are the machine's, held to the agents that are on
     // (`missions/slots.ts`). Each agent's own `per_agent` is its pack's as loaded now, so a save from its page counts.
@@ -446,37 +449,17 @@ export function buildMissions(params: {
     },
     /** A `mission` job's run (0.8.0): the scheduler's `startMission`. */
     runJob: (job: Job, body: string | undefined) => startJobRun({ missions, store }, job, body),
+    /** Told each time a mission changes status. */
+    watch: (watcher: (mission: Mission) => void) => void (heard = watcher),
+    /** How a mission stands, for a job's step that waits for it (`missions/job-runs.ts`). */
+    endOf: (id: string) => jobMissionEnd(store, id),
     /** Presses on a mission's buttons (0.8.7): a question's options (`missions/options.ts`), Accept/Continue/Stop (`actions.ts`). */
     presses: (pipeline: Pick<Pipeline, "isAdmin">) => {
       const isAdmin = (who: { gatewayId: string; senderId: string }) => pipeline.isAdmin(who);
       return [new OptionPresses({ missions, isAdmin }), new ActionPresses({ missions, isAdmin })];
     },
-    /** The mission whose turn asked, as its prompt names it (0.8.7). */
-    missionOf: (request: { gateway: string; chatId: string }) => {
-      const mission = request.gateway === MISSION_GATEWAY_ID ? store.get(request.chatId) : null;
-      return mission ? { id: shortId(mission.id), goal: mission.goal } : null;
-    },
-    /** *Approve similar from this mission*: the kind a request is, and the yes that allows it there (0.8.7). */
-    similar: {
-      kindOf: (request: { gateway: string; tool: string; params: Record<string, unknown> }) => {
-        const kind = request.gateway === MISSION_GATEWAY_ID ? similarKind(request.tool, request.params) : null;
-        return kind ? similarLabel(kind) : null;
-      },
-      allow: (request: { gateway: string; chatId: string; tool: string; params: Record<string, unknown> }) => {
-        const kind = request.gateway === MISSION_GATEWAY_ID ? similarKind(request.tool, request.params) : null;
-        const mission = kind ? store.get(request.chatId) : null;
-        if (kind && mission && !isFinal(mission.status)) similar.allow(mission.id, kind);
-      },
-    },
-    /** Whether a mission's call is covered by such a yes — who gave it, for the gate (`allowedBefore`). */
-    allowedBefore: (ask: { gatewayId: string; chatId: string; tool: string; params: Record<string, unknown> }) =>
-      ask.gatewayId === MISSION_GATEWAY_ID && similar.allows(ask.chatId, ask.tool, ask.params) ? "approve similar from this mission" : null,
-    /** The approval prompts of a mission's turn go to the chat it reports to (`ApprovalPromptsDeps.askedIn`). */
-    askedIn: (request: { gateway: string; chatId: string }) => {
-      if (request.gateway !== MISSION_GATEWAY_ID) return null;
-      const mission = store.get(request.chatId);
-      return mission ? { gatewayId: mission.gatewayId, chatId: mission.chatId } : null;
-    },
+    // What the approval gate and its prompts ask of a mission's turn (`missions/gate-side.ts`).
+    ...gateSide(store, similar),
     /** The pipeline and the tools, once both exist — what a mission's turns, checks and reviewer go through. */
     connect(pipeline: Pipeline, tools: Map<string, Tool>, usage: Pick<UsagePort, "forSession" | "helperTokens">): void {
       late = {

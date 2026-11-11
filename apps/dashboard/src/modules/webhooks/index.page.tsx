@@ -346,7 +346,7 @@ function UrlBar({
       <p className="text-base-content/65 text-xs leading-normal">
         Anyone with this URL can fire it, so treat it like a password, and rotate it if it leaks.
       </p>
-      <CallExample url={url} kind={kind} />
+      <CallExample url={url} kind={kind === "steps" ? "agentTurn" : kind} />
     </div>
   );
 }

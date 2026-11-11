@@ -1,7 +1,7 @@
 /**
  * The dashboard links an agent's tools and a mission's notices carry (0.8.11, `web/links.ts`): a mission's page in
  * `work`'s answer, in what `mission` start answers and in the notices; where an approval is answered; a proposed job's
- * card on the Schedule page. Each goes through the one rule, so a DM whose person holds no dashboard account gets none.
+ * page among the automations. Each goes through the one rule, so a DM whose person holds no dashboard account gets none.
  */
 
 import { describe, expect, test } from "bun:test";
@@ -129,7 +129,7 @@ describe("a mission's notices: *started*, *needs you* and *done* carry its page"
   });
 });
 
-describe("`schedule`: a proposed job's card on the Schedule page", () => {
+describe("`schedule`: a proposed job's page among the automations", () => {
   async function scheduleTool(linkFor: LinkFor) {
     const db = openDatabase(join(tempDir("links-schedule"), "t.db"));
     await migrate(db);
@@ -143,8 +143,8 @@ describe("`schedule`: a proposed job's card on the Schedule page", () => {
     const { store, propose } = await scheduleTool(rule());
     const own = (await propose(dm("8142"))).content;
     const job = store.list({ includeDisabled: true }).at(-1)!;
-    expect(own).toEndWith(` Its card on the Schedule page: ${BASE}/dashboard/schedule?job=${job.id}`);
-    expect((await propose(ROOM)).content).toContain("/dashboard/schedule?job=");
+    expect(own).toEndWith(` Its page: ${BASE}/dashboard/automations/${job.id}`);
+    expect((await propose(ROOM)).content).toContain("/dashboard/automations/cron_");
     expect((await propose(dm("555"))).content).not.toContain("/dashboard/");
   });
 });

@@ -10,17 +10,18 @@
  * the rows and `next_run_at` — and this can be read without the SQL around it.
  */
 
-import type { JobDelivery, JobPayload } from "@nouride/shared";
+import type { JobDelivery, JobPayload, JobStep, StepGo } from "@nouride/shared";
 import { assertTimezone, nextCronOccurrence, parseCronExpr } from "@/modules/cron/expr.ts";
 import type { JobInput } from "@/modules/cron/cron.store.ts";
 import { CHECK_MAX, CHECKS_MAX, GOAL_MAX, REVIEW_MAX } from "@/modules/missions/limits.ts";
+import { APPROVAL_WAIT_MAX_MS, APPROVAL_WAIT_MIN_MS, STEPS_MAX } from "./steps.ts";
 
 /**
  * A field of a job a refusal is about (0.8.23), which the dashboard's form names: its name, agent and chat, when it
- * runs, what it does (a reminder's text, an agent's message, a command, a mission's goal, checks and review), and where
- * it reports.
+ * runs, what it does (a reminder's text, an agent's message, a command, a mission's goal, checks and review, or its
+ * steps), and where it reports.
  */
-export type CronField = "name" | "agent" | "target" | "schedule" | "kind" | "text" | "message" | "command" | "goal" | "checks" | "review" | "delivery";
+export type CronField = "name" | "agent" | "target" | "schedule" | "kind" | "text" | "message" | "command" | "goal" | "checks" | "review" | "delivery" | "steps";
 
 /** Refused input, phrased for whoever sent it — an operator on a CLI or a model reading a tool result. */
 export class CronValidationError extends Error {
@@ -73,21 +74,8 @@ export function validateJob(input: JobInput, rules: ValidationRules): void {
   }
 
   const { payload } = input;
-  if (payload.kind === "systemEvent" && !payload.text.trim()) {
-    throw new CronValidationError("a system event needs text to deliver.", "text");
-  }
-  if (payload.kind === "agentTurn" && !payload.message.trim()) {
-    throw new CronValidationError("an agent turn needs a message.", "message");
-  }
-  if (payload.kind === "mission") missionProblems(payload, input.delivery);
-  if (payload.kind === "command") {
-    if (!Array.isArray(payload.argv) || payload.argv.length === 0) {
-      throw new CronValidationError("a command needs an argv array.", "command");
-    }
-    if (payload.argv.some((a) => typeof a !== "string")) {
-      throw new CronValidationError("every argv entry must be a string.", "command");
-    }
-  }
+  if (payload.kind === "steps") validateSteps(input);
+  else doesProblems(payload, input.delivery);
 
   const delivery = input.delivery;
   if (delivery?.mode === "webhook" && !delivery.webhookUrl) {
@@ -103,7 +91,90 @@ export function validateJob(input: JobInput, rules: ValidationRules): void {
   }
 }
 
-function missionProblems(payload: Extract<JobPayload, { kind: "mission" }>, delivery: JobDelivery | undefined): void {
+/** What one thing a job does must be: a job of one kind, or one step of several. */
+function doesProblems(does: Exclude<JobPayload, { kind: "steps" }> | Exclude<JobStep, { kind: "approval" }>, delivery: JobDelivery | undefined): void {
+  if (does.kind === "systemEvent" && !does.text.trim()) {
+    throw new CronValidationError("a system event needs text to deliver.", "text");
+  }
+  if (does.kind === "agentTurn" && !does.message.trim()) {
+    throw new CronValidationError("an agent turn needs a message.", "message");
+  }
+  if (does.kind === "mission") missionProblems(does, delivery);
+  if (does.kind === "command") {
+    if (!Array.isArray(does.argv) || does.argv.length === 0) {
+      throw new CronValidationError("a command needs an argv array.", "command");
+    }
+    if (does.argv.some((a) => typeof a !== "string")) {
+      throw new CronValidationError("every argv entry must be a string.", "command");
+    }
+  }
+}
+
+const STEP_KINDS = ["systemEvent", "agentTurn", "command", "mission", "approval"];
+/** A step's id: short, and safe in a button's data and an address. */
+const STEP_ID = /^[a-z0-9][a-z0-9_-]{0,23}$/;
+
+/**
+ * What a job of several steps must be, said with the step's number so whoever wrote the list finds it. Called for a
+ * new job and for a change to one (`cron.store.ts`): a list is edited far more often than a job of one kind is.
+ */
+export function validateSteps(input: Pick<JobInput, "payload" | "session" | "delivery">): void {
+  if (input.payload.kind !== "steps") return;
+  const steps = input.payload.steps;
+  if (!Array.isArray(steps) || steps.length === 0) throw new CronValidationError("a job of steps needs at least one step.", "steps");
+  if (steps.length > STEPS_MAX) throw new CronValidationError(`a job runs at most ${STEPS_MAX} steps.`, "steps");
+  // Each turn's words go to the next step, so none is put into a person's chat as a message from them would be.
+  if (input.session === "chat") {
+    throw new CronValidationError("a job of steps keeps its own history: its session is `fresh` or `isolated`, not the chat's.", "steps");
+  }
+  const place = new Map<string, number>();
+  for (const [index, step] of steps.entries()) {
+    const at = `step ${index + 1}`;
+    if (!step || typeof step !== "object" || !STEP_KINDS.includes(step.kind)) {
+      throw new CronValidationError(`${at} must be a message, an agent's turn, a command, a mission or a wait for a person.`, "steps");
+    }
+    if (typeof step.id !== "string" || !STEP_ID.test(step.id)) {
+      throw new CronValidationError(`${at} needs an id of its own: lower-case letters, digits, - and _, at most 24.`, "steps");
+    }
+    if (place.has(step.id)) throw new CronValidationError(`${at} has the id of step ${place.get(step.id)! + 1} (${step.id}): each step's id is its own.`, "steps");
+    place.set(step.id, index);
+  }
+  for (const [index, step] of steps.entries()) {
+    const at = `step ${index + 1}`;
+    if ((step.kind === "agentTurn" || step.kind === "mission") && step.agentId !== undefined && !step.agentId.trim()) {
+      throw new CronValidationError(`${at} names no agent: leave the agent out for the job's own.`, "steps");
+    }
+    if (step.kind === "approval") approvalProblems(step, at);
+    else {
+      try {
+        doesProblems(step, input.delivery);
+      } catch (err) {
+        if (err instanceof CronValidationError) throw new CronValidationError(`${at}: ${err.message}`, "steps");
+        throw err;
+      }
+    }
+    for (const [exit, go] of [["then", step.then], ["whenFailed", step.whenFailed], ["whenEmpty", step.whenEmpty]] as const) {
+      exitProblems(go, exit, at, index, place);
+    }
+  }
+}
+
+/** An exit is the next step, the end, or a later step: a jump back would be a loop, and one to nowhere a run that stops unexplained. */
+function exitProblems(go: StepGo | undefined, exit: string, at: string, index: number, place: ReadonlyMap<string, number>): void {
+  if (go === undefined || go === "next" || go === "end") return;
+  const to = typeof go === "object" && go !== null && typeof go.to === "string" ? place.get(go.to) : undefined;
+  if (to === undefined) throw new CronValidationError(`${at}: \`${exit}\` is "next", "end", or { to: the id of a later step }.`, "steps");
+  if (to <= index) throw new CronValidationError(`${at}: \`${exit}\` points at step ${to + 1}, which is not after it. A run only goes forward.`, "steps");
+}
+
+function approvalProblems(step: Extract<JobStep, { kind: "approval" }>, at: string): void {
+  if (typeof step.ask !== "string" || !step.ask.trim()) throw new CronValidationError(`${at}: a wait for a person needs the question it asks.`, "steps");
+  if (step.timeoutMs !== undefined && (!Number.isFinite(step.timeoutMs) || step.timeoutMs < APPROVAL_WAIT_MIN_MS || step.timeoutMs > APPROVAL_WAIT_MAX_MS)) {
+    throw new CronValidationError(`${at}: it waits between ${APPROVAL_WAIT_MIN_MS / 60_000} minutes and ${APPROVAL_WAIT_MAX_MS / 86_400_000} days.`, "steps");
+  }
+}
+
+function missionProblems(payload: { goal: string; checks?: string[]; review?: string | false }, delivery: JobDelivery | undefined): void {
   if (!payload.goal.trim()) throw new CronValidationError("a mission needs a goal: what should be true when a run is done.", "goal");
   if (payload.goal.length > GOAL_MAX) throw new CronValidationError(`keep a mission's goal under ${GOAL_MAX} characters: write the detail to a file and name its absolute path in the goal.`, "goal");
   const checks = payload.checks ?? [];

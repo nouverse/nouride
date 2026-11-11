@@ -10,7 +10,7 @@
  * it runs with nobody there.
  */
 
-import type { Job, JobProposal, MessageButton } from "@nouride/shared";
+import type { Job, JobPayload, JobProposal, JobStep, MessageButton, StepGo } from "@nouride/shared";
 import type { CronPort, JobInput } from "./cron.store.ts";
 
 /** Proposals an agent may have waiting at once: past it, the oldest is the person's to answer first. */
@@ -31,31 +31,58 @@ export function proposalPressed(data: string): { id: string; on: boolean } | nul
   return match ? { on: match[1] === "on", id: match[2]! } : null;
 }
 
-/** What a job does, in a line a person decides on — the command written out whole, since it runs with no model. */
-function doesLine(job: Pick<Job, "agentId" | "payload">): string {
-  const { payload } = job;
+/**
+ * What a job does, in a line a person decides on — the command written out whole, since it runs with no model. A job
+ * of several steps says each on a line of its own, numbered, in the order they run, with where the run goes from it
+ * when that is not simply the next step: every one is read before a yes.
+ */
+function doesLine(agentId: string, payload: JobPayload | JobStep): string {
   switch (payload.kind) {
     case "systemEvent":
       return `sends the text "${payload.text}"`;
     case "agentTurn":
-      return `${job.agentId} works on: "${payload.message}"`;
+      return `${("agentId" in payload && payload.agentId) || agentId} works on: "${payload.message}"`;
     case "command":
       return `runs \`${payload.argv.join(" ")}\` on this machine, with no model`;
     case "mission": {
       const checks = payload.checks?.length ? `, done when \`${payload.checks.join("`, `")}\` pass` : "";
       const review = payload.review === false ? ", no reviewer" : ", then a reviewer agrees";
-      return `a mission for ${job.agentId}: "${payload.goal}"${checks}${review}`;
+      return `a mission for ${("agentId" in payload && payload.agentId) || agentId}: "${payload.goal}"${checks}${review}`;
     }
+    case "approval":
+      return `waits for a person's yes to: "${payload.ask}"`;
+    case "steps":
+      return [
+        "in order, each handed what the one before said:",
+        ...payload.steps.map((step, index) => `${index + 1}. ${doesLine(agentId, step)}${exitsLine(step, index, payload.steps)}`),
+      ].join("\n");
   }
+}
+
+/** Where a run goes from a step, said only where it is not what a person would expect of a list. */
+function exitsLine(step: JobStep, index: number, steps: readonly JobStep[]): string {
+  const place = (go: StepGo): string => (go === "end" ? "the run ends there" : `the run goes to step ${go === "next" ? index + 2 : steps.findIndex((one) => one.id === go.to) + 1}`);
+  const last = index === steps.length - 1;
+  const said: string[] = [];
+  if (step.then !== undefined && step.then !== "next" && !last) said.push(`Once done, ${place(step.then)}.`);
+  if (step.kind === "approval") {
+    said.push(step.whenFailed === undefined || step.whenFailed === "end" || last ? "On a no, or no answer, the run ends." : `On a no, or no answer, ${place(step.whenFailed)}.`);
+    return ` ${said.join(" ")}`;
+  }
+  if (step.whenFailed !== undefined && step.whenFailed !== "end" && !last) said.push(`If it fails, ${place(step.whenFailed)}.`);
+  if (step.kind === "command" || step.kind === "agentTurn") {
+    said.push(step.whenEmpty === undefined || step.whenEmpty === "end" || last ? "With nothing to say, the run ends there." : `With nothing to say, ${place(step.whenEmpty)}.`);
+  }
+  return said.length > 0 ? ` ${said.join(" ")}` : "";
 }
 
 /** The card: who proposes what, when it runs, and where it reports — and how to answer it without buttons. */
 export function proposalCard(job: Job, when: string, shown: { buttons: boolean }): string {
   const change = job.proposal?.replaces ? ` (a change to job ${job.proposal.replaces})` : "";
   const lines = [
-    `📋 **${job.proposal?.by ?? job.agentId}** proposes ${job.trigger.kind === "webhook" ? "a webhook" : "a scheduled job"}: **${job.name}**${change}`,
-    `When: ${job.trigger.kind === "webhook" ? "a request to its own URL, shown once it is on" : when}`,
-    `Does: ${doesLine(job)}`,
+    `📋 **${job.proposal?.by ?? job.agentId}** proposes ${job.trigger.kind === "webhook" ? "a webhook" : job.trigger.kind === "manual" ? "work started by hand" : "a scheduled job"}: **${job.name}**${change}`,
+    `When: ${job.trigger.kind === "webhook" ? "a request to its own URL, shown once it is on" : job.trigger.kind === "manual" ? "when somebody presses Run now" : when}`,
+    `Does: ${doesLine(job.agentId, job.payload)}`,
     "Results: here",
     "It stays off until somebody turns it on.",
   ];

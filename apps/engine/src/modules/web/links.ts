@@ -30,7 +30,7 @@ function pathOf(page: DashboardPage): string {
     case "mission":
       return `/missions/${at(page.id)}`;
     case "schedule":
-      return page.job ? `/schedule?job=${at(page.job)}` : "/schedule";
+      return page.job ? `/automations/${at(page.job)}` : "/automations";
     case "overview":
       return "/";
     case "agent-cli":

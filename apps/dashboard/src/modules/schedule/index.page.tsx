@@ -242,7 +242,7 @@ export default function SchedulePage({ job: linked }: { job?: string }) {
           filter, to fade in anew when it changes (`FILL_PAGE`). */}
       <ScrollArea key={filter} fill className="space-y-3 pr-1">
         {shown.map((job) => {
-          const Icon = PAYLOAD_ICON[job.payload.kind] ?? Clock;
+          const Icon = job.payload.kind === "steps" ? Clock : (PAYLOAD_ICON[job.payload.kind] ?? Clock);
           const failing = job.failStreak > 0;
           return (
             <div

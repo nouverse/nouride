@@ -1,8 +1,15 @@
 /**
- * Scheduled jobs and webhooks (`routes/cron.ts`): one table, two triggers, and their runs.
+ * Automations (`routes/cron.ts`, `routes/automations.ts`): one table of jobs, three ways one starts, and their runs.
+ * A job's work is one thing or a list of steps.
  */
 
-import type { CronDeliveryMode, JobPayload, JobSessionMode } from "@nouride/shared";
+import type { CronDeliveryMode, JobPayload, JobSessionMode, JobStep, RunWait, StepGo, StepOutcome } from "@nouride/shared";
+
+/** One step of an automation, where a run goes from it, how one went in a run, and what a run waits for: the daemon's own. */
+export type AutomationStep = JobStep;
+export type StepExit = StepGo;
+export type StepRunOutcome = StepOutcome;
+export type RunWaiting = RunWait;
 
 /**
  * A scheduled job.
@@ -44,12 +51,13 @@ export type JobDeliveryMode = CronDeliveryMode;
 /** What a job does when it fires: the daemon's own `JobPayload`, sent as it is stored. */
 export type JobPayloadInput = JobPayload;
 
-/** When a job fires: one of `at`, `every` or `cron`, a string the daemon parses, read in `tz`. */
+/** When a job fires: one of `at`, `every` or `cron`, a string the daemon parses, read in `tz`; or `manual`, when a person starts it. */
 export interface JobScheduleInput {
   at?: string;
   every?: string;
   cron?: string;
   tz?: string;
+  manual?: boolean;
 }
 
 /** The body of `POST /cron/:id`: what is given is changed, what is not is kept. */
@@ -105,11 +113,50 @@ export interface JobRunSummary {
   jobId: string;
   startedAt: number;
   finishedAt?: number;
-  /** `interrupted`: cut off by a daemon restart — not a failure. `running`: not over yet, no `finishedAt`. */
-  status: "success" | "error" | "skipped" | "interrupted" | "running";
+  /**
+   * `interrupted`: cut off by a daemon restart — not a failure. `running`: not over yet, no `finishedAt`. `waiting`:
+   * not over either, a step of it waits for a mission or a person.
+   */
+  status: "success" | "error" | "skipped" | "interrupted" | "running" | "waiting";
   result?: string;
   /** What its guards held with nobody there to ask (0.8.0) — each allowed always for the job from here. */
   held?: HeldAction[];
+  /** How each step went, for an automation of several: as many as were reached, written as the run goes. */
+  steps?: StepRunOutcome[];
+  /** What it waits for, while it does. */
+  waiting?: RunWaiting;
+}
+
+/** How an automation starts: at a time, when its address is called, or when a person starts it. */
+export type AutomationStart = "scheduled" | "webhook" | "manual";
+
+/**
+ * A job as the Automations page lists it, whatever starts it: a schedule's next time, a webhook's address, and how
+ * its last run went, in one row.
+ */
+export interface AutomationSummary extends JobSummary {
+  start: AutomationStart;
+  /** A webhook's address, and whether a call can arrive. */
+  hook?: Pick<WebhookSummary, "webhookToken" | "path" | "url" | "urlGuessed" | "reach">;
+  /** Its newest run, at work, waiting or over. */
+  lastRun?: JobRunSummary;
+  /** The id of a change an agent proposed to it, waiting for a person: an automation of its own, with `proposal`. */
+  suggested?: string;
+}
+
+/** A step that waits for a person, as Waiting for you lists it. */
+export interface WaitingStep {
+  runId: string;
+  jobId: string;
+  jobName: string;
+  agentId: string;
+  /** What it asks. */
+  ask: string;
+  /** What the step before it said, for the person to decide on. */
+  said?: string;
+  since: number;
+  /** When it stops waiting and the run ends. */
+  until: number;
 }
 
 /** One standing yes on a job (0.8.0, the daemon's `JobAllowance`): where its runs may send, and who said so. */
@@ -141,7 +188,7 @@ export interface CronRunEntry {
   agentId: string;
   startedAt: number;
   finishedAt?: number;
-  /** `interrupted`: cut off by a daemon restart — not a failure. `running`: not over yet, no `finishedAt`. */
-  status: "success" | "error" | "skipped" | "interrupted" | "running";
+  /** `interrupted`: cut off by a daemon restart — not a failure. `running` and `waiting`: not over yet, no `finishedAt`. */
+  status: JobRunSummary["status"];
   result?: string;
 }

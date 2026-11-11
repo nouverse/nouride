@@ -11,6 +11,7 @@
 import type { Job, JobPayload, JobTrigger, Tool, ToolContext } from "@nouride/shared";
 import { CronValidationError } from "@/modules/cron/validate.ts";
 import { parseScheduleInput } from "@/modules/cron/parse.ts";
+import { stepsFrom } from "@/modules/cron/step-input.ts";
 import type { CronPort, JobInput } from "@/modules/cron/cron.store.ts";
 import { proposalFor, proposalRefusal } from "@/modules/cron/proposals.ts";
 import { MISSION_GATEWAY_ID } from "@/modules/missions/gateway.ts";
@@ -34,10 +35,11 @@ export interface ScheduleToolOptions {
 }
 
 const DESCRIPTION =
-  "Propose work that runs later: on a schedule, or when a webhook is called. It stays off until a person turns it on " +
-  "from the card this posts here. Say so in one line. Use it for anything asked at a time or again and again. The " +
-  "cheapest that does the job: `text` is sent as written, `command` runs a shell line, `prompt` is one turn of yours, " +
-  "`mission` is long work that is checked. To change a job, propose it again with `replaces`.";
+  "Propose work that runs later: on a schedule, when a webhook is called, or when a person starts it. It stays off " +
+  "until a person turns it on from the card this posts here. Say so in one line. Use it for anything asked at a time " +
+  "or again and again. The cheapest that does the job: `text` is sent as written, `command` runs a shell line, " +
+  "`prompt` is one turn of yours, `mission` is long work that is checked. Several in order are `steps`. To change " +
+  "a job, or its steps, propose it again with `replaces`.";
 
 /**
  * A run's `prompt`, or its mission's goal and review, as written in English (0.8.8): each run of a proposed job starts
@@ -55,7 +57,10 @@ function notInEnglish(args: Record<string, unknown>): string | null {
   return null;
 }
 
-function payloadOf(args: Record<string, unknown>): JobPayload | string {
+type OneKind = Exclude<JobPayload, { kind: "steps" }>;
+
+/** The one thing a job, or one step of several, does: exactly one of the four, as written. */
+function doesOf(args: Record<string, unknown>): OneKind | string {
   const given = (["text", "command", "prompt", "mission"] as const).filter((key) => typeof args[key] === "string" && String(args[key]).trim());
   if (given.length !== 1) return "Give exactly one of `text`, `command`, `prompt` or `mission`.";
   const refused = notInEnglish(args);
@@ -81,6 +86,42 @@ function payloadOf(args: Record<string, unknown>): JobPayload | string {
   }
 }
 
+/** A step's exit as the tool takes it, `if_failed` and `if_empty` beside `then`, under the name a job keeps it by. */
+const EXITS = [["then", "then"], ["if_failed", "whenFailed"], ["if_empty", "whenEmpty"]] as const;
+
+/**
+ * `steps`: each one written as a job of one kind is, so there is little new to learn to write a list. A `prompt` or a
+ * `mission` may name another agent, `ask` waits for a person, and each of a step's three exits is `next`, `end` or the
+ * number of a later step. Given with `text`, `command`, `prompt` or `mission` beside it, the call is refused: a job is
+ * one thing or a list, and guessing which was meant would propose the wrong one.
+ */
+function payloadOf(args: Record<string, unknown>, agentExists: (agentId: string) => boolean): JobPayload | string {
+  if (args.steps === undefined) return doesOf(args);
+  if (!Array.isArray(args.steps) || args.steps.length === 0) return "`steps` is a list of at least one step.";
+  if ((["text", "command", "prompt", "mission"] as const).some((key) => typeof args[key] === "string" && String(args[key]).trim())) {
+    return "Give `steps`, or one of `text`, `command`, `prompt` and `mission`: not both.";
+  }
+  const written: Record<string, unknown>[] = [];
+  for (const [index, raw] of args.steps.entries()) {
+    const step = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+    const asks = typeof step.ask === "string" && step.ask.trim() ? step.ask.trim() : "";
+    const does = asks ? null : doesOf(step);
+    if (typeof does === "string") return `Step ${index + 1}: ${does.replace("`prompt` or `mission`", "`prompt`, `mission` or `ask`")}`;
+    const agent = typeof step.agent === "string" && step.agent.trim() ? step.agent.trim() : "";
+    if (agent && !agentExists(agent)) return `Step ${index + 1}: there is no agent called ${agent}.`;
+    // A command's own `then` is what a job of one command does with its output: in a list that is the step after it.
+    const one: Record<string, unknown> = asks ? { kind: "approval", ask: asks } : { ...does };
+    delete one.then;
+    written.push({
+      ...one,
+      ...(agent ? { agentId: agent } : {}),
+      ...(typeof step.name === "string" ? { name: step.name } : {}),
+      ...Object.fromEntries(EXITS.filter(([given]) => step[given] !== undefined).map(([given, kept]) => [kept, step[given]])),
+    });
+  }
+  return { kind: "steps", steps: stepsFrom(written) };
+}
+
 /**
  * `when`, as a person would say it to a CLI: `every 15m`, `cron 0 9 * * 1-5`, `at 2026-11-02 09:00`, `webhook`. One
  * field rather than four, because each field rides on every chat request's tool list.
@@ -92,6 +133,8 @@ function triggerOf(when: string, tz: string | undefined, now: number, timezone: 
   switch (word.toLowerCase()) {
     case "webhook":
       return { kind: "webhook" };
+    case "manual":
+      return { kind: "manual" };
     case "every":
       return parseScheduleInput({ every: value }, now, timezone);
     case "at":
@@ -99,7 +142,7 @@ function triggerOf(when: string, tz: string | undefined, now: number, timezone: 
     case "cron":
       return parseScheduleInput({ cron: value, ...zone }, now, timezone);
     default:
-      throw new CronValidationError('`when` starts with `every`, `at`, `cron` or is `webhook`: "every 15m", "cron 0 9 * * 1-5".');
+      throw new CronValidationError('`when` starts with `every`, `at`, `cron` or is `webhook` or `manual`: "every 15m", "cron 0 9 * * 1-5".');
   }
 }
 
@@ -120,7 +163,7 @@ export function createScheduleTool(options: ScheduleToolOptions): Tool {
         type: "object",
         properties: {
           name: { type: "string", description: "Short: on its card and in the list." },
-          when: { type: "string", description: '"every 15m", "cron 0 9 * * 1-5", "at 2026-11-02 09:00", or "webhook".' },
+          when: { type: "string", description: '"every 15m", "cron 0 9 * * 1-5", "at 2026-11-02 09:00", "webhook", or "manual".' },
           tz: { type: "string", description: "The zone for `cron` and `at`." },
           text: { type: "string", description: "A reminder, sent as written." },
           command: { type: "string", description: "A shell line; what it prints is sent, and nothing at all when it prints nothing." },
@@ -129,6 +172,26 @@ export function createScheduleTool(options: ScheduleToolOptions): Tool {
           checks: { type: "array", items: { type: "string" }, description: "Mission: commands that say a run is done." },
           review: { type: "string", description: "Mission: what the reviewer checks." },
           no_review: { type: "boolean", description: "Mission: no reviewer." },
+          steps: {
+            type: "array",
+            description:
+              "Several, in a fixed order, each handed what the one before said; the last one's words are sent. A step is one of `text`, `command`, `prompt`, `mission` (the run waits for it) or `ask` (the run waits for a person's yes). A failed step ends the run as failed and one with nothing to say ends it quietly, unless `if_failed` or `if_empty` say otherwise; `then` is where it goes once done. Each is \"next\", \"end\" or a later step's number.",
+            items: {
+              type: "object",
+              properties: {
+                name: { type: "string" },
+                text: { type: "string" },
+                command: { type: "string" },
+                prompt: { type: "string" },
+                mission: { type: "string" },
+                ask: { type: "string" },
+                agent: { type: "string" },
+                then: { type: "string" },
+                if_failed: { type: "string" },
+                if_empty: { type: "string" },
+              },
+            },
+          },
           agent: { type: "string", description: "Another agent runs it." },
           replaces: { type: "string", description: "The id of the job this changes." },
         },
@@ -143,20 +206,21 @@ export function createScheduleTool(options: ScheduleToolOptions): Tool {
       if (!name) return { content: "Give it a `name`.", isError: true };
       const agentId = typeof args.agent === "string" && args.agent.trim() ? args.agent.trim() : ctx.agentId;
       if (!options.agentExists(agentId)) return { content: `There is no agent called ${agentId}.`, isError: true };
-      const payload = payloadOf(args);
+      const payload = payloadOf(args, options.agentExists);
       if (typeof payload === "string") return { content: payload, isError: true };
       // Each run is started as the person who turned the job on, so a run's start does not read the brief its goal
       // points at, as an agent's own start does: it is read here, while the agent that wrote it is here to fix it.
-      if (payload.kind === "mission" && options.readBrief) {
-        for (const path of briefFilesOf(payload.goal)) {
-          const text = options.readBrief(path);
+      const missions = payload.kind === "steps" ? payload.steps.filter((step) => step.kind === "mission") : payload.kind === "mission" ? [payload] : [];
+      for (const mission of options.readBrief ? missions : []) {
+        for (const path of briefFilesOf(mission.goal)) {
+          const text = options.readBrief!(path);
           if (text !== null && !workTextIsEnglish(text)) return { content: writeWorkInEnglish(`The brief file ${path}, which the goal points at,`), isError: true };
         }
       }
       try {
         const trigger = triggerOf(String(args.when ?? ""), typeof args.tz === "string" ? args.tz : undefined, now(), options.timezone());
         // A command a call from outside sets off, with no model between, is an admin's to make from the dashboard.
-        if (trigger.kind === "webhook" && payload.kind === "command") {
+        if (trigger.kind === "webhook" && (payload.kind === "command" || (payload.kind === "steps" && payload.steps.some((step) => step.kind === "command")))) {
           return { content: "A webhook that runs a command is made by an admin from the dashboard, not proposed.", isError: true };
         }
         const replaces = typeof args.replaces === "string" && args.replaces.trim() ? args.replaces.trim() : undefined;
@@ -177,8 +241,8 @@ export function createScheduleTool(options: ScheduleToolOptions): Tool {
         return {
           content:
             `Proposed as ${job.id}. It stays off until a person turns it on ` +
-            (posted ? "from its card here" : "from the Schedule page (its card could not be posted here)") +
-            `. Say so in one line; do not ask them again.${page ? ` Its card on the Schedule page: ${page}` : ""}`,
+            (posted ? "from its card here" : "from the Automations page (its card could not be posted here)") +
+            `. Say so in one line; do not ask them again.${page ? ` Its page: ${page}` : ""}`,
           isError: false,
         };
       } catch (err) {

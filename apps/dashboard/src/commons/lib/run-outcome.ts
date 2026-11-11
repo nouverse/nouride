@@ -28,6 +28,12 @@ export function runOutcomeToast(name: string, outcome: RunNowOutcome): ToastRequ
         message: `${name} is still running`,
         detail: "How it ends will show in its runs.",
       };
+    case "waiting":
+      return {
+        kind: "info",
+        message: `${name} is waiting`,
+        detail: "One of its steps waits for a mission to end, or for your answer. Its page shows which.",
+      };
     case "skipped":
       return said({ kind: "info", message: `${name} skipped this run` });
     case "interrupted":

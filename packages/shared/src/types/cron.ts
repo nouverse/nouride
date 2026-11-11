@@ -51,12 +51,17 @@ export type JobTrigger =
    *
    * `nextRun` returns null for this, so `due()` never picks it up and the ticker never sees it.
    */
-  | { kind: "webhook" };
+  | { kind: "webhook" }
+  /**
+   * Never on the clock and with no address: only when a person presses Run now, or an agent is asked to run it. A list
+   * of steps somebody starts when they need it, where it had to be given a time it would never be wanted at.
+   */
+  | { kind: "manual" };
 
 /**
  * What actually happens when a job is due.
  *
- * Four kinds, and the split is about **cost**, not taste. A reminder that needs no thinking
+ * Four kinds and a list of them, and the split is about **cost**, not taste. A reminder that needs no thinking
  * should not cost a model call, and a script whose output needs interpreting should cost
  * exactly one — not a turn that spends its iterations discovering it has to run `exec` first.
  * Long work is a mission (0.8.0): it outlasts a turn, survives a restart and is checked.
@@ -92,7 +97,89 @@ export type JobPayload =
       checks?: string[];
       /** The reviewer's criteria in words; `false` for no review; absent: the goal itself. */
       review?: string | false;
-    };
+    }
+  /**
+   * Several of the above, in order (`JobStep`): each step is handed what the one before said, and the last one's words
+   * are the run's, delivered as the job says. A list a person reads top to bottom, with a branch where a step says
+   * where the run goes next. No loop: an exit only ever points forward.
+   */
+  | { kind: "steps"; steps: JobStep[] };
+
+/**
+ * Where a run goes from a step: the step after it, the end of the run, or a later step by its id. Never an earlier one,
+ * so a run always ends.
+ */
+export type StepGo = "next" | "end" | { to: string };
+
+/** What every step has, whatever it does. */
+interface StepCommon {
+  /** Names the step within its job: what an exit points at and what a run's outcomes are kept by. */
+  id: string;
+  /** A person's name for it, shown on its card. */
+  name?: string;
+  /** Where the run goes when the step is done. Absent: the next step. */
+  then?: StepGo;
+  /**
+   * Where it goes when the step failed. Absent: the run ends, failed, as a job of that one kind does. Going on hands
+   * the failure to the step it goes to, so a step can be the one that tells somebody.
+   */
+  whenFailed?: StepGo;
+  /**
+   * Where it goes when the step had nothing to say: a command that printed nothing, an agent with nothing to report.
+   * Absent: the run ends there, quietly, so a check that finds nothing wakes nobody.
+   */
+  whenEmpty?: StepGo;
+}
+
+/**
+ * One step of a job that runs several. Each is what a job of one kind does, less what the list decides for it: a
+ * command's `then` is the step after it.
+ */
+export type JobStep = StepCommon &
+  (
+    | /** Text sent as written to where the job reports. What the step before said goes on to the step after. */
+    { kind: "systemEvent"; text: string }
+    /** One turn, of the job's agent or of `agentId`: another agent reads what the step before said and starts fresh. */
+    | { kind: "agentTurn"; message: string; model?: string; agentId?: string }
+    /** A command with no model, in the job's agent's workspace. */
+    | { kind: "command"; argv: string[]; cwd?: string; timeoutMs?: number }
+    /**
+     * A mission, started with what the step before said as its request. The run waits for it to end, however long that
+     * is and across a restart, and hands its result on. One that failed or was stopped is a failed step.
+     */
+    | { kind: "mission"; goal: string; checks?: string[]; review?: string | false; agentId?: string }
+    /**
+     * A wait for a person: asked where the job reports and on the dashboard, with what the step before said. A yes hands
+     * that on to the next step; a no, or no answer in `timeoutMs`, is the step's failed exit.
+     */
+    | { kind: "approval"; ask: string; timeoutMs?: number }
+  );
+
+/** How one step of a run went, kept on the run as it happens for whoever reads it. */
+export interface StepOutcome {
+  /** The step's id. */
+  id: string;
+  kind: JobStep["kind"];
+  /**
+   * `running` and `waiting` while the run is at it. `empty`: it had nothing to say. `declined` and `expired`: a person
+   * said no, or nobody answered. `skipped` and `interrupted` as a run's own.
+   */
+  status: "running" | "waiting" | "done" | "failed" | "empty" | "declined" | "expired" | "skipped" | "interrupted";
+  /** What it said, or why it failed, clipped. */
+  said?: string;
+  startedAt: number;
+  /** How long it took, once it ended. */
+  ms?: number;
+  /** The mission it started. */
+  missionId?: string;
+  /** Who answered it, for a step that waited for a person. */
+  by?: string;
+}
+
+/** What a run that waits is waiting for. */
+export type RunWait =
+  | { kind: "mission"; step: string; missionId: string; since: number }
+  | { kind: "approval"; step: string; since: number; until: number; ask: string };
 
 export type CronDeliveryMode = "announce" | "none" | "webhook";
 
@@ -233,9 +320,16 @@ export interface JobRun {
   jobId: string;
   startedAt: number;
   finishedAt?: number;
-  /** `interrupted`: cut off by a daemon restart — not a failure, and not reported as one. */
-  status: "success" | "error" | "skipped" | "interrupted";
+  /**
+   * `interrupted`: cut off by a daemon restart — not a failure, and not reported as one. `running` while it is at work,
+   * `waiting` while a step of it waits for a mission or a person: neither has a `finishedAt`.
+   */
+  status: "success" | "error" | "skipped" | "interrupted" | "running" | "waiting";
   result?: string;
   /** What its guards held with nobody there to ask (0.8.0): each can be allowed always for the job from its page. */
   held?: HeldAction[];
+  /** How each step went, for a job of several: as many as were reached. */
+  steps?: StepOutcome[];
+  /** What it waits for, while it does. */
+  waiting?: RunWait;
 }

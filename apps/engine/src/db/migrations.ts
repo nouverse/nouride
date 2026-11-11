@@ -63,6 +63,7 @@ import chatMessagesKey from "./migrations/080_chat_messages_key.sql" with { type
 import retryPromised from "./migrations/081_retry_promised.sql" with { type: "text" };
 import resumeAsked from "./migrations/082_resume_asked.sql" with { type: "text" };
 import conversationOpener from "./migrations/083_conversation_opener.sql" with { type: "text" };
+import runSteps from "./migrations/084_run_steps.sql" with { type: "text" };
 
 export interface Migration {
   /** Parsed from the filename prefix, and what `user_version` is set to once applied. */
@@ -98,6 +99,7 @@ export const MIGRATIONS: readonly Migration[] = [
   { version: 81, name: "081_retry_promised.sql", sql: retryPromised },
   { version: 82, name: "082_resume_asked.sql", sql: resumeAsked },
   { version: 83, name: "083_conversation_opener.sql", sql: conversationOpener },
+  { version: 84, name: "084_run_steps.sql", sql: runSteps },
 ];
 
 /**

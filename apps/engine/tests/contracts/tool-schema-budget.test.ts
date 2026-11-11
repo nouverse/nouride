@@ -152,7 +152,10 @@ const PER_TOOL = 3_400;
 // one result under its agent. Asking three was three calls, and a model that made them a reply apart waited for each in
 // turn. The parameter says it stands in place of `agent` and `task`, how many it takes and where the answers come back:
 // unsaid, a model sends both shapes, or waits for three results where one comes.
-const TOTAL = 48_680;
+// 49,540 for `schedule`'s steps (~860): a list in a fixed order with where each step sends the run (`then`,
+// `if_failed`, `if_empty`), a step that waits for a mission or for a person's yes, and a start by hand. Unsaid, a model
+// writes a list the daemon refuses, or leaves the branch to a prompt, which is what a list of steps is there to replace.
+const TOTAL = 49_540;
 
 describe("tool schema budget", () => {
   test("every conditional tool was built, so the total means what it says", () => {

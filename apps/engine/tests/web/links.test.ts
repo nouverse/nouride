@@ -29,8 +29,8 @@ describe("a dashboard link", () => {
 
   test("each page, its ids encoded: a `/`, `?`, `#` or `&` in one never makes another path or another parameter", () => {
     expect(dashboardLink(SET, { kind: "mission", id: "a/b?c#d" })).toBe(`${BASE}/dashboard/missions/a%2Fb%3Fc%23d`);
-    expect(dashboardLink(SET, { kind: "schedule" })).toBe(`${BASE}/dashboard/schedule`);
-    expect(dashboardLink(SET, { kind: "schedule", job: "job_1&x=2" })).toBe(`${BASE}/dashboard/schedule?job=job_1%26x%3D2`);
+    expect(dashboardLink(SET, { kind: "schedule" })).toBe(`${BASE}/dashboard/automations`);
+    expect(dashboardLink(SET, { kind: "schedule", job: "job_1&x=2" })).toBe(`${BASE}/dashboard/automations/job_1%26x%3D2`);
     expect(dashboardLink(SET, { kind: "overview" })).toBe(`${BASE}/dashboard/`);
     expect(dashboardLink(SET, { kind: "agent-cli", agentId: "nix" })).toBe(`${BASE}/dashboard/agents/nix/cli`);
     expect(dashboardLink(SET, { kind: "mcp-install", name: "io.github.x/y z", agent: "nouva" })).toBe(`${BASE}/dashboard/mcp?install=io.github.x%2Fy%20z&agent=nouva`);

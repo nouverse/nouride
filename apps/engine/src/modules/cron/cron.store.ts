@@ -12,11 +12,12 @@
  * throws at 3am into a log nobody is watching.
  */
 
-import { newId, createLogger, type Job, type JobRun, type JobTrigger, type JobPayload, type JobDelivery, type JobSessionMode, type JobTarget, type CronSection, type JobProposal, type Port, type ReachTest, type HeldAction, type JobAllowance } from "@nouride/shared";
+import { newId, createLogger, type Job, type JobRun, type StepOutcome, type JobTrigger, type JobPayload, type JobDelivery, type JobSessionMode, type JobTarget, type CronSection, type JobProposal, type Port, type ReachTest, type JobAllowance } from "@nouride/shared";
+import { RunHistory, type RunOutcome, type RunState, type WaitingRun } from "./runs.store.ts";
 import { randomToken, type SqliteDb } from "@nouride/runtime";
 import type { AuditLog } from "@/commons/audit.store.ts";
 import { nextCronOccurrence, parseCronExpr } from "@/modules/cron/expr.ts";
-import { CronValidationError, validateJob, type ValidationRules } from "@/modules/cron/validate.ts";
+import { CronValidationError, validateJob, validateSteps, type ValidationRules } from "@/modules/cron/validate.ts";
 
 const log = createLogger("cron.store");
 
@@ -47,16 +48,6 @@ interface Row {
   allowed: string | null;
 }
 
-interface RunRow {
-  id: string;
-  job_id: string;
-  started_at: number;
-  finished_at: number | null;
-  status: string;
-  result: string | null;
-  held: string | null;
-}
-
 export interface JobInput {
   agentId: string;
   name: string;
@@ -81,23 +72,14 @@ export interface CronStoreOptions {
   now?: () => number;
 }
 
-export type RunOutcome = (
-  | { status: "success"; result?: string }
-  | {
-      status: "error";
-      result: string;
-      /** The job's own chat would not take its delivery — so a failure notice sent there would not arrive either. */
-      unreachable?: true;
-    }
-  | { status: "skipped"; result: string }
-  | { status: "interrupted"; result: string }
-) & {
-  /** What its guards held with nobody there to ask (0.8.0) — kept on the run, for a person to allow always. */
-  held?: readonly HeldAction[];
-};
+export type { RunOutcome, RunState, WaitingRun };
 
 export class CronStore {
-  constructor(private readonly options: CronStoreOptions) {}
+  private readonly history: RunHistory;
+
+  constructor(private readonly options: CronStoreOptions) {
+    this.history = new RunHistory(options.db, () => this.now);
+  }
 
   private get now(): number {
     return (this.options.now ?? Date.now)();
@@ -144,6 +126,9 @@ export class CronStore {
       case "webhook":
         // Never, by construction. `due()` reads `next_run_at`, so a null here is what keeps a
         // webhook job out of the ticker entirely rather than needing the ticker to know about it.
+        return null;
+      case "manual":
+        // Started by a person, never by the clock.
         return null;
     }
   }
@@ -309,6 +294,8 @@ export class CronStore {
         // The whole command, because that is what an audit log is for. An unattended argv is the
         // single most important thing here to be able to read back later.
         ...(job.payload.kind === "command" ? { argv: job.payload.argv } : {}),
+        // And every step's, for a job of several: each command whole, each other step by its kind.
+        ...(job.payload.kind === "steps" ? { steps: job.payload.steps.map((step) => (step.kind === "command" ? { kind: step.kind, argv: step.argv } : { kind: step.kind })) } : {}),
         next_run_at: job.nextRunAt,
       },
     });
@@ -368,6 +355,8 @@ export class CronStore {
     // `at` in the past is refused on create; on update the existing one may legitimately be in the
     // past already, so only a *changed* schedule is re-checked.
     if (patch.trigger || patch.agentId !== undefined) validateJob(merged, this.rules);
+    // A list of steps is what a change to such a job is nearly always about: held to its rules on every one.
+    else if (patch.payload || patch.session || patch.delivery) validateSteps(merged);
 
     const nextRunAt = existing.enabled
       ? (this.nextRun(merged.trigger, this.now) ?? null)
@@ -597,108 +586,52 @@ export class CronStore {
     }
   }
 
-  // ── Run history ───────────────────────────────────────────────────────────
+  // ── Run history (`runs.store.ts`) ─────────────────────────────────────────
 
   startRun(jobId: string): JobRun {
-    const run: JobRun = { id: newId("run"), jobId, startedAt: this.now, status: "success" };
-    /**
-     * The job's name is copied onto the run, not joined to it later.
-     *
-     * A one-shot is deleted the moment it fires, so by the time anybody reads its history the row it
-     * would have joined to is gone — that is how every successful `at` job used to vanish from the
-     * run list entirely. Copied *at start* rather than at finish, so a run that is still going has a
-     * name too, and a job renamed between two runs reads as two names, which is what happened.
-     */
-    const name = this.db
-      .prepare<{ name: string }>("SELECT name FROM cron_jobs WHERE id = ?")
-      .get(jobId)?.name;
-    this.db
-      .prepare(
-        "INSERT INTO cron_runs (id, job_id, job_name, started_at, finished_at, status, result) VALUES (?, ?, ?, ?, NULL, 'running', NULL)",
-      )
-      .run(run.id, run.jobId, name ?? null, run.startedAt);
-    return run;
+    return this.history.start(jobId);
   }
 
   finishRun(runId: string, outcome: RunOutcome): void {
-    this.db
-      .prepare("UPDATE cron_runs SET finished_at = ?, status = ?, result = ?, held = ? WHERE id = ?")
-      .run(this.now, outcome.status, outcome.result ?? null, outcome.held?.length ? JSON.stringify(outcome.held) : null, runId);
+    this.history.finish(runId, outcome);
+  }
+
+  /** How a run's steps went so far, written as each begins and ends. */
+  progressRun(runId: string, steps: readonly StepOutcome[]): void {
+    this.history.progress(runId, steps);
+  }
+
+  /** A run that stops to wait, with where it stands; and taken up again. */
+  parkRun(runId: string, state: RunState, steps: readonly StepOutcome[]): void {
+    this.history.park(runId, state, steps);
+  }
+
+  unparkRun(runId: string): void {
+    this.history.unpark(runId);
+  }
+
+  waitingRuns(): WaitingRun[] {
+    return this.history.waiting();
+  }
+
+  waitingRun(runId: string): WaitingRun | null {
+    return this.history.waiting().find((one) => one.run.id === runId) ?? null;
   }
 
   runs(jobId: string, limit = 20): JobRun[] {
-    return this.db
-      .prepare<RunRow>("SELECT * FROM cron_runs WHERE job_id = ? ORDER BY started_at DESC LIMIT ?")
-      .all(jobId, limit)
-      .map((row) => ({
-        id: row.id,
-        jobId: row.job_id,
-        startedAt: row.started_at,
-        ...(row.finished_at === null ? {} : { finishedAt: row.finished_at }),
-        status: row.status as JobRun["status"],
-        ...(row.result === null ? {} : { result: row.result }),
-        ...(row.held === null ? {} : { held: JSON.parse(row.held) as HeldAction[] }),
-      }));
+    return this.history.of(jobId, limit);
   }
 
-  /**
-   * Recent runs across every job, newest first, with the job's name attached.
-   *
-   * `runs(jobId)` answers "how has this one been doing", which is the question the Schedule page
-   * asks. This answers "what has fired lately", which is the question you ask when something went
-   * wrong and you do not yet know which job it was — and it was not answerable at all without
-   * opening every job in turn.
-   */
   recentRuns(limit = 100): (JobRun & { jobName: string; agentId: string })[] {
-    return this.db
-      .prepare<RunRow & { job_name: string | null; agent_id: string | null }>(
-        // `r.job_name` first, because the join cannot answer for a job that has been deleted — and a
-        // successfully fired one-shot always has been. The join is still there for `agent_id`, which
-        // is genuinely the job's rather than the run's.
-        `SELECT r.*, COALESCE(r.job_name, j.name) AS job_name, j.agent_id AS agent_id
-         FROM cron_runs r LEFT JOIN cron_jobs j ON j.id = r.job_id
-         ORDER BY r.started_at DESC LIMIT ?`,
-      )
-      .all(Math.max(1, Math.min(limit, 500)))
-      .map((row) => ({
-        id: row.id,
-        jobId: row.job_id,
-        // A run whose job has since been deleted keeps its history — the row is the record that it
-        // happened, and dropping it would make the list disagree with the audit log.
-        jobName: row.job_name ?? "(deleted job)",
-        agentId: row.agent_id ?? "",
-        startedAt: row.started_at,
-        ...(row.finished_at === null ? {} : { finishedAt: row.finished_at }),
-        status: row.status as JobRun["status"],
-        ...(row.result === null ? {} : { result: row.result }),
-        ...(row.held === null ? {} : { held: JSON.parse(row.held) as HeldAction[] }),
-      }));
+    return this.history.recent(limit);
   }
 
-  /** Drop run history past the retention window. `0` days keeps everything. */
   sweepRuns(): number {
-    const days = this.options.config.runRetentionDays;
-    if (days <= 0) return 0;
-    const cutoff = this.now - days * 86_400_000;
-    const result = this.db.prepare("DELETE FROM cron_runs WHERE started_at < ?").run(cutoff);
-    const removed = result.changes;
-    if (removed > 0) log.info("swept cron run history", { removed, older_than_days: days });
-    return removed;
+    return this.history.sweep(this.options.config.runRetentionDays);
   }
 
-  /**
-   * Mark runs left mid-flight by a restart.
-   *
-   * A row that says `running` with no `finished_at` and no process behind it is a lie the
-   * dashboard would render as a job still working. Called once at boot, before the ticker starts.
-   */
   reconcileInterrupted(): number {
-    const result = this.db
-      .prepare(
-        "UPDATE cron_runs SET status = 'interrupted', finished_at = ?, result = 'interrupted by a daemon restart' WHERE finished_at IS NULL",
-      )
-      .run(this.now);
-    return result.changes;
+    return this.history.reconcileInterrupted();
   }
 }
 

@@ -33,7 +33,7 @@ import { Choice, Section } from "./form-parts";
 import { TriggerFields } from "./TriggerFields";
 import { draftFromTrigger, triggerBody, type TriggerDraft } from "../lib/trigger";
 
-type PayloadKind = JobPayloadInput["kind"];
+type PayloadKind = Exclude<JobPayloadInput["kind"], "steps">;
 /** What a command's output is worth: posted as it is, or handed to one turn. */
 type Then = Extract<JobPayloadInput, { kind: "command" }>["then"];
 type SessionMode = JobSummary["session"];
@@ -115,7 +115,7 @@ export function JobForm({
   const orchestrator = useOrchestrator();
   const ordered = useOrchestratorFirst(agents, (agent) => agent.id);
   const [agentId, setAgentId] = useState(job?.agentId ?? ordered[0]?.id ?? "");
-  const [kind, setKind] = useState<PayloadKind>(job?.payload.kind ?? "agentTurn");
+  const [kind, setKind] = useState<PayloadKind>(job && job.payload.kind !== "steps" ? job.payload.kind : "agentTurn");
 
   const [text, setText] = useState(String(job?.payload.text ?? ""));
   const [message, setMessage] = useState(String(job?.payload.message ?? ""));

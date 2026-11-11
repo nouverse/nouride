@@ -219,7 +219,7 @@ export function WebhookForm({
  * the trigger differs — a webhook's "reminder" is something an external system just did, not a time
  * that came round.
  */
-type WebhookKind = JobPayloadInput["kind"];
+type WebhookKind = Exclude<JobPayloadInput["kind"], "steps">;
 
 const WEBHOOK_KINDS: { kind: WebhookKind; label: string; hint: string }[] = [
   {

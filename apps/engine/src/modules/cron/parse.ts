@@ -48,6 +48,8 @@ export interface ScheduleInput {
   cron?: string;
   /** IANA zone for `cron`, and for an `at` with no offset. */
   tz?: string;
+  /** No time at all: it runs when somebody starts it. */
+  manual?: boolean;
 }
 
 /**
@@ -62,8 +64,12 @@ export function parseScheduleInput(
   defaultTz: string,
 ): JobTrigger {
   const given = [input.at, input.every, input.cron].filter(Boolean);
+  if (input.manual === true) {
+    if (given.length > 0) throw new CronValidationError("a job started by hand has no time: leave out `at`, `every` and `cron`.", "schedule");
+    return { kind: "manual" };
+  }
   if (given.length === 0) {
-    throw new CronValidationError("give a trigger: `at` for once, `every` for an interval, or `cron`.", "schedule");
+    throw new CronValidationError("give a trigger: `at` for once, `every` for an interval, `cron`, or `manual` for one started by hand.", "schedule");
   }
   if (given.length > 1) {
     throw new CronValidationError("give exactly one of `at`, `every` or `cron`.", "schedule");
@@ -150,6 +156,8 @@ export function describeTrigger(trigger: JobTrigger, defaultTz: string): string 
       return `cron \`${trigger.expr}\` (${trigger.tz ?? defaultTz})`;
     case "webhook":
       return "when its webhook is called";
+    case "manual":
+      return "when somebody starts it";
   }
 }
 

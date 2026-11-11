@@ -12,6 +12,7 @@ import { attachmentTypeFor } from "@nouride/gateways";
 import type { JobInput } from "@/modules/cron/cron.store.ts";
 import { CronValidationError, type CronField } from "@/modules/cron/validate.ts";
 import { parseScheduleInput } from "@/modules/cron/parse.ts";
+import { stepsFrom } from "@/modules/cron/step-input.ts";
 import { webhookUrl } from "@/modules/web/hooks.ts";
 import { hookReach } from "@/modules/web/hook-reach.ts";
 import type { ControlDeps } from "./types.ts";
@@ -100,7 +101,8 @@ function cronPayloadFrom(raw: unknown): JobPayload {
       ...(payload.review === false ? { review: false } : typeof payload.review === "string" && payload.review.trim() ? { review: payload.review.trim() } : {}),
     };
   }
-  throw new CronValidationError('`payload.kind` must be "systemEvent", "agentTurn", "command" or "mission".', "kind");
+  if (kind === "steps") return { kind, steps: stepsFrom(payload.steps) };
+  throw new CronValidationError('`payload.kind` must be "systemEvent", "agentTurn", "command", "mission" or "steps".', "kind");
 }
 
 function cronDeliveryFrom(raw: unknown): JobDelivery | undefined {
@@ -164,6 +166,7 @@ export function cronInputFrom(
           ...(typeof body.every === "string" ? { every: body.every } : {}),
           ...(typeof body.cron === "string" ? { cron: body.cron } : {}),
           ...(typeof body.tz === "string" ? { tz: body.tz } : {}),
+          ...(body.manual === true ? { manual: true } : {}),
         },
         Date.now(),
         timezone,
@@ -187,7 +190,7 @@ function isSessionMode(value: unknown): value is JobSessionMode {
 
 export function cronPatchFrom(body: Record<string, unknown>, timezone: string): Partial<JobInput> {
   const scheduleGiven =
-    typeof body.at === "string" || typeof body.every === "string" || typeof body.cron === "string";
+    typeof body.at === "string" || typeof body.every === "string" || typeof body.cron === "string" || body.manual === true;
   const target = body.target as Record<string, unknown> | undefined;
 
   return {
@@ -201,6 +204,7 @@ export function cronPatchFrom(body: Record<string, unknown>, timezone: string): 
               ...(typeof body.every === "string" ? { every: body.every } : {}),
               ...(typeof body.cron === "string" ? { cron: body.cron } : {}),
               ...(typeof body.tz === "string" ? { tz: body.tz } : {}),
+              ...(body.manual === true ? { manual: true } : {}),
             },
             Date.now(),
             timezone,

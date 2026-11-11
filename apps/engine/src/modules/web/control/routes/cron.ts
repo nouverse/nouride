@@ -10,6 +10,7 @@ import { webhookUrl } from "@/modules/web/hooks.ts";
 import { sendReachTest } from "@/modules/web/hook-reach.ts";
 import { settledCard, turnOnProposal } from "@/modules/cron/proposals.ts";
 import type { CronField } from "@/modules/cron/validate.ts";
+import type { JobPayload } from "@nouride/shared";
 import { cronInputFrom, cronPatchFrom, cronRefusalField, isCronRefusal, jsonBody, webhookView } from "../payloads.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { NOT_CHANGED, notSaved } from "../plain.ts";
@@ -28,6 +29,7 @@ const CRON_FIELDS: Record<CronField, string> = {
   checks: "the mission's checks",
   review: "the mission's review",
   delivery: "where it goes",
+  steps: "the steps",
 };
 
 /** A cron refusal in the page's words: the field it names, or what was entered. */
@@ -99,9 +101,10 @@ export function registerCronRoutes(control: ControlApp, deps: ControlDeps): void
     }
 
     try {
-      const job = deps.cron.store.create({
-        ...cronInputFrom(body, principal.actor, deps.cron.timezone, { trigger: { kind: "webhook" } }),
-      });
+      const input = cronInputFrom(body, principal.actor, deps.cron.timezone, { trigger: { kind: "webhook" } });
+      const unknown = unknownStepAgent(deps, input.payload);
+      if (unknown) return c.json({ error: unknown }, 400);
+      const job = deps.cron.store.create(input);
       deps.audit.record({
         action: "webhook_create",
         agentId: job.agentId,
@@ -181,7 +184,7 @@ export function registerCronRoutes(control: ControlApp, deps: ControlDeps): void
       const input = cronInputFrom(body, principal.actor, deps.cron.timezone);
       // An agent that does not exist used to be accepted here and fail into a log hours later, when
       // the job came due — which is exactly when nobody is watching. Said now, to whoever asked.
-      const unknown = unknownAgent(deps, input.agentId);
+      const unknown = unknownAgent(deps, input.agentId) ?? unknownStepAgent(deps, input.payload);
       if (unknown) return c.json({ error: unknown }, 400);
       const job = deps.cron.store.create(input);
       deps.audit.record({
@@ -207,7 +210,7 @@ export function registerCronRoutes(control: ControlApp, deps: ControlDeps): void
 
     try {
       const patch = cronPatchFrom(body, deps.cron.timezone);
-      const unknown = patch.agentId !== undefined ? unknownAgent(deps, patch.agentId) : null;
+      const unknown = (patch.agentId !== undefined ? unknownAgent(deps, patch.agentId) : null) ?? unknownStepAgent(deps, patch.payload);
       if (unknown) return c.json({ error: unknown }, 400);
       const job = deps.cron.store.update(existing.id, patch, c.get("principal").actor);
       if (!job) return c.json({ error: "no such job" }, 404);
@@ -307,6 +310,15 @@ function summaryOf(job: Job, timezone: string): JobSummary {
 function unknownAgent(deps: ControlDeps, agentId: string): string | null {
   if (!agentId.trim() || deps.registry.get(agentId)) return null;
   return `no agent "${agentId}": a job must name one that exists`;
+}
+
+/** The same for a step that names an agent of its own, in a job of several: said at the request, with the step's number. */
+function unknownStepAgent(deps: ControlDeps, payload: JobPayload | undefined): string | null {
+  if (payload?.kind !== "steps") return null;
+  for (const [index, step] of payload.steps.entries()) {
+    if ((step.kind === "agentTurn" || step.kind === "mission") && step.agentId && !deps.registry.get(step.agentId)) return `step ${index + 1}: no agent "${step.agentId}": a step must name one that exists`;
+  }
+  return null;
 }
 
 /** The longest a caller may ask to be kept waiting before a 202 — under the 100 s a common proxy allows. */
