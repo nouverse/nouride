@@ -130,6 +130,10 @@ pose=…>` or `<EmptyState pose=…>`; which state takes which pose is the table
   one element are not a fallback: the one written later in the stylesheet wins, whatever their order in
   the class.
 - Nothing lies over the phone's tab bar: a toast stands above it.
+- A page held to the window (`fillsViewport`, `FILL_PAGE`) has its padding inside the height it is held to,
+  so what runs past the window has none under it. `FILL_PAGE` carries a foot for that; a tab that runs
+  down the page as a document does adds `RUNS_DOWN`, on a root as tall as what it holds (no `flex-1`,
+  no `min-h-0`), and ends with the room a scrolling page has.
 
 ## Implementation constraints
 

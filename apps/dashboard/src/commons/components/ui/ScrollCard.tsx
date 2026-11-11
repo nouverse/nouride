@@ -32,7 +32,20 @@ export const HELD_BOTTOM = "pb-[calc(9rem+env(safe-area-inset-bottom))] lg:pb-8"
 // sliver — it did, on MCP. Only the list grows into what is left (`fill`), and never below its own minimum. Each fades
 // in as it is drawn (`*:animate-fade`), so a tab's panel, or a form opened above the list, shows where it came from: one
 // that stays is not drawn again, and does not move. A list a tab only filters is keyed by the tab, to be drawn anew.
-export const FILL_PAGE = "flex min-h-0 flex-1 flex-col gap-6 [&>*]:shrink-0 *:animate-fade";
+//
+// And a foot of its own, after its last child: the layout's padding is inside the height the page is held to, so a page
+// that runs past the window anyway — a short window, a form open above the list, a tab that runs down the page — ended
+// flush with the window's foot. The foot's margins take back its height and the gap before it, so it takes nothing
+// from a list that fills the window: it lies in the layout's padding there, and under the last child where the page
+// scrolls.
+const HELD_FOOT = "lg:after:block lg:after:h-8 lg:after:shrink-0 lg:after:-mt-6 lg:after:-mb-8 lg:after:content-['']";
+export const FILL_PAGE = `flex min-h-0 flex-1 flex-col gap-6 [&>*]:shrink-0 *:animate-fade ${HELD_FOOT}`;
+
+/**
+ * Under a part of a held page that runs down the page as a document does (Skills' Explore): with the held page's own
+ * foot, the room a page that scrolls ends with (`PAGE_BOTTOM`).
+ */
+export const RUNS_DOWN = "lg:pb-12";
 
 /** The bounded, scrolling region on its own — for a list that is not one card, like Schedule's jobs. */
 export function ScrollArea({

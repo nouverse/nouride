@@ -17,6 +17,7 @@ import { api } from "@/commons/lib/api";
 import type { SkillHubHit, SkillHubInstall } from "@nouride/wire";
 import { Card, EmptyState, ErrorNote } from "@/commons/components/ui/ui";
 import { Details } from "@/commons/components/ui/Details";
+import { RUNS_DOWN } from "@/commons/components/ui/ScrollCard";
 import { SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
 
 type Source = "" | "skills.sh" | "clawhub" | "well-known";
@@ -60,7 +61,9 @@ export function ExplorePanel({ editable, onReview }: { editable: boolean; onRevi
   const hits = searched ? (search.data?.hits ?? []) : (popular.data?.hits ?? []);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6">
+    // As tall as what it holds, not what the window left: held to that, its cards ran out of it, and the room under
+    // them stayed up inside it.
+    <div className={`flex flex-col gap-6 ${RUNS_DOWN}`}>
       <Card
         title="Install from a repository or URL"
         description="Any GitHub repository or folder that holds skills. Every skill in it waits on the Pending tab."

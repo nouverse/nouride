@@ -57,6 +57,35 @@ describe("the bottom of a page", () => {
     expect(HELD_BOTTOM.split(" ")).toContain("lg:pb-8");
   });
 
+  // Skills' Explore runs down the page, on a page held to the window: its last card ended flush with the window's foot,
+  // because the layout's padding is inside the height the page is held to.
+  test("a held page that runs past the window has a foot of its own, which takes nothing from a list that fills it", () => {
+    const source = read("commons/components/ui/ScrollCard.tsx");
+    const foot = (/const HELD_FOOT = "([^"]+)"/.exec(source)?.[1] ?? "").split(" ");
+    const fill = /export const FILL_PAGE = `([^`]+)`/.exec(source)?.[1] ?? "";
+    expect(fill).toContain("${HELD_FOOT}");
+    // A step is a quarter of a rem. The foot is as tall as the layout's padding there, so it lies in it.
+    const steps = (prefix: string, among: string[]) => Number(among.find((word) => word.startsWith(prefix))?.slice(prefix.length) ?? Number.NaN);
+    expect(foot).toContain("lg:after:content-['']");
+    expect(foot).toContain("lg:after:shrink-0");
+    expect(steps("lg:after:h-", foot)).toBe(steps("lg:pb-", HELD_BOTTOM.split(" ")));
+    // Its margins take back its own height and the gap before it: the list above it keeps every pixel.
+    expect(steps("lg:after:-mb-", foot)).toBe(steps("lg:after:h-", foot));
+    expect(steps("lg:after:-mt-", foot)).toBe(steps("gap-", fill.split(" ")));
+  });
+
+  test("a tab that runs down a held page ends with a scrolling page's room", () => {
+    const source = read("commons/components/ui/ScrollCard.tsx");
+    const steps = (pattern: RegExp, text: string) => Number(pattern.exec(text)?.[1] ?? Number.NaN);
+    const runsDown = steps(/export const RUNS_DOWN = "lg:pb-(\d+)"/, source);
+    expect(runsDown + steps(/lg:after:h-(\d+)/, source)).toBe(steps(/lg:pb-(\d+)/, PAGE_BOTTOM));
+    // On a root as tall as what it holds: one held to what the window left (`flex-1 min-h-0`) keeps the room inside it,
+    // above where its cards end.
+    const root = /<div className=\{`([^`]*\$\{RUNS_DOWN\}[^`]*)`\}>/.exec(read("modules/skills/explore.panel.tsx"))?.[1] ?? "";
+    expect(root).toContain("${RUNS_DOWN}");
+    for (const word of ["flex-1", "min-h-0"]) expect(root.split(" ")).not.toContain(word);
+  });
+
   test("is under every page: the document's, the one held to the window, System Logs and Secrets", () => {
     const layout = read("commons/components/layout/RootLayout.tsx");
     const containers = [...layout.matchAll(/<div className=\{`mx-auto [^`]*`\}>/g)].map((m) => m[0]);
