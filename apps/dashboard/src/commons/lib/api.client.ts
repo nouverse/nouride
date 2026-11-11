@@ -70,10 +70,15 @@ interface CustomRequestInit extends RequestInit {
  * Told the moment a request finds the daemon not answering — nothing came back, or a proxy answered for it — so the
  * restart follower (`restart.ts`) can hold the page's queries before a retry turns into an error on screen. Not for
  * `/api/health`: that is how the follower looks, and its silence is expected.
+ *
+ * `slow` is this client's own clock running out, which is not the daemon's silence: a route that works for minutes ran
+ * past it while every other request was answered, and the page said Nouride was restarting.
  */
-let onUnreachable: (() => void) | null = null;
+export type Unreachable = "silent" | "slow";
 
-export function whenUnreachable(listener: () => void): void {
+let onUnreachable: ((how: Unreachable) => void) | null = null;
+
+export function whenUnreachable(listener: (how: Unreachable) => void): void {
   onUnreachable = listener;
 }
 
@@ -107,13 +112,12 @@ export async function request<T>(path: string, init?: CustomRequestInit): Promis
       },
     });
   } catch (err) {
-    if (path !== "/api/health") onUnreachable?.();
-    if (err instanceof DOMException && err.name === "TimeoutError") {
-      throw new ApiError(0, `Nouride did not answer within ${timeout / 1000} seconds`);
-    }
+    const slow = err instanceof DOMException && err.name === "TimeoutError";
+    if (path !== "/api/health") onUnreachable?.(slow ? "slow" : "silent");
+    if (slow) throw new ApiError(0, `Nouride did not answer within ${timeout / 1000} seconds`);
     throw new ApiError(0, "cannot reach Nouride");
   }
-  if (notAnswering(res.status) && path !== "/api/health") onUnreachable?.();
+  if (notAnswering(res.status) && path !== "/api/health") onUnreachable?.("silent");
 
   // /health answers 503 when degraded but still returns the payload — that body is
   // exactly what the dashboard needs to show, so a non-2xx is not automatically an

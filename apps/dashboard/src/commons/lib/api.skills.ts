@@ -118,7 +118,9 @@ export const skillsApi = {
   skillHubInstall: (ref: string) => post<SkillHubInstall>(`${control}/skills/hub/install`, { ref }),
 
   learningSettings: () => request<LearningSettings>(`${control}/skills/learning`),
-  reviewSkills: () => post<NonNullable<LearningSettings["lastReview"]>["report"]>(`${control}/skills/review`, {}),
+  // Minutes, not the client's seconds: a review asks a model once for the overlaps and once more per rewrite, each of
+  // which reads the skill's files first. Cut at the default, the page said Nouride was restarting while it worked on.
+  reviewSkills: () => post<NonNullable<LearningSettings["lastReview"]>["report"]>(`${control}/skills/review`, {}, { timeoutMs: 10 * 60_000 }),
   // A patch, not the whole object: the form sends what changed, and the daemon validates the lot
   // before writing any of it.
   saveLearningSettings: (patch: Partial<Omit<LearningSettings, "editable" | "pending">>) =>

@@ -17,6 +17,8 @@
  */
 
 import { describe, expect, test } from "bun:test";
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { Hono } from "hono";
 import { mountControlRoutes } from "@/modules/web/control/index.ts";
 import type { ControlDeps } from "@/modules/web/control/types.ts";
@@ -76,5 +78,44 @@ describe("the dashboard's calls", () => {
   test("the method is read for nearly every call — a reader that found none would check paths alone", () => {
     const calls = dashboardCalls();
     expect(calls.filter((call) => call.method !== null).length).toBeGreaterThan(calls.length - 5);
+  });
+});
+
+/**
+ * A route that works for minutes keeps its own connection open (`keepOpen`), and the browser has to wait as long: its
+ * client gives a call fifteen seconds unless the call says otherwise. `POST /skills/review` did not, so "Review now"
+ * was cut while the review ran on, and the page said Nouride was probably restarting.
+ */
+describe("a route that works for minutes", () => {
+  const ROUTES = join(import.meta.dir, "../../src/modules/web/control/routes");
+
+  /** Each route whose handler holds its request open past the server's idle timeout. */
+  function heldOpen(): Route[] {
+    const held: Route[] = [];
+    for (const name of readdirSync(ROUTES).filter((file) => file.endsWith(".ts"))) {
+      const source = readFileSync(join(ROUTES, name), "utf8");
+      const routes = [...source.matchAll(/\bcontrol\.(get|post|put|patch|delete)\(\s*"([^"]+)"/g)];
+      for (const hold of source.matchAll(/keepOpen\?\.\(/g)) {
+        const route = routes.filter((found) => found.index < hold.index).at(-1);
+        if (route) held.push({ method: route[1]!.toUpperCase(), shape: routeShape(route[2]!) });
+      }
+    }
+    return held;
+  }
+
+  test("is called with a wait of the call's own, not the client's seconds", () => {
+    const held = heldOpen();
+    // The review, the memory pass, forgetting a person and the tag tidies at least: none found is a reader that broke.
+    expect(held.length).toBeGreaterThanOrEqual(8);
+    expect(held).toContainEqual({ method: "POST", shape: ["skills", "review"] });
+
+    const impatient = dashboardCalls().filter((call) => !call.patient && held.some((route) => route.method === call.method && matches(call.shape, route.shape)));
+    expect(impatient.map((call) => `${call.method} ${call.raw}  (${call.file})`)).toEqual([]);
+  });
+
+  test("the reader sees a wait where a call gives one, and none where it does not", () => {
+    const patient = (start: string) => dashboardCalls().find((call) => call.raw.startsWith(start))?.patient;
+    expect(patient("/memory/pass")).toBe(true);
+    expect(patient("/skills/learning")).toBe(false);
   });
 });

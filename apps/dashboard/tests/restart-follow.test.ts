@@ -8,7 +8,7 @@
 
 import { afterAll, describe, expect, test } from "bun:test";
 import type { HealthPayload } from "@nouride/wire";
-import { entryScript, follow, following, markRestartPending, restartPending, restartState, type RestartIo } from "@/commons/lib/restart";
+import { afterSlowAnswer, entryScript, follow, following, markRestartPending, restartPending, restartState, type RestartIo } from "@/commons/lib/restart";
 import { POLL_MS } from "@/commons/lib/restart-watch";
 
 const health = (uptime: number, status: HealthPayload["status"] = "ok", version = "0.7.11"): HealthPayload => ({ status, uptime, version, agents: 1, gateways: {} });
@@ -109,6 +109,44 @@ describe("a restart nobody here asked for", () => {
     await follow(io, { kind: "outage", before: null, held: true });
     expect(log).not.toContain("reload");
     expect(log).toContain("refetch");
+  });
+});
+
+/**
+ * "Review now" on Skills ran for minutes, the client gave up on it at its own seconds, and the strip said Nouride was
+ * probably restarting while it worked on and answered everything else. A request that ran out of time is a slow route
+ * until `/health` is silent too.
+ */
+describe("a request that ran out of the page's patience", () => {
+  test("says nothing and holds nothing while the daemon answers its health", async () => {
+    const { io, log } = scripted({ looks: [health(9_000)] });
+    const said: string[] = [];
+    const look = io.health;
+    io.health = async () => {
+      const answer = await look();
+      said.push(restartState().phase);
+      return answer;
+    };
+    await afterSlowAnswer(io);
+    expect(log).toEqual(["health:ok/9000"]);
+    expect(said).toEqual(["idle"]);
+    expect(restartState().phase).toBe("idle");
+  });
+
+  test("is followed as an outage once its health is silent too, or says it is going down", async () => {
+    for (const first of [null, health(9_000, "shutting_down")]) {
+      const { io, log } = scripted({ looks: [first, null, health(1)] });
+      await afterSlowAnswer(io);
+      expect(log.slice(0, 2)).toEqual([`health:${first ? "shutting_down/9000" : "none"}`, "queries held"]);
+      expect(log.slice(-3)).toEqual(["queries run", "refetch", "queries run"]);
+      expect(restartState().phase).toBe("idle");
+    }
+  });
+
+  test("two at once look once", async () => {
+    const { io, log } = scripted({ looks: [health(9_000)] });
+    await Promise.all([afterSlowAnswer(io), afterSlowAnswer(io)]);
+    expect(log).toEqual(["health:ok/9000"]);
   });
 });
 

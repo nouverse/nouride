@@ -77,23 +77,28 @@ export function matches(call: Shape, route: Shape): boolean {
  * the answer the call declares, its type argument (`post<{ ok: true; note: string }>`), where it gives one.
  *
  * Paths alone missed half a rename: `/memory/tags/tidy` is a GET and a POST, and renaming one left the other to match.
+ *
+ * And whether it gives itself longer than the client's default to be answered (`timeoutMs`), for the routes that work
+ * for minutes.
  */
-function callAround(source: string, templateStart: number, templateEnd: number): { method: string | null; answer: string | null } {
+function callAround(source: string, templateStart: number, templateEnd: number): { method: string | null; answer: string | null; patient: boolean } {
   const before = source.slice(Math.max(0, templateStart - 300), templateStart);
   const helper = /\b(request|post|put|del)(<[^()]*>)?\(\s*$/.exec(before);
-  if (!helper) return { method: null, answer: null };
+  if (!helper) return { method: null, answer: null, patient: false };
   const answer = helper[2]?.slice(1, -1) ?? null;
-  if (helper[1] === "post") return { method: "POST", answer };
-  if (helper[1] === "put") return { method: "PUT", answer };
-  if (helper[1] === "del") return { method: "DELETE", answer };
-  // `request`: the rest of its argument list, up to the parenthesis that closes it.
+  // The rest of its argument list, up to the parenthesis that closes it.
   let depth = 1;
   let end = templateEnd + 1;
   for (; end < source.length && depth > 0; end += 1) {
     if (source[end] === "(") depth += 1;
     else if (source[end] === ")") depth -= 1;
   }
-  return { method: /method:\s*"([A-Z]+)"/.exec(source.slice(templateEnd, end))?.[1] ?? "GET", answer };
+  const rest = source.slice(templateEnd, end);
+  const patient = /\btimeoutMs\b/.test(rest);
+  if (helper[1] === "post") return { method: "POST", answer, patient };
+  if (helper[1] === "put") return { method: "PUT", answer, patient };
+  if (helper[1] === "del") return { method: "DELETE", answer, patient };
+  return { method: /method:\s*"([A-Z]+)"/.exec(rest)?.[1] ?? "GET", answer, patient };
 }
 
 /**
@@ -114,6 +119,8 @@ export interface Call {
   file: string;
   /** The answer's type as the call writes it, `{ ok: boolean; note: string }` or `UpdateInstall`; null for none. */
   answer: string | null;
+  /** Whether the call says how long it waits for its answer, rather than the client's default seconds. */
+  patient: boolean;
 }
 
 /**
@@ -136,8 +143,8 @@ export function dashboardCalls(): Call[] {
       if (raw === null || NOT_STATIC.includes(raw)) continue;
       const path = pathOf(raw);
       // The template's backtick is just before the marker; its closing one ends `raw`.
-      const { method, answer } = callAround(source, at - 1, at + marker.length + raw.length);
-      out.push({ shape: clientShape(path), method, raw, file, answer });
+      const { method, answer, patient } = callAround(source, at - 1, at + marker.length + raw.length);
+      out.push({ shape: clientShape(path), method, raw, file, answer, patient });
     }
   }
 

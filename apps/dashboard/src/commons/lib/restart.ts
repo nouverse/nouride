@@ -12,7 +12,7 @@
  * - back, it compares the build the daemon now serves with this page's — the entry script's hashed name in
  *   `index.html` — and reloads into a new one, or else refetches every query on the page it is on;
  * - a restart nobody here asked for (another tab, the CLI, a crash) is noticed by a query that could not reach the
- *   daemon (`noticeUnreachable`), and followed the same way, except that a new build is left to `UpdatedBanner` to
+ *   daemon (`whenUnreachable`), and followed the same way, except that a new build is left to `UpdatedBanner` to
  *   offer: whoever is typing in this tab did not ask for the page to go.
  *
  * A module, not a hook: a restart outlives the button that asked for it — the person navigates away while it waits —
@@ -24,7 +24,7 @@ import { useSyncExternalStore } from "react";
 import { api } from "./api";
 import type { HealthPayload } from "@nouride/wire";
 import { ApiError, whenUnreachable } from "./api.client";
-import { lookAgain, lookAtInstall, POLL_MS, type InstallPhase, type RestartWatch } from "./restart-watch";
+import { lookAgain, lookAtInstall, POLL_MS, readRestart, type InstallPhase, type RestartWatch } from "./restart-watch";
 
 /** What is being followed: a restart this tab asked for, an update's, or one nobody here asked for. */
 export type RestartKind = "restart" | "install" | "outage";
@@ -208,6 +208,25 @@ export async function follow(io: RestartIo, start: { kind: RestartKind; before: 
   }
 }
 
+let asking = false;
+
+/**
+ * One request ran out of this page's patience. That is a slow route until `/health` is silent too: the weekly skill
+ * review answered after minutes, was cut at the client's seconds, and the strip said Nouride was probably restarting
+ * while it ran on. So one look first, and an outage is followed only when that look finds nothing answering.
+ */
+export async function afterSlowAnswer(io: RestartIo): Promise<void> {
+  if (asking || active) return;
+  asking = true;
+  try {
+    const health = await io.health().catch(() => null);
+    if (readRestart(health, null, false) !== "away" || active) return;
+  } finally {
+    asking = false;
+  }
+  await follow(io, { kind: "outage", before: null, held: true });
+}
+
 // ── The browser's side ──────────────────────────────────────────────────────────────────────────────────────────────
 
 let client: QueryClient | null = null;
@@ -218,8 +237,10 @@ let client: QueryClient | null = null;
  */
 export function connectRestart(queryClient: QueryClient): void {
   client = queryClient;
-  whenUnreachable(() => {
-    if (!following()) void follow(browser, { kind: "outage", before: null, held: true });
+  whenUnreachable((how) => {
+    if (following()) return;
+    if (how === "slow") void afterSlowAnswer(browser);
+    else void follow(browser, { kind: "outage", before: null, held: true });
   });
 }
 
