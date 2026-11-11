@@ -9,8 +9,8 @@ name: nouride
 #   ghcr.io/nouverse/nouride          the free build, the LLM gateway in it (off until switched on)
 #   ghcr.io/nouverse/nouride-pro      + Nouverse sign-in and multi-user — private
 #
-# `ghcr.io/nouverse/nouride-router` still gets every 0.8.x release, as the free
-# image under Router's old name; a file that names it is better pointed here.
+# A file that names `ghcr.io/nouverse/nouride-router`, the free image under Router's old name, is pointed here: it is
+# the same build, and the old name goes in 0.9.0.
 
 #
 # The Pro image is what Nouverse pods run; it is not for handing out. Swap the

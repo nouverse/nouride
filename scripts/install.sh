@@ -185,16 +185,14 @@ fi
 case "$VARIANT" in
   basic) VARIANT="" ;;
   ""|router|pro) ;;
-  *) die "unknown --variant: $VARIANT (the editions are basic, router and pro)" ;;
+  *) die "unknown --variant: $VARIANT (the editions are basic and pro)" ;;
 esac
 # <<< editions
 # >>> gateway on
 # Router is part of Nouride since 0.8.28 (v0.8.28_RFC): the free build carries the LLM gateway, off until
-# `[nougate] in_process = true`. `--variant router`, which older docs and Nouride Home still run, installs it with the
-# gateway switched on, as a Router install had it. It still downloads Router's names, which every 0.8.x release
-# carries — Router's own build up to 0.8.27, the free build under those names from 0.8.28
-# (scripts/release/router-alias.ts) — so a --version from either line, or a release not yet out, installs what
-# switching the gateway on needs. 0.9.0 removes this, with those names.
+# `[nougate] in_process = true`. `--variant router`, which older scripts and Nouride Home still run, installs it with
+# the gateway switched on, as a Router install had it ("download names" below says which files). 0.9.0 removes this,
+# with Router's names.
 GATEWAY_ON=0
 case "$VARIANT" in router) GATEWAY_ON=1 ;; esac
 
@@ -279,9 +277,25 @@ place_identity() {
 }
 # <<< identity
 if [ -n "$IDENTITY" ]; then check_identity "$IDENTITY" "$INSTALL_DIR/.nouride/data"; fi
+# >>> download names
+# Whose files a release is asked for. `router` asks for Community's own: from 0.8.28 Router's names hold the same bytes
+# (scripts/release/router-alias.ts), so a new install never asks for Router's, and 0.9.0 drops those names without
+# touching this path. Only a --version from before 0.8.28, when Router was a build of its own with the gateway in it,
+# still downloads Router's.
+router_build() {
+  case "$1" in latest) return 1 ;; esac
+  rb="${1#v}"; rb="${rb%%-*}"
+  rb_major="${rb%%.*}"; rb_rest="${rb#*.}"; rb_minor="${rb_rest%%.*}"; rb_patch="${rb_rest#*.}"; rb_patch="${rb_patch%%.*}"
+  [ "$rb_major" -eq 0 ] 2>/dev/null || return 1
+  [ "$rb_minor" -lt 8 ] 2>/dev/null && return 0
+  [ "$rb_minor" -eq 8 ] 2>/dev/null && [ "$rb_patch" -lt 28 ] 2>/dev/null
+}
+NAMES="$VARIANT"
+if [ "$VARIANT" = "router" ] && ! router_build "$VERSION"; then NAMES=""; fi
+# <<< download names
 # One name, three URLs below plus this log line. Derived once because a suffix applied in some
 # places and not others downloads the wrong build and reports the right one.
-if [ -n "$VARIANT" ]; then ARTIFACT="nouride-${VARIANT}-${TARGET}"; else ARTIFACT="nouride-${TARGET}"; fi
+if [ -n "$NAMES" ]; then ARTIFACT="nouride-${NAMES}-${TARGET}"; else ARTIFACT="nouride-${TARGET}"; fi
 say "architecture   $(uname -m)"
 say "C library      $libc"
 say "build          ${ARTIFACT}"
@@ -289,9 +303,10 @@ say "build          ${ARTIFACT}"
 # both tests fail — which is the ordinary build, the common path — and whether `set -e` acts on it
 # depends on the shell and on where the line sits. Not worth knowing: this says the same thing and
 # has one status.
-case "$VARIANT" in
-  pro) say "bundled        LLM gateway + multi-user accounts, Nouverse sign-in, Box pairing" ;;
-  router) say "Router is part of Nouride now: this installs Nouride, with its LLM gateway switched on" ;;
+case "$VARIANT:$NAMES" in
+  pro:*) say "bundled        LLM gateway + multi-user accounts, Nouverse sign-in, Box pairing" ;;
+  router:) say "Router is part of Nouride Community now: this installs Community, with its LLM gateway switched on" ;;
+  router:*) say "a release from before Router joined Community: this installs Router's own build, its LLM gateway on" ;;
 esac
 
 command -v systemctl >/dev/null 2>&1 && HAS_SYSTEMD=1 || HAS_SYSTEMD=0
@@ -591,7 +606,7 @@ else
     fetch_failed "$url" "$dl_how"
   fi
   # The release's checksum file and its signature, from beside the tarball.
-  fetch_sums "${url%/*}" "$VERSION" "$VARIANT" "$STAGE"
+  fetch_sums "${url%/*}" "$VERSION" "$NAMES" "$STAGE"
   sig=""
   if must_be_signed "$VERSION"; then
     if ! sig_how="$(fetch_status "${url%/*}/$SUMS.sig" "$STAGE/$SUMS.sig")"; then

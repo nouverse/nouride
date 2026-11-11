@@ -3,7 +3,7 @@ title: Masuk dengan Nouverse
 description: Edisi self-hosted masuk dengan password lokal; masuk dengan Nouverse hanya ada di edisi Pro.
 ---
 
-Edisi self-hosted, Community dan Router, masuk ke dashboard dengan password lokal, dan CLI menjangkau
+Community, edisi self-hosted, masuk ke dashboard dengan password lokal, dan CLI menjangkau
 daemon dengan control token yang disimpan di `.nouride/data`. Gak ada urusan login yang keluar dari
 mesin kamu.
 

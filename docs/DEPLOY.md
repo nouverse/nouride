@@ -51,18 +51,16 @@ sh /tmp/install.sh --tarball /tmp/nouride-linux-x64.tar.gz
 That is the free edition: WhatsApp and the LLM gateway compiled in (the gateway off until
 `[nougate] in_process = true`, which setup's **Use Nougate** and the LLM Gateway page write), one account, no
 external sign-in. Built from a clone without `internals/nougate`, it has no gateway. `pro` adds multi-user
-accounts, Nouverse sign-in and Box pairing. The Router edition, the free one with the gateway on, is the free
-edition since 0.8.28.
+accounts, Nouverse sign-in and Box pairing.
 
 Once a release exists, the tarball step goes away: `sh install.sh` downloads the right build itself.
 
 ```bash
 sh install.sh                            # the free edition
-sh install.sh --variant router           # the same, with the gateway on (accepted until 0.9)
 ```
 
 `pro` is licensed rather than a public download, so for it the script needs `--tarball`. `--variant`
-takes those three names and refuses any other.
+takes `basic` and `pro`.
 
 Then open the printed URL. **The daemon boots with no configuration at all** — the provider, its
 credential and the first agent are set in the dashboard wizard, which tests the endpoint before saving
@@ -81,7 +79,7 @@ carries Apple Silicon builds only (`darwin-arm64`); an Intel Mac builds its own 
 |---|---|
 | `--tarball PATH` | install from a tarball already on this machine |
 | `--version TAG`, `--base-url URL`, `--repo OWNER/NAME` | which release to download, and from where |
-| `--variant NAME` | `pro`; omitted, the free edition. `router` until 0.9: the free edition with the gateway on |
+| `--variant NAME` | `pro`; omitted, the free edition |
 | `--dir PATH`, `--user NAME` | install directory and service account — `/srv/nouride` and `nouride` |
 | `--host ADDR`, `--port PORT` | where the dashboard listens — `127.0.0.1:18254` |
 | `--allow-packages`, `--no-packages` | let agents install system packages through `nouride-pkg`, asking a person each time unless an agent is `trusted` — or remove it (`CLI.md`, `nouride pkg`) |

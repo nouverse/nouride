@@ -78,8 +78,7 @@ daemon, di port-nya sendiri, `18256`, dan ia mati sampai kamu memintanya. Memili
 halaman **LLM Gateway** di dashboard (di bawah Settings), langsung menyalakannya tanpa restart, dan ia tetap menyala sejak itu.
 **Turn off** di halaman yang sama menyebutkan agent yang berhenti menjawab, lalu me-restart Nouride begitu tidak ada
 yang sedang berjalan; kalau tidak ada yang akan menyalakan Nouride lagi, setelannya disimpan dan ia mati di start
-berikutnya. Sampai 0.9, perintah install lama edisi Router (`--variant router`) dan image-nya
-(`@@DOCKER_IMAGE@@-router`) memberi build yang sama dengan Nougate sudah menyala.
+berikutnya.
 
 **Tidak perlu API key untuk mulai.** Langkah pertama wizard setup tetap menerima API key, dan di
 bawahnya ada **Use Nougate**: masuk dengan akun yang sudah kamu punya: Claude (Pro atau

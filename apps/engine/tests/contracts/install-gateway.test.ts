@@ -50,7 +50,7 @@ describe("install.sh --variant router", () => {
     expect(run('echo "GATEWAY_ON=$GATEWAY_ON"', "router").out.trim()).toBe("GATEWAY_ON=1");
     for (const variant of ["", "pro"]) expect(run('echo "GATEWAY_ON=$GATEWAY_ON"', variant).out.trim()).toBe("GATEWAY_ON=0");
     // And the line a person reads names what happened, plainly.
-    expect(INSTALL).toContain('router) say "Router is part of Nouride now: this installs Nouride, with its LLM gateway switched on" ;;');
+    expect(INSTALL).toContain('router:) say "Router is part of Nouride Community now: this installs Community, with its LLM gateway switched on" ;;');
   });
 
   test("a fresh install gets a config with the gateway on, and `careful` as the setup wizard would have started it", () => {
@@ -117,5 +117,46 @@ describe("install.sh --variant router", () => {
     expect(INSTALL.slice(INSTALL.lastIndexOf("\n\n", call), call)).toContain('if [ "$GATEWAY_ON" = "1" ]; then');
     // install-bundle-router.sh is the same installer, told `--variant router`.
     expect(readFileSync(join(ROOT, "scripts/install-bundle-router.sh"), "utf8")).toContain('sh "$STAGE/install.sh" --variant router "$@"');
+  });
+});
+
+/**
+ * Whose files `--variant router` downloads. A new install never asks for Router's names: since Router joined Community
+ * they hold Community's bytes, so it asks for Community's own, and the names can go without touching this path. Only a
+ * version from before the fold, when Router was a build of its own with the gateway in it, still downloads Router's.
+ */
+describe("the files a router install downloads", () => {
+  const NAMES = between("# >>> download names\n", "# <<< download names");
+  const names = (variant: string, version: string) => {
+    const result = spawnSync(SH, ["-c", `set -eu\nVARIANT='${variant}'\nVERSION='${version}'\n${NAMES}\nprintf '%s' "$NAMES"`], { encoding: "utf8" });
+    expect(result.status).toBe(0);
+    return result.stdout;
+  };
+
+  test("Community's own, for the newest release and any from 0.8.28 on", () => {
+    for (const version of ["latest", "v0.8.28", "0.8.31", "v0.8.32", "v0.9.0", "v1.0.0"]) expect({ version, names: names("router", version) }).toEqual({ version, names: "" });
+  });
+
+  test("Router's, only for a release from before 0.8.28", () => {
+    for (const version of ["v0.8.27", "0.8.0", "v0.7.29", "v0.6.3"]) expect({ version, names: names("router", version) }).toEqual({ version, names: "router" });
+  });
+
+  test("and every other edition's are its own, whatever the version", () => {
+    expect([names("", "latest"), names("pro", "v0.8.31"), names("pro", "v0.8.0")]).toEqual(["", "pro", "pro"]);
+  });
+
+  test("and the installer says which build that is", () => {
+    const start = INSTALL.indexOf('case "$VARIANT:$NAMES" in');
+    const block = INSTALL.slice(start, INSTALL.indexOf("\nesac", start) + 5);
+    const said = (variant: string, version: string) =>
+      spawnSync(SH, ["-c", `set -eu\nsay() { echo "$*"; }\nVARIANT='${variant}'\nVERSION='${version}'\n${NAMES}\n${block}`], { encoding: "utf8" }).stdout.trim();
+    expect(said("router", "latest")).toBe("Router is part of Nouride Community now: this installs Community, with its LLM gateway switched on");
+    expect(said("router", "v0.8.20")).toBe("a release from before Router joined Community: this installs Router's own build, its LLM gateway on");
+    expect(said("", "latest")).toBe("");
+  });
+
+  test("are what the download and its checksum file are named by", () => {
+    expect(INSTALL).toContain('if [ -n "$NAMES" ]; then ARTIFACT="nouride-${NAMES}-${TARGET}"; else ARTIFACT="nouride-${TARGET}"; fi');
+    expect(INSTALL).toContain('fetch_sums "${url%/*}" "$VERSION" "$NAMES" "$STAGE"');
   });
 });

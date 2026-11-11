@@ -57,7 +57,7 @@ Script installer sengaja ditulis dalam POSIX `sh` polos dan bisa dibaca dari ata
     |---|---|---|
     | `--host ADDR` | `127.0.0.1` | Alamat yang di-bind dashboard |
     | `--port PORT` | `@@PORT@@` | Port dashboard |
-    | `--variant NAME` | (basic) | `pro` berlisensi dan cuma bisa dipasang lewat `--tarball`. `router` masih diterima sampai 0.9: memasang build yang sama dengan Nougate langsung menyala |
+    | `--variant NAME` | (basic) | `pro` berlisensi dan cuma bisa dipasang lewat `--tarball` |
     | `--allow-packages` | mati | Izinkan agent memasang paket sistem dari repositori sistem ini sendiri, dengan bertanya ke kamu sebelum tiap perubahan, kecuali agent-nya `trusted`. Tanpanya, agent cuma memasang ke direktori bin miliknya sendiri. Dipertahankan oleh run berikutnya |
     | `--no-packages` | | Mematikan `--allow-packages` lagi |
     | `--dir PATH` | `@@INSTALL_DIR@@` | Direktori instalasi |
@@ -201,9 +201,6 @@ Setiap rilis adalah tarball berisi executable (WhatsApp ada di dalamnya), dashbo
 | Linux (Alpine) | `x86_64` | musl | [`nouride-linux-x64-musl.tar.gz`](@@TARBALL_BASE@@/nouride-linux-x64-musl.tar.gz) |
 | Linux (Alpine) | `aarch64` | musl | [`nouride-linux-arm64-musl.tar.gz`](@@TARBALL_BASE@@/nouride-linux-arm64-musl.tar.gz) |
 | macOS | Apple Silicon | tidak berlaku | [`nouride-darwin-arm64.tar.gz`](@@TARBALL_BASE@@/nouride-darwin-arm64.tar.gz) |
-
-Setiap rilis sampai 0.9 juga membawa tarball yang sama dengan nama lama edisi Router (`nouride-router-*`), jadi
-instalasi Router pindah ke build ini sendiri lewat update-nya.
 
 Kalau kamu sudah punya tarball di mesin, installer bakal memakainya dan melewati unduhan sama sekali:
 

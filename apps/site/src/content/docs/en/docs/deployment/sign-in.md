@@ -3,7 +3,7 @@ title: Sign in with Nouverse
 description: Self-hosted editions sign in with a local password; Nouverse sign-in is in the Pro edition only.
 ---
 
-The self-hosted editions, Community and Router, sign in to the dashboard with a local password, and
+Community, the self-hosted edition, signs in to the dashboard with a local password, and
 the CLI reaches the daemon with a control token kept in `.nouride/data`. Nothing about signing in
 leaves your machine.
 

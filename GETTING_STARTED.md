@@ -90,7 +90,6 @@ curl -fsSL https://get.nouride.com/install.sh | sh
 The same script installs into `~/nouride`, links `nouride` into `/usr/local/bin` (or `~/.local/bin`), and runs it as
 a LaunchAgent (`~/Library/LaunchAgents/tech.nouverse.nouride.plist`): as you, with Homebrew first on its `PATH`, and
 only while you are logged in. Its log is `~/nouride/.nouride/data/nouride.log`.
-`--variant router` installs the Router edition here too.
 
 ---
 

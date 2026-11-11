@@ -568,6 +568,6 @@ describe("the public edition", () => {
     const installer = readFileSync(join(import.meta.dir, "../../../../scripts/install.sh"), "utf8");
     expect(installer).toContain('""|router|pro)');
     // What it does is `install-gateway.test.ts`'s: the free build, with the gateway switched on.
-    expect(installer).toContain('router) say "Router is part of Nouride now: this installs Nouride, with its LLM gateway switched on" ;;');
+    expect(installer).toContain('router:) say "Router is part of Nouride Community now: this installs Community, with its LLM gateway switched on" ;;');
   });
 });

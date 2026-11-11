@@ -1578,7 +1578,7 @@ The tarball holds what an install needs beside the binary, and the build prints 
 ```
 
 `skills/` are the built-in skills, `pkg/` is the `nouride-pkg` root service `install.sh --allow-packages`
-installs, and the router editions add `frontend/`, the bundled LLM gateway's UI. `install.sh` unpacks
+installs, and a build that carries the LLM gateway adds `frontend/`, its UI. `install.sh` unpacks
 them all.
 
 ---

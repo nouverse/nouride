@@ -57,7 +57,7 @@ The installer is deliberately plain POSIX `sh` and readable top to bottom. Inspe
     |---|---|---|
     | `--host ADDR` | `127.0.0.1` | Address the dashboard binds to |
     | `--port PORT` | `@@PORT@@` | Dashboard port |
-    | `--variant NAME` | (basic) | `pro` is licensed and installs only with `--tarball`. `router` is still accepted until 0.9: it installs the same build with Nougate switched on |
+    | `--variant NAME` | (basic) | `pro` is licensed and installs only with `--tarball` |
     | `--allow-packages` | off | Let agents install system packages from this system's own repositories, asking you before every change unless an agent is `trusted`. Without it they install only into their own bin directory. Later runs keep it |
     | `--no-packages` | | Turn `--allow-packages` off again |
     | `--dir PATH` | `@@INSTALL_DIR@@` | Install directory |
@@ -199,9 +199,6 @@ annotated `config.example.toml`.
 | Linux (Alpine) | `x86_64` | musl | [`nouride-linux-x64-musl.tar.gz`](@@TARBALL_BASE@@/nouride-linux-x64-musl.tar.gz) |
 | Linux (Alpine) | `aarch64` | musl | [`nouride-linux-arm64-musl.tar.gz`](@@TARBALL_BASE@@/nouride-linux-arm64-musl.tar.gz) |
 | macOS | Apple Silicon | not applicable | [`nouride-darwin-arm64.tar.gz`](@@TARBALL_BASE@@/nouride-darwin-arm64.tar.gz) |
-
-Each release until 0.9 also carries the same tarballs under the Router edition's old names
-(`nouride-router-*`), so a Router install updates onto this build by itself.
 
 If you already have a tarball on the machine, the installer will use it and skip the download
 entirely:

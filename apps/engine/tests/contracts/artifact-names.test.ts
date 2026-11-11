@@ -39,7 +39,7 @@ describe("the editions", () => {
     for (const edition of BUILT) expect(variant(edition)).toEqual({ name: edition, status: 0, said: `VARIANT=${variantFor(edition)}` });
     expect(variant("")).toEqual({ name: "", status: 0, said: "VARIANT=" });
     for (const name of ["device", "device-pro", "cloud", "pro-router", "normal", "device-nougate", "Pro", "community"]) {
-      expect(variant(name)).toEqual({ name, status: 1, said: `DIE: unknown --variant: ${name} (the editions are basic, router and pro)` });
+      expect(variant(name)).toEqual({ name, status: 1, said: `DIE: unknown --variant: ${name} (the editions are basic and pro)` });
     }
   });
 });
@@ -62,7 +62,8 @@ describe("a release's artefact names", () => {
     expect(line).toBeDefined();
     for (const edition of BUILT) {
       for (const target of KNOWN_TARGETS) {
-        const run = spawnSync("sh", ["-c", `${line}\nprintf %s "$ARTIFACT"`], { env: { VARIANT: variantFor(edition), TARGET: target }, encoding: "utf8" });
+        // Named by the edition's own files; which files `--variant router` asks for is `install-gateway.test.ts`'s.
+        const run = spawnSync("sh", ["-c", `${line}\nprintf %s "$ARTIFACT"`], { env: { NAMES: variantFor(edition), TARGET: target }, encoding: "utf8" });
         expect(`${edition} ${target}: ${run.stdout}`).toBe(`${edition} ${target}: ${built(edition, target)}`);
       }
     }
