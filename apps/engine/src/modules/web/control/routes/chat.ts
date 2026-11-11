@@ -29,6 +29,7 @@ import {
 } from "@/modules/turns/transcript.ts";
 import { jsonBody, parseAttachments } from "../payloads.ts";
 import { conversationNamed } from "../conversation.ts";
+import { pageOf } from "../page.ts";
 import { mayOpen, readerOf, type Reader } from "../whose.ts";
 import type { Room } from "@/modules/rooms/rooms.store.ts";
 import type { Principal } from "@/modules/users/auth.ts";
@@ -49,6 +50,8 @@ interface SendBody {
   senderId?: string;
   senderName?: string;
   attachments?: unknown;
+  /** The dashboard page it was written from, where the client says one (`page.ts`). */
+  page?: unknown;
 }
 
 /**
@@ -468,6 +471,7 @@ export function registerChatRoutes(control: ControlApp, deps: ControlDeps): void
       agent: agent.config.id,
       ...sender,
       ...(attachments.length > 0 ? { attachments } : {}),
+      ...pageOf(body.page),
     });
 
     deps.audit.record({

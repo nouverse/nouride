@@ -21,7 +21,7 @@ import { type ChatMessage, clipTrimmed, type MessageEnvelope, oneLine } from "@n
 import { formatDuration } from "@/modules/hooks/format.ts";
 import { isSystemEvent, type PipelineDeps } from "./deps.ts";
 import { isEdit, steerEditHeader } from "./edit-rules.ts";
-import { secretsNote, withQuotedContext } from "./messages.ts";
+import { inert, pageNote, secretsNote, withQuotedContext } from "./messages.ts";
 import type { ActiveTurn } from "./turn-context.ts";
 
 /** Messages one turn reads before the next ones wait for it to finish: a turn rewritten more is a conversation. */
@@ -192,11 +192,6 @@ export function requestQuote(text: string, names: readonly string[]): string {
   return clipTrimmed(oneLine(inert(unaddressed(text, ...names))), QUOTE_MAX);
 }
 
-/** Without what makes text a mention: `@name`, and the platforms' `<@123>` markup. */
-function inert(text: string): string {
-  return text.replace(/<[@#!][^>\s]*>/g, "").replace(/@(?=[\p{L}\p{N}_])/gu, "");
-}
-
 /**
  * The words without the agent's name in front. A one-to-one chat needs no address, but the dashboard's and
  * the CLI's connection puts `<agent>: ` before what was typed so a room can route it, and the model read it
@@ -229,8 +224,10 @@ export function steerMessage(
   const who = envelopes[0]?.senderName?.trim() || "The person";
   // With what its handles stand for in front, and the message it replies to, as a turn's own question has them
   // (`secretsNote`, `withQuotedContext`): "I mean you yourself", sent as a reply to the progress line, says nothing alone.
+  // And after it the dashboard page it was written from, as a turn's question carries it (`pageNote`): no turn of its
+  // own begins for it, so here is the one place it can be said.
   const words = (envelope: MessageEnvelope) =>
-    [secretsNote(envelope.secrets, options), withQuotedContext(envelope, unaddressed(envelope.text, ...names).trim())].filter(Boolean).join("\n\n");
+    [secretsNote(envelope.secrets, options), withQuotedContext(envelope, unaddressed(envelope.text, ...names).trim()), pageNote(envelope.page)].filter(Boolean).join("\n\n");
   const plain = envelopes.filter((envelope) => !isEdit(envelope) && !isTell(envelope));
   // A mission's `tell` (0.8.10): followed, as the person's word over the goal's details — never a new goal, which the page
   // holds. Said as "how to do the work" and nothing more, a model took a changed detail for a changed result and spent
