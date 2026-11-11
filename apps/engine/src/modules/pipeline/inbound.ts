@@ -33,11 +33,10 @@ import { requireMentionHere } from "./room-mention.ts";
 import { isSystemEvent } from "./deps.ts";
 import type { Admission } from "./admission.ts";
 import type { SessionLifecycle } from "./session-lifecycle.ts";
-import { TurnContext, type ActiveTurn } from "./turn-context.ts";
-import type { TurnRunner } from "./turn.ts";
+import { atWork, lapsedHandover } from "./at-work.ts";
 import { isEdit } from "./edit-rules.ts";
-import { acceptSteer, sayAs } from "./steer-accept.ts";
-import { busyNotice, STEER_ACK_EDIT, STEER_ACK_PARKED, STEER_ACK_PARKED_ROOM, steerAck, whileBusy } from "./steering.ts";
+import { TurnContext } from "./turn-context.ts";
+import type { TurnRunner } from "./turn.ts";
 
 const log = createLogger("pipeline.inbound");
 
@@ -179,7 +178,12 @@ export class InboundRouter {
     // Handed to a running turn and never read (`TurnContext.releaseTurn`): its agent's next turn. Routed and
     // claimed once already — doing either again would drop it, or answer it twice in a room that named two.
     const returnedTo = this.ctx.deps.registry.get(this.ctx.returned.get(envelope) ?? "");
-    if (returnedTo) return await this.admit(returnedTo, envelope, { kind: "human" }, { addressees: 1, addressed: true, claimed: true });
+    if (returnedTo) {
+      // A hand-over that waited for its agent (`holdHandover`) is an agent's message still, at its depth in the chain.
+      const handed = this.ctx.handed.get(envelope);
+      if (handed && (await lapsedHandover(this.ctx, returnedTo, envelope, handed))) return;
+      return await this.admit(returnedTo, envelope, this.ctx.verdictOf(envelope), { addressees: 1, addressed: true, claimed: true });
+    }
 
     const instance = this.ctx.deps.config.gateways.find((g) => g.id === envelope.gatewayId);
 
@@ -760,7 +764,7 @@ export class InboundRouter {
      */
     const working = this.ctx.turnIn(agent.config.id, envelope.chatId, envelope.gatewayId);
     if (working) {
-      await this.atWork(agent, envelope, working, { addressed, fromPerson: verdict.kind === "human" });
+      await atWork(this.ctx, agent, envelope, working, { addressed, fromPerson: verdict.kind === "human", ...(verdict.kind === "agent" ? { handed: verdict } : {}) });
       return;
     }
 
@@ -784,50 +788,6 @@ export class InboundRouter {
     // replied-to `/approve` into ordinary chat and let a quoted `@othername` reroute the message. See
     // `MessageEnvelope.quotedText`.
     await this.turns.runTurn(agent, envelope, key, withQuotedContext(envelope, text));
-  }
-
-  /**
-   * A message for an agent already at work in this chat: read by its turn, said to be waiting, or refused.
-   * `whileBusy` decides; this does it.
-   *
-   * Spoken as the agent, through its own bot where it has one: a reply quoting the message is what keeps
-   * a busy room readable, and answering it reaches the agent. Recorded for the dashboard too, where a reply
-   * through the local connection is handed to nobody: a steer on the turn's record (`steer-accept.ts`), a
-   * refusal as an event of the room.
-   */
-  private async atWork(
-    agent: LoadedAgent,
-    envelope: MessageEnvelope,
-    turn: ActiveTurn,
-    o: { addressed: boolean; fromPerson: boolean },
-  ): Promise<void> {
-    const id = agent.config.id;
-    const outcome = whileBusy(turn, envelope, { ...o, steer: this.ctx.deps.config.queue.steer });
-    const parked = this.ctx.deps.approvals
-      .pending()
-      .some((request) => request.agentId === id && request.gateway === envelope.gatewayId && request.chatId === envelope.chatId);
-    log.info("that agent is already working in this chat", { agent_id: id, chat_id: envelope.chatId, outcome });
-    if (outcome === "steer") {
-      const ack = !parked ? (isEdit(envelope) ? STEER_ACK_EDIT : steerAck(this.ctx.deps, id)) : envelope.chatType === "dm" ? STEER_ACK_PARKED : STEER_ACK_PARKED_ROOM;
-      await acceptSteer(this.ctx, turn, envelope, { ack, parked, send: sayAs(this.ctx, envelope, id) });
-      return;
-    }
-    const notice = busyNotice({ id, displayName: agent.config.displayName }, turn, { parked });
-    if (outcome === "tell") {
-      // Before the send, so a second message from them racing this one is not told twice.
-      (turn.told ??= new Set()).add(envelope.senderId);
-      await this.ctx.voice.reply(envelope, notice, id);
-    }
-    this.ctx.deps.chatEvents?.record({
-      gatewayId: envelope.gatewayId,
-      chatId: envelope.chatId,
-      audience: "ui",
-      kind: "dropped",
-      text: notice,
-      agentId: id,
-      ...(envelope.senderId ? { actor: envelope.senderId } : {}),
-      details: { reason: "agent_busy", messageId: envelope.id },
-    });
   }
 }
 

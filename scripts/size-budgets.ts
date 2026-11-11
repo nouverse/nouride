@@ -82,10 +82,6 @@ export const BUDGET: Record<string, Budget> = {
     lines: 409,
     why: "the one place a message's files become what the agent gets (stored, shown, described, heard or transcribed) and the note that says which, so the note and the parts cannot disagree",
   },
-  "apps/engine/src/modules/pipeline/inbound.ts": {
-    lines: 422,
-    why: "whether a message gets a turn at all, and whose: every early return together, in the order that is the point of the file, and the one routing call the dashboard's room line asks too",
-  },
   "scripts/build/core.ts": {
     lines: 432,
     why: "the release build in the order a tarball is made: the edition this checkout can build, compile, check what is embedded, stage what goes beside the binary, pack, say what was built; staging is the seam",

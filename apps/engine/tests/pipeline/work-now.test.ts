@@ -91,7 +91,7 @@ describe("the other agents of a room", () => {
   test("one at work is named with its request, how long, and an approval it waits on", () => {
     const busy = turn({ trigger: message({ text: "nox: deploy the shop and tell @nero when it is up" }) });
     const [note] = workNotes(sources({ turnHere: (id) => (id === "nox" ? busy : undefined), parkedHere: (id) => id === "nox" }), NOW);
-    expect(note).toBe('(In this chat now: nox is at work on "deploy the shop and tell nero when it is up" (2m so far), waiting for an approval here.)');
+    expect(note).toBe('(In this chat now: nox is at work on "deploy the shop and tell nero when it is up" (2m so far), waiting for an approval here. A tag to one at work here waits until it is done: say all you need in one message.)');
   });
 
   test("a tag inside the request it quotes reaches nobody: the @ is taken out", () => {
@@ -108,9 +108,9 @@ describe("the other agents of a room", () => {
 
   test("work the room never saw asked is named without words: a peer's turn, a job's wake", () => {
     const peer = turn({});
-    expect(roomNote(workNow(sources({ turnHere: (id) => (id === "nox" ? peer : undefined) })).mates, NOW)).toBe("(In this chat now: nox is at work (2m so far).)");
+    expect(roomNote(workNow(sources({ turnHere: (id) => (id === "nox" ? peer : undefined) })).mates, NOW)).toBe("(In this chat now: nox is at work (2m so far). A tag to one at work here waits until it is done: say all you need in one message.)");
     const wake = turn({ trigger: message({ senderId: "nouride:system", text: "[System event] a job ended" }) });
-    expect(roomNote(workNow(sources({ turnHere: (id) => (id === "nox" ? wake : undefined) })).mates, NOW)).toBe("(In this chat now: nox is at work (2m so far).)");
+    expect(roomNote(workNow(sources({ turnHere: (id) => (id === "nox" ? wake : undefined) })).mates, NOW)).toBe("(In this chat now: nox is at work (2m so far). A tag to one at work here waits until it is done: say all you need in one message.)");
   });
 
   test("nothing is said when every other agent is free, and nothing in a one-to-one chat", () => {
@@ -290,7 +290,7 @@ describe("on a turn's message, through the pipeline", () => {
     const requests = made.requests as unknown as Body[];
     const beside = requests.find((body) => lastUser(body).includes("what is nox doing?"))!;
     const after = requests.find((body) => lastUser(body).includes("and now?"))!;
-    expect(lastUser(beside)).toMatch(/\(In this chat now: nox is at work on "deploy the shop" \(\d+m?s so far\)\.\)/);
+    expect(lastUser(beside)).toMatch(/\(In this chat now: nox is at work on "deploy the shop" \(\d+m?s so far\)\. A tag to one at work here waits until it is done: say all you need in one message\.\)/);
     expect(lastUser(after)).not.toContain("In this chat now");
     // The cached part: the same bytes with Nox at work as with nobody.
     expect(system(beside)).toBe(system(after));

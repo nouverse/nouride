@@ -108,6 +108,9 @@ export function cappedTarget(turns: Iterable<ActiveTurn>, envelope: MessageEnvel
  *   agent — in a room anybody else steering it would be answering a question for somebody who did not ask.
  * - `tell`: refused, and the sender is told the agent is busy and with what. Once per person per turn, so a
  *   busy agent does not become a noisy one.
+ * - `wait`: kept for when the turn ends. One of our agents handing work over: a person's message that waits behind a
+ *   long turn is answered against a conversation that has moved on, and is refused; an agent's hand-over is work
+ *   somebody asked for, and refusing it left that work with nobody, the agent that handed it over never woken.
  * - `quiet`: refused without a word, as before. A message that did not address the agent — a room with one bot
  *   hands it everything said there, most of it people talking to each other — one whose sender was already
  *   told, and the daemon's own events.
@@ -122,9 +125,12 @@ export function whileBusy(
     fromPerson: boolean;
     /** `[queue] steer`. */
     steer: boolean;
+    /** From one of our agents, within its chain's budget: a hand-over. */
+    handedOver?: boolean;
   },
-): "steer" | "tell" | "quiet" {
+): "steer" | "tell" | "wait" | "quiet" {
   if (!turn || !o.addressed || isSystemEvent(envelope)) return "quiet";
+  if (o.handedOver && !o.fromPerson) return "wait";
   const started = turn.trigger;
   const starter = Boolean(envelope.senderId) && started !== undefined && !isSystemEvent(started) && started.senderId === envelope.senderId;
   if (o.steer && o.fromPerson && starter && turn.steers && wordsOnly(envelope) && (turn.steered ?? 0) + turn.steers.length < STEER_CAP) {
@@ -165,6 +171,14 @@ export function busyNotice(
   const waiting = o.parked ? ", and is waiting for an approval here" : "";
   const then = o.queued ? "this message waits for it, and is answered next" : "ask again once it's done";
   return `⏳ ${inert(agent.displayName || agent.id)} is still working${about ? ` on "${about}"` : ""}${since}${waiting}: ${then}.`;
+}
+
+/**
+ * What the room is told of a hand-over that waited longer than a message may wait in the queue: said by the agent it
+ * was for, so a reply reaches it, and with no tag in it, so it wakes nobody.
+ */
+export function lapsedHandoverNotice(from: string, waitedMs: number): string {
+  return `(${inert(from)} handed me work that waited ${formatDuration(Math.round(waitedMs / 1000))} for me to be free, too long to still be what is wanted, so I am leaving it. Hand it over again if it is.)`;
 }
 
 /** At most this much of the request, on one line. */

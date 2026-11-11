@@ -46,7 +46,10 @@ export function roomNote(mates: readonly RoomMate[], now: number): string | null
     }
     return mate.asleep ? [`${mate.id} is asleep and takes no work until a person wakes it`] : [];
   });
-  return lines.length > 0 ? `(In this chat now: ${lines.join("; ")}.)` : null;
+  if (lines.length === 0) return null;
+  // What a tag does to one at work (`ActiveTurns.holdHandover`): said, so an agent neither waits on it nor tags it twice.
+  const waits = mates.some((mate) => mate.turn) ? " A tag to one at work here waits until it is done: say all you need in one message." : "";
+  return `(In this chat now: ${lines.join("; ")}.${waits})`;
 }
 
 /** One piece of work running on the box besides the turn's own. */

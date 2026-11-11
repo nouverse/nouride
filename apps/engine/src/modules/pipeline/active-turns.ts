@@ -12,6 +12,7 @@ import type { PipelineDeps } from "./deps.ts";
 import { isTell, STEER_CAP, steerMessage } from "./steering.ts";
 import { inboxIds } from "./inbox.store.ts";
 import { mergeEnvelopes } from "./messages.ts";
+import type { AgentMessageVerdict } from "@/modules/router/agent-mentions.ts";
 
 const log = createLogger("pipeline.active-turns");
 
@@ -76,6 +77,8 @@ export interface ActiveTurn {
   told?: Set<string>;
   /** Messages past `STEER_CAP` drawn on it with the notice that they wait (`steer-accept.ts`): taken back when it ends. */
   waiting?: MessageEnvelope[];
+  /** Work other agents handed its agent while it was at work here, one for each of them: its next turns (`holdHandover`). */
+  handovers?: MessageEnvelope[];
   /** What it read as it worked, by message id: an edit of one is a correction to its work, as one of its question is. */
   read?: Map<string, string>;
   /**
@@ -83,6 +86,13 @@ export interface ActiveTurn {
    * coding CLI's turn listens while a prompt runs, to hand the words over then rather than once the prompt ends.
    */
   onSteer?: () => void;
+}
+
+/** A hand-over as it came in: the agent that handed it over, how deep in its chain, and since when it has waited. */
+export interface HandedOver {
+  from: string;
+  hops: number;
+  since: number;
 }
 
 export class ActiveTurns {
@@ -101,6 +111,8 @@ export class ActiveTurns {
    * and the queue would take it for a platform's redelivery of the same id.
    */
   readonly returned = new WeakMap<MessageEnvelope, string>();
+  /** How each waiting hand-over came in. It is an agent's message still when its turn comes, at its depth in the chain. */
+  readonly handed = new WeakMap<MessageEnvelope, HandedOver>();
 
   constructor(readonly deps: PipelineDeps) {}
 
@@ -137,6 +149,7 @@ export class ActiveTurns {
     return () => {
       if (this.peerTurns.get(key) !== turn) return;
       this.peerTurns.delete(key);
+      this.handBack(turn);
       this.wakeWaiters(key);
     };
   }
@@ -167,6 +180,7 @@ export class ActiveTurns {
       this.returned.set(merged, turn.agentId);
       this.requeue?.(merged);
     }
+    if (turn) this.handBack(turn);
     this.wakeWaiters(turnKey);
   }
 
@@ -289,8 +303,53 @@ export class ActiveTurns {
    * which would mark it handled on the way out (`InboxDesk.track`) — before any turn has read it.
    */
   holds(envelope: MessageEnvelope): boolean {
-    for (const turn of this.activeTurns.values()) if (turn.steers?.includes(envelope)) return true;
+    for (const turn of this.turnsAtWork()) {
+      if (turn.steers?.includes(envelope)) return true;
+      // A hand-over that joined one already waiting is inside it, under its own id.
+      if (turn.handovers?.some((one) => one === envelope || one.id === envelope.id || one.mergedIds?.includes(envelope.id))) return true;
+    }
     return false;
+  }
+
+  /**
+   * Whose a message put back for its agent is: a hand-over that waited is an agent's still, at its depth in its chain,
+   * so its budget goes on counting and a second wait holds it again; anything else was a person's.
+   */
+  verdictOf(envelope: MessageEnvelope): AgentMessageVerdict {
+    const handed = this.handed.get(envelope);
+    return handed ? { kind: "agent", from: handed.from, hops: handed.hops } : { kind: "human" };
+  }
+
+  /** Work other agents handed over while `turn` ran: each is a turn of its own now, in the order it came. */
+  private handBack(turn: ActiveTurn): void {
+    for (const handover of turn.handovers?.splice(0) ?? []) {
+      this.returned.set(handover, turn.agentId);
+      this.requeue?.(handover);
+    }
+  }
+
+  /** Every turn at work: each agent's own, and a peer turn held in a chat for another agent. */
+  private *turnsAtWork(): Iterable<ActiveTurn> {
+    yield* this.activeTurns.values();
+    yield* this.peerTurns.values();
+  }
+
+  /**
+   * Keep an agent's hand-over until `turn` ends. One waits for each handing agent: a second from the same agent joins
+   * its first, as two messages sent in a burst are one, so nothing is lost and an agent that tags twice starts one
+   * turn. True when it joined one already waiting, which the room has heard of.
+   */
+  holdHandover(turn: ActiveTurn, envelope: MessageEnvelope, by: { from: string; hops: number }, now: number = Date.now()): boolean {
+    const waiting = (turn.handovers ??= []);
+    const at = waiting.findIndex((one) => this.handed.get(one)?.from === by.from);
+    const before = at >= 0 ? waiting[at] : undefined;
+    const earlier = before ? this.handed.get(before) : undefined;
+    const kept = before ? mergeEnvelopes(before, envelope) : envelope;
+    // Since it first waited: one put back behind another turn keeps its own time, and one that joins takes the first's.
+    this.handed.set(kept, { from: by.from, hops: Math.max(by.hops, earlier?.hops ?? 0), since: this.handed.get(envelope)?.since ?? earlier?.since ?? now });
+    if (before) waiting[at] = kept;
+    else waiting.push(kept);
+    return before !== undefined;
   }
 
   /**
