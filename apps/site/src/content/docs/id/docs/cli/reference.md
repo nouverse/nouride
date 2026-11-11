@@ -294,7 +294,9 @@ nouride policy                                 # apa yang selalu bertanya, apa y
 nouride policy check <perintah…>               # apakah ini akan ditahan? Menjawab tanpa menjalankan
 ```
 
-`policy check` bekerja saat daemon mati, yang justru saat orang sedang mendiagnosis penolakan.
+`policy check` bekerja saat daemon mati, yang justru saat orang sedang mendiagnosis penolakan. Ia menyebut perintahnya
+yang mana dari tiga: ada di daftar tetap, ditanya setiap kali; program sehari-hari, jalan di semua tingkat tanpa
+ditanya; atau selain itu, ditanya sekali di `careful`.
 
 ## Akses dan orang
 

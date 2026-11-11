@@ -287,7 +287,8 @@ nouride policy check <command…>                # would this be gated? Answers 
 ```
 
 `policy check` works while the daemon is down, which is exactly when somebody is debugging a
-refusal.
+refusal. It says which of three a command is: on the fixed list, asked every time; an everyday program, run at every
+level without asking; or anything else, asked once under `careful`.
 
 ## Access and people
 

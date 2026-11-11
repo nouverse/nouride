@@ -13,7 +13,7 @@ import type { Client } from "@nouride/cli-kit";
  * safe way to ask "what would happen if…" about `rm -rf`.
  */
 export async function policy(_client: Client, args: string[]): Promise<void> {
-  const { BALANCED_ASKS, classifyHardline, classifyOwnState, credentialPath, HARDLINE_SUMMARY, HARDLINE_EXEMPTIONS } = await import("@nouride/policy");
+  const { BALANCED_ASKS, classifyHardline, classifyOwnState, credentialPath, decideExec, HARDLINE_SUMMARY, HARDLINE_EXEMPTIONS } = await import("@nouride/policy");
   const asksAt = (cls: string) => ({ careful: true, balanced: BALANCED_ASKS.has(cls as never), trusted: false });
   const levels = (cls: string) => (BALANCED_ASKS.has(cls as never) ? "careful and balanced" : "careful");
 
@@ -42,6 +42,17 @@ export async function policy(_client: Client, args: string[]): Promise<void> {
       return;
     }
 
+    /**
+     * An everyday program runs at every level, unasked — decided by the decision itself, so this says what an agent's
+     * command meets. Answered "careful asks it once" for every command off the fixed list, it could not tell
+     * `rg --pre=sh x` from `rg -n foo` (found on the live box).
+     */
+    const decided = decideExec({ policy: { blocked: [] }, request: { argv: [...argv], cwd: "", agentId: "" }, grantKey: "", grants: new Set(), canAsk: true, ownStateByOs: true });
+    if (decided.action === "run") {
+      emit({ command: argv, class: null, reason: null, everyday: true, asks: { careful: false, balanced: false, trusted: false } });
+      say(`${GREEN}✓${RESET} an everyday program: it runs at every level without asking`);
+      return;
+    }
     const credential = credentialPath(argv);
     emit({ command: argv, class: null, reason: credential ? `touches credentials (${credential})` : null, asks: { careful: "once", balanced: false, trusted: false } });
     say(`${GREEN}✓${RESET} on no list: ${credential ? `it touches credentials (${credential}), so ` : ""}careful asks it once and \`allow-always\` remembers it; balanced and trusted run it`);

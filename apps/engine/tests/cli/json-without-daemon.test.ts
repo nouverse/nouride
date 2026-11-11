@@ -68,7 +68,7 @@ describe("--json without a daemon (D5)", () => {
 
   test("each answers with what its lines were printed from", async () => {
     await cli(["db", "backup"]);
-    const [list, verify, check, schema, explain, rules, gated, ungated, rename] = await Promise.all([
+    const [list, verify, check, schema, explain, rules, gated, ungated, flagged, rename] = await Promise.all([
       cli(["db", "list"]),
       cli(["db", "verify"]),
       cli(["config", "check"]),
@@ -77,6 +77,7 @@ describe("--json without a daemon (D5)", () => {
       cli(["policy"]),
       cli(["policy", "check", "--", "rm", "-rf", "/"]),
       cli(["policy", "check", "--", "ls"]),
+      cli(["policy", "check", "--", "rg", "--pre=sh", "x"]),
       cli(["gateway", "rename", "telegram:a", "telegram:b"]),
     ]);
 
@@ -87,7 +88,10 @@ describe("--json without a daemon (D5)", () => {
     expect(explain.answer.data).toMatchObject({ path: "daemon.data_dir", type: "string" });
     expect((rules.answer.data?.alwaysAsks as unknown[]).length).toBeGreaterThan(0);
     expect(gated.answer.data).toMatchObject({ command: ["rm", "-rf", "/"], class: "delete", asks: { careful: true, balanced: false, trusted: false } });
-    expect(ungated.answer.data).toMatchObject({ command: ["ls"], class: null, asks: { careful: "once", balanced: false, trusted: false } });
+    // An everyday program runs unasked; one with a flag that runs something is a new command, asked once at careful.
+    expect(ungated.answer.data).toMatchObject({ command: ["ls"], class: null, everyday: true, asks: { careful: false, balanced: false, trusted: false } });
+    expect(flagged.answer.data).toMatchObject({ command: ["rg", "--pre=sh", "x"], class: null, asks: { careful: "once", balanced: false, trusted: false } });
+    expect(flagged.answer.data).not.toHaveProperty("everyday");
     expect(rename.answer.data).toMatchObject({ from: "telegram:a", to: "telegram:b", applied: false });
     for (const run of [list, verify, check, schema, explain, rules, gated, ungated, rename]) expect(run.code).toBe(0);
   }, 30_000);
