@@ -1,29 +1,94 @@
 ---
-title: Tugas terjadwal
-description: Cron job, pengingat, sekali jalan, dan webhook, hal yang terjadi tanpa ada yang mengetik.
+title: Automations
+description: Pekerjaan yang jalan tanpa ada yang mengetik, sesuai jadwal, saat webhook dipanggil atau saat kamu mulai sendiri, berupa satu hal atau beberapa langkah berurutan.
 ---
 
-Scheduler membangunkan agent ketika gak ada yang mengajaknya bicara. Empat bentuk pemicu, satu tabel
-job.
+Automation adalah pekerjaan yang jalan ketika gak ada yang mengajak agent bicara. Ia punya **awal**, yang
+menentukan kapan ia jalan, dan **langkah-langkah**, yang menentukan apa yang dikerjakan.
 
-| | |
+| Ia mulai | |
 |---|---|
-| **Cron** | ekspresi crontab, `0 9 * * *` |
-| **Every** | interval, `15m`, `2h` |
-| **At** | sekali, pada suatu waktu, `2h` dari sekarang, atau sebuah timestamp |
-| **Webhook** | saat sebuah URL dipanggil, bukan saat jam tertentu |
+| **Sesuai jadwal** | ekspresi crontab (`0 9 * * *`), interval (`15m`, `2h`), atau sekali pada suatu waktu |
+| **Saat dipanggil** | webhook: saat URL-nya dipanggil, bukan saat jam tertentu |
+| **Manual** | saat kamu menekan **Run now** |
 
 ![Halaman Schedule](/media/dashboard-schedule.png)
 
-Halaman **Schedule** di dashboard mencakup tiga yang pertama dan **Webhooks** yang keempat. Keduanya
-job yang sama dilihat dari dua sisi yang penting: apa yang menyala karena jam, dan apa yang menyala
-karena dipanggil sesuatu. Schedule menampilkan semua job, bisa difilter aktif, dijeda, atau gagal, dan
-di sanalah kamu membuat, mengubah, menjalankan, menjeda, dan menghapusnya. Atau minta saja ke agent:
-"ingatkan aku cek deploy dua jam lagi", lalu agent [mengusulkan](#diminta-ke-agent) job-nya, dan kamu yang
-menyalakannya.
+Halaman **Automations** di dashboard (Work → Automations) menampilkan semuanya, apa pun awalnya, dengan
+satu dropdown untuk melihat yang terjadwal saja, yang webhook, atau yang manual. Di sanalah kamu membuat,
+mengubah, menjalankan, menjeda, dan menghapusnya. Atau minta saja ke agent: "ingatkan aku cek deploy dua
+jam lagi", lalu agent [mengusulkan](#diminta-ke-agent) automation-nya, dan kamu yang menyalakannya.
 
-Schedule berlaku daemon-wide, bukan per agent, meskipun setiap job punya pemilik, karena biasanya kamu
-ingin melihat semua yang terjadwal sekaligus.
+Daftarnya berlaku untuk seluruh instalasi, bukan per agent, meskipun setiap automation punya pemilik,
+karena biasanya kamu ingin melihat semua yang jalan sendiri sekaligus.
+
+## Langkah-langkah
+
+Automation mengerjakan satu hal, atau beberapa hal dengan urutan yang tetap. Tiap hal adalah satu langkah:
+
+| Langkah | Yang dikerjakan | Memanggil model? |
+|---|---|---|
+| **Kirim pesan** | mengirim teks apa adanya ke chat automation itu | tidak |
+| **Minta ke agent** | satu giliran agent pemilik automation, atau agent lain yang kamu pilih | ya, satu giliran |
+| **Jalankan perintah** | menjalankan satu baris shell di workspace agent | tidak |
+| **Mulai mission** | pekerjaan panjang yang dicek; automation menunggunya selesai | ya, seperti [mission](/id/docs/manual/missions/) |
+| **Tunggu persetujuan** | bertanya ke orang, dan lanjut setelah dijawab ya | tidak |
+
+Nouride menjalankan langkah-langkah itu sesuai urutannya, setiap kali. Tiap langkah menerima apa yang
+dikatakan langkah sebelumnya, dan agent hanya mengerjakan langkah yang diberikan kepadanya: ia gak
+melompat, gak mengubah urutan, dan gak menentukan sendiri apa berikutnya. Itu bedanya dengan
+[mission](/id/docs/manual/missions/), di mana agent merencanakan sendiri pekerjaannya. Kata-kata langkah
+terakhir adalah yang dikirim automation ke chat-nya.
+
+Di halaman automation, langkah-langkahnya berupa kartu sesuai urutan jalannya. Tekan kartu untuk
+mengubahnya, tekan tanda plus di antara dua kartu untuk menambah langkah, dan seret kartu untuk
+memindahkannya. Gak ada yang berubah sebelum kamu menekan **Save**.
+
+### Ke mana automation lanjut
+
+Tiap langkah bisa menentukan ke mana automation lanjut saat ia selesai, saat ia gagal, dan saat ia gak
+punya apa-apa untuk dikatakan: ke langkah berikutnya, selesai di situ, atau ke langkah yang lebih bawah.
+Automation hanya bisa maju, jadi ia pasti selesai.
+
+Kalau dibiarkan apa adanya: langkah yang selesai lanjut ke langkah berikutnya, langkah yang gagal
+mengakhiri automation sebagai gagal dan mengabarkannya di chat, dan langkah yang gak punya apa-apa untuk
+dikatakan (perintah yang gak mencetak apa pun, agent yang gak punya laporan) mengakhirinya dengan diam.
+Jadi pengecekan yang gak menemukan apa-apa gak membangunkan siapa pun.
+
+Contoh, pengecekan toko:
+
+1. **Jalankan perintah**: `curl -sf https://shop.example.com/health`. Kalau selesai: berhenti di sini.
+   Kalau gagal: lanjut.
+2. **Minta ke agent**: "Tokonya mati: cari tahu kenapa."
+3. **Tunggu persetujuan**: "Restart tokonya?"
+4. **Mulai mission**: "Restart toko dan pastikan ia menjawab."
+
+Selama toko menjawab, automation berhenti di langkah 1 dan gak ada model yang dipanggil. Saat toko mati,
+agent memeriksanya, kamu ditanya, dan baru dengan jawaban ya dari kamu sesuatu di-restart.
+
+### Mission di tengah
+
+Mission boleh jadi langkah di posisi mana pun. Automation menunggunya selesai, selama apa pun dan walau
+Nouride restart di tengah jalan, lalu meneruskan hasilnya ke langkah berikutnya. Mission yang gagal atau
+dihentikan dihitung sebagai langkah gagal, jadi automation bisa lanjut ke langkah yang mengabari kamu.
+
+### Langkah yang menunggu kamu
+
+Chat automation itu mendapat kartu berisi pertanyaannya, apa yang dikatakan langkah sebelumnya, dan dua
+tombol, **Continue** dan **Stop**. Pertanyaan yang sama ada di dashboard, di **Waiting for you** dan di
+halaman automation itu sendiri. Continue meneruskan apa yang dikatakan langkah sebelumnya ke langkah
+berikutnya. Stop, atau gak ada jawaban dalam waktu yang diberikan langkah itu (sehari kalau gak diatur,
+bisa lima menit sampai tujuh hari), mengakhiri automation di situ: gak ada langkah sesudahnya yang jalan,
+dan itu gak dilaporkan sebagai gagal. Di chat satu lawan satu, orang di chat itu yang menjawab; di grup,
+orang yang menyalakan automation-nya, atau admin. Selama menunggu gak ada model yang dipanggil, dan
+penantiannya bertahan walau Nouride restart.
+
+Kalau chat-nya gak punya tombol, seperti WhatsApp, kartunya meminta dijawab di dashboard.
+
+### Satu jalan dalam satu waktu
+
+Selama satu jalan masih menunggu, entah mission atau kamu, automation itu gak memulai jalan lain: waktu
+berikutnya dihitung sejak jalan itu selesai, dan **Run now** mengatakan apa yang sedang ditunggunya.
 
 ## Dari CLI
 
@@ -31,7 +96,9 @@ ingin melihat semua yang terjadwal sekaligus.
 nouride cron                     # yang terjadwal dan aktif
 nouride cron --all               # termasuk yang dinonaktifkan
 nouride cron run <id>            # jalankan sekarang
-nouride cron runs <id>           # riwayatnya
+nouride cron runs <id>           # riwayatnya, dengan hasil tiap langkah
+nouride cron continue <run id>   # jawab ya untuk jalan yang langkahnya menunggu orang
+nouride cron stop <run id>       # atau hentikan di situ
 nouride cron enable|disable <id>
 nouride cron rm <id>
 ```
@@ -49,7 +116,7 @@ nouride cron add --name "morning-brief" \
 | Flag | |
 |---|---|
 | `--name` | namanya |
-| `--cron "0 9 * * *"` / `--every 15m` / `--at 2h` | pilih tepat satu |
+| `--cron "0 9 * * *"` / `--every 15m` / `--at 2h` / `--manual` | pilih tepat satu. `--manual` gak punya waktu: ia jalan saat ada yang memulainya |
 | `--tz <zona>` | jam mana yang dipakai membaca jadwalnya |
 | `--agent <id>` | agent yang memilikinya. Dari panggilan agent sendiri, agent itu |
 | `--gateway <id> --chat <id>` | ke mana hasilnya dikirim. Wajib dari terminal; dari panggilan agent sendiri, percakapannya |
@@ -58,12 +125,35 @@ nouride cron add --name "morning-brief" \
 | `--command <shell>` | jalankan sebuah perintah. Tanpa panggilan model |
 | `--then agent` | …lalu bangunkan agent dengan apa yang dicetaknya, kalau ia mencetak sesuatu |
 | `--mission <goal>` | jalankan setiap kali sebagai mission. Dengan `--check <perintah>` untuk satu cek, `--no-review` tanpa reviewer; cek lebih banyak dari dashboard |
+| `--steps <file.json>` | beberapa hal di atas dengan urutan tetap: daftarnya, dalam JSON (di bawah) |
 | `--session <fresh\|isolated\|chat>` | riwayat apa yang dilihat giliran itu |
 | `--quiet` | gak mengirim apa pun, termasuk kabar gagal; hasilnya tetap ada di `nouride cron runs` |
 | `--keep` | simpan job sekali-jalan setelah menyala: dimatikan, dan tercatat sebagai `fired` |
 
-`nouride cron update <id>` menerima `--name`, flag jadwal, `--tz`, `--text`, `--message` dan
+`nouride cron update <id>` menerima `--name`, flag jadwal, `--tz`, `--text`, `--message`, `--steps` dan
 `--agent`.
+
+Daftar langkah ditulis di file, karena gak muat di satu baris perintah. Tiap langkah punya `kind` dan apa
+yang dibutuhkan jenis itu, dan boleh menentukan ke mana automation lanjut darinya (`then`, `whenFailed`,
+`whenEmpty`: `"next"`, `"end"`, atau nomor langkah yang lebih bawah). Pengecekan toko di atas:
+
+```json
+[
+  { "name": "Check the shop", "kind": "command", "argv": ["sh", "-lc", "curl -sf https://shop.example.com/health"], "then": "end", "whenFailed": "next" },
+  { "kind": "agentTurn", "message": "The shop is down: find out why." },
+  { "kind": "approval", "ask": "Restart the shop?" },
+  { "kind": "mission", "goal": "Restart the shop and confirm it answers." }
+]
+```
+
+```bash
+nouride cron add --name "shop-check" --every 10m --steps shop-check.json \
+  --agent nouva --gateway telegram:nouva --chat 123456789
+```
+
+Jenis lainnya adalah `systemEvent` (pesan, dengan `text`). `agentTurn` dan `mission` menerima `agentId`
+untuk agent lain, dan `approval` menerima `timeoutMs`. Nouride membaca file itu dan menolak langkah yang
+gak bisa dijalankannya, dengan menyebut langkahnya.
 
 ### Empat jenis job, dan biayanya
 
@@ -100,8 +190,9 @@ diberi kabar waktu run selesai, butuh orang, atau berakhir, bukan waktu run mula
 ## Diminta ke agent
 
 Minta di chat, misalnya "tiap Senin jam 9, rangkum email pelanggan untuk tim", dan agent
-**mengusulkan** job-nya lewat tool `schedule`. Agent menulis job-nya lengkap, membiarkannya mati, dan
-mengirim kartu ke chat:
+**mengusulkan** automation-nya lewat tool `schedule`: satu hal, atau daftar langkah beserta ke mana
+tiap langkah meneruskan jalannya. Agent menulisnya lengkap, membiarkannya mati, dan mengirim kartu ke
+chat, tiap langkah di barisnya sendiri:
 
 ```
 📋 nouva proposes a scheduled job: Customer mail
@@ -115,12 +206,13 @@ Gak ada yang jalan sebelum ada yang menjawab. **Turn on** menyalakan jadwalnya, 
 atas nama orang yang menekannya. **Discard** membuang usulannya. Di chat satu lawan satu, orang di chat
 itu yang menjawab; di grup, orang yang meminta atau admin. Kalau chat-nya gak punya tombol, seperti
 WhatsApp, kartunya menyebut perintahnya: `/schedule on <id>` dan `/schedule discard <id>`. Halaman
-Schedule dan Webhooks menampilkan usulan dengan dua tombol yang sama, dan kartu yang dijawab dari sana
-ikut berubah di chat.
+Automations menampilkan usulan dengan dua tombol yang sama, dan kartu yang dijawab dari sana ikut
+berubah di chat.
 
 Agent gak pernah menyalakan job sendiri, memperluasnya, atau mengubah job yang sedang jalan. Perubahan
 adalah usulan baru yang menyebut job yang diganti; setelah dinyalakan, job itu berubah bentuk tapi tetap
-memakai id, riwayat run, dan URL webhook-nya. Agent yang menjalankan `nouride cron add`, `update` atau
+memakai id, riwayat run, dan URL webhook-nya. Di halaman automation itu, perubahannya menunggu sebagai
+**Suggested**, dengan apa yang ditambah, diubah, dan dihapus, serta tombol **Accept** dan **Discard**. Agent yang menjalankan `nouride cron add`, `update` atau
 `enable`, atau `webhook add` atau `rotate`, ditolak dan diarahkan ke `schedule`. Paling banyak sepuluh
 usulan dari satu agent yang boleh menunggu sekaligus, dihitung dari agent yang mengusulkannya.
 
@@ -155,8 +247,8 @@ menjalankan job secara manual, tanpa body, dan gak dihitung sebagai pengiriman.
 ### Supaya webhook bisa dipanggil dari internet
 
 GitHub, Stripe dan sejenisnya memanggil webhook dari internet. Kebanyakan box ada di balik router
-rumah, dan panggilan itu gak pernah sampai kecuali ada yang membukakan jalan. Setiap kartu di halaman
-Webhooks menyebutkan keadaannya:
+rumah, dan panggilan itu gak pernah sampai kecuali ada yang membukakan jalan. Halaman webhook itu
+sendiri menyebutkan keadaannya:
 
 | | |
 |---|---|

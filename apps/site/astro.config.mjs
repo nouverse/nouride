@@ -64,7 +64,7 @@ const sidebar = [
       { label: 'Approvals & permissions', slug: 'docs/manual/approvals', translations: { id: 'Approval & Izin' } },
       { label: 'Skills & learning', slug: 'docs/manual/skills', translations: { id: 'Skill & Pembelajaran' } },
       { label: 'Who may talk to it', slug: 'docs/manual/access', translations: { id: 'Siapa yang Boleh Bicara' } },
-      { label: 'Scheduled work', slug: 'docs/manual/schedule', translations: { id: 'Tugas Terjadwal' } },
+      { label: 'Automations', slug: 'docs/manual/schedule', translations: { id: 'Automations' } },
       { label: 'Missions', slug: 'docs/manual/missions', translations: { id: 'Misi' } },
       { label: 'External agents', slug: 'docs/manual/external-agents', translations: { id: 'Agent Eksternal' } },
       { label: 'Office', slug: 'docs/manual/office', translations: { id: 'Office' } },

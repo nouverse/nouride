@@ -1254,13 +1254,27 @@ type JobTrigger =
   | { kind: "at"; at: number }                      // one-shot, epoch milliseconds
   | { kind: "every"; everyMs: number }              // interval, measured from the end of the last run
   | { kind: "cron"; expr: string; tz?: string }     // 5-field expression, IANA zone
-  | { kind: "webhook" };                            // runs when its URL is called, not on a clock
+  | { kind: "webhook" }                             // runs when its URL is called, not on a clock
+  | { kind: "manual" };                             // runs when a person starts it: never due
 
 type JobPayload =
   | { kind: "systemEvent"; text: string }                       // delivered as-is, no model call
   | { kind: "agentTurn"; message: string; model?: string }      // a full turn with tools
   | { kind: "command"; argv: string[]; cwd?: string; timeoutMs?: number;
-      then: "deliver" | "agentTurn" };                          // a host command, no model call
+      then: "deliver" | "agentTurn" }                           // a host command, no model call
+  | { kind: "mission"; goal: string; checks?: string[]; review?: string | false }
+  | { kind: "steps"; steps: JobStep[] };                        // several, in a fixed order (8.3.1)
+
+// A step is one of the above less what the list decides for it, or a wait for a person. Each has an id, an optional
+// name, and three exits: where the run goes when it is done, failed, or had nothing to say.
+type StepGo = "next" | "end" | { to: string };                  // `to`: the id of a LATER step
+type JobStep = { id: string; name?: string; then?: StepGo; whenFailed?: StepGo; whenEmpty?: StepGo } & (
+  | { kind: "systemEvent"; text: string }
+  | { kind: "agentTurn"; message: string; model?: string; agentId?: string }
+  | { kind: "command"; argv: string[]; cwd?: string; timeoutMs?: number }
+  | { kind: "mission"; goal: string; checks?: string[]; review?: string | false; agentId?: string }
+  | { kind: "approval"; ask: string; timeoutMs?: number }
+);
 
 interface JobTarget {
   gatewayId: string;   // the gateway INSTANCE (`discord:main`), never the platform
@@ -1297,6 +1311,16 @@ Sessions, bindings and outbound messages are all keyed by instance, so a platfor
 | `command` with `then: "agentTurn"` | one, when it printed something | A probe whose output needs interpreting — the facts are already in hand when the turn starts. A run that prints nothing runs no turn and sends nothing (0.8.17): a check that prints only when something is wrong costs nothing while all is well. |
 | `agentTurn` | one turn, up to `max_tool_iterations` | Work whose answer is not known in advance. |
 | `mission` | the mission's turns, and a reviewer's | Long work, checked: each run is a mission started as whoever turned the job on, reporting to its chat, ending at the reviewer; one at a time (0.8.0). |
+
+#### 8.3.1 A list of steps
+
+A job's work may be a list (`steps`, at most 20): the scheduler runs the steps in order, each handed what the one before said as text, and an agent runs only the step it is given. The last step's words are the run's, delivered as the job says; a message step is sent as it runs, and a mission tells its chat itself. A job of steps never runs on the chat's history. A webhook's body is read by the first agent or mission step, and every later turn is marked as having read outside content.
+
+- **Exits.** Each step says where the run goes when it is done (`then`), failed (`whenFailed`) and had nothing to say (`whenEmpty`): the next step, the end, or a later step by id. Forward only, refused at save otherwise, so a run always ends and there is no loop. Left unsaid a step behaves as a job of that one kind: done goes on, failed ends the run as failed and is reported, nothing to say ends it quietly. A failed step that goes on hands its failure to the step it goes to.
+- **A mission as a step**, at any place: the run waits for the mission to end and hands its result on. A mission that failed or was stopped is a failed step.
+- **A wait for a person** (`approval`): asked where the job reports, with Continue and Stop where the connection has buttons, and on the dashboard (Waiting for you, and the automation's page). In a one-to-one chat the person in it answers; in a room whoever turned the job on, or an admin; on the dashboard an operator or an admin. A yes hands on what the step before said. A no, or no answer within `timeoutMs` (a day unless set, five minutes to seven days), is the step's failed exit: by default the run ends there as skipped, not failed, and nothing is reported as a failure. No model is asked while it waits.
+- **A run that waits is a row, not a process.** Its status is `waiting`, with where it stands (`cron_runs.state`): the step, what the step before said, a webhook body no step has read, and what it waits for. A mission's end, an answer from a chat or the dashboard, its time running out, and a boot each find it there, so a restart loses nothing; at boot a run whose mission ended meanwhile goes on, and one whose mission is gone fails that step. While a run of a job waits the job starts no other: it has no next time until that run settles it, and Run now says what it waits for. Each step's outcome is written to the run as the step begins and ends, so a run at work can be read.
+- An agent proposes a list through `schedule` as it proposes any job, each step written as a job of one kind is (`text`, `command`, `prompt`, `mission`, `ask`), with exits by step number; the card says each step and where the run goes from it. Nothing an agent wrote runs until a person turns it on.
 
 A `command` payload runs argv on the daemon host with no model and **no approval gate** — nothing inspects it when it fires.
 An agent proposes scheduled work and never makes it (0.8.0): the `schedule` tool writes the job whole, kept off, and posts a card in the chat — what it does, when, where it reports — that a person turns on (a press, `/schedule on <id>`, or the dashboard), by the rule approvals keep for who may answer. The `nouride` tool refuses `cron add|update|enable` and `webhook add|rotate` and points there. Reached any other way, the CLI is still on the fixed list: `nouride cron add … --command` is classified as the command it schedules, and otherwise as `unattended` (§17.4), asked under `careful` — and under `balanced` when the command is one `balanced` asks — and never a standing grant.
