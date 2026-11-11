@@ -67,9 +67,21 @@ describe("install.sh, run whole at every release (0.8.18)", () => {
   test("the release workflow runs it twice on Debian, Ubuntu arm64 and Alpine, and asks the download host", () => {
     const workflow = readFileSync(join(import.meta.dir, "../../../../.github/workflows/release.yml"), "utf8");
     expect(workflow).toContain('sh scripts/release/install-run.sh install-run/nouride-linux-x64.tar.gz debian:13 linux/amd64 "$v"');
-    expect(workflow).toContain('sh scripts/release/install-run.sh install-run/nouride-linux-arm64.tar.gz ubuntu:24.04 linux/arm64 "$v"');
+    expect(workflow).toContain('sh scripts/release/install-run.sh install-run/nouride-linux-arm64.tar.gz ubuntu:24.04 linux/arm64 "${GITHUB_REF_NAME#v}"');
     expect(workflow).toContain('sh scripts/release/install-run.sh install-run/nouride-linux-x64-musl.tar.gz alpine:3.20 linux/amd64 "$v"');
     expect(workflow).toContain("https://get.nouride.com/latest/nouride-linux-x64.tar.gz");
+  });
+
+  test("Ubuntu arm64 on an arm64 runner, not under QEMU, whose container could not resolve the Ubuntu mirror", () => {
+    const workflow = readFileSync(join(import.meta.dir, "../../../../.github/workflows/release.yml"), "utf8");
+    const job = workflow.slice(workflow.indexOf("\n  install-arm64:\n"), workflow.indexOf("\n  # ── The release audit"));
+    expect(job).toContain("    runs-on: ubuntu-24.04-arm\n");
+    expect(job).toContain("ubuntu:24.04 linux/arm64");
+    expect(job).not.toContain("setup-qemu-action");
+    // The x64 job runs no arm64 container any more, so it needs no emulation either.
+    const x64 = workflow.slice(workflow.indexOf("\n  install:\n"), workflow.indexOf("\n  install-arm64:\n"));
+    expect(x64).not.toContain("linux/arm64");
+    expect(x64).not.toContain("setup-qemu-action");
   });
 
   test("on Alpine without shadow the account is made with busybox's adduser, not refused at useradd", () => {

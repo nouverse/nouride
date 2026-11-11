@@ -1359,7 +1359,8 @@ jobs:
   # (REVIEW B1): 0.5.10 and 0.5.11 shipped one dash refused at its last block, and until 0.8.18 it told a system with
   # no service manager to run a command that does not exist and stopped at `useradd` on Alpine. This release's
   # install.sh on this release's public tarballs, twice each (an install, then the re-run every upgrade is), in
-  # Debian, Ubuntu on arm64 and Alpine: `scripts/release/install-run.sh`. And the download host answers.
+  # Debian and Alpine here and Ubuntu on arm64 in `install-arm64`: `scripts/release/install-run.sh`. And the download
+  # host answers.
   install:
     needs: [binaries, guard-visibility]
     if: ${{ !cancelled() && startsWith(github.ref, 'refs/tags/v') && needs.binaries.result == 'success' && github.repository_owner == 'nouverse' }}
@@ -1393,16 +1394,36 @@ jobs:
         run: |
           rm -rf install-run && mkdir install-run
           sh scripts/release/gh-retry.sh gh release download "${GITHUB_REF_NAME}" --clobber --repo nouverse/nouride --dir install-run \
-            --pattern nouride-linux-x64.tar.gz --pattern nouride-linux-arm64.tar.gz --pattern nouride-linux-x64-musl.tar.gz
-      # QEMU for the Ubuntu arm64 run: a GitHub-hosted runner has no arm64 emulation of its own, and without it that
-      # container dies on `exec format error` (0.8.20's release, the first on hosted runners since build-runner had it).
-      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
-      - name: install.sh, twice, on Debian, Ubuntu arm64 and Alpine
+            --pattern nouride-linux-x64.tar.gz --pattern nouride-linux-x64-musl.tar.gz
+      - name: install.sh, twice, on Debian and Alpine
         run: |
           v="${GITHUB_REF_NAME#v}"
           sh scripts/release/install-run.sh install-run/nouride-linux-x64.tar.gz debian:13 linux/amd64 "$v"
-          sh scripts/release/install-run.sh install-run/nouride-linux-arm64.tar.gz ubuntu:24.04 linux/arm64 "$v"
           sh scripts/release/install-run.sh install-run/nouride-linux-x64-musl.tar.gz alpine:3.20 linux/amd64 "$v"
+          rm -rf install-run
+
+  # The same on Ubuntu arm64, on an arm64 runner. Run under QEMU on an x64 one, its container could not resolve
+  # ports.ubuntu.com for hours while every other name resolved, and the release run stayed red over a check that never
+  # reached install.sh. The public half builds arm64 on these runners already.
+  install-arm64:
+    needs: [binaries, guard-visibility]
+    if: ${{ !cancelled() && startsWith(github.ref, 'refs/tags/v') && needs.binaries.result == 'success' && github.repository_owner == 'nouverse' }}
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: This release's arm64 tarball, from its draft
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_REPO_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          rm -rf install-run && mkdir install-run
+          sh scripts/release/gh-retry.sh gh release download "${GITHUB_REF_NAME}" --clobber --repo nouverse/nouride --dir install-run \
+            --pattern nouride-linux-arm64.tar.gz
+      - name: install.sh, twice, on Ubuntu arm64
+        run: |
+          sh scripts/release/install-run.sh install-run/nouride-linux-arm64.tar.gz ubuntu:24.04 linux/arm64 "${GITHUB_REF_NAME#v}"
           rm -rf install-run
 
   # ── The release audit ───────────────────────────────────────────────────────
