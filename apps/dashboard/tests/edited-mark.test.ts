@@ -11,7 +11,7 @@ import { createElement } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderToString } from "react-dom/server";
 import { answersAnEdit, saidAsDrawn } from "../src/commons/lib/turn-display.ts";
-import { TurnView } from "../src/modules/chat/components/Turn.tsx";
+import { TurnView } from "../src/commons/components/chat/Turn.tsx";
 import type { ChatTurn } from "@nouride/wire";
 
 const turn = (extra: Partial<ChatTurn> = {}): ChatTurn => ({

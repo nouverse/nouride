@@ -24,10 +24,10 @@ import { cn } from "@/commons/lib/utils";
 import type { ChatListData } from "../hooks/use-chat-list";
 import { usePinnedGroups } from "../hooks/use-pinned";
 import { groupKey } from "../lib/chat-list";
-import { groupStream, readTags } from "../lib/group-stream";
+import { groupStream, readTags } from "@/commons/lib/group-stream";
 import { HEADER_BUTTON } from "./AgentHeader";
 import { groupName } from "./ListRows";
-import { LiveTurnView, TurnView } from "./Turn";
+import { LiveTurnView, TurnView } from "@/commons/components/chat/Turn";
 
 export function GroupConversation({ platform, chatId, data }: { platform: string; chatId: string; data: ChatListData }) {
   const group = data.list.data?.groups.find((one) => one.platform === platform && one.chatId === chatId);

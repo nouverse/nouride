@@ -121,7 +121,7 @@ describe("the bottom of a page", () => {
   });
 
   test("the chat's composer, which sits at the bottom, keeps clear of the home indicator", () => {
-    expect(read("modules/chat/components/Composer.tsx")).toContain("pb-[max(0.75rem,env(safe-area-inset-bottom))]");
+    expect(read("commons/components/chat/Composer.tsx")).toContain("pb-[max(0.75rem,env(safe-area-inset-bottom))]");
   });
 
   test("the viewport reports the safe area, and keeps its zoom", () => {

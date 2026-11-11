@@ -22,6 +22,13 @@ export function doingNow(agent: AgentSummary): { words: string; tone: "success" 
   return { words: "Idle", tone: "muted" };
 }
 
+/** "Working", and how many helpers are at it in the background: a chat's row in the list and the bar over it say the same. */
+export function workingWords(working: boolean, helpers: number): string | undefined {
+  const help = helpers === 1 ? "1 helper" : `${helpers} helpers`;
+  if (working) return helpers > 0 ? `Working · ${help}` : "Working";
+  return helpers > 0 ? `${help} at work` : undefined;
+}
+
 /**
  * The model an agent answers with, as lists show it. An external agent's is its CLI's — the pack's, or the CLI's own
  * default, named once a session has said it: "Claude Code · Opus 5.5 (default)". Its `model` is its `[llm]`, which

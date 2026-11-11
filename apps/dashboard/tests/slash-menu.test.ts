@@ -12,7 +12,7 @@ import {
   applyCommand,
   matchCommands,
   slashToken,
-} from "../src/modules/chat/components/SlashMenu.tsx";
+} from "../src/commons/components/chat/SlashMenu.tsx";
 import type { SlashCommand } from "@nouride/wire";
 
 const COMMANDS: SlashCommand[] = [

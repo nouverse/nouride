@@ -4,7 +4,7 @@
  * reads it, changes it if they like, and presses send; and the agent still asks before it installs anything, as it
  * always does. It replaces a command printed for a person to type, which a person who is not technical cannot use.
  *
- * The chat takes the message from its address once and drops it from there (`modules/chat/lib/start-with.ts`). Drawn
+ * The chat takes the message from its address once and drops it from there (`commons/lib/start-with.ts`). Drawn
  * once the orchestrator is known, since its name is on the button: "Ask your orchestrator" asks a person to know the word.
  * Not for a viewer, who may read the dashboard but send nothing, a chat message included.
  *

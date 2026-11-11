@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { applyMention, matchMentions, mentionToken, orderMentions } from "../src/modules/chat/components/MentionMenu.tsx";
+import { applyMention, matchMentions, mentionToken, orderMentions } from "../src/commons/components/chat/MentionMenu.tsx";
 import type { Room } from "@nouride/wire";
 
 const room = (ids: string[]): Room => ({
