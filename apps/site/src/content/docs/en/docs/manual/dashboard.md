@@ -128,7 +128,7 @@ this order:
   its page. Facts and documents are shown to whoever may decide them: an admin or an operator.
 - **What is moving.** Each mission at work, with how far along its checklist is.
 - **Quick chat**, on a laptop: a line to an agent, the orchestrator first and marked as such, and the chat opens with
-  the answer. On a phone a **+ Chat** button floats above the tab bar instead.
+  the answer. On a phone the chat button that floats over every page stands in its place, above the tab bar.
 - **Your agents.** The Office, small, and beside it each agent as a chip: its cat, its name, a crown on the
   orchestrator and a dot for what it is doing. A chip opens the agent; the picture opens the Office.
 - Then today's AI use, folded to one line, and setup notes when the last start found something.
@@ -136,14 +136,37 @@ this order:
 When nothing waits and nothing moves, the cat says *Nothing is waiting for you*: asleep, with a coffee, or leaning on
 its scooter, a different picture each time you open Home. While a mission is moving, it rides beside the list.
 
+## A chat on every page
+
+On every page but Chats, a round button with an agent's face stands in the corner of the window; on a phone it stands
+above the tab bar. Press it and a small chat opens over the page: a card in the corner on a laptop or a tablet, a
+sheet from the foot of the screen on a phone. The page stays where it is, so you can look at it while you ask. Press
+the button again, press Escape or use the panel's close button to put it away. What you had written and not sent is
+still in the box when you open it again.
+
+- **Which agent.** The first time it opens on your orchestrator, and after that on the agent you last used there. On
+  an agent's own pages it opens on that agent. Press the agent's name at the top of the panel to pick another.
+- **The same conversation as on Chats.** For each agent the panel shows your newest one-to-one conversation with it,
+  the one its row on Chats opens, and starts one when there is none. What you send in the panel is on Chats and the
+  other way round, with the agent's steps, its files, the approvals it waits on and **Stop**, as on Chats. The arrows
+  at the top of the panel open the same conversation on the Chats page. Rooms and groups stay on Chats.
+- **The agent knows which page you have open.** Each message from the panel tells the agent the page it was written
+  from: what the page is called, its address, and what it is about where it is about one thing, such as a mission or
+  an agent. So "what is this one waiting for?" asked on a mission's page is about that mission. A message written on
+  the Chats page names no page.
+
+The button is there for whoever may chat (an admin or an operator). While the panel is closed it asks the server for
+nothing.
+
 ## Ask your orchestrator, from any page
 
 Most pages carry a button in their header, **Ask** and your orchestrator's name: *Ask Nouva to create an agent* on
 Agents, *to set up a webhook* on Webhooks, *to schedule something* on Schedule, *to add a model* on Models, and so on.
-It opens a chat with the orchestrator with a request for that page already written, with a gap (…) for what you
-want. Finish it and send it: nothing is sent until you do, and the agent still asks before anything risky. It is
-there for whoever may chat (an admin or an operator), and only once an orchestrator is set. On a phone it says
-**Ask Nouva**.
+It opens the chat over the page you are on, with your orchestrator, and puts a request for that page in the box, with
+a gap (…) for what you want. You stay on the page. Finish the request and send it: nothing is sent until you do, and
+the agent still asks before anything risky. If you had already written something in the box, the request is added
+under it. The button is there for whoever may chat (an admin or an operator), and only once an orchestrator is set.
+On a phone it says **Ask Nouva**.
 
 ## An agent is the module
 

@@ -120,6 +120,19 @@ then is read by the running turn at its next step (`SPEC.md` §10.1, steering). 
 from the turn's record: your message under the steps, then "↪ Got it" and the agent's line under it.
 In a room the message keeps its own bubble where it was said, and the card quotes it above the lines.
 
+**The floating chat is that same conversation, over every other page.** A person looking at a mission, a job or a
+log line wants to ask about it without leaving it, and a button that went to Chats took the page away. So every page
+but Chats has a round button with an agent's face, and it opens a panel over the page: a card in the corner from a
+tablet's width up, a sheet on a phone (`commons/components/floating-chat`). The panel draws the Chats page's own
+conversation component for one agent, picked in its bar: the person's newest one-to-one conversation with it, the one
+its row on Chats opens, so there is one transcript and one live turn whichever place it is read from. Two things are
+the panel's own. A new conversation's id is kept in the panel, where the Chats page puts it in the address, because
+the page under the panel must not move. And each message says which page was open (`OpenPage`: the address, the
+page's title, and its subject where the page says one with `usePageSubject`), which the daemon puts on that message as
+one line, never in the prompt. It opens on the agent the page belongs to, else the one last used there, else the
+orchestrator. Closed, it draws no conversation, so it holds no event stream and asks for nothing: a browser has six
+connections to give. The pages' "Ask Nouva to" buttons open it with their request in the box, unsent.
+
 ---
 
 ## 2. Queues that are not the same queue
@@ -333,6 +346,9 @@ reaches the daemon over HTTP only (`ARCHITECTURE.md` §3).
 | `src/commons/components/ui/ui.tsx` | `Card`, `Field`, `PageHeader`, `EmptyState`, `StatusDot`, `ErrorNote` |
 | `src/commons/components/ui/confirm.tsx` | `useConfirm()` — the one "are you sure?", promise-shaped |
 | `src/commons/components/ui/SearchSelect.tsx` | pick one of a long list: a button that opens it, with a field to narrow it (whose chats, on Chats) |
+| `src/commons/components/chat/` | the conversation and its parts (`Conversation`, `Composer`, `Turn`), drawn by the Chats page and by the floating chat |
+| `src/commons/components/floating-chat/` | the chat over every page: its button and card or sheet (`FloatingChat`), what is in it (`FloatingPanel`), the page a message says (`page-open.ts`) |
+| `src/commons/hooks/use-page-subject.ts` | `usePageSubject("…")`: a page says the one thing it is about, for an agent asked from the floating chat |
 | `src/commons/components/ui/Markdown.tsx` | the deliberately small, HTML-free renderer |
 | `src/commons/lib/api.ts` and `api.*.ts` | every control-API call, typed by `@nouride/wire`; cookie auth, same-origin |
 | `src/commons/lib/session.ts` | the single description of who may be where, and the redirects |

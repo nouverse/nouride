@@ -117,10 +117,15 @@ pose=…>` or `<EmptyState pose=…>`; which state takes which pose is the table
 ## Layout
 
 - Desktop: the sidebar. Phone (below 768px): a tab bar at the bottom (Home, Chats, Work, Agents, More),
-  with Work holding missions, approvals and jobs under one badge, and a floating "+ Chat" on Home and
-  Chats. No sidebar drawer on a phone.
-- Home, in order: what needs the person, what is moving, Quick Chat, the agents. On a phone "+ Chat"
-  stands in for Quick Chat: a floating button never covers a field.
+  with Work holding missions, approvals and jobs under one badge. No sidebar drawer on a phone.
+- The floating chat (`commons/components/floating-chat`): a round button with an agent's face on every page
+  but Chats, and the panel it opens. Below a laptop's width the button stands above the tab bar, never over
+  it, and every page's foot leaves it room (`PAGE_BOTTOM`); from a laptop up it is in the window's corner,
+  small enough to lie over nothing but a held card's rounded corner. The panel is a card over the button
+  from a tablet's width up, with the page under it in reach, and a sheet on a phone. It is the one floating
+  button: a page adds no second.
+- Home, in order: what needs the person, what is moving, Quick Chat, the agents. On a phone the floating
+  chat's button stands in for Quick Chat: a floating button never covers a field.
 - The menu by how often a page is opened: Home, Chats, Work, Agents; then Skills, Memory; everything set up
   once behind Settings, a page of grouped cards with a search. A section's other pages are tabs over it.
 - An approval is answered where it is asked: in the chat as well as on its page.
