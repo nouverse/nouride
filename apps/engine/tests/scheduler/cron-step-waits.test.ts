@@ -160,6 +160,13 @@ describe("a mission as a step", () => {
     expect(h.delivered).toEqual([]);
   });
 
+  test("handed a webhook's body and an earlier step's words, each is named: the mission can tell them apart", async () => {
+    const made = job([{ id: "note", kind: "command", argv: ["sh", "-c", "printf 'disk 91%%'"] }, mission("fix", "Free some space.")], { trigger: { kind: "webhook" } });
+    const h = hands();
+    await h.scheduler.runNow(made.id, "webhook", { body: "alert from the monitor" });
+    expect(h.started[0]!.body).toBe("The webhook's payload:\nalert from the monitor\n\nWhat the step before said:\ndisk 91%");
+  });
+
   test("another agent's mission is started as that agent's", async () => {
     const made = job([{ id: "m", kind: "mission", goal: "Review it.", agentId: "nix" }]);
     const h = hands();

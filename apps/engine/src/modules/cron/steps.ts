@@ -281,7 +281,9 @@ async function runStep(
     }
 
     case "mission": {
-      const request = [carry.body, carry.before?.said].filter(Boolean).join("\n\n") || undefined;
+      // Each part named when there are two, so the mission can tell a caller's payload from an earlier step's words.
+      const said = carry.before?.said;
+      const request = carry.body && said ? `The webhook's payload:\n${carry.body}\n\nWhat the step before said:\n${said}` : carry.body || said || undefined;
       delete carry.body;
       const run = hands.mission(step, request);
       if ("busy" in run) {
