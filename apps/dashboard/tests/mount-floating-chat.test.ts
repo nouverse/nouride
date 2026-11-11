@@ -249,6 +249,37 @@ describe("the conversation in it", () => {
     }
   });
 
+  test("a turn at work is there as on Chats: its steps, its plan, the approval it waits on answered there, and Stop", async () => {
+    const approval = { id: "ap_1", agentId: "nouva", chatId: "web-1", tool: "exec", params: { command: "rm -rf build/cache" }, grantable: false, requestedAt: Date.now(), timeoutMs: 60_000 };
+    // The conversation as the daemon's own fixture has it: a turn at work, a step of it waiting on an approval.
+    answer({ "/status": AT_REST["/status"], "/approvals": { status: 200, body: { pending: [approval] } } });
+    const posted = recordPosts({ "/approvals/ap_1/deny": { status: 200, body: { ok: true, id: "ap_1", decision: "deny" } }, "/stop": { status: 200, body: { stopped: 1 } } });
+    const posts = (path: string) => posted.posts.filter((post) => post.path === path).map((post) => post.body);
+    try {
+      await renderPage("/skills", async (host) => {
+        await open(host);
+        // What was asked, that it is at work and on what, and its steps a press away.
+        await eventually(() => card()!.textContent?.includes("clean the build") === true, 3_000, "the turn at work");
+        expect(card()!.textContent).toContain("waiting for approval: exec");
+        expect(card()!.textContent).toContain("3 steps");
+        // Its bar says so too, and the plan it keeps is over the box.
+        expect(card()!.querySelector('button[aria-label^="Chatting with Nouva"]')?.textContent).toContain("Working");
+        expect(card()!.textContent).toContain("2 of 4");
+        // The approval it waits on, with what it would run, answered here.
+        await eventually(() => card()!.textContent?.includes("rm -rf build/cache") === true, 3_000, "the approval");
+        ([...card()!.querySelectorAll("button")].find((button) => button.textContent?.trim() === "Deny") as HTMLElement).click();
+        await eventually(() => posts("/approvals/ap_1/deny").length === 1, 3_000, "the answer");
+        // And Stop, beside Send.
+        (card()!.querySelector('button[aria-label="Stop what is running"]') as HTMLElement).click();
+        await eventually(() => posts("/stop").length === 1, 3_000, "the stop");
+      });
+      expect(posts("/stop")).toEqual([{ chatId: "web-1" }]);
+      expect(posts("/chat/send")).toEqual([]);
+    } finally {
+      posted.restore();
+    }
+  });
+
   test("nothing can be written before the person's conversations are read: a message must not start a second one", async () => {
     answer({ ...AT_REST, "/chat-list": { status: 200, body: {}, hold: true } });
     await renderPage("/skills", async (host) => {
