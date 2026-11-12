@@ -9,7 +9,8 @@
  * `packages/shared/assets/mascot`; a pose that has moved is written there. The first three sheets were cut before this
  * script and are not its business.
  *
- * It lives here for the reason `crop-mascot-sheet.ts` does: `sharp` is installed with Astro, under `apps/site`.
+ * It lives under `apps/site` because that is where `sharp` is installed, with Astro: Bun resolves a bare import from
+ * the script's own directory, so a copy in `scripts/` would not find it.
  *
  * ## What is background
  *

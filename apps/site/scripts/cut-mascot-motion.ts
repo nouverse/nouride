@@ -9,7 +9,8 @@
  * standing, side by side) and `ride.webp` (six frames riding, side by side). A strip's frames share one cell size and
  * one anchor, so a page steps through them by moving the background and the cat stays put.
  *
- * It lives here for the reason `crop-mascot-sheet.ts` does: `sharp` is installed with Astro, under `apps/site`.
+ * It lives under `apps/site` because that is where `sharp` is installed, with Astro: Bun resolves a bare import from
+ * the script's own directory, so a copy in `scripts/` would not find it.
  *
  * ## Why not key the white out by colour
  *

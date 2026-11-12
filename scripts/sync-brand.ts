@@ -1,10 +1,9 @@
 #!/usr/bin/env bun
 /**
- * Copy the shared favicon into each app's `public/`, because a favicon cannot be imported — and the site's loading
- * logo, which cannot either.
+ * Copy the shared favicon and the app's icons into each app's `public/`, because a favicon cannot be imported.
  *
- * Everything else about the brand is an import: the dashboard resolves `@brand/nouride.png` through
- * a Vite alias, the docs site does the same and its MDX heroes use a relative path. Those all end up
+ * Everything else about the brand is an import: the dashboard resolves `@brand/mascot/standing/01-waving.webp`
+ * through a Vite alias, the docs site does the same and its MDX heroes use a relative path. Those all end up
  * hashed into the app's own output from one file in `packages/shared/assets`.
  *
  * A favicon cannot work that way. `index.html` says `href="/favicon.png"` and Starlight's `favicon`
@@ -31,8 +30,8 @@ const ROOT = join(dirname(new URL(import.meta.url).pathname), "..");
 /**
  * Which mark each app wears, and where it has to be a real file rather than an import.
  *
- * `favicon-site.png` is the full logo scaled to 256, not the 1.4 MB original: a favicon is fetched
- * on every cold page load, and the wordmark it carries is unreadable below about 64 pixels anyway.
+ * `favicon-site.png` is the full logo at 256 px and no larger: a favicon is fetched on every cold
+ * page load, and the wordmark it carries is unreadable below about 64 pixels anyway.
  *
  * The dashboard's is the chibi at 64 px, 7 KB: a tab draws it at 16 to 32 CSS pixels, so 64 covers a 2x
  * screen. It was `favicon.png` itself, 256 px and 65 KB, the second-largest file on a cold load; that one
@@ -42,11 +41,6 @@ const ROOT = join(dirname(new URL(import.meta.url).pathname), "..");
 const COPIES = [
   { from: "packages/shared/assets/favicon-64.png", to: "apps/dashboard/public/favicon.png" },
   { from: "packages/shared/assets/favicon-site.png", to: "apps/site/public/favicon.png" },
-  /**
-   * The site's loading overlay shows it before any stylesheet or script has run, so `Site.astro` names it by path and
-   * the bundler never sees it. It was a committed copy of `nouride.png`, beside a second one nothing used.
-   */
-  { from: "packages/shared/assets/nouride.png", to: "apps/site/public/logo.png" },
   /**
    * The dashboard's app icons, for a phone's home screen and an installed app: the favicon's head, the mascot's own
    * (`mascot/standing/12-head.webp`, 512px), cut without the sparks beside it. Two to show, clear around the head as the

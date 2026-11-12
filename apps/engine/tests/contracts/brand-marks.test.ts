@@ -16,7 +16,7 @@ const script = readFileSync(join(ROOT, "scripts/sync-brand.ts"), "utf8");
 
 /** Every entry in that script's COPIES, read from the script itself. */
 const copies = [...script.matchAll(/from:\s*"([^"]+)",\s*to:\s*"([^"]+)"/g)].map((match) => ({ from: match[1] as string, to: match[2] as string }));
-/** The favicons among them: the site's loading logo is a copy too, and not a mark a tab wears. */
+/** The favicons among them: the dashboard's app icons are copies too, and not the mark a tab wears. */
 const sources = copies.filter((copy) => copy.to.endsWith("/favicon.png")).map((copy) => copy.from);
 
 describe("brand marks", () => {
@@ -33,18 +33,23 @@ describe("brand marks", () => {
   });
 
   test("a favicon stays small enough to be one, since it is fetched on every cold load", () => {
-    // The full logo is 1.4 MB at source. Pointing an entry straight at it would work and would ship
-    // that on every first page view.
+    // Pointing an entry straight at a full-size picture would work, and would ship it on every first
+    // page view.
     for (const source of sources) {
       expect(readFileSync(join(ROOT, source)).byteLength).toBeLessThan(200_000);
     }
   });
 
-  test("the site's loading logo is generated from the brand source, not committed beside it", () => {
-    // A `logo.png` in `apps/site/public` was a committed byte-for-byte copy of `nouride.png`, with a second one nothing used.
-    expect(copies).toContainEqual({ from: "packages/shared/assets/nouride.png", to: "apps/site/public/logo.png" });
+  test("what the script copies is generated, not committed beside its source, and nothing is ignored that it does not copy", () => {
+    // A copy that is not ignored gets committed, and then there are two of the file to keep in step. And a line left
+    // behind for a copy the script no longer makes hides whatever is put at that path by hand: the site's
+    // `logo.png` was one, a copy of a logo no page drew any more.
+    expect(copies.length).toBeGreaterThan(sources.length);
     const ignored = readFileSync(join(ROOT, ".gitignore"), "utf8").split("\n");
     for (const copy of copies) expect({ to: copy.to, ignored: ignored.includes(copy.to) }).toEqual({ to: copy.to, ignored: true });
+    const made = new Set(copies.map((copy) => copy.to));
+    const images = ignored.filter((line) => /^apps\/\w+\/public\/.+\.png$/.test(line));
+    expect(images.filter((line) => !made.has(line))).toEqual([]);
   });
 
   test("and so are the installers the site serves: generated, ignored, and no committed copy", () => {

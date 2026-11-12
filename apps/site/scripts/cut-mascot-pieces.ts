@@ -24,7 +24,8 @@
  * That, and the ground between the legs, is all the stacked parts differ from the pose by: a few dozen pixels. A cut
  * that lost a part differs by thousands, and the script refuses it.
  *
- * It lives here for the reason `crop-mascot-sheet.ts` does: `sharp` is installed with Astro, under `apps/site`.
+ * It lives under `apps/site` because that is where `sharp` is installed, with Astro: Bun resolves a bare import from
+ * the script's own directory, so a copy in `scripts/` would not find it.
  */
 
 import { existsSync, mkdirSync } from "node:fs";
