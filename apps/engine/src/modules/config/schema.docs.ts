@@ -336,7 +336,7 @@ export const ANNOTATIONS: Record<string, Annotation> = {
     caveat: "Inherited like `small_model`. Nothing runs on it unless an agent asks for `high` or a helper key names it.",
   },
   "llm.defaults.max_tokens": { description: "Output ceiling per reply, unless an agent sets its own. 0 is by model: 32000 for the Claude 4/5, Gemini 2.5/3 and GPT-5 families, 8192 for a model Nouride does not know." },
-  "llm.defaults.temperature": { description: "Sampling temperature, unless an agent sets its own." },
+  "llm.defaults.temperature": { description: "Sampling temperature, unless an agent sets its own. A model that takes none is sent none." },
   "llm.defaults.effort": {
     description:
       "How long a thinking model thinks before it answers, unless an agent sets its own `[llm] effort`: low, medium, high, xhigh or max. " +

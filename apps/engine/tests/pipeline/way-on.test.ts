@@ -207,14 +207,23 @@ async function room(turns: Parameters<typeof scriptedOpenAI>[0], maxHops = 3, bu
   gateway.buttons = buttons;
   second.buttons = buttons;
   let refuse = false;
+  // The refused request less its temperature. A provider that will not take a request refuses it again when it is
+  // asked once more without one (`TemperatureGuard`): refused once only, the second ask answered and nothing failed.
+  let again: string | undefined;
+  const lessTemperature = (init: RequestInit) => JSON.stringify({ ...(JSON.parse(String(init.body ?? "{}")) as Record<string, unknown>), temperature: undefined });
   const bench = await pipelineBench({
     turns,
     maxAttempts: 1,
     fetch: (scripted) =>
       (async (url: string, init?: RequestInit) => {
-        if (refuse && init?.method === "POST") {
-          refuse = false;
-          return new Response(JSON.stringify({ error: { message: "this request is not allowed" } }), { status: 400, headers: { "content-type": "application/json" } });
+        if (init?.method === "POST") {
+          const asked = lessTemperature(init);
+          const askedAgain = asked === again;
+          again = refuse ? asked : undefined;
+          if (refuse || askedAgain) {
+            refuse = false;
+            return new Response(JSON.stringify({ error: { message: "this request is not allowed" } }), { status: 400, headers: { "content-type": "application/json" } });
+          }
         }
         return scripted(url, init);
       }) as unknown as typeof fetch,
