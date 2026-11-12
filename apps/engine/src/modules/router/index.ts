@@ -17,6 +17,8 @@ export type RouteReason =
   | "mention"
   /** A reply to something this agent said, on a platform that has replies. */
   | "reply"
+  /** Nobody addressed, and the room named the agent that answers then — `/mention <agent>`, set from the room. */
+  | "room_answerer"
   | "gateway_owner"
   | "channel_binding"
   | "sole_agent"
@@ -81,6 +83,15 @@ export interface RouterOptions {
    * could not be on its own, gated off with the owner fallback: the same rule, but without the claim, six times over.
    */
   frontDesk?: string;
+  /**
+   * The agent this room named to answer a message that addressed nobody (`/mention <agent>`, the dashboard's Groups page).
+   *
+   * Below a tag, a reply and somebody else's tag, which name someone for this one message. Above the connection's owner,
+   * a channel binding and the orchestrator: it is the most specific choice there is, a person in that room saying it of
+   * that room, so what `/mention` says is what happens. Like the front desk it names the same agent on every bot's copy
+   * of the message, and the claim on (message, agent) lets one answer through.
+   */
+  roomAnswerer?: string;
 }
 
 export function routeMessage(
@@ -132,6 +143,10 @@ export function routeMessage(
   if (envelope.mentions && envelope.mentions.length > 0 && !envelope.mentionsSelf) {
     return { agent: null, reason: "addressed_elsewhere" };
   }
+
+  // The caller passes one only while it is an agent that can answer: gone or switched off, the room has no answerer.
+  const named = options.roomAnswerer ? active.find((agent) => agent.config.id === options.roomAnswerer) : undefined;
+  if (named) return { agent: named, reason: "room_answerer" };
 
   if (options.gatewayOwner && options.answerUnaddressed !== false) {
     const owner = active.find((agent) => agent.config.id === options.gatewayOwner);

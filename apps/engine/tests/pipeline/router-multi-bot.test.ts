@@ -203,6 +203,52 @@ describe("a front desk (`[daemon] orchestrator_mode`)", () => {
   });
 });
 
+describe("a room that named its answerer (`/mention <agent>`)", () => {
+  const chatter = (over: Partial<MessageEnvelope> = {}) => envelope({ gateway: "telegram", chatType: "group", chatId: "-100:7", text: "halo semua", mentions: [], ...over });
+  /** As the pipeline calls it on one bot's copy, in a room that named Nix: with the desk beside it, as it would be. */
+  const inRoom = (bot: string, env: MessageEnvelope, more: Parameters<typeof routeMessage>[2] = {}) =>
+    routeMessage({ ...env, gatewayId: `telegram:${bot}` }, registry, { gatewayOwner: bot, answerUnaddressed: false, orchestrator: "nouva", frontDesk: "nouva", roomAnswerer: "nix", ...more });
+
+  test("every bot's copy of a message that names nobody goes to the agent the room named, not to the desk or its own owner", () => {
+    for (const bot of AGENTS) {
+      const decision = inRoom(bot, chatter());
+      expect(decision.agent?.config.id, bot).toBe("nix");
+      expect(decision.reason, bot).toBe("room_answerer");
+    }
+  });
+
+  test("above the connection's owner where one bot is alone, and above a channel binding", async () => {
+    // One bot of ours on the platform: everything it gets is its agent's, until the room says otherwise.
+    const alone = routeMessage({ ...chatter(), gatewayId: "telegram:nouva" }, registry, { gatewayOwner: "nouva", answerUnaddressed: true, orchestrator: "nouva", roomAnswerer: "nix" });
+    expect(alone.agent?.config.id).toBe("nix");
+    // An operator bound Nero to this chat in its pack: the room's own word is nearer than the file's.
+    await writeTextFile(`${agentsDir}/nero/config.toml`, '[agent]\ndisplay_name = "Nero"\n\n[llm]\nprovider = "test"\n\n[channels]\n"telegram:nouva" = ["-100:7"]\n');
+    const bound = await AgentRegistry.create({ agentsDir, llmDefaults: DEFAULTS, knownProviders: ["test"] });
+    const options = { gatewayOwner: "nouva", answerUnaddressed: false, orchestrator: "nouva" };
+    expect(routeMessage({ ...chatter(), gatewayId: "telegram:nouva" }, bound, options).reason).toBe("channel_binding");
+    expect(routeMessage({ ...chatter(), gatewayId: "telegram:nouva" }, bound, { ...options, roomAnswerer: "nix" }).agent?.config.id).toBe("nix");
+  });
+
+  test("below a tag, a name in the words, a reply, and somebody else's tag", () => {
+    // The platform resolved a tag to this bot: its agent, whoever the room named.
+    expect(inRoom("nero", chatter({ mentionsSelf: true })).agent?.config.id).toBe("nero");
+    expect(inRoom("nero", chatter({ mentionsSelf: true })).reason).toBe("mention");
+    // A name in the words.
+    expect(inRoom("nouva", chatter({ text: "nero: masih hidup?" })).agent?.config.id).toBe("nero");
+    // A reply to what Nexa said.
+    expect(inRoom("nouva", chatter(), { repliedToAgent: "nexa" })).toMatchObject({ reason: "reply" });
+    expect(inRoom("nouva", chatter(), { repliedToAgent: "nexa" }).agent?.config.id).toBe("nexa");
+    // Somebody else was tagged, on a platform that says so: nobody's here, the room's agent included.
+    expect(inRoom("nouva", chatter({ mentions: ["SomeoneElsesBot"] }))).toEqual({ agent: null, reason: "addressed_elsewhere" });
+  });
+
+  test("an agent that is not there is nobody's name: the copy is routed as the room without one would be", () => {
+    const decision = inRoom("nouva", chatter(), { roomAnswerer: "ghost" });
+    expect(decision.agent?.config.id).toBe("nouva");
+    expect(decision.reason).toBe("front_desk");
+  });
+});
+
 describe("one bot per platform, or a DM", () => {
   test("the owner still answers anything on its own connection", () => {
     // The arrangement the fallback exists for: withholding it here would make a single-bot install

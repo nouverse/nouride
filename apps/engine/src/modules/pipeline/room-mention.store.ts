@@ -1,5 +1,7 @@
 /**
- * A group's own answer to `groups_require_mention` — set from the group with `/mention` (`hooks/builtins/mention.ts`).
+ * A group's own answer to "a message here that tags nobody, who answers it?" — set from the group with `/mention`
+ * (`hooks/builtins/mention.ts`) or on the dashboard's Groups page: a tag is needed, or none is and one of our agents
+ * answers, the one the group named or else the orchestrator.
  *
  * Keyed by the room **as the platform sees it**: the platform (`telegram`) and its chat id, never our connection.
  * Several of our bots sit in one group, one connection each, and every one of them is handed the same message; the
@@ -21,9 +23,17 @@ const log = createLogger("pipeline.room-mention");
 /** What a group said, and who said it. */
 export interface RoomMentionSetting {
   requireMention: boolean;
+  /**
+   * The agent the group named to answer what tags nobody. Never with `requireMention`: a tag needed is nobody's to
+   * answer. Absent, and no tag needed, it is the orchestrator's — what a row from before the column means.
+   */
+  answerer?: string;
   setBy: string;
   setAt: number;
 }
+
+/** What a group may say: a tag is needed, or none is and this agent answers, or none is and the orchestrator does. */
+export type RoomMentionChoice = { requireMention: true } | { requireMention: false; answerer?: string };
 
 export class RoomMentionStore {
   constructor(
@@ -34,24 +44,26 @@ export class RoomMentionStore {
   /** This group's override, or nothing when it has none. Read on every group message: a primary-key lookup. */
   get(platform: string, chatId: string): RoomMentionSetting | undefined {
     const row = this.db
-      .prepare<{ require_mention: number; set_by: string; set_at: number }>(
-        "SELECT require_mention, set_by, set_at FROM room_mention WHERE platform = ? AND chat_id = ?",
+      .prepare<{ require_mention: number; agent_id: string | null; set_by: string; set_at: number }>(
+        "SELECT require_mention, agent_id, set_by, set_at FROM room_mention WHERE platform = ? AND chat_id = ?",
       )
       .get(platform, chatId);
-    return row ? { requireMention: row.require_mention === 1, setBy: row.set_by, setAt: row.set_at } : undefined;
+    if (!row) return undefined;
+    return { requireMention: row.require_mention === 1, ...(row.agent_id ? { answerer: row.agent_id } : {}), setBy: row.set_by, setAt: row.set_at };
   }
 
-  /** Set this group's override, replacing one it had. */
-  set(platform: string, chatId: string, requireMention: boolean, setBy: string): void {
+  /** Set this group's override, replacing one it had: the agent it named too, which a tag needed leaves none of. */
+  set(platform: string, chatId: string, choice: RoomMentionChoice, setBy: string): void {
+    const answerer = choice.requireMention ? null : (choice.answerer ?? null);
     this.db
       .prepare(
-        `INSERT INTO room_mention (platform, chat_id, require_mention, set_by, set_at)
-         VALUES (?, ?, ?, ?, ?)
+        `INSERT INTO room_mention (platform, chat_id, require_mention, agent_id, set_by, set_at)
+         VALUES (?, ?, ?, ?, ?, ?)
          ON CONFLICT(platform, chat_id) DO UPDATE SET
-           require_mention = excluded.require_mention, set_by = excluded.set_by, set_at = excluded.set_at`,
+           require_mention = excluded.require_mention, agent_id = excluded.agent_id, set_by = excluded.set_by, set_at = excluded.set_at`,
       )
-      .run(platform, chatId, requireMention ? 1 : 0, setBy, this.now());
-    log.info("a group's mention setting changed", { platform, chat_id: chatId, require_mention: requireMention, by: setBy });
+      .run(platform, chatId, choice.requireMention ? 1 : 0, answerer, setBy, this.now());
+    log.info("a group's mention setting changed", { platform, chat_id: chatId, require_mention: choice.requireMention, ...(answerer ? { answerer } : {}), by: setBy });
   }
 
   /** Remove the override, so the connection and the daemon decide again. False when there was none. */

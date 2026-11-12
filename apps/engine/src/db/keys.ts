@@ -145,9 +145,11 @@ export const KEY_COLUMNS: readonly KeyColumn[] = [
   { table: "memory_facts", column: "readers_chat", kind: "gatewayPrefixed" },
   { table: "memory_groups", column: "chat", kind: "gatewayPrefixed" },
 
-  // A group's own `groups_require_mention` (`/mention`): the room as the platform sees it, so no gateway to rename.
+  // A group's own answer to who answers what tags nobody (`/mention`): the room as the platform sees it, so no gateway
+  // to rename, and the agent the group named.
   { table: "room_mention", column: "platform", kind: "platform" },
   { table: "room_mention", column: "chat_id", kind: "chatId" },
+  { table: "room_mention", column: "agent_id", kind: "agent" },
 
   // A room's name (0.7.24): keyed like `room_mention`, the room as the platform sees it.
   { table: "room_names", column: "platform", kind: "platform" },

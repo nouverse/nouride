@@ -38,6 +38,9 @@ export function slashCommands(parts: {
   restart: () => DaemonRestart | undefined;
   /** A message put back — `/secret undo` — arriving as one from its platform would. */
   deliver: (envelope: MessageEnvelope) => void;
+  /** For `/mention`: what each agent is tagged with on a platform, and who answers an untagged message in a room. */
+  mentionTags: (platform: MessageEnvelope["gateway"]) => Record<string, string>;
+  untaggedAnswerer: (room: { gateway: MessageEnvelope["gateway"]; gatewayId: string; chatId: string }) => string | null;
 }): HookRegistry {
   const { deps, admission, modelOverrides, isAdmin, control } = parts;
   // Those a person may change only by name and as an admin: a restart, an agent's effort, a group's mention rule, secrets.
@@ -77,7 +80,18 @@ export function slashCommands(parts: {
     ...(deps.usage ? { sessionUsage: (sessionId: string, since: number, onlyCli?: boolean) => deps.usage!.forSession(sessionId, since, onlyCli) } : {}),
     ...(deps.reflection ? { drafts: deps.reflection } : {}),
     ...(deps.roomMention
-      ? { groupMention: groupMentionHookPort({ config: deps.config, store: deps.roomMention, ...(deps.rooms ? { rooms: deps.rooms } : {}), mayChange, claim: (envelope, key) => admission.claim(envelope, key) }) }
+      ? {
+          groupMention: groupMentionHookPort({
+            config: deps.config,
+            store: deps.roomMention,
+            ...(deps.rooms ? { rooms: deps.rooms } : {}),
+            mayChange,
+            claim: (envelope, key) => admission.claim(envelope, key),
+            agents: () => deps.registry.enabled().map((agent) => ({ id: agent.config.id, name: agent.config.displayName || agent.config.id })),
+            tags: parts.mentionTags,
+            answers: (envelope) => parts.untaggedAnswerer({ gateway: envelope.gateway, gatewayId: envelope.gatewayId, chatId: envelope.chatId }),
+          }),
+        }
       : {}),
     ...(parts.secrets
       ? { secrets: secretsHookPort({ secrets: parts.secrets, keeping: deps.secretKeeping, registry: deps.registry, mayManage: mayChange, deliver: parts.deliver }) }

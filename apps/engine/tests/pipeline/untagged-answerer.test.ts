@@ -50,9 +50,13 @@ async function daemon(options: { orchestrator?: string; groupsRequireMention?: b
     room(chatId: string, agentIds: string[]) {
       rooms.create({ gatewayId: LOCAL, chatId, agentIds });
     },
+    /** The room's own `/mention <agent>`, as the command stores it. */
+    names(chatId: string, agentId: string) {
+      mention.set("web", chatId, { requireMention: false, answerer: agentId }, "web:admin");
+    },
     /** The room's own `/mention on`, as the command stores it: keyed by the platform, `web`. */
     requireTag(chatId: string) {
-      mention.set("web", chatId, true, "web:admin");
+      mention.set("web", chatId, { requireMention: true }, "web:admin");
     },
     said: (chatId: string) => bench.pipeline.untaggedAnswerer({ gateway: "web", gatewayId: LOCAL, chatId }),
     /** Who actually answered an untagged message there. */
@@ -162,8 +166,20 @@ describe("where the daemon requires a tag in groups", () => {
     h.room("trio", ["nouva", "nero", "nox"]);
     const [said] = await h.mentionSays("trio");
     expect(said).toStartWith(
-      "In this group no mention is needed. (a room made in the dashboard: the orchestrator answers when it is in the room, or the room's only agent)",
+      "Here no tag is needed; Nouva answers. (a room made in the dashboard: the orchestrator answers when it is in the room, or the room's only agent)",
     );
+  });
+
+  test("a dashboard room keeps its members' rule: an agent named for it answers only as one of its members", async () => {
+    const h = await daemon({ orchestrator: "nouva", groupsRequireMention: true });
+    h.room("duo", ["nouva", "nero"]);
+    // Nox is an agent of the install and not of this room: naming it gives the room to nobody new.
+    h.names("duo", "nox");
+    expect(h.said("duo")).toBe("nouva");
+    expect(await h.answered("duo")).toEqual(["nouva"]);
+    // A member named answers, where the orchestrator would have.
+    h.names("duo", "nero");
+    expect(h.said("duo")).toBe("nero");
   });
 
   test("a dashboard room whose own `/mention` requires a tag: silent", async () => {

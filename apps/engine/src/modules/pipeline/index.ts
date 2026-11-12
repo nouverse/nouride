@@ -75,6 +75,7 @@ import { EditLedger } from "./edits.ts";
 import { onGatewayEvent } from "./gateway-events.ts";
 import { chatQueue } from "./chat-queue.ts";
 import { commandMenu, slashCommands } from "./slash-commands.ts";
+import type { RoomMentionChoice } from "./room-mention.store.ts";
 import { WakeUps } from "./wake-ups.ts";
 import { TurnControl } from "./turn-control.ts";
 import { ChatDirectory } from "./chat-directory.ts";
@@ -146,6 +147,9 @@ export class Pipeline {
       isAdmin: (envelope) => this.isAdmin(envelope),
       restart: () => this.restart,
       deliver: (back) => this.deliver(back),
+      mentionTags: (platform) => this.voice.agentMentionTokens(platform),
+      // The router is made after the commands: asked when `/mention` is typed, not now.
+      untaggedAnswerer: (room) => this.inbound.untaggedAnswerer(room),
     });
 
     this.turns = new TurnRunner(
@@ -446,6 +450,15 @@ export class Pipeline {
   /** Each agent's tag as a platform writes it (`voice.ts`), for the dashboard to read a tag in a group as the agent's name. */
   agentTags(...args: Parameters<Voice["agentMentionTokens"]>) { return this.voice.agentMentionTokens(...args); }
   renameRoom(...args: Parameters<ChatDirectory["renameRoom"]>) { return this.chats.renameRoom(...args); }
+  /** A room's own answer to who answers what tags nobody (`/mention`), for the Groups page; null where nothing keeps one. */
+  roomMention(platform: string, chatId: string) { return this.deps.roomMention?.get(platform, chatId) ?? null; }
+  /** The same setting `/mention` writes, set from the Groups page: a choice, or null for the room's own gone. False where nothing keeps one. */
+  setRoomMention(platform: string, chatId: string, choice: RoomMentionChoice | null, actor: string): boolean {
+    if (!this.deps.roomMention) return false;
+    if (choice === null) this.deps.roomMention.clear(platform, chatId);
+    else this.deps.roomMention.set(platform, chatId, choice, actor);
+    return true;
+  }
   sayInChat(...args: Parameters<ChatDirectory["sayInChat"]>) { return this.chats.sayInChat(...args); }
 
   // What the built-in tools are handed — `tool-ports.ts`.

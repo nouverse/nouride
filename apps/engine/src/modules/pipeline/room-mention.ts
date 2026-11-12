@@ -1,10 +1,10 @@
 /**
- * Whether a group's unaddressed message may be answered at all — `groups_require_mention` — and the command a group
- * sets it with, `/mention` (`hooks/builtins/mention.ts`).
+ * Whether a group's unaddressed message may be answered at all — `groups_require_mention` — which of our agents the
+ * group named to answer it, and the command a group sets both with, `/mention` (`hooks/builtins/mention.ts`).
  *
- * Three places can say it, and the nearest wins: the group itself (`room-mention.store.ts`), the connection
- * (`[gateways.<platform>.<name>] groups_require_mention`), the daemon (`[agents] groups_require_mention`). A group with
- * no row of its own is decided exactly as before the row could exist.
+ * Three places can say whether a tag is needed, and the nearest wins: the group itself (`room-mention.store.ts`), the
+ * connection (`[gateways.<platform>.<name>] groups_require_mention`), the daemon (`[agents] groups_require_mention`).
+ * A group with no row of its own is decided exactly as before the row could exist. Only the group names an agent.
  *
  * A room made in the dashboard is not held to the daemon's: that setting is for groups on the chat apps, where every one
  * of our bots gets a copy of everything. A dashboard room has a member list, so the router can answer an untagged
@@ -23,7 +23,7 @@ import type { AgentRegistry } from "@nouride/persona";
 import type { GlobalConfig, LoadedAgent, MessageEnvelope } from "@nouride/shared";
 import type { HookRegistry } from "@/modules/hooks/registry.ts";
 import type { GroupMentionHookPort, MentionSource } from "@/modules/hooks/types.ts";
-import { parseCommand } from "@/modules/hooks/parse.ts";
+import { isPlatformMention, parseCommand } from "@/modules/hooks/parse.ts";
 import { isEdit } from "./edit-rules.ts";
 import { isSystemEvent } from "./deps.ts";
 import type { RoomsPort } from "@/modules/rooms/rooms.store.ts";
@@ -45,9 +45,9 @@ interface Sources {
 export function requireMentionHere(
   sources: Sources,
   envelope: Pick<MessageEnvelope, "gateway" | "gatewayId" | "chatId">,
-): { requireMention: boolean; source: MentionSource } {
+): { requireMention: boolean; source: MentionSource; answerer?: string } {
   const own = sources.roomMention?.get(envelope.gateway, envelope.chatId);
-  if (own) return { requireMention: own.requireMention, source: "group" };
+  if (own) return { requireMention: own.requireMention, source: "group", ...(own.answerer ? { answerer: own.answerer } : {}) };
   const instance = sources.config.gateways.find((gateway) => gateway.id === envelope.gatewayId)?.groupsRequireMention;
   if (instance !== undefined) return { requireMention: instance, source: "gateway" };
   // Keyed by the connection, as the room was made on it: only the dashboard's own makes one.
@@ -68,19 +68,41 @@ export function groupMentionHookPort(o: {
   rooms?: Sources["rooms"];
   mayChange: (envelope: MessageEnvelope) => boolean;
   claim: (envelope: MessageEnvelope, key: string) => boolean;
+  /** The agents that can answer, and what each is tagged with on a platform: what a name after `/mention` is read against. */
+  agents: () => { id: string; name: string }[];
+  tags: (platform: MessageEnvelope["gateway"]) => Record<string, string>;
+  /** Who answers a message here that tags nobody, as the router routes one (`InboundRouter.untaggedAnswerer`). */
+  answers: (envelope: MessageEnvelope) => string | null;
 }): GroupMentionHookPort {
   return {
-    here: (envelope) => requireMentionHere({ config: o.config, roomMention: o.store, ...(o.rooms ? { rooms: o.rooms } : {}) }, envelope),
-    set: (envelope, requireMention, actor) =>
-      requireMention === null
-        ? o.store.clear(envelope.gateway, envelope.chatId)
-        : (o.store.set(envelope.gateway, envelope.chatId, requireMention, actor), true),
+    here: (envelope) => {
+      const here = requireMentionHere({ config: o.config, roomMention: o.store, ...(o.rooms ? { rooms: o.rooms } : {}) }, envelope);
+      const answers = here.requireMention ? null : o.answers(envelope);
+      // The agent the room named and that can no longer answer: said, so the room knows why somebody else does.
+      const gone = here.answerer && here.answerer !== answers ? { gone: here.answerer } : {};
+      return { requireMention: here.requireMention, source: here.source, answers, ...gone };
+    },
+    set: (envelope, choice, actor) =>
+      choice === null ? o.store.clear(envelope.gateway, envelope.chatId) : (o.store.set(envelope.gateway, envelope.chatId, choice, actor), true),
+    agents: (envelope) => {
+      const tags = o.tags(envelope.gateway);
+      return o.agents().map((agent) => ({ ...agent, ...(tags[agent.id] ? { tag: tags[agent.id]! } : {}) }));
+    },
     mayChange: o.mayChange,
     firstCopy: (envelope, command) => {
       const said = envelope.idsPerConnection ? `${envelope.senderId}@${envelope.timestamp}` : envelope.id;
       return o.claim({ ...envelope, id: said }, command);
     },
   };
+}
+
+/**
+ * Whether a group command was addressed to the bot it arrived on by the bot's name stuck to the command:
+ * `/mention@NovelistBot`, which the adapter hands on as `/mention` with `mentionsSelf`. A tag among its arguments is
+ * not that: `/mention @NovelistBot` tags that bot too, and is the room given to it, whoever's copy takes it.
+ */
+function addressedHere(envelope: Pick<MessageEnvelope, "mentionsSelf">, args: readonly string[]): boolean {
+  return envelope.mentionsSelf === true && !args.some(isPlatformMention);
 }
 
 /**
@@ -101,6 +123,10 @@ const pause = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve,
  *
  * Run as the orchestrator and spoken through its bot where it has one (`Voice.reply`), else as the connection's own
  * agent or the first enabled one: the hook needs an agent to run as, and a group command says nothing about which.
+ *
+ * But a command addressed to one bot is that bot's to answer (`addressedHere`): `/mention@NovelistBot`, as a platform's
+ * command menu writes it in a group, was answered by the orchestrator, through the orchestrator's bot, and the person
+ * who had named the novelist's read that as the wrong agent taking over.
  */
 export async function answerGroupCommand(
   o: {
@@ -120,13 +146,14 @@ export async function answerGroupCommand(
   if (envelope.text.trim().split(/\s+/)[0]!.includes("@")) return false;
   const named = o.config.daemon.orchestrator;
   const desk = named ? o.registry.enabled().find((candidate) => candidate.config.id === named) : undefined;
-  if (desk) {
+  const owner = o.config.gateways.find((gateway) => gateway.id === envelope.gatewayId)?.agent;
+  const addressed = addressedHere(envelope, command.args) && owner ? o.registry.get(owner) : undefined;
+  if (desk && !addressed) {
     const own = o.config.gateways.find((gateway) => gateway.enabled && gateway.platform === envelope.gateway && gateway.agent === desk.config.id);
     // Another bot's copy: the orchestrator's own goes first, so the claim is its.
     if (own && own.id !== envelope.gatewayId && o.connected(own.id)) await (o.wait ?? pause)(DESK_FIRST_MS);
   }
-  const owner = o.config.gateways.find((gateway) => gateway.id === envelope.gatewayId)?.agent;
-  const agent: LoadedAgent | undefined = desk ?? (owner ? o.registry.get(owner) : undefined) ?? o.registry.enabled()[0];
+  const agent: LoadedAgent | undefined = addressed ?? desk ?? (owner ? o.registry.get(owner) : undefined) ?? o.registry.enabled()[0];
   if (!agent) return false;
   const result = await o.hooks.run(command.command, command.args, agent, envelope);
   if (result.reply) await o.reply(envelope, result.reply, agent.config.id);

@@ -78,10 +78,15 @@ export type MentionSource = "group" | "gateway" | "daemon" | "room";
 
 /** A group's own mention setting, for `/mention` (`builtins/mention.ts`) — built by `pipeline/room-mention.ts`. */
 export interface GroupMentionHookPort {
-  /** What this chat's unaddressed messages need, and which place said so. */
-  here(envelope: MessageEnvelope): { requireMention: boolean; source: MentionSource };
+  /**
+   * What this chat's unaddressed messages need, which place said so, and who answers one: the router's own answer,
+   * `null` where a tag is needed or nobody would. `gone`, the agent the room named that can no longer answer.
+   */
+  here(envelope: MessageEnvelope): { requireMention: boolean; source: MentionSource; answers: string | null; gone?: string };
   /** Set this group's own value, or `null` to remove it. False when `null` found nothing to remove. */
-  set(envelope: MessageEnvelope, requireMention: boolean | null, actor: string): boolean;
+  set(envelope: MessageEnvelope, choice: { requireMention: true } | { requireMention: false; answerer?: string } | null, actor: string): boolean;
+  /** The agents that can answer here, each with what it is tagged with on this platform where it has a bot of its own. */
+  agents(envelope: MessageEnvelope): { id: string; name: string; tag?: string }[];
   /** An admin by name, as for `/daemon-restart`: paired or on an allowlist, and an admin's person under People. */
   mayChange(envelope: MessageEnvelope): boolean;
   /** True for the first copy of this command in this group — every bot in it is handed one — and false for the rest. */

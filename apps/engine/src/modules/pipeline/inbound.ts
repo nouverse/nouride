@@ -138,11 +138,16 @@ export class InboundRouter {
   private route(envelope: MessageEnvelope, instance: GatewayInstanceConfig | undefined, repliedTo?: string): ReturnType<typeof routeMessage> {
     // The group's own `/mention`, then this connection's setting, then the daemon's — which a room made in the dashboard
     // is not held to: its members decide, below (`room-mention.ts`).
-    const groupsRequireMention = requireMentionHere(this.ctx.deps, envelope).requireMention;
+    const here = requireMentionHere(this.ctx.deps, envelope);
+    const groupsRequireMention = here.requireMention;
+    const members = this.ctx.roomAgents(envelope);
+    // The agent the room named with `/mention <agent>`. In a room with a member list, only while it is one of them: a
+    // room made in the dashboard keeps its members' rule. One removed or switched off since is no agent to the router,
+    // which then routes the message as it would have with nobody named.
+    const roomAnswerer = here.answerer && (!members || members.includes(here.answerer)) ? here.answerer : undefined;
     const answerUnaddressed =
       envelope.chatType === "dm" ||
       (!groupsRequireMention && this.couldAnswerUnaddressed(envelope, instance).size <= 1);
-    const members = this.ctx.roomAgents(envelope);
     // Where nobody may answer an unaddressed message, the orchestrator is the one who does — the room's front desk. Not
     // for a slash command: `/new` clears one agent's history and `/model` changes one agent's model, so the room is told
     // which names would work rather than having one chosen for it.
@@ -161,6 +166,7 @@ export class InboundRouter {
       answerUnaddressed,
       ...(repliedTo ? { repliedToAgent: repliedTo } : {}),
       ...(frontDesk ? { frontDesk } : {}),
+      ...(roomAnswerer ? { roomAnswerer } : {}),
     });
   }
 
@@ -400,7 +406,11 @@ export class InboundRouter {
      * other copies of the message to say whom they routed it to, and stands back if one named someone (0.7.26, live in
      * a group where Nouva answered a reply to Nix).
      */
-    if (decision.reason === "front_desk" && envelope.chatType !== "dm") {
+    // The room's own agent stands back the same way where another of our bots has a copy of the message: "a reply
+    // still wins" is only true if the copy that saw the reply is heard first. Alone in the room, nobody else has one.
+    const forNobody =
+      decision.reason === "front_desk" || (decision.reason === "room_answerer" && this.couldAnswerUnaddressed(envelope, instance).size > 1);
+    if (forNobody && envelope.chatType !== "dm") {
       // The desk's own bot's copy says it; the others, which only stand by for it, quietly. Where ids are per connection
       // only that copy goes on at all (`admit`), so the rest need not wait.
       const own = this.ctx.voice.voiceGatewayId(decision.agent.config.id, envelope.gatewayId) === envelope.gatewayId;

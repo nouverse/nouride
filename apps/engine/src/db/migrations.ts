@@ -64,6 +64,7 @@ import retryPromised from "./migrations/081_retry_promised.sql" with { type: "te
 import resumeAsked from "./migrations/082_resume_asked.sql" with { type: "text" };
 import conversationOpener from "./migrations/083_conversation_opener.sql" with { type: "text" };
 import runSteps from "./migrations/084_run_steps.sql" with { type: "text" };
+import roomAnswerer from "./migrations/085_room_answerer.sql" with { type: "text" };
 
 export interface Migration {
   /** Parsed from the filename prefix, and what `user_version` is set to once applied. */
@@ -100,6 +101,7 @@ export const MIGRATIONS: readonly Migration[] = [
   { version: 82, name: "082_resume_asked.sql", sql: resumeAsked },
   { version: 83, name: "083_conversation_opener.sql", sql: conversationOpener },
   { version: 84, name: "084_run_steps.sql", sql: runSteps },
+  { version: 85, name: "085_room_answerer.sql", sql: roomAnswerer },
 ];
 
 /**
