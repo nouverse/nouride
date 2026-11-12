@@ -36,8 +36,11 @@ async function turnOn(gateway: FakeGateway, bench: Bench): Promise<string[]> {
 
 describe("the bubble after the last step", () => {
   test("says a coding CLI is writing its reply, while it does", async () => {
-    // One step, then a long reply written over ~600 ms — about six ticks here.
-    const script = [{ sessionUpdate: "tool_call", toolCallId: "t1", title: "git log", kind: "execute", name: "Bash", status: "in_progress", rawInput: { command: "git log" } }, { sessionUpdate: "tool_call_update", toolCallId: "t1", status: "completed" }, { sleep: 150 }, said("Mira wrote it "), { sleep: 250 }, said("in March, "), { sleep: 250 }, said("and Nix fixed it since.")];
+    // One step, then a long reply written a letter at a time, every 15 ms. The bubble says "writing" only when a piece
+    // came within half a tick of the tick (100 ms here), so the pieces come several times faster than that: three
+    // pieces 250 ms apart needed a tick to land just after one, and on a busy machine none did.
+    const REPLY = "Mira wrote it in March, and Nix fixed it since.";
+    const script = [{ sessionUpdate: "tool_call", toolCallId: "t1", title: "git log", kind: "execute", name: "Bash", status: "in_progress", rawInput: { command: "git log" } }, { sessionUpdate: "tool_call_update", toolCallId: "t1", status: "completed" }, ...[...REPLY].flatMap((letter) => [{ sleep: 15 }, said(letter)])];
     const row: CliRow = { id: "fake", name: "Fake CLI", command: process.execPath, args: [FAKE], install: "it is a test", versionArgs: ["--version"], profileEnv: "FAKE_HOME", env: { FAKE_MODE: "script", FAKE_SCRIPT: JSON.stringify(script) }, modes: { folder: "yolo", risky: "default", all: "default" }, instructionFile: "AGENTS.md" };
     const gateway = new FakeGateway();
     const bench = await pipelineBench({
@@ -47,13 +50,13 @@ describe("the bubble after the last step", () => {
         const service = new ExternalAgents({ rows: () => [row], workspaceDir: () => made.config.daemon.workspaceDir, secretsFor: () => ({}), sessions: { load: () => ({}), save: () => {} } });
         services.push(service);
         mkdirSync(privateWorkspace(made.config.daemon.workspaceDir, "nouva"), { recursive: true });
-        return { externalAgents: service, progressIntervalMs: 1, progressQuietMs: 100 };
+        return { externalAgents: service, progressIntervalMs: 1, progressQuietMs: 200 };
       },
     });
     benches.push(bench);
     const edits = await turnOn(gateway, bench);
     expect(edits.some((text) => /^\[nouva\] ⏳ ✍️ writing a reply… \d+s$/.test(text))).toBe(true);
-    expect(gateway.sent.map((message) => message.text.replace(/ · \d+s$/, ""))).toEqual(["[nouva] ✓ 1 step", "Mira wrote it in March, and Nix fixed it since."]);
+    expect(gateway.sent.map((message) => message.text.replace(/ · \d+s$/, ""))).toEqual(["[nouva] ✓ 1 step", REPLY]);
   });
 
   test("says a model is thinking while its next request is out, and nothing new once it has answered", async () => {
