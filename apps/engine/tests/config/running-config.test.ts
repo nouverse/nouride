@@ -169,6 +169,7 @@ const ROWS: Row[] = [
   { method: "removeProvider", via: "removing a profile", write: ({ settings }) => settings.removeProvider("local", actor, () => []) },
   { method: "setTurnSeconds", via: "the turn's wall clock", write: ({ settings }) => settings.setTurnSeconds({ seconds: 120, actor }) },
   { method: "setJobQuietMinutes", via: "a job's quiet wait", write: ({ settings }) => settings.setJobQuietMinutes({ minutes: 30, actor }) },
+  { method: "setQuietHours", via: "the automations' quiet hours", write: ({ settings }) => settings.setQuietHours({ hours: "22:00-07:00", actor }) },
   { method: "setUpdateTrack", via: "the update track", write: ({ settings }) => settings.setUpdateTrack({ track: "lts", actor }) },
   { method: "setBackupSeal", via: "the backup passphrase", write: ({ settings }) => settings.setBackupSeal({ passphrase: "a long walk to the river", actor }) },
   { method: "setToolIterations", via: "the tool budget", write: ({ settings }) => settings.setToolIterations({ iterations: 40, actor }) },
