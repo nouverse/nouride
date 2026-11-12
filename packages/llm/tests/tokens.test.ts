@@ -56,23 +56,32 @@ describe("estimateTokens", () => {
   test("a character costs a comparison, not a regex — the context guard runs it over the whole conversation every round", () => {
     // A log line of timestamps and ids, the text the estimate is run over most, ~2M characters of it.
     const log = "2026-10-17T08:00:00.123Z INFO pipeline turn complete turn=4f9c2e1a chat=1000000001\n".repeat(24_000);
-    const median = (fn: () => number): number => {
-      for (let warm = 0; warm < 3; warm += 1) fn();
-      const samples = Array.from({ length: 9 }, () => {
-        const start = performance.now();
-        fn();
-        return performance.now() - start;
-      });
-      return samples.sort((a, b) => a - b)[4]!;
+    const timed = (fn: () => number): number => {
+      const start = performance.now();
+      fn();
+      return performance.now() - start;
     };
     // What the estimator used to do: a regex test per character. Measured here, beside it, so the
     // comparison is between two runs on the same machine — a range check costs about a quarter of it.
-    const regex = median(() => {
+    const byRegex = (): number => {
       let cjk = 0;
       for (const char of log) if (CJK.test(char)) cjk += 1;
       return cjk;
-    });
-    expect(median(() => estimateTokens(log))).toBeLessThan(regex / 2);
+    };
+    // Timed in turn, a sample of each after the other, so a busy machine slows both alike. Timed as two runs, one
+    // after the other, a burst of other work during the second read as the estimator being slow.
+    const regex: number[] = [];
+    const ranged: number[] = [];
+    for (let round = 0; round < 12; round += 1) {
+      const one = timed(byRegex);
+      const other = timed(() => estimateTokens(log));
+      // The first three warm both up.
+      if (round < 3) continue;
+      regex.push(one);
+      ranged.push(other);
+    }
+    const median = (samples: number[]): number => samples.sort((a, b) => a - b)[4]!;
+    expect(median(ranged)).toBeLessThan(median(regex) / 2);
   });
 });
 
