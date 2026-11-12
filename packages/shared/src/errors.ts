@@ -66,6 +66,11 @@ export interface LLMFailure {
   action: "retry" | "shrink" | "degrade" | "stop";
   alertOperator: boolean;
   operatorHint: string;
+  /**
+   * The provider's own sentence about it, where its answer held one. For the operator's alert and never the chat: a
+   * gateway that has no account for a model says which one to add, and the hint alone names this install's own key.
+   */
+  said?: string;
 }
 
 export class LLMError extends NourideError {

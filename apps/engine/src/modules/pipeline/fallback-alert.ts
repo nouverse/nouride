@@ -28,6 +28,14 @@ export class FallbackOutages {
   }
 }
 
+/**
+ * What the operator is told about a failure that is theirs to fix: what to change, then the provider's own sentence
+ * where it wrote one. A gateway with no account for a model says which to add; the hint alone names this install's key.
+ */
+export function forOperator(failure: Pick<LLMFailure, "operatorHint" | "said">): string {
+  return failure.said ? `${failure.operatorHint} The provider said: "${failure.said}"` : failure.operatorHint;
+}
+
 export function alertOnFallback(
   outages: FallbackOutages,
   notifier: Pick<Notifier, "alert"> | undefined,
@@ -38,7 +46,7 @@ export function alertOnFallback(
     void notifier?.alert(
       `fallback:${fromProfile}:${from}`,
       `${agent.config.id}: ${from} on ${fromProfile} failed (${failure.class}), so ${to} on ${toProfile} is answering until it is back.` +
-        (failure.alertOperator ? ` ${failure.operatorHint}` : ""),
+        (failure.alertOperator ? ` ${forOperator(failure)}` : ""),
     );
   };
 }

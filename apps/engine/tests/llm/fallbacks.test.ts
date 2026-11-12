@@ -341,4 +341,18 @@ describe("what the operator is told", () => {
     alertOnFallback(new FallbackOutages(), { alert: async (_key, text) => (alerts.push(text), true) }, agent)(fell(FAILURES.model_not_found!));
     expect(alerts[0]).toEndWith("until it is back. the model id is wrong.");
   });
+
+  test("with the provider's own sentence after the fix, where it wrote one", () => {
+    const alerts: string[] = [];
+    const notify = alertOnFallback(new FallbackOutages(), { alert: async (_key, text) => (alerts.push(text), true) }, agent);
+    notify(fell({ ...FAILURES.auth!, said: "no account is configured for kiro on this gateway" }));
+    expect(alerts[0]).toEndWith('until it is back. the provider rejected the credential. The provider said: "no account is configured for kiro on this gateway"');
+  });
+
+  test("and not for a failure that is not theirs to fix", () => {
+    const alerts: string[] = [];
+    const notify = alertOnFallback(new FallbackOutages(), { alert: async (_key, text) => (alerts.push(text), true) }, agent);
+    notify(fell({ ...FAILURES.transient!, said: "upstream connect error" }));
+    expect(alerts[0]).toEndWith("is answering until it is back.");
+  });
 });

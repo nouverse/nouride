@@ -24,6 +24,7 @@ import { ChatProgress } from "@/modules/pipeline/chat-progress.ts";
 import { cronJobOfChat } from "@/modules/cron/session.ts";
 import { isSystemEvent } from "./deps.ts";
 import { quotedId } from "./edit-rules.ts";
+import { forOperator } from "./fallback-alert.ts";
 import { effortRefusedNote, emptyTurnMessage } from "./messages.ts";
 import type { AttachmentIntake } from "./attachments.ts";
 import type { RoomMemory } from "./room-memory.ts";
@@ -451,7 +452,7 @@ export class TurnRunner {
     if (failure?.alertOperator) {
       void this.ctx.deps.notifier?.alert(
         `provider_${failure.class}:${agent.config.llm.provider}`,
-        `${agent.config.id} cannot reach ${agent.config.llm.provider}: ${failure.class}. ${failure.operatorHint}`,
+        `${agent.config.id} cannot reach ${agent.config.llm.provider}: ${failure.class}. ${forOperator(failure)}`,
       );
     }
     turn.failed = true;

@@ -12,7 +12,8 @@
 
 import { describe, expect, test } from "bun:test";
 import { classifyFailure, type FailureClass } from "../src/classify.ts";
-import { postJson } from "../src/http.ts";
+import type { LLMError, LLMFailure } from "@nouride/shared";
+import { postJson, reportedFailure } from "../src/http.ts";
 
 const CASES: [string, { status?: number; message?: string }, FailureClass][] = [
   // The one that was actually observed.
@@ -147,5 +148,55 @@ describe("the retry loop reads the classification", () => {
         action: "shrink",
       });
     }
+  });
+});
+
+describe("the provider's own sentence about a failure", () => {
+  const failed = async (status: number, body: string): Promise<LLMFailure | undefined> => {
+    const fetchImpl = (async () => new Response(body, { status })) as unknown as typeof fetch;
+    try {
+      await postJson("https://x/y", {}, {}, undefined, { fetchImpl, sleep: async () => {} });
+    } catch (err) {
+      return (err as LLMError).failure;
+    }
+    throw new Error("should have thrown");
+  };
+  // What a gateway with no account for a model answers, in each of the two shapes it speaks.
+  const NO_ACCOUNT = '"gpt-9" is served by kiro, but none of them has an account configured on this gateway. Add one on the provider page.';
+
+  test("a gateway with no account for a model: a credential to add, with the sentence that says which", async () => {
+    const openai = await failed(401, JSON.stringify({ error: { message: NO_ACCOUNT, type: "authentication_error", code: "no_account" } }));
+    expect(openai).toMatchObject({ class: "auth", action: "stop", alertOperator: true, said: NO_ACCOUNT });
+    const anthropic = await failed(401, JSON.stringify({ type: "error", error: { type: "authentication_error", message: NO_ACCOUNT } }));
+    expect(anthropic).toMatchObject({ class: "auth", action: "stop", alertOperator: true, said: NO_ACCOUNT });
+  });
+
+  test("a message at the top of the body, or an error that is one string, is read too", async () => {
+    expect((await failed(404, JSON.stringify({ message: "no such model here" })))?.said).toBe("no such model here");
+    expect((await failed(404, JSON.stringify({ error: "no such model here" })))?.said).toBe("no such model here");
+  });
+
+  test("a body that is not that shape gives no sentence: a proxy's page is not one", async () => {
+    expect((await failed(502, "<html><body><h1>502 Bad Gateway</h1></body></html>"))?.said).toBeUndefined();
+    expect((await failed(401, JSON.stringify({ error: { code: 401 } })))?.said).toBeUndefined();
+    expect((await failed(401, JSON.stringify(["unauthorized"])))?.said).toBeUndefined();
+    expect((await failed(401, "null"))?.said).toBeUndefined();
+  });
+
+  test("it is one line, no longer than an alert carries, with what is named like a credential taken out", async () => {
+    const long = await failed(401, JSON.stringify({ error: { message: `unauthorized:\n  ${"x".repeat(400)}` } }));
+    expect(long?.said).toHaveLength(240);
+    expect(long?.said).toStartWith("unauthorized: xxx");
+    expect(long?.said).toEndWith("…");
+    const keyed = await failed(401, JSON.stringify({ error: { message: "unauthorized: Authorization: Bearer abcdefgh12345678 was refused, api_key=mangga-manis-0001" } }));
+    expect(keyed?.said).toContain("Bearer [redacted]");
+    expect(keyed?.said).toContain("api_key=[redacted]");
+    expect(keyed?.said).not.toContain("abcdefgh12345678");
+    expect(keyed?.said).not.toContain("mangga-manis-0001");
+  });
+
+  test("a failure named inside an answer that began as a success carries its sentence, and a made-up one does not", () => {
+    expect(reportedFailure({ message: NO_ACCOUNT, type: "authentication_error" }, "the provider ended the answer with an error").failure?.said).toBe(NO_ACCOUNT);
+    expect(reportedFailure({}, "the provider ended the answer with an error").failure?.said).toBeUndefined();
   });
 });

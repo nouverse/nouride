@@ -12,6 +12,7 @@ export * from "./crash.ts";
 export * from "./ids.ts";
 export * from "./quiet-hours.ts";
 export * from "./logger.ts";
+export { redactLogText } from "./log-redact.ts";
 export * from "./bytes.ts";
 export * from "./media.ts";
 export * from "./port.ts";

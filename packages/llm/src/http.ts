@@ -7,7 +7,7 @@
  * *request* and hands back an untouched `Response`.
  */
 
-import { contained, createLogger, LLMError, parseSse, SseStalledError, type LLMFailure, type RetryInfo, type SseEvent, type StopReason, type TokenUsage } from "@nouride/shared";
+import { contained, createLogger, LLMError, parseSse, redactLogText, SseStalledError, type LLMFailure, type RetryInfo, type SseEvent, type StopReason, type TokenUsage } from "@nouride/shared";
 import { classifyFailure } from "./classify.ts";
 
 const log = createLogger("llm.http");
@@ -266,12 +266,14 @@ export async function postJson(
     const classification = classifyFailure({ status: res.status, message: detail });
     // Which providers a gateway in between tried — on the error itself, so the turn's failure says it.
     const upstream = failedVia(res.headers);
+    const said = providerWords(detail);
     const error = new LLMError(`${res.status} ${res.statusText}: ${detail}${upstream ? throughGateway(upstream) : ""}`, res.status, {
       failure: {
         class: classification.class,
         action: classification.action,
         alertOperator: classification.alertOperator,
         operatorHint: classification.operatorHint,
+        ...(said ? { said } : {}),
       },
       userMessage: classification.userMessage,
       ...(upstream ? { upstream } : {}),
@@ -288,6 +290,35 @@ export async function postJson(
   throw lastError instanceof LLMError
     ? lastError
     : new LLMError(`request failed after ${maxAttempts} attempts`);
+}
+
+/** As much of a provider's sentence as an alert carries: a chat message, not a log line. */
+const MAX_SAID_CHARS = 240;
+
+/**
+ * The sentence a provider wrote about a failure, out of an error body in the shape OpenAI's and Anthropic's APIs share
+ * (`{ "error": { "message": … } }`, or the message at the top). Nothing for any other body: a proxy's HTML page is not
+ * a sentence, and half a JSON object is not one either. What is named like a credential in it is taken out, as in a
+ * log line.
+ */
+function providerWords(body: string): string | undefined {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(body);
+  } catch {
+    return undefined;
+  }
+  if (typeof parsed !== "object" || parsed === null) return undefined;
+  const top = parsed as { error?: unknown; message?: unknown };
+  const inner = typeof top.error === "object" && top.error !== null ? (top.error as { message?: unknown }).message : top.error;
+  return sentence(typeof inner === "string" && inner.trim() ? inner : top.message);
+}
+
+function sentence(words: unknown): string | undefined {
+  if (typeof words !== "string") return undefined;
+  const line = redactLogText(words.replace(/\s+/g, " ").trim());
+  if (!line) return undefined;
+  return line.length > MAX_SAID_CHARS ? `${line.slice(0, MAX_SAID_CHARS - 1)}…` : line;
 }
 
 /**
@@ -388,8 +419,9 @@ export function reportedFailure(error: unknown, fallback: string): LLMError {
   const status = typeof said.code === "number" && said.code >= 400 && said.code < 600 ? said.code : 502;
   const detail = (code && !message.includes(code) ? `${code}: ${message}` : message).slice(0, 300);
   const classification = classifyFailure({ status, message: detail });
+  const words = sentence(message === fallback ? undefined : message);
   return new LLMError(`the provider reported a failure in its answer: ${detail}`, status, {
-    failure: { class: classification.class, action: classification.action, alertOperator: classification.alertOperator, operatorHint: classification.operatorHint },
+    failure: { class: classification.class, action: classification.action, alertOperator: classification.alertOperator, operatorHint: classification.operatorHint, ...(words ? { said: words } : {}) },
     userMessage: classification.userMessage,
   });
 }
