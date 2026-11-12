@@ -18,7 +18,7 @@ const COMPONENT = (what: string): string => `${what}: its state, its handlers an
 
 export const LONG_FUNCTIONS: Record<string, Record<string, Budget>> = {
   "apps/dashboard/src/commons/components/chat/Composer.tsx": { Composer: { lines: 174, why: COMPONENT("everything below the transcript: the box, two menus, files, send") } },
-  "apps/dashboard/src/commons/components/chat/Conversation.tsx": { Conversation: { lines: 273, why: COMPONENT("one conversation, wherever drawn: data, two menus, scroll, send, its page") } },
+  "apps/dashboard/src/commons/components/chat/Conversation.tsx": { Conversation: { lines: 276, why: COMPONENT("one conversation, wherever drawn: data, two menus, scroll, send, its page") } },
   "apps/dashboard/src/commons/components/mcp/McpServerForm.tsx": { McpServerForm: { lines: 267, why: COMPONENT("the form that adds or edits one MCP server, by hand or from the catalog") } },
   "apps/dashboard/src/commons/components/ui/Combobox.tsx": { Combobox: { lines: 207, why: "a text field that suggests: the typed text, the filtered list, the whole list on its chevron and the keyboard over one open state, as one control every model picker uses" } },
   "apps/dashboard/src/commons/components/ui/Markdown.tsx": { Markdown: { lines: 235, why: "the markdown renderer: each block kind read in one pass over the lines, with the flushes that close a list, a quote, a table or a code block" } },

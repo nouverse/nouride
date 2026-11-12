@@ -432,6 +432,11 @@ link-nya. Admin memilih chat siapa lewat dropdown di sebelah kolom cari, di daft
 pribadi orang yang belum ada di People, satu orang (ketik sebagian namanya untuk mencarinya), atau **Not known**. Namamu
 sendiri tidak ada di daftar itu: **Mine** memang sudah milikmu (0.8.33). Percakapan jadwal dan mission belum dipisah per orang: semua orang tetap melihatnya seperti sebelumnya.
 
+**Percakapan terbuka di pesan terbarunya** dan tetap di situ selama jawaban ditulis. Scroll ke atas untuk membaca, dan
+posisinya tetap di tempat kamu berhenti; panah kecil di kaki percakapan membawamu kembali ke pesan terbaru. Mengirim
+pesan juga membawamu ke sana, di mana pun kamu sedang membaca. Chat yang melayang di halaman lain bekerja sama, tanpa
+panahnya.
+
 **Chat dengan agent** membuka percakapan terakhirnya, jadi kamu lanjut dari yang tadi. **History** di header-nya hanya
 berisi percakapan agent itu: yang di dashboard, dan chat pribadinya di aplikasi chat, masing-masing dengan asalnya.
 **New chat** memulai yang baru. Untuk menghapus percakapan, pakai menu (**…**) di barisnya di History, atau menu chat

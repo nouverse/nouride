@@ -46,6 +46,7 @@ import { JobStrip } from "./Jobs";
 import { applyMention, matchMentions, mentionToken, orderMentions } from "./MentionMenu";
 import { PlanStrip } from "./PlanStrip";
 import { applyCommand, matchCommands, slashToken } from "./SlashMenu";
+import { ToNewest } from "./ToNewest";
 import { EarlierMessage, LiveTurnView, TurnView, UserBubble } from "./Turn";
 
 /** What the composer says under a room's box about a message that tags nobody: the router's answer, in words. */
@@ -184,10 +185,10 @@ export function Conversation({ sessionId, roomChatId, agent, agents: chat, onSes
   useDraft({ draft: draft?.text, onTaken: () => draft?.onTaken(), setInput, textareaRef });
 
   /**
-   * Opens at the newest message, follows the answer as it is written, and lets go the moment the
-   * reader scrolls up. All three in one place — see the hook.
+   * Opens at the newest message, follows the answer as it is written, lets go the moment the reader
+   * scrolls up, and goes to the end for what they send. All in one place — see the hook.
    */
-  useStickyScroll({ container: scrollRef, content: streamRef, resetKey: sessionId });
+  const scroll = useStickyScroll({ container: scrollRef, content: streamRef, resetKey: sessionId });
 
   const attachments = useAttachments();
   const drop = useFileDrop({ onFiles: attachments.add, disabled: !writable });
@@ -327,6 +328,8 @@ export function Conversation({ sessionId, roomChatId, agent, agents: chat, onSes
   const submit = () => {
     if (!canSend) return;
     conversation.send(input.trim(), attachments.ready, page?.());
+    // What they send is theirs to see, wherever in the conversation they were reading.
+    scroll.toEnd();
     /**
      * The sidebar is asked to catch up immediately, not at its next tick.
      *
@@ -470,6 +473,8 @@ export function Conversation({ sessionId, roomChatId, agent, agents: chat, onSes
               </div>
             )}
           </div>
+          {/* On the Chats page: the floating chat is a few messages tall, and its end a flick away. */}
+          {!narrow && scroll.away ? <ToNewest onPress={() => scroll.toEnd("smooth")} /> : null}
 
           {!room && <PlanStrip plan={workNotes.data?.plan} chat={conversation.session} busy={busy} />}
 

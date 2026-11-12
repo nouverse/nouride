@@ -421,6 +421,11 @@ person, then what scheduled jobs said on their own, then the private chats of pe
 yours already (0.8.33). A scheduled job's conversation and a
 mission's are not held by person yet: everyone sees them as before.
 
+**A conversation opens on its newest message** and stays there as an answer is written. Scroll up to read and it
+stays where you put it; a small arrow at the foot of the conversation takes you back to the newest message. Sending a
+message takes you there too, wherever you were reading. The chat that floats over other pages does the same, without
+the arrow.
+
 **An agent's chat** opens its latest conversation, to carry on where you left off. **History**, in its header, lists
 only that agent's conversations: the ones in the dashboard, and its private chats on chat apps, each saying where it is
 from. **New chat** starts a fresh one. To delete a conversation, use the menu (**…**) on its row in History, or the
