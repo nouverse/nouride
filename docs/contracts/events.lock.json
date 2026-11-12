@@ -375,6 +375,10 @@
           "killed"
         ]
       },
+      "page": {
+        "optional": true,
+        "type": "string"
+      },
       "step": {
         "identity": true,
         "type": "number"
@@ -604,5 +608,5 @@
       }
     }
   },
-  "version": "1.8"
+  "version": "1.9"
 }

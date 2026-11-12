@@ -416,7 +416,7 @@ export class TurnExecutor {
               waited > 1000
                 ? `${call.name} ${describeToolResult(result)} · ${ran}ms · ${Math.round(waited / 1000)}s waiting for you${auto}`
                 : `${call.name} ${describeToolResult(result)} · ${ran}ms${auto}`,
-              { callId: call.id, name: call.name, error: result.isError === true, outcome: toolOutcome(result), ...(audit && typeof audit === "object" ? { audit } : {}) },
+              { callId: call.id, name: call.name, error: result.isError === true, outcome: toolOutcome(result), ...(result.page && !result.isError ? { page: result.page } : {}), ...(audit && typeof audit === "object" ? { audit } : {}) },
             );
             working.push({
               role: "tool",

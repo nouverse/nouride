@@ -10,7 +10,7 @@
 import { resolveWithin, statFile } from "@nouride/runtime";
 import type { Tool, ToolContext, ToolResult } from "@nouride/shared";
 import { SYSTEM_SENDER } from "@/modules/pipeline/deps.ts";
-import type { LinkFor } from "@/modules/web/links.ts";
+import { pagePath, type LinkFor } from "@/modules/web/links.ts";
 import type { AuditPort } from "@/commons/audit.store.ts";
 import { isMissionChat } from "@/modules/missions/gateway.ts";
 import { isDraft, signedOffBy, type DraftChange } from "@/modules/missions/drafts.ts";
@@ -249,7 +249,7 @@ export function createMissionTools(missions: Missions, options: { linkFor?: Link
       const { answer, mission } = await startChecked(missions, request, (id) => options.linkFor?.(ctx, { kind: "mission", id }) ?? null);
       // Started without a draft: the words it rests on are on the record, as a person's start is.
       if (now && mission) options.audit?.record({ action: "mission_started", actor: `agent ${ctx.agentId}`, agentId: mission.agentId, details: { mission: mission.id, said } });
-      return answer;
+      return mission ? { ...answer, page: pagePath({ kind: "mission", id: mission.id }) } : answer;
     },
   };
 

@@ -4,6 +4,12 @@ Every change to [events.lock.json](./events.lock.json) is a line here, under the
 in [../EVENTS.md](../EVENTS.md); `apps/engine/tests/contracts/events-contract.test.ts` refuses a version with no
 heading here.
 
+## 1.9 — Nouride 0.8.34
+
+- `tool_done` may carry `page`: the dashboard page of what the call made or changed, as a path under the dashboard
+  (`/automations/<id>`, `/missions/<id>`): an automation an agent proposed, a mission it started. A chat in the
+  dashboard opens it and refreshes the page under it. A reader that knows no `page` reads the step as before.
+
 ## 1.8 — Nouride 0.8.17
 
 - `usage.purpose` may be `side_question`: a `/btw` answered beside the turn, read-only and kept out of the

@@ -7,7 +7,8 @@
  */
 
 import { useEffect, useState } from "react";
-import { Pencil, Square } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { ArrowRight, Pencil, Square } from "lucide-react";
 import { Markdown } from "@/commons/components/ui/Markdown";
 import type { ChatTurn, LiveTurn, TurnAttachment, TurnCause, TurnStep } from "@nouride/wire";
 import { AttachmentList } from "./Attachments";
@@ -18,6 +19,7 @@ import { LiveStepLine } from "@/commons/components/turns/StepLine";
 import { CopyButton } from "@/commons/components/ui/CopyButton";
 import { PersonMessage } from "@/commons/components/chat/PersonMessage";
 import { AgentReply } from "@/commons/components/chat/AgentReply";
+import { sectionTitle } from "@/commons/components/floating-chat/page-open";
 import { TaggedText } from "@/commons/components/chat/AgentTag";
 
 export function UserBubble({
@@ -243,12 +245,35 @@ export function TurnView({
           sessionId={turn.sessionId ?? sessionId}
           files={(turn.attachments ?? []).filter((file) => file.direction === "out")}
         />
+        <MadePages steps={turn.steps} />
         {content && (
           <div className="sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex items-center gap-2">
             <CopyButton text={content} className={COPY_CLASS} />
           </div>
         )}
       </AgentReply>
+    </div>
+  );
+}
+
+/**
+ * What the turn made or changed that has a page of its own (`tool_done.page`: an automation proposed, a mission
+ * started), one press away under the answer. The page is the daemon's word, not read out of the agent's: an agent
+ * that forgot to say where it put something still leaves a way to it. In the chat that floats over a page the link
+ * opens under the chat, which stays.
+ */
+function MadePages({ steps }: { steps: TurnStep[] }) {
+  const pages = [...new Set(steps.flatMap((step) => (step.kind === "tool_done" && step.page ? [step.page] : [])))];
+  if (pages.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-2">
+      {pages.map((page) => (
+        // A path the daemon handed over, which no route's type knows.
+        <Link key={page} to={page as "/"} className="btn btn-xs h-7 gap-1.5 rounded-full border-0 bg-secondary/10 text-secondary hover:bg-secondary/20">
+          Open in {sectionTitle(page) || "the dashboard"}
+          <ArrowRight size={12} aria-hidden="true" />
+        </Link>
+      ))}
     </div>
   );
 }
@@ -379,6 +404,8 @@ export function LiveTurnView({
             />
           </>
         )}
+        {/* As soon as the call that made it is done, before the answer says so. */}
+        <MadePages steps={turn.steps} />
       </AgentReply>
     </div>
   );

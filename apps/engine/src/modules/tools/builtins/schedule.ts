@@ -16,7 +16,7 @@ import type { CronPort, JobInput } from "@/modules/cron/cron.store.ts";
 import { proposalFor, proposalRefusal } from "@/modules/cron/proposals.ts";
 import { MISSION_GATEWAY_ID } from "@/modules/missions/gateway.ts";
 import { briefFilesOf } from "@/modules/missions/start.ts";
-import type { LinkFor } from "@/modules/web/links.ts";
+import { pagePath, type LinkFor } from "@/modules/web/links.ts";
 import { workTextIsEnglish, writeWorkInEnglish } from "@/modules/memory/index.ts";
 
 export interface ScheduleToolOptions {
@@ -244,6 +244,7 @@ export function createScheduleTool(options: ScheduleToolOptions): Tool {
             (posted ? "from its card here" : "from the Automations page (its card could not be posted here)") +
             `. Say so in one line; do not ask them again.${page ? ` Its page: ${page}` : ""}`,
           isError: false,
+          page: pagePath({ kind: "schedule", job: job.id }),
         };
       } catch (err) {
         if (err instanceof CronValidationError || (err as Error)?.name === "CronParseError") return { content: `Not proposed: ${(err as Error).message}`, isError: true };

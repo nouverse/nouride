@@ -15,7 +15,7 @@
 
 import { useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { ChatTurn, OpenPage, Room, SlashCommand } from "@nouride/wire";
+import type { ChatTurn, LiveTurn, OpenPage, Room, SlashCommand } from "@nouride/wire";
 import type { Look } from "@/commons/cat/look";
 import { PersonMessage } from "@/commons/components/chat/PersonMessage";
 import { ReadOnlyNote } from "@/commons/components/chat/ReadOnlyNote";
@@ -27,6 +27,7 @@ import { useConversation } from "@/commons/hooks/use-conversation";
 import { useDraft } from "@/commons/hooks/use-draft";
 import { ENTER, useMotionList } from "@/commons/hooks/use-motion-list";
 import { useWorkNotes } from "@/commons/hooks/use-notes";
+import { usePageFollows } from "@/commons/hooks/use-page-follows";
 import { useStickyScroll } from "@/commons/hooks/use-sticky-scroll";
 import { doingNow, orchestratorFirst, workingWords } from "@/commons/lib/agents";
 import { api } from "@/commons/lib/api";
@@ -95,6 +96,8 @@ export interface ConversationProps {
   narrow?: boolean;
 }
 
+const NO_TURNS: readonly LiveTurn[] = [];
+
 export function Conversation({ sessionId, roomChatId, agent, agents: chat, onSession, header, aside, draft, untagged, page, box, narrow = false }: ConversationProps) {
   const queryClient = useQueryClient();
   const me = useMe();
@@ -129,6 +132,8 @@ export function Conversation({ sessionId, roomChatId, agent, agents: chat, onSes
     agentId: chosenAgent,
     onSession,
   });
+  // Over a page (the floating chat's): the page follows what the agent does. On Chats there is no page under it.
+  usePageFollows(page ? conversation.liveTurns : NO_TURNS);
 
   /**
    * Which agent this conversation belongs to: the daemon's answer, since a conversation is keyed by (agent, chat) and

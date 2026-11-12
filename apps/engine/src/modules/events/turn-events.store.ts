@@ -337,6 +337,7 @@ function assemble(rows: readonly StepEventRow[]): TurnStep[] {
         ...(typeof data.name === "string" ? { name: data.name } : {}),
         ...(typeof data.error === "boolean" ? { error: data.error } : {}),
         ...(outcomeOf(data.outcome) ? { outcome: outcomeOf(data.outcome) } : {}),
+        ...(typeof data.page === "string" ? { page: data.page } : {}),
         ...(typeof data.editOf === "string" ? { editOf: data.editOf } : {}),
       });
     }

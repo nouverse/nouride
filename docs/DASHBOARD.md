@@ -362,6 +362,8 @@ reaches the daemon over HTTP only (`ARCHITECTURE.md` §3).
 | `src/commons/components/chat/` | the conversation and its parts (`Conversation`, `Composer`, `Turn`), drawn by the Chats page and by the floating chat |
 | `src/commons/components/floating-chat/` | the chat over every page: its button and card or sheet (`FloatingChat`), what is in it (`FloatingPanel`), the page a message says (`page-open.ts`) |
 | `src/commons/hooks/use-page-subject.ts` | `usePageSubject("…")`: a page says the one thing it is about, for an agent asked from the floating chat |
+| `src/commons/hooks/use-page-follows.ts` | the page under the floating chat follows the agent: read again when a call made something with a page (`tool_done.page`) and when the turn ends; on a page that makes a new one, what the agent made is opened in its place |
+| `src/commons/lib/unsaved.ts` | `useUnsaved(holds)`: a page says it holds something written and not saved, so nothing takes the person off it by itself |
 | `src/commons/components/ui/Markdown.tsx` | the deliberately small, HTML-free renderer |
 | `src/commons/lib/api.ts` and `api.*.ts` | every control-API call, typed by `@nouride/wire`; cookie auth, same-origin |
 | `src/commons/lib/session.ts` | the single description of who may be where, and the redirects |

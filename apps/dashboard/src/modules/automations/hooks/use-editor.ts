@@ -12,6 +12,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import type { StepExit } from "@nouride/wire";
+import { useUnsaved } from "@/commons/lib/unsaved";
 import { changed, settled, type Draft } from "../lib/draft";
 import { asKind, blankStep, duplicateStep, insertStep, moveStep, removeStep, replaceStep, setExit, type Changed, type ExitName, type ExitReset, type Step, type StepKind } from "../lib/steps";
 
@@ -51,6 +52,9 @@ export interface Editor {
 export function useEditor(loaded: Draft, fresh: boolean): Editor {
   const [state, setState] = useState<State>({ draft: null, open: null, resets: [] });
   const draft = state.draft ?? loaded;
+  // What the floating chat asks before it opens an agent's work in this page's place (`lib/unsaved.ts`): a new one is
+  // unsaved from its first key, not from being new.
+  useUnsaved(state.draft !== null && changed(loaded, state.draft));
 
   const change = useCallback(
     (next: (draft: Draft) => { draft: Draft; reset?: ExitReset[]; open?: string | null }) => {

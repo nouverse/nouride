@@ -163,6 +163,14 @@ describe("a call's steps, read back", () => {
     ]);
   });
 
+  test("and the dashboard page of what a call made, where it made one (`tool_done.page`)", () => {
+    const id = turns.begin({ sessionId: SESSION, ...WHERE, prompt: "every morning, the news" });
+    turns.step(id, "tool", "schedule Morning news", { callId: "call_1", name: "schedule" });
+    turns.step(id, "tool_done", "schedule ok · 4ms", { callId: "call_1", name: "schedule", error: false, outcome: "ok", page: "/automations/cron_1" });
+    turns.step(id, "tool_done", "read ok · 1ms", { callId: "call_2", name: "read", error: false, outcome: "ok" });
+    expect(turns.stepsSince(id).map(({ name, page }) => [name, page])).toEqual([["schedule", undefined], ["schedule", "/automations/cron_1"], ["read", undefined]]);
+  });
+
   test("how a call ended, from its result: a non-zero exit is an answer, a timeout or a kill is not the call doing its job", () => {
     expect(toolOutcome({ isError: false })).toBe("ok");
     expect(toolOutcome({ isError: true, metadata: { exitCode: 1 } })).toBe("exit");

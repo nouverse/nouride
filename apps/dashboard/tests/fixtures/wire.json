@@ -1115,7 +1115,7 @@
     "appliance": false,
     "uptime": 0,
     "version": "0.7.10",
-    "eventProtocol": "1.8",
+    "eventProtocol": "1.9",
     "agents": 1,
     "install": "install_1",
     "gateways": {

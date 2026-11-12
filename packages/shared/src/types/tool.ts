@@ -215,6 +215,12 @@ export interface ToolResult {
   /** Not sent to the model; for the audit log and the dashboard. */
   metadata?: Record<string, unknown>;
   /**
+   * The dashboard page of what this call made or changed, as a path under the dashboard (`/automations/<id>`): an
+   * automation it proposed, a mission it started. Written on the call's `tool_done`, so a chat in the dashboard can
+   * open it and refresh the page under it. A path and not an address: its reader is in the dashboard already.
+   */
+  page?: string;
+  /**
    * The content came from outside — written by whoever wrote the page, the server, the file — and is marked
    * as data in `content`. The executor remembers it for the rest of the turn (`ToolContext.untrustedRead`).
    */

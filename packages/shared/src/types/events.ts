@@ -39,7 +39,7 @@
  *   `replyChars` are the authority on what was sent.
  */
 
-export const EVENT_PROTOCOL_VERSION = "1.8";
+export const EVENT_PROTOCOL_VERSION = "1.9";
 
 type FieldType = "string" | "number" | "boolean" | "object" | "array";
 
@@ -103,7 +103,8 @@ export const EVENT_CONTRACT = {
     /**
      * A tool call ended: its line — how it went, how long it took — and whether it failed. `outcome` (1.1) says how:
      * `exit` is a command that ran and answered with a non-zero exit — `which` saying no — where `failed`, `timed_out`
-     * and `killed` are the call not doing its job. `error` is true for all four.
+     * and `killed` are the call not doing its job. `error` is true for all four. `page` (1.9) is the dashboard page
+     * of what the call made or changed, a path under the dashboard: an automation proposed, a mission started.
      */
     tool_done: {
       step,
@@ -112,6 +113,7 @@ export const EVENT_CONTRACT = {
       name: { type: "string", identity: true },
       error: { type: "boolean" },
       outcome: { type: "string", optional: true, values: ["ok", "exit", "failed", "timed_out", "killed"] },
+      page: optionalString,
       ...delegated,
     },
     /**

@@ -24,6 +24,12 @@ export function dashboardLink(dashboard: { publicUrl: string }, page: DashboardP
   return base ? `${base}/dashboard${pathOf(page)}` : null;
 }
 
+/**
+ * A page's path under the dashboard, with no address: what a tool says it made or changed (`ToolResult.page`). Its
+ * reader is in the dashboard, so it goes with or without `public_url`, where a link for a chat app does not.
+ */
+export const pagePath = (page: DashboardPage): string => pathOf(page);
+
 function pathOf(page: DashboardPage): string {
   const at = encodeURIComponent;
   switch (page.kind) {

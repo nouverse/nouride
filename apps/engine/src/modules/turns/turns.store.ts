@@ -93,6 +93,8 @@ export interface TurnStep {
   /** A result: whether it failed, and how (`tool_done.outcome`, 1.1). */
   error?: boolean;
   outcome?: TurnEventData["tool_done"]["outcome"];
+  /** The dashboard page of what a call made or changed (`tool_done.page`, 1.9). */
+  page?: string;
   /** A `steer` that is a person's edit: the message it changes (`steer.editOf`, 1.3). */
   editOf?: string;
 }

@@ -7,8 +7,8 @@ kind carries, what a reader can rely on, and how it may change. The source of tr
 `packages/shared/src/types/events.ts`; `apps/engine/tests/contracts/events-contract.test.ts` holds this page, the
 daemon's writers and the dashboard to it.
 
-**Protocol 1.5** (Nouride 0.8.0; 1.4 from 0.7.26, 1.3 from 0.7.14, 1.2 from 0.7.11, 1.1 from 0.7.10, 1.0 from 0.7.6).
-`GET /events` answers `version`, `/health` answers `eventProtocol`, and both routes send `x-event-protocol: 1.5`. A reader compares
+**Protocol 1.9** (Nouride 0.8.34; 1.8 from 0.8.17, 1.7 from 0.8.12, 1.6 from 0.8.8, 1.5 from 0.8.0, 1.4 from 0.7.26, 1.3 from 0.7.14, 1.2 from 0.7.11, 1.1 from 0.7.10, 1.0 from 0.7.6).
+`GET /events` answers `version`, `/health` answers `eventProtocol`, and both routes send `x-event-protocol: 1.9`. A reader compares
 the major.
 
 ## Reading it
@@ -71,7 +71,7 @@ as the turn's step log. A key marked `?` may be absent.
 |---|---|---|
 | `reasoning` | The model's own account of what it is working out | `step` `text` `via?` `by?` |
 | `tool` | A tool call started — a coding CLI's says the tool of Nouride's it is `like` | `step` `text` `callId` `name` `like?` `via?` `by?` |
-| `tool_done` | A tool call ended: how it went, how long it took | `step` `text` `callId` `name` `error` `outcome?` `via?` `by?` |
+| `tool_done` | A tool call ended: how it went, how long it took | `step` `text` `callId` `name` `error` `outcome?` `page?` `via?` `by?` |
 | `note` | The daemon remarking — calls at once, output kept in a file; `capped` marks the step log reaching 500 | `step` `text` `capped?` `via?` `by?` |
 | `waiting` | Parked on a person, an approval | `step` `text` `callId?` `name?` `approvalId?` `via?` `by?` |
 | `steer` | A message sent while the turn worked, once read; `editOf`, the sender's edit of the message it names | `step` `text` `editOf?` |
@@ -95,6 +95,8 @@ model that failed, `to` the one asked). `compact.phase` is `start`, then `done` 
 `cancelled`, `interrupted`. `tool_done.outcome` (1.1) is how a call ended: `ok`; `exit`, a command that ran and
 answered with a non-zero exit — `which` saying no; or `failed`, `timed_out`, `killed`, the call not doing its job.
 `error` is true for all but `ok`; a reader deciding what is a fault reads `outcome`, never the line's words.
+`tool_done.page` (1.9) is the dashboard page of what the call made or changed, a path under the dashboard
+(`/automations/<id>`): an automation proposed, a mission started. Absent for a call that made nothing with a page.
 `usage.purpose` (1.1) is what the call was for: `turn` — the turn's own — `helper`, `peer`, `steer_reply`, and the
 work the turn set off, `compaction` and `reflection`; `memory`, `embedding`, `vision` and `transcription` name the
 rest a turn may have caused; `second_look` (1.5) is the check on what work nobody watches sends out; `side_question` (1.8) a `/btw` answered beside the turn, in a session of its own. `usage.basis` (1.1) is how it is billed: `list`, priced from the vendor's page as of

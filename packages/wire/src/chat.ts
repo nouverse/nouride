@@ -64,6 +64,8 @@ export interface TurnStep {
   /** A result's failure, and how — `exit` is a command answering no, the rest the call not doing its job. */
   error?: boolean;
   outcome?: TurnEventData["tool_done"]["outcome"];
+  /** The dashboard page of what a finished call made or changed, a path under the dashboard (stream 1.9). */
+  page?: string;
   /** A `steer` that is a person's edit: the message it changes (stream 1.3). Absent from a daemon before it. */
   editOf?: string;
 }

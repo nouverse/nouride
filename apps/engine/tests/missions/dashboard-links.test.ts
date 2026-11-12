@@ -95,6 +95,17 @@ describe("`mission` start: the page in what it answers", () => {
     expect((await pageIn(dm("555"))).answer).not.toContain("Page:");
   });
 
+  test("a start's result says the mission's page as a path, where the chat gets no link too; a refused start says none", async () => {
+    const h = await missionsHarness();
+    const { chat } = createMissionTools(h.missions, { linkFor: () => null });
+    const started = await chat.execute({ action: "start", goal: "count the lines", checks: ["true"] }, dm("555"));
+    expect(started.content).not.toContain("Page:");
+    expect(started.page).toBe(`/missions/${h.store.open().at(-1)!.id}`);
+    const refused = await chat.execute({ action: "start", goal: "" }, dm("555"));
+    expect(refused.isError).toBe(true);
+    expect(refused.page).toBeUndefined();
+  });
+
   test("a mission proposed in a DM — nobody asked — carries the page for the chat's own person", async () => {
     const h = await missionsHarness();
     const { chat } = createMissionTools(h.missions, { linkFor: rule() });
@@ -146,5 +157,12 @@ describe("`schedule`: a proposed job's page among the automations", () => {
     expect(own).toEndWith(` Its page: ${BASE}/dashboard/automations/${job.id}`);
     expect((await propose(ROOM)).content).toContain("/dashboard/automations/cron_");
     expect((await propose(dm("555"))).content).not.toContain("/dashboard/");
+  });
+
+  test("the result says the job's page as a path, with or without a link: a chat in the dashboard opens it", async () => {
+    const { store, propose } = await scheduleTool(() => null);
+    const made = await propose(dm("555"));
+    expect(made.content).not.toContain("Its page");
+    expect(made.page).toBe(`/automations/${store.list({ includeDisabled: true }).at(-1)!.id}`);
   });
 });

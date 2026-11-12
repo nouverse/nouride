@@ -161,6 +161,11 @@ ada di kotaknya waktu kamu buka lagi.
 - **Percakapan baru.** Ikon balon chat dengan tanda plus, di atas panel, memulai percakapan baru dengan agent yang
   sedang dipilih di panel. Pesan pertamamu yang memulainya, dan panel tetap di percakapan itu. Kalau panel ditutup
   tanpa menulis apa-apa, ia terbuka lagi di percakapan terbarumu.
+- **Halaman mengikuti agent.** Saat agent membuat atau mengubah sesuatu yang punya halaman sendiri, misalnya
+  automation yang ia usulkan atau mission yang ia mulai, halaman di bawah chat memuat ulang datanya sendiri, dan
+  sekali lagi setelah agent selesai menjawab. Tombol di bawah jawabannya, **Open in Automations** untuk automation,
+  membawamu ke yang ia buat. Di halaman untuk membuat automation baru, yang dibuat agent untukmu langsung terbuka
+  di situ dengan langkah-langkahnya; kalau form-nya sudah kamu isi, halamannya tetap dan tombol itu jalannya.
 - **Agent tahu halaman mana yang sedang kamu buka.** Tiap pesan dari panel memberi tahu agent halaman tempat pesan itu
   ditulis: nama halamannya, alamatnya, dan tentang apa halaman itu kalau memang tentang satu hal, misalnya sebuah misi
   atau sebuah agent. Jadi "yang ini lagi nunggu apa?" yang ditanyakan di halaman sebuah misi artinya misi itu. Pesan

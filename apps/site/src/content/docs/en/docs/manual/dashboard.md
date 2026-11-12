@@ -155,6 +155,11 @@ still in the box when you open it again.
 - **A new conversation.** The speech bubble with a plus, at the top of the panel, starts a new conversation with the
   agent the panel is on. Your first message begins it, and the panel stays on it. If you close the panel without
   writing anything, it opens on your newest conversation again.
+- **The page follows the agent.** When the agent makes or changes something that has a page of its own, such as an
+  automation it proposes or a mission it starts, the page under the chat reads its data again by itself, and once
+  more when the agent has finished answering. A button under the answer, **Open in Automations** for an automation,
+  takes you to what it made. On the page that makes a new automation, what the agent made for you opens in its
+  place, its steps drawn; if you had already written in the form, the page stays and the button is the way.
 - **The agent knows which page you have open.** Each message from the panel tells the agent the page it was written
   from: what the page is called, its address, and what it is about where it is about one thing, such as a mission or
   an agent. So "what is this one waiting for?" asked on a mission's page is about that mission. A message written on
