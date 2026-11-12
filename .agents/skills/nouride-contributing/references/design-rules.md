@@ -105,12 +105,28 @@ What it stands for (the owner's reading, 2026-11-10), so a new pose or a line of
 
 On the landing page it also moves: it rides into the hero, rides along the window's foot as the page scrolls and wags
 its tail at the footer. Those are the page's own (`apps/site/src/components/landing/`), cut from the sheets in
-`docs/design/mascot/grids` by `apps/site/scripts/cut-mascot-motion.ts`.
+`docs/design/mascot/grids` by `apps/site/scripts/cut-mascot-motion.ts`. In the hero it waves only once it has stopped:
+while it rides in, and when a click sends it off and back, it is the riding cat (`landing/HeroRiding.astro`).
+
+Three poses are also cut into parts, for motion that moves the tail, an ear or the head where a pose can only be
+moved whole: the cat standing as it does at the landing page's footer, the cat riding at speed, and the waving cat.
+The parts are the pose's own pixels and never a redrawing: a cat drawn again by hand is another cat (tried and
+refused, 2026-11-12). `apps/site/scripts/cut-mascot-pieces.ts` cuts them along the lines in `mascot-piece-cuts.ts`,
+each on the pose's canvas, so laid over each other they are the pose, into `packages/shared/assets/mascot/pieces`;
+`apps/site/src/components/mascot/rigs.mjs` says what hangs from what and where each part turns. The standing cat is
+the docs' corner cat and the riding cat the hero's; the waving cat is cut and put together and waits for a page. What
+the art does not hold cannot be cut: no pose shows the scooter without the cat, and the wheels are painted at an
+angle, so they do not spin. `mascot-pieces.test.ts` holds the pieces to the cut and the pages to the pieces.
 
 At most one mascot per view, beside the content it explains and never on top of it; Home is the one
 exception its mockup draws, a small one beside the card it explains. The landing page is the other: a chapter has
 its own cat, and the rider at the window's foot is beside them. No mascot in a table, a form or a
-dialog's body. A view that reads as plain information gets none. In the dashboard a pose is `<Mascot
+dialog's body. A view that reads as plain information gets none. The docs are the exception to that (the owner's
+call, 2026-11-12): one small cat at the foot of the window's right edge, under the table of contents, for company on
+a long read (`apps/site/src/components/DocsCat.astro`). It is the footer's cat, standing and facing the reader,
+drawn mirrored so that it looks at the page and not at the window's edge; the letter on its helmet is a piece of its
+own, turned back so that it still reads. It explains nothing and covers nothing: it is drawn only where the window is wide enough for that corner to be empty,
+it wags its tail faster when pointed at and hops when clicked. In the dashboard a pose is `<Mascot
 pose=…>` or `<EmptyState pose=…>`; which state takes which pose is the table in v0.8.24's RFC
 ("The new look, as built").
 
