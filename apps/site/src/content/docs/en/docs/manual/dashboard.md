@@ -165,6 +165,9 @@ still in the box when you open it again.
   from: what the page is called, its address, and what it is about where it is about one thing, such as a mission or
   an agent. So "what is this one waiting for?" asked on a mission's page is about that mission. A message written on
   the Chats page names no page.
+- **It can take you to another page.** In a conversation from the panel the agent is also told the dashboard's pages,
+  so "take me to the memory graph" is answered with a link. Press it and that page opens under the chat, which stays
+  open; on a phone the chat is put away so you see the page. A link to anywhere else opens in a new tab, as before.
 
 The button is there for whoever may chat (an admin or an operator). While the panel is closed it asks the server for
 nothing.

@@ -137,8 +137,11 @@ its row on Chats opens, so there is one transcript and one live turn whichever p
 the panel's own. A new conversation's id is kept in the panel, where the Chats page puts it in the address, because
 the page under the panel must not move. And each message says which page was open (`OpenPage`: the address, the
 page's title, and its subject where the page says one with `usePageSubject`), which the daemon puts on that message as
-one line, never in the prompt. It opens on the agent the page belongs to, else the one last used there, else the
-orchestrator. Closed, it draws no conversation, so it holds no event stream and asks for nothing: a browser has six
+one line, never in the prompt. Once in a conversation, on the first message that names a page, the daemon also says
+the dashboard's pages by name and path (`web/dashboard-pages.ts`, held to the menu by a contract test), so the agent
+can answer with a link; a link to a page of this dashboard, in any markdown the dashboard draws, opens it in place
+(`lib/page-link.ts`, `Linked` in `Markdown.tsx`), and any other path stays words. It opens on the agent the page
+belongs to, else the one last used there, else the orchestrator. Closed, it draws no conversation, so it holds no event stream and asks for nothing: a browser has six
 connections to give. The pages' "Ask Nouva to" buttons open it with their request in the box, unsent.
 
 ---
@@ -361,6 +364,7 @@ reaches the daemon over HTTP only (`ARCHITECTURE.md` §3).
 | `src/commons/components/jobs/` | what more than one page draws of a job: `StepCard` (one step of a flow), `WaitingStepCard` (a step that waits for a person, on Work and Home), `ProposalBar`, `Allowances`, `ChatPicker` |
 | `src/commons/components/chat/` | the conversation and its parts (`Conversation`, `Composer`, `Turn`), drawn by the Chats page and by the floating chat |
 | `src/commons/components/floating-chat/` | the chat over every page: its button and card or sheet (`FloatingChat`), what is in it (`FloatingPanel`), the page a message says (`page-open.ts`) |
+| `src/commons/lib/page-link.ts` | `pageInDashboard(href)`: whether a link an agent wrote names a page of this dashboard, read as a browser reads it; `Markdown` opens such a link in place |
 | `src/commons/hooks/use-page-subject.ts` | `usePageSubject("…")`: a page says the one thing it is about, for an agent asked from the floating chat |
 | `src/commons/hooks/use-page-follows.ts` | the page under the floating chat follows the agent: read again when a call made something with a page (`tool_done.page`) and when the turn ends; on a page that makes a new one, what the agent made is opened in its place |
 | `src/commons/lib/unsaved.ts` | `useUnsaved(holds)`: a page says it holds something written and not saved, so nothing takes the person off it by itself |

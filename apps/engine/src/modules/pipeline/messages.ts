@@ -12,17 +12,20 @@ import {
   type ApprovalRequest,
   type Attachment,
   type AudioRefPart,
+  type ChatMessage,
   clip,
   clipTrimmed,
   type ImageRefPart,
   type MessageContent,
   type MessageEnvelope,
+  messageText,
   oneLine,
   type OpenPage,
   plural,
   type TakenSecret,
 } from "@nouride/shared";
 import { duration } from "@/modules/jobs/wake-text.ts";
+import { PAGES_NOTE_START, pagesNote } from "@/modules/web/dashboard-pages.ts";
 
 /**
  * Under an answer whose requests went without this chat's `/effort` level, because the model refused it (0.8.17): once,
@@ -261,6 +264,19 @@ export function pageNote(page: OpenPage | undefined): string | null {
   const subject = page.subject ? part(page.subject, PAGE_NOTE_MAX.subject) : "";
   const named = [part(page.title, PAGE_NOTE_MAX.title), subject ? `"${subject}"` : ""].filter(Boolean);
   return `(Written from the dashboard, with this page open: ${[...named, `at ${path}`].join(", ")}.)`;
+}
+
+/**
+ * What a turn's message written from the dashboard carries: the page that was open, and before it, once in a
+ * conversation, the dashboard's pages (`pagesNote`), so a link the agent writes opens one that is there. Once, because
+ * each message is kept as it was sent: on every message, a long conversation would hold the list as many times. Said
+ * again once the history no longer holds it, as after a summary took the place of the message that did.
+ */
+export function pageNotes(page: OpenPage | undefined, history: readonly ChatMessage[]): string[] {
+  const open = pageNote(page);
+  if (!open) return [];
+  const told = history.some((message) => message.role === "user" && messageText(message.content).includes(PAGES_NOTE_START));
+  return told ? [open] : [pagesNote(), open];
 }
 
 /**

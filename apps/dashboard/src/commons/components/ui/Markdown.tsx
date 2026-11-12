@@ -2,10 +2,13 @@
  * A secure, full-featured markdown renderer.
  * Supports: Headings, Lists, Blockquotes, Fenced Code, Tables, Horizontal Rules,
  * Bold, Italic, Code, Markdown Links [label](url), and Auto-linked Bare URLs (https://...).
+ * A link to a page of this dashboard opens it in place (`Linked`).
  */
 
 import { createContext, useContext, type ReactNode } from "react";
+import { useRouter } from "@tanstack/react-router";
 import { ExternalLink } from "lucide-react";
+import { pageInDashboard } from "@/commons/lib/page-link";
 
 /**
  * How a block's plain words are drawn: as written, or as the page around it says (an agent's answer draws its agents'
@@ -16,6 +19,44 @@ export const PlainWords = createContext<((text: string) => ReactNode) | null>(nu
 function Plain({ text }: { text: string }) {
   const draw = useContext(PlainWords);
   return draw ? draw(text) : text;
+}
+
+const LINK = "text-primary hover:underline font-medium";
+
+/**
+ * A link in the text. To a page of this dashboard (`pageInDashboard`) it opens that page here, in place: the person
+ * is in the dashboard already, and the chat that floats over its pages stays open over the one it opened. Any other
+ * `http(s)` address opens in a new tab. What is neither is drawn as its label, with nothing to click: a
+ * `javascript:` link, or a path of the daemon's own, would act in the dashboard's origin with the reader's session.
+ *
+ * Drawn outside the app's router (a test, a preview), a path is no page of anything, and stays its label.
+ */
+function Linked({ href, children }: { href: string; children: ReactNode }) {
+  const router = useRouter({ warn: false }) as ReturnType<typeof useRouter> | undefined;
+  const page = router ? pageInDashboard(href, { origin: window.location.origin, basepath: router.basepath }) : null;
+  if (router && page) {
+    return (
+      <a
+        href={`${router.basepath.replace(/\/+$/, "")}${page}`}
+        className={`${LINK} break-words`}
+        onClick={(event) => {
+          // A plain click only: with a key held, or another button, the browser opens it its own way (a new tab).
+          if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+          event.preventDefault();
+          void router.navigate({ href: page });
+        }}
+      >
+        {children}
+      </a>
+    );
+  }
+  if (!/^https?:\/\//i.test(href)) return <span>{children}</span>;
+  return (
+    <a href={href} target="_blank" rel="noreferrer noopener" className={`${LINK} inline-flex items-center gap-0.5 break-all`}>
+      <span>{children}</span>
+      <ExternalLink size={11} className="shrink-0 opacity-70" />
+    </a>
+  );
 }
 
 /** Inline spans. Ordered so that code wins — backticks inside code are literal. */
@@ -70,23 +111,10 @@ function inline(text: string, keyPrefix: string): ReactNode[] {
     } else if (token.startsWith("[")) {
       const split = token.indexOf("](");
       const label = token.slice(1, split);
-      const href = token.slice(split + 2, -1);
-      const safe = /^https?:\/\//i.test(href);
       out.push(
-        safe ? (
-          <a
-            key={key}
-            href={href}
-            target="_blank"
-            rel="noreferrer noopener"
-            className="text-primary hover:underline font-medium inline-flex items-center gap-0.5 break-all"
-          >
-            <span>{label}</span>
-            <ExternalLink size={11} className="shrink-0 opacity-70" />
-          </a>
-        ) : (
-          <span key={key}>{label}</span>
-        ),
+        <Linked key={key} href={token.slice(split + 2, -1)}>
+          {label}
+        </Linked>,
       );
     } else if (token.startsWith("http://") || token.startsWith("https://")) {
       // Auto-linked bare URL — strip trailing punctuation like comma, dot, quotes, or closing parenthesis
@@ -94,16 +122,9 @@ function inline(text: string, keyPrefix: string): ReactNode[] {
       const trailing = token.slice(cleanUrl.length);
 
       out.push(
-        <a
-          key={key}
-          href={cleanUrl}
-          target="_blank"
-          rel="noreferrer noopener"
-          className="text-primary hover:underline font-medium inline-flex items-center gap-0.5 break-all"
-        >
-          <span>{cleanUrl}</span>
-          <ExternalLink size={11} className="shrink-0 opacity-70" />
-        </a>,
+        <Linked key={key} href={cleanUrl}>
+          {cleanUrl}
+        </Linked>,
       );
       if (trailing) {
         out.push(trailing);

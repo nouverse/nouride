@@ -56,13 +56,15 @@ describe("Markdown list rendering", () => {
 /**
  * What a model writes is drawn as links, so the link is the one place its text becomes something a click acts on.
  * Only `http(s)` is ever an `href`: a `javascript:` link in an answer — written by the model, or by a page it read —
- * would run in the dashboard's origin, with the operator's session, on one click.
+ * would run in the dashboard's origin, with the operator's session, on one click. The one path that is a link is a
+ * page of the dashboard the text is drawn in (`page-link.test.ts`, `mount-chat-links.test.ts`); drawn anywhere else,
+ * as here, a path is a page of nothing.
  */
 describe("Markdown links", () => {
   const html = (source: string) => renderToString(Markdown({ source }));
 
   test("a link that is not http(s) is drawn as its label, with no href", () => {
-    for (const href of ["javascript:alert(1)", "JaVaScRiPt:alert(1)", "data:text/html,x", "/api/control/secrets"]) {
+    for (const href of ["javascript:alert(1)", "JaVaScRiPt:alert(1)", "data:text/html,x", "/api/control/secrets", "/dashboard/memories/graph"]) {
       const drawn = html(`see [the docs](${href}) now`);
       expect(drawn, href).not.toContain("href=");
       expect(drawn, href).toContain("the docs");

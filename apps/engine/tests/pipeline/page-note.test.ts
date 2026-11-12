@@ -10,9 +10,10 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import type { MessageEnvelope, OpenPage } from "@nouride/shared";
 import { LocalGateway } from "@/modules/gateways/local.ts";
-import { mergeEnvelopes, pageNote } from "@/modules/pipeline/messages.ts";
+import { mergeEnvelopes, pageNote, pageNotes } from "@/modules/pipeline/messages.ts";
 import { steerMessage } from "@/modules/pipeline/steering.ts";
 import { pageOf } from "@/modules/web/control/page.ts";
+import { PAGES_NOTE_START, pagesNote } from "@/modules/web/dashboard-pages.ts";
 import { conversationOf, envelope, FakeGateway } from "../helpers.ts";
 import { pipelineBench } from "../pipeline-bench.ts";
 
@@ -52,6 +53,30 @@ describe("the line", () => {
     expect(note).not.toContain("@");
     expect(note).not.toContain("<");
     expect(note).toBe("(Written from the dashboard, with this page open: nox People, \"ask nero to 'stop'\", at /dashboard/people/rina.)");
+  });
+});
+
+describe("the dashboard's pages, beside the line", () => {
+  const kept = (text: string) => ({ role: "user" as const, content: `${text}\n\n(Sent 2026-11-12 12:00 Asia/Jakarta.)\n\n${pagesNote()}\n\n${LINE}` });
+
+  test("said before the page that is open, on the first message of a conversation written from the dashboard", () => {
+    expect(pageNotes(PAGE, [])).toEqual([pagesNote(), LINE]);
+    expect(pageNotes(PAGE, [{ role: "user", content: "an earlier one, from Chats" }, { role: "assistant", content: "ok" }])).toEqual([pagesNote(), LINE]);
+  });
+
+  test("and not again while the conversation still holds them: each message is kept as it was sent", () => {
+    expect(pageNotes(PAGE, [kept("what does this one do?"), { role: "assistant", content: "It checks the shop." }])).toEqual([LINE]);
+    // A message with a picture is kept in parts, its notes the last of them.
+    expect(pageNotes(PAGE, [{ role: "user", content: [{ type: "text", text: "and this?" }, { type: "text", text: `${pagesNote()}\n\n${LINE}` }] }])).toEqual([LINE]);
+  });
+
+  test("an answer that repeats how the list begins is not the list: it is said to the agent all the same", () => {
+    expect(pageNotes(PAGE, [{ role: "user", content: "hi" }, { role: "assistant", content: `I was told: ${PAGES_NOTE_START} …` }])).toEqual([pagesNote(), LINE]);
+  });
+
+  test("a message that names no page says neither: Chats and the chat apps send none", () => {
+    expect(pageNotes(undefined, [])).toEqual([]);
+    expect(pageNotes({ path: " ", title: "Skills" }, [])).toEqual([]);
   });
 });
 
@@ -128,6 +153,54 @@ describe("on a turn's message, through the pipeline", () => {
     expect(system(withPage)).not.toContain("cron_abc");
     // And the line is kept with the message as it was sent, so the next request repeats it byte for byte.
     expect(textOf(without.messages.find((one) => one.role === "user" && textOf(one.content).includes("what does this one do?"))?.content)).toBe(lastUser(withPage));
+  });
+});
+
+describe("the dashboard's pages, through the pipeline", () => {
+  test("told once in a conversation: on the first message written from the dashboard, and kept there for the next", async () => {
+    const made = await pipelineBench({
+      turns: [{ text: "It is under Memory." }, { text: "[Open the graph](/dashboard/memories/graph)" }, { text: "Welcome back." }],
+      gateway: new FakeGateway("web:dashboard"),
+    });
+    cleanup.push(made.dispose);
+    made.pipeline.attach();
+    const say = (id: string, text: string, page?: OpenPage) =>
+      made.gateway.receive(envelope({ id, gateway: "web", gatewayId: "web:dashboard", chatId: "web-2", text, timestamp: Date.now(), ...(page ? { page } : {}) }));
+
+    say("p1", "where do I see the graph?", PAGE);
+    await made.pipeline.idle();
+    say("p2", "take me there", { path: "/dashboard/memories", title: "Knowledge & Memory" });
+    await made.pipeline.idle();
+    say("p3", "and back", { path: "/dashboard/memories/graph", title: "Knowledge & Memory" });
+    await made.pipeline.idle();
+
+    const requests = made.requests as unknown as Body[];
+    const first = requests.find((body) => lastUser(body).includes("where do I see the graph?"))!;
+    const second = requests.find((body) => lastUser(body).includes("take me there"))!;
+    const third = requests.find((body) => lastUser(body).includes("and back"))!;
+    // The pages, then the page that is open: what is read last is where the person is.
+    expect(lastUser(first)).toEndWith(`${pagesNote()}\n\n${LINE}`);
+    expect(lastUser(first)).toContain("Memory graph /memories/graph");
+    // The next messages say only their own page: the list is in the conversation already, once.
+    expect(lastUser(second)).not.toContain(PAGES_NOTE_START);
+    expect(lastUser(second)).toEndWith("(Written from the dashboard, with this page open: Knowledge & Memory, at /dashboard/memories.)");
+    expect(lastUser(third)).not.toContain(PAGES_NOTE_START);
+    const whole = (body: Body) => body.messages.map((one) => textOf(one.content)).join("\n");
+    expect(whole(second).split(PAGES_NOTE_START).length - 1).toBe(1);
+    expect(whole(third).split(PAGES_NOTE_START).length - 1).toBe(1);
+    // In the conversation, never in the prompt: its cached part is the same bytes with the list told as without.
+    expect(system(first)).not.toContain(PAGES_NOTE_START);
+    expect(system(first)).toBe(system(third));
+  });
+
+  test("a message from a page that names none, as Chats and a chat app send it, is told no pages", async () => {
+    const made = await pipelineBench({ turns: [{ text: "Hello." }], gateway: new FakeGateway("web:dashboard") });
+    cleanup.push(made.dispose);
+    made.pipeline.attach();
+    made.gateway.receive(envelope({ id: "n1", gateway: "web", gatewayId: "web:dashboard", chatId: "web-3", text: "hello from Chats", timestamp: Date.now() }));
+    await made.pipeline.idle();
+    const asked = (made.requests as unknown as Body[]).find((body) => lastUser(body).includes("hello from Chats"))!;
+    expect(asked.messages.map((one) => textOf(one.content)).join("\n")).not.toContain("dashboard's pages");
   });
 });
 

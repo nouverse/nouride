@@ -14,7 +14,7 @@ import { fallbacksFor } from "@/modules/llm/fallbacks.ts";
 import { resolveToolset } from "@/modules/tools/registry.ts";
 import { isSystemEvent } from "./deps.ts";
 import { editedQuestionNote, isEdit } from "./edit-rules.ts";
-import { arrivingQuestion, composeContent, composeQuestion, outsideOf, pageNote, secretsNote, threadOpenerNote, turnReminders } from "./messages.ts";
+import { arrivingQuestion, composeContent, composeQuestion, outsideOf, pageNotes, secretsNote, threadOpenerNote, turnReminders } from "./messages.ts";
 import { missionQuestions } from "./mission-questions.ts";
 import { OWN_WORDS } from "./own-words-wake.ts";
 import { scheduledInChat } from "./job-turns.ts";
@@ -221,8 +221,9 @@ export function turnRequest(
       ...workNotes(sourcesFrom(ctx, agent, envelope, shape || !(isSystemEvent(envelope) || envelope.senderIsBot) ? person : undefined), Date.now()),
       // What its own missions in this chat wait for the person to answer (`mission-questions.ts`).
       ...missionQuestions(ctx.deps.missionCommands?.forChat(envelope.gatewayId, envelope.chatId) ?? [], agent.config.id, toolset.definitions),
-      // The dashboard page the person had open as they wrote, where the message says one (`pageNote`).
-      ...[pageNote(envelope.page)].filter((note): note is string => note !== null),
+      // The dashboard page the person had open as they wrote, where the message says one, and the dashboard's pages
+      // where this conversation does not hold them yet (`pageNotes`).
+      ...pageNotes(envelope.page, turn.history),
     ],
     workspaceDir: workspace.shared,
     privateDir: workspace.own,
