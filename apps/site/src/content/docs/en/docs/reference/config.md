@@ -288,7 +288,7 @@ model = ""                          # the default tier
 # small_model = ""                  # the small tier; unset, it is `model`
 # high_model = ""                   # the high tier; unset, it is `model`
 max_tokens = 0                      # 0 = by model: 32000 for Claude 4/5, Gemini 2.5/3, GPT-5; else 8192
-temperature = 0.7
+temperature = 0.7                   # a model that takes none is sent none
 # fallbacks = []                   # who answers when an agent's model cannot: [{ provider, model }], in order
 
 [llm.limits]

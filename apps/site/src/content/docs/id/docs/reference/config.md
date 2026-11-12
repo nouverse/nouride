@@ -295,7 +295,7 @@ model = ""                          # tingkat default
 # small_model = ""                  # tingkat small; kosong berarti `model`
 # high_model = ""                   # tingkat high; kosong berarti `model`
 max_tokens = 0                      # 0 = sesuai model: 32000 untuk Claude 4/5, Gemini 2.5/3, GPT-5; selain itu 8192
-temperature = 0.7
+temperature = 0.7                   # model yang tidak menerimanya tidak dikirimi
 # fallbacks = []                   # siapa yang menjawab kalau model agent tidak bisa: [{ provider, model }], berurutan
 
 [llm.limits]
