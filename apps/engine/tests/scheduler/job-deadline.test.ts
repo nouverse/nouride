@@ -45,8 +45,12 @@ afterEach(() => {
 const WHERE = { agentId: "nouva", gatewayId: "telegram:main", chatId: "chat-1" };
 /** A process that answers SIGTERM by exiting 255, as `ssh` does — the stop the deadline exists for. */
 const LIKE_SSH = ["sh", "-c", "trap 'exit 255' TERM; while :; do sleep 0.1; done"];
-/** A single process that ignores SIGTERM, so only the SIGKILL after the grace ends it. Portable: no group needed. */
-const DEAF = [process.execPath, "-e", "process.on('SIGTERM', () => {}); setInterval(() => {}, 1000)"];
+/**
+ * A single process that ignores SIGTERM, so only the SIGKILL after the grace ends it. Portable: no group needed. The
+ * shell ignores the signal before it becomes `sleep`, which keeps it ignored. It was a script that set its own handler
+ * once it ran: on a busy machine the deadline's SIGTERM came before it had, and ended it at once.
+ */
+const DEAF = ["sh", "-c", "trap '' TERM; exec sleep 30"];
 
 function store(maxMs: number, options: { audit?: AuditLog; deadlines?: JobDeadlines; graceMs?: number } = {}) {
   return new JobStore({
