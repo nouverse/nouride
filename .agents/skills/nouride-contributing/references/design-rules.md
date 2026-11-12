@@ -118,6 +118,14 @@ the docs' corner cat and the riding cat the hero's; the waving cat is cut and pu
 the art does not hold cannot be cut: no pose shows the scooter without the cat, and the wheels are painted at an
 angle, so they do not spin. `mascot-pieces.test.ts` holds the pieces to the cut and the pages to the pieces.
 
+A pixel cat waits as well, for motion no painted pose holds: 32 pixels a side, placed by hand, in
+`docs/design/mascot/pixel`. It keeps the helmet's letter, the sunglasses, the hoodie and the tail's white tip, and
+not the painting, so it is a second look and is used only where the owner asks for it. `make-sprite.mjs` there holds
+its pixels as rows of letters and its moves (standing, walking, waving, hopping) as frames, and writes the sheet: a
+new move is a few rows and a list of frames, never a part turned or scaled, which breaks a pixel drawing's grid. Below
+32 the letter and the sunglasses cannot both be read; much above it a frame is no longer cheap to draw again.
+`mascot-pixel-sprite.test.ts` holds the sheet to the script.
+
 At most one mascot per view, beside the content it explains and never on top of it; Home is the one
 exception its mockup draws, a small one beside the card it explains. The landing page is the other: a chapter has
 its own cat, and the rider at the window's foot is beside them. No mascot in a table, a form or a
