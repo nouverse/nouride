@@ -30,6 +30,9 @@ export function useStickyScroll<T extends HTMLElement>(options: {
   const { container, content, resetKey } = options;
   /** Whether the reader is at the end. Starts true: a new view opens at the bottom. */
   const following = useRef(true);
+  /** What watches the content grow, and the content it watches now. */
+  const growth = useRef<ResizeObserver | null>(null);
+  const watched = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     const box = container.current;
@@ -38,10 +41,6 @@ export function useStickyScroll<T extends HTMLElement>(options: {
     const atBottom = () =>
       box.scrollHeight - box.scrollTop - box.clientHeight <= NEAR_BOTTOM_PX;
 
-    const toBottom = () => {
-      box.scrollTop = box.scrollHeight;
-    };
-
     // A user scroll is the only thing that changes whether we follow. Programmatic scrolls below fire
     // this too, and they always land at the bottom, so they set it to true — which is correct.
     const onScroll = () => {
@@ -49,20 +48,36 @@ export function useStickyScroll<T extends HTMLElement>(options: {
     };
     box.addEventListener("scroll", onScroll, { passive: true });
 
-    const observed = content.current;
-    let observer: ResizeObserver | undefined;
-    if (observed && typeof ResizeObserver !== "undefined") {
-      observer = new ResizeObserver(() => {
-        if (following.current) toBottom();
+    if (typeof ResizeObserver !== "undefined") {
+      growth.current = new ResizeObserver(() => {
+        if (following.current) box.scrollTop = box.scrollHeight;
       });
-      observer.observe(observed);
     }
 
     return () => {
       box.removeEventListener("scroll", onScroll);
-      observer?.disconnect();
+      growth.current?.disconnect();
+      growth.current = null;
+      watched.current = null;
     };
-  }, [container, content]);
+  }, [container]);
+
+  /**
+   * The content is watched from the draw it first appears in, looked for after every draw.
+   *
+   * It is not there at the first one: a conversation still being read draws its loading shape, and an empty one its
+   * greeting. Looked for once, when the hook was set up, it was never found where the conversation was read after the
+   * page drew — the chat that floats over a page, opened for the first time — and nothing followed the answer as it
+   * was written: it went on under the fold. Watching it from when it appears also lands a conversation just read at
+   * its end, since an observer says the size of what it is given at once.
+   */
+  useEffect(() => {
+    const now = content.current;
+    if (now === watched.current) return;
+    if (watched.current) growth.current?.unobserve(watched.current);
+    watched.current = now;
+    if (now) growth.current?.observe(now);
+  });
 
   /**
    * A different conversation opens at its newest message.
