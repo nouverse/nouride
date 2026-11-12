@@ -222,6 +222,46 @@ Yang menjawab usulan cuma orang, gak pernah agent. Ada yang cuma bisa dinyalakan
 perubahan pada job milik agent lain, perubahan pada job yang melapor ke chat lain, dan webhook, sama seperti
 membuatnya. Izin *allow always* milik job lama gak ikut ke bentuk barunya: ia bertanya lagi.
 
+## Mengawasi sesuatu
+
+"Kabari aku kalau disk hampir penuh" adalah pengecekan berkala. Kalau dibiarkan begitu saja, ia mengabari setiap kali
+jalan, selama disk masih penuh, termasuk jam tiga pagi. Tiga tanda membuatnya jadi pengawas (0.8.36).
+
+**Langkah yang lanjut hanya kalau ada yang berubah.** Tandai sebuah langkah (perintah, giliran agent, atau misi) dengan
+**Go on only when this changes**. Apa yang ia katakan dibandingkan dengan yang ia katakan terakhir kali automation itu
+jalan sampai selesai. Kalau sama, jalannya berhenti di situ dengan tenang, seperti langkah yang tidak punya apa-apa
+untuk dikatakan: tidak ada agent yang dibangunkan, tidak ada yang dikirim. Jalan pertama belum punya pembanding, jadi
+lanjut. Langkah yang gagal tidak dibandingkan. Yang disimpan Nouride adalah sidik jari dari ucapan langkah itu, bukan
+kata-katanya.
+
+Jadi pengecekan tiap sepuluh menit mengabari sekali saat disk lewat 90%, sekali lagi saat lewat 95%, dan sekali saat
+sudah turun lagi: setiap kali hasil ceknya berubah.
+
+**Automation yang mengabari sekali saja.** Nyalakan **Tell me once, then turn off** di bagian tempat ia melapor. Setelah
+jalan pertama (yang jalan sendiri) mengabari sesuatu, automation itu mematikan dirinya, dan halamannya bilang begitu.
+Nyalakan lagi kalau mau dikabari sekali lagi. Jalan yang kamu mulai sendiri tidak dihitung: itu kamu sedang mencoba.
+"Kabari aku kalau build-nya selesai" adalah tanda ini, pada pengecekan yang ditandai lanjut hanya kalau berubah.
+
+**Minta ke agent.** "Kabari aku kalau disk lewat 90%" di chat: agent mengusulkan pengecekan berkala dengan tanda-tanda
+ini, kartunya menyebutkannya dengan kata-kata, dan kamu yang menyalakannya.
+
+### Jam tenang
+
+Satu pengaturan untuk seluruh instalasi, di halaman Automations: dua jam dalam sehari, di zona waktu server, dan di
+antaranya apa yang mau dikatakan automation ke chat disimpan dulu. Automation tetap jalan, jadi apa yang berubah di
+malam hari diketahui di pagi hari. Saat jam tenang berakhir, tiap chat mendapat satu pesan: setiap automation yang
+punya sesuatu untuk dikatakan, dengan namanya, apa yang ia katakan dan kapan, yang gagal lebih dulu. Pertanyaan yang
+ditunggu sebuah langkah juga ditanyakan saat itu, dan waktu menjawabnya dihitung dari saat itu; sementara itu ia ada di
+**Waiting for you** di dashboard.
+
+Tiga hal tetap disampaikan jam berapa pun: automation dengan **Tell me at once, even in quiet hours** menyala, untuk
+yang tidak bisa menunggu pagi (kamera di pintu); jalan yang kamu mulai sendiri, karena kamu memang sedang di situ; dan
+apa yang dikirim automation ke sebuah URL, bukan ke chat. Misi mengabari chat-nya sendiri soal hasilnya, dan tidak
+ditahan.
+
+Admin yang mengatur jamnya. Kosongkan kedua jam untuk tidak ada, dan begitulah awalnya. Di `config.toml`:
+`[cron] quiet_hours = "22:00-07:00"`.
+
 ## Webhook
 
 Endpoint yang menjalankan sebuah job ketika ada yang memanggilnya.
@@ -245,6 +285,25 @@ endpoint yang menjalankan argv di host adalah remote shell dengan password panja
 Setiap panggilan dihitung di kartunya sebagai satu pengiriman, dan webhook yang panggilannya gagal
 `fail_streak_limit` kali berturut-turut menjeda dirinya sendiri, seperti job terjadwal. **Run now**
 menjalankan job secara manual, tanpa body, dan gak dihitung sebagai pengiriman.
+
+### Skrip di depan webhook
+
+Kalau langkah pertama automation sebuah webhook adalah perintah, perintah itu menerima kiriman si pemanggil lewat
+standard input, tidak pernah lewat argumen atau environment-nya. Apa yang ia cetak itulah yang diterima langkah
+berikutnya. Kalau tidak mencetak apa-apa, jalannya berhenti di situ: skrip yang menentukan panggilan mana yang layak
+dikerjakan agent, dan bagian mana dari tiap panggilan yang dibaca agent.
+
+```sh
+# Langkah 1, perintah: hanya orang di pintu yang lanjut. Selain itu berhenti di sini, tanpa biaya model.
+jq -r 'select(.event == "person") | "Ada orang di kamera \(.camera)."'
+```
+
+Langkah agent sesudahnya menerima baris itu, dan diberi tahu bahwa isinya datang dari luar. Ia tidak lagi melihat
+kiriman asli si pemanggil, jadi cetak apa yang perlu ia baca. Sampai 0.8.35 perintah mengabaikan kiriman itu dan
+langkah agent pertama yang membacanya.
+
+Automation seperti ini dibuat admin dari dashboard: panggilan dari luar yang menjalankan perintah tanpa model di
+antaranya bukan hal yang diusulkan agent.
 
 ### Supaya webhook bisa dipanggil dari internet
 

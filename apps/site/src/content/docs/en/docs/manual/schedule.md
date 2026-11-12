@@ -211,6 +211,43 @@ Only a person answers a proposal, never an agent. Some are an admin's to turn on
 agent's job, a change to a job that reports to another chat, and a webhook, as making one is. What the old job was
 allowed always does not carry over to its new shape: it asks again.
 
+## Watching something
+
+"Tell me when the disk is nearly full" is a check on a clock. Left as it is, it tells you every time it runs, for as
+long as the disk stays full, and at three in the morning. Three marks make it a watch (0.8.36).
+
+**A step that goes on only when something changed.** Mark a step (a command, an agent's turn or a mission) with
+**Go on only when this changes**. What it said is compared with what it said the last time the automation ran to its
+end. The same again, and the run ends there quietly, as when a step has nothing to say: no agent is woken, and nothing
+is sent. The first run has nothing to compare with, and goes on. A step that failed is not compared. Nouride keeps
+a fingerprint of what the step said, not the words.
+
+So a check every ten minutes tells you once when the disk passes 90%, once more when it passes 95%, and once when it
+is back under: each time what the check printed changed.
+
+**An automation that tells you once.** Turn on **Tell me once, then turn off** where it says where it reports. After
+the first run on its own time that tells you something, the automation turns itself off, and its page says so. Turn it
+on again to be told once more. A run you start by hand does not count: you are trying it out. "Tell me when the build
+is done" is this mark, on a check marked to go on only when it changes.
+
+**Ask an agent for one.** "Kabari aku kalau disk lewat 90%" in a chat: the agent proposes a check on a clock with
+these marks, its card says them in words, and you turn it on.
+
+### Quiet hours
+
+One setting for the whole install, on the Automations page: two times of the day, in the server's time zone, between
+which what automations would say to a chat is kept. The automations still run, so what changed in the night is known
+in the morning. When the hours end, each chat gets one message: every automation that had something to say, by its
+name, with what it said and when, the ones that failed first. A question a step waits on is asked then too, and its
+time to answer counts from then; it is under **Waiting for you** on the dashboard meanwhile.
+
+Three things are said whatever the hour: an automation with **Tell me at once, even in quiet hours** turned on, for
+what cannot wait for the morning (a camera at the door); a run you start by hand, since you are there; and what an
+automation sends to a URL instead of a chat. A mission tells its chat how it went by itself, and is not held.
+
+An admin sets the hours. Leave both times empty for none, which is how it starts. In `config.toml` it is
+`[cron] quiet_hours = "22:00-07:00"`.
+
 ## Webhooks
 
 An endpoint that runs a job when something calls it.
@@ -234,6 +271,24 @@ learns its URL; an endpoint that runs argv on the host is a remote shell with a 
 Each call is counted on its card as a delivery, and a hook whose calls fail `fail_streak_limit` times
 in a row pauses itself, as a scheduled job does. **Run now** runs the job by hand, without a body: it
 is not counted as a delivery.
+
+### A script in front of a webhook
+
+When the first step of a webhook's automation is a command, the command is handed what the caller sent on its
+standard input, and never in its arguments or its environment. What it prints is what the next step is handed. Print
+nothing, and the run ends there: a script decides which calls are worth an agent's turn, and what of each call the
+agent reads.
+
+```sh
+# Step 1, a command: only a person at the door goes on. Everything else ends here, and costs no model.
+jq -r 'select(.event == "person") | "Somebody is at the \(.camera) camera."'
+```
+
+The agent's step after it is handed that line, and is told it came from outside. It does not see the caller's body
+any more, so print what it should read. Up to 0.8.35 a command ignored the body and the first agent's step read it.
+
+Such an automation is made by an admin from the dashboard: a call from outside that runs a command with no model
+between is not something an agent proposes.
 
 ### Reaching a webhook from the internet
 
