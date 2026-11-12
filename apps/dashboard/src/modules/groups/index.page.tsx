@@ -22,6 +22,8 @@ import { useSaved } from "@/commons/hooks/use-saved";
 import { useTextFilter } from "@/commons/lib/use-text-filter";
 import { ListLoading } from "@/commons/components/ui/Spinner";
 import { PAGE_ASKS } from "@/commons/components/agents/page-asks";
+import { useOrchestratorFirst } from "@/commons/components/agents/AgentName";
+import { WhoAnswers } from "./components/WhoAnswers";
 
 /** A room nobody named, by a short form of its id: what there is to tell two of them apart. */
 function shortChatId(chatId: string): string {
@@ -31,6 +33,10 @@ function shortChatId(chatId: string): string {
 export default function GroupsPage() {
   const queryClient = useQueryClient();
   const groups = useQuery({ queryKey: ["groups"], queryFn: api.groups });
+  // The agents a room can be given to, the orchestrator first: what its "who answers" list holds.
+  const status = useQuery({ queryKey: ["status"], queryFn: api.status });
+  const agents = useOrchestratorFirst(status.data?.agents ?? [], (agent) => agent.id).map((agent) => ({ id: agent.id, name: agent.displayName || agent.id }));
+  const orchestrator = status.data?.orchestrator ?? null;
   const me = useMe();
   const editable = isAdmin(me.data ?? null);
   const list = groups.data?.groups ?? [];
@@ -73,13 +79,14 @@ export default function GroupsPage() {
                 <tr className="border-b border-base-content/[0.08] text-base-content/65 text-[11px] uppercase tracking-wider font-mono">
                   <th className="pl-6">Name</th>
                   <th>Agents</th>
+                  <th>No tag: who answers</th>
                   <th>Who talks there</th>
                   <th className="text-right pr-6">Actions</th>
                 </tr>
               </thead>
               <tbody className="block divide-y divide-base-content/[0.06] sm:table-row-group">
                 {visible.map((group) => (
-                  <GroupRow key={`${group.platform}:${group.chatId}`} group={group} editable={editable} onChanged={refresh} />
+                  <GroupRow key={`${group.platform}:${group.chatId}`} group={group} agents={agents} orchestrator={orchestrator} editable={editable} onChanged={refresh} />
                 ))}
               </tbody>
             </table>
@@ -91,7 +98,19 @@ export default function GroupsPage() {
   );
 }
 
-function GroupRow({ group, editable, onChanged }: { group: GroupRecord; editable: boolean; onChanged: () => void }) {
+function GroupRow({
+  group,
+  agents,
+  orchestrator,
+  editable,
+  onChanged,
+}: {
+  group: GroupRecord;
+  agents: readonly { id: string; name: string }[];
+  orchestrator: string | null;
+  editable: boolean;
+  onChanged: () => void;
+}) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(group.name ?? "");
   const saved = useSaved();
@@ -160,6 +179,11 @@ function GroupRow({ group, editable, onChanged }: { group: GroupRecord; editable
         ) : (
           <span className="text-base-content/65">—</span>
         )}
+      </td>
+      <td className="block px-4 py-1.5 text-xs align-top max-sm:border-0 sm:table-cell sm:px-3 sm:py-3">
+        {/* Named on a phone, where there is no column header to say what is picked. */}
+        <span className="mb-1 block text-base-content/65 sm:hidden">No tag: who answers</span>
+        <WhoAnswers group={group} agents={agents} orchestrator={orchestrator} editable={editable} onChanged={onChanged} />
       </td>
       <td className="block px-4 py-1.5 text-xs text-base-content/80 align-top max-sm:border-0 sm:table-cell sm:px-3 sm:py-3">
         {/* Named on a phone, where there is no column header to say what the names are. */}

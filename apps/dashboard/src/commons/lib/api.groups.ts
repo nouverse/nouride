@@ -12,4 +12,10 @@ export const groupsApi = {
   groups: () => request<{ groups: GroupRecord[] }>(`${control}/groups`),
   /** Rename a room. An admin's. An empty title clears the rename, and the platform's name is back. */
   renameGroup: (room: { gatewayId: string; chatId: string; title: string }) => post<{ ok: boolean; name?: string }>(`${control}/groups`, room),
+  /**
+   * Who answers a message that tags nobody in a room on a chat app: a tag is needed, one agent answers, or the room's
+   * own setting is gone. An admin's. The setting `/mention` writes from the room.
+   */
+  setGroupMention: (room: { gatewayId: string; chatId: string } & ({ mention: "required" | "default" } | { mention: "agent"; agent: string })) =>
+    post<{ ok: boolean } & Pick<GroupRecord, "mention" | "untagged">>(`${control}/groups/mention`, room),
 };

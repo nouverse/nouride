@@ -20,6 +20,14 @@ export interface GroupRecord {
   /** Who spoke there lately: a People key and name, or the name their platform shows. */
   people: { key?: string; name: string }[];
   lastActive: number;
+  /**
+   * The room's own answer to "a message here that tags nobody, who answers it?", set there with `/mention` or on the
+   * Groups page, where it gave one: a tag is needed, or none is and the agent named answers. No tag needed and nobody
+   * named is what `/mention off` left: the orchestrator answers.
+   */
+  mention?: { requireTag: boolean; answerer?: string };
+  /** Who answers such a message now, as the router routes one. Absent where nobody does: a tag is needed, or nobody is named. */
+  untagged?: string;
 }
 
 /** A chat a job's results can go to, as `GET /chats` answers it (`reachableChats` in the engine's `pipeline/send-message.ts`). */
