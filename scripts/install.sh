@@ -222,14 +222,14 @@ gateway_state() {
 }
 
 # gateway_on <config file> <owner> <group> — `in_process = true` for [nougate], unless the file already says either
-# way: an operator who switched it off keeps it off. A file made here starts `careful` as well, as the setup wizard
-# starts the one it makes (`beginInstall`, apps/engine/src/modules/setup/service.ts) — which it leaves alone once a file
-# is there. An edit goes through `cat >`, so the file keeps its owner and its mode.
+# way: an operator who switched it off keeps it off. A file made here states no approval level, as the one the setup
+# wizard makes states none: a new install is `balanced`, the default (apps/engine/src/modules/config/defaults.ts).
+# An edit goes through `cat >`, so the file keeps its owner and its mode.
 gateway_on() {
   go_file="$1"
   if [ ! -f "$go_file" ]; then
     install -o "$2" -g "$3" -m 640 /dev/null "$go_file"
-    printf '[security]\napprovals = "careful"\n\n[nougate]\nin_process = true\n' > "$go_file"
+    printf '[nougate]\nin_process = true\n' > "$go_file"
     say "on: $go_file says [nougate] in_process = true"
     return 0
   fi

@@ -209,17 +209,20 @@ describe("saveProvider", () => {
     expect(readFileSync(join(dataDir, "secrets.enc")).toString("latin1")).not.toContain(LIVE_KEY);
   });
 
-  test("a new install starts careful: the first write sets the level, a later one leaves it as it is", async () => {
-    // An install whose file exists keeps what it says — one that never set a level is `balanced`.
+  test("a new install states no level of its own, so it is balanced, the default; one that states one keeps it", async () => {
+    // Setup's first write put `careful` in a new install's file, while every agent it made said `balanced`: two
+    // answers for one install, and the first was read as what a new person meets.
     const { setup, config } = await service();
     await setup.saveProvider({ kind: "openai", baseUrl: "https://x.example/v1", apiKey: LIVE_KEY, actor: "t" });
     const security = async () => parseToml<{ security?: unknown }>(await readTextFile(configPath)).security;
-    expect(await security()).toEqual({ approvals: "careful" });
-    expect(config.security.approvals).toBe("careful");
+    expect(await security()).toBeUndefined();
+    expect(config.security.approvals).toBe("balanced");
+    expect(DEFAULT_CONFIG.security.approvals).toBe("balanced");
 
-    await writeTextFileAtomic(configPath, (await readTextFile(configPath)).replace('approvals = "careful"', 'approvals = "balanced"'));
+    // An install whose file says `careful`, as one set up before did, keeps it through setup's later writes.
+    await writeTextFileAtomic(configPath, `${await readTextFile(configPath)}\n[security]\napprovals = "careful"\n`);
     await setup.saveProvider({ kind: "anthropic", name: "second", baseUrl: "https://y.example", apiKey: LIVE_KEY, actor: "t" });
-    expect(await security()).toEqual({ approvals: "balanced" });
+    expect(await security()).toEqual({ approvals: "careful" });
   });
 
   test("applies the profile live, so no restart is needed", async () => {
@@ -435,11 +438,11 @@ describe("createAgent", () => {
     expect(await readTextFileIfExists(join(agentsDir, "long", "IDENTITY.md"))).toBeNull();
   });
 
-  test("makes every agent balanced itself, whatever it is made as: what a new install's first agent asks is the agent's, not the install's careful", async () => {
+  test("makes every agent balanced itself, whatever it is made as and whatever the install's own level is", async () => {
     const { setup, config } = await service();
     await setup.saveProvider({ kind: "openai", baseUrl: "https://x/v1", apiKey: LIVE_KEY, actor: "t" });
-    // The install as a whole starts careful, and an agent's own level is read before it.
-    expect(config.security.approvals).toBe("careful");
+    // An install that was set up careful as a whole stays so: an agent's own level is read before it.
+    config.security.approvals = "careful";
     for (const preset of PRESETS) {
       const id = `made-${preset.id}`;
       expect(await setup.createAgent({ ...agentInput, id, preset: preset.id }), preset.id).toMatchObject({ ok: true });

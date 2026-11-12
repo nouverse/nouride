@@ -355,8 +355,8 @@ Agent yang memegang tool `update` bisa mengecek tanpa diminta dan meminta izin u
 - **`check` sama sekali gak digerbangi.** Membaca nomor versi gak mengubah apa pun, dan agent
   yang harus menginterupsi kamu untuk menjawab "kita sudah paling baru belum?" adalah agent yang
   gak pernah ditanya.
-- **`apply` ada di daftar tetap** (`replace`): ditanyakan **setiap kali** di `careful`, yang ditulis untuk
-  instalasi baru, dan gak pernah bisa jadi `allow-always` permanen. `balanced` menjawabnya sendiri; yang
+- **`apply` ada di daftar tetap** (`replace`): ditanyakan **setiap kali** di `careful`, dan gak pernah bisa
+  jadi `allow-always` permanen. `balanced` menjawabnya sendiri; yang
   masih ditanyakan tingkat itu adalah daemon ini *dihentikan*, bukan diganti. Kalau gak ada yang bisa ditanya
   dan tingkatnya gak menjawabnya, ia ditolak, bukan dijalankan.
 

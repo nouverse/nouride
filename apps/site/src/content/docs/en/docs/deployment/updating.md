@@ -343,8 +343,8 @@ An agent holding the `update` tool can check unprompted and ask to install:
 
 - **`check` is not gated at all.** Reading a version number changes nothing, and an agent that has
   to interrupt you to answer "are we current?" is one nobody asks.
-- **`apply` is on the fixed list** (`replace`): asked **every time** under `careful`, which a new install
-  writes, and never a standing `allow-always`. `balanced` answers it itself: what that level still asks is
+- **`apply` is on the fixed list** (`replace`): asked **every time** under `careful`, and never a
+  standing `allow-always`. `balanced` answers it itself: what that level still asks is
   this daemon *stopped*, not replaced. If there is nobody to ask and the level does not answer it, it is
   refused rather than run.
 

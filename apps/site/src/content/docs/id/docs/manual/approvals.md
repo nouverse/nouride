@@ -72,14 +72,14 @@ daftar tetap berisi apa yang selalu bertanya.
 
 | | |
 |---|---|
-| `careful` | Perintah atau perubahan baru bertanya sekali, dan *allow always* mengingatnya. Semua yang ada di [daftar tetap](#daftar-tetap) bertanya setiap kali. Ini yang ditulis `nouride setup` untuk instalasi baru |
-| `balanced` | Cuma mengubah `config.toml`, memberi seseorang akses, menghentikan daemon ini, mengganti atau menghapus secret yang tersimpan, kredensial yang keluar dari mesin ini, dan mengubah paket sistemnya yang bertanya, begitu juga semua yang ditanyakan `trusted`. Sisanya jalan. Ini yang dipakai instalasi yang gak pernah menetapkan tingkat |
+| `careful` | Perintah atau perubahan baru bertanya sekali, dan *allow always* mengingatnya. Semua yang ada di [daftar tetap](#daftar-tetap) bertanya setiap kali |
+| `balanced` | Cuma mengubah `config.toml`, memberi seseorang akses, menghentikan daemon ini, mengganti atau menghapus secret yang tersimpan, kredensial yang keluar dari mesin ini, dan mengubah paket sistemnya yang bertanya, begitu juga semua yang ditanyakan `trusted`. Sisanya jalan. Ini yang dipakai instalasi baru, dan setiap agent yang dibuat setup |
 | `trusted` | Gak ada yang bertanya, kecuali [kerja yang gak diawasi](#dua-pengaman-untuk-kerja-yang-gak-diawasi) yang mengirim ke tempat yang gak disebut job-nya, program yang di-install untuk semua agent, perubahan agent pada [persona-nya sendiri](#daftar-tetap), dan perubahan agent pada [siapa seseorang menurut People](#daftar-tetap) |
 
-Agent yang dibuat `nouride setup` dan dashboard sudah diset `balanced` sendiri, jadi agent pertama di instalasi baru
-hanya bertanya untuk beberapa hal di baris itu. `careful` adalah yang ditulis setup untuk instalasinya secara
-keseluruhan: tingkat untuk agent yang tidak menyebut tingkatnya sendiri, misalnya pack yang ditulis tangan, atau agent
-yang diubah ke **Follow each person** untuk orang yang belum memilih.
+Instalasi baru `balanced` seluruhnya: agent yang dibuat `nouride setup` dan dashboard menyebutnya sendiri, dan tingkat
+milik instalasinya, yang dipakai agent yang tidak menyebut tingkat apa pun, juga `balanced`. Sampai 0.8.34 setup
+menulis `careful` untuk instalasinya; instalasi yang disiapkan sebelum itu tetap menyimpannya di `config.toml`, dan
+`[security] approvals` yang mengubahnya.
 
 :::note[Ganti nama di 0.7.23]
 Sampai 0.7.23 ketiganya bernama `normal`, `risky`, dan `none`; cara kerjanya gak berubah sama sekali. Sejak

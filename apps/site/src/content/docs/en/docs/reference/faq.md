@@ -108,7 +108,7 @@ standing grant. Creating and changing (`terraform apply`) ask once, as any new c
 Where nobody set a level it is `balanced`: only changing a `config.toml`, giving someone access, stopping this
 daemon, replacing a stored secret, a credential leaving and changing this machine's system packages ask, besides the
 few [every level asks](/en/docs/manual/approvals/#the-fixed-list). `/approvals careful` in a chat asks before anything
-new for you. A new install is written `careful`.
+new for you. A new install is `balanced` too; one set up before 0.8.34 was written `careful`, and keeps it.
 
 **The agent forgot something after `/new`.**
 `/new` starts a new conversation, and the old one is saved to memory first. The agent finds it again

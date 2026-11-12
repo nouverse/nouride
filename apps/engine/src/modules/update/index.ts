@@ -12,7 +12,7 @@
  * An update runs a binary fetched over the network as this daemon's own user, and then ends the
  * process. That is the largest thing an agent can ask for, so it is on `@nouride/policy`'s fixed list as `replace`:
  *
- * - asked every time under `careful`, which a new install writes
+ * - asked every time under `careful`
  * - never grantable, so `allow-always` cannot turn it into a standing permission
  * - refused outright when there is nobody to ask and the level does not answer it, rather than proceeding
  *

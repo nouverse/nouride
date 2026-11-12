@@ -1,5 +1,5 @@
 /**
- * The daemon's hint under `careful`: a new install asks a lot, and the person being asked is told —
+ * The daemon's hint under `careful`: it asks a lot, and the person being asked is told —
  * once — that `balanced` asks only the few that matter, and where it is set.
  *
  * The daemon's words in the approval message, never the agent's: a model talked into wanting fewer questions could

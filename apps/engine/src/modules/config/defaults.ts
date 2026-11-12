@@ -145,8 +145,9 @@ export const DEFAULT_CONFIG: GlobalConfig = {
     /**
      * How much gets asked when neither the agent nor the person has said.
      *
-     * `balanced` in the code, so an install that never set one keeps what it had. A new install is `careful`: setup
-     * writes it into the file. What `balanced` still asks — a config.toml changed, someone given
+     * `balanced`, for a new install too: setup writes no level. It wrote `careful` into a new install's file while
+     * making its agents `balanced`, two answers for one install; an install that has a level in its file keeps it.
+     * What `balanced` still asks — a config.toml changed, someone given
      * access, the daemon stopped, a secret replaced, a credential leaving, this machine's packages changed, and what
      * every level asks — is `BALANCED_ASKS`.
      *

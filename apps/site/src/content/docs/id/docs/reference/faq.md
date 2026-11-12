@@ -113,8 +113,8 @@ bacanya, `plan`, `get`, `describe`, `--dry-run`, sama sekali gak ditahan.
 Kalau gak ada yang menetapkan tingkat, ia `balanced`: cuma mengubah `config.toml`, memberi seseorang akses,
 menghentikan daemon ini, mengganti secret yang tersimpan, kredensial yang keluar, dan mengubah paket sistem mesin ini
 yang bertanya, selain yang sedikit yang [ditanyakan di setiap tingkat](/id/docs/manual/approvals/#daftar-tetap).
-`/approvals careful` di chat membuatnya bertanya sebelum hal baru apa pun untuk kamu. Instalasi baru ditulis
-`careful`.
+`/approvals careful` di chat membuatnya bertanya sebelum hal baru apa pun untuk kamu. Instalasi baru juga
+`balanced`; yang disiapkan sebelum 0.8.34 ditulis `careful`, dan tetap begitu.
 
 **Agent lupa sesuatu setelah `/new`.**
 `/new` memulai percakapan baru, dan yang lama disimpan ke memori dulu. Agent bisa menemukannya lagi

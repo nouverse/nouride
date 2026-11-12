@@ -2321,7 +2321,9 @@ whose class is not in `BALANCED_ASKS` — the ✔ rows above — and every quest
 `trusted` answers all but `unwatched`, `shared-tools`, `persona` and `people` (`skipsApproval` in `packages/policy/src/approvals.ts`). That is only safe because an elevation is classified by what it elevates — `sudo systemctl stop
 nouride` is `stop`, not an elevation — so a wrapper cannot carry one of `balanced`'s questions past it. Under `careful`
 the daemon's own line under the fifth question of a day names `balanced` and where it is set, once a day per person,
-and never `trusted` (`tools/careful-hint.ts`). A new install is `careful`: setup's first write puts it in the file.
+and never `trusted` (`tools/careful-hint.ts`). A new install is `balanced`, the default in the code: setup writes
+no level, and the agents it makes say `balanced` themselves. Until 0.8.34 setup's first write put `careful` in a new
+install's file, and an install that has it there keeps it.
 
 **An agent can clear up after itself: `.scratchpad/`.** A command every one of whose operands sits
 inside a directory named `.scratchpad` is not hardline, wherever that directory is —

@@ -14,7 +14,7 @@
 
 import { cleanHeadline, HEADLINE_MAX } from "./identity-headline.ts";
 import { LOCAL_GATEWAY_ID, TERMINAL_SENDER } from "@/modules/gateways/local.ts";
-import { fileExists, join, listDir, parseToml, removePath, writeTextFileAtomic } from "@nouride/runtime";
+import { join, listDir, parseToml, removePath, writeTextFileAtomic } from "@nouride/runtime";
 import { editDaemonConfig } from "@/modules/config/config-file.ts";
 import { saveProvider as saveProfile } from "@/modules/config/settings/providers.ts";
 import { createLogger, type AgentAccess, type GlobalConfig } from "@nouride/shared";
@@ -214,17 +214,6 @@ export class SetupService {
   }
 
   /**
-   * A new install starts `careful`: the first thing setup writes into a `config.toml` that is not
-   * there yet — the wizard's or `nouride setup`'s first step, a provider — is `[security] approvals = "careful"`. An
-   * install whose file exists is left as it is: one that never set a level stays `balanced`, the default in the code.
-   */
-  private async beginInstall(): Promise<{ ok: true } | { ok: false; error: string }> {
-    if (await fileExists(this.configPath())) return { ok: true };
-    const written = await editDaemonConfig(this.configPath(), this.deps.config, (source) => upsertTomlTable(source, "security", { approvals: "careful" }));
-    return written.ok ? { ok: true } : written;
-  }
-
-  /**
    * Save the one provider profile this daemon is set up with.
    *
    * The key goes to the secret store and its **name** goes into `config.toml`. That indirection is the
@@ -260,8 +249,6 @@ export class SetupService {
      * and an existing profile keeps the secret it already names.
      */
     const name = (input.name?.trim() || SETUP_PROFILE).toLowerCase();
-    const begun = await this.beginInstall();
-    if (!begun.ok) return begun;
     const saved = await saveProfile(this.settingsDeps(), { name, kind: input.kind, baseUrl, apiKey: input.apiKey, actor: input.actor });
     if (!saved.ok) return saved;
     // The secret the profile names — its own, when it had one — for whoever says where the key went.

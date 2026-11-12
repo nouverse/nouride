@@ -70,14 +70,14 @@ fixed list of what always asks.
 
 | | |
 |---|---|
-| `careful` | A new command or a change asks once, and *allow always* remembers it. Everything on [the fixed list](#the-fixed-list) asks every time. What `nouride setup` writes for a new install |
-| `balanced` | Only changing a `config.toml`, giving someone access, stopping this daemon, replacing or deleting a stored secret, a credential leaving this machine, and changing its system packages ask, as does everything `trusted` asks. Everything else runs. What an install that never set a level has |
+| `careful` | A new command or a change asks once, and *allow always* remembers it. Everything on [the fixed list](#the-fixed-list) asks every time |
+| `balanced` | Only changing a `config.toml`, giving someone access, stopping this daemon, replacing or deleting a stored secret, a credential leaving this machine, and changing its system packages ask, as does everything `trusted` asks. Everything else runs. What a new install has, and every agent setup makes |
 | `trusted` | Nothing asks, except [work nobody watches](#two-guards-on-work-nobody-watches) sending somewhere its job did not name, a program installed for every agent, an agent's change to [its own persona](#the-fixed-list), and an agent's change to [who People says a person is](#the-fixed-list) |
 
-The agents that `nouride setup` and the dashboard make are set to `balanced` themselves, so the first agent of a new
-install asks only about the few things in that row. `careful` is what setup writes for the install as a whole: the
-level of an agent that states none of its own, such as a pack written by hand, or one switched to **Follow each
-person** for a person who has not chosen.
+A new install is `balanced` throughout: the agents that `nouride setup` and the dashboard make say so themselves,
+and the install's own level, which an agent that states none falls to, is `balanced` too. Until 0.8.34 setup wrote
+`careful` for the install as a whole; an install set up before then keeps that in its `config.toml`, where
+`[security] approvals` changes it.
 
 :::note[Renamed in 0.7.23]
 Until 0.7.23 the three were called `normal`, `risky` and `none`; nothing about what they do changed. Since

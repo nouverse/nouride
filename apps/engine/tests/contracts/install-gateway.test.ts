@@ -53,16 +53,18 @@ describe("install.sh --variant router", () => {
     expect(INSTALL).toContain('router:) say "Router is part of Nouride Community now: this installs Community, with its LLM gateway switched on" ;;');
   });
 
-  test("a fresh install gets a config with the gateway on, and `careful` as the setup wizard would have started it", () => {
+  test("a fresh install gets a config with the gateway on and no approval level of its own: balanced, as the setup wizard's is", () => {
     const dir = install();
     expect(on(dir)).toEqual({ status: 0, out: `SAY: on: ${dir}/.nouride/config.toml says [nougate] in_process = true\n` });
     const path = join(dir, ".nouride/config.toml");
     expect(loaded(path).nougate.inProcess).toBe(true);
-    expect(loaded(path).security.approvals).toBe("careful");
+    // Nothing of a level in the file, so the default: the installer wrote `careful` here while setup did.
+    expect(readFileSync(path, "utf8")).toBe("[nougate]\nin_process = true\n");
+    expect(loaded(path).security.approvals).toBe("balanced");
     // The daemon's, and not every account's: the mode the daemon's own saves keep.
     expect(statSync(path).mode & 0o777).toBe(0o640);
-    // The wizard starts a file it makes `careful`, and skips that once a file is there — so this one says it too.
-    expect(readFileSync(join(ROOT, "apps/engine/src/modules/setup/service.ts"), "utf8")).toContain('upsertTomlTable(source, "security", { approvals: "careful" })');
+    // The wizard writes no level into a file it makes either: the two ways to a new install agree.
+    expect(readFileSync(join(ROOT, "apps/engine/src/modules/setup/service.ts"), "utf8")).not.toContain('approvals: "careful"');
   });
 
   test("a config with no word of the gateway gets the table, and keeps everything it had — a last line with no newline too", () => {
