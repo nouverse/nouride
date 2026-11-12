@@ -374,6 +374,13 @@ setiap percakapan di timeline, apa yang diketahui semua agent, dan perubahan yan
 dan agent di dalamnya, dan kalau **Documents** dinyalakan, koleksi, dokumennya, link di antaranya, dan dokumen yang
 maknanya berdekatan.
 
+**Groups**, di sebelah Memory dan People, menampilkan ruangan tempat agent kamu bicara. Admin bisa mengganti nama
+ruangan di sana, dan memilih siapa yang menjawab pesan di dalamnya yang gak men-tag siapa pun: tag diperlukan, salah
+satu agent (orchestrator diberi tanda), atau **Default**, yang mengikuti koneksi dan server. Ini setelan yang sama
+dengan yang diubah `/mention` dari dalam grup, jadi perubahan di satu tempat terlihat di tempat lainnya
+([Ngobrol dengan agent → Grup](/id/docs/manual/chatting/#grup)). Room yang dibuat di dashboard gak punya daftar ini:
+anggotanya yang menjawab.
+
 [Memori →](/id/docs/architecture/memory/)
 
 ## Hal-hal yang selalu dilakukan UI ini
@@ -445,7 +452,7 @@ itu sendiri saat sedang dibuka; kamu ditanya dulu, dan gak ada yang bisa membata
 **Room** adalah satu percakapan dengan beberapa agent. Pilih agent-nya waktu membuat room, lalu tag yang kamu maksud
 (`@nox`): tag adalah cara sebuah pesan sampai ke agent tertentu. Header room menampilkan anggotanya sebagai tag yang kamu
 ketik, dan bilang siapa yang menjawab pesan tanpa tag, kalau memang ada: orchestrator kalau ia ada di room itu, atau
-satu-satunya agent di room itu. Setelan yang membuat grup di aplikasi chat menunggu tag gak berlaku di sini; `/mention on`
+satu-satunya agent di room itu. Setelan yang membuat grup di aplikasi chat menunggu tag gak berlaku di sini; `/mention required`
 di room itu yang berlaku. **Add agent** memasukkan agent lain; menu room untuk mengganti nama, mengeluarkan agent, atau
 menghapus room.
 

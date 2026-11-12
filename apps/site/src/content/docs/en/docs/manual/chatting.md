@@ -35,7 +35,7 @@ nothing and always work. They are answered at once, even while a turn is running
 | `/grants` | List standing command permissions, or revoke them: `/grants revoke <id\|all>` |
 | `/drafts` | Skills the agent has drafted and wants your call on, `show`, `approve`, `deny` |
 | `/secret` | Passwords and keys sent in this chat: what is held, `undo`, `set <name> <value>`, `guard off` ([below](#sending-a-password-or-a-key)) |
-| `/mention` | Whether this group needs a mention; `off`, `on` or `default` changes it (admins); see [below](#groups) |
+| `/mention` | Who answers a message in this group that tags nobody; `<agent>`, `required` or `default` changes it (admins); see [below](#groups) |
 | `/daemon-restart` | Restart the whole daemon once nothing is running, or `now`; this chat is told when it is back |
 | `/commands` | Sync this list to the platform's own command menu |
 
@@ -301,23 +301,44 @@ Both are daemon-wide, under `[agents]`, because they are about rooms rather than
 `group_context_messages` is also on the **Agents → Settings** page. A single connection can override
 either, and the group-context field on a connection's form says out loud that it is an override.
 
-A group can also decide `groups_require_mention` for itself, from inside the group:
+A group can also answer one question for itself, from inside the group: **a message here that tags
+nobody, who answers it?**
 
-- `/mention` says this group's setting and where it comes from: this group, the gateway, or the daemon
-  (in a room made in the dashboard: the room's own rule above).
-- `/mention off`: in this group no mention is needed. `/mention on`: a mention is required again.
+- `/mention` says it in one sentence: whether a tag is needed, who answers a message with none, and
+  where the setting comes from (this group, the gateway, or the daemon; in a room made in the
+  dashboard, the room's own rule above).
+- `/mention @NovelistBot` gives the group to that agent: no tag is needed, and it answers every message
+  here that tags nobody. The agent can be named by its bot's handle, its id or its name
+  (`/mention novelist`), and on Discord by tagging its bot.
+- `/mention required`: a tag is needed, and a message that tags nobody is answered by nobody.
 - `/mention default` removes the group's own setting, so the gateway and the daemon decide again, or,
   in a dashboard room, its members.
+
+A tag and a reply still win: in a group given to the novelist, `@Alice …` or a reply to something
+Alice said is Alice's. The setting decides only a message that names nobody.
+
+On Telegram a topic is a room of its own, so `/mention @NovelistBot` sent inside one topic gives that
+topic to the novelist, and the other topics stay as they were.
 
 The group's own setting wins over the connection's and the daemon's, and it is kept across restarts.
 It belongs to the group, not to one bot: with several of our bots in the group, each one reads the
 same setting, and the command is answered once. Changing it is an admin's, as for `/daemon-restart`;
-anyone else is told so and nothing changes. In a DM it does nothing: a DM always gets an answer. On
-Telegram, `/mention@yourbot off` from the command menu works too.
+anyone else is told so and nothing changes. In a DM it does nothing: a DM always gets an answer. The
+same choice is on the dashboard's **Groups** page, one list per group, and what either says the other
+shows.
 
-In a group several of our bots share, `/mention off` does not let every bot answer untagged chatter: a
-message that names nobody is answered once, by the orchestrator
+`/mention@NovelistBot`, the way Telegram's command menu writes a command for one bot, is answered by
+that bot: it says who answers here now, and how to give the group to it.
+
+If the agent a group named is later removed or switched off, the group follows the orchestrator again,
+and `/mention` says so.
+
+In a group several of our bots share, a message that names nobody is never answered by every bot: it
+is answered once, by the agent the group named, or else by the orchestrator
 ([Gateways → The orchestrator is the front desk](/en/docs/gateways/overview/#the-orchestrator-is-the-front-desk)).
+
+Until 0.8.34 the words were `/mention on` and `/mention off`. Both are still read: `on` is `required`,
+and `off` is no tag needed with nobody named, which the orchestrator answers.
 
 ### A group's name
 

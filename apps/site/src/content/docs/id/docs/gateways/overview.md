@@ -115,6 +115,7 @@ fallback itu dimatikan dan sebuah pesan harus menyebut tujuannya:
 | Tag platform milik bot ini sendiri | agent milik koneksi itu |
 | Id atau nama tampilan agent di teks (`nox:`, `@nox`) | agent itu |
 | Balasan ke pesan yang ditulis sebuah agent | agent itu |
+| Agent yang ditunjuk ruangan itu (`/mention <agent>`), untuk pesan yang gak menyapa siapa pun | agent itu |
 | Channel binding di sebuah pack | agent itu |
 | **Tag platform milik orang lain** | **gak ada**: inilah penjaga yang menghentikan banjir |
 | Gak ada | gak ada |
@@ -130,12 +131,16 @@ agent pertama yang kamu buat) menjawab pesan yang gak menyapa siapa pun, sekali 
 sendiri. Bot lain diam. Agent-nya sama di setiap salinan pesan, jadi klaim satu-giliran-per-pesan di
 bawah cuma meloloskan satu, dan prompt-nya menyuruhnya menjawab sendiri atau meneruskan ke agent yang
 headline-nya cocok. Baris lain di tabel gak berubah, DM gak terpengaruh, dan grup yang mewajibkan
-mention (`groups_require_mention`, atau `/mention on` di grup itu) tetap diam untuknya juga.
+mention (`groups_require_mention`, atau `/mention required` di grup itu) tetap diam untuknya juga.
 
-`groups_require_mention` juga bisa diatur untuk satu grup dari dalam grup itu, dengan `/mention off`,
-`/mention on`, atau `/mention default` (admin). Setelannya disimpan untuk grup sebagaimana platform
+Sebuah grup bisa menyebut agent lain untuk baris itu, dari dalam grup: `/mention @NovelistBot` (admin),
+dan novelis yang menjawab setiap pesan di sana yang gak men-tag siapa pun, di tempat orchestrator.
+Urutannya di bawah tag, reply, dan tag ke orang lain, dan di atas pemilik koneksi, channel binding, dan
+orchestrator: itu ucapan orang di ruangan itu tentang ruangan itu. `/mention required` meminta tag, dan
+`/mention default` menghapus setelan milik grup. Setelannya disimpan untuk grup sebagaimana platform
 mengenalnya, bukan untuk satu koneksi, jadi setiap bot di grup membaca nilai yang sama, dan perintahnya
-dijawab satu bot, sekali. [Ngobrol dengan agent → Grup](/id/docs/manual/chatting/#grup)
+dijawab satu bot, sekali. Topik Telegram adalah ruangan sendiri.
+[Ngobrol dengan agent → Grup](/id/docs/manual/chatting/#grup)
 
 ### Satu giliran per pesan
 

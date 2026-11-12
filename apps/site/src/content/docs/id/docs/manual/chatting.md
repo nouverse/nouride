@@ -35,7 +35,7 @@ jalan. Semuanya dijawab saat itu juga, bahkan ketika sebuah giliran sedang jalan
 | `/grants` | Daftar izin permanen, atau cabut: `/grants revoke <id\|all>` |
 | `/drafts` | Skill yang diusulkan agent dan menunggu keputusan kamu, `show`, `approve`, `deny` |
 | `/secret` | Kata sandi dan kunci yang dikirim di chat ini: apa yang dipegang, `undo`, `set <nama> <nilai>`, `guard off`. Lihat [di bawah](#mengirim-kata-sandi-atau-kunci) |
-| `/mention` | Apakah grup ini butuh mention; `off`, `on`, atau `default` untuk mengubahnya (admin). Lihat [di bawah](#grup) |
+| `/mention` | Siapa yang menjawab pesan di grup ini yang gak men-tag siapa pun; `<agent>`, `required`, atau `default` untuk mengubahnya (admin). Lihat [di bawah](#grup) |
 | `/daemon-restart` | Restart seluruh daemon setelah tidak ada yang berjalan, atau `now`; chat ini dikabari begitu daemon kembali |
 | `/commands` | Sinkronkan daftar ini ke menu perintah bawaan platform |
 
@@ -310,23 +310,44 @@ Keduanya berlaku untuk seluruh daemon, di `[agents]`, karena keduanya soal ruang
 agent; `group_context_messages` juga ada di halaman **Agents → Settings**. Satu koneksi bisa menimpa
 keduanya, dan kolom group context di form koneksi menyatakan dengan jelas bahwa ia sebuah penimpaan.
 
-Sebuah grup juga bisa menentukan `groups_require_mention` untuk dirinya sendiri, dari dalam grup itu:
+Sebuah grup juga bisa menjawab satu pertanyaan untuk dirinya sendiri, dari dalam grup itu: **pesan di
+sini yang gak men-tag siapa pun, siapa yang menjawabnya?**
 
-- `/mention` memberi tahu setelan grup ini dan asalnya: dari grup ini, dari gateway, atau dari daemon
-  (di room yang dibuat di dashboard: aturan room itu sendiri, di atas).
-- `/mention off`: di grup ini gak perlu mention. `/mention on`: mention wajib lagi.
+- `/mention` menjawabnya dalam satu kalimat: apakah tag diperlukan, siapa yang menjawab pesan tanpa tag,
+  dan dari mana setelannya (grup ini, gateway, atau daemon; di room yang dibuat di dashboard: aturan room
+  itu sendiri, di atas).
+- `/mention @NovelistBot` memberikan grup itu ke agent tersebut: tag gak diperlukan, dan ia menjawab
+  setiap pesan di sini yang gak men-tag siapa pun. Agent-nya bisa disebut dengan nama bot-nya, id-nya,
+  atau namanya (`/mention novelist`), dan di Discord dengan men-tag bot-nya.
+- `/mention required`: tag diperlukan, dan pesan yang gak men-tag siapa pun gak dijawab siapa pun.
 - `/mention default` menghapus setelan milik grup, jadi gateway dan daemon yang menentukan lagi, atau,
   di room dashboard, anggotanya.
+
+Tag dan reply tetap menang: di grup yang diberikan ke novelis, `@Alice …` atau reply ke ucapan Alice
+tetap milik Alice. Setelan ini hanya menentukan pesan yang gak menyebut siapa pun.
+
+Di Telegram, satu topik adalah ruangan sendiri, jadi `/mention @NovelistBot` yang dikirim di dalam satu
+topik memberikan topik itu ke novelis, dan topik lain tetap seperti semula.
 
 Setelan milik grup menang atas setelan koneksi dan daemon, dan tetap tersimpan setelah restart. Ia milik
 grupnya, bukan milik satu bot: kalau ada beberapa bot kita di grup itu, semuanya membaca setelan yang
 sama, dan perintahnya dijawab sekali. Mengubahnya hak admin, sama seperti `/daemon-restart`; orang lain
 diberi tahu begitu dan gak ada yang berubah. Di DM perintah ini gak berbuat apa-apa: DM selalu dijawab.
-Di Telegram, `/mention@botkamu off` dari menu perintah juga jalan.
+Pilihan yang sama ada di halaman **Groups** di dashboard, satu daftar per grup, dan yang dikatakan satu
+tempat terlihat di tempat lainnya.
 
-Di grup yang berisi beberapa bot kita, `/mention off` gak membuat setiap bot menjawab obrolan yang gak
-menyapa siapa pun: pesan seperti itu dijawab sekali, oleh orchestrator
+`/mention@NovelistBot`, cara menu perintah Telegram menulis perintah untuk satu bot, dijawab oleh bot
+itu: ia bilang siapa yang menjawab di sini sekarang, dan cara memberikan grup itu kepadanya.
+
+Kalau agent yang disebut sebuah grup kemudian dihapus atau dimatikan, grup itu mengikuti orchestrator
+lagi, dan `/mention` mengatakannya.
+
+Di grup yang berisi beberapa bot kita, pesan yang gak menyebut siapa pun gak pernah dijawab oleh setiap
+bot: ia dijawab sekali, oleh agent yang disebut grup itu, atau kalau gak ada, oleh orchestrator
 ([Gateway → Orchestrator adalah meja depan](/id/docs/gateways/overview/#orchestrator-adalah-meja-depan)).
+
+Sampai 0.8.34 kata-katanya `/mention on` dan `/mention off`. Keduanya masih dibaca: `on` sama dengan
+`required`, dan `off` berarti tag gak diperlukan tanpa agent yang disebut, yang dijawab orchestrator.
 
 ### Nama grup
 

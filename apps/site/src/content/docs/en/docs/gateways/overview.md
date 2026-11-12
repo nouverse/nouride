@@ -111,6 +111,7 @@ fallbacks switch off and a message has to be addressed:
 | This bot's own platform tag | that connection's agent |
 | An agent id or display name in the text (`nox:`, `@nox`) | that agent |
 | A reply to a message an agent wrote | that agent |
+| The agent the room named (`/mention <agent>`), for a message that addresses nobody | that agent |
 | A channel binding in a pack | that agent |
 | **Somebody else's platform tag** | **nobody**: this is the guard that stops the storm |
 | Nothing | nobody |
@@ -126,13 +127,17 @@ The "Nothing" row has an answer where the room does not require a mention: the o
 through its own bot. The other bots stay quiet. It is the same agent on every copy of the message, so
 the one-turn-per-message claim below lets exactly one through, and its prompt tells it to answer or
 hand the message to the agent whose headline fits. Every other row of the table is unchanged, a DM is
-unaffected, and a room that requires a mention (`groups_require_mention`, or `/mention on` in that
-group) stays quiet for it too.
+unaffected, and a room that requires a mention (`groups_require_mention`, or `/mention required` in
+that group) stays quiet for it too.
 
-`groups_require_mention` can also be set for one group from inside it, with `/mention off`, `/mention on`
-or `/mention default` (admins). It is stored for the group as the platform knows it, not for one
-connection, so every bot in the group reads the same value, and the command is answered by one bot,
-once. [Talking to an agent → Groups](/en/docs/manual/chatting/#groups)
+A group can name another agent for that row, from inside it: `/mention @NovelistBot` (admins), and the
+novelist answers every message there that tags nobody, where the orchestrator would have. It ranks
+below a tag, a reply and somebody else's tag, and above the connection's owner, a channel binding and
+the orchestrator: a person in that room said it of that room. `/mention required` asks for a tag, and
+`/mention default` removes the group's own setting. It is stored for the group as the platform knows
+it, not for one connection, so every bot in the group reads the same value, and the command is
+answered by one bot, once. A Telegram topic is a room of its own.
+[Talking to an agent → Groups](/en/docs/manual/chatting/#groups)
 
 ### One turn per message
 

@@ -77,12 +77,12 @@ perlu semua kredensial disetel lagi. Nilai yang bukan tulisan perintah itu ditol
 sebuah pesan gak menyebut siapa pun, tiba di gateway tanpa pemilik, dan gak cocok dengan channel binding mana pun. Ia
 juga meja depan untuk room yang diisi beberapa bot kita sekaligus: pesan di sana yang gak men-tag, menyebut nama, atau
 membalas siapa pun (yang salinannya diterima tiap bot) dijawab olehnya saja, sekali, lewat bot-nya sendiri, kecuali
-room itu mewajibkan mention (`groups_require_mention`, atau `/mention on` di grup itu). Pesan yang menyapa seseorang
+room itu mewajibkan mention (`groups_require_mention`, atau `/mention required` di grup itu), atau menyebut agent lain untuk menjawab di sana (`/mention <agent>`). Pesan yang menyapa seseorang
 tetap diarahkan seperti biasa, dan DM gak terpengaruh. Agent pertama yang kamu buat otomatis jadi orchestrator.
 
 `groups_require_mention` itu soal grup di Telegram, Discord, dan WhatsApp. Room yang kamu buat di dashboard menjawab
 sesuai anggotanya: orchestrator kalau ia ada di room itu, atau satu-satunya agent di room itu, dan selain itu gak ada
-yang menjawab. Room itu baru menunggu tag kalau di dalamnya diketik `/mention on`.
+yang menjawab. Room itu baru menunggu tag kalau di dalamnya diketik `/mention required`.
 
 ## `[agents]`
 

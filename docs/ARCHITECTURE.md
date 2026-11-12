@@ -1153,6 +1153,13 @@ the same agent on every copy, so the (message, agent) claim lets one through, an
 own bot; where ids differ per connection, `admit` leaves it to that bot's own copy. Its OTHER AGENTS section tells it
 the untagged message is its to answer or hand on.
 
+A room can name another agent for that row (`/mention <agent>`, the dashboard's Groups page): the room's own setting
+(`pipeline/room-mention.store.ts`, keyed by platform and chat, so every bot's copy reads one value) keeps the agent,
+and the pipeline passes it to the router as `roomAnswerer`. The router ranks it below a tag, a reply and somebody
+else's tag, and above the connection's owner, a channel binding and the front desk (reason `room_answerer`). The same
+agent on every copy, so the same claim lets one through; and where another of our bots has a copy it waits, as the
+front desk does, for the copy that saw a reply. In a room with a member list it answers only as a member.
+
 ### 12.3 Mention resolution
 
 A bot's platform *name* is not its agent's name.

@@ -76,12 +76,12 @@ and a box rebuilt from one needs every credential set again. A value the command
 mentions nobody, arrives on a gateway with no owner, and matches no channel binding. It is also the front desk of a
 room several of our bots share: a message there that tags, names or replies to nobody (which every bot gets a copy of)
 is answered by it alone, once, through its own bot, unless the room requires a mention (`groups_require_mention`, or
-`/mention on` in that group). A message that addresses someone routes exactly as before, and DMs are unaffected. The
+`/mention required` in that group), or named another agent to answer there (`/mention <agent>`). A message that addresses someone routes exactly as before, and DMs are unaffected. The
 first agent you make becomes it.
 
 `groups_require_mention` is about groups on Telegram, Discord and WhatsApp. A room you make in the dashboard answers as
 its members say: the orchestrator when it is in the room, or the room's only agent, and otherwise nobody. Only
-`/mention on` in that room makes it wait for a tag.
+`/mention required` in that room makes it wait for a tag.
 
 ## `[agents]`
 

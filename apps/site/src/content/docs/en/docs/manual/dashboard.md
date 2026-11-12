@@ -363,6 +363,12 @@ timeline, what every agent knows, and the changes waiting on you.
 agents in them, and with **Documents** switched on, the collections, their documents, the links between them and the
 documents close in meaning.
 
+**Groups**, beside Memory and People, lists the rooms your agents talk in. An admin renames a room there, and picks
+who answers a message in it that tags nobody: a tag is needed, one of the agents (the orchestrator is marked), or
+**Default**, which follows the connection and the server. It is the same setting `/mention` changes from inside the
+group, so a change in either place shows in the other ([Talking to an agent → Groups](/en/docs/manual/chatting/#groups)).
+A room made in the dashboard has no list: its members answer.
+
 [Memory →](/en/docs/architecture/memory/)
 
 ## Things the UI will always do
@@ -434,7 +440,7 @@ chat's own menu while it is open; you are asked first, and nothing undoes it.
 **A room** is one conversation with several agents. Pick the agents when you make it, then tag the one you mean
 (`@nox`): a tag is how a message reaches a particular agent. The room's header shows its members as the tags you type,
 and says who answers a message with no tag, if anyone does: the orchestrator when it is in the room, or the room's only
-agent. The setting that makes chat-app groups wait for a tag does not apply here; `/mention on` in the room does. **Add
+agent. The setting that makes chat-app groups wait for a tag does not apply here; `/mention required` in the room does. **Add
 agent** brings another one in; the room's menu renames it, takes an agent out, or deletes it.
 
 **Anything from a chat app is read-only here.** A group, or a private chat with an agent on Telegram, Discord or
