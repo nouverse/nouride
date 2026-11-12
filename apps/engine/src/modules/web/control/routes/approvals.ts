@@ -70,8 +70,9 @@ export function registerApprovalRoutes(control: ControlApp, deps: ControlDeps): 
     // And how a person reads who that was, for the prompt in the chat that says it is settled.
     const principal = c.get("principal");
     const request = deps.approvals.get(id);
-    // Another person's request is answered as one that is not there, and stays pending for whoever it was asked of.
-    if (request && !mayAnswerHere(deps, readerIn(c), request)) return c.json({ error: "no such approval", id }, 404);
+    // Another person's request is answered as an id that names nothing is, to the letter, and stays pending for whoever
+    // it was asked of: a different answer would say that it is there.
+    if (request && !mayAnswerHere(deps, readerIn(c), request)) return c.json({ error: "not pending", id }, 409);
     // A change to an agent's persona or to People is an admin's to answer (`approval-answerers.ts`): an operator's
     // dashboard account answers the rest, not these. The control token is the operator at the terminal, an admin.
     if (request && adminOnly(request) && !atLeast(principal, "admin")) {

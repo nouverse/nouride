@@ -119,7 +119,7 @@ async function house() {
     pending: () => requests.filter((one) => one.status === "pending"),
     settled: () => requests.filter((one) => one.status !== "pending"),
     get: (id: string) => requests.find((one) => one.id === id) ?? null,
-    resolve: (id: string, decision: string, by: { id: string }) => (answered.push({ id, decision, by: by.id }), true),
+    resolve: (id: string, decision: string, by: { id: string }): boolean => (answered.push({ id, decision, by: by.id }), true),
   };
   const deps = {
     approvals,
@@ -176,7 +176,7 @@ async function house() {
     const response = await app.request(path, { method, headers: { "content-type": "application/json" }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
     return { status: response.status, body: (await response.json()) as Record<string, unknown> };
   };
-  return { ask, sessions, turns, rooms, dispatched, ended, killed, gadingTurn, answered };
+  return { ask, sessions, turns, rooms, dispatched, ended, killed, gadingTurn, answered, gate: approvals };
 }
 
 const listed = (body: Record<string, unknown>) => (body.sessions as SessionSummary[]).map((one) => one.chatId).sort();
@@ -265,11 +265,22 @@ describe("a request for a yes belongs to the chat it was asked in", () => {
       expect({ id, status: (await h.ask("GET", `/approvals/${id}`)).status }).toEqual({ id, status: 404 });
       for (const decision of ["allow-once", "allow-always", "deny"]) {
         const refused = await h.ask("POST", `/approvals/${id}/${decision}`);
-        // As one that never was: the same answer a made-up id gets, so nothing says it exists.
-        expect({ id, decision, status: refused.status, body: refused.body }).toEqual({ id, decision, status: 404, body: { error: "no such approval", id } });
+        expect({ id, decision, status: refused.status, body: refused.body }).toEqual({ id, decision, status: 409, body: { error: "not pending", id } });
       }
     }
     expect(h.answered).toEqual([]);
+  });
+
+  test("and is answered to the letter as an id that names nothing is, so no answer says it is there", async () => {
+    const h = await house();
+    // The gate's own answer to an id it does not hold, as the real one gives it.
+    h.gate.resolve = () => false;
+    const made = { read: await h.ask("GET", "/approvals/ap_made_up"), answer: await h.ask("POST", "/approvals/ap_made_up/deny") };
+    const theirs = { read: await h.ask("GET", "/approvals/ap_g"), answer: await h.ask("POST", "/approvals/ap_g/deny") };
+    const without = (one: { status: number; body: Record<string, unknown> }) => ({ status: one.status, body: { ...one.body, id: "" } });
+    expect(without(theirs.read)).toEqual(without(made.read));
+    expect(without(theirs.answer)).toEqual(without(made.answer));
+    expect(made.answer.status).toBe(409);
   });
 
   test("her own opens and takes her answer, as hers", async () => {
