@@ -66,7 +66,8 @@ describe("a budget's own entry, through the whole check", () => {
     expect(long).toEqual({ rule: "budget-why", detail: expect.stringContaining("is 201 characters") });
     expect(long!.detail).toContain("the one reason the file is over the cap today");
     expect((await planted(LISTED, { lines, why: " " })).map((finding) => finding.rule)).toEqual(["budget-why"]);
-  });
+    // Three readings of the whole tree: past the default five seconds on a busy machine, where both of these failed.
+  }, 30_000);
 
   test("the three files split on their seams may not be budgeted again, whatever the entry says", async () => {
     for (const file of ["apps/engine/src/index.ts", "apps/engine/src/modules/pipeline/index.ts", "apps/engine/src/modules/pipeline/turn.ts"]) {
@@ -77,7 +78,7 @@ describe("a budget's own entry, through the whole check", () => {
         refused: expect.stringContaining("may not be budgeted again"),
       });
     }
-  });
+  }, 30_000);
 });
 
 describe("which files are sized", () => {
