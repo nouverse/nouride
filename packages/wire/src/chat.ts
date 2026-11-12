@@ -5,6 +5,12 @@
 
 import type { TurnEventData, TurnStepKind } from "@nouride/shared";
 
+/**
+ * The page a message was written from, as `POST /chat/send` takes it in `page`: sent by the chat that floats over the
+ * dashboard's pages and by nothing else. Optional, and a daemon older than it ignores it.
+ */
+export type { OpenPage } from "@nouride/shared";
+
 export interface ChatMessageStep {
   name: string;
   text: string;

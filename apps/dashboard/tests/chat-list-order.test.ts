@@ -9,7 +9,7 @@ import { describe, expect, test } from "bun:test";
 import type { AgentSummary, ChatListGroup, ChatListPayload, ChatListRoom, ChatTurn, LiveTurn, RoomMessage } from "@nouride/wire";
 import { chatsView, DASHBOARD, groupsView, QUIET_AFTER_MS, type GroupsRow } from "@/modules/chat/lib/chat-list";
 import { chatOpen, onChats } from "@/commons/lib/chat-place";
-import { groupStream } from "@/modules/chat/lib/group-stream";
+import { groupStream } from "@/commons/lib/group-stream";
 
 const NOW = 1_800_000_000_000;
 const agent = (id: string, displayName = id[0]!.toUpperCase() + id.slice(1)): AgentSummary => ({ id, displayName, enabled: true, state: "running", provider: "p", model: "m", tools: [], approvals: "careful" }) as AgentSummary;

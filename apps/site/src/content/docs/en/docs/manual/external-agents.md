@@ -45,8 +45,8 @@ Nouride ships no CLI. Each installs with npm, as its adapter, which carries the 
 Or ask the orchestrator in chat: it installs either for every agent, on an admin's yes (from 0.8.9, only an admin
 answers it, in a one-to-one chat too: the install runs as the daemon's user). The dashboard asks for you (0.8.19):
 where a CLI is not on the box, **Models → Coding CLIs** and an external agent's **Brain** tab have a button,
-**Ask Nouva to set it up** (your orchestrator's name), which opens the chat with the request written out, for you to
-read and send.
+**Ask Nouva to set it up** (your orchestrator's name), which opens the chat over the page with the request written
+out, for you to read and send.
 
 `nouride agents scan` lists the CLIs the box has, each with the command Nouride starts and its version. That version
 is the adapter's (`claude-agent-acp 0.97.0`), not the CLI's own. Since 0.8.24 each built-in CLI also says where its

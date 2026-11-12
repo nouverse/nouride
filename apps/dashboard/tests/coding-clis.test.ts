@@ -8,6 +8,7 @@
 import { afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { Window } from "happy-dom";
 import type { CliAccountsView } from "@nouride/wire";
+import { floatingChatAsked } from "./floating-chat-harness.ts";
 import { eventually } from "./wait.ts";
 
 const GLOBALS = ["window", "document", "navigator", "localStorage", "HTMLElement", "Element", "Node"] as const;
@@ -69,8 +70,8 @@ async function mount(): Promise<{ host: HTMLElement; unmount: () => void }> {
 }
 
 const button = (host: HTMLElement, text: string) => [...host.querySelectorAll("button")].find((entry) => entry.textContent?.trim() === text) as HTMLButtonElement | undefined;
-/** The links that ask the orchestrator to set a CLI up. */
-const asks = (host: HTMLElement) => [...host.querySelectorAll("a")].filter((link) => link.textContent?.trim() === "Ask Nouva to set it up");
+/** The buttons that ask the orchestrator to set a CLI up. */
+const asks = (host: HTMLElement) => [...host.querySelectorAll("button")].filter((button) => button.textContent?.trim() === "Ask Nouva to set it up");
 
 /** The text outside every "Details" section: what a person reads without opening anything. */
 const plainText = (host: HTMLElement) => {
@@ -123,10 +124,13 @@ describe("Coding CLIs on the Models page", () => {
       // the person sends; the command under Details, for whoever runs the server (0.8.19).
       expect(plainText(host)).toContain("Gemini CLI is not set up on this server yet.");
       await eventually(() => asks(host).length === 1, 2_000, "the button naming the orchestrator");
-      const ask = new URL(asks(host)[0]!.getAttribute("href")!, "http://localhost");
-      expect(ask.pathname).toEndWith("/chat");
-      expect(ask.searchParams.get("agent")).toBe("nouva");
-      expect(ask.searchParams.get("draft")).toBe("Please install Gemini CLI on this server, with what Nouride needs to use it as an agent (its ACP adapter), and tell me when it is ready to sign in.");
+      // Pressed, it opens the chat over the page on the orchestrator, with the request for its box.
+      asks(host)[0]!.click();
+      expect(await floatingChatAsked()).toEqual({
+        open: true,
+        agent: "nouva",
+        draft: "Please install Gemini CLI on this server, with what Nouride needs to use it as an agent (its ACP adapter), and tell me when it is ready to sign in.",
+      });
       const command = [...host.querySelectorAll("details")].find((entry) => entry.textContent?.includes("npm i -g gemini-acp"))!;
       expect(command.querySelector("summary")?.textContent).toBe("Details");
       expect(plainText(host)).not.toContain("npm i -g");

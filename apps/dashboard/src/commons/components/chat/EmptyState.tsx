@@ -20,6 +20,11 @@ export interface EmptyStateProps {
   room: Room | null;
   /** Greeted by name when the daemon knows who is signed in. */
   senderName: string | undefined;
+  /**
+   * In a panel a phone's width at any window's (the floating chat): the openers in one column, each whole, and less air
+   * around a smaller cat, so all of it is seen in the panel's height without scrolling.
+   */
+  narrow?: boolean;
   onPick: (prompt: string) => void;
 }
 
@@ -38,13 +43,13 @@ function openers(agentName: string): string[] {
   ];
 }
 
-export function EmptyState({ agentName, look, room, senderName, onPick }: EmptyStateProps) {
+export function EmptyState({ agentName, look, room, senderName, narrow = false, onPick }: EmptyStateProps) {
   const prompts = openers(agentName || "Agent");
   return (
-      <div className="flex-1 flex flex-col justify-center items-center max-w-2xl mx-auto w-full text-center space-y-5 py-8 my-auto">
+      <div className={`flex-1 flex flex-col justify-center items-center max-w-2xl mx-auto w-full text-center my-auto ${narrow ? "space-y-3.5 py-4" : "space-y-5 py-8"}`}>
         <div className="p-3.5 rounded-2xl bg-base-100 border border-base-content/[0.08] shadow-lg shadow-primary/5">
           {look && !room ? (
-            <CatPortrait look={look} scale={2} label={`${agentName ?? "The agent"}'s cat`} />
+            <CatPortrait look={look} scale={narrow ? 1.5 : 2} label={`${agentName ?? "The agent"}'s cat`} />
           ) : (
             <Mascot pose="head" decorative className="size-12" />
           )}
@@ -87,15 +92,15 @@ export function EmptyState({ agentName, look, room, senderName, onPick }: EmptyS
 
         {/* One column on a phone, each opener whole: in a grid track sized by its content, a cut-off line held the track
             at its full width, past the screen's edge (0.8.12). */}
-        <div className={`grid grid-cols-1 gap-2 sm:grid-cols-2 w-full text-left pt-1 ${room ? "hidden" : ""}`}>
+        <div className={`grid grid-cols-1 gap-2 w-full text-left pt-1 ${narrow ? "" : "sm:grid-cols-2"} ${room ? "hidden" : ""}`}>
           {prompts.map((prompt) => (
             <button
               key={prompt}
               type="button"
               onClick={() => onPick(prompt)}
-              className="p-3 rounded-xl bg-base-100/80 hover:bg-base-100 hover:border-primary/40 border border-base-content/[0.08] text-sm text-base-content/85 font-medium transition-all active:scale-[0.98] shadow-xs flex min-w-0 items-center justify-between text-left group gap-2 sm:text-xs"
+              className={`p-3 rounded-xl bg-base-100/80 hover:bg-base-100 hover:border-primary/40 border border-base-content/[0.08] text-sm text-base-content/85 font-medium transition-all active:scale-[0.98] shadow-xs flex min-w-0 items-center justify-between text-left group gap-2 ${narrow ? "" : "sm:text-xs"}`}
             >
-              <span className="min-w-0 sm:truncate">{prompt}</span>
+              <span className={`min-w-0 ${narrow ? "" : "sm:truncate"}`}>{prompt}</span>
               <Sparkles size={13} className="text-primary/40 group-hover:text-primary transition-colors shrink-0" />
             </button>
           ))}

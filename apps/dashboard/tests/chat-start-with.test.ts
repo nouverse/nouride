@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { parseChatSearch, startWith } from "@/modules/chat/lib/start-with";
+import { parseChatSearch, startWith } from "@/commons/lib/start-with";
 
 const AGENTS = [{ id: "nouva" }, { id: "nix" }];
 

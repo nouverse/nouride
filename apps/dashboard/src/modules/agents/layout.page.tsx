@@ -24,6 +24,7 @@ import {
   Target,
   Terminal,
 } from "lucide-react";
+import { usePageSubject } from "@/commons/hooks/use-page-subject";
 import { api } from "@/commons/lib/api";
 import { agentModel } from "@/commons/lib/agents";
 import { canWrite, isAdmin, useMe } from "@/commons/lib/session";
@@ -73,6 +74,8 @@ export default function AgentLayoutPage({ agentId }: { agentId: string }) {
   const queryClient = useQueryClient();
 
   const agent = (status.data?.agents ?? []).find((entry) => entry.id === agentId);
+  // Which agent these pages are about, for one asked from the chat that floats over them.
+  usePageSubject(agent ? agent.displayName || agent.id : undefined);
   const editable = canWrite(me.data ?? null);
   // Keyed on the agent too: the bar is drawn only once it is known, after the first render.
   const tabBar = useSelectedInView<HTMLDivElement>(`${pathname} ${Boolean(agent)}`);

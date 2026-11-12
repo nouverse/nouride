@@ -8,18 +8,22 @@ The conceptual side of this is in the [manual](/en/docs/manual/schedule/). This 
 ## Listing
 
 ```bash
-nouride cron                     # scheduled and enabled
+nouride cron                     # scheduled and enabled, and the ones started by hand
 nouride cron --all               # including disabled
-nouride cron runs <id>           # this job's history
+nouride cron runs <id>           # this job's history, with how each step of a run went
+nouride cron continue <run id>   # a run whose step waits for a person: go on
+nouride cron stop <run id>       # …or stop it there
 ```
+
+A run that waits is listed by `runs` with its id beside it.
 
 ## Creating
 
 ```bash
 nouride cron add --name <name> \
-  (--at 2h | --every 15m | --cron "0 9 * * *") \
+  (--at 2h | --every 15m | --cron "0 9 * * *" | --manual) \
   --gateway <id> --chat <id> --agent <id> \
-  [--message <prompt> | --text <message> | --command <shell> | --mission <goal>] \
+  [--message <prompt> | --text <message> | --command <shell> | --mission <goal> | --steps <file.json>] \
   [--then agent] [--session fresh|isolated|chat] [--tz <zone>] [--quiet] [--keep]
 ```
 
@@ -28,6 +32,7 @@ nouride cron add --name <name> \
 | `--at 2h` / `--at "2026-11-02 09:00"` | once, after a duration or at a time |
 | `--every 15m` | an interval: `30s`, `15m`, `6h`, `1d` |
 | `--cron "0 9 * * *"` | a crontab expression |
+| `--manual` | no time at all: it runs when somebody starts it, with `nouride cron run <id>` or Run now on its page |
 | `--tz <zone>` | which clock a `--cron` expression or an `--at` time is read in. Defaults to `[daemon] timezone` |
 | `--gateway <id> --chat <id>` | where the result goes |
 | `--agent <id>` | which agent runs it |
@@ -36,6 +41,7 @@ nouride cron add --name <name> \
 | `--command <shell>` | run a shell line, no model call |
 | `--then agent` | …and wake the agent with what it printed. A run that prints nothing wakes nobody and sends nothing |
 | `--mission <goal>` | run each time as a mission; `--check <command>` for one check, `--no-review` for no reviewer |
+| `--steps <file.json>` | several of these in a fixed order, read from a file: [the list, as JSON](/en/docs/manual/schedule/#from-the-cli) |
 | `--session` | `fresh` (default, no history), `isolated` (its own thread), `chat` (the target chat's) |
 | `--quiet` | record the run, deliver nothing, not even a failure alert |
 | `--keep` | keep a one-shot after it fires: switched off, and listed as `fired` |
@@ -70,7 +76,7 @@ nouride cron add --name inbox --cron "0 8 * * *" \
 ## Changing and running
 
 ```bash
-nouride cron update <id> [--name …] [--at|--every|--cron …] [--tz <zone>] [--text|--message …] [--agent <id>]
+nouride cron update <id> [--name …] [--at|--every|--cron …] [--tz <zone>] [--text|--message|--steps …] [--agent <id>]
 nouride cron run <id>            # fire it now, and print the outcome
 nouride cron enable <id>         # also clears a job disabled by its failure streak
 nouride cron disable <id>

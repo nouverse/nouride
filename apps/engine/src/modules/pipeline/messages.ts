@@ -13,9 +13,12 @@ import {
   type Attachment,
   type AudioRefPart,
   clip,
+  clipTrimmed,
   type ImageRefPart,
   type MessageContent,
   type MessageEnvelope,
+  oneLine,
+  type OpenPage,
   plural,
   type TakenSecret,
 } from "@nouride/shared";
@@ -199,10 +202,12 @@ export function mergeEnvelopes(base: MessageEnvelope, next: MessageEnvelope): Me
   const attachments = [...withOrigin(base), ...withOrigin(next)];
   const mentions = Array.from(new Set([...(base.mentions ?? []), ...(next.mentions ?? [])]));
 
-  // An edit is of one message: the several a burst became are not an edit of it.
-  const { edit: _edit, ...rest } = base;
+  // An edit is of one message: the several a burst became are not an edit of it. And the page is where the person is
+  // now, which is the newest message's: an earlier one's would name a page they have left.
+  const { edit: _edit, page: _page, ...rest } = base;
   return {
     ...rest,
+    ...(next.page ? { page: next.page } : {}),
     id: next.id,
     mergedIds: [...(base.mergedIds ?? []), base.id],
     timestamp: next.timestamp,
@@ -229,6 +234,33 @@ function withOrigin(envelope: MessageEnvelope): Attachment[] {
 export function outsideOf(envelope: Pick<MessageEnvelope, "forwarded" | "outsideContent">): { outsideContent?: string[] } {
   const named = [...new Set([...(envelope.forwarded ? ["a forwarded message"] : []), ...(envelope.outsideContent ?? [])])];
   return named.length > 0 ? { outsideContent: named } : {};
+}
+
+/** Without what makes text a mention: `@name`, and the platforms' `<@123>` markup. */
+export function inert(text: string): string {
+  return text.replace(/<[@#!][^>\s]*>/g, "").replace(/@(?=[\p{L}\p{N}_])/gu, "");
+}
+
+/** At most this much of each part of a page is said: its address, what the dashboard calls it, what it is about. */
+const PAGE_NOTE_MAX = { path: 200, title: 80, subject: 120 } as const;
+
+/**
+ * Where a message was written from (`MessageEnvelope.page`): the dashboard page its sender had open, so "this one" has
+ * something to point at. One line, and each part of it is the browser's claim, held to a line of its own length with
+ * nothing in it that tags an agent or closes the quote it is said in: a page's subject is whatever somebody named a
+ * mission or a job.
+ *
+ * On the message and never in the prompt, as `loadNote` is: the page changes with every click, and in the cached part
+ * it would write the whole prefix again on every message. Nothing is said for a message that names no page.
+ */
+export function pageNote(page: OpenPage | undefined): string | null {
+  if (!page) return null;
+  const part = (text: string, max: number) => clipTrimmed(oneLine(inert(text)), max).replace(/"/g, "'");
+  const path = part(page.path, PAGE_NOTE_MAX.path);
+  if (!path) return null;
+  const subject = page.subject ? part(page.subject, PAGE_NOTE_MAX.subject) : "";
+  const named = [part(page.title, PAGE_NOTE_MAX.title), subject ? `"${subject}"` : ""].filter(Boolean);
+  return `(Written from the dashboard, with this page open: ${[...named, `at ${path}`].join(", ")}.)`;
 }
 
 /**

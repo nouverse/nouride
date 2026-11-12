@@ -41,7 +41,7 @@ export function morningRoute(person: Person, lastFrom: readonly { gatewayId: str
 
 /** What the daemon keeps that a morning line reads. */
 export interface MorningSources {
-  cron: Pick<CronPort, "recentRuns" | "get">;
+  cron: Pick<CronPort, "recentRuns" | "get" | "waitingRuns">;
   missions: Pick<MissionsPort, "open" | "endedBetween"> | undefined;
   approvals: () => Pick<ApprovalGate, "pending">;
   usage: Pick<UsagePort, "since" | "spenders">;
@@ -74,9 +74,19 @@ export function morningFacts(params: MorningSources): (person: Person, from: num
       .filter((request) => admin || mine.chat(request.chatId) || (String(request.gateway) === MISSION_GATEWAY_ID && mine.sender(missionOf(request.chatId)?.startedBy ?? "")))
       .map((request) => ({ agent: request.agentId, what: request.tool }));
     const missionIsMine = (mission: { startedBy: string; chatId: string }) => admin || mine.sender(mission.startedBy) || mine.chat(mission.chatId);
-    const needsYou = (params.missions?.open() ?? [])
-      .filter((mission) => mission.status === "waiting" && missionIsMine(mission))
-      .map((mission) => ({ goal: mission.goal, what: mission.reason ?? mission.waitKind ?? "waiting" }));
+    // A step of a job that waits for a person's yes is theirs as its failed run would be: by its chat, or who turned it on.
+    const steps = params.cron.waitingRuns().flatMap(({ run, state }) => {
+      const job = state.wait.kind === "approval" ? params.cron.get(run.jobId) : null;
+      if (!job || state.wait.kind !== "approval") return [];
+      const theirOwn = admin || mine.chat(job.target.chatId) || (job.turnedOnBy !== undefined && mine.sender(job.turnedOnBy));
+      return theirOwn ? [{ goal: job.name, what: state.wait.ask }] : [];
+    });
+    const needsYou = [
+      ...(params.missions?.open() ?? [])
+        .filter((mission) => mission.status === "waiting" && missionIsMine(mission))
+        .map((mission) => ({ goal: mission.goal, what: mission.reason ?? mission.waitKind ?? "waiting" })),
+      ...steps,
+    ];
     const ended = (params.missions?.endedBetween(from, now) ?? [])
       .filter(missionIsMine)
       .map((mission) => ({ goal: mission.goal, status: mission.status as "done" | "failed" | "stopped", ...(mission.status !== "done" && mission.reason ? { why: mission.reason } : {}) }));

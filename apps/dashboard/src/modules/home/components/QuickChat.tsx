@@ -1,7 +1,7 @@
 /**
  * Quick chat on Home (0.8.24): one line to an agent without opening Chats first. Sent as the chat page sends it, and the
- * conversation it started opens, where the answer arrives. From a laptop's width up: on a phone "+ Chat" floats where
- * this card's field would be, and a floating button never covers a composer.
+ * conversation it started opens, where the answer arrives. From a laptop's width up: on a phone the floating chat's
+ * button stands where this card's field would be, and a floating button never covers a composer.
  */
 
 import { useNavigate } from "@tanstack/react-router";

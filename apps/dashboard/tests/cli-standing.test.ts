@@ -9,6 +9,7 @@ import { afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { Window } from "happy-dom";
 import type { AgentCli, CliAccountsView, CliVersionView } from "@nouride/wire";
 import { standingWords } from "@/commons/lib/cli-standing";
+import { floatingChatAsked } from "./floating-chat-harness.ts";
 import { eventually } from "./wait.ts";
 
 const GLOBALS = ["window", "document", "navigator", "localStorage", "HTMLElement", "Element", "Node"] as const;
@@ -105,12 +106,13 @@ describe("the Models page", () => {
 
   test("an update on offer is a button that asks the orchestrator to run the update, in a message the person sends", async () => {
     const { host } = await mount([card("claude-code", "0.97.0", { standing: "update", offer: "0.100.0" }), card("codex", "2.5.0", { standing: "current" })]);
-    const asking = () => [...host.querySelectorAll("a")].filter((link) => link.textContent?.trim() === "Ask Nouva to update it");
+    const asking = () => [...host.querySelectorAll("button")].filter((button) => button.textContent?.trim() === "Ask Nouva to update it");
     await eventually(() => asking().length > 0, 3_000, "the update's button");
     const asks = asking();
     expect(asks).toHaveLength(1);
-    const draft = new URL(asks[0]!.getAttribute("href")!, "http://localhost").searchParams.get("draft");
-    expect(draft).toBe("Please update Claude Code on this server with `nouride agents update claude-code`, and tell me how it went.");
+    // Pressed, it opens the chat over the page on the orchestrator, with the request for its box.
+    asks[0]!.click();
+    expect(await floatingChatAsked()).toEqual({ open: true, agent: "nouva", draft: "Please update Claude Code on this server with `nouride agents update claude-code`, and tell me how it went." });
   });
 
   test("Check again asks the server afresh, which reads the newest out again", async () => {
@@ -153,9 +155,10 @@ describe("the Brain tab of an agent that works in it", () => {
   test("after a failed check its plain words say so, and the version before is a button that puts it back", async () => {
     const failed = { ...CLI, unavailable: "Codex 2.6.0 did not pass Nouride's check: it no longer offers steering. Go back to 2.5.0 (`nouride agents update codex 2.5.0`), or update Nouride", plain: "Its coding CLI was updated to a version that does not work with this Nouride. The version before can be put back.", wayBack: "2.5.0" };
     const host = await brainTab(failed, { id: "codex", name: "Codex", command: "codex-acp", installed: true, version: "2.6.0", install: "npm i -g", login: true, standing: { standing: "newer" } });
-    await eventually(() => [...host.querySelectorAll("a")].some((link) => link.textContent?.trim() === "Ask Nouva to put it back"), 3_000, "the way back");
-    const back = [...host.querySelectorAll("a")].find((link) => link.textContent?.trim() === "Ask Nouva to put it back")!;
-    expect(new URL(back.getAttribute("href")!, "http://localhost").searchParams.get("draft")).toBe("Please put Codex on this server back to 2.5.0 with `nouride agents update codex 2.5.0`, and tell me how it went.");
+    const backs = () => [...host.querySelectorAll("button")].filter((button) => button.textContent?.trim() === "Ask Nouva to put it back");
+    await eventually(() => backs().length > 0, 3_000, "the way back");
+    backs()[0]!.click();
+    expect((await floatingChatAsked()).draft).toBe("Please put Codex on this server back to 2.5.0 with `nouride agents update codex 2.5.0`, and tell me how it went.");
     expect(plainText(host)).toContain("Its coding CLI was updated to a version that does not work with this Nouride.");
   });
 

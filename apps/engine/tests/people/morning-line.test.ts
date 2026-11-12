@@ -155,6 +155,14 @@ describe("whose news it is", () => {
     job("Mira's report", "555");
     job("Turned on by Mira", "-100team", "555");
     job("Someone else's", "777");
+    // A run of several steps that waits for a person's yes, in Mira's chat and in somebody else's.
+    const asks = (name: string, chatId: string, question: string) => {
+      const created = cron.create({ agentId: "nouva", name, trigger: { kind: "manual" }, payload: { kind: "steps", steps: [{ id: "ok", kind: "approval", ask: question }] }, target: { gatewayId: "telegram:nouva", chatId }, createdBy: "cli" });
+      const run = cron.startRun(created.id);
+      cron.parkRun(run.id, { at: "ok", wait: { kind: "approval", step: "ok", since: 1, until: 2, ask: question }, settles: true }, []);
+    };
+    asks("Mira's deploy", "555", "Deploy now?");
+    asks("Someone else's deploy", "777", "Ship it?");
     const mission = (goal: string, startedBy: string, status: "waiting" | "done", reason: string | null = null) => {
       const one = newMission({ agentId: "nouva", goal, startedBy, gatewayId: "telegram:nouva", chatId: startedBy }, { id: MissionStore.newId(), settings: DEFAULT_CONFIG.missions as never, privateDir: "/p", now: Date.now() });
       missions.save({ ...one, status, reason, waitKind: status === "waiting" ? "input" : null, endedAt: status === "done" ? Date.now() - 1000 : null });
@@ -178,7 +186,7 @@ describe("whose news it is", () => {
     const facts = (await sources())(MIRA, 0, false);
     expect(facts.failed.map((one) => one.job).sort()).toEqual(["Mira's report", "Turned on by Mira"]);
     expect(facts.approvals).toEqual([{ agent: "nox", what: "exec" }]);
-    expect(facts.needsYou).toEqual([{ goal: "Mira's question", what: "Which disk?" }]);
+    expect(facts.needsYou).toEqual([{ goal: "Mira's question", what: "Which disk?" }, { goal: "Mira's deploy", what: "Deploy now?" }]);
     expect(facts.ended.map((one) => one.goal)).toEqual(["Mira's done work"]);
     expect(facts.spent).toBeUndefined();
   });
@@ -187,13 +195,14 @@ describe("whose news it is", () => {
     const facts = (await sources())(MIRA, 0, true);
     expect(facts.failed).toHaveLength(3);
     expect(facts.approvals).toHaveLength(2);
+    expect(facts.needsYou.map((one) => one.goal).sort()).toEqual(["Mira's deploy", "Mira's question", "Someone else's deploy"]);
     expect(facts.ended).toHaveLength(2);
     expect(facts.spent).toEqual({ usd: 2.5, tokens: 150, top: [{ agent: "nouva", model: "big-1", usd: 2.5, tokens: 150 }] });
   });
 
   test("a day said in tokens names its biggest spenders by tokens — the store orders by dollars", () => {
     const facts = morningFacts({
-      cron: { recentRuns: () => [], get: () => null },
+      cron: { recentRuns: () => [], get: () => null, waitingRuns: () => [] },
       missions: undefined,
       approvals: () => ({ pending: () => [] }),
       usage: {

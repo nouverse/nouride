@@ -22,6 +22,7 @@ import { ApprovalCard } from "@/commons/components/approvals/ApprovalCard";
 import { Card, EmptyState, ErrorNote } from "@/commons/components/ui/ui";
 import { useAnswerApproval } from "@/commons/hooks/use-answer-approval";
 import { useConversation } from "@/commons/hooks/use-conversation";
+import { usePageSubject } from "@/commons/hooks/use-page-subject";
 import { ago } from "@/commons/lib/format";
 import { canWrite, useMe } from "@/commons/lib/session";
 import { Checklist } from "./components/Checklist";
@@ -95,6 +96,8 @@ export default function MissionPage({ missionId }: { missionId: string }) {
     retry: (count, error) => !(error instanceof ApiError && error.status === 404) && count < 2,
   });
   const detail = found.data;
+  // What this page is about, for an agent asked from the chat that floats over it.
+  usePageSubject(detail ? missionTitle(detail.mission.goal) : undefined);
   const conversation = useConversation({
     ...(detail ? { sessionId: detail.sessionId } : {}),
     agentId: detail?.mission.agentId ?? "",

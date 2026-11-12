@@ -1,27 +1,87 @@
 ---
-title: Scheduled work
-description: Cron jobs, reminders, one-shots and webhooks, things that happen without anyone typing.
+title: Automations
+description: Work that runs without anyone typing, on a schedule, when a webhook is called or when you start it, as one thing or as steps in a fixed order.
 ---
 
-The scheduler wakes an agent when nobody is talking to it. Four trigger shapes, one job table.
+An automation is work that runs when nobody is talking to an agent. It has a **start**, which says when it runs,
+and its **steps**, which say what it does.
 
-| | |
+| It starts | |
 |---|---|
-| **Cron** | a crontab expression, `0 9 * * *` |
-| **Every** | an interval, `15m`, `2h` |
-| **At** | once, at a time, `2h` from now, or a timestamp |
-| **Webhook** | when a URL is called, rather than on a clock |
+| **On a schedule** | a crontab expression (`0 9 * * *`), an interval (`15m`, `2h`), or once, at a time |
+| **When called** | a webhook: when its URL is called, rather than on a clock |
+| **By hand** | when you press **Run now** |
 
 ![The Schedule page](/media/dashboard-schedule.png)
 
-The dashboard's **Schedule** page covers the first three and **Webhooks** the fourth. They are the
-same jobs seen from the two sides that matter: what fires on a clock, and what fires when something
-calls it. Schedule lists every job, filtered by active, paused or failing, and is where you create,
-edit, run, pause and delete them. Or just ask an agent: "remind me to check the deploy in two hours".
-It [proposes](#asked-of-an-agent) the job, and you turn it on.
+The dashboard's **Automations** page (Work → Automations) lists them all, whatever starts them, with one
+dropdown to see only the scheduled ones, the webhooks or the ones started by hand. It is where you make, change, run,
+pause and delete them. Or just ask an agent: "remind me to check the deploy in two hours". It
+[proposes](#asked-of-an-agent) the automation, and you turn it on.
 
-Schedule stays daemon-wide rather than per agent, even though every job has an owner, because you
-usually want to see everything scheduled at once.
+The list is for the whole install rather than per agent, even though every automation has an owner, because you
+usually want to see everything that runs on its own at once.
+
+## Steps
+
+An automation does one thing, or several in a fixed order. Each one is a step:
+
+| A step | What it does | Does it call a model |
+|---|---|---|
+| **Send a message** | sends text as written to the automation's chat | no |
+| **Ask an agent** | one turn of the automation's agent, or of another agent you pick | yes, one turn |
+| **Run a command** | runs a shell line in the agent's workspace | no |
+| **Start a mission** | long work that is checked; the run waits for it | yes, as a [mission](/en/docs/manual/missions/) does |
+| **Wait for your OK** | asks a person, and goes on when they say so | no |
+
+Nouride runs the steps in that order, every time. Each step is handed what the one before it said, and an agent does
+only the step it is given: it does not skip ahead, reorder the list or decide what comes next. That is the
+difference from a [mission](/en/docs/manual/missions/), where the agent plans the work itself. The words of the last
+step are what the automation sends to its chat.
+
+On the automation's page the steps are cards in the order they run. Press a card to change it, press the plus
+between two cards to add a step, and drag a card to move it. Nothing changes until you press **Save**.
+
+### Where a run goes next
+
+Each step can say where the run goes when it is done, when it failed, and when it had nothing to say: on to the next
+step, to the end, or to a later step. A run only ever goes forward, so it always ends.
+
+Left as they are, a step that is done goes on to the next one, a step that failed ends the run as failed and says so
+in the chat, and a step with nothing to say (a command that printed nothing, an agent with nothing to report) ends the
+run quietly. So a check that finds nothing wakes nobody.
+
+A shop check, for example:
+
+1. **Run a command**: `curl -sf https://shop.example.com/health`. Once done: end here. If it fails: go on.
+2. **Ask an agent**: "The shop is down: find out why."
+3. **Wait for your OK**: "Restart the shop?"
+4. **Start a mission**: "Restart the shop and confirm it answers."
+
+While the shop answers, the run ends at step 1 and no model is called. When it does not, the agent looks into it,
+you are asked, and only with your yes is anything restarted.
+
+### A mission in the middle
+
+A mission can be any step. The run waits for it to end, however long that takes and across a restart of Nouride, and
+hands its result to the next step. A mission that failed or was stopped is a failed step, so the automation can
+go on to a step that tells you about it.
+
+### A step that waits for you
+
+The automation's chat gets a card with the question, what the step before said, and two buttons, **Continue** and
+**Stop**. The same question is on the dashboard, under **Waiting for you** and on the automation's own page. Continue
+hands what the step before said to the next step. Stop, or no answer in the time the step allows (a day unless you
+set another, from five minutes to seven days), ends the run there: nothing after it runs, and it is not reported as
+a failure. In a one-to-one chat the person in it answers; in a group, whoever turned the automation on, or an admin.
+No model is called while it waits, and the wait survives a restart.
+
+Where a chat has no buttons, as on WhatsApp, the card says to answer on the dashboard.
+
+### One run at a time
+
+While a run waits, for a mission or for you, the automation starts no other run: its next time is counted from when
+that run ends, and **Run now** says what it is waiting for.
 
 ## From the CLI
 
@@ -29,7 +89,9 @@ usually want to see everything scheduled at once.
 nouride cron                     # what is scheduled and enabled
 nouride cron --all               # including disabled ones
 nouride cron run <id>            # fire it now
-nouride cron runs <id>           # its history
+nouride cron runs <id>           # its history, with how each step went
+nouride cron continue <run id>   # say yes to a run whose step waits for a person
+nouride cron stop <run id>       # or stop it there
 nouride cron enable|disable <id>
 nouride cron rm <id>
 ```
@@ -47,7 +109,7 @@ nouride cron add --name "morning-brief" \
 | Flag | |
 |---|---|
 | `--name` | what it is called |
-| `--cron "0 9 * * *"` / `--every 15m` / `--at 2h` | pick exactly one |
+| `--cron "0 9 * * *"` / `--every 15m` / `--at 2h` / `--manual` | pick exactly one. `--manual` has no time: it runs when somebody starts it |
 | `--tz <zone>` | which clock the schedule is read against |
 | `--agent <id>` | which agent owns it. From an agent's own call, that agent |
 | `--gateway <id> --chat <id>` | where the result goes. Needed from a terminal; from an agent's own call, its conversation |
@@ -56,12 +118,34 @@ nouride cron add --name "morning-brief" \
 | `--command <shell>` | run a command. No model call |
 | `--then agent` | …and wake the agent with what it printed, when it printed something |
 | `--mission <goal>` | run each time as a mission. With `--check <command>` for one check, `--no-review` for no reviewer; more checks from the dashboard |
+| `--steps <file.json>` | several of these in a fixed order: the list, as JSON (below) |
 | `--session <fresh\|isolated\|chat>` | what history the turn sees |
 | `--quiet` | deliver nothing, failures included; the result stays in `nouride cron runs` |
 | `--keep` | keep a one-shot after it fires: switched off, and listed as `fired` |
 
-`nouride cron update <id>` takes `--name`, the schedule flags, `--tz`, `--text`, `--message` and
+`nouride cron update <id>` takes `--name`, the schedule flags, `--tz`, `--text`, `--message`, `--steps` and
 `--agent`.
+
+A list of steps is written in a file, since it does not fit a command line. Each step has a `kind` and what that kind
+needs, and may say where the run goes from it (`then`, `whenFailed`, `whenEmpty`: `"next"`, `"end"`, or the number of a
+later step). The shop check above:
+
+```json
+[
+  { "name": "Check the shop", "kind": "command", "argv": ["sh", "-lc", "curl -sf https://shop.example.com/health"], "then": "end", "whenFailed": "next" },
+  { "kind": "agentTurn", "message": "The shop is down: find out why." },
+  { "kind": "approval", "ask": "Restart the shop?" },
+  { "kind": "mission", "goal": "Restart the shop and confirm it answers." }
+]
+```
+
+```bash
+nouride cron add --name "shop-check" --every 10m --steps shop-check.json \
+  --agent nouva --gateway telegram:nouva --chat 123456789
+```
+
+The other kinds are `systemEvent` (a message, with `text`). `agentTurn` and `mission` take an `agentId` for another
+agent, and `approval` a `timeoutMs`. Nouride reads the file and refuses a step it cannot run, naming it.
 
 ### Four kinds of job, and the cost of each
 
@@ -97,8 +181,8 @@ when a run is done, needs someone or ends, not that it started on schedule.
 ## Asked of an agent
 
 Ask in a chat ("every Monday at 9, sum up the customer mail for the team") and the agent
-**proposes** the job with its `schedule` tool. It writes the whole job, keeps it switched off, and
-posts a card in the chat:
+**proposes** the automation with its `schedule` tool: one thing, or a list of steps with where each sends the run. It
+writes the whole of it, keeps it switched off, and posts a card in the chat, each step on a line of its own:
 
 ```
 📋 nouva proposes a scheduled job: Customer mail
@@ -111,13 +195,13 @@ It stays off until somebody turns it on.          [Turn on] [Discard]
 Nothing runs until someone answers. **Turn on** starts the schedule, and its missions run as the
 person who pressed it. **Discard** throws the proposal away. In a one-to-one chat the person in it
 answers; in a group, the person who asked or an admin. Where a chat has no buttons, as on WhatsApp,
-the card names the commands: `/schedule on <id>` and `/schedule discard <id>`. The Schedule and
-Webhooks pages list proposals with the same two buttons, and a card answered there says so in the
-chat.
+the card names the commands: `/schedule on <id>` and `/schedule discard <id>`. The Automations page
+lists proposals with the same two buttons, and a card answered there says so in the chat.
 
 The agent never turns a job on itself, widens one or edits one that runs. A change is a new proposal
 that names the job it replaces; turned on, that job takes the new shape and keeps its id, its runs
-and its webhook URL. An agent that runs `nouride cron add`, `update` or `enable`, or `webhook add` or
+and its webhook URL. On the automation's page the change waits as **Suggested**, with what it adds, changes and
+removes, and **Accept** and **Discard**. An agent that runs `nouride cron add`, `update` or `enable`, or `webhook add` or
 `rotate`, is refused and pointed back at `schedule`. At most ten proposals of one agent wait at once, counted by the
 agent that proposed them.
 
@@ -152,8 +236,8 @@ is not counted as a delivery.
 ### Reaching a webhook from the internet
 
 GitHub, Stripe and the like call a webhook from the internet. Most boxes sit behind a home router, where
-that call never arrives unless something lets it in. Each card on the Webhooks page says which case
-the hook is in:
+that call never arrives unless something lets it in. A webhook's own page says which case it is
+in:
 
 | | |
 |---|---|

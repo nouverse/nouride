@@ -4,9 +4,10 @@
  * The Office's Open chat opened `/chat` whichever cat was picked, and the chat started with the orchestrator: a person
  * who picked Nix found Nouva, and what they sent went to her (2026-11-02). The link now names the agent in `?agent=`.
  *
- * `?draft=` is a message put in the box for the person to read and send (`AskAgentButton`, 0.8.19). It is never sent
- * from the address: `?initialMessage=` once was, and every reload sent it again. The page takes it once and drops it
- * from the address, so a reload does not put it back over what the person changed.
+ * `?draft=` is a message put in the box for the person to read and send (0.8.19): a link's, kept in a bookmark or
+ * written in a document, since the pages' own Ask buttons open the floating chat on the page they are on. It is never
+ * sent from the address: `?initialMessage=` once was, and every reload sent it again. The page takes it once and drops
+ * it from the address, so a reload does not put it back over what the person changed.
  */
 
 /** What `/chat/` takes from its URL: the agent to start with, and a draft for the box, never a message to send. */

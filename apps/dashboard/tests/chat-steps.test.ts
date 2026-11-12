@@ -9,7 +9,7 @@ import { createElement } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { formatDuration, formatElapsed, saidWhileWorking, turnTokens, workSteps } from "@/commons/lib/steps";
 import { StepFeed, StepPill } from "@/commons/components/turns/Steps";
-import { LiveTurnView, TurnView } from "@/modules/chat/components/Turn";
+import { LiveTurnView, TurnView } from "@/commons/components/chat/Turn";
 import type { ChatTurn, LiveTurn, TurnStep } from "@nouride/wire";
 
 describe("the clock", () => {

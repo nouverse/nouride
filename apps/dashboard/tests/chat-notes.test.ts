@@ -12,7 +12,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { Window } from "happy-dom";
 import type { ChatTurn, LiveTurn, WorkNotes } from "@nouride/wire";
-import { stepsDone, withPlans } from "@/modules/chat/lib/notes";
+import { stepsDone, withPlans } from "@/commons/lib/notes";
 import { eventually } from "./wait.ts";
 
 const WIRE = JSON.parse(readFileSync(join(import.meta.dir, "fixtures", "wire.json"), "utf8")) as Record<string, unknown>;

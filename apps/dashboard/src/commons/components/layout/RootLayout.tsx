@@ -23,6 +23,7 @@ import { DRAWER_MOTION, DRAWER_SHADE, SHADE_PLACE, SHEET_BOX, SHEET_PLACE } from
 import { Sidebar } from "@/commons/components/layout/Sidebar";
 import { PHONE_CHAT_SPACE, TAB_BAR_SPACE, TabBar } from "@/commons/components/layout/TabBar";
 import { CompactSidebar } from "@/commons/components/layout/CompactSidebar";
+import { FloatingChat } from "@/commons/components/floating-chat/FloatingChat";
 import { isBoolean, useKept } from "@/commons/hooks/use-kept";
 import { chatOpen, onChats } from "@/commons/lib/chat-place";
 import { SectionTabs } from "@/commons/components/layout/SectionTabs";
@@ -245,6 +246,8 @@ export function RootLayout() {
       </div>
 
       <TabBar pathname={pathname} more={moreOpen} onMore={() => setMoreOpen((open) => !open)} onTab={() => setMoreOpen(false)} phoneChat={phoneChat} />
+      {/* A chat over every page but the one that is the chat: there the conversation is the page, and its box is at the foot. */}
+      {!chats && <FloatingChat pathname={pathname} />}
     </div>
   );
 }

@@ -24,7 +24,6 @@ import { OfficeTeaser } from "./components/OfficeTeaser";
 import { BoxLine, BoxWarnings } from "./components/BoxStatus";
 import { UsageCard } from "./components/UsageCard";
 import { SetupNotes } from "./components/SetupNotes";
-import { CHAT_BUTTON_ROOM, NewChatButton } from "./components/NewChatButton";
 import { QUIET, movingPoses, pickMoment } from "./moments";
 
 /** "2 agents awake · 1 mission moving · 1 thing needs you": what is going on, in one line. */
@@ -73,9 +72,7 @@ export default function HomePage() {
   const pendingApprovals = approvals.data?.pending ?? [];
 
   return (
-    // Room under the last card for "+ Chat", which floats over the page's foot on a phone (`NewChatButton`): it lay on
-    // the last card's corner once the page was scrolled to its end.
-    <div className={`space-y-6 ${CHAT_BUTTON_ROOM}`}>
+    <div className="space-y-6">
       <Hero name={name} line={summaryLine(awake, movingNow.length, needs.total)} aside={<BoxLine health={health.data} />} />
       <BoxWarnings health={health.data} />
 
@@ -100,8 +97,6 @@ export default function HomePage() {
 
       <UsageCard />
       <SetupNotes />
-
-      <NewChatButton />
     </div>
   );
 }

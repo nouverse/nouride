@@ -10,7 +10,7 @@ import { join } from "node:path";
 const source = (file: string) => readFileSync(join(import.meta.dir, "../src", file), "utf8");
 
 test("a person's own message breaks a long word or URL instead of running out of its bubble", () => {
-  const bubble = source("modules/chat/components/Turn.tsx").split("\n").find((line) => line.includes("rounded-tr-xs bg-secondary/20"));
+  const bubble = source("commons/components/chat/Turn.tsx").split("\n").find((line) => line.includes("rounded-tr-xs bg-secondary/20"));
   expect(bubble).toContain("[overflow-wrap:anywhere]");
 });
 

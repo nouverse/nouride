@@ -9,8 +9,8 @@ import { describe, expect, test } from "bun:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { ChatEvent } from "@nouride/wire";
-import { EventPill } from "@/modules/chat/components/EventPill";
-import { eventWords } from "@/modules/chat/lib/event-words";
+import { EventPill } from "@/commons/components/chat/EventPill";
+import { eventWords } from "@/commons/lib/event-words";
 
 const render = (text: string) => renderToStaticMarkup(createElement(EventPill, { event: { id: "e1", kind: "note", text, at: 0 } as never }));
 

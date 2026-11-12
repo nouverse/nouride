@@ -9,7 +9,7 @@
 
 import { cn } from "@/commons/lib/utils";
 import { ChatList } from "./components/ChatList";
-import { Conversation } from "./components/Conversation";
+import { OpenConversation } from "./components/OpenConversation";
 import { GroupConversation } from "./components/GroupConversation";
 import { useChatList } from "./hooks/use-chat-list";
 import { groupKey } from "./lib/chat-list";
@@ -47,7 +47,7 @@ export default function ChatPage({
         {group ? (
           <GroupConversation key={groupKey(group)} platform={group.platform} chatId={group.chatId} data={data} />
         ) : (
-          <Conversation
+          <OpenConversation
             {...(sessionId ? { sessionId } : {})}
             {...(roomChatId ? { roomChatId } : {})}
             {...(agent ? { agent } : {})}

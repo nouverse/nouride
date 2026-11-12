@@ -13,7 +13,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 const SRC = join(dirname(import.meta.path), "..", "src");
-const composer = readFileSync(join(SRC, "modules/chat/components/Composer.tsx"), "utf8");
+const composer = readFileSync(join(SRC, "commons/components/chat/Composer.tsx"), "utf8");
 const attach = readFileSync(join(SRC, "commons/components/ui/FileDrop.tsx"), "utf8");
 
 test("one line of text and the buttons beside it share a centre", () => {

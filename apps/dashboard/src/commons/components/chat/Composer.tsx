@@ -21,7 +21,7 @@ import { AttachButton, AttachmentTray, type AttachedFile } from "@/commons/compo
 import { ErrorNote } from "@/commons/components/ui/ui";
 import { MentionMenu, type MentionCandidate } from "./MentionMenu.tsx";
 import { SlashMenu } from "./SlashMenu.tsx";
-import { completionKey } from "../lib/completion.ts";
+import { completionKey } from "@/commons/lib/completion";
 
 /** One completion menu, from the composer's point of view. */
 export interface MenuState<T> {

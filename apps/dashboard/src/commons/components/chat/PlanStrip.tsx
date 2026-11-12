@@ -13,7 +13,7 @@ import { Link } from "@tanstack/react-router";
 import { ChevronDown, ChevronUp, ListChecks, Target } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import type { MissionView, NotesPlan } from "@nouride/wire";
-import { stepsDone } from "../lib/notes";
+import { stepsDone } from "@/commons/lib/notes";
 import { PlanSteps } from "./PlanSteps";
 
 /** How a mission's line reads its state: what it is doing, or that it needs the person. */

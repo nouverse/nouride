@@ -33,7 +33,7 @@ gak pernah membaca control token itu sendiri.
 | Menentukan apa yang boleh dipelajari | dashboard → Skills | [Skill & pembelajaran](/id/docs/manual/skills/) |
 | Melihat apa yang diingatnya | dashboard → Memory | [Memori](/id/docs/architecture/memory/) |
 | Mengizinkan atau menolak orang | dashboard → Settings → Access | [Siapa yang boleh bicara](/id/docs/manual/access/) |
-| Menjadwalkan sesuatu jam 9 pagi | dashboard → Work → Schedule, `nouride cron`, atau minta saja | [Tugas terjadwal](/id/docs/manual/schedule/) |
+| Menjadwalkan sesuatu jam 9 pagi, atau saat webhook dipanggil | dashboard → Work → Automations, `nouride cron`, atau minta saja | [Automations](/id/docs/manual/schedule/) |
 | Melihat semua agent lagi ngapain dalam sekali lihat | dashboard → Agents → Office | [Office](/id/docs/manual/office/) |
 | Bikin agent yang dijawab Claude Code atau Codex | dashboard → Agents → New Agent, atau minta orchestrator | [Agent eksternal](/id/docs/manual/external-agents/) |
 | Memeriksa keadaannya | `nouride status`, `nouride doctor` | [doctor](/id/docs/cli/doctor/) |

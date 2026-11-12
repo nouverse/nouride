@@ -23,7 +23,7 @@ import { useEventStream } from "@/commons/hooks/use-event-stream";
 import { usePageVisible } from "@/commons/hooks/use-page-visible";
 import { notesKey } from "@/commons/hooks/use-notes";
 import { api, ApiError } from "@/commons/lib/api";
-import type { ChatEvent, ChatSession, ChatTurn, LiveTurn, RoomMessage, RunningJob } from "@nouride/wire";
+import type { ChatEvent, ChatSession, ChatTurn, LiveTurn, OpenPage, RoomMessage, RunningJob } from "@nouride/wire";
 
 /**
  * How often to ask while something is happening.
@@ -114,7 +114,8 @@ export interface Conversation {
   streaming: boolean;
   /** A send that was refused, or a turn that never started. */
   error: Error | null;
-  send: (text: string, attachments?: { path: string; mimeType: string; filename: string }[]) => void;
+  /** `page`: the dashboard page it is written from, which the agent is then told (the floating chat's alone). */
+  send: (text: string, attachments?: { path: string; mimeType: string; filename: string }[], page?: OpenPage) => void;
   /** Everything in the chat, or one agent when a card names it. */
   stop: (agent?: string) => void;
   clearError: () => void;
@@ -131,8 +132,8 @@ export function useConversation(input: {
    */
   roomChatId?: string;
   agentId: string;
-  /** Called with the daemon's session id once a new conversation has one. */
-  onSession: (sessionId: string) => void;
+  /** Called with the daemon's session id once a new conversation has one, and the agent the daemon says it is with. */
+  onSession: (sessionId: string, agentId: string) => void;
 }): Conversation {
   const { sessionId, roomChatId, agentId, onSession } = input;
   const queryClient = useQueryClient();
@@ -480,6 +481,7 @@ export function useConversation(input: {
     mutationFn: (input: {
       text: string;
       attachments?: { path: string; mimeType: string; filename: string }[];
+      page?: OpenPage;
     }) =>
       /**
        * No sender in the payload, deliberately.
@@ -504,6 +506,7 @@ export function useConversation(input: {
               ...(agentId ? { agent: agentId } : {}),
             }),
         ...(input.attachments?.length ? { attachments: input.attachments } : {}),
+        ...(input.page ? { page: input.page } : {}),
       }),
     onSuccess: (result, { text }) => {
       void queryClient.invalidateQueries({ queryKey: ["sessions"] });
@@ -526,12 +529,12 @@ export function useConversation(input: {
       // A new conversation, or the same chat with a different agent. Carry the message across the
       // route change so it does not blink out of existence.
       justSent.set(result.sessionId, { text, at: Date.now() });
-      onSession(result.sessionId);
+      onSession(result.sessionId, result.agentId);
     },
   });
 
   const send = useCallback(
-    (text: string, attachments?: { path: string; mimeType: string; filename: string }[]) => {
+    (text: string, attachments?: { path: string; mimeType: string; filename: string }[], page?: OpenPage) => {
       const trimmed = text.trim();
       // A message may be nothing but files — the same rule the daemon applies.
       if (!trimmed && !attachments?.length) return;
@@ -547,7 +550,7 @@ export function useConversation(input: {
         setPending(trimmed || `${attachments!.length} file(s)`);
         pendingSince.current = Date.now();
       }
-      sendMutation.mutate({ text: trimmed, ...(attachments?.length ? { attachments } : {}) });
+      sendMutation.mutate({ text: trimmed, ...(attachments?.length ? { attachments } : {}), ...(page ? { page } : {}) });
       wake.current();
     },
     [sendMutation, roomChatId, live?.status],

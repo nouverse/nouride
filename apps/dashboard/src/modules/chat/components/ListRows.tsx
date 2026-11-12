@@ -9,17 +9,11 @@ import { GroupAvatar, MiniAvatars, StackedAvatars } from "@/commons/components/c
 import { ConversationRow, RowTag } from "@/commons/components/chat/ConversationRow";
 import { PlatformTag } from "@/commons/components/chat/PlatformBadge";
 import { agentChatLink } from "@/commons/hooks/use-agent-chat";
+import { workingWords } from "@/commons/lib/agents";
 import { platformName } from "@/commons/lib/platform";
 import { shortWhen } from "@/commons/lib/when";
 import type { ChatListData } from "../hooks/use-chat-list";
 import { lastLine, type ChatRow } from "../lib/chat-list";
-
-/** "Working", and how many helpers are at it in the background. */
-export function workingWords(working: boolean, helpers: number): string | undefined {
-  const help = helpers === 1 ? "1 helper" : `${helpers} helpers`;
-  if (working) return helpers > 0 ? `Working · ${help}` : "Working";
-  return helpers > 0 ? `${help} at work` : undefined;
-}
 
 /** Who said a room's or a group's last line: an agent by its name, a person by the name their app shows. */
 const saidBy = (data: ChatListData) => (last: ChatListLine) => (last.from === "agent" ? (last.name ? data.nameOf(last.name) : undefined) : last.name);

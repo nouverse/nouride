@@ -47,8 +47,8 @@ itu sendiri:
 Atau minta orchestrator lewat chat: dia meng-install salah satunya untuk semua agent, setelah admin bilang ya (sejak
 0.8.9 cuma admin yang menjawabnya, di chat satu-satu juga: install-nya jalan sebagai user daemon). Dashboard bisa
 memintakannya untukmu (0.8.19): kalau sebuah CLI belum ada di box, **Models → Coding CLIs** dan tab **Brain** milik
-agent eksternal punya tombol **Ask Nouva to set it up** (dengan nama orchestrator-mu), yang membuka chat dengan
-permintaannya sudah tertulis, untuk kamu baca lalu kirim.
+agent eksternal punya tombol **Ask Nouva to set it up** (dengan nama orchestrator-mu), yang membuka chat di atas
+halaman itu dengan permintaannya sudah tertulis, untuk kamu baca lalu kirim.
 
 `nouride agents scan` menampilkan CLI yang ada di box, masing-masing dengan perintah yang dijalankan Nouride dan
 versinya. Versi itu milik adapter-nya (`claude-agent-acp 0.97.0`), bukan versi CLI-nya sendiri. Sejak 0.8.24 tiap CLI

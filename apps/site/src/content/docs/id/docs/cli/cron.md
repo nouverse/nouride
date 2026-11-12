@@ -8,18 +8,22 @@ Sisi konseptualnya ada di [panduan pemakaian](/id/docs/manual/schedule/). Halama
 ## Melihat daftar
 
 ```bash
-nouride cron                     # yang terjadwal dan aktif
+nouride cron                     # yang terjadwal dan aktif, dan yang dimulai manual
 nouride cron --all               # termasuk yang dinonaktifkan
-nouride cron runs <id>           # riwayat job ini
+nouride cron runs <id>           # riwayat job ini, dengan hasil tiap langkah
+nouride cron continue <run id>   # jalan yang langkahnya menunggu orang: lanjutkan
+nouride cron stop <run id>       # …atau hentikan di situ
 ```
+
+Jalan yang sedang menunggu ditampilkan `runs` dengan id-nya di sampingnya.
 
 ## Membuat
 
 ```bash
 nouride cron add --name <nama> \
-  (--at 2h | --every 15m | --cron "0 9 * * *") \
+  (--at 2h | --every 15m | --cron "0 9 * * *" | --manual) \
   --gateway <id> --chat <id> --agent <id> \
-  [--message <prompt> | --text <pesan> | --command <shell> | --mission <goal>] \
+  [--message <prompt> | --text <pesan> | --command <shell> | --mission <goal> | --steps <file.json>] \
   [--then agent] [--session fresh|isolated|chat] [--tz <zona>] [--quiet] [--keep]
 ```
 
@@ -28,6 +32,7 @@ nouride cron add --name <nama> \
 | `--at 2h` / `--at "2026-11-02 09:00"` | sekali, setelah durasi tertentu atau pada jam tertentu |
 | `--every 15m` | interval: `30s`, `15m`, `6h`, `1d` |
 | `--cron "0 9 * * *"` | ekspresi crontab |
+| `--manual` | tanpa waktu: ia jalan saat ada yang memulainya, dengan `nouride cron run <id>` atau Run now di halamannya |
 | `--tz <zona>` | jam mana yang dipakai membaca ekspresi `--cron` atau waktu `--at`. Default ke `[daemon] timezone` |
 | `--gateway <id> --chat <id>` | ke mana hasilnya dikirim |
 | `--agent <id>` | agent yang menjalankannya |
@@ -36,6 +41,7 @@ nouride cron add --name <nama> \
 | `--command <shell>` | jalankan satu baris shell, tanpa panggilan model |
 | `--then agent` | …lalu bangunkan agent dengan apa yang dicetaknya. Run yang tidak mencetak apa pun tidak membangunkan siapa pun dan tidak mengirim apa pun |
 | `--mission <goal>` | jalankan setiap kali sebagai mission; `--check <perintah>` untuk satu cek, `--no-review` tanpa reviewer |
+| `--steps <file.json>` | beberapa hal di atas dengan urutan tetap, dibaca dari file: [daftarnya, dalam JSON](/id/docs/manual/schedule/#dari-cli) |
 | `--session` | `fresh` (default, tanpa riwayat), `isolated` (thread-nya sendiri), `chat` (percakapan chat tujuan) |
 | `--quiet` | catat run-nya, gak mengirim apa pun, bahkan peringatan gagal |
 | `--keep` | simpan job sekali-jalan setelah menyala: dimatikan, dan tercatat sebagai `fired` |
@@ -71,7 +77,7 @@ nouride cron add --name inbox --cron "0 8 * * *" \
 ## Mengubah dan menjalankan
 
 ```bash
-nouride cron update <id> [--name …] [--at|--every|--cron …] [--tz <zona>] [--text|--message …] [--agent <id>]
+nouride cron update <id> [--name …] [--at|--every|--cron …] [--tz <zona>] [--text|--message|--steps …] [--agent <id>]
 nouride cron run <id>            # jalankan sekarang, dan cetak hasilnya
 nouride cron enable <id>         # sekaligus membersihkan job yang mati karena deret kegagalan
 nouride cron disable <id>

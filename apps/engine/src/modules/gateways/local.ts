@@ -21,6 +21,7 @@ import {
   type GatewayName,
   type GatewayStatus,
   type MessageEnvelope,
+  type OpenPage,
   type OutboundMessage,
 } from "@nouride/shared";
 import { LOCAL_GATEWAY_ID } from "@nouride/shared";
@@ -49,6 +50,8 @@ export interface LocalTurnRequest {
   agent?: string;
   /** Local file paths, so `nouride chat` can attach a file. `url` is the path. */
   attachments?: Attachment[];
+  /** The dashboard page it was written from: see `MessageEnvelope.page`. */
+  page?: OpenPage;
 }
 
 export interface LocalTurnResult {
@@ -211,6 +214,7 @@ export class LocalGateway implements Gateway {
       ...(request.attachments && request.attachments.length > 0
         ? { attachments: request.attachments }
         : {}),
+      ...(request.page ? { page: request.page } : {}),
       raw: { via: "dev endpoint" },
     };
   }

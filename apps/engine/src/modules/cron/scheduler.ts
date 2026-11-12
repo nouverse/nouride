@@ -323,7 +323,13 @@ export class CronScheduler {
     if (this.stopping) return;
     this.stepRuns.expire();
     for (const job of this.options.store.due(this.now)) {
-      if (this.inFlight.has(job.id) || this.stepRuns.waitingOf(job.id)) continue;
+      if (this.inFlight.has(job.id)) continue;
+      // A job changed while its run waits is given a time again (`CronStore.update`), and would be found due here
+      // every second for as long as the wait lasts, a day or more. Its time is taken back: its run gives it one.
+      if (this.stepRuns.waitingOf(job.id)) {
+        this.options.store.claim(job);
+        continue;
+      }
       if (!this.options.store.claim(job)) continue;
       // Not awaited: one slow `agentTurn` must not hold back every other job's tick. Errors are
       // handled inside `execute`, so nothing escapes here.
@@ -426,7 +432,7 @@ export class CronScheduler {
     this.options.store.finishRun(runId, outcome);
     if (how.settles) this.options.store.settle(job, outcome);
     // A run by hand that waited had taken its job's time (`execute`): it has one again, counted from now.
-    else if (how.cause === "resumed" && job.trigger.kind !== "at" && this.options.store.get(job.id)?.nextRunAt === undefined) this.options.store.update(job.id, {}, "cron");
+    else if (how.cause === "resumed" && job.trigger.kind !== "at" && this.options.store.get(job.id)?.enabled && this.options.store.get(job.id)?.nextRunAt === undefined) this.options.store.update(job.id, {}, "cron");
 
     const level = outcome.status === "error" ? "warn" : "info";
     log[level]("cron run finished", {
