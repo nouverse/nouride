@@ -1,0 +1,551 @@
+[
+  {
+    "name": "Shop health check",
+    "send": {
+      "create": "/cron"
+    },
+    "body": {
+      "agentId": "nouva",
+      "name": "Shop health check",
+      "payload": {
+        "kind": "steps",
+        "steps": [
+          {
+            "id": "s1",
+            "kind": "command",
+            "argv": [
+              "sh",
+              "-lc",
+              "curl -sf https://shop.example.com/health"
+            ],
+            "then": "end",
+            "whenFailed": "next"
+          },
+          {
+            "id": "s2",
+            "kind": "agentTurn",
+            "message": "The shop's health check failed. Find out why and say what you found.",
+            "name": "Find out why",
+            "agentId": "nix",
+            "whenFailed": {
+              "to": "s6"
+            },
+            "whenEmpty": "next"
+          },
+          {
+            "id": "s3",
+            "kind": "mission",
+            "goal": "Bring the shop back up and confirm that it answers.",
+            "name": "Bring it back",
+            "checks": [
+              "curl -sf https://shop.example.com/health"
+            ],
+            "whenFailed": {
+              "to": "s6"
+            }
+          },
+          {
+            "id": "s4",
+            "kind": "approval",
+            "ask": "Post what was found to the group?",
+            "timeoutMs": 3600000
+          },
+          {
+            "id": "s5",
+            "kind": "systemEvent",
+            "text": "The shop was down for a while. What was found is above.",
+            "name": "Tell the group",
+            "then": "end"
+          },
+          {
+            "id": "s6",
+            "kind": "systemEvent",
+            "text": "The shop check needs you: a step failed and it could not fix itself.",
+            "name": "Tell me"
+          }
+        ]
+      },
+      "target": {
+        "gatewayId": "telegram:nouva",
+        "chatId": "8142"
+      },
+      "delivery": {
+        "mode": "announce"
+      },
+      "every": "15m"
+    },
+    "keeps": {
+      "name": "Shop health check",
+      "start": "scheduled",
+      "payload": {
+        "kind": "steps",
+        "steps": [
+          {
+            "id": "s1",
+            "kind": "command",
+            "argv": [
+              "sh",
+              "-lc",
+              "curl -sf https://shop.example.com/health"
+            ],
+            "then": "end",
+            "whenFailed": "next"
+          },
+          {
+            "id": "s2",
+            "kind": "agentTurn",
+            "message": "The shop's health check failed. Find out why and say what you found.",
+            "name": "Find out why",
+            "agentId": "nix",
+            "whenFailed": {
+              "to": "s6"
+            },
+            "whenEmpty": "next"
+          },
+          {
+            "id": "s3",
+            "kind": "mission",
+            "goal": "Bring the shop back up and confirm that it answers.",
+            "name": "Bring it back",
+            "checks": [
+              "curl -sf https://shop.example.com/health"
+            ],
+            "whenFailed": {
+              "to": "s6"
+            }
+          },
+          {
+            "id": "s4",
+            "kind": "approval",
+            "ask": "Post what was found to the group?",
+            "timeoutMs": 3600000
+          },
+          {
+            "id": "s5",
+            "kind": "systemEvent",
+            "text": "The shop was down for a while. What was found is above.",
+            "name": "Tell the group",
+            "then": "end"
+          },
+          {
+            "id": "s6",
+            "kind": "systemEvent",
+            "text": "The shop check needs you: a step failed and it could not fix itself.",
+            "name": "Tell me"
+          }
+        ]
+      },
+      "target": {
+        "gatewayId": "telegram:nouva",
+        "chatId": "8142"
+      },
+      "delivery": {
+        "mode": "announce"
+      }
+    }
+  },
+  {
+    "name": "Backup check",
+    "send": {
+      "create": "/cron"
+    },
+    "body": {
+      "agentId": "nouva",
+      "name": "Backup check",
+      "payload": {
+        "kind": "command",
+        "argv": [
+          "sh",
+          "-lc",
+          "ls backups | tail -1"
+        ],
+        "then": "agentTurn"
+      },
+      "target": {
+        "gatewayId": "telegram:nouva",
+        "chatId": "8142"
+      },
+      "delivery": {
+        "mode": "announce"
+      },
+      "manual": true
+    },
+    "keeps": {
+      "name": "Backup check",
+      "start": "manual",
+      "payload": {
+        "kind": "command",
+        "argv": [
+          "sh",
+          "-lc",
+          "ls backups | tail -1"
+        ],
+        "then": "agentTurn"
+      },
+      "target": {
+        "gatewayId": "telegram:nouva",
+        "chatId": "8142"
+      },
+      "delivery": {
+        "mode": "announce"
+      }
+    }
+  },
+  {
+    "name": "New order",
+    "send": {
+      "create": "/webhooks"
+    },
+    "body": {
+      "agentId": "nouva",
+      "name": "New order",
+      "payload": {
+        "kind": "steps",
+        "steps": [
+          {
+            "id": "s1",
+            "kind": "agentTurn",
+            "message": "A new order came in. Read what was sent and say who ordered what."
+          },
+          {
+            "id": "s2",
+            "kind": "systemEvent",
+            "text": "New order, details above."
+          }
+        ]
+      },
+      "target": {
+        "gatewayId": "telegram:nouva",
+        "chatId": "8142"
+      },
+      "delivery": {
+        "mode": "announce"
+      }
+    },
+    "keeps": {
+      "name": "New order",
+      "start": "webhook",
+      "payload": {
+        "kind": "steps",
+        "steps": [
+          {
+            "id": "s1",
+            "kind": "agentTurn",
+            "message": "A new order came in. Read what was sent and say who ordered what."
+          },
+          {
+            "id": "s2",
+            "kind": "systemEvent",
+            "text": "New order, details above."
+          }
+        ]
+      },
+      "target": {
+        "gatewayId": "telegram:nouva",
+        "chatId": "8142"
+      },
+      "delivery": {
+        "mode": "announce"
+      }
+    }
+  },
+  {
+    "name": "Morning brief",
+    "send": {
+      "create": "/cron"
+    },
+    "body": {
+      "agentId": "nouva",
+      "name": "Morning brief",
+      "payload": {
+        "kind": "systemEvent",
+        "text": "Good morning. The bins go out today."
+      },
+      "target": {
+        "gatewayId": "telegram:nouva",
+        "chatId": "8142"
+      },
+      "delivery": {
+        "mode": "announce"
+      },
+      "cron": "0 7 * * 1,2,3,4,5",
+      "tz": "Asia/Jakarta"
+    },
+    "keeps": {
+      "name": "Morning brief",
+      "start": "scheduled",
+      "payload": {
+        "kind": "systemEvent",
+        "text": "Good morning. The bins go out today."
+      },
+      "target": {
+        "gatewayId": "telegram:nouva",
+        "chatId": "8142"
+      },
+      "delivery": {
+        "mode": "announce"
+      }
+    }
+  },
+  {
+    "name": "Year-end tidy",
+    "send": {
+      "create": "/cron"
+    },
+    "body": {
+      "agentId": "nouva",
+      "name": "Year-end tidy",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "Archive this year's reports."
+      },
+      "target": {
+        "gatewayId": "telegram:nouva",
+        "chatId": "8142"
+      },
+      "delivery": {
+        "mode": "none"
+      },
+      "at": "2099-12-31 09:00",
+      "tz": "Asia/Jakarta",
+      "keepAfterRun": true
+    },
+    "keeps": {
+      "name": "Year-end tidy",
+      "start": "scheduled",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "Archive this year's reports."
+      },
+      "target": {
+        "gatewayId": "telegram:nouva",
+        "chatId": "8142"
+      },
+      "delivery": {
+        "mode": "none"
+      }
+    }
+  },
+  {
+    "name": "Shop health check, changed",
+    "send": {
+      "change": "Shop health check"
+    },
+    "body": {
+      "name": "Shop check",
+      "payload": {
+        "kind": "steps",
+        "steps": [
+          {
+            "id": "s1",
+            "kind": "command",
+            "argv": [
+              "sh",
+              "-lc",
+              "curl -sf https://shop.example.com/health"
+            ],
+            "then": "end",
+            "whenFailed": "next"
+          },
+          {
+            "id": "s2",
+            "kind": "agentTurn",
+            "message": "The shop's health check failed. Find out why and say what you found.",
+            "name": "Find out why",
+            "agentId": "nix",
+            "whenEmpty": "next"
+          },
+          {
+            "id": "s3",
+            "kind": "mission",
+            "goal": "Bring the shop back up and confirm that it answers.",
+            "name": "Bring it back",
+            "checks": [
+              "curl -sf https://shop.example.com/health"
+            ]
+          },
+          {
+            "id": "s5",
+            "kind": "systemEvent",
+            "text": "The shop was down for a while. What was found is above.",
+            "name": "Tell the group",
+            "then": "end"
+          },
+          {
+            "id": "s4",
+            "kind": "approval",
+            "ask": "Post what was found to the group?",
+            "timeoutMs": 3600000
+          }
+        ]
+      },
+      "cron": "0 7 * * *",
+      "tz": "Asia/Jakarta"
+    },
+    "keeps": {
+      "name": "Shop check",
+      "start": "scheduled",
+      "payload": {
+        "kind": "steps",
+        "steps": [
+          {
+            "id": "s1",
+            "kind": "command",
+            "argv": [
+              "sh",
+              "-lc",
+              "curl -sf https://shop.example.com/health"
+            ],
+            "then": "end",
+            "whenFailed": "next"
+          },
+          {
+            "id": "s2",
+            "kind": "agentTurn",
+            "message": "The shop's health check failed. Find out why and say what you found.",
+            "name": "Find out why",
+            "agentId": "nix",
+            "whenEmpty": "next"
+          },
+          {
+            "id": "s3",
+            "kind": "mission",
+            "goal": "Bring the shop back up and confirm that it answers.",
+            "name": "Bring it back",
+            "checks": [
+              "curl -sf https://shop.example.com/health"
+            ]
+          },
+          {
+            "id": "s5",
+            "kind": "systemEvent",
+            "text": "The shop was down for a while. What was found is above.",
+            "name": "Tell the group",
+            "then": "end"
+          },
+          {
+            "id": "s4",
+            "kind": "approval",
+            "ask": "Post what was found to the group?",
+            "timeoutMs": 3600000
+          }
+        ]
+      },
+      "target": {
+        "gatewayId": "telegram:nouva",
+        "chatId": "8142"
+      },
+      "delivery": {
+        "mode": "announce"
+      }
+    }
+  },
+  {
+    "name": "Backup check, with a second step",
+    "send": {
+      "change": "Backup check"
+    },
+    "body": {
+      "payload": {
+        "kind": "steps",
+        "steps": [
+          {
+            "id": "s1",
+            "kind": "command",
+            "argv": [
+              "sh",
+              "-lc",
+              "ls backups | tail -1"
+            ]
+          },
+          {
+            "id": "s3",
+            "kind": "agentTurn",
+            "message": "Say what the output of the command before this step means."
+          },
+          {
+            "id": "s2",
+            "kind": "systemEvent",
+            "text": "Backup checked."
+          }
+        ]
+      }
+    },
+    "keeps": {
+      "name": "Backup check",
+      "start": "manual",
+      "payload": {
+        "kind": "steps",
+        "steps": [
+          {
+            "id": "s1",
+            "kind": "command",
+            "argv": [
+              "sh",
+              "-lc",
+              "ls backups | tail -1"
+            ]
+          },
+          {
+            "id": "s3",
+            "kind": "agentTurn",
+            "message": "Say what the output of the command before this step means."
+          },
+          {
+            "id": "s2",
+            "kind": "systemEvent",
+            "text": "Backup checked."
+          }
+        ]
+      },
+      "target": {
+        "gatewayId": "telegram:nouva",
+        "chatId": "8142"
+      },
+      "delivery": {
+        "mode": "announce"
+      }
+    }
+  },
+  {
+    "name": "New order, reporting elsewhere and quiet",
+    "send": {
+      "change": "New order"
+    },
+    "body": {
+      "target": {
+        "gatewayId": "telegram:nouva",
+        "chatId": "-100200"
+      },
+      "delivery": {
+        "mode": "none"
+      }
+    },
+    "keeps": {
+      "name": "New order",
+      "start": "webhook",
+      "payload": {
+        "kind": "steps",
+        "steps": [
+          {
+            "id": "s1",
+            "kind": "agentTurn",
+            "message": "A new order came in. Read what was sent and say who ordered what."
+          },
+          {
+            "id": "s2",
+            "kind": "systemEvent",
+            "text": "New order, details above."
+          }
+        ]
+      },
+      "target": {
+        "gatewayId": "telegram:nouva",
+        "chatId": "-100200"
+      },
+      "delivery": {
+        "mode": "none"
+      }
+    }
+  }
+]
