@@ -76,6 +76,11 @@ daftar tetap berisi apa yang selalu bertanya.
 | `balanced` | Cuma mengubah `config.toml`, memberi seseorang akses, menghentikan daemon ini, mengganti atau menghapus secret yang tersimpan, kredensial yang keluar dari mesin ini, dan mengubah paket sistemnya yang bertanya, begitu juga semua yang ditanyakan `trusted`. Sisanya jalan. Ini yang dipakai instalasi yang gak pernah menetapkan tingkat |
 | `trusted` | Gak ada yang bertanya, kecuali [kerja yang gak diawasi](#dua-pengaman-untuk-kerja-yang-gak-diawasi) yang mengirim ke tempat yang gak disebut job-nya, program yang di-install untuk semua agent, perubahan agent pada [persona-nya sendiri](#daftar-tetap), dan perubahan agent pada [siapa seseorang menurut People](#daftar-tetap) |
 
+Agent yang dibuat `nouride setup` dan dashboard sudah diset `balanced` sendiri, jadi agent pertama di instalasi baru
+hanya bertanya untuk beberapa hal di baris itu. `careful` adalah yang ditulis setup untuk instalasinya secara
+keseluruhan: tingkat untuk agent yang tidak menyebut tingkatnya sendiri, misalnya pack yang ditulis tangan, atau agent
+yang diubah ke **Follow each person** untuk orang yang belum memilih.
+
 :::note[Ganti nama di 0.7.23]
 Sampai 0.7.23 ketiganya bernama `normal`, `risky`, dan `none`; cara kerjanya gak berubah sama sekali. Sejak
 0.8.0 nama lama ditolak seperti kata lain yang gak dikenal: di `config.toml` daemon gak start, di pack agent

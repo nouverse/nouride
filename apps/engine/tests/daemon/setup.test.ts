@@ -15,8 +15,10 @@ import { tmpdir } from "node:os";
 import { SecretStore } from "@nouride/secrets";
 import { parseToml, readTextFile, readTextFileIfExists, writeTextFileAtomic } from "@nouride/runtime";
 import { AgentRegistry } from "@nouride/persona";
+import { resolveApprovalLevel } from "@nouride/policy";
 import { ProviderRegistry } from "@/modules/llm/providers.ts";
 import { assertGatewayExecPosture } from "@/modules/config/global/index.ts";
+import { PRESETS } from "@/modules/setup/presets.ts";
 import { SetupService, SETUP_PROFILE } from "@/modules/setup/service.ts";
 
 /** The secret a profile the wizard makes names: the Models page's rule, one writer for both. */
@@ -431,6 +433,22 @@ describe("createAgent", () => {
     expect(await readTextFileIfExists(join(agentsDir, "lyra", "IDENTITY.md"))).toContain("- **Headline:** Research: searches the web");
     expect(await setup.createAgent({ ...agentInput, id: "long", headline: "x".repeat(151) })).toMatchObject({ ok: false, error: expect.stringContaining("150") });
     expect(await readTextFileIfExists(join(agentsDir, "long", "IDENTITY.md"))).toBeNull();
+  });
+
+  test("makes every agent balanced itself, whatever it is made as: what a new install's first agent asks is the agent's, not the install's careful", async () => {
+    const { setup, config } = await service();
+    await setup.saveProvider({ kind: "openai", baseUrl: "https://x/v1", apiKey: LIVE_KEY, actor: "t" });
+    // The install as a whole starts careful, and an agent's own level is read before it.
+    expect(config.security.approvals).toBe("careful");
+    for (const preset of PRESETS) {
+      const id = `made-${preset.id}`;
+      expect(await setup.createAgent({ ...agentInput, id, preset: preset.id }), preset.id).toMatchObject({ ok: true });
+      const pack = parseToml<{ agent?: { approvals?: string } }>(await readTextFile(join(agentsDir, id, "config.toml")));
+      expect(pack.agent?.approvals, preset.id).toBe("balanced");
+      expect(resolveApprovalLevel({ agent: pack.agent?.approvals as "balanced", daemon: config.security.approvals }), preset.id).toEqual({ level: "balanced", source: "agent" });
+    }
+    // One that states none, a pack written by hand, is the install's.
+    expect(resolveApprovalLevel({ daemon: config.security.approvals })).toEqual({ level: "careful", source: "daemon" });
   });
 
   test("writes AGENTS.md and MEMORY.md, not just identity and soul", async () => {
