@@ -91,6 +91,15 @@ the wait before it and the same failure in a row shown once. Stop, Continue, Acc
 and **Accept as it is** on one waiting for anything else. While it is open, **Tell it** takes words for it, and lists what
 it was told with whether it has read each.
 
+**A mission is a person's** (0.8.35): whoever started it, from a chat or from this page, and a mission an automation
+starts is its automation's owner's. The page shows your own, and only its owner or an admin tells it something, stops
+it, continues it, accepts it, answers it or deletes it. One an agent proposed on its own is answered by whoever may open
+the chat it was proposed in, and becomes theirs. You also see a mission of someone else's that reports to a chat of
+yours: it says whose it is, and you read it without changing it. An operator or a viewer sees no one else's otherwise,
+not in the list and not by its link. An admin picks whose in the dropdown beside the search, as on
+[Automations](/en/docs/manual/schedule/#whose-an-automation-is): Mine, Everyone set apart by person, one person, or
+Nobody's.
+
 From 0.8.13, an ended mission can be deleted (**Delete** on its page, or `nouride mission delete <id>`), with its
 conversation, its checklist and the folder Nouride made for it; a folder you named and its branch stay. One still open
 has to be stopped first: there is no Delete on it until then. Work in its folder nobody committed stops the delete and

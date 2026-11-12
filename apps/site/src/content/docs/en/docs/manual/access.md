@@ -236,3 +236,7 @@ Who may sign in to the dashboard is a different question from who may message a 
 roles live under **Users**, admin-only (multi-user accounts are a Pro edition feature).
 Nobody can delete their own account, and the last admin cannot be demoted, because that would lock
 the instance out of account management.
+
+What an account sees is its own: its [chats](/en/docs/manual/dashboard/#chat), its
+[automations](/en/docs/manual/schedule/#whose-an-automation-is) and its [missions](/en/docs/manual/missions/#watching-it).
+An admin sees everyone's, and picks whose on each of those pages.

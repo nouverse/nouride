@@ -19,8 +19,35 @@ satu dropdown untuk melihat yang terjadwal saja, yang webhook, atau yang manual.
 mengubah, menjalankan, menjeda, dan menghapusnya. Atau minta saja ke agent: "ingatkan aku cek deploy dua
 jam lagi", lalu agent [mengusulkan](#diminta-ke-agent) automation-nya, dan kamu yang menyalakannya.
 
-Daftarnya berlaku untuk seluruh instalasi, bukan per agent, meskipun setiap automation punya pemilik,
-karena biasanya kamu ingin melihat semua yang jalan sendiri sekaligus.
+Daftarnya mencakup semua agent, bukan per agent, karena biasanya kamu ingin melihat semua milikmu yang jalan sendiri
+sekaligus.
+
+### Automation ini milik siapa
+
+**Satu automation dimiliki satu orang** (0.8.35). Yang kamu buat di dashboard jadi milikmu. Yang diusulkan agent lalu
+kamu nyalakan juga jadi milikmu, siapa pun yang memintanya. Halaman ini menampilkan milikmu, dan hanya pemiliknya atau
+admin yang bisa mengubahnya: mengedit, menjalankan, menjeda, menghapus, atau menjawab langkah yang menunggu.
+
+Kamu juga melihat automation milik orang lain yang melapor ke chat-mu, karena apa pun yang menulis ke chat-mu boleh
+kamu baca. Barisnya menyebut milik siapa, bisa dibuka, langkah dan riwayat jalannya bisa dibaca, tapi tidak ada yang
+bisa kamu ubah di sana. Alamat webhook hanya ditampilkan ke yang boleh mengubahnya.
+
+Selain itu, operator atau viewer tidak pernah melihat milik orang lain: tidak di daftar, tidak juga lewat link-nya,
+yang dijawab seolah automation itu tidak ada. Admin memilih milik siapa lewat dropdown di samping pencarian: **Mine**
+(awalnya di sini), **Everyone**, yang memisahkan daftar per orang, satu orang (ketik sebagian namanya), atau
+**Nobody's**. Nobody's adalah yang dibuat dari command line dan yang dari sebelum 0.8.35 yang pembuatnya tidak bisa
+Nouride kenali. Di halaman satu automation, admin bisa menyerahkannya ke seseorang, atau ke tidak siapa pun.
+
+Perubahan yang diusulkan agent atas automation yang sudah ada hanya bisa dinyalakan pemiliknya, atau admin: melihat
+kartunya di sebuah chat belum cukup untuk mengubah milik orang lain.
+
+Automation dari sebelum 0.8.35 jadi milik akun yang membuat atau menyalakannya. Yang diusulkan agent di sebuah chat
+jadi milik orang yang menyalakannya di sana.
+
+**Ini soal halaman, bukan soal apa yang agent tahu.** Satu agent bekerja untuk semua orang yang ngobrol dengannya:
+ditanya di chat ada jadwal apa saja, ia menjawab dari semua automation yang ia punya, siapa pun pembuatnya, dan memori
+serta file-nya menyimpan apa yang ia kerjakan untuk kalian masing-masing. Dua orang yang tidak boleh saling tahu
+pekerjaannya butuh dua agent.
 
 ## Langkah-langkah
 
