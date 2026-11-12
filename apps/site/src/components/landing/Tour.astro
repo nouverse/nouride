@@ -18,7 +18,7 @@ import chats from '../../../public/media/dashboard-chat.png';
 import agents from '../../../public/media/dashboard-agents.png';
 import memory from '../../../public/media/memory-graph.png';
 import skills from '../../../public/media/dashboard-skills.png';
-import schedule from '../../../public/media/dashboard-schedule.png';
+import automations from '../../../public/media/dashboard-automations.png';
 import waving from '@brand/mascot/standing/01-waving.webp';
 import thumbsUp from '@brand/mascot/standing/02-thumbs-up.webp';
 import laptop from '@brand/mascot/standing/05-laptop.webp';
@@ -33,7 +33,7 @@ const tabs = [
   { id: 'agents', shot: agents, pose: laptop },
   { id: 'memory', shot: memory, pose: reading },
   { id: 'skills', shot: skills, pose: searching },
-  { id: 'schedule', shot: schedule, pose: calendar },
+  { id: 'automations', shot: automations, pose: calendar },
 ] as const;
 
 interface Props {
@@ -215,7 +215,7 @@ const { t, more } = Astro.props;
   #tour-agents:checked ~ .tour-tabs .tour-tab-agents,
   #tour-memory:checked ~ .tour-tabs .tour-tab-memory,
   #tour-skills:checked ~ .tour-tabs .tour-tab-skills,
-  #tour-schedule:checked ~ .tour-tabs .tour-tab-schedule {
+  #tour-automations:checked ~ .tour-tabs .tour-tab-automations {
     background: var(--nr-tint-lavender);
     color: var(--nr-lavender);
   }
@@ -224,7 +224,7 @@ const { t, more } = Astro.props;
   #tour-agents:focus-visible ~ .tour-tabs .tour-tab-agents,
   #tour-memory:focus-visible ~ .tour-tabs .tour-tab-memory,
   #tour-skills:focus-visible ~ .tour-tabs .tour-tab-skills,
-  #tour-schedule:focus-visible ~ .tour-tabs .tour-tab-schedule {
+  #tour-automations:focus-visible ~ .tour-tabs .tour-tab-automations {
     outline: 3px solid var(--nr-lavender);
     outline-offset: 2px;
   }
@@ -302,7 +302,7 @@ const { t, more } = Astro.props;
   #tour-agents:checked ~ .tour-view .tour-shot-agents,
   #tour-memory:checked ~ .tour-view .tour-shot-memory,
   #tour-skills:checked ~ .tour-view .tour-shot-skills,
-  #tour-schedule:checked ~ .tour-view .tour-shot-schedule {
+  #tour-automations:checked ~ .tour-view .tour-shot-automations {
     opacity: 1;
     visibility: visible;
   }
@@ -311,7 +311,7 @@ const { t, more } = Astro.props;
   #tour-agents:checked ~ .tour-view .tour-say-agents,
   #tour-memory:checked ~ .tour-view .tour-say-memory,
   #tour-skills:checked ~ .tour-view .tour-say-skills,
-  #tour-schedule:checked ~ .tour-view .tour-say-schedule {
+  #tour-automations:checked ~ .tour-view .tour-say-automations {
     display: flex;
   }
 
@@ -326,7 +326,7 @@ const { t, more } = Astro.props;
     #tour-agents:checked ~ .tour-view .tour-shot-agents,
     #tour-memory:checked ~ .tour-view .tour-shot-memory,
     #tour-skills:checked ~ .tour-view .tour-shot-skills,
-    #tour-schedule:checked ~ .tour-view .tour-shot-schedule {
+    #tour-automations:checked ~ .tour-view .tour-shot-automations {
       transform: none;
       transition-delay: 0s;
     }

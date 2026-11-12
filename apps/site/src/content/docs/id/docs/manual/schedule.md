@@ -12,7 +12,7 @@ menentukan kapan ia jalan, dan **langkah-langkah**, yang menentukan apa yang dik
 | **Saat dipanggil** | webhook: saat URL-nya dipanggil, bukan saat jam tertentu |
 | **Manual** | saat kamu menekan **Run now** |
 
-![Halaman Schedule](/media/dashboard-schedule.png)
+![Halaman Automations: tiap automation dengan pemicunya, langkah-langkahnya, dan hasil run terakhirnya](/media/dashboard-automations.png)
 
 Halaman **Automations** di dashboard (Work → Automations) menampilkan semuanya, apa pun awalnya, dengan
 satu dropdown untuk melihat yang terjadwal saja, yang webhook, atau yang manual. Di sanalah kamu membuat,
@@ -43,6 +43,8 @@ terakhir adalah yang dikirim automation ke chat-nya.
 Di halaman automation, langkah-langkahnya berupa kartu sesuai urutan jalannya. Tekan kartu untuk
 mengubahnya, tekan tanda plus di antara dua kartu untuk menambah langkah, dan seret kartu untuk
 memindahkannya. Gak ada yang berubah sebelum kamu menekan **Save**.
+
+![Halaman satu automation: pemicunya, langkah-langkahnya sebagai kartu dengan jalur di antaranya, dan run terakhirnya](/media/dashboard-automation-steps.png)
 
 ### Ke mana automation lanjut
 
@@ -224,7 +226,7 @@ membuatnya. Izin *allow always* milik job lama gak ikut ke bentuk barunya: ia be
 
 Endpoint yang menjalankan sebuah job ketika ada yang memanggilnya.
 
-![Sebuah webhook: URL-nya, cara memanggilnya, apa yang dijalankan dan ke mana balasannya](/media/dashboard-webhooks.png)
+![Automation yang dimulai webhook: alamatnya, cara memanggilnya, dan langkah yang dijalankannya](/media/dashboard-webhooks.png)
 
 ```bash
 nouride webhook                  # apa yang ada, beserta URL-nya

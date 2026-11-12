@@ -12,7 +12,7 @@ and its **steps**, which say what it does.
 | **When called** | a webhook: when its URL is called, rather than on a clock |
 | **By hand** | when you press **Run now** |
 
-![The Schedule page](/media/dashboard-schedule.png)
+![The Automations page: each automation with what starts it, its steps and how its last run went](/media/dashboard-automations.png)
 
 The dashboard's **Automations** page (Work → Automations) lists them all, whatever starts them, with one
 dropdown to see only the scheduled ones, the webhooks or the ones started by hand. It is where you make, change, run,
@@ -41,6 +41,8 @@ step are what the automation sends to its chat.
 
 On the automation's page the steps are cards in the order they run. Press a card to change it, press the plus
 between two cards to add a step, and drag a card to move it. Nothing changes until you press **Save**.
+
+![One automation's page: its start, its steps as cards with the paths between them, and its recent runs](/media/dashboard-automation-steps.png)
 
 ### Where a run goes next
 
@@ -213,7 +215,7 @@ allowed always does not carry over to its new shape: it asks again.
 
 An endpoint that runs a job when something calls it.
 
-![A webhook: its URL, how to call it, what it runs and where the reply goes](/media/dashboard-webhooks.png)
+![An automation a webhook starts: its address, how to call it, and the steps it runs](/media/dashboard-webhooks.png)
 
 ```bash
 nouride webhook                  # what exists, and its URL
