@@ -261,13 +261,18 @@ untuk dikatakan: tidak ada agent yang dibangunkan, tidak ada yang dikirim. Jalan
 lanjut. Langkah yang gagal tidak dibandingkan. Yang disimpan Nouride adalah sidik jari dari ucapan langkah itu, bukan
 kata-katanya.
 
+Misi adalah satu-satunya pengecualian dari "tidak ada yang dikirim": misi mengabari chat-nya sendiri soal hasilnya,
+setiap kali. Pada misi, tanda ini hanya menentukan apakah jalannya lanjut ke langkah sesudahnya.
+
 Jadi pengecekan tiap sepuluh menit mengabari sekali saat disk lewat 90%, sekali lagi saat lewat 95%, dan sekali saat
 sudah turun lagi: setiap kali hasil ceknya berubah.
 
 **Automation yang mengabari sekali saja.** Nyalakan **Tell me once, then turn off** di bagian tempat ia melapor. Setelah
 jalan pertama (yang jalan sendiri) mengabari sesuatu, automation itu mematikan dirinya, dan halamannya bilang begitu.
 Nyalakan lagi kalau mau dikabari sekali lagi. Jalan yang kamu mulai sendiri tidak dihitung: itu kamu sedang mencoba.
-"Kabari aku kalau build-nya selesai" adalah tanda ini, pada pengecekan yang ditandai lanjut hanya kalau berubah.
+"Kabari aku kalau build-nya selesai" adalah tanda ini, pada pengecekan yang ditandai lanjut hanya kalau berubah. Kabar
+dari misi ke chat-nya ikut dihitung sebagai mengabari, jadi automation yang berisi misi mati setelah jalan pertama yang
+sampai ke misi itu.
 
 **Minta ke agent.** "Kabari aku kalau disk lewat 90%" di chat: agent mengusulkan pengecekan berkala dengan tanda-tanda
 ini, kartunya menyebutkannya dengan kata-kata, dan kamu yang menyalakannya.
@@ -279,7 +284,8 @@ antaranya apa yang mau dikatakan automation ke chat disimpan dulu. Automation te
 malam hari diketahui di pagi hari. Saat jam tenang berakhir, tiap chat mendapat satu pesan: setiap automation yang
 punya sesuatu untuk dikatakan, dengan namanya, apa yang ia katakan dan kapan, yang gagal lebih dulu. Pertanyaan yang
 ditunggu sebuah langkah juga ditanyakan saat itu, dan waktu menjawabnya dihitung dari saat itu; sementara itu ia ada di
-**Waiting for you** di dashboard.
+**Waiting for you** di dashboard. Selama ada yang disimpan, halaman Automations menyebut berapa pesan dari
+automation-mu yang sedang ditahan, di samping jamnya.
 
 Tiga hal tetap disampaikan jam berapa pun: automation dengan **Tell me at once, even in quiet hours** menyala, untuk
 yang tidak bisa menunggu pagi (kamera di pintu); jalan yang kamu mulai sendiri, karena kamu memang sedang di situ; dan

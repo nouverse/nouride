@@ -248,13 +248,17 @@ end. The same again, and the run ends there quietly, as when a step has nothing 
 is sent. The first run has nothing to compare with, and goes on. A step that failed is not compared. Nouride keeps
 a fingerprint of what the step said, not the words.
 
+A mission is the one exception to "nothing is sent": it tells its chat how it ended by itself, every time. On a
+mission the mark decides only whether the run goes on to the steps after it.
+
 So a check every ten minutes tells you once when the disk passes 90%, once more when it passes 95%, and once when it
 is back under: each time what the check printed changed.
 
 **An automation that tells you once.** Turn on **Tell me once, then turn off** where it says where it reports. After
 the first run on its own time that tells you something, the automation turns itself off, and its page says so. Turn it
 on again to be told once more. A run you start by hand does not count: you are trying it out. "Tell me when the build
-is done" is this mark, on a check marked to go on only when it changes.
+is done" is this mark, on a check marked to go on only when it changes. A mission's own word to its chat counts as
+telling, so an automation with a mission in it turns off after the first run that reaches the mission.
 
 **Ask an agent for one.** "Kabari aku kalau disk lewat 90%" in a chat: the agent proposes a check on a clock with
 these marks, its card says them in words, and you turn it on.
@@ -265,7 +269,8 @@ One setting for the whole install, on the Automations page: two times of the day
 which what automations would say to a chat is kept. The automations still run, so what changed in the night is known
 in the morning. When the hours end, each chat gets one message: every automation that had something to say, by its
 name, with what it said and when, the ones that failed first. A question a step waits on is asked then too, and its
-time to answer counts from then; it is under **Waiting for you** on the dashboard meanwhile.
+time to answer counts from then; it is under **Waiting for you** on the dashboard meanwhile. While something is kept,
+the Automations page says how many messages of your automations are, beside the hours.
 
 Three things are said whatever the hour: an automation with **Tell me at once, even in quiet hours** turned on, for
 what cannot wait for the morning (a camera at the door); a run you start by hand, since you are there; and what an
