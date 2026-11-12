@@ -1160,6 +1160,17 @@ else's tag, and above the connection's owner, a channel binding and the front de
 agent on every copy, so the same claim lets one through; and where another of our bots has a copy it waits, as the
 front desk does, for the copy that saw a reply. In a room with a member list it answers only as a member.
 
+Which copy the claim lets through decides where the conversation is kept: a session is keyed by the connection its
+message came on. So where the copies share an id, the agent's own bot's copy goes first: in `admit`, another bot's copy
+stands by a moment (`OWN_COPY_FIRST_MS`) and goes on only if the message is still unclaimed, which it is where the
+agent's bot is not in the room. An agent's talk in a room is then one conversation, under its own connection, whether
+it was tagged, named in the words, or answering as the room's agent or the front desk.
+
+A command written with another of our bots' tag in front (`@Nox /status`, how a command is written where a tag is how
+a bot is addressed) is that bot's: its own copy has the tag taken off by its adapter and answers the command, and the
+queue leaves every other copy alone (`pipeline/command-for-another.ts`), where the words would otherwise be routed as a
+message to whoever they tag.
+
 ### 12.3 Mention resolution
 
 A bot's platform *name* is not its agent's name.
