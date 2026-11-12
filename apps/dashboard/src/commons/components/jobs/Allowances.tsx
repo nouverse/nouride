@@ -1,7 +1,7 @@
 /**
  * *Always for this job* on the dashboard (0.8.0): what a run's guards held with nobody there to ask, each with a button
  * that allows it for the job's runs from now on — and on the job's card, what is allowed, each taken back with a press.
- * One pair for the Schedule and Webhooks pages, which list the same jobs.
+ * One pair for an automation's page, whatever starts it.
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -16,7 +16,7 @@ function useAllowed(jobId: string) {
   return useMutation({
     mutationFn: (change: Parameters<typeof api.cronAllowed>[1]) => api.cronAllowed(jobId, change),
     onSuccess: (_answer, change) => {
-      for (const key of [["cron", jobId], ["cron"], ["webhooks"]]) void queryClient.invalidateQueries({ queryKey: key });
+      void queryClient.invalidateQueries({ queryKey: ["automations"] });
       toast.show({ message: "add" in change ? "Allowed for this job's runs from now on" : "Taken back: it is asked again", kind: "success" });
     },
     onError: (err) => toast.error("Could not change what this job may send", err),

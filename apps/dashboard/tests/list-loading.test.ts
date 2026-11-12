@@ -67,8 +67,8 @@ describe("what is loading", () => {
     expect(html).toContain("lg:grid-cols-3");
   });
 
-  test("Secrets and Webhooks draw rows, not their empty list, until the answer says there is nothing", async () => {
-    for (const [path, route, empty] of [["/secrets", "/secrets", "No secrets yet"], ["/webhooks", "/webhooks", "No webhooks yet"]] as const) {
+  test("Secrets and Automations draw their shape, not their empty list, until the answer says there is nothing", async () => {
+    for (const [path, route, empty] of [["/secrets", "/secrets", "No secrets yet"], ["/automations", "/automations", "No automations yet"]] as const) {
       answer({ [route]: { status: 200, body: {}, hold: true } });
       const html = await renderPage(path, async (host) => {
         await eventually(() => host.querySelector('main [aria-busy="true"]') !== null, 4_000, `${path}'s shape`);

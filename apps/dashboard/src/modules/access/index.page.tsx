@@ -18,6 +18,7 @@ import { AlertTriangle, Lock, Shield } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import { Card, PageHeader } from "@/commons/components/ui/ui";
 import { SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
+import { SearchSelect } from "@/commons/components/ui/SearchSelect";
 import { ApprovedTab } from "./approved.tab";
 import { BlockedTab } from "./blocked.tab";
 import { DeniedTab } from "./denied.tab";
@@ -101,19 +102,14 @@ export default function AccessPage({ search, onSearch }: { search: AccessSearch;
               value={tab}
               onChange={(next) => onSearch({ ...search, tab: next })}
             />
-            <select
-              aria-label="Agent"
-              className="select select-sm w-auto rounded-xl text-xs"
+            <SearchSelect
+              small
+              label="Agent"
+              options={[{ value: "", label: "All agents" }, ...agents.map((agent) => ({ value: agent, label: agent === orchestrator ? `♛ ${agent}` : agent }))]}
               value={search.agent ?? ""}
-              onChange={(event) => onSearch({ ...search, agent: event.target.value || undefined })}
-            >
-              <option value="">All agents</option>
-              {agents.map((agent) => (
-                <option key={agent} value={agent}>
-                  {agent === orchestrator ? `♛ ${agent}` : agent}
-                </option>
-              ))}
-            </select>
+              onChange={(next) => onSearch({ ...search, agent: next || undefined })}
+              width={208}
+            />
           </div>
 
           {access.isPending ? (

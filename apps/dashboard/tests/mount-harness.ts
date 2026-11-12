@@ -381,6 +381,11 @@ export const PAGES: [name: string, path: string][] = [
   // A conversation and a room are their own routes, each handing the page an id the index never does.
   ["chat, a conversation", "/chat/ses_1"],
   ["chat, a room", "/chat/room/room_1"],
+  ["automations", "/automations"],
+  ["automations, the webhooks", "/automations?start=webhook"],
+  ["an automation", "/automations/cron_1"],
+  ["a new automation", "/automations/new"],
+  // The addresses Schedule and Webhooks had: each lands on Automations.
   ["schedule", "/schedule"],
   ["webhooks", "/webhooks"],
   ["skills", "/skills"],
@@ -474,6 +479,29 @@ export const press = (host: HTMLElement, label: string) => ([...host.querySelect
 export const type = (input: HTMLInputElement | HTMLTextAreaElement, text: string) => {
   Object.getOwnPropertyDescriptor(Object.getPrototypeOf(input), "value")!.set!.call(input, text);
   input.dispatchEvent(new (input.ownerDocument.defaultView as unknown as typeof globalThis).Event("input", { bubbles: true }));
+};
+/**
+ * A dropdown (`SearchSelect`) by what it picks: what its button holds, its rows once opened, and a row picked. The list
+ * is drawn on the page's body, over every card, so it is read there.
+ */
+export const dropdown = (host: HTMLElement, label: string) => {
+  const button = () => [...host.querySelectorAll<HTMLButtonElement>('button[aria-haspopup="listbox"]')].find((one) => one.getAttribute("aria-label")?.startsWith(`${label}: `));
+  const rows = () => [...host.ownerDocument.body.querySelectorAll<HTMLElement>(`[role="listbox"][aria-label="${label}"] [role="option"] button`)];
+  const named = (row: HTMLElement) => row.querySelector("span")?.textContent?.trim() ?? "";
+  const open = async () => {
+    if (rows().length === 0) button()!.click();
+    await eventually(() => rows().length > 0, 2_000, `the ${label} list`);
+    return rows().map(named);
+  };
+  return {
+    button,
+    holds: () => button()?.getAttribute("aria-label")?.slice(label.length + 2) ?? null,
+    open,
+    pick: async (option: string) => {
+      await open();
+      rows().find((row) => named(row) === option)!.click();
+    },
+  };
 };
 /** Every POST the page sends from here on, by path, with its body — answered from `answers` where it names the path. */
 export const recordPosts = (answers: Record<string, { status: number; body: unknown }> = {}) => {

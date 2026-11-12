@@ -74,6 +74,11 @@ export interface ToastRequest {
    * dismissed rather than daring the reader to read faster.
    */
   duration?: number;
+  /**
+   * One thing to do about it, as a button in the toast: "Undo" after a delete. Pressed, it does it and the toast goes.
+   * For taking back what was just done and nothing else; a decision that needs reading is a `useConfirm`.
+   */
+  action?: { label: string; onPress: () => void };
 }
 
 interface Toast extends ToastRequest {
@@ -224,6 +229,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       */}
       <div
         className="toast toast-end toast-bottom z-[100] pointer-events-none max-w-[min(28rem,calc(100vw-2rem))] max-lg:bottom-[calc(5.25rem+env(safe-area-inset-bottom))]!"
+        // Lifted by what a page keeps at its foot (`--toast-lift`: a bar that saves), so the two never lie on each other.
+        style={{ marginBottom: "var(--toast-lift, 0px)" }}
         // `polite`, not `assertive`: these announce the result of something the reader just did, and
         // interrupting a screen reader mid-sentence to say "Saved" is worse than waiting for the pause.
         aria-live="polite"
@@ -259,6 +266,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   </details>
                 ) : null}
               </div>
+              {toast.action ? (
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-xs shrink-0 border border-base-content/10 font-semibold"
+                  onClick={() => {
+                    toast.action?.onPress();
+                    dismiss(toast.id);
+                  }}
+                >
+                  {toast.action.label}
+                </button>
+              ) : null}
               <button
                 type="button"
                 className="btn btn-ghost btn-xs btn-square shrink-0"

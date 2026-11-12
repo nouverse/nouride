@@ -25,11 +25,12 @@ Menunya diurutkan menurut seberapa sering halamannya dibuka: **Home, Chats, Work
 Home                yang butuh kamu · yang sedang jalan · Quick chat · agent kamu · box-nya · pemakaian AI hari ini
 Chats               agent dan room kamu dalam satu daftar, plus grup tempat mereka ada di aplikasi chat
 Work
-  Waiting for you   tool call yang ditunggu agent, dan misi yang menunggu jawabanmu
+  Waiting for you   tool call yang ditunggu agent, misi yang menunggu jawabanmu, dan langkah automation
+                    yang menunggu persetujuanmu
+  Automations       semua yang jalan sendiri, sesuai jadwal, saat webhook dipanggil, atau manual:
+                    buat, ubah langkahnya, jalankan sekarang, lihat hasil tiap run
   Missions          kerjaan panjang yang diselesaikan agent sendiri: yang butuh kamu, yang jalan, yang selesai; Limits
   Helpers           helper, perintah dan agent yang ditanya, yang dibiarkan agent jalan: langkahnya, Stop
-  Schedule          semua job: buat, ubah, jalankan sekarang; filter aktif / dijeda / gagal
-  Webhooks          endpoint yang menjalankan job saat dipanggil, bukan saat jam tertentu
 Agents
   Agents            daftarnya, New Agent (admin), dan Settings seluruh daemon
     └ <agent>
@@ -105,7 +106,7 @@ dengan bar tab-nya.
 
 **Tampilannya** krem lembut di siang hari dan ungu keabuan di malam hari. Ia mengikuti setelan perangkatmu sampai kamu
 memilih sendiri lewat tombol matahari atau bulan di sebelah namamu. Kucing Nouride menyapa kamu di Home, menemani
-di halaman yang masih kosong, dan duduk di sebelah judul halaman seperti Schedule dan Secrets. Selama halaman dimuat,
+di halaman yang masih kosong, dan duduk di sebelah judul halaman seperti Automations dan Secrets. Selama halaman dimuat,
 kamu melihat kerangkanya: bentuk abu-abu di tempat isinya nanti muncul.
 
 **Update** adalah kartu di Settings, bukan entri menu. Versi di bawah logo menampilkan titik kalau ada rilis yang lebih
@@ -125,7 +126,8 @@ sudah berapa lama nyala, di sebelah badge update dan **Restart**; hal yang perlu
 bawahnya. Lalu, berurutan:
 
 - **Yang butuh kamu.** Tool call yang ditunggu agent dijawab langsung di situ: **Allow once**, **Deny**, dan **Always
-  allow** kalau ditawarkan. Misi yang menunggu jawaban, permintaan untuk bicara dengan agent, skill yang perlu
+  allow** kalau ditawarkan. Langkah automation yang menunggu persetujuanmu juga dijawab di situ: **Continue** atau
+  **Stop**. Misi yang menunggu jawaban, permintaan untuk bicara dengan agent, skill yang perlu
   ditinjau, fakta yang ingin disimpan atau diubah oleh proses malam, atau dokumen yang disimpan agent untuk sebuah
   koleksi tampil sebagai kartu yang membuka halamannya. Fakta dan dokumen ditampilkan ke yang boleh memutuskannya:
   admin atau operator.
@@ -167,12 +169,57 @@ server.
 ## Tanya orchestrator dari halaman mana pun
 
 Kebanyakan halaman punya tombol di header-nya, **Ask** dan nama orchestrator-mu: *Ask Nouva to create an agent* di
-Agents, *to set up a webhook* di Webhooks, *to schedule something* di Schedule, *to add a model* di Models, dan
-seterusnya. Tombol itu membuka chat di atas halaman yang sedang kamu buka, dengan orchestrator-mu, dan menaruh
+Agents, *to make an automation* di Automations, *to add a model* di Models, dan seterusnya. Tombol itu membuka chat di atas halaman yang sedang kamu buka, dengan orchestrator-mu, dan menaruh
 permintaan untuk halaman itu di kotaknya, dengan bagian kosong (…) untuk yang kamu mau. Kamu tetap di halaman itu.
 Lengkapi lalu kirim: tidak ada yang terkirim sebelum kamu menekan kirim, dan agent tetap minta izin untuk hal yang
 berisiko. Kalau kamu sudah menulis sesuatu di kotaknya, permintaannya ditambahkan di bawahnya. Tombolnya ada untuk
 yang boleh chat (admin atau operator), dan hanya kalau orchestrator sudah dipilih. Di HP tulisannya **Ask Nouva**.
+
+## Automations
+
+**Work → Automations** adalah satu daftar untuk semua yang jalan sendiri: yang mulai pada waktu tertentu, yang mulai
+saat webhook dipanggil, dan yang kamu mulai sendiri. Apa itu automation, dan apa yang dikerjakan tiap jenis langkah,
+ada di [Automations](/id/docs/manual/schedule/). Yang ini tentang halamannya.
+
+**Daftarnya.** Tiap automation tampil sebagai kartu: namanya, apa yang memulainya dalam kata-kata (*every day at
+07:00*), langkah-langkahnya sebagai deretan kotak kecil (enam yang pertama, lalu berapa sisanya), agent yang
+menjalankannya, hasil run terakhirnya, kapan ia jalan lagi, dan tombol untuk menjedanya. Automation yang cuma punya
+satu langkah menuliskan langkah itu dalam satu baris, jadi pengingat lama terbaca sebagai apa yang ia kerjakan. Kotak
+pencarian mencari di nama, agent, dan isi langkahnya, dan satu dropdown, **Starts**, menyaring daftarnya jadi
+**Scheduled**, **Webhooks**, atau **Manual**. Automation yang diusulkan agent membawa tombol **Turn on** dan
+**Discard**. **New automation** membuka halaman kosong untuk diisi, atau minta saja ke agent lewat chat.
+
+**Halaman satu automation** berisi namanya di atas (tekan untuk mengganti nama), tombol nyala atau jeda, **Run now**,
+dan **Delete** di menu di sebelahnya. Di bawahnya:
+
+- **Start**: kapan ia jalan, ditulis ulang dalam kata-kata selagi kamu mengaturnya. Webhook menampilkan alamatnya
+  dengan tombol salin, contoh cara memanggilnya, **Send a test**, dan **New address** kalau alamat lamanya bocor.
+- **Steps**: kartu sesuai urutan jalannya, disambung satu garis. Tekan kartu untuk mengubahnya di tempat. Tekan tanda
+  plus di antara dua kartu untuk menambah langkah di situ dan memilih apa yang dikerjakannya. Seret kartu lewat
+  pegangannya untuk memindahkannya, atau pakai **Move up** dan **Move down** di menu kartu, tempat **Duplicate** dan
+  **Delete** juga berada. Langkah yang dihapus bisa dikembalikan dengan **Undo** selama beberapa detik.
+- **Ke mana run berlanjut**: di bawah tiap kartu, label kecil bilang ke mana run pergi setelah langkahnya selesai,
+  kalau gagal, dan kalau gak ada yang dikatakan. Di laptop, langkah yang melompat ke depan disambung ke langkah
+  tujuannya dengan garis melengkung, dan garis itu menyala saat labelnya ditunjuk. Run hanya bergerak maju, jadi
+  kalau memindah atau menghapus langkah membuat lompatan mengarah ke belakang, halamannya mengembalikan lompatan itu
+  ke cara biasa dan bilang begitu di kartunya.
+- **Who and where**: agent-nya, chat yang dikabari hasil tiap run, dan apa yang ia ingat di antara run.
+
+Gak ada yang tersimpan selagi kamu mengetik. Begitu ada yang berubah, sebuah bar di bawah halaman menawarkan **Save**
+dan **Discard changes**, dan bilang apa yang masih kurang. Kalau server menolak sebuah langkah, kartu langkah itu
+ditandai dengan alasannya dalam kata-kata sehari-hari.
+
+**Run.** Pindah dari **Steps** ke **Last run**, dan kartu yang sama menunjukkan jalannya run itu: langkah mana yang
+selesai dan berapa lama, mana yang gagal dan kenapa, dan mana yang gak pernah dicapai. Run yang masih jalan digambar
+selagi ia bergerak. Langkah yang menunggu kamu punya **Continue** dan **Stop** di kartunya, untuk yang boleh mengubah
+automation, dan langkah yang memulai mission punya link ke mission itu. **Recent runs** berisi dua puluh run
+terakhir, dan menekan salah satunya menggambar run itu di atas langkah-langkahnya.
+
+**Perubahan yang diusulkan agent** menunggu di atas halaman sebagai **Suggested**, dengan apa yang ditambah, diubah,
+dan dihapus, serta tombol **Accept** dan **Discard**. **Current** dan **Suggested** menukar kartunya di antara
+keduanya, dengan langkah yang berubah ditandai.
+
+Schedule dan Webhooks dulu dua halaman. Sekarang keduanya jadi satu halaman ini, dan alamat lamanya masih membukanya.
 
 ## Agent adalah modulnya
 
@@ -229,7 +276,7 @@ lama percakapan disimpan, dan `config.toml` milik daemon untuk apa pun yang belu
 
 ## Yang menunggu kamu, dan di mana
 
-Empat hal menunggu keputusan orang, dan masing-masing punya tempatnya sendiri. Mencampurkan dua yang
+Beberapa hal menunggu keputusan orang, dan masing-masing punya tempatnya sendiri. Mencampurkan dua yang
 pertama pernah memakan waktu satu jam seorang operator, dan pilihan katanya dibuat supaya itu gak
 terulang.
 
@@ -240,6 +287,7 @@ terulang.
 | **Skill drafts** | Skills Workshop → *Pending*, dengan angka di sebelah Skills di menu | Agent *mengusulkan* sebuah skill, atau kamu mengambilnya dari hub |
 | **Memory proposals** | Home, dan Knowledge & Memory → *Proposals*, dengan angka di sebelah Memory di menu | Proses malam ingin mengubah sesuatu yang sebaiknya diputuskan orang |
 | **Dokumen untuk ditambahkan** | Home, dan kartu koleksinya di Knowledge & Memory → *Knowledge*, dengan angka di sebelah Memory | Agent menyimpan dokumen untuk sebuah koleksi, dan dokumen itu menunggu kamu tambahkan atau tolak |
+| **Langkah yang menunggu persetujuanmu** | Home, Work → *Waiting for you*, dan halaman automation itu sendiri, dengan **Continue** dan **Stop** | Sebuah run automation sampai di langkah yang bertanya ke orang sebelum lanjut |
 
 Approval adalah giliran yang berhenti di tengah jalan dengan timer. Draft atau proposal adalah usulan
 tentang pekerjaan yang sudah selesai: gak menghalangi apa pun dan menunggu kamu. Menyatukan mereka
@@ -260,14 +308,15 @@ yang menunggu dan membuka tempat ia dijawab:
 Keduanya hanya muncul kalau antreannya gak kosong, dan gak satu pun membawa tombol approve. Mengizinkan
 orang asing masuk, atau menerbitkan skill yang ditulis agent, bukan keputusan yang diambil dari
 halaman yang cuma kamu lirik, jadi jumlahnya di sini, permintaannya dibaca di tempat ia diputuskan.
-Misi yang menunggu jawaban juga tampil sebagai kartu, yang membuka misinya. Memory proposals tampil
-sebagai angka di tab *Proposals*.
+Misi yang menunggu jawaban juga tampil sebagai kartu, yang membuka misinya. Langkah automation yang
+menunggu persetujuanmu dijawab langsung di sana, dengan **Continue** dan **Stop**, dan kartunya membuka
+automation itu. Memory proposals tampil sebagai angka di tab *Proposals*.
 
 ![Kartu approval](/media/dashboard-approvals.png)
 
 ## Link dari chat
 
-Saat ditanya soal misi, job terjadwal, atau approval, agent memberimu link ke halamannya di sini, dan notifikasi misi
+Saat ditanya soal misi, automation, atau approval, agent memberimu link ke halamannya di sini, dan notifikasi misi
 *mulai*, *butuh kamu*, dan *selesai* juga membawanya. Link dibangun dari `[dashboard] public_url`, alamat dashboard dari
 luar. Tanpa itu tidak ada link: alamat `localhost` tidak bisa dibuka dari HP.
 
@@ -278,8 +327,9 @@ luar. Tanpa itu tidak ada link: alamat `localhost` tidak bisa dibuka dari HP.
 - **Dibuka saat belum masuk**, link membawa ke halaman login, lalu setelah masuk, ke halaman yang dimaksud.
 - **Tanpa kartu pratinjau.** Pesan yang berisi link dikirim dengan pratinjau dimatikan, jadi chat tidak menampilkan kartu
   halaman login.
-- **Satu job di Schedule.** Link untuk job yang diusulkan agent, `/schedule?job=<id>`, membuka halamannya dengan kartu
-  job itu ditandai dan riwayat run-nya terbuka.
+- **Satu automation.** Link untuk automation yang diusulkan agent membuka halaman automation itu sendiri,
+  `/automations/<id>`. Link dari sebelum Automations jadi satu halaman, `/schedule?job=<id>`, tiba di halaman yang
+  sama, dan alamat lama Schedule dan Webhooks membuka daftar Automations.
 
 ## Skills ada di tingkat atas *dan* sebagai tab
 

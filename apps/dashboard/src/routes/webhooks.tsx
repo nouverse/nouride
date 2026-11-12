@@ -1,4 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
-import WebhooksPage from "@/modules/webhooks/index.page";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/webhooks")({ staticData: { fillsViewport: true }, component: WebhooksPage });
+/** Webhooks is part of Automations. Its address still lands: on the list, narrowed to what starts when its address is called. */
+export const Route = createFileRoute("/webhooks")({
+  beforeLoad: () => {
+    throw redirect({ to: "/automations", search: { start: "webhook" }, replace: true });
+  },
+});

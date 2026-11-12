@@ -11,7 +11,7 @@ const item = (to: string) => DAILY.find((one) => one.to === to)!;
 
 describe("the page you are on", () => {
   test("is a section's item on the pages it holds, and on the pages under them", () => {
-    expect(["/work", "/missions", "/missions/msn_1", "/jobs/job_1", "/schedule", "/webhooks"].every((path) => isCurrent(item("/work"), path))).toBe(true);
+    expect(["/work", "/automations", "/automations/cron_1", "/automations/new", "/missions", "/missions/msn_1", "/jobs/job_1"].every((path) => isCurrent(item("/work"), path))).toBe(true);
     expect(isCurrent(item("/agents"), "/office")).toBe(true);
     expect(isCurrent(item("/agents"), "/agents/nix/model")).toBe(true);
   });
@@ -57,8 +57,14 @@ test("the community is beside the manual at the foot of Settings, and only there
 
 describe("a section's tabs", () => {
   test("over its list pages, and none over one mission or one agent", () => {
-    expect(sectionTabs("/jobs")?.map((tab) => tab.label)).toEqual(["Waiting for you", "Missions", "Helpers", "Schedule", "Webhooks"]);
-    expect(sectionTabs("/webhooks")?.[0]?.to).toBe("/work");
+    expect(sectionTabs("/jobs")?.map((tab) => tab.label)).toEqual(["Waiting for you", "Automations", "Missions", "Helpers"]);
+    expect(sectionTabs("/automations")?.map((tab) => tab.to)).toEqual(["/work", "/automations", "/missions", "/jobs"]);
+    // Schedule and Webhooks are not pages of the section any more: their addresses land on Automations.
+    expect(sectionTabs("/schedule")).toBeNull();
+    expect(sectionTabs("/webhooks")).toBeNull();
+    // One automation, and the page that makes one, carry no tabs: they are not a list.
+    expect(sectionTabs("/automations/cron_1")).toBeNull();
+    expect(sectionTabs("/automations/new")).toBeNull();
     expect(sectionTabs("/people/")?.map((tab) => tab.to)).toEqual(["/memories", "/people", "/groups"]);
     expect(sectionTabs("/office")?.map((tab) => tab.to)).toEqual(["/agents", "/office"]);
     expect(sectionTabs("/missions/msn_1")).toBeNull();

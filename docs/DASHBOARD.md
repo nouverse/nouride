@@ -18,8 +18,8 @@ Missions          long work an agent finishes alone: what needs you, what runs, 
 
 Overview          what is waiting on you · today's tokens and spend · the Office, small
 Office            the agents' statuses as a small office of cats; a cat's card to wake, sleep or restyle it (0.8.1)
-Schedule          scheduled jobs: create, edit, run now, pause; their runs
-Webhooks          jobs that run when something calls their URL
+Automations       everything that runs on its own, whatever starts it (a schedule, a webhook, by hand):
+                  the list, and a page for each with its start, its steps as a flow and its runs (0.8.34)
 System Logs       the daemon's log, the audit trail, job runs, background commands
 
 Agents            the list, and New Agent — answered by a model, or by a coding CLI on this box
@@ -108,8 +108,16 @@ tidy — and **Tidy tags** in the page header, which opens the same review at an
 `[[people]]` mapping that tells an agent who is speaking: one entry per person, added by name with a
 Person Key made from it, and their accounts attached then or when they pair.
 
-**Schedule stays daemon-wide** even though every cron job has an `agentId`, because you usually want
-to see everything scheduled at once. Webhooks sit beside it: the same jobs, seen from what fires them.
+**Automations is one page, and daemon-wide.** A scheduled job, a webhook and a job started by hand are the same
+thing with a different start, so they are one list (`modules/automations`) with one dropdown for the start, where
+Schedule and Webhooks were two pages. It stays daemon-wide even though every job has an `agentId`, because you
+usually want to see everything that runs on its own at once. One automation's page is its start, its steps as cards
+in the order they run, and who runs it and where it reports. A run is drawn over those same cards (done, failed,
+waiting, never reached), so the picture a person edits is the picture a run is read on, and a suggested change is
+the same cards again with what it adds and changes marked. A job that does one thing is drawn as one step and stays
+saved as one thing until it needs to be a list. Nothing is saved as it is typed: the page keeps a draft and one bar
+saves it, because a list of steps half saved is a job that runs half of what was meant. `/schedule` and `/webhooks`
+redirect to the list, and `/schedule?job=<id>` to that job's page.
 
 **Chat is the first entry, and it is a client of the daemon, not of the browser.** A turn belongs to
 the daemon's turn records, so reloading the page, opening a second tab or coming back an hour later
@@ -145,6 +153,7 @@ Confusing these once cost an operator an hour, and the words are chosen so it ca
 | **Access** | The Access page; counted beside it in the sidebar, and on Overview | A person is asking to be let in at all |
 | **Skill drafts** | Skills Workshop, Pending; counted on Overview | An agent has *proposed* a skill, or the weekly review a change to the library, and wants your call. Blocks nothing, and never expires |
 | **Memory proposals** | Memory, Proposals | The nightly pass wants a change it may not make alone — shared knowledge, or any fact while `facts = "ask"` |
+| **A step waiting for a yes** | Work, Waiting for you; Home; the automation's own page | A run of an automation reached a step that asks a person. Continue or Stop; no answer in the step's time ends the run there |
 
 Overview counts the pairing requests and the drafts and links to them, but answers neither: it is a
 page you skim, and the decision belongs on the page that shows the whole request.
@@ -345,7 +354,11 @@ reaches the daemon over HTTP only (`ARCHITECTURE.md` §3).
 | `src/commons/components/layout/RootLayout.tsx` | the sidebar: its groups, and which entries are admin-only |
 | `src/commons/components/ui/ui.tsx` | `Card`, `Field`, `PageHeader`, `EmptyState`, `StatusDot`, `ErrorNote` |
 | `src/commons/components/ui/confirm.tsx` | `useConfirm()` — the one "are you sure?", promise-shaped |
-| `src/commons/components/ui/SearchSelect.tsx` | pick one of a long list: a button that opens it, with a field to narrow it (whose chats, on Chats) |
+| `src/commons/components/ui/SearchSelect.tsx` | pick one of a list: a button that opens it. A long list gets a field to narrow it (whose chats, on Chats); a short one takes the keys itself (a list's filters) |
+| `src/commons/components/ui/ReorderList.tsx` | a list put in order by dragging a row's handle, by the arrow keys on it, or by buttons; the rows slide to their new places |
+| `src/commons/components/ui/FlowLinks.tsx` | the curved lines between the cards of a flow, drawn over it from marks the cards carry |
+| `src/commons/components/ui/InlineTitle.tsx` | a page's title, edited where it is |
+| `src/commons/components/jobs/` | what more than one page draws of a job: `StepCard` (one step of a flow), `WaitingStepCard` (a step that waits for a person, on Work and Home), `ProposalBar`, `Allowances`, `ChatPicker` |
 | `src/commons/components/chat/` | the conversation and its parts (`Conversation`, `Composer`, `Turn`), drawn by the Chats page and by the floating chat |
 | `src/commons/components/floating-chat/` | the chat over every page: its button and card or sheet (`FloatingChat`), what is in it (`FloatingPanel`), the page a message says (`page-open.ts`) |
 | `src/commons/hooks/use-page-subject.ts` | `usePageSubject("…")`: a page says the one thing it is about, for an agent asked from the floating chat |

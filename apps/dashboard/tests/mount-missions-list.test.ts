@@ -5,7 +5,7 @@
  */
 
 import { expect, test } from "bun:test";
-import { buttons, press, renderPage, useMountHarness } from "./mount-harness.ts";
+import { buttons, dropdown, press, renderPage, useMountHarness } from "./mount-harness.ts";
 import { eventually } from "./wait.ts";
 
 useMountHarness();
@@ -36,19 +36,18 @@ test("what finished is the last 3, 7, 14 or 30 days — 3 unless chosen, no furt
   let chosen = "";
   try {
     await renderPage("/missions", async (host) => {
-      await eventually(() => host.querySelector('select[aria-label="Finished in"]') !== null, 2_000, "the span filter");
-      const span = host.querySelector<HTMLSelectElement>('select[aria-label="Finished in"]')!;
-      options = [...span.options].map((option) => option.textContent ?? "");
-      chosen = span.value;
-      span.value = "30";
-      span.dispatchEvent(new Event("change", { bubbles: true }));
+      const span = dropdown(host, "Finished in");
+      await eventually(() => span.button() !== undefined, 2_000, "the span filter");
+      chosen = span.holds() ?? "";
+      options = await span.open();
+      await span.pick("Last 30 days");
       await eventually(() => asked.some((url) => url.includes("days=30")), 2_000, "the month asked for");
     });
   } finally {
     globalThis.fetch = harness;
   }
   expect(options).toEqual(["Last 3 days", "Last 7 days", "Last 14 days", "Last 30 days"]);
-  expect(chosen).toBe("3");
+  expect(chosen).toBe("Last 3 days");
   // The page's first ask; the menu's count reads the daemon's own week on every page, unfiltered (0.8.24).
   expect(asked.filter((url) => !url.endsWith("/api/control/missions"))[0]).toContain("days=3");
   expect(asked.some((url) => url.includes("days=30"))).toBe(true);

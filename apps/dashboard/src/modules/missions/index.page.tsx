@@ -20,6 +20,8 @@ import { canWrite, useMe } from "@/commons/lib/session";
 import { useTextFilter } from "@/commons/lib/use-text-filter";
 import { useOrchestrator, useOrchestratorFirst } from "@/commons/components/agents/AgentName";
 import { FILL_PAGE, ScrollCard } from "@/commons/components/ui/ScrollCard";
+import { SearchSelect } from "@/commons/components/ui/SearchSelect";
+import { agentOptions } from "@/commons/lib/agents";
 import { Count, SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
 import { Card, EmptyState, ErrorNote, PageHeader } from "@/commons/components/ui/ui";
 import { CardGrid } from "@/commons/components/ui/CardGrid";
@@ -141,32 +143,27 @@ export default function MissionsPage({ agent }: { agent?: string }) {
   const shown = (mission: MissionView) => matched.has(mission);
 
   const spanFilter = (
-    <select className="select select-sm w-36 rounded-xl" aria-label="Finished in" value={days} onChange={(event) => setDays(Number(event.target.value) as Span)}>
-      {SPANS.map((span) => (
-        <option key={span} value={span}>
-          Last {span} days
-        </option>
-      ))}
-    </select>
+    <SearchSelect
+      small
+      label="Finished in"
+      options={SPANS.map((span) => ({ value: String(span), label: `Last ${span} days` }))}
+      value={String(days)}
+      onChange={(next) => setDays(Number(next) as Span)}
+      width={176}
+    />
   );
 
   // The agent filter is the address's `?agent=`, as an agent's page links here — so the daemon sends that agent's only.
   const agentFilter =
     agents.length > 1 || agent ? (
-      <select
-        className="select select-sm w-40 rounded-xl"
-        aria-label="Agent"
+      <SearchSelect
+        small
+        label="Agent"
+        options={agentOptions(agents.map((entry) => entry.id), orchestrator, agent)}
         value={agent ?? ""}
-        onChange={(event) => void navigate({ to: "/missions", search: event.target.value ? { agent: event.target.value } : {} })}
-      >
-        <option value="">Every agent</option>
-        {agents.map((entry) => (
-          <option key={entry.id} value={entry.id}>
-            {entry.id === orchestrator ? `${entry.id} (orchestrator)` : entry.id}
-          </option>
-        ))}
-        {agent && !agents.some((entry) => entry.id === agent) ? <option value={agent}>{agent}</option> : null}
-      </select>
+        onChange={(next) => void navigate({ to: "/missions", search: next ? { agent: next } : {} })}
+        width={208}
+      />
     ) : null;
 
   return (

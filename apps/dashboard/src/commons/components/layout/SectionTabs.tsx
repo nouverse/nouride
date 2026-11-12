@@ -16,10 +16,9 @@ interface Tab {
 const SECTIONS: Tab[][] = [
   [
     { to: "/work", label: "Waiting for you" },
+    { to: "/automations", label: "Automations" },
     { to: "/missions", label: "Missions" },
     { to: "/jobs", label: "Helpers" },
-    { to: "/schedule", label: "Schedule" },
-    { to: "/webhooks", label: "Webhooks" },
   ],
   [
     { to: "/memories", label: "Knowledge & Memory" },

@@ -27,8 +27,8 @@ const TAB = "relative flex min-h-12 flex-col items-center justify-center gap-0.5
  * the sheet, the place of More was the sheet's Sign out, and the other tabs' the account's line, which did nothing.
  */
 export function TabBar({ pathname, more, onMore, onTab, phoneChat = false }: { pathname: string; more: boolean; onMore: () => void; onTab: () => void; phoneChat?: boolean }) {
-  const { approvals, missions } = useNeedsYou();
-  const waiting = approvals + missions;
+  const { approvals, missions, steps } = useNeedsYou();
+  const waiting = approvals + missions + steps;
   return (
     <>
     <div aria-hidden="true" className={cn("bg-app-foot pointer-events-none fixed inset-x-0 bottom-0 z-40 h-[calc(2.75rem+env(safe-area-inset-bottom))] lg:hidden", phoneChat && "max-md:hidden")} />

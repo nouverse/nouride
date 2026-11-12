@@ -107,7 +107,7 @@ export const TEST_BUDGET: Record<string, Budget> = {
     why: "reflection end to end, written before `modules/reflection` was split, on this file's `enginePointedAt` harness; new cases go to tests/reflection/",
   },
   "apps/dashboard/tests/mount.test.ts": {
-    lines: 1_780,
+    lines: 1_577,
     why: "every dashboard page mounted, and the cases that click through one; the harness is `mount-harness.ts`, so a page's new cases go in a file of their own",
   },
   "apps/engine/tests/llm/prompt.test.ts": {

@@ -15,7 +15,7 @@
 import { join } from "node:path";
 import { Hono } from "hono";
 import { setModifiedTime, writeTextFile } from "@nouride/runtime";
-import { sessionIdFor } from "@nouride/shared";
+import { sessionIdFor, type Job, type JobStep } from "@nouride/shared";
 import { SecretStore } from "@nouride/secrets";
 import { startMemoryPass } from "@/boot/memory-pass.ts";
 import { VERSION } from "@/commons/version.ts";
@@ -23,6 +23,8 @@ import { AuditLog } from "@/commons/audit.store.ts";
 import type { DaemonContext } from "@/commons/context.ts";
 import { SettingsService } from "@/modules/config/settings/index.ts";
 import { McpTokenStore } from "@/modules/mcp-server/tokens.store.ts";
+import { CronStore, type JobInput } from "@/modules/cron/cron.store.ts";
+import { CronScheduler } from "@/modules/cron/scheduler.ts";
 import { Missions } from "@/modules/missions/missions.ts";
 import { MissionStore } from "@/modules/missions/missions.store.ts";
 import { NotesStore, STALE_AFTER_MS } from "@/modules/notes/store.ts";
@@ -50,7 +52,11 @@ const INSTANT = 1_760_000_000_000;
  * Each fixture, by the path the dashboard asks for, and how it is asked here. A conversation's two are asked with the
  * session's own id; the search with the words a person would type.
  */
-const ASKED: Record<string, (ids: { session: string; mission: string }) => string> = {
+const ASKED: Record<string, (ids: { session: string; mission: string; automation: string }) => string> = {
+  // Every automation, one of them with its runs and the change an agent suggested to it, and the steps that wait.
+  "/automations": () => "/automations",
+  "/automations/cron_1": (ids) => `/automations/${ids.automation}`,
+  "/automations/waiting": () => "/automations/waiting",
   "/sessions/ses_1/turns": (ids) => `/sessions/${ids.session}/turns`,
   "/sessions/ses_1/live": (ids) => `/sessions/${ids.session}/live?after=0`,
   "/sessions/ses_1/notes": (ids) => `/sessions/${ids.session}/notes`,
@@ -259,6 +265,65 @@ async function missions(bench: Bench, notes: NotesStore): Promise<{ missions: Mi
 }
 
 /**
+ * Automations, one of each kind the page draws: a list of steps on a timer whose newest run failed its command, had
+ * its agent look into it and now waits for a person; a change an agent suggested to it; one thing at a time of day
+ * that ran; a webhook; and a list an agent proposed, started by hand. The steps run through the scheduler itself, so
+ * each outcome is what a run writes, with a stand-in for the agent's turn and no chat to deliver to.
+ */
+async function automations(bench: Bench): Promise<{ cron: NonNullable<ControlDeps["cron"]>; names: [string, string][] }> {
+  const where = { gatewayId: "telegram:main", chatId: "-100200" };
+  const store = new CronStore({ db: bench.db, config: bench.config.cron, timezone: "Asia/Jakarta", now: () => INSTANT });
+  const scheduler = new CronScheduler({
+    store,
+    config: bench.config.cron,
+    now: () => INSTANT,
+    executors: {
+      runTurn: async () => ({ text: "The payment service was restarting after its update. It answers again now, and nothing else is down." }),
+      dispatchTurn: () => true,
+      deliver: async () => ({ ok: true }),
+      commandSandbox: () => ({ cwd: bench.dataDir, env: {} }),
+    },
+  });
+  const make = (input: Omit<JobInput, "agentId" | "target" | "createdBy">): Job => store.create({ agentId: "nouva", target: where, createdBy: "usr_1", ...input });
+  const check: JobStep = { id: "check", kind: "command", argv: ["sh", "-lc", "echo 'the shop answered 503' >&2; exit 22"], then: "end", whenFailed: "next" };
+  const find: JobStep = { id: "find", kind: "agentTurn", name: "Find out why", message: "The shop's health check failed. Find out why and say what you found." };
+  const ok: JobStep = { id: "ok", kind: "approval", ask: "Send what was found to the group?", whenFailed: "end" };
+  const tell: JobStep = { id: "tell", kind: "systemEvent", name: "Tell the group", text: "The shop was down. What we found is above." };
+
+  const shop = make({ name: "Shop health check", trigger: { kind: "every", everyMs: 600_000 }, payload: { kind: "steps", steps: [check, find, ok, tell] } });
+  await scheduler.runNow(shop.id, "usr_1");
+  const proposal = { by: "nouva", gatewayId: where.gatewayId, chatId: where.chatId, for: "usr_1", at: INSTANT };
+  const change = make({
+    name: "Shop health check",
+    trigger: { kind: "every", everyMs: 600_000 },
+    payload: { kind: "steps", steps: [check, find, ok, tell, { id: "log", kind: "command", name: "Note it down", argv: ["sh", "-lc", "date >> outages.log"] }] },
+    proposal: { ...proposal, replaces: shop.id },
+  });
+  const brief = make({ name: "Morning brief", trigger: { kind: "cron", expr: "0 7 * * *" }, payload: { kind: "agentTurn", message: "Sum up what came in overnight, in five lines." } });
+  await scheduler.runNow(brief.id, "usr_1");
+  const order = make({ name: "New order", trigger: { kind: "webhook" }, payload: { kind: "agentTurn", message: "A new order came in. Read what was sent and say who ordered what." } });
+  const backup = make({
+    name: "Backup check",
+    trigger: { kind: "manual" },
+    payload: { kind: "steps", steps: [{ id: "s1", kind: "command", argv: ["sh", "-lc", "ls backups | tail -1"], whenEmpty: "next" }, { id: "s2", kind: "agentTurn", message: "Say whether last night's backup is there." }] },
+    proposal,
+  });
+
+  const jobs = [shop, change, brief, order, backup];
+  const runs = jobs.flatMap((job) => store.runs(job.id));
+  const hook = store.get(order.id)?.webhookToken ?? "";
+  return {
+    cron: { store, scheduler, timezone: "Asia/Jakarta" },
+    names: [
+      ...jobs.map((job, n): [string, string] => [job.id, `cron_${n + 1}`]),
+      ...runs.map((run, n): [string, string] => [run.id, `run_${n + 1}`]),
+      [hook, "hook_1"],
+      [`/hooks/${hook}`, "/hooks/hook_1"],
+    ],
+  };
+}
+
+/**
  * A Telegram group nouva talks in, named by Telegram and renamed by the operator, where a family member and a stranger
  * spoke.
  */
@@ -338,6 +403,7 @@ export async function wireAnswers(): Promise<Record<string, unknown>> {
 
     const notes = await workNotes(dataDir);
     const work = await missions(bench, notes);
+    const jobs = await automations(bench);
     // On the bench's machine, as its pipeline is: the fixture says how much runs at once, and must not say this laptop's.
     const ctx = { config, db, gateways: bench.gateways, startedAt: Date.now(), configSource: configPath, status: "ready", agentCount: 1, providerErrors: new Map(), machine: BENCH_MACHINE } as unknown as DaemonContext;
     const app = new Hono();
@@ -365,6 +431,7 @@ export async function wireAnswers(): Promise<Record<string, unknown>> {
       mcpTokens,
       notes,
       missions: work.missions,
+      cron: jobs.cron,
       local: { id: "web:dashboard" },
       // As the boot hands it out on a build without the gateway, which the suite runs as: off, and nothing to switch.
       llmGateway: new GatewaySwitch({ carried: false, decidedBy: null, start: async () => { throw new Error("not carried"); }, save: async () => ({ ok: true }) }),
@@ -376,6 +443,7 @@ export async function wireAnswers(): Promise<Record<string, unknown>> {
       [ids.session, "ses_1"],
       [ids.done, "turn_1"],
       [ids.working, "turn_2"],
+      ...jobs.names,
       [work.working, "msn_1"],
       [work.stopped, "msn_2"],
       [sessionIdFor({ agentId: "nouva", gatewayId: "web:mission", chatId: work.working }), "ses_msn_1"],
@@ -391,7 +459,7 @@ export async function wireAnswers(): Promise<Record<string, unknown>> {
     ]);
     const answered: Record<string, unknown> = {};
     for (const [fixture, asked] of Object.entries(ASKED)) {
-      const path = asked({ session: ids.session, mission: work.working });
+      const path = asked({ session: ids.session, mission: work.working, automation: jobs.names[0]![0] });
       const answer =
         path === "/health"
           ? buildHealth(ctx, () => ({ rssMb: 64, heapUsedMb: 32 }) as never).payload
