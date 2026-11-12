@@ -50,6 +50,12 @@ const MAX_MESSAGE_CHARS = 2000;
 const SLASH_ARGS = "args";
 
 /**
+ * How long a slash command's description may be. Discord refuses the whole list over one that is longer: a
+ * description of 103 characters kept every command of every bot off the menu, which went on showing the old ones.
+ */
+const MAX_DESCRIPTION_CHARS = 100;
+
+/**
  * How much of Discord's state to keep in memory.
  *
  * Zero means "do not cache", which is the default for all three: nothing in this adapter reads them,
@@ -573,7 +579,8 @@ export class DiscordGateway extends BaseGateway {
     await client.application.commands.set(
       commands.map((c) => ({
         name: c.command,
-        description: c.description,
+        // Cut to what Discord takes, so one long description costs its own tail and not the menu.
+        description: c.description.length > MAX_DESCRIPTION_CHARS ? `${c.description.slice(0, MAX_DESCRIPTION_CHARS - 1)}…` : c.description,
         type: 1, // CHAT_INPUT
         /**
          * One optional free-text option on every command, rather than a schema per command.
