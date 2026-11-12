@@ -433,6 +433,14 @@ Dokumen **gak** dikirim ke model sama sekali: agent membukanya dengan `read` ata
 sebuah PDF gak berbiaya apa pun sampai agent benar-benar melihatnya. Voice note dikirim ke model hanya
 kalau model itu bisa mendengarnya (`read_audio`).
 
+Gambar yang sangat besar, tangkapan layar panjang atau foto langsung dari kamera, dikirim ke model sebagai
+salinan yang lebih kecil: gak ada sisi yang lebih dari 2.576 piksel, sebanyak yang dibaca model (0.8.37).
+File kamu gak diubah. Nouride membuat salinannya dengan ffmpeg; di mesin yang gak punya ffmpeg gambar itu
+gak ikut dikirim, dan agent diberi tahu ukurannya dan bahwa gambarnya terlalu besar, jadi ia bisa minta
+yang lebih kecil. Sebelumnya, satu gambar seperti itu bisa membuat semua giliran berikutnya di
+percakapannya gagal, karena penyedia model menolak seluruh permintaannya. `[media] max_image_side`
+mengatur angkanya, untuk model yang membaca lebih besar.
+
 Agent mengirim file balik dengan `send_file`. Ia gak akan mengirim file kredensial, atau file apa pun
 yang memuat nilai salah satu secret agent itu, karena file di platform chat gak bisa disamarkan.
 

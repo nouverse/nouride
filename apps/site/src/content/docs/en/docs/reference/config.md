@@ -605,6 +605,7 @@ has a control for behind **Advanced**. Each works exactly as it always did when 
 | `[security.rate_limit] cooldown_reply` | `"Please slow down."` | What a sender over the rate limit is told. |
 | `[alerts] cooldown_ms` | `300000` | Gap between repeats of the same alert. |
 | `[media] max_image_bytes` | `8388608` | Images larger than this are reported rather than looked at. |
+| `[media] max_image_side` | `2576` | The most pixels a picture sent to a model may have on its longer side. A larger one is sent as a smaller copy, which needs ffmpeg on this machine; without it the agent is told the picture was too large. Raise it only for a model that reads more. |
 | `[media] max_audio_bytes` | `20971520` | Clips larger than this, after any transcode, are reported rather than sent. |
 | `[control] enabled` | `true` | Serve the token-guarded control API the CLI talks to. |
 | `[control] chat` | `true` | Register the in-process gateway `nouride chat` delivers through. |

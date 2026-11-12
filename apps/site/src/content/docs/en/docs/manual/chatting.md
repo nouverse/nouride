@@ -419,6 +419,13 @@ the agent's own model unless you name a cheaper one in `[media] image_model`. Do
 sent to a model at all: the agent opens them with `read` or a command, so a PDF costs nothing until
 the agent looks at it. Voice notes go to the model only if it can hear them (`read_audio`).
 
+A very large picture, a long screenshot or a photo straight from a camera, is sent to the model as a
+smaller copy: no side longer than 2,576 pixels, which is as much as a model reads (0.8.37). Your file
+is not changed. Nouride makes the copy with ffmpeg; on a machine without it the picture is left out,
+and the agent is told its size and that it was too large, so it can ask you for a smaller one. Before
+this, one such picture could end every later turn of its conversation, because the provider refused
+the whole request. `[media] max_image_side` sets the number, for a model that reads more.
+
 Agents send files back with `send_file`. It will not send a credential file, or any file holding the
 value of one of the agent's secrets, because a file on a chat platform cannot be masked.
 

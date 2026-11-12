@@ -183,6 +183,7 @@ export class SideQuestions {
     const ctx = this.ctx;
     return new TurnExecutor({
       ...(ctx.deps.spill ? { spill: ctx.deps.spill } : {}),
+      fitImages: ctx.fitImages,
       onFallback: alertOnFallback(ctx.outages, ctx.deps.notifier, agent),
       windowOf: (model) => ctx.deps.providers?.catalog?.windowNow(agent.config.llm.provider, model) ?? null,
       llm: ctx.deps.config.llm,

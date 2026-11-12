@@ -24,6 +24,7 @@ import type {
 import type { ApprovalLevel } from "@nouride/shared";
 import type { ApprovalGate } from "@/modules/tools/approval.ts";
 import type { AgentToolset } from "@/modules/tools/registry.ts";
+import type { ImageFit } from "@/modules/llm/images.ts";
 import type { ToolOutputSpill } from "@/modules/llm/spill.ts";
 import type { TokenScales } from "@/modules/llm/context-scale.ts";
 import type { ActivityKind } from "@/commons/activity.ts";
@@ -440,6 +441,11 @@ export interface ExecutorDeps {
    * every setting in the daemon.
    */
   maxImageBytes?: number;
+  /**
+   * `[media] max_image_side` and what makes a picture fit it, for the same step: a picture larger on a side goes as a
+   * smaller copy, or as a line. A port for the reason `maxImageBytes` is a number: the converter is the attachments'.
+   */
+  fitImages?: ImageFit;
   /**
    * The model refused an audio part and the turn was answered without it.
    *

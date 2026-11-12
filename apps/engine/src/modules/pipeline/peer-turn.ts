@@ -205,6 +205,7 @@ export function startPeerTurn(ctx: TurnContext, request: PeerTurnRequest, option
   const lines = contextInto(ctx.deps.turns, request.ctx.turnId, { via: "ask_agent", by: peer.config.id });
   const executor = brainFor(ctx.deps.externalAgents, peer, {
     ...(ctx.deps.spill ? { spill: ctx.deps.spill } : {}),
+    fitImages: ctx.fitImages,
     onFallback: alertOnFallback(ctx.outages, ctx.deps.notifier, peer),
     windowOf: (model) => ctx.deps.providers?.catalog?.windowNow(peer.config.llm.provider, model) ?? null,
     llm: ctx.deps.config.llm,

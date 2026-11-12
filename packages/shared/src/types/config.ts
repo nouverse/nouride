@@ -506,6 +506,12 @@ export interface MediaSection {
   /** Cap per image. Beyond it the agent is told the image was too large to look at. */
   maxImageBytes: number;
   /**
+   * The most pixels a picture sent to a model may have on its longer side. A larger one goes as a smaller copy, made
+   * with ffmpeg, or is left out with a line that says so: a provider refuses a request over a picture past its own
+   * limit, and with it every later turn of the conversation that holds the picture.
+   */
+  maxImageSide: number;
+  /**
    * Whether voice notes and audio files are sent to the model at all.
    *
    * On, a clip goes to the conversation model as sound — **only when that model is known to hear**.

@@ -46,6 +46,7 @@ export const ADVANCED_KEYS: ReadonlySet<string> = new Set([
   "security.credentials_dir",
   "security.tool_max_output_bytes",
   "media.max_image_bytes",
+  "media.max_image_side",
   "media.max_audio_bytes",
   "agents.mention_max_hops",
   "agents.job_wake_max_chain",

@@ -26,7 +26,7 @@
 
 import { isSupportedImageType } from "@nouride/llm";
 import { readFileBytes, statFile } from "@nouride/runtime";
-import { createLogger, FILE_IMAGE_REF, sniffImageMime, type ChatMessage, type ContentPart } from "@nouride/shared";
+import { createLogger, FILE_IMAGE_REF, imageSize, sniffImageMime, type ChatMessage, type ContentPart } from "@nouride/shared";
 import { localTime, safeTimeZone } from "@/commons/clock.ts";
 
 const log = createLogger("llm.images");
@@ -43,10 +43,26 @@ const log = createLogger("llm.images");
  */
 const MAX_IMAGE_BYTES_PER_REQUEST = 16 * 1024 * 1024;
 
+/**
+ * How a picture too large on a side for a model is made to fit.
+ *
+ * A provider refuses a whole request over one such picture, and the conversation keeps the picture: every turn after
+ * it failed the same way (live, a long screenshot in a room with many pictures). So none goes out past the bound,
+ * whoever the provider is, and the refusal has nothing to be about.
+ */
+export interface ImageFit {
+  /** `[media] max_image_side`: the most pixels a picture may have on its longer side. */
+  maxSide: number;
+  /** Makes the smaller copy (the attachments' converter). Absent, or `null` from it, the picture is left out with a line. */
+  shrink?: (path: string, maxSide: number) => Promise<{ bytes: Uint8Array; mimeType: string } | null>;
+}
+
 export interface ResolveImagesOptions {
   maxBytes?: number;
   /** Per-image ceiling, from `[media] max_image_bytes`. A file over it is never sent. */
   maxBytesEach?: number;
+  /** The bound in pixels, and what makes a picture fit it. Absent, a picture goes whatever its size. */
+  fit?: ImageFit;
   /** The zone a picture's line gives its time in: the daemon's, as every other time the agent reads. */
   timeZone?: string;
 }
@@ -110,6 +126,7 @@ export async function resolveImages(
         : await loadImage(part.localPath, part.mimeType, {
             remainingBytes: maxBytes - bytes,
             maxBytesEach: options.maxBytesEach,
+            fit: options.fit,
           });
 
       if (!resolved || "over" in resolved) {
@@ -124,6 +141,10 @@ export async function resolveImages(
       }
       if ("unsendable" in resolved) {
         parts.push({ type: "text", text: unsendableLine(part.filename, resolved.unsendable) });
+        continue;
+      }
+      if ("tooLarge" in resolved) {
+        parts.push({ type: "text", text: tooLargeLine(opened ? part.ref.slice(FILE_IMAGE_REF.length) : part.filename, resolved.tooLarge, options.fit?.maxSide ?? 0) });
         continue;
       }
 
@@ -204,11 +225,19 @@ function unsendableLine(filename: string | undefined, format: string): string {
   return `[image: ${filename ?? "attachment"}: ${format} is not a format the model can be sent; ask for a PNG or JPEG, or convert it with your tools]`;
 }
 
+/**
+ * A picture larger on a side than a model is sent, where no smaller copy could be made: no ffmpeg on this machine, or
+ * a file it cannot read. Said with its size and the bound, so the agent can make the copy itself or ask for one.
+ */
+function tooLargeLine(name: string | undefined, size: { width: number; height: number }, maxSide: number): string {
+  return `[image: ${name ?? "attachment"}: ${size.width}x${size.height} pixels, more than the ${maxSide} a side a model is sent, and no smaller copy could be made here. Make one with your tools and read that, or ask for a smaller picture]`;
+}
+
 async function loadImage(
   path: string,
   mimeType: string,
-  limits: { remainingBytes: number; maxBytesEach?: number },
-): Promise<{ data: string; mimeType: string; bytes: number } | { unsendable: string } | { over: true } | null> {
+  limits: { remainingBytes: number; maxBytesEach?: number; fit?: ImageFit },
+): Promise<{ data: string; mimeType: string; bytes: number } | { unsendable: string } | { tooLarge: { width: number; height: number } } | { over: true } | null> {
   /**
    * Size checked from the directory entry before the file is opened.
    *
@@ -218,15 +247,27 @@ async function loadImage(
   const size = statFile(path)?.size;
   if (size === undefined) return null;
   if (limits.maxBytesEach !== undefined && size > limits.maxBytesEach) return null;
-  // Base64 is four bytes out for every three in, and it is the encoded length that travels.
-  if (Math.ceil(size / 3) * 4 > limits.remainingBytes) return { over: true };
+  // Base64 is four bytes out for every three in, and it is the encoded length that travels. With something to make a
+  // picture smaller, one that a whole request could carry is read first: too large on a side, it weighs far less once
+  // it fits.
+  const encoded = (length: number): number => Math.ceil(length / 3) * 4;
+  if (encoded(size) > limits.remainingBytes && (!limits.fit?.shrink || size > MAX_IMAGE_BYTES_PER_REQUEST)) return { over: true };
 
   try {
     const raw = await readFileBytes(path);
     // The bytes decide what is sent and as what — a label is somebody's claim (`sniffImageMime`).
     const actual = sniffImageMime(raw);
     if (!actual || !isSupportedImageType(actual)) return { unsendable: actual ?? `this file (labelled ${mimeType})` };
-    return { data: toBase64(raw), mimeType: actual, bytes: Math.ceil(raw.byteLength / 3) * 4 };
+
+    const pixels = limits.fit ? imageSize(raw) : null;
+    if (limits.fit && pixels && Math.max(pixels.width, pixels.height) > limits.fit.maxSide) {
+      const smaller = (await limits.fit.shrink?.(path, limits.fit.maxSide)) ?? null;
+      if (!smaller || !isSupportedImageType(smaller.mimeType)) return { tooLarge: pixels };
+      if (encoded(smaller.bytes.byteLength) > limits.remainingBytes) return { over: true };
+      return { data: toBase64(smaller.bytes), mimeType: smaller.mimeType, bytes: encoded(smaller.bytes.byteLength) };
+    }
+    if (encoded(raw.byteLength) > limits.remainingBytes) return { over: true };
+    return { data: toBase64(raw), mimeType: actual, bytes: encoded(raw.byteLength) };
   } catch (err) {
     log.warn("an attached image could not be read back", { path, error: String(err) });
     return null;

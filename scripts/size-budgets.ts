@@ -27,8 +27,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "a security classifier: what an agent may never do without a human, and the credential paths read word by word. It grows by a rule; a second way of classifying goes in a file of its own",
   },
   "apps/engine/src/modules/config/schema.docs.ts": {
-    lines: 482,
-    why: "one annotation per setting, the list `config explain` and the dashboard read; it grows by an entry (the quiet hours' now), and splitting it would hide the list it is",
+    lines: 487,
+    why: "one annotation per setting, the list `config explain` and the dashboard read; it grows by an entry (a picture's most pixels on a side, now), and splitting it would hide the list it is",
   },
   "apps/engine/src/modules/web/control/routes/chat.ts": {
     lines: 507,

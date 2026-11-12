@@ -606,3 +606,15 @@ describe("the exec knobs 0.8.0 took out", () => {
   });
 });
 
+describe("the most pixels a picture may have on a side", () => {
+  test("is 2576 as shipped, and what the file says where it says", async () => {
+    expect(DEFAULT_CONFIG.media.maxImageSide).toBe(2576);
+    expect((await load("[media]\nmax_image_side = 1568\n")).config.media.maxImageSide).toBe(1568);
+  });
+
+  test("refuses nothing, less than nothing and half a pixel: every picture would be past it, or none", async () => {
+    for (const bad of ["0", "-1", "2576.5", '"2576"']) {
+      await expect(load(`[media]\nmax_image_side = ${bad}\n`)).rejects.toThrow(/\[media\] max_image_side = .* is not a whole number from 1 up/);
+    }
+  });
+});

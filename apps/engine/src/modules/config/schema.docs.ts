@@ -186,6 +186,11 @@ export const ANNOTATIONS: Record<string, Annotation> = {
   },
   "media.read_images": { description: "Whether images are looked at at all: one sent in a chat, one an agent opens with `read`, one an MCP server returns." },
   "media.max_image_bytes": { description: "Images larger than this are reported rather than looked at." },
+  "media.max_image_side": {
+    description:
+      "The most pixels a picture sent to a model may have on its longer side. A larger one is sent as a smaller copy, " +
+      "which needs ffmpeg on this machine; without it the agent is told the picture was too large. Raise it only for a model that reads more.",
+  },
   "media.read_audio": {
     description:
       "Whether voice notes and audio files are sent to the model. Even on, a clip is sent only to a " +

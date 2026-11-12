@@ -51,6 +51,91 @@ export function sniffImageMime(bytes: Uint8Array): string | null {
 }
 
 /**
+ * How large a picture is in pixels, read from its header: the four formats a model is sent. `null` for any other
+ * file, and for a header cut short or not as its format says, which is a size nobody knows rather than a refusal.
+ *
+ * A provider refuses a request over one picture too large on a side, and with it every turn of the conversation that
+ * holds the picture: a long screenshot is well under any limit in bytes. Nothing is decoded here, so it costs the
+ * same for a picture of any size.
+ */
+export function imageSize(bytes: Uint8Array): { width: number; height: number } | null {
+  const size = (() => {
+    switch (sniffImageMime(bytes)) {
+      case "image/png":
+        // The first chunk is IHDR by the format's own rule: its width and height sit right after the chunk's name.
+        return ascii(bytes, 12, "IHDR") && bytes.byteLength >= 24 ? { width: uint(bytes, 16, 4, false), height: uint(bytes, 20, 4, false) } : null;
+      case "image/gif":
+        return bytes.byteLength >= 10 ? { width: uint(bytes, 6, 2, true), height: uint(bytes, 8, 2, true) } : null;
+      case "image/webp":
+        return webpSize(bytes);
+      case "image/jpeg":
+        return jpegSize(bytes);
+      default:
+        return null;
+    }
+  })();
+  return size && size.width > 0 && size.height > 0 ? size : null;
+}
+
+/** An unsigned integer of `length` bytes at `offset`, in the byte order the format writes. */
+function uint(bytes: Uint8Array, offset: number, length: number, littleEndian: boolean): number {
+  let value = 0;
+  for (let index = 0; index < length; index += 1) {
+    value = value * 256 + bytes[littleEndian ? offset + length - 1 - index : offset + index]!;
+  }
+  return value;
+}
+
+/** WebP's three kinds each keep the size elsewhere: lossy in its frame header, lossless packed into bits, extended as the canvas. */
+function webpSize(bytes: Uint8Array): { width: number; height: number } | null {
+  if (bytes.byteLength < 30) return null;
+  if (ascii(bytes, 12, "VP8X")) return { width: uint(bytes, 24, 3, true) + 1, height: uint(bytes, 27, 3, true) + 1 };
+  if (ascii(bytes, 12, "VP8L")) {
+    if (bytes[20] !== 0x2f) return null;
+    const bits = uint(bytes, 21, 4, true);
+    return { width: (bits % 16384) + 1, height: (Math.floor(bits / 16384) % 16384) + 1 };
+  }
+  if (ascii(bytes, 12, "VP8 ")) {
+    // Fourteen bits each: the two above them are a scale a decoder applies, not part of the size.
+    if (!starts(bytes.subarray(23), [0x9d, 0x01, 0x2a])) return null;
+    return { width: uint(bytes, 26, 2, true) % 16384, height: uint(bytes, 28, 2, true) % 16384 };
+  }
+  return null;
+}
+
+/**
+ * A JPEG's size is in its frame header, which comes after whatever the camera put first: a thumbnail, a colour
+ * profile, each a segment that says its own length. So the segments are walked, never searched for a byte pattern,
+ * which a thumbnail's own frame header would match first.
+ */
+function jpegSize(bytes: Uint8Array): { width: number; height: number } | null {
+  let offset = 2;
+  while (offset + 4 <= bytes.byteLength) {
+    if (bytes[offset] !== 0xff) return null;
+    const marker = bytes[offset + 1]!;
+    // Fill bytes before a marker, and the markers that stand alone with no length after them.
+    if (marker === 0xff) {
+      offset += 1;
+      continue;
+    }
+    if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd8)) {
+      offset += 2;
+      continue;
+    }
+    // The picture's data, or its end, with no frame header before it.
+    if (marker === 0xda || marker === 0xd9) return null;
+    const length = uint(bytes, offset + 2, 2, false);
+    // A frame header of any coding: the sixteen markers from 0xc0 up, but for the three among them that are tables.
+    if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
+      if (offset + 9 > bytes.byteLength) return null;
+      return { width: uint(bytes, offset + 7, 2, false), height: uint(bytes, offset + 5, 2, false) };
+    }
+    offset += 2 + length;
+  }
+  return null;
+}
+
+/**
  * Whether these bytes are a web page.
  *
  * The one negative case worth naming, because it is the one that actually happens: a fetch that was

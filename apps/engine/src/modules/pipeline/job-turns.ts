@@ -225,6 +225,7 @@ export class JobTurns {
 
     const executor = brainFor(this.ctx.deps.externalAgents, agent, {
       maxImageBytes: this.ctx.deps.config.media.maxImageBytes,
+      fitImages: this.ctx.fitImages,
       onFallback: alertOnFallback(this.ctx.outages, this.ctx.deps.notifier, agent),
       windowOf: (model) => this.ctx.deps.providers?.catalog?.windowNow(agent.config.llm.provider, model) ?? null,
       ...(this.ctx.deps.spill ? { spill: this.ctx.deps.spill } : {}),

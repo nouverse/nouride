@@ -620,6 +620,7 @@ ditulis di `config.toml`, dan `nouride config explain <kunci>` menjelaskannya le
 | `[security.rate_limit] cooldown_reply` | `"Please slow down."` | Yang dibilang ke pengirim yang lewat batas. |
 | `[alerts] cooldown_ms` | `300000` | Jeda sebelum alert yang sama diulang. |
 | `[media] max_image_bytes` | `8388608` | Gambar yang lebih besar dari ini dilaporkan, bukan dilihat. |
+| `[media] max_image_side` | `2576` | Jumlah piksel terbanyak di sisi terpanjang gambar yang dikirim ke model. Gambar yang lebih besar dikirim sebagai salinan yang lebih kecil, yang butuh ffmpeg di mesin ini; tanpa itu agent diberi tahu gambarnya terlalu besar. Naikkan hanya untuk model yang membaca lebih besar. |
 | `[media] max_audio_bytes` | `20971520` | Klip yang lebih besar dari ini, setelah di-transcode, dilaporkan, bukan dikirim. |
 | `[control] enabled` | `true` | Sajikan control API ber-token yang dipakai CLI. |
 | `[control] chat` | `true` | Daftarkan gateway in-process yang dipakai `nouride chat`. |

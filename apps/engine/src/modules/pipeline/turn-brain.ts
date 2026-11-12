@@ -52,6 +52,7 @@ export function turnBrain(
   const executor = brainFor(ctx.deps.externalAgents, agent, {
     summarizer: summarize,
     maxImageBytes: ctx.deps.config.media.maxImageBytes,
+    fitImages: ctx.fitImages,
     // A route that refused audio is not sent any for a week. Read at call time, so a `/model`
     // switched mid-conversation is the one recorded.
     onAudioRefused: () => with_.hearing.recordRejection(agent.config.llm.provider, with_.modelOverrides.get(session.id) ?? agent.config.llm.model),

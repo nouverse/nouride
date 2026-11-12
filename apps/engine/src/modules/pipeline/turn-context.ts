@@ -17,6 +17,7 @@
 import { estimateMessagesTokens } from "@nouride/llm";
 import { capStoredTurns } from "@/modules/llm/context.ts";
 import { TokenScales } from "@/modules/llm/context-scale.ts";
+import type { ImageFit } from "@/modules/llm/images.ts";
 import { closeTurn, type ClosedTurn, type InterruptCause } from "@/modules/turns/close.ts";
 import type { TurnJournal } from "@/modules/turns/journal.store.ts";
 import { startJobFor } from "@/modules/jobs/jobs.store.ts";
@@ -35,6 +36,7 @@ import { todaysVerdict, type BudgetVerdict } from "@/modules/llm/budget.ts";
 import { findPerson } from "@/modules/people/match.ts";
 import { roomName as nameOfRoom } from "@/modules/rooms/room-names.store.ts";
 import type { Recall } from "@/modules/memory/index.ts";
+import { ImageShrinker } from "@/modules/attachments/shrink-image.ts";
 import { isStored } from "@/modules/attachments/store.ts";
 import type { PipelineDeps } from "./deps.ts";
 import type { LoadNow } from "./messages.ts";
@@ -102,6 +104,8 @@ export class TurnContext extends ActiveTurns {
   readonly waysOn = new WaysOn();
   /** Which models are falling back now, so the operator hears of each outage once (`fallback-alert.ts`). */
   readonly outages = new FallbackOutages();
+  /** The smaller copies of pictures too large on a side, made once and kept for the requests after (`shrink-image.ts`). */
+  private readonly shrinker = new ImageShrinker();
   /** The daemon's hint under `careful`, counted per person per day — `tools/careful-hint.ts`. */
   private readonly carefulHints = new CarefulHints({ timeZone: () => this.deps.config.daemon.timezone });
 
@@ -118,6 +122,15 @@ export class TurnContext extends ActiveTurns {
   ) {
     super(deps);
     this.tools = deps.tools;
+  }
+
+  /**
+   * How a picture too large on a side for a model is made to fit, for every executor built here: a turn, a job, a
+   * helper, a peer and a side question each resolve the same conversation's pictures. Read per executor, so a change
+   * of `[media] max_image_side` is the next turn's.
+   */
+  get fitImages(): ImageFit {
+    return { maxSide: this.deps.config.media.maxImageSide, shrink: (path, maxSide) => this.shrinker.shrink(path, maxSide) };
   }
 
   /** The room's name for the runtime block (`roomName`), in a room that has one — none for a one-to-one. */

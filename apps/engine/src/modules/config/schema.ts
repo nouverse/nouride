@@ -142,6 +142,7 @@ const CONFIG_BOUNDS: Record<string, { min?: number; max?: number; fraction?: tru
   "llm.context.compact_at_ratio": { max: 1, fraction: true },
   "llm.context.compact_at_tokens": { min: 16_000 },
   "queue.max_concurrent_turns": { min: 1 },
+  "media.max_image_side": { min: 1 },
   "delegate.max_background": { max: MAX_BACKGROUND_HELPERS },
   "missions.per_agent": { min: 1, max: MOST_MISSIONS_PER_AGENT },
   // No fixed most: as high as every agent at once, which only the agents loaded know (`missions/slots.ts`).

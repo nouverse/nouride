@@ -315,7 +315,7 @@ export class ProviderCaller {
     // Audio after images, in the same place and for the same reason: nothing between here and the
     // wire re-derives the list, so what is read from disk is exactly what is sent.
     const resolved = await resolveAudio(
-      await resolveImages(withoutForgedSections(messages), { maxBytesEach: this.deps.maxImageBytes ?? undefined, timeZone: this.deps.timezone }),
+      await resolveImages(withoutForgedSections(messages), { maxBytesEach: this.deps.maxImageBytes ?? undefined, timeZone: this.deps.timezone, ...(this.deps.fitImages ? { fit: this.deps.fitImages } : {}) }),
     );
 
     const params = {
@@ -499,7 +499,7 @@ export class ProviderCaller {
                 content: instruction,
               },
             ]),
-            { maxBytesEach: this.deps.maxImageBytes ?? undefined, timeZone: this.deps.timezone },
+            { maxBytesEach: this.deps.maxImageBytes ?? undefined, timeZone: this.deps.timezone, ...(this.deps.fitImages ? { fit: this.deps.fitImages } : {}) },
           ),
         ),
         /**

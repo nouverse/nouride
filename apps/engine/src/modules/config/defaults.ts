@@ -205,6 +205,9 @@ export const DEFAULT_CONFIG: GlobalConfig = {
     imageModel: "",
     readImages: true,
     maxImageBytes: 8 * 1024 * 1024,
+    // The longest side the provider that documents the most detail reads, as its documentation says. A larger picture
+    // is scaled down by the model anyway, and past a provider's own limit it is refused.
+    maxImageSide: 2576,
     readAudio: true,
     // `auto` hears nothing until a gateway says a model can. That is the safe default: the other way
     // round, the first voice note to a model behind a gateway that drops audio gets an invented answer.

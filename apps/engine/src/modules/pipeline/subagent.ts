@@ -348,6 +348,7 @@ export function helperExecutor(
   const level = () => request.ctx.unattended?.level ?? ctx.approvalLevel(parent, { gatewayId: request.ctx.gatewayId, senderId: request.ctx.senderId });
   return new TurnExecutor({
     ...(ctx.deps.spill ? { spill: ctx.deps.spill } : {}),
+    fitImages: ctx.fitImages,
     // A helper runs as its parent, on the parent's model and fallback.
     onFallback: alertOnFallback(ctx.outages, ctx.deps.notifier, parent),
     windowOf: (model) => ctx.deps.providers?.catalog?.windowNow(parent.config.llm.provider, model) ?? null,

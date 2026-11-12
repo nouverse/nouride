@@ -186,6 +186,102 @@ describe("the budget", () => {
  * bytes, or a picture the agent opened with `read`, can say PNG and be a JPEG — or be a HEIC, which a provider refuses
  * along with the whole request.
  */
+describe("a picture too large on a side", () => {
+  /** A PNG's header saying `width` by `height`, padded to `bytes`: the size is read from the header, nothing is decoded. */
+  function sized(name: string, width: number, height: number, bytes = 64): ImageRefPart {
+    const header = Buffer.alloc(25);
+    header.writeUInt32BE(13, 0);
+    header.write("IHDR", 4, "latin1");
+    header.writeUInt32BE(width, 8);
+    header.writeUInt32BE(height, 12);
+    header.set([8, 2, 0, 0, 0], 16);
+    const path = join(dir, name);
+    writeFileSync(path, Buffer.concat([PNG, header, Buffer.alloc(Math.max(0, bytes - PNG.length - header.length), 7)]));
+    return { type: "image_ref", ref: `ref-${name}`, localPath: path, mimeType: "image/png", filename: name };
+  }
+  /** What a converter hands back: a JPEG's first bytes, so the copy is told from the original by its type too. */
+  const COPY = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4]);
+  const shrinking = (answer: { bytes: Uint8Array; mimeType: string } | null = { bytes: COPY, mimeType: "image/jpeg" }) => {
+    const asked: [string, number][] = [];
+    return { asked, shrink: async (path: string, maxSide: number) => (asked.push([path, maxSide]), answer) };
+  };
+  const imagesOf = (message: ChatMessage) => partsOf(message).filter((part) => part.type === "image");
+  const textOf = (message: ChatMessage) => partsOf(message).map((part) => (part.type === "text" ? part.text : "")).join("\n");
+
+  test("goes as a smaller copy: the long screenshot that ended every turn of its conversation", async () => {
+    const { asked, shrink } = shrinking();
+    const tall = sized("chat.png", 1280, 6000);
+    const [message] = await resolveImages([userWith(tall)], { fit: { maxSide: 2576, shrink } });
+
+    expect(asked).toEqual([[tall.localPath, 2576]]);
+    const [sent] = imagesOf(message!);
+    if (sent?.type !== "image") throw new Error("the picture was not sent");
+    // The copy and its own type, never the original's bytes under the copy's name.
+    expect(sent.data).toBe(COPY.toString("base64"));
+    expect(sent.mimeType).toBe("image/jpeg");
+    expect(textOf(message!)).not.toContain("pixels");
+  });
+
+  test("wide counts as tall does, and the bound itself is not past it", async () => {
+    const { asked, shrink } = shrinking();
+    const out = await resolveImages([userWith(sized("wide.png", 2577, 10), sized("edge.png", 2576, 2576), sized("small.png", 800, 600))], { fit: { maxSide: 2576, shrink } });
+    expect(asked.map(([path]) => path)).toEqual([join(dir, "wide.png")]);
+    expect(imagesOf(out[0]!)).toHaveLength(3);
+  });
+
+  test("with nothing to make a copy, it is left out with a line that says its size and the bound, and the others still go", async () => {
+    const [message] = await resolveImages([userWith(sized("chat.png", 1280, 6000), image("ok.png"))], { fit: { maxSide: 2576 } });
+    expect(imagesOf(message!)).toHaveLength(1);
+    expect(textOf(message!)).toContain("[image: chat.png: 1280x6000 pixels, more than the 2576 a side a model is sent, and no smaller copy could be made here. Make one with your tools and read that, or ask for a smaller picture]");
+  });
+
+  test("a converter that could not make one leaves the same line, and so does a copy in a format no model takes", async () => {
+    for (const answer of [null, { bytes: COPY, mimeType: "image/bmp" }]) {
+      const [message] = await resolveImages([userWith(sized("chat.png", 1280, 6000))], { fit: { maxSide: 2576, shrink: shrinking(answer).shrink } });
+      expect(imagesOf(message!)).toHaveLength(0);
+      expect(textOf(message!)).toContain("1280x6000 pixels, more than the 2576 a side");
+    }
+  });
+
+  test("a file the agent opened is named by its path, which is what it would read again", async () => {
+    const opened: ImageRefPart = { ...sized("shot.png", 9000, 400), ref: "file:/work/shot.png" };
+    const [message] = await resolveImages([userWith(opened)], { fit: { maxSide: 2576 } });
+    expect(textOf(message!)).toContain("[image: /work/shot.png: 9000x400 pixels");
+  });
+
+  test("a picture whose size nobody can read goes as it is: unknown is not too large", async () => {
+    const { asked, shrink } = shrinking();
+    const [message] = await resolveImages([userWith(image("plain.png", 64))], { fit: { maxSide: 2576, shrink } });
+    expect(asked).toEqual([]);
+    expect(imagesOf(message!)).toHaveLength(1);
+  });
+
+  test("with no bound given, a picture goes whatever its size", async () => {
+    const [message] = await resolveImages([userWith(sized("chat.png", 1280, 6000))]);
+    expect(imagesOf(message!)).toHaveLength(1);
+  });
+
+  test("the copy's weight is what the request's budget counts, so a heavy original that fits once smaller is sent", async () => {
+    // 600 bytes on disk against a budget of 400: by its own weight it would be crowded out; its copy is 8 bytes.
+    const { shrink } = shrinking();
+    const out = await resolveImages([userWith(sized("heavy.png", 4000, 3000, 600), image("after.png", 240))], { maxBytes: 400, fit: { maxSide: 2576, shrink } });
+    expect(imagesOf(out[0]!)).toHaveLength(2);
+  });
+
+  test("and a copy that is still too heavy is left out as any picture over the budget is", async () => {
+    const heavy = { bytes: Buffer.concat([COPY, Buffer.alloc(600, 7)]), mimeType: "image/jpeg" };
+    const [message] = await resolveImages([userWith(sized("heavy.png", 4000, 3000, 600))], { maxBytes: 400, fit: { maxSide: 2576, shrink: shrinking(heavy).shrink } });
+    expect(imagesOf(message!)).toHaveLength(0);
+    expect(textOf(message!)).toContain("not in this request");
+  });
+
+  test("without a converter a file over the budget is not read at all, as before", async () => {
+    const [message] = await resolveImages([userWith(sized("heavy.png", 4000, 3000, 600))], { maxBytes: 400, fit: { maxSide: 2576 } });
+    expect(textOf(message!)).toContain("not in this request");
+    expect(textOf(message!)).not.toContain("pixels");
+  });
+});
+
 describe("the bytes decide", () => {
   test("a JPEG labelled PNG is sent as a JPEG", async () => {
     const path = join(dir, "photo.png");
