@@ -73,7 +73,13 @@ export function took(ms: number): string {
 /** What a chip of the run says, and its colour: mint for done, red for a failure only, pink for what waits on a person. */
 export type Tone = "done" | "failed" | "quiet" | "working" | "needs";
 
-export function outcomeWords(outcome: StepRunOutcome): { label: string; tone: Tone } {
+/**
+ * What waits for a person says: for the reader, in the colour of what needs them; or for whoever else answers it
+ * (`whom`), on a page the reader only reads, where nothing is theirs to press.
+ */
+const waitsFor = (whom: string | undefined): { label: string; tone: Tone } => (whom ? { label: `Waiting for ${whom}`, tone: "quiet" } : { label: "Waiting for you", tone: "needs" });
+
+export function outcomeWords(outcome: StepRunOutcome, whom?: string): { label: string; tone: Tone } {
   const after = outcome.ms !== undefined ? ` ${outcome.status === "done" ? "in" : "after"} ${took(outcome.ms)}` : "";
   switch (outcome.status) {
     case "done":
@@ -85,7 +91,7 @@ export function outcomeWords(outcome: StepRunOutcome): { label: string; tone: To
     case "running":
       return { label: "Working", tone: "working" };
     case "waiting":
-      return outcome.kind === "approval" ? { label: "Waiting for you", tone: "needs" } : { label: "Waiting for its mission", tone: "working" };
+      return outcome.kind === "approval" ? waitsFor(whom) : { label: "Waiting for its mission", tone: "working" };
     case "declined":
       return { label: outcome.by ? `Stopped by ${outcome.by}` : "Stopped", tone: "quiet" };
     case "expired":
@@ -97,8 +103,8 @@ export function outcomeWords(outcome: StepRunOutcome): { label: string; tone: To
   }
 }
 
-/** A whole run in a word or two, for a list of runs. */
-export function runWords(run: Pick<JobRunSummary, "status" | "waiting">): { label: string; tone: Tone } {
+/** A whole run in a word or two, for a list of runs. `whom`: who answers one that waits, where that is not the reader. */
+export function runWords(run: Pick<JobRunSummary, "status" | "waiting">, whom?: string): { label: string; tone: Tone } {
   switch (run.status) {
     case "success":
       return { label: "Done", tone: "done" };
@@ -111,7 +117,7 @@ export function runWords(run: Pick<JobRunSummary, "status" | "waiting">): { labe
     case "running":
       return { label: "Working", tone: "working" };
     case "waiting":
-      return run.waiting?.kind === "approval" ? { label: "Waiting for you", tone: "needs" } : { label: "Waiting for a mission", tone: "working" };
+      return run.waiting?.kind === "approval" ? waitsFor(whom) : { label: "Waiting for a mission", tone: "working" };
   }
 }
 

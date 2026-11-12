@@ -35,9 +35,12 @@ export interface NeedsYou {
 /** The week's missions, as Home and the count read them: under `["missions"]`, so a change to one refreshes it. */
 export const MOVING_MISSIONS = ["missions", "home"] as const;
 
-/** The missions waiting on a person for anything but a tool's approval, which is counted, and answered, as one. */
-export function missionsWaiting<T extends Pick<MissionView, "seen" | "waitKind">>(missions: readonly T[]): T[] {
-  return missions.filter((mission) => mission.seen === "needs_you" && mission.waitKind !== "approval");
+/**
+ * The missions waiting on the reader for anything but a tool's approval, which is counted, and answered, as one. Not
+ * one they only read: it reports to a chat of theirs and waits for its own person, so it is nothing they can answer.
+ */
+export function missionsWaiting<T extends Pick<MissionView, "seen" | "waitKind" | "changeable">>(missions: readonly T[]): T[] {
+  return missions.filter((mission) => mission.seen === "needs_you" && mission.waitKind !== "approval" && mission.changeable !== false);
 }
 
 export function useNeedsYou(): NeedsYou {

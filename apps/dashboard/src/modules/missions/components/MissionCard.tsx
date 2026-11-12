@@ -2,12 +2,15 @@
  * One mission as a card, laid out as the Knowledge tab lays out a collection (0.8.20): its goal and how
  * it stands, how far along its checklist is, and one line that says the most useful thing about it now — the step it is
  * on while it works, what it waits for while it needs you, how it ended once it has. The whole card opens its page.
+ * One the reader only reads (it reports to a chat of theirs, and is another person's) says whose it is beside its badge.
  */
 
 import { Link } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
 import type { MissionView } from "@nouride/wire";
 import { CARD, LIFTS } from "@/commons/components/ui/CardGrid";
+import { Tag } from "@/commons/components/ui/Tag";
+import { readsOnly, whoseWords } from "@/commons/lib/by-person";
 import { ago } from "@/commons/lib/format";
 import { cn } from "@/commons/lib/utils";
 import { Lit } from "@/commons/components/ui/Lit";
@@ -28,7 +31,10 @@ export function MissionCard({ mission, motion = "" }: { mission: MissionView; mo
       <Lit state={`${mission.status} ${mission.seen}`} arrived={motion === ENTER} />
       {/* The badge on a line of its own: "Needs you · a question" beside the goal left it a word or two a line. */}
       <header className="space-y-2.5">
-        <SeenBadge mission={mission} />
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <SeenBadge mission={mission} />
+          {readsOnly(mission) ? <Tag title="You can read this one, not change it">{whoseWords(mission)}</Tag> : null}
+        </div>
         <h3 className="text-sm font-semibold leading-snug tracking-tight text-base-content line-clamp-2 [overflow-wrap:anywhere]" title={mission.goal}>
           {missionTitle(mission.goal)}
         </h3>

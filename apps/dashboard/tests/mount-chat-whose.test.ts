@@ -8,7 +8,7 @@ import { describe, expect, test } from "bun:test";
 import type { SessionSummary } from "@nouride/wire";
 import { groupByPerson, ownConversations } from "@/modules/chat/lib/history";
 import { EVERYONE_WORDS } from "@/modules/chat/components/EveryoneList";
-import { peopleOptions } from "@/modules/chat/components/PeopleFilter";
+import { peopleOptions } from "@/commons/components/people/PeopleFilter";
 import { answer, renderPage, type, useMountHarness, WIRE } from "./mount-harness.ts";
 import { eventually } from "./wait.ts";
 
@@ -117,6 +117,12 @@ describe("the chat list", () => {
       "person:raka=Raka",
       "unknown=Not known",
     ]);
+  });
+
+  test("the last choice is called what the page calls it, and Not known where it says nothing", () => {
+    const people = [{ key: "sam", name: "Kak Sam" }];
+    expect(peopleOptions(people, undefined, "Nobody's").map((option) => `${option.value}=${option.label}`)).toEqual(["mine=Mine", "everyone=Everyone", "person:sam=Kak Sam", "unknown=Nobody's"]);
+    expect(peopleOptions(people).at(-1)).toEqual({ value: "unknown", label: "Not known" });
   });
 
   test("leaves the reader's own person out of the names: Mine is theirs already", async () => {

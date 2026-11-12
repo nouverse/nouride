@@ -46,6 +46,8 @@ export type FlowMode =
       /** What the step before said, for the step that waits for a person. */
       before?: string | undefined;
       canAnswer: boolean;
+      /** Who answers a step that waits for a person, where that is not the reader: on a page they only read. */
+      whom?: string | undefined;
     }
   | { kind: "read" };
 
@@ -146,8 +148,8 @@ export function StepItem({
     const outcome = mode.outcomes.get(step.id);
     return (
       <>
-        <StepCard {...head} whole={outcome?.status === "waiting"} state={outcome ? (landed ? "target" : OF_TONE[outcomeWords(outcome).tone]) : undefined} dimmed={!outcome} aside={face}>
-          {outcome ? <StepRun outcome={outcome} run={mode.run} name={mode.name} before={mode.before} canAnswer={mode.canAnswer} /> : <p className="text-xs text-base-content/65">Not reached in this run</p>}
+        <StepCard {...head} whole={outcome?.status === "waiting"} state={outcome ? (landed ? "target" : OF_TONE[outcomeWords(outcome, mode.whom).tone]) : undefined} dimmed={!outcome} aside={face}>
+          {outcome ? <StepRun outcome={outcome} run={mode.run} name={mode.name} before={mode.before} canAnswer={mode.canAnswer} whom={mode.whom} /> : <p className="text-xs text-base-content/65">Not reached in this run</p>}
         </StepCard>
         {branches(outcome ? exitTaken(outcome.status) : null)}
       </>

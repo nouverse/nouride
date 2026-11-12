@@ -9,8 +9,8 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ChatListPayload } from "@nouride/wire";
 import { useChatAgents } from "@/commons/hooks/use-chat-agents";
+import { useWhose } from "@/commons/hooks/use-whose";
 import { api } from "@/commons/lib/api";
-import { useWhose } from "./use-whose";
 
 const BUSY_MS = 2_000;
 const IDLE_MS = 5_000;
@@ -20,7 +20,7 @@ const working = (list: ChatListPayload | undefined) =>
 
 export function useChatList() {
   const agents = useChatAgents();
-  const { whose } = useWhose();
+  const { whose } = useWhose("chat");
   const list = useQuery({
     queryKey: ["chat-list", whose],
     queryFn: () => api.chatList(whose),

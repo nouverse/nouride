@@ -16,7 +16,7 @@ export default function NewAutomationPage() {
   const status = useQuery({ queryKey: ["status"], queryFn: api.status });
   const gateways = useQuery({ queryKey: ["gateways"], queryFn: api.gateways, retry: false });
   // The server's time zone, which a time is read in unless it names its own.
-  const list = useQuery({ queryKey: ["automations", "list"], queryFn: api.automations, retry: false });
+  const list = useQuery({ queryKey: ["automations", "list", "mine"], queryFn: () => api.automations(), retry: false });
   const home = list.data?.timezone ?? "UTC";
   const agent = orchestratorFirst(status.data?.agents ?? [], status.data?.orchestrator)[0]?.id ?? "";
   const connections = gateways.data?.gateways ?? [];

@@ -21,6 +21,7 @@ import { Ellipsis, Loader2, Monitor, Plus, Trash2 } from "lucide-react";
 import type { ChatListPayload, SessionSummary } from "@nouride/wire";
 import { ConversationRow, ListHeading } from "@/commons/components/chat/ConversationRow";
 import { PlatformTag } from "@/commons/components/chat/PlatformBadge";
+import { PeopleFilter } from "@/commons/components/people/PeopleFilter";
 import { useConfirm } from "@/commons/components/ui/confirm";
 import { Drawer, DrawerHead } from "@/commons/components/ui/Drawer";
 import { DropdownMenu } from "@/commons/components/ui/DropdownMenu";
@@ -28,13 +29,12 @@ import { useToast } from "@/commons/components/ui/toast";
 import { SearchInput } from "@/commons/components/ui/SearchInput";
 import { ListLoading } from "@/commons/components/ui/Spinner";
 import { useDebounced } from "@/commons/hooks/use-debounced";
+import { useWhose } from "@/commons/hooks/use-whose";
 import { api } from "@/commons/lib/api";
 import { platformName } from "@/commons/lib/platform";
 import { shortWhen } from "@/commons/lib/when";
 import { DELETE_CONVERSATION, groupByDate, groupByPerson, ownConversations } from "../lib/history";
-import { useWhose } from "../hooks/use-whose";
 import { EVERYONE_WORDS } from "./EveryoneList";
-import { PeopleFilter } from "./PeopleFilter";
 
 const PAGE = 50;
 const LOCAL = "web:";
@@ -73,7 +73,7 @@ export function HistoryPanel({
 function HistoryBody({ agentId, agentName, current, list, onClose }: { agentId: string; agentName: string; current: string | undefined; list: ChatListPayload | undefined; onClose: () => void }) {
   const [search, setSearch] = useState("");
   const term = useDebounced(search, 250);
-  const { whose, setWhose, canPick } = useWhose();
+  const { whose, setWhose, canPick } = useWhose("chat");
   const sessions = useInfiniteQuery({
     queryKey: ["sessions", "agent", agentId, whose, term],
     queryFn: ({ pageParam }) => api.sessions({ agent: agentId, whose, limit: PAGE, ...(term ? { q: term } : {}), ...(pageParam ? { before: pageParam } : {}) }),

@@ -10,17 +10,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { MessagesSquare, UsersRound } from "lucide-react";
 import { ListHeading } from "@/commons/components/chat/ConversationRow";
+import { PeopleFilter } from "@/commons/components/people/PeopleFilter";
 import { SearchInput } from "@/commons/components/ui/SearchInput";
 import { Count, SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
 import { ListLoading } from "@/commons/components/ui/Spinner";
 import { EmptyState } from "@/commons/components/ui/ui";
+import { useWhose } from "@/commons/hooks/use-whose";
 import type { ChatListData } from "../hooks/use-chat-list";
 import { usePinnedGroups } from "../hooks/use-pinned";
 import { useSeen } from "../hooks/use-seen";
 import { chatsView, groupKey, type ChatRow } from "../lib/chat-list";
-import { useWhose } from "../hooks/use-whose";
 import { EveryoneList } from "./EveryoneList";
-import { PeopleFilter } from "./PeopleFilter";
 import { ChatsRow } from "./ListRows";
 import { GroupsTab } from "./GroupsTab";
 import { StartMenu } from "./StartMenu";
@@ -46,7 +46,7 @@ const fromAgent = (row: ChatRow) => (row.kind === "agent" ? row.entry?.last?.fro
 export function ChatList({ data, open, className }: { data: ChatListData; open: OpenNow; className?: string }) {
   const [tab, setTab] = useState<"chats" | "groups">(open.group ? "groups" : "chats");
   // An admin reads their own by default; everyone's, one person's or nobody known's when they pick it beside the search.
-  const { whose, setWhose, canPick } = useWhose();
+  const { whose, setWhose, canPick } = useWhose("chat");
   const [query, setQuery] = useState("");
   const [pinnedGroups] = usePinnedGroups();
   const seen = useSeen();

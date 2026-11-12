@@ -4,7 +4,8 @@
  * for you and Home, where it is a card of its own (`WaitingStepCard`).
  *
  * The answers are an operator's or an admin's, as every change is: an account that can only look is shown the question
- * and no buttons, where a press would be refused.
+ * and no buttons, where a press would be refused. So is whoever only reads the automation, on its own page: it is
+ * another person's to answer, and the line says whose.
  */
 
 import { Check, X } from "lucide-react";
@@ -19,6 +20,7 @@ export function StepQuestion({
   said,
   until,
   canAnswer,
+  whom,
 }: {
   runId: string;
   /** The automation's name, for what the answer's toast says. */
@@ -29,6 +31,8 @@ export function StepQuestion({
   /** When it stops waiting. */
   until?: number | undefined;
   canAnswer: boolean;
+  /** Who answers it, where the reader only reads the automation: a person's name, or "an admin". */
+  whom?: string | undefined;
 }) {
   const answer = useAnswerStep();
   return (
@@ -51,7 +55,7 @@ export function StepQuestion({
           {until ? <span className="text-xs text-base-content/65">Waits {inTime(until).replace(/^in /, "")} more, then stops.</span> : null}
         </div>
       ) : (
-        <p className="text-xs text-base-content/65">Someone who may change automations can answer this.</p>
+        <p className="text-xs text-base-content/65">{whom ? `${whom.charAt(0).toUpperCase()}${whom.slice(1)} can answer this.` : "Someone who may change automations can answer this."}</p>
       )}
     </div>
   );
