@@ -21,6 +21,7 @@ interface Row {
   agent_id: string;
   started_by: string;
   by_agent: string | null;
+  owner: string | null;
   gateway_id: string;
   chat_id: string;
   goal: string;
@@ -72,8 +73,8 @@ const UPSERT = `INSERT INTO missions (
   wait_kind, reason, report, files, last_check, answers, workdir, parent_id, untrusted, job_id, request, reviewed,
   limit_hours, limit_turns, limit_tokens, turns_used, tokens_used, resumes, waited_ms, waiting_since, warned_at,
   followed_up_at, progress_at, progress_done, nudged_at, created_at, started_at, updated_at, ended_at, branch, told,
-  summary, cli_turns, cli_unreported, helpers_since
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  summary, cli_turns, cli_unreported, helpers_since, owner
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
   agent_id = excluded.agent_id, started_by = excluded.started_by, by_agent = excluded.by_agent,
   gateway_id = excluded.gateway_id, chat_id = excluded.chat_id, goal = excluded.goal, checks = excluded.checks,
@@ -88,7 +89,8 @@ ON CONFLICT(id) DO UPDATE SET
   progress_at = excluded.progress_at, progress_done = excluded.progress_done, nudged_at = excluded.nudged_at,
   created_at = excluded.created_at, started_at = excluded.started_at, updated_at = excluded.updated_at,
   ended_at = excluded.ended_at, branch = excluded.branch, told = excluded.told, summary = excluded.summary,
-  cli_turns = excluded.cli_turns, cli_unreported = excluded.cli_unreported, helpers_since = excluded.helpers_since`;
+  cli_turns = excluded.cli_turns, cli_unreported = excluded.cli_unreported, helpers_since = excluded.helpers_since,
+  owner = excluded.owner`;
 
 /** A list that must parse to strings — read back from a JSON column this store wrote. */
 function strings(text: string): string[] {
@@ -130,6 +132,7 @@ function fromRow(row: Row): Mission {
     agentId: row.agent_id,
     startedBy: row.started_by,
     byAgent: row.by_agent,
+    owner: row.owner,
     gatewayId: row.gateway_id,
     chatId: row.chat_id,
     goal: row.goal,
@@ -185,6 +188,7 @@ function toRow(mission: Mission): unknown[] {
     mission.waitingSince, mission.warnedAt, mission.followedUpAt, mission.progressAt, mission.progressDone,
     mission.nudgedAt, mission.createdAt, mission.startedAt, mission.updatedAt, mission.endedAt, mission.branch,
     JSON.stringify(mission.told), mission.summary, mission.cliTurns, mission.cliUnreported, mission.helpersSince,
+    mission.owner,
   ];
 }
 

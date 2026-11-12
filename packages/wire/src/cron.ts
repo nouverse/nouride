@@ -44,6 +44,13 @@ export interface JobSummary {
   allowed?: JobAllowance[];
   /** One human-readable line, rendered by the daemon so the browser never parses a cron expression. */
   describes: string;
+  /** The person it is for, by People: what an admin's Everyone sets it apart under. Absent for nobody's. */
+  person?: { key: string; name: string };
+  /**
+   * Whether whoever asked may change it: its owner, or an admin. One that only reports to a chat of theirs is theirs
+   * to read. Absent from a daemon older than the field, where everyone changed everything.
+   */
+  changeable?: boolean;
 }
 
 export type JobDeliveryMode = CronDeliveryMode;

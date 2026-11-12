@@ -4,7 +4,7 @@
  */
 
 import { basename } from "@nouride/runtime";
-import type { MissionsSection } from "@nouride/shared";
+import { ownerIdentity, type MissionsSection } from "@nouride/shared";
 import { workTextIsEnglish, writeWorkInEnglish } from "@/modules/memory/index.ts";
 import { AGENT_MISSIONS_PER_DAY, CHECK_MAX, CHECKS_MAX, GOAL_MAX, REVIEW_MAX } from "./limits.ts";
 import type { MissionsPort } from "./missions.store.ts";
@@ -27,6 +27,8 @@ export interface StartRequest {
   chatId: string;
   /** The agent that started it on that person's behalf. */
   byAgent?: string;
+  /** Whose it is (`Mission.owner`), where that is not whoever starts it: an automation's owner, a parent mission's. */
+  owner?: string | null;
   /** Started on the agent's own initiative: it waits for the person's yes before anything runs. */
   proposed?: boolean;
   parentId?: string;
@@ -163,6 +165,7 @@ export function newMission(
     agentId: request.agentId,
     startedBy: request.startedBy,
     byAgent: request.byAgent ?? null,
+    owner: request.owner !== undefined ? request.owner : (ownerIdentity(request.gatewayId, request.startedBy) ?? null),
     gatewayId: request.gatewayId,
     chatId: request.chatId,
     goal: request.goal.trim(),

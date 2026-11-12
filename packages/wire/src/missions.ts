@@ -48,6 +48,13 @@ export interface MissionView {
   startedBy: string;
   /** The agent that started it on that person's behalf, when an agent did. */
   byAgent: string | null;
+  /** The person it is for, by People: what an admin's Everyone sets it apart under. Absent for nobody's. */
+  person?: { key: string; name: string };
+  /**
+   * Whether whoever asked may change it: whoever started it, or an admin. One that only reports to a chat of theirs
+   * is theirs to read. Absent from a daemon older than the field, where everyone changed everything.
+   */
+  changeable?: boolean;
   /** Where it reports: the chat it began in. */
   gatewayId: string;
   chatId: string;

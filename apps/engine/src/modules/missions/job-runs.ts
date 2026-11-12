@@ -29,6 +29,8 @@ export function startJobRun(
     ...(job.payload.review !== undefined ? { review: job.payload.review } : {}),
     // The person who turned it on from its card; a job a person made themselves runs as whoever made it.
     startedBy: job.turnedOnBy ?? job.createdBy,
+    // The automation's owner's, whoever its runs run as: a job nobody owns starts missions nobody owns.
+    owner: job.owner ?? null,
     gatewayId: reportTo.gatewayId,
     chatId: reportTo.chatId,
     jobId: job.id,

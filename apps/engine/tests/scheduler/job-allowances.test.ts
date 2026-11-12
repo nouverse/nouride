@@ -72,16 +72,19 @@ describe("POST /cron/:id/allowed", () => {
   function control(role: "admin" | "operator" | "viewer") {
     const app = new Hono<{ Variables: { principal: unknown } }>();
     app.use("*", async (c, next) => {
-      c.set("principal", { kind: "user", actor: role, role, user: { username: role } });
+      c.set("principal", { kind: "user", actor: role, role, user: { id: `usr_${role}`, username: role } });
       await next();
     });
-    registerCronRoutes(app as never, { cron: { store, scheduler: {}, timezone: "UTC" } } as never);
+    registerCronRoutes(app as never, { ctx: { config: { people: [] } }, cron: { store, scheduler: {}, timezone: "UTC" } } as never);
     return (id: string, body: unknown) => app.request(`/cron/${id}/allowed`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
   }
 
   test("an operator allows a scheduled job's held action, and takes it back; a viewer may not", async () => {
-    const job = store.create(input());
-    expect((await control("viewer")(job.id, { add: { keys: HELD.keys, label: HELD.label } })).status).toBe(403);
+    // Each on a job of their own: another person's is not there for them at all (`whose.ts`).
+    const viewers = store.create(input({ owner: "web:usr_viewer" }));
+    expect((await control("viewer")(viewers.id, { add: { keys: HELD.keys, label: HELD.label } })).status).toBe(403);
+    const job = store.create(input({ owner: "web:usr_operator" }));
+    expect((await control("viewer")(job.id, { add: { keys: HELD.keys, label: HELD.label } })).status).toBe(404);
     const added = await control("operator")(job.id, { add: { keys: HELD.keys, label: HELD.label } });
     expect(added.status).toBe(200);
     expect(store.get(job.id)?.allowed?.map((one) => one.by)).toEqual(["operator"]);
@@ -91,7 +94,7 @@ describe("POST /cron/:id/allowed", () => {
   });
 
   test("a webhook's is an admin's, as making one is", async () => {
-    const hook = store.create(input({ trigger: { kind: "webhook" } }));
+    const hook = store.create(input({ trigger: { kind: "webhook" }, owner: "web:usr_operator" }));
     expect((await control("operator")(hook.id, { add: { keys: HELD.keys, label: HELD.label } })).status).toBe(403);
     expect((await control("admin")(hook.id, { add: { keys: HELD.keys, label: HELD.label } })).status).toBe(200);
   });

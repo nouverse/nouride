@@ -9,7 +9,7 @@ import { describe, expect, test } from "bun:test";
 import { Hono } from "hono";
 import type { MessageEnvelope } from "@nouride/shared";
 import { registerMissionRoutes } from "@/modules/web/control/routes/missions.ts";
-import { missionsHarness } from "./harness.ts";
+import { missionsHarness, STARTERS_CTX } from "./harness.ts";
 
 const cli = (agentId: string) => agentId === "nova";
 const HOUR = 3_600_000;
@@ -285,7 +285,8 @@ describe("what the dashboard reads", () => {
       c.set("principal", { kind: "user", actor: "operator", role: "operator", user: { id: "usr_1", username: "op", displayName: "op" } });
       await next();
     });
-    registerMissionRoutes(control as never, { missions: h.missions, notes: h.notes, approvals: { pending: () => [] }, audit: { record: () => {} } } as never);
+    registerMissionRoutes(control as never, {
+      ctx: STARTERS_CTX, missions: h.missions, notes: h.notes, approvals: { pending: () => [] }, audit: { record: () => {} } } as never);
     const onCli = await h.start("on the CLI");
     const onModel = await h.start("on a model", { agentId: "nox" });
     h.turn(onCli, { tokens: 3000 });

@@ -54,6 +54,16 @@ describe("a job's run", () => {
     expect(h.told.filter((one) => one.text.startsWith("▶"))).toEqual([]);
   });
 
+  test("it is the job's owner's, whoever it runs as: a job nobody owns starts a mission nobody owns", async () => {
+    // It runs as a bare id or a username, and reports to the job's chat: neither names the person on that platform.
+    const owned = await runOf({ ...JOB, owner: "web:usr_owner" });
+    if (!("started" in owned.run)) throw new Error(JSON.stringify(owned.run));
+    expect(owned.h.store.get(owned.run.started)).toMatchObject({ owner: "web:usr_owner", startedBy: "8142" });
+    const nobodys = await runOf();
+    if (!("started" in nobodys.run)) throw new Error(JSON.stringify(nobodys.run));
+    expect(nobodys.h.store.get(nobodys.run.started)?.owner).toBeNull();
+  });
+
   test("a job a person made themselves runs as whoever made it; a delivery override is where it reports", async () => {
     const { h, run } = await runOf({ ...JOB, turnedOnBy: undefined, createdBy: "usr_owner", delivery: { mode: "announce", gatewayId: "telegram:nova", chatId: "8142" } } as Job);
     if (!("started" in run)) throw new Error(JSON.stringify(run));

@@ -17,7 +17,7 @@ import { OptionPresses } from "@/modules/missions/options.ts";
 import { FOLLOW_UP_MS } from "@/modules/missions/limits.ts";
 import type { Mission } from "@/modules/missions/types.ts";
 import { registerMissionRoutes } from "@/modules/web/control/routes/missions.ts";
-import { missionsHarness } from "./harness.ts";
+import { missionsHarness, STARTERS_CTX } from "./harness.ts";
 
 type Harness = Awaited<ReturnType<typeof missionsHarness>>;
 
@@ -614,7 +614,8 @@ describe("from the dashboard's API", () => {
       c.set("principal", { kind: "user", actor: "operator", role: "operator", user: { id: "usr_op", username: "op", displayName: "Op" } });
       await next();
     });
-    registerMissionRoutes(control as never, { missions: h.missions, notes: h.notes, approvals: { pending: () => [] }, audit: { record: () => {} } } as never);
+    registerMissionRoutes(control as never, {
+      ctx: STARTERS_CTX, missions: h.missions, notes: h.notes, approvals: { pending: () => [] }, audit: { record: () => {} } } as never);
     return (mission: Mission, verb: string, body: unknown = {}) => control.request(`/missions/${mission.id}/${verb}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
   }
 

@@ -329,7 +329,7 @@ export function createMissionTools(missions: Missions, options: { linkFor?: Link
           return claimed("Noted. This turn ends here and the mission ends as failed.", `Cannot be done: ${reason}`);
         }
         case "start":
-          return (await startChecked(missions, { ...startFields(args, ctx), startedBy: mission.startedBy, gatewayId: mission.gatewayId, chatId: mission.chatId, parentId: mission.id, ...(mission.untrusted ? { untrusted: true } : {}) })).answer;
+          return (await startChecked(missions, { ...startFields(args, ctx), startedBy: mission.startedBy, owner: mission.owner, gatewayId: mission.gatewayId, chatId: mission.chatId, parentId: mission.id, ...(mission.untrusted ? { untrusted: true } : {}) })).answer;
         default:
           return refused('`action` is one of "done", "ask", "fail", "start".');
       }

@@ -26,6 +26,7 @@ import { LOCAL_GATEWAY_ID } from "@/modules/gateways/local.ts";
 import { atLeast } from "@/modules/users/auth.ts";
 import { jsonBody } from "../payloads.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
+import { thingOfMission, thingsFor, type Things } from "../whose.ts";
 
 /** Where a mission started from the dashboard reports, when the page names no chat. */
 const DASHBOARD_MISSIONS_CHAT = "missions";
@@ -43,8 +44,10 @@ const LISTED_DAYS = { usual: 7, most: 30 } as const;
  * and whether its tokens are known (0.8.8) — the meters drew "2 of 100" turns for a coding CLI's mission, which no turn
  * limit holds, and its tokens as a count where the CLI reported none.
  */
-function view(missions: Missions, mission: Mission) {
-  return { ...mission, seen: seenAs(mission.status), workedMs: workedMs(mission, missions.now()), shown: missions.limitsShown(mission) };
+function view(missions: Missions, mission: Mission, things: Things) {
+  // Its owner goes out as the person, never as the id it is kept under.
+  const { owner: _owner, ...shown } = mission;
+  return { ...shown, seen: seenAs(mission.status), workedMs: workedMs(mission, missions.now()), shown: missions.limitsShown(mission), ...things.said(thingOfMission(mission)) };
 }
 
 /**
@@ -141,7 +144,8 @@ function strings(value: unknown): string[] | undefined {
 
 export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): void {
   const unavailable = { error: "missions are not run in this process" };
-
+  /** What a route answers for a mission that is not there: also for one that is another person's (`whose.ts`). */
+  const missing = { error: "no such mission", plain: "This mission is not there any more. Reload the list." };
   control.get("/missions", (c) => {
     const missions: Missions | undefined = deps.missions;
     if (!missions) return c.json(unavailable, 501);
@@ -150,12 +154,14 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
     const days = Math.min(LISTED_DAYS.most, Math.max(1, Math.round(Number(c.req.query("days") ?? LISTED_DAYS.usual)) || LISTED_DAYS.usual));
     const limit = Math.min(500, Math.max(1, Number(c.req.query("limit") ?? (c.req.query("days") ? 500 : 100)) || 100));
     const now = missions.now();
+    const things = thingsFor(deps, c.get("principal"), c.req.query("whose"));
     // A mission that ended more than `days` ago is out of the list unless asked for (`?all=1`, the CLI's); its record stays.
     const all = c.req.query("all") === "1";
     const rows = missions
       .recent(limit, agent)
       .filter((mission) => all || mission.endedAt === null || now - mission.endedAt < days * DAY_MS)
-      .map((mission) => ({ ...view(missions, mission), checklist: checklistOf(deps.notes, mission) }));
+      .filter((mission) => things.listed(thingOfMission(mission)))
+      .map((mission) => ({ ...view(missions, mission, things), checklist: checklistOf(deps.notes, mission) }));
     rows.sort((a, b) => ORDER[a.seen] - ORDER[b.seen] || b.createdAt - a.createdAt);
     return c.json({ missions: rows } satisfies { missions: MissionView[] });
   });
@@ -164,7 +170,8 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
     const missions = deps.missions;
     if (!missions) return c.json(unavailable, 501);
     const mission = missions.find(c.req.param("id"));
-    if (!mission) return c.json({ error: "no such mission" }, 404);
+    const things = thingsFor(deps, c.get("principal"));
+    if (!mission || !things.sees(thingOfMission(mission))) return c.json({ error: "no such mission" }, 404);
     const key = { agentId: mission.agentId, gatewayId: MISSION_GATEWAY_ID, chatId: mission.id };
     const plan = deps.notes?.plan(key);
     const parked = deps.approvals
@@ -175,7 +182,7 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
     // The reviewer at work: minutes a pass, where "Running its checks" alone read as stuck (0.8.10).
     const reviewing = missions.reviewing(mission.id);
     return c.json({
-      mission: view(missions, mission),
+      mission: view(missions, mission, things),
       // Its conversation, for the routes every conversation has: its turns, its notes.
       sessionId: sessionIdFor(key),
       // What its turns did, in steps as each turn's line counts them — "2 of 100" turns alone read as two actions (0.8.0).
@@ -207,12 +214,14 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
       ...(body.accept === true ? { accept: true } : {}),
       ...(typeof body.workdir === "string" && body.workdir.trim() ? { workdir: body.workdir.trim() } : {}),
       startedBy: principal.user?.id ?? principal.actor,
+      // The account's, wherever it reports; the command line's is nobody's.
+      owner: principal.user ? `web:${principal.user.id}` : null,
       gatewayId: typeof body.gatewayId === "string" ? body.gatewayId : LOCAL_GATEWAY_ID,
       chatId: typeof body.chatId === "string" ? body.chatId : DASHBOARD_MISSIONS_CHAT,
     });
     if ("refused" in started) return c.json({ error: started.refused, plain: "The mission was not started. Check its goal, its checks and its folder, and try again." }, 400);
     deps.audit.record({ action: "mission_started", actor: principal.actor, agentId: started.mission.agentId, details: { mission: started.mission.id } });
-    return c.json({ mission: view(missions, started.mission) } satisfies { mission: MissionView }, 201);
+    return c.json({ mission: view(missions, started.mission, thingsFor(deps, principal)) } satisfies { mission: MissionView }, 201);
   });
 
   /**
@@ -225,6 +234,10 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
     if (!missions) return c.json(unavailable, 501);
     const principal = c.get("principal");
     if (!atLeast(principal, "operator")) return c.json({ error: "operator only" }, 403);
+    // Its owner's to change, or an admin's: another person's is not there for this reader.
+    const things = thingsFor(deps, principal);
+    const mine = missions.find(c.req.param("id"));
+    if (mine && !things.changes(thingOfMission(mine))) return c.json(missing, 404);
     const body = await jsonBody(c);
     if (!body) return c.json({ error: "send the fields to change" }, 400);
     const checks = strings(body.checks);
@@ -252,7 +265,7 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
     // What changed is the chat's list (a folder by its path among it), and a brief's failure an exception's message: the
     // page says what it means (0.8.23), and the chat it began in has the list.
     const plain = edited.briefFailed ? "Saved, but its brief could not be written, so it has none for now. Whoever runs the server can see why." : "Saved. The chat it began in is told what changed.";
-    return c.json({ mission: view(missions, edited.mission), changed: edited.changed, ...(edited.briefFailed ? { briefFailed: edited.briefFailed } : {}), plain } satisfies { mission: MissionView; changed: string[]; briefFailed?: string; plain?: string });
+    return c.json({ mission: view(missions, edited.mission, things), changed: edited.changed, ...(edited.briefFailed ? { briefFailed: edited.briefFailed } : {}), plain } satisfies { mission: MissionView; changed: string[]; briefFailed?: string; plain?: string });
   });
 
   /**
@@ -265,7 +278,7 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
     const principal = c.get("principal");
     if (!atLeast(principal, "operator")) return c.json({ error: "operator only" }, 403);
     const found = missions.find(c.req.param("id"));
-    if (!found) return c.json({ error: `No mission ${c.req.param("id")}.` }, 404);
+    if (!found || !thingsFor(deps, principal).changes(thingOfMission(found))) return c.json({ error: `No mission ${c.req.param("id")}.` }, 404);
     const force = c.req.query("force") === "1";
     const deleted = await missions.delete(found.id, principal.user?.displayName?.trim() || principal.actor, { force });
     // The note is what gets past it, read by the CLI as its hint and by the page as a second, forced ask, whose words are
@@ -299,12 +312,16 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
     const body = (await jsonBody(c)) ?? {};
     const text = typeof body.text === "string" ? body.text : undefined;
     const by = principal.user?.displayName?.trim() || principal.actor;
+    // Its owner's to tell, stop, answer and accept, or an admin's: another person's is not there for this reader.
+    const things = thingsFor(deps, principal);
+    const mine = missions.find(id);
+    if (mine && !things.changes(thingOfMission(mine))) return c.json(missing, 404);
     // Words for it while it works (0.8.10), with where they went — the dashboard says it as the toast.
     if (verb === "tell") {
       const told = missions.tell(id, text ?? "", by);
       if ("refused" in told) return c.json({ error: told.refused, plain: refusedPlain(told, "tell") }, 409);
       deps.audit.record({ action: "mission_tell", actor: principal.actor, agentId: told.mission.agentId, details: { mission: told.mission.id, chars: (text ?? "").trim().length } });
-      return c.json({ mission: view(missions, told.mission), said: told.said, plain: toldPlain(told.where) } satisfies { mission: MissionView; said?: string; plain?: string });
+      return c.json({ mission: view(missions, told.mission, things), said: told.said, plain: toldPlain(told.where) } satisfies { mission: MissionView; said?: string; plain?: string });
     }
     const acted =
       verb === "stop"
@@ -314,13 +331,14 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
           : verb === "accept"
             ? typeof body.outside === "string"
               ? missions.acceptOutside(id, body.outside, by)
-              : missions.accept(id, by)
+              : // A yes to one an agent proposed on its own makes it the account's (`acceptMission`): said as them.
+                missions.accept(id, by, principal.user ? { gatewayId: LOCAL_GATEWAY_ID, senderId: principal.user.id } : undefined)
             : verb === "answer"
               ? missions.answer(id, text ?? "", by)
               : null;
     if (!acted) return c.json({ error: "stop, continue, accept, answer or tell" }, 404);
     if ("refused" in acted) return c.json({ error: acted.refused, plain: refusedPlain(acted, verb) }, 409);
     deps.audit.record({ action: `mission_${verb}`, actor: principal.actor, agentId: acted.mission.agentId, details: { mission: acted.mission.id, ...(typeof body.outside === "string" ? { outside: body.outside } : {}) } });
-    return c.json({ mission: view(missions, acted.mission) } satisfies { mission: MissionView; said?: string; plain?: string });
+    return c.json({ mission: view(missions, acted.mission, things) } satisfies { mission: MissionView; said?: string; plain?: string });
   });
 }

@@ -46,6 +46,7 @@ interface Row {
   proposal: string | null;
   turned_on_by: string | null;
   allowed: string | null;
+  owner: string | null;
 }
 
 export interface JobInput {
@@ -58,6 +59,8 @@ export interface JobInput {
   delivery?: JobDelivery;
   keepAfterRun?: boolean;
   createdBy: string;
+  /** Whose it is (`Job.owner`): the account that makes it. A proposal has none until a person turns it on. */
+  owner?: string;
   enabled?: boolean;
   /** Proposed by an agent (0.8.0, `proposals.ts`): created off, until a person turns it on from its card. */
   proposal?: JobProposal;
@@ -177,9 +180,21 @@ export class CronStore {
     return { ...job, webhookToken: token };
   }
 
-  /** A proposal said yes to (`proposals.ts`): no longer one, and who said it kept — whom its missions run as. */
-  settleProposal(id: string, turnedOnBy: string): void {
-    this.db.prepare("UPDATE cron_jobs SET proposal = NULL, turned_on_by = ? WHERE id = ?").run(turnedOnBy, id);
+  /**
+   * A proposal said yes to (`proposals.ts`): no longer one, and who said it kept — whom its missions run as. It is
+   * theirs from then (`owner`), unless it already was somebody's: a change to a job a person made stays that person's.
+   */
+  settleProposal(id: string, turnedOnBy: string, owner?: string): void {
+    this.db.prepare("UPDATE cron_jobs SET proposal = NULL, turned_on_by = ?, owner = COALESCE(owner, ?) WHERE id = ?").run(turnedOnBy, owner ?? null, id);
+  }
+
+  /** Handed to a person, or to nobody (an admin's, from its page). The job as it then is, or null where there is none. */
+  setOwner(id: string, owner: string | null, actor: string): Job | null {
+    const job = this.get(id);
+    if (!job) return null;
+    this.db.prepare("UPDATE cron_jobs SET owner = ? WHERE id = ?").run(owner, id);
+    this.options.audit?.record({ action: "cron_owner_set", agentId: job.agentId, actor, details: { job: id, owner, was: job.owner ?? null } });
+    return this.get(id);
   }
 
   /**
@@ -251,6 +266,7 @@ export class CronStore {
       // and this one is the entire authentication on a public endpoint.
       ...(input.trigger.kind === "webhook" ? { webhookToken: randomToken() } : {}),
       ...(input.proposal ? { proposal: input.proposal } : {}),
+      ...(input.owner && !input.proposal ? { owner: input.owner } : {}),
     };
 
     this.db
@@ -258,8 +274,8 @@ export class CronStore {
         `INSERT INTO cron_jobs (id, agent_id, name, enabled, schedule, payload, delivery,
            created_at, last_run_at, next_run_at, run_count, fail_count,
            target_gateway_id, target_chat_id, session, keep_after_run, created_by,
-           fail_streak, disabled_reason, webhook_token, proposal)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, 0, 0, ?, ?, ?, ?, ?, 0, NULL, ?, ?)`,
+           fail_streak, disabled_reason, webhook_token, proposal, owner)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, 0, 0, ?, ?, ?, ?, ?, 0, NULL, ?, ?, ?)`,
       )
       .run(
         job.id,
@@ -278,6 +294,7 @@ export class CronStore {
         job.createdBy,
         job.webhookToken ?? null,
         job.proposal ? JSON.stringify(job.proposal) : null,
+        job.owner ?? null,
       );
 
     this.options.audit?.record({
@@ -674,6 +691,7 @@ function toJob(row: Row): Job {
     ...(row.proposal === null ? {} : { proposal: JSON.parse(row.proposal) as JobProposal }),
     ...(row.turned_on_by === null ? {} : { turnedOnBy: row.turned_on_by }),
     ...(row.allowed === null ? {} : { allowed: JSON.parse(row.allowed) as JobAllowance[] }),
+    ...(row.owner === null ? {} : { owner: row.owner }),
   };
 }
 

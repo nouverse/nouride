@@ -16,7 +16,7 @@ import { SYSTEM_SENDER } from "@/modules/pipeline/deps.ts";
 import { SqliteApprovalGate } from "@/modules/tools/approvals.store.ts";
 import { createMissionTools } from "@/modules/tools/builtins/mission.ts";
 import { createWorkTool } from "@/modules/tools/builtins/work.ts";
-import { missionsHarness } from "./harness.ts";
+import { missionsHarness, STARTERS_CTX } from "./harness.ts";
 
 type Audited = { action: string; actor: string; agentId?: string; details?: Record<string, unknown> };
 
@@ -185,7 +185,8 @@ describe("D4 — a draft changed before it runs", () => {
         c.set("principal", { kind: "user", actor: "gading", role: "operator", user: { id: "usr_1", username: "gading" } });
         await next();
       });
-      registerMissionRoutes(control as never, { missions, notes: h.notes, approvals: { pending: () => [] }, audit: { record: () => {} } } as never);
+      registerMissionRoutes(control as never, {
+      ctx: STARTERS_CTX, missions, notes: h.notes, approvals: { pending: () => [] }, audit: { record: () => {} } } as never);
       return (await (await control.request(`/missions/${mission!.id}/edit`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })).json()) as Record<string, unknown>;
     };
     expect(await edit(h.missions, { goal: "Revise the RFC to every answer" })).toMatchObject({ changed: ["goal"], plain: "Saved. The chat it began in is told what changed." });

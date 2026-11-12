@@ -7,7 +7,7 @@
  * The dashboard answers it too, and its card follows.
  */
 
-import { createLogger, type ButtonPress, type ChatType, type Job, type PressAnswer } from "@nouride/shared";
+import { createLogger, ownerIdentity, type ButtonPress, type ChatType, type Job, type PressAnswer } from "@nouride/shared";
 import type { Notifier } from "@/commons/notify.ts";
 import { mayAnswer } from "@/modules/tools/approval-answerers.ts";
 import type { CronPort } from "./cron.store.ts";
@@ -108,7 +108,8 @@ export class ProposalCards {
     // An admin could make that change themselves; so may an operator on the dashboard, which does not ask this.
     const refused = admin ? null : changeRefusal(this.deps.store, job);
     if (refused) return { refused };
-    const result = turnOnProposal(this.deps.store, id, { actor: who.name, as: who.senderId });
+    const owner = ownerIdentity(who.gatewayId, who.senderId);
+    const result = turnOnProposal(this.deps.store, id, { actor: who.name, as: who.senderId, ...(owner ? { owner } : {}) });
     if ("refused" in result) return result;
     log.info("a proposal turned on", { job: result.job.id, by: who.senderId });
     this.settled(id, settled);

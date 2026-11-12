@@ -22,6 +22,15 @@ async function drain(): Promise<void> {
   for (let i = 0; i < 20; i += 1) await Promise.resolve();
 }
 
+/**
+ * The daemon's side of a route test, as far as whose a mission is goes (`web/control/whose.ts`): one person holding
+ * the accounts these tests sign in as and the chat id this harness starts missions from, so what a test starts is
+ * its account's own to read and change. A test about another person's mission says its own people.
+ */
+export const STARTERS_CTX = {
+  config: { people: [{ key: "starter", name: "Starter", ids: ["web:usr_admin", "web:usr_operator", "web:usr_viewer", "web:usr_1", "web:usr_op", "telegram:8142"] }] },
+};
+
 export const SETTINGS: MissionsInForce = { perAgent: 1, maxRunning: 2, limitHours: 8, limitTurns: 50, limitTokens: 50_000_000 };
 
 export async function missionsHarness(options: { settings?: Partial<MissionsInForce>; agents?: string[]; jobAllowed?: (jobId: string) => readonly string[]; prepare?: (mission: Mission) => Promise<string | void>; branchRefusal?: (request: { agentId: string; workdir: string; branch: string }) => Promise<string | null>; sourceRepository?: (workdir: string) => string; runsOnCli?: (agentId: string) => boolean; freeToDelete?: (agentId: string) => boolean; readBrief?: (path: string) => string | null; goalBriefOf?: (mission: Mission) => string | null; stopTurn?: (mission: Mission) => void; helperTokens?: (missionId: string, since: number) => number; runningTokens?: (missionId: string) => number; personSaid?: (mission: Mission) => string | null; turnStartedAt?: (turnId: string) => number | null; checkRefusal?: (request: { agentId: string; workdir?: string }, command: string) => string | null; steerTurn?: (mission: Mission, told: Told) => SteerOutcome; pageOf?: (mission: Mission) => string | null; diskLow?: () => number | null; unsavedIn?: (mission: Mission) => string[] } = {}) {

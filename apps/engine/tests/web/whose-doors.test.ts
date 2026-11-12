@@ -59,6 +59,13 @@ const RINA = { agentId: "nouva", gatewayId: LOCAL, chatId: "web-r" };
 const GADING_DM = { agentId: "nouva", gatewayId: "telegram:nouva", chatId: "814" };
 const GROUP = { agentId: "nouva", gatewayId: "telegram:nouva", chatId: "-100" };
 const JOB = { agentId: "nouva", gatewayId: "telegram:nouva", chatId: "cron:cron_1" };
+/** Another automation's own conversation: the admin's, which reports to the admin's own private chat. */
+const HIS_JOB = { agentId: "nouva", gatewayId: "telegram:nouva", chatId: "cron:cron_2" };
+/** The automations, as far as whose they are goes: Rina's morning line, and the admin's evening one. */
+const AUTOMATIONS: Record<string, { owner?: string; target: { gatewayId: string; chatId: string }; delivery: { mode: string } }> = {
+  cron_1: { owner: "web:u2", target: { gatewayId: LOCAL, chatId: "web-r" }, delivery: { mode: "announce" } },
+  cron_2: { owner: "web:u1", target: { gatewayId: "telegram:nouva", chatId: "814" }, delivery: { mode: "announce" } },
+};
 
 async function house() {
   const dir = tempDir("whose-doors");
@@ -87,6 +94,7 @@ async function house() {
   roomMessages.record({ id: "m1", gatewayId: GROUP.gatewayId, chatId: GROUP.chatId, senderId: "814", senderName: "Gading", text: "lampu teras mati", at: Date.now() });
   said(GROUP, "814", "lampu teras mati");
   said(JOB, "814", "the morning line", { via: "schedule", job: "cron_1" });
+  said(HIS_JOB, "814", "the evening line", { via: "schedule", job: "cron_2" });
   rooms.create({ gatewayId: LOCAL, chatId: "room-1", agentIds: ["nouva"], title: "Keuangan", createdBy: "gading" });
   await notes.write(GADING, "Gaji", "Transfer on the 25th.");
   for (const where of [GADING, RINA]) events.append({ kind: "note", turnId: null, agentId: where.agentId, gatewayId: where.gatewayId, chatId: where.chatId, data: { text: where.chatId } } as never);
@@ -105,6 +113,7 @@ async function house() {
     roomMessages,
     events,
     notes,
+    cron: { store: { get: (id: string) => AUTOMATIONS[id] ?? null } },
     turnInspector: new TurnInspector(db),
     audit: { record: () => undefined },
     registry: {
@@ -208,7 +217,7 @@ describe("an operator asking for another person's conversation", () => {
     expect((await h.ask("GET", `/turns/${h.gadingTurn}`)).status).toBe(404);
     const turns = (await h.ask("GET", "/turns?limit=50")).body.turns as { prompt: string }[];
     expect(turns.map((turn) => turn.prompt).sort()).toEqual(["resep rendang", "the morning line"]);
-    // Her chat's rows and the daemon's own, and a scheduled job's, which anyone reads: none of the admin's, here or on an app.
+    // Her chat's rows, the daemon's own and her own automation's: none of the admin's, here, on an app, or his automation's.
     const chats = new Set(((await h.ask("GET", "/events?limit=500")).body.events as { chatId: string | null }[]).map((row) => row.chatId));
     expect([...chats].sort()).toEqual(["cron:cron_1", "web-r", null].sort());
     expect(((await h.ask("GET", "/jobs")).body.jobs as { id: string }[]).map((job) => job.id)).toEqual(["job_r"]);
@@ -219,7 +228,7 @@ describe("an operator asking for another person's conversation", () => {
 });
 
 describe("her own, and what nobody owns", () => {
-  test("her conversation opens and takes a message; a scheduled job's own reads for anyone", async () => {
+  test("her conversation opens and takes a message; her automation's own reads for her, and another person's does not", async () => {
     const h = await house();
     const mine = (await h.ask("GET", `/sessions/${sessionIdFor(RINA)}/turns`)).body as unknown as Transcript;
     expect(mine.turns.map((turn) => turn.prompt)).toEqual(["resep rendang"]);
@@ -227,6 +236,10 @@ describe("her own, and what nobody owns", () => {
     expect(h.dispatched).toHaveLength(1);
     const job = (await h.ask("GET", `/sessions/${sessionIdFor(JOB)}/turns`)).body as unknown as Transcript;
     expect(job.turns.map((turn) => turn.prompt)).toEqual(["the morning line"]);
+    // The admin's automation ran in a conversation of its own, and every account read it: answered as one that is not there.
+    expect(((await h.ask("GET", `/sessions/${sessionIdFor(HIS_JOB)}/turns`)).body as unknown as Transcript).turns).toEqual([]);
+    as = "gading";
+    expect(((await h.ask("GET", `/sessions/${sessionIdFor(HIS_JOB)}/turns`)).body as unknown as Transcript).turns.map((turn) => turn.prompt)).toEqual(["the evening line"]);
   });
 
   test("a viewer with no person reads nothing of anyone's, and nothing is theirs yet", async () => {
@@ -257,6 +270,7 @@ describe("an admin", () => {
       "-100 group -",
       "814 private Gading",
       "cron:cron_1 job -",
+      "cron:cron_2 job -",
       "web-g private Gading",
       "web-r private Rina",
     ]);

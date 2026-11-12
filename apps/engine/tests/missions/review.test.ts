@@ -14,7 +14,7 @@ import { REVIEW_PASSES, REVIEW_REJECTIONS } from "@/modules/missions/limits.ts";
 import { reviewBrief, reviewNotes, reviewOf, verdictOf } from "@/modules/missions/review.ts";
 import { readOnlyToolset } from "@/modules/tools/read-only.ts";
 import type { AgentToolset } from "@/modules/tools/registry.ts";
-import { missionsHarness } from "./harness.ts";
+import { missionsHarness, STARTERS_CTX } from "./harness.ts";
 
 describe("the reviewer's answer", () => {
   test("PASS on its first line passes, however it is dressed; FAIL is followed by its findings; anything else fails", () => {
@@ -184,8 +184,12 @@ describe("what the review does", () => {
     await h.settle();
     const reviewing = { pass: 1, of: REVIEW_PASSES, since: h.now() };
     expect(h.missions.reviewing(mission.id)).toEqual(reviewing);
-    const control = new Hono();
-    registerMissionRoutes(control as never, { missions: h.missions, notes: h.notes, approvals: { pending: () => [] } } as never);
+    const control = new Hono<{ Variables: { principal: unknown } }>();
+    control.use("*", async (c, next) => {
+      c.set("principal", { kind: "user", actor: "operator", role: "operator", user: { id: "usr_operator", username: "operator" } });
+      await next();
+    });
+    registerMissionRoutes(control as never, { ctx: STARTERS_CTX, missions: h.missions, notes: h.notes, approvals: { pending: () => [] } } as never);
     const detail = (await (await control.request(`/missions/${mission.id}`)).json()) as { reviewing?: unknown };
     expect(detail.reviewing).toEqual(reviewing);
     finish({ pass: true, findings: "", tokens: 0 });

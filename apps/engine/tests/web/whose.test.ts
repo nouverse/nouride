@@ -52,6 +52,22 @@ describe("what a conversation is", () => {
     rooms: { get: (_: string, chatId: string) => (chatId === "room-1" ? { createdBy: "rina" } : null) },
     roomMessages: { isRoom: (_: string, chatId: string) => chatId === "-100", spokeIn: () => new Set<string>() },
     pipeline: { chatTypeOf: (_: string, chatId: string) => (chatId === "-200" ? "group" : chatId === "814" ? "dm" : undefined) },
+    // The automations and the missions, as far as whose they are goes. Rina is `web:u2` and `telegram:555`.
+    cron: {
+      store: {
+        get: (id: string) =>
+          ({
+            cron_hers: { owner: "web:u2", target: { gatewayId: "telegram:nouva", chatId: "814" }, delivery: { mode: "announce" } },
+            cron_his: { owner: "web:u1", target: { gatewayId: "telegram:nouva", chatId: "814" }, delivery: { mode: "announce" } },
+            cron_to_her: { owner: "web:u1", target: { gatewayId: "telegram:nix", chatId: "555" }, delivery: { mode: "announce" } },
+            cron_nobodys: { target: { gatewayId: "telegram:nouva", chatId: "814" }, delivery: { mode: "announce" } },
+          })[id] ?? null,
+      },
+    },
+    missions: {
+      get: (id: string) => ({ msn_hers: { owner: "telegram:555", gatewayId: "telegram:nix", chatId: "555" }, msn_his: { owner: "web:u1", gatewayId: "web:dashboard", chatId: "missions" } })[id] ?? null,
+    },
+    sessions: { openerOfChat: (_: string, chatId: string) => (chatId === "555" ? "telegram:555" : chatId === "814" ? "telegram:814" : undefined) },
   };
 
   test("a mission's, a scheduled job's, a room made here, a group with a log or one its messages called one, or private", () => {
@@ -64,16 +80,33 @@ describe("what a conversation is", () => {
     expect(kindOf({ ...deps, pipeline: undefined } as never, "web:dashboard", "web-1")).toBe("private");
   });
 
-  test("opens, for someone not an admin: theirs, the rooms they made, and what nobody owns; never a chat nobody opened", () => {
+  test("opens, for someone not an admin: theirs and the rooms they made; never a chat nobody opened", () => {
     const reader = readerOf(rina as never, PEOPLE);
     const open = (gatewayId: string, chatId: string, openedBy?: string) => mayOpen(deps as never, reader, { gatewayId, chatId, openedBy });
     expect(open("telegram:nix", "555", "telegram:555")).toBe(true);
     expect(open("web:dashboard", "web-1", "web:u1")).toBe(false);
     expect(open("web:dashboard", "web-1")).toBe(false);
     expect(open("web:dashboard", "room-1")).toBe(true);
-    expect(open("telegram:nouva", "cron:cron_1")).toBe(true);
-    expect(open("web:mission", "msn_1")).toBe(true);
     expect(open("telegram:nouva", "-100", "telegram:555")).toBe(false);
+  });
+
+  test("an automation's own conversation and a mission's open for whoever sees the automation or the mission", () => {
+    // Every account read these. Now: her own, and one that reports to her chat; not another person's, not one
+    // nobody owns that reports elsewhere, and not one whose automation or mission is gone.
+    const reader = readerOf(rina as never, PEOPLE);
+    const open = (gatewayId: string, chatId: string) => mayOpen(deps as never, reader, { gatewayId, chatId });
+    expect(open("telegram:nouva", "cron:cron_hers")).toBe(true);
+    expect(open("telegram:nouva", "cron:cron_to_her")).toBe(true);
+    expect(open("telegram:nouva", "cron:cron_his")).toBe(false);
+    expect(open("telegram:nouva", "cron:cron_nobodys")).toBe(false);
+    expect(open("telegram:nouva", "cron:cron_gone")).toBe(false);
+    expect(open("web:mission", "msn_hers")).toBe(true);
+    expect(open("web:mission", "msn_his")).toBe(false);
+    expect(open("web:mission", "msn_gone")).toBe(false);
+    // An admin opens every one, also what is left of one that is gone.
+    const admin = readerOf({ kind: "user", role: "admin", user: { id: "u1", username: "gading", role: "admin" } } as never, PEOPLE);
+    expect(mayOpen(deps as never, admin, { gatewayId: "telegram:nouva", chatId: "cron:cron_gone" })).toBe(true);
+    expect(mayOpen(deps as never, admin, { gatewayId: "web:mission", chatId: "msn_his" })).toBe(true);
   });
 });
 

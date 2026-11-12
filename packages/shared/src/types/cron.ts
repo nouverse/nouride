@@ -261,6 +261,12 @@ export interface Job {
   /** Who turned it on from its card: whom its missions run as. */
   turnedOnBy?: string;
   /**
+   * Whose it is: a person, as People writes an id (`web:<account id>`, `telegram:814…`). The account that made it, or
+   * whoever turned its proposal on. Absent for one made from the command line or by the daemon, and for a proposal
+   * nobody turned on yet: nobody's.
+   */
+  owner?: string;
+  /**
    * What its runs may send out without being asked again (0.8.0): a person answered *always for this job* to an action
    * the guards held — a message to another chat, an MCP tool, a post to a host. Each names where, by key
    * (`chat:telegram:nouva:555`, `mcp:mail__send`, `host:hooks.slack.com`); anything else is still asked.

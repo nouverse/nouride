@@ -63,6 +63,11 @@ export interface Mission {
   startedBy: string;
   /** The agent that started it on that person's behalf, when an agent did. */
   byAgent: string | null;
+  /**
+   * Whose it is: a person, as People writes an id (`web:<account id>`, `telegram:814…`): whoever started it, or the
+   * owner of the automation that did. Null is nobody's: started from the command line, or by an automation nobody owns.
+   */
+  owner: string | null;
   /** Where it reports: the chat it began in. */
   gatewayId: string;
   chatId: string;

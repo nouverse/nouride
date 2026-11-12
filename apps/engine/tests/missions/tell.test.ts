@@ -13,7 +13,7 @@ import type { HookContext } from "@/modules/hooks/types.ts";
 import type { SteerOutcome } from "@/modules/missions/tell.ts";
 import { registerMissionRoutes } from "@/modules/web/control/routes/missions.ts";
 import type { Mission, Told } from "@/modules/missions/types.ts";
-import { missionsHarness } from "./harness.ts";
+import { missionsHarness, STARTERS_CTX } from "./harness.ts";
 
 const done = { kind: "done" as const, summary: "Done.", report: "Report written.", files: [] };
 
@@ -221,7 +221,8 @@ describe("the ways in", () => {
         c.set("principal", { kind: "user", actor: role, role, user: { id: `usr_${role}`, username: role, displayName: role === "operator" ? "Gading" : role } });
         await next();
       });
-      registerMissionRoutes(control as never, { missions: h.missions, notes: h.notes, approvals: { pending: () => [] }, audit: { record: (row: { action: string; details: unknown }) => void audited.push(row) } } as never);
+      registerMissionRoutes(control as never, {
+      ctx: STARTERS_CTX, missions: h.missions, notes: h.notes, approvals: { pending: () => [] }, audit: { record: (row: { action: string; details: unknown }) => void audited.push(row) } } as never);
       return (path: string, body: unknown) => control.request(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
     };
     const mission = await h.start();

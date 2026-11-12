@@ -58,3 +58,15 @@ export function rootSessionOf(id: string): string {
   const marker = /:(?:sub|peer|btw):/.exec(id);
   return marker ? id.slice(0, marker.index) : id;
 }
+
+/**
+ * A person, as the owner of something is kept: `<platform>:<their id there>`, the form People writes an id in and a
+ * conversation's opener is kept in (`web:<account id>`, `telegram:814…`). `gatewayId` carries the platform. Nothing
+ * for a sender that is no person: the command line, the daemon's own, an agent.
+ */
+export function ownerIdentity(gatewayId: string, senderId: string | null | undefined): string | undefined {
+  const who = senderId?.trim();
+  if (!who || who === "cli" || who.startsWith("agent:") || who.startsWith("nouride:")) return undefined;
+  const platform = gatewayId.split(":")[0];
+  return platform ? `${platform}:${who}` : undefined;
+}

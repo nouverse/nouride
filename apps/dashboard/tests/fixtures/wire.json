@@ -38,7 +38,12 @@
           "finishedAt": 1760000000000,
           "status": "success",
           "result": "The payment service was restarting after its update. It answers again now, and nothing else is down."
-        }
+        },
+        "person": {
+          "key": "gading",
+          "name": "Gading"
+        },
+        "changeable": true
       },
       {
         "id": "cron_1",
@@ -137,7 +142,12 @@
             "ask": "Send what was found to the group?"
           }
         },
-        "suggested": "cron_2"
+        "suggested": "cron_2",
+        "person": {
+          "key": "gading",
+          "name": "Gading"
+        },
+        "changeable": true
       },
       {
         "id": "cron_2",
@@ -215,7 +225,8 @@
           "replaces": "cron_1"
         },
         "describes": "every 10m",
-        "start": "scheduled"
+        "start": "scheduled",
+        "changeable": true
       },
       {
         "id": "cron_4",
@@ -255,7 +266,12 @@
             "state": "local",
             "why": "No public address is set, so only this network can call it."
           }
-        }
+        },
+        "person": {
+          "key": "gading",
+          "name": "Gading"
+        },
+        "changeable": true
       },
       {
         "id": "cron_5",
@@ -307,7 +323,8 @@
           "at": 1760000000000
         },
         "describes": "when somebody starts it",
-        "start": "manual"
+        "start": "manual",
+        "changeable": true
       }
     ],
     "timezone": "Asia/Jakarta"
@@ -410,7 +427,12 @@
           "ask": "Send what was found to the group?"
         }
       },
-      "suggested": "cron_2"
+      "suggested": "cron_2",
+      "person": {
+        "key": "gading",
+        "name": "Gading"
+      },
+      "changeable": true
     },
     "runs": [
       {
@@ -528,7 +550,8 @@
         "replaces": "cron_1"
       },
       "describes": "every 10m",
-      "start": "scheduled"
+      "start": "scheduled",
+      "changeable": true
     },
     "timezone": "Asia/Jakarta"
   },
@@ -749,6 +772,11 @@
           "turns": true,
           "tokens": "known"
         },
+        "person": {
+          "key": "gading",
+          "name": "Gading"
+        },
+        "changeable": true,
         "checklist": {
           "done": 1,
           "total": 3,
@@ -813,6 +841,11 @@
           "turns": true,
           "tokens": "known"
         },
+        "person": {
+          "key": "gading",
+          "name": "Gading"
+        },
+        "changeable": true,
         "checklist": null
       }
     ]
@@ -875,7 +908,12 @@
       "shown": {
         "turns": true,
         "tokens": "known"
-      }
+      },
+      "person": {
+        "key": "gading",
+        "name": "Gading"
+      },
+      "changeable": true
     },
     "sessionId": "ses_msn_1",
     "steps": 0,

@@ -735,7 +735,7 @@
   "apps/engine/src/modules/web/control/routes/auth.ts": { "version": 1 },
   "apps/engine/src/modules/web/control/routes/chat.ts": { "version": 4, "date": 2 },
   "apps/engine/src/modules/web/control/routes/conversations.ts": { "version": 3, "date": 1 },
-  "apps/engine/src/modules/web/control/routes/cron.ts": { "version": 3 },
+  "apps/engine/src/modules/web/control/routes/cron.ts": { "version": 2 },
   "apps/engine/src/modules/web/control/routes/delegate.ts": { "version": 1 },
   "apps/engine/src/modules/web/control/routes/diagnostics.ts": { "version": 12 },
   "apps/engine/src/modules/web/control/routes/drafts.ts": { "version": 2 },

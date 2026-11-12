@@ -12,7 +12,7 @@ import { mission as missionCommand } from "../../../cli/src/commands/mission.ts"
 import { missionHooks } from "@/modules/hooks/builtins/mission.ts";
 import type { HookContext } from "@/modules/hooks/types.ts";
 import { registerMissionRoutes } from "@/modules/web/control/routes/missions.ts";
-import { missionsHarness } from "./harness.ts";
+import { missionsHarness, STARTERS_CTX } from "./harness.ts";
 
 /** `/mission …` typed in the mission's own DM. */
 async function typed(h: Awaited<ReturnType<typeof missionsHarness>>, text: string): Promise<string | undefined> {
@@ -91,7 +91,8 @@ describe("from the control API and the CLI", () => {
       c.set("principal", { kind: "user", actor: "operator", role: "operator", user: { id: "usr_op", username: "op", displayName: "Op" } });
       await next();
     });
-    registerMissionRoutes(control as never, { missions: h.missions, notes: h.notes, approvals: { pending: () => [] }, audit: { record: () => {} } } as never);
+    registerMissionRoutes(control as never, {
+      ctx: STARTERS_CTX, missions: h.missions, notes: h.notes, approvals: { pending: () => [] }, audit: { record: () => {} } } as never);
     const mission = await h.start("ship it", { checks: ["bun test"] });
     const post = (body: unknown) => control.request(`/missions/${mission.id}/accept`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
     expect((await post({})).status).toBe(409);

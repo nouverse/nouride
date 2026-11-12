@@ -17,6 +17,7 @@ import { registerAccessRoutes } from "@/modules/web/control/routes/access.ts";
 import { registerAgentRoutes } from "@/modules/web/control/routes/agents.ts";
 import { registerAgentToolRoutes } from "@/modules/web/control/routes/agent-tools.ts";
 import { registerCronRoutes } from "@/modules/web/control/routes/cron.ts";
+import { registerWebhookRoutes } from "@/modules/web/control/routes/webhooks.ts";
 import { registerDelegateRoutes } from "@/modules/web/control/routes/delegate.ts";
 import { registerDiagnosticRoutes } from "@/modules/web/control/routes/diagnostics.ts";
 import { registerDraftRoutes } from "@/modules/web/control/routes/drafts.ts";
@@ -57,7 +58,7 @@ function daemon(): Record<string, unknown> {
     files: {},
     setup: { setLook: refuse, setAnsweredBy: refuse },
     memory: { knowledge: { enabled: () => true } },
-    cron: { timezone: "UTC", store: { create: thrown, update: thrown, get: () => ({ id: "cron_1" }) } },
+    cron: { timezone: "UTC", store: { create: thrown, update: thrown, get: () => ({ id: "cron_1", target: { gatewayId: "telegram:nouva", chatId: "814" }, delivery: { mode: "announce" } }) } },
     registry: {
       get: (id: string) => ({ dir: `/packs/${id}`, config: { id, mcp: {}, tools: { enabled: [] } } }),
       all: () => [],
@@ -101,7 +102,7 @@ const FORMS: [string, Register, string, string, unknown, string, string][] = [
   ["the missions' limits", registerMissionSettingsRoutes as Register, "POST", "/policy/missions", { limitHours: 0.1 }, "limitHours", "the hours limit"],
   ["a scheduled job", registerCronRoutes as Register, "POST", "/cron", { agentId: "nix", name: "x", every: "5m", payload: { kind: "systemEvent", text: "hi" } }, "schedule", "when it runs"],
   ["a scheduled job, changed", registerCronRoutes as Register, "POST", "/cron/cron_1", { name: "x" }, "name", "the name"],
-  ["a webhook", registerCronRoutes as Register, "POST", "/webhooks", { agentId: "nix", name: "x", payload: { kind: "agentTurn", message: " " } }, "message", "what to ask the agent"],
+  ["a webhook", registerWebhookRoutes as Register, "POST", "/webhooks", { agentId: "nix", name: "x", payload: { kind: "agentTurn", message: " " } }, "message", "what to ask the agent"],
   ["memory's settings", registerMemoryRoutes as Register, "PUT", "/memory/settings", { passAt: "25:00" }, "passAt", "the time of the nightly pass"],
   ["an agent's look", registerAgentToolRoutes as Register, "POST", "/agents/nix/look", { hat: "crown" }, "hat", "the hat"],
   ["an agent's model", registerAgentRoutes as Register, "POST", "/agents/nix/model", { provider: "ghost", model: "m" }, "provider", "the provider"],

@@ -9,7 +9,7 @@ import { Hono } from "hono";
 import { sessionIdFor } from "@nouride/shared";
 import { MISSION_GATEWAY_ID } from "@/modules/missions/gateway.ts";
 import { registerMissionRoutes } from "@/modules/web/control/routes/missions.ts";
-import { missionsHarness } from "../missions/harness.ts";
+import { missionsHarness, STARTERS_CTX } from "../missions/harness.ts";
 
 async function app(role: "admin" | "operator" | "viewer" = "operator", extra: Record<string, unknown> = {}, harness: Parameters<typeof missionsHarness>[0] = {}) {
   const h = await missionsHarness({ settings: { perAgent: 1, maxRunning: 4 }, ...harness });
@@ -19,7 +19,11 @@ async function app(role: "admin" | "operator" | "viewer" = "operator", extra: Re
     await next();
   });
   registerMissionRoutes(control as never, {
+      ctx: STARTERS_CTX,
     missions: h.missions,
+    // The chat the harness starts missions from is the starter's own private chat: one an agent proposed there on
+    // its own, which nobody owns yet, is theirs to see.
+    sessions: { openerOfChat: () => "telegram:8142" },
     // The checklist the route reads is the one `plan` keeps for the mission's conversation.
     notes: h.notes,
     approvals: { pending: () => [] },

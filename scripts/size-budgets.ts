@@ -39,8 +39,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "the service the agents' CLIs run under: their connections, sessions, sign-ins, models and lent tools, as the runner reaches them through `RunnerHost`; each one's logic is in a file beside it",
   },
   "apps/engine/src/modules/cron/cron.store.ts": {
-    lines: 463,
-    why: "the job table and the one place `next_run_at` moves, so no schedule is advanced twice; validation is `cron/validate.ts`, turning a proposal on is `cron/proposals.ts`",
+    lines: 475,
+    why: "the job table, whose a job is among its columns, and the one place `next_run_at` moves, so no schedule is advanced twice; validation is `cron/validate.ts`, a proposal's yes is `cron/proposals.ts`",
   },
   "packages/persona/src/config.ts": {
     lines: 492,

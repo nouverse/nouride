@@ -233,7 +233,7 @@ async function workNotes(dataDir: string): Promise<NotesStore> {
  * Two missions of nouva's, as a person starts them from the dashboard: one at work, its checklist part done with a note
  * on the finished step, and one stopped. Each has a folder of its own, so no mission id is in a path.
  */
-async function missions(bench: Bench, notes: NotesStore): Promise<{ missions: Missions; working: string; stopped: string }> {
+async function missions(bench: Bench, notes: NotesStore, account: string): Promise<{ missions: Missions; working: string; stopped: string }> {
   const service = new Missions({
     store: new MissionStore(bench.db),
     settings: () => ({ perAgent: 2, maxRunning: 2, limitHours: 8, limitTurns: 50, limitTokens: 50_000_000 }),
@@ -249,7 +249,7 @@ async function missions(bench: Bench, notes: NotesStore): Promise<{ missions: Mi
     now: () => INSTANT,
   });
   const start = (goal: string, workdir: string) => {
-    const started = service.start({ agentId: "nouva", goal, checks: ["test -s report.md"], workdir, startedBy: "usr_1", gatewayId: "web:dashboard", chatId: "missions" });
+    const started = service.start({ agentId: "nouva", goal, checks: ["test -s report.md"], workdir, startedBy: account, gatewayId: "web:dashboard", chatId: "missions" });
     if ("refused" in started) throw new Error(started.refused);
     return started.mission.id;
   };
@@ -270,7 +270,7 @@ async function missions(bench: Bench, notes: NotesStore): Promise<{ missions: Mi
  * that ran; a webhook; and a list an agent proposed, started by hand. The steps run through the scheduler itself, so
  * each outcome is what a run writes, with a stand-in for the agent's turn and no chat to deliver to.
  */
-async function automations(bench: Bench): Promise<{ cron: NonNullable<ControlDeps["cron"]>; names: [string, string][] }> {
+async function automations(bench: Bench, account: string): Promise<{ cron: NonNullable<ControlDeps["cron"]>; names: [string, string][] }> {
   const where = { gatewayId: "telegram:main", chatId: "-100200" };
   const store = new CronStore({ db: bench.db, config: bench.config.cron, timezone: "Asia/Jakarta", now: () => INSTANT });
   const scheduler = new CronScheduler({
@@ -284,7 +284,8 @@ async function automations(bench: Bench): Promise<{ cron: NonNullable<ControlDep
       commandSandbox: () => ({ cwd: bench.dataDir, env: {} }),
     },
   });
-  const make = (input: Omit<JobInput, "agentId" | "target" | "createdBy">): Job => store.create({ agentId: "nouva", target: where, createdBy: "usr_1", ...input });
+  // The tester's own, as one made on the dashboard is its maker's: the pages open on "mine".
+  const make = (input: Omit<JobInput, "agentId" | "target" | "createdBy" | "owner">): Job => store.create({ agentId: "nouva", target: where, createdBy: "usr_1", owner: `web:${account}`, ...input });
   const check: JobStep = { id: "check", kind: "command", argv: ["sh", "-lc", "echo 'the shop answered 503' >&2; exit 22"], then: "end", whenFailed: "next" };
   const find: JobStep = { id: "find", kind: "agentTurn", name: "Find out why", message: "The shop's health check failed. Find out why and say what you found." };
   const ok: JobStep = { id: "ok", kind: "approval", ask: "Send what was found to the group?", whenFailed: "end" };
@@ -402,8 +403,8 @@ export async function wireAnswers(): Promise<Record<string, unknown>> {
     const token = mcpTokens.create({ person: "gading", agents: ["nouva"], scopes: ["memory", "personas"], label: "zed", now: INSTANT, expiresAt: null }).token;
 
     const notes = await workNotes(dataDir);
-    const work = await missions(bench, notes);
-    const jobs = await automations(bench);
+    const work = await missions(bench, notes, tester.id);
+    const jobs = await automations(bench, tester.id);
     // On the bench's machine, as its pipeline is: the fixture says how much runs at once, and must not say this laptop's.
     const ctx = { config, db, gateways: bench.gateways, startedAt: Date.now(), configSource: configPath, status: "ready", agentCount: 1, providerErrors: new Map(), machine: BENCH_MACHINE } as unknown as DaemonContext;
     const app = new Hono();

@@ -122,10 +122,10 @@ export function changeRefusal(store: Pick<CronPort, "get">, job: Job): string | 
 }
 
 /**
- * A person's yes: the job is on, and runs as them. A change takes the shape of the job it replaces — whose history
+ * A person's yes: the job is on, runs as them, and is theirs (`by.owner`, the person as People writes an id). A change takes the shape of the job it replaces — whose history
  * and URL it keeps — and the proposal goes.
  */
-export function turnOnProposal(store: CronPort, id: string, by: { actor: string; as: string }): { job: Job } | { refused: string } {
+export function turnOnProposal(store: CronPort, id: string, by: { actor: string; as: string; owner?: string }): { job: Job } | { refused: string } {
   const job = store.get(id);
   if (!job?.proposal) return { refused: "That proposal is no longer waiting." };
   const replaces = job.proposal.replaces;
@@ -136,10 +136,10 @@ export function turnOnProposal(store: CronPort, id: string, by: { actor: string;
     // What it was allowed always was a yes to its old shape: the new one asks again.
     for (const grant of changed.allowed ?? []) store.disallow(replaces, grant.keys[0]!, by.actor);
     store.delete(id, by.actor);
-    store.settleProposal(replaces, by.as);
+    store.settleProposal(replaces, by.as, by.owner);
     return { job: store.get(replaces)! };
   }
-  store.settleProposal(id, by.as);
+  store.settleProposal(id, by.as, by.owner);
   return { job: store.setEnabled(id, true, by.actor)! };
 }
 

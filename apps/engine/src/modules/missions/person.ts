@@ -4,7 +4,7 @@
  * person or the operator; never from an agent, which cannot raise its own limit.
  */
 
-import { createLogger } from "@nouride/shared";
+import { createLogger, ownerIdentity } from "@nouride/shared";
 import { limitsNear } from "./decide.ts";
 import { workedMs } from "./page.ts";
 import type { Missions } from "./missions.ts";
@@ -158,6 +158,8 @@ export function acceptMission(missions: Missions, deps: MissionsDeps, id: string
     // A proposal: the person's yes starts it — and, said in its own chat, it runs as them: their approval level and
     // People entry, and a question in a group theirs to answer. It ran as the daemon, whose turn proposed it.
     if (as && as.gatewayId === mission.gatewayId) mission.startedBy = as.senderId;
+    // And where it was nobody's (an agent proposed it on its own), it is theirs from here: whoever said yes.
+    if (mission.owner === null && as) mission.owner = ownerIdentity(as.gatewayId, as.senderId) ?? null;
     log.info("a proposed mission accepted, so it starts", { mission: mission.id, by, runs_as: mission.startedBy });
     // Its wait for the yes is before it started, not time it waited while working: counted as such, a proposal
     // accepted 60 hours on read 0h worked for 60 hours, and its hours limit never fired.
