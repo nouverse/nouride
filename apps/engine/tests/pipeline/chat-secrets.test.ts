@@ -209,7 +209,7 @@ describe("ChatSecrets", () => {
     const handle = message.text.match(/\$TMP_SECRET_[0-9A-F]{12}/)?.[0];
     expect(message.text).toBe(`/secret set wifi_kantor ${handle}`);
     expect(secrets.held.get(handle!, secretScope(message))?.value).toBe("rumah123");
-    expect(secrets.putBack(message)).toBeNull();
+    expect(secrets.putBack(message)).toEqual([]);
   });
 
   test("/secret undo: the message as written, as an edit of itself — its handle let go — and only while an edit is answered", () => {
@@ -219,24 +219,49 @@ describe("ChatSecrets", () => {
     const [taken] = secrets.take(message);
     expect(message.raw).toBeNull();
 
-    const back = secrets.putBack({ gatewayId: "telegram:nouva", chatId: "814", senderId: "u1" });
+    const [back, ...more] = secrets.putBack({ gatewayId: "telegram:nouva", chatId: "814", senderId: "u1" });
+    expect(more).toEqual([]);
     expect(back).toMatchObject({ id: "m7:as-written", text: `deploy with ${TOKEN}`, edit: { of: "m7", sentAt: 1_000_000 }, asWritten: true, raw: null });
     expect(back?.secrets).toBeUndefined();
     expect(secrets.held.get(taken!.handle, secretScope(message))).toBeUndefined();
     // Once: there is nothing left to put back.
-    expect(secrets.putBack({ gatewayId: "telegram:nouva", chatId: "814", senderId: "u1" })).toBeNull();
+    expect(secrets.putBack({ gatewayId: "telegram:nouva", chatId: "814", senderId: "u1" })).toEqual([]);
 
     // Past the window an edit is answered in, there is no putting one back.
     secrets.take(from(`again ${TOKEN}`, { id: "m8", timestamp: now }));
     now += EDIT_WINDOW_MS;
-    expect(secrets.putBack({ gatewayId: "telegram:nouva", chatId: "814", senderId: "u1" })).toBeNull();
+    expect(secrets.putBack({ gatewayId: "telegram:nouva", chatId: "814", senderId: "u1" })).toEqual([]);
   });
 
   test("only the person who sent it can put it back, and by handle", () => {
     const secrets = new ChatSecrets(new TransientSecrets());
     const first = secrets.take(from(`one ${TOKEN}`, { id: "a" }))[0]!;
     secrets.take(from(`two ${TOKEN.replace("ghp_Z", "ghp_Y")}`, { id: "b" }));
-    expect(secrets.putBack({ gatewayId: "telegram:nouva", chatId: "814", senderId: "someone-else" })).toBeNull();
-    expect(secrets.putBack({ gatewayId: "telegram:nouva", chatId: "814", senderId: "u1" }, first.handle)?.id).toBe("a:as-written");
+    expect(secrets.putBack({ gatewayId: "telegram:nouva", chatId: "814", senderId: "someone-else" })).toEqual([]);
+    expect(secrets.putBack({ gatewayId: "telegram:nouva", chatId: "814", senderId: "u1" }, first.handle).map((back) => back.id)).toEqual(["a:as-written"]);
+  });
+
+  test("in a room several of our bots share, every bot's copy is put back, each as its own connection has it", () => {
+    // A Telegram basic group: one message, a copy to each bot under its own number. The first takes the credential and
+    // says so; the others are the same message. Put back, each bot gets its own again, as an edit reaches every bot.
+    const secrets = new ChatSecrets(new TransientSecrets());
+    const copy = (bot: string, id: string) => from(`deploy with ${TOKEN}`, { gateway: "telegram", gatewayId: `telegram:${bot}`, chatType: "group", chatId: "-500", id, timestamp: 77, idsPerConnection: true });
+    // Nouva's copy came with a handle on it already, from a message before: put back, it carries none.
+    expect(secrets.take({ ...copy("nouva", "14"), secrets: [{ handle: "$TMP_SECRET_0123456789AB", label: "a token from before" }] })).toHaveLength(1);
+    expect(secrets.take(copy("nox", "9"))).toEqual([]);
+    expect(secrets.take(copy("nero", "31"))).toEqual([]);
+    // The same copy handed over twice is kept once.
+    expect(secrets.take(copy("nox", "9"))).toEqual([]);
+
+    // Asked on any bot's connection: a room's messages are the room's.
+    const undo = { gateway: "telegram" as const, gatewayId: "telegram:nero", chatType: "group" as const, chatId: "-500", senderId: "u1" };
+    const back = secrets.putBack(undo);
+    expect(back.map((one) => [one.gatewayId, one.id, one.edit?.of])).toEqual([
+      ["telegram:nouva", "14:as-written", "14"],
+      ["telegram:nox", "9:as-written", "9"],
+      ["telegram:nero", "31:as-written", "31"],
+    ]);
+    expect(back.every((one) => one.asWritten === true && one.text === `deploy with ${TOKEN}` && one.secrets === undefined)).toBe(true);
+    expect(secrets.putBack(undo)).toEqual([]);
   });
 });

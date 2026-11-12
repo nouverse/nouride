@@ -10,6 +10,7 @@
 
 import { afterEach, describe, expect, test } from "bun:test";
 import type { SqliteDb } from "@nouride/runtime";
+import { TransientSecrets } from "@nouride/secrets";
 import type { MessageEnvelope } from "@nouride/shared";
 import { frontDeskFor, unaddressedFallback } from "@/modules/router/front-desk.ts";
 import { envelope as envelopeAt, FakeGateway } from "../helpers.ts";
@@ -43,6 +44,8 @@ async function room(options: { orchestrator: boolean; groupsRequireMention?: boo
       gateways: { telegram: Object.fromEntries(BOTS.map((id) => [id, { enabled: true, token: `t-${id}`, agent: id }])) },
     },
     gateways: Object.values(connections),
+    // What takes a credential out of a message and keeps it as it was written, for `/secret undo`.
+    deps: { heldSecrets: new TransientSecrets() },
   });
   cleanup.push(bench.dispose);
   bench.pipeline.setTools(new Map());
@@ -71,6 +74,51 @@ describe("with an orchestrator", () => {
     expect(h.said()).toEqual({ nouva: [], nox: ["answer 1"], nero: [] });
     // And in the conversation its own bot keeps, the one a tag to it continues: Nouva's bot had the message first, and
     // the orchestrator's talk in the room was kept under whichever bot's copy won.
+    expect(conversationsOf(h.db, "nox")).toEqual(["ses_nox:telegram:nox:room-1"]);
+  });
+
+  test("a message put back with `/secret undo` is read again in the orchestrator's own conversation, as an edit reaches every bot", async () => {
+    // The first bot handed the message took the credential out and kept the message as written: Nouva's. Put back, it
+    // came on Nouva's connection alone, so the orchestrator read it again in a conversation under Nouva's bot, and
+    // what it then said of it came from there.
+    const h = await room({ orchestrator: true });
+    const token = `ghp_${"Zq9xW2vB7nM4kL8p".repeat(3).slice(0, 36)}`;
+    await h.say({ id: "m-token", senderId: "operator", text: `deploy pakai ${token}` });
+    // `/secret@nox_bot undo`, as Telegram's menu writes a command in a group: Nox's bot has it with its name taken off.
+    const undo = envelopeAt({ id: "m-undo", timestamp: Date.now(), chatType: "group", chatId: "room-1", senderId: "operator" });
+    for (const id of BOTS) {
+      h.connections[id]!.receive({ ...undo, gatewayId: `telegram:${id}`, ...(id === "nox" ? { text: "/secret undo", mentionsSelf: true } : { text: "/secret@nox_bot undo", mentions: ["nox_bot"] }) });
+    }
+    await h.pipeline.idle();
+
+    // Read again once, as written, and said through its own bot.
+    expect(h.requests).toHaveLength(2);
+    expect(JSON.stringify(h.requests.at(-1))).toContain(token);
+    expect(h.said().nox?.at(-1)).toBe("answer 2");
+    expect(h.said().nouva).toEqual([]);
+    expect(conversationsOf(h.db, "nox")).toEqual(["ses_nox:telegram:nox:room-1"]);
+  });
+
+  test("and where each bot numbers the message its own way, it is read again at all: on the orchestrator's own copy", async () => {
+    // A Telegram basic group. Put back on the first bot's connection alone, the message was the orchestrator's to
+    // read and left to its own bot's copy, which never came: "I'll read it again", and nobody did.
+    const h = await room({ orchestrator: true });
+    const token = `ghp_${"Zq9xW2vB7nM4kL8p".repeat(3).slice(0, 36)}`;
+    const base = { chatType: "group" as const, chatId: "room-1", senderId: "operator", idsPerConnection: true };
+    const sent = Date.now();
+    BOTS.forEach((id, i) => h.connections[id]!.receive(envelopeAt({ ...base, timestamp: sent, id: String(100 + i), gatewayId: `telegram:${id}`, text: `deploy pakai ${token}` })));
+    await h.pipeline.idle();
+    const asked = Date.now();
+    BOTS.forEach((id, i) =>
+      h.connections[id]!.receive(
+        envelopeAt({ ...base, timestamp: asked, id: String(200 + i), gatewayId: `telegram:${id}`, ...(id === "nox" ? { text: "/secret undo", mentionsSelf: true } : { text: "/secret@nox_bot undo", mentions: ["nox_bot"] }) }),
+      ),
+    );
+    await h.pipeline.idle();
+
+    expect(h.requests).toHaveLength(2);
+    expect(JSON.stringify(h.requests.at(-1))).toContain(token);
+    expect(h.said().nox?.at(-1)).toBe("answer 2");
     expect(conversationsOf(h.db, "nox")).toEqual(["ses_nox:telegram:nox:room-1"]);
   });
 

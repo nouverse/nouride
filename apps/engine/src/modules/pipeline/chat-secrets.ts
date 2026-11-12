@@ -29,6 +29,8 @@ const HANDLE = /^\$TMP_SECRET_[0-9A-F]{12}$/;
 /** A message something was taken from, as it was written — for `/secret undo`, and only while an edit is answered. */
 interface Taken {
   original: MessageEnvelope;
+  /** The same message as our other bots in the room were handed it, each as its own connection has it. */
+  copies: MessageEnvelope[];
   handles: string[];
   at: number;
 }
@@ -94,27 +96,33 @@ export class ChatSecrets {
 
   /**
    * The sender's message as they wrote it — the newest they sent here, or the one `handle` came from — as an edit of
-   * itself, for `arrive` to deliver: answered as corrected, wherever it is (`edits.ts`). Its handles are let go. Null
+   * itself, for `arrive` to deliver: answered as corrected, wherever it is (`edits.ts`). Its handles are let go. None
    * when nothing they sent here was taken in the last `EDIT_WINDOW_MS`, the time an edit is still answered.
+   *
+   * One for every one of our bots that was handed the message, each as its own connection has it: the way a platform
+   * delivers an edit. Put back on the first bot's connection alone, it was read again by whoever answers the room in
+   * a conversation under that bot (a conversation is kept by the connection a message came on), and what the agent
+   * then said of it came from there; where each bot numbers a message its own way, it was read by nobody but that
+   * bot's own agent.
    */
-  putBack(command: Pick<MessageEnvelope, "gatewayId" | "chatId" | "senderId">, handle?: string): MessageEnvelope | null {
+  putBack(command: Pick<MessageEnvelope, "gatewayId" | "chatId" | "senderId"> & Partial<Pick<MessageEnvelope, "gateway" | "chatType">>, handle?: string): MessageEnvelope[] {
     const key = `${secretScope(command)}\u0000${command.senderId}`;
     const list = (this.recent.get(key) ?? []).filter((taken) => this.now() - taken.at < EDIT_WINDOW_MS);
     const found = handle ? list.find((taken) => taken.handles.includes(handle)) : list.at(-1);
-    if (!found) return null;
+    if (!found) return [];
     this.recent.set(
       key,
       list.filter((taken) => taken !== found),
     );
     for (const held of found.handles) this.held.release(held);
-    const { secrets: _secrets, ...original } = found.original;
-    return {
+    const at = this.now();
+    return [found.original, ...found.copies].map(({ secrets: _secrets, ...original }) => ({
       ...original,
       id: `${original.id}:as-written`,
-      timestamp: this.now(),
+      timestamp: at,
       edit: { of: original.edit?.of ?? original.id, sentAt: original.edit?.sentAt ?? original.timestamp },
       asWritten: true,
-    };
+    }));
   }
 
   /** Keep it for `/secret undo` — unless it is another copy of the newest one kept, which says false. */
@@ -122,10 +130,14 @@ export class ChatSecrets {
     const key = `${scope}\u0000${sender}`;
     const at = this.now();
     const list = (this.recent.get(key) ?? []).filter((had) => at - had.at < EDIT_WINDOW_MS);
-    const newest = list.at(-1)?.original;
+    const kept = list.at(-1);
+    const newest = kept?.original;
     // The same message as each bot is handed it: the same sender, time and words; in a Telegram basic group not the id.
-    if (newest && newest.timestamp === original.timestamp && newest.text === original.text && newest.gatewayId !== original.gatewayId) return false;
-    list.push({ original, handles: taken.map((secret) => secret.handle), at });
+    if (kept && newest && newest.timestamp === original.timestamp && newest.text === original.text && newest.gatewayId !== original.gatewayId) {
+      if (!kept.copies.some((copy) => copy.gatewayId === original.gatewayId)) kept.copies.push(original);
+      return false;
+    }
+    list.push({ original, copies: [], handles: taken.map((secret) => secret.handle), at });
     // A handful per person per chat — undo reaches back to the newest, or names one — and set last, so the ceiling on
     // the conversations held, which every table kept in memory has, lets the quietest go first.
     this.recent.delete(key);
@@ -216,8 +228,8 @@ export function secretsHookPort(o: {
     },
     putBack: (envelope, handle) => {
       const back = o.secrets.putBack(envelope, handle);
-      if (back) o.deliver(back);
-      return back !== null;
+      for (const copy of back) o.deliver(copy);
+      return back.length > 0;
     },
   };
 }
