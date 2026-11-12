@@ -10,7 +10,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { lintedFiles, proProjects } from "../../../../scripts/lint-sources.ts";
@@ -65,6 +65,74 @@ describe("ci.yml", () => {
     const run = spawnSync("sh", ["-c", runOf(job, "The Pro checks in nouverse/nouride-pro, for this commit")], { encoding: "utf8", env: { PATH: process.env.PATH ?? "/usr/bin:/bin", GH_TOKEN: "" } });
     expect(run.status).toBe(1);
     expect(run.stdout).toContain("::error::RELEASES_REPO_TOKEN is not set");
+  });
+});
+
+describe("ci.yml waits for the Pro checks to end", () => {
+  const job = jobs(read(".github/workflows/ci.yml")).get("verify-private") ?? "";
+  const step = runOf(job, "The Pro checks in nouverse/nouride-pro, for this commit");
+
+  /**
+   * The step, with a `gh` that answers as GitHub does over a run's life and a `sleep` that does not wait: started,
+   * found, then asked how it is. `asks` is what each of those asks is answered: a line of `status conclusion`, or
+   * `fail` for a request that fails. The last one is repeated.
+   */
+  function waited(asks: string[]): { status: number | null; out: string; asked: number } {
+    const dir = mkdtempSync(join(tmpdir(), "pro-gate-"));
+    try {
+      asks.forEach((line, at) => writeFileSync(join(dir, `answer-${at + 1}`), line));
+      writeFileSync(
+        join(dir, "gh"),
+        [
+          "#!/bin/sh",
+          'case "$1 $2" in',
+          '  "workflow run") exit 0 ;;',
+          '  "run list") echo 77 ;;',
+          // What the step replaced: it gives up, as it did on the day this was written.
+          '  "run watch") exit 1 ;;',
+          '  "run view")',
+          `    n=$(($(cat "${dir}/asked" 2>/dev/null || echo 0) + 1)); echo "$n" > "${dir}/asked"`,
+          `    [ -f "${dir}/answer-$n" ] || n=${asks.length}`,
+          `    line=$(cat "${dir}/answer-$n")`,
+          '    [ "$line" = fail ] && exit 1',
+          '    echo "$line" ;;',
+          "esac",
+          "",
+        ].join("\n"),
+        { mode: 0o755 },
+      );
+      writeFileSync(join(dir, "sleep"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+      // `-e`, as the runner's shell has it: a command that fails ends the step unless the step says otherwise.
+      const run = spawnSync("sh", ["-e", "-c", step], { encoding: "utf8", env: { PATH: `${dir}:${process.env.PATH ?? "/usr/bin:/bin"}`, GH_TOKEN: "t", GITHUB_SHA: "abc" } });
+      return { status: run.status, out: run.stdout + run.stderr, asked: Number(readFileSync(join(dir, "asked"), "utf8")) };
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  test("through a request that fails and a run still at work, to the run's own conclusion", () => {
+    const passed = waited(["fail", "queued ", "in_progress ", "fail", "in_progress ", "completed success"]);
+    expect(passed.out).toContain("the Pro checks: success");
+    expect(passed.status).toBe(0);
+    expect(passed.asked).toBe(6);
+  });
+
+  test("a run that ends any other way fails the job, by what it ended as", () => {
+    for (const ended of ["failure", "cancelled", "timed_out"]) {
+      const failed = waited(["in_progress ", `completed ${ended}`]);
+      expect(failed.out, ended).toContain(`::error::the Pro checks ended '${ended}'`);
+      expect(failed.status, ended).toBe(1);
+    }
+  });
+
+  test("a run that never ends fails the job after its 55 minutes, and is not read as ended with nothing", () => {
+    const never = waited(["in_progress "]);
+    expect(never.out).toContain("::error::the Pro checks had not ended after 55 minutes (their run is 77 in nouverse/nouride-pro).");
+    expect(never.out).not.toContain("ended ''");
+    expect(never.status).toBe(1);
+    // A hundred and ten asks, thirty seconds apart: inside the job's sixty minutes.
+    expect(never.asked).toBe(110);
+    expect(job).toContain("timeout-minutes: 60");
   });
 });
 

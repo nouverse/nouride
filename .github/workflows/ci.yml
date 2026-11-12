@@ -223,7 +223,15 @@ jobs:
             [ -n "${run}" ] && break
           done
           [ -n "${run}" ] || { error "the Pro checks were started but their run was not found."; exit 1; }
-          gh run watch "${run}" --repo nouverse/nouride-pro --interval 30 >/dev/null 2>&1 || true
-          conclusion=$(gh run view "${run}" --repo nouverse/nouride-pro --json conclusion --jq .conclusion)
+          # Asked until it has ended, a request that fails among them. `gh run watch` gives up on one failed request,
+          # and the run it left was then read once: still at work, it has no conclusion, and this job said the Pro
+          # checks had ended '' over a run that went on and passed.
+          conclusion=""
+          for _ in $(seq 1 110); do
+            state=$(gh run view "${run}" --repo nouverse/nouride-pro --json status,conclusion --jq '.status + " " + .conclusion' 2>/dev/null || true)
+            case "${state}" in "completed "*) conclusion="${state#completed }"; break ;; esac
+            sleep 30
+          done
+          [ -n "${conclusion}" ] || { error "the Pro checks had not ended after 55 minutes (their run is ${run} in nouverse/nouride-pro)."; exit 1; }
           echo "the Pro checks: ${conclusion}"
           [ "${conclusion}" = "success" ] || { error "the Pro checks ended '${conclusion}' (their log is in nouverse/nouride-pro)."; exit 1; }
