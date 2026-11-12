@@ -55,6 +55,12 @@ export interface TurnJournal {
   question(message: ChatMessage): void;
   /** The calls about to run — after the message that asked for them, before the first one starts. */
   started(callIds: readonly string[]): void;
+  /**
+   * The turn's own messages as the model now holds them, in place of every one recorded since the question: its oldest
+   * steps were summed up into notes when they filled the window (`llm/summarize-steps.ts`). A turn closed after that,
+   * for a restart, is closed into what fits; as recorded, its steps would be a turn no request can carry again.
+   */
+  rewritten(messages: readonly ChatMessage[]): void;
   /** Everything recorded so far, in order. */
   entries(): JournalEntry[];
   /** Whether every write so far landed — a closing reads nothing past a hole as having not happened. */
@@ -120,6 +126,25 @@ export class TurnJournalStore {
       },
       started: (callIds) => {
         if (callIds.length > 0) write({ started: [...callIds] }, "started");
+      },
+      rewritten: (messages) => {
+        // One commit: the rows after the question go and the new ones take their numbers, so the journal has no gap
+        // and never holds half of each. A commit that fails leaves it as it was, which is whole and only longer.
+        const from = seq;
+        try {
+          this.db.transaction(() => {
+            this.db.prepare("DELETE FROM turn_journal WHERE turn_id = ? AND seq >= 2").run(turnId);
+            seq = 2;
+            for (const message of messages) {
+              this.db.prepare("INSERT INTO turn_journal (turn_id, seq, at, entry) VALUES (?, ?, ?, ?)").run(turnId, seq, Date.now(), JSON.stringify({ message }));
+              seq += 1;
+            }
+          });
+        } catch (err) {
+          seq = from;
+          this.failed = { count: this.failed.count + 1, lastAt: Date.now() };
+          log.error("could not journal a turn", { turn_id: turnId, kind: "rewritten", error: String(err) });
+        }
       },
       entries: () => this.read(turnId)?.entries ?? [],
       complete: () => lost === 0,

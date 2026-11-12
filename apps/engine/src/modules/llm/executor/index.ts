@@ -10,6 +10,7 @@
  *
  *   types.ts           the request, the result, what the executor is wired to, the token shares
  *   prepare.ts         everything decided before the first call: window, prompt, budget, history
+ *   room-in-turn.ts    the turn's oldest steps summed up, once its own work fills the window
  *   tool-caller.ts     one tool call: gate, sandbox, cap, and the two facts the loop reads after
  *   stopped-call.ts    a tool call that does not stop with its turn, left to finish without it
  *   provider-caller.ts one model call: streaming, the overflow retry, usage, and the tools-withheld wrap-up
@@ -48,6 +49,7 @@ import {
   type TurnResult,
 } from "./types.ts";
 import { prepareTurn } from "./prepare.ts";
+import { roomInTurn } from "./room-in-turn.ts";
 import { beforeRound, SAME_ANSWER, SETTLE_RULES, wrapUpPrompt } from "./settle.ts";
 import { longTurnHelperNote, longWorkNotesNote, nudgeRead, repeatedEditNote, roundShape, SAME_ANSWER_END_AT, SameAnswers, sameAnswerNote, singleCallChainNote, type RoundShape } from "./nudges.ts";
 import { ToolCaller, readToolControl, spilledOf } from "./tool-caller.ts";
@@ -135,6 +137,8 @@ export class TurnExecutor {
       let wrappedUp: string | undefined;
       /** Stopped at a step boundary for a shutdown — see `TurnRequest.pause`. */
       let paused = false;
+      /** How summing up this turn's own steps last went: one that failed is not asked for again this turn. */
+      let stepsSummed: "done" | "failed" | "none" = "none";
 
       /**
        * This agent's budget, or the daemon's when it names none.
@@ -233,6 +237,8 @@ export class TurnExecutor {
           const cleared = [room.trimmed > 0 ? `cleared ${room.trimmed} earlier tool result(s)` : "", shortened > 0 ? `shortened the text of ${shortened} earlier write(s)` : ""].filter(Boolean).join(" and ");
           this.deps.onActivity?.("compact", `context full: ${cleared} to make room`, { phase: "pruned", pruned: room.trimmed });
         }
+        // Still over with the old output out: the turn's own steps fill the window (`roomInTurn`).
+        if (stepsSummed !== "failed") stepsSummed = await roomInTurn({ deps: this.deps, req, plan, working, turnStart: window.messages.length, ceilings });
 
         this.deps.onActivity?.("thinking", iterations === 1 ? "thinking" : `thinking (step ${iterations})`);
         sayRequest(working);

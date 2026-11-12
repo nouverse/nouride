@@ -11,7 +11,7 @@
 
 import { estimateTokens, estimateToolsTokens } from "@nouride/llm";
 import { foldDefinitions } from "@/modules/tools/fold.ts";
-import { createLogger, type ChatMessage, type Skill, type SystemBlock , resolveToolIterations, resolveTurnDurationMs, tierModel } from "@nouride/shared";
+import { createLogger, type ChatMessage, type LLMProvider, type Skill, type SystemBlock , resolveToolIterations, resolveTurnDurationMs, tierModel } from "@nouride/shared";
 import { compactionThreshold, conversationBudget, pruneToolOutputs, resolveCompactionLimit, truncateContext } from "@/modules/llm/context.ts";
 import { ASSUMED_CACHE_LIFETIME_MS, CacheBreaks } from "@/modules/llm/cache-breaks.ts";
 import { compactHistory } from "@/modules/llm/summarize.ts";
@@ -64,6 +64,8 @@ export interface TurnPlan {
   ceilingsAt: (scale: number) => TurnCeilings;
   /** History as it stands after any summarization pass — what gets persisted from. */
   history: ChatMessage[];
+  /** Who sums up, and on which model: the history before the turn, and the turn's own oldest steps if they fill the window. */
+  summarizer: { provider: LLMProvider; model: string };
   /** The slice of it that fits, and what was dropped to make it fit. */
   window: ReturnType<typeof truncateContext>;
   /**
@@ -437,6 +439,7 @@ export async function prepareTurn(
     overhead: prompt.tokens + toolsTokens,
     ceilingsAt: (measured) => ceilingsAt(facts, measured),
     history,
+    summarizer: { provider: summarizer.provider, model: summaryModel },
     window,
     userMessage,
   };

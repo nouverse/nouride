@@ -331,11 +331,11 @@ export async function compactHistory(
  * boundaries and each piece becomes a part of its own. Cutting it to fit is what the old version did,
  * and what it cut was the start — the part of a session most worth remembering.
  */
-async function summarizeSpan(
+export async function summarizeSpan(
   span: ChatMessage[],
   previous: Part | undefined,
   firstNumber: number,
-  options: CompactOptions,
+  options: Pick<CompactOptions, "provider" | "model" | "summarizerWindow" | "signal">,
 ): Promise<Part[]> {
   const window = options.summarizerWindow ?? 128_000;
   const inputBudget = Math.max(16_000, Math.min(400_000, Math.floor(window * 0.5) - 20_000));
