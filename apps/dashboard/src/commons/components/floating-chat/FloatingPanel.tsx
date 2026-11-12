@@ -1,6 +1,6 @@
 /**
  * What is inside the floating chat: its bar (the agent it is on, picked there; a new conversation with it; a way to the
- * same conversation on the Chats page; its close) over that agent's conversation: the person's newest one with it, the
+ * same conversation on the Chats page; the line that minimizes it) over that agent's conversation: the person's newest one with it, the
  * one its row on Chats opens (`/chat-list`), or a new one where there is none or the person asked for one.
  *
  * The conversation is the Chats page's own (`commons/components/chat/Conversation.tsx`): the same transcript, live
@@ -14,7 +14,7 @@
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useRouter } from "@tanstack/react-router";
-import { ChevronDown, Maximize2, MessageSquarePlus, X } from "lucide-react";
+import { ChevronDown, Maximize2, MessageSquarePlus, Minus } from "lucide-react";
 import { AgentAvatar } from "@/commons/components/agents/AgentAvatar";
 import { ChatLoading } from "@/commons/components/chat/ChatLoading";
 import { Conversation, STATUS_TONES, type ConversationNow } from "@/commons/components/chat/Conversation";
@@ -144,8 +144,9 @@ export function FloatingPanel({
       <Link {...agentChatLink(agentId, sessionId)} onClick={onClose} className={ICON_BUTTON} aria-label="Open this conversation in Chats" title="Open in Chats">
         <Maximize2 size={16} aria-hidden="true" />
       </Link>
-      <button type="button" className={ICON_BUTTON} aria-label="Close the chat" onClick={onClose}>
-        <X size={17} aria-hidden="true" />
+      {/* A line, not a cross: it puts the panel away and ends nothing. The conversation and a turn at work go on. */}
+      <button type="button" className={ICON_BUTTON} aria-label="Minimize the chat" title="Minimize" onClick={onClose}>
+        <Minus size={18} aria-hidden="true" />
       </button>
     </header>
   );

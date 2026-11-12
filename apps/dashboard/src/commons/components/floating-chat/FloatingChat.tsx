@@ -2,7 +2,7 @@
  * The chat that floats over every page but Chats: a button at the foot of the window with an agent's face on it, and
  * the panel it opens, so a person can ask an agent about what they are looking at without leaving the page. From a
  * tablet's width up the panel is a card over the button, and the page under it stays in reach; on a phone it is a sheet
- * over the page (`Drawer`). Pressing the button again, Escape or the panel's own close puts it away.
+ * over the page (`Drawer`). Pressing the button again, Escape or the panel's own minimize puts it away.
  *
  * Which agent it opens on is `agentAtOpen`'s to say: the one the page belongs to, else the one it was last on in this
  * browser, else the orchestrator. The person picks another in the panel's bar.
@@ -78,8 +78,8 @@ export function FloatingChat({ pathname }: { pathname: string }) {
         ref={button}
         type="button"
         aria-expanded={state.open}
-        aria-label={state.open ? `Close the chat with ${name}` : label}
-        title={state.open ? "Close the chat" : label}
+        aria-label={state.open ? `Minimize the chat with ${name}` : label}
+        title={state.open ? "Minimize the chat" : label}
         onClick={() => (state.open ? closeFloatingChat() : openFloatingChat({ agent: opensOn }))}
         className={cn(
           "fixed z-30 grid place-items-center rounded-full border border-base-content/[0.08] bg-base-100 text-secondary shadow-soft transition-transform duration-150 hover:-translate-y-0.5 active:scale-95",

@@ -20,7 +20,7 @@ export const AT_REST = { "/status": ok(TWO_AGENTS), "/sessions/ses_1/live": ok({
 export const LAST_AGENT_KEY = "nouride-floating-chat-agent";
 
 /** The floating button, whichever of its two names it has. */
-export const floatButton = (host: HTMLElement) => host.querySelector('button[aria-label^="Chat with "], button[aria-label^="Close the chat with "]') as HTMLButtonElement | null;
+export const floatButton = (host: HTMLElement) => host.querySelector('button[aria-label^="Chat with "], button[aria-label^="Minimize the chat with "]') as HTMLButtonElement | null;
 
 /** The panel as a card over the button, from a tablet's width up. */
 export const card = () => dom.document.querySelector("[data-floating-chat]") as unknown as HTMLElement | null;

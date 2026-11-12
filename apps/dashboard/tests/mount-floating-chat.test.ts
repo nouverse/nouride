@@ -76,7 +76,7 @@ describe("opening and closing", () => {
       expect(card()!.getAttribute("role")).toBe("dialog");
       expect(card()!.getAttribute("aria-label")).toBe("Chat with Nouva");
       expect(button.getAttribute("aria-expanded")).toBe("true");
-      expect(button.getAttribute("aria-label")).toBe("Close the chat with Nouva");
+      expect(button.getAttribute("aria-label")).toBe("Minimize the chat with Nouva");
       // The box to write in takes the focus once the conversation is drawn.
       await eventually(() => boxIn(card()) !== null && focused() === boxIn(card()), 3_000, "the box focused");
       // The page under it is still there: nothing is drawn in its place.
@@ -95,8 +95,13 @@ describe("opening and closing", () => {
 
       button.click();
       await eventually(() => card() !== null, 2_000, "open a third time");
-      (card()!.querySelector('button[aria-label="Close the chat"]') as HTMLElement).click();
-      await eventually(() => card() === null, 2_000, "put away by its own close");
+      // Its own button says what it does: it minimizes, with a line and not a cross, since it ends nothing.
+      const minimize = card()!.querySelector('button[aria-label="Minimize the chat"]') as HTMLElement;
+      expect(minimize.getAttribute("title")).toBe("Minimize");
+      expect(minimize.querySelector("svg")?.getAttribute("class")).toContain("lucide-minus");
+      expect(card()!.querySelector('button[aria-label*="Close"]')).toBeNull();
+      minimize.click();
+      await eventually(() => card() === null, 2_000, "put away by its own button");
     });
   });
 
@@ -545,7 +550,7 @@ describe("on a phone", () => {
       expect(sheet()!.getAttribute("aria-label")).toBe("Chat with Nouva");
       await eventually(() => sheet()!.textContent?.includes("is the disk full?") === true, 3_000, "the transcript");
       expect(focused()).not.toBe(boxIn(sheet()));
-      (sheet()!.querySelector('button[aria-label="Close the chat"]') as HTMLElement).click();
+      (sheet()!.querySelector('button[aria-label="Minimize the chat"]') as HTMLElement).click();
       await eventually(() => sheet() === null, 2_000, "the sheet put away");
       // And what was in it is let go a moment after: closed, no conversation is drawn.
       await eventually(() => dom.document.querySelector('[data-drawer="bottom"][aria-label^="Chat with "] textarea') === null, 2_000, "the conversation gone");

@@ -148,7 +148,8 @@ di sebelah daftarnya.
 Di setiap halaman selain Chats, ada tombol bulat bergambar wajah agent di pojok jendela; di HP letaknya di atas bar
 tab. Tekan, dan chat kecil terbuka di atas halaman: kartu di pojok kalau di laptop atau tablet, lembar yang naik dari
 bawah layar kalau di HP. Halamannya tetap di tempat, jadi kamu bisa sambil melihatnya waktu bertanya. Tekan tombolnya
-lagi, tekan Escape, atau pakai tombol tutup di panel untuk menutupnya. Yang sudah kamu tulis tapi belum dikirim masih
+lagi, tekan Escape, atau pakai tombol minimize di panel untuk menyembunyikannya: gak ada yang berakhir, dan agent yang
+sedang bekerja tetap lanjut. Yang sudah kamu tulis tapi belum dikirim masih
 ada di kotaknya waktu kamu buka lagi.
 
 - **Agent yang mana.** Pertama kali, chat terbuka dengan orchestrator-mu; setelah itu dengan agent yang terakhir kamu

@@ -143,7 +143,8 @@ its scooter, a different picture each time you open Home. While a mission is mov
 On every page but Chats, a round button with an agent's face stands in the corner of the window; on a phone it stands
 above the tab bar. Press it and a small chat opens over the page: a card in the corner on a laptop or a tablet, a
 sheet from the foot of the screen on a phone. The page stays where it is, so you can look at it while you ask. Press
-the button again, press Escape or use the panel's close button to put it away. What you had written and not sent is
+the button again, press Escape or use the panel's minimize button to put it away: that ends nothing, and an agent at
+work goes on. What you had written and not sent is
 still in the box when you open it again.
 
 - **Which agent.** The first time it opens on your orchestrator, and after that on the agent you last used there. On
