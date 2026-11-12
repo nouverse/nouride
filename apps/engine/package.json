@@ -1,7 +1,7 @@
 {
   "name": "@nouride/engine",
   "description": "Nouride engine \u2014 the multi-agent daemon: router, agents, LLM executor, tools, cron, web API.",
-  "version": "0.8.34",
+  "version": "0.8.35",
   "license": "FSL-1.1-ALv2",
   "private": true,
   "type": "module",
