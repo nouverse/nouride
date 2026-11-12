@@ -7,7 +7,7 @@
 import { describe, expect, test } from "bun:test";
 import type { AutomationSummary } from "@nouride/wire";
 import {
-  READS_OUTPUT, blankDraft, changed, createBody, deliveryOf, draftOf, draftProblems, listedSteps, patchBody, payloadOf, savesAsList, sessionOf, settled, stepsOf, turnsIntoList, type Draft,
+  READS_OUTPUT, blankDraft, changed, createBody, deliveryOf, draftOf, draftProblems, listedSteps, patchBody, payloadOf, savesAsList, sessionOf, settled, stepsOf, turnsIntoList, withMark, type Draft,
 } from "@/modules/automations/lib/draft";
 import type { Step } from "@/modules/automations/lib/steps";
 
@@ -57,6 +57,9 @@ describe("one thing, or a list", () => {
     expect(one({ id: "a", kind: "approval", ask: "Go?" })).toBe(true);
     // A name of spaces is no name.
     expect(one({ ...say("a"), name: "  " })).toBe(false);
+    // The mark to go on only when what it says changes is a step's, which one thing has no place for.
+    expect(one({ id: "a", kind: "command", argv: ["sh", "-lc", "df -h"], onlyChanged: true })).toBe(true);
+    expect(one({ id: "a", kind: "command", argv: ["sh", "-lc", "df -h"] })).toBe(false);
     // One loaded as a list stays one, however short; and no steps is a list too, which a save refuses.
     expect(savesAsList({ steps: [say("a")], list: true })).toBe(true);
     expect(payloadOf({ steps: [say("a")], then: "deliver", list: true })).toEqual({ kind: "steps", steps: [say("a")] });
@@ -134,6 +137,41 @@ describe("what a save sends", () => {
   test("a report elsewhere than its chat is kept when only the mode changes", () => {
     const was = loaded({ delivery: { mode: "announce", gatewayId: "discord:nix", chatId: "ops" } });
     expect(patchBody(was, { ...was, delivery: { ...was.delivery, mode: "none" } })).toEqual({ delivery: { mode: "none", gatewayId: "discord:nix", chatId: "ops" } });
+  });
+
+  test("a mark where it reports is sent with the rest of where it reports, and none of that is lost", () => {
+    // As the server answers one that reports elsewhere, to an address the page has no field for.
+    const elsewhere = { mode: "webhook", gatewayId: "discord:nix", chatId: "ops", webhookUrl: "https://hooks.example.com/in" } as Draft["delivery"];
+    const was = loaded({ delivery: elsewhere });
+    expect(patchBody(was, { ...was, delivery: withMark(was.delivery, "once", true) })).toEqual({ delivery: { ...elsewhere, once: true } });
+    expect(patchBody(was, { ...was, delivery: withMark(was.delivery, "atOnce", true) })).toEqual({ delivery: { ...elsewhere, atOnce: true } });
+    // One mark taken off leaves the other.
+    const both = loaded({ delivery: { mode: "announce", once: true, atOnce: true } });
+    expect(patchBody(both, { ...both, delivery: withMark(both.delivery, "once", false) })).toEqual({ delivery: { mode: "announce", atOnce: true } });
+    expect(patchBody(both, { ...both, delivery: withMark(both.delivery, "atOnce", false) })).toEqual({ delivery: { mode: "announce", once: true } });
+    // A mark is there or it is not: never sent as off.
+    expect(withMark({ mode: "announce" }, "once", false)).toEqual({ mode: "announce" });
+  });
+
+  test("a mark taken off and put back is the automation as it was loaded: nothing to save", () => {
+    const was = loaded({ delivery: { mode: "announce", once: true, atOnce: true } });
+    const back = withMark(withMark(was.delivery, "once", false), "once", true);
+    expect(changed(was, { ...was, delivery: back })).toBe(false);
+    expect(changed(was, { ...was, delivery: withMark(was.delivery, "once", false) })).toBe(true);
+  });
+
+  test("one that tells nobody is not sent as turning itself off once it has told; the draft keeps the mark for when it tells again", () => {
+    const was = loaded({ delivery: { mode: "announce", once: true, atOnce: true } });
+    const quiet: Draft = { ...was, delivery: { ...was.delivery, mode: "none" } };
+    expect(deliveryOf(quiet)).toEqual({ mode: "none", atOnce: true });
+    expect(patchBody(was, quiet)).toEqual({ delivery: { mode: "none", atOnce: true } });
+    expect(quiet.delivery.once).toBe(true);
+    // Telling switched back on: as it was loaded.
+    expect(changed(was, { ...quiet, delivery: { ...quiet.delivery, mode: "announce" } })).toBe(false);
+    // A mission tells its chat whatever was picked, so its mark stands.
+    expect(deliveryOf({ steps: [{ id: "m", kind: "mission", goal: "x" }], delivery: quiet.delivery })).toEqual({ mode: "announce", once: true, atOnce: true });
+    // A new one is made the same way.
+    expect((createBody({ ...quiet, start: "manual" }) as { delivery: unknown }).delivery).toEqual({ mode: "none", atOnce: true });
   });
 
   test("a new one: its agent, name, work, chat and start; a webhook has no start to send; once may stay listed", () => {

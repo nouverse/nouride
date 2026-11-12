@@ -21,6 +21,13 @@ let app: Hono;
 let role: "admin" | "operator" | "viewer";
 let saved: { hours: string; actor?: string }[];
 let editable: boolean;
+/** What the scheduler says is kept now: a job id for each thing said, and when the hours end. */
+let kept: { jobIds: string[]; until: number } | null;
+/** The automations those ids are: the reader's own, and another person's that reports to a chat that is not theirs. */
+const JOBS: Record<string, unknown> = {
+  mine: { id: "mine", owner: "web:u2", target: { gatewayId: "telegram:main", chatId: "900" }, delivery: { mode: "announce" } },
+  theirs: { id: "theirs", owner: "web:u1", target: { gatewayId: "telegram:main", chatId: "901" }, delivery: { mode: "announce" } },
+};
 
 beforeEach(async () => {
   dir = mkdtempSync(join(tmpdir(), "quiet-hours-routes-"));
@@ -29,6 +36,7 @@ beforeEach(async () => {
   role = "admin";
   saved = [];
   editable = true;
+  kept = null;
   const config = structuredClone(DEFAULT_CONFIG);
   config.daemon.timezone = "Asia/Jakarta";
   const settings = {
@@ -42,6 +50,7 @@ beforeEach(async () => {
   const deps = {
     ctx: { config, db },
     audit: new AuditLog(db),
+    cron: { scheduler: { kept: () => kept }, store: { get: (id: string) => JOBS[id] ?? null } },
     get settings() {
       return editable ? settings : undefined;
     },
@@ -58,7 +67,7 @@ afterEach(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-const read = async () => (await app.request("/policy/quiet-hours")).json();
+const read = async () => (await (await app.request("/policy/quiet-hours")).json()) as Record<string, unknown>;
 const send = async (body: unknown) => {
   const res = await app.request("/policy/quiet-hours", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
   return { status: res.status, body: (await res.json()) as Record<string, unknown> };
@@ -104,5 +113,38 @@ describe("the install's quiet hours", () => {
     editable = false;
     expect(await read()).toEqual({ timeZone: "Asia/Jakarta", editable: false });
     expect((await send({ from: "22:00", to: "07:00" })).status).toBe(501);
+  });
+});
+
+describe("what is kept now", () => {
+  const UNTIL = 1_800_000_000_000;
+
+  test("nothing kept: nothing said of it", async () => {
+    expect(await read()).not.toHaveProperty("kept");
+    kept = { jobIds: [], until: UNTIL };
+    expect(await read()).not.toHaveProperty("kept");
+  });
+
+  test("an admin is told how many things are kept, everyone's, and when they are sent", async () => {
+    kept = { jobIds: ["mine", "theirs", "theirs"], until: UNTIL };
+    expect((await read()).kept).toEqual({ count: 3, until: UNTIL });
+  });
+
+  test("an operator is told of their own automations' alone: another person's are not theirs to learn of, by a number either", async () => {
+    role = "operator";
+    kept = { jobIds: ["mine", "theirs", "theirs", "mine"], until: UNTIL };
+    expect((await read()).kept).toEqual({ count: 2, until: UNTIL });
+    kept = { jobIds: ["theirs"], until: UNTIL };
+    expect(await read()).not.toHaveProperty("kept");
+  });
+
+  test("a line whose automation is gone is nobody's to count", async () => {
+    kept = { jobIds: ["deleted"], until: UNTIL };
+    expect(await read()).not.toHaveProperty("kept");
+  });
+
+  test("a save answers with it too, as a read does", async () => {
+    kept = { jobIds: ["mine"], until: UNTIL };
+    expect((await send({ from: "22:00", to: "07:00" })).body.kept).toEqual({ count: 1, until: UNTIL });
   });
 });

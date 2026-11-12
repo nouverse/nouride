@@ -174,6 +174,11 @@ export interface StepOutcome {
   status: "running" | "waiting" | "done" | "failed" | "empty" | "declined" | "expired" | "skipped" | "interrupted";
   /** What it said, or why it failed, clipped. */
   said?: string;
+  /**
+   * With `empty`: it said what it said the last time the automation ran to its end, on a step marked to go on only
+   * when that changes. Absent, an `empty` step had nothing to say. A field, so no reader matches the words in `said`.
+   */
+  same?: true;
   startedAt: number;
   /** How long it took, once it ended. */
   ms?: number;

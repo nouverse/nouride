@@ -5,7 +5,7 @@
 
 import { describe, expect, test } from "bun:test";
 import type { JobRunSummary, StepRunOutcome } from "@nouride/wire";
-import { exitTaken, live, outcomeWords, outcomesOf, pathTaken, ranFor, runWords, took, whenWords } from "@/modules/automations/lib/runs";
+import { exitTaken, live, outcomeWords, outcomesOf, pathTaken, ranFor, runWords, sameAsLastTime, took, whenWords } from "@/modules/automations/lib/runs";
 import type { Step } from "@/modules/automations/lib/steps";
 
 const STEPS: Step[] = [
@@ -87,6 +87,21 @@ describe("the words", () => {
     // A wait for a person is what needs you; a wait for a mission is the automation at work.
     expect(outcomeWords(out("ok", "waiting"))).toEqual({ label: "Waiting for you", tone: "needs" });
     expect(outcomeWords({ id: "m", kind: "mission", status: "waiting", startedAt: 1 })).toEqual({ label: "Waiting for its mission", tone: "working" });
+  });
+
+  test("a step that said what it said the last time is said so, as quietly as one with nothing to say", () => {
+    // As the server keeps it: a step with nothing to say, marked as one that said the same again.
+    const same = out("check", "empty", { said: "said the same as last time", same: true, ms: 30 });
+    expect(sameAsLastTime(same)).toBe(true);
+    expect(outcomeWords(same)).toEqual({ label: "The same as last time", tone: "quiet" });
+    // It left by the path of a step with nothing to say.
+    expect(exitTaken(same.status)).toBe("whenEmpty");
+    // One that printed nothing is not one that said the same; nor is a step that printed those very words and went on.
+    expect(outcomeWords(out("check", "empty", { said: "printed nothing" }))).toEqual({ label: "Nothing to say", tone: "quiet" });
+    expect(sameAsLastTime(out("check", "empty"))).toBe(false);
+    // The field says it, never the words: a command that printed those very words had something to say.
+    expect(sameAsLastTime(out("check", "empty", { said: "said the same as last time" }))).toBe(false);
+    expect(sameAsLastTime(out("check", "done", { said: "said the same as last time", same: true }))).toBe(false);
   });
 
   test("a whole run, for a list of runs", () => {

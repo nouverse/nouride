@@ -6,6 +6,9 @@
  * page that makes one. It opens the chat over the page with the request written, and sends nothing.
  *
  * One the reader only reads has none of these: a line under its name says whose it is and why it is on their page.
+ *
+ * Under the head, why it is off where it turned itself off: after it kept failing, as a warning, or after it told, for
+ * one set to tell once, which is what it was asked to do and is said as information.
  */
 
 import { useMutation } from "@tanstack/react-query";
@@ -27,6 +30,7 @@ import { readsOnly } from "@/commons/lib/by-person";
 import { runOutcomeToast } from "@/commons/lib/run-outcome";
 import { cn } from "@/commons/lib/utils";
 import type { Draft } from "../lib/draft";
+import { toldAndOff } from "../lib/watch";
 import { START } from "../lib/words";
 import { startOf } from "./StartCard";
 
@@ -209,8 +213,13 @@ export function AutomationHeader({
           {automation.failStreak === 1 ? "Its last run failed." : `Its last ${automation.failStreak} runs failed.`} Last run shows which step, and why.
         </p>
       ) : null}
-      {automation && !automation.enabled && automation.disabledReason ? (
-        <div className="rounded-[14px] bg-warning/10 px-3 py-2 text-sm text-warning">
+      {automation && toldAndOff(automation) ? (
+        // Nothing went wrong: it did what it was set to do. Said as information, with no reason to open.
+        <p role="status" data-off="told" className="rounded-[14px] bg-info/10 px-3 py-2 text-sm text-info">
+          {only ? "It told you, and turned itself off." : "It told you, and turned itself off. Turn it on to be told again."}
+        </p>
+      ) : automation && !automation.enabled && automation.disabledReason ? (
+        <div data-off="failing" className="rounded-[14px] bg-warning/10 px-3 py-2 text-sm text-warning">
           <p>{only ? "It was turned off after it kept failing." : "It was turned off after it kept failing. Turn it on to try again."}</p>
           <Details>
             <p>{automation.disabledReason}</p>

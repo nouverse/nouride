@@ -67,7 +67,7 @@ describe("the rows", () => {
       previews = cards(host).map((one) => one.querySelector("ol")?.getAttribute("aria-label") ?? null);
     });
     // A change an agent suggested to an automation (cron_2) is not a row of its own: the automation says it waits.
-    expect(Object.keys(seen)).toEqual(["cron_3", "cron_1", "cron_4", "cron_5"]);
+    expect(Object.keys(seen)).toEqual(["cron_3", "cron_1", "cron_4", "cron_5", "cron_6"]);
     expect(seen.cron_3).toStartWith("Morning briefStarts every day at 07:00");
     // One that does a single thing says what, beside its icon; one of several steps draws them and no more.
     expect(seen.cron_3).toContain("Sum up what came in overnight, in five lines.");
@@ -80,10 +80,13 @@ describe("the rows", () => {
     expect(seen.cron_4).toContain("Has not run yet");
     expect(seen.cron_5).toStartWith("Backup checkStarts when you press Run now");
     expect(seen.cron_5).toContain("Suggested by Nouva");
+    // One that tells once and has told: off, and said so, not as one somebody paused.
+    expect(seen.cron_6).toStartWith("Door cameraStarts when its address is called");
+    expect(seen.cron_6).toContain("Told you, now off");
     // The server's own line for a start ("cron `0 7 * * *`", "every 10m") is never what a person reads.
     expect(Object.values(seen).join(" ")).not.toMatch(/cron|\d+m\b/);
-    expect(hrefs).toEqual(["/dashboard/automations/cron_3", "/dashboard/automations/cron_1", "/dashboard/automations/cron_4", "/dashboard/automations/cron_5"]);
-    expect(previews).toEqual(["1 step", "4 steps", "1 step", "2 steps"]);
+    expect(hrefs).toEqual(["/dashboard/automations/cron_3", "/dashboard/automations/cron_1", "/dashboard/automations/cron_4", "/dashboard/automations/cron_5", "/dashboard/automations/cron_6"]);
+    expect(previews).toEqual(["1 step", "4 steps", "1 step", "2 steps", "2 steps"]);
   });
 
   test("the steps' drawing holds six kinds, then how many more; a failing one and a paused one say so", async () => {
@@ -117,7 +120,7 @@ describe("the rows", () => {
       record.restore();
       sent = record.posts;
     });
-    expect(offered).toEqual(["switch", "switch", "switch", "Turn on+Discard"]);
+    expect(offered).toEqual(["switch", "switch", "switch", "Turn on+Discard", "switch"]);
     expect(sent).toEqual([{ path: "/cron/cron_3/disable", body: null }, { path: "/cron/cron_5/enable", body: null }]);
   });
 
@@ -129,7 +132,7 @@ describe("the rows", () => {
       seen.create = [...host.querySelectorAll("main a")].some((a) => a.textContent?.includes("New automation"));
       seen.switches = [...host.querySelectorAll<HTMLInputElement>('main [role="switch"]')].map((one) => one.disabled);
     });
-    expect(seen).toEqual({ create: false, switches: [true, true, true] });
+    expect(seen).toEqual({ create: false, switches: [true, true, true, true] });
   });
 });
 
@@ -145,14 +148,14 @@ describe("narrowing the list", () => {
       seen.field = host.ownerDocument.body.querySelector('[role="combobox"]') !== null;
       seen.selects = host.querySelectorAll("main select").length;
       await starts.pick("Webhooks");
-      await eventually(() => cards(host).length === 1, 2_000, "the webhooks alone");
+      await eventually(() => cards(host).length === 2, 2_000, "the webhooks alone");
       seen.after = cards(host).map((one) => one.dataset.automation!);
       seen.search = app.search();
       await starts.pick("All");
-      await eventually(() => cards(host).length === 4, 2_000, "all of them again");
+      await eventually(() => cards(host).length === 5, 2_000, "all of them again");
       seen.back = Object.keys(app.search()).length;
     });
-    expect(seen).toEqual({ options: ["All", "Scheduled", "Webhooks", "Manual"], counts: ["All4", "Scheduled2", "Webhooks1", "Manual1"], field: false, selects: 0, held: "Starts: All", after: ["cron_4"], search: { start: "webhook" }, back: 0 });
+    expect(seen).toEqual({ options: ["All", "Scheduled", "Webhooks", "Manual"], counts: ["All5", "Scheduled2", "Webhooks2", "Manual1"], field: false, selects: 0, held: "Starts: All", after: ["cron_4", "cron_6"], search: { start: "webhook" }, back: 0 });
   });
 
   test("the search keeps what holds each word: in a name, an agent, or what a step says; and says when nothing does", async () => {

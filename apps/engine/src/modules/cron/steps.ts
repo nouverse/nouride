@@ -298,7 +298,7 @@ async function runStep(
         return { exit: "empty" };
       }
       if (sameAsBefore(step, ran.output, hands, carry)) {
-        mark("empty", SAME);
+        mark("empty", SAME, { same: true });
         return { exit: "empty", same: true };
       }
       mark("done", ran.output);
@@ -324,7 +324,7 @@ async function runStep(
         return { exit: "empty" };
       }
       if (sameAsBefore(step, turn.text, hands, carry)) {
-        mark("empty", SAME);
+        mark("empty", SAME, { same: true });
         return { exit: "empty", same: true };
       }
       mark("done", turn.text);
@@ -366,7 +366,7 @@ function afterWait(woke: Woke, step: JobStep, hands: StepHands, carry: Carry, ma
     // A mission tells its chat how it ended, whatever the run does next.
     carry.told = true;
     if (sameAsBefore(step, woke.said, hands, carry)) {
-      mark("empty", SAME);
+      mark("empty", SAME, { same: true });
       return { exit: "empty", same: true };
     }
     mark("done", woke.said);

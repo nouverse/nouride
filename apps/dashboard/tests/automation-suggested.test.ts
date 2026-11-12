@@ -74,4 +74,17 @@ describe("the banner's sentence", () => {
     expect(changeWords(automation(NOW), automation(NOW, { target: { gatewayId: "telegram:nouva", chatId: "2" } }), "UTC")).toBe("It would report to another chat.");
     expect(changeWords(automation(NOW), automation(NOW), "UTC")).toBe("It would run as it does now.");
   });
+
+  test("says a mark where it reports that the change sets or drops: telling once, and telling at once whatever the hour", () => {
+    const once = { delivery: { mode: "announce" as const, once: true as const } };
+    const both = { delivery: { mode: "announce" as const, once: true as const, atOnce: true as const } };
+    expect(changeWords(automation(NOW), automation(NOW, once), "UTC")).toBe("It would tell once, then turn itself off.");
+    expect(changeWords(automation(NOW, once), automation(NOW), "UTC")).toBe("It would go on telling, and no longer turn itself off.");
+    expect(changeWords(automation(NOW, once), automation(NOW, both), "UTC")).toBe("It would tell at once, even in quiet hours.");
+    expect(changeWords(automation(NOW, both), automation(NOW, once), "UTC")).toBe("What it says in quiet hours would be kept until they end.");
+    // The same marks on both sides are no change.
+    expect(changeWords(automation(NOW, both), automation(NOW, both), "UTC")).toBe("It would run as it does now.");
+    // A step marked to go on only when what it says changes is a change to that step.
+    expect(changeWords(automation(NOW), automation([{ ...NOW[0]!, onlyChanged: true }, ...NOW.slice(1)]), "UTC")).toBe("Changes step 1.");
+  });
 });

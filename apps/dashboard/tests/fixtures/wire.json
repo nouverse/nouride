@@ -325,6 +325,97 @@
         "describes": "when somebody starts it",
         "start": "manual",
         "changeable": true
+      },
+      {
+        "id": "cron_6",
+        "agentId": "nouva",
+        "name": "Door camera",
+        "enabled": false,
+        "trigger": {
+          "kind": "webhook"
+        },
+        "payload": {
+          "kind": "steps",
+          "steps": [
+            {
+              "id": "read",
+              "kind": "command",
+              "name": "Read what the camera saw",
+              "argv": [
+                "cat"
+              ],
+              "onlyChanged": true
+            },
+            {
+              "id": "say",
+              "kind": "systemEvent",
+              "name": "Say so",
+              "text": "Somebody is at the door."
+            }
+          ]
+        },
+        "delivery": {
+          "mode": "announce",
+          "once": true,
+          "atOnce": true
+        },
+        "target": {
+          "gatewayId": "telegram:main",
+          "chatId": "-100200"
+        },
+        "session": "fresh",
+        "keepAfterRun": false,
+        "createdBy": "usr_1",
+        "createdAt": 1760000000000,
+        "lastRunAt": 1760000000000,
+        "runCount": 3,
+        "failCount": 0,
+        "failStreak": 0,
+        "disabledReason": "told",
+        "webhookToken": "hook_2",
+        "describes": "when its webhook is called",
+        "start": "webhook",
+        "hook": {
+          "webhookToken": "hook_2",
+          "path": "/hooks/hook_2",
+          "url": "http://127.0.0.1:18254/hooks/hook_2",
+          "urlGuessed": true,
+          "reach": {
+            "state": "local",
+            "why": "No public address is set, so only this network can call it."
+          }
+        },
+        "lastRun": {
+          "id": "run_3",
+          "jobId": "cron_6",
+          "startedAt": 1760000000000,
+          "finishedAt": 1760000000000,
+          "status": "success",
+          "result": "a parcel at the door",
+          "steps": [
+            {
+              "id": "read",
+              "kind": "command",
+              "startedAt": 1760000000000,
+              "status": "done",
+              "said": "a parcel at the door",
+              "ms": 0
+            },
+            {
+              "id": "say",
+              "kind": "systemEvent",
+              "startedAt": 1760000000000,
+              "status": "done",
+              "said": "Somebody is at the door.",
+              "ms": 0
+            }
+          ]
+        },
+        "person": {
+          "key": "gading",
+          "name": "Gading"
+        },
+        "changeable": true
       }
     ],
     "timezone": "Asia/Jakarta"
@@ -555,6 +646,173 @@
     },
     "timezone": "Asia/Jakarta"
   },
+  "/automations/cron_6": {
+    "automation": {
+      "id": "cron_6",
+      "agentId": "nouva",
+      "name": "Door camera",
+      "enabled": false,
+      "trigger": {
+        "kind": "webhook"
+      },
+      "payload": {
+        "kind": "steps",
+        "steps": [
+          {
+            "id": "read",
+            "kind": "command",
+            "name": "Read what the camera saw",
+            "argv": [
+              "cat"
+            ],
+            "onlyChanged": true
+          },
+          {
+            "id": "say",
+            "kind": "systemEvent",
+            "name": "Say so",
+            "text": "Somebody is at the door."
+          }
+        ]
+      },
+      "delivery": {
+        "mode": "announce",
+        "once": true,
+        "atOnce": true
+      },
+      "target": {
+        "gatewayId": "telegram:main",
+        "chatId": "-100200"
+      },
+      "session": "fresh",
+      "keepAfterRun": false,
+      "createdBy": "usr_1",
+      "createdAt": 1760000000000,
+      "lastRunAt": 1760000000000,
+      "runCount": 3,
+      "failCount": 0,
+      "failStreak": 0,
+      "disabledReason": "told",
+      "webhookToken": "hook_2",
+      "describes": "when its webhook is called",
+      "start": "webhook",
+      "hook": {
+        "webhookToken": "hook_2",
+        "path": "/hooks/hook_2",
+        "url": "http://127.0.0.1:18254/hooks/hook_2",
+        "urlGuessed": true,
+        "reach": {
+          "state": "local",
+          "why": "No public address is set, so only this network can call it."
+        }
+      },
+      "lastRun": {
+        "id": "run_3",
+        "jobId": "cron_6",
+        "startedAt": 1760000000000,
+        "finishedAt": 1760000000000,
+        "status": "success",
+        "result": "a parcel at the door",
+        "steps": [
+          {
+            "id": "read",
+            "kind": "command",
+            "startedAt": 1760000000000,
+            "status": "done",
+            "said": "a parcel at the door",
+            "ms": 0
+          },
+          {
+            "id": "say",
+            "kind": "systemEvent",
+            "startedAt": 1760000000000,
+            "status": "done",
+            "said": "Somebody is at the door.",
+            "ms": 0
+          }
+        ]
+      },
+      "person": {
+        "key": "gading",
+        "name": "Gading"
+      },
+      "changeable": true
+    },
+    "runs": [
+      {
+        "id": "run_3",
+        "jobId": "cron_6",
+        "startedAt": 1760000000000,
+        "finishedAt": 1760000000000,
+        "status": "success",
+        "result": "a parcel at the door",
+        "steps": [
+          {
+            "id": "read",
+            "kind": "command",
+            "startedAt": 1760000000000,
+            "status": "done",
+            "said": "a parcel at the door",
+            "ms": 0
+          },
+          {
+            "id": "say",
+            "kind": "systemEvent",
+            "startedAt": 1760000000000,
+            "status": "done",
+            "said": "Somebody is at the door.",
+            "ms": 0
+          }
+        ]
+      },
+      {
+        "id": "run_4",
+        "jobId": "cron_6",
+        "startedAt": 1760000000000,
+        "finishedAt": 1760000000000,
+        "status": "success",
+        "result": "step 1 of 2, \"Read what the camera saw\" said the same as last time: the run ended there",
+        "steps": [
+          {
+            "id": "read",
+            "kind": "command",
+            "startedAt": 1760000000000,
+            "status": "empty",
+            "said": "said the same as last time",
+            "ms": 0,
+            "same": true
+          }
+        ]
+      },
+      {
+        "id": "run_5",
+        "jobId": "cron_6",
+        "startedAt": 1760000000000,
+        "finishedAt": 1760000000000,
+        "status": "success",
+        "result": "a person at the door",
+        "steps": [
+          {
+            "id": "read",
+            "kind": "command",
+            "startedAt": 1760000000000,
+            "status": "done",
+            "said": "a person at the door",
+            "ms": 0
+          },
+          {
+            "id": "say",
+            "kind": "systemEvent",
+            "startedAt": 1760000000000,
+            "status": "done",
+            "said": "Somebody is at the door.",
+            "ms": 0
+          }
+        ]
+      }
+    ],
+    "timezone": "Asia/Jakarta"
+  },
   "/automations/waiting": {
     "waiting": [
       {
@@ -568,6 +826,12 @@
         "until": 1760000000000
       }
     ]
+  },
+  "/policy/quiet-hours": {
+    "from": "22:00",
+    "to": "07:00",
+    "timeZone": "Asia/Jakarta",
+    "editable": true
   },
   "/sessions/ses_1/turns": {
     "events": [],

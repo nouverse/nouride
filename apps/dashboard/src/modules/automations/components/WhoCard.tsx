@@ -5,6 +5,10 @@
  * The agent is chosen when the automation is made and stays: the page has no way to hand one over, and a change that
  * named another agent would. A mission always tells its chat when it is done or needs someone, so an automation with
  * one cannot stay quiet.
+ *
+ * Two switches make it a watch: tell once and turn itself off, and tell at once whatever the hour. The first is not
+ * offered where it tells nobody, which could never turn it off. Both are said in the card's own line where they are
+ * on, for a reader who cannot open its fields.
  */
 
 import { useState } from "react";
@@ -17,7 +21,9 @@ import { Field } from "@/commons/components/ui/ui";
 import { useAgentFace } from "@/commons/hooks/use-agent-face";
 import { useKnownChats } from "@/commons/hooks/use-known-chats";
 import { cn } from "@/commons/lib/utils";
-import { deliveryOf, savesAsList, sessionOf, type Draft } from "../lib/draft";
+import { useQuietHours } from "../hooks/use-quiet-hours";
+import { deliveryOf, savesAsList, sessionOf, withMark, type Draft } from "../lib/draft";
+import { ONCE_HINT, atOnceHint, hoursWords, marksWords } from "../lib/watch";
 import type { AgentChoice } from "./KindFields";
 
 const REMEMBERS: { value: Draft["session"]; label: string }[] = [
@@ -56,6 +62,9 @@ export function WhoCard({
   const name = face?.name ?? (draft.agentId || "An agent");
   const says = delivery.mode === "none" ? "stays quiet: each run is kept, and nothing is sent." : delivery.mode === "webhook" ? "sends each run's result to another app." : chat ? `tells ${chat} how each run went.` : "tells a chat how each run went.";
   const shown = editable && open;
+  const marks = marksWords(delivery);
+  // What the hours are is said under the switch that overrides them: asked only while that switch is on the page.
+  const quiet = useQuietHours(shown);
 
   return (
     <section aria-label="Who and where" className={cn("rounded-[22px] border border-base-content/[0.08] bg-base-100 shadow-soft", missing && "border-error/40")}>
@@ -66,6 +75,11 @@ export function WhoCard({
           <p className="font-semibold text-base-content [overflow-wrap:anywhere]">
             {name} runs it and {says}
           </p>
+          {marks.length > 0 ? (
+            <p data-marks className="text-sm text-base-content/75">
+              {marks.join(" ")}
+            </p>
+          ) : null}
           {missing ? <p className="text-xs font-medium text-error">{missing}</p> : null}
         </div>
         {editable ? (
@@ -92,6 +106,13 @@ export function WhoCard({
               onChange={(tells) => set({ delivery: { ...draft.delivery, mode: tells ? "announce" : "none" } })}
             />
           )}
+          {delivery.mode !== "none" ? <ToggleRow label="Tell me once, then turn off" hint={ONCE_HINT} checked={draft.delivery.once === true} onChange={(on) => set({ delivery: withMark(draft.delivery, "once", on) })} /> : null}
+          <ToggleRow
+            label="Tell me at once, even in quiet hours"
+            hint={atOnceHint(quiet.data ? hoursWords(quiet.data) : undefined, delivery.mode === "announce")}
+            checked={draft.delivery.atOnce === true}
+            onChange={(on) => set({ delivery: withMark(draft.delivery, "atOnce", on) })}
+          />
           <Field label="Between runs it remembers" hint="Remembering costs a little more each run. Something that reports gains nothing from yesterday's report.">
             <SearchSelect
               label="Between runs it remembers"

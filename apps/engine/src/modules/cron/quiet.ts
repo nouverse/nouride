@@ -100,6 +100,12 @@ export class Keeper {
     return this.quiet.endsAt();
   }
 
+  /** What is kept now, a job id for each line, and when it is to be said; null while nothing is kept. */
+  kept(): { jobIds: string[]; until: number } | null {
+    const jobIds = this.watch.heldJobs();
+    return jobIds.length > 0 ? { jobIds, until: this.quiet.endsAt() } : null;
+  }
+
   /** The hours are over: what was kept is said, and each kept question asked where its job reports. */
   async say(store: Pick<CronPort, "get">, executors: Pick<CronExecutors, "deliver" | "ask" | "alert">, runs: Pick<StepRuns, "keptAsk">): Promise<void> {
     await sayKept(this.watch, this.quiet, {

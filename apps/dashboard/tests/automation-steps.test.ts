@@ -7,8 +7,8 @@
 
 import { describe, expect, test } from "bun:test";
 import {
-  DEFAULT_EXIT, STEPS_MAX, argvOf, asKind, blankStep, branchesOf, duplicateStep, exitFrom, exitOf, exitValue, exitsOf, forward, insertStep, isLast, landsAt, mainText, moveStep, newStepId,
-  refusedStep, removeStep, replaceStep, setExit, shellLine, stepProblems, type Step,
+  DEFAULT_EXIT, STEPS_MAX, argvOf, asKind, blankStep, branchesOf, canWatch, duplicateStep, exitFrom, exitOf, exitValue, exitsOf, forward, insertStep, isLast, landsAt, mainText, moveStep, newStepId,
+  refusedStep, removeStep, replaceStep, setExit, shellLine, stepProblems, watching, type Step,
 } from "@/modules/automations/lib/steps";
 
 const say = (id: string, more: Partial<Step> = {}): Step => ({ id, kind: "systemEvent", text: `say ${id}`, ...more }) as Step;
@@ -164,6 +164,40 @@ describe("a step's words", () => {
     expect(asKind(say("a"), "command")).toEqual({ id: "a", kind: "command", argv: ["sh", "-lc", "say a"] });
     expect(asKind(step, "command")).toBe(step);
     expect(mainText({ id: "a", kind: "approval", ask: "Go?" })).toBe("Go?");
+  });
+});
+
+describe("a step that goes on only when what it says changes", () => {
+  const turn: Step = { id: "b", kind: "agentTurn", message: "look" };
+  const mission: Step = { id: "c", kind: "mission", goal: "do" };
+  const wait: Step = { id: "d", kind: "approval", ask: "Go?" };
+
+  test("can be a command, an agent's turn or a mission: never a message or a wait, which the server refuses", () => {
+    expect([run("a"), turn, mission, say("e"), wait].map((step) => [step.kind, canWatch(step)])).toEqual([["command", true], ["agentTurn", true], ["mission", true], ["systemEvent", false], ["approval", false]]);
+  });
+
+  test("the mark is set as the server takes it, and taken off it is not there at all; the rest of the step is kept", () => {
+    const step = run("a", { name: "Check", whenFailed: "next", timeoutMs: 5_000 } as Partial<Step>);
+    expect(watching(step, true)).toEqual({ ...step, onlyChanged: true });
+    expect(watching(watching(step, true), false)).toEqual(step);
+    expect("onlyChanged" in watching(watching(step, true), false)).toBe(false);
+    expect(watching(turn, true)).toEqual({ ...turn, onlyChanged: true });
+    expect(watching(mission, true)).toEqual({ ...mission, onlyChanged: true });
+    // Not on a kind that cannot hold it, whatever is asked.
+    expect(watching(say("e"), true)).toEqual(say("e"));
+    expect(watching(wait, true)).toEqual(wait);
+  });
+
+  test("another kind keeps the mark where it can hold it, and drops it where it cannot", () => {
+    const marked = watching(run("a"), true);
+    expect(asKind(marked, "agentTurn")).toEqual({ id: "a", onlyChanged: true, kind: "agentTurn", message: "run a" });
+    expect(asKind(marked, "mission")).toEqual({ id: "a", onlyChanged: true, kind: "mission", goal: "run a" });
+    expect(asKind(asKind(marked, "mission"), "command")).toEqual({ id: "a", onlyChanged: true, kind: "command", argv: ["sh", "-lc", "run a"] });
+    expect(asKind(marked, "systemEvent")).toEqual({ id: "a", kind: "systemEvent", text: "run a" });
+    expect(asKind(marked, "approval")).toEqual({ id: "a", kind: "approval", ask: "run a" });
+    // A copy is marked as its step is; nothing in a marked list is something the server would refuse.
+    expect(duplicateStep([marked, say("b")], 0).steps[1]).toEqual({ ...marked, id: "s3" });
+    expect(stepProblems([marked, watching(turn, true), watching(mission, true)])).toEqual([]);
   });
 });
 

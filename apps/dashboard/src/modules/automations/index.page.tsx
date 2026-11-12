@@ -8,6 +8,8 @@
  * Under an admin's own list a line says how many more there are, so a short list is not read as the rest being gone.
  *
  * Asked again every ten seconds, as the Schedule page was: a row's last run and its state change on their own.
+ *
+ * Under the head, the quiet hours: the one setting here that is every automation's, and the server's.
  */
 
 import { useState } from "react";
@@ -32,6 +34,7 @@ import { byPerson, NOBODYS } from "@/commons/lib/by-person";
 import { canWrite, isAdmin, useMe } from "@/commons/lib/session";
 import { useTextFilter } from "@/commons/lib/use-text-filter";
 import { AutomationRow } from "./components/AutomationRow";
+import { QuietHours } from "./components/QuietHours";
 import { counts, matches, rows, searchedIn, type StartFilter } from "./lib/list";
 
 const FILTERS: { value: StartFilter; label: string }[] = [
@@ -131,6 +134,9 @@ export default function AutomationsPage({ start, onStart }: { start: StartFilter
           ) : null
         }
       />
+
+      {/* One setting for every automation here, said under the head: not one of the list's filters, which come next. */}
+      <QuietHours />
 
       {/* The picker stays where a list is empty: it is how an admin gets from nobody's back to their own. */}
       {held.length > 0 || canPick ? (

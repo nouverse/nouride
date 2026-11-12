@@ -26,7 +26,7 @@ function sources(dir: string): string[] {
 /** Every call that writes the daemon's config or an agent's pack. */
 const SAVES = [
   "setAccessMode", "setMemorySettings", "setPersonFacts", "setPersonRecall", "setWebSearch", "setPasswordLogin", "saveMcpServer", "deleteMcpServer",
-  "saveAgentModel", "saveAgentSkills", "setAgentApprovals", "setJobQuietMinutes", "setAgentJobQuietMinutes", "setGroupContext",
+  "saveAgentModel", "saveAgentSkills", "setAgentApprovals", "setJobQuietMinutes", "setAgentJobQuietMinutes", "setQuietHours", "setGroupContext",
   "setDailyCostCap", "setMentionSettings", "saveGateway", "deleteGateway", "saveProviderProfile",
   "deleteProvider", "writeConfig", "setTurnSeconds", "setAgentTurnSeconds", "setToolIterations", "setAgentToolIterations",
   "setMcpServerEnabled", "setSkillOffGlobally", "saveRsiSettings", "savePerson", "deletePerson", "setRetention",

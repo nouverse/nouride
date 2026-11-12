@@ -352,6 +352,11 @@ export class CronScheduler {
     }
   }
 
+  /** What the quiet hours keep now (`Keeper.kept`): what a page says is waiting, and until when. */
+  kept(): { jobIds: string[]; until: number } | null {
+    return this.keeper?.kept() ?? null;
+  }
+
   /** Whether a run of this job is going now — what `runNow` would refuse a second start for. */
   isRunning(id: string): boolean {
     return this.inFlight.has(id) || this.stepRuns.waitingOf(id) !== null;

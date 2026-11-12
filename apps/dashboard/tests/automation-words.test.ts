@@ -5,7 +5,7 @@
 
 import { describe, expect, test } from "bun:test";
 import type { Step } from "@/modules/automations/lib/steps";
-import { KIND, START, endWords, exitAsks, exitChip, exitGoes, lastStepWords, stepLine, stepNote, stepTitle } from "@/modules/automations/lib/words";
+import { KIND, START, endWords, exitAsks, exitChip, exitGoes, lastStepWords, sameAgainWords, stepLine, stepNote, stepTitle } from "@/modules/automations/lib/words";
 
 const command: Step = { id: "a", kind: "command", argv: ["sh", "-lc", "curl -sf  https://shop.example.com/health"] };
 const turn: Step = { id: "b", kind: "agentTurn", message: "Find out why.\nSay what you found." };
@@ -40,6 +40,27 @@ describe("a step's words", () => {
     expect(stepNote({ ...wait, timeoutMs: 5 * 60_000 }, 2)).toBe("The run waits up to 5 minutes for your answer.");
     expect(stepNote({ ...wait, timeoutMs: 3 * 86_400_000 }, 2)).toBe("The run waits up to 3 days for your answer.");
     expect(stepNote({ ...wait, timeoutMs: 4 * 3_600_000 }, 2)).toBe("The run waits up to 4 hours for your answer.");
+  });
+
+  test("a step marked to go on only when what it says changes says so after its note; a kind that cannot hold the mark never does", () => {
+    const said = "It goes on only when what it says changes.";
+    expect(stepNote({ ...command, onlyChanged: true }, 0)).toBe(`No AI is used for this step. ${said}`);
+    expect(stepNote({ ...turn, onlyChanged: true }, 1)).toBe(`It is handed what the step before said. ${said}`);
+    expect(stepNote({ ...mission, onlyChanged: true }, 1)).toBe(`The run waits here until the mission ends. ${said}`);
+    expect(stepNote({ ...say, onlyChanged: true }, 3)).toBe("Sent as written to where it reports. No AI.");
+    expect(stepNote({ ...wait, onlyChanged: true }, 2)).toBe("The run waits up to 1 day for your answer.");
+  });
+
+  test("what the run does when a marked step says the same again: it ends quietly, or goes where its path for nothing to say leads", () => {
+    const quiet = "If it says the same as last time, the run ends here quietly.";
+    expect(sameAgainWords([command, turn], 0)).toBe(quiet);
+    // The last step, wherever its path points: there is nothing to go on to.
+    expect(sameAgainWords([command, { ...turn, whenEmpty: "next" }], 1)).toBe(quiet);
+    // A mission has told its chat how it went by then, so its run's end is not called quiet.
+    expect(sameAgainWords([mission, turn], 0)).toBe("If it says the same as last time, the run ends here.");
+    const led = 'If it says the same as last time, the run goes where "When it has nothing to say" sends it.';
+    expect(sameAgainWords([{ ...command, whenEmpty: "next" }, turn], 0)).toBe(led);
+    expect(sameAgainWords([{ ...command, whenEmpty: { to: "d" } }, turn, say], 0)).toBe(led);
   });
 
   test("every kind and every start has an icon, a name and a soft colour of the theme's own", () => {

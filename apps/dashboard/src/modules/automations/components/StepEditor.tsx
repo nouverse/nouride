@@ -3,15 +3,19 @@
  * the run goes from it. Each path is a short dropdown: the next step, the end of the run, or a later step by its
  * number and title. Only later ones are offered, since a run only ever goes forward. The last step has no paths to
  * set: the run ends after it, and its card says how that end is counted.
+ *
+ * Over the paths, for a step that says something of its own (a command, an agent, a mission): the switch that lets the
+ * run go on only when what the step says has changed since the last run. Not offered on a message or a wait.
  */
 
 import { Undo2 } from "lucide-react";
 import type { StepExit } from "@nouride/wire";
 import { Field } from "@/commons/components/ui/ui";
 import { SearchSelect } from "@/commons/components/ui/SearchSelect";
+import { ToggleRow } from "@/commons/components/ui/ToggleRow";
 import type { Then } from "../lib/draft";
-import { DEFAULT_EXIT, KINDS, exitFrom, exitOf, exitValue, exitsOf, isLast, type ExitName, type ExitReset, type Step, type StepKind } from "../lib/steps";
-import { KIND, endWords, exitAsks, exitChip, lastStepWords } from "../lib/words";
+import { DEFAULT_EXIT, KINDS, canWatch, exitFrom, exitOf, exitValue, exitsOf, isLast, watching, type ExitName, type ExitReset, type Step, type StepKind } from "../lib/steps";
+import { KIND, endWords, exitAsks, exitChip, lastStepWords, sameAgainWords } from "../lib/words";
 import { KindFields, type AgentChoice } from "./KindFields";
 
 /** What a path can be set to from a step that is not the last: on, the end, or any step after it. */
@@ -87,6 +91,8 @@ export function StepEditor({
 
       {/* Keyed by the kind as well: another kind's fields are another form, with nothing typed in it carried over unseen. */}
       <KindFields key={`${step.id} ${step.kind}`} step={step} own={own} agents={agents} alone={alone} onChange={onStep} />
+
+      {canWatch(step) ? <ToggleRow label="Go on only when this changes" hint={sameAgainWords(steps, index)} checked={step.onlyChanged === true} onChange={(on) => onStep(watching(step, on))} /> : null}
 
       {isLast(steps, index) ? (
         // Nothing to choose: "Finish the run" stood here beside "End the run", two names for one thing.

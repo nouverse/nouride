@@ -3,7 +3,8 @@
  *
  * The page always draws steps, and an automation's work is one thing or a list of them. One made before lists is drawn
  * as a single step and saved as the one thing it is; it becomes a list when a second step is added, or when its step
- * takes something only a list holds (a name, another agent, a path of its own, a wait for a person). Two things change
+ * takes something only a list holds (a name, another agent, a path of its own, a wait for a person, the mark to go on
+ * only when what it says changes). Two things change
  * with it, and both are done here so the page can say them before the save: a command that handed its output to its
  * agent becomes the command and a step for that agent, and an automation that read its chat's history starts each run
  * clean, since a list keeps a history of its own.
@@ -29,7 +30,10 @@ export interface Draft {
   keepAfterRun: boolean;
   gatewayId: string;
   chatId: string;
-  /** Whether a run tells its chat. `webhook`, set elsewhere, is kept as it is: the page has no field for its address. */
+  /**
+   * Whether a run tells its chat, and its two marks: tell once and turn off, tell at once whatever the hour.
+   * `webhook`, set elsewhere, is kept as it is: the page has no field for its address.
+   */
   delivery: Delivery;
   session: AutomationSummary["session"];
   steps: Step[];
@@ -100,9 +104,12 @@ export function blankDraft(agentId: string, gatewayId: string, timezone: string)
   };
 }
 
-/** What only a step of a list can hold: a name, an agent of its own, a path of its own, a wait for a person. */
+/**
+ * What only a step of a list can hold: a name, an agent of its own, a path of its own, a wait for a person, the mark
+ * to go on only when what it says changes.
+ */
 function listOnly(step: Step): boolean {
-  if (step.kind === "approval" || step.name?.trim()) return true;
+  if (step.kind === "approval" || step.name?.trim() || step.onlyChanged) return true;
   if ((step.kind === "agentTurn" || step.kind === "mission") && step.agentId) return true;
   return EXITS.some((exit) => step[exit] !== undefined);
 }
@@ -138,9 +145,27 @@ export function payloadOf(draft: Pick<Draft, "steps" | "then" | "list">): JobPay
 
 const hasMission = (draft: Pick<Draft, "steps">): boolean => draft.steps.some((step) => step.kind === "mission");
 
-/** Where a run reports, as it is saved: a mission tells its chat when it is done or needs someone, whatever was picked. */
+/**
+ * Where a run reports, as it is saved: a mission tells its chat when it is done or needs someone, whatever was picked.
+ * And one that tells nobody is not sent as turning itself off once it has told: it never would, and the server refuses
+ * the two together. The draft keeps the mark, so telling switched back on finds it as it was left.
+ */
 export function deliveryOf(draft: Pick<Draft, "steps" | "delivery">): Delivery {
-  return hasMission(draft) && draft.delivery.mode !== "announce" ? { ...draft.delivery, mode: "announce" } : draft.delivery;
+  const delivery: Delivery = hasMission(draft) && draft.delivery.mode !== "announce" ? { ...draft.delivery, mode: "announce" } : draft.delivery;
+  if (delivery.mode !== "none" || !delivery.once) return delivery;
+  const { once: _once, ...tellsNobody } = delivery;
+  return tellsNobody;
+}
+
+/**
+ * A delivery with one of its two marks set or taken off, and the rest of it as it was: the chat it reports to instead
+ * of its own, an address set elsewhere. A mark is there or it is not, and the two stand in the order the server writes
+ * them, so a mark put back is the delivery that was loaded and not a change to save.
+ */
+export function withMark(delivery: Delivery, mark: "once" | "atOnce", on: boolean): Delivery {
+  const { once, atOnce, ...rest } = delivery;
+  const marks = { once, atOnce, [mark]: on };
+  return { ...rest, ...(marks.once ? { once: true as const } : {}), ...(marks.atOnce ? { atOnce: true as const } : {}) };
 }
 
 /** What it keeps between runs, as it is saved: a list never reads its chat's history. */

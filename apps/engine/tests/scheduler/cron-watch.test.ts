@@ -18,6 +18,7 @@ import { WEBHOOK_PAYLOAD } from "@/modules/cron/prompts.ts";
 import { Quiet } from "@/modules/cron/quiet.ts";
 import { CronScheduler, TOLD, type CronExecutors, type JobTurnRequest, type JobTurnResult } from "@/modules/cron/scheduler.ts";
 import { stepsFrom } from "@/modules/cron/step-input.ts";
+import type { MissionEnd } from "@/modules/missions/job-runs.ts";
 import { cronInputFrom } from "@/modules/web/control/payloads.ts";
 import { APPROVAL_WAIT_MS } from "@/modules/cron/steps.ts";
 import { WatchStore } from "@/modules/cron/watch.store.ts";
@@ -137,12 +138,15 @@ describe("a step that goes on only when what it said has changed", () => {
     expect(await h.due(made.id)).toMatchObject({ status: "success", result: 'step 1 of 2, the command `sh -c cat ' + join(DIR, "disk") + "` said the same as last time: the run ended there" });
     expect(went(made.id)).toEqual(["check:empty"]);
     expect(last(made.id).steps?.[0]?.said).toBe("said the same as last time");
+    // Said as a field too: a page reads that, not the words.
+    expect(last(made.id).steps?.[0]?.same).toBe(true);
     expect(h.turns).toHaveLength(1);
     expect(h.said()).toEqual(["The disk is at 91%."]);
 
     await write("disk", "disk at 95%");
     await h.due(made.id);
     expect(went(made.id)).toEqual(["check:done", "tell:done"]);
+    expect(last(made.id).steps?.[0]).not.toHaveProperty("same");
     expect(h.said()).toEqual(["The disk is at 91%.", "The disk is at 95%."]);
     // And back to what it said two runs ago is a change too: only the last time is compared with.
     await write("disk", "disk at 91%");
@@ -175,9 +179,41 @@ describe("a step that goes on only when what it said has changed", () => {
     await h.due(made.id);
     await h.due(made.id);
     expect(went(made.id)).toEqual(["look:empty"]);
+    expect(last(made.id).steps?.[0]?.same).toBe(true);
     await h.due(made.id);
     expect(went(made.id)).toEqual(["look:done", "tell:done"]);
     expect(h.said()).toEqual(["The build changed.", "The build changed."]);
+  });
+
+  test("a mission can be marked: what it ended with is compared, and it told its chat itself either way", async () => {
+    const made = job([{ id: "audit", kind: "mission", goal: "Audit the backups.", onlyChanged: true }, say("tell", "The audit changed.")], { delivery: { mode: "announce", once: true } });
+    const ends = new Map<string, MissionEnd>();
+    let started = 0;
+    const h = hands([], { startMission: () => ({ started: `msn_${(started += 1)}` }), missionEnd: (id) => ends.get(id) ?? { working: true } });
+    const ended = async (said: string) => {
+      await h.due(made.id);
+      ends.set(`msn_${started}`, { said });
+      h.scheduler.missionChanged(`msn_${started}`);
+      await eventually(() => last(made.id).finishedAt !== undefined, 4_000, "the run to end");
+    };
+
+    await ended("All seven backups are whole.");
+    expect(went(made.id)).toEqual(["audit:done", "tell:done"]);
+    // A mission tells its chat how it ended, so a job that tells once has told: off after its first run.
+    expect(store.get(made.id)).toMatchObject({ enabled: false, disabledReason: "told" });
+
+    store.setEnabled(made.id, true, "tester");
+    await ended("All seven backups are whole.");
+    // The same again: the run ends there and the step after is not run.
+    expect(went(made.id)).toEqual(["audit:empty"]);
+    expect(last(made.id).steps?.[0]).toMatchObject({ said: "said the same as last time", same: true });
+    expect(h.said()).toEqual(["The audit changed."]);
+    // And it told its chat this time too, by itself: the mark decides what the run does next, not what a mission says.
+    expect(store.get(made.id)).toMatchObject({ enabled: false, disabledReason: "told" });
+
+    store.setEnabled(made.id, true, "tester");
+    await ended("One backup is missing.");
+    expect(went(made.id)).toEqual(["audit:done", "tell:done"]);
   });
 
   test("a failed step is not compared, and what it said before stands", async () => {
@@ -390,6 +426,23 @@ describe("quiet hours", () => {
     expect(went(made.id)).toEqual(["check:done"]);
     expect(h.said()).toEqual(["disk at 91%"]);
     expect(watch.holding()).toBe(true);
+  });
+
+  test("what is kept now is said to a page: whose each thing is, and when the hours end", async () => {
+    hours = "22:00-07:00";
+    clock = NIGHT;
+    const disk = job([sh("check", "echo 'disk at 91%'")]);
+    const backup = job([sh("run", "echo 'no space left' >&2; exit 1")], { name: "backup" });
+    const h = hands();
+    // Nothing kept is nothing to say, in the night too.
+    expect(h.scheduler.kept()).toBeNull();
+    await h.due(disk.id);
+    await h.due(backup.id);
+    await h.due(disk.id);
+    const kept = h.scheduler.kept()!;
+    expect(kept.jobIds).toEqual([disk.id, backup.id, disk.id]);
+    // Seven in the morning of the same night, in the daemon's zone.
+    expect(new Date(kept.until).toISOString()).toBe(new Date(MORNING).toISOString());
   });
 
   test("when they end, what was kept is one message a chat: each automation by its name, failures first", async () => {

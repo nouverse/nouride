@@ -62,6 +62,12 @@ export function pathTaken(steps: readonly Step[], run: JobRunSummary | undefined
   });
 }
 
+/**
+ * Whether a step ended quietly because it said what it said the last time: one marked to go on only when what it says
+ * changes. The server keeps such a step as one with nothing to say, and says which it was in a field of its own.
+ */
+export const sameAsLastTime = (outcome: Pick<StepRunOutcome, "status" | "same">): boolean => outcome.status === "empty" && outcome.same === true;
+
 /** How long something took, to the unit a person reads: "0.4 s", "48 s", "3 min", "2 h". */
 export function took(ms: number): string {
   if (ms < 10_000) return `${(ms / 1000).toFixed(1)} s`;
@@ -87,7 +93,7 @@ export function outcomeWords(outcome: StepRunOutcome, whom?: string): { label: s
     case "failed":
       return { label: `Failed${after}`, tone: "failed" };
     case "empty":
-      return { label: "Nothing to say", tone: "quiet" };
+      return { label: sameAsLastTime(outcome) ? "The same as last time" : "Nothing to say", tone: "quiet" };
     case "running":
       return { label: "Working", tone: "working" };
     case "waiting":

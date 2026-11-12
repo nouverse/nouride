@@ -5,18 +5,24 @@
 
 import type { QuietHoursPolicy } from "@nouride/wire";
 import { parseQuietHours } from "@nouride/shared";
-import { atLeast } from "@/modules/users/auth.ts";
+import { atLeast, type Principal } from "@/modules/users/auth.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { jsonBody } from "../payloads.ts";
 import { NO_SETTINGS, notSaved } from "../plain.ts";
+import { thingOfJob, thingsFor } from "../whose.ts";
 
 export function registerQuietHoursRoutes(control: ControlApp, deps: ControlDeps): void {
-  const policy = (): QuietHoursPolicy => {
+  const policy = (principal: Principal): QuietHoursPolicy => {
     const span = parseQuietHours(deps.ctx.config.cron.quietHours);
-    return { ...(span ? { from: clock(span.from), to: clock(span.to) } : {}), timeZone: deps.ctx.config.daemon.timezone, editable: Boolean(deps.settings) };
+    return {
+      ...(span ? { from: clock(span.from), to: clock(span.to) } : {}),
+      timeZone: deps.ctx.config.daemon.timezone,
+      editable: Boolean(deps.settings),
+      ...keptFor(deps, principal),
+    };
   };
 
-  control.get("/policy/quiet-hours", (c) => c.json(policy() satisfies QuietHoursPolicy));
+  control.get("/policy/quiet-hours", (c) => c.json(policy(c.get("principal")) satisfies QuietHoursPolicy));
 
   control.post("/policy/quiet-hours", async (c) => {
     if (!deps.settings) return c.json({ error: "config editing is not available", plain: NO_SETTINGS }, 501);
@@ -31,8 +37,27 @@ export function registerQuietHoursRoutes(control: ControlApp, deps: ControlDeps)
     }
     const result = await deps.settings.setQuietHours({ hours: none ? "" : `${body.from as string}-${body.to as string}`, actor: principal.actor });
     if (!result.ok) return c.json({ error: result.error, plain: notSaved("the two times: they must be different") }, 400);
-    return c.json({ ok: true, ...policy() } satisfies { ok: true } & QuietHoursPolicy);
+    return c.json({ ok: true, ...policy(principal) } satisfies { ok: true } & QuietHoursPolicy);
   });
+}
+
+/**
+ * What is kept now, counted over the automations whoever asks may see: another person's are not theirs to learn
+ * of, by a number either.
+ */
+function keptFor(deps: ControlDeps, principal: Principal): Pick<QuietHoursPolicy, "kept"> {
+  const kept = deps.cron?.scheduler.kept();
+  if (!kept || !deps.cron) return {};
+  const things = thingsFor(deps, principal);
+  const seen = new Map<string, boolean>();
+  const count = kept.jobIds.filter((jobId) => {
+    if (!seen.has(jobId)) {
+      const job = deps.cron!.store.get(jobId);
+      seen.set(jobId, job !== null && job !== undefined && things.sees(thingOfJob(job)));
+    }
+    return seen.get(jobId);
+  }).length;
+  return count > 0 ? { kept: { count, until: kept.until } } : {};
 }
 
 const clock = (minutes: number): string => `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
