@@ -129,6 +129,13 @@ interface StepCommon {
    * Absent: the run ends there, quietly, so a check that finds nothing wakes nobody.
    */
   whenEmpty?: StepGo;
+  /**
+   * Go on only when what the step said differs from what it said the last time a run of this job ended well: the same
+   * again, and the step reads as one with nothing to say. So a check on a clock tells once, when something changes,
+   * and not on every run. The first run has nothing to compare with and goes on. For a step that says something of
+   * its own: a command, an agent's turn, a mission.
+   */
+  onlyChanged?: true;
 }
 
 /**
@@ -189,6 +196,13 @@ export interface JobDelivery {
   gatewayId?: string;
   chatId?: string;
   webhookUrl?: string;
+  /**
+   * Turn the job off after the first run on its own time that told somebody something: "tell me when the build is
+   * done" goes on telling after it is done, otherwise. A run a person started by hand does not count.
+   */
+  once?: true;
+  /** Tell whatever the hour: what the job says is not held for the install's quiet hours (`[cron] quiet_hours`). */
+  atOnce?: true;
 }
 
 /**

@@ -27,6 +27,7 @@ const CONFIG: CronSection = {
   runRetentionDays: 14,
   catchupWindowMs: 3_600_000,
   failStreakLimit: 3,
+  quietHours: "",
   unattendedApproval: "auto",
   commandTimeoutMs: 600_000,
 };

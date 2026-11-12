@@ -1139,6 +1139,12 @@ export interface CronSection {
   unattendedApproval: "auto" | "deny";
   /** Wall-clock ceiling on a `command` payload. */
   commandTimeoutMs: number;
+  /**
+   * Hours of the day, in the daemon's time zone, in which what an automation would say to a chat is kept and sent as
+   * one message when they end: `"22:00-07:00"`. Empty: none. A job marked to tell at once, and a run a person started
+   * by hand, are said whatever the hour.
+   */
+  quietHours: string;
 }
 
 /**

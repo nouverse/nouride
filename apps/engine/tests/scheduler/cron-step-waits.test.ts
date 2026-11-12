@@ -29,6 +29,7 @@ const CONFIG: CronSection = {
   runRetentionDays: 14,
   catchupWindowMs: 60_000,
   failStreakLimit: 3,
+  quietHours: "",
   unattendedApproval: "auto",
   commandTimeoutMs: 5000,
 };
@@ -161,10 +162,18 @@ describe("a mission as a step", () => {
   });
 
   test("handed a webhook's body and an earlier step's words, each is named: the mission can tell them apart", async () => {
-    const made = job([{ id: "note", kind: "command", argv: ["sh", "-c", "printf 'disk 91%%'"] }, mission("fix", "Free some space.")], { trigger: { kind: "webhook" } });
+    // A message reads no body, so the mission after it is the first step to: it gets the body beside the message's words.
+    const made = job([{ id: "note", kind: "systemEvent", text: "The monitor called." }, mission("fix", "Free some space.")], { trigger: { kind: "webhook" } });
     const h = hands();
     await h.scheduler.runNow(made.id, "webhook", { body: "alert from the monitor" });
-    expect(h.started[0]!.body).toBe("The webhook's payload:\nalert from the monitor\n\nWhat the step before said:\ndisk 91%");
+    expect(h.started[0]!.body).toBe("The webhook's payload:\nalert from the monitor\n\nWhat the step before said:\nThe monitor called.");
+  });
+
+  test("after a command that read the body, the mission is handed what the command said and not the body", async () => {
+    const made = job([{ id: "note", kind: "command", argv: ["sh", "-c", "cat >/dev/null; printf 'disk 91%%'"] }, mission("fix", "Free some space.")], { trigger: { kind: "webhook" } });
+    const h = hands();
+    await h.scheduler.runNow(made.id, "webhook", { body: "alert from the monitor" });
+    expect(h.started[0]!.body).toBe("disk 91%");
   });
 
   test("another agent's mission is started as that agent's", async () => {

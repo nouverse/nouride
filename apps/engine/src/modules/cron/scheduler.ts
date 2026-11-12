@@ -44,8 +44,10 @@ import type { CronPort, RunOutcome, RunState } from "@/modules/cron/cron.store.t
 import { APPROVAL_WAIT_MS, type StepHands } from "./steps.ts";
 import { StepRuns, type Parked } from "./step-runs.ts";
 import type { MissionEnd } from "@/modules/missions/job-runs.ts";
-import { deliverResult, reportFailure, undelivered } from "./delivery.ts";
+import { deliverResult, reportFailure, undelivered, type Delivered } from "./delivery.ts";
 import { runJobCommand } from "./job-command.ts";
+import { Keeper, type Quiet } from "./quiet.ts";
+import type { WatchStore } from "./watch.store.ts";
 import type { AskAnswered } from "./step-asks.ts";
 import type { AuditPort } from "@/commons/audit.store.ts";
 
@@ -136,7 +138,14 @@ export interface CronSchedulerOptions {
   now?: () => number;
   /** The longest the timer sleeps: `MAX_SLEEP_MS`. A test's is shorter. */
   maxSleepMs?: number;
+  /** What a job that watches keeps between runs, and what is held for the quiet hours. Absent: neither is kept. */
+  watch?: WatchStore;
+  /** The install's quiet hours (`quiet.ts`). Absent: nothing is ever held. */
+  quiet?: Quiet;
 }
+
+/** Why a job set to tell once is off: `disabled_reason`, which its page puts into words. */
+export const TOLD = "told";
 
 /** The shortest the timer is ever set for — see `arm`. */
 const MIN_SLEEP_MS = 1_000;
@@ -154,11 +163,14 @@ export class CronScheduler {
   private stopping = false;
   /** Runs of several steps: begun here, and taken up again after a wait (`step-runs.ts`). */
   private readonly stepRuns: StepRuns;
+  /** The quiet hours and what they keep (`quiet.ts`), where both were handed in. */
+  private readonly keeper?: Keeper;
 
   constructor(private readonly options: CronSchedulerOptions) {
+    if (options.watch && options.quiet) this.keeper = new Keeper(options.watch, options.quiet);
     this.stepRuns = new StepRuns({
       store: options.store,
-      hands: (job, signal, runId) => this.stepHands(job, signal, runId),
+      hands: (job, signal, runId, byHand) => this.stepHands(job, signal, runId, byHand),
       enter: (jobId) => {
         if (this.inFlight.has(jobId)) return null;
         const controller = new AbortController();
@@ -166,7 +178,7 @@ export class CronScheduler {
         return controller;
       },
       leave: (jobId) => void this.inFlight.delete(jobId),
-      ended: (job, runId, outcome, settles) => this.finish(job, runId, outcome, { settles, cause: "resumed", startedAt: this.now }),
+      ended: (job, runId, outcome, how) => this.finish(job, runId, outcome, { ...how, cause: "resumed", startedAt: this.now }),
       ...(options.executors.missionEnd ? { mission: (id: string) => options.executors.missionEnd!(id) } : {}),
       ...(options.executors.settleAsk ? { settleCard: (card: NonNullable<RunState["card"]>, text: string) => options.executors.settleAsk!(card, text) } : {}),
       now: () => this.now,
@@ -322,6 +334,9 @@ export class CronScheduler {
   private async tick(): Promise<void> {
     if (this.stopping) return;
     this.stepRuns.expire();
+    // The quiet hours over: what was kept is said. Looked at on every tick, so within the timer's longest sleep of
+    // their end, a minute: the morning's message has no second to be on.
+    await this.keeper?.say(this.options.store, this.options.executors, this.stepRuns);
     for (const job of this.options.store.due(this.now)) {
       if (this.inFlight.has(job.id)) continue;
       // A job changed while its run waits is given a time again (`CronStore.update`), and would be found due here
@@ -403,10 +418,11 @@ export class CronScheduler {
     const run = this.options.store.startRun(job.id);
     const startedAt = this.now;
     const settles = opts.advanceSchedule !== false;
+    const byHand = cause === "manual";
 
     let outcome: RunOutcome | Parked;
     try {
-      outcome = await this.dispatch(job, controller.signal, { run, settles, ...(opts.trigger ? { trigger: opts.trigger } : {}) });
+      outcome = await this.dispatch(job, controller.signal, { run, settles, byHand, ...(opts.trigger ? { trigger: opts.trigger } : {}) });
     } catch (err) {
       // Anything thrown past `dispatch` is a bug in it, not in the job. Recorded against the job
       // anyway: an unattended run that vanishes without a row is the failure that costs hours.
@@ -423,14 +439,27 @@ export class CronScheduler {
       this.arm();
       return outcome;
     }
-    await this.finish(job, run.id, outcome, { settles, cause, startedAt });
-    return outcome;
+    await this.finish(job, run.id, outcome, { settles, byHand, cause, startedAt });
+    // What `finish` read of the run and nobody else is told: the hashes it kept, and whether it told.
+    const shown = { ...outcome };
+    delete shown.said;
+    delete shown.told;
+    return shown;
   }
 
   /** A run over, at once or after it waited: written down, its job settled when the run counts for it, a failure told. */
-  private async finish(job: Job, runId: string, outcome: RunOutcome, how: { settles: boolean; cause: string; startedAt: number }): Promise<void> {
+  private async finish(job: Job, runId: string, outcome: RunOutcome, how: { settles: boolean; byHand: boolean; cause: string; startedAt: number }): Promise<void> {
     this.options.store.finishRun(runId, outcome);
     if (how.settles) this.options.store.settle(job, outcome);
+    // What its marked steps said is what the next run compares with, once this one ended well: a run that failed before
+    // anybody heard keeps nothing, so the next one says it. A person's no, or nobody's answer, was heard.
+    if (outcome.said && (outcome.status === "success" || outcome.status === "skipped")) this.options.watch?.keepSaid(job.id, outcome.said);
+    // Set to tell once, and it told: off, with why. Held for the quiet hours counts, or the morning would hear it from
+    // every run of the night. Not a run by hand: a person trying it out has not been told what it watches for.
+    if (job.delivery.once && job.delivery.mode !== "none" && !how.byHand && outcome.status === "success" && outcome.told) {
+      this.options.store.turnOff(job.id, TOLD);
+      log.info("a job set to tell once told, and turned itself off", { job: job.id, name: job.name });
+    }
     // A run by hand that waited had taken its job's time (`execute`): it has one again, counted from now.
     else if (how.cause === "resumed" && job.trigger.kind !== "at" && this.options.store.get(job.id)?.enabled && this.options.store.get(job.id)?.nextRunAt === undefined) this.options.store.update(job.id, {}, "cron");
 
@@ -446,15 +475,29 @@ export class CronScheduler {
 
     // A failed unattended run has to reach a person. The chat the job points at is the one place
     // the operator is already looking, and it is where the successful runs would have gone.
-    if (outcome.status === "error") await reportFailure(this.options.executors, job, outcome);
+    if (outcome.status !== "error") return;
+    // Inside the quiet hours the failure is kept with the rest and said first when they end: nothing can be done about
+    // it at three in the morning. One whose chat is the problem goes to the alert channel as it always did.
+    if (!outcome.unreachable && this.keeper?.keep(job, how.byHand, { runId, kind: "failed", text: outcome.result.slice(0, 1000) })) return;
+    await reportFailure(this.options.executors, job, outcome);
+  }
+
+  /** A run's words to where its job reports: at once, or kept for the end of the quiet hours. */
+  private async say(job: Job, runId: string, text: string, byHand: boolean): Promise<Delivered> {
+    if (this.keeper?.keep(job, byHand, { runId, kind: "said", text })) return { ok: true };
+    return await deliverResult(this.options.executors, this.now, job, text);
   }
 
   private async dispatch(
     job: Job,
     signal: AbortSignal,
-    how: { run: Pick<JobRun, "id">; settles: boolean; trigger?: TriggerContext },
+    how: { run: Pick<JobRun, "id">; settles: boolean; byHand: boolean; trigger?: TriggerContext },
   ): Promise<RunOutcome | Parked> {
     const trigger = how.trigger;
+    // What a run that delivered its words says of itself, for a job set to tell once.
+    const told = { told: true as const };
+    // Inside the quiet hours nothing is put into the chat: a turn is run here and its words are kept.
+    const kept = this.keeper?.holds(job, how.byHand) === true;
     /**
      * Asleep, it takes no work: checked here for every kind. Only a job's own turn checked it, so a reminder or a command
      * still ran, and a turn into its chat was held and replayed at its wake once per occurrence — an every-15-minutes job
@@ -473,9 +516,9 @@ export class CronScheduler {
          * however much the sender put in the request — which makes the cheapest mode the one that
          * cannot say what happened.
          */
-        const delivered = await deliverResult(this.options.executors, this.now, job, withDeliveredBody(job.payload.text, trigger));
+        const delivered = await this.say(job, how.run.id, withDeliveredBody(job.payload.text, trigger), how.byHand);
         return delivered.ok
-          ? { status: "success", result: "delivered" }
+          ? { status: "success", result: "delivered", ...told }
           : undelivered(delivered);
       }
 
@@ -500,12 +543,12 @@ export class CronScheduler {
         // Whoever called the endpoint wrote the payload: what the turn keeps after reading it waits for a person.
         const outside = trigger?.body?.trim() ? [WEBHOOK_PAYLOAD] : undefined;
 
-        if (job.delivery.mode === "announce" && runsOnChatHistory(job)) {
+        if (job.delivery.mode === "announce" && runsOnChatHistory(job) && !kept) {
           const message = unattendedPreamble(job, prompt);
           if (!this.options.executors.dispatchTurn(job, message, outside)) {
             return { status: "error", result: "the pipeline would not accept the turn" };
           }
-          return { status: "success", result: "dispatched" };
+          return { status: "success", result: "dispatched", ...told };
         }
 
         const result = await this.runTurn(job, prompt, job.payload.model, signal, outside);
@@ -517,14 +560,14 @@ export class CronScheduler {
         if (!result.text.trim()) {
           return { status: "success", result: "the agent had nothing to report", ...held };
         }
-        const delivered = await deliverResult(this.options.executors, this.now, job, result.text);
+        const delivered = await this.say(job, how.run.id, result.text, how.byHand);
         return delivered.ok
-          ? { status: "success", result: result.text.slice(0, 2000), ...held }
+          ? { status: "success", result: result.text.slice(0, 2000), ...held, ...told }
           : { ...undelivered(delivered), ...held };
       }
 
       case "steps":
-        return await this.stepRuns.begin(job, how.run, signal, trigger, how.settles);
+        return await this.stepRuns.begin(job, how.run, signal, trigger, { settles: how.settles, byHand: how.byHand });
 
       case "mission": {
         /**
@@ -535,7 +578,7 @@ export class CronScheduler {
         const run = this.options.executors.startMission?.(job, trigger?.body) ?? { refused: "missions are not run in this process" };
         if ("busy" in run) return { status: "skipped", result: `the last run, mission ${run.busy}, is still working` };
         if ("refused" in run) return { status: "error", result: run.refused };
-        return { status: "success", result: `started mission ${run.started}` };
+        return { status: "success", result: `started mission ${run.started}`, ...told };
       }
 
       case "command": {
@@ -553,9 +596,9 @@ export class CronScheduler {
         }
 
         if (job.payload.then === "deliver") {
-          const delivered = await deliverResult(this.options.executors, this.now, job, output);
+          const delivered = await this.say(job, how.run.id, output, how.byHand);
           return delivered.ok
-            ? { status: "success", result: output.slice(0, 2000) }
+            ? { status: "success", result: output.slice(0, 2000), ...told }
             : undelivered(delivered);
         }
 
@@ -565,20 +608,20 @@ export class CronScheduler {
         // Same condition as the `agentTurn` case above, and for the same reason: the dispatch path's
         // reply goes to the conversation the message came from, which only reaches a person when
         // that conversation is the target chat.
-        if (job.delivery.mode === "announce" && runsOnChatHistory(job)) {
+        if (job.delivery.mode === "announce" && runsOnChatHistory(job) && !kept) {
           const message = unattendedPreamble(job, commandTurnMessage(job, output));
           if (!this.options.executors.dispatchTurn(job, message)) {
             return { status: "error", result: "the pipeline would not accept the turn" };
           }
-          return { status: "success", result: "dispatched" };
+          return { status: "success", result: "dispatched", ...told };
         }
         const turn = await this.runTurn(job, commandTurnMessage(job, output), undefined, signal);
         const held = turn.held?.length ? { held: turn.held } : {};
         if (turn.error) return { status: "error", result: turn.error, ...held };
         if (!turn.text.trim()) return { status: "success", result: "the agent had nothing to report", ...held };
-        const delivered = await deliverResult(this.options.executors, this.now, job, turn.text);
+        const delivered = await this.say(job, how.run.id, turn.text, how.byHand);
         return delivered.ok
-          ? { status: "success", result: turn.text.slice(0, 2000), ...held }
+          ? { status: "success", result: turn.text.slice(0, 2000), ...held, ...told }
           : { ...undelivered(delivered), ...held };
       }
     }
@@ -589,18 +632,24 @@ export class CronScheduler {
    * is its own job to the pipeline, so its guards weigh it against that step's words; another agent's starts fresh, in
    * a history of its own. A turn is always run here and never put into the chat, since the next step waits for its words.
    */
-  private stepHands(job: Job, signal: AbortSignal, runId: string): StepHands {
+  private stepHands(job: Job, signal: AbortSignal, runId: string, byHand: boolean): StepHands {
     return {
-      command: (step) => runJobCommand(this.options.executors, this.options.config, job, step),
+      command: (step, input) => runJobCommand(this.options.executors, this.options.config, job, step, input),
+      saidBefore: (stepId) => this.options.watch?.saidBefore(job.id, stepId),
       turn: async (step, message, outside) => {
         const own = !step.agentId || step.agentId === job.agentId;
         const asJob: Job = { ...job, agentId: step.agentId ?? job.agentId, session: own ? job.session : "fresh", payload: { kind: "agentTurn", message: step.message } };
         return await this.runTurn(asJob, message, step.model, signal, outside ? [WEBHOOK_PAYLOAD] : undefined);
       },
-      deliver: (text) => deliverResult(this.options.executors, this.now, job, text),
+      deliver: (text) => this.say(job, runId, text, byHand),
       mission: (step, request) =>
         this.options.executors.startMission?.({ ...job, agentId: step.agentId ?? job.agentId, payload: step }, request) ?? { refused: "missions are not run in this process" },
-      ask: async (step, shown) => await this.options.executors.ask?.(job, runId, step, shown, this.now + (step.timeoutMs ?? APPROVAL_WAIT_MS)),
+      ask: async (step, shown) => {
+        // Inside the quiet hours the question is kept and asked when they end; the dashboard lists it meanwhile.
+        if (this.keeper?.keep(job, byHand, { runId, stepId: step.id, kind: "ask", text: shown })) return { from: this.keeper.endsAt() };
+        const card = await this.options.executors.ask?.(job, runId, step, shown, this.now + (step.timeoutMs ?? APPROVAL_WAIT_MS));
+        return card ? { card } : undefined;
+      },
       progress: (outcomes) => this.options.store.progressRun(runId, outcomes),
       stopping: () => this.stopping || signal.aborted,
       now: () => this.now,

@@ -13,6 +13,8 @@ export async function runJobCommand(
   config: Pick<CronSection, "commandTimeoutMs">,
   job: Job,
   command: { argv: string[]; cwd?: string; timeoutMs?: number },
+  /** Written to the command's standard input and closed: a webhook's body, which is never in its arguments or its environment. */
+  input?: string,
 ): Promise<{ output: string } | { error: string }> {
   // The sandbox reads the command off the job it is given: the secrets bound to this argv, and no others.
   const sandbox = executors.commandSandbox({ ...job, payload: { kind: "command", argv: command.argv, then: "deliver" } });
@@ -24,6 +26,7 @@ export async function runJobCommand(
     timeoutMs: command.timeoutMs ?? config.commandTimeoutMs,
     maxOutputBytes: 256 * 1024,
     env: sandbox.env,
+    ...(input === undefined ? {} : { stdin: input }),
   };
 
   const result = await runCommand(command.argv, options);

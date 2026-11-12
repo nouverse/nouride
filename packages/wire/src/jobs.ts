@@ -10,6 +10,17 @@ export interface JobQuietPolicy {
   editable: boolean;
 }
 
+/** `[cron] quiet_hours`: when what automations would say to a chat is kept, and sent as one message afterwards. */
+export interface QuietHoursPolicy {
+  /** `22:00`. Absent with `to`: no quiet hours are set. */
+  from?: string;
+  /** `07:00`. */
+  to?: string;
+  /** The zone the two times are in: the daemon's. */
+  timeZone: string;
+  editable: boolean;
+}
+
 /** `[delegate] max_background`: how many helpers an agent may have in the background at once (0.7.15). */
 export interface DelegatePolicy {
   /** The daemon's, as it holds now — an agent without its own follows it. 0 is off. */

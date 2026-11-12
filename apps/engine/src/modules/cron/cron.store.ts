@@ -519,6 +519,12 @@ export class CronStore {
     return changed.changes !== 0;
   }
 
+  /** Turned off by the daemon, with why: a job set to tell once that has told (`disabled_reason`). */
+  turnOff(id: string, reason: string): void {
+    this.db.prepare("UPDATE cron_jobs SET enabled = 0, next_run_at = NULL, disabled_reason = ? WHERE id = ?").run(reason, id);
+    this.scheduleChanged();
+  }
+
   /**
    * End a run: count it, advance the trigger, and decide whether the job survives it.
    *

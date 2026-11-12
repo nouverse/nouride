@@ -5,16 +5,7 @@
  * `reportConfigAdvisories`, which says what loads fine and is still worth a line.
  */
 
-import {
-  ConfigError,
-  createLogger,
-  GROUP_CONTEXT_MAX,
-  maxBackgroundRefusal,
-  modelGuardRefusal,
-  type GlobalConfig,
-  toolIterationsRefusal,
-  turnSecondsRefusal,
-} from "@nouride/shared";
+import { ConfigError, createLogger, GROUP_CONTEXT_MAX, maxBackgroundRefusal, modelGuardRefusal, type GlobalConfig, toolIterationsRefusal, turnSecondsRefusal, parseQuietHours } from "@nouride/shared";
 import { boundsOf, CONFIG_ENUMS, UNSET_NUMBERS } from "@/modules/config/schema.ts";
 import { DEFAULT_CONFIG } from "@/modules/config/defaults.ts";
 import { isWritableDir, statFile } from "@nouride/runtime";
@@ -25,6 +16,13 @@ import { validatePeople } from "./validate-people.ts";
 import { parseBackupSeal } from "@/modules/config/sealed-secrets.ts";
 import { validateTiers } from "./validate-tiers.ts";
 import { fallbackPair } from "@nouride/persona";
+
+/** `[cron] quiet_hours`: two different times of the day, or empty for none. */
+function quietHours(value: string): void {
+  if (value.trim() !== "" && parseQuietHours(value) === null) {
+    throw new ConfigError(`[cron] quiet_hours must be two times of the day, as "22:00-07:00", or empty for none; got "${value}"`);
+  }
+}
 
 const log = createLogger("config");
 
@@ -445,6 +443,7 @@ export function validate(config: GlobalConfig): void {
   positiveInt(config.cron.minIntervalMs, "[cron] min_interval_ms");
   positiveInt(config.cron.maxJobs, "[cron] max_jobs");
   positiveInt(config.cron.failStreakLimit, "[cron] fail_streak_limit");
+  quietHours(config.cron.quietHours);
   positiveInt(config.cron.commandTimeoutMs, "[cron] command_timeout_ms");
   if (config.cron.catchupWindowMs < 0 || !Number.isFinite(config.cron.catchupWindowMs)) {
     throw new ConfigError(

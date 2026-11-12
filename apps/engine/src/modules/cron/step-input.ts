@@ -44,6 +44,7 @@ function stepFrom(step: Record<string, unknown>, index: number, ids: readonly st
     ...exit("then"),
     ...exit("whenFailed"),
     ...exit("whenEmpty"),
+    ...(step.onlyChanged === true ? { onlyChanged: true as const } : {}),
   };
   const agent = text(step.agentId).trim() ? { agentId: text(step.agentId).trim() } : {};
 

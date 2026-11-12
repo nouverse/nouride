@@ -11,11 +11,14 @@ import { localTime } from "@/commons/clock.ts";
 import type { Notifier } from "@/commons/notify.ts";
 import type { CronPort } from "@/modules/cron/cron.store.ts";
 import { CronScheduler, type CronExecutors } from "@/modules/cron/scheduler.ts";
+import { Quiet } from "@/modules/cron/quiet.ts";
 import { StepAsks } from "@/modules/cron/step-asks.ts";
+import type { WatchStore } from "@/modules/cron/watch.store.ts";
 import type { Mission } from "@/modules/missions/types.ts";
 
 export function buildScheduler(params: {
   cron: CronPort;
+  watch: WatchStore;
   /** Read when it is used: the zone and the `[cron]` section a save from the dashboard changes. */
   config: () => GlobalConfig;
   notifier: Pick<Notifier, "ask" | "settle">;
@@ -47,6 +50,9 @@ export function buildScheduler(params: {
   const scheduler: CronScheduler = new CronScheduler({
     store: params.cron,
     config: params.config().cron,
+    watch: params.watch,
+    // Read at each use: the hours are changed from the dashboard and apply to the next thing said.
+    quiet: new Quiet({ hours: () => params.config().cron.quietHours, timeZone: () => params.config().daemon.timezone, now: Date.now }),
     // A `mission` job's run starts a mission, and a step that is one waits for it; the rest run through the pipeline.
     executors: {
       ...pipeline.cronExecutors(),

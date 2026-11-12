@@ -27,8 +27,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "a security classifier: what an agent may never do without a human, and the credential paths read word by word. It grows by a rule; a second way of classifying goes in a file of its own",
   },
   "apps/engine/src/modules/config/schema.docs.ts": {
-    lines: 475,
-    why: "one annotation per setting, the list `config explain` and the dashboard read; it grows by an entry, or a rule an entry must say, and splitting it would hide the list it is",
+    lines: 482,
+    why: "one annotation per setting, the list `config explain` and the dashboard read; it grows by an entry (the quiet hours' now), and splitting it would hide the list it is",
   },
   "apps/engine/src/modules/web/control/routes/chat.ts": {
     lines: 507,
@@ -39,8 +39,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "the service the agents' CLIs run under: their connections, sessions, sign-ins, models and lent tools, as the runner reaches them through `RunnerHost`; each one's logic is in a file beside it",
   },
   "apps/engine/src/modules/cron/cron.store.ts": {
-    lines: 475,
-    why: "the job table, whose a job is among its columns, and the one place `next_run_at` moves, so no schedule is advanced twice; validation is `cron/validate.ts`, a proposal's yes is `cron/proposals.ts`",
+    lines: 479,
+    why: "the job table, with whose a job is and the daemon turning one off with why, and the one place `next_run_at` moves; validation is `cron/validate.ts`, what a job that watches keeps is `watch.store.ts`",
   },
   "packages/persona/src/config.ts": {
     lines: 492,

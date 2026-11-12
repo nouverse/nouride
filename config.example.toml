@@ -877,6 +877,11 @@ enabled = true
 # Either way, `exec` still meets the blocked list and this agent's allowlist first.
 unattended_approval = "auto"
 
+# Quiet hours, in the daemon's time zone. Automations still run inside them, but what they would say to a chat is kept
+# and sent as one message when the hours end, failures first. An automation marked to tell at once, and a run you
+# start by hand, are said whatever the hour. Empty: none.
+# quiet_hours = "22:00-07:00"
+
 # ── skills ────────────────────────────────────────────────────────────────────────────────────────
 [skills]
 # Skills no agent loads, whatever their own skills.toml says. Names, not paths.

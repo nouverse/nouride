@@ -524,6 +524,7 @@ export const DEFAULT_CONFIG: GlobalConfig = {
     runRetentionDays: 3,
     catchupWindowMs: 3_600_000,
     failStreakLimit: 10,
+    quietHours: "",
     unattendedApproval: "auto",
     // Ten minutes: long enough for a backup or a test suite, short enough that a hung command is
     // noticed on the next run rather than holding a slot forever.

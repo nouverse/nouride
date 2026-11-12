@@ -38,8 +38,10 @@ const DESCRIPTION =
   "Propose work that runs later: on a schedule, when a webhook is called, or when a person starts it. It stays off " +
   "until a person turns it on from the card this posts here. Say so in one line. Use it for anything asked at a time " +
   "or again and again. The cheapest that does the job: `text` is sent as written, `command` runs a shell line, " +
-  "`prompt` is one turn of yours, `mission` is long work that is checked. Several in order are `steps`. To change " +
-  "a job, or its steps, propose it again with `replaces`.";
+  "`prompt` is one turn of yours, `mission` is long work that is checked. Several in order are `steps`. To watch " +
+  'something ("tell me when…"), check it on a schedule with `only_changed`: it speaks when what it found changes and ' +
+  "is quiet otherwise. Add `once` when it should tell one time and then stop. To change a job, or its steps, " +
+  "propose it again with `replaces`.";
 
 /**
  * A run's `prompt`, or its mission's goal and review, as written in English (0.8.8): each run of a proposed job starts
@@ -96,7 +98,15 @@ const EXITS = [["then", "then"], ["if_failed", "whenFailed"], ["if_empty", "when
  * one thing or a list, and guessing which was meant would propose the wrong one.
  */
 function payloadOf(args: Record<string, unknown>, agentExists: (agentId: string) => boolean): JobPayload | string {
-  if (args.steps === undefined) return doesOf(args);
+  if (args.steps === undefined) {
+    const one = doesOf(args);
+    if (typeof one === "string" || args.only_changed !== true) return one;
+    if (one.kind === "systemEvent") return "A `text` is the same words every run, so there is nothing that could change: watch with a `command` or a `prompt` that looks at something.";
+    // One thing that speaks only when changed is a list of one: the mark is a step's, and a list's last words are sent.
+    const step: Record<string, unknown> = { ...one, onlyChanged: true };
+    delete step.then;
+    return { kind: "steps", steps: stepsFrom([step]) };
+  }
   if (!Array.isArray(args.steps) || args.steps.length === 0) return "`steps` is a list of at least one step.";
   if ((["text", "command", "prompt", "mission"] as const).some((key) => typeof args[key] === "string" && String(args[key]).trim())) {
     return "Give `steps`, or one of `text`, `command`, `prompt` and `mission`: not both.";
@@ -116,6 +126,7 @@ function payloadOf(args: Record<string, unknown>, agentExists: (agentId: string)
       ...one,
       ...(agent ? { agentId: agent } : {}),
       ...(typeof step.name === "string" ? { name: step.name } : {}),
+      ...(step.only_changed === true ? { onlyChanged: true } : {}),
       ...Object.fromEntries(EXITS.filter(([given]) => step[given] !== undefined).map(([given, kept]) => [kept, step[given]])),
     });
   }
@@ -189,9 +200,12 @@ export function createScheduleTool(options: ScheduleToolOptions): Tool {
                 then: { type: "string" },
                 if_failed: { type: "string" },
                 if_empty: { type: "string" },
+                only_changed: { type: "boolean" },
               },
             },
           },
+          only_changed: { type: "boolean", description: "A `command` or `prompt` (or a step): goes on only when what it said differs from the last run." },
+          once: { type: "boolean", description: "Turns itself off after the first run that tells somebody." },
           agent: { type: "string", description: "Another agent runs it." },
           replaces: { type: "string", description: "The id of the job this changes." },
         },
@@ -232,6 +246,7 @@ export function createScheduleTool(options: ScheduleToolOptions): Tool {
           trigger,
           payload,
           target: { gatewayId: ctx.gatewayId, chatId: ctx.chatId },
+          ...(args.once === true ? { delivery: { mode: "announce" as const, once: true as const } } : {}),
           createdBy: `agent:${ctx.agentId}`,
           proposal: proposalFor(ctx.agentId, { gatewayId: ctx.gatewayId, chatId: ctx.chatId, senderId: ctx.senderId }, now(), replaces),
         };

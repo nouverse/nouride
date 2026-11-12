@@ -54,7 +54,7 @@ function doesLine(agentId: string, payload: JobPayload | JobStep): string {
     case "steps":
       return [
         "in order, each handed what the one before said:",
-        ...payload.steps.map((step, index) => `${index + 1}. ${doesLine(agentId, step)}${exitsLine(step, index, payload.steps)}`),
+        ...payload.steps.map((step, index) => `${index + 1}. ${doesLine(agentId, step)}${step.onlyChanged ? ". It goes on only when this differs from the last run." : ""}${exitsLine(step, index, payload.steps)}`),
       ].join("\n");
   }
 }
@@ -84,6 +84,7 @@ export function proposalCard(job: Job, when: string, shown: { buttons: boolean }
     `When: ${job.trigger.kind === "webhook" ? "a request to its own URL, shown once it is on" : job.trigger.kind === "manual" ? "when somebody presses Run now" : when}`,
     `Does: ${doesLine(job.agentId, job.payload)}`,
     "Results: here",
+    ...(job.delivery.once ? ["Tells once: after the first run that tells you something, it turns itself off."] : []),
     "It stays off until somebody turns it on.",
   ];
   if (!shown.buttons) lines.push(`Turn on: /schedule on ${job.id}, or /schedule discard ${job.id}`);

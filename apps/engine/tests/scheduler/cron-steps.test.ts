@@ -28,6 +28,7 @@ const CONFIG: CronSection = {
   runRetentionDays: 14,
   catchupWindowMs: 60_000,
   failStreakLimit: 3,
+  quietHours: "",
   unattendedApproval: "auto",
   commandTimeoutMs: 5000,
 };
@@ -172,7 +173,9 @@ describe("a job of steps runs them in order", () => {
   });
 
   test("a webhook's body is read by the first agent's turn, once, and every later turn has read outside content", async () => {
-    const made = job([sh("stamp", "printf 'received'"), ask("read", "Read the payload."), ask("act", "Act on it.", { agentId: "nix" })], { trigger: { kind: "webhook" } });
+    // A message reads no body: the agent's turn after it is the first step that does. A command first would read it
+    // itself, on its standard input (`cron-watch.test.ts`).
+    const made = job([say("stamp", "A call came in."), ask("read", "Read the payload."), ask("act", "Act on it.", { agentId: "nix" })], { trigger: { kind: "webhook" } });
     const { scheduler, turns } = hands({ nouva: { text: "It is an order." }, nix: { text: "Order filed." } });
     await scheduler.runNow(made.id, "webhook", { body: '{"order": 42}' });
 

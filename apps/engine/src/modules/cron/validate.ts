@@ -89,6 +89,10 @@ export function validateJob(input: JobInput, rules: ValidationRules): void {
       "delivery",
     );
   }
+  // Told nobody, it would never turn off: the mark would read as a promise it cannot keep.
+  if (delivery?.once && delivery.mode === "none") {
+    throw new CronValidationError("a job that tells nobody cannot turn itself off once it has told: give it somewhere to report.", "delivery");
+  }
 }
 
 /** What one thing a job does must be: a job of one kind, or one step of several. */
@@ -143,6 +147,10 @@ export function validateSteps(input: Pick<JobInput, "payload" | "session" | "del
     const at = `step ${index + 1}`;
     if ((step.kind === "agentTurn" || step.kind === "mission") && step.agentId !== undefined && !step.agentId.trim()) {
       throw new CronValidationError(`${at} names no agent: leave the agent out for the job's own.`, "steps");
+    }
+    // A message says the words it was given and a wait says none of its own: neither has anything that could change.
+    if (step.onlyChanged && (step.kind === "systemEvent" || step.kind === "approval")) {
+      throw new CronValidationError(`${at}: only a command, an agent's turn or a mission can go on only when what it said has changed.`, "steps");
     }
     if (step.kind === "approval") approvalProblems(step, at);
     else {

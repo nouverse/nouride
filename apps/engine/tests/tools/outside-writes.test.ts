@@ -68,7 +68,7 @@ describe("what a message carried from outside", () => {
     const db: SqliteDb = openDatabase(join(dir, "t.db"));
     migrate(db);
     cleanup.push(() => db.close());
-    const cron: CronSection = { enabled: true, minIntervalMs: 1000, maxJobs: 20, runRetentionDays: 14, catchupWindowMs: 60_000, failStreakLimit: 3, unattendedApproval: "auto", commandTimeoutMs: 5000 };
+    const cron: CronSection = { enabled: true, minIntervalMs: 1000, maxJobs: 20, runRetentionDays: 14, catchupWindowMs: 60_000, failStreakLimit: 3, quietHours: "", unattendedApproval: "auto", commandTimeoutMs: 5000 };
     const store = new CronStore({ db, config: cron, timezone: "UTC", now: () => Date.now() });
     const turns: JobTurnRequest[] = [];
     const dispatched: { job: Job; outside?: string[] }[] = [];

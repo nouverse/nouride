@@ -28,6 +28,10 @@ export type RunOutcome = (
   held?: readonly HeldAction[];
   /** How each step went, for a job of several: as many as were reached. */
   steps?: readonly StepOutcome[];
+  /** What each step marked `onlyChanged` said, as a hash by its id: what the job's next run compares with. */
+  said?: Readonly<Record<string, string>>;
+  /** The run told somebody something: its words were delivered, or a mission it started reports for itself. */
+  told?: true;
 };
 
 interface RunRow {
@@ -55,10 +59,16 @@ export interface RunState {
   outside?: true;
   /** What the run's guards held so far. */
   held?: HeldAction[];
+  /** What each step marked `onlyChanged` said so far, as a hash by its id: kept on the job once the run ends well. */
+  said?: Record<string, string>;
+  /** The run told its chat something already. */
+  told?: true;
   /** The card a person was asked on, to rewrite once it is answered, from wherever. */
   card?: { gatewayId: string; chatId: string; messageId: string };
   /** Whether the run's end counts for its job and moves its schedule: one forced by hand does neither. */
   settles: boolean;
+  /** A person started it by hand: they are there, so nothing it says is held for the quiet hours. */
+  byHand?: true;
 }
 
 /** A run that waits, with what it waits in. */

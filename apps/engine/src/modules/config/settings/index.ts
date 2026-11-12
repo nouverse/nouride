@@ -38,6 +38,7 @@ import * as tiers from "./tiers.ts";
 import * as missions from "./missions.ts";
 import * as update from "./update.ts";
 import * as backups from "./backups.ts";
+import * as quietHours from "./quiet-hours.ts";
 
 export { GATEWAY_PLATFORMS, PROVIDER_KINDS } from "./types.ts";
 export type { LearningPatch } from "./learning.ts";
@@ -156,6 +157,11 @@ export class SettingsService {
   /** `[update] track`: `latest` or `lts`, which releases this install is offered (0.8.18). */
   async setUpdateTrack(...args: Rest<typeof update.setUpdateTrack>): Promise<SaveResult> {
     return await update.setUpdateTrack(this.deps, ...args);
+  }
+
+  /** `[cron] quiet_hours`: when what automations would say is kept for later, or empty for never. */
+  async setQuietHours(...args: Rest<typeof quietHours.setQuietHours>): Promise<SaveResult> {
+    return await quietHours.setQuietHours(this.deps, ...args);
   }
 
   /** `[jobs] quiet_after_minutes` — how long a job may be quiet before its agent says so. */

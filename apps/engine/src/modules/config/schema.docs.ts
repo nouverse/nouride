@@ -498,6 +498,13 @@ export const ANNOTATIONS: Record<string, Annotation> = {
     description: "How far back a run missed while the daemon was down is still worth doing.",
   },
   "cron.fail_streak_limit": { description: "Consecutive failures before a job is disabled and reported." },
+  "cron.quiet_hours": { live: true,
+    description:
+      "Hours of the day in which what automations would say to a chat is kept, and sent as one message when they end. Empty for none.",
+    example: 'quiet_hours = "22:00-07:00"',
+    caveat:
+      "In the daemon's time zone. The automations still run. One marked to tell at once, and a run started by hand, are said whatever the hour.",
+  },
   "cron.unattended_approval": {
     description: "What a scheduled turn does when a tool needs approval and nobody is watching.",
     caveat:

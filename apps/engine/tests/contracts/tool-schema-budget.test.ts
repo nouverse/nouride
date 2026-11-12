@@ -155,7 +155,9 @@ const PER_TOOL = 3_400;
 // 49,540 for `schedule`'s steps (~860): a list in a fixed order with where each step sends the run (`then`,
 // `if_failed`, `if_empty`), a step that waits for a mission or for a person's yes, and a start by hand. Unsaid, a model
 // writes a list the daemon refuses, or leaves the branch to a prompt, which is what a list of steps is there to replace.
-const TOTAL = 49_540;
+// 50,020 for a job that watches (~480): `schedule`'s `only_changed` and `once`, with when to reach for each. Unsaid, a
+// model asked "tell me when the disk is full" proposes a check that tells every fifteen minutes, for ever.
+const TOTAL = 50_020;
 
 describe("tool schema budget", () => {
   test("every conditional tool was built, so the total means what it says", () => {

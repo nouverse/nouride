@@ -25,7 +25,11 @@ export interface JobSummary {
   enabled: boolean;
   trigger: Record<string, unknown>;
   payload: { kind: JobPayloadInput["kind"]; [key: string]: unknown };
-  delivery: { mode: JobDeliveryMode; gatewayId?: string; chatId?: string };
+  /**
+   * `once`: it turns itself off after the first run on its own time that told somebody something. `atOnce`: what it
+   * says is not kept for the install's quiet hours.
+   */
+  delivery: { mode: JobDeliveryMode; gatewayId?: string; chatId?: string; once?: true; atOnce?: true };
   target: { gatewayId: string; chatId: string };
   session: JobSessionMode;
   createdBy: string;
@@ -72,7 +76,7 @@ export interface JobPatch extends JobScheduleInput {
   name?: string;
   payload?: JobPayloadInput;
   target?: { gatewayId: string; chatId: string };
-  delivery?: { mode: JobDeliveryMode; gatewayId?: string; chatId?: string };
+  delivery?: { mode: JobDeliveryMode; gatewayId?: string; chatId?: string; once?: true; atOnce?: true };
   session?: JobSummary["session"];
   keepAfterRun?: boolean;
 }

@@ -25,13 +25,13 @@ export interface Parked {
 
 export interface StepRunsDeps {
   store: CronPort;
-  /** What a run's steps are done with (`CronScheduler.stepHands`). */
-  hands(job: Job, signal: AbortSignal, runId: string): StepHands;
+  /** What a run's steps are done with (`CronScheduler.stepHands`). `byHand`: a person started the run. */
+  hands(job: Job, signal: AbortSignal, runId: string, byHand: boolean): StepHands;
   /** The job's place among the runs at work: taken (null when a run of it is going) and given back. */
   enter(jobId: string): AbortController | null;
   leave(jobId: string): void;
   /** A run over: written down, its job settled when the run counts for it, a failure told. */
-  ended(job: Job, runId: string, outcome: RunOutcome, settles: boolean): Promise<void>;
+  ended(job: Job, runId: string, outcome: RunOutcome, how: { settles: boolean; byHand: boolean }): Promise<void>;
   /** How a mission stands, or null when there is none by that id. Absent where missions are not run. */
   mission?(id: string): MissionEnd | null;
   /** A question's card rewritten, when it was answered somewhere else or not at all. */
@@ -50,15 +50,15 @@ export class StepRuns {
   constructor(private readonly deps: StepRunsDeps) {}
 
   /** A run begun: its end, or the wait it stopped at. */
-  async begin(job: Job, run: Pick<JobRun, "id">, signal: AbortSignal, trigger: TriggerContext | undefined, settles: boolean): Promise<RunOutcome | Parked> {
+  async begin(job: Job, run: Pick<JobRun, "id">, signal: AbortSignal, trigger: TriggerContext | undefined, how: { settles: boolean; byHand: boolean }): Promise<RunOutcome | Parked> {
     if (job.payload.kind !== "steps") return { status: "error", result: "not a job of steps" };
-    const end = await runSteps(job, job.payload.steps, this.deps.hands(job, signal, run.id), trigger ? { trigger } : {});
-    return this.keep(job, run.id, end, settles);
+    const end = await runSteps(job, job.payload.steps, this.deps.hands(job, signal, run.id, how.byHand), trigger ? { trigger } : {});
+    return this.keep(job, run.id, end, how);
   }
 
-  private keep(job: Job, runId: string, end: StepsEnd, settles: boolean): RunOutcome | Parked {
+  private keep(job: Job, runId: string, end: StepsEnd, how: { settles: boolean; byHand: boolean }): RunOutcome | Parked {
     if ("outcome" in end) return end.outcome;
-    this.deps.store.parkRun(runId, { ...end.park, settles }, end.outcomes);
+    this.deps.store.parkRun(runId, { ...end.park, settles: how.settles, ...(how.byHand ? { byHand: true as const } : {}) }, end.outcomes);
     const result = waitWords(job, job.payload.kind === "steps" ? job.payload.steps : [], end.park.wait);
     log.info("a run waits", { job: job.id, run: runId, for: end.park.wait.kind, step: end.park.wait.step });
     return { status: "waiting", result };
@@ -87,15 +87,29 @@ export class StepRuns {
 
     let end: StepsEnd;
     try {
-      end = await runSteps(job, job.payload.steps, this.deps.hands(job, controller.signal, runId), { state, outcomes: run.steps ?? [], woke });
+      end = await runSteps(job, job.payload.steps, this.deps.hands(job, controller.signal, runId, state.byHand === true), { state, outcomes: run.steps ?? [], woke });
     } catch (err) {
       log.error("a waiting run threw as it went on", { job: job.id, run: runId, error: String(err) });
       end = { outcome: { status: "error", result: toUserMessage(err), ...(run.steps ? { steps: run.steps } : {}) } };
     } finally {
       this.deps.leave(job.id);
     }
-    const kept = this.keep(job, runId, end, state.settles);
-    if (kept.status !== "waiting") await this.deps.ended(job, runId, kept, state.settles);
+    const how = { settles: state.settles, byHand: state.byHand === true };
+    const kept = this.keep(job, runId, end, how);
+    if (kept.status !== "waiting") await this.deps.ended(job, runId, kept, how);
+  }
+
+  /**
+   * A question that was kept for the end of the quiet hours, asked now: the step it waits in, when the run still waits
+   * there, and a way to keep the card it is asked on with the run, to rewrite once it is answered.
+   */
+  keptAsk(runId: string, stepId: string): { job: Job; step: Extract<JobStep, { kind: "approval" }>; until: number; carded(card: NonNullable<RunState["card"]>): void } | null {
+    const waiting = this.deps.store.waitingRun(runId);
+    const job = waiting ? this.deps.store.get(waiting.run.jobId) : null;
+    if (!waiting || !job || job.payload.kind !== "steps" || waiting.state.wait.kind !== "approval" || waiting.state.wait.step !== stepId) return null;
+    const step = job.payload.steps.find((one) => one.id === stepId);
+    if (step?.kind !== "approval") return null;
+    return { job, step, until: waiting.state.wait.until, carded: (card) => this.deps.store.parkRun(runId, { ...waiting.state, card }, waiting.run.steps ?? []) };
   }
 
   /** A mission ended or changed: a run that waits for it goes on once it is over. */

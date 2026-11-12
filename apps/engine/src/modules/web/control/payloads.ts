@@ -117,6 +117,8 @@ function cronDeliveryFrom(raw: unknown): JobDelivery | undefined {
     ...(typeof delivery.gatewayId === "string" ? { gatewayId: delivery.gatewayId } : {}),
     ...(typeof delivery.chatId === "string" ? { chatId: delivery.chatId } : {}),
     ...(typeof delivery.webhookUrl === "string" ? { webhookUrl: delivery.webhookUrl } : {}),
+    ...(delivery.once === true ? { once: true as const } : {}),
+    ...(delivery.atOnce === true ? { atOnce: true as const } : {}),
   };
 }
 

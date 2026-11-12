@@ -37,6 +37,7 @@ import { registerApprovalRoutes } from "./routes/approvals.ts";
 import { registerAccessRoutes } from "./routes/access.ts";
 import { registerPolicyRoutes } from "./routes/policy.ts";
 import { registerJobQuietRoutes } from "./routes/job-quiet.ts";
+import { registerQuietHoursRoutes } from "./routes/quiet-hours.ts";
 import { registerMissionSettingsRoutes } from "./routes/mission-settings.ts";
 import { registerTierRoutes } from "./routes/tiers.ts";
 import { registerDelegateRoutes } from "./routes/delegate.ts";
@@ -104,6 +105,7 @@ export function mountControlRoutes(app: Hono, deps: ControlDeps): void {
   registerAccessRoutes(control, deps);
   registerPolicyRoutes(control, deps);
   registerJobQuietRoutes(control, deps);
+  registerQuietHoursRoutes(control, deps);
   registerMissionSettingsRoutes(control, deps);
   // Before `registerAgentRoutes`, whose `/agents/:id/:action` would claim `/agents/:id/tiers`.
   registerTierRoutes(control, deps);

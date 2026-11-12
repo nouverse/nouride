@@ -16,6 +16,7 @@
  * and a question (`StepHands`), so a step can do nothing a job of one kind could not, under the same guards.
  */
 
+import { sha256Text } from "@nouride/runtime";
 import type { HeldAction, Job, JobStep, RunWait, StepGo, StepOutcome } from "@nouride/shared";
 import type { RunOutcome, RunState } from "./cron.store.ts";
 import { stepTurnMessage, withTriggerBody, type StepBefore } from "./prompts.ts";
@@ -38,16 +39,21 @@ type Step<K extends JobStep["kind"]> = Extract<JobStep, { kind: K }>;
 type Sent = { ok: true } | { ok: false; error: string; unreachable?: true };
 
 export interface StepHands {
-  /** A command with no model: what it printed, or why it failed. */
-  command(step: Step<"command">): Promise<{ output: string } | { error: string }>;
+  /** A command with no model: what it printed, or why it failed. `input`: a webhook's body, on its standard input. */
+  command(step: Step<"command">, input?: string): Promise<{ output: string } | { error: string }>;
+  /** What the step of that id said the last time a run of this job ended well, as a hash; nothing on its first run. */
+  saidBefore(stepId: string): string | undefined;
   /** One turn of the step's agent. `outside`: the run has read a webhook's payload, so what the turn keeps waits for a person. */
   turn(step: Step<"agentTurn">, message: string, outside: boolean): Promise<JobTurnResult>;
   /** Text to where the job reports, as the job's delivery says. */
   deliver(text: string): Promise<Sent>;
   /** A mission started with `request` as what the run handed it. */
   mission(step: Step<"mission">, request: string | undefined): { started: string } | { busy: string } | { refused: string };
-  /** A person asked, where the job reports: the card it was asked on, when it has one to rewrite later. */
-  ask(step: Step<"approval">, text: string): Promise<RunState["card"] | undefined>;
+  /**
+   * A person asked, where the job reports: the card it was asked on, when it has one to rewrite later. `from`: the
+   * question is kept for the end of the quiet hours and asked then, so its time to answer counts from then.
+   */
+  ask(step: Step<"approval">, text: string): Promise<{ card?: RunState["card"]; from?: number } | undefined>;
   /** The outcomes so far, written down as each step begins and ends: a run at work can be read. */
   progress(outcomes: readonly StepOutcome[]): void;
   /** The daemon is going down: the run stops before its next step. */
@@ -63,7 +69,7 @@ export type Woke =
   | { kind: "approval"; go: false; by?: string };
 
 /** A run that ended, or one that stopped to wait: where it stands and how its steps went so far, for the store to keep. */
-export type StepsEnd = { outcome: RunOutcome } | { park: Omit<RunState, "settles">; outcomes: readonly StepOutcome[] };
+export type StepsEnd = { outcome: RunOutcome } | { park: Omit<RunState, "settles" | "byHand">; outcomes: readonly StepOutcome[] };
 
 /** Where a run of steps starts from: its beginning with what set it off, or the state it waited in and what woke it. */
 export type StepsFrom = { trigger?: TriggerContext } | { state: RunState; outcomes: readonly StepOutcome[]; woke: Woke };
@@ -91,7 +97,9 @@ function exitOf(step: JobStep, went: "done" | "failed" | "empty"): StepGo {
 
 /** How one step went: done, failed or with nothing to say, each with what it hands on; or the run stops or waits here. */
 type Went =
-  | { exit: "done" | "empty"; before?: Said }
+  | { exit: "done"; before?: Said }
+  /** `same`: it said what it said last time, and was marked to go on only when that changed. */
+  | { exit: "empty"; same?: true }
   | { exit: "failed"; why: string; declined?: StepOutcome["status"] }
   | { halt: RunOutcome }
   | { wait: RunWait; card?: RunState["card"] };
@@ -107,6 +115,10 @@ interface Carry {
   outside: boolean;
   outcomes: StepOutcome[];
   held: HeldAction[];
+  /** What each step marked `onlyChanged` said in this run, as a hash by its id. */
+  said: Record<string, string>;
+  /** The chat was told something by this run. */
+  told: boolean;
 }
 
 export async function runSteps(job: Job, steps: readonly JobStep[], hands: StepHands, from: StepsFrom): Promise<StepsEnd> {
@@ -118,8 +130,18 @@ export async function runSteps(job: Job, steps: readonly JobStep[], hands: StepH
     outside: resumed ? resumed.state.outside === true : body !== undefined,
     outcomes: resumed ? [...resumed.outcomes] : [],
     held: resumed?.state.held ? [...resumed.state.held] : [],
+    said: { ...resumed?.state.said },
+    told: resumed?.state.told === true,
   };
-  const end = (outcome: RunOutcome): StepsEnd => ({ outcome: { ...outcome, steps: carry.outcomes, ...(carry.held.length > 0 ? { held: carry.held } : {}) } });
+  const end = (outcome: RunOutcome): StepsEnd => ({
+    outcome: {
+      ...outcome,
+      steps: carry.outcomes,
+      ...(carry.held.length > 0 ? { held: carry.held } : {}),
+      ...(Object.keys(carry.said).length > 0 ? { said: carry.said } : {}),
+      ...(carry.told ? { told: true as const } : {}),
+    },
+  });
 
   let index = resumed ? steps.findIndex((step) => step.id === resumed.state.at) : 0;
   // The list was changed while the run waited, and the step it waited in is gone: there is nowhere to go on from.
@@ -149,7 +171,7 @@ export async function runSteps(job: Job, steps: readonly JobStep[], hands: StepH
 
     let went: Went;
     if (woke) {
-      went = afterWait(woke, carry, mark);
+      went = afterWait(woke, step, hands, carry, mark);
       woke = undefined;
     } else {
       mark("running");
@@ -166,6 +188,8 @@ export async function runSteps(job: Job, steps: readonly JobStep[], hands: StepH
           ...(carry.body ? { body: carry.body } : {}),
           ...(carry.outside ? { outside: true as const } : {}),
           ...(carry.held.length > 0 ? { held: carry.held } : {}),
+          ...(Object.keys(carry.said).length > 0 ? { said: carry.said } : {}),
+          ...(carry.told ? { told: true as const } : {}),
           ...(went.card ? { card: went.card } : {}),
         },
         outcomes: carry.outcomes,
@@ -181,7 +205,7 @@ export async function runSteps(job: Job, steps: readonly JobStep[], hands: StepH
       }
       carry.before = { from: capital(label), said: went.why, failed: true };
     } else if (went.exit === "empty") {
-      if (next < 0 || next >= steps.length) return end({ status: "success", result: `${label} had nothing to say: the run ended there` });
+      if (next < 0 || next >= steps.length) return end({ status: "success", result: `${label} ${went.same ? "said the same as last time" : "had nothing to say"}: the run ended there` });
       delete carry.before;
     } else if (went.before) {
       carry.before = went.before;
@@ -215,7 +239,22 @@ async function finish(carry: Carry, hands: StepHands, end: (outcome: RunOutcome)
   if (!last) return end({ status: "success", result: "the last step had nothing to say" });
   if (last.told) return end({ status: "success", result: last.said.slice(0, SAID_KEPT) });
   const sent = await hands.deliver(last.said);
+  if (sent.ok) carry.told = true;
   return sent.ok ? end({ status: "success", result: last.said.slice(0, SAID_KEPT) }) : end({ status: "error", result: sent.error, ...(sent.unreachable ? { unreachable: true } : {}) });
+}
+
+/** What a step marked to go on only when changed is said to have done when it said the same again. */
+const SAME = "said the same as last time";
+
+/**
+ * Whether a step marked `onlyChanged` said what it said the last time a run of its job ended well. What it said now is
+ * kept either way, as a hash: the text may hold what should not be kept twice.
+ */
+function sameAsBefore(step: JobStep, said: string, hands: StepHands, carry: Carry): boolean {
+  if (!step.onlyChanged) return false;
+  const hash = sha256Text(said.trim());
+  carry.said[step.id] = hash;
+  return hands.saidBefore(step.id) === hash;
 }
 
 type Mark = (status: StepOutcome["status"], said?: string, more?: Partial<StepOutcome>) => void;
@@ -242,17 +281,25 @@ async function runStep(
         return { halt: { status: "error", result: `${at.label} failed: ${sent.error}`, ...(sent.unreachable ? { unreachable: true } : {}) } };
       }
       mark("done", step.text);
+      carry.told = true;
       // What the step before said goes on past a message, for the step after it. The chat has been told now, so a run
       // that ends here delivers nothing more.
       return { exit: "done", before: carry.before ? { ...carry.before, told: true } : { from: "The message", said: step.text, told: true } };
     }
 
     case "command": {
-      const ran = await hands.command(step);
+      // A webhook's body no step has read yet is this command's to read, on its standard input: what it prints is what
+      // the run goes on with, so a script can drop a call before any agent is woken for it.
+      const ran = await hands.command(step, carry.body);
+      delete carry.body;
       if ("error" in ran) return failed(ran.error);
       if (!ran.output.trim()) {
         mark("empty", "printed nothing");
         return { exit: "empty" };
+      }
+      if (sameAsBefore(step, ran.output, hands, carry)) {
+        mark("empty", SAME);
+        return { exit: "empty", same: true };
       }
       mark("done", ran.output);
       return { exit: "done", before: { from: `The command \`${step.argv.join(" ")}\``, said: ran.output } };
@@ -276,6 +323,10 @@ async function runStep(
         mark("empty", "had nothing to report");
         return { exit: "empty" };
       }
+      if (sameAsBefore(step, turn.text, hands, carry)) {
+        mark("empty", SAME);
+        return { exit: "empty", same: true };
+      }
       mark("done", turn.text);
       return { exit: "done", before: { from: `${step.agentId ?? job.agentId}`, said: turn.text } };
     }
@@ -297,20 +348,26 @@ async function runStep(
 
     case "approval": {
       const shown = carry.before ? carry.before.said.trim().slice(0, SAID_KEPT) : "";
-      const card = await hands.ask(step, shown);
+      const asked = await hands.ask(step, shown);
       mark("waiting", step.ask);
-      const since = hands.now();
-      return { wait: { kind: "approval", step: step.id, since, until: since + (step.timeoutMs ?? APPROVAL_WAIT_MS), ask: step.ask }, ...(card ? { card } : {}) };
+      const since = asked?.from ?? hands.now();
+      return { wait: { kind: "approval", step: step.id, since, until: since + (step.timeoutMs ?? APPROVAL_WAIT_MS), ask: step.ask }, ...(asked?.card ? { card: asked.card } : {}) };
     }
   }
 }
 
 /** The step a run waited in, now that the wait is over: how it went. */
-function afterWait(woke: Woke, carry: Carry, mark: Mark): Went {
+function afterWait(woke: Woke, step: JobStep, hands: StepHands, carry: Carry, mark: Mark): Went {
   if (woke.kind === "mission") {
     if ("failed" in woke) {
       mark("failed", woke.failed);
       return { exit: "failed", why: woke.failed };
+    }
+    // A mission tells its chat how it ended, whatever the run does next.
+    carry.told = true;
+    if (sameAsBefore(step, woke.said, hands, carry)) {
+      mark("empty", SAME);
+      return { exit: "empty", same: true };
     }
     mark("done", woke.said);
     // A mission tells its chat how it ended, so its words are not delivered a second time as the run's.

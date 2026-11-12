@@ -22,6 +22,7 @@ import { AttachmentStore } from "@/modules/attachments/store.ts";
 import { ChatEventStore } from "@/modules/chat-events/chat-events.store.ts";
 import { RoomMessageStore } from "@/modules/chat-events/room-messages.store.ts";
 import { CronStore } from "@/modules/cron/cron.store.ts";
+import { WatchStore } from "@/modules/cron/watch.store.ts";
 import { EventStore } from "@/modules/events/events.store.ts";
 import { EventedTurnStore } from "@/modules/events/turn-events.store.ts";
 import { JobStore } from "@/modules/jobs/jobs.store.ts";
@@ -172,6 +173,8 @@ export async function openStores(input: {
   // and validating the table costs nothing, while *firing* a job needs the gateways up — a reminder
   // that fires into a Discord instance still connecting is delivered nowhere.
   const cron = new CronStore({ db, config: config.cron, timezone: config.daemon.timezone, audit });
+  // What a job that watches keeps between its runs, and what is held for the quiet hours.
+  const watch = new WatchStore(db);
 
   // Error-level logs also land in the audit table (§15.3 SPEC).
   addLogSink(audit.logSink);
@@ -245,7 +248,7 @@ export async function openStores(input: {
   return {
     dbPath, vaultFormat, db, state, agentUsers, secrets, heldSecrets, ownSecrets, knownSecrets, providers, sessions,
     events, turns, durable, chatEvents, rooms, roomMessages, attachmentIndex, recoveredTurns, orphanedTurns, usage,
-    integrity, audit, credentialsDir, childEnv, cron, logs, logStore, attachments, access, jobWakes, jobs, uploads, spill,
+    integrity, audit, credentialsDir, childEnv, cron, watch, logs, logStore, attachments, access, jobWakes, jobs, uploads, spill,
     notes, accounts, drafts, autoApprove, grants, toolGrants,
   };
 }
