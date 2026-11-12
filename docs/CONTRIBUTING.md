@@ -92,7 +92,7 @@ bun test ./apps/engine/ -t "silences"           # by name
 
 ```bash
 bun run lint:check    # every lint below
-bun run verify        # lint:check, then the whole test suite — what CI runs
+bun run verify        # lint:check, then the whole test suite: run it before you push
 bun run audit         # the packages in bun.lock against published advisories, critical only
 ```
 
@@ -169,6 +169,14 @@ The release workflow never prunes on its own, because what is still installed is
 from 0.7.11 on can be built again from its tag, as above.
 
 ---
+
+## What CI runs
+
+A push to `main` or a release branch runs the lint and the contract tests (`bun run test:contracts`): a few minutes.
+The whole suite is not run on a push. It runs on your machine before you push (`bun run verify`), and in CI once a
+release, on Linux, when a maintainer asks for it on the release's commit; a tag whose commit it never passed on runs
+it before anything is built. So a change that passes locally and breaks a test only Linux runs is found at the
+release, not at the push: say in your change when it touches process groups, `prlimit`, `/proc` or the pty.
 
 ## Where CI runs: one switch
 
