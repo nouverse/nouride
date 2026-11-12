@@ -14,6 +14,7 @@ import { agentsOwnHome, describeHost, installCommands } from "@/modules/toolchai
 import { pythonEnvState } from "@/modules/toolchain/python.ts";
 import { localPackageSetup } from "@/modules/system-packages/index.ts";
 import { enableAdvice, type PackageSetup } from "@/modules/system-packages/setup.ts";
+import { asCalled } from "@/modules/tools/fold.ts";
 import type { HarnessView } from "./types.ts";
 import { skillGaps, skillsInScope } from "./sections.ts";
 
@@ -241,9 +242,10 @@ function projectSkillLines(ctx: HarnessView["ctx"]): string[] {
   if (!can("read") && !can("exec")) return [];
   const roots = ctx.agent.config.skillRoots;
   const yours = roots.length > 0 ? `yours: ${roots.map((root) => `\`${root}\``).join(", ")}` : "you have none";
+  const names = ctx.tools?.map((tool) => tool.name) ?? [];
   const ask = can("skill_root")
     ? [
-        "  as the person's instructions. To have them as yours, ask with `skill_root` (add, the project's path,",
+        `  as the person's instructions. To have them as yours, ask with \`${asCalled("skill_root", names)}\` (add, the project's path,`,
         "  your reason): an admin answers it in the chat, at every approval level, and nothing changes until",
         "  then. Whether a project's skills become yours is theirs to decide, not yours.",
       ]
@@ -267,8 +269,9 @@ function projectSkillLines(ctx: HarnessView["ctx"]): string[] {
  */
 function hubLines(ctx: HarnessView["ctx"]): string[] {
   const has = (name: string) => ctx.tools?.some((tool) => tool.name === name) ?? false;
+  const names = ctx.tools?.map((tool) => tool.name) ?? [];
   const how = has("skill_search")
-    ? "`skill_search`, then `skill_install` with the ref it gives"
+    ? `\`${asCalled("skill_search", names)}\`, then \`${asCalled("skill_install", names)}\` with the ref it gives`
     : has("nouride")
       ? "`nouride skills search <words>`, then `nouride skills install <ref>`"
       : null;

@@ -5,6 +5,7 @@
  * every turn, which throws away the cached prefix for a fact the agent can get by calling the tool.
  */
 
+import { asCalled } from "@/modules/tools/fold.ts";
 import type { HarnessView, PromptContext } from "./types.ts";
 
 /**
@@ -152,7 +153,8 @@ export function renderMemory({ ctx, toolNames }: HarnessView): string[] {
   if (selfManagement.length > 0) {
     lines.push("", "OPERATING THE HARNESS");
     lines.push(
-      ...selfManagement.map(([name, what]) => `- \`${name}\`: ${what}`),
+      // Named as the model can call them: the skill tools are sent as one entry (`tools/fold.ts`).
+      ...selfManagement.map(([name, what]) => `- \`${asCalled(name!, toolNames)}\`: ${what}`),
       "- You cannot edit another agent's persona or memory, and you cannot add a provider endpoint or a credential. Those are the operator's; say so and describe what they would need to do.",
       "- After creating an agent, tell the person its id and whether it is enabled. An agent that exists but is off looks broken from the outside.",
       // Pushed unconditionally, so it named `agent_enable` to every agent holding any of these — long

@@ -5,6 +5,7 @@
  * described here answers a question the agent otherwise has to guess at or ask a human for.
  */
 
+import { asCalled } from "@/modules/tools/fold.ts";
 import type { HarnessView } from "./types.ts";
 
 
@@ -43,7 +44,7 @@ export function renderCli({ ctx, toolNames }: HarnessView): string[] {
       "- You run inside a Nouride daemon, and the `nouride` tool is how you ask it the things nothing else can answer: its own logs, audit trail and status; connections and gateways; scheduled jobs and webhooks; grants, access and config.",
       ...(dedicated.length > 0
         ? [
-            `- Where you have a dedicated tool for something, that tool is the way and the command is not: ${dedicated.map(([tool, what]) => `${what} goes to \`${tool}\``).join(", ")}. Same work, and the tool hands back a result instead of text to parse.`,
+            `- Where you have a dedicated tool for something, that tool is the way and the command is not: ${dedicated.map(([tool, what]) => `${what} goes to \`${asCalled(tool!, toolNames)}\``).join(", ")}. Same work, and the tool hands back a result instead of text to parse.`,
           ]
         : []),
       // The whole command set used to be written out here — ~1,500 tokens on every request, uncached,

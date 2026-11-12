@@ -24,6 +24,7 @@ import { statFile } from "@nouride/runtime";
 import { autoApprovable, skipsApproval, type HardlineVerdict } from "@nouride/policy";
 import { resolveToolPath } from "@/modules/tools/builtins/files.ts";
 import { coerceArguments } from "@/modules/tools/arguments.ts";
+import { inFoldedWords, openFolded, unfoldCall } from "@/modules/tools/fold.ts";
 import { logToolThrow } from "@/modules/tools/audited.ts";
 import { resultCharsFor } from "@/modules/llm/spill.ts";
 import { compactResult } from "@/modules/llm/output-by-kind.ts";
@@ -168,7 +169,10 @@ export class ToolCaller {
     /** A call an external agent's CLI made over MCP (`LentTools.call`): `ToolContext.lent`. */
     from?: { lent: true },
   ): Promise<ToolResult> {
-    const result = await this.attempt(req, call, maxResultTokens, cutAt, from);
+    const ran = await this.attempt(req, call, maxResultTokens, cutAt, from);
+    // A coding CLI is lent the tools by their own names; a model of ours is sent some of them as one entry.
+    const names = req.toolset.definitions.map((definition) => definition.name);
+    const result = from?.lent ? ran : { ...ran, content: inFoldedWords(unfoldCall(call, names).name, ran.content, names) };
     return cutAt !== undefined && result.isError && arrivedEmpty(call) ? withCutNote(result, cutAt) : result;
   }
 
@@ -183,6 +187,11 @@ export class ToolCaller {
     this.lastToolNotApproved = false;
     this.lastAutoApproved = false;
     const { toolset, agent } = req;
+    // The entry several tools are sent as (`tools/fold.ts`): its call is the call of the tool it names, and asked
+    // with an action alone it answers with what that action takes. Here too, for a caller that did not unfold it.
+    call = unfoldCall(call, toolset.definitions.map((definition) => definition.name));
+    const opened = openFolded(call, toolset.definitions);
+    if (opened) return opened;
     const tool = toolset.get(call.name);
 
     if (!tool) {

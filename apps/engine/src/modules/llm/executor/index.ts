@@ -54,6 +54,7 @@ import { ToolCaller, readToolControl, spilledOf } from "./tool-caller.ts";
 import { ProviderCaller } from "./provider-caller.ts";
 import { requestLines } from "./context-line.ts";
 
+import { unfoldCall } from "@/modules/tools/fold.ts";
 export type { ExecutorDeps, TurnRequest, TurnResult } from "./types.ts";
 
 const log = createLogger("llm.executor");
@@ -310,7 +311,12 @@ export class TurnExecutor {
          */
         const opened: (ImageRefPart | AudioRefPart)[] = [];
 
-        for (const group of groupParallelCalls(response.toolCalls, canParallelise)) {
+        // Each call under its own tool's name, where the model was sent several as one entry (`tools/fold.ts`): what
+        // is announced, gated, run and written down is the tool, as it would be had the model named it.
+        const held = req.toolset.definitions.map((definition) => definition.name);
+        const calls = response.toolCalls.map((call) => unfoldCall(call, held));
+
+        for (const group of groupParallelCalls(calls, canParallelise)) {
           // Between groups is a step boundary too. The calls left never start, and the journal says so.
           if (req.pause?.()) {
             paused = true;

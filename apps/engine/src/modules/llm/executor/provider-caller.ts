@@ -14,6 +14,7 @@ import { truncateContext } from "@/modules/llm/context.ts";
 import { outputCap } from "@/modules/llm/output-cap.ts";
 import { carriesAudio, resolveAudio, withoutAudio } from "@/modules/llm/audio.ts";
 import { resolveImages } from "@/modules/llm/images.ts";
+import { foldDefinitions } from "@/modules/tools/fold.ts";
 import { withoutForgedSections } from "@/modules/llm/prompt/index.ts";
 import { createReasoningStream } from "@/modules/llm/reasoning.ts";
 import { createGenerationProgress } from "@/modules/llm/progress.ts";
@@ -327,7 +328,7 @@ export class ProviderCaller {
       // Read now, at every request, so a note written in the step before is in this one (`ChatParams.tail`) — after who
       // is speaking, which is sent there too, out of the cached prefix (`BuiltPrompt.situation`).
       ...tailOf(prompt, req),
-      ...(toolset.definitions.length > 0 ? { tools: toolset.definitions } : {}),
+      ...(toolset.definitions.length > 0 ? { tools: foldDefinitions(toolset.definitions) } : {}),
       temperature: agent.config.llm.temperature,
       ...this.effortOf(req),
       maxTokens: outputCap(agent.config.llm.maxTokens, this.modelFor(req), this.deps.llm.limits.maxTokensPerTurn),
@@ -507,7 +508,7 @@ export class ProviderCaller {
          * over at its first byte, the tools being the first thing in a request: a 90k-token conversation written again for
          * one closing sentence (live, 2026-10-22). With `none` the prefix is the turn's own, and only the instruction is new.
          */
-        ...(offered && req.toolset.definitions.length > 0 ? { tools: req.toolset.definitions, toolChoice: "none" as const } : {}),
+        ...(offered && req.toolset.definitions.length > 0 ? { tools: foldDefinitions(req.toolset.definitions), toolChoice: "none" as const } : {}),
         ...tailOf(prompt, req),
         temperature: req.agent.config.llm.temperature,
         ...this.effortOf(req),

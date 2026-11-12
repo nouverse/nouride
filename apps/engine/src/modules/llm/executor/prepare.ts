@@ -10,6 +10,7 @@
  */
 
 import { estimateTokens, estimateToolsTokens } from "@nouride/llm";
+import { foldDefinitions } from "@/modules/tools/fold.ts";
 import { createLogger, type ChatMessage, type Skill, type SystemBlock , resolveToolIterations, resolveTurnDurationMs, tierModel } from "@nouride/shared";
 import { compactionThreshold, conversationBudget, pruneToolOutputs, resolveCompactionLimit, truncateContext } from "@/modules/llm/context.ts";
 import { ASSUMED_CACHE_LIFETIME_MS, CacheBreaks } from "@/modules/llm/cache-breaks.ts";
@@ -347,7 +348,8 @@ export async function prepareTurn(
   // resent itself twenty times in one turn. The ceiling is inert on small windows, where the ratio
   // is already the smaller number. First match wins for the ceiling: the agent, the operator, the
   // model's own figure.
-  const toolsTokens = estimateToolsTokens(toolset.definitions);
+  // As they are sent: several of them as one entry (`tools/fold.ts`).
+  const toolsTokens = estimateToolsTokens(foldDefinitions(toolset.definitions));
   // Who summarises: the runner's route (`llm/summarizer.ts`) — `[memory]`'s pass model when set — else the
   // turn's own provider, metered here as its compaction, with `summary_model` or the turn's model.
   const own = { profile: agent.config.llm.provider, model: requested };
