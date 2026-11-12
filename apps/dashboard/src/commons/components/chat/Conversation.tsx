@@ -439,6 +439,7 @@ export function Conversation({ sessionId, roomChatId, agent, agents: chat, onSes
                         showPrompt={prompted(entry.turn)}
                         asker={elsewhere ? (entry.turn.senderName ?? "") : undefined}
                         onStop={(agentId) => conversation.stop(agentId)}
+                        onRevealing={conversation.reveals}
                         motion={motion}
                       />
                     );

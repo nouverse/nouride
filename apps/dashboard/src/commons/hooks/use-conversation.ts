@@ -20,6 +20,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { splitForDisplay } from "@/commons/lib/turn-display";
 import { useEventStream } from "@/commons/hooks/use-event-stream";
+import { useRevealing } from "@/commons/hooks/use-revealing";
 import { usePageVisible } from "@/commons/hooks/use-page-visible";
 import { notesKey } from "@/commons/hooks/use-notes";
 import { api, ApiError } from "@/commons/lib/api";
@@ -93,6 +94,12 @@ export interface Conversation {
    */
   liveTurns: LiveTurn[];
   /**
+   * A live turn that is over says whether its answer is still being written out (`LiveTurnView`). A turn this page
+   * saw at work stays in `liveTurns` until its view says it is not: an answer that came whole at the turn's end is
+   * written out like any other, not handed to the history a moment later with every word at once.
+   */
+  reveals: (turnId: string, on: boolean) => void;
+  /**
    * Background work still running in this conversation.
    *
    * Not part of any turn: `exec background: true` returns immediately, so the turn that started a
@@ -139,6 +146,7 @@ export function useConversation(input: {
   const queryClient = useQueryClient();
 
   const [live, setLive] = useState<LiveTurn | null>(null);
+  const { turnId: revealing, read: readForReveal, say: reveals, reset: resetReveal } = useRevealing();
   /** A room's running turns. Plural — see `Conversation.liveTurns`. */
   const [liveTurns, setLiveTurns] = useState<LiveTurn[]>([]);
   /** Which turns were running at the last poll, so one leaving the list can settle the transcript. */
@@ -215,6 +223,7 @@ export function useConversation(input: {
     cursor.current = { turnId: "", seq: 0 };
     settled.current = new Set();
     setLive(null);
+    resetReveal();
     setLiveTurns([]);
     seenRunning.current = new Set();
     setJobs([]);
@@ -424,6 +433,8 @@ export function useConversation(input: {
          * Once, because the transcript is what the finished turn is then rendered from, and a refetch
          * per poll would reload the whole conversation every second for as long as the tab is open.
          */
+        // Before the history is asked for it: an ended turn's answer still to write out is held live (`useRevealing`).
+        readForReveal(turn);
         if (turn && turn.status !== "running" && !settled.current.has(turn.id)) {
           settled.current.add(turn.id);
           void queryClient.invalidateQueries({ queryKey: ["transcript", sessionId] });
@@ -475,7 +486,7 @@ export function useConversation(input: {
      * a room showed the bubble and nothing else, no working card, no steps, until the page was
      * reloaded. The daemon was reporting the running turn within two seconds the whole time.
      */
-  }, [sessionId, roomChatId, queryClient]);
+  }, [sessionId, roomChatId, queryClient, readForReveal, resetReveal]);
 
   const sendMutation = useMutation({
     mutationFn: (input: {
@@ -576,7 +587,7 @@ export function useConversation(input: {
   );
 
   // One decision, in one place — see `lib/display.ts` for what splitting it in two cost.
-  const { history, live: liveShown } = splitForDisplay(transcript.data?.turns ?? [], live);
+  const { history, live: liveShown } = splitForDisplay(transcript.data?.turns ?? [], live, revealing);
 
   return {
     session: transcript.data?.session ?? null,
@@ -585,6 +596,7 @@ export function useConversation(input: {
     events: [...(transcript.data?.events ?? [])].sort((a, b) => a.at - b.at),
     messages: transcript.data?.messages ?? [],
     liveTurns: roomChatId ? liveTurns : liveShown ? [liveShown] : [],
+    reveals,
     jobs,
     pending,
     startedHere,

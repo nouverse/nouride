@@ -24,15 +24,18 @@ export interface Display {
   live: LiveTurn | null;
 }
 
-export function splitForDisplay(recorded: ChatTurn[], live: LiveTurn | null): Display {
+export function splitForDisplay(recorded: ChatTurn[], live: LiveTurn | null, revealing: string | null = null): Display {
   /**
-   * Live if it is still working, or if the history has not caught up with it yet.
+   * Live if it is still working, or if the history has not caught up with it yet, or if its answer is still being
+   * shown (`revealing`, the turn `LiveTurnView` says it has not finished writing out).
    *
-   * The second half covers the moment between a turn ending and the transcript being refetched —
-   * without it the answer blinks out of existence for a few hundred milliseconds.
+   * The second covers the moment between a turn ending and the transcript being refetched —
+   * without it the answer blinks out of existence for a few hundred milliseconds. The third, an answer that came
+   * whole as the turn ended: the history has every word of it a moment later, and drawn from there it was nothing
+   * and then everything, where every other answer is written out.
    */
   const shown =
-    live && (live.status === "running" || !recorded.some((turn) => turn.id === live.id))
+    live && (live.status === "running" || !recorded.some((turn) => turn.id === live.id) || live.id === revealing)
       ? live
       : null;
 

@@ -67,6 +67,21 @@ describe("a conversation that is working", () => {
     expect(live?.id).toBe("t2");
   });
 
+  test("a finished turn whose answer is still being written out stays live, though the history has it", () => {
+    // Its answer came whole as it ended: the history has every word a moment later, and drawn from there it was
+    // nothing and then everything.
+    const { history, live } = splitForDisplay([turn("t1"), turn("t2")], asLive(turn("t2")), "t2");
+    expect(history.map((t) => t.id)).toEqual(["t1"]);
+    expect(live?.id).toBe("t2");
+  });
+
+  test("and goes to the history once it has been: another turn still being shown does not hold this one", () => {
+    expect(splitForDisplay([turn("t1"), turn("t2")], asLive(turn("t2")), null).live).toBeNull();
+    const held = splitForDisplay([turn("t1"), turn("t2")], asLive(turn("t2")), "t1");
+    expect(held.live).toBeNull();
+    expect(held.history.map((t) => t.id)).toEqual(["t1", "t2"]);
+  });
+
   test("nothing is ever drawn twice", () => {
     const recorded = [turn("t1"), turn("t2")];
     const { history, live } = splitForDisplay(recorded, asLive(turn("t2", "running")));

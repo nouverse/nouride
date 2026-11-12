@@ -287,17 +287,17 @@ function MadePages({ steps }: { steps: TurnStep[] }) {
  * appearing twice.
  *
  * So the text is paced here. It only ever *catches up* — a proportional chase, so a big lump is
- * absorbed in under a second and a trickle is followed immediately — and it snaps to the whole thing
- * the moment the turn is over. Nothing is ever withheld from a finished answer.
+ * absorbed in under a second and a trickle is followed immediately.
+ *
+ * A turn that ends is not cut short: what was not shown yet is written out at the same chase. It snapped to the
+ * whole thing the moment the turn was over, and a model that hands its answer over in one piece as the turn ends
+ * (its calls done, a silence, then every word) was drawn as nothing and then everything. A turn first drawn when it
+ * is already over is drawn whole: nothing is withheld from an answer nobody watched being written.
  */
 function useTypewriter(target: string, live: boolean): string {
   const [shown, setShown] = useState(() => (live ? 0 : target.length));
 
   useEffect(() => {
-    if (!live) {
-      setShown(target.length);
-      return;
-    }
     if (shown >= target.length) {
       // A new turn, or a reply that was replaced by a shorter one (the empty-turn notice). Start over
       // rather than leaving the tail of the last answer on screen.
@@ -312,9 +312,9 @@ function useTypewriter(target: string, live: boolean): string {
       });
     }, 16);
     return () => clearTimeout(frame);
-  }, [target, live, shown]);
+  }, [target, shown]);
 
-  return target.slice(0, live ? shown : target.length);
+  return target.slice(0, shown);
 }
 
 /**
@@ -330,9 +330,15 @@ export function LiveTurnView({
   showPrompt,
   asker,
   onStop,
+  onRevealing,
   motion = "",
 }: {
   turn: LiveTurn;
+  /**
+   * Told, once the turn is over, whether its answer is still being written out, and again when it has been: the
+   * conversation draws the turn live until then (`Conversation.reveals`).
+   */
+  onRevealing?: (turnId: string, on: boolean) => void;
   /** Who asked, on a chat app — see `TurnView`. */
   asker?: string | undefined;
   sessionId: string;
@@ -353,6 +359,14 @@ export function LiveTurnView({
   const { content } = splitThinking(turn.reply);
   const running = turn.status === "running";
   const revealed = useTypewriter(content, running);
+  // Behind only once the turn is over, and said again when its answer has been written out: the conversation holds
+  // an ended turn live until then (`reveals`). At work it is drawn live whatever has been shown, and saying so each
+  // time the text caught up would draw the whole conversation again several times a second.
+  const behind = !running && revealed.length < content.length;
+  useEffect(() => {
+    onRevealing?.(turn.id, behind);
+    return () => onRevealing?.(turn.id, false);
+  }, [turn.id, running, behind, onRevealing]);
 
   return (
     <div className="space-y-3">

@@ -366,6 +366,7 @@ reaches the daemon over HTTP only (`ARCHITECTURE.md` §3).
 | `src/commons/components/floating-chat/` | the chat over every page: its button and card or sheet (`FloatingChat`), what is in it (`FloatingPanel`), the page a message says (`page-open.ts`) |
 | `src/commons/lib/page-link.ts` | `pageInDashboard(href)`: whether a link an agent wrote names a page of this dashboard, read as a browser reads it; `Markdown` opens such a link in place |
 | `src/commons/hooks/use-page-subject.ts` | `usePageSubject("…")`: a page says the one thing it is about, for an agent asked from the floating chat |
+| `src/commons/hooks/use-revealing.ts` | an ended turn held as live while its answer is still being written out: an answer that came whole at the turn's end is written out, not taken by the history with every word at once (`splitForDisplay`, `useTypewriter` in `Turn.tsx`) |
 | `src/commons/hooks/use-page-follows.ts` | the page under the floating chat follows the agent: read again when a call made something with a page (`tool_done.page`) and when the turn ends; on a page that makes a new one, what the agent made is opened in its place |
 | `src/commons/lib/unsaved.ts` | `useUnsaved(holds)`: a page says it holds something written and not saved, so nothing takes the person off it by itself |
 | `src/commons/components/ui/Markdown.tsx` | the deliberately small, HTML-free renderer |
