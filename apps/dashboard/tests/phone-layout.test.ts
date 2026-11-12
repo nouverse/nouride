@@ -52,9 +52,10 @@ describe("the bottom of a page", () => {
     expect(PAGE_BOTTOM.split(" ")).toContain("lg:pb-20");
   });
 
-  test("a page held to the window from a laptop up keeps the page's own margin there, and a phone's room", () => {
+  // It kept the page's own 2rem there while the floating chat's button was small enough to lie over its card's corner.
+  test("a page held to the window from a laptop up ends where a page that scrolls does, and has a phone's room", () => {
     expect(phoneRem(HELD_BOTTOM)).toBe(phoneRem(PAGE_BOTTOM));
-    expect(HELD_BOTTOM.split(" ")).toContain("lg:pb-8");
+    expect(HELD_BOTTOM.split(" ")).toContain("lg:pb-20");
   });
 
   // Skills' Explore runs down the page, on a page held to the window: its last card ended flush with the window's foot,
@@ -101,16 +102,23 @@ describe("the bottom of a page", () => {
   // The floating chat's button stands over the tab bar's right end on every page but Chats, where Home's "+ Chat" stood
   // on Home alone: so every page's foot leaves it the room Home's did.
   test("a page's last card ends above the floating chat's button, not under it; the button stands clear of the tab bar", () => {
-    const place = /const BUTTON_PLACE = "([^"]+)"/.exec(read("commons/components/floating-chat/FloatingChat.tsx"))?.[1] ?? "";
-    // Where the button's foot is, up from the safe area, and its height (`size-12` is 3rem): below a laptop's width.
-    const foot = Number(/(?:^| )bottom-\[calc\((\d+(?:\.\d+)?)rem\+env\(safe-area-inset-bottom\)\)\](?: |$)/.exec(place)?.[1] ?? Number.NaN);
-    expect(place.split(" ")).toContain("size-12");
+    const place = (/const BUTTON_PLACE = "([^"]+)"/.exec(read("commons/components/floating-chat/FloatingChat.tsx"))?.[1] ?? "").split(" ");
+    // Where the button's foot is, up from the safe area, below a laptop's width; and its height at every width
+    // (`size-14` is 3.5rem: it was 2.75rem from a laptop up, and too small to find).
+    const foot = Number(/^bottom-\[calc\((\d+(?:\.\d+)?)rem\+env\(safe-area-inset-bottom\)\)\]$/.exec(place.find((word) => word.startsWith("bottom-")) ?? "")?.[1] ?? Number.NaN);
+    const tall = Number(/^size-(\d+)$/.exec(place.find((word) => word.startsWith("size-")) ?? "")?.[1] ?? Number.NaN) / 4;
+    expect(tall).toBeGreaterThanOrEqual(3.5);
+    expect(place.some((word) => /^(sm|md|lg|xl):size-/.test(word))).toBe(false);
     expect(foot).toBeGreaterThan(BAR_REM);
     // The last card's foot against the button's top: 2rem of air or more, as cards have between them and the bar.
-    expect(phoneRem(PAGE_BOTTOM)).toBeGreaterThanOrEqual(foot + 3 + 2);
-    // From a laptop up it is in the window's corner, under where a page that scrolls ends: 2.75rem tall, 0.625rem up.
-    expect(place.split(" ")).toEqual(expect.arrayContaining(["lg:bottom-2.5", "lg:size-11"]));
-    expect(PAGE_BOTTOM.split(" ")).toContain("lg:pb-20");
+    expect(phoneRem(PAGE_BOTTOM)).toBeGreaterThanOrEqual(foot + tall + 2);
+    // From a laptop up it is in the window's corner, and a page's last card ends over it: one that scrolls, and one
+    // held to the window, whose card's last row would lie under it.
+    const corner = Number(/^lg:bottom-(\d+(?:\.\d+)?)$/.exec(place.find((word) => word.startsWith("lg:bottom-")) ?? "")?.[1] ?? Number.NaN) / 4;
+    for (const bottom of [PAGE_BOTTOM, HELD_BOTTOM]) {
+      const room = Number(/(?:^| )lg:pb-(\d+)(?: |$)/.exec(bottom)?.[1] ?? Number.NaN) / 4;
+      expect(room).toBeGreaterThanOrEqual(corner + tall);
+    }
   });
 
   test("a toast stands above the tab bar on a phone, where it lay over the tabs and took their taps", () => {

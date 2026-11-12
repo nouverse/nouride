@@ -2,12 +2,16 @@
  * The head of an automation's page: the way back to the list, its name (written where it stands), how it starts and
  * where it reports in a line, and what a person does with the whole of it: turn it on or off, run it now, delete it.
  * One an agent proposed is turned on or discarded here instead; it has never run, so it has no switch and no Run now.
+ * And the button that asks the orchestrator, as the list has: for a change to this automation, or for a new one on the
+ * page that makes one. It opens the chat over the page with the request written, and sends nothing.
  */
 
 import { useMutation } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft, Ellipsis, Play, Trash2 } from "lucide-react";
 import type { AutomationSummary, RunNowOutcome } from "@nouride/wire";
+import { AskAgentButton } from "@/commons/components/agents/AskAgentButton";
+import { automationAsk, PAGE_ASKS } from "@/commons/components/agents/page-asks";
 import { ProposalBar } from "@/commons/components/jobs/ProposalBar";
 import { useConfirm } from "@/commons/components/ui/confirm";
 import { Details } from "@/commons/components/ui/Details";
@@ -168,6 +172,7 @@ export function AutomationHeader({
           </p>
         </div>
 
+        <AskAgentButton {...(automation ? automationAsk(automation.name) : PAGE_ASKS.automations)} variant="soft" />
         {proposal && automation ? (
           <div className="flex flex-wrap items-center gap-2">
             <Tag tone="needs">Suggested by {agentName(proposal.by)}</Tag>

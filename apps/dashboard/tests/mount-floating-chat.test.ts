@@ -12,6 +12,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { agentAtOpen, agentOfPage } from "@/commons/lib/floating-chat";
 import { sectionTitle } from "@/commons/components/floating-chat/page-open";
 import { DAILY, SETTINGS } from "@/commons/components/layout/nav";
+import { conversationOf } from "@/commons/components/floating-chat/FloatingPanel";
 import { sectionTabs } from "@/commons/components/layout/SectionTabs";
 import { answer, dom, recordPosts, renderPage, type, useMountHarness, WIRE } from "./mount-harness.ts";
 import { AT_REST, boxIn, card, FakeEventSource, floatButton, LAST_AGENT_KEY, pressKey, recordRequests, sendIn, sheet } from "./floating-chat-harness.ts";
@@ -51,6 +52,7 @@ async function open(host: HTMLElement, panel: () => HTMLElement | null = card): 
   await eventually(() => boxIn(panel()) !== null, 3_000, "the conversation in the panel");
 }
 const link = () => card()?.querySelector('a[aria-label="Open this conversation in Chats"]') as HTMLAnchorElement | null;
+const newChat = () => card()?.querySelector('button[aria-label^="Start a new conversation with "]') as HTMLButtonElement | null;
 const sent = (posts: { path: string; body: unknown }[]) => posts.filter((post) => post.path === "/chat/send").map((post) => post.body);
 const reply = (id: string, prompt: string, words: string) => ({
   status: 200,
@@ -385,6 +387,76 @@ describe("the conversation in it", () => {
     } finally {
       posted.restore();
     }
+  });
+
+  test("New chat in its bar leaves the newest conversation for a new one with the same agent, and the panel stays on the one a message then starts", async () => {
+    answer(AT_REST);
+    const posted = recordPosts({ "/chat/send": { status: 200, body: { sessionId: "ses_new", chatId: "web-9", messageId: "msg_1", agentId: "nouva" } } });
+    try {
+      await renderPage("/skills", async (host) => {
+        await open(host);
+        // On the person's newest conversation with Nouva, as ever.
+        await eventually(() => card()!.textContent?.includes("is the disk full?") === true, 3_000, "the transcript");
+        expect(link()!.getAttribute("href")).toBe("/dashboard/chat/ses_1");
+        expect(newChat()!.getAttribute("aria-label")).toBe("Start a new conversation with Nouva");
+        newChat()!.click();
+        // A new one: nothing of the old is drawn, and there is no second one to ask for.
+        await eventually(() => card()!.textContent?.includes("is the disk full?") === false && boxIn(card()) !== null, 3_000, "an empty conversation");
+        expect(link()!.getAttribute("href")).toBe("/dashboard/chat?agent=nouva");
+        expect(newChat()!.disabled).toBe(true);
+        type(boxIn(card())!, "something else");
+        await eventually(() => sendIn(card())?.disabled === false, 2_000, "send enabled");
+        sendIn(card())!.click();
+        // The list still names the old one (here it never catches up): the panel is on the one it started.
+        await eventually(() => link()?.getAttribute("href") === "/dashboard/chat/ses_new", 3_000, "the conversation it started");
+        expect(newChat()!.disabled).toBe(false);
+        floatButton(host)!.click();
+        await eventually(() => card() === null, 2_000, "closed");
+        await open(host);
+        expect(link()!.getAttribute("href")).toBe("/dashboard/chat/ses_new");
+      });
+      // To the agent, and not into the conversation it left.
+      expect(sent(posted.posts)).toEqual([{ text: "something else", agent: "nouva", page: { path: "/dashboard/skills", title: "Skills Workshop" } }]);
+    } finally {
+      posted.restore();
+    }
+  });
+
+  test("a new chat asked for and left unwritten is forgotten: opened again, or back from another agent, the panel is on the newest one", async () => {
+    answer(AT_REST);
+    await renderPage("/skills", async (host) => {
+      await open(host);
+      newChat()!.click();
+      await eventually(() => link()?.getAttribute("href") === "/dashboard/chat?agent=nouva", 3_000, "a new chat");
+      floatButton(host)!.click();
+      await eventually(() => card() === null, 2_000, "closed");
+      await open(host);
+      expect(link()!.getAttribute("href")).toBe("/dashboard/chat/ses_1");
+      // Asked for again, then another agent picked and Nouva picked back.
+      newChat()!.click();
+      await eventually(() => link()?.getAttribute("href") === "/dashboard/chat?agent=nouva", 3_000, "a new chat again");
+      for (const agent of ["Nix", "Nouva"]) {
+        (card()!.querySelector('button[aria-label$="Pick another agent"]') as HTMLButtonElement).click();
+        await drawn();
+        ([...card()!.querySelectorAll("li button")].find((row) => row.textContent?.startsWith(agent)) as HTMLButtonElement).click();
+        await eventually(() => boxIn(card())?.getAttribute("placeholder") === `Message ${agent}…`, 3_000, `the conversation with ${agent}`);
+      }
+      expect(link()!.getAttribute("href")).toBe("/dashboard/chat/ses_1");
+    });
+  });
+
+  test("which conversation it is on: the list's, and one a message here just started while the list has not caught up", () => {
+    expect(conversationOf(undefined, undefined)).toBeUndefined();
+    expect(conversationOf("ses_1", undefined)).toBe("ses_1");
+    // Started where the agent had none, and the list does not know it yet.
+    expect(conversationOf(undefined, { id: "ses_new" })).toBe("ses_new");
+    // Started over an older one, which the list still names.
+    expect(conversationOf("ses_1", { id: "ses_new", over: "ses_1" })).toBe("ses_new");
+    // The list caught up, or names a newer one started elsewhere since: the list's.
+    expect(conversationOf("ses_new", { id: "ses_new", over: "ses_1" })).toBe("ses_new");
+    expect(conversationOf("ses_later", { id: "ses_new", over: "ses_1" })).toBe("ses_later");
+    // The one it started is gone and the agent has none again: not a conversation that no longer exists.
+    expect(conversationOf(undefined, { id: "ses_new", over: "ses_1" })).toBeUndefined();
   });
 
   test("the page a message names is the one on screen as it is sent: a page that is gone takes what it was about with it", async () => {

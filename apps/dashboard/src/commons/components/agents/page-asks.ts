@@ -31,3 +31,6 @@ export const PAGE_ASKS = {
   box: { task: "how the box is doing", message: "How is my box doing? Check its disk, its memory and its updates, and tell me in plain words." },
   office: { task: "what everyone is doing", message: "What is each of my agents doing right now? A line each." },
 } as const satisfies Record<string, PageAsk>;
+
+/** The same on one automation's page: the request names the automation, so the agent knows which one is meant. */
+export const automationAsk = (name: string): PageAsk => ({ task: "to change it", message: `Change my automation "${name}": …` });

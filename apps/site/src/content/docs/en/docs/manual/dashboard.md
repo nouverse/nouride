@@ -152,6 +152,9 @@ still in the box when you open it again.
   the one its row on Chats opens, and starts one when there is none. What you send in the panel is on Chats and the
   other way round, with the agent's steps, its files, the approvals it waits on and **Stop**, as on Chats. The arrows
   at the top of the panel open the same conversation on the Chats page. Rooms and groups stay on Chats.
+- **A new conversation.** The speech bubble with a plus, at the top of the panel, starts a new conversation with the
+  agent the panel is on. Your first message begins it, and the panel stays on it. If you close the panel without
+  writing anything, it opens on your newest conversation again.
 - **The agent knows which page you have open.** Each message from the panel tells the agent the page it was written
   from: what the page is called, its address, and what it is about where it is about one thing, such as a mission or
   an agent. So "what is this one waiting for?" asked on a mission's page is about that mission. A message written on
@@ -163,7 +166,8 @@ nothing.
 ## Ask your orchestrator, from any page
 
 Most pages carry a button in their header, **Ask** and your orchestrator's name: *Ask Nouva to create an agent* on
-Agents, *to make an automation* on Automations, *to add a model* on Models, and so on.
+Agents, *to make an automation* on Automations, *to change it* on one automation's page, *to add a model* on Models,
+and so on.
 It opens the chat over the page you are on, with your orchestrator, and puts a request for that page in the box, with
 a gap (…) for what you want. You stay on the page. Finish the request and send it: nothing is sent until you do, and
 the agent still asks before anything risky. If you had already written something in the box, the request is added
@@ -183,8 +187,8 @@ does. A search box looks in the names, the agents and what the steps say, and on
 list to **Scheduled**, **Webhooks** or **Manual**. An automation an agent proposed carries **Turn on** and
 **Discard**. **New automation** opens an empty page to fill in, or ask an agent for one in a chat.
 
-**One automation's page** has its name at the top (press it to rename), the switch, **Run now**, and **Delete** in
-the menu beside them. Under it:
+**One automation's page** has its name at the top (press it to rename), **Ask Nouva to change it**, the switch,
+**Run now**, and **Delete** in the menu beside them. Under it:
 
 - **Start**: when it runs, said back to you in words as you set it. A webhook shows its address with a button to copy
   it, an example of how to call it, **Send a test**, and **New address** for when the old one got out.

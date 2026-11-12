@@ -12,7 +12,7 @@ import { SearchInput } from "./SearchInput";
 /**
  * The space under a page's last card. On a phone and a tablet the tab bar floats over the page's foot (`TabBar`), with
  * the browser's toolbar and the home indicator under it, and the floating chat's button stands over the bar's right end
- * (`FloatingChat`): 11rem past the safe area, the button's top at 8.5rem and room to see the last card clear of it.
+ * (`FloatingChat`): 11rem past the safe area, the button's top at 9rem and room to see the last card clear of it.
  * It was 7rem, and the last line of a page sat a finger's width above the bar, read as under it. From a laptop up, a
  * page that scrolls ends 5rem above the window's foot, over the button in its corner, where it ended 2rem above the
  * foot and the last card looked cut by the window's edge.
@@ -20,10 +20,12 @@ import { SearchInput } from "./SearchInput";
 export const PAGE_BOTTOM = "pb-[calc(11rem+env(safe-area-inset-bottom))] lg:pb-20";
 
 /**
- * The same under a page held to the window from a laptop up (`fillsViewport`, System Logs, Secrets): nothing scrolls
- * under its last card there, the card's own list does, so it keeps the 2rem the page has on its other sides.
+ * The same under a page held to the window from a laptop up (`fillsViewport`, System Logs, Secrets): its card ends
+ * 5rem above the window's foot too, over the floating chat's button, whose top is at 4.5rem. It kept the 2rem the page
+ * has on its other sides while the button was small enough to lie over the card's rounded corner; a button a person can
+ * find would lie over the right end of the card's last row.
  */
-export const HELD_BOTTOM = "pb-[calc(11rem+env(safe-area-inset-bottom))] lg:pb-8";
+export const HELD_BOTTOM = "pb-[calc(11rem+env(safe-area-inset-bottom))] lg:pb-20";
 
 /**
  * A page laid out to fill the window (`staticData: { fillsViewport: true }`): its root, a column the list takes the rest
@@ -39,14 +41,14 @@ export const HELD_BOTTOM = "pb-[calc(11rem+env(safe-area-inset-bottom))] lg:pb-8
 // flush with the window's foot. The foot's margins take back its height and the gap before it, so it takes nothing
 // from a list that fills the window: it lies in the layout's padding there, and under the last child where the page
 // scrolls.
-const HELD_FOOT = "lg:after:block lg:after:h-8 lg:after:shrink-0 lg:after:-mt-6 lg:after:-mb-8 lg:after:content-['']";
+const HELD_FOOT = "lg:after:block lg:after:h-20 lg:after:shrink-0 lg:after:-mt-6 lg:after:-mb-20 lg:after:content-['']";
 export const FILL_PAGE = `flex min-h-0 flex-1 flex-col gap-6 [&>*]:shrink-0 *:animate-fade ${HELD_FOOT}`;
 
 /**
  * Under a part of a held page that runs down the page as a document does (Skills' Explore): with the held page's own
  * foot, the room a page that scrolls ends with (`PAGE_BOTTOM`).
  */
-export const RUNS_DOWN = "lg:pb-12";
+export const RUNS_DOWN = "lg:pb-0";
 
 /** The bounded, scrolling region on its own — for a list that is not one card, like Schedule's jobs. */
 export function ScrollArea({

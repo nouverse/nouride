@@ -158,6 +158,9 @@ ada di kotaknya waktu kamu buka lagi.
   dengannya, yang dibuka barisnya di Chats, dan memulai yang baru kalau belum ada. Yang kamu kirim di panel ada di
   Chats, begitu juga sebaliknya, lengkap dengan langkah agent, file-nya, izin yang ia tunggu, dan **Stop**, seperti di
   Chats. Tombol panah di atas panel membuka percakapan yang sama di halaman Chats. Room dan grup tetap di Chats.
+- **Percakapan baru.** Ikon balon chat dengan tanda plus, di atas panel, memulai percakapan baru dengan agent yang
+  sedang dipilih di panel. Pesan pertamamu yang memulainya, dan panel tetap di percakapan itu. Kalau panel ditutup
+  tanpa menulis apa-apa, ia terbuka lagi di percakapan terbarumu.
 - **Agent tahu halaman mana yang sedang kamu buka.** Tiap pesan dari panel memberi tahu agent halaman tempat pesan itu
   ditulis: nama halamannya, alamatnya, dan tentang apa halaman itu kalau memang tentang satu hal, misalnya sebuah misi
   atau sebuah agent. Jadi "yang ini lagi nunggu apa?" yang ditanyakan di halaman sebuah misi artinya misi itu. Pesan
@@ -169,7 +172,7 @@ server.
 ## Tanya orchestrator dari halaman mana pun
 
 Kebanyakan halaman punya tombol di header-nya, **Ask** dan nama orchestrator-mu: *Ask Nouva to create an agent* di
-Agents, *to make an automation* di Automations, *to add a model* di Models, dan seterusnya. Tombol itu membuka chat di atas halaman yang sedang kamu buka, dengan orchestrator-mu, dan menaruh
+Agents, *to make an automation* di Automations, *to change it* di halaman satu automation, *to add a model* di Models, dan seterusnya. Tombol itu membuka chat di atas halaman yang sedang kamu buka, dengan orchestrator-mu, dan menaruh
 permintaan untuk halaman itu di kotaknya, dengan bagian kosong (…) untuk yang kamu mau. Kamu tetap di halaman itu.
 Lengkapi lalu kirim: tidak ada yang terkirim sebelum kamu menekan kirim, dan agent tetap minta izin untuk hal yang
 berisiko. Kalau kamu sudah menulis sesuatu di kotaknya, permintaannya ditambahkan di bawahnya. Tombolnya ada untuk
@@ -189,8 +192,8 @@ pencarian mencari di nama, agent, dan isi langkahnya, dan satu dropdown, **Start
 **Scheduled**, **Webhooks**, atau **Manual**. Automation yang diusulkan agent membawa tombol **Turn on** dan
 **Discard**. **New automation** membuka halaman kosong untuk diisi, atau minta saja ke agent lewat chat.
 
-**Halaman satu automation** berisi namanya di atas (tekan untuk mengganti nama), tombol nyala atau jeda, **Run now**,
-dan **Delete** di menu di sebelahnya. Di bawahnya:
+**Halaman satu automation** berisi namanya di atas (tekan untuk mengganti nama), **Ask Nouva to change it**, tombol
+nyala atau jeda, **Run now**, dan **Delete** di menu di sebelahnya. Di bawahnya:
 
 - **Start**: kapan ia jalan, ditulis ulang dalam kata-kata selagi kamu mengaturnya. Webhook menampilkan alamatnya
   dengan tombol salin, contoh cara memanggilnya, **Send a test**, dan **New address** kalau alamat lamanya bocor.

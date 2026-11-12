@@ -7,6 +7,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { PAGE_ASKS } from "@/commons/components/agents/page-asks";
 import { sectionTitle } from "@/commons/components/floating-chat/page-open";
 import { answer, dom, recordPosts, renderPage, type, useMountHarness } from "./mount-harness.ts";
 import { AT_REST, boxIn, card, floatButton, LAST_AGENT_KEY, sendIn } from "./floating-chat-harness.ts";
@@ -58,17 +59,50 @@ describe("the page a message from the floating chat is sent with", () => {
   });
 });
 
+describe("Ask on an automation's own page, as on the list", () => {
+  const ask = (host: HTMLElement, task: string) => host.querySelector(`button[title="Ask Nouva ${task}"]`) as HTMLButtonElement | null;
+
+  /** The Ask button of the page at `path` pressed: what the chat's box then holds, and what was sent. */
+  async function asked(path: string, task: string): Promise<{ box: string; sent: unknown[] }> {
+    answer(AT_REST);
+    const posted = recordPosts({ "/chat/send": { status: 200, body: { sessionId: "ses_1", chatId: "web-1", messageId: "msg_9", agentId: "nouva" } } });
+    try {
+      let box = "";
+      await renderPage(path, async (host) => {
+        await eventually(() => ask(host, task) !== null, 4_000, `Ask Nouva ${task}`);
+        ask(host, task)!.click();
+        await eventually(() => (boxIn(card())?.value ?? "") !== "", 3_000, "the request in the box");
+        box = boxIn(card())!.value;
+      });
+      return { box, sent: sent(posted.posts) };
+    } finally {
+      posted.restore();
+    }
+  }
+
+  test("one automation's page asks for a change to it, by its name, in the chat over the page; nothing is sent", async () => {
+    expect(await asked("/automations/cron_1", "to change it")).toEqual({ box: 'Change my automation "Shop health check": …', sent: [] });
+  });
+
+  test("the page that makes one asks for a new one, in the list's own words", async () => {
+    expect(await asked("/automations/new", PAGE_ASKS.automations.task)).toEqual({ box: PAGE_ASKS.automations.message, sent: [] });
+  });
+});
+
 test("the bar that saves ends short of the chat's button below a laptop's width, and of its open card from a laptop up", () => {
   const bar = readFileSync(join(import.meta.dir, "../src/modules/automations/components/SaveBar.tsx"), "utf8");
   const chat = readFileSync(join(import.meta.dir, "../src/commons/components/floating-chat/FloatingChat.tsx"), "utf8");
-  // The chat's own places, as it writes them: its button 3rem wide, 1rem from the right, over the tab bar; its card 25rem wide.
-  expect(chat).toContain("right-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] size-12");
+  // The chat's own places, as it writes them: its button 3.5rem wide, 1rem from the right, over the tab bar; its card
+  // 25rem wide, 1rem from the right too.
+  expect(chat).toContain('BUTTON_PLACE = "right-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] size-14 ');
+  expect(chat).toContain('"right-4 bottom-[calc(9.5rem+env(safe-area-inset-bottom))]');
   expect(chat).toContain("w-[25rem]");
+  expect(chat).not.toContain("lg:right-");
   const classes = /aria-label="Unsaved changes" className="([^"]+)"/.exec(bar)?.[1]?.split(" ") ?? [];
-  // Beside the button, at its height: 4rem of room at its right is the button's 3rem and the 1rem it stands in from the edge.
-  expect(classes).toEqual(expect.arrayContaining(["sticky", "bottom-[calc(5.5rem+env(safe-area-inset-bottom))]", "max-lg:mr-16"]));
-  // Left of the card: its 25rem and the 0.625rem it stands in, less the page's own 2rem of padding, and a gap.
-  expect(classes).toEqual(expect.arrayContaining(["lg:bottom-6", "lg:mr-[24.75rem]"]));
+  // Beside the button, at its height: 4.5rem of room at its right is the button's 3.5rem and the 1rem it stands in from the edge.
+  expect(classes).toEqual(expect.arrayContaining(["sticky", "bottom-[calc(5.5rem+env(safe-area-inset-bottom))]", "max-lg:mr-[4.5rem]"]));
+  // Left of the card: its 25rem and the 1rem it stands in, less the page's own 2rem of padding, and 1rem between them.
+  expect(classes).toEqual(expect.arrayContaining(["lg:bottom-6", "lg:mr-[25rem]"]));
   // Not centred on the page, where its right end would lie under the card.
   expect(classes).not.toContain("mx-auto");
 });

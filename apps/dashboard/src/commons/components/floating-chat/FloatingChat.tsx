@@ -22,22 +22,22 @@ import { useWide } from "@/commons/hooks/use-wide";
 import { agentAtOpen, agentOfPage, closeFloatingChat, openFloatingChat, useFloatingChat } from "@/commons/lib/floating-chat";
 import { canWrite, useMe } from "@/commons/lib/session";
 import { cn } from "@/commons/lib/utils";
-import { FloatingPanel } from "./FloatingPanel";
+import { FloatingPanel, type Started } from "./FloatingPanel";
 
 /** Where this browser keeps the agent the floating chat was last on. */
 const LAST_AGENT_KEY = "nouride-floating-chat-agent";
 const isString = (value: unknown): value is string => typeof value === "string";
 
 /**
- * Where the button stands. Below a laptop's width: over the tab bar, clear of it, where Home's "+ Chat" stood, and a
- * page's foot leaves it room (`PAGE_BOTTOM`). From a laptop up: in the window's corner, small enough that of a card held
- * to the window (`HELD_BOTTOM`) it lies over the rounded corner and nothing in it.
+ * Where the button stands, 3.5rem across: it was 2.75rem in the corner, and too small to find or to hit. Below a
+ * laptop's width: over the tab bar, clear of it, where Home's "+ Chat" stood. From a laptop up: in the window's corner,
+ * 1rem in. Every page's foot leaves it room (`PAGE_BOTTOM`), a page held to the window too, so it lies over no card.
  */
-const BUTTON_PLACE = "right-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] size-12 lg:right-2.5 lg:bottom-2.5 lg:size-11";
+const BUTTON_PLACE = "right-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] size-14 lg:bottom-4";
 
 /** The card, from a tablet's width up: over the button, about 400 by 620, and never taller than the window. */
 const CARD_PLACE =
-  "right-4 bottom-[calc(9rem+env(safe-area-inset-bottom))] h-[38.75rem] max-h-[calc(100dvh-10rem-env(safe-area-inset-bottom))] w-[25rem] max-w-[calc(100vw-2rem)] lg:right-2.5 lg:bottom-16 lg:max-h-[calc(100dvh-5rem)]";
+  "right-4 bottom-[calc(9.5rem+env(safe-area-inset-bottom))] h-[38.75rem] max-h-[calc(100dvh-10.5rem-env(safe-area-inset-bottom))] w-[25rem] max-w-[calc(100vw-2rem)] lg:bottom-20 lg:max-h-[calc(100dvh-6rem)]";
 
 export function FloatingChat({ pathname }: { pathname: string }) {
   const me = useMe();
@@ -48,7 +48,7 @@ export function FloatingChat({ pathname }: { pathname: string }) {
   /** What is written in the box and not sent: kept here, so putting the panel away does not throw it away. */
   const box = useState("");
   /** The conversations a first message in the panel started, by agent: kept here for the same reason (`FloatingPanel`). */
-  const started = useState<Record<string, string>>({});
+  const started = useState<Record<string, Started>>({});
   const button = useRef<HTMLButtonElement>(null);
 
   // Gone with the shell around it (Chats, a sign-out): closed, so it is not open again on the page after.
@@ -88,14 +88,14 @@ export function FloatingChat({ pathname }: { pathname: string }) {
       >
         {look ? (
           <>
-            <AgentAvatar look={look} name={name} size="xs" className="size-9 rounded-full lg:size-8" />
+            <AgentAvatar look={look} name={name} size="xs" className="size-11 rounded-full" />
             {/* The face says who; the mark on its corner says what the button is. */}
-            <span aria-hidden="true" className="absolute -right-0.5 -bottom-0.5 grid size-5 place-items-center rounded-full bg-secondary text-secondary-content ring-2 ring-base-100">
-              <MessageCircle size={11} />
+            <span aria-hidden="true" className="absolute -right-0.5 -bottom-0.5 grid size-6 place-items-center rounded-full bg-secondary text-secondary-content ring-2 ring-base-100">
+              <MessageCircle size={13} />
             </span>
           </>
         ) : (
-          <MessageCircle size={20} aria-hidden="true" />
+          <MessageCircle size={24} aria-hidden="true" />
         )}
       </button>
 

@@ -6,8 +6,8 @@
  * It stands above a phone's tab bar, where a toast stands too: while it is drawn, the toasts are lifted over it
  * (`--toast-lift`), so an Undo never lies on Save. And it keeps clear of the chat that floats over every page
  * (`FloatingChat`): below a laptop's width it ends short of the chat's button, which stands over the tab bar's right
- * end, and from a laptop up it ends short of where the open chat's card is, 25rem wide at the window's right edge, so
- * Save is never under either.
+ * end, and from a laptop up it ends short of where the open chat's card is, 25rem wide and 1rem in from the window's
+ * right edge, so Save is never under either.
  */
 
 import { useEffect, useRef } from "react";
@@ -50,7 +50,7 @@ export function SaveBar({
   const refused = error ? failureWords(error) : null;
 
   return (
-    <div ref={bar} role="region" aria-label="Unsaved changes" className="sticky bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-20 flex w-auto max-w-2xl flex-wrap items-center gap-x-4 gap-y-2 rounded-[22px] border border-base-content/[0.08] bg-base-100 px-4 py-3 shadow-xl animate-enter max-lg:mr-16 lg:bottom-6 lg:mr-[24.75rem]">
+    <div ref={bar} role="region" aria-label="Unsaved changes" className="sticky bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-20 flex w-auto max-w-2xl flex-wrap items-center gap-x-4 gap-y-2 rounded-[22px] border border-base-content/[0.08] bg-base-100 px-4 py-3 shadow-xl animate-enter max-lg:mr-[4.5rem] lg:bottom-6 lg:mr-[25rem]">
       <div className="min-w-0 flex-[1_1_14rem] space-y-1 text-sm">
         {refused ? (
           <div role="alert" className="space-y-1 text-error">

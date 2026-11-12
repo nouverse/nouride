@@ -409,6 +409,15 @@
 }
 
 @layer base {
+  /* What can be pressed shows the hand. Tailwind 4 leaves a button the arrow, and daisyUI gives the hand to `.btn`
+     alone: a card, a chip or a round button that is a `<button>` of its own looked like nothing could be done with it
+     (the floating chat's button, the owner). In the base layer, so a class that says a cursor (`cursor-grab`) wins. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary {
+    cursor: pointer;
+  }
+
   /* Headings in Fredoka at its one weight: a page's `font-bold` on one is drawn as 500 rather than emboldened. */
   h1,
   h2,
