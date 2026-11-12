@@ -136,10 +136,11 @@ jobs:
           echo "bb766f710eef8ede859c18578c72c327597cd4c8a85b06001b1f3843c6019386  $RUNNER_TEMP/gh.tar.gz" | sha256sum -c -
           tar -xzf "$RUNNER_TEMP/gh.tar.gz" -C "$RUNNER_TEMP"
           echo "$RUNNER_TEMP/gh_${v}_linux_amd64/bin" >> "$GITHUB_PATH"
-      # Whether ci.yml already passed on this exact commit. A tag is cut from a commit that was just
-      # pushed to main and tested there; running the whole suite again was the release's longest job
-      # after the builds, for an answer already known. Anything else — a dispatch, a commit CI skipped
-      # — still runs `verify`.
+      # Whether the whole suite already passed on this exact commit: ci.yml's `verify`, which runs when the suite is
+      # asked for on a branch (`gh workflow run ci.yml --ref <branch>`), once a release, before its tag. Running it
+      # again here was the release's longest job after the builds, for an answer already known. A push's `checks`
+      # are not that answer: on a commit the suite was never asked for, `verify` below runs it before anything is
+      # built.
       #
       # Each job by its own conclusion, `verify-private` passed rather than skipped: a green run that did not run it (a
       # run before the job existed, or `main`'s, which skips what the release branch's run passed) proves nothing about
@@ -153,7 +154,7 @@ jobs:
             | while read -r run; do gh run view "${run}" --repo "${GITHUB_REPOSITORY}" --json jobs --jq '.jobs[] | select(.conclusion == "success") | .name' 2>/dev/null; done || true)
           if printf '%s\n' "${passed}" | grep -qx verify; then
             echo "ci_green=yes" >> "$GITHUB_OUTPUT"
-            echo "::notice::ci.yml already passed on ${GITHUB_SHA}; verify is skipped."
+            echo "::notice::ci.yml's verify, the whole suite, already passed on ${GITHUB_SHA}; it is skipped here."
           else
             echo "ci_green=no" >> "$GITHUB_OUTPUT"
           fi
@@ -691,7 +692,7 @@ jobs:
     permissions:
       contents: write # upload assets to the release
     needs: [verify, verify-private, guard-visibility]
-    # `verify` is skipped when CI already passed on this commit; skipped is as good as passed here. And skipped with
+    # `verify` is skipped when ci.yml's passed on this commit; skipped is as good as passed here. And skipped with
     # nothing planned — a dispatch with no SUBMODULE_TOKEN, every row needing it — as an empty matrix fails the job.
     if: ${{ !cancelled() && needs.guard-visibility.result == 'success' && needs.guard-visibility.outputs.binaries != '[]' && (needs.verify.result == 'success' || needs.verify.result == 'skipped') && github.repository_owner == 'nouverse' }}
     # On the runner CI_RUNNER names, as every job is. GitHub's own runners were tried for this job in 0.7.21's rehearsal

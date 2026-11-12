@@ -12,10 +12,12 @@ export const missionsApi = {
   /**
    * Sorted by the daemon: needs you first, then working, then the rest, newest first within each. 501 without missions.
    * `days`: how far back the ended ones go (0.8.8) — the daemon lists a week unless asked, and a month at most.
+   * `whose`: the reader's own unless said; `everyone`, one person's (`person:<key>`) or nobody's (`unknown`), an
+   * admin's alone to ask. `elsewhere`: for an admin reading their own, how many more are other people's or nobody's.
    */
-  missions: (agent?: string, days?: number) => {
-    const query = new URLSearchParams({ ...(agent ? { agent } : {}), ...(days ? { days: String(days) } : {}) }).toString();
-    return request<{ missions: MissionView[] }>(`${control}/missions${query ? `?${query}` : ""}`);
+  missions: (agent?: string, days?: number, whose = "mine") => {
+    const query = new URLSearchParams({ ...(agent ? { agent } : {}), ...(days ? { days: String(days) } : {}), ...(whose !== "mine" ? { whose } : {}) }).toString();
+    return request<{ missions: MissionView[]; elsewhere?: number }>(`${control}/missions${query ? `?${query}` : ""}`);
   },
 
   mission: (id: string) => request<MissionDetail>(`${control}/missions/${encodeURIComponent(id)}`),

@@ -97,6 +97,18 @@ export function findPerson(
 }
 
 /**
+ * Whether an owner's identity (`web:<account id>`, `telegram:814…`, as an automation keeps whose it is) is this sender:
+ * the id they write from, or another id of the person People says they are. Nobody's is no sender's.
+ */
+export function senderIsOwner(people: readonly Person[], sender: Pick<MessageEnvelope, "gatewayId" | "senderId">, owner: string | null | undefined): boolean {
+  if (!owner) return false;
+  const who = { gatewayId: sender.gatewayId, senderId: sender.senderId };
+  if (idFormsFor(who).includes(owner)) return true;
+  const person = people.find((candidate) => idsOf(candidate).some((id) => personIdMatches(id, who)));
+  return person !== undefined && idsOf(person).includes(owner);
+}
+
+/**
  * What a sender is called wherever the model reads their words: their `[[people]]` name when they are one of the
  * install's people — on every account they write from — and what the platform calls them otherwise. One person on
  * two accounts, or under a nickname like `~`, reads as one person, and as the person the system prompt names.

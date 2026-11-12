@@ -437,7 +437,7 @@ punya percakapan sendiri. Operator atau viewer tidak pernah melihat milik orang 
 link-nya. Admin memilih chat siapa lewat dropdown di sebelah kolom cari, di daftar dan di History: **Mine** (bawaannya),
 **Everyone**, yang menampilkan semua percakapan dipisah per orang, lalu yang dikatakan jadwal sendirian, lalu chat
 pribadi orang yang belum ada di People, satu orang (ketik sebagian namanya untuk mencarinya), atau **Not known**. Namamu
-sendiri tidak ada di daftar itu: **Mine** memang sudah milikmu (0.8.33). Percakapan jadwal dan mission belum dipisah per orang: semua orang tetap melihatnya seperti sebelumnya.
+sendiri tidak ada di daftar itu: **Mine** memang sudah milikmu (0.8.33). Percakapan milik sebuah automation dan milik sebuah misi mengikuti automation dan misinya (0.8.35): yang melihatnya bisa membaca percakapannya, yang lain tidak.
 
 **Percakapan terbuka di pesan terbarunya** dan tetap di situ selama jawaban ditulis. Scroll ke atas untuk membaca, dan
 posisinya tetap di tempat kamu berhenti; panah kecil di kaki percakapan membawamu kembali ke pesan terbaru. Mengirim

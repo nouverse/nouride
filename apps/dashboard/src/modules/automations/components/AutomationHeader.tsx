@@ -4,6 +4,8 @@
  * One an agent proposed is turned on or discarded here instead; it has never run, so it has no switch and no Run now.
  * And the button that asks the orchestrator, as the list has: for a change to this automation, or for a new one on the
  * page that makes one. It opens the chat over the page with the request written, and sends nothing.
+ *
+ * One the reader only reads has none of these: a line under its name says whose it is and why it is on their page.
  */
 
 import { useMutation } from "@tanstack/react-query";
@@ -13,6 +15,7 @@ import type { AutomationSummary, RunNowOutcome } from "@nouride/wire";
 import { AskAgentButton } from "@/commons/components/agents/AskAgentButton";
 import { automationAsk, PAGE_ASKS } from "@/commons/components/agents/page-asks";
 import { ProposalBar } from "@/commons/components/jobs/ProposalBar";
+import { ReadOnlyNote } from "@/commons/components/people/ReadOnlyNote";
 import { useConfirm } from "@/commons/components/ui/confirm";
 import { Details } from "@/commons/components/ui/Details";
 import { DropdownMenu } from "@/commons/components/ui/DropdownMenu";
@@ -20,6 +23,7 @@ import { InlineTitle } from "@/commons/components/ui/InlineTitle";
 import { Tag } from "@/commons/components/ui/Tag";
 import { useToast } from "@/commons/components/ui/toast";
 import { api } from "@/commons/lib/api";
+import { readsOnly } from "@/commons/lib/by-person";
 import { runOutcomeToast } from "@/commons/lib/run-outcome";
 import { cn } from "@/commons/lib/utils";
 import type { Draft } from "../lib/draft";
@@ -155,6 +159,7 @@ export function AutomationHeader({
 }) {
   const { icon: Icon, tile } = START[draft.start];
   const proposal = automation?.proposal;
+  const only = automation !== null && readsOnly(automation);
 
   return (
     <header className="space-y-3">
@@ -172,8 +177,8 @@ export function AutomationHeader({
           </p>
         </div>
 
-        <AskAgentButton {...(automation ? automationAsk(automation.name) : PAGE_ASKS.automations)} variant="soft" />
-        {proposal && automation ? (
+        {only ? null : <AskAgentButton {...(automation ? automationAsk(automation.name) : PAGE_ASKS.automations)} variant="soft" />}
+        {only ? null : proposal && automation ? (
           <div className="flex flex-wrap items-center gap-2">
             <Tag tone="needs">Suggested by {agentName(proposal.by)}</Tag>
             <ProposalBar job={automation} canAnswer={automation.start === "webhook" ? admin : writable} onAnswered={(on) => (on ? onChanged() : onGone())} />
@@ -183,6 +188,7 @@ export function AutomationHeader({
         ) : null}
       </div>
 
+      {only && automation ? <ReadOnlyNote thing={automation} /> : null}
       {proposal ? (
         <p className="text-sm text-base-content/70">
           It stays off until somebody turns it on.
@@ -205,7 +211,7 @@ export function AutomationHeader({
       ) : null}
       {automation && !automation.enabled && automation.disabledReason ? (
         <div className="rounded-[14px] bg-warning/10 px-3 py-2 text-sm text-warning">
-          <p>It was turned off after it kept failing. Turn it on to try again.</p>
+          <p>{only ? "It was turned off after it kept failing." : "It was turned off after it kept failing. Turn it on to try again."}</p>
           <Details>
             <p>{automation.disabledReason}</p>
           </Details>

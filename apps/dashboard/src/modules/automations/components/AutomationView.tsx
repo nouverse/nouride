@@ -4,6 +4,9 @@
  * each step went and the path it took; and a change an agent suggested, beside the steps as they run now.
  *
  * What is typed is a draft (`useEditor`): the page saves nothing until Save, and a run's polling never moves a draft.
+ *
+ * One the reader only reads (it reports to a chat of theirs, and is another person's) is drawn the same, with nothing
+ * that changes it: its steps and its runs are read, and what a run waits for is its own person's to answer.
  */
 
 import { useMemo, useState } from "react";
@@ -17,6 +20,7 @@ import { useKnownChats } from "@/commons/hooks/use-known-chats";
 import { usePageSubject } from "@/commons/hooks/use-page-subject";
 import { useWaitingSteps } from "@/commons/hooks/use-waiting-steps";
 import { api } from "@/commons/lib/api";
+import { answeredBy, readsOnly } from "@/commons/lib/by-person";
 import { canWrite, isAdmin, useMe } from "@/commons/lib/session";
 import { useOrchestratorFirst } from "@/commons/components/agents/AgentName";
 import { useEditor, type Editor } from "../hooks/use-editor";
@@ -34,6 +38,7 @@ import { StartCard } from "./StartCard";
 import type { FlowMode } from "./StepItem";
 import { SuggestedBanner, type Side } from "./SuggestedBanner";
 import { WhoCard } from "./WhoCard";
+import { WhoseItIs } from "./WhoseItIs";
 
 export interface AutomationDetail {
   automation: AutomationSummary;
@@ -57,17 +62,23 @@ function editing(editor: Editor, agents: readonly AgentChoice[], issues: readonl
 
 /** Beside the flow, under it on a phone: its runs, what its runs may send without asking, and who may change it. */
 function Beside({ automation, runs, picked, onPick, canAllow }: { automation: AutomationSummary | null; runs: JobRunSummary[]; picked: string | null; onPick: (run: JobRunSummary) => void; canAllow: boolean }) {
+  // On one the reader only reads: whose it is to change, as a sentence starts.
+  const theirs = automation && readsOnly(automation) ? (automation.person?.name ?? "An admin") : null;
   return (
     <aside className="w-full space-y-4 lg:w-80 lg:shrink-0">
-      {automation && !automation.proposal ? <RecentRuns jobId={automation.id} runs={runs} picked={picked} onPick={onPick} canAllow={canAllow} /> : null}
+      {automation && !automation.proposal ? <RecentRuns jobId={automation.id} runs={runs} picked={picked} onPick={onPick} canAllow={canAllow} whom={answeredBy(automation)} /> : null}
       {automation?.allowed?.length ? (
         <section className="rounded-[22px] border border-base-content/[0.08] bg-base-100 p-4 shadow-soft">
           <Allowed job={automation} canEdit={canAllow} />
         </section>
       ) : null}
+      {/* Not for one an agent proposed: it is nobody's until somebody turns it on, and theirs from then. */}
+      {automation && !automation.proposal ? <WhoseItIs automation={automation} /> : null}
       <section className="space-y-2 rounded-[22px] border border-base-content/[0.08] bg-base-100 p-4 shadow-soft">
         <h2 className="text-lg text-base-content">Who may change it</h2>
-        <p className="text-sm text-base-content/85">You change the steps here. An agent can suggest a change, and it waits for your yes.</p>
+        <p className="text-sm text-base-content/85">
+          {theirs ? `${theirs} changes its steps and answers what it asks. You can read them, and how each run went.` : "You change the steps here. An agent can suggest a change, and it waits for your yes."}
+        </p>
         <p className="text-xs text-base-content/65">Nouride runs the steps in this order every time. An agent only does the step it is given, with what the step before it said.</p>
       </section>
     </aside>
@@ -83,7 +94,8 @@ export function AutomationView({ detail, blank, home }: { detail: AutomationDeta
   const queryClient = useQueryClient();
   const toast = useToast();
   const me = useMe();
-  const [writable, admin] = [canWrite(me.data ?? null), isAdmin(me.data ?? null)];
+  // Whether this page may change it: the account may change automations, and this one is not another person's.
+  const [writable, admin] = [canWrite(me.data ?? null) && !(automation && readsOnly(automation)), isAdmin(me.data ?? null)];
   const status = useQuery({ queryKey: ["status"], queryFn: api.status });
   const gateways = useQuery({ queryKey: ["gateways"], queryFn: api.gateways, retry: false });
   const { labelOf } = useKnownChats();
@@ -115,7 +127,7 @@ export function AutomationView({ detail, blank, home }: { detail: AutomationDeta
   const lacking = (part: (typeof problems)[number]["part"]) => (problems[0]?.part === part ? problems[0].message : undefined);
 
   const mode: FlowMode = run
-    ? { kind: "run", run, outcomes: outcomesOf(shown.steps, run), name: automation?.name ?? "", before: saidBefore(run, waiting.data?.waiting.find((step) => step.runId === run.id)?.said), canAnswer: writable }
+    ? { kind: "run", run, outcomes: outcomesOf(shown.steps, run), name: automation?.name ?? "", before: saidBefore(run, waiting.data?.waiting.find((step) => step.runId === run.id)?.said), canAnswer: writable, whom: automation ? answeredBy(automation) : undefined }
     : editable
       ? editing(editor, agents, stepIssues, saving.refused, (index) => {
           const kept = editor.remove(index);
@@ -170,7 +182,8 @@ export function AutomationView({ detail, blank, home }: { detail: AutomationDeta
           home={home}
           side={side}
           onSide={setSide}
-          canAnswer={suggested.start === "webhook" ? admin : writable}
+          // A change proposed in a chat the reader cannot open is not theirs to answer: the server says so of it.
+          canAnswer={(suggested.start === "webhook" ? admin : writable) && suggested.changeable !== false}
           held={editor.dirty ? "Save or discard your own changes first." : null}
           onAnswered={() => {
             setSide("current");

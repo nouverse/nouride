@@ -437,6 +437,8 @@ export type MissionView = WireMissionView;
 
 export interface MissionListResponse {
   missions: MissionView[];
+  /** For an admin who asked for their own: how many more are other people's or nobody's. */
+  elsewhere?: number;
 }
 
 export interface MissionDetailResponse {

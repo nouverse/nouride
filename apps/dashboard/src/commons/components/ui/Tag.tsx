@@ -23,9 +23,9 @@ const TONES: Record<TagTone, string> = {
   plain: "border border-base-content/10 text-base-content/70",
 };
 
-export function Tag({ tone = "plain", children, className }: { tone?: TagTone; children: ReactNode; className?: string }) {
+export function Tag({ tone = "plain", children, className, title }: { tone?: TagTone; children: ReactNode; className?: string; /** What the word means, for a pointer that rests on it. */ title?: string }) {
   return (
-    <span data-tag={tone} className={cn("inline-flex max-w-full items-center gap-1 truncate rounded-full px-2.5 py-0.5 text-xs font-medium", TONES[tone], className)}>
+    <span data-tag={tone} title={title} className={cn("inline-flex max-w-full items-center gap-1 truncate rounded-full px-2.5 py-0.5 text-xs font-medium", TONES[tone], className)}>
       {children}
     </span>
   );

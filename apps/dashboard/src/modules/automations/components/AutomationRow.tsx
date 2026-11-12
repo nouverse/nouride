@@ -1,7 +1,10 @@
 /**
  * One automation in the list, as a card that opens its page: its name, how it starts, a small drawing of its steps,
- * whose it is, the state it is in, and how its last run went. The whole card is the link (its name's, stretched over
+ * its agent, the state it is in, and how its last run went. The whole card is the link (its name's, stretched over
  * it); the switch that turns it on and off, and a proposal's two answers, stand over the link and take their own press.
+ *
+ * One the reader only reads (it reports to a chat of theirs, and is another person's) says whose it is where its
+ * switch would stand, and offers nothing that changes it. It opens as any other.
  */
 
 import { useMutation } from "@tanstack/react-query";
@@ -11,10 +14,12 @@ import { AgentAvatar } from "@/commons/components/agents/AgentAvatar";
 import { ProposalBar } from "@/commons/components/jobs/ProposalBar";
 import { LIFTS } from "@/commons/components/ui/CardGrid";
 import { Lit } from "@/commons/components/ui/Lit";
+import { Tag } from "@/commons/components/ui/Tag";
 import { useToast } from "@/commons/components/ui/toast";
 import { useAgentFace } from "@/commons/hooks/use-agent-face";
 import { ENTER, type Motion } from "@/commons/hooks/use-motion-list";
 import { api } from "@/commons/lib/api";
+import { readsOnly, whoseWords } from "@/commons/lib/by-person";
 import { cn } from "@/commons/lib/utils";
 import { stepsOf } from "../lib/draft";
 import { lastRunLine, previewOf, stateOf } from "../lib/list";
@@ -82,6 +87,7 @@ export function AutomationRow({
   const { icon: Icon, tile } = START[automation.start];
   const state = stateOf(automation, agentName);
   const last = lastRunLine(automation);
+  const only = readsOnly(automation);
   const toggle = useMutation({
     mutationFn: (on: boolean) => api.cronAction(automation.id, on ? "enable" : "disable"),
     onError: (error, on) => toast.error(`Could not turn ${automation.name} ${on ? "on" : "off"}`, error),
@@ -103,7 +109,11 @@ export function AutomationRow({
           </h2>
           <p className="text-sm text-base-content/65 [overflow-wrap:anywhere]">Starts {startWords(automation.trigger, home)}</p>
         </div>
-        {automation.proposal ? null : (
+        {only ? (
+          <Tag className="relative z-[1] mt-1 shrink-0" title="You can read this one, not change it">
+            {whoseWords(automation)}
+          </Tag>
+        ) : automation.proposal ? null : (
           <input
             type="checkbox"
             role="switch"
@@ -128,7 +138,7 @@ export function AutomationRow({
         <span data-state={state.tone} className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 font-bold", TONES[state.tone])}>
           {state.word}
         </span>
-        {automation.proposal ? (
+        {automation.proposal && !only ? (
           <span className="relative z-[1]">
             <ProposalBar job={automation} canAnswer={automation.start === "webhook" ? admin : writable} onAnswered={onChanged} />
           </span>

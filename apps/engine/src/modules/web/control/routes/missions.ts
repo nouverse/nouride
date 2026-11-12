@@ -157,13 +157,11 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
     const things = thingsFor(deps, c.get("principal"), c.req.query("whose"));
     // A mission that ended more than `days` ago is out of the list unless asked for (`?all=1`, the CLI's); its record stays.
     const all = c.req.query("all") === "1";
-    const rows = missions
-      .recent(limit, agent)
-      .filter((mission) => all || mission.endedAt === null || now - mission.endedAt < days * DAY_MS)
-      .filter((mission) => things.listed(thingOfMission(mission)))
-      .map((mission) => ({ ...view(missions, mission, things), checklist: checklistOf(deps.notes, mission) }));
+    const recent = missions.recent(limit, agent).filter((mission) => all || mission.endedAt === null || now - mission.endedAt < days * DAY_MS);
+    const rows = recent.filter((mission) => things.listed(thingOfMission(mission))).map((mission) => ({ ...view(missions, mission, things), checklist: checklistOf(deps.notes, mission) }));
     rows.sort((a, b) => ORDER[a.seen] - ORDER[b.seen] || b.createdAt - a.createdAt);
-    return c.json({ missions: rows } satisfies { missions: MissionView[] });
+    const elsewhere = things.elsewhere(recent.map(thingOfMission));
+    return c.json({ missions: rows, ...(elsewhere ? { elsewhere } : {}) } satisfies { missions: MissionView[]; elsewhere?: number });
   });
 
   control.get("/missions/:id", (c) => {

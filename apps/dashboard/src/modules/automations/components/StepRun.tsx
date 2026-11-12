@@ -38,6 +38,7 @@ export function StepRun({
   name,
   before,
   canAnswer,
+  whom,
 }: {
   outcome: StepRunOutcome;
   run: JobRunSummary;
@@ -46,8 +47,10 @@ export function StepRun({
   /** What the step before said, for a step that waits for a person to decide on. */
   before?: string | undefined;
   canAnswer: boolean;
+  /** Who answers it while it waits for a person, where that is not the reader. */
+  whom?: string | undefined;
 }) {
-  const { label, tone } = outcomeWords(outcome);
+  const { label, tone } = outcomeWords(outcome, whom);
   const asking = outcome.status === "waiting" && run.waiting?.kind === "approval" && run.waiting.step === outcome.id ? run.waiting : null;
   const failed = outcome.status === "failed";
   // A step that waits says its own question as what it said: that is drawn as the question, not repeated under it.
@@ -56,7 +59,7 @@ export function StepRun({
     <div className="space-y-2.5">
       <RunChip label={label} tone={tone} live={outcome.status === "running" || outcome.status === "waiting"} />
       {/* The question is the card's own line, over this: it is asked once. */}
-      {asking ? <StepQuestion runId={run.id} name={name} said={before} until={asking.until} canAnswer={canAnswer} /> : null}
+      {asking ? <StepQuestion runId={run.id} name={name} said={before} until={asking.until} canAnswer={canAnswer} whom={whom} /> : null}
       {outcome.missionId ? (
         <Link to="/missions/$missionId" params={{ missionId: outcome.missionId }} className="group flex items-center gap-1.5 self-start text-sm font-medium text-secondary">
           {outcome.status === "waiting" ? "See the mission it waits for" : "See the mission it started"}

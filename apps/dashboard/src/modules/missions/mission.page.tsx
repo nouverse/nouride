@@ -19,10 +19,12 @@ import { api } from "@/commons/lib/api";
 import type { MissionDetail } from "@nouride/wire";
 import { ApiError } from "@/commons/lib/api.client";
 import { ApprovalCard } from "@/commons/components/approvals/ApprovalCard";
+import { ReadOnlyNote } from "@/commons/components/people/ReadOnlyNote";
 import { Card, EmptyState, ErrorNote } from "@/commons/components/ui/ui";
 import { useAnswerApproval } from "@/commons/hooks/use-answer-approval";
 import { useConversation } from "@/commons/hooks/use-conversation";
 import { usePageSubject } from "@/commons/hooks/use-page-subject";
+import { readsOnly } from "@/commons/lib/by-person";
 import { ago } from "@/commons/lib/format";
 import { canWrite, useMe } from "@/commons/lib/session";
 import { Checklist } from "./components/Checklist";
@@ -33,7 +35,7 @@ import { BriefCard } from "./components/BriefCard";
 import { MissionTimeline } from "./components/MissionTimeline";
 import { NowLine } from "./components/NowLine";
 import { AnswerBox, Questions } from "./components/Questions";
-import { TellBox, ToldList } from "./components/Told";
+import { TellCard } from "./components/Told";
 import { SeenBadge } from "./components/SeenBadge";
 import { useMissionAct } from "./hooks/use-mission-act";
 import { useMissionDelete } from "./hooks/use-mission-delete";
@@ -127,7 +129,9 @@ export default function MissionPage({ missionId }: { missionId: string }) {
   }
 
   const { mission, plan, parked } = detail;
-  const writable = canWrite(me.data ?? null);
+  // One the reader only reads, since it reports to a chat of theirs: nothing on the page changes it or answers it.
+  const only = readsOnly(mission);
+  const writable = canWrite(me.data ?? null) && !only;
   const live = conversation.liveTurns[0];
   const waitingOn = mission.status === "waiting" ? mission.waitKind : null;
   const draft = waitingOn === "accept" && mission.startedAt === null;
@@ -158,9 +162,10 @@ export default function MissionPage({ missionId }: { missionId: string }) {
           />
         </div>
         {mission.goal.replace(/\s+/g, " ").trim() !== missionTitle(mission.goal) && <Goal goal={mission.goal} />}
+        {only && <ReadOnlyNote thing={mission} />}
       </header>
 
-      {mission.seen === "needs_you" && (
+      {mission.seen === "needs_you" && !only && (
         <div role="status" className="alert alert-soft alert-warning grid-cols-[auto_minmax(0,1fr)] items-start rounded-2xl">
           <Mascot pose="waiting" decorative className="w-12 sm:w-14" />
           <div className="w-full min-w-0 space-y-3">
@@ -188,7 +193,7 @@ export default function MissionPage({ missionId }: { missionId: string }) {
       {detail.brief && <BriefCard brief={detail.brief} shown={briefShown(detail.briefPath, mission.id)} />}
 
       {/* Parked while it works on what does not depend on them — a mission waits only once nothing else moves. */}
-      {parked.length > 0 && (
+      {parked.length > 0 && !only && (
         <section aria-label="Approvals it parked" className="space-y-2.5">
           <h2 className="flex items-center gap-1.5 px-1 font-mono text-[11px] font-bold uppercase tracking-wider text-base-content/65">
             <ShieldCheck size={13} aria-hidden="true" /> Waiting for your approval · {parked.length}
@@ -228,16 +233,12 @@ export default function MissionPage({ missionId }: { missionId: string }) {
         {/* Below lg one column, and its cards items of the grid (`contents`), so the Checklist can come before the Turns:
             "how far is it" was read past every turn on a phone (0.8.11). From lg, the column beside them. */}
         <aside className="min-w-0 max-lg:contents max-lg:[&>*]:min-w-0 lg:space-y-5">
-          {(mission.seen === "working" || mission.seen === "needs_you" || mission.told.length > 0) && (
-            <Card title="Tell it" description={mission.seen === "working" || mission.seen === "needs_you" ? "Something it should know while it works." : "What it was told while it worked."}>
-              <div className="space-y-4">
-                {(mission.seen === "working" || mission.seen === "needs_you") && (
-                  <TellBox disabled={!writable} pending={act.isPending} onTell={(text, done) => act.mutate({ verb: "tell", text }, { onSuccess: done })} />
-                )}
-                <ToldList told={mission.told} />
-              </div>
-            </Card>
-          )}
+          <TellCard
+            mission={mission}
+            writable={writable}
+            pending={act.isPending}
+            onTell={(text, done) => act.mutate({ verb: "tell", text }, { onSuccess: done })}
+          />
           <Card title="Checklist" description="Kept by the agent; every turn starts from it." className="max-lg:order-first">
             <Checklist plan={plan} />
           </Card>

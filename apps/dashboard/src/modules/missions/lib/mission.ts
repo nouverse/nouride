@@ -28,7 +28,7 @@ const NEEDS: Record<MissionWaitKind, string> = {
 };
 
 /** The badge's tone: blue is something working, the rest are states (the Nouverse design rules). */
-export const SEEN_TONE: Record<MissionSeen, string> = {
+const SEEN_TONE: Record<MissionSeen, string> = {
   working: "bg-primary/10 text-primary border-primary/25",
   needs_you: "bg-warning/15 text-warning border-warning/30",
   done: "bg-success/10 text-success border-success/25",
@@ -36,12 +36,27 @@ export const SEEN_TONE: Record<MissionSeen, string> = {
 };
 
 /**
+ * Whether it waits for someone who is not the reader. One the reader only reads (it reports to a chat of theirs, and
+ * is another person's) waits for its own person, or an admin: it is not "Needs you" to them, and nothing counts it as
+ * waiting for them.
+ */
+export function waitsElsewhere(mission: Pick<MissionView, "seen" | "changeable">): boolean {
+  return mission.seen === "needs_you" && mission.changeable === false;
+}
+
+/** The badge's colours: one that waits for someone else is as quiet as one that ended, since nothing is the reader's to do. */
+export function seenTone(mission: Pick<MissionView, "seen" | "changeable">): string {
+  return SEEN_TONE[waitsElsewhere(mission) ? "ended" : mission.seen];
+}
+
+/**
  * The words on a mission's badge: "Needs you · a question", "Working", "Ended · failed". A mission waiting in the queue is
  * working as a person sees it, and says it is queued; one running its checks says so. A draft (0.8.11) waits on an accept
  * that starts it, and says "draft": "Needs you · accept" read as a result to sign off, the chat's notice and the page's
  * buttons saying Draft, Start it and Drop it.
  */
-export function seenAs(mission: Pick<MissionView, "seen" | "status" | "waitKind" | "startedAt">): string {
+export function seenAs(mission: Pick<MissionView, "seen" | "status" | "waitKind" | "startedAt" | "changeable" | "person">): string {
+  if (waitsElsewhere(mission)) return `Waiting for ${mission.person?.name ?? "an admin"}`;
   if (mission.seen === "needs_you" && mission.waitKind === "accept" && mission.startedAt === null) return `${SEEN_LABEL.needs_you} · draft`;
   if (mission.seen === "needs_you") return mission.waitKind ? `${SEEN_LABEL.needs_you} · ${NEEDS[mission.waitKind]}` : SEEN_LABEL.needs_you;
   if (mission.seen === "ended") return `${SEEN_LABEL.ended} · ${mission.status === "failed" ? "failed" : "stopped"}`;
@@ -174,8 +189,9 @@ export function shortId(id: string): string {
  */
 export type MissionTab = "all" | "needs_you" | "working" | "done" | "failed" | "stopped";
 
-/** Which tab a mission is under: needs you, working, or how it finished. */
-export function tabOf(mission: Pick<MissionView, "seen" | "status">): Exclude<MissionTab, "all"> {
+/** Which tab a mission is under: needs you, working, or how it finished. One that waits for someone else is at work. */
+export function tabOf(mission: Pick<MissionView, "seen" | "status" | "changeable">): Exclude<MissionTab, "all"> {
+  if (waitsElsewhere(mission)) return "working";
   if (mission.seen === "needs_you" || mission.seen === "working") return mission.seen;
   return mission.status === "failed" ? "failed" : mission.status === "stopped" ? "stopped" : "done";
 }
@@ -224,6 +240,7 @@ export function anyOpen(missions: readonly Pick<MissionView, "seen">[]): boolean
  * it ended once it has — or null when there is nothing worth a line.
  */
 export function rowLine(mission: MissionView): { label: string; text: string } | null {
+  if (waitsElsewhere(mission)) return { label: "Waiting", text: `Only ${mission.person?.name ?? "an admin"} can answer what it waits for.` };
   if (mission.seen === "needs_you") return { label: "Needs you", text: needsYouSaid(mission) };
   if (mission.seen === "working") {
     if (mission.status === "queued") return { label: "Queued", text: mission.reason ?? "waits for a free slot" };

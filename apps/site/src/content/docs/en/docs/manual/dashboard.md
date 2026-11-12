@@ -424,8 +424,8 @@ viewer never sees anyone else's: not in the list, not by its link. An admin pick
 search, in the list and in History: **Mine** (where it starts), **Everyone**, which lists every conversation set apart by
 person, then what scheduled jobs said on their own, then the private chats of people not yet under People, one person
 (type part of their name to find them), or **Not known**. Your own name is not in the list: **Mine** is
-yours already (0.8.33). A scheduled job's conversation and a
-mission's are not held by person yet: everyone sees them as before.
+yours already (0.8.33). An automation's own conversation and a mission's follow the automation and the mission
+(0.8.35): whoever sees one reads its conversation, and nobody else does.
 
 **A conversation opens on its newest message** and stays there as an answer is written. Scroll up to read and it
 stays where you put it; a small arrow at the foot of the conversation takes you back to the newest message. Sending a

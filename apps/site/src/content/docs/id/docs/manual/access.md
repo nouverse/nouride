@@ -251,3 +251,7 @@ Siapa yang boleh masuk ke dashboard adalah pertanyaan berbeda dari siapa yang bo
 bot. Akun dan peran ada di **Users**, khusus admin (akun multi-user adalah fitur edisi Pro).
 Gak ada yang bisa menghapus akunnya sendiri, dan admin terakhir gak bisa diturunkan, karena itu akan
 mengunci instance ini dari manajemen akun.
+
+Yang dilihat sebuah akun adalah miliknya sendiri: [chat](/id/docs/manual/dashboard/#chat)-nya,
+[automation](/id/docs/manual/schedule/#automation-ini-milik-siapa)-nya dan [misi](/id/docs/manual/missions/#memantaunya)-nya.
+Admin melihat milik semua orang, dan memilih milik siapa di tiap halaman itu.

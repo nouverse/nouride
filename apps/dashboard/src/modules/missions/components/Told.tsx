@@ -2,14 +2,33 @@
  * Telling a mission something while it works (0.8.10): the box, and what was told so far with whether it read it. The
  * words reach the turn at work before its next step, or wait for its next turn; the agent follows them over the goal's
  * details, and its checks still decide when it is done. Where they went is the toast, in the daemon's own sentence.
+ *
+ * The box is there while the mission can still be told, for whoever may tell it: one the reader only reads has the
+ * list of what it was told and no box.
  */
 
 import { useState } from "react";
 import { MessageSquarePlus } from "lucide-react";
-import type { MissionTold } from "@nouride/wire";
+import type { MissionTold, MissionView } from "@nouride/wire";
+import { Card } from "@/commons/components/ui/ui";
+import { readsOnly } from "@/commons/lib/by-person";
 import { ago } from "@/commons/lib/format";
 
-export function TellBox({ onTell, pending, disabled }: { onTell: (text: string, done: () => void) => void; pending: boolean; disabled: boolean }) {
+/** The card that holds both: the box while it works or waits, and what it was told for as long as there is any. */
+export function TellCard({ mission, writable, pending, onTell }: { mission: MissionView; writable: boolean; pending: boolean; onTell: (text: string, done: () => void) => void }) {
+  const open = !readsOnly(mission) && (mission.seen === "working" || mission.seen === "needs_you");
+  if (!open && mission.told.length === 0) return null;
+  return (
+    <Card title="Tell it" description={open ? "Something it should know while it works." : "What it was told while it worked."}>
+      <div className="space-y-4">
+        {open && <TellBox disabled={!writable} pending={pending} onTell={onTell} />}
+        <ToldList told={mission.told} />
+      </div>
+    </Card>
+  );
+}
+
+function TellBox({ onTell, pending, disabled }: { onTell: (text: string, done: () => void) => void; pending: boolean; disabled: boolean }) {
   const [text, setText] = useState("");
   return (
     <form
@@ -41,7 +60,7 @@ export function TellBox({ onTell, pending, disabled }: { onTell: (text: string, 
   );
 }
 
-export function ToldList({ told }: { told: MissionTold[] }) {
+function ToldList({ told }: { told: MissionTold[] }) {
   if (told.length === 0) return null;
   return (
     <ul className="space-y-2.5">

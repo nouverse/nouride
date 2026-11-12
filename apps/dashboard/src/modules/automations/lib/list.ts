@@ -4,6 +4,7 @@
  */
 
 import type { AutomationStart, AutomationSummary } from "@nouride/wire";
+import { answeredBy, readsOnly } from "@/commons/lib/by-person";
 import { stepsOf } from "./draft";
 import { runWords, took, whenWords, type Tone } from "./runs";
 import { mainText, type StepKind } from "./steps";
@@ -19,11 +20,16 @@ export function rows(automations: readonly AutomationSummary[]): AutomationSumma
   return automations.filter((one) => !one.proposal?.replaces || !ids.has(one.proposal.replaces));
 }
 
-/** The state a row says, most pressing first: something waits for the person, it fails, it is off, or it is on. */
+/**
+ * The state a row says, most pressing first: something waits for the person, it fails, it is off, or it is on. On one
+ * the reader only reads, what waits is another's to answer: said in the same words, without the colour of what needs
+ * the reader.
+ */
 export function stateOf(automation: AutomationSummary, agentName: (id: string) => string): { word: string; tone: Tone } {
-  if (automation.proposal) return { word: `Suggested by ${agentName(automation.proposal.by)}`, tone: "needs" };
-  if (automation.lastRun?.status === "waiting" && automation.lastRun.waiting?.kind === "approval") return { word: "Waiting for you", tone: "needs" };
-  if (automation.suggested) return { word: "A change is suggested", tone: "needs" };
+  const theirs = readsOnly(automation);
+  if (automation.proposal) return { word: `Suggested by ${agentName(automation.proposal.by)}`, tone: theirs ? "quiet" : "needs" };
+  if (automation.lastRun?.status === "waiting" && automation.lastRun.waiting?.kind === "approval") return { word: runWords(automation.lastRun, answeredBy(automation)).label, tone: theirs ? "quiet" : "needs" };
+  if (automation.suggested) return { word: "A change is suggested", tone: theirs ? "quiet" : "needs" };
   if (automation.failStreak > 0) return { word: "Failing", tone: "failed" };
   if (!automation.enabled) return { word: "Paused", tone: "quiet" };
   return { word: "On", tone: "done" };
@@ -41,8 +47,9 @@ export function previewOf(automation: AutomationSummary): { kinds: StepKind[]; m
 export function lastRunLine(automation: AutomationSummary, now = Date.now()): { words: string; tone: Tone } | null {
   const run = automation.lastRun;
   if (!run) return null;
-  const { label, tone } = runWords(run);
-  const how = run.status === "success" && run.finishedAt !== undefined ? `done in ${took(run.finishedAt - run.startedAt)}` : label.toLowerCase();
+  const { label, tone } = runWords(run, answeredBy(automation));
+  // After a comma, so its first letter is small; a name in it keeps its own.
+  const how = run.status === "success" && run.finishedAt !== undefined ? `done in ${took(run.finishedAt - run.startedAt)}` : `${label.charAt(0).toLowerCase()}${label.slice(1)}`;
   return { words: `${whenWords(run.startedAt, now)}, ${how}`, tone };
 }
 

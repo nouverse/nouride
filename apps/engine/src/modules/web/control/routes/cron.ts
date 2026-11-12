@@ -12,7 +12,7 @@ import type { CronField } from "@/modules/cron/validate.ts";
 import type { JobPayload } from "@nouride/shared";
 import { cronInputFrom, cronPatchFrom, cronRefusalField, isCronRefusal, jsonBody } from "../payloads.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
-import { NOT_CHANGED, notSaved } from "../plain.ts";
+import { NOBODY_TO_HOLD_IT, NOT_CHANGED, notSaved } from "../plain.ts";
 import { jobFor, thingOfJob, thingsFor, type Things } from "../whose.ts";
 
 /** Each field a job or a webhook can be refused for, as the Schedule and Webhooks pages' forms name it. */
@@ -196,7 +196,7 @@ export function registerCronRoutes(control: ControlApp, deps: ControlDeps): void
     // Kept as an id of theirs People reads: their account where they have one, so what they make later sits beside it.
     const ids = person ? idsOf(person) : [];
     const owner = person ? (ids.find((id) => id.startsWith("web:")) ?? ids[0] ?? null) : null;
-    if (person && !owner) return c.json({ error: `${person.name ?? person.key} has no account or chat id in People to hold it by`, plain: NOT_CHANGED }, 400);
+    if (person && !owner) return c.json({ error: `${person.name ?? person.key} has no account or chat id in People to hold it by`, plain: NOBODY_TO_HOLD_IT }, 400);
     const job = deps.cron.store.setOwner(c.req.param("id"), owner, principal.actor);
     if (!job) return c.json({ error: "no such job" }, 404);
     return c.json({ job: summaryOf(job, deps.cron.timezone, thingsFor(deps, principal)) } satisfies { job: JobSummary });
@@ -219,7 +219,7 @@ export function registerCronRoutes(control: ControlApp, deps: ControlDeps): void
      */
     if (job.proposal && action === "enable") {
       if (job.trigger.kind === "webhook" && !atLeast(principal, "admin")) return c.json({ error: "admin only" }, 403);
-      const turned = turnOnProposal(deps.cron.store, id, { actor, as: principal.user?.id ?? actor, ...(principal.user ? { owner: `web:${principal.user.id}` } : {}) });
+      const turned = turnOnProposal(deps.cron.store, id, yesOf(principal, things));
       if ("refused" in turned) return c.json({ error: turned.refused, plain: NOT_CHANGED }, 409);
       deps.cron.proposals?.settled(id, settledCard(job, true, principal.user?.displayName?.trim() || actor));
       return c.json({ job: summaryOf(turned.job, deps.cron.timezone, thingsFor(deps, principal)) } satisfies { job: JobSummary });
@@ -270,6 +270,19 @@ export function registerCronRoutes(control: ControlApp, deps: ControlDeps): void
 function summaryOf(job: Job, timezone: string, things: Things): JobSummary {
   const { owner: _owner, ...shown } = job;
   return { ...shown, describes: describeTrigger(job.trigger, timezone), ...things.said(thingOfJob(job)) };
+}
+
+/**
+ * A yes from the dashboard: who said it, whose the job becomes, and whether a job that a change would rewrite is theirs
+ * to change. Its owner's or an admin's, where anyone who sees a proposal may say yes to a new one.
+ */
+function yesOf(principal: { actor: string; user?: { id: string } | undefined }, things: Things): Parameters<typeof turnOnProposal>[2] {
+  return {
+    actor: principal.actor,
+    as: principal.user?.id ?? principal.actor,
+    ...(principal.user ? { owner: `web:${principal.user.id}` } : {}),
+    mayChange: (replaced) => things.owns(thingOfJob(replaced)),
+  };
 }
 
 /** Why `agentId` cannot own a job, or null. Empty is the store's to refuse, with its own sentence. */

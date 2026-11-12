@@ -165,6 +165,12 @@ describe("the ones from before", () => {
       mission.run("msn_chat", "814", "telegram:nouva", "814", null, null);
       mission.run("msn_discord", "5823", "discord:nero", "1534", null, null);
       mission.run("msn_cli", "cli", "web:dashboard", "missions", null, null);
+      // From the dashboard: by an account's username, as an older build wrote it; to report to a chat on a chat app; by
+      // an account that is gone; under a word that is no account's.
+      mission.run("msn_username", "Gading", "web:dashboard", "missions", null, null);
+      mission.run("msn_page_to_chat", "u2", "telegram:nouva", "814", null, null);
+      mission.run("msn_gone", "u9", "web:dashboard", "missions", null, null);
+      mission.run("msn_word", "dashboard", "web:dashboard", "missions", null, null);
       // A job's: it ran as a username, which is no id on the job's platform. Its job's owner; and its child's.
       mission.run("msn_job", "gading", "telegram:nouva", "814", "cron_dash", null);
       mission.run("msn_child", "gading", "telegram:nouva", "814", null, "msn_job");
@@ -188,9 +194,13 @@ describe("the ones from before", () => {
         msn_child: "web:u1",
         msn_cli: null,
         msn_discord: "discord:5823",
+        msn_gone: null,
         msn_job: "web:u1",
         msn_nobodys_job: null,
         msn_page: "web:u1",
+        msn_page_to_chat: "web:u2",
+        msn_username: "web:u1",
+        msn_word: null,
       });
     } finally {
       old.close();

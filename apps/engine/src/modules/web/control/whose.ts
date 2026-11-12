@@ -138,11 +138,13 @@ export interface Thing {
    * not started. Whoever may open its chat answers it, and it becomes theirs.
    */
   proposed?: boolean;
+  /** A proposed change: the id of the job it would rewrite. Answered by whoever may change that job. */
+  replaces?: string;
 }
 
 export function thingOfJob(job: Pick<Job, "owner" | "proposal" | "target" | "delivery">): Thing {
   const reportsTo = job.proposal ? { gatewayId: job.proposal.gatewayId, chatId: job.proposal.chatId } : deliveryTarget(job as Job);
-  return { owner: job.owner, reportsTo, ...(job.proposal ? { proposed: true } : {}) };
+  return { owner: job.owner, reportsTo, ...(job.proposal ? { proposed: true } : {}), ...(job.proposal?.replaces ? { replaces: job.proposal.replaces } : {}) };
 }
 
 export function thingOfMission(mission: Pick<Mission, "owner" | "gatewayId" | "chatId" | "status" | "waitKind" | "startedAt">): Thing {
@@ -211,9 +213,21 @@ export class Things {
     return this.reader.everyone || isMineThing(this.deps, this.reader, thing, this.spoke);
   }
 
-  /** Whether the reader may act on it: its owner or an admin; and a proposal, whoever sees it, since a yes makes it theirs. */
+  /** Whether it is the reader's to rewrite: its owner or an admin. What a yes to a change of it takes. */
+  owns(thing: Thing): boolean {
+    return mayChangeThing(this.reader, thing);
+  }
+
+  /**
+   * Whether the reader may act on it: its owner or an admin; and a proposal, whoever sees it, since a yes makes it
+   * theirs. A proposed change is the exception to that one: it rewrites a job that is there, so it is answered by
+   * whoever may change that job, and seeing its card in a chat is not enough.
+   */
   changes(thing: Thing): boolean {
-    return mayChangeThing(this.reader, thing) || (thing.proposed === true && this.sees(thing));
+    if (this.owns(thing)) return true;
+    if (thing.proposed !== true || !this.sees(thing)) return false;
+    const replaced = thing.replaces ? this.deps.cron?.store.get(thing.replaces) : null;
+    return !replaced || this.owns(thingOfJob(replaced));
   }
 
   /** Whether a list shows it: the reader's own, everyone's, one person's, or nobody's, as they asked. */
@@ -227,6 +241,16 @@ export class Things {
       default:
         return isMineThing(this.deps, this.asked, thing, this.askedSpoke);
     }
+  }
+
+  /**
+   * How many of `all` are not listed for an admin who asked for their own: other people's and nobody's, which Everyone
+   * lists. Said so a page that opens on Mine does not read as if the rest were gone, the day an install updates. None
+   * for anyone else: there is no more for them to see.
+   */
+  elsewhere(all: readonly Thing[]): number {
+    if (this.whose.kind !== "mine" || !this.reader.everyone) return 0;
+    return all.filter((thing) => !this.listed(thing)).length;
   }
 
   /** What a page is told of whose it is and whether the reader may change it. */
@@ -252,7 +276,7 @@ export function jobFor(deps: KindSources & Pick<ControlDeps, "ctx">, principal: 
   if (!job) return null;
   const things = thingsFor(deps, principal);
   const thing = thingOfJob(job);
-  return things.sees(thing) ? { job, things, changeable: things.changes(thing), owned: mayChangeThing(things.reader, thing) } : null;
+  return things.sees(thing) ? { job, things, changeable: things.changes(thing), owned: things.owns(thing) } : null;
 }
 
 /**

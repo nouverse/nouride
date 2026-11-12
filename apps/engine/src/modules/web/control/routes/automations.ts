@@ -46,10 +46,12 @@ export function registerAutomationRoutes(control: ControlApp, deps: ControlDeps)
     if (!deps.cron) return c.json({ error: "the scheduler is not enabled" }, 501);
     const things = thingsFor(deps, c.get("principal"), c.req.query("whose"));
     const all = deps.cron.store.list({ ...(c.req.query("agent") ? { agentId: c.req.query("agent") as string } : {}), includeDisabled: true });
+    const elsewhere = things.elsewhere(all.map(thingOfJob));
     return c.json({
       automations: all.filter((job) => things.listed(thingOfJob(job))).map((job) => automationOf(job, deps, all, things)),
       timezone: deps.cron.timezone,
-    } satisfies { automations: AutomationSummary[]; timezone: string });
+      ...(elsewhere ? { elsewhere } : {}),
+    } satisfies { automations: AutomationSummary[]; timezone: string; elsewhere?: number });
   });
 
   /** Registered before `/automations/:id`: Hono matches in order, and `waiting` would be read as a job's id. */

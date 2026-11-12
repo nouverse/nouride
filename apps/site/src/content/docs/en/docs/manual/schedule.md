@@ -19,8 +19,34 @@ dropdown to see only the scheduled ones, the webhooks or the ones started by han
 pause and delete them. Or just ask an agent: "remind me to check the deploy in two hours". It
 [proposes](#asked-of-an-agent) the automation, and you turn it on.
 
-The list is for the whole install rather than per agent, even though every automation has an owner, because you
-usually want to see everything that runs on its own at once.
+The list is across every agent rather than per agent, because you usually want to see everything of yours that runs on
+its own at once.
+
+### Whose an automation is
+
+**An automation is a person's** (0.8.35). Make one on the dashboard and it is yours. Say yes to one an agent proposed
+and it is yours, whoever asked for it. The page shows your own, and only its owner or an admin changes it: edits it,
+runs it, pauses it, deletes it, answers a step that waits.
+
+You also see an automation of someone else's that reports to a chat of yours, since what writes to your chat is yours
+to read. Its row says whose it is, it opens, and you read its steps and its runs, but nothing on it changes anything.
+A webhook's address is shown only to whoever may change it.
+
+An operator or a viewer never sees anyone else's otherwise: not in the list, and not by its link, which answers as if
+the automation were not there. An admin picks whose in the dropdown beside the search: **Mine** (where it starts),
+**Everyone**, which sets the list apart by person, one person (type part of their name), or **Nobody's**. Nobody's are
+the ones made from the command line and the ones from before 0.8.35 whose maker Nouride could not tell. On an
+automation's own page an admin hands it to a person, or to nobody.
+
+A change an agent proposes to an automation that is already there is its owner's to turn on, or an admin's: seeing its
+card in a chat is not enough to rewrite somebody else's.
+
+An automation made before 0.8.35 belongs to the account that made it or turned it on. One an agent proposed in a chat
+belongs to whoever said yes there.
+
+**This is about the pages, not about what an agent knows.** An agent works for everyone who talks to it: asked in a
+chat what is scheduled, it answers from every automation it has, whoever made them, and its memory and its files hold
+what it did for each of you. Two people who must not learn of each other's work want two agents.
 
 ## Steps
 

@@ -15,8 +15,13 @@ export const cronApi = {
   cronRuns: (limit = 100) =>
     request<{ runs: CronRunEntry[]; timezone: string }>(`${control}/cron/runs?limit=${limit}`),
 
-  /** Every automation, with how each starts and how its newest run went. */
-  automations: () => request<{ automations: AutomationSummary[]; timezone: string }>(`${control}/automations`),
+  /**
+   * Every automation the reader sees, with how each starts, how its newest run went, whose it is and whether the
+   * reader may change it: their own; `everyone`, one person's (`person:<key>`) or nobody's (`unknown`), an admin's
+   * alone to ask. `elsewhere`: for an admin reading their own, how many more are other people's or nobody's.
+   */
+  automations: (whose = "mine") =>
+    request<{ automations: AutomationSummary[]; timezone: string; elsewhere?: number }>(`${control}/automations${whose !== "mine" ? `?${new URLSearchParams({ whose })}` : ""}`),
 
   /** One automation, its last twenty runs with how each step went, and a change an agent suggested to it. */
   automation: (id: string) =>
@@ -57,6 +62,9 @@ export const cronApi = {
     post<{ job: JobSummary }>(`${control}/cron/${id}`, patch),
 
   cronDelete: (id: string) => request<{ ok: true; id: string }>(`${control}/cron/${id}`, { method: "DELETE" }),
+
+  /** Whose an automation is, set by an admin: a person in People by their key, or `null` for nobody. */
+  cronOwner: (id: string, person: string | null) => post<{ job: JobSummary }>(`${control}/cron/${id}/owner`, { person }),
 
   // A webhook is the same row with another start, so everything but making one and its address goes through the
   // `cron*` calls above: on, off, run, change, delete.

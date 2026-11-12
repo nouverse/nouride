@@ -22,6 +22,7 @@ import {
   personIdMatches,
   refusePersonId,
   senderIsAdmin,
+  senderIsOwner,
 } from "@/modules/people/match.ts";
 
 const sender = (gatewayId: string, senderId: string) => ({ gatewayId, senderId });
@@ -156,6 +157,28 @@ describe("what is refused, and why", () => {
     ]) {
       expect({ id, refusal: refusePersonId(id) }).toEqual({ id, refusal: null });
     }
+  });
+});
+
+describe("senderIsOwner", () => {
+  const people: Person[] = [{ key: "gading", name: "Gading", ids: ["telegram:814", "web:usr_admin", "discord:nero:5823"] }];
+  const onTelegram = { gatewayId: "telegram:nouva", senderId: "814" };
+
+  test("the id they write from, or another id of the person People says they are", () => {
+    expect(senderIsOwner(people, onTelegram, "telegram:814")).toBe(true);
+    // Turned on from the dashboard: the same person, by their account.
+    expect(senderIsOwner(people, onTelegram, "web:usr_admin")).toBe(true);
+    // A sender People does not know still owns what is kept under the id they write from.
+    expect(senderIsOwner([], { gatewayId: "telegram:nouva", senderId: "999" }, "telegram:999")).toBe(true);
+  });
+
+  test("nobody's is no sender's, and another person's is not theirs", () => {
+    expect(senderIsOwner(people, onTelegram, undefined)).toBe(false);
+    expect(senderIsOwner(people, onTelegram, null)).toBe(false);
+    expect(senderIsOwner(people, onTelegram, "web:usr_rina")).toBe(false);
+    // An id that only starts the same is another person.
+    expect(senderIsOwner(people, onTelegram, "telegram:8149")).toBe(false);
+    expect(senderIsOwner(people, { gatewayId: "telegram:nouva", senderId: "999" }, "web:usr_admin")).toBe(false);
   });
 });
 

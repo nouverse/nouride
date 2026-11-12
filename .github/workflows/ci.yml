@@ -1,37 +1,45 @@
-# The same checks a release runs, on every push and pull request.
+# A push's checks, and the whole suite when it is asked for.
 #
-# `release.yml` gates publishing on `bun run lint:check` + the full suite, which meant the checks
-# existed but only ever ran on a `v*` tag — the one moment where finding a regression is most
-# expensive and least expected. This runs them where they are cheap to fix instead.
+# A push runs `checks`: the lint, the site's pages and the contract tests, which read what a release is made of (the
+# workflows, the notes, the docs, every published file). A few minutes. The whole suite ran here on every push once: a
+# quarter of an hour each, and one more chance of a red while a release waited on it. It runs on the machine a change
+# is made on before the push (`bun run verify`), and here once a release, when asked:
+#
+#   gh workflow run ci.yml --repo nouverse/nouride --ref releases/v<X.Y.Z>
+#
+# That runs `verify`, the lint and the whole suite on Linux (its Linux-only half, process groups, prlimit, /proc, the
+# pty, never runs on a Mac), and `verify-private`, the same over the private submodules, on that branch's commit. A
+# tag on a commit where they passed does not run them again; on any other commit release.yml runs the suite itself
+# before it publishes anything, so no release is built from a commit the suite never passed on.
 #
 # Deliberately one Bun version, not a matrix: the daemon targets a single one — `.bun-version`, which every
 # workflow, the image and the types read — and a matrix here would test combinations nothing ships on.
 #
-# Two jobs: `verify`, the public tree's checks, and `verify-private`, the same over the private
-# submodules. Whether the image still builds is `ci-image.yml`'s, which runs when something the
-# Dockerfile copies changes.
+# Whether the image still builds is `ci-image.yml`'s, which runs when something the Dockerfile copies changes.
 #
-# What runs depends on what the push changed (`changes`, scripts/ci-changes.ts; the owner, 2026-11-06): code runs
-# everything; documentation and the site alone run `docs`, the light job. Not a path filter on the trigger: the suite
-# and `lint:check` read more than code (the release notes, the site's pages, every published file for `check-public`),
-# and ignoring `docs/**` once let such a commit land unchecked. `docs` runs exactly the checks that read them.
+# Every push runs `checks`, documentation and the site included: `lint:check` and the contract tests read more than
+# code (the release notes, the site's pages, every published file for `check-public`), and ignoring `docs/**` once let
+# such a commit land unchecked. So no path filter on the trigger either. A push that changed the root helper's files
+# also runs `helper` (`changes`, scripts/ci-changes.ts).
 
 name: ci
 
 on:
   push:
-    # A release branch too: the suite's Linux-only half (process groups, prlimit, /proc, the pty) never runs on a
-    # Mac, and this is where it runs before the branch reaches `main`.
+    # A release branch too: its commits are checked before the branch reaches `main`.
     # `lts/**`: a long-term line's maintenance branch (0.8.18, PLAN §3.3), whose fixes are tested as a release's are.
     branches: ["main", "releases/**", "lts/**"]
+  # The whole suite on a branch's commit, asked for by hand: see the header.
+  workflow_dispatch:
   # No pull requests (2026-10-29, the owner): work is pushed to a release branch, and `main` is fast-forwarded at the
   # release. A pull request's run went to GitHub's runners, which billing refused — and a fork's, on the runner, would
   # run its code on the machine that builds releases. `workflow-pins.test.ts` keeps every workflow without one.
 
 # A new push makes the previous run's answer irrelevant, so it is cancelled rather than left to finish and report on a
-# commit nobody is looking at any more.
+# commit nobody is looking at any more. By the event too: a push's checks and an asked-for suite on one branch are two
+# answers, and neither cancels the other.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -52,11 +60,11 @@ permissions:
 # The self-hosted line each job used is kept, commented, beside its `runs-on`.
 jobs:
   # `main` is fast-forwarded to a release branch's commit when the release is tagged, and that commit's run on the
-  # branch already proved it: running every job again on `main` was four runs of the same tests a release, and each one
-  # another chance of a red on a commit already green (two went red there; REVIEW B4). So on `main` each job asks
-  # first whether it passed on this commit, in a successful run of this workflow, and is skipped if it did, as
-  # release.yml's verify jobs are on a tag. Its own conclusion, not the run's: a run on `main` that skipped its jobs is
-  # a successful run too. Not asked anywhere else, and an answer that cannot be had runs the jobs.
+  # branch already proved it: running every job again on `main` was four runs of the same checks a release, and each
+  # one another chance of a red on a commit already green (two went red there; REVIEW B4). So on `main` each of a
+  # push's jobs asks first whether it passed on this commit, in a successful run of this workflow, and is skipped if it
+  # did, as release.yml's verify jobs are on a tag. Its own conclusion, not the run's: a run on `main` that skipped its
+  # jobs is a successful run too. Not asked anywhere else, and an answer that cannot be had runs the jobs.
   passed:
     if: ${{ github.ref == 'refs/heads/main' && github.repository_owner == 'nouverse' }}
     # runs-on: [self-hosted, build-runner]
@@ -66,8 +74,7 @@ jobs:
       actions: read # this workflow's runs on this commit, and their jobs
     timeout-minutes: 5
     outputs:
-      verify: ${{ steps.passed.outputs.verify }}
-      verify_private: ${{ steps.passed.outputs.verify_private }}
+      checks: ${{ steps.passed.outputs.checks }}
       helper: ${{ steps.passed.outputs.helper }}
     steps:
       # GitHub-hosted images ship `gh`; the self-hosted build runner does not. Fetched into this job's temp directory
@@ -87,24 +94,22 @@ jobs:
         run: |
           passed=$(gh run list --repo "${GITHUB_REPOSITORY}" --workflow ci.yml --commit "${GITHUB_SHA}" --status success --json databaseId --jq '.[].databaseId' 2>/dev/null \
             | while read -r run; do gh run view "${run}" --repo "${GITHUB_REPOSITORY}" --json jobs --jq '.jobs[] | select(.conclusion == "success") | .name' 2>/dev/null; done || true)
-          for job in verify verify-private helper; do
+          for job in checks helper; do
             if printf '%s\n' "${passed}" | grep -qx "${job}"; then
               echo "${job//-/_}=yes" >> "$GITHUB_OUTPUT"
               echo "::notice::${job} already passed on ${GITHUB_SHA}; it is skipped here."
             fi
           done
 
-  # What the push changed, and so which of the jobs below it needs.
+  # Whether the push changed the root helper, and so needs its job. A suite that was asked for has no push to read.
   changes:
-    if: github.repository_owner == 'nouverse'
+    if: ${{ github.event_name == 'push' && github.repository_owner == 'nouverse' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       contents: read
     outputs:
-      code: ${{ steps.needs.outputs.code }}
       helper: ${{ steps.needs.outputs.helper }}
-      docs: ${{ steps.needs.outputs.docs }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -118,34 +123,51 @@ jobs:
           BEFORE: ${{ github.event.before }}
         run: bun run scripts/ci-changes.ts "${BEFORE}" "${GITHUB_SHA}"
 
-  # Documentation and the site alone: the checks that read them, a few minutes instead of the suite's half hour.
-  docs:
-    needs: [changes]
-    if: ${{ needs.changes.outputs.code != 'true' && needs.changes.outputs.docs == 'true' && github.repository_owner == 'nouverse' }}
-    runs-on: ubuntu-24.04
+  # What every push is held to, whatever it changed: the lint, the site's pages and the contract tests.
+  checks:
+    needs: [passed]
+    # Whatever `passed` did, skipped off `main` included: without a status function GitHub skips a job whose need was.
+    if: ${{ !cancelled() && github.event_name == 'push' && needs.passed.outputs.checks != 'yes' && github.repository_owner == 'nouverse' }}
+    # runs-on: [self-hosted, build-runner]
+    runs-on: ${{ fromJSON(vars.CI_RUNNER || '"ubuntu-24.04"') }}
     timeout-minutes: 15
     steps:
+      # No submodules: everything this job checks is in this repository. The ones under
+      # `internals/` are private and are not needed to verify.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # The self-hosted runner keeps its working copy between jobs, submodules and all: the last job's private checkout
+      # would be read as this commit's, built into a public image, or stop the next checkout over what its install changed.
+      - name: Start without the last job's submodules
+        run: if git config --get-regexp '^submodule\.' >/dev/null; then git submodule deinit --force --all; fi
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: .bun-version
+      # Packages from the last run, keyed on the lockfiles: an install is then a link step, not a
+      # download of every dependency on every push.
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
           restore-keys: bun-${{ runner.os }}-
+      # One install for everything, the WhatsApp bridge included: it is a workspace member.
       - run: bun install --frozen-lockfile
+      # `routeTree.gen.ts` is written by the TanStack Router Vite plugin and is gitignored, so a
+      # fresh checkout does not have it and twenty-seven route files fail to typecheck. Building the
+      # dashboard produces it — and proves the dashboard builds, which nothing else here did.
       - run: bun run build:dashboard
       - run: bun run lint:check
+      # The site's pages: `astro check`, kept out of the commit hook for its cost (scripts/lint-sources.ts).
       - run: bun run lint:site
+      # Its temporary files in the job's own folder, which the runner empties at each job's start and end: what a test
+      # leaves behind cannot pile up on the self-hosted runner's disk (13 GB in `/tmp` filled it on 2026-10-29).
       - run: bun run test:contracts
         env:
           TMPDIR: ${{ runner.temp }}
 
+  # The whole suite with the lint, on Linux: once a release, when asked (the header has the command). release.yml's
+  # `verify` is this job at a tag, and is skipped there where this one passed on the tagged commit.
   verify:
-    needs: [passed, changes]
-    # Whatever `passed` did, skipped off `main` included: without a status function GitHub skips a job whose need was.
-    if: ${{ !cancelled() && needs.changes.outputs.code == 'true' && needs.passed.outputs.verify != 'yes' && github.repository_owner == 'nouverse' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && github.repository_owner == 'nouverse' }}
     # runs-on: [self-hosted, build-runner]
     runs-on: ${{ fromJSON(vars.CI_RUNNER || '"ubuntu-24.04"') }}
     # A hung test must not spend six hours of runner time, the default.
@@ -199,11 +221,11 @@ jobs:
   # The Pro code, verified in nouverse/nouride-pro: its verify.yml checks this commit with the private submodules at
   # their pins (lint, the whole suite, the Pro edition assembled). Not here since 2026-11-06: this repository is public,
   # and so are its logs, which would say what Pro does. This job starts that run, waits for it, and reports its
-  # conclusion and nothing else; a run that cannot be started or found fails here, never passes. Pushes only, and only
-  # under nouverse: a fork holds no token for it. release.yml asks the same of a tag unless this passed on its commit.
+  # conclusion and nothing else; a run that cannot be started or found fails here, never passes. With `verify`, when
+  # the suite is asked for, and only under nouverse: a fork holds no token for it. The Pro half of a release asks the
+  # same of a tag unless this passed on its commit.
   verify-private:
-    needs: [passed, changes]
-    if: ${{ !cancelled() && github.event_name == 'push' && needs.changes.outputs.code == 'true' && needs.passed.outputs.verify_private != 'yes' && github.repository_owner == 'nouverse' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && github.repository_owner == 'nouverse' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:

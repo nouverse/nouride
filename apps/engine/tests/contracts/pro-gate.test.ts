@@ -1,6 +1,6 @@
 /**
- * The Pro code is gated: tested, typechecked and linted on a push to this repository, and before a tag builds a Pro
- * edition from it.
+ * The Pro code is gated: tested, typechecked and linted when the whole suite is asked for on a commit of this
+ * repository, once a release, and before a tag builds a Pro edition from it.
  *
  * The Box editions are built from `internals/pro` — pairing, licensing, onboarding, the update source, multi-user,
  * sign-in, flash — and until 0.7.9 no CI or release step tested, typechecked or linted any of it: `verify` checks out
@@ -44,9 +44,9 @@ describe("ci.yml", () => {
   // The Pro checks themselves, in nouverse/nouride-pro since the main repository went public (2026-11-06).
   const proVerify = existsSync(join(ROOT, "internals/pro/.github/workflows/verify.yml")) ? read("internals/pro/.github/workflows/verify.yml") : null;
 
-  test("verifies the Pro code on a push, in nouverse/nouride-pro, whose logs are private", () => {
-    // Pushes only, and only in nouverse's own repository: a fork holds no token (workflow-repository.test.ts).
-    expect(job).toMatch(/^ {4}if: \$\{\{ !cancelled\(\) && github\.event_name == 'push' && .* && github\.repository_owner == 'nouverse' \}\}$/m);
+  test("verifies the Pro code when the suite is asked for, in nouverse/nouride-pro, whose logs are private", () => {
+    // With `verify`, and only in nouverse's own repository: a fork holds no token (workflow-repository.test.ts).
+    expect(job).toMatch(/^ {4}if: \$\{\{ github\.event_name == 'workflow_dispatch' && github\.repository_owner == 'nouverse' \}\}$/m);
     expect(job).toContain('gh workflow run verify.yml --repo nouverse/nouride-pro -f ref="${GITHUB_SHA}"');
     // Its conclusion decides this job: anything but success fails it.
     expect(job).toContain('[ "${conclusion}" = "success" ] ||');

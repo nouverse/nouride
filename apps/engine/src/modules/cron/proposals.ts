@@ -122,15 +122,26 @@ export function changeRefusal(store: Pick<CronPort, "get">, job: Job): string | 
   return "It changes a job of another agent, or one that reports to another chat: only an admin can turn that on.";
 }
 
+/** What a person is told who says yes to a change of an automation that is not theirs. */
+const NOT_THEIRS_TO_CHANGE = "It changes an automation that is someone else's: only they, or an admin, can turn that on.";
+
 /**
  * A person's yes: the job is on, runs as them, and is theirs (`by.owner`, the person as People writes an id). A change takes the shape of the job it replaces — whose history
  * and URL it keeps — and the proposal goes.
  */
-export function turnOnProposal(store: CronPort, id: string, by: { actor: string; as: string; owner?: string }): { job: Job } | { refused: string } {
+export function turnOnProposal(
+  store: CronPort,
+  id: string,
+  by: { actor: string; as: string; owner?: string; /** Whether this person may change that job: its owner, or an admin. */ mayChange?: (job: Job) => boolean },
+): { job: Job } | { refused: string } {
   const job = store.get(id);
   if (!job?.proposal) return { refused: "That proposal is no longer waiting." };
   const replaces = job.proposal.replaces;
   if (replaces) {
+    // A change rewrites the job it replaces, so the yes is that job's owner's, or an admin's: anyone else who can see
+    // the card would change another person's automation with one press.
+    const replaced = store.get(replaces);
+    if (replaced && by.mayChange && !by.mayChange(replaced)) return { refused: NOT_THEIRS_TO_CHANGE };
     // Changed first, the proposal let go after: a change the store refuses leaves the proposal there to discard.
     const changed = store.update(replaces, { name: job.name, trigger: job.trigger, payload: job.payload, target: job.target, delivery: job.delivery, session: job.session }, by.actor);
     if (!changed) return { refused: `The job it would change, ${replaces}, is gone.` };

@@ -1,7 +1,8 @@
 /**
  * Stop, Continue and Accept, beside the mission's goal — each only when it applies (`actionsFor`) — and Delete once it
  * has ended (0.8.13). Answer is not here: it is a box under the question it answers. Stop, Accept as it is and Delete
- * ask first, since what they end does not come back.
+ * ask first, since what they end does not come back. None of them on a mission the reader only reads: it is another
+ * person's to stop, continue and accept.
  */
 
 import { Check, Play, Square, Trash2 } from "lucide-react";
@@ -9,6 +10,7 @@ import type { MissionVerb, MissionView } from "@nouride/wire";
 import { ApiError } from "@/commons/lib/api.client";
 import { useConfirm } from "@/commons/components/ui/confirm";
 import { useToast } from "@/commons/components/ui/toast";
+import { readsOnly } from "@/commons/lib/by-person";
 import { actionsFor, shortId } from "../lib/mission";
 
 export function MissionActions({
@@ -52,6 +54,7 @@ export function MissionActions({
     }
   }
 
+  if (readsOnly(mission)) return null;
   const actions = actionsFor(mission);
   const proposal = mission.waitKind === "accept" && mission.startedAt === null;
   return (

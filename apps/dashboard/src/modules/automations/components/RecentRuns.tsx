@@ -18,6 +18,7 @@ export function RecentRuns({
   picked,
   onPick,
   canAllow,
+  whom,
 }: {
   jobId: string;
   runs: readonly JobRunSummary[];
@@ -25,6 +26,8 @@ export function RecentRuns({
   picked: string | null;
   onPick: (run: JobRunSummary) => void;
   canAllow: boolean;
+  /** Who answers a run that waits for a person, where that is not the reader. */
+  whom?: string | undefined;
 }) {
   return (
     <section aria-label="Recent runs" className="rounded-[22px] border border-base-content/[0.08] bg-base-100 p-4 shadow-soft">
@@ -34,7 +37,7 @@ export function RecentRuns({
       ) : (
         <ul className="mt-2 max-h-[26rem] list-none space-y-0.5 overflow-y-auto overscroll-contain pr-0.5">
           {runs.map((run) => {
-            const { label, tone } = runWords(run);
+            const { label, tone } = runWords(run, whom);
             const on = picked === run.id;
             return (
               <li key={run.id}>

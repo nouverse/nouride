@@ -98,6 +98,16 @@ kegagalan yang sama berturut-turut ditampilkan sekali. Stop, Continue, Accept da
 **Accept as it is** di misi yang menunggu hal lain. Selama misinya masih terbuka, **Tell it** menerima pesan untuknya, dan
 menampilkan apa saja yang sudah disampaikan berikut sudah dibaca atau belum.
 
+**Satu misi dimiliki satu orang** (0.8.35): yang memulainya, dari chat atau dari halaman ini, dan misi yang dimulai
+sebuah automation jadi milik pemilik automation itu. Halaman ini menampilkan milikmu, dan hanya pemiliknya atau admin
+yang bisa menyampaikan sesuatu, menghentikan, melanjutkan, menerima, menjawab, atau menghapusnya. Misi yang diusulkan
+agent sendiri dijawab oleh siapa pun yang boleh membuka chat tempat ia diusulkan, lalu jadi milik orang itu. Kamu juga
+melihat misi milik orang lain yang melapor ke chat-mu: ia menyebut milik siapa, dan bisa kamu baca tanpa mengubahnya.
+Selain itu, operator atau viewer tidak melihat milik orang lain, tidak di daftar dan tidak lewat link-nya. Admin memilih
+milik siapa lewat dropdown di samping pencarian, seperti di
+[Automations](/id/docs/manual/schedule/#automation-ini-milik-siapa): Mine, Everyone yang dipisah per orang, satu orang,
+atau Nobody's.
+
 Sejak 0.8.13, misi yang sudah berakhir bisa dihapus (**Delete** di halamannya, atau `nouride mission delete <id>`)
 beserta percakapannya, checklist-nya dan folder yang dibuat Nouride untuknya; folder yang kamu tentukan sendiri dan
 branch-nya tetap ada. Misi yang masih terbuka harus di-stop dulu; tombol Delete baru muncul setelahnya. Kerja di
