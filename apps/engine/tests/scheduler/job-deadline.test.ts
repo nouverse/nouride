@@ -52,6 +52,21 @@ const LIKE_SSH = ["sh", "-c", "trap 'exit 255' TERM; while :; do sleep 0.1; done
  */
 const DEAF = ["sh", "-c", "trap '' TERM; exec sleep 30"];
 
+/**
+ * Deadlines reached when the test says, not after a time. For a job that must have done something before it is
+ * stopped: one that boots a runtime first took longer than any short deadline on a busy machine, and was stopped
+ * before it had.
+ */
+class HeldDeadlines extends JobDeadlines {
+  private readonly held: (() => void)[] = [];
+  override arm(_id: string, _ms: number, onExpire: () => void): void {
+    this.held.push(onExpire);
+  }
+  reach(): void {
+    for (const expire of this.held.splice(0)) expire();
+  }
+}
+
 function store(maxMs: number, options: { audit?: AuditLog; deadlines?: JobDeadlines; graceMs?: number } = {}) {
   return new JobStore({
     db,
@@ -145,20 +160,25 @@ describe("a job that runs past job_max_ms", () => {
       "-e",
       "const c = require('child_process').spawn('sleep', ['30'], { detached: true, stdio: ['ignore', 'inherit', 'inherit'] }); console.log('escaped ' + c.pid); setInterval(() => {}, 1000)",
     ];
-    const s = store(300, { graceMs: 300 });
+    // The deadline is reached once the job has started what escapes, never before: with 300 ms from its start, a busy
+    // machine stopped the job while its runtime was still loading, and nothing had escaped to hold the output.
+    const deadlines = new HeldDeadlines();
+    const s = store(300, { graceMs: 300, deadlines });
     const done = completed(s);
     const job = run(s, escapes);
     // What it printed, once it has: a fixed 150 ms read nothing on a busy machine, and the test failed on NaN.
     let log = "";
-    await eventually(() => /escaped \d+/.test((log = existsSync(job.logPath) ? readFileSync(job.logPath, "utf8") : "")), 4_000, "the job to say what escaped");
+    await eventually(() => /escaped \d+/.test((log = existsSync(job.logPath) ? readFileSync(job.logPath, "utf8") : "")), 8_000, "the job to say what escaped");
     const escaped = Number(/escaped (\d+)/.exec(log)?.[1]);
     if (escaped) strays.push(escaped);
+    expect(isProcessAlive(escaped)).toBe(true);
+    deadlines.reach();
 
     const { job: finished, stop } = await done;
     expect(finished.status).toBe("killed");
     expect(stop?.by).toBe("deadline");
     expect(escaped).toBeGreaterThan(0);
-  }, 10_000);
+  }, 15_000);
 
   test.skipIf(process.platform !== "linux")("reaches what the job started, not only the job (Linux: a process group of its own)", async () => {
     const s = store(300, { graceMs: 300 });
