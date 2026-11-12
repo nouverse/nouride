@@ -618,6 +618,9 @@ export class InboundRouter {
       return;
     }
 
+    // The agent's own bot's copy first, so its conversation in a room is one, kept under its own connection.
+    if (!how.claimed) await this.admission.ownCopyFirst(envelope, agent.config.id, this.ctx.voice.voiceGatewayId(agent.config.id, envelope.gatewayId) === envelope.gatewayId);
+
     // Before anything with a side effect — a hook, a turn, a session write. Every copy of this message
     // reaches here; only the first one carries on.
     if (!how.claimed && !this.admission.claim(envelope, agent.config.id)) {

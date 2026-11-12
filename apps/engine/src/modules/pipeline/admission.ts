@@ -29,6 +29,9 @@ import { droppedNotice } from "./messages.ts";
 
 const log = createLogger("pipeline.admission");
 
+/** How long another bot's copy of a room's message stands by for the copy of the agent's own bot (`ownCopyFirst`). */
+const OWN_COPY_FIRST_MS = 750;
+
 export class Admission {
   /** Sender → recent message timestamps, for the per-sender rate limit (§10.1 SPEC). */
   private readonly recentBySender = new Map<string, number[]>();
@@ -254,6 +257,29 @@ export class Admission {
     return true;
   }
 
+  /** Whether a copy of this message was already claimed for this agent: asked without claiming it. */
+  private taken(envelope: MessageEnvelope, agentId: string): boolean {
+    const seen = this.claimed.get(claimKey(envelope, agentId));
+    return seen !== undefined && Date.now() - seen < CLAIM_TTL_MS;
+  }
+
+  /**
+   * Before the claim, where every bot has the message under one id: the agent's own bot's copy goes first.
+   *
+   * The claim lets the first copy through, and the first is any bot's. A conversation is kept by the connection its
+   * message came on, so an agent's talk in a room was kept under whichever bot's copy won: one bot's for this message
+   * and another's for the next, and never the one its own bot keeps when the agent is tagged. Live on Discord, a room
+   * given to Nexa had its untagged message answered in a conversation under Nix's connection.
+   *
+   * So another bot's copy (`own` false) stands by a moment and goes on only if the message is still nobody's then,
+   * which it is where the agent's bot is not in the room: nothing says which rooms a bot was invited to. Where each
+   * bot numbers the message its own way the claim collapses nothing, and only the agent's own copy goes on at all.
+   */
+  async ownCopyFirst(envelope: MessageEnvelope, agentId: string, own: boolean): Promise<void> {
+    if (own || envelope.chatType === "dm" || envelope.idsPerConnection || this.taken(envelope, agentId)) return;
+    await new Promise<void>((resolve) => setTimeout(resolve, OWN_COPY_FIRST_MS));
+  }
+
   /**
    * Claim this (message, agent) pair, or report that another connection already has it.
    *
@@ -262,11 +288,8 @@ export class Admission {
    */
   claim(envelope: MessageEnvelope, agentId: string): boolean {
     const now = Date.now();
-    // Keyed on the platform, not the instance — the instance is exactly what differs between the
-    // copies we are collapsing. A message id is unique within a platform's chat.
-    const key = `${envelope.gateway}:${envelope.chatId}:${envelope.id}:${agentId}`;
-    const seen = this.claimed.get(key);
-    if (seen !== undefined && now - seen < CLAIM_TTL_MS) return false;
+    const key = claimKey(envelope, agentId);
+    if (this.taken(envelope, agentId)) return false;
 
     this.claimed.set(key, now);
     // Swept opportunistically rather than on a timer: the table only grows while messages arrive, so
@@ -388,6 +411,14 @@ export class Admission {
     this.lastDropNotice.set(key, now);
     return text;
   }
+}
+
+/**
+ * What a claim is kept by. On the platform, not the instance: the instance is exactly what differs between the copies
+ * being collapsed. A message id is unique within a platform's chat.
+ */
+function claimKey(envelope: MessageEnvelope, agentId: string): string {
+  return `${envelope.gateway}:${envelope.chatId}:${envelope.id}:${agentId}`;
 }
 
 /** One message as all its copies have it: the platform's id, or where each bot numbers it its own way, who and when. */

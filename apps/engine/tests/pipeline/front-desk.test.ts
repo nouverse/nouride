@@ -9,6 +9,7 @@
  */
 
 import { afterEach, describe, expect, test } from "bun:test";
+import type { SqliteDb } from "@nouride/runtime";
 import type { MessageEnvelope } from "@nouride/shared";
 import { frontDeskFor, unaddressedFallback } from "@/modules/router/front-desk.ts";
 import { envelope as envelopeAt, FakeGateway } from "../helpers.ts";
@@ -21,6 +22,10 @@ afterEach(() => {
 });
 
 const BOTS = ["nouva", "nox", "nero"] as const;
+
+/** The conversations an agent has, by id: which connection each is kept under. */
+const conversationsOf = (db: SqliteDb, agent: string): string[] =>
+  db.prepare<{ id: string }>("SELECT id FROM sessions WHERE agent_id = ?").all(agent).map((row) => row.id);
 
 /** Three agents, a Telegram bot each, all in one group. `nox` is the orchestrator, so its own bot is not the first one. */
 async function room(options: { orchestrator: boolean; groupsRequireMention?: boolean; turns?: number }) {
@@ -64,6 +69,9 @@ describe("with an orchestrator", () => {
 
     expect(h.requests).toHaveLength(1);
     expect(h.said()).toEqual({ nouva: [], nox: ["answer 1"], nero: [] });
+    // And in the conversation its own bot keeps, the one a tag to it continues: Nouva's bot had the message first, and
+    // the orchestrator's talk in the room was kept under whichever bot's copy won.
+    expect(conversationsOf(h.db, "nox")).toEqual(["ses_nox:telegram:nox:room-1"]);
   });
 
   test("where each bot numbers the message differently, still once — on the orchestrator's own copy", async () => {
@@ -83,6 +91,8 @@ describe("with an orchestrator", () => {
 
     expect(h.requests).toHaveLength(1);
     expect(h.said()).toEqual({ nouva: [], nox: [], nero: ["answer 1"] });
+    // Named in the words, so every bot's copy is for Nero: its own bot's is the one that takes it, though it came last.
+    expect(conversationsOf(h.db, "nero")).toEqual(["ses_nero:telegram:nero:room-1"]);
   });
 
   test("a DM is unaffected: the bot's own agent answers, not the front desk", async () => {
