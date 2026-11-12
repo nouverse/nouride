@@ -32,6 +32,9 @@ export function notSaved(what: string | undefined): string {
 /** A change that is not a form's (a removal, an action), turned down for a reason in the server's own words. */
 export const NOT_CHANGED = "Nothing was changed. Reload the page, and try again.";
 
+/** An automation handed to a person People holds nothing for: no account, no chat app. */
+export const NOBODY_TO_HOLD_IT = "This person has no account and no chat app under their name in People yet, so nothing can be theirs. Add one for them in People first.";
+
 /** Refused because what the page showed changed on the server meanwhile. */
 export const CHANGED_MEANWHILE = "This changed since the page showed it. Reload the page, and try again.";
 

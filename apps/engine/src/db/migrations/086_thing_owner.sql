@@ -17,11 +17,15 @@ UPDATE cron_jobs SET owner = CASE
   ELSE NULL
 END;
 
--- A mission: its job's owner where a job started it; else whoever started it, an account's id on the dashboard and a
--- sender's id in a chat, qualified by the platform of the chat it reports to.
+-- A mission: its job's owner where a job started it; else whoever started it. An account, by its id wherever the
+-- mission reports, or by its username from the dashboard; a sender's id in a chat, qualified by the platform of the
+-- chat it reports to. From the dashboard by an account that is gone, or under a name that is no account's: nobody's,
+-- never an id no person can hold.
 UPDATE missions SET owner = CASE
   WHEN job_id IS NOT NULL THEN (SELECT j.owner FROM cron_jobs j WHERE j.id = missions.job_id)
   WHEN started_by IS NULL OR started_by = '' OR started_by = 'cli' OR started_by LIKE 'agent:%' OR started_by LIKE 'nouride:%' THEN NULL
+  WHEN started_by IN (SELECT id FROM users) THEN 'web:' || started_by
+  WHEN gateway_id LIKE 'web:%' THEN (SELECT 'web:' || u.id FROM users u WHERE u.username = lower(missions.started_by))
   WHEN instr(gateway_id, ':') > 1 THEN substr(gateway_id, 1, instr(gateway_id, ':') - 1) || ':' || started_by
   ELSE NULL
 END;

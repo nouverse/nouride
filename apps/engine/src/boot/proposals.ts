@@ -4,12 +4,13 @@
  * pressed, which is after it exists.
  */
 
-import type { Tool } from "@nouride/shared";
+import type { Person, Tool } from "@nouride/shared";
 import type { AgentRegistry } from "@nouride/persona";
 import type { Notifier } from "@/commons/notify.ts";
 import type { CronPort } from "@/modules/cron/cron.store.ts";
 import { describeTrigger } from "@/modules/cron/parse.ts";
 import { ProposalCards } from "@/modules/cron/proposal-cards.ts";
+import { senderIsOwner } from "@/modules/people/match.ts";
 import { createScheduleTool } from "@/modules/tools/builtins/schedule.ts";
 import { readBrief } from "./missions.ts";
 import type { LinkFor } from "@/modules/web/links.ts";
@@ -19,6 +20,8 @@ export function buildProposals(params: {
   notifier: Pick<Notifier, "ask" | "settle">;
   registry: Pick<AgentRegistry, "get">;
   timezone: () => string;
+  /** People, as it is now: whose an automation is, when a change to it is answered from a chat. */
+  people: () => readonly Person[];
   /** The job's card on the Schedule page, in the tool's answer (`web/links.ts`, 0.8.11). */
   linkFor?: LinkFor;
   /** The pipeline's voice and admins — read when a card is posted or answered. */
@@ -29,6 +32,7 @@ export function buildProposals(params: {
     notifier: params.notifier,
     voice: (agentId, gatewayId) => params.pipeline().voiceGatewayId(agentId, gatewayId),
     isAdmin: (who) => params.pipeline().isAdmin(who),
+    isOwner: (who, owner) => senderIsOwner(params.people(), who, owner),
     when: (job) => describeTrigger(job.trigger, params.timezone()),
   });
   const tool = createScheduleTool({

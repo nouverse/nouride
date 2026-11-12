@@ -22,6 +22,8 @@ export interface ProposalCardsDeps {
   voice: (agentId: string, gatewayId: string) => string;
   /** An admin by People: in a room, who besides the person it was proposed for may answer. */
   isAdmin: (who: { gatewayId: string; senderId: string }) => boolean;
+  /** Whether a job's owner is this sender, by People: whose yes a change to that job takes. */
+  isOwner: (who: { gatewayId: string; senderId: string }, owner: string | undefined) => boolean;
   /** When a job runs, in words — `describeTrigger` in the daemon's zone. */
   when: (job: Job) => string;
 }
@@ -109,7 +111,7 @@ export class ProposalCards {
     const refused = admin ? null : changeRefusal(this.deps.store, job);
     if (refused) return { refused };
     const owner = ownerIdentity(who.gatewayId, who.senderId);
-    const result = turnOnProposal(this.deps.store, id, { actor: who.name, as: who.senderId, ...(owner ? { owner } : {}) });
+    const result = turnOnProposal(this.deps.store, id, { actor: who.name, as: who.senderId, ...(owner ? { owner } : {}), mayChange: (replaced) => admin || this.deps.isOwner(who, replaced.owner) });
     if ("refused" in result) return result;
     log.info("a proposal turned on", { job: result.job.id, by: who.senderId });
     this.settled(id, settled);

@@ -53,6 +53,8 @@ beforeEach(async () => {
     },
     voice: (_agentId, gatewayId) => gatewayId,
     isAdmin: (who) => ADMINS.has(who.senderId),
+    // People, as far as these tests go: a sender owns what was made or turned on under their Telegram id.
+    isOwner: (who, owner) => owner === `telegram:${who.senderId}`,
     when: (job) => (job.trigger.kind === "cron" ? `cron ${job.trigger.expr}` : job.trigger.kind),
   });
   tool = createScheduleTool({ store, timezone: () => "Asia/Jakarta", agentExists: (id) => id === "nouva" || id === "nox", post: (job) => cards.post(job) });
@@ -173,7 +175,7 @@ describe("answering", () => {
   });
 
   test("a change takes the shape of the job it replaces — keeping its id and runs — and the proposal goes", async () => {
-    const live = store.create({ agentId: "nouva", name: "report", trigger: { kind: "cron", expr: "0 7 * * *" }, payload: { kind: "agentTurn", message: "old" }, target: { gatewayId: "telegram:main", chatId: "8142" }, createdBy: "cli" });
+    const live = store.create({ agentId: "nouva", name: "report", trigger: { kind: "cron", expr: "0 7 * * *" }, payload: { kind: "agentTurn", message: "old" }, target: { gatewayId: "telegram:main", chatId: "8142" }, createdBy: "cli", owner: "telegram:8142" });
     store.settle(live, { status: "success" });
     expect((await propose({ name: "report", text: undefined, prompt: "new", when: "cron 0 8 * * *", replaces: live.id })).isError).toBe(false);
     expect(asked.at(-1)!.text).toContain(`a change to job ${live.id}`);
@@ -184,6 +186,24 @@ describe("answering", () => {
     // A change cannot make a schedule a webhook, nor name a job that is not there.
     expect((await propose({ text: undefined, prompt: "x", when: "webhook", replaces: live.id })).content).toContain("keeps the job's trigger");
     expect((await propose({ replaces: "cron_gone" })).content).toContain("There is no job cron_gone");
+  });
+
+  test("a change to an automation that is someone else's, or nobody's, is its owner's or an admin's to turn on", async () => {
+    // The card is in this person's chat, and the job reports there: they see it. Seeing it is not a yes to rewriting it.
+    const base = { agentId: "nouva", trigger: { kind: "cron" as const, expr: "0 7 * * *" }, payload: { kind: "agentTurn" as const, message: "old" }, target: { gatewayId: "telegram:main", chatId: "8142" }, createdBy: "cli" };
+    const theirs = store.create({ ...base, name: "theirs", owner: "web:u1" });
+    const nobodys = store.create({ ...base, name: "nobodys" });
+    for (const replaced of [theirs, nobodys]) {
+      expect((await propose({ name: replaced.name, text: undefined, prompt: "new", when: "cron 0 8 * * *", replaces: replaced.id })).isError).toBe(false);
+      const proposal = store.list({ includeDisabled: true }).find((one) => one.proposal)!;
+      expect((await cards.press(press(`job:on:${proposal.id}`))).notice).toBe("It changes an automation that is someone else's: only they, or an admin, can turn that on.");
+      expect(store.get(replaced.id)).toMatchObject({ payload: { kind: "agentTurn", message: "old" }, trigger: { kind: "cron", expr: "0 7 * * *" } });
+      expect(store.get(proposal.id)?.proposal).toBeDefined();
+      // An admin's yes changes it, and it stays whose it was.
+      expect((await cards.press(press(`job:on:${proposal.id}`, { senderId: "admin-7", senderName: "Boss" }))).notice).toBe("Turned on.");
+      expect(store.get(replaced.id)).toMatchObject({ payload: { kind: "agentTurn", message: "new" } });
+    }
+    expect(store.get(theirs.id)?.owner).toBe("web:u1");
   });
 
   test("a change to another agent's job, or to one that reports to another chat, is an admin's to turn on", async () => {
@@ -206,7 +226,7 @@ describe("answering", () => {
 
   test("a change turned on takes back what the job it replaces was allowed always", async () => {
     // What was allowed was a yes to the old job's shape; nobody said yes to the new one sending there.
-    const live = store.create({ agentId: "nouva", name: "report", trigger: { kind: "cron", expr: "0 7 * * *" }, payload: { kind: "agentTurn", message: "old" }, target: { gatewayId: "telegram:main", chatId: "8142" }, createdBy: "cli" });
+    const live = store.create({ agentId: "nouva", name: "report", trigger: { kind: "cron", expr: "0 7 * * *" }, payload: { kind: "agentTurn", message: "old" }, target: { gatewayId: "telegram:main", chatId: "8142" }, createdBy: "cli", owner: "telegram:8142" });
     store.allow(live.id, { keys: ["chat:telegram:main:-100finance"], label: "the finance chat" }, "admin");
     store.allow(live.id, { keys: ["host:x.example"], label: "x.example" }, "admin");
     expect((await propose({ name: "report", text: undefined, prompt: "new", when: "cron 0 8 * * *", replaces: live.id })).isError).toBe(false);

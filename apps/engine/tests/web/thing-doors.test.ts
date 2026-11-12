@@ -29,6 +29,8 @@ const LOCAL = "web:dashboard";
 const PEOPLE = [
   { key: "gading", name: "Gading", ids: ["web:u1", "telegram:814"] },
   { key: "rina", name: "Rina", ids: ["web:u2", "telegram:555"] },
+  // In People by name only: no account and no chat app, so nothing can be kept as theirs.
+  { key: "tamu", name: "Tamu", ids: [] },
 ];
 const ACCOUNTS = {
   gading: { kind: "user", actor: "gading", role: "admin", user: { id: "u1", username: "gading", displayName: "Gading", role: "admin" } },
@@ -325,6 +327,30 @@ describe("her own", () => {
     expect(h.store.get(id)?.proposal).toBeUndefined();
   });
 
+  test("a change proposed in her chat to another person's automation is not hers to turn on; one to her own is", async () => {
+    const h = await house();
+    const change = (replaces: string, name: string) => h.store.create(job({ name, createdBy: "agent:nova", target: HER_WEB, proposal: proposalFor("nova", { ...HER_WEB, senderId: "u2" }, 1, replaces) }));
+
+    // The admin's automation tells her chat, so she sees it, and the agent proposed a change to it there.
+    const toHis = change(h.jobs.toHer.id, "to her, rewritten");
+    // She sees the proposal, marked as not hers to answer, and every door that would answer it is closed to her.
+    expect(((await h.ask("GET", `/automations/${toHis.id}`)).body.automation as AutomationSummary).changeable).toBe(false);
+    expect((await h.ask("POST", `/cron/${toHis.id}/enable`)).status).toBe(404);
+    expect((await h.ask("DELETE", `/cron/${toHis.id}`)).status).toBe(404);
+    expect(h.store.get(h.jobs.toHer.id)).toMatchObject({ name: "to her", owner: "web:u1" });
+    expect(h.store.get(toHis.id)?.proposal).toBeDefined();
+
+    // A change to her own is hers.
+    const toHers = change(h.jobs.hers.id, "hers, rewritten");
+    expect((await h.ask("POST", `/cron/${toHers.id}/enable`)).status).toBe(200);
+    expect(h.store.get(h.jobs.hers.id)).toMatchObject({ name: "hers, rewritten", owner: "web:u2" });
+
+    // The admin says yes to the first: changed, and still the admin's.
+    as = "gading";
+    expect((await h.ask("POST", `/cron/${toHis.id}/enable`)).status).toBe(200);
+    expect(h.store.get(h.jobs.toHer.id)).toMatchObject({ name: "to her, rewritten", owner: "web:u1" });
+  });
+
   test("a mission she starts is hers; one an agent proposed in her chat becomes hers when she says yes", async () => {
     const h = await house();
     const started = await h.ask("POST", "/missions", { agent: "nova", goal: "Write the report in the folder" });
@@ -356,6 +382,24 @@ describe("an admin", () => {
     expect(await h.names("/missions?whose=unknown", "missions")).toEqual(["proposed"]);
   });
 
+  test("is told how many more there are than their own, and nobody else is told anything", async () => {
+    const h = await house();
+    const elsewhere = async (path: string) => (await h.ask("GET", path)).body.elsewhere;
+    as = "gading";
+    // Six automations, four of them listed as the admin's own: the page opens on those, and says two more exist.
+    expect(await elsewhere("/automations")).toBe(2);
+    expect(await elsewhere("/missions")).toBe(2);
+    // Asked for everyone's, one person's or nobody's, the list is what was asked for: nothing to add.
+    for (const whose of ["everyone", "person:rina", "unknown"]) expect({ whose, said: await elsewhere(`/automations?whose=${whose}`) }).toEqual({ whose, said: undefined });
+    expect(await elsewhere("/missions?whose=everyone")).toBeUndefined();
+    // An operator sees all there is for her to see, and the command line's own is everyone's.
+    as = "rina";
+    expect(await elsewhere("/automations")).toBeUndefined();
+    expect(await elsewhere("/missions")).toBeUndefined();
+    as = "cli";
+    expect(await elsewhere("/automations")).toBeUndefined();
+  });
+
   test("changes anyone's, and hands one nobody owns to a person, or back to nobody", async () => {
     const h = await house();
     as = "gading";
@@ -371,6 +415,9 @@ describe("an admin", () => {
     expect((await h.ask("POST", `/cron/${id}/disable`)).status).toBe(200);
     as = "gading";
     expect((await h.ask("POST", `/cron/${id}/owner`, { person: "budi" })).status).toBe(400);
+    // Somebody People holds no id for: refused in words that say what to do, and it stays whose it was.
+    expect(await h.ask("POST", `/cron/${id}/owner`, { person: "tamu" })).toMatchObject({ status: 400, body: { plain: "This person has no account and no chat app under their name in People yet, so nothing can be theirs. Add one for them in People first." } });
+    expect(h.store.get(id)?.owner).toBe("web:u2");
     expect((await h.ask("POST", `/cron/${id}/owner`, {})).status).toBe(400);
     expect((await h.ask("POST", `/cron/${id}/owner`, { person: null })).status).toBe(200);
     expect(h.store.get(id)?.owner).toBeUndefined();
