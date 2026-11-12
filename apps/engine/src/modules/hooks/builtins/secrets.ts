@@ -27,9 +27,14 @@ const secret: Hook = {
   description: "Credentials sent here: `/secret`, `/secret set <name> <value>`, `/secret undo`",
   // Nothing here runs the agent: what is held, and the store, are the daemon's.
   worksWhilePaused: true,
+  // In a group it is about the group's messages, whichever bot was handed them: typed with no tag in a room several
+  // of our bots share it reached nobody, and "put my message back" went unanswered.
+  aboutTheGroup: "group",
   handler: async (ctx) => {
     const port = ctx.deps.secrets;
     if (!port) return { handled: true, reply: "This daemon does not take credentials out of messages." };
+    // Every bot in a group is handed the command: the first copy answers, the rest say nothing and put nothing back.
+    if (ctx.envelope.chatType !== "dm" && ctx.deps.groupMention && !ctx.deps.groupMention.firstCopy(ctx.envelope, ["/secret", ...ctx.args].join(" "))) return { handled: true };
     const [verb = "", ...rest] = ctx.args;
     switch (verb.toLowerCase()) {
       case "":

@@ -122,6 +122,48 @@ describe("with an orchestrator", () => {
     expect(conversationsOf(h.db, "nox")).toEqual(["ses_nox:telegram:nox:room-1"]);
   });
 
+  test("`/secret undo` typed with no tag, where a tag is required: answered once, and the message is read again by whom it was for", async () => {
+    // A room that keeps its silence without a tag. The command went to every bot and was for none of them, so nobody
+    // answered it, and a message the daemon had taken something out of could not be put back from the room.
+    const h = await room({ orchestrator: true, groupsRequireMention: true });
+    const token = `ghp_${"Zq9xW2vB7nM4kL8p".repeat(3).slice(0, 36)}`;
+    await h.say({ id: "m-token", senderId: "operator", text: `nero: deploy pakai ${token}` });
+    expect(h.requests).toHaveLength(1);
+    expect(JSON.stringify(h.requests[0])).not.toContain(token);
+
+    await h.say({ id: "m-undo", senderId: "operator", text: "/secret undo" });
+    const said = h.said();
+    // One answer, in the orchestrator's voice, whichever bot's copy came first; the other bots say nothing of it.
+    expect(Object.values(said).flat().filter((text) => text === "Put back as you wrote it. I'll read it again.")).toHaveLength(1);
+    // After the notice that something was taken out, which it said too.
+    expect(said.nox).toHaveLength(2);
+    expect(said.nox?.[0]).toStartWith("🔒 Taken out of your message");
+    expect(said.nox?.[1]).toBe("Put back as you wrote it. I'll read it again.");
+    expect(said.nouva).toEqual([]);
+    // And read again once, as written, by the agent it named.
+    expect(h.requests).toHaveLength(2);
+    expect(JSON.stringify(h.requests.at(-1))).toContain(token);
+    expect(said.nero).toEqual(["answer 1", "answer 2"]);
+  });
+
+  test("and what the room holds is said once too, with no tag", async () => {
+    const h = await room({ orchestrator: true, groupsRequireMention: true });
+    await h.say({ id: "m-status", senderId: "operator", text: "/secret" });
+    const all = Object.values(h.said()).flat();
+    expect(all).toHaveLength(1);
+    expect(all[0]).toStartWith("Nothing held in this chat.");
+    expect(h.requests).toHaveLength(0);
+  });
+
+  test("in a one-to-one chat `/secret` is that chat's own agent's to answer, not the orchestrator's", async () => {
+    const h = await room({ orchestrator: true });
+    h.connections.nero!.receive(envelopeAt({ id: "dm-secret", timestamp: Date.now(), chatType: "dm", chatId: "dm-1", gatewayId: "telegram:nero", text: "/secret" }));
+    await h.pipeline.idle();
+    const said = h.said();
+    expect(said.nero?.[0]).toStartWith("Nothing held in this chat.");
+    expect(said.nox).toEqual([]);
+  });
+
   test("where each bot numbers the message differently, still once — on the orchestrator's own copy", async () => {
     // A Telegram basic group: the claim cannot collapse copies with different ids, so only the agent's own bot takes it.
     const h = await room({ orchestrator: true });
@@ -177,6 +219,17 @@ describe("with an orchestrator", () => {
 });
 
 describe("with no orchestrator named — as before", () => {
+  test("`/secret undo` with no tag is still answered, once, by the bot whose copy came first", async () => {
+    const h = await room({ orchestrator: false });
+    const token = `ghp_${"Zq9xW2vB7nM4kL8p".repeat(3).slice(0, 36)}`;
+    await h.say({ id: "m-token", senderId: "operator", text: `nero: deploy pakai ${token}` });
+    await h.say({ id: "m-undo", senderId: "operator", text: "/secret undo" });
+    const said = h.said();
+    expect(Object.values(said).flat().filter((text) => text === "Put back as you wrote it. I'll read it again.")).toHaveLength(1);
+    expect(h.requests).toHaveLength(2);
+    expect(JSON.stringify(h.requests.at(-1))).toContain(token);
+  });
+
   test("an unaddressed room message is answered by nobody", async () => {
     const h = await room({ orchestrator: false });
     await h.say({ text: "ada yang bisa bantu?" });

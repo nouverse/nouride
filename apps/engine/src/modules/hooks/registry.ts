@@ -9,7 +9,7 @@
  * the conversation, the approval gate, the agent, or the command list itself.
  */
 
-import { createLogger, type LoadedAgent, type MessageEnvelope } from "@nouride/shared";
+import { createLogger, type ChatType, type LoadedAgent, type MessageEnvelope } from "@nouride/shared";
 import type { Hook,HookDeps, HookResult } from "./types.ts";
 import { parseCommand } from "./parse.ts";
 import { sessionHooks } from "./builtins/session.ts";
@@ -47,9 +47,10 @@ export class HookRegistry {
     return this.hooks.has(command);
   }
 
-  /** A command about the group rather than an agent (`Hook.aboutTheGroup`). */
-  aboutTheGroup(command: string): boolean {
-    return this.hooks.get(command)?.aboutTheGroup === true;
+  /** A command about the group rather than an agent, in a chat of this kind (`Hook.aboutTheGroup`). */
+  aboutTheGroup(command: string, chatType: ChatType): boolean {
+    const about = this.hooks.get(command)?.aboutTheGroup;
+    return about === true || (about === "group" && chatType !== "dm");
   }
 
   /** A command a paused agent still answers — `/start` above all. Words, and every other command, wait for `/start`. */

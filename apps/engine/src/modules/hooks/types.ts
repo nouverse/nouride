@@ -291,7 +291,9 @@ export interface Hook {
   /**
    * About the group, not an agent — `/mention`. Answered before routing, addressed or not, by the bot it arrived on
    * (`pipeline/room-mention.ts`): in a room several of our bots share, an untagged command reaches nobody otherwise.
+   * `"group"`: so in a group alone — `/secret`, which in a one-to-one chat is that chat's own agent's to answer, as
+   * any command is: what it keeps is handed to that agent's commands.
    */
-  aboutTheGroup?: boolean;
+  aboutTheGroup?: boolean | "group";
   handler: (ctx: HookContext) => Promise<HookResult>;
 }

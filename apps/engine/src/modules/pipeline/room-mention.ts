@@ -142,7 +142,7 @@ export async function answerGroupCommand(
 ): Promise<boolean> {
   if (isEdit(envelope) || envelope.senderIsBot || isSystemEvent(envelope)) return false;
   const command = parseCommand(envelope.text);
-  if (!command || !o.hooks.aboutTheGroup(command.command)) return false;
+  if (!command || !o.hooks.aboutTheGroup(command.command, envelope.chatType)) return false;
   if (envelope.text.trim().split(/\s+/)[0]!.includes("@")) return false;
   const named = o.config.daemon.orchestrator;
   const desk = named ? o.registry.enabled().find((candidate) => candidate.config.id === named) : undefined;
