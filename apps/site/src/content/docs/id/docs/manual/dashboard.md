@@ -307,6 +307,15 @@ Approval adalah giliran yang berhenti di tengah jalan dengan timer. Draft atau p
 tentang pekerjaan yang sudah selesai: gak menghalangi apa pun dan menunggu kamu. Menyatukan mereka
 dalam satu antrean akan memberi salah satunya siklus hidup yang salah.
 
+**Approval adalah milik chat tempat ia ditanyakan** (0.8.37). Operator melihat dan menjawab permintaan yang ditanyakan
+di chat yang boleh ia buka: percakapannya sendiri, grup tempat ia pernah bicara, dan yang ditanyakan automation dan
+misi miliknya. Permintaan milik orang lain gak ada di halamannya, dan menjawabnya lewat alamatnya gak menjawab
+apa-apa: permintaan itu tetap menunggu orang yang ditanya. Admin melihat dan menjawab semuanya.
+
+**Log daemon dan log audit hanya dibaca admin** (0.8.37). Isinya setiap baris dari chat, perintah dan keputusan semua
+orang. Di **Logs**, yang lain punya dua tab sisanya: apa yang jalan terjadwal, dan perintah yang masih berjalan di
+latar belakang.
+
 ### Apa yang Home katakan tentang yang lain
 
 Approval dijawab langsung di Home, paling depan di antara yang butuh kamu, dan di *Waiting for you* milik Work, karena

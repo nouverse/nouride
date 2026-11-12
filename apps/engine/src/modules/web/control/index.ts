@@ -22,6 +22,7 @@ import { registerSetupRoutes } from "./routes/setup.ts";
 import { registerFileRoutes } from "./routes/files.ts";
 import { registerSkillRootRoutes } from "./routes/skill-roots.ts";
 import { registerDiagnosticRoutes } from "./routes/diagnostics.ts";
+import { registerLogRoutes } from "./routes/logs.ts";
 import { registerConversationRoutes } from "./routes/conversations.ts";
 import { registerChatListRoutes } from "./routes/chat-list.ts";
 import { registerChatRoutes } from "./routes/chat.ts";
@@ -90,6 +91,7 @@ export function mountControlRoutes(app: Hono, deps: ControlDeps): void {
   // Before it too: `POST /agents/:id/skill-roots` is three segments.
   registerSkillRootRoutes(control, deps);
   registerDiagnosticRoutes(control, deps);
+  registerLogRoutes(control, deps);
   registerConversationRoutes(control, deps);
   registerChatListRoutes(control, deps);
   registerChatRoutes(control, deps);

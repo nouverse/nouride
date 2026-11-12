@@ -281,7 +281,7 @@ describe("only an admin answers it", () => {
   /** The control routes on this gate, with an operator's and an admin's dashboard account. */
   async function dashboard(more: Record<string, unknown> = {}) {
     const users = new UserStore({ db, passwords: cheapPasswords });
-    await users.create({ username: "opal", password: "operator-password-1", role: "operator", createdBy: "test" });
+    const opal = await users.create({ username: "opal", password: "operator-password-1", role: "operator", createdBy: "test" });
     await users.create({ username: "ada", password: "admin-password-1", role: "admin", createdBy: "test" });
     const token = "control-token-for-tests-0000000000";
     const app = new Hono();
@@ -291,6 +291,9 @@ describe("only an admin answers it", () => {
       audit: new AuditLog(db),
       users,
       approvals: gate,
+      // The chat the requests are asked in is the operator's own, so each is hers to see: what refuses her the first
+      // is that it is an admin's to answer, not that it is somebody else's.
+      sessions: { find: () => ({ agentId: "nouva", ...DM, openedBy: `web:${opal.id}` }) },
       ...more,
     } as unknown as ControlDeps);
     const post = (path: string, body?: unknown, cookie?: string, bearer?: string) =>

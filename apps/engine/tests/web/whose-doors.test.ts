@@ -21,9 +21,11 @@ import { NotesStore } from "@/modules/notes/store.ts";
 import { RoomStore } from "@/modules/rooms/rooms.store.ts";
 import { SessionStore } from "@/modules/sessions/sessions.store.ts";
 import { TurnInspector } from "@/modules/turns/inspection.store.ts";
+import { registerApprovalRoutes } from "@/modules/web/control/routes/approvals.ts";
 import { registerChatListRoutes } from "@/modules/web/control/routes/chat-list.ts";
 import { registerChatRoutes } from "@/modules/web/control/routes/chat.ts";
 import { registerConversationRoutes } from "@/modules/web/control/routes/conversations.ts";
+import { registerLogRoutes } from "@/modules/web/control/routes/logs.ts";
 import { registerEventRoutes } from "@/modules/web/control/routes/events.ts";
 import { registerGroupRoutes } from "@/modules/web/control/routes/groups.ts";
 import { registerJobRoutes } from "@/modules/web/control/routes/jobs.ts";
@@ -65,7 +67,11 @@ const HIS_JOB = { agentId: "nouva", gatewayId: "telegram:nouva", chatId: "cron:c
 const AUTOMATIONS: Record<string, { owner?: string; target: { gatewayId: string; chatId: string }; delivery: { mode: string } }> = {
   cron_1: { owner: "web:u2", target: { gatewayId: LOCAL, chatId: "web-r" }, delivery: { mode: "announce" } },
   cron_2: { owner: "web:u1", target: { gatewayId: "telegram:nouva", chatId: "814" }, delivery: { mode: "announce" } },
+  // Rina's too, and it has never run: its own conversation has no row and no turn yet.
+  cron_3: { owner: "web:u2", target: { gatewayId: LOCAL, chatId: "web-r" }, delivery: { mode: "announce" } },
 };
+/** That automation's own conversation, which nothing was said in yet. */
+const NEW_JOB = { agentId: "nouva", gatewayId: "telegram:nouva", chatId: "cron:cron_3" };
 
 async function house() {
   const dir = tempDir("whose-doors");
@@ -104,9 +110,23 @@ async function house() {
     { id: "job_g", agentId: "nouva", gatewayId: LOCAL, chatId: "web-g", command: "pdftotext gaji.pdf", status: "running", kind: "exec", startedAt: 1 },
     { id: "job_r", agentId: "nouva", gatewayId: LOCAL, chatId: "web-r", command: "curl resep", status: "running", kind: "exec", startedAt: 1 },
   ];
+  // A request for a yes in each kind of place: each person's own chat here, the admin's chat on an app, the group, and
+  // each one's automation's own conversation. As the gate keeps them: `gateway` is the connection it was asked on.
+  const asked = (id: string, where: { gatewayId: string; chatId: string }, status = "pending") => ({ id, agentId: "nouva", gateway: where.gatewayId, chatId: where.chatId, tool: "exec", params: { command: `echo ${id}` }, status, requestedAt: 1, timeoutMs: 600_000 });
+  const requests = [asked("ap_g", GADING), asked("ap_r", RINA), asked("ap_dm", GADING_DM), asked("ap_group", GROUP), asked("ap_job", JOB), asked("ap_new_job", NEW_JOB), asked("ap_his_job", HIS_JOB), asked("ap_old_g", GADING, "approved"), asked("ap_old_r", RINA, "approved")];
+  const answered: { id: string; decision: string; by: string }[] = [];
+  const approvals = {
+    pending: () => requests.filter((one) => one.status === "pending"),
+    settled: () => requests.filter((one) => one.status !== "pending"),
+    get: (id: string) => requests.find((one) => one.id === id) ?? null,
+    resolve: (id: string, decision: string, by: { id: string }) => (answered.push({ id, decision, by: by.id }), true),
+  };
   const deps = {
+    approvals,
+    logs: { query: () => [{ seq: 1, message: "gaji bulan ini" }], oldestSeq: () => 1, latestSeq: () => 1 },
+    logStore: { query: () => [{ id: 1, message: "gaji bulan ini" }], count: () => 1, components: () => [], span: () => ({ oldest: 1, newest: 1 }) },
     local: { id: LOCAL, platform: "web", dispatch: (request: unknown) => (dispatched.push(request), { messageId: "m", chatId: "x" }) },
-    ctx: { config: { people: PEOPLE, daemon: {} }, gateways: new Map([["telegram:nouva", { platform: "telegram" }]]) },
+    ctx: { config: { people: PEOPLE, daemon: {}, retention: { logDays: 3 } }, gateways: new Map([["telegram:nouva", { platform: "telegram" }]]) },
     sessions,
     turns,
     rooms,
@@ -115,7 +135,7 @@ async function house() {
     notes,
     cron: { store: { get: (id: string) => AUTOMATIONS[id] ?? null } },
     turnInspector: new TurnInspector(db),
-    audit: { record: () => undefined },
+    audit: { record: () => undefined, recent: () => [{ id: "a1", action: "exec", actor: "gading", details: { command: "cat gaji.pdf" } }] },
     registry: {
       get: (id: string) => (id === "nouva" ? { config: { id, enabled: true, displayName: "Nouva" } } : undefined),
       enabled: () => [{ config: { id: "nouva" } }],
@@ -149,14 +169,14 @@ async function house() {
     c.set("principal", ACCOUNTS[as]);
     await next();
   });
-  for (const register of [registerChatRoutes, registerConversationRoutes, registerChatListRoutes, registerNotesRoutes, registerTurnRoutes, registerEventRoutes, registerRoomRoutes, registerGroupRoutes, registerKnownChatRoutes, registerJobRoutes]) {
+  for (const register of [registerChatRoutes, registerConversationRoutes, registerChatListRoutes, registerNotesRoutes, registerTurnRoutes, registerEventRoutes, registerRoomRoutes, registerGroupRoutes, registerKnownChatRoutes, registerJobRoutes, registerApprovalRoutes, registerLogRoutes]) {
     register(app as never, deps as never);
   }
   const ask = async (method: string, path: string, body?: unknown) => {
     const response = await app.request(path, { method, headers: { "content-type": "application/json" }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
     return { status: response.status, body: (await response.json()) as Record<string, unknown> };
   };
-  return { ask, sessions, turns, rooms, dispatched, ended, killed, gadingTurn };
+  return { ask, sessions, turns, rooms, dispatched, ended, killed, gadingTurn, answered };
 }
 
 const listed = (body: Record<string, unknown>) => (body.sessions as SessionSummary[]).map((one) => one.chatId).sort();
@@ -224,6 +244,78 @@ describe("an operator asking for another person's conversation", () => {
     expect((await h.ask("GET", "/jobs/job_g/log")).status).toBe(404);
     expect((await h.ask("POST", "/jobs/job_g/kill")).status).toBe(409);
     expect(h.killed).toEqual([]);
+  });
+});
+
+describe("a request for a yes belongs to the chat it was asked in", () => {
+  const ids = (body: Record<string, unknown>, list: "pending" | "settled" = "pending") => ((body[list] ?? []) as { id: string }[]).map((one) => one.id).sort();
+
+  test("an operator sees the ones asked in her own chat and her own automation, and no other, answered ones included", async () => {
+    const h = await house();
+    // Her automation that has not run yet asks in a conversation with no row: still hers, by the automation.
+    expect(ids((await h.ask("GET", "/approvals")).body)).toEqual(["ap_job", "ap_new_job", "ap_r"]);
+    const all = (await h.ask("GET", "/approvals?all=1")).body;
+    expect(ids(all)).toEqual(["ap_job", "ap_new_job", "ap_r"]);
+    expect(ids(all, "settled")).toEqual(["ap_old_r"]);
+  });
+
+  test("another person's is not there by its id, and answering it answers nothing: it stays pending for them", async () => {
+    const h = await house();
+    for (const id of ["ap_g", "ap_dm", "ap_group", "ap_his_job"]) {
+      expect({ id, status: (await h.ask("GET", `/approvals/${id}`)).status }).toEqual({ id, status: 404 });
+      for (const decision of ["allow-once", "allow-always", "deny"]) {
+        const refused = await h.ask("POST", `/approvals/${id}/${decision}`);
+        // As one that never was: the same answer a made-up id gets, so nothing says it exists.
+        expect({ id, decision, status: refused.status, body: refused.body }).toEqual({ id, decision, status: 404, body: { error: "no such approval", id } });
+      }
+    }
+    expect(h.answered).toEqual([]);
+  });
+
+  test("her own opens and takes her answer, as hers", async () => {
+    const h = await house();
+    expect((await h.ask("GET", "/approvals/ap_r")).body.approval).toMatchObject({ id: "ap_r", chatId: "web-r" });
+    expect((await h.ask("POST", "/approvals/ap_r/allow-once")).body).toEqual({ ok: true, id: "ap_r", decision: "allow-once" });
+    expect((await h.ask("POST", "/approvals/ap_job/deny")).status).toBe(200);
+    expect(h.answered).toEqual([
+      { id: "ap_r", decision: "allow-once", by: "rina" },
+      { id: "ap_job", decision: "deny", by: "rina" },
+    ]);
+  });
+
+  test("a viewer with no person sees none; an admin sees every one and answers any", async () => {
+    const h = await house();
+    as = "tamu";
+    expect(ids((await h.ask("GET", "/approvals")).body)).toEqual([]);
+    as = "gading";
+    expect(ids((await h.ask("GET", "/approvals")).body)).toEqual(["ap_dm", "ap_g", "ap_group", "ap_his_job", "ap_job", "ap_new_job", "ap_r"]);
+    expect(ids((await h.ask("GET", "/approvals?all=1")).body, "settled")).toEqual(["ap_old_g", "ap_old_r"]);
+    expect((await h.ask("POST", "/approvals/ap_r/deny")).status).toBe(200);
+    expect(h.answered).toEqual([{ id: "ap_r", decision: "deny", by: "gading" }]);
+  });
+});
+
+describe("the daemon's log and the audit log are an admin's to read", () => {
+  const DOORS = ["/logs", "/logs/stored", "/audit"];
+
+  test("an operator and a viewer are refused each, in words a page can say, and read nothing of them", async () => {
+    const h = await house();
+    for (const who of ["rina", "tamu"] as const) {
+      as = who;
+      for (const path of DOORS) {
+        const refused = await h.ask("GET", path);
+        expect({ who, path, status: refused.status, body: refused.body }).toEqual({ who, path, status: 403, body: { error: "admin only", plain: "Only an admin can read the logs." } });
+      }
+    }
+  });
+
+  test("an admin reads each", async () => {
+    const h = await house();
+    as = "gading";
+    for (const path of DOORS) {
+      const read = await h.ask("GET", path);
+      expect({ path, status: read.status, rows: (read.body.entries as unknown[]).length }).toEqual({ path, status: 200, rows: 1 });
+    }
   });
 });
 
@@ -308,11 +400,13 @@ describe("an admin", () => {
 
 /** The route files, and the questions a door may ask (`whose.ts`, `conversation.ts`, and each file's own helper). */
 const ROUTES = join(import.meta.dir, "../../src/modules/web/control/routes");
-const ASKS = /\b(mayOpen|conversationFor|roomFor|yours|readable|theirs|keyOf|eventsFor|readerOf|readerIn)\(/;
-/** A path that names one conversation, room, turn or helper, by any method. */
-const DOOR = /^\/(sessions\/:id|rooms\/:chatId|turns|jobs|events|chat\/send$|stop$)/;
+const ASKS = /\b(mayOpen|conversationFor|roomFor|yours|readable|theirs|keyOf|eventsFor|readerOf|readerIn|mayAnswerHere)\(/;
+/** A path that names one conversation, room, turn, helper or request for a yes, by any method. */
+const DOOR = /^\/(sessions\/:id|rooms\/:chatId|turns|jobs|events|approvals|chat\/send$|stop$)/;
 /** A path that lists them, read with a GET. */
 const LIST = /^\/(sessions|rooms|chat-list|groups|chats)$/;
+/** What only an admin reads: every person's lines are in them. */
+const ADMINS = /^\/(logs|logs\/stored|audit)$/;
 
 describe("every door asks", () => {
   test("each route that names or lists a conversation, a room, a turn or a helper asks whether the reader may open it", () => {
@@ -328,7 +422,24 @@ describe("every door asks", () => {
       });
     }
     // The table of the RFC, at least: a reader that stopped finding routes would pass anything.
-    expect(doors.length).toBeGreaterThanOrEqual(27);
+    expect(doors.length).toBeGreaterThanOrEqual(30);
+    expect(doors.map((door) => door.route)).toEqual(expect.arrayContaining(["GET /approvals", "GET /approvals/:id", "POST /approvals/:id/:decision"]));
     expect(doors.filter((door) => !door.asks).map((door) => `${door.route} (${door.file})`)).toEqual([]);
+  });
+
+  test("each route that reads the daemon's log or the audit log asks for an admin before anything else", () => {
+    const reads: { route: string; asks: boolean }[] = [];
+    for (const file of readdirSync(ROUTES).filter((name) => name.endsWith(".ts"))) {
+      const source = readFileSync(join(ROUTES, file), "utf8");
+      const found = [...source.matchAll(/\bcontrol\.(get|post|put|patch|delete)\(\s*"([^"]+)"/g)];
+      found.forEach((match, n) => {
+        if (!ADMINS.test(match[2]!)) return;
+        const body = source.slice(match.index, found[n + 1]?.index ?? source.length);
+        // The first thing its handler does: nothing is read, and no "not enabled" said, to anyone else.
+        reads.push({ route: `${match[1]!.toUpperCase()} ${match[2]!}`, asks: /=> \{\s*if \(!atLeast\(c\.get\("principal"\), "admin"\)\) return c\.json\(/.test(body) });
+      });
+    }
+    expect(reads.map((read) => read.route).sort()).toEqual(["GET /audit", "GET /logs", "GET /logs/stored"]);
+    expect(reads.filter((read) => !read.asks)).toEqual([]);
   });
 });

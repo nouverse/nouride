@@ -3,29 +3,49 @@
  */
 
 import type { ApprovalDecision, ApprovalRequest } from "@nouride/wire";
-import { atLeast } from "@/modules/users/auth.ts";
+import { atLeast, type Principal } from "@/modules/users/auth.ts";
 import { adminOnly, adminOnlyNotice } from "@/modules/tools/approval-answerers.ts";
+import { sessionIdFor } from "@nouride/shared";
+import { conversationNamed } from "../conversation.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
+import { mayOpen, readerOf, type Reader } from "../whose.ts";
 
 /** How many answered requests `?all=1` lists. */
 const SETTLED_LISTED = 50;
 
+/**
+ * Whether a request is this reader's to see and to answer: it was asked in a chat they may open, by the question a
+ * conversation answers (`whose.ts`). An admin and the control token see every one. Another person's request is not
+ * there for an operator: not in the list, not by its id, and not to answer.
+ */
+function mayAnswerHere(deps: ControlDeps, reader: Reader, request: { agentId: string; gateway: string; chatId: string }): boolean {
+  if (reader.everyone) return true;
+  // The conversation it was asked in says who opened it; an automation's own and a mission's are read by the chat's
+  // id alone, so one with no row yet is still its owner's.
+  const asked = conversationNamed(deps, sessionIdFor({ agentId: request.agentId, gatewayId: request.gateway, chatId: request.chatId }));
+  return mayOpen(deps, reader, asked ?? { gatewayId: request.gateway, chatId: request.chatId });
+}
+
 export function registerApprovalRoutes(control: ControlApp, deps: ControlDeps): void {
+  const readerIn = (c: { get(key: "principal"): Principal }): Reader => readerOf(c.get("principal"), deps.ctx.config.people);
+
   control.get("/approvals", (c) => {
     // The poll *is* the signal. A client asking for pending approvals is a client that would show one,
     // which is the only evidence the daemon has that anybody is there — and without it nothing could be refused for want
     // of anyone to ask, because the local gateway always claims to be connected.
     deps.reach?.notePoll();
     const agent = c.req.query("agent");
-    const pending = deps.approvals.pending(agent);
+    const reader = readerIn(c);
+    const theirs = <R extends { agentId: string; gateway: string; chatId: string }>(requests: R[]): R[] => requests.filter((request) => mayAnswerHere(deps, reader, request));
+    const pending = theirs(deps.approvals.pending(agent));
     // `all=1`: what was answered too, from the rows the gate keeps until its sweep — `nouride approvals --all`.
     if (c.req.query("all") !== "1") return c.json({ pending } satisfies { pending: ApprovalRequest[]; settled?: ApprovalRequest[] });
-    return c.json({ pending, settled: deps.approvals.settled({ ...(agent ? { agentId: agent } : {}), limit: SETTLED_LISTED }) } satisfies { pending: ApprovalRequest[]; settled?: ApprovalRequest[] });
+    return c.json({ pending, settled: theirs(deps.approvals.settled({ ...(agent ? { agentId: agent } : {}), limit: SETTLED_LISTED })) } satisfies { pending: ApprovalRequest[]; settled?: ApprovalRequest[] });
   });
 
   control.get("/approvals/:id", (c) => {
     const approval = deps.approvals.get(c.req.param("id"));
-    return approval ? c.json({ approval }) : c.json({ error: "no such approval", id: c.req.param("id") }, 404);
+    return approval && mayAnswerHere(deps, readerIn(c), approval) ? c.json({ approval }) : c.json({ error: "no such approval", id: c.req.param("id") }, 404);
   });
 
   control.post("/approvals/:id/:decision", (c) => {
@@ -49,9 +69,11 @@ export function registerApprovalRoutes(control: ControlApp, deps: ControlDeps): 
     // the one question an audit log of approvals exists to answer.
     // And how a person reads who that was, for the prompt in the chat that says it is settled.
     const principal = c.get("principal");
+    const request = deps.approvals.get(id);
+    // Another person's request is answered as one that is not there, and stays pending for whoever it was asked of.
+    if (request && !mayAnswerHere(deps, readerIn(c), request)) return c.json({ error: "no such approval", id }, 404);
     // A change to an agent's persona or to People is an admin's to answer (`approval-answerers.ts`): an operator's
     // dashboard account answers the rest, not these. The control token is the operator at the terminal, an admin.
-    const request = deps.approvals.get(id);
     if (request && adminOnly(request) && !atLeast(principal, "admin")) {
       return c.json({ error: `admin only: ${adminOnlyNotice(request)}`, plain: "Only an admin can answer this request.", id }, 403);
     }

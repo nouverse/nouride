@@ -27,18 +27,27 @@ import { BackgroundJobs } from "./components/BackgroundJobs";
 import { DaemonLog } from "./components/DaemonLog";
 import { ScheduleRuns } from "./components/ScheduleRuns";
 import { PAGE_ASKS } from "@/commons/components/agents/page-asks";
+import { isAdmin, useMe } from "@/commons/lib/session";
 
 type Tab = "daemon" | "audit" | "schedule" | "jobs";
 
-const TABS: { id: Tab; label: string; hint: string }[] = [
-  { id: "daemon", label: "Daemon", hint: "Every line the process printed" },
-  { id: "audit", label: "Audit", hint: "One row per decision, with an actor" },
+/**
+ * `adminOnly`: every line of everybody's chats, commands and decisions is in the daemon's log and the audit log, so
+ * the server answers them to an admin alone. The tab is not offered to anyone else, where it would open on a refusal.
+ */
+const TABS: { id: Tab; label: string; hint: string; adminOnly?: true }[] = [
+  { id: "daemon", label: "Daemon", hint: "Every line the process printed", adminOnly: true },
+  { id: "audit", label: "Audit", hint: "One row per decision, with an actor", adminOnly: true },
   { id: "schedule", label: "Schedule", hint: "What the scheduler fired" },
   { id: "jobs", label: "Helpers", hint: "Commands started and not waited for" },
 ];
 
 export default function LogsPage() {
-  const [tab, setTab] = useState<Tab>("daemon");
+  const admin = isAdmin(useMe().data ?? null);
+  const tabs = TABS.filter((entry) => admin || !entry.adminOnly);
+  const [picked, setTab] = useState<Tab | null>(null);
+  // The first tab this reader has, until they pick one of theirs.
+  const tab = tabs.find((entry) => entry.id === picked)?.id ?? tabs[0]!.id;
 
   return (
     /**
@@ -56,10 +65,14 @@ export default function LogsPage() {
         <PageHeader
           ask={PAGE_ASKS.logs}
           title="Logs"
-          description="For whoever runs the server: what Nouride has been doing, who did what, what ran on a schedule and what still runs in the background, to find out why something went wrong."
+          description={
+            admin
+              ? "For whoever runs the server: what Nouride has been doing, who did what, what ran on a schedule and what still runs in the background, to find out why something went wrong."
+              : "What ran on a schedule and what still runs in the background, to find out why something went wrong."
+          }
         />
 
-        <SegmentedTabs tabs={TABS.map((entry) => ({ value: entry.id, label: entry.label, title: entry.hint }))} value={tab} onChange={setTab} />
+        <SegmentedTabs tabs={tabs.map((entry) => ({ value: entry.id, label: entry.label, title: entry.hint }))} value={tab} onChange={setTab} />
       </div>
 
       {tab === "daemon" && <DaemonLog />}
