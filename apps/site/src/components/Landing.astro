@@ -37,6 +37,7 @@
 
 import Site from '../layouts/Site.astro';
 import Tour from './landing/Tour.astro';
+import HeroRiding from './landing/HeroRiding.astro';
 import Rider from './landing/Rider.astro';
 import { Icon } from '@astrojs/starlight/components';
 import {
@@ -130,6 +131,7 @@ const year = new Date().getFullYear();
       <div class="hero-ride" data-hero-ride>
         <span class="hero-dust" aria-hidden="true"><i></i><i></i><i></i></span>
         <img class="hero-cat" src={heroCat.src} alt={t.hero.mascotAlt} width={heroCat.width} height={heroCat.height} />
+        <HeroRiding />
       </div>
     </div>
 
@@ -494,13 +496,18 @@ const year = new Date().getFullYear();
   /**
    * The hero's cat: it leans a little toward the pointer, and a click sends it off the right edge and back in from the
    * left. The riding is CSS; the script only says when. Taking `is-off` away puts the entrance's animation back, which
-   * is what plays it again.
+   * is what plays it again. While it travels it is the riding cat (`landing/HeroRiding.astro`) and waves only once it
+   * has stopped; `is-here` says it has, which stops the riding cat's parts moving where nobody sees them.
    */
   const ride = document.querySelector<HTMLElement>('[data-hero-ride]');
   if (ride && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    ride.addEventListener('click', () => ride.classList.add('is-off'));
+    ride.addEventListener('click', () => {
+      ride.classList.remove('is-here');
+      ride.classList.add('is-off');
+    });
     ride.addEventListener('animationend', (event) => {
       if (event.animationName === 'hero-off') ride.classList.remove('is-off');
+      if (event.animationName === 'hero-in') ride.classList.add('is-here');
     });
     const hero = ride.closest<HTMLElement>('.hero-top');
     hero?.addEventListener('pointermove', (event) => {
@@ -1672,6 +1679,14 @@ const year = new Date().getFullYear();
     .hero-cat {
       animation: hero-bob 2.8s ease-in-out 2s infinite;
     }
+    /* It waves once it has stopped: until then, and while it rides off, the riding cat is drawn in its place. */
+    :global(html.js) .hero-cat {
+      animation: hero-hello 1.5s linear 0.45s both, hero-bob 2.8s ease-in-out 2s infinite;
+    }
+    :global(html.js) .hero-ride.is-off .hero-cat {
+      animation: none;
+      opacity: 0;
+    }
     :global(html.js) .hero-dust i {
       animation: hero-dust 460ms ease-out 0.55s 3;
     }
@@ -1757,6 +1772,10 @@ const year = new Date().getFullYear();
     0% { transform: none; }
     22% { transform: translateX(-3%) rotate(-9deg); }
     100% { transform: translateX(110vw) rotate(-9deg); }
+  }
+  @keyframes hero-hello {
+    0%, 76% { opacity: 0; }
+    84%, 100% { opacity: 1; }
   }
   @keyframes hero-bob {
     0%, 100% { transform: none; }

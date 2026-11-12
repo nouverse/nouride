@@ -1,0 +1,79 @@
+---
+/**
+ * The hero's cat while it moves: riding in, and riding off when clicked.
+ *
+ * Standing still it waves hello, which is the picture `Landing.astro` draws. A cat that waves while it rides away is
+ * waving at nobody, so for as long as the wrapper travels this one is shown in its place: the riding pose, cut into
+ * parts (`mascot/rigs.mjs`), its body bobbing on its wheels, its tail out behind and its streaks running past. The two
+ * change places as it stops, timed on the entrance's own clock.
+ *
+ * It is laid over the waving picture so the two heads are one size and the wheels stand on one line. With no script
+ * or with reduced motion nothing rides, and this is not shown at all.
+ */
+
+import { rigMarkup } from '../mascot/rigs.mjs';
+---
+
+<svg class="hero-go" viewBox="0 0 512 512" aria-hidden="true"><Fragment set:html={rigMarkup('riding')} /></svg>
+
+<style>
+  .hero-go {
+    position: absolute;
+    left: -27%;
+    bottom: -6.8%;
+    width: 116%;
+    height: auto;
+    overflow: visible;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    /* The same clock as the wrapper's `hero-in`: shown while it travels, gone once it has stopped. */
+    :global(html.js) .hero-go {
+      animation: hero-go 1.5s linear 0.45s both;
+    }
+    :global(html.js .hero-ride.is-off) .hero-go {
+      animation: none;
+      opacity: 1;
+    }
+    .hero-go :global(.j-bike) { animation: go-rock 2.4s ease-in-out infinite; }
+    .hero-go :global(.j-ride) { animation: go-bob 0.42s ease-in-out infinite; }
+    .hero-go :global(.j-tail) { animation: go-flutter 0.5s ease-in-out infinite; }
+    .hero-go :global(.j-head) { animation: go-head 1.68s ease-in-out infinite; }
+    .hero-go :global(.j-lines-top) { animation: go-streak 0.8s linear infinite; }
+    .hero-go :global(.j-lines-bottom) { animation: go-streak 0.8s linear -0.37s infinite; }
+    /* Standing still nothing of it is seen, so nothing of it runs. */
+    :global(.hero-ride.is-here) .hero-go :global(g) {
+      animation-play-state: paused;
+    }
+  }
+  @keyframes hero-go {
+    0%, 76% { opacity: 1; }
+    84%, 100% { opacity: 0; }
+  }
+  @keyframes go-rock {
+    0%, 100% { transform: rotate(-0.9deg); }
+    50% { transform: rotate(0.8deg); }
+  }
+  @keyframes go-bob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+  }
+  @keyframes go-flutter {
+    0%, 100% { transform: rotate(-6deg); }
+    50% { transform: rotate(7deg); }
+  }
+  @keyframes go-head {
+    0%, 100% { transform: rotate(-1.8deg); }
+    50% { transform: rotate(1.6deg); }
+  }
+  /* A streak comes out from behind the cat and fades where it was drawn. It never goes further: its near end was cut
+     along the cat's outline, and past its own place that cut would show. */
+  @keyframes go-streak {
+    0% { transform: translateX(64px); opacity: 0; }
+    30% { opacity: 1; }
+    65% { transform: translateX(0); opacity: 1; }
+    100% { transform: translateX(0); opacity: 0; }
+  }
+</style>

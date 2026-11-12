@@ -1,0 +1,182 @@
+---
+/**
+ * The cat in the corner of a docs page, for company on a long read.
+ *
+ * It is the cat that waits at the landing page's footer, standing and facing the reader, at the window's foot on the
+ * right, under the page's table of contents, where nothing is written. There its four drawn frames step; here one of
+ * them is cut into parts (`mascot/rigs.mjs`), so it moves as smoothly as a part can turn: it breathes, wags its tail,
+ * flicks an ear and turns its head toward the pointer. Pointing at it wags the tail faster; a click makes it hop.
+ *
+ * The frame looks to its right, which in that corner is the window's edge. So it is drawn mirrored, and looks at the
+ * page. The letter on its helmet is a piece of its own, turned back, or it would read the wrong way round.
+ *
+ * It is decoration: hidden from a screen reader and not a stop for the Tab key. It is drawn only where the window is
+ * wide and tall enough to have that empty corner, and its pieces are not fetched before then: they wait in a
+ * `<template>`. With reduced motion it stands still and a click does nothing.
+ */
+
+import { rigMarkup } from './mascot/rigs.mjs';
+---
+
+<div class="docs-cat" data-docs-cat aria-hidden="true">
+  <template><svg viewBox="0 -130 369 610"><Fragment set:html={rigMarkup('idle')} /></svg></template>
+</div>
+
+<script>
+  /** Where the corner is empty: a screen whose table of contents has its own column, and tall enough for both. */
+  const ROOM = 'screen and (min-width: 72rem) and (min-height: 40rem)';
+
+  const cat = document.querySelector<HTMLElement>('[data-docs-cat]');
+  if (cat) {
+    const room = matchMedia(ROOM);
+    const arrive = () => {
+      const waiting = cat.querySelector('template');
+      if (!room.matches || !waiting) return;
+      waiting.replaceWith(waiting.content);
+      // Out of the page's own layer, which lies under the table of contents' column: there a click never reached it.
+      document.body.append(cat);
+    };
+    room.addEventListener('change', arrive);
+    arrive();
+
+    if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      cat.addEventListener('click', () => cat.classList.add('is-hop'));
+      cat.addEventListener('animationend', (event) => {
+        if (event.animationName === 'dc-hop') cat.classList.remove('is-hop');
+      });
+      // Its head turns a little toward the pointer: left of it for most of the page, so the far side counts for more.
+      let queued = false;
+      window.addEventListener('pointermove', (event) => {
+        if (event.pointerType !== 'mouse' || queued || !room.matches) return;
+        queued = true;
+        requestAnimationFrame(() => {
+          queued = false;
+          const box = cat.getBoundingClientRect();
+          const across = (event.clientX - (box.left + box.width / 2)) / window.innerWidth;
+          cat.style.setProperty('--look', `${Math.max(-7, Math.min(5, across * 9)).toFixed(1)}deg`);
+        });
+      }, { passive: true });
+    }
+  }
+</script>
+
+<style>
+  .docs-cat {
+    display: none;
+  }
+  /* A screen: on paper it would be printed over every page's corner. */
+  @media screen and (min-width: 72rem) and (min-height: 40rem) {
+    .docs-cat {
+      display: block;
+      position: fixed;
+      right: 1.5rem;
+      bottom: 0.25rem;
+      z-index: 2;
+      width: 6rem;
+      cursor: pointer;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+  }
+  /* Mirrored, so that it looks at the page and not at the window's edge. */
+  .docs-cat :global(svg) {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+    transform: scaleX(-1);
+  }
+  /* The letter on the helmet, turned back in the mirrored drawing: it reads as it is written. It is painted leaning
+     with the helmet, by about 17 degrees, so it is stood up, turned, and leant again: turned alone, it would lean
+     against the helmet it is on. */
+  .docs-cat :global(.j-mark) {
+    transform: skewX(17deg) scaleX(-1) skewX(-17deg);
+  }
+  /* The ground's shadow in the page's own ink, so it is a shade by day and a faint light by night. */
+  .docs-cat :global(.rig-ground) {
+    fill: var(--sl-color-white);
+    opacity: 0.12;
+  }
+  /* On `rotate`, so the head's own slow sway, which is on `transform`, is left alone. Turned the other way round: in a
+     mirrored drawing a turn to the left is seen as one to the right. */
+  .docs-cat :global(.j-head) {
+    rotate: calc(var(--look, 0deg) * -1);
+    transition: rotate 320ms ease-out;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .docs-cat :global(.j-torso) { animation: dc-breathe 3.6s ease-in-out infinite; }
+    .docs-cat :global(.j-head) { animation: dc-sway 7.2s ease-in-out infinite; }
+    .docs-cat :global(.j-tail) { animation: dc-wag 1.3s ease-in-out infinite alternate; }
+    .docs-cat :global(.j-ear-left) { animation: dc-flick-left 5.4s ease-in-out infinite; }
+    .docs-cat :global(.j-ear-right) { animation: dc-flick-right 5.4s ease-in-out 0.35s infinite; }
+
+    /* Pointed at, it is pleased: the tail goes faster. */
+    .docs-cat:hover :global(.j-tail) { animation-duration: 0.42s; }
+
+    /* Clicked, it hops once: the script takes `is-hop` away when the hop ends. */
+    .docs-cat.is-hop :global(.j-cat) { animation: dc-hop 0.85s cubic-bezier(0.3, 0, 0.3, 1); }
+    .docs-cat.is-hop :global(.j-ground) { animation: dc-hop-ground 0.85s cubic-bezier(0.3, 0, 0.3, 1); }
+    .docs-cat.is-hop :global(.j-tail) { animation: dc-hop-tail 0.85s ease-in-out; }
+    .docs-cat.is-hop :global(.j-head) { animation: dc-hop-head 0.85s ease-in-out; }
+    .docs-cat.is-hop :global(.j-ear-left) { animation: dc-hop-ear-left 0.85s ease-in-out; }
+    .docs-cat.is-hop :global(.j-ear-right) { animation: dc-hop-ear-right 0.85s ease-in-out; }
+  }
+
+  @keyframes dc-breathe {
+    0%, 100% { transform: scale(1, 1); }
+    50% { transform: scale(1.008, 1.018); }
+  }
+  @keyframes dc-sway {
+    0%, 100% { transform: rotate(-1.8deg); }
+    50% { transform: rotate(2deg); }
+  }
+  @keyframes dc-wag {
+    from { transform: rotate(-9deg); }
+    to { transform: rotate(8deg); }
+  }
+  /* An ear leans along its own foot, so the cut never opens: turn to the foot's angle, lean, turn back. */
+  @keyframes dc-flick-left {
+    0%, 78%, 100% { transform: rotate(-33deg) skewX(0deg) rotate(33deg); }
+    84% { transform: rotate(-33deg) skewX(13deg) rotate(33deg); }
+    90% { transform: rotate(-33deg) skewX(-5deg) rotate(33deg); }
+  }
+  @keyframes dc-flick-right {
+    0%, 78%, 100% { transform: rotate(29deg) skewX(0deg) rotate(-29deg); }
+    84% { transform: rotate(29deg) skewX(-13deg) rotate(-29deg); }
+    90% { transform: rotate(29deg) skewX(5deg) rotate(-29deg); }
+  }
+  /* Down into a crouch, up, a moment in the air, and a soft landing. */
+  @keyframes dc-hop {
+    0%, 100% { transform: translateY(0) scale(1, 1); }
+    16% { transform: translateY(0) scale(1.08, 0.88); }
+    46%, 54% { transform: translateY(-118px) scale(0.95, 1.06); }
+    84% { transform: translateY(0) scale(1.06, 0.92); }
+  }
+  @keyframes dc-hop-ground {
+    0%, 100% { transform: scale(1); opacity: 0.12; }
+    46%, 54% { transform: scale(0.62); opacity: 0.06; }
+  }
+  @keyframes dc-hop-tail {
+    0%, 100% { transform: rotate(0deg); }
+    16% { transform: rotate(10deg); }
+    50% { transform: rotate(-22deg); }
+    84% { transform: rotate(8deg); }
+  }
+  @keyframes dc-hop-head {
+    0%, 100% { transform: rotate(0deg) translateY(0); }
+    16% { transform: rotate(0deg) translateY(6px); }
+    50% { transform: rotate(-3deg) translateY(-4px); }
+    84% { transform: rotate(1deg) translateY(4px); }
+  }
+  @keyframes dc-hop-ear-left {
+    0%, 100% { transform: rotate(-33deg) skewX(0deg) rotate(33deg); }
+    50% { transform: rotate(-33deg) skewX(-12deg) rotate(33deg); }
+    84% { transform: rotate(-33deg) skewX(8deg) rotate(33deg); }
+  }
+  @keyframes dc-hop-ear-right {
+    0%, 100% { transform: rotate(29deg) skewX(0deg) rotate(-29deg); }
+    50% { transform: rotate(29deg) skewX(12deg) rotate(-29deg); }
+    84% { transform: rotate(29deg) skewX(-8deg) rotate(-29deg); }
+  }
+</style>

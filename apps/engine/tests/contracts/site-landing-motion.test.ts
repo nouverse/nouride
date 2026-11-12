@@ -15,7 +15,14 @@ import { join } from "node:path";
 
 const ROOT = join(import.meta.dir, "../../../..");
 const SITE = join(ROOT, "apps/site");
-const COMPONENTS = ["src/components/Landing.astro", "src/components/landing/Tour.astro", "src/components/landing/Rider.astro"] as const;
+// The docs' corner cat is not the landing page's, and moves by the same rule: it is held to it here with the rest.
+const COMPONENTS = [
+  "src/components/Landing.astro",
+  "src/components/landing/Tour.astro",
+  "src/components/landing/Rider.astro",
+  "src/components/landing/HeroRiding.astro",
+  "src/components/DocsCat.astro",
+] as const;
 const read = (file: string) => readFileSync(join(SITE, file), "utf8");
 
 /** A component's stylesheet. */
@@ -72,6 +79,7 @@ describe("the landing page's motion", () => {
     // The rider and the hero's cat are moved by script, which no stylesheet's media query stops.
     expect(read("src/components/landing/Rider.astro")).toContain("!matchMedia('(prefers-reduced-motion: reduce)').matches");
     expect(read("src/components/Landing.astro")).toContain("if (ride && !matchMedia('(prefers-reduced-motion: reduce)').matches)");
+    expect(read("src/components/DocsCat.astro")).toContain("if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {");
     expect(read("src/components/landing/Tour.astro")).toContain("matchMedia('(prefers-reduced-motion: reduce)').matches ||");
     expect(read("src/components/Landing.astro")).toContain("if (drift && chapter && !matchMedia('(prefers-reduced-motion: reduce)').matches)");
   });

@@ -1,5 +1,6 @@
 ---
 import Default from '@astrojs/starlight/components/Footer.astro';
+import DocsCat from './DocsCat.astro';
 ---
 
 <Default {...Astro.props}><slot /></Default>
@@ -8,6 +9,8 @@ import Default from '@astrojs/starlight/components/Footer.astro';
   <span>&copy; {new Date().getFullYear()} Nouverse Technologies. All rights reserved.</span>
   <span>Powered by <a href="https://nouverse.com" target="_blank" rel="noopener noreferrer">Nouverse Technologies</a></span>
 </div>
+
+<DocsCat />
 
 <style>
   .docs-footer-bar {
