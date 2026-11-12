@@ -29,6 +29,7 @@ import { EffortGuard } from "./effort.ts";
 import { cutOff, parsedBody, postJson, reportedFailure, requireBody, streamEvents, streamIdleTimeoutMs, unreadable, withCallStats, type HttpDeps } from "./http.ts";
 import { toolArguments } from "./tool-arguments.ts";
 import { systemBlocks } from "./system.ts";
+import { TemperatureGuard } from "./temperature.ts";
 import { fillMissingUsage } from "./tokens.ts";
 
 /** The Messages API version this client speaks — sent with every request, and with a model listing (`models.ts`). */
@@ -183,6 +184,7 @@ export class AnthropicProvider implements LLMProvider {
   readonly baseUrl: string;
   readonly cacheLifetimeMs?: number;
   private readonly effort = new EffortGuard();
+  private readonly temperature = new TemperatureGuard();
 
   constructor(private readonly options: AnthropicProviderOptions) {
     this.baseUrl = options.baseUrl.replace(/\/$/, "");
@@ -322,9 +324,9 @@ export class AnthropicProvider implements LLMProvider {
     yield { type: "done", stopReason, ...(cutAtLimit ? { cutAtLimit: true as const } : {}) };
   }
 
-  /** Through the effort guard: a model that refuses `effort` is asked again without it (`effort.ts`). */
+  /** Through the two guards: a model that refuses `temperature` or `effort` is asked again without it (`temperature.ts`, `effort.ts`). */
   private async post(params: ChatParams, stream: boolean): Promise<Response> {
-    return await this.effort.post(params, (asked) => this.send(asked, stream));
+    return await this.temperature.post(params, (kept) => this.effort.post(kept, (asked) => this.send(asked, stream)));
   }
 
   private async send(params: ChatParams, stream: boolean): Promise<Response> {
