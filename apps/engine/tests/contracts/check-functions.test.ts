@@ -30,7 +30,8 @@ describe("this tree", () => {
     const present = Object.entries(LONG_FUNCTIONS).filter(([file]) => existsSync(join(ROOT, file)));
     expect(found).toBe(present.reduce((sum, [, names]) => sum + Object.keys(names).length, 0));
     expect(found).toBeGreaterThan(60);
-  });
+    // A reading of the whole tree, as the two under "the whole check refuses" are.
+  }, 30_000);
 
   test("and the lint says so the way lint:check runs it", () => {
     const run = spawnSync("bun", ["run", "scripts/check-functions.ts"], { cwd: ROOT, encoding: "utf8" });
@@ -49,7 +50,8 @@ describe("the whole check refuses", () => {
     expect(findings[0]!.detail).toContain("`runDaemon` is ");
     expect(findings[0]!.detail).toContain("over the 150 cap. Split it on a seam");
     expect(findings[0]!.detail).toContain("record it in `LONG_FUNCTIONS`");
-  });
+    // A reading of the whole tree: past the default five seconds on a busy machine, where this and the next failed.
+  }, 30_000);
 
   test("a recorded one past its record, and a record for a file that is gone", async () => {
     const recorded = LONG_FUNCTIONS["apps/engine/src/index.ts"]!.runDaemon!;
@@ -62,7 +64,7 @@ describe("the whole check refuses", () => {
       { file: "apps/engine/src/index.ts", rule: "function-grew" },
       { file: "apps/engine/src/gone.ts", rule: "stale-record" },
     ]);
-  });
+  }, 30_000);
 
   test("but not the Pro code's records in a public clone, where the submodule is not checked out", async () => {
     const root = mkdtempSync(join(tmpdir(), "nouride-functions-"));

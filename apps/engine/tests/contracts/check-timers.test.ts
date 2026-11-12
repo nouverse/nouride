@@ -26,7 +26,8 @@ describe("this tree", () => {
     const { timers, findings } = await checkTimers(ROOT);
     expect(findings).toEqual([]);
     expect(floorFailure(timers)).toBeNull();
-  });
+    // A reading of the whole tree: past the default five seconds on a busy machine, where it failed.
+  }, 30_000);
 
   test("and the lint says so the way lint:check runs it", () => {
     const run = spawnSync("bun", ["run", "scripts/check-timers.ts"], { cwd: ROOT, encoding: "utf8" });
