@@ -1,0 +1,35 @@
+{
+  "sheet": "nouride-pixel.png",
+  "cell": 48,
+  "cat": 32,
+  "at": [
+    8,
+    16
+  ],
+  "moves": [
+    {
+      "name": "idle",
+      "row": 0,
+      "frames": 4,
+      "fps": 4
+    },
+    {
+      "name": "walk",
+      "row": 1,
+      "frames": 4,
+      "fps": 8
+    },
+    {
+      "name": "wave",
+      "row": 2,
+      "frames": 4,
+      "fps": 6
+    },
+    {
+      "name": "hop",
+      "row": 3,
+      "frames": 6,
+      "fps": 10
+    }
+  ]
+}
