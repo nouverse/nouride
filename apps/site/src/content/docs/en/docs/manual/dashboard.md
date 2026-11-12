@@ -25,11 +25,12 @@ and **Memory** now and then, and everything you set up once behind **Settings**.
 Home                what needs you · what is moving · Quick chat · your agents · the box · today's AI use
 Chats               your agents and rooms in one list, and the groups they are in on chat apps
 Work
-  Waiting for you   tool calls an agent waits on, and missions waiting for your answer
+  Waiting for you   tool calls an agent waits on, missions waiting for your answer, and steps of an
+                    automation waiting for your yes
+  Automations       everything that runs on its own, on a schedule, when a webhook is called or by hand:
+                    make one, change its steps, run it now, see how each run went
   Missions          long work agents finish alone: what needs you, what runs, what ended; Limits
   Helpers           helpers, commands and asked agents an agent left running: each one's steps, Stop
-  Schedule          every job: create, edit, run now; filter by active / paused / failing
-  Webhooks          endpoints that run a job when called, rather than on a clock
 Agents
   Agents            the list, New Agent (admin), and daemon-wide Settings
     └ <agent>
@@ -104,7 +105,7 @@ whole menu, and a phone keeps its tab bar.
 
 **The look** is a soft cream by day and a violet grey by night. It follows your device until you choose with the sun or
 moon button beside your name. The Nouride cat greets you on Home, keeps you company on an empty page, and sits beside the title of pages such as
-Schedule and Secrets. While a page loads you see its outline, grey shapes where its content will be.
+Automations and Secrets. While a page loads you see its outline, grey shapes where its content will be.
 
 **Update** is a card on Settings rather than a menu entry. The version under the logo shows a dot when a newer release
 exists, and the badge at the top of Home or the button on **Your box** opens the page. Check, download and install are
@@ -123,7 +124,8 @@ long it has been up, beside the update badge and **Restart**; anything to look a
 this order:
 
 - **What needs you.** A tool call an agent waits on is answered right there: **Allow once**, **Deny**, and **Always
-  allow** where it is offered. A mission waiting for an answer, a request to talk to the agents, a skill to review, a
+  allow** where it is offered. A step of an automation that waits for your yes is answered there too: **Continue**
+  or **Stop**. A mission waiting for an answer, a request to talk to the agents, a skill to review, a
   fact the nightly pass wants to keep or change, or a document an agent saved for a collection is a card that opens
   its page. Facts and documents are shown to whoever may decide them: an admin or an operator.
 - **What is moving.** Each mission at work, with how far along its checklist is.
@@ -161,12 +163,56 @@ nothing.
 ## Ask your orchestrator, from any page
 
 Most pages carry a button in their header, **Ask** and your orchestrator's name: *Ask Nouva to create an agent* on
-Agents, *to set up a webhook* on Webhooks, *to schedule something* on Schedule, *to add a model* on Models, and so on.
+Agents, *to make an automation* on Automations, *to add a model* on Models, and so on.
 It opens the chat over the page you are on, with your orchestrator, and puts a request for that page in the box, with
 a gap (…) for what you want. You stay on the page. Finish the request and send it: nothing is sent until you do, and
 the agent still asks before anything risky. If you had already written something in the box, the request is added
 under it. The button is there for whoever may chat (an admin or an operator), and only once an orchestrator is set.
 On a phone it says **Ask Nouva**.
+
+## Automations
+
+**Work → Automations** is one list of everything that runs on its own: what starts at a time, what starts when a
+webhook is called, and what you start by hand. What an automation is, and what each kind of step does, is on
+[Automations](/en/docs/manual/schedule/). This is the page itself.
+
+**The list.** Each automation is a card: its name, what starts it in words (*every day at 07:00*), its steps as a row
+of small tiles (the first six, then how many more), the agent that runs it, how its last run went, when it runs next,
+and a switch to pause it. An automation with one step says that step in a line, so an old reminder reads as what it
+does. A search box looks in the names, the agents and what the steps say, and one dropdown, **Starts**, narrows the
+list to **Scheduled**, **Webhooks** or **Manual**. An automation an agent proposed carries **Turn on** and
+**Discard**. **New automation** opens an empty page to fill in, or ask an agent for one in a chat.
+
+**One automation's page** has its name at the top (press it to rename), the switch, **Run now**, and **Delete** in
+the menu beside them. Under it:
+
+- **Start**: when it runs, said back to you in words as you set it. A webhook shows its address with a button to copy
+  it, an example of how to call it, **Send a test**, and **New address** for when the old one got out.
+- **Steps**: cards in the order they run, joined by a line. Press a card to change it where it is. Press the plus
+  between two cards to add a step there and pick what it does. Drag a card by its handle to move it, or use **Move
+  up** and **Move down** in the card's menu, where **Duplicate** and **Delete** are too. A deleted step comes back
+  with **Undo** for a few seconds.
+- **Where a run goes next**: under each card, small labels say where the run goes once the step is done, if it
+  failed, and if it had nothing to say. On a laptop a step that jumps ahead is joined to the step it lands on by a
+  curved line, and pointing at the label lights that line up. A run only goes forward, so when moving or deleting a
+  step would leave a jump pointing back, the page sets it to the usual way and says so on the card.
+- **Who and where**: the agent, the chat that hears how each run went, and what it remembers between runs.
+
+Nothing is saved as you type. Once something changed, a bar at the foot of the page offers **Save** and **Discard
+changes**, and says what is still missing. If the server refuses a step, that step's card is marked with the reason
+in everyday words.
+
+**Runs.** Switch from **Steps** to **Last run** and the same cards show how the run went: which steps are done and
+how long each took, which failed and why, and which the run never reached. A run that is still going is drawn as it
+moves. A step that waits for you has **Continue** and **Stop** on its card, for whoever may change automations, and a
+step that started a mission links to it. **Recent runs** lists the last twenty, and pressing one draws that run over
+the steps.
+
+**A change an agent suggests** waits at the top of the page as **Suggested**, with what it adds, changes and removes,
+and **Accept** and **Discard**. **Current** and **Suggested** switch the cards between the two, with the changed
+steps marked.
+
+Schedule and Webhooks used to be two pages. They are this one page now, and their old addresses still open it.
 
 ## An agent is the module
 
@@ -221,7 +267,7 @@ agent's own *Settings* tab holds only what that agent overrides.
 
 ## What waits on you, and where
 
-Four things wait on a person, and each has its own place. Confusing the first two once cost an
+Several things wait on a person, and each has its own place. Confusing the first two once cost an
 operator an hour, and the wording is chosen so it cannot happen again.
 
 | | Where | What it means |
@@ -231,6 +277,7 @@ operator an hour, and the wording is chosen so it cannot happen again.
 | **Skill drafts** | Skills Workshop → *Pending*, with a count beside Skills in the menu | An agent has *proposed* a skill, or you fetched one from a hub |
 | **Memory proposals** | Home, and Knowledge & Memory → *Proposals*, with a count beside Memory in the menu | The nightly pass wants a change a person should decide on |
 | **Documents to add** | Home, and the collection's card under Knowledge & Memory → *Knowledge*, with a count beside Memory | An agent saved a document for a collection, and it waits for you to add or decline it |
+| **A step waiting for your yes** | Home, Work → *Waiting for you*, and the automation's own page, with **Continue** and **Stop** | A run of an automation has reached a step that asks a person before it goes on |
 
 An approval is a turn stopped mid-flight with a timer on it. A draft or a proposal is a suggestion
 about work that already finished: it blocks nothing and waits for you. Putting them in one queue
@@ -250,13 +297,15 @@ waiting and opening where they are answered:
 Both appear only when the queue is not empty, and neither carries an approve button. Letting a
 stranger in, or publishing a skill an agent wrote, is not a decision to make from a page you are
 skimming, so the count is here and the request is read where it is decided. A mission waiting for an
-answer is a card too, opening the mission. Memory proposals show as a count on the *Proposals* tab.
+answer is a card too, opening the mission. A step of an automation that waits for your yes is answered right there,
+with **Continue** and **Stop**, and its card opens the automation. Memory proposals show as a count on the
+*Proposals* tab.
 
 ![An approval card](/media/dashboard-approvals.png)
 
 ## Links from a chat
 
-Asked about a mission, a scheduled job or an approval, an agent gives you the link to its page here, and a mission's
+Asked about a mission, an automation or an approval, an agent gives you the link to its page here, and a mission's
 *started*, *needs you* and *done* notices carry one. Links are built from `[dashboard] public_url`, the address the
 dashboard is reached at from outside. Without it there are none: a `localhost` address opens nothing on a phone.
 
@@ -267,8 +316,9 @@ dashboard is reached at from outside. Without it there are none: a `localhost` a
 - **Opened signed out**, a link goes to the login page, and once you sign in, on to the page it named.
 - **No preview card.** A message that holds a link is sent with its preview off, so the chat shows no card of the login
   page.
-- **One job on Schedule.** The link for a job an agent proposed, `/schedule?job=<id>`, opens the page with that job's
-  card marked and its runs open.
+- **One automation.** The link for an automation an agent proposed opens that automation's own page,
+  `/automations/<id>`. A link from before Automations was one page, `/schedule?job=<id>`, lands on the same page, and
+  the old Schedule and Webhooks addresses open the Automations list.
 
 ## Skills is top-level *and* a tab
 
