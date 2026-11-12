@@ -14,6 +14,7 @@ import { Allowed } from "@/commons/components/jobs/Allowances";
 import { SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
 import { useToast } from "@/commons/components/ui/toast";
 import { useKnownChats } from "@/commons/hooks/use-known-chats";
+import { usePageSubject } from "@/commons/hooks/use-page-subject";
 import { useWaitingSteps } from "@/commons/hooks/use-waiting-steps";
 import { api } from "@/commons/lib/api";
 import { canWrite, isAdmin, useMe } from "@/commons/lib/session";
@@ -75,7 +76,8 @@ function Beside({ automation, runs, picked, onPick, canAllow }: { automation: Au
 
 export function AutomationView({ detail, blank, home }: { detail: AutomationDetail | null; blank: Draft; home: string }) {
   const automation = detail?.automation ?? null;
-  // page subject: <automation.name> (<automation.id>), once `automation` is here; none while one is being made.
+  // What the floating chat tells an agent this page is about: the automation by its name; nothing while one is made.
+  usePageSubject(automation?.name);
   const fresh = automation === null;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
