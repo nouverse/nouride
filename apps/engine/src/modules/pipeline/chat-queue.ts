@@ -13,6 +13,7 @@ import type { Voice } from "./voice.ts";
 import type { TurnContext } from "./turn-context.ts";
 import type { InboxDesk } from "./inbox-desk.ts";
 import type { InboundRouter } from "./inbound.ts";
+import { commandForAnotherBot } from "./command-for-another.ts";
 import { jobOfCompletionWake } from "./job-wakes.ts";
 import { answerGroupCommand } from "./room-mention.ts";
 import { conversationSlots } from "./fair-share.ts";
@@ -37,6 +38,16 @@ export function chatQueue(parts: {
     reply: (to: MessageEnvelope, text: string, fromAgent: string) => voice.reply(to, text, fromAgent),
     connected: (gatewayId: string) => deps.gateways.get(gatewayId)?.status === "connected",
   };
+  /** What tags each of our bots on a platform, by connection, as each connection says it now. */
+  const botTags = (platform: MessageEnvelope["gateway"]): Record<string, string> =>
+    Object.fromEntries(
+      deps.config.gateways
+        .filter((instance) => instance.enabled && instance.platform === platform)
+        .flatMap((instance) => {
+          const tag = deps.gateways.get(instance.id)?.selfMention;
+          return tag ? [[instance.id, tag] as const] : [];
+        }),
+    );
   return new KeyedQueue<MessageEnvelope>({
     // Sequential per (agent-bearing chat), parallel across chats. The key deliberately
     // excludes the agent: two agents in one chat still take turns, because they are
@@ -89,6 +100,8 @@ export function chatQueue(parts: {
       if (woken) deps.jobWakes?.markWoken(woken, Date.now());
       // A command about the group (`/mention`) before routing: untagged in a shared room, routing would answer nobody.
       return parts.inbox().track(envelope, async () => {
+        // A command for another of our bots, by the tag in front of it: that bot's own copy answers it.
+        if (commandForAnotherBot({ hooks, tags: botTags }, envelope)) return;
         if (!(await answerGroupCommand(groupCommand, envelope))) await inbound.handle(envelope);
       });
     },

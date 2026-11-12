@@ -69,7 +69,8 @@ const listed = (agents: Agents): string => agents.map((agent) => (agent.tag && a
 
 const mention: Hook = {
   command: "/mention",
-  description: "Who answers here without a tag: `/mention`, `/mention <agent>`, `/mention required`, `/mention default`",
+  // Within the hundred characters the shortest platform menu takes (Discord's).
+  description: "Who answers without a tag here: `/mention <agent>`, `/mention required`, `/mention default`",
   // The group's setting, not this agent's: pausing the agent that happens to receive it has nothing to say about it.
   worksWhilePaused: true,
   aboutTheGroup: true,
@@ -94,7 +95,9 @@ function reply(ctx: HookContext): { reply?: string } {
     // Addressed to one bot and saying nothing else, as a command menu writes it: that bot's agent answers (`addressedHere`),
     // and says how the room is given to it. The person who sent it meant that.
     const mine = agents.find((agent) => agent.id === ctx.agent.config.id);
-    const teach = ctx.envelope.mentionsSelf && mine && here.answers !== mine.id ? `\nTo have ${mine.name} answer everything here: \`/mention ${mine.tag ?? mine.id}\`.` : "";
+    // In words a person can type: a handle where the platform's tag is one (`@NovelistBot`), else the agent's id.
+    const typed = mine?.tag?.startsWith("@") ? mine.tag : mine?.id;
+    const teach = ctx.envelope.mentionsSelf && mine && here.answers !== mine.id ? `\nTo have ${mine.name} answer everything here: \`/mention ${typed}\`.` : "";
     return { reply: `${sentence(here, agents)} (${FROM[here.source]})${teach}\n${USAGE}` };
   }
 

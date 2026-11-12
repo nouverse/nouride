@@ -18,6 +18,7 @@ import { parseCommand } from "@/modules/hooks/parse.ts";
 import { requireMentionHere } from "@/modules/pipeline/room-mention.ts";
 import { RoomMentionStore, type RoomMentionPort } from "@/modules/pipeline/room-mention.store.ts";
 import { UserStore } from "@/modules/users/users.store.ts";
+import { stripLeadingSelfMention, writtenMentions } from "../../../../packages/gateways/src/channels/discord/envelope.ts";
 import { foldChatId, telegramMentions } from "../../../../packages/gateways/src/channels/telegram/envelope.ts";
 import { cheapPasswords, envelope as envelopeAt, FakeGateway, tempDir } from "../helpers.ts";
 import { pipelineBench, type Bench } from "../pipeline-bench.ts";
@@ -139,17 +140,32 @@ function asTelegramDelivers(text: string, self: string): Pick<MessageEnvelope, "
   return { text: read.text, mentions: read.mentions, ...(read.mentionsSelf ? { mentionsSelf: true } : {}) };
 }
 
+/** Each bot's id on Discord, where a tag is written `<@id>`. */
+const SNOWFLAKE: Record<string, string> = { nouva: "111", nox: "222", nero: "333" };
+
+/** A message as the Discord bot `self`'s own adapter hands it over: its own tag off the front, the tags read off the text. */
+function asDiscordDelivers(content: string, self: string): Pick<MessageEnvelope, "text" | "mentions" | "mentionsSelf"> {
+  const selfId = SNOWFLAKE[self]!;
+  const read = writtenMentions({ content, users: Object.entries(SNOWFLAKE).map(([username, id]) => ({ id, username })), selfId });
+  return { text: stripLeadingSelfMention(content, selfId).trim(), mentions: read.mentions, ...(read.mentionsSelf ? { mentionsSelf: true } : {}) };
+}
+
 /**
  * Agents with a Telegram bot each, all in one group, and people: `operator` an admin, `colleague` paired but not one.
+ * With `platform: "discord"`, a Discord bot each, in one server channel.
  * `writes` counts what reached the store, so "one change" is asserted on the store and not on the replies.
  */
-async function group(options: { bots?: string[]; daemonRequires?: boolean; instanceRequires?: boolean; turns?: number; orchestrator?: string } = {}) {
+async function group(
+  options: { bots?: string[]; daemonRequires?: boolean; instanceRequires?: boolean; turns?: number; orchestrator?: string; platform?: "telegram" | "discord" } = {},
+) {
   const bots = options.bots ?? ["nouva", "nox", "nero"];
+  const platform = options.platform ?? "telegram";
   const connections = Object.fromEntries(
     bots.map((id) => {
-      const connection = new FakeGateway(`telegram:${id}`, "telegram");
+      const connection = new FakeGateway(`${platform}:${id}`, platform);
       // What a person writes to tag this bot, as its adapter says it.
-      connection.selfMention = `@${id}_bot`;
+      connection.selfMention = platform === "discord" ? `<@${SNOWFLAKE[id]}>` : `@${id}_bot`;
+      if (platform === "discord") connection.selfId = SNOWFLAKE[id]!;
       return [id, connection];
     }),
   );
@@ -162,7 +178,7 @@ async function group(options: { bots?: string[]; daemonRequires?: boolean; insta
       agents: { mentions_enabled: true, groups_require_mention: options.daemonRequires ?? false },
       ...(options.orchestrator ? { daemon: { orchestrator: options.orchestrator } } : {}),
       gateways: {
-        telegram: Object.fromEntries(
+        [platform]: Object.fromEntries(
           bots.map((id) => [id, { enabled: true, token: `t-${id}`, agent: id, ...(options.instanceRequires === undefined ? {} : { groups_require_mention: options.instanceRequires }) }]),
         ),
       },
@@ -173,7 +189,7 @@ async function group(options: { bots?: string[]; daemonRequires?: boolean; insta
       users = store;
       const account = async (username: string, role: "admin" | "operator") => `web:${(await store.create({ username, role, createdBy: "test" })).id}`;
       config.people = [
-        { key: "gading", ids: ["telegram:operator", await account("gading", "admin")], name: "Gading" },
+        { key: "gading", ids: ["telegram:operator", "discord:operator", await account("gading", "admin")], name: "Gading" },
         { key: "budi", ids: ["telegram:colleague", await account("budi", "operator")], name: "Budi" },
       ];
     },
@@ -197,10 +213,10 @@ async function group(options: { bots?: string[]; daemonRequires?: boolean; insta
   cleanup.push(bench.dispose);
   bench.pipeline.setTools(new Map());
   bench.pipeline.attach();
-  return harness(bench, bots, connections, writes);
+  return harness(bench, bots, connections, writes, platform);
 }
 
-function harness(bench: Bench, bots: string[], connections: Record<string, FakeGateway>, writes: string[]) {
+function harness(bench: Bench, bots: string[], connections: Record<string, FakeGateway>, writes: string[], platform: "telegram" | "discord") {
   let n = 0;
   return {
     ...bench,
@@ -208,8 +224,8 @@ function harness(bench: Bench, bots: string[], connections: Record<string, FakeG
     /** One message as Telegram delivers it to a group: a copy to every bot, the same id and time on each. */
     async say(over: Partial<MessageEnvelope> & { perBot?: (bot: string) => Partial<MessageEnvelope> }) {
       const { perBot, ...rest } = over;
-      const message = envelopeAt({ id: `m-${++n}`, timestamp: Date.now(), chatType: "group", chatId: "room-1", senderId: "operator", ...rest });
-      for (const id of bots) connections[id]!.receive({ ...message, gatewayId: `telegram:${id}`, ...perBot?.(id) });
+      const message = envelopeAt({ id: `m-${++n}`, timestamp: Date.now(), gateway: platform, chatType: platform === "discord" ? "channel" : "group", chatId: "room-1", senderId: "operator", ...rest });
+      for (const id of bots) connections[id]!.receive({ ...message, gatewayId: `${platform}:${id}`, ...perBot?.(id) });
       await bench.pipeline.idle();
     },
     /** What every bot said, flattened, since the last call. */
@@ -335,7 +351,7 @@ describe("/mention says, sets and clears", () => {
     expect(said).toContain("`/mention default` follow the gateway or daemon again");
     expect(said).not.toMatch(/\/mention (on|off)\b/);
     const listed = h.pipeline.commands().find((command) => command.command === "mention" || command.command === "/mention");
-    expect(listed?.description).toBe("Who answers here without a tag: `/mention`, `/mention <agent>`, `/mention required`, `/mention default`");
+    expect(listed?.description).toBe("Who answers without a tag here: `/mention <agent>`, `/mention required`, `/mention default`");
   });
 
   test("the connection's own setting is named as the gateway's", async () => {
@@ -477,6 +493,34 @@ describe("/mention <agent>: the room given to one agent", () => {
     expect(h.said()[0]).toStartWith("Here no tag is needed; Nouva answers. nox, the agent named for it, is no longer here. (set for this group with /mention)");
   }, ROOM);
 
+  test("its conversation there is one, under its own bot, whichever bot's copy came first: the one a tag reaches too", async () => {
+    // Where every bot has the message under one id, the first copy through the claim took it, and the conversation is
+    // kept by the connection a message came on: Nero's, under Nouva's bot for one message and Nox's for the next, and
+    // never the one a tag to Nero continues. Nero's copy is the last to come here.
+    const h = await group({ orchestrator: "nouva", turns: 3 });
+    await h.say({ text: "/mention nero" });
+    expect(await untagged(h)).toEqual(["nero"]);
+    expect(await untagged(h)).toEqual(["nero"]);
+    h.said();
+    await h.say({ text: "@nero_bot dan ini?", perBot: (bot) => (bot === "nero" ? { mentionsSelf: true } : { mentions: ["nero_bot"] }) });
+    expect(h.speakers()).toEqual(["nero"]);
+
+    const conversations = h.db.prepare<{ id: string }>("SELECT id FROM sessions WHERE agent_id = 'nero'").all().map((row) => row.id);
+    expect(conversations).toEqual(["ses_nero:telegram:nero:room-1"]);
+  }, ROOM);
+
+  test("where its own bot has no copy of the message, another bot's copy still brings it the message", async () => {
+    // Nothing says which rooms a bot was invited to: the others wait for its copy only a moment.
+    const h = await group({ orchestrator: "nouva", turns: 2 });
+    await h.say({ text: "/mention nero" });
+    h.said();
+    const message = envelopeAt({ id: "m-without", timestamp: Date.now(), chatType: "group", chatId: "room-1", senderId: "operator", text: "ada yang bisa bantu?" });
+    for (const id of ["nouva", "nox"]) h.connections[id]!.receive({ ...message, gatewayId: `telegram:${id}` });
+    await h.pipeline.idle();
+
+    expect(h.said()).toEqual(["answer 1"]);
+  }, ROOM);
+
   test("it is the room's own: another room is the orchestrator's as before", async () => {
     const h = await group({ orchestrator: "nouva", turns: 3 });
     await h.say({ text: "/mention nox" });
@@ -510,6 +554,54 @@ describe("/mention <agent>: the room given to one agent", () => {
     expect(nox.sent.map((m) => m.text)).toEqual(["after the restart"]);
     expect(nouva.sent).toEqual([]);
   });
+});
+
+describe("on Discord, where a tag is written `<@id>`", () => {
+  const ROOM = 30_000;
+
+  test("`/mention <@id>` names the agent whose bot that is; the orchestrator's bot answers", async () => {
+    const h = await group({ platform: "discord", orchestrator: "nouva" });
+    await h.say({ text: "", perBot: (bot) => asDiscordDelivers("/mention <@222>", bot) });
+
+    expect(h.connections.nouva!.sent.map((message) => message.text)).toEqual([`Done. ${answers("Nox")}`]);
+    expect(h.said()).toHaveLength(1);
+    expect(h.writes).toEqual(["set discord:room-1 nox"]);
+  }, ROOM);
+
+  test("`@Orchestrator /mention @Nox`, the tag in front as Discord is written: one answer, and Nox does not take it as a message to it", async () => {
+    const h = await group({ platform: "discord", orchestrator: "nouva", turns: 2 });
+    await h.say({ text: "", perBot: (bot) => asDiscordDelivers("<@111> /mention <@222>", bot) });
+
+    expect(h.connections.nouva!.sent.map((message) => message.text)).toEqual([`Done. ${answers("Nox")}`]);
+    expect(h.connections.nox!.sent).toEqual([]);
+    expect(h.connections.nero!.sent).toEqual([]);
+    expect(h.writes).toEqual(["set discord:room-1 nox"]);
+  }, ROOM);
+
+  test("any command written that way is the named bot's: answered once, as a command, though another bot's copy came first", async () => {
+    // Nouva's copy comes first and still has Nox's tag in front. It was routed to Nox as a message and took the
+    // claim: Nox's model answered `/help` as if it were talk, and Nox's own copy, the command, was dropped.
+    const h = await group({ platform: "discord", orchestrator: "nouva" });
+    await h.say({ text: "", perBot: (bot) => asDiscordDelivers("<@222> /help", bot) });
+
+    const said = h.connections.nox!.sent.map((message) => message.text);
+    expect(said).toHaveLength(1);
+    expect(said[0]).toContain("/mention");
+    expect(said[0]).not.toContain("answer 1");
+    expect(h.connections.nouva!.sent).toEqual([]);
+    expect(h.connections.nero!.sent).toEqual([]);
+  }, ROOM);
+
+  test("`@Nox /mention`: Nox's bot answers, and says how the room is given to it in words a person can type", async () => {
+    const h = await group({ platform: "discord", orchestrator: "nouva" });
+    await h.say({ text: "", perBot: (bot) => asDiscordDelivers("<@222> /mention", bot) });
+
+    const said = h.connections.nox!.sent.map((message) => message.text);
+    expect(said).toHaveLength(1);
+    expect(h.connections.nouva!.sent).toEqual([]);
+    expect(said[0]).toContain("\nTo have Nox answer everything here: `/mention nox`.\n");
+    expect(said[0]).not.toContain("<@");
+  }, ROOM);
 });
 
 describe("the Groups page's door", () => {
