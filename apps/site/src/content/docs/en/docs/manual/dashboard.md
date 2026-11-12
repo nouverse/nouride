@@ -204,7 +204,8 @@ list to **Scheduled**, **Webhooks** or **Manual**. An automation an agent propos
 - **Where a run goes next**: under each card, small labels say where the run goes once the step is done, if it
   failed, and if it had nothing to say. On a laptop a step that jumps ahead is joined to the step it lands on by a
   curved line, and pointing at the label lights that line up. A run only goes forward, so when moving or deleting a
-  step would leave a jump pointing back, the page sets it to the usual way and says so on the card.
+  step would leave a jump pointing back, the page sets it to the usual way and says so on the card. The last
+  step has no such labels and nothing to choose: the run ends after it, and its card says how that end is counted.
 - **Who and where**: the agent, the chat that hears how each run went, and what it remembers between runs.
 
 Nothing is saved as you type. Once something changed, a bar at the foot of the page offers **Save** and **Discard

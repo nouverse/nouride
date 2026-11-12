@@ -6,7 +6,7 @@
 
 import { Bot, Clock, Hand, MessageSquare, Play, Target, Terminal, Zap, type LucideIcon } from "lucide-react";
 import type { AutomationStart } from "@nouride/wire";
-import { APPROVAL_WAIT_MS, exitOf, landsAt, mainText, type ExitName, type Step, type StepKind } from "./steps";
+import { APPROVAL_WAIT_MS, exitOf, exitsOf, landsAt, mainText, type ExitName, type Step, type StepKind } from "./steps";
 
 export interface KindLook {
   icon: LucideIcon;
@@ -82,6 +82,19 @@ export function exitGoes(steps: readonly Step[], index: number, exit: ExitName, 
 export function endWords(exit: ExitName): string {
   if (exit === "whenFailed") return "End the run, as failed";
   return exit === "whenEmpty" ? "End the run quietly" : "End the run here";
+}
+
+/**
+ * What happens after the last step, in place of its paths: the run ends, and how that end is counted. Said and not
+ * chosen, since every choice there ends the run the same way.
+ */
+export function lastStepWords(step: Step): string {
+  const ways = exitsOf(step);
+  return [
+    "This is the last step, so the run ends after it.",
+    ...(ways.includes("whenFailed") ? [step.kind === "approval" ? "If you say no, or nobody answers, it ends there." : "If it fails, the run ends as failed."] : []),
+    ...(ways.includes("whenEmpty") ? ["With nothing to say, it ends quietly."] : []),
+  ].join(" ");
 }
 
 /** How long a wait is, in the unit a person says it in: "5 minutes", "1 hour", "3 days". */

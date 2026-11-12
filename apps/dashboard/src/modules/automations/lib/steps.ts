@@ -70,12 +70,19 @@ export interface Branch {
   jump: boolean;
 }
 
-/** The paths a step says for itself: only these are drawn under its card. */
+/** Whether a step is the last: after it the run ends whichever way the step went, and there is nothing to choose. */
+export const isLast = (steps: readonly Step[], index: number): boolean => index === steps.length - 1;
+
+/**
+ * The paths a step says for itself: only these are drawn under its card. None for the last step, whatever it holds:
+ * "go on" there has no step to go on to, and the run ends the same way as with "end" (as failed after a failure,
+ * quietly after silence). It was drawn as "If it fails → go on" under the last card, which read as a branch.
+ */
 export function branchesOf(steps: readonly Step[], index: number): Branch[] {
   const step = steps[index]!;
   return EXITS.flatMap((exit): Branch[] => {
     const go = step[exit];
-    if (go === undefined || go === DEFAULT_EXIT[exit]) return [];
+    if (go === undefined || go === DEFAULT_EXIT[exit] || (isLast(steps, index) && typeof go !== "object")) return [];
     const to = landsAt(steps, index, exit);
     return [{ exit, to, jump: to !== "end" && to > index + 1 }];
   });

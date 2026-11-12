@@ -236,7 +236,7 @@ describe("where the run goes from a step", () => {
   test("set from its card: only later steps are offered, the path is a chip under the card and a line to where it lands", async () => {
     shown();
     let sent: { path: string; body: unknown }[] = [];
-    const seen = { before: 0, offered: [] as string[], chips: [] as string[], links: [] as (string | null)[], lit: "", target: "", last: [] as string[] };
+    const seen = { before: 0, offered: [] as string[], chips: [] as string[], links: [] as (string | null)[], lit: "", target: "", last: "", lastPaths: 0 };
     await renderPage(PAGE, async (host) => {
       await flowDrawn(host);
       // Nothing a step says for itself: no chip, no line.
@@ -256,11 +256,11 @@ describe("where the run goes from a step", () => {
       await eventually(() => host.querySelector("[data-flow-link]")?.getAttribute("data-state") === "active", 2_000, "the line lit");
       seen.lit = host.querySelector("[data-flow-link]")?.getAttribute("data-state") ?? "";
       seen.target = stepCard(host, "tell").dataset.state ?? "";
-      // The last step has nothing after it to jump to.
+      // The last step has nothing after it: no path is offered, and its card says how the run ends.
       labelled(host, "Edit step 4").click();
-      await eventually(() => dropdown(host, "When it is done").button() !== undefined && host.textContent?.includes("Sent as written") === true, 2_000, "the last step's paths");
-      seen.last = await dropdown(host, "When it is done").open();
-      await dropdown(host, "When it is done").pick("Finish the run");
+      await eventually(() => host.textContent?.includes("This is the last step") === true, 2_000, "the last step's editor");
+      seen.last = [...host.querySelectorAll("p")].find((line) => line.textContent?.startsWith("This is the last step"))?.textContent ?? "";
+      seen.lastPaths = ["When it is done", "When it fails", "When it has nothing to say"].filter((label) => dropdown(host, label).button() !== undefined).length;
       sent = await saved(host);
     });
     expect(seen.before).toBe(0);
@@ -269,8 +269,32 @@ describe("where the run goes from a step", () => {
     // Ending the run is no jump: only the path to a later step is a line.
     expect(seen.links).toEqual(["check:whenFailed"]);
     expect([seen.lit, seen.target]).toEqual(["active", "target"]);
-    expect(seen.last).toEqual(["Finish the run", "End the run here"]);
+    // A message sent has one way out, so nothing more is said of it.
+    expect(seen.last).toBe("This is the last step, so the run ends after it.");
+    expect(seen.lastPaths).toBe(0);
     expect(steps(sent)).toEqual([{ ...CHECK, then: "end", whenFailed: { to: "tell" } }, FIND, OK, TELL]);
+  });
+
+  test("the last step ends the run whichever way it went: though it holds a path, none is drawn under it or offered on it", async () => {
+    // As an agent or the command line may write it, and as the page once let a person set it: "go on" with no step to go on to.
+    shown([CHECK, { ...FIND, whenFailed: "next", whenEmpty: "next", then: "end" }]);
+    const seen = { chips: 0, says: "", paths: 0, middle: 0 };
+    await renderPage(PAGE, async (host) => {
+      await flowDrawn(host, 2);
+      seen.chips = host.querySelectorAll("[data-branch]").length;
+      labelled(host, "Edit step 2").click();
+      await eventually(() => host.textContent?.includes("This is the last step") === true, 2_000, "the last step's editor");
+      seen.says = [...host.querySelectorAll("p")].find((line) => line.textContent?.startsWith("This is the last step"))?.textContent ?? "";
+      seen.paths = host.querySelectorAll('button[aria-haspopup="listbox"][aria-label^="When it"]').length;
+      // The step before it still has its three.
+      labelled(host, "Edit step 1").click();
+      await eventually(() => host.textContent?.includes("Where the run goes from here") === true, 2_000, "a middle step's paths");
+      seen.middle = host.querySelectorAll('button[aria-haspopup="listbox"][aria-label^="When it"]').length;
+    });
+    expect(seen.chips).toBe(0);
+    expect(seen.says).toBe("This is the last step, so the run ends after it. If it fails, the run ends as failed. With nothing to say, it ends quietly.");
+    expect(seen.paths).toBe(0);
+    expect(seen.middle).toBe(3);
   });
 
   test("a move that would turn a path backward puts it back to its default, and the card says so", async () => {

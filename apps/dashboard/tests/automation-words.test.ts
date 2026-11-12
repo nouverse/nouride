@@ -5,7 +5,7 @@
 
 import { describe, expect, test } from "bun:test";
 import type { Step } from "@/modules/automations/lib/steps";
-import { KIND, START, endWords, exitAsks, exitChip, exitGoes, stepLine, stepNote, stepTitle } from "@/modules/automations/lib/words";
+import { KIND, START, endWords, exitAsks, exitChip, exitGoes, lastStepWords, stepLine, stepNote, stepTitle } from "@/modules/automations/lib/words";
 
 const command: Step = { id: "a", kind: "command", argv: ["sh", "-lc", "curl -sf  https://shop.example.com/health"] };
 const turn: Step = { id: "b", kind: "agentTurn", message: "Find out why.\nSay what you found." };
@@ -57,6 +57,15 @@ describe("a step's words", () => {
 describe("a path's words", () => {
   const steps = [{ ...command, then: "end", whenFailed: "next", whenEmpty: { to: "d" } } as Step, turn, wait, say];
   const title = (step: Step) => stepTitle(step, "Nix");
+
+  test("the last step says how the run ends, by what its kind can do: a failure counted, silence quiet, a no not a failure", () => {
+    expect(lastStepWords(command)).toBe("This is the last step, so the run ends after it. If it fails, the run ends as failed. With nothing to say, it ends quietly.");
+    expect(lastStepWords(turn)).toBe(lastStepWords(command));
+    // A message sent has one way out; a wait ends in a yes or a no.
+    expect(lastStepWords(say)).toBe("This is the last step, so the run ends after it.");
+    expect(lastStepWords(wait)).toBe("This is the last step, so the run ends after it. If you say no, or nobody answers, it ends there.");
+    expect(lastStepWords({ id: "m", kind: "mission", goal: "x" })).toBe("This is the last step, so the run ends after it. If it fails, the run ends as failed.");
+  });
 
   test("what happened for the run to take it: in the editor as a question, under the card as a chip", () => {
     expect([exitAsks(command, "then"), exitAsks(command, "whenFailed"), exitAsks(command, "whenEmpty")]).toEqual(["When it is done", "When it fails", "When it has nothing to say"]);

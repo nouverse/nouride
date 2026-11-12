@@ -1,7 +1,8 @@
 /**
  * A step's fields, opened in its own card: what it is called, what kind it is and that kind's own fields, and where
  * the run goes from it. Each path is a short dropdown: the next step, the end of the run, or a later step by its
- * number and title. Only later ones are offered, since a run only ever goes forward.
+ * number and title. Only later ones are offered, since a run only ever goes forward. The last step has no paths to
+ * set: the run ends after it, and its card says how that end is counted.
  */
 
 import { Undo2 } from "lucide-react";
@@ -9,15 +10,14 @@ import type { StepExit } from "@nouride/wire";
 import { Field } from "@/commons/components/ui/ui";
 import { SearchSelect } from "@/commons/components/ui/SearchSelect";
 import type { Then } from "../lib/draft";
-import { DEFAULT_EXIT, KINDS, exitFrom, exitOf, exitValue, exitsOf, type ExitName, type ExitReset, type Step, type StepKind } from "../lib/steps";
-import { KIND, endWords, exitAsks, exitChip } from "../lib/words";
+import { DEFAULT_EXIT, KINDS, exitFrom, exitOf, exitValue, exitsOf, isLast, type ExitName, type ExitReset, type Step, type StepKind } from "../lib/steps";
+import { KIND, endWords, exitAsks, exitChip, lastStepWords } from "../lib/words";
 import { KindFields, type AgentChoice } from "./KindFields";
 
-/** What a path can be set to from a step: on, the end, or any step after it. */
+/** What a path can be set to from a step that is not the last: on, the end, or any step after it. */
 function choices(steps: readonly Step[], index: number, exit: ExitName, titleOf: (step: Step) => string): { value: string; label: string }[] {
-  const last = index === steps.length - 1;
   return [
-    { value: "next", label: last ? "Finish the run" : `Go on to step ${index + 2}` },
+    { value: "next", label: `Go on to step ${index + 2}` },
     { value: "end", label: endWords(exit) },
     // The step right after it is "go on", said once.
     ...steps.slice(index + 2).map((step, at) => ({ value: exitValue({ to: step.id }), label: `Jump to step ${index + 3 + at}, ${titleOf(step)}` })),
@@ -88,25 +88,30 @@ export function StepEditor({
       {/* Keyed by the kind as well: another kind's fields are another form, with nothing typed in it carried over unseen. */}
       <KindFields key={`${step.id} ${step.kind}`} step={step} own={own} agents={agents} alone={alone} onChange={onStep} />
 
-      <fieldset className="space-y-3 rounded-[18px] bg-base-200/60 p-3.5">
-        <legend className="sr-only">Where the run goes from this step</legend>
-        <p className="text-xs font-bold text-base-content/70">Where the run goes from here</p>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {exitsOf(step).map((exit) => (
-            <Field key={exit} label={exitAsks(step, exit)}>
-              <SearchSelect
-                label={exitAsks(step, exit)}
-                align="start"
-                className="w-full bg-base-100"
-                width={320}
-                options={choices(steps, index, exit, titleOf)}
-                value={held(steps, index, exit)}
-                onChange={(next) => onExit(exit, exitFrom(next))}
-              />
-            </Field>
-          ))}
-        </div>
-      </fieldset>
+      {isLast(steps, index) ? (
+        // Nothing to choose: "Finish the run" stood here beside "End the run", two names for one thing.
+        <p className="rounded-[18px] bg-base-200/60 p-3.5 text-xs text-base-content/75">{lastStepWords(step)}</p>
+      ) : (
+        <fieldset className="space-y-3 rounded-[18px] bg-base-200/60 p-3.5">
+          <legend className="sr-only">Where the run goes from this step</legend>
+          <p className="text-xs font-bold text-base-content/70">Where the run goes from here</p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {exitsOf(step).map((exit) => (
+              <Field key={exit} label={exitAsks(step, exit)}>
+                <SearchSelect
+                  label={exitAsks(step, exit)}
+                  align="start"
+                  className="w-full bg-base-100"
+                  width={320}
+                  options={choices(steps, index, exit, titleOf)}
+                  value={held(steps, index, exit)}
+                  onChange={(next) => onExit(exit, exitFrom(next))}
+                />
+              </Field>
+            ))}
+          </div>
+        </fieldset>
+      )}
 
       <div className="flex justify-end">
         <button type="button" className="btn btn-sm btn-ghost border border-base-content/10" onClick={onDone}>

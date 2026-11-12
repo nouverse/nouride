@@ -7,7 +7,7 @@
 
 import { describe, expect, test } from "bun:test";
 import {
-  DEFAULT_EXIT, STEPS_MAX, argvOf, asKind, blankStep, branchesOf, duplicateStep, exitFrom, exitOf, exitValue, exitsOf, forward, insertStep, landsAt, mainText, moveStep, newStepId,
+  DEFAULT_EXIT, STEPS_MAX, argvOf, asKind, blankStep, branchesOf, duplicateStep, exitFrom, exitOf, exitValue, exitsOf, forward, insertStep, isLast, landsAt, mainText, moveStep, newStepId,
   refusedStep, removeStep, replaceStep, setExit, shellLine, stepProblems, type Step,
 } from "@/modules/automations/lib/steps";
 
@@ -49,6 +49,15 @@ describe("where a run goes from a step", () => {
     expect(branchesOf(steps, 1)).toEqual([{ exit: "then", to: 2, jump: false }]);
     expect(branchesOf([run("a", { whenFailed: { to: "d" } }), say("b"), say("c"), say("d")], 0)).toEqual([{ exit: "whenFailed", to: 3, jump: true }]);
     expect(branchesOf(steps, 2)).toEqual([]);
+  });
+
+  test("the last step has no branch, whatever it holds: after it the run ends whichever way it went", () => {
+    const held = run("b", { then: "end", whenFailed: "next", whenEmpty: "next" });
+    expect(branchesOf([run("a"), held], 1)).toEqual([]);
+    expect(branchesOf([held], 0)).toEqual([]);
+    // The same step with one after it: each of its paths is a branch again.
+    expect(branchesOf([run("a"), held, say("c")], 1).map((branch) => branch.exit)).toEqual(["then", "whenFailed", "whenEmpty"]);
+    expect([isLast([run("a"), held], 1), isLast([run("a"), held], 0), isLast([held], 0)]).toEqual([true, false, true]);
   });
 
   test("set: a later step, on, or the end; the default is left out, and a step that is not after it is not taken", () => {

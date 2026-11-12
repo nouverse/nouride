@@ -210,7 +210,8 @@ nyala atau jeda, **Run now**, dan **Delete** di menu di sebelahnya. Di bawahnya:
   kalau gagal, dan kalau gak ada yang dikatakan. Di laptop, langkah yang melompat ke depan disambung ke langkah
   tujuannya dengan garis melengkung, dan garis itu menyala saat labelnya ditunjuk. Run hanya bergerak maju, jadi
   kalau memindah atau menghapus langkah membuat lompatan mengarah ke belakang, halamannya mengembalikan lompatan itu
-  ke cara biasa dan bilang begitu di kartunya.
+  ke cara biasa dan bilang begitu di kartunya. Langkah terakhir gak punya label itu dan gak ada yang perlu dipilih: run
+  selesai setelahnya, dan kartunya bilang bagaimana akhir itu dihitung.
 - **Who and where**: agent-nya, chat yang dikabari hasil tiap run, dan apa yang ia ingat di antara run.
 
 Gak ada yang tersimpan selagi kamu mengetik. Begitu ada yang berubah, sebuah bar di bawah halaman menawarkan **Save**
