@@ -8,6 +8,7 @@ import { answeredBy, readsOnly } from "@/commons/lib/by-person";
 import { stepsOf } from "./draft";
 import { runWords, took, whenWords, type Tone } from "./runs";
 import { mainText, type StepKind } from "./steps";
+import { toldAndOff } from "./watch";
 
 export type StartFilter = "all" | AutomationStart;
 
@@ -21,7 +22,8 @@ export function rows(automations: readonly AutomationSummary[]): AutomationSumma
 }
 
 /**
- * The state a row says, most pressing first: something waits for the person, it fails, it is off, or it is on. On one
+ * The state a row says, most pressing first: something waits for the person, it fails, it is off (paused, or because
+ * it told and turned itself off), or it is on. On one
  * the reader only reads, what waits is another's to answer: said in the same words, without the colour of what needs
  * the reader.
  */
@@ -31,7 +33,8 @@ export function stateOf(automation: AutomationSummary, agentName: (id: string) =
   if (automation.lastRun?.status === "waiting" && automation.lastRun.waiting?.kind === "approval") return { word: runWords(automation.lastRun, answeredBy(automation)).label, tone: theirs ? "quiet" : "needs" };
   if (automation.suggested) return { word: "A change is suggested", tone: theirs ? "quiet" : "needs" };
   if (automation.failStreak > 0) return { word: "Failing", tone: "failed" };
-  if (!automation.enabled) return { word: "Paused", tone: "quiet" };
+  // One that told and turned itself off was paused by nobody: said, so its person does not look for who did.
+  if (!automation.enabled) return { word: toldAndOff(automation) ? "Told you, now off" : "Paused", tone: "quiet" };
   return { word: "On", tone: "done" };
 }
 

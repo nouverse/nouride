@@ -1,8 +1,8 @@
 /**
  * How one step went in the run being looked at, drawn in the step's card: done and how long it took, failed and why,
- * nothing to say, at work, or waiting. What it said is folded under it, a command's output in the mono face, a failure's
- * reason open. A step that waits for a person carries the question and its two answers right here; one that waits for
- * a mission links to that mission's page.
+ * nothing to say, the same as last time, at work, or waiting. What it said is folded under it, a command's output in
+ * the mono face, a failure's reason open. A step that waits for a person carries the question and its two answers
+ * right here; one that waits for a mission links to that mission's page.
  */
 
 import { Link } from "@tanstack/react-router";
@@ -11,7 +11,7 @@ import type { JobRunSummary, StepRunOutcome } from "@nouride/wire";
 import { RunResult } from "@/commons/components/jobs/RunResult";
 import { StepQuestion } from "@/commons/components/jobs/WaitingStep";
 import { cn } from "@/commons/lib/utils";
-import { outcomeWords, type Tone } from "../lib/runs";
+import { outcomeWords, sameAsLastTime, type Tone } from "../lib/runs";
 
 /** A run's chip in each tone: mint for done and at work, red for a failure only, pink for what waits on a person. */
 export const TONES: Record<Tone, string> = {
@@ -54,7 +54,8 @@ export function StepRun({
   const asking = outcome.status === "waiting" && run.waiting?.kind === "approval" && run.waiting.step === outcome.id ? run.waiting : null;
   const failed = outcome.status === "failed";
   // A step that waits says its own question as what it said: that is drawn as the question, not repeated under it.
-  const said = asking || outcome.status === "waiting" ? undefined : outcome.said;
+  // One that said the same as last time has that on its chip: under "What it printed" it would read as its output.
+  const said = asking || outcome.status === "waiting" || sameAsLastTime(outcome) ? undefined : outcome.said;
   return (
     <div className="space-y-2.5">
       <RunChip label={label} tone={tone} live={outcome.status === "running" || outcome.status === "waiting"} />

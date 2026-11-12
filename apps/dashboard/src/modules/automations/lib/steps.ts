@@ -53,6 +53,18 @@ export function exitsOf(step: Step): ExitName[] {
 
 export const exitOf = (step: Step, exit: ExitName): StepExit => step[exit] ?? DEFAULT_EXIT[exit];
 
+/**
+ * Whether a step can be marked to go on only when what it says changes: one that says something of its own. A message
+ * says what a person wrote and a wait hands on what the step before said, and the server refuses the mark on either.
+ */
+export const canWatch = (step: Pick<Step, "kind">): boolean => step.kind === "command" || step.kind === "agentTurn" || step.kind === "mission";
+
+/** A step with that mark set or taken off. The mark is there or it is not: never kept as off, and never on a kind that cannot hold it. */
+export function watching(step: Step, on: boolean): Step {
+  const { onlyChanged: _was, ...rest } = step;
+  return (on && canWatch(step) ? { ...rest, onlyChanged: true } : rest) as Step;
+}
+
 /** Where an exit lands in the list: a step's place, or the run's end. The step after the last one is the end. */
 export function landsAt(steps: readonly Step[], index: number, exit: ExitName): number | "end" {
   const go = exitOf(steps[index]!, exit);
@@ -143,15 +155,17 @@ export function asKind(step: Step, kind: StepKind): Step {
   const failed = step.whenFailed ? { whenFailed: step.whenFailed } : {};
   const empty = step.whenEmpty ? { whenEmpty: step.whenEmpty } : {};
   const agent = "agentId" in step && step.agentId ? { agentId: step.agentId } : {};
+  // Kept by the kinds that say something of their own; a message or a wait cannot hold it.
+  const watch = step.onlyChanged ? { onlyChanged: true as const } : {};
   switch (kind) {
     case "systemEvent":
       return { ...base, kind, text };
     case "agentTurn":
-      return { ...base, ...failed, ...empty, kind, message: text, ...agent };
+      return { ...base, ...failed, ...empty, ...watch, kind, message: text, ...agent };
     case "command":
-      return { ...base, ...failed, ...empty, kind, argv: argvOf(text) };
+      return { ...base, ...failed, ...empty, ...watch, kind, argv: argvOf(text) };
     case "mission":
-      return { ...base, ...failed, kind, goal: text, ...agent };
+      return { ...base, ...failed, ...watch, kind, goal: text, ...agent };
     case "approval":
       return { ...base, ...failed, kind, ask: text };
   }

@@ -310,7 +310,7 @@ describe("the Automations page, as someone who is not an admin", () => {
       record.restore();
       localStorage.removeItem(KEPT);
     }
-    expect(seen).toEqual({ picker: false, sections: 0, rows: 4 });
+    expect(seen).toEqual({ picker: false, sections: 0, rows: 5 });
     expect(record.urls).toEqual([""]);
   });
 

@@ -55,6 +55,11 @@ export class WatchStore {
     return this.db.prepare<{ n: number }>("SELECT count(*) AS n FROM cron_held").get()!.n > 0;
   }
 
+  /** Whose each held line is, one job id a line: what a page counts, by who may see the job. */
+  heldJobs(): string[] {
+    return this.db.prepare<{ job_id: string }>("SELECT job_id FROM cron_held ORDER BY at, id").all().map((row) => row.job_id);
+  }
+
   /** Everything held, in the order it was said, taken out: sent or lost, it is not sent twice. */
   release(): HeldLine[] {
     const rows = this.db.prepare<HeldRow>("SELECT id, job_id, run_id, step_id, kind, text, at FROM cron_held ORDER BY at, id").all();

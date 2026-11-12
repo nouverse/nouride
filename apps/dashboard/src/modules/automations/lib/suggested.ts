@@ -103,5 +103,8 @@ export function changeWords(current: AutomationSummary, suggested: AutomationSum
   if (suggested.name !== current.name) said.push(`Renames it to "${suggested.name}".`);
   if (startWords(suggested.trigger, home) !== startWords(current.trigger, home)) said.push(`It would start ${startWords(suggested.trigger, home)}.`);
   if (suggested.target.gatewayId !== current.target.gatewayId || suggested.target.chatId !== current.target.chatId) said.push("It would report to another chat.");
+  // The two marks where it reports: a change that sets or drops one is not one that runs as it does now.
+  if (Boolean(suggested.delivery.once) !== Boolean(current.delivery.once)) said.push(suggested.delivery.once ? "It would tell once, then turn itself off." : "It would go on telling, and no longer turn itself off.");
+  if (Boolean(suggested.delivery.atOnce) !== Boolean(current.delivery.atOnce)) said.push(suggested.delivery.atOnce ? "It would tell at once, even in quiet hours." : "What it says in quiet hours would be kept until they end.");
   return said.length > 0 ? said.join(" ") : "It would run as it does now.";
 }

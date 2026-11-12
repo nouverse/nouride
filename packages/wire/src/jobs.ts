@@ -19,6 +19,11 @@ export interface QuietHoursPolicy {
   /** The zone the two times are in: the daemon's. */
   timeZone: string;
   editable: boolean;
+  /**
+   * What is kept now, of the automations whoever asked may see: how many things said, and when the hours end and
+   * they are sent. Absent when nothing is kept.
+   */
+  kept?: { count: number; until: number };
 }
 
 /** `[delegate] max_background`: how many helpers an agent may have in the background at once (0.7.15). */

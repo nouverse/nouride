@@ -41,6 +41,13 @@ describe("the state a row says", () => {
     // A run that waits for a mission is the automation at work, not something for the person.
     expect(stateOf(one("a", { lastRun: { id: "r", jobId: "a", startedAt: 1, status: "waiting", waiting: { kind: "mission", step: "s", missionId: "msn_1", since: 1 } } }), name).word).toBe("On");
   });
+
+  test("one that told and turned itself off says so, quietly: nobody paused it, and nothing failed", () => {
+    expect(stateOf(one("a", { enabled: false, disabledReason: "told" }), name)).toEqual({ word: "Told you, now off", tone: "quiet" });
+    // Turned on again it is on, whatever it was off for; off for another reason it is paused.
+    expect(stateOf(one("a", { enabled: true, disabledReason: "told" }), name)).toEqual({ word: "On", tone: "done" });
+    expect(stateOf(one("a", { enabled: false, disabledReason: "5 runs failed in a row" }), name)).toEqual({ word: "Paused", tone: "quiet" });
+  });
 });
 
 describe("a row's preview and last run", () => {

@@ -29,7 +29,7 @@ export interface JobSummary {
    * `once`: it turns itself off after the first run on its own time that told somebody something. `atOnce`: what it
    * says is not kept for the install's quiet hours.
    */
-  delivery: { mode: JobDeliveryMode; gatewayId?: string; chatId?: string; once?: true; atOnce?: true };
+  delivery: { mode: JobDeliveryMode; gatewayId?: string; chatId?: string; webhookUrl?: string; once?: true; atOnce?: true };
   target: { gatewayId: string; chatId: string };
   session: JobSessionMode;
   createdBy: string;
@@ -39,6 +39,10 @@ export interface JobSummary {
   runCount: number;
   failCount: number;
   failStreak: number;
+  /**
+   * Why it is off, where the daemon turned it off. `told`: it is one that tells once, and it told. Anything else is
+   * what it kept failing on, in words.
+   */
   disabledReason?: string;
   /** Proposed by an agent and not turned on yet (0.8.0): off until somebody turns it on. */
   proposal?: { by: string; at: number; replaces?: string };

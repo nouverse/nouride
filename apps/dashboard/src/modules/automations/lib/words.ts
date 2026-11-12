@@ -6,7 +6,7 @@
 
 import { Bot, Clock, Hand, MessageSquare, Play, Target, Terminal, Zap, type LucideIcon } from "lucide-react";
 import type { AutomationStart } from "@nouride/wire";
-import { APPROVAL_WAIT_MS, exitOf, exitsOf, landsAt, mainText, type ExitName, type Step, type StepKind } from "./steps";
+import { APPROVAL_WAIT_MS, canWatch, exitOf, exitsOf, landsAt, mainText, type ExitName, type Step, type StepKind } from "./steps";
 
 export interface KindLook {
   icon: LucideIcon;
@@ -104,10 +104,27 @@ function waitWords(ms: number): string {
 }
 
 /**
- * A few quiet words under a step's line: what it costs, what it is handed, or what it waits for. `reads` is the agent a
- * lone command hands its output to, where it does.
+ * The line under "Go on only when this changes": what the run does when the step says what it said the last time. It
+ * takes the step's path for nothing to say, which ends the run quietly unless the step sends it elsewhere. A mission's
+ * run ends there too, and not quietly: the mission has told its chat how it went by then, as every mission does.
+ */
+export function sameAgainWords(steps: readonly Step[], index: number): string {
+  const step = steps[index]!;
+  if (landsAt(steps, index, "whenEmpty") !== "end") return `If it says the same as last time, the run goes where "${exitAsks(step, "whenEmpty")}" sends it.`;
+  return step.kind === "mission" ? "If it says the same as last time, the run ends here." : "If it says the same as last time, the run ends here quietly.";
+}
+
+/**
+ * A few quiet words under a step's line: what it costs, what it is handed, or what it waits for, and that it goes on
+ * only when what it says changes, where it is marked so. `reads` is the agent a lone command hands its output to,
+ * where it does.
  */
 export function stepNote(step: Step, index: number, reads?: string): string {
+  const note = kindNote(step, index, reads);
+  return step.onlyChanged && canWatch(step) ? `${note} It goes on only when what it says changes.` : note;
+}
+
+function kindNote(step: Step, index: number, reads?: string): string {
   switch (step.kind) {
     case "command":
       return reads ? `No AI runs it. Then ${reads} reads what it printed and reports.` : "No AI is used for this step.";

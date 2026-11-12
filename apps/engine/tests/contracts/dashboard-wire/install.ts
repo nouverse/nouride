@@ -24,7 +24,9 @@ import type { DaemonContext } from "@/commons/context.ts";
 import { SettingsService } from "@/modules/config/settings/index.ts";
 import { McpTokenStore } from "@/modules/mcp-server/tokens.store.ts";
 import { CronStore, type JobInput } from "@/modules/cron/cron.store.ts";
+import { Quiet } from "@/modules/cron/quiet.ts";
 import { CronScheduler } from "@/modules/cron/scheduler.ts";
+import { WatchStore } from "@/modules/cron/watch.store.ts";
 import { Missions } from "@/modules/missions/missions.ts";
 import { MissionStore } from "@/modules/missions/missions.store.ts";
 import { NotesStore, STALE_AFTER_MS } from "@/modules/notes/store.ts";
@@ -52,11 +54,14 @@ const INSTANT = 1_760_000_000_000;
  * Each fixture, by the path the dashboard asks for, and how it is asked here. A conversation's two are asked with the
  * session's own id; the search with the words a person would type.
  */
-const ASKED: Record<string, (ids: { session: string; mission: string; automation: string }) => string> = {
+const ASKED: Record<string, (ids: { session: string; mission: string; automation: string; watch: string }) => string> = {
   // Every automation, one of them with its runs and the change an agent suggested to it, and the steps that wait.
   "/automations": () => "/automations",
   "/automations/cron_1": (ids) => `/automations/${ids.automation}`,
+  // One that watches, with its marks, a run that said the same as last time, and off since it told.
+  "/automations/cron_6": (ids) => `/automations/${ids.watch}`,
   "/automations/waiting": () => "/automations/waiting",
+  "/policy/quiet-hours": () => "/policy/quiet-hours",
   "/sessions/ses_1/turns": (ids) => `/sessions/${ids.session}/turns`,
   "/sessions/ses_1/live": (ids) => `/sessions/${ids.session}/live?after=0`,
   "/sessions/ses_1/notes": (ids) => `/sessions/${ids.session}/notes`,
@@ -267,16 +272,21 @@ async function missions(bench: Bench, notes: NotesStore, account: string): Promi
 /**
  * Automations, one of each kind the page draws: a list of steps on a timer whose newest run failed its command, had
  * its agent look into it and now waits for a person; a change an agent suggested to it; one thing at a time of day
- * that ran; a webhook; and a list an agent proposed, started by hand. The steps run through the scheduler itself, so
- * each outcome is what a run writes, with a stand-in for the agent's turn and no chat to deliver to.
+ * that ran; a webhook; a list an agent proposed, started by hand; and one that watches, which told and turned itself
+ * off. The steps run through the scheduler itself, so each outcome is what a run writes, with a stand-in for the
+ * agent's turn and no chat to deliver to.
  */
 async function automations(bench: Bench, account: string): Promise<{ cron: NonNullable<ControlDeps["cron"]>; names: [string, string][] }> {
   const where = { gatewayId: "telegram:main", chatId: "-100200" };
   const store = new CronStore({ db: bench.db, config: bench.config.cron, timezone: "Asia/Jakarta", now: () => INSTANT });
+  // Quiet hours set, as an install that uses them has: the afternoon the fixture is asked in is outside them.
+  bench.config.cron.quietHours = "22:00-07:00";
   const scheduler = new CronScheduler({
     store,
     config: bench.config.cron,
     now: () => INSTANT,
+    watch: new WatchStore(bench.db, () => INSTANT),
+    quiet: new Quiet({ hours: () => bench.config.cron.quietHours, timeZone: () => "Asia/Jakarta", now: () => INSTANT }),
     executors: {
       runTurn: async () => ({ text: "The payment service was restarting after its update. It answers again now, and nothing else is down." }),
       dispatchTurn: () => true,
@@ -310,9 +320,28 @@ async function automations(bench: Bench, account: string): Promise<{ cron: NonNu
     proposal,
   });
 
-  const jobs = [shop, change, brief, order, backup];
+  /**
+   * The watch: a camera's webhook with a script in front of it, marked to go on only when what it says changed, on an
+   * automation that tells once, at once whatever the hour. Three calls, as the camera makes them: it tells and turns
+   * itself off; turned on again it reads the same and ends at the script; then something else is at the door, and it
+   * tells and is off again. So the page has each: the marks, a step that said the same as last time, and an
+   * automation off because it told.
+   */
+  const door = make({
+    name: "Door camera",
+    trigger: { kind: "webhook" },
+    payload: { kind: "steps", steps: [{ id: "read", kind: "command", name: "Read what the camera saw", argv: ["cat"], onlyChanged: true }, { id: "say", kind: "systemEvent", name: "Say so", text: "Somebody is at the door." }] },
+    delivery: { mode: "announce", once: true, atOnce: true },
+  });
+  for (const body of ["a person at the door", "a person at the door", "a parcel at the door"]) {
+    store.setEnabled(door.id, true, "usr_1");
+    await scheduler.runNow(door.id, "camera", { body });
+  }
+
+  const jobs = [shop, change, brief, order, backup, door];
   const runs = jobs.flatMap((job) => store.runs(job.id));
   const hook = store.get(order.id)?.webhookToken ?? "";
+  const camera = store.get(door.id)?.webhookToken ?? "";
   return {
     cron: { store, scheduler, timezone: "Asia/Jakarta" },
     names: [
@@ -320,6 +349,8 @@ async function automations(bench: Bench, account: string): Promise<{ cron: NonNu
       ...runs.map((run, n): [string, string] => [run.id, `run_${n + 1}`]),
       [hook, "hook_1"],
       [`/hooks/${hook}`, "/hooks/hook_1"],
+      [camera, "hook_2"],
+      [`/hooks/${camera}`, "/hooks/hook_2"],
     ],
   };
 }
@@ -460,7 +491,7 @@ export async function wireAnswers(): Promise<Record<string, unknown>> {
     ]);
     const answered: Record<string, unknown> = {};
     for (const [fixture, asked] of Object.entries(ASKED)) {
-      const path = asked({ session: ids.session, mission: work.working, automation: jobs.names[0]![0] });
+      const path = asked({ session: ids.session, mission: work.working, automation: jobs.names[0]![0], watch: jobs.names[5]![0] });
       const answer =
         path === "/health"
           ? buildHealth(ctx, () => ({ rssMb: 64, heapUsedMb: 32 }) as never).payload
