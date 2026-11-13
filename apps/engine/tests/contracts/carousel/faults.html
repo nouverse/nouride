@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Slides with one fault each</title>
+<style>
+  body { margin: 0; background: #555; }
+  .slide { width: 1080px; height: 1350px; overflow: hidden; position: relative; box-sizing: border-box; padding: 96px; background: #ffffff; color: #111111; font-family: sans-serif; }
+  h2 { font-size: 84px; margin: 0 0 32px; }
+  p { font-size: 44px; margin: 0; }
+  .fine-print { font-size: 20px; }
+  .wide-line { white-space: nowrap; font-size: 60px; }
+  .corner { position: absolute; left: 12px; top: 700px; font-size: 40px; }
+  .pale { color: #c8c8c8; }
+  .clipped { height: 60px; overflow: hidden; font-size: 44px; line-height: 1.4; }
+  .on-top { position: absolute; left: 96px; top: 96px; font-size: 84px; }
+  .tall { height: 1500px; }
+</style>
+</head>
+<body>
+<section class="slide"><h2>Small</h2><p class="fine-print">Syarat dan ketentuan berlaku untuk semua pembelian.</p></section>
+<section class="slide"><h2>Outside</h2><p class="wide-line">Baris ini terlalu panjang untuk muat di dalam satu slide tanpa dipotong tepinya</p></section>
+<section class="slide"><h2>Edge</h2><span class="corner">Mepet tepi</span></section>
+<section class="slide"><h2>Contrast</h2><p class="pale">Abu-abu muda di atas putih.</p></section>
+<section class="slide"><h2>Cut</h2><div class="clipped">Baris pertama terlihat. Baris kedua terpotong karena kotaknya terlalu pendek untuk semua kalimat ini.</div></section>
+<section class="slide"><h2>Overlap</h2><span class="on-top">Menimpa</span></section>
+<section class="slide"><h2>Picture</h2><img src="assets/tidak-ada.png" alt="" width="400" height="300"></section>
+<section class="slide"><h2>Filler</h2><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p></section>
+<section class="slide tall"><h2>Size</h2><p>Slide ini lebih tinggi dari yang lain.</p></section>
+<section class="slide"></section>
+</body>
+</html>

@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>A full-screen slide</title>
+<style>
+  body { margin: 0; }
+  .slide { width: 1080px; height: 1920px; overflow: hidden; position: relative; box-sizing: border-box; background: #111111; color: #ffffff; font-family: sans-serif; }
+  .slide > * { position: absolute; left: 120px; font-size: 64px; margin: 0; }
+  .up { top: 120px; }
+  .middle { top: 800px; }
+  .down { top: 1500px; }
+  .aside { left: 20px !important; top: 1000px; }
+</style>
+</head>
+<body>
+<section class="slide"><p class="up">Di bawah bar atas</p><p class="middle">Di tengah, aman</p><p class="down">Di balik tombol</p><p class="aside">Mepet sisi</p></section>
+</body>
+</html>

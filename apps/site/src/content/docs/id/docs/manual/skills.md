@@ -90,6 +90,11 @@ bawaan atau di kumpulan sampai ke semua agent dalam semenit, tanpa restart (seja
   dulu kamu mau bentuk apa: link yang bisa dibuka, gambar, gambar di dalam HP dan laptop, atau file
   HTML-nya. Ia gak punya gaya sendiri: warna dan font datang dari kamu, brand kamu, atau dipilih untuk
   permintaan itu.
+- **carousel**: satu set gambar untuk digeser di Instagram, LinkedIn atau TikTok. Ia bertanya dulu mau
+  diposting di mana, yang menentukan bentuknya, lalu mengirim kata-katanya slide demi slide untuk kamu
+  iyakan sebelum menggambar apa pun. Semua slide ada di satu file HTML, digambar pada ukuran persis
+  platformnya, diukur untuk layar HP dan dilihat dulu sebelum dikirim, sebagai satu album berurutan atau
+  sebagai PDF. Ia juga gak punya gaya sendiri.
 - **motion-graphics**: video yang dibuat dari kode dengan Remotion. Ia lebih dulu memeriksa apakah mesin
   ini sanggup me-render-nya, dan me-render di perangkat kamu yang lain lewat network-reach kalau gak
   sanggup.

@@ -21,6 +21,7 @@ const HEAVY: Record<string, string> = {
   "browser-automation": "under 600 MB available memory",
   slides: "not here, as on a 512 MB board",
   "mockup-design": "not here, as on a 512 MB board",
+  carousel: "not here, as on a 512 MB board",
   "document-authoring": "Under 400 MB available, it is not for here",
   nouclip: "Under 700 MB available (any 512 MB board), render on another machine",
   "motion-graphics": "under 2 GB available memory",

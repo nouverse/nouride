@@ -84,6 +84,11 @@ pool reaches every agent within a minute, without a restart (from 0.8.13).
   browser at a desktop's and a phone's width, measured and looked at before it is sent. It asks first
   how you want it: a link to open, pictures, pictures inside a phone and a laptop, or the HTML file. It
   has no look of its own: the colours and fonts are yours, your brand's, or chosen for the request.
+- **carousel**: a set of pictures to swipe through on Instagram, LinkedIn or TikTok. It asks first where
+  it is posted, which decides the shape, and sends you the words slide by slide for a yes before it
+  draws anything. Every slide is in one HTML file, drawn at the platform's exact size, measured for a
+  phone and looked at before it is sent, as one album in order or as a PDF. It has no look of its own
+  either.
 - **motion-graphics**: a video made from code with Remotion. It checks first whether this machine can
   render it, and renders on another of your devices through network-reach when it cannot.
 - **browser-automation**: a real browser driven with Playwright to log in, click through and fill in
