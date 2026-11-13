@@ -90,7 +90,11 @@ pool reaches every agent within a minute, without a restart (from 0.8.13).
   phone and looked at before it is sent, as one album in order or as a PDF. It has no look of its own
   either.
 - **motion-graphics**: a video made from code with Remotion. It checks first whether this machine can
-  render it, and renders on another of your devices through network-reach when it cannot.
+  render it, and renders on another of your devices through network-reach when it cannot. It asks where
+  the video is watched, which decides its shape (a screen, a full phone screen for Reels or TikTok, a
+  feed post), and for a feed it puts the hook first, one idea a scene, its words on screen long enough to
+  read, and an end card. Each round is measured as well as looked at: small text, text where a phone's
+  app draws over a vertical video, and text too pale to read.
 - **browser-automation**: a real browser driven with Playwright to log in, click through and fill in
   sites. It asks before anything that cannot be undone, and turns a flow that works into a script that
   runs again on its own.

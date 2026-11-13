@@ -7,8 +7,10 @@
  */
 
 import { describe, expect, test } from "bun:test";
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { whichBinary } from "@nouride/runtime";
 
 const source = readFileSync(join(import.meta.dir, "../../../../content/skills/motion-graphics/SKILL.md"), "utf8");
 // As one line: where Markdown wraps a sentence is not part of what it says.
@@ -34,8 +36,8 @@ describe("nothing is sent before it is looked at", () => {
 
 describe("a round of looking is cheap enough to do", () => {
   test("one bundle per round, rebuilt after every edit", () => {
-    expect(skill).toContain("npx remotion bundle src/index.ts --out-dir=build");
-    expect(skill).toContain("npx remotion still build Main");
+    // The round's command bundles once and renders every picture from the bundle (`round.mjs`, below).
+    expect(skill).toContain("It prints each scene's arriving and settled frame, type-checks, bundles once, renders a still of `Main` and of `Check` at every one of those frames and the `Sheet`");
     expect(skill).toContain("**Bundle again after every edit**");
   });
 
@@ -53,7 +55,8 @@ describe("a round of looking is cheap enough to do", () => {
     expect(skill).toContain("**Arriving stills.** One per scene, a second after it starts: the scene before should be gone");
     expect(skill).toContain("Neither the settled stills nor the sheet are taken there.");
     expect(skill).toContain("The storyboard's scenes start at frames 0, 90 and 240, so its arriving stills are 30, 120 and 270.");
-    expect(source).toContain("for f in 30 75 120 225 270 345; do\n  npx remotion still build Main \"$TMPDIR/r1-$f.png\"");
+    // The round's own command takes them: 30 75, 120 225, 270 345 for the storyboard's three scenes.
+    expect(source).toContain("node <this skill's folder>/round.mjs --scenes 3,5,4 --fps 30 --round 1");
   });
 
   test("defects are looked for by name", () => {
@@ -176,16 +179,16 @@ describe("the measurable defects are measured, by a file that ships with the ski
   const check = readFileSync(join(import.meta.dir, "../../../../content/skills/motion-graphics/Check.tsx"), "utf8");
 
   test("the skill copies Check.tsx into src/, registers it, and renders a check of every still", () => {
-    expect(skill).toContain("**Measured, not judged.** Four things on the list below are measured, and a measure does not skip one");
+    expect(skill).toContain("**Measured, not judged.** Six things on the list below are measured, and a measure does not skip one");
     expect(skill).toContain("Copy `Check.tsx` from this skill's folder, beside this file, into `src/`");
     expect(source).toContain('<Composition id="Check" component={makeCheck(Main)} {...MAIN} />');
-    expect(source).toContain('npx remotion still build Check "$TMPDIR/r1-check-$f.png" --frame=$f');
+    expect(skill).toContain("renders a still of `Main` and of `Check` at every one of those frames");
     expect(skill).toContain("A finding is fixed, or written in the round's list with why it is meant");
   });
 
-  test("it measures the four the skill names, and says so on the frame", () => {
+  test("it measures the six the skill names, and says so on the frame", () => {
     expect(check).toContain("export const makeCheck = (Video: ComponentType) =>");
-    for (const kind of ['kind: "small"', 'kind: "margin"', 'kind: "alone"', 'kind: "overlap"']) expect(check).toContain(kind);
+    for (const kind of ['kind: "small"', 'kind: "margin"', 'kind: "covered"', 'kind: "contrast"', 'kind: "alone"', 'kind: "overlap"']) expect(check).toContain(kind);
     expect(check).toContain("Math.min(width, height) / 30");
     expect(check).toContain("nothing measured wrong");
     // A clean frame is marked in a corner, small: a bar across the top hid every frame's top (live, 0.8.12).
@@ -206,9 +209,8 @@ describe("the measurable defects are measured, by a file that ships with the ski
   test("the stills' frames are printed from the scene list, and all of them are taken every round", () => {
     // Nero's run (0.8.12): it picked its own frames and, after round 1, looked only where it had changed something —
     // the planted caption in the margin, in from 3.8 s into its scene, fell between them and went out with the video.
-    expect(skill).toContain("**Print the frames from the scene list, and take all of them every round.**");
-    expect(source).toContain("node -e 'const fps = 30, scenes = [3, 5, 4]; let t = 0; for (const s of scenes) { console.log(t + fps, t + s * fps - fps / 2); t += s * fps; }'");
-    expect(skill).toContain("`30 75`, `120 225`, `270 345` for the storyboard");
+    expect(skill).toContain("**The frames come from the scene list, all of them every round.**");
+    expect(skill).toContain("`round.mjs` (below) works them out from the scene lengths: `30 75`, `120 225`, `270 345` for the storyboard.");
     expect(skill).toContain("Every round renders all of them, not only the scenes you changed");
   });
 
@@ -218,3 +220,94 @@ describe("the measurable defects are measured, by a file that ships with the ski
     expect(skill).toContain("A grep that finds nothing exits 1, which is why the line ends with `|| echo`");
   });
 });
+
+/**
+ * A clip made as content, for a feed: what it is asked first, what makes one work, and what more is measured.
+ *
+ * The skill made a video and asked about assets, never where the video would be watched: a clip for Reels came out as
+ * a 16:9 film, its title in the band the app covers with its own buttons, its sentences up for a second. The shape is
+ * asked with the assets; a feed clip's order is said as rules of structure, never of look; a line's time on screen is
+ * counted from its length; and in a 9:16 frame `Check` measures what the app covers, where the 5% margin was all it
+ * knew, and the contrast of text that has arrived.
+ */
+describe("a clip made for a feed", () => {
+  const check = readFileSync(join(import.meta.dir, "../../../../content/skills/motion-graphics/Check.tsx"), "utf8");
+
+  test("where it is watched is asked once, with the assets, and decides the frame", () => {
+    expect(skill).toContain("**Ask what form, once**, in the same message as the assets, and only what the request does not already say");
+    expect(skill).toContain("- **Where it is watched**, which decides its shape: a screen or YouTube (16:9); Reels, TikTok, Shorts or a story (9:16, a full phone screen); a feed post (4:5 or square).");
+    expect(skill).toContain("With nothing said and nobody to ask, it is 16:9 with no sound.");
+    expect(skill).toContain("a full phone screen, `1080×1920`; a feed post `1080×1350` or square `1080×1080`");
+    expect(source.indexOf("**Ask what form, once**")).toBeLessThan(source.indexOf("**Ask the person about the assets first, every time**"));
+  });
+
+  test("its order is said as structure: a hook first, one idea a scene, its words on screen, an end card", () => {
+    expect(skill).toContain("That decides its order, never its look:");
+    for (const rule of ["- **The first scene is the hook**", "- **One idea a scene**", "- **What it says is on screen**: with the sound off it still says everything.", "- **The last scene is the end card**"]) expect(skill).toContain(rule);
+    expect(skill).toContain("No logo alone, no fade from black, no greeting.");
+  });
+
+  test("words are given their time: a second for every 17 characters, counted in the storyboard and answered every round", () => {
+    expect(skill).toContain("**Words need time.** A line is on screen, fully arrived, for a second for every 17 characters it has, and never under a second");
+    expect(skill).toContain("`\"Giling tepat sebelum diseduh\" (28 characters: 2 s)`");
+    expect(skill).toContain("- a line of words on screen for less than its time (a second for every 17 characters, never under one)");
+    expect(skill).toContain("- words given their time:");
+  });
+
+  test("in a 9:16 frame the check measures what the app covers, in place of the margin, and the skill gives its numbers", () => {
+    expect(skill).toContain("what matters stays out of the top 14%, the bottom 35% and the outer 6% of each side");
+    expect(check).toContain("const COVERED = { top: 0.14, bottom: 0.35, side: 0.06 };");
+    expect(check).toContain("const fullScreen = Math.abs(width / height - 9 / 16) < 0.01;");
+    // One or the other: a full-screen frame is held to its bands, every other frame to the 5% margin.
+    expect(check).toContain("    if (fullScreen) {");
+    expect(check).toContain("    } else if (rects.some((b) => b.x < mx || b.y < my || b.x + b.w > width - mx || b.y + b.h > height - my)) {");
+  });
+
+  test("contrast is measured only on text that has arrived, against a plain colour: a fade is not a finding", () => {
+    expect(check).toContain("if (front && back && front.a > 0.95 && opacityOf(el) > 0.95) {");
+    expect(check).toContain("const needs = px >= min * 2 || (px >= min * 1.555 && weight >= 700) ? 3 : 4.5;");
+    expect(check).toContain('if (s.backgroundImage && s.backgroundImage !== "none") return null;');
+    expect(skill).toContain("text that has arrived and is too close in colour to the plain colour behind it (under 4.5:1, or 3:1 for large text)");
+  });
+});
+
+describe("a round is one command", () => {
+  const script = join(import.meta.dir, "../../../../content/skills/motion-graphics/round.mjs");
+  const run = (args: string[]) => {
+    const done = spawnSync(whichBinary("node") ?? process.execPath, [script, ...args], { encoding: "utf8" });
+    return { code: done.status, out: done.stdout, err: done.stderr };
+  };
+
+  test("the skill gives it whole, and says what it writes and what to read", () => {
+    expect(source).toContain("node <this skill's folder>/round.mjs --scenes 3,5,4 --fps 30 --round 1");
+    expect(skill).toContain("One round is one command, run in the project's folder.");
+    expect(skill).toContain("into `rounds/` (`r1-75.png`, `r1-check-75.png`, `r1-sheet.png`), and its last line names the pictures to read");
+  });
+
+  test("its frames are the skill's: a second into each scene, and half a second before its end", () => {
+    const dry = run(["--scenes", "3,5,4", "--fps", "30", "--dry-run"]);
+    expect(dry.code).toBe(0);
+    const said = dry.out.split("\n");
+    expect(said.slice(0, 4)).toEqual(["round 1: 3 scene(s) at 30 fps, 360 frames", "  scene 1 (3 s): arriving 30, settled 75", "  scene 2 (5 s): arriving 120, settled 225", "  scene 3 (4 s): arriving 270, settled 345"]);
+    // A scene too short for a second and a half keeps a third of itself at each end, and its frames stay inside it.
+    expect(run(["--scenes", "1,0.5", "--fps", "30", "--dry-run"]).out.split("\n").slice(1, 3)).toEqual(["  scene 1 (1 s): arriving 10, settled 20", "  scene 2 (0.5 s): arriving 35, settled 40"]);
+  });
+
+  test("it type-checks, bundles once, then a still and a check of every frame, then the sheet", () => {
+    const commands = run(["--scenes", "3,5", "--fps", "30", "--round", "2", "--out", "/tmp/r", "--dry-run"]).out.split("\n").filter((line) => line.startsWith("npx "));
+    expect(commands.slice(0, 2)).toEqual(["npx tsc --noEmit", "npx remotion bundle src/index.ts --out-dir=build --log=error"]);
+    expect(commands.slice(2, 4)).toEqual(["npx remotion still build Main /tmp/r/r2-30.png --frame=30 --scale=0.5 --log=error", "npx remotion still build Check /tmp/r/r2-check-30.png --frame=30 --scale=0.5 --log=error"]);
+    expect(commands.filter((line) => line.includes(" still build Main ")).map((line) => /--frame=(\d+)/.exec(line)?.[1])).toEqual(["30", "75", "120", "225"]);
+    expect(commands.at(-1)).toBe("npx remotion still build Sheet /tmp/r/r2-sheet.png --scale=0.5 --log=error");
+    expect(commands.filter((line) => line.includes(" bundle "))).toHaveLength(1);
+  });
+
+  test("bad arguments are one line and exit 1", () => {
+    expect(run([])).toMatchObject({ code: 1 });
+    expect(run(["--scenes", "3,x", "--fps", "30"]).err).toContain("--scenes is each scene's length in seconds, in order: --scenes 3,5,4");
+    expect(run(["--scenes", "3", "--fps", "0"]).err).toContain("--fps is the video's frames a second");
+    expect(run(["--scenes", "3", "--fps", "30", "--scale", "2"]).err).toContain("--scale is how large the pictures are");
+    expect(run(["--scenes", "3", "--fps", "30", "--frames", "1"]).err).toContain("unknown option --frames");
+  });
+});
+

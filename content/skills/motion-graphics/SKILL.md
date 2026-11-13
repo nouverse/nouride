@@ -87,7 +87,8 @@ export const Root = () => (
 );
 ```
 
-Vertical for phones is `1080×1920`, square `1080×1080`.
+The shape is where it is watched (step 4 asks): a screen or YouTube is `1920×1080`; Reels, TikTok, Shorts or a story,
+a full phone screen, `1080×1920`; a feed post `1080×1350` or square `1080×1080`.
 
 Remotion also publishes its own agent skills for the API itself: `npx -y skills add remotion-dev/skills`
 in the project folder puts them under `.agents/skills/`, with no questions asked. `read`
@@ -112,6 +113,17 @@ The probe measures the clock. Nobody receives it.
 
 ## 4. Storyboard, then code
 
+**Ask what form, once**, in the same message as the assets, and only what the request does not already say:
+
+- **Where it is watched**, which decides its shape: a screen or YouTube (16:9); Reels, TikTok, Shorts or a story
+  (9:16, a full phone screen); a feed post (4:5 or square).
+- **How long**, when they have a length in mind. With none, it is as long as its scenes need to be read (below).
+- **Sound**: their music or their voice as a file, music found with a licence, or none. Many people watch a feed
+  with the sound off, so what the clip says is on screen either way.
+
+When their words already say it ("reels", "buat TikTok", "an intro for my talk"), do not ask it again: say in one
+line what you took as the answer. With nothing said and nobody to ask, it is 16:9 with no sound.
+
 **Ask the person about the assets first, every time** (their logo, screenshots, photos, footage, music, brand font
 and colours) before you look for any. Theirs beat anything found; find only what they say to find, or what they do
 not have. How to ask, where to find with a licence, and the commands that crop, resize, cut and trim them are in
@@ -131,6 +143,23 @@ Assets: logo (theirs, logo.svg); dashboard screenshot (taken from app.example.co
 The font and the colours on its first line are theirs where they have any. With none, choose them for this video,
 for who it is for and what it should feel like, and say in one line why. This skill names none: a look copied from an
 example is nobody's.
+
+**A clip for a feed** (9:16, 4:5, square) is watched by someone about to swipe on. That decides its order, never its
+look:
+
+- **The first scene is the hook**: what the clip is about, in words on screen, moving from its first frame. No logo
+  alone, no fade from black, no greeting.
+- **One idea a scene**, and a scene as long as its words need, no longer.
+- **What it says is on screen**: with the sound off it still says everything.
+- **The last scene is the end card**: what to do next and the account's name, held long enough to be read.
+- **In a 9:16 frame**, what matters stays out of the top 14%, the bottom 35% and the outer 6% of each side, where the
+  app draws its own bars and buttons. `Check` measures it (step 5).
+
+**Words need time.** A line is on screen, fully arrived, for a second for every 17 characters it has, and never under
+a second: the pace subtitles are held to (Netflix's ceiling for subtitles is 17 characters a second in many
+languages, 20 in English), and on-screen text has motion beside it to compete with. Count it in the storyboard,
+beside each line that is a sentence: `"Giling tepat sebelum diseduh" (28 characters: 2 s)`. A scene that cannot give
+its words their time says less, or is longer.
 
 A line with no source you can write there is a line you made up: a tagline, a URL, a feature list. Ask for it, or
 take it from their site or docs, before it goes in the storyboard. A small model wrote `nouride.com` and a tagline
@@ -204,17 +233,10 @@ what comes in is halfway (a title still showing under the next scene, a card fly
 text, a word that wraps only while it grows). Neither the settled stills nor the sheet are taken there.
 The storyboard's scenes start at frames 0, 90 and 240, so its arriving stills are 30, 120 and 270.
 
-**Print the frames from the scene list, and take all of them every round.** Picked by eye, they miss:
-a caption that came in 3.8 s into a scene fell between the frames an agent chose, and passed. With the
-scene lengths in seconds, in order, and the fps:
-
-```sh
-node -e 'const fps = 30, scenes = [3, 5, 4]; let t = 0; for (const s of scenes) { console.log(t + fps, t + s * fps - fps / 2); t += s * fps; }'
-```
-
-It prints each scene's arriving and settled frame: `30 75`, `120 225`, `270 345` for the storyboard.
-Every round renders all of them, not only the scenes you changed: a fix in one scene moves what comes
-after it.
+**The frames come from the scene list, all of them every round.** Picked by eye, they miss: a caption
+that came in 3.8 s into a scene fell between the frames an agent chose, and passed. `round.mjs` (below)
+works them out from the scene lengths: `30 75`, `120 225`, `270 345` for the storyboard. Every round
+renders all of them, not only the scenes you changed: a fix in one scene moves what comes after it.
 
 **Contact sheet.** One picture of how it moves: 16 frames spread over its length, 4×4. Build it in
 Remotion itself. The FFmpeg it bundles has only the `scale` filter, no `fps` or `tile`, and a system
@@ -257,9 +279,11 @@ const SPREAD = Array.from({ length: 16 }, (_, i) => Math.round((i * (MAIN.durati
 <Composition id="Sheet" component={makeSheet(Main, SPREAD)} {...MAIN} />
 ```
 
-**Measured, not judged.** Four things on the list below are measured, and a measure does not skip
-one: text under 1/30 of the shorter side, text inside the 5% margin, a word alone on a last line,
-text over a picture or over other text. In a real test an agent read a 26 px line on three rounds of
+**Measured, not judged.** Six things on the list below are measured, and a measure does not skip
+one: text under 1/30 of the shorter side, text inside the 5% margin, in a 9:16 frame text where the app
+draws over the video instead (the top 14%, the bottom 35%, the outer 6% of a side), text that has
+arrived and is too close in colour to the plain colour behind it (under 4.5:1, or 3:1 for large text),
+a word alone on a last line, text over a picture or over other text. In a real test an agent read a 26 px line on three rounds of
 stills and wrote `none` for small text. Copy `Check.tsx` from this skill's folder, beside this file,
 into `src/`, and register it beside `Sheet`:
 
@@ -271,16 +295,17 @@ A still of `Check` is the frame with each finding outlined in red and listed acr
 it found nothing, the whole frame with a small green `nothing measured wrong` in its bottom-right corner. A finding is fixed, or written in the round's list with why it is
 meant (a caption set over a photo on purpose). The rest of the list is judged by eye on the stills.
 
-One round, as one script:
+One round is one command, run in the project's folder. `round.mjs` is beside this file: write its full path. It
+takes each scene's length in seconds, in order, as the storyboard has them:
 
 ```sh
-npx tsc --noEmit && npx remotion bundle src/index.ts --out-dir=build --log=error || exit 1
-for f in 30 75 120 225 270 345; do
-  npx remotion still build Main "$TMPDIR/r1-$f.png" --frame=$f --scale=0.5 --log=error || exit 1
-  npx remotion still build Check "$TMPDIR/r1-check-$f.png" --frame=$f --scale=0.5 --log=error || exit 1
-done
-npx remotion still build Sheet "$TMPDIR/r1-sheet.png" --scale=0.5 --log=error
+node <this skill's folder>/round.mjs --scenes 3,5,4 --fps 30 --round 1
 ```
+
+It prints each scene's arriving and settled frame, type-checks, bundles once, renders a still of `Main` and of
+`Check` at every one of those frames and the `Sheet`, into `rounds/` (`r1-75.png`, `r1-check-75.png`,
+`r1-sheet.png`), and its last line names the pictures to read. The next round is `--round 2`. When it stops at an
+error, the error is the lines above its own: a type error or a bundle that failed renders nothing.
 
 `read` every still and its check, then the sheet, all of them in one `read`. Text is judged on the stills; a cell of
 the sheet is a quarter of the width, and the sheet is for when things arrive and leave. Look for each of these by name,
@@ -295,6 +320,9 @@ since "looks fine" misses them:
 - everything in one third of the frame and the rest empty
 - the same thing where each should differ: four avatars with one initial, three cards with one icon
 - text smaller than 1/30 of the shorter side
+- in a 9:16 frame, something that matters where the app draws over it; text too pale against what is behind it
+- a line of words on screen for less than its time (a second for every 17 characters, never under one)
+- for a feed: the first scene says what it is about at once, and the last says what to do
 - on the sheet: a scene arriving later than the storyboard says, or one that sits still for seconds
 
 **Write the answers down, every round.** Each item on that list gets a line: `none`, or what you saw
@@ -311,6 +339,9 @@ Round 2 (stills 30, 75, 120, 225, 270, 345 and the sheet)
 - one third full, the rest empty: none
 - the same where each should differ: 345, three cards with one icon
 - text under 1/30: none
+- covered in a 9:16 frame, or too pale: none
+- words given their time: 120, "Kopi yang digiling tepat sebelum diseduh" (40 characters) is up 1.5 s -> scene 2 is a second longer
+- a feed's first and last scene: none
 - sheet, timing: none
 ```
 

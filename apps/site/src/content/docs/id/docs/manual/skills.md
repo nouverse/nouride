@@ -97,7 +97,10 @@ bawaan atau di kumpulan sampai ke semua agent dalam semenit, tanpa restart (seja
   sebagai PDF. Ia juga gak punya gaya sendiri.
 - **motion-graphics**: video yang dibuat dari kode dengan Remotion. Ia lebih dulu memeriksa apakah mesin
   ini sanggup me-render-nya, dan me-render di perangkat kamu yang lain lewat network-reach kalau gak
-  sanggup.
+  sanggup. Ia bertanya videonya ditonton di mana, yang menentukan bentuknya (layar biasa, layar HP penuh
+  untuk Reels atau TikTok, postingan feed), dan untuk feed ia menaruh kaitnya di depan, satu gagasan per
+  adegan, kata-katanya di layar cukup lama untuk dibaca, dan kartu penutup. Tiap putaran diukur selain
+  dilihat: teks kekecilan, teks di tempat aplikasi HP menimpa video vertikal, dan teks yang terlalu pucat.
 - **browser-automation**: browser sungguhan yang dikendalikan dengan Playwright untuk login, menelusuri
   dan mengisi situs. Ia bertanya dulu sebelum apa pun yang gak bisa dibatalkan, dan mengubah alur yang
   berhasil jadi script yang bisa jalan lagi sendiri.
