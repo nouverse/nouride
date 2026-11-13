@@ -64,6 +64,17 @@ describe("an external agent's sign-in", () => {
     await eventually(() => service.unavailable("coder") === null, 4_000, "the agent to be available again");
   });
 
+  test("a code sent to a terminal UI that takes a burst as a paste is sent, with no Enter left for the person to press", async () => {
+    // Claude Code's `setup-token`: the code and its Enter written together sat in the field as stars, the page said
+    // "Sent", and the owner stopped the sign-in and started again before pressing Enter by itself.
+    const { service, agent } = setup({ login: [FAKE_LOGIN, "--paste"] });
+    service.startLogin(agent);
+    await eventually(() => (service.login("coder")?.output ?? "").includes("paste the code"), 10_000, "the sign-in to ask for its code");
+    await service.answerLogin("coder", "CODE123");
+    await eventually(() => service.login("coder")?.running === false, 10_000, "the sign-in to end");
+    expect(service.login("coder")).toMatchObject({ exitCode: 0, signedIn: true });
+  });
+
   test("the address a browser sign-in ended on, pasted back, is opened on the box, where the sign-in waits for it", async () => {
     // From the person's own machine the page on the box's 127.0.0.1 does not load; typed into the sign-in, the address
     // would be a line of input it does not read.
@@ -129,6 +140,44 @@ test("a long sign-in whose kept end would start inside a token starts after it, 
   const shown = login.view().output;
   expect(shown).not.toContain("Z");
   expect(shown.length).toBeLessThanOrEqual(16_000);
+});
+
+describe("what a line the person typed is written as", () => {
+  const terminal = (tty: boolean) => {
+    const writes: string[] = [];
+    let end: (code: number) => void = () => {};
+    // Killed, it has not ended yet: a program told to stop takes a moment to go, as a real one does.
+    const proc = { tty, drain: () => "", exited: new Promise<number>((resolve) => (end = resolve)), write: (data: string) => void writes.push(data), kill: () => {} };
+    return { writes, end, login: new CliLogin(proc as never) };
+  };
+
+  test("in a terminal, the words and then Enter in a write of its own; Enter alone at once; on pipes, one line", async () => {
+    const tty = terminal(true);
+    tty.login.answer("CODE123\n");
+    expect(tty.writes).toEqual(["CODE123"]);
+    await eventually(() => tty.writes.length === 2, 3_000, "the Enter after the words");
+    expect(tty.writes).toEqual(["CODE123", "\r"]);
+    tty.login.answer("");
+    expect(tty.writes).toEqual(["CODE123", "\r", "\r"]);
+
+    const pipes = terminal(false);
+    pipes.login.answer("CODE123");
+    expect(pipes.writes).toEqual(["CODE123\n"]);
+  });
+
+  test("a sign-in that ended or was stopped before its Enter was due is written nothing more", async () => {
+    const ended = terminal(true);
+    ended.login.answer("CODE123");
+    ended.end(0);
+    const stopped = terminal(true);
+    stopped.login.answer("CODE123");
+    stopped.login.stop();
+    // A third, left alone, says when the Enter of all three was due.
+    const left = terminal(true);
+    left.login.answer("CODE123");
+    await eventually(() => left.writes.length === 2, 3_000, "the Enter that was due");
+    expect({ ended: ended.writes, stopped: stopped.writes }).toEqual({ ended: ["CODE123"], stopped: ["CODE123"] });
+  });
 });
 
 describe("a pasted address", () => {

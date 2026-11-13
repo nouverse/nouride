@@ -10,10 +10,18 @@
  */
 
 import type { InteractiveProcess } from "@nouride/runtime";
+import { contained, createLogger } from "@nouride/shared";
 import { Screen } from "./screen.ts";
+
+const log = createLogger("external-agents.login");
 
 /** What a sign-in's page shows of the terminal: the end of it, which is where the link and the question are. */
 const KEPT_CHARS = 16_000;
+/**
+ * How long after a line's words its Enter is written, in a terminal. Claude Code's `setup-token` took a code and an
+ * Enter written 300 ms apart as a line, and the two written together as a paste (measured on a Linux box).
+ */
+const ENTER_AFTER_MS = 300;
 const LINK = /https?:\/\/[^\s"'<>`]+/g;
 
 export interface LoginView {
@@ -157,10 +165,23 @@ export class CliLogin implements SignIn {
    * raw mode submits on nothing else — Claude Code's `setup-token` took a line feed as a character, and the code it was
    * sent sat in its field (0.8.8). On pipes no terminal turns one into the other, and a line feed ends the line. Empty,
    * it is Enter alone: "Press Enter to retry".
+   *
+   * In a terminal the words and their Enter are two writes, a moment apart. A terminal UI takes a burst of characters
+   * as a paste, and an Enter that comes with them as part of what was pasted: sent together, the code sat in the field
+   * of Claude Code's `setup-token` as stars, the page said "Sent", and nothing moved until Enter was pressed by itself.
    */
   answer(text: string): void {
     if (!this.running) throw new Error("the sign-in has ended");
-    this.proc.write(`${text.replace(/[\r\n]+/g, "")}${this.proc.tty ? "\r" : "\n"}`);
+    const line = text.replace(/[\r\n]+/g, "");
+    if (!this.proc.tty) return void this.proc.write(`${line}\n`);
+    if (line === "") return void this.proc.write("\r");
+    this.proc.write(line);
+    setTimeout(
+      contained(log, "could not press Enter after a sign-in's line", () => {
+        if (this.running && !this.stoppedHere) this.proc.write("\r");
+      }),
+      ENTER_AFTER_MS,
+    );
   }
 
   stop(): void {

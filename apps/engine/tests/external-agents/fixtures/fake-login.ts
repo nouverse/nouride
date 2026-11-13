@@ -4,6 +4,10 @@
  *
  * With `--returns`, a browser sign-in instead: its link's `redirect_uri` is a page on 127.0.0.1 it waits on, and that page
  * opened with `code=OK` signs it in.
+ *
+ * With `--paste`, it reads its terminal key by key, as a terminal UI does, and takes a burst of characters as a paste:
+ * an Enter that arrives with them is part of what was pasted, and only an Enter by itself sends the field. What Claude
+ * Code's `setup-token` does with a code and an Enter written together.
  */
 
 import { createServer } from "node:http";
@@ -23,4 +27,14 @@ if (process.argv.includes("--returns")) {
     process.stdout.write(`Open https://accounts.example.test/auth?redirect_uri=${encodeURIComponent(`http://127.0.0.1:${port}/`)}&state=s1 and sign in\n`);
   });
 } else process.stdout.write(`cwd=${process.cwd()}\nprofile=${process.env.FAKE_HOME}\nOpen \x1b[1mhttps://login.example.test/device?c=1\x1b[0m and paste the code:\n`);
-for await (const line of console) process.exit(line.trim() === "CODE123" ? 0 : 3);
+if (process.argv.includes("--paste")) {
+  let field = "";
+  process.stdin.setRawMode?.(true);
+  process.stdin.on("data", (chunk: Buffer) => {
+    const got = chunk.toString("utf8");
+    if (got === "\r" || got === "\n") process.exit(field === "CODE123" ? 0 : 3);
+    // More than a key at once is a paste: its line ends are dropped, and nothing is sent.
+    field += got.replace(/[\r\n]/g, "");
+    process.stdout.write("*".repeat(got.length));
+  });
+} else for await (const line of console) process.exit(line.trim() === "CODE123" ? 0 : 3);

@@ -222,7 +222,7 @@ describe("an external agent's Brain tab", () => {
     const { host, unmount } = await mount();
     try {
       await eventually(() => !button(host, "Enter")?.disabled, 2_000, "Enter, once the admin is known");
-      expect(host.textContent).not.toContain("If it does not move on within a minute");
+      expect(host.textContent).not.toContain("If it does not move on");
       const field = host.querySelector('input[placeholder="The code, or the address the browser ended on"]') as HTMLInputElement;
       type(field, "ABCD-1234");
       button(host, "Enter")!.click();
@@ -230,7 +230,7 @@ describe("an external agent's Brain tab", () => {
       expect(posted[0]).toEqual({ path: "/api/control/agents/coder/cli/login/answer", body: { text: "" } });
       // What was typed stays for Send: pressed by mistake, Enter dropped a pasted code.
       expect(field.value).toBe("ABCD-1234");
-      await eventually(() => (host.textContent ?? "").includes("Sent Enter. The terminal below shows what Codex does with it. If it does not move on within a minute, Stop and sign in again."), 2_000, "the note");
+      await eventually(() => (host.textContent ?? "").includes("Sent Enter. The terminal below shows what Codex does with it. If it does not move on, press Enter; if it still does not within a minute, Stop and sign in again."), 2_000, "the note");
     } finally {
       unmount();
     }

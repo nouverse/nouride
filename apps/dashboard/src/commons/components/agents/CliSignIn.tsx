@@ -84,7 +84,7 @@ export function CliSignIn(props: {
         <button type="button" className="btn btn-sm btn-ghost gap-1" disabled={!admin || send.isPending} onClick={() => send.mutate("")} title="Press Enter in the terminal when it says to"><CornerDownLeft size={14} aria-hidden="true" /> Enter</button>
         <button type="button" className="btn btn-sm btn-ghost gap-1" disabled={!admin} onClick={() => stop.mutate()}><Square size={14} aria-hidden="true" /> Stop</button>
       </form>
-      {sent ? <p className="text-base-content/65 text-xs">{sent}. The terminal below shows what {cliName} does with it. If it does not move on within a minute, Stop and sign in again.</p> : null}
+      {sent ? <p className="text-base-content/65 text-xs">{sent}. The terminal below shows what {cliName} does with it. If it does not move on, press Enter; if it still does not within a minute, Stop and sign in again.</p> : null}
       {transcript}
       <ErrorNote error={send.error ?? stop.error} />
     </div>
