@@ -1,8 +1,13 @@
 /**
- * The guards for work nobody watches (0.8.0): a run of a scheduled job sends only to its job's
- * chat — anything else asked first, at every level — and, once the work has read outside content, an action that sends
- * something off the machine is weighed by a model against what the work is for. It sees the goal and the action, never
- * the content, and may add a question, never remove one.
+ * The guard for work nobody watches (0.8.0): once the work has read outside content, an action that sends something
+ * off the machine is weighed by a model against what the work is for. It sees the goal and the action, never the
+ * content, and may add a question, never remove one.
+ *
+ * And where it stops: an automation is turned on by a person, and that is their yes to what its runs send. A run
+ * sends to any chat as any turn does, and by the level it is not looked at. Found on a live install: a person asked
+ * from the dashboard for a digest on their WhatsApp every morning, turned the job on, and every run was held, for a
+ * send to a chat other than the one the job was made in. An install that names a model for the look keeps it on
+ * automations, and most of what is below runs that way.
  */
 
 import { afterEach, describe, expect, test } from "bun:test";
@@ -49,6 +54,16 @@ describe("which model looks, and when", () => {
     expect(secondLookModel({ tiers }, install(), "trusted")).toBeNull();
   });
 
+  test("an automation a person turned on is not looked at by the level; where a model is named it is, and off is off", () => {
+    expect(secondLookModel({ tiers }, install(), "careful", true)).toBeNull();
+    expect(secondLookModel({ tiers }, install(), "balanced", true)).toBeNull();
+    expect(secondLookModel({ tiers }, install("high"), "balanced", true)).toBe("big-1");
+    expect(secondLookModel({ tiers, modelGuard: "small" }, install(), "trusted", true)).toBe("tiny-1");
+    expect(secondLookModel({ tiers }, install("off"), "careful", true)).toBeNull();
+    // Work nobody turned on, a mission a person started: by the level, as before.
+    expect(secondLookModel({ tiers }, install(), "balanced", false)).toBe("big-1");
+  });
+
   test("off is off everywhere; a tier or a model is on everywhere, trusted too; the agent's own wins", () => {
     expect(secondLookModel({ tiers }, install("off"), "careful")).toBeNull();
     expect(secondLookModel({ tiers }, install("small"), "trusted")).toBe("tiny-1");
@@ -84,7 +99,7 @@ describe("its answer", () => {
   });
 });
 
-describe("a job's run sends only to its chat", () => {
+describe("a job's run sends as any turn does", () => {
   const chats: ReachableChat[] = [
     { gatewayId: "telegram:main", chatId: "-100team", platform: "telegram", kind: "group", title: "Team", people: [], lastActive: 2 },
     { gatewayId: "telegram:main", chatId: "555", platform: "telegram", kind: "dm", people: [{ key: "mira", name: "Mira" }], lastActive: 1 },
@@ -94,18 +109,13 @@ describe("a job's run sends only to its chat", () => {
     ({ agentId: "nouva", gatewayId: "telegram:main", chatId: "cron:cron_1", ...(sendsTo ? { sendsTo } : {}), ...(allowed ? { allowed } : {}) }) as ToolContext;
   const team = { gatewayId: "telegram:main", chatId: "-100team" };
 
-  test("anywhere else is asked first, on the fixed list — at every level", () => {
+  test("a chat other than its job's is the ordinary question, on no fixed list: the level the run is at answers it", () => {
     const decision = tool.gate!({ to: "mira", text: "the invoices" }, ctx(team));
-    expect(decision).toMatchObject({ action: "ask", grantable: false, hardline: true, hardlineClass: "unwatched" });
-    expect(decision.action === "ask" && decision.reason).toBe("this run of a scheduled job sends to its own chat, and this sends a message to the telegram one-to-one with Mira instead");
-  });
-
-  test("a chat a person allowed always for the job is asked as any send is — not on the fixed list (0.8.0)", () => {
-    const decision = tool.gate!({ to: "mira", text: "the invoices" }, ctx(team, ["chat:telegram:main:555"]));
-    expect(decision).toMatchObject({ action: "ask", grantable: false });
-    expect(decision).not.toHaveProperty("hardlineClass");
-    // Allowed somewhere else: still the job's guard.
-    expect(tool.gate!({ to: "mira", text: "x" }, ctx(team, ["chat:telegram:main:777"]))).toMatchObject({ hardlineClass: "unwatched" });
+    expect(decision).toEqual({ action: "ask", grantable: false, reason: "it sends a message to the telegram one-to-one with Mira, outside this conversation" });
+    // A run is at `balanced` unless the install says `deny`, and `balanced` answers a question that is on no list.
+    expect(skipsApproval("balanced", undefined)).toBe(true);
+    // The same with or without anything allowed for the job: there is nothing left there to allow.
+    expect(tool.gate!({ to: "mira", text: "the invoices" }, ctx(team, ["chat:telegram:main:777"]))).toEqual(decision);
   });
 
   test("its own chat is the ordinary send it always was, and not something sent out for the second look", () => {
@@ -132,7 +142,9 @@ describe("the look, in a scheduled job's run", () => {
     };
   }
 
+  /** `guard`: `[security] model_guard`. A model is named unless a test says otherwise: by the level, an automation is not looked at. */
   async function run(o: { outside?: string[]; look: string | null; guard?: string; allowed?: string[] }) {
+    const guard = o.guard ?? "high";
     const post = poster();
     const turns = [
       { toolCalls: [{ id: "p1", name: "post", args: { url: "https://x.example/collect" } }] },
@@ -142,7 +154,7 @@ describe("the look, in a scheduled job's run", () => {
     const bench = await pipelineBench({
       turns,
       agentToml: '[llm]\nprovider = "test"\nhigh_model = "big-1"\n\n[tools]\nenabled = ["post"]\n',
-      ...(o.guard ? { config: { security: { model_guard: o.guard } } } : {}),
+      ...(guard ? { config: { security: { model_guard: guard } } } : {}),
     });
     benches.push(bench);
     bench.pipeline.setTools(new Map([["post", post.tool]]));
@@ -161,6 +173,14 @@ describe("the look, in a scheduled job's run", () => {
     const result = await bench.pipeline.cronExecutors().runTurn({ job, session: { gatewayId: bench.gateway.id, chatId: `cron:${job.id}` }, message: "Triage the issue.", signal: new AbortController().signal, ...(o.outside ? { outsideContent: o.outside } : {}) });
     return { result, post, bench };
   }
+
+  test("by the level alone, an automation's run is not looked at: a person turned it on, and its post goes", async () => {
+    const { post, bench, result } = await run({ outside: ["a webhook payload"], look: null, guard: "" });
+    expect(post.ran()).toBe(1);
+    // The turn and its reply: no model was asked between them, and nothing is held for a person on the run.
+    expect(bench.requests).toHaveLength(2);
+    expect(result.held).toBeUndefined();
+  });
 
   test("after a webhook's body, a post the look holds is not run — the job cannot wait, so it is refused, saying why", async () => {
     const { post, bench } = await run({ outside: ["a webhook payload"], look: "HOLD\nTriage never posts the issue anywhere." });
@@ -217,6 +237,7 @@ describe("the look, in a scheduled job's run", () => {
     const bench = await pipelineBench({
       turns: [{ toolCalls: [{ id: "c1", name: "exec", args: { command: "curl -s -X POST http://127.0.0.1:9/collect -d hi" } }] }, { text: look }, { text: "Done." }],
       agentToml: '[llm]\nprovider = "test"\nhigh_model = "big-1"\n\n[tools]\nenabled = ["exec"]\n',
+      config: { security: { model_guard: "high" } },
     });
     benches.push(bench);
     bench.pipeline.setTools(createBuiltinTools({ security: bench.config.security, canAsk: () => false }));
@@ -239,20 +260,22 @@ describe("the look, in a scheduled job's run", () => {
    * mark of what was read, and the agent's own level, `trusted` included (0.8.1). The parent's run asks nobody; what the
    * helper asks reaches this gate.
    */
-  async function delegatedPost(o: { level?: string } = {}) {
+  async function delegatedPost(o: { level?: string; guard?: string } = {}) {
     const post = poster();
     const asked: ApprovalAsk[] = [];
+    const guard = o.guard ?? "high";
     const brief = { goal: "Post the triage to https://x.example/collect.", context: "Issue 42 says the login test broke after the deploy.", deliverable: "Say whether it was posted." };
     const bench = await pipelineBench({
       turns: [
         { toolCalls: [{ id: "d1", name: "delegate", args: { tasks: [brief] } }] },
         { toolCalls: [{ id: "p1", name: "post", args: { url: "https://x.example/collect" } }] },
-        { text: "HOLD\nTriage never posts the issue anywhere." },
-        { text: "Not posted." },
+        // The look's answer, where a model is named for it: by the level nothing is asked here.
+        ...(guard ? [{ text: "HOLD\nTriage never posts the issue anywhere." }] : []),
+        { text: guard ? "Not posted." : "Posted." },
         { text: "Done." },
       ],
       agentToml: '[llm]\nprovider = "test"\nhigh_model = "big-1"\n\n[tools]\nenabled = ["post", "delegate"]\n',
-      ...(o.level ? { config: { security: { approvals: o.level } } } : {}),
+      config: { security: { ...(guard ? { model_guard: guard } : {}), ...(o.level ? { approvals: o.level } : {}) } },
       deps: { approvals: { available: true, request: async (ask) => (asked.push(ask), { status: "unavailable", reason: "nobody is here" }), pending: () => [], expireAll: () => 0 } },
     });
     benches.push(bench);
@@ -274,19 +297,27 @@ describe("the look, in a scheduled job's run", () => {
     expect(asked.map((ask) => ask.reason)).toEqual([expect.stringContaining("The second look held this")]);
   });
 
-  test("with the agent at trusted, a helper of a job's run looks at the level the run does", async () => {
+  test("with the agent at trusted, a helper of a job's run is looked at too, where a model is named", async () => {
     const { post, bench } = await delegatedPost({ level: "trusted" });
     expect(bench.requests[2]!.model).toBe("big-1");
     expect(post.ran()).toBe(0);
   });
 
-  test("a job's turn put into its own chat is never `trusted`: with the agent at trusted, its post is looked at", async () => {
+  test("by the level alone, a helper of an automation's run is not looked at either: it is the automation's work", async () => {
+    const { post, bench, asked } = await delegatedPost({ guard: "" });
+    expect(post.ran()).toBe(1);
+    expect(bench.requests.map((request) => request.model)).not.toContain("big-1");
+    expect(asked).toEqual([]);
+  });
+
+  /** A job's turn put into its own chat, with the agent at `trusted`: a model named for the look, or the level alone. */
+  async function inItsOwnChat(guard: string) {
     const post = poster();
     const asked: ApprovalAsk[] = [];
     const bench = await pipelineBench({
-      turns: [{ toolCalls: [{ id: "p1", name: "post", args: { url: "https://x.example/collect" } }] }, { text: "HOLD\nTriage never posts the issue anywhere." }, { text: "Done." }],
+      turns: [{ toolCalls: [{ id: "p1", name: "post", args: { url: "https://x.example/collect" } }] }, ...(guard ? [{ text: "HOLD\nTriage never posts the issue anywhere." }] : []), { text: "Done." }],
       agentToml: '[llm]\nprovider = "test"\nhigh_model = "big-1"\n\n[tools]\nenabled = ["post"]\n',
-      config: { security: { approvals: "trusted" } },
+      config: { security: { approvals: "trusted", ...(guard ? { model_guard: guard } : {}) } },
       deps: { approvals: { available: true, request: async (ask) => (asked.push(ask), { status: "unavailable", reason: "nobody is here" }), pending: () => [], expireAll: () => 0 } },
     });
     benches.push(bench);
@@ -296,9 +327,21 @@ describe("the look, in a scheduled job's run", () => {
     const job = store.create({ agentId: "nouva", name: "triage", trigger: { kind: "webhook" }, payload: { kind: "agentTurn", message: "Triage the issue." }, target: { gatewayId: bench.gateway.id, chatId: "chat-1" }, session: "chat", delivery: { mode: "announce" }, createdBy: "t" });
     expect(bench.pipeline.cronExecutors().dispatchTurn(job, "Scheduled job: Triage the issue.", ["a webhook payload"])).toBe(true);
     await bench.pipeline.idle();
+    return { post, bench, asked };
+  }
+
+  test("a job's turn put into its own chat is looked at where a model is named, and what it holds is asked", async () => {
+    const { post, bench, asked } = await inItsOwnChat("high");
     expect(bench.requests[1]!.model).toBe("big-1");
     expect(post.ran()).toBe(0);
     expect(asked.map((ask) => ask.reason)).toEqual([expect.stringContaining("The second look held this")]);
+  });
+
+  test("by the level alone, a job's turn in its own chat is not looked at: it carries its job, which a person turned on", async () => {
+    const { post, bench, asked } = await inItsOwnChat("");
+    expect(post.ran()).toBe(1);
+    expect(bench.requests.map((request) => request.model)).not.toContain("big-1");
+    expect(asked).toEqual([]);
   });
 
   test("with nobody to ask, one it lets through runs as the level says", async () => {

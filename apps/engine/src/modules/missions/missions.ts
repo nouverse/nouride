@@ -359,7 +359,8 @@ export class Missions implements TurnShaper {
       parked: parked.length,
       person: { gatewayId: mission.gatewayId, senderId: mission.startedBy },
       ...(mission.untrusted ? { outsideContent: [OUTSIDE_EARLIER] } : {}),
-      // A job's run sends only to its job's chat, and a person may answer *always for this job* (0.8.0).
+      // An automation's mission carries its job: a person turned it on, so the look is taken only where a model is
+      // named for it, and a person may then answer *always for this job* (0.8.0).
       unattended: {
         goal: mission.goal,
         ...(mission.jobId

@@ -1066,8 +1066,8 @@ export const HARDLINE_SUMMARY: { class: HardlineVerdict["class"]; what: string; 
   { class: "force-push", what: "A remote's history rewritten (an ordinary push is not)", examples: ["git push --force|-f|--force-with-lease|--mirror", "git push origin +main, git push --delete …"] },
   {
     class: "unwatched",
-    what: "Work nobody watches sending somewhere its job did not name, or what the second look held; asked under trusted too",
-    examples: ["send_message to another chat from a scheduled job's run", "a send the second look found does not belong to the work"],
+    what: "What the second look held in work nobody watches; asked under trusted too",
+    examples: ["a send the second look found does not belong to a mission's work", "the same on an automation's run, where a model is named for the look"],
   },
   {
     class: "shared-tools",

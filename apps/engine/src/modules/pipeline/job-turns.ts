@@ -338,7 +338,8 @@ export class JobTurns {
         ...(request.model ? { model: request.model } : {}),
         // The payload of the webhook that fired it is outside content from the first step.
         ...(request.outsideContent?.length ? { outsideContent: request.outsideContent } : {}),
-        // Nobody is watching it, and it sends only to its job's chat (0.8.0).
+        // Nobody is watching it. Its job is what a person turned on: the yes for what the run sends, wherever (the
+        // chat it reports to is where its own words go, and no send off the machine).
         unattended: {
           goal: jobGoal(request.job),
           sendsTo: deliveryTarget(request.job),
@@ -563,8 +564,9 @@ export function scheduledInChat(envelope: MessageEnvelope): Unattended | undefin
 }
 
 /**
- * The level a turn in a chat is answered at: a scheduled job's is never `trusted`, so it looks (0.8.0). It was resolved
- * as any chat turn's, for `nouride:system`, and an agent or a daemon at `trusted` gave it a run with no second look.
+ * The level a turn in a chat is answered at: a scheduled job's is never `trusted`, as its run in a conversation of its
+ * own never is (0.8.0): nobody is there, so what `balanced` asks is still asked. It was resolved as any chat turn's,
+ * for `nouride:system`, and so took an agent's or a daemon's `trusted`.
  */
 export function chatTurnLevel(envelope: MessageEnvelope, level: ApprovalLevel): ApprovalLevel {
   return level === "trusted" && scheduledInChat(envelope) ? "balanced" : level;

@@ -891,7 +891,7 @@ describe("access: kept out, and the way back", () => {
       record.restore();
       sent = record.posts;
     });
-    expect(html).toContain("on at Careful and Balanced, off at Trusted. A scheduled or webhook run is never Trusted, so it looks.");
+    expect(html).toContain("on a mission at Careful and Balanced, off at Trusted, and off on an automation you turned on.");
     expect(html).toContain("another model first checks that the send fits the work. If it does not, you are asked before it goes.");
     expect(sent).toEqual([{ path: "/agents/nouva/model_guard", body: { value: "off" } }]);
   });

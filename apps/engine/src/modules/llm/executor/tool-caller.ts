@@ -145,7 +145,8 @@ export class ToolCaller {
     if (!action) return null;
     // Allowed always for this job (0.8.0): a person answered for exactly where it goes, so nothing is looked at again.
     if (action.to.length > 0 && action.to.every((key) => ctx.allowed?.includes(key))) return null;
-    const held = await look({ goal: req.unattended.goal, action: `${call.name} (${action.what})` });
+    // An automation's work (its run, a helper of it, its mission) carries its job: a person turned that on.
+    const held = await look({ goal: req.unattended.goal, action: `${call.name} (${action.what})`, turnedOn: req.unattended.jobId !== undefined });
     if (held === null) return null;
     log.info("the second look held a call", { agent_id: req.agent.config.id, turn_id: req.turnId, tool: call.name });
     if (decision.action === "refuse") return { action: "refuse", reason: `${decision.reason}. ${held}` };

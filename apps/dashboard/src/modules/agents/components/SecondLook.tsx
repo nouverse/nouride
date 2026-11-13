@@ -1,10 +1,11 @@
 /**
- * The second look for this agent (0.8.0, `[security] model_guard`): before work nobody watches — a scheduled job's run,
- * a webhook's, a mission — sends something off the machine after reading outside content, a model weighs the action
- * against what the work is for, and may add a question. It never removes one.
+ * The second look for this agent (0.8.0, `[security] model_guard`): before work nobody watches sends something off the
+ * machine after reading outside content, a model weighs the action against what the work is for, and may add a
+ * question. It never removes one. By the level that work is a mission; an automation a person turned on has their yes,
+ * and is looked at only where the look is always on.
  *
- * Three choices a person makes here: follow the daemon's setting, always on (the agent's high tier, even at `trusted`),
- * or off. A model named by id stays the config file's to say; it shows here as what it is.
+ * Three choices a person makes here: follow the daemon's setting, always on (the agent's high tier, even at `trusted`,
+ * automations too), or off. A model named by id stays the config file's to say; it shows here as what it is.
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -15,11 +16,11 @@ import { Card, ErrorNote } from "@/commons/components/ui/ui";
 import { useSaved } from "@/commons/hooks/use-saved";
 
 /**
- * What a setting means, in words — unset is by the approval level the work runs at. A scheduled or webhook run is never
- * Trusted, so a Trusted agent's runs still look: the live box's Trusted orchestrator read as "off" here while they did.
+ * What a setting means, in words — unset is by the approval level the work runs at, and not on an automation: a
+ * person turned that on, which is their yes.
  */
 function meaning(setting: string): string {
-  if (!setting) return "on at Careful and Balanced, off at Trusted. A scheduled or webhook run is never Trusted, so it looks";
+  if (!setting) return "on a mission at Careful and Balanced, off at Trusted, and off on an automation you turned on";
   if (setting === "off") return "off";
   return `on at every level, on ${["small", "default", "high"].includes(setting) ? `the ${setting} tier` : setting}`;
 }
@@ -38,7 +39,7 @@ export function SecondLook({ agent }: { agent: AgentSummary }) {
   const { own, install } = agent.secondLook;
   const options: { value: string | null; label: string; detail: string; icon: typeof Eye }[] = [
     { value: null, label: "Follow the default", detail: `As the default for every agent says: ${meaning(install)}.`, icon: Settings2 },
-    { value: "high", label: "Always look", detail: "On at every level, Trusted too, on this agent's high tier.", icon: Eye },
+    { value: "high", label: "Always look", detail: "On at every level, Trusted too, on this agent's high tier, and on automations: a send it holds waits for your yes on the automation's page.", icon: Eye },
     { value: "off", label: "Off", detail: "Work nobody watches sends without a second look. The fixed list still asks what it asks.", icon: EyeOff },
   ];
   const custom = own !== null && !options.some((option) => option.value === own);
@@ -46,7 +47,7 @@ export function SecondLook({ agent }: { agent: AgentSummary }) {
   return (
     <Card
       title="Second look"
-      description="When work nobody watches (a scheduled job's run, a webhook's, a mission) has read something from outside (a web page, an email, a webhook) and then sends something off this machine, another model first checks that the send fits the work. If it does not, you are asked before it goes. It can only add a question, never skip one."
+      description="When a mission has read something from outside (a web page, an email, a webhook) and then sends something off this machine, another model first checks that the send fits the work. If it does not, you are asked before it goes. It can only add a question, never skip one. An automation you turned on is not checked, since turning it on is your yes, unless you choose Always look."
     >
       <div className="space-y-2">
         {options.map((option) => {

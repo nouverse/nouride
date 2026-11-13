@@ -54,7 +54,7 @@ const OPTIONS: {
     value: "trusted",
     label: "Trusted: never ask",
     detail:
-      "Nothing asks, including the changes above, except work nobody watches sending somewhere its job did not name, a program installed for every agent, a change to an agent's own persona, and a change to who People says a person is. Anyone who can message this agent can have it run anything else it is able to run.",
+      "Nothing asks, including the changes above, except a program installed for every agent, a change to an agent's own persona, and a change to who People says a person is. Anyone who can message this agent can have it run anything else it is able to run.",
     icon: ShieldOff,
     danger: true,
   },

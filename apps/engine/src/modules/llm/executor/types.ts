@@ -248,9 +248,10 @@ export interface TurnRequest {
   outsideContent?: readonly string[];
   /**
    * Work nobody watches (0.8.0): a scheduled job's run, a webhook's, a mission's turn. `goal` is what the work is for —
-   * what the second look weighs an action against (`tools/second-look.ts`); `sendsTo`, for a job's run, is the one chat
-   * its job names, and a send anywhere else is asked first (`ToolContext.sendsTo`); `jobId` the job, so a person can
-   * answer *always for this job*, and `allowed` what they already allowed it (`Job.allowed`).
+   * what the second look weighs an action against (`tools/second-look.ts`); `sendsTo`, for a job's run, is the chat
+   * its job reports to, which is not a send off the machine (`ToolContext.sendsTo`); `jobId` the job, which a person
+   * turned on, so its work is looked at only where a model is named for the look, and a person can then answer
+   * *always for this job*; `allowed` is what they already allowed it (`Job.allowed`).
    */
   unattended?: Unattended;
   /**
@@ -572,7 +573,7 @@ export interface ExecutorDeps {
    * watches that has read outside content. Null when it does; why not when it does not — or when nothing could answer.
    * Absent where it is off: by the agent's `[security] model_guard`, or its approval level.
    */
-  secondLook?: (input: { goal: string; action: string }) => Promise<string | null>;
+  secondLook?: (input: { goal: string; action: string; turnedOn?: boolean }) => Promise<string | null>;
   /**
    * The daemon's hint under `careful` for the question about to be put to a person, or null — counted per question, so
    * called only when one is actually asked (`tools/careful-hint.ts`). Absent where nobody is talking to the agent.

@@ -13,8 +13,8 @@
  *   stored secret replaced or deleted, a credential leaving, this machine's system packages changed (0.8.15), the
  *   daemon's own state where agents run as it, and what `trusted` asks too. The default in the code, and the owner's
  *   everyday level.
- * - **`trusted`** — only `NEVER_SKIPPED`: work nobody watches sending elsewhere, a program installed for every agent,
- *   an agent's own persona, and who People says a person is.
+ * - **`trusted`** — only `NEVER_SKIPPED`: what the second look held in work nobody watches, a program installed for
+ *   every agent, an agent's own persona, and who People says a person is.
  *
  * ## Who decides, and why the order is this way round
  *
@@ -85,8 +85,9 @@ const NEVER_SKIPPED: ReadonlySet<HardlineClass | undefined> = new Set<HardlineCl
  * everything, which is the whole point of `trusted` and the reason it is kept away from every unauthenticated surface.
  */
 export function skipsApproval(level: ApprovalLevel, hardlineClass: HardlineClass | undefined): boolean {
-  // Work nobody watches, sending somewhere it was not told to (0.8.0): `trusted` is a person choosing not to be asked
-  // about what they are there to see, and nobody is there to see this.
+  // What the second look held in work nobody watches (0.8.0): `trusted` is a person choosing not to be asked about
+  // what they are there to see, and nobody is there to see this. By the level the look is off at `trusted` and on an
+  // automation a person turned on, so this is the question of an install that named a model for it.
   // A program every agent runs, installed as the daemon's user (0.8.1): asked under `trusted` too, for the same reason.
   // An agent's own persona (0.8.8): it holds the rules that ask, and a level is not the owner reading the change.
   // Who People says a person is (0.8.9): an admin is a person there, and a chat id linked to one answers as an admin.
@@ -110,7 +111,7 @@ export function describeApprovalLevel(resolution: ApprovalResolution): string {
   const what: Record<ApprovalLevel, string> = {
     careful: "a new command or change asks once, and deletes, teardowns, force-pushes and the rest of the fixed list every time",
     balanced: "only a config.toml changed, someone given access, the daemon stopped, a secret replaced, a credential leaving and this machine's packages changed ask, besides the few every level asks",
-    trusted: "nothing asks, but work nobody watches still asks before it sends somewhere its job did not name, and a program installed for every agent, a change to an agent's own persona and a change to who People says a person is ask too",
+    trusted: "nothing asks, but a program installed for every agent, a change to an agent's own persona and a change to who People says a person is still do",
   };
   const who: Record<ApprovalResolution["source"], string> = {
     agent: "set on this agent, so it applies to everyone talking to it",

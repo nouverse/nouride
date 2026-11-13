@@ -3,8 +3,8 @@
  */
 
 /**
- * What every level asks, `trusted` too, as the model reads it. Work nobody watches sending somewhere its job did not
- * name is left out: such a turn is told the one chat it sends to, and no other turn can do it.
+ * What every level asks, `trusted` too, as the model reads it. What the second look holds in work nobody watches is
+ * left out: it is a question the look puts about an action, not a kind of action a turn could be told to avoid.
  */
 export const EVERY_LEVEL_ASKS =
   "installing a program for every agent, changing your own persona, and changing who People says a person is";

@@ -179,8 +179,8 @@ export interface ToolContext {
    */
   untrustedRead?: readonly string[];
   /**
-   * Where a run of a scheduled job sends what it has to say — its job's chat (0.8.0). Set only for such a run: a send
-   * anywhere else is asked first, at every approval level, since nobody is watching and the job named this one.
+   * Where a run of a scheduled job sends what it has to say — its job's chat (0.8.0). Set only for such a run: a
+   * message there is the run's own report, not something sent off the machine for the second look to weigh.
    */
   sendsTo?: { gatewayId: string; chatId: string };
   /** What a person allowed this job's runs to send without asking again — `Job.allowed`'s keys (0.8.0). */
@@ -373,8 +373,8 @@ export type HardlineClass =
   /** A remote's history rewritten — `git push --force` and its kin. An ordinary push is not. */
   | "force-push"
   /**
-   * Work nobody watches — a scheduled job's run, a mission — sending somewhere its job did not name, or what the second
-   * look held (0.8.0). Asked at every level, `trusted` too: nobody is there to see it happen.
+   * What the second look held in work nobody watches — a mission, or an automation's run where a model is named for
+   * the look (0.8.0). Asked at every level, `trusted` too: nobody is there to see it happen.
    */
   | "unwatched"
   /**

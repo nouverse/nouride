@@ -20,7 +20,9 @@
  * somebody else's face. Never the chat it is in: that is an answer, not a message.
  *
  * Asked like any tool that changes something, at the agent's approval level — it speaks to people outside this
- * conversation. An unknown or ambiguous `to` is refused before anybody is asked, with the chats it can reach.
+ * conversation. In a scheduled job's run that is the level the run is at: the job was turned on by a person, and
+ * nothing more is asked for where it sends. An unknown or ambiguous `to` is refused before anybody is asked, with the
+ * chats it can reach.
  *
  * **The list has a call of its own: no `to`.** Nothing is sent and nobody is asked. An unknown `to` used to be the only
  * way to see the chats, and the schema said so; agents on two different models then made a recipient up to get the
@@ -206,21 +208,11 @@ export function createSendMessageTool(options: SendMessageOptions): Tool {
       const found = resolve(args, ctx);
       if (!found.ok) return { action: "refuse", reason: found.reason };
       /**
-       * A run of a scheduled job sends only to the chat its job names (0.8.0): anywhere else is
-       * asked first, at every level — parked in a mission, refused in a turn that cannot wait. Checked against the job, not
-       * against a chat never written to before, which would ask on every reply of a job that answers customers.
+       * The same question in a scheduled job's run as anywhere, answered by the level the run is at. A run used to be
+       * held, at every level, for a send to any chat but the one its job reports to: a person who had asked for "a digest
+       * on my WhatsApp every morning" and turned that job on themselves found each run held, for a yes they had given.
+       * A job is turned on by a person, and that is their yes to what it sends.
        */
-      // A person may have allowed this one always for the job (0.8.0, `Job.allowed`): it is asked as any other send then.
-      if (ctx.sendsTo && chatAddress(found.chat) !== chatAddress(ctx.sendsTo) && !ctx.allowed?.includes(`chat:${chatAddress(found.chat)}`)) {
-        return {
-          action: "ask",
-          grantable: false,
-          hardline: true,
-          hardlineClass: "unwatched",
-          // In words: a person reads this on the job's page, where a chat's address says nothing to them.
-          reason: `this run of a scheduled job sends to its own chat, and this sends a message to ${describeChat(found.chat)} instead`,
-        };
-      }
       return { action: "ask", grantable: false, reason: `it sends a message to ${describeChat(found.chat)}, outside this conversation` };
     },
 
