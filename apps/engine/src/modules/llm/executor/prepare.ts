@@ -394,7 +394,8 @@ export async function prepareTurn(
    * with nothing to show for it, and afterwards there was no trace that it had.
    */
   let history = req.history;
-  history = clearStaleOutput(deps, req, history, sha256Text(`${requested}\n${toolset.definitions.map((tool) => tool.name).join(",")}\n${prompt.text}`), at.getTime());
+  // The prefix by its parts, in the order a request carries them: the tools first, then the prompt's sections.
+  history = clearStaleOutput(deps, req, history, { tools: sha256Text(toolset.definitions.map((tool) => tool.name).join(",")), model: requested, ...prompt.parts }, at.getTime());
   if (deps.llm.context.truncationStrategy === "summary") {
     const say = deps.onActivity ? (text: string, detail: Record<string, unknown>) => void deps.onActivity?.("compact", text, detail) : undefined;
     const compacted = await compactHistory(history, {
@@ -461,10 +462,24 @@ const cacheBreaks = new CacheBreaks();
  * lost anyway (`CacheBreaks`), or once there is enough of it to pay for the rewrite; once cleared it stays cleared, so
  * the prefix only shrinks at those moments.
  */
-function clearStaleOutput(deps: ExecutorDeps, req: TurnRequest, history: ChatMessage[], prefix: string, now: number): ChatMessage[] {
+function clearStaleOutput(deps: ExecutorDeps, req: TurnRequest, history: ChatMessage[], prefix: Record<string, string>, now: number): ChatMessage[] {
   const lastAt = history.findLast((message) => message.timestamp !== undefined)?.timestamp;
   // The lifetime is the endpoint's, as its client declares it: five minutes idle loses one cache and not another.
-  const lost = cacheBreaks.lost(req.sessionId, prefix, lastAt, now, req.provider.cacheLifetimeMs ?? ASSUMED_CACHE_LIFETIME_MS);
+  const { lost, idle, changed } = cacheBreaks.seen(req.sessionId, prefix, lastAt, now, req.provider.cacheLifetimeMs ?? ASSUMED_CACHE_LIFETIME_MS);
+  /**
+   * Said when a part of the prefix is not what it was while the cache was otherwise still warm: that change, and
+   * nothing a person did, is what this turn's first request pays for, the whole conversation written again. By name
+   * and never by content, with what is at stake, so whoever reads the log can tell which part of a prompt moves too
+   * often. An idle conversation is not said: its cache was gone whatever the prompt held.
+   */
+  if (changed.length > 0 && !idle) {
+    log.info("the cached prefix changed since this conversation's last request", {
+      agent_id: req.agent.config.id,
+      turn_id: req.turnId,
+      changed,
+      history_tokens: estimateTokens(history.map((message) => (typeof message.content === "string" ? message.content : JSON.stringify(message.content))).join("\n")),
+    });
+  }
   const stale = pruneToolOutputs(history, {
     protectTokens: 0,
     protectTurns: STALE_AFTER_TURNS,

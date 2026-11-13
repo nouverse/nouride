@@ -18,6 +18,7 @@
  */
 
 import { estimateTokens, SYSTEM_BLOCK_SEPARATOR } from "@nouride/llm";
+import { sha256Text } from "@nouride/runtime";
 import type { ChatMessage, SystemBlock } from "@nouride/shared";
 import {
   DELIMITER_END,
@@ -104,6 +105,7 @@ export function buildSystemPrompt(ctx: PromptContext): BuiltPrompt {
     // Exposed so `/prompt` can print the operator's own material and elide ours without a second
     // assembly path — the thing this module's header exists to prevent.
     sections: sections.map((s) => ({ name: s.name, origin: s.origin, chars: s.content.length })),
+    parts: Object.fromEntries(sections.filter((s) => s.name !== SITUATION).map((s) => [s.name, sha256Text(s.content)])),
     /**
      * The same prompt with everything Nouride wrote replaced by a one-line note.
      *
