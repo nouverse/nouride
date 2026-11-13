@@ -29,7 +29,10 @@ export interface EmptyStateProps {
 }
 
 /**
- * The three openers offered in a fresh chat.
+ * The four openers offered in a fresh chat: who the agent is, then three kinds of work it does from a skill it
+ * already has. A press puts one in the message box and sends nothing, so one that ends at a colon is for the person
+ * to finish, with their own writing pasted in or their own subject named: it is shown with `…` after it, which is
+ * not part of what goes in the box.
  *
  * In English, deliberately. They were written in Indonesian — the language this daemon's operator
  * speaks — and baked into the component, so the first thing any other user saw was a language they
@@ -38,15 +41,21 @@ export interface EmptyStateProps {
 function openers(agentName: string): string[] {
   return [
     `Hi ${agentName}, introduce yourself and tell me what you can do.`,
-    "Tell me how things are running, and what is at work right now.",
-    "How do I connect WhatsApp or Telegram?",
+    "Make a carousel from this writing: ",
+    "Design a mockup of a landing page for: ",
+    "Research this, with sources: ",
   ];
 }
+
+/** An opener as its button reads: one left for the person to finish says so. */
+const shown = (prompt: string) => (prompt.endsWith(": ") ? `${prompt}…` : prompt);
 
 export function EmptyState({ agentName, look, room, senderName, narrow = false, onPick }: EmptyStateProps) {
   const prompts = openers(agentName || "Agent");
   return (
-      <div className={`flex-1 flex flex-col justify-center items-center max-w-2xl mx-auto w-full text-center my-auto ${narrow ? "space-y-3.5 py-4" : "space-y-5 py-8"}`}>
+      // The air around it, measured in a browser with four openers: at the spacing three had, the floating panel's
+      // 443 px held 452, and a phone 640 px tall scrolled 63 px on the Chats page. A wide page keeps its own.
+      <div className={`flex-1 flex flex-col justify-center items-center max-w-2xl mx-auto w-full text-center my-auto ${narrow ? "space-y-3 py-3" : "space-y-3.5 py-4 sm:space-y-5 sm:py-8"}`}>
         <div className="p-3.5 rounded-2xl bg-base-100 border border-base-content/[0.08] shadow-lg shadow-primary/5">
           {look && !room ? (
             <CatPortrait look={look} scale={narrow ? 1.5 : 2} label={`${agentName ?? "The agent"}'s cat`} />
@@ -92,7 +101,7 @@ export function EmptyState({ agentName, look, room, senderName, narrow = false, 
 
         {/* One column on a phone, each opener whole: in a grid track sized by its content, a cut-off line held the track
             at its full width, past the screen's edge (0.8.12). */}
-        <div className={`grid grid-cols-1 gap-2 w-full text-left pt-1 ${narrow ? "" : "sm:grid-cols-2"} ${room ? "hidden" : ""}`}>
+        <div className={`grid grid-cols-1 w-full text-left pt-1 ${narrow ? "gap-1.5" : "gap-2 sm:grid-cols-2"} ${room ? "hidden" : ""}`}>
           {prompts.map((prompt) => (
             <button
               key={prompt}
@@ -100,7 +109,7 @@ export function EmptyState({ agentName, look, room, senderName, narrow = false, 
               onClick={() => onPick(prompt)}
               className={`p-3 rounded-xl bg-base-100/80 hover:bg-base-100 hover:border-primary/40 border border-base-content/[0.08] text-sm text-base-content/85 font-medium transition-all active:scale-[0.98] shadow-xs flex min-w-0 items-center justify-between text-left group gap-2 ${narrow ? "" : "sm:text-xs"}`}
             >
-              <span className={`min-w-0 ${narrow ? "" : "sm:truncate"}`}>{prompt}</span>
+              <span className={`min-w-0 ${narrow ? "" : "sm:truncate"}`}>{shown(prompt)}</span>
               <Sparkles size={13} className="text-primary/40 group-hover:text-primary transition-colors shrink-0" />
             </button>
           ))}
