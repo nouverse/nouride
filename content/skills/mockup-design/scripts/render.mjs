@@ -23,7 +23,7 @@
 // What is measured, and why each number, is in judge.mjs beside this file. None of it is about how a page looks.
 
 import { createRequire } from "node:module";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { FIXES, VIEWPORTS, judge } from "./judge.mjs";
@@ -260,6 +260,11 @@ for (const screen of screens) {
   for (const pass of passes) {
     const viewport = VIEWPORTS[pass.width];
     const label = `${screen.name}-${pass.width}${pass.dark ? "-dark" : ""}`;
+    // What an earlier round drew of this screen at this width goes first: a check picture left from a round with
+    // findings stood beside a round with none, and a window of a page that has since become shorter stayed to be read.
+    for (const name of readdirSync(out)) {
+      if (name === `${label}.png` || name === `${label}-check.png` || (name.startsWith(`${label}-`) && /^\d+\.png$/.test(name.slice(label.length + 1)))) rmSync(join(out, name), { force: true });
+    }
     const context = await browser.newContext({
       viewport: { width: viewport.width, height: viewport.height },
       deviceScaleFactor: viewport.scale,
@@ -355,5 +360,5 @@ if (fontsMissing.size) console.log(`fonts not on this machine or not loaded: ${[
 for (const line of [...pageLines].slice(0, 8)) console.log(`page: ${line}`);
 console.log(total ? `${total} finding(s): fix them in the HTML and render again` : "nothing measured wrong - now look at the pictures for what cannot be measured");
 // Named one by one: a model handed only the whole page reads a phone's text at a third of its size and judges nothing.
-console.log(`next: read these in one read call, then write the round's list (SKILL.md step 4): ${results.flatMap((r) => [...r.read, ...(r.check ? [r.check] : [])]).join(", ")}`);
+console.log(`next: read these in one read call, then write the round's list (SKILL.md step 3): ${results.flatMap((r) => [...r.read, ...(r.check ? [r.check] : [])]).join(", ")}`);
 process.exit(total ? 4 : 0);

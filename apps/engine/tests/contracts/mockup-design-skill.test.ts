@@ -18,7 +18,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
+import { copyFileSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { whichBinary } from "@nouride/runtime";
@@ -82,6 +82,9 @@ describe("what the skill tells an agent", () => {
     expect(flat).toContain("**Four rounds is the limit**: then send what you have with your list and ask what to change.");
     expect(flat).toContain("Exit `4` means findings; `0` means nothing measured wrong, **not** that the mockup is good.");
     expect(flat).toContain("Both widths, always: the desktop and the phone.");
+    // Seen with a real model: its message was a tour of the screen, and said nothing of what its rounds found.
+    expect(flat).toContain("a short message, not a tour of the screen, which they can see");
+    expect(flat).toContain("what the rounds found and fixed, in two or three lines");
   });
 
   test("each form is sent its own way, and a link by the skill that exists for it", () => {
@@ -95,6 +98,8 @@ describe("what the skill tells an agent", () => {
   test("a change is made in the file they saw, and what they saw is kept", () => {
     expect(flat).toContain("**The change is made in the file they saw**, never in a new mockup from nothing");
     expect(flat).toContain("**Keep what they saw first**: `cp -r <work>/mockup <work>/mockup-v1`");
+    // Seen with a real model: after a change it read the framed picture alone, where only a screen's first window is.
+    expect(flat).toContain("Then step 3 again, every round, the windows read again at both widths: a change in one place moves another.");
   });
 
   test("the numbers in its table are the checker's own", () => {
@@ -248,6 +253,10 @@ describe("the frame", () => {
     expect(html.split("file:///work/render/home-desktop-1.png").length - 1).toBe(2);
     expect(html).toContain("background: rgb(27 42 74);");
     expect(html).toContain("object-fit: cover; object-position: top center;");
+    // The phone's screen is the status band and then the whole window: a bar pinned to the window's foot was cut in
+    // half when the band took its room from the window.
+    expect(html).toContain(".phone .screen { display: flex; flex-direction: column; width: 390px; height: 898px;");
+    expect(html).toContain(".phone .status { flex: 0 0 54px;");
     // Nothing is laid over the screen or changes its colours.
     expect(html).not.toMatch(/\.screen img \{[^}]*(filter|opacity|mix-blend)/);
     for (const id of ["phone", "laptop", "devices"]) expect(html).toContain(`id="${id}"`);
@@ -311,7 +320,18 @@ describe("the scripts, run as an agent runs them", () => {
       const next = faulty.out.split("\n").find((l) => l.startsWith("next:"))!;
       for (const name of ["faults-desktop-1.png", "faults-mobile-1.png", "faults-mobile-check.png", "no-viewport-mobile-1.png"]) expect(next).toContain(name);
       for (const name of ["faults-desktop.png", "faults-mobile.png", "faults-mobile-check.png"]) expect(existsSync(join(out, name))).toBe(true);
-    });
+
+      // The next round, with the faults gone: the check picture of the round before does not stay beside it.
+      const fixed = join(out, "faults.html");
+      copyFileSync(join(PAGES, "good.html"), fixed);
+      const again = run("render.mjs", [fixed, "--browser-dir", BROWSER!, "--out", out, ...chromium]);
+      expect({ code: again.code, err: again.err }).toEqual({ code: 0, err: "" });
+      expect(["faults-mobile-check.png", "faults-desktop-check.png"].filter((name) => existsSync(join(out, name)))).toEqual([]);
+      expect(existsSync(join(out, "faults-mobile-1.png"))).toBe(true);
+      // And another screen's pictures are left alone.
+      expect(existsSync(join(out, "no-viewport-mobile-check.png"))).toBe(true);
+      // Three renders, each starting a browser: more than the five seconds a test is given.
+    }, 90_000);
 
     test("a screen's two pictures come back inside a phone, a laptop and the two together", () => {
       const clean = join(out, "clean");
@@ -319,6 +339,6 @@ describe("the scripts, run as an agent runs them", () => {
       expect({ code: framed.code, err: framed.err }).toEqual({ code: 0, err: "" });
       for (const name of ["good-phone.png", "good-laptop.png", "good-devices.png"]) expect(statSync(join(out, name)).size).toBeGreaterThan(20_000);
       rmSync(out, { recursive: true, force: true });
-    });
+    }, 60_000);
   });
 });

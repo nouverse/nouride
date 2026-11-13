@@ -41,9 +41,9 @@ directory's full path. Write it out in every command.
 
 | File | What it is |
 |---|---|
-| `scripts/render.mjs` | draws each screen at a desktop's and a phone's width, writes the pictures, measures every screen and prints the findings |
-| `scripts/judge.mjs` | the rules `render.mjs` measures by, each with its number and where the number comes from. Read it when a finding surprises you |
-| `scripts/frame.mjs` | puts a screen's pictures inside a phone and a laptop, for a person who asked for that |
+| `scripts/render.mjs` | draws each screen at a desktop's and a phone's width, writes the pictures, measures every screen and prints the findings. `--help` says how it is run: its code is not for reading |
+| `scripts/judge.mjs` | the rules `render.mjs` measures by, each with its number and where the number comes from. Read it only when a finding surprises you |
+| `scripts/frame.mjs` | puts a screen's pictures inside a phone and a laptop, for a person who asked for that. `--help` says how it is run |
 | `references/craft.md` | what to look for that no script can measure. Read it before your first round |
 
 `render.mjs` and `frame.mjs` borrow Playwright and its browser from the **`browser-automation` skill's folder**: if
@@ -182,8 +182,9 @@ pictures for the person to judge.
 
 ## 4. Send it, the way they picked
 
-Both widths, always: the desktop and the phone. With it, a short message: what you took as given, what you chose for
-the look when nothing was said, what is not done, and the last round's list in two or three lines.
+Both widths, always: the desktop and the phone. With it, a short message, not a tour of the screen, which they can
+see: what you took as given, what you chose for the look when nothing was said and why, what is not done, and what
+the rounds found and fixed, in two or three lines.
 
 - **Pictures**: `send_file` each `<name>-desktop.png` and `<name>-mobile.png` from the render folder, each with a
   caption that says the screen and the width.
@@ -195,7 +196,7 @@ the look when nothing was said, what is not done, and the last round's list in t
   ```
 
   It writes `home-phone.png`, `home-laptop.png` and `home-devices.png`, the two together. A device shows one
-  screen: the first window of the page, with the phone's status band above it. `--bg` is what the devices stand
+  screen: the first window of the page, whole, with the phone's status band above it. `--bg` is what the devices stand
   on: one of the mockup's own colours, so the picture belongs to it; `transparent` for none; a plain grey when you
   give nothing. `read` what it wrote before you send it, then `send_file` `home-devices.png`, and the whole-page
   pictures too when the page is longer than one screen.
@@ -213,8 +214,9 @@ the look when nothing was said, what is not done, and the last round's list in t
 - **The change is made in the file they saw**, never in a new mockup from nothing: they would lose what they liked.
 - **Keep what they saw first**: `cp -r <work>/mockup <work>/mockup-v1` (then `-v2`, and so on). "The earlier one" is
   asked for more often than not.
-- Then step 3 again, every round, and send what changed. A before and an after side by side when the change is the
-  point.
+- Then step 3 again, every round, the windows read again at both widths: a change in one place moves another. Then
+  send what changed, the frames drawn again where they asked for frames. A before and an after side by side when the
+  change is the point.
 - **Two directions, when they ask for options** or the brief leaves the look wide open: two at most, the first
   screen only, the same words in both, each named by what differs. The rest is built in the one they pick.
 - When they say yes to it, the HTML is where the real page starts. Say so.

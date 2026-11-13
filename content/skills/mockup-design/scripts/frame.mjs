@@ -7,7 +7,8 @@
 //
 // --phone is a picture of the mockup at a phone's width, --laptop one at a desktop's: render.mjs's NAME-mobile-1.png
 // and NAME-desktop-1.png, the first window of each. A longer picture is held from its top: a device shows one screen.
-// On the phone the mockup starts under the band a phone keeps for its clock, so nothing of it is behind the pill.
+// On the phone the mockup starts under the band a phone keeps for its clock, so nothing of it is behind the pill,
+// and the whole of its window is shown, down to a bar pinned to its foot.
 // Writes NAME-phone.png, NAME-laptop.png, and NAME-devices.png (the two together) when both were given.
 // --bg is what the devices stand on: any CSS colour, taken from the mockup's own colours so the picture belongs to
 // it, or `transparent`. With none it is a plain light grey, which says nothing about the mockup.
@@ -54,9 +55,10 @@ export function frameHtml({ phone, laptop, bg = NEUTRAL }) {
 
   /* A phone of no make: a dark body, a round-cornered screen, a pill at its top, three keys on its sides. */
   .phone { position: relative; padding: 13px; border-radius: 62px; background: #0D0D0F; box-shadow: inset 0 0 0 2px #2C2C31, inset 0 0 0 4px #0D0D0F, 0 30px 60px -18px rgba(0, 0, 0, 0.38), 0 12px 24px -12px rgba(0, 0, 0, 0.28); }
-  .phone .screen { display: flex; flex-direction: column; width: ${PHONE.width}px; height: ${PHONE.height}px; border-radius: 50px; }
+  .phone .screen { display: flex; flex-direction: column; width: ${PHONE.width}px; height: ${PHONE.height + STATUS}px; border-radius: 50px; }
   .phone .screen img { flex: 1; min-height: 0; }
-  /* The band a phone keeps for its clock, where the pill is: the mockup starts under it, as a page does on a phone.
+  /* The band a phone keeps for its clock, where the pill is: the mockup starts under it, as a page does on a phone,
+     and the screen is that much taller, so the whole window is shown: a bar pinned to its foot was cut in half.
      Its colour is the mockup's own top-left corner, drawn a hundred times its size, so the band belongs to the page. */
   .phone .status { flex: 0 0 ${STATUS}px; background-repeat: no-repeat; background-position: 0 0; background-size: ${PHONE.width * 100}px auto; image-rendering: pixelated; }
   .phone .island { position: absolute; top: 25px; left: 50%; width: 112px; height: 32px; margin-left: -56px; border-radius: 16px; background: #000; }
