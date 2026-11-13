@@ -15,8 +15,11 @@ looking like one thing: one stylesheet, one margin, one size of heading. Never a
 
 What goes wrong is what you cannot see from the code: text that is fine at your size and unreadable on a phone, a
 line that runs off the slide, pale grey on white, an emoji drawn as an empty box, eight slides that do not look like
-one set. So **every slide is drawn, measured and looked at, round after round, before anything is sent**, and the
-person says yes to the words before anything is drawn.
+one set. So **every slide is drawn, measured and looked at, round after round, before anything is sent**.
+
+And what is wrong with a carousel most often is its words, which no script measures: a claim nobody gave you, a
+slide that says two things. So there are **two turns, not one**: the first ends with the outline, the words of every
+slide, sent for a yes. Nothing is written to a file or drawn before that yes.
 
 ## This skill has no look of its own
 
@@ -52,9 +55,9 @@ what it names, when it names it; one command where one will do; a fix as an edit
 
 ## This machine
 
-Drawing is a browser's work: a carousel of ten slides peaked at about 150 MB of memory (an estimate from the
-mockup-design skill's measurement of three screens at two widths, 130 MB on a Linux box; a slide heavy with pictures
-takes more). One command, before you write anything, says whether this machine can and whether the browser is set up:
+Drawing is a browser's work: a carousel of five slides peaked at 93 MB of memory and took 2.3 seconds (measured on a
+Linux box, three runs; a slide heavy with pictures takes more). One command, before you write anything, says whether
+this machine can and whether the browser is set up:
 
 ```sh
 free -m 2>/dev/null | awk '/^Mem:/{print "avail_mb", $7}' || echo "total_mb $(( $(sysctl -n hw.memsize) / 1048576 ))"
@@ -102,14 +105,19 @@ with `mission`, the form and the outline in its brief.
 
 ## 2. The outline, for a yes
 
-The words come before any drawing: changing a line of an outline is free, changing a drawn slide is a round. Write
-it slide by slide and send it, every line that states a fact with its `source:`, where you read it:
+**Send the outline and end your turn there.** In the turn that sends it you write no file and run no command: the
+next turn, after their yes, is the one that draws. Changing a line of an outline is free; changing a drawn slide is a
+round. Only two things skip the wait: they said to just make it ("langsung aja", "no need to ask"), or you are in a
+mission, whose brief is the outline they said yes to.
+
+Write it slide by slide, every line that states a fact with its `source:`, where you read it:
 
 ```text
 7 slides, 4:5, for <the account>. Look: <theirs, or what you chose and why, in one line>.
 1. (the first slide) <the line that makes someone stop: what they get, or the question they have>
 2. <one idea, in a heading and a sentence>                     source: <their notes, p. 2>
 3. <one idea>                                                  source: <the page they sent>
+   <a reason or a tip you added to it>                         source: mine, not from your notes
 ...
 7. (the last slide) <what to do next, and the account's name>  source: <the name they gave>
 Caption: <two or three sentences, then the hashtags if they want them>
@@ -126,14 +134,16 @@ What makes a carousel work is its order, not its look, so settle it here:
 - **Every fact has a source** you can name. A line with none is one you made up: a number, a quote, a claim about
   their product. Ask for it or take it from their material before it goes on a slide. A statistic nobody measured does
   not go on a slide.
+- **What you add to their material is in the outline too**: a tip, a reason, a number of seconds they did not give
+  you. Marked `source: mine, not from your notes`, so they can strike it. Nothing reaches a slide that was not a
+  line of the outline.
 - **Their language**, the way their readers write it.
 
-Wait for a yes unless they said to just make it. The outline they said yes to is what you draw: a slide's words do
-not grow while you draw it.
+The outline they said yes to is what you draw: a slide's words do not grow while you draw it.
 
 ## 3. Write the slides, one HTML file
 
-`<work>` is a folder in your workspace, or the mission's folder. Every slide is in **one** file,
+This step starts once the outline has its yes. `<work>` is a folder in your workspace, or the mission's folder. Every slide is in **one** file,
 `<work>/carousel/slides.html`, written with `write`, which makes the folders. Pictures of theirs go in
 `<work>/carousel/assets/`. Each rule here prevents a failure that has happened:
 
@@ -220,7 +230,8 @@ Round 2, 7 slides, 4:5
 - one idea a slide, and no slide with far more words than the rest: 5 says two things -> split
 - they are one set: the same margin, the same heading, the same place for the page mark: 4's heading is larger -> one size
 - each leads to the next, and the last says what to do, with the account's name: none
-- the words are the outline's: real, in their language, none cut or wrapped badly: none
+- the words are the outline's and no more, in their language, none cut or wrapped badly: none
+- a slide is used: nothing crowded into its top with the rest of it empty: 2 to 4 end halfway down -> the body is larger
 - it looks like theirs, not like the last thing I made: none
 - everything they asked for is there, and nothing they did not: none
 ```
@@ -230,7 +241,7 @@ read again**: a fix on one slide can move another, since they share their rules.
 a round in ONE `multi_edit`, at the lines the findings name, and never the whole file written a second time. To see
 a few lines before you change them, `read` that slice (`offset`, `limit`), once.
 
-**The rounds are the plan.** A carousel is one turn's work: it needs no `plan` and no notes of its own. **Four
+**The rounds are the plan.** Drawing a carousel is one turn's work: it needs no `plan` and no notes of its own. **Four
 rounds is the limit**: then send what you have with your list and ask what to change. A finding you decide to keep,
 because it is what they asked for, is named in your message, not left for them to find. If your model cannot see
 images, say so: fix what is measured, and send the pictures for the person to judge.

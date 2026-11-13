@@ -77,7 +77,15 @@ describe("what the skill tells an agent", () => {
     expect(flat).toContain("every line that states a fact with its `source:`, where you read it");
     expect(flat).toContain("A line with none is one you made up: a number, a quote, a claim about their product.");
     expect(flat).toContain("A statistic nobody measured does not go on a slide.");
-    expect(flat).toContain("Wait for a yes unless they said to just make it.");
+    // The outline ends a turn of its own: a real agent, told only to wait for a yes, drew in the turn that had the words.
+    expect(flat).toContain("So there are **two turns, not one**: the first ends with the outline, the words of every slide, sent for a yes. Nothing is written to a file or drawn before that yes.");
+    expect(flat).toContain("**Send the outline and end your turn there.** In the turn that sends it you write no file and run no command");
+    expect(flat).toContain('Only two things skip the wait: they said to just make it ("langsung aja", "no need to ask"), or you are in a mission');
+    expect(flat).toContain("This step starts once the outline has its yes.");
+    // And what the agent adds to their material is a line of it, marked as its own: it added three such on a first run.
+    expect(flat).toContain("- **What you add to their material is in the outline too**: a tip, a reason, a number of seconds they did not give you. Marked `source: mine, not from your notes`, so they can strike it.");
+    expect(flat).toContain("Nothing reaches a slide that was not a line of the outline.");
+    expect(skill).toContain("   <a reason or a tip you added to it>                         source: mine, not from your notes");
     for (const rule of ["**The first slide is the only one everybody sees.**", "**One idea a slide.**", "**The last slide says what to do**"]) expect(flat).toContain(rule);
   });
 
@@ -89,6 +97,8 @@ describe("what the skill tells an agent", () => {
     expect(flat).toContain("**Four rounds is the limit**");
     expect(flat).toContain("**A fix is an edit**: every fix of a round in ONE `multi_edit`");
     expect(flat).toContain("- they are one set: the same margin, the same heading, the same place for the page mark");
+    expect(flat).toContain("- a slide is used: nothing crowded into its top with the rest of it empty");
+    expect(flat).toContain("**The rounds are the plan.** Drawing a carousel is one turn's work");
   });
 
   test("the set is sent in ONE call, in order, and the caption as text to copy", () => {
@@ -116,6 +126,7 @@ describe("what the skill tells an agent", () => {
 
   test("it says what it asks of the machine, and where to draw when this one is too small", () => {
     expect(flat).toMatch(/## This machine[\s\S]*?512 MB board/);
+    expect(flat).toContain("a carousel of five slides peaked at 93 MB of memory and took 2.3 seconds (measured on a Linux box, three runs");
     expect(flat).toContain("| `browser: set up`, and 1 GB available or more | go on. Do **not** read the `browser-automation` skill");
   });
 });
