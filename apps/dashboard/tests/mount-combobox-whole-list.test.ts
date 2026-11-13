@@ -15,10 +15,11 @@ useMountHarness();
 
 const MODELS = ["test-model", "model-two", "other-three"];
 
-test("a field holding a model lists every model from the chevron, nothing on focus, and closes on a second press", async () => {
+test("a field holding a model lists every model from the chevron, nothing on focus or on a press, and closes on a second press", async () => {
   answer({ "/providers/test/models": { status: 200, body: { ok: true, models: MODELS } } });
-  const seen: { onFocus: unknown; listed: string[]; chevronBefore: string | null; chevronOpen: string | null; afterSecond: unknown } = {
+  const seen: { onFocus: unknown; onPress: unknown; listed: string[]; chevronBefore: string | null; chevronOpen: string | null; afterSecond: unknown } = {
     onFocus: "not run",
+    onPress: "not run",
     listed: [],
     chevronBefore: null,
     chevronOpen: null,
@@ -40,6 +41,11 @@ test("a field holding a model lists every model from the chevron, nothing on foc
     input.focus();
     await eventually(() => document.activeElement === input, 2_000, "the field focused");
     seen.onFocus = list();
+    // Nor on a press: only a field that asks for it lists on one (a conversation's picker, in a wide window). React
+    // draws what a press does in the microtasks after it, so a list opened on it would be there once they have run.
+    input.click();
+    for (let turn = 0; turn < 5; turn++) await Promise.resolve();
+    seen.onPress = list();
 
     seen.chevronBefore = chevron().getAttribute("aria-label");
     chevron().click();
@@ -53,6 +59,7 @@ test("a field holding a model lists every model from the chevron, nothing on foc
   });
 
   expect(seen.onFocus).toBeNull();
+  expect(seen.onPress).toBeNull();
   expect(seen.chevronBefore).toBe("Show the whole list");
   // Every option, though the field holds one of them and two do not contain its name.
   expect(seen.listed).toEqual(MODELS);

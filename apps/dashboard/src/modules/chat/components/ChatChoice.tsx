@@ -21,6 +21,7 @@ import type { ChatChoices } from "@nouride/wire";
 import { Combobox } from "@/commons/components/ui/Combobox";
 import { PopoverSheet } from "@/commons/components/ui/PopoverSheet";
 import { ErrorNote, Field } from "@/commons/components/ui/ui";
+import { useWide } from "@/commons/hooks/use-wide";
 import { api } from "@/commons/lib/api";
 import { chatModels } from "@/commons/lib/model-kind";
 import { cn } from "@/commons/lib/utils";
@@ -196,6 +197,9 @@ function ChoicePanel({
   const cli = view.cli;
   const cliName = cli?.name ?? "";
   const noList = cli !== undefined && cli.models.length === 0;
+  // A press on the field opens its whole list: nobody knows there are models to pick until they see them. Not on a
+  // phone, where the keyboard that press brings up moves the list under the finger: there the field's arrow opens it.
+  const wide = useWide();
   const ownEffort = view.effort.own ? `${name}'s own (${view.effort.own})` : `${name}'s own`;
   const chooseModel = (value: string) => {
     const said = value.trim();
@@ -216,8 +220,8 @@ function ChoicePanel({
         <p className="mt-0.5 text-xs text-base-content/65">For this conversation only, from your next message. Everywhere else {name} keeps its own.</p>
       </div>
 
-      <Field label="Model" hint={noList ? `${cliName} lists its models after its first answer.` : cli ? `One ${cliName} offers, or another name it takes.` : "Search, or type a model's name and press Enter."}>
-        <Combobox options={options} describe={named} loading={loading} value={model} onChange={onType} onPick={chooseModel} disabled={busy} placeholder={cli ? `${cliName}'s own` : view.model.own} />
+      <Field label="Model" hint={noList ? `${cliName} lists its models after its first answer.` : cli ? `One ${cliName} offers, or another name it takes.` : "Pick one from the list, or type a model's name and press Enter."}>
+        <Combobox options={options} describe={named} loading={loading} value={model} onChange={onType} onPick={chooseModel} disabled={busy} placeholder={cli ? `${cliName}'s own` : view.model.own} listOnPress={wide} />
       </Field>
       {noList ? (
         <p className="-mt-2 text-xs text-base-content/65">

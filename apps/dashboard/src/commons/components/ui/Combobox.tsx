@@ -17,6 +17,9 @@
  * none. On a phone a list opened on focus was moved by the keyboard coming up and by every keystroke after, and the
  * owner picking a model in the setup wizard had it jump under their finger (2026-11-07). A field whose answer is picked
  * from what is listed, a chat or a stored secret's name, asks for `listOnFocus`: nobody knows a chat's id to type.
+ * A model picked in a panel asks for `listOnPress`: the whole list when the field is pressed or emptied. A list that
+ * waited for typing never showed a person what there was to pick from, and one on focus would cover the rest of a
+ * panel that hands the field the focus as it opens.
  *
  * The chevron at the end opens the whole list, whatever the field holds. Typing filters by what is in the box, so a
  * field that already held a model offered only that model, and seeing the others meant deleting its name first. The
@@ -47,6 +50,8 @@ export interface ComboboxProps {
   describe?: (option: string) => string | undefined;
   /** The whole list on focus, for a field answered by picking from it; a model's list waits for typing (see above). */
   listOnFocus?: boolean;
+  /** The whole list when the field is pressed, and when it is emptied (see above). Not for a phone: the keyboard moves it. */
+  listOnPress?: boolean;
   /**
    * A row was picked, the typed text's own row included: for a field that acts on a pick at once. `onChange` is told
    * every keystroke, and a field that saved on that would save every prefix on the way to a name.
@@ -115,6 +120,11 @@ export function Combobox(props: ComboboxProps) {
     };
   }, [showing]);
 
+  // The whole list opens at the model the field holds: of hundreds, it was somewhere below the first rows.
+  useLayoutEffect(() => {
+    if (showing && whole && place) listRef.current?.querySelector('[aria-selected="true"]')?.scrollIntoView?.({ block: "nearest" });
+  }, [showing, whole, place]);
+
   const close = () => {
     setActive(-1);
     setOpen(false);
@@ -174,7 +184,13 @@ export function Combobox(props: ComboboxProps) {
           setActive(-1);
           setOpen(true);
           setBrowsing(false);
-          setWhole(false);
+          setWhole(props.listOnPress === true && e.target.value.trim() === "");
+        }}
+        onClick={() => {
+          if (!props.listOnPress) return;
+          setActive(-1);
+          setOpen(true);
+          setWhole(true);
         }}
         onFocus={() => {
           if (!props.listOnFocus) return;
@@ -183,6 +199,8 @@ export function Combobox(props: ComboboxProps) {
         }}
         onKeyDown={(e) => {
           if (e.key === "Escape") {
+            // The list alone, where one is showing: a panel the field is in closes on Escape too, and both went at once.
+            if (showing) e.stopPropagation();
             close();
             return;
           }

@@ -7,12 +7,16 @@
  * provider on every page drawn, a model that embeds offered for a chat, a pick offered where it would be refused.
  */
 
-import { describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
 import type { ChatChoices } from "@nouride/wire";
 import { answer, dom, recordPosts, renderPage, type, useMountHarness, WIRE } from "./mount-harness.ts";
 import { eventually } from "./wait.ts";
 
 useMountHarness();
+// A test that makes the window a phone's leaves it one: the tests after it drew a sheet where they read a panel.
+afterEach(() => {
+  dom.happyDOM.setViewport({ width: 1024, height: 768 });
+});
 
 const ok = (body: unknown) => ({ status: 200, body });
 const OWN: ChatChoices = { model: { own: "gemini-3.8-flash" }, effort: { own: "low" }, efforts: ["low", "medium", "high", "xhigh", "max"] };
@@ -167,6 +171,91 @@ describe("a conversation not begun", () => {
     } finally {
       posted.restore();
     }
+  });
+});
+
+describe("the model field's list", () => {
+  /** Forty models that chat, the agent's own after them, and one that embeds. */
+  const MANY = ok({ models: [...Array.from({ length: 40 }, (_, index) => `model-${String(index + 1).padStart(2, "0")}`), "gemini-3.8-flash", "text-embedding-3-large"] });
+  const listReady = () => eventually(() => (panel()!.querySelector('button[aria-label="Show the whole list"]') as HTMLButtonElement | null)?.disabled === false, 3_000, "the list in the field");
+  const phone = () => dom.happyDOM.setViewport({ width: 390, height: 844 });
+
+  test("is not there as the panel opens; a press on the field brings the whole of it, at the model the field holds", async () => {
+    answer({ "/chat/choices": ok(OWN), "/chat/models": MANY });
+    // What the list brought into view: no layout here, so the call itself is what is read.
+    const shown: string[] = [];
+    const rowsOf = (dom as unknown as { HTMLElement: { prototype: { scrollIntoView?: unknown } } }).HTMLElement.prototype;
+    const had = rowsOf.scrollIntoView;
+    rowsOf.scrollIntoView = function (this: HTMLElement) {
+      shown.push(this.textContent?.trim() ?? "");
+    };
+    try {
+      await renderPage(NEW_CHAT, async (host) => {
+        await opened(host);
+        await listReady();
+        // The panel hands the field the focus as it opens: a list then would cover the levels under it.
+        expect(rows()).toEqual([]);
+        field()!.click();
+        await eventually(() => rows().length > 0, 2_000, "the list on a press");
+        // Every model that chats, though the field holds one of them: on typing alone it showed that one and no other.
+        expect(rows().length).toBe(41);
+        expect(rows()).not.toContain("text-embedding-3-large");
+        // It scrolls: held to a height, and opened at the model the conversation is on, its forty-first row.
+        const list = dom.document.querySelector('ul[role="listbox"]') as unknown as HTMLElement;
+        expect(list.style.maxHeight).toBe("240px");
+        expect(list.className).toContain("overflow-y-auto");
+        expect(shown).toContain("gemini-3.8-flash");
+        row("model-07")!.click();
+        await eventually(() => says(host) === "model-07 · low", 2_000, "the row picked");
+      });
+    } finally {
+      rowsOf.scrollIntoView = had;
+    }
+  });
+
+  test("an emptied field shows the whole list again, and a name typed narrows it", async () => {
+    answer({ "/chat/choices": ok(OWN), "/chat/models": MANY });
+    await renderPage(NEW_CHAT, async (host) => {
+      await opened(host);
+      await listReady();
+      type(field()!, "");
+      await eventually(() => rows().length === 41, 2_000, "the whole list for an emptied field");
+      type(field()!, "model-1");
+      // The words typed, then the ten models that hold them.
+      await eventually(() => rows().length === 11, 2_000, "the list narrowed");
+      expect(rows().slice(1)).toEqual(Array.from({ length: 10 }, (_, index) => `model-1${index}`));
+    });
+  });
+
+  test("Escape closes the list and leaves the panel; pressed again, it closes the panel", async () => {
+    answer({ "/chat/choices": ok(OWN), "/chat/models": MANY });
+    await renderPage(NEW_CHAT, async (host) => {
+      await opened(host);
+      await listReady();
+      field()!.click();
+      await eventually(() => rows().length > 0, 2_000, "the list on a press");
+      key(field()!, "Escape");
+      await eventually(() => rows().length === 0, 2_000, "the list closed");
+      expect(field()).not.toBeNull();
+      expect(panel()!.closest("[data-leaving]")).toBeNull();
+      key(field()!, "Escape");
+      await eventually(() => panel() === null || panel()!.closest("[data-leaving]") !== null, 2_000, "the panel closed");
+    });
+  });
+
+  test("on a phone a press brings no list, which the keyboard would move under the finger: the field's arrow does", async () => {
+    phone();
+    answer({ "/chat/choices": ok(OWN), "/chat/models": MANY });
+    await renderPage(NEW_CHAT, async (host) => {
+      await opened(host);
+      await listReady();
+      field()!.click();
+      type(field()!, "");
+      await eventually(() => (panel()!.querySelector('button[aria-label="Show the whole list"]') as HTMLButtonElement).getAttribute("aria-expanded") === "false", 2_000, "the field settled");
+      expect(rows()).toEqual([]);
+      wholeList();
+      await eventually(() => rows().length === 41, 2_000, "the whole list by the arrow");
+    });
   });
 });
 
