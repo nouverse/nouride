@@ -139,8 +139,12 @@ export function routeMessage(
    *
    * Only when the platform actually resolved mentions. An empty list means the platform reported none,
    * not that it could not tell.
+   *
+   * Never in a one-to-one chat: nobody else is there to be addressed, so a tag is something the person said. A
+   * platform marks any `@word` as a mention, and a message to an agent's own bot that named somebody's handle was
+   * settled with no turn and no word, however often it was sent.
    */
-  if (envelope.mentions && envelope.mentions.length > 0 && !envelope.mentionsSelf) {
+  if (envelope.chatType !== "dm" && envelope.mentions && envelope.mentions.length > 0 && !envelope.mentionsSelf) {
     return { agent: null, reason: "addressed_elsewhere" };
   }
 

@@ -1129,7 +1129,7 @@ In that arrangement a message has to be addressed:
 | Agent id or display name in the text (`nox:`, `@nox`) | that agent | works from any connection |
 | Reply to a message an agent wrote | that agent | names exactly one, cannot fan out — see below |
 | Channel binding in the pack | that agent | explicit operator opt-in |
-| **Platform tag of somebody else** | **nobody** — `addressed_elsewhere` | the guard that stops the storm |
+| **Platform tag of somebody else**, in a room | **nobody** — `addressed_elsewhere` | the guard that stops the storm. Never in a one-to-one chat, where nobody else is there to be addressed: a handle in a message to an agent's own bot is something the person said |
 | Nothing | nobody | `no_match` |
 
 **Who wrote the quoted message** comes from two places (`Voice.replyAuthor`). The outbound record — which agent sent
@@ -1187,7 +1187,7 @@ inbound  <@1111111111111111111> hidup?
              ▼
    router:  mentionsSelf + gatewayOwner ──► that agent            "mention"
             id / display name in text   ──► that agent            "mention"
-            mentions present, none ours ──► nobody          "addressed_elsewhere"
+            mentions present, none ours ──► nobody          "addressed_elsewhere"   (a room only)
 ```
 
 Outbound, the same fact in reverse: the prompt hands each agent the **exact token to type** for every

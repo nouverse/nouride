@@ -421,3 +421,39 @@ describe("an agent's own tag, taken off what it is handed", () => {
     expect(stripAddressPrefix("@Nexa, render ulang", nexa)).toBe("render ulang");
   });
 });
+
+describe("in a one-to-one chat, somebody else's tag is something said, not somebody addressed", () => {
+  // On a live install: a message to an agent's own bot that named a GitHub handle, `@qisthidev`, was taken from
+  // Telegram, settled the same second with no turn and no line in the log, and sent again with the same end. Telegram
+  // marks any `@word` as a mention, and "somebody was tagged and it was not us" was asked of a chat with nobody else in it.
+  const toTheBot = (overrides: Partial<MessageEnvelope> = {}) =>
+    envelope({ gateway: "telegram", gatewayId: "telegram:nouva", chatType: "dm", chatId: "814", text: "tolong kasih balasan ke @qisthidev lagi", mentions: ["qisthidev"], ...overrides });
+  const options = { gatewayOwner: "nouva", orchestrator: "nouva" };
+
+  test("a handle in a message to the bot: the bot's own agent answers", () => {
+    const decision = routeMessage(toTheBot(), registry, options);
+    expect(decision.agent?.config.id).toBe("nouva");
+    expect(decision.reason).toBe("gateway_owner");
+  });
+
+  test("read as the adapter reads a real Telegram message with a mention entity", () => {
+    const text = "Fixed in 0.8.34. @qisthidev your instance is on it now.";
+    const read = telegramMentions({ text, entities: [{ type: "mention", offset: text.indexOf("@"), length: "@qisthidev".length }] } as never, { username: "nouva_bot", id: 1 } as never);
+    expect(read).toMatchObject({ mentions: ["qisthidev"], mentionsSelf: false });
+    expect(routeMessage(toTheBot({ text: read.text, mentions: read.mentions }), registry, options).agent?.config.id).toBe("nouva");
+  });
+
+  test("another of our agents tagged there still answers as before, and so does a reply to this bot", () => {
+    expect(routeMessage(toTheBot({ text: "@nix cek build", mentions: ["nix"] }), registry, options)).toMatchObject({ reason: "mention" });
+    expect(routeMessage(toTheBot({ text: "@nix cek build", mentions: ["nix"] }), registry, options).agent?.config.id).toBe("nix");
+    expect(routeMessage(toTheBot(), registry, { ...options, repliedToAgent: "nouva" }).agent?.config.id).toBe("nouva");
+  });
+
+  test("in a group the rule stands: a stranger's tag there is somebody else's message", () => {
+    for (const chatType of ["group", "channel"] as const) {
+      expect(routeMessage(toTheBot({ chatType }), registry, { ...options, answerUnaddressed: false })).toEqual({ agent: null, reason: "addressed_elsewhere" });
+      // And where the connection's agent answers what tags nobody, a tag of somebody else is still not that.
+      expect(routeMessage(toTheBot({ chatType }), registry, options)).toEqual({ agent: null, reason: "addressed_elsewhere" });
+    }
+  });
+});
