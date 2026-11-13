@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Orders</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 16px/1.5 sans-serif; color: #111; background: #fff; }
+  header { display: flex; align-items: center; justify-content: space-between; padding: 12px 24px; border-bottom: 1px solid #ccc; }
+  nav a { display: inline-block; padding: 12px 14px; color: #111; }
+  main { max-width: 960px; margin: 0 auto; padding: 24px; }
+  h1 { font-size: 32px; margin: 0 0 16px; }
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .card { border: 1px solid #ccc; border-radius: 8px; padding: 16px; }
+  .card p { margin: 4px 0 0; color: #444; }
+  form { display: flex; gap: 12px; margin-top: 24px; }
+  form input { flex: 1; min-height: 48px; padding: 0 12px; font-size: 16px; border: 1px solid #666; border-radius: 6px; }
+  button { min-height: 48px; min-width: 96px; font-size: 16px; color: #fff; background: #111; border: 0; border-radius: 6px; }
+  .tick { display: flex; align-items: center; gap: 8px; min-height: 48px; margin-top: 12px; }
+  .banner { margin-top: 16px; padding: 16px; border-radius: 8px; color: #fff; background: linear-gradient(#222, #555); }
+  .name { width: 160px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .two { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; max-width: 320px; }
+  @media (max-width: 700px) {
+    .cards { grid-template-columns: 1fr; }
+    form { flex-direction: column; }
+    main { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+<header><strong>Warung Kopi</strong><nav><a href="#orders">Orders</a><a href="#menu">Menu</a></nav></header>
+<main>
+  <h1>Today's orders</h1>
+  <div class="cards">
+    <div class="card"><strong>Table 4</strong><p>2 iced coffee, 1 toast. Waiting 6 minutes.</p></div>
+    <div class="card"><strong>Table 7</strong><p>1 hot tea. Served. Read the <a href="#note">kitchen note</a> for this table.</p></div>
+    <div class="card"><strong>Takeaway</strong><p>3 iced coffee for Rina, paid.</p></div>
+  </div>
+  <form><input type="search" aria-label="Find an order" placeholder="Find an order"><button type="submit">Find</button></form>
+  <!-- Each of these is right as it is, and a checker that reads carelessly reports it: a tick box whose label is what
+       a finger hits, a name shortened with "..." on purpose, a text held to two lines on purpose, a note nobody sees, white text on a gradient (what is behind it is not one
+       colour, so it is left to the eye). -->
+  <label class="tick"><input type="checkbox"> Send a receipt</label>
+  <p class="name">Rina Kusumawardhani from the corner table</p>
+  <p class="two">A note from the kitchen that runs to several lines when it is shown whole, and is held to two here because the card has room for two.</p>
+  <p style="visibility: hidden; font-size: 8px">A note that is not shown.</p>
+  <p class="banner">Open until 22.00 tonight.</p>
+</main>
+</body>
+</html>

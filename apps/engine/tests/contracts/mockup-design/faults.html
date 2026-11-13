@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Faults</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 16px/1.5 sans-serif; color: #111; background: #fff; }
+  main { padding: 24px; }
+  .wide { width: 620px; padding: 8px; border: 1px solid #111; }
+  .tiny { font-size: 10px; }
+  .faint { color: #9a9a9a; }
+  .tight { height: 22px; overflow: hidden; width: 240px; }
+  .stack { position: relative; height: 60px; }
+  .stack span { position: absolute; left: 0; top: 10px; }
+  .press { width: 30px; height: 26px; padding: 0; font-size: 12px; }
+  .field { font-size: 13px; height: 48px; width: 220px; }
+</style>
+</head>
+<body>
+<main>
+  <p class="wide">A box with a fixed width, wider than a phone.</p>
+  <p class="tiny">Ten pixel text nobody reads.</p>
+  <p class="faint">Grey on white, too faint to read.</p>
+  <p class="tight">A paragraph whose box is one line high, so that its second and its third line are cut off where nobody sees them.</p>
+  <div class="stack"><span>First label here</span><span>Second label here</span></div>
+  <button class="press" aria-label="Small press">ok</button>
+  <input class="field" aria-label="Small field" value="thirteen">
+  <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+  <img src="missing-picture.png" alt="missing" width="80" height="40">
+</main>
+</body>
+</html>

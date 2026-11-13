@@ -85,6 +85,11 @@ bawaan atau di kumpulan sampai ke semua agent dalam semenit, tanpa restart (seja
   dinyalakan di perangkatnya.
 - **share-preview**: link publik trycloudflare.com ke sesuatu yang dibangun agent, tanpa akun dan tanpa
   membuka port.
+- **mockup-design**: mockup sebuah layar, halaman atau aplikasi, ditulis sebagai HTML dan digambar di
+  browser sungguhan pada lebar desktop dan lebar HP, diukur dan dilihat dulu sebelum dikirim. Ia bertanya
+  dulu kamu mau bentuk apa: link yang bisa dibuka, gambar, gambar di dalam HP dan laptop, atau file
+  HTML-nya. Ia gak punya gaya sendiri: warna dan font datang dari kamu, brand kamu, atau dipilih untuk
+  permintaan itu.
 - **motion-graphics**: video yang dibuat dari kode dengan Remotion. Ia lebih dulu memeriksa apakah mesin
   ini sanggup me-render-nya, dan me-render di perangkat kamu yang lain lewat network-reach kalau gak
   sanggup.

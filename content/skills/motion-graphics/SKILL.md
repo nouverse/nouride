@@ -121,12 +121,16 @@ Write the plan and send it before the code, each asset with where it comes from,
 number on screen with its `source:`, where you read it:
 
 ```text
-1920×1080, 30 fps, 12 s. Font: Inter. Colors: #0B0F1A bg, #F5F7FF text, #5B8CFF accent.
+1920×1080, 30 fps, 12 s. Font: <theirs, or the one you chose>. Colors: <background>, <text>, <accent>.
 Assets: logo (theirs, logo.svg); dashboard screenshot (taken from app.example.com); no music.
 1. 0–3 s    "Nouride" fades up and scales 0.9→1, accent line draws under it      source: the name they gave
 2. 3–8 s    three points slide in from the left, one per second, 8 words max     source: example.com/features
 3. 8–12 s   logo, the URL underneath, holds 2 s then fades out                    source: example.com (checked: it answers)
 ```
+
+The font and the colours on its first line are theirs where they have any. With none, choose them for this video,
+for who it is for and what it should feel like, and say in one line why. This skill names none: a look copied from an
+example is nobody's.
 
 A line with no source you can write there is a line you made up: a tagline, a URL, a feature list. Ask for it, or
 take it from their site or docs, before it goes in the storyboard. A small model wrote `nouride.com` and a tagline

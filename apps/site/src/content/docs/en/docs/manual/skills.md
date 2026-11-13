@@ -80,6 +80,10 @@ pool reaches every agent within a minute, without a restart (from 0.8.13).
   on at the device.
 - **share-preview**: a public trycloudflare.com link to something an agent built, with no account and
   no port opened.
+- **mockup-design**: a mockup of a screen, a page or an app, written as HTML and drawn in a real
+  browser at a desktop's and a phone's width, measured and looked at before it is sent. It asks first
+  how you want it: a link to open, pictures, pictures inside a phone and a laptop, or the HTML file. It
+  has no look of its own: the colours and fonts are yours, your brand's, or chosen for the request.
 - **motion-graphics**: a video made from code with Remotion. It checks first whether this machine can
   render it, and renders on another of your devices through network-reach when it cannot.
 - **browser-automation**: a real browser driven with Playwright to log in, click through and fill in

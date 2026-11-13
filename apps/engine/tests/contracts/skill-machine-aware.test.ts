@@ -20,6 +20,7 @@ const body = (name: string) => readFileSync(join(dir!, name, "SKILL.md"), "utf8"
 const HEAVY: Record<string, string> = {
   "browser-automation": "under 600 MB available memory",
   slides: "not here, as on a 512 MB board",
+  "mockup-design": "not here, as on a 512 MB board",
   "document-authoring": "Under 400 MB available, it is not for here",
   nouclip: "Under 700 MB available (any 512 MB board), render on another machine",
   "motion-graphics": "under 2 GB available memory",
@@ -42,8 +43,8 @@ describe("the skills we ship know the machine", () => {
   for (const [name, verdict] of Object.entries(HEAVY)) {
     test(`${name} checks the memory and says what to do when it is short`, () => {
       const text = body(name);
-      // slides runs browser-automation's own check rather than a copy of it.
-      expect(text).toMatch(name === "slides" ? /browser-automation`'s step 1/ : /free -m/);
+      // slides and mockup-design run browser-automation's own check rather than a copy of it.
+      expect(text).toMatch(name === "slides" || name === "mockup-design" ? /browser-automation`'s step 1/ : /free -m/);
       expect(text).toContain(verdict);
       expect(text).toMatch(/another (?:of (?:the person's|their) )?machines?|step 8|step 7/);
     });
