@@ -10,6 +10,13 @@ import { api } from "@/commons/lib/api";
 import type { HeldAction, JobSummary } from "@nouride/wire";
 import { useToast } from "@/commons/components/ui/toast";
 
+/**
+ * A row of words and its button. The words keep a width of their own, so in a narrow column the button goes under
+ * them: with none to keep, they shrank to a sliver beside the button and a long word ran on under it.
+ */
+const ROW = "flex flex-wrap items-start gap-x-2 gap-y-1";
+const WORDS = "min-w-0 grow basis-44 text-base-content/80 [overflow-wrap:anywhere]";
+
 function useAllowed(jobId: string) {
   const queryClient = useQueryClient();
   const toast = useToast();
@@ -27,11 +34,11 @@ function useAllowed(jobId: string) {
 export function HeldActions({ jobId, held, canEdit }: { jobId: string; held: HeldAction[]; canEdit: boolean }) {
   const allow = useAllowed(jobId);
   return (
-    <ul className="mt-1 space-y-1">
+    <ul className="mt-1 space-y-1 text-[11px]">
       {held.map((one, index) => (
-        <li key={`${one.keys.join(" ")}-${index}`} className="flex flex-wrap items-center gap-2 text-[11px]">
-          <ShieldAlert size={12} aria-hidden="true" className="shrink-0 text-warning" />
-          <span className="min-w-0 flex-1 text-base-content/80">
+        <li key={`${one.keys.join(" ")}-${index}`} className={ROW}>
+          <ShieldAlert size={12} aria-hidden="true" className="mt-0.5 shrink-0 text-warning" />
+          <span className={WORDS}>
             Held: {one.label} <span className="text-base-content/65">({one.reason})</span>
           </span>
           {one.keys.length > 0 && (
@@ -59,9 +66,9 @@ export function Allowed({ job, canEdit }: { job: Pick<JobSummary, "id" | "allowe
       <p className="text-[11px] font-bold uppercase tracking-wider text-base-content/65 font-mono">Always allowed for this job</p>
       <ul className="space-y-1">
         {job.allowed.map((one) => (
-          <li key={one.keys.join(" ")} className="flex flex-wrap items-center gap-2">
-            <ShieldCheck size={12} aria-hidden="true" className="shrink-0 text-success" />
-            <span className="min-w-0 flex-1 text-base-content/80">
+          <li key={one.keys.join(" ")} className={ROW}>
+            <ShieldCheck size={12} aria-hidden="true" className="mt-0.5 shrink-0 text-success" />
+            <span className={WORDS}>
               {one.label} <span className="text-base-content/65">(by {one.by})</span>
             </span>
             <button type="button" className="btn btn-ghost btn-xs rounded-lg" disabled={!canEdit || allow.isPending} onClick={() => allow.mutate({ remove: one.keys[0]! })}>

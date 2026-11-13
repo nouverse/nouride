@@ -43,7 +43,7 @@ const input = (over: Partial<JobInput> = {}): JobInput => ({
   ...over,
 });
 
-const HELD = { keys: ["chat:telegram:nouva:555"], label: "sends a message to the telegram one-to-one with Mira", reason: "this run of a scheduled job sends to telegram:nouva:-100team" };
+const HELD = { keys: ["chat:telegram:nouva:555"], label: "sends a message to the telegram one-to-one with Mira", reason: "this run of a scheduled job sends to its own chat" };
 
 describe("on the job and its runs", () => {
   test("what a run's guards held is on the run, however it ended", async () => {

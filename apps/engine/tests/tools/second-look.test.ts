@@ -97,7 +97,7 @@ describe("a job's run sends only to its chat", () => {
   test("anywhere else is asked first, on the fixed list — at every level", () => {
     const decision = tool.gate!({ to: "mira", text: "the invoices" }, ctx(team));
     expect(decision).toMatchObject({ action: "ask", grantable: false, hardline: true, hardlineClass: "unwatched" });
-    expect(decision.action === "ask" && decision.reason).toBe("this run of a scheduled job sends to telegram:main:-100team, and this sends a message to the telegram one-to-one with Mira instead");
+    expect(decision.action === "ask" && decision.reason).toBe("this run of a scheduled job sends to its own chat, and this sends a message to the telegram one-to-one with Mira instead");
   });
 
   test("a chat a person allowed always for the job is asked as any send is — not on the fixed list (0.8.0)", () => {

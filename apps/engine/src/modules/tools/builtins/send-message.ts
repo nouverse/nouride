@@ -217,7 +217,8 @@ export function createSendMessageTool(options: SendMessageOptions): Tool {
           grantable: false,
           hardline: true,
           hardlineClass: "unwatched",
-          reason: `this run of a scheduled job sends to ${chatAddress(ctx.sendsTo)}, and this sends a message to ${describeChat(found.chat)} instead`,
+          // In words: a person reads this on the job's page, where a chat's address says nothing to them.
+          reason: `this run of a scheduled job sends to its own chat, and this sends a message to ${describeChat(found.chat)} instead`,
         };
       }
       return { action: "ask", grantable: false, reason: `it sends a message to ${describeChat(found.chat)}, outside this conversation` };
