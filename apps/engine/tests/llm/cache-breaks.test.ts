@@ -110,6 +110,9 @@ describe("a prompt's parts", () => {
   });
 });
 
+// The conversations' ids are this file's own: the tracker is one for the process, and a suite runs its files in one.
+// An id another file used (`ses_idle`, in the stale output's tests) came with that file's parts already remembered,
+// and this file's first turn of it was then a change.
 describe("at a turn's start, through the executor", () => {
   /** One turn of a conversation whose last message was `idleMs` ago, with what the agent's memory file holds now. */
   async function turn(sessionId: string, memory: string, idleMs = MINUTE, model = "m"): Promise<void> {
@@ -149,10 +152,10 @@ describe("at a turn's start, through the executor", () => {
   const said = (sessionId: string) => logged.filter((entry) => entry.turn_id?.startsWith(`turn_${sessionId}_`));
 
   test("a memory file written between two turns of a warm conversation is named, with how much conversation is written again", async () => {
-    await turn("ses_memory", "# MEMORY\n- likes tea\n");
-    expect(said("ses_memory")).toEqual([]);
-    await turn("ses_memory", "# MEMORY\n- likes tea\n- and coffee\n");
-    const lines = said("ses_memory");
+    await turn("cachebreaks_memory", "# MEMORY\n- likes tea\n");
+    expect(said("cachebreaks_memory")).toEqual([]);
+    await turn("cachebreaks_memory", "# MEMORY\n- likes tea\n- and coffee\n");
+    const lines = said("cachebreaks_memory");
     expect(lines).toHaveLength(1);
     expect(lines[0]).toMatchObject({ level: "info", component: "llm.executor", agent_id: "nouva", data: { changed: ["memory"] } });
     // The conversation at stake, estimated: a few hundred tokens of it here, and never nothing.
@@ -162,16 +165,16 @@ describe("at a turn's start, through the executor", () => {
   });
 
   test("the same prompt twice says nothing; another model is named as that", async () => {
-    await turn("ses_same", "# MEMORY\n- likes tea\n");
-    await turn("ses_same", "# MEMORY\n- likes tea\n");
-    expect(said("ses_same")).toEqual([]);
-    await turn("ses_same", "# MEMORY\n- likes tea\n", MINUTE, "another-model");
-    expect(said("ses_same").map((entry) => entry.data!.changed)).toEqual([expect.arrayContaining(["model"])]);
+    await turn("cachebreaks_same", "# MEMORY\n- likes tea\n");
+    await turn("cachebreaks_same", "# MEMORY\n- likes tea\n");
+    expect(said("cachebreaks_same")).toEqual([]);
+    await turn("cachebreaks_same", "# MEMORY\n- likes tea\n", MINUTE, "another-model");
+    expect(said("cachebreaks_same").map((entry) => entry.data!.changed)).toEqual([expect.arrayContaining(["model"])]);
   });
 
   test("a conversation idle past its endpoint's lifetime is not said: its cache was gone whatever the prompt held", async () => {
-    await turn("ses_idle", "# MEMORY\n- likes tea\n");
-    await turn("ses_idle", "# MEMORY\n- likes tea\n- and coffee\n", 20 * MINUTE);
-    expect(said("ses_idle")).toEqual([]);
+    await turn("cachebreaks_idle", "# MEMORY\n- likes tea\n");
+    await turn("cachebreaks_idle", "# MEMORY\n- likes tea\n- and coffee\n", 20 * MINUTE);
+    expect(said("cachebreaks_idle")).toEqual([]);
   });
 });
