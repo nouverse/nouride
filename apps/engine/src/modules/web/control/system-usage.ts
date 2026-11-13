@@ -8,6 +8,9 @@
  */
 
 import type { SystemFolderSizes } from "@nouride/wire";
+
+/** What is measured: an entry's name and its size. What kind of thing it is, the route says, from the listing. */
+type Measured = Omit<SystemFolderSizes, "entries"> & { entries: { name: string; bytes: number }[] };
 import { listDir, runCommand } from "@nouride/runtime";
 import { contained, createLogger } from "@nouride/shared";
 
@@ -49,7 +52,7 @@ export class FolderSizes {
   ) {}
 
   /** What is known now, with a measure started when there is none or it has gone stale. */
-  read(): SystemFolderSizes {
+  read(): Measured {
     const last = Math.max(this.known?.at ?? -Infinity, this.failedAt ?? -Infinity);
     if (this.now() - last > FRESH_MS && !this.measuring) contained(log, "the data folder's size was not measured", () => this.measure())();
     const state = this.measuring ? "measuring" : this.known ? "ready" : "unavailable";

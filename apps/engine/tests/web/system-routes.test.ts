@@ -123,6 +123,8 @@ describe("what the machine is using", () => {
     expect(sizes.totalBytes!).toBeGreaterThanOrEqual(sizes.entries.reduce((sum, entry) => sum + entry.bytes, 0) + 64 * 1024);
     // Largest first: the workspace holds the half megabyte.
     expect(sizes.entries[0]!.name).toBe("workspace");
+    // Each says what kind of thing it is, as Files does.
+    expect(Object.fromEntries(sizes.entries.map((entry) => [entry.name, entry.kind]))).toEqual({ "config.toml": "file", data: "folder", workspace: "folder" });
     expect(sizes.entries[0]!.bytes).toBeGreaterThan(400 * 1024);
   });
 });
@@ -136,6 +138,11 @@ describe("the data folder, to read", () => {
     expect(data.entries).toEqual([expect.objectContaining({ name: "nouride.db", closed: "database" })]);
   });
 
+  test("a path to a file, asked for as a folder, answers that file: what a link from a chat opens", async () => {
+    const at = (await ask("/system/files?path=workspace/plain.md")).body as unknown as SystemFolderListing;
+    expect(at).toEqual({ path: "workspace/plain.md", entries: [], more: 0, leftOut: false, file: expect.objectContaining({ name: "plain.md", kind: "file", sizeBytes: 21 }) });
+  });
+
   test("each refusal has its status and a sentence for the person", async () => {
     const said = async (path: string) => {
       const answer = await ask(path);
@@ -146,7 +153,8 @@ describe("the data folder, to read", () => {
     expect(await said("/system/files/read?path=data/.control-token")).toEqual({ status: 403, reason: "left-out", plain: "This is kept private: credentials and secrets are not shown here." });
     expect(await said("/system/files/read?path=data/nouride.db")).toEqual({ status: 403, reason: "database", plain: "The database does not open here." });
     expect(await said("/system/files/read?path=workspace")).toEqual({ status: 400, reason: "a-folder", plain: "That is a folder, not a file." });
-    expect(await said("/system/files?path=workspace/plain.md")).toEqual({ status: 400, reason: "not-a-folder", plain: "That is a file, not a folder." });
+    // Asked for as a folder, the database says what it is; a link to it from a chat lands here.
+    expect(await said("/system/files?path=data/nouride.db")).toEqual({ status: 403, reason: "database", plain: "The database does not open here." });
     expect(await said("/system/files/raw?path=data/.control-token")).toMatchObject({ status: 403, reason: "left-out" });
   });
 

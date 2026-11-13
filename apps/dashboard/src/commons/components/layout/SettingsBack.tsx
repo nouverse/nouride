@@ -11,14 +11,17 @@ import { cn } from "@/commons/lib/utils";
 
 /** Settings' pages: every card it shows, the update's page among them. */
 const PAGES = new Set([...SETTINGS.flatMap((group) => group.items.map((item) => item.to)), "/update"]);
+/** The ones an admin does not reach from Settings: Logs is a tab of System for them, in the menu itself. */
+const NOT_AN_ADMINS = new Set(SETTINGS.flatMap((group) => group.items.filter((item) => item.exceptAdmin).map((item) => item.to)));
 
-/** Whether `pathname` is one of Settings' own pages: the page itself, not one under it. */
-export function fromSettings(pathname: string): boolean {
-  return PAGES.has(pathname.replace(/\/+$/, "") || "/");
+/** Whether `pathname` is one of Settings' own pages for this reader: the page itself, not one under it. */
+export function fromSettings(pathname: string, admin = false): boolean {
+  const path = pathname.replace(/\/+$/, "") || "/";
+  return PAGES.has(path) && !(admin && NOT_AN_ADMINS.has(path));
 }
 
-export function SettingsBack({ pathname, className }: { pathname: string; className?: string }) {
-  if (!fromSettings(pathname)) return null;
+export function SettingsBack({ pathname, admin, className }: { pathname: string; admin: boolean; className?: string }) {
+  if (!fromSettings(pathname, admin)) return null;
   return (
     <Link to={SETTINGS_HOME} className={cn("btn btn-ghost btn-sm -ml-2 shrink-0 gap-1 self-start font-medium text-base-content/70 hover:text-base-content", className)}>
       <ChevronLeft size={16} aria-hidden="true" />

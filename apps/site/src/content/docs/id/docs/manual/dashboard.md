@@ -19,7 +19,8 @@ setup dan `nouride setup` menjalankan kode yang sama, dan halaman Skills menulis
 ## Peta
 
 Menunya diurutkan menurut seberapa sering halamannya dibuka: **Home, Chats, Work, dan Agents** tiap hari, **Skills**,
-**Connectors** dan **Memory** sesekali, dan semua yang cukup diatur sekali ada di balik **Settings**.
+**Connectors** dan **Memory** sesekali, **System** untuk admin, dan semua yang cukup diatur sekali ada di balik
+**Settings**.
 
 ```
 Home                yang butuh kamu · yang sedang jalan · Quick chat · agent kamu · box-nya · pemakaian AI hari ini
@@ -52,6 +53,10 @@ Memory
   Knowledge & Memory   Knowledge · Agent notes · People · Timeline · Shared · Proposals · Settings, dan graph
   People            nama dan catatan untuk manusia yang mereka ajak bicara
   Groups            ruangan tempat mereka bicara: nama tiap ruangan, agent-nya, siapa yang bicara di sana
+System                                                                        (admin)
+  System            apa yang sedang dipakai mesin ini: RAM, disk, apa yang makan tempat
+  Logs              Daemon · Audit · Schedule · Helpers
+  Files             apa yang disimpan Nouride di mesin ini, untuk dibaca
 
 Settings
   Models and keys
@@ -69,11 +74,11 @@ Settings
     My Account      username, nama, password
   This box
     My Box          perangkatnya sendiri (hanya Box yang sudah dipasangkan)   (admin)
-    Logs            Daemon · Audit · Schedule · Helpers
+    Logs            Schedule · Helpers, untuk yang bukan admin
     Update          versi yang jalan, rilis terbaru, dan cara memasangnya
 ```
 
-Work, Agents, dan Memory masing-masing berisi beberapa halaman, tampil sebagai tab di bagian atas tiap halamannya.
+Work, Agents, Memory, dan System masing-masing berisi beberapa halaman, tampil sebagai tab di bagian atas tiap halamannya.
 Setiap tab tetap punya alamat sendiri, jadi link ke salah satunya tetap membukanya. Work terbuka di **Waiting for
 you**, dan angka di sebelah Work di menu adalah jumlah yang menunggu di sana.
 
@@ -315,6 +320,40 @@ apa-apa: permintaan itu tetap menunggu orang yang ditanya. Admin melihat dan men
 **Log daemon dan log audit hanya dibaca admin** (0.8.35). Isinya setiap baris dari chat, perintah dan keputusan semua
 orang. Di **Logs**, yang lain punya dua tab sisanya: apa yang jalan terjadwal, dan perintah yang masih berjalan di
 latar belakang.
+
+## System
+
+Untuk yang mengurus box, **System** di menu berisi tiga tab. Hanya admin yang punya; untuk yang lain, **Logs** tetap ada
+di bawah Settings dengan dua tabnya.
+
+**System** bilang apa yang sedang dipakai mesin sekarang, tiap angka berupa batang dengan satu kalimat di sebelahnya:
+
+- **RAM**: berapa yang terpakai dari yang boleh dipakai Nouride, lalu siapa yang memegangnya: Nouride sendiri, dan
+  perintah para agent kalau dihitung terpisah. Di dalam container, atau di bawah service yang memasang batas, plafonnya
+  adalah batas itu dan angka terpakainya milik container itu sendiri, sama dengan yang ditunjukkan `docker stats`,
+  bukan milik mesin di sekelilingnya. Kartunya bilang yang mana.
+- **Disk**: disk tempat berkas Nouride berada (di container, volume-nya), berapa yang kosong, dan berapa yang dipakai
+  berkas Nouride sendiri, folder terbesar dulu. Tekan salah satunya untuk membukanya di Files. Folder besar butuh
+  semenit atau lebih untuk dihitung, dan halamannya bilang begitu selama menghitung.
+- **Nouride here**: versinya, sudah berapa lama jalan, core prosesor yang boleh dipakai, dan di mana berkasnya.
+
+Mulai tiga perempat penuh, batangnya berubah dan bilang **Getting full**; mulai sembilan persepuluh, **Nearly full**.
+Angka yang gak diberikan mesin ditulis sebagai gak diketahui. Gak pernah digambar sebagai batang kosong.
+
+**Files** menunjukkan apa yang disimpan Nouride di mesin: para agent, workspace mereka, kiriman orang, pengaturannya.
+Ini untuk dilihat: gak ada di halaman ini yang mengubah berkas. Buka folder dengan menekannya, dan kembali lewat jejak
+di atas atau tombol Back browser. Berkas terbuka sesuai jenisnya: halaman markdown sebagai halaman (**Show its
+source** untuk teks aslinya), kode dengan warnanya dan tombol **Copy**, gambar sebagai gambar.
+
+**Kredensial dan rahasia gak ditampilkan.** Yang menyimpannya dikeluarkan dari setiap daftar, namanya juga: kunci
+Nouride sendiri dan brankas rahasianya, folder kredensial, sesi aplikasi chat, berkas `.env`, kunci SSH dan kunci
+lainnya, serta login yang disimpan alat-alat di home para agent. Kalau diminta lewat alamatnya, berkas seperti itu
+bilang bahwa ia dirahasiakan. Di dalam berkas biasa, sesuatu yang mirip kredensial disembunyikan di tempatnya, dan
+halamannya bilang begitu. Database tampil dengan ukurannya dan gak bisa dibuka.
+
+**Path adalah link.** Kalau agent menulis path di dalam berkas Nouride (`.nouride/workspace/…/report.md`, atau path
+lengkapnya di mesin ini) di balasan, di halaman mission di antara berkas hasilnya, atau di perintah yang dijalankan
+sebuah giliran, admin bisa menekannya untuk membuka berkas itu di Files.
 
 ### Apa yang Home katakan tentang yang lain
 

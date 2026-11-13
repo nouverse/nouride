@@ -34,7 +34,9 @@ export const DASHBOARD_PAGES: readonly (readonly [name: string, path: string])[]
   ["Access", "/access"],
   ["Users", "/users"],
   ["My Account", "/account"],
+  ["System", "/system"],
   ["Logs", "/logs"],
+  ["Files", "/files"],
   ["Update", "/update"],
 ];
 

@@ -189,6 +189,9 @@ describe("each way a step can end", () => {
 });
 
 describe("following a run", () => {
+  // The page's own two-second timer is what is waited for, on a machine that may be running the whole suite beside it:
+  // on a release's run the second ask came after 4,089 ms of a 4,000 ms wait. A wait returns as soon as it holds, so
+  // its deadline costs a fast machine nothing.
   test("while one is at work the page asks again every two seconds, and draws the step that ended as it ends", async () => {
     const at = [run("running", [out("check", "done", { ms: 400 }), out("find", "running")])];
     answer({ [PAGE]: detail(automation(), at) });
@@ -203,9 +206,9 @@ describe("following a run", () => {
       await renderPage(PAGE, async (host) => {
         await flowDrawn(host);
         seen.first = chip(host, "find");
-        await eventually(() => asked >= 2, 4_000, "asked again");
+        await eventually(() => asked >= 2, 15_000, "asked again");
         answer({ [PAGE]: detail(automation(), [run("success", [out("check", "done", { ms: 400 }), out("find", "done", { ms: 9_000 })], { finishedAt: Date.now() })]) });
-        await eventually(() => chip(host, "find") === "Done in 9.0 s", 5_000, "the step ended");
+        await eventually(() => chip(host, "find") === "Done in 9.0 s", 15_000, "the step ended");
         seen.then = chip(host, "find");
       });
     } finally {
@@ -213,7 +216,7 @@ describe("following a run", () => {
     }
     expect(seen.first).toBe("Working");
     expect(seen.then).toBe("Done in 9.0 s");
-  });
+  }, 40_000);
 
   test("Recent runs lists them, newest first, and a press on one draws that run over the steps", async () => {
     const older = run("success", [out("check", "empty", { ms: 30 })], { id: "run_0", startedAt: Date.now() - 2 * 86_400_000, finishedAt: Date.now() - 2 * 86_400_000 + 30, result: "step 1 of 4 had nothing to say: the run ended there" });

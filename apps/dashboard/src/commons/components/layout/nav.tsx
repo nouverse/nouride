@@ -16,10 +16,11 @@
 import { Link } from "@tanstack/react-router";
 import { useRef, type ComponentType } from "react";
 import {
+  Activity,
   Blocks,
-  Cat,
   Box,
   Brain,
+  Cat,
   Cpu,
   House,
   KeyRound,
@@ -50,6 +51,8 @@ export interface NavItem {
   /** Something waiting there, drawn after the label — and nothing when nothing is. */
   badge?: ComponentType;
   adminOnly?: boolean;
+  /** Left out for an admin, who reaches the page another way: Logs is a tab of System for them. */
+  exceptAdmin?: boolean;
   /**
    * Shown only on a paired Box. My Box is served by the appliance plugin, which is active only on a box it was flashed
    * onto — the same Pro edition in a pod has nothing behind the page.
@@ -112,6 +115,8 @@ const OCCASIONAL: NavItem[] = [
   // Under Skills, the same shape: one library of outside tools, switched on per agent.
   { to: "/mcp", label: "Connectors", icon: Plug },
   { to: "/memories", label: "Memory", icon: Brain, holds: ["/people", "/groups"], badge: MemoryBadge },
+  // An admin's: what the machine is using, what Nouride logged and the files it keeps, as three tabs.
+  { to: "/system", label: "System", icon: Activity, holds: ["/logs", "/files"], adminOnly: true },
 ];
 
 /**
@@ -147,7 +152,7 @@ export const SETTINGS: { group: string; items: NavItem[] }[] = [
     group: "This box",
     items: [
       { to: "/box", label: "My Box", icon: Box, adminOnly: true, boxOnly: true, about: "The box itself: its network, its storage and its updates." },
-      { to: "/logs", label: "Logs", icon: ScrollText, about: "What the agents and the box did, line by line, for when something went wrong." },
+      { to: "/logs", label: "Logs", icon: ScrollText, exceptAdmin: true, about: "What the agents and the box did, line by line, for when something went wrong." },
     ],
   },
 ];
@@ -163,7 +168,7 @@ export function isCurrent(item: Pick<NavItem, "to" | "holds">, pathname: string)
 
 /** The pages this person may see: what is for admins, for a paired box or for a hosted gateway, only there. */
 export function visible(items: NavItem[], where: { admin: boolean; onBox: boolean; hostsGateway: boolean }): NavItem[] {
-  return items.filter((item) => (!item.adminOnly || where.admin) && (!item.boxOnly || where.onBox) && (!item.gatewayOnly || where.hostsGateway));
+  return items.filter((item) => (!item.adminOnly || where.admin) && (!item.exceptAdmin || !where.admin) && (!item.boxOnly || where.onBox) && (!item.gatewayOnly || where.hostsGateway));
 }
 
 const ITEM = "flex min-h-11 items-center gap-3 rounded-[14px] px-3 text-sm transition-colors duration-150 active:scale-[0.98] lg:min-h-10";
@@ -222,7 +227,7 @@ export function SidebarNav({ pathname, where, compact = false }: { pathname: str
     return (
       <nav ref={nav} aria-label="Menu" className="relative isolate flex w-full flex-1 flex-col items-center gap-0.5 overflow-y-auto px-2 py-3">
         <NavHighlight nav={nav} />
-        {[...DAILY, ...OCCASIONAL, { to: SETTINGS_HOME, label: "Settings", icon: Settings, badge: AccessBadge }].map((item) => (
+        {[...DAILY, ...visible(OCCASIONAL, where), { to: SETTINGS_HOME, label: "Settings", icon: Settings, badge: AccessBadge }].map((item) => (
           <NavLink key={item.to} item={item} pathname={pathname} compact />
         ))}
       </nav>
@@ -237,7 +242,7 @@ export function SidebarNav({ pathname, where, compact = false }: { pathname: str
         ))}
       </div>
       <div className="space-y-0.5">
-        {OCCASIONAL.map((item) => (
+        {visible(OCCASIONAL, where).map((item) => (
           <NavLink key={item.to} item={item} pathname={pathname} />
         ))}
         {/*

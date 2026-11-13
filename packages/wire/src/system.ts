@@ -38,7 +38,7 @@ export interface SystemFolderSizes {
   measuredAt: number | null;
   totalBytes: number | null;
   /** The folder's own entries, largest first. What is left out of Files is counted in the total and not named here. */
-  entries: { name: string; bytes: number }[];
+  entries: { name: string; bytes: number; kind: "folder" | "file" }[];
 }
 
 export interface SystemFileEntry {
@@ -61,6 +61,8 @@ export interface SystemFolderListing {
   more: number;
   /** Whether anything here is left out: credentials and secrets are not listed. */
   leftOut: boolean;
+  /** Set where the path asked for is a file and not a folder: that file, and no entries. */
+  file?: SystemFileEntry;
 }
 
 /** Why a path is not listed or opened. */

@@ -42,6 +42,7 @@ import { agentsApi } from "./api.agents";
 import { chatApi } from "./api.chat";
 import { notesApi } from "./api.notes";
 import { logsApi } from "./api.logs";
+import { systemApi } from "./api.system";
 import { cronApi } from "./api.cron";
 import { turnsApi } from "./api.turns";
 import { tiersApi } from "./api.tiers";
@@ -62,6 +63,7 @@ export const api = {
   ...chatApi,
   ...notesApi,
   ...logsApi,
+  ...systemApi,
   ...cronApi,
   ...turnsApi,
 

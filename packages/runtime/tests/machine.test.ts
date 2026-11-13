@@ -79,8 +79,9 @@ describe("the machine's cores and memory", () => {
 
 describe("the memory in use, of what this process may use", () => {
   const MiB = 1024 ** 2;
-  /** A machine of `gib` with `freeGib` still to hand out, and the files a cgroup would show. */
-  const using = (gib: number, freeGib: number, files: Record<string, string> = {}): MachineSource => ({ ...source(8, gib, files), availableBytes: () => freeGib * GiB });
+  /** A machine of `gib` whose kernel says `freeGib` could still be handed out, and the files a cgroup would show. */
+  const using = (gib: number, freeGib: number, files: Record<string, string> = {}): MachineSource =>
+    source(8, gib, { ...(freeGib > 0 ? { "/proc/meminfo": `MemTotal:       ${gib * 1024 * 1024} kB\nMemFree:          1024 kB\nMemAvailable:   ${freeGib * 1024 * 1024} kB\n` } : {}), ...files });
 
   test("a machine with no limit on this process: its memory less what could still be handed out", () => {
     expect(readMemoryUse(using(16, 10))).toEqual({ usedBytes: 6 * GiB, totalBytes: 16 * GiB, limited: false, machineBytes: 16 * GiB });
@@ -130,7 +131,9 @@ describe("the memory in use, of what this process may use", () => {
     const blind = { "/proc/self/cgroup": "0::/\n", "/sys/fs/cgroup/memory.max": `${GiB}\n` };
     expect(readMemoryUse(using(64, 40, blind))).toEqual({ usedBytes: null, totalBytes: GiB, limited: true, machineBytes: 64 * GiB });
     expect(readMemoryUse(using(0, 0))).toEqual({ usedBytes: null, totalBytes: 0, limited: false, machineBytes: 0 });
+    // A system that keeps no figure of what could be handed out (a Mac): none is made from what is merely free.
     expect(readMemoryUse(using(8, 0))).toEqual({ usedBytes: null, totalBytes: 8 * GiB, limited: false, machineBytes: 8 * GiB });
+    expect(readMemoryUse(source(8, 16, { "/proc/meminfo": "MemTotal: 16777216 kB\nMemFree: 131072 kB\n" }))).toMatchObject({ usedBytes: null, totalBytes: 16 * GiB });
     // The real one: read, never assumed.
     const real = readMemoryUse();
     expect(real.totalBytes).toBeGreaterThan(0);

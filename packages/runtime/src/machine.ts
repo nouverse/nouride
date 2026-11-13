@@ -12,7 +12,7 @@
 
 import { readFileSync } from "node:fs";
 import { availableParallelism, cpus } from "node:os";
-import { availableMemoryBytes, totalMemoryBytes } from "./process.ts";
+import { totalMemoryBytes } from "./process.ts";
 
 export interface MachineSpec {
   /** The cores this process may run on, a container's CPU quota counted. At least 1. */
@@ -27,8 +27,6 @@ export interface MachineSource {
   memoryBytes(): number;
   /** A file's text, or null when it is not there. */
   read(path: string): string | null;
-  /** What the system says could still be handed out, in bytes; 0 when it will not say. The system's own when absent. */
-  availableBytes?(): number;
 }
 
 /**
@@ -47,7 +45,6 @@ function systemCores(): number {
 const SYSTEM: MachineSource = {
   cores: systemCores,
   memoryBytes: () => totalMemoryBytes(),
-  availableBytes: () => availableMemoryBytes(),
   read: (path) => {
     try {
       return readFileSync(path, "utf8");
@@ -126,7 +123,10 @@ const stat = (text: string | null, name: string): number => Number(new RegExp(`^
  * Where a cgroup's limit is below the machine's memory, that group's own count: `memory.current` less the file cache
  * the kernel gives back on demand (`inactive_file`), which is how `docker stats` counts a container, so the figure a
  * person reads here is the one they read there. The lowest limit on the way up is the one that binds, as `readMachine`
- * has it. Elsewhere the machine's: its memory less what could still be handed out.
+ * has it. Elsewhere the machine's: its memory less what the kernel says could still be handed out (`MemAvailable`).
+ *
+ * Where no such figure is kept there is none to say, and none is made from what is merely free: a Mac's free pages
+ * are a sliver of what it could hand out, and the difference read 99 % in use on a machine with room to spare.
  */
 export function readMemoryUse(source: MachineSource = SYSTEM): MemoryUse {
   const machineBytes = Math.max(0, source.memoryBytes());
@@ -149,6 +149,6 @@ export function readMemoryUse(source: MachineSource = SYSTEM): MemoryUse {
     .filter((group): group is { max: number; used: () => number | null } => group.max !== null && (machineBytes === 0 || group.max < machineBytes))
     .sort((a, b) => a.max - b.max)[0];
   if (held) return { usedBytes: held.used(), totalBytes: held.max, limited: true, machineBytes };
-  const available = (source.availableBytes ?? availableMemoryBytes)();
+  const available = Number(/^MemAvailable:\s+(\d+) kB$/m.exec(source.read("/proc/meminfo") ?? "")?.[1] ?? 0) * 1024;
   return { usedBytes: machineBytes > 0 && available > 0 ? Math.max(0, machineBytes - available) : null, totalBytes: machineBytes, limited: false, machineBytes };
 }

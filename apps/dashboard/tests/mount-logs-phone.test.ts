@@ -39,7 +39,8 @@ test("a daemon log row: its message the whole width under the time and the compo
     await eventually(() => host.textContent?.includes(message) === true, 2_000, "the log row");
     messageClass = classOf(host, "span", message);
     row = host.querySelector("button.text-left")?.getAttribute("class") ?? "";
-    page = host.querySelector("main > div")?.getAttribute("class") ?? "";
+    // The page's own root: its section's tabs are over it, in the same `main`.
+    page = [...host.querySelectorAll("main > div")].at(-1)?.getAttribute("class") ?? "";
   });
   const words = messageClass.split(" ");
   expect(words).toEqual(expect.arrayContaining(["basis-full", "max-sm:order-last", "sm:basis-0", "sm:flex-1", "text-sm", "sm:text-xs"]));

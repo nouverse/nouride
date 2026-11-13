@@ -19,7 +19,7 @@ the setup wizard and `nouride setup` run the same code, and the Skills page writ
 ## The map
 
 The menu is in the order its pages are opened: **Home, Chats, Work and Agents** every day, **Skills**, **Connectors**
-and **Memory** now and then, and everything you set up once behind **Settings**.
+and **Memory** now and then, **System** for an admin, and everything you set up once behind **Settings**.
 
 ```
 Home                what needs you · what is moving · Quick chat · your agents · the box · today's AI use
@@ -52,6 +52,10 @@ Memory
   Knowledge & Memory   Knowledge · Agent notes · People · Timeline · Shared · Proposals · Settings, and a graph
   People            names and notes for the humans they talk to
   Groups            the rooms they talk in: each one's name, its agents, who talks there
+System                                                                        (admin)
+  System            what this machine is using: RAM, the disk, what takes the room
+  Logs              Daemon · Audit · Schedule · Helpers
+  Files             what Nouride keeps on this machine, to read
 
 Settings
   Models and keys
@@ -69,11 +73,11 @@ Settings
     My Account      username, name, password
   This box
     My Box          the appliance itself (a paired Box only)                  (admin)
-    Logs            Daemon · Audit · Schedule · Helpers
+    Logs            Schedule · Helpers, for anyone who is not an admin
     Update          the version running, the newest release, installing it
 ```
 
-Work, Agents and Memory each hold several pages, shown as tabs across the top of each of them. Every tab keeps its own
+Work, Agents, Memory and System each hold several pages, shown as tabs across the top of each of them. Every tab keeps its own
 address, so a link to one still opens it. Work opens on **Waiting for you**, and the count beside Work in the menu is
 what waits there.
 
@@ -305,6 +309,41 @@ waiting for whoever it was asked of. An admin sees and answers every one.
 **The daemon's log and the audit log are an admin's to read** (0.8.35). They hold every line of everybody's chats,
 commands and decisions. On **Logs**, anyone else has the two other tabs: what ran on a schedule, and the commands
 still running in the background.
+
+## System
+
+For whoever runs the box, **System** in the menu holds three tabs. Only an admin has it; for anyone else, **Logs** stays
+under Settings with its two tabs.
+
+**System** says what the machine is using right now, each figure a bar with a sentence beside it:
+
+- **RAM**: how much is in use of what Nouride may use, then who holds it: Nouride itself, and the agents' commands
+  where they are counted apart. In a container, or under a service that sets a limit, the ceiling is that limit and
+  the figure in use is the container's own, the one `docker stats` shows, not the machine's around it. The card says
+  which it is.
+- **Disk**: the disk Nouride's files are on (in a container, its volume), how much is free, and how much Nouride's
+  own files take, with the largest folders first. A press on one opens it in Files. A large folder takes a minute or
+  so to count, and the page says so while it does.
+- **Nouride here**: the version, how long it has been running, the processor cores it may use, and where its files
+  are.
+
+From three quarters full a bar turns and says **Getting full**; from nine tenths, **Nearly full**. A figure the
+machine does not give is said as not known. It is never drawn as an empty bar.
+
+**Files** shows what Nouride keeps on the machine: its agents, their workspaces, what people sent, its settings. It is
+for looking: nothing on the page changes a file. Open a folder with a press, and go back with the path at the top or
+your browser's Back. A file opens as what it is: a page of markdown as a page (**Show its source** for the text
+itself), code in its colours with **Copy**, a picture as a picture.
+
+**Credentials and secrets are not shown.** What holds one is left out of every list, by its name too: Nouride's own
+keys and its secret store, the credentials folder, a chat app's session, `.env` files, SSH and other keys, and the
+sign-ins tools keep in the agents' home. Asked for by its address, such a file says it is kept private. Inside an
+ordinary file, something that looks like a credential is hidden where it was, and the page says so. The database is
+listed with its size and does not open.
+
+**A path is a link.** Where an agent writes a path inside Nouride's files (`.nouride/workspace/…/report.md`, or the
+whole path on this machine) in a reply, on a mission's page among its result files, or in a command a turn ran, an
+admin can press it to open that file in Files.
 
 ### What Home says about the others
 

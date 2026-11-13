@@ -4,7 +4,7 @@
  */
 
 import { expect, test } from "bun:test";
-import { renderPage, useMountHarness } from "./mount-harness.ts";
+import { answer, renderPage, useMountHarness, WIRE } from "./mount-harness.ts";
 import { eventually } from "./wait.ts";
 import { fromSettings } from "@/commons/components/layout/SettingsBack";
 
@@ -20,7 +20,19 @@ test("over Settings' pages, and only those", async () => {
       seen[path] = back(host);
     });
   }
-  expect(seen).toEqual({ "/models": 1, "/logs": 1, "/account": 1, "/update": 1, "/agents": 0, "/work": 0, "/settings": 0 });
+  // Signed in as an admin, as the harness is: Logs is a tab of System for them, in the menu, so no way back over it.
+  expect(seen).toEqual({ "/models": 1, "/logs": 0, "/account": 1, "/update": 1, "/agents": 0, "/work": 0, "/settings": 0 });
+});
+
+test("over Logs for someone who is not an admin, the page that holds the window: it is one of Settings' pages for them", async () => {
+  const me = WIRE["/auth/me"] as { user: Record<string, unknown> } & Record<string, unknown>;
+  answer({ "/auth/me": { status: 200, body: { ...me, role: "operator", user: { ...me.user, role: "operator" } } } });
+  let seen = -1;
+  await renderPage("/logs", async (host) => {
+    await eventually(() => back(host) > 0, 3_000, "the way back over Logs");
+    seen = back(host);
+  });
+  expect(seen).toBe(1);
 });
 
 test("a page under one of them is that page's own, not Settings'", () => {
@@ -30,4 +42,8 @@ test("a page under one of them is that page's own, not Settings'", () => {
   expect(fromSettings("/mcp")).toBe(false);
   expect(fromSettings("/agents/nix/model")).toBe(false);
   expect(fromSettings("/models-old")).toBe(false);
+  // Logs is a Settings page for everyone but an admin, who has it as a tab of System: no way back to Settings over it.
+  expect(fromSettings("/logs")).toBe(true);
+  expect(fromSettings("/logs", true)).toBe(false);
+  expect(fromSettings("/models", true)).toBe(true);
 });

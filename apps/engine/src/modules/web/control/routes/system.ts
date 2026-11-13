@@ -54,13 +54,17 @@ function hidden(text: string, stored: Record<string, string>): string {
 const INERT = { "X-Content-Type-Options": "nosniff", "Content-Security-Policy": "default-src 'none'; sandbox", "Cache-Control": "private, no-store" };
 
 export function registerSystemRoutes(control: ControlApp, deps: ControlDeps): void {
-  // The folder the config file is in: `.nouride`, where agents, workspaces and the data all live by default.
-  const root = deps.ctx.configSource ? dirname(deps.ctx.configSource) : dirname(deps.ctx.config.daemon.dataDir);
-  const sizes = new FolderSizes(root);
+  /**
+   * The folder the config file is in: `.nouride`, where agents, workspaces and the data all live by default. Worked
+   * out when a route is first asked, not as they are registered: a context a test wires holds less than a config.
+   */
+  let folder: { root: string; sizes: FolderSizes } | null = null;
+  const at = () => (folder ??= ((root) => ({ root, sizes: new FolderSizes(root) }))(deps.ctx.configSource ? dirname(deps.ctx.configSource) : dirname(deps.ctx.config.daemon.dataDir)));
 
   control.get("/system", (c) => {
     if (!atLeast(c.get("principal"), "admin")) return c.json(ADMINS_ONLY, 403);
     const memory = readMemoryUse();
+    const { root } = at();
     return c.json({
       version: VERSION,
       uptimeSeconds: Math.round((Date.now() - deps.ctx.startedAt) / 1000),
@@ -80,23 +84,32 @@ export function registerSystemRoutes(control: ControlApp, deps: ControlDeps): vo
 
   control.get("/system/folder-sizes", (c) => {
     if (!atLeast(c.get("principal"), "admin")) return c.json(ADMINS_ONLY, 403);
+    const { root, sizes } = at();
     const read = sizes.read();
     // By name only what Files lists: what is left out there is in the total and nowhere else.
     const listed = listFolder(root, "", Number.MAX_SAFE_INTEGER);
-    const named = new Set(listed.ok ? listed.entries.map((entry) => entry.name) : []);
-    return c.json({ ...read, entries: read.entries.filter((entry) => named.has(entry.name)) } satisfies SystemFolderSizes);
+    const kinds = new Map(listed.ok ? listed.entries.map((entry) => [entry.name, entry.kind]) : []);
+    return c.json({ ...read, entries: read.entries.flatMap((entry) => (kinds.has(entry.name) ? [{ ...entry, kind: kinds.get(entry.name)! }] : [])) } satisfies SystemFolderSizes);
   });
 
   control.get("/system/files", (c) => {
     if (!atLeast(c.get("principal"), "admin")) return c.json(ADMINS_ONLY, 403);
-    const listing = listFolder(root, c.req.query("path") ?? "");
+    const asked = c.req.query("path") ?? "";
+    const { root } = at();
+    const listing = listFolder(root, asked);
+    if (!listing.ok && listing.reason === "not-a-folder") {
+      // A path to a file, as a link from a chat is: the page learns it is one, and opens it.
+      const found = findFile(root, asked);
+      if (found.ok) return c.json({ path: found.entry.path, entries: [], more: 0, leftOut: false, file: found.entry } satisfies SystemFolderListing);
+      return c.json({ error: found.reason, reason: found.reason, plain: REFUSALS[found.reason].plain }, REFUSALS[found.reason].status);
+    }
     if (!listing.ok) return c.json({ error: listing.reason, reason: listing.reason, plain: REFUSALS[listing.reason].plain }, REFUSALS[listing.reason].status);
     return c.json({ path: listing.path, entries: listing.entries, more: listing.more, leftOut: listing.leftOut } satisfies SystemFolderListing);
   });
 
   control.get("/system/files/read", async (c) => {
     if (!atLeast(c.get("principal"), "admin")) return c.json(ADMINS_ONLY, 403);
-    const found = findFile(root, c.req.query("path") ?? "");
+    const found = findFile(at().root, c.req.query("path") ?? "");
     if (!found.ok) return c.json({ error: found.reason, reason: found.reason, plain: REFUSALS[found.reason].plain }, REFUSALS[found.reason].status);
     const size = found.entry.sizeBytes ?? 0;
     if (pictureType(found.entry.name)) return c.json({ entry: found.entry, kind: size <= PICTURE_MAX_BYTES ? "picture" : "other" } satisfies SystemFileOpened);
@@ -111,7 +124,7 @@ export function registerSystemRoutes(control: ControlApp, deps: ControlDeps): vo
   /** A picture's own bytes, for the page to draw. A picture by its name only; anything else is refused. */
   control.get("/system/files/raw", (c) => {
     if (!atLeast(c.get("principal"), "admin")) return c.json(ADMINS_ONLY, 403);
-    const found = findFile(root, c.req.query("path") ?? "");
+    const found = findFile(at().root, c.req.query("path") ?? "");
     if (!found.ok) return c.json({ error: found.reason, reason: found.reason, plain: REFUSALS[found.reason].plain }, REFUSALS[found.reason].status);
     const type = pictureType(found.entry.name);
     if (!type || (found.entry.sizeBytes ?? 0) > PICTURE_MAX_BYTES) return c.json({ error: "not a picture", plain: "Only a picture is shown this way." }, 400);

@@ -10,6 +10,9 @@ import { useRouter } from "@tanstack/react-router";
 import { ExternalLink } from "lucide-react";
 import { CodeBlock } from "@/commons/components/ui/CodeBlock";
 import { pageInDashboard } from "@/commons/lib/page-link";
+import { underDataFolder } from "@/commons/lib/data-folder";
+import { useDataFolder } from "@/commons/hooks/use-data-folder";
+import { FilePath } from "@/commons/components/ui/FilePath";
 
 /**
  * How a block's plain words are drawn: as written, or as the page around it says (an agent's answer draws its agents'
@@ -34,7 +37,9 @@ const LINK = "text-primary hover:underline font-medium";
  */
 function Linked({ href, children }: { href: string; children: ReactNode }) {
   const router = useRouter({ warn: false }) as ReturnType<typeof useRouter> | undefined;
-  const page = router ? pageInDashboard(href, { origin: window.location.origin, basepath: router.basepath }) : null;
+  // A link an agent wrote to a file of the data folder, by its path: the file in Files.
+  const file = underDataFolder(href, useDataFolder());
+  const page = !router ? null : file !== null ? `/files?path=${encodeURIComponent(file)}` : pageInDashboard(href, { origin: window.location.origin, basepath: router.basepath });
   if (router && page) {
     return (
       <a
@@ -92,9 +97,10 @@ function inline(text: string, keyPrefix: string): ReactNode[] {
       } else {
         out.push(
           // Ink, not the brand blue: code is what was said, and the blue is for signals and actions (the Nouverse design rules).
-          <code key={key} className="bg-base-200/90 text-base-content border border-base-content/10 rounded-md px-1.5 py-0.5 font-mono text-[0.85em]">
-            {codeContent}
-          </code>,
+          // A path of this machine's data folder is a link to that file in Files, for whoever may open it.
+          <FilePath key={key} text={codeContent} link="rounded-md outline-none hover:[&>code]:border-primary/50 hover:[&>code]:text-primary focus-visible:ring-2 focus-visible:ring-primary/50">
+            <code className="bg-base-200/90 text-base-content border border-base-content/10 rounded-md px-1.5 py-0.5 font-mono text-[0.85em]">{codeContent}</code>
+          </FilePath>,
         );
       }
     } else if (token.startsWith("**")) {
