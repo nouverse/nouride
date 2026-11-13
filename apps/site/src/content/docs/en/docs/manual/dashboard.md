@@ -426,6 +426,10 @@ The list has two halves, switched at its top:
 The **+** at the top starts a chat with an agent or makes a room, and the search finds a chat by its name or its last
 message.
 
+**Code in a reply.** A block of code is coloured by its language, in the theme's own colours, and has **Copy** at its
+top: the code goes to your clipboard as it was written. A block that names no language, or one Nouride does not colour,
+stays plain.
+
 **Your chats are yours.** Each account sees its own: its conversations with each agent here, its private chats with the
 agents on Telegram, Discord and WhatsApp (by the person it is under People), the groups that person spoke in, and the
 rooms it made or spoke in. Two accounts talking to the same agent each have their own conversation. An operator or a

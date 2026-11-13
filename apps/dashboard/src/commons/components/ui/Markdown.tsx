@@ -1,6 +1,6 @@
 /**
  * A secure, full-featured markdown renderer.
- * Supports: Headings, Lists, Blockquotes, Fenced Code, Tables, Horizontal Rules,
+ * Supports: Headings, Lists, Blockquotes, Fenced Code (`CodeBlock`: coloured, with a copy button), Tables, Horizontal Rules,
  * Bold, Italic, Code, Markdown Links [label](url), and Auto-linked Bare URLs (https://...).
  * A link to a page of this dashboard opens it in place (`Linked`).
  */
@@ -8,6 +8,7 @@
 import { createContext, useContext, type ReactNode } from "react";
 import { useRouter } from "@tanstack/react-router";
 import { ExternalLink } from "lucide-react";
+import { CodeBlock } from "@/commons/components/ui/CodeBlock";
 import { pageInDashboard } from "@/commons/lib/page-link";
 
 /**
@@ -247,18 +248,7 @@ export function Markdown({ source, compact = false }: { source: string; compact?
 
     if (code !== null) {
       if (line.trim().startsWith("```")) {
-        blocks.push(
-          <div key={blocks.length} className="rounded-xl border border-base-content/10 bg-base-200/60 overflow-hidden shadow-xs">
-            {codeLang && (
-              <div className="bg-base-300/40 px-3 py-1 text-[11px] font-mono font-medium text-base-content/65 uppercase tracking-wider border-b border-base-content/10">
-                {codeLang}
-              </div>
-            )}
-            <pre className="overflow-x-auto p-3.5 font-mono text-xs leading-relaxed text-base-content/90">
-              <code>{code.join("\n")}</code>
-            </pre>
-          </div>,
-        );
+        blocks.push(<CodeBlock key={blocks.length} lang={codeLang || undefined} text={code.join("\n")} />);
         code = null;
       } else {
         code.push(raw);
@@ -395,13 +385,9 @@ export function Markdown({ source, compact = false }: { source: string; compact?
   flushQuote();
   flushTable();
 
-  if (code !== null) {
-    blocks.push(
-      <pre key={blocks.length} className="bg-base-200/60 border border-base-content/10 overflow-x-auto rounded-xl p-3.5 font-mono text-xs text-base-content/90">
-        <code>{code.join("\n")}</code>
-      </pre>,
-    );
-  }
+  // A fence not closed yet is a block still being written: the same box, so nothing jumps when it closes, and its
+  // colours when it is whole.
+  if (code !== null) blocks.push(<CodeBlock key={blocks.length} lang={codeLang || undefined} text={code.join("\n")} growing />);
 
   return <div className={compact ? "space-y-1.5 text-xs" : "space-y-3 text-sm"}>{blocks}</div>;
 }

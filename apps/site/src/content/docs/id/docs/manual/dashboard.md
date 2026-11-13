@@ -439,6 +439,10 @@ Daftarnya punya dua bagian, dipilih di atasnya:
 Tombol **+** di atas memulai chat dengan agent atau membuat room, dan kolom cari menemukan chat dari namanya atau pesan
 terakhirnya.
 
+**Kode di jawaban.** Blok kode diwarnai sesuai bahasanya, memakai warna tema, dan punya tombol **Copy** di atasnya:
+kodenya masuk clipboard persis seperti ditulis. Blok yang gak menyebut bahasa, atau bahasanya gak diwarnai Nouride,
+tetap polos.
+
 **Chat kamu milik kamu.** Tiap akun melihat miliknya sendiri: percakapannya dengan tiap agent di sini, chat pribadinya
 dengan agent di Telegram, Discord, dan WhatsApp (lewat orang yang jadi akun itu di People), grup tempat orang itu pernah
 bicara, dan room yang ia buat atau pernah bicara di dalamnya. Dua akun yang bicara dengan agent yang sama masing-masing
