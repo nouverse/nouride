@@ -483,6 +483,18 @@ export class SetupService {
     // Not loaded by anything: orientation for whoever edits this pack, at no cost in the prompt.
     await writeTextFileAtomic(join(dir, "README.md"), STARTER_README);
 
+    const defaults = this.deps.config.llm.defaults;
+    let followsInstall = defaults.provider !== "" && defaults.provider === profile && defaults.model === model;
+    if (!followsInstall && (defaults.provider === "" || (defaults.provider === profile && defaults.model === ""))) {
+      const written = await editDaemonConfig(this.configPath(), this.deps.config, (existing) =>
+        upsertTomlTable(existing, "llm.defaults", {
+          provider: profile,
+          ...(defaults.model ? {} : { model }),
+        }),
+      ).catch(() => null);
+      followsInstall = written?.ok === true;
+    }
+
     // Not through `editPackFile`: a new pack, written whole — and removed whole when it does not load.
     await writeTextFileAtomic(
       join(dir, "config.toml"),
@@ -496,9 +508,7 @@ export class SetupService {
         "# credentials, for everyone who talks to it, rather than following each person's own setting.",
         'approvals = "balanced"',
         "",
-        "[llm]",
-        `provider = ${JSON.stringify(profile)}`,
-        `model = ${JSON.stringify(model)}`,
+        ...(followsInstall ? [] : ["[llm]", `provider = ${JSON.stringify(profile)}`, `model = ${JSON.stringify(model)}`]),
         "",
         "[tools]",
         ...(written[0] === "*"
