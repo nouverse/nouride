@@ -12,7 +12,7 @@
 
 import { readFileSync } from "node:fs";
 import { availableParallelism, cpus } from "node:os";
-import { totalMemoryBytes } from "./process.ts";
+import { totalMemoryBytes } from "./process-memory.ts";
 
 export interface MachineSpec {
   /** The cores this process may run on, a container's CPU quota counted. At least 1. */

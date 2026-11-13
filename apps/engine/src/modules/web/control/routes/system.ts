@@ -7,7 +7,7 @@
  */
 
 import type { SystemFileOpened, SystemFileRefusal, SystemFolderListing, SystemFolderSizes, SystemOverview } from "@nouride/wire";
-import { commandsMemory, dirname, diskSpace, processMemory, readFileRange, readMachine, readMemoryUse } from "@nouride/runtime";
+import { commandsMemory, dirname, diskSpace, processHeldBytes, readFileRange, readMachine, readMemoryUse } from "@nouride/runtime";
 import { findSecrets, maskSecrets } from "@nouride/secrets";
 import { egressValues } from "@/commons/egress.ts";
 import { VERSION } from "@/commons/version.ts";
@@ -70,7 +70,8 @@ export function registerSystemRoutes(control: ControlApp, deps: ControlDeps): vo
       uptimeSeconds: Math.round((Date.now() - deps.ctx.startedAt) / 1000),
       cores: (deps.ctx.machine ?? readMachine()).cores,
       memory: {
-        daemonBytes: processMemory().rssBytes,
+        // Counted as what is in use is counted, without the file pages a kernel drops and reads again.
+        daemonBytes: processHeldBytes(),
         commands: commandsMemory(),
         usedBytes: memory.usedBytes,
         totalBytes: memory.totalBytes > 0 ? memory.totalBytes : null,

@@ -5,6 +5,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { readMachine, readMemoryUse, type MachineSource } from "../src/machine.ts";
+import { processHeldBytes } from "../src/process-memory.ts";
 
 const GiB = 1024 ** 3;
 
@@ -138,5 +139,20 @@ describe("the memory in use, of what this process may use", () => {
     const real = readMemoryUse();
     expect(real.totalBytes).toBeGreaterThan(0);
     if (real.usedBytes !== null) expect(real.usedBytes).toBeLessThanOrEqual(real.totalBytes * 1.05);
+  });
+});
+
+describe("what this process itself holds", () => {
+  test("its own and shared memory where the system says, without its executable's pages; everything resident elsewhere", () => {
+    const status = "Name:\tnouride\nVmRSS:\t   86324 kB\nRssAnon:\t   36120 kB\nRssFile:\t   49180 kB\nRssShmem:\t    1024 kB\nThreads:\t12\n";
+    expect(processHeldBytes(status)).toBe((36120 + 1024) * 1024);
+    // A kernel that says the first and not the second.
+    expect(processHeldBytes("RssAnon:\t   2048 kB\n")).toBe(2048 * 1024);
+    // No such file (a Mac), or one that says neither: what is resident, which is never nothing.
+    for (const none of [null, "Name:\tnouride\nVmRSS:\t 100 kB\n"]) {
+      expect(processHeldBytes(none)).toBeGreaterThan(1024 * 1024);
+      expect(processHeldBytes(none)).toBeLessThanOrEqual(process.memoryUsage().rss * 1.5);
+    }
+    expect(processHeldBytes()).toBeGreaterThan(1024 * 1024);
   });
 });

@@ -19,21 +19,19 @@ import { forward, readCapped } from "../src/process-output.ts";
 import { withOwnProcessGroup } from "../src/process-group.ts";
 import { systemProgram, withBinFirst } from "../src/process-shell.ts";
 import {
-  availableMemoryBytes,
   isRoot,
   canElevate,
   processCommandLine,
-  processMemory,
   resourceLimitsAvailable,
   runCommand,
   signalProcess,
   spawnInteractive,
   spawnLongLived,
-  totalMemoryBytes,
   whichBinary,
   withBackgroundPriority,
   withLimits,
 } from "../src/process.ts";
+import { availableMemoryBytes, processMemory, totalMemoryBytes } from "../src/process-memory.ts";
 import { eventually, sleep } from "./wait.ts";
 
 const linux = process.platform === "linux";
