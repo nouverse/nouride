@@ -30,10 +30,14 @@ interface Choice {
   effort?: LlmEffort | null;
 }
 
-/** The levels this agent's conversations can choose: its coding CLI's own where it has listed any, else every level. */
+/**
+ * The levels this agent's conversations can choose: its coding CLI's own where it has listed any, else every level.
+ * Of a CLI's, the ones that are levels here: one it calls by a name of its own (Codex offered `ultra` for a model)
+ * was in the panel, and picking it was refused as no level at all.
+ */
 function effortsOf(deps: ControlDeps, agent: LoadedAgent): { offered: string[]; all: string[] } {
   const offered = agent.config.external ? (deps.externalAgents?.efforts.of(agent.config.id).map((entry) => entry.value) ?? []) : [];
-  return { offered, all: offered.length > 0 ? offered : [...LLM_EFFORTS] };
+  return { offered, all: offered.length > 0 ? offered.filter(isLlmEffort) : [...LLM_EFFORTS] };
 }
 
 /**

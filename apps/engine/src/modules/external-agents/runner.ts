@@ -412,13 +412,12 @@ export class ExternalTurnRunner {
   }
 
   /**
-   * The model a turn was answered by, as lists name it: its chat's choice where it made one, else the agent's own. A
-   * turn on a model its chat picked was recorded, and its usage counted, under the agent's own.
+   * The model a turn was answered by: its chat's choice where it made one, else the agent's own. A turn on a model its
+   * chat picked was recorded, and its usage counted, under the agent's own. By the id its CLI takes, as the agent's
+   * own is recorded: a usage row under a display name would be a second model in every count.
    */
   private answering(chosen: string | undefined): string | undefined {
-    const agentId = this.agent.config.id;
-    if (chosen !== undefined) return this.host.models?.of(agentId).find((model) => model.value === chosen)?.name ?? chosen;
-    return this.agent.config.external?.model ?? this.host.models?.runsOn(agentId) ?? undefined;
+    return chosen ?? this.agent.config.external?.model ?? this.host.models?.runsOn(this.agent.config.id) ?? undefined;
   }
 
   /** A failure as the person reads it, and as the agent's status where it is the CLI's state rather than this turn's. */

@@ -378,6 +378,16 @@ describe("an agent a coding CLI answers", () => {
     expect(refused.body).toEqual({ error: "its CLI does not offer `max` for the model it is on (it offers: low, high)", plain: "That level is not offered for the model it is on. Pick another." } as never);
     expect((await h.choose("rina", { sessionId, effort: "high", model: "sonnet" })).body).toMatchObject({ model: { chosen: "sonnet" }, effort: { chosen: "high" } });
   });
+
+  test("a level its CLI calls by a name of its own is not offered: picked, it would be refused as no level at all", async () => {
+    // Seen on a real Codex session: it offered `ultra` for one of its models.
+    const h = await daemon({ cli: { ...CLI, efforts: ["low", "high", "ultra"] } });
+    const { body } = await h.call<ChatChoices>("rina", "GET", "/chat/choices?agent=nouva");
+    expect(body.efforts).toEqual(["low", "high"]);
+    const sessionId = sessionIdFor({ agentId: "nouva", gatewayId: h.local.id, chatId: "web-1" });
+    h.bench.turns.begin({ sessionId, agentId: "nouva", gatewayId: h.local.id, chatId: "web-1", senderId: "u2", prompt: "halo" });
+    expect((await h.choose("rina", { sessionId, effort: "ultra" })).status).toBe(400);
+  });
 });
 
 describe("the models a picker suggests", () => {
