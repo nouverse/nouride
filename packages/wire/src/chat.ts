@@ -224,6 +224,25 @@ export interface ChatSession {
 }
 
 /**
+ * What a one-to-one conversation is answered with: its agent's own model and effort, and what the conversation chose
+ * over them (`/model`, `/effort`, or the picker on its page). A choice is the conversation's alone and ends with it:
+ * the agent's own answers the next one.
+ */
+export interface ChatChoices {
+  /** The agent's own model, and this conversation's where it chose one. */
+  model: { own: string; chosen?: string };
+  /**
+   * How long the model thinks: the agent's own level where it sets one, and this conversation's. `refusedBy`: the
+   * model that refused the chosen level, which is then sent none.
+   */
+  effort: { own?: string; chosen?: string; refusedBy?: string };
+  /** The levels a conversation can choose. A coding CLI's are its own, for the model it is on. */
+  efforts: string[];
+  /** Where a coding CLI answers the agent: which, and the models it offers (none before its first session). */
+  cli?: { id: string; name: string; models: { value: string; name?: string }[] };
+}
+
+/**
  * What happened in a chat, for the wording and the icon: a chat event's kind (`chat-events.store.ts` in the engine).
  *
  * A closed set rather than free text, because the dashboard renders each differently and an

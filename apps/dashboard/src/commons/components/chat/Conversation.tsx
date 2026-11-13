@@ -95,11 +95,13 @@ export interface ConversationProps {
   box?: [string, Dispatch<SetStateAction<string>>];
   /** Drawn in a panel a phone's width at any window's: what lays itself out by the window's width is told. */
   narrow?: boolean;
+  /** A model and an effort picked for a new conversation, read as its first message is sent (`ChatChoice`). */
+  firstChoice?: () => { model?: string; effort?: string };
 }
 
 const NO_TURNS: readonly LiveTurn[] = [];
 
-export function Conversation({ sessionId, roomChatId, agent, agents: chat, onSession, header, aside, draft, untagged, page, box, narrow = false }: ConversationProps) {
+export function Conversation({ sessionId, roomChatId, agent, agents: chat, onSession, header, aside, draft, untagged, page, box, narrow = false, firstChoice }: ConversationProps) {
   const queryClient = useQueryClient();
   const me = useMe();
 
@@ -132,6 +134,7 @@ export function Conversation({ sessionId, roomChatId, agent, agents: chat, onSes
     ...(roomChatId ? { roomChatId } : {}),
     agentId: chosenAgent,
     onSession,
+    ...(firstChoice ? { firstChoice } : {}),
   });
   // Over a page (the floating chat's): the page follows what the agent does. On Chats there is no page under it.
   usePageFollows(page ? conversation.liveTurns : NO_TURNS);

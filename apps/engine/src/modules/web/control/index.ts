@@ -26,6 +26,7 @@ import { registerLogRoutes } from "./routes/logs.ts";
 import { registerConversationRoutes } from "./routes/conversations.ts";
 import { registerChatListRoutes } from "./routes/chat-list.ts";
 import { registerChatRoutes } from "./routes/chat.ts";
+import { registerChatChoiceRoutes } from "./routes/chat-choices.ts";
 import { registerNotesRoutes } from "./routes/notes.ts";
 import { registerMissionRoutes } from "./routes/missions.ts";
 import { registerRoomRoutes } from "./routes/rooms.ts";
@@ -95,6 +96,7 @@ export function mountControlRoutes(app: Hono, deps: ControlDeps): void {
   registerConversationRoutes(control, deps);
   registerChatListRoutes(control, deps);
   registerChatRoutes(control, deps);
+  registerChatChoiceRoutes(control, deps);
   registerNotesRoutes(control, deps);
   registerMissionRoutes(control, deps);
   registerRoomRoutes(control, deps);

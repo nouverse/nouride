@@ -47,6 +47,11 @@ export interface ComboboxProps {
   describe?: (option: string) => string | undefined;
   /** The whole list on focus, for a field answered by picking from it; a model's list waits for typing (see above). */
   listOnFocus?: boolean;
+  /**
+   * A row was picked, the typed text's own row included: for a field that acts on a pick at once. `onChange` is told
+   * every keystroke, and a field that saved on that would save every prefix on the way to a name.
+   */
+  onPick?: (value: string) => void;
 }
 
 export function Combobox(props: ComboboxProps) {
@@ -119,6 +124,7 @@ export function Combobox(props: ComboboxProps) {
 
   const commit = (choice: string) => {
     onChange(choice);
+    props.onPick?.(choice);
     setDraft(null);
     close();
   };

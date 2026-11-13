@@ -200,6 +200,16 @@ export function isLlmEffort(value: unknown): value is LlmEffort {
   return typeof value === "string" && (LLM_EFFORTS as readonly string[]).includes(value);
 }
 
+/**
+ * Why a level asked for a conversation is not kept, for `/effort` and the page's picker alike: no level at all, or one
+ * the agent's coding CLI does not offer for the model it is on (`offered`, empty where no CLI answers or it has listed
+ * none yet). Null: it is kept.
+ */
+export function effortRefusal(level: string, offered: readonly string[]): "no-level" | "not-offered" | null {
+  if (!isLlmEffort(level)) return "no-level";
+  return offered.length > 0 && !offered.includes(level) ? "not-offered" : null;
+}
+
 export interface ChatParams {
   model: string;
   messages: ChatMessage[];

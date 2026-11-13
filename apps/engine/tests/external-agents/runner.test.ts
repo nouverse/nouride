@@ -486,6 +486,32 @@ describe("a turn of an external agent", () => {
     expect(await stderrSaid(connection, (line) => line.startsWith("mode:") || line.startsWith("model:"), 4)).toEqual(["mode:yolo", "model:big", "mode:default", "model:small"]);
   });
 
+  test("a model chosen in the chat is its session's, over the agent's own, and the agent's own is back when the chat chooses none", async () => {
+    // `/model` in a chat with an agent a coding CLI answers said the model was changed, and nothing was: the session
+    // was set to what the agent's pack names, whatever its chat had chosen.
+    runAgentCommandsThrough({ prefix: () => ["env"], put: () => [] });
+    const { service, agent, runner, req } = setup({ model: "big" });
+    await runner.run(req("one"));
+    await runner.run(req("two", { model: "small" }));
+    // Chosen still: set once, not at every message.
+    await runner.run(req("three", { model: "small" }));
+    await runner.run(req("four"));
+    const connection = await service.connection(agent);
+    expect(await stderrSaid(connection, (line) => line.startsWith("model:"), 3)).toEqual(["model:big", "model:small", "model:big"]);
+  });
+
+  test("and where its pack names no model: the chat's while it chooses one, then the CLI's own default back", async () => {
+    runAgentCommandsThrough({ prefix: () => ["env"], put: () => [] });
+    const { service, agent, runner, req } = setup();
+    await runner.run(req("one"));
+    await runner.run(req("two", { model: "big" }));
+    await runner.run(req("three"));
+    await runner.run(req("four"));
+    const connection = await service.connection(agent);
+    // Nothing is set while nobody names one: the session opened on the CLI's own, `small`.
+    expect(await stderrSaid(connection, (line) => line.startsWith("model:"), 2)).toEqual(["model:big", "model:small"]);
+  });
+
   test("the idle sweep leaves a CLI whose turn is still opening its session (0.8.1)", async () => {
     // A turn counted only while it prompted: a sweep while it wrote the instructions or synced skills stopped the CLI.
     const { service, runner, req } = setup();

@@ -61,6 +61,13 @@ memasangnya di sesi mereka sendiri: [Agent eksternal →](/id/docs/manual/extern
 `/model` dan `/effort` sebuah chat tetap ada setelah restart, termasuk restart karena update, sampai
 `/model default`, `/effort default`, `/reset` atau rollover menghapusnya; `/new` mempertahankannya.
 
+**Di dashboard, dua perintah itu ada tombolnya** (sejak 0.8.35). Di bar atas percakapan dengan satu agent, tombol
+bertuliskan nama model membuka panel: pilih model dari daftar atau ketik namanya, dan pilih effort. Ini pilihan yang
+sama dengan yang dibuat perintahnya, hanya untuk percakapan itu dan mulai pesan berikutnya, dan masing-masing membaca
+apa yang dipasang yang lain. **Back to the agent's own** membatalkannya. Model yang dipilih sebelum pesan pertama
+sebuah percakapan ikut terkirim bersama pesan itu. Agent yang dijawab coding CLI memilih di antara model yang
+ditawarkan CLI-nya, setelah CLI itu menyebutkannya. Room dan chat di aplikasi chat tetap memakai perintahnya.
+
 Level sebuah chat hanya berlaku di chat itu, dan misi berjalan di percakapannya sendiri. `/effort max lock` menjadikan
 level itu milik agent: ditulis ke config-nya seperti yang dilakukan tab Model, untuk semua chat dan semua misi, dan tetap
 ada setelah restart. `/effort lock` mengunci level yang dipasang chat ini, dan `/effort unlock` menghapus level milik

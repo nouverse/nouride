@@ -399,8 +399,9 @@ export class ExternalTurnRunner {
     const offered = this.host.models?.of(agentId) ?? [];
     await cli.settle(sessionId, {
       mode: cli.row.modes?.[preset],
-      // A model only where the CLI offers one; the CLI's own default back where the pack no longer names one.
-      ...(offered.length > 0 ? { model: external.model ?? offered.find((model) => model.current)?.value, own: external.model === undefined } : {}),
+      // This chat's choice (`/model`, the page's picker), else the agent's own; a session is one chat's, so the choice
+      // reaches no other. Only where the CLI offers models; its own default back where nothing names one any more.
+      ...(offered.length > 0 ? { model: req.model ?? external.model ?? offered.find((model) => model.current)?.value, own: req.model === undefined && external.model === undefined } : {}),
       // `/effort` in this chat, else the one effort an API agent's model thinks with too: `[llm] effort`, else
       // `[llm.defaults] effort`. None at all puts back the CLI's own, where this chat had set another.
       effort: req.effort ?? this.agent.config.llm?.effort,

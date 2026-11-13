@@ -29,6 +29,7 @@ import {
 } from "@/modules/turns/transcript.ts";
 import { jsonBody, parseAttachments } from "../payloads.ts";
 import { conversationNamed } from "../conversation.ts";
+import { keepFirstChoice } from "./chat-choices.ts";
 import { pageOf } from "../page.ts";
 import { mayOpen, readerOf, type Reader } from "../whose.ts";
 import type { Room } from "@/modules/rooms/rooms.store.ts";
@@ -52,6 +53,9 @@ interface SendBody {
   attachments?: unknown;
   /** The dashboard page it was written from, where the client says one (`page.ts`). */
   page?: unknown;
+  /** A model and an effort chosen on the page for this conversation, before its first message (`chat-choices.ts`). */
+  model?: unknown;
+  effort?: unknown;
 }
 
 /**
@@ -464,6 +468,10 @@ export function registerChatRoutes(control: ControlApp, deps: ControlDeps): void
           ...(body.senderId ? { senderId: body.senderId } : {}),
           ...(body.senderName ? { senderName: body.senderName } : {}),
         };
+
+    // A model and an effort picked on the page before the conversation had a message come with its first one.
+    const refused = keepFirstChoice(deps, agent, chatId, body);
+    if (refused) return c.json(refused, 400);
 
     const { messageId } = deps.local.dispatch({
       ...(body.text ? { text: body.text } : {}),

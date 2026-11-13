@@ -976,6 +976,22 @@
       "at": 1760000000000
     }
   },
+  "/chat/choices": {
+    "model": {
+      "own": "test-model"
+    },
+    "effort": {},
+    "efforts": [
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max"
+    ]
+  },
+  "/chat/models": {
+    "models": []
+  },
   "/missions": {
     "missions": [
       {

@@ -65,6 +65,9 @@ const ASKED: Record<string, (ids: { session: string; mission: string; automation
   "/sessions/ses_1/turns": (ids) => `/sessions/${ids.session}/turns`,
   "/sessions/ses_1/live": (ids) => `/sessions/${ids.session}/live?after=0`,
   "/sessions/ses_1/notes": (ids) => `/sessions/${ids.session}/notes`,
+  // What a conversation with the agent is answered with, and the models its picker suggests (`ChatChoice`).
+  "/chat/choices": () => "/chat/choices?agent=nouva",
+  "/chat/models": () => "/chat/models?agent=nouva",
   "/missions": () => "/missions",
   "/missions/msn_1": (ids) => `/missions/${ids.mission}`,
   "/policy/missions": () => "/policy/missions",

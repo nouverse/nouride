@@ -59,6 +59,9 @@ function UnderButton({ onClose, anchor, label, width = 400, children }: PanelPro
     };
     const away = (event: PointerEvent) => {
       const target = event.target as Node;
+      // A list one of the panel's own fields opened is drawn at the body (`Combobox`): a press on it picks from the
+      // panel, and closing on it took the panel away before the pick landed.
+      if (target instanceof Element && target.closest('[role="listbox"]')) return;
       if (!box.current?.contains(target) && !button?.contains(target)) onClose();
     };
     document.addEventListener("keydown", escape);

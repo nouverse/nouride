@@ -145,9 +145,14 @@ export function useConversation(input: {
   agentId: string;
   /** Called with the daemon's session id once a new conversation has one, and the agent the daemon says it is with. */
   onSession: (sessionId: string, agentId: string) => void;
+  /** A model and an effort picked for a new conversation, read as its first message is sent (`ChatChoice`). */
+  firstChoice?: () => { model?: string; effort?: string };
 }): Conversation {
   const { sessionId, roomChatId, agentId, onSession } = input;
   const queryClient = useQueryClient();
+  /** Read when a message is sent, not when the hook was last drawn: the pick may be a moment old. */
+  const firstChoice = useRef(input.firstChoice);
+  firstChoice.current = input.firstChoice;
 
   const [live, setLive] = useState<LiveTurn | null>(null);
   const { turnId: revealing, read: readForReveal, say: reveals, reset: resetReveal } = useRevealing();
@@ -452,6 +457,8 @@ export function useConversation(input: {
           void queryClient.invalidateQueries({ queryKey: ["sessions"] });
           // The turn is where the agent writes its work notes, so the Notes panel is read again with the transcript.
           void queryClient.invalidateQueries({ queryKey: notesKey(sessionId) });
+          // And where a command changes what the conversation is answered with, or ends it: the picker reads it again.
+          void queryClient.invalidateQueries({ queryKey: ["chat-choices", sessionId] });
           // And where it starts a mission, which the strip above the composer lists while it works.
           void queryClient.invalidateQueries({ queryKey: ["missions", "chat"] });
         }
@@ -526,6 +533,8 @@ export function useConversation(input: {
           : {
               ...(sessionId ? { sessionId } : {}),
               ...(agentId ? { agent: agentId } : {}),
+              // A conversation that has begun keeps its own choice, made on its page: only a first message carries one.
+              ...(sessionId ? {} : firstChoice.current?.()),
             }),
         ...(input.attachments?.length ? { attachments: input.attachments } : {}),
         ...(input.page ? { page: input.page } : {}),

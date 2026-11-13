@@ -44,7 +44,7 @@
  */
 
 import type { KeyedQueue } from "@nouride/queue";
-import { createLogger, type ButtonPress, type LoadedAgent, type MessageEnvelope, type Tool } from "@nouride/shared";
+import { createLogger, sessionIdFor, type ButtonPress, type LlmEffort, type LoadedAgent, type MessageEnvelope, type SessionKey, type Tool } from "@nouride/shared";
 import { HookRegistry, ModelOverrides } from "@/modules/hooks/registry.ts";
 import type { CronExecutors } from "@/modules/cron/scheduler.ts";
 import type { DaemonRestart } from "@/modules/update/restart.ts";
@@ -442,6 +442,21 @@ export class Pipeline {
   agentStatus(...args: Parameters<TurnControl["agentStatus"]>) { return this.control.agentStatus(...args); }
 
   // The chats the daemon knows, as the dashboard asks — `chat-directory.ts`.
+  /** What a conversation chose over its agent's own (`/model`, `/effort`), for the picker on its page. */
+  chatChoice(sessionId: string): { model?: string; effort?: LlmEffort; refused?: { effort: LlmEffort; model: string } } {
+    const model = this.modelOverrides.get(sessionId);
+    const effort = this.modelOverrides.effortOf(sessionId);
+    const refused = this.modelOverrides.refusalOf(sessionId);
+    return { ...(model ? { model } : {}), ...(effort ? { effort } : {}), ...(refused ? { refused } : {}) };
+  }
+  /** The picker's choice, kept as the commands keep theirs: a value, or null for the agent's own back. Absent: as it is. */
+  chooseInChat(key: SessionKey, choice: { model?: string | null; effort?: LlmEffort | null }): void {
+    const sessionId = sessionIdFor(key);
+    if (choice.model === null) this.modelOverrides.clear(sessionId);
+    else if (choice.model !== undefined) this.modelOverrides.set(key, choice.model);
+    if (choice.effort === null) this.modelOverrides.clearEffort(sessionId);
+    else if (choice.effort !== undefined) this.modelOverrides.setEffort(key, choice.effort);
+  }
   chatTypeOf(...args: Parameters<ChatDirectory["chatTypeOf"]>) { return this.chats.chatTypeOf(...args); }
   reachableChats() { return this.chats.reachableChats(); }
   knownRooms() { return this.chats.knownRooms(); }

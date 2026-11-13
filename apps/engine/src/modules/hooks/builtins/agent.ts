@@ -3,7 +3,7 @@
  * what prompt it is actually carrying, and re-reading its pack from disk.
  */
 
-import { isLlmEffort, LLM_EFFORTS } from "@nouride/shared";
+import { effortRefusal, isLlmEffort, LLM_EFFORTS } from "@nouride/shared";
 import type { Hook, HookContext } from "../types.ts";
 import { failed, sessionKey } from "../format.ts";
 
@@ -16,15 +16,18 @@ export const agentHooks: Hook[] = [
         const key = sessionKey(ctx);
         const session = ctx.deps.sessions.load(key);
         const requested = ctx.args[0];
+        // An agent a coding CLI answers runs on the CLI's model, never its pack's `[llm]`: said as `/status` says it.
+        const cli = ctx.agent.config.external ? ctx.deps.answering?.(ctx.agent, key.gatewayId, key.chatId) : undefined;
+        const own = ctx.agent.config.external ? (cli?.model?.name ?? `${cli?.cli ?? "its CLI"}'s own`) : ctx.agent.config.llm.model;
 
         if (!requested) {
-          const current = ctx.deps.modelOverrides.get(session.id) ?? ctx.agent.config.llm.model;
+          const current = ctx.deps.modelOverrides.get(session.id) ?? own;
           return { handled: true, reply: `Current model: \`${current}\`` };
         }
 
         if (requested === "reset" || requested === "default") {
           ctx.deps.modelOverrides.clear(session.id);
-          return { handled: true, reply: `Back to \`${ctx.agent.config.llm.model}\`.` };
+          return { handled: true, reply: `Back to \`${own}\`.` };
         }
 
         // Not validated against a model list: the whole point of TD-004 is that base_url can
@@ -75,10 +78,11 @@ export const agentHooks: Hook[] = [
           ctx.deps.modelOverrides.clearEffort(session.id);
           return { handled: true, reply: own ? `Back to the agent's effort, \`${own}\`.` : cli ? "Back to the CLI's own effort." : "Back to its provider's default." };
         }
-        if (!isLlmEffort(requested)) {
+        const refusal = effortRefusal(requested, offered);
+        if (refusal === "no-level" || !isLlmEffort(requested)) {
           return { handled: true, reply: `\`${requested}\` is not a level: ${LLM_EFFORTS.join(", ")}, or default.` };
         }
-        if (offered.length > 0 && !offered.includes(requested)) {
+        if (refusal === "not-offered") {
           return { handled: true, reply: `Its CLI does not offer \`${requested}\` for the model it is on.${offers}` };
         }
         ctx.deps.modelOverrides.setEffort(key, requested);

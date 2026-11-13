@@ -1,6 +1,7 @@
 /**
- * The bar over a conversation with one agent: its cat, its name, what it is doing now, its History, a new chat with it,
- * and a menu with what is done to this conversation as a whole. On a phone a way back to the list comes first, and the
+ * The bar over a conversation with one agent: its cat, its name, what it is doing now, the model and effort this
+ * conversation is answered with (`ChatChoice`), its History, a new chat with it, and a menu with what is done to this
+ * conversation as a whole. On a phone a way back to the list comes first, and the
  * buttons keep their icons only, each a finger's size and named for whoever cannot see it.
  *
  * A private chat on a chat app says where it lives and that it is read here, in the words beside the name.
@@ -17,6 +18,7 @@ import { DropdownMenu } from "@/commons/components/ui/DropdownMenu";
 import { platformName } from "@/commons/lib/platform";
 import { cn } from "@/commons/lib/utils";
 import { DELETE_CONVERSATION } from "../lib/history";
+import { ChatChoice, type FirstChoice } from "./ChatChoice";
 
 /** A header's button: a word beside its icon from a phone's width up, the icon alone on a phone. */
 export const HEADER_BUTTON = "btn btn-ghost h-11 min-h-11 gap-1.5 rounded-[14px] px-3 text-[13px] font-semibold text-base-content/80 hover:bg-base-content/[0.06] max-sm:w-11 max-sm:px-0 sm:h-9 sm:min-h-9";
@@ -30,6 +32,7 @@ export function AgentHeader({
   readOnly,
   history,
   notes,
+  choice,
   onDelete,
   deleting,
 }: {
@@ -45,6 +48,11 @@ export function AgentHeader({
   history: { open: boolean; toggle: () => void };
   /** The work notes drawer's toggle; absent where there are none to show. */
   notes?: { open: boolean; count: number; toggle: () => void };
+  /**
+   * A new conversation's pick of a model and an effort, kept by its page until the first message. Absent where the
+   * reader cannot write here: an account that only reads, a chat that lives on a chat app.
+   */
+  choice?: { first: FirstChoice; onFirst: (next: FirstChoice) => void };
   onDelete: () => void;
   deleting: boolean;
 }) {
@@ -75,6 +83,7 @@ export function AgentHeader({
         </p>
       </div>
 
+      {choice && !readOnly ? <ChatChoice agentId={agentId} name={name} sessionId={sessionId} first={choice.first} onFirst={choice.onFirst} buttonClassName={HEADER_BUTTON} /> : null}
       <button type="button" className={cn(HEADER_BUTTON, history.open && "bg-secondary/10 text-secondary")} aria-expanded={history.open} aria-label={`${name}'s conversations`} onClick={history.toggle}>
         <History size={17} aria-hidden="true" />
         <span className="max-sm:hidden">History</span>

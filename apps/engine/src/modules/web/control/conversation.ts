@@ -7,6 +7,10 @@
  * for the start of another chat: the dashboard jumped to an empty conversation, and the turn it was meant for never saw
  * it.
  *
+ * The same for a row a choice wrote before any message (`/model` as a conversation's first words, or a model picked on
+ * its page: `SessionStore.keepModel`). It has not started and names nobody, so read as it is the conversation was
+ * nobody's until its first turn ended: whoever chose a model first could not open their own conversation meanwhile.
+ *
  * A route that names a conversation finds it with `conversationFor`: for a reader who may not open it, it is not there
  * (`whose.ts`).
  */
@@ -25,9 +29,10 @@ export interface NamedConversation {
 
 export function conversationNamed(deps: { sessions?: SessionsPort; turns?: TurnsPort }, sessionId: string): NamedConversation | null {
   const session = deps.sessions?.find(sessionId);
-  if (session) return session;
+  // Started, or already somebody's: the row says all there is. Not started and nobody's: its turn says who.
+  if (session && (session.openedBy !== undefined || session.startedAt !== 0)) return session;
   const turn = deps.turns?.latestForSession(sessionId);
-  if (!turn) return null;
+  if (!turn) return session ?? null;
   const openedBy = personWhoOpened(turn);
   return { agentId: turn.agentId, chatId: turn.chatId, gatewayId: turn.gatewayId, ...(openedBy ? { openedBy } : {}) };
 }

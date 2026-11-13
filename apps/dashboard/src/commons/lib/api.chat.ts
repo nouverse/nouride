@@ -6,7 +6,7 @@
  */
 
 import { control, post, request } from "./api.client";
-import type { ApprovalDecision, ApprovalRequest, ChatListPayload, ChatTurn, LiveTurn, OpenPage, Room, RunningJob, SessionSummary, SlashCommand, Transcript, TurnAttachment, UploadedFile } from "@nouride/wire";
+import type { ApprovalDecision, ApprovalRequest, ChatChoices, ChatListPayload, ChatTurn, LiveTurn, OpenPage, Room, RunningJob, SessionSummary, SlashCommand, Transcript, TurnAttachment, UploadedFile } from "@nouride/wire";
 
 export const chatApi = {
   /**
@@ -165,11 +165,23 @@ export const chatApi = {
     attachments?: { path: string; mimeType: string; filename: string }[];
     /** The page it is written from, which the agent is then told: the floating chat's, and nothing else sends one. */
     page?: OpenPage;
+    /** A model and an effort picked for a conversation before its first message, which they come with. */
+    model?: string;
+    effort?: string;
   }) =>
     post<{ sessionId: string; chatId: string; messageId: string; agentId: string }>(
       `${control}/chat/send`,
       input,
     ),
+
+  /** What a conversation is answered with, or what a new one with this agent would be: the model, the effort. */
+  chatChoices: (of: { session: string } | { agent: string }) => request<ChatChoices>(`${control}/chat/choices?${new URLSearchParams(of)}`),
+
+  /** Pick for a conversation that has begun: a value, or null for the agent's own back. Answers as it now stands. */
+  chooseInChat: (input: { sessionId: string; model?: string | null; effort?: string | null }) => post<ChatChoices>(`${control}/chat/choices`, input),
+
+  /** The models to suggest for an agent's conversations: its provider's own list, by name. */
+  chatModels: (agent: string) => request<{ models: string[] }>(`${control}/chat/models?${new URLSearchParams({ agent })}`),
 
   /**
    * The slash commands the daemon answers, for the composer's `/` menu.

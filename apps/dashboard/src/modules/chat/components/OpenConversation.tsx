@@ -13,6 +13,7 @@ import { canWrite, useMe } from "@/commons/lib/session";
 import type { ChatListData } from "../hooks/use-chat-list";
 import { useOpenChat } from "../hooks/use-open-chat";
 import { AgentHeader } from "./AgentHeader";
+import type { FirstChoice } from "./ChatChoice";
 import { HistoryPanel } from "./HistoryPanel";
 import { NotesPanel } from "./NotesPanel";
 import { RoomHeader } from "./RoomHeader";
@@ -50,6 +51,14 @@ export function OpenConversation(
 
   const roomEntry = roomChatId ? data.list.data?.rooms.find((one) => one.chatId === roomChatId) : undefined;
 
+  /**
+   * The model and effort picked for a conversation not begun, which go with its first message (`ChatChoice`). Another
+   * agent, or a conversation that has begun, starts from nothing picked: a pick is one conversation's.
+   */
+  const [first, setFirst] = useState<FirstChoice>({});
+  useEffect(() => setFirst({}), [agent, sessionId]);
+  const writes = canWrite(me.data ?? null);
+
   return (
     <Conversation
       {...(sessionId ? { sessionId } : {})}
@@ -60,6 +69,7 @@ export function OpenConversation(
       onSession={(id) => void navigate({ to: "/chat/$sessionId", params: { sessionId: id }, replace: true })}
       // Dropped from the address once it is in the box, so a reload does not put it back; the agent it named stays.
       draft={{ text: draft, onTaken: () => void navigate({ to: "/chat", search: agent ? { agent } : {}, replace: true }) }}
+      firstChoice={() => first}
       header={(now) =>
         now.room ? (
           <RoomHeader room={now.room} data={data} untagged={roomEntry?.untagged} onDelete={open.deleteOnScreen} deleting={open.deleting} />
@@ -73,6 +83,7 @@ export function OpenConversation(
             {...(now.elsewhere ? { readOnly: { platform: now.elsewhere } } : {})}
             history={{ open: historyOpen, toggle: () => { closeNotes(); setHistoryOpen((was) => !was); } }}
             {...(workNotes.data ? { notes: { open: notesOpen, count: workNotes.data.tasks.length, toggle: () => { setHistoryOpen(false); toggleNotes(); } } } : {})}
+            {...(writes ? { choice: { first, onFirst: setFirst } } : {})}
             onDelete={open.deleteOnScreen}
             deleting={open.deleting}
           />

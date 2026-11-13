@@ -60,6 +60,13 @@ back the agent's level, which its Model tab sets. Claude Code and Codex set it o
 A chat's `/model` and `/effort` are kept through a restart, an update included, until `/model default`,
 `/effort default`, `/reset` or a rollover drops them; `/new` keeps them.
 
+**On the dashboard, the same two are a button** (from 0.8.35). In the bar over a conversation with one agent, the
+button with the model's name opens a panel: pick a model from the list or type its name, and pick an effort. It is the
+same choice the commands make, for that conversation only and from your next message, and each reads what the other
+set. **Back to the agent's own** undoes it. A model picked before a conversation's first message goes with that
+message. An agent a coding CLI answers picks among the models its CLI offers, once the CLI has listed them. Rooms and
+chats on a chat app keep the commands.
+
 A chat's level is that chat's alone, and a mission runs in a conversation of its own. `/effort max lock` makes the
 level the agent's own instead: written in its config as the Model tab does, for every chat and every mission, and kept
 across a restart. `/effort lock` locks the level this chat set, and `/effort unlock` takes the agent's own away. Only an
