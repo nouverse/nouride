@@ -120,10 +120,12 @@ export function Combobox(props: ComboboxProps) {
     };
   }, [showing]);
 
-  // The whole list opens at the model the field holds: of hundreds, it was somewhere below the first rows.
+  // A list opens at the row the field holds: of hundreds of models, it was somewhere below the first rows. As it opens
+  // and not after: the list's own scroll moves `place`, and following the row then pulled the list back to it.
+  const listed = showing && place !== null;
   useLayoutEffect(() => {
-    if (showing && whole && place) listRef.current?.querySelector('[aria-selected="true"]')?.scrollIntoView?.({ block: "nearest" });
-  }, [showing, whole, place]);
+    if (listed) listRef.current?.querySelector('[aria-selected="true"]')?.scrollIntoView?.({ block: "nearest" });
+  }, [listed]);
 
   const close = () => {
     setActive(-1);

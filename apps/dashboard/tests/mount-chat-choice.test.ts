@@ -204,7 +204,12 @@ describe("the model field's list", () => {
         const list = dom.document.querySelector('ul[role="listbox"]') as unknown as HTMLElement;
         expect(list.style.maxHeight).toBe("240px");
         expect(list.className).toContain("overflow-y-auto");
-        expect(shown).toContain("gemini-3.8-flash");
+        expect(shown).toEqual(["gemini-3.8-flash"]);
+        // The list's own scroll is no opening. The field measures where its list goes at every scroll, and the model
+        // followed again at each one pulled the list back to it: under a real wheel it never reached its last row.
+        const { flushSync } = await import("react-dom");
+        flushSync(() => void list.dispatchEvent(new (dom as unknown as { Event: typeof Event }).Event("scroll")));
+        expect(shown).toEqual(["gemini-3.8-flash"]);
         row("model-07")!.click();
         await eventually(() => says(host) === "model-07 · low", 2_000, "the row picked");
       });
