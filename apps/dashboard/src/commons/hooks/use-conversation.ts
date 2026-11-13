@@ -20,7 +20,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { splitForDisplay } from "@/commons/lib/turn-display";
 import { useEventStream } from "@/commons/hooks/use-event-stream";
-import { useRevealing } from "@/commons/hooks/use-revealing";
+import { useRevealing, useRoomRevealing } from "@/commons/hooks/use-revealing";
 import { usePageVisible } from "@/commons/hooks/use-page-visible";
 import { notesKey } from "@/commons/hooks/use-notes";
 import { api, ApiError } from "@/commons/lib/api";
@@ -51,6 +51,9 @@ const HIDDEN_MS = 30_000;
  * resolves, which is the exact thing the daemon's own timeout rule exists to avoid.
  */
 const START_GRACE_MS = 30_000;
+
+/** No turns, the same list every time: a new one each draw would be read as a change. */
+const NO_TURNS: ChatTurn[] = [];
 
 /**
  * What was just sent, so the route change that follows it does not lose the message.
@@ -96,7 +99,8 @@ export interface Conversation {
   /**
    * A live turn that is over says whether its answer is still being written out (`LiveTurnView`). A turn this page
    * saw at work stays in `liveTurns` until its view says it is not: an answer that came whole at the turn's end is
-   * written out like any other, not handed to the history a moment later with every word at once.
+   * written out like any other, not handed to the history a moment later with every word at once. In a room too,
+   * whose own list has only the turns at work (`useRoomRevealing`).
    */
   reveals: (turnId: string, on: boolean) => void;
   /**
@@ -173,6 +177,9 @@ export function useConversation(input: {
     refetchOnWindowFocus: true,
     staleTime: 30_000,
   });
+  /** A room's turns as drawn: one that ended stays live while its answer is written out (`useRoomRevealing`). */
+  const room = useRoomRevealing((roomChatId && transcript.data?.turns) || NO_TURNS, liveTurns, transcript.dataUpdatedAt);
+  const { read: readRoom, reset: resetRoom } = room;
 
   /**
    * The placeholder goes the moment the real message is on screen.
@@ -224,6 +231,7 @@ export function useConversation(input: {
     settled.current = new Set();
     setLive(null);
     resetReveal();
+    resetRoom();
     setLiveTurns([]);
     seenRunning.current = new Set();
     setJobs([]);
@@ -266,7 +274,10 @@ export function useConversation(input: {
           setJobs(running ?? []);
           // Replaced whole rather than extended: every poll carries each turn's steps in full, so
           // merging would double them. A room's turns come with no cursor, since nothing is asked "since": none is kept.
-          setLiveTurns(turns.map((turn) => ({ ...turn, cursor: 0 })));
+          const atWork = turns.map((turn) => ({ ...turn, cursor: 0 }));
+          // Before the list is replaced: a turn that was in it and is gone is held live while its answer is written out.
+          readRoom(atWork);
+          setLiveTurns(atWork);
 
           if (turns.length > 0 || pendingRef.current) wait = streamed.current ? STREAMED_LIVE_MS : LIVE_MS;
 
@@ -486,7 +497,7 @@ export function useConversation(input: {
      * a room showed the bubble and nothing else, no working card, no steps, until the page was
      * reloaded. The daemon was reporting the running turn within two seconds the whole time.
      */
-  }, [sessionId, roomChatId, queryClient, readForReveal, resetReveal]);
+  }, [sessionId, roomChatId, queryClient, readForReveal, resetReveal, readRoom, resetRoom]);
 
   const sendMutation = useMutation({
     mutationFn: (input: {
@@ -591,12 +602,12 @@ export function useConversation(input: {
 
   return {
     session: transcript.data?.session ?? null,
-    turns: history,
+    turns: roomChatId ? room.history : history,
     earlier: transcript.data?.earlier ?? [],
     events: [...(transcript.data?.events ?? [])].sort((a, b) => a.at - b.at),
     messages: transcript.data?.messages ?? [],
-    liveTurns: roomChatId ? liveTurns : liveShown ? [liveShown] : [],
-    reveals,
+    liveTurns: roomChatId ? room.live : liveShown ? [liveShown] : [],
+    reveals: roomChatId ? room.say : reveals,
     jobs,
     pending,
     startedHere,

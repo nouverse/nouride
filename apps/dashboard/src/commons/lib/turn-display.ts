@@ -48,6 +48,38 @@ export function splitForDisplay(recorded: ChatTurn[], live: LiveTurn | null, rev
   };
 }
 
+/** A room's turn that left the list of turns at work: as it was last seen there, and when it was found gone. */
+export interface HeldTurn {
+  turn: LiveTurn;
+  leftAt: number;
+}
+
+/**
+ * The same decision for a room, where several turns can be at work and the daemon's list holds only those.
+ *
+ * A turn that ended was in neither list for a moment, then in the history with every word: an answer that came whole
+ * as its turn ended was drawn as nothing and then everything, the way a one-to-one conversation's was. So a turn this
+ * page saw at work stays live once it is over (`held`): as it was last seen until the history has it, then as the
+ * history has it, for as long as its view is still writing its answer out (`revealing`).
+ *
+ * `readAt`: when the history was read. One read after a turn ended that does not have it is not waited for again.
+ */
+export function splitRoomForDisplay(recorded: ChatTurn[], atWork: LiveTurn[], held: readonly HeldTurn[], revealing: ReadonlySet<string>, readAt: number): { history: ChatTurn[]; live: LiveTurn[] } {
+  const working = new Set(atWork.map((turn) => turn.id));
+  const finished = new Map(recorded.filter((turn) => turn.status !== "running").map((turn) => [turn.id, turn]));
+  const over: LiveTurn[] = [];
+  for (const { turn, leftAt } of held) {
+    if (working.has(turn.id)) continue;
+    const record = finished.get(turn.id);
+    if (!record) {
+      if (readAt <= leftAt) over.push(turn);
+    } else if (revealing.has(turn.id)) over.push({ ...record, cursor: turn.cursor });
+  }
+  const live = [...atWork, ...over];
+  const shown = new Set(live.map((turn) => turn.id));
+  return { history: recorded.filter((turn) => turn.status !== "running" && !shown.has(turn.id)), live };
+}
+
 /**
  * The heading of a turn the daemon started, from why it did (`ChatTurn.cause`). It matched the wake-up message's
  * wording before — a rewording in the engine changed what the chat said had happened to a job, with every test green.
