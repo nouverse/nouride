@@ -43,8 +43,8 @@ describe("the skills we ship know the machine", () => {
   for (const [name, verdict] of Object.entries(HEAVY)) {
     test(`${name} checks the memory and says what to do when it is short`, () => {
       const text = body(name);
-      // slides and mockup-design run browser-automation's own check rather than a copy of it.
-      expect(text).toMatch(name === "slides" || name === "mockup-design" ? /browser-automation`'s step 1/ : /free -m/);
+      // slides runs browser-automation's own check rather than a copy of it.
+      expect(text).toMatch(name === "slides" ? /browser-automation`'s step 1/ : /free -m/);
       expect(text).toContain(verdict);
       expect(text).toMatch(/another (?:of (?:the person's|their) )?machines?|step 8|step 7/);
     });

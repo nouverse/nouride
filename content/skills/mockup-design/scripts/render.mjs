@@ -3,13 +3,15 @@
 // measured on each, and print the findings. Part of the mockup-design skill.
 //
 //   node render.mjs SCREEN.html [MORE.html ...] --browser-dir DIR [--out DIR] [--only desktop|mobile] [--also tablet]
-//                   [--dark] [--chromium PATH]
+//                   [--dark] [--frame [--bg COLOUR|transparent]] [--chromium PATH]
 //
 // A screen is an HTML file, or an address (http://127.0.0.1:8787/checkout) for a mockup that is served.
 // --browser-dir is the browser-automation skill's folder (the one holding node_modules/playwright-core and
 // .playwright/cli.config.json); this script borrows its Playwright and its browser, so nothing is installed twice.
 // --chromium PATH uses that browser instead of Playwright's own (a system Chromium, e.g. on Alpine).
 // --dark draws each screen a second time as a device set to dark does (prefers-color-scheme: dark), named -dark.
+// --frame also puts each screen's first window inside a phone and a laptop, in the same run and the same browser:
+// NAME-phone.png, NAME-laptop.png, NAME-devices.png (frame.mjs beside this file says what they are, and --bg).
 //
 // Writes into --out (default: a folder named render, beside the first screen), for a screen named home:
 //   home-desktop.png, home-mobile.png          the whole page at each width: what the person is sent
@@ -26,6 +28,7 @@ import { createRequire } from "node:module";
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { drawFrames, isColour } from "./frame.mjs";
 import { FIXES, VIEWPORTS, judge } from "./judge.mjs";
 
 /** A page taller than this is not drawn whole: a picture that long is read by nobody. */
@@ -35,7 +38,7 @@ const MOST_WINDOWS = 8;
 
 function usage(msg, code = 1) {
   if (msg) console.error(`render.mjs: ${msg}`);
-  console.error("usage: node render.mjs SCREEN.html [MORE.html ...] --browser-dir DIR [--out DIR] [--only desktop|mobile] [--also tablet] [--dark] [--chromium PATH]");
+  console.error("usage: node render.mjs SCREEN.html [MORE.html ...] --browser-dir DIR [--out DIR] [--only desktop|mobile] [--also tablet] [--dark] [--frame [--bg COLOUR|transparent]] [--chromium PATH]");
   process.exit(code);
 }
 
@@ -44,7 +47,7 @@ if (args.includes("-h") || args.includes("--help")) {
   console.log(readFileSync(new URL(import.meta.url), "utf8").split("\n").filter((l) => l.startsWith("//")).map((l) => l.slice(3)).join("\n"));
   process.exit(0);
 }
-const opt = { screens: [], out: null, browserDir: null, widths: ["desktop", "mobile"], dark: false, chromium: null };
+const opt = { screens: [], out: null, browserDir: null, widths: ["desktop", "mobile"], dark: false, chromium: null, frame: false, bg: undefined };
 for (let i = 0; i < args.length; i++) {
   const a = args[i];
   if (a === "--out") opt.out = args[++i];
@@ -52,12 +55,16 @@ for (let i = 0; i < args.length; i++) {
   else if (a === "--only") opt.widths = [args[++i]];
   else if (a === "--also") opt.widths.push(args[++i]);
   else if (a === "--dark") opt.dark = true;
+  else if (a === "--frame") opt.frame = true;
+  else if (a === "--bg") opt.bg = args[++i];
   else if (a === "--chromium") opt.chromium = args[++i];
   else if (a.startsWith("--")) usage(`unknown option ${a}`);
   else opt.screens.push(a);
 }
 if (!opt.screens.length) usage("no screen given");
 for (const width of opt.widths) if (!VIEWPORTS[width]) usage(`no width called ${width} (one of ${Object.keys(VIEWPORTS).join(", ")})`);
+if (opt.bg !== undefined && !isColour(opt.bg)) usage("--bg is one CSS colour (a hex value, an rgb value, a name) or transparent");
+if (opt.bg !== undefined && !opt.frame) usage("--bg is what the devices stand on: it goes with --frame");
 
 const isAddress = (screen) => /^https?:\/\//i.test(screen);
 const screens = opt.screens.map((screen) => {
@@ -330,6 +337,25 @@ for (const screen of screens) {
     results.push({ screen: screen.name, width: pass.width, dark: pass.dark, label, title: facts.page.title, tall, windows, read, check, findings, texts: facts.texts.length });
   }
 }
+// The devices, where they were asked for: each screen's first window at a phone's width and at a desktop's, as it
+// was just drawn (not the dark pass), with the browser that drew it.
+const framed = [];
+/** Of each screen's frames, the one to read: the two devices together, or the one device that was drawn. */
+const framedToRead = [];
+if (opt.frame) {
+  for (const screen of screens) {
+    const first = (width) => results.find((r) => r.screen === screen.name && r.width === width && !r.dark)?.read[0] ?? null;
+    const phone = first("mobile"), laptop = first("desktop");
+    if (!phone && !laptop) continue;
+    try {
+      const wrote = await drawFrames(browser, { phone, laptop, out, name: screen.name, ...(opt.bg !== undefined ? { bg: opt.bg } : {}) });
+      framed.push(...wrote);
+      framedToRead.push(wrote.find((file) => file.endsWith("-devices.png")) ?? wrote[0]);
+    } catch (e) {
+      pageLines.add(`${screen.name}: its frames were not drawn: ${String(e.message).split("\n")[0]}`);
+    }
+  }
+}
 await browser.close();
 
 writeFileSync(join(out, "check.json"), JSON.stringify(results.map(({ screen, width, dark, title, tall, findings }) => ({ screen, width, dark, title, tall, findings: findings.map(({ kind, what }) => ({ kind, what })) })), null, 1));
@@ -338,7 +364,7 @@ writeFileSync(join(out, "check.json"), JSON.stringify(results.map(({ screen, wid
 let total = 0;
 const kinds = new Set();
 console.log(`${screens.length} screen(s), each at ${opt.widths.map((w) => `${w} ${VIEWPORTS[w].width}x${VIEWPORTS[w].height}`).join(" and ")}${opt.dark ? ", light and dark" : ""}`);
-console.log(`wrote ${out}/: NAME-WIDTH.png (the whole page), NAME-WIDTH-N.png (one window each), check.json`);
+console.log(`wrote ${out}/: NAME-WIDTH.png (the whole page), NAME-WIDTH-N.png (one window each), check.json${framed.length ? ", NAME-phone.png, NAME-laptop.png, NAME-devices.png (the first window in a device)" : ""}`);
 for (const r of results) {
   const head = `${r.screen} at ${r.width}${r.dark ? ", dark" : ""} (${VIEWPORTS[r.width].width} wide, ${r.tall}px tall)`;
   if (!r.findings.length) { console.log(`${head}: nothing measured wrong`); continue; }
@@ -360,5 +386,7 @@ if (fontsMissing.size) console.log(`fonts not on this machine or not loaded: ${[
 for (const line of [...pageLines].slice(0, 8)) console.log(`page: ${line}`);
 console.log(total ? `${total} finding(s): fix them in the HTML and render again` : "nothing measured wrong - now look at the pictures for what cannot be measured");
 // Named one by one: a model handed only the whole page reads a phone's text at a third of its size and judges nothing.
-console.log(`next: read these in one read call, then write the round's list (SKILL.md step 3): ${results.flatMap((r) => [...r.read, ...(r.check ? [r.check] : [])]).join(", ")}`);
+// The devices' picture is read too, and only when there is nothing left to fix: with findings it will be drawn again.
+const devices = total ? [] : framedToRead.filter(Boolean);
+console.log(`next: read these in one read call, then write the round's list (SKILL.md step 3): ${[...results.flatMap((r) => [...r.read, ...(r.check ? [r.check] : [])]), ...devices].join(", ")}`);
 process.exit(total ? 4 : 0);

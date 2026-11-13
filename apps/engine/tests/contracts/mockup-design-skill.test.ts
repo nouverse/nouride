@@ -21,6 +21,7 @@ import { spawnSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { inflateSync } from "node:zlib";
 import { whichBinary } from "@nouride/runtime";
 
 const ROOT = join(import.meta.dir, "../../../..");
@@ -91,8 +92,32 @@ describe("what the skill tells an agent", () => {
     expect(flat).toContain("load the `share-preview` skill and follow it");
     expect(existsSync(join(ROOT, "content/skills/share-preview/SKILL.md"))).toBe(true);
     expect(flat).toContain("anyone with the link can open it, and it lasts while this machine keeps it up");
-    expect(flat).toContain("`read` what it wrote before you send it, then `send_file` `home-devices.png`");
+    expect(flat).toContain("The last round's `read` held `home-devices.png`: `send_file` it");
     expect(flat).toContain("`send_file` the screen's `.html`, with one line that it opens in any browser");
+  });
+
+  /**
+   * A mockup on a small model took sixteen requests and a million tokens in, each request carrying everything before
+   * it: a skill read whole for one command, two scripts read as code, the page written twice, the frames in a command
+   * of their own. Each of these lines is one of those steps not taken.
+   */
+  test("it is followed in few steps: what is read, what is run and what is written again are each said", () => {
+    expect(flat).toContain("**Every step you take is paid for again by every step after it**");
+    // The browser skill is read only where the browser is not set up, and one command says which.
+    expect(skill).toContain('ls <private>/browser/node_modules/playwright-core >/dev/null 2>&1 && echo "browser: set up" || echo "browser: not set up"');
+    expect(flat).toContain("| `browser: set up`, and 1 GB available or more | go on. Do **not** read the `browser-automation` skill: nothing below needs it |");
+    expect(flat).toContain("| `browser: not set up` | load the `browser-automation` skill, do its steps 1 and 2 once, and come back |");
+    // The scripts are run, not read; the reference is read with the first pictures, not in a step of its own.
+    expect(flat).toContain("its code and its `--help` are not for reading");
+    expect(flat).toContain("One command a round. This is all of it: there is nothing to look up in its `--help`.");
+    expect(flat).toContain("and in your first round `MK/references/craft.md` in that same call");
+    // The frames come from the round's own command.
+    expect(flat).toContain('the same command draws those too, so no round needs a second one: add `--frame --bg "<a colour of the mockup\'s own>"`');
+    // A fix, and a change they asked for, is an edit: the page is not written a second time.
+    expect(flat).toContain("**A fix is an edit**: change what the finding names with `edit` or `multi_edit`, and never write the whole file a second time.");
+    expect(flat).toContain("The change itself is an `edit` or a `multi_edit` of the file, as a fix is.");
+    // And no folder is made in a step of its own.
+    expect(skill).not.toContain("mkdir");
   });
 
   test("a change is made in the file they saw, and what they saw is kept", () => {
@@ -147,6 +172,11 @@ describe("it has no look of its own", () => {
     expect(readFileSync(join(SKILL_DIR, "scripts/judge.mjs"), "utf8").match(COLOUR)).toBeNull();
     const drawn = new Set(readFileSync(join(SKILL_DIR, "scripts/render.mjs"), "utf8").match(/#[0-9a-fA-F]{3,8}\b/g) ?? []);
     expect([...drawn].sort()).toEqual(["#FF1744", "#fff"]);
+    // What the frame draws is a device's body and the plain grey it stands on with nothing said: its words to the
+    // agent, like the renderer's, give no colour as an example to copy.
+    const frame = readFileSync(join(SKILL_DIR, "scripts/frame.mjs"), "utf8");
+    const said = [...frame.matchAll(/(?:usage|console\.(?:log|error))\((?:`[^`]*`|"[^"]*")/g)].map((m) => m[0]).join("\n");
+    expect(said.match(COLOUR)).toBeNull();
   });
 
   test("the motion-graphics skill's example names none either", () => {
@@ -279,6 +309,24 @@ describe("the frame", () => {
   });
 });
 
+/**
+ * The colour of a PNG's top-left pixel. Whatever filter its first row was written with, a row's first pixel has
+ * nothing to its left and nothing above it, so its bytes are the colour itself.
+ */
+function cornerOf(file: string): number[] {
+  const png = readFileSync(file);
+  const data: Buffer[] = [];
+  let colourType = 6;
+  for (let at = 8; at < png.length; ) {
+    const length = png.readUInt32BE(at);
+    const kind = png.toString("latin1", at + 4, at + 8);
+    if (kind === "IHDR") colourType = png[at + 8 + 9]!;
+    if (kind === "IDAT") data.push(png.subarray(at + 8, at + 8 + length));
+    at += 12 + length;
+  }
+  return [...inflateSync(Buffer.concat(data)).subarray(1, colourType === 6 ? 5 : 4)].slice(0, 3);
+}
+
 describe("the scripts, run as an agent runs them", () => {
   const runner = whichBinary("node") ?? process.execPath;
   const run = (script: string, args: string[], env: Record<string, string> = {}) => {
@@ -295,6 +343,9 @@ describe("the scripts, run as an agent runs them", () => {
     expect(run("frame.mjs", ["--out", tmpdir()])).toMatchObject({ code: 1 });
     expect(run("frame.mjs", ["--out", tmpdir(), "--phone", join(PAGES, "good.html")]).err).toContain("is not a picture");
     expect(run("frame.mjs", ["--out", tmpdir(), "--phone", join(PAGES, "good.html"), "--bg", 'red;} body{display:none'])).toMatchObject({ code: 1 });
+    // The renderer takes the same backdrop, with the frames it goes with.
+    expect(run("render.mjs", [join(PAGES, "good.html"), "--frame", "--bg", "red;} body{display:none"])).toMatchObject({ code: 1 });
+    expect(run("render.mjs", [join(PAGES, "good.html"), "--bg", "red"]).err).toContain("--bg is what the devices stand on: it goes with --frame");
   });
 
   const BROWSER = process.env.NOURIDE_TEST_BROWSER_DIR;
@@ -331,6 +382,25 @@ describe("the scripts, run as an agent runs them", () => {
       // And another screen's pictures are left alone.
       expect(existsSync(join(out, "no-viewport-mobile-check.png"))).toBe(true);
       // Three renders, each starting a browser: more than the five seconds a test is given.
+    }, 90_000);
+
+    test("one command draws a round and its frames: the devices are read with the windows, and not while there is something to fix", () => {
+      const one = join(out, "one");
+      const clean = run("render.mjs", [join(PAGES, "good.html"), "--browser-dir", BROWSER!, "--out", one, "--frame", "--bg", "rgb(27 42 74)", ...chromium]);
+      expect({ code: clean.code, err: clean.err }).toEqual({ code: 0, err: "" });
+      for (const name of ["good-phone.png", "good-laptop.png", "good-devices.png"]) expect(statSync(join(one, name)).size).toBeGreaterThan(20_000);
+      // The devices stand on the colour the command gave: read from the picture's own corner.
+      expect(cornerOf(join(one, "good-devices.png"))).toEqual([27, 42, 74]);
+      const next = clean.out.split("\n").find((l) => l.startsWith("next:"))!;
+      expect(next).toContain("good-devices.png");
+      expect(next).not.toContain("good-phone.png");
+      // One width alone: the one device that was drawn is the one to read.
+      const phoneOnly = run("render.mjs", [join(PAGES, "good.html"), "--browser-dir", BROWSER!, "--out", join(out, "phone"), "--frame", "--only", "mobile", ...chromium]);
+      expect(phoneOnly.out.split("\n").find((l) => l.startsWith("next:"))).toContain("good-phone.png");
+      // With findings the frames will be drawn again: they are written, and not handed over to be read.
+      const faulty = run("render.mjs", [join(PAGES, "faults.html"), "--browser-dir", BROWSER!, "--out", one, "--frame", ...chromium]);
+      expect(faulty.code).toBe(4);
+      expect(faulty.out.split("\n").find((l) => l.startsWith("next:"))).not.toContain("faults-devices.png");
     }, 90_000);
 
     test("a screen's two pictures come back inside a phone, a laptop and the two together", () => {

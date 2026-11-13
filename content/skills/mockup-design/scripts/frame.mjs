@@ -86,6 +86,42 @@ ${phone && laptop ? `<div id="devices" class="stage together">${laptopBody}${pho
 </body></html>`;
 }
 
+/**
+ * The pictures of the devices, written into `out` as NAME-phone.png, NAME-laptop.png and, with both, NAME-devices.png;
+ * the files it wrote. `browser` is a Playwright browser that is already open: render.mjs draws the frames with the one
+ * it rendered in, so a round that wants frames starts no second browser.
+ */
+export async function drawFrames(browser, { phone, laptop, out, name, bg = NEUTRAL }) {
+  // Loaded from a file beside the pictures it writes: a page set from a string is about:blank and may not show
+  // file:// pictures.
+  const sheet = join(out, `.${name}-frame.html`);
+  const address = (shot) => (shot ? pathToFileURL(resolve(shot)).href : null);
+  writeFileSync(sheet, frameHtml({ phone: address(phone), laptop: address(laptop), bg }));
+  const wrote = [];
+  const page = await browser.newPage({ viewport: { width: 1700, height: 1300 }, deviceScaleFactor: 2 });
+  try {
+    await page.goto(pathToFileURL(sheet).href, { waitUntil: "load" });
+    const broken = await page.evaluate(() => [...document.images].filter((img) => !img.complete || img.naturalWidth === 0).map((img) => img.getAttribute("src")));
+    if (broken.length) throw new Error(`could not read ${[...new Set(broken)].join(", ")}`);
+    for (const id of ["phone", "laptop", "devices"]) {
+      const box = page.locator(`#${id}`);
+      if ((await box.count()) === 0) continue;
+      const file = join(out, `${name}-${id}.png`);
+      await box.screenshot({ path: file, omitBackground: bg === "transparent" });
+      wrote.push(file);
+    }
+  } finally {
+    await page.close();
+    rmSync(sheet, { force: true });
+  }
+  return wrote;
+}
+
+/** Whether `--bg` is one CSS colour, or `transparent`: it is written into a stylesheet. */
+export function isColour(value) {
+  return typeof value === "string" && value.length > 0 && !/[<>"{};]/.test(value);
+}
+
 function usage(msg, code = 1) {
   if (msg) console.error(`frame.mjs: ${msg}`);
   console.error("usage: node frame.mjs --browser-dir DIR --out DIR [--name NAME] [--phone SHOT.png] [--laptop SHOT.png] [--bg COLOUR|transparent] [--chromium PATH]");
@@ -112,7 +148,7 @@ async function main() {
   }
   if (!opt.phone && !opt.laptop) usage("give --phone, --laptop, or both");
   if (!opt.out) usage("no --out folder");
-  if (!opt.bg || /[<>"{};]/.test(opt.bg)) usage("--bg is one CSS colour (#1b2a4a, rgb(27 42 74), a name) or transparent");
+  if (!isColour(opt.bg)) usage("--bg is one CSS colour (a hex value, an rgb value, a name) or transparent");
   for (const shot of [opt.phone, opt.laptop]) {
     if (!shot) continue;
     if (!existsSync(resolve(shot))) usage(`no picture at ${resolve(shot)}`, 2);
@@ -146,30 +182,14 @@ async function main() {
     console.error(`frame.mjs: the browser did not start: ${String(e.message).split("\n")[0]}`);
     return 3;
   }
-  // Loaded from a file beside the pictures it writes: a page set from a string is about:blank and may not show
-  // file:// pictures.
-  const sheet = join(out, `.${name}-frame.html`);
-  const address = (shot) => (shot ? pathToFileURL(resolve(shot)).href : null);
-  writeFileSync(sheet, frameHtml({ phone: address(opt.phone), laptop: address(opt.laptop), bg: opt.bg }));
-  const wrote = [];
+  let wrote;
   try {
-    const page = await browser.newPage({ viewport: { width: 1700, height: 1300 }, deviceScaleFactor: 2 });
-    await page.goto(pathToFileURL(sheet).href, { waitUntil: "load" });
-    const broken = await page.evaluate(() => [...document.images].filter((img) => !img.complete || img.naturalWidth === 0).map((img) => img.getAttribute("src")));
-    if (broken.length) {
-      console.error(`frame.mjs: could not read ${[...new Set(broken)].join(", ")}`);
-      return 2;
-    }
-    for (const id of ["phone", "laptop", "devices"]) {
-      const box = page.locator(`#${id}`);
-      if ((await box.count()) === 0) continue;
-      const file = join(out, `${name}-${id}.png`);
-      await box.screenshot({ path: file, omitBackground: opt.bg === "transparent" });
-      wrote.push(file);
-    }
+    wrote = await drawFrames(browser, { phone: opt.phone, laptop: opt.laptop, out, name, bg: opt.bg });
+  } catch (e) {
+    console.error(`frame.mjs: ${String(e.message).split("\n")[0]}`);
+    return 2;
   } finally {
     await browser.close();
-    rmSync(sheet, { force: true });
   }
   console.log(`wrote ${wrote.join(", ")}`);
   console.log(`next: read ${wrote.length > 1 ? "them" : "it"} before sending: the screen filled, nothing of the mockup cut that matters, the backdrop belonging to it`);

@@ -41,24 +41,35 @@ directory's full path. Write it out in every command.
 
 | File | What it is |
 |---|---|
-| `scripts/render.mjs` | draws each screen at a desktop's and a phone's width, writes the pictures, measures every screen and prints the findings. `--help` says how it is run: its code is not for reading |
+| `scripts/render.mjs` | draws each screen at a desktop's and a phone's width, writes the pictures, measures every screen and prints the findings; with `--frame`, the devices too. Step 3 has its whole command: its code and its `--help` are not for reading |
 | `scripts/judge.mjs` | the rules `render.mjs` measures by, each with its number and where the number comes from. Read it only when a finding surprises you |
-| `scripts/frame.mjs` | puts a screen's pictures inside a phone and a laptop, for a person who asked for that. `--help` says how it is run |
-| `references/craft.md` | what to look for that no script can measure. Read it before your first round |
+| `scripts/frame.mjs` | puts pictures drawn earlier inside a phone and a laptop. `render.mjs --frame` does it in the same run; this is for framing again without drawing again |
+| `references/craft.md` | what to look for that no script can measure. Read it once, in the same `read` call as your first round's pictures |
 
-`render.mjs` and `frame.mjs` borrow Playwright and its browser from the **`browser-automation` skill's folder**: if
-this machine has not set it up, do that skill's steps 1 and 2 first (`<private>/browser`, by its full path).
+`render.mjs` and `frame.mjs` borrow Playwright and its browser from the **`browser-automation` skill's folder**,
+`<private>/browser` by its full path. The next section says whether it is there.
+
+**Every step you take is paid for again by every step after it**: what you read, what you write and what a command
+prints all stay in front of you until the turn ends. So this skill is written to be followed in few steps: read only
+what it names, when it names it; one command where one will do; a fix as an edit, never the file written again.
 
 ## This machine
 
 Drawing is a browser's work: three small screens at both widths peaked at about 130 MB of memory (measured on a Linux
-box), and a screen heavy with pictures takes more. Before you write anything, run `browser-automation`'s step 1 here:
+box), and a screen heavy with pictures takes more. One command, before you write anything, says whether this machine
+can and whether the browser is set up:
+
+```sh
+free -m 2>/dev/null | awk '/^Mem:/{print "avail_mb", $7}' || echo "total_mb $(( $(sysctl -n hw.memsize) / 1048576 ))"
+ls <private>/browser/node_modules/playwright-core >/dev/null 2>&1 && echo "browser: set up" || echo "browser: not set up"
+```
 
 | It says | Then |
 |---|---|
-| fine | go on |
-| tight | render with nothing else heavy running, and one screen at a time (`--only desktop`, then `--only mobile`) |
-| not here, as on a 512 MB board | draw on another of the person's machines (`browser-automation` step 8). With none, say so **before** you start: you can still write the mockup and send it as a link or as the HTML file, but there will be no pictures, and nobody will have looked at it. That is theirs to accept |
+| `browser: set up`, and 1 GB available or more | go on. Do **not** read the `browser-automation` skill: nothing below needs it |
+| `browser: not set up` | load the `browser-automation` skill, do its steps 1 and 2 once, and come back |
+| 600 MB to 1 GB available | tight: render with nothing else heavy running, and one width at a time (`--only desktop`, then `--only mobile`) |
+| under 600 MB available: not here, as on a 512 MB board | draw on another of the person's machines (`browser-automation` step 8). With none, say so **before** you start: you can still write the mockup and send it as a link or as the HTML file, but there will be no pictures, and nobody will have looked at it. That is theirs to accept |
 
 ## 1. Ask what form, once
 
@@ -90,12 +101,9 @@ with `mission`, the screens and the form in its brief.
 
 ## 2. Write the screens, HTML first
 
-```sh
-mkdir -p <work>/mockup/assets
-```
-
 `<work>` is a folder in your workspace, or the mission's folder. One file per screen, named for the screen:
-`<work>/mockup/home.html`, `<work>/mockup/order.html`. Each rule here prevents a failure that has happened:
+`<work>/mockup/home.html`, `<work>/mockup/order.html`, written with `write`, which makes the folders. Pictures of
+theirs go in `<work>/mockup/assets/`. Each rule here prevents a failure that has happened:
 
 - **A file opens by itself.** Its CSS is in a `<style>` in the file, or in one `style.css` beside the screens when
   several share it. No build step and nothing to install: the person may open the file with a double click.
@@ -122,11 +130,14 @@ mkdir -p <work>/mockup/assets
 
 ## 3. Render, measure and look, every round
 
-Read `references/craft.md` once, before the first round. Then, every round:
+One command a round. This is all of it: there is nothing to look up in its `--help`.
 
 ```sh
 node MK/scripts/render.mjs <work>/mockup/home.html <work>/mockup/order.html --browser-dir <private>/browser
 ```
+
+When they asked for the mockup **inside a phone and a laptop**, the same command draws those too, so no round needs
+a second one: add `--frame --bg "<a colour of the mockup's own>"` (step 4 says what `--bg` is).
 
 It writes `<work>/mockup/render/` (or `--out DIR`). For a screen named `home`: `home-desktop.png` and
 `home-mobile.png`, the whole page at each width, which is what the person is sent; `home-desktop-1.png`,
@@ -158,7 +169,7 @@ one width, `--also tablet` a third, `--dark` each screen again as a device set t
 drawn from its address: `node MK/scripts/render.mjs http://127.0.0.1:8787/order ...`.
 
 Then **look**. The script's last line names the pictures to read: read them all in **one** `read` call, each window
-of each screen at each width. The whole-page picture alone is not enough: a phone's page in one picture is a third
+of each screen at each width, and in your first round `MK/references/craft.md` in that same call. The whole-page picture alone is not enough: a phone's page in one picture is a third
 of its size, and nothing in it can be judged. Then write one line for each of these, every round, with the screen
 and the width, or `none`:
 
@@ -175,7 +186,9 @@ Round 2, 2 screens, desktop and phone
 ```
 
 A check kept in your head is the one that gets skipped. A line that is not `none` is fixed, then **render again and
-read again**: a fix at one width can break the other. **Four rounds is the limit**: then send what you have with
+read again**: a fix at one width can break the other. **A fix is an edit**: change what the finding names with `edit`
+or `multi_edit`, and never write the whole file a second time. A page written again is paid for again, and carried
+by every step after it. **Four rounds is the limit**: then send what you have with
 your list and ask what to change. A finding you decide to keep, because it is what they asked for, is named in your
 message, not left for them to find. If your model cannot see images, say so: fix what is measured, and send the
 pictures for the person to judge.
@@ -188,18 +201,13 @@ the rounds found and fixed, in two or three lines.
 
 - **Pictures**: `send_file` each `<name>-desktop.png` and `<name>-mobile.png` from the render folder, each with a
   caption that says the screen and the width.
-- **Inside a phone and a laptop**:
-
-  ```sh
-  node MK/scripts/frame.mjs --browser-dir <private>/browser --out <work>/mockup/render --name home \
-    --phone <work>/mockup/render/home-mobile-1.png --laptop <work>/mockup/render/home-desktop-1.png --bg "<a colour of the mockup's own>"
-  ```
-
-  It writes `home-phone.png`, `home-laptop.png` and `home-devices.png`, the two together. A device shows one
-  screen: the first window of the page, whole, with the phone's status band above it. `--bg` is what the devices stand
-  on: one of the mockup's own colours, so the picture belongs to it; `transparent` for none; a plain grey when you
-  give nothing. `read` what it wrote before you send it, then `send_file` `home-devices.png`, and the whole-page
-  pictures too when the page is longer than one screen.
+- **Inside a phone and a laptop**: the round's own command drew them (`--frame`, step 3): `home-phone.png`,
+  `home-laptop.png` and `home-devices.png`, the two together. A device shows one screen: the first window of the
+  page, whole, with the phone's status band above it. `--bg` is what the devices stand on: one of the mockup's own
+  colours, so the picture belongs to it; `transparent` for none; a plain grey when you give nothing. The last
+  round's `read` held `home-devices.png`: `send_file` it, and the whole-page pictures too when the page is longer than
+  one screen. (Frames for pictures drawn earlier, with nothing drawn again:
+  `node MK/scripts/frame.mjs --browser-dir <private>/browser --out <work>/mockup/render --name home --phone <work>/mockup/render/home-mobile-1.png --laptop <work>/mockup/render/home-desktop-1.png`.)
 - **A link**: load the `share-preview` skill and follow it, serving the mockup's folder
   (`python3 -m http.server 8787 --bind 127.0.0.1` with `cwd` set to `<work>/mockup`), and send the address of the
   first screen. Say what `share-preview` says to say: anyone with the link can open it, and it lasts while this
@@ -214,9 +222,10 @@ the rounds found and fixed, in two or three lines.
 - **The change is made in the file they saw**, never in a new mockup from nothing: they would lose what they liked.
 - **Keep what they saw first**: `cp -r <work>/mockup <work>/mockup-v1` (then `-v2`, and so on). "The earlier one" is
   asked for more often than not.
+- The change itself is an `edit` or a `multi_edit` of the file, as a fix is.
 - Then step 3 again, every round, the windows read again at both widths: a change in one place moves another. Then
-  send what changed, the frames drawn again where they asked for frames. A before and an after side by side when the
-  change is the point.
+  send what changed, the frames drawn again by the same command where they asked for frames. A before and an after
+  side by side when the change is the point.
 - **Two directions, when they ask for options** or the brief leaves the look wide open: two at most, the first
   screen only, the same words in both, each named by what differs. The rest is built in the one they pick.
 - When they say yes to it, the HTML is where the real page starts. Say so.
