@@ -65,28 +65,38 @@ export function judge(facts) {
   const { viewport, page } = facts;
   const texts = facts.texts ?? [], controls = facts.controls ?? [], fields = facts.fields ?? [], pictures = facts.pictures ?? [], wide = facts.wide ?? [];
   const found = [];
-  const add = (kind, what, box) => found.push({ kind, what, box: box ?? { x: 0, y: 0, w: viewport.width, h: viewport.height } });
+  // `find` is what to look for in the page's own file to stand where the finding is: its words, then its element's.
+  // `rule` is the id or class whose CSS rule the fix is most often in.
+  const add = (kind, what, box, find = [], rule = "") => found.push({ kind, what, box: box ?? { x: 0, y: 0, w: viewport.width, h: viewport.height }, find: find.filter(Boolean), rule: rule || "" });
+  const hex = ({ r, g, b }) => `#${[r, g, b].map((v) => Math.round(v).toString(16).padStart(2, "0")).join("")}`;
+  const where = (text) => (text.el ? `${text.el} ` : "");
 
   if (texts.length === 0 && pictures.length === 0) add("empty", "nothing on the page");
 
   const extra = page.scrollWidth - viewport.width;
   if (extra > 1) {
     add("sideways", `the page is ${px(extra)} wider than the window (${viewport.width}px) and scrolls sideways`, { x: viewport.width, y: 0, w: extra, h: Math.min(page.scrollHeight, viewport.height) });
-    for (const one of wide.slice(0, 3)) add("sideways", `sticks out ${px(one.box.x + one.box.w - viewport.width)} past the window: ${one.what}`, one.box);
+    for (const one of wide.slice(0, 3)) add("sideways", `sticks out ${px(one.box.x + one.box.w - viewport.width)} past the window: ${one.what}, ${px(one.box.w)} wide`, one.box, [one.handle && `"${one.handle}`, one.said], one.handle);
   }
   if (viewport.mobile && !page.hasViewportMeta) add("viewport", 'no <meta name="viewport" content="width=device-width, initial-scale=1">: a phone draws this page 980px wide and shrinks it');
 
   for (const text of texts) {
-    if (text.px < MIN_TEXT - 0.5) add("small", `${px(text.px)} text (under ${MIN_TEXT}): ${quote(text.text)}`, text.box);
-    if (text.cut === "height") add("cut", `text cut off by its box, in height: ${quote(text.text)}`, text.box);
-    if (text.cut === "width") add("cut", `text cut off by its box, with no "..." to say so: ${quote(text.text)}`, text.box);
+    const find = [text.text.slice(0, 40), text.handle && `"${text.handle}`];
+    if (text.px < MIN_TEXT - 0.5) add("small", `${px(text.px)} text (under ${MIN_TEXT}): ${where(text)}${quote(text.text)}`, text.box, find, text.handle);
+    // What cuts it is named, with what it holds and the room it has: the fix is that box's, not the text's.
+    if (text.cut) {
+      const { how, by, holds, room } = text.cut;
+      const cutter = by ? ` by ${by}, which hides what runs past it and holds ${px(holds)} in ${px(room)}` : "";
+      add("cut", how === "height" ? `text cut off in height${cutter}: ${quote(text.text)}` : `text cut off in width, with no "..." to say so${cutter}: ${quote(text.text)}`, text.box, [text.cut.handle && `"${text.cut.handle}`, ...find], text.cut.handle);
+    }
     if (text.color && text.bg) {
-      const seen = ratio(over(text.color, text.bg), text.bg);
+      const front = over(text.color, text.bg);
+      const seen = ratio(front, text.bg);
       const large = text.px >= 24 || (text.px >= 18.66 && (text.weight ?? 400) >= 700);
       const needs = large ? CONTRAST_LARGE : CONTRAST;
-      if (seen < needs) add("contrast", `contrast ${seen.toFixed(1)}:1 (needs ${needs}): ${quote(text.text)}`, text.box);
+      if (seen < needs) add("contrast", `contrast ${seen.toFixed(1)}:1 (needs ${needs}), ${hex(front)} on ${hex(text.bg)}: ${where(text)}${quote(text.text)}`, text.box, find, text.handle);
     }
-    if (/lorem ipsum|dolor sit amet/i.test(text.text)) add("filler", `filler text, not the page's own words: ${quote(text.text)}`, text.box);
+    if (/lorem ipsum|dolor sit amet/i.test(text.text)) add("filler", `filler text, not the page's own words: ${quote(text.text)}`, text.box, find);
   }
 
   // Text over text: two lines of different elements, neither inside the other, neither pinned to the window (a bar
@@ -96,7 +106,7 @@ export function judge(facts) {
     for (let j = i + 1; j < lines.length; j++) {
       const a = lines[i].text, b = lines[j].text;
       if (a.id === b.id || (a.path ?? []).includes(b.id) || (b.path ?? []).includes(a.id)) continue;
-      if (area(band(lines[i].box), band(lines[j].box)) > 4) add("overlap", `${quote(a.text, 30)} over ${quote(b.text, 30)}`, lines[i].box);
+      if (area(band(lines[i].box), band(lines[j].box)) > 4) add("overlap", `${where(a)}${quote(a.text, 30)} over ${where(b)}${quote(b.text, 30)}`, lines[i].box, [a.text.slice(0, 40), a.handle && `"${a.handle}`], a.handle);
     }
   }
 
@@ -104,15 +114,15 @@ export function judge(facts) {
     for (const control of controls) {
       if (control.inline) continue;
       if (control.box.w < MIN_TAP - 0.5 || control.box.h < MIN_TAP - 0.5) {
-        add("tap", `${Math.round(control.box.w)}x${Math.round(control.box.h)} to press (under ${MIN_TAP}x${MIN_TAP}): ${control.what}`, control.box);
+        add("tap", `${Math.round(control.box.w)}x${Math.round(control.box.h)} to press (under ${MIN_TAP}x${MIN_TAP}): ${control.what}`, control.box, [control.handle && `"${control.handle}`, control.said], control.handle);
       }
     }
     for (const field of fields) {
-      if (field.px < MIN_FIELD_ON_A_PHONE - 0.5) add("zoom", `a field with ${px(field.px)} text (under ${MIN_FIELD_ON_A_PHONE}): a phone zooms the page when it is tapped: ${field.what}`, field.box);
+      if (field.px < MIN_FIELD_ON_A_PHONE - 0.5) add("zoom", `a field with ${px(field.px)} text (under ${MIN_FIELD_ON_A_PHONE}): a phone zooms the page when it is tapped: ${field.what}`, field.box, [field.handle && `"${field.handle}`, field.said], field.handle);
     }
   }
 
-  for (const picture of pictures) if (!picture.loaded) add("picture", `a picture did not load: ${picture.src}`, picture.box);
+  for (const picture of pictures) if (!picture.loaded) add("picture", `a picture did not load: ${picture.src}`, picture.box, [picture.handle]);
 
   const seen = new Set();
   return found.filter((one) => {
@@ -123,6 +133,34 @@ export function judge(facts) {
   });
 }
 
+/**
+ * Where in a screen's own file a finding is, as ` (home.html:212, its rule at :48)`: the line its words stand on, or
+ * the word of its element (an id, a class), and the line of that element's CSS rule, where most fixes are made. The
+ * first is said only where it is one place or a few: a word on forty lines says nothing. Empty for a screen that is
+ * an address. With it the fix is an edit at a line, with no file read whole to find the place.
+ */
+export function whereInFile(source, file, finding) {
+  if (!source) return "";
+  const lineAt = (at) => source.slice(0, at).split("\n").length;
+  const escaped = (text) => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  let where = "";
+  for (const needle of finding.find ?? []) {
+    if (!needle || needle.length < 3) continue;
+    const lines = [];
+    for (const form of new Set([needle, escaped(needle)])) {
+      for (let at = source.indexOf(form); at >= 0 && lines.length < 6; at = source.indexOf(form, at + form.length)) lines.push(lineAt(at));
+    }
+    const found = [...new Set(lines)].sort((a, b) => a - b);
+    if (found.length >= 1 && found.length <= 3) { where = `${file}:${found.join(", ")}`; break; }
+  }
+  let rule = "";
+  if (finding.rule && /^[\w-]+$/.test(finding.rule)) {
+    const at = source.search(new RegExp(`[.#]${finding.rule}(?![\\w-])[^{};]*\\{`));
+    if (at >= 0) rule = `its rule at :${lineAt(at)}`;
+  }
+  return where || rule ? ` (${[where, rule].filter(Boolean).join(", ")})` : "";
+}
+
 /** What to do about each kind, as render.mjs prints it once under the findings. */
 export const FIXES = {
   sideways: "find what is wider than the window (a fixed width, a long word, a table, 100vw plus padding) and let it wrap, shrink or scroll inside its own box",
@@ -131,7 +169,7 @@ export const FIXES = {
   zoom: `fields at ${MIN_FIELD_ON_A_PHONE}px or more at a phone's width`,
   tap: `give it ${MIN_TAP}px of height and width at a phone's width: padding counts`,
   contrast: "darker text or a lighter background (or the reverse), keeping the page's own colours",
-  cut: "let the box grow, wrap the text, or shorten the words",
+  cut: "the box it names is the one to change: take its fixed height or width away, or its overflow, or say less in it",
   overlap: "one thing per place: remove the absolute position or the negative margin that put them together",
   picture: "the path is relative to the page's own file, and the file is there",
   filler: "write what the screen would really say, in the person's language",

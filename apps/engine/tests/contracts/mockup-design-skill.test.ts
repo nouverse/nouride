@@ -33,18 +33,19 @@ const flat = skill.replace(/\s+/g, " ");
 
 type Box = { x: number; y: number; w: number; h: number };
 type Colour = { r: number; g: number; b: number; a?: number };
-type Finding = { kind: string; what: string; box: Box };
+type Finding = { kind: string; what: string; box: Box; find: string[]; rule: string };
 interface Facts {
   viewport: { name: string; width: number; height: number; mobile: boolean };
   page: { scrollWidth: number; scrollHeight: number; hasViewportMeta: boolean };
-  texts?: { id: number; path?: number[]; text: string; px: number; weight?: number; color?: Colour | null; bg?: Colour | null; box: Box; lines?: Box[]; cut?: string | null; pinned?: boolean }[];
-  controls?: { what: string; box: Box; inline?: boolean }[];
-  fields?: { what: string; px: number; box: Box }[];
-  pictures?: { src: string; loaded: boolean; box: Box }[];
-  wide?: { what: string; box: Box }[];
+  texts?: { id: number; path?: number[]; text: string; el?: string; handle?: string; px: number; weight?: number; color?: Colour | null; bg?: Colour | null; box: Box; lines?: Box[]; cut?: { how: string; by: string; handle: string; holds: number; room: number } | null; pinned?: boolean }[];
+  controls?: { what: string; handle?: string; said?: string; box: Box; inline?: boolean }[];
+  fields?: { what: string; handle?: string; said?: string; px: number; box: Box }[];
+  pictures?: { src: string; handle?: string; loaded: boolean; box: Box }[];
+  wide?: { what: string; handle?: string; said?: string; box: Box }[];
 }
-const { judge, ratio, over, MIN_TEXT, MIN_FIELD_ON_A_PHONE, MIN_TAP, VIEWPORTS } = (await import(join(SKILL_DIR, "scripts/judge.mjs"))) as {
+const { judge, ratio, over, whereInFile, MIN_TEXT, MIN_FIELD_ON_A_PHONE, MIN_TAP, VIEWPORTS } = (await import(join(SKILL_DIR, "scripts/judge.mjs"))) as {
   judge: (facts: Facts) => Finding[];
+  whereInFile: (source: string, file: string, finding: { find?: string[]; rule?: string }) => string;
   ratio: (a: Colour, b: Colour) => number;
   over: (front: Colour, back: Colour) => Colour;
   MIN_TEXT: number;
@@ -114,7 +115,12 @@ describe("what the skill tells an agent", () => {
     // The frames come from the round's own command.
     expect(flat).toContain('the same command draws those too, so no round needs a second one: add `--frame --bg "<a colour of the mockup\'s own>"`');
     // A fix, and a change they asked for, is an edit: the page is not written a second time.
-    expect(flat).toContain("**A fix is an edit**: change what the finding names with `edit` or `multi_edit`, and never write the whole file a second time.");
+    expect(flat).toContain("**A fix is an edit**: every fix of a round in ONE `multi_edit`, at the lines the findings name, and never the whole file written a second time.");
+    // A finding says where, so nothing is read to find the place. Told only that text was cut, an agent on a small
+    // model read the checker's code and its own page in six pieces: twelve requests, each carrying the whole turn.
+    expect(flat).toContain("**A finding says where the fix is**: the element, what causes it, and the line of your file it stands on and the line of its CSS rule.");
+    expect(flat).toContain("never the scripts, which say nothing a finding does not");
+    expect(flat).toContain("**The rounds are the plan.** A mockup of a screen or two is one turn's work: it needs no `plan` and no notes of its own");
     expect(flat).toContain("The change itself is an `edit` or a `multi_edit` of the file, as a fix is.");
     // And no folder is made in a step of its own.
     expect(skill).not.toContain("mkdir");
@@ -212,7 +218,7 @@ describe("the checker's rules, from plain facts", () => {
   test("contrast: grey on white fails, large text needs less, and a see-through colour is judged as it is seen", () => {
     const grey = { r: 154, g: 154, b: 154, a: 1 };
     const found = judge({ viewport: desk, page: fits(desk), texts: [line(1, "too faint", { color: grey })] });
-    expect(found.map((one) => one.what)).toEqual(['contrast 2.8:1 (needs 4.5): "too faint"']);
+    expect(found.map((one) => one.what)).toEqual(['contrast 2.8:1 (needs 4.5), #9a9a9a on #ffffff: "too faint"']);
     // The same grey as a heading of 24 px still fails 3:1; a darker grey passes it there and fails as body text.
     const mid = { r: 138, g: 138, b: 138, a: 1 };
     expect(ratio(mid, WHITE)).toBeGreaterThan(3);
@@ -238,8 +244,10 @@ describe("the checker's rules, from plain facts", () => {
   });
 
   test("a page wider than its window is named with what sticks out; a phone with no viewport tag is told why", () => {
-    const wide = judge({ viewport: phone, page: { ...fits(phone), scrollWidth: 644 }, texts: [line(1, "a box")], wide: [{ what: '<p.wide> "A box with a fixed width"', box: box(24, 24, 620, 40) }] });
-    expect(wide.map((one) => one.what)).toEqual(["the page is 254px wider than the window (390px) and scrolls sideways", 'sticks out 254px past the window: <p.wide> "A box with a fixed width"']);
+    const wide = judge({ viewport: phone, page: { ...fits(phone), scrollWidth: 644 }, texts: [line(1, "a box")], wide: [{ what: '<p.wide> "A box with a fixed width"', handle: "wide", box: box(24, 24, 620, 40) }] });
+    expect(wide.map((one) => one.what)).toEqual(["the page is 254px wider than the window (390px) and scrolls sideways", 'sticks out 254px past the window: <p.wide> "A box with a fixed width", 620px wide']);
+    // What to look for in the page's own file, and whose CSS rule the fix is in, go with the finding.
+    expect({ find: wide[1]!.find, rule: wide[1]!.rule }).toEqual({ find: ['"wide'], rule: "wide" });
     const bare = judge({ viewport: phone, page: { scrollWidth: 980, scrollHeight: 2000, hasViewportMeta: false }, texts: [line(1, "a page")] });
     expect(kinds(bare)).toEqual(["sideways", "viewport"]);
     // The tag is a phone's matter: a desktop draws the page the same without it.
@@ -261,16 +269,56 @@ describe("the checker's rules, from plain facts", () => {
     const found = judge({
       viewport: desk,
       page: fits(desk),
-      texts: [line(1, "A paragraph in a box one line high", { cut: "height" }), line(2, "A name with no room", { cut: "width" }), line(3, "Lorem ipsum dolor sit amet"), line(4, "Lorem ipsum dolor sit amet", { box: box(20, 400, 200, 20) })],
+      texts: [
+        line(1, "A paragraph in a box one line high", { el: "<p>", cut: { how: "height", by: "<div.card>", handle: "card", holds: 96, room: 22 } }),
+        line(2, "A name with no room", { cut: { how: "width", by: "<td.name>", handle: "name", holds: 180, room: 120 } }),
+        line(3, "Lorem ipsum dolor sit amet"),
+        line(4, "Lorem ipsum dolor sit amet", { box: box(20, 400, 200, 20) }),
+      ],
       pictures: [{ src: "missing.png", loaded: false, box: box(0, 0, 80, 40) }],
     });
     expect(found.map((one) => `${one.kind}: ${one.what}`)).toEqual([
-      'cut: text cut off by its box, in height: "A paragraph in a box one line high"',
-      'cut: text cut off by its box, with no "..." to say so: "A name with no room"',
+      // What cuts the text is named, with what it holds and the room it has: an agent that was told only "cut off by
+      // its box" read the checker's own code to learn which box.
+      'cut: text cut off in height by <div.card>, which hides what runs past it and holds 96px in 22px: "A paragraph in a box one line high"',
+      'cut: text cut off in width, with no "..." to say so by <td.name>, which hides what runs past it and holds 180px in 120px: "A name with no room"',
       'filler: filler text, not the page\'s own words: "Lorem ipsum dolor sit amet"',
       "picture: a picture did not load: missing.png",
     ]);
+    expect(found.find((one) => one.kind === "cut")).toMatchObject({ find: ['"card', "A paragraph in a box one line high"], rule: "card" });
     expect(kinds(judge({ viewport: desk, page: fits(desk) }))).toEqual(["empty"]);
+  });
+});
+
+describe("where in the page's own file a finding is", () => {
+  const page = [
+    "<style>",
+    "  .card { height: 22px; overflow: hidden; }",
+    "  .press, .press-small { width: 30px; }",
+    "</style>",
+    '<div class="card"><p>Open until 22.00 &amp; later</p></div>',
+    '<button class="press">ok</button>',
+    "<p>ok</p><p>ok</p><p>ok</p><p>ok</p>",
+  ].join("\n");
+
+  test("the line its words stand on, and the line of its element's CSS rule", () => {
+    expect(whereInFile(page, "home.html", { find: ['"card', "Open until 22.00"], rule: "card" })).toBe(" (home.html:5, its rule at :2)");
+    // Words as the file spells them: an ampersand is written as its entity there.
+    expect(whereInFile(page, "home.html", { find: ["Open until 22.00 & later"] })).toBe(" (home.html:5)");
+    // A rule shared with another selector is still its rule; a longer class that starts the same is not.
+    expect(whereInFile(page, "home.html", { find: ['"press'], rule: "press" })).toBe(" (home.html:6, its rule at :3)");
+    expect(whereInFile(page, "home.html", { find: [], rule: "pres" })).toBe("");
+  });
+
+  test("a word that stands in many places names none, and the next thing to look for is tried", () => {
+    // "ok" is on two lines, four times on one of them: two lines are still a place to look.
+    expect(whereInFile(page, "home.html", { find: ["ok</p><p>ok"] })).toBe(" (home.html:7)");
+    const many = Array.from({ length: 12 }, (_, i) => `<li class="row">item ${i}</li>`).join("\n") + '\n<li class="row last">the last</li>';
+    expect(whereInFile(many, "list.html", { find: ['"row'] })).toBe("");
+    expect(whereInFile(many, "list.html", { find: ['"row', "the last"] })).toBe(" (list.html:13)");
+    // A screen that is an address has no file to point into, and a rule's name is never read as a pattern.
+    expect(whereInFile("", "order", { find: ["anything"], rule: "card" })).toBe("");
+    expect(whereInFile(page, "home.html", { find: [], rule: "ca.*" })).toBe("");
   });
 });
 
@@ -367,6 +415,13 @@ describe("the scripts, run as an agent runs them", () => {
       expect(found("faults", "mobile")).toEqual(["sideways", "sideways", "small", "contrast", "cut", "filler", "overlap", "tap", "zoom", "picture"]);
       expect(found("no-viewport", "desktop")).toEqual([]);
       expect(found("no-viewport", "mobile")).toEqual(["sideways", "viewport"]);
+      // Each finding says where it is in the page's own file, and where its element's CSS rule is.
+      const said = faulty.out.split("\n");
+      expect(said.find((l) => l.includes("cut:"))).toContain('by <p.tight>, which hides what runs past it and holds');
+      expect(said.find((l) => l.includes("cut:"))).toContain("(faults.html:26, its rule at :14)");
+      expect(said.find((l) => l.includes("contrast:"))).toContain("#9a9a9a on #ffffff: <p.faint>");
+      expect(said.find((l) => l.includes("tap:"))).toContain("(faults.html:28, its rule at :17)");
+      expect(said.find((l) => l.includes("sticks out"))).toContain('<p.wide> "A box with a fixed width, wide", 620px wide (faults.html:23, its rule at :11)');
       // What an agent reads next is named: each window of each screen at each width, and the check pictures.
       const next = faulty.out.split("\n").find((l) => l.startsWith("next:"))!;
       for (const name of ["faults-desktop-1.png", "faults-mobile-1.png", "faults-mobile-check.png", "no-viewport-mobile-1.png"]) expect(next).toContain(name);

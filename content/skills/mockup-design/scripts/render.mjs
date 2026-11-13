@@ -29,7 +29,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync
 import { basename, dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { drawFrames, isColour } from "./frame.mjs";
-import { FIXES, VIEWPORTS, judge } from "./judge.mjs";
+import { FIXES, VIEWPORTS, judge, whereInFile } from "./judge.mjs";
 
 /** A page taller than this is not drawn whole: a picture that long is read by nobody. */
 const TALLEST = 12_000;
@@ -140,13 +140,15 @@ function collect() {
     return { r: 255, g: 255, b: 255, a: 1 };
   };
   const pinned = (el) => { for (let a = el; a; a = a.parentElement) { const p = style(a).position; if (p === "fixed" || p === "sticky") return true; } return false; };
+  // What cuts a piece of text, and by how much: the nearest box above it that hides what runs past it and holds more
+  // than it has room for. Named, because the text is not where the fix is: the box is.
   const cutBy = (el) => {
     for (let a = el; a && a !== document.documentElement; a = a.parentElement) {
       const s = style(a);
       const hidesY = /hidden|clip/.test(s.overflowY), hidesX = /hidden|clip/.test(s.overflowX);
       const clamped = s.webkitLineClamp && s.webkitLineClamp !== "none";
-      if (hidesY && !clamped && a.scrollHeight > a.clientHeight + 2 && a !== document.body) return "height";
-      if (hidesX && s.textOverflow !== "ellipsis" && !clamped && a.scrollWidth > a.clientWidth + 2 && a !== document.body) return "width";
+      if (hidesY && !clamped && a.scrollHeight > a.clientHeight + 2 && a !== document.body) return { how: "height", by: tagged(a), handle: handle(a), holds: a.scrollHeight, room: a.clientHeight };
+      if (hidesX && s.textOverflow !== "ellipsis" && !clamped && a.scrollWidth > a.clientWidth + 2 && a !== document.body) return { how: "width", by: tagged(a), handle: handle(a), holds: a.scrollWidth, room: a.clientWidth };
     }
     return null;
   };
@@ -167,7 +169,11 @@ function collect() {
     return { x, y, w: Math.min(line.x + line.w, box.x + box.w) - x, h: Math.min(line.y + line.h, box.y + box.h) - y };
   };
   const words = (el, n = 40) => (el.getAttribute?.("aria-label") || el.textContent || el.getAttribute?.("placeholder") || el.getAttribute?.("value") || "").replace(/\s+/g, " ").trim().slice(0, n);
-  const named = (el) => { const cls = typeof el.className === "string" && el.className.trim() ? `.${el.className.trim().split(/\s+/).slice(0, 2).join(".")}` : ""; const said = words(el, 30); return `<${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ""}${cls}>${said ? ` "${said}"` : ""}`; };
+  // An element as its tag, its id and its first two classes: what a person searches their file for.
+  const tagged = (el) => { const cls = typeof el.className === "string" && el.className.trim() ? `.${el.className.trim().split(/\s+/).slice(0, 2).join(".")}` : ""; return `<${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ""}${cls}>`; };
+  const named = (el) => { const said = words(el, 30); return `${tagged(el)}${said ? ` "${said}"` : ""}`; };
+  // The word of an element that is likeliest to stand once in the file: its id, else its first class.
+  const handle = (el) => el.id || (typeof el.className === "string" && el.className.trim() ? el.className.trim().split(/\s+/)[0] : "");
 
   const texts = [];
   const range = document.createRange();
@@ -186,7 +192,7 @@ function collect() {
     const s = style(el);
     const path = [];
     for (let a = el.parentElement; a; a = a.parentElement) path.push(idOf(a));
-    texts.push({ id: idOf(el), path, text: text.slice(0, 80), px: parseFloat(s.fontSize), weight: parseInt(s.fontWeight, 10) || 400, color: parse(s.color), bg: bgOf(el), box, lines, cut: cutBy(el), pinned: pinned(el) });
+    texts.push({ id: idOf(el), path, text: text.slice(0, 80), el: tagged(el), handle: handle(el), px: parseFloat(s.fontSize), weight: parseInt(s.fontWeight, 10) || 400, color: parse(s.color), bg: bgOf(el), box, lines, cut: cutBy(el), pinned: pinned(el) });
   }
 
   const controls = [];
@@ -203,7 +209,7 @@ function collect() {
     const around = (el.parentElement?.textContent ?? "").replace(/\s+/g, " ").trim().length;
     const own = (el.textContent ?? "").replace(/\s+/g, " ").trim().length;
     const inline = el.tagName === "A" && style(el).display === "inline" && around > own + 8;
-    controls.push({ what: named(el), box: rel(r), inline });
+    controls.push({ what: named(el), handle: handle(el), said: words(el, 40), box: rel(r), inline });
   }
 
   const fields = [];
@@ -211,13 +217,13 @@ function collect() {
     if (!shown(el) || /^(hidden|checkbox|radio|range|color|file|submit|button|image|reset)$/.test(el.type ?? "")) continue;
     const r = el.getBoundingClientRect();
     if (r.width < 1 || r.height < 1) continue;
-    fields.push({ what: named(el), px: parseFloat(style(el).fontSize), box: rel(r) });
+    fields.push({ what: named(el), handle: handle(el), said: words(el, 40), px: parseFloat(style(el).fontSize), box: rel(r) });
   }
 
   const pictures = [];
   for (const el of document.querySelectorAll("img")) {
     if (!shown(el)) continue;
-    pictures.push({ src: (el.getAttribute("src") ?? "").slice(0, 120), loaded: el.complete && el.naturalWidth > 0, box: rel(el.getBoundingClientRect()) });
+    pictures.push({ src: (el.getAttribute("src") ?? "").slice(0, 120), handle: el.getAttribute("src") ?? "", loaded: el.complete && el.naturalWidth > 0, box: rel(el.getBoundingClientRect()) });
   }
   const drawn = document.querySelectorAll("svg, canvas, video").length;
 
@@ -231,7 +237,7 @@ function collect() {
     const r = el.getBoundingClientRect();
     if (r.width < 1 || r.right <= windowWide + 1 || !shown(el) || scrollsItself(el)) continue;
     if ([...el.children].some((child) => child.getBoundingClientRect().right >= r.right - 1)) continue;
-    wide.push({ what: named(el), box: rel(r) });
+    wide.push({ what: named(el), handle: handle(el), said: words(el, 40), box: rel(r) });
   }
 
   return {
@@ -293,7 +299,8 @@ for (const screen of screens) {
     }
     const facts = await page.evaluate(collect);
     for (const font of await page.evaluate(missingFonts)) fontsMissing.add(font);
-    const findings = judge({ viewport: { name: pass.width, ...viewport }, ...facts });
+    const source = isAddress(screen.from) ? "" : readFileSync(screen.from, "utf8");
+    const findings = judge({ viewport: { name: pass.width, ...viewport }, ...facts }).map((finding) => ({ ...finding, what: finding.what + whereInFile(source, basename(screen.from), finding) }));
 
     const tall = facts.page.scrollHeight;
     const drawnTall = Math.min(tall, TALLEST);

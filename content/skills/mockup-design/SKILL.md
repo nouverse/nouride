@@ -145,10 +145,15 @@ It writes `<work>/mockup/render/` (or `--out DIR`). For a screen named `home`: `
 `home-mobile-check.png` where something was found, each finding outlined in red and numbered. It prints:
 
 ```text
-home at mobile (390 wide, 2140px tall): 2 finding(s), outlined in home-mobile-check.png
+home at mobile (390 wide, 2140px tall): 3 finding(s), outlined in home-mobile-check.png
   1. sideways: the page is 38px wider than the window (390px) and scrolls sideways
-  2. tap: 30x26 to press (under 44x44): <a.more> "See all"
+  2. sideways: sticks out 38px past the window: <div.menu-grid> "Kopi Susu Aren", 428px wide (home.html:212, its rule at :48)
+  3. cut: text cut off in height by <div.hero>, which hides what runs past it and holds 96px in 72px: "Buka sampai 22.00" (home.html:180, its rule at :31)
 ```
+
+**A finding says where the fix is**: the element, what causes it, and the line of your file it stands on and the line
+of its CSS rule. Fix it there. Nothing has to be read again to find the place: not your own file from its top, and
+never the scripts, which say nothing a finding does not.
 
 | Finding | What it means | Fix |
 |---|---|---|
@@ -186,9 +191,13 @@ Round 2, 2 screens, desktop and phone
 ```
 
 A check kept in your head is the one that gets skipped. A line that is not `none` is fixed, then **render again and
-read again**: a fix at one width can break the other. **A fix is an edit**: change what the finding names with `edit`
-or `multi_edit`, and never write the whole file a second time. A page written again is paid for again, and carried
-by every step after it. **Four rounds is the limit**: then send what you have with
+read again**: a fix at one width can break the other. **A fix is an edit**: every fix of a round in ONE `multi_edit`,
+at the lines the findings name, and never the whole file written a second time. A page written again is paid for
+again, and carried by every step after it. To see a few lines before you change them, `read` that slice (`offset`,
+`limit`), once.
+
+**The rounds are the plan.** A mockup of a screen or two is one turn's work: it needs no `plan` and no notes of its
+own, and each of those is a step that carries the whole turn again. **Four rounds is the limit**: then send what you have with
 your list and ask what to change. A finding you decide to keep, because it is what they asked for, is named in your
 message, not left for them to find. If your model cannot see images, say so: fix what is measured, and send the
 pictures for the person to judge.
