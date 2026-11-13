@@ -122,6 +122,12 @@ export async function deliverInParts(
   send: {
     text: (part: string, index: number, ids: string[]) => Promise<void>;
     attachment: (attachment: Attachment, ids: string[]) => Promise<void>;
+    /**
+     * Several files as one message, for a platform that has that. Used only for a message that says its files are
+     * one set (`OutboundMessage.together`). `take` says how many of the files still to send, from the first of
+     * them, can go as one: fewer than two is none, and that file goes by itself.
+     */
+    album?: { take: (left: readonly Attachment[]) => number; send: (files: readonly Attachment[], ids: string[]) => Promise<void> };
   },
   /** Waited for before each part — every one is a message of its own to the platform (`Pacer`). */
   pace: () => Promise<void> = async () => {},
@@ -134,10 +140,20 @@ export async function deliverInParts(
       await pace();
       await send.text(part, index, ids);
     }
-    for (const [index, attachment] of (msg.attachments ?? []).entries()) {
+    const files = msg.attachments ?? [];
+    const album = msg.together ? send.album : undefined;
+    for (let index = 0; index < files.length; ) {
+      // What is left, should this part fail, starts at the first file of it: an album lands whole or not at all.
       at = { attachmentIndex: index };
       await pace();
-      await send.attachment(attachment, ids);
+      const together = album ? album.take(files.slice(index)) : 0;
+      if (album && together >= 2) {
+        await album.send(files.slice(index, index + together), ids);
+        index += together;
+      } else {
+        await send.attachment(files[index]!, ids);
+        index += 1;
+      }
     }
   } catch (err) {
     if (ids.length === 0) throw err;

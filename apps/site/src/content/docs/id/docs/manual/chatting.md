@@ -459,6 +459,10 @@ mengatur angkanya, untuk model yang membaca lebih besar.
 Agent mengirim file balik dengan `send_file`. Ia gak akan mengirim file kredensial, atau file apa pun
 yang memuat nilai salah satu secret agent itu, karena file di platform chat gak bisa disamarkan.
 
+Beberapa file yang satu kesatuan, slide carousel atau halaman hasil scan, dikirim dalam satu kiriman, berurutan:
+satu album di Telegram dan satu pesan di Discord, masing-masing sampai sepuluh file, dan satu per satu di WhatsApp
+dan di dashboard. Tiap file dicek dulu, jadi satu set sampai utuh atau tidak sama sekali.
+
 ## Dari terminal
 
 ```bash

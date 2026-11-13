@@ -51,6 +51,11 @@ export interface SendFileOptions {
    * images that were on screen, and the agent passed that on as a broken gateway.
    */
   send: (ctx: ToolContext, attachment: Attachment) => Promise<{ ids: string[]; delivered: boolean; refused?: string }>;
+  /**
+   * Several files as one set, in order: an album where the platform has albums. Without it they go through `send`
+   * one after another, which is what a platform with no albums does with a set anyway.
+   */
+  sendTogether?: (ctx: ToolContext, attachments: readonly Attachment[]) => Promise<{ ids: string[]; delivered: boolean; refused?: string }>;
   maxBytes: number;
   /** The same policy `web_fetch` uses. Absent means a URL cannot be sent, only a path. */
   urlPolicy?: UrlPolicy;
@@ -368,6 +373,115 @@ async function sendRemote(
   };
 }
 
+/** The caption a call gave, or none. */
+function captionOf(args: Record<string, unknown>): string | undefined {
+  return typeof args.caption === "string" && args.caption.trim() ? args.caption.trim() : undefined;
+}
+
+/**
+ * A file of the workspace, read and checked as every file `send_file` sends is, or why it is not sent: inside the
+ * directories the agent may read, there, not empty, under the install's limit, no credential file, none of the
+ * agent's credentials in its text, and what its name says it is.
+ */
+async function localFile(raw: string, ctx: ToolContext, options: SendFileOptions): Promise<Attachment | { error: string }> {
+  // The same sandbox and the same root list `read` uses — reached through `rootsFor` rather than
+  // rebuilt here, so a change to what an agent may open cannot apply to reading and miss sending.
+  // Read mode: putting a file on the wire is a read, and it must reach read-only roots such as
+  // the background-job log directory, which is exactly where a long build log lives.
+  const roots = rootsFor(ctx, "read");
+  let resolved: string | null = null;
+  for (const root of roots) {
+    try {
+      resolved = resolveWithin(root, raw);
+      break;
+    } catch {
+      // Not under this root — try the next.
+    }
+  }
+  if (!resolved) return { error: `\`${raw}\` is outside the directories you may use (${roots.length} configured).` };
+
+  const stat = await statFile(resolved);
+  if (!stat || stat.isDirectory) return { error: stat ? `\`${raw}\` is a directory.` : `\`${raw}\` does not exist.` };
+  if (stat.size === 0) {
+    // Platforms reject a zero-byte upload, and the refusal reads as a network fault. Saying so
+    // here turns it into something the model can act on — usually the command wrote nothing.
+    return { error: `\`${raw}\` is empty, so there is nothing to send.` };
+  }
+  if (stat.size > options.maxBytes) {
+    return { error: `\`${raw}\` is ${formatBytes(stat.size)}, over the ${formatBytes(options.maxBytes)} limit for this install. Send an excerpt, or compress it first.` };
+  }
+
+  // A credential file is never put on a chat platform, where nothing masks it — see `credential-files.ts`.
+  if (credentialKind(resolved)) return { error: credentialSendRefusal(raw) };
+
+  const filename = basename(resolved);
+  const extension = extname(filename).toLowerCase();
+  const buffer = await readFileBytes(resolved);
+  const env = options.childEnv?.(ctx.agentId);
+  if (env && !looksBinary(buffer.subarray(0, 4096)) && containsSecret(new TextDecoder().decode(buffer), env)) {
+    return { error: `\`${raw}\` contains the value of one of your credentials, and a file sent to a chat goes as it is: nothing can mask it there. Take the value out, or send the file without it.` };
+  }
+  /**
+   * The same check as the URL path, and needed for the same reason.
+   *
+   * A file on disk is not more trustworthy than a URL when the thing that put it there was a
+   * download: the agent that hit the Cloudflare page saved it to its workspace first and sent it
+   * from there, which is exactly this branch.
+   */
+  const checked = checkBytes(buffer, {
+    filename,
+    type: TYPE_BY_EXTENSION[extension] ?? "file",
+    mimeType: MIME_BY_EXTENSION[extension] ?? "application/octet-stream",
+  });
+  if ("error" in checked) return { error: checked.error };
+
+  return { type: TYPE_BY_EXTENSION[extension] ?? "file", buffer, mimeType: checked.mimeType, filename, size: stat.size };
+}
+
+/** A set through the port for one file, in order, stopping at the first that does not arrive. */
+async function oneByOne(files: readonly Attachment[], ctx: ToolContext, options: SendFileOptions): Promise<{ ids: string[]; delivered: boolean; refused?: string }> {
+  const ids: string[] = [];
+  for (const file of files) {
+    const sent = await options.send(ctx, file);
+    if (!sent.delivered) return { ids, delivered: false, ...(sent.refused ? { refused: sent.refused } : {}) };
+    ids.push(...sent.ids);
+  }
+  return { ids, delivered: true };
+}
+
+/** How many files one call sends together: two albums' worth where a platform shows ten as one. A choice, to keep a call from emptying a folder into a chat. */
+const TOGETHER_MAX = 20;
+
+/**
+ * Several files of the workspace, sent as one set in the order given: one album where the platform has albums, one
+ * after another where it has none. Every file is read and checked before any is sent, so a set arrives whole or
+ * not at all: half a carousel is not something to have in a chat.
+ */
+async function sendSeveral(paths: readonly string[], args: Record<string, unknown>, ctx: ToolContext, options: SendFileOptions): Promise<ToolResult> {
+  if (paths.length > TOGETHER_MAX) return { content: `\`paths\` holds ${paths.length} files, and one call sends ${TOGETHER_MAX} at most. Send them in two calls, or as one archive.`, isError: true };
+  const files: Attachment[] = [];
+  for (const raw of paths) {
+    const file = await localFile(raw, ctx, options);
+    if ("error" in file) return { content: `Nothing was sent: ${file.error}`, isError: true };
+    files.push(file);
+  }
+  const caption = captionOf(args);
+  if (caption) files[0]!.caption = caption;
+  const sent = options.sendTogether ? await options.sendTogether(ctx, files) : await oneByOne(files, ctx, options);
+  const names = files.map((file) => `\`${file.filename}\``).join(", ");
+  if (!sent.delivered) {
+    return {
+      content: sent.refused
+        ? `The ${files.length} files could not be delivered, because the platform refused them: ${sent.refused}. Sending them again here will not help.`
+        : `The ${files.length} files could not be delivered: the gateway did not accept them. They may arrive when the connection recovers.`,
+      isError: true,
+    };
+  }
+  const bytes = files.reduce((sum, file) => sum + (file.size ?? 0), 0);
+  log.info("files sent to chat", { agent_id: ctx.agentId, chat_id: ctx.chatId, files: files.length, bytes });
+  return { content: `Sent ${files.length} files (${formatBytes(bytes)}) to this conversation, together and in this order: ${names}.`, isError: false };
+}
+
 export function createSendFileTool(options: SendFileOptions): Tool {
   return {
     requiresApproval: false,
@@ -376,7 +490,8 @@ export function createSendFileTool(options: SendFileOptions): Tool {
       description:
         "Send a file to this conversation, so the person receives it as a real attachment instead of " +
         "pasted text. " +
-        "Give either `path` for a file in your workspace, or `url` to send something from the web: " +
+        "Give either `path` for a file in your workspace, `paths` for several that belong together (the slides of " +
+        "a carousel, the pages of a scan) in ONE call, or `url` to send something from the web: " +
         'the `image:` URL from `web_search` with `kind: "image"` goes straight in here. ' +
         "**Do not download it with `curl` or `wget` first.** A shell download of an image succeeds " +
         "with exit 0 when the server answers with a Cloudflare check or a login wall, so you end up " +
@@ -399,9 +514,14 @@ export function createSendFileTool(options: SendFileOptions): Tool {
               "An http(s) URL to fetch and send. Use the direct file URL, not the page it appears on. " +
               "Give this or `path`, never both.",
           },
+          paths: {
+            type: "array",
+            items: { type: "string" },
+            description: "Several files of your workspace, sent together in this order: one album where the chat has albums. Instead of `path`.",
+          },
           caption: {
             type: "string",
-            description: "A short line sent with the file. Say what it is; do not restate its contents.",
+            description: "A short line sent with the file, or once with a set. Say what it is; do not restate its contents.",
           },
         },
         required: [],
@@ -411,92 +531,21 @@ export function createSendFileTool(options: SendFileOptions): Tool {
     async execute(args: Record<string, unknown>, ctx: ToolContext): Promise<ToolResult> {
       const raw = typeof args.path === "string" ? args.path.trim() : "";
       const remote = typeof args.url === "string" ? args.url.trim() : "";
+      const several = Array.isArray(args.paths) ? args.paths.map((one) => (typeof one === "string" ? one.trim() : "")).filter(Boolean) : [];
 
-      if (raw && remote) {
-        return { content: "Give either `path` or `url`, not both.", isError: true };
+      if ([raw, remote, several.length > 0].filter(Boolean).length > 1) {
+        return { content: "Give one of `path`, `paths` or `url`, not more.", isError: true };
       }
       if (remote) return await sendRemote(remote, args, ctx, options);
-      if (!raw) return { content: "Give the `path` or the `url` of the file to send.", isError: true };
+      if (several.length > 1) return await sendSeveral(several, args, ctx, options);
+      const one = raw || several[0] || "";
+      if (!one) return { content: "Give the `path` or the `url` of the file to send, or `paths` for several.", isError: true };
 
-      // The same sandbox and the same root list `read` uses — reached through `rootsFor` rather than
-      // rebuilt here, so a change to what an agent may open cannot apply to reading and miss sending.
-      // Read mode: putting a file on the wire is a read, and it must reach read-only roots such as
-      // the background-job log directory, which is exactly where a long build log lives.
-      const roots = rootsFor(ctx, "read");
-      let resolved: string | null = null;
-      for (const root of roots) {
-        try {
-          resolved = resolveWithin(root, raw);
-          break;
-        } catch {
-          // Not under this root — try the next.
-        }
-      }
-      if (!resolved) {
-        return {
-          content: `\`${raw}\` is outside the directories you may use (${roots.length} configured).`,
-          isError: true,
-        };
-      }
-
-      const stat = await statFile(resolved);
-      if (!stat || stat.isDirectory) {
-        return {
-          content: stat ? `\`${raw}\` is a directory.` : `\`${raw}\` does not exist.`,
-          isError: true,
-        };
-      }
-      if (stat.size === 0) {
-        // Platforms reject a zero-byte upload, and the refusal reads as a network fault. Saying so
-        // here turns it into something the model can act on — usually the command wrote nothing.
-        return { content: `\`${raw}\` is empty, so there is nothing to send.`, isError: true };
-      }
-      if (stat.size > options.maxBytes) {
-        return {
-          content:
-            `\`${raw}\` is ${formatBytes(stat.size)}, over the ${formatBytes(options.maxBytes)} limit ` +
-            `for this install. Send an excerpt, or compress it first.`,
-          isError: true,
-        };
-      }
-
-      // A credential file is never put on a chat platform, where nothing masks it — see `credential-files.ts`.
-      if (credentialKind(resolved)) return { content: credentialSendRefusal(raw), isError: true };
-
-      const filename = basename(resolved);
-      const extension = extname(filename).toLowerCase();
-      const buffer = await readFileBytes(resolved);
-      const env = options.childEnv?.(ctx.agentId);
-      if (env && !looksBinary(buffer.subarray(0, 4096)) && containsSecret(new TextDecoder().decode(buffer), env)) {
-        return {
-          content: `\`${raw}\` contains the value of one of your credentials, and a file sent to a chat goes as it is: nothing can mask it there. Take the value out, or send the file without it.`,
-          isError: true,
-        };
-      }
-      /**
-       * The same check as the URL path, and needed for the same reason.
-       *
-       * A file on disk is not more trustworthy than a URL when the thing that put it there was a
-       * download: the agent that hit the Cloudflare page saved it to its workspace first and sent it
-       * from there, which is exactly this branch.
-       */
-      const checked = checkBytes(buffer, {
-        filename,
-        type: TYPE_BY_EXTENSION[extension] ?? "file",
-        mimeType: MIME_BY_EXTENSION[extension] ?? "application/octet-stream",
-      });
-      if ("error" in checked) return { content: checked.error, isError: true };
-
-      const attachment: Attachment = {
-        type: TYPE_BY_EXTENSION[extension] ?? "file",
-        buffer,
-        mimeType: checked.mimeType,
-        filename,
-        size: stat.size,
-        ...(typeof args.caption === "string" && args.caption.trim()
-          ? { caption: args.caption.trim() }
-          : {}),
-      };
+      const attachment = await localFile(one, ctx, options);
+      if ("error" in attachment) return { content: attachment.error, isError: true };
+      const caption = captionOf(args);
+      if (caption) attachment.caption = caption;
+      const { filename = one, size = 0 } = attachment;
 
       const sent = await options.send(ctx, attachment);
       // A gateway that buffered instead of sending, or one that is gone. Reporting success there
@@ -508,10 +557,10 @@ export function createSendFileTool(options: SendFileOptions): Tool {
         agent_id: ctx.agentId,
         chat_id: ctx.chatId,
         filename,
-        bytes: stat.size,
+        bytes: size,
       });
       return {
-        content: `Sent \`${filename}\` (${formatBytes(stat.size)}) to this conversation.`,
+        content: `Sent \`${filename}\` (${formatBytes(size)}) to this conversation.`,
         isError: false,
       };
     },

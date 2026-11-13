@@ -45,7 +45,7 @@ export class ToolPorts {
    * A closure rather than the gateway map, for the same reason `startJob` and the cron executors are
    * closures: a tool holding the gateway map could send anywhere, to any conversation.
    */
-  async sendAttachment(ctx: ToolContext, attachment: Attachment): Promise<SendAttachmentResult> {
+  async sendAttachment(ctx: ToolContext, attachment: Attachment | readonly Attachment[]): Promise<SendAttachmentResult> {
     return await this.o.turnContext.sendAttachment(ctx, attachment);
   }
 

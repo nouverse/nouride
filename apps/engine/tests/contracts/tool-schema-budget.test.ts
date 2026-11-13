@@ -161,15 +161,17 @@ const PER_TOOL = 3_400;
 // 50,260 for where a job's results go (~240): `schedule`'s `to`, and that a run needs no `send_message` for its own
 // result. Unsaid, a model asked for a digest "on my WhatsApp" proposed a job that reported where it was made and told
 // its run to send the digest itself: the chat looked up and a message sent on every run, and the report made twice.
-const TOTAL = 50_260;
+// 50,570 for several files in one send (~310): `send_file`'s `paths`, and that files which belong together go in ONE
+// call. Unsaid, the slides of a carousel are a call each: eight steps, eight messages, and no album where a chat has one.
+const TOTAL = 50_570;
 
 /**
  * What a provider is sent for the same set: the skill tools as the one entry that stands for them (`tools/fold.ts`).
  * Each tool keeps its whole definition, read when its action is opened, so `TOTAL` still holds each to its ceiling.
- * 45,430: measured at 45,427 against 50,258 for the tools themselves, the three skill tools of this set (5,525) sent
+ * 45,740: measured at 45,734 against 50,565 for the tools themselves, the three skill tools of this set (5,525) sent
  * as an entry of about 690. On a month of a live install they were called once in 13,823 tool calls.
  */
-const SENT = 45_430;
+const SENT = 45_740;
 
 describe("tool schema budget", () => {
   test("every conditional tool was built, so the total means what it says", () => {

@@ -444,6 +444,10 @@ the whole request. `[media] max_image_side` sets the number, for a model that re
 Agents send files back with `send_file`. It will not send a credential file, or any file holding the
 value of one of the agent's secrets, because a file on a chat platform cannot be masked.
 
+Several files that belong together, the slides of a carousel or the pages of a scan, go in one send, in
+order: one album on Telegram and one message on Discord, up to ten files each, and one after another on
+WhatsApp and in the dashboard. Every file is checked first, so a set arrives whole or not at all.
+
 ## From the terminal
 
 ```bash

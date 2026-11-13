@@ -37,6 +37,7 @@ import { openDownload } from "../../commons/download.ts";
 import { Pacer } from "../../commons/pace.ts";
 import { chunk, sendsText } from "../../commons/text.ts";
 import { voiceMessageUpload } from "../../commons/voice.ts";
+import { discordAlbumMessage, discordAlbumRun } from "./album.ts";
 import { discordEdit, discordEnvelope } from "./envelope.ts";
 import { discordRoomTitle, ThreadOpeners, type RoomChannel } from "./rooms.ts";
 import { heartbeatAlive } from "./heartbeat.ts";
@@ -147,6 +148,7 @@ export function logShardLifecycle(client: Pick<Client, "on">, log: Logger, curre
     }),
   );
 }
+
 
 export class DiscordGateway extends BaseGateway {
   /** The bot's presence, following its agent (0.8.0) — kept, so a reconnect shows it again. */
@@ -521,6 +523,8 @@ export class DiscordGateway extends BaseGateway {
         });
         ids.push(sent.id);
       },
+      // A set of files is one message with all of them (`album.ts`); a voice note is never one of a set.
+      album: { take: discordAlbumRun, send: async (files, ids) => void ids.push((await channel.send(discordAlbumMessage(files, MAX_MESSAGE_CHARS))).id) },
     }, () => this.pacer.take(msg.chatId));
   }
 

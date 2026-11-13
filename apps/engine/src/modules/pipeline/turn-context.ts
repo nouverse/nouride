@@ -341,7 +341,9 @@ export class TurnContext extends ActiveTurns {
    * for two images that were on screen at the time, and the agent passed that on to the operator as a
    * broken gateway. Only the thing holding the gateway can tell the difference, and this is it.
    */
-  async sendAttachment(ctx: ToolContext, attachment: Attachment): Promise<SendAttachmentResult> {
+  async sendAttachment(ctx: ToolContext, attachment: Attachment | readonly Attachment[]): Promise<SendAttachmentResult> {
+    // Several are one set (`OutboundMessage.together`): an album where the platform has albums, in this order.
+    const files = "type" in attachment ? [attachment] : [...attachment];
     const gateway = this.deps.gateways.get(ctx.gatewayId);
     if (!gateway) {
       log.warn("send_file has no gateway", { gateway_id: ctx.gatewayId });
@@ -355,7 +357,8 @@ export class TurnContext extends ActiveTurns {
         // Empty: the caption rides on the attachment, so the adapter decides whether that is a separate
         // message or a caption field. A text here would be a second message nobody asked for.
         text: "",
-        attachments: [attachment],
+        attachments: files,
+        ...(files.length > 1 ? { together: true as const } : {}),
       });
     } catch (err) {
       log.warn("send_file was refused", { gateway_id: ctx.gatewayId, error: String(err) });
@@ -377,7 +380,7 @@ export class TurnContext extends ActiveTurns {
      *
      * A side effect worth having: a file sent to Telegram is now readable from the dashboard too.
      */
-    void this.keepOutboundCopy(ctx, attachment);
+    for (const file of files) void this.keepOutboundCopy(ctx, file);
 
     return {
       ids,

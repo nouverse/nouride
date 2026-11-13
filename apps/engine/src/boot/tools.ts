@@ -178,6 +178,7 @@ export function buildTools(deps: {
     },
     sendFile: {
       send: (toolCtx, attachment) => pipeline.sendAttachment(toolCtx, attachment),
+      sendTogether: (toolCtx, attachments) => pipeline.sendAttachment(toolCtx, attachments),
       // The same policy `web_fetch` uses, from the same setting. A URL an agent found in search
       // results is the least trustworthy URL there is, so it meets the guard on every redirect hop.
       urlPolicy: { allowPrivate: config.security.web.allowPrivateUrls },

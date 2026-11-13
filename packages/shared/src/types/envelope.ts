@@ -282,6 +282,13 @@ export interface OutboundMessage {
   mentions?: string[];
   attachments?: Attachment[];
   /**
+   * Its files are one set, to arrive as one: an album where the platform has albums, in this order. Asked for by
+   * `send_file` with several files: the slides of a carousel sent one message each arrive as eight messages, in
+   * whatever order the uploads finish being looked at. Absent, each file is a message of its own, which keeps each
+   * one replyable in an answer that happens to carry two.
+   */
+  together?: true;
+  /**
    * Ask the platform not to decorate a link in this message.
    *
    * For status lines, not for answers. A progress line naming `exec python3 … https://…` made Telegram

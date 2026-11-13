@@ -23,6 +23,7 @@ import { BaseGateway, type GatewayIdentity, deliverInParts } from "../../commons
 import { chunkRendered, sendsText } from "../../commons/text.ts";
 import { parseMarkdown, toPlainText } from "../../commons/markdown.ts";
 import { toTelegramHtml } from "./html.ts";
+import { sendTelegramAlbum, telegramAlbumRun } from "./album.ts";
 import { foldChatId, telegramEdit, telegramEnvelope, telegramRoomTitle, topicNameOf } from "./envelope.ts";
 import { inlineKeyboard, NO_BUTTONS, telegramPress } from "./presses.ts";
 
@@ -95,6 +96,7 @@ export interface TelegramGatewayOptions extends GatewayIdentity {
   mode: "polling" | "webhook";
   resilience?: Partial<GatewayResilienceConfig>;
 }
+
 
 export class TelegramGateway extends BaseGateway {
   /** What the agent is told about writing here — `Gateway.formatting`: converted markdown, a phone, no tables. */
@@ -442,6 +444,11 @@ export class TelegramGateway extends BaseGateway {
       attachment: async (attachment, ids) => {
         const id = await this.deliverAttachment(attachment, chatId, threadId);
         if (id) ids.push(id);
+      },
+      album: {
+        take: telegramAlbumRun,
+        send: async (files, ids) =>
+          void ids.push(...(await sendTelegramAlbum(files, { api: bot.api, chatId, threadId, captionMax: MAX_CAPTION_CHARS, retry: (call) => this.afterRetryAfter(call), refused: (err) => telegramRefusal(err) !== null, one: (file) => this.deliverAttachment(file, chatId, threadId), log: this.log }))),
       },
     }, () => this.pacer.take(chatId));
   }
