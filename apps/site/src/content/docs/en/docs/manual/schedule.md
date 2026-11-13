@@ -240,7 +240,7 @@ allowed always does not carry over to its new shape: it asks again.
 ## Watching something
 
 "Tell me when the disk is nearly full" is a check on a clock. Left as it is, it tells you every time it runs, for as
-long as the disk stays full, and at three in the morning. Three marks make it a watch (0.8.36).
+long as the disk stays full, and at three in the morning. Three marks make it a watch (0.8.35).
 
 **A step that goes on only when something changed.** Mark a step (a command, an agent's turn or a mission) with
 **Go on only when this changes**. What it said is compared with what it said the last time the automation ran to its

@@ -99,7 +99,7 @@ line saying where its whole text is kept, which the agent opens with `read` when
 model's cache of the conversation is lost anyway (the agent's prompt, model or tools changed, or the chat was quiet
 for an hour), or once there is enough of it to be worth rewriting, so a chat going back and forth keeps its cache.
 
-One long task is held the same way (from 0.8.37). When a single turn has taken so many steps that they fill the
+One long task is held the same way (from 0.8.35). When a single turn has taken so many steps that they fill the
 model's context by themselves, the agent sums up its earliest steps and carries on from those notes. Before, such a
 turn ended there, with the work unfinished.
 
@@ -405,7 +405,7 @@ Anyone who may talk to that agent in the room can press, once, and the line then
 Without buttons the line says the same in words: say "continue", or tag another agent.
 
 **When your own request fails in a room.** If the agent had already done part of the work, the line it leaves
-says so and carries **Continue** (from 0.8.37), so you do not have to tag it again. You, or an admin, can press
+says so and carries **Continue** (from 0.8.35), so you do not have to tag it again. You, or an admin, can press
 it, once. In a one-to-one chat there is no button: saying "continue" is as short.
 
 **In a one-to-one chat this is not how it works, and it cannot be.** Each bot has its own private
@@ -428,7 +428,7 @@ sent to a model at all: the agent opens them with `read` or a command, so a PDF 
 the agent looks at it. Voice notes go to the model only if it can hear them (`read_audio`).
 
 A very large picture, a long screenshot or a photo straight from a camera, is sent to the model as a
-smaller copy: no side longer than 2,576 pixels, which is as much as a model reads (0.8.37). Your file
+smaller copy: no side longer than 2,576 pixels, which is as much as a model reads (0.8.35). Your file
 is not changed. Nouride makes the copy with ffmpeg; on a machine without it the picture is left out,
 and the agent is told its size and that it was too large, so it can ask you for a smaller one. Before
 this, one such picture could end every later turn of its conversation, because the provider refused

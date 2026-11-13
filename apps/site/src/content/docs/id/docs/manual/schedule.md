@@ -252,7 +252,7 @@ membuatnya. Izin *allow always* milik job lama gak ikut ke bentuk barunya: ia be
 ## Mengawasi sesuatu
 
 "Kabari aku kalau disk hampir penuh" adalah pengecekan berkala. Kalau dibiarkan begitu saja, ia mengabari setiap kali
-jalan, selama disk masih penuh, termasuk jam tiga pagi. Tiga tanda membuatnya jadi pengawas (0.8.36).
+jalan, selama disk masih penuh, termasuk jam tiga pagi. Tiga tanda membuatnya jadi pengawas (0.8.35).
 
 **Langkah yang lanjut hanya kalau ada yang berubah.** Tandai sebuah langkah (perintah, giliran agent, atau misi) dengan
 **Go on only when this changes**. Apa yang ia katakan dibandingkan dengan yang ia katakan terakhir kali automation itu

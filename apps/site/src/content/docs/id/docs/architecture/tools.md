@@ -33,7 +33,7 @@ akan dicoba dipenuhi model. Beberapa ikut daemon, bukan daftar itu: `ask_agent` 
 yang bisa ditanya, `attachment_read`, dan tool MCP milik agent. `skill_create` membawa `skill_search`
 dan `skill_install` bersamanya, dan `send_file` membawa `send_message`.
 
-Tool-tool skill dikirim ke model sebagai satu (0.8.37): sebuah tool bernama `skill` yang menyebut kegunaan
+Tool-tool skill dikirim ke model sebagai satu (0.8.35): sebuah tool bernama `skill` yang menyebut kegunaan
 masing-masing dalam satu baris. Model memanggilnya dengan sebuah aksi untuk membaca apa yang dibutuhkan
 aksi itu, lalu sekali lagi dengan argumennya. Skema seorang agent dikirim di setiap permintaan, dan
 tool-tool ini kira-kira sepersepuluhnya padahal hampir gak pernah dipanggil. Yang berubah cuma apa yang

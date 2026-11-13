@@ -313,7 +313,7 @@ teksnya jadi satu baris yang bilang seberapa besar teks itu, bahwa panggilannya 
 untuk membaca file-nya kalau perlu isinya sekarang. Panggilan di langkah terakhir gak pernah dipendekkan. Tanpa ini, giliran coding yang
 panjang membawa setiap file yang ia tulis sampai jendelanya penuh.
 
-Dan kalau langkah-langkahnya sendiri yang memenuhi jendela, tanpa ada lagi yang bisa dibersihkan (sejak 0.8.37),
+Dan kalau langkah-langkahnya sendiri yang memenuhi jendela, tanpa ada lagi yang bisa dibersihkan (sejak 0.8.35),
 langkah-langkah paling lama dari giliran itu dirangkum oleh perangkum yang sama, dan gilirannya lanjut dari catatannya
 dan langkah-langkah terbarunya. Sebelumnya giliran seperti itu berakhir karena konteksnya penuh. Ini mulai di batas
 tempat pemadatan mulai dan memberi ruang sampai batas tempat riwayat dipangkas, jadi giliran yang panjang diminta

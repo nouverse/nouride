@@ -33,7 +33,7 @@ promise the model will try to keep. A few follow the daemon rather than the list
 there is another agent to ask, `attachment_read`, and the agent's MCP tools. `skill_create` brings
 `skill_search` and `skill_install` with it, and `send_file` brings `send_message`.
 
-The skill tools are sent to the model as one (0.8.37): a tool called `skill` that names what each does
+The skill tools are sent to the model as one (0.8.35): a tool called `skill` that names what each does
 in a line. The model calls it with an action to read what that action takes, then again with its
 arguments. An agent's schemas are sent with every request, and these were about a tenth of them for
 tools that are almost never called. Only what the model is sent changes: `[tools] enabled`, a standing

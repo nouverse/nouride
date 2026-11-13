@@ -303,7 +303,7 @@ goes next, oldest first: the call stays with its path and its result, and the te
 saying how big it was, that the call ran, and to read the file for what it holds now. The calls of
 the latest step are never shortened. Without this a long coding turn carried every file it wrote until the window was full.
 
-And when the steps themselves fill the window, with nothing left in them to clear (from 0.8.37), the turn's oldest
+And when the steps themselves fill the window, with nothing left in them to clear (from 0.8.35), the turn's oldest
 steps are summed up by the same summarizer, and the turn goes on from its notes and its newest steps. Before, such a
 turn ended on a full context. It starts at the line compaction starts at and makes room down to the line history is
 trimmed to, so a long turn is asked for notes once in a while, not at every step. A call and its result leave

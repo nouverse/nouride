@@ -297,12 +297,12 @@ An approval is a turn stopped mid-flight with a timer on it. A draft or a propos
 about work that already finished: it blocks nothing and waits for you. Putting them in one queue
 would give one of them the wrong lifecycle.
 
-**An approval belongs to the chat it was asked in** (0.8.37). An operator sees and answers the requests asked in a
+**An approval belongs to the chat it was asked in** (0.8.35). An operator sees and answers the requests asked in a
 chat they may open: their own conversations, the groups they spoke in, and what their own automations and missions
 ask. Another person's request is not on their pages, and answering it by its address answers nothing: it stays
 waiting for whoever it was asked of. An admin sees and answers every one.
 
-**The daemon's log and the audit log are an admin's to read** (0.8.37). They hold every line of everybody's chats,
+**The daemon's log and the audit log are an admin's to read** (0.8.35). They hold every line of everybody's chats,
 commands and decisions. On **Logs**, anyone else has the two other tabs: what ran on a schedule, and the commands
 still running in the background.
 

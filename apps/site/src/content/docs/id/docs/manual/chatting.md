@@ -103,7 +103,7 @@ lagi. Ini terjadi saat cache model untuk percakapan itu memang sudah hilang (pro
 atau chat diam satu jam), atau saat jumlahnya cukup besar untuk layak ditulis ulang, jadi chat yang sedang aktif
 tetap kena cache.
 
-Satu tugas yang panjang dijaga dengan cara yang sama (sejak 0.8.37). Kalau satu giliran sudah mengambil begitu banyak
+Satu tugas yang panjang dijaga dengan cara yang sama (sejak 0.8.35). Kalau satu giliran sudah mengambil begitu banyak
 langkah sampai langkah-langkah itu sendiri memenuhi konteks model, agent merangkum langkah-langkah awalnya dan lanjut
 dari catatan itu. Sebelumnya giliran seperti itu berhenti di situ, dengan pekerjaan yang belum selesai.
 
@@ -416,7 +416,7 @@ bisa menekannya, sekali, dan baris itu lalu menyebut siapa memilih apa. Tanpa to
 mengatakan hal yang sama dengan kata-kata: bilang "continue", atau tag agent lain.
 
 **Kalau permintaanmu sendiri gagal di room.** Kalau agent sudah mengerjakan sebagian, baris yang ditinggalkannya
-bilang begitu dan membawa tombol **Continue** (sejak 0.8.37), jadi kamu gak perlu men-tag-nya lagi. Kamu, atau
+bilang begitu dan membawa tombol **Continue** (sejak 0.8.35), jadi kamu gak perlu men-tag-nya lagi. Kamu, atau
 admin, bisa menekannya, sekali. Di chat satu lawan satu gak ada tombolnya: bilang "continue" sama pendeknya.
 
 **Di chat satu lawan satu ini gak bekerja begitu, dan memang gak bisa.** Setiap bot punya
@@ -442,7 +442,7 @@ sebuah PDF gak berbiaya apa pun sampai agent benar-benar melihatnya. Voice note 
 kalau model itu bisa mendengarnya (`read_audio`).
 
 Gambar yang sangat besar, tangkapan layar panjang atau foto langsung dari kamera, dikirim ke model sebagai
-salinan yang lebih kecil: gak ada sisi yang lebih dari 2.576 piksel, sebanyak yang dibaca model (0.8.37).
+salinan yang lebih kecil: gak ada sisi yang lebih dari 2.576 piksel, sebanyak yang dibaca model (0.8.35).
 File kamu gak diubah. Nouride membuat salinannya dengan ffmpeg; di mesin yang gak punya ffmpeg gambar itu
 gak ikut dikirim, dan agent diberi tahu ukurannya dan bahwa gambarnya terlalu besar, jadi ia bisa minta
 yang lebih kecil. Sebelumnya, satu gambar seperti itu bisa membuat semua giliran berikutnya di
