@@ -67,6 +67,7 @@ import runSteps from "./migrations/084_run_steps.sql" with { type: "text" };
 import roomAnswerer from "./migrations/085_room_answerer.sql" with { type: "text" };
 import thingOwner from "./migrations/086_thing_owner.sql" with { type: "text" };
 import watch from "./migrations/087_watch.sql" with { type: "text" };
+import heldNoLongerAsked from "./migrations/088_held_no_longer_asked.sql" with { type: "text" };
 
 export interface Migration {
   /** Parsed from the filename prefix, and what `user_version` is set to once applied. */
@@ -106,6 +107,7 @@ export const MIGRATIONS: readonly Migration[] = [
   { version: 85, name: "085_room_answerer.sql", sql: roomAnswerer },
   { version: 86, name: "086_thing_owner.sql", sql: thingOwner },
   { version: 87, name: "087_watch.sql", sql: watch },
+  { version: 88, name: "088_held_no_longer_asked.sql", sql: heldNoLongerAsked },
 ];
 
 /**
