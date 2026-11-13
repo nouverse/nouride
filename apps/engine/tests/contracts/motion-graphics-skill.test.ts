@@ -74,7 +74,7 @@ describe("a round of looking is cheap enough to do", () => {
     expect(skill).toContain("**Write the answers down, every round.** Each item on that list gets a line: `none`, or what you saw and on which picture.");
     expect(skill).toContain("A line that is not `none` is fixed before the next round.");
     expect(skill).toContain("The message that sends the video carries the last round's list");
-    expect(skill).toContain("with one line per scene and the last round's list from step 5");
+    expect(skill).toContain("With them, one line per scene and the last round's list from step 5.");
     expect(skill).toContain("the list in its report");
   });
 
@@ -268,6 +268,13 @@ describe("a clip made for a feed", () => {
     expect(check).toContain("const needs = px >= min * 2 || (px >= min * 1.555 && weight >= 700) ? 3 : 4.5;");
     expect(check).toContain('if (s.backgroundImage && s.backgroundImage !== "none") return null;');
     expect(skill).toContain("text that has arrived and is too close in colour to the plain colour behind it (under 4.5:1, or 3:1 for large text)");
+  });
+});
+
+describe("what is sent", () => {
+  test("the video and its contact sheet go in one send, the video first", () => {
+    // A real agent sent them in two calls: two messages, where a chat with albums shows one.
+    expect(skill).toContain("Send `out/video.mp4` and the contact sheet in ONE `send_file` call, both in `paths`, the video first: they arrive together.");
   });
 });
 

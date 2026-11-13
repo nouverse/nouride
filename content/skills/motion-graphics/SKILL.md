@@ -376,10 +376,10 @@ Duration, width × height and frame count match the storyboard. `read` a frame f
 end the way you read the stills: they show what was encoded, which is where a fallback font, a black
 frame or the wrong composition turns up.
 
-Send `out/video.mp4` with `send_file`, and the contact sheet with it, with one line per scene and the
-last round's list from step 5. In a mission they go with `mission` done instead: the video and the sheet
-as its files, the list in its report. Chat apps cap uploads (a Telegram bot at 50 MB): over that,
-render again with `--crf=28`, or shorter.
+Send `out/video.mp4` and the contact sheet in ONE `send_file` call, both in `paths`, the video first: they
+arrive together. With them, one line per scene and the last round's list from step 5. In a mission they go
+with `mission` done instead: the video and the sheet as its files, the list in its report. Chat apps cap
+uploads (a Telegram bot at 50 MB): over that, render again with `--crf=28`, or shorter.
 
 ## 7. Render somewhere else
 
