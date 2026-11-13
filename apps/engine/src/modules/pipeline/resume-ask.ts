@@ -15,6 +15,10 @@
  *
  * Where the connection carries buttons the question has one, Continue, and a press on it takes the turn up the way
  * the daemon would have inside the window. Saying "continue" does the same without one.
+ *
+ * A person's own turn that ended early in a room, on a failure or its deadline, with work kept, has one too
+ * (`turn-endings.ts`): its line says to say "continue", which in a room means tagging the agent again, and the press
+ * saves that. It needs nothing kept here either: the turn's record says how it ended.
  */
 
 import { createLogger, type ButtonPress, type MessageButton, type PressAnswer } from "@nouride/shared";
@@ -34,10 +38,17 @@ const log = createLogger("pipeline");
 export const ASK_WITHIN_MS = INBOX_KEEP_MS;
 
 const PRESS = "carry-on:";
+/** Under a person's own turn that ended early: its own data, so a press on it is never read by another line's rule. */
+const ENDED = "go-on:";
 
 /** The button under the question. Its data names the turn, so a press needs nothing this process remembers. */
 export function continueButton(turnId: string): MessageButton {
   return { label: "Continue", data: `${PRESS}${turnId}`, style: "positive" };
+}
+
+/** The button under a person's own turn that ended early with work kept. */
+export function continueEndedButton(turnId: string): MessageButton {
+  return { label: "Continue", data: `${ENDED}${turnId}`, style: "positive" };
 }
 
 /**
@@ -102,8 +113,11 @@ export async function askToCarryOn(input: {
  */
 export function continuePresses(deps: {
   turns: Pick<TurnsPort, "get" | "startedFor">;
-  /** Take the turn up — `Pipeline.resumeTurn`. False where its connection is gone. */
-  resume: (turn: TurnRecord) => boolean;
+  /**
+   * Take the turn up — `Pipeline.resumeTurn`. False where its connection is gone. `why`: a restart cut it off a while
+   * ago (`asked`), or it ended by itself (`ended`), which is what its agent is told.
+   */
+  resume: (turn: TurnRecord, why: "asked" | "ended") => boolean;
   isAdmin: (who: { gatewayId: string; senderId: string }) => boolean;
   /**
    * Work another agent handed over that ended early, its line still waiting (`way-on.ts`): Continue is under it too,
@@ -112,26 +126,45 @@ export function continuePresses(deps: {
   handedOver?: { waits(turnId: string): boolean; mayAsk(press: ButtonPress, agentId: string): boolean; settle(turnId: string): void };
   // The shape a connection's presses are routed by (`gateways/presses.ts`), said here so this domain needs no other's type.
 }): { owns(data: string): boolean; press(press: ButtonPress): Promise<PressAnswer> } {
+  const gone: PressAnswer = { notice: "That is not waiting any more." };
+  const notTheirs: PressAnswer = { notice: "Only the person who asked for it, or an admin, can say that here." };
+  const couldNot: PressAnswer = { notice: `I could not pick that up from here. Say "continue" instead.` };
+  const here = (turn: TurnRecord, press: ButtonPress) => turn.gatewayId === press.gatewayId && turn.chatId === press.chatId;
+  const theirs = (turn: TurnRecord, press: ButtonPress) =>
+    mayAnswer({ chatType: press.chatType, senderId: press.senderId, isAdmin: () => deps.isAdmin(press) }, { requestedBy: turn.senderId ?? "" });
+  /** The line as it was, and who chose: what an ended turn's line reads once pressed. */
+  const continued = (turn: TurnRecord, press: ButtonPress) => `${turn.reply}\n\nContinued by ${press.senderName}.`;
+
+  /** Under a person's own turn that a failure or its deadline ended. */
+  const ended = (press: ButtonPress): PressAnswer => {
+    const turn = deps.turns.get(press.data.slice(ENDED.length));
+    if (!turn || !(turn.status === "failed" || turn.status === "cancelled") || !here(turn, press)) return gone;
+    if (!theirs(turn, press)) return notTheirs;
+    // Once: the turn that takes it up is found by the id it is given.
+    if (deps.turns.startedFor(resumptionId(turn.id), turn.startedAt)) return { notice: "I have carried on with that already." };
+    if (!deps.resume(turn, "ended")) return couldNot;
+    log.info("taking up a turn that ended early, as its person asked", { turn_id: turn.id, agent_id: turn.agentId });
+    return { notice: "Carrying on.", settled: continued(turn, press) };
+  };
+
   return {
-    owns: (data) => data.startsWith(PRESS),
+    owns: (data) => data.startsWith(PRESS) || data.startsWith(ENDED),
     async press(press: ButtonPress): Promise<PressAnswer> {
+      if (press.data.startsWith(ENDED)) return ended(press);
       const turn = deps.turns.get(press.data.slice(PRESS.length));
       const handed = turn !== null && turn !== undefined && turn.status !== "interrupted" && deps.handedOver?.waits(turn.id) === true;
-      if (!turn || !(turn.status === "interrupted" || handed) || turn.gatewayId !== press.gatewayId || turn.chatId !== press.chatId) {
-        return { notice: "That is not waiting any more." };
-      }
+      if (!turn || !(turn.status === "interrupted" || handed) || !here(turn, press)) return gone;
       if (handed) {
         if (!deps.handedOver!.mayAsk(press, turn.agentId)) return { notice: "Only someone who may talk to that agent here can say that." };
-        if (!deps.resume(turn)) return { notice: `I could not pick that up from here. Say "continue" instead.` };
+        if (!deps.resume(turn, "ended")) return couldNot;
         deps.handedOver!.settle(turn.id);
         log.info("taking up handed-over work its room asked to carry on", { turn_id: turn.id, agent_id: turn.agentId });
-        return { notice: "Carrying on.", settled: `${turn.reply}\n\nContinued by ${press.senderName}.` };
+        return { notice: "Carrying on.", settled: continued(turn, press) };
       }
-      const who = { chatType: press.chatType, senderId: press.senderId, isAdmin: () => deps.isAdmin(press) };
-      if (!mayAnswer(who, { requestedBy: turn.senderId ?? "" })) return { notice: "Only the person who asked for it, or an admin, can say that here." };
+      if (!theirs(turn, press)) return notTheirs;
       // Taken up already: by an earlier press, or by the daemon inside its window.
       if (deps.turns.startedFor(resumptionId(turn.id), turn.startedAt)) return { notice: "I have carried on with that already.", settled: resumeSettled(turn.prompt, false) };
-      if (!deps.resume(turn)) return { notice: `I could not pick that up from here. Say "continue" instead.` };
+      if (!deps.resume(turn, "asked")) return couldNot;
       log.info("taking up a turn its person asked to carry on", { turn_id: turn.id, agent_id: turn.agentId });
       return { notice: "Carrying on.", settled: resumeSettled(turn.prompt, true) };
     },

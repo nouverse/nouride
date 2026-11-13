@@ -398,7 +398,7 @@ export async function buildTurnMachine(
   // And the ways on for work that stopped in a room: Continue under a chain at its budget, Continue and Hand to under
   // handed-over work that ended early.
   const waysOn = pipeline.waysOn();
-  const carryOn = continuePresses({ turns: stores.turns, resume: (turn) => pipeline.resumeTurn(turn, "asked"), isAdmin: (who) => pipeline.isAdmin(who), handedOver: waysOn.handedOver });
+  const carryOn = continuePresses({ turns: stores.turns, resume: (turn, why) => pipeline.resumeTurn(turn, why), isAdmin: (who) => pipeline.isAdmin(who), handedOver: waysOn.handedOver });
   routePresses(input.gateways.values(), [parts.prompts, proposals.cards, stepAsks, ...missions.presses(pipeline), carryOn, waysOn.presses]);
   return { mcp, mcpLogins, mcpCatalog, skillRoots, pipeline, scheduler, tools };
 }

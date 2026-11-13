@@ -14,7 +14,7 @@ import { INBOX_FRESH_MS } from "./inbox.store.ts";
 import type { TurnJournal } from "@/modules/turns/journal.store.ts";
 import type { FinishTurn } from "@/modules/turns/turns.store.ts";
 import type { ChatProgress } from "./chat-progress.ts";
-import { continueButton } from "./resume-ask.ts";
+import { continueButton, continueEndedButton } from "./resume-ask.ts";
 import { RESTARTING, STOPPED_BY_PERSON, type TurnContext } from "./turn-context.ts";
 import { handToButtons } from "./way-on.ts";
 
@@ -86,7 +86,19 @@ export async function endEarly(
   // what the person is waiting to hear, so one that never lands is sent after the restart.
   const delivered = (): void => ctx.markDelivered(input.turnId);
   if (wayOn && input.turnId) ctx.waysOn.offer(input.turnId);
-  if (await ctx.voice.reply(input.envelope, told(closed), input.cause.kind === "restart" ? input.agentId : undefined, { onDelivered: delivered, ...(wayOn ? { buttons: wayOn } : {}) })) delivered();
+  const buttons = wayOn || (!retrying && ownContinue(input, closed));
+  if (await ctx.voice.reply(input.envelope, told(closed), input.cause.kind === "restart" ? input.agentId : undefined, { onDelivered: delivered, ...(buttons ? { buttons } : {}) })) delivered();
+}
+
+/**
+ * Continue, under a person's own turn in a room that a failure or its deadline ended with work kept: the line says
+ * to say "continue", and in a room that means tagging the agent again. Null where the line says no such thing, and in
+ * a one-to-one chat, where the word alone is as short as a press.
+ */
+function ownContinue(input: { cause: InterruptCause; envelope: MessageEnvelope; turnId: string | undefined }, closed: ClosedTurn): MessageButton[] | null {
+  const ended = input.cause.kind === "error" || input.cause.kind === "deadline";
+  if (!ended || !input.turnId || input.envelope.chatType === "dm" || keptSentence(closed) === null) return null;
+  return [continueEndedButton(input.turnId)];
 }
 
 /** Said with the buttons, and instead of them where a connection has none. */
@@ -95,7 +107,7 @@ const HAND_ON_WORDS = "Or tag another agent to hand it on.";
 /**
  * Continue and Hand to, for a turn in a room that one of our agents' hand-overs began and that a failure or its
  * deadline ended: nobody is waiting on it the way a person waits on their own question, so the room is asked.
- * Null for any other turn, which says what it always said.
+ * Null for any other turn: a person's own has `ownContinue`.
  */
 function wayOnFor(
   ctx: TurnContext,

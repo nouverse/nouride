@@ -1,17 +1,20 @@
 /**
  * A way on for work that stopped in a room (`modules/pipeline/way-on.ts`): Continue under a chain at its hop budget,
- * Continue and Hand to under handed-over work that ended early.
+ * Continue and Hand to under handed-over work that ended early, and Continue under a person's own turn that ended
+ * early with work kept (`resume-ask.ts`).
  *
  * Each case is a way a button must not behave: delivering to an agent that can no longer take it, taking a press
  * from somebody who may not talk to the agent, working twice, working from another chat, giving the work on as an
- * agent's rather than as the person's who chose, or appearing under a turn a person started themselves.
+ * agent's rather than as the person's who chose, telling the agent a restart happened when none did, or offering to
+ * hand a person's own question to another agent.
  */
 
 import { afterEach, describe, expect, test } from "bun:test";
-import { messageText, type ButtonPress, type LoadedAgent, type MessageEnvelope } from "@nouride/shared";
+import { messageText, type ButtonPress, type LoadedAgent, type MessageEnvelope, type Tool } from "@nouride/shared";
 import { routePresses } from "@/modules/gateways/presses.ts";
 import type { HandedOver } from "@/modules/pipeline/active-turns.ts";
-import { continuePresses } from "@/modules/pipeline/resume-ask.ts";
+import { continueEndedButton, continuePresses } from "@/modules/pipeline/resume-ask.ts";
+import { restartResumeEnvelope } from "@/modules/pipeline/restart-resume.ts";
 import { HAND_TO_SHOWN, handedOnText, handToButtons, wayOnPresses, WaysOn } from "@/modules/pipeline/way-on.ts";
 import type { TurnRecord } from "@/modules/turns/turns.store.ts";
 import { AutoApprovalGate, conversationOf, envelope, eventually, FakeGateway, type scriptedOpenAI } from "../helpers.ts";
@@ -152,7 +155,7 @@ describe("Continue under handed-over work that ended early", () => {
     const turn = { ...failed, senderId: "nouva-bot", startedAt: 1, ...overrides.turn } as TurnRecord;
     const presses = continuePresses({
       turns: { get: (id) => (id === turn.id ? turn : null), startedFor: () => false },
-      resume: (one) => (resumed.push(one.id), true),
+      resume: (one, why) => (resumed.push(`${one.id} ${why}`), true),
       isAdmin: () => false,
       handedOver: { waits: () => overrides.waits ?? true, mayAsk: () => overrides.mayAsk ?? true, settle: (id) => void settled.push(id) },
     });
@@ -162,7 +165,8 @@ describe("Continue under handed-over work that ended early", () => {
   test("the same agent takes it up for anyone who may talk to it there, and the line says who chose", async () => {
     const { presses, resumed, settled } = carryOn();
     const answer = await presses.press(press(`carry-on:${failed.id}`));
-    expect(resumed).toEqual([failed.id]);
+    // As work that ended, which is what its agent is told: no restart cut it off.
+    expect(resumed).toEqual([`${failed.id} ended`]);
     expect(settled).toEqual([failed.id]);
     expect(answer).toEqual({ notice: "Carrying on.", settled: "The model refused the request. What I did so far is kept.\n\nContinued by Gading." });
   });
@@ -178,9 +182,105 @@ describe("Continue under handed-over work that ended early", () => {
   test("a turn a restart cut off keeps its own rule: the person whose turn it was, or an admin", async () => {
     const cut = carryOn({ turn: { status: "interrupted", senderId: "100" } });
     expect((await cut.presses.press(press(`carry-on:${failed.id}`))).notice).toBe("Carrying on.");
+    expect(cut.resumed).toEqual([`${failed.id} asked`]);
     const others = carryOn({ turn: { status: "interrupted", senderId: "someone-else" } });
     expect((await others.presses.press(press(`carry-on:${failed.id}`))).notice).toContain("Only the person who asked for it");
     expect(others.settled).toEqual([]);
+  });
+});
+
+describe("Continue under a person's own turn that ended early", () => {
+  const own = (overrides: { turn?: Partial<TurnRecord>; admin?: boolean; taken?: boolean; resumes?: boolean; waits?: boolean } = {}) => {
+    const resumed: string[] = [];
+    const settled: string[] = [];
+    const turn = { ...failed, senderId: "100", startedAt: 1, reply: `The model refused the request. What I did so far is kept: say "continue" and I will pick up from there.`, ...overrides.turn } as TurnRecord;
+    const presses = continuePresses({
+      turns: { get: (id) => (id === turn.id ? turn : null), startedFor: (messageId) => messageId === `resume:${turn.id}` && overrides.taken === true },
+      resume: (one, why) => (resumed.push(`${one.id} ${why}`), overrides.resumes ?? true),
+      isAdmin: () => overrides.admin ?? false,
+      // Another agent's work is another line's: its rule is never asked here.
+      handedOver: { waits: () => overrides.waits ?? false, mayAsk: () => true, settle: (id) => void settled.push(id) },
+    });
+    return { presses, resumed, settled, button: continueEndedButton(turn.id) };
+  };
+
+  test("its button is Continue, with data of its own that names the turn", () => {
+    const { presses, button } = own();
+    expect(button).toEqual({ label: "Continue", data: `go-on:${failed.id}`, style: "positive" });
+    expect(presses.owns(button.data)).toBe(true);
+    expect(presses.owns("hand:to:turn_1:nouva")).toBe(false);
+  });
+
+  test("the person whose turn it was has the agent take it up, as work that ended, and the line says who chose", async () => {
+    for (const status of ["failed", "cancelled"] as const) {
+      const { presses, resumed, button } = own({ turn: { status } });
+      expect(await presses.press(press(button.data))).toEqual({
+        notice: "Carrying on.",
+        settled: `The model refused the request. What I did so far is kept: say "continue" and I will pick up from there.\n\nContinued by Gading.`,
+      });
+      expect(resumed).toEqual([`${failed.id} ended`]);
+    }
+  });
+
+  test("somebody else in the room may not, and an admin may", async () => {
+    const other = own({ turn: { senderId: "someone-else" } });
+    expect(await other.presses.press(press(other.button.data))).toEqual({ notice: "Only the person who asked for it, or an admin, can say that here." });
+    expect(other.resumed).toEqual([]);
+    const admin = own({ turn: { senderId: "someone-else" }, admin: true });
+    expect((await admin.presses.press(press(admin.button.data))).notice).toBe("Carrying on.");
+  });
+
+  test("once: a turn already taken up is not taken up again, and the line is left as it reads", async () => {
+    const { presses, resumed, button } = own({ taken: true });
+    expect(await presses.press(press(button.data))).toEqual({ notice: "I have carried on with that already." });
+    expect(resumed).toEqual([]);
+  });
+
+  test("not from another chat or another connection, and not for a turn that did not end early", async () => {
+    for (const elsewhere of [{ chatId: "999" }, { gatewayId: "telegram:main" }]) {
+      const { presses, resumed, button } = own();
+      expect(await presses.press(press(button.data, elsewhere))).toEqual({ notice: "That is not waiting any more." });
+      expect(resumed).toEqual([]);
+    }
+    for (const status of ["done", "running", "interrupted"] as const) {
+      const { presses, resumed, button } = own({ turn: { status } });
+      expect(await presses.press(press(button.data))).toEqual({ notice: "That is not waiting any more." });
+      expect(resumed).toEqual([]);
+    }
+    const unknown = own();
+    expect(await unknown.presses.press(press("go-on:turn_nobody"))).toEqual({ notice: "That is not waiting any more." });
+  });
+
+  test("a connection that is gone is said, with the word that still works", async () => {
+    const { presses, button } = own({ resumes: false });
+    expect(await presses.press(press(button.data))).toEqual({ notice: `I could not pick that up from here. Say "continue" instead.` });
+  });
+
+  test("handed-over work pressed through this button is held to this rule: the room's own is not asked", async () => {
+    // A line that waits as handed-over work, pressed with a person's button by somebody who is not its sender.
+    const { presses, resumed, settled, button } = own({ turn: { senderId: "nouva-bot" }, waits: true });
+    expect(await presses.press(press(button.data))).toEqual({ notice: "Only the person who asked for it, or an admin, can say that here." });
+    expect(resumed).toEqual([]);
+    expect(settled).toEqual([]);
+  });
+});
+
+describe("what the agent is told when it is asked to carry on", () => {
+  const turn = { id: "turn_1", agentId: "nox", gatewayId: "telegram:second", chatId: "814", prompt: "nox: restart the cache" };
+
+  test("after work that ended by itself: that it ended, and no word of a restart that did not happen", () => {
+    const told = restartResumeEnvelope(turn, "telegram", "group", "ended");
+    expect(told.text).toStartWith(`[system] Your work on "nox: restart the cache" ended before it was finished, and they have now asked you to carry on.`);
+    expect(told.text).toContain("Carry on from where you stopped");
+    expect(told.text).not.toContain("restart the daemon");
+    expect(told.text).not.toMatch(/daemon restarted|provider failed/);
+    expect(told).toMatchObject({ id: "resume:turn_1", mentions: ["nox"], chatType: "group", raw: { via: "ended resumed", turn: "turn_1" } });
+  });
+
+  test("after a restart a while ago: that, as before", () => {
+    const told = restartResumeEnvelope(turn, "telegram", "group", "asked");
+    expect(told.text).toStartWith(`[system] The daemon restarted a while ago while you were working on "nox: restart the cache", and they have now asked you to carry on.`);
+    expect(told.raw).toEqual({ via: "restart resumed", turn: "turn_1" });
   });
 });
 
@@ -199,14 +299,17 @@ interface Room {
   requests: { messages: { role: string; content: unknown }[] }[];
   /** The next model request is refused, as a provider refuses a request it will not take. */
   refuseNext(): void;
+  /** The next model request is answered as a provider that is down for a while answers: a failure tried again later. */
+  downNext(): void;
 }
 
-async function room(turns: Parameters<typeof scriptedOpenAI>[0], maxHops = 3, buttons = true): Promise<Room> {
+async function room(turns: Parameters<typeof scriptedOpenAI>[0], maxHops = 3, buttons = true, tools: [string, Tool][] = []): Promise<Room> {
   const gateway = new FakeGateway("telegram:main");
   const second = new FakeGateway("telegram:second", "telegram");
   gateway.buttons = buttons;
   second.buttons = buttons;
   let refuse = false;
+  let down = false;
   // The refused request less its temperature. A provider that will not take a request refuses it again when it is
   // asked once more without one (`TemperatureGuard`): refused once only, the second ask answered and nothing failed.
   let again: string | undefined;
@@ -216,6 +319,10 @@ async function room(turns: Parameters<typeof scriptedOpenAI>[0], maxHops = 3, bu
     maxAttempts: 1,
     fetch: (scripted) =>
       (async (url: string, init?: RequestInit) => {
+        if (init?.method === "POST" && down) {
+          down = false;
+          return new Response(JSON.stringify({ error: { message: "upstream unavailable" } }), { status: 503, headers: { "content-type": "application/json" } });
+        }
         if (init?.method === "POST") {
           const asked = lessTemperature(init);
           const askedAgain = asked === again;
@@ -228,6 +335,7 @@ async function room(turns: Parameters<typeof scriptedOpenAI>[0], maxHops = 3, bu
         return scripted(url, init);
       }) as unknown as typeof fetch,
     agents: [{ id: "nouva" }, { id: "nox" }],
+    ...(tools.length > 0 ? { agentToml: `[llm]\nprovider = "test"\n\n[tools]\nenabled = [${tools.map(([name]) => `"${name}"`).join(", ")}]\napproval_required = []\n` } : {}),
     config: {
       agents: { mentions_enabled: true, mention_max_hops: maxHops },
       gateways: {
@@ -241,18 +349,19 @@ async function room(turns: Parameters<typeof scriptedOpenAI>[0], maxHops = 3, bu
     configure: (config) => void (config.queue.steerReply = false),
     gateway,
     gateways: [gateway, second],
-    deps: () => ({ approvals: new AutoApprovalGate() }),
+    // A failure that is tried again is tried long after a test is over.
+    deps: () => ({ approvals: new AutoApprovalGate(), providerResumeMs: 3_600_000 }),
   });
   cleanup.push(bench.dispose);
-  bench.pipeline.setTools(new Map());
+  bench.pipeline.setTools(new Map(tools));
   bench.pipeline.attach();
   // As the boot routes them (`boot/turn-machine.ts`).
   const waysOn = bench.pipeline.waysOn();
   routePresses(bench.gateways.values(), [
-    continuePresses({ turns: bench.turns, resume: (turn) => bench.pipeline.resumeTurn(turn, "asked"), isAdmin: () => false, handedOver: waysOn.handedOver }),
+    continuePresses({ turns: bench.turns, resume: (turn, why) => bench.pipeline.resumeTurn(turn, why), isAdmin: () => false, handedOver: waysOn.handedOver }),
     waysOn.presses,
   ]);
-  return { pipeline: bench.pipeline, gateway, second, requests: bench.requests, refuseNext: () => void (refuse = true) };
+  return { pipeline: bench.pipeline, gateway, second, requests: bench.requests, refuseNext: () => void (refuse = true), downNext: () => void (down = true) };
 }
 
 const inRoom = (id: string, text: string, gatewayId = "telegram:main", overrides: Partial<MessageEnvelope> = {}) =>
@@ -331,6 +440,9 @@ describe("in a room, through the pipeline", () => {
     expect((await pressOn(h.second, at, carryOn!)).notice).toBe("Carrying on.");
     await eventually(() => h.second.sent.at(-1)?.text === "Cache restarted.", 4_000, "Nox's answer");
     expect(h.second.sent[at]?.text).toContain("Continued by Gading.");
+    // Told what happened: the work ended. No restart did.
+    expect(lastAsked(h)).toContain("ended before it was finished, and they have now asked you to carry on");
+    expect(lastAsked(h)).not.toContain("restarted");
     expect((await pressOn(h.second, at, handTo!)).notice).toContain("not waiting any more");
   });
 
@@ -357,13 +469,89 @@ describe("in a room, through the pipeline", () => {
     expect(failedLine.buttons).toBeUndefined();
   });
 
-  test("a turn a person started themselves says what it always said: no buttons, no word of handing on", async () => {
+  test("a turn a person started themselves that kept nothing says what it always said: no buttons, no word of handing on", async () => {
     const h = await room([{ text: "never" }]);
     h.refuseNext();
     h.second.receive(inRoom("m1", "nox: restart the cache", "telegram:second"));
     await h.pipeline.idle();
     const line = h.second.sent.at(-1)!;
     expect(line.text).not.toContain("hand it on");
+    expect(line.text).not.toContain("continue");
     expect(line.buttons).toBeUndefined();
+  });
+
+  /**
+   * A room whose agent has one tool, and whose turn ends after the tool ran, with work kept: by default the model
+   * refuses the next request. `how`: the provider is down for a while instead, or the daemon is stopping.
+   */
+  async function endedWithWork(buttons = true, chatType: MessageEnvelope["chatType"] = "group", how: "refused" | "down" | "restart" = "refused") {
+    let h: Room | undefined;
+    const end = { refused: () => h!.refuseNext(), down: () => h!.downNext(), restart: () => h!.pipeline.pause() }[how];
+    const probe: Tool = {
+      definition: { name: "probe", description: "Look at the cache.", parameters: { type: "object", properties: {} } },
+      requiresApproval: false,
+      execute: async () => (end(), { content: "the cache is stale", isError: false }),
+    } as Tool;
+    h = await room([{ toolCalls: [{ id: "c1", name: "probe", args: {} }] }, { text: "Cache restarted." }], 3, buttons, [["probe", probe]]);
+    h.second.receive(inRoom("m1", "nox: restart the cache", "telegram:second", { chatType, senderId: "user-1" }));
+    await h.pipeline.idle();
+    return h;
+  }
+
+  test("a person's own turn that ends early with work kept carries Continue, alone, and a press has the agent take it up", async () => {
+    const h = await endedWithWork();
+    const at = lineWith(h.second, "go-on:");
+    const line = h.second.sent[at]!;
+    expect(line.text).toContain(`What I did so far is kept: say "continue" and I will pick up from there.`);
+    // Their own question: nobody else's to hand on.
+    expect(line.text).not.toContain("hand it on");
+    expect(line.buttons!.map((button) => button.label)).toEqual(["Continue"]);
+    const [data] = line.buttons!.map((button) => button.data);
+
+    expect((await pressOn(h.second, at, data!)).notice).toBe("Carrying on.");
+    await eventually(() => h.second.sent.at(-1)?.text === "Cache restarted.", 4_000, "Nox's answer");
+    expect(lastAsked(h)).toContain(`Your work on "restart the cache" ended before it was finished`);
+    expect(lastAsked(h)).not.toContain("restarted");
+    // What it had done is in what it is sent: the call and its result.
+    expect(JSON.stringify(h.requests.at(-1)!.messages)).toContain("the cache is stale");
+    expect(h.second.sent[at]?.text).toContain("Continued by Gading.");
+    expect(h.second.sent[at]?.buttons).toBeUndefined();
+    // Once.
+    const before = h.requests.length;
+    expect((await pressOn(h.second, at, data!)).notice).toBe("I have carried on with that already.");
+    await h.pipeline.idle();
+    expect(h.requests).toHaveLength(before);
+  });
+
+  test("somebody else in the room is told it is not theirs, and nothing runs", async () => {
+    const h = await endedWithWork();
+    const at = lineWith(h.second, "go-on:");
+    const before = h.requests.length;
+    const answer = await h.second.press({ chatId: "814", chatType: "group", messageId: `${h.second.id}#${at + 1}`, data: h.second.sent[at]!.buttons![0]!.data, senderId: "user-2", senderName: "Somebody" });
+    expect(answer.notice).toBe("Only the person who asked for it, or an admin, can say that here.");
+    await h.pipeline.idle();
+    expect(h.requests).toHaveLength(before);
+    expect(h.second.sent[at]?.buttons).toHaveLength(1);
+  });
+
+  test("a turn the daemon will try again by itself, and one a restart cut off, carry no such button: each has its own way on", async () => {
+    const tried = await endedWithWork(true, "group", "down");
+    const promise = tried.second.sent.at(-1)!;
+    expect(promise.text).toContain("I'll try again in a few minutes");
+    expect(promise.buttons).toBeUndefined();
+
+    const cut = await endedWithWork(true, "group", "restart");
+    const report = cut.second.sent.at(-1)!;
+    expect(report.text).toContain("restart");
+    expect(report.buttons).toBeUndefined();
+  });
+
+  test("on a connection with no buttons, and in a one-to-one chat, the line says the same in words and carries none", async () => {
+    const plain = await endedWithWork(false);
+    expect(plain.second.sent.at(-1)!.text).toContain(`say "continue"`);
+    expect(plain.second.sent.at(-1)!.buttons).toBeUndefined();
+    const alone = await endedWithWork(true, "dm");
+    expect(alone.second.sent.at(-1)!.text).toContain(`say "continue"`);
+    expect(alone.second.sent.at(-1)!.buttons).toBeUndefined();
   });
 });

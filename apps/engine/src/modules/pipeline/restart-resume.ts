@@ -70,9 +70,10 @@ export function isResumption(messageId: string | null | undefined): boolean {
 
 /**
  * Why a turn is taken up: the daemon restarted and is back within the window, its model provider failed for longer
- * than a retry rides out, or a restart cut it off a while ago and its person has now said to carry on (`resume-ask.ts`).
+ * than a retry rides out, a restart cut it off a while ago and its person has now said to carry on (`resume-ask.ts`),
+ * or it ended early on a failure or its deadline and somebody pressed Continue under the line that said so.
  */
-export type ResumeWhy = "restart" | "provider" | "asked";
+export type ResumeWhy = "restart" | "provider" | "asked" | "ended";
 
 /** The call a restart cut the turn off in, read for what it may have done (`turns/cut-calls.ts`). */
 export type Cut = { kind: CutKind; call: CutCall };
@@ -101,7 +102,10 @@ export function restartResumeEnvelope(
       ? `The daemon restarted while you were working on "${quoted}", and it is back.${cut ? ` ${cutLine(cut)}` : ""}${kept}`
       : why === "asked"
         ? `The daemon restarted a while ago while you were working on "${quoted}", and they have now asked you to carry on.`
-        : `Your model provider failed while you were working on "${quoted}", and it has had a few minutes to recover.`;
+        : why === "ended"
+          ? // No restart happened, and an agent told one did looks for what a restart cut off.
+            `Your work on "${quoted}" ended before it was finished, and they have now asked you to carry on.`
+          : `Your model provider failed while you were working on "${quoted}", and it has had a few minutes to recover.`;
   return {
     id: resumptionId(turn.id),
     timestamp: Date.now(),

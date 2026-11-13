@@ -96,7 +96,7 @@ async function restart(previous: Bench, options: { answers?: string[]; buttons?:
   const recovered = recoverTurns({ ...next.durable, sessions: next.sessions, turns: next.turns, maxTurns: 200 });
   next.pipeline.setTools(new Map());
   next.pipeline.attach();
-  routePresses(next.gateways.values(), [continuePresses({ turns: next.turns, resume: (turn) => next.pipeline.resumeTurn(turn, "asked"), isAdmin: () => false })]);
+  routePresses(next.gateways.values(), [continuePresses({ turns: next.turns, resume: (turn, why) => next.pipeline.resumeTurn(turn, why), isAdmin: () => false })]);
   await resumeAfterBoot({
     recovered, orphaned: [], stores: next.durable, startedAt: Date.now(), pipeline: next.pipeline, turns: next.turns,
     notifier: new Notifier({ gateways: next.gateways }), chatEvents: { record: (event) => (timeline.push({ chatId: event.chatId, text: event.text }), null) },
