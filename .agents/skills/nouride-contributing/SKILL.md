@@ -504,8 +504,9 @@ rather than left in `.git/hooks`, which is not cloned; `bun install` points `cor
 **So a green commit does not mean the tests pass.** They used to run here and were the slow half by
 a factor of five — 28 seconds against 6, on every commit including the ones that only touch a
 comment — and a commit on a branch is usually a checkpoint rather than a claim that anything works.
-Run `bun run verify` before you push; that is where the claim is made. There are no pull requests: commit to the
-release branch and push it; `main` is fast-forwarded to it when the release is tagged.
+Run `bun run verify` before you push; that is where the claim is made. Nouride's own work has no pull requests:
+commit to the release branch and push it; `main` is fast-forwarded to it when the release is tagged. Somebody else's
+pull request runs the lint and the whole suite (`pr.yml`) and says whether its author agreed to the CLA (`cla.yml`).
 
 Nothing about the *value* of the whole suite changed, and it is still the whole suite rather than a
 staged-files subset, because this repo's failures are consistently the kind a static check misses: a

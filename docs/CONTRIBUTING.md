@@ -21,6 +21,17 @@ You agree once, by commenting on your first pull request:
 If you contribute as part of your job, check with your employer first: section 5 of the agreement asks you to. To
 agree for a company or organization, contact Nouverse through https://nouverse.com before you start.
 
+Two checks run on a pull request, and both show on its page:
+
+- **`checks`**: the lint and the whole test suite on what you propose, on GitHub's own runner. About a quarter of an
+  hour. On your first pull request it starts once a maintainer has allowed the run, which is GitHub's rule for a
+  first contribution to a repository.
+- **`cla`**: waiting until you have commented the sentence above, then agreed. Agreed once, it is agreed on every
+  pull request after.
+
+Run `bun run verify` first where you can: it is the same lint and suite. Where you cannot, say so in the pull request,
+and `checks` is the answer.
+
 ---
 
 ## Prerequisites
@@ -188,14 +199,20 @@ gh variable set CI_RUNNER --body '["self-hosted", "build-runner"]'   # the self-
 gh variable delete CI_RUNNER                                          # back to GitHub's runners
 ```
 
-There are no pull requests (the owner, 2026-10-29): work is committed to the release branch and pushed, and `main` is
-fast-forwarded to it when the release is tagged. No workflow runs on a pull request — a fork's would run its code on
-the machine that builds and signs releases, and GitHub's own runners are refused for billing —
-`tests/contracts/workflow-pins.test.ts` holds that. The self-hosted runner keeps its working copy between jobs, so every job starts by
-clearing the submodules a job before it left checked out — on GitHub's fresh runners that step has nothing to do. On
-the self-hosted runner, the release is signed on a machine that also builds: the trade the switch makes, and the
-reason GitHub's runners are the default. Since 2026-10-18 (GitHub's runners would not start for billing), the
-variable is set.
+Nouride's own work has no pull requests (the owner, 2026-10-29): it is committed to the release branch and pushed,
+and `main` is fast-forwarded to it when the release is tagged. Somebody else's pull request starts two workflows of
+its own (2026-11-13), and they are the two the switch does not move: `pr.yml`, the lint and the whole suite on the code
+proposed, and `cla.yml`, the status that says whether its author has agreed to the Contributor Licence Agreement. Both
+name GitHub's runner outright, because the variable can name the machine that builds and signs releases and a fork's
+code must not run there. `pr.yml` is given a token that reads and no secret; `cla.yml` writes one status and checks
+nothing of the pull request out. `tests/contracts/pull-request-workflows.test.ts` holds each of those lines, and
+`workflow-pins.test.ts` keeps every other workflow without the trigger.
+
+The self-hosted runner keeps its working copy between jobs, so every job starts by clearing the submodules a job
+before it left checked out — on GitHub's fresh runners that step has nothing to do. On the self-hosted runner, the
+release is signed on a machine that also builds: the trade the switch makes, and the reason GitHub's runners are the
+default. The variable was set from 2026-10-18, when GitHub's runners would not start for billing, and is unset again
+now that the repository is public (2026-11-06).
 
 ---
 

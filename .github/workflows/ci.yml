@@ -31,9 +31,10 @@ on:
     branches: ["main", "releases/**", "lts/**"]
   # The whole suite on a branch's commit, asked for by hand: see the header.
   workflow_dispatch:
-  # No pull requests (2026-10-29, the owner): work is pushed to a release branch, and `main` is fast-forwarded at the
-  # release. A pull request's run went to GitHub's runners, which billing refused — and a fork's, on the runner, would
-  # run its code on the machine that builds releases. `workflow-pins.test.ts` keeps every workflow without one.
+  # No pull request here: Nouride's own work is pushed to a release branch, and `main` is fast-forwarded at the
+  # release. Somebody else's pull request has a workflow of its own, pr.yml, which is given nothing: every job here can
+  # run on the machine that builds releases (`CI_RUNNER`), and a fork's code must not. `workflow-pins.test.ts` keeps
+  # this workflow, and every other but the two a pull request starts, without the trigger.
 
 # A new push makes the previous run's answer irrelevant, so it is cancelled rather than left to finish and report on a
 # commit nobody is looking at any more. By the event too: a push's checks and an asked-for suite on one branch are two

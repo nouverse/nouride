@@ -1,0 +1,59 @@
+# What a pull request is held to: the lint and the whole suite, on the code it proposes.
+#
+# Nouride's own work is pushed to a release branch and checked there (ci.yml). A pull request is how somebody outside
+# proposes a change, and until this workflow nothing ran on one: its author could not see whether it passed, and a
+# maintainer had to fetch it and run everything by hand before reading it.
+#
+# The whole suite, where a push runs the lint and the contract tests only: a push comes from a machine that ran the
+# suite before it (`bun run verify`), and a pull request may come from one that could not.
+#
+# It runs somebody else's code, so it is given nothing:
+#   - `pull_request`, never `pull_request_target`: a fork's run gets a token that only reads, and no secret.
+#   - GitHub's hosted runner, named outright. Never `CI_RUNNER`: that variable can name the self-hosted machine that
+#     builds and signs releases, and a fork's code must not run there.
+#   - No private submodule: everything checked here is in this repository.
+#
+# `tests/contracts/pull-request-workflows.test.ts` holds each of those lines.
+
+name: pr
+
+on:
+  pull_request:
+    branches: ["main", "releases/**", "lts/**"]
+
+# A new push to the pull request makes the run before it an answer about code nobody proposes any more.
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # ci.yml's `verify`, step for step, on the hosted runner.
+  checks:
+    if: ${{ github.repository_owner == 'nouverse' }}
+    runs-on: ubuntu-24.04
+    # A hung test must not spend six hours of runner time, the default.
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+      # Read and written in the pull request's own scope: a run here cannot change what a branch's runs restore.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+      - run: bun install --frozen-lockfile
+      # Writes `routeTree.gen.ts`, which the route files need to typecheck, and proves the dashboard builds.
+      - run: bun run build:dashboard
+      - run: bun run lint:check
+      - run: bun run lint:site
+      - run: bun run test
+        env:
+          TMPDIR: ${{ runner.temp }}

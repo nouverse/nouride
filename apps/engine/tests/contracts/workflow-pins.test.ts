@@ -31,9 +31,10 @@ describe("the workflows", () => {
     expect(block).toBe("  contents: read\n");
   });
 
-  test("no workflow runs on a pull request: work is pushed to a release branch, never proposed (2026-10-29)", () => {
-    // No pull requests: work is pushed. And one back would be a fork's code run on the machine that builds and signs
-    // releases — every job here runs on it (`CI_RUNNER`) — or, routed to GitHub's runners, a run billing refuses.
-    for (const [name, text] of workflows) expect({ name, pullRequest: /\n {2}pull_request(_target)?:/.test(text) }).toEqual({ name, pullRequest: false });
+  test("a pull request starts two workflows and no other: what each may do is `pull-request-workflows.test.ts`'s", () => {
+    // Nouride's own work is pushed to a release branch. A trigger added to any other workflow would run a fork's code
+    // with what that workflow holds: a token that writes, a secret, or the machine that builds and signs releases.
+    const started = workflows.filter(([, text]) => /\n {2}pull_request(_target)?:/.test(text)).map(([name]) => name);
+    expect(started.sort()).toEqual(["cla.yml", "pr.yml"]);
   });
 });

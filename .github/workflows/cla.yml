@@ -1,0 +1,88 @@
+# Whether a pull request's author has agreed to the Contributor Licence Agreement, said on the pull request itself.
+#
+# A pull request is taken only once its author has agreed (docs/CONTRIBUTING.md): Nouverse sells editions of Nouride,
+# and the agreement is what lets a contribution be in them. The author agrees by commenting one sentence. Until this
+# workflow a maintainer had to notice the comment was missing and ask for it by hand.
+#
+# It sets one commit status, `cla`, on the pull request's newest commit: waiting, with the sentence to comment, or
+# agreed. It writes no comment of its own. Agreed once is agreed: the sentence on an earlier pull request counts. A
+# pull request from Nouverse's own people, or from a bot, needs none.
+#
+# This runs with a token that can write a status, on events anybody can cause, so it never touches what a pull
+# request proposes:
+#   - No checkout and no action: nothing of the pull request is ever on the runner.
+#   - What it reads (who the author is, what was commented) comes from the API as data and is only compared.
+#   - The one value taken from the event is the pull request's number, handed over in the environment.
+#
+# `tests/contracts/pull-request-workflows.test.ts` holds each of those lines.
+
+name: cla
+
+on:
+  # Its workflow file is the default branch's, whatever the pull request changes.
+  pull_request_target:
+    types: [opened, reopened, synchronize]
+  issue_comment:
+    types: [created]
+
+permissions: {}
+
+# One answer at a time for a pull request, in order: a comment and a push a moment apart must not leave the older one's.
+concurrency:
+  group: cla-${{ github.event.pull_request.number || github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  cla:
+    # A comment on an issue that is no pull request is none of this.
+    if: ${{ github.repository_owner == 'nouverse' && (github.event_name == 'pull_request_target' || github.event.issue.pull_request) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      statuses: write
+      pull-requests: read
+      issues: read
+    steps:
+      - name: Whether the author agreed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
+        run: |
+          set -euo pipefail
+          repo="$GITHUB_REPOSITORY"
+          sentence="I have read the CLA Document and I hereby sign the CLA"
+          pull=$(gh api "repos/$repo/pulls/$NUMBER")
+          [ "$(jq -r .state <<<"$pull")" = open ] || exit 0
+          author=$(jq -r .user.login <<<"$pull")
+          sha=$(jq -r .head.sha <<<"$pull")
+
+          # Whether `author` wrote the sentence as a line of its own in a comment on pull request $1. A line quoted
+          # from somebody who asked for it starts with `>`, and is not theirs.
+          agreed_on() {
+            gh api --paginate "repos/$repo/issues/$1/comments" | jq -s --arg author "$author" --arg sentence "$sentence" '
+              [.[][] | select(.user.login == $author) | .body | split("\n")[]
+                | gsub("^[\\s`*_]+|[\\s`*_.]+$"; "") | ascii_downcase | select(. == ($sentence | ascii_downcase))] | length > 0'
+          }
+
+          why=""
+          if [ "$(jq -r .user.type <<<"$pull")" = Bot ]; then
+            why="A bot's pull request: no agreement to ask for"
+          elif jq -e '.author_association == "OWNER" or .author_association == "MEMBER"' <<<"$pull" >/dev/null; then
+            why="Nouverse's own"
+          elif [ "$(agreed_on "$NUMBER")" = true ]; then
+            why="$author agreed to the Contributor Licence Agreement here"
+          else
+            # Agreed once is agreed: the sentence on one of their earlier pull requests.
+            earlier=$(gh api -X GET search/issues -f q="repo:$repo is:pr commenter:$author in:comments \"I hereby sign the CLA\"" -f per_page=20 --jq '.items[].number' || true)
+            for number in $earlier; do
+              if [ "$number" != "$NUMBER" ] && [ "$(agreed_on "$number")" = true ]; then
+                why="$author agreed to the Contributor Licence Agreement on #$number"
+                break
+              fi
+            done
+          fi
+
+          if [ -n "$why" ]; then state=success; else state=pending; why="Waiting for its author to comment: $sentence"; fi
+          gh api -X POST "repos/$repo/statuses/$sha" -f state="$state" -f context=cla -f description="$why" \
+            -f target_url="https://github.com/$repo/blob/main/docs/CONTRIBUTING.md#before-your-first-pull-request" >/dev/null
+          echo "$state: $why"
