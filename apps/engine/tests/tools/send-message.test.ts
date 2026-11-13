@@ -4,7 +4,8 @@
  * The resolver is pure, so each rule is a row here — a person's key or name, a group's name, an address, several
  * matches narrowed to one, too many, none, the chat it is in, and another agent's connection. Then the tool's gate and
  * its run, with a fake `post`: an unresolved `to` is refused before a person is asked, a resolved one is asked about by
- * where it goes, and the audit keeps where and how long, never the words.
+ * where it goes, no `to` at all is the list read with nobody asked, and the audit keeps where and how long, never the
+ * words.
  */
 
 import { describe, expect, test } from "bun:test";
@@ -118,6 +119,39 @@ describe("the tool", () => {
     const { made } = tool();
     expect(made.gate!({ to: "grup wa", text: "x" }, ctx).action).toBe("refuse");
     expect(made.gate!({ to: "mira", text: "  " }, ctx)).toEqual({ action: "refuse", reason: "`text` is empty" });
+  });
+
+  test("no `to` is the call for the list: read with nobody asked, nothing sent, and not a failed step", async () => {
+    // Live: while an unknown `to` was the only way to see the chats, agents on two models sent `to: "list"`, `text: "test"`.
+    const { made, posted } = tool();
+    expect(made.gate!({}, ctx)).toEqual({ action: "run", via: "ceiling" });
+    // A scheduled job's run reads it the same way: its guard is on what is sent, and this sends nothing.
+    expect(made.gate!({}, { ...ctx, sendsTo: { gatewayId: "web:dashboard", chatId: "web-1" } })).toEqual({ action: "run", via: "ceiling" });
+    expect(made.sendsOut!({}, ctx)).toBeNull();
+    const result = await made.execute({}, ctx);
+    expect(result.isError).toBe(false);
+    expect(result.content).toStartWith("Nothing was sent: there was no `to`. Give `to` one of these addresses, a person's key, or a group's name:");
+    expect(result.content).toContain('- `whatsapp:main:1203@g.us`: the whatsapp group "Keluarga Besar" (Mira Wati, Budi)');
+    expect(posted).toEqual([]);
+  });
+
+  test("a `text` with no `to` beside it goes nowhere: the list, and the words that nothing was sent", async () => {
+    const { made, posted } = tool();
+    expect(made.gate!({ to: " ", text: "Rapat jam 7." }, ctx).action).toBe("run");
+    const result = await made.execute({ to: " ", text: "Rapat jam 7." }, ctx);
+    expect(result).toMatchObject({ isError: false });
+    expect(result.content).toStartWith("Nothing was sent: there was no `to`.");
+    expect(posted).toEqual([]);
+  });
+
+  test("the schema requires neither field and says how the list is had, never that an unknown `to` gives it", () => {
+    const { definition } = tool().made;
+    const parameters = definition.parameters as { required: string[]; properties: { to: { description: string } } };
+    // A required `text` would have to be made up for the list, and a required `to` is the made-up recipient again.
+    expect(parameters.required).toEqual([]);
+    expect(definition.description).toContain("With no `to`, it lists the chats you can reach and sends nothing.");
+    expect(parameters.properties.to.description).toEndWith("Left out: the list.");
+    expect(definition.description).not.toContain("unknown `to`");
   });
 
   test("sends to the chat `to` resolved to, and says so", async () => {

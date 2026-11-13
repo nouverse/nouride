@@ -323,7 +323,7 @@ export function renderTools(view: HarnessView): string[] {
     // and scheduled a job to post it — and the group's conversation never knew it had been said (0.7.23).
     ...(toolNames.includes("send_message")
       ? [
-          "- Asked to tell somebody something, or to post into another chat (a person's one-to-one, a group): `send_message`. `to` is a person's key or name, a group's name, or a chat's address; when it names nothing you can reach, or a person with more than one chat, the answer lists them. Never read the daemon's database or schedule a job to find or reach a chat, or to check that a message went.",
+          "- Asked to tell somebody something, or to post into another chat (a person's one-to-one, a group): `send_message`. `to` is a person's key or name, a group's name, or a chat's address. With no `to` it lists the chats you can reach and sends nothing: never make up a `to` to see them. For a person with more than one chat, the answer lists theirs. Never read the daemon's database or schedule a job to find or reach a chat, or to check that a message went.",
         ]
       : []),
     ...(toolNames.includes("session_status")

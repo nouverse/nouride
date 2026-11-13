@@ -9,8 +9,8 @@
  * So two halves, and the second is the one that matters:
  *
  * - **Addressing without ids.** `to` is a person (their key or name: their one-to-one chat), a group's name, or
- *   `gateway:chat` from the list this tool gives back when `to` names nothing it can reach. The agent never needs the
- *   database, and the prompt says not to read it.
+ *   `gateway:chat` from the list this tool gives back. The agent never needs the database, and the prompt says not to
+ *   read it.
  * - **The message lands in that chat's conversation.** After the platform takes it, it is appended to this agent's
  *   conversation there as its own words, after a `[system]` line saying where it was sent from — so the next turn in
  *   that chat has it in its history (`pipeline/send-message.ts`).
@@ -21,6 +21,11 @@
  *
  * Asked like any tool that changes something, at the agent's approval level — it speaks to people outside this
  * conversation. An unknown or ambiguous `to` is refused before anybody is asked, with the chats it can reach.
+ *
+ * **The list has a call of its own: no `to`.** Nothing is sent and nobody is asked. An unknown `to` used to be the only
+ * way to see the chats, and the schema said so; agents on two different models then made a recipient up to get the
+ * list (`to: "list"`, `text: "test"`), in a chat and at the start of a scheduled job's run. Each was a failed step on
+ * the person's page, and a message waiting for the chat that would one day carry that name.
  */
 
 import type { Tool, ToolContext, ToolResult } from "@nouride/shared";
@@ -157,6 +162,11 @@ function textOf(args: Record<string, unknown>): string {
   return typeof args.text === "string" ? args.text.trim() : "";
 }
 
+/** No `to`: the call that asks which chats there are. With a `text` beside it, a send that forgot where: listed too. */
+function asksForChats(args: Record<string, unknown>): boolean {
+  return typeof args.to !== "string" || !args.to.trim();
+}
+
 export function createSendMessageTool(options: SendMessageOptions): Tool {
   const resolve = (args: Record<string, unknown>, ctx: ToolContext): Resolved =>
     resolveSendTarget(typeof args.to === "string" ? args.to : "", options.targets(ctx), ctx);
@@ -167,17 +177,19 @@ export function createSendMessageTool(options: SendMessageOptions): Tool {
       name: "send_message",
       description:
         "Send a message into another chat you know (a person's one-to-one chat or a group), and it becomes part of that " +
-        "chat's conversation. Not for this chat: answer here in your reply. An unknown `to` lists the chats you can reach.",
+        "chat's conversation. Not for this chat: answer here in your reply. With no `to`, it lists the chats you can " +
+        "reach and sends nothing.",
       parameters: {
         type: "object",
         properties: {
           to: {
             type: "string",
-            description: 'A person\'s key or name ("mira"), a group\'s name, or a chat address `gateway:chat` from the list.',
+            description: 'A person\'s key or name ("mira"), a group\'s name, or a chat address `gateway:chat` from the list. Left out: the list.',
           },
           text: { type: "string", description: "The message, exactly as it should arrive." },
         },
-        required: ["to", "text"],
+        // Neither is required: the call for the list has no `to`, and a `text` it had to carry would be made up.
+        required: [],
       },
     },
 
@@ -188,6 +200,8 @@ export function createSendMessageTool(options: SendMessageOptions): Tool {
     },
 
     gate(args, ctx) {
+      // The list is read, and nothing leaves: nobody is asked.
+      if (asksForChats(args)) return { action: "run", via: "ceiling" };
       if (!textOf(args)) return { action: "refuse", reason: "`text` is empty" };
       const found = resolve(args, ctx);
       if (!found.ok) return { action: "refuse", reason: found.reason };
@@ -217,6 +231,7 @@ export function createSendMessageTool(options: SendMessageOptions): Tool {
     },
 
     async execute(args, ctx): Promise<ToolResult> {
+      if (asksForChats(args)) return { content: listing(options.targets(ctx).chats, "Nothing was sent: there was no `to`."), isError: false };
       const text = textOf(args);
       if (!text) return { content: "`text` is empty.", isError: true };
       const found = resolve(args, ctx);
