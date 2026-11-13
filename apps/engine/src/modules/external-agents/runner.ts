@@ -297,7 +297,7 @@ export class ExternalTurnRunner {
           // hours of work. Recorded here and counted from the turn's result, so no prompt is either twice.
           if (answered.usage) {
             reported = (reported ?? 0) + answered.usage.totalTokens;
-            this.deps.onUsage?.({ ...cliUsage(answered.usage), model: external.model ?? this.host.models?.runsOn(agentId) ?? cli.row.name, agentId, provider: cli.row.id });
+            this.deps.onUsage?.({ ...cliUsage(answered.usage), model: this.answering(req.model) ?? cli.row.name, agentId, provider: cli.row.id });
           }
           // How far the estimate was from what the CLI then reported: the measure of the running count a limit reads.
           log.info("a CLI prompt ended", { agent_id: agentId, estimated: read.spent, ...(answered.usage ? { reported: answered.usage.totalTokens } : {}) });
@@ -347,7 +347,7 @@ export class ExternalTurnRunner {
     return {
       ...this.result(req, text, turnMessages, steps, calls, refused, stop, req.pause?.() === true, prompts, answer || last),
       externalTokens: reported,
-      answeredBy: [cli.row.name, external.model ?? this.host.models?.runsOn(agentId)].filter(Boolean).join(" · "),
+      answeredBy: [cli.row.name, this.answering(req.model)].filter(Boolean).join(" · "),
       ...(spoke ? { told: text } : {}),
     };
   }
@@ -409,6 +409,16 @@ export class ExternalTurnRunner {
     });
     this.host.efforts?.keep(agentId, offeredEfforts(cli.optionsOf(sessionId)));
     return sessionId;
+  }
+
+  /**
+   * The model a turn was answered by, as lists name it: its chat's choice where it made one, else the agent's own. A
+   * turn on a model its chat picked was recorded, and its usage counted, under the agent's own.
+   */
+  private answering(chosen: string | undefined): string | undefined {
+    const agentId = this.agent.config.id;
+    if (chosen !== undefined) return this.host.models?.of(agentId).find((model) => model.value === chosen)?.name ?? chosen;
+    return this.agent.config.external?.model ?? this.host.models?.runsOn(agentId) ?? undefined;
   }
 
   /** A failure as the person reads it, and as the agent's status where it is the CLI's state rather than this turn's. */

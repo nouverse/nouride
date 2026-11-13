@@ -512,6 +512,18 @@ describe("a turn of an external agent", () => {
     expect(await stderrSaid(connection, (line) => line.startsWith("model:"), 2)).toEqual(["model:big", "model:small"]);
   });
 
+  test("a turn on a model its chat picked is recorded under that model, and so is what it spent", async () => {
+    // Recorded, and its usage counted, under the agent's own: a conversation moved to another model read as if it
+    // had never been.
+    runAgentCommandsThrough({ prefix: () => ["env"], put: () => [] });
+    const { runner, req, usages } = setup({ mode: "usage", model: "big" });
+    expect((await runner.run(req("one"))).answeredBy).toBe("Fake CLI · big");
+    expect((await runner.run(req("two", { model: "small" }))).answeredBy).toBe("Fake CLI · small");
+    // The agent's own again once the chat chooses none.
+    expect((await runner.run(req("three"))).answeredBy).toBe("Fake CLI · big");
+    expect((usages as { model: string }[]).map((usage) => usage.model)).toEqual(["big", "small", "big"]);
+  });
+
   test("the idle sweep leaves a CLI whose turn is still opening its session (0.8.1)", async () => {
     // A turn counted only while it prompted: a sweep while it wrote the instructions or synced skills stopped the CLI.
     const { service, runner, req } = setup();
