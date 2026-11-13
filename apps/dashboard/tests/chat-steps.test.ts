@@ -94,8 +94,9 @@ describe("a step's row", () => {
   });
 
   test("on a phone, what it said is the first line and the call the whole width under it (0.8.12)", () => {
-    // A Claude Code command beside "Bash ok: nr-ag…" was a column of twelve letters on an iPhone.
-    const command = "getent group nr-agents; id nr-nexa 2>&1; S=/srv/nouride/.nouride/workspace/shared/nouride-demo";
+    // A Claude Code command beside "Bash ok: nr-ag…" was a column of twelve letters on an iPhone. A call this short is
+    // laid out so on a phone alone; a longer one is so at every width (`mount-step-long-call.test.ts`).
+    const command = "getent group nr-agents; id nr-nexa 2>&1";
     const html = renderToString(createElement(StepFeed, { steps: [{ seq: 1, at: 0, kind: "tool", text: command, ms: 0 }, { seq: 2, at: 1, kind: "tool_done", text: `${command.split(" ")[0]} Bash ok: nr-agents:x:997:`, ms: 40 }], elapsedMs: 1_000, running: false }));
     const call = /<div class="([^"]*)">getent group/.exec(html)?.[1] ?? "";
     expect(call.split(" ")).toEqual(expect.arrayContaining(["max-sm:order-last", "max-sm:basis-full"]));

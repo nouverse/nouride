@@ -55,6 +55,11 @@ function WholeRows({ rows, activeSeq }: { rows: StepRowModel[]; activeSeq?: numb
   );
 }
 
+/** A call longer than this takes the row's whole width, what came of it on the line above: beside a result it has half a row. */
+const LONG_CALL = 48;
+/** And one longer than this is cut at three lines, the rest a press away. */
+const TALL_CALL = 240;
+
 /**
  * One tool call, on one line.
  *
@@ -62,14 +67,23 @@ function WholeRows({ rows, activeSeq }: { rows: StepRowModel[]; activeSeq?: numb
  * duration used to sit. `stepRows` explains why the two rows became one; what matters here is the
  * colour: a non-zero exit is *muted*, because `which` exits 1 to say "not installed" and three rows
  * of red on a screen where nothing was wrong is what made a working turn look broken.
+ *
+ * A long call is not one line and does not share one. Beside its result a shell line of six hundred characters was a
+ * column forty letters wide and a dozen lines tall, broken in the middle of every word, with the result cut short in
+ * the half it had taken: the list of a turn that ran three of them was a screen and a half. So it is laid out as on a
+ * phone at every width, the result first and the call under it on the whole row, broken at its spaces; and a very long
+ * one shows its first three lines until it is asked for.
  */
 function StepRow({ row, active }: { row: StepRowModel; active?: boolean }) {
+  const [whole, setWhole] = useState(false);
   const isThought = row.kind === "reasoning";
   const spinning = active || row.running;
   const said = Boolean(row.outcome) || row.waitedMs !== undefined;
+  const long = !isThought && row.text.length > LONG_CALL;
+  const tall = !isThought && row.text.length > TALL_CALL;
   return (
     <div
-      className={`p-2 rounded-lg border text-[11px] flex flex-wrap items-start gap-x-2 gap-y-1 sm:flex-nowrap ${
+      className={`p-2 rounded-lg border text-[11px] flex flex-wrap items-start gap-x-2 gap-y-1 ${long ? "" : "sm:flex-nowrap"} ${
         spinning
           ? "bg-primary/5 border-primary/20"
           : "bg-base-100/80 border-base-content/[0.05]"
@@ -85,11 +99,27 @@ function StepRow({ row, active }: { row: StepRowModel; active?: boolean }) {
       {/* A width of its own: a long outcome on the right squeezed the call's name to a letter a line (0.8.1). On a
           phone that width was still a column of twelve letters — a command broken every few characters beside
           "Bash ok: …" (0.8.12) — so there the outcome is the row's first line and the call is the whole width under it. */}
-      <div className={`min-w-20 flex-1 break-all leading-relaxed ${said ? "max-sm:order-last max-sm:basis-full" : ""}`}>{row.text}</div>
+      <div className={`min-w-20 flex-1 leading-relaxed ${long ? "[overflow-wrap:anywhere]" : "break-all"} ${said ? (long ? "order-last basis-full" : "max-sm:order-last max-sm:basis-full") : ""}`}>
+        {tall ? (
+          <>
+            <div className={whole ? undefined : "line-clamp-3"}>{row.text}</div>
+            <button
+              type="button"
+              aria-expanded={whole}
+              onClick={() => setWhole((was) => !was)}
+              className="-mx-1 mt-0.5 inline-flex h-8 items-center rounded px-1 font-sans text-[11px] font-semibold not-italic text-secondary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-secondary/60 sm:h-6"
+            >
+              {whole ? "Show less" : "Show all"}
+            </button>
+          </>
+        ) : (
+          row.text
+        )}
+      </div>
       {/* Nothing said yet, nothing beside it: an empty outcome still took half a phone's row, and a call at work beside the
           agent's cat was broken every sixteen letters. */}
       {said ? (
-        <span className="flex min-w-0 items-baseline gap-1.5 font-mono text-[10px] mt-0.5 max-sm:flex-1 sm:max-w-[45%]">
+        <span className={`flex min-w-0 items-baseline gap-1.5 font-mono text-[10px] mt-0.5 ${long ? "flex-1" : "max-sm:flex-1 sm:max-w-[45%]"}`}>
           {row.waitedMs !== undefined && (
             // The model deciding what to call, which is most of a slow turn and was previously shown in
             // the duration column as though the call itself had taken that long.
