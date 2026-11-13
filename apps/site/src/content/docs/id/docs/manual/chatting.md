@@ -103,6 +103,10 @@ lagi. Ini terjadi saat cache model untuk percakapan itu memang sudah hilang (pro
 atau chat diam satu jam), atau saat jumlahnya cukup besar untuk layak ditulis ulang, jadi chat yang sedang aktif
 tetap kena cache.
 
+Satu tugas yang panjang dijaga dengan cara yang sama (sejak 0.8.37). Kalau satu giliran sudah mengambil begitu banyak
+langkah sampai langkah-langkah itu sendiri memenuhi konteks model, agent merangkum langkah-langkah awalnya dan lanjut
+dari catatan itu. Sebelumnya giliran seperti itu berhenti di situ, dengan pekerjaan yang belum selesai.
+
 `max_context_ratio` menentukan seberapa banyak jendela konteks model diisi sebelum itu berjalan.
 [Referensi konfigurasi →](/id/docs/reference/config/)
 
@@ -410,6 +414,10 @@ agent lain di room (0.8.33). Continue membuat agent yang sama melanjutkannya. Ha
 lain apa yang tadi diminta ke agent pertama. Siapa pun yang boleh bicara dengan agent itu di room
 bisa menekannya, sekali, dan baris itu lalu menyebut siapa memilih apa. Tanpa tombol, baris itu
 mengatakan hal yang sama dengan kata-kata: bilang "continue", atau tag agent lain.
+
+**Kalau permintaanmu sendiri gagal di room.** Kalau agent sudah mengerjakan sebagian, baris yang ditinggalkannya
+bilang begitu dan membawa tombol **Continue** (sejak 0.8.37), jadi kamu gak perlu men-tag-nya lagi. Kamu, atau
+admin, bisa menekannya, sekali. Di chat satu lawan satu gak ada tombolnya: bilang "continue" sama pendeknya.
 
 **Di chat satu lawan satu ini gak bekerja begitu, dan memang gak bisa.** Setiap bot punya
 percakapan pribadinya sendiri dengan kamu, jadi tag yang ditulis di DM gak sampai ke siapa pun, bot

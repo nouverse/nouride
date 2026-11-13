@@ -99,6 +99,10 @@ line saying where its whole text is kept, which the agent opens with `read` when
 model's cache of the conversation is lost anyway (the agent's prompt, model or tools changed, or the chat was quiet
 for an hour), or once there is enough of it to be worth rewriting, so a chat going back and forth keeps its cache.
 
+One long task is held the same way (from 0.8.37). When a single turn has taken so many steps that they fill the
+model's context by themselves, the agent sums up its earliest steps and carries on from those notes. Before, such a
+turn ended there, with the work unfinished.
+
 `max_context_ratio` decides how much of the model's context window gets filled before that kicks in.
 [Configuration reference →](/en/docs/reference/config/)
 
@@ -399,6 +403,10 @@ it leaves carries **Continue** and **Hand to** for up to three other agents of t
 Continue has the same agent take it up again. Hand to gives another agent what the first was asked.
 Anyone who may talk to that agent in the room can press, once, and the line then says who chose what.
 Without buttons the line says the same in words: say "continue", or tag another agent.
+
+**When your own request fails in a room.** If the agent had already done part of the work, the line it leaves
+says so and carries **Continue** (from 0.8.37), so you do not have to tag it again. You, or an admin, can press
+it, once. In a one-to-one chat there is no button: saying "continue" is as short.
 
 **In a one-to-one chat this is not how it works, and it cannot be.** Each bot has its own private
 conversation with you, so a tag written in a DM reaches nobody, the other agent's bot never sees the

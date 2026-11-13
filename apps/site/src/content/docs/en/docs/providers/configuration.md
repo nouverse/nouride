@@ -303,6 +303,13 @@ goes next, oldest first: the call stays with its path and its result, and the te
 saying how big it was, that the call ran, and to read the file for what it holds now. The calls of
 the latest step are never shortened. Without this a long coding turn carried every file it wrote until the window was full.
 
+And when the steps themselves fill the window, with nothing left in them to clear (from 0.8.37), the turn's oldest
+steps are summed up by the same summarizer, and the turn goes on from its notes and its newest steps. Before, such a
+turn ended on a full context. It starts at the line compaction starts at and makes room down to the line history is
+trimmed to, so a long turn is asked for notes once in a while, not at every step. A call and its result leave
+together, and the newest step always stays. If the summarizer fails, the turn's activity says so once and the turn
+carries on as it was.
+
 A tool's result is also made smaller by what it is before it enters the conversation: a terminal's colour codes are
 taken out, a line a progress bar redrew is kept at its last state, three or more identical lines become one counted
 `[× N]`, and JSON loses the spaces between its parts. A diff and a file read with `read` are kept exactly. The whole
