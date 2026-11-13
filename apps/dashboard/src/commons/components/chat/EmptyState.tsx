@@ -29,10 +29,14 @@ export interface EmptyStateProps {
 }
 
 /**
- * The four openers offered in a fresh chat: who the agent is, then three kinds of work it does from a skill it
- * already has. A press puts one in the message box and sends nothing, so one that ends at a colon is for the person
- * to finish, with their own writing pasted in or their own subject named: it is shown with `…` after it, which is
- * not part of what goes in the box.
+ * The four openers offered in a fresh chat: who the agent is, two kinds of work it does from a skill it already
+ * has, and how a chat app is connected to it. A press puts one in the message box and sends nothing, so one that
+ * ends at a colon is for the person to finish, with their own writing pasted in or their own subject named: it is
+ * shown with `…` after it, which is not part of what goes in the box.
+ *
+ * The last names its three chat apps in as few words as say it: "How do I connect Telegram, Discord or WhatsApp?"
+ * is 328 px wide at an opener's size, and an opener has 303 in the floating panel and 281 on a small phone. A second
+ * opener on two lines is 20 px the panel does not have.
  *
  * In English, deliberately. They were written in Indonesian — the language this daemon's operator
  * speaks — and baked into the component, so the first thing any other user saw was a language they
@@ -43,7 +47,7 @@ function openers(agentName: string): string[] {
     `Hi ${agentName}, introduce yourself and tell me what you can do.`,
     "Make a carousel from this writing: ",
     "Design a mockup of a landing page for: ",
-    "Research this, with sources: ",
+    "Connect Telegram, Discord or WhatsApp?",
   ];
 }
 

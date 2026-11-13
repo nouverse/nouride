@@ -1,8 +1,8 @@
 /**
  * The openers of a fresh chat.
  *
- * Four: who the agent is, then three kinds of work it does from a skill it has (a carousel from a person's writing,
- * a mockup, something found out with its sources). Those three end at a colon for the person to finish, and their
+ * Four: who the agent is, two kinds of work it does from a skill it has (a carousel from a person's writing, a
+ * mockup), and how a chat app is connected. The two of work end at a colon for the person to finish, and their
  * buttons read with `…` after them; what a press puts in the message box is the words alone, and nothing is sent.
  *
  * Whether four fit is a browser's to say, and was measured there with the built stylesheet: the floating panel's
@@ -33,14 +33,14 @@ const grid = (host: HTMLElement) => host.querySelector("div.grid") as HTMLElemen
 const openers = (host: HTMLElement) => [...grid(host).querySelectorAll<HTMLButtonElement>("button")];
 
 describe("the openers of a fresh chat", () => {
-  test("four: the agent by its name, then a carousel, a mockup and research, each of those left for the person to finish", async () => {
+  test("four: the agent by its name, a carousel and a mockup left for the person to finish, and how a chat app is connected", async () => {
     const { host, unmount } = await greet({});
     try {
       expect(openers(host).map((button) => button.textContent)).toEqual([
         "Hi Nix, introduce yourself and tell me what you can do.",
         "Make a carousel from this writing: …",
         "Design a mockup of a landing page for: …",
-        "Research this, with sources: …",
+        "Connect Telegram, Discord or WhatsApp?",
       ]);
     } finally {
       unmount();
@@ -55,7 +55,7 @@ describe("the openers of a fresh chat", () => {
         "Hi Nix, introduce yourself and tell me what you can do.",
         "Make a carousel from this writing: ",
         "Design a mockup of a landing page for: ",
-        "Research this, with sources: ",
+        "Connect Telegram, Discord or WhatsApp?",
       ]);
     } finally {
       unmount();
