@@ -61,7 +61,7 @@ function everyTool() {
   });
   tools.set("mission", createMissionTools(stub as never).chat);
   tools.set("work", createWorkTool(stub as never));
-  tools.set("schedule", createScheduleTool({ store: stub as never, timezone: () => "UTC", agentExists: () => true, post: async () => true }));
+  tools.set("schedule", createScheduleTool({ chats: () => ({ chats: [], othersGateways: [] }), store: stub as never, timezone: () => "UTC", agentExists: () => true, post: async () => true }));
   tools.set("persona", createPersonaTool({ files: stub as never }));
   return tools;
 }

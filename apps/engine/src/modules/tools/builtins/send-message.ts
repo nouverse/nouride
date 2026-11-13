@@ -56,7 +56,7 @@ export interface SendTargets {
 
 export interface SendMessageOptions {
   /** The chats this agent can reach from where it is, read per call — conversations start while the daemon runs. */
-  targets(ctx: ToolContext): SendTargets;
+  targets(ctx: Pick<ToolContext, "agentId">): SendTargets;
   /** Put the text on the wire, and into that chat's conversation once it landed. */
   post(ctx: ToolContext, chat: ReachableChat, text: string): Promise<{ ok: true } | { ok: false; reason: string }>;
 }
@@ -87,6 +87,12 @@ function describeChat(chat: ReachableChat): string {
   const named = chat.title ? ` "${chat.title}"` : "";
   const present = chat.people.length > 0 ? ` (${chat.people.map((person) => person.name).join(", ")})` : "";
   return `the ${platform} group${named}${present}`;
+}
+
+/** A chat by its address, in the words `to` resolves to: where a scheduled job's results go, on its card. The address when it is not one of these. */
+export function describeAddress(targets: SendTargets, chat: { gatewayId: string; chatId: string }): string {
+  const found = targets.chats.find((one) => chatAddress(one) === chatAddress(chat));
+  return found ? describeChat(found) : chatAddress(chat);
 }
 
 function listing(chats: readonly ReachableChat[], heading: string): string {

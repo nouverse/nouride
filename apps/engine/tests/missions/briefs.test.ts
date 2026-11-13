@@ -128,7 +128,7 @@ describe("a proposed job's prompt and mission", () => {
     db = openDatabase(join(dir, "t.db"));
     await migrate(db);
     store = new CronStore({ db, config: DEFAULT_CONFIG.cron, timezone: "Asia/Jakarta" });
-    tool = createScheduleTool({ store, timezone: () => "Asia/Jakarta", agentExists: (id) => id === "nouva", post: async () => true });
+    tool = createScheduleTool({ chats: () => ({ chats: [], othersGateways: [] }), store, timezone: () => "Asia/Jakarta", agentExists: (id) => id === "nouva", post: async () => true });
   });
   afterEach(() => {
     db.close();
@@ -158,7 +158,7 @@ describe("a proposed job's prompt and mission", () => {
 
   test("a mission's goal pointing at a brief not in English is refused at proposal — a run's start does not read it (D6)", async () => {
     const briefs: Record<string, string> = { "/work/nouva/BRIEF.md": ENGLISH_BRIEF, "/work/nouva/brief-id.md": INDONESIAN_BRIEF };
-    const reading = createScheduleTool({ store, timezone: () => "Asia/Jakarta", agentExists: (id) => id === "nouva", post: async () => true, readBrief: (path) => briefs[path] ?? null });
+    const reading = createScheduleTool({ chats: () => ({ chats: [], othersGateways: [] }), store, timezone: () => "Asia/Jakarta", agentExists: (id) => id === "nouva", post: async () => true, readBrief: (path) => briefs[path] ?? null });
     const offer = (mission: string) => reading.execute({ name: "Nightly audit", when: "cron 0 7 * * *", mission }, DM);
     const refused = await offer("Full brief, read first: /work/nouva/brief-id.md");
     expect(refused).toMatchObject({ isError: true });

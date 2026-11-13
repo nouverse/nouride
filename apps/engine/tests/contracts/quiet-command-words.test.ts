@@ -17,7 +17,7 @@ const read = (path: string) => readFileSync(join(ROOT, path), "utf8").replace(/\
 
 describe("the words about a scheduled command's quiet run", () => {
   test("the schedule tool says a command that prints nothing sends nothing", () => {
-    const tool = createScheduleTool({ store: {} as never, timezone: () => "UTC", agentExists: () => true, post: async () => true });
+    const tool = createScheduleTool({ chats: () => ({ chats: [], othersGateways: [] }), store: {} as never, timezone: () => "UTC", agentExists: () => true, post: async () => true });
     const command = (tool.definition.parameters as { properties: Record<string, { description: string }> }).properties.command!;
     expect(command.description).toBe("A shell line; what it prints is sent, and nothing at all when it prints nothing.");
   });

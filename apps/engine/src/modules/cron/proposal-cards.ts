@@ -26,6 +26,8 @@ export interface ProposalCardsDeps {
   isOwner: (who: { gatewayId: string; senderId: string }, owner: string | undefined) => boolean;
   /** When a job runs, in words — `describeTrigger` in the daemon's zone. */
   when: (job: Job) => string;
+  /** Where a job's results go when that is not the chat it reports from, in words; null for there. */
+  results: (job: Job) => string | null;
 }
 
 /** Who answered, from a chat: where they said it, who they are there, and what kind of chat it is. */
@@ -55,7 +57,8 @@ export class ProposalCards {
     const proposal = job.proposal;
     if (!proposal) return false;
     const target = { gatewayId: this.deps.voice(proposal.by, proposal.gatewayId), chatId: proposal.chatId };
-    const sent = await this.deps.notifier.ask(target, (buttons) => proposalCard(job, this.deps.when(job), { buttons }), proposalButtons(job.id));
+    const results = this.deps.results(job) ?? undefined;
+    const sent = await this.deps.notifier.ask(target, (buttons) => proposalCard(job, this.deps.when(job), { buttons, results }), proposalButtons(job.id));
     if (!sent) {
       log.warn("a proposal's card was not delivered: answer it from the dashboard", { job: job.id, gateway_id: target.gatewayId });
       return false;

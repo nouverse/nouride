@@ -77,13 +77,14 @@ function exitsLine(step: JobStep, index: number, steps: readonly JobStep[]): str
 }
 
 /** The card: who proposes what, when it runs, and where it reports — and how to answer it without buttons. */
-export function proposalCard(job: Job, when: string, shown: { buttons: boolean }): string {
+export function proposalCard(job: Job, when: string, shown: { buttons: boolean; /** Where its results go when not here, in words. */ results?: string | undefined }): string {
   const change = job.proposal?.replaces ? ` (a change to job ${job.proposal.replaces})` : "";
   const lines = [
     `📋 **${job.proposal?.by ?? job.agentId}** proposes ${job.trigger.kind === "webhook" ? "a webhook" : job.trigger.kind === "manual" ? "work started by hand" : "a scheduled job"}: **${job.name}**${change}`,
     `When: ${job.trigger.kind === "webhook" ? "a request to its own URL, shown once it is on" : job.trigger.kind === "manual" ? "when somebody presses Run now" : when}`,
     `Does: ${doesLine(job.agentId, job.payload)}`,
-    "Results: here",
+    // Named on the card a person turns on, since that is their yes to it: results sent elsewhere are not asked about again.
+    `Results: ${shown.results ? `sent to ${shown.results}, not here` : "here"}`,
     ...(job.delivery.once ? ["Tells once: after the first run that tells you something, it turns itself off."] : []),
     "It stays off until somebody turns it on.",
   ];

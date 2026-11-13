@@ -269,7 +269,7 @@ describe("the Automations page's routes", () => {
 describe("an agent proposes a list", () => {
   function tool(agents = ["nouva", "nix"]) {
     const posted: Job[] = [];
-    const made = createScheduleTool({ store, timezone: () => "UTC", agentExists: (id) => agents.includes(id), post: async (proposed) => (posted.push(proposed), true) });
+    const made = createScheduleTool({ chats: () => ({ chats: [], othersGateways: [] }), store, timezone: () => "UTC", agentExists: (id) => agents.includes(id), post: async (proposed) => (posted.push(proposed), true) });
     const ctx = { agentId: "nouva", gatewayId: "telegram:main", chatId: "8142", senderId: "8142", workspaceRoots: [] } as unknown as ToolContext;
     return { propose: (args: Record<string, unknown>) => made.execute({ name: "weekly", when: "cron 0 9 * * 1", ...args }, ctx), posted, made };
   }

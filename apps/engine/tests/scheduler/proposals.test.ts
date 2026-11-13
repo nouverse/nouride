@@ -56,8 +56,9 @@ beforeEach(async () => {
     // People, as far as these tests go: a sender owns what was made or turned on under their Telegram id.
     isOwner: (who, owner) => owner === `telegram:${who.senderId}`,
     when: (job) => (job.trigger.kind === "cron" ? `cron ${job.trigger.expr}` : job.trigger.kind),
+    results: () => null,
   });
-  tool = createScheduleTool({ store, timezone: () => "Asia/Jakarta", agentExists: (id) => id === "nouva" || id === "nox", post: (job) => cards.post(job) });
+  tool = createScheduleTool({ store, timezone: () => "Asia/Jakarta", agentExists: (id) => id === "nouva" || id === "nox", post: (job) => cards.post(job), chats: () => ({ chats: [], othersGateways: [] }) });
 });
 afterEach(() => {
   db.close();

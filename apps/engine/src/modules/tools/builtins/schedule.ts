@@ -18,6 +18,7 @@ import { MISSION_GATEWAY_ID } from "@/modules/missions/gateway.ts";
 import { briefFilesOf } from "@/modules/missions/start.ts";
 import { pagePath, type LinkFor } from "@/modules/web/links.ts";
 import { workTextIsEnglish, writeWorkInEnglish } from "@/modules/memory/index.ts";
+import { describeAddress, resolveSendTarget, type SendTargets } from "./send-message.ts";
 
 export interface ScheduleToolOptions {
   store: CronPort;
@@ -27,6 +28,8 @@ export interface ScheduleToolOptions {
   agentExists: (agentId: string) => boolean;
   /** Post its card in the chat it was asked in. False when it could not be said there. */
   post: (job: Job) => Promise<boolean>;
+  /** The chats an agent can reach, as `send_message` knows them: what `to` is resolved against, for the agent that will run the job. */
+  chats: (agentId: string) => SendTargets;
   /** The job's card on the Schedule page, where a link goes into this chat (`web/links.ts`, 0.8.11). */
   linkFor?: LinkFor;
   /** A brief file's text, or null where it cannot be read — what a mission's start reads (`boot/missions.ts`). */
@@ -40,8 +43,9 @@ const DESCRIPTION =
   "or again and again. The cheapest that does the job: `text` is sent as written, `command` runs a shell line, " +
   "`prompt` is one turn of yours, `mission` is long work that is checked. Several in order are `steps`. To watch " +
   'something ("tell me when…"), check it on a schedule with `only_changed`: it speaks when what it found changes and ' +
-  "is quiet otherwise. Add `once` when it should tell one time and then stop. To change a job, or its steps, " +
-  "propose it again with `replaces`.";
+  "is quiet otherwise. Add `once` when it should tell one time and then stop. Each run's result comes to this chat; " +
+  "`to` sends it to another one instead, so no run needs `send_message` for its own result. To change a job, or its " +
+  "steps, propose it again with `replaces`.";
 
 /**
  * A run's `prompt`, or its mission's goal and review, as written in English (0.8.8): each run of a proposed job starts
@@ -157,6 +161,26 @@ function triggerOf(when: string, tz: string | undefined, now: number, timezone: 
   }
 }
 
+/**
+ * Where each run's result goes when that is not the chat it was proposed in, or null for here; a string is why `to`
+ * names no chat. Resolved as `send_message` resolves its `to`, against the chats of the agent that will run the job: it
+ * is that agent's connection the result goes out on.
+ *
+ * Without it a job could only report to the chat it was made in. Asked from the dashboard for a digest on a person's
+ * WhatsApp every morning, an agent wrote "send it with `send_message`" into the job's prompt instead: each run then
+ * looked the chat up again, sent the digest as a message of its own, and reported a second time where it was made.
+ *
+ * A change that says no `to` keeps where the job it replaces sends: a change of its hour does not move its results.
+ */
+function resultsGoTo(args: Record<string, unknown>, ctx: ToolContext, targets: SendTargets, replaced: Job | null): { gatewayId: string; chatId: string } | null | string {
+  const to = typeof args.to === "string" ? args.to.trim() : "";
+  if (!to) return replaced?.delivery.gatewayId && replaced.delivery.chatId ? { gatewayId: replaced.delivery.gatewayId, chatId: replaced.delivery.chatId } : null;
+  // No chat is "here" to the resolver, so this one resolves as any other: naming it is the same as leaving `to` out.
+  const found = resolveSendTarget(to, targets, { gatewayId: ctx.gatewayId, chatId: "", gateway: ctx.gateway });
+  if (!found.ok) return `\`to\` names no chat its results could go to. ${found.reason}`;
+  return found.chat.gatewayId === ctx.gatewayId && found.chat.chatId === ctx.chatId ? null : { gatewayId: found.chat.gatewayId, chatId: found.chat.chatId };
+}
+
 /** Why this chat cannot take a proposal: its card would go where nobody reads — a mission's conversation, a job's own. */
 function notAChat(ctx: ToolContext): string | null {
   if (ctx.gatewayId === MISSION_GATEWAY_ID || ctx.chatId.startsWith("cron:")) return "Propose scheduled work from a chat with a person in it: nobody reads this conversation.";
@@ -207,6 +231,7 @@ export function createScheduleTool(options: ScheduleToolOptions): Tool {
           only_changed: { type: "boolean", description: "A `command` or `prompt` (or a step): goes on only when what it said differs from the last run." },
           once: { type: "boolean", description: "Turns itself off after the first run that tells somebody." },
           agent: { type: "string", description: "Another agent runs it." },
+          to: { type: "string", description: "Where each run's result is sent when not here: as `send_message`'s `to`." },
           replaces: { type: "string", description: "The id of the job this changes." },
         },
         required: ["name", "when"],
@@ -240,13 +265,15 @@ export function createScheduleTool(options: ScheduleToolOptions): Tool {
         const replaces = typeof args.replaces === "string" && args.replaces.trim() ? args.replaces.trim() : undefined;
         const refused = proposalRefusal(options.store, ctx.agentId, { trigger }, replaces);
         if (refused) return { content: refused, isError: true };
+        const elsewhere = resultsGoTo(args, ctx, options.chats(agentId), replaces ? options.store.get(replaces) : null);
+        if (typeof elsewhere === "string") return { content: elsewhere, isError: true };
         const input: JobInput = {
           agentId,
           name,
           trigger,
           payload,
           target: { gatewayId: ctx.gatewayId, chatId: ctx.chatId },
-          ...(args.once === true ? { delivery: { mode: "announce" as const, once: true as const } } : {}),
+          ...(args.once === true || elsewhere ? { delivery: { mode: "announce" as const, ...(args.once === true ? { once: true as const } : {}), ...elsewhere } } : {}),
           createdBy: `agent:${ctx.agentId}`,
           proposal: proposalFor(ctx.agentId, { gatewayId: ctx.gatewayId, chatId: ctx.chatId, senderId: ctx.senderId }, now(), replaces),
         };
@@ -255,7 +282,7 @@ export function createScheduleTool(options: ScheduleToolOptions): Tool {
         const page = options.linkFor?.(ctx, { kind: "schedule", job: job.id });
         return {
           content:
-            `Proposed as ${job.id}. It stays off until a person turns it on ` +
+            `Proposed as ${job.id}.${elsewhere ? ` Each run's result goes to ${describeAddress(options.chats(agentId), elsewhere)}, not here.` : ""} It stays off until a person turns it on ` +
             (posted ? "from its card here" : "from the Automations page (its card could not be posted here)") +
             `. Say so in one line; do not ask them again.${page ? ` Its page: ${page}` : ""}`,
           isError: false,

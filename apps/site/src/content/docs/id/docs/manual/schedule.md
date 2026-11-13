@@ -238,6 +238,12 @@ WhatsApp, kartunya menyebut perintahnya: `/schedule on <id>` dan `/schedule disc
 Automations menampilkan usulan dengan dua tombol yang sama, dan kartu yang dijawab dari sana ikut
 berubah di chat.
 
+Hasilnya datang ke chat tempat kamu memintanya. Minta dikirim ke tempat lain ("terus kirim ke WhatsApp
+saya", "ke grup keluarga") dan agent menyebut chat itu di usulannya. Kartunya lalu menulis ke mana hasil
+tiap run dikirim, `Results: sent to the whatsapp one-to-one with Gading, not here`, begitu juga halaman
+automation-nya. Menyalakannya adalah "ya" kamu untuk itu, dan untuk apa pun yang dikirim langkahnya: run
+gak ditahan untuk bertanya lagi.
+
 Agent gak pernah menyalakan job sendiri, memperluasnya, atau mengubah job yang sedang jalan. Perubahan
 adalah usulan baru yang menyebut job yang diganti; setelah dinyalakan, job itu berubah bentuk tapi tetap
 memakai id, riwayat run, dan URL webhook-nya. Di halaman automation itu, perubahannya menunggu sebagai

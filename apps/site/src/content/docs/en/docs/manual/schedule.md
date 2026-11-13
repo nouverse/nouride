@@ -226,6 +226,12 @@ answers; in a group, the person who asked or an admin. Where a chat has no butto
 the card names the commands: `/schedule on <id>` and `/schedule discard <id>`. The Automations page
 lists proposals with the same two buttons, and a card answered there says so in the chat.
 
+Results come to the chat you asked in. Ask for them somewhere else ("and send it to my WhatsApp", "to the
+family group") and the agent names that chat in what it proposes. The card then says where each run's
+result is sent, `Results: sent to the whatsapp one-to-one with Gading, not here`, and so does the
+automation's page. Turning it on is your yes to that, and to whatever else its steps send: a run is not
+held to ask again.
+
 The agent never turns a job on itself, widens one or edits one that runs. A change is a new proposal
 that names the job it replaces; turned on, that job takes the new shape and keeps its id, its runs
 and its webhook URL. On the automation's page the change waits as **Suggested**, with what it adds, changes and

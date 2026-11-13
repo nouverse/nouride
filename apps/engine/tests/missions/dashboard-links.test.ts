@@ -145,7 +145,7 @@ describe("`schedule`: a proposed job's page among the automations", () => {
     const db = openDatabase(join(tempDir("links-schedule"), "t.db"));
     await migrate(db);
     const store = new CronStore({ db, config: DEFAULT_CONFIG.cron, timezone: "Asia/Jakarta" });
-    const tool = createScheduleTool({ store, timezone: () => "Asia/Jakarta", agentExists: () => true, post: async () => true, linkFor });
+    const tool = createScheduleTool({ chats: () => ({ chats: [], othersGateways: [] }), store, timezone: () => "Asia/Jakarta", agentExists: () => true, post: async () => true, linkFor });
     const propose = (ctx: ToolContext) => tool.execute({ name: "Standup", when: "cron 0 9 * * 1-5", text: "Standup in 15 minutes" }, { ...ctx, agentId: "nouva" });
     return { store, propose };
   }

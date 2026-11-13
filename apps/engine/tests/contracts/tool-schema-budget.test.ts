@@ -46,7 +46,7 @@ tools.set("mission", createMissionTools(stub as never).chat);
 // `work` the same way (0.8.7): every agent that holds a tool carries it.
 tools.set("work", createWorkTool(stub as never));
 // `schedule` the same way (0.8.0).
-tools.set("schedule", createScheduleTool({ store: stub as never, timezone: () => "UTC", agentExists: () => true, post: async () => true }));
+tools.set("schedule", createScheduleTool({ chats: () => ({ chats: [], othersGateways: [] }), store: stub as never, timezone: () => "UTC", agentExists: () => true, post: async () => true }));
 // `persona` the same way (0.8.8).
 tools.set("persona", createPersonaTool({ files: stub as never }));
 
@@ -158,15 +158,18 @@ const PER_TOOL = 3_400;
 // writes a list the daemon refuses, or leaves the branch to a prompt, which is what a list of steps is there to replace.
 // 50,020 for a job that watches (~480): `schedule`'s `only_changed` and `once`, with when to reach for each. Unsaid, a
 // model asked "tell me when the disk is full" proposes a check that tells every fifteen minutes, for ever.
-const TOTAL = 50_020;
+// 50,260 for where a job's results go (~240): `schedule`'s `to`, and that a run needs no `send_message` for its own
+// result. Unsaid, a model asked for a digest "on my WhatsApp" proposed a job that reported where it was made and told
+// its run to send the digest itself: the chat looked up and a message sent on every run, and the report made twice.
+const TOTAL = 50_260;
 
 /**
  * What a provider is sent for the same set: the skill tools as the one entry that stands for them (`tools/fold.ts`).
  * Each tool keeps its whole definition, read when its action is opened, so `TOTAL` still holds each to its ceiling.
- * 45,200: measured at 45,188 against 50,019 for the tools themselves, the three skill tools of this set (5,525) sent
+ * 45,430: measured at 45,427 against 50,258 for the tools themselves, the three skill tools of this set (5,525) sent
  * as an entry of about 690. On a month of a live install they were called once in 13,823 tool calls.
  */
-const SENT = 45_200;
+const SENT = 45_430;
 
 describe("tool schema budget", () => {
   test("every conditional tool was built, so the total means what it says", () => {
