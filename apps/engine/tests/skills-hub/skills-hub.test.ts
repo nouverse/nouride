@@ -335,7 +335,12 @@ describe("agents know where to look", () => {
     const { renderSkillPolicy } = await import("@/modules/llm/prompt/harness-skills.ts");
     const { fakeAgent } = await import("../helpers.ts");
     const ctx = (tools: string[]) => ({ ctx: { agent: { ...fakeAgent(), skills: [] }, gateway: "web", tools: tools.map((name) => ({ name })) } }) as never;
-    expect(renderSkillPolicy(ctx(["skill_search", "skill_install"])).join("\n")).toContain("`skill_search`, then `skill_install`");
+    // The two are sent to a model as one entry (`tools/fold.ts`), so the prompt names them as the model can call them.
+    const both = renderSkillPolicy(ctx(["skill_search", "skill_install"])).join("\n");
+    expect(both).toContain("look on the public hubs first: `skill` with action `search`, then `skill` with action `install` with the ref it gives");
+    expect(both).not.toMatch(/skill_search|skill_install/);
+    // One alone is sent as itself, and named so.
+    expect(renderSkillPolicy(ctx(["skill_search"])).join("\n")).toContain("`skill_search`");
     expect(renderSkillPolicy(ctx(["nouride"])).join("\n")).toContain("`nouride skills search <words>`");
     // An agent with neither is not told of the hubs. With `read` it is still told of a project's own skills (2026-11-07).
     expect(renderSkillPolicy(ctx(["read"])).join("\n")).not.toContain("public hubs");
