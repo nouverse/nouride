@@ -172,6 +172,17 @@ export function commandsOomKills(): number | null {
   return count === undefined ? null : Number(count);
 }
 
+/**
+ * What the agents' commands hold together now and what they may hold, in bytes, or null where they have no group of
+ * their own: there a command's memory is part of whatever the daemon's is counted in.
+ */
+export function commandsMemory(): { usedBytes: number; maxBytes: number | null } | null {
+  if (!commandsDir) return null;
+  const used = Number(read(`${commandsDir}/memory.current`)?.trim());
+  if (!Number.isFinite(used) || used < 0) return null;
+  return { usedBytes: used, maxBytes: limit(read(`${commandsDir}/memory.max`)) };
+}
+
 /** The rise in `commandsOomKills` since `before`, when there was one. */
 export function oomKillsSince(before: number | null): number | undefined {
   const after = commandsOomKills();

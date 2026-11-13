@@ -228,6 +228,20 @@ export function freeDiskBytes(path: string): number | null {
   }
 }
 
+/**
+ * The size of the filesystem holding `path` and what of it is still free to this user, in bytes, or `null` when it
+ * will not say. In a container this is the volume the path is on, which is what a person there can fill.
+ */
+export function diskSpace(path: string): { totalBytes: number; freeBytes: number } | null {
+  try {
+    const stats = statfsSync(path);
+    const totalBytes = Number(stats.blocks) * Number(stats.bsize);
+    return totalBytes > 0 ? { totalBytes, freeBytes: Number(stats.bavail) * Number(stats.bsize) } : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function readFileBytes(path: string): Promise<Uint8Array> {
   return new Uint8Array(await Bun.file(path).arrayBuffer());
 }

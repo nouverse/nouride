@@ -995,6 +995,14 @@ function resolvedFrom(cwd: string, path: string): string {
 }
 
 /**
+ * Whether `path` is one that holds a credential, by the same list a command is read against. For what shows files to
+ * a person (the dashboard's Files): one list of what a credential's path looks like, not a second beside it.
+ */
+export function holdsCredential(path: string): boolean {
+  return CREDENTIAL_PATTERNS.some((pattern) => pattern.test(path));
+}
+
+/**
  * The argument naming a credential path, clipped for a prompt — or `null`. See `CREDENTIAL_PATTERNS`.
  *
  * Read word by word as well as whole: `bash -lc "cat .env"` is one argument, `.env` in the middle of it, and the
