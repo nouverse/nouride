@@ -248,7 +248,9 @@ export function registerUpdateRoutes(control: ControlApp, deps: ControlDeps): vo
           : result.restart === "idle"
             ? `The update to ${result.to} is installed. Nouride restarts as soon as nothing is running, within ten minutes.`
             : `The update to ${result.to} is installed. Nouride is restarting now.`;
-      return c.json({ ok: true, ...result, plain, wake_in_seconds: followUp.delaySeconds });
+      // More than the page reads: the CLI and the agent's tool read when the follow-up turn comes.
+      const installed = { ok: true as const, ...result, plain, wake_in_seconds: followUp.delaySeconds };
+      return c.json(installed satisfies { ok: true; to: string; note: string; plain?: string });
     } catch (err) {
       return c.json({ error: err instanceof Error ? err.message : String(err), plain: "The update did not install. Try again in a moment." }, 409);
     }

@@ -155,7 +155,10 @@ export function registerAccessRoutes(control: ControlApp, deps: ControlDeps): vo
         // The platform form — `telegram:814…` — so it is them whichever of our bots they write to.
         const identity = idFormsFor({ gatewayId: record.gatewayId, senderId: record.senderId }).at(-1)!;
         const linked = await deps.settings.linkIdentity({ identity, target: as, actor: principal.actor });
-        if (!linked.ok) return c.json({ ok: true, sender: record, warning: `approved, but not linked: ${linked.error}`, plain: "Approved, but not linked to the person you chose. Whoever runs the server can see why." });
+        if (!linked.ok) {
+          const unlinked = { ok: true, sender: record, warning: `approved, but not linked: ${linked.error}`, plain: "Approved, but not linked to the person you chose. Whoever runs the server can see why." };
+          return c.json(unlinked satisfies { ok: boolean; warning?: string; plain?: string });
+        }
         person = linked.person;
       }
       // Told in the conversation they used, so they know to try again rather than waiting.
@@ -165,7 +168,8 @@ export function registerAccessRoutes(control: ControlApp, deps: ControlDeps): vo
           "You are approved. Go ahead, message me again.",
         );
       }
-      return c.json({ ok: true, sender: record, person });
+      const approved = { ok: true, sender: record, person };
+      return c.json(approved satisfies { ok: boolean; warning?: string; plain?: string });
     }
 
     if (action === "allow" && gatewayId && senderId) {
@@ -177,7 +181,8 @@ export function registerAccessRoutes(control: ControlApp, deps: ControlDeps): vo
       const name = c.req.query("name")?.trim() || deps.roomMessages?.lastNameOf(gatewayId, senderId) || undefined;
       const record = deps.access.allow(gatewayId, senderId, principal.actor, name);
       if (!record) return c.json({ error: `${gatewayId}:${senderId} is blocked. Unblock them first` }, 409);
-      return c.json({ ok: true, sender: record });
+      const allowed = { ok: true, sender: record };
+      return c.json(allowed satisfies { ok: boolean });
     }
 
     if (isAnswer(action) && gatewayId && senderId) {
@@ -198,7 +203,7 @@ export function registerAccessRoutes(control: ControlApp, deps: ControlDeps): vo
       // Their "stop asking me" goes with the access a deny, a block or a revoke ends, or pairing them again
       // would bring it back — a decision nobody made twice. A reset or an unblock ends no access.
       if (action === "deny" || action === "block" || action === "revoke") deps.autoApprove?.forget(gatewayId, senderId);
-      return c.json({ ok: true });
+      return c.json({ ok: true } satisfies { ok: boolean });
     }
 
     return c.json(

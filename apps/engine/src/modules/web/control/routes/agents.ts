@@ -307,16 +307,16 @@ export function registerAgentRoutes(control: ControlApp, deps: ControlDeps): voi
       // Asleep (0.8.0) is what Pause became: `pause` and `resume` stay as the old names for it.
       case "sleep":
       case "pause":
-        return c.json({ ok: deps.registry.pause(id) });
+        return c.json({ ok: deps.registry.pause(id) } satisfies { ok: boolean });
       case "wake":
       case "resume":
-        return c.json({ ok: deps.registry.resume(id) });
+        return c.json({ ok: deps.registry.resume(id) } satisfies { ok: boolean });
       case "reload":
         try {
           await deps.registry.reload(id);
           // Config and instructions both: a coding CLI's sessions keep what they read as they opened (0.8.8).
           deps.externalAgents?.renew(id);
-          return c.json({ ok: true });
+          return c.json({ ok: true } satisfies { ok: boolean });
         } catch (err) {
           return c.json({ error: String(err), plain: "This agent could not be loaded again: its files have a mistake. Whoever looks after it can fix them." }, 400);
         }
@@ -343,7 +343,7 @@ export function registerAgentRoutes(control: ControlApp, deps: ControlDeps): voi
           actor: principal.actor,
         });
         if (!result.ok) return c.json({ error: result.error, plain: NOT_SAVED }, 400);
-        return c.json({ ok: true });
+        return c.json({ ok: true } satisfies { ok: boolean });
       }
 
       /**
@@ -377,7 +377,7 @@ export function registerAgentRoutes(control: ControlApp, deps: ControlDeps): voi
           actor: principal.actor,
         });
         if (!result.ok) return c.json({ error: result.error, plain: NOT_SAVED }, 400);
-        return c.json({ ok: true, approvals: body.approvals });
+        return c.json({ ok: true, approvals: body.approvals } satisfies { ok: true; approvals: string });
       }
 
       /**
@@ -400,7 +400,7 @@ export function registerAgentRoutes(control: ControlApp, deps: ControlDeps): voi
           actor: principal.actor,
         });
         if (!result.ok) return c.json({ error: result.error, plain: NOT_SAVED }, 400);
-        return c.json({ ok: true, value });
+        return c.json({ ok: true, value } satisfies { ok: true; value: string | null });
       }
 
       /**
@@ -427,7 +427,7 @@ export function registerAgentRoutes(control: ControlApp, deps: ControlDeps): voi
           actor: principal.actor,
         });
         if (!result.ok) return c.json({ error: result.error, plain: NOT_SAVED }, 400);
-        return c.json({ ok: true, on });
+        return c.json({ ok: true, on } satisfies { ok: true; on: boolean });
       }
 
       default:

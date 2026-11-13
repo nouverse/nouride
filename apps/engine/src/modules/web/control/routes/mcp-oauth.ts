@@ -40,7 +40,7 @@ export function registerMcpOAuthRoutes(control: ControlApp, deps: ControlDeps): 
       ...(typeof body.clientSecret === "string" ? { clientSecret: body.clientSecret } : {}),
     });
     if ("error" in started) return c.json({ error: started.error, plain: "Signing in to this connector could not start. Check its settings, and try again." }, started.status);
-    return c.json({ url: started.url });
+    return c.json({ url: started.url } satisfies { url: string });
   };
   control.post("/mcp/library/:server/oauth/start", (c) => start(c, undefined));
   control.post("/agents/:id/mcp/:server/oauth/start", (c) => start(c, c.req.param("id")));
@@ -62,7 +62,7 @@ export function registerMcpOAuthRoutes(control: ControlApp, deps: ControlDeps): 
     const server = c.req.param("server") ?? "";
     const done = await deps.mcpLogins.logout(holderOf(agentId, server), server, principal.actor);
     if ("error" in done) return c.json({ error: done.error, plain: "The connector's sign-in was not removed. Reload the page, and try again." }, done.status);
-    return c.json(done);
+    return c.json(done satisfies { ok: true });
   };
   control.delete("/mcp/library/:server/oauth", (c) => logout(c, undefined));
   control.delete("/agents/:id/mcp/:server/oauth", (c) => logout(c, c.req.param("id")));

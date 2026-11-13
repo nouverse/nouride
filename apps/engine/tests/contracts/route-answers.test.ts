@@ -16,21 +16,11 @@ import { describe, expect, test } from "bun:test";
 import { routeAnswers } from "../../../../scripts/route-answers.ts";
 
 /**
- * Routes whose answers this cannot read, each with why. The answer is made in a function the route hands the request
- * to, or the route answers by an action in its path and each action's caller declares its own.
+ * Routes whose answers this cannot read, each with why. None today: an answer given through a helper of the route's
+ * own file is read there (`route-answers.ts`), and a route that answers by an action in its path holds each answer
+ * to what that action's caller declares. One goes here only with the reason it cannot be read.
  */
-const NOT_READ: Record<string, string> = {
-  "GET /memory/graph": "answered gzipped, through `jsonGzipped`",
-  "GET /memory/facets": "answered gzipped, through `jsonGzipped`",
-  "POST /knowledge/:id/pending/:decision": "answers by its decision: a saved document, or a plain yes",
-  "POST /mcp/library/:server/oauth/start": "answered by `start`, shared with the agent's own route",
-  "POST /agents/:id/mcp/:server/oauth/start": "answered by `start`, shared with the library's route",
-  "DELETE /mcp/library/:server/oauth": "answered by `forget`, shared with the agent's own route",
-  "DELETE /agents/:id/mcp/:server/oauth": "answered by `forget`, shared with the library's route",
-  "POST /agents/:id/:action": "answers by its action: sleep, wake, approvals, a setting, a switch",
-  "POST /access/:action": "answers by its action: approve, deny, block, revoke",
-  "POST /update/install": "answered by the update's own plan, built outside the route",
-};
+const NOT_READ: Record<string, string> = {};
 
 const routes = routeAnswers();
 const failing = (route: (typeof routes)[number]): string[] => {

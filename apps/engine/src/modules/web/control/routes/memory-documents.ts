@@ -11,7 +11,7 @@
  * never names a path; `modules/memory/manage.ts` maps a subject to its file.
  */
 
-import type { AgentNotes, Episode, EpisodeSummary, PersonSummary } from "@nouride/wire";
+import type { AgentNotes, Episode, EpisodeSummary, MemoryFacets, MemoryGraph, PersonSummary } from "@nouride/wire";
 import { gzipText, join, readTextFileIfExists, statFile } from "@nouride/runtime";
 import type { EpisodeStatus } from "@/modules/memory/index.ts";
 import { atLeast } from "@/modules/users/auth.ts";
@@ -155,14 +155,14 @@ export function registerMemoryDocumentRoutes(control: ControlApp, deps: ControlD
       limit,
       { knowledge: c.req.query("knowledge") === "1" },
     );
-    return jsonGzipped(c, graph);
+    return jsonGzipped(c, graph satisfies MemoryGraph);
   });
 
   /** Every agent, person and tag the graph can be filtered by, with how many conversations have each. */
   control.get("/memory/facets", (c) => {
     const no = refusal(c.get("principal"));
     if (no) return c.json({ error: no[0] }, no[1]);
-    return jsonGzipped(c, deps.memory!.graphFacets());
+    return jsonGzipped(c, deps.memory!.graphFacets() satisfies MemoryFacets);
   });
 
   control.get("/memory/episodes/:id", async (c) => {

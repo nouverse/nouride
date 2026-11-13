@@ -353,7 +353,7 @@ export function registerKnowledgeRoutes(control: ControlApp, deps: ControlDeps):
     if (!joined) return c.json({ error: `nothing called "${path}" waits in "${id}"` }, 404);
     deps.audit.record({ action: "knowledge_document_approved", actor: principal.actor, details: { collection: id, document: joined.path } });
     if (waiting) tell(approvedLine(waiting.title, collection));
-    return c.json({ saved: { path: joined.path, status: joined.document?.status ?? "indexed", ...(joined.document?.reason ? { reason: joined.document.reason } : {}) } });
+    return c.json({ saved: { path: joined.path, status: joined.document?.status ?? "indexed", ...(joined.document?.reason ? { reason: joined.document.reason } : {}) } } satisfies { saved: SavedDocument });
   });
 
   /** The index brought in line with the folder: every collection, or one. */
