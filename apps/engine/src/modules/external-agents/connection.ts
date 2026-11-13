@@ -264,8 +264,13 @@ export class CliConnection {
         (set) => {
           was.model = want.own ? undefined : want.model;
           this.offers(sessionId, set.configOptions);
-          delete was.effort;
-          delete was.ownEffort;
+          // Its levels follow its model, so the level is read again below. Not where the CLI kept the level Nouride
+          // had set over the change (Codex does): that level is still Nouride's doing and the CLI's own still known.
+          // Forgotten here, a chat's model and level taken back together left the session at the level picked.
+          if (was.effort === undefined || thoughtLevel(this.options.get(sessionId))?.currentValue !== was.effort) {
+            delete was.effort;
+            delete was.ownEffort;
+          }
         },
         (err: unknown) => want.note(`${this.row.name} kept its own model: ${String(err)}`),
       );

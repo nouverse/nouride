@@ -261,6 +261,27 @@ describe("a turn of an external agent", () => {
       expect(kept([...own.steps, ...pack.steps])).toEqual([]);
     });
 
+    test("a chat's model and level taken back together: the CLI's own level is back too, where the CLI keeps a level over a model's change", async () => {
+      // Seen on a real Codex session: it keeps a session's level when its model changes. Nouride forgot the level was
+      // its own doing as it set the model back, so the session stayed at the level the chat had picked.
+      const levels = ["medium", "low", "high"];
+      const { service, agent, runner, req } = setup({ mode: "keepeffort", efforts: { small: levels, big: levels } });
+      await runner.run(req("one"));
+      await runner.run(req("two", { model: "big", effort: "low" }));
+      await runner.run(req("three"));
+      expect(await efforts(await service.connection(agent), 4)).toEqual(["model:big", "reasoning:low", "model:small", "reasoning:medium"]);
+    });
+
+    test("and where the CLI puts the level back itself as its model changes, nothing more is set", async () => {
+      const levels = ["medium", "low", "high"];
+      const { service, agent, runner, req } = setup({ efforts: { small: levels, big: levels } });
+      await runner.run(req("one"));
+      await runner.run(req("two", { model: "big", effort: "low" }));
+      await runner.run(req("three"));
+      await runner.run(req("four"));
+      expect(await efforts(await service.connection(agent), 3)).toEqual(["model:big", "reasoning:low", "model:small"]);
+    });
+
     test("the model first, then the effort among what the new model offers: one the old did not offer is set once it does", async () => {
       const { service, agent, runner, req, steps } = setup({ efforts: { small: ["low"], big: ["low", "high", "max"] }, model: "small", effort: "max" });
       await runner.run(req("one"));

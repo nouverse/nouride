@@ -102,7 +102,10 @@ const server = new AcpServer({
       if (!option) throw new Error(`Unknown config option: ${configId}`);
       if (!option.options?.some((entry) => entry.value === value)) throw new Error(`Invalid value for config option ${configId}: ${value}`);
       const set = settings.get(sessionId)!;
-      if (configId === "model") settings.set(sessionId, { model: value, ...(efforts[value]?.[0] ? { effort: efforts[value][0] } : {}) });
+      // A model's change puts the level back to the new model's first, as Claude Code's follows its model; `keepeffort`
+      // keeps the level where the new model offers it, as Codex does.
+      const keeps = mode === "keepeffort" && set.effort !== undefined && efforts[value]?.includes(set.effort);
+      if (configId === "model") settings.set(sessionId, { model: value, ...(keeps ? { effort: set.effort } : efforts[value]?.[0] ? { effort: efforts[value][0] } : {}) });
       else set.effort = value;
       process.stderr.write(`${configId}:${value}\n`);
       return { configOptions: optionsOf(sessionId) };
