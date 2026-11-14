@@ -8,7 +8,7 @@
  */
 
 import { resolveWithin, statFile } from "@nouride/runtime";
-import type { Tool, ToolContext, ToolResult } from "@nouride/shared";
+import { createLogger, type Tool, type ToolContext, type ToolResult } from "@nouride/shared";
 import { SYSTEM_SENDER } from "@/modules/pipeline/deps.ts";
 import { pagePath, type LinkFor } from "@/modules/web/links.ts";
 import type { AuditPort } from "@/commons/audit.store.ts";
@@ -97,8 +97,29 @@ const CHAT_FIELDS = {
   id: { type: "string", description: "edit: your draft's id." },
 } as const;
 
+const log = createLogger("tools.mission");
+
 function ok(content: string): ToolResult {
   return { content, isError: false };
+}
+
+/**
+ * A refused call, said in the log with the tool's own words. The agent reads them and tries again; nobody else did:
+ * two of an agent's starts failed in a millisecond on a live box, the third went through, and why the first two did
+ * was kept only in a turn journal that was gone by the time anyone asked. The words are the tool's own sentences,
+ * an id or a path in the mission's folder at most, and the logger masks a credential besides.
+ */
+function said(answer: ToolResult, args: Record<string, unknown>, ctx: ToolContext): ToolResult {
+  if (answer.isError) {
+    log.info("mission call refused", {
+      agent_id: ctx.agentId,
+      chat_id: ctx.chatId,
+      ...(ctx.turnId ? { turn_id: ctx.turnId } : {}),
+      action: typeof args.action === "string" ? args.action : null,
+      why: answer.content.length > 400 ? `${answer.content.slice(0, 399)}…` : answer.content,
+    });
+  }
+  return answer;
 }
 
 function refused(content: string): ToolResult {
@@ -220,38 +241,40 @@ export function createMissionTools(missions: Missions, options: { linkFor?: Link
         required: ["action"],
       },
     },
-    async execute(args, ctx) {
-      if (args.action === "edit") return await editOwn(missions, args, ctx);
-      if (args.action !== "start") return refused('In a chat, `mission` drafts one (action "start") or changes your draft ("edit").');
-      // A draft unless the person asked for it to run now, in words of their own in this turn.
-      // A turn nobody typed — a job's end, a schedule — proposes, as it always has.
-      const said = text(args.said);
-      const now = args.now === true;
-      if (now && !said) return refused("`now` needs `said`: the person's own words asking for it to run now, as they wrote them. Without them it is a draft they start.");
-      if (now && (ctx.senderId === SYSTEM_SENDER || ctx.askedBy || ctx.unattended)) return refused("`now` starts work on a person's own word, in the turn their message started, and this turn is not one. Draft it instead.");
-      if (now && typeof args.brief === "string") return refused("A brief goes with a draft. Started at once, the goal says what the work is, or names a brief file by its absolute path.");
-      // The chat's task goes with it — its notes and its plan, the ones this turn wrote (`missions/carry.ts`).
-      const from = { agentId: ctx.agentId, gatewayId: ctx.gatewayId, chatId: ctx.chatId, ...(ctx.turnId ? { turnId: ctx.turnId } : {}) };
-      // A draft whose call names nobody to sign it off is the person's, after its checks — `WHO_SIGNS`'s own answer, as a
-      // draft waits for them to start it. Left to the defaults, a model that fills no optional field (Nouva on Gemini
-      // Flash, live, 2026-10-31) drafted every long job with the reviewer for the person following it in the chat. Started
-      // at once, the person may be leaving: the reviewer, as before.
-      const named = args.accept !== undefined || args.no_review !== undefined || text(args.review) !== "";
-      const request: StartRequest = {
-        ...startFields(args, ctx),
-        startedBy: ctx.senderId,
-        gatewayId: ctx.gatewayId,
-        chatId: ctx.chatId,
-        from,
-        ...(now ? { said } : { proposed: true, ...(named ? {} : { review: false as const, accept: true }) }),
-        ...(typeof args.brief === "string" && args.brief.trim() ? { brief: args.brief.trim() } : {}),
-      };
-      const { answer, mission } = await startChecked(missions, request, (id) => options.linkFor?.(ctx, { kind: "mission", id }) ?? null);
-      // Started without a draft: the words it rests on are on the record, as a person's start is.
-      if (now && mission) options.audit?.record({ action: "mission_started", actor: `agent ${ctx.agentId}`, agentId: mission.agentId, details: { mission: mission.id, said } });
-      return mission ? { ...answer, page: pagePath({ kind: "mission", id: mission.id }) } : answer;
-    },
+    execute: async (args, ctx) => said(await startOrEdit(args, ctx), args, ctx),
   };
+
+  async function startOrEdit(args: Record<string, unknown>, ctx: ToolContext): Promise<ToolResult> {
+    if (args.action === "edit") return await editOwn(missions, args, ctx);
+    if (args.action !== "start") return refused('In a chat, `mission` drafts one (action "start") or changes your draft ("edit").');
+    // A draft unless the person asked for it to run now, in words of their own in this turn.
+    // A turn nobody typed — a job's end, a schedule — proposes, as it always has.
+    const said = text(args.said);
+    const now = args.now === true;
+    if (now && !said) return refused("`now` needs `said`: the person's own words asking for it to run now, as they wrote them. Without them it is a draft they start.");
+    if (now && (ctx.senderId === SYSTEM_SENDER || ctx.askedBy || ctx.unattended)) return refused("`now` starts work on a person's own word, in the turn their message started, and this turn is not one. Draft it instead.");
+    if (now && typeof args.brief === "string") return refused("A brief goes with a draft. Started at once, the goal says what the work is, or names a brief file by its absolute path.");
+    // The chat's task goes with it — its notes and its plan, the ones this turn wrote (`missions/carry.ts`).
+    const from = { agentId: ctx.agentId, gatewayId: ctx.gatewayId, chatId: ctx.chatId, ...(ctx.turnId ? { turnId: ctx.turnId } : {}) };
+    // A draft whose call names nobody to sign it off is the person's, after its checks — `WHO_SIGNS`'s own answer, as a
+    // draft waits for them to start it. Left to the defaults, a model that fills no optional field (Nouva on Gemini
+    // Flash, live, 2026-10-31) drafted every long job with the reviewer for the person following it in the chat. Started
+    // at once, the person may be leaving: the reviewer, as before.
+    const named = args.accept !== undefined || args.no_review !== undefined || text(args.review) !== "";
+    const request: StartRequest = {
+      ...startFields(args, ctx),
+      startedBy: ctx.senderId,
+      gatewayId: ctx.gatewayId,
+      chatId: ctx.chatId,
+      from,
+      ...(now ? { said } : { proposed: true, ...(named ? {} : { review: false as const, accept: true }) }),
+      ...(typeof args.brief === "string" && args.brief.trim() ? { brief: args.brief.trim() } : {}),
+    };
+    const { answer, mission } = await startChecked(missions, request, (id) => options.linkFor?.(ctx, { kind: "mission", id }) ?? null);
+    // Started without a draft: the words it rests on are on the record, as a person's start is.
+    if (now && mission) options.audit?.record({ action: "mission_started", actor: `agent ${ctx.agentId}`, agentId: mission.agentId, details: { mission: mission.id, said } });
+    return mission ? { ...answer, page: pagePath({ kind: "mission", id: mission.id }) } : answer;
+  }
 
   const inside: Tool = {
     requiresApproval: false,
@@ -286,55 +309,57 @@ export function createMissionTools(missions: Missions, options: { linkFor?: Link
         required: ["action"],
       },
     },
-    async execute(args, ctx) {
-      const mission = isMissionChat(ctx) ? missions.get(ctx.chatId) : null;
-      if (!mission) return refused("This turn is not a mission's.");
-      switch (args.action) {
-        case "done": {
-          const summary = text(args.summary);
-          if (!summary) return refused("`done` needs a `summary`: the result, in two or three sentences, for the chat.");
-          const report = text(args.report);
-          if (!report) return refused("`done` needs a `report`: the whole account of the work, which the person receives as `report.md`.");
-          const files: string[] = [];
-          for (const file of strings(args.files) ?? []) {
-            let path: string;
-            try {
-              path = resolveWithin(mission.workdir, file);
-            } catch {
-              return refused(`${file} is not inside the mission's folder (${mission.workdir}). Put the result there first.`);
-            }
-            // Checked here, while the agent can still name it right: a video named as `worktree/apps/…` from inside the
-            // worktree resolved to a path that was not there, and the person got "Not sent as files" (live, 0.8.12).
-            const found = statFile(path);
-            if (!found || found.isDirectory) {
-              return refused(`${file} is not a file: ${path} ${found ? "is a folder" : "does not exist"}. Relative paths start at the mission's folder, ${mission.workdir}. Name each file where it is, then call done again.`);
-            }
-            files.push(path);
-          }
-          missions.claim(mission.id, { kind: "done", summary, report, files });
-          return claimed(mission.checks.length > 0 ? `Noted. This turn ends here and the daemon runs the checks: ${mission.checks.join("; ")}.` : "Noted. This turn ends here and it goes to the person to accept.", `Done: ${summary}`);
-        }
-        case "ask": {
-          const question = text(args.question);
-          if (!question) return refused("`ask` needs one `question`.");
-          const options = askOptions(args.options);
-          if (options === null) return refused(`\`options\` are 2 to ${MAX_OPTIONS} answers to pick from, each a few words of text. Leave it out for an open answer.`);
-          missions.claim(mission.id, { kind: "ask", question, ...(options.length > 0 ? { options } : {}) });
-          return claimed("Asked. This turn ends here and the mission waits for the answer; it comes back as the next turn.", `Asked: ${question}`);
-        }
-        case "fail": {
-          const reason = text(args.reason);
-          if (!reason) return refused("`fail` needs a `reason`.");
-          missions.claim(mission.id, { kind: "fail", reason, report: text(args.report) });
-          return claimed("Noted. This turn ends here and the mission ends as failed.", `Cannot be done: ${reason}`);
-        }
-        case "start":
-          return (await startChecked(missions, { ...startFields(args, ctx), startedBy: mission.startedBy, owner: mission.owner, gatewayId: mission.gatewayId, chatId: mission.chatId, parentId: mission.id, ...(mission.untrusted ? { untrusted: true } : {}) })).answer;
-        default:
-          return refused('`action` is one of "done", "ask", "fail", "start".');
-      }
-    },
+    execute: async (args, ctx) => said(await insideAction(args, ctx), args, ctx),
   };
+
+  async function insideAction(args: Record<string, unknown>, ctx: ToolContext): Promise<ToolResult> {
+    const mission = isMissionChat(ctx) ? missions.get(ctx.chatId) : null;
+    if (!mission) return refused("This turn is not a mission's.");
+    switch (args.action) {
+      case "done": {
+        const summary = text(args.summary);
+        if (!summary) return refused("`done` needs a `summary`: the result, in two or three sentences, for the chat.");
+        const report = text(args.report);
+        if (!report) return refused("`done` needs a `report`: the whole account of the work, which the person receives as `report.md`.");
+        const files: string[] = [];
+        for (const file of strings(args.files) ?? []) {
+          let path: string;
+          try {
+            path = resolveWithin(mission.workdir, file);
+          } catch {
+            return refused(`${file} is not inside the mission's folder (${mission.workdir}). Put the result there first.`);
+          }
+          // Checked here, while the agent can still name it right: a video named as `worktree/apps/…` from inside the
+          // worktree resolved to a path that was not there, and the person got "Not sent as files" (live, 0.8.12).
+          const found = statFile(path);
+          if (!found || found.isDirectory) {
+            return refused(`${file} is not a file: ${path} ${found ? "is a folder" : "does not exist"}. Relative paths start at the mission's folder, ${mission.workdir}. Name each file where it is, then call done again.`);
+          }
+          files.push(path);
+        }
+        missions.claim(mission.id, { kind: "done", summary, report, files });
+        return claimed(mission.checks.length > 0 ? `Noted. This turn ends here and the daemon runs the checks: ${mission.checks.join("; ")}.` : "Noted. This turn ends here and it goes to the person to accept.", `Done: ${summary}`);
+      }
+      case "ask": {
+        const question = text(args.question);
+        if (!question) return refused("`ask` needs one `question`.");
+        const options = askOptions(args.options);
+        if (options === null) return refused(`\`options\` are 2 to ${MAX_OPTIONS} answers to pick from, each a few words of text. Leave it out for an open answer.`);
+        missions.claim(mission.id, { kind: "ask", question, ...(options.length > 0 ? { options } : {}) });
+        return claimed("Asked. This turn ends here and the mission waits for the answer; it comes back as the next turn.", `Asked: ${question}`);
+      }
+      case "fail": {
+        const reason = text(args.reason);
+        if (!reason) return refused("`fail` needs a `reason`.");
+        missions.claim(mission.id, { kind: "fail", reason, report: text(args.report) });
+        return claimed("Noted. This turn ends here and the mission ends as failed.", `Cannot be done: ${reason}`);
+      }
+      case "start":
+        return (await startChecked(missions, { ...startFields(args, ctx), startedBy: mission.startedBy, owner: mission.owner, gatewayId: mission.gatewayId, chatId: mission.chatId, parentId: mission.id, ...(mission.untrusted ? { untrusted: true } : {}) })).answer;
+      default:
+        return refused('`action` is one of "done", "ask", "fail", "start".');
+    }
+  }
 
   return { chat, inside };
 }

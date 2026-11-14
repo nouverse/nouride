@@ -8,7 +8,7 @@
  * stranded, and an updater already installed cannot be patched. So each floor's stone has to stand within the first
  * twenty-five: five releases of room before the thirtieth, for the next intermediate releases to be deleted (D1).
  *
- * The page is read as those updaters read it, with no token: a draft is not on it, and a pre-release takes a place
+ * The page is the one those updaters read: a draft is left out, as they never see one, and a pre-release takes a place
  * but is no stone, since they skip it. The release being cut is put at the top first, as it will stand once published.
  *
  *   bun run scripts/release/mirror-page.ts [--adding vX.Y.Z]     exit 1, each stranded floor named, when one is
@@ -71,18 +71,44 @@ export function floorOf(tag: string, root = ROOT): string | null {
   return existsSync(path) ? parseNotes(readFileSync(path, "utf8")).floor : null;
 }
 
+/** A refusal GitHub gives a caller that asked too often: asked again after a wait, never read as the page. */
+const ASKED_TOO_OFTEN = new Set([403, 429]);
+
+/**
+ * The page's releases, read with the workflow's token where there is one. With no token, GitHub allows sixty asks an
+ * hour from one address, and a hosted runner shares its address with other repositories' jobs: v0.8.36's release
+ * stopped here on a 403 that was that limit, while the page answered anyone else. A token reads the same public page,
+ * drafts included, which are left out below as the updaters never see them. A refusal for asking too often is asked
+ * again, twice, after the wait GitHub names or a few seconds; any other answer is the page's.
+ */
+export async function readPage(options: { token?: string; fetchImpl?: typeof fetch; sleep?: (ms: number) => Promise<void> } = {}): Promise<{ ok: true; listed: { tag_name: string; draft?: boolean; prerelease?: boolean }[] } | { ok: false; status: number }> {
+  const doFetch = options.fetchImpl ?? fetch;
+  const sleep = options.sleep ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
+  const headers: Record<string, string> = { accept: "application/vnd.github+json", "user-agent": "nouride-release-audit" };
+  if (options.token) headers.authorization = `Bearer ${options.token}`;
+  let status = 0;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const response = await doFetch(PAGE_URL, { headers });
+    if (response.ok) return { ok: true, listed: (await response.json()) as { tag_name: string; draft?: boolean; prerelease?: boolean }[] };
+    status = response.status;
+    if (!ASKED_TOO_OFTEN.has(status) || attempt === 2) break;
+    const asked = Number(response.headers.get("retry-after"));
+    await sleep(Number.isFinite(asked) && asked > 0 ? Math.min(asked, 60) * 1000 : 5_000 * (attempt + 1));
+  }
+  return { ok: false, status };
+}
+
 if (import.meta.main) {
   const adding = (() => {
     const at = process.argv.indexOf("--adding");
     return at === -1 ? null : (process.argv[at + 1] ?? null);
   })();
-  // No token, on purpose: the page as an updater in the field sees it.
-  const response = await fetch(PAGE_URL, { headers: { accept: "application/vnd.github+json", "user-agent": "nouride-release-audit" } });
-  if (!response.ok) {
-    console.error(`✗ the mirror's page answered ${response.status} (${PAGE_URL})`);
+  const read = await readPage({ token: process.env.GH_TOKEN || undefined });
+  if (!read.ok) {
+    console.error(`✗ the mirror's page answered ${read.status} (${PAGE_URL})`);
     process.exit(1);
   }
-  const listed = (await response.json()) as { tag_name: string; draft?: boolean; prerelease?: boolean }[];
+  const listed = read.listed;
   const page: MirrorEntry[] = listed
     .filter((entry) => !entry.draft)
     .map((entry) => ({ tag: entry.tag_name, floor: floorOf(entry.tag_name), prerelease: entry.prerelease === true }));

@@ -223,7 +223,9 @@ first like any change to its config, unless the agent's approvals are `trusted`.
 **The context window comes from the gateway when it says, else from the model id.** An endpoint whose
 `/models` listing states a model's window (Nougate's `context_window`, OpenRouter's `context_length`,
 vLLM's `max_model_len`) is believed, from its last listing: it is asked when the daemon starts and
-then at most hourly, and no turn waits for it. Otherwise the model id is looked up in a table of
+then at most hourly, and no turn waits for it. What it last said is kept across a restart, so the first
+turns after one, and every turn while the listing cannot be read, use it too, as long as the provider's
+address is the same. Otherwise the model id is looked up in a table of
 families, a gateway's prefix ignored, so `antigravity:claude-sonnet-4-6` is looked up as
 `claude-sonnet-4-6`. A model nothing knows is assumed to have 32k, and its history is trimmed far harder
 than it needs to be; the log says so once per model. `context_window` in the agent's `[llm]` is the fix,

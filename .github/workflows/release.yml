@@ -546,6 +546,10 @@ jobs:
       # intermediate releases from the mirror first (D1); `mirror-page.ts` names the floor.
       - name: The mirror's first page keeps every stepping stone
         if: startsWith(github.ref, 'refs/tags/v')
+        # Read with this run's token: with none, a hosted runner's shared address runs out of GitHub's sixty asks an
+        # hour, and v0.8.36 stopped here on that 403 (`mirror-page.ts`, readPage).
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bun run scripts/release/mirror-page.ts --adding "${GITHUB_REF_NAME}"
       - name: Initialize releases if tagged
         if: startsWith(github.ref, 'refs/tags/v')

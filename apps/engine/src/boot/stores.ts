@@ -14,6 +14,7 @@ import { VERSION } from "@/commons/version.ts";
 import { databaseEpoch } from "@/db/epoch.ts";
 import { AuditLog } from "@/commons/audit.store.ts";
 import { DaemonStateStore } from "@/commons/daemon-state.store.ts";
+import { modelWindowsState } from "@/commons/daemon-state.ts";
 import { LogBuffer } from "@/commons/log-buffer.ts";
 import { LogStore } from "@/commons/logs.store.ts";
 import { AccessStore } from "@/modules/access/access.store.ts";
@@ -99,7 +100,8 @@ export async function openStores(input: {
   // knows: what each request a model is sent and each line a chat is sent is masked of (`commons/egress.ts`).
   const ownSecrets = () => ({ ...secrets.knownValues(), ...ownSecretValues() });
   const knownSecrets = () => ({ ...ownSecrets(), ...heldSecrets.values() });
-  const providers = new ProviderRegistry(config.providers, secrets, undefined, knownSecrets);
+  // The windows each endpoint last stated, kept so the first turns after this boot are budgeted by them (`llm/catalog.ts`).
+  const providers = new ProviderRegistry(config.providers, secrets, undefined, knownSecrets, modelWindowsState(state));
   const sessions = new SessionStore(db);
   /**
    * What each turn did — steps, timings, and the answer as it is written.

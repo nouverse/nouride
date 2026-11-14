@@ -6,9 +6,15 @@
  * twice an hour per profile for the same answer.
  *
  * A turn never waits for it. `windowNow` answers from what the endpoint last said and asks again in the background
- * when that is stale or missing, so the first turn after a boot budgets by the table (`contextWindowInfo`) and the
- * next by the gateway — where a listing on the turn's path would hold every first turn for up to five seconds of
- * timeout against a gateway that is down.
+ * when that is stale or missing — where a listing on the turn's path would hold every first turn for up to five
+ * seconds of timeout against a gateway that is down.
+ *
+ * What the endpoint last said of each model's window is kept across a restart (`remembered`, a row of the daemon's
+ * state). Without it the first turns after a boot, the messages that waited while the daemon was down among them,
+ * and every turn while a listing could not be read, were budgeted by the table's guess (`contextWindowInfo`): 200,000
+ * for a model the gateway lists at a million, so a coding agent's history was compacted and a tool result it was
+ * still using was cut at a fifth of its room. What was kept answers until the endpoint says something new, and only
+ * for the address it was said by.
  */
 
 import { listModels, type ListedModel } from "@nouride/llm";
@@ -24,9 +30,14 @@ const LISTING_TIMEOUT_MS = 5000;
 
 type Endpoint = { kind: ProviderKind; baseUrl: string; apiKey: string; headers?: Record<string, string> };
 
+/** What each profile's endpoint last stated: its address then, and each model's window, null where it stated none. */
+export type RememberedWindows = Record<string, { address: string; windows: Record<string, number | null> }>;
+
 export interface CatalogDeps {
   /** The profile's endpoint as it is now — throws for a profile or a credential that is not there. */
   endpointFor(profile: string): Endpoint;
+  /** Where what the endpoints said is kept across a restart. Absent, nothing is: a test, the CLI. */
+  remembered?: { load(): RememberedWindows; save(windows: RememberedWindows): void };
   fetchImpl?: typeof fetch;
   now?: () => number;
 }
@@ -42,7 +53,12 @@ export class ModelCatalog {
   /** A listing being asked for, so the readers that ask at once share one request. */
   private readonly asking = new Map<string, Promise<Map<string, ListedModel> | null>>();
 
-  constructor(private readonly deps: CatalogDeps) {}
+  /** What was kept, as it was loaded and since written: read where no listing of this boot answers. */
+  private readonly kept: RememberedWindows;
+
+  constructor(private readonly deps: CatalogDeps) {
+    this.kept = deps.remembered?.load() ?? {};
+  }
 
   /**
    * The profile's listing, asked for when what it last said is older than an hour — a minute, when it could not be
@@ -55,30 +71,29 @@ export class ModelCatalog {
   }
 
   /**
-   * The context window the profile's endpoint states for `model`, from what it last said — never waiting for it. Null
-   * when it has said nothing about that model, or nothing yet; a stale or missing answer is asked for in the background,
-   * for the next turn.
-   *
-   * A bare id (`claude-opus-5.5`) on a gateway that lists ids with a provider (`kiro:claude-opus-5.5`) can go to any
-   * provider that serves it, and which one is the gateway's choice per request. So it is the smallest window among
-   * them, and only when every one of them states one: a route that says nothing could be the 32k one.
+   * The context window the profile's endpoint states for `model`, from what it last said — never waiting for it, and
+   * from before this boot where this boot has nothing yet (`windowIn` for a bare id). Null when it has said nothing
+   * about that model; a stale or missing answer is asked for in the background, for the next turn.
    */
   windowNow(profile: string, model: string): number | null {
     const entry = this.entries.get(profile);
     if (!entry || this.now() - entry.at >= ttlOf(entry)) void this.ask(profile);
     const models = entry?.models;
-    if (!models) return null;
-
-    const exact = models.get(model);
-    if (exact || model.includes(":")) return exact?.contextWindow ?? null;
-    const routes = [...new Set([...models.entries()].filter(([id]) => id.endsWith(`:${model}`)).map(([, listed]) => listed))];
-    if (routes.length === 0 || routes.some((route) => route.contextWindow === undefined)) return null;
-    return Math.min(...routes.map((route) => route.contextWindow!));
+    if (models) return windowIn(new Map([...models].map(([name, listed]) => [name, listed.contextWindow ?? null])), model);
+    // Nothing read yet this boot, or a listing that cannot be read now: what the endpoint said before, where it is still
+    // the same endpoint. A profile moved to another address is forgotten (`forget`); this also checks the address.
+    const kept = this.kept[profile];
+    if (!kept || kept.address !== this.addressOf(profile)) return null;
+    return windowIn(new Map(Object.entries(kept.windows)), model);
   }
 
   /** Drop what a profile's endpoint said: its URL or credential changed, and the old answer is not about the new one. */
   forget(profile: string): void {
     this.entries.delete(profile);
+    if (this.kept[profile]) {
+      delete this.kept[profile];
+      this.deps.remembered?.save(this.kept);
+    }
   }
 
   /** The cached listing while it is believed; `undefined` when it is not, or there is none. */
@@ -94,6 +109,7 @@ export class ModelCatalog {
       .catch(() => null)
       .then((models) => {
         this.entries.set(profile, { at: this.now(), models });
+        if (models) this.keep(profile, models);
         return models;
       })
       .finally(() => this.asking.delete(profile));
@@ -126,6 +142,45 @@ export class ModelCatalog {
   private now(): number {
     return (this.deps.now ?? Date.now)();
   }
+
+  /** The profile's address as it is now, or null where it cannot be had. */
+  private addressOf(profile: string): string | null {
+    try {
+      return this.deps.endpointFor(profile).baseUrl;
+    } catch {
+      return null;
+    }
+  }
+
+  /** What a listing said of each model's window, kept for the next boot: written only when it changed. */
+  private keep(profile: string, models: Map<string, ListedModel>): void {
+    const address = this.addressOf(profile);
+    if (!this.deps.remembered || address === null) return;
+    const windows = Object.fromEntries([...models].map(([name, listed]) => [name, listed.contextWindow ?? null]));
+    const before = this.kept[profile];
+    if (before && before.address === address && sameWindows(before.windows, windows)) return;
+    this.kept[profile] = { address, windows };
+    this.deps.remembered.save(this.kept);
+  }
+}
+
+/**
+ * A model's window among what an endpoint said, by every name it answers to. A bare id (`claude-opus-5.5`) on a gateway
+ * that lists ids with a provider (`kiro:claude-opus-5.5`) can go to any provider that serves it, and which one is the
+ * gateway's choice per request. So it is the smallest window among them, and only when every one of them states one:
+ * a route that says nothing could be the 32k one.
+ */
+function windowIn(windows: Map<string, number | null>, model: string): number | null {
+  const exact = windows.get(model);
+  if (exact !== undefined || model.includes(":")) return exact ?? null;
+  const routes = [...windows.entries()].filter(([id]) => id.endsWith(`:${model}`)).map(([, window]) => window);
+  if (routes.length === 0 || routes.some((window) => window === null)) return null;
+  return Math.min(...(routes as number[]));
+}
+
+function sameWindows(a: Record<string, number | null>, b: Record<string, number | null>): boolean {
+  const keys = Object.keys(a);
+  return keys.length === Object.keys(b).length && keys.every((key) => key in b && a[key] === b[key]);
 }
 
 function ttlOf(entry: Entry): number {
