@@ -152,7 +152,8 @@ export const BUILT_IN_CLIS: readonly CliRow[] = [
     install: "npm i -g @agentclientprotocol/codex-acp (it carries Codex itself)",
     package: "@agentclientprotocol/codex-acp",
     // 2.3.0 on the box, and 2.5.0 the e2e VM's Codex, each the version there on 2026-11-08.
-    tested: { lowest: "2.3.0", highest: "2.5.0" },
+    // 2.6.0 on the box since: its handshake check passed, and an agent on it answered a turn and one that ran a command.
+    tested: { lowest: "2.3.0", highest: "2.6.0" },
     carries: { name: "Codex", package: "@openai/codex", field: "version" },
     versionArgs: ["--version"],
     // The folder must exist before it starts, or the handshake itself fails.
