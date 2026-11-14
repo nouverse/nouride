@@ -18,11 +18,16 @@ interface Spent {
   cachedInputTokens: number | null;
 }
 
-export function cliStatusLines(cli: CliAnswering, own: { model: string; provider: string }, transcript: number, spent: Spent | undefined): string[] {
+/**
+ * `picked` is the model this chat was put on with `/model`, as a chat reads it (`named`). It is what answers here, so it
+ * is the line: the agent's own model alone read as what answered a chat that was on another.
+ */
+export function cliStatusLines(cli: CliAnswering, own: { model: string; provider: string }, transcript: number, spent: Spent | undefined, picked?: string): string[] {
   const name = cli.cli;
-  const model = cli.model
+  const its = cli.model
     ? `${cli.model.name} (${cli.model.by === "pack" ? "set in the pack" : `${name}'s own, as its last session opened`})`
     : `${name} chooses it`;
+  const model = picked ? `${picked}, picked in this chat. \`/model default\` goes back to ${cli.model ? cli.model.name : `${name}'s own`}` : its;
   const context = cli.context
     ? `${formatTokens(cli.context.used)} of ${formatTokens(cli.context.size)} tokens at its last report`
     : "not reported in this conversation since the daemon started";

@@ -13,7 +13,7 @@ import type { CliAnswering } from "@/modules/pipeline/brain.ts";
 
 const status = sessionHooks.find((hook) => hook.command === "/status")!;
 
-function ctx(options: { external: boolean; answering?: CliAnswering; spent?: { inputTokens: number; outputTokens: number; cachedInputTokens: number | null } }): HookContext {
+function ctx(options: { external: boolean; answering?: CliAnswering; spent?: { inputTokens: number; outputTokens: number; cachedInputTokens: number | null }; picked?: string }): HookContext {
   const asked: string[] = [];
   return {
     agent: {
@@ -30,7 +30,8 @@ function ctx(options: { external: boolean; answering?: CliAnswering; spent?: { i
     deps: {
       registry: { status: () => "running" },
       sessions: { load: () => ({ id: "ses_1", startedAt: 0, messages: Array.from({ length: 101 }, () => ({ role: "user", content: "x" })) }) },
-      modelOverrides: { get: () => undefined },
+      modelOverrides: { get: () => options.picked },
+      cliModels: () => [{ value: "default", name: "Default (recommended)" }, { value: "fable", name: "Fable 5.2" }],
       daemon: { startedAt: Date.now(), version: "0.8.8" },
       sessionUsage: (_id: string, _since: number, onlyCli?: boolean) => (asked.push(`usage onlyCli=${onlyCli === true}`), { lastInputTokens: 0, ...(options.spent ?? { inputTokens: 0, outputTokens: 0, cachedInputTokens: null }) }),
       answering: (_agent: unknown, gatewayId: string, chatId: string) => (asked.push(`${gatewayId}|${chatId}`), options.answering ?? null),
@@ -95,6 +96,18 @@ describe("/status of an agent a coding CLI answers", () => {
     expect(text).toContain("Context: kept by Codex itself, not reported in this conversation since the daemon started");
     expect(text).toContain("Tokens: none reported by Codex in this conversation yet");
     expect(text).not.toContain("0 in");
+  });
+
+  test("a chat put on another model with /model says that one, by what it stands for, and where /model default goes back", async () => {
+    // Seen on a box: after `/model fable` the chat answered on Fable 5.2 and `/status` there still said Sonnet 5.5.
+    const text = await reply(ctx({ external: true, answering: CLAUDE, picked: "fable" }));
+    expect(text).toContain("Model: `fable` (Fable 5.2), picked in this chat. `/model default` goes back to Opus 5.5\n");
+    expect(text).not.toContain("as its last session opened");
+    // A name the CLI has not listed is said as written; with no model known, the way back is the CLI's own.
+    expect(await reply(ctx({ external: true, answering: { ...CLAUDE, model: null }, picked: "o9" }))).toContain("Model: `o9`, picked in this chat. `/model default` goes back to Claude Code's own\n");
+    // No pick: the agent's own, as before. An agent its own model answers keeps its own words for a pick.
+    expect(await reply(ctx({ external: true, answering: CLAUDE }))).toContain("Model: Opus 5.5 (Claude Code's own, as its last session opened)");
+    expect(await reply(ctx({ external: false, picked: "gpt-x" }))).toContain("Model: gpt-x (overridden for this chat)");
   });
 
   test("a model the pack sets is said as the pack's", async () => {
