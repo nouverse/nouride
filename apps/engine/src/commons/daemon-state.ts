@@ -204,3 +204,30 @@ export function alertCooldownsState(rows: StateRows): { load(): Record<string, n
   const row = new StateRow<Record<string, number>>(rows, "alert-cooldowns", "the alert cooldowns", timesOf);
   return { load: () => row.load() ?? {}, save: (at) => row.save(at) };
 }
+
+/** The context windows an endpoint last stated, by profile: its address then, and each model's window or null. */
+type RememberedWindows = Record<string, { address: string; windows: Record<string, number | null> }>;
+
+/**
+ * What each provider profile's endpoint last said of its models' context windows (`llm/catalog.ts`). A restart forgot
+ * it, and the first turns after one, the messages that waited while the daemon was down among them, were budgeted by
+ * the table's guess: 200,000 for a model the gateway lists at a million, so a coding agent's history was compacted and
+ * its tool output cut at a fifth of its room.
+ */
+export function modelWindowsState(rows: StateRows): { load(): RememberedWindows; save(windows: RememberedWindows): void } {
+  const row = new StateRow<RememberedWindows>(rows, "model-windows", "the context windows the endpoints stated", (value) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+    const out: RememberedWindows = {};
+    for (const [profile, entry] of Object.entries(value)) {
+      const e = entry as { address?: unknown; windows?: unknown } | null;
+      if (!e || typeof e.address !== "string" || !e.windows || typeof e.windows !== "object" || Array.isArray(e.windows)) continue;
+      const windows: Record<string, number | null> = {};
+      for (const [model, window] of Object.entries(e.windows)) {
+        if (window === null || (typeof window === "number" && Number.isInteger(window) && window > 0)) windows[model] = window;
+      }
+      out[profile] = { address: e.address, windows };
+    }
+    return out;
+  });
+  return { load: () => row.load() ?? {}, save: (windows) => row.save(windows) };
+}

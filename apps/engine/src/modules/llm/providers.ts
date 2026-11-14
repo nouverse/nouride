@@ -24,7 +24,7 @@ import {
   type ProviderProfile,
 } from "@nouride/shared";
 import type { SecretStore } from "@nouride/secrets";
-import { ModelCatalog } from "./catalog.ts";
+import { ModelCatalog, type CatalogDeps } from "./catalog.ts";
 
 const log = createLogger("llm.providers");
 
@@ -40,10 +40,13 @@ export class ProviderRegistry {
     private readonly http?: HttpDeps,
     /** Every credential the daemon knows, which every request is masked of before it leaves (`commons/egress.ts`). */
     private readonly known?: () => Record<string, string>,
+    /** Where the windows the endpoints stated are kept across a restart (`catalog.ts`). */
+    remembered?: CatalogDeps["remembered"],
   ) {
     this.catalog = new ModelCatalog({
       endpointFor: (name) => this.endpointFor(name),
       ...(http?.fetchImpl ? { fetchImpl: http.fetchImpl } : {}),
+      ...(remembered ? { remembered } : {}),
     });
   }
 
