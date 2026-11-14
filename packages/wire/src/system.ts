@@ -52,6 +52,8 @@ export interface SystemFileEntry {
   modifiedAt: number | null;
   /** Why a file does not open, where it does not. */
   closed?: "database";
+  /** Set where an admin may delete it from the page: an agent's work, a chat's attachment, a tool's kept output, a job's log. */
+  removable?: true;
 }
 
 export interface SystemFolderListing {
@@ -65,16 +67,36 @@ export interface SystemFolderListing {
   file?: SystemFileEntry;
 }
 
-/** Why a path is not listed or opened. */
-export type SystemFileRefusal = "outside" | "missing" | "left-out" | "not-a-folder" | "a-folder" | "database";
+/**
+ * Why a path is not listed, opened, downloaded or deleted. The last three are a download's and a delete's alone:
+ * `masked`, words in it look like a credential; `kept`, it is Nouride's own and not an admin's to delete here;
+ * `in-use`, a running mission or job is working there.
+ */
+export type SystemFileRefusal = "outside" | "missing" | "left-out" | "not-a-folder" | "a-folder" | "database" | "masked" | "kept" | "in-use";
 
 export interface SystemFileOpened {
   entry: SystemFileEntry;
-  /** `text`: its words are in `text`. `picture`: fetched as a picture. `other`: not something a page shows. */
-  kind: "text" | "picture" | "other";
+  /**
+   * `text`: its words are in `text`. `picture`, `video`, `audio`: fetched as that, and drawn or played in the page.
+   * `pdf`: opened by the browser in a tab of its own. `other`: not something a page shows, and downloaded.
+   */
+  kind: "text" | "picture" | "video" | "audio" | "pdf" | "other";
   text?: string;
   /** Whether `text` is only the file's beginning. */
   truncated?: boolean;
-  /** Whether something that looked like a credential was masked in `text`. */
+  /** Whether something that looked like a credential was masked in `text`. A file like that is not downloaded. */
   masked?: boolean;
+}
+
+/** What a delete would take, for the question asked before it: how many files, and how much of the disk. */
+export interface SystemFileWeight {
+  entry: SystemFileEntry;
+  /** The files in it, itself counted where it is one. */
+  files: number;
+  /** Whether there are more files than were counted. */
+  more: boolean;
+  /** What it takes on disk; null where that could not be measured. */
+  bytes: number | null;
+  /** Set where it is a link: the link is what goes, and what it leads to stays. */
+  link?: true;
 }

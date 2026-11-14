@@ -1,13 +1,14 @@
 /**
- * The data folder as System's Files tab reads it (`system-files.ts`): what is listed, what is left out whole, and
- * every way a path could lead out of the folder. On a folder of the test's making, laid out as an install's is.
+ * The data folder as System's Files tab reads it (`system-files.ts`): what is listed, what is left out whole, every
+ * way a path could lead out of the folder, and what an admin may delete from it. On a folder of the test's making,
+ * laid out as an install's is.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { findFile, listFolder, pictureType } from "@/modules/web/control/system-files.ts";
+import { findFile, findRemovable, listFolder, mediaOf, removableAt } from "@/modules/web/control/system-files.ts";
 
 let top: string;
 let root: string;
@@ -55,6 +56,12 @@ beforeAll(() => {
     "workspace/app/token-savings.md",
     "workspace/app/keyboard.md",
     "workspace/app/src/index.ts",
+    "workspace/shared/report/out.txt",
+    "workspace/private/nix/app/main.ts",
+    "attachments/nix/photo.png",
+    "tool-output/nix/ses_1/out.txt",
+    "jobs/job_1.log",
+    "jobs/nix/job_2.log",
   ])
     put(path);
   writeFileSync(join(top, "outside.txt"), "not Nouride's");
@@ -64,6 +71,11 @@ beforeAll(() => {
   symlinkSync(join(root, "data/nouride.db"), join(root, "workspace/link-db"));
   symlinkSync(join(root, "workspace/notes.md"), join(root, "workspace/link-notes"));
   symlinkSync(join(root, "workspace/app"), join(root, "workspace/link-app"));
+  symlinkSync(join(root, "agents"), join(root, "workspace/shared/link-agents"));
+  symlinkSync(join(root, "workspace/shared"), join(root, "agents/link-shared"));
+  // A folder with nothing private in it, reached by a name under which a tool keeps a sign-in.
+  put("workspace/shared/plain/config");
+  symlinkSync(join(root, "workspace/shared/plain"), join(root, "workspace/shared/.kube"));
 });
 afterAll(() => rmSync(top, { recursive: true, force: true }));
 
@@ -71,7 +83,7 @@ describe("a folder's listing", () => {
   test("the data folder itself: folders first, then files, each by name", () => {
     const listing = listFolder(root, "");
     expect(listing).toMatchObject({ ok: true, path: "", more: 0, leftOut: true });
-    expect(names("")).toEqual(["agents", "data", "home", "workspace", "config.toml"]);
+    expect(names("")).toEqual(["agents", "attachments", "data", "home", "jobs", "tool-output", "workspace", "config.toml"]);
     const config = (listing as { entries: { name: string; kind: string; sizeBytes: number | null; modifiedAt: number | null; path: string }[] }).entries.at(-1)!;
     expect(config).toMatchObject({ name: "config.toml", path: "config.toml", kind: "file", sizeBytes: 1 });
     expect(config.modifiedAt).toBeGreaterThan(1_700_000_000_000);
@@ -105,7 +117,7 @@ describe("a folder's listing", () => {
   });
 
   test("a link is what it leads to: listed where that is inside and not left out", () => {
-    expect(names("workspace")).toEqual(["app", "link-app", "site", "link-db", "link-notes", "notes.md", "shot.png"]);
+    expect(names("workspace")).toEqual(["app", "link-app", "private", "shared", "site", "link-db", "link-notes", "notes.md", "shot.png"]);
     const listing = listFolder(root, "workspace") as { leftOut: boolean; entries: { name: string; closed?: string }[] };
     expect(listing.leftOut).toBe(true);
     // A link to the database is the database: listed, closed.
@@ -191,10 +203,152 @@ describe("asked for by name", () => {
   });
 });
 
-test("a picture is told by its name's ending, and nothing that can carry a script is one", () => {
-  expect(pictureType("shot.PNG")).toBe("image/png");
-  expect(pictureType("photo.jpeg")).toBe("image/jpeg");
-  expect(pictureType("drawing.svg")).toBeNull();
-  expect(pictureType("page.html")).toBeNull();
-  expect(pictureType("png")).toBeNull();
+describe("what an admin may delete", () => {
+  test.each([
+    ["workspace/shared/report", "folder"],
+    ["workspace/shared/report/out.txt", "file"],
+    ["workspace/private/nix/app", "folder"],
+    ["workspace/private/nix/notes.md", "file"],
+    // Left in the workspaces' folder by an older layout: nobody's own folder.
+    ["workspace/old", "folder"],
+    ["workspace/old.txt", "file"],
+    ["attachments/nix/photo.png", "file"],
+    ["attachments/nix/2026-11", "folder"],
+    ["tool-output/nix/ses_1", "folder"],
+    ["jobs/nix/job_2.log", "file"],
+    // A log from before each agent had a folder of its own there.
+    ["jobs/job_1.log", "file"],
+    // Where the data is a volume of its own and they stayed inside it.
+    ["data/jobs/job_1.log", "file"],
+    ["data/attachments/nix/photo.png", "file"],
+    ["data/tool-output/nix/ses_1", "folder"],
+  ] as const)("%s, a %s: what agents and chats left behind", (path, kind) => {
+    expect(removableAt(path, kind)).toBe(true);
+  });
+
+  test.each([
+    ["", "folder"],
+    // The folders Nouride lays out, each with its agent's own user and group on it.
+    ["workspace", "folder"],
+    ["workspace/shared", "folder"],
+    ["workspace/private", "folder"],
+    ["workspace/private/nix", "folder"],
+    ["attachments", "folder"],
+    ["attachments/nix", "folder"],
+    ["tool-output", "folder"],
+    ["tool-output/nix", "folder"],
+    ["jobs", "folder"],
+    ["jobs/nix", "folder"],
+    ["data/attachments/nix", "folder"],
+    ["data/jobs", "folder"],
+    // Everything else is Nouride's own.
+    ["config.toml", "file"],
+    ["data/nouride.db", "file"],
+    ["data/backups/db/nouride-2026-11-13.db", "file"],
+    ["data/uploads/a.png", "file"],
+    ["agents/nouva/MEMORY.md", "file"],
+    ["agents/nouva", "folder"],
+    ["home/project/readme.md", "file"],
+    ["memory/nouva/2026-11-13.md", "file"],
+    ["bin/tool", "file"],
+    // Only the three kept folders are known inside `data/`: a workspace is never there.
+    ["data/workspace/shared/report", "folder"],
+    ["data/workspace/old.txt", "file"],
+    // A name that only begins as one of them.
+    ["workspace-old/notes.md", "file"],
+    ["jobs-old/job_1.log", "file"],
+  ] as const)("%s, a %s, is kept", (path, kind) => {
+    expect(removableAt(path, kind)).toBe(false);
+  });
+
+  test("a listing marks what may be deleted, and nothing else", () => {
+    const marked = (path: string) => {
+      const listing = listFolder(root, path);
+      if (!listing.ok) throw new Error(`${path}: ${listing.reason}`);
+      return Object.fromEntries(listing.entries.map((entry) => [entry.name, entry.removable === true]));
+    };
+    expect(marked("")).toEqual({ agents: false, attachments: false, data: false, home: false, jobs: false, "tool-output": false, workspace: false, "config.toml": false });
+    expect(marked("workspace")).toMatchObject({ app: true, private: false, shared: false, "notes.md": true, "link-db": true });
+    expect(marked("workspace/private")).toEqual({ nix: false });
+    expect(marked("workspace/private/nix")).toEqual({ app: true });
+    expect(marked("workspace/shared")).toEqual({ report: true, "link-agents": true, plain: true, ".kube": true });
+    expect(marked("jobs")).toEqual({ nix: false, "job_1.log": true });
+    expect(marked("attachments")).toEqual({ nix: false });
+    expect(marked("attachments/nix")).toEqual({ "photo.png": true });
+    expect(marked("data")).toMatchObject({ "nouride.db": false, "advisories.json": false });
+    // Through a link out of the workspaces, where the folder really is decides: an agent's persona files are kept.
+    expect(marked("workspace/shared/link-agents")).toEqual({ nouva: false, shared: false, "link-shared": false });
+    expect(marked("workspace/shared/link-agents/nouva")).toEqual({ "MEMORY.md": false });
+    // Through a link inside them, they are still the workspace's.
+    expect(marked("workspace/link-app")).toEqual({ src: true, "keyboard.md": true, "token-savings.md": true });
+    // And the other way: the shared folder reached from among the agents' persona files is not marked there, by the
+    // path it is asked by.
+    expect(marked("agents/link-shared")).toEqual({ report: false, "link-agents": false, plain: false, ".kube": false });
+  });
+
+  test("a file and a folder are found where they really are", () => {
+    expect(findRemovable(root, "workspace/shared/report/out.txt")).toEqual({
+      ok: true,
+      real: join(root, "workspace/shared/report/out.txt"),
+      led: "workspace/shared/report/out.txt",
+      link: false,
+      entry: expect.objectContaining({ name: "out.txt", path: "workspace/shared/report/out.txt", kind: "file", sizeBytes: 1 }),
+    });
+    expect(findRemovable(root, "workspace/private/nix/app")).toMatchObject({ ok: true, real: join(root, "workspace/private/nix/app"), link: false, entry: { kind: "folder", sizeBytes: null } });
+    // Through a link to a folder of the workspace: the folder it leads to, and the entry in it.
+    expect(findRemovable(root, "workspace/link-app/src")).toMatchObject({ ok: true, real: join(root, "workspace/app/src"), led: "workspace/app/src", entry: { path: "workspace/link-app/src" } });
+  });
+
+  test("a link is the link itself, never what it leads to: the database, a secret and a folder outside stay", () => {
+    for (const name of ["link-notes", "link-db", "link-ctl", "link-out", "link-app"]) {
+      expect(findRemovable(root, `workspace/${name}`)).toMatchObject({ ok: true, real: join(root, "workspace", name), led: `workspace/${name}`, link: true, entry: { kind: "file" } });
+    }
+  });
+
+  test.each([
+    ["", "kept"],
+    ["workspace", "kept"],
+    ["workspace/shared", "kept"],
+    ["workspace/private/nix", "kept"],
+    ["attachments/nix", "kept"],
+    ["jobs/nix", "kept"],
+    ["config.toml", "kept"],
+    ["data/nouride.db", "kept"],
+    ["agents/nouva/MEMORY.md", "kept"],
+    // In the workspaces by its path, an agent's persona folder by where it is.
+    ["workspace/shared/link-agents/nouva", "kept"],
+    ["workspace/shared/link-agents/nouva/MEMORY.md", "kept"],
+    // The workspace's by where it is, an agent's persona folder by the path it is asked by.
+    ["agents/link-shared/report", "kept"],
+    ["agents/link-shared/report/out.txt", "kept"],
+    ["workspace/app/.env", "left-out"],
+    ["workspace/link-app/.env", "left-out"],
+    // A sign-in by the path it is asked by, though the folder that name leads to holds nothing private.
+    ["workspace/shared/.kube/config", "left-out"],
+    ["data/.control-token", "left-out"],
+    ["../outside.txt", "outside"],
+    ["workspace/../../outside.txt", "outside"],
+    ["/etc/passwd", "outside"],
+    ["workspace/link-out/outside.txt", "outside"],
+    ["workspace/gone.md", "missing"],
+    ["workspace/gone/notes.md", "missing"],
+  ] as const)("%s is refused: %s", (path, reason) => {
+    expect(findRemovable(root, path)).toEqual({ ok: false, reason });
+  });
+});
+
+test("what a browser shows as itself is told by a name's ending, and nothing that can carry a script is one", () => {
+  expect(mediaOf("shot.PNG")).toEqual({ kind: "picture", type: "image/png" });
+  expect(mediaOf("photo.jpeg")).toEqual({ kind: "picture", type: "image/jpeg" });
+  expect(mediaOf("demo.mp4")).toEqual({ kind: "video", type: "video/mp4" });
+  expect(mediaOf("screen.MOV")).toEqual({ kind: "video", type: "video/quicktime" });
+  expect(mediaOf("clip.webm")).toEqual({ kind: "video", type: "video/webm" });
+  expect(mediaOf("voice.oga")).toEqual({ kind: "audio", type: "audio/ogg" });
+  expect(mediaOf("song.mp3")).toEqual({ kind: "audio", type: "audio/mpeg" });
+  expect(mediaOf("memo.m4a")).toEqual({ kind: "audio", type: "audio/mp4" });
+  expect(mediaOf("report.pdf")).toEqual({ kind: "pdf", type: "application/pdf" });
+  expect(mediaOf("drawing.svg")).toBeNull();
+  expect(mediaOf("page.html")).toBeNull();
+  expect(mediaOf("notes.md")).toBeNull();
+  expect(mediaOf("mp4")).toBeNull();
 });
