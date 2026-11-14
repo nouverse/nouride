@@ -37,3 +37,11 @@ test("the skills that store a device's or a site's password say how, and keep it
   expect(page("network-reach/SKILL.md")).toContain("Use it from there, never in a file, your notes or a reply.");
   expect(page("coding-agents/references/claude-code.md")).toContain("keep it with `secret_save` under that name");
 });
+
+test("a saved browser login is loaded and never printed: its cookies are masked by nothing", () => {
+  // The file `state-save` writes holds live session cookies and is no stored secret: a `cat` of it put a working login
+  // into the conversation unmasked.
+  const skill = pages.find((entry) => entry.path === "browser-automation/SKILL.md")!.text;
+  expect(skill).toContain("Load it with `state-load` and never open, print or read it (`cat`, `read`, a search of the folder)");
+  expect(skill).toContain("what it holds are the session's cookies, which no secret store masks, so printing it puts a working login into this conversation and its log.");
+});
