@@ -108,8 +108,9 @@ export const BUILT_IN_CLIS: readonly CliRow[] = [
     args: [],
     install: "npm i -g @agentclientprotocol/claude-agent-acp (Node 22 or later; it carries Claude Code itself)",
     package: "@agentclientprotocol/claude-agent-acp",
-    // 0.95.0 answers the owner's agents on the box, and 0.100.0 the e2e VM's Claude, each the version there on 2026-11-08.
-    tested: { lowest: "0.95.0", highest: "0.100.0" },
+    // 0.95.0 answered the owner's agents on the box, and 0.100.0 the e2e VM's Claude, each the version there on 2026-11-08.
+    // 0.107.0 on the box since: its handshake check passed, and a turn answered on its default model and on `fable`.
+    tested: { lowest: "0.95.0", highest: "0.107.0" },
     // The SDK holds Claude Code's own binary, and says its version in a field of its own (0.3.323: "2.1.323").
     carries: { name: "Claude Code", package: "@anthropic-ai/claude-agent-sdk", field: "claudeCodeVersion" },
     versionArgs: ["--version"],
