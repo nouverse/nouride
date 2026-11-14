@@ -1,11 +1,12 @@
 /**
  * The System page and its Files tab, drawn against a stand-in for the daemon's answers: what each bar says in words,
- * what is said where a figure is missing, a folder's rows and what a press on one does, a file read as what it is,
- * and each refusal's sentence. For an admin: anyone else sees that it is an admin's, and nothing is asked.
+ * what is said where a figure is missing, which build this is and the way to a newer one, a folder's rows and what a
+ * press on one does, a file shown as what it is, a copy of it kept, what agents left behind deleted once asked, and
+ * each refusal's sentence. For an admin: anyone else sees that it is an admin's, and nothing is asked.
  */
 
 import { describe, expect, test } from "bun:test";
-import { answer, buttons, renderPage, RESPONSES, useMountHarness, WIRE } from "./mount-harness.ts";
+import { answer, buttons, dom, recordPosts, renderPage, RESPONSES, useMountHarness, WIRE } from "./mount-harness.ts";
 import { eventually } from "./wait.ts";
 
 useMountHarness();
@@ -45,6 +46,40 @@ describe("System", () => {
       // Nothing is nearly full here, and nothing says so.
       expect(text(host)).not.toContain("Getting full");
       expect(text(host)).not.toContain("Nearly full");
+    });
+  });
+
+  test("the version says which build it is, and has the way to a newer one beside it while there is one", async () => {
+    const UPDATE = RESPONSES["/update"] as { install: object; check: object } & Record<string, unknown>;
+    const version = (host: HTMLElement) => [...host.querySelectorAll("div")].find((row) => row.firstElementChild?.textContent === "Version" && row.children.length === 2)!;
+    await renderPage("/system", async (host) => {
+      await drawn(host, "0.8.36 (Community)");
+      const way = version(host).querySelector<HTMLAnchorElement>("a")!;
+      expect([way.textContent, way.getAttribute("href")]).toEqual(["0.7.10 is out", "/dashboard/update"]);
+    });
+    // Downloaded and waiting: the same way, in its own words.
+    answer({ "/update": { status: 200, body: { ...UPDATE, install: { ...UPDATE.install, edition: "pro" }, download: { status: "ready", received: 1, total: 1, tag: "v0.7.10", artifact: "a", error: null } } } });
+    await renderPage("/system", async (host) => {
+      await drawn(host, "0.8.36 (Pro)");
+      expect(version(host).querySelector("a")!.textContent).toBe("Update ready to install");
+    });
+    // Nothing newer: the version and its build, and no button.
+    answer({ "/update": { status: 200, body: { ...UPDATE, check: { ...UPDATE.check, latest: "0.7.9", newer: false } } } });
+    await renderPage("/system", async (host) => {
+      await drawn(host, "0.8.36 (Community)");
+      expect(version(host).querySelector("a")).toBeNull();
+    });
+    // The check did not answer: the version alone, as the machine itself gives it.
+    answer({ "/update": { status: 503, body: { error: "unreachable" } } });
+    await renderPage("/system", async (host) => {
+      await drawn(host, "Version0.8.36");
+      expect(version(host).textContent).toBe("Version0.8.36");
+    });
+    // A build with no update check of its own (a container) still says which it is.
+    answer({ "/update": { status: 503, body: { error: "unreachable" } }, "/health": { status: 200, body: { ...(WIRE["/health"] as object), edition: "pro" } } });
+    await renderPage("/system", async (host) => {
+      await drawn(host, "0.8.36 (Pro)");
+      expect(version(host).textContent).toBe("Version0.8.36 (Pro)");
     });
   });
 
@@ -133,7 +168,7 @@ describe("System in the menu", () => {
 describe("Files", () => {
   const rows = (host: HTMLElement) => [...host.querySelectorAll<HTMLElement>("ul > li")].map((row) => row.textContent?.replace(/\s+/g, " ").trim() ?? "");
 
-  test("the data folder: folders first, each row its size and when it changed, and why something is not listed", async () => {
+  test("the data folder: folders first, each row its size and when it changed, and nothing said of what is not listed", async () => {
     const listed = RESPONSES["/system/files"] as { entries: { name: string }[] } & Record<string, unknown>;
     const changed: Record<string, number> = { data: 60_000, workspace: 3 * 86_400_000, "config.toml": 5 * 3_600_000 };
     // By its query, the folder itself alone: an answer by the bare path would be every folder's.
@@ -142,15 +177,20 @@ describe("Files", () => {
       await drawn(host, "config.toml");
       expect(host.querySelector('nav[aria-label="Where you are"]')!.textContent).toBe(" Nouride's files");
       expect(rows(host)).toEqual(["data1 min ago", "workspace3 days ago", "config.toml7 KB5 h ago"]);
-      expect(text(host)).toContain("Credentials and secrets are kept private: what holds one is not listed here.");
+      // Left out there (`leftOut`), and the page does not bring it up.
+      expect(text(host)).not.toContain("kept private");
+      expect(text(host)).not.toContain("not listed");
+      // Nouride's own: no row here has anything to delete, and no room is kept for a button.
+      expect(host.querySelectorAll('ul > li button[aria-label^="Delete "]')).toHaveLength(0);
+      expect(host.querySelectorAll("ul > li span.size-8")).toHaveLength(0);
       // A press on a folder is its address: a link to it, and the browser's Back to leave it.
-      buttons(host);
-      [...host.querySelectorAll<HTMLButtonElement>("ul > li > button")].find((row) => row.textContent?.includes("workspace"))!.click();
+      [...host.querySelectorAll<HTMLButtonElement>("ul > li button")].find((row) => row.textContent?.includes("workspace"))!.click();
       await eventually(() => app.location() === "/files" && (app.search() as { path?: string }).path === "workspace", 3_000, "the folder's address");
       await drawn(host, "notes.md");
       expect(host.querySelector('nav[aria-label="Where you are"] [aria-current="page"]')!.textContent).toBe("workspace");
       expect(text(host)).toContain("And 1,200 more here that this list does not show.");
-      expect(text(host)).not.toContain("Credentials and secrets are kept private");
+      // What agents left behind: each row has its delete, named for what it deletes.
+      expect([...host.querySelectorAll('ul > li button[aria-label^="Delete "]')].map((button) => button.getAttribute("aria-label"))).toEqual(["Delete shots", "Delete notes.md", "Delete run.sh", "Delete shot.png"]);
     });
   });
 
@@ -160,7 +200,7 @@ describe("Files", () => {
     await renderPage("/files?path=data", async (host) => {
       await drawn(host, "nouride.db");
       expect(rows(host)).toEqual(["nouride.dbThe database: it does not open here87.0 MBjust now"]);
-      expect(host.querySelectorAll("ul > li > button")).toHaveLength(0);
+      expect(host.querySelectorAll("ul > li button")).toHaveLength(0);
     });
   });
 
@@ -173,7 +213,10 @@ describe("Files", () => {
       expect([...host.querySelectorAll("h1, h2, h3")].map((heading) => heading.textContent)).toContain("Deploy notes");
       expect(text(host)).not.toContain("# Deploy notes");
       expect(text(host)).toContain("2 KB · changed 2 h ago");
-      expect(text(host)).toContain("Something in this file looked like a credential, and is hidden where it was.");
+      expect(text(host)).toContain("Something in this file looked like a credential, and is hidden where it was. A file like this is read here, and not downloaded.");
+      // A copy would be its bytes as they are: there is no button for one.
+      expect(buttons(host)).not.toContain("Download");
+      expect(buttons(host)).toContain("Delete");
       expect(text(host)).toContain("The key is [hidden: GitHub token].");
       expect(text(host)).not.toContain("This is the beginning of the file");
       const toggle = () => [...host.querySelectorAll<HTMLButtonElement>("button")].find((button) => /Show (its source|as a page)/.test(button.textContent ?? ""))!;
@@ -211,8 +254,211 @@ describe("Files", () => {
       expect(host.querySelector("img[alt='shot.png']")!.getAttribute("src")).toBe("/api/control/system/files/raw?path=workspace%2Fshot.png");
     });
     await renderPage("/files?path=workspace/blob.bin", async (host) => {
-      await drawn(host, "Not something to read here");
+      await drawn(host, "Not something to show here");
+      // In its middle, the way to it; and nothing to delete, where the daemon did not mark it.
+      expect(text(host)).toContain("Download it to open it with something that can.");
+      expect(buttons(host).filter((label) => label === "Download")).toHaveLength(2);
+      expect(buttons(host)).not.toContain("Delete");
     });
+  });
+
+  test("from a laptop's width up the page is held to the window, and the list or the file scrolls inside its card", async () => {
+    answer({});
+    await renderPage("/files?path=workspace", async (host) => {
+      await drawn(host, "notes.md");
+      const list = host.querySelector("ul")!;
+      const area = list.closest(".lg\\:overflow-y-auto") as HTMLElement;
+      expect(area).not.toBeNull();
+      expect(area.className).toContain("lg:flex-1");
+      // Where you are is outside what scrolls, in the same card.
+      const crumbs = host.querySelector('nav[aria-label="Where you are"]')!;
+      expect(area.contains(crumbs)).toBe(false);
+      expect(crumbs.closest("section")).toBe(area.closest("section"));
+      expect(area.closest("section")!.className).toContain("lg:flex-1");
+      // The page's root takes the window's height, which the layout holds it to.
+      expect((area.closest("section")!.parentElement as HTMLElement).className).toContain("flex min-h-0 flex-1 flex-col");
+      expect((host.querySelector("main > div") as HTMLElement).className).toContain("lg:h-full");
+    });
+    await renderPage("/files?path=workspace/notes.md", async (host) => {
+      await drawn(host, "Deploy notes");
+      const area = [...host.querySelectorAll("h1, h2, h3")].find((heading) => heading.textContent === "Deploy notes")!.closest(".lg\\:overflow-y-auto") as HTMLElement;
+      expect(area).not.toBeNull();
+      // The file's own bar stays: its way back and what can be done with it.
+      const back = [...host.querySelectorAll("button")].find((button) => button.textContent?.includes("Back to its folder"))!;
+      expect(area.contains(back)).toBe(false);
+      expect(back.closest("section")).toBe(area.closest("section"));
+    });
+  });
+
+  test("a video and a sound are played where they stand, and a PDF opens in the browser's reader", async () => {
+    const entry = (name: string) => ({ name, path: `workspace/${name}`, kind: "file", sizeBytes: 5 * 1024 ** 2, modifiedAt: Date.now() - 7_200_000 });
+    const at = (name: string, kind: string) => ({
+      [`/system/files?path=workspace/${name}`]: { status: 200, body: { path: `workspace/${name}`, entries: [], more: 0, leftOut: false, file: entry(name) } },
+      [`/system/files/read?path=workspace/${name}`]: { status: 200, body: { entry: entry(name), kind } },
+    });
+    answer({ ...at("demo.mp4", "video"), ...at("voice.oga", "audio"), ...at("report.pdf", "pdf") });
+    await renderPage("/files?path=workspace/demo.mp4", async (host) => {
+      await eventually(() => host.querySelector("video") !== null, 3_000, "the player");
+      const video = host.querySelector("video")!;
+      expect(video.getAttribute("src")).toBe("/api/control/system/files/raw?path=workspace%2Fdemo.mp4");
+      expect([video.hasAttribute("controls"), video.getAttribute("preload"), video.hasAttribute("playsinline")]).toEqual([true, "metadata", true]);
+      expect(buttons(host).filter((label) => label === "Download")).toHaveLength(1);
+      // A form this browser does not play: said, with the file offered in the middle.
+      video.dispatchEvent(new dom.Event("error") as unknown as Event);
+      await drawn(host, "This browser cannot play it");
+      expect(host.querySelector("video")).toBeNull();
+      expect(buttons(host).filter((label) => label === "Download")).toHaveLength(2);
+    });
+    await renderPage("/files?path=workspace/voice.oga", async (host) => {
+      await eventually(() => host.querySelector("audio") !== null, 3_000, "the player");
+      expect(host.querySelector("audio")!.getAttribute("src")).toBe("/api/control/system/files/raw?path=workspace%2Fvoice.oga");
+      expect(host.querySelector("audio")!.hasAttribute("controls")).toBe(true);
+    });
+    await renderPage("/files?path=workspace/report.pdf", async (host) => {
+      await drawn(host, "It opens in a tab of its own, in the browser's reader.");
+      const open = [...host.querySelectorAll<HTMLAnchorElement>("main a")].find((link) => link.textContent?.trim() === "Open it")!;
+      expect([open.getAttribute("href"), open.getAttribute("target")]).toEqual(["/api/control/system/files/raw?path=workspace%2Freport.pdf", "_blank"]);
+      expect(buttons(host).filter((label) => label === "Download")).toHaveLength(2);
+    });
+  });
+
+  /** Every download the page hands the browser: where from, and the name it is saved under. */
+  const recordSaves = () => {
+    const saves: { href: string | null; name: string | null }[] = [];
+    const proto = (dom as unknown as { HTMLAnchorElement: { prototype: { click: () => void } } }).HTMLAnchorElement.prototype;
+    const click = proto.click;
+    proto.click = function (this: HTMLAnchorElement) {
+      if (this.hasAttribute("download")) saves.push({ href: this.getAttribute("href"), name: this.getAttribute("download") });
+      else click.call(this);
+    };
+    return { saves, restore: () => void (proto.click = click) };
+  };
+  /** Every request of the files routes, in the order asked. */
+  const recordAsks = () => {
+    const asked: string[] = [];
+    const spy = globalThis.fetch;
+    globalThis.fetch = ((input: unknown, init?: RequestInit) => {
+      const url = new URL(String(typeof input === "string" ? input : (input as Request).url), "http://localhost");
+      if (url.pathname.startsWith("/api/control/system/files")) asked.push(`${init?.method ?? "GET"} ${url.pathname.replace("/api/control", "")}${decodeURIComponent(url.search)}`);
+      return (spy as typeof fetch)(input as RequestInfo, init);
+    }) as typeof fetch;
+    return { asked, restore: () => void (globalThis.fetch = spy) };
+  };
+  const dialog = () => dom.document.body.querySelector("dialog[open]");
+  const inDialog = (label: string) => [...(dialog()?.querySelectorAll("button") ?? [])].find((button) => button.textContent?.trim() === label) as HTMLButtonElement | undefined;
+
+  test("Download asks first whether the file would be handed over, then leaves the fetching to the browser", async () => {
+    const entry = { name: "run.sh", path: "workspace/run.sh", kind: "file", sizeBytes: 120, modifiedAt: Date.now() - 7_200_000 };
+    answer({
+      "/system/files?path=workspace/run.sh": { status: 200, body: { path: "workspace/run.sh", entries: [], more: 0, leftOut: false, file: entry } },
+      "/system/files/read?path=workspace/run.sh": { status: 200, body: { entry, kind: "text", text: "echo hello\n", truncated: false, masked: false } },
+    });
+    const saved = recordSaves();
+    const asks = recordAsks();
+    try {
+      await renderPage("/files?path=workspace/run.sh", async (host) => {
+        await drawn(host, "echo hello");
+        [...host.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent?.trim() === "Download")!.click();
+        await eventually(() => saved.saves.length === 1, 3_000, "the download");
+        expect(saved.saves).toEqual([{ href: "/api/control/system/files/download?path=workspace%2Frun.sh", name: "run.sh" }]);
+        expect(asks.asked.filter((ask) => ask.includes("/download"))).toEqual(["GET /system/files/download?path=workspace/run.sh&check=1"]);
+      });
+    } finally {
+      saved.restore();
+      asks.restore();
+    }
+  });
+
+  test("a file the daemon will not hand over says why, and the browser is given nothing to fetch", async () => {
+    const entry = { name: "long.log", path: "workspace/long.log", kind: "file", sizeBytes: 9 * 1024 ** 2, modifiedAt: Date.now() - 7_200_000 };
+    answer({
+      "/system/files?path=workspace/long.log": { status: 200, body: { path: "workspace/long.log", entries: [], more: 0, leftOut: false, file: entry } },
+      // Nothing masked in the beginning that is shown: what is further down, only the whole reading finds.
+      "/system/files/read?path=workspace/long.log": { status: 200, body: { entry, kind: "text", text: "a line\n", truncated: true, masked: false } },
+      "/system/files/download": { status: 403, body: { error: "masked", reason: "masked", plain: "Something in this file looks like a credential, so it is not downloaded from here." } },
+    });
+    const saved = recordSaves();
+    try {
+      await renderPage("/files?path=workspace/long.log", async (host) => {
+        await drawn(host, "a line");
+        [...host.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent?.trim() === "Download")!.click();
+        await drawn(host, "Something in this file looks like a credential, so it is not downloaded from here.");
+        expect(saved.saves).toEqual([]);
+      });
+    } finally {
+      saved.restore();
+    }
+  });
+
+  test("a row's delete asks first, naming what would go and how much; said no, nothing is sent", async () => {
+    answer({});
+    const posted = recordPosts({ "/system/files/delete": { status: 200, body: { ok: true, path: "workspace/shots" } } });
+    try {
+      await renderPage("/files?path=workspace", async (host) => {
+        await drawn(host, "notes.md");
+        host.querySelector<HTMLButtonElement>('button[aria-label="Delete shots"]')!.click();
+        await eventually(() => inDialog("Delete") !== undefined, 3_000, "the question");
+        const said = (dialog()!.textContent ?? "").replace(/\s+/g, " ");
+        expect(said).toContain("Delete shots?");
+        expect(said).toContain("The folder and everything in it will be gone from this machine: 1,204 files, 3.2 GB. This cannot be undone.");
+        inDialog("Cancel")!.click();
+        await eventually(() => dialog() === null, 2_000, "the question closed");
+        expect(posted.posts).toEqual([]);
+        // Asked again and said yes: deleted by its path, and the folder is read again.
+        const again = () => host.querySelector<HTMLButtonElement>('button[aria-label="Delete shots"]')!;
+        await eventually(() => !again().disabled, 2_000, "the row's delete, free again");
+        again().click();
+        await eventually(() => inDialog("Delete") !== undefined, 3_000, "the question again");
+        const asks = recordAsks();
+        try {
+          inDialog("Delete")!.click();
+          await eventually(() => posted.posts.length === 1, 3_000, "the delete");
+          expect(posted.posts).toEqual([{ path: "/system/files/delete", body: { path: "workspace/shots" } }]);
+          await eventually(() => asks.asked.includes("GET /system/files?path=workspace"), 3_000, "the folder read again");
+        } finally {
+          asks.restore();
+        }
+      });
+    } finally {
+      posted.restore();
+    }
+  });
+
+  test("a delete the daemon holds back says why on its row, and nothing is asked of the person", async () => {
+    answer({ "/system/files/weigh?path=workspace/shots": { status: 409, body: { error: "in-use", reason: "in-use", plain: "A mission is still working here. Delete it once the mission has ended." } } });
+    const posted = recordPosts();
+    try {
+      await renderPage("/files?path=workspace", async (host) => {
+        await drawn(host, "notes.md");
+        host.querySelector<HTMLButtonElement>('button[aria-label="Delete shots"]')!.click();
+        await drawn(host, "A mission is still working here. Delete it once the mission has ended.");
+        expect(dialog()).toBeNull();
+        expect(posted.posts).toEqual([]);
+        // Said on the row it was asked of.
+        expect(host.querySelector('button[aria-label="Delete shots"]')!.closest("li")!.textContent).toContain("A mission is still working here.");
+      });
+    } finally {
+      posted.restore();
+    }
+  });
+
+  test("an open file that is deleted leaves the page on the folder it was in", async () => {
+    const at = RESPONSES["/system/files?path=workspace/notes.md"] as { file: object } & Record<string, unknown>;
+    answer({ "/system/files?path=workspace/notes.md": { status: 200, body: at } });
+    const posted = recordPosts({ "/system/files/delete": { status: 200, body: { ok: true, path: "workspace/notes.md" } } });
+    try {
+      await renderPage("/files?path=workspace/notes.md", async (host, app) => {
+        await drawn(host, "Deploy notes");
+        [...host.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent?.trim() === "Delete")!.click();
+        await eventually(() => inDialog("Delete") !== undefined, 3_000, "the question");
+        expect((dialog()!.textContent ?? "").replace(/\s+/g, " ")).toContain("It is 2 KB, and will be gone from this machine. This cannot be undone.");
+        inDialog("Delete")!.click();
+        await eventually(() => (app.search() as { path?: string }).path === "workspace", 3_000, "its folder");
+        expect(posted.posts).toEqual([{ path: "/system/files/delete", body: { path: "workspace/notes.md" } }]);
+      });
+    } finally {
+      posted.restore();
+    }
   });
 
   test("what is kept private, and what is gone, each say so with a way back", async () => {

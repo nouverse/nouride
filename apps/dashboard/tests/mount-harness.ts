@@ -111,13 +111,17 @@ export const RESPONSES: Record<string, unknown> = {
     more: 1200,
     leftOut: false,
     entries: [
-      { name: "shots", path: "workspace/shots", kind: "folder", sizeBytes: null, modifiedAt: Date.now() - 86_400_000 },
-      { name: "notes.md", path: "workspace/notes.md", kind: "file", sizeBytes: 2048, modifiedAt: Date.now() - 7_200_000 },
-      { name: "run.sh", path: "workspace/run.sh", kind: "file", sizeBytes: 120, modifiedAt: Date.now() - 7_200_000 },
-      { name: "shot.png", path: "workspace/shot.png", kind: "file", sizeBytes: 300 * 1024, modifiedAt: Date.now() - 7_200_000 },
+      { name: "shots", path: "workspace/shots", kind: "folder", sizeBytes: null, modifiedAt: Date.now() - 86_400_000, removable: true },
+      { name: "notes.md", path: "workspace/notes.md", kind: "file", sizeBytes: 2048, modifiedAt: Date.now() - 7_200_000, removable: true },
+      { name: "run.sh", path: "workspace/run.sh", kind: "file", sizeBytes: 120, modifiedAt: Date.now() - 7_200_000, removable: true },
+      { name: "shot.png", path: "workspace/shot.png", kind: "file", sizeBytes: 300 * 1024, modifiedAt: Date.now() - 7_200_000, removable: true },
     ],
   },
-  "/system/files?path=workspace/notes.md": { path: "workspace/notes.md", entries: [], more: 0, leftOut: false, file: { name: "notes.md", path: "workspace/notes.md", kind: "file", sizeBytes: 2048, modifiedAt: Date.now() - 7_200_000 } },
+  "/system/files?path=workspace/notes.md": { path: "workspace/notes.md", entries: [], more: 0, leftOut: false, file: { name: "notes.md", path: "workspace/notes.md", kind: "file", sizeBytes: 2048, modifiedAt: Date.now() - 7_200_000, removable: true } },
+  // Asked before a download, of any file: it would be handed over.
+  "/system/files/download": { ok: true },
+  "/system/files/weigh?path=workspace/shots": { entry: { name: "shots", path: "workspace/shots", kind: "folder", sizeBytes: null, modifiedAt: Date.now() - 86_400_000, removable: true }, files: 1204, more: false, bytes: 3.2 * 1024 ** 3 },
+  "/system/files/weigh?path=workspace/notes.md": { entry: { name: "notes.md", path: "workspace/notes.md", kind: "file", sizeBytes: 2048, modifiedAt: Date.now() - 7_200_000, removable: true }, files: 1, more: false, bytes: 2048 },
   "/system/files/read?path=workspace/notes.md": {
     entry: { name: "notes.md", path: "workspace/notes.md", kind: "file", sizeBytes: 2048, modifiedAt: Date.now() - 7_200_000 },
     kind: "text",

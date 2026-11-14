@@ -335,7 +335,8 @@ di bawah Settings dengan dua tabnya.
 - **Disk**: disk tempat berkas Nouride berada (di container, volume-nya), berapa yang kosong, dan berapa yang dipakai
   berkas Nouride sendiri, folder terbesar dulu. Tekan salah satunya untuk membukanya di Files. Folder besar butuh
   semenit atau lebih untuk dihitung, dan halamannya bilang begitu selama menghitung.
-- **Nouride here**: versinya, sudah berapa lama jalan, core prosesor yang boleh dipakai, dan di mana berkasnya.
+- **Nouride here**: versinya dan edisinya, Community atau Pro, sudah berapa lama jalan, core prosesor yang boleh
+  dipakai, dan di mana berkasnya. Kalau ada rilis yang lebih baru, tombol di sebelah versi membuka halaman Update.
 
 Mulai tiga perempat penuh, batangnya berubah dan bilang **Getting full**; mulai sembilan persepuluh, **Nearly full**.
 Angka yang gak diberikan mesin ditulis sebagai gak diketahui. Gak pernah digambar sebagai batang kosong.
@@ -348,15 +349,30 @@ menurut namanya, misalnya berkas memory agent, beserta seberapa banyak percakapa
 `cached prefix` di tab Daemon.
 
 **Files** menunjukkan apa yang disimpan Nouride di mesin: para agent, workspace mereka, kiriman orang, pengaturannya.
-Ini untuk dilihat: gak ada di halaman ini yang mengubah berkas. Buka folder dengan menekannya, dan kembali lewat jejak
-di atas atau tombol Back browser. Berkas terbuka sesuai jenisnya: halaman markdown sebagai halaman (**Show its
-source** untuk teks aslinya), kode dengan warnanya dan tombol **Copy**, gambar sebagai gambar.
+Buka folder dengan menekannya, dan kembali lewat jejak di atas atau tombol Back browser. Di jendela lebar, daftar dan
+berkas yang terbuka digulir di dalam kartunya, jadi jejak dan tombolnya tetap di tempat; di ponsel halamannya yang
+digulir. Berkas terbuka sesuai jenisnya: halaman markdown sebagai halaman (**Show its source** untuk teks aslinya),
+kode dengan warnanya dan tombol **Copy**, gambar sebagai gambar, video atau suara di pemutar. PDF punya **Open it**,
+yang membukanya di pembaca PDF browser, di tab sendiri. Yang lain bilang apa jenisnya, dengan **Download** di
+tengahnya.
+
+**Download** menyimpan salinan berkas yang terbuka ke komputermu, apa adanya. Berkas teks yang panjang dibaca seluruhnya
+dulu, jadi log yang besar butuh sebentar.
+
+**Delete** hanya untuk yang ditinggalkan agent dan chat: isi workspace para agent, berkas yang dikirim orang di chat,
+keluaran panjang yang disimpan sebuah tool, dan log job latar. Baris folder seperti itu punya tombolnya di ujung, begitu
+juga berkas yang terbuka. Halamannya bertanya dulu, menyebut berapa berkas dan berapa besar disk yang akan hilang, dan
+gak bisa dibatalkan. Berkas Nouride sendiri gak punya tombol itu: pengaturannya, database-nya, berkas persona dan memory
+para agent, dan folder yang ia siapkan untuk tiap agent. Selama sebuah mission atau job latar masih bekerja di sebuah
+folder, folder itu dan isinya menunggu sampai selesai, dan halamannya bilang yang mana dari keduanya. Setiap
+penghapusan dicatat di audit log (**Logs**, **Audit**) beserta siapa yang melakukannya.
 
 **Kredensial dan rahasia gak ditampilkan.** Yang menyimpannya dikeluarkan dari setiap daftar, namanya juga: kunci
 Nouride sendiri dan brankas rahasianya, folder kredensial, sesi aplikasi chat, berkas `.env`, kunci SSH dan kunci
 lainnya, serta login yang disimpan alat-alat di home para agent. Kalau diminta lewat alamatnya, berkas seperti itu
 bilang bahwa ia dirahasiakan. Di dalam berkas biasa, sesuatu yang mirip kredensial disembunyikan di tempatnya, dan
-halamannya bilang begitu. Database tampil dengan ukurannya dan gak bisa dibuka.
+halamannya bilang begitu; berkas seperti itu dibaca di halaman dan gak diunduh. Database tampil dengan ukurannya, dan
+gak bisa dibuka maupun diunduh.
 
 **Path adalah link.** Kalau agent menulis path di dalam berkas Nouride (`.nouride/workspace/…/report.md`, atau path
 lengkapnya di mesin ini) di balasan, di halaman mission di antara berkas hasilnya, atau di perintah yang dijalankan

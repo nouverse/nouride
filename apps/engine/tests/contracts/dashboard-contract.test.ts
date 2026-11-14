@@ -77,8 +77,9 @@ describe("the dashboard's calls", () => {
   test("the method is read for nearly every call — a reader that found none would check paths alone", () => {
     const calls = dashboardCalls();
     // The few with none are addresses handed to the browser to fetch itself, or built apart from their `request`: the
-    // event stream, a picture's own bytes for an `<img>` (System's Files), and three of the second kind.
-    expect(calls.filter((call) => call.method !== null).length).toBeGreaterThan(calls.length - 6);
+    // event stream, a file's own bytes for a picture or a player and the file to keep (System's Files), and three of
+    // the second kind.
+    expect(calls.filter((call) => call.method !== null).length).toBeGreaterThan(calls.length - 7);
   });
 });
 

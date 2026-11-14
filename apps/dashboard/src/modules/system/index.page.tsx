@@ -16,6 +16,7 @@ import { PAGE_ASKS } from "@/commons/components/agents/page-asks";
 import { Card, EmptyState, ErrorNote, PageHeader } from "@/commons/components/ui/ui";
 import { CardLoading } from "@/commons/components/ui/Skeleton";
 import { CopyButton } from "@/commons/components/ui/CopyButton";
+import { badgeState, editionLabel, useUpdate } from "@/commons/hooks/use-update";
 import { ago, formatBytes } from "@/commons/lib/format";
 import { isAdmin, useMe } from "@/commons/lib/session";
 import { Meter } from "./components/Meter";
@@ -73,6 +74,32 @@ function FolderSizes() {
         ))}
       </ul>
     </div>
+  );
+}
+
+/**
+ * The version with which build it is, in the word a person uses for it: two boxes on one version can differ. And,
+ * where a newer one is out, the way to it beside the figure it replaces, since this is where somebody looks to see
+ * what they run.
+ */
+function Version({ version }: { version: string }) {
+  const update = useUpdate();
+  const health = useQuery({ queryKey: ["health"], queryFn: api.health, staleTime: 60_000 });
+  const state = badgeState(update.data);
+  // The update check says it where this build has one; a build with none (a container, a checkout) still says its own.
+  const edition = update.data?.install?.edition ?? health.data?.edition;
+  return (
+    <span className="inline-flex flex-wrap items-center justify-end gap-x-3 gap-y-1">
+      <span>
+        {version}
+        {edition && edition !== "unknown" ? ` (${editionLabel(edition)})` : ""}
+      </span>
+      {state === "available" || state === "downloading" || state === "ready" ? (
+        <Link to="/update" className="btn btn-xs border-0 bg-success/15 font-semibold text-success hover:bg-success/25">
+          {state === "ready" ? "Update ready to install" : `${update.data?.check?.latest ?? "A newer version"} is out`}
+        </Link>
+      ) : null}
+    </span>
   );
 }
 
@@ -141,7 +168,7 @@ export default function SystemPage() {
 
           <Card title="Nouride here" className="lg:col-span-2">
             <Row icon={<HardDrive size={14} aria-hidden="true" />} name="Version">
-              {read.version}
+              <Version version={read.version} />
             </Row>
             <Row icon={<HardDrive size={14} aria-hidden="true" />} name="Running for">
               {upFor(read.uptimeSeconds)}

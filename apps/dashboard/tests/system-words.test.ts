@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { ceilingWords, commandsWords, fullnessOf, inUseWords, shareOf, upFor } from "@/modules/system/lib/words";
+import { ceilingWords, commandsWords, deleteWords, fullnessOf, inUseWords, shareOf, upFor } from "@/modules/system/lib/words";
 import { crumbsOf, isMarkdown, languageOf, parentOf } from "@/modules/system/lib/paths";
 import { formatBytes } from "@/commons/lib/format";
 
@@ -78,5 +78,36 @@ describe("a path under the data folder", () => {
   test("a file's words are coloured by its name's ending, and a page of markdown is told from them", () => {
     expect(["index.ts", "run.SH", "config.toml", "data.jsonl", "Dockerfile", "notes.txt", "README"].map(languageOf)).toEqual(["typescript", "bash", "ini", "json", "dockerfile", undefined, undefined]);
     expect(["notes.md", "README.MARKDOWN", "md", "notes.md.bak"].map(isMarkdown)).toEqual([true, true, false, false]);
+  });
+});
+
+describe("what the question before a delete says it would take", () => {
+  const entry = (kind: "file" | "folder") => ({ name: "x", path: "workspace/x", kind, sizeBytes: null, modifiedAt: null });
+
+  test("a file is its size; one whose size is not known is said without it", () => {
+    expect(deleteWords({ entry: entry("file"), files: 1, more: false, bytes: 2048 })).toBe("It is 2 KB, and will be gone from this machine.");
+    expect(deleteWords({ entry: entry("file"), files: 1, more: false, bytes: null })).toBe("It will be gone from this machine.");
+  });
+
+  test("a folder is its files and what they take on disk", () => {
+    expect(deleteWords({ entry: entry("folder"), files: 1204, more: false, bytes: 3.2 * 1024 ** 3 })).toBe("The folder and everything in it will be gone from this machine: 1,204 files, 3.2 GB.");
+    expect(deleteWords({ entry: entry("folder"), files: 1, more: false, bytes: 10 * 1024 })).toBe("The folder and everything in it will be gone from this machine: 1 file, 10 KB.");
+  });
+
+  test("a count that stopped at its ceiling is more than that many, and a size that was not measured is left unsaid", () => {
+    expect(deleteWords({ entry: entry("folder"), files: 20_000, more: true, bytes: 9 * 1024 ** 3 })).toBe("The folder and everything in it will be gone from this machine: more than 20,000 files, 9.0 GB.");
+    expect(deleteWords({ entry: entry("folder"), files: 1, more: true, bytes: null })).toBe("The folder and everything in it will be gone from this machine: more than 1 files.");
+    expect(deleteWords({ entry: entry("folder"), files: 12, more: false, bytes: null })).toBe("The folder and everything in it will be gone from this machine: 12 files.");
+  });
+
+  test("a link's question says only the link goes, whatever it is listed as", () => {
+    expect(deleteWords({ entry: entry("file"), files: 1, more: false, bytes: null, link: true })).toBe("It is a link: the link will be gone from this machine, and what it leads to stays.");
+    expect(deleteWords({ entry: entry("folder"), files: 1, more: false, bytes: null, link: true })).toBe("It is a link: the link will be gone from this machine, and what it leads to stays.");
+  });
+
+  test("an empty folder is said as empty, not as no files", () => {
+    expect(deleteWords({ entry: entry("folder"), files: 0, more: false, bytes: 4096 })).toBe("The folder is empty, and will be gone from this machine.");
+    // Only folders in it, and more of them than were looked at: not known to be empty.
+    expect(deleteWords({ entry: entry("folder"), files: 0, more: true, bytes: null })).toBe("The folder and everything in it will be gone from this machine: more than 0 files.");
   });
 });
