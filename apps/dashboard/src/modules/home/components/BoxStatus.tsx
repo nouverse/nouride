@@ -8,6 +8,7 @@ import type { HealthPayload } from "@nouride/wire";
 import { editionLabel } from "@/commons/hooks/use-update";
 import { healthWarnings } from "@/commons/lib/health-warnings";
 import { RestartButton } from "@/commons/components/box/RestartButton";
+import { CliUpdateBadge } from "./CliUpdateBadge";
 import { UpdateBadge } from "./UpdateBadge";
 
 function uptime(seconds: number): string {
@@ -26,9 +27,10 @@ function stateOf(health: HealthPayload, warnings: number): { words: string; well
 
 /**
  * The box in one line, at the top of Home in the greeting's corner: whether
- * everything is working, the version and how long it has been up, the update badge and Restart.
+ * everything is working, the version and how long it has been up, the update badge, a coding CLI's where one is out,
+ * and Restart.
  */
-export function BoxLine({ health }: { health: HealthPayload }) {
+export function BoxLine({ health, agents = [] }: { health: HealthPayload; agents?: readonly { external?: { cli: string } | undefined }[] }) {
   const state = stateOf(health, healthWarnings(health).length);
   return (
     <div className="flex flex-wrap items-center gap-2 lg:justify-end">
@@ -45,6 +47,7 @@ export function BoxLine({ health }: { health: HealthPayload }) {
         · Up for {uptime(health.uptime)}
       </span>
       <UpdateBadge />
+      <CliUpdateBadge agents={agents} />
       <RestartButton />
     </div>
   );
