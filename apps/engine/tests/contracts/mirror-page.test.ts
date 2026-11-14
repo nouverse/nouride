@@ -7,7 +7,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { floorOf, strandedFloors, type MirrorEntry } from "../../../../scripts/release/mirror-page.ts";
+import { floorOf, readPage, strandedFloors, type MirrorEntry } from "../../../../scripts/release/mirror-page.ts";
 
 const entry = (tag: string, floor: string | null = null, prerelease = false): MirrorEntry => ({ tag, floor, prerelease });
 /** The mirror as it stood on 2026-11-04, with 0.8.17 on top. */
@@ -47,6 +47,46 @@ describe("the mirror's first page", () => {
   });
 });
 
+describe("reading the page", () => {
+  const page = [{ tag_name: "v0.8.36" }, { tag_name: "v0.8.0", prerelease: false }];
+  /** Answers in turn, and what each ask carried. */
+  const answers = (...statuses: number[]) => {
+    const asked: Record<string, string>[] = [];
+    const fetchImpl = (async (_url: string, init: RequestInit) => {
+      asked.push(init.headers as Record<string, string>);
+      const status = statuses[asked.length - 1] ?? 200;
+      return status === 200 ? Response.json(page) : new Response("{}", { status, headers: status === 403 ? { "retry-after": "2" } : {} });
+    }) as unknown as typeof fetch;
+    return { fetchImpl, asked };
+  };
+
+  test("with the workflow's token, as a bearer; with none, no authorization at all", async () => {
+    const withToken = answers();
+    expect(await readPage({ token: "t0k", fetchImpl: withToken.fetchImpl })).toEqual({ ok: true, listed: page });
+    expect(withToken.asked[0]?.authorization).toBe("Bearer t0k");
+    const without = answers();
+    await readPage({ fetchImpl: without.fetchImpl });
+    expect(without.asked[0]).not.toHaveProperty("authorization");
+  });
+
+  test("a refusal for asking too often is asked again after the wait it names; the page that follows is read (v0.8.36 stopped on one)", async () => {
+    const waited: number[] = [];
+    const twice = answers(403, 429);
+    expect(await readPage({ fetchImpl: twice.fetchImpl, sleep: async (ms) => void waited.push(ms) })).toEqual({ ok: true, listed: page });
+    expect(twice.asked).toHaveLength(3);
+    expect(waited).toEqual([2_000, 10_000]);
+  });
+
+  test("three refusals stop it, naming the status; any other refusal stops it at once", async () => {
+    const always = answers(403, 403, 403);
+    expect(await readPage({ fetchImpl: always.fetchImpl, sleep: async () => {} })).toEqual({ ok: false, status: 403 });
+    expect(always.asked).toHaveLength(3);
+    const gone = answers(404);
+    expect(await readPage({ fetchImpl: gone.fetchImpl, sleep: async () => {} })).toEqual({ ok: false, status: 404 });
+    expect(gone.asked).toHaveLength(1);
+  });
+});
+
 describe("the release workflow", () => {
   const workflow = readFileSync(join(import.meta.dir, "../../../../.github/workflows/release.yml"), "utf8");
 
@@ -54,6 +94,9 @@ describe("the release workflow", () => {
     const check = workflow.indexOf('bun run scripts/release/mirror-page.ts --adding "${GITHUB_REF_NAME}"');
     expect(check).toBeGreaterThan(-1);
     expect(check).toBeLessThan(workflow.indexOf("- name: Initialize releases if tagged"));
+    // Read with the run's token: with none, the hosted runner's shared address ran out of asks.
+    const step = workflow.slice(workflow.indexOf("- name: The mirror's first page keeps every stepping stone"), check);
+    expect(step).toContain("GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}");
   });
 
   test("stops when the update gate cannot be told, instead of going green with no box offered the release (REVIEW B1)", () => {
