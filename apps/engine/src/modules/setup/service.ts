@@ -183,6 +183,22 @@ export class SetupService {
     return await setOrchestrator(this.deps, input);
   }
 
+  /**
+   * Why a new agent cannot be called `id`, or null where it can: its shape, a name Nouride keeps, one taken, a folder
+   * already there. Asked before anything is written by whoever asks for the id: `nouride setup` wrote the provider,
+   * was then refused the id by `createAgent`, and could not be run again to give another.
+   */
+  agentIdProblem(raw: string): string | null {
+    const id = raw.trim().toLowerCase();
+    if (!VALID_AGENT_ID.test(id)) return "An agent id is 2–32 characters: lowercase letters, digits and hyphens, starting with a letter.";
+    if (RESERVED_AGENT_IDS.has(id)) return `"${id}" is reserved.`;
+    if (this.deps.registry.get(id)) return `An agent called "${id}" already exists.`;
+    // On disk but not in the registry: a pack that failed to load, or somebody's files. Overwriting would destroy
+    // whatever is there — including a MEMORY.md that exists nowhere else — while looking like a fresh create.
+    if (listDir(join(this.deps.agentsDir, id)).length > 0) return `agents/${id}/ already exists on disk but did not load. Fix or remove it first.`;
+    return null;
+  }
+
   state(): SetupState {
     const hasUser = this.deps.userCount() > 0;
     // "Configured" means a profile whose credential actually resolves. A profile with a missing key is
@@ -445,26 +461,9 @@ export class SetupService {
     external?: { cli: string; profile?: string };
   }): Promise<{ ok: true; id: string; provider: string } | { ok: false; error: string }> {
     const id = input.id.trim().toLowerCase();
-    if (!VALID_AGENT_ID.test(id)) {
-      return {
-        ok: false,
-        error:
-          "An agent id is 2–32 characters: lowercase letters, digits and hyphens, starting with a letter.",
-      };
-    }
-    if (RESERVED_AGENT_IDS.has(id)) return { ok: false, error: `"${id}" is reserved.` };
-    if (this.deps.registry.get(id)) return { ok: false, error: `An agent called "${id}" already exists.` };
-
+    const refused = this.agentIdProblem(id);
+    if (refused) return { ok: false, error: refused };
     const dir = join(this.deps.agentsDir, id);
-    if (listDir(dir).length > 0) {
-      // On disk but not in the registry: a pack that failed to load, or somebody's files. Overwriting would destroy
-      // whatever is there — including a MEMORY.md that exists nowhere else — while looking like a fresh create; and
-      // only a directory this call made is one it may remove again below.
-      return {
-        ok: false,
-        error: `agents/${id}/ already exists on disk but did not load. Fix or remove it first.`,
-      };
-    }
 
     const displayName = input.displayName.trim() || id;
     const orchestrator = this.deps.config.daemon.orchestrator ? this.deps.registry.get(this.deps.config.daemon.orchestrator) : undefined;

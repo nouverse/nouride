@@ -18,7 +18,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { readTextFile, readTextFileIfExists, serveHttp, writeTextFileAtomic } from "@nouride/runtime";
 import { MuteableOutput } from "@nouride/runtime";
-import { setup } from "@/cli/setup.ts";
+import { agentIdAsked, setup } from "@/cli/setup.ts";
 import { restartHint } from "@/service/hints.ts";
 
 let root: string;
@@ -38,17 +38,91 @@ afterEach(() => {
 });
 
 describe("nouride setup", () => {
-  test("refuses when the install already has a config, and changes nothing", async () => {
-    const configPath = join(root, ".nouride", "config.toml");
-    const original = '[providers.mine]\nkind = "anthropic"\n';
-    await writeTextFileAtomic(configPath, original);
+  /** An endpoint that lists one model, and a full unattended run against it with what is given beside. */
+  async function run(extra: string[], key = "sk-not-a-real-key"): Promise<void> {
+    const server = serveHttp({ port: 0, hostname: "127.0.0.1", fetch: (req) => (new URL(req.url).pathname.endsWith("/models") ? Response.json({ data: [{ id: "model-one" }] }) : new Response("no", { status: 404 })) });
+    try {
+      process.env.NOURIDE_TEST_KEY = key;
+      await setup(["--yes", "--provider", "openai", "--base-url", `http://127.0.0.1:${server.port}`, "--api-key-from-env", "NOURIDE_TEST_KEY", ...extra]);
+    } finally {
+      delete process.env.NOURIDE_TEST_KEY;
+      await server.stop(true);
+    }
+  }
+  const configPath = () => join(root, ".nouride", "config.toml");
 
-    await setup(["--yes", "--provider", "openai"]);
+  test("refuses an install that is set up, a provider and an agent there, and changes nothing", async () => {
+    await run(["--agent", "nouva"]);
+    expect(process.exitCode).toBeFalsy();
+    const original = await readTextFile(configPath());
+
+    await run(["--agent", "second"]);
 
     expect(process.exitCode).toBe(1);
-    // The file is the assertion, not the exit code alone: a guard that reports failure after writing
-    // is not a guard.
-    expect(await readTextFile(configPath)).toBe(original);
+    // The files are the assertion, not the exit code alone: a guard that reports failure after writing is not a guard.
+    expect(await readTextFile(configPath())).toBe(original);
+    expect(await readTextFileIfExists(join(root, ".nouride", "agents", "second", "config.toml"))).toBeNull();
+  });
+
+  test("a config with nothing set up in it is not an install that is set up: no key, nothing written", async () => {
+    const original = "[dashboard]\nport = 18254\n";
+    await writeTextFileAtomic(configPath(), original);
+    await setup(["--yes", "--provider", "openai"]);
+    expect(process.exitCode).toBe(1);
+    expect(await readTextFile(configPath())).toBe(original);
+    // And one that does not load says why, by its file and field, and is left as it is.
+    const broken = '[providers.mine]\nkind = "anthropic"\n';
+    await writeTextFileAtomic(configPath(), broken);
+    await expect(setup(["--yes", "--provider", "openai"])).rejects.toThrow("providers.mine");
+    expect(await readTextFile(configPath())).toBe(broken);
+  });
+
+  test("an agent id that is refused is refused before anything is written", async () => {
+    // It wrote the provider and its key, was then refused the id, and could not be run again: config.toml was there.
+    await run(["--agent", "nouride"]);
+    expect(process.exitCode).toBe(1);
+    expect(await readTextFileIfExists(configPath())).toBeNull();
+    expect(await readTextFileIfExists(join(root, ".nouride", "data", "secrets.enc"))).toBeNull();
+  });
+
+  test("in a terminal, a refused agent id says why and another is asked for until one can be used", async () => {
+    const reserved = (id: string) => (id === "nouride" ? '"nouride" is reserved.' : id === "taken" ? 'An agent called "taken" already exists.' : null);
+    const answers = ["taken", "nouva"];
+    let asked = 0;
+    expect(await agentIdAsked(reserved, "nouride", async () => answers[asked++]!)).toBe("nouva");
+    expect(asked).toBe(2);
+    // One that can be used is taken as given, and nobody is asked.
+    expect(await agentIdAsked(reserved, "nouva", async () => { throw new Error("not asked"); })).toBe("nouva");
+    // With nobody to ask, a refused one is the end.
+    expect(await agentIdAsked(reserved, "nouride", null)).toBeNull();
+  });
+
+  test("a run that stopped after the provider goes on at the agent: the provider is not asked for again", async () => {
+    // What a refused id left before it was checked first: the provider saved, no agent.
+    const { SetupService } = await import("@/modules/setup/service.ts");
+    const made = SetupService.prototype.createAgent;
+    SetupService.prototype.createAgent = async () => ({ ok: false, error: "stopped here" });
+    try {
+      await run(["--agent", "nouva"]);
+    } finally {
+      SetupService.prototype.createAgent = made;
+    }
+    expect(process.exitCode).toBe(1);
+    const afterProvider = await readTextFile(configPath());
+    expect(afterProvider).toContain('api_key = "default_api_key"');
+    process.exitCode = 0;
+
+    // Again, with no provider flags and no key at all: nothing of the provider is asked, and the agent is made.
+    const server = serveHttp({ port: 0, hostname: "127.0.0.1", fetch: () => Response.json({ data: [{ id: "model-one" }] }) });
+    try {
+      await setup(["--yes", "--agent", "nouva", "--model", "model-one"]);
+    } finally {
+      await server.stop(true);
+    }
+    expect(process.exitCode).toBeFalsy();
+    expect(await readTextFile(join(root, ".nouride", "agents", "nouva", "IDENTITY.md"))).toContain("nouva");
+    // The provider's profile is as the first run wrote it.
+    expect(await readTextFile(configPath())).toContain('api_key = "default_api_key"');
   });
 
   test("an unattended run with no key fails instead of prompting", async () => {
@@ -163,12 +237,14 @@ describe("nouride setup", () => {
       fetch: (req) => (new URL(req.url).pathname.endsWith("/models") ? Response.json({ data: [{ id: "model-one" }] }) : new Response("no", { status: 404 })),
     });
     const flags = ["--yes", "--provider", "openai", "--base-url", `http://127.0.0.1:${server.port}`, "--api-key-from-env", "NOURIDE_TEST_KEY", "--agent", "nouva", "--prompt", "Be brief.", "--headline", "Brief help"];
-    const run = async (): Promise<string> => {
+    // No supervisor's file on this machine, whatever machine the test runs on; `inside` is a container's.
+    const NONE = { systemd: join(root, "no-unit"), launchd: join(root, "no-plist"), container: join(root, "no-dockerenv") };
+    const run = async (supervisor = NONE): Promise<string> => {
       let out = "";
       const original = process.stdout.write.bind(process.stdout);
       (process.stdout as unknown as { write: unknown }).write = (chunk: unknown) => ((out += String(chunk)), true);
       try {
-        await setup(flags);
+        await setup(flags, supervisor);
       } finally {
         (process.stdout as unknown as { write: unknown }).write = original;
       }
@@ -191,8 +267,17 @@ describe("nouride setup", () => {
       await new Promise((resolve) => holder.once("exit", resolve));
       rmSync(join(root, ".nouride"), { recursive: true, force: true });
       const alone = await run();
-      expect(alone).toContain("nouride start        # then talk to it");
+      expect(alone).toContain("nouride start   # then talk to it");
+      expect(alone).toContain("nouride chat         # from this directory");
       expect(alone).not.toContain(restartHint());
+
+      // In a container with no daemon up, the start is the host's: `nouride start` there starts nothing that stays.
+      rmSync(join(root, ".nouride"), { recursive: true, force: true });
+      writeFileSync(join(root, "dockerenv"), "");
+      const inside = await run({ ...NONE, container: join(root, "dockerenv") });
+      expect(inside).toContain("docker compose up -d   # from the host: the daemon starts with what setup wrote");
+      expect(inside).not.toContain("nouride start");
+      expect(inside).not.toContain("nouride chat");
     } finally {
       holder.kill();
       delete process.env.NOURIDE_TEST_KEY;

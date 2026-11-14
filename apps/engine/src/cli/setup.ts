@@ -24,7 +24,6 @@
 
 import {
   ensureDir,
-  fileExists,
   join,
   openLinePrompt,
   type LinePrompt,
@@ -39,7 +38,7 @@ import { FIRST_AGENT } from "@/modules/setup/presets.ts";
 import { SetupService } from "@/modules/setup/service.ts";
 import type { ProviderKind } from "@/modules/setup/probe.ts";
 import { flagValue, hasFlag } from "@nouride/cli-kit";
-import { restartHint } from "@/service/hints.ts";
+import { restartHint, startCommand, type SupervisorPaths } from "@/service/hints.ts";
 import { runningDaemon } from "@/cli/daemon-lock.ts";
 
 const RESET = "\x1b[0m";
@@ -61,22 +60,13 @@ function has(args: string[], name: string): boolean {
   return hasFlag(args, `--${name}`);
 }
 
-export async function setup(args: string[]): Promise<void> {
+export async function setup(args: string[], supervisor: SupervisorPaths = {}): Promise<void> {
   const cwd = process.cwd();
   const configPath = flag(args, "config") ?? defaultConfigPath(cwd);
   const unattended = has(args, "yes");
   // A TTY is what makes a question answerable. Checked rather than assumed: a setup step in a
   // provisioning script has no terminal, and prompting there hangs until the job times out.
   const interactive = Boolean(process.stdin.isTTY) && !unattended;
-
-  if (await fileExists(configPath)) {
-    // Refused, not merged. This command writes a provider profile and scaffolds an agent; run against
-    // a configured install it would look like a no-op that quietly changed the orchestrator.
-    say(`${RED}✗${RESET} ${configPath} already exists: this install is already set up.`);
-    say(`${DIM}  edit it directly, or use the dashboard to add a provider or an agent.${RESET}`);
-    process.exitCode = 1;
-    return;
-  }
 
   const { config } = await loadConfig();
   const { dataDir, agentsDir, workspaceDir } = config.daemon;
@@ -130,99 +120,27 @@ export async function setup(args: string[]): Promise<void> {
       userCount: () => 1,
     });
 
-    // ── provider ────────────────────────────────────────────────────────────
-    const kindInput = flag(args, "provider") ?? (await ask("provider  anthropic | openai", "anthropic"));
-    if (kindInput !== "anthropic" && kindInput !== "openai") {
-      say(`${RED}✗${RESET} provider must be "anthropic" or "openai", got "${kindInput}"`);
+    // Where setup is, read from what is set up, as the dashboard's wizard reads it, and not from whether config.toml
+    // exists: a run that wrote the provider and was then refused its agent could not be run again to finish.
+    const state = service.state();
+    if (state.hasProvider && state.hasAgent) {
+      // Refused, not merged: run against a set-up install it would look like a no-op that quietly changed the orchestrator.
+      say(`${RED}✗${RESET} this install is already set up: it has a provider and an agent.`);
+      say(`${DIM}  edit ${configPath} directly, or use the dashboard to add a provider or an agent.${RESET}`);
       process.exitCode = 1;
       return;
     }
-    const kind: ProviderKind = kindInput;
-    // The wire format's own vendor, so nobody has to look it up: from the table that says what a profile there needs.
-    const baseUrl = flag(args, "base-url") ?? (await ask("base_url ", defaultEndpoint(kind)));
-
-    const envVar = flag(args, "api-key-from-env");
-    const apiKey = envVar ? process.env[envVar] : await askSecret(prompt, "api key ");
-    if (!apiKey) {
-      say(
-        envVar
-          ? `${RED}✗${RESET} $${envVar} is empty or unset`
-          : `${RED}✗${RESET} an api key is required: pass --api-key-from-env VAR when unattended`,
-      );
+    // An agent id given as a flag is checked before anything is written: nobody is there to be asked for another.
+    const namedId = flag(args, "agent");
+    const namedProblem = namedId !== undefined && !state.hasAgent ? service.agentIdProblem(namedId) : null;
+    if (namedProblem) {
+      say(`${RED}✗${RESET} ${namedProblem}`);
       process.exitCode = 1;
       return;
     }
-
-    // The endpoint is called before anything is written. A key that does not work is the single most
-    // common way a fresh install fails, and it surfaces on the agent's first message — long after
-    // setup said it had succeeded.
-    say(`${DIM}  probing ${baseUrl} …${RESET}`);
-    const saved = await service.saveProvider({ kind, baseUrl, apiKey, actor: "cli" });
-    if (!saved.ok) {
-      say(`${RED}✗${RESET} ${saved.error}`);
-      process.exitCode = 1;
-      return;
-    }
-    say(`${GREEN}✓${RESET} provider reachable ${DIM}(${saved.models.length} models)${RESET}`);
-    say(`${DIM}  key stored as secret "${saved.secret}" in ${join(dataDir, "secrets.enc")}, encrypted${RESET}`);
-    say(`${DIM}  config.toml holds the NAME, never the value${RESET}`);
-
-    // ── first agent ─────────────────────────────────────────────────────────
-    // A Nourider named Nourider unless told otherwise, as the dashboard's wizard makes it.
-    const agentId = flag(args, "agent") ?? (await ask("agent id ", FIRST_AGENT.id));
-    const displayName = flag(args, "name") ?? (agentId === FIRST_AGENT.id ? FIRST_AGENT.name : agentId);
-
-    // Asked, not assumed. The default is the first model the endpoint listed, which is meaningful for
-    // a vendor API and arbitrary for a proxy — a real run against Nougate listed **414**, and taking
-    // `[0]` silently picked one of them. The dashboard shows this list; so does this.
-    let model = flag(args, "model") ?? "";
-    if (!model) {
-      const suggested = saved.models[0] ?? "";
-      if (prompt && saved.models.length > 1) {
-        const preview = saved.models.slice(0, 5).join(", ");
-        const more = saved.models.length > 5 ? `, … ${saved.models.length - 5} more` : "";
-        say(`${DIM}  models: ${preview}${more}${RESET}`);
-      }
-      model = await ask("model ", suggested);
-    }
-    if (!model) {
-      say(`${YELLOW}!${RESET} no model could be determined: pass --model`);
-      process.exitCode = 1;
-      return;
-    }
-    if (saved.models.length > 0 && !saved.models.includes(model)) {
-      // A warning, not a refusal: proxies routinely serve models their listing omits, and refusing
-      // here would block the deployment this daemon was written for.
-      say(`${YELLOW}!${RESET} "${model}" is not in the endpoint's listing, continuing anyway`);
-    }
-
-    // Every field the dashboard wizard collects, so the two paths produce the same pack rather than
-    // merely calling the same code. They already shared `SetupService`; what differed was what got
-    // *asked*, and a CLI install that silently skipped the persona produced an agent with a generic
-    // SOUL.md — the same service, a different agent. (Who the operator is is not asked: People holds that.)
-    // Empty is the Nourider's own SOUL.md, the one the wizard fills in.
-    const systemPrompt = flag(args, "prompt") ?? (await ask("persona  one line (enter for the Nourider's)", ""));
-
-    // What its peers read to decide whom to ask — one short line, not the persona. Empty is the preset's.
-    const headline = flag(args, "headline") ?? (await ask("headline  one short line, what to bring it (enter for the default)", ""));
-
-    const created = await service.createAgent({
-      id: agentId,
-      displayName,
-      systemPrompt,
-      model,
-      actor: "cli",
-      ...(headline ? { headline } : {}),
-      // Off unless asked. `exec` is the one capability whose blast radius is the host rather than a
-      // file, and a setup default is the wrong place to hand it out.
-    });
-    if (!created.ok) {
-      say(`${RED}✗${RESET} ${created.error}`);
-      process.exitCode = 1;
-      return;
-    }
-
-    say(`${GREEN}✓${RESET} agent ${BOLD}${created.id}${RESET} ${DIM}(${model} via ${created.provider})${RESET}`);
+    const models = state.hasProvider ? await alreadySetUp(service) : await provider(service, args, ask, prompt, dataDir);
+    if (models === null) return;
+    if (!state.hasAgent && !(await firstAgent(service, args, ask, prompt, models, namedId))) return;
     say();
     say(`${DIM}next:${RESET}`);
     if (runningDaemon(dataDir) !== null) {
@@ -230,12 +148,145 @@ export async function setup(args: string[]): Promise<void> {
       // only when it starts, and `nouride start` there is a second daemon its lock refuses (0.8.15).
       say(`  ${restartHint()}   ${DIM}# the running daemon reads what setup wrote when it starts again${RESET}`);
     } else {
-      say(`  nouride start        ${DIM}# then talk to it${RESET}`);
-      say(`  nouride chat         ${DIM}# from this directory${RESET}`);
+      // The supervisor's own start where there is one: `nouride start` in a container starts nothing that stays.
+      const start = startCommand(supervisor);
+      say(`  ${start.command}   ${DIM}# ${start.note}${RESET}`);
+      if (start.command === "nouride start") say(`  nouride chat         ${DIM}# from this directory${RESET}`);
     }
   } finally {
     prompt?.close();
   }
+}
+
+type Ask = (question: string, fallback: string) => Promise<string>;
+
+/**
+ * An agent id that can be used: `first` where nothing is wrong with it, else each problem said and another asked for,
+ * until one can. Null where nobody is there to ask (`again`): an unattended run stops, with nothing of the agent written.
+ */
+export async function agentIdAsked(problemOf: (id: string) => string | null, first: string, again: (() => Promise<string>) | null): Promise<string | null> {
+  let id = first;
+  for (let problem = problemOf(id); problem; problem = problemOf(id)) {
+    say(`${RED}✗${RESET} ${problem}`);
+    if (!again) return null;
+    id = await again();
+  }
+  return id;
+}
+
+/** A provider already set up by a run that stopped after it: said, and its models listed for the agent's question. */
+async function alreadySetUp(service: SetupService): Promise<string[]> {
+  say(`${GREEN}✓${RESET} a provider is set up already ${DIM}(going on at the agent)${RESET}`);
+  const listed = await service.listModels();
+  return listed.ok ? listed.models : [];
+}
+
+/** The provider's step: asked, probed, saved. The models its endpoint listed, or null where it stopped. */
+async function provider(service: SetupService, args: string[], ask: Ask, prompt: LinePrompt | null, dataDir: string): Promise<string[] | null> {
+  // ── provider ────────────────────────────────────────────────────────────
+  const kindInput = flag(args, "provider") ?? (await ask("provider  anthropic | openai", "anthropic"));
+  if (kindInput !== "anthropic" && kindInput !== "openai") {
+    say(`${RED}✗${RESET} provider must be "anthropic" or "openai", got "${kindInput}"`);
+    process.exitCode = 1;
+    return null;
+  }
+  const kind: ProviderKind = kindInput;
+  // The wire format's own vendor, so nobody has to look it up: from the table that says what a profile there needs.
+  const baseUrl = flag(args, "base-url") ?? (await ask("base_url ", defaultEndpoint(kind)));
+
+  const envVar = flag(args, "api-key-from-env");
+  const apiKey = envVar ? process.env[envVar] : await askSecret(prompt, "api key ");
+  if (!apiKey) {
+    say(
+      envVar
+        ? `${RED}✗${RESET} $${envVar} is empty or unset`
+        : `${RED}✗${RESET} an api key is required: pass --api-key-from-env VAR when unattended`,
+    );
+    process.exitCode = 1;
+    return null;
+  }
+
+  // The endpoint is called before anything is written. A key that does not work is the single most
+  // common way a fresh install fails, and it surfaces on the agent's first message — long after
+  // setup said it had succeeded.
+  say(`${DIM}  probing ${baseUrl} …${RESET}`);
+  const saved = await service.saveProvider({ kind, baseUrl, apiKey, actor: "cli" });
+  if (!saved.ok) {
+    say(`${RED}✗${RESET} ${saved.error}`);
+    process.exitCode = 1;
+    return null;
+  }
+  say(`${GREEN}✓${RESET} provider reachable ${DIM}(${saved.models.length} models)${RESET}`);
+  say(`${DIM}  key stored as secret "${saved.secret}" in ${join(dataDir, "secrets.enc")}, encrypted${RESET}`);
+  say(`${DIM}  config.toml holds the NAME, never the value${RESET}`);
+
+  return saved.models;
+}
+
+/** The first agent's step: its id asked again while it is refused, where there is someone to ask. False where it stopped. */
+async function firstAgent(service: SetupService, args: string[], ask: Ask, prompt: LinePrompt | null, listed: readonly string[], namedId: string | undefined): Promise<boolean> {
+  const saved = { models: listed };
+  // ── first agent ─────────────────────────────────────────────────────────
+  // A Nourider named Nourider unless told otherwise, as the dashboard's wizard makes it.
+  const agentId = await agentIdAsked((id) => service.agentIdProblem(id), namedId ?? (await ask("agent id ", FIRST_AGENT.id)), prompt ? () => ask("agent id ", FIRST_AGENT.id) : null);
+  if (agentId === null) {
+    process.exitCode = 1;
+    return false;
+  }
+  const displayName = flag(args, "name") ?? (agentId === FIRST_AGENT.id ? FIRST_AGENT.name : agentId);
+
+  // Asked, not assumed. The default is the first model the endpoint listed, which is meaningful for
+  // a vendor API and arbitrary for a proxy — a real run against Nougate listed **414**, and taking
+  // `[0]` silently picked one of them. The dashboard shows this list; so does this.
+  let model = flag(args, "model") ?? "";
+  if (!model) {
+    const suggested = saved.models[0] ?? "";
+    if (prompt && saved.models.length > 1) {
+      const preview = saved.models.slice(0, 5).join(", ");
+      const more = saved.models.length > 5 ? `, … ${saved.models.length - 5} more` : "";
+      say(`${DIM}  models: ${preview}${more}${RESET}`);
+    }
+    model = await ask("model ", suggested);
+  }
+  if (!model) {
+    say(`${YELLOW}!${RESET} no model could be determined: pass --model`);
+    process.exitCode = 1;
+    return false;
+  }
+  if (saved.models.length > 0 && !saved.models.includes(model)) {
+    // A warning, not a refusal: proxies routinely serve models their listing omits, and refusing
+    // here would block the deployment this daemon was written for.
+    say(`${YELLOW}!${RESET} "${model}" is not in the endpoint's listing, continuing anyway`);
+  }
+
+  // Every field the dashboard wizard collects, so the two paths produce the same pack rather than
+  // merely calling the same code. They already shared `SetupService`; what differed was what got
+  // *asked*, and a CLI install that silently skipped the persona produced an agent with a generic
+  // SOUL.md — the same service, a different agent. (Who the operator is is not asked: People holds that.)
+  // Empty is the Nourider's own SOUL.md, the one the wizard fills in.
+  const systemPrompt = flag(args, "prompt") ?? (await ask("persona  one line (enter for the Nourider's)", ""));
+
+  // What its peers read to decide whom to ask — one short line, not the persona. Empty is the preset's.
+  const headline = flag(args, "headline") ?? (await ask("headline  one short line, what to bring it (enter for the default)", ""));
+
+  const created = await service.createAgent({
+    id: agentId,
+    displayName,
+    systemPrompt,
+    model,
+    actor: "cli",
+    ...(headline ? { headline } : {}),
+    // Off unless asked. `exec` is the one capability whose blast radius is the host rather than a
+    // file, and a setup default is the wrong place to hand it out.
+  });
+  if (!created.ok) {
+    say(`${RED}✗${RESET} ${created.error}`);
+    process.exitCode = 1;
+    return false;
+  }
+
+  say(`${GREEN}✓${RESET} agent ${BOLD}${created.id}${RESET} ${DIM}(${model} via ${created.provider})${RESET}`);
+  return true;
 }
 
 /**
