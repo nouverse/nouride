@@ -34,9 +34,9 @@ const SECTIONS: Tab[][] = [
   ],
   [
     { to: "/system", label: "System", adminOnly: true },
-    { to: "/logs", label: "Logs" },
     { to: "/files", label: "Files", adminOnly: true },
     { to: "/update", label: "Update", adminOnly: true },
+    { to: "/logs", label: "Logs" },
   ],
 ];
 

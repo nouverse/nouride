@@ -117,7 +117,7 @@ const OCCASIONAL: NavItem[] = [
   { to: "/mcp", label: "Connectors", icon: Plug },
   { to: "/memories", label: "Memory", icon: Brain, holds: ["/people", "/groups"], badge: MemoryBadge },
   // An admin's: what the machine is using, what Nouride logged, the files it keeps and its update, as four tabs.
-  { to: "/system", label: "System", icon: Activity, holds: ["/logs", "/files", "/update"], adminOnly: true },
+  { to: "/system", label: "System", icon: Activity, holds: ["/files", "/update", "/logs"], adminOnly: true },
 ];
 
 /**

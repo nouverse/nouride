@@ -150,7 +150,8 @@ describe("System in the menu", () => {
         expect(item(host).some((link) => link.getAttribute("aria-current") === "page")).toBe(true);
         // Its tabs over the page, the one you are on marked.
         const tabs = [...host.ownerDocument.querySelectorAll<HTMLAnchorElement>("main a")].filter((link) => ["System", "Logs", "Files", "Update"].includes(link.textContent ?? "") && ["/dashboard/system", "/dashboard/logs", "/dashboard/files", "/dashboard/update"].includes(link.getAttribute("href") ?? ""));
-        expect(tabs.map((tab) => tab.textContent)).toEqual(["System", "Logs", "Files", "Update"]);
+        // The machine first, then what is on it, what is new for it, and its log last.
+        expect(tabs.map((tab) => tab.textContent)).toEqual(["System", "Files", "Update", "Logs"]);
         expect(tabs.find((tab) => tab.getAttribute("aria-current") === "page")?.getAttribute("href")).toBe(`/dashboard${page}`);
       });
     }

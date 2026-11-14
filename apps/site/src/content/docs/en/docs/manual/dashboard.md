@@ -325,7 +325,7 @@ still running in the background.
 
 ## System
 
-For whoever runs the box, **System** in the menu holds four tabs: System, Logs, Files and Update. Only an admin has
+For whoever runs the box, **System** in the menu holds four tabs: System, Files, Update and Logs. Only an admin has
 it; for anyone else, **Logs** stays under Settings with its two tabs, and **Update** beside it.
 
 **System** says what the machine is using right now, each figure a bar with a sentence beside it:

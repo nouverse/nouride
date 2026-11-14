@@ -337,7 +337,7 @@ latar belakang.
 
 ## System
 
-Untuk yang mengurus box, **System** di menu berisi empat tab: System, Logs, Files, dan Update. Hanya admin yang punya;
+Untuk yang mengurus box, **System** di menu berisi empat tab: System, Files, Update, dan Logs. Hanya admin yang punya;
 untuk yang lain, **Logs** tetap ada di bawah Settings dengan dua tabnya, dan **Update** di sebelahnya.
 
 **System** bilang apa yang sedang dipakai mesin sekarang, tiap angka berupa batang dengan satu kalimat di sebelahnya:

@@ -96,9 +96,9 @@ describe("what a person may see", () => {
 });
 
 describe("System, an admin's", () => {
-  test("its tabs are System, Logs, Files and Update for an admin; anyone else has Logs alone there, and no bar of one tab", () => {
-    for (const page of ["/system", "/logs", "/files", "/update"]) expect(sectionTabs(page, true)?.map((tab) => tab.label)).toEqual(["System", "Logs", "Files", "Update"]);
-    expect(sectionTabs("/update", true)?.map((tab) => tab.to)).toEqual(["/system", "/logs", "/files", "/update"]);
+  test("its tabs are System, Files, Update and Logs, in that order, for an admin; anyone else has Logs alone there, and no bar of one tab", () => {
+    for (const page of ["/system", "/logs", "/files", "/update"]) expect(sectionTabs(page, true)?.map((tab) => tab.label)).toEqual(["System", "Files", "Update", "Logs"]);
+    expect(sectionTabs("/update", true)?.map((tab) => tab.to)).toEqual(["/system", "/files", "/update", "/logs"]);
     expect(sectionTabs("/logs", false)).toBeNull();
     expect(sectionTabs("/system", false)).toBeNull();
     // Update is theirs to open from Settings, as Logs is: no bar over it either.
