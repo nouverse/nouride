@@ -138,6 +138,32 @@ describe("the update, held, installed, checked", () => {
     expect(updates.wayBack("claude-code")).toBe("0.95.0");
     expect(updates.wayBack("codex")).toBeNull();
   });
+
+  test("a version that passes for the first time hands on the session it was checked with, once", async () => {
+    // What agents were offered on the version before is not this one's: the lists named Fable 5.1 on a CLI with 5.2.
+    const seen: unknown[] = [];
+    const saved: Record<string, string>[] = [];
+    let recorded: Record<string, string> = { "claude-code": "0.95.0" };
+    const box = host([], async () => running("claude-code"));
+    const updates = new CliUpdates({ ...box.h, versions: { load: () => recorded, save: (next) => void (saved.push(next), (recorded = next)) }, newVersion: (cli, agentId, opened) => void seen.push([cli, agentId, opened.sessionId]) });
+    const opened = { sessionId: "s-new", modes: { currentModeId: "default", availableModes: MODES.map((id) => ({ id, name: id })) } };
+    const connection = { agentId: "nix", info: { agentInfo: { version: "0.107.0" }, _meta: { steering: { supported: true } } }, launch: { cwd: "/srv/agents/nix" }, probe: async () => opened } as unknown as CliConnection;
+    expect(await updates.checkVersion(CLAUDE, connection)).toBeNull();
+    expect(saved).toEqual([{ "claude-code": "0.107.0" }]);
+    expect(seen).toEqual([["claude-code", "nix", "s-new"]]);
+    // The same version starting again, for another agent: checked already, nothing probed and nothing handed on.
+    expect(await updates.checkVersion(CLAUDE, { ...connection, agentId: "nox", probe: async () => { throw new Error("not probed twice"); } } as unknown as CliConnection)).toBeNull();
+    expect(seen).toHaveLength(1);
+  });
+
+  test("a version that fails its check hands nothing on: the lists of the version before stay", async () => {
+    const seen: unknown[] = [];
+    const box = host([], async () => running("claude-code"));
+    const updates = new CliUpdates({ ...box.h, newVersion: () => void seen.push("handed on") });
+    const connection = { agentId: "nix", info: { agentInfo: { version: "0.101.0" }, _meta: {} }, launch: { cwd: "/srv/agents/nix" }, probe: async () => ({ sessionId: "s1", modes: { currentModeId: "default", availableModes: MODES.map((id) => ({ id, name: id })) } }) } as unknown as CliConnection;
+    expect(await updates.checkVersion(CLAUDE, connection)).toContain("did not pass Nouride's check");
+    expect(seen).toEqual([]);
+  });
 });
 
 describe("`nouride agents update`", () => {

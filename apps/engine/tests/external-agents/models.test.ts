@@ -8,7 +8,7 @@ import { describe, expect, test } from "bun:test";
 import { Hono } from "hono";
 import type { AgentRegistry } from "@nouride/persona";
 import type { NewSessionResult } from "@nouride/acp";
-import { offeredModels, OfferedModels } from "@/modules/external-agents/models.ts";
+import { offeredModels, OfferedModels, renewLists } from "@/modules/external-agents/models.ts";
 import { mountControlRoutes } from "@/modules/web/control/index.ts";
 import type { ControlDeps } from "@/modules/web/control/types.ts";
 import type { DaemonContext } from "@/commons/context.ts";
@@ -100,4 +100,93 @@ test("an external agent's row of /status carries its CLI's model: the pack's, an
     ["Claude Code", null, "Opus 5.5"],
     ["Codex", "gpt-5.6-luna", "gpt-6-luna"],
   ]);
+});
+
+describe("the lists after a CLI's new version passed its check", () => {
+  const file = () => {
+    let saved: Record<string, { value: string; name?: string; current?: string }[]> = {};
+    let writes = 0;
+    return { load: () => saved, save: (next: typeof saved) => void ((saved = next), (writes += 1)), read: () => saved, writes: () => writes };
+  };
+  const BEFORE = [{ value: "default", current: "default" }, { value: "fable", name: "Fable 5.1" }];
+  const session = {
+    sessionId: "s-new",
+    configOptions: [
+      { id: "model", type: "select", currentValue: "default", options: [{ value: "default", name: "Default", description: "Opus" }, { value: "opus", name: "Opus 5.5" }, { value: "fable", name: "Fable 5.2" }] },
+      { id: "effort", category: "thought_level", type: "select", currentValue: "high", options: [{ value: "low", name: "Low" }, { value: "high", name: "High" }] },
+    ],
+  } as unknown as NewSessionResult;
+
+  test("the agent it was checked for has what the session offered; the others on that CLI have none, and another CLI's agent is left alone", () => {
+    // Both Claude Code agents' lists named Fable 5.1 on a CLI that had 5.2, until someone opened the Models page.
+    const models = file();
+    const efforts = file();
+    const lists = { models: new OfferedModels(models), efforts: new OfferedModels(efforts) };
+    for (const agentId of ["nix", "nox", "kuro"]) {
+      lists.models.keep(agentId, BEFORE);
+      lists.efforts.keep(agentId, [{ value: "max", current: "max" }]);
+    }
+    renewLists(lists, "nix", session, ["nix", "nox"]);
+    expect(lists.models.of("nix")).toEqual([{ value: "default", name: "Default", current: "Opus 5.5" }, { value: "opus", name: "Opus 5.5" }, { value: "fable", name: "Fable 5.2" }]);
+    expect(lists.efforts.of("nix")).toEqual([{ value: "low", name: "Low" }, { value: "high", name: "High", current: "high" }]);
+    expect(lists.models.of("nox")).toEqual([]);
+    expect(lists.efforts.of("nox")).toEqual([]);
+    expect(lists.models.runsOn("nox")).toBeNull();
+    // Codex's agent is on another CLI: what it was offered is still what it is offered.
+    expect(lists.models.of("kuro")).toEqual(BEFORE);
+    expect(lists.efforts.of("kuro")).toEqual([{ value: "max", current: "max" }]);
+    // Let go where it is kept too: a restart does not bring the old list back.
+    expect(Object.keys(models.read()).sort()).toEqual(["kuro", "nix"]);
+    expect(Object.keys(efforts.read()).sort()).toEqual(["kuro", "nix"]);
+  });
+
+  test("a list let go is gone where it is kept, at once: a restart does not bring it back", () => {
+    const kept = file();
+    const models = new OfferedModels(kept);
+    models.keep("nix", BEFORE);
+    models.keep("nox", BEFORE);
+    models.forget("nox");
+    expect(Object.keys(kept.read())).toEqual(["nix"]);
+    expect(new OfferedModels(kept).of("nox")).toEqual([]);
+    // One that was never kept: nothing written.
+    const before = kept.writes();
+    models.forget("nobody");
+    expect(kept.writes()).toBe(before);
+  });
+
+  test("a session that offers no models leaves the checked agent with none, not the version before's", () => {
+    const lists = { models: new OfferedModels(file()), efforts: new OfferedModels(file()) };
+    lists.models.keep("nix", BEFORE);
+    renewLists(lists, "nix", { sessionId: "s" } as NewSessionResult, ["nix"]);
+    expect(lists.models.of("nix")).toEqual([]);
+  });
+});
+
+describe("the CLIs' service, when a CLI's new version passes its check", () => {
+  test("lets go the lists of the other agents that CLI answers, and keeps the checked agent's from the session", async () => {
+    const { ExternalAgents } = await import("@/modules/external-agents/index.ts");
+    const state = (initial: Record<string, { value: string; name?: string; current?: string }[]>) => {
+      let saved = initial;
+      return { load: () => saved, save: (next: typeof saved) => void (saved = next) };
+    };
+    const old = [{ value: "fable", name: "Fable 5.1" }];
+    let recorded: Record<string, string> = { fake: "1.0.0" };
+    const service = new ExternalAgents({
+      rows: () => [{ id: "fake", name: "Fake CLI", command: "fake-acp", args: [], install: "", versionArgs: ["--version"], instructionFile: "AGENTS.md" }],
+      workspaceDir: () => "/tmp",
+      secretsFor: () => ({}),
+      sessions: { load: () => ({}), save: () => {} },
+      models: state({ nix: old, nox: old, kuro: old }),
+      efforts: state({}),
+      versions: { load: () => recorded, save: (next) => void (recorded = next) },
+      // Which agents the CLI answers is asked of the registry: here, two of the three.
+      agentsOn: (cliId) => (cliId === "fake" ? ["nix", "nox"] : []),
+    });
+    const opened = { sessionId: "s", modes: { currentModeId: "default", availableModes: [] }, configOptions: [{ id: "model", type: "select", currentValue: "fable", options: [{ value: "fable", name: "Fable 5.2" }] }] };
+    const connection = { agentId: "nix", info: { agentInfo: { version: "2.0.0" } }, launch: { cwd: "/tmp" }, probe: async () => opened };
+    expect(await service.updates.checkVersion(service.row("fake")!, connection as never)).toBeNull();
+    expect(service.models.of("nix")).toEqual([{ value: "fable", name: "Fable 5.2", current: "fable" }]);
+    expect(service.models.of("nox")).toEqual([]);
+    expect(service.models.of("kuro")).toEqual(old);
+  });
 });

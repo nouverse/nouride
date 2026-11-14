@@ -37,7 +37,7 @@ import type { PlanStep } from "@/modules/notes/store.ts";
 import type { CliModel } from "@/commons/daemon-state.ts";
 import type { AuditPort } from "@/commons/audit.store.ts";
 import { CliConnection, signedOut, unavailableReason, type Spawn } from "./connection.ts";
-import { OfferedModels, offeredModels } from "./models.ts";
+import { OfferedModels, offeredModels, renewLists } from "./models.ts";
 import { accountLaunch, launchFor, ownFolder, profileDirOf } from "./launch.ts";
 import { FRESH_POLL_MS, FRESH_WAIT_MS, hashedEach, notStartedWith, pause } from "./fresh-secrets.ts";
 import { CliAccounts, type AccountsDeps, type CliAccountsView } from "./accounts.ts";
@@ -93,6 +93,8 @@ export interface CliRoom {
 export interface ExternalAgentsDeps {
   /** The CLIs this install knows: the built-in rows and the person's own. */
   rows?: () => readonly CliRow[];
+  /** The agents a CLI answers, by id: whose model lists a new version of it lets go. Absent: the one it was checked for. */
+  agentsOn?: (cliId: string) => string[];
   workspaceDir: () => string;
   /** The secrets bound to a command of the agent's (`[security.exec_secrets]`), as variables. */
   secretsFor: (agentId: string, argv: readonly string[]) => Record<string, string>;
@@ -210,6 +212,7 @@ export class ExternalAgents implements RunnerHost {
       connection: (agent) => this.connection(agent),
       setUnavailable: (agentId, reason) => this.setUnavailable(agentId, reason),
       forgetScan: () => void ((this.scanned = null), this.parts.clear()),
+      newVersion: (cliId, agentId, opened) => renewLists(this, agentId, opened, deps.agentsOn?.(cliId) ?? []),
       ...(deps.versions ? { versions: deps.versions } : {}),
     });
   }

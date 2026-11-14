@@ -142,7 +142,8 @@ export async function runDaemon(): Promise<void> {
   // One cache for the daemon: entries are keyed by directory, so two agents naming the same project
   // share the scan rather than each paying for it.
   const projectSkills = new ProjectSkills();
-  const externalAgents = startExternalAgents({ config, state, childEnv, notes: () => notes, port: () => web?.server.port, commands, secrets, audit, projectSkills });
+  // `agentsOn` reads the registry, which loads below: it is asked only once a CLI's new version is checked.
+  const externalAgents = startExternalAgents({ config, state, childEnv, notes: () => notes, port: () => web?.server.port, commands, secrets, audit, projectSkills, agentsOn: (cliId) => registry.all().flatMap((agent) => (agent.config.external?.cli === cliId ? [agent.config.id] : [])) });
   progress.phase = "loading agents";
   const registry = await AgentRegistry.create({
     agentsDir: config.daemon.agentsDir,

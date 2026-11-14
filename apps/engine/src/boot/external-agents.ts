@@ -17,10 +17,11 @@ import { NewestVersions } from "@/modules/external-agents/newest.ts";
 import type { NotesStore } from "@/modules/notes/store.ts";
 import type { ChildEnv } from "@/modules/tools/exec-secrets.ts";
 
-export function startExternalAgents(params: { config: GlobalConfig; state: StateRows; childEnv: ChildEnv; notes: () => NotesStore; port?: () => number | undefined; commands: CommandIsolation; secrets: SecretStore; audit: AuditPort; projectSkills: ProjectSkills }): ExternalAgents {
+export function startExternalAgents(params: { config: GlobalConfig; state: StateRows; childEnv: ChildEnv; notes: () => NotesStore; port?: () => number | undefined; commands: CommandIsolation; secrets: SecretStore; audit: AuditPort; projectSkills: ProjectSkills; agentsOn: (cliId: string) => string[] }): ExternalAgents {
   const externalAgents = new ExternalAgents({
     // Read at each use, so a reload that adds a row is seen by the next agent load and turn.
     rows: () => [...BUILT_IN_CLIS, ...params.config.externalClis],
+    agentsOn: params.agentsOn,
     workspaceDir: () => params.config.daemon.workspaceDir,
     secretsFor: (agentId, argv) => params.childEnv.forCommand(agentId, argv).env,
     sessions: externalSessionsState(params.state),

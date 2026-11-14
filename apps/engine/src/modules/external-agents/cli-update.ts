@@ -9,7 +9,7 @@
  * A version is checked whenever it first starts, not only after an update: one installed by hand is held to the same.
  */
 
-import { handshakeProblem, type CliRow } from "@nouride/acp";
+import { handshakeProblem, type CliRow, type NewSessionResult } from "@nouride/acp";
 import { createLogger, type LoadedAgent } from "@nouride/shared";
 import { signedOut, type CliConnection } from "./connection.ts";
 
@@ -29,6 +29,12 @@ export interface UpdateHost {
   setUnavailable(agentId: string, reason: string | null): void;
   /** Drop the scan kept for a minute: after an update it says the version before (seen on the e2e VM's Models page). */
   forgetScan(): void;
+  /**
+   * A version passed its check for the first time, with the session opened to check it: what agents were offered on the
+   * version before is not this one's (`renewLists`). After an update the Brain tab and `/model` went on naming the old
+   * version's models until each agent's next session.
+   */
+  newVersion?(cliId: string, agentId: string, opened: NewSessionResult): void;
   versions?: Versions;
 }
 
@@ -70,9 +76,11 @@ export class CliUpdates {
     const version = connection.info?.agentInfo?.version;
     if (!versions || !version || versions.load()[row.id] === version) return null;
     let modes: string[] | null = null;
+    let opened: NewSessionResult | null = null;
     let problem: string | null = null;
     try {
-      modes = (await connection.probe(connection.launch.cwd)).modes?.availableModes.map((mode) => mode.id) ?? [];
+      opened = await connection.probe(connection.launch.cwd);
+      modes = opened.modes?.availableModes.map((mode) => mode.id) ?? [];
     } catch (err) {
       if (!signedOut(row, err)) problem = `it did not open a session: ${err instanceof Error ? err.message : String(err)}`;
     }
@@ -85,6 +93,7 @@ export class CliUpdates {
     if (modes !== null) {
       versions.save({ ...versions.load(), [row.id]: version });
       this.failing.delete(row.id);
+      if (opened) this.host.newVersion?.(row.id, connection.agentId, opened);
       log.info("a CLI's new version passed the check", { cli: row.id, version });
     }
     return null;

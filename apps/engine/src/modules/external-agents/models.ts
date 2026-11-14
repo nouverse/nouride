@@ -95,8 +95,34 @@ export class OfferedModels {
     this.file.save(this.kept);
   }
 
+  /** An agent's list let go: what was kept is not what its CLI offers now. Nothing is shown until it says again. */
+  forget(agentId: string): void {
+    if (!this.file || !(agentId in this.kept)) return;
+    const { [agentId]: _gone, ...rest } = this.kept;
+    this.kept = rest;
+    this.file.save(rest);
+  }
+
   /** The model the agent's CLI opened its last session on, as lists name it; null before its first. */
   runsOn(agentId: string): string | null {
     return this.of(agentId).find((model) => model.current)?.current ?? null;
   }
+}
+
+/**
+ * A CLI's new version passed its check, with the session opened to check it for one agent. That agent's lists are what
+ * the session offered. Every other agent on the CLI has none until its own next session, or until the Models page asks
+ * its CLI: a list is the running version's or it is absent, never the version before's shown as this one's. After the
+ * box's Claude Code went from one that knew Fable 5.1 to one with Fable 5.2, both agents' lists named 5.1 until someone
+ * opened the Models page.
+ */
+export function renewLists(lists: { models: OfferedModels; efforts: OfferedModels }, checked: string, opened: NewSessionResult, on: readonly string[]): void {
+  for (const agentId of on) {
+    lists.models.forget(agentId);
+    lists.efforts.forget(agentId);
+  }
+  const offered = offeredModels(opened);
+  if (offered) lists.models.keep(checked, offered);
+  else lists.models.forget(checked);
+  lists.efforts.keep(checked, offeredEfforts(opened.configOptions));
 }

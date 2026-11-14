@@ -35,8 +35,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "the dashboard chat's routes together: upload, send with its page and a first message's model and effort, live, transcripts, files, delete, each answer held to the wire's type and to whose it is",
   },
   "apps/engine/src/modules/external-agents/index.ts": {
-    lines: 536,
-    why: "the service the agents' CLIs run under: connections, sessions, sign-ins, models, lent tools and what each CLI runs on, as the runner reaches them; each one's logic is in a file beside it",
+    lines: 538,
+    why: "the service the agents' CLIs run under: connections, sessions, sign-ins, models, lent tools, a CLI's parts and a new version's lists (0.8.38), as the runner reaches them; the logic is in files beside",
   },
   "apps/engine/src/modules/cron/cron.store.ts": {
     lines: 479,
