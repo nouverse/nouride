@@ -566,8 +566,29 @@ describe("a turn of an external agent", () => {
 
   test("an old \"not found\" on a running CLI's stderr does not make a later failure \"not installed\" (0.8.1)", async () => {
     const { service, runner, req } = setup({ mode: "overloaded" });
-    await expect(runner.run(req("hello"))).rejects.toThrow("Fake CLI did not start: session/prompt: the model is overloaded");
+    await expect(runner.run(req("hello"))).rejects.toThrow("Fake CLI refused the message: the model is overloaded");
     expect(service.unavailable("coder")).toBeNull();
+  });
+
+  test("a message its CLI refuses is said as refused, never as a CLI that did not start", async () => {
+    // "Claude Code did not start: session/prompt: Internal error: You've reached your Fable limit." It had started.
+    const { service, runner, req } = setup({ mode: "overloaded" });
+    const failure = await runner.run(req("hello")).then(() => null, (err: unknown) => err as Error);
+    expect(failure?.message).toBe("Fake CLI refused the message: the model is overloaded, try again later");
+    expect(failure?.message).not.toContain("did not start");
+    expect(failure?.message).not.toContain("session/prompt");
+    // Nothing picked in this chat: nothing is said of a model.
+    expect(failure?.message).not.toContain("This chat is on");
+    // The CLI runs: the agent is not marked as one that cannot answer.
+    expect(service.unavailable("coder")).toBeNull();
+  });
+
+  test("where this chat picked a model, the failure says what the chat is on and the way back", async () => {
+    // A chat picked `fable`, its next message hit the account's limit, and nothing said the chat stayed on that model.
+    const { runner, req } = setup({ mode: "overloaded" });
+    const failure = await runner.run(req("hello", { model: "big" })).then(() => null, (err: unknown) => err as Error);
+    // This CLI calls its models by their words alone; one with a name of its own is said with it (`prompt-failed.test.ts`).
+    expect(failure?.message).toBe("Fake CLI refused the message: the model is overloaded, try again later. This chat is on `big`, picked here. `/model default` goes back to Fake CLI's own.");
   });
 
   test("an instruction file that is a link is left alone and not read; the turn goes on (0.8.1)", async () => {

@@ -16,8 +16,8 @@ import { clockNote } from "@/modules/llm/executor/reminders.ts";
 import type { PlanStep } from "@/modules/notes/store.ts";
 import { writeInstruction } from "./instruction.ts";
 import { askPermission } from "./permission.ts";
-import { signedOut, unavailableReason, type CliConnection } from "./connection.ts";
-import { offeredEfforts, offeredModels, type OfferedModels } from "./models.ts";
+import { failedInPrompt, promptFailed, signedOut, unavailableReason, type CliConnection } from "./connection.ts";
+import { offeredEfforts, offeredModels, pickedNote, type OfferedModels } from "./models.ts";
 import { folderReady } from "./launch.ts";
 import { UpdateReader } from "./updates.ts";
 import { situationOf, untold, type Situation } from "./situation.ts";
@@ -334,7 +334,7 @@ export class ExternalTurnRunner {
       cli.forget(key);
       // Stopped — and the CLI closed for not stopping: the turn ends as a stopped one with what it said, and the agent is
       // not unavailable.
-      if (!req.signal?.aborted) throw this.unavailable(err, cli);
+      if (!req.signal?.aborted) throw this.unavailable(err, cli, failedInPrompt(err) ? { model: req.model } : undefined);
       if (reader) take(reader);
     } finally {
       clearTimeout(deaf);
@@ -420,8 +420,12 @@ export class ExternalTurnRunner {
     return chosen ?? this.agent.config.external?.model ?? this.host.models?.runsOn(this.agent.config.id) ?? undefined;
   }
 
-  /** A failure as the person reads it, and as the agent's status where it is the CLI's state rather than this turn's. */
-  private unavailable(err: unknown, connection: CliConnection | undefined): NourideError {
+  /**
+   * A failure as the person reads it, and as the agent's status where it is the CLI's state rather than this turn's.
+   * `sent`: the CLI had taken a message, with the model this chat picked for it where it did: said as the message
+   * refused, and what the chat is on with the way back, since a picked model is the first thing a person changed.
+   */
+  private unavailable(err: unknown, connection: CliConnection | undefined, sent?: { model: string | undefined }): NourideError {
     const row = connection?.row;
     if (!row) {
       const message = err instanceof Error ? err.message : String(err);
@@ -430,6 +434,12 @@ export class ExternalTurnRunner {
     }
     // Its stderr says "not installed" only of a CLI that never answered: an old "server not found" line in a running
     // CLI's tail turned a later failure into "not installed here" (0.8.1).
+    if (sent && !signedOut(row, err)) {
+      const failed = promptFailed(row, err, Boolean(connection.closed));
+      if (connection.closed) this.host.setUnavailable(this.agent.config.id, failed);
+      const reason = sent.model === undefined ? failed : `${failed}${/[.!?]$/.test(failed) ? "" : "."} ${pickedNote(sent.model, row.name, this.host.models?.of(this.agent.config.id) ?? [])}`;
+      return new NourideError("external_agent", reason, reason, { cause: err });
+    }
     const reason = unavailableReason(row, err, connection.info ? [] : connection.stderrTail);
     if (signedOut(row, err) || /not installed/.test(reason) || connection.closed) this.host.setUnavailable(this.agent.config.id, reason);
     return new NourideError("external_agent", reason, reason, { cause: err });

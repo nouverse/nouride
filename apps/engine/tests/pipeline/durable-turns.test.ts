@@ -130,6 +130,16 @@ describe("closing a turn, at every boundary", () => {
     expect(report).toContain('say "continue"');
   });
 
+  test("a failed turn's cause ends the sentence once, whether or not it brought its own full stop", () => {
+    // "…Switch to another model to continue.. The request above still stands" was written into a conversation.
+    const note = (message: string) => String(closeTurn([{ message: QUESTION }], { kind: "error", message }).messages[1]!.content);
+    expect(note("Claude Code refused the message: Switch to another model to continue.")).toBe("[harness] I could not finish this: Claude Code refused the message: Switch to another model to continue. The request above still stands; asked to continue, I start on it.");
+    expect(note("the provider gave no answer")).toBe("[harness] I could not finish this: the provider gave no answer. The request above still stands; asked to continue, I start on it.");
+    // Work done before the failure: the same, with the other ending.
+    const worked = String(closeTurn(SCRIPTED.slice(0, 7), { kind: "error", message: "it stopped!" }).messages.at(-1)!.content);
+    expect(worked).toBe("[harness] I could not finish this: it stopped! What I did so far is above; asked to continue, I pick up from there.");
+  });
+
   test("/stop keeps the words it always left", () => {
     const closed = closeTurn([{ message: QUESTION }], { kind: "stopped" });
     expect(closed.messages).toHaveLength(2);

@@ -45,6 +45,16 @@ export function offeredEfforts(options: readonly SessionConfigOption[] | null | 
   }));
 }
 
+/**
+ * What a chat is on, and the way back, said under a message that failed on a model picked in that chat. The failure
+ * alone ("You've reached your Fable limit") did not say the chat would keep asking that model: a person had to recall
+ * having picked it, and how to undo that. Said whatever the CLI's words were, which are not read.
+ */
+export function pickedNote(model: string, cli: string, offered: readonly CliModel[]): string {
+  const name = offered.find((entry) => entry.value === model)?.name;
+  return `This chat is on \`${model}\`${name && name !== model ? ` (${name})` : ""}, picked here. \`/model default\` goes back to ${cli}'s own.`;
+}
+
 /** The kept models — or efforts — read once and written as a session changes them. */
 export class OfferedModels {
   private kept: Record<string, CliModel[]>;
