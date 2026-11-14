@@ -119,8 +119,11 @@ from its history: the rewrite costs nothing then. Left out, a profile on `https:
 the lifetime Anthropic documents, and any other as `60`. Set it where you know your endpoint's; `0` is for one that
 caches nothing. `nouride config check` shows the figure in force for each profile that has one.
 
-No profiles exist by default. The setup wizard, the dashboard or this file creates the first one,
-and `[llm.defaults] provider` stays empty until then.
+No profiles exist by default. The setup wizard, the dashboard or this file creates the first one.
+`[llm.defaults]` stays empty until the first agent is made from the dashboard: its provider and its model are
+recorded there, and its own pack says neither, so it follows the install when the provider changes (0.8.36). An agent
+made with another provider or another model says both in its pack's `[llm]`, and defaults you set by hand are never
+written over: a key left empty is filled in only by an agent that agrees with the ones you set.
 [Provider profiles →](/en/docs/providers/configuration/)
 
 ## `[gateways.<platform>.<name>]`

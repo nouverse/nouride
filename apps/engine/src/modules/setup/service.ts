@@ -352,6 +352,49 @@ export class SetupService {
   }
 
   /**
+   * Whether a new agent's pack leaves `[llm]` out and follows the install's `[llm.defaults]`, with the defaults
+   * written first where the agent's choice is what they are missing. A pack that says nothing moves with the install
+   * when its provider changes; one that names a profile stops loading the day that profile goes.
+   *
+   * It follows only where the defaults then say exactly its provider and its model. Each key is asked on its own: a
+   * key the defaults leave empty is filled with the agent's, and one they already say must be the agent's. Asked of
+   * the provider alone, an install whose defaults named a model and no provider had the provider written and the pack
+   * left empty, and the agent ran on the install's model in place of the one it was made with.
+   *
+   * `undo` takes back what was written, for a pack that then does not load: the very text where nobody else changed
+   * the file since, the keys alone where somebody did.
+   */
+  private async followInstall(profile: string, model: string): Promise<{ follows: boolean; undo: () => Promise<void> }> {
+    const defaults = this.deps.config.llm.defaults;
+    const none = async () => {};
+    const missing = { ...(defaults.provider === "" ? { provider: profile } : {}), ...(defaults.model === "" ? { model } : {}) };
+    const agrees = (defaults.provider === "" || defaults.provider === profile) && (defaults.model === "" || defaults.model === model);
+    if (!agrees) return { follows: false, undo: none };
+    if (Object.keys(missing).length === 0) return { follows: true, undo: none };
+
+    let before = "";
+    let after = "";
+    const written = await editDaemonConfig(this.configPath(), this.deps.config, (existing) => {
+      before = existing;
+      after = upsertTomlTable(existing, "llm.defaults", missing);
+      return after;
+    }).catch(() => null);
+    // By the running defaults alone, as the pack's load will read them: a write that failed, or one that did not reach
+    // them, leaves them short of the agent's choice, and a pack with nothing to follow would not load.
+    const now = this.deps.config.llm.defaults;
+    if (now.provider !== profile || now.model !== model) return { follows: false, undo: none };
+    if (!(written?.ok === true && written.changed)) return { follows: true, undo: none };
+    const emptied = Object.fromEntries(Object.keys(missing).map((key) => [key, ""]));
+    return {
+      follows: true,
+      undo: async () => {
+        const undone = await editDaemonConfig(this.configPath(), this.deps.config, (existing) => (existing === after ? before : upsertTomlTable(existing, "llm.defaults", emptied))).catch((err: unknown) => ({ ok: false as const, error: String(err) }));
+        if (!undone.ok) log.warn("the install's defaults, written for an agent that did not load, could not be taken back", { error: undone.error });
+      },
+    };
+  }
+
+  /**
    * Create the first agent from the wizard.
    *
    * Writes the same four files a hand-made pack has, then loads it — so what the wizard produces is an
@@ -483,17 +526,8 @@ export class SetupService {
     // Not loaded by anything: orientation for whoever edits this pack, at no cost in the prompt.
     await writeTextFileAtomic(join(dir, "README.md"), STARTER_README);
 
-    const defaults = this.deps.config.llm.defaults;
-    let followsInstall = defaults.provider !== "" && defaults.provider === profile && defaults.model === model;
-    if (!followsInstall && (defaults.provider === "" || (defaults.provider === profile && defaults.model === ""))) {
-      const written = await editDaemonConfig(this.configPath(), this.deps.config, (existing) =>
-        upsertTomlTable(existing, "llm.defaults", {
-          provider: profile,
-          ...(defaults.model ? {} : { model }),
-        }),
-      ).catch(() => null);
-      followsInstall = written?.ok === true;
-    }
+    const installs = await this.followInstall(profile, model);
+    const followsInstall = installs.follows;
 
     // Not through `editPackFile`: a new pack, written whole — and removed whole when it does not load.
     await writeTextFileAtomic(
@@ -541,6 +575,8 @@ export class SetupService {
       // "already exists on disk" — so one bug in here would lock the operator out of the id they
       // wanted, on a screen with no other way forward.
       removePath(dir);
+      // And what it wrote for the install: defaults recorded for an agent that was not made are nobody's choice.
+      await installs.undo();
       return {
         ok: false,
         error: `agents/${id}/ did not load, so nothing was kept: ${String(
