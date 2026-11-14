@@ -47,8 +47,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "a pack's `config.toml` mapped field by field, so each refusal names its file and field: one list, the pack's schema. Its MCP server readers are the seam if it grows by more than a field",
   },
   "apps/engine/src/modules/jobs/jobs.store.ts": {
-    lines: 516,
-    why: "the background job table: a command's, a helper's and an ask's rows, every write to `jobs.status` in one class; its log sweep also clears logs no row names, whose finder is beside it",
+    lines: 519,
+    why: "the background job table: a command's, a helper's and an ask's rows, every write to `jobs.status` in one class, its log sweep, and which running jobs are services, for what waits on a job's end",
   },
   "apps/engine/src/modules/tools/registry.ts": {
     lines: 450,
@@ -71,8 +71,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "the turn record and its columns, the causes it names, the clause every read of a conversation uses to leave a delegate's own turns out, and the queries that use it, a restart's two marks among them",
   },
   "apps/engine/src/modules/missions/missions.ts": {
-    lines: 581,
-    why: "the missions' one service (start, the dispatcher, a turn's shape and end, stop, continue, which hold a slot) over state this class alone holds; its pure rules are apart: `decide.ts`, `counts.ts`",
+    lines: 584,
+    why: "the missions' one service (start, the dispatcher, a turn's shape and end, stop, continue, the slots, the jobs it waits for) over state this class alone holds; pure rules: `decide.ts`, `counts.ts`",
   },
   "packages/gateways/src/channels/discord/gateway.ts": {
     lines: 429,

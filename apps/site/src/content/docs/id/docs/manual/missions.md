@@ -98,6 +98,12 @@ kegagalan yang sama berturut-turut ditampilkan sekali. Stop, Continue, Accept da
 **Accept as it is** di misi yang menunggu hal lain. Selama misinya masih terbuka, **Tell it** menerima pesan untuknya, dan
 menampilkan apa saja yang sudah disampaikan berikut sudah dibaca atau belum.
 
+**Misi menunggu job yang selesai, tidak pernah menunggu server** (0.8.38). Build atau tes yang ia tinggalkan di latar
+membangunkannya saat selesai. Server yang ia nyalakan untuk melihat hasil kerjanya (preview, server statis) jalan di
+sampingnya dan tidak menahan apa-apa: misinya lanjut ke langkah berikutnya, dan server itu dimatikan saat misinya
+selesai. Kalau sebuah misi sudah menunggu satu jam untuk sebuah job, ia diberi tahu job yang mana, satu kali, untuk
+jaga-jaga kalau job itu memang tidak akan pernah selesai.
+
 **Satu misi dimiliki satu orang** (0.8.35): yang memulainya, dari chat atau dari halaman ini, dan misi yang dimulai
 sebuah automation jadi milik pemilik automation itu. Halaman ini menampilkan milikmu, dan hanya pemiliknya atau admin
 yang bisa menyampaikan sesuatu, menghentikan, melanjutkan, menerima, menjawab, atau menghapusnya. Misi yang diusulkan

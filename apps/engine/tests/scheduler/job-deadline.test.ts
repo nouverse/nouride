@@ -205,6 +205,12 @@ describe("what the deadline leaves alone", () => {
     expect(s.get(job.id)?.status).toBe("running");
     expect(s.isService(job.id)).toBe(true);
     expect(s.getSnapshot(job.id)?.service).toBe(true);
+    // Listed with it for what waits on a job's end (a mission): beside a job that ends, which is not one.
+    const other = run(s, ["sleep", "6"]);
+    expect(s.runningWithService(job.agentId).map((one) => [one.id, one.service])).toEqual([[job.id, true], [other.id, false]]);
+    const otherDone = completed(s);
+    s.kill(other.id, "test");
+    await otherDone;
 
     const done = completed(s);
     s.kill(job.id, "test");

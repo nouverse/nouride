@@ -182,6 +182,68 @@ describe("a turn", () => {
     expect(h.store.get(mission.id)!.turnsUsed).toBe(2);
   });
 
+  test("a server it started is not waited for: the one job left running a service, the next turn comes", async () => {
+    // On the box: a mission's static server, started as a service as the tool says, was the one job left running when a
+    // turn ended. The mission waited for its end for two hours and forty minutes, until a person stopped the server.
+    const h = await missionsHarness();
+    const mission = await h.start();
+    const serve = { id: "job_serve", gatewayId: MISSION_GATEWAY_ID, chatId: mission.id, service: true };
+    h.jobs.set("nova", [serve]);
+    h.turn(mission);
+    expect(h.queued).toHaveLength(2);
+    expect(h.queued[1]!.text).toBe("continue with the next step.");
+    // Beside a job that ends, that one is waited for; and both are stopped with the mission, the server too.
+    h.jobs.set("nova", [serve, { id: "job_build", gatewayId: MISSION_GATEWAY_ID, chatId: mission.id }]);
+    h.turn(mission);
+    expect(h.queued).toHaveLength(2);
+    h.missions.stop(mission.id, "Gading");
+    expect(h.killed).toEqual(["job_serve", "job_build"]);
+  });
+
+  test("quiet behind a server alone, it is nudged as any quiet mission is: a server is nothing to wait for", async () => {
+    const h = await missionsHarness();
+    const mission = await h.start();
+    const serve = { id: "job_serve", gatewayId: MISSION_GATEWAY_ID, chatId: mission.id, service: true };
+    h.jobs.set("nova", [serve, { id: "job_build", gatewayId: MISSION_GATEWAY_ID, chatId: mission.id }]);
+    h.turn(mission);
+    // The build ended and its word never came: the server alone is left.
+    h.jobs.set("nova", [serve]);
+    h.tick(61 * 60_000);
+    h.missions.tick();
+    expect(h.queued.at(-1)!.text).toContain("nothing has happened in this mission for an hour");
+  });
+
+  test("waiting an hour for a job, it is told which and the way on if that one never ends: once a job, and never taken for stuck", async () => {
+    const h = await missionsHarness();
+    const mission = await h.start();
+    h.jobs.set("nova", [{ id: "job_7", gatewayId: MISSION_GATEWAY_ID, chatId: mission.id, command: "bash -lc python3 tools/serve.py\n  out 8731" }]);
+    h.turn(mission);
+    h.tick(59 * 60_000);
+    h.missions.tick();
+    expect(h.queued).toHaveLength(1);
+    h.tick(2 * 60_000);
+    h.missions.tick();
+    expect(h.queued).toHaveLength(2);
+    const told = h.queued[1]!.text;
+    expect(told).toContain("you have waited an hour for a job still running: job_7 (`bash -lc python3 tools/serve.py out 8731`)");
+    // The words that carry the way on: what such a job is, how it is stopped, how it is started so it holds nothing.
+    expect(told).toContain("it never ends and this mission stands still behind it");
+    expect(told).toContain("stop it with `nouride jobs kill <id>`, start it again with `service: true`, and carry on");
+    expect(told).toContain("If its result is still to come, end your turn: you are woken when it ends.");
+    // It says it is still waiting: the same job is not brought up again, and waiting for it is not being stuck.
+    h.turn(mission, { worked: 0 });
+    h.tick(3 * 60 * 60_000);
+    h.missions.tick();
+    expect(h.queued).toHaveLength(2);
+    expect(h.store.get(mission.id)!.status).toBe("running");
+    // Another job it then waits an hour for is said, with the first not named again.
+    h.jobs.set("nova", [{ id: "job_7", gatewayId: MISSION_GATEWAY_ID, chatId: mission.id }, { id: "job_8", gatewayId: MISSION_GATEWAY_ID, chatId: mission.id }]);
+    h.missions.tick();
+    expect(h.queued).toHaveLength(3);
+    expect(h.queued[2]!.text).toContain("for a job still running: job_8.");
+    expect(h.queued[2]!.text).not.toContain("job_7");
+  });
+
   test("three in a row that do nothing — no call that worked, no step moved — and a person is asked", async () => {
     const h = await missionsHarness();
     const mission = await h.start();

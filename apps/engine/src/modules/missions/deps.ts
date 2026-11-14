@@ -14,6 +14,17 @@ import type { MissionsInForce } from "./slots.ts";
 import type { SteerOutcome } from "./tell.ts";
 import type { Mission, Told } from "./types.ts";
 
+/** A running job of an agent, as a mission reads it. */
+export interface MissionJob {
+  id: string;
+  gatewayId: string;
+  chatId: string;
+  /** Started to serve until it is stopped: it never ends by itself. */
+  service?: boolean;
+  /** What it runs, for telling the agent which job is meant. */
+  command?: string;
+}
+
 export interface MissionsDeps {
   store: MissionsPort;
   /** `[missions]`, read when it matters — a change from the dashboard reaches the next decision — the slots resolved. */
@@ -22,8 +33,11 @@ export interface MissionsDeps {
   agents: { exists(agentId: string): boolean; asleep(agentId: string): boolean; privateDir(agentId: string): string };
   /** The conversations' work notes: a mission's checklist, and the chat task it was started from (`carry.ts`). */
   notes?: NotesPort;
-  /** A mission's running jobs — its commands and helpers report to its conversation — and stopping one. */
-  jobs?: { running(agentId: string): { id: string; gatewayId: string; chatId: string }[]; kill(id: string, why: string): boolean };
+  /**
+   * A mission's running jobs — its commands and helpers report to its conversation — and stopping one. `service`: one
+   * that serves until it is stopped (a dev server, a tunnel), whose end a mission does not wait for.
+   */
+  jobs?: { running(agentId: string): MissionJob[]; kill(id: string, why: string): boolean };
   /** The approvals a mission has parked and nobody has answered yet. */
   parked: (mission: Mission) => Parked[];
   /** How its approvals settled since a moment: answered by a person — approved or denied — or expired unanswered. */

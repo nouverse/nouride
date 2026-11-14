@@ -74,7 +74,7 @@ export async function missionsHarness(options: { settings?: Partial<MissionsInFo
   const parked = new Map<string, { id: string; what: string }[]>();
   /** How a mission's approvals settled once no longer parked. */
   const settled = new Map<string, ApprovalStatus[]>();
-  const jobs = new Map<string, { id: string; gatewayId: string; chatId: string }[]>();
+  const jobs = new Map<string, { id: string; gatewayId: string; chatId: string; service?: boolean; command?: string }[]>();
   const asleep = new Set<string>();
   const agents = new Set(options.agents ?? ["nova", "nox"]);
   let checks: (mission: Mission) => Promise<CheckResult> = async () => ({ passed: true, failed: null });

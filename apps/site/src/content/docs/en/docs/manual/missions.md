@@ -91,6 +91,11 @@ the wait before it and the same failure in a row shown once. Stop, Continue, Acc
 and **Accept as it is** on one waiting for anything else. While it is open, **Tell it** takes words for it, and lists what
 it was told with whether it has read each.
 
+**A mission waits for a job that ends, never for a server** (0.8.38). A build or a test run it left in the background
+wakes it when it ends. A server it started to look at its work (a preview, a static server) runs beside it and holds
+nothing: the mission goes on to its next step, and the server is stopped when the mission ends. Where a mission has
+waited an hour for a job, it is told which one, once, in case that job is one that never ends.
+
 **A mission is a person's** (0.8.35): whoever started it, from a chat or from this page, and a mission an automation
 starts is its automation's owner's. The page shows your own, and only its owner or an admin tells it something, stops
 it, continues it, accepts it, answers it or deletes it. One an agent proposed on its own is answered by whoever may open

@@ -222,7 +222,8 @@ export function buildMissions(params: {
       privateDir: (agentId) => privateWorkspace(params.config().daemon.workspaceDir, agentId),
     },
     notes: params.notes,
-    jobs: { running: (agentId) => params.jobs.running(agentId), kill: (id, why) => params.jobs.kill(id, why) },
+    // With whether each serves until it is stopped: a mission does not wait for the end of one that never ends.
+    jobs: { running: (agentId) => params.jobs.runningWithService(agentId), kill: (id, why) => params.jobs.kill(id, why) },
     parked: (mission) =>
       params
         .approvals()

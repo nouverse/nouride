@@ -13,7 +13,7 @@ import { inOwnFolder, ownFolderOf } from "./worktree.ts";
 import { createLogger } from "@nouride/shared";
 import type { MissionsDeps } from "./deps.ts";
 import type { Missions } from "./missions.ts";
-import { limitReached, limitsNear, retryAfter, stepsDone } from "./decide.ts";
+import { heldByJobText, limitReached, limitsNear, retryAfter, stepsDone } from "./decide.ts";
 import { MISSION_GATEWAY_ID } from "./gateway.ts";
 import { FOLLOW_UP_MS, KEEP_MS, KEEP_WHEN_DISK_LOW_MS, LIMIT_WAIT_MS, PROGRESS_EVERY_MS, STALL_AFTER_MS } from "./limits.ts";
 import { buttonsFor } from "./actions.ts";
@@ -36,6 +36,8 @@ export class MissionTimers {
   private sweptAt = 0;
   /** Folders this process has removed — the window is looked at again each hour. */
   private readonly removed = new Set<string>();
+  /** The jobs a mission was told it has waited an hour for: once a job. */
+  private readonly toldOf = new Set<string>();
   /** Folders with no mission to their name that this process has looked at: each once, while it is there. */
   private readonly leftSeen = new Set<string>();
   /** When each running mission's limits were last read for what its CLI said (`spent`). */
@@ -169,7 +171,8 @@ export class MissionTimers {
      */
     if (this.stopAtLimit(mission, now)) return;
     this.progress(mission, now);
-    if (busy || jobs) return;
+    if (busy) return;
+    if (jobs) return this.heldByJob(mission, now);
     const quietSince = Math.max(mission.updatedAt, mission.nudgedAt ?? 0);
     if (now - quietSince < STALL_AFTER_MS) return;
     if (mission.nudgedAt === null) {
@@ -180,6 +183,19 @@ export class MissionTimers {
       return;
     }
     this.missions.wait(mission, "stuck", "it went quiet: no turn, job or activity for two hours, a nudge included");
+  }
+
+  /**
+   * Waiting for a job that has not ended in an hour: told which, once a job. A build may take that long, and its
+   * mission then says it is still waiting. A server started as an ordinary job never ends, and the mission behind it
+   * would wait for good with nothing to say so; the turn that says so is what lets the agent stop it.
+   */
+  private heldByJob(mission: Mission, now: number): void {
+    const held = this.missions.awaited(mission).filter((job) => !this.toldOf.has(job.id));
+    if (held.length === 0 || now - mission.updatedAt < STALL_AFTER_MS) return;
+    for (const job of held) this.toldOf.add(job.id);
+    log.info("a mission has waited an hour for a job, so it was told", { mission: mission.id, jobs: held.map((job) => job.id) });
+    this.missions.queueTurn(mission, heldByJobText(held));
   }
 
   private waiting(mission: Mission, now: number): void {
