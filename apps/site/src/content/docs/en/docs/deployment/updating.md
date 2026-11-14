@@ -145,12 +145,12 @@ before this.
 ## From the dashboard
 
 The top of **Home** carries a badge beside **Restart**, *Up to date*, or the version that is
-waiting. It is the way in: pressing it opens **Update**, which is a card on Settings rather than a
-menu entry, because updating is something you do rarely and only when there is something to do.
+waiting. It is the way in: pressing it opens **Update**, a tab of **System** in the menu for an
+admin, and a card on Settings for anyone else.
 
-**Your box**, at the foot of the sidebar, shows the running version, and a button that opens Update
-when something newer is out. The version under the wordmark gets a dot then too. That dot is a
-signal, not a door: the brand goes home, and the badge or the button is what you press.
+**Your box**, at the foot of the sidebar, shows the running version and opens Update when pressed,
+with a note on it when something newer is out. The version under the wordmark gets a dot then too.
+That dot is a signal, not a door: the brand goes home, and the badge or the card is what you press.
 
 ![The Update page: the running version and edition on the left, and the newest release for that edition on the right](/media/dashboard-update.png)
 

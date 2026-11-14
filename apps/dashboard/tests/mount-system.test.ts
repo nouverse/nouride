@@ -142,15 +142,15 @@ describe("System", () => {
 describe("System in the menu", () => {
   const item = (host: HTMLElement) => [...host.ownerDocument.querySelectorAll<HTMLAnchorElement>('nav[aria-label="Menu"] a')].filter((link) => link.getAttribute("href") === "/dashboard/system");
 
-  test("an admin has it, marked as the page they are on across its three tabs; anyone else does not have it", async () => {
+  test("an admin has it, marked as the page they are on across its four tabs; anyone else does not have it", async () => {
     answer({});
-    for (const page of ["/system", "/logs", "/files"]) {
+    for (const page of ["/system", "/logs", "/files", "/update"]) {
       await renderPage(page, async (host) => {
         await eventually(() => item(host).length > 0, 3_000, "System in the menu");
         expect(item(host).some((link) => link.getAttribute("aria-current") === "page")).toBe(true);
         // Its tabs over the page, the one you are on marked.
-        const tabs = [...host.ownerDocument.querySelectorAll<HTMLAnchorElement>("a[aria-current], a")].filter((link) => ["/dashboard/system", "/dashboard/logs", "/dashboard/files"].includes(link.getAttribute("href") ?? "") && !link.closest('nav[aria-label="Menu"]'));
-        expect([...new Set(tabs.map((tab) => tab.textContent))]).toEqual(expect.arrayContaining(["System", "Logs", "Files"]));
+        const tabs = [...host.ownerDocument.querySelectorAll<HTMLAnchorElement>("main a")].filter((link) => ["System", "Logs", "Files", "Update"].includes(link.textContent ?? "") && ["/dashboard/system", "/dashboard/logs", "/dashboard/files", "/dashboard/update"].includes(link.getAttribute("href") ?? ""));
+        expect(tabs.map((tab) => tab.textContent)).toEqual(["System", "Logs", "Files", "Update"]);
         expect(tabs.find((tab) => tab.getAttribute("aria-current") === "page")?.getAttribute("href")).toBe(`/dashboard${page}`);
       });
     }
@@ -505,15 +505,25 @@ describe("a path of the data folder is a link to its file", () => {
     });
   });
 
-  test("a mission's result files, by their names on its page", async () => {
+  test("a mission's result files, by their names on its page, and the folder it works in", async () => {
     const mission = WIRE["/missions/msn_1"] as { mission: Record<string, unknown> } & Record<string, unknown>;
     const workdir = "/srv/nouride/.nouride/workspace/shared/report";
     answer({ "/missions/msn_1": { status: 200, body: { ...mission, mission: { ...mission.mission, status: "done", workdir, report: "Done.", files: [`${workdir}/out/report.pdf`, "/tmp/elsewhere.txt"] } } } });
     await renderPage("/missions/msn_1", async (host) => {
       await drawn(host, "out/report.pdf");
-      expect(hrefs(host)).toEqual([["out/report.pdf", "/dashboard/files?path=workspace%2Fshared%2Freport%2Fout%2Freport.pdf"]]);
+      expect(hrefs(host)).toEqual([
+        ["out/report.pdf", "/dashboard/files?path=workspace%2Fshared%2Freport%2Fout%2Freport.pdf"],
+        // Under what it is judged by: its folder, opened in Files as a folder.
+        [workdir, "/dashboard/files?path=workspace%2Fshared%2Freport"],
+      ]);
       // One outside the folder is its name, as it was.
       expect(text(host)).toContain("/tmp/elsewhere.txt");
+    });
+    // A mission that works in a folder outside Nouride's own: its folder is said, and leads nowhere.
+    answer({ "/missions/msn_1": { status: 200, body: { ...mission, mission: { ...mission.mission, status: "done", workdir: "/srv/repo/app", report: "Done.", files: [] } } } });
+    await renderPage("/missions/msn_1", async (host) => {
+      await drawn(host, "/srv/repo/app");
+      expect(hrefs(host)).toEqual([]);
     });
   });
 

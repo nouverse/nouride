@@ -55,7 +55,8 @@ Memory
 System                                                                        (admin)
   System            what this machine is using: RAM, the disk, what takes the room
   Logs              Daemon · Audit · Schedule · Helpers
-  Files             what Nouride keeps on this machine, to read
+  Files             what Nouride keeps on this machine: to read, download, clear
+  Update            the version running, the newest release, installing it
 
 Settings
   Models and keys
@@ -74,7 +75,7 @@ Settings
   This box
     My Box          the appliance itself (a paired Box only)                  (admin)
     Logs            Schedule · Helpers, for anyone who is not an admin
-    Update          the version running, the newest release, installing it
+    Update          the same page, for anyone who is not an admin
 ```
 
 Work, Agents, Memory and System each hold several pages, shown as tabs across the top of each of them. Every tab keeps its own
@@ -88,8 +89,8 @@ pages are listed under it only while you are on Settings or one of them.
 Admin-only pages are **absent** from the menu and from Settings for anyone who cannot use them, rather than present
 and refusing.
 
-At the foot of the sidebar, **Your box** says whether the box is running well and which version it runs, with a button
-when a newer version is out. The card itself opens Settings.
+At the foot of the sidebar, **Your box** says whether the box is running well and which version it runs, with a note
+when a newer version is out. The whole card opens the Update page, a newer version out or not.
 
 The browser tab's title counts everything waiting for you, `(2) Nouride`, so a tab left in the background still tells
 you.
@@ -111,8 +112,9 @@ whole menu, and a phone keeps its tab bar.
 moon button beside your name. The Nouride cat greets you on Home, keeps you company on an empty page, and sits beside the title of pages such as
 Automations and Secrets. While a page loads you see its outline, grey shapes where its content will be.
 
-**Update** is a card on Settings rather than a menu entry. The version under the logo shows a dot when a newer release
-exists, and the badge at the top of Home or the button on **Your box** opens the page. Check, download and install are
+**Update** is a tab of **System** for an admin, and a card on Settings for anyone else. The version under the logo
+shows a dot when a newer release exists, and the badge at the top of Home, **Your box** and the button beside System's
+version each open the page. Check, download and install are
 three steps, because only the last one restarts the daemon, and it waits until nothing is running.
 [Updating →](/en/docs/deployment/updating/)
 
@@ -312,8 +314,8 @@ still running in the background.
 
 ## System
 
-For whoever runs the box, **System** in the menu holds three tabs. Only an admin has it; for anyone else, **Logs** stays
-under Settings with its two tabs.
+For whoever runs the box, **System** in the menu holds four tabs: System, Logs, Files and Update. Only an admin has
+it; for anyone else, **Logs** stays under Settings with its two tabs, and **Update** beside it.
 
 **System** says what the machine is using right now, each figure a bar with a sentence beside it:
 

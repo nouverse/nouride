@@ -1,6 +1,6 @@
 /**
  * The pages one menu item holds, as tabs over each of them (0.8.24): Work's four, Memory's three, Agents' two and
- * System's three, which are an admin's but for Logs. Drawn
+ * System's four, which are an admin's: anyone else reaches Logs and Update from Settings, with no bar over them. Drawn
  * by the shell over a section's list pages, never over one mission or one agent, so each page keeps its own address
  * and a link to it still opens it.
  */
@@ -36,6 +36,7 @@ const SECTIONS: Tab[][] = [
     { to: "/system", label: "System", adminOnly: true },
     { to: "/logs", label: "Logs" },
     { to: "/files", label: "Files", adminOnly: true },
+    { to: "/update", label: "Update", adminOnly: true },
   ],
 ];
 

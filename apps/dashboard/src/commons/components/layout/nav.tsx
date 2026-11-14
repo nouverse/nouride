@@ -22,6 +22,7 @@ import {
   Brain,
   Cat,
   Cpu,
+  Download,
   House,
   KeyRound,
   MessageSquare,
@@ -115,8 +116,8 @@ const OCCASIONAL: NavItem[] = [
   // Under Skills, the same shape: one library of outside tools, switched on per agent.
   { to: "/mcp", label: "Connectors", icon: Plug },
   { to: "/memories", label: "Memory", icon: Brain, holds: ["/people", "/groups"], badge: MemoryBadge },
-  // An admin's: what the machine is using, what Nouride logged and the files it keeps, as three tabs.
-  { to: "/system", label: "System", icon: Activity, holds: ["/logs", "/files"], adminOnly: true },
+  // An admin's: what the machine is using, what Nouride logged, the files it keeps and its update, as four tabs.
+  { to: "/system", label: "System", icon: Activity, holds: ["/logs", "/files", "/update"], adminOnly: true },
 ];
 
 /**
@@ -153,6 +154,8 @@ export const SETTINGS: { group: string; items: NavItem[] }[] = [
     items: [
       { to: "/box", label: "My Box", icon: Box, adminOnly: true, boxOnly: true, about: "The box itself: its network, its storage and its updates." },
       { to: "/logs", label: "Logs", icon: ScrollText, exceptAdmin: true, about: "What the agents and the box did, line by line, for when something went wrong." },
+      // A tab of System for an admin, as Logs is; for anyone else it is here, where it always was.
+      { to: "/update", label: "Update", icon: Download, exceptAdmin: true, about: "The newest version of Nouride, and installing it." },
     ],
   },
 ];

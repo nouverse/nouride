@@ -56,7 +56,8 @@ Memory
 System                                                                        (admin)
   System            apa yang sedang dipakai mesin ini: RAM, disk, apa yang makan tempat
   Logs              Daemon · Audit · Schedule · Helpers
-  Files             apa yang disimpan Nouride di mesin ini, untuk dibaca
+  Files             apa yang disimpan Nouride di mesin ini: dibaca, diunduh, dibersihkan
+  Update            versi yang jalan, rilis terbaru, dan cara memasangnya
 
 Settings
   Models and keys
@@ -75,7 +76,7 @@ Settings
   This box
     My Box          perangkatnya sendiri (hanya Box yang sudah dipasangkan)   (admin)
     Logs            Schedule · Helpers, untuk yang bukan admin
-    Update          versi yang jalan, rilis terbaru, dan cara memasangnya
+    Update          halaman yang sama, untuk yang bukan admin
 ```
 
 Work, Agents, Memory, dan System masing-masing berisi beberapa halaman, tampil sebagai tab di bagian atas tiap halamannya.
@@ -91,7 +92,7 @@ Halaman khusus admin **gak muncul** di menu maupun di Settings bagi yang gak bol
 menolak.
 
 Di bagian bawah sidebar, **Your box** menunjukkan apakah box-nya jalan dengan baik dan versi berapa yang jalan, plus
-sebuah tombol kalau ada versi yang lebih baru. Kartunya sendiri membuka Settings.
+keterangan kalau ada versi yang lebih baru. Seluruh kartunya membuka halaman Update, ada versi baru atau tidak.
 
 Judul tab browser menghitung semua yang menunggu kamu, `(2) Nouride`, jadi tab yang ditinggal di belakang tetap
 memberi tahu.
@@ -114,8 +115,9 @@ memilih sendiri lewat tombol matahari atau bulan di sebelah namamu. Kucing Nouri
 di halaman yang masih kosong, dan duduk di sebelah judul halaman seperti Automations dan Secrets. Selama halaman dimuat,
 kamu melihat kerangkanya: bentuk abu-abu di tempat isinya nanti muncul.
 
-**Update** adalah kartu di Settings, bukan entri menu. Versi di bawah logo menampilkan titik kalau ada rilis yang lebih
-baru, dan badge di bagian atas Home atau tombol di **Your box** membuka halamannya. Cek, unduh, dan pasang adalah tiga
+**Update** adalah tab di **System** untuk admin, dan kartu di Settings untuk yang lain. Versi di bawah logo menampilkan
+titik kalau ada rilis yang lebih baru, dan badge di bagian atas Home, **Your box**, serta tombol di sebelah versi pada
+halaman System masing-masing membuka halamannya. Cek, unduh, dan pasang adalah tiga
 langkah terpisah, karena cuma yang terakhir yang me-restart daemon, dan itu pun menunggu sampai gak ada yang jalan.
 [Update →](/id/docs/deployment/updating/)
 
@@ -323,8 +325,8 @@ latar belakang.
 
 ## System
 
-Untuk yang mengurus box, **System** di menu berisi tiga tab. Hanya admin yang punya; untuk yang lain, **Logs** tetap ada
-di bawah Settings dengan dua tabnya.
+Untuk yang mengurus box, **System** di menu berisi empat tab: System, Logs, Files, dan Update. Hanya admin yang punya;
+untuk yang lain, **Logs** tetap ada di bawah Settings dengan dua tabnya, dan **Update** di sebelahnya.
 
 **System** bilang apa yang sedang dipakai mesin sekarang, tiap angka berupa batang dengan satu kalimat di sebelahnya:
 

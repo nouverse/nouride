@@ -9,7 +9,7 @@ import { cn } from "@/commons/lib/utils";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { ArrowUpRight, BookOpen, Download, MessagesSquare } from "lucide-react";
+import { ArrowUpRight, BookOpen, MessagesSquare } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import { isPairedBox } from "@/commons/lib/api.appliance";
 import { gatewayPage } from "@/commons/lib/bundled-gateway";
@@ -19,11 +19,6 @@ import { SETTINGS, visible, type NavItem } from "@/commons/components/layout/nav
 import { EmptyState, PageHeader } from "@/commons/components/ui/ui";
 import { SearchInput } from "@/commons/components/ui/SearchInput";
 import { RestartButton } from "@/commons/components/box/RestartButton";
-
-/** The box's own pages that are not in the menu: its update, and the manual. */
-const EXTRA: Record<string, NavItem[]> = {
-  "This box": [{ to: "/update", label: "Update", icon: Download, about: "The newest version of Nouride, and installing it." }],
-};
 
 function matches(item: NavItem, words: string): boolean {
   const text = `${item.label} ${item.about ?? ""}`.toLowerCase();
@@ -38,7 +33,7 @@ export default function SettingsPage() {
   const where = { admin: isAdmin(me.data ?? null), onBox: isPairedBox(health.data), hostsGateway: gatewayPage(setup.data ?? null) };
   const [query, setQuery] = useState("");
   const words = query.trim().toLowerCase();
-  const groups = SETTINGS.map((group) => ({ group: group.group, items: visible([...group.items, ...(EXTRA[group.group] ?? [])], where).filter((item) => matches(item, words)) })).filter((group) => group.items.length > 0);
+  const groups = SETTINGS.map((group) => ({ group: group.group, items: visible(group.items, where).filter((item) => matches(item, words)) })).filter((group) => group.items.length > 0);
 
   return (
     <div className="space-y-6">

@@ -77,9 +77,10 @@ describe("what a person may see", () => {
   const settings = SETTINGS.flatMap((group) => group.items);
   test("a member sees no admin page, a box's page only on a paired box, the gateway only where it is hosted", () => {
     const shown = (where: Parameters<typeof visible>[1]) => visible(settings, where).map((one) => one.label);
-    expect(shown({ admin: false, onBox: true, hostsGateway: true })).toEqual(["Access", "My Account", "Logs"]);
-    // An admin reaches Logs as a tab of System, in the menu itself: it is not listed a second time under Settings.
+    expect(shown({ admin: false, onBox: true, hostsGateway: true })).toEqual(["Access", "My Account", "Logs", "Update"]);
+    // An admin reaches Logs and Update as tabs of System, in the menu itself: neither is listed a second time under Settings.
     expect(shown({ admin: true, onBox: true, hostsGateway: true })).not.toContain("Logs");
+    expect(shown({ admin: true, onBox: true, hostsGateway: true })).not.toContain("Update");
     expect(shown({ admin: true, onBox: false, hostsGateway: false })).not.toContain("My Box");
     expect(shown({ admin: true, onBox: false, hostsGateway: false })).not.toContain("LLM Gateway");
     expect(shown({ admin: true, onBox: true, hostsGateway: true })).toEqual(expect.arrayContaining(["My Box", "LLM Gateway", "Models", "Secrets"]));
@@ -95,10 +96,13 @@ describe("what a person may see", () => {
 });
 
 describe("System, an admin's", () => {
-  test("its tabs are System, Logs and Files for an admin; anyone else has Logs alone, and no bar of one tab", () => {
-    for (const page of ["/system", "/logs", "/files"]) expect(sectionTabs(page, true)?.map((tab) => tab.label)).toEqual(["System", "Logs", "Files"]);
+  test("its tabs are System, Logs, Files and Update for an admin; anyone else has Logs alone there, and no bar of one tab", () => {
+    for (const page of ["/system", "/logs", "/files", "/update"]) expect(sectionTabs(page, true)?.map((tab) => tab.label)).toEqual(["System", "Logs", "Files", "Update"]);
+    expect(sectionTabs("/update", true)?.map((tab) => tab.to)).toEqual(["/system", "/logs", "/files", "/update"]);
     expect(sectionTabs("/logs", false)).toBeNull();
     expect(sectionTabs("/system", false)).toBeNull();
+    // Update is theirs to open from Settings, as Logs is: no bar over it either.
+    expect(sectionTabs("/update", false)).toBeNull();
     // The other sections are everyone's.
     expect(sectionTabs("/work", false)?.map((tab) => tab.label)).toEqual(["Waiting for you", "Automations", "Missions", "Helpers"]);
   });

@@ -9,9 +9,9 @@ import { ChevronLeft } from "lucide-react";
 import { SETTINGS, SETTINGS_HOME } from "@/commons/components/layout/nav";
 import { cn } from "@/commons/lib/utils";
 
-/** Settings' pages: every card it shows, the update's page among them. */
-const PAGES = new Set([...SETTINGS.flatMap((group) => group.items.map((item) => item.to)), "/update"]);
-/** The ones an admin does not reach from Settings: Logs is a tab of System for them, in the menu itself. */
+/** Settings' pages: every card it shows. */
+const PAGES = new Set(SETTINGS.flatMap((group) => group.items.map((item) => item.to)));
+/** The ones an admin does not reach from Settings: Logs and Update are tabs of System for them, in the menu itself. */
 const NOT_AN_ADMINS = new Set(SETTINGS.flatMap((group) => group.items.filter((item) => item.exceptAdmin).map((item) => item.to)));
 
 /** Whether `pathname` is one of Settings' own pages for this reader: the page itself, not one under it. */
