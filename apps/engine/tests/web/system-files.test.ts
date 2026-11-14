@@ -209,6 +209,11 @@ describe("what an admin may delete", () => {
     ["workspace/shared/report/out.txt", "file"],
     ["workspace/private/nix/app", "folder"],
     ["workspace/private/nix/notes.md", "file"],
+    // What a coding CLI keeps inside one of the agent's accounts is the CLI's own, and a tool's own state beside it.
+    ["workspace/private/nix/.cli/claude-code/work/projects", "folder"],
+    ["workspace/private/nix/.cli/claude-code/work/history.jsonl", "file"],
+    ["workspace/private/nix/.cache", "folder"],
+    ["workspace/private/nix/.clip", "folder"],
     // Left in the workspaces' folder by an older layout: nobody's own folder.
     ["workspace/old", "folder"],
     ["workspace/old.txt", "file"],
@@ -233,6 +238,10 @@ describe("what an admin may delete", () => {
     ["workspace/shared", "folder"],
     ["workspace/private", "folder"],
     ["workspace/private/nix", "folder"],
+    // An agent's coding CLI and its accounts, as the daemon lays them out: its sign-in and its conversations' sessions.
+    ["workspace/private/nix/.cli", "folder"],
+    ["workspace/private/nix/.cli/claude-code", "folder"],
+    ["workspace/private/nix/.cli/claude-code/work", "folder"],
     ["attachments", "folder"],
     ["attachments/nix", "folder"],
     ["tool-output", "folder"],

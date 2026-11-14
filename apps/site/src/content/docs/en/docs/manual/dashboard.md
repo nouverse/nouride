@@ -384,7 +384,8 @@ which takes a moment for a large log.
 people sent in a chat, the long output a tool kept, and the logs of background jobs. A row of such a folder has the
 button at its end, and so does an open file. The page asks first, naming how many files and how much of the disk
 would go, and it cannot be undone. Nouride's own files have no such button: its settings, its database, its agents'
-persona and memory files, and the folder it keeps for each agent. While a mission or a background job is still working
+persona and memory files, the folder it keeps for each agent, and in it the folders of the agent's coding CLI and its
+accounts (`.cli`), which hold its sign-in and its conversations. While a mission or a background job is still working
 in a folder, it and what is in it wait until that has ended, and the page says which of the two it is. Each delete is
 written to the audit log (**Logs**, **Audit**) with who did it.
 

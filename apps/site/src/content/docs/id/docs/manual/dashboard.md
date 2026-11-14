@@ -397,7 +397,8 @@ dulu, jadi log yang besar butuh sebentar.
 keluaran panjang yang disimpan sebuah tool, dan log job latar. Baris folder seperti itu punya tombolnya di ujung, begitu
 juga berkas yang terbuka. Halamannya bertanya dulu, menyebut berapa berkas dan berapa besar disk yang akan hilang, dan
 gak bisa dibatalkan. Berkas Nouride sendiri gak punya tombol itu: pengaturannya, database-nya, berkas persona dan memory
-para agent, dan folder yang ia siapkan untuk tiap agent. Selama sebuah mission atau job latar masih bekerja di sebuah
+para agent, folder yang ia siapkan untuk tiap agent, dan di dalamnya folder coding CLI agent itu beserta akun-akunnya
+(`.cli`), yang menyimpan login dan percakapannya. Selama sebuah mission atau job latar masih bekerja di sebuah
 folder, folder itu dan isinya menunggu sampai selesai, dan halamannya bilang yang mana dari keduanya. Setiap
 penghapusan dicatat di audit log (**Logs**, **Audit**) beserta siapa yang melakukannya.
 
