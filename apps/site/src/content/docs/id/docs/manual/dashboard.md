@@ -340,7 +340,7 @@ di bawah Settings dengan dua tabnya.
 Mulai tiga perempat penuh, batangnya berubah dan bilang **Getting full**; mulai sembilan persepuluh, **Nearly full**.
 Angka yang gak diberikan mesin ditulis sebagai gak diketahui. Gak pernah digambar sebagai batang kosong.
 
-**Logs** juga bilang kenapa sebuah percakapan jadi lebih mahal dari sebelumnya (0.8.37). Penyedia model menyimpan
+**Logs** juga bilang kenapa sebuah percakapan jadi lebih mahal dari sebelumnya (0.8.36). Penyedia model menyimpan
 bagian depan percakapan, jadi request berikutnya hanya membayar sebagian kecil untuk yang sudah pernah dibacanya; kalau
 ada yang berubah di bagian depan itu, semua yang sesudahnya dibayar penuh lagi. Kalau itu terjadi saat penyedia
 seharusnya masih menyimpannya, satu baris bilang bagian mana yang berubah: tool-nya, modelnya, atau satu bagian prompt

@@ -330,7 +330,7 @@ under Settings with its two tabs.
 From three quarters full a bar turns and says **Getting full**; from nine tenths, **Nearly full**. A figure the
 machine does not give is said as not known. It is never drawn as an empty bar.
 
-**Logs** also says why a conversation cost more than the one before it (0.8.37). A provider keeps the front of a
+**Logs** also says why a conversation cost more than the one before it (0.8.36). A provider keeps the front of a
 conversation, so the next request pays a fraction for what it has read before; when something in that front changes,
 everything after it is paid for in full again. When that happens while the provider would still have had it, a line
 says which part changed: the tools, the model, or a section of the prompt by its name, such as the agent's memory
