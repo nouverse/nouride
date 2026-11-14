@@ -14,6 +14,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { api } from "@/commons/lib/api";
+import { PAGE_ASKS } from "@/commons/components/agents/page-asks";
 import { Card, EmptyState, ErrorNote, PageHeader } from "@/commons/components/ui/ui";
 import { FILL_PAGE, ScrollArea } from "@/commons/components/ui/ScrollCard";
 import { ListLoading } from "@/commons/components/ui/Spinner";
@@ -46,7 +47,7 @@ export default function FilesPage({ path, onOpen }: { path: string; onOpen: (pat
   const read = listing.data;
   return (
     <div className={FILL_PAGE}>
-      <PageHeader title="Files" description="What Nouride keeps on this machine. What agents and chats left behind can be deleted here; the rest is to look at." />
+      <PageHeader ask={PAGE_ASKS.files} title="Files" description="What Nouride keeps on this machine. What agents and chats left behind can be deleted here; the rest is to look at." />
       <Card className="lg:flex lg:min-h-[22rem] lg:flex-1 lg:flex-col" bodyClassName="lg:flex lg:min-h-0 lg:flex-1 lg:flex-col">
         <div className="flex min-h-0 flex-col gap-4 lg:flex-1">
           <div className="shrink-0">
