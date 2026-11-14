@@ -228,7 +228,8 @@ file: pilih di tab **CLI** agent di dashboard, atau minta agent-nya ("pakai xhig
 yang daftar `/models`-nya menyebutkan jendela sebuah model (`context_window` milik Nougate,
 `context_length` milik OpenRouter, `max_model_len` milik vLLM) dipercaya, dari daftar terakhirnya:
 daftar itu ditanyakan saat daemon mulai lalu paling sering sejam sekali, dan tidak ada turn yang
-menunggunya. Kalau tidak, id model dicari di tabel keluarga model, prefix dari gateway diabaikan, jadi
+menunggunya. Yang terakhir disebutkannya disimpan melewati restart, jadi turn pertama sesudahnya, dan
+setiap turn selagi daftarnya tidak bisa dibaca, juga memakainya, selama alamat provider-nya sama. Kalau tidak, id model dicari di tabel keluarga model, prefix dari gateway diabaikan, jadi
 `antigravity:claude-sonnet-4-6` dicari sebagai `claude-sonnet-4-6`. Model yang tidak diketahui siapa pun
 dianggap punya 32k, dan riwayatnya dipangkas jauh lebih keras dari yang perlu; log menyebutkannya sekali
 per model. `context_window` di `[llm]` milik agent itu obatnya, dan mengalahkan keduanya.
