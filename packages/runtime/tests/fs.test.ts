@@ -164,3 +164,17 @@ describe("an atomic write syncs the new file before the rename and its folder af
     expect(readdirSync(dir)).toEqual(["secrets.json"]);
   });
 });
+
+describe("the space on the disk a folder is on", () => {
+  test("a folder that is there says its filesystem's size and what is free; one that is not says nothing, never 0", async () => {
+    const { diskSpace, freeDiskBytes } = await import("../src/fs.ts");
+    const here = diskSpace(import.meta.dir);
+    expect(here).not.toBeNull();
+    expect(here!.totalBytes).toBeGreaterThan(0);
+    expect(here!.freeBytes).toBeGreaterThanOrEqual(0);
+    expect(here!.freeBytes).toBeLessThanOrEqual(here!.totalBytes);
+    // The same count of free bytes the boot's own check reads.
+    expect(Math.abs(here!.freeBytes - freeDiskBytes(import.meta.dir)!)).toBeLessThan(here!.totalBytes * 0.05);
+    expect(diskSpace("/no/such/folder/anywhere")).toBeNull();
+  });
+});

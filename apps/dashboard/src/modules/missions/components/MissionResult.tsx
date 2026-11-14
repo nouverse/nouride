@@ -10,6 +10,7 @@ import { Markdown } from "@/commons/components/ui/Markdown";
 import { MarkdownPreview } from "@/commons/components/ui/MarkdownPreview";
 import { cn } from "@/commons/lib/utils";
 import { inFolder } from "../lib/mission";
+import { FilePath } from "@/commons/components/ui/FilePath";
 import { Leaving } from "@/commons/components/ui/OverPage";
 
 export function MissionResult({ report, files, workdir }: { report: string | null; files: string[]; workdir: string }) {
@@ -56,7 +57,10 @@ export function MissionResult({ report, files, workdir }: { report: string | nul
         <ul className="flex flex-wrap gap-1.5">
           {files.map((file) => (
             <li key={file} className="badge badge-ghost h-auto max-w-full gap-1.5 py-1 font-mono text-[11px] break-all">
-              <FileText size={12} className="shrink-0" aria-hidden="true" /> {inFolder(file, workdir)}
+              <FileText size={12} className="shrink-0" aria-hidden="true" />
+              <FilePath text={file} link="text-primary hover:underline">
+                {inFolder(file, workdir)}
+              </FilePath>
             </li>
           ))}
         </ul>

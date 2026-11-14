@@ -16,6 +16,7 @@ export {
   classifyHardline,
   classifyOwnState,
   credentialPath,
+  holdsCredential,
   HARDLINE_SUMMARY,
   HARDLINE_EXEMPTIONS,
   SCRATCHPAD_DIRNAME,

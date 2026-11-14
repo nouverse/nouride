@@ -19,7 +19,7 @@ the setup wizard and `nouride setup` run the same code, and the Skills page writ
 ## The map
 
 The menu is in the order its pages are opened: **Home, Chats, Work and Agents** every day, **Skills**, **Connectors**
-and **Memory** now and then, and everything you set up once behind **Settings**.
+and **Memory** now and then, **System** for an admin, and everything you set up once behind **Settings**.
 
 ```
 Home                what needs you · what is moving · Quick chat · your agents · the box · today's AI use
@@ -52,6 +52,11 @@ Memory
   Knowledge & Memory   Knowledge · Agent notes · People · Timeline · Shared · Proposals · Settings, and a graph
   People            names and notes for the humans they talk to
   Groups            the rooms they talk in: each one's name, its agents, who talks there
+System                                                                        (admin)
+  System            what this machine is using: RAM, the disk, what takes the room
+  Logs              Daemon · Audit · Schedule · Helpers
+  Files             what Nouride keeps on this machine: to read, download, clear
+  Update            the version running, the newest release, installing it
 
 Settings
   Models and keys
@@ -69,11 +74,11 @@ Settings
     My Account      username, name, password
   This box
     My Box          the appliance itself (a paired Box only)                  (admin)
-    Logs            Daemon · Audit · Schedule · Helpers
-    Update          the version running, the newest release, installing it
+    Logs            Schedule · Helpers, for anyone who is not an admin
+    Update          the same page, for anyone who is not an admin
 ```
 
-Work, Agents and Memory each hold several pages, shown as tabs across the top of each of them. Every tab keeps its own
+Work, Agents, Memory and System each hold several pages, shown as tabs across the top of each of them. Every tab keeps its own
 address, so a link to one still opens it. Work opens on **Waiting for you**, and the count beside Work in the menu is
 what waits there.
 
@@ -84,8 +89,8 @@ pages are listed under it only while you are on Settings or one of them.
 Admin-only pages are **absent** from the menu and from Settings for anyone who cannot use them, rather than present
 and refusing.
 
-At the foot of the sidebar, **Your box** says whether the box is running well and which version it runs, with a button
-when a newer version is out. The card itself opens Settings.
+At the foot of the sidebar, **Your box** says whether the box is running well and which version it runs, with a note
+when a newer version is out. The whole card opens the Update page, a newer version out or not.
 
 The browser tab's title counts everything waiting for you, `(2) Nouride`, so a tab left in the background still tells
 you.
@@ -107,8 +112,9 @@ whole menu, and a phone keeps its tab bar.
 moon button beside your name. The Nouride cat greets you on Home, keeps you company on an empty page, and sits beside the title of pages such as
 Automations and Secrets. While a page loads you see its outline, grey shapes where its content will be.
 
-**Update** is a card on Settings rather than a menu entry. The version under the logo shows a dot when a newer release
-exists, and the badge at the top of Home or the button on **Your box** opens the page. Check, download and install are
+**Update** is a tab of **System** for an admin, and a card on Settings for anyone else. The version under the logo
+shows a dot when a newer release exists, and the badge at the top of Home, **Your box** and the button beside System's
+version each open the page. Check, download and install are
 three steps, because only the last one restarts the daemon, and it waits until nothing is running.
 [Updating →](/en/docs/deployment/updating/)
 
@@ -247,6 +253,17 @@ format, a credential, defined once under *Models* and shared. A **model** is one
 within it, under that agent's *Model* tab. Keeping them apart is what lets one agent move to a
 different deployment without touching the others.
 
+Adding a profile, under the key's field, **How to get an API key** folds out a list of the services people most often
+mean, each a link to the page its key is made on, with what using it costs: **Pay per use** (OpenAI, Anthropic, Google
+Gemini, DeepSeek, Z.ai, OpenCode Zen; a ChatGPT or Claude subscription does not cover the API) or **In your plan**
+(OpenCode Go; Command Code, on every plan but Go). **Use it** fills the name, the kind and the base URL; a name you
+typed yourself is kept, and a saved profile keeps its name. The first-run setup has the same list.
+
+Under it, **Extra headers** holds what a provider asks for beyond its key, one on each line as `Name: value`. Most ask
+for nothing. **Use it** for OpenCode Go fills `x-opencode-session: {session}`, where `{session}` becomes an id of the
+conversation on each request, and every line stays yours to change, add or remove. A saved header shows its name only:
+leave its line as it is to keep its value.
+
 The *Model* tab also sets how long the agent's model thinks (**Effort**), asked for in each of its requests in every
 chat; a chat's `/effort` sets its own over it, and an admin's `/effort <level> lock` in a chat sets this one.
 
@@ -305,6 +322,61 @@ waiting for whoever it was asked of. An admin sees and answers every one.
 **The daemon's log and the audit log are an admin's to read** (0.8.35). They hold every line of everybody's chats,
 commands and decisions. On **Logs**, anyone else has the two other tabs: what ran on a schedule, and the commands
 still running in the background.
+
+## System
+
+For whoever runs the box, **System** in the menu holds four tabs: System, Files, Update and Logs. Only an admin has
+it; for anyone else, **Logs** stays under Settings with its two tabs, and **Update** beside it.
+
+**System** says what the machine is using right now, each figure a bar with a sentence beside it:
+
+- **RAM**: how much is in use of what Nouride may use, then who holds it: Nouride itself, and the agents' commands
+  where they are counted apart. In a container, or under a service that sets a limit, the ceiling is that limit and
+  the figure in use is the container's own, the one `docker stats` shows, not the machine's around it. The card says
+  which it is.
+- **Disk**: the disk Nouride's files are on (in a container, its volume), how much is free, and how much Nouride's
+  own files take, with the largest folders first. A press on one opens it in Files. A large folder takes a minute or
+  so to count, and the page says so while it does.
+- **Nouride here**: the version and which edition it is, Community or Pro, how long it has been running, the
+  processor cores it may use, and where its files are. When a newer release is out, a button beside the version opens
+  the Update page.
+
+From three quarters full a bar turns and says **Getting full**; from nine tenths, **Nearly full**. A figure the
+machine does not give is said as not known. It is never drawn as an empty bar.
+
+**Logs** also says why a conversation cost more than the one before it (0.8.36). A provider keeps the front of a
+conversation, so the next request pays a fraction for what it has read before; when something in that front changes,
+everything after it is paid for in full again. When that happens while the provider would still have had it, a line
+says which part changed: the tools, the model, or a section of the prompt by its name, such as the agent's memory
+file, with how much conversation is written again. Search the Daemon tab for `cached prefix`.
+
+**Files** shows what Nouride keeps on the machine: its agents, their workspaces, what people sent, its settings. Open
+a folder with a press, and go back with the path at the top or your browser's Back. On a wide window the list and an
+open file scroll inside the card, so the path and the buttons stay where they are; on a phone the page scrolls. A file
+opens as what it is: a page of markdown as a page (**Show its source** for the text itself), code in its colours with
+**Copy**, a picture as a picture, a video or a sound in a player. A PDF has **Open it**, which opens it in your
+browser's reader in a tab of its own. Anything else says what it is, with **Download** in its middle.
+
+**Download** keeps a copy of the open file on your own computer, as it is. A long text file is read through first,
+which takes a moment for a large log.
+
+**Delete** is for what agents and chats left behind, and nothing else: what is in the agents' workspaces, the files
+people sent in a chat, the long output a tool kept, and the logs of background jobs. A row of such a folder has the
+button at its end, and so does an open file. The page asks first, naming how many files and how much of the disk
+would go, and it cannot be undone. Nouride's own files have no such button: its settings, its database, its agents'
+persona and memory files, and the folder it keeps for each agent. While a mission or a background job is still working
+in a folder, it and what is in it wait until that has ended, and the page says which of the two it is. Each delete is
+written to the audit log (**Logs**, **Audit**) with who did it.
+
+**Credentials and secrets are not shown.** What holds one is left out of every list, by its name too: Nouride's own
+keys and its secret store, the credentials folder, a chat app's session, `.env` files, SSH and other keys, and the
+sign-ins tools keep in the agents' home. Asked for by its address, such a file says it is kept private. Inside an
+ordinary file, something that looks like a credential is hidden where it was, and the page says so; a file like that
+is read on the page and not downloaded. The database is listed with its size, and neither opens nor downloads.
+
+**A path is a link.** Where an agent writes a path inside Nouride's files (`.nouride/workspace/…/report.md`, or the
+whole path on this machine) in a reply, on a mission's page among its result files, or in a command a turn ran, an
+admin can press it to open that file in Files.
 
 ### What Home says about the others
 

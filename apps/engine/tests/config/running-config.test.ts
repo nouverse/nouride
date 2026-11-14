@@ -27,6 +27,7 @@ import { keyEveryone, updatePersonNotes } from "@/modules/config/settings/people
 import { ProviderRegistry } from "@/modules/llm/providers.ts";
 import { setOrchestrator } from "@/modules/setup/agent-access.ts";
 import { FileService } from "@/modules/setup/files.ts";
+import { VERSION } from "@/commons/version.ts";
 import { SetupService } from "@/modules/setup/service.ts";
 
 /** An install as somebody keeps one: comments, a provider with headers the form never shows, two connections, people. */
@@ -353,7 +354,8 @@ describe("what a save puts in the running config", () => {
     const built = h.providers.get("local");
     await h.settings.saveProvider({ name: "local", kind: "openai", baseUrl: "http://127.0.0.1:11435/v1", apiKey: "a-new-key", actor });
     expect(h.providers.get("local")).not.toBe(built);
-    expect(h.providers.endpointFor("local")).toEqual({ kind: "openai", baseUrl: "http://127.0.0.1:11435/v1", apiKey: "a-new-key", headers: { "x-team": "ops" } });
+    // Its own headers, kept through the save, beside the one every request says for itself.
+    expect(h.providers.endpointFor("local")).toEqual({ kind: "openai", baseUrl: "http://127.0.0.1:11435/v1", apiKey: "a-new-key", headers: { "user-agent": `nouride/${VERSION}`, "x-team": "ops" } });
   });
 
   test("a removed profile is not answered from the client built for it", async () => {

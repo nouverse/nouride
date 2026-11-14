@@ -9,6 +9,7 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight, Loader2 } from "lucide-react";
 import type { TurnStatus, TurnStep } from "@nouride/wire";
+import { PathWords } from "@/commons/components/ui/FilePath";
 import { TurnRecord } from "@/commons/components/turns/TurnRecord";
 import {
   countedSteps,
@@ -54,6 +55,9 @@ function WholeRows({ rows, activeSeq }: { rows: StepRowModel[]; activeSeq?: numb
     </div>
   );
 }
+
+/** A path of the data folder inside a call: a link to that file in Files, in the call's own type. */
+const PATH_LINK = "text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary";
 
 /** A call longer than this takes the row's whole width, what came of it on the line above: beside a result it has half a row. */
 const LONG_CALL = 48;
@@ -102,7 +106,9 @@ function StepRow({ row, active }: { row: StepRowModel; active?: boolean }) {
       <div className={`min-w-20 flex-1 leading-relaxed ${long ? "[overflow-wrap:anywhere]" : "break-all"} ${said ? (long ? "order-last basis-full" : "max-sm:order-last max-sm:basis-full") : ""}`}>
         {tall ? (
           <>
-            <div className={whole ? undefined : "line-clamp-3"}>{row.text}</div>
+            <div className={whole ? undefined : "line-clamp-3"}>
+              <PathWords text={row.text} link={PATH_LINK} />
+            </div>
             <button
               type="button"
               aria-expanded={whole}
@@ -113,7 +119,7 @@ function StepRow({ row, active }: { row: StepRowModel; active?: boolean }) {
             </button>
           </>
         ) : (
-          row.text
+          <PathWords text={row.text} link={PATH_LINK} />
         )}
       </div>
       {/* Nothing said yet, nothing beside it: an empty outcome still took half a phone's row, and a call at work beside the

@@ -25,4 +25,6 @@ export interface ProviderProfileView {
   apiKeySecret: string;
   hasCredential: boolean;
   builtIn: boolean;
+  /** Its extra headers by name. A saved value is `null`, never sent, but for `{session}`: the one that is no secret. */
+  headers: Record<string, string | null>;
 }

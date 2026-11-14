@@ -172,7 +172,8 @@ log_days         = 3     # the daemon's own log table (0 turns it off)
 Two of these are worth understanding.
 
 **`job_log_days`** cannot be "delete when the job ends", because the agent may still be holding the
-path the tool handed it.
+path the tool handed it. A log that no job points at any more goes on the same count (0.8.36): the
+sweep went by the jobs on record, and a log without one stayed for good.
 
 **`scratchpad_days`** covers `workspace/private/<agent>/.scratchpad/`: the disposable directory an
 agent is told to put throwaway artefacts in: a screenshot on its way to being sent, a download on its

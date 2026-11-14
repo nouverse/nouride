@@ -218,7 +218,7 @@ describe("how a file is served", () => {
   });
 
   test("a filename cannot break out of the header it is put in", async () => {
-    const { asciiName } = await import("@/modules/web/control/routes/chat.ts");
+    const { asciiName } = await import("@/modules/web/control/file-response.ts");
 
     // The name came from a browser or a chat platform. A quote or a newline in a header value changes
     // what the header means, which is a response-splitting bug rather than a cosmetic one.
@@ -245,7 +245,7 @@ describe("how a file is served", () => {
  */
 describe("the byte window a range request asks for", () => {
   test("both ends are inclusive", async () => {
-    const { parseRange } = await import("@/modules/web/control/routes/chat.ts");
+    const { parseRange } = await import("@/modules/web/control/file-response.ts");
 
     expect(parseRange("bytes=0-0", 1000)).toEqual({ start: 0, end: 0 });
     expect(parseRange("bytes=0-499", 1000)).toEqual({ start: 0, end: 499 });
@@ -253,7 +253,7 @@ describe("the byte window a range request asks for", () => {
   });
 
   test("an open end means the rest of the file — the form Chrome opens with", async () => {
-    const { parseRange } = await import("@/modules/web/control/routes/chat.ts");
+    const { parseRange } = await import("@/modules/web/control/file-response.ts");
 
     expect(parseRange("bytes=0-", 1000)).toEqual({ start: 0, end: 999 });
     expect(parseRange("bytes=900-", 1000)).toEqual({ start: 900, end: 999 });
@@ -261,7 +261,7 @@ describe("the byte window a range request asks for", () => {
 
   test("a suffix range means the LAST n bytes, not the first n", async () => {
     // The form that gets read wrong, and the one a player uses to find a trailing index atom.
-    const { parseRange } = await import("@/modules/web/control/routes/chat.ts");
+    const { parseRange } = await import("@/modules/web/control/file-response.ts");
 
     expect(parseRange("bytes=-500", 1000)).toEqual({ start: 500, end: 999 });
     // Larger than the file is not an error — it means the whole thing.
@@ -270,7 +270,7 @@ describe("the byte window a range request asks for", () => {
 
   test("an end past the file is clamped, not refused", async () => {
     // A player that guesses long is asking for "the rest"; refusing it would stall playback.
-    const { parseRange } = await import("@/modules/web/control/routes/chat.ts");
+    const { parseRange } = await import("@/modules/web/control/file-response.ts");
 
     expect(parseRange("bytes=0-99999", 1000)).toEqual({ start: 0, end: 999 });
   });
@@ -278,7 +278,7 @@ describe("the byte window a range request asks for", () => {
   test("a start past the file is a 416, never a quiet full body", async () => {
     // The client has to be told the real size or it cannot correct itself. Answering 200 with the
     // whole file would have it treat the head as the tail it asked for.
-    const { parseRange } = await import("@/modules/web/control/routes/chat.ts");
+    const { parseRange } = await import("@/modules/web/control/file-response.ts");
 
     expect(parseRange("bytes=1000-", 1000)).toBe("unsatisfiable");
     expect(parseRange("bytes=5000-6000", 1000)).toBe("unsatisfiable");
@@ -288,7 +288,7 @@ describe("the byte window a range request asks for", () => {
 
   test("an empty file can satisfy nothing", async () => {
     // Guarded explicitly: the arithmetic would otherwise produce an end of -1.
-    const { parseRange } = await import("@/modules/web/control/routes/chat.ts");
+    const { parseRange } = await import("@/modules/web/control/file-response.ts");
 
     expect(parseRange("bytes=0-", 0)).toBe("unsatisfiable");
     expect(parseRange("bytes=0-0", 0)).toBe("unsatisfiable");
@@ -301,7 +301,7 @@ describe("the byte window a range request asks for", () => {
      * and answering it wrongly, with a single body where a multipart one was asked for, is worse than
      * not answering it at all.
      */
-    const { parseRange } = await import("@/modules/web/control/routes/chat.ts");
+    const { parseRange } = await import("@/modules/web/control/file-response.ts");
 
     expect(parseRange(undefined, 1000)).toBeNull();
     expect(parseRange("", 1000)).toBeNull();

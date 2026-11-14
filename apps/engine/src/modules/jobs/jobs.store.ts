@@ -33,6 +33,7 @@ import { contained, createLogger, newId, type ExecPolicySection, type SandboxOpt
 import type { AuditLog } from "@/commons/audit.store.ts";
 import type { SubAgentHandoff } from "@/modules/tools/handoff.ts";
 import type { HelperBrief } from "@/modules/tools/builtins/delegate-brief.ts";
+import { strayLogs } from "./stray-logs.ts";
 import { JobDeadlines } from "./deadline.ts";
 import { HelperJobs, type HelperRow, type HelperStart, type StartAsk, type StartHelper } from "./helper-jobs.ts";
 import { spawnJob } from "./job-spawn.ts";
@@ -766,6 +767,8 @@ export class JobStore {
    *
    * `0` disables the sweep rather than deleting everything, the same off position the other retention
    * knobs use.
+   *
+   * Counted: each job that lost its row, and each log that had none.
    */
   sweepLogs(days: number, now: number = Date.now()): number {
     if (days <= 0) return 0;
@@ -782,6 +785,11 @@ export class JobStore {
       if (stat && stat.mtimeMs >= cutoff) continue;
       if (stat) removePath(row.log_path);
       this.options.db.prepare("DELETE FROM jobs WHERE id = ?").run(row.id);
+      removed += 1;
+    }
+    // And the logs no row names, which nothing above reaches (`stray-logs.ts`). A running job has its row.
+    for (const path of strayLogs(this.options.logDir, (id) => this.get(id) !== null, cutoff)) {
+      removePath(path);
       removed += 1;
     }
 

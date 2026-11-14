@@ -285,6 +285,12 @@ export interface BuiltPrompt {
    */
   sections: { name: string; origin: Section["origin"]; chars: number }[];
   /**
+   * A digest of each section sent in front of the conversation, by its name: what tells which of them changed between
+   * two requests of one conversation, without holding any of them (`CacheBreaks`). Who is speaking is not among them:
+   * it goes after the conversation, where a change costs nothing in front of it.
+   */
+  parts: Record<string, string>;
+  /**
    * `text`, with every section Nouride wrote replaced by a one-line note.
    *
    * What `/prompt` prints. The operator gets their own material verbatim and can see where the

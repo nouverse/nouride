@@ -28,6 +28,8 @@ export const PAGE_ASKS = {
   secrets: { task: "to save a key", message: "I want to save a key for … Ask me for it when you are ready." },
   access: { task: "about who may talk to my agents", message: "Let … talk to my agents on … Or tell me who is waiting to." },
   logs: { task: "to read the logs", message: "Read the recent logs and tell me, in plain words, whether anything is wrong." },
+  system: { task: "how this machine is doing", message: "How is this machine doing? Check its memory and its disk, and tell me in plain words." },
+  files: { task: "what can be cleared", message: "Look at what takes the most room in my agents' workspaces, and tell me in plain words what is safe to delete. Do not delete anything yet." },
   box: { task: "how the box is doing", message: "How is my box doing? Check its disk, its memory and its updates, and tell me in plain words." },
   office: { task: "what everyone is doing", message: "What is each of my agents doing right now? A line each." },
 } as const satisfies Record<string, PageAsk>;

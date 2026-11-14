@@ -23,15 +23,15 @@ export interface Budget {
 /** Source files over `MAX_CODE_LINES`. */
 export const BUDGET: Record<string, Budget> = {
   "packages/policy/src/hardline.ts": {
-    lines: 553,
-    why: "a security classifier: what an agent may never do without a human, and the credential paths read word by word. It grows by a rule; a second way of classifying goes in a file of its own",
+    lines: 556,
+    why: "a security classifier: what an agent may never do without a human, and the credential paths read word by word, asked of a path too (Files). It grows by a rule; a second way goes in its own file",
   },
   "apps/engine/src/modules/config/schema.docs.ts": {
     lines: 487,
     why: "one annotation per setting, the list `config explain` and the dashboard read; it grows by an entry (a picture's most pixels on a side, now), and splitting it would hide the list it is",
   },
   "apps/engine/src/modules/web/control/routes/chat.ts": {
-    lines: 515,
+    lines: 462,
     why: "the dashboard chat's routes together: upload, send with its page and a first message's model and effort, live, transcripts, files, delete, each answer held to the wire's type and to whose it is",
   },
   "apps/engine/src/modules/external-agents/index.ts": {
@@ -47,8 +47,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "a pack's `config.toml` mapped field by field, so each refusal names its file and field: one list, the pack's schema. Its MCP server readers are the seam if it grows by more than a field",
   },
   "apps/engine/src/modules/jobs/jobs.store.ts": {
-    lines: 511,
-    why: "the background job table: a command's, a helper's and a background ask's rows, every write to `jobs.status` in one class; the wake-up text and a helper's runtime half are beside it",
+    lines: 516,
+    why: "the background job table: a command's, a helper's and an ask's rows, every write to `jobs.status` in one class; its log sweep also clears logs no row names, whose finder is beside it",
   },
   "apps/engine/src/modules/tools/registry.ts": {
     lines: 450,

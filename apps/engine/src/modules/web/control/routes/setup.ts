@@ -10,7 +10,7 @@ import { oauthReady, oauthSupported } from "@/modules/users/oidc.ts";
 import type { SetupState } from "@nouride/wire";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { isPresetId } from "@/modules/setup/presets.ts";
-import { jsonBody } from "../payloads.ts";
+import { jsonBody, providerHeaders } from "../payloads.ts";
 import { NOT_RUNNING, NOT_SAVED, probed } from "../plain.ts";
 
 export function registerSetupRoutes(control: ControlApp, deps: ControlDeps): void {
@@ -85,6 +85,7 @@ export function registerSetupRoutes(control: ControlApp, deps: ControlDeps): voi
       name: typeof body.name === "string" && body.name.trim() ? body.name.trim() : undefined,
       baseUrl: typeof body.base_url === "string" ? body.base_url : "",
       apiKey: typeof body.api_key === "string" ? body.api_key : "",
+      ...(providerHeaders(body.headers) ? { headers: providerHeaders(body.headers)! } : {}),
       actor: principal.actor,
       skipProbe: body.skip_probe === true,
     });

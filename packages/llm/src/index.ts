@@ -14,6 +14,7 @@ import { OpenAIProvider } from "./openai.ts";
 
 export { listModels, wireCapabilities, type ListedModel } from "./models.ts";
 export type { HttpDeps } from "./http.ts";
+export { profileHeaders, SESSION_PLACEHOLDER } from "./http.ts";
 export {
   compactionLimitInfo,
   contextWindowInfo,

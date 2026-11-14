@@ -30,6 +30,7 @@ import { canWrite, useMe } from "@/commons/lib/session";
 import { Checklist } from "./components/Checklist";
 import { Meters } from "./components/Meters";
 import { MissionActions } from "./components/MissionActions";
+import { FilePath } from "@/commons/components/ui/FilePath";
 import { MissionResult } from "./components/MissionResult";
 import { BriefCard } from "./components/BriefCard";
 import { MissionTimeline } from "./components/MissionTimeline";
@@ -79,7 +80,11 @@ function JudgedBy({ detail }: { detail: MissionDetail }) {
         </div>
       )}
       <p className="flex items-start gap-1.5 font-mono text-xs text-base-content/70 break-all">
-        <FolderOpen size={13} className="mt-0.5 shrink-0" aria-hidden="true" /> {mission.workdir}
+        <FolderOpen size={13} className="mt-0.5 shrink-0" aria-hidden="true" />
+        {/* The folder it works in: for an admin, a way to it in Files, where its files can be read and cleared. */}
+        <span className="min-w-0">
+          <FilePath text={mission.workdir} link="text-primary hover:underline" />
+        </span>
       </p>
     </div>
   );

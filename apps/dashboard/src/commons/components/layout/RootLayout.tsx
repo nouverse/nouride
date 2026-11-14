@@ -42,6 +42,19 @@ function useTitle(total: number) {
   }, [total]);
 }
 
+/**
+ * What sits over a page: its section's tabs, or the way back to Settings. Over a page that owns the window too (Logs,
+ * one of System's), which is why it takes the margins such a page has none of.
+ */
+function PageTop({ pathname, admin, className }: { pathname: string; admin: boolean; className?: string }) {
+  return (
+    <>
+      <SectionTabs pathname={pathname} admin={admin} {...(className ? { className } : {})} />
+      <SettingsBack pathname={pathname} admin={admin} {...(className ? { className } : {})} />
+    </>
+  );
+}
+
 export function RootLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const search = useRouterState({ select: (s) => s.location.searchStr });
@@ -219,7 +232,7 @@ export function RootLayout() {
         {ownsViewport ? (
           /* Above the tab bar on a phone: a chat's composer sits on the page's foot. */
           <main className={cn("flex min-h-0 flex-1 flex-col overflow-hidden *:animate-fade", phoneChat ? PHONE_CHAT_SPACE : TAB_BAR_SPACE)}>
-            <SettingsBack pathname={pathname} className="mx-4 mt-2 sm:mx-6 lg:mx-8 lg:mt-4" />
+            <PageTop pathname={pathname} admin={where.admin} className="mx-4 mt-2 sm:mx-6 lg:mx-8 lg:mt-4" />
             <Outlet />
           </main>
         ) : fillsViewport ? (
@@ -229,16 +242,14 @@ export function RootLayout() {
             {/* Held to the window from a laptop's width up; on a phone it scrolls as a document, as the page beside it
                 does — a list scrolling inside a card inside a scrolling page, under a header, is a sliver there. */}
             <div className={`mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 pt-2 sm:px-6 sm:pt-4 lg:h-full lg:p-8 ${HELD_BOTTOM} *:animate-fade`}>
-              <SectionTabs pathname={pathname} />
-              <SettingsBack pathname={pathname} />
+              <PageTop pathname={pathname} admin={where.admin} />
               <Outlet />
             </div>
           </main>
         ) : (
           <main className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
             <div className={`mx-auto w-full max-w-6xl space-y-6 px-4 pt-2 sm:px-6 sm:pt-4 lg:p-8 ${PAGE_BOTTOM} *:animate-fade`}>
-              <SectionTabs pathname={pathname} />
-              <SettingsBack pathname={pathname} />
+              <PageTop pathname={pathname} admin={where.admin} />
               <Outlet />
             </div>
           </main>

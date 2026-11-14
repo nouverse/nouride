@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { renderPage, useMountHarness } from "./mount-harness.ts";
+import { answer, renderPage, useMountHarness, WIRE } from "./mount-harness.ts";
 import { eventually } from "./wait.ts";
 
 useMountHarness();
@@ -237,7 +237,10 @@ describe("the page you are on", () => {
 
   test("on a page that is none of the sidebar's items, the highlight is hidden rather than left on the last one", async () => {
     let hidden = false;
-    await renderPage("/update", async (host) => {
+    // Files is an admin's, a tab of System in their menu; for anyone else no item of the menu holds it.
+    const me = WIRE["/auth/me"] as { user: Record<string, unknown> } & Record<string, unknown>;
+    answer({ "/auth/me": { status: 200, body: { ...me, role: "operator", user: { ...me.user, role: "operator" } } } });
+    await renderPage("/files", async (host) => {
       await eventually(() => mark(host) !== null, 4_000, "the mark");
       hidden = words(mark(host)).includes("invisible") && host.querySelector(`${MENU} a[aria-current="page"]`) === null;
     });

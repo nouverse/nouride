@@ -7,11 +7,12 @@
  * agree are where they drift, so they are here, and `tests/format.test.ts` pins them.
  */
 
-/** `1.2 MB`. Bytes are only interesting to a person as a rough magnitude. */
+/** `1.2 MB`, `31.8 GB`. Bytes are only interesting to a person as a rough magnitude. */
 export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`;
 }
 
 const MINUTE = 60_000;

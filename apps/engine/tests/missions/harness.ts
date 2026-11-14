@@ -33,7 +33,20 @@ export const STARTERS_CTX = {
 
 export const SETTINGS: MissionsInForce = { perAgent: 1, maxRunning: 2, limitHours: 8, limitTurns: 50, limitTokens: 50_000_000 };
 
-export async function missionsHarness(options: { settings?: Partial<MissionsInForce>; agents?: string[]; jobAllowed?: (jobId: string) => readonly string[]; prepare?: (mission: Mission) => Promise<string | void>; branchRefusal?: (request: { agentId: string; workdir: string; branch: string }) => Promise<string | null>; sourceRepository?: (workdir: string) => string; runsOnCli?: (agentId: string) => boolean; freeToDelete?: (agentId: string) => boolean; readBrief?: (path: string) => string | null; goalBriefOf?: (mission: Mission) => string | null; stopTurn?: (mission: Mission) => void; helperTokens?: (missionId: string, since: number) => number; runningTokens?: (missionId: string) => number; personSaid?: (mission: Mission) => string | null; turnStartedAt?: (turnId: string) => number | null; checkRefusal?: (request: { agentId: string; workdir?: string }, command: string) => string | null; steerTurn?: (mission: Mission, told: Told) => SteerOutcome; pageOf?: (mission: Mission) => string | null; diskLow?: () => number | null; unsavedIn?: (mission: Mission) => string[] } = {}) {
+/** The ports for folders no mission names, where a test lists some: each one asked about, and the ones removed. */
+function leftFolders(options: { left?: () => { agentId: string; id: string; changedAt: number }[]; unsavedInLeft?: (missionId: string) => string[] }) {
+  const asked: string[] = [];
+  const removed: string[] = [];
+  const removeLeft = async (agentId: string, missionId: string) => {
+    asked.push(`${agentId}:${missionId}`);
+    const unsaved = options.unsavedInLeft?.(missionId) ?? [];
+    if (unsaved.length === 0) removed.push(missionId);
+    return unsaved;
+  };
+  return { asked, removed, ports: options.left ? { folders: options.left, removeLeft } : {} };
+}
+
+export async function missionsHarness(options: { settings?: Partial<MissionsInForce>; agents?: string[]; jobAllowed?: (jobId: string) => readonly string[]; prepare?: (mission: Mission) => Promise<string | void>; branchRefusal?: (request: { agentId: string; workdir: string; branch: string }) => Promise<string | null>; sourceRepository?: (workdir: string) => string; runsOnCli?: (agentId: string) => boolean; freeToDelete?: (agentId: string) => boolean; readBrief?: (path: string) => string | null; goalBriefOf?: (mission: Mission) => string | null; stopTurn?: (mission: Mission) => void; helperTokens?: (missionId: string, since: number) => number; runningTokens?: (missionId: string) => number; personSaid?: (mission: Mission) => string | null; turnStartedAt?: (turnId: string) => number | null; checkRefusal?: (request: { agentId: string; workdir?: string }, command: string) => string | null; steerTurn?: (mission: Mission, told: Told) => SteerOutcome; pageOf?: (mission: Mission) => string | null; diskLow?: () => number | null; left?: () => { agentId: string; id: string; changedAt: number }[]; unsavedInLeft?: (missionId: string) => string[]; unsavedIn?: (mission: Mission) => string[] } = {}) {
   const db = await openAndMigrate(join(tempDir("missions"), "nouride.db"));
   const store = new MissionStore(db);
   const told: { mission: string; text: string; buttons?: MessageButton[] }[] = [];
@@ -45,6 +58,7 @@ export async function missionsHarness(options: { settings?: Partial<MissionsInFo
   const removed: string[] = [];
   /** The removals that asked to keep a folder holding work nobody committed. */
   const keepingUnsaved: string[] = [];
+  const left = leftFolders(options);
   const delivered: string[] = [];
   let unsent: string[] = [];
   /** Each `report.md` sent, by mission, and what it held (0.8.11). */
@@ -105,6 +119,7 @@ export async function missionsHarness(options: { settings?: Partial<MissionsInFo
     ...(options.steerTurn ? { steerTurn: options.steerTurn } : {}),
     ...(options.pageOf ? { pageOf: options.pageOf } : {}),
     ...(options.diskLow ? { diskLow: options.diskLow } : {}),
+    ...left.ports,
     prepare: options.prepare ?? (async () => {}),
     check: (mission) => checks(mission),
     review: (mission, earlier) => (review ? review(mission, earlier) : Promise.resolve({ pass: true, findings: "", tokens: 0 })),
@@ -138,6 +153,8 @@ export async function missionsHarness(options: { settings?: Partial<MissionsInFo
     stopped,
     removed,
     keepingUnsaved,
+    askedLeft: left.asked,
+    removedLeft: left.removed,
     delivered,
     setUnsent: (names: string[]) => void (unsent = names),
     reports,

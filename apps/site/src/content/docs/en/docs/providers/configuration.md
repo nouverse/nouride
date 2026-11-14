@@ -69,6 +69,30 @@ api_key = "ollama"
 config, so a credential belongs in `api_key` (a secret name), not here. (A per-agent MCP server's
 `headers` are checked and refused if a value looks like a credential; a provider profile's are not.)
 
+One value is not sent as written: `{session}` becomes an id of the conversation on each request, the same opaque id
+`identify` sends (below), whether or not the profile says `identify`. It is for a service that routes by
+conversation or refuses a request without one. OpenCode Go, a subscription with its own key, answers 400 to any
+request that has no `x-opencode-session`:
+
+```toml
+[providers.opencode-go]
+kind = "openai"
+base_url = "https://opencode.ai/inference/go/openai/v1"
+api_key = "opencode-go_api_key"
+headers = { "x-opencode-session" = "{session}" }
+billing = "included"                         # a subscription: counted in tokens, never shown as money spent
+```
+
+A request that belongs to no conversation (a summary, a memory pass, the model list) carries an id of its own. In the
+dashboard these are a provider's **Extra headers**, one on each line as `Name: value`, under the key's field: picking
+OpenCode Go under **How to get an API key** fills this one in, and you can change, add or remove any line. A saved
+header shows its name only, since its value is not sent back to the page; a line left as it is keeps its value. The
+form does not take `Authorization`, `x-api-key` or `Content-Type`: the key goes in the key's field, where it is kept
+as a secret.
+
+Every request also says who is asking, `user-agent: nouride/<version>`, where it said the HTTP library's name before;
+a `user-agent` in `headers` replaces it.
+
 `identify = true` says which agent and conversation each request is for: `user`, `prompt_cache_key` and an
 `x-client-id` header on the OpenAI wire, `metadata.user_id` on Anthropic's. A gateway such as Nougate tells
 its clients and sessions apart by them, and OpenAI sends a conversation's requests to the cache its prefix is

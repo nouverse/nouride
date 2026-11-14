@@ -19,7 +19,8 @@ setup dan `nouride setup` menjalankan kode yang sama, dan halaman Skills menulis
 ## Peta
 
 Menunya diurutkan menurut seberapa sering halamannya dibuka: **Home, Chats, Work, dan Agents** tiap hari, **Skills**,
-**Connectors** dan **Memory** sesekali, dan semua yang cukup diatur sekali ada di balik **Settings**.
+**Connectors** dan **Memory** sesekali, **System** untuk admin, dan semua yang cukup diatur sekali ada di balik
+**Settings**.
 
 ```
 Home                yang butuh kamu · yang sedang jalan · Quick chat · agent kamu · box-nya · pemakaian AI hari ini
@@ -52,6 +53,11 @@ Memory
   Knowledge & Memory   Knowledge · Agent notes · People · Timeline · Shared · Proposals · Settings, dan graph
   People            nama dan catatan untuk manusia yang mereka ajak bicara
   Groups            ruangan tempat mereka bicara: nama tiap ruangan, agent-nya, siapa yang bicara di sana
+System                                                                        (admin)
+  System            apa yang sedang dipakai mesin ini: RAM, disk, apa yang makan tempat
+  Logs              Daemon · Audit · Schedule · Helpers
+  Files             apa yang disimpan Nouride di mesin ini: dibaca, diunduh, dibersihkan
+  Update            versi yang jalan, rilis terbaru, dan cara memasangnya
 
 Settings
   Models and keys
@@ -69,11 +75,11 @@ Settings
     My Account      username, nama, password
   This box
     My Box          perangkatnya sendiri (hanya Box yang sudah dipasangkan)   (admin)
-    Logs            Daemon · Audit · Schedule · Helpers
-    Update          versi yang jalan, rilis terbaru, dan cara memasangnya
+    Logs            Schedule · Helpers, untuk yang bukan admin
+    Update          halaman yang sama, untuk yang bukan admin
 ```
 
-Work, Agents, dan Memory masing-masing berisi beberapa halaman, tampil sebagai tab di bagian atas tiap halamannya.
+Work, Agents, Memory, dan System masing-masing berisi beberapa halaman, tampil sebagai tab di bagian atas tiap halamannya.
 Setiap tab tetap punya alamat sendiri, jadi link ke salah satunya tetap membukanya. Work terbuka di **Waiting for
 you**, dan angka di sebelah Work di menu adalah jumlah yang menunggu di sana.
 
@@ -86,7 +92,7 @@ Halaman khusus admin **gak muncul** di menu maupun di Settings bagi yang gak bol
 menolak.
 
 Di bagian bawah sidebar, **Your box** menunjukkan apakah box-nya jalan dengan baik dan versi berapa yang jalan, plus
-sebuah tombol kalau ada versi yang lebih baru. Kartunya sendiri membuka Settings.
+keterangan kalau ada versi yang lebih baru. Seluruh kartunya membuka halaman Update, ada versi baru atau tidak.
 
 Judul tab browser menghitung semua yang menunggu kamu, `(2) Nouride`, jadi tab yang ditinggal di belakang tetap
 memberi tahu.
@@ -109,8 +115,9 @@ memilih sendiri lewat tombol matahari atau bulan di sebelah namamu. Kucing Nouri
 di halaman yang masih kosong, dan duduk di sebelah judul halaman seperti Automations dan Secrets. Selama halaman dimuat,
 kamu melihat kerangkanya: bentuk abu-abu di tempat isinya nanti muncul.
 
-**Update** adalah kartu di Settings, bukan entri menu. Versi di bawah logo menampilkan titik kalau ada rilis yang lebih
-baru, dan badge di bagian atas Home atau tombol di **Your box** membuka halamannya. Cek, unduh, dan pasang adalah tiga
+**Update** adalah tab di **System** untuk admin, dan kartu di Settings untuk yang lain. Versi di bawah logo menampilkan
+titik kalau ada rilis yang lebih baru, dan badge di bagian atas Home, **Your box**, serta tombol di sebelah versi pada
+halaman System masing-masing membuka halamannya. Cek, unduh, dan pasang adalah tiga
 langkah terpisah, karena cuma yang terakhir yang me-restart daemon, dan itu pun menunggu sampai gak ada yang jalan.
 [Update →](/id/docs/deployment/updating/)
 
@@ -254,6 +261,18 @@ format, kredensial, didefinisikan sekali di *Models* lalu dipakai bersama. **Mod
 satu agent di dalamnya, di tab *Model* milik agent itu. Memisahkan keduanya adalah yang membuat satu
 agent bisa pindah deployment tanpa menyentuh yang lain.
 
+Saat menambah profil, di bawah kolom key ada **How to get an API key** yang bisa dibuka: daftar layanan yang paling
+sering dimaksud, masing-masing link ke halaman tempat key-nya dibuat, beserta biayanya: **Pay per use** (OpenAI,
+Anthropic, Google Gemini, DeepSeek, Z.ai, OpenCode Zen; langganan ChatGPT atau Claude gak mencakup API-nya) atau **In
+your plan** (OpenCode Go; Command Code, di semua paket kecuali Go). **Use it** mengisi nama, jenis, dan base URL-nya;
+nama yang kamu ketik sendiri gak diubah, dan profil yang sudah tersimpan tetap dengan namanya. Setup pertama punya
+daftar yang sama.
+
+Di bawahnya, **Extra headers** memuat apa yang diminta provider selain key-nya, satu per baris sebagai `Name: value`.
+Kebanyakan gak minta apa-apa. **Use it** untuk OpenCode Go mengisi `x-opencode-session: {session}`, dengan `{session}`
+diganti id percakapan di setiap request, dan setiap baris tetap bisa kamu ubah, tambah, atau hapus. Header yang sudah
+tersimpan hanya menampilkan namanya: biarkan barisnya supaya nilainya tetap.
+
 Tab *Model* juga mengatur seberapa lama model agent berpikir (**Effort**), yang diminta di setiap request-nya di semua
 chat; `/effort` di sebuah chat memasang level chat itu sendiri di atasnya, dan `/effort <level> lock` dari admin di
 sebuah chat mengatur yang ini.
@@ -315,6 +334,63 @@ apa-apa: permintaan itu tetap menunggu orang yang ditanya. Admin melihat dan men
 **Log daemon dan log audit hanya dibaca admin** (0.8.35). Isinya setiap baris dari chat, perintah dan keputusan semua
 orang. Di **Logs**, yang lain punya dua tab sisanya: apa yang jalan terjadwal, dan perintah yang masih berjalan di
 latar belakang.
+
+## System
+
+Untuk yang mengurus box, **System** di menu berisi empat tab: System, Files, Update, dan Logs. Hanya admin yang punya;
+untuk yang lain, **Logs** tetap ada di bawah Settings dengan dua tabnya, dan **Update** di sebelahnya.
+
+**System** bilang apa yang sedang dipakai mesin sekarang, tiap angka berupa batang dengan satu kalimat di sebelahnya:
+
+- **RAM**: berapa yang terpakai dari yang boleh dipakai Nouride, lalu siapa yang memegangnya: Nouride sendiri, dan
+  perintah para agent kalau dihitung terpisah. Di dalam container, atau di bawah service yang memasang batas, plafonnya
+  adalah batas itu dan angka terpakainya milik container itu sendiri, sama dengan yang ditunjukkan `docker stats`,
+  bukan milik mesin di sekelilingnya. Kartunya bilang yang mana.
+- **Disk**: disk tempat berkas Nouride berada (di container, volume-nya), berapa yang kosong, dan berapa yang dipakai
+  berkas Nouride sendiri, folder terbesar dulu. Tekan salah satunya untuk membukanya di Files. Folder besar butuh
+  semenit atau lebih untuk dihitung, dan halamannya bilang begitu selama menghitung.
+- **Nouride here**: versinya dan edisinya, Community atau Pro, sudah berapa lama jalan, core prosesor yang boleh
+  dipakai, dan di mana berkasnya. Kalau ada rilis yang lebih baru, tombol di sebelah versi membuka halaman Update.
+
+Mulai tiga perempat penuh, batangnya berubah dan bilang **Getting full**; mulai sembilan persepuluh, **Nearly full**.
+Angka yang gak diberikan mesin ditulis sebagai gak diketahui. Gak pernah digambar sebagai batang kosong.
+
+**Logs** juga bilang kenapa sebuah percakapan jadi lebih mahal dari sebelumnya (0.8.36). Penyedia model menyimpan
+bagian depan percakapan, jadi request berikutnya hanya membayar sebagian kecil untuk yang sudah pernah dibacanya; kalau
+ada yang berubah di bagian depan itu, semua yang sesudahnya dibayar penuh lagi. Kalau itu terjadi saat penyedia
+seharusnya masih menyimpannya, satu baris bilang bagian mana yang berubah: tool-nya, modelnya, atau satu bagian prompt
+menurut namanya, misalnya berkas memory agent, beserta seberapa banyak percakapan yang ditulis ulang. Cari
+`cached prefix` di tab Daemon.
+
+**Files** menunjukkan apa yang disimpan Nouride di mesin: para agent, workspace mereka, kiriman orang, pengaturannya.
+Buka folder dengan menekannya, dan kembali lewat jejak di atas atau tombol Back browser. Di jendela lebar, daftar dan
+berkas yang terbuka digulir di dalam kartunya, jadi jejak dan tombolnya tetap di tempat; di ponsel halamannya yang
+digulir. Berkas terbuka sesuai jenisnya: halaman markdown sebagai halaman (**Show its source** untuk teks aslinya),
+kode dengan warnanya dan tombol **Copy**, gambar sebagai gambar, video atau suara di pemutar. PDF punya **Open it**,
+yang membukanya di pembaca PDF browser, di tab sendiri. Yang lain bilang apa jenisnya, dengan **Download** di
+tengahnya.
+
+**Download** menyimpan salinan berkas yang terbuka ke komputermu, apa adanya. Berkas teks yang panjang dibaca seluruhnya
+dulu, jadi log yang besar butuh sebentar.
+
+**Delete** hanya untuk yang ditinggalkan agent dan chat: isi workspace para agent, berkas yang dikirim orang di chat,
+keluaran panjang yang disimpan sebuah tool, dan log job latar. Baris folder seperti itu punya tombolnya di ujung, begitu
+juga berkas yang terbuka. Halamannya bertanya dulu, menyebut berapa berkas dan berapa besar disk yang akan hilang, dan
+gak bisa dibatalkan. Berkas Nouride sendiri gak punya tombol itu: pengaturannya, database-nya, berkas persona dan memory
+para agent, dan folder yang ia siapkan untuk tiap agent. Selama sebuah mission atau job latar masih bekerja di sebuah
+folder, folder itu dan isinya menunggu sampai selesai, dan halamannya bilang yang mana dari keduanya. Setiap
+penghapusan dicatat di audit log (**Logs**, **Audit**) beserta siapa yang melakukannya.
+
+**Kredensial dan rahasia gak ditampilkan.** Yang menyimpannya dikeluarkan dari setiap daftar, namanya juga: kunci
+Nouride sendiri dan brankas rahasianya, folder kredensial, sesi aplikasi chat, berkas `.env`, kunci SSH dan kunci
+lainnya, serta login yang disimpan alat-alat di home para agent. Kalau diminta lewat alamatnya, berkas seperti itu
+bilang bahwa ia dirahasiakan. Di dalam berkas biasa, sesuatu yang mirip kredensial disembunyikan di tempatnya, dan
+halamannya bilang begitu; berkas seperti itu dibaca di halaman dan gak diunduh. Database tampil dengan ukurannya, dan
+gak bisa dibuka maupun diunduh.
+
+**Path adalah link.** Kalau agent menulis path di dalam berkas Nouride (`.nouride/workspace/…/report.md`, atau path
+lengkapnya di mesin ini) di balasan, di halaman mission di antara berkas hasilnya, atau di perintah yang dijalankan
+sebuah giliran, admin bisa menekannya untuk membuka berkas itu di Files.
 
 ### Apa yang Home katakan tentang yang lain
 

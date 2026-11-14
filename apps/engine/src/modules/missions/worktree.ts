@@ -12,7 +12,7 @@
  * queue stays (`decide.ts`).
  */
 
-import { dirname, join, relative } from "@nouride/runtime";
+import { dirname, join, listDir, relative, statFile } from "@nouride/runtime";
 
 /** A command run as the mission's agent: its exit, and what it printed. */
 export type AsAgent = (argv: string[]) => Promise<{ ok: boolean; out: string }>;
@@ -20,6 +20,22 @@ export type AsAgent = (argv: string[]) => Promise<{ ok: boolean; out: string }>;
 /** The folder the daemon makes for a mission, under its agent's own; the worktree goes inside it. */
 export function ownFolderOf(privateDir: string, missionId: string): string {
   return `${privateDir.replace(/\/+$/, "")}/missions/${missionId}`;
+}
+
+/** A folder under an agent's `missions/` that is a mission's own, by the id it is named for. */
+const OWN_FOLDER = /^msn_[0-9a-f]+$/;
+
+/**
+ * The missions' own folders an agent has, each by its mission's id, with when the folder itself last changed: what
+ * the sweep reads to find one no mission's record names any more. Only a folder named as a mission's is one: the
+ * rest of what an agent keeps beside them is its own.
+ */
+export function ownFolders(privateDir: string): { id: string; changedAt: number }[] {
+  const missions = `${privateDir.replace(/\/+$/, "")}/missions`;
+  return listDir(missions).flatMap((entry) => {
+    const stat = entry.isDirectory && OWN_FOLDER.test(entry.name) ? statFile(join(missions, entry.name)) : null;
+    return stat ? [{ id: entry.name, changedAt: stat.mtimeMs }] : [];
+  });
 }
 
 /** Whether a mission's folder is the daemon's own for it — the default folder, or a worktree inside it. */
@@ -144,6 +160,14 @@ export async function removeOwnFolder(own: string, run: AsAgent, how: { keepUnsa
   if (!removed.ok) throw new Error(removed.out.trim() || `${own} could not be removed`);
   if (common.ok && common.out.trim()) await run(["git", "--git-dir", common.out.trim(), "worktree", "prune"]);
   return [];
+}
+
+/**
+ * Remove a mission's own folder that no mission's record names any more: as an ended mission's, and never over work
+ * nobody committed, whose worktrees are named. Nobody is left to ask what the work was.
+ */
+export function removeLeftFolder(own: string, run: AsAgent): Promise<string[]> {
+  return removeOwnFolder(own, run, { keepUnsaved: true });
 }
 
 /** The worktrees in a mission's folder holding changes nobody committed: its own, then its helpers' (`helpers/<n>`, from 1). */

@@ -70,6 +70,30 @@ api_key = "ollama"
 jadi kredensial tempatnya di `api_key` (nama secret), bukan di sini. (`headers` milik server MCP per
 agent diperiksa dan ditolak kalau nilainya terlihat seperti kredensial; milik profil provider gak.)
 
+Ada satu nilai yang gak dikirim apa adanya: `{session}` diganti dengan id percakapan di setiap request, id buram
+yang sama dengan yang dikirim `identify` (di bawah), baik profilnya menulis `identify` atau gak. Ini untuk layanan
+yang mengarahkan request per percakapan, atau menolak request yang gak menyebutkannya. OpenCode Go, langganan dengan
+key sendiri, menjawab 400 untuk request tanpa `x-opencode-session`:
+
+```toml
+[providers.opencode-go]
+kind = "openai"
+base_url = "https://opencode.ai/inference/go/openai/v1"
+api_key = "opencode-go_api_key"
+headers = { "x-opencode-session" = "{session}" }
+billing = "included"                         # langganan: dihitung dalam token, gak pernah tampil sebagai uang keluar
+```
+
+Request yang bukan bagian dari percakapan mana pun (ringkasan, memory pass, daftar model) membawa id sendiri. Di
+dashboard ini adalah **Extra headers** milik provider, satu per baris sebagai `Name: value`, di bawah kolom key:
+memilih OpenCode Go di **How to get an API key** mengisi baris ini, dan kamu bisa mengubah, menambah, atau menghapus
+baris mana pun. Header yang sudah tersimpan hanya menampilkan namanya, karena nilainya gak dikirim balik ke halaman;
+baris yang dibiarkan tetap menyimpan nilainya. Form ini gak menerima `Authorization`, `x-api-key`, atau
+`Content-Type`: key tempatnya di kolom key, yang disimpan sebagai secret.
+
+Setiap request juga menyebut siapa yang meminta, `user-agent: nouride/<versi>`, yang sebelumnya berisi nama library
+HTTP-nya; `user-agent` di `headers` menggantikannya.
+
 `identify = true` menyebutkan agent dan percakapan mana yang meminta setiap request: `user`,
 `prompt_cache_key` dan header `x-client-id` di format OpenAI, `metadata.user_id` di format Anthropic.
 Gateway seperti Nougate membedakan klien dan sesinya dengan itu, dan OpenAI mengirim request sebuah

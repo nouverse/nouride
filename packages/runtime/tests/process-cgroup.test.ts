@@ -11,7 +11,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { forgetCommandIsolation, inCommandsCgroup, isolateCommands } from "../src/process-cgroup.ts";
+import { commandsMemory, forgetCommandIsolation, inCommandsCgroup, isolateCommands } from "../src/process-cgroup.ts";
 import { runCommand, spawnLongLived } from "../src/process.ts";
 import { startBackgroundCommand } from "../src/process-background.ts";
 
@@ -61,6 +61,20 @@ describe("splitting the cgroup", () => {
     expect(box.at("daemon/cpu.weight")).toBe("1000");
     // The daemon keeps 256 threads' worth of the unit's task limit, however many processes the commands start.
     expect(box.at("commands/pids.max")).toBe("76022");
+  });
+
+  test("what the commands hold together is read from their own group, with its ceiling; with no group there is nothing to say", () => {
+    expect(commandsMemory()).toBeNull();
+    const box = unit({});
+    expect(isolateCommands(box.options).isolated).toBe(true);
+    // The kernel writes the count; here the test does, as it would stand with a build running.
+    expect(commandsMemory()).toBeNull();
+    writeFileSync(join(box.cgroup, "commands", "memory.current"), `${412 * MiB}\n`);
+    expect(commandsMemory()).toEqual({ usedBytes: 412 * MiB, maxBytes: 1310 * MiB });
+    writeFileSync(join(box.cgroup, "commands", "memory.max"), "max\n");
+    expect(commandsMemory()).toEqual({ usedBytes: 412 * MiB, maxBytes: null });
+    forgetCommandIsolation();
+    expect(commandsMemory()).toBeNull();
   });
 
   test("the share is a fifth of the least of the unit's limits and the machine, between 256 and 512 MiB, and never more than half", () => {

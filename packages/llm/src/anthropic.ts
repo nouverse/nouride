@@ -26,7 +26,7 @@ import {
 } from "@nouride/shared";
 import { collectStream, isEventStream } from "./collect.ts";
 import { EffortGuard } from "./effort.ts";
-import { cutOff, parsedBody, postJson, reportedFailure, requireBody, streamEvents, streamIdleTimeoutMs, unreadable, withCallStats, type HttpDeps } from "./http.ts";
+import { cutOff, parsedBody, postJson, profileHeaders, reportedFailure, requireBody, streamEvents, streamIdleTimeoutMs, unreadable, withCallStats, type HttpDeps } from "./http.ts";
 import { toolArguments } from "./tool-arguments.ts";
 import { systemBlocks } from "./system.ts";
 import { TemperatureGuard } from "./temperature.ts";
@@ -344,7 +344,7 @@ export class AnthropicProvider implements LLMProvider {
       {
         "x-api-key": this.options.apiKey,
         "anthropic-version": ANTHROPIC_VERSION,
-        ...this.options.headers,
+        ...profileHeaders(this.options.headers, params.identity?.conversation),
       },
       {
         model: params.model,

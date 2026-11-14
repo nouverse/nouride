@@ -189,6 +189,10 @@ describe("each way a step can end", () => {
 });
 
 describe("following a run", () => {
+  // The page's own two-second timer is what is waited for. When this failed on a release's run and on a pull
+  // request's, the second ask never came at all: the query library had been loaded by a file with no DOM and took
+  // itself for a server's, which sets no timer (`mount-harness.ts`, `asABrowser`). The wait is four of its turns, for
+  // a machine running the whole suite beside it, and returns as soon as it holds.
   test("while one is at work the page asks again every two seconds, and draws the step that ended as it ends", async () => {
     const at = [run("running", [out("check", "done", { ms: 400 }), out("find", "running")])];
     answer({ [PAGE]: detail(automation(), at) });
@@ -203,9 +207,9 @@ describe("following a run", () => {
       await renderPage(PAGE, async (host) => {
         await flowDrawn(host);
         seen.first = chip(host, "find");
-        await eventually(() => asked >= 2, 4_000, "asked again");
+        await eventually(() => asked >= 2, 8_000, "asked again");
         answer({ [PAGE]: detail(automation(), [run("success", [out("check", "done", { ms: 400 }), out("find", "done", { ms: 9_000 })], { finishedAt: Date.now() })]) });
-        await eventually(() => chip(host, "find") === "Done in 9.0 s", 5_000, "the step ended");
+        await eventually(() => chip(host, "find") === "Done in 9.0 s", 8_000, "the step ended");
         seen.then = chip(host, "find");
       });
     } finally {
@@ -213,7 +217,7 @@ describe("following a run", () => {
     }
     expect(seen.first).toBe("Working");
     expect(seen.then).toBe("Done in 9.0 s");
-  });
+  }, 40_000);
 
   test("Recent runs lists them, newest first, and a press on one draws that run over the steps", async () => {
     const older = run("success", [out("check", "empty", { ms: 30 })], { id: "run_0", startedAt: Date.now() - 2 * 86_400_000, finishedAt: Date.now() - 2 * 86_400_000 + 30, result: "step 1 of 4 had nothing to say: the run ended there" });

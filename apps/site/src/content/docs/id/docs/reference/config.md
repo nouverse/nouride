@@ -102,7 +102,7 @@ group_context_messages = 20
 kind = "anthropic"                  # wire format-nya, bukan vendornya
 base_url = "https://nougate.nouverse.tech/anthropic/v1"
 api_key = "nougate"                 # NAMA sebuah secret
-# headers = { "HTTP-Referer" = "https://nouverse.tech" }
+# headers = { "HTTP-Referer" = "https://nouverse.tech" }   # {session} di sebuah nilai menjadi id percakapan
 # identify = true                   # sebutkan agent dan percakapan untuk tiap request; ditulis otomatis
                                     # untuk API OpenAI dan Anthropic sendiri
 # billing = "included"              # langganan: gak ada biaya per token
@@ -122,8 +122,12 @@ lama dibersihkan dari riwayatnya: menulis ulang riwayat gak makan biaya apa-apa 
 kamu tahu umur cache endpoint-mu; `0` untuk yang gak menyimpan cache sama sekali. `nouride config check` menampilkan
 angka yang berlaku untuk tiap profil yang punya.
 
-Gak ada profil secara default. Setup wizard, dashboard, atau file ini yang membuat profil pertama,
-dan `[llm.defaults] provider` tetap kosong sampai saat itu. [Profil provider →](/id/docs/providers/configuration/)
+Gak ada profil secara default. Setup wizard, dashboard, atau file ini yang membuat profil pertama.
+`[llm.defaults]` tetap kosong sampai agent pertama dibuat dari dashboard: provider dan model-nya dicatat di sana, dan
+pack-nya sendiri gak menyebut keduanya, jadi ia ikut install-nya kalau provider diganti (0.8.36). Agent yang dibuat
+dengan provider atau model lain menyebut keduanya di `[llm]` pack-nya, dan default yang kamu isi sendiri gak pernah
+ditimpa: kunci yang kosong hanya diisi oleh agent yang cocok dengan yang sudah kamu isi.
+[Profil provider →](/id/docs/providers/configuration/)
 
 ## `[gateways.<platform>.<nama>]`
 

@@ -7,7 +7,7 @@ import type { ProviderKind } from "@nouride/shared";
 import { atLeast } from "@/modules/users/auth.ts";
 import type { ProviderField } from "@/modules/config/settings/providers.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
-import { jsonBody } from "../payloads.ts";
+import { jsonBody, providerHeaders } from "../payloads.ts";
 import { NOT_CHANGED, NO_SETTINGS, notSaved, probed } from "../plain.ts";
 
 /** Each field a provider's save can be refused for, as the Models page's form names it. */
@@ -16,6 +16,7 @@ const PROVIDER_FIELDS: Record<ProviderField, string> = {
   kind: "the kind",
   baseUrl: "the base URL",
   apiKey: "the API key",
+  headers: "the extra headers",
 };
 
 export function registerProviderRoutes(control: ControlApp, deps: ControlDeps): void {
@@ -36,6 +37,7 @@ export function registerProviderRoutes(control: ControlApp, deps: ControlDeps): 
       baseUrl: String(body.baseUrl ?? ""),
       actor: principal.actor,
       ...(typeof body.apiKey === "string" ? { apiKey: body.apiKey } : {}),
+      ...(providerHeaders(body.headers) ? { headers: providerHeaders(body.headers)! } : {}),
     });
     return result.ok ? c.json(result satisfies { ok: true; restartRequired: boolean }) : c.json({ error: result.error, plain: notSaved(result.field && PROVIDER_FIELDS[result.field]) }, 400);
   });

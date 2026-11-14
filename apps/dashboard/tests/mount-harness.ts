@@ -65,6 +65,70 @@ export const RESPONSES: Record<string, unknown> = {
    * the Update page builds its install card and the download it would start — without this it drew "Could not reach
    * the daemon" and nothing under it, which a mount passes just as happily.
    */
+  /**
+   * Hand-written, and for good: the System page's readings are this machine's own (its memory, its disk, the files in
+   * its data folder), so no fixture written from one machine holds on another. The routes' own shapes and words are
+   * the engine's `tests/web/system-routes.test.ts`. A container held to 6 GB on a larger machine, with a group for
+   * the agents' commands, and a small data folder with one of each thing Files shows.
+   */
+  "/system": {
+    version: "0.8.36",
+    uptimeSeconds: 3 * 3600 + 120,
+    cores: 4,
+    memory: { daemonBytes: 412 * 1024 ** 2, commands: { usedBytes: 1228 * 1024 ** 2, maxBytes: 4608 * 1024 ** 2 }, usedBytes: 2.1 * 1024 ** 3, totalBytes: 6 * 1024 ** 3, limited: true, machineBytes: 8 * 1024 ** 3 },
+    disk: { totalBytes: 100 * 1024 ** 3, freeBytes: 64 * 1024 ** 3 },
+    folder: "/srv/nouride/.nouride",
+  },
+  "/system/folder-sizes": {
+    state: "ready",
+    measuredAt: Date.now() - 3 * 60_000,
+    totalBytes: 32 * 1024 ** 3,
+    entries: [
+      { name: "workspace", kind: "folder", bytes: 20 * 1024 ** 3 },
+      { name: "attachments", kind: "folder", bytes: 9 * 1024 ** 3 },
+      { name: "data", kind: "folder", bytes: 2.5 * 1024 ** 3 },
+      { name: "config.toml", kind: "file", bytes: 8 * 1024 },
+    ],
+  },
+  "/system/files": {
+    path: "",
+    more: 0,
+    leftOut: true,
+    entries: [
+      { name: "data", path: "data", kind: "folder", sizeBytes: null, modifiedAt: Date.now() - 60_000 },
+      { name: "workspace", path: "workspace", kind: "folder", sizeBytes: null, modifiedAt: Date.now() - 3 * 86_400_000 },
+      { name: "config.toml", path: "config.toml", kind: "file", sizeBytes: 7231, modifiedAt: Date.now() - 5 * 3_600_000 },
+    ],
+  },
+  "/system/files?path=data": {
+    path: "data",
+    more: 0,
+    leftOut: true,
+    entries: [{ name: "nouride.db", path: "data/nouride.db", kind: "file", sizeBytes: 87 * 1024 ** 2, modifiedAt: Date.now() - 30_000, closed: "database" }],
+  },
+  "/system/files?path=workspace": {
+    path: "workspace",
+    more: 1200,
+    leftOut: false,
+    entries: [
+      { name: "shots", path: "workspace/shots", kind: "folder", sizeBytes: null, modifiedAt: Date.now() - 86_400_000, removable: true },
+      { name: "notes.md", path: "workspace/notes.md", kind: "file", sizeBytes: 2048, modifiedAt: Date.now() - 7_200_000, removable: true },
+      { name: "run.sh", path: "workspace/run.sh", kind: "file", sizeBytes: 120, modifiedAt: Date.now() - 7_200_000, removable: true },
+      { name: "shot.png", path: "workspace/shot.png", kind: "file", sizeBytes: 300 * 1024, modifiedAt: Date.now() - 7_200_000, removable: true },
+    ],
+  },
+  "/system/files?path=workspace/notes.md": { path: "workspace/notes.md", entries: [], more: 0, leftOut: false, file: { name: "notes.md", path: "workspace/notes.md", kind: "file", sizeBytes: 2048, modifiedAt: Date.now() - 7_200_000, removable: true } },
+  // Asked before a download, of any file: it would be handed over.
+  "/system/files/download": { ok: true },
+  "/system/files/weigh?path=workspace/shots": { entry: { name: "shots", path: "workspace/shots", kind: "folder", sizeBytes: null, modifiedAt: Date.now() - 86_400_000, removable: true }, files: 1204, more: false, bytes: 3.2 * 1024 ** 3 },
+  "/system/files/weigh?path=workspace/notes.md": { entry: { name: "notes.md", path: "workspace/notes.md", kind: "file", sizeBytes: 2048, modifiedAt: Date.now() - 7_200_000, removable: true }, files: 1, more: false, bytes: 2048 },
+  "/system/files/read?path=workspace/notes.md": {
+    entry: { name: "notes.md", path: "workspace/notes.md", kind: "file", sizeBytes: 2048, modifiedAt: Date.now() - 7_200_000 },
+    kind: "text",
+    text: "# Deploy notes\n\nThe key is [hidden: GitHub token].\n",
+    truncated: false,
+    masked: true,
+  },
   "/update": {
     supported: true,
     install: { version: "0.7.9", edition: "basic", installDir: "/opt/nouride", supervisor: "systemd", compiled: true, platform: "linux", arch: "x64", musl: false },
@@ -315,12 +379,28 @@ const realError = console.error;
  * The harness's hooks, registered by each file that mounts pages: the DOM and the stubbed `fetch` installed before its
  * first test and taken back off after its last, and each test's answers, errors and drawings cleared after it.
  */
+/**
+ * The query library is told to ask, each time, whether there is a window, where it decided once.
+ *
+ * It reads `typeof window` when it is first loaded and keeps the answer: on a server it sets no interval, no stale
+ * timer, and keeps what it fetched for good. Bun runs every test file in one process, so a file with no DOM that
+ * loaded the library first made every page mounted after it a server's, for the rest of the run: a page that asks
+ * again every two seconds never asked again, however long it was waited for. Which file loads first follows the
+ * directory's own order, which differs from one machine to the next, so the automation page's test failed on Linux
+ * runners (a release's own run, twice, and a pull request's) and never on a Mac, and read as a slow timer.
+ */
+async function asABrowser(): Promise<void> {
+  const { environmentManager } = await import("@tanstack/react-query");
+  environmentManager.setIsServer(() => typeof (globalThis as { window?: unknown }).window === "undefined");
+}
+
 export function useMountHarness(): void {
   beforeAll(async () => {
     // The route tree is generated and gitignored: written here from `src/routes`, so a fresh clone has one and a route
     // added since the last build is in it.
     await generateRouteTree();
     install();
+    await asABrowser();
   });
 
   afterEach(() => {
@@ -400,6 +480,10 @@ export const PAGES: [name: string, path: string][] = [
   ["access, history", "/access?tab=history&agent=nouva"],
   ["users", "/users"],
   ["logs", "/logs"],
+  ["system", "/system"],
+  ["files", "/files"],
+  ["files, a folder", "/files?path=workspace"],
+  ["files, a file", "/files?path=workspace/notes.md"],
   ["account", "/account"],
   ["box", "/box"],
   ["update", "/update"],

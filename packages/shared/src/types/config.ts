@@ -77,7 +77,12 @@ export interface ProviderProfile {
   baseUrl: string;
   /** Name of the secret holding the credential — never the credential itself. */
   apiKeySecret: string;
-  /** Extra headers, e.g. OpenRouter attribution or a gateway key. */
+  /**
+   * Extra headers, e.g. OpenRouter attribution or a gateway key. `{session}` in a value is where the conversation's
+   * id is written on each request, for an endpoint that routes by it or refuses a request without one: OpenCode Go
+   * answers 400 unless `x-opencode-session` is sent. The id is the opaque one `identify` sends, whether or not the
+   * profile says `identify`, and an id of the one call where nothing says which conversation it is (a summary).
+   */
   headers?: Record<string, string>;
   /**
    * Say which agent and conversation each request is for — the fields a gateway such as Nougate tells its

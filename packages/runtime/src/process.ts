@@ -21,7 +21,6 @@ import { systemProgram, withBinFirst } from "./process-shell.ts";
 import { asItsAgent, trackCommand, untrackCommand } from "./process-agents.ts";
 
 export { systemProgram } from "./process-shell.ts";
-import { freemem, totalmem } from "node:os";
 import { readTextFileSync, statFile } from "./fs.ts";
 
 const log = createLogger("runtime.process");
@@ -606,64 +605,6 @@ export function whichBinary(name: string, path: string = process.env.PATH ?? "")
   // `path` is for the one caller that must not see the agents' own directories: finding the system's
   // python3 to build the shared env from, which a venv's own python3 earlier on PATH would otherwise answer.
   return Bun.which(name, { PATH: path });
-}
-
-/**
- * What this machine says it has, in bytes, or 0 when it will not say.
- *
- * `/proc/meminfo` first, and that is the whole point of this function. Inside an LXC, lxcfs rewrites
- * `/proc/meminfo` to show the *container's* memory — but it cannot intercept the `sysinfo()` syscall
- * that `os.totalmem()` uses, so `totalmem()` reports the **host's**. On a 2 GB container of a 62 GB
- * Proxmox node the two disagree by a factor of thirty, and a ceiling computed from the wrong one is
- * no ceiling. Found by writing it the easy way first and watching the unit come out at 50 GB.
- *
- * `totalmem()` stays as the fallback for everywhere `/proc` is not a thing.
- */
-export function totalMemoryBytes(): number {
-  try {
-    const match = /^MemTotal:\s+(\d+) kB$/m.exec(readTextFileSync("/proc/meminfo"));
-    if (match) return Number(match[1]) * 1024;
-  } catch {
-    // Not Linux, or /proc is not mounted.
-  }
-  try {
-    return totalmem();
-  } catch {
-    return 0;
-  }
-}
-
-/**
- * This process's own memory, in bytes: what is resident, and how much of the JavaScript heap is in use.
- *
- * Two numbers because they answer different questions. Resident is what the machine pays — the heap, the runtime, and
- * the pages of the executable mapped from disk, which the kernel drops and re-reads under pressure. The heap in use is
- * the part it cannot drop, and the one that grows if something is kept that should not be.
- */
-export function processMemory(): { rssBytes: number; heapUsedBytes: number } {
-  const usage = process.memoryUsage();
-  return { rssBytes: usage.rss, heapUsedBytes: usage.heapUsed };
-}
-
-/**
- * What the kernel says could still be handed out without swapping, in bytes, or 0 when it will not say.
- *
- * `MemAvailable` rather than `MemFree`: free memory on a box that has been up a while is mostly page
- * cache, which the kernel gives back on demand, so `MemFree` reads as nearly full on a box with room
- * to spare. `/proc/meminfo` first for the same LXC reason as {@link totalMemoryBytes}.
- */
-export function availableMemoryBytes(): number {
-  try {
-    const match = /^MemAvailable:\s+(\d+) kB$/m.exec(readTextFileSync("/proc/meminfo"));
-    if (match) return Number(match[1]) * 1024;
-  } catch {
-    // Not Linux, or /proc is not mounted.
-  }
-  try {
-    return freemem();
-  } catch {
-    return 0;
-  }
 }
 
 /**

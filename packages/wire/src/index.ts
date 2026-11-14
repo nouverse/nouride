@@ -41,6 +41,7 @@ export type * from "./secrets.ts";
 export type * from "./settings.ts";
 export type * from "./skills.ts";
 export type * from "./status.ts";
+export type * from "./system.ts";
 export type * from "./tiers.ts";
 export type * from "./tool-budget.ts";
 export type * from "./turns.ts";

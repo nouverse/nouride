@@ -176,7 +176,8 @@ log_days         = 3     # tabel log milik daemon sendiri (0 mematikannya)
 Dua di antaranya layak dipahami.
 
 **`job_log_days`** gak bisa berarti "hapus saat job selesai", karena agent mungkin masih memegang path
-yang diberikan tool kepadanya.
+yang diberikan tool kepadanya. Log yang sudah gak ditunjuk job mana pun ikut dihapus dengan hitungan yang
+sama (0.8.36): sapuannya dulu hanya melihat job yang tercatat, jadi log tanpa catatan tinggal selamanya.
 
 **`scratchpad_days`** mencakup `workspace/private/<agent>/.scratchpad/`: direktori sekali pakai tempat
 agent diminta menaruh artefak sementara: screenshot yang sedang menuju dikirim, unduhan yang sedang
