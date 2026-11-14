@@ -39,6 +39,16 @@ describe("[external]", () => {
     expect(() => parse({ cli: "claude-code", profile: ["rina", 7] })).toThrow("[external] profile must be a non-empty string");
   });
 
+  test("`move_at` is the percent of a limit used at which it moves on early: a whole number from 1 to 99, or refused with the field", () => {
+    expect(parse({ cli: "claude-code", profile: ["rina", "work"], move_at: 90 }).external).toEqual({ cli: "claude-code", profile: "rina", accounts: ["rina", "work"], moveAt: 90 });
+    expect(parse({ cli: "claude-code" }).external).not.toHaveProperty("moveAt");
+    expect(parse({ cli: "claude-code", move_at: 1 }).external?.moveAt).toBe(1);
+    expect(parse({ cli: "claude-code", move_at: 99 }).external?.moveAt).toBe(99);
+    for (const bad of [0, 100, 90.5, "90", -5, true]) {
+      expect(() => parse({ cli: "claude-code", move_at: bad })).toThrow(`agents/coder/config.toml [external] move_at must be a whole number from 1 to 99, the percent of a limit used at which it moves to its next account, got ${JSON.stringify(bad)}`);
+    }
+  });
+
   test("keeps the agent's model settings: Nouride's own work around the CLI runs on them", () => {
     expect(parseAgentConfig("coder", { external: { cli: "omp" }, llm: { model: "small-one" } } as never, { defaults: DEFAULTS, knownClis: CLIS }).llm.model).toBe("small-one");
   });
@@ -56,7 +66,7 @@ describe("[external]", () => {
 
   test("a key it does not read is warned about by name — `instruction` too, since the persona pack reaches the CLI (0.8.1)", () => {
     expect(unknownPackKeys({ external: { cli: "omp", modle: "x" } })).toEqual(["[external] modle"]);
-    expect(unknownPackKeys({ external: { cli: "omp", profile: "a", model: "b", permissions: "all" } })).toEqual([]);
+    expect(unknownPackKeys({ external: { cli: "omp", profile: "a", model: "b", permissions: "all", move_at: 90 } })).toEqual([]);
     expect(unknownPackKeys({ external: { cli: "omp", instruction: "c" } })).toEqual(["[external] instruction"]);
   });
 });

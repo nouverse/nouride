@@ -104,6 +104,13 @@ export interface CliRow {
    * (`external-agents/rotation.ts`). Absent: its refusals say nothing of the kind, and no account is ever marked.
    */
   limit?: { key: string; value: string; resets?: string };
+  /**
+   * Where its connector says how much of the account's limits is used, in a session update's `_meta`: the key there,
+   * the map of the limits' windows under it, and in each window the share used, from 0 to 1, and when it starts again,
+   * in seconds since 1970. Read as it is written, so an agent that asked to (`[external] move_at`) moves to its next
+   * account before a message is refused. Absent: it says nothing of the kind.
+   */
+  use?: { meta: string; windows: string; used: string; resets: string };
 }
 
 export const BUILT_IN_CLIS: readonly CliRow[] = [
@@ -141,6 +148,9 @@ export const BUILT_IN_CLIS: readonly CliRow[] = [
     // A real refusal of 0.107.0 at a model's limit: code -32603, data `{ "errorKind": "rate_limit" }`. A limit that
     // came with a rate-limit event of its turn adds `rateLimit`, whose `resetsAt` is in seconds; a model's own did not.
     limit: { key: "errorKind", value: "rate_limit", resets: "rateLimit.resetsAt" },
+    // Every `usage_update` of 0.107.0, read on the box: `_meta["_claude/rateLimit"].unifiedWindows` holds
+    // `five_hour` and `seven_day`, each `{ utilization: 0.44, resetsAt: 1794675000, status: "allowed" }`.
+    use: { meta: "_claude/rateLimit", windows: "unifiedWindows", used: "utilization", resets: "resetsAt" },
     loginNote: "Signs in with a Claude subscription.",
   },
   {

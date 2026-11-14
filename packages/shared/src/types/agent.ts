@@ -381,6 +381,11 @@ export interface ExternalAgentConfig {
    * CLI starts with. Absent: the one account, `profile`.
    */
   accounts?: string[];
+  /**
+   * With several accounts: the share of a limit used, in percent, at which it moves to its next account once its turn
+   * has ended (`move_at = 90`). Absent: it moves only when a message is refused.
+   */
+  moveAt?: number;
   /** Passed to the CLI as its model. Absent: the CLI's own default. */
   model?: string;
   /** Absent: `folder` where each agent is its own user, `risky` where it is not (Docker, macOS). */

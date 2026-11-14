@@ -18,13 +18,22 @@
 import { AcpError, type CliRow } from "@nouride/acp";
 import { NourideError, type ExternalAgentConfig } from "@nouride/shared";
 import { failedInPrompt } from "./connection.ts";
+import type { AccountUse } from "./use.ts";
 
-/** An account at a limit for a model: until when, and whether the CLI said so. */
+/** An account at a limit for a model, or near one: until when, and whether the CLI said so. */
 export interface LimitMark {
   until: number;
   /** The CLI named the end. Where it did not, `until` is when the account is tried again. */
   known: boolean;
+  /**
+   * Near a limit, not at it: the share of that limit used when its CLI last said, from 0 to 1. Absent: a message was
+   * refused. Kept under `ANY_MODEL`, and read only by an agent that asked to move on early (`move_at`).
+   */
+  near?: number;
 }
+
+/** The model a mark of nearness is kept under: the limit it is near is the account's, whatever model runs. */
+const ANY_MODEL = "*";
 
 /**
  * How long a limit that named no end is held: an hour. Trying again costs one refused message and the CLI started
@@ -84,6 +93,7 @@ function about(ms: number): string {
 }
 
 const forModel = (model: string) => (model === OWN_MODEL ? "" : ` for \`${model}\``);
+const percent = (mark: LimitMark) => `${Math.round((mark.near ?? 1) * 100)}%`;
 const ends = (mark: LimitMark, now: number) => (mark.known ? `for ${about(mark.until - now)} more` : "it did not say until when");
 
 export interface RotationDeps {
@@ -93,7 +103,7 @@ export interface RotationDeps {
   usable: (row: CliRow, account: string) => boolean;
   now?: () => number;
   /** Each mark and each move, for the audit log. */
-  record?: (action: "cli_account_limited" | "cli_account_moved", details: Record<string, unknown>) => void;
+  record?: (action: "cli_account_limited" | "cli_account_moved" | "cli_account_near", details: Record<string, unknown>) => void;
 }
 
 export class AccountRotation {
@@ -122,7 +132,7 @@ export class AccountRotation {
   }
 
   /** Every mark an account holds now, by model, for where accounts are listed. */
-  limitsOf(cli: string, account: string): { model: string; until: number; known: boolean }[] {
+  limitsOf(cli: string, account: string): ({ model: string } & LimitMark)[] {
     const prefix = `${cli}|${account}|`;
     return Object.keys(this.kept).flatMap((key) => {
       const model = key.startsWith(prefix) ? key.slice(prefix.length) : null;
@@ -134,7 +144,11 @@ export class AccountRotation {
   /** An account's marks in words, a sentence a model, for where accounts are listed to a person. */
   says(cli: string, account: string): string[] {
     const now = this.now();
-    return this.limitsOf(cli, account).map((mark) => `At its limit${forModel(mark.model)}: ${mark.known ? `for ${about(mark.until - now)} more` : "it did not say until when, and it is tried again within the hour"}.`);
+    return this.limitsOf(cli, account).map((mark) =>
+      mark.near !== undefined
+        ? `Near a limit, ${percent(mark)} of it used: it starts again in ${about(mark.until - now)}.`
+        : `At its limit${forModel(mark.model)}: ${mark.known ? `for ${about(mark.until - now)} more` : "it did not say until when, and it is tried again within the hour"}.`,
+    );
   }
 
   /** The account the agent's CLI was last started on; none before its first start. */
@@ -156,10 +170,62 @@ export class AccountRotation {
     const current = this.on.get(agent.id);
     const here = current && accounts.includes(current) ? current : undefined;
     if (accounts.length < 2 || model === undefined) return here ?? accounts[0]!;
-    if (here && !this.limited(row.id, here, model)) return here;
-    const next = accounts.find((account) => this.deps.usable(row, account) && !this.limited(row.id, account, model));
-    if (next) return next;
+    const next = this.pick(row, agent, model);
+    if (next) return next.account;
     throw this.spent(row, agent.name, accounts, model, " Nothing was sent.");
+  }
+
+  /** The mark that an account is near a limit, where it holds and is at or past the agent's own (`move_at`). */
+  private near(cli: string, account: string, moveAt: number | undefined): LimitMark | null {
+    const mark = moveAt === undefined ? null : this.limited(cli, account, ANY_MODEL);
+    return mark && (mark.near ?? 1) * 100 >= moveAt! ? mark : null;
+  }
+
+  /**
+   * The account a turn on `model` goes on with: the one it is on while that is neither at a limit for the model nor,
+   * for an agent that asked to move early, near one; else the first of its list that is neither. With none such, it
+   * stays where it is until the limit itself, and only then takes one that is merely near. `left`: the account it
+   * leaves for being near a limit, with that mark. Null: every account is at its limit.
+   */
+  private pick(row: CliRow, agent: { id: string; external: ExternalAgentConfig }, model: string): { account: string; left?: { account: string; mark: LimitMark } } | null {
+    const accounts = accountsOf(agent.external);
+    const current = this.on.get(agent.id);
+    const here = current && accounts.includes(current) && !this.limited(row.id, current, model) ? current : undefined;
+    const nearHere = here ? this.near(row.id, here, agent.external.moveAt) : null;
+    if (here && !nearHere) return { account: here };
+    const open = accounts.filter((account) => this.deps.usable(row, account) && !this.limited(row.id, account, model));
+    const free = open.find((account) => !this.near(row.id, account, agent.external.moveAt));
+    if (free) return { account: free, ...(here && nearHere ? { left: { account: here, mark: nearHere } } : {}) };
+    const stay = here ?? open[0];
+    return stay ? { account: stay } : null;
+  }
+
+  /**
+   * What the chat is told where the agent's turn on `model` starts on another account because the one it is on is near
+   * a limit: said before the turn, which then starts there (`accountFor`). Null where it stays.
+   */
+  early(row: CliRow, agent: { id: string; name: string; external: ExternalAgentConfig }, model: string): string | null {
+    const next = accountsOf(agent.external).length < 2 ? null : this.pick(row, agent, model);
+    if (!next?.left) return null;
+    this.deps.record?.("cli_account_moved", { cli: row.id, agent: agent.id, from: next.left.account, to: next.account, model, early: true });
+    return `Account ${next.left.account} has used ${percent(next.left.mark)} of a limit that starts again in ${about(next.left.mark.until - this.now())}. ${agent.name} goes on with ${next.account}.`;
+  }
+
+  /**
+   * A turn ended, with the account's use as its CLI last said it. At or past the agent's own mark (`move_at`), the
+   * account is marked as near that limit until it starts again, and the agent's next turn starts on its next account.
+   * Only for an agent with another account that asked for it: nothing moves early that was not told to.
+   */
+  used(row: CliRow, agent: { id: string; external: ExternalAgentConfig }, use: AccountUse | null): void {
+    const moveAt = agent.external.moveAt;
+    const accounts = accountsOf(agent.external);
+    if (moveAt === undefined || accounts.length < 2 || !use || use.until <= this.now() || use.used * 100 < moveAt) return;
+    const account = this.on.get(agent.id) ?? accounts[0]!;
+    const key = `${row.id}|${account}|${ANY_MODEL}`;
+    const seen = this.kept[key]?.until === use.until;
+    this.kept = { ...this.kept, [key]: { until: use.until, known: true, near: use.used } };
+    this.deps.file?.save(this.kept);
+    if (!seen) this.deps.record?.("cli_account_near", { cli: row.id, account, used: use.used, until: use.until, agent: agent.id });
   }
 
   /**
@@ -179,7 +245,7 @@ export class AccountRotation {
     this.deps.file?.save(this.kept);
     this.deps.record?.("cli_account_limited", { cli: row.id, account: from, model: key, until: limit.until, known: limit.known, agent: agent.id });
     if (accounts.length < 2) return null;
-    const to = accounts.find((account) => this.deps.usable(row, account) && !this.limited(row.id, account, key));
+    const to = this.pick(row, agent, key)?.account;
     if (!to) throw this.spent(row, agent.name, accounts, key, "");
     this.deps.record?.("cli_account_moved", { cli: row.id, agent: agent.id, from, to, model: key });
     return `Account ${from} reached its limit${forModel(key)}: ${ends(limit, this.now())}. ${agent.name} goes on with ${to}.`;

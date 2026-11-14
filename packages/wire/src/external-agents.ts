@@ -90,6 +90,10 @@ export interface AgentCli {
   accounts?: string[];
   /** The account its CLI is on now, where that is not `profile`. */
   on?: string;
+  /** The percent of a limit used at which it moves to its next account before a message is refused; absent: only then. */
+  moveAt?: number;
+  /** Its CLI says how much of an account's limits is used as it works, so moving on early can be set for it. */
+  saysUse?: boolean;
   permissions: CliPreset;
   model: string | null;
   /** The models its CLI offered when its last session opened, suggested in the model field; none before its first. */

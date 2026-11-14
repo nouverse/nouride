@@ -16,11 +16,11 @@ import type { ExternalAgents } from "@/modules/external-agents/index.ts";
 const TOKEN = "control-token-for-tests-0000000000";
 
 /** `wayBack`: the version its CLI's update check offers back, where a new version failed it (0.8.24). */
-function app(wayBack: string | null = null, moved?: { accounts: string[]; on?: string }) {
+function app(wayBack: string | null = null, moved?: { accounts?: string[]; on?: string; moveAt?: number; saysUse?: boolean }) {
   const seen: string[] = [];
   const audits: { action: string; actor?: string; details?: Record<string, unknown> }[] = [];
   const agents: Record<string, LoadedAgent> = {
-    coder: { config: { id: "coder", external: { cli: "codex", profile: "work", ...(moved ? { accounts: moved.accounts } : {}) }, llm: { effort: "high" } } } as unknown as LoadedAgent,
+    coder: { config: { id: "coder", external: { cli: "codex", profile: "work", ...(moved?.accounts ? { accounts: moved.accounts } : {}), ...(moved?.moveAt !== undefined ? { moveAt: moved.moveAt } : {}) }, llm: { effort: "high" } } } as unknown as LoadedAgent,
     nouva: { config: { id: "nouva" } } as unknown as LoadedAgent,
   };
   const login = { running: true, output: "Open https://x.test", links: ["https://x.test"], exitCode: null };
@@ -42,7 +42,7 @@ function app(wayBack: string | null = null, moved?: { accounts: string[]; on?: s
         name === "spare" ? { ok: true, tokenRemoved: true } : name === "stuck" ? { ok: true, tokenRemoved: false, tokenError: "read-only file system" } : { ok: false, error: "Coder uses it", users: ["Coder"] }),
     },
     startAccountLogin: (cli: string, name: string, actor: string) => (seen.push(`account login ${cli} ${name} by ${actor}`), login),
-    row: (id: string) => (id === "codex" || id === "claude-code" ? { id, profileEnv: "CODEX_HOME" } : undefined),
+    row: (id: string) => (id === "codex" || id === "claude-code" ? { id, profileEnv: "CODEX_HOME", ...(moved?.saysUse ? { use: { meta: "m", windows: "w", used: "u", resets: "r" } } : {}) } : undefined),
     profiles: async (agent: LoadedAgent, fresh: boolean) => (seen.push(`profiles ${agent.config.id}${fresh ? " fresh" : ""}`), [{ name: "work", inUse: true, signedIn: false, reason: "Codex is not signed in" }]),
     startLogin: (agent: LoadedAgent, profile?: string) => (seen.push(`start ${agent.config.id}${profile ? ` on ${profile}` : ""}`), login),
     answerLogin: (id: string, text: string) => (seen.push(`answer ${id} ${text}`), login),
@@ -139,6 +139,26 @@ describe("an external agent's CLI routes", () => {
     expect(seen.filter((line) => line.startsWith("set coder"))).toHaveLength(1);
   });
 
+  test("moving on before a limit: its mark is shown where it set one, with whether its CLI says an account's use; set and turned off by the same field", async () => {
+    const shown = (await (await app(undefined, { accounts: ["work", "spare"], moveAt: 90, saysUse: true }).call("GET", "/agents/coder/cli")).json()) as Record<string, unknown>;
+    expect(shown).toMatchObject({ moveAt: 90, saysUse: true });
+    // No mark set, and a CLI that says nothing of an account's use: neither is said.
+    const plain = (await (await app(undefined, { accounts: ["work", "spare"] }).call("GET", "/agents/coder/cli")).json()) as Record<string, unknown>;
+    expect(["moveAt" in plain, "saysUse" in plain]).toEqual([false, false]);
+    // With the one account still, what its CLI can say is said all the same: the page then offers the setting.
+    expect(await (await app(undefined, { saysUse: true }).call("GET", "/agents/coder/cli")).json()).toMatchObject({ saysUse: true });
+    const { call, seen } = app();
+    expect((await call("POST", "/agents/coder/cli", { move_at: 85 })).status).toBe(200);
+    expect((await call("POST", "/agents/coder/cli", { move_at: null })).status).toBe(200);
+    expect(seen.filter((line) => line.startsWith("set coder"))).toEqual(['set coder {"moveAt":85}', 'set coder {"moveAt":null}']);
+    for (const bad of [0, 100, 85.5, "85", true]) {
+      const refused = await call("POST", "/agents/coder/cli", { move_at: bad });
+      expect(refused.status).toBe(400);
+      expect(((await refused.json()) as { error: string }).error).toBe("move_at is a whole number from 1 to 99, or null to turn it off");
+    }
+    expect(seen.filter((line) => line.startsWith("set coder"))).toHaveLength(2);
+  });
+
   test("its sign-in's terminal is an admin's to read, as the sign-in is — an operator sees the rest", async () => {
     // What a sign-in prints can be the code that signs the account in; `GET /agents/:id/cli` handed it to an operator.
     const login = { running: true, output: "Enter the code ABCD-1234 at https://x.test/device", links: ["https://x.test/device"], exitCode: null };
@@ -151,7 +171,7 @@ describe("an external agent's CLI routes", () => {
       registerExternalAgentRoutes(scoped as never, {
         registry: { get: () => ({ config: { id: "coder", external: { cli: "codex" } } }) },
         ctx: { config: { llm: { defaults: {} } } },
-        externalAgents: { preset: () => "risky", models: { of: () => [] }, efforts: { of: () => [] }, unavailable: () => null, login: () => login },
+        externalAgents: { preset: () => "risky", models: { of: () => [] }, efforts: { of: () => [] }, unavailable: () => null, login: () => login, row: () => undefined },
       } as never);
       return (await (await scoped.request("/agents/coder/cli")).json()) as { login: unknown; cli: string };
     };

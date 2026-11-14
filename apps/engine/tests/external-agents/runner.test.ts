@@ -923,6 +923,42 @@ describe("an account at its limit, and the agent's next one", () => {
     expect(later.text).not.toContain(GO_ON);
   });
 
+  /** The same CLI saying how much of each account's limits is used: `first` at 93% of a limit that starts again in an hour. */
+  const saysUse = { ...SHARED, use: { meta: "fake/use", windows: "windows", used: "share", resets: "starts" }, env: { FAKE_MODE: "", FAKE_USE: JSON.stringify({ "tok-first": 0.93 }) } };
+  const EARLY = "_Account first has used 93% of a limit that starts again in about 60 minutes. Coder goes on with second._\n\n";
+
+  test("near a limit, an agent that asked to moves on before it: its turn ends where it ran, and the next starts on the next account, the chat told first", async () => {
+    const { service, agent, runner, req, deltas, audits } = setup({ row: saysUse, tokens: TOKENS, external: { ...BOTH, moveAt: 90 } });
+    const first = await runner.run(req("push the fix"));
+    // The turn that crossed its mark is answered where it ran: nothing is cut, sent again or said of accounts.
+    expect(first.text).not.toContain("Account");
+    expect(service.rotation.accountOf("coder")).toBe("first");
+    expect(audits).toEqual(["cli_account_near"]);
+    const next = await runner.run(req("and the tests"));
+    expect(next.text).toStartWith(EARLY);
+    expect(next.text).toEndWith(`Mira: and the tests\n\n${CLOCK}`);
+    expect(deltas.join("").indexOf(EARLY)).toBeLessThan(deltas.join("").lastIndexOf("Done:"));
+    expect(service.rotation.accountOf("coder")).toBe("second");
+    expect(audits).toEqual(["cli_account_near", "cli_account_moved"]);
+    // The other account's token, the first account's folder, the conversation's session loaded.
+    const said = await stderrSaid(await service.connection(agent), (line) => line.startsWith("prompted-as:") || line.startsWith("loaded:"), 2);
+    expect(said).toEqual(["loaded:s1", "prompted-as:tok-second in first"]);
+    // It stays there, and the move is said once.
+    const third = await runner.run(req("and the docs"));
+    expect(third.text).not.toContain("Account");
+    expect(service.rotation.says("fake", "first")).toEqual(["Near a limit, 93% of it used: it starts again in about 60 minutes."]);
+  });
+
+  test("an agent that did not ask, or whose mark is higher, stays: what its CLI says of the account's use moves nothing", async () => {
+    for (const external of [BOTH, { ...BOTH, moveAt: 95 }]) {
+      const { service, runner, req, audits } = setup({ row: saysUse, tokens: TOKENS, external });
+      await runner.run(req("push the fix"));
+      expect((await runner.run(req("and the tests"))).text).not.toContain("Account");
+      expect(service.rotation.accountOf("coder")).toBe("first");
+      expect(audits).toEqual([]);
+    }
+  });
+
   test("the moves are counted: a host that always says to move ends at the agent's accounts, and a stopped turn is not moved", async () => {
     // The marks end the moves by themselves; the count is what holds if they ever did not.
     const { ExternalTurnRunner } = await import("@/modules/external-agents/runner.ts");
@@ -940,6 +976,8 @@ describe("an account at its limit, and the agent's next one", () => {
           asked += 1;
           return "moved";
         },
+        early: () => null,
+        used: () => {},
       },
       setUnavailable: () => {},
     } as never;

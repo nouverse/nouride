@@ -181,17 +181,25 @@ export function cliAccountsState(rows: StateRows): { load(): Record<string, stri
   return { load: () => row.load() ?? {}, save: (accounts) => row.save(accounts) };
 }
 
+/** A coding-CLI account's mark as it is kept: at a limit until then, or near one by the share of it used (`near`). */
+interface CliLimitMark {
+  until: number;
+  known: boolean;
+  near?: number;
+}
+
 /**
- * The coding-CLI accounts at a limit, each for a model and until when (`external-agents/rotation.ts`), by
+ * The coding-CLI accounts at a limit or near one, each for a model and until when (`external-agents/rotation.ts`), by
  * `cli|account|model`: a restart does not send the next message to an account known to refuse it.
  */
-export function cliLimitsState(rows: StateRows): { load(): Record<string, { until: number; known: boolean }>; save(marks: Record<string, { until: number; known: boolean }>): void } {
-  const row = new StateRow<Record<string, { until: number; known: boolean }>>(rows, "cli-account-limits", "the coding-CLI accounts at a limit", (value) => {
+export function cliLimitsState(rows: StateRows): { load(): Record<string, CliLimitMark>; save(marks: Record<string, CliLimitMark>): void } {
+  const row = new StateRow<Record<string, CliLimitMark>>(rows, "cli-account-limits", "the coding-CLI accounts at a limit", (value) => {
     if (!value || typeof value !== "object" || Array.isArray(value)) return null;
     return Object.fromEntries(
       Object.entries(value).flatMap(([key, mark]) => {
-        const { until, known } = (mark ?? {}) as { until?: unknown; known?: unknown };
-        return typeof until === "number" && Number.isFinite(until) ? [[key, { until, known: known === true }]] : [];
+        const { until, known, near } = (mark ?? {}) as { until?: unknown; known?: unknown; near?: unknown };
+        const share = typeof near === "number" && Number.isFinite(near) ? { near } : {};
+        return typeof until === "number" && Number.isFinite(until) ? [[key, { until, known: known === true, ...share }]] : [];
       }),
     );
   });

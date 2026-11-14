@@ -18,6 +18,8 @@ export interface ExternalSettings {
   profile?: string | string[];
   permissions?: ExternalPermissions;
   model?: string;
+  /** The percent of a limit used at which it moves to its next account early (`move_at`); null takes it out. */
+  moveAt?: number | null;
 }
 
 /**
@@ -44,14 +46,18 @@ export async function setExternal(
   if (!agent.config.external) return { ok: false, error: `${input.agentId} is not an external agent` };
   // A list of one account is that account, written as its name.
   const profile = Array.isArray(input.settings.profile) ? (input.settings.profile.length > 1 ? input.settings.profile : input.settings.profile[0]) : input.settings.profile;
-  const given = Object.entries({ ...input.settings, ...(profile === undefined ? {} : { profile }) }).filter((entry): entry is [string, string | string[]] => typeof entry[1] === "string" || Array.isArray(entry[1]));
-  if (given.length === 0) return { ok: true };
+  const { moveAt, ...texts } = input.settings;
+  const given = Object.entries({ ...texts, ...(profile === undefined ? {} : { profile }) }).filter((entry): entry is [string, string | string[]] => typeof entry[1] === "string" || Array.isArray(entry[1]));
+  const keys = [...given.map(([key]) => key), ...(moveAt === undefined ? [] : ["move_at"])];
+  if (keys.length === 0) return { ok: true };
   const saved = await editPackFile({
     path: join(agent.dir, "config.toml"),
     reload: () => deps.registry.reload(input.agentId),
     edit: (source) => {
       let next = source;
-      const set: Record<string, string | string[]> = {};
+      const set: Record<string, string | string[] | number> = {};
+      if (moveAt === null) next = removeTomlKey(next, "external", "move_at");
+      else if (moveAt !== undefined) set.move_at = moveAt;
       for (const [key, value] of given) {
         if (Array.isArray(value)) set[key] = value;
         else if (!value.trim() && CLEARABLE.has(key)) next = removeTomlKey(next, "external", key);
@@ -61,8 +67,8 @@ export async function setExternal(
     },
   });
   if (!saved.ok) return saved;
-  log.info("an external agent's CLI settings changed", { agent: input.agentId, keys: given.map(([key]) => key), actor: input.actor });
-  deps.audit?.record({ action: "agent_external_changed", agentId: input.agentId, actor: input.actor, details: { keys: given.map(([key]) => key) } });
+  log.info("an external agent's CLI settings changed", { agent: input.agentId, keys, actor: input.actor });
+  deps.audit?.record({ action: "agent_external_changed", agentId: input.agentId, actor: input.actor, details: { keys } });
   return { ok: true };
 }
 

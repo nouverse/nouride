@@ -43,6 +43,12 @@ function settingsOf(body: Record<string, unknown>): ExternalSettings | { error: 
     if (typeof body[key] !== "string") return { error: `${key} must be text` };
     settings[key] = body[key];
   }
+  // `move_at`: the percent of a limit used at which it moves on early; null turns it off.
+  if (body.move_at !== undefined) {
+    const at = body.move_at;
+    if (at !== null && (typeof at !== "number" || !Number.isInteger(at) || at < 1 || at > 99)) return { error: "move_at is a whole number from 1 to 99, or null to turn it off" };
+    settings.moveAt = at;
+  }
   if (body.permissions !== undefined) {
     if (!(EXTERNAL_PERMISSIONS as readonly unknown[]).includes(body.permissions)) return { error: `permissions must be one of ${EXTERNAL_PERMISSIONS.join(", ")}` };
     settings.permissions = body.permissions as ExternalSettings["permissions"];
@@ -50,11 +56,15 @@ function settingsOf(body: Record<string, unknown>): ExternalSettings | { error: 
   return settings;
 }
 
-/** The accounts an agent moves through, where it has several, and the one it is on now where that is not its first. */
-function accountsNow(accounts: readonly string[] | undefined, onNow: () => string | undefined): { accounts?: string[]; on?: string } {
-  if (!accounts) return {};
+/**
+ * The accounts an agent moves through, where it has several, and the one it is on now where that is not its first; its
+ * own mark for moving on before a limit where it set one, and whether its CLI says an account's use at all.
+ */
+function accountsNow(external: { accounts?: readonly string[]; moveAt?: number }, saysUse: boolean, onNow: () => string | undefined): Pick<AgentCli, "accounts" | "on" | "moveAt" | "saysUse"> {
+  const early = { ...(external.moveAt !== undefined ? { moveAt: external.moveAt } : {}), ...(saysUse ? { saysUse: true } : {}) };
+  if (!external.accounts) return early;
   const now = onNow();
-  return { accounts: [...accounts], ...(now && now !== accounts[0] ? { on: now } : {}) };
+  return { accounts: [...external.accounts], ...(now && now !== external.accounts[0] ? { on: now } : {}), ...early };
 }
 
 export function registerExternalAgentRoutes(control: ControlApp, deps: ControlDeps): void {
@@ -194,7 +204,7 @@ export function registerExternalAgentRoutes(control: ControlApp, deps: ControlDe
     return c.json({
       cli: external.cli,
       profile: external.profile ?? "default",
-      ...accountsNow(external.accounts, () => ops.rotation.accountOf(agent.config.id)),
+      ...accountsNow(external, ops.row(external.cli)?.use !== undefined, () => ops.rotation.accountOf(agent.config.id)),
       permissions: external.permissions ?? ops.preset(),
       model: external.model ?? null,
       // What its CLI offered when its last session opened, suggested in the model field; none before its first.

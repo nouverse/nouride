@@ -98,6 +98,25 @@ describe("an external agent from the dashboard", () => {
     expect(registry.get("coder")?.config.external).toEqual({ cli: "codex", profile: "work" });
   });
 
+  test("its mark for moving on early is a number in its pack, changed in place, and taken out when turned off", async () => {
+    const { registry, setup } = await service();
+    await setup.createAgent({ id: "coder", displayName: "Coder", systemPrompt: "", model: "", actor: "t", external: { cli: "codex" } });
+    const pack = () => readTextFileIfExists(join(root, "agents", "coder", "config.toml"));
+    expect(await setup.setExternal({ agentId: "coder", settings: { profile: ["rina", "work"], moveAt: 90 }, actor: "t" })).toEqual({ ok: true });
+    expect(registry.get("coder")?.config.external).toEqual({ cli: "codex", profile: "rina", accounts: ["rina", "work"], moveAt: 90 });
+    expect(await pack()).toContain("move_at = 90");
+    expect(await setup.setExternal({ agentId: "coder", settings: { moveAt: 75 }, actor: "t" })).toEqual({ ok: true });
+    expect(await pack()).toContain("move_at = 75");
+    expect(await pack()).not.toContain("move_at = 90");
+    // Turned off: the key is gone, and its accounts stay as they were.
+    expect(await setup.setExternal({ agentId: "coder", settings: { moveAt: null }, actor: "t" })).toEqual({ ok: true });
+    expect(await pack()).not.toContain("move_at");
+    expect(registry.get("coder")?.config.external).toEqual({ cli: "codex", profile: "rina", accounts: ["rina", "work"] });
+    // One the loader refuses saves nothing.
+    expect(await setup.setExternal({ agentId: "coder", settings: { moveAt: 100 }, actor: "t" })).toMatchObject({ ok: false, error: expect.stringContaining("Saved nothing") });
+    expect(await pack()).not.toContain("move_at");
+  });
+
   test("an agent that is not external has no CLI settings to change", async () => {
     const { setup } = await service();
     await setup.createAgent({ id: "nouva", displayName: "Nouva", systemPrompt: "", model: "gpt-4o", actor: "t" });

@@ -27,6 +27,7 @@ import { ownFolderOf } from "@/modules/missions/worktree.ts";
 import { missionDeleteScope } from "./inside-delete.ts";
 import { promptOf, promptTakes } from "./prompt.ts";
 import { ACCOUNTS_SPENT, accountsOf, OWN_MODEL, type AccountRotation } from "./rotation.ts";
+import type { AccountUse } from "./use.ts";
 import { cliUsage, type CliContexts, type CliSpending } from "./usage.ts";
 import { merged, MidPrompt, untilSaid } from "./steering.ts";
 
@@ -41,7 +42,9 @@ export interface RunnerHost {
   forTurn?(agent: LoadedAgent, signal?: AbortSignal, model?: string): Promise<{ cli: CliConnection; notYet: string[] }>;
   /** The agent's CLI as this install knows it, and the accounts at a limit: a refused message may move the agent (`rotation.ts`). */
   row?(id: string): CliRow | undefined;
-  rotation?: Pick<AccountRotation, "refused">;
+  rotation?: Pick<AccountRotation, "refused" | "early" | "used">;
+  /** The account's use as the agent's CLI last said it; null where it said none (`use.ts`). */
+  accountUse?(agentId: string): AccountUse | null;
   /**
    * The session a conversation kept from before, for a CLI that reopens sessions; and keeping a new one, with the
    * fingerprint of the instructions it opened on (`writeInstruction`) — null where they could not be written.
@@ -130,20 +133,30 @@ export class ExternalTurnRunner {
   async run(req: TurnRequest): Promise<TurnResult> {
     const external = this.agent.config.external;
     const model = this.modelOf(req);
+    const row = external && this.host.row?.(external.cli);
+    const agent = external && { id: this.agent.config.id, name: this.agent.config.displayName, external };
     let moved = "";
+    const tell = (note: string) => {
+      moved += `_${note}_\n\n`;
+      this.deps.onActivity?.("note", note);
+      this.deps.onText?.(`_${note}_\n\n`);
+    };
+    // The account it is on is near a limit and it asked to move on early: said first, and the turn starts on the next.
+    const early = row && agent ? this.host.rotation?.early(row, agent, model) : null;
+    if (early) tell(early);
     let ask = req;
     // Each move marks an account, so the moves end by themselves; counted all the same, so nothing can move for ever.
     for (let moves = accountsOf(external ?? { cli: "" }).length; ; moves -= 1) {
       this.worked = false;
       try {
         const answered = await this.attempt(ask);
+        // What its CLI said of the account's use while it worked: past the agent's own mark, its next turn moves on.
+        if (row && agent) this.host.rotation?.used(row, agent, this.host.accountUse?.(agent.id) ?? null);
         return moved ? { ...answered, text: `${moved}${answered.text}` } : answered;
       } catch (err) {
         const note = req.signal?.aborted || moves <= 0 ? null : this.movedBy(err, model);
         if (!note) throw err;
-        moved += `_${note}_\n\n`;
-        this.deps.onActivity?.("note", note);
-        this.deps.onText?.(`_${note}_\n\n`);
+        tell(note);
         if (this.worked) ask = { ...req, userMessage: { ...req.userMessage, content: GO_ON } };
       }
     }

@@ -16,6 +16,19 @@ export interface RawExternal {
   profile?: unknown;
   model?: unknown;
   permissions?: unknown;
+  move_at?: unknown;
+}
+
+/**
+ * `move_at`: the percent of a limit used at which an agent with several accounts moves on before a message is refused.
+ * A whole number from 1 to 99: 100 is the limit itself, where it moves anyway.
+ */
+function moveAtOf(raw: unknown, where: string): number | undefined {
+  if (raw === undefined) return undefined;
+  if (typeof raw !== "number" || !Number.isInteger(raw) || raw < 1 || raw > 99) {
+    throw new ConfigError(`${where} [external] move_at must be a whole number from 1 to 99, the percent of a limit used at which it moves to its next account, got ${JSON.stringify(raw)}`);
+  }
+  return raw;
 }
 
 /**
@@ -56,11 +69,13 @@ export function externalOf(raw: unknown, where: string, knownClis: readonly stri
     throw new ConfigError(`${where} [external] permissions must be one of ${EXTERNAL_PERMISSIONS.join(", ")}, got ${JSON.stringify(permissions)}`);
   }
   const model = text(table.model, "model");
+  const moveAt = moveAtOf(table.move_at, where);
   return {
     external: {
       cli,
       ...(profile ? { profile } : {}),
       ...(accounts.length > 1 ? { accounts } : {}),
+      ...(moveAt !== undefined ? { moveAt } : {}),
       ...(model ? { model } : {}),
       ...(permissions !== undefined ? { permissions: permissions as ExternalPermissions } : {}),
     },

@@ -27,7 +27,7 @@ const PACK_KEYS: Readonly<Record<string, readonly string[] | "open">> = {
   workspace: ["roots", "skill_roots"],
   // Refused by the parser, naming the install's library — listed so it is refused once rather than also warned about.
   mcp_servers: "open",
-  external: ["cli", "profile", "model", "permissions"],
+  external: ["cli", "profile", "model", "permissions", "move_at"],
   look: ["fur", "pattern", "outfit", "outfit_color", "hat", "accessory", "eyes"],
   jobs: ["quiet_after_minutes"],
   delegate: ["max_background"],

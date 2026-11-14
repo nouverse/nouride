@@ -13,6 +13,7 @@ import { createLogger } from "@nouride/shared";
 import type { LongLivedProcess } from "@nouride/runtime";
 import type { Launch } from "./launch.ts";
 import { thoughtLevel } from "./models.ts";
+import { useOf, type AccountUse } from "./use.ts";
 
 const log = createLogger("external-agents");
 
@@ -87,6 +88,8 @@ export class CliConnection {
   onOwnWords?: (sessionId: string, update: SessionUpdate) => void;
   /** What this CLI runs on, read from the files installed as it started (`parts.ts`); none until then, or for a row that names no package. */
   parts: Promise<CliPart[]> = Promise.resolve([]);
+  /** The account's use as this CLI last said it in a prompt (`use.ts`); null before it said any. */
+  accountUse: AccountUse | null = null;
 
   constructor(
     readonly row: CliRow,
@@ -368,7 +371,10 @@ export class CliConnection {
     this.running += 1;
     this.permissions.set(sessionId, onPermission);
     try {
-      return await client.promptAnswer(sessionId, blocks, onUpdate);
+      return await client.promptAnswer(sessionId, blocks, (update) => {
+        this.accountUse = useOf(this.row, update, this.now()) ?? this.accountUse;
+        onUpdate(update);
+      });
     } catch (err) {
       if (typeof err === "object" && err !== null) inPrompt.add(err);
       throw err;

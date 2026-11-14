@@ -36,6 +36,10 @@
  * `{ errorKind: "rate_limit" }`. `FAKE_LIMITED_AFTER=step`: after one step of work. Each prompt goes to stderr as
  * `prompted-as:<token> in <the profile folder's name>`.
  *
+ * `FAKE_USE`, JSON by token (`{"tok-first":0.93}`): started with that token, each prompt says how much of its account's
+ * limits is used, beside the context's size as claude-agent-acp says it: `_meta["fake/use"].windows`, a short one at
+ * that share starting again in an hour, and a long one at a tenth.
+ *
  * `FAKE_TAKES`, JSON, is what it says at its handshake it takes in a prompt (`{"image":true}`); unset, text alone.
  *
  * `FAKE_EFFORTS`, JSON of each model's efforts (`{"small":["low","high"]}`), adds an effort option filed under ACP's
@@ -188,6 +192,12 @@ const server = new AcpServer({
       if (mode === "usage") channel.update({ sessionUpdate: "usage_update", used: 42_000, size: 200_000 });
       if (mode === "overloaded") throw new Error("the model is overloaded, try again later");
       if (process.env.FAKE_TOKEN) process.stderr.write(`prompted-as:${process.env.FAKE_TOKEN} in ${basename(process.env.FAKE_HOME ?? "")}\n`);
+      const share = (JSON.parse(process.env.FAKE_USE ?? "{}") as Record<string, number>)[process.env.FAKE_TOKEN ?? "-"];
+      if (share !== undefined) {
+        const seconds = Math.floor(Date.now() / 1000);
+        const windows = { short: { share, starts: seconds + 3_600 }, long: { share: 0.1, starts: seconds + 86_400 } };
+        channel.update({ sessionUpdate: "usage_update", used: 1_000, size: 200_000, _meta: { "fake/use": { windows } } } as never);
+      }
       if ((process.env.FAKE_LIMITED ?? "").split(",").includes(process.env.FAKE_TOKEN ?? "-")) {
         if (process.env.FAKE_LIMITED_AFTER === "step") {
           channel.update({ sessionUpdate: "tool_call", toolCallId: "l1", title: "git status", kind: "execute", name: "Bash", status: "in_progress" });

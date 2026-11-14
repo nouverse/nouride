@@ -46,6 +46,7 @@ import { CliLogin, type LoginView, type SignIn } from "./login.ts";
 import { openOnBox, returnAddress } from "./callback.ts";
 import { KeptParts } from "./parts.ts";
 import { AccountRotation, type LimitsFile } from "./rotation.ts";
+import type { AccountUse } from "./use.ts";
 import { profileNames, type CliProfile } from "./profiles.ts";
 import { cliSessionKey, ExternalTurnRunner, type RunnerHost } from "./runner.ts";
 import { Instructed, type InstructedFile } from "./instructed.ts";
@@ -226,6 +227,11 @@ export class ExternalAgents implements RunnerHost {
   /** Every CLI this install knows, built-in first. */
   rows(): readonly CliRow[] {
     return this.deps.rows?.() ?? BUILT_IN_CLIS;
+  }
+
+  /** The account's use as the agent's running CLI last said it (`use.ts`): what a turn's end reads to move on early. */
+  accountUse(agentId: string): AccountUse | null {
+    return this.running.get(agentId)?.accountUse ?? null;
   }
 
   row(id: string): CliRow | undefined {
