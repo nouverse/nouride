@@ -16,12 +16,34 @@ export function offeredModels(opened: NewSessionResult | null): CliModel[] | nul
   const option = opened?.configOptions?.find((entry) => entry.id === "model");
   if (!option?.options?.length) return null;
   const on = option.options.find((entry) => entry.value === option.currentValue);
-  const standsFor = on?.description ? option.options.find((entry) => entry !== on && entry.name === on.description) : undefined;
+  const standsFor = on ? stoodFor(on, option.options) : undefined;
   return option.options.map(({ value, name }) => ({
     value,
     ...(name && name !== value ? { name } : {}),
     ...(on && value === on.value ? { current: standsFor?.name ?? value } : {}),
   }));
+}
+
+type Offered = NonNullable<SessionConfigOption["options"]>[number];
+
+/**
+ * The option an alias stands for, where the CLI says so by describing the alias with another option's name. Three ways
+ * it has been said, each read from a real session: the name itself ("Opus 5.5"); the name at the head of a longer line
+ * ("Opus 5.5 · Best for everyday, complex tasks"); and the one word the name begins with ("Opus", where "Opus 5.5" is
+ * offered). The last stopped matching when only the first was read, and every list said `default` for what the default
+ * was. A word that several names begin with names none of them: nothing is guessed, and the alias is shown as itself.
+ */
+function stoodFor(on: Offered, options: readonly Offered[]): Offered | undefined {
+  const said = on.description?.trim();
+  if (!said) return undefined;
+  const others = options.filter((entry) => entry !== on && entry.name);
+  const exact = others.find((entry) => entry.name === said);
+  if (exact) return exact;
+  // The head of a longer line, ended by a space: "Opus 5" is not the head of "Opus 5.5 · …".
+  const heads = others.filter((entry) => said.startsWith(`${entry.name} `)).sort((a, b) => b.name!.length - a.name!.length);
+  if (heads[0]) return heads[0];
+  const family = others.filter((entry) => entry.name!.startsWith(`${said} `));
+  return family.length === 1 ? family[0] : undefined;
 }
 
 /**

@@ -27,6 +27,40 @@ describe("the model a CLI's session opened on", () => {
     expect(models).toEqual([{ value: "default", name: "Default (recommended)", current: "Opus 5.5" }, { value: "opus", name: "Opus 5.5" }, { value: "sonnet", name: "Sonnet 5.5" }]);
   });
 
+  /** The model option of a real session of claude-agent-acp 0.107.0 (Claude Code 2.1.323), as it was sent. */
+  const REAL = [
+    { value: "default", name: "Default (recommended)", description: "Opus" },
+    { value: "opus", name: "Opus 5.5", description: "Opus 5.5 · Best for everyday, complex tasks · $4/$20 per Mtok" },
+    { value: "fable", name: "Fable 5.2", description: "Fable 5.2 · Most capable for your hardest and longest-running tasks · $8/$40 per Mtok" },
+    { value: "sonnet", name: "Sonnet 5.5", description: "Sonnet 5.5 · Efficient for routine tasks · $2/$10 per Mtok" },
+    { value: "haiku", name: "Haiku 5.5", description: "Haiku 5.5 · Fastest for quick answers · $0.10/$0.50 per Mtok ($0.50/$2.50 for prompts over 100k)" },
+  ];
+
+  test("an alias described by the one word a single offered name begins with stands for that model", () => {
+    // Every list on the live box said `default` for what the default was: "Opus" is not the name "Opus 5.5".
+    const models = offeredModels(opened("default", REAL));
+    expect(models?.[0]).toEqual({ value: "default", name: "Default (recommended)", current: "Opus 5.5" });
+    // A model that is no alias is described with its own name first: it stands for nothing but itself.
+    expect(offeredModels(opened("fable", REAL))?.find((model) => model.current)).toEqual({ value: "fable", name: "Fable 5.2", current: "fable" });
+  });
+
+  test("an alias described by a longer line stands for the model whose whole name heads it", () => {
+    const options = [{ value: "default", name: "Default", description: "Opus 5.5 · Best for everyday, complex tasks" }, { value: "old", name: "Opus 5" }, { value: "opus", name: "Opus 5.5" }];
+    // "Opus 5" is not the head of "Opus 5.5 · …": the name ends at a space.
+    expect(offeredModels(opened("default", options))?.[0]?.current).toBe("Opus 5.5");
+    expect(offeredModels(opened("default", options.slice(0, 2)))?.[0]?.current).toBe("default");
+    // Two names that both head the line: the longer is the one it names, wherever it is listed.
+    const family = [{ value: "default", name: "Default", description: "Opus 5.5 · Best for everyday, complex tasks" }, { value: "any-opus", name: "Opus" }, { value: "opus", name: "Opus 5.5" }];
+    expect(offeredModels(opened("default", family))?.[0]?.current).toBe("Opus 5.5");
+  });
+
+  test("a word several offered names begin with names none of them: the alias is shown as itself", () => {
+    const options = [{ value: "default", name: "Default", description: "Opus" }, { value: "opus", name: "Opus 5.5" }, { value: "claude-opus-5", name: "Opus 5" }];
+    expect(offeredModels(opened("default", options))?.[0]?.current).toBe("default");
+    // And a description that names nothing offered.
+    expect(offeredModels(opened("default", [{ value: "default", name: "Default", description: "Whatever your plan includes" }, { value: "opus", name: "Opus 5.5" }]))?.[0]?.current).toBe("default");
+  });
+
   test("any other is named by its value; one not offered is not named at all", () => {
     expect(offeredModels(opened("gpt-6-luna", [{ value: "gpt-6-luna", name: "6 Luna", description: "Latest frontier model." }, { value: "gpt-5.6-luna", name: "5.6 Luna" }]))?.[0]).toEqual({ value: "gpt-6-luna", name: "6 Luna", current: "gpt-6-luna" });
     expect(offeredModels(opened("elsewhere", [{ value: "small" }])) ).toEqual([{ value: "small" }]);
