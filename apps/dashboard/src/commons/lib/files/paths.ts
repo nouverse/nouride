@@ -29,3 +29,26 @@ export function languageOf(name: string): string | undefined {
 export function isMarkdown(name: string): boolean {
   return /\.(md|markdown)$/i.test(name);
 }
+
+/** Whether `path` is the folder `root` or under it. */
+export function within(path: string, root: string): boolean {
+  const parts = path.split("/").filter(Boolean);
+  return root.split("/").filter(Boolean).every((part, index) => parts[index] === part);
+}
+
+/** A folder a files view may not leave: its path among Nouride's files, and what it is called where you are. */
+export interface FilesRoot {
+  path: string;
+  name: string;
+}
+
+/** Where a view held to `root` is: `path` where that is in the folder, the folder itself for anything outside it. */
+export function heldTo(path: string, root: FilesRoot | undefined): string {
+  return !root || within(path, root.path) ? path : root.path;
+}
+
+/** The folders on the way to `path` from `root` down, nearest last; all of them where no folder holds the view. */
+export function crumbsUnder(path: string, root: FilesRoot | undefined): { name: string; path: string }[] {
+  const all = crumbsOf(path);
+  return root ? all.slice(crumbsOf(root.path).length) : all;
+}

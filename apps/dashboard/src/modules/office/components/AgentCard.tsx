@@ -1,9 +1,9 @@
 import { Link } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { MessageSquare, Moon, Palette, Sun, Target, X } from "lucide-react";
+import { FolderOpen, MessageSquare, Moon, Palette, Sun, Target, X } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import type { AgentSummary } from "@nouride/wire";
-import { canWrite, useMe } from "@/commons/lib/session";
+import { canWrite, isAdmin, useMe } from "@/commons/lib/session";
 import { useAgentChatLink } from "@/commons/hooks/use-agent-chat";
 import { AgentStatusBadge } from "@/commons/components/agents/agent-status-badge";
 import { ErrorNote } from "@/commons/components/ui/ui";
@@ -83,6 +83,12 @@ export function AgentCard({ agent, status, onClose }: { agent: AgentSummary; sta
         <Link to="/agents/$agentId/look" params={{ agentId: agent.id }} className="btn btn-sm gap-1.5">
           <Palette size={14} aria-hidden="true" /> Edit look
         </Link>
+        {/* Its own folder in the workspace: an admin's to look through, as its tab on the agent's page is. */}
+        {isAdmin(me.data ?? null) ? (
+          <Link to="/agents/$agentId/workspace" params={{ agentId: agent.id }} search={{ path: "" }} className="btn btn-sm gap-1.5">
+            <FolderOpen size={14} aria-hidden="true" /> Workspace
+          </Link>
+        ) : null}
       </div>
       <ErrorNote error={act.error} />
     </div>

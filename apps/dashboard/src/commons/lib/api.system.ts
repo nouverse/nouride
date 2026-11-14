@@ -4,7 +4,7 @@
  */
 
 import { control, post, request } from "./api.client";
-import type { SystemFileOpened, SystemFileWeight, SystemFolderListing, SystemFolderSizes, SystemOverview } from "@nouride/wire";
+import type { SystemFileOpened, SystemFileWeight, SystemFolderListing, SystemFolderSizes, SystemOverview, SystemWorkspace } from "@nouride/wire";
 
 const at = (path: string) => `path=${encodeURIComponent(path)}`;
 
@@ -18,7 +18,9 @@ export const systemApi = {
   /** How large the data folder is. Asked again while it says `measuring`: the count comes later. */
   systemFolderSizes: () => request<SystemFolderSizes>(`${control}/system/folder-sizes`),
   /** A folder of the data folder, by its path under it; the folder itself for an empty path. */
-  systemFiles: (path: string) => request<SystemFolderListing>(`${control}/system/files?${at(path)}`),
+  systemFiles: (path: string, root?: string) => request<SystemFolderListing>(`${control}/system/files?${at(path)}${root === undefined ? "" : `&root=${encodeURIComponent(root)}`}`),
+  /** Where the agents' workspace is among Nouride's files; null where this install keeps it outside them. */
+  systemWorkspace: () => request<SystemWorkspace>(`${control}/system/files/workspace`),
   systemFile: (path: string) => request<SystemFileOpened>(`${control}/system/files/read?${at(path)}`),
   /** Where a file's own bytes are, for an `<img>`, a `<video>`, an `<audio>`, or a PDF in a tab of its own. */
   systemMedia: (path: string) => `${control}/system/files/raw?${at(path)}`,

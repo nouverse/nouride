@@ -13,6 +13,9 @@ describe("the page you are on", () => {
   test("is a section's item on the pages it holds, and on the pages under them", () => {
     expect(["/work", "/automations", "/automations/cron_1", "/automations/new", "/missions", "/missions/msn_1", "/jobs/job_1"].every((path) => isCurrent(item("/work"), path))).toBe(true);
     expect(isCurrent(item("/agents"), "/office")).toBe(true);
+    // The agents' workspace is a page of Agents, and not one of Work for the letters its name begins with.
+    expect(isCurrent(item("/agents"), "/workspace")).toBe(true);
+    expect(isCurrent(item("/work"), "/workspace")).toBe(false);
     expect(isCurrent(item("/agents"), "/agents/nix/model")).toBe(true);
   });
 
@@ -66,7 +69,10 @@ describe("a section's tabs", () => {
     expect(sectionTabs("/automations/cron_1")).toBeNull();
     expect(sectionTabs("/automations/new")).toBeNull();
     expect(sectionTabs("/people/")?.map((tab) => tab.to)).toEqual(["/memories", "/people", "/groups"]);
-    expect(sectionTabs("/office")?.map((tab) => tab.to)).toEqual(["/agents", "/office"]);
+    // Workspace beside Agents and Office is an admin's: anyone else has the two.
+    expect(sectionTabs("/office")?.map((tab) => tab.label)).toEqual(["Agents", "Office", "Workspace"]);
+    expect(sectionTabs("/workspace")?.map((tab) => tab.to)).toEqual(["/agents", "/office", "/workspace"]);
+    expect(sectionTabs("/office", false)?.map((tab) => tab.to)).toEqual(["/agents", "/office"]);
     expect(sectionTabs("/missions/msn_1")).toBeNull();
     expect(sectionTabs("/agents/nix")).toBeNull();
     expect(sectionTabs("/")).toBeNull();

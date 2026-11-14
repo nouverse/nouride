@@ -30,6 +30,7 @@ const STORED = "s3cr3t-value-kept-in-the-store-0001";
 let top: string;
 let root: string;
 let app: Hono;
+let config: typeof DEFAULT_CONFIG;
 let as: keyof typeof ACCOUNTS = "admin";
 /** What is running, as a test sets it, and what was written to the audit log. */
 let missions: { workdir: string | null }[] = [];
@@ -68,8 +69,9 @@ beforeAll(() => {
   // A token cut in two by where a long file's check reads its second piece.
   put("workspace/edge-log.txt", `${"b".repeat(1024 * 1024 - 13)} ${GITHUB_TOKEN}\n${"c".repeat(2048)}`);
   put('workspace/we"ird\u00e9.txt', "named oddly\n");
-  const config = structuredClone(DEFAULT_CONFIG);
+  config = structuredClone(DEFAULT_CONFIG);
   config.daemon.dataDir = join(root, "data");
+  config.daemon.workspaceDir = join(root, "workspace");
   const control = new Hono();
   control.use("*", async (c, next) => {
     (c as unknown as { set(key: string, value: unknown): void }).set("principal", ACCOUNTS[as]);
@@ -107,6 +109,7 @@ describe("the System page is an admin's", () => {
         "/system/files/download?path=workspace/plain.md",
         "/system/files/download?path=workspace/plain.md&check=1",
         "/system/files/weigh?path=workspace/plain.md",
+        "/system/files/workspace",
       ]) {
         const refused = await ask(path);
         expect({ who, path, status: refused.status, body: refused.body }).toEqual({ who, path, status: 403, body: { error: "admin only", plain: "Only an admin can open the System page." } });
@@ -164,6 +167,53 @@ describe("what the machine is using", () => {
     // Each says what kind of thing it is, as Files does.
     expect(Object.fromEntries(sizes.entries.map((entry) => [entry.name, entry.kind]))).toEqual({ "config.toml": "file", data: "folder", workspace: "folder" });
     expect(sizes.entries[0]!.bytes).toBeGreaterThan(400 * 1024);
+  });
+});
+
+describe("a view held to one folder: an agent's Workspace tab, the Workspace tab", () => {
+  const view = (root: string, path: string) => ask(`/system/files?root=${encodeURIComponent(root)}&path=${encodeURIComponent(path)}`);
+  const OUTSIDE = { error: "outside the folder this view shows", plain: "That is outside this folder." };
+
+  test("is given that folder and what is under it, and refused what is outside it, by real folders and files there", async () => {
+    put("workspace/private/nix/app/main.ts", "export {};\n");
+    put("workspace/private/nix-old/kept.md", "an older folder whose name begins the same\n");
+    put("workspace/private/nox/plan.md", "another agent's\n");
+    put("workspace/shared/report.txt", "shared\n");
+    const NIX = "workspace/private/nix";
+    const own = (await view(NIX, NIX)).body as unknown as SystemFolderListing;
+    expect(own.entries.map((entry) => entry.name)).toEqual(["app"]);
+    expect(((await view(NIX, `${NIX}/app/main.ts`)).body as unknown as SystemFolderListing).file?.path).toBe(`${NIX}/app/main.ts`);
+    // Each of these is there to be read, and is an admin's to read in Files: this view is not given it.
+    for (const path of ["workspace/private/nox", "workspace/private/nox/plan.md", "workspace/private/nix-old", "workspace/private", "workspace/shared/report.txt", "workspace", ""]) {
+      const refused = await view(NIX, path);
+      expect({ path, status: refused.status, body: refused.body }).toEqual({ path, status: 400, body: OUTSIDE });
+    }
+    // A way up written into the path is refused before the view is asked, as it is for every path here.
+    for (const path of [`${NIX}/../nox`, `${NIX}/app/../../nox/plan.md`]) {
+      const refused = await view(NIX, path);
+      expect({ path, status: refused.status, reason: refused.body?.reason }).toEqual({ path, status: 400, reason: "outside" });
+    }
+    // Asked with no folder to hold it, each is given as before.
+    expect((await ask("/system/files?path=workspace/private/nox")).status).toBe(200);
+    // The whole workspace: everything in it, nothing beside it.
+    expect((await view("workspace", "workspace/shared")).status).toBe(200);
+    expect((await view("workspace", "data")).body).toEqual(OUTSIDE);
+  });
+
+  test("where the workspace is among Nouride's files: its path as a listing writes it, or none when it is kept outside", async () => {
+    expect((await ask("/system/files/workspace")).body).toEqual({ path: "workspace" });
+    const inside = config.daemon.workspaceDir;
+    try {
+      config.daemon.workspaceDir = join(top, "elsewhere", "workspace");
+      expect((await ask("/system/files/workspace")).body).toEqual({ path: null });
+      // The folder of Nouride's files itself is not a workspace inside it.
+      config.daemon.workspaceDir = root;
+      expect((await ask("/system/files/workspace")).body).toEqual({ path: null });
+      config.daemon.workspaceDir = join(root, "home", "work");
+      expect((await ask("/system/files/workspace")).body).toEqual({ path: "home/work" });
+    } finally {
+      config.daemon.workspaceDir = inside;
+    }
   });
 });
 

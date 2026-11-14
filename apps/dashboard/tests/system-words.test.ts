@@ -4,8 +4,9 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { ceilingWords, commandsWords, deleteWords, fullnessOf, inUseWords, shareOf, upFor } from "@/modules/system/lib/words";
-import { crumbsOf, isMarkdown, languageOf, parentOf } from "@/modules/system/lib/paths";
+import { ceilingWords, commandsWords, fullnessOf, inUseWords, shareOf, upFor } from "@/modules/system/lib/words";
+import { deleteWords } from "@/commons/lib/files/words";
+import { crumbsOf, isMarkdown, languageOf, parentOf } from "@/commons/lib/files/paths";
 import { formatBytes } from "@/commons/lib/format";
 
 const GiB = 1024 ** 3;

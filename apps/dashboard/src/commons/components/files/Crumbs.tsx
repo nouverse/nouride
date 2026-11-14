@@ -1,20 +1,24 @@
-/** Where you are in the data folder: each folder on the way a press back to it, the last one where you are. */
+/**
+ * Where you are in the data folder: each folder on the way a press back to it, the last one where you are. A view held
+ * to one folder (`root`) starts there and names it: nothing above it is on the way, so nothing above it is a press away.
+ */
 
 import { ChevronRight, FolderOpen } from "lucide-react";
-import { crumbsOf } from "../lib/paths";
+import { crumbsUnder, type FilesRoot } from "@/commons/lib/files/paths";
 
-export function Crumbs({ path, onOpen }: { path: string; onOpen: (path: string) => void }) {
-  const crumbs = crumbsOf(path);
+export function Crumbs({ path, onOpen, root }: { path: string; onOpen: (path: string) => void; root?: FilesRoot | undefined }) {
+  const crumbs = crumbsUnder(path, root);
+  const top = root?.name ?? "Nouride's files";
   const step = "inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary/50 sm:min-h-8";
   return (
     <nav aria-label="Where you are" className="flex flex-wrap items-center gap-x-0.5 gap-y-1">
       {crumbs.length === 0 ? (
         <span aria-current="page" className={`${step} font-semibold text-base-content`}>
-          <FolderOpen size={15} aria-hidden="true" /> Nouride's files
+          <FolderOpen size={15} aria-hidden="true" /> {top}
         </span>
       ) : (
-        <button type="button" className={`${step} font-medium text-primary hover:bg-base-200/60`} onClick={() => onOpen("")}>
-          <FolderOpen size={15} aria-hidden="true" /> Nouride's files
+        <button type="button" className={`${step} font-medium text-primary hover:bg-base-200/60`} onClick={() => onOpen(root?.path ?? "")}>
+          <FolderOpen size={15} aria-hidden="true" /> {top}
         </button>
       )}
       {crumbs.map((crumb, index) => (

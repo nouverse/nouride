@@ -13,14 +13,15 @@ import {
   Cpu,
   Crown,
   FileText,
+  FolderOpen,
   KeyRound,
+  Palette,
   Pause,
   Play,
   Plug,
   Radio,
   RotateCw,
   SlidersHorizontal,
-  Palette,
   Target,
   Terminal,
 } from "lucide-react";
@@ -42,6 +43,7 @@ interface Tab {
     | "/agents/$agentId/mcp"
     | "/agents/$agentId/cli"
     | "/agents/$agentId/look"
+    | "/agents/$agentId/workspace"
     | "/agents/$agentId/settings";
   label: string;
   icon: typeof FileText;
@@ -65,6 +67,9 @@ const TABS: Tab[] = [
  * model Nouride's own work around it runs on. One tab in place of CLI and Model, which a person read as two answers.
  */
 const BRAIN_TAB: Tab = { to: "/agents/$agentId/cli", label: "Brain", icon: Terminal };
+
+/** Its own folder in the workspace, to look through: an admin's, as System's Files is. */
+const WORKSPACE_TAB: Tab = { to: "/agents/$agentId/workspace", label: "Workspace", icon: FolderOpen };
 
 export default function AgentLayoutPage({ agentId }: { agentId: string }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -191,7 +196,7 @@ export default function AgentLayoutPage({ agentId }: { agentId: string }) {
 
         {/* Apple Segmented Tab Bar */}
         <div ref={tabBar} className={SEGMENTED_BAR}>
-          {(agent.external ? [TABS[0]!, BRAIN_TAB, ...TABS.slice(2)] : TABS).map(({ to, label, icon: Icon, exact }) => {
+          {[...(agent.external ? [TABS[0]!, BRAIN_TAB, ...TABS.slice(2)] : TABS), ...(isAdmin(me.data ?? null) ? [WORKSPACE_TAB] : [])].map(({ to, label, icon: Icon, exact }) => {
             const target = to.replace("$agentId", agentId);
             const active = exact ? pathname === target : pathname.startsWith(target);
             return (

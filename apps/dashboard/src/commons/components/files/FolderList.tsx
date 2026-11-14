@@ -9,8 +9,8 @@ import type { SystemFileEntry, SystemFolderListing } from "@nouride/wire";
 import { Spinner } from "@/commons/components/ui/Spinner";
 import { EmptyState, ErrorNote } from "@/commons/components/ui/ui";
 import { ago, formatBytes } from "@/commons/lib/format";
-import { isMarkdown, languageOf } from "../lib/paths";
-import type { FileActions } from "../lib/use-file-actions";
+import { isMarkdown, languageOf } from "@/commons/lib/files/paths";
+import type { FileActions } from "@/commons/lib/files/use-file-actions";
 
 function iconOf(entry: SystemFileEntry) {
   if (entry.kind === "folder") return Folder;

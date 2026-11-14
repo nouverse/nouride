@@ -87,13 +87,13 @@ const CHAT_LIST = {
   groups: [],
 };
 
-function serve(status: unknown = STATUS): { posted: { path: string; body: unknown }[] } {
+function serve(status: unknown = STATUS, role = "admin"): { posted: { path: string; body: unknown }[] } {
   const posted: { path: string; body: unknown }[] = [];
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const path = new URL(String(input), "http://localhost").pathname;
     if (path === "/api/control/status") return json(status);
     if (path === "/api/control/chat-list") return json(CHAT_LIST);
-    if (path === "/api/control/auth/me") return json({ id: "u1", username: "mira", role: "admin" });
+    if (path === "/api/control/auth/me") return json({ id: "u1", username: "mira", role });
     if (init?.method === "POST") {
       posted.push({ path, body: JSON.parse(String(init.body ?? "{}")) });
       return json({ ok: true });
@@ -163,6 +163,28 @@ describe("the Office", () => {
     } finally {
       unmount();
     }
+  });
+
+  test("a cat's card opens that agent's own folder for an admin, and has no such button for anyone else", async () => {
+    const workspace = (host: HTMLElement) => [...host.querySelectorAll("a")].find((link) => (link.textContent ?? "").trim() === "Workspace");
+    const opened = async (role: string) => {
+      serve(STATUS, role);
+      const { host, unmount } = await mount("office");
+      try {
+        await eventually(() => host.querySelectorAll("button[aria-pressed]").length === 4, 3_000, "a button per cat");
+        (host.querySelector('button[aria-label="Wren, waiting for you"]') as HTMLButtonElement).click();
+        await eventually(() => (host.textContent ?? "").includes("Edit look"), 2_000, "its card");
+        // Sleep is pressable once who is signed in is known, for an operator as for an admin: only then is a button
+        // that is not there one that was left out.
+        await eventually(() => [...host.querySelectorAll("button")].some((button) => (button.textContent ?? "").trim() === "Sleep" && !button.disabled), 2_000, "who is signed in");
+        return workspace(host)?.getAttribute("href");
+      } finally {
+        unmount();
+      }
+    };
+    // The picked agent's, not the orchestrator's: the tab on its own page.
+    expect(await opened("admin")).toMatch(/\/agents\/wren\/workspace(\?path=)?$/);
+    expect(await opened("operator")).toBeUndefined();
   });
 });
 
