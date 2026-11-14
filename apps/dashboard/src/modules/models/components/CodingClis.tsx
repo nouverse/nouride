@@ -212,12 +212,17 @@ function AccountRow({ cli, account, admin, signing, onSignIn, onChanged }: { cli
           ) : null}
         </span>
       </div>
+      {account.limits?.map((limit) => (
+        <p key={limit} className="text-warning text-xs" data-account-limit>{limit.replaceAll("`", "")}</p>
+      ))}
       {account.agents.length > 0 ? (
         <ul className="flex flex-wrap gap-2">
           {account.agents.map((agent) => (
             <li key={agent.id} className="flex items-center gap-1.5 rounded-lg border border-base-content/10 px-2 py-1 text-xs">
               {agent.signedIn ? <CheckCircle2 size={13} className="text-success" aria-label="answers" /> : <KeyRound size={13} className="text-warning" aria-label="cannot answer" />}
               <span>{agent.name}</span>
+              {/* Moved to another of its accounts while this one is at its limit. */}
+              {agent.on ? <span className="text-info">on {agent.on} now</span> : null}
               {!agent.signedIn && !cli.shared ? (
                 <Link to="/agents/$agentId/cli" params={{ agentId: agent.id }} className="link link-primary">Sign in</Link>
               ) : null}

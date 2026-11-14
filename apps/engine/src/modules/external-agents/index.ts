@@ -254,7 +254,7 @@ export class ExternalAgents implements RunnerHost {
     if (!external) return null;
     const open = this.running.get(agent.config.id);
     const handshake = open && !open.closed ? open.info?.agentInfo : undefined;
-    return answeringOf(this.row(external.cli)?.name ?? external.cli, external.model, handshake, this.models.runsOn(agent.config.id), this.contexts.of(agent.config.id, cliSessionKey(gatewayId, chatId)), this.parts.ownVersion(external.cli));
+    return answeringOf(this.row(external.cli)?.name ?? external.cli, external.model, handshake, this.models.runsOn(agent.config.id), this.contexts.of(agent.config.id, cliSessionKey(gatewayId, chatId)), this.parts.ownVersion(external.cli), external.accounts ? (this.rotation.accountOf(agent.config.id) ?? external.accounts[0]) : undefined);
   }
 
   /**
@@ -587,7 +587,7 @@ export class ExternalAgents implements RunnerHost {
 
   /** Every CLI with its accounts and the agents on each, for the Models page; `fresh` (Check again) asks the registry too. */
   async accountList(agents: readonly LoadedAgent[], fresh = false): Promise<CliAccountsView[]> {
-    return this.accounts.list(this.rows(), await this.scan(fresh, fresh), agents, (agent) => this.profiles(agent, fresh));
+    return this.accounts.list(this.rows(), await this.scan(fresh, fresh), agents, (agent) => this.profiles(agent, fresh), this.rotation);
   }
 
   /**

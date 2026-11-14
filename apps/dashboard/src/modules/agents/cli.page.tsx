@@ -16,6 +16,7 @@ import { Combobox } from "@/commons/components/ui/Combobox";
 import { AskAgentButton } from "@/commons/components/agents/AskAgentButton";
 import { CliStanding, CliVersionNumbers } from "@/commons/components/agents/CliStanding";
 import { CliOwnBadge, CliPartsLine } from "@/commons/components/agents/CliParts";
+import { NextAccounts } from "./components/NextAccounts";
 import { Details } from "@/commons/components/ui/Details";
 import { byInstaller, goBackMessage, setUpMessage } from "@/commons/lib/set-up";
 import { CliProfiles } from "./components/CliProfiles";
@@ -148,6 +149,11 @@ export default function AgentCliPage({ agentId }: { agentId: string }) {
       <Settings agentId={agentId} data={data} cliName={cliName} models={profiles.data?.models ?? data.models ?? []} admin={admin} onSaved={async () => {
         await queryClient.invalidateQueries({ queryKey: ["agent-cli", agentId] });
         await queryClient.invalidateQueries({ queryKey: ["status"] });
+      }} />
+
+      <NextAccounts agentId={agentId} agentName={agentName} data={data} admin={admin} onSaved={async () => {
+        await changed();
+        await queryClient.invalidateQueries({ queryKey: ["cli-accounts"] });
       }} />
 
       {/* The model of Nouride's own work around it — and of a turn the CLI cannot answer — folded: it is not what answers. */}

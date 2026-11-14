@@ -82,6 +82,22 @@ describe("an external agent from the dashboard", () => {
     expect(await readTextFileIfExists(join(root, "agents", "coder", "config.toml"))).toBe(before);
   });
 
+  test("its accounts to move through are the one field, written as a list; a list of one is that account's name", async () => {
+    const { registry, setup } = await service();
+    await setup.createAgent({ id: "coder", displayName: "Coder", systemPrompt: "", model: "", actor: "t", external: { cli: "codex" } });
+    expect(await setup.setExternal({ agentId: "coder", settings: { profile: ["rina", "work"] }, actor: "t" })).toEqual({ ok: true });
+    expect(registry.get("coder")?.config.external).toEqual({ cli: "codex", profile: "rina", accounts: ["rina", "work"] });
+    expect(await readTextFileIfExists(join(root, "agents", "coder", "config.toml"))).toContain('profile = ["rina", "work"]');
+    // Back to the one: the name alone, and no list left behind it.
+    expect(await setup.setExternal({ agentId: "coder", settings: { profile: ["work"] }, actor: "t" })).toEqual({ ok: true });
+    expect(registry.get("coder")?.config.external).toEqual({ cli: "codex", profile: "work" });
+    expect(await readTextFileIfExists(join(root, "agents", "coder", "config.toml"))).toContain('profile = "work"');
+    // One the loader refuses changes nothing.
+    const refused = await setup.setExternal({ agentId: "coder", settings: { profile: ["work", "work"] }, actor: "t" });
+    expect(refused).toMatchObject({ ok: false, error: expect.stringContaining("Saved nothing") });
+    expect(registry.get("coder")?.config.external).toEqual({ cli: "codex", profile: "work" });
+  });
+
   test("an agent that is not external has no CLI settings to change", async () => {
     const { setup } = await service();
     await setup.createAgent({ id: "nouva", displayName: "Nouva", systemPrompt: "", model: "gpt-4o", actor: "t" });

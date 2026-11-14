@@ -86,6 +86,10 @@ export type CliPreset = "folder" | "risky" | "all";
 export interface AgentCli {
   cli: string;
   profile: string;
+  /** The accounts it moves through when one reaches its limit, in order, `profile` first; one where it has the one. */
+  accounts?: string[];
+  /** The account its CLI is on now, where that is not `profile`. */
+  on?: string;
   permissions: CliPreset;
   model: string | null;
   /** The models its CLI offered when its last session opened, suggested in the model field; none before its first. */
@@ -111,7 +115,10 @@ export interface CliAccountView {
   name: string;
   /** A shared account: whether it is signed in. One sign-in per agent: null — each agent's says. */
   signedIn: boolean | null;
-  agents: { id: string; name: string; signedIn: boolean | null }[];
+  /** `on`: the account the agent's CLI runs on now, where it moved off this one at a limit. */
+  agents: { id: string; name: string; signedIn: boolean | null; on?: string }[];
+  /** The limits this account is at now, a sentence a model; absent where it is at none. */
+  limits?: string[];
 }
 
 export interface CliAccountsView {

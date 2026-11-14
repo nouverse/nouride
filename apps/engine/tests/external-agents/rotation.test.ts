@@ -183,6 +183,16 @@ describe("the account a turn starts on", () => {
     expect(kept()).toEqual({});
   });
 
+  test("an account's marks in words, for where accounts are listed", async () => {
+    const { turn } = rotation({ kept: { "claude-code|rina|fable": { until: NOW + 5 * 24 * HOUR, known: true }, "claude-code|rina|default": { until: NOW + HOUR, known: false } } });
+    expect(turn.says("claude-code", "rina")).toEqual([
+      "At its limit for `fable`: for about 5 days more.",
+      // The CLI did not say until when: the hour is when it is tried again, said as that and not as its end.
+      "At its limit: it did not say until when, and it is tried again within the hour.",
+    ]);
+    expect(turn.says("claude-code", "work")).toEqual([]);
+  });
+
   test("marks are kept across a restart", () => {
     const { turn } = rotation({ kept: { "claude-code|rina|fable": { until: NOW + HOUR, known: true } } });
     expect(turn.accountFor(ROW, NIX, "fable")).toBe("work");

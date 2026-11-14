@@ -14,7 +14,8 @@ import { externalOrchestratorRefusal } from "./agent-access.ts";
 const log = createLogger("setup");
 
 export interface ExternalSettings {
-  profile?: string;
+  /** One account, or the several it moves through at a limit, in order: written as the one field, a name or a list. */
+  profile?: string | string[];
   permissions?: ExternalPermissions;
   model?: string;
 }
@@ -41,16 +42,19 @@ export async function setExternal(
   const agent = deps.registry.get(input.agentId);
   if (!agent) return { ok: false, error: `no agent "${input.agentId}"` };
   if (!agent.config.external) return { ok: false, error: `${input.agentId} is not an external agent` };
-  const given = Object.entries(input.settings).filter((entry): entry is [string, string] => typeof entry[1] === "string");
+  // A list of one account is that account, written as its name.
+  const profile = Array.isArray(input.settings.profile) ? (input.settings.profile.length > 1 ? input.settings.profile : input.settings.profile[0]) : input.settings.profile;
+  const given = Object.entries({ ...input.settings, ...(profile === undefined ? {} : { profile }) }).filter((entry): entry is [string, string | string[]] => typeof entry[1] === "string" || Array.isArray(entry[1]));
   if (given.length === 0) return { ok: true };
   const saved = await editPackFile({
     path: join(agent.dir, "config.toml"),
     reload: () => deps.registry.reload(input.agentId),
     edit: (source) => {
       let next = source;
-      const set: Record<string, string> = {};
+      const set: Record<string, string | string[]> = {};
       for (const [key, value] of given) {
-        if (!value.trim() && CLEARABLE.has(key)) next = removeTomlKey(next, "external", key);
+        if (Array.isArray(value)) set[key] = value;
+        else if (!value.trim() && CLEARABLE.has(key)) next = removeTomlKey(next, "external", key);
         else set[key] = value.trim();
       }
       return Object.keys(set).length > 0 ? upsertTomlTable(next, "external", set) : next;

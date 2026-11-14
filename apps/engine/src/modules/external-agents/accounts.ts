@@ -24,7 +24,10 @@ export interface CliAccountView {
   name: string;
   /** A shared account: whether its token is kept. One sign-in per agent: null — each agent's line says. */
   signedIn: boolean | null;
-  agents: { id: string; name: string; signedIn: boolean | null }[];
+  /** `on`: the account the agent's CLI runs on now, where it moved off this one at a limit (`rotation.ts`). */
+  agents: { id: string; name: string; signedIn: boolean | null; on?: string }[];
+  /** The limits this account is at now, a sentence a model; absent where it is at none. */
+  limits?: string[];
 }
 
 export interface CliAccountsView {
@@ -107,21 +110,31 @@ export class CliAccounts {
    * Every CLI with its accounts — the ones added, and the ones a pack names — and each account's agents with whether
    * they can answer, as `check` asks the CLI on that agent's account.
    */
-  async list(rows: readonly CliRow[], scanned: readonly ScannedCli[], agents: readonly LoadedAgent[], check: (agent: LoadedAgent) => Promise<CliProfile[]>): Promise<CliAccountsView[]> {
+  async list(
+    rows: readonly CliRow[],
+    scanned: readonly ScannedCli[],
+    agents: readonly LoadedAgent[],
+    check: (agent: LoadedAgent) => Promise<CliProfile[]>,
+    turn?: { says(cli: string, account: string): string[]; accountOf(agentId: string): string | undefined },
+  ): Promise<CliAccountsView[]> {
     const kept = this.deps.file?.load() ?? {};
     const views: CliAccountsView[] = [];
     for (const row of rows) {
       const scan = scanned.find((entry) => entry.id === row.id);
       const users = agents.filter((agent) => agent.config.external?.cli === row.id);
-      const names = [...new Set([...(kept[row.id] ?? []), ...users.map(profileOf)])].sort();
+      // Every account an agent may move to is an account of the CLI, listed whether or not it was added by hand.
+      const names = [...new Set([...(kept[row.id] ?? []), ...users.flatMap((agent) => agent.config.external?.accounts ?? [profileOf(agent)])])].sort();
       const accounts: CliAccountView[] = [];
       for (const name of names) {
         const on: CliAccountView["agents"] = [];
         for (const agent of users.filter((entry) => profileOf(entry) === name)) {
           const inUse = (await check(agent)).find((profile) => profile.inUse);
-          on.push({ id: agent.config.id, name: agent.config.displayName, signedIn: inUse?.signedIn ?? null });
+          // Moved to another of its accounts, at a limit here: said beside it, under the account it starts on.
+          const now = turn?.accountOf(agent.config.id);
+          on.push({ id: agent.config.id, name: agent.config.displayName, signedIn: inUse?.signedIn ?? null, ...(now && now !== name ? { on: now } : {}) });
         }
-        accounts.push({ name, signedIn: row.sharedLogin ? this.token(row, name) !== undefined : null, agents: on });
+        const limits = turn?.says(row.id, name) ?? [];
+        accounts.push({ name, signedIn: row.sharedLogin ? this.token(row, name) !== undefined : null, agents: on, ...(limits.length > 0 ? { limits } : {}) });
       }
       views.push({
         id: row.id,

@@ -32,6 +32,7 @@ export function cliStatusLines(cli: CliAnswering, own: { model: string; provider
     // The CLI's own version first, its connector's after: the connector's alone read as Claude Code's.
     `Answered by: ${name}${cli.version ? ` ${cli.version}` : ""}${cli.running ? ` (${cli.version ? "in " : ""}${cli.running})` : ", not running now; it starts at the next message"}`,
     `Model: ${model}`,
+    ...(cli.account ? [`Account: ${cli.account}, of the ones it moves between when one reaches its limit`] : []),
     `Context: kept by ${name} itself, ${context}`,
     `Transcript: ${transcript} messages, the daemon's record of this chat`,
     reported

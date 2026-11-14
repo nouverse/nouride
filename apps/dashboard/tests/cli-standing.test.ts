@@ -152,6 +152,15 @@ describe("the Models page", () => {
     expect(host.querySelector('[data-standing="newer"] details')?.textContent).toContain("with zod 4.6.7");
   });
 
+  test("an account at its limit says so in words, and an agent that moved off it says where it is now", async () => {
+    const limited = { ...card("claude-code", "0.107.0", { standing: "current" }), shared: true, accounts: [{ name: "rina", signedIn: true, limits: ["At its limit for `fable`: for about 5 days more."], agents: [{ id: "nix", name: "Nix", signedIn: true, on: "work" }, { id: "nox", name: "Nox", signedIn: true }] }, { name: "work", signedIn: true, agents: [] }] };
+    const { host } = await mount([limited]);
+    // The mark's name for the model is plain text on a page: no code marks.
+    expect([...host.querySelectorAll("[data-account-limit]")].map((line) => line.textContent)).toEqual(["At its limit for fable: for about 5 days more."]);
+    expect(plainText(host)).toContain("Nixon work now");
+    expect(plainText(host)).not.toContain("Noxon ");
+  });
+
   test("Check again asks the server afresh, which reads the newest out again", async () => {
     const { host, asked } = await mount([card("a", "0.100.0", { standing: "current" })]);
     const again = [...host.querySelectorAll("button")].find((entry) => entry.textContent?.trim() === "Check again") as HTMLButtonElement;

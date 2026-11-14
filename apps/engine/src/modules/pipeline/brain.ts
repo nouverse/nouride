@@ -22,6 +22,8 @@ export interface CliAnswering {
    * Absent where it was not read.
    */
   version?: string;
+  /** The account its CLI is on now, of the several it moves between at a limit (`rotation.ts`). Absent: it has the one. */
+  account?: string;
   /** What answered its handshake, as it named itself — "@agentclientprotocol/claude-agent-acp 0.95.0" — while it runs; null when it is stopped. */
   running: string | null;
   /** The model: the pack's, else the CLI's own, as its last session opened on it; null where neither says, and the CLI chooses. */

@@ -50,7 +50,7 @@ const SIGNED_IN: CliProfile[] = [
   { name: "home", inUse: false, signedIn: false, reason: "Codex is not signed in — sign in on the agent's Brain tab" },
 ];
 
-function serve(role: "admin" | "viewer", cli: AgentCli = CLI, profiles: CliProfile[] = NOT_SIGNED_IN): { posted: { path: string; body: unknown }[] } {
+function serve(role: "admin" | "viewer", cli: AgentCli = CLI, profiles: CliProfile[] = NOT_SIGNED_IN, accounts?: unknown): { posted: { path: string; body: unknown }[] } {
   const posted: { path: string; body: unknown }[] = [];
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const path = new URL(String(input), "http://localhost").pathname;
@@ -60,6 +60,7 @@ function serve(role: "admin" | "viewer", cli: AgentCli = CLI, profiles: CliProfi
     }
     if (path === "/api/control/auth/me") return json({ id: "u1", username: "mira", role });
     if (path === "/api/control/agents/coder/cli") return json(cli);
+    if (path === "/api/control/cli-accounts" && accounts) return json(accounts);
     if (path === "/api/control/agents/coder/cli/profiles") return json({ profiles, separate: true, models: MODELS });
     if (path === "/api/control/status") return json({ agents: [{ id: "coder", displayName: "Coder" }], gateways: [] });
     if (path === "/api/control/external-clis") return json({ room: { enough: true, bytes: 2 ** 31, needs: 2 ** 29 }, clis: [{ id: "codex", name: "Codex", command: "codex-acp", installed: true, version: "0.9.1", install: "npm i -g", login: true }] });
@@ -103,6 +104,62 @@ function type(input: HTMLInputElement, text: string): void {
 }
 
 const button = (host: HTMLElement, text: string) => [...host.querySelectorAll("button")].find((entry) => entry.textContent?.trim() === text) as HTMLButtonElement | undefined;
+
+describe("the accounts an agent goes on with when its account reaches its limit", () => {
+  /** A CLI whose accounts are signed in once for every agent: two signed in, one not. */
+  const SHARED = { clis: [{ id: "codex", name: "Codex", installed: true, install: "", shared: true, canLogin: true, accounts: [{ name: "work", signedIn: true, agents: [] }, { name: "spare", signedIn: true, agents: [] }, { name: "team", signedIn: false, agents: [] }] }] };
+  const QUIET: AgentCli = { ...CLI, login: null, unavailable: null };
+  const card = (host: HTMLElement) => host.querySelector<HTMLElement>("[data-next-accounts]");
+
+  test("picked from the signed-in accounts, in order, and saved as the one list with its first account first", async () => {
+    const { posted } = serve("admin", QUIET, SIGNED_IN, SHARED);
+    const { host, unmount } = await mount();
+    try {
+      await eventually(() => card(host) !== null, 3_000, "the accounts to go on with");
+      expect(host.textContent).toContain("Coder starts on work.");
+      expect(card(host)!.textContent).toContain("None yet: at its limit, Coder stops until the limit ends.");
+      // Only an account that is signed in, and not the one it starts on, can be gone on with.
+      const select = card(host)!.querySelector("select") as HTMLSelectElement;
+      expect([...select.options].map((option) => option.value)).toEqual(["", "spare"]);
+      Object.getOwnPropertyDescriptor(Object.getPrototypeOf(select), "value")!.set!.call(select, "spare");
+      select.dispatchEvent(new (select.ownerDocument.defaultView as unknown as typeof globalThis).Event("change", { bubbles: true }));
+      await eventually(() => button(card(host)!, "Add")?.disabled === false, 2_000, "the account picked");
+      button(card(host)!, "Add")!.click();
+      await eventually(() => (card(host)!.textContent ?? "").includes("1.spare"), 2_000, "the account listed");
+      button(card(host)!, "Save")!.click();
+      await eventually(() => posted.length > 0, 2_000, "the list saved");
+      expect(posted[0]).toEqual({ path: "/api/control/agents/coder/cli", body: { profile: ["work", "spare"] } });
+    } finally {
+      unmount();
+    }
+  });
+
+  test("the ones it has are listed in order, with where it is now; one taken off is saved as the name alone", async () => {
+    const { posted } = serve("admin", { ...QUIET, accounts: ["work", "spare"], on: "spare" }, SIGNED_IN, SHARED);
+    const { host, unmount } = await mount();
+    try {
+      await eventually(() => (card(host)?.textContent ?? "").includes("1.spare"), 3_000, "its accounts");
+      expect(card(host)!.textContent).toContain("Coder is on spare now.");
+      (card(host)!.querySelector('button[aria-label="Remove spare"]') as HTMLButtonElement).click();
+      await eventually(() => button(card(host)!, "Save")?.disabled === false, 2_000, "the change");
+      button(card(host)!, "Save")!.click();
+      await eventually(() => posted.length > 0, 2_000, "the list saved");
+      expect(posted[0]!.body).toEqual({ profile: ["work"] });
+    } finally {
+      unmount();
+    }
+  });
+
+  test("not offered for a CLI that signs in once per agent: it has no other account to start with", async () => {
+    serve("admin", QUIET, SIGNED_IN, { clis: [{ ...SHARED.clis[0], shared: false }] });
+    const { host, unmount } = await mount();
+    try {
+      expect(card(host)).toBeNull();
+    } finally {
+      unmount();
+    }
+  });
+});
 
 describe("an external agent's Brain tab", () => {
   test("says the agent cannot answer until the profile it uses is signed in, and walks the sign-in through", async () => {

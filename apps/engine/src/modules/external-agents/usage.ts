@@ -117,10 +117,11 @@ export class CliContexts {
  * said it, what answered its handshake while it runs, the model — the pack's, else the one its last session opened on —
  * and the context it last said.
  */
-export function answeringOf(cli: string, packModel: string | undefined, handshake: InitializeResult["agentInfo"], runsOn: string | null, context: CliContext | null, version?: string): CliAnswering {
+export function answeringOf(cli: string, packModel: string | undefined, handshake: InitializeResult["agentInfo"], runsOn: string | null, context: CliContext | null, version?: string, account?: string): CliAnswering {
   return {
     cli,
     ...(version ? { version } : {}),
+    ...(account ? { account } : {}),
     running: handshake ? [handshake.name ?? handshake.title, handshake.version].filter(Boolean).join(" ") || null : null,
     model: packModel ? { name: packModel, by: "pack" } : runsOn ? { name: runsOn, by: "cli" } : null,
     context,

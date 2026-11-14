@@ -16,16 +16,17 @@ import type { ExternalAgents } from "@/modules/external-agents/index.ts";
 const TOKEN = "control-token-for-tests-0000000000";
 
 /** `wayBack`: the version its CLI's update check offers back, where a new version failed it (0.8.24). */
-function app(wayBack: string | null = null) {
+function app(wayBack: string | null = null, moved?: { accounts: string[]; on?: string }) {
   const seen: string[] = [];
   const audits: { action: string; actor?: string; details?: Record<string, unknown> }[] = [];
   const agents: Record<string, LoadedAgent> = {
-    coder: { config: { id: "coder", external: { cli: "codex", profile: "work" }, llm: { effort: "high" } } } as unknown as LoadedAgent,
+    coder: { config: { id: "coder", external: { cli: "codex", profile: "work", ...(moved ? { accounts: moved.accounts } : {}) }, llm: { effort: "high" } } } as unknown as LoadedAgent,
     nouva: { config: { id: "nouva" } } as unknown as LoadedAgent,
   };
   const login = { running: true, output: "Open https://x.test", links: ["https://x.test"], exitCode: null };
   const externalAgents = {
     room: () => ({ enough: true, bytes: 2 ** 31, needs: 2 ** 29 }),
+    rotation: { accountOf: () => moved?.on },
     scan: async () => [{ id: "codex", name: "Codex", command: "codex-acp", installed: false, install: "npm i -g", login: true }],
     unavailable: () => (wayBack ? "Codex 2.6.0 did not pass Nouride's check: it no longer offers steering" : "Codex is not signed in"),
     updates: { wayBack: () => wayBack },
@@ -112,6 +113,30 @@ describe("an external agent's CLI routes", () => {
     expect((await call("POST", "/agents/coder/cli", { effort: "default" })).status).toBe(200);
     expect((await call("POST", "/agents/coder/cli", { effort: "huge", model: "x" })).status).toBe(400);
     expect(seen).toEqual(["set coder {}", "effort coder xhigh", "set coder {}", "effort coder default"]);
+  });
+
+  test("show the accounts it moves through, and the one it is on now where it has moved", async () => {
+    const moved = await (await app(undefined, { accounts: ["work", "spare"], on: "spare" }).call("GET", "/agents/coder/cli")).json();
+    expect(moved).toMatchObject({ profile: "work", accounts: ["work", "spare"], on: "spare" });
+    // On its first account, or not started yet: nothing said of another.
+    const home = (await (await app(undefined, { accounts: ["work", "spare"], on: "work" }).call("GET", "/agents/coder/cli")).json()) as Record<string, unknown>;
+    expect(home.accounts).toEqual(["work", "spare"]);
+    expect("on" in home).toBe(false);
+    expect("on" in ((await (await app(undefined, { accounts: ["work", "spare"] }).call("GET", "/agents/coder/cli")).json()) as Record<string, unknown>)).toBe(false);
+    // An agent with the one account has no list to show.
+    expect("accounts" in ((await (await app().call("GET", "/agents/coder/cli")).json()) as Record<string, unknown>)).toBe(false);
+  });
+
+  test("its accounts to move through reach the writer as the list given, each a name once; anything else is refused", async () => {
+    const { call, seen } = app();
+    expect((await call("POST", "/agents/coder/cli", { profile: ["rina", "work"] })).status).toBe(200);
+    expect(seen).toContain('set coder {"profile":["rina","work"]}');
+    for (const bad of [[], ["rina", "rina"], ["rina", "Not A Name"], ["rina", 7]]) {
+      const refused = await call("POST", "/agents/coder/cli", { profile: bad });
+      expect(refused.status).toBe(400);
+      expect(((await refused.json()) as { error: string }).error).toBe("profile as a list is one or more account names, lowercase letters, digits and dashes, each once");
+    }
+    expect(seen.filter((line) => line.startsWith("set coder"))).toHaveLength(1);
   });
 
   test("its sign-in's terminal is an admin's to read, as the sign-in is — an operator sees the rest", async () => {

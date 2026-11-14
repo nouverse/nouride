@@ -131,6 +131,12 @@ export class AccountRotation {
     });
   }
 
+  /** An account's marks in words, a sentence a model, for where accounts are listed to a person. */
+  says(cli: string, account: string): string[] {
+    const now = this.now();
+    return this.limitsOf(cli, account).map((mark) => `At its limit${forModel(mark.model)}: ${mark.known ? `for ${about(mark.until - now)} more` : "it did not say until when, and it is tried again within the hour"}.`);
+  }
+
   /** The account the agent's CLI was last started on; none before its first start. */
   accountOf(agentId: string): string | undefined {
     return this.on.get(agentId);

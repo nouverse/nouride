@@ -57,6 +57,11 @@ describe("/status of an agent a coding CLI answers", () => {
     expect(await reply(ctx({ external: true, answering: { ...CLAUDE, version: "2.1.323", running: null } }))).toContain("Answered by: Claude Code 2.1.323, not running now");
   });
 
+  test("an agent with several accounts is told which one it is on now", async () => {
+    expect(await reply(ctx({ external: true, answering: { ...CLAUDE, account: "work" } }))).toContain("Account: work, of the ones it moves between when one reaches its limit");
+    expect(await reply(ctx({ external: true, answering: CLAUDE }))).not.toContain("Account:");
+  });
+
   test("says the CLI answers, on its model — never the pack's `[llm]` as if it answered", async () => {
     const c = ctx({ external: true, answering: CLAUDE, spent: { inputTokens: 1_200_000, outputTokens: 40_000, cachedInputTokens: 1_100_000 } });
     const text = await reply(c);
