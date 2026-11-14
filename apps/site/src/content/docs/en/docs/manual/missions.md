@@ -206,7 +206,9 @@ restarts with no step finished stops.
 
 Each mission gets a folder under its agent's private one, removed a week after it ends. Started with a `workdir` (an
 existing folder or repository), it works there instead, or in a git repository in a worktree of its own (below), and
-the folder it was given is never removed. When it ends, it is filed once in its agent's memory, from its report.
+the folder it was given is never removed. A mission's own folder that holds work nobody committed is kept, and named
+in the log. One whose mission is no longer on record at all goes once it has been a week untouched (0.8.36), under
+the same rule about work nobody committed. When it ends, it is filed once in its agent's memory, from its report.
 
 A mission has a conversation of its own, not yours: `/new`, `/reset` or deleting the chat it started in leaves it
 running and reporting there. That conversation is on the mission's page, not in the Chat list. Once it has ended, a

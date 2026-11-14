@@ -42,7 +42,7 @@ import { createWorkTool } from "@/modules/tools/builtins/work.ts";
 import type { SubagentRequest, SubagentResult } from "@/modules/tools/builtins/delegate.ts";
 import { reviewBrief, reviewOf } from "@/modules/missions/review.ts";
 import { repositoryOf, sourceRepositoryOf } from "@/modules/missions/decide.ts";
-import { branchRefusal, helperWorktreeFor, inOwnFolder, makeWorktree, ownFolderOf, removeExtraWorktrees, removeOwnFolder, trackedIn, worktreeBranch, type AsAgent } from "@/modules/missions/worktree.ts";
+import { branchRefusal, helperWorktreeFor, inOwnFolder, makeWorktree, ownFolderOf, ownFolders, removeExtraWorktrees, removeLeftFolder, removeOwnFolder, trackedIn, worktreeBranch, type AsAgent } from "@/modules/missions/worktree.ts";
 import { sendTextFile, type SendFileOptions } from "@/modules/tools/builtins/attach.ts";
 import { besidesTheReport } from "@/modules/missions/results.ts";
 import type { LinkFor } from "@/modules/web/links.ts";
@@ -320,6 +320,8 @@ export function buildMissions(params: {
       if ((!inOwnFolder(mission.workdir, own) && mission.startedAt !== null) || !params.registry.get(mission.agentId)) return [];
       return await removeOwnFolder(own, asTheAgent(mission.agentId), how);
     },
+    folders: () => params.registry.enabled().flatMap((agent) => ownFolders(privateWorkspace(params.config().daemon.workspaceDir, agent.config.id)).map((folder) => ({ agentId: agent.config.id, ...folder }))),
+    removeLeft: (agentId, missionId) => removeLeftFolder(ownFolderOf(privateWorkspace(params.config().daemon.workspaceDir, agentId), missionId), asTheAgent(agentId)),
     // Where missions work — the workspace's disk — against the daemon's own disk warning, a starting value.
     diskLow: () => {
       const free = freeDiskBytes(params.config().daemon.workspaceDir);

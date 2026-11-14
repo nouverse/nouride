@@ -8,8 +8,8 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { join } from "node:path";
-import { readFileSync, utimesSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { readFileSync, symlinkSync, utimesSync, writeFileSync } from "node:fs";
 import { ensureDir, removePath, statFile, type SqliteDb } from "@nouride/runtime";
 import { openAndMigrate } from "@/db/index.ts";
 import { jobLimits } from "@/modules/jobs/job-spawn.ts";
@@ -560,6 +560,36 @@ describe("sweeping old logs", () => {
 
     expect(s.sweepLogs(0)).toBe(0);
     expect(statFile(job.logPath)).not.toBeNull();
+  });
+
+  test("a log no job's row names goes with the old ones: in the folder itself and in an agent's, and nothing else there", async () => {
+    // A live install held thirty-six, the oldest three months old: the sweep went by the rows and never met them.
+    const s = store();
+    const kept = await finished(s);
+    const logs = dirname(dirname(kept.logPath));
+    const agent = s.logDirFor("nouva");
+    const put = (path: string, days: number) => {
+      writeFileSync(path, "a line\n");
+      age(path, days);
+      return path;
+    };
+    const flat = put(join(logs, "job_062159cec59745a2b719.log"), 90);
+    const own = put(join(agent, "job_075a0b1a94fc4d36acb5.log"), 20);
+    const recent = put(join(agent, "job_10e365153e2548659d17.log"), 2);
+    // Not a job's log by its name: what the daemon stages for an agent is kept beside them.
+    const staged = put(join(agent, "home.tar"), 90);
+    const other = put(join(logs, "notes.log"), 90);
+    // A link named as one is never followed, and never one.
+    symlinkSync(staged, join(agent, "job_15a3b59263ff41e98186.log"));
+
+    expect(s.sweepLogs(14)).toBe(2);
+    expect([statFile(flat), statFile(own)]).toEqual([null, null]);
+    for (const path of [recent, staged, other, kept.logPath]) expect({ path, there: statFile(path) !== null }).toEqual({ path, there: true });
+    expect(s.get(kept.id)).not.toBeNull();
+    // Off is off for these too.
+    age(recent, 90);
+    expect(s.sweepLogs(0)).toBe(0);
+    expect(statFile(recent)).not.toBeNull();
   });
 
   test("a row whose log is already gone is cleaned up too", async () => {

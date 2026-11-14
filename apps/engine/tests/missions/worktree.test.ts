@@ -6,12 +6,12 @@
  */
 
 import { afterEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileExistsSync, runCommand } from "@nouride/runtime";
 import { blockedBy, repositoryOf } from "@/modules/missions/decide.ts";
-import { branchOf, branchRefusal, helperWorktreeFor, makeWorktree, ownFolderOf, removeExtraWorktrees, removeOwnFolder, trackedIn, worktreeBranch, type AsAgent } from "@/modules/missions/worktree.ts";
+import { branchOf, branchRefusal, helperWorktreeFor, makeWorktree, ownFolderOf, ownFolders, removeExtraWorktrees, removeLeftFolder, removeOwnFolder, trackedIn, worktreeBranch, type AsAgent } from "@/modules/missions/worktree.ts";
 import { doneNotice } from "@/modules/missions/notices.ts";
 import type { Mission } from "@/modules/missions/types.ts";
 import { missionsHarness } from "./harness.ts";
@@ -171,6 +171,49 @@ describe("a mission's worktree", () => {
  * `mission/<id>` by hand. Git says what a branch name may be, and one already there is refused — its worktree would be
  * refused, or made on work that is not the mission's. Unnamed, it stays `mission/<id>`.
  */
+describe("the missions' own folders an agent has", () => {
+  test("are the folders named as a mission's, each with when it last changed; nothing else beside them", () => {
+    const root = mkdtempSync(join(tmpdir(), "mission-folders-"));
+    dirs.push(root);
+    const own = join(root, "private", "coder");
+    for (const name of ["msn_0bda637c95a1b2c3d4e5", "msn_101810774f00112233aa", "notes", "msn_not-an-id", "MSN_0BDA"]) mkdirSync(join(own, "missions", name), { recursive: true });
+    // A file named as one is not a folder of one.
+    writeFileSync(join(own, "missions", "msn_abcdef0123456789abcd"), "a file");
+    const when = new Date("2026-10-01T00:00:00Z");
+    utimesSync(join(own, "missions", "msn_101810774f00112233aa"), when, when);
+    const found = ownFolders(own).sort((a, b) => a.id.localeCompare(b.id));
+    expect(found.map((folder) => folder.id)).toEqual(["msn_0bda637c95a1b2c3d4e5", "msn_101810774f00112233aa"]);
+    expect(found[1]!.changedAt).toBe(when.getTime());
+    expect(found[0]!.changedAt).toBeGreaterThan(Date.now() - 60_000);
+    // The same with a slash at the folder's end, and none where an agent has had no mission.
+    expect(ownFolders(`${own}/`).map((folder) => folder.id).sort()).toEqual(found.map((folder) => folder.id));
+    expect(ownFolders(join(root, "private", "nobody"))).toEqual([]);
+  });
+
+  test("one no mission names, with only its brief left, is removed whole: there is no worktree in it to hold work", async () => {
+    const root = mkdtempSync(join(tmpdir(), "mission-folders-"));
+    dirs.push(root);
+    const own = ownFolderOf(join(root, "private", "coder"), "msn_a3ae8b852e0011223344");
+    mkdirSync(own, { recursive: true });
+    writeFileSync(join(own, "BRIEF.md"), "# The brief\n");
+    expect(await removeLeftFolder(own, run)).toEqual([]);
+    expect(existsSync(own)).toBe(false);
+  }, GIT_MS);
+
+  test("one no mission names is kept while work in it is not committed, and named; it goes once the work is", async () => {
+    // Its mission's record is gone, and with it anyone to ask what the work was.
+    const { repo, own } = await repository();
+    await makeWorktree(input({ mission: { id: "m1", workdir: repo, branch: null }, own }));
+    writeFileSync(join(own, "worktree", "app", "fix.ts"), "half done\n");
+    expect(await removeLeftFolder(own, run)).toEqual([join(own, "worktree")]);
+    expect(existsSync(join(own, "worktree", "app", "fix.ts"))).toBe(true);
+    await git(join(own, "worktree"), "add", ".");
+    await git(join(own, "worktree"), "commit", "-q", "-m", "the fix");
+    expect(await removeLeftFolder(own, run)).toEqual([]);
+    expect(existsSync(own)).toBe(false);
+  }, GIT_MS);
+});
+
 describe("a branch named at start", () => {
   test("is taken when git takes it and it is new — the worktree, the done notice, the page and the helpers are on it", async () => {
     const { repo, own } = await repository();

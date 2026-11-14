@@ -47,8 +47,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "a pack's `config.toml` mapped field by field, so each refusal names its file and field: one list, the pack's schema. Its MCP server readers are the seam if it grows by more than a field",
   },
   "apps/engine/src/modules/jobs/jobs.store.ts": {
-    lines: 511,
-    why: "the background job table: a command's, a helper's and a background ask's rows, every write to `jobs.status` in one class; the wake-up text and a helper's runtime half are beside it",
+    lines: 516,
+    why: "the background job table: a command's, a helper's and an ask's rows, every write to `jobs.status` in one class; its log sweep also clears logs no row names, whose finder is beside it",
   },
   "apps/engine/src/modules/tools/registry.ts": {
     lines: 450,

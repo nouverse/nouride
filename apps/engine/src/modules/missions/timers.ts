@@ -36,6 +36,8 @@ export class MissionTimers {
   private sweptAt = 0;
   /** Folders this process has removed — the window is looked at again each hour. */
   private readonly removed = new Set<string>();
+  /** Folders with no mission to their name that this process has looked at: each once, while it is there. */
+  private readonly leftSeen = new Set<string>();
   /** When each running mission's limits were last read for what its CLI said (`spent`). */
   private readonly spentChecked = new Map<string, number>();
 
@@ -46,7 +48,7 @@ export class MissionTimers {
 
   /** Folders it remembers removing, and missions whose limits it read for what their CLI said — `Missions.tables`. */
   entries(): number {
-    return this.removed.size + this.spentChecked.size;
+    return this.removed.size + this.leftSeen.size + this.spentChecked.size;
   }
 
   tick(now: number): void {
@@ -84,6 +86,30 @@ export class MissionTimers {
               ? log.info("an ended mission's folder removed early: the disk is low", { mission: mission.id, free_mb: freeMb })
               : log.info("an ended mission's folder removed", { mission: mission.id }),
         (err: unknown) => log.warn("an ended mission's folder could not be removed", { mission: mission.id, error: String(err) }),
+      );
+    }
+    this.sweepLeft(now);
+  }
+
+  /**
+   * A folder no mission's record names. A record goes thirty days after its mission ended, and where its folder was
+   * still there then (work in it nobody had committed, the daemon down through its week) nothing above looks at it
+   * again: it stayed for good, and so did the folder of a mission whose record went any other way. A week untouched,
+   * it is removed as an ended mission's is, and never over work nobody committed.
+   */
+  private sweepLeft(now: number): void {
+    const folders = this.deps.folders?.() ?? [];
+    const there = new Set(folders.map((folder) => folder.id));
+    for (const id of this.leftSeen) if (!there.has(id)) this.leftSeen.delete(id);
+    for (const folder of folders) {
+      if (this.leftSeen.has(folder.id) || now - folder.changedAt < KEEP_MS || this.deps.store.get(folder.id) !== null || !this.deps.removeLeft) continue;
+      this.leftSeen.add(folder.id);
+      void this.deps.removeLeft(folder.agentId, folder.id).then(
+        (unsaved) =>
+          unsaved.length > 0
+            ? log.warn("a folder no mission names kept: work in it was never committed", { mission: folder.id, agent: folder.agentId, worktrees: unsaved })
+            : log.info("a folder no mission names removed", { mission: folder.id, agent: folder.agentId }),
+        (err: unknown) => log.warn("a folder no mission names could not be removed", { mission: folder.id, agent: folder.agentId, error: String(err) }),
       );
     }
   }

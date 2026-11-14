@@ -821,6 +821,65 @@ describe("an ended mission's folder, with the disk low", () => {
   });
 });
 
+describe("a folder no mission's record names", () => {
+  const DAY = 24 * 60 * 60_000;
+
+  test("a week untouched, is removed: not a newer one, not one a record still names, and not over work nobody committed", async () => {
+    // On the live box fourteen such folders had stayed since their missions' records went, and nothing looked at them.
+    let folders: { agentId: string; id: string; changedAt: number }[] = [];
+    const h = await missionsHarness({ left: () => folders, unsavedInLeft: (id) => (id === "msn_unsaved" ? ["/w/nova/missions/msn_unsaved/worktree"] : []) });
+    const recorded = await h.start("still on record");
+    h.missions.stop(recorded.id, "Gading");
+    // The folders are looked at once an hour.
+    h.tick(61 * 60_000);
+    const at = h.now();
+    folders = [
+      { agentId: "nova", id: "msn_gone", changedAt: at - 8 * DAY },
+      { agentId: "nox", id: "msn_another", changedAt: at - 30 * DAY },
+      { agentId: "nova", id: "msn_fresh", changedAt: at - 6 * DAY },
+      { agentId: "nova", id: "msn_unsaved", changedAt: at - 40 * DAY },
+      // Its record is still there: the sweep of ended missions is the one that decides for it.
+      { agentId: "nova", id: recorded.id, changedAt: at - 40 * DAY },
+    ];
+    h.missions.tick();
+    await h.settle();
+    expect(h.removedLeft).toEqual(["msn_gone", "msn_another"]);
+    expect(h.askedLeft).toEqual(["nova:msn_gone", "nox:msn_another", "nova:msn_unsaved"]);
+    // Each is looked at once while it is there: an hour on, the one kept is not asked about again.
+    h.tick(61 * 60_000);
+    h.missions.tick();
+    await h.settle();
+    expect(h.askedLeft).toHaveLength(3);
+    // The newer one, once its week has passed.
+    h.tick(2 * DAY);
+    h.missions.tick();
+    await h.settle();
+    expect(h.removedLeft).toEqual(["msn_gone", "msn_another", "msn_fresh"]);
+  });
+
+  test("what was looked at is let go once the folder is gone", async () => {
+    let folders = [{ agentId: "nova", id: "msn_gone", changedAt: 0 }];
+    const h = await missionsHarness({ left: () => folders });
+    h.tick(8 * DAY);
+    h.missions.tick();
+    await h.settle();
+    expect(h.removedLeft).toEqual(["msn_gone"]);
+    expect(h.missions.tables().swept).toBe(1);
+    folders = [];
+    h.tick(61 * 60_000);
+    h.missions.tick();
+    expect(h.missions.tables().swept).toBe(0);
+  });
+
+  test("a daemon that cannot list or remove them looks at none", async () => {
+    const h = await missionsHarness();
+    h.tick(8 * DAY);
+    h.missions.tick();
+    await h.settle();
+    expect(h.askedLeft).toEqual([]);
+  });
+});
+
 describe("what the missions keep in memory", () => {
   test("goes with a mission that ends — and is not made again by a turn that ends, or a message that comes, after it", async () => {
     // The box's one slot holds the second back while the first is checked (its agent's own does not, since 0.8.11).

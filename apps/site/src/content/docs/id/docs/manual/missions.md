@@ -220,8 +220,10 @@ restart tanpa satu langkah pun selesai akan berhenti.
 
 Setiap misi dapat folder di bawah folder privat agent-nya, dihapus seminggu setelah misi berakhir. Kalau dimulai dengan
 `workdir` (folder atau repositori yang sudah ada), ia bekerja di sana, atau di repositori git di worktree-nya sendiri
-(lihat di bawah), dan folder yang diberikan itu gak pernah dihapus. Waktu berakhir, ia dicatat sekali di memori
-agent-nya, dari laporannya.
+(lihat di bawah), dan folder yang diberikan itu gak pernah dihapus. Folder misi yang masih menyimpan kerjaan yang
+belum di-commit ditahan, dan disebut di log. Folder yang misinya sudah gak tercatat sama sekali dihapus setelah
+seminggu gak disentuh (0.8.36), dengan aturan yang sama soal kerjaan yang belum di-commit. Waktu berakhir, ia dicatat
+sekali di memori agent-nya, dari laporannya.
 
 Misi punya percakapan sendiri, bukan percakapanmu: `/new`, `/reset` atau menghapus chat tempat ia dimulai gak
 menghentikannya, dan ia tetap melapor ke sana. Percakapan itu ada di halaman misinya, bukan di daftar Chat. Setelah

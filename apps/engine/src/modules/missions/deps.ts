@@ -80,6 +80,13 @@ export interface MissionsDeps {
    */
   remove?: (mission: Mission, how?: { keepUnsaved: boolean }) => Promise<string[]>;
   /**
+   * Every agent's missions' own folders, by the mission each is named for, with when it last changed: among them the
+   * ones no mission's record names any more (`MissionTimers.sweepLeft`).
+   */
+  folders?: () => { agentId: string; id: string; changedAt: number }[];
+  /** Remove such a folder as `remove` does an ended mission's, never over work nobody committed: those worktrees are named. */
+  removeLeft?: (agentId: string, missionId: string) => Promise<string[]>;
+  /**
    * The free megabytes where missions work, when they are below the daemon's disk warning — null when there is room or
    * it cannot be read. Low, an ended mission's folder goes an hour after it ended instead of a week.
    */
