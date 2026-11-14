@@ -1,5 +1,6 @@
 /**
- * Publishing a release moves the Pro repository's `main` to the pin the tag carries, as it moves this repository's.
+ * Publishing a release moves the Pro repository's `main` to the pin the tag carries, as the release's pull request moves
+ * this repository's.
  *
  * It was not in the steps, and `nouride-pro`'s `main` stayed at 0.7.8's pin while 0.7.9's and 0.7.10's lived only on
  * release branches. The line is read out of `docs/CONTRIBUTING.md` § Cutting a release and run as written, against
@@ -69,11 +70,13 @@ const sh = (line: string, cwd: string) => spawnSync("sh", ["-c", line], { cwd, e
 describe("publishing a release", () => {
   const steps = publishing(readFileSync(join(ROOT, "docs/CONTRIBUTING.md"), "utf8"), /^## Cutting a release$/m);
 
-  test("moves this repository's main, then the Pro repository's main to the pin, then tags", () => {
+  test("takes main as the pull request's merge left it, then moves the Pro repository's main to the pin, then tags", () => {
     const at = (pattern: RegExp) => steps.findIndex((line) => pattern.test(line));
-    const order = [at(/git push origin main$/), steps.indexOf(PRO_LINE), at(/git push origin vX\.Y\.Z$/)];
+    const order = [at(/git pull --ff-only$/), steps.indexOf(PRO_LINE), at(/git push origin vX\.Y\.Z$/)];
     expect(order.every((index) => index >= 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
+    // `main` moves by the pull request's merge commit, never by a push of a release branch to it.
+    expect(steps.some((line) => /git push origin main$/.test(line) || /releases\/vX\.Y\.Z:main/.test(line))).toBe(false);
   });
 
   test("the Pro line, run as written, moves that main to the pin", () => {

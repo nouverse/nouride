@@ -31,9 +31,9 @@ on:
     branches: ["main", "releases/**", "lts/**"]
   # The whole suite on a branch's commit, asked for by hand: see the header.
   workflow_dispatch:
-  # No pull request here: Nouride's own work is pushed to a release branch, and `main` is fast-forwarded at the
-  # release. Somebody else's pull request has a workflow of its own, pr.yml, which is given nothing: every job here can
-  # run on the machine that builds releases (`CI_RUNNER`), and a fork's code must not. `workflow-pins.test.ts` keeps
+  # No pull request here: Nouride's own work is pushed to a release branch, and at the release that branch reaches
+  # `main` by a pull request merged with a merge commit. A pull request has a workflow of its own, pr.yml, which is
+  # given nothing: every job here can run on the machine that builds releases (`CI_RUNNER`), and a fork's code must not. `workflow-pins.test.ts` keeps
   # this workflow, and every other but the two a pull request starts, without the trigger.
 
 # A new push makes the previous run's answer irrelevant, so it is cancelled rather than left to finish and report on a
@@ -60,8 +60,8 @@ permissions:
 #
 # The self-hosted line each job used is kept, commented, beside its `runs-on`.
 jobs:
-  # `main` is fast-forwarded to a release branch's commit when the release is tagged, and that commit's run on the
-  # branch already proved it: running every job again on `main` was four runs of the same checks a release, and each
+  # `main` takes a release branch at its release (a merge commit since 0.8.36, a fast-forward before), and a commit a
+  # run already proved, on the branch or by the asked-for suite on `main`, is not run again: running every job again on `main` was four runs of the same checks a release, and each
   # one another chance of a red on a commit already green (two went red there; REVIEW B4). So on `main` each of a
   # push's jobs asks first whether it passed on this commit, in a successful run of this workflow, and is skipped if it
   # did, as release.yml's verify jobs are on a tag. Its own conclusion, not the run's: a run on `main` that skipped its

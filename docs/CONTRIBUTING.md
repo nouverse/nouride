@@ -218,19 +218,21 @@ now that the repository is public (2026-11-06).
 
 ## Cutting a release
 
-The whole procedure — the checks, the end-to-end run on the live box, the rollout to Boxes — is in the maintainers'
-private release runbook. Once a release branch has passed it, publishing moves three refs, and every one of them only
-forward:
+The whole procedure — the checks, the end-to-end run on the maintainers' box, the rollout to Boxes — is in the
+maintainers' private release runbook; the order, for anyone, is in `.agents/skills/nouride-contributing/references/repos-and-releases.md`.
+In short, since 0.8.36: the release branch goes to `main` by a pull request, merged with a merge commit (never a
+squash: every commit a note cites stays in `main`), the branch is deleted, the whole suite runs on the merge commit,
+and the tag goes on it. Two refs move on the way, each only forward:
 
 ```bash
-git fetch . releases/vX.Y.Z:main && git push origin main             # main is always the last release
-git -C internals/pro push origin "$(git rev-parse main:internals/pro)":refs/heads/main   # and the Pro repository's main, to the pin
-git tag vX.Y.Z && git push origin vX.Y.Z                                # which starts release.yml
+git switch main && git pull --ff-only                                                    # main as the merge left it
+git -C internals/pro push origin "$(git rev-parse main:internals/pro)":refs/heads/main   # the Pro repository's main, to the pin
+git tag vX.Y.Z && git push origin vX.Y.Z                                                 # on the merge commit: starts release.yml
 ```
 
-The second line is the Pro submodule's `main` following the pin the tag carries, as this repository's `main` follows
-the tag; a push that is not a fast-forward is refused, so it cannot move `main` anywhere else. Until 0.7.11 it was
-not in the steps, and that `main` stayed at 0.7.8's pin while 0.7.9's and 0.7.10's lived only on release branches.
+The first line is the Pro submodule's `main` following the pin the tag carries, as this repository's `main` follows
+the release; a push that is not a fast-forward is refused, so it cannot move `main` anywhere else. A published tag is
+never moved: its binaries are signed against its commit.
 
 After the run, the maps of releases nothing runs any more (above):
 

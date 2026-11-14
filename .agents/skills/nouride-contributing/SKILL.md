@@ -331,6 +331,12 @@ can repeat, is added to what `helper-trouble.ts` watches. "It logs a warning" is
 
 ---
 
+## The repositories, and how a release goes out
+
+Nouride is three repositories in one checkout: this one, the private `nouride-pro` in `internals/pro` and Nougate in
+`internals/nougate`, each with its own branches and CI. How to clone them, which holds what, the branches, and the
+release's order from the notes to the tag: `references/repos-and-releases.md`.
+
 ## Repo map
 
 The engine follows the same shape as `apps/dashboard` and the other Nouverse backends:
@@ -504,9 +510,10 @@ rather than left in `.git/hooks`, which is not cloned; `bun install` points `cor
 **So a green commit does not mean the tests pass.** They used to run here and were the slow half by
 a factor of five — 28 seconds against 6, on every commit including the ones that only touch a
 comment — and a commit on a branch is usually a checkpoint rather than a claim that anything works.
-Run `bun run verify` before you push; that is where the claim is made. Nouride's own work has no pull requests:
-commit to the release branch and push it; `main` is fast-forwarded to it when the release is tagged. Somebody else's
-pull request runs the lint and the whole suite (`pr.yml`) and says whether its author agreed to the CLA (`cla.yml`).
+Run `bun run verify` before you push; that is where the claim is made. Nouride's own work is committed to the
+release branch and pushed; at the release that branch goes to `main` by a pull request merged with a merge commit, and
+the tag goes on the merge (`references/repos-and-releases.md`). Every pull request runs the lint and the whole suite
+(`pr.yml`) and says whether its author agreed to the CLA (`cla.yml`).
 
 Nothing about the *value* of the whole suite changed, and it is still the whole suite rather than a
 staged-files subset, because this repo's failures are consistently the kind a static check misses: a
