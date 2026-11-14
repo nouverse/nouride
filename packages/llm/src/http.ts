@@ -170,6 +170,28 @@ function throughGateway(upstream: NonNullable<LLMError["upstream"]>): string {
   return ` (through nougate: ${who}${count})`;
 }
 
+/** In a profile header's value, where the conversation's id goes: `"x-opencode-session" = "{session}"`. */
+export const SESSION_PLACEHOLDER = "{session}";
+
+/**
+ * A profile's extra headers as one request sends them: `{session}` in a value becomes the conversation's id, the
+ * same for every request of it, which is what an endpoint that asks for one routes and caches by. A request nothing
+ * names a conversation for (a summary, a memory pass, an embedding, a model listing) is one of its own, so it gets
+ * an id of its own: the endpoint this exists for, OpenCode Go, refuses a request with none. One id per request, so
+ * two headers that ask for it agree.
+ */
+export function profileHeaders(headers: Record<string, string> | undefined, conversation?: string): Record<string, string> {
+  if (!headers) return {};
+  let session: string | undefined;
+  return Object.fromEntries(
+    Object.entries(headers).map(([name, value]) =>
+      typeof value === "string" && value.includes(SESSION_PLACEHOLDER)
+        ? [name, value.replaceAll(SESSION_PLACEHOLDER, (session ??= conversation ?? crypto.randomUUID().replaceAll("-", "")))]
+        : [name, value],
+    ),
+  );
+}
+
 export async function postJson(
   url: string,
   headers: Record<string, string>,

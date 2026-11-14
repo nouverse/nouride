@@ -33,6 +33,16 @@ export async function jsonBody(c: { req: { json(): Promise<unknown> } }): Promis
 }
 
 /**
+ * A provider's extra headers as a form sends them: each name with its value, or with none for a saved header whose
+ * value the form was never given (`settings/providers.ts` keeps it). Absent, or anything that is not that shape: the
+ * caller leaves the headers it has alone, as a client from before the field does.
+ */
+export function providerHeaders(raw: unknown): Record<string, string | null> | undefined {
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return undefined;
+  return Object.fromEntries(Object.entries(raw).map(([name, value]) => [name, typeof value === "string" ? value : null]));
+}
+
+/**
  * `attachments: [{ path, mimeType?, filename? }]` from the control API.
  *
  * The path lands in `Attachment.url`, which is what the local gateway reads. Anything unparseable is

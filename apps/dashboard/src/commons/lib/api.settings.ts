@@ -72,6 +72,8 @@ export const settingsApi = {
     kind: string;
     baseUrl: string;
     apiKey?: string;
+    /** Its extra headers, all of them; a `null` value keeps the one saved under that name (`lib/extra-headers.ts`). */
+    headers?: Record<string, string | null>;
   }) => post<{ ok: true; restartRequired: boolean }>(`${control}/providers`, input),
 
   deleteProvider: (name: string) =>

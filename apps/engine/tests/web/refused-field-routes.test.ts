@@ -93,6 +93,7 @@ const FORMS: [string, Register, string, string, unknown, string, string][] = [
   ["a connector added for an agent", registerMcpRoutes as Register, "POST", "/agents/nix/mcp", { name: "gh", transport: "streamable-http", url: "x" }, "url", "the connector's address"],
   ["web search", registerWebSearchRoutes as Register, "POST", "/web-search", { mode: "searxng" }, "endpoint", "the address"],
   ["a provider", registerProviderRoutes as Register, "POST", "/providers", { name: "x", kind: "openai", baseUrl: "https://x" }, "apiKey", "the API key"],
+  ["a provider's extra headers", registerProviderRoutes as Register, "POST", "/providers", { name: "x", kind: "openai", baseUrl: "https://x", headers: { Authorization: "v" } }, "headers", "the extra headers"],
   ["skill learning", registerDraftRoutes as Register, "POST", "/skills/learning", { mode: "always" }, "mode", "what an agent may do with what it learns"],
   ["a connection", registerGatewayRoutes as Register, "POST", "/gateways", { platform: "telegram", name: "my bot" }, "name", "the connection's name"],
   ["a person", registerPeopleRoutes as Register, "POST", "/people", { name: "Sam", key: "Sam" }, "key", "the person key"],

@@ -102,7 +102,7 @@ group_context_messages = 20
 kind = "anthropic"                  # wire format-nya, bukan vendornya
 base_url = "https://nougate.nouverse.tech/anthropic/v1"
 api_key = "nougate"                 # NAMA sebuah secret
-# headers = { "HTTP-Referer" = "https://nouverse.tech" }
+# headers = { "HTTP-Referer" = "https://nouverse.tech" }   # {session} di sebuah nilai menjadi id percakapan
 # identify = true                   # sebutkan agent dan percakapan untuk tiap request; ditulis otomatis
                                     # untuk API OpenAI dan Anthropic sendiri
 # billing = "included"              # langganan: gak ada biaya per token

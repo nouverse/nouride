@@ -101,7 +101,7 @@ group_context_messages = 20
 kind = "anthropic"                  # the wire format, not the vendor
 base_url = "https://nougate.nouverse.tech/anthropic/v1"
 api_key = "nougate"                 # a secret NAME
-# headers = { "HTTP-Referer" = "https://nouverse.tech" }
+# headers = { "HTTP-Referer" = "https://nouverse.tech" }   # {session} in a value becomes the conversation's id
 # identify = true                   # say which agent and conversation each request is for; written for you on
                                     # OpenAI's and Anthropic's own APIs
 # billing = "included"              # a subscription: no cost per token

@@ -1699,7 +1699,8 @@
         "baseUrl": "https://fake.test/v1",
         "apiKeySecret": "testkey",
         "hasCredential": false,
-        "builtIn": false
+        "builtIn": false,
+        "headers": {}
       },
       {
         "name": "ollama",
@@ -1707,7 +1708,8 @@
         "baseUrl": "http://127.0.0.1:11434/v1",
         "apiKeySecret": "testkey",
         "hasCredential": false,
-        "builtIn": false
+        "builtIn": false,
+        "headers": {}
       }
     ],
     "editable": true

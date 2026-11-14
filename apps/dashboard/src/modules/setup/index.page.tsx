@@ -16,6 +16,8 @@ import { GatewayOffer, GatewayStep } from "./GatewayStep";
 import { MemoryStep } from "./MemoryStep";
 import { Mascot } from "@/commons/components/brand/Mascot";
 import { KeyHints } from "@/commons/components/providers/KeyHints";
+import { ExtraHeaders } from "@/commons/components/providers/ExtraHeaders";
+import { useProviderDraft } from "@/commons/hooks/use-provider-draft";
 
 const PRESETS: Record<string, { label: string; baseUrl: string; hint: string }> = {
   openai: {
@@ -86,9 +88,8 @@ function ProviderStep() {
 }
 
 function KeyForm({ state, onUseGateway }: { state: SetupState | undefined; onUseGateway: () => void }) {
-  const [kind, setKind] = useState<keyof typeof PRESETS>("openai");
-  const [name, setName] = useState("openai");
-  const [baseUrl, setBaseUrl] = useState(PRESETS.openai?.baseUrl ?? "");
+  const draft = useProviderDraft({ name: "openai", kind: "openai", baseUrl: PRESETS.openai?.baseUrl ?? "" });
+  const { kind, name, setName, baseUrl, setBaseUrl } = draft;
   const [apiKey, setApiKey] = useState("");
   const queryClient = useQueryClient();
 
@@ -109,7 +110,7 @@ function KeyForm({ state, onUseGateway }: { state: SetupState | undefined; onUse
 
   const save = useMutation({
     mutationFn: async () => {
-      const result = await api.saveProvider({ kind, name, base_url: baseUrl, api_key: apiKey, skip_probe: true });
+      const result = await api.saveProvider({ kind, name, base_url: baseUrl, api_key: apiKey, headers: draft.sentHeaders(), skip_probe: true });
       const modelsResult = await api.setupModels();
       queryClient.setQueryData(["models"], modelsResult.models);
       return result;
@@ -150,8 +151,7 @@ function KeyForm({ state, onUseGateway }: { state: SetupState | undefined; onUse
                   : "text-base-content/65 hover:text-base-content"
               }`}
               onClick={() => {
-                setKind(value as keyof typeof PRESETS);
-                setBaseUrl(p.baseUrl);
+                draft.point({ kind: value as typeof kind, baseUrl: p.baseUrl, name: value });
                 resetTested();
               }}
             >
@@ -207,15 +207,14 @@ function KeyForm({ state, onUseGateway }: { state: SetupState | undefined; onUse
               Kept safe on this server and never shown again.
             </span>
           </label>
-          {/* Where a key comes from and what it costs; a line's "Use it" fills what the line knows, and keeps a name already typed. */}
+          {/* Where a key comes from and what it costs; a line's "Use it" fills what the line knows, the name and the headers it asks for with it, unless the person typed their own. */}
           <KeyHints
             onUse={(hint) => {
-              setKind(hint.kind);
-              setBaseUrl(hint.baseUrl);
-              if (name.trim() === "") setName(hint.id);
+              draft.point({ kind: hint.kind, baseUrl: hint.baseUrl, name: hint.id, ...(hint.headers ? { headers: hint.headers } : {}) });
               resetTested();
             }}
           />
+          <ExtraHeaders value={draft.headers} onChange={draft.setHeaders} />
         </div>
 
         {(probe.isError || save.isError) && (

@@ -15,6 +15,11 @@
  * vendors' own APIs take the fields it sends, and on OpenAI's one of them keeps a conversation's requests on the
  * cache its prefix is already in, so a profile on either is written with it. What it sends names no person: the
  * conversation goes as a digest (`executor/provider-caller.ts`).
+ *
+ * A plan that includes its key is written `billing = "included"`, so its use is counted in tokens and never shown as
+ * money spent: OpenCode Go's, a subscription, and Command Code's, whose requests draw on plan credits. What Go asks
+ * for beyond its key, a header that says the conversation, is not written from here: it is one of the profile's own
+ * `headers`, which the form fills when Go is picked and the person may change.
  */
 
 import { parseToml } from "@nouride/runtime";
@@ -40,6 +45,10 @@ interface KnownEndpoint {
   cacheMinutes?: number;
 }
 
+const OPENCODE_GO: KnownEndpoint["keys"] = {
+  billing: { value: "included", why: "OpenCode Go is a subscription: use counts against the plan's limits, and nothing is charged per token" },
+};
+
 const KNOWN_ENDPOINTS: readonly KnownEndpoint[] = [
   // Five minutes: the lifetime Anthropic documents for the cache marker the client sends, which asks for no longer one.
   {
@@ -57,6 +66,13 @@ const KNOWN_ENDPOINTS: readonly KnownEndpoint[] = [
       max_tokens_field: { value: "max_completion_tokens", why: "OpenAI's own API takes a reply's output limit only as max_completion_tokens for its newer models" },
       identify: { value: true, why: "OpenAI's own API takes user and prompt_cache_key, which keeps a conversation's requests on the cache its prefix is in" },
     },
+  },
+  { kind: "openai", baseUrl: "https://opencode.ai/inference/go/openai/v1", keys: OPENCODE_GO },
+  { kind: "anthropic", baseUrl: "https://opencode.ai/inference/go/anthropic/v1", keys: OPENCODE_GO },
+  {
+    kind: "openai",
+    baseUrl: "https://api.commandcode.ai/provider/v1",
+    keys: { billing: { value: "included", why: "a Command Code plan includes the key: use draws on the plan's credits, and nothing is charged per token" } },
   },
 ];
 

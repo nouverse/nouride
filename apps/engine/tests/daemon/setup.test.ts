@@ -311,6 +311,25 @@ describe("saveProvider", () => {
     }
   });
 
+  test("OpenCode Go's address is saved as part of a plan, with the header the form sent, live; OpenCode Zen's, charged per request, with neither", async () => {
+    // Go answers 400 to a request that does not say its conversation in `x-opencode-session`: the form fills that
+    // header when Go is picked, and setup saves what the form holds.
+    const { setup, config } = await service();
+    await setup.saveProvider({ kind: "openai", name: "opencode-go", baseUrl: "https://opencode.ai/inference/go/openai/v1", apiKey: LIVE_KEY, headers: { "x-opencode-session": "{session}" }, actor: "t" });
+    await setup.saveProvider({ kind: "openai", name: "opencode-zen", baseUrl: "https://opencode.ai/inference/openai/v1", apiKey: LIVE_KEY, actor: "t" });
+
+    const parsed = parseToml<{ providers: Record<string, Record<string, unknown>> }>(await readTextFile(configPath));
+    expect(parsed.providers["opencode-go"]).toMatchObject({ headers: { "x-opencode-session": "{session}" }, billing: "included" });
+    expect(config.providers["opencode-go"]).toMatchObject({ headers: { "x-opencode-session": "{session}" }, billing: "included" });
+    for (const key of ["headers", "billing"]) expect(parsed.providers["opencode-zen"]).not.toHaveProperty(key);
+    expect(config.providers["opencode-zen"]?.headers).toBeUndefined();
+
+    // A header the form would not have sent is refused before anything is written, and says which.
+    const refused = await setup.saveProvider({ kind: "openai", name: "bad", baseUrl: "https://x.example/v1", apiKey: LIVE_KEY, headers: { Authorization: "Bearer other" }, actor: "t", skipProbe: true });
+    expect(refused).toMatchObject({ ok: false, error: "Authorization is a header the request sends itself: the key goes in the API key field" });
+    expect(config.providers.bad).toBeUndefined();
+  });
+
   test("identify = false written by the operator is kept on a save; the one the entry wrote goes when the profile moves to another server", async () => {
     const { setup, config } = await service();
     const profile = async () => parseToml<{ providers: Record<string, Record<string, unknown>> }>(await readTextFile(configPath)).providers[SETUP_PROFILE];

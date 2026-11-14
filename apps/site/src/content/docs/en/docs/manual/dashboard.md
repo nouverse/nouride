@@ -256,7 +256,13 @@ different deployment without touching the others.
 Adding a profile, under the key's field, **How to get an API key** folds out a list of the services people most often
 mean, each a link to the page its key is made on, with what using it costs: **Pay per use** (OpenAI, Anthropic, Google
 Gemini, DeepSeek, Z.ai, OpenCode Zen; a ChatGPT or Claude subscription does not cover the API) or **In your plan**
-(Command Code, on every plan but Go). **Use it** fills the kind and the base URL. The first-run setup has the same list.
+(OpenCode Go; Command Code, on every plan but Go). **Use it** fills the name, the kind and the base URL; a name you
+typed yourself is kept, and a saved profile keeps its name. The first-run setup has the same list.
+
+Under it, **Extra headers** holds what a provider asks for beyond its key, one on each line as `Name: value`. Most ask
+for nothing. **Use it** for OpenCode Go fills `x-opencode-session: {session}`, where `{session}` becomes an id of the
+conversation on each request, and every line stays yours to change, add or remove. A saved header shows its name only:
+leave its line as it is to keep its value.
 
 The *Model* tab also sets how long the agent's model thinks (**Effort**), asked for in each of its requests in every
 chat; a chat's `/effort` sets its own over it, and an admin's `/effort <level> lock` in a chat sets this one.

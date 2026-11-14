@@ -227,6 +227,8 @@ export class SetupService {
     name?: string;
     baseUrl: string;
     apiKey: string;
+    /** Extra headers the service asks for, as the form holds them (`settings/providers.ts`). */
+    headers?: Record<string, string | null>;
     actor: string;
     /** Skip the live check. For a provider that has no model listing, not for convenience. */
     skipProbe?: boolean;
@@ -249,7 +251,7 @@ export class SetupService {
      * and an existing profile keeps the secret it already names.
      */
     const name = (input.name?.trim() || SETUP_PROFILE).toLowerCase();
-    const saved = await saveProfile(this.settingsDeps(), { name, kind: input.kind, baseUrl, apiKey: input.apiKey, actor: input.actor });
+    const saved = await saveProfile(this.settingsDeps(), { name, kind: input.kind, baseUrl, apiKey: input.apiKey, ...(input.headers ? { headers: input.headers } : {}), actor: input.actor });
     if (!saved.ok) return saved;
     // The secret the profile names — its own, when it had one — for whoever says where the key went.
     return { ok: true, models, secret: this.deps.config.providers[name]?.apiKeySecret ?? `${name}_api_key` };

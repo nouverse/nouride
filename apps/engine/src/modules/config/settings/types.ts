@@ -68,6 +68,11 @@ export interface ProviderView {
   hasCredential: boolean;
   /** True for a profile that came from `defaults.ts` rather than the config file. */
   builtIn: boolean;
+  /**
+   * Its extra headers by name. A value is never sent to a browser, since one may hold a gateway's key: `null`, but
+   * for the one value that is no secret by what it is, `{session}`, which the form shows as it was filled.
+   */
+  headers: Record<string, string | null>;
 }
 
 export interface SettingsDeps {

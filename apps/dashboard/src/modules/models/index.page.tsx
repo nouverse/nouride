@@ -16,6 +16,8 @@ import { Card, EmptyState, ErrorNote, Field, PageHeader } from "@/commons/compon
 import { useConfirm } from "@/commons/components/ui/confirm";
 import { isBundledEndpoint, nougateConsoleUrl } from "@/commons/lib/bundled-gateway";
 import { useSaved } from "@/commons/hooks/use-saved";
+import { useProviderDraft } from "@/commons/hooks/use-provider-draft";
+import { ExtraHeaders } from "@/commons/components/providers/ExtraHeaders";
 import { FILL_PAGE, ScrollArea } from "@/commons/components/ui/ScrollCard";
 import { Count, SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
 import { ModelTiersButton } from "./components/ModelTiers";
@@ -267,9 +269,8 @@ function ProviderForm({
   onSaved: () => void;
   embedded?: boolean;
 }) {
-  const [name, setName] = useState(existing?.name ?? "");
-  const [kind, setKind] = useState(existing?.kind ?? "openai");
-  const [baseUrl, setBaseUrl] = useState(existing?.baseUrl ?? KINDS[1]?.baseUrl ?? "");
+  const draft = useProviderDraft({ name: existing?.name ?? "", kind: existing?.kind ?? "openai", baseUrl: existing?.baseUrl ?? KINDS[1]?.baseUrl ?? "", ...(existing ? { headers: existing.headers, saved: true } : {}) });
+  const { kind, setKind, name, setName, baseUrl, setBaseUrl } = draft;
   const [apiKey, setApiKey] = useState("");
 
   const probe = useMutation({ mutationFn: () => api.probe({ kind, baseUrl, apiKey }) });
@@ -281,6 +282,7 @@ function ProviderForm({
         kind,
         baseUrl,
         ...(apiKey.trim() ? { apiKey: apiKey.trim() } : {}),
+        headers: draft.sentHeaders(),
       }),
     onSuccess: (answer) => {
       saved(answer, `Provider ${name}`, "The next call through it uses these.");
@@ -359,14 +361,9 @@ function ProviderForm({
         />
       </Field>
 
-      {/* Where a key comes from and what it costs; a line's "Use it" fills what the line knows, and keeps a name already typed. */}
-      <KeyHints
-        onUse={(hint) => {
-          setKind(hint.kind);
-          setBaseUrl(hint.baseUrl);
-          if (!existing && name.trim() === "") setName(hint.id);
-        }}
-      />
+      {/* Where a key comes from and what it costs; a line's "Use it" points the form at that service (`useProviderDraft`). */}
+      <KeyHints onUse={(hint) => draft.point({ kind: hint.kind, baseUrl: hint.baseUrl, name: hint.id, ...(hint.headers ? { headers: hint.headers } : {}) })} />
+      <ExtraHeaders value={draft.headers} onChange={draft.setHeaders} saved={Boolean(existing)} />
 
       {probe.data && (
         <div className={`alert ${probe.data.ok ? "alert-success bg-success/10 border-success/30 text-success" : "alert-error bg-error/10 border-error/30 text-error"} text-xs rounded-xl p-3`}>

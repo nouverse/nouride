@@ -14,7 +14,7 @@ export const setupApi = {
   setupState: () => request<SetupState>(`${control}/setup/state`),
   probeProvider: (input: { kind: string; base_url: string; api_key: string }) =>
     post<{ ok: boolean; models: string[]; error?: string; plain?: string }>(`${control}/setup/probe`, input),
-  saveProvider: (input: { kind: string; name?: string; base_url: string; api_key: string; skip_probe?: boolean }) =>
+  saveProvider: (input: { kind: string; name?: string; base_url: string; api_key: string; headers?: Record<string, string | null>; skip_probe?: boolean }) =>
     post<{ ok: true; models: string[] }>(`${control}/setup/provider`, input),
   setupModels: () => request<{ ok: true; models: string[] }>(`${control}/setup/models`),
   /**

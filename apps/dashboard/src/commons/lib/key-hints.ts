@@ -7,8 +7,10 @@
  * service says which it is, in a sentence, beside the link to the page where its key is made.
  *
  * Each line was read from the service's own documentation, and its address asked without a key: it refused for the
- * key alone, which is what a right address does. A service that needs more than a key and an address is not listed,
- * since the hint would lead to a provider that answers nothing.
+ * key alone, which is what a right address does. A service that needs more than a key and an address is listed only
+ * with what it needs, or the hint would lead to a provider that answers nothing: OpenCode Go refuses a request that
+ * does not say its conversation in a header, so its line carries that header, which "Use it" puts in the form's
+ * extra headers where the person sees it and may change it.
  */
 
 export interface KeyHint {
@@ -24,6 +26,11 @@ export interface KeyHint {
   cost: "per-use" | "included";
   /** What it costs and what to know first, in a sentence or two. */
   words: string;
+  /**
+   * Headers the service asks for beyond its key, which "Use it" fills the form's extra headers with. `{session}` as
+   * a value is where the daemon writes an id for each conversation.
+   */
+  headers?: Record<string, string>;
 }
 
 export const KEY_HINTS: readonly KeyHint[] = [
@@ -80,6 +87,16 @@ export const KEY_HINTS: readonly KeyHint[] = [
     baseUrl: "https://opencode.ai/inference/openai/v1",
     cost: "per-use",
     words: "Charged per request, from credits you add there. Its free models answer only inside OpenCode itself.",
+  },
+  {
+    id: "opencode-go",
+    name: "OpenCode Go",
+    keyUrl: "https://opencode.ai/console",
+    kind: "openai",
+    baseUrl: "https://opencode.ai/inference/go/openai/v1",
+    cost: "included",
+    words: "Your OpenCode Go plan includes the key: use counts against the plan's limits and stops there, so nothing is charged outside it unless you turn on Extra Usage there. OpenCode means Go for coding agents.",
+    headers: { "x-opencode-session": "{session}" },
   },
   {
     id: "commandcode",

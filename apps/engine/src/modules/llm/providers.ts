@@ -1,4 +1,11 @@
 /**
+ * Who is asking, on every request to a model's endpoint: this client's own name and version, where the HTTP library's
+ * went before. A service that tells its clients apart asks for exactly that (OpenCode Go: "identify itself with its
+ * own user agent, rather than a generic SDK or HTTP-library name"). A profile's own `headers` can say another.
+ */
+const CLIENT_HEADERS = { "user-agent": `nouride/${VERSION}` };
+
+/**
  * Provider profiles → live clients.
  *
  * One client per profile, shared by every agent that names it. The credential is resolved
@@ -6,8 +13,9 @@
  * appears in an agent config, a log line, or the dashboard.
  */
 
-import { createProvider, type HttpDeps } from "@nouride/llm";
+import { createProvider, profileHeaders, type HttpDeps } from "@nouride/llm";
 import { withEgressMask } from "@/commons/egress.ts";
+import { VERSION } from "@/commons/version.ts";
 import {
   ConfigError,
   createLogger,
@@ -62,7 +70,7 @@ export class ProviderRegistry {
       kind: profile.kind,
       baseUrl: profile.baseUrl,
       apiKey,
-      ...(profile.headers ? { headers: profile.headers } : {}),
+      headers: { ...CLIENT_HEADERS, ...profile.headers },
       ...(profile.identify ? { identify: true } : {}),
       ...(profile.maxTokensField ? { maxTokensField: profile.maxTokensField } : {}),
       ...(profile.cacheMinutes !== undefined ? { cacheMinutes: profile.cacheMinutes } : {}),
@@ -102,7 +110,9 @@ export class ProviderRegistry {
       kind: profile.kind,
       baseUrl: profile.baseUrl,
       apiKey: this.secrets.require(profile.apiKeySecret, `[providers.${name}]`),
-      ...(profile.headers ? { headers: profile.headers } : {}),
+      // Asked outside a client (the model list, a picture, a voice note): each such call is one of its own, so a
+      // header that asks for the conversation's id gets an id of that call, never the bare `{session}`.
+      headers: { ...CLIENT_HEADERS, ...profileHeaders(profile.headers) },
     };
   }
 

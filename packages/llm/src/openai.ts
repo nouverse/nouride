@@ -37,7 +37,7 @@ import {
 import { collectStream, isEventStream } from "./collect.ts";
 import { EffortGuard } from "./effort.ts";
 import { toolArguments } from "./tool-arguments.ts";
-import { cutOff, parsedBody, postJson, reportedFailure, requireBody, streamEvents, streamIdleTimeoutMs, unreadable, withCallStats, type HttpDeps } from "./http.ts";
+import { cutOff, parsedBody, postJson, profileHeaders, reportedFailure, requireBody, streamEvents, streamIdleTimeoutMs, unreadable, withCallStats, type HttpDeps } from "./http.ts";
 import { flattenSystem } from "./system.ts";
 import { TemperatureGuard } from "./temperature.ts";
 import { estimateTokens, fillMissingUsage } from "./tokens.ts";
@@ -45,7 +45,7 @@ import { estimateTokens, fillMissingUsage } from "./tokens.ts";
 export interface OpenAIProviderOptions {
   baseUrl: string;
   apiKey: string;
-  /** Extra headers — e.g. OpenRouter's HTTP-Referer, a Nougate gateway key. */
+  /** Extra headers — e.g. OpenRouter's HTTP-Referer, a Nougate gateway key. `{session}` in a value is the conversation's id (`profileHeaders`). */
   headers?: Record<string, string>;
   /** Send who is asking (`ChatParams.identity`); off for a server that rejects fields it does not know. */
   identify?: boolean;
@@ -149,7 +149,7 @@ export class OpenAIProvider implements LLMProvider {
     if (params.input.length === 0) return { vectors: [], inputTokens: 0 };
     const res = await postJson(
       `${this.baseUrl}/embeddings`,
-      { authorization: `Bearer ${this.options.apiKey}`, ...this.options.headers },
+      { authorization: `Bearer ${this.options.apiKey}`, ...profileHeaders(this.options.headers) },
       {
         model: params.model,
         input: params.input,
@@ -377,7 +377,13 @@ export class OpenAIProvider implements LLMProvider {
     const identity = this.options.identify ? params.identity : undefined;
     return await postJson(
       `${this.baseUrl}/chat/completions`,
-      { authorization: `Bearer ${this.options.apiKey}`, ...this.options.headers, ...(identity ? { "x-client-id": `nouride/${identity.agentId}` } : {}) },
+      {
+        authorization: `Bearer ${this.options.apiKey}`,
+        // The conversation where a header asks for it, whether or not the profile says `identify`: the id names no
+        // person, and the header is the profile's own.
+        ...profileHeaders(this.options.headers, params.identity?.conversation),
+        ...(identity ? { "x-client-id": `nouride/${identity.agentId}` } : {}),
+      },
       {
         model: params.model,
         messages,

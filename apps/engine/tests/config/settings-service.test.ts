@@ -533,6 +533,88 @@ describe("provider profiles", () => {
     expect(config.providers.nougate).toMatchObject({ baseUrl: "https://gate2.example.com/v1", headers: { "x-team": "ops" }, identify: true, billing: "included" });
   });
 
+  describe("extra headers, as the form sends them", () => {
+    const go = { name: "go", kind: "openai", baseUrl: "https://opencode.ai/inference/go/openai/v1", actor: "test" };
+    const view = () => settings.providerProfiles().find((profile) => profile.name === "go")?.headers;
+
+    test("are written under the profile and live at once: the conversation's header as it was filled, `{session}` and all", async () => {
+      expect(await settings.saveProvider({ ...go, apiKey: "sk-live", headers: { "x-opencode-session": "{session}" } })).toEqual({ ok: true, restartRequired: false });
+      expect(read()).toContain('headers = { x-opencode-session = "{session}" }');
+      expect(config.providers.go?.headers).toEqual({ "x-opencode-session": "{session}" });
+      // What is around a name or a value is not part of it: a space after the colon is how a person types a line.
+      expect(await settings.saveProvider({ ...go, headers: { " x-team ": "  ops  " } })).toMatchObject({ ok: true });
+      expect(config.providers.go?.headers).toEqual({ "x-team": "ops" });
+    });
+
+    test("a saved value is never sent back, but the one that is no secret: `{session}`", async () => {
+      await settings.saveProvider({ ...go, apiKey: "sk-live", headers: { "x-opencode-session": "{session}", "x-gateway-key": "gw-live-secret-value", "x-trace": "nouride-{session}" } });
+      // A value that only holds the placeholder among other text could hold a key beside it: not sent either.
+      expect(view()).toEqual({ "x-opencode-session": "{session}", "x-gateway-key": null, "x-trace": null });
+      expect(JSON.stringify(settings.providerProfiles())).not.toContain("gw-live-secret-value");
+      // A profile with none says so as an empty set, which is what the form reads.
+      await settings.saveProvider({ name: "plain", kind: "openai", baseUrl: "https://x.example/v1", apiKey: "sk-live", actor: "test" });
+      expect(settings.providerProfiles().find((profile) => profile.name === "plain")?.headers).toEqual({});
+    });
+
+    test("a name sent with no value keeps the value saved under it, in whatever case it was typed; a name no longer sent is removed", async () => {
+      await settings.saveProvider({ ...go, apiKey: "sk-live", headers: { "x-gateway-key": "gw-live-secret-value", "x-old": "1" } });
+      expect(await settings.saveProvider({ ...go, headers: { "X-Gateway-Key": null, "x-opencode-session": "{session}" } })).toMatchObject({ ok: true });
+      expect(config.providers.go?.headers).toEqual({ "X-Gateway-Key": "gw-live-secret-value", "x-opencode-session": "{session}" });
+      expect(read()).not.toContain("x-old");
+      // An empty value is the same as none: the form's line for a saved header has nothing after its colon.
+      await settings.saveProvider({ ...go, headers: { "X-Gateway-Key": "  ", "x-opencode-session": "{session}" } });
+      expect(config.providers.go?.headers?.["X-Gateway-Key"]).toBe("gw-live-secret-value");
+    });
+
+    test("the form's set replaces a table an operator wrote by hand, in whichever of TOML's forms; an empty set removes it", async () => {
+      await settings.saveProvider({ ...go, apiKey: "sk-live" });
+      writeFileSync(configPath, `${read()}\n[providers.go.headers]\nx-team = "ops"\nx-old = "1"\n`);
+      config.providers.go = { ...config.providers.go!, headers: { "x-team": "ops", "x-old": "1" } };
+
+      expect(await settings.saveProvider({ ...go, headers: { "x-team": null, "x-opencode-session": "{session}" } })).toMatchObject({ ok: true });
+      expect(read()).not.toContain("[providers.go.headers]");
+      expect(config.providers.go?.headers).toEqual({ "x-team": "ops", "x-opencode-session": "{session}" });
+
+      expect(await settings.saveProvider({ ...go, headers: {} })).toMatchObject({ ok: true });
+      expect(read()).not.toContain("headers");
+      expect(config.providers.go?.headers).toBeUndefined();
+      // The rest of the profile is as it was.
+      expect(config.providers.go).toMatchObject({ baseUrl: "https://opencode.ai/inference/go/openai/v1", apiKeySecret: "go_api_key" });
+    });
+
+    test("not sent at all, as a client from before the field does: the headers it has are left as they are", async () => {
+      await settings.saveProvider({ ...go, apiKey: "sk-live", headers: { "x-opencode-session": "{session}" } });
+      const before = read();
+      await settings.saveProvider({ ...go });
+      expect(read()).toBe(before);
+      expect(config.providers.go?.headers).toEqual({ "x-opencode-session": "{session}" });
+    });
+
+    test("refused, naming the field and writing nothing: a name that is not a header's, the request's own, one given twice, one with no value, a value no header carries, too many", async () => {
+      await settings.saveProvider({ ...go, apiKey: "sk-live" });
+      const before = read();
+      const refused = async (headers: Record<string, string | null>) => {
+        const result = await settings.saveProvider({ ...go, headers });
+        expect(read()).toBe(before);
+        return result;
+      };
+      expect(await refused({ "x session": "1" })).toEqual({ ok: false, field: "headers", error: '"x session" is not a header\'s name' });
+      expect(await refused({ "x-a:": "1" })).toMatchObject({ ok: false, field: "headers" });
+      // A key typed as a header would sit in the file as text: the key's own field keeps it as a secret.
+      for (const own of ["Authorization", "x-api-key", "Content-Type"]) {
+        expect(await refused({ [own]: "v" })).toEqual({ ok: false, field: "headers", error: `${own} is a header the request sends itself: the key goes in the API key field` });
+      }
+      expect(await refused({ "x-team": "ops", "X-Team": "dev" })).toEqual({ ok: false, field: "headers", error: "header X-Team is there twice" });
+      expect(await refused({ "x-new": null })).toEqual({ ok: false, field: "headers", error: "header x-new needs a value" });
+      expect(await refused({ "x-new": "" })).toEqual({ ok: false, field: "headers", error: "header x-new needs a value" });
+      expect(await refused({ "x-new": "a\nx-injected: 1" })).toEqual({ ok: false, field: "headers", error: "header x-new has a value a header cannot carry" });
+      expect(await refused({ "x-new": "v".repeat(1025) })).toMatchObject({ ok: false, field: "headers" });
+      expect(await refused(Object.fromEntries(Array.from({ length: 17 }, (_, index) => [`x-h${index}`, "v"])))).toEqual({ ok: false, field: "headers", error: "a provider takes at most 16 extra headers" });
+      // At the limits, taken.
+      expect(await settings.saveProvider({ ...go, headers: Object.fromEntries(Array.from({ length: 16 }, (_, index) => [`x-h${index}`, "v".repeat(1024)])) })).toMatchObject({ ok: true });
+    });
+  });
+
   test("refuses to delete a profile an agent still names", async () => {
     await settings.saveProvider({
       name: "nougate",

@@ -2,6 +2,7 @@
  * Provider profiles: the endpoints agents run against.
  */
 
+import { SESSION_PLACEHOLDER } from "@nouride/llm";
 import { createLogger } from "@nouride/shared";
 import type { ProviderKind } from "@nouride/shared";
 import { removeTomlKey, upsertTomlTable, removeTomlTable } from "@/modules/config/edit.ts";
@@ -18,7 +19,43 @@ import {
 const log = createLogger("settings");
 
 /** A field of the provider form a refusal names (0.8.23). */
-export type ProviderField = "name" | "kind" | "baseUrl" | "apiKey";
+export type ProviderField = "name" | "kind" | "baseUrl" | "apiKey" | "headers";
+
+/** A header's name as HTTP takes one, in the letters services use for theirs. */
+const HEADER_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+/**
+ * Headers a request says for itself. A key typed as a header would sit in `config.toml` as text, where the key's own
+ * field keeps it as a secret the file only names.
+ */
+const OWN_HEADERS = new Set(["authorization", "x-api-key", "content-type"]);
+const MAX_HEADERS = 16;
+const MAX_HEADER_VALUE = 1024;
+
+/**
+ * A provider's extra headers as its form sent them, which is the whole set: a header the form no longer names is
+ * removed. A name with no value keeps the value saved under it, because a saved value is never sent back to the form
+ * to be sent here again.
+ */
+function headersFrom(asked: Record<string, string | null>, saved: Record<string, string> | undefined): { ok: true; headers: Record<string, string> } | { ok: false; error: string } {
+  const savedBy = new Map(Object.entries(saved ?? {}).map(([name, value]) => [name.toLowerCase(), value]));
+  const headers: Record<string, string> = {};
+  const seen = new Set<string>();
+  for (const [typed, given] of Object.entries(asked)) {
+    const name = typed.trim();
+    const lower = name.toLowerCase();
+    if (!HEADER_NAME.test(name)) return { ok: false, error: `"${typed}" is not a header's name` };
+    if (OWN_HEADERS.has(lower)) return { ok: false, error: `${name} is a header the request sends itself: the key goes in the API key field` };
+    // HTTP reads a header's name in any case: two spellings of one would be sent as one header with both values.
+    if (seen.has(lower)) return { ok: false, error: `header ${name} is there twice` };
+    seen.add(lower);
+    const value = given?.trim() ? given.trim() : savedBy.get(lower);
+    if (value === undefined) return { ok: false, error: `header ${name} needs a value` };
+    if (/[\r\n]/.test(value) || value.length > MAX_HEADER_VALUE) return { ok: false, error: `header ${name} has a value a header cannot carry` };
+    headers[name] = value;
+  }
+  if (seen.size > MAX_HEADERS) return { ok: false, error: `a provider takes at most ${MAX_HEADERS} extra headers` };
+  return { ok: true, headers };
+}
 
 // ── Provider profiles ──────────────────────────────────────────────────────
 
@@ -31,6 +68,7 @@ export function providerProfiles(deps: SettingsDeps): ProviderView[] {
     apiKeySecret: profile.apiKeySecret,
     hasCredential: names.has(profile.apiKeySecret),
     builtIn: false,
+    headers: Object.fromEntries(Object.entries(profile.headers ?? {}).map(([header, value]) => [header, value === SESSION_PLACEHOLDER ? value : null])),
   }));
 }
 
@@ -47,6 +85,8 @@ export async function saveProvider(deps: Pick<SettingsDeps, "config" | "configPa
   kind: string;
   baseUrl: string;
   apiKey?: string;
+  /** Its extra headers, all of them (`headersFrom`). Absent: the ones it has are left as they are. */
+  headers?: Record<string, string | null>;
   actor: string;
 }): Promise<SaveResult<ProviderField>> {
   const name = input.name.trim().toLowerCase();
@@ -64,6 +104,9 @@ export async function saveProvider(deps: Pick<SettingsDeps, "config" | "configPa
   const apiKeySecret = existing?.apiKeySecret ?? `${name}_api_key`;
   const apiKey = input.apiKey?.trim();
   if (!apiKey && !existing) return { ok: false, field: "apiKey", error: "an API key is required" };
+  const read = input.headers === undefined ? undefined : headersFrom(input.headers, existing?.headers);
+  if (read && !read.ok) return { ok: false, field: "headers", error: read.error };
+  const headers = read?.headers;
 
   const saved = await editConfigFile(deps, (source) => {
     // What its endpoint needs beyond the wire format, from the one table (`known-endpoints.ts`): OpenAI's own API
@@ -71,11 +114,15 @@ export async function saveProvider(deps: Pick<SettingsDeps, "config" | "configPa
     // key the operator wrote by hand is seen and kept.
     const keys = endpointKeys(source, name, { kind, baseUrl });
     const cleared = keys.remove.reduce((text, key) => removeTomlKey(text, `providers.${name}`, key), source);
-    return upsertTomlTable(cleared, `providers.${name}`, {
+    // The set as the form sent it replaces what is there, in whichever of TOML's forms it was written: a
+    // `[providers.<name>.headers]` table of an operator's own, left in place, would meet a second `headers`.
+    const bare = headers === undefined ? cleared : removeTomlTable(cleared, `providers.${name}.headers`);
+    return upsertTomlTable(bare, `providers.${name}`, {
       kind,
       base_url: baseUrl,
       // The NAME again. Same rule, same reason.
       api_key: apiKeySecret,
+      ...(headers && Object.keys(headers).length > 0 ? { headers } : {}),
       ...keys.set,
     });
   });

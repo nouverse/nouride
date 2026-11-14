@@ -264,8 +264,14 @@ agent bisa pindah deployment tanpa menyentuh yang lain.
 Saat menambah profil, di bawah kolom key ada **How to get an API key** yang bisa dibuka: daftar layanan yang paling
 sering dimaksud, masing-masing link ke halaman tempat key-nya dibuat, beserta biayanya: **Pay per use** (OpenAI,
 Anthropic, Google Gemini, DeepSeek, Z.ai, OpenCode Zen; langganan ChatGPT atau Claude gak mencakup API-nya) atau **In
-your plan** (Command Code, di semua paket kecuali Go). **Use it** mengisi jenis dan base URL-nya. Setup pertama punya
+your plan** (OpenCode Go; Command Code, di semua paket kecuali Go). **Use it** mengisi nama, jenis, dan base URL-nya;
+nama yang kamu ketik sendiri gak diubah, dan profil yang sudah tersimpan tetap dengan namanya. Setup pertama punya
 daftar yang sama.
+
+Di bawahnya, **Extra headers** memuat apa yang diminta provider selain key-nya, satu per baris sebagai `Name: value`.
+Kebanyakan gak minta apa-apa. **Use it** untuk OpenCode Go mengisi `x-opencode-session: {session}`, dengan `{session}`
+diganti id percakapan di setiap request, dan setiap baris tetap bisa kamu ubah, tambah, atau hapus. Header yang sudah
+tersimpan hanya menampilkan namanya: biarkan barisnya supaya nilainya tetap.
 
 Tab *Model* juga mengatur seberapa lama model agent berpikir (**Effort**), yang diminta di setiap request-nya di semua
 chat; `/effort` di sebuah chat memasang level chat itu sendiri di atasnya, dan `/effort <level> lock` dari admin di

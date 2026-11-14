@@ -164,3 +164,39 @@ describe("an older install with a profile on Anthropic's own API", () => {
     expect(unknownKeys).toEqual([]);
   });
 });
+
+describe("an install with a profile on OpenCode Go, from before setup knew the address is a plan's", () => {
+  const GO = `
+[providers.go]
+kind = "openai"
+base_url = "https://opencode.ai/inference/go/openai/v1"
+api_key = "go_api_key"
+headers = { x-opencode-session = "{session}" }
+`;
+
+  test("is written as included in a plan, once, and live for this boot; its headers are its own and are left as they are", async () => {
+    const at = install(`${OTHERS}${GO}`);
+    said.length = 0;
+    expect(await bringEndpointKeysForward(at)).toEqual(["go"]);
+    expect(readFileSync(at.configPath, "utf8")).toBe(`${OTHERS}${GO}billing = "included"\n`);
+    expect(at.config.providers.go).toMatchObject({ billing: "included", headers: { "x-opencode-session": "{session}" } });
+    expect(said.map((entry) => entry.data)).toEqual([
+      { profile: "go", billing: "included", why: "OpenCode Go is a subscription: use counts against the plan's limits, and nothing is charged per token" },
+    ]);
+    expect(await bringEndpointKeysForward(at)).toEqual([]);
+  });
+
+  test("one with no header is given none: what Go asks for beyond its key is the profile's to say", async () => {
+    const at = install(GO.replace('headers = { x-opencode-session = "{session}" }\n', ""));
+    await bringEndpointKeysForward(at);
+    expect(readFileSync(at.configPath, "utf8")).not.toContain("x-opencode-session");
+    expect(at.config.providers.go?.headers).toBeUndefined();
+  });
+
+  test("a billing the operator wrote is their answer", async () => {
+    const text = `${GO}billing = "metered"\n`;
+    const at = install(text);
+    expect(await bringEndpointKeysForward(at)).toEqual([]);
+    expect(readFileSync(at.configPath, "utf8")).toBe(text);
+  });
+});
