@@ -4,6 +4,7 @@
  */
 
 import { effortRefusal, isLlmEffort, LLM_EFFORTS } from "@nouride/shared";
+import { named, offers, picked } from "../cli-model.ts";
 import type { Hook, HookContext } from "../types.ts";
 import { failed, sessionKey } from "../format.ts";
 
@@ -19,10 +20,14 @@ export const agentHooks: Hook[] = [
         // An agent a coding CLI answers runs on the CLI's model, never its pack's `[llm]`: said as `/status` says it.
         const cli = ctx.agent.config.external ? ctx.deps.answering?.(ctx.agent, key.gatewayId, key.chatId) : undefined;
         const own = ctx.agent.config.external ? (cli?.model?.name ?? `${cli?.cli ?? "its CLI"}'s own`) : ctx.agent.config.llm.model;
+        // What the agent's CLI offers, as its last session said: a name is held to it and said with what it stands for
+        // (`cli-model.ts`). Empty for an agent its own model answers, and before a CLI's first session.
+        const offered = ctx.agent.config.external ? (ctx.deps.cliModels?.(ctx.agent.config.id) ?? []) : [];
+        const cliName = cli?.cli ?? "its CLI";
 
         if (!requested) {
-          const current = ctx.deps.modelOverrides.get(session.id) ?? own;
-          return { handled: true, reply: `Current model: \`${current}\`` };
+          const chosen = ctx.deps.modelOverrides.get(session.id);
+          return { handled: true, reply: `Current model: ${chosen ? named(chosen, offered) : `\`${own}\``}${offers(cliName, offered)}` };
         }
 
         if (requested === "reset" || requested === "default") {
@@ -30,9 +35,15 @@ export const agentHooks: Hook[] = [
           return { handled: true, reply: `Back to \`${own}\`.` };
         }
 
-        // Not validated against a model list: the whole point of TD-004 is that base_url can
-        // point anywhere, so the set of valid names is not something the daemon can know. A
-        // wrong name surfaces as a provider error on the next turn.
+        if (ctx.agent.config.external) {
+          const pick = picked(requested, cliName, offered);
+          if ("refused" in pick) return { handled: true, reply: pick.refused };
+          ctx.deps.modelOverrides.set(key, pick.model);
+          return { handled: true, reply: pick.reply };
+        }
+        // An agent its own model answers is not validated against a model list: the whole point of
+        // TD-004 is that base_url can point anywhere, so the set of valid names is not something the
+        // daemon can know. A wrong name surfaces as a provider error on the next turn.
         ctx.deps.modelOverrides.set(key, requested);
         return { handled: true, reply: `Model for this chat is now \`${requested}\`.` };
       },

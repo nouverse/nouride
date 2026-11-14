@@ -48,6 +48,8 @@ export interface ExternalBrains {
   takes?(agent: LoadedAgent): Promise<{ image: boolean; audio: boolean } | null>;
   /** The efforts the agent's CLI offered for the model its last session opened on, for `/effort`; empty before one. */
   offeredEfforts?(agentId: string): string[];
+  /** The models each agent's CLI offered when its last session opened, for `/model`; none before one. */
+  models?: { of(agentId: string): readonly { value: string; name?: string }[] };
   /** What answers the agent in a conversation, for `/status`; null for an agent its own model answers. */
   answering?(agent: LoadedAgent, gatewayId: string, chatId: string): CliAnswering | null;
   /**

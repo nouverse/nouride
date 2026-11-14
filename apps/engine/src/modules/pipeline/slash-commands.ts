@@ -68,6 +68,7 @@ export function slashCommands(parts: {
     stopBackground: (agentId, chatId) => control.stopBackgroundFor(agentId, chatId),
     agentStatus: (agentId) => control.agentStatus(agentId),
     ...(deps.externalAgents?.offeredEfforts ? { cliEfforts: (agentId: string) => deps.externalAgents!.offeredEfforts!(agentId) } : {}),
+    ...(deps.externalAgents?.models ? { cliModels: (agentId: string) => deps.externalAgents!.models!.of(agentId) } : {}),
     ...(deps.agentEffort ? { agentEffort: { mayChange, set: deps.agentEffort } } : {}),
     ...(deps.externalAgents?.answering ? { answering: (agent: LoadedAgent, gatewayId: string, chatId: string) => deps.externalAgents!.answering!(agent, gatewayId, chatId) } : {}),
     compactSession: (agentId, hookCtx) => parts.lifecycle.compactSession(agentId, hookCtx),
