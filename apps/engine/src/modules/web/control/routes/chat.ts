@@ -19,7 +19,7 @@ import type { SessionsPort } from "@/modules/sessions/sessions.store.ts";
 import { MISSION_GATEWAY_ID } from "@/modules/missions/gateway.ts";
 import { SYSTEM_SENDER } from "@/modules/pipeline/deps.ts";
 import type { TurnsPort } from "@/modules/turns/turns.store.ts";
-import { readFileBody, readFileRange, statFile } from "@nouride/runtime";
+import { statFile } from "@nouride/runtime";
 import {
   historyOf,
   messagesToTranscript,
@@ -27,6 +27,7 @@ import {
   toTurnPayload,
   withDurations,
 } from "@/modules/turns/transcript.ts";
+import { asciiName, fileResponse } from "../file-response.ts";
 import { jsonBody, parseAttachments } from "../payloads.ts";
 import { conversationNamed } from "../conversation.ts";
 import { keepFirstChoice } from "./chat-choices.ts";
@@ -106,66 +107,6 @@ const INLINE_TYPES = new Set([
 
 export function rendersInline(mimeType: string): boolean {
   return INLINE_TYPES.has(mimeType.split(";")[0]?.trim().toLowerCase() ?? "");
-}
-
-/**
- * A filename safe to put in a header.
- *
- * A header value cannot carry a quote or a newline without changing what the header means, and the
- * name came from a chat platform or a browser — neither of which promises anything about it.
- */
-export function asciiName(name: string): string {
-  const cleaned = name.replace(/[^\x20-\x7E]/g, "_").replace(/["\\]/g, "_");
-  return cleaned.trim() || "file";
-}
-
-/**
- * The byte window a `Range` header asks for, resolved against the real file size.
- *
- * Returns `null` when there is no usable range and the whole file should be sent — which includes the
- * multi-range form (`bytes=0-99,200-299`). Ignoring a range is explicitly allowed; answering one with
- * a body that is not what it asked for is not, and a media element resyncs from a 200 without
- * complaint. No media element sends a multi-range request anyway.
- *
- * `"unsatisfiable"` is the third outcome and it is separate on purpose: a start past the end of the
- * file is a 416 carrying the true size, not a silent full-body 200 the client will mis-parse as the
- * tail it asked for.
- *
- * Both ends are **inclusive**, as HTTP defines them. Three forms exist and the third is the one that
- * gets forgotten: `bytes=-500` means the *last* 500 bytes, not "from 0 to 500".
- */
-export function parseRange(
-  header: string | undefined,
-  size: number,
-): { start: number; end: number } | "unsatisfiable" | null {
-  const match = /^bytes=(\d*)-(\d*)$/.exec((header ?? "").trim());
-  if (!match) return null;
-
-  const [, rawStart, rawEnd] = match;
-  if (!rawStart && !rawEnd) return null;
-
-  // A zero-length file can satisfy no range at all, and the arithmetic below would produce -1.
-  if (size === 0) return "unsatisfiable";
-
-  let start: number;
-  let end: number;
-
-  if (!rawStart) {
-    // Suffix form: the last N bytes, clamped to the whole file when N is larger than it.
-    const suffix = Number.parseInt(rawEnd!, 10);
-    if (suffix <= 0) return "unsatisfiable";
-    start = Math.max(0, size - suffix);
-    end = size - 1;
-  } else {
-    start = Number.parseInt(rawStart, 10);
-    // An absent or oversized end means "to the end of the file" — `bytes=0-` is what Chrome opens with.
-    end = rawEnd ? Math.min(Number.parseInt(rawEnd, 10), size - 1) : size - 1;
-  }
-
-  if (!Number.isFinite(start) || !Number.isFinite(end) || start > end || start >= size) {
-    return "unsatisfiable";
-  }
-  return { start, end };
 }
 
 /** Background jobs still running in one conversation, newest first. */
@@ -683,43 +624,11 @@ export function registerChatRoutes(control: ControlApp, deps: ControlDeps): void
       return c.json({ error: "that file is no longer on disk: attachments are swept by retention" }, 410);
     }
 
-    const headers: Record<string, string> = {
+    return fileResponse(file.path, stat.size, c.req.header("range"), {
       "content-type": file.mimeType || "application/octet-stream",
       "content-disposition": `${rendersInline(file.mimeType) ? "inline" : "attachment"}; filename="${asciiName(file.name)}"`,
       // Private, because this is somebody's file, and short because a retention sweep can remove it.
       "cache-control": "private, max-age=300",
-      // Advertised whether or not this request asked for a range: a `<video>` element decides how to
-      // load — and on Safari, *whether* to play at all — from this header on the first response.
-      "accept-ranges": "bytes",
-    };
-
-    const range = parseRange(c.req.header("range"), stat.size);
-
-    if (range === "unsatisfiable") {
-      // 416 must carry the real size, or the client has no way to correct its own request.
-      return new Response(null, {
-        status: 416,
-        headers: { ...headers, "content-range": `bytes */${stat.size}` },
-      });
-    }
-
-    if (range) {
-      const length = range.end - range.start + 1;
-      return new Response(readFileRange(file.path, range.start, range.end + 1), {
-        status: 206,
-        headers: {
-          ...headers,
-          "content-length": String(length),
-          "content-range": `bytes ${range.start}-${range.end}/${stat.size}`,
-        },
-      });
-    }
-
-    // Streamed rather than buffered even here. The whole point is that nothing on this path has to
-    // hold a large file in memory, and a request with no `Range` header is exactly the request that
-    // would hold the largest one.
-    return new Response(readFileBody(file.path), {
-      headers: { ...headers, "content-length": String(stat.size) },
     });
   });
 

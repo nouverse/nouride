@@ -67,7 +67,7 @@ export const LONG_FUNCTIONS: Record<string, Record<string, Budget>> = {
   "apps/engine/src/modules/tools/builtins/sessions.ts": { createSessionTool: { lines: 191, why: "the `session` tool: its schema and each action's run over the sessions it holds and what their output may show" } },
   "apps/engine/src/modules/web/control/routes/agents.ts": { registerAgentRoutes: { lines: 299, why: ROUTES("agents'") } },
   "apps/engine/src/modules/web/control/routes/auth.ts": { registerAuthRoutes: { lines: 188, why: ROUTES("sign-in") } },
-  "apps/engine/src/modules/web/control/routes/chat.ts": { registerChatRoutes: { lines: 285, why: ROUTES("dashboard chat's") } },
+  "apps/engine/src/modules/web/control/routes/chat.ts": { registerChatRoutes: { lines: 263, why: ROUTES("dashboard chat's") } },
   "apps/engine/src/modules/web/control/routes/cron.ts": { registerCronRoutes: { lines: 162, why: ROUTES("schedule's") } },
   "apps/engine/src/modules/web/control/routes/diagnostics.ts": { registerDiagnosticRoutes: { lines: 170, why: ROUTES("diagnostic") } },
   "apps/engine/src/modules/web/control/routes/external-agents.ts": { registerExternalAgentRoutes: { lines: 206, why: ROUTES("coding CLIs'") } },
