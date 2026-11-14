@@ -379,12 +379,28 @@ const realError = console.error;
  * The harness's hooks, registered by each file that mounts pages: the DOM and the stubbed `fetch` installed before its
  * first test and taken back off after its last, and each test's answers, errors and drawings cleared after it.
  */
+/**
+ * The query library is told to ask, each time, whether there is a window, where it decided once.
+ *
+ * It reads `typeof window` when it is first loaded and keeps the answer: on a server it sets no interval, no stale
+ * timer, and keeps what it fetched for good. Bun runs every test file in one process, so a file with no DOM that
+ * loaded the library first made every page mounted after it a server's, for the rest of the run: a page that asks
+ * again every two seconds never asked again, however long it was waited for. Which file loads first follows the
+ * directory's own order, which differs from one machine to the next, so the automation page's test failed on Linux
+ * runners (a release's own run, twice, and a pull request's) and never on a Mac, and read as a slow timer.
+ */
+async function asABrowser(): Promise<void> {
+  const { environmentManager } = await import("@tanstack/react-query");
+  environmentManager.setIsServer(() => typeof (globalThis as { window?: unknown }).window === "undefined");
+}
+
 export function useMountHarness(): void {
   beforeAll(async () => {
     // The route tree is generated and gitignored: written here from `src/routes`, so a fresh clone has one and a route
     // added since the last build is in it.
     await generateRouteTree();
     install();
+    await asABrowser();
   });
 
   afterEach(() => {
