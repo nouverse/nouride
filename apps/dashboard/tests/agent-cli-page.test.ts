@@ -117,7 +117,7 @@ describe("the accounts an agent goes on with when its account reaches its limit"
     try {
       await eventually(() => card(host) !== null, 3_000, "the accounts to go on with");
       expect(host.textContent).toContain("Coder starts on work.");
-      expect(card(host)!.textContent).toContain("None yet: at its limit, Coder stops until the limit ends.");
+      expect(card(host)!.textContent).toContain("None yet: at its limit, Nouride's own model for Coder answers until the limit ends.");
       // Only an account that is signed in, and not the one it starts on, can be gone on with.
       const select = card(host)!.querySelector("select") as HTMLSelectElement;
       expect([...select.options].map((option) => option.value)).toEqual(["", "spare"]);

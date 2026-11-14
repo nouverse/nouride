@@ -55,7 +55,7 @@ export function NextAccounts({ agentId, agentName, data, admin, onSaved }: { age
             ))}
           </ol>
         ) : (
-          <p className="text-base-content/65 text-xs">None yet: at its limit, {agentName} stops until the limit ends.</p>
+          <p className="text-base-content/65 text-xs">None yet: at its limit, Nouride's own model for {agentName} answers until the limit ends.</p>
         )}
         {more.length > 0 ? (
           <div className="flex flex-wrap items-center gap-2">
