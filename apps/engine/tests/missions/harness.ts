@@ -46,7 +46,7 @@ function leftFolders(options: { left?: () => { agentId: string; id: string; chan
   return { asked, removed, ports: options.left ? { folders: options.left, removeLeft } : {} };
 }
 
-export async function missionsHarness(options: { settings?: Partial<MissionsInForce>; agents?: string[]; jobAllowed?: (jobId: string) => readonly string[]; prepare?: (mission: Mission) => Promise<string | void>; branchRefusal?: (request: { agentId: string; workdir: string; branch: string }) => Promise<string | null>; sourceRepository?: (workdir: string) => string; runsOnCli?: (agentId: string) => boolean; freeToDelete?: (agentId: string) => boolean; readBrief?: (path: string) => string | null; goalBriefOf?: (mission: Mission) => string | null; stopTurn?: (mission: Mission) => void; helperTokens?: (missionId: string, since: number) => number; runningTokens?: (missionId: string) => number; personSaid?: (mission: Mission) => string | null; turnStartedAt?: (turnId: string) => number | null; checkRefusal?: (request: { agentId: string; workdir?: string }, command: string) => string | null; steerTurn?: (mission: Mission, told: Told) => SteerOutcome; pageOf?: (mission: Mission) => string | null; diskLow?: () => number | null; left?: () => { agentId: string; id: string; changedAt: number }[]; unsavedInLeft?: (missionId: string) => string[]; unsavedIn?: (mission: Mission) => string[] } = {}) {
+export async function missionsHarness(options: { settings?: Partial<MissionsInForce>; agents?: string[]; jobAllowed?: (jobId: string) => readonly string[]; prepare?: (mission: Mission) => Promise<string | void>; branchRefusal?: (request: { agentId: string; workdir: string; branch: string }) => Promise<string | null>; sourceRepository?: (workdir: string) => string; runsOnCli?: (agentId: string) => boolean; freeToDelete?: (agentId: string) => boolean; readBrief?: (path: string) => string | null; goalBriefOf?: (mission: Mission) => string | null; stopTurn?: (mission: Mission) => void; helperTokens?: (missionId: string, since: number) => number; runningTokens?: (missionId: string) => number; personSaid?: (mission: Mission) => string | null; turnStartedAt?: (turnId: string) => number | null; checkRefusal?: (request: { agentId: string; workdir?: string }, command: string) => string | null; steerTurn?: (mission: Mission, told: Told) => SteerOutcome; pageOf?: (mission: Mission) => string | null; diskLow?: () => number | null; left?: () => { agentId: string; id: string; changedAt: number }[]; unsavedInLeft?: (missionId: string) => string[]; unsavedIn?: (mission: Mission) => string[]; noFolder?: (mission: Mission) => boolean } = {}) {
   const db = await openAndMigrate(join(tempDir("missions"), "nouride.db"));
   const store = new MissionStore(db);
   const told: { mission: string; text: string; buttons?: MessageButton[] }[] = [];
@@ -126,6 +126,8 @@ export async function missionsHarness(options: { settings?: Partial<MissionsInFo
     remember: async (mission) => void remembered.push(mission.id),
     remove: async (mission, how) => {
       if (how?.keepUnsaved) keepingUnsaved.push(mission.id);
+      // No folder of its own there: nothing to remove, and said as that.
+      if (options.noFolder?.(mission)) return null;
       // As the daemon's: with work nobody committed and `keepUnsaved`, it is named and nothing is removed.
       const unsaved = how?.keepUnsaved ? (options.unsavedIn?.(mission) ?? []) : [];
       if (unsaved.length === 0) removed.push(mission.id);

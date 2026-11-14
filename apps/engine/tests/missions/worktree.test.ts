@@ -92,6 +92,16 @@ describe("a mission's worktree", () => {
     expect((await git(repo, "worktree", "list")).split("\n")).toHaveLength(1);
   });
 
+  test("a folder that is not there is said as that, and nothing is run to remove it", async () => {
+    const { root } = await repository();
+    const nothing = ownFolderOf(join(root, "private", "coder"), "m9");
+    const ran: string[] = [];
+    const watched: AsAgent = (argv) => (ran.push(argv[0]!), run(argv));
+    expect(await removeOwnFolder(nothing, watched, { keepUnsaved: true })).toBeNull();
+    expect(await removeLeftFolder(nothing, watched)).toBeNull();
+    expect(ran).toEqual(["test", "test"]);
+  });
+
   test("goes with the mission's folder; its branch stays in the repository", async () => {
     const { repo, own } = await repository();
     await makeWorktree(input({ mission: { id: "m1", workdir: repo, branch: null }, own }));

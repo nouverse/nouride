@@ -7,7 +7,7 @@ import { workedMs } from "@/modules/missions/page.ts";
 import { describe, expect, test } from "bun:test";
 import { MISSION_GATEWAY_ID } from "@/modules/missions/gateway.ts";
 import { SYSTEM_SENDER } from "@/modules/pipeline/deps.ts";
-import type { ToolContext } from "@nouride/shared";
+import { addLogSink, type LogEntry, type ToolContext } from "@nouride/shared";
 import { createMissionTools } from "@/modules/tools/builtins/mission.ts";
 import { carryInto } from "@/modules/missions/carry.ts";
 import type { Mission } from "@/modules/missions/types.ts";
@@ -854,6 +854,32 @@ describe("an ended mission", () => {
     await h.settle();
     expect(h.removed).toEqual([own.id, named.id]);
     expect(h.keepingUnsaved).toEqual([own.id]);
+  });
+});
+
+describe("what the sweep says", () => {
+  const said: LogEntry[] = [];
+  addLogSink((entry) => void (entry.component === "missions.timers" && said.push(entry)));
+
+  test("removed, of a folder it removed; nothing of an ended mission whose folder was not there", async () => {
+    // After every restart the sweep came to each mission of the last thirty days again and logged "removed" for all
+    // of them: 41 lines a sweep on the box, for folders gone a week or more. In a sandbox over a copy of the live data
+    // the same lines read as the copy deleting the live install's folders.
+    const gone = new Set<string>();
+    const h = await missionsHarness({ settings: { maxRunning: 4, perAgent: 4 }, noFolder: (mission) => gone.has(mission.id) });
+    const there = await h.start("its folder is there");
+    const not = await h.start("its folder went long ago");
+    gone.add(not.id);
+    h.missions.stop(there.id, "Gading");
+    h.missions.stop(not.id, "Gading");
+    said.length = 0;
+    h.tick(8 * 24 * 60 * 60_000);
+    h.missions.tick();
+    await h.settle();
+    expect(said.filter((entry) => entry.message.includes("folder")).map((entry) => [entry.message, (entry.data as { mission: string }).mission])).toEqual([["an ended mission's folder removed", there.id]]);
+    // Both were looked at, and one was removed.
+    expect([...h.keepingUnsaved].sort()).toEqual([there.id, not.id].sort());
+    expect(h.removed).toEqual([there.id]);
   });
 });
 

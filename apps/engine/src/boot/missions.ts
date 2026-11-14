@@ -318,7 +318,7 @@ export function buildMissions(params: {
       // Only the folder the daemon made for it — `newMission`'s default, or its worktree — under its agent's own; for a
       // draft that never started, the folder its brief was written to, whatever folder it would have worked in.
       const own = ownFolderOf(privateWorkspace(params.config().daemon.workspaceDir, mission.agentId), mission.id);
-      if ((!inOwnFolder(mission.workdir, own) && mission.startedAt !== null) || !params.registry.get(mission.agentId)) return [];
+      if ((!inOwnFolder(mission.workdir, own) && mission.startedAt !== null) || !params.registry.get(mission.agentId)) return null;
       return await removeOwnFolder(own, asTheAgent(mission.agentId), how);
     },
     folders: () => params.registry.enabled().flatMap((agent) => ownFolders(privateWorkspace(params.config().daemon.workspaceDir, agent.config.id)).map((folder) => ({ agentId: agent.config.id, ...folder }))),

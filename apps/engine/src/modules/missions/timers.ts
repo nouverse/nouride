@@ -82,11 +82,14 @@ export class MissionTimers {
       this.removed.add(mission.id);
       void this.deps.remove(mission, { keepUnsaved: true }).then(
         (unsaved) =>
-          unsaved.length > 0
-            ? log.warn("an ended mission's folder kept: work in it was never committed", { mission: mission.id, worktrees: unsaved })
-            : freeMb !== null && (mission.endedAt ?? now) > now - KEEP_MS
-              ? log.info("an ended mission's folder removed early: the disk is low", { mission: mission.id, free_mb: freeMb })
-              : log.info("an ended mission's folder removed", { mission: mission.id }),
+          // Null: no folder was there. Said as removed, a sandbox over a copy of live data read as deleting live folders.
+          unsaved === null
+            ? undefined
+            : unsaved.length > 0
+              ? log.warn("an ended mission's folder kept: work in it was never committed", { mission: mission.id, worktrees: unsaved })
+              : freeMb !== null && (mission.endedAt ?? now) > now - KEEP_MS
+                ? log.info("an ended mission's folder removed early: the disk is low", { mission: mission.id, free_mb: freeMb })
+                : log.info("an ended mission's folder removed", { mission: mission.id }),
         (err: unknown) => log.warn("an ended mission's folder could not be removed", { mission: mission.id, error: String(err) }),
       );
     }
@@ -108,9 +111,11 @@ export class MissionTimers {
       this.leftSeen.add(folder.id);
       void this.deps.removeLeft(folder.agentId, folder.id).then(
         (unsaved) =>
-          unsaved.length > 0
-            ? log.warn("a folder no mission names kept: work in it was never committed", { mission: folder.id, agent: folder.agentId, worktrees: unsaved })
-            : log.info("a folder no mission names removed", { mission: folder.id, agent: folder.agentId }),
+          unsaved === null
+            ? undefined
+            : unsaved.length > 0
+              ? log.warn("a folder no mission names kept: work in it was never committed", { mission: folder.id, agent: folder.agentId, worktrees: unsaved })
+              : log.info("a folder no mission names removed", { mission: folder.id, agent: folder.agentId }),
         (err: unknown) => log.warn("a folder no mission names could not be removed", { mission: folder.id, agent: folder.agentId, error: String(err) }),
       );
     }
