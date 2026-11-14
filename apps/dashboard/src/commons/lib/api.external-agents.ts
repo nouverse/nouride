@@ -23,7 +23,7 @@ export const externalAgentsApi = {
   externalClis: (fresh = false) => request<{ room: CliRoom; clis: ScannedCli[] }>(`${control}/external-clis${fresh ? "?fresh=1" : ""}`),
   agentCli: (id: string) => request<AgentCli>(`${control}/agents/${id}/cli`),
   /** Admin only. An empty model is the key removed. */
-  setAgentCli: (id: string, settings: Partial<{ profile: string | string[]; permissions: CliPreset; model: string; effort: string }>) => post<{ ok: true }>(`${control}/agents/${id}/cli`, settings),
+  setAgentCli: (id: string, settings: Partial<{ profile: string | string[]; permissions: CliPreset; model: string; effort: string; move_at: number | null }>) => post<{ ok: true }>(`${control}/agents/${id}/cli`, settings),
   /** Asks the CLI on each profile, so it takes seconds; `fresh` asks again rather than take the last answer. */
   agentCliProfiles: (id: string, fresh = false) => request<{ profiles: CliProfile[]; separate: boolean; models: { value: string; name?: string }[] }>(`${control}/agents/${id}/cli/profiles${fresh ? "?fresh=1" : ""}`),
   /** On the profile the agent answers with, or on the one named — a new name is a new profile. */

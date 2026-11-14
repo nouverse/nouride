@@ -150,6 +150,74 @@ describe("the accounts an agent goes on with when its account reaches its limit"
     }
   });
 
+  describe("moving on before the limit", () => {
+    const early = (host: HTMLElement) => card(host)?.querySelector<HTMLElement>("[data-move-early]") ?? null;
+    const toggle = (host: HTMLElement) => early(host)!.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    const percent = (host: HTMLElement) => early(host)!.querySelector('input[aria-label="Percent of a limit used"]') as HTMLInputElement | null;
+    const TWO: AgentCli = { ...QUIET, accounts: ["work", "spare"], saysUse: true };
+
+    test("off until switched on; on, it starts at 90% and is saved with the accounts", async () => {
+      const { posted } = serve("admin", TWO, SIGNED_IN, SHARED);
+      const { host, unmount } = await mount();
+      try {
+        await eventually(() => early(host) !== null, 3_000, "the switch");
+        expect(toggle(host).checked).toBe(false);
+        expect(percent(host)).toBeNull();
+        expect(early(host)!.textContent).toContain("Off: Coder goes on with the next account only when a message is refused, and that message is sent again.");
+        expect(button(card(host)!, "Save")!.disabled).toBe(true);
+        toggle(host).click();
+        await eventually(() => percent(host) !== null, 2_000, "the share");
+        expect(percent(host)!.value).toBe("90");
+        expect(early(host)!.textContent).toContain("Coder finishes the message it is answering, then goes on with the next account. Nothing is cut off or sent twice.");
+        button(card(host)!, "Save")!.click();
+        await eventually(() => posted.length > 0, 2_000, "saved");
+        expect(posted[0]!.body).toEqual({ profile: ["work", "spare"], move_at: 90 });
+      } finally {
+        unmount();
+      }
+    });
+
+    test("its own share is shown and changed; one that is no percent is not saved; switched off, it is taken out", async () => {
+      const { posted } = serve("admin", { ...TWO, moveAt: 80 }, SIGNED_IN, SHARED);
+      const { host, unmount } = await mount();
+      try {
+        await eventually(() => early(host) !== null && toggle(host).checked, 3_000, "the switch, on");
+        expect(percent(host)!.value).toBe("80");
+        // Nothing changed yet: nothing to save.
+        expect(button(card(host)!, "Save")!.disabled).toBe(true);
+        type(percent(host)!, "100");
+        await eventually(() => (early(host)!.textContent ?? "").includes("Type a whole number from 1 to 99."), 2_000, "the figure refused");
+        expect(button(card(host)!, "Save")!.disabled).toBe(true);
+        type(percent(host)!, "85");
+        await eventually(() => button(card(host)!, "Save")!.disabled === false, 2_000, "the figure taken");
+        expect(early(host)!.textContent).not.toContain("Type a whole number");
+        button(card(host)!, "Save")!.click();
+        await eventually(() => posted.length === 1, 2_000, "saved");
+        expect(posted[0]!.body).toEqual({ profile: ["work", "spare"], move_at: 85 });
+        toggle(host).click();
+        await eventually(() => percent(host) === null, 2_000, "switched off");
+        button(card(host)!, "Save")!.click();
+        await eventually(() => posted.length === 2, 2_000, "saved again");
+        expect(posted[1]!.body).toEqual({ profile: ["work", "spare"], move_at: null });
+      } finally {
+        unmount();
+      }
+    });
+
+    test("not offered where its CLI says nothing of an account's use, or while it has no account to go on with", async () => {
+      for (const data of [{ ...TWO, saysUse: undefined }, { ...QUIET, saysUse: true }] as AgentCli[]) {
+        serve("admin", data, SIGNED_IN, SHARED);
+        const { host, unmount } = await mount();
+        try {
+          await eventually(() => card(host) !== null, 3_000, "the accounts to go on with");
+          expect(early(host)).toBeNull();
+        } finally {
+          unmount();
+        }
+      }
+    });
+  });
+
   test("not offered for a CLI that signs in once per agent: it has no other account to start with", async () => {
     serve("admin", QUIET, SIGNED_IN, { clis: [{ ...SHARED.clis[0], shared: false }] });
     const { host, unmount } = await mount();
