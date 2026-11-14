@@ -107,7 +107,7 @@ export const DAILY: NavItem[] = [
   { to: "/chat", label: "Chats", icon: MessageSquare },
   { to: "/work", label: "Work", icon: Target, holds: ["/automations", "/missions", "/jobs"], badge: WorkBadge },
   // A cat, as every agent is one here, where it was a robot.
-  { to: "/agents", label: "Agents", icon: Cat, holds: ["/office", "/workspace"] },
+  { to: "/agents", label: "Agents", icon: Cat, holds: ["/workspace"] },
 ];
 
 /** Now and then. */

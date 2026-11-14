@@ -10,7 +10,9 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { eventually } from "./wait.ts";
 
-const GLOBALS = ["window", "document", "navigator", "localStorage", "HTMLElement", "Element", "Node"] as const;
+// With what the Office at the top of the Agents page asks of a browser: its clock for the cats' frames, and its
+// measure of the column it is drawn in.
+const GLOBALS = ["window", "document", "navigator", "localStorage", "HTMLElement", "Element", "Node", "requestAnimationFrame", "cancelAnimationFrame", "matchMedia", "ResizeObserver", "getComputedStyle"] as const;
 let dom: Window;
 let realFetch: typeof fetch;
 
@@ -133,6 +135,7 @@ describe("an external agent's tabs", () => {
     }
     const layout = readFileSync(join(import.meta.dir, "../src/modules/agents/layout.page.tsx"), "utf8");
     expect(layout).toContain('const BRAIN_TAB: Tab = { to: "/agents/$agentId/cli", label: "Brain", icon: Terminal };');
-    expect(layout).toContain("(agent.external ? [TABS[0]!, BRAIN_TAB, ...TABS.slice(2)] : TABS)");
+    // Brain in Model's place, with an admin's Workspace beside whichever of the two it is.
+    expect(layout).toContain("[TABS[0]!, agent.external ? BRAIN_TAB : TABS[1]!, ...(isAdmin(me.data ?? null) ? [WORKSPACE_TAB] : []), ...TABS.slice(2)]");
   });
 });

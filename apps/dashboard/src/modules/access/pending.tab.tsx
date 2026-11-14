@@ -17,7 +17,7 @@ import { api } from "@/commons/lib/api";
 import type { PersonTarget, SenderAnswer, SenderRecord } from "@nouride/wire";
 import { canWrite, isAdmin, useMe } from "@/commons/lib/session";
 import { EmptyState, ErrorNote } from "@/commons/components/ui/ui";
-import { ScrollCard } from "@/commons/components/ui/ScrollCard";
+import { ListCard } from "@/commons/components/ui/ListCard";
 import { useToast } from "@/commons/components/ui/toast";
 import { useConfirm } from "@/commons/components/ui/confirm";
 import { PersonPicker } from "@/commons/components/people/PersonPicker";
@@ -76,7 +76,7 @@ export function PendingTab({
   return (
     <>
     {dialog}
-    <ScrollCard
+    <ListCard
       title={`Waiting to be approved (${senders.length})`}
       description={
         senders.length > 0
@@ -185,7 +185,7 @@ export function PendingTab({
           })}
         </ul>
       )}
-    </ScrollCard>
+    </ListCard>
     </>
   );
 }

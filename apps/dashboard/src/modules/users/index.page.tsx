@@ -9,7 +9,7 @@ import { useState } from "react";
 import { ExternalLink, Info, Plus, ShieldCheck, Trash2 } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import { Card, EmptyState, ErrorNote, Field, PageHeader } from "@/commons/components/ui/ui";
-import { FILL_PAGE, ScrollCard } from "@/commons/components/ui/ScrollCard";
+import { ListCard } from "@/commons/components/ui/ListCard";
 import { useConfirm } from "@/commons/components/ui/confirm";
 import { PersonPicker } from "@/commons/components/people/PersonPicker";
 import type { PersonRecord } from "@nouride/wire";
@@ -59,7 +59,7 @@ export default function UsersPage() {
   const { ask, dialog } = useConfirm();
 
   return (
-    <div className={FILL_PAGE}>
+    <div className="space-y-6 *:animate-fade">
       {dialog}
       <PageHeader
         title="User Accounts"
@@ -129,7 +129,7 @@ export default function UsersPage() {
         </Card>
       )}
 
-      <ScrollCard fill title="Accounts">
+      <ListCard title="Accounts">
         {users.isPending ? (
           <ListLoading />
         ) : list.length === 0 ? (
@@ -254,7 +254,7 @@ export default function UsersPage() {
           </div>
         )}
         <ErrorNote error={remove.error ?? setRole.error} />
-      </ScrollCard>
+      </ListCard>
 
     </div>
   );

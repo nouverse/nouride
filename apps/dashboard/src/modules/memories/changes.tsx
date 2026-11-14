@@ -13,6 +13,7 @@ import { ChevronDown, Link2 } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import type { ChangeCause, ChangeKind } from "@nouride/wire";
 import { ErrorNote } from "@/commons/components/ui/ui";
+import { Expandable } from "@/commons/components/ui/ListCard";
 
 const KIND: Record<ChangeKind, { label: string; badge: string }> = {
   added: { label: "Added", badge: "badge-success" },
@@ -46,35 +47,37 @@ export function RecentChanges({ nameOf, onOpenEpisode }: { nameOf: (key: string)
           {secondhand ? <span className="badge badge-ghost badge-xs font-mono">{secondhand} told by someone else</span> : null}
         </span>
       </summary>
-      <ul className="border-base-content/[0.06] max-h-[50dvh] divide-y divide-base-content/[0.06] overflow-y-auto border-t px-5">
-        {list.map((change, index) => (
-          <li key={`${change.at}-${index}`} className="space-y-1 py-2.5">
-            <p className="text-base-content/65 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
-              <span className={`badge badge-xs ${KIND[change.change].badge}`}>{KIND[change.change].label}</span>
-              <span className="text-base-content/80 font-medium">{change.subject === "shared" ? "Shared" : nameOf(change.subject)}</span>
-              <span>{new Date(change.at).toLocaleString()}</span>
-              <span>· {CAUSE[change.cause]}</span>
-              {change.secondhand ? (
-                <span className="badge badge-ghost badge-xs font-mono" title="Kept from a conversation they were not in">
-                  told by someone else
-                </span>
-              ) : null}
-              {change.source ? (
-                <button type="button" className="link link-hover inline-flex items-center gap-0.5" onClick={() => onOpenEpisode(change.source!)}>
-                  <Link2 size={11} /> from a conversation
-                </button>
-              ) : null}
-            </p>
-            <p className={`text-sm ${change.change === "removed" ? "text-base-content/65 line-through" : ""}`}>{change.text}</p>
-            {change.previous ? (
-              <p className="text-base-content/65 whitespace-pre-line text-xs">
-                {change.change === "merged" ? "From:\n" : "Was: "}
-                {change.previous}
+      <Expandable maxHeight="max-h-[50dvh]" className="border-base-content/[0.06] border-t">
+        <ul className="divide-y divide-base-content/[0.06] px-5">
+          {list.map((change, index) => (
+            <li key={`${change.at}-${index}`} className="space-y-1 py-2.5">
+              <p className="text-base-content/65 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+                <span className={`badge badge-xs ${KIND[change.change].badge}`}>{KIND[change.change].label}</span>
+                <span className="text-base-content/80 font-medium">{change.subject === "shared" ? "Shared" : nameOf(change.subject)}</span>
+                <span>{new Date(change.at).toLocaleString()}</span>
+                <span>· {CAUSE[change.cause]}</span>
+                {change.secondhand ? (
+                  <span className="badge badge-ghost badge-xs font-mono" title="Kept from a conversation they were not in">
+                    told by someone else
+                  </span>
+                ) : null}
+                {change.source ? (
+                  <button type="button" className="link link-hover inline-flex items-center gap-0.5" onClick={() => onOpenEpisode(change.source!)}>
+                    <Link2 size={11} /> from a conversation
+                  </button>
+                ) : null}
               </p>
-            ) : null}
-          </li>
-        ))}
-      </ul>
+              <p className={`text-sm ${change.change === "removed" ? "text-base-content/65 line-through" : ""}`}>{change.text}</p>
+              {change.previous ? (
+                <p className="text-base-content/65 whitespace-pre-line text-xs">
+                  {change.change === "merged" ? "From:\n" : "Was: "}
+                  {change.previous}
+                </p>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      </Expandable>
     </details>
   );
 }

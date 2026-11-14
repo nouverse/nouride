@@ -82,7 +82,7 @@ describe("a files view held to one folder", () => {
   });
 });
 
-describe("the Workspace tab beside Agents and Office", () => {
+describe("the Workspace tab beside Agents", () => {
   test("opens on the workspace, lists private and shared alone, goes into them, and its way back ends at the workspace", async () => {
     answer(FILES);
     await asking(async (asked) => {
@@ -129,7 +129,7 @@ describe("the Workspace tab beside Agents and Office", () => {
     const tabs = (host: HTMLElement) => [...host.ownerDocument.querySelectorAll<HTMLAnchorElement>("main a")].filter((link) => ["/dashboard/agents", "/dashboard/office", "/dashboard/workspace"].includes(link.getAttribute("href") ?? ""));
     await renderPage("/workspace", async (host) => {
       await drawn(host, "shared");
-      expect(tabs(host).map((tab) => tab.textContent)).toEqual(["Agents", "Office", "Workspace"]);
+      expect(tabs(host).map((tab) => tab.textContent)).toEqual(["Agents", "Workspace"]);
       expect(tabs(host).find((tab) => tab.getAttribute("aria-current") === "page")?.textContent).toBe("Workspace");
       // Agents in the menu is the page you are on.
       const menu = [...host.ownerDocument.querySelectorAll<HTMLAnchorElement>('nav[aria-label="Menu"] a')].filter((link) => link.getAttribute("href") === "/dashboard/agents");
@@ -137,9 +137,10 @@ describe("the Workspace tab beside Agents and Office", () => {
     });
     answer({ ...FILES, ...operator() });
     await asking(async (asked) => {
-      await renderPage("/office", async (host) => {
-        await eventually(() => tabs(host).length > 0, 3_000, "the section's tabs");
-        expect(tabs(host).map((tab) => tab.textContent)).toEqual(["Agents", "Office"]);
+      // With Workspace not theirs, Agents is the one page of its section: no bar of one tab over it.
+      await renderPage("/agents", async (host) => {
+        await eventually(() => host.querySelector("[data-agent-rows]") !== null, 3_000, "the agents");
+        expect(tabs(host)).toEqual([]);
       });
       await renderPage("/workspace", async (host) => {
         await drawn(host, "For an admin");
@@ -169,9 +170,9 @@ describe("an agent's Workspace tab", () => {
       await renderPage("/agents/nouva/workspace", async (host, app) => {
         await drawn(host, "plan.md");
         expect(host.querySelector('[data-workspace="agent"]')).not.toBeNull();
-        // The last of the agent's tabs, and the one you are on.
-        const tabs = [...host.ownerDocument.querySelectorAll<HTMLAnchorElement>("main a")].filter((link) => /^\/dashboard\/agents\/nouva(\/[a-z]+)?(\?|$)/.test(link.getAttribute("href") ?? ""));
-        expect(tabs.at(-1)).toBe(tab(host)!);
+        // Beside Model among the agent's tabs, in the row that stays, and the one you are on.
+        const tabs = [...host.ownerDocument.querySelectorAll<HTMLAnchorElement>("main [data-sticky-bar] a")].filter((link) => /^\/dashboard\/agents\/nouva(\/[a-z]+)?(\?|$)/.test(link.getAttribute("href") ?? ""));
+        expect(tabs.slice(0, 4).map((link) => link.textContent)).toEqual(["Files", "Model", "Workspace", "Connections"]);
         expect(tab(host)!.textContent).toBe("Workspace");
         expect(tabs.filter((link) => link.getAttribute("aria-current") === "page")).toEqual([tab(host)!]);
         // Its folder is the top: `workspace` and `private` are not on the way, so they are not a press away.

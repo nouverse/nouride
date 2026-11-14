@@ -15,7 +15,7 @@ import { api } from "@/commons/lib/api";
 import type { Proposal } from "@nouride/wire";
 import { useToast } from "@/commons/components/ui/toast";
 import { EmptyState, ErrorNote } from "@/commons/components/ui/ui";
-import { ScrollCard } from "@/commons/components/ui/ScrollCard";
+import { ListCard } from "@/commons/components/ui/ListCard";
 import { EpisodeView } from "./episode-view";
 import { useNames } from "./names";
 import { Leaving } from "@/commons/components/ui/OverPage";
@@ -71,7 +71,7 @@ export function ProposalsTab({ editable }: { editable: boolean }) {
         <EmptyState pose="approved" title="Nothing waiting" description="Changes to facts already kept, facts about someone who wasn't there, and shared knowledge wait here for you." />
       ) : null}
       {list.length > 0 ? (
-        <ScrollCard title={`${list.length} waiting`}>
+        <ListCard title={`${list.length} waiting`}>
           <ul className="divide-y divide-base-content/[0.06]">
             {list.map((proposal) => (
               <li key={proposal.id} className="flex items-start justify-between gap-3 py-3">
@@ -98,7 +98,7 @@ export function ProposalsTab({ editable }: { editable: boolean }) {
               </li>
             ))}
           </ul>
-        </ScrollCard>
+        </ListCard>
       ) : null}
       <Leaving value={episode}>{(id) => <EpisodeView id={id} editable={editable} nameOf={nameOf} onOpen={setEpisode} onClose={() => setEpisode(null)} />}</Leaving>
     </div>

@@ -1,13 +1,11 @@
 /**
- * A card whose list scrolls inside it: the header — title, description, and a filter box when one
- * is asked for — stays put, and the body stops at `maxHeight`. For lists that grow without bound
- * (skills, drafts, search results), so forty of them do not push the rest of the page out of reach.
+ * For the few pages that keep a list scrolling inside the window (Files, the Workspace, Logs): the room under a page,
+ * the page held to the window, and the area in it that scrolls. Every other page scrolls as a page, with its tabs,
+ * filter and search in a row that stays (`StickyBar`) and its long lists opened in full (`ListCard`).
  */
 
 import type { ReactNode } from "react";
 import { cn } from "@/commons/lib/utils";
-import { Card } from "./ui";
-import { SearchInput } from "./SearchInput";
 
 /**
  * The space under a page's last card. On a phone and a tablet the tab bar floats over the page's foot (`TabBar`), with
@@ -65,47 +63,4 @@ export function ScrollArea({
   children: ReactNode;
 }) {
   return <div className={cn(fill ? "lg:min-h-[16rem] lg:flex-1 lg:overflow-y-auto lg:overscroll-contain" : `${maxHeight} overflow-y-auto overscroll-contain`, className)}>{children}</div>;
-}
-
-export function ScrollCard({
-  title,
-  description,
-  actions,
-  search,
-  maxHeight = "max-h-[32rem]",
-  fill = false,
-  className,
-  children,
-}: {
-  /** Take the height a `FILL_PAGE` leaves, rather than `maxHeight` — the list scrolls, the page around it does not. */
-  fill?: boolean;
-  title?: string;
-  description?: string;
-  actions?: ReactNode;
-  /** A filter box in the header, beside any actions. */
-  search?: { value: string; onChange: (next: string) => void; placeholder?: string };
-  /** A Tailwind max-height class. Written out in full so the build sees it. */
-  maxHeight?: string;
-  /** On the card itself — a border that says something is waiting, say. */
-  className?: string;
-  children: ReactNode;
-}) {
-  const header =
-    search || actions ? (
-      <div className="flex flex-wrap items-center gap-2">
-        {search ? <SearchInput value={search.value} onChange={search.onChange} placeholder={search.placeholder} className="w-48" /> : null}
-        {actions}
-      </div>
-    ) : undefined;
-  return (
-    <Card
-      {...(title ? { title } : {})}
-      {...(description ? { description } : {})}
-      {...(header ? { actions: header } : {})}
-      className={cn(fill && "lg:flex lg:min-h-[22rem] lg:flex-1 lg:flex-col", className)}
-      bodyClassName={fill ? "lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain" : `${maxHeight} overflow-y-auto overscroll-contain`}
-    >
-      {children}
-    </Card>
-  );
 }

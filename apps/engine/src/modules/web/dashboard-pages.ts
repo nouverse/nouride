@@ -19,7 +19,6 @@ export const DASHBOARD_PAGES: readonly (readonly [name: string, path: string])[]
   ["Missions", "/missions"],
   ["Helpers", "/jobs"],
   ["Agents", "/agents"],
-  ["Office", "/office"],
   ["Workspace", "/workspace"],
   ["Skills", "/skills"],
   ["Connectors", "/mcp"],

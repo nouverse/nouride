@@ -14,7 +14,7 @@ import { api } from "@/commons/lib/api";
 import type { EpisodeFilter, EpisodeStatus } from "@nouride/wire";
 import { useToast } from "@/commons/components/ui/toast";
 import { Card, EmptyState, ErrorNote } from "@/commons/components/ui/ui";
-import { ScrollCard } from "@/commons/components/ui/ScrollCard";
+import { ListCard } from "@/commons/components/ui/ListCard";
 import { EpisodeView, stars } from "./episode-view";
 import { useNames } from "./names";
 import {
@@ -192,9 +192,9 @@ export function TimelineTab({ editable }: { editable: boolean }) {
       ) : null}
 
       {list.length > 0 ? (
-        <ScrollCard title={`${list.length} conversation(s)`} description="Newest first. Open a day to see its conversations.">
-          {/* Its own scroll, so the page stays put and a long history is a list of days, not a wall. */}
-          <div className="-mx-2 max-h-[65dvh] space-y-1 overflow-y-auto px-2">
+        <ListCard title={`${list.length} conversation(s)`} description="Newest first. Open a day to see its conversations.">
+          {/* A long history is a list of days, each closed until opened, not a wall: the page scrolls. */}
+          <div className="-mx-2 space-y-1 px-2">
             {byDay(list).map(([day, dayEpisodes]) => (
               // Closed by default; a filter's results open, so what was searched for is in sight.
               <details key={`${day}:${filtered}`} open={filtered} className="group rounded-xl border border-base-content/[0.06]">
@@ -239,7 +239,7 @@ export function TimelineTab({ editable }: { editable: boolean }) {
               </details>
             ))}
           </div>
-        </ScrollCard>
+        </ListCard>
       ) : null}
 
       <Leaving value={open}>{(id) => <EpisodeView id={id} editable={editable} nameOf={nameOf} onOpen={setOpen} onClose={() => setOpen(null)} />}</Leaving>

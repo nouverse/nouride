@@ -117,7 +117,7 @@ describe("every route has a way in", () => {
    * to it from outside (a bookmark, a link an agent sent in a chat before). Such a route is a redirect and nothing else,
    * so the allowance cannot hide a page nobody opens.
    */
-  const MOVED: Record<string, string> = { "schedule.tsx": "/automations", "webhooks.tsx": "/automations" };
+  const MOVED: Record<string, string> = { "schedule.tsx": "/automations", "webhooks.tsx": "/automations", "office.tsx": "/agents" };
 
   test("an address kept for old links only sends its visitor on: it has no page of its own", () => {
     for (const [file, to] of Object.entries(MOVED)) {

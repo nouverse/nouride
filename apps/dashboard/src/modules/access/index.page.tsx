@@ -17,7 +17,10 @@ import { Link } from "@tanstack/react-router";
 import { AlertTriangle, Lock, Shield } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import { Card, PageHeader } from "@/commons/components/ui/ui";
+import { useState } from "react";
+import { SearchInput } from "@/commons/components/ui/SearchInput";
 import { SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
+import { StickyBar } from "@/commons/components/ui/StickyBar";
 import { SearchSelect } from "@/commons/components/ui/SearchSelect";
 import { ApprovedTab } from "./approved.tab";
 import { BlockedTab } from "./blocked.tab";
@@ -25,6 +28,7 @@ import { DeniedTab } from "./denied.tab";
 import { HistoryTab } from "./history.tab";
 import { PendingTab } from "./pending.tab";
 import type { AccessSearch, AccessTab } from "./search";
+import { SenderQuery } from "./sender-line";
 import { ListLoading } from "@/commons/components/ui/Spinner";
 import { PAGE_ASKS } from "@/commons/components/agents/page-asks";
 
@@ -34,6 +38,8 @@ export default function AccessPage({ search, onSearch }: { search: AccessSearch;
   const access = useQuery({ queryKey: ["access"], queryFn: api.access, refetchInterval: 15_000, retry: false });
   const gateways = useQuery({ queryKey: ["gateways"], queryFn: api.gateways });
   const tab: AccessTab = search.tab ?? "pending";
+  /** One filter for whichever tab is open, in the row that stays at the top of the window. */
+  const [query, setQuery] = useState("");
 
   const agentOf = (gatewayId: string) => gateways.data?.gateways.find((gateway) => gateway.id === gatewayId)?.agent;
   const orchestrator = useOrchestrator();
@@ -90,7 +96,23 @@ export default function AccessPage({ search, onSearch }: { search: AccessSearch;
             </span>
           </p>
 
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          {/* The tabs, the agent and the filter stay at the top of the window while the list scrolls under them. */}
+          <StickyBar
+            label="Which senders"
+            tools={
+              <>
+                <SearchInput value={query} onChange={setQuery} placeholder="Filter senders" className="w-48" />
+                <SearchSelect
+                  small
+                  label="Agent"
+                  options={[{ value: "", label: "All agents" }, ...agents.map((agent) => ({ value: agent, label: agent === orchestrator ? `♛ ${agent}` : agent }))]}
+                  value={search.agent ?? ""}
+                  onChange={(next) => onSearch({ ...search, agent: next || undefined })}
+                  width={208}
+                />
+              </>
+            }
+          >
             <SegmentedTabs
               tabs={[
                 { value: "pending", label: "Pending", after: count(pending.length, "badge-warning") },
@@ -102,16 +124,9 @@ export default function AccessPage({ search, onSearch }: { search: AccessSearch;
               value={tab}
               onChange={(next) => onSearch({ ...search, tab: next })}
             />
-            <SearchSelect
-              small
-              label="Agent"
-              options={[{ value: "", label: "All agents" }, ...agents.map((agent) => ({ value: agent, label: agent === orchestrator ? `♛ ${agent}` : agent }))]}
-              value={search.agent ?? ""}
-              onChange={(next) => onSearch({ ...search, agent: next || undefined })}
-              width={208}
-            />
-          </div>
+          </StickyBar>
 
+          <SenderQuery.Provider value={{ query, setQuery }}>
           {access.isPending ? (
             <ListLoading />
           ) : tab === "pending" ? (
@@ -125,6 +140,7 @@ export default function AccessPage({ search, onSearch }: { search: AccessSearch;
           ) : (
             <HistoryTab senders={access.data?.senders ?? []} agentOf={agentOf} inScope={inScope} />
           )}
+          </SenderQuery.Provider>
         </>
       )}
     </div>

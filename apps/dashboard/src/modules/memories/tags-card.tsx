@@ -19,6 +19,7 @@ import { useConfirm } from "@/commons/components/ui/confirm";
 import { useToast } from "@/commons/components/ui/toast";
 import { ErrorNote } from "@/commons/components/ui/ui";
 import { Leaving, overPage } from "@/commons/components/ui/OverPage";
+import { Expandable } from "@/commons/components/ui/ListCard";
 
 /** How long the last tidy stays offered for Undo on the card. `nouride memory tags undo` has no limit. */
 const UNDO_DAYS = 7;
@@ -209,14 +210,16 @@ function ReviewDialog({ changes, onClose, onDone }: { changes: TagTidyChange[]; 
             <X size={16} />
           </button>
         </div>
-        <div className="max-h-[55dvh] space-y-1 overflow-y-auto">
-          {!changes.length && !suggested.length ? (
-            <p className="text-base-content/65 px-2 py-3 text-sm">The rules find nothing to tidy. The model can still look for tags that mean one subject: spellings the rules cannot see, synonyms, a narrow tag that only ever means a broad one.</p>
-          ) : null}
-          {changes.map((change) => row(change, ticked.includes(change.id), () => toggle(ticked, setTicked, change.id)))}
-          {suggested.length ? <p className="text-base-content/65 px-2 pt-3 text-xs font-medium">Suggested by the model: read before ticking</p> : null}
-          {suggested.map((change) => row(change, kept.includes(change.id), () => toggle(kept, setKept, change.id)))}
-        </div>
+        <Expandable maxHeight="max-h-[55dvh]">
+          <div className="space-y-1">
+            {!changes.length && !suggested.length ? (
+              <p className="text-base-content/65 px-2 py-3 text-sm">The rules find nothing to tidy. The model can still look for tags that mean one subject: spellings the rules cannot see, synonyms, a narrow tag that only ever means a broad one.</p>
+            ) : null}
+            {changes.map((change) => row(change, ticked.includes(change.id), () => toggle(ticked, setTicked, change.id)))}
+            {suggested.length ? <p className="text-base-content/65 px-2 pt-3 text-xs font-medium">Suggested by the model: read before ticking</p> : null}
+            {suggested.map((change) => row(change, kept.includes(change.id), () => toggle(kept, setKept, change.id)))}
+          </div>
+        </Expandable>
         {ask.error ? <ErrorNote error={ask.error} /> : null}
         <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
           <button type="button" className="btn btn-ghost btn-sm rounded-xl" disabled={ask.isPending || suggested.length > 0} onClick={() => ask.mutate()}>

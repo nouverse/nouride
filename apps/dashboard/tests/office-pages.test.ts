@@ -108,7 +108,8 @@ async function mount(page: "office" | "look", agentId = "codey"): Promise<{ host
   const { createRoot } = await import("react-dom/client");
   const { QueryClient, QueryClientProvider } = await import("@tanstack/react-query");
   const { RouterProvider, createRootRoute, createRoute, createRouter, createMemoryHistory, Outlet } = await import("@tanstack/react-router");
-  const { default: OfficePage } = await import("@/modules/office/index.page");
+  // The Office is the top of the Agents page: the cats over the list of the same agents.
+  const { default: OfficePage } = await import("@/modules/agents/index.page");
   const { default: AgentLookPage } = await import("@/modules/agents/look.page");
   // The pages link to others; a router to hold them, the page under test its only route.
   const root = createRootRoute({ component: () => React.createElement(Outlet) });
@@ -145,11 +146,23 @@ describe("the Office", () => {
       await eventually(() => drawn.some((call) => call.method === "drawImage"), 2_000, "the room drawn");
       const painted = drawn.filter((call) => call.method === "putImageData").map((call) => call.args[0] as { data: Uint8ClampedArray });
       expect(painted.some((image) => image.data.some((value, at) => at % 4 === 3 && value === 255))).toBe(true);
+      // Under the office, every agent as a row, the orchestrator first: each a link to its own page, none opened yet.
+      const rows = () => [...host.querySelectorAll<HTMLElement>("[data-agent-row]")];
+      const row = (id: string) => host.querySelector<HTMLElement>(`[data-agent-row="${id}"]`)!;
+      // In the order the server lists them, the orchestrator first: the list's own order, not the office's seats.
+      expect(rows().map((entry) => entry.dataset.agentRow)).toEqual(["nouva", "wren", "codey", "sleepy"]);
+      expect(rows().map((entry) => entry.querySelector("a")!.getAttribute("href"))).toEqual(["/agents/nouva", "/agents/wren", "/agents/codey", "/agents/sleepy"]);
+      expect(host.querySelectorAll("[data-agent-actions]")).toHaveLength(0);
       (host.querySelector('button[aria-label="Nouva, working"]') as HTMLButtonElement).click();
-      await eventually(() => (host.textContent ?? "").includes("telegram:nouva · 555"), 2_000, "its card");
-      expect(host.textContent).toContain("Edit look");
-      // Its card wears the orchestrator's badge too (0.8.15); Wren's, below, does not.
-      const card = () => host.querySelector("aside")?.textContent ?? "";
+      // Picking a cat opens that agent's row: what it is doing, and what a person does with it, in the one place.
+      await eventually(() => (row("nouva").textContent ?? "").includes("telegram:nouva · 555"), 2_000, "its row, opened");
+      expect(host.querySelectorAll("[data-agent-actions]")).toHaveLength(1);
+      const actions = () => [...host.querySelectorAll<HTMLElement>("[data-agent-actions] a, [data-agent-actions] button")].map((entry) => entry.textContent?.trim());
+      expect(actions().filter((label) => ["Details", "Open chat", "Sleep", "Workspace", "Edit look"].includes(label ?? ""))).toEqual(["Details", "Open chat", "Sleep", "Workspace", "Edit look"]);
+      // Details is the agent's own page.
+      expect([...host.querySelectorAll("[data-agent-actions] a")].find((link) => link.textContent?.trim() === "Details")!.getAttribute("href")).toBe("/agents/nouva");
+      // The orchestrator's row wears its badge; Wren's, below, does not.
+      const card = () => host.querySelector("[data-agent-actions]")?.closest("[data-agent-row]")?.textContent ?? "";
       expect(card()).toContain("orchestrator");
       // Open chat carries on the cat's newest conversation, as its row in the chat list does: it started a new one every
       // time, and the conversation the person was in was left behind.
@@ -160,6 +173,16 @@ describe("the Office", () => {
       await eventually(() => (openChat()?.getAttribute("href") ?? "").includes("agent=wren"), 2_000, "Wren's Open chat");
       expect(openChat()!.getAttribute("href")).toMatch(/\/chat\/?\?agent=wren$/);
       expect(card()).not.toContain("orchestrator");
+      // One row open at a time, and the cat picked is the one marked: the row's own button closes it again.
+      expect(host.querySelectorAll("[data-agent-actions]")).toHaveLength(1);
+      expect(row("wren").querySelector("[data-agent-actions]")).not.toBeNull();
+      (row("wren").querySelector('button[aria-label="Close Wren\'s actions"]') as HTMLButtonElement).click();
+      await eventually(() => host.querySelectorAll("[data-agent-actions]").length === 0, 2_000, "closed");
+      expect(host.querySelector('button[aria-label="Wren, waiting for you"]')!.getAttribute("aria-pressed")).toBe("false");
+      // And a row opens without the office: its own button, for a phone or a keyboard.
+      (row("codey").querySelector('button[aria-label="What to do with Codey"]') as HTMLButtonElement).click();
+      await eventually(() => row("codey").querySelector("[data-agent-actions]") !== null, 2_000, "opened from its row");
+      expect(row("codey").textContent).toContain("Cannot work: Codex is not signed in");
     } finally {
       unmount();
     }
@@ -173,7 +196,7 @@ describe("the Office", () => {
       try {
         await eventually(() => host.querySelectorAll("button[aria-pressed]").length === 4, 3_000, "a button per cat");
         (host.querySelector('button[aria-label="Wren, waiting for you"]') as HTMLButtonElement).click();
-        await eventually(() => (host.textContent ?? "").includes("Edit look"), 2_000, "its card");
+        await eventually(() => (host.textContent ?? "").includes("Edit look"), 2_000, "its row, opened");
         // Sleep is pressable once who is signed in is known, for an operator as for an admin: only then is a button
         // that is not there one that was left out.
         await eventually(() => [...host.querySelectorAll("button")].some((button) => (button.textContent ?? "").trim() === "Sleep" && !button.disabled), 2_000, "who is signed in");

@@ -87,7 +87,7 @@ describe("the bottom of a page", () => {
     for (const word of ["flex-1", "min-h-0"]) expect(root.split(" ")).not.toContain(word);
   });
 
-  test("is under every page: the document's, the one held to the window, System Logs and Secrets", () => {
+  test("is under every page: the document's, the one held to the window, and System Logs", () => {
     const layout = read("commons/components/layout/RootLayout.tsx");
     const containers = [...layout.matchAll(/<div className=\{`mx-auto [^`]*`\}>/g)].map((m) => m[0]);
     expect(containers.length).toBe(2);
@@ -96,7 +96,9 @@ describe("the bottom of a page", () => {
     expect(document).toContain("${PAGE_BOTTOM}");
     // No `sm:p-*` or `p-*` after it that would set the bottom back below a laptop's width.
     for (const container of containers) expect(container).not.toMatch(/\s(sm:)?p-\d/);
-    for (const page of ["modules/logs/index.page.tsx", "modules/secrets/index.page.tsx"]) expect(read(page)).toContain("${HELD_BOTTOM}");
+    expect(read("modules/logs/index.page.tsx")).toContain("${HELD_BOTTOM}");
+    // Secrets scrolls as a page now, under the document's own foot: it holds no bottom of its own.
+    expect(read("modules/secrets/index.page.tsx")).not.toContain("HELD_BOTTOM");
   });
 
   // The floating chat's button stands over the tab bar's right end on every page but Chats, where Home's "+ Chat" stood

@@ -29,7 +29,9 @@ import { api } from "@/commons/lib/api";
 import { canWrite, useMe } from "@/commons/lib/session";
 import { EmptyState, ErrorNote, PageHeader } from "@/commons/components/ui/ui";
 import { Details } from "@/commons/components/ui/Details";
-import { FILL_PAGE, ScrollCard } from "@/commons/components/ui/ScrollCard";
+import { ListCard } from "@/commons/components/ui/ListCard";
+import { SearchInput } from "@/commons/components/ui/SearchInput";
+import { StickyBar } from "@/commons/components/ui/StickyBar";
 import { useTextFilter } from "@/commons/lib/use-text-filter";
 import { PoolList } from "./pool.list";
 import { DecidedStrip, DraftList } from "./drafts.panel";
@@ -70,7 +72,7 @@ export default function SkillWorkshopPage() {
   const showPool = tab === "live";
 
   return (
-    <div className={FILL_PAGE}>
+    <div className="space-y-6 *:animate-fade">
       <PageHeader
         ask={PAGE_ASKS.skills}
         pose={catalog.isPending || skills.length > 0 ? "star" : undefined}
@@ -82,26 +84,36 @@ export default function SkillWorkshopPage() {
 
       <LearningSettingsPanel canEdit={canWrite(me.data ?? null)} onShowPending={() => setTab("pending")} />
 
-      <SegmentedTabs
-        tabs={[
-          { value: "live" as Tab, label: "Live", after: <Count n={skills.length} /> },
-          // The only count worth colouring: it is the one that means somebody has to do something.
-          { value: "pending" as Tab, label: "Pending", after: <Count n={pending.length} highlight={pending.length > 0} /> },
-          // Skills somebody else wrote. Installing one lands it on Pending, so it sits beside it.
-          { value: "explore" as Tab, label: "Explore" },
-        ]}
-        value={tab}
-        onChange={setTab}
-      />
+      {/* The tabs and the tab's filter stay at the top of the window while its list scrolls under them. */}
+      <StickyBar
+        label="Which skills"
+        tools={
+          showPending && pending.length > 0 ? (
+            <SearchInput value={pendingQuery} onChange={setPendingQuery} placeholder="Filter drafts" className="w-48" />
+          ) : showPool && skills.length > 0 ? (
+            <SearchInput value={poolQuery} onChange={setPoolQuery} placeholder="Filter skills" className="w-48" />
+          ) : undefined
+        }
+      >
+        <SegmentedTabs
+          tabs={[
+            { value: "live" as Tab, label: "Live", after: <Count n={skills.length} /> },
+            // The only count worth colouring: it is the one that means somebody has to do something.
+            { value: "pending" as Tab, label: "Pending", after: <Count n={pending.length} highlight={pending.length > 0} /> },
+            // Skills somebody else wrote. Installing one lands it on Pending, so it sits beside it.
+            { value: "explore" as Tab, label: "Explore" },
+          ]}
+          value={tab}
+          onChange={setTab}
+        />
+      </StickyBar>
 
       {explore}
 
       {showPending ? (
-        <ScrollCard
-          fill
+        <ListCard
           title={`${pending.length} draft${pending.length === 1 ? "" : "s"} waiting on you`}
           description="Skills an agent worked out, or you fetched from a hub. Approving one puts it in the pool for every agent; nothing expires."
-          {...(pending.length > 0 ? { search: { value: pendingQuery, onChange: setPendingQuery, placeholder: "Filter drafts" } } : {})}
         >
           <ErrorNote error={drafts.error} />
           {drafts.isPending ? (
@@ -118,15 +130,11 @@ export default function SkillWorkshopPage() {
             <DraftList drafts={visiblePending} editable={editable} />
           )}
           <DecidedStrip drafts={decided.slice(0, 5)} />
-        </ScrollCard>
+        </ListCard>
       ) : null}
 
       {showPool ? (
-        <ScrollCard
-          fill
-          title={`${skills.length} skill${skills.length === 1 ? "" : "s"} live`}
-          {...(skills.length > 0 ? { search: { value: poolQuery, onChange: setPoolQuery, placeholder: "Filter skills" } } : {})}
-        >
+        <ListCard title={`${skills.length} skill${skills.length === 1 ? "" : "s"} live`}>
           {skills.length === 0 ? (
             <EmptyState
               pose="star"
@@ -144,7 +152,7 @@ export default function SkillWorkshopPage() {
               <p className="break-all font-mono">{catalog.data.poolDir}</p>
             </Details>
           ) : null}
-        </ScrollCard>
+        </ListCard>
       ) : null}
     </div>
   );

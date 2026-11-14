@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import McpLibraryPage from "@/modules/mcp/index.page";
 
 export const Route = createFileRoute("/mcp")({
-  staticData: { fillsViewport: true },
   component: RouteComponent,
   // `?install=<registry name>&agent=<id>`: the link `mcp_search` gives — Explore opened on that server's form, the
   // agent that found it ticked to switch it on.

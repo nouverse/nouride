@@ -18,8 +18,8 @@ import { isBundledEndpoint, nougateConsoleUrl } from "@/commons/lib/bundled-gate
 import { useSaved } from "@/commons/hooks/use-saved";
 import { useProviderDraft } from "@/commons/hooks/use-provider-draft";
 import { ExtraHeaders } from "@/commons/components/providers/ExtraHeaders";
-import { FILL_PAGE, ScrollArea } from "@/commons/components/ui/ScrollCard";
 import { Count, SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
+import { StickyBar } from "@/commons/components/ui/StickyBar";
 import { ModelTiersButton } from "./components/ModelTiers";
 import { CodingClis } from "./components/CodingClis";
 import { ListLoading } from "@/commons/components/ui/Spinner";
@@ -46,7 +46,7 @@ export default function ModelsPage({ tab }: { tab?: "clis" | undefined } = {}) {
   const count = (kind: string) => list.filter((profile) => profile.kind === kind).length;
 
   return (
-    <div className={FILL_PAGE}>
+    <div className="space-y-6 *:animate-fade">
       <PageHeader
         ask={PAGE_ASKS.models}
         title="Models"
@@ -67,20 +67,37 @@ export default function ModelsPage({ tab }: { tab?: "clis" | undefined } = {}) {
         }
       />
 
-      <SegmentedTabs
-        tabs={[
-          { value: "providers" as const, label: "Model providers" },
-          { value: "clis" as const, label: "Coding CLIs" },
-        ]}
-        value={source}
-        onChange={setSource}
-      />
+      {/* Which list, and for the providers which kind: both stay at the top of the window while the list scrolls. */}
+      <StickyBar
+        label="Which models"
+        tools={
+          source === "providers" && list.length > 0 ? (
+            <SegmentedTabs
+              tabs={[
+                { value: "all" as const, label: "All", after: <Count n={list.length} /> },
+                { value: "openai" as const, label: "OpenAI-compatible", after: <Count n={count("openai")} /> },
+                { value: "anthropic" as const, label: "Anthropic", after: <Count n={count("anthropic")} /> },
+              ]}
+              value={wire}
+              onChange={setWire}
+            />
+          ) : undefined
+        }
+      >
+        <SegmentedTabs
+          tabs={[
+            { value: "providers" as const, label: "Model providers" },
+            { value: "clis" as const, label: "Coding CLIs" },
+          ]}
+          value={source}
+          onChange={setSource}
+        />
+      </StickyBar>
 
-      {/* Its own scroll, as the providers' list has: the page itself does not. */}
       {source === "clis" ? (
-        <ScrollArea fill className="pr-1">
+        <div>
           <CodingClis />
-        </ScrollArea>
+        </div>
       ) : null}
 
       {source === "providers" && adding && (
@@ -101,18 +118,9 @@ export default function ModelsPage({ tab }: { tab?: "clis" | undefined } = {}) {
         </Card>
       ) : (
         <>
-        <SegmentedTabs
-          tabs={[
-            { value: "all" as const, label: "All", after: <Count n={list.length} /> },
-            { value: "openai" as const, label: "OpenAI-compatible", after: <Count n={count("openai")} /> },
-            { value: "anthropic" as const, label: "Anthropic", after: <Count n={count("anthropic")} /> },
-          ]}
-          value={wire}
-          onChange={setWire}
-        />
         {shown.length === 0 ? <EmptyState pose="searching" title="No provider of this kind" /> : null}
-        {/* Its own scroll, so the tabs stay put over a long list. Keyed by the tab, to fade in anew (`FILL_PAGE`). */}
-        <ScrollArea key={wire} fill className="space-y-4 pr-1">
+        {/* Keyed by the kind picked, to fade in anew. */}
+        <div key={wire} className="space-y-4">
           {shown.map((profile) => (
             <ProfileCard
               key={profile.name}
@@ -123,7 +131,7 @@ export default function ModelsPage({ tab }: { tab?: "clis" | undefined } = {}) {
               onChanged={refresh}
             />
           ))}
-        </ScrollArea>
+        </div>
         </>
       )}
 

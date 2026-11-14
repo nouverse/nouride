@@ -10,7 +10,7 @@ import { api } from "@/commons/lib/api";
 import type { SenderRecord } from "@nouride/wire";
 import { canWrite, useMe } from "@/commons/lib/session";
 import { EmptyState, ErrorNote } from "@/commons/components/ui/ui";
-import { ScrollCard } from "@/commons/components/ui/ScrollCard";
+import { ListCard } from "@/commons/components/ui/ListCard";
 import { ago } from "@/commons/lib/format";
 import { BUTTON, NoMatch, SenderLine, byWhom, useSenderFilter } from "./sender-line";
 
@@ -28,7 +28,7 @@ export function BlockedTab({ senders, agentOf }: { senders: SenderRecord[]; agen
   const { visible, query, search } = useSenderFilter(senders, agentOf);
 
   return (
-    <ScrollCard title={`Blocked (${senders.length})`} description="Ignored, with no reply, until you unblock them." {...search}>
+    <ListCard title={`Blocked (${senders.length})`} description="Ignored, with no reply, until you unblock them." {...search}>
       <ErrorNote error={unblock.error} />
       {senders.length === 0 ? (
         <EmptyState pose="security" title="Nobody is blocked" />
@@ -57,6 +57,6 @@ export function BlockedTab({ senders, agentOf }: { senders: SenderRecord[]; agen
           ))}
         </ul>
       )}
-    </ScrollCard>
+    </ListCard>
   );
 }

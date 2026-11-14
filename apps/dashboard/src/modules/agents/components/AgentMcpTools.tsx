@@ -12,7 +12,7 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import type { McpServer } from "@nouride/wire";
 import { ErrorNote } from "@/commons/components/ui/ui";
-import { ScrollArea } from "@/commons/components/ui/ScrollCard";
+import { Expandable } from "@/commons/components/ui/ListCard";
 import { Spinner } from "@/commons/components/ui/Spinner";
 import { formatBytes } from "@/commons/lib/format";
 import { useSaved } from "@/commons/hooks/use-saved";
@@ -108,7 +108,7 @@ export function AgentMcpTools({ agentId, server, admin, onChanged }: { agentId: 
                   {bytes.left > 0 ? ` · ${formatBytes(bytes.left)} left out` : ""}
                 </span>
               </div>
-              <ScrollArea maxHeight="max-h-80">
+              <Expandable maxHeight="max-h-80">
                 <ul className="divide-y divide-base-content/[0.06]">
                   {tools.map((tool) => (
                     <li key={tool.name}>
@@ -129,7 +129,7 @@ export function AgentMcpTools({ agentId, server, admin, onChanged }: { agentId: 
                     </li>
                   ))}
                 </ul>
-              </ScrollArea>
+              </Expandable>
               {admin ? (
                 <div className="flex items-center gap-2">
                   <button

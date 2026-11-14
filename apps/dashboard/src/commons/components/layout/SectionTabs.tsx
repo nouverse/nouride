@@ -1,8 +1,8 @@
 /**
- * The pages one menu item holds, as tabs over each of them (0.8.24): Work's four, Memory's three, Agents' two with an
- * admin's Workspace beside them, and System's four, which are an admin's: anyone else reaches Logs and Update from
- * Settings, with no bar over them. Drawn by the shell over a section's list pages, never over one mission or one
- * agent, so each page keeps its own address and a link to it still opens it.
+ * The pages one menu item holds, as tabs over each of them (0.8.24): Work's four, Memory's three, Agents with an
+ * admin's Workspace beside it (the Office is the top of the Agents page), and System's four, which are an admin's:
+ * anyone else reaches Logs and Update from Settings, with no bar over them. Drawn by the shell over a section's list
+ * pages, never over one mission or one agent, so each page keeps its own address and a link to it still opens it.
  */
 
 import { Link } from "@tanstack/react-router";
@@ -30,7 +30,6 @@ const SECTIONS: Tab[][] = [
   ],
   [
     { to: "/agents", label: "Agents" },
-    { to: "/office", label: "Office" },
     { to: "/workspace", label: "Workspace", adminOnly: true },
   ],
   [

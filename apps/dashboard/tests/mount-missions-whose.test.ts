@@ -89,7 +89,7 @@ describe("a mission the reader only reads, that waits for a person", () => {
 });
 
 describe("the Missions page, as an admin", () => {
-  test("one picker in the list's head beside its search, on Mine, whose last choice reads Nobody's; Mine asks for nothing but the list", async () => {
+  test("one picker beside the search in the row that stays, on Mine, whose last choice reads Nobody's; Mine asks for nothing but the list", async () => {
     const seen = { holds: "" as string | null, options: [] as string[], beside: false, sections: -1, groups: [] as (string | null)[] };
     const record = asked();
     try {

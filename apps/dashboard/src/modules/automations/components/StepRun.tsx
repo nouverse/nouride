@@ -12,6 +12,7 @@ import { RunResult } from "@/commons/components/jobs/RunResult";
 import { StepQuestion } from "@/commons/components/jobs/WaitingStep";
 import { cn } from "@/commons/lib/utils";
 import { outcomeWords, sameAsLastTime, type Tone } from "../lib/runs";
+import { Expandable } from "@/commons/components/ui/ListCard";
 
 /** A run's chip in each tone: mint for done and at work, red for a failure only, pink for what waits on a person. */
 export const TONES: Record<Tone, string> = {
@@ -70,10 +71,12 @@ export function StepRun({
       {said ? (
         <details open={failed} className="rounded-[14px] bg-base-200/60 px-3 py-2">
           <summary className="cursor-pointer select-none text-xs font-semibold text-base-content/70">{failed ? "Why" : outcome.kind === "command" ? "What it printed" : "What it said"}</summary>
-          <p className={cn("mt-1.5 max-h-56 overflow-y-auto whitespace-pre-wrap text-base-content/85 [overflow-wrap:anywhere]", outcome.kind === "command" ? "font-mono text-xs" : "text-sm")}>
-            {/* A mission it names is a link to that mission's page. */}
-            <RunResult text={said} />
-          </p>
+          <Expandable maxHeight="max-h-56" className="mt-1.5">
+            <p className={cn("whitespace-pre-wrap text-base-content/85 [overflow-wrap:anywhere]", outcome.kind === "command" ? "font-mono text-xs" : "text-sm")}>
+              {/* A mission it names is a link to that mission's page. */}
+              <RunResult text={said} />
+            </p>
+          </Expandable>
         </details>
       ) : null}
     </div>

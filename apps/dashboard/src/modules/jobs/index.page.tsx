@@ -15,7 +15,9 @@ import { api } from "@/commons/lib/api";
 import type { BackgroundJob } from "@nouride/wire";
 import { useTextFilter } from "@/commons/lib/use-text-filter";
 import { useOrchestrator, useOrchestratorFirst } from "@/commons/components/agents/AgentName";
-import { FILL_PAGE, ScrollCard } from "@/commons/components/ui/ScrollCard";
+import { ListCard } from "@/commons/components/ui/ListCard";
+import { SearchInput } from "@/commons/components/ui/SearchInput";
+import { StickyBar } from "@/commons/components/ui/StickyBar";
 import { SearchSelect } from "@/commons/components/ui/SearchSelect";
 import { agentOptions } from "@/commons/lib/agents";
 import { Count, SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
@@ -106,7 +108,7 @@ export default function JobsPage({ agent }: { agent?: string }) {
     ) : null;
 
   return (
-    <div className={FILL_PAGE}>
+    <div className="space-y-6 *:animate-fade">
       <PageHeader
         title="Helpers"
         description="Work an agent left running in the background: helpers it handed a piece to, commands it did not wait for, agents it asked. Each opens to what it did."
@@ -114,25 +116,26 @@ export default function JobsPage({ agent }: { agent?: string }) {
       {/* The window that sweeps these rows, as Logs' jobs panel shows it, here too (0.8.12). */}
       <RetentionControl scope="jobLogs" />
 
-      <SegmentedTabs
-        tabs={TABS.map((entry) => ({ value: entry.id, label: entry.label, after: <Count n={counts[entry.id]} highlight={entry.id === "running" && counts.running > 0} /> }))}
-        value={tab}
-        onChange={setTab}
-      />
-
-      {/* Keyed by the tab, so the list it filters is drawn anew and fades in (`FILL_PAGE`). */}
-      <ScrollCard
-        key={tab}
-        fill
-        title={current.title(counts[tab])}
-        {...(jobs.length > 0 ? { search: { value: filter, onChange: setFilter, placeholder: "Search jobs" } } : {})}
-        actions={
+      {/* The tabs, the filters and the search stay at the top of the window while the list scrolls under them. */}
+      <StickyBar
+        label="Which jobs"
+        tools={
           <>
+            {jobs.length > 0 ? <SearchInput value={filter} onChange={setFilter} placeholder="Search jobs" className="w-48" /> : null}
             {kindFilter}
             {agentFilter}
           </>
         }
       >
+        <SegmentedTabs
+          tabs={TABS.map((entry) => ({ value: entry.id, label: entry.label, after: <Count n={counts[entry.id]} highlight={entry.id === "running" && counts.running > 0} /> }))}
+          value={tab}
+          onChange={setTab}
+        />
+      </StickyBar>
+
+      {/* Keyed by the tab, so the list it filters is drawn anew and fades in. */}
+      <ListCard key={tab} title={current.title(counts[tab])}>
         <JobList
           jobs={(list.data?.jobs ?? []).filter((job) => tab === "all" || tabOf(job) === tab)}
           shown={(job) => matched.has(job)}
@@ -144,7 +147,7 @@ export default function JobsPage({ agent }: { agent?: string }) {
             )
           }
         />
-      </ScrollCard>
+      </ListCard>
     </div>
   );
 }

@@ -40,7 +40,8 @@ function WorkspaceFiles({ path, onOpen, agentId }: Props) {
 export default function AgentWorkspacePage({ agentId, path, onOpen }: Required<Props>) {
   return (
     <Card title="Workspace" description="This agent's own folder: what it made and keeps while it works. Other agents do not read it.">
-      <div className="flex min-h-[22rem] flex-col" data-workspace="agent">
+      {/* Held to most of the window from a laptop up, so the list scrolls inside the card under the path that stays. */}
+      <div className="flex min-h-[22rem] flex-col lg:h-[calc(100dvh-22rem)]" data-workspace="agent">
         <WorkspaceFiles agentId={agentId} path={path} onOpen={onOpen} />
       </div>
     </Card>

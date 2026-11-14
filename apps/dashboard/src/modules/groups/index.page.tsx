@@ -17,7 +17,9 @@ import { Pencil } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import type { GroupRecord } from "@nouride/wire";
 import { Card, EmptyState, ErrorNote, PageHeader } from "@/commons/components/ui/ui";
-import { FILL_PAGE, ScrollCard } from "@/commons/components/ui/ScrollCard";
+import { ListCard } from "@/commons/components/ui/ListCard";
+import { SearchInput } from "@/commons/components/ui/SearchInput";
+import { StickyBar } from "@/commons/components/ui/StickyBar";
 import { useSaved } from "@/commons/hooks/use-saved";
 import { useTextFilter } from "@/commons/lib/use-text-filter";
 import { ListLoading } from "@/commons/components/ui/Spinner";
@@ -47,7 +49,7 @@ export default function GroupsPage() {
   const visible = useTextFilter(list, filter, (group) => [group.name, group.platformTitle, group.chatId, platformName(group.platform), ...group.agents, ...group.people.map((person) => person.name)]);
 
   return (
-    <div className={FILL_PAGE}>
+    <div className="space-y-6 *:animate-fade">
       <PageHeader
         ask={PAGE_ASKS.groups}
         title="Groups"
@@ -67,7 +69,10 @@ export default function GroupsPage() {
           />
         </Card>
       ) : (
-        <ScrollCard fill title="Known Rooms" description="One row per room. A Discord thread is a room of its own." search={{ value: filter, onChange: setFilter, placeholder: "Search groups" }}>
+        <>
+        {/* The search stays at the top of the window while the list scrolls under it. */}
+        <StickyBar label="Which rooms" tools={<SearchInput value={filter} onChange={setFilter} placeholder="Search groups" className="w-56" />} />
+        <ListCard title="Known Rooms" description="One row per room. A Discord thread is a room of its own.">
           {visible.length === 0 ? (
             <p className="py-6 text-center text-sm text-base-content/65">Nothing matches “{filter}”.</p>
           ) : (
@@ -92,7 +97,8 @@ export default function GroupsPage() {
             </table>
           </div>
           )}
-        </ScrollCard>
+        </ListCard>
+        </>
       )}
     </div>
   );

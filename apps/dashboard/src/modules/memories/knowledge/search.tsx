@@ -10,6 +10,7 @@ import { api } from "@/commons/lib/api";
 import { ErrorNote } from "@/commons/components/ui/ui";
 import type { OpenDocument } from "./document.dialog";
 import { pagesLine } from "./words";
+import { Expandable } from "@/commons/components/ui/ListCard";
 
 /** How much of a section's words a hit shows: enough to see why it was found. */
 const EXCERPT = 240;
@@ -52,22 +53,24 @@ export function KnowledgeSearch({ onOpen }: { onOpen: (at: OpenDocument) => void
           <p className="text-base-content/65 text-xs">
             {hits.length === 0 ? "Nothing found. Try other words." : `${hits.length === 1 ? "1 section" : `${hits.length} sections`} found, best first: what your agents would find.`}
           </p>
-          <ul className="divide-base-content/[0.06] mt-2 max-h-[28rem] divide-y overflow-y-auto overscroll-contain">
-            {hits.map((hit) => {
-              const pages = pagesLine(hit);
-              return (
-                <li key={hit.item}>
-                  <button type="button" className="hover:bg-base-200/60 w-full rounded-lg px-2 py-2.5 text-left transition-colors" onClick={() => onOpen({ collection: hit.collection, path: hit.path })}>
-                    <span className="text-base-content/65 block text-[11px] font-mono">
-                      {hit.collectionName} · {hit.trail}
-                      {pages ? ` · ${pages}` : ""}
-                    </span>
-                    <span className="mt-0.5 line-clamp-3 block text-sm">{hit.text.length > EXCERPT ? `${hit.text.slice(0, EXCERPT).trimEnd()}…` : hit.text}</span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+          <Expandable maxHeight="max-h-[28rem]" className="mt-2">
+            <ul className="divide-base-content/[0.06] divide-y">
+              {hits.map((hit) => {
+                const pages = pagesLine(hit);
+                return (
+                  <li key={hit.item}>
+                    <button type="button" className="hover:bg-base-200/60 w-full rounded-lg px-2 py-2.5 text-left transition-colors" onClick={() => onOpen({ collection: hit.collection, path: hit.path })}>
+                      <span className="text-base-content/65 block text-[11px] font-mono">
+                        {hit.collectionName} · {hit.trail}
+                        {pages ? ` · ${pages}` : ""}
+                      </span>
+                      <span className="mt-0.5 line-clamp-3 block text-sm">{hit.text.length > EXCERPT ? `${hit.text.slice(0, EXCERPT).trimEnd()}…` : hit.text}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </Expandable>
         </section>
       ) : null}
     </div>

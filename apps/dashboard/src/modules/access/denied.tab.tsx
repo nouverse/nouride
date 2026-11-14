@@ -11,7 +11,7 @@ import { api } from "@/commons/lib/api";
 import type { SenderAnswer, SenderRecord } from "@nouride/wire";
 import { canWrite, useMe } from "@/commons/lib/session";
 import { EmptyState, ErrorNote } from "@/commons/components/ui/ui";
-import { ScrollCard } from "@/commons/components/ui/ScrollCard";
+import { ListCard } from "@/commons/components/ui/ListCard";
 import { ago, inTime } from "@/commons/lib/format";
 import { BUTTON, NoMatch, SenderLine, byWhom, useSenderFilter } from "./sender-line";
 
@@ -30,7 +30,7 @@ export function DeniedTab({ senders, agentOf }: { senders: SenderRecord[]; agent
   const { visible, query, search } = useSenderFilter(senders, agentOf);
 
   return (
-    <ScrollCard
+    <ListCard
       title={`Denied (${senders.length})`}
       description="Turned away for now. Each may ask again once their wait is over, or at once after a reset."
       {...search}
@@ -80,6 +80,6 @@ export function DeniedTab({ senders, agentOf }: { senders: SenderRecord[]; agent
           ))}
         </ul>
       )}
-    </ScrollCard>
+    </ListCard>
   );
 }

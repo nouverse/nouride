@@ -4,7 +4,7 @@
  * means. The name is whatever the platform reports, so the id under it is the part to trust.
  */
 
-import { useState, type ReactNode } from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
 import { Bot } from "lucide-react";
 import type { SenderRecord } from "@nouride/wire";
 import { useTextFilter } from "@/commons/lib/use-text-filter";
@@ -77,8 +77,15 @@ export const BUTTON = {
 } as const;
 
 /**
- * The filter box every list on the page carries, as the Skills lists do: by the name they gave, their
- * id, or the agent whose connection they wrote to. Offered once a list has something to filter.
+ * The page's one filter over whichever list is open, kept by the page in the row that stays at the top of the window.
+ * Where a list is drawn outside such a page, it keeps a filter of its own in its card.
+ */
+export const SenderQuery = createContext<{ query: string; setQuery: (next: string) => void } | null>(null);
+
+/**
+ * What a list of senders is filtered by: the name they gave, their id, or the agent whose connection they wrote to.
+ * The words typed are the page's (`SenderQuery`) where it keeps them, else the list's own, with a box in its card
+ * once it has something to filter.
  */
 export function useSenderFilter<T extends Pick<SenderRecord, "gatewayId" | "senderId" | "senderName">>(
   senders: readonly T[],
@@ -86,9 +93,11 @@ export function useSenderFilter<T extends Pick<SenderRecord, "gatewayId" | "send
   /** More to match on, where a list shows more — the person in People an account belongs to. */
   also: (sender: T) => (string | null | undefined)[] = () => [],
 ) {
-  const [query, setQuery] = useState("");
+  const own = useState("");
+  const shared = useContext(SenderQuery);
+  const [query, setQuery] = shared ? [shared.query, shared.setQuery] : own;
   const visible = useTextFilter(senders, query, (sender) => [sender.senderName, `${sender.gatewayId}:${sender.senderId}`, agentOf(sender.gatewayId), ...also(sender)]);
-  const search = senders.length > 0 ? { search: { value: query, onChange: setQuery, placeholder: "Filter senders" } } : {};
+  const search = !shared && senders.length > 0 ? { search: { value: query, onChange: setQuery, placeholder: "Filter senders" } } : {};
   return { visible, query, search };
 }
 

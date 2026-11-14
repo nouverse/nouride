@@ -23,7 +23,7 @@ import type { AgentSkill } from "@nouride/wire";
 import { canWrite, useMe } from "@/commons/lib/session";
 import { ErrorNote } from "@/commons/components/ui/ui";
 import { Details } from "@/commons/components/ui/Details";
-import { ScrollCard } from "@/commons/components/ui/ScrollCard";
+import { ListCard } from "@/commons/components/ui/ListCard";
 import { useTextFilter } from "@/commons/lib/use-text-filter";
 import { useSaved } from "@/commons/hooks/use-saved";
 import { ExternalNote } from "./components/ExternalNote";
@@ -105,7 +105,7 @@ export default function AgentSkillsPage({ agentId }: { agentId: string }) {
             : `Nouride's skills do not reach ${cli} yet: it uses its own. What you switch here applies when ${name} goes back to its model.`
         }
       />
-      <ScrollCard
+      <ListCard
         title="Skills"
         description="Instructions the agent reaches for when a task matches. Every skill in the pool is on until you switch it off here; only this agent is affected."
         {...(list.length > 0 ? { search: { value: query, onChange: setQuery, placeholder: "Filter skills" } } : {})}
@@ -185,7 +185,7 @@ export default function AgentSkillsPage({ agentId }: { agentId: string }) {
             );
           })}
         </ul>
-      </ScrollCard>
+      </ListCard>
 
       {/* Under the card, not in it: the count and the way out stay in view however far the list is scrolled. */}
       <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-xs text-base-content/65">
