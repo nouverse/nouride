@@ -4,7 +4,7 @@
  * ships no CLI; this only says what is there.
  */
 
-import { cliStanding, type CliPart, type CliRow, type CliVersionView } from "@nouride/acp";
+import { cliPart, cliStanding, type CliPart, type CliRow, type CliVersionView } from "@nouride/acp";
 import { runCommand } from "@nouride/runtime";
 import { buildEnv } from "@/modules/tools/builtins/exec.ts";
 import type { NewestVersions } from "./newest.ts";
@@ -38,15 +38,20 @@ export interface ScannedCli {
 
 /**
  * The scanned CLIs with the newest each package has published, where the registry said, and where each version stands
- * (0.8.24). The registry is asked about the installed ones only; `check` asks it now rather than once a day.
+ * (0.8.24): against the connector's newest, the CLI's own version that carries, and the CLI's own newest. The registry
+ * is asked about the installed ones only; `check` asks it now rather than once a day.
  */
-export async function withStanding(clis: readonly ScannedCli[], newest: Pick<NewestVersions, "of"> | undefined, check: boolean): Promise<ScannedCli[]> {
-  const packages = clis.flatMap((cli) => (cli.installed && cli.package ? [cli.package] : []));
-  const said = newest ? await newest.of(packages, check) : {};
+export async function withStanding(clis: readonly ScannedCli[], newest: Pick<NewestVersions, "of"> | undefined, check: boolean, rows: readonly CliRow[] = []): Promise<ScannedCli[]> {
+  const asked = clis.flatMap((cli) => {
+    if (!cli.installed || !cli.package) return [];
+    const carries = rows.find((row) => row.id === cli.id)?.carries;
+    return [{ package: cli.package, ...(carries ? { carries: { package: carries.package, field: carries.field } } : {}) }];
+  });
+  const said = newest ? await newest.of(asked, check) : {};
   return clis.map((cli) => {
     const out = cli.package ? said[cli.package] : undefined;
-    const standing = cli.installed && cli.version && cli.tested ? cliStanding(cli.version, cli.tested, out) : null;
-    return { ...cli, ...(out ? { newest: out } : {}), ...(standing ? { standing } : {}) };
+    const standing = cli.installed && cli.version && cli.tested ? cliStanding(cli.version, cli.tested, out, cliPart(cli.parts)?.version) : null;
+    return { ...cli, ...(out?.version ? { newest: out.version } : {}), ...(standing ? { standing } : {}) };
   });
 }
 

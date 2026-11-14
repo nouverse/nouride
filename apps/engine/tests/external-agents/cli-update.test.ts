@@ -262,6 +262,30 @@ describe("`nouride agents update`", () => {
     expect(lines.join("\n")).toContain("Claude Code is at 0.100.0 already");
   });
 
+  test("with no version named it installs what is on offer, the newest out, past the tested ones or not", async () => {
+    const { client, order } = daemon(0, { cli: "claude-code", passed: true, version: "0.107.0", before: "0.95.0" });
+    Object.assign(SCANNED, { standing: { standing: "update", offer: "0.107.0", offerUntested: true } });
+    try {
+      await updateCli(client, ["claude-code"], steps(order));
+    } finally {
+      Object.assign(SCANNED, { standing: { standing: "update", offer: "0.100.0" } });
+    }
+    expect(order).toContain("install npm install -g @agentclientprotocol/claude-agent-acp@0.107.0");
+  });
+
+  test("with nothing on offer, a version past the tested ones is left where it is: never put back to the newest tested", async () => {
+    // A box on 0.107.0, the tested versions ending at 0.100.0: the command with no version named would have installed 0.100.0.
+    const { client, order } = daemon(0);
+    Object.assign(SCANNED, { version: "0.107.0", standing: { standing: "newer" } });
+    try {
+      await updateCli(client, ["claude-code"], steps(order));
+    } finally {
+      Object.assign(SCANNED, { version: "0.95.0", standing: { standing: "update", offer: "0.100.0" } });
+    }
+    expect(order).toEqual(["get /external-clis?fresh=1", "post /external-clis/claude-code/release"]);
+    expect(lines.join("\n")).toContain("Claude Code is at 0.107.0 already");
+  });
+
   test("the way back is the same with the version named", async () => {
     const { client, order } = daemon(0);
     await updateCli(client, ["claude-code", "0.95.1"], steps(order));

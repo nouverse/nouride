@@ -502,7 +502,7 @@ export class ExternalAgents implements RunnerHost {
     }
     const clis = await this.scanned.clis;
     this.parts.note(clis);
-    return withStanding(clis, this.deps.newest, check);
+    return withStanding(clis, this.deps.newest, check, this.rows());
   }
 
   /**

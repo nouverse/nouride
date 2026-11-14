@@ -34,8 +34,7 @@ export function CliVersionNumbers({ pkg, version, standing, parts }: Pick<Props,
       {standing ? (
         <p className="font-mono">
           {version ? `${pkg ?? "version"} ${version}` : null}
-          {standing.offer ? ` · an update installs ${standing.offer}` : null}
-          {standing.untested ? ` · ${standing.untested} is out, not tested with this Nouride yet` : null}
+          {standing.offer ? ` · an update installs ${standing.offer}${standing.offerUntested ? ", not tested with this Nouride yet" : ""}` : null}
         </p>
       ) : null}
       <CliPartsRest parts={parts} />

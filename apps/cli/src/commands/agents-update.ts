@@ -1,6 +1,6 @@
 /**
- * `nouride agents update <cli> [<version>]` (0.8.24): a coding CLI to the newest version this Nouride was tested with, or
- * to `<version>` — the way back after a failed check. In order: held at the daemon until no turn runs in it (one still
+ * `nouride agents update <cli> [<version>]` (0.8.24): a coding CLI to the newest version out, tested with this Nouride
+ * or not, or to `<version>` — the way back after a failed check. In order: held at the daemon until no turn runs in it (one still
  * running after ten minutes: nothing is installed, and it says so); installed through the shared tools folder as `nouride
  * tools run` installs, as this user; checked at the daemon, the CLI started again for its first agent and its new
  * version's handshake read (`external-agents/cli-update.ts`). A failed check leaves only that CLI's agents unavailable,
@@ -38,7 +38,9 @@ export async function updateCli(client: Client, args: readonly string[], steps: 
   if (!cli) usageError(`No coding CLI "${id}" here.`, USAGE);
   if (!cli.package) fail(`${cli.name} names no package, so Nouride does not update it`, "Update it the way it was installed.");
   if (!cli.installed) fail(`${cli.name} is not installed here`, `nouride tools run -- npm i -g ${cli.package}`);
-  const to = version ?? cli.standing?.offer ?? cli.tested?.highest;
+  // With no version named: what is on offer, the newest out. With nothing on offer and a version installed, nothing is
+  // newer: the newest tested is not installed over a version past it, which put a box on 0.107.0 back to 0.100.0.
+  const to = version ?? cli.standing?.offer ?? (cli.version ? cli.version : cli.tested?.highest);
   if (!to) fail(`no version of ${cli.name} to update to`, "Name one: nouride agents update <cli> <version>.");
   if (cli.version === to) {
     // Let go of a hold a run cut off before its check left (its agents said "being updated" until a restart): the new

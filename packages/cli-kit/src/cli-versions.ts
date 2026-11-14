@@ -16,24 +16,29 @@ export function cliVersionChecks(clis: readonly ScannedCli[]): { level: "ok" | "
 }
 
 /**
- * Where an installed CLI's version stands, in a line (0.8.24): against the versions this Nouride was tested with, and the
- * newest its package has published where the registry was reached — `agents scan` and `doctor` say the same. Null for a
- * CLI with no tested range: a person's own, which names no package.
+ * Where an installed CLI's version stands, in a line (0.8.24): against the versions this Nouride was tested with, and
+ * what is out where the registry was reached — `agents scan` and `doctor` say the same. The newest out is what an update
+ * installs, tested with this Nouride or not, and the line says which. Null for a CLI with no tested range: a person's
+ * own, which names no package.
  */
 export function cliVersionLine(cli: ScannedCli): string | null {
   const { standing, tested, version } = cli;
   if (!standing || !tested || !version) return null;
   const range = `${tested.lowest} to ${tested.highest}`;
-  const out = standing.untested ? `; ${standing.untested} is out, not yet tested with this Nouride` : "";
+  const own = cli.parts?.find((part) => part.kind === "cli")?.name ?? cli.name;
+  const brings = standing.brings ? `, with ${own} ${standing.brings}` : "";
+  const untested = standing.offerUntested ? `. It is past the versions this Nouride was tested with (${range}), and offered all the same` : "";
+  const ahead = standing.ahead ? `; ${own} ${standing.ahead} is out, and nothing that carries it yet` : "";
   switch (standing.standing) {
     case "older":
-      return `${version} is older than this Nouride supports (tested with ${range}): update it to ${standing.offer}${out}`;
+      return `${version} is older than this Nouride supports (tested with ${range}): update it to ${standing.offer ?? tested.highest}${brings}${untested}`;
     case "newer":
-      return `${version} is newer than this Nouride was tested with (${range}): it runs, untested`;
+      return `${version} is newer than this Nouride was tested with (${range}): it runs, untested${ahead}`;
     case "update":
-      return `${standing.offer} is out, the newest this Nouride was tested with (${range}); this is ${version}${out}`;
+      return `${standing.offer} is out${brings}; this is ${version}${untested}`;
     case "current":
-      return `${version}, the newest this Nouride was tested with (${range})${out}`;
+      // "The newest out" only where the registry said what is out: otherwise it is the newest tested, and that is said.
+      return `${version}, ${cli.newest ? "the newest out" : `the newest this Nouride was tested with (${range}); what is out was not read`}${ahead}`;
   }
 }
 

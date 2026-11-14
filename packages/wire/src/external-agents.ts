@@ -3,7 +3,7 @@
  * sign-in, and the accounts each CLI is signed in on.
  */
 
-import type { CliPart, CliStanding } from "@nouride/acp";
+import type { CliPart, CliStanding, CliVersionView } from "@nouride/acp";
 
 /** An external agent's coding CLI, on its row of the agents (0.8.1). */
 export interface AgentExternal {
@@ -47,13 +47,8 @@ export type { CliStanding };
 /** One thing a coding CLI runs on: the CLI itself, its connector, the runtime, a dependency (`@nouride/acp`). */
 export type { CliPart };
 
-export interface CliVersionView {
-  standing: CliStanding;
-  /** What an update installs: the newest version this Nouride was tested with. */
-  offer?: string;
-  /** The newest published, where it is past every version this Nouride was tested with. */
-  untested?: string;
-}
+/** A CLI's standing with what an update installs and brings (`cliStanding` in `@nouride/acp`). */
+export type { CliVersionView };
 
 /** Whether this box can hold a CLI's session: what the agents' commands may hold, and what one needs. */
 export interface CliRoom {

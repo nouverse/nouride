@@ -16,7 +16,7 @@
  */
 
 export { BUILT_IN_CLIS, type CliPreset, type CliRow } from "./agents.ts";
-export { cliStanding, type CliStanding, type CliVersionView } from "./versions.ts";
+export { cliStanding, type CliOut, type CliStanding, type CliVersionView } from "./versions.ts";
 export { cliPart, underMinimum, type CliPart, type CliPartKind } from "./parts.ts";
 export { handshakeProblem } from "./handshake.ts";
 export { AcpClient, type AcpClientOptions } from "./client.ts";
