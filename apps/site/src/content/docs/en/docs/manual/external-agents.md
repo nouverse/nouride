@@ -126,13 +126,27 @@ The chat gets one line saying which account reached its limit, until when, and w
 - When every account in the list is at its limit, nothing is sent: the agent's own model answers that message and says
   which accounts are spent, and until when.
 
-**Models → Coding CLIs** says, under an account, each limit it is at, and beside an agent that moved off it, where that
-agent is now. `/status` in a chat names the account the agent is on. In the pack it is the one field, as a list:
+**Before the limit.** An agent can also move on before a message is refused. On its Brain tab, under the accounts,
+switch on **Move on before the limit** and set the share of a limit at which it goes on, 90% to begin with. Claude Code
+says how much of an account's limits is used while it works (its five-hour and its weekly limit, each with when it
+starts again). Once the fullest of them is at or past the agent's share, the agent finishes the message it is
+answering, and its next message starts on the next account, with one line in the chat saying so. Nothing is cut off or
+sent twice. It is off unless you switch it on, and offered only where the CLI says an account's use.
+
+- The account is passed over, by agents that asked for this, until that limit starts again.
+- Each agent goes by its own share: one that did not ask stays on the account, and one with a higher share stays until
+  its own.
+- Where every other account is near a limit too, or at one, the agent stays where it is until the limit itself.
+
+**Models → Coding CLIs** says, under an account, each limit it is at or near, and beside an agent that moved off it,
+where that agent is now. `/status` in a chat names the account the agent is on. In the pack it is the one field, as a
+list, and the share beside it:
 
 ```toml
 [external]
 cli = "claude-code"
 profile = ["work", "second"]
+move_at = 90                        # optional: move on once 90% of a limit is used
 ```
 
 For a CLI that signs in once per agent, as Codex does, there is no other account to start with, so the list is not

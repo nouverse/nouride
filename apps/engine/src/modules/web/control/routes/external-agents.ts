@@ -46,7 +46,7 @@ function settingsOf(body: Record<string, unknown>): ExternalSettings | { error: 
   // `move_at`: the percent of a limit used at which it moves on early; null turns it off.
   if (body.move_at !== undefined) {
     const at = body.move_at;
-    if (at !== null && (typeof at !== "number" || !Number.isInteger(at) || at < 1 || at > 99)) return { error: "move_at is a whole number from 1 to 99, or null to turn it off" };
+    if (at !== null && (typeof at !== "number" || !Number.isInteger(at) || at < 1 || at > 99)) return { error: "the share of a limit to move on at is a whole number from 1 to 99, or nothing to turn it off" };
     settings.moveAt = at;
   }
   if (body.permissions !== undefined) {

@@ -154,7 +154,7 @@ describe("an external agent's CLI routes", () => {
     for (const bad of [0, 100, 85.5, "85", true]) {
       const refused = await call("POST", "/agents/coder/cli", { move_at: bad });
       expect(refused.status).toBe(400);
-      expect(((await refused.json()) as { error: string }).error).toBe("move_at is a whole number from 1 to 99, or null to turn it off");
+      expect(((await refused.json()) as { error: string }).error).toBe("the share of a limit to move on at is a whole number from 1 to 99, or nothing to turn it off");
     }
     expect(seen.filter((line) => line.startsWith("set coder"))).toHaveLength(2);
   });

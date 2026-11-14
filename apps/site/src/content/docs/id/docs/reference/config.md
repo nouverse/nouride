@@ -506,6 +506,8 @@ Per agent, di `config.toml` pack-nya:
 cli = "claude-code"                 # wajib: claude-code, codex, atau id [[external_clis]]
 profile = "default"                 # akunnya: huruf kecil, angka, dan "-", maks 24 (default); atau daftar,
                                     # ["work", "second"]: lanjut ke akun berikutnya begitu satu kena limit
+move_at = 90                        # dengan beberapa akun: pindah begitu sekian persen limit terpakai (1 sampai 99);
+                                    # tanpa ini: hanya saat ada pesan yang ditolak
 permissions = "risky"               # folder | risky | all; kalau gak ada: folder kalau agent punya user sendiri, risky di tempat lain
 model = "sonnet"                    # sesuai nama dari CLI-nya; kalau gak ada: default CLI
 ```

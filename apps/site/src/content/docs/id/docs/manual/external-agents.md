@@ -134,14 +134,28 @@ dipakai agent selanjutnya.
 - Kalau semua akun di daftar kena limit, gak ada yang dikirim: model agent itu sendiri yang menjawab pesan tersebut dan
   menyebut akun mana saja yang habis, dan sampai kapan.
 
-**Models → Coding CLIs** menyebut, di bawah tiap akun, limit yang sedang mengenainya, dan di samping agent yang pindah
-dari akun itu, di mana agent tersebut sekarang. `/status` di chat menyebut akun yang sedang dipakai agent. Di pack-nya,
-ini satu field yang sama, berupa daftar:
+**Sebelum kena limit.** Agent juga bisa pindah sebelum ada pesan yang ditolak. Di tab Brain-nya, di bawah daftar akun,
+nyalakan **Move on before the limit** dan atur berapa bagian dari limit yang terpakai saat dia pindah, awalnya 90%.
+Claude Code menyebut seberapa banyak limit sebuah akun sudah terpakai selama bekerja (limit lima jam dan limit
+mingguan, masing-masing dengan kapan mulai lagi). Begitu yang paling penuh sudah mencapai angka agent itu, dia
+menyelesaikan pesan yang sedang dijawab, dan pesan berikutnya mulai di akun selanjutnya, dengan satu baris di chat yang
+bilang begitu. Gak ada yang terpotong atau terkirim dua kali. Fitur ini mati kecuali kamu nyalakan, dan hanya
+ditawarkan kalau CLI-nya menyebut pemakaian akun.
+
+- Akun itu dilewati, oleh agent-agent yang meminta fitur ini, sampai limit tersebut mulai lagi.
+- Tiap agent memakai angkanya sendiri: yang gak meminta tetap di akun itu, dan yang angkanya lebih tinggi tetap di sana
+  sampai angkanya sendiri tercapai.
+- Kalau semua akun lain juga sudah dekat limit, atau sudah kena, agent tetap di tempatnya sampai limit itu sendiri.
+
+**Models → Coding CLIs** menyebut, di bawah tiap akun, limit yang sedang mengenainya atau yang sudah dekat, dan di
+samping agent yang pindah dari akun itu, di mana agent tersebut sekarang. `/status` di chat menyebut akun yang sedang
+dipakai agent. Di pack-nya, ini satu field yang sama, berupa daftar, dengan angkanya di sampingnya:
 
 ```toml
 [external]
 cli = "claude-code"
 profile = ["work", "second"]
+move_at = 90                        # opsional: pindah begitu 90% dari sebuah limit terpakai
 ```
 
 Untuk CLI yang login sekali per agent, seperti Codex, gak ada akun lain untuk dipakai menyala, jadi daftarnya gak

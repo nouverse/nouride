@@ -217,7 +217,10 @@ model = "sonnet"           # as the CLI names it; absent: the CLI's default
   account while it is not at a limit itself, and starts from the top of its list after a restart. With every account
   at its limit nothing is sent (`external_accounts_spent`) and the agent's own model answers. A mark is the account's,
   read by every agent on it; the move is each agent's own, by its own list. Which accounts a list holds is the
-  person's call: a subscription's terms are its maker's to say.
+  person's call: a subscription's terms are its maker's to say. Opt-in, `move_at = 90` moves it before a refusal: where
+  the connector says an account's use (`CliRow.use`, the limits' windows in a session update's `_meta`), a turn's end
+  marks the account as near a limit once that share of it is used, until that limit starts again, and the agent's next
+  turn starts on its next account (`external-agents/use.ts`). Read by each agent's own share; near is never spent.
 - **What it runs on (0.8.38):** a built-in CLI's row names what its adapter carries (`CliRow.carries`). The scan reads
   Node, the adapter, the CLI inside it and the adapter's dependencies from the files installed
   (`external-agents/parts.ts`); the dashboard, `agents scan`, `/status` and the agent's own instruction file name the

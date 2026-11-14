@@ -491,6 +491,8 @@ Per agent, in its pack's `config.toml`:
 cli = "claude-code"                 # required: claude-code, codex or an [[external_clis]] id
 profile = "default"                 # the account: lowercase, digits and "-", up to 24 (the default); or a list,
                                     # ["work", "second"]: it goes on with the next when one reaches its limit
+move_at = 90                        # with several accounts: move on once this percent of a limit is used (1 to 99);
+                                    # absent: only when a message is refused
 permissions = "risky"               # folder | risky | all; absent: folder where agents are their own users, risky elsewhere
 model = "sonnet"                    # as the CLI names it; absent: the CLI's default
 ```
