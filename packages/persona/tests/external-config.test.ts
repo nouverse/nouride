@@ -24,6 +24,21 @@ describe("[external]", () => {
     expect(parseAgentConfig("plain", null, { defaults: DEFAULTS, knownClis: CLIS }).external).toBeUndefined();
   });
 
+  test("`profile` as a list is the accounts it moves through at a limit, in order, the first its profile", () => {
+    // One field for one account or several: no second setting to keep in step with it.
+    expect(parse({ cli: "claude-code", profile: ["rina", "work"] }).external).toEqual({ cli: "claude-code", profile: "rina", accounts: ["rina", "work"] });
+    // A list of one is the one account, as its name alone is.
+    expect(parse({ cli: "claude-code", profile: ["rina"] }).external).toEqual({ cli: "claude-code", profile: "rina" });
+    expect(parse({ cli: "claude-code", profile: "rina" }).external).toEqual({ cli: "claude-code", profile: "rina" });
+  });
+
+  test("a list that names an account twice, none, or one no folder could carry is refused with the field", () => {
+    expect(() => parse({ cli: "claude-code", profile: ["rina", "work", "rina"] })).toThrow('agents/coder/config.toml [external] profile lists "rina" twice: each account once, in the order to move through them');
+    expect(() => parse({ cli: "claude-code", profile: [] })).toThrow("[external] profile is an empty list: name an account, or several in the order to move through them");
+    expect(() => parse({ cli: "claude-code", profile: ["rina", "Work Laptop"] })).toThrow('[external] profile "Work Laptop" must be lowercase');
+    expect(() => parse({ cli: "claude-code", profile: ["rina", 7] })).toThrow("[external] profile must be a non-empty string");
+  });
+
   test("keeps the agent's model settings: Nouride's own work around the CLI runs on them", () => {
     expect(parseAgentConfig("coder", { external: { cli: "omp" }, llm: { model: "small-one" } } as never, { defaults: DEFAULTS, knownClis: CLIS }).llm.model).toBe("small-one");
   });

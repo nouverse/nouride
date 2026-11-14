@@ -375,6 +375,12 @@ export interface ExternalAgentConfig {
   cli: string;
   /** The profile — the CLI's sign-in and settings folder, inside the agent's own — it uses. Absent: `default`. */
   profile?: string;
+  /**
+   * The accounts it moves between when one reaches a limit, in order, `profile` being the first: written in the one
+   * field, as a list (`profile = ["rina", "work"]`). One folder all the same, the first's; the account is the token its
+   * CLI starts with. Absent: the one account, `profile`.
+   */
+  accounts?: string[];
   /** Passed to the CLI as its model. Absent: the CLI's own default. */
   model?: string;
   /** Absent: `folder` where each agent is its own user, `risky` where it is not (Docker, macOS). */

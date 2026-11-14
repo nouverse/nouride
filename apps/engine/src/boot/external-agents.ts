@@ -9,7 +9,7 @@ import type { ProjectSkills } from "@nouride/persona";
 import type { GlobalConfig } from "@nouride/shared";
 import { totalMemoryBytes, type CommandIsolation } from "@nouride/runtime";
 import type { SecretStore } from "@nouride/secrets";
-import { cliAccountsState, cliLeftRunningState, cliNewestState, externalEffortsState, externalInstructionsState, externalModelsState, externalSessionsState, externalVersionsState } from "@/commons/daemon-state.ts";
+import { cliAccountsState, cliLeftRunningState, cliLimitsState, cliNewestState, externalEffortsState, externalInstructionsState, externalModelsState, externalSessionsState, externalVersionsState } from "@/commons/daemon-state.ts";
 import type { StateRows } from "@/commons/daemon-state.store.ts";
 import type { AuditPort } from "@/commons/audit.store.ts";
 import { ExternalAgents } from "@/modules/external-agents/index.ts";
@@ -30,6 +30,7 @@ export function startExternalAgents(params: { config: GlobalConfig; state: State
     models: externalModelsState(params.state),
     efforts: externalEffortsState(params.state),
     leftRunning: cliLeftRunningState(params.state),
+    limits: cliLimitsState(params.state),
     // A shared account's token is a secret like a provider's key: in the store, never in a file of ours.
     accounts: {
       file: cliAccountsState(params.state),

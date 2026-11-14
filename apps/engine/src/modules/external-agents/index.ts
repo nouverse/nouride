@@ -45,6 +45,7 @@ import { LentTools } from "./lent-tools.ts";
 import { CliLogin, type LoginView, type SignIn } from "./login.ts";
 import { openOnBox, returnAddress } from "./callback.ts";
 import { KeptParts } from "./parts.ts";
+import { AccountRotation, type LimitsFile } from "./rotation.ts";
 import { profileNames, type CliProfile } from "./profiles.ts";
 import { cliSessionKey, ExternalTurnRunner, type RunnerHost } from "./runner.ts";
 import { Instructed, type InstructedFile } from "./instructed.ts";
@@ -95,6 +96,8 @@ export interface ExternalAgentsDeps {
   rows?: () => readonly CliRow[];
   /** The agents a CLI answers, by id: whose model lists a new version of it lets go. Absent: the one it was checked for. */
   agentsOn?: (cliId: string) => string[];
+  /** The accounts at a limit, kept across a restart (`rotation.ts`). Absent: in this process alone. */
+  limits?: LimitsFile;
   workspaceDir: () => string;
   /** The secrets bound to a command of the agent's (`[security.exec_secrets]`), as variables. */
   secretsFor: (agentId: string, argv: readonly string[]) => Record<string, string>;
@@ -170,6 +173,8 @@ export class ExternalAgents implements RunnerHost {
   private scanned: { at: number; clis: Promise<ScannedCli[]> } | null = null;
   /** What each CLI runs on, as last read (`parts.ts`): `/status` names the CLI's own version from it. */
   private readonly parts = new KeptParts();
+  /** Which account each agent is on, and the accounts at a limit: an agent moved to its next (`rotation.ts`). */
+  readonly rotation: AccountRotation;
   /** What the CLIs leave running in the background, and the chats owed what came of it. */
   private readonly left: LeftRunning;
   /** A CLI being updated, held while its new version installs, and checked after (`cli-update.ts`, 0.8.24). */
@@ -199,6 +204,7 @@ export class ExternalAgents implements RunnerHost {
     this.models = new OfferedModels(deps.models);
     this.efforts = new OfferedModels(deps.efforts);
     this.accounts = new CliAccounts(deps.accounts ?? {});
+    this.rotation = new AccountRotation({ usable: (row, account) => this.accounts.token(row, account) !== undefined, record: (action, details) => deps.audit?.record({ action, actor: "nouride:system", details }), ...(deps.limits ? { file: deps.limits } : {}), ...(deps.now ? { now: deps.now } : {}) });
     this.ownWords = new OwnWords((chat) => this.onOwnWords?.(chat), deps.quietMs);
     this.left = new LeftRunning(deps.leftRunning, deps.commandsUnder ?? commandsRunningUnder);
     this.updates = new CliUpdates({
@@ -400,7 +406,7 @@ export class ExternalAgents implements RunnerHost {
    * them. Not while another turn works in one of its sessions, a session goes on by itself, or a command it left running
    * would end with it: a later turn starts it again.
    */
-  async connection(agent: LoadedAgent): Promise<CliConnection> {
+  async connection(agent: LoadedAgent, model?: string): Promise<CliConnection> {
     const external = agent.config.external;
     if (!external) throw new Error(`${agent.config.id} is not an external agent`);
     const agentId = agent.config.id;
@@ -410,7 +416,10 @@ export class ExternalAgents implements RunnerHost {
     if (held) throw new NourideError("external_agent", held, held);
     const profile = external.profile ?? "default";
     const secrets = this.deps.secretsFor(agentId, [row.command, ...row.args]);
-    const stamp = secretsStamp(secrets);
+    // The account this turn runs on: the one it is on, or its next where that is at a limit for the turn's model. The
+    // folder stays `profile`, the first; a CLI on another account is started again as one whose secrets changed is.
+    const account = this.rotation.accountFor(row, { id: agentId, name: agent.config.displayName, external }, model);
+    const stamp = `${secretsStamp(secrets)}|${account}`;
     const current = this.running.get(agentId);
     if (current && !current.closed && current.row.id === row.id && current.launch.profileDir === launchFor({ row, profile, privateDir: this.privateDir(agentId), secrets: {} }).profileDir) {
       if (this.startedWith.get(agentId) === stamp || current.busy || current.held || this.left.commandsOf(current) > 0) return current;
@@ -424,7 +433,7 @@ export class ExternalAgents implements RunnerHost {
     if (pending) return pending;
     const start = (async () => {
       const lent = row.mcpEnvHeaders && this.deps.mcpUrl?.() ? this.lent.env(agentId) : {};
-      const launch = launchFor({ row, profile, privateDir: ownFolder(this.privateDir(agentId)), secrets: { ...secrets, ...this.tokenEnv(row, profile), ...lent } });
+      const launch = launchFor({ row, profile, privateDir: ownFolder(this.privateDir(agentId)), secrets: { ...secrets, ...this.tokenEnv(row, account), ...lent } });
       const connection = new CliConnection(row, launch, agentId, this.deps.spawn ?? spawnLongLived, this.deps.now);
       connection.onOwnWords = (sessionId, update) => {
         // It says what came of it: a stop from here cuts nothing of that session's off.
@@ -447,6 +456,7 @@ export class ExternalAgents implements RunnerHost {
         throw new NourideError("external_agent", failed, failed);
       }
       connection.parts = this.parts.started(row, launch.env, runCommand);
+      this.rotation.started(agentId, account);
       this.running.set(agentId, connection);
       this.startedWith.set(agentId, stamp);
       this.startedWithEach.set(agentId, hashedEach(secrets));
@@ -466,11 +476,11 @@ export class ExternalAgents implements RunnerHost {
    * that goes on, told which variables its shell does not have yet. Not for a command the CLI left running: that may go
    * on for hours, and the turn is told at once instead.
    */
-  async forTurn(agent: LoadedAgent, signal?: AbortSignal): Promise<{ cli: CliConnection; notYet: string[] }> {
+  async forTurn(agent: LoadedAgent, signal?: AbortSignal, model?: string): Promise<{ cli: CliConnection; notYet: string[] }> {
     const now = this.deps.now ?? Date.now;
     const deadline = now() + (this.deps.freshWaitMs ?? FRESH_WAIT_MS);
     for (;;) {
-      const cli = await this.connection(agent);
+      const cli = await this.connection(agent, model);
       const notYet = this.notYet(agent.config.id, cli);
       const blocked = cli.busy || cli.held;
       if (notYet.length === 0 || !blocked || this.left.commandsOf(cli) > 0 || now() >= deadline || signal?.aborted) return { cli, notYet };

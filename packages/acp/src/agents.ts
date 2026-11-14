@@ -97,6 +97,13 @@ export interface CliRow {
   status?: readonly string[];
   /** Words in a refusal that mean "not signed in or not set up", beyond the protocol's -32000. */
   signedOut?: readonly string[];
+  /**
+   * How its connector marks a message refused for a limit of the account, in the refusal's `data`: the field and the
+   * value that say so, and where it says one, the dotted path to when the limit ends, in seconds since 1970. Read from
+   * the data alone, never from the sentence beside it: an account is marked and the agent moved to its next
+   * (`external-agents/rotation.ts`). Absent: its refusals say nothing of the kind, and no account is ever marked.
+   */
+  limit?: { key: string; value: string; resets?: string };
 }
 
 export const BUILT_IN_CLIS: readonly CliRow[] = [
@@ -131,6 +138,9 @@ export const BUILT_IN_CLIS: readonly CliRow[] = [
     status: ["--cli", "auth", "status"],
     // `claude setup-token`: Claude Code's own long-lived sign-in for a machine with no browser, read from the variable.
     sharedLogin: { args: ["--cli", "setup-token"], env: "CLAUDE_CODE_OAUTH_TOKEN", tokenPrefix: "sk-ant-oat01-" },
+    // A real refusal of 0.107.0 at a model's limit: code -32603, data `{ "errorKind": "rate_limit" }`. A limit that
+    // came with a rate-limit event of its turn adds `rateLimit`, whose `resetsAt` is in seconds; a model's own did not.
+    limit: { key: "errorKind", value: "rate_limit", resets: "rateLimit.resetsAt" },
     loginNote: "Signs in with a Claude subscription.",
   },
   {
