@@ -115,10 +115,12 @@ the account it is on reaches a usage limit, Nouride starts its CLI on the next o
 The conversation goes on: the CLI's session is kept in the agent's folder, and only the sign-in it starts with changes.
 The chat gets one line saying which account reached its limit, until when, and which one the agent goes on with.
 
-- A limit is often one model's alone, so it is kept per account and model: an agent moves only for a turn on that model,
-  and goes on answering on the first account on another.
-- Where the CLI says when the limit ends, the account is used again after that. Where it does not, it is tried again
-  within the hour.
+- A limit is often one model's alone, so it is kept per account and model: an account at its limit for one model still
+  answers on another.
+- An account at its limit is passed over until the limit ends, where the CLI said when. Where it did not, it can be
+  tried again after an hour. This is kept across a restart.
+- An agent that moved stays on the account it moved to, for as long as that one is not at a limit itself. After a
+  restart of Nouride it starts from the top of its list again, on the first account that is not at a limit.
 - Each agent moves by its own list. Agents that share an account all see that it is at its limit, and each goes to its
   own next one; nothing is switched for every agent at once, and one agent's sign-in never becomes another's.
 - When every account in the list is at its limit, nothing is sent: the agent's own model answers that message and says

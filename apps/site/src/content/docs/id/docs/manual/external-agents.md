@@ -122,10 +122,12 @@ itu, satu kali. Percakapannya berlanjut: sesi CLI disimpan di folder agent, dan 
 saat menyala. Chat-nya mendapat satu baris yang menyebut akun mana yang kena limit, sampai kapan, dan akun mana yang
 dipakai agent selanjutnya.
 
-- Limit sering cuma milik satu model, jadi dicatat per akun dan per model: agent pindah hanya untuk giliran di model
-  itu, dan tetap menjawab di akun pertama untuk model lain.
-- Kalau CLI menyebut kapan limitnya berakhir, akun itu dipakai lagi setelahnya. Kalau tidak, akun itu dicoba lagi dalam
-  satu jam.
+- Limit sering cuma milik satu model, jadi dicatat per akun dan per model: akun yang kena limit untuk satu model masih
+  menjawab di model lain.
+- Akun yang kena limit dilewati sampai limitnya berakhir, kalau CLI menyebut kapan. Kalau tidak, akun itu bisa dicoba
+  lagi setelah satu jam. Catatan ini bertahan setelah restart.
+- Agent yang sudah pindah tetap di akun tujuannya, selama akun itu sendiri belum kena limit. Setelah Nouride restart,
+  dia mulai lagi dari atas daftarnya, di akun pertama yang tidak kena limit.
 - Tiap agent pindah menurut daftarnya sendiri. Agent-agent yang berbagi satu akun sama-sama tahu akun itu kena limit,
   dan masing-masing pindah ke akun berikutnya miliknya; gak ada yang diganti untuk semua agent sekaligus, dan login
   satu agent gak pernah jadi milik agent lain.

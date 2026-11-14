@@ -213,7 +213,8 @@ model = "sonnet"           # as the CLI names it; absent: the CLI's default
   (`external-agents/rotation.ts`). Its folder stays the first one's, and the account is the token its CLI starts with.
   A refusal the adapter marks as a limit (`CliRow.limit`: the error's data, never its sentence) marks that account for
   that model until the end it named, or for an hour where it named none (`cli-account-limits` in `daemon_state`); the
-  CLI is started on the next account and the message sent again, once, the session loaded as it was. With every account
+  CLI is started on the next account and the message sent again, once, the session loaded as it was. It stays on that
+  account while it is not at a limit itself, and starts from the top of its list after a restart. With every account
   at its limit nothing is sent (`external_accounts_spent`) and the agent's own model answers. A mark is the account's,
   read by every agent on it; the move is each agent's own, by its own list. Which accounts a list holds is the
   person's call: a subscription's terms are its maker's to say.
