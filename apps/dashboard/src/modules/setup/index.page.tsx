@@ -15,6 +15,7 @@ import { gatewayMount } from "@/commons/lib/bundled-gateway";
 import { GatewayOffer, GatewayStep } from "./GatewayStep";
 import { MemoryStep } from "./MemoryStep";
 import { Mascot } from "@/commons/components/brand/Mascot";
+import { KeyHints } from "@/commons/components/providers/KeyHints";
 
 const PRESETS: Record<string, { label: string; baseUrl: string; hint: string }> = {
   openai: {
@@ -206,6 +207,15 @@ function KeyForm({ state, onUseGateway }: { state: SetupState | undefined; onUse
               Kept safe on this server and never shown again.
             </span>
           </label>
+          {/* Where a key comes from and what it costs; a line's "Use it" fills what the line knows, and keeps a name already typed. */}
+          <KeyHints
+            onUse={(hint) => {
+              setKind(hint.kind);
+              setBaseUrl(hint.baseUrl);
+              if (name.trim() === "") setName(hint.id);
+              resetTested();
+            }}
+          />
         </div>
 
         {(probe.isError || save.isError) && (

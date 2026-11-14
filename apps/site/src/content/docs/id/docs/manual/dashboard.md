@@ -261,6 +261,12 @@ format, kredensial, didefinisikan sekali di *Models* lalu dipakai bersama. **Mod
 satu agent di dalamnya, di tab *Model* milik agent itu. Memisahkan keduanya adalah yang membuat satu
 agent bisa pindah deployment tanpa menyentuh yang lain.
 
+Saat menambah profil, di bawah kolom key ada **How to get an API key** yang bisa dibuka: daftar layanan yang paling
+sering dimaksud, masing-masing link ke halaman tempat key-nya dibuat, beserta biayanya: **Pay per use** (OpenAI,
+Anthropic, Google Gemini, DeepSeek, Z.ai, OpenCode Zen; langganan ChatGPT atau Claude gak mencakup API-nya) atau **In
+your plan** (Command Code, di semua paket kecuali Go). **Use it** mengisi jenis dan base URL-nya. Setup pertama punya
+daftar yang sama.
+
 Tab *Model* juga mengatur seberapa lama model agent berpikir (**Effort**), yang diminta di setiap request-nya di semua
 chat; `/effort` di sebuah chat memasang level chat itu sendiri di atasnya, dan `/effort <level> lock` dari admin di
 sebuah chat mengatur yang ini.

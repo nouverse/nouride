@@ -22,6 +22,7 @@ import { ModelTiersButton } from "./components/ModelTiers";
 import { CodingClis } from "./components/CodingClis";
 import { ListLoading } from "@/commons/components/ui/Spinner";
 import { PAGE_ASKS } from "@/commons/components/agents/page-asks";
+import { KeyHints } from "@/commons/components/providers/KeyHints";
 
 const KINDS = [
   { id: "anthropic", label: "Anthropic", baseUrl: "https://api.anthropic.com/v1" },
@@ -357,6 +358,15 @@ function ProviderForm({
           onChange={(e) => setApiKey(e.target.value)}
         />
       </Field>
+
+      {/* Where a key comes from and what it costs; a line's "Use it" fills what the line knows, and keeps a name already typed. */}
+      <KeyHints
+        onUse={(hint) => {
+          setKind(hint.kind);
+          setBaseUrl(hint.baseUrl);
+          if (!existing && name.trim() === "") setName(hint.id);
+        }}
+      />
 
       {probe.data && (
         <div className={`alert ${probe.data.ok ? "alert-success bg-success/10 border-success/30 text-success" : "alert-error bg-error/10 border-error/30 text-error"} text-xs rounded-xl p-3`}>

@@ -38,7 +38,7 @@ export const LONG_FUNCTIONS: Record<string, Record<string, Budget>> = {
   "apps/dashboard/src/modules/office/index.page.tsx": { OfficePage: { lines: 159, why: COMPONENT("the Office, the agents at their desks") } },
   "apps/dashboard/src/modules/people/index.page.tsx": { PersonForm: { lines: 178, why: COMPONENT("the form for one person") } },
   "apps/dashboard/src/modules/secrets/index.page.tsx": { SecretsPage: { lines: 164, why: COMPONENT("the secrets page, its list while it loads, empty and filled") } },
-  "apps/dashboard/src/modules/setup/index.page.tsx": { KeyForm: { lines: 155, why: COMPONENT("setup's form for a provider's key") } },
+  "apps/dashboard/src/modules/setup/index.page.tsx": { KeyForm: { lines: 164, why: COMPONENT("setup's form for a provider's key, with where a key comes from") } },
   "apps/dashboard/src/modules/users/index.page.tsx": { UsersPage: { lines: 212, why: COMPONENT("the dashboard's users") } },
   "apps/dashboard/src/modules/web-search/index.page.tsx": { WebSearchPage: { lines: 172, why: COMPONENT("the web search settings: five services, and the key name each one keeps") } },
   "apps/engine/src/boot/control-plane.ts": { startControlPlane: { lines: 274, why: "boot's wiring of the control API and the dashboard: every port their routes take, built in the order they need each other" } },

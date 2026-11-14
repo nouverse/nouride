@@ -253,6 +253,11 @@ format, a credential, defined once under *Models* and shared. A **model** is one
 within it, under that agent's *Model* tab. Keeping them apart is what lets one agent move to a
 different deployment without touching the others.
 
+Adding a profile, under the key's field, **How to get an API key** folds out a list of the services people most often
+mean, each a link to the page its key is made on, with what using it costs: **Pay per use** (OpenAI, Anthropic, Google
+Gemini, DeepSeek, Z.ai, OpenCode Zen; a ChatGPT or Claude subscription does not cover the API) or **In your plan**
+(Command Code, on every plan but Go). **Use it** fills the kind and the base URL. The first-run setup has the same list.
+
 The *Model* tab also sets how long the agent's model thinks (**Effort**), asked for in each of its requests in every
 chat; a chat's `/effort` sets its own over it, and an admin's `/effort <level> lock` in a chat sets this one.
 
