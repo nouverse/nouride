@@ -2,6 +2,7 @@
  * Where a coding CLI's version stands, in words: `nouride agents scan` and `nouride doctor` say the same.
  */
 
+import { partsNamed } from "@nouride/acp";
 import type { CliPart, ScannedCli } from "@nouride/wire";
 
 /** Whether its version is one to look at: older than this Nouride supports, or newer than it was tested with. */
@@ -48,16 +49,9 @@ const unscoped = (name: string): string => name.slice(name.lastIndexOf("/") + 1)
 /** A part's name and version; where the files installed did not say its version, that is said instead of a guess. */
 const partWords = (part: CliPart, name = part.name): string => `${name} ${part.version ?? "(version not read)"}`;
 
-/**
- * The CLI itself and what carries it, as one phrase: "Claude Code 2.1.323, in claude-agent-acp 0.107.0". The
- * connector's version alone was shown as the CLI's. Null where nothing of it was read: a person's own CLI.
- */
+/** The CLI itself and what carries it, as one phrase (`partsNamed`); null where nothing of it was read: a person's own CLI. */
 export function cliNamed(cli: Pick<ScannedCli, "parts">): string | null {
-  const connector = cli.parts?.find((part) => part.kind === "connector");
-  if (!connector) return null;
-  const own = cli.parts?.find((part) => part.kind === "cli");
-  const carried = partWords(connector, unscoped(connector.name));
-  return own ? `${partWords(own)}, in ${carried}` : carried;
+  return partsNamed(cli.parts);
 }
 
 /**

@@ -446,6 +446,7 @@ export class ExternalAgents implements RunnerHost {
         this.setUnavailable(agentId, failed);
         throw new NourideError("external_agent", failed, failed);
       }
+      connection.parts = this.parts.started(row, launch.env, runCommand);
       this.running.set(agentId, connection);
       this.startedWith.set(agentId, stamp);
       this.startedWithEach.set(agentId, hashedEach(secrets));
@@ -709,7 +710,6 @@ export class ExternalAgents implements RunnerHost {
     const connection = new CliConnection(row, launch, agentId, this.deps.spawn ?? spawnLongLived, this.deps.now);
     try {
       await connection.open();
-      this.parts.started(row, launch.env, runCommand);
       return connection;
     } catch (err) {
       await connection.close();

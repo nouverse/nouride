@@ -6,7 +6,7 @@
  */
 
 import { afterEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { CliRow } from "@nouride/acp";
@@ -51,14 +51,14 @@ const row = (mode = "", efforts?: Record<string, string[]>): CliRow => ({
   instructionFile: "AGENTS.md",
 });
 
-function setup(options: { mode?: string; efforts?: Record<string, string[]>; effort?: string; answer?: ApprovalOutcome; permissions?: "folder" | "risky" | "all"; model?: string; persona?: Record<string, string>; onText?: (delta: string) => void; onPreamble?: ExecutorDeps["onPreamble"]; stopGraceMs?: number; profileInstruction?: boolean; quietMs?: number; commandsUnder?: (pid: number) => number; kept?: Record<string, string>; left?: { load(): Record<string, OwnChat>; save(left: Record<string, OwnChat>): void }; onAsk?: () => void } = {}) {
+function setup(options: { row?: Partial<CliRow>; mode?: string; efforts?: Record<string, string[]>; effort?: string; answer?: ApprovalOutcome; permissions?: "folder" | "risky" | "all"; model?: string; persona?: Record<string, string>; onText?: (delta: string) => void; onPreamble?: ExecutorDeps["onPreamble"]; stopGraceMs?: number; profileInstruction?: boolean; quietMs?: number; commandsUnder?: (pid: number) => number; kept?: Record<string, string>; left?: { load(): Record<string, OwnChat>; save(left: Record<string, OwnChat>): void }; onAsk?: () => void } = {}) {
   const dir = mkdtempSync(join(tmpdir(), "external-runner-"));
   dirs.push(dir);
   // The agent's own folder, which boot makes for every agent.
   mkdirSync(privateWorkspace(dir, "coder"), { recursive: true });
   const plans: PlanStep[][] = [];
   const service = new ExternalAgents({
-    rows: () => [{ ...row(options.mode, options.efforts), ...(options.profileInstruction ? { profileInstructionFile: "AGENTS.md" } : {}) }],
+    rows: () => [{ ...row(options.mode, options.efforts), ...(options.profileInstruction ? { profileInstructionFile: "AGENTS.md" } : {}), ...options.row }],
     workspaceDir: () => dir,
     secretsFor: () => ({}),
     sessions: { load: () => ({ ...options.kept }), save: () => {} },
@@ -857,6 +857,29 @@ describe("what a CLI's turn has spent while it runs (0.8.8)", () => {
     expect(during).toBe(42_000);
     expect(elsewhere).toBe(0);
     expect(run.service.spentNow("coder", "telegram:coder", "555")).toBe(0);
+  });
+});
+
+describe("what an agent's instruction file says runs it", () => {
+  test("read from the files installed as its CLI starts, and written before its first session opens", async () => {
+    // A connector as npm installs one: the program in a folder whose `package.json` is the package the row names.
+    const install = mkdtempSync(join(tmpdir(), "external-install-"));
+    dirs.push(install);
+    writeFileSync(join(install, "package.json"), JSON.stringify({ name: "@fake/acp", version: "9.9.9" }));
+    const program = join(install, "run");
+    writeFileSync(program, `#!/bin/sh\nexec "${process.execPath}" "${FAKE}" "$@"\n`);
+    chmodSync(program, 0o755);
+    const { service, agent, runner, req, folder } = setup({ row: { command: program, args: [], package: "@fake/acp" } });
+    await runner.run(req("hello"));
+    expect(readFileSync(join(folder, "AGENTS.md"), "utf8")).toContain("What runs you: acp 9.9.9, read from the files installed. It is updated for every agent on it at once with `nouride agents update fake`");
+    // Its row names no CLI inside the connector: `/status` is told no version of one.
+    expect(service.answering(agent, "telegram:coder", "555")?.version).toBeUndefined();
+  });
+
+  test("a CLI that is a command alone, with no package named, is told nothing of it", async () => {
+    const { runner, req, folder } = setup();
+    await runner.run(req("hello"));
+    expect(readFileSync(join(folder, "AGENTS.md"), "utf8")).not.toContain("What runs you");
   });
 });
 

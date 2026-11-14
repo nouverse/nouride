@@ -120,12 +120,19 @@ export class KeptParts {
     for (const cli of clis) cli.parts ? this.kept.set(cli.id, cli.parts) : this.kept.delete(cli.id);
   }
 
-  /** A CLI started: its parts read, where nothing was read of it yet. Never waited for, and a failed read says nothing. */
-  started(row: CliRow, env: Record<string, string>, run: typeof runCommand): void {
-    if (this.kept.has(row.id)) return;
-    void readParts(row, env, run).then(
-      (parts) => void (parts.length > 0 && this.kept.set(row.id, parts)),
-      () => undefined,
+  /**
+   * A CLI started: its parts, read where nothing was read of it yet and kept. A read that fails is no parts, and never
+   * a start that fails.
+   */
+  started(row: CliRow, env: Record<string, string>, run: typeof runCommand, read: typeof readParts = readParts): Promise<CliPart[]> {
+    const kept = this.kept.get(row.id);
+    if (kept) return Promise.resolve(kept);
+    return read(row, env, run).then(
+      (parts) => {
+        if (parts.length > 0) this.kept.set(row.id, parts);
+        return parts;
+      },
+      () => [],
     );
   }
 

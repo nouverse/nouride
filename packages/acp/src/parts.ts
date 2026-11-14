@@ -48,3 +48,20 @@ export function underMinimum(version: string, range: string): boolean | null {
 export function cliPart(parts: readonly CliPart[] | undefined): CliPart | undefined {
   return parts?.find((part) => part.kind === "cli");
 }
+
+/** A package's name without its scope, as a person says it: "claude-agent-acp". */
+const unscoped = (name: string): string => name.slice(name.lastIndexOf("/") + 1);
+
+/**
+ * The CLI itself and what carries it, as one phrase: "Claude Code 2.1.323, in claude-agent-acp 0.107.0". The
+ * connector's version alone was shown as the CLI's. A version the files did not say is said as not read, never guessed.
+ * Null where no connector was read: a person's own CLI.
+ */
+export function partsNamed(parts: readonly CliPart[] | undefined): string | null {
+  const connector = parts?.find((part) => part.kind === "connector");
+  if (!connector) return null;
+  const words = (part: CliPart, name: string) => `${name} ${part.version ?? "(version not read)"}`;
+  const own = cliPart(parts);
+  const carried = words(connector, unscoped(connector.name));
+  return own ? `${words(own, own.name)}, in ${carried}` : carried;
+}

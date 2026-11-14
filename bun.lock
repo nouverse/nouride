@@ -99,6 +99,7 @@
       "name": "@nouride/cli-kit",
       "version": "0.1.0",
       "dependencies": {
+        "@nouride/acp": "workspace:*",
         "@nouride/runtime": "workspace:*",
         "@nouride/shared": "workspace:*",
         "@nouride/wire": "workspace:*",

@@ -8,7 +8,7 @@
  */
 
 import { VERSION } from "@/commons/version.ts";
-import { AcpClient, AcpError, AUTH_REQUIRED, INTERNAL_ERROR, type CliRow, type ContentBlock, type InitializeResult, type McpServer, type NewSessionResult, type PermissionOutcome, type RequestPermissionParams, type SessionConfigOption, type SessionUpdate, type PromptAnswer, type SteerOutcome } from "@nouride/acp";
+import { AcpClient, AcpError, AUTH_REQUIRED, INTERNAL_ERROR, type CliPart, type CliRow, type ContentBlock, type InitializeResult, type McpServer, type NewSessionResult, type PermissionOutcome, type RequestPermissionParams, type SessionConfigOption, type SessionUpdate, type PromptAnswer, type SteerOutcome } from "@nouride/acp";
 import { createLogger } from "@nouride/shared";
 import type { LongLivedProcess } from "@nouride/runtime";
 import type { Launch } from "./launch.ts";
@@ -85,6 +85,8 @@ export class CliConnection {
   lastUsed: number;
   /** What a session says with no prompt running — the CLI going on by itself (`own-words.ts`). */
   onOwnWords?: (sessionId: string, update: SessionUpdate) => void;
+  /** What this CLI runs on, read from the files installed as it started (`parts.ts`); none until then, or for a row that names no package. */
+  parts: Promise<CliPart[]> = Promise.resolve([]);
 
   constructor(
     readonly row: CliRow,
