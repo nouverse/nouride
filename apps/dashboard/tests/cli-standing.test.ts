@@ -115,6 +115,23 @@ describe("the Models page", () => {
     expect(await floatingChatAsked()).toEqual({ open: true, agent: "nouva", draft: "Please update Claude Code on this server with `nouride agents update claude-code`, and tell me how it went." });
   });
 
+  test("a CLI's own version is on its badge, what carries and runs it under that, the rest under Details", async () => {
+    // The badge read "installed": the one version read was the connector's, shown nowhere a person looked.
+    const parts = [
+      { kind: "cli", name: "Claude Code", package: "@anthropic-ai/claude-agent-sdk", version: "2.1.323" },
+      { kind: "connector", name: "@agentclientprotocol/claude-agent-acp", package: "@agentclientprotocol/claude-agent-acp", version: "0.107.0" },
+      { kind: "runtime", name: "Node.js", version: "24.15.0", needs: ">=22", tooOld: false },
+      { kind: "dependency", name: "zod", package: "zod", version: "4.6.7" },
+    ] as const;
+    const { host } = await mount([{ ...card("claude-code", "0.107.0", { standing: "newer" }), parts: [...parts] }, card("codex", "2.5.0", { standing: "current" })]);
+    const badges = [...host.querySelectorAll("[data-cli-own]")].map((badge) => `${badge.getAttribute("data-cli-own")}: ${badge.textContent}`);
+    // One whose parts were not read keeps the word it had.
+    expect(badges).toEqual(["version: Claude Code 2.1.323", "installed: installed"]);
+    expect(plainText(host)).toContain("Runs in claude-agent-acp 0.107.0, on Node.js 24.15.0.");
+    expect(plainText(host)).not.toContain("zod");
+    expect(host.querySelector('[data-standing="newer"] details')?.textContent).toContain("with zod 4.6.7");
+  });
+
   test("Check again asks the server afresh, which reads the newest out again", async () => {
     const { host, asked } = await mount([card("a", "0.100.0", { standing: "current" })]);
     const again = [...host.querySelectorAll("button")].find((entry) => entry.textContent?.trim() === "Check again") as HTMLButtonElement;

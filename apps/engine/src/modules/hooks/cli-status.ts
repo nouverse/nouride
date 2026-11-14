@@ -29,7 +29,8 @@ export function cliStatusLines(cli: CliAnswering, own: { model: string; provider
   const reported = spent && spent.inputTokens + spent.outputTokens > 0;
   const cached = !spent || spent.cachedInputTokens === null ? " (cache not reported)" : spent.cachedInputTokens > 0 ? ` (${formatTokens(spent.cachedInputTokens)} cached)` : "";
   return [
-    `Answered by: ${name}${cli.running ? ` (${cli.running})` : ", not running now; it starts at the next message"}`,
+    // The CLI's own version first, its connector's after: the connector's alone read as Claude Code's.
+    `Answered by: ${name}${cli.version ? ` ${cli.version}` : ""}${cli.running ? ` (${cli.version ? "in " : ""}${cli.running})` : ", not running now; it starts at the next message"}`,
     `Model: ${model}`,
     `Context: kept by ${name} itself, ${context}`,
     `Transcript: ${transcript} messages, the daemon's record of this chat`,

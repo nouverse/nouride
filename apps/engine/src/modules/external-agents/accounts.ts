@@ -14,7 +14,7 @@
  * out of a CLI for anything else.
  */
 
-import type { CliRow, CliVersionView } from "@nouride/acp";
+import type { CliPart, CliRow, CliVersionView } from "@nouride/acp";
 import { PROFILE_NAME } from "@nouride/persona";
 import type { LoadedAgent } from "@nouride/shared";
 import type { CliProfile } from "./profiles.ts";
@@ -37,6 +37,8 @@ export interface CliAccountsView {
   /** The package `version` is of, and where that version stands against the ones this Nouride was tested with (0.8.24). */
   package?: string;
   standing?: CliVersionView;
+  /** What it runs on, the CLI itself first (`parts.ts`). */
+  parts?: CliPart[];
   install: string;
   /** Signed in once for every agent on an account, or once per agent. */
   shared: boolean;
@@ -129,6 +131,7 @@ export class CliAccounts {
         ...(scan?.version ? { version: scan.version } : {}),
         ...(row.package ? { package: row.package } : {}),
         ...(scan?.standing ? { standing: scan.standing } : {}),
+        ...(scan?.parts ? { parts: scan.parts } : {}),
         install: row.install,
         shared: Boolean(row.sharedLogin),
         canLogin: Boolean(row.sharedLogin ?? row.login?.length),

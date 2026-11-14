@@ -4,10 +4,11 @@
  * ships no CLI; this only says what is there.
  */
 
-import { cliStanding, type CliRow, type CliVersionView } from "@nouride/acp";
+import { cliStanding, type CliPart, type CliRow, type CliVersionView } from "@nouride/acp";
 import { runCommand } from "@nouride/runtime";
 import { buildEnv } from "@/modules/tools/builtins/exec.ts";
 import type { NewestVersions } from "./newest.ts";
+import { readParts } from "./parts.ts";
 
 export interface ScannedCli {
   id: string;
@@ -31,6 +32,8 @@ export interface ScannedCli {
   newest?: string;
   /** Where its version stands against `tested` and `newest`, where both its version and `tested` are known. */
   standing?: CliVersionView;
+  /** What it runs on, the CLI itself first (`parts.ts`); absent where nothing of it could be read. */
+  parts?: CliPart[];
 }
 
 /**
@@ -50,7 +53,7 @@ export async function withStanding(clis: readonly ScannedCli[], newest: Pick<New
 const VERSION = /\d+\.\d+(?:\.\d+)?(?:[-+][\w.]+)?/;
 const MISSING = /not found|No such file|ENOENT|executable file not found/i;
 
-export async function scanCli(row: CliRow, run: typeof runCommand = runCommand): Promise<ScannedCli> {
+export async function scanCli(row: CliRow, run: typeof runCommand = runCommand, env: Record<string, string> = buildEnv({})): Promise<ScannedCli> {
   const base = {
     id: row.id,
     name: row.name,
@@ -63,11 +66,12 @@ export async function scanCli(row: CliRow, run: typeof runCommand = runCommand):
     ...(row.tested ? { tested: row.tested } : {}),
   };
   try {
-    const out = await run([row.command, ...row.versionArgs], { cwd: "/", env: buildEnv({}), timeoutMs: 20_000, maxOutputBytes: 8192 });
+    const out = await run([row.command, ...row.versionArgs], { cwd: "/", env, timeoutMs: 20_000, maxOutputBytes: 8192 });
     // 126 and 127 are the shell's "cannot run" and "not found"; a CLI that ran and failed its version flag is there.
     if (out.exitCode === 127 || out.exitCode === 126 || MISSING.test(out.stderr) && out.exitCode !== 0) return { ...base, installed: false };
     const version = `${out.stdout}\n${out.stderr}`.match(VERSION)?.[0];
-    return { ...base, installed: true, ...(version ? { version } : {}) };
+    const parts = await readParts(row, env, run);
+    return { ...base, installed: true, ...(version ? { version } : {}), ...(parts.length > 0 ? { parts } : {}) };
   } catch (err) {
     if (MISSING.test(String(err))) return { ...base, installed: false };
     throw err;

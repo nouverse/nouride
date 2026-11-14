@@ -8,7 +8,7 @@
 
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { BUILT_IN_CLIS, cliStanding, type CliRow } from "@nouride/acp";
-import { cliVersionChecks, type Client } from "@nouride/cli-kit";
+import { cliNamed, cliPartsChecks, cliVersionChecks, type Client } from "@nouride/cli-kit";
 import { scanClis } from "../../../cli/src/commands/external-clis.ts";
 import { ExternalAgents } from "@/modules/external-agents/index.ts";
 import { NewestVersions, type NewestRead } from "@/modules/external-agents/newest.ts";
@@ -174,5 +174,60 @@ describe("`nouride agents scan` and `nouride doctor` say the same", () => {
 
   test("a person's own CLI, with no tested range, gets no line", () => {
     expect(cliVersionChecks([{ id: "mine", name: "Mine", command: "mine-acp", install: "", login: false, installed: true, version: "1.0.0" }])).toEqual([]);
+  });
+});
+
+describe("what a CLI runs on, in `agents scan` and `doctor`", () => {
+  let lines: string[];
+  let spy: ReturnType<typeof spyOn>;
+  beforeEach(() => {
+    lines = [];
+    spy = spyOn(console, "log").mockImplementation((...args: unknown[]) => void lines.push(plain(args.join(" "))));
+  });
+  afterEach(() => spy.mockRestore());
+
+  const scanned = (node: { version?: string; tooOld?: boolean }): ScannedCli => ({
+    id: "claude-code",
+    name: "Claude Code",
+    command: "claude-agent-acp",
+    install: ROW.install,
+    login: true,
+    installed: true,
+    version: "0.107.0",
+    package: ROW.package!,
+    parts: [
+      { kind: "cli", name: "Claude Code", package: "@anthropic-ai/claude-agent-sdk", version: "2.1.323" },
+      { kind: "connector", name: "@agentclientprotocol/claude-agent-acp", package: "@agentclientprotocol/claude-agent-acp", version: "0.107.0" },
+      { kind: "runtime", name: "Node.js", needs: ">=22", ...node },
+      { kind: "dependency", name: "@agentclientprotocol/sdk", package: "@agentclientprotocol/sdk", version: "2.6.0" },
+      { kind: "dependency", name: "zod", package: "zod" },
+    ],
+  });
+
+  test("the CLI's own version and its connector's are each named, with the runtime and the rest", async () => {
+    const cli = scanned({ version: "24.15.0", tooOld: false });
+    expect(cliNamed(cli)).toBe("Claude Code 2.1.323, in claude-agent-acp 0.107.0");
+    expect(cliPartsChecks([cli])).toEqual([
+      { level: "ok", message: "coding CLI claude-code: Claude Code 2.1.323, in claude-agent-acp 0.107.0" },
+      { level: "ok", message: "coding CLI claude-code: Node.js 24.15.0 (claude-agent-acp asks for >=22)" },
+      // A dependency whose version the files did not say is said as that, never given a number.
+      { level: "ok", message: "coding CLI claude-code: with @agentclientprotocol/sdk 2.6.0, zod (version not read)" },
+    ]);
+    await scanClis({ get: async () => ({ room: { enough: true, bytes: 0, needs: 0 }, clis: [cli] }) } as unknown as Client);
+    expect(lines[0]).toBe("● claude-code Claude Code 2.1.323, in claude-agent-acp 0.107.0");
+    expect(lines).toContain("    Node.js 24.15.0 (claude-agent-acp asks for >=22)");
+    expect(lines).toContain("    with @agentclientprotocol/sdk 2.6.0, zod (version not read)");
+  });
+
+  test("a Node under what the connector asks for is a warning", () => {
+    expect(cliPartsChecks([scanned({ version: "20.11.1", tooOld: true })])[1]).toEqual({ level: "warn", message: "coding CLI claude-code: Node.js 20.11.1 is older than claude-agent-acp asks for (>=22): update Node.js" });
+  });
+
+  test("a CLI whose parts were not read keeps the line it had, and gets none of these", async () => {
+    const own: ScannedCli = { id: "mine", name: "Mine", command: "mine-acp", install: "", login: false, installed: true, version: "1.0.0" };
+    expect(cliNamed(own)).toBeNull();
+    expect(cliPartsChecks([own])).toEqual([]);
+    await scanClis({ get: async () => ({ room: { enough: true, bytes: 0, needs: 0 }, clis: [own] }) } as unknown as Client);
+    expect(lines).toEqual(["● mine Mine · mine-acp 1.0.0"]);
   });
 });

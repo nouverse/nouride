@@ -113,12 +113,14 @@ export class CliContexts {
 }
 
 /**
- * What answers an agent its CLI answers, as `/status` says it: the CLI, what answered its handshake while it runs, the
- * model — the pack's, else the one its last session opened on — and the context it last said.
+ * What answers an agent its CLI answers, as `/status` says it: the CLI and its own version where the files installed
+ * said it, what answered its handshake while it runs, the model — the pack's, else the one its last session opened on —
+ * and the context it last said.
  */
-export function answeringOf(cli: string, packModel: string | undefined, handshake: InitializeResult["agentInfo"], runsOn: string | null, context: CliContext | null): CliAnswering {
+export function answeringOf(cli: string, packModel: string | undefined, handshake: InitializeResult["agentInfo"], runsOn: string | null, context: CliContext | null, version?: string): CliAnswering {
   return {
     cli,
+    ...(version ? { version } : {}),
     running: handshake ? [handshake.name ?? handshake.title, handshake.version].filter(Boolean).join(" ") || null : null,
     model: packModel ? { name: packModel, by: "pack" } : runsOn ? { name: runsOn, by: "cli" } : null,
     context,

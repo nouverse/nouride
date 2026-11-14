@@ -15,6 +15,7 @@ import { Card, ErrorNote, Field } from "@/commons/components/ui/ui";
 import { Combobox } from "@/commons/components/ui/Combobox";
 import { AskAgentButton } from "@/commons/components/agents/AskAgentButton";
 import { CliStanding, CliVersionNumbers } from "@/commons/components/agents/CliStanding";
+import { CliOwnBadge, CliPartsLine } from "@/commons/components/agents/CliParts";
 import { Details } from "@/commons/components/ui/Details";
 import { byInstaller, goBackMessage, setUpMessage } from "@/commons/lib/set-up";
 import { CliProfiles } from "./components/CliProfiles";
@@ -81,12 +82,13 @@ export default function AgentCliPage({ agentId }: { agentId: string }) {
             <Terminal size={16} className="text-base-content/60" aria-hidden="true" />
             <span className="font-semibold">{cliName}</span>
             {row?.installed ? (
-              // No version: the scan reads the ACP adapter's, not the CLI's own (Coding CLIs on the Models page says why).
-              <span className="badge badge-sm badge-ghost font-mono">installed</span>
+              // The CLI's own version, as the files installed say it; its connector's is the line under it.
+              <CliOwnBadge parts={row.parts} />
             ) : row ? (
               <span className="badge badge-sm badge-warning font-mono">not installed</span>
             ) : null}
           </div>
+          {row?.installed ? <CliPartsLine parts={row.parts} /> : null}
           {row?.installed ? <CliStanding name={cliName} cli={row.id} pkg={row.package} version={row.version} standing={row.standing} ownDetails={false} /> : null}
           {/* Not there yet: asked of the orchestrator where it can install it, else whoever runs the server (0.8.19). */}
           {row && !row.installed ? (
@@ -102,7 +104,7 @@ export default function AgentCliPage({ agentId }: { agentId: string }) {
           {row ? (
             <Details>
               <p className="font-mono">{row.command}</p>
-              {row.installed ? <CliVersionNumbers pkg={row.package} version={row.version} standing={row.standing} /> : null}
+              {row.installed ? <CliVersionNumbers pkg={row.package} version={row.version} standing={row.standing} parts={row.parts} /> : null}
               {!row.installed ? <p className="break-all font-mono">{row.install}</p> : null}
             </Details>
           ) : null}

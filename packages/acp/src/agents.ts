@@ -32,6 +32,14 @@ export interface CliRow {
    * ran Nouride's turns, named where it ran; a version is added here only after that.
    */
   tested?: { lowest: string; highest: string };
+  /**
+   * The CLI `package` carries: which of its dependencies is the CLI itself, and the field of that dependency's
+   * `package.json` that holds the CLI's version. `package` is the connector, and its version is not the CLI's: the
+   * dashboard read claude-agent-acp 0.100.0, said "up to date", and the Claude Code inside it, 2.1.316, knew no model
+   * newer ones had (seen on a live box). The one fact about a CLI's parts a row states; the rest is read from the
+   * files installed (`parts.ts`). Absent: a person's own CLI, whose command is taken to be the CLI.
+   */
+  carries?: { name: string; package: string; field: string };
   /** Prints its version. */
   versionArgs: readonly string[];
   /** The variable that points it at a profile folder (its sign-in and settings), made before it starts. Absent: HOME. */
@@ -102,6 +110,8 @@ export const BUILT_IN_CLIS: readonly CliRow[] = [
     package: "@agentclientprotocol/claude-agent-acp",
     // 0.95.0 answers the owner's agents on the box, and 0.100.0 the e2e VM's Claude, each the version there on 2026-11-08.
     tested: { lowest: "0.95.0", highest: "0.100.0" },
+    // The SDK holds Claude Code's own binary, and says its version in a field of its own (0.3.323: "2.1.323").
+    carries: { name: "Claude Code", package: "@anthropic-ai/claude-agent-sdk", field: "claudeCodeVersion" },
     versionArgs: ["--version"],
     profileEnv: "CLAUDE_CONFIG_DIR",
     // v1 pinned: the adapter also serves a draft v2 to a client that asks. No claude.ai connectors: a profile signed in
@@ -132,6 +142,7 @@ export const BUILT_IN_CLIS: readonly CliRow[] = [
     package: "@agentclientprotocol/codex-acp",
     // 2.3.0 on the box, and 2.5.0 the e2e VM's Codex, each the version there on 2026-11-08.
     tested: { lowest: "2.3.0", highest: "2.5.0" },
+    carries: { name: "Codex", package: "@openai/codex", field: "version" },
     versionArgs: ["--version"],
     // The folder must exist before it starts, or the handshake itself fails.
     profileEnv: "CODEX_HOME",

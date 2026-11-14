@@ -17,6 +17,11 @@ import { TYPING_REFRESH_MS, type ExecutorDeps, type TurnBrain, type TurnRequest,
 export interface CliAnswering {
   /** The CLI by its name: "Claude Code". */
   cli: string;
+  /**
+   * The CLI's own version, as the files installed say: Claude Code's, which is not its connector's in `running`.
+   * Absent where it was not read.
+   */
+  version?: string;
   /** What answered its handshake, as it named itself — "@agentclientprotocol/claude-agent-acp 0.95.0" — while it runs; null when it is stopped. */
   running: string | null;
   /** The model: the pack's, else the CLI's own, as its last session opened on it; null where neither says, and the CLI chooses. */

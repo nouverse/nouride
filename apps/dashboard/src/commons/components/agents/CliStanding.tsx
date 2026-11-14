@@ -4,11 +4,12 @@
  * the number the CLI itself shows: kept out of the sentence for that reason.
  */
 
-import type { CliVersionView } from "@nouride/wire";
+import type { CliPart, CliVersionView } from "@nouride/wire";
 import { standingWords } from "@/commons/lib/cli-standing";
 import { updateMessage } from "@/commons/lib/set-up";
 import { AskAgentButton } from "./AskAgentButton";
 import { Details } from "@/commons/components/ui/Details";
+import { CliPartsRest } from "./CliParts";
 
 const TONE = { success: "badge-success", info: "badge-info", warning: "badge-warning" } as const;
 
@@ -19,23 +20,30 @@ interface Props {
   pkg?: string | undefined;
   version?: string | undefined;
   standing?: CliVersionView | undefined;
+  /** What it runs on: its other dependencies go under Details, beside the numbers. */
+  parts?: readonly CliPart[] | undefined;
   /** Where the page has a Details of its own beside it, its numbers go there (`CliVersionNumbers`): two read as one too many. */
   ownDetails?: boolean;
 }
 
 /** The version numbers, for whoever runs the server: the package they are of, what an update installs, what is out. */
-export function CliVersionNumbers({ pkg, version, standing }: Pick<Props, "pkg" | "version" | "standing">) {
-  if (!standing) return null;
+export function CliVersionNumbers({ pkg, version, standing, parts }: Pick<Props, "pkg" | "version" | "standing" | "parts">) {
+  if (!standing && !parts?.length) return null;
   return (
-    <p className="font-mono">
-      {version ? `${pkg ?? "version"} ${version}` : null}
-      {standing.offer ? ` · an update installs ${standing.offer}` : null}
-      {standing.untested ? ` · ${standing.untested} is out, not tested with this Nouride yet` : null}
-    </p>
+    <>
+      {standing ? (
+        <p className="font-mono">
+          {version ? `${pkg ?? "version"} ${version}` : null}
+          {standing.offer ? ` · an update installs ${standing.offer}` : null}
+          {standing.untested ? ` · ${standing.untested} is out, not tested with this Nouride yet` : null}
+        </p>
+      ) : null}
+      <CliPartsRest parts={parts} />
+    </>
   );
 }
 
-export function CliStanding({ name, cli, pkg, version, standing, ownDetails = true }: Props) {
+export function CliStanding({ name, cli, pkg, version, standing, parts, ownDetails = true }: Props) {
   if (!standing) return null;
   const words = standingWords(name, standing);
   return (
@@ -47,7 +55,7 @@ export function CliStanding({ name, cli, pkg, version, standing, ownDetails = tr
       {words.update && cli ? <AskAgentButton task="to update it" message={updateMessage(name, cli)} /> : null}
       {ownDetails ? (
         <Details>
-          <CliVersionNumbers pkg={pkg} version={version} standing={standing} />
+          <CliVersionNumbers pkg={pkg} version={version} standing={standing} parts={parts} />
         </Details>
       ) : null}
     </div>

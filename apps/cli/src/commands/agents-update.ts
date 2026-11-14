@@ -7,7 +7,7 @@
  * and names the version to go back to. The Update button asks the orchestrator to run this; it is not typed by people.
  */
 
-import { BOLD, DIM, GREEN, RESET, emit, fail, say, usageError } from "@nouride/cli-kit";
+import { BOLD, DIM, GREEN, RESET, cliNamed, emit, fail, say, usageError } from "@nouride/cli-kit";
 import type { Client, ExternalClisResponse } from "@nouride/cli-kit";
 import type { UpdateChecked } from "@nouride/cli-kit";
 
@@ -73,5 +73,7 @@ export async function updateCli(client: Client, args: readonly string[], steps: 
   const checked = await client.post<UpdateChecked>(`/external-clis/${id}/check`);
   emit({ ...checked, from: cli.version ?? null, to });
   if (!checked.passed) fail(checked.problem ?? `${cli.name} ${to} did not pass Nouride's check`, checked.before ? `Go back: nouride agents update ${id} ${checked.before}` : undefined);
-  say(`${GREEN}✓${RESET} ${BOLD}${cli.name}${RESET} is at ${to}, from ${cli.version ?? "its version before"}: its handshake has what Nouride uses`);
+  // What is there now, the CLI's own version and its connector's: "Claude Code is at 0.107.0" named the connector's as the CLI's.
+  const now = (await client.get<ExternalClisResponse>("/external-clis?fresh=1").catch(() => null))?.clis.find((entry) => entry.id === id);
+  say(`${GREEN}✓${RESET} ${BOLD}${cli.name}${RESET} is updated to ${(now && cliNamed(now)) ?? `${cli.package} ${to}`}, from ${cliNamed(cli) ?? cli.version ?? "its version before"}. Its handshake has what Nouride uses`);
 }

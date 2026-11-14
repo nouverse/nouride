@@ -44,6 +44,7 @@ import { CliAccounts, type AccountsDeps, type CliAccountsView } from "./accounts
 import { LentTools } from "./lent-tools.ts";
 import { CliLogin, type LoginView, type SignIn } from "./login.ts";
 import { openOnBox, returnAddress } from "./callback.ts";
+import { KeptParts } from "./parts.ts";
 import { profileNames, type CliProfile } from "./profiles.ts";
 import { cliSessionKey, ExternalTurnRunner, type RunnerHost } from "./runner.ts";
 import { Instructed, type InstructedFile } from "./instructed.ts";
@@ -165,6 +166,8 @@ export class ExternalAgents implements RunnerHost {
   /** Wakes an agent's chat for what its CLI said by itself: a turn there reads it. Set once the pipeline is up. */
   onOwnWords?: (chat: OwnChat) => void;
   private scanned: { at: number; clis: Promise<ScannedCli[]> } | null = null;
+  /** What each CLI runs on, as last read (`parts.ts`): `/status` names the CLI's own version from it. */
+  private readonly parts = new KeptParts();
   /** What the CLIs leave running in the background, and the chats owed what came of it. */
   private readonly left: LeftRunning;
   /** A CLI being updated, held while its new version installs, and checked after (`cli-update.ts`, 0.8.24). */
@@ -206,7 +209,7 @@ export class ExternalAgents implements RunnerHost {
       },
       connection: (agent) => this.connection(agent),
       setUnavailable: (agentId, reason) => this.setUnavailable(agentId, reason),
-      forgetScan: () => void (this.scanned = null),
+      forgetScan: () => void ((this.scanned = null), this.parts.clear()),
       ...(deps.versions ? { versions: deps.versions } : {}),
     });
   }
@@ -242,7 +245,7 @@ export class ExternalAgents implements RunnerHost {
     if (!external) return null;
     const open = this.running.get(agent.config.id);
     const handshake = open && !open.closed ? open.info?.agentInfo : undefined;
-    return answeringOf(this.row(external.cli)?.name ?? external.cli, external.model, handshake, this.models.runsOn(agent.config.id), this.contexts.of(agent.config.id, cliSessionKey(gatewayId, chatId)));
+    return answeringOf(this.row(external.cli)?.name ?? external.cli, external.model, handshake, this.models.runsOn(agent.config.id), this.contexts.of(agent.config.id, cliSessionKey(gatewayId, chatId)), this.parts.ownVersion(external.cli));
   }
 
   /**
@@ -494,7 +497,9 @@ export class ExternalAgents implements RunnerHost {
       const scan = this.deps.scan ?? ((row: CliRow) => scanCli(row));
       this.scanned = { at: now, clis: Promise.all(this.rows().map(scan)) };
     }
-    return withStanding(await this.scanned.clis, this.deps.newest, check);
+    const clis = await this.scanned.clis;
+    this.parts.note(clis);
+    return withStanding(clis, this.deps.newest, check);
   }
 
   /**
@@ -701,6 +706,7 @@ export class ExternalAgents implements RunnerHost {
     const connection = new CliConnection(row, launch, agentId, this.deps.spawn ?? spawnLongLived, this.deps.now);
     try {
       await connection.open();
+      this.parts.started(row, launch.env, runCommand);
       return connection;
     } catch (err) {
       await connection.close();

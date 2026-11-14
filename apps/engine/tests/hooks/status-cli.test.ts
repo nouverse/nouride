@@ -49,6 +49,14 @@ const CLAUDE: CliAnswering = {
 };
 
 describe("/status of an agent a coding CLI answers", () => {
+  test("names the CLI's own version, and its connector's as what carries it", async () => {
+    // The connector's version alone read as Claude Code's: 0.100.0 "up to date" over a Claude Code two models behind.
+    const text = await reply(ctx({ external: true, answering: { ...CLAUDE, version: "2.1.323", running: "@agentclientprotocol/claude-agent-acp 0.107.0" } }));
+    expect(text).toContain("Answered by: Claude Code 2.1.323 (in @agentclientprotocol/claude-agent-acp 0.107.0)");
+    // Stopped, its own version is still said: it is read from the files installed, not from a running CLI.
+    expect(await reply(ctx({ external: true, answering: { ...CLAUDE, version: "2.1.323", running: null } }))).toContain("Answered by: Claude Code 2.1.323, not running now");
+  });
+
   test("says the CLI answers, on its model — never the pack's `[llm]` as if it answered", async () => {
     const c = ctx({ external: true, answering: CLAUDE, spent: { inputTokens: 1_200_000, outputTokens: 40_000, cachedInputTokens: 1_100_000 } });
     const text = await reply(c);

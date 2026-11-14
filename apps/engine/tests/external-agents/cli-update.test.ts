@@ -165,11 +165,12 @@ describe("`nouride agents update`", () => {
   const SCANNED = { id: "claude-code", name: "Claude Code", command: "claude-agent-acp", install: "", login: true, installed: true, version: "0.95.0", package: "@agentclientprotocol/claude-agent-acp", tested: { lowest: "0.95.0", highest: "0.100.0" }, standing: { standing: "update", offer: "0.100.0" } };
 
   /** A daemon that is busy for `busyFor` holds, and checks as `checked` says; every step written down in order. */
-  function daemon(busyFor: number, checked: Record<string, unknown> = { cli: "claude-code", passed: true, version: "0.100.0", before: "0.95.0" }) {
+  function daemon(busyFor: number, checked: Record<string, unknown> = { cli: "claude-code", passed: true, version: "0.100.0", before: "0.95.0" }, after: Record<string, unknown> = {}) {
     const order: string[] = [];
     let holds = 0;
     const client = {
-      get: async (path: string) => (order.push(`get ${path}`), { room: { enough: true, bytes: 0, needs: 0 }, clis: [SCANNED] }),
+      // After the check the scan reads the new install: the CLI's own version and its connector's.
+      get: async (path: string) => (order.push(`get ${path}`), { room: { enough: true, bytes: 0, needs: 0 }, clis: [order.some((step) => step.endsWith("/check")) ? { ...SCANNED, ...after } : SCANNED] }),
       post: async (path: string) => {
         order.push(`post ${path}`);
         if (path.endsWith("/hold")) return { busy: holds++ < busyFor ? 1 : 0 };
@@ -201,8 +202,26 @@ describe("`nouride agents update`", () => {
       "post /external-clis/claude-code/hold",
       "install npm install -g @agentclientprotocol/claude-agent-acp@0.100.0",
       "post /external-clis/claude-code/check",
+      "get /external-clis?fresh=1",
     ]);
-    expect(lines.join("\n")).toContain("Claude Code is at 0.100.0, from 0.95.0: its handshake has what Nouride uses");
+    // Nothing read of what it runs on: the package and the version installed, never called the CLI's own.
+    expect(lines.join("\n")).toContain("Claude Code is updated to @agentclientprotocol/claude-agent-acp 0.100.0, from 0.95.0. Its handshake has what Nouride uses");
+  });
+
+  test("its last line names the CLI's own version and its connector's, before and after", async () => {
+    // \"Claude Code is at 0.107.0\" was the connector's number under the CLI's name (seen on a live box).
+    const parts = (own: string, connector: string) => [
+      { kind: "cli", name: "Claude Code", package: "@anthropic-ai/claude-agent-sdk", version: own },
+      { kind: "connector", name: "@agentclientprotocol/claude-agent-acp", package: "@agentclientprotocol/claude-agent-acp", version: connector },
+    ];
+    const { client, order } = daemon(0, undefined, { version: "0.100.0", parts: parts("2.1.323", "0.100.0") });
+    Object.assign(SCANNED, { parts: parts("2.1.316", "0.95.0") });
+    try {
+      await updateCli(client, ["claude-code"], steps(order));
+    } finally {
+      delete (SCANNED as { parts?: unknown }).parts;
+    }
+    expect(lines.join("\n")).toContain("Claude Code is updated to Claude Code 2.1.323, in claude-agent-acp 0.100.0, from Claude Code 2.1.316, in claude-agent-acp 0.95.0. Its handshake has what Nouride uses");
   });
 
   test("at the version already: nothing installed, and a hold a cut-off run left is let go (live box, 2026-11-08)", async () => {

@@ -3,7 +3,7 @@
  * sign-in, and the accounts each CLI is signed in on.
  */
 
-import type { CliStanding } from "@nouride/acp";
+import type { CliPart, CliStanding } from "@nouride/acp";
 
 /** An external agent's coding CLI, on its row of the agents (0.8.1). */
 export interface AgentExternal {
@@ -37,10 +37,15 @@ export interface ScannedCli {
   /** The newest published, where the server could ask. */
   newest?: string;
   standing?: CliVersionView;
+  /** What it runs on, the CLI itself first; absent where nothing of it could be read. */
+  parts?: CliPart[];
 }
 
 /** Where a coding CLI's version stands (`cliStanding` in `@nouride/acp`). */
 export type { CliStanding };
+
+/** One thing a coding CLI runs on: the CLI itself, its connector, the runtime, a dependency (`@nouride/acp`). */
+export type { CliPart };
 
 export interface CliVersionView {
   standing: CliStanding;
@@ -123,6 +128,8 @@ export interface CliAccountsView {
   version?: string;
   package?: string;
   standing?: CliVersionView;
+  /** What it runs on, the CLI itself first. */
+  parts?: CliPart[];
   install: string;
   /** Signed in once for every agent on an account, or once per agent. */
   shared: boolean;
