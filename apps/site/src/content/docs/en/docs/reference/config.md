@@ -489,7 +489,8 @@ Per agent, in its pack's `config.toml`:
 ```toml
 [external]
 cli = "claude-code"                 # required: claude-code, codex or an [[external_clis]] id
-profile = "default"                 # the account: lowercase, digits and "-", up to 24 (the default)
+profile = "default"                 # the account: lowercase, digits and "-", up to 24 (the default); or a list,
+                                    # ["work", "second"]: it goes on with the next when one reaches its limit
 permissions = "risky"               # folder | risky | all; absent: folder where agents are their own users, risky elsewhere
 model = "sonnet"                    # as the CLI names it; absent: the CLI's default
 ```

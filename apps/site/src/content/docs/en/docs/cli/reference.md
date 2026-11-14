@@ -108,6 +108,11 @@ nouride setup --yes --provider anthropic --api-key-from-env ANTHROPIC_API_KEY --
 
 Flags: `--provider`, `--base-url`, `--api-key-from-env`, `--agent`, `--name`, `--model`, `--prompt`,
 `--headline`, `--config`, `--yes`. There is deliberately no `--api-key`.
+
+Run again, it goes on from where it stopped, as the dashboard's wizard does (0.8.38): with a provider set up and no
+agent yet, it keeps the provider and goes on at the agent; with both, it says the install is set up and changes
+nothing. An agent id that cannot be used (`nouride` is reserved, say) is refused before anything is written, and asked
+again when you are typing. Its last lines say how to start what it set up, `docker compose up -d` in a container.
 [First run →](/en/docs/start/first-run/#doing-it-over-ssh-instead)
 
 ## Looking at it
@@ -143,9 +148,9 @@ nouride chat [agent]              # interactive chat, no bot token needed
 
 ```bash
 nouride agents                    # list: waiting for you, working, asleep or idle
-nouride agents scan               # the coding CLIs this box has for external agents, with their versions
+nouride agents scan               # the coding CLIs this box has for external agents, and what each runs on
 nouride agents login <id>         # sign an external agent's CLI in: run on the box, answered here
-nouride agents update <cli> [<version>]   # to the newest version this Nouride was tested with, or back to <version>
+nouride agents update <cli> [<version>]   # to the newest version out, or to <version>
 nouride agent sleep <id>          # takes no work until wake, through a restart too (pause works too)
 nouride agent wake  <id>          # (resume works too)
 nouride agent reload <id>
@@ -158,10 +163,12 @@ nouride agent skill-root rm  <id> <path>
 nouride acp [--agent <id>]        # an agent in Zed or another ACP editor; the editor runs this
 ```
 
-`agents scan` looks again each time, and prints each CLI with the command Nouride starts and that command's version:
-the ACP adapter's (`claude-agent-acp 0.97.0`), not the CLI's own. Under each built-in CLI it says where that version
-stands against the versions this Nouride was tested with and the newest out, which it asks the npm registry at most
-once a day; `nouride doctor` says the same. `agents login` runs the CLI's sign-in on the box, in
+`agents scan` looks again each time, and prints each CLI by its own version (Claude Code 2.1.323) with the command
+Nouride starts and, under it, everything it runs on: Node, the ACP adapter, the CLI the adapter carries, and the
+adapter's other packages (0.8.38). Under each built-in CLI it says where its version stands against the newest out,
+which it asks the npm registry at most once a day, and the versions this Nouride was tested with; a newer version is
+offered whether or not it was tested, and says which. `nouride doctor` says the same. `agents update` with no version
+installs the one on offer. `agents login` runs the CLI's sign-in on the box, in
 that agent's own profile, and shows here what it prints; a line you type is its next input, and Ctrl-D stops it.
 `agent external` and `agent internal` are an admin's, as signing in is. `acp` is started by an editor, not typed: it
 speaks the Agent Client Protocol on stdin and stdout, and without `--agent` the orchestrator answers.

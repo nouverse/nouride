@@ -45,7 +45,9 @@ Agents
         Connectors      server MCP instalasi yang dipakai agent ini
         Settings        batas tool dan turn-nya, job senyap, dan tool apa saja yang dimilikinya
         Look            kucingnya di Office
+        Workspace       folder miliknya sendiri, untuk dilihat-lihat          (admin)
   Office            status para agent sebagai kantor kecil berisi kucing
+  Workspace         tempat para agent bekerja: folder tiap agent, dan folder bersama   (admin)
 
 Skills              Skills Workshop: Live · Pending · Explore
 Connectors          server MCP instalasi: Installed · Explore, saklar per agent
@@ -130,7 +132,8 @@ daemon kembali. Cuma admin atau operator yang melihatnya, di situ dan di bagian 
 Home dibuka dengan sapaan dan satu baris tentang apa yang sedang terjadi: berapa agent yang bangun, berapa misi yang
 sedang jalan, berapa hal yang butuh kamu. Di pojok sapaan, box-nya bilang apakah semua berjalan baik, versinya, dan
 sudah berapa lama nyala, di sebelah badge update dan **Restart**; hal yang perlu dicek tampil sebagai kartu tepat di
-bawahnya. Lalu, berurutan:
+bawahnya. Kalau CLI coding yang dipakai salah satu agent kamu punya update, admin melihat badge kedua di sana, misalnya
+**Claude Code update out** (0.8.38), yang membuka **Models → Coding CLIs**. Lalu, berurutan:
 
 - **Yang butuh kamu.** Tool call yang ditunggu agent dijawab langsung di situ: **Allow once**, **Deny**, dan **Always
   allow** kalau ditawarkan. Langkah automation yang menunggu persetujuanmu juga dijawab di situ: **Continue** atau
@@ -279,7 +282,9 @@ sebuah chat mengatur yang ini.
 
 [Agent eksternal](/id/docs/manual/external-agents/) punya tab **Brain** sebagai ganti *Model*: CLI coding yang
 menjawabnya, akun, preset, dan model CLI-nya, dengan model Nouride sendiri untuknya terlipat di bawah. Akun-akunnya ada
-di *Models → Coding CLIs*.
+di *Models → Coding CLIs*, tempat tiap CLI disebut dengan versinya sendiri, beserta semua yang dipakainya untuk jalan
+dan apakah ada versi yang lebih baru (0.8.38). Tab Brain juga berisi akun-akun yang dipakai agent itu
+[begitu satu akun kena limit](/id/docs/manual/external-agents/#kalau-sebuah-akun-kena-limit).
 
 ![Tab Model milik sebuah agent](/media/dashboard-agent-model.png)
 
@@ -297,6 +302,21 @@ dengan cookie sesi.
 
 `config.toml` di sini milik agent itu sendiri. Milik daemon ada di kartu terakhir
 **Agents → Settings**.
+
+### Workspace
+
+Admin bisa melihat-lihat apa yang disimpan para agent selama bekerja (0.8.38), di tiga tempat yang sebenarnya satu
+tampilan berkas, sama dengan **System → Files**:
+
+- Tab **Workspace** sebuah agent menampilkan folder milik agent itu sendiri, dan gak ada yang lain: path di atasnya
+  mulai dari folder itu, jadi gak ada jalan naik atau keluar darinya.
+- **Agents → Workspace**, di samping Agents dan Office, dibuka di workspace dan masuk ke dua foldernya: `private`,
+  berisi satu folder untuk tiap agent, dan `shared`, folder yang dibaca dan ditulis semua agent.
+- Di **Office**, kartu kucing yang kamu klik punya **Workspace**, yang membuka tab agent itu.
+
+Berkas dibuka, diunduh, dan dihapus di sana seperti di Files, dan apa pun yang menyimpan kredensial tetap gak
+ditampilkan. Yang bukan admin gak punya ketiganya. Kalau sebuah install menyimpan workspace-nya di luar folder Nouride
+sendiri, halamannya bilang workspace itu gak bisa dilihat dari sini.
 
 ### Settings, untuk semua agent
 

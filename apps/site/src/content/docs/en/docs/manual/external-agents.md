@@ -48,20 +48,30 @@ where a CLI is not on the box, **Models → Coding CLIs** and an external agent'
 **Ask Nouva to set it up** (your orchestrator's name), which opens the chat over the page with the request written
 out, for you to read and send.
 
-`nouride agents scan` lists the CLIs the box has, each with the command Nouride starts and its version. That version
-is the adapter's (`claude-agent-acp 0.97.0`), not the CLI's own. Since 0.8.24 each built-in CLI also says where its
-version stands against the versions this Nouride was tested with and the newest out, which Nouride asks the npm
-registry once a day: up to date, a newer version out, newer than this Nouride was tested with (it runs, with a
-warning), or older than it supports. The **Models** page and the agent's **Brain** tab say the same in words, with the
-numbers under Details. Each week Nouride's own CI installs each CLI's newest version and checks its handshake with no
-sign-in; a version that passes that and a real turn is named tested in the next release.
+`nouride agents scan` lists the CLIs the box has, each with the command Nouride starts and everything it runs on
+(0.8.38): Node, the adapter, the CLI the adapter carries, and the adapter's other packages, each with its version. The
+CLI's own version is not the adapter's: `claude-agent-acp 0.107.0` carries Claude Code 2.1.323, and it is the CLI's
+version that decides which models it has. So the **Models** page and an agent's **Brain** tab name the CLI by its own
+version, with the rest under Details, and `/status` in a chat says it too. The agent is told what runs it as well, read
+from the files installed, so asked "which Claude Code are you on?" it does not guess from another copy on the box.
+
+Each built-in CLI also says where its version stands against the newest out, which Nouride asks the npm registry once
+a day, and against the versions this Nouride was tested with: up to date, a newer version out, newer than this Nouride
+was tested with (it runs, with a warning), or older than it supports. A newer version is offered as soon as it is out,
+tested with this Nouride or not; one that was not says so beside the offer, and it is yours to take or leave. Where a
+newer CLI is out that no adapter carries yet, the badge reads **newest you can get**, with nothing to press. **Home**
+tells an admin when a CLI an agent works in has an update out. Each week Nouride's own CI installs each CLI's newest
+version and checks its handshake with no sign-in; a version that passes that and a real turn is named tested in the next
+release.
 
 **Update** there asks the orchestrator, in a message you send, to run `nouride agents update <cli>`. It waits until no
-turn runs in that CLI, and starts none in it meanwhile; installs the newest version this Nouride was tested with, as
+turn runs in that CLI, and starts none in it meanwhile; installs the version on offer, the newest out, as
 `nouride tools run` installs; then starts the CLI again and checks its handshake for what Nouride uses: steering, and the
 modes its presets set. No prompt is sent for the check. A version that fails it stops only that CLI's agents, saying
 why, and the version before is offered back: **Ask … to put it back** on the agent's Brain tab, or
-`nouride agents update <cli> <version>`. The CLIs' own updaters stay off.
+`nouride agents update <cli> <version>`. After an update the models each agent offers are read again from the new
+version, at its next session. The CLIs' own updaters stay off, and an agent a CLI answers cannot run the update itself,
+since the update stops its own CLI: it asks the orchestrator, or tells you to.
 
 ## Making one
 
@@ -96,6 +106,38 @@ an agent's Brain tab, are an admin's to do. The sign-in runs on the box, and the
 
 A CLI you add signs in with its own `login` words. If its browser sign-in ends on a page on the box that does not load
 from your machine, paste that page's address back, and Nouride opens it on the box.
+
+### When an account reaches its limit
+
+An agent can have more than one account to answer with (0.8.38). On its **Brain** tab, **When its account reaches its
+limit** lists the accounts it goes on with, in order, picked from the ones signed in on **Models → Coding CLIs**. When
+the account it is on reaches a usage limit, Nouride starts its CLI on the next one and sends the message again, once.
+The conversation goes on: the CLI's session is kept in the agent's folder, and only the sign-in it starts with changes.
+The chat gets one line saying which account reached its limit, until when, and which one the agent goes on with.
+
+- A limit is often one model's alone, so it is kept per account and model: an agent moves only for a turn on that model,
+  and goes on answering on the first account on another.
+- Where the CLI says when the limit ends, the account is used again after that. Where it does not, it is tried again
+  within the hour.
+- Each agent moves by its own list. Agents that share an account all see that it is at its limit, and each goes to its
+  own next one; nothing is switched for every agent at once, and one agent's sign-in never becomes another's.
+- When every account in the list is at its limit, nothing is sent: the agent's own model answers that message and says
+  which accounts are spent, and until when.
+
+**Models → Coding CLIs** says, under an account, each limit it is at, and beside an agent that moved off it, where that
+agent is now. `/status` in a chat names the account the agent is on. In the pack it is the one field, as a list:
+
+```toml
+[external]
+cli = "claude-code"
+profile = ["work", "second"]
+```
+
+For a CLI that signs in once per agent, as Codex does, there is no other account to start with, so the list is not
+offered.
+
+Which accounts go in a list is yours to decide. A subscription is one person's, and its maker's terms say what it may
+be used for: moving between several people's accounts to get past their limits may break those terms.
 
 ## How it runs
 
@@ -211,8 +253,12 @@ you as a Nouride approval, in your chat or on the dashboard, and in a mission it
 level answers it for you. **Always** is offered only where the CLI offers an always of its own, and the CLI keeps that
 rule, not Nouride.
 
-`/model` in a chat changes only Nouride's own model for that chat, the one that answers when the CLI cannot. The model
-the CLI answers with is set on the Brain tab.
+`/model <name>` in a chat puts the CLI on that model for that chat; the agent's own, for every chat, is set on the Brain
+tab. A name is checked against the models the CLI offers (0.8.38), and the reply says what it stands for: `fable` is
+whichever Fable the installed version has. A name the CLI does not have is refused with the list of the ones it has,
+instead of the next message failing. `/model` alone says the model now and the ones offered, and `/model default` goes
+back to the agent's own. While the CLI has not said its list yet (before its first session, or after an update), a name
+is taken as written and the reply says it is not checked.
 
 `/effort high` sets how long the CLI thinks in that chat, from the next message, over the agent's own effort; the
 session is set to it as it runs, so the CLI keeps the conversation. Only a level the CLI offers for the model it is on
@@ -229,7 +275,9 @@ subscription.
 
 When its CLI cannot answer a message (not signed in, not installed, or it failed), the agent's own model answers that
 one, starting with a line that says so, and the CLI answers the next once it can. A message the CLI had begun to answer,
-or one you stopped, is not answered again.
+or one you stopped, is not answered again. The line tells a CLI that did not start from one that started and then
+refused the message (an account's limit, say), and where the chat is on a model picked with `/model`, it says so and
+how to go back.
 
 Its status says why: the CLI is not installed (and how to install it), not signed in, or failed to start. A CLI
 updates often, and a new version can change what Nouride uses: the first time a version starts, however it was

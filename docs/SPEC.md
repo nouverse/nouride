@@ -193,7 +193,7 @@ An external agent is a Nouride agent whose turns a coding CLI answers over the A
 ```toml
 [external]
 cli = "claude-code"
-profile = "work"           # its sign-in folder; absent: "default"
+profile = "work"           # its sign-in folder; absent: "default"; or a list: the accounts it moves through (0.8.38)
 permissions = "risky"      # folder | risky | all; absent: folder where agents are their own users, risky elsewhere
 model = "sonnet"           # as the CLI names it; absent: the CLI's default
 ```
@@ -209,6 +209,19 @@ model = "sonnet"           # as the CLI names it; absent: the CLI's default
   waits for as for a background job (§14.2) — as the agent's own user, from its own folder. A profile is a folder in it (`.cli/<cli>/<profile>`), pointed at by the
   CLI's own variable (`CLAUDE_CONFIG_DIR`, `CODEX_HOME`, …) — two agents can hold two accounts of one CLI. Each
   conversation keeps its session, reopened after a restart where the CLI can.
+- **Several accounts (0.8.38):** `profile` as a list is the accounts an agent moves through
+  (`external-agents/rotation.ts`). Its folder stays the first one's, and the account is the token its CLI starts with.
+  A refusal the adapter marks as a limit (`CliRow.limit`: the error's data, never its sentence) marks that account for
+  that model until the end it named, or for an hour where it named none (`cli-account-limits` in `daemon_state`); the
+  CLI is started on the next account and the message sent again, once, the session loaded as it was. With every account
+  at its limit nothing is sent (`external_accounts_spent`) and the agent's own model answers. A mark is the account's,
+  read by every agent on it; the move is each agent's own, by its own list. Which accounts a list holds is the
+  person's call: a subscription's terms are its maker's to say.
+- **What it runs on (0.8.38):** a built-in CLI's row names what its adapter carries (`CliRow.carries`). The scan reads
+  Node, the adapter, the CLI inside it and the adapter's dependencies from the files installed
+  (`external-agents/parts.ts`); the dashboard, `agents scan`, `/status` and the agent's own instruction file name the
+  CLI by its own version. The newest version out is offered whether or not it was tested (`cliStanding`), and `/model`
+  holds a name to the models the CLI offered (`hooks/cli-model.ts`).
 - **A mission is one session (0.8.7):** a mission's turns are one conversation, `web:mission` and the mission's id
   (`cliSessionKey`), so its first turn opens one ACP session in the mission's folder and every later turn prompts that
   same session — kept beside the database (`keepSession`) and reopened after a restart with `session/load` where the

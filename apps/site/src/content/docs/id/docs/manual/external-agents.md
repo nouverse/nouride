@@ -50,22 +50,32 @@ memintakannya untukmu (0.8.19): kalau sebuah CLI belum ada di box, **Models → 
 agent eksternal punya tombol **Ask Nouva to set it up** (dengan nama orchestrator-mu), yang membuka chat di atas
 halaman itu dengan permintaannya sudah tertulis, untuk kamu baca lalu kirim.
 
-`nouride agents scan` menampilkan CLI yang ada di box, masing-masing dengan perintah yang dijalankan Nouride dan
-versinya. Versi itu milik adapter-nya (`claude-agent-acp 0.97.0`), bukan versi CLI-nya sendiri. Sejak 0.8.24 tiap CLI
-bawaan juga bilang posisi versinya dibanding versi-versi yang sudah dites dengan Nouride ini dan versi terbaru yang
-sudah rilis, yang Nouride tanyakan ke registry npm sehari sekali: sudah terbaru, ada versi baru, lebih baru dari yang
-pernah dites dengan Nouride ini (tetap jalan, dengan peringatan), atau lebih lama dari yang didukung. Halaman **Models**
-dan tab **Brain** agent-nya bilang hal yang sama dengan kata-kata, angkanya di bawah Details. Tiap minggu CI Nouride
-sendiri meng-install versi terbaru tiap CLI dan mengecek handshake-nya tanpa login; versi yang lolos itu dan satu
-giliran sungguhan disebut sudah dites di rilis berikutnya.
+`nouride agents scan` menampilkan CLI yang ada di box, masing-masing dengan perintah yang dijalankan Nouride dan semua
+yang dipakainya untuk jalan (0.8.38): Node, adapter-nya, CLI yang dibawa adapter itu, dan paket-paket lain milik
+adapter, masing-masing dengan versinya. Versi CLI-nya sendiri bukan versi adapter: `claude-agent-acp 0.107.0` membawa
+Claude Code 2.1.323, dan versi CLI itulah yang menentukan model apa saja yang dia punya. Jadi halaman **Models** dan tab
+**Brain** agent-nya menyebut CLI dengan versinya sendiri, sisanya di bawah Details, dan `/status` di chat juga
+menyebutnya. Agent-nya pun diberi tahu apa yang menjalankannya, dibaca dari berkas yang ter-install, jadi kalau ditanya
+"kamu pakai Claude Code versi berapa?" dia gak menebak dari salinan lain yang ada di box.
+
+Tiap CLI bawaan juga bilang posisi versinya dibanding versi terbaru yang sudah rilis, yang Nouride tanyakan ke registry
+npm sehari sekali, dan dibanding versi-versi yang sudah dites dengan Nouride ini: sudah terbaru, ada versi baru, lebih
+baru dari yang pernah dites dengan Nouride ini (tetap jalan, dengan peringatan), atau lebih lama dari yang didukung.
+Versi baru ditawarkan begitu rilis, sudah dites dengan Nouride ini atau belum; yang belum dites bilang begitu di samping
+tawarannya, dan kamu yang memutuskan mau ambil atau tidak. Kalau ada CLI lebih baru yang belum dibawa adapter mana pun,
+badge-nya bertuliskan **newest you can get**, tanpa tombol apa pun. **Home** memberi tahu admin kalau CLI yang dipakai
+sebuah agent punya update. Tiap minggu CI Nouride sendiri meng-install versi terbaru tiap CLI dan mengecek handshake-nya
+tanpa login; versi yang lolos itu dan satu giliran sungguhan disebut sudah dites di rilis berikutnya.
 
 **Update** di sana meminta orchestrator, lewat pesan yang kamu kirim, menjalankan `nouride agents update <cli>`. Dia
 menunggu sampai gak ada giliran yang jalan di CLI itu, dan gak memulai yang baru selama menunggu; meng-install versi
-terbaru yang sudah dites dengan Nouride ini, seperti `nouride tools run` meng-install; lalu menyalakan CLI-nya lagi dan
+yang ditawarkan, yaitu yang terbaru, seperti `nouride tools run` meng-install; lalu menyalakan CLI-nya lagi dan
 mengecek handshake-nya untuk hal yang dipakai Nouride: steering, dan mode yang dipasang preset-nya. Pengecekannya gak
 mengirim prompt. Versi yang gak lolos cuma menghentikan agent-agent CLI itu, dengan alasannya, dan versi sebelumnya
 ditawarkan kembali: **Ask … to put it back** di tab Brain agent-nya, atau `nouride agents update <cli> <versi>`.
-Updater bawaan CLI-nya tetap mati.
+Setelah update, daftar model tiap agent dibaca ulang dari versi baru, di sesi berikutnya. Updater bawaan CLI-nya tetap
+mati, dan agent yang dijawab CLI gak bisa menjalankan update itu sendiri, karena update menghentikan CLI-nya sendiri:
+dia minta ke orchestrator, atau menyuruh kamu.
 
 ## Membuat agent eksternal
 
@@ -102,6 +112,42 @@ menyimpan tab Brain sebuah agent itu urusan admin. Login-nya jalan di box, dan h
 
 CLI yang kamu tambahkan sendiri login pakai kata-kata `login`-nya sendiri. Kalau login lewat browser-nya berakhir di
 halaman di box yang gak bisa dibuka dari mesin kamu, tempel balik alamat halaman itu, dan Nouride membukanya di box.
+
+### Kalau sebuah akun kena limit
+
+Satu agent bisa punya lebih dari satu akun untuk menjawab (0.8.38). Di tab **Brain**-nya, **When its account reaches its
+limit** berisi akun-akun lanjutannya, berurutan, dipilih dari akun yang sudah login di **Models → Coding CLIs**. Begitu
+akun yang sedang dipakai kena limit pemakaian, Nouride menyalakan CLI-nya di akun berikutnya dan mengirim ulang pesan
+itu, satu kali. Percakapannya berlanjut: sesi CLI disimpan di folder agent, dan yang berganti cuma login yang dipakai
+saat menyala. Chat-nya mendapat satu baris yang menyebut akun mana yang kena limit, sampai kapan, dan akun mana yang
+dipakai agent selanjutnya.
+
+- Limit sering cuma milik satu model, jadi dicatat per akun dan per model: agent pindah hanya untuk giliran di model
+  itu, dan tetap menjawab di akun pertama untuk model lain.
+- Kalau CLI menyebut kapan limitnya berakhir, akun itu dipakai lagi setelahnya. Kalau tidak, akun itu dicoba lagi dalam
+  satu jam.
+- Tiap agent pindah menurut daftarnya sendiri. Agent-agent yang berbagi satu akun sama-sama tahu akun itu kena limit,
+  dan masing-masing pindah ke akun berikutnya miliknya; gak ada yang diganti untuk semua agent sekaligus, dan login
+  satu agent gak pernah jadi milik agent lain.
+- Kalau semua akun di daftar kena limit, gak ada yang dikirim: model agent itu sendiri yang menjawab pesan tersebut dan
+  menyebut akun mana saja yang habis, dan sampai kapan.
+
+**Models → Coding CLIs** menyebut, di bawah tiap akun, limit yang sedang mengenainya, dan di samping agent yang pindah
+dari akun itu, di mana agent tersebut sekarang. `/status` di chat menyebut akun yang sedang dipakai agent. Di pack-nya,
+ini satu field yang sama, berupa daftar:
+
+```toml
+[external]
+cli = "claude-code"
+profile = ["work", "second"]
+```
+
+Untuk CLI yang login sekali per agent, seperti Codex, gak ada akun lain untuk dipakai menyala, jadi daftarnya gak
+ditawarkan.
+
+Akun mana yang masuk daftar, kamu yang memutuskan. Satu langganan itu milik satu orang, dan ketentuan pembuatnya yang
+mengatur boleh dipakai untuk apa: berpindah-pindah di antara akun beberapa orang untuk melewati limit mereka bisa
+melanggar ketentuan itu.
 
 ## Cara jalannya
 
@@ -219,8 +265,12 @@ datang ke kamu sebagai approval Nouride, di chat atau di dashboard, dan di dalam
 Approval level gak pernah menjawabnya atas nama kamu. **Always** cuma ditawarkan kalau CLI-nya punya pilihan always
 sendiri, dan aturan itu disimpan oleh CLI, bukan oleh Nouride.
 
-`/model` di chat cuma mengganti model Nouride sendiri untuk chat itu, yaitu model yang menjawab kalau CLI gak bisa. Model
-yang dipakai CLI untuk menjawab diatur di tab Brain.
+`/model <nama>` di chat memindahkan CLI ke model itu untuk chat tersebut; model milik agent, untuk semua chat, diatur di
+tab Brain. Nama itu dicek ke daftar model yang ditawarkan CLI (0.8.38), dan balasannya menyebut nama itu maksudnya apa:
+`fable` adalah Fable yang mana pun yang dimiliki versi yang ter-install. Nama yang gak dimiliki CLI ditolak beserta
+daftar yang dia punya, bukan baru ketahuan saat pesan berikutnya gagal. `/model` saja menyebut model sekarang dan
+pilihannya, dan `/model default` kembali ke model milik agent. Selama CLI belum menyebut daftarnya (sebelum sesi
+pertamanya, atau setelah update), nama diterima apa adanya dan balasannya bilang belum dicek.
 
 `/effort high` mengatur seberapa lama CLI berpikir di chat itu, mulai pesan berikutnya, di atas effort milik agent;
 sesinya diubah selagi berjalan, jadi CLI tetap memegang percakapannya. Hanya level yang ditawarkan CLI untuk model yang
@@ -237,7 +287,9 @@ jalan pakai langganannya sendiri.
 
 Kalau CLI-nya gak bisa menjawab sebuah pesan (belum login, belum ter-install, atau gagal), model agent itu sendiri yang
 menjawab pesan tersebut, diawali satu baris yang bilang begitu, dan CLI menjawab lagi pesan berikutnya begitu bisa. Pesan
-yang sudah mulai dijawab CLI, atau yang kamu hentikan, gak dijawab ulang.
+yang sudah mulai dijawab CLI, atau yang kamu hentikan, gak dijawab ulang. Baris itu membedakan CLI yang gak menyala dari
+CLI yang menyala lalu menolak pesannya (limit akun, misalnya), dan kalau chat itu sedang di model yang dipilih lewat
+`/model`, baris itu bilang begitu dan cara kembalinya.
 
 Status-nya bilang kenapa: CLI belum ter-install (beserta cara install-nya), belum login, atau gagal start. CLI sering
 update, dan versi baru bisa mengubah hal yang dipakai Nouride: pertama kali sebuah versi start, bagaimanapun cara

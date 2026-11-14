@@ -18,6 +18,8 @@ Missions          long work an agent finishes alone: what needs you, what runs, 
 
 Overview          what is waiting on you · today's tokens and spend · the Office, small
 Office            the agents' statuses as a small office of cats; a cat's card to wake, sleep or restyle it (0.8.1)
+Workspace         the agents' workspace, to look through: `private` and `shared`, and nothing above them — an
+                  admin's (0.8.38)
 Automations       everything that runs on its own, whatever starts it (a schedule, a webhook, by hand):
                   the list, and a page for each with its start, its steps as a flow and its runs (0.8.34)
 System Logs       the daemon's log, the audit trail, job runs, background commands
@@ -36,6 +38,7 @@ Agents            the list, and New Agent — answered by a model, or by a codin
       MCP             which of the install's MCP servers it uses
       Settings        what one turn may spend, its tools
       Look            its cat in the Office, part by part, as it will be
+      Workspace       its own folder in the workspace, with no way out of it — an admin's (0.8.38)
 
 Skills            the Workshop: the pool, who has each skill, drafts, skills on public hubs
 MCP               the install's MCP servers: Installed · Explore, a switch per agent on each

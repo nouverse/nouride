@@ -36,7 +36,8 @@ office lain (pintu di ujung lorong menyebut berapa), dan baris di atas office me
 dari yang di office lain sedang nunggu kamu.
 
 Klik kucing untuk lihat agent-nya lagi ngapain dan di mana, dengan link ke tiap chat dan misi, lalu tidurkan atau
-bangunkan, buka chat terakhirnya (sama seperti barisnya di Chats), atau ganti tampilannya.
+bangunkan, buka chat terakhirnya (sama seperti barisnya di Chats), atau ganti tampilannya. Admin juga punya
+**Workspace** di sana, yang membuka [folder milik agent itu](/id/docs/manual/dashboard/#workspace).
 
 Halaman ini menanyakan status agent tiap lima detik selama terbuka dan terlihat, dan gak menanyakan apa-apa kalau
 tidak. Gak ada yang bergerak kalau sistem kamu minta gerakan dikurangi, dan di HP kantornya mengecil supaya muat.

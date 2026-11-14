@@ -44,7 +44,9 @@ Agents
         Connectors      the install's MCP servers this agent uses
         Settings        its tool and turn budgets, quiet jobs, and which tools it has
         Look            its cat in the Office
+        Workspace       its own folder, to look through                       (admin)
   Office            the agents' statuses as a small office of cats
+  Workspace         where the agents work: each agent's own folder, and the one they share   (admin)
 
 Skills              the Skills Workshop: Live · Pending · Explore
 Connectors          the install's MCP servers: Installed · Explore, a switch per agent
@@ -126,8 +128,9 @@ admin or an operator sees it, there and at the foot of Settings.
 
 Home opens with a greeting and one line on what is going on: how many agents are awake, how many missions are moving,
 how many things need you. In the greeting's corner the box says whether everything is working, its version and how
-long it has been up, beside the update badge and **Restart**; anything to look at is a card right under it. Then, in
-this order:
+long it has been up, beside the update badge and **Restart**; anything to look at is a card right under it. When a
+coding CLI one of your agents works in has an update out, an admin sees a second badge there, such as **Claude Code
+update out** (0.8.38), which opens **Models → Coding CLIs**. Then, in this order:
 
 - **What needs you.** A tool call an agent waits on is answered right there: **Allow once**, **Deny**, and **Always
   allow** where it is offered. A step of an automation that waits for your yes is answered there too: **Continue**
@@ -269,7 +272,9 @@ chat; a chat's `/effort` sets its own over it, and an admin's `/effort <level> l
 
 An [external agent](/en/docs/manual/external-agents/) has a **Brain** tab in place of *Model*: the coding CLI that
 answers it, the account, the preset and the CLI's model, with Nouride's own model for it folded below. Its accounts
-are under *Models → Coding CLIs*.
+are under *Models → Coding CLIs*, where each CLI is named by its own version, with everything it runs on and whether a
+newer one is out (0.8.38). The Brain tab also holds the accounts the agent
+[goes on with when one reaches its limit](/en/docs/manual/external-agents/#when-an-account-reaches-its-limit).
 
 ![An agent's Model tab](/media/dashboard-agent-model.png)
 
@@ -286,6 +291,21 @@ emitted a script tag" into a script running in an admin's browser, same origin, 
 cookie.
 
 The `config.toml` here is the agent's own. The daemon's is the last card of **Agents → Settings**.
+
+### Workspace
+
+An admin can look through what agents keep while they work (0.8.38), in three places that are one files view, the
+same one as **System → Files**:
+
+- An agent's **Workspace** tab shows that agent's own folder, and nothing else: the path at the top starts at the
+  folder, so there is no way up or out of it.
+- **Agents → Workspace**, beside Agents and Office, opens on the workspace and goes into its two folders: `private`,
+  with a folder for each agent, and `shared`, the one every agent reads and writes.
+- In the **Office**, the card of a cat you clicked has **Workspace**, which opens that agent's tab.
+
+Files open, download and delete there as they do in Files, and what holds a credential is left out the same way.
+Anyone who is not an admin has none of the three. Where an install keeps its workspace outside Nouride's own folder,
+the pages say it cannot be looked through here.
 
 ### Settings, for every agent
 
