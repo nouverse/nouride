@@ -22,6 +22,7 @@ import { HELD_BOTTOM, PAGE_BOTTOM } from "@/commons/components/ui/ScrollCard";
 import { Sheet } from "@/commons/components/ui/Sheet";
 import { Sidebar, SidebarBrand } from "@/commons/components/layout/Sidebar";
 import { useLaptop } from "@/commons/hooks/use-wide";
+import { useFoot } from "@/commons/hooks/use-foot";
 import { PHONE_CHAT_SPACE, TAB_BAR_SPACE, TabBar } from "@/commons/components/layout/TabBar";
 import { CompactSidebar } from "@/commons/components/layout/CompactSidebar";
 import { FloatingChat } from "@/commons/components/floating-chat/FloatingChat";
@@ -91,6 +92,9 @@ export function RootLayout() {
   /** More, on a phone: the menu's other pages, as a sheet that slides up over the page. */
   const [moreOpen, setMoreOpen] = useState(false);
   const laptop = useLaptop();
+  /** What scrolls the page, read for whether the tab bar is at the foot as it scrolls (`useFoot`). */
+  const [scroller, setScroller] = useState<HTMLElement | null>(null);
+  const footShown = useFoot(scroller, { active: !laptop, more: moreOpen, page: pathname });
   /** The menu expanded beside Chats, where it is folded to icons unless this browser chose otherwise (`CompactSidebar`). */
   const [menuOpen, setMenuOpen] = useKept(CHAT_MENU_KEY, false, isBoolean);
   const { total } = useNeedsYou();
@@ -219,7 +223,7 @@ export function RootLayout() {
         ) : fillsViewport ? (
           /* Never sideways: a tooltip waiting unseen at the edge of a phone's screen made the page pan by a few pixels under
              a finger (a mission's turn chips). What is wider than the page is that element's to wrap or scroll. */
-          <main className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
+          <main ref={setScroller} className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
             {/* Held to the window from a laptop's width up; on a phone it scrolls as a document, as the page beside it
                 does — a list scrolling inside a card inside a scrolling page, under a header, is a sliver there. */}
             <div className={`mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 pt-2 sm:px-6 sm:pt-4 lg:h-full lg:p-8 ${HELD_BOTTOM} *:animate-fade`}>
@@ -228,7 +232,7 @@ export function RootLayout() {
             </div>
           </main>
         ) : (
-          <main className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
+          <main ref={setScroller} className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
             <div className={`mx-auto w-full max-w-6xl space-y-6 px-4 pt-2 sm:px-6 sm:pt-4 lg:p-8 ${PAGE_BOTTOM} *:animate-fade`}>
               <PageTop pathname={pathname} admin={where.admin} />
               <Outlet />
@@ -237,7 +241,7 @@ export function RootLayout() {
         )}
       </div>
 
-      <TabBar pathname={pathname} more={moreOpen} onMore={() => setMoreOpen((open) => !open)} onTab={() => setMoreOpen(false)} phoneChat={phoneChat} />
+      <TabBar pathname={pathname} more={moreOpen} onMore={() => setMoreOpen((open) => !open)} onTab={() => setMoreOpen(false)} phoneChat={phoneChat} away={!footShown} />
       {/* A chat over every page but the one that is the chat: there the conversation is the page, and its box is at the foot. */}
       {!chats && <FloatingChat pathname={pathname} />}
     </div>

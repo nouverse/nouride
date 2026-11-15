@@ -92,15 +92,15 @@ describe("Ask on an automation's own page, as on the list", () => {
 test("the bar that saves ends short of the chat's button below a laptop's width, and of its open card from a laptop up", () => {
   const bar = readFileSync(join(import.meta.dir, "../src/modules/automations/components/SaveBar.tsx"), "utf8");
   const chat = readFileSync(join(import.meta.dir, "../src/commons/components/floating-chat/FloatingChat.tsx"), "utf8");
-  // The chat's own places, as it writes them: its button 3.5rem wide, 1rem from the right, over the tab bar; its card
-  // 25rem wide, 1rem from the right too.
-  expect(chat).toContain('BUTTON_PLACE = "right-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] size-14 ');
-  expect(chat).toContain('"right-4 bottom-[calc(9.5rem+env(safe-area-inset-bottom))]');
+  // The chat's own places, as it writes them: its button 3.5rem wide, 1rem from the right, over the tab bar's foot; its
+  // card 25rem wide, 1rem from the right too.
+  expect(chat).toContain('BUTTON_PLACE = "right-4 bottom-[calc(var(--foot)+0.75rem)] size-14 ');
+  expect(chat).toContain('"right-4 bottom-[calc(var(--foot)+4.75rem)]');
   expect(chat).toContain("w-[25rem]");
   expect(chat).not.toContain("lg:right-");
   const classes = /aria-label="Unsaved changes" className="([^"]+)"/.exec(bar)?.[1]?.split(" ") ?? [];
   // Beside the button, at its height: 4.5rem of room at its right is the button's 3.5rem and the 1rem it stands in from the edge.
-  expect(classes).toEqual(expect.arrayContaining(["sticky", "bottom-[calc(5.5rem+env(safe-area-inset-bottom))]", "max-lg:mr-[4.5rem]"]));
+  expect(classes).toEqual(expect.arrayContaining(["sticky", "bottom-[calc(var(--foot)+0.75rem)]", "max-lg:mr-[4.5rem]"]));
   // Left of the card: its 25rem and the 1rem it stands in, less the page's own 2rem of padding, and 1rem between them.
   expect(classes).toEqual(expect.arrayContaining(["lg:bottom-6", "lg:mr-[25rem]"]));
   // Not centred on the page, where its right end would lie under the card.

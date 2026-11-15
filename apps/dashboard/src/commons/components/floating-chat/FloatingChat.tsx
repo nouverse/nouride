@@ -35,12 +35,13 @@ const isString = (value: unknown): value is string => typeof value === "string";
  * 1rem in. A page that scrolls leaves it room at its end (`PAGE_BOTTOM`), so it lies over no card once the page is
  * scrolled down. A page held to the window runs under it, to the page's own margin, and what scrolls in its card ends
  * with room to bring the last row clear (`HELD_END`): room kept free for the button was a blank band under the card.
+ * Over the bar it is placed by the bar's foot (`--foot`), so it comes down when a page scrolled down puts the bar away.
  */
-const BUTTON_PLACE = "right-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] size-14 lg:bottom-4";
+const BUTTON_PLACE = "right-4 bottom-[calc(var(--foot)+0.75rem)] size-14 lg:bottom-4";
 
 /** The card, from a tablet's width up: over the button, about 400 by 620, and never taller than the window. */
 const CARD_PLACE =
-  "right-4 bottom-[calc(9.5rem+env(safe-area-inset-bottom))] h-[38.75rem] max-h-[calc(100dvh-10.5rem-env(safe-area-inset-bottom))] w-[25rem] max-w-[calc(100vw-2rem)] lg:bottom-20 lg:max-h-[calc(100dvh-6rem)]";
+  "right-4 bottom-[calc(var(--foot)+4.75rem)] h-[38.75rem] max-h-[calc(100dvh-var(--foot)-5.75rem)] w-[25rem] max-w-[calc(100vw-2rem)] lg:bottom-20 lg:max-h-[calc(100dvh-6rem)]";
 
 export function FloatingChat({ pathname }: { pathname: string }) {
   const me = useMe();
@@ -85,7 +86,7 @@ export function FloatingChat({ pathname }: { pathname: string }) {
         title={state.open ? "Minimize the chat" : label}
         onClick={() => (state.open ? closeFloatingChat() : openFloatingChat({ agent: opensOn }))}
         className={cn(
-          "fixed z-30 grid place-items-center rounded-full border border-base-content/[0.08] bg-base-100 text-secondary shadow-soft transition-transform duration-150 hover:-translate-y-0.5 active:scale-95",
+          "fixed z-30 grid place-items-center rounded-full border border-base-content/[0.08] bg-base-100 text-secondary shadow-soft transition-[translate,scale,bottom] duration-200 hover:-translate-y-0.5 active:scale-95",
           BUTTON_PLACE,
         )}
       >
@@ -166,7 +167,7 @@ function FloatingCard({ open, label, button, onClose, children }: { open: boolea
       aria-label={label}
       tabIndex={-1}
       data-floating-chat=""
-      className={cn("fixed z-40 flex origin-bottom-right flex-col overflow-hidden rounded-[22px] border border-base-content/[0.08] bg-base-100 shadow-soft outline-none animate-enter", CARD_PLACE)}
+      className={cn("fixed z-40 flex origin-bottom-right flex-col overflow-hidden rounded-[22px] border border-base-content/[0.08] bg-base-100 shadow-soft outline-none transition-[bottom] duration-200 animate-enter", CARD_PLACE)}
     >
       {children}
     </div>,

@@ -12,10 +12,12 @@ import { DAILY, isCurrent } from "@/commons/components/layout/nav";
 import { useNeedsYou } from "@/commons/hooks/use-needs-you";
 import { cn } from "@/commons/lib/utils";
 
-/** How far the bar reaches up from the screen's foot: what a page or a composer stays above. */
-export const TAB_BAR_SPACE = "max-lg:pb-[calc(4.75rem+env(safe-area-inset-bottom))]";
+/** How far the bar reaches up from the screen's foot (`--foot-bar` in `main.css`): what a page or a composer stays above. */
+export const TAB_BAR_SPACE = "max-lg:pb-[var(--foot-bar)]";
 /** The same while a conversation is the whole of a phone's screen and the bar steps aside: only a tablet keeps it. */
-export const PHONE_CHAT_SPACE = "md:max-lg:pb-[calc(4.75rem+env(safe-area-inset-bottom))]";
+export const PHONE_CHAT_SPACE = "md:max-lg:pb-[var(--foot-bar)]";
+/** The bar's way away and back, as a page scrolls (`useFoot`); with reduced motion it is simply there or not. */
+const FOOT_MOTION = "transition-[translate] duration-200 ease-out";
 
 const TAB = "relative flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-2xl text-xs font-medium transition-colors active:scale-95";
 
@@ -25,16 +27,26 @@ const TAB = "relative flex min-h-12 flex-col items-center justify-center gap-0.5
  * While More is open the bar stays over its sheet (`z-[60]`, the sheet leaving it room at its foot), so More closes
  * what it opened and a tab goes where it says (`onTab` closes the sheet, the tab of the page you are on included). Under
  * the sheet, the place of More was the sheet's Sign out, and the other tabs' the account's line, which did nothing.
+ *
+ * `away`: a page scrolled down has put it away (`useFoot`), below the screen's foot with the strip under it.
  */
-export function TabBar({ pathname, more, onMore, onTab, phoneChat = false }: { pathname: string; more: boolean; onMore: () => void; onTab: () => void; phoneChat?: boolean }) {
+export function TabBar({ pathname, more, onMore, onTab, phoneChat = false, away = false }: { pathname: string; more: boolean; onMore: () => void; onTab: () => void; phoneChat?: boolean; away?: boolean }) {
   const { approvals, missions, steps } = useNeedsYou();
   const waiting = approvals + missions + steps;
   return (
     <>
-    <div aria-hidden="true" className={cn("bg-app-foot pointer-events-none fixed inset-x-0 bottom-0 z-40 h-[calc(2.75rem+env(safe-area-inset-bottom))] lg:hidden", phoneChat && "max-md:hidden")} />
+    <div aria-hidden="true" className={cn("bg-app-foot pointer-events-none fixed inset-x-0 bottom-0 z-40 h-[calc(2.75rem+env(safe-area-inset-bottom))] lg:hidden", FOOT_MOTION, away && "translate-y-full", phoneChat && "max-md:hidden")} />
     <nav
       aria-label="Tabs"
-      className={cn("fixed inset-x-3 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] grid grid-cols-5 gap-1 rounded-[22px] border border-base-content/[0.08] bg-base-100 p-1.5 shadow-soft lg:hidden", more ? "z-[60]" : "z-40", phoneChat && "max-md:hidden")}
+      inert={away}
+      data-away={away ? "" : undefined}
+      className={cn(
+        "fixed inset-x-3 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] grid grid-cols-5 gap-1 rounded-[22px] border border-base-content/[0.08] bg-base-100 p-1.5 shadow-soft lg:hidden",
+        FOOT_MOTION,
+        away && "translate-y-[calc(100%+0.5rem+env(safe-area-inset-bottom))]",
+        more ? "z-[60]" : "z-40",
+        phoneChat && "max-md:hidden",
+      )}
     >
       {DAILY.map((item) => {
         const current = !more && isCurrent(item, pathname);

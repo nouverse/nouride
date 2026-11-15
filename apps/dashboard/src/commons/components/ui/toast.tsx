@@ -224,11 +224,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         anything clickable in this layout — the sidebar is on the left and page actions sit top-right.
         `pointer-events-none` on the stack with it restored per toast so a box that happens to sit
         over a button does not swallow the click, while its own dismiss still works.
-        Below a laptop's width that corner is the tab bar's: the stack stands above the bar's reach there (`TAB_BAR_SPACE`),
-        where a toast lay over Agents and More and took their taps for as long as it showed.
+        Below a laptop's width that corner is the tab bar's: the stack stands above the bar's foot there (`--foot`), and
+        comes down with it when a page scrolled down puts the bar away. A toast lay over Agents and More and took their
+        taps for as long as it showed.
       */}
       <div
-        className="toast toast-end toast-bottom z-[100] pointer-events-none max-w-[min(28rem,calc(100vw-2rem))] max-lg:bottom-[calc(5.25rem+env(safe-area-inset-bottom))]!"
+        className="toast toast-end toast-bottom z-[100] pointer-events-none max-w-[min(28rem,calc(100vw-2rem))] transition-[bottom] duration-200 max-lg:bottom-[calc(var(--foot)+0.5rem)]!"
         // Lifted by what a page keeps at its foot (`--toast-lift`: a bar that saves), so the two never lie on each other.
         style={{ marginBottom: "var(--toast-lift, 0px)" }}
         // `polite`, not `assertive`: these announce the result of something the reader just did, and
