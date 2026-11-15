@@ -26,6 +26,7 @@ import { orchestratorFirst } from "@/commons/lib/agents";
 import { api } from "@/commons/lib/api";
 import { pickFloatingAgent, takeFloatingDraft } from "@/commons/lib/floating-chat";
 import { cn } from "@/commons/lib/utils";
+import { SHEET_GRAB } from "@/commons/components/ui/Sheet";
 import { pageOpen } from "./page-open";
 
 /** A button of the bar that is an icon alone: a finger's size on a phone. */
@@ -109,8 +110,9 @@ export function FloatingPanel({
   const name = chat.nameOf(agentId);
   const look = chat.looks.get(agentId);
 
+  // On a phone, where the panel is a sheet, a swipe down on its head puts it away as on the sheet's grab line.
   const bar = (now?: ConversationNow) => (
-    <header className="flex h-14 shrink-0 items-center gap-1 border-b border-base-content/[0.08] pr-2 pl-2">
+    <header {...{ [SHEET_GRAB]: "" }} className="flex h-14 shrink-0 touch-none items-center gap-1 border-b border-base-content/[0.08] pr-2 pl-2">
       <button
         type="button"
         className="flex min-h-11 min-w-0 flex-1 items-center gap-2.5 rounded-[14px] px-1.5 text-left outline-none hover:bg-base-content/[0.05] focus-visible:ring-2 focus-visible:ring-secondary/60"

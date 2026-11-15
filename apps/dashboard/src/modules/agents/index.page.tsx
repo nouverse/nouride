@@ -15,7 +15,8 @@ import { agentModel, orchestratorFirst } from "@/commons/lib/agents";
 import { isAdmin, useMe } from "@/commons/lib/session";
 import { Card, EmptyState, ErrorNote, PageHeader } from "@/commons/components/ui/ui";
 import { NewAgentForm } from "./components/NewAgentForm";
-import { AgentRows, PickedAgent } from "./components/AgentRows";
+import { AgentRows, AgentSheet, PickedAgent } from "./components/AgentRows";
+import { useWide } from "@/commons/hooks/use-wide";
 import { ListLoading } from "@/commons/components/ui/Spinner";
 import { SearchInput } from "@/commons/components/ui/SearchInput";
 import { StickyBar } from "@/commons/components/ui/StickyBar";
@@ -51,7 +52,10 @@ export default function AgentListPage() {
   const pick = (agentId: string | null) => setShown(agentId ? { agentId, at: "office" } : null);
   const openRow = (agentId: string | null) => setShown(agentId ? { agentId, at: "row" } : null);
   const platformsOf = (agentId: string) => (gateways.data?.gateways ?? []).filter((gateway) => gateway.agent === agentId).map((gateway) => gateway.platform);
-  const picked = shown?.at === "office" ? agents.find((agent) => agent.id === shown.agentId) : undefined;
+  // On a phone a cat's press and a row's both open the agent's sheet; from a tablet up, where they always did.
+  const wide = useWide();
+  const picked = wide && shown?.at === "office" ? agents.find((agent) => agent.id === shown.agentId) : undefined;
+  const sheetAgent = wide || !shown ? undefined : agents.find((agent) => agent.id === shown.agentId);
   // From every agent: an agent's look is the same here, in the Office and on its Look tab.
   const looks = useMemo(() => looksOf(status.data?.agents ?? []), [status.data]);
 
@@ -142,7 +146,7 @@ export default function AgentListPage() {
       ) : (
         <>
           {/* The office first: who is doing what, at a glance. Picking a cat shows that agent right under it. */}
-          <OfficeView selected={picked ? picked.id : null} onSelect={pick} />
+          <OfficeView selected={picked ? picked.id : (sheetAgent?.id ?? null)} onSelect={pick} />
           {picked ? <PickedAgent row={{ agent: picked, platforms: platformsOf(picked.id) }} orchestrator={orchestrator} look={looks.get(picked.id)} onClose={() => setShown(null)} /> : null}
           {/* The filter and the search stay at the top of the window while the list scrolls under them. */}
           <StickyBar
@@ -166,8 +170,17 @@ export default function AgentListPage() {
                 looks={looks}
                 open={shown?.at === "row" ? shown.agentId : null}
                 onOpen={openRow}
+                sheet={!wide}
               />
             </div>
+          )}
+          {wide ? null : (
+            <AgentSheet
+              row={sheetAgent ? { agent: sheetAgent, platforms: platformsOf(sheetAgent.id) } : undefined}
+              orchestrator={orchestrator}
+              look={sheetAgent ? looks.get(sheetAgent.id) : undefined}
+              onClose={() => setShown(null)}
+            />
           )}
         </>
       )}

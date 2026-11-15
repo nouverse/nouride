@@ -1,14 +1,15 @@
 /**
  * A panel opened from a button: under it, from a tablet's width up, and on a phone a sheet that rises from the foot of
- * the screen over a shade, a finger's reach from the thumb (`Drawer`, the motion of every drawer and of the app's More).
- * The list of agents to start a chat with opens in it.
+ * the screen over a shade, a finger's reach from the thumb (`Sheet`, with its name and its close in its head). "Add a
+ * step", the list of agents to start a chat with and a conversation's model open in it. What it holds names itself
+ * under its button and leaves that to the sheet's head on a phone (`max-md:hidden`).
  *
  * Under its button it is drawn at the body (`overPage`) through `Leaving`, so it is seen to go, and closed by Escape, by
  * a press outside it, or by its page; it takes the focus as it opens and gives it back to its button as it closes.
  */
 
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from "react";
-import { Drawer } from "@/commons/components/ui/Drawer";
+import { Sheet } from "@/commons/components/ui/Sheet";
 import { Leaving, overPage } from "@/commons/components/ui/OverPage";
 import { useWide } from "@/commons/hooks/use-wide";
 import { placeMenu } from "@/commons/lib/menu-place";
@@ -18,6 +19,8 @@ interface PanelProps {
   /** The button it opens from: placed under it, and given the focus back. */
   anchor: RefObject<HTMLElement | null>;
   label: string;
+  /** Its name in a sheet's head, when shorter than `label`. */
+  title?: string;
   /** How wide it is under its button; a sheet is the phone's width. */
   width?: number;
   children: ReactNode;
@@ -27,16 +30,15 @@ export function PopoverSheet({ open, ...panel }: PanelProps & { open: boolean })
   const wide = useWide();
   if (!wide) {
     return (
-      <Drawer open={open} onClose={panel.onClose} side="bottom" label={panel.label} lazy>
-        <span aria-hidden="true" className="mx-auto mt-2.5 mb-1 h-1.5 w-10 shrink-0 rounded-full bg-base-content/20" />
+      <Sheet open={open} onClose={panel.onClose} label={panel.label} title={panel.title ?? panel.label} lazy>
         {panel.children}
-      </Drawer>
+      </Sheet>
     );
   }
   return <Leaving value={open}>{() => <UnderButton {...panel} />}</Leaving>;
 }
 
-function UnderButton({ onClose, anchor, label, width = 400, children }: PanelProps) {
+function UnderButton({ onClose, anchor, label, width = 400, children }: Omit<PanelProps, "title">) {
   const box = useRef<HTMLDivElement>(null);
   const [place, setPlace] = useState<CSSProperties | null>(null);
 

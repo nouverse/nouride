@@ -6,8 +6,8 @@
  * move, and the reduced-motion rule cuts the moving while keeping what places the drawer (`reduced-motion.test.ts`).
  */
 
-import { describe, expect, test } from "bun:test";
-import { answer, renderPage, useMountHarness, WIRE } from "./mount-harness.ts";
+import { afterEach, describe, expect, test } from "bun:test";
+import { answer, dom, renderPage, useMountHarness, WIRE } from "./mount-harness.ts";
 import { eventually } from "./wait.ts";
 
 useMountHarness();
@@ -15,36 +15,51 @@ useMountHarness();
 const words = (element: Element | null | undefined) => (element?.getAttribute("class") ?? "").split(/\s+/);
 /** The menu's own nav: the tab bar under it is a nav too. */
 const MENU = 'nav[aria-label="Menu"]';
-/** The drawer: the sidebar's own frame, around the one nav. */
-const drawer = (host: HTMLElement) => host.querySelector(MENU)?.parentElement?.parentElement ?? null;
+/** More: the sheet the menu is drawn in below a laptop's width (`Sheet`), at the body. */
+const drawer = (_host?: HTMLElement) => dom.document.querySelector('[data-sheet][aria-label="Menu"]') as unknown as HTMLElement | null;
 const moreButton = (host: HTMLElement) => [...host.querySelectorAll<HTMLElement>('nav[aria-label="Tabs"] button')].find((button) => button.textContent?.includes("More")) ?? null;
-const shade = (host: HTMLElement) => [...host.querySelectorAll('button[aria-label="Close menu"]')].find((button) => !button.closest("nav") && !drawer(host)?.contains(button)) ?? null;
+const shade = (_host?: HTMLElement) => drawer()?.previousElementSibling ?? null;
+const phone = () => dom.happyDOM.setViewport({ width: 390, height: 844 });
+
+afterEach(() => {
+  dom.happyDOM.setViewport({ width: 1024, height: 768 });
+});
 
 describe("on a phone, More", () => {
   test("is drawn once, closed: out of place and out of reach, its shade faded out — and beside the page from a laptop up", async () => {
-    let seen = { navs: 0, drawer: [] as string[], shade: [] as string[] };
+    let seen = { navs: 0, drawer: [] as string[], shade: [] as string[], laptopSheet: true, laptopNavs: 0 };
+    phone();
+    await renderPage("/missions", async () => {
+      await eventually(() => dom.document.querySelector(MENU) !== null, 4_000, "the sidebar");
+      seen = { ...seen, navs: dom.document.querySelectorAll(MENU).length, drawer: words(drawer()), shade: words(shade()) };
+    });
+    dom.happyDOM.setViewport({ width: 1024, height: 768 });
     await renderPage("/missions", async (host) => {
       await eventually(() => host.querySelector(MENU) !== null, 4_000, "the sidebar");
-      seen = { navs: host.querySelectorAll(MENU).length, drawer: words(drawer(host)), shade: words(shade(host)) };
+      seen = { ...seen, laptopSheet: drawer() !== null, laptopNavs: host.querySelectorAll(MENU).length };
     });
     expect(seen.navs).toBe(1);
-    expect(seen.drawer).toEqual(expect.arrayContaining(["invisible", "translate-y-full", "transition-[translate,visibility]", "lg:visible", "lg:translate-y-0"]));
-    expect(seen.shade).toEqual(expect.arrayContaining(["invisible", "opacity-0", "transition-[opacity,visibility]", "lg:hidden"]));
+    expect(seen.drawer).toEqual(expect.arrayContaining(["invisible", "translate-y-full", "transition-[translate,visibility]"]));
+    expect(seen.shade).toEqual(expect.arrayContaining(["invisible", "opacity-0", "transition-[opacity,visibility]"]));
+    // From a laptop up the menu is beside the page, and no sheet is drawn.
+    expect(seen.laptopSheet).toBe(false);
+    expect(seen.laptopNavs).toBe(1);
   });
 
   test("slides up over its shade when the tab bar's More is pressed, and back down — still drawn — when a page is chosen in it", async () => {
     let seen = { open: [] as string[], shade: [] as string[], closed: [] as string[], kept: false };
+    phone();
     await renderPage("/missions", async (host, app) => {
       await eventually(() => moreButton(host) !== null, 4_000, "the tab bar's More");
-      const frame = drawer(host);
+      const frame = drawer();
       moreButton(host)!.click();
-      await eventually(() => words(drawer(host)).includes("translate-y-0") && moreButton(host)!.getAttribute("aria-expanded") === "true", 2_000, "More to open");
-      seen.open = words(drawer(host));
-      seen.shade = words(shade(host));
-      (host.querySelector(`${MENU} a[href$="/skills"]`) as HTMLElement).click();
-      await eventually(() => app.location().endsWith("/skills") && words(drawer(host)).includes("translate-y-full"), 4_000, "More to close");
-      seen.closed = words(drawer(host));
-      seen.kept = drawer(host) === frame;
+      await eventually(() => words(drawer()).includes("translate-y-0") && moreButton(host)!.getAttribute("aria-expanded") === "true", 2_000, "More to open");
+      seen.open = words(drawer());
+      seen.shade = words(shade());
+      (drawer()!.querySelector(`${MENU} a[href$="/skills"]`) as HTMLElement).click();
+      await eventually(() => app.location().endsWith("/skills") && words(drawer()).includes("translate-y-full"), 4_000, "More to close");
+      seen.closed = words(drawer());
+      seen.kept = drawer() === frame;
     });
     expect(seen.open).toEqual(expect.arrayContaining(["visible", "translate-y-0"]));
     expect(seen.shade).toEqual(expect.arrayContaining(["visible", "opacity-100"]));
@@ -62,12 +77,13 @@ describe("on a phone, More and the tab bar", () => {
 
   test("the bar stays over the open sheet, which leaves it room, and goes back under what opens over the page once closed", async () => {
     let seen = { closedBar: [] as string[], openBar: [] as string[], sheet: [] as string[] };
+    phone();
     await renderPage("/agents", async (host) => {
       await eventually(() => moreButton(host) !== null, 4_000, "the tab bar's More");
       seen.closedBar = words(tabs(host));
       moreButton(host)!.click();
       await eventually(() => moreButton(host)!.getAttribute("aria-expanded") === "true", 2_000, "More to open");
-      seen = { ...seen, openBar: words(tabs(host)), sheet: words(drawer(host)) };
+      seen = { ...seen, openBar: words(tabs(host)), sheet: words(drawer()) };
     });
     expect(seen.closedBar).toContain("z-40");
     expect(seen.closedBar).not.toContain("z-[60]");
@@ -77,18 +93,20 @@ describe("on a phone, More and the tab bar", () => {
     expect(seen.sheet).toContain("max-lg:pb-[calc(4.75rem+env(safe-area-inset-bottom))]");
   });
 
-  test("put away, the sheet and its shade take no tap at once, not only when hidden; from a laptop up the menu takes them", async () => {
+  test("put away, the sheet and its shade take no tap at once, not only when hidden", async () => {
     let seen = { drawer: [] as string[], shade: [] as string[] };
-    await renderPage("/agents", async (host) => {
-      await eventually(() => host.querySelector(MENU) !== null, 4_000, "the sidebar");
-      seen = { drawer: words(drawer(host)), shade: words(shade(host)) };
+    phone();
+    await renderPage("/agents", async () => {
+      await eventually(() => dom.document.querySelector(MENU) !== null, 4_000, "the sidebar");
+      seen = { drawer: words(drawer()), shade: words(shade()) };
     });
-    expect(seen.drawer).toEqual(expect.arrayContaining(["pointer-events-none", "lg:pointer-events-auto"]));
+    expect(seen.drawer).toContain("pointer-events-none");
     expect(seen.shade).toContain("pointer-events-none");
   });
 
   test("a tab closes More, the tab of the page you are on too, and More closes what it opened", async () => {
     const seen: Record<string, string | null> = {};
+    phone();
     await renderPage("/agents", async (host, app) => {
       await eventually(() => moreButton(host) !== null, 4_000, "the tab bar's More");
       const expanded = () => moreButton(host)!.getAttribute("aria-expanded");

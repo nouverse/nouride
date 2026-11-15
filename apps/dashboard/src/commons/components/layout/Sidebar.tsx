@@ -5,13 +5,26 @@
  */
 
 import { Link } from "@tanstack/react-router";
-import { LogOut, Moon, PanelLeftClose, Sun, X } from "lucide-react";
+import { LogOut, Moon, PanelLeftClose, Sun } from "lucide-react";
 import type { Principal } from "@nouride/wire";
 import { Mascot } from "@/commons/components/brand/Mascot";
 import { BoxCard } from "@/commons/components/layout/BoxCard";
 import { SidebarNav } from "@/commons/components/layout/nav";
 import { SidebarVersion } from "@/commons/components/layout/SidebarVersion";
 import type { Theme } from "@/commons/lib/theme";
+
+/** Nouride's name, its head and its version: the sidebar's head, and the head of More's sheet. */
+export function SidebarBrand() {
+  return (
+    <Link to="/" className="group flex items-center gap-2.5">
+      <Mascot pose="head" decorative className="w-9 transition-transform duration-150 group-active:scale-95" />
+      <div className="leading-tight">
+        <p className="font-display text-lg font-medium tracking-tight text-base-content">Nouride</p>
+        <SidebarVersion />
+      </div>
+    </Link>
+  );
+}
 
 export function Sidebar({
   pathname,
@@ -20,7 +33,7 @@ export function Sidebar({
   theme,
   toggleTheme,
   signOut,
-  onClose,
+  inSheet = false,
   onFold,
 }: {
   pathname: string;
@@ -29,32 +42,25 @@ export function Sidebar({
   theme: Theme;
   toggleTheme: () => void;
   signOut: () => void;
-  /** Closes More on a phone. */
-  onClose: () => void;
+  /** Drawn in More's sheet on a phone, under the sheet's head. */
+  inSheet?: boolean;
   /** Folds the menu to its icons: offered on Chats only. */
   onFold?: () => void;
 }) {
   const label = principal?.user?.displayName?.trim() ?? "";
   return (
     <div className="flex h-full w-full flex-col lg:w-64">
-      <div className="flex h-16 shrink-0 items-center justify-between px-5">
-        <Link to="/" className="group flex items-center gap-2.5">
-          <Mascot pose="head" decorative className="w-9 transition-transform duration-150 group-active:scale-95" />
-          <div className="leading-tight">
-            <p className="font-display text-lg font-medium tracking-tight text-base-content">Nouride</p>
-            <SidebarVersion />
-          </div>
-        </Link>
-        {onFold ? (
-          <button type="button" className="btn btn-ghost btn-square hidden size-10 text-base-content/70 hover:text-base-content lg:inline-flex" onClick={onFold} aria-label="Fold the menu to icons" title="Icons only">
-            <PanelLeftClose size={18} />
-          </button>
-        ) : null}
-        <button type="button" className="btn btn-ghost btn-square size-11 text-base-content/70 hover:text-base-content lg:hidden" onClick={onClose} aria-label="Close menu">
-          <X size={18} />
-        </button>
-      </div>
-
+      {/* In More's sheet, the sheet's own head carries the name and the close (`Sheet`). */}
+      {inSheet ? null : (
+        <div className="flex h-16 shrink-0 items-center justify-between px-5">
+          <SidebarBrand />
+          {onFold ? (
+            <button type="button" className="btn btn-ghost btn-square size-10 text-base-content/70 hover:text-base-content" onClick={onFold} aria-label="Fold the menu to icons" title="Icons only">
+              <PanelLeftClose size={18} />
+            </button>
+          ) : null}
+        </div>
+      )}
       <SidebarNav pathname={pathname} where={where} />
 
       <div className="shrink-0 space-y-2 p-3">

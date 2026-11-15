@@ -19,8 +19,9 @@ import { useSignOut } from "@/commons/components/layout/sign-out";
 import { gatewayPage } from "@/commons/lib/bundled-gateway";
 import { isPairedBox } from "@/commons/lib/api.appliance";
 import { HELD_BOTTOM, PAGE_BOTTOM } from "@/commons/components/ui/ScrollCard";
-import { DRAWER_MOTION, DRAWER_SHADE, SHADE_PLACE, SHEET_BOX, SHEET_PLACE } from "@/commons/components/ui/Drawer";
-import { Sidebar } from "@/commons/components/layout/Sidebar";
+import { Sheet } from "@/commons/components/ui/Sheet";
+import { Sidebar, SidebarBrand } from "@/commons/components/layout/Sidebar";
+import { useLaptop } from "@/commons/hooks/use-wide";
 import { PHONE_CHAT_SPACE, TAB_BAR_SPACE, TabBar } from "@/commons/components/layout/TabBar";
 import { CompactSidebar } from "@/commons/components/layout/CompactSidebar";
 import { FloatingChat } from "@/commons/components/floating-chat/FloatingChat";
@@ -89,6 +90,7 @@ export function RootLayout() {
   const [theme, toggleTheme] = useTheme();
   /** More, on a phone: the menu's other pages, as a sheet that slides up over the page. */
   const [moreOpen, setMoreOpen] = useState(false);
+  const laptop = useLaptop();
   /** The menu expanded beside Chats, where it is folded to icons unless this browser chose otherwise (`CompactSidebar`). */
   const [menuOpen, setMenuOpen] = useKept(CHAT_MENU_KEY, false, isBoolean);
   const { total } = useNeedsYou();
@@ -161,8 +163,8 @@ export function RootLayout() {
       theme={theme}
       toggleTheme={toggleTheme}
       signOut={signOut}
-      onClose={() => setMoreOpen(false)}
-      {...(chats ? { onFold: () => setMenuOpen(false) } : {})}
+      inSheet={!laptop}
+      {...(chats && laptop ? { onFold: () => setMenuOpen(false) } : {})}
     />
   );
 
@@ -172,39 +174,18 @@ export function RootLayout() {
     <div className="bg-app flex h-dvh flex-col overflow-hidden pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] text-base-content selection:bg-secondary/20">
       {/* Beside the menu, not in it: folded on Chats, the menu that holds Sign out on a phone is not drawn on a laptop. */}
       {signOutDialog}
-      {/* The sidebar, drawn once: fixed beside the page from a laptop's width up, and on a phone More, a sheet that slides
-          up over a shade that fades, and slides back down. It stays drawn so it can be seen to go: drawn only while
-          open, it came and went at once. Hidden once down (`invisible`), it and the shade take no click and no focus.
-          Only their place and opacity move. */}
-      <button
-        type="button"
-        className={cn("fixed inset-0 z-40 lg:hidden", DRAWER_SHADE, moreOpen ? SHADE_PLACE.open : SHADE_PLACE.closed)}
-        onClick={() => setMoreOpen(false)}
-        aria-label="Close menu"
-      />
-      <div
-        className={cn(
-          // A phone's More is a sheet as every drawer is (`Drawer`): the same corners, ground and motion.
-          "fixed inset-x-0 bottom-0 z-50 flex flex-col",
-          SHEET_BOX,
-          // Room at its foot for the tab bar, which stays over it while it is open (`TabBar`).
-          TAB_BAR_SPACE,
-          DRAWER_MOTION,
-          "lg:pointer-events-auto lg:visible lg:inset-y-0 lg:right-auto lg:left-0 lg:z-30 lg:max-h-none lg:translate-y-0 lg:rounded-none lg:border-r lg:border-base-content/[0.06] lg:p-0 lg:shadow-none",
-          moreOpen ? SHEET_PLACE.open : SHEET_PLACE.closed,
-        )}
-      >
-        {compact ? (
-          <>
-            <div className="hidden h-full lg:flex">
-              <CompactSidebar pathname={pathname} where={where} onExpand={() => setMenuOpen(true)} theme={theme} toggleTheme={toggleTheme} signOut={signOut} />
-            </div>
-            <div className="contents lg:hidden">{sidebar}</div>
-          </>
-        ) : (
-          sidebar
-        )}
-      </div>
+      {/* The sidebar, drawn once: fixed beside the page from a laptop's width up, and below it More, a sheet as every
+          sheet is (`Sheet`): its head Nouride's name and a close, a swipe down on it puts it away. */}
+      {laptop ? (
+        <div className="fixed inset-y-0 left-0 z-30 flex border-r border-base-content/[0.06] bg-base-200">
+          {compact ? <CompactSidebar pathname={pathname} where={where} onExpand={() => setMenuOpen(true)} theme={theme} toggleTheme={toggleTheme} signOut={signOut} /> : sidebar}
+        </div>
+      ) : (
+        // Room at its foot for the tab bar, which stays over it while it is open (`TabBar`).
+        <Sheet open={moreOpen} onClose={() => setMoreOpen(false)} label="Menu" title={<SidebarBrand />} closeLabel="Close menu" className={TAB_BAR_SPACE}>
+          {sidebar}
+        </Sheet>
+      )}
 
       <div className={cn("flex h-full min-h-0 flex-1 flex-col overflow-hidden", compact ? "lg:pl-[5.5rem]" : "lg:pl-64")}>
         {/* A phone's header: the name, and the way back to Nouride Home inside its app. The rest is the tab bar's. */}

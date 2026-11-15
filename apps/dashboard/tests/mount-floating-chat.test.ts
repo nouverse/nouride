@@ -548,12 +548,14 @@ describe("on a phone", () => {
       expect(card()).toBeNull();
       expect(sheet()!.getAttribute("role")).toBe("dialog");
       expect(sheet()!.getAttribute("aria-label")).toBe("Chat with Nouva");
+      // Its own head, with the line to minimize, is where a swipe down starts, as on every sheet's head (`Sheet`).
+      expect(sheet()!.querySelector('header[data-sheet-grab] button[aria-label="Minimize the chat"]')).not.toBeNull();
       await eventually(() => sheet()!.textContent?.includes("is the disk full?") === true, 3_000, "the transcript");
       expect(focused()).not.toBe(boxIn(sheet()));
       (sheet()!.querySelector('button[aria-label="Minimize the chat"]') as HTMLElement).click();
       await eventually(() => sheet() === null, 2_000, "the sheet put away");
       // And what was in it is let go a moment after: closed, no conversation is drawn.
-      await eventually(() => dom.document.querySelector('[data-drawer="bottom"][aria-label^="Chat with "] textarea') === null, 2_000, "the conversation gone");
+      await eventually(() => dom.document.querySelector('[data-sheet][aria-label^="Chat with "] textarea') === null, 2_000, "the conversation gone");
     });
   });
 
