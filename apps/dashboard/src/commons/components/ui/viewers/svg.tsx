@@ -33,7 +33,7 @@ export default function SvgPicture({ text, onFail }: ViewerProps) {
       >
         <img src={src} alt="A picture drawn from SVG" onError={onFail} className="block h-auto max-h-96 max-w-full" />
       </button>
-      <Leaving value={open && src}>{(picture) => <Lightbox src={picture} name="picture.svg" light onClose={() => setOpen(false)} />}</Leaving>
+      <Leaving value={open && src}>{(picture) => <Lightbox pictures={[{ src: picture, name: "picture.svg" }]} light onClose={() => setOpen(false)} />}</Leaving>
     </>
   );
 }

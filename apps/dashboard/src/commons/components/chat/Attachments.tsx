@@ -16,8 +16,8 @@
  * — the fact that it *was* sent is part of the conversation — but it does not pretend to be openable.
  */
 
-import { useState } from "react";
-import { ExternalLink, ImageOff, Video } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Download, ExternalLink, ImageOff, LoaderCircle, Video } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import type { TurnAttachment } from "@nouride/wire";
 import { fileIconFor } from "@/commons/components/ui/FileDrop";
@@ -25,6 +25,7 @@ import { isMarkdownFile, MarkdownPreview } from "@/commons/components/ui/Markdow
 import { formatBytes } from "@/commons/lib/format";
 import { Leaving } from "@/commons/components/ui/OverPage";
 import { Lightbox } from "@/commons/components/ui/Lightbox";
+import { archiveName, archiveOf, saveAs } from "@/commons/lib/download-all";
 
 function isImage(file: TurnAttachment): boolean {
   return file.mimeType.startsWith("image/") || file.kind === "image";
@@ -178,6 +179,34 @@ function FileRow({ src, file, onRead }: { src: string | null; file: TurnAttachme
   );
 }
 
+/**
+ * "Download all": a message's files as one archive, built in the browser (`commons/lib/download-all.ts`), for a set
+ * of two or more that are still on disk. It says how far it is while it fetches, and which file stopped it.
+ */
+function DownloadAll({ files, align }: { files: { name: string; url: string }[]; align: "start" | "end" }) {
+  const [state, setState] = useState<{ done: number } | { failed: string } | null>(null);
+  const busy = state !== null && "done" in state;
+  const run = async () => {
+    setState({ done: 0 });
+    try {
+      const archive = await archiveOf(files, (done) => setState({ done }));
+      saveAs(archive, archiveName(files.map((file) => file.name)));
+      setState(null);
+    } catch (err) {
+      setState({ failed: err instanceof Error ? err.message : String(err) });
+    }
+  };
+  return (
+    <div className={`flex flex-wrap items-center gap-2 text-[11px] ${align === "end" ? "justify-end" : "justify-start"}`}>
+      <button type="button" className="btn btn-ghost btn-xs max-sm:btn-sm gap-1 rounded-lg text-base-content/75" onClick={() => void run()} disabled={busy}>
+        {busy ? <LoaderCircle size={12} className="animate-spin" aria-hidden="true" /> : <Download size={12} aria-hidden="true" />}
+        {busy ? `Getting ${state.done} of ${files.length}…` : `Download all (${files.length})`}
+      </button>
+      {state !== null && "failed" in state && <span className="text-error">Not downloaded: {state.failed}.</span>}
+    </div>
+  );
+}
+
 export function AttachmentList({
   sessionId,
   files,
@@ -187,11 +216,22 @@ export function AttachmentList({
   files: TurnAttachment[];
   align?: "start" | "end";
 }) {
-  const [open, setOpen] = useState<{ src: string; name: string } | null>(null);
+  /** Which of the message's pictures is open: they open as one set, a gallery. */
+  const [open, setOpen] = useState<number | null>(null);
   /** A markdown file read in place (0.8.11) — a mission's `report.md` above all — not a download. */
   const [reading, setReading] = useState<{ src: string; name: string } | null>(null);
+  // One object while the same picture is asked for: `Leaving` keeps what it was given, and the first picture is 0.
+  const opened = useMemo(() => (open === null ? null : { at: open }), [open]);
 
   if (files.length === 0) return null;
+  const pictures = files.flatMap((file) => {
+    const src = api.attachmentUrl(sessionId, file);
+    return isImage(file) && src ? [{ src, name: file.name }] : [];
+  });
+  const kept = files.flatMap((file) => {
+    const url = api.attachmentUrl(sessionId, file);
+    return url ? [{ name: file.name, url }] : [];
+  });
 
   return (
     <>
@@ -206,7 +246,7 @@ export function AttachmentList({
                 key={`${file.name}-${index}`}
                 src={src}
                 file={file}
-                onOpen={() => setOpen({ src, name: file.name })}
+                onOpen={() => setOpen(pictures.findIndex((picture) => picture.src === src))}
               />
             );
           }
@@ -222,8 +262,9 @@ export function AttachmentList({
           return <FileRow key={`${file.name}-${index}`} src={src} file={file} />;
         })}
       </div>
+      {kept.length > 1 && <DownloadAll files={kept} align={align} />}
 
-      <Leaving value={open}>{(image) => <Lightbox src={image.src} name={image.name} onClose={() => setOpen(null)} />}</Leaving>
+      <Leaving value={pictures.length > 0 && opened}>{({ at }) => <Lightbox pictures={pictures} at={at} onClose={() => setOpen(null)} />}</Leaving>
       <Leaving value={reading}>{(file) => <MarkdownPreview name={file.name} url={file.src} onClose={() => setReading(null)} />}</Leaving>
     </>
   );
