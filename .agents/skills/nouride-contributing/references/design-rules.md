@@ -175,8 +175,9 @@ pose=…>` or `<EmptyState pose=…>`; which state takes which pose is the table
   still under the pointer. Check a page with the wheel over the middle of its list, not by scrolling it
   from a script.
 - A row of a list is one thing to press. Where it opens something under it, the whole line is the button
-  and what leaves the page is a named button inside what opened. Opening it never moves the page under the
-  pointer.
+  and what leaves the page is a named button inside what opened. What a press opens is shown where the
+  press was (a cat picked in the Office has its card under the Office, not in a row far below), so nothing
+  ever has to move the page under the pointer, and what opened can be closed from where it is.
 - A page held to the window (`fillsViewport`, `FILL_PAGE`) has its padding inside the height it is held to,
   so what runs past the window has none under it: `FILL_PAGE` carries a foot for that. Its list is a
   `ScrollArea`, which ends with `HELD_END`.

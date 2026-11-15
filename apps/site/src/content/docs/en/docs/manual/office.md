@@ -36,12 +36,12 @@ many of those elsewhere are waiting for you.
 
 Under the office every agent is a row: its cat, its name, what answers it, where it is reached and what it is doing.
 
-Click a cat, or press its row anywhere, and that agent's row opens: what the agent is doing and where, with a link to
-each chat and mission, and **Details** for its page, **Open chat** for its latest chat (as its line in Chats does),
-**Sleep** or **Wake**, and **Edit look**. An admin also has **Workspace** there, which opens
-[the agent's own folder](/en/docs/manual/dashboard/#workspace). A press on the row opens it and goes nowhere: the
-agent's page is **Details**. The page stays where it is, and moves only when you pick a cat whose row is not on the
-screen.
+Click a cat and that agent's card opens right under the office, above the list: what the agent is doing and where,
+with a link to each chat and mission, and **Details** for its page, **Open chat** for its latest chat (as its line in
+Chats does), **Sleep** or **Wake**, and **Edit look**. An admin also has **Workspace** there, which opens
+[the agent's own folder](/en/docs/manual/dashboard/#workspace). The card closes with its **×**, with a second click on
+the cat, or when you pick another cat. A press anywhere on an agent's row in the list opens the same under that row. A
+press opens and goes nowhere: the agent's page is **Details**. The page never moves under your hand.
 
 The page asks for the agents' statuses every five seconds while it is open and in view, and nothing while it is not.
 It moves nothing if your system asks for reduced motion, and on a phone it shrinks to fit.

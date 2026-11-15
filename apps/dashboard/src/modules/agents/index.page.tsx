@@ -15,7 +15,7 @@ import { agentModel, orchestratorFirst } from "@/commons/lib/agents";
 import { isAdmin, useMe } from "@/commons/lib/session";
 import { Card, EmptyState, ErrorNote, PageHeader } from "@/commons/components/ui/ui";
 import { NewAgentForm } from "./components/NewAgentForm";
-import { AgentRows, type Picked } from "./components/AgentRows";
+import { AgentRows, PickedAgent } from "./components/AgentRows";
 import { ListLoading } from "@/commons/components/ui/Spinner";
 import { SearchInput } from "@/commons/components/ui/SearchInput";
 import { StickyBar } from "@/commons/components/ui/StickyBar";
@@ -42,15 +42,16 @@ export default function AgentListPage() {
   const counts = Object.fromEntries(AGENT_FILTERS.map((entry) => [entry.id, agents.filter((agent) => inFilter(agent, entry.id)).length])) as Record<AgentFilter, number>;
   // By its name, its id, what answers it or what it is for: with many agents, the one wanted is typed, not looked for.
   const [query, setQuery] = useState("");
-  const shown = useTextFilter(agents.filter((agent) => inFilter(agent, filter)), query, (agent) => [agent.displayName, agent.id, agent.headline, agentModel(agent)]);
-  /** The agent whose row is open: picked as a cat in the Office, or opened on its row. */
-  const [open, setOpen] = useState<string | null>(null);
-  /** The cat last picked in the Office: its row is brought into view only when none of it is on the screen. */
-  const [picked, setPicked] = useState<Picked | null>(null);
-  const pick = (agentId: string | null) => {
-    setOpen(agentId);
-    if (agentId) setPicked({ agentId });
-  };
+  const listed = useTextFilter(agents.filter((agent) => inFilter(agent, filter)), query, (agent) => [agent.displayName, agent.id, agent.headline, agentModel(agent)]);
+  /**
+   * The agent shown, and where: a cat picked in the Office has its card right under the Office, where the press was;
+   * a row pressed opens under that row. One at a time: the same agent's actions are never on the page twice.
+   */
+  const [shown, setShown] = useState<{ agentId: string; at: "office" | "row" } | null>(null);
+  const pick = (agentId: string | null) => setShown(agentId ? { agentId, at: "office" } : null);
+  const openRow = (agentId: string | null) => setShown(agentId ? { agentId, at: "row" } : null);
+  const platformsOf = (agentId: string) => (gateways.data?.gateways ?? []).filter((gateway) => gateway.agent === agentId).map((gateway) => gateway.platform);
+  const picked = shown?.at === "office" ? agents.find((agent) => agent.id === shown.agentId) : undefined;
   // From every agent: an agent's look is the same here, in the Office and on its Look tab.
   const looks = useMemo(() => looksOf(status.data?.agents ?? []), [status.data]);
 
@@ -140,8 +141,9 @@ export default function AgentListPage() {
         </Card>
       ) : (
         <>
-          {/* The office first: who is doing what, at a glance. Picking a cat opens that agent's row below. */}
-          <OfficeView selected={open} onSelect={pick} />
+          {/* The office first: who is doing what, at a glance. Picking a cat shows that agent right under it. */}
+          <OfficeView selected={picked ? picked.id : null} onSelect={pick} />
+          {picked ? <PickedAgent row={{ agent: picked, platforms: platformsOf(picked.id) }} orchestrator={orchestrator} look={looks.get(picked.id)} onClose={() => setShown(null)} /> : null}
           {/* The filter and the search stay at the top of the window while the list scrolls under them. */}
           <StickyBar
             label="Which agents"
@@ -153,18 +155,17 @@ export default function AgentListPage() {
               onChange={setFilter}
             />
           </StickyBar>
-          {shown.length === 0 ? (
+          {listed.length === 0 ? (
             <EmptyState pose="searching" title={query.trim() ? `Nothing matches “${query}”` : `No ${filter} agents`} />
           ) : (
             // Keyed by the filter, so the list it narrows is drawn anew and fades in.
             <div key={filter}>
               <AgentRows
-                rows={shown.map((agent) => ({ agent, platforms: (gateways.data?.gateways ?? []).filter((gateway) => gateway.agent === agent.id).map((gateway) => gateway.platform) }))}
+                rows={listed.map((agent) => ({ agent, platforms: platformsOf(agent.id) }))}
                 orchestrator={orchestrator}
                 looks={looks}
-                open={open}
-                onOpen={setOpen}
-                picked={picked}
+                open={shown?.at === "row" ? shown.agentId : null}
+                onOpen={openRow}
               />
             </div>
           )}
