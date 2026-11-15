@@ -85,6 +85,8 @@ describe("an html block in a reply", () => {
       expect(drawn.hasAttribute("srcdoc")).toBe(false);
       const dialog = drawn.closest('[role="dialog"]')!;
       expect(dialog.getAttribute("aria-label")).toBe("Preview of an html block");
+      // As wide as the screen leaves it, never a width of its own that a phone's screen is narrower than.
+      expect(drawn.parentElement!.className.split(" ")).toEqual(expect.arrayContaining(["w-full", "max-w-[76rem]"]));
       // The same address in a tab of its own, where the daemon's policy still holds it.
       expect(dialog.querySelector("a")!.getAttribute("href")).toBe(drawn.getAttribute("src"));
       expect(dialog.querySelector("a")!.getAttribute("rel")).toBe("noopener noreferrer");

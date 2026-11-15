@@ -194,55 +194,60 @@ function RoomMenu({ room, data, refresh, answer, onRename, onDelete, deleting }:
       <DropdownMenu trigger={<Ellipsis size={17} aria-hidden="true" />} triggerClassName={cn(HEADER_BUTTON, "w-11 px-0 sm:w-9")} ariaLabel="More for this room" width={260} menuClassName={MENU}>
         {(close) => (
           <MenuPages answer={answer} close={close}>
-            <li>
-              <button type="button" className="min-h-11 gap-3 rounded-xl text-sm" onClick={() => { close(); onRename(); }}>
-                <Pencil size={16} aria-hidden="true" /> Rename room
-              </button>
-            </li>
-            {members.length > 1
-              ? members.map((agentId) => (
-                  <li key={agentId}>
-                    <button
-                      type="button"
-                      className="min-h-11 gap-3 rounded-xl text-sm"
-                      disabled={removeMember.isPending}
-                      onClick={async () => {
-                        close();
-                        const confirmed = await ask({
-                          title: `Take ${data.nameOf(agentId)} out of this room?`,
-                          body: <>It stops getting messages here. What it already said stays in the room.</>,
-                          confirmLabel: "Take out",
-                        });
-                        if (confirmed) removeMember.mutate(agentId);
-                      }}
-                    >
-                      <UserMinus size={16} aria-hidden="true" /> Take {data.nameOf(agentId)} out
-                    </button>
-                  </li>
-                ))
-              : null}
-            <li>
-              <button
-                type="button"
-                className="min-h-11 gap-3 rounded-xl text-sm text-error"
-                disabled={deleting}
-                onClick={async () => {
-                  close();
-                  const confirmed = await ask({
-                    title: "Delete this room?",
-                    body: (
-                      <>
-                        The room, its history, and every member&apos;s conversation in it are deleted: {members.join(", ")}. Anything running here is cancelled. There is no undo.
-                      </>
-                    ),
-                    confirmLabel: "Delete room",
-                  });
-                  if (confirmed) onDelete();
-                }}
-              >
-                <Trash2 size={16} aria-hidden="true" /> Delete room
-              </button>
-            </li>
+            {(whoAnswers) => (
+              <>
+                <li>
+                  <button type="button" className="min-h-11 gap-3 rounded-xl text-sm" onClick={() => { close(); onRename(); }}>
+                    <Pencil size={16} aria-hidden="true" /> Rename room
+                  </button>
+                </li>
+                {whoAnswers}
+                {members.length > 1
+                  ? members.map((agentId) => (
+                      <li key={agentId}>
+                        <button
+                          type="button"
+                          className="min-h-11 gap-3 rounded-xl text-sm"
+                          disabled={removeMember.isPending}
+                          onClick={async () => {
+                            close();
+                            const confirmed = await ask({
+                              title: `Take ${data.nameOf(agentId)} out of this room?`,
+                              body: <>It stops getting messages here. What it already said stays in the room.</>,
+                              confirmLabel: "Take out",
+                            });
+                            if (confirmed) removeMember.mutate(agentId);
+                          }}
+                        >
+                          <UserMinus size={16} aria-hidden="true" /> Take {data.nameOf(agentId)} out
+                        </button>
+                      </li>
+                    ))
+                  : null}
+                <li>
+                  <button
+                    type="button"
+                    className="min-h-11 gap-3 rounded-xl text-sm text-error"
+                    disabled={deleting}
+                    onClick={async () => {
+                      close();
+                      const confirmed = await ask({
+                        title: "Delete this room?",
+                        body: (
+                          <>
+                            The room, its history, and every member&apos;s conversation in it are deleted: {members.join(", ")}. Anything running here is cancelled. There is no undo.
+                          </>
+                        ),
+                        confirmLabel: "Delete room",
+                      });
+                      if (confirmed) onDelete();
+                    }}
+                  >
+                    <Trash2 size={16} aria-hidden="true" /> Delete room
+                  </button>
+                </li>
+              </>
+            )}
           </MenuPages>
         )}
       </DropdownMenu>
@@ -256,7 +261,7 @@ function RoomMenu({ room, data, refresh, answer, onRename, onDelete, deleting }:
  * beside the members' tags, which a phone does not draw. Drawn only while the menu is open, so it opens on its first
  * page each time.
  */
-function MenuPages({ answer, close, children }: { answer: RoomAnswer | null; close: () => void; children: ReactNode }) {
+function MenuPages({ answer, close, children }: { answer: RoomAnswer | null; close: () => void; /** The menu's first page, handed the entry that opens the second to put among its own. */ children: (whoAnswers: ReactNode) => ReactNode }) {
   const [picking, setPicking] = useState(false);
   if (picking && answer) {
     return (
@@ -270,16 +275,13 @@ function MenuPages({ answer, close, children }: { answer: RoomAnswer | null; clo
       </>
     );
   }
-  return (
-    <>
-      {children}
-      {answer ? (
-        <li className="md:hidden">
-          <button type="button" className="min-h-11 gap-3 rounded-xl text-sm" onClick={() => setPicking(true)}>
-            <AtSign size={16} aria-hidden="true" /> Who answers with no tag
-          </button>
-        </li>
-      ) : null}
-    </>
+  return children(
+    answer ? (
+      <li className="md:hidden">
+        <button type="button" className="min-h-11 gap-3 rounded-xl text-sm" onClick={() => setPicking(true)}>
+          <AtSign size={16} aria-hidden="true" /> Who answers with no tag
+        </button>
+      </li>
+    ) : null,
   );
 }

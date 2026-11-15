@@ -68,4 +68,27 @@ describe("interleaving a room", () => {
 
     expect(ids(out)).toEqual(["both", "nouva", "nero"]);
   });
+
+  test("an asked agent's answer said in the room is above the turn that asked for it, whose own answer came after", () => {
+    // Nouva's turn began at 100 and ended at 400; Nix's answer was said at 300, while Nouva still worked.
+    const asking = { id: "nouva-asks", startedAt: 100, endedAt: 400, agentId: "nouva" } as ChatTurn;
+    const shown = { id: "nix-answers", startedAt: 300, endedAt: 300, agentId: "nix", cause: { via: "shown answer", asked: "nouva", parent: "nouva-asks" } } as ChatTurn;
+    expect(ids(interleave([asking, shown], [], [event("delegated", 150)], [message("ask", 100), message("later", 500)]))).toEqual(["ask", "nix-answers", "nouva-asks", "delegated", "later"]);
+    // The asking turn still at work: the same place, above its progress.
+    const working = { id: "nouva-asks", startedAt: 100, agentId: "nouva", status: "running" } as LiveTurn;
+    expect(ids(interleave([shown], [working], [], [message("ask", 100)]))).toEqual(["ask", "nix-answers", "nouva-asks"]);
+  });
+
+  test("one said after the asking turn had ended, an ask behind that turn, is where it was said", () => {
+    const asking = { id: "nouva-asks", startedAt: 100, endedAt: 200, agentId: "nouva" } as ChatTurn;
+    const shown = { id: "nix-answers", startedAt: 900, agentId: "nix", cause: { via: "shown answer", parent: "nouva-asks" } } as ChatTurn;
+    expect(ids(interleave([asking, shown], [], [], [message("ask", 100), message("meanwhile", 500)]))).toEqual(["ask", "nouva-asks", "meanwhile", "nix-answers"]);
+    // And one whose asking turn is no longer among what is drawn, or that names none.
+    expect(ids(interleave([shown], [], [], [message("meanwhile", 500)]))).toEqual(["meanwhile", "nix-answers"]);
+    const nameless = { id: "nix-answers", startedAt: 900, agentId: "nix", cause: { via: "shown answer" } } as ChatTurn;
+    expect(ids(interleave([asking, nameless], [], [], []))).toEqual(["nouva-asks", "nix-answers"]);
+    // Another turn's cause that names a parent is not this: a delegate's own turn stays where it began.
+    const other = { id: "job-turn", startedAt: 300, agentId: "nix", cause: { via: "job completion", parent: "nouva-asks" } } as ChatTurn;
+    expect(ids(interleave([{ ...asking, endedAt: 400 }, other], [], [], []))).toEqual(["nouva-asks", "job-turn"]);
+  });
 });

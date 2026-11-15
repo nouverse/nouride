@@ -153,6 +153,10 @@ describe("a room's header, for an admin", () => {
         await eventually(() => item("Who answers with no tag") !== undefined, 2_000, "the menu's entry");
         // Only below a laptop's width: beside the tags it is already there.
         expect(item("Who answers with no tag")!.closest("li")!.className).toContain("md:hidden");
+        // Among the room's own entries, above the ones that take something away.
+        const order = items().map((one) => one.textContent?.trim());
+        expect(order.indexOf("Who answers with no tag")).toBe(order.indexOf("Rename room") + 1);
+        expect(order.at(-1)).toBe("Delete room");
         expect(rows(host).length).toBe(0);
         item("Who answers with no tag")!.click();
         await eventually(() => rows(host).length > 0, 2_000, "the choices");

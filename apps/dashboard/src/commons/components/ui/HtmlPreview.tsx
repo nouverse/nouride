@@ -27,7 +27,7 @@ export function HtmlPreview({ src, name, onClose }: { src: string; name: string;
   return overPage(
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-2 backdrop-blur-sm animate-fade sm:p-4" role="dialog" aria-label={`Preview of ${name}`}>
       <button type="button" className="absolute inset-0 cursor-default" aria-label="Close" onClick={onClose} />
-      <div className="relative z-10 flex h-[90dvh] w-[min(98vw,76rem)] flex-col overflow-hidden rounded-2xl border border-base-content/10 bg-base-100 shadow-2xl animate-enter">
+      <div className="relative z-10 flex h-[90dvh] w-full max-w-[76rem] flex-col overflow-hidden rounded-2xl border border-base-content/10 bg-base-100 shadow-2xl animate-enter">
         <div className="flex shrink-0 items-center gap-1 border-b border-base-content/[0.08] py-1.5 pr-1.5 pl-4">
           <span className="min-w-0 flex-1 truncate font-mono text-xs text-base-content/70">{name}</span>
           {/* In a tab it is under the same policy: the daemon sends it with the page, whatever frames it. */}
