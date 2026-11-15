@@ -121,7 +121,7 @@ Four ways in.
 be installed from a hub: the **Explore** tab on the Skills page, `nouride skills search` /
 `nouride skills install`, or an agent asking with `skill_search` / `skill_install`.
 
-**A search asks Nouverse's catalog** (0.8.39). Nouverse keeps a list of public skills (ClawHub's whole list, and the
+**A search asks Nouverse's catalog** (0.8.38). Nouverse keeps a list of public skills (ClawHub's whole list, and the
 skills of the GitHub repositories it follows) in its own order, its picks first. Explore opens on that list and
 searches it, and so do `nouride skills search` and `skill_search`; a pick is marked as one, and a search says how
 many match. When the catalog does not answer, the public lists are asked directly, as before, and the answer says

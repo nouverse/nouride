@@ -98,7 +98,7 @@ agent memeriksanya, kamu ditanya, dan baru dengan jawaban ya dari kamu sesuatu d
 
 ### Beberapa sekaligus
 
-Satu langkah bisa memulai beberapa hal sekaligus (0.8.39): dua sampai lima, masing-masing berupa pertanyaan ke agent
+Satu langkah bisa memulai beberapa hal sekaligus (0.8.38): dua sampai lima, masing-masing berupa pertanyaan ke agent
 atau perintah yang dijalankan. Semuanya mulai bersamaan, masing-masing menerima apa yang dikatakan langkah
 sebelumnya, dan langkah itu selesai saat yang terakhir selesai. Apa yang mereka katakan diteruskan sebagai satu teks,
 masing-masing di bawah namanya (nama yang kamu beri, nama agent, atau perintahnya), tanpa model di antaranya. Kalau
@@ -208,7 +208,7 @@ nouride cron add --name "shop-check" --every 10m --steps shop-check.json \
   --agent nouva --gateway telegram:nouva --chat 123456789
 ```
 
-Jenis lainnya adalah `systemEvent` (pesan, dengan `text`) dan `parallel` (beberapa sekaligus, 0.8.39): `steps`-nya
+Jenis lainnya adalah `systemEvent` (pesan, dengan `text`) dan `parallel` (beberapa sekaligus, 0.8.38): `steps`-nya
 berisi dua sampai lima `agentTurn` dan `command`, ditulis seperti langkah-langkah itu. `agentTurn` dan `mission`
 menerima `agentId` untuk agent lain, dan `approval` menerima `timeoutMs`. Nouride membaca file itu dan menolak
 langkah yang gak bisa dijalankannya, dengan menyebut langkahnya.

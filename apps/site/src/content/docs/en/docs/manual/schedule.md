@@ -92,7 +92,7 @@ you are asked, and only with your yes is anything restarted.
 
 ### Several at the same time
 
-A step can start several things at once (0.8.39): two to five, each what to ask an agent or a command to run. They
+A step can start several things at once (0.8.38): two to five, each what to ask an agent or a command to run. They
 start together, each handed what the step before said, and the step is done when the last of them is. What they said
 goes on as one text, each under its name (the name you gave it, the agent, or the command), with no model between.
 As the last step, that text is what the automation sends.
@@ -198,7 +198,7 @@ nouride cron add --name "shop-check" --every 10m --steps shop-check.json \
   --agent nouva --gateway telegram:nouva --chat 123456789
 ```
 
-The other kinds are `systemEvent` (a message, with `text`) and `parallel` (several at the same time, 0.8.39): its
+The other kinds are `systemEvent` (a message, with `text`) and `parallel` (several at the same time, 0.8.38): its
 `steps` are two to five of `agentTurn` and `command`, written as those steps are. `agentTurn` and `mission` take an
 `agentId` for another agent, and `approval` a `timeoutMs`. Nouride reads the file and refuses a step it cannot run,
 naming it.

@@ -405,7 +405,7 @@ at most and the rest counted. Work somebody else asked for in a private chat is 
 words, only its kind, its folder and its time. This tells the agent and locks nothing: avoiding a
 clash is still the agent's call.
 
-**Work one agent did for another reaches both of them (0.8.39).** When an agent asks another for
+**Work one agent did for another reaches both of them (0.8.38).** When an agent asks another for
 something, or starts a mission for it, the report goes back to the one that asked. That used to be
 all of it: the agent that did the work had no trace of it in its own chats, so when you spoke of it
 there it read it as news and started from nothing. Now, for a day after such work ends, the agent

@@ -129,7 +129,7 @@ Empat jalan masuk.
 bisa dipasang dari hub: tab **Explore** di halaman Skills, `nouride skills search` /
 `nouride skills install`, atau agent yang memintanya lewat `skill_search` / `skill_install`.
 
-**Pencarian bertanya ke katalog Nouverse** (0.8.39). Nouverse menyimpan daftar skill publik (seluruh daftar ClawHub,
+**Pencarian bertanya ke katalog Nouverse** (0.8.38). Nouverse menyimpan daftar skill publik (seluruh daftar ClawHub,
 dan skill dari repositori GitHub yang diikutinya) dengan urutannya sendiri, pilihannya di depan. Explore dibuka
 dengan daftar itu dan mencarinya, begitu juga `nouride skills search` dan `skill_search`; skill pilihan diberi
 tanda, dan pencarian menyebut berapa yang cocok. Kalau katalognya gak menjawab, daftar-daftar publik ditanya

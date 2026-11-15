@@ -415,7 +415,7 @@ perintah latar beserta foldernya, paling banyak enam dan sisanya dihitung. Peker
 orang lain di chat pribadi disebut tanpa isinya, cuma jenisnya, foldernya, dan lamanya. Ini memberi
 tahu agent dan gak mengunci apa pun: menghindari tabrakan tetap keputusan agent.
 
-**Yang dikerjakan satu agent untuk agent lain sampai ke keduanya (0.8.39).** Saat sebuah agent
+**Yang dikerjakan satu agent untuk agent lain sampai ke keduanya (0.8.38).** Saat sebuah agent
 meminta sesuatu ke agent lain, atau memulai misi untuknya, laporannya kembali ke agent yang meminta.
 Dulu cuma itu: agent yang mengerjakan gak punya jejaknya di chat miliknya sendiri, jadi saat kamu
 menyebutnya di sana ia membacanya sebagai kabar baru dan mulai dari nol. Sekarang, selama sehari

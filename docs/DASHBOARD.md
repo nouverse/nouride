@@ -120,7 +120,7 @@ usually want to see everything that runs on its own at once. One automation's pa
 in the order they run, and who runs it and where it reports. A run is drawn over those same cards (done, failed,
 waiting, never reached), so the picture a person edits is the picture a run is read on (a step of several at the
 same time is one card, written as a short list of what starts together, and read in a run as how each of them went
-under its name, 0.8.39), and a suggested change is
+under its name, 0.8.38), and a suggested change is
 the same cards again with what it adds and changes marked. A job that does one thing is drawn as one step and stays
 saved as one thing until it needs to be a list. Nothing is saved as it is typed: the page keeps a draft and one bar
 saves it, because a list of steps half saved is a job that runs half of what was meant. `/schedule` and `/webhooks`
@@ -198,7 +198,7 @@ them lying. But they are one *workflow*: you judge a draft by what is already in
 |---|---|
 | **Live** | the pool: what the agents are actually carrying — opened first when nothing waits on you |
 | **Pending** | the queue, plus what was recently decided, for working through it — opened first when something waits |
-| **Explore** | opens on Nouverse's list of public skills, its picks first, and searches it on a button (0.8.39), as MCP's Explore does its catalog; ClawHub's most downloaded and the hubs themselves when Nouverse's list does not answer; a GitHub repository by its address; installing one makes it a pending draft, adjusted to Nouride's frontmatter, with nothing run |
+| **Explore** | opens on Nouverse's list of public skills, its picks first, and searches it on a button (0.8.38), as MCP's Explore does its catalog; ClawHub's most downloaded and the hubs themselves when Nouverse's list does not answer; a GitHub repository by its address; installing one makes it a pending draft, adjusted to Nouride's frontmatter, with nothing run |
 
 **The Self-Improving Skill panel lives on this page too**, collapsed above the tabs: `[skills.learning]` as
 three controls. The mode is a radio group of three — *Off*, *Propose, and wait for me* (`ask`, the
