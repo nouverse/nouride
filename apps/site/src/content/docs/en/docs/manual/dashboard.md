@@ -252,7 +252,7 @@ row's end, or a click on its cat in the Office, opens what you do with it withou
 **Open chat**, **Sleep** or **Wake**, **Workspace** for an admin, **Edit look**. A filter over the list narrows it to
 the agents that are active, idle, asleep or unavailable.
 
-![The agents list](/media/dashboard-agents.png)
+![The agents as rows under the Office, with Wren's row opened: Details, Open chat, Sleep, Workspace, Edit look](/media/dashboard-agents.png)
 
 ### Model versus Models
 

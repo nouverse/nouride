@@ -8,7 +8,7 @@ office, a workroom, the lobby and a bedroom, side by side over a hall. Each agen
 bed (the orchestrator's desk alone at the front of the workroom, a crown by its name).
 Home shows the same office, small and still, under **Your agents**, with each agent beside it as a chip.
 
-![The Office: Nouva, the orchestrator, and Ember at work (Ember under a red ! because it cannot work), Wren waiting for you, Kira and Pip on the sofa, Moss asleep, and Codey in bed because it cannot work](/media/dashboard-office.png)
+![Agents, opening on the Office: Nouva, the orchestrator, and Ember at work, Kira, Pip and Wren on the sofa, Moss asleep, and Codey in bed because it cannot work; under it the filter and the first of the agents' rows](/media/dashboard-office.png)
 
 ## Where a cat is
 
