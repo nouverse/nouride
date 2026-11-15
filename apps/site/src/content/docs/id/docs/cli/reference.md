@@ -356,7 +356,7 @@ Webhook adalah job yang sama, pakai `nouride cron` untuk `rm`, `enable`, `disabl
 nouride skills [agent] [-v]       # apa yang ditawarkan ke agent, dan kapan tiap skill dibaca
 nouride skills --all              # seluruh kumpulan: siapa yang menyalakannya, dan software yang kurang
 nouride skills on|off <skill> <agent>
-nouride skills search <kueri>     # skills.sh, ClawHub dan indeks well-known
+nouride skills search <kueri>     # katalog skill publik Nouverse; --source skills.sh,clawhub bertanya ke daftar itu
 nouride skills install <sumber>   # owner/repo, URL, clawhub:slug… - masuk sebagai draft
 nouride skills drafts             # apa yang diusulkan para agent
 nouride skills draft <id>         # satu draft utuh, beserta giliran asalnya

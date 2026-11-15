@@ -196,7 +196,7 @@ them lying. But they are one *workflow*: you judge a draft by what is already in
 |---|---|
 | **Live** | the pool: what the agents are actually carrying — opened first when nothing waits on you |
 | **Pending** | the queue, plus what was recently decided, for working through it — opened first when something waits |
-| **Explore** | opens on ClawHub's most downloaded skills (kept an hour); skills on skills.sh, ClawHub, well-known indexes or a GitHub repository; installing one makes it a pending draft, adjusted to Nouride's frontmatter, with nothing run |
+| **Explore** | opens on Nouverse's list of public skills, its picks first, and searches it on a button (0.8.39), as MCP's Explore does its catalog; ClawHub's most downloaded and the hubs themselves when Nouverse's list does not answer; a GitHub repository by its address; installing one makes it a pending draft, adjusted to Nouride's frontmatter, with nothing run |
 
 **The Self-Improving Skill panel lives on this page too**, collapsed above the tabs: `[skills.learning]` as
 three controls. The mode is a radio group of three — *Off*, *Propose, and wait for me* (`ask`, the

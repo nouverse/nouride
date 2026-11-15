@@ -121,6 +121,14 @@ Four ways in.
 be installed from a hub: the **Explore** tab on the Skills page, `nouride skills search` /
 `nouride skills install`, or an agent asking with `skill_search` / `skill_install`.
 
+**A search asks Nouverse's catalog** (0.8.39). Nouverse keeps a list of public skills (ClawHub's whole list, and the
+skills of the GitHub repositories it follows) in its own order, its picks first. Explore opens on that list and
+searches it, and so do `nouride skills search` and `skill_search`; a pick is marked as one, and a search says how
+many match. When the catalog does not answer, the public lists are asked directly, as before, and the answer says
+so. One list alone is still asked by name, `nouride skills search pdf --source skills.sh`, and
+[`NOURIDE_SKILLS_CATALOG_URL`](/en/docs/reference/environment/) set empty turns the catalog off. Nouverse only
+lists: installing fetches from the hub or the repository itself, as below.
+
 | Source | Install with |
 |---|---|
 | GitHub | `owner/repo`, `owner/repo/path/to/skill`, or a github.com URL. Installs every skill in it |
@@ -253,7 +261,7 @@ own approves everything waiting, or the Skills Workshop, whose tabs are one work
 |---|---|
 | **Live** | the pool: what the agents are actually carrying. Opened first when nothing waits on you |
 | **Pending** | the queue, plus what was recently decided. Opened first when something waits on you |
-| **Explore** | skills on the hubs, opening on ClawHub's most downloaded. Installing one puts it on Pending |
+| **Explore** | Nouverse's list of public skills, its picks first, with one search over it. Installing one puts it on Pending |
 
 Each draft row opens into the whole `SKILL.md`, editable in place, plus the scrubbed transcript of
 the turn it came from, or, for an install, where it came from and what was adjusted. Both are on the

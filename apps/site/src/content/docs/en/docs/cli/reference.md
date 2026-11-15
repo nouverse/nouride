@@ -346,7 +346,7 @@ Webhooks are the same jobs, use `nouride cron` for `rm`, `enable`, `disable`, `r
 nouride skills [agent] [-v]       # what an agent is offered, and when each was last read
 nouride skills --all              # the whole pool: who has it on, and missing software
 nouride skills on|off <skill> <agent>
-nouride skills search <query>     # skills.sh, ClawHub and well-known indexes
+nouride skills search <query>     # Nouverse's catalog of public skills; --source skills.sh,clawhub asks those lists
 nouride skills install <source>   # owner/repo, a URL, clawhub:slug… - arrives as a draft
 nouride skills drafts             # what the agents have proposed
 nouride skills draft <id>         # one draft in full, with the turn it came from

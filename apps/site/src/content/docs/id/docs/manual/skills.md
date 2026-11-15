@@ -129,6 +129,15 @@ Empat jalan masuk.
 bisa dipasang dari hub: tab **Explore** di halaman Skills, `nouride skills search` /
 `nouride skills install`, atau agent yang memintanya lewat `skill_search` / `skill_install`.
 
+**Pencarian bertanya ke katalog Nouverse** (0.8.39). Nouverse menyimpan daftar skill publik (seluruh daftar ClawHub,
+dan skill dari repositori GitHub yang diikutinya) dengan urutannya sendiri, pilihannya di depan. Explore dibuka
+dengan daftar itu dan mencarinya, begitu juga `nouride skills search` dan `skill_search`; skill pilihan diberi
+tanda, dan pencarian menyebut berapa yang cocok. Kalau katalognya gak menjawab, daftar-daftar publik ditanya
+langsung seperti sebelumnya, dan jawabannya bilang begitu. Satu daftar saja tetap bisa ditanya dengan menyebut
+namanya, `nouride skills search pdf --source skills.sh`, dan
+[`NOURIDE_SKILLS_CATALOG_URL`](/id/docs/reference/environment/) yang dikosongkan mematikan katalognya. Nouverse cuma
+mendaftar: pemasangan tetap mengambil dari hub atau repositorinya sendiri, seperti di bawah.
+
 | Sumber | Pasang dengan |
 |---|---|
 | GitHub | `owner/repo`, `owner/repo/path/ke/skill`, atau URL github.com. Memasang semua skill di dalamnya |
@@ -267,7 +276,7 @@ alur kerja:
 |---|---|
 | **Live** | kumpulannya: apa yang benar-benar dibawa para agent. Dibuka duluan kalau tidak ada yang menunggu kamu |
 | **Pending** | antreannya, plus yang baru-baru ini diputuskan. Dibuka duluan kalau ada yang menunggu kamu |
-| **Explore** | skill di hub, dibuka dengan yang paling banyak diunduh di ClawHub. Memasang salah satunya menaruhnya di Pending |
+| **Explore** | daftar skill publik milik Nouverse, pilihannya di depan, dengan satu pencarian di atasnya. Memasang salah satunya menaruhnya di Pending |
 
 Setiap baris draft terbuka menjadi `SKILL.md` utuh, bisa disunting di tempat, plus transkrip giliran
 asalnya yang sudah dibersihkan, atau, untuk skill dari hub, asalnya dan apa saja yang disesuaikan.

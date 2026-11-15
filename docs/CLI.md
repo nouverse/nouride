@@ -622,7 +622,7 @@ nouride skills nouva -v            # one agent, with descriptions and paths
 nouride skills --all               # the pool: every skill, who has it on, what the host is missing
 nouride skills off document-authoring nouva
 nouride skills on  document-authoring nouva
-nouride skills search "release notes"      # skills.sh, ClawHub, well-known indexes
+nouride skills search "release notes"      # Nouverse's catalog; --source skills.sh,clawhub asks those hubs themselves
 nouride skills install owner/repo          # fetched as a draft, for you to approve
 ```
 
