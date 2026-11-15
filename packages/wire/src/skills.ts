@@ -111,14 +111,36 @@ export interface SkillHubHit {
   url: string;
   installs?: number;
   stars?: number;
+  /** From Nouverse's catalog alone: what it is called where that differs from its name, and who published it. */
+  title?: string;
+  owner?: string;
+  /** One Nouverse put on its own list. */
+  pick?: boolean;
 }
+
+/** Where a list of skills is from: Nouverse's catalog, or the hubs themselves (one named, the catalog off or not answering). */
+export type SkillHubFrom = "catalog" | "hubs";
 
 export interface SkillHubSearch {
   hits: SkillHubHit[];
   /** Every hub a search can ask, by id. */
   sources: readonly string[];
-  /** A hub that did not answer, said beside the results rather than instead of them. */
+  /** A hub, or the catalog, that did not answer, said beside the results rather than instead of them. */
   errors: { source: string; error: string }[];
+  from: SkillHubFrom;
+  /** The catalog's alone: how many match in all, and when its copy was last brought up to date (ISO; null: not yet). */
+  total?: number;
+  syncedAt?: string | null;
+}
+
+/** What Explore shows before a search: Nouverse's own list, or ClawHub's most used; `plain`, why there is none, in the page's words. */
+export interface SkillHubPopular {
+  hits: SkillHubHit[];
+  from: SkillHubFrom;
+  total?: number;
+  syncedAt?: string | null;
+  error?: string;
+  plain?: string;
 }
 
 export interface SkillHubInstall {

@@ -1724,30 +1724,65 @@
   "/skills/hub/search": {
     "hits": [
       {
-        "ref": "skills.sh:anthropics/skills/pdf",
-        "source": "skills.sh",
+        "ref": "github:anthropics/skills/skills/pdf",
+        "source": "github",
         "name": "pdf",
-        "description": "from anthropics/skills",
-        "url": "https://skills.sh/anthropics/skills/pdf",
-        "installs": 205751
-      }
-    ],
-    "errors": [
-      {
-        "source": "clawhub",
-        "error": "HTTP 503 from clawhub.ai"
+        "description": "Read, fill and make PDF files.",
+        "url": "https://github.com/anthropics/skills/tree/main/skills/pdf",
+        "stars": 51234,
+        "owner": "anthropics",
+        "pick": true
       },
       {
-        "source": "well-known",
-        "error": "HTTP 503 from agentskills.io"
+        "ref": "clawhub:pskoett/self-improving-agent",
+        "source": "clawhub",
+        "name": "self-improving-agent",
+        "description": "Keeps what it learned.",
+        "url": "https://clawhub.ai/pskoett/self-improving-agent",
+        "installs": 492992,
+        "stars": 4020,
+        "title": "self improving agent",
+        "owner": "pskoett"
       }
     ],
+    "errors": [],
+    "from": "catalog",
+    "total": 4012,
+    "syncedAt": "2025-10-09T08:53:20.000Z",
     "sources": [
       "skills.sh",
       "clawhub",
       "well-known",
       "github"
     ]
+  },
+  "/skills/hub/popular": {
+    "hits": [
+      {
+        "ref": "github:anthropics/skills/skills/pdf",
+        "source": "github",
+        "name": "pdf",
+        "description": "Read, fill and make PDF files.",
+        "url": "https://github.com/anthropics/skills/tree/main/skills/pdf",
+        "stars": 51234,
+        "owner": "anthropics",
+        "pick": true
+      },
+      {
+        "ref": "clawhub:pskoett/self-improving-agent",
+        "source": "clawhub",
+        "name": "self-improving-agent",
+        "description": "Keeps what it learned.",
+        "url": "https://clawhub.ai/pskoett/self-improving-agent",
+        "installs": 492992,
+        "stars": 4020,
+        "title": "self improving agent",
+        "owner": "pskoett"
+      }
+    ],
+    "from": "catalog",
+    "total": 4012,
+    "syncedAt": "2025-10-09T08:53:20.000Z"
   },
   "/mcp-server": {
     "enabled": true,

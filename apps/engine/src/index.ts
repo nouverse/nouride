@@ -323,7 +323,7 @@ export async function runDaemon(): Promise<void> {
   if (secretStoreTimer) ctx.backgroundTimers.push(secretStoreTimer);
 
   // The machine itself: the MCP servers, the pipeline, the scheduler and the toolset, joined.
-  const { mcp, mcpLogins, mcpCatalog, skillRoots, pipeline, scheduler, tools } = await buildTurnMachine(stores, parts, {
+  const { mcp, mcpLogins, mcpCatalog, skillsCatalog, skillRoots, pipeline, scheduler, tools } = await buildTurnMachine(stores, parts, {
     ctx, config, machine, configPath, progress, registry, gateways, memory, load: upkeep.load, externalAgents, projectSkills, builtinSkillsDir, supervisor: supervisorInfo, startedAt,
   });
 
@@ -371,7 +371,7 @@ export async function runDaemon(): Promise<void> {
     ctx, db, config, configSource: source, secrets, registry, providers, pipeline, approvals,
     grants, toolGrants, access, memory, memoryPass, jobs, notifier, audit, logs, logStore, mcp, reach, projectSkills, skillRoots,
     builtinSkillsDir, autoApprove, sessions, notes, missions: missions.missions, externalAgents, turns, events, chatEvents, roomMessages, attachmentIndex, rooms, usage, uploads, cron, scheduler, proposals: proposals.cards, localGateway,
-    supervisorInfo, reflection, mcpCatalog, mcpLogins, agentsSeen, state,
+    supervisorInfo, reflection, mcpCatalog, skillsCatalog, mcpLogins, agentsSeen, state,
     builtinTools: tools,
   });
   const { server, streams } = controlPlane;

@@ -40,7 +40,7 @@ import type { ProviderRegistry } from "@/modules/llm/providers.ts";
 import type { UsagePort } from "@/modules/llm/usage.store.ts";
 import type { Pipeline } from "@/modules/pipeline/index.ts";
 import type { ReflectionEngine } from "@/modules/reflection/index.ts";
-import { createSkillHub } from "@/modules/skills-hub/index.ts";
+import { createSkillHub, type SkillsCatalog } from "@/modules/skills-hub/index.ts";
 import type { Tool } from "@nouride/shared";
 import type { SessionsPort } from "@/modules/sessions/sessions.store.ts";
 import type { TurnsPort } from "@/modules/turns/turns.store.ts";
@@ -107,6 +107,8 @@ export async function startControlPlane(deps: {
   db: SqliteDb;
   /** Nouverse's MCP catalog, for the Explore tab and `nouride mcp search` (0.7.19). Undefined: turned off. */
   mcpCatalog?: McpCatalog | undefined;
+  /** Nouverse's skills catalog, asked first by Explore on Skills and `nouride skills search`. Undefined: turned off. */
+  skillsCatalog?: SkillsCatalog | undefined;
   /** Remote MCP servers' logins, for Connect on the MCP page and `nouride mcp login` (0.7.19). */
   mcpLogins?: McpLogins;
   config: GlobalConfig;
@@ -392,7 +394,7 @@ export async function startControlPlane(deps: {
               projectSkills,
               skillRoots: deps.skillRoots,
               reflection,
-              skillHub: createSkillHub({ config, secrets, reflection, builtinSkillsDir }),
+              skillHub: createSkillHub({ config, secrets, reflection, builtinSkillsDir, catalog: deps.skillsCatalog }),
               ...(deps.mcpCatalog ? { mcpCatalog: deps.mcpCatalog } : {}),
               ...(deps.mcpLogins ? { mcpLogins: deps.mcpLogins } : {}),
               ...(builtinSkillsDir ? { builtinSkillsDir } : {}),

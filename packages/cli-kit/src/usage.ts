@@ -210,7 +210,7 @@ ${BOLD}Talking to a running daemon${RESET}
   nouride skills draft <id>        One draft in full, with the turn it came from
   nouride skills approve|deny <id> Put a draft in the pool, or discard it
   nouride skills review            Review the library now: tighten, merge, archive. Proposals wait in drafts
-  nouride skills search <query> [--source skills.sh,clawhub,well-known]   Find skills on the public hubs
+  nouride skills search <query> [--source skills.sh,clawhub,well-known]   Find skills in Nouverse's catalog, or on the hubs named
   nouride skills install <source>  Fetch one (owner/repo, URL, clawhub:slug…) as a draft to approve
   nouride tool-budget              Tool round-trips one reply may spend, per daemon and per agent
   nouride tool-budget <n>          Set the daemon default

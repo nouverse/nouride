@@ -1,12 +1,12 @@
 /**
- * Skills from hubs: search across them, and install one into the pending queue.
+ * Skills from elsewhere: a search of Nouverse's catalog or the hubs, and an install of one into the pending queue.
  *
  * Install never writes the pool — it raises drafts, decided on the same Pending tab as everything
  * else. So the bar here is the one for raising a draft by hand (operator), not for publishing.
  * Registered before `registerSkillRoutes`, whose `/skills/:name` would otherwise take `hub`.
  */
 
-import type { SkillHubHit, SkillHubInstall, SkillHubSearch } from "@nouride/wire";
+import type { SkillHubInstall, SkillHubPopular, SkillHubSearch } from "@nouride/wire";
 import { atLeast } from "@/modules/users/auth.ts";
 import { hubErrorMessage, SOURCE_IDS, type InstallResult, type SourceId } from "@/modules/skills-hub/index.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
@@ -42,14 +42,15 @@ export function registerSkillHubRoutes(control: ControlApp, deps: ControlDeps): 
     return c.json({ ...result, sources: SOURCE_IDS } satisfies SkillHubSearch);
   });
 
-  /** The most used skills, for Explore before anything is typed. A hub that does not answer is said, not an error page. */
+  /** Nouverse's own list, or the most used skills, for Explore before anything is typed. A hub that does not answer is said, not an error page. */
   control.get("/skills/hub/popular", async (c) => {
     if (!deps.skillHub) return c.json({ error: "the skills hub is not available" }, 501);
     if (!atLeast(c.get("principal"), "operator")) return c.json({ error: "operator only" }, 403);
     try {
-      return c.json({ hits: await deps.skillHub.popular() } satisfies { hits: SkillHubHit[]; error?: string; plain?: string });
+      const { hits, from, total, syncedAt } = await deps.skillHub.popular();
+      return c.json({ hits, from, ...(total !== undefined ? { total } : {}), ...(syncedAt !== undefined ? { syncedAt } : {}) } satisfies SkillHubPopular);
     } catch (err) {
-      return c.json({ hits: [], error: hubErrorMessage(err), plain: "The list of popular skills could not be reached. Try again in a moment." });
+      return c.json({ hits: [], from: "hubs", error: hubErrorMessage(err), plain: "The list of popular skills could not be reached. Try again in a moment." } satisfies SkillHubPopular);
     }
   });
 

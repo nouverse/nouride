@@ -32,6 +32,7 @@ import { MissionStore } from "@/modules/missions/missions.store.ts";
 import { NotesStore, STALE_AFTER_MS } from "@/modules/notes/store.ts";
 import { TIDY_PAST_FACTS } from "@/modules/memory/consolidate.ts";
 import { SetupService } from "@/modules/setup/service.ts";
+import { createSkillsCatalog } from "@/modules/skills-hub/catalog.ts";
 import { SkillHub } from "@/modules/skills-hub/index.ts";
 import { SqliteApprovalGate } from "@/modules/tools/approvals.store.ts";
 import { TurnRecorder, stepsInto } from "@/modules/turns/recorder.ts";
@@ -81,6 +82,7 @@ const ASKED: Record<string, (ids: { session: string; mission: string; automation
   "/providers": () => "/providers",
   "/providers/ollama/models": () => "/providers/ollama/models",
   "/skills/hub/search": () => "/skills/hub/search?q=pdf",
+  "/skills/hub/popular": () => "/skills/hub/popular",
   "/mcp-server": () => "/mcp-server",
   "/mcp/library": () => "/mcp/library",
   "/agents/nouva/mcp": () => "/agents/nouva/mcp",
@@ -117,12 +119,23 @@ const ASKED: Record<string, (ids: { session: string; mission: string; automation
   "/knowledge/search": () => "/knowledge/search?q=router",
 };
 
-/** What lies past the box: a provider's model list, and the skill hubs — one answering, one down. */
+/** Nouverse's skills catalog as the box asks it, in the shape Nouverse answers in: a pick from a repository, and one of ClawHub's. */
+const SKILLS_CATALOG = "https://catalog.test/skills-catalog";
+const catalogSkill = (fields: Record<string, unknown>, pinned: number | null) => ({ title: null, description: "", version: null, license: null, installs: 0, stars: 0, updatedAt: null, ...fields, _meta: { "tech.nouverse/catalog": { pinned } } });
+const CATALOG_SKILLS = [
+  catalogSkill({ ref: "github:anthropics/skills/skills/pdf", source: "github", name: "pdf", description: "Read, fill and make PDF files.", owner: "anthropics", url: "https://github.com/anthropics/skills/tree/main/skills/pdf", stars: 51234, license: "Apache-2.0" }, 1),
+  catalogSkill({ ref: "clawhub:pskoett/self-improving-agent", source: "clawhub", name: "self-improving-agent", title: "self improving agent", description: "Keeps what it learned.", owner: "pskoett", url: "https://clawhub.ai/pskoett/self-improving-agent", version: "4.0.5", installs: 492992, stars: 4020 }, null),
+];
+
+/** What lies past the box: a provider's model list, Nouverse's skills catalog, and the skill hubs — one answering, one down. */
 function outside(): typeof fetch {
   const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
   return (async (input: string | URL | Request) => {
     const url = String(input instanceof Request ? input.url : input);
     if (url.startsWith("http://127.0.0.1:11434/v1/models")) return json({ object: "list", data: [{ id: "llama3.2", object: "model" }, { id: "qwen3:8b", object: "model" }] });
+    if (url.startsWith(SKILLS_CATALOG)) {
+      return json({ success: true, message: "", error: null, payload: { skills: CATALOG_SKILLS, metadata: { count: 2, total: 4012, limit: 24, offset: 0, nextOffset: 24, syncedAt: "2026-10-19T02:01:02.666Z" } } });
+    }
     if (url.startsWith("https://skills.sh/api/search")) return json({ skills: [{ id: "anthropics/skills/pdf", source: "anthropics/skills", skillId: "pdf", name: "pdf", installs: 205751 }] });
     return json({ error: "unavailable" }, 503);
   }) as typeof fetch;
@@ -448,7 +461,10 @@ export async function wireAnswers(): Promise<Record<string, unknown>> {
       secrets,
       settings: new SettingsService({ config, configPath, secrets, providers, gatewayStatus: () => ctx.gateways, keyHeld: () => null, audit }),
       setup: new SetupService({ config, configPath, dataDir, agentsDir, secrets, providers, registry, audit, userCount: () => users.count(), fetchImpl: outside() }),
-      skillHub: new SkillHub({ scratchDir: dataDir, agentsDir, reflection: {} as never, fetchImpl: outside(), checkUrlImpl: async () => ({ allowed: true }) as never }),
+      skillHub: new SkillHub({
+        scratchDir: dataDir, agentsDir, reflection: {} as never, fetchImpl: outside(), checkUrlImpl: async () => ({ allowed: true }) as never,
+        catalog: createSkillsCatalog({ url: SKILLS_CATALOG, fetch: { fetchImpl: outside(), checkUrlImpl: async () => ({ allowed: true }) as never } }),
+      }),
       users,
       audit,
       approvals,

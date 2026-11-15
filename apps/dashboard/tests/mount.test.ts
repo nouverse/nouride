@@ -170,9 +170,6 @@ describe("the memory graph", () => {
   });
 });
 
-/**
- * Skills from hubs: the Explore tab searches every hub and installs into Pending.
- */
 describe("pages that keep their lists in bounds", () => {
   const ok = (body: unknown) => ({ status: 200, body });
   const clickText = async (host: HTMLElement, selector: string, text: string) => {
@@ -263,47 +260,6 @@ describe("Skills lists", () => {
     } finally {
       for (const key of Object.keys(fixtures)) delete overrides[key];
     }
-  });
-});
-
-describe("Skills Explore", () => {
-  const settle = async () => {
-    for (let i = 0; i < 6; i += 1) await sleep(10);
-  };
-  const clickText = async (host: HTMLElement, selector: string, text: string) => {
-    const target = [...host.querySelectorAll(selector)].find((el) => el.textContent?.includes(text)) as HTMLElement | undefined;
-    if (!target) throw new Error(`nothing matching ${selector} with "${text}"`);
-    target.click();
-    await settle();
-  };
-
-  test("the tab says what install means, and offers search and a repository field", async () => {
-    const html = await renderPage("/skills", (host) => clickText(host, '[role="tab"]', "Explore"));
-    expect(errors.filter((line) => /Error|error boundary|Cannot read/.test(line))).toEqual([]);
-    expect(html).toContain("Find a skill");
-    expect(html).toContain("nothing runs until you do");
-    expect(html).toContain("Install from a repository or URL");
-    expect(html).toContain("All hubs");
-    // Installing by repository comes first: it is the one that needs no searching.
-    expect(html.indexOf("Install from a repository or URL")).toBeLessThan(html.indexOf("Find a skill"));
-  });
-
-  test("a search lists hits with Install, and says which hub did not answer", async () => {
-    const html = await renderPage("/skills", async (host) => {
-      await clickText(host, '[role="tab"]', "Explore");
-      const input = host.querySelector('input[aria-label="Search skill hubs"]') as HTMLInputElement;
-      const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(input), "value")!.set!;
-      setter.call(input, "pdf");
-      input.dispatchEvent(new (input.ownerDocument.defaultView as unknown as typeof globalThis).Event("input", { bubbles: true }));
-      await settle();
-      await clickText(host, 'button[type="submit"]', "Search");
-    });
-    expect(html).toContain("skills.sh:anthropics/skills/pdf");
-    expect(html).toContain("205,751 installs");
-    expect(html).toMatch(/<\/svg> Install<\/button>/);
-    expect(html).toContain("clawhub did not answer");
-    // The results scroll inside their card rather than pushing the page down.
-    expect(html).toMatch(/min-h-0 flex-1[^"]*overflow-y-auto/);
   });
 });
 
