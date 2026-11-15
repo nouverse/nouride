@@ -94,7 +94,7 @@ export default function MermaidDiagram({ text, onFail }: ViewerProps) {
       <button type="button" onClick={() => setOpen(true)} className="block max-w-full cursor-zoom-in rounded-lg" aria-label="Open the diagram large">
         <img src={src} alt="A diagram drawn from Mermaid" onError={onFail} className="block h-auto max-w-full" />
       </button>
-      <Leaving value={open && src}>{(picture) => <Lightbox src={picture} name="diagram.svg" onClose={() => setOpen(false)} />}</Leaving>
+      <Leaving value={open && src}>{(picture) => <Lightbox pictures={[{ src: picture, name: "diagram.svg" }]} onClose={() => setOpen(false)} />}</Leaving>
     </>
   );
 }
