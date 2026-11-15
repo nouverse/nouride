@@ -261,7 +261,7 @@ kamu lakukan dengannya tanpa meninggalkan daftar: **Details**, **Open chat**, **
 untuk admin, dan **Edit look**. Filter di atas daftar menyaringnya ke agent yang aktif, santai, tidur, atau gak bisa
 kerja.
 
-![Daftar agent](/media/dashboard-agents.png)
+![Para agent sebagai baris di bawah Office, dengan baris Wren terbuka: Details, Open chat, Sleep, Workspace, Edit look](/media/dashboard-agents.png)
 
 ### Model versus Models
 
