@@ -32,20 +32,19 @@ Work
   Missions          long work agents finish alone: what needs you, what runs, what ended; Limits
   Helpers           helpers, commands and asked agents an agent left running: each one's steps, Stop
 Agents
-  Agents            the list, New Agent (admin), and daemon-wide Settings
+  Agents            the Office, every agent as a row under it, New Agent (admin), and daemon-wide Settings
     └ <agent>
         Files           IDENTITY.md, SOUL.md, AGENTS.md, MEMORY.md, config.toml
         Model           which provider profile and model this agent runs on
         Brain           an external agent's, in place of Model: its CLI, account, preset and model,
                         and Nouride's own model for it
+        Workspace       its own folder, to look through                       (admin)
         Connections     the bots and numbers it answers on
         Access          whether it takes new senders, how much it asks before it acts, its senders' count
         Skills          every skill in the pool, and which of them this agent carries
         Connectors      the install's MCP servers this agent uses
         Settings        its tool and turn budgets, quiet jobs, and which tools it has
         Look            its cat in the Office
-        Workspace       its own folder, to look through                       (admin)
-  Office            the agents' statuses as a small office of cats
   Workspace         where the agents work: each agent's own folder, and the one they share   (admin)
 
 Skills              the Skills Workshop: Live · Pending · Explore
@@ -141,7 +140,7 @@ update out** (0.8.38), which opens **Models → Coding CLIs**. Then, in this ord
 - **Quick chat**, on a laptop: a line to an agent, the orchestrator first and marked as such, and the chat opens with
   the answer. On a phone the chat button that floats over every page stands in its place, above the tab bar.
 - **Your agents.** The Office, small, and beside it each agent as a chip: its cat, its name, a crown on the
-  orchestrator and a dot for what it is doing. A chip opens the agent; the picture opens the Office.
+  orchestrator and a dot for what it is doing. A chip opens the agent; the picture opens Agents, where the Office is.
 - Then today's AI use, folded to one line, and setup notes when the last start found something.
 
 When nothing waits and nothing moves, the cat says *Nothing is waiting for you*: asleep, with a coffee, or leaning on
@@ -247,6 +246,12 @@ It also closes off a failure. A connection is created from an agent's own page, 
 nothing to ask about ownership and the dashboard cannot make a gateway that belongs to nobody. One
 written into `config.toml` by hand without an owner is flagged at the top of the Agents page.
 
+**Agents** opens on [the Office](/en/docs/manual/office/), and under it every agent is a row (0.8.38): its cat, its
+name, what answers it, where it is reached and what it is doing. Press a row for the agent's page. The arrow at a
+row's end, or a click on its cat in the Office, opens what you do with it without leaving the list: **Details**,
+**Open chat**, **Sleep** or **Wake**, **Workspace** for an admin, **Edit look**. A filter over the list narrows it to
+the agents that are active, idle, asleep or unavailable.
+
 ![The agents list](/media/dashboard-agents.png)
 
 ### Model versus Models
@@ -297,11 +302,11 @@ The `config.toml` here is the agent's own. The daemon's is the last card of **Ag
 An admin can look through what agents keep while they work (0.8.38), in three places that are one files view, the
 same one as **System → Files**:
 
-- An agent's **Workspace** tab shows that agent's own folder, and nothing else: the path at the top starts at the
-  folder, so there is no way up or out of it.
-- **Agents → Workspace**, beside Agents and Office, opens on the workspace and goes into its two folders: `private`,
+- An agent's **Workspace** tab, beside Model, shows that agent's own folder, and nothing else: the path at the top
+  starts at the folder, so there is no way up or out of it. An agent that has kept nothing yet has an empty one.
+- **Agents → Workspace**, beside Agents, opens on the workspace and goes into its two folders: `private`,
   with a folder for each agent, and `shared`, the one every agent reads and writes.
-- In the **Office**, the card of a cat you clicked has **Workspace**, which opens that agent's tab.
+- On **Agents**, an agent's row, opened, has **Workspace**, which opens that agent's tab.
 
 Files open, download and delete there as they do in Files, and what holds a credential is left out the same way.
 Anyone who is not an admin has none of the three. Where an install keeps its workspace outside Nouride's own folder,
@@ -476,6 +481,13 @@ A room made in the dashboard has no list: its members answer.
 ## Things the UI will always do
 
 Not style preferences, each one is a bug that was written, or one the code's shape now prevents.
+
+**A page scrolls as a page** (0.8.38). Where a page has tabs, a filter or a search of its own, that row stays at the
+top of the window while the list scrolls under it, so they are always in reach. A long list with another card under
+it is cut short, its last rows fading out, and **Show all** opens it in full. A list scrolls inside its card in three
+places only, from a laptop's width up: **Files**, the **Workspace** and **Logs**, where the path or the filters over
+the list have to stay; their card runs to the foot of the window, and the chat button floats over its corner. A chat
+scrolls its own conversation. Before, most pages held a list in a short card that scrolled inside the page.
 
 **Destructive actions ask, and say what will happen.** Which item, how many agents it affects, and
 that nothing undoes it. The button carries the verb, "Delete", never "OK".

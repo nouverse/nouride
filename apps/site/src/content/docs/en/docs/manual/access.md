@@ -55,7 +55,8 @@ we block?" has no agent in it. Five tabs, the shape of a request's life:
 | **Blocked** | Who is kept out until you **Unblock** them |
 | **History** | Every request and every answer, newest first, with who gave it |
 
-A filter narrows all five to one agent, each list has a filter box and scrolls inside its card, and each agent's own **Access** tab counts its senders and
+A filter narrows all five to one agent and a filter box narrows the open tab's list, both in the row of the tabs, which
+stays at the top of the window while the list scrolls. Each agent's own **Access** tab counts its senders and
 links here, filtered to it. Approving as somebody adds that id to the person, so every agent knows
 them by name from the next message. Once approved, they are told so in the chat they used.
 

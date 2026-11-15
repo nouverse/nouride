@@ -17,14 +17,16 @@ Chat              talk to any agent, or open a room with several
 Missions          long work an agent finishes alone: what needs you, what runs, each one's page (0.8.0)
 
 Overview          what is waiting on you · today's tokens and spend · the Office, small
-Office            the agents' statuses as a small office of cats; a cat's card to wake, sleep or restyle it (0.8.1)
+Office            the agents' statuses as a small office of cats (0.8.1): the top of Agents since 0.8.38, where
+                  picking a cat opens that agent's row with what a person does with it
 Workspace         the agents' workspace, to look through: `private` and `shared`, and nothing above them — an
                   admin's (0.8.38)
 Automations       everything that runs on its own, whatever starts it (a schedule, a webhook, by hand):
                   the list, and a page for each with its start, its steps as a flow and its runs (0.8.34)
 System Logs       the daemon's log, the audit trail, job runs, background commands
 
-Agents            the list, and New Agent — answered by a model, or by a coding CLI on this box
+Agents            the Office, every agent as a row under it, and New Agent — answered by a model, or by a
+                  coding CLI on this box
   ├ Agent Settings  daemon-wide: who may pair, group context, exec policy, mentions, spend cap,
   │                 budgets, retention, and config.toml itself
   └ <agent-id>
@@ -32,13 +34,13 @@ Agents            the list, and New Agent — answered by a model, or by a codin
       Model           which provider profile and model this agent runs on
       Brain           in Model's place for an external agent: its coding CLI, account and sign-in,
                       preset, the CLI's model, and the model Nouride's own work for it runs on
+      Workspace       its own folder in the workspace, with no way out of it — an admin's (0.8.38)
       Connections     the bots and numbers it answers on
       Access          whether it takes new senders, what it asks before acting, its senders' count
       Skills          every skill in the pool, and which of them this agent carries
       MCP             which of the install's MCP servers it uses
       Settings        what one turn may spend, its tools
       Look            its cat in the Office, part by part, as it will be
-      Workspace       its own folder in the workspace, with no way out of it — an admin's (0.8.38)
 
 Skills            the Workshop: the pool, who has each skill, drafts, skills on public hubs
 MCP               the install's MCP servers: Installed · Explore, a switch per agent on each
@@ -60,8 +62,8 @@ My Box            the paired Box — only on one
 Documentation     a link out to the docs site
 ```
 
-The sidebar heads the blocks above Interact, Monitor, Configure (Agents to Secrets), Connect, Account and Learn, so
-the Office is **Monitor → Office**.
+The sidebar heads the blocks above Interact, Monitor, Configure (Agents to Secrets), Connect, Account and Learn. The
+Office has no page of its own since 0.8.38: it is the top of **Agents**, and its old address lands there.
 Models, LLM Gateway, Secrets, Integrations, Web Search, Users and My Box are an admin's, and absent
 from the sidebar for anyone else (§3). `/update` — which version this is, and taking a newer one — hangs off the
 version shown in the sidebar.
@@ -302,6 +304,17 @@ at a breakpoint sets `grid-cols-1` for a phone, or its one track grows to its wi
 of columns — a log line, a table, a step beside its outcome — becomes a block there, its long part the
 whole width. `tests/phone-type.test.ts` and `tests/phone-layout.test.ts` hold the rules that can be read
 from the source.
+
+**A page scrolls as a page; three keep a list inside a card** (0.8.38, from the owner). Thirteen pages were held
+to the window from a laptop up, their list scrolling in a card under a title, a description and tabs that stayed:
+what was left for the list was a strip, and a band under it was kept clear for the chat button. Now a page scrolls,
+and its own tabs, filter and search are one row that stays at the top of the window (`StickyBar`: clear while it
+rests in its place, the page's own ground once the page runs under it). A page's own list is shown in full; a list
+with another card under it is cut short and opened with one press (`ListCard`). Files and the Workspace
+(`fillsViewport`) and Logs keep the list in the card, because the path and the filters over it have to stay: the
+card runs to the page's own margin at the window's foot, the floating chat's button lies over its corner, and what
+scrolls ends with room to bring its last row clear (`HELD_END`). `tests/mount-page-scroll.test.ts`,
+`tests/sticky-bar.test.ts`, `tests/list-card.test.ts` and `tests/phone-layout.test.ts` hold these.
 
 **Empty is a real value.** An account with no name set means nobody has said what to call them. The
 agent then uses no name at all, rather than falling back to the login handle. This is the fix for a

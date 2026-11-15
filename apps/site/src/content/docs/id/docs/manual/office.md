@@ -3,8 +3,8 @@ title: Office
 description: Status agent-agent kamu dalam bentuk kantor kecil berisi kucing (siapa yang kerja, siapa yang nunggu kamu, siapa yang santai atau tidur), dan tampilan sendiri untuk tiap agent.
 ---
 
-**Agents → Office** menampilkan apa yang sedang dikerjakan agent-agent kamu sebagai kantor kecil pixel art: ruang
-kerja, lobi, dan kamar tidur, berjejer di atas lorong. Tiap agent adalah kucing Nouride dengan meja sendiri, kursi
+**Agents** dibuka dengan Office di atas (0.8.38; dulu tab tersendiri): apa yang sedang dikerjakan agent-agent kamu
+sebagai kantor kecil pixel art, ruang kerja, lobi, dan kamar tidur, berjejer di atas lorong. Tiap agent adalah kucing Nouride dengan meja sendiri, kursi
 sofa sendiri, dan kasur sendiri (meja orchestrator sendirian di depan ruang kerja, dengan mahkota di namanya).
 Home menampilkan office yang sama, kecil dan diam, di **Your agents**, dengan tiap agent di sebelahnya sebagai chip.
 
@@ -35,9 +35,13 @@ Satu office muat dua belas agent: orchestrator selalu ada, lalu yang paling dulu
 office lain (pintu di ujung lorong menyebut berapa), dan baris di atas office menghitung semuanya, termasuk berapa
 dari yang di office lain sedang nunggu kamu.
 
-Klik kucing untuk lihat agent-nya lagi ngapain dan di mana, dengan link ke tiap chat dan misi, lalu tidurkan atau
-bangunkan, buka chat terakhirnya (sama seperti barisnya di Chats), atau ganti tampilannya. Admin juga punya
-**Workspace** di sana, yang membuka [folder milik agent itu](/id/docs/manual/dashboard/#workspace).
+Di bawah office, tiap agent jadi satu baris: kucingnya, namanya, apa yang menjawabnya, di mana ia bisa dihubungi, dan
+apa yang sedang ia kerjakan. Barisnya membuka halaman agent itu.
+
+Klik kucing dan baris agent itu terbuka di bawah office: agent-nya lagi ngapain dan di mana, dengan link ke tiap chat
+dan misi, lalu **Details** untuk halamannya, **Open chat** untuk chat terakhirnya (sama seperti barisnya di Chats),
+**Sleep** atau **Wake**, dan **Edit look**. Admin juga punya **Workspace** di sana, yang membuka
+[folder milik agent itu](/id/docs/manual/dashboard/#workspace). Panah di ujung baris membuka hal yang sama.
 
 Halaman ini menanyakan status agent tiap lima detik selama terbuka dan terlihat, dan gak menanyakan apa-apa kalau
 tidak. Gak ada yang bergerak kalau sistem kamu minta gerakan dikurangi, dan di HP kantornya mengecil supaya muat.

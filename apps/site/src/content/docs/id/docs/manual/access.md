@@ -58,7 +58,8 @@ perjalanan sebuah permintaan:
 | **Blocked** | Siapa yang ditolak sampai kamu **Unblock** |
 | **History** | Semua permintaan dan semua jawabannya, yang terbaru di atas, beserta siapa yang menjawab |
 
-Filter agent menyaring kelimanya untuk satu agent, tiap daftar punya kotak filter dan di-scroll di dalam kartunya, dan tab **Access** milik tiap agent menghitung
+Filter agent menyaring kelimanya untuk satu agent dan kotak filter menyaring daftar tab yang terbuka, keduanya di
+baris tab, yang tetap di atas jendela sementara daftarnya bergulir. Tab **Access** milik tiap agent menghitung
 pengirimnya lalu menautkan ke sini, sudah tersaring untuk agent itu. Menyetujui sebagai seseorang
 menambahkan id itu ke orangnya, jadi semua agent mengenal namanya sejak pesan berikutnya. Setelah
 disetujui, mereka diberi tahu di chat yang mereka pakai.

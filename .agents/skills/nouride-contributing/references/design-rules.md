@@ -144,8 +144,10 @@ pose=…>` or `<EmptyState pose=…>`; which state takes which pose is the table
   with Work holding missions, approvals and jobs under one badge. No sidebar drawer on a phone.
 - The floating chat (`commons/components/floating-chat`): a round button with an agent's face on every page
   but Chats, 3.5rem across, and the panel it opens. Below a laptop's width the button stands above the tab
-  bar, never over it; from a laptop up it is in the window's corner. Every page's foot leaves it room
-  (`PAGE_BOTTOM`, and `HELD_BOTTOM` under a page held to the window), so it lies over no card. The panel is
+  bar, never over it; from a laptop up it is in the window's corner. A page that scrolls leaves it room at
+  its end (`PAGE_BOTTOM`). A page held to the window runs under it, to the page's own margin (`HELD_BOTTOM`),
+  and what scrolls in its card ends with room to bring the last row clear (`HELD_END`): no band is kept
+  blank for the button. The panel is
   a card over the button from a tablet's width up, with the page under it in reach, and a sheet on a phone.
   It is the one floating button: a page adds no second.
 - What can be pressed shows the hand: every enabled `<button>`, whatever it looks like (a card, a chip, a
@@ -161,10 +163,14 @@ pose=…>` or `<EmptyState pose=…>`; which state takes which pose is the table
   one element are not a fallback: the one written later in the stylesheet wins, whatever their order in
   the class.
 - Nothing lies over the phone's tab bar: a toast stands above it.
+- A page scrolls as a page. Its own tabs, filter and search go in one `StickyBar`, which stays at the top
+  of the window while the page scrolls under it; its own list is a `ListCard`, shown in full, or cut short
+  with one press to open it where another card follows. A list scrolls inside its card on Files, the
+  Workspace and Logs alone, where the path or the filters over it have to stay. A new page is not held to
+  the window without that reason.
 - A page held to the window (`fillsViewport`, `FILL_PAGE`) has its padding inside the height it is held to,
-  so what runs past the window has none under it. `FILL_PAGE` carries a foot for that; a tab that runs
-  down the page as a document does adds `RUNS_DOWN`, on a root as tall as what it holds (no `flex-1`,
-  no `min-h-0`), and ends with the room a scrolling page has.
+  so what runs past the window has none under it: `FILL_PAGE` carries a foot for that. Its list is a
+  `ScrollArea`, which ends with `HELD_END`.
 
 ## Implementation constraints
 
