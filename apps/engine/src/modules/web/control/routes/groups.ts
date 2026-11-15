@@ -7,7 +7,8 @@
  *
  * And who answers a message there that tags nobody: the room's own setting, the one `/mention` writes from the room
  * (`pipeline/room-mention.store.ts`), read and set here, so what either says the other shows. An admin's, as in the
- * chat. A room made in the dashboard has none to set: its members decide (`pipeline/room-mention.ts`).
+ * chat. A room made in the dashboard takes it too, for one of its members: the router answers there by its member
+ * list, and an agent named that is not on it is no agent to it (`pipeline/inbound.ts`).
  */
 
 import type { GatewayName } from "@nouride/shared";
@@ -51,15 +52,17 @@ export function registerGroupRoutes(control: ControlApp, deps: ControlDeps): voi
     if (!gatewayId || !chatId) return c.json({ error: "gatewayId and chatId are required" }, 400);
     const group = deps.pipeline.knownRooms().find((one) => one.gatewayId === gatewayId && one.chatId === chatId);
     if (!group) return c.json({ error: "no such room", plain: "That room is not there any more. Reload the page." }, 404);
-    if (group.dashboard) {
-      return c.json({ error: "a dashboard room keeps its members' rule", plain: "A room made in the dashboard is answered by its members: the orchestrator when it is one of them." }, 400);
-    }
     const agent = typeof body.agent === "string" ? body.agent.trim() : "";
     if (body.mention !== "required" && body.mention !== "default" && body.mention !== "agent") {
       return c.json({ error: "mention is one of `required`, `default`, `agent`" }, 400);
     }
     if (body.mention === "agent" && !deps.registry.enabled().some((one) => one.config.id === agent)) {
       return c.json({ error: `no agent \`${agent}\``, plain: "That agent is not there any more. Reload the page." }, 400);
+    }
+    // A room with a member list is answered by it. Naming an agent that is not on it would be kept and never used: the
+    // page would say that agent answers, and the router would go on as if nobody had been named.
+    if (group.dashboard && body.mention === "agent" && !(deps.rooms?.membersOf(gatewayId, chatId) ?? []).includes(agent)) {
+      return c.json({ error: `\`${agent}\` is not in this room`, plain: "That agent is not in this room. Add it to the room first." }, 400);
     }
     const choice = body.mention === "default" ? null : body.mention === "required" ? ({ requireMention: true } as const) : ({ requireMention: false, answerer: agent } as const);
     if (!deps.pipeline.setRoomMention(group.platform, chatId, choice, c.get("principal").actor)) {

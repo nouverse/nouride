@@ -156,6 +156,7 @@ async function house() {
       cancelTurnsInChat: () => 0,
       endConversation: async (where: { sessionId: string }) => (ended.push(where.sessionId), { stopped: 0, turns: 0 }),
       untaggedAnswerer: () => null,
+      roomMention: () => null,
       agentTags: () => ({}),
       knownRooms: () => [{ gatewayId: GROUP.gatewayId, platform: "telegram", chatId: GROUP.chatId, name: "Rumah", dashboard: false, agents: ["nouva"], people: [], lastActive: 1 }],
       reachableChats: () => [

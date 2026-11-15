@@ -126,6 +126,8 @@ function roomsOf(deps: ControlDeps, local: string, platform: GatewayName): ChatL
     const turn = deps.turns?.forChat(local, room.chatId, 1).at(-1) ?? null;
     const line = newer(turnLine(turn), saidLast(deps, [local], room.chatId));
     const untagged = deps.pipeline.untaggedAnswerer({ gateway: platform, gatewayId: local, chatId: room.chatId });
+    // The room's own choice, the one `/mention` writes there: what its header's picker shows as picked.
+    const own = deps.pipeline.roomMention(platform, room.chatId);
     return {
       chatId: room.chatId,
       ...(room.title ? { title: room.title } : {}),
@@ -134,6 +136,7 @@ function roomsOf(deps: ControlDeps, local: string, platform: GatewayName): ChatL
       ...bare(line),
       working: (deps.turns?.runningForChat(local, room.chatId) ?? []).length > 0,
       ...(untagged ? { untagged } : {}),
+      ...(own ? { mention: { requireTag: own.requireMention, ...(own.answerer ? { answerer: own.answerer } : {}) } } : {}),
     };
   });
 }

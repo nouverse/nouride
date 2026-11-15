@@ -72,7 +72,7 @@ export function OpenConversation(
       firstChoice={() => first}
       header={(now) =>
         now.room ? (
-          <RoomHeader room={now.room} data={data} untagged={roomEntry?.untagged} onDelete={open.deleteOnScreen} deleting={open.deleting} />
+          <RoomHeader room={now.room} data={data} said={roomEntry} onDelete={open.deleteOnScreen} deleting={open.deleting} />
         ) : (
           <AgentHeader
             agentId={now.agentId}
