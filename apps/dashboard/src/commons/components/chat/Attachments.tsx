@@ -16,14 +16,15 @@
  * — the fact that it *was* sent is part of the conversation — but it does not pretend to be openable.
  */
 
-import { useEffect, useState } from "react";
-import { Download, ExternalLink, ImageOff, Video, X } from "lucide-react";
+import { useState } from "react";
+import { ExternalLink, ImageOff, Video } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import type { TurnAttachment } from "@nouride/wire";
 import { fileIconFor } from "@/commons/components/ui/FileDrop";
 import { isMarkdownFile, MarkdownPreview } from "@/commons/components/ui/MarkdownPreview";
 import { formatBytes } from "@/commons/lib/format";
-import { Leaving, overPage } from "@/commons/components/ui/OverPage";
+import { Leaving } from "@/commons/components/ui/OverPage";
+import { Lightbox } from "@/commons/components/ui/Lightbox";
 
 function isImage(file: TurnAttachment): boolean {
   return file.mimeType.startsWith("image/") || file.kind === "image";
@@ -49,65 +50,6 @@ function isAudio(file: TurnAttachment): boolean {
  */
 function isVideo(file: TurnAttachment): boolean {
   return file.mimeType.startsWith("video/") || file.kind === "video";
-}
-
-/**
- * The popup.
- *
- * Escape closes it, the backdrop closes it, and the image is capped to the viewport — a 4000px
- * screenshot that opens larger than the window is a screenshot you cannot see. The full-size copy is
- * one click further on, in a new tab.
- */
-function Lightbox({ src, name, onClose }: { src: string; name: string; onClose: () => void }) {
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
-  return overPage(
-    <div
-      className="fixed inset-0 z-50 grid place-items-center bg-black/80 backdrop-blur-sm p-4 animate-fade"
-      role="dialog"
-      aria-label={name}
-    >
-      {/* The backdrop is the close button, which is what everybody tries first. */}
-      <button type="button" className="absolute inset-0 cursor-zoom-out" onClick={onClose} aria-label="Close" />
-
-      <div className="relative z-10 max-w-[92vw] max-h-[88dvh] flex flex-col items-center gap-2 animate-enter">
-        <img
-          src={src}
-          alt={name}
-          className="max-w-full max-h-[80dvh] rounded-xl shadow-2xl object-contain bg-base-100"
-        />
-        <div className="flex items-center gap-2 text-[11px] text-white/80 font-mono">
-          <span className="truncate max-w-[60vw]">{name}</span>
-          <a
-            href={src}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 hover:text-white"
-          >
-            <ExternalLink size={12} /> open
-          </a>
-          <a href={src} download={name} className="inline-flex items-center gap-1 hover:text-white">
-            <Download size={12} /> save
-          </a>
-        </div>
-      </div>
-
-      <button
-        type="button"
-        onClick={onClose}
-        className="absolute top-4 right-4 z-10 btn btn-sm btn-circle bg-base-100/90 border-0"
-        aria-label="Close"
-      >
-        <X size={16} />
-      </button>
-    </div>
-  );
 }
 
 function ImageTile({ src, file, onOpen }: { src: string; file: TurnAttachment; onOpen: () => void }) {
