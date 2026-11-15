@@ -6,10 +6,11 @@
  * disagreed the moment the page reloaded.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, Pencil, Square } from "lucide-react";
 import { Markdown } from "@/commons/components/ui/Markdown";
+import { HtmlBlocks, turnHtmlPreview } from "@/commons/lib/html-preview";
 import type { ChatTurn, LiveTurn, TurnAttachment, TurnCause, TurnStep } from "@nouride/wire";
 import { AttachmentList } from "./Attachments";
 import { saidWhileWorking, splitThinking } from "@/commons/lib/steps";
@@ -203,6 +204,7 @@ export function TurnView({
   showPrompt?: boolean;
 }) {
   const { thinking, content } = splitThinking(turn.reply);
+  const previews = useMemo(() => turnHtmlPreview(turn.id, turn.reply ?? ""), [turn.id, turn.reply]);
   // A turn can end with nothing to say — stopped, interrupted, refused — and the record knows which.
   // Silence with no explanation is the impression this daemon spent a session learning not to give.
   const fallback =
@@ -237,7 +239,10 @@ export function TurnView({
         />
         <SaidWhileWorking steps={turn.steps} quote={showPrompt === false} />
         <div className="w-full min-w-0 text-sm leading-relaxed text-base-content/90 [overflow-wrap:anywhere]">
-          <Markdown source={content || fallback} />
+          {/* A reply that is stored: an `html` block of it can be read back by the daemon, and previewed. */}
+          <HtmlBlocks.Provider value={previews}>
+            <Markdown source={content || fallback} />
+          </HtmlBlocks.Provider>
         </div>
         {/* What the agent sent back with `send_file`. Under the answer, because that is where the
             sentence about it is. */}

@@ -28,6 +28,7 @@ import { dashboardFile } from "@/modules/web/dashboard-files.ts";
 import type { HealthPayload } from "@nouride/wire";
 import { buildHealth, startingHealth, type HealthResult } from "@/modules/web/health.ts";
 import { LLM_GATEWAY_PREFIX } from "@/modules/web/llm-gateway.ts";
+import { PREVIEW_PATH } from "@/modules/web/control/routes/preview.ts";
 
 const log = createLogger("web");
 
@@ -173,6 +174,44 @@ export const GATEWAY_SECURITY_HEADERS: Record<string, string> = {
   "X-Frame-Options": "SAMEORIGIN",
 };
 
+/**
+ * A preview of HTML an agent wrote (`control/routes/preview.ts`) is somebody else's page, served from this address.
+ * Its policy starts from nothing and allows what is written in the page itself:
+ *
+ * - `sandbox allow-scripts`: its scripts run, in a document with no origin of its own. So no cookie of the session, no
+ *   storage of the dashboard's and nothing of the page that frames it is its to read, and it cannot move that page,
+ *   open a window, or send a form. In the header, so it holds in a tab as it does in the dashboard's frame.
+ * - no request leaves it (`default-src 'none'`, `connect-src 'none'`): not to this daemon's API, not to the web. Its
+ *   own inline scripts and styles, and pictures, fonts and sound given as `data:`.
+ * - framed by this origin's pages and nothing else.
+ */
+export const PREVIEW_SECURITY_HEADERS: Record<string, string> = {
+  ...SECURITY_HEADERS,
+  "Content-Security-Policy": [
+    "sandbox allow-scripts",
+    "default-src 'none'",
+    "script-src 'unsafe-inline'",
+    "style-src 'unsafe-inline'",
+    "img-src data:",
+    "font-src data:",
+    "media-src data:",
+    "connect-src 'none'",
+    "form-action 'none'",
+    "frame-ancestors 'self'",
+    "base-uri 'none'",
+  ].join("; "),
+  "X-Frame-Options": "SAMEORIGIN",
+};
+
+/** The control API's preview routes, as a request's path names them. */
+const PREVIEW_PREFIX = `/api/control${PREVIEW_PATH}`;
+
+/** The headers an answer goes out under, by its path: the preview's, the gateway's dashboard's, else the dashboard's own. */
+export function headersFor(path: string): Record<string, string> {
+  if (path === PREVIEW_PREFIX || path.startsWith(`${PREVIEW_PREFIX}/`)) return PREVIEW_SECURITY_HEADERS;
+  return isGatewayPath(path) ? GATEWAY_SECURITY_HEADERS : SECURITY_HEADERS;
+}
+
 /** Whether a path is the gateway's dashboard — the one place `GATEWAY_SECURITY_HEADERS` applies. */
 function isGatewayPath(path: string): boolean {
   return path === LLM_GATEWAY_PREFIX || path.startsWith(`${LLM_GATEWAY_PREFIX}/`);
@@ -187,8 +226,7 @@ function createWebApp(ctx: DaemonContext, deps: WebDeps = {}): Hono {
     // rebuilds the response and drops its Content-Type, which with `nosniff` means
     // the browser refuses to apply our CSS and to run our JS — a blank dashboard
     // with no error worth reading.
-    const headers = isGatewayPath(c.req.path) ? GATEWAY_SECURITY_HEADERS : SECURITY_HEADERS;
-    for (const [name, value] of Object.entries(headers)) {
+    for (const [name, value] of Object.entries(headersFor(c.req.path))) {
       c.res.headers.set(name, value);
     }
   });

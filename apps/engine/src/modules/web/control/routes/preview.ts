@@ -1,0 +1,82 @@
+/**
+ * A preview of HTML an agent wrote: the `html` block of a reply, or an `.html` file among Nouride's files, served as
+ * the page it is so a person can look at it.
+ *
+ * It is somebody else's page, written by a model, and it is served from the dashboard's own address. So it is served
+ * under a policy of its own (`PREVIEW_SECURITY_HEADERS`, `web/server.ts`), and three things hold whatever the page
+ * tries:
+ *
+ * - **It reaches nothing.** No request leaves it: not to the daemon's API, not to the web. What it shows is what is
+ *   written in it: its own markup, styles and scripts, and pictures given as `data:`.
+ * - **It is nobody.** It runs with no origin of its own, so the session's cookie, the dashboard's storage and the
+ *   page around it are not its to read, in a frame and in a tab alike.
+ * - **It stays where it is.** It cannot move the page around it, open a window or send a form.
+ *
+ * And the daemon takes the HTML from what it has stored, never from what the browser sends: a request names a turn
+ * and where in its reply the block is, or a file by its path, and nothing in it is served back.
+ *
+ * A frame the dashboard filled itself would take the dashboard's policy, under which the page's own scripts do not
+ * run and its requests go where the dashboard's may: that is why this is a route.
+ */
+
+import { readFileRange } from "@nouride/runtime";
+import { atLeast } from "@/modules/users/auth.ts";
+import type { ControlApp, ControlDeps } from "../types.ts";
+import { conversationFor } from "../conversation.ts";
+import { filesRoot, findFile } from "../system-files.ts";
+import { readerOf } from "../whose.ts";
+import { hidden } from "./system-files.ts";
+
+/** The control API's paths that answer under the preview's policy. */
+export const PREVIEW_PATH = "/preview";
+
+/** A page larger than this, in a file's bytes or a block's characters, is not previewed: it is read whole. A choice. */
+const PREVIEW_MAX = 2 * 1024 * 1024;
+
+/** What a refusal says, as a page: the frame shows it where the preview would have been. */
+const said = (words: string) => `<!doctype html><meta charset="utf-8"><body style="font:15px system-ui;color:#555;padding:24px">${words}</body>`;
+
+/** Kept by no cache, and read as the type it is sent as: the next look reads what is stored then. */
+const PAGE = { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "private, no-store" };
+
+/**
+ * The words of an `html` block of a reply, by where they are in it, or null where that is not one: `at` must follow a
+ * fence line that names `html`, and what comes after `length` characters must be the fence's end. Any other part of
+ * a reply is not a page somebody wrote to be looked at, and is not served as one.
+ */
+export function htmlBlockAt(reply: string, at: number, length: number): string | null {
+  // A place counted from the reply's start, in whole characters: one counted back from its end is nowhere.
+  if (!Number.isInteger(at) || !Number.isInteger(length) || at < 0 || length <= 0) return null;
+  const opened = /(?:^|\n)[ \t]*(`{3,}|~{3,})[ \t]*html\b[^\n]*\n$/i.exec(reply.slice(0, at));
+  if (!opened) return null;
+  const closes = new RegExp(`^\\n?[ \\t]*${opened[1]![0] === "`" ? "`" : "~"}{${opened[1]!.length},}[ \\t]*(?:\\n|$)`);
+  return closes.test(reply.slice(at + length)) ? reply.slice(at, at + length) : null;
+}
+
+export function registerPreviewRoutes(control: ControlApp, deps: ControlDeps): void {
+  /**
+   * An `html` block of a turn's reply: `?at=` and `?length=` say where in the stored reply it is. Read by whoever may
+   * open the turn's conversation, as the turn itself is.
+   */
+  control.get(`${PREVIEW_PATH}/turn/:id`, (c) => {
+    const turn = deps.turns?.get(c.req.param("id"));
+    const reader = readerOf(c.get("principal"), deps.ctx.config.people);
+    if (!turn || !(reader.everyone || conversationFor(deps, reader, turn.sessionId))) return c.html(said("This is not there to preview."), 404);
+    const html = htmlBlockAt(turn.reply ?? "", Number(c.req.query("at")), Number(c.req.query("length")));
+    if (html === null) return c.html(said("This is not there to preview."), 404);
+    if (html.length > PREVIEW_MAX) return c.html(said("This page is too large to preview here."), 413);
+    return c.body(html, 200, PAGE);
+  });
+
+  /** An `.html` file among Nouride's files, by its path there. An admin's, as every route of the files is. */
+  control.get(`${PREVIEW_PATH}/file`, async (c) => {
+    if (!atLeast(c.get("principal"), "admin")) return c.html(said("Only an admin can open Nouride's files."), 403);
+    const found = findFile(filesRoot(deps.ctx.configSource, deps.ctx.config.daemon.dataDir), c.req.query("path") ?? "");
+    if (!found.ok || !/\.html?$/i.test(found.entry.name)) return c.html(said("This is not there to preview."), 404);
+    const size = found.entry.sizeBytes ?? 0;
+    if (size > PREVIEW_MAX) return c.html(said("This page is too large to preview here."), 413);
+    const raw = new TextDecoder("utf-8", { fatal: false }).decode(new Uint8Array(await readFileRange(found.real, 0, size).arrayBuffer()));
+    // Its words as the Files page shows them: a credential written into a page is hidden here too.
+    return c.body(hidden(raw, deps.secrets.knownValues()), 200, PAGE);
+  });
+}

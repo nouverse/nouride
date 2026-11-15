@@ -15,10 +15,17 @@
  * the drawing and the code. Until the viewer is here, while the block is still being written, and when the viewer does
  * not load or cannot draw it, the block is its code as above, with no error box: the code is what was written, and an
  * error says less than it does.
+ *
+ * An `html` block is never drawn in the page. Where it is a block of a stored reply it has "Preview", which opens it in
+ * a frame of its own on a press (`HtmlPreview`): a page somebody else wrote does not run because it was scrolled past.
  */
 
-import { Component, useEffect, useMemo, useState, type ComponentType, type ReactNode } from "react";
+import { Component, useContext, useEffect, useMemo, useState, type ComponentType, type ReactNode } from "react";
+import { Eye } from "lucide-react";
 import { CopyButton } from "@/commons/components/ui/CopyButton";
+import { HtmlPreview } from "@/commons/components/ui/HtmlPreview";
+import { Leaving } from "@/commons/components/ui/OverPage";
+import { HtmlBlocks, namesHtml } from "@/commons/lib/html-preview";
 import { viewerFor, type Viewer, type ViewerProps } from "@/commons/components/ui/viewers";
 import type { CodePiece } from "@/commons/lib/highlight";
 
@@ -155,6 +162,10 @@ export function CodeBlock({ lang, text, growing = false }: { lang?: string | und
   const colourable = Boolean(lang) && !growing && !pictured && text.length <= COLOURED_UP_TO;
   const highlighter = useHighlighter(colourable);
   const coloured = useMemo<CodePiece[] | null>(() => (colourable && highlighter ? highlighter.pieces(lang ?? "", text) : null), [colourable, highlighter, lang, text]);
+  // Where this block is one of a stored reply's, the address that previews it; none while it is still being written.
+  const previews = useContext(HtmlBlocks);
+  const preview = !growing && namesHtml(lang) ? (previews?.(text) ?? null) : null;
+  const [previewing, setPreviewing] = useState(false);
   return (
     <div className="rounded-xl border border-base-content/10 bg-base-200/60 overflow-hidden shadow-xs" data-viewer={pictured ? "picture" : "code"}>
       {/* The head: what a printed page leaves out (`MarkdownPreview`). */}
@@ -171,9 +182,15 @@ export function CodeBlock({ lang, text, growing = false }: { lang?: string | und
               </button>
             </span>
           )}
+          {preview && (
+            <button type="button" className="btn btn-ghost btn-xs max-sm:btn-sm shrink-0 gap-1 rounded-lg" onClick={() => setPreviewing(true)}>
+              <Eye size={12} aria-hidden="true" /> Preview
+            </button>
+          )}
           <CopyButton text={text} className="btn btn-ghost btn-xs max-sm:btn-sm shrink-0 gap-1 rounded-lg" />
         </span>
       </div>
+      <Leaving value={previewing && preview}>{(src) => <HtmlPreview src={src} name="an html block" onClose={() => setPreviewing(false)} />}</Leaving>
       {pictured && Drawn ? (
         <div className="overflow-x-auto p-3.5">
           <Fallible key={text} onFail={() => setFailed(text)}>
