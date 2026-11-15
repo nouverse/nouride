@@ -584,8 +584,9 @@ that verified only one of them would be claiming something it had not checked.
 git tag v0.2.0 && git push origin v0.2.0
 ```
 
-A tag needs four secrets: `SUBMODULE_TOKEN` reads the private submodules the free edition (the gateway)
-and Pro build from, `RELEASES_REPO_TOKEN` publishes the public tarballs and images, `RELEASE_SIGNING_KEY` signs
+A tag needs four secrets: `SUBMODULE_TOKEN` checks out the submodules the editions build from (Pro's, which is
+private, and the gateway's, which is public and read with the same token in the same step, so a tag with no token builds
+no edition, the free one included), `RELEASES_REPO_TOKEN` publishes the public tarballs and images, `RELEASE_SIGNING_KEY` signs
 every checksum file, and `NOUVERSE_RELEASE_TOKEN` publishes the Pro editions for boxes. The first two
 are tried in the workflow's first job, before anything is built. `GITHUB_TOKEN` pushes the private
 image, with `packages: write`. **Pulling needs a credential too**, while the package is private:

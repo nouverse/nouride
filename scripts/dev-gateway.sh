@@ -75,7 +75,6 @@ say "Linking the bundled gateway"
 if [ ! -f "$ROOT/internals/nougate/apps/backend/package.json" ]; then
   echo "✗ internals/nougate is not checked out." >&2
   echo "  git submodule update --init internals/nougate" >&2
-  echo "  (it is a private repository — you need read access to nouverse/nougate)" >&2
   exit 1
 fi
 mkdir -p "$ROOT/node_modules/@nouverse"

@@ -8,7 +8,8 @@
  *
  * One since Router became part of the free build: Community carries the LLM gateway, off until
  * `[nougate] in_process = true`, as Pro does — about half a megabyte of binary, and nothing running until it is
- * switched on. Its source is a private submodule, so a public clone builds Community without it, and says so;
+ * switched on. Its source is a submodule, a public repository of its own: a clone that has not checked it out builds
+ * Community without it, and says so;
  * `--require-gateway` is how a release refuses to. `--router` is refused by name (`scripts/build/core.ts`).
  *
  * Adding a public edition is one record. Nothing else in the build has to change.

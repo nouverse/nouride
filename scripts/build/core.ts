@@ -197,7 +197,7 @@ async function withPluginsResolvable<T>(edition: EditionSpec, run: () => Promise
    * Registered before the first link, and it has to be.
    *
    * Two ways out of this function skip a `finally`: `run` ends a failed compile with
-   * `process.exit(code)`, and `linkPlugin` throws on a private submodule that is not checked out.
+   * `process.exit(code)`, and `linkPlugin` throws on a submodule that is not checked out.
    * The links that had already been made survived both — and the next `lint:types` followed them
    * into nougate's source and failed with sixteen errors on a tree where nothing was wrong. The
    * same bug `dev-gateway.sh` documents at its own `trap`, reached from the other direction.
@@ -240,8 +240,8 @@ async function withPluginsResolvable<T>(edition: EditionSpec, run: () => Promise
 /**
  * One `node_modules` entry pointing at a plugin directory. Scoped names need their parent made.
  *
- * Refuses an empty directory before linking it, because three of these are **private submodules**
- * and a public clone has the directory without the contents. Bun does not error on a dynamic
+ * Refuses an empty directory before linking it, because these are **submodules**, Pro's a private one,
+ * and a clone that has not checked one out has the directory without the contents. Bun does not error on a dynamic
  * `import()` of a bare specifier it cannot resolve at *bundle* time — it errors at *compile* time,
  * with `Could not resolve: "nouride-oauth". Maybe you need to "bun install"?`, after the two-attempt
  * retry has spent twenty seconds on it. That message names a package nobody mentioned and suggests
@@ -258,7 +258,7 @@ async function linkPlugin(edition: EditionSpec, plugin: PluginSpec): Promise<str
     throw new Error(
       `the ${edition.id} edition needs \`${rel}\`, and it is not checked out.\n` +
         `  git submodule update --init ${plugin.dir}\n` +
-        `  (private — you need read access to it. The free build needs none of these: ` +
+        `  (\`internals/pro\` is private and needs read access. The free build needs none of these: ` +
         `\`bun run build:binary\` works on a clone with no submodules at all.)`,
     );
   }

@@ -384,15 +384,15 @@ describe("the public edition", () => {
     expect(workflow).not.toContain("matrix.gpl");
   });
 
-  test("and the private repository it needs is the gateway's alone", () => {
+  test("and the one repository it clones is the gateway's", () => {
     /**
-     * The last column names the private submodules a variant clones: `internals/pro` (everything the
-     * private editions carry, one repository) and `internals/nougate`. A job that clones the wrong set
+     * The last column names the submodules a variant clones: `internals/pro`, private (everything the
+     * private editions carry, one repository), and `internals/nougate`, public. A job that clones the wrong set
      * fails three minutes into a build; which features an edition carries is `edition.ts`'s decision.
      *
      * The public row is the point of asserting it here. It clones the gateway, which it carries, and
      * nothing else: a public row that cloned `internals/pro` would carry what the private editions sell.
-     * Somebody without access to a private repository still builds the free edition — without the
+     * Somebody who checks out no submodule still builds the free edition — without the
      * gateway, which only the release requires (`build-gateway.test.ts`).
      */
     const workflow = readFileSync(join(import.meta.dir, "../../../../.github/workflows/release.yml"), "utf8");

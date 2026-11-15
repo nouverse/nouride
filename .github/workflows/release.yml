@@ -41,12 +41,13 @@
 #
 # ## What this needs that `GITHUB_TOKEN` cannot give
 #
-# `SUBMODULE_TOKEN` — a token that can read `nouverse/nougate` and
-# `nouverse/nouride-pro`, private repositories and therefore invisible to
-# `GITHUB_TOKEN`. The free edition builds from the first and Pro from both, and
-# `verify-private` tests the Pro code with them before either Pro edition is
-# built. A tag builds every edition, so on a tag a missing secret fails the run;
-# a dispatch drops the rows that need it and says so.
+# `SUBMODULE_TOKEN` — a token that can read `nouverse/nouride-pro`, a private
+# repository and therefore invisible to `GITHUB_TOKEN`, and `nouverse/nougate`,
+# which is public and is checked out with the same token in the same step. The
+# free edition builds from Nougate and Pro from both, and `verify-private` tests
+# the Pro code with them before either Pro edition is built. A tag builds every
+# edition, so on a tag a missing secret fails the run, the free edition's build
+# included; a dispatch drops the rows that need it and says so.
 # The WhatsApp bridge is part of this repository (`packages/wa-bridge`) and needs nothing.
 #
 # `RELEASES_REPO_TOKEN` — write access to `nouverse/nouride`, the public
@@ -232,7 +233,8 @@ jobs:
           # that plans none fails its audit (`release` below). A dispatch builds what it is asked for, public
           # unless told otherwise.
           WANT: ${{ github.event_name == 'workflow_dispatch' && inputs.variants || steps.quiet.outputs.public_only == 'yes' && 'public' || vars.RELEASE_VARIANTS || 'all' }}
-          # Whether the private submodule is reachable at all. The secret's VALUE is
+          # Whether the submodules can be checked out at all: the checkout step takes
+          # this token for each, Nougate's public one too. The secret's VALUE is
           # never read here — only whether it is set — so nothing sensitive enters
           # the planner or its log.
           HAS_NOUGATE_TOKEN: ${{ secrets.SUBMODULE_TOKEN != '' && 'yes' || 'no' }}
@@ -245,18 +247,18 @@ jobs:
           # download, a Box tarball, a Pro container — and the combinations nobody
           # receives are not built.
           #
-          # The free row is public *and* needs a private submodule: it carries the
-          # LLM gateway, as the Router row it replaced did (v0.8.28_RFC). Its nougate
-          # source stays private; only the compiled bundle ships. `--require-gateway`
+          # The free row is public *and* needs a submodule: it carries the LLM
+          # gateway, as the Router row it replaced did (v0.8.28_RFC), built from
+          # `internals/nougate`, a public repository of its own. `--require-gateway`
           # makes a build without it fail rather than publish Community with no gateway.
           #
-          # The last field is the **private submodules** that variant needs, space
+          # The last field is the **submodules** that variant needs, space
           # separated, and it used to be a bare "needs nougate" boolean. Two more
           # plugins moved out into private repositories of their own when this
           # repository was prepared to go public, and a boolean could no longer say
           # which. `wa-bridge` is not here: it is part of this repository.
           #
-          # variant, build flag or None, image package or None, edition arg, public, private submodules, targets
+          # variant, build flag or None, image package or None, edition arg, private, submodules, targets
           #
           # `pro` produces both: the tarball for a Box, the image for a pod. It carries the LLM gateway, off unless
           # `[nougate] in_process = true` — Pro Router was the same build with it, and became Pro in 0.7.20 (the
@@ -267,8 +269,8 @@ jobs:
           # The public rows build their tarballs here, where the source and its private maps are; their images are
           # built from a signed kit in nouverse/nouride (made by `binaries`), on GitHub's free runners, natively
           # per architecture — the images were most of a release's time on the one build runner, under emulation.
-          # Two private submodules: `internals/pro` (build-pro, multi-user, oauth, appliance
-          # and the internal docs, one repository) and `internals/nougate`. Which features an
+          # Two submodules: `internals/pro`, private (build-pro, multi-user, oauth, appliance
+          # and the internal docs, one repository), and `internals/nougate`, public. Which features an
           # edition carries is the build's decision (`scripts/build/edition.ts`); this only
           # decides what is checked out, and the public row never checks out `internals/pro`.
           PRO = "internals/pro"
@@ -281,8 +283,9 @@ jobs:
           want = os.environ["WANT"]
           keep = [r for r in ROWS if want == "all" or (want == "public") != r[4]]
 
-          # Without a token for the private repositories, no row can be built: each
-          # carries the gateway. What to do about that depends on why we are here:
+          # Without the token the checkout step takes, no row can be built: each
+          # carries the gateway, and that step reads Nougate with it as it reads Pro.
+          # What to do about that depends on why we are here:
           #
           #   a tag  — fail. A release that quietly ships half of what it advertises is
           #            worse than one that stops and says which half is missing.
@@ -297,9 +300,9 @@ jobs:
                   print(
                       "::warning::SUBMODULE_TOKEN is not set, so these variants are skipped: "
                       + ", ".join(dropped)
-                      + ". They need read access to the private nouverse/nougate, "
-                      "and nouverse/nouride-pro "
-                      "repositories. A tagged release does NOT skip them — it fails.",
+                      + ". Their submodules, nouverse/nougate and the private "
+                      "nouverse/nouride-pro, are checked out with it. "
+                      "A tagged release does NOT skip them — it fails.",
                       file=sys.stderr,
                   )
 
@@ -394,7 +397,7 @@ jobs:
         env:
           RELEASES_TOKEN: ${{ secrets.RELEASES_REPO_TOKEN }}
           SUBMODULE_TOKEN: ${{ secrets.SUBMODULE_TOKEN }}
-          # Any variant that names a private submodule — every row, since the free
+          # Any variant that names a submodule — every row, since the free
           # one carries the gateway. This used to key on one edition's name, which
           # stopped covering the set the moment another private edition needed
           # something other than nougate.
@@ -445,7 +448,7 @@ jobs:
           # from the public rows alone is a supported outcome, and failing here
           # for a token it never uses would block it for nothing.
           #
-          # Both, not the first one: one token reads every private submodule, so a
+          # Both, not the first one: one token checks out every submodule, so a
           # grant that covers nougate and not nouride-pro fails three minutes later
           # on a clone rather than here, which is the whole reason this step exists.
           if [ "${WANT_PRIVATE}" = "yes" ] && [ -n "${SUBMODULE_TOKEN}" ]; then
@@ -656,7 +659,7 @@ jobs:
         run: if git config --get-regexp '^submodule\.' >/dev/null; then git submodule deinit --force --all; fi
       # Both: the drift tests of the hosted LLM gateway read `internals/nougate` the way the Pro ones read
       # `internals/pro`, and one token reads both. Through `-c`, so no step after this one holds it.
-      - name: Check out the private submodules
+      - name: Check out the submodules
         env:
           TOKEN: ${{ secrets.SUBMODULE_TOKEN }}
         run: |
@@ -742,14 +745,15 @@ jobs:
       - name: Start without the last job's submodules
         run: if git config --get-regexp '^submodule\.' >/dev/null; then git submodule deinit --force --all; fi
 
-      # Private, so `GITHUB_TOKEN` cannot see them. Which ones depends on the
+      # Pro's is private, so `GITHUB_TOKEN` cannot see it; the gateway's is public,
+      # and read with the same token here. Which ones depends on the
       # variant — `matrix.submodules` names them: the gateway's for the free
       # build, and Pro's as well for Pro.
       #
       # One `insteadOf` and one `update` for all of them: the token is the same,
       # and a step per repository was three copies of the same five lines that
       # drifted the moment a third repository appeared.
-      - name: Check out the private submodules
+      - name: Check out the submodules
         if: matrix.submodules
         env:
           TOKEN: ${{ secrets.SUBMODULE_TOKEN }}
@@ -757,7 +761,7 @@ jobs:
         run: |
           error() { printf '::%s::%s\n' error "$*"; }
           if [ -z "${TOKEN}" ]; then
-            error "SUBMODULE_TOKEN is not set, and these submodules are private: ${PATHS}. This variant cannot be built. See the header of this workflow."
+            error "SUBMODULE_TOKEN is not set, and these submodules are checked out with it: ${PATHS}. This variant cannot be built. See the header of this workflow."
             exit 1
           fi
           # Unquoted on purpose: the value is a space-separated list of paths. The token goes through `-c`,
@@ -1150,7 +1154,7 @@ jobs:
         run: if git config --get-regexp '^submodule\.' >/dev/null; then git submodule deinit --force --all; fi
 
       # Same as the binaries job — see the note there for why it is one step.
-      - name: Check out the private submodules
+      - name: Check out the submodules
         if: matrix.submodules
         env:
           TOKEN: ${{ secrets.SUBMODULE_TOKEN }}
@@ -1158,7 +1162,7 @@ jobs:
         run: |
           error() { printf '::%s::%s\n' error "$*"; }
           if [ -z "${TOKEN}" ]; then
-            error "SUBMODULE_TOKEN is not set, and these submodules are private: ${PATHS}. This variant cannot be built. See the header of this workflow."
+            error "SUBMODULE_TOKEN is not set, and these submodules are checked out with it: ${PATHS}. This variant cannot be built. See the header of this workflow."
             exit 1
           fi
           # Unquoted on purpose: the value is a space-separated list of paths. The token goes through `-c`,
