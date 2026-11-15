@@ -60,6 +60,7 @@ Automation mengerjakan satu hal, atau beberapa hal dengan urutan yang tetap. Tia
 | **Jalankan perintah** | menjalankan satu baris shell di workspace agent | tidak |
 | **Mulai mission** | pekerjaan panjang yang dicek; automation menunggunya selesai | ya, seperti [mission](/id/docs/manual/missions/) |
 | **Tunggu persetujuan** | bertanya ke orang, dan lanjut setelah dijawab ya | tidak |
+| **Beberapa sekaligus** | memulai dua sampai lima giliran agent atau perintah bersamaan, lalu menggabung apa yang dikatakan masing-masing | ya, satu giliran untuk tiap agent di dalamnya |
 
 Nouride menjalankan langkah-langkah itu sesuai urutannya, setiap kali. Tiap langkah menerima apa yang
 dikatakan langkah sebelumnya, dan agent hanya mengerjakan langkah yang diberikan kepadanya: ia gak
@@ -94,6 +95,33 @@ Contoh, pengecekan toko:
 
 Selama toko menjawab, automation berhenti di langkah 1 dan gak ada model yang dipanggil. Saat toko mati,
 agent memeriksanya, kamu ditanya, dan baru dengan jawaban ya dari kamu sesuatu di-restart.
+
+### Beberapa sekaligus
+
+Satu langkah bisa memulai beberapa hal sekaligus (0.8.39): dua sampai lima, masing-masing berupa pertanyaan ke agent
+atau perintah yang dijalankan. Semuanya mulai bersamaan, masing-masing menerima apa yang dikatakan langkah
+sebelumnya, dan langkah itu selesai saat yang terakhir selesai. Apa yang mereka katakan diteruskan sebagai satu teks,
+masing-masing di bawah namanya (nama yang kamu beri, nama agent, atau perintahnya), tanpa model di antaranya. Kalau
+ini langkah terakhir, teks itulah yang dikirim automation.
+
+Contohnya, ronde pagi:
+
+1. **Beberapa sekaligus**: Nix membaca berita, Nox membaca kalender, dan `gh issue list` dijalankan.
+2. **Minta ke agent**: "Tulis catatan pagi dari apa yang mereka katakan."
+
+- **Kalau salah satunya gagal**, langkah itu mengambil jalur gagalnya. Kalau dibiarkan, automation berakhir sebagai
+  gagal dan menyebut yang mana yang gagal; apa yang dikatakan yang lain tetap tersimpan di halaman run itu. Kalau
+  diteruskan ke langkah lain, langkah itu menerima apa yang dikatakan yang lain beserta yang mana yang gagal dan
+  kenapa.
+- **Agent yang sedang tidur atau sibuk** dihitung sebagai kegagalan yang satu itu, padahal langkah yang berdiri
+  sendiri akan mengakhiri automation sebagai dilewati: hasil kerja yang lain tetap dipakai.
+- **Kalau tidak ada satu pun yang punya sesuatu untuk dikatakan**, langkah itu mengambil jalur diamnya. Satu yang
+  diam di antara yang lain tidak dimasukkan ke teksnya.
+- **Satu agent mengambil satu.** Dua giliran satu agent pada saat yang sama adalah dua langkah, satu setelah yang
+  lain. Mission dan menunggu persetujuan juga langkah tersendiri.
+- Tiap giliran agent berbiaya satu giliran, dan mereka jalan bersamaan: tiga agent berarti tiga giliran sekaligus.
+
+Halaman sebuah run menyebut bagaimana jalannya masing-masing, di bawah langkahnya.
 
 ### Mission di tengah
 
@@ -180,9 +208,19 @@ nouride cron add --name "shop-check" --every 10m --steps shop-check.json \
   --agent nouva --gateway telegram:nouva --chat 123456789
 ```
 
-Jenis lainnya adalah `systemEvent` (pesan, dengan `text`). `agentTurn` dan `mission` menerima `agentId`
-untuk agent lain, dan `approval` menerima `timeoutMs`. Nouride membaca file itu dan menolak langkah yang
-gak bisa dijalankannya, dengan menyebut langkahnya.
+Jenis lainnya adalah `systemEvent` (pesan, dengan `text`) dan `parallel` (beberapa sekaligus, 0.8.39): `steps`-nya
+berisi dua sampai lima `agentTurn` dan `command`, ditulis seperti langkah-langkah itu. `agentTurn` dan `mission`
+menerima `agentId` untuk agent lain, dan `approval` menerima `timeoutMs`. Nouride membaca file itu dan menolak
+langkah yang gak bisa dijalankannya, dengan menyebut langkahnya.
+
+```json
+{ "kind": "parallel", "whenFailed": "next", "steps": [
+  { "name": "News", "kind": "agentTurn", "message": "Read today's news and say what matters.", "agentId": "nix" },
+  { "kind": "command", "argv": ["sh", "-lc", "gh issue list --limit 5"] }
+] }
+```
+
+`nouride cron runs <id>` mencantumkan masing-masing di bawah langkahnya, beserta bagaimana jalannya.
 
 ### Empat jenis job, dan biayanya
 

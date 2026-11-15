@@ -118,7 +118,9 @@ thing with a different start, so they are one list (`modules/automations`) with 
 Schedule and Webhooks were two pages. It stays daemon-wide even though every job has an `agentId`, because you
 usually want to see everything that runs on its own at once. One automation's page is its start, its steps as cards
 in the order they run, and who runs it and where it reports. A run is drawn over those same cards (done, failed,
-waiting, never reached), so the picture a person edits is the picture a run is read on, and a suggested change is
+waiting, never reached), so the picture a person edits is the picture a run is read on (a step of several at the
+same time is one card, written as a short list of what starts together, and read in a run as how each of them went
+under its name, 0.8.39), and a suggested change is
 the same cards again with what it adds and changes marked. A job that does one thing is drawn as one step and stays
 saved as one thing until it needs to be a list. Nothing is saved as it is typed: the page keeps a draft and one bar
 saves it, because a list of steps half saved is a job that runs half of what was meant. `/schedule` and `/webhooks`
