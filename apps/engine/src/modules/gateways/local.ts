@@ -185,7 +185,9 @@ export class LocalGateway implements Gateway {
     // `nouva: /stop` misses the queue's urgent lane and waits behind the very turn it is meant to stop.
     // Rehearsed on a copy of the box: `/approve` from the dashboard sat behind the turn waiting on it
     // until the approval expired. `mentions` below routes it either way.
-    const text = request.agent && !body.trimStart().startsWith("/") ? `${request.agent}: ${body}` : body;
+    // A message of files alone goes bare as well: with no words after it the prefix was all there was, so "nix:" was
+    // kept as what the person wrote, drawn in their own bubble and handed to the model as their message.
+    const text = request.agent && body.trim() && !body.trimStart().startsWith("/") ? `${request.agent}: ${body}` : body;
 
     return {
       id: newId("msg"),
