@@ -14,6 +14,17 @@ import type { MissionsInForce } from "./slots.ts";
 import type { SteerOutcome } from "./tell.ts";
 import type { Mission, Told } from "./types.ts";
 
+/** A running job of an agent, as a mission reads it. */
+export interface MissionJob {
+  id: string;
+  gatewayId: string;
+  chatId: string;
+  /** Started to serve until it is stopped: it never ends by itself. */
+  service?: boolean;
+  /** What it runs, for telling the agent which job is meant. */
+  command?: string;
+}
+
 export interface MissionsDeps {
   store: MissionsPort;
   /** `[missions]`, read when it matters — a change from the dashboard reaches the next decision — the slots resolved. */
@@ -22,8 +33,11 @@ export interface MissionsDeps {
   agents: { exists(agentId: string): boolean; asleep(agentId: string): boolean; privateDir(agentId: string): string };
   /** The conversations' work notes: a mission's checklist, and the chat task it was started from (`carry.ts`). */
   notes?: NotesPort;
-  /** A mission's running jobs — its commands and helpers report to its conversation — and stopping one. */
-  jobs?: { running(agentId: string): { id: string; gatewayId: string; chatId: string }[]; kill(id: string, why: string): boolean };
+  /**
+   * A mission's running jobs — its commands and helpers report to its conversation — and stopping one. `service`: one
+   * that serves until it is stopped (a dev server, a tunnel), whose end a mission does not wait for.
+   */
+  jobs?: { running(agentId: string): MissionJob[]; kill(id: string, why: string): boolean };
   /** The approvals a mission has parked and nobody has answered yet. */
   parked: (mission: Mission) => Parked[];
   /** How its approvals settled since a moment: answered by a person — approved or denied — or expired unanswered. */
@@ -74,18 +88,21 @@ export interface MissionsDeps {
   changed?: (mission: Mission) => void;
   /** What lasts of a mission that ended, filed once as an episode of its agent's memory, from its report. */
   remember?: (mission: Mission) => Promise<void>;
+  /** A mission another agent started has ended: kept, so both agents are told of it in their own chats (`pipeline/work-done.ts`). */
+  helped?: (mission: Mission) => void;
   /**
    * Remove an ended mission's own folder, past `KEEP_MS` — only ever the folder the daemon made for it. `keepUnsaved`:
-   * not where a worktree in it holds work nobody committed — those worktrees are named, and nothing is removed.
+   * not where a worktree in it holds work nobody committed — those worktrees are named, and nothing is removed. Null:
+   * it had no folder of its own there, so nothing was removed and nothing is said to have been.
    */
-  remove?: (mission: Mission, how?: { keepUnsaved: boolean }) => Promise<string[]>;
+  remove?: (mission: Mission, how?: { keepUnsaved: boolean }) => Promise<string[] | null>;
   /**
    * Every agent's missions' own folders, by the mission each is named for, with when it last changed: among them the
    * ones no mission's record names any more (`MissionTimers.sweepLeft`).
    */
   folders?: () => { agentId: string; id: string; changedAt: number }[];
   /** Remove such a folder as `remove` does an ended mission's, never over work nobody committed: those worktrees are named. */
-  removeLeft?: (agentId: string, missionId: string) => Promise<string[]>;
+  removeLeft?: (agentId: string, missionId: string) => Promise<string[] | null>;
   /**
    * The free megabytes where missions work, when they are below the daemon's disk warning — null when there is room or
    * it cannot be read. Low, an ended mission's folder goes an hour after it ended instead of a week.

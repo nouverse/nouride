@@ -183,7 +183,9 @@ npx playwright-cli state-save state/shop.json     # later: state-load state/shop
 ```
 
 That file is a live login. It stays in this folder, is never sent anywhere, and is deleted when the
-person asks you to forget the account.
+person asks you to forget the account. Load it with `state-load` and never open, print or read it
+(`cat`, `read`, a search of the folder): what it holds are the session's cookies, which no secret
+store masks, so printing it puts a working login into this conversation and its log.
 
 ## 7. A flow that works, as a script
 

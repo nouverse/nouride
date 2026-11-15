@@ -43,6 +43,7 @@ function words(host: HTMLElement): string {
 const DATA: Record<string, string> = {
   "Write report.md": "a step of a mission's plan, as its agent wrote it",
   "test -s report.md": "a check the person who started the mission wrote",
+  "plan.md": "a file an agent made in its own folder, by the name the agent gave it",
 };
 
 /** An address a person copies, like Integrations' `http://localhost/mcp`: a value, not wording. */
@@ -67,6 +68,8 @@ const PAGES: [name: string, path: string][] = [
   ["an agent's access", "/agents/nouva/access"],
   ["an agent's skills", "/agents/nouva/skills"],
   ["an agent's connectors", "/agents/nouva/mcp"],
+  ["an agent's workspace", "/agents/nouva/workspace"],
+  ["the workspace", "/workspace"],
   ["models", "/models"],
   ["coding CLIs", "/models?tab=clis"],
   ["update", "/update"],

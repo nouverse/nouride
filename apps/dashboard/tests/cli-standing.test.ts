@@ -38,11 +38,16 @@ afterEach(() => {
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 
 const STATES: [CliVersionView, string, string, boolean][] = [
-  [{ standing: "current" }, "up to date", "This is the newest Claude Code this Nouride was tested with.", false],
-  [{ standing: "current", untested: "0.101.0" }, "up to date", "This is the newest Claude Code this Nouride was tested with. A newer one is out, not tested with it yet.", false],
-  [{ standing: "update", offer: "0.100.0" }, "update out", "A newer version of Claude Code is out, one this Nouride was tested with.", true],
+  [{ standing: "current" }, "up to date", "This is the newest Claude Code.", false],
+  [{ standing: "update", offer: "0.100.0" }, "update out", "A newer version of Claude Code is out.", true],
+  // Past every version this Nouride was tested with: offered all the same, and said. It was once kept back.
+  [{ standing: "update", offer: "0.107.0", offerUntested: true }, "update out", "A newer version of Claude Code is out. It was not tested with this Nouride yet.", true],
+  // What the update brings, by the CLI's own version where the server read it.
+  [{ standing: "update", offer: "0.107.0", offerUntested: true, brings: "2.1.323" }, "update out", "Claude Code 2.1.323 is out. It was not tested with this Nouride yet.", true],
   [{ standing: "newer" }, "newer than tested", "This Claude Code is newer than this Nouride was tested with. It runs, but it was not tried with it.", false],
   [{ standing: "older", offer: "0.100.0" }, "too old", "This Claude Code is older than this Nouride supports. Update it.", true],
+  // A newer CLI out that nothing carries yet: not "up to date", and nothing to press.
+  [{ standing: "current", ahead: "2.1.325" }, "newest you can get", "Claude Code 2.1.325 is out, but it cannot be installed here yet. There is nothing to update.", false],
 ];
 
 describe("each standing's words", () => {
@@ -51,6 +56,9 @@ describe("each standing's words", () => {
     expect(standingWords("Codex", { standing: "older" }).tone).toBe("warning");
     expect(standingWords("Codex", { standing: "newer" }).tone).toBe("warning");
     expect(standingWords("Codex", { standing: "current" }).tone).toBe("success");
+    // Up to date is green only when nothing newer is out at all.
+    expect(standingWords("Codex", { standing: "current", ahead: "0.166.0" }).tone).toBe("info");
+
   });
 });
 
@@ -89,18 +97,19 @@ describe("the Models page", () => {
   }
 
   test("each CLI says where it stands in words, its numbers under Details", async () => {
-    const { host } = await mount([card("a", "0.100.0", { standing: "current", untested: "0.101.0" }), card("b", "0.97.0", { standing: "update", offer: "0.100.0" }), card("c", "0.102.0", { standing: "newer" }), card("d", "0.90.0", { standing: "older", offer: "0.100.0" })]);
+    const { host } = await mount([card("a", "0.100.0", { standing: "update", offer: "0.101.0", offerUntested: true }), card("b", "0.97.0", { standing: "update", offer: "0.100.0" }), card("c", "0.102.0", { standing: "newer" }), card("d", "0.90.0", { standing: "older", offer: "0.100.0" })]);
     // The badge and the sentence: the update's button below them comes once the orchestrator's name is known.
     const shown = [...host.querySelectorAll("[data-standing] > p")].map((element) => plainText(element).replace(/\s+/g, " ").trim());
     expect(shown).toEqual([
-      "up to date This is the newest Claude Code this Nouride was tested with. A newer one is out, not tested with it yet.",
-      "update out A newer version of Claude Code is out, one this Nouride was tested with.",
+      "update out A newer version of Claude Code is out. It was not tested with this Nouride yet.",
+      "update out A newer version of Claude Code is out.",
       "newer than tested This Claude Code is newer than this Nouride was tested with. It runs, but it was not tried with it.",
       "too old This Claude Code is older than this Nouride supports. Update it.",
     ]);
     // The numbers are for whoever runs the server: the one Nouride reads is not the one the CLI shows.
     const details = host.querySelector('[data-standing="older"] details')?.textContent ?? "";
     expect(details).toContain("@agentclientprotocol/claude-agent-acp 0.90.0 · an update installs 0.100.0");
+    expect(host.querySelector('[data-standing="update"] details')?.textContent).toContain("an update installs 0.101.0, not tested with this Nouride yet");
     expect(plainText(host)).not.toContain("0.90.0");
   });
 
@@ -113,6 +122,43 @@ describe("the Models page", () => {
     // Pressed, it opens the chat over the page on the orchestrator, with the request for its box.
     asks[0]!.click();
     expect(await floatingChatAsked()).toEqual({ open: true, agent: "nouva", draft: "Please update Claude Code on this server with `nouride agents update claude-code`, and tell me how it went." });
+  });
+
+  test("a version past the ones this Nouride was tested with is offered all the same: the button is there", async () => {
+    // "Up to date" and no button, while a Claude Code with a newer model was out: the update was kept back for a release.
+    const { host } = await mount([card("claude-code", "0.100.0", { standing: "update", offer: "0.107.0", offerUntested: true, brings: "2.1.323" })]);
+    const asking = () => [...host.querySelectorAll("button")].filter((button) => button.textContent?.trim() === "Ask Nouva to update it");
+    await eventually(() => asking().length > 0, 3_000, "the update's button");
+    expect(plainText(host)).toContain("It was not tested with this Nouride yet.");
+    asking()[0]!.click();
+    // The same request as for a tested one: the command installs what is on offer, the newest out.
+    expect(await floatingChatAsked()).toEqual({ open: true, agent: "nouva", draft: "Please update Claude Code on this server with `nouride agents update claude-code`, and tell me how it went." });
+  });
+
+  test("a CLI's own version is on its badge, what carries and runs it under that, the rest under Details", async () => {
+    // The badge read "installed": the one version read was the connector's, shown nowhere a person looked.
+    const parts = [
+      { kind: "cli", name: "Claude Code", package: "@anthropic-ai/claude-agent-sdk", version: "2.1.323" },
+      { kind: "connector", name: "@agentclientprotocol/claude-agent-acp", package: "@agentclientprotocol/claude-agent-acp", version: "0.107.0" },
+      { kind: "runtime", name: "Node.js", version: "24.15.0", needs: ">=22", tooOld: false },
+      { kind: "dependency", name: "zod", package: "zod", version: "4.6.7" },
+    ] as const;
+    const { host } = await mount([{ ...card("claude-code", "0.107.0", { standing: "newer" }), parts: [...parts] }, card("codex", "2.5.0", { standing: "current" })]);
+    const badges = [...host.querySelectorAll("[data-cli-own]")].map((badge) => `${badge.getAttribute("data-cli-own")}: ${badge.textContent}`);
+    // One whose parts were not read keeps the word it had.
+    expect(badges).toEqual(["version: Claude Code 2.1.323", "installed: installed"]);
+    expect(plainText(host)).toContain("Runs in claude-agent-acp 0.107.0, on Node.js 24.15.0.");
+    expect(plainText(host)).not.toContain("zod");
+    expect(host.querySelector('[data-standing="newer"] details')?.textContent).toContain("with zod 4.6.7");
+  });
+
+  test("an account at its limit says so in words, and an agent that moved off it says where it is now", async () => {
+    const limited = { ...card("claude-code", "0.107.0", { standing: "current" }), shared: true, accounts: [{ name: "rina", signedIn: true, limits: ["At its limit for `fable`: for about 5 days more."], agents: [{ id: "nix", name: "Nix", signedIn: true, on: "work" }, { id: "nox", name: "Nox", signedIn: true }] }, { name: "work", signedIn: true, agents: [] }] };
+    const { host } = await mount([limited]);
+    // The mark's name for the model is plain text on a page: no code marks.
+    expect([...host.querySelectorAll("[data-account-limit]")].map((line) => line.textContent)).toEqual(["At its limit for fable: for about 5 days more."]);
+    expect(plainText(host)).toContain("Nixon work now");
+    expect(plainText(host)).not.toContain("Noxon ");
   });
 
   test("Check again asks the server afresh, which reads the newest out again", async () => {

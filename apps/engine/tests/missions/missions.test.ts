@@ -7,7 +7,7 @@ import { workedMs } from "@/modules/missions/page.ts";
 import { describe, expect, test } from "bun:test";
 import { MISSION_GATEWAY_ID } from "@/modules/missions/gateway.ts";
 import { SYSTEM_SENDER } from "@/modules/pipeline/deps.ts";
-import type { ToolContext } from "@nouride/shared";
+import { addLogSink, type LogEntry, type ToolContext } from "@nouride/shared";
 import { createMissionTools } from "@/modules/tools/builtins/mission.ts";
 import { carryInto } from "@/modules/missions/carry.ts";
 import type { Mission } from "@/modules/missions/types.ts";
@@ -180,6 +180,68 @@ describe("a turn", () => {
     h.turn(mission);
     expect(h.queued).toHaveLength(2);
     expect(h.store.get(mission.id)!.turnsUsed).toBe(2);
+  });
+
+  test("a server it started is not waited for: the one job left running a service, the next turn comes", async () => {
+    // On the box: a mission's static server, started as a service as the tool says, was the one job left running when a
+    // turn ended. The mission waited for its end for two hours and forty minutes, until a person stopped the server.
+    const h = await missionsHarness();
+    const mission = await h.start();
+    const serve = { id: "job_serve", gatewayId: MISSION_GATEWAY_ID, chatId: mission.id, service: true };
+    h.jobs.set("nova", [serve]);
+    h.turn(mission);
+    expect(h.queued).toHaveLength(2);
+    expect(h.queued[1]!.text).toBe("continue with the next step.");
+    // Beside a job that ends, that one is waited for; and both are stopped with the mission, the server too.
+    h.jobs.set("nova", [serve, { id: "job_build", gatewayId: MISSION_GATEWAY_ID, chatId: mission.id }]);
+    h.turn(mission);
+    expect(h.queued).toHaveLength(2);
+    h.missions.stop(mission.id, "Gading");
+    expect(h.killed).toEqual(["job_serve", "job_build"]);
+  });
+
+  test("quiet behind a server alone, it is nudged as any quiet mission is: a server is nothing to wait for", async () => {
+    const h = await missionsHarness();
+    const mission = await h.start();
+    const serve = { id: "job_serve", gatewayId: MISSION_GATEWAY_ID, chatId: mission.id, service: true };
+    h.jobs.set("nova", [serve, { id: "job_build", gatewayId: MISSION_GATEWAY_ID, chatId: mission.id }]);
+    h.turn(mission);
+    // The build ended and its word never came: the server alone is left.
+    h.jobs.set("nova", [serve]);
+    h.tick(61 * 60_000);
+    h.missions.tick();
+    expect(h.queued.at(-1)!.text).toContain("nothing has happened in this mission for an hour");
+  });
+
+  test("waiting an hour for a job, it is told which and the way on if that one never ends: once a job, and never taken for stuck", async () => {
+    const h = await missionsHarness();
+    const mission = await h.start();
+    h.jobs.set("nova", [{ id: "job_7", gatewayId: MISSION_GATEWAY_ID, chatId: mission.id, command: "bash -lc python3 tools/serve.py\n  out 8731" }]);
+    h.turn(mission);
+    h.tick(59 * 60_000);
+    h.missions.tick();
+    expect(h.queued).toHaveLength(1);
+    h.tick(2 * 60_000);
+    h.missions.tick();
+    expect(h.queued).toHaveLength(2);
+    const told = h.queued[1]!.text;
+    expect(told).toContain("you have waited an hour for a job still running: job_7 (`bash -lc python3 tools/serve.py out 8731`)");
+    // The words that carry the way on: what such a job is, how it is stopped, how it is started so it holds nothing.
+    expect(told).toContain("it never ends and this mission stands still behind it");
+    expect(told).toContain("stop it with `nouride jobs kill <id>`, start it again with `service: true`, and carry on");
+    expect(told).toContain("If its result is still to come, end your turn: you are woken when it ends.");
+    // It says it is still waiting: the same job is not brought up again, and waiting for it is not being stuck.
+    h.turn(mission, { worked: 0 });
+    h.tick(3 * 60 * 60_000);
+    h.missions.tick();
+    expect(h.queued).toHaveLength(2);
+    expect(h.store.get(mission.id)!.status).toBe("running");
+    // Another job it then waits an hour for is said, with the first not named again.
+    h.jobs.set("nova", [{ id: "job_7", gatewayId: MISSION_GATEWAY_ID, chatId: mission.id }, { id: "job_8", gatewayId: MISSION_GATEWAY_ID, chatId: mission.id }]);
+    h.missions.tick();
+    expect(h.queued).toHaveLength(3);
+    expect(h.queued[2]!.text).toContain("for a job still running: job_8.");
+    expect(h.queued[2]!.text).not.toContain("job_7");
   });
 
   test("three in a row that do nothing — no call that worked, no step moved — and a person is asked", async () => {
@@ -792,6 +854,32 @@ describe("an ended mission", () => {
     await h.settle();
     expect(h.removed).toEqual([own.id, named.id]);
     expect(h.keepingUnsaved).toEqual([own.id]);
+  });
+});
+
+describe("what the sweep says", () => {
+  const said: LogEntry[] = [];
+  addLogSink((entry) => void (entry.component === "missions.timers" && said.push(entry)));
+
+  test("removed, of a folder it removed; nothing of an ended mission whose folder was not there", async () => {
+    // After every restart the sweep came to each mission of the last thirty days again and logged "removed" for all
+    // of them: 41 lines a sweep on the box, for folders gone a week or more. In a sandbox over a copy of the live data
+    // the same lines read as the copy deleting the live install's folders.
+    const gone = new Set<string>();
+    const h = await missionsHarness({ settings: { maxRunning: 4, perAgent: 4 }, noFolder: (mission) => gone.has(mission.id) });
+    const there = await h.start("its folder is there");
+    const not = await h.start("its folder went long ago");
+    gone.add(not.id);
+    h.missions.stop(there.id, "Gading");
+    h.missions.stop(not.id, "Gading");
+    said.length = 0;
+    h.tick(8 * 24 * 60 * 60_000);
+    h.missions.tick();
+    await h.settle();
+    expect(said.filter((entry) => entry.message.includes("folder")).map((entry) => [entry.message, (entry.data as { mission: string }).mission])).toEqual([["an ended mission's folder removed", there.id]]);
+    // Both were looked at, and one was removed.
+    expect([...h.keepingUnsaved].sort()).toEqual([there.id, not.id].sort());
+    expect(h.removed).toEqual([there.id]);
   });
 });
 

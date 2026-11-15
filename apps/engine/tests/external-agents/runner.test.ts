@@ -6,7 +6,7 @@
  */
 
 import { afterEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { CliRow } from "@nouride/acp";
@@ -15,6 +15,7 @@ import { privateWorkspace } from "@nouride/persona";
 import { runAgentCommandsThrough } from "@nouride/runtime";
 import { ExternalAgents } from "@/modules/external-agents/index.ts";
 import { situationOf, untold } from "@/modules/external-agents/situation.ts";
+import { GO_ON } from "@/modules/external-agents/runner.ts";
 import { CLOCK, clockDeps } from "./fixtures/clock.ts";
 import { ownKey, type OwnChat } from "@/modules/external-agents/own-words.ts";
 import { cliLeftRunningState, externalEffortsState, externalModelsState } from "@/commons/daemon-state.ts";
@@ -51,20 +52,23 @@ const row = (mode = "", efforts?: Record<string, string[]>): CliRow => ({
   instructionFile: "AGENTS.md",
 });
 
-function setup(options: { mode?: string; efforts?: Record<string, string[]>; effort?: string; answer?: ApprovalOutcome; permissions?: "folder" | "risky" | "all"; model?: string; persona?: Record<string, string>; onText?: (delta: string) => void; onPreamble?: ExecutorDeps["onPreamble"]; stopGraceMs?: number; profileInstruction?: boolean; quietMs?: number; commandsUnder?: (pid: number) => number; kept?: Record<string, string>; left?: { load(): Record<string, OwnChat>; save(left: Record<string, OwnChat>): void }; onAsk?: () => void } = {}) {
+function setup(options: { row?: Partial<CliRow>; tokens?: Record<string, string>; external?: Record<string, unknown>; mode?: string; efforts?: Record<string, string[]>; effort?: string; answer?: ApprovalOutcome; permissions?: "folder" | "risky" | "all"; model?: string; persona?: Record<string, string>; onText?: (delta: string) => void; onPreamble?: ExecutorDeps["onPreamble"]; stopGraceMs?: number; profileInstruction?: boolean; quietMs?: number; commandsUnder?: (pid: number) => number; kept?: Record<string, string>; left?: { load(): Record<string, OwnChat>; save(left: Record<string, OwnChat>): void }; onAsk?: () => void } = {}) {
   const dir = mkdtempSync(join(tmpdir(), "external-runner-"));
   dirs.push(dir);
   // The agent's own folder, which boot makes for every agent.
   mkdirSync(privateWorkspace(dir, "coder"), { recursive: true });
   const plans: PlanStep[][] = [];
+  const audits: string[] = [];
   const service = new ExternalAgents({
-    rows: () => [{ ...row(options.mode, options.efforts), ...(options.profileInstruction ? { profileInstructionFile: "AGENTS.md" } : {}) }],
+    rows: () => [{ ...row(options.mode, options.efforts), ...(options.profileInstruction ? { profileInstructionFile: "AGENTS.md" } : {}), ...options.row }],
     workspaceDir: () => dir,
     secretsFor: () => ({}),
     sessions: { load: () => ({ ...options.kept }), save: () => {} },
     models: externalModelsState(stateOf(dir)),
     efforts: externalEffortsState(stateOf(dir)),
     keepPlan: async (_key, _task, steps) => void plans.push(steps),
+    audit: { record: (entry) => void audits.push(entry.action) },
+    ...(options.tokens ? { accounts: { tokens: { get: (name: string) => options.tokens![name], set: async () => {}, delete: async () => false } } } : {}),
     ...(options.stopGraceMs !== undefined ? { stopGraceMs: options.stopGraceMs } : {}),
     ...(options.quietMs !== undefined ? { quietMs: options.quietMs } : {}),
     ...(options.commandsUnder ? { commandsUnder: options.commandsUnder } : {}),
@@ -98,7 +102,7 @@ function setup(options: { mode?: string; efforts?: Record<string, string[]>; eff
     config: {
       id: "coder",
       displayName: "Coder",
-      external: { cli: "fake", ...(options.permissions ? { permissions: options.permissions } : {}), ...(options.model ? { model: options.model } : {}) },
+      external: { cli: "fake", ...(options.permissions ? { permissions: options.permissions } : {}), ...(options.model ? { model: options.model } : {}), ...options.external },
       ...(options.effort ? { llm: { effort: options.effort } } : {}),
     },
     persona: { identity: "", ...options.persona },
@@ -117,7 +121,7 @@ function setup(options: { mode?: string; efforts?: Record<string, string[]>; eff
       senderName: "Mira",
       ...extra,
     }) as unknown as TurnRequest;
-  return { service, agent, runner: service.runnerFor(agent, deps)!, req, asks, steps, deltas, plans, usages, folder: privateWorkspace(dir, "coder") };
+  return { service, agent, runner: service.runnerFor(agent, deps)!, req, asks, steps, deltas, plans, usages, audits, folder: privateWorkspace(dir, "coder") };
 }
 
 describe("a turn of an external agent", () => {
@@ -566,8 +570,29 @@ describe("a turn of an external agent", () => {
 
   test("an old \"not found\" on a running CLI's stderr does not make a later failure \"not installed\" (0.8.1)", async () => {
     const { service, runner, req } = setup({ mode: "overloaded" });
-    await expect(runner.run(req("hello"))).rejects.toThrow("Fake CLI did not start: session/prompt: the model is overloaded");
+    await expect(runner.run(req("hello"))).rejects.toThrow("Fake CLI refused the message: the model is overloaded");
     expect(service.unavailable("coder")).toBeNull();
+  });
+
+  test("a message its CLI refuses is said as refused, never as a CLI that did not start", async () => {
+    // "Claude Code did not start: session/prompt: Internal error: You've reached your Fable limit." It had started.
+    const { service, runner, req } = setup({ mode: "overloaded" });
+    const failure = await runner.run(req("hello")).then(() => null, (err: unknown) => err as Error);
+    expect(failure?.message).toBe("Fake CLI refused the message: the model is overloaded, try again later");
+    expect(failure?.message).not.toContain("did not start");
+    expect(failure?.message).not.toContain("session/prompt");
+    // Nothing picked in this chat: nothing is said of a model.
+    expect(failure?.message).not.toContain("This chat is on");
+    // The CLI runs: the agent is not marked as one that cannot answer.
+    expect(service.unavailable("coder")).toBeNull();
+  });
+
+  test("where this chat picked a model, the failure says what the chat is on and the way back", async () => {
+    // A chat picked `fable`, its next message hit the account's limit, and nothing said the chat stayed on that model.
+    const { runner, req } = setup({ mode: "overloaded" });
+    const failure = await runner.run(req("hello", { model: "big" })).then(() => null, (err: unknown) => err as Error);
+    // This CLI calls its models by their words alone; one with a name of its own is said with it (`prompt-failed.test.ts`).
+    expect(failure?.message).toBe("Fake CLI refused the message: the model is overloaded, try again later. This chat is on `big`, picked here. `/model default` goes back to Fake CLI's own.");
   });
 
   test("an instruction file that is a link is left alone and not read; the turn goes on (0.8.1)", async () => {
@@ -836,6 +861,180 @@ describe("what a CLI's turn has spent while it runs (0.8.8)", () => {
     expect(during).toBe(42_000);
     expect(elsewhere).toBe(0);
     expect(run.service.spentNow("coder", "telegram:coder", "555")).toBe(0);
+  });
+});
+
+describe("an account at its limit, and the agent's next one", () => {
+  /** A CLI with a sign-in two accounts share, each a token; started with `tok-first`, it refuses as an account at its limit. */
+  const SHARED = { sharedLogin: { args: [], env: "FAKE_TOKEN", tokenPrefix: "tok-" }, limit: { key: "errorKind", value: "rate_limit" } };
+  const TOKENS = { "cli-fake-first": "tok-first", "cli-fake-second": "tok-second" };
+  const BOTH = { profile: "first", accounts: ["first", "second"] };
+  const limited = (tokens: string, extra: Record<string, string> = {}) => ({ ...SHARED, env: { FAKE_MODE: "", FAKE_LIMITED: tokens, ...extra } });
+  const NOTE = "_Account first reached its limit: it did not say until when. Coder goes on with second._\n\n";
+
+  test("the turn runs again on the next account, in the same folder and the same session, and the chat is told first", async () => {
+    // The person moved the chat back by hand, with a second account signed in beside the one at its limit.
+    const { service, agent, runner, req, deltas, audits } = setup({ row: limited("tok-first"), tokens: TOKENS, external: BOTH });
+    const result = await runner.run(req("push the fix"));
+    expect(result.text).toStartWith(NOTE);
+    expect(result.text).toEndWith(`Mira: push the fix\n\n${CLOCK}`);
+    // Told before the answer, where the chat reads as it comes.
+    expect(deltas.join("")).toContain(NOTE);
+    expect(deltas.join("").indexOf(NOTE)).toBeLessThan(deltas.join("").indexOf("Done:"));
+    expect(service.rotation.accountOf("coder")).toBe("second");
+    expect(audits).toEqual(["cli_account_limited", "cli_account_moved"]);
+    // The second start: the other account's token, the first account's folder, the conversation's session loaded.
+    const said = await stderrSaid(await service.connection(agent), (line) => line.startsWith("prompted-as:") || line.startsWith("loaded:"), 2);
+    expect(said).toEqual(["loaded:s1", "prompted-as:tok-second in first"]);
+    // The next turn stays there: nothing is refused, and nothing more is said of accounts.
+    const next = await runner.run(req("and the tests"));
+    expect(next.text).not.toContain("reached its limit");
+    expect(service.unavailable("coder")).toBeNull();
+  });
+
+  test("a turn on another model is not moved: the limit is the model's, on that account", async () => {
+    const { service, runner, req } = setup({ row: limited("tok-first"), tokens: TOKENS, external: BOTH });
+    await runner.run(req("push the fix", { model: "big" }));
+    expect(service.rotation.limitsOf("fake", "first")).toEqual([{ model: "big", until: expect.any(Number), known: false }]);
+    // The agent's CLI is on its second account now; a turn on the other model has no mark to move it anywhere.
+    expect(service.rotation.accountFor(service.row("fake")!, { id: "coder", name: "Coder", external: { cli: "fake", ...BOTH } }, "small")).toBe("second");
+    service.rotation.started("coder", "first");
+    expect(service.rotation.accountFor(service.row("fake")!, { id: "coder", name: "Coder", external: { cli: "fake", ...BOTH } }, "small")).toBe("first");
+  });
+
+  test("after it had done a step, it is told to go on, not handed the message to do again", async () => {
+    const { runner, req } = setup({ row: limited("tok-first", { FAKE_LIMITED_AFTER: "step" }), tokens: TOKENS, external: BOTH });
+    const result = await runner.run(req("push the fix"));
+    expect(result.text).toStartWith(NOTE);
+    expect(result.text).toContain(GO_ON);
+    expect(result.text).not.toContain("Mira: push the fix");
+    expect(GO_ON).toBe("[Nouride: the account this ran on reached its limit, and you are on another one now. Nothing else changed. What you did so far is above: go on from where you stopped, and do not do again what is already done.]");
+  });
+
+  test("a later turn refused before any step is handed its message: an earlier turn's steps do not count", async () => {
+    const three = { profile: "first", accounts: ["first", "second", "third"] };
+    const { service, runner, req } = setup({ row: limited("tok-first,tok-second"), tokens: { ...TOKENS, "cli-fake-third": "tok-third" }, external: three });
+    // The first turn is refused twice and answered on the third account, with steps.
+    expect((await runner.run(req("push the fix", { model: "big" }))).text).toContain("Mira: push the fix");
+    // The same runner, a turn on another model, back on the first account: refused before any step, twice.
+    service.rotation.started("coder", "first");
+    const later = await runner.run(req("and the tests", { model: "small" }));
+    expect(later.text).toContain("Mira: and the tests");
+    expect(later.text).not.toContain(GO_ON);
+  });
+
+  /** The same CLI saying how much of each account's limits is used: `first` at 93% of a limit that starts again in an hour. */
+  const saysUse = { ...SHARED, use: { meta: "fake/use", windows: "windows", used: "share", resets: "starts" }, env: { FAKE_MODE: "", FAKE_USE: JSON.stringify({ "tok-first": 0.93 }) } };
+  const EARLY = "_Account first has used 93% of a limit that starts again in about 60 minutes. Coder goes on with second._\n\n";
+
+  test("near a limit, an agent that asked to moves on before it: its turn ends where it ran, and the next starts on the next account, the chat told first", async () => {
+    const { service, agent, runner, req, deltas, audits } = setup({ row: saysUse, tokens: TOKENS, external: { ...BOTH, moveAt: 90 } });
+    const first = await runner.run(req("push the fix"));
+    // The turn that crossed its mark is answered where it ran: nothing is cut, sent again or said of accounts.
+    expect(first.text).not.toContain("Account");
+    expect(service.rotation.accountOf("coder")).toBe("first");
+    expect(audits).toEqual(["cli_account_near"]);
+    const next = await runner.run(req("and the tests"));
+    expect(next.text).toStartWith(EARLY);
+    expect(next.text).toEndWith(`Mira: and the tests\n\n${CLOCK}`);
+    expect(deltas.join("").indexOf(EARLY)).toBeLessThan(deltas.join("").lastIndexOf("Done:"));
+    expect(service.rotation.accountOf("coder")).toBe("second");
+    expect(audits).toEqual(["cli_account_near", "cli_account_moved"]);
+    // The other account's token, the first account's folder, the conversation's session loaded.
+    const said = await stderrSaid(await service.connection(agent), (line) => line.startsWith("prompted-as:") || line.startsWith("loaded:"), 2);
+    expect(said).toEqual(["loaded:s1", "prompted-as:tok-second in first"]);
+    // It stays there, and the move is said once.
+    const third = await runner.run(req("and the docs"));
+    expect(third.text).not.toContain("Account");
+    expect(service.rotation.says("fake", "first")).toEqual(["Near a limit, 93% of it used: it starts again in about 60 minutes."]);
+  });
+
+  test("an agent that did not ask, or whose mark is higher, stays: what its CLI says of the account's use moves nothing", async () => {
+    for (const external of [BOTH, { ...BOTH, moveAt: 95 }]) {
+      const { service, runner, req, audits } = setup({ row: saysUse, tokens: TOKENS, external });
+      await runner.run(req("push the fix"));
+      expect((await runner.run(req("and the tests"))).text).not.toContain("Account");
+      expect(service.rotation.accountOf("coder")).toBe("first");
+      expect(audits).toEqual([]);
+    }
+  });
+
+  test("the moves are counted: a host that always says to move ends at the agent's accounts, and a stopped turn is not moved", async () => {
+    // The marks end the moves by themselves; the count is what holds if they ever did not.
+    const { ExternalTurnRunner } = await import("@/modules/external-agents/runner.ts");
+    const two = { config: { id: "coder", displayName: "Coder", external: { cli: "fake", profile: "first", accounts: ["first", "second"] } }, persona: { identity: "" } } as unknown as LoadedAgent;
+    let starts = 0;
+    let asked = 0;
+    const host = {
+      connection: async () => {
+        starts += 1;
+        throw new Error("refused");
+      },
+      row: () => ({ id: "fake", name: "Fake CLI" }),
+      rotation: {
+        refused: () => {
+          asked += 1;
+          return "moved";
+        },
+        early: () => null,
+        used: () => {},
+      },
+      setUnavailable: () => {},
+    } as never;
+    const turn = { agent: two, toolset: { definitions: [], get: () => undefined }, history: [], userMessage: { role: "user", content: "hello" }, gateway: "telegram", gatewayId: "telegram:coder", chatId: "555" } as unknown as TurnRequest;
+    await expect(new ExternalTurnRunner(two, {} as ExecutorDeps, host).run(turn)).rejects.toThrow("refused");
+    expect(starts).toBe(3);
+    expect(asked).toBe(2);
+    // A turn the person stopped is not moved to another account to go on.
+    const stopped = new AbortController();
+    stopped.abort();
+    await expect(new ExternalTurnRunner(two, {} as ExecutorDeps, host).run({ ...turn, signal: stopped.signal } as TurnRequest)).rejects.toThrow("refused");
+    expect(asked).toBe(2);
+  });
+
+  test("every account at its limit is said with each, and the agent is not one that cannot answer", async () => {
+    const { service, runner, req } = setup({ row: limited("tok-first,tok-second"), tokens: TOKENS, external: BOTH });
+    await expect(runner.run(req("push the fix"))).rejects.toThrow("Every account of Coder is at its limit: first (it did not say until when), second (it did not say until when).");
+    expect(service.unavailable("coder")).toBeNull();
+    // Known now: the next turn is not sent to be refused twice more.
+    await expect(runner.run(req("again"))).rejects.toThrow("second (it did not say until when). Nothing was sent.");
+    expect(service.unavailable("coder")).toBeNull();
+  });
+
+  test("an agent with the one account fails as it did, and its account is marked for the others on it", async () => {
+    const { service, runner, req } = setup({ row: limited("tok-first"), tokens: TOKENS, external: { profile: "first" } });
+    await expect(runner.run(req("push the fix"))).rejects.toThrow("Fake CLI refused the message: You have hit your limit.");
+    expect(service.rotation.limitsOf("fake", "first")).toHaveLength(1);
+  });
+
+  test("a CLI whose row says nothing of limits is never moved, whatever its refusal's data", async () => {
+    const { limit: _limit, ...silent } = limited("tok-first");
+    const { service, runner, req } = setup({ row: silent, tokens: TOKENS, external: BOTH });
+    await expect(runner.run(req("push the fix"))).rejects.toThrow("Fake CLI refused the message: You have hit your limit.");
+    expect(service.rotation.accountOf("coder")).toBe("first");
+  });
+});
+
+describe("what an agent's instruction file says runs it", () => {
+  test("read from the files installed as its CLI starts, and written before its first session opens", async () => {
+    // A connector as npm installs one: the program in a folder whose `package.json` is the package the row names.
+    const install = mkdtempSync(join(tmpdir(), "external-install-"));
+    dirs.push(install);
+    writeFileSync(join(install, "package.json"), JSON.stringify({ name: "@fake/acp", version: "9.9.9" }));
+    const program = join(install, "run");
+    writeFileSync(program, `#!/bin/sh\nexec "${process.execPath}" "${FAKE}" "$@"\n`);
+    chmodSync(program, 0o755);
+    const { service, agent, runner, req, folder } = setup({ row: { command: program, args: [], package: "@fake/acp" } });
+    await runner.run(req("hello"));
+    expect(readFileSync(join(folder, "AGENTS.md"), "utf8")).toContain("What runs you: acp 9.9.9, read from the files installed. It is updated for every agent on it at once with `nouride agents update fake`");
+    // Its row names no CLI inside the connector: `/status` is told no version of one.
+    expect(service.answering(agent, "telegram:coder", "555")?.version).toBeUndefined();
+  });
+
+  test("a CLI that is a command alone, with no package named, is told nothing of it", async () => {
+    const { runner, req, folder } = setup();
+    await runner.run(req("hello"));
+    expect(readFileSync(join(folder, "AGENTS.md"), "utf8")).not.toContain("What runs you");
   });
 });
 

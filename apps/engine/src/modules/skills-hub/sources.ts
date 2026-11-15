@@ -64,6 +64,10 @@ export interface HubHit {
   url: string;
   installs?: number;
   stars?: number;
+  /** From Nouverse's catalog alone: what it is called where it differs from its name, who published it, and a pick of Nouverse's. */
+  title?: string;
+  owner?: string;
+  pick?: true;
 }
 
 export interface SourceDeps extends HubFetchDeps {

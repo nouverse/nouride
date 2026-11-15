@@ -23,7 +23,49 @@ import { INCOMPLETE, NOT_RUNNING, NOT_SAVED, notSaved } from "../plain.ts";
 /** What a typed answer may be: a code, a choice — never a document. */
 const ANSWER_MAX = 2000;
 
-type Ops = Pick<ExternalAgents, "room" | "scan" | "row" | "unavailable" | "preset" | "models" | "efforts" | "profiles" | "login" | "startLogin" | "answerLogin" | "stopLogin" | "updates">;
+type Ops = Pick<ExternalAgents, "room" | "scan" | "row" | "unavailable" | "preset" | "models" | "efforts" | "profiles" | "login" | "startLogin" | "answerLogin" | "stopLogin" | "updates" | "rotation">;
+
+/**
+ * An agent's CLI settings as a body gives them: its model as text, its preset one of the three, and `profile` an
+ * account's name or the several it moves through when one reaches its limit, in order and each once (`rotation.ts`).
+ */
+function settingsOf(body: Record<string, unknown>): ExternalSettings | { error: string } {
+  const settings: ExternalSettings = {};
+  if (Array.isArray(body.profile)) {
+    const listed: unknown[] = body.profile;
+    if (listed.length === 0 || listed.some((name) => typeof name !== "string" || !PROFILE_NAME.test(name)) || new Set(listed).size !== listed.length) {
+      return { error: "profile as a list is one or more account names, lowercase letters, digits and dashes, each once" };
+    }
+    settings.profile = listed as string[];
+  }
+  for (const key of ["profile", "model"] as const) {
+    if (body[key] === undefined || Array.isArray(settings[key])) continue;
+    if (typeof body[key] !== "string") return { error: `${key} must be text` };
+    settings[key] = body[key];
+  }
+  // `move_at`: the percent of a limit used at which it moves on early; null turns it off.
+  if (body.move_at !== undefined) {
+    const at = body.move_at;
+    if (at !== null && (typeof at !== "number" || !Number.isInteger(at) || at < 1 || at > 99)) return { error: "the share of a limit to move on at is a whole number from 1 to 99, or nothing to turn it off" };
+    settings.moveAt = at;
+  }
+  if (body.permissions !== undefined) {
+    if (!(EXTERNAL_PERMISSIONS as readonly unknown[]).includes(body.permissions)) return { error: `permissions must be one of ${EXTERNAL_PERMISSIONS.join(", ")}` };
+    settings.permissions = body.permissions as ExternalSettings["permissions"];
+  }
+  return settings;
+}
+
+/**
+ * The accounts an agent moves through, where it has several, and the one it is on now where that is not its first; its
+ * own mark for moving on before a limit where it set one, and whether its CLI says an account's use at all.
+ */
+function accountsNow(external: { accounts?: readonly string[]; moveAt?: number }, saysUse: boolean, onNow: () => string | undefined): Pick<AgentCli, "accounts" | "on" | "moveAt" | "saysUse"> {
+  const early = { ...(external.moveAt !== undefined ? { moveAt: external.moveAt } : {}), ...(saysUse ? { saysUse: true } : {}) };
+  if (!external.accounts) return early;
+  const now = onNow();
+  return { accounts: [...external.accounts], ...(now && now !== external.accounts[0] ? { on: now } : {}), ...early };
+}
 
 export function registerExternalAgentRoutes(control: ControlApp, deps: ControlDeps): void {
   control.get("/external-clis", async (c) => {
@@ -162,6 +204,7 @@ export function registerExternalAgentRoutes(control: ControlApp, deps: ControlDe
     return c.json({
       cli: external.cli,
       profile: external.profile ?? "default",
+      ...accountsNow(external, ops.row(external.cli)?.use !== undefined, () => ops.rotation.accountOf(agent.config.id)),
       permissions: external.permissions ?? ops.preset(),
       model: external.model ?? null,
       // What its CLI offered when its last session opened, suggested in the model field; none before its first.
@@ -194,16 +237,8 @@ export function registerExternalAgentRoutes(control: ControlApp, deps: ControlDe
     const principal = c.get("principal");
     if (!atLeast(principal, "admin")) return c.json({ error: "admin only" }, 403);
     const body = ((await jsonBody(c)) ?? {}) as Record<string, unknown>;
-    const settings: ExternalSettings = {};
-    for (const key of ["profile", "model"] as const) {
-      if (body[key] === undefined) continue;
-      if (typeof body[key] !== "string") return c.json({ error: `${key} must be text` }, 400);
-      settings[key] = body[key];
-    }
-    if (body.permissions !== undefined) {
-      if (!(EXTERNAL_PERMISSIONS as readonly unknown[]).includes(body.permissions)) return c.json({ error: `permissions must be one of ${EXTERNAL_PERMISSIONS.join(", ")}` }, 400);
-      settings.permissions = body.permissions as ExternalSettings["permissions"];
-    }
+    const settings = settingsOf(body);
+    if ("error" in settings) return c.json({ error: settings.error }, 400);
     // Its effort is `[llm]`, not `[external]`: the one setting its model and its CLI share (`setup/agent-effort.ts`).
     if (body.effort !== undefined && !isEffortChoice(body.effort)) return c.json({ error: `effort is one of ${EFFORT_CHOICES.join(", ")}` }, 400);
     const result = await deps.setup.setExternal({ agentId: c.req.param("id"), settings, actor: principal.actor });

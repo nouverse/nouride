@@ -35,20 +35,20 @@ export const BUDGET: Record<string, Budget> = {
     why: "the dashboard chat's routes together: upload, send with its page and a first message's model and effort, live, transcripts, files, delete, each answer held to the wire's type and to whose it is",
   },
   "apps/engine/src/modules/external-agents/index.ts": {
-    lines: 531,
-    why: "the service the agents' CLIs run under: their connections, sessions, sign-ins, models and lent tools, as the runner reaches them through `RunnerHost`; each one's logic is in a file beside it",
+    lines: 548,
+    why: "the service the agents' CLIs run under: connections, sessions, sign-ins, models, lent tools, a CLI's parts, a new version's lists, a turn's account and that account's use; the logic is in files beside",
   },
   "apps/engine/src/modules/cron/cron.store.ts": {
-    lines: 479,
-    why: "the job table, with whose a job is and the daemon turning one off with why, and the one place `next_run_at` moves; validation is `cron/validate.ts`, what a job that watches keeps is `watch.store.ts`",
+    lines: 481,
+    why: "the job table, whose a job is, the daemon turning one off with why, the one place `next_run_at` moves, what the audit keeps of a step; validation is `cron/validate.ts`, a watch's is `watch.store.ts`",
   },
   "packages/persona/src/config.ts": {
     lines: 492,
     why: "a pack's `config.toml` mapped field by field, so each refusal names its file and field: one list, the pack's schema. Its MCP server readers are the seam if it grows by more than a field",
   },
   "apps/engine/src/modules/jobs/jobs.store.ts": {
-    lines: 516,
-    why: "the background job table: a command's, a helper's and an ask's rows, every write to `jobs.status` in one class; its log sweep also clears logs no row names, whose finder is beside it",
+    lines: 519,
+    why: "the background job table: a command's, a helper's and an ask's rows, every write to `jobs.status` in one class, its log sweep, and which running jobs are services, for what waits on a job's end",
   },
   "apps/engine/src/modules/tools/registry.ts": {
     lines: 450,
@@ -71,8 +71,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "the turn record and its columns, the causes it names, the clause every read of a conversation uses to leave a delegate's own turns out, and the queries that use it, a restart's two marks among them",
   },
   "apps/engine/src/modules/missions/missions.ts": {
-    lines: 581,
-    why: "the missions' one service (start, the dispatcher, a turn's shape and end, stop, continue, which hold a slot) over state this class alone holds; its pure rules are apart: `decide.ts`, `counts.ts`",
+    lines: 585,
+    why: "the missions' one service (start, the dispatcher, a turn's shape, its end and who is handed it, stop, continue, the slots, the jobs it waits for) over state this class alone holds; rules: `decide.ts`",
   },
   "packages/gateways/src/channels/discord/gateway.ts": {
     lines: 429,
@@ -107,7 +107,7 @@ export const TEST_BUDGET: Record<string, Budget> = {
     why: "reflection end to end, written before `modules/reflection` was split, on this file's `enginePointedAt` harness; new cases go to tests/reflection/",
   },
   "apps/dashboard/tests/mount.test.ts": {
-    lines: 1_577,
+    lines: 1_540,
     why: "every dashboard page mounted, and the cases that click through one; the harness is `mount-harness.ts`, so a page's new cases go in a file of their own",
   },
   "apps/engine/tests/llm/prompt.test.ts": {

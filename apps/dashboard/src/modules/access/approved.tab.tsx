@@ -19,7 +19,7 @@ import type { PersonRecord, SenderAnswer, SenderRecord } from "@nouride/wire";
 import { canWrite, useMe } from "@/commons/lib/session";
 import { Card, EmptyState, ErrorNote } from "@/commons/components/ui/ui";
 import { Details } from "@/commons/components/ui/Details";
-import { ScrollCard } from "@/commons/components/ui/ScrollCard";
+import { ListCard } from "@/commons/components/ui/ListCard";
 import { useConfirm } from "@/commons/components/ui/confirm";
 import { ago } from "@/commons/lib/format";
 import { BUTTON, NoMatch, SenderLine, byWhom, useSenderFilter } from "./sender-line";
@@ -99,8 +99,10 @@ export function ApprovedTab({
   return (
     <div className="space-y-6">
       {dialog}
-      <ScrollCard
+      <ListCard
         title={`Approved (${senders.length})`}
+        // Another card stands under this one: a long list is cut short, and opens in full with one press.
+        maxHeight="max-h-[32rem]"
         description="Answered by the agent whose connection they wrote to. Each account says which person in People it is."
         {...search}
       >
@@ -158,7 +160,7 @@ export function ApprovedTab({
             ))}
           </ul>
         )}
-      </ScrollCard>
+      </ListCard>
 
       {/* Only when the config names anybody: an install that never wrote an id needs no card saying so. */}
       {allowlist.length > 0 ? (

@@ -30,7 +30,9 @@ import type { FieldChange, SecretEntry } from "@nouride/wire";
 import { isAdmin, useMe } from "@/commons/lib/session";
 import { Card, EmptyState, ErrorNote, PageHeader } from "@/commons/components/ui/ui";
 import { useConfirm } from "@/commons/components/ui/confirm";
-import { HELD_BOTTOM, ScrollCard } from "@/commons/components/ui/ScrollCard";
+import { ListCard } from "@/commons/components/ui/ListCard";
+import { SearchInput } from "@/commons/components/ui/SearchInput";
+import { StickyBar } from "@/commons/components/ui/StickyBar";
 import { useTextFilter } from "@/commons/lib/use-text-filter";
 import { BackupPasswordCard } from "./components/BackupPasswordCard";
 import { LockNote } from "./components/LockNote";
@@ -113,17 +115,11 @@ export default function SecretsPage() {
   const visible = useTextFilter(entries, filter, (entry) => [entry.name, ...entry.usedBy.map(plainUse), ...Object.entries(entry.fields ?? {}).flat(), entry.addedBy]);
 
   /**
-   * The page owns the viewport (see `ownsViewport` in the layout): the header and the list's own
-   * header with its Refresh stay where they are, and only the list scrolls — a box with forty
-   * credentials otherwise scrolls the button you came for off the screen.
-   *
-   * The card keeps a minimum height, and the page itself still scrolls past it, so a short screen
-   * with the form open loses nothing: it simply scrolls the old way. From a laptop's width up: on a phone the page
-   * scrolls as a document, as every other does there.
+   * The page scrolls as one page. It was held to the window with the list scrolling inside it; a filter box in the
+   * list's own header finds the secret to replace instead of a scroll through forty.
    */
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
-    <div className={`mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 pt-4 sm:px-6 sm:pt-6 lg:h-full lg:p-8 ${HELD_BOTTOM}`}>
+    <div className="space-y-6 *:animate-fade">
       <PageHeader
         ask={PAGE_ASKS.secrets}
         className="shrink-0"
@@ -173,6 +169,20 @@ export default function SecretsPage() {
         </Card>
       ) : null}
 
+      {/* Above the list: under it, at the foot of a page as long as the secrets are many, nobody saw that their backups
+          held no secrets until they needed one. */}
+      <BackupPasswordCard
+        sealed={secrets.data?.sealedInSnapshots}
+        admin={admin}
+        onTurnOff={() =>
+          ask({
+            title: "Turn off the backup password?",
+            body: "Backups from now on will not include your secrets. The backups made before keep theirs, locked with the old password.",
+            confirmLabel: "Turn off",
+          })
+        }
+      />
+
       {editing !== null ? (
         <SecretForm
           /** Non-empty means replace: the name is fixed and only a value is being asked for. */
@@ -183,8 +193,14 @@ export default function SecretsPage() {
         />
       ) : null}
 
-      <ScrollCard
-        fill
+      {/* The search stays at the top of the window while the list scrolls under it. */}
+      {entries.length > 0 ? (
+        <StickyBar label="Which secrets">
+          <SearchInput value={filter} onChange={setFilter} placeholder="Search secrets" className="w-full max-w-sm" />
+        </StickyBar>
+      ) : null}
+
+      <ListCard
         title="Your secrets"
         description="Each one, where its value comes from, and what needs it."
         actions={
@@ -197,7 +213,6 @@ export default function SecretsPage() {
             <RefreshCw size={13} className={secrets.isFetching ? "animate-spin" : ""} /> Refresh
           </button>
         }
-        {...(entries.length > 0 ? { search: { value: filter, onChange: setFilter, placeholder: "Search secrets" } } : {})}
       >
         {secrets.isPending ? (
           <ListLoading />
@@ -226,7 +241,7 @@ export default function SecretsPage() {
             ))}
           </div>
         )}
-      </ScrollCard>
+      </ListCard>
 
       {/**
        * Stated on the page, not only in a code comment.
@@ -239,19 +254,7 @@ export default function SecretsPage() {
         <span>A saved secret cannot be shown again, here or anywhere, so nobody can read it out of this page. If you have lost one, replace it.</span>
       </p>
       <LockNote lock={secrets.data?.lock} />
-      <BackupPasswordCard
-        sealed={secrets.data?.sealedInSnapshots}
-        admin={admin}
-        onTurnOff={() =>
-          ask({
-            title: "Turn off the backup password?",
-            body: "Backups from now on will not include your secrets. The backups made before keep theirs, locked with the old password.",
-            confirmLabel: "Turn off",
-          })
-        }
-      />
       {dialog}
-    </div>
     </div>
   );
 }

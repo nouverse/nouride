@@ -308,7 +308,7 @@ describe("what a list of steps must be", () => {
     expect(refused([])).toBe("a job of steps needs at least one step.");
     expect(refused(Array.from({ length: STEPS_MAX + 1 }, (_, n) => say(`s${n}`, "x")))).toBe(`a job runs at most ${STEPS_MAX} steps.`);
     expect(refused(Array.from({ length: STEPS_MAX }, (_, n) => say(`s${n}`, "x")))).toBe("accepted");
-    expect(refused([say("a", "x"), { id: "b", kind: "dance" }])).toBe("step 2 must be a message, an agent's turn, a command, a mission or a wait for a person.");
+    expect(refused([say("a", "x"), { id: "b", kind: "dance" }])).toBe("step 2 must be a message, an agent's turn, a command, a mission, a wait for a person or several steps at the same time.");
     expect(refused([say("a", "x"), say("a", "y")])).toBe("step 2 has the id of step 1 (a): each step's id is its own.");
     expect(refused([{ kind: "systemEvent", text: "x" }])).toBe("step 1 needs an id of its own: lower-case letters, digits, - and _, at most 24.");
     expect(refused([say("Has Space", "x")])).toContain("step 1 needs an id of its own");
@@ -355,7 +355,7 @@ describe("a list as somebody wrote it", () => {
     expect(stepsFrom([{ id: "s2", kind: "systemEvent", text: "a" }, { kind: "systemEvent", text: "b" }]).map((step) => step.id)).toEqual(["s2", "s2x"]);
     expect(stepsFrom([{ kind: "systemEvent", text: "a", then: 9 }])[0]!.then).toEqual({ to: "9" });
     expect(() => stepsFrom("nope")).toThrow("a job of steps needs its `steps`, a list.");
-    expect(() => stepsFrom([{ kind: "steps", steps: [] }])).toThrow("step 1 must be a message, an agent's turn, a command, a mission or a wait for a person.");
+    expect(() => stepsFrom([{ kind: "steps", steps: [] }])).toThrow("step 1 must be a message, an agent's turn, a command, a mission, a wait for a person or several steps at the same time.");
   });
 
   test("a mission's checks and review, and a wait's question and time, are read as written", () => {

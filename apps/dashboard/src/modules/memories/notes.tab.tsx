@@ -14,7 +14,7 @@ import { NotebookText } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import { NotesModal } from "@/commons/components/ui/NotesModal";
 import { EmptyState, ErrorNote } from "@/commons/components/ui/ui";
-import { ScrollCard } from "@/commons/components/ui/ScrollCard";
+import { ListCard } from "@/commons/components/ui/ListCard";
 import { OrchestratorBadge, useOrchestrator, useOrchestratorFirst } from "@/commons/components/agents/AgentName";
 import { Leaving } from "@/commons/components/ui/OverPage";
 import { ListLoading } from "@/commons/components/ui/Spinner";
@@ -52,7 +52,7 @@ export function NotesTab({ editable }: { editable: boolean }) {
   return (
     <div className="space-y-4">
       {notes.error ? <ErrorNote error={notes.error} /> : null}
-      <ScrollCard title="Agent notes" description="What each agent keeps for itself. Part of who it is, and never changed by the nightly pass.">
+      <ListCard title="Agent notes" description="What each agent keeps for itself. Part of who it is, and never changed by the nightly pass.">
         {notes.isLoading ? (
           <ListLoading />
         ) : list.length === 0 ? (
@@ -77,7 +77,7 @@ export function NotesTab({ editable }: { editable: boolean }) {
             ))}
           </ul>
         )}
-      </ScrollCard>
+      </ListCard>
       <Leaving value={open}>{(id) => <NoteView id={id} editable={editable} onClose={() => setOpen(null)} />}</Leaving>
     </div>
   );

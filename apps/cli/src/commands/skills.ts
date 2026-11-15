@@ -97,8 +97,11 @@ export async function skills(client: Client, args: string[]): Promise<void> {
 }
 
 interface HubSearchResponse {
-  hits: { ref: string; source: string; name: string; description: string; url: string; installs?: number; stars?: number }[];
+  hits: { ref: string; source: string; name: string; description: string; url: string; installs?: number; stars?: number; pick?: boolean }[];
   errors: { source: string; error: string }[];
+  /** Where the answer is from; a daemon before the catalog says nothing, and asked the hubs. */
+  from?: "catalog" | "hubs";
+  total?: number;
 }
 
 interface HubInstallResponse {
@@ -109,21 +112,23 @@ interface HubInstallResponse {
   notes?: string[];
 }
 
-/** `nouride skills search <query> [--source=skills.sh,clawhub]` — every hub at once. */
+/** `nouride skills search <query> [--source=skills.sh,clawhub]`: Nouverse's catalog, or the hubs named, asked themselves. */
 async function hubSearch(client: Client, query: string, args: string[]): Promise<void> {
   if (!query.trim()) usageLines("nouride skills search <query> [--source skills.sh,clawhub,well-known]");
   // `--source=x` arrives as `--source x` (`normalizeArgv`), so it is read as a flag with a value: looking for the `=`
   // spelling found nothing, and the hub list went into the query as a word.
   const source = flagValue(args, "--source");
   const params = new URLSearchParams({ q: query, ...(source ? { source } : {}) });
-  const { hits, errors } = await client.get<HubSearchResponse>(`/skills/hub/search?${params}`);
+  const { hits, errors, from, total } = await client.get<HubSearchResponse>(`/skills/hub/search?${params}`);
   if (hits.length === 0) say(`${DIM}nothing found for "${query}"${RESET}`);
   for (const hit of hits) {
     const count = hit.installs !== undefined ? ` ${DIM}${hit.installs.toLocaleString("en-US")} installs${RESET}` : "";
-    say(`${BOLD}${hit.name}${RESET} ${DIM}[${hit.source}]${RESET}${count}`);
+    say(`${BOLD}${hit.name}${RESET} ${DIM}[${hit.source}]${RESET}${hit.pick ? ` ${GREEN}Nouverse's pick${RESET}` : ""}${count}`);
     if (hit.description) say(`  ${clip(hit.description, 140)}`);
     say(`  ${CYAN}nouride skills install ${hit.ref}${RESET}`);
   }
+  // The catalog knows how many match in all; the hubs each answer a page and say no more.
+  if (from === "catalog" && hits.length > 0) say(`${DIM}${hits.length} of ${(total ?? hits.length).toLocaleString("en-US")} in Nouverse's catalog (more words narrow it; one hub alone: --source)${RESET}`);
   for (const failure of errors) say(`${YELLOW}${failure.source}:${RESET} ${failure.error}`);
 }
 

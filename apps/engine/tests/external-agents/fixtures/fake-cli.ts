@@ -31,6 +31,15 @@
  *   prompt and `exec`, and replies with what each answered. Its headers' `${VAR}`s are filled from its environment, as
  *   Claude Code fills them, and each session's headers as given go to stderr.
  *
+ * `FAKE_LIMITED`, a list of tokens: started with one of them in `FAKE_TOKEN`, as a shared account's token reaches a real
+ * CLI, every prompt is refused as an account at its limit is: the limit said as a message, then a refusal whose data is
+ * `{ errorKind: "rate_limit" }`. `FAKE_LIMITED_AFTER=step`: after one step of work. Each prompt goes to stderr as
+ * `prompted-as:<token> in <the profile folder's name>`.
+ *
+ * `FAKE_USE`, JSON by token (`{"tok-first":0.93}`): started with that token, each prompt says how much of its account's
+ * limits is used, beside the context's size as claude-agent-acp says it: `_meta["fake/use"].windows`, a short one at
+ * that share starting again in an hour, and a long one at a tenth.
+ *
  * `FAKE_TAKES`, JSON, is what it says at its handshake it takes in a prompt (`{"image":true}`); unset, text alone.
  *
  * `FAKE_EFFORTS`, JSON of each model's efforts (`{"small":["low","high"]}`), adds an effort option filed under ACP's
@@ -44,8 +53,8 @@
  */
 
 import { existsSync } from "node:fs";
-import { join } from "node:path";
-import { AcpServer, authRequired, type ContentBlock, type McpServer, type SessionConfigOption } from "@nouride/acp";
+import { basename, join } from "node:path";
+import { AcpError, AcpServer, authRequired, type ContentBlock, type McpServer, type SessionConfigOption } from "@nouride/acp";
 import { sleep } from "../../wait.ts";
 
 const mode = process.env.FAKE_MODE ?? "";
@@ -182,6 +191,21 @@ const server = new AcpServer({
       if (mode === "badplan") channel.update({ sessionUpdate: "plan" } as never);
       if (mode === "usage") channel.update({ sessionUpdate: "usage_update", used: 42_000, size: 200_000 });
       if (mode === "overloaded") throw new Error("the model is overloaded, try again later");
+      if (process.env.FAKE_TOKEN) process.stderr.write(`prompted-as:${process.env.FAKE_TOKEN} in ${basename(process.env.FAKE_HOME ?? "")}\n`);
+      const share = (JSON.parse(process.env.FAKE_USE ?? "{}") as Record<string, number>)[process.env.FAKE_TOKEN ?? "-"];
+      if (share !== undefined) {
+        const seconds = Math.floor(Date.now() / 1000);
+        const windows = { short: { share, starts: seconds + 3_600 }, long: { share: 0.1, starts: seconds + 86_400 } };
+        channel.update({ sessionUpdate: "usage_update", used: 1_000, size: 200_000, _meta: { "fake/use": { windows } } } as never);
+      }
+      if ((process.env.FAKE_LIMITED ?? "").split(",").includes(process.env.FAKE_TOKEN ?? "-")) {
+        if (process.env.FAKE_LIMITED_AFTER === "step") {
+          channel.update({ sessionUpdate: "tool_call", toolCallId: "l1", title: "git status", kind: "execute", name: "Bash", status: "in_progress" });
+          channel.update({ sessionUpdate: "tool_call_update", toolCallId: "l1", status: "completed", content: [{ type: "content", content: { type: "text", text: "clean" } }] });
+        }
+        channel.update({ sessionUpdate: "agent_message_chunk", content: { type: "text", text: "You have hit your limit." } });
+        throw new AcpError(-32603, "Internal error: You have hit your limit.", { errorKind: "rate_limit" });
+      }
       channel.update({ sessionUpdate: "agent_thought_chunk", content: { type: "text", text: "Looking first." } });
       channel.update({ sessionUpdate: "tool_call", toolCallId: "t1", title: "echo hi", kind: "execute", name: "Bash", status: "in_progress" });
       channel.update({ sessionUpdate: "tool_call_update", toolCallId: "t1", status: "completed", content: [{ type: "content", content: { type: "text", text: "hi" } }] });

@@ -138,6 +138,32 @@ describe("the update, held, installed, checked", () => {
     expect(updates.wayBack("claude-code")).toBe("0.95.0");
     expect(updates.wayBack("codex")).toBeNull();
   });
+
+  test("a version that passes for the first time hands on the session it was checked with, once", async () => {
+    // What agents were offered on the version before is not this one's: the lists named Fable 5.1 on a CLI with 5.2.
+    const seen: unknown[] = [];
+    const saved: Record<string, string>[] = [];
+    let recorded: Record<string, string> = { "claude-code": "0.95.0" };
+    const box = host([], async () => running("claude-code"));
+    const updates = new CliUpdates({ ...box.h, versions: { load: () => recorded, save: (next) => void (saved.push(next), (recorded = next)) }, newVersion: (cli, agentId, opened) => void seen.push([cli, agentId, opened.sessionId]) });
+    const opened = { sessionId: "s-new", modes: { currentModeId: "default", availableModes: MODES.map((id) => ({ id, name: id })) } };
+    const connection = { agentId: "nix", info: { agentInfo: { version: "0.107.0" }, _meta: { steering: { supported: true } } }, launch: { cwd: "/srv/agents/nix" }, probe: async () => opened } as unknown as CliConnection;
+    expect(await updates.checkVersion(CLAUDE, connection)).toBeNull();
+    expect(saved).toEqual([{ "claude-code": "0.107.0" }]);
+    expect(seen).toEqual([["claude-code", "nix", "s-new"]]);
+    // The same version starting again, for another agent: checked already, nothing probed and nothing handed on.
+    expect(await updates.checkVersion(CLAUDE, { ...connection, agentId: "nox", probe: async () => { throw new Error("not probed twice"); } } as unknown as CliConnection)).toBeNull();
+    expect(seen).toHaveLength(1);
+  });
+
+  test("a version that fails its check hands nothing on: the lists of the version before stay", async () => {
+    const seen: unknown[] = [];
+    const box = host([], async () => running("claude-code"));
+    const updates = new CliUpdates({ ...box.h, newVersion: () => void seen.push("handed on") });
+    const connection = { agentId: "nix", info: { agentInfo: { version: "0.101.0" }, _meta: {} }, launch: { cwd: "/srv/agents/nix" }, probe: async () => ({ sessionId: "s1", modes: { currentModeId: "default", availableModes: MODES.map((id) => ({ id, name: id })) } }) } as unknown as CliConnection;
+    expect(await updates.checkVersion(CLAUDE, connection)).toContain("did not pass Nouride's check");
+    expect(seen).toEqual([]);
+  });
 });
 
 describe("`nouride agents update`", () => {
@@ -165,11 +191,12 @@ describe("`nouride agents update`", () => {
   const SCANNED = { id: "claude-code", name: "Claude Code", command: "claude-agent-acp", install: "", login: true, installed: true, version: "0.95.0", package: "@agentclientprotocol/claude-agent-acp", tested: { lowest: "0.95.0", highest: "0.100.0" }, standing: { standing: "update", offer: "0.100.0" } };
 
   /** A daemon that is busy for `busyFor` holds, and checks as `checked` says; every step written down in order. */
-  function daemon(busyFor: number, checked: Record<string, unknown> = { cli: "claude-code", passed: true, version: "0.100.0", before: "0.95.0" }) {
+  function daemon(busyFor: number, checked: Record<string, unknown> = { cli: "claude-code", passed: true, version: "0.100.0", before: "0.95.0" }, after: Record<string, unknown> = {}) {
     const order: string[] = [];
     let holds = 0;
     const client = {
-      get: async (path: string) => (order.push(`get ${path}`), { room: { enough: true, bytes: 0, needs: 0 }, clis: [SCANNED] }),
+      // After the check the scan reads the new install: the CLI's own version and its connector's.
+      get: async (path: string) => (order.push(`get ${path}`), { room: { enough: true, bytes: 0, needs: 0 }, clis: [order.some((step) => step.endsWith("/check")) ? { ...SCANNED, ...after } : SCANNED] }),
       post: async (path: string) => {
         order.push(`post ${path}`);
         if (path.endsWith("/hold")) return { busy: holds++ < busyFor ? 1 : 0 };
@@ -201,8 +228,26 @@ describe("`nouride agents update`", () => {
       "post /external-clis/claude-code/hold",
       "install npm install -g @agentclientprotocol/claude-agent-acp@0.100.0",
       "post /external-clis/claude-code/check",
+      "get /external-clis?fresh=1",
     ]);
-    expect(lines.join("\n")).toContain("Claude Code is at 0.100.0, from 0.95.0: its handshake has what Nouride uses");
+    // Nothing read of what it runs on: the package and the version installed, never called the CLI's own.
+    expect(lines.join("\n")).toContain("Claude Code is updated to @agentclientprotocol/claude-agent-acp 0.100.0, from 0.95.0. Its handshake has what Nouride uses");
+  });
+
+  test("its last line names the CLI's own version and its connector's, before and after", async () => {
+    // \"Claude Code is at 0.107.0\" was the connector's number under the CLI's name (seen on a live box).
+    const parts = (own: string, connector: string) => [
+      { kind: "cli", name: "Claude Code", package: "@anthropic-ai/claude-agent-sdk", version: own },
+      { kind: "connector", name: "@agentclientprotocol/claude-agent-acp", package: "@agentclientprotocol/claude-agent-acp", version: connector },
+    ];
+    const { client, order } = daemon(0, undefined, { version: "0.100.0", parts: parts("2.1.323", "0.100.0") });
+    Object.assign(SCANNED, { parts: parts("2.1.316", "0.95.0") });
+    try {
+      await updateCli(client, ["claude-code"], steps(order));
+    } finally {
+      delete (SCANNED as { parts?: unknown }).parts;
+    }
+    expect(lines.join("\n")).toContain("Claude Code is updated to Claude Code 2.1.323, in claude-agent-acp 0.100.0, from Claude Code 2.1.316, in claude-agent-acp 0.95.0. Its handshake has what Nouride uses");
   });
 
   test("at the version already: nothing installed, and a hold a cut-off run left is let go (live box, 2026-11-08)", async () => {
@@ -215,6 +260,30 @@ describe("`nouride agents update`", () => {
     }
     expect(order).toEqual(["get /external-clis?fresh=1", "post /external-clis/claude-code/release"]);
     expect(lines.join("\n")).toContain("Claude Code is at 0.100.0 already");
+  });
+
+  test("with no version named it installs what is on offer, the newest out, past the tested ones or not", async () => {
+    const { client, order } = daemon(0, { cli: "claude-code", passed: true, version: "0.107.0", before: "0.95.0" });
+    Object.assign(SCANNED, { standing: { standing: "update", offer: "0.107.0", offerUntested: true } });
+    try {
+      await updateCli(client, ["claude-code"], steps(order));
+    } finally {
+      Object.assign(SCANNED, { standing: { standing: "update", offer: "0.100.0" } });
+    }
+    expect(order).toContain("install npm install -g @agentclientprotocol/claude-agent-acp@0.107.0");
+  });
+
+  test("with nothing on offer, a version past the tested ones is left where it is: never put back to the newest tested", async () => {
+    // A box on 0.107.0, the tested versions ending at 0.100.0: the command with no version named would have installed 0.100.0.
+    const { client, order } = daemon(0);
+    Object.assign(SCANNED, { version: "0.107.0", standing: { standing: "newer" } });
+    try {
+      await updateCli(client, ["claude-code"], steps(order));
+    } finally {
+      Object.assign(SCANNED, { version: "0.95.0", standing: { standing: "update", offer: "0.100.0" } });
+    }
+    expect(order).toEqual(["get /external-clis?fresh=1", "post /external-clis/claude-code/release"]);
+    expect(lines.join("\n")).toContain("Claude Code is at 0.107.0 already");
   });
 
   test("the way back is the same with the version named", async () => {

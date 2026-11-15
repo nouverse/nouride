@@ -50,7 +50,7 @@ const SIGNED_IN: CliProfile[] = [
   { name: "home", inUse: false, signedIn: false, reason: "Codex is not signed in — sign in on the agent's Brain tab" },
 ];
 
-function serve(role: "admin" | "viewer", cli: AgentCli = CLI, profiles: CliProfile[] = NOT_SIGNED_IN): { posted: { path: string; body: unknown }[] } {
+function serve(role: "admin" | "viewer", cli: AgentCli = CLI, profiles: CliProfile[] = NOT_SIGNED_IN, accounts?: unknown): { posted: { path: string; body: unknown }[] } {
   const posted: { path: string; body: unknown }[] = [];
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const path = new URL(String(input), "http://localhost").pathname;
@@ -60,6 +60,7 @@ function serve(role: "admin" | "viewer", cli: AgentCli = CLI, profiles: CliProfi
     }
     if (path === "/api/control/auth/me") return json({ id: "u1", username: "mira", role });
     if (path === "/api/control/agents/coder/cli") return json(cli);
+    if (path === "/api/control/cli-accounts" && accounts) return json(accounts);
     if (path === "/api/control/agents/coder/cli/profiles") return json({ profiles, separate: true, models: MODELS });
     if (path === "/api/control/status") return json({ agents: [{ id: "coder", displayName: "Coder" }], gateways: [] });
     if (path === "/api/control/external-clis") return json({ room: { enough: true, bytes: 2 ** 31, needs: 2 ** 29 }, clis: [{ id: "codex", name: "Codex", command: "codex-acp", installed: true, version: "0.9.1", install: "npm i -g", login: true }] });
@@ -103,6 +104,130 @@ function type(input: HTMLInputElement, text: string): void {
 }
 
 const button = (host: HTMLElement, text: string) => [...host.querySelectorAll("button")].find((entry) => entry.textContent?.trim() === text) as HTMLButtonElement | undefined;
+
+describe("the accounts an agent goes on with when its account reaches its limit", () => {
+  /** A CLI whose accounts are signed in once for every agent: two signed in, one not. */
+  const SHARED = { clis: [{ id: "codex", name: "Codex", installed: true, install: "", shared: true, canLogin: true, accounts: [{ name: "work", signedIn: true, agents: [] }, { name: "spare", signedIn: true, agents: [] }, { name: "team", signedIn: false, agents: [] }] }] };
+  const QUIET: AgentCli = { ...CLI, login: null, unavailable: null };
+  const card = (host: HTMLElement) => host.querySelector<HTMLElement>("[data-next-accounts]");
+
+  test("picked from the signed-in accounts, in order, and saved as the one list with its first account first", async () => {
+    const { posted } = serve("admin", QUIET, SIGNED_IN, SHARED);
+    const { host, unmount } = await mount();
+    try {
+      await eventually(() => card(host) !== null, 3_000, "the accounts to go on with");
+      expect(host.textContent).toContain("Coder starts on work.");
+      expect(card(host)!.textContent).toContain("None yet: at its limit, Nouride's own model for Coder answers until the limit ends.");
+      // Only an account that is signed in, and not the one it starts on, can be gone on with.
+      const select = card(host)!.querySelector("select") as HTMLSelectElement;
+      expect([...select.options].map((option) => option.value)).toEqual(["", "spare"]);
+      Object.getOwnPropertyDescriptor(Object.getPrototypeOf(select), "value")!.set!.call(select, "spare");
+      select.dispatchEvent(new (select.ownerDocument.defaultView as unknown as typeof globalThis).Event("change", { bubbles: true }));
+      await eventually(() => button(card(host)!, "Add")?.disabled === false, 2_000, "the account picked");
+      button(card(host)!, "Add")!.click();
+      await eventually(() => (card(host)!.textContent ?? "").includes("1.spare"), 2_000, "the account listed");
+      button(card(host)!, "Save")!.click();
+      await eventually(() => posted.length > 0, 2_000, "the list saved");
+      expect(posted[0]).toEqual({ path: "/api/control/agents/coder/cli", body: { profile: ["work", "spare"] } });
+    } finally {
+      unmount();
+    }
+  });
+
+  test("the ones it has are listed in order, with where it is now; one taken off is saved as the name alone", async () => {
+    const { posted } = serve("admin", { ...QUIET, accounts: ["work", "spare"], on: "spare" }, SIGNED_IN, SHARED);
+    const { host, unmount } = await mount();
+    try {
+      await eventually(() => (card(host)?.textContent ?? "").includes("1.spare"), 3_000, "its accounts");
+      expect(card(host)!.textContent).toContain("Coder is on spare now.");
+      (card(host)!.querySelector('button[aria-label="Remove spare"]') as HTMLButtonElement).click();
+      await eventually(() => button(card(host)!, "Save")?.disabled === false, 2_000, "the change");
+      button(card(host)!, "Save")!.click();
+      await eventually(() => posted.length > 0, 2_000, "the list saved");
+      expect(posted[0]!.body).toEqual({ profile: ["work"] });
+    } finally {
+      unmount();
+    }
+  });
+
+  describe("moving on before the limit", () => {
+    const early = (host: HTMLElement) => card(host)?.querySelector<HTMLElement>("[data-move-early]") ?? null;
+    const toggle = (host: HTMLElement) => early(host)!.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    const percent = (host: HTMLElement) => early(host)!.querySelector('input[aria-label="Percent of a limit used"]') as HTMLInputElement | null;
+    const TWO: AgentCli = { ...QUIET, accounts: ["work", "spare"], saysUse: true };
+
+    test("off until switched on; on, it starts at 90% and is saved with the accounts", async () => {
+      const { posted } = serve("admin", TWO, SIGNED_IN, SHARED);
+      const { host, unmount } = await mount();
+      try {
+        await eventually(() => early(host) !== null, 3_000, "the switch");
+        expect(toggle(host).checked).toBe(false);
+        expect(percent(host)).toBeNull();
+        expect(early(host)!.textContent).toContain("Off: Coder goes on with the next account only when a message is refused, and that message is sent again.");
+        expect(button(card(host)!, "Save")!.disabled).toBe(true);
+        toggle(host).click();
+        await eventually(() => percent(host) !== null, 2_000, "the share");
+        expect(percent(host)!.value).toBe("90");
+        expect(early(host)!.textContent).toContain("Coder finishes the message it is answering, then goes on with the next account. Nothing is cut off or sent twice.");
+        button(card(host)!, "Save")!.click();
+        await eventually(() => posted.length > 0, 2_000, "saved");
+        expect(posted[0]!.body).toEqual({ profile: ["work", "spare"], move_at: 90 });
+      } finally {
+        unmount();
+      }
+    });
+
+    test("its own share is shown and changed; one that is no percent is not saved; switched off, it is taken out", async () => {
+      const { posted } = serve("admin", { ...TWO, moveAt: 80 }, SIGNED_IN, SHARED);
+      const { host, unmount } = await mount();
+      try {
+        await eventually(() => early(host) !== null && toggle(host).checked, 3_000, "the switch, on");
+        expect(percent(host)!.value).toBe("80");
+        // Nothing changed yet: nothing to save.
+        expect(button(card(host)!, "Save")!.disabled).toBe(true);
+        type(percent(host)!, "100");
+        await eventually(() => (early(host)!.textContent ?? "").includes("Type a whole number from 1 to 99."), 2_000, "the figure refused");
+        expect(button(card(host)!, "Save")!.disabled).toBe(true);
+        type(percent(host)!, "85");
+        await eventually(() => button(card(host)!, "Save")!.disabled === false, 2_000, "the figure taken");
+        expect(early(host)!.textContent).not.toContain("Type a whole number");
+        button(card(host)!, "Save")!.click();
+        await eventually(() => posted.length === 1, 2_000, "saved");
+        expect(posted[0]!.body).toEqual({ profile: ["work", "spare"], move_at: 85 });
+        toggle(host).click();
+        await eventually(() => percent(host) === null, 2_000, "switched off");
+        button(card(host)!, "Save")!.click();
+        await eventually(() => posted.length === 2, 2_000, "saved again");
+        expect(posted[1]!.body).toEqual({ profile: ["work", "spare"], move_at: null });
+      } finally {
+        unmount();
+      }
+    });
+
+    test("not offered where its CLI says nothing of an account's use, or while it has no account to go on with", async () => {
+      for (const data of [{ ...TWO, saysUse: undefined }, { ...QUIET, saysUse: true }] as AgentCli[]) {
+        serve("admin", data, SIGNED_IN, SHARED);
+        const { host, unmount } = await mount();
+        try {
+          await eventually(() => card(host) !== null, 3_000, "the accounts to go on with");
+          expect(early(host)).toBeNull();
+        } finally {
+          unmount();
+        }
+      }
+    });
+  });
+
+  test("not offered for a CLI that signs in once per agent: it has no other account to start with", async () => {
+    serve("admin", QUIET, SIGNED_IN, { clis: [{ ...SHARED.clis[0], shared: false }] });
+    const { host, unmount } = await mount();
+    try {
+      expect(card(host)).toBeNull();
+    } finally {
+      unmount();
+    }
+  });
+});
 
 describe("an external agent's Brain tab", () => {
   test("says the agent cannot answer until the profile it uses is signed in, and walks the sign-in through", async () => {

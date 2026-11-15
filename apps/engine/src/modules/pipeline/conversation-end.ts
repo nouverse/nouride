@@ -21,6 +21,7 @@ import type { ToolOutputSpill } from "@/modules/llm/spill.ts";
 import type { SessionsPort } from "@/modules/sessions/sessions.store.ts";
 import type { ApprovalGate } from "@/modules/tools/approval.ts";
 import type { TurnsPort } from "@/modules/turns/turns.store.ts";
+import type { WorkDonePort } from "./work-done.store.ts";
 
 const log = createLogger("pipeline.conversation-end");
 
@@ -75,7 +76,12 @@ export type EndEffect =
    */
   | "forgetCliSession"
   /** All this agent's pending approvals, wherever they were asked — `/reset`'s, per §9.4 SPEC. */
-  | "expireAgentApprovals";
+  | "expireAgentApprovals"
+  /**
+   * What this agent asked another for from this conversation, and an answer of its own here kept on work it did for
+   * another (`work-done.ts`): both are said in other chats afterwards, and a deleted conversation is said nowhere.
+   */
+  | "forgetWorkDone";
 
 /**
  * Each way of ending, in the order it runs. Auto-approval is in none of them, on purpose: "stop asking me" is a standing
@@ -85,7 +91,7 @@ const ENDS: Readonly<Record<EndMode, readonly EndEffect[]>> = {
   new: ["cutMemory", "clearContext", "resetHops", "clearChatEvents", "forgetSpill", "forgetCliSession"],
   reset: ["cutMemory", "clearContext", "resetHops", "clearChatEvents", "forgetSpill", "clearNotes", "dropModelOverride", "expireAgentApprovals", "forgetCliSession"],
   rollover: ["clearContext", "resetHops", "forgetSpill", "dropModelOverride", "forgetCliSession"],
-  delete: ["stopTurns", "deleteRecord", "resetHops", "clearChatEvents", "forgetSpill", "clearNotes", "dropModelOverride", "expireApprovals", "forgetCliSession"],
+  delete: ["stopTurns", "deleteRecord", "resetHops", "clearChatEvents", "forgetSpill", "clearNotes", "dropModelOverride", "expireApprovals", "forgetCliSession", "forgetWorkDone"],
 };
 
 /** What ending one reaches — the stores, and the pipeline's own in-memory state. */
@@ -111,6 +117,7 @@ export interface ConversationEndDeps {
   platformOf(gatewayId: string): string;
   /** Let an external agent's CLI session for this chat go. Absent: no agent is answered by a CLI. */
   forgetCliSession?(agentId: string, gatewayId: string, chatId: string): void;
+  workDone?: Pick<WorkDonePort, "forgetChat">;
 }
 
 /** Which conversation, and — when the caller holds its row — the id it was stored under. */
@@ -189,6 +196,9 @@ export async function endConversation(deps: ConversationEndDeps, conversation: E
         break;
       case "forgetCliSession":
         deps.forgetCliSession?.(agentId, gatewayId, chatId);
+        break;
+      case "forgetWorkDone":
+        deps.workDone?.forgetChat(agentId, gatewayId, chatId);
         break;
     }
   }

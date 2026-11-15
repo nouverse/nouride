@@ -22,6 +22,7 @@ import type { AttachmentIntake } from "./attachments.ts";
 import type { RoomMemory } from "./room-memory.ts";
 import type { TurnContext } from "./turn-context.ts";
 import type { TurnState } from "./turn-state.ts";
+import { doneNotes, doneSources, heldIn } from "./work-done.ts";
 import { sourcesFrom, workNotes } from "./work-now.ts";
 
 /** What the turn holds to answer with: its provider, its tools, and the chat's `/model` when it has one. */
@@ -200,6 +201,9 @@ export function turnRequest(
   const { agent, envelope, session, record, shape, cause, journal, nudges, person, asPerson, turnKey } = turn;
   const { provider, toolset, override } = ask.kit;
   const { recall, modelOverrides, workspace } = ask;
+  // Who reads this chat's work notes: a mission's turn reads as the person who started it; a turn no person began, as nobody.
+  const reader = shape || !(isSystemEvent(envelope) || envelope.senderIsBot) ? person : undefined;
+  const now = Date.now();
   return {
     signal: turn.controller.signal,
     agent,
@@ -216,9 +220,10 @@ export function turnRequest(
     userMessage: ask.asked,
     reminders: [
       ...turnReminders(turn.text, toolset.definitions, { running: ctx.helpersRunning(agent.config.id, envelope), now: Date.now() }, ctx.loadNow(agent)),
-      // The other agents of this chat, and what else is at work on the box (`work-now.ts`). A mission's turn reads as
-      // the person who started it; a turn no person began reads as nobody.
-      ...workNotes(sourcesFrom(ctx, agent, envelope, shape || !(isSystemEvent(envelope) || envelope.senderIsBot) ? person : undefined), Date.now()),
+      // The other agents of this chat, and what else is at work on the box (`work-now.ts`).
+      ...workNotes(sourcesFrom(ctx, agent, envelope, reader), now),
+      // What it did for another agent lately, and what one that worked for it has since said to this person (`work-done.ts`).
+      ...doneNotes(doneSources(ctx.deps.workDone, { me: agent.config.id, at: envelope, reader, people: ctx.deps.config.people, now, timeZone: ctx.deps.config.daemon.timezone, held: (line) => heldIn(turn.history, line) })),
       // What its own missions in this chat wait for the person to answer (`mission-questions.ts`).
       ...missionQuestions(ctx.deps.missionCommands?.forChat(envelope.gatewayId, envelope.chatId) ?? [], agent.config.id, toolset.definitions),
       // The dashboard page the person had open as they wrote, where the message says one, and the dashboard's pages

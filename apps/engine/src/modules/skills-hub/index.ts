@@ -1,5 +1,9 @@
 /**
- * Skills from elsewhere: find them across hubs, and bring one in as a pending draft.
+ * Skills from elsewhere: find them, and bring one in as a pending draft.
+ *
+ * A search asks Nouverse's catalog (`catalog.ts`), which keeps the hubs' listings in its own order. The hubs are asked
+ * themselves when one is named, when the catalog is turned off, and when it does not answer: a search that works
+ * while Nouverse is down is worth the one branch, and the answer says which it was.
  *
  * Installing never writes to the pool. It fetches, normalizes (see `normalize.ts`), checks the name
  * against what is already there, and raises a draft in the same queue an agent's own skills wait in.
@@ -14,12 +18,14 @@ import type { GlobalConfig } from "@nouride/shared";
 import { readPool } from "@/modules/reflection/pool.ts";
 import { proposeInstall } from "@/modules/reflection/install.ts";
 import type { ReflectionEngine } from "@/modules/reflection/index.ts";
+import type { SkillsCatalog } from "./catalog.ts";
 import { HubError } from "./fetch.ts";
 import { normalizeSkill } from "./normalize.ts";
 import { fetchSkills, popularSkills, searchSource, SOURCE_IDS, type HubHit, type SourceDeps, type SourceId } from "./sources.ts";
 
 export { SOURCE_IDS, type HubHit, type SourceId } from "./sources.ts";
 export { HubError } from "./fetch.ts";
+export { skillsCatalogFromEnvironment, type SkillsCatalog } from "./catalog.ts";
 
 const log = createLogger("skills-hub");
 
@@ -27,20 +33,35 @@ export interface SkillHubDeps extends SourceDeps {
   agentsDir: string;
   builtinSkillsDir?: string;
   reflection: Pick<ReflectionEngine, "installDeps">;
+  /** Nouverse's catalog, asked first. Absent: turned off, and the hubs are what a search asks. */
+  catalog?: SkillsCatalog | undefined;
+}
+
+/** What a search or the list before one came from, and what the catalog said of its whole list. */
+export interface HubFound {
+  hits: HubHit[];
+  /** A hub, or the catalog, that did not answer. */
+  errors: { source: string; error: string }[];
+  from: "catalog" | "hubs";
+  /** The catalog's alone: how many match in all, and when its copy was last brought up to date. */
+  total?: number;
+  syncedAt?: string | null;
 }
 
 /**
- * The hub as the daemon runs it. Stateless, so the tool registry and the control API each build
- * their own from what they already hold. The GitHub token is read per request, so one set after
- * boot is used without a restart.
+ * The hub as the daemon runs it. The tool registry and the control API each build their own from what they already
+ * hold, around the one catalog made at boot. The GitHub token is read per request, so one set after boot is used
+ * without a restart.
  */
 export function createSkillHub(deps: {
   config: GlobalConfig;
   secrets: Pick<SecretStore, "resolve">;
   reflection: Pick<ReflectionEngine, "installDeps">;
   builtinSkillsDir?: string | undefined;
+  catalog?: SkillsCatalog | undefined;
 }): SkillHub {
   return new SkillHub({
+    ...(deps.catalog ? { catalog: deps.catalog } : {}),
     scratchDir: deps.config.daemon.dataDir,
     agentsDir: deps.config.daemon.agentsDir,
     ...(deps.builtinSkillsDir ? { builtinSkillsDir: deps.builtinSkillsDir } : {}),
@@ -61,26 +82,39 @@ export interface InstallResult {
 /** How long the popular list is kept, and how many of it — Explore shows twelve; a page asking for more gets up to this. */
 const POPULAR_TTL_MS = 60 * 60_000;
 const POPULAR_KEPT = 24;
+/** The catalog is one list where the hubs were three: it is asked for what three hubs' pages came to (it holds that to what it serves). */
+const HUBS_ASKED = 3;
+/** What the catalog is called where a hub's name goes: beside a failure, on the page and in a tool's answer. */
+const CATALOG_NAME = "Nouverse's catalog";
+
+const said = (err: unknown): string => (err instanceof Error ? err.message : String(err));
 
 export class SkillHub {
   constructor(private readonly deps: SkillHubDeps) {}
 
   /**
-   * Every source at once, each with its own deadline, merged in turns so no one hub's ranking buries
-   * the others. A source that fails is reported beside the results, not instead of them.
+   * Nouverse's catalog, in its order, when no hub is named. Otherwise, and when the catalog does not answer, every
+   * source at once, each with its own deadline, merged in turns so no one hub's ranking buries the others. A source
+   * that fails is reported beside the results, not instead of them: the catalog too.
    */
-  async search(
-    query: string,
-    options: { sources?: SourceId[]; limit?: number } = {},
-  ): Promise<{ hits: HubHit[]; errors: { source: SourceId; error: string }[] }> {
+  async search(query: string, options: { sources?: SourceId[]; limit?: number } = {}): Promise<HubFound> {
     const limit = Math.min(Math.max(options.limit ?? 8, 1), 25);
+    const fell: HubFound["errors"] = [];
+    if (!options.sources?.length && this.deps.catalog) {
+      try {
+        const page = await this.deps.catalog.search(query, limit * HUBS_ASKED);
+        return { hits: page.hits, errors: [], from: "catalog", total: page.total, syncedAt: page.syncedAt };
+      } catch (err) {
+        fell.push({ source: CATALOG_NAME, error: said(err) });
+      }
+    }
     const sources = options.sources?.length ? options.sources : SOURCE_IDS;
     const settled = await Promise.all(
       sources.map(async (source) => {
         try {
           return { source, hits: await searchSource(source, query, limit, this.deps) };
         } catch (err) {
-          return { source, hits: [] as HubHit[], error: err instanceof Error ? err.message : String(err) };
+          return { source, hits: [] as HubHit[], error: said(err) };
         }
       }),
     );
@@ -91,20 +125,30 @@ export class SkillHub {
     }
     return {
       hits,
-      errors: settled.flatMap((s) => ("error" in s && s.error ? [{ source: s.source, error: s.error }] : [])),
+      errors: [...fell, ...settled.flatMap((s) => ("error" in s && s.error ? [{ source: s.source, error: s.error }] : []))],
+      from: "hubs",
     };
   }
 
   /**
-   * The most used skills, for Explore before a search — kept an hour, so opening the tab is one request to ClawHub an
-   * hour at most, however often it is opened. A failure is not kept: the next open asks again.
+   * What Explore shows before a search: Nouverse's own list, its picks first, kept as the catalog keeps a search. A
+   * catalog that is off, does not answer or holds nothing yet leaves ClawHub's most used, kept an hour, so opening
+   * the tab is one request to ClawHub an hour at most. A failure is not kept: the next open asks again.
    */
-  async popular(limit = 12): Promise<HubHit[]> {
+  async popular(limit = 12): Promise<HubFound> {
+    const fell: HubFound["errors"] = [];
+    if (this.deps.catalog) {
+      try {
+        const page = await this.deps.catalog.search("", POPULAR_KEPT);
+        if (page.hits.length > 0) return { hits: page.hits.slice(0, limit), errors: [], from: "catalog", total: page.total, syncedAt: page.syncedAt };
+      } catch (err) {
+        fell.push({ source: CATALOG_NAME, error: said(err) });
+        log.warn("the skills catalog did not answer; ClawHub's most used are shown", { error: said(err) });
+      }
+    }
     const now = Date.now();
-    if (this.popularCache && now - this.popularCache.at < POPULAR_TTL_MS) return this.popularCache.hits.slice(0, limit);
-    const hits = await popularSkills(POPULAR_KEPT, this.deps);
-    this.popularCache = { at: now, hits };
-    return hits.slice(0, limit);
+    if (!this.popularCache || now - this.popularCache.at >= POPULAR_TTL_MS) this.popularCache = { at: now, hits: await popularSkills(POPULAR_KEPT, this.deps) };
+    return { hits: this.popularCache.hits.slice(0, limit), errors: fell, from: "hubs" };
   }
 
   private popularCache: { at: number; hits: HubHit[] } | null = null;

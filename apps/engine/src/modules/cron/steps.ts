@@ -17,10 +17,11 @@
  */
 
 import { sha256Text } from "@nouride/runtime";
-import type { HeldAction, Job, JobStep, RunWait, StepGo, StepOutcome } from "@nouride/shared";
+import type { HeldAction, Job, JobStep, RunWait, StepGo, StepOutcome, TogetherStep } from "@nouride/shared";
 import type { RunOutcome, RunState } from "./cron.store.ts";
 import { stepTurnMessage, withTriggerBody, type StepBefore } from "./prompts.ts";
 import type { JobTurnResult, TriggerContext } from "./scheduler.ts";
+import { runTogether } from "./together.ts";
 
 /** A job may run this many steps (a starting value): a list a person still reads on one page. */
 export const STEPS_MAX = 20;
@@ -33,7 +34,8 @@ export const APPROVAL_WAIT_MAX_MS = 7 * 86_400_000;
 /** How much of what a step said is kept on the run, and shown to a person asked about it. */
 const SAID_KEPT = 2000;
 
-type Step<K extends JobStep["kind"]> = Extract<JobStep, { kind: K }>;
+/** A step of one kind, or one of the steps a `parallel` step starts together: the same command, the same turn. */
+type Step<K extends "systemEvent" | "agentTurn" | "command" | "mission" | "approval"> = Extract<JobStep | TogetherStep, { kind: K }>;
 
 /** A delivery made, or why not: `unreachable` when the job's own chat would not take it. */
 type Sent = { ok: true } | { ok: false; error: string; unreachable?: true };
@@ -86,7 +88,9 @@ export function stepLabel(job: Pick<Job, "agentId">, step: JobStep, index: numbe
           ? "the mission"
           : step.kind === "approval"
             ? "the wait for a person"
-            : "the message";
+            : step.kind === "parallel"
+              ? `${step.steps.length} steps at the same time`
+              : "the message";
   return `step ${index + 1} of ${total}, ${what}`;
 }
 
@@ -100,7 +104,8 @@ type Went =
   | { exit: "done"; before?: Said }
   /** `same`: it said what it said last time, and was marked to go on only when that changed. */
   | { exit: "empty"; same?: true }
-  | { exit: "failed"; why: string; declined?: StepOutcome["status"] }
+  /** `said`: what was said beside the failure, by the steps that ran at the same time as the one that failed. */
+  | { exit: "failed"; why: string; declined?: StepOutcome["status"]; said?: string }
   | { halt: RunOutcome }
   | { wait: RunWait; card?: RunState["card"] };
 
@@ -203,7 +208,7 @@ export async function runSteps(job: Job, steps: readonly JobStep[], hands: StepH
       if (next < 0 || next >= steps.length) {
         return end(went.declined ? { status: "skipped", result: `${label}: ${went.why}` } : { status: "error", result: `${label} failed: ${went.why}` });
       }
-      carry.before = { from: capital(label), said: went.why, failed: true };
+      carry.before = { from: capital(label), said: went.said ?? went.why, failed: true };
     } else if (went.exit === "empty") {
       if (next < 0 || next >= steps.length) return end({ status: "success", result: `${label} ${went.same ? "said the same as last time" : "had nothing to say"}: the run ended there` });
       delete carry.before;
@@ -344,6 +349,32 @@ async function runStep(
       if ("refused" in run) return failed(run.refused);
       mark("waiting", `started mission ${run.started}`, { missionId: run.started });
       return { wait: { kind: "mission", step: step.id, missionId: run.started, since: hands.now() } };
+    }
+
+    case "parallel": {
+      const body = carry.body;
+      delete carry.body;
+      const ran = await runTogether(job, step, { place: at.index + 1, total: at.total, handedOn: at.handedOn }, hands, { ...(body ? { body } : {}), ...(carry.before ? { before: carry.before } : {}), outside: carry.outside }, (parts) => mark("running", undefined, { parts: [...parts] }));
+      carry.held.push(...ran.held);
+      const parts = { parts: ran.parts };
+      if (ran.went === "interrupted") {
+        mark("interrupted", ran.why, parts);
+        return { halt: { status: "interrupted", result: `${at.label}: ${ran.why}` } };
+      }
+      if (ran.went === "failed") {
+        mark("failed", ran.why, parts);
+        return { exit: "failed", why: ran.why ?? "one of them failed", said: ran.said };
+      }
+      if (ran.went === "empty") {
+        mark("empty", "none of them had anything to say", parts);
+        return { exit: "empty" };
+      }
+      if (sameAsBefore(step, ran.said, hands, carry)) {
+        mark("empty", SAME, { same: true, ...parts });
+        return { exit: "empty", same: true };
+      }
+      mark("done", ran.said, parts);
+      return { exit: "done", before: { from: capital(at.label.slice(at.label.indexOf(", ") + 2)), said: ran.said } };
     }
 
     case "approval": {

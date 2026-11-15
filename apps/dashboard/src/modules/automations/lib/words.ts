@@ -4,9 +4,9 @@
  * the server: what happens, never how it is stored.
  */
 
-import { Bot, Clock, Hand, MessageSquare, Play, Target, Terminal, Zap, type LucideIcon } from "lucide-react";
+import { Bot, Clock, Hand, MessageSquare, Play, Split, Target, Terminal, Zap, type LucideIcon } from "lucide-react";
 import type { AutomationStart } from "@nouride/wire";
-import { APPROVAL_WAIT_MS, canWatch, exitOf, exitsOf, landsAt, mainText, type ExitName, type Step, type StepKind } from "./steps";
+import { APPROVAL_WAIT_MS, canWatch, exitOf, exitsOf, landsAt, mainText, shellLine, type ExitName, type Part, type Step, type StepKind } from "./steps";
 
 export interface KindLook {
   icon: LucideIcon;
@@ -25,6 +25,7 @@ export const KIND: Record<StepKind, KindLook> = {
   systemEvent: { icon: MessageSquare, label: "Send a message", hint: "Your words, sent as written to where it reports. No AI.", tile: "bg-info/15 text-info" },
   mission: { icon: Target, label: "Start a mission", hint: "Long work, checked. The run waits until the mission ends.", tile: "bg-secondary/10 text-secondary" },
   approval: { icon: Hand, label: "Wait for your OK", hint: "The run stops and asks you. It goes on when you say yes.", tile: "bg-accent/15 text-accent" },
+  parallel: { icon: Split, label: "Several at the same time", hint: "Agents and commands that start together. What each says is joined and handed on.", tile: "bg-primary/15 text-primary" },
 };
 
 export const START: Record<AutomationStart, { icon: LucideIcon; label: string; tile: string }> = {
@@ -47,7 +48,18 @@ export function stepTitle(step: Step, agent: string): string {
       return "Start a mission";
     case "approval":
       return "Wait for your OK";
+    case "parallel":
+      return `${step.steps.length} at the same time`;
   }
+}
+
+/**
+ * What one of the steps started at the same time is called over its words: the name a person gave it, or whose turn it
+ * is, or the command. `agent` is what that agent is called here; the run's own report names it as the daemon does.
+ */
+export function partTitle(part: Part, agent: string): string {
+  if (part.name?.trim()) return part.name.trim();
+  return part.kind === "command" ? shellLine(part.argv) : agent;
 }
 
 /** The one line under a step's title: the start of what it says, asks or runs. */
@@ -136,5 +148,7 @@ function kindNote(step: Step, index: number, reads?: string): string {
       return "The run waits here until the mission ends.";
     case "approval":
       return `The run waits up to ${waitWords(step.timeoutMs ?? APPROVAL_WAIT_MS)} for your answer.`;
+    case "parallel":
+      return "They start together. What each says is joined, each under its name, and goes on once the last one is done.";
   }
 }

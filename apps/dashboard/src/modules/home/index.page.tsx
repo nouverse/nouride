@@ -73,7 +73,7 @@ export default function HomePage() {
 
   return (
     <div className="space-y-6">
-      <Hero name={name} line={summaryLine(awake, movingNow.length, needs.total)} aside={<BoxLine health={health.data} />} />
+      <Hero name={name} line={summaryLine(awake, movingNow.length, needs.total)} aside={<BoxLine health={health.data} agents={status.data?.agents ?? []} />} />
       <BoxWarnings health={health.data} />
 
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">

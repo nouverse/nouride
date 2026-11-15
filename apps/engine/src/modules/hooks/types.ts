@@ -206,6 +206,8 @@ export interface HookDeps {
   modelOverrides: ModelOverrides;
   /** The efforts an agent's coding CLI offered for its model, for `/effort` (0.8.16); empty before its first session. */
   cliEfforts?: (agentId: string) => string[];
+  /** The models an agent's coding CLI offered when its last session opened, for `/model`; empty before its first. */
+  cliModels?: (agentId: string) => readonly { value: string; name?: string }[];
   /**
    * An agent's own effort, `[llm] effort` in its pack, for `/effort … lock` (0.8.17): the write the Model tab and the CLI
    * tab make (`setup/agent-effort.ts`). Absent where a chat writes no pack.

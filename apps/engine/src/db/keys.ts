@@ -186,6 +186,15 @@ export const KEY_COLUMNS: readonly KeyColumn[] = [
   { table: "turn_records", column: "gateway_id", kind: "gateway" },
   { table: "turn_records", column: "chat_id", kind: "chatId" },
   { table: "turn_records", column: "sender_id", kind: "sender" },
+  // What one agent did for another: both agents, the chat it was asked from and the person it was for, and the
+  // chat the helper answered that person in afterwards.
+  { table: "work_for_another", column: "helper", kind: "agent" },
+  { table: "work_for_another", column: "asker", kind: "agent" },
+  { table: "work_for_another", column: "gateway_id", kind: "gateway" },
+  { table: "work_for_another", column: "chat_id", kind: "chatId" },
+  { table: "work_for_another", column: "sender_id", kind: "sender" },
+  { table: "work_for_another", column: "said_gateway_id", kind: "gateway" },
+  { table: "work_for_another", column: "said_chat_id", kind: "chatId" },
 ];
 
 /**
@@ -243,4 +252,6 @@ export const ON_CONVERSATION_DELETE: Readonly<Record<string, "deleted" | "expire
   sender_access: "kept",
   // Records.
   audit_log: "kept",
+  // What was asked from it, and what its agent answered in it, are not said in another chat once it is gone.
+  work_for_another: "deleted",
 };

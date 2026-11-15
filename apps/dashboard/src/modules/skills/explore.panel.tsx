@@ -1,6 +1,9 @@
 /**
- * Explore — skills somebody else wrote, from skills.sh, ClawHub, a well-known index, or any GitHub
- * repository.
+ * Explore — skills somebody else wrote: Nouverse's list of public skills, its picks first, or any GitHub repository.
+ *
+ * The list is Nouverse's catalog, through the daemon, as Connectors' Explore is: before anyone types, its own list,
+ * and a search after, on its button. When the catalog does not answer, the daemon asks the public lists themselves
+ * and the page says so.
  *
  * Install here means "fetch it and put it in front of me": the skill becomes a pending draft, already
  * adjusted to Nouride's frontmatter, with where it came from and what was changed beside it. It is
@@ -11,16 +14,30 @@
 
 import { ListLoading } from "@/commons/components/ui/Spinner";
 import { useState, type FormEvent } from "react";
+import { SearchForm } from "@/commons/components/ui/SearchForm";
+import { StickyTools } from "@/commons/components/ui/StickyBar";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, ExternalLink, FolderGit2, Search, ShieldAlert } from "lucide-react";
+import { Download, ExternalLink, FolderGit2, ShieldAlert, Star } from "lucide-react";
 import { api } from "@/commons/lib/api";
-import type { SkillHubHit, SkillHubInstall } from "@nouride/wire";
+import type { SkillHubFrom, SkillHubHit, SkillHubInstall } from "@nouride/wire";
 import { Card, EmptyState, ErrorNote } from "@/commons/components/ui/ui";
 import { Details } from "@/commons/components/ui/Details";
-import { RUNS_DOWN } from "@/commons/components/ui/ScrollCard";
-import { SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
+import { ago } from "@/commons/lib/format";
 
-type Source = "" | "skills.sh" | "clawhub" | "well-known";
+/** What the list is called over its rows: Nouverse's own before a search, ClawHub's most used when Nouverse's is not there. */
+export function listLabel(from: SkillHubFrom | undefined, searched: string): string {
+  if (searched) return `Matching “${searched}”`;
+  return from === "catalog" ? "Nouverse's picks" : "Most used on ClawHub";
+}
+
+/** The line under it: what the list is and how fresh Nouverse's copy is. Nothing where the public lists answered themselves. */
+export function listLine(list: { from?: SkillHubFrom; total?: number; syncedAt?: string | null } | undefined, searched: boolean, now = Date.now()): string {
+  if (!list || list.from !== "catalog") return "";
+  const fresh = list.syncedAt ? `, updated ${ago(Date.parse(list.syncedAt), now)}` : "";
+  const total = list.total ?? 0;
+  const what = searched ? `${total.toLocaleString("en-US")} ${total === 1 ? "match" : "matches"} in` : "Nouverse's picks first, from";
+  return `${what} Nouverse's list of public skills${fresh}.`;
+}
 
 const SOURCE_LABEL: Record<SkillHubHit["source"], string> = {
   "skills.sh": "skills.sh",
@@ -32,12 +49,11 @@ const SOURCE_LABEL: Record<SkillHubHit["source"], string> = {
 export function ExplorePanel({ editable, onReview }: { editable: boolean; onReview: () => void }) {
   const queryClient = useQueryClient();
   const [query, setQuery] = useState("");
-  const [source, setSource] = useState<Source>("");
   const [ref, setRef] = useState("");
   /** The last install's outcome, keyed by what was installed, so it shows beside that row. */
   const [outcome, setOutcome] = useState<{ ref: string; result: SkillHubInstall } | null>(null);
 
-  const search = useMutation({ mutationFn: (args: { query: string; source: Source }) => api.skillHubSearch(args.query, args.source || undefined) });
+  const search = useMutation({ mutationFn: (words: string) => api.skillHubSearch(words) });
   const install = useMutation({
     mutationFn: (target: string) => api.skillHubInstall(target),
     onSuccess: (result, target) => {
@@ -47,23 +63,19 @@ export function ExplorePanel({ editable, onReview }: { editable: boolean; onRevi
     onError: (error, target) => setOutcome({ ref: target, result: { ok: false, error: error instanceof Error ? error.message : String(error) } }),
   });
 
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    if (query.trim()) search.mutate({ query: query.trim(), source });
-  };
   const installRef = (event: FormEvent) => {
     event.preventDefault();
     if (ref.trim()) install.mutate(ref.trim());
   };
-  // Before a search, the most used skills — so the tab opens on something to pick from, not an empty box.
+  // Before a search, Nouverse's own list — so the tab opens on something to pick from, not an empty box.
   const popular = useQuery({ queryKey: ["skill-hub-popular"], queryFn: api.skillHubPopular, staleTime: 10 * 60_000, retry: false, enabled: !search.data });
   const searched = Boolean(search.data);
-  const hits = searched ? (search.data?.hits ?? []) : (popular.data?.hits ?? []);
+  const list = searched ? search.data : popular.data;
+  const hits = list?.hits ?? [];
+  const line = listLine(list, searched);
 
   return (
-    // As tall as what it holds, not what the window left: held to that, its cards ran out of it, and the room under
-    // them stayed up inside it.
-    <div className={`flex flex-col gap-6 ${RUNS_DOWN}`}>
+    <div className="flex flex-col gap-6">
       <Card
         title="Install from a repository or URL"
         description="Any GitHub repository or folder that holds skills. Every skill in it waits on the Pending tab."
@@ -97,44 +109,17 @@ export function ExplorePanel({ editable, onReview }: { editable: boolean; onRevi
 
       <Card
         title="Find a skill"
-        description="Search skills.sh, ClawHub and other public lists of skills at once. Installing one puts it on the Pending tab for you to read and approve; nothing runs until you do." // plain-words-ok: skills.sh, a website's own name
+        description="Search Nouverse's list of public skills. They are made by others and not checked: installing one puts it on the Pending tab for you to read and approve; nothing runs until you do."
         className="flex flex-col"
       >
-        <form onSubmit={submit} className="space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="input flex min-w-0 flex-1 items-center gap-2 rounded-xl">
-              <Search size={15} className="opacity-50" />
-              <input
-                type="search"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="pdf, kubernetes, release notes…"
-                className="min-w-0 flex-1 bg-transparent outline-none"
-                aria-label="Search skill hubs"
-              />
-            </label>
-            <button type="submit" className="btn btn-primary rounded-xl gap-2" disabled={!query.trim() || search.isPending}>
-              {search.isPending ? <span className="loading loading-spinner loading-xs" /> : <Search size={15} />} Search
-            </button>
-          </div>
-          <SegmentedTabs
-            tabs={[
-              { value: "" as Source, label: "All hubs" },
-              { value: "skills.sh" as Source, label: "skills.sh" }, // plain-words-ok: a website's own name
-              { value: "clawhub" as Source, label: "ClawHub" },
-              { value: "well-known" as Source, label: "well-known" },
-            ]}
-            value={source}
-            onChange={(next) => {
-              setSource(next);
-              if (query.trim()) search.mutate({ query: query.trim(), source: next });
-            }}
-          />
-        </form>
+        {/* In the row that stays at the top of the window, beside the tabs: in the card it left with the first hits. */}
+        <StickyTools fill>
+          <SearchForm value={query} onChange={setQuery} onSearch={(words) => search.mutate(words)} placeholder="pdf, kubernetes, release notes…" label="Search skills" busy={search.isPending} />
+        </StickyTools>
 
         {/* The page scrolls, not the list: nothing is below it to push off the screen, and held to what the window left
             under the two cards above it, the hits had the height of one. */}
-        <div data-explore-hits className="mt-5 space-y-3">
+        <div data-explore-hits className="space-y-3">
           <ErrorNote error={search.error} />
           {search.isPending ? <ListLoading /> : null}
           {!searched ? (
@@ -144,9 +129,13 @@ export function ExplorePanel({ editable, onReview }: { editable: boolean; onRevi
               <p className="flex items-center gap-2 text-xs text-warning">
                 <ShieldAlert size={13} /> {popular.data.plain ?? `ClawHub did not answer: ${popular.data.error}`}
               </p>
-            ) : hits.length > 0 ? (
-              <p className="text-[11px] font-bold uppercase tracking-wider text-base-content/65 font-mono">Most used on ClawHub</p>
             ) : null
+          ) : null}
+          {!search.isPending && hits.length > 0 ? (
+            <div className="space-y-0.5" data-explore-list={list?.from ?? ""}>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-base-content/65 font-mono">{listLabel(list?.from, searched ? (search.variables ?? "") : "")}</p>
+              {line ? <p className="text-xs text-base-content/65">{line}</p> : null}
+            </div>
           ) : null}
           {(search.data?.errors ?? []).map((failure) => (
             <p key={failure.source} className="flex items-center gap-2 text-xs text-warning">
@@ -194,10 +183,19 @@ function HitRow({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-semibold text-base-content">{hit.name}</span>
+            <span className="font-semibold text-base-content">{hit.title ?? hit.name}</span>
             <span className="badge badge-ghost badge-sm rounded-md font-mono">{SOURCE_LABEL[hit.source]}</span>
+            {hit.pick ? (
+              <span className="badge badge-primary badge-soft badge-sm font-mono gap-1" title="Picked by Nouverse">
+                <Star size={11} aria-hidden="true" /> pick
+              </span>
+            ) : null}
+            {hit.owner ? <span className="text-xs text-base-content/65">by {hit.owner}</span> : null}
+            {/* How much it is used: a hub's installs, or its repository's stars where nothing counts installs. */}
             {hit.installs !== undefined ? (
               <span className="text-xs text-base-content/65">{hit.installs.toLocaleString("en-US")} installs</span>
+            ) : hit.stars !== undefined ? (
+              <span className="text-xs text-base-content/65">{hit.stars.toLocaleString("en-US")} stars</span>
             ) : null}
           </div>
           {hit.description ? <p className="line-clamp-2 text-xs leading-relaxed text-base-content/70">{hit.description}</p> : null}

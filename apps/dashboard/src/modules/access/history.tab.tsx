@@ -10,7 +10,7 @@ import { Ban, Check, Clock, RotateCcw, Unlock, UserPlus, UserX, X } from "lucide
 import { api } from "@/commons/lib/api";
 import type { AccessEvent, SenderRecord } from "@nouride/wire";
 import { EmptyState, ErrorNote } from "@/commons/components/ui/ui";
-import { ScrollCard } from "@/commons/components/ui/ScrollCard";
+import { ListCard } from "@/commons/components/ui/ListCard";
 import { ago } from "@/commons/lib/format";
 import { NoMatch, SenderLine, byWhom, useSenderFilter } from "./sender-line";
 import { ListLoading } from "@/commons/components/ui/Spinner";
@@ -60,7 +60,7 @@ export function HistoryTab({
   const { visible, query, search } = useSenderFilter(lines, agentOf);
 
   return (
-    <ScrollCard title="History" description="Every request and every answer, newest first, kept as long as the audit log is." {...search}>
+    <ListCard title="History" description="Every request and every answer, newest first, kept as long as the audit log is." {...search}>
       <ErrorNote error={history.error} />
       {history.isPending ? (
         <ListLoading />
@@ -89,6 +89,6 @@ export function HistoryTab({
           })}
         </ul>
       )}
-    </ScrollCard>
+    </ListCard>
   );
 }

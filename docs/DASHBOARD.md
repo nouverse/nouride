@@ -17,12 +17,16 @@ Chat              talk to any agent, or open a room with several
 Missions          long work an agent finishes alone: what needs you, what runs, each one's page (0.8.0)
 
 Overview          what is waiting on you · today's tokens and spend · the Office, small
-Office            the agents' statuses as a small office of cats; a cat's card to wake, sleep or restyle it (0.8.1)
+Office            the agents' statuses as a small office of cats (0.8.1): the top of Agents since 0.8.38, where
+                  picking a cat opens that agent's row with what a person does with it
+Workspace         the agents' workspace, to look through: `private` and `shared`, and nothing above them — an
+                  admin's (0.8.38)
 Automations       everything that runs on its own, whatever starts it (a schedule, a webhook, by hand):
                   the list, and a page for each with its start, its steps as a flow and its runs (0.8.34)
 System Logs       the daemon's log, the audit trail, job runs, background commands
 
-Agents            the list, and New Agent — answered by a model, or by a coding CLI on this box
+Agents            the Office, every agent as a row under it, and New Agent — answered by a model, or by a
+                  coding CLI on this box
   ├ Agent Settings  daemon-wide: who may pair, group context, exec policy, mentions, spend cap,
   │                 budgets, retention, and config.toml itself
   └ <agent-id>
@@ -30,6 +34,7 @@ Agents            the list, and New Agent — answered by a model, or by a codin
       Model           which provider profile and model this agent runs on
       Brain           in Model's place for an external agent: its coding CLI, account and sign-in,
                       preset, the CLI's model, and the model Nouride's own work for it runs on
+      Workspace       its own folder in the workspace, with no way out of it — an admin's (0.8.38)
       Connections     the bots and numbers it answers on
       Access          whether it takes new senders, what it asks before acting, its senders' count
       Skills          every skill in the pool, and which of them this agent carries
@@ -57,8 +62,8 @@ My Box            the paired Box — only on one
 Documentation     a link out to the docs site
 ```
 
-The sidebar heads the blocks above Interact, Monitor, Configure (Agents to Secrets), Connect, Account and Learn, so
-the Office is **Monitor → Office**.
+The sidebar heads the blocks above Interact, Monitor, Configure (Agents to Secrets), Connect, Account and Learn. The
+Office has no page of its own since 0.8.38: it is the top of **Agents**, and its old address lands there.
 Models, LLM Gateway, Secrets, Integrations, Web Search, Users and My Box are an admin's, and absent
 from the sidebar for anyone else (§3). `/update` — which version this is, and taking a newer one — hangs off the
 version shown in the sidebar.
@@ -113,7 +118,9 @@ thing with a different start, so they are one list (`modules/automations`) with 
 Schedule and Webhooks were two pages. It stays daemon-wide even though every job has an `agentId`, because you
 usually want to see everything that runs on its own at once. One automation's page is its start, its steps as cards
 in the order they run, and who runs it and where it reports. A run is drawn over those same cards (done, failed,
-waiting, never reached), so the picture a person edits is the picture a run is read on, and a suggested change is
+waiting, never reached), so the picture a person edits is the picture a run is read on (a step of several at the
+same time is one card, written as a short list of what starts together, and read in a run as how each of them went
+under its name, 0.8.38), and a suggested change is
 the same cards again with what it adds and changes marked. A job that does one thing is drawn as one step and stays
 saved as one thing until it needs to be a list. Nothing is saved as it is typed: the page keeps a draft and one bar
 saves it, because a list of steps half saved is a job that runs half of what was meant. `/schedule` and `/webhooks`
@@ -191,7 +198,7 @@ them lying. But they are one *workflow*: you judge a draft by what is already in
 |---|---|
 | **Live** | the pool: what the agents are actually carrying — opened first when nothing waits on you |
 | **Pending** | the queue, plus what was recently decided, for working through it — opened first when something waits |
-| **Explore** | opens on ClawHub's most downloaded skills (kept an hour); skills on skills.sh, ClawHub, well-known indexes or a GitHub repository; installing one makes it a pending draft, adjusted to Nouride's frontmatter, with nothing run |
+| **Explore** | opens on Nouverse's list of public skills, its picks first, and searches it on a button (0.8.38), as MCP's Explore does its catalog; ClawHub's most downloaded and the hubs themselves when Nouverse's list does not answer; a GitHub repository by its address; installing one makes it a pending draft, adjusted to Nouride's frontmatter, with nothing run |
 
 **The Self-Improving Skill panel lives on this page too**, collapsed above the tabs: `[skills.learning]` as
 three controls. The mode is a radio group of three — *Off*, *Propose, and wait for me* (`ask`, the
@@ -299,6 +306,20 @@ at a breakpoint sets `grid-cols-1` for a phone, or its one track grows to its wi
 of columns — a log line, a table, a step beside its outcome — becomes a block there, its long part the
 whole width. `tests/phone-type.test.ts` and `tests/phone-layout.test.ts` hold the rules that can be read
 from the source.
+
+**A page scrolls as a page; three keep a list inside a card** (0.8.38, from the owner). Thirteen pages were held
+to the window from a laptop up, their list scrolling in a card under a title, a description and tabs that stayed:
+what was left for the list was a strip, and a band under it was kept clear for the chat button. Now a page scrolls,
+and its own tabs, filter and search are one row that stays at the top of the window (`StickyBar`: clear while it
+rests in its place, the page's own ground once the page runs under it). A search that belongs to a part of the page
+under the row (Explore's, the documents', an agent's skills) is drawn into the row by that part (`StickyTools`), which
+keeps what was typed and found; one asked on its button is `SearchForm`. No list is a box that scrolls inside a page
+that scrolls: such a box keeps the wheel and moves nothing. A page's own list is shown in full; a list
+with another card under it is cut short and opened with one press (`ListCard`). Files and the Workspace
+(`fillsViewport`) and Logs keep the list in the card, because the path and the filters over it have to stay: the
+card runs to the page's own margin at the window's foot, the floating chat's button lies over its corner, and what
+scrolls ends with room to bring its last row clear (`HELD_END`). `tests/mount-page-scroll.test.ts`,
+`tests/sticky-bar.test.ts`, `tests/list-card.test.ts` and `tests/phone-layout.test.ts` hold these.
 
 **Empty is a real value.** An account with no name set means nobody has said what to call them. The
 agent then uses no name at all, rather than falling back to the login handle. This is the fix for a

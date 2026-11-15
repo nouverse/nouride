@@ -10,7 +10,7 @@
  */
 
 import { control, post, request } from "./api.client";
-import type { CatalogSkill, LearningSettings, SkillDraft, SkillHubHit, SkillHubInstall, SkillHubSearch, SoftwareCheck } from "@nouride/wire";
+import type { CatalogSkill, LearningSettings, SkillDraft, SkillHubInstall, SkillHubPopular, SkillHubSearch, SoftwareCheck } from "@nouride/wire";
 
 export const skillsApi = {
   skillCatalog: () =>
@@ -107,14 +107,11 @@ export const skillsApi = {
   denySkillDraft: (id: string) =>
     post<{ ok: true }>(`${control}/skills/drafts/${encodeURIComponent(id)}/deny`, {}),
 
-  // Skills from hubs. Search reads public indexes; install raises drafts — nothing reaches the pool
-  // until one is approved on the Pending tab.
-  skillHubSearch: (query: string, source?: string) =>
-    request<SkillHubSearch>(
-      `${control}/skills/hub/search?${new URLSearchParams({ q: query, ...(source ? { source } : {}) })}`,
-    ),
-  /** The most used skills, shown on Explore before anything is typed; `plain`, why they are not, in the page's words (0.8.20). */
-  skillHubPopular: () => request<{ hits: SkillHubHit[]; error?: string; plain?: string }>(`${control}/skills/hub/popular`),
+  // Skills from elsewhere. Search asks Nouverse's catalog, or the hubs when it does not answer; install raises
+  // drafts — nothing reaches the pool until one is approved on the Pending tab.
+  skillHubSearch: (query: string) => request<SkillHubSearch>(`${control}/skills/hub/search?${new URLSearchParams({ q: query })}`),
+  /** Nouverse's own list, or the most used skills, shown on Explore before anything is typed; `plain`, why they are not, in the page's words (0.8.20). */
+  skillHubPopular: () => request<SkillHubPopular>(`${control}/skills/hub/popular`),
   skillHubInstall: (ref: string) => post<SkillHubInstall>(`${control}/skills/hub/install`, { ref }),
 
   learningSettings: () => request<LearningSettings>(`${control}/skills/learning`),

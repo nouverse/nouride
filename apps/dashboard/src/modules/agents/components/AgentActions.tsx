@@ -1,25 +1,24 @@
+/**
+ * An agent's row, opened: what it is doing and where, why it cannot work if it cannot, and what a person does from
+ * here: open its page, open its chat, put it to sleep or wake it, look through its folder, change its look. One place
+ * for these, under the agent's row in the list, whether the row was opened there or by picking its cat in the Office.
+ */
+
 import { Link } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { MessageSquare, Moon, Palette, Sun, Target, X } from "lucide-react";
+import { FolderOpen, MessageSquare, Moon, Palette, SquareArrowOutUpRight, Sun, Target } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import type { AgentSummary } from "@nouride/wire";
-import { canWrite, useMe } from "@/commons/lib/session";
+import { canWrite, isAdmin, useMe } from "@/commons/lib/session";
 import { useAgentChatLink } from "@/commons/hooks/use-agent-chat";
-import { AgentStatusBadge } from "@/commons/components/agents/agent-status-badge";
 import { ErrorNote } from "@/commons/components/ui/ui";
-import { OrchestratorBadge, useOrchestrator } from "@/commons/components/agents/AgentName";
 import type { Status } from "@/commons/office/lib/layout";
 
 /** A mission's turns run on this connection; its chat id is the mission's. */
 const MISSION_GATEWAY = "web:mission";
 
-/**
- * A cat, clicked: what its agent is doing and where, why it cannot work if it cannot, and what a person does from here
- * — put it to sleep or wake it, open the chat or the mission it is in, change its look.
- */
-export function AgentCard({ agent, status, onClose }: { agent: AgentSummary; status: Status; onClose: () => void }) {
+export function AgentActions({ agent, status }: { agent: AgentSummary; status: Status }) {
   const me = useMe();
-  const orchestrator = useOrchestrator();
   const editable = canWrite(me.data ?? null);
   const queryClient = useQueryClient();
   const act = useMutation({
@@ -31,21 +30,7 @@ export function AgentCard({ agent, status, onClose }: { agent: AgentSummary; sta
   const asleep = status === "asleep";
 
   return (
-    <div className="space-y-4 rounded-2xl border border-base-content/10 bg-base-100 p-4 shadow-xs">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 space-y-1">
-          <p className="truncate text-lg font-bold tracking-tight">{agent.displayName}</p>
-          <div className="flex flex-wrap items-center gap-1.5">
-            <AgentStatusBadge agent={agent} />
-            {/* The same mark the other pages give it, and its name wears over its cat. */}
-            {agent.id === orchestrator ? <OrchestratorBadge /> : null}
-          </div>
-        </div>
-        <button type="button" className="btn btn-ghost btn-xs btn-circle" onClick={onClose} aria-label="Close">
-          <X size={14} aria-hidden="true" />
-        </button>
-      </div>
-
+    <div className="space-y-3" data-agent-actions>
       {agent.activity?.unavailable ? <p className="text-error text-xs">Cannot work: {agent.activity.unavailable}</p> : null}
 
       {working.length > 0 || (agent.activity?.jobs ?? 0) > 0 || (agent.activity?.waiting ?? 0) > 0 ? (
@@ -73,13 +58,23 @@ export function AgentCard({ agent, status, onClose }: { agent: AgentSummary; sta
       )}
 
       <div className="flex flex-wrap gap-2">
-        <button type="button" className="btn btn-sm gap-1.5" disabled={!editable || act.isPending} onClick={() => act.mutate(asleep ? "wake" : "sleep")}>
-          {asleep ? <Sun size={14} aria-hidden="true" /> : <Moon size={14} aria-hidden="true" />} {asleep ? "Wake" : "Sleep"}
-        </button>
+        {/* Its own page first: everything else about it is there. */}
+        <Link to="/agents/$agentId" params={{ agentId: agent.id }} className="btn btn-primary btn-sm gap-1.5">
+          <SquareArrowOutUpRight size={14} aria-hidden="true" /> Details
+        </Link>
         {/* This agent's newest conversation, as its row in the chat list opens; a new chat with it when it has none. */}
         <Link {...chat} className="btn btn-sm gap-1.5">
           <MessageSquare size={14} aria-hidden="true" /> Open chat
         </Link>
+        <button type="button" className="btn btn-sm gap-1.5" disabled={!editable || act.isPending} onClick={() => act.mutate(asleep ? "wake" : "sleep")}>
+          {asleep ? <Sun size={14} aria-hidden="true" /> : <Moon size={14} aria-hidden="true" />} {asleep ? "Wake" : "Sleep"}
+        </button>
+        {/* Its own folder in the workspace: an admin's to look through, as its tab on the agent's page is. */}
+        {isAdmin(me.data ?? null) ? (
+          <Link to="/agents/$agentId/workspace" params={{ agentId: agent.id }} search={{ path: "" }} className="btn btn-sm gap-1.5">
+            <FolderOpen size={14} aria-hidden="true" /> Workspace
+          </Link>
+        ) : null}
         <Link to="/agents/$agentId/look" params={{ agentId: agent.id }} className="btn btn-sm gap-1.5">
           <Palette size={14} aria-hidden="true" /> Edit look
         </Link>

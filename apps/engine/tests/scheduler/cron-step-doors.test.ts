@@ -255,7 +255,7 @@ describe("the Automations page's routes", () => {
     };
     // A command's `then` as a job of one command has it is not an exit of a step: refused, not quietly dropped.
     expect((await said([{ kind: "command", argv: ["date"], then: "agentTurn" }]))[1].error).toBe('step 1: `then` is "next", "end", or { to: the id of a later step }.');
-    expect((await said([{ kind: "steps", steps: [] }]))[1].error).toBe("step 1 must be a message, an agent's turn, a command, a mission or a wait for a person.");
+    expect((await said([{ kind: "steps", steps: [] }]))[1].error).toBe("step 1 must be a message, an agent's turn, a command, a mission, a wait for a person or several steps at the same time.");
     const [status, ghost] = await said([{ kind: "mission", goal: "x", agentId: "ghost" }]);
     expect(status).toBe(400);
     expect(ghost.error).toBe('step 1: no agent "ghost": a step must name one that exists');
@@ -349,8 +349,8 @@ describe("an agent proposes a list", () => {
     const { propose } = tool();
     expect((await propose({ text: "hi", steps: [{ prompt: "x" }] })).content).toBe("Give `steps`, or one of `text`, `command`, `prompt` and `mission`: not both.");
     expect((await propose({ steps: [] })).content).toBe("`steps` is a list of at least one step.");
-    expect((await propose({ steps: [{ prompt: "x" }, { prompt: "y", text: "z" }] })).content).toBe("Step 2: Give exactly one of `text`, `command`, `prompt`, `mission` or `ask`.");
-    expect((await propose({ steps: [{ name: "nothing" }] })).content).toBe("Step 1: Give exactly one of `text`, `command`, `prompt`, `mission` or `ask`.");
+    expect((await propose({ steps: [{ prompt: "x" }, { prompt: "y", text: "z" }] })).content).toBe("Step 2: Give exactly one of `text`, `command`, `prompt`, `mission`, `ask` or `together`.");
+    expect((await propose({ steps: [{ name: "nothing" }] })).content).toBe("Step 1: Give exactly one of `text`, `command`, `prompt`, `mission`, `ask` or `together`.");
     expect((await propose({ steps: [{ prompt: "x", agent: "ghost" }] })).content).toBe("Step 1: there is no agent called ghost.");
     expect((await propose({ steps: [{ prompt: "x" }, { prompt: "y", then: 1 }] })).content).toBe("Not proposed: step 2: `then` points at step 1, which is not after it. A run only goes forward.");
     expect((await propose({ when: "webhook", steps: [{ prompt: "x" }, { command: "date" }] })).content).toBe("A webhook that runs a command is made by an admin from the dashboard, not proposed.");

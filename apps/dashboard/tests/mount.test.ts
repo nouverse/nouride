@@ -170,9 +170,6 @@ describe("the memory graph", () => {
   });
 });
 
-/**
- * Skills from hubs: the Explore tab searches every hub and installs into Pending.
- */
 describe("pages that keep their lists in bounds", () => {
   const ok = (body: unknown) => ({ status: 200, body });
   const clickText = async (host: HTMLElement, selector: string, text: string) => {
@@ -185,27 +182,22 @@ describe("pages that keep their lists in bounds", () => {
     answer({});
   });
 
-  test("Users: what the roles mean comes before the accounts, which scroll", async () => {
+  test("Users: what the roles mean comes before the accounts, and the page scrolls as a page", async () => {
     answer({
       "/users": ok({ multiUser: true, users: [{ id: "u1", username: "tester", role: "admin", createdAt: 0, mustChangePassword: false }] }),
     });
     const html = await renderPage("/users");
     expect(html.indexOf("Role Permissions Summary")).toBeLessThan(html.indexOf(">Accounts<"));
-    // Held to the window, the list scrolling inside its card (fillsViewport).
-    expect(html).toMatch(/lg:min-h-0 lg:flex-1 lg:overflow-y-auto/);
+    // No list scrolling inside a card: the accounts are as long as they are.
+    expect(html).not.toMatch(/lg:overflow-y-auto/);
   });
 
-  test("Memory: an open profile scrolls inside itself, under a header that stays", async () => {
+  test("Memory: the people are a list as long as it is, and an open profile is as long as it is: the page scrolls", async () => {
     const html = await renderPage("/memories", (host) => clickText(host, '[role="tab"]', "People"));
-    expect(html).toMatch(/<summary class="[^"]*sticky top-0/);
-    expect(html).toMatch(/max-h-\[55dvh\] overflow-y-auto/);
-  });
-
-  test("Memory: Agent notes, Proposals and Timeline scroll inside their cards", async () => {
-    for (const tab of ["Agent notes", "Proposals", "Timeline"]) {
-      const html = await renderPage("/memories", (host) => clickText(host, '[role="tab"]', tab));
-      expect(html).toMatch(/max-h-\[32rem\] overflow-y-auto/);
-    }
+    expect(html).toContain("<summary");
+    // No list scrolling inside the page, and no header of a row held over the tabs that stay.
+    expect(html).not.toMatch(/max-h-\[\d+dvh\][^"]*overflow-y-auto/);
+    expect(html).not.toMatch(/<summary class="[^"]*sticky/);
   });
 
   test("Skills: opens on the pool when nothing waits; each tab shows its own list", async () => {
@@ -243,13 +235,15 @@ describe("Skills lists", () => {
     for (let i = 0; i < 4; i += 1) await sleep(10);
   };
 
-  test("each list scrolls inside its card, filling the window, and has its own filter", async () => {
+  test("each list is as long as it is, and its filter is beside the tabs in the row that stays", async () => {
     Object.assign(overrides, Object.fromEntries(Object.entries(fixtures).map(([path, body]) => [path, { status: 200, body }])));
     try {
       // Something waits, so it opens on Pending.
-      const html = await renderPage("/skills");
-      expect(html).toContain('aria-label="Filter drafts"');
-      expect(html).toMatch(/lg:min-h-0 lg:flex-1 lg:overflow-y-auto/);
+      const html = await renderPage("/skills", async (host) => {
+        expect(host.querySelector('[data-sticky-bar] [role="tablist"]')).not.toBeNull();
+        expect(host.querySelector('[data-sticky-bar] input[aria-label="Filter drafts"]')).not.toBeNull();
+      });
+      expect(html).not.toMatch(/lg:overflow-y-auto/);
 
       const live = async (host: HTMLElement) => {
         ([...host.querySelectorAll('[role="tab"]')].find((el) => el.textContent?.includes("Live")) as HTMLElement).click();
@@ -259,54 +253,13 @@ describe("Skills lists", () => {
       const filtered = await renderPage("/skills", live);
       expect(filtered).toContain("deploy-k8s");
       expect(filtered).not.toContain("pdf-tools");
-      expect(filtered).toMatch(/lg:min-h-0 lg:flex-1 lg:overflow-y-auto/);
+      expect(filtered).not.toMatch(/lg:overflow-y-auto/);
 
       const none = await renderPage("/skills", (host) => type(host, "Filter drafts", "nothing like this"));
       expect(none).toContain("No draft matches");
     } finally {
       for (const key of Object.keys(fixtures)) delete overrides[key];
     }
-  });
-});
-
-describe("Skills Explore", () => {
-  const settle = async () => {
-    for (let i = 0; i < 6; i += 1) await sleep(10);
-  };
-  const clickText = async (host: HTMLElement, selector: string, text: string) => {
-    const target = [...host.querySelectorAll(selector)].find((el) => el.textContent?.includes(text)) as HTMLElement | undefined;
-    if (!target) throw new Error(`nothing matching ${selector} with "${text}"`);
-    target.click();
-    await settle();
-  };
-
-  test("the tab says what install means, and offers search and a repository field", async () => {
-    const html = await renderPage("/skills", (host) => clickText(host, '[role="tab"]', "Explore"));
-    expect(errors.filter((line) => /Error|error boundary|Cannot read/.test(line))).toEqual([]);
-    expect(html).toContain("Find a skill");
-    expect(html).toContain("nothing runs until you do");
-    expect(html).toContain("Install from a repository or URL");
-    expect(html).toContain("All hubs");
-    // Installing by repository comes first: it is the one that needs no searching.
-    expect(html.indexOf("Install from a repository or URL")).toBeLessThan(html.indexOf("Find a skill"));
-  });
-
-  test("a search lists hits with Install, and says which hub did not answer", async () => {
-    const html = await renderPage("/skills", async (host) => {
-      await clickText(host, '[role="tab"]', "Explore");
-      const input = host.querySelector('input[aria-label="Search skill hubs"]') as HTMLInputElement;
-      const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(input), "value")!.set!;
-      setter.call(input, "pdf");
-      input.dispatchEvent(new (input.ownerDocument.defaultView as unknown as typeof globalThis).Event("input", { bubbles: true }));
-      await settle();
-      await clickText(host, 'button[type="submit"]', "Search");
-    });
-    expect(html).toContain("skills.sh:anthropics/skills/pdf");
-    expect(html).toContain("205,751 installs");
-    expect(html).toMatch(/<\/svg> Install<\/button>/);
-    expect(html).toContain("clawhub did not answer");
-    // The results scroll inside their card rather than pushing the page down.
-    expect(html).toMatch(/min-h-0 flex-1[^"]*overflow-y-auto/);
   });
 });
 
@@ -1387,11 +1340,13 @@ describe("which pages own the viewport", () => {
     }
   });
 
-  test("chat, Logs, Secrets and the LLM Gateway fill it", async () => {
-    for (const path of ["/chat", "/logs", "/secrets", "/llm-gateway"]) {
+  test("chat, Logs and the LLM Gateway fill it; Secrets scrolls as a page", async () => {
+    for (const path of ["/chat", "/logs", "/llm-gateway"]) {
       const html = await renderPage(path);
       expect({ path, fills: html.includes(FILLS) }).toEqual({ path, fills: true });
     }
+    const secrets = await renderPage("/secrets");
+    expect({ scrolls: secrets.includes(SCROLLS), fills: secrets.includes(FILLS) }).toEqual({ scrolls: true, fills: false });
   });
 
   // A conversation open on a phone is the whole screen, the tab bar stepped aside: only a tablet keeps the bar's room.
@@ -1713,7 +1668,7 @@ describe("missions", () => {
     expect(html).toContain('href="/dashboard/missions/msn_1"');
   });
 
-  test("the list's tabs count each group, the search narrows it, and it scrolls inside its card", async () => {
+  test("the list's tabs count each group and the search narrows it, both in the row that stays", async () => {
     const seen: Record<string, string> = {};
     await renderPage("/missions", async (host) => {
       const tabs = () => [...host.querySelectorAll('[role="tab"]')] as HTMLElement[];
@@ -1737,11 +1692,11 @@ describe("missions", () => {
       await eventually(() => host.textContent?.includes("Nothing matches") === true, 2_000, "no match");
     });
     expect(seen.tabs).toBe("All2 | Needs you0 | Working1 | Done0 | Failed0 | Stopped1");
-    // Held to the window (`fillsViewport`) from a laptop's width up, the list scrolling inside its card, so the tabs stay put.
-    expect(seen.all).toContain("mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 pt-2 sm:px-6 sm:pt-4 lg:h-full lg:p-8");
-    expect(seen.all).toMatch(/lg:min-h-0 lg:flex-1 lg:overflow-y-auto/);
-    // Its search and agent filter wrap under each other on a phone rather than run past the card's edge.
-    expect(seen.all).toMatch(/<div class="flex min-w-0 max-w-full flex-wrap items-center gap-2"><div class="flex flex-wrap items-center gap-2"><label class="input/);
+    // The page scrolls as a page, and the tabs stay in the row at the top of the window, the filters and the search
+    // at its end: they wrap under the tabs on a narrow window rather than run past its edge.
+    expect(seen.all).not.toContain("lg:h-full lg:p-8");
+    expect(seen.all).not.toMatch(/lg:overflow-y-auto/);
+    expect(seen.all).toMatch(/data-sticky-bar[^>]*>.*role="tablist".*<div class="ml-auto flex min-w-0 flex-wrap items-center gap-2">/s);
     expect(seen.finished).toContain("Tidy the old logs");
     expect(seen.finished).not.toContain("Write a report on the disk usage");
     expect(seen.searched).toContain("Tidy the old logs");

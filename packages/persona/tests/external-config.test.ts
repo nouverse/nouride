@@ -24,6 +24,31 @@ describe("[external]", () => {
     expect(parseAgentConfig("plain", null, { defaults: DEFAULTS, knownClis: CLIS }).external).toBeUndefined();
   });
 
+  test("`profile` as a list is the accounts it moves through at a limit, in order, the first its profile", () => {
+    // One field for one account or several: no second setting to keep in step with it.
+    expect(parse({ cli: "claude-code", profile: ["rina", "work"] }).external).toEqual({ cli: "claude-code", profile: "rina", accounts: ["rina", "work"] });
+    // A list of one is the one account, as its name alone is.
+    expect(parse({ cli: "claude-code", profile: ["rina"] }).external).toEqual({ cli: "claude-code", profile: "rina" });
+    expect(parse({ cli: "claude-code", profile: "rina" }).external).toEqual({ cli: "claude-code", profile: "rina" });
+  });
+
+  test("a list that names an account twice, none, or one no folder could carry is refused with the field", () => {
+    expect(() => parse({ cli: "claude-code", profile: ["rina", "work", "rina"] })).toThrow('agents/coder/config.toml [external] profile lists "rina" twice: each account once, in the order to move through them');
+    expect(() => parse({ cli: "claude-code", profile: [] })).toThrow("[external] profile is an empty list: name an account, or several in the order to move through them");
+    expect(() => parse({ cli: "claude-code", profile: ["rina", "Work Laptop"] })).toThrow('[external] profile "Work Laptop" must be lowercase');
+    expect(() => parse({ cli: "claude-code", profile: ["rina", 7] })).toThrow("[external] profile must be a non-empty string");
+  });
+
+  test("`move_at` is the percent of a limit used at which it moves on early: a whole number from 1 to 99, or refused with the field", () => {
+    expect(parse({ cli: "claude-code", profile: ["rina", "work"], move_at: 90 }).external).toEqual({ cli: "claude-code", profile: "rina", accounts: ["rina", "work"], moveAt: 90 });
+    expect(parse({ cli: "claude-code" }).external).not.toHaveProperty("moveAt");
+    expect(parse({ cli: "claude-code", move_at: 1 }).external?.moveAt).toBe(1);
+    expect(parse({ cli: "claude-code", move_at: 99 }).external?.moveAt).toBe(99);
+    for (const bad of [0, 100, 90.5, "90", -5, true]) {
+      expect(() => parse({ cli: "claude-code", move_at: bad })).toThrow(`agents/coder/config.toml [external] move_at must be a whole number from 1 to 99, the percent of a limit used at which it moves to its next account, got ${JSON.stringify(bad)}`);
+    }
+  });
+
   test("keeps the agent's model settings: Nouride's own work around the CLI runs on them", () => {
     expect(parseAgentConfig("coder", { external: { cli: "omp" }, llm: { model: "small-one" } } as never, { defaults: DEFAULTS, knownClis: CLIS }).llm.model).toBe("small-one");
   });
@@ -41,7 +66,7 @@ describe("[external]", () => {
 
   test("a key it does not read is warned about by name — `instruction` too, since the persona pack reaches the CLI (0.8.1)", () => {
     expect(unknownPackKeys({ external: { cli: "omp", modle: "x" } })).toEqual(["[external] modle"]);
-    expect(unknownPackKeys({ external: { cli: "omp", profile: "a", model: "b", permissions: "all" } })).toEqual([]);
+    expect(unknownPackKeys({ external: { cli: "omp", profile: "a", model: "b", permissions: "all", move_at: 90 } })).toEqual([]);
     expect(unknownPackKeys({ external: { cli: "omp", instruction: "c" } })).toEqual(["[external] instruction"]);
   });
 });

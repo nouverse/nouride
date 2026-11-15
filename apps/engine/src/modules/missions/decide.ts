@@ -196,6 +196,21 @@ export function retryAfter(attempt: number): number {
   return RETRY_AFTER_MS[Math.min(Math.max(attempt, 1), RETRY_AFTER_MS.length) - 1]!;
 }
 
+/**
+ * What a mission is told once it has waited an hour for a job: which one, and the way on where it is one that never
+ * ends. Said to its model, so the words carry the rule: stop it, start it again as a service, carry on.
+ */
+export function heldByJobText(jobs: readonly { id: string; command?: string }[]): string {
+  const named = jobs.map((job) => `${job.id}${job.command ? ` (\`${job.command.replace(/\s+/g, " ").slice(0, 100)}\`)` : ""}`).join(", ");
+  const one = jobs.length === 1;
+  return (
+    `you have waited an hour for ${one ? "a job" : "jobs"} still running: ${named}. ` +
+    `If ${one ? "it serves" : "one of them serves"} until it is stopped (a server, a watcher), it never ends and this mission stands still behind it: ` +
+    "stop it with `nouride jobs kill <id>`, start it again with `service: true`, and carry on. " +
+    "If its result is still to come, end your turn: you are woken when it ends."
+  );
+}
+
 export function afterTurn(input: {
   /** Turns in a row that called no tool and moved no step, this one counted. */
   idle: number;

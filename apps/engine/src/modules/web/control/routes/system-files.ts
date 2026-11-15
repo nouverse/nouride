@@ -7,8 +7,8 @@
  * was masked is not handed over whole: a download is the bytes as they are, and would undo the mask.
  */
 
-import type { SystemFileOpened, SystemFileRefusal, SystemFileWeight, SystemFolderListing } from "@nouride/wire";
-import { readFileRange } from "@nouride/runtime";
+import type { SystemFileOpened, SystemFileRefusal, SystemFileWeight, SystemFolderListing, SystemWorkspace } from "@nouride/wire";
+import { isAbsolute, readFileRange, relative } from "@nouride/runtime";
 import { findSecrets, maskSecrets } from "@nouride/secrets";
 import { egressValues } from "@/commons/egress.ts";
 import { atLeast } from "@/modules/users/auth.ts";
@@ -89,6 +89,15 @@ async function kindOf(found: Extract<Found, { ok: true }>): Promise<SystemFileOp
  */
 const INERT = { "X-Content-Type-Options": "nosniff", "Cache-Control": "private, no-store" };
 
+/** Whether a listed path is `root` or under it, both as the listing writes them: `/` between parts, none before the first. */
+function within(path: string, root: string): boolean {
+  const parts = path.split("/").filter(Boolean);
+  return root.split("/").filter(Boolean).every((part, index) => parts[index] === part);
+}
+
+/** A view that may not leave a folder (`?root=`) asked for a path outside it. */
+const OUTSIDE_VIEW = { error: "outside the folder this view shows", plain: "That is outside this folder." };
+
 export function registerSystemFileRoutes(control: ControlApp, deps: ControlDeps, rootOf: () => string): void {
   /**
    * Whether nothing in a file's words would be masked, all of it read: asked before a download, and kept by where
@@ -116,16 +125,32 @@ export function registerSystemFileRoutes(control: ControlApp, deps: ControlDeps,
     if (!atLeast(c.get("principal"), "admin")) return c.json(ADMINS_ONLY, 403);
     const asked = c.req.query("path") ?? "";
     const root = rootOf();
+    // A view held to one folder (a Workspace tab) says which: what it is given is that folder's or under it, as the
+    // path is once read, links followed and `..` gone. Held here, not only by the page's own crumbs.
+    const view = c.req.query("root");
     const listing = listFolder(root, asked);
     if (!listing.ok && listing.reason === "not-a-folder") {
       // A path to a file, as a link from a chat is: the page learns it is one, and opens it.
       const found = findFile(root, asked);
       if (!found.ok) return c.json(refusal(found.reason).body, refusal(found.reason).status);
+      if (view !== undefined && !within(found.entry.path, view)) return c.json(OUTSIDE_VIEW, 400);
       const removable = findRemovable(root, asked).ok;
       return c.json({ path: found.entry.path, entries: [], more: 0, leftOut: false, file: { ...found.entry, ...(removable ? { removable: true as const } : {}) } } satisfies SystemFolderListing);
     }
     if (!listing.ok) return c.json(refusal(listing.reason).body, refusal(listing.reason).status);
+    if (view !== undefined && !within(listing.path, view)) return c.json(OUTSIDE_VIEW, 400);
     return c.json({ path: listing.path, entries: listing.entries, more: listing.more, leftOut: listing.leftOut } satisfies SystemFolderListing);
+  });
+
+  /**
+   * Where the agents' workspace is among Nouride's files, for the views that open on it: its path as a listing writes
+   * one, or null where the install keeps the workspace outside the folder these routes show.
+   */
+  control.get("/system/files/workspace", (c) => {
+    if (!atLeast(c.get("principal"), "admin")) return c.json(ADMINS_ONLY, 403);
+    const path = relative(rootOf(), deps.ctx.config.daemon.workspaceDir);
+    const inside = path !== "" && !path.startsWith("..") && !isAbsolute(path);
+    return c.json({ path: inside ? path.split(/[\\/]/).filter(Boolean).join("/") : null } satisfies SystemWorkspace);
   });
 
   control.get("/system/files/read", async (c) => {

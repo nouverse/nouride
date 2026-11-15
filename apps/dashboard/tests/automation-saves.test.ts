@@ -86,6 +86,18 @@ function saves(): Save[] {
     message: "Archive this year's reports.",
   });
 
+  // Several at the same time, then a step that reads what they said; a failure among them goes on to it.
+  let round = fresh({ name: "Morning round", trigger: { ...fresh({}).trigger, mode: "daily", time: "07:00", days: [] } });
+  round = add(round, "parallel", {
+    name: "Ask them",
+    steps: [
+      { id: "s1-1", name: "News", kind: "agentTurn", message: "Read today's news and say what matters.", agentId: "nix" },
+      { id: "s1-2", kind: "command", argv: argvOf("ls reports | tail -3") },
+    ],
+  });
+  round = add(round, "agentTurn", { message: "Write the morning note from what they said." });
+  round = path(round, 0, "whenFailed", "next");
+
   // The list changed: renamed, a step moved above the wait, the step two paths led to deleted, and another time to start.
   let shopNow: Draft = { ...shop, name: "Shop check", trigger: { ...shop.trigger, mode: "daily", time: "07:00", days: [] } };
   shopNow = move(shopNow, 4, 3);
@@ -103,6 +115,7 @@ function saves(): Save[] {
     made(order),
     made(brief),
     made(tidy),
+    made(round),
     changed("Shop health check, changed", shop, shopNow),
     changed("Backup check, with a second step", backup, backupNow),
     changed("New order, reporting elsewhere and quiet", order, orderNow),

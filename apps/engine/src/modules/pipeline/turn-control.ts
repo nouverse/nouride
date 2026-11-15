@@ -20,7 +20,7 @@ export class TurnControl {
       deps: Pick<
         PipelineDeps,
         | "registry" | "providers" | "jobs" | "externalAgents" | "missionCommands" | "approvals" | "sessions" | "turns"
-        | "chatEvents" | "spill" | "notes" | "memory" | "gateways"
+        | "chatEvents" | "spill" | "notes" | "memory" | "gateways" | "workDone"
       >;
       turnContext: TurnContext;
       voice: Pick<Voice, "outbound">;
@@ -95,6 +95,7 @@ export class TurnControl {
         modelOverrides: this.o.modelOverrides,
         stopTurns: (agentId, chatId) => this.o.turnContext.cancelTurnsForAgent(agentId, chatId),
         forgetCliSession: (agentId, gatewayId, chatId) => deps.externalAgents?.forgetSession?.(agentId, gatewayId, chatId),
+        ...(deps.workDone ? { workDone: deps.workDone } : {}),
         // The connection's own word for its platform; a gateway id is `<platform>:<name>` for one no longer connected.
         platformOf: (gatewayId) => deps.gateways.get(gatewayId)?.platform ?? gatewayId.split(":")[0] ?? gatewayId,
       },

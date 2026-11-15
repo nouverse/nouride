@@ -82,7 +82,7 @@ export function OfficeTeaser({ agents: everyone, orchestrator }: { agents: Agent
       title="Your agents"
       description={counts || "Your agents at work."}
       actions={
-        <Link to="/office" className="btn btn-ghost btn-xs gap-1 font-medium text-secondary hover:bg-secondary/10">
+        <Link to="/agents" className="btn btn-ghost btn-xs gap-1 font-medium text-secondary hover:bg-secondary/10">
           Open the Office <ArrowUpRight size={13} />
         </Link>
       }
@@ -92,7 +92,7 @@ export function OfficeTeaser({ agents: everyone, orchestrator }: { agents: Agent
       ) : (
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
           <div ref={setBox} className="min-w-0 lg:w-1/2 lg:shrink-0">
-            <Link to="/office" aria-label={`Open the Office: ${counts}`} className="block w-fit">
+            <Link to="/agents" aria-label={`Open the Office: ${counts}`} className="block w-fit">
               <canvas
                 ref={canvas}
                 width={layout.width}

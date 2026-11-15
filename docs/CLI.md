@@ -157,6 +157,13 @@ What it creates:
   workspace/private/    one directory per agent, unreadable by the others
 ```
 
+Run again, it goes on from where it stopped, as the dashboard's wizard does (0.8.38): what is set up is read from the
+install (a provider, an agent), not from whether `config.toml` exists. With a provider and no agent it keeps the
+provider and goes on at the agent; with both it says the install is set up, exit 1, and writes nothing. An agent id that
+cannot be used (`nouride` is reserved) is refused before anything is written, and asked again in a terminal; it used to
+be refused after the provider and key were written, and the next run refused to start at all. Its "next:" lines say how
+to start what it set up: `docker compose up -d` in a container.
+
 Unattended, for a provisioning script with no terminal to answer:
 
 ```bash
@@ -492,21 +499,24 @@ asks for one itself with its `skill_root` tool, which an admin answers in the ch
 ### `nouride agents scan` · `nouride agents login <id>` · `nouride agents update <cli>`
 
 ```bash
-nouride agents scan                # the coding CLIs this box has for external agents, and their versions — looked at now
+nouride agents scan                # the coding CLIs this box has for external agents, and what each runs on — looked at now
 nouride agents login coder         # sign coder's CLI in, on its own profile
-nouride agents update claude-code  # to the newest version this Nouride was tested with, checked before its agents work
+nouride agents update claude-code  # to the newest version out, checked before its agents work
 nouride agents update claude-code 0.95.0   # the way back, after a version failed its check
 ```
 
 `scan` runs each CLI's version command — the two built in, Claude Code and Codex, and every `[[external_clis]]` row
-— and prints which are installed, each with the command that starts it and its version (for the built-in two, the
-ACP adapter's: `claude-agent-acp`, `codex-acp`), and how to install the others. On a box whose agents' commands have
-less than 512 MiB it says so in one line and lists none.
+— and prints which are installed, each with the command that starts it, and how to install the others. A built-in CLI
+is named by what it runs on (0.8.38), read from the files installed: the CLI's own version in the adapter that carries
+it ("Claude Code 2.1.323, in claude-agent-acp 0.107.0"), then Node against what the adapter asks for, a warning where
+it is under that, and the adapter's other packages. The adapter's version alone said nothing of which models the CLI
+has. On a box whose agents' commands have less than 512 MiB it says so in one line and lists none.
 
 For each built-in CLI that is installed, a second line says where its version stands (0.8.24): against the lowest and
 highest versions of its package this Nouride was tested with, and the newest the npm registry has published, read at
-most once a day. Up to date, a newer tested version out, older than this Nouride supports, or newer than it was tested
-with, which runs, untested. With no network nothing is said of the newest;
+most once a day. Up to date, a newer version out, older than this Nouride supports, or newer than it was tested with,
+which runs, untested. The newest out is offered whether or not this Nouride was tested with it (0.8.38), and the line
+says which, and which version of the CLI it brings. With no network nothing is said of the newest;
 a CLI that is not installed is not asked about. `nouride doctor` prints the same line for each, a warning for the
 last two.
 
@@ -523,7 +533,8 @@ running after ten minutes: nothing is installed, exit 1); its package is install
 installs, as this user; then the daemon starts it again for the first of its agents and checks its handshake for what
 Nouride uses — steering, the modes its presets set; no prompt is sent. Passed, exit 0. Failed, exit 1: only that CLI's
 agents are unavailable, saying so, and the version before (the last that passed) is named to go back to. With no
-version it installs the newest this Nouride was tested with. Through the `nouride` tool it is asked as `tools run` is
+version it installs the one on offer: the newest out, or the newest this Nouride was tested with where what is out
+could not be read. The models each agent offers are read again from the new version. Through the `nouride` tool it is asked as `tools run` is
 (`shared-tools`, at every level); the dashboard's **Update** asks the orchestrator to run it.
 
 ### `nouride acp [--agent <id>]`
@@ -611,7 +622,7 @@ nouride skills nouva -v            # one agent, with descriptions and paths
 nouride skills --all               # the pool: every skill, who has it on, what the host is missing
 nouride skills off document-authoring nouva
 nouride skills on  document-authoring nouva
-nouride skills search "release notes"      # skills.sh, ClawHub, well-known indexes
+nouride skills search "release notes"      # Nouverse's catalog; --source skills.sh,clawhub asks those hubs themselves
 nouride skills install owner/repo          # fetched as a draft, for you to approve
 ```
 

@@ -146,7 +146,7 @@ describe("a new automation", () => {
     type(host.querySelector('input[aria-label="Name"]') as HTMLInputElement, "Morning brief");
     ([...host.querySelectorAll("button")].find((button) => button.textContent?.includes("Add the first step")) as HTMLElement).click();
     const kinds = () => [...host.ownerDocument.body.querySelectorAll<HTMLElement>('[role="dialog"][aria-label="Add a step"] button')];
-    await eventually(() => kinds().length === 5, 2_000, "the picker");
+    await eventually(() => kinds().length === 6, 2_000, "the picker");
     kinds().find((button) => button.querySelector("span span")?.textContent === "Ask an agent")!.click();
     await eventually(() => host.textContent?.includes("What to ask") === true, 2_000, "the step's fields");
     type(field(host, "What to ask"), "Sum up the mail.");

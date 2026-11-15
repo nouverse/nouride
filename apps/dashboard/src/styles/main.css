@@ -283,6 +283,24 @@
     color-mix(in oklab, var(--color-base-200) 50%, var(--color-base-100));
 }
 
+/* The page itself, for a row that stays at the top of the window while the page scrolls under it (`StickyBar`): the
+   same two layers as `bg-app`, the light measured from the window as the page's is, so the row covers what passes
+   under it and cannot be told from the page. A flat ground showed as a band across the light at the top right.
+   Where a browser has no fixed background (a phone's Safari) the light is measured from the row, which is at the
+   window's top by then. The two lists of layers must agree. */
+@utility bg-app-bar {
+  background:
+    radial-gradient(60rem 30rem at 100% 0%, color-mix(in oklab, var(--fill-secondary) 9%, transparent), transparent 70%) fixed,
+    color-mix(in oklab, var(--color-base-200) 50%, var(--color-base-100));
+}
+/* The same, running out downwards: the short fade under that row, so a card goes under it rather than being cut. */
+@utility bg-app-bar-fade {
+  background:
+    radial-gradient(60rem 30rem at 100% 0%, color-mix(in oklab, var(--fill-secondary) 9%, transparent), transparent 70%) fixed,
+    color-mix(in oklab, var(--color-base-200) 50%, var(--color-base-100));
+  mask-image: linear-gradient(to bottom, #000, transparent);
+}
+
 /* The same ground under a phone's floating tab bar, fading up into the page: without it the page showed through the
    strip between the bar and the screen's foot, under a browser's own floating toolbar. */
 @utility bg-app-foot {

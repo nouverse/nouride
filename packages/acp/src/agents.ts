@@ -32,6 +32,14 @@ export interface CliRow {
    * ran Nouride's turns, named where it ran; a version is added here only after that.
    */
   tested?: { lowest: string; highest: string };
+  /**
+   * The CLI `package` carries: which of its dependencies is the CLI itself, and the field of that dependency's
+   * `package.json` that holds the CLI's version. `package` is the connector, and its version is not the CLI's: the
+   * dashboard read claude-agent-acp 0.100.0, said "up to date", and the Claude Code inside it, 2.1.316, knew no model
+   * newer ones had (seen on a live box). The one fact about a CLI's parts a row states; the rest is read from the
+   * files installed (`parts.ts`). Absent: a person's own CLI, whose command is taken to be the CLI.
+   */
+  carries?: { name: string; package: string; field: string };
   /** Prints its version. */
   versionArgs: readonly string[];
   /** The variable that points it at a profile folder (its sign-in and settings), made before it starts. Absent: HOME. */
@@ -89,6 +97,20 @@ export interface CliRow {
   status?: readonly string[];
   /** Words in a refusal that mean "not signed in or not set up", beyond the protocol's -32000. */
   signedOut?: readonly string[];
+  /**
+   * How its connector marks a message refused for a limit of the account, in the refusal's `data`: the field and the
+   * value that say so, and where it says one, the dotted path to when the limit ends, in seconds since 1970. Read from
+   * the data alone, never from the sentence beside it: an account is marked and the agent moved to its next
+   * (`external-agents/rotation.ts`). Absent: its refusals say nothing of the kind, and no account is ever marked.
+   */
+  limit?: { key: string; value: string; resets?: string };
+  /**
+   * Where its connector says how much of the account's limits is used, in a session update's `_meta`: the key there,
+   * the map of the limits' windows under it, and in each window the share used, from 0 to 1, and when it starts again,
+   * in seconds since 1970. Read as it is written, so an agent that asked to (`[external] move_at`) moves to its next
+   * account before a message is refused. Absent: it says nothing of the kind.
+   */
+  use?: { meta: string; windows: string; used: string; resets: string };
 }
 
 export const BUILT_IN_CLIS: readonly CliRow[] = [
@@ -100,8 +122,11 @@ export const BUILT_IN_CLIS: readonly CliRow[] = [
     args: [],
     install: "npm i -g @agentclientprotocol/claude-agent-acp (Node 22 or later; it carries Claude Code itself)",
     package: "@agentclientprotocol/claude-agent-acp",
-    // 0.95.0 answers the owner's agents on the box, and 0.100.0 the e2e VM's Claude, each the version there on 2026-11-08.
-    tested: { lowest: "0.95.0", highest: "0.100.0" },
+    // 0.95.0 answered the owner's agents on the box, and 0.100.0 the e2e VM's Claude, each the version there on 2026-11-08.
+    // 0.107.0 on the box since: its handshake check passed, and a turn answered on its default model and on `fable`.
+    tested: { lowest: "0.95.0", highest: "0.107.0" },
+    // The SDK holds Claude Code's own binary, and says its version in a field of its own (0.3.323: "2.1.323").
+    carries: { name: "Claude Code", package: "@anthropic-ai/claude-agent-sdk", field: "claudeCodeVersion" },
     versionArgs: ["--version"],
     profileEnv: "CLAUDE_CONFIG_DIR",
     // v1 pinned: the adapter also serves a draft v2 to a client that asks. No claude.ai connectors: a profile signed in
@@ -120,6 +145,12 @@ export const BUILT_IN_CLIS: readonly CliRow[] = [
     status: ["--cli", "auth", "status"],
     // `claude setup-token`: Claude Code's own long-lived sign-in for a machine with no browser, read from the variable.
     sharedLogin: { args: ["--cli", "setup-token"], env: "CLAUDE_CODE_OAUTH_TOKEN", tokenPrefix: "sk-ant-oat01-" },
+    // A real refusal of 0.107.0 at a model's limit: code -32603, data `{ "errorKind": "rate_limit" }`. A limit that
+    // came with a rate-limit event of its turn adds `rateLimit`, whose `resetsAt` is in seconds; a model's own did not.
+    limit: { key: "errorKind", value: "rate_limit", resets: "rateLimit.resetsAt" },
+    // Every `usage_update` of 0.107.0, read on the box: `_meta["_claude/rateLimit"].unifiedWindows` holds
+    // `five_hour` and `seven_day`, each `{ utilization: 0.44, resetsAt: 1794675000, status: "allowed" }`.
+    use: { meta: "_claude/rateLimit", windows: "unifiedWindows", used: "utilization", resets: "resetsAt" },
     loginNote: "Signs in with a Claude subscription.",
   },
   {
@@ -131,7 +162,9 @@ export const BUILT_IN_CLIS: readonly CliRow[] = [
     install: "npm i -g @agentclientprotocol/codex-acp (it carries Codex itself)",
     package: "@agentclientprotocol/codex-acp",
     // 2.3.0 on the box, and 2.5.0 the e2e VM's Codex, each the version there on 2026-11-08.
-    tested: { lowest: "2.3.0", highest: "2.5.0" },
+    // 2.6.0 on the box since: its handshake check passed, and an agent on it answered a turn and one that ran a command.
+    tested: { lowest: "2.3.0", highest: "2.6.0" },
+    carries: { name: "Codex", package: "@openai/codex", field: "version" },
     versionArgs: ["--version"],
     // The folder must exist before it starts, or the handshake itself fails.
     profileEnv: "CODEX_HOME",

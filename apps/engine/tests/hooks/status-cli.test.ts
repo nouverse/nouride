@@ -13,7 +13,7 @@ import type { CliAnswering } from "@/modules/pipeline/brain.ts";
 
 const status = sessionHooks.find((hook) => hook.command === "/status")!;
 
-function ctx(options: { external: boolean; answering?: CliAnswering; spent?: { inputTokens: number; outputTokens: number; cachedInputTokens: number | null } }): HookContext {
+function ctx(options: { external: boolean; answering?: CliAnswering; spent?: { inputTokens: number; outputTokens: number; cachedInputTokens: number | null }; picked?: string }): HookContext {
   const asked: string[] = [];
   return {
     agent: {
@@ -30,7 +30,8 @@ function ctx(options: { external: boolean; answering?: CliAnswering; spent?: { i
     deps: {
       registry: { status: () => "running" },
       sessions: { load: () => ({ id: "ses_1", startedAt: 0, messages: Array.from({ length: 101 }, () => ({ role: "user", content: "x" })) }) },
-      modelOverrides: { get: () => undefined },
+      modelOverrides: { get: () => options.picked },
+      cliModels: () => [{ value: "default", name: "Default (recommended)" }, { value: "fable", name: "Fable 5.2" }],
       daemon: { startedAt: Date.now(), version: "0.8.8" },
       sessionUsage: (_id: string, _since: number, onlyCli?: boolean) => (asked.push(`usage onlyCli=${onlyCli === true}`), { lastInputTokens: 0, ...(options.spent ?? { inputTokens: 0, outputTokens: 0, cachedInputTokens: null }) }),
       answering: (_agent: unknown, gatewayId: string, chatId: string) => (asked.push(`${gatewayId}|${chatId}`), options.answering ?? null),
@@ -49,6 +50,19 @@ const CLAUDE: CliAnswering = {
 };
 
 describe("/status of an agent a coding CLI answers", () => {
+  test("names the CLI's own version, and its connector's as what carries it", async () => {
+    // The connector's version alone read as Claude Code's: 0.100.0 "up to date" over a Claude Code two models behind.
+    const text = await reply(ctx({ external: true, answering: { ...CLAUDE, version: "2.1.323", running: "@agentclientprotocol/claude-agent-acp 0.107.0" } }));
+    expect(text).toContain("Answered by: Claude Code 2.1.323 (in @agentclientprotocol/claude-agent-acp 0.107.0)");
+    // Stopped, its own version is still said: it is read from the files installed, not from a running CLI.
+    expect(await reply(ctx({ external: true, answering: { ...CLAUDE, version: "2.1.323", running: null } }))).toContain("Answered by: Claude Code 2.1.323, not running now");
+  });
+
+  test("an agent with several accounts is told which one it is on now", async () => {
+    expect(await reply(ctx({ external: true, answering: { ...CLAUDE, account: "work" } }))).toContain("Account: work, of the ones it moves between when one reaches its limit");
+    expect(await reply(ctx({ external: true, answering: CLAUDE }))).not.toContain("Account:");
+  });
+
   test("says the CLI answers, on its model — never the pack's `[llm]` as if it answered", async () => {
     const c = ctx({ external: true, answering: CLAUDE, spent: { inputTokens: 1_200_000, outputTokens: 40_000, cachedInputTokens: 1_100_000 } });
     const text = await reply(c);
@@ -82,6 +96,18 @@ describe("/status of an agent a coding CLI answers", () => {
     expect(text).toContain("Context: kept by Codex itself, not reported in this conversation since the daemon started");
     expect(text).toContain("Tokens: none reported by Codex in this conversation yet");
     expect(text).not.toContain("0 in");
+  });
+
+  test("a chat put on another model with /model says that one, by what it stands for, and where /model default goes back", async () => {
+    // Seen on a box: after `/model fable` the chat answered on Fable 5.2 and `/status` there still said Sonnet 5.5.
+    const text = await reply(ctx({ external: true, answering: CLAUDE, picked: "fable" }));
+    expect(text).toContain("Model: `fable` (Fable 5.2), picked in this chat. `/model default` goes back to Opus 5.5\n");
+    expect(text).not.toContain("as its last session opened");
+    // A name the CLI has not listed is said as written; with no model known, the way back is the CLI's own.
+    expect(await reply(ctx({ external: true, answering: { ...CLAUDE, model: null }, picked: "o9" }))).toContain("Model: `o9`, picked in this chat. `/model default` goes back to Claude Code's own\n");
+    // No pick: the agent's own, as before. An agent its own model answers keeps its own words for a pick.
+    expect(await reply(ctx({ external: true, answering: CLAUDE }))).toContain("Model: Opus 5.5 (Claude Code's own, as its last session opened)");
+    expect(await reply(ctx({ external: false, picked: "gpt-x" }))).toContain("Model: gpt-x (overridden for this chat)");
   });
 
   test("a model the pack sets is said as the pack's", async () => {

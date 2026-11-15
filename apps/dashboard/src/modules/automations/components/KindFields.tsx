@@ -5,11 +5,13 @@
  */
 
 import { useState } from "react";
+import { Plus, Trash2 } from "lucide-react";
 import { Field } from "@/commons/components/ui/ui";
 import { SearchSelect } from "@/commons/components/ui/SearchSelect";
+import { SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
 import { MissionFields, missionDraft, type MissionDraft } from "@/commons/components/jobs/MissionFields";
 import type { Then } from "../lib/draft";
-import { APPROVAL_WAIT_MS, argvOf, shellLine, type Step } from "../lib/steps";
+import { APPROVAL_WAIT_MS, TOGETHER_MAX, TOGETHER_MIN, argvOf, asPart, blankPart, parted, shellLine, type Part, type Step } from "../lib/steps";
 
 type Of<K extends Step["kind"]> = Extract<Step, { kind: K }>;
 
@@ -38,7 +40,7 @@ function StepAgent({ value, own, agents, onChange }: { value: string | undefined
   );
 }
 
-const withAgent = <S extends Of<"agentTurn"> | Of<"mission">>(step: S, agentId: string | undefined): S => {
+const withAgent = <S extends Of<"agentTurn"> | Of<"mission"> | Extract<Part, { kind: "agentTurn" }>>(step: S, agentId: string | undefined): S => {
   const { agentId: _was, ...rest } = step;
   return (agentId ? { ...rest, agentId } : rest) as S;
 };
@@ -154,6 +156,71 @@ function CommandStep({ step, alone, onChange }: { step: Of<"command">; alone: { 
   );
 }
 
+/**
+ * Several at the same time: each one what to ask an agent or a command to run, with a name its words go under. Two to
+ * five, the server's own bounds: the last two cannot be removed, and a sixth cannot be added.
+ */
+function TogetherStep({ step, own, agents, onChange }: { step: Of<"parallel">; own: string; agents: readonly AgentChoice[]; onChange: (step: Step) => void }) {
+  const write = (parts: readonly Part[]) => onChange(parted(step, parts));
+  const set = (at: number, part: Part) => write(step.steps.map((one, index) => (index === at ? part : one)));
+  return (
+    <>
+      <p className="text-xs text-base-content/65">They start at the same time, each handed what the step before said. The run goes on when the last one is done, with what each said under its name.</p>
+      <ul className="space-y-3" data-together>
+        {step.steps.map((part, at) => (
+          <li key={at} className="space-y-3 rounded-2xl border border-base-content/[0.08] bg-base-200/40 p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <SegmentedTabs
+                tabs={[
+                  { value: "agentTurn" as const, label: "Ask an agent" },
+                  { value: "command" as const, label: "Run a command" },
+                ]}
+                value={part.kind}
+                onChange={(kind) => set(at, asPart(part, kind))}
+              />
+              <button type="button" className="btn btn-ghost btn-sm btn-circle" aria-label={`Remove number ${at + 1}`} title="Remove it" disabled={step.steps.length <= TOGETHER_MIN} onClick={() => write(step.steps.filter((_, index) => index !== at))}>
+                <Trash2 size={15} aria-hidden="true" />
+              </button>
+            </div>
+            {part.kind === "agentTurn" ? (
+              <>
+                <Field label="What to ask" hint="The agent works on it with its tools.">
+                  <textarea className={AREA} rows={2} value={part.message} placeholder="Read today's news and say what matters." onChange={(event) => set(at, { ...part, message: event.target.value })} />
+                </Field>
+                <StepAgent value={part.agentId} own={own} agents={agents} onChange={(agentId) => set(at, withAgent(part, agentId))} />
+              </>
+            ) : (
+              <Field label="Command" hint="Runs on this server with no AI, and nobody is asked first.">
+                <input
+                  className="input w-full font-mono text-[13px]"
+                  value={shellLine(part.argv)}
+                  placeholder="scripts/check-queue.sh" // plain-words-ok: an example of the command this field takes
+                  onChange={(event) => set(at, { ...part, argv: argvOf(event.target.value) })}
+                />
+              </Field>
+            )}
+            <Field label="Name" hint="What its words are put under. Empty: the agent's name, or the command.">
+              <input
+                className="input w-full text-sm"
+                value={part.name ?? ""}
+                maxLength={80}
+                placeholder="News"
+                onChange={(event) => {
+                  const { name: _was, ...rest } = part;
+                  set(at, (event.target.value ? { ...rest, name: event.target.value } : rest) as Part);
+                }}
+              />
+            </Field>
+          </li>
+        ))}
+      </ul>
+      <button type="button" className="btn btn-sm gap-1.5 self-start rounded-xl" disabled={step.steps.length >= TOGETHER_MAX} onClick={() => write([...step.steps, blankPart("agentTurn")])}>
+        <Plus size={14} aria-hidden="true" /> Add another
+      </button>
+    </>
+  );
+}
+
 export function KindFields({
   step,
   own,
@@ -191,5 +258,7 @@ export function KindFields({
       return <MissionStep step={step} own={own} agents={agents} onChange={onChange} />;
     case "approval":
       return <ApprovalStep step={step} onChange={onChange} />;
+    case "parallel":
+      return <TogetherStep step={step} own={own} agents={agents} onChange={onChange} />;
   }
 }

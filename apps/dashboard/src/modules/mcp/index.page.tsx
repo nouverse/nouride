@@ -12,7 +12,9 @@ import type { CatalogDraft } from "@nouride/wire";
 import { isAdmin, useMe } from "@/commons/lib/session";
 import { EmptyState, ErrorNote, PageHeader } from "@/commons/components/ui/ui";
 import { Details } from "@/commons/components/ui/Details";
-import { FILL_PAGE, ScrollCard } from "@/commons/components/ui/ScrollCard";
+import { ListCard } from "@/commons/components/ui/ListCard";
+import { SearchInput } from "@/commons/components/ui/SearchInput";
+import { StickyBar } from "@/commons/components/ui/StickyBar";
 import { useTextFilter } from "@/commons/lib/use-text-filter";
 import { SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
 import { McpExplore } from "@/commons/components/mcp/McpExplore";
@@ -55,7 +57,7 @@ export default function McpLibraryPage({ install, agent }: { install?: string; a
   const visible = useTextFilter(servers, filter, (server) => [server.name, server.url ?? "", server.command ?? ""]);
 
   return (
-    <div className={FILL_PAGE}>
+    <div className="space-y-6 *:animate-fade">
       <PageHeader
         ask={PAGE_ASKS.connectors}
         pose={library.isPending || servers.length > 0 ? "delivery" : undefined}
@@ -81,14 +83,17 @@ export default function McpLibraryPage({ install, agent }: { install?: string; a
       ) : null}
       <ErrorNote error={library.error} />
 
-      <SegmentedTabs
-        tabs={[
-          { value: "installed" as const, label: "Installed", after: <span className="badge badge-xs badge-ghost font-mono">{servers.length}</span> },
-          { value: "explore" as const, label: "Explore", title: "Connectors from the public catalog" },
-        ]}
-        value={tab}
-        onChange={setTab}
-      />
+      {/* The tabs and the filter stay at the top of the window while the list scrolls under them. */}
+      <StickyBar label="Which connectors" tools={tab === "installed" && servers.length > 0 ? <SearchInput value={filter} onChange={setFilter} placeholder="Filter connectors" className="w-48" /> : undefined}>
+        <SegmentedTabs
+          tabs={[
+            { value: "installed" as const, label: "Installed", after: <span className="badge badge-xs badge-ghost font-mono">{servers.length}</span> },
+            { value: "explore" as const, label: "Explore", title: "Connectors from the public catalog" },
+          ]}
+          value={tab}
+          onChange={setTab}
+        />
+      </StickyBar>
 
       {tab === "explore" ? <McpExplore admin={admin} {...(install ? { install } : {})} onPick={pick} /> : null}
 
@@ -114,12 +119,7 @@ export default function McpLibraryPage({ install, agent }: { install?: string; a
       {tab !== "installed" ? null : library.isPending ? (
         <ListLoading />
       ) : (
-        // Scrolls inside its card, as Skills' lists do, so the tabs stay in reach however many servers there are.
-        <ScrollCard
-          fill
-          title={`${servers.length} connector${servers.length === 1 ? "" : "s"} added`}
-          {...(servers.length > 0 ? { search: { value: filter, onChange: setFilter, placeholder: "Filter connectors" } } : {})}
-        >
+        <ListCard title={`${servers.length} connector${servers.length === 1 ? "" : "s"} added`}>
           {servers.length === 0 ? (
             <EmptyState pose="delivery" title="No connectors yet" description="Find one in Explore, or add one by hand, then switch it on for the agents that should use it." />
           ) : visible.length === 0 ? (
@@ -131,7 +131,7 @@ export default function McpLibraryPage({ install, agent }: { install?: string; a
               ))}
             </div>
           )}
-        </ScrollCard>
+        </ListCard>
       )}
     </div>
   );

@@ -13,6 +13,7 @@
  */
 
 import { agentCommandsHaveOwnUsers, join, readPlainTextFile, sha256Text, writeFileAsAgent, writeTextFileAtomic } from "@nouride/runtime";
+import { partsNamed } from "@nouride/acp";
 import type { LoadedAgent, PersonaFiles } from "@nouride/shared";
 import { underHeading } from "@nouride/persona";
 import { WHEN_TO_START, WHO_SIGNS } from "@/modules/tools/builtins/mission.ts";
@@ -22,6 +23,20 @@ import type { CliConnection } from "./connection.ts";
 /** Which memory counts, said to a CLI that keeps one of its own (`instructionBlock`). */
 const CLI_MEMORY =
   "Your coding CLI may keep a memory of its own; Nouride and the other agents do not read it. What should last goes in MEMORY.md with `memory_write` (about=agent), and what you learn about a person with about=person.";
+
+/**
+ * What runs the agent, and how that is updated, said to the agent its CLI runs. Asked "can you update Claude Code here",
+ * one read the version of another copy of the CLI on its PATH, named that, and proposed the CLI's own updater, which
+ * changes nothing an agent runs on. It cannot run the update itself (the update stops its own CLI), so it is told who
+ * can. Whether a newer one is out is not said here: that changes daily, and this file is read when a session opens.
+ */
+export function whatRuns(named: string, cliId: string): string {
+  return (
+    `What runs you: ${named}, read from the files installed. It is updated for every agent on it at once with \`nouride agents update ${cliId}\`, ` +
+    "which the orchestrator runs on a person's word: ask it with `ask_agent`, or tell the person to. Its own updater, and any other copy of it " +
+    "on your PATH, change nothing that runs you. Whether a newer version is out is the orchestrator's `nouride agents scan` to say."
+  );
+}
 
 /** Found by its start alone, so a block whose first line a person reworded is still the one replaced. */
 const OPENS = "<!-- nouride:begin";
@@ -37,16 +52,17 @@ const END = "<!-- nouride:end -->";
  * `memory`: which memory counts (0.8.10) — a CLI may keep one of its own, and Claude Code's own prompt tells it to write
  * there; Nix kept five notes in its profile folder for four days that no other agent, nor Nouride, ever read.
  */
-function instructionBlock(input: { name: string; cli: string; persona: PersonaFiles; missions: boolean; work: boolean; memory: boolean; links: boolean }): string {
+function instructionBlock(input: { name: string; cli: string; persona: PersonaFiles; missions: boolean; work: boolean; memory: boolean; links: boolean; runs?: string }): string {
   const lines = [
     BEGIN,
-    // No version: the one a CLI's ACP side reports is its adapter's (claude-agent-acp 0.95.0), which the agent took for
-    // Claude Code's own (0.8.1, the live box).
+    // No version here: the one a CLI's ACP side reports is its adapter's (claude-agent-acp 0.95.0), which the agent took
+    // for Claude Code's own (0.8.1, the live box). The CLI's own, read from the files installed, is `runs`, below.
     `You are ${input.name}, an agent in Nouride, answered by ${input.cli}. People message you from chat; a message starts with where it came from (the platform, DM or a group, and the agents \`ask_agent\` reaches from there, as "[telegram · DM · ask_agent: nouva, nox]"), then who sent it ("Mira: …").`,
     // The persona's files are a Nouride agent's, and name its tools; the CLI has its own for most of them.
     "Nouride's own tools are the `nouride` MCP server's: other agents (`ask_agent`), what the household remembers, this conversation's plan and notes, schedules, sending a message or a file, a file sent earlier in this conversation (`attachment_read`), keeping a credential sent in chat (`secret_save`), skills in the household's pool, a new agent, and an MCP server to add. Where the files below name a tool you do not have (`exec`, `read`, `write`, `edit`, `web_fetch`), use your own that does it.",
     // The harness's rule, word for word: a CLI's own prompt sets no working language, and the persona pack is the person's.
     WORKING_LANGUAGE,
+    ...(input.runs ? [input.runs] : []),
     ...(input.work ? ["The `work` tool shows your own missions, background jobs and approvals."] : []),
     ...(input.memory ? [CLI_MEMORY] : []),
     ...(input.links ? [DASHBOARD_LINKS] : []),
@@ -103,11 +119,12 @@ async function rewrite(agent: LoadedAgent, path: string, change: (current: strin
  * every reload after a note would cost each conversation its CLI's context. A person's edit of it on the Files tab lets
  * the sessions go by itself (`renew`). The `mission` and `work` lines are there for a chat turn and not for a scheduled
  * job's or an `ask_agent` turn in the same chat: compared, a daily job dropped that chat's session twice a day (Nox's
- * review).
+ * review). What runs the agent is left out too: compared, an update of the CLI would cost every conversation its session.
  */
 export async function writeInstruction(agent: LoadedAgent, connection: CliConnection, own: string, can: { missions?: boolean; work?: boolean; memory?: boolean; links?: boolean } = {}): Promise<string> {
   const input = { name: agent.config.displayName, cli: connection.row.name, persona: agent.persona, missions: can.missions === true, work: can.work === true, memory: can.memory === true, links: can.links === true };
-  const block = instructionBlock(input);
+  const named = partsNamed(await connection.parts);
+  const block = instructionBlock({ ...input, ...(named ? { runs: whatRuns(named, connection.row.id) } : {}) });
   const { row, launch } = connection;
   const profile = row.profileInstructionFile && launch.profileDir ? join(launch.profileDir, row.profileInstructionFile) : null;
   await rewrite(agent, profile ?? join(own, row.instructionFile), (current) => withBlock(current, block));

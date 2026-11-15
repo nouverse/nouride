@@ -8,7 +8,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { answer, dom, renderPage, type, useMountHarness } from "./mount-harness.ts";
+import { answer, dom, renderPage, type, useMountHarness, WIRE } from "./mount-harness.ts";
 import { eventually } from "./wait.ts";
 import { greetingAt } from "@/modules/home/components/Hero";
 import { doingNow } from "@/commons/lib/agents";
@@ -57,6 +57,37 @@ describe("the words", () => {
     expect(doing({ ...base, activity: "asleep" })).toEqual({ words: "Asleep", tone: "muted" });
     expect(doing(undefined, { enabled: false })).toEqual({ words: "Switched off", tone: "muted" });
     expect(doing(undefined, { state: "error" })).toEqual({ words: "Not running", tone: "muted" });
+  });
+});
+
+describe("a coding CLI's update, on Home", () => {
+  const CLIS = { room: { enough: true, bytes: 0, needs: 0 }, clis: [{ id: "claude-code", name: "Claude Code", command: "claude-agent-acp", install: "", login: true, installed: true, version: "0.100.0", standing: { standing: "update", offer: "0.107.0", offerUntested: true } }] };
+  const HOME = (agents: unknown[]) => ({ ...NO_STEPS, "/status": ok({ status: "ready", gateways: [], providers: [], uptimeMs: 1000, orchestrator: "nouva", agents }), "/approvals": ok({ pending: [] }), "/missions": ok({ missions: [] }), "/knowledge": ok({ collections: [] }), "/external-clis": ok(CLIS) });
+  const ME = WIRE["/auth/me"] as { user: Record<string, unknown> } & Record<string, unknown>;
+  const NIX = agent("nix", { external: { cli: "claude-code", profile: "rina" } });
+  const badge = (host: HTMLElement) => host.querySelector<HTMLAnchorElement>("[data-cli-update]");
+
+  test("an admin is told beside Nouride's own update, with the way to the CLI's card", async () => {
+    // "Up to date" everywhere while a Claude Code with a newer model was out: it was learned of from the missing model.
+    answer(HOME([agent("nouva"), NIX]));
+    await renderPage("/", async (host) => {
+      await eventually(() => badge(host) !== null, 3_000, "the CLI's update on Home");
+      expect(badge(host)!.textContent).toBe("Claude Code update out");
+      expect(badge(host)!.getAttribute("href")).toContain("/models?tab=clis");
+    });
+  });
+
+  test("not where no agent works in that CLI, and not to someone who cannot have it updated", async () => {
+    answer(HOME([agent("nouva")]));
+    await renderPage("/", async (host) => {
+      await eventually(() => host.textContent?.includes("Your agents") === true, 3_000, "Home");
+      expect(badge(host)).toBeNull();
+    });
+    answer({ ...HOME([agent("nouva"), NIX]), "/auth/me": ok({ ...ME, role: "operator", user: { ...ME.user, role: "operator" } }) });
+    await renderPage("/", async (host) => {
+      await eventually(() => host.textContent?.includes("Your agents") === true, 3_000, "Home");
+      expect(badge(host)).toBeNull();
+    });
   });
 });
 

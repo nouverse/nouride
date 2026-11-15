@@ -129,9 +129,9 @@ ${BOLD}Talking to a running daemon${RESET}
   nouride chat [agent]             Interactive chat, no bot token needed
   nouride status                   One-screen summary
   nouride agents                   List agents and their state
-  nouride agents scan              The coding CLIs this box has for external agents, and their versions
+  nouride agents scan              The coding CLIs this box has: what each runs on, its versions, and what is out
   nouride agents login <id>        Sign an external agent's CLI in: run on the box, answered here a line at a time
-  nouride agents update <cli> [<version>]   A coding CLI to the newest version this Nouride was tested with, or to
+  nouride agents update <cli> [<version>]   A coding CLI to the newest version out, tested here or not, or to
                                    <version>; installed as tools run installs, then checked before its agents work
   nouride acp [--agent <id>]       An agent in Zed or another ACP editor: the editor runs this, on this machine
   nouride agent <sleep|wake|reload> <id>    asleep, it takes no work until wake, a restart included
@@ -210,7 +210,7 @@ ${BOLD}Talking to a running daemon${RESET}
   nouride skills draft <id>        One draft in full, with the turn it came from
   nouride skills approve|deny <id> Put a draft in the pool, or discard it
   nouride skills review            Review the library now: tighten, merge, archive. Proposals wait in drafts
-  nouride skills search <query> [--source skills.sh,clawhub,well-known]   Find skills on the public hubs
+  nouride skills search <query> [--source skills.sh,clawhub,well-known]   Find skills in Nouverse's catalog, or on the hubs named
   nouride skills install <source>  Fetch one (owner/repo, URL, clawhub:slug…) as a draft to approve
   nouride tool-budget              Tool round-trips one reply may spend, per daemon and per agent
   nouride tool-budget <n>          Set the daemon default

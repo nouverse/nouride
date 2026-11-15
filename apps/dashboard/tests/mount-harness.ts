@@ -106,6 +106,24 @@ export const RESPONSES: Record<string, unknown> = {
     leftOut: true,
     entries: [{ name: "nouride.db", path: "data/nouride.db", kind: "file", sizeBytes: 87 * 1024 ** 2, modifiedAt: Date.now() - 30_000, closed: "database" }],
   },
+  // The Workspace views, each held to its folder (`root`): before the folder's own answer, which any `path=workspace`
+  // would otherwise take.
+  "/system/files/workspace": { path: "workspace" },
+  "/system/files?path=workspace&root=workspace": {
+    path: "workspace",
+    more: 0,
+    leftOut: false,
+    entries: [
+      { name: "private", path: "workspace/private", kind: "folder", sizeBytes: null, modifiedAt: Date.now() - 60_000 },
+      { name: "shared", path: "workspace/shared", kind: "folder", sizeBytes: null, modifiedAt: Date.now() - 3_600_000 },
+    ],
+  },
+  "/system/files?path=workspace/private/nouva&root=workspace/private/nouva": {
+    path: "workspace/private/nouva",
+    more: 0,
+    leftOut: false,
+    entries: [{ name: "plan.md", path: "workspace/private/nouva/plan.md", kind: "file", sizeBytes: 2048, modifiedAt: Date.now() - 7_200_000, removable: true }],
+  },
   "/system/files?path=workspace": {
     path: "workspace",
     more: 1200,
@@ -453,6 +471,9 @@ export const PAGES: [name: string, path: string][] = [
   ["agent access", "/agents/nouva/access"],
   ["agent skills", "/agents/nouva/skills"],
   ["agent mcp", "/agents/nouva/mcp"],
+  ["agent workspace", "/agents/nouva/workspace"],
+  ["workspace", "/workspace"],
+  ["workspace, a folder", "/workspace?path=workspace/private"],
   ["mcp library", "/mcp"],
   ["integrations", "/integrations"],
   ["web search", "/web-search"],

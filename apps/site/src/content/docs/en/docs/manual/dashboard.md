@@ -32,19 +32,20 @@ Work
   Missions          long work agents finish alone: what needs you, what runs, what ended; Limits
   Helpers           helpers, commands and asked agents an agent left running: each one's steps, Stop
 Agents
-  Agents            the list, New Agent (admin), and daemon-wide Settings
+  Agents            the Office, every agent as a row under it, New Agent (admin), and daemon-wide Settings
     └ <agent>
         Files           IDENTITY.md, SOUL.md, AGENTS.md, MEMORY.md, config.toml
         Model           which provider profile and model this agent runs on
         Brain           an external agent's, in place of Model: its CLI, account, preset and model,
                         and Nouride's own model for it
+        Workspace       its own folder, to look through                       (admin)
         Connections     the bots and numbers it answers on
         Access          whether it takes new senders, how much it asks before it acts, its senders' count
         Skills          every skill in the pool, and which of them this agent carries
         Connectors      the install's MCP servers this agent uses
         Settings        its tool and turn budgets, quiet jobs, and which tools it has
         Look            its cat in the Office
-  Office            the agents' statuses as a small office of cats
+  Workspace         where the agents work: each agent's own folder, and the one they share   (admin)
 
 Skills              the Skills Workshop: Live · Pending · Explore
 Connectors          the install's MCP servers: Installed · Explore, a switch per agent
@@ -126,8 +127,9 @@ admin or an operator sees it, there and at the foot of Settings.
 
 Home opens with a greeting and one line on what is going on: how many agents are awake, how many missions are moving,
 how many things need you. In the greeting's corner the box says whether everything is working, its version and how
-long it has been up, beside the update badge and **Restart**; anything to look at is a card right under it. Then, in
-this order:
+long it has been up, beside the update badge and **Restart**; anything to look at is a card right under it. When a
+coding CLI one of your agents works in has an update out, an admin sees a second badge there, such as **Claude Code
+update out** (0.8.38), which opens **Models → Coding CLIs**. Then, in this order:
 
 - **What needs you.** A tool call an agent waits on is answered right there: **Allow once**, **Deny**, and **Always
   allow** where it is offered. A step of an automation that waits for your yes is answered there too: **Continue**
@@ -138,7 +140,7 @@ this order:
 - **Quick chat**, on a laptop: a line to an agent, the orchestrator first and marked as such, and the chat opens with
   the answer. On a phone the chat button that floats over every page stands in its place, above the tab bar.
 - **Your agents.** The Office, small, and beside it each agent as a chip: its cat, its name, a crown on the
-  orchestrator and a dot for what it is doing. A chip opens the agent; the picture opens the Office.
+  orchestrator and a dot for what it is doing. A chip opens the agent; the picture opens Agents, where the Office is.
 - Then today's AI use, folded to one line, and setup notes when the last start found something.
 
 When nothing waits and nothing moves, the cat says *Nothing is waiting for you*: asleep, with a coffee, or leaning on
@@ -244,7 +246,13 @@ It also closes off a failure. A connection is created from an agent's own page, 
 nothing to ask about ownership and the dashboard cannot make a gateway that belongs to nobody. One
 written into `config.toml` by hand without an owner is flagged at the top of the Agents page.
 
-![The agents list](/media/dashboard-agents.png)
+**Agents** opens on [the Office](/en/docs/manual/office/), and under it every agent is a row (0.8.38): its cat, its
+name, what answers it, where it is reached and what it is doing. Press a row for the agent's page. The arrow at a
+row's end, or a click on its cat in the Office, opens what you do with it without leaving the list: **Details**,
+**Open chat**, **Sleep** or **Wake**, **Workspace** for an admin, **Edit look**. A filter over the list narrows it to
+the agents that are active, idle, asleep or unavailable.
+
+![The agents as rows under the Office, with Wren's row opened: Details, Open chat, Sleep, Workspace, Edit look](/media/dashboard-agents.png)
 
 ### Model versus Models
 
@@ -269,7 +277,9 @@ chat; a chat's `/effort` sets its own over it, and an admin's `/effort <level> l
 
 An [external agent](/en/docs/manual/external-agents/) has a **Brain** tab in place of *Model*: the coding CLI that
 answers it, the account, the preset and the CLI's model, with Nouride's own model for it folded below. Its accounts
-are under *Models → Coding CLIs*.
+are under *Models → Coding CLIs*, where each CLI is named by its own version, with everything it runs on and whether a
+newer one is out (0.8.38). The Brain tab also holds the accounts the agent
+[goes on with when one reaches its limit](/en/docs/manual/external-agents/#when-an-account-reaches-its-limit).
 
 ![An agent's Model tab](/media/dashboard-agent-model.png)
 
@@ -286,6 +296,21 @@ emitted a script tag" into a script running in an admin's browser, same origin, 
 cookie.
 
 The `config.toml` here is the agent's own. The daemon's is the last card of **Agents → Settings**.
+
+### Workspace
+
+An admin can look through what agents keep while they work (0.8.38), in three places that are one files view, the
+same one as **System → Files**:
+
+- An agent's **Workspace** tab, beside Model, shows that agent's own folder, and nothing else: the path at the top
+  starts at the folder, so there is no way up or out of it. An agent that has kept nothing yet has an empty one.
+- **Agents → Workspace**, beside Agents, opens on the workspace and goes into its two folders: `private`,
+  with a folder for each agent, and `shared`, the one every agent reads and writes.
+- On **Agents**, an agent's row, opened, has **Workspace**, which opens that agent's tab.
+
+Files open, download and delete there as they do in Files, and what holds a credential is left out the same way.
+Anyone who is not an admin has none of the three. Where an install keeps its workspace outside Nouride's own folder,
+the pages say it cannot be looked through here.
 
 ### Settings, for every agent
 
@@ -364,7 +389,8 @@ which takes a moment for a large log.
 people sent in a chat, the long output a tool kept, and the logs of background jobs. A row of such a folder has the
 button at its end, and so does an open file. The page asks first, naming how many files and how much of the disk
 would go, and it cannot be undone. Nouride's own files have no such button: its settings, its database, its agents'
-persona and memory files, and the folder it keeps for each agent. While a mission or a background job is still working
+persona and memory files, the folder it keeps for each agent, and in it the folders of the agent's coding CLI and its
+accounts (`.cli`), which hold its sign-in and its conversations. While a mission or a background job is still working
 in a folder, it and what is in it wait until that has ended, and the page says which of the two it is. Each delete is
 written to the audit log (**Logs**, **Audit**) with who did it.
 
@@ -455,6 +481,13 @@ A room made in the dashboard has no list: its members answer.
 ## Things the UI will always do
 
 Not style preferences, each one is a bug that was written, or one the code's shape now prevents.
+
+**A page scrolls as a page** (0.8.38). Where a page has tabs, a filter or a search of its own, that row stays at the
+top of the window while the list scrolls under it, so they are always in reach. A long list with another card under
+it is cut short, its last rows fading out, and **Show all** opens it in full. A list scrolls inside its card in three
+places only, from a laptop's width up: **Files**, the **Workspace** and **Logs**, where the path or the filters over
+the list have to stay; their card runs to the foot of the window, and the chat button floats over its corner. A chat
+scrolls its own conversation. Before, most pages held a list in a short card that scrolled inside the page.
 
 **Destructive actions ask, and say what will happen.** Which item, how many agents it affects, and
 that nothing undoes it. The button carries the verb, "Delete", never "OK".

@@ -138,3 +138,32 @@ export function saidAsDrawn(step: Pick<TurnStep, "text" | "editOf">): { text: st
   if (step.editOf === undefined) return { text: step.text, edited: false };
   return { text: step.text.replace(/^✎ /, ""), edited: true };
 }
+
+/** What the daemon keeps as the words of a message that was files alone (`pipeline/turn-state.ts` in the engine). */
+const FILES_ALONE = "(attachment)";
+
+/**
+ * What the person wrote in the message a turn answers: nothing, when it was files alone. The files are drawn as files
+ * over it, and a bubble saying "(attachment)" under them would be words nobody wrote.
+ */
+export function wordsOf(turn: Pick<ChatTurn, "prompt" | "attachments">): string {
+  return turn.prompt === FILES_ALONE && (turn.attachments ?? []).some((file) => file.direction !== "out") ? "" : turn.prompt;
+}
+
+/** What a message this page just sent was: its words, and how many files came with it. */
+export interface Sent {
+  text: string;
+  files: number;
+}
+
+/**
+ * Whether a turn is the one a message this page just sent began: by its words, or, for files alone, by its having
+ * none. Files alone were matched by a placeholder's own words ("3 files"), which no turn ever holds, so the page
+ * waited for a turn that had already come and then said no agent had started on the message.
+ */
+export function answersSent(turn: Pick<ChatTurn, "prompt" | "attachments">, sent: Sent): boolean {
+  return sent.text.trim() ? turn.prompt.trim() === sent.text.trim() : sent.files > 0 && wordsOf(turn) === "";
+}
+
+/** What stands in for a message of files alone until its turn is drawn: how many, in a person's words. */
+export const filesWords = (count: number): string => (count === 1 ? "1 file" : `${count} files`);

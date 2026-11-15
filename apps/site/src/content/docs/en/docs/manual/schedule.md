@@ -59,6 +59,7 @@ An automation does one thing, or several in a fixed order. Each one is a step:
 | **Run a command** | runs a shell line in the agent's workspace | no |
 | **Start a mission** | long work that is checked; the run waits for it | yes, as a [mission](/en/docs/manual/missions/) does |
 | **Wait for your OK** | asks a person, and goes on when they say so | no |
+| **Several at the same time** | starts two to five agents' turns or commands together, and joins what each said | yes, one turn for each agent in it |
 
 Nouride runs the steps in that order, every time. Each step is handed what the one before it said, and an agent does
 only the step it is given: it does not skip ahead, reorder the list or decide what comes next. That is the
@@ -88,6 +89,31 @@ A shop check, for example:
 
 While the shop answers, the run ends at step 1 and no model is called. When it does not, the agent looks into it,
 you are asked, and only with your yes is anything restarted.
+
+### Several at the same time
+
+A step can start several things at once (0.8.38): two to five, each what to ask an agent or a command to run. They
+start together, each handed what the step before said, and the step is done when the last of them is. What they said
+goes on as one text, each under its name (the name you gave it, the agent, or the command), with no model between.
+As the last step, that text is what the automation sends.
+
+A morning round, for example:
+
+1. **Several at the same time**: Nix reads the news, Nox reads the calendar, and `gh issue list` runs.
+2. **Ask an agent**: "Write the morning note from what they said."
+
+- **One that failed** makes the step's failed path. Left as it is, the run ends as failed and says which one failed;
+  what the others said is kept on the run's page. Sent on to another step, that step is handed what the others said
+  with which failed and why.
+- **An agent that is asleep or busy** is that one's failure, where a step alone would have ended the run as skipped:
+  the others' work stands.
+- **With nothing to say from any of them**, the step takes its quiet path. One with nothing to say among others is
+  left out of the text.
+- **An agent takes one of them.** Two turns of one agent at once are two steps, one after the other. A mission and a
+  wait for a person are steps of their own too.
+- Each agent's turn costs what a turn costs, and they run at once: three agents are three turns at the same time.
+
+A run's page says how each of them went, under the step.
 
 ### A mission in the middle
 
@@ -172,8 +198,19 @@ nouride cron add --name "shop-check" --every 10m --steps shop-check.json \
   --agent nouva --gateway telegram:nouva --chat 123456789
 ```
 
-The other kinds are `systemEvent` (a message, with `text`). `agentTurn` and `mission` take an `agentId` for another
-agent, and `approval` a `timeoutMs`. Nouride reads the file and refuses a step it cannot run, naming it.
+The other kinds are `systemEvent` (a message, with `text`) and `parallel` (several at the same time, 0.8.38): its
+`steps` are two to five of `agentTurn` and `command`, written as those steps are. `agentTurn` and `mission` take an
+`agentId` for another agent, and `approval` a `timeoutMs`. Nouride reads the file and refuses a step it cannot run,
+naming it.
+
+```json
+{ "kind": "parallel", "whenFailed": "next", "steps": [
+  { "name": "News", "kind": "agentTurn", "message": "Read today's news and say what matters.", "agentId": "nix" },
+  { "kind": "command", "argv": ["sh", "-lc", "gh issue list --limit 5"] }
+] }
+```
+
+`nouride cron runs <id>` lists each of them under the step, with how it went.
 
 ### Four kinds of job, and the cost of each
 

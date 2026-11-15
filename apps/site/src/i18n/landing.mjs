@@ -51,7 +51,7 @@ export const en = {
     tabs: {
       home: { label: 'Home', text: 'What needs you, what is moving, and a quick chat, on one page.', alt: "The dashboard's Home: a greeting, what needs you, what is moving and a quick chat" },
       chats: { label: 'Chats', text: 'Talk to any agent, and see each step it took to answer.', alt: 'A chat with an agent in the dashboard, with the steps it took' },
-      agents: { label: 'Agents', text: 'Each agent has its own model, its own tools and its own chat connections.', alt: 'The Agents page: a card for each agent with its model, connections and tools' },
+      agents: { label: 'Agents', text: 'Each agent has its own model, its own tools and its own chat connections.', alt: 'The Agents page: a row for each agent with its model and what it is doing, one opened with what to do with it' },
       memory: { label: 'Memory', text: 'Every conversation they remember, joined to the people in it and its tags.', alt: 'The memory graph: conversations joined to people, tags and agents' },
       skills: { label: 'Skills', text: 'One pool of skills for every agent, and a switch for each.', alt: 'The Skills page: the list of skills and which agents have each switched on' },
       automations: { label: 'Automations', text: 'What runs on its own: at a time, when another app calls, or when you say. Step by step.', alt: 'The Automations page: each automation with what starts it, its steps and how its last run went' },
@@ -196,7 +196,7 @@ export const id = {
     tabs: {
       home: { label: 'Home', text: 'Yang butuh kamu, yang sedang jalan, dan chat cepat, dalam satu halaman.', alt: 'Home di dashboard: sapaan, yang butuh kamu, yang sedang jalan, dan chat cepat' },
       chats: { label: 'Chats', text: 'Ngobrol dengan agent mana pun, dan lihat tiap langkah yang dia ambil untuk menjawab.', alt: 'Chat dengan agent di dashboard, lengkap dengan langkah-langkahnya' },
-      agents: { label: 'Agents', text: 'Tiap agent punya model, tool, dan sambungan chat sendiri.', alt: 'Halaman Agents: kartu tiap agent dengan model, sambungan, dan tool-nya' },
+      agents: { label: 'Agents', text: 'Tiap agent punya model, tool, dan sambungan chat sendiri.', alt: 'Halaman Agents: satu baris untuk tiap agent dengan model dan apa yang sedang ia kerjakan, satu terbuka dengan pilihan tindakannya' },
       memory: { label: 'Memory', text: 'Semua percakapan yang mereka ingat, terhubung ke orang-orangnya dan tag-nya.', alt: 'Graf memori: percakapan yang terhubung ke orang, tag, dan agent' },
       skills: { label: 'Skills', text: 'Satu kumpulan skill untuk semua agent, dengan sakelar untuk tiap agent.', alt: 'Halaman Skills: daftar skill dan agent mana yang menyalakannya' },
       automations: { label: 'Automations', text: 'Yang jalan sendiri: pada waktunya, saat aplikasi lain memanggil, atau saat kamu minta. Langkah demi langkah.', alt: 'Halaman Automations: tiap automation dengan pemicunya, langkah-langkahnya, dan hasil run terakhirnya' },

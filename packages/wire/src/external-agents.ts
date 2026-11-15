@@ -3,7 +3,7 @@
  * sign-in, and the accounts each CLI is signed in on.
  */
 
-import type { CliStanding } from "@nouride/acp";
+import type { CliPart, CliStanding, CliVersionView } from "@nouride/acp";
 
 /** An external agent's coding CLI, on its row of the agents (0.8.1). */
 export interface AgentExternal {
@@ -37,18 +37,18 @@ export interface ScannedCli {
   /** The newest published, where the server could ask. */
   newest?: string;
   standing?: CliVersionView;
+  /** What it runs on, the CLI itself first; absent where nothing of it could be read. */
+  parts?: CliPart[];
 }
 
 /** Where a coding CLI's version stands (`cliStanding` in `@nouride/acp`). */
 export type { CliStanding };
 
-export interface CliVersionView {
-  standing: CliStanding;
-  /** What an update installs: the newest version this Nouride was tested with. */
-  offer?: string;
-  /** The newest published, where it is past every version this Nouride was tested with. */
-  untested?: string;
-}
+/** One thing a coding CLI runs on: the CLI itself, its connector, the runtime, a dependency (`@nouride/acp`). */
+export type { CliPart };
+
+/** A CLI's standing with what an update installs and brings (`cliStanding` in `@nouride/acp`). */
+export type { CliVersionView };
 
 /** Whether this box can hold a CLI's session: what the agents' commands may hold, and what one needs. */
 export interface CliRoom {
@@ -86,6 +86,14 @@ export type CliPreset = "folder" | "risky" | "all";
 export interface AgentCli {
   cli: string;
   profile: string;
+  /** The accounts it moves through when one reaches its limit, in order, `profile` first; one where it has the one. */
+  accounts?: string[];
+  /** The account its CLI is on now, where that is not `profile`. */
+  on?: string;
+  /** The percent of a limit used at which it moves to its next account before a message is refused; absent: only then. */
+  moveAt?: number;
+  /** Its CLI says how much of an account's limits is used as it works, so moving on early can be set for it. */
+  saysUse?: boolean;
   permissions: CliPreset;
   model: string | null;
   /** The models its CLI offered when its last session opened, suggested in the model field; none before its first. */
@@ -111,7 +119,10 @@ export interface CliAccountView {
   name: string;
   /** A shared account: whether it is signed in. One sign-in per agent: null — each agent's says. */
   signedIn: boolean | null;
-  agents: { id: string; name: string; signedIn: boolean | null }[];
+  /** `on`: the account the agent's CLI runs on now, where it moved off this one at a limit. */
+  agents: { id: string; name: string; signedIn: boolean | null; on?: string }[];
+  /** The limits this account is at now, a sentence a model; absent where it is at none. */
+  limits?: string[];
 }
 
 export interface CliAccountsView {
@@ -123,6 +134,8 @@ export interface CliAccountsView {
   version?: string;
   package?: string;
   standing?: CliVersionView;
+  /** What it runs on, the CLI itself first. */
+  parts?: CliPart[];
   install: string;
   /** Signed in once for every agent on an account, or once per agent. */
   shared: boolean;

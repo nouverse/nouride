@@ -48,6 +48,8 @@ import { besidesTheReport } from "@/modules/missions/results.ts";
 import type { LinkFor } from "@/modules/web/links.ts";
 import type { AuditPort } from "@/commons/audit.store.ts";
 import { BRIEF_FILE, goalBrief } from "@/modules/missions/drafts.ts";
+import { keepDone, missionDone } from "@/modules/pipeline/work-done.ts";
+import { WorkDoneStore } from "@/modules/pipeline/work-done.store.ts";
 import { buildEnv, ownHomeEnv } from "@/modules/tools/builtins/exec.ts";
 
 const log = createLogger("boot.missions");
@@ -222,7 +224,8 @@ export function buildMissions(params: {
       privateDir: (agentId) => privateWorkspace(params.config().daemon.workspaceDir, agentId),
     },
     notes: params.notes,
-    jobs: { running: (agentId) => params.jobs.running(agentId), kill: (id, why) => params.jobs.kill(id, why) },
+    // With whether each serves until it is stopped: a mission does not wait for the end of one that never ends.
+    jobs: { running: (agentId) => params.jobs.runningWithService(agentId), kill: (id, why) => params.jobs.kill(id, why) },
     parked: (mission) =>
       params
         .approvals()
@@ -300,6 +303,8 @@ export function buildMissions(params: {
         if (!there.ok) throw new Error(there.out);
       }
     },
+    // One another agent started: kept as it ends, so the agent that ran it and the one that started it are told of it.
+    helped: (mission) => keepDone(new WorkDoneStore(params.db), missionDone(mission)),
     remember: async (mission) => {
       if (!params.memory) return;
       const person = personFor(params.config().people, mission.gatewayId, mission.startedBy)?.key ?? `${mission.gatewayId}:${mission.startedBy}`;
@@ -317,7 +322,7 @@ export function buildMissions(params: {
       // Only the folder the daemon made for it — `newMission`'s default, or its worktree — under its agent's own; for a
       // draft that never started, the folder its brief was written to, whatever folder it would have worked in.
       const own = ownFolderOf(privateWorkspace(params.config().daemon.workspaceDir, mission.agentId), mission.id);
-      if ((!inOwnFolder(mission.workdir, own) && mission.startedAt !== null) || !params.registry.get(mission.agentId)) return [];
+      if ((!inOwnFolder(mission.workdir, own) && mission.startedAt !== null) || !params.registry.get(mission.agentId)) return null;
       return await removeOwnFolder(own, asTheAgent(mission.agentId), how);
     },
     folders: () => params.registry.enabled().flatMap((agent) => ownFolders(privateWorkspace(params.config().daemon.workspaceDir, agent.config.id)).map((folder) => ({ agentId: agent.config.id, ...folder }))),

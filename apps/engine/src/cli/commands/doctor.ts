@@ -1,5 +1,5 @@
 import type { ExternalClisResponse, McpResponse, SkillCatalogResponse, StatusResponse } from "@nouride/cli-kit";
-import { cliVersionChecks, BOLD, DIM, GREEN, RED, RESET, YELLOW, emit, say, hasFlag } from "@nouride/cli-kit";
+import { cliPartsChecks, cliVersionChecks, BOLD, DIM, GREEN, RED, RESET, YELLOW, emit, say, hasFlag } from "@nouride/cli-kit";
 import { formatBytes, type GlobalConfig } from "@nouride/shared";
 import { MCP_SCHEMA_WARN_BYTES } from "@/modules/tools/mcp.ts";
 import { lintConfig } from "@/modules/config/schema.ts";
@@ -289,7 +289,7 @@ export async function doctor(args: string[] = []): Promise<void> {
   // The coding CLIs installed here against the versions this Nouride was tested with, and the newest out (0.8.24): what
   // `nouride agents scan` says of each. Nothing on a box with none.
   const clis = await client.softGet<ExternalClisResponse>("/external-clis").catch(() => null);
-  for (const check of cliVersionChecks(clis?.clis ?? [])) add(check.level, check.message);
+  for (const check of [...cliVersionChecks(clis?.clis ?? []), ...cliPartsChecks(clis?.clis ?? [])]) add(check.level, check.message);
 
   if (status.pendingApprovals > 0) {
     add(

@@ -5,6 +5,7 @@
 
 import type { ReactNode } from "react";
 import { RetentionControl, type RetentionShown } from "@/commons/components/ui/RetentionControl";
+import { HELD_END } from "@/commons/components/ui/ScrollCard";
 
 /**
  * A card whose body scrolls and whose head does not.
@@ -51,7 +52,7 @@ export function Panel({
       </div>
       {/* `min-h-0` is what makes the scroll happen here instead of pushing the page taller — without
           it a flex child grows to its content and the whole document scrolls again. */}
-      <div className="px-2 py-2 sm:px-3 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">{children}</div>
+      <div className={`px-2 py-2 sm:px-3 lg:min-h-0 lg:flex-1 lg:overflow-y-auto ${HELD_END}`}>{children}</div>
     </section>
   );
 }

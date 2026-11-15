@@ -22,7 +22,7 @@ describe("a card that opens something", () => {
   for (const [page, path, what] of [
     ["Missions", "/missions", 'a[href$="/missions/msn_1"]'],
     ["Helpers", "/jobs", 'a[href*="/jobs/"]'],
-    ["Agents", "/agents", "main button.group"],
+    // Agents are rows of one list under the Office now, not cards: a row does not lift.
   ] as const) {
     test(`lifts on ${page}, eased, and only where it opens something`, async () => {
       // The engine's fixture has no background job: one running, as a helper an agent left.

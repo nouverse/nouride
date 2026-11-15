@@ -33,6 +33,7 @@ import type { TurnShaper } from "./turn-shape.ts";
 import type { MissionCommands } from "@/modules/hooks/builtins/mission.ts";
 import type { ScheduleCommands } from "@/modules/hooks/builtins/schedule.ts";
 import type { RoomMentionPort } from "./room-mention.store.ts";
+import type { WorkDonePort } from "./work-done.store.ts";
 import type { DeliveryPort } from "@/modules/turns/delivery.store.ts";
 import type { ChatEventsPort } from "@/modules/chat-events/chat-events.store.ts";
 import type { RoomsPort } from "@/modules/rooms/rooms.store.ts";
@@ -224,6 +225,8 @@ export interface PipelineDeps {
   autoApprove?: AutoApprovePort;
   /** A group's own `groups_require_mention`, set with `/mention` (`room-mention.ts`). Absent, config alone decides. */
   roomMention?: RoomMentionPort;
+  /** What one agent did for another, once it has ended (`work-done.ts`). Absent, nothing of it is kept or said. */
+  workDone?: WorkDonePort;
   /** What each room is called — its platform's name and the operator's rename (`rooms/room-names.store.ts`, 0.7.24). */
   roomNames?: RoomNamePort;
   /** Minimum gap between progress-line edits. Lowered in tests; the default suits a chat platform. */

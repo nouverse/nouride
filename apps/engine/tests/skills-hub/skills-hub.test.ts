@@ -351,7 +351,7 @@ describe("agents know where to look", () => {
 describe("Explore before a search", () => {
   test("the most downloaded skills on ClawHub, kept an hour — opening the tab again asks nobody", async () => {
     const { skillHub, seen } = hub();
-    const hits = await skillHub.popular();
+    const { hits } = await skillHub.popular();
     expect(hits.map((hit) => [hit.ref, hit.installs])).toEqual([["clawhub:p/self-improving-agent", 486325], ["clawhub:s/github", undefined]]);
     await skillHub.popular();
     expect(seen.filter((url) => url.includes("sort=downloads"))).toHaveLength(1);
@@ -362,7 +362,7 @@ describe("Explore before a search", () => {
     const { skillHub, seen } = hub({ popular });
     await expect(skillHub.popular()).rejects.toThrow();
     popular.down = false;
-    expect(await skillHub.popular()).toHaveLength(2);
+    expect((await skillHub.popular()).hits).toHaveLength(2);
     expect(seen.filter((url) => url.includes("sort=downloads"))).toHaveLength(2);
   });
 });

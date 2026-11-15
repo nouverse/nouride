@@ -71,9 +71,11 @@ function closingNote(cause: InterruptCause, worked: boolean): string {
     return "[harness] They stopped me here, before I answered. The request above still stands unless they say otherwise.";
   }
   const why = cause.kind === "error" ? `I could not finish this: ${cause.message}` : `I was interrupted here by ${phrase(cause)}, before I finished`;
+  // A cause that ends its own sentence gets no second full stop: "…to continue.. The request above" was written.
+  const said = /[.!?]$/.test(why) ? why : `${why}.`;
   return worked
-    ? `[harness] ${why}. What I did so far is above; asked to continue, I pick up from there.`
-    : `[harness] ${why}. The request above still stands; asked to continue, I start on it.`;
+    ? `[harness] ${said} What I did so far is above; asked to continue, I pick up from there.`
+    : `[harness] ${said} The request above still stands; asked to continue, I start on it.`;
 }
 
 function cutOff(cause: InterruptCause): string {

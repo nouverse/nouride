@@ -327,6 +327,104 @@
     }
   },
   {
+    "name": "Morning round",
+    "send": {
+      "create": "/cron"
+    },
+    "body": {
+      "agentId": "nouva",
+      "name": "Morning round",
+      "payload": {
+        "kind": "steps",
+        "steps": [
+          {
+            "id": "s1",
+            "kind": "parallel",
+            "steps": [
+              {
+                "id": "s1-1",
+                "name": "News",
+                "kind": "agentTurn",
+                "message": "Read today's news and say what matters.",
+                "agentId": "nix"
+              },
+              {
+                "id": "s1-2",
+                "kind": "command",
+                "argv": [
+                  "sh",
+                  "-lc",
+                  "ls reports | tail -3"
+                ]
+              }
+            ],
+            "name": "Ask them",
+            "whenFailed": "next"
+          },
+          {
+            "id": "s2",
+            "kind": "agentTurn",
+            "message": "Write the morning note from what they said."
+          }
+        ]
+      },
+      "target": {
+        "gatewayId": "telegram:nouva",
+        "chatId": "8142"
+      },
+      "delivery": {
+        "mode": "announce"
+      },
+      "cron": "0 7 * * *",
+      "tz": "Asia/Jakarta"
+    },
+    "keeps": {
+      "name": "Morning round",
+      "start": "scheduled",
+      "payload": {
+        "kind": "steps",
+        "steps": [
+          {
+            "id": "s1",
+            "kind": "parallel",
+            "steps": [
+              {
+                "id": "s1-1",
+                "name": "News",
+                "kind": "agentTurn",
+                "message": "Read today's news and say what matters.",
+                "agentId": "nix"
+              },
+              {
+                "id": "s1-2",
+                "kind": "command",
+                "argv": [
+                  "sh",
+                  "-lc",
+                  "ls reports | tail -3"
+                ]
+              }
+            ],
+            "name": "Ask them",
+            "whenFailed": "next"
+          },
+          {
+            "id": "s2",
+            "kind": "agentTurn",
+            "message": "Write the morning note from what they said."
+          }
+        ]
+      },
+      "target": {
+        "gatewayId": "telegram:nouva",
+        "chatId": "8142"
+      },
+      "delivery": {
+        "mode": "announce"
+      }
+    }
+  },
+  {
     "name": "Shop health check, changed",
     "send": {
       "change": "Shop health check"

@@ -16,7 +16,7 @@ import type { TurnOutcome, TurnShape, TurnShaper } from "@/modules/pipeline/turn
 import { SYSTEM_SENDER } from "@/modules/pipeline/deps.ts";
 import { buttonsFor } from "./actions.ts";
 import { Checking, type Reviewing } from "./checking.ts";
-import type { MissionsDeps } from "./deps.ts";
+import type { MissionJob, MissionsDeps } from "./deps.ts";
 import { afterTurn, answersWait, blockedBy, continueGives, limitReached, limitsNear, nearLimit, openInSameRepository, planSignature, stepsDone, type LimitsInForce, type MissionLimit, type Unsettled } from "./decide.ts";
 import { isMissionChat, MISSION_GATEWAY_ID } from "./gateway.ts";
 import { ANSWERS_KEPT, APPROVAL_ANSWERABLE_MS, MAX_RESUMES, SAME_QUESTION, STALL_AFTER_MS } from "./limits.ts";
@@ -684,6 +684,7 @@ export class Missions implements TurnShaper {
     if (this.deps.notes) void carryBack(this.deps.notes, mission).catch((err: unknown) => log.warn("a chat's line for its mission could not be updated", { mission: mission.id, error: String(err) }));
     if (this.deps.notes) void closePlan(this.deps.notes, mission).catch((err: unknown) => log.warn("a done mission's checklist could not be closed", { mission: mission.id, error: String(err) }));
     void this.deps.remember?.(mission).catch((err: unknown) => log.warn("a mission's episode could not be filed", { mission: mission.id, error: String(err) }));
+    this.deps.helped?.(mission);
     this.tellParent(mission);
     this.tidy(mission);
     this.schedule();
@@ -708,8 +709,18 @@ export class Missions implements TurnShaper {
     this.queueTurn(parent, `the mission you handed to ${child.agentId}, ${shortId(child.id)}, ${what}`, true);
   }
 
-  jobsOf(mission: Mission): { id: string }[] {
+  /** Every job of its own that is running, a server among them: what its end stops. */
+  jobsOf(mission: Mission): MissionJob[] {
     return (this.deps.jobs?.running(mission.agentId) ?? []).filter((job) => job.gatewayId === MISSION_GATEWAY_ID && job.chatId === mission.id);
+  }
+
+  /**
+   * The jobs whose end it waits for: every one of its own but a service. A server never ends, so a mission whose
+   * static server was the one job left running waited for it, on the box for two hours and forty minutes with nothing
+   * said, until a person saw it and stopped the server. The agent had started it as a service, as it is told to.
+   */
+  awaited(mission: Mission): MissionJob[] {
+    return this.jobsOf(mission).filter((job) => job.service !== true);
   }
 
   /**
@@ -717,7 +728,7 @@ export class Missions implements TurnShaper {
    * but its child's result went round idle turns into `stuck`, and the child's end then found it waiting.
    */
   awaits(mission: Mission): boolean {
-    return this.jobsOf(mission).length > 0 || this.deps.store.open().some((other) => other.parentId === mission.id);
+    return this.awaited(mission).length > 0 || this.deps.store.open().some((other) => other.parentId === mission.id);
   }
 
   /** An agent woke: its running missions go on from their pages, and what waited for a slot may start. */

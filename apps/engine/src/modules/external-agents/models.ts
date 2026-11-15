@@ -16,12 +16,34 @@ export function offeredModels(opened: NewSessionResult | null): CliModel[] | nul
   const option = opened?.configOptions?.find((entry) => entry.id === "model");
   if (!option?.options?.length) return null;
   const on = option.options.find((entry) => entry.value === option.currentValue);
-  const standsFor = on?.description ? option.options.find((entry) => entry !== on && entry.name === on.description) : undefined;
+  const standsFor = on ? stoodFor(on, option.options) : undefined;
   return option.options.map(({ value, name }) => ({
     value,
     ...(name && name !== value ? { name } : {}),
     ...(on && value === on.value ? { current: standsFor?.name ?? value } : {}),
   }));
+}
+
+type Offered = NonNullable<SessionConfigOption["options"]>[number];
+
+/**
+ * The option an alias stands for, where the CLI says so by describing the alias with another option's name. Three ways
+ * it has been said, each read from a real session: the name itself ("Opus 5.5"); the name at the head of a longer line
+ * ("Opus 5.5 · Best for everyday, complex tasks"); and the one word the name begins with ("Opus", where "Opus 5.5" is
+ * offered). The last stopped matching when only the first was read, and every list said `default` for what the default
+ * was. A word that several names begin with names none of them: nothing is guessed, and the alias is shown as itself.
+ */
+function stoodFor(on: Offered, options: readonly Offered[]): Offered | undefined {
+  const said = on.description?.trim();
+  if (!said) return undefined;
+  const others = options.filter((entry) => entry !== on && entry.name);
+  const exact = others.find((entry) => entry.name === said);
+  if (exact) return exact;
+  // The head of a longer line, ended by a space: "Opus 5" is not the head of "Opus 5.5 · …".
+  const heads = others.filter((entry) => said.startsWith(`${entry.name} `)).sort((a, b) => b.name!.length - a.name!.length);
+  if (heads[0]) return heads[0];
+  const family = others.filter((entry) => entry.name!.startsWith(`${said} `));
+  return family.length === 1 ? family[0] : undefined;
 }
 
 /**
@@ -45,6 +67,16 @@ export function offeredEfforts(options: readonly SessionConfigOption[] | null | 
   }));
 }
 
+/**
+ * What a chat is on, and the way back, said under a message that failed on a model picked in that chat. The failure
+ * alone ("You've reached your Fable limit") did not say the chat would keep asking that model: a person had to recall
+ * having picked it, and how to undo that. Said whatever the CLI's words were, which are not read.
+ */
+export function pickedNote(model: string, cli: string, offered: readonly CliModel[]): string {
+  const name = offered.find((entry) => entry.value === model)?.name;
+  return `This chat is on \`${model}\`${name && name !== model ? ` (${name})` : ""}, picked here. \`/model default\` goes back to ${cli}'s own.`;
+}
+
 /** The kept models — or efforts — read once and written as a session changes them. */
 export class OfferedModels {
   private kept: Record<string, CliModel[]>;
@@ -63,8 +95,34 @@ export class OfferedModels {
     this.file.save(this.kept);
   }
 
+  /** An agent's list let go: what was kept is not what its CLI offers now. Nothing is shown until it says again. */
+  forget(agentId: string): void {
+    if (!this.file || !(agentId in this.kept)) return;
+    const { [agentId]: _gone, ...rest } = this.kept;
+    this.kept = rest;
+    this.file.save(rest);
+  }
+
   /** The model the agent's CLI opened its last session on, as lists name it; null before its first. */
   runsOn(agentId: string): string | null {
     return this.of(agentId).find((model) => model.current)?.current ?? null;
   }
+}
+
+/**
+ * A CLI's new version passed its check, with the session opened to check it for one agent. That agent's lists are what
+ * the session offered. Every other agent on the CLI has none until its own next session, or until the Models page asks
+ * its CLI: a list is the running version's or it is absent, never the version before's shown as this one's. After the
+ * box's Claude Code went from one that knew Fable 5.1 to one with Fable 5.2, both agents' lists named 5.1 until someone
+ * opened the Models page.
+ */
+export function renewLists(lists: { models: OfferedModels; efforts: OfferedModels }, checked: string, opened: NewSessionResult, on: readonly string[]): void {
+  for (const agentId of on) {
+    lists.models.forget(agentId);
+    lists.efforts.forget(agentId);
+  }
+  const offered = offeredModels(opened);
+  if (offered) lists.models.keep(checked, offered);
+  else lists.models.forget(checked);
+  lists.efforts.keep(checked, offeredEfforts(opened.configOptions));
 }

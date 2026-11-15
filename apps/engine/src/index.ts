@@ -142,7 +142,8 @@ export async function runDaemon(): Promise<void> {
   // One cache for the daemon: entries are keyed by directory, so two agents naming the same project
   // share the scan rather than each paying for it.
   const projectSkills = new ProjectSkills();
-  const externalAgents = startExternalAgents({ config, state, childEnv, notes: () => notes, port: () => web?.server.port, commands, secrets, audit, projectSkills });
+  // `agentsOn` reads the registry, which loads below: it is asked only once a CLI's new version is checked.
+  const externalAgents = startExternalAgents({ config, state, childEnv, notes: () => notes, port: () => web?.server.port, commands, secrets, audit, projectSkills, agentsOn: (cliId) => registry.all().flatMap((agent) => (agent.config.external?.cli === cliId ? [agent.config.id] : [])) });
   progress.phase = "loading agents";
   const registry = await AgentRegistry.create({
     agentsDir: config.daemon.agentsDir,
@@ -322,7 +323,7 @@ export async function runDaemon(): Promise<void> {
   if (secretStoreTimer) ctx.backgroundTimers.push(secretStoreTimer);
 
   // The machine itself: the MCP servers, the pipeline, the scheduler and the toolset, joined.
-  const { mcp, mcpLogins, mcpCatalog, skillRoots, pipeline, scheduler, tools } = await buildTurnMachine(stores, parts, {
+  const { mcp, mcpLogins, mcpCatalog, skillsCatalog, skillRoots, pipeline, scheduler, tools } = await buildTurnMachine(stores, parts, {
     ctx, config, machine, configPath, progress, registry, gateways, memory, load: upkeep.load, externalAgents, projectSkills, builtinSkillsDir, supervisor: supervisorInfo, startedAt,
   });
 
@@ -370,7 +371,7 @@ export async function runDaemon(): Promise<void> {
     ctx, db, config, configSource: source, secrets, registry, providers, pipeline, approvals,
     grants, toolGrants, access, memory, memoryPass, jobs, notifier, audit, logs, logStore, mcp, reach, projectSkills, skillRoots,
     builtinSkillsDir, autoApprove, sessions, notes, missions: missions.missions, externalAgents, turns, events, chatEvents, roomMessages, attachmentIndex, rooms, usage, uploads, cron, scheduler, proposals: proposals.cards, localGateway,
-    supervisorInfo, reflection, mcpCatalog, mcpLogins, agentsSeen, state,
+    supervisorInfo, reflection, mcpCatalog, skillsCatalog, mcpLogins, agentsSeen, state,
     builtinTools: tools,
   });
   const { server, streams } = controlPlane;

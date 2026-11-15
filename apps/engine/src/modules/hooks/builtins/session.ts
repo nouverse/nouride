@@ -11,6 +11,7 @@ import { describeStatus } from "@/modules/pipeline/agent-status.ts";
 import { editionLabel } from "@/commons/build.ts";
 import type { Hook } from "../types.ts";
 import { clearedSize, failed, formatDuration, formatTokens, memoryNote, sessionKey } from "../format.ts";
+import { named } from "../cli-model.ts";
 import { cliStatusLines } from "../cli-status.ts";
 
 export const sessionHooks: Hook[] = [
@@ -198,7 +199,9 @@ export const sessionHooks: Hook[] = [
           `State: ${ctx.deps.agentStatus ? describeStatus(ctx.deps.agentStatus(ctx.agent.config.id)) : ctx.deps.registry.status(ctx.agent.config.id)}`,
         ];
 
-        const lines = cli ? [...head, ...cliStatusLines(cli, ctx.agent.config.llm, session.messages.length, usage)] : [
+        // The chat's own pick, said with what the CLI calls it, as `/model` says it.
+        const picked = cli && override ? named(override, ctx.deps.cliModels?.(ctx.agent.config.id) ?? []) : undefined;
+        const lines = cli ? [...head, ...cliStatusLines(cli, ctx.agent.config.llm, session.messages.length, usage, picked)] : [
           ...head,
           `Model: ${override ?? ctx.agent.config.llm.model}${override ? " (overridden for this chat)" : ""}`,
           `Provider: ${ctx.agent.config.llm.provider}`,

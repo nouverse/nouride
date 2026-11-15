@@ -203,6 +203,26 @@ describe("coding-CLI accounts", () => {
     expect(file.load()).toEqual({ fake: [] });
   });
 
+  test("listed: every account an agent moves through, the limits each is at, and where an agent is now", async () => {
+    const accounts = new CliAccounts({ file: { load: () => ({ fake: ["spare"] }), save: () => {} }, tokens: { get: (name) => (name === "cli-fake-work" ? undefined : "fk-tok-x"), set: async () => {}, delete: async () => true } });
+    const row = { id: "fake", name: "Fake CLI", install: "", sharedLogin: { args: [], env: "FAKE_TOKEN", tokenPrefix: "fk-" } } as unknown as CliRow;
+    const nix = { config: { id: "nix", displayName: "Nix", external: { cli: "fake", profile: "rina", accounts: ["rina", "work"] } } } as unknown as LoadedAgent;
+    const nox = { config: { id: "nox", displayName: "Nox", external: { cli: "fake", profile: "rina" } } } as unknown as LoadedAgent;
+    const turn = { says: (_cli: string, account: string) => (account === "rina" ? ["At its limit for `fable`: for about 5 days more."] : []), accountOf: (agentId: string) => (agentId === "nix" ? "work" : "rina") };
+    const [view] = await accounts.list([row], [], [nix, nox], async () => [{ name: "rina", inUse: true, signedIn: true, reason: null }], turn);
+    expect(view!.accounts).toEqual([
+      // Where its agents start; one of them moved off it, said beside it. Its limit in words.
+      { name: "rina", signedIn: true, agents: [{ id: "nix", name: "Nix", signedIn: true, on: "work" }, { id: "nox", name: "Nox", signedIn: true }], limits: ["At its limit for `fable`: for about 5 days more."] },
+      // Added by hand, used by none.
+      { name: "spare", signedIn: true, agents: [] },
+      // Named only in an agent's list: an account of the CLI all the same, here not signed in.
+      { name: "work", signedIn: false, agents: [] },
+    ]);
+    // With nothing that says: as it was listed before.
+    const [plain] = await accounts.list([row], [], [nox], async () => [{ name: "rina", inUse: true, signedIn: true, reason: null }]);
+    expect(plain!.accounts).toEqual([{ name: "rina", signedIn: true, agents: [{ id: "nox", name: "Nox", signedIn: true }] }, { name: "spare", signedIn: true, agents: [] }]);
+  });
+
   test("an account added on the Models page is one each agent of its CLI may pick", async () => {
     const { service, agent } = setup();
     service.accounts.add("fake", "team");

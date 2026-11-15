@@ -102,7 +102,7 @@ export function Flow({
               taken={mode.kind === "run" && (index === 0 ? mode.outcomes.has(steps[0]!.id) : went(index - 1, index))}
               {...(add ? { onAdd: add(index), addLabel: index === 0 ? "Add a step at the start" : `Add a step before step ${index + 1}` } : {})}
             />
-            <StepItem steps={steps} index={index} own={own} ownName={agentName(own)} mode={mode} grip={grip} mark={marks?.get(steps[index]!.id)} landed={landsOn === stepAnchor(steps[index]!.id)} active={active} onActive={setActive} onShow={show} titleOf={titleOf} />
+            <StepItem steps={steps} index={index} own={own} ownName={agentName(own)} agentName={agentName} mode={mode} grip={grip} mark={marks?.get(steps[index]!.id)} landed={landsOn === stepAnchor(steps[index]!.id)} active={active} onActive={setActive} onShow={show} titleOf={titleOf} />
           </>
         )}
       </ReorderList>

@@ -28,6 +28,24 @@ export function startHint(paths: SupervisorPaths = {}): string {
 }
 
 /**
+ * The command that starts the daemon on this machine, for the next step `nouride setup` prints: the supervisor's where
+ * there is one. It printed `nouride start` everywhere, which inside a container starts nothing that stays, and beside a
+ * systemd unit starts a second copy.
+ */
+export function startCommand(paths: SupervisorPaths = {}): { command: string; note: string } {
+  switch (supervisorHere(paths)) {
+    case "systemd":
+      return { command: "sudo systemctl start nouride", note: "it is a systemd service here" };
+    case "launchd":
+      return { command: `launchctl kickstart -k gui/$(id -u)/${LAUNCHD_LABEL}`, note: "it runs under launchd here" };
+    case "container":
+      return { command: "docker compose up -d", note: "from the host: the daemon starts with what setup wrote" };
+    default:
+      return { command: "nouride start", note: "then talk to it" };
+  }
+}
+
+/**
  * How to restart the daemon running on this machine — for what it reads only when it starts, as `nouride setup` writes
  * beside a running one (Docker's docs run it so). The same commands the first-run guide gives.
  */
@@ -45,7 +63,7 @@ export function restartHint(paths: SupervisorPaths = {}): string {
 }
 
 /** Where the files that say which supervisor runs the daemon are — for a test. */
-interface SupervisorPaths {
+export interface SupervisorPaths {
   systemd?: string;
   launchd?: string;
   container?: string;

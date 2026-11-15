@@ -13,14 +13,15 @@ import {
   Cpu,
   Crown,
   FileText,
+  FolderOpen,
   KeyRound,
+  Palette,
   Pause,
   Play,
   Plug,
   Radio,
   RotateCw,
   SlidersHorizontal,
-  Palette,
   Target,
   Terminal,
 } from "lucide-react";
@@ -30,6 +31,7 @@ import { agentModel } from "@/commons/lib/agents";
 import { canWrite, isAdmin, useMe } from "@/commons/lib/session";
 import { ErrorNote } from "@/commons/components/ui/ui";
 import { SEGMENTED_BAR, segmentClass, useSelectedInView } from "@/commons/components/ui/SegmentedTabs";
+import { StickyBar } from "@/commons/components/ui/StickyBar";
 import { DetailLoading } from "@/commons/components/ui/Skeleton";
 
 interface Tab {
@@ -42,6 +44,7 @@ interface Tab {
     | "/agents/$agentId/mcp"
     | "/agents/$agentId/cli"
     | "/agents/$agentId/look"
+    | "/agents/$agentId/workspace"
     | "/agents/$agentId/settings";
   label: string;
   icon: typeof FileText;
@@ -65,6 +68,9 @@ const TABS: Tab[] = [
  * model Nouride's own work around it runs on. One tab in place of CLI and Model, which a person read as two answers.
  */
 const BRAIN_TAB: Tab = { to: "/agents/$agentId/cli", label: "Brain", icon: Terminal };
+
+/** Its own folder in the workspace, to look through: an admin's, as System's Files is. */
+const WORKSPACE_TAB: Tab = { to: "/agents/$agentId/workspace", label: "Workspace", icon: FolderOpen };
 
 export default function AgentLayoutPage({ agentId }: { agentId: string }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -189,9 +195,14 @@ export default function AgentLayoutPage({ agentId }: { agentId: string }) {
 
         <ErrorNote error={act.error ?? makeDefault.error} />
 
-        {/* Apple Segmented Tab Bar */}
+      </div>
+
+      {/* Its tabs stay at the top of the window while the tab's page scrolls under them. Outside the header's own
+          block: a row that stays is held by the block it is in, and inside the header it left with it. */}
+      <StickyBar label="This agent's pages">
         <div ref={tabBar} className={SEGMENTED_BAR}>
-          {(agent.external ? [TABS[0]!, BRAIN_TAB, ...TABS.slice(2)] : TABS).map(({ to, label, icon: Icon, exact }) => {
+          {/* Its files, what answers it, then its own folder for an admin: Workspace beside Model, or Brain in its place. */}
+          {[TABS[0]!, agent.external ? BRAIN_TAB : TABS[1]!, ...(isAdmin(me.data ?? null) ? [WORKSPACE_TAB] : []), ...TABS.slice(2)].map(({ to, label, icon: Icon, exact }) => {
             const target = to.replace("$agentId", agentId);
             const active = exact ? pathname === target : pathname.startsWith(target);
             return (
@@ -210,7 +221,7 @@ export default function AgentLayoutPage({ agentId }: { agentId: string }) {
             );
           })}
         </div>
-      </div>
+      </StickyBar>
 
       <Outlet />
     </div>

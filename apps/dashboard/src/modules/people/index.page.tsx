@@ -21,7 +21,7 @@ import type { PersonRecord } from "@nouride/wire";
 import { PersonNotes } from "@/commons/components/people/PersonNotes";
 import { MorningLine } from "./components/MorningLine";
 import { Card, EmptyState, ErrorNote, Field, PageHeader } from "@/commons/components/ui/ui";
-import { FILL_PAGE, ScrollCard } from "@/commons/components/ui/ScrollCard";
+import { ListCard } from "@/commons/components/ui/ListCard";
 import { keyProblem, suggestKey, typedKey } from "@/commons/lib/person-key";
 import { useConfirm } from "@/commons/components/ui/confirm";
 import { useToast } from "@/commons/components/ui/toast";
@@ -42,7 +42,7 @@ export default function PeoplePage() {
   const list = people.data?.people ?? [];
 
   return (
-    <div className={FILL_PAGE}>
+    <div className="space-y-6 *:animate-fade">
       <PageHeader
         ask={PAGE_ASKS.people}
         title="People"
@@ -80,7 +80,7 @@ export default function PeoplePage() {
           />
         </Card>
       ) : (
-        <ScrollCard fill title="Known People" description="One row per person. Your agents know who is writing, whichever of these accounts they write from.">
+        <ListCard title="Known People" description="One row per person. Your agents know who is writing, whichever of these accounts they write from.">
           <div className="overflow-x-auto -mx-4 -my-2 sm:-mx-6">
             {/*
               A card per person on a phone, the table from `sm` up: in four columns at phone width an account id had a
@@ -104,7 +104,7 @@ export default function PeoplePage() {
               </tbody>
             </table>
           </div>
-        </ScrollCard>
+        </ListCard>
       )}
 
       <Leaving value={notesOf}>{(person) => <PersonNotes person={person} editable={isAdmin(me.data ?? null)} onClose={() => setNotesOf(null)} />}</Leaving>

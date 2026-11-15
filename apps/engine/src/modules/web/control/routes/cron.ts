@@ -296,6 +296,10 @@ export function unknownStepAgent(deps: ControlDeps, payload: JobPayload | undefi
   if (payload?.kind !== "steps") return null;
   for (const [index, step] of payload.steps.entries()) {
     if ((step.kind === "agentTurn" || step.kind === "mission") && step.agentId && !deps.registry.get(step.agentId)) return `step ${index + 1}: no agent "${step.agentId}": a step must name one that exists`;
+    // And each of the steps it starts together, by its place among them.
+    for (const [at, part] of (step.kind === "parallel" ? step.steps : []).entries()) {
+      if (part.kind === "agentTurn" && part.agentId && !deps.registry.get(part.agentId)) return `step ${index + 1}, part ${at + 1}: no agent "${part.agentId}": a step must name one that exists`;
+    }
   }
   return null;
 }

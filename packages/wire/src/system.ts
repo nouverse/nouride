@@ -56,6 +56,11 @@ export interface SystemFileEntry {
   removable?: true;
 }
 
+/** Where the agents' workspace is among Nouride's files, as a listing's path; null where it is kept outside them. */
+export interface SystemWorkspace {
+  path: string | null;
+}
+
 export interface SystemFolderListing {
   path: string;
   entries: SystemFileEntry[];

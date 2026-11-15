@@ -11,7 +11,9 @@ import { afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { Window } from "happy-dom";
 import { eventually } from "./wait.ts";
 
-const GLOBALS = ["window", "document", "navigator", "localStorage", "HTMLElement", "Element", "Node"] as const;
+// With what the Office at the top of the Agents page asks of a browser: its clock for the cats' frames, and its
+// measure of the column it is drawn in.
+const GLOBALS = ["window", "document", "navigator", "localStorage", "HTMLElement", "Element", "Node", "requestAnimationFrame", "cancelAnimationFrame", "matchMedia", "ResizeObserver", "getComputedStyle"] as const;
 let dom: Window;
 let realFetch: typeof fetch;
 

@@ -16,8 +16,8 @@ import { clockNote } from "@/modules/llm/executor/reminders.ts";
 import type { PlanStep } from "@/modules/notes/store.ts";
 import { writeInstruction } from "./instruction.ts";
 import { askPermission } from "./permission.ts";
-import { signedOut, unavailableReason, type CliConnection } from "./connection.ts";
-import { offeredEfforts, offeredModels, type OfferedModels } from "./models.ts";
+import { failedInPrompt, promptFailed, signedOut, unavailableReason, type CliConnection } from "./connection.ts";
+import { offeredEfforts, offeredModels, pickedNote, type OfferedModels } from "./models.ts";
 import { folderReady } from "./launch.ts";
 import { UpdateReader } from "./updates.ts";
 import { situationOf, untold, type Situation } from "./situation.ts";
@@ -26,6 +26,8 @@ import { isMissionChat, MISSION_GATEWAY_ID } from "@/modules/missions/gateway.ts
 import { ownFolderOf } from "@/modules/missions/worktree.ts";
 import { missionDeleteScope } from "./inside-delete.ts";
 import { promptOf, promptTakes } from "./prompt.ts";
+import { ACCOUNTS_SPENT, accountsOf, OWN_MODEL, type AccountRotation } from "./rotation.ts";
+import type { AccountUse } from "./use.ts";
 import { cliUsage, type CliContexts, type CliSpending } from "./usage.ts";
 import { merged, MidPrompt, untilSaid } from "./steering.ts";
 
@@ -34,9 +36,15 @@ export const cliSessionKey = (gatewayId: string, chatId: string) => `${gatewayId
 
 /** What the runner needs of the service that holds the agents' CLIs. */
 export interface RunnerHost {
-  connection(agent: LoadedAgent): Promise<CliConnection>;
+  /** The agent's CLI; with the turn's model, on the account that is not at a limit for it (`rotation.ts`). */
+  connection(agent: LoadedAgent, model?: string): Promise<CliConnection>;
   /** The CLI a turn prompts on, and the variables its shell does not have yet (`ExternalAgents.forTurn`, 0.8.15). */
-  forTurn?(agent: LoadedAgent, signal?: AbortSignal): Promise<{ cli: CliConnection; notYet: string[] }>;
+  forTurn?(agent: LoadedAgent, signal?: AbortSignal, model?: string): Promise<{ cli: CliConnection; notYet: string[] }>;
+  /** The agent's CLI as this install knows it, and the accounts at a limit: a refused message may move the agent (`rotation.ts`). */
+  row?(id: string): CliRow | undefined;
+  rotation?: Pick<AccountRotation, "refused" | "early" | "used">;
+  /** The account's use as the agent's CLI last said it; null where it said none (`use.ts`). */
+  accountUse?(agentId: string): AccountUse | null;
   /**
    * The session a conversation kept from before, for a CLI that reopens sessions; and keeping a new one, with the
    * fingerprint of the instructions it opened on (`writeInstruction`) — null where they could not be written.
@@ -92,14 +100,84 @@ const log = createLogger("external-agents");
 /** The whole turn's work and nothing a compaction could shorten: the CLI keeps its own context. */
 const NO_COMPACTION = { threshold: Number.MAX_SAFE_INTEGER, limit: Number.MAX_SAFE_INTEGER, totalLimit: Number.MAX_SAFE_INTEGER, source: "external agent", summaryModel: "", summarizerWindow: 0 };
 
+/**
+ * Said to the CLI in place of the person's message when the turn is run again on another account after it had already
+ * done a step: what it did is in its session, loaded under the new account, and the same message again could have it
+ * do that work twice.
+ */
+export const GO_ON =
+  "[Nouride: the account this ran on reached its limit, and you are on another one now. Nothing else changed. What you did so far is above: go on from where you stopped, and do not do again what is already done.]";
+
 export class ExternalTurnRunner {
+  private readonly deps: ExecutorDeps;
+  /** Whether the attempt running has done a step: after a limit it is told to go on, not handed the message again. */
+  private worked = false;
+
   constructor(
     private readonly agent: LoadedAgent,
-    private readonly deps: ExecutorDeps,
+    deps: ExecutorDeps,
     private readonly host: RunnerHost,
-  ) {}
+  ) {
+    const said: NonNullable<ExecutorDeps["onActivity"]> = (...step) => {
+      if (step[0] === "tool") this.worked = true;
+      return deps.onActivity?.(...step);
+    };
+    this.deps = { ...deps, onActivity: said };
+  }
 
+  /**
+   * The turn; and where its message is refused for a limit of the account and the agent has another (`rotation.ts`),
+   * the turn again on that one, the chat told of the move first. The session is the same one, loaded under the other
+   * account. As many times as it has accounts to move to: the last one's refusal is thrown as every account spent.
+   */
   async run(req: TurnRequest): Promise<TurnResult> {
+    const external = this.agent.config.external;
+    const model = this.modelOf(req);
+    const row = external && this.host.row?.(external.cli);
+    const agent = external && { id: this.agent.config.id, name: this.agent.config.displayName, external };
+    let moved = "";
+    const tell = (note: string) => {
+      moved += `_${note}_\n\n`;
+      this.deps.onActivity?.("note", note);
+      this.deps.onText?.(`_${note}_\n\n`);
+    };
+    // The account it is on is near a limit and it asked to move on early: said first, and the turn starts on the next.
+    const early = row && agent ? this.host.rotation?.early(row, agent, model) : null;
+    if (early) tell(early);
+    let ask = req;
+    // Each move marks an account, so the moves end by themselves; counted all the same, so nothing can move for ever.
+    for (let moves = accountsOf(external ?? { cli: "" }).length; ; moves -= 1) {
+      this.worked = false;
+      try {
+        const answered = await this.attempt(ask);
+        // What its CLI said of the account's use while it worked: past the agent's own mark, its next turn moves on.
+        if (row && agent) this.host.rotation?.used(row, agent, this.host.accountUse?.(agent.id) ?? null);
+        return moved ? { ...answered, text: `${moved}${answered.text}` } : answered;
+      } catch (err) {
+        const note = req.signal?.aborted || moves <= 0 ? null : this.movedBy(err, model);
+        if (!note) throw err;
+        tell(note);
+        if (this.worked) ask = { ...req, userMessage: { ...req.userMessage, content: GO_ON } };
+      }
+    }
+  }
+
+  /**
+   * A message the CLI refused: where that was a limit of its account, the account is marked; and where the agent has
+   * another, what the chat is told of the move. Null for any other failure. Throws where every account is at its limit.
+   */
+  private movedBy(err: unknown, model: string): string | null {
+    const external = this.agent.config.external;
+    const row = external && this.host.row?.(external.cli);
+    return row ? (this.host.rotation?.refused(row, { id: this.agent.config.id, name: this.agent.config.displayName, external }, err, model) ?? null) : null;
+  }
+
+  /** The model a turn runs on, by the word its CLI takes: this chat's, else the pack's, else the CLI's own. */
+  private modelOf(req: TurnRequest): string {
+    return req.model ?? this.agent.config.external?.model ?? OWN_MODEL;
+  }
+
+  private async attempt(req: TurnRequest): Promise<TurnResult> {
     const external = this.agent.config.external;
     if (!external) throw new NourideError("external_agent", `${this.agent.config.id} is not an external agent`);
     const agentId = this.agent.config.id;
@@ -128,8 +206,8 @@ export class ExternalTurnRunner {
     /** Secrets kept since the CLI started that its shell does not have this turn: named in the first prompt. */
     let notYet: string[] = [];
     try {
-      if (this.host.forTurn) ({ cli: connection, notYet } = await this.host.forTurn(this.agent, req.signal));
-      else connection = await this.host.connection(this.agent);
+      if (this.host.forTurn) ({ cli: connection, notYet } = await this.host.forTurn(this.agent, req.signal, this.modelOf(req)));
+      else connection = await this.host.connection(this.agent, this.modelOf(req));
     } catch (err) {
       req.signal?.removeEventListener("abort", cancel);
       throw this.unavailable(err, undefined);
@@ -334,7 +412,7 @@ export class ExternalTurnRunner {
       cli.forget(key);
       // Stopped — and the CLI closed for not stopping: the turn ends as a stopped one with what it said, and the agent is
       // not unavailable.
-      if (!req.signal?.aborted) throw this.unavailable(err, cli);
+      if (!req.signal?.aborted) throw this.unavailable(err, cli, failedInPrompt(err) ? { model: req.model } : undefined);
       if (reader) take(reader);
     } finally {
       clearTimeout(deaf);
@@ -420,9 +498,15 @@ export class ExternalTurnRunner {
     return chosen ?? this.agent.config.external?.model ?? this.host.models?.runsOn(this.agent.config.id) ?? undefined;
   }
 
-  /** A failure as the person reads it, and as the agent's status where it is the CLI's state rather than this turn's. */
-  private unavailable(err: unknown, connection: CliConnection | undefined): NourideError {
+  /**
+   * A failure as the person reads it, and as the agent's status where it is the CLI's state rather than this turn's.
+   * `sent`: the CLI had taken a message, with the model this chat picked for it where it did: said as the message
+   * refused, and what the chat is on with the way back, since a picked model is the first thing a person changed.
+   */
+  private unavailable(err: unknown, connection: CliConnection | undefined, sent?: { model: string | undefined }): NourideError {
     const row = connection?.row;
+    // Every account at its limit for this turn's model: said as it is, and the agent is not one that cannot answer.
+    if (err instanceof NourideError && err.code === ACCOUNTS_SPENT) return err;
     if (!row) {
       const message = err instanceof Error ? err.message : String(err);
       this.host.setUnavailable(this.agent.config.id, message);
@@ -430,6 +514,12 @@ export class ExternalTurnRunner {
     }
     // Its stderr says "not installed" only of a CLI that never answered: an old "server not found" line in a running
     // CLI's tail turned a later failure into "not installed here" (0.8.1).
+    if (sent && !signedOut(row, err)) {
+      const failed = promptFailed(row, err, Boolean(connection.closed));
+      if (connection.closed) this.host.setUnavailable(this.agent.config.id, failed);
+      const reason = sent.model === undefined ? failed : `${failed}${/[.!?]$/.test(failed) ? "" : "."} ${pickedNote(sent.model, row.name, this.host.models?.of(this.agent.config.id) ?? [])}`;
+      return new NourideError("external_agent", reason, reason, { cause: err });
+    }
     const reason = unavailableReason(row, err, connection.info ? [] : connection.stderrTail);
     if (signedOut(row, err) || /not installed/.test(reason) || connection.closed) this.host.setUnavailable(this.agent.config.id, reason);
     return new NourideError("external_agent", reason, reason, { cause: err });

@@ -31,7 +31,9 @@ const isString = (value: unknown): value is string => typeof value === "string";
 /**
  * Where the button stands, 3.5rem across: it was 2.75rem in the corner, and too small to find or to hit. Below a
  * laptop's width: over the tab bar, clear of it, where Home's "+ Chat" stood. From a laptop up: in the window's corner,
- * 1rem in. Every page's foot leaves it room (`PAGE_BOTTOM`), a page held to the window too, so it lies over no card.
+ * 1rem in. A page that scrolls leaves it room at its end (`PAGE_BOTTOM`), so it lies over no card once the page is
+ * scrolled down. A page held to the window runs under it, to the page's own margin, and what scrolls in its card ends
+ * with room to bring the last row clear (`HELD_END`): room kept free for the button was a blank band under the card.
  */
 const BUTTON_PLACE = "right-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] size-14 lg:bottom-4";
 

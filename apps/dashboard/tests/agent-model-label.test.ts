@@ -26,7 +26,7 @@ describe("the model an agent is listed with", () => {
   test("every list of agents shows it so: the Agents page and an agent's header", () => {
     const source = (path: string) => readFileSync(join(import.meta.dir, "../src/modules", path), "utf8");
     expect(source("chat/components/AgentHeader.tsx")).not.toContain("{agent.model}");
-    expect(source("agents/index.page.tsx")).toContain("`${agentModel(agent)} · account ${agent.external.profile}`");
+    expect(source("agents/components/AgentRows.tsx")).toContain("`${agentModel(agent)} · account ${agent.external.profile}`");
     expect(source("agents/layout.page.tsx")).toContain("<Terminal size={11} /> {agentModel(agent)}");
   });
 });

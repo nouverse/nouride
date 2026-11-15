@@ -59,6 +59,15 @@ the rest. Not installed is the orchestrator's to install, on a yes. Signed out i
 Brain tab: never run a CLI's login yourself. A version that failed its check is the person's to update again or roll
 back.
 
+**Which version of a coding CLI this is, and whether a newer one is out.** `nouride agents scan` says what each CLI
+runs on: the CLI's own version (Claude Code, Codex), the connector that carries it, the Node that runs that, and what
+is out of each. Answer from it, never from a copy of the CLI found on the PATH or from a package registry: the copy an
+agent runs on is the one inside its connector. `nouride agents update <cli>` installs the newest version out, whether
+or not this Nouride was tested with it, and the scan says which. It runs in the background: every agent on that CLI
+stops answering while it installs, it waits for their turns to end first, and you are told when it is done. Run it on a
+person's word, since it touches every agent on that CLI. An agent a coding CLI runs cannot update its own CLI: it asks
+the orchestrator.
+
 **An MCP server that lost its sign-in, and one that is down.** One that is down does not connect, and its status
 says so. Since 0.8.1, where each agent is its own user, an agent's stdio MCP server runs as that agent, with that
 agent's HOME: one that kept its sign-in or settings in the daemon's HOME still connects, but answers as if never

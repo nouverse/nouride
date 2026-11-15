@@ -4,7 +4,7 @@
  */
 
 import { openLinePrompt } from "@nouride/runtime";
-import { BOLD, DIM, GREEN, RESET, YELLOW, cliVersionLine, cliVersionWarns, fail, say } from "@nouride/cli-kit";
+import { BOLD, DIM, GREEN, RESET, YELLOW, cliNamed, cliPartsLines, cliVersionLine, cliVersionWarns, fail, say } from "@nouride/cli-kit";
 import type { Client, AgentCliResponse, CliLoginResponse, ExternalClisResponse } from "@nouride/cli-kit";
 
 /**
@@ -16,10 +16,13 @@ export async function scanClis(client: Client): Promise<void> {
   const { room, clis } = await client.get<ExternalClisResponse>("/external-clis?fresh=1");
   if (!room.enough) return say(`${DIM}No room for a coding CLI here: the agents' commands may hold ${mib(room.bytes)}, and one CLI's session needs at least ${mib(room.needs)}.${RESET}`);
   for (const cli of clis) {
-    if (cli.installed) say(`${GREEN}●${RESET} ${BOLD}${cli.id}${RESET} ${DIM}${cli.name} · ${cli.command}${cli.version ? ` ${cli.version}` : ""}${RESET}`);
+    // The CLI's own version and its connector's, each named: the connector's alone read as the CLI's.
+    const named = cli.installed ? cliNamed(cli) : null;
+    if (cli.installed) say(`${GREEN}●${RESET} ${BOLD}${cli.id}${RESET} ${DIM}${named ?? `${cli.name} · ${cli.command}${cli.version ? ` ${cli.version}` : ""}`}${RESET}`);
     else say(`${DIM}○ ${cli.id} ${cli.name}, not installed: ${cli.install}${RESET}`);
     const standing = cliVersionLine(cli);
     if (standing) say(`    ${cliVersionWarns(cli) ? YELLOW : DIM}${standing}${RESET}`);
+    if (cli.installed) for (const line of cliPartsLines(cli)) say(`    ${line.level === "warn" ? YELLOW : DIM}${line.message}${RESET}`);
     if (cli.installed && !cli.login && cli.loginNote) say(`    ${DIM}${cli.loginNote}${RESET}`);
   }
 }

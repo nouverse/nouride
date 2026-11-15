@@ -3,12 +3,12 @@ title: Office
 description: Your agents' statuses as a small office of cats (who is working, who waits for you, who is idle or asleep), and a look of its own for each.
 ---
 
-**Agents → Office** shows what your agents are doing as a small pixel-art office: a workroom, the lobby and a
-bedroom, side by side over a hall. Each agent is a Nouride cat with its own desk, its own seat on a sofa and its own
+**Agents** opens on the Office (0.8.38; it was a tab of its own): what your agents are doing as a small pixel-art
+office, a workroom, the lobby and a bedroom, side by side over a hall. Each agent is a Nouride cat with its own desk, its own seat on a sofa and its own
 bed (the orchestrator's desk alone at the front of the workroom, a crown by its name).
 Home shows the same office, small and still, under **Your agents**, with each agent beside it as a chip.
 
-![The Office: Nouva, the orchestrator, and Ember at work (Ember under a red ! because it cannot work), Wren waiting for you, Kira and Pip on the sofa, Moss asleep, and Codey in bed because it cannot work](/media/dashboard-office.png)
+![Agents, opening on the Office: Nouva, the orchestrator, and Ember at work, Kira, Pip and Wren on the sofa, Moss asleep, and Codey in bed because it cannot work; under it the filter and the first of the agents' rows](/media/dashboard-office.png)
 
 ## Where a cat is
 
@@ -34,8 +34,14 @@ An office holds twelve agents: the orchestrator always, then the ones made first
 office (a door at the end of the hall says how many), and the line over the office counts them all, and says how
 many of those elsewhere are waiting for you.
 
-Click a cat to see what its agent is doing and where, with a link to each chat and mission, and to put it to sleep or
-wake it, open its latest chat (as its line in Chats does), or change its look.
+Under the office every agent is a row: its cat, its name, what answers it, where it is reached and what it is doing.
+
+Click a cat and that agent's card opens right under the office, above the list: what the agent is doing and where,
+with a link to each chat and mission, and **Details** for its page, **Open chat** for its latest chat (as its line in
+Chats does), **Sleep** or **Wake**, and **Edit look**. An admin also has **Workspace** there, which opens
+[the agent's own folder](/en/docs/manual/dashboard/#workspace). The card closes with its **×**, with a second click on
+the cat, or when you pick another cat. A press anywhere on an agent's row in the list opens the same under that row. A
+press opens and goes nowhere: the agent's page is **Details**. The page never moves under your hand.
 
 The page asks for the agents' statuses every five seconds while it is open and in view, and nothing while it is not.
 It moves nothing if your system asks for reduced motion, and on a phone it shrinks to fit.

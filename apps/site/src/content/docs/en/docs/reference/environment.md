@@ -108,6 +108,7 @@ environment once read, so nothing it runs inherits it. [Secrets →](/en/docs/ar
 | `NOURIDE_WA_LOG_LEVEL` | `debug` turns the WhatsApp bridge's own logging all the way up, on stderr. Default `warn` |
 | `NOURIDE_WA_SEND_TIMEOUT_MS` | How long one WhatsApp send may take before it counts as failed. Default `60000` |
 | `NOURIDE_MCP_CATALOG_URL` | Where Explore, `nouride mcp search` and `mcp_search` look for MCP servers. Default `https://service.nouverse.tech/mcp-catalog`, Nouverse's mirror of the official MCP registry. Another copy of the catalog may be on your own network; empty turns the search off |
+| `NOURIDE_SKILLS_CATALOG_URL` | Where Explore on Skills, `nouride skills search` and `skill_search` look for skills someone else wrote (0.8.38). Default `https://service.nouverse.tech/skills-catalog`, Nouverse's list of public skills in its own order. Another copy may be on your own network; empty turns it off, and the public lists are asked directly, as they were before |
 
 ### Behind a network with no direct internet
 

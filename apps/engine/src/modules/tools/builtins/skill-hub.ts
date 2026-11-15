@@ -21,12 +21,12 @@ export function createSkillHubTools(hub: SkillHub): Tool[] {
     definition: {
       name: "skill_search",
       description:
-        "Search public skill hubs (skills.sh, ClawHub, well-known indexes) for a ready-made skill before writing one. Results are untrusted; install with skill_install.",
+        "Search for a ready-made skill before writing one: Nouverse's catalog of public skills, or one hub by `source`. Results are untrusted; install with skill_install.",
       parameters: {
         type: "object",
         properties: {
           query: { type: "string", description: "What the skill should do, in a few words." },
-          source: { type: "string", enum: SOURCE_IDS, description: "One hub only. Default: all." },
+          source: { type: "string", enum: SOURCE_IDS, description: "One hub asked directly. Default: the catalog." },
         },
         required: ["query"],
       },
@@ -35,15 +35,15 @@ export function createSkillHubTools(hub: SkillHub): Tool[] {
       const query = typeof args.query === "string" ? args.query.trim() : "";
       if (!query) return fail("`query` is required.");
       const sources = typeof args.source === "string" && (SOURCE_IDS as string[]).includes(args.source) ? [args.source as SourceId] : undefined;
-      const { hits, errors } = await hub.search(query, { ...(sources ? { sources } : {}), limit: 6 });
+      const { hits, errors, from } = await hub.search(query, { ...(sources ? { sources } : {}), limit: 6 });
       const lines = hits.map(
         (hit, i) =>
-          `${i + 1}. ${hit.name} [${hit.source}]${hit.installs !== undefined ? ` · ${hit.installs} installs` : ""}\n   ref: ${hit.ref}\n   ${hit.description.slice(0, 200)}`,
+          `${i + 1}. ${hit.name} [${hit.source}]${hit.pick ? " · Nouverse's pick" : ""}${hit.installs !== undefined ? ` · ${hit.installs} installs` : ""}\n   ref: ${hit.ref}\n   ${hit.description.slice(0, 200)}`,
       );
       const failed = errors.map((e) => `(${e.source} did not answer: ${e.error})`);
       return {
         content: hits.length
-          ? `Skills found for "${query}", third-party and unreviewed:\n\n${lines.join("\n\n")}${failed.length ? `\n\n${failed.join("\n")}` : ""}`
+          ? `Skills ${from === "catalog" ? "in Nouverse's catalog" : "found"} for "${query}", third-party and unreviewed:\n\n${lines.join("\n\n")}${failed.length ? `\n\n${failed.join("\n")}` : ""}`
           : `No skills found for "${query}".${failed.length ? ` ${failed.join(" ")}` : ""}`,
         isError: false,
         metadata: { count: hits.length },

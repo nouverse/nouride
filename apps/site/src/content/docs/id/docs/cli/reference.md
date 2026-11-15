@@ -111,6 +111,12 @@ nouride setup --yes --provider anthropic --api-key-from-env ANTHROPIC_API_KEY --
 
 Flag: `--provider`, `--base-url`, `--api-key-from-env`, `--agent`, `--name`, `--model`, `--prompt`,
 `--headline`, `--config`, `--yes`. Sengaja gak ada `--api-key`.
+
+Dijalankan lagi, dia melanjutkan dari tempat berhentinya, seperti wizard di dashboard (0.8.38): kalau provider sudah
+diatur dan agent belum ada, provider-nya dipertahankan dan dia lanjut ke agent; kalau dua-duanya sudah ada, dia bilang
+install ini sudah siap dan gak mengubah apa-apa. Id agent yang gak bisa dipakai (`nouride` itu id cadangan, misalnya)
+ditolak sebelum ada yang ditulis, dan ditanyakan lagi kalau kamu sedang mengetik. Baris terakhirnya bilang cara
+menyalakan yang baru diatur: `docker compose up -d` kalau di dalam container.
 [Menyalakan pertama kali →](/id/docs/start/first-run/#kalau-hanya-bisa-lewat-ssh)
 
 ## Melihat keadaannya
@@ -146,9 +152,9 @@ nouride chat [agent]              # chat interaktif, tanpa bot token
 
 ```bash
 nouride agents                    # daftar: waiting for you, working, asleep, atau idle
-nouride agents scan               # CLI coding untuk agent eksternal yang ada di box ini, beserta versinya
+nouride agents scan               # CLI coding untuk agent eksternal di box ini, dan apa saja yang dipakainya
 nouride agents login <id>         # login CLI agent eksternal: jalan di box, dijawab dari sini
-nouride agents update <cli> [<versi>]   # ke versi terbaru yang sudah dites dengan Nouride ini, atau kembali ke <versi>
+nouride agents update <cli> [<versi>]   # ke versi terbaru yang sudah rilis, atau ke <versi>
 nouride agent sleep <id>          # gak menerima kerjaan sampai wake, restart pun gak membangunkannya (pause juga bisa)
 nouride agent wake  <id>          # (resume juga bisa)
 nouride agent reload <id>
@@ -161,10 +167,12 @@ nouride agent skill-root rm  <id> <path>
 nouride acp [--agent <id>]        # agent di Zed atau editor ACP lain; editor yang menjalankan ini
 ```
 
-`agents scan` mengecek ulang tiap kali, dan mencetak tiap CLI beserta perintah yang dijalankan Nouride dan versi
-perintah itu: versi adapter ACP-nya (`claude-agent-acp 0.97.0`), bukan versi CLI-nya sendiri. Di bawah tiap CLI
-bawaan dia bilang posisi versi itu dibanding versi-versi yang sudah dites dengan Nouride ini dan versi terbaru yang
-sudah rilis, yang dia tanyakan ke registry npm paling sering sehari sekali; `nouride doctor` bilang hal yang sama. `agents login`
+`agents scan` mengecek ulang tiap kali, dan mencetak tiap CLI dengan versinya sendiri (Claude Code 2.1.323) beserta
+perintah yang dijalankan Nouride dan, di bawahnya, semua yang dipakainya untuk jalan: Node, adapter ACP-nya, CLI yang
+dibawa adapter itu, dan paket-paket lain milik adapter (0.8.38). Di bawah tiap CLI bawaan dia bilang posisi versinya
+dibanding versi terbaru yang sudah rilis, yang dia tanyakan ke registry npm paling sering sehari sekali, dan dibanding
+versi-versi yang sudah dites dengan Nouride ini; versi baru ditawarkan baik sudah dites maupun belum, dan dia bilang
+yang mana. `nouride doctor` bilang hal yang sama. `agents update` tanpa versi meng-install yang ditawarkan. `agents login`
 menjalankan login CLI di box, di profil milik agent itu sendiri, dan menampilkan di sini apa yang dicetaknya; baris yang
 kamu ketik jadi input berikutnya, dan Ctrl-D menghentikannya. `agent external` dan `agent internal` urusan admin,
 sama seperti login. `acp` dijalankan oleh editor, bukan diketik: dia bicara Agent Client Protocol lewat stdin dan
@@ -348,7 +356,7 @@ Webhook adalah job yang sama, pakai `nouride cron` untuk `rm`, `enable`, `disabl
 nouride skills [agent] [-v]       # apa yang ditawarkan ke agent, dan kapan tiap skill dibaca
 nouride skills --all              # seluruh kumpulan: siapa yang menyalakannya, dan software yang kurang
 nouride skills on|off <skill> <agent>
-nouride skills search <kueri>     # skills.sh, ClawHub dan indeks well-known
+nouride skills search <kueri>     # katalog skill publik Nouverse; --source skills.sh,clawhub bertanya ke daftar itu
 nouride skills install <sumber>   # owner/repo, URL, clawhub:slug… - masuk sebagai draft
 nouride skills drafts             # apa yang diusulkan para agent
 nouride skills draft <id>         # satu draft utuh, beserta giliran asalnya

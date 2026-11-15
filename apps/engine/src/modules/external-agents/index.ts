@@ -37,13 +37,16 @@ import type { PlanStep } from "@/modules/notes/store.ts";
 import type { CliModel } from "@/commons/daemon-state.ts";
 import type { AuditPort } from "@/commons/audit.store.ts";
 import { CliConnection, signedOut, unavailableReason, type Spawn } from "./connection.ts";
-import { OfferedModels, offeredModels } from "./models.ts";
+import { OfferedModels, offeredModels, renewLists } from "./models.ts";
 import { accountLaunch, launchFor, ownFolder, profileDirOf } from "./launch.ts";
 import { FRESH_POLL_MS, FRESH_WAIT_MS, hashedEach, notStartedWith, pause } from "./fresh-secrets.ts";
 import { CliAccounts, type AccountsDeps, type CliAccountsView } from "./accounts.ts";
 import { LentTools } from "./lent-tools.ts";
 import { CliLogin, type LoginView, type SignIn } from "./login.ts";
 import { openOnBox, returnAddress } from "./callback.ts";
+import { KeptParts } from "./parts.ts";
+import { AccountRotation, type LimitsFile } from "./rotation.ts";
+import type { AccountUse } from "./use.ts";
 import { profileNames, type CliProfile } from "./profiles.ts";
 import { cliSessionKey, ExternalTurnRunner, type RunnerHost } from "./runner.ts";
 import { Instructed, type InstructedFile } from "./instructed.ts";
@@ -92,6 +95,10 @@ export interface CliRoom {
 export interface ExternalAgentsDeps {
   /** The CLIs this install knows: the built-in rows and the person's own. */
   rows?: () => readonly CliRow[];
+  /** The agents a CLI answers, by id: whose model lists a new version of it lets go. Absent: the one it was checked for. */
+  agentsOn?: (cliId: string) => string[];
+  /** The accounts at a limit, kept across a restart (`rotation.ts`). Absent: in this process alone. */
+  limits?: LimitsFile;
   workspaceDir: () => string;
   /** The secrets bound to a command of the agent's (`[security.exec_secrets]`), as variables. */
   secretsFor: (agentId: string, argv: readonly string[]) => Record<string, string>;
@@ -165,6 +172,10 @@ export class ExternalAgents implements RunnerHost {
   /** Wakes an agent's chat for what its CLI said by itself: a turn there reads it. Set once the pipeline is up. */
   onOwnWords?: (chat: OwnChat) => void;
   private scanned: { at: number; clis: Promise<ScannedCli[]> } | null = null;
+  /** What each CLI runs on, as last read (`parts.ts`): `/status` names the CLI's own version from it. */
+  private readonly parts = new KeptParts();
+  /** Which account each agent is on, and the accounts at a limit: an agent moved to its next (`rotation.ts`). */
+  readonly rotation: AccountRotation;
   /** What the CLIs leave running in the background, and the chats owed what came of it. */
   private readonly left: LeftRunning;
   /** A CLI being updated, held while its new version installs, and checked after (`cli-update.ts`, 0.8.24). */
@@ -194,6 +205,7 @@ export class ExternalAgents implements RunnerHost {
     this.models = new OfferedModels(deps.models);
     this.efforts = new OfferedModels(deps.efforts);
     this.accounts = new CliAccounts(deps.accounts ?? {});
+    this.rotation = new AccountRotation({ usable: (row, account) => this.accounts.token(row, account) !== undefined, record: (action, details) => deps.audit?.record({ action, actor: "nouride:system", details }), ...(deps.limits ? { file: deps.limits } : {}), ...(deps.now ? { now: deps.now } : {}) });
     this.ownWords = new OwnWords((chat) => this.onOwnWords?.(chat), deps.quietMs);
     this.left = new LeftRunning(deps.leftRunning, deps.commandsUnder ?? commandsRunningUnder);
     this.updates = new CliUpdates({
@@ -206,7 +218,8 @@ export class ExternalAgents implements RunnerHost {
       },
       connection: (agent) => this.connection(agent),
       setUnavailable: (agentId, reason) => this.setUnavailable(agentId, reason),
-      forgetScan: () => void (this.scanned = null),
+      forgetScan: () => void ((this.scanned = null), this.parts.clear()),
+      newVersion: (cliId, agentId, opened) => renewLists(this, agentId, opened, deps.agentsOn?.(cliId) ?? []),
       ...(deps.versions ? { versions: deps.versions } : {}),
     });
   }
@@ -214,6 +227,11 @@ export class ExternalAgents implements RunnerHost {
   /** Every CLI this install knows, built-in first. */
   rows(): readonly CliRow[] {
     return this.deps.rows?.() ?? BUILT_IN_CLIS;
+  }
+
+  /** The account's use as the agent's running CLI last said it (`use.ts`): what a turn's end reads to move on early. */
+  accountUse(agentId: string): AccountUse | null {
+    return this.running.get(agentId)?.accountUse ?? null;
   }
 
   row(id: string): CliRow | undefined {
@@ -242,7 +260,7 @@ export class ExternalAgents implements RunnerHost {
     if (!external) return null;
     const open = this.running.get(agent.config.id);
     const handshake = open && !open.closed ? open.info?.agentInfo : undefined;
-    return answeringOf(this.row(external.cli)?.name ?? external.cli, external.model, handshake, this.models.runsOn(agent.config.id), this.contexts.of(agent.config.id, cliSessionKey(gatewayId, chatId)));
+    return answeringOf(this.row(external.cli)?.name ?? external.cli, external.model, handshake, this.models.runsOn(agent.config.id), this.contexts.of(agent.config.id, cliSessionKey(gatewayId, chatId)), this.parts.ownVersion(external.cli), external.accounts ? (this.rotation.accountOf(agent.config.id) ?? external.accounts[0]) : undefined);
   }
 
   /**
@@ -394,7 +412,7 @@ export class ExternalAgents implements RunnerHost {
    * them. Not while another turn works in one of its sessions, a session goes on by itself, or a command it left running
    * would end with it: a later turn starts it again.
    */
-  async connection(agent: LoadedAgent): Promise<CliConnection> {
+  async connection(agent: LoadedAgent, model?: string): Promise<CliConnection> {
     const external = agent.config.external;
     if (!external) throw new Error(`${agent.config.id} is not an external agent`);
     const agentId = agent.config.id;
@@ -404,7 +422,10 @@ export class ExternalAgents implements RunnerHost {
     if (held) throw new NourideError("external_agent", held, held);
     const profile = external.profile ?? "default";
     const secrets = this.deps.secretsFor(agentId, [row.command, ...row.args]);
-    const stamp = secretsStamp(secrets);
+    // The account this turn runs on: the one it is on, or its next where that is at a limit for the turn's model. The
+    // folder stays `profile`, the first; a CLI on another account is started again as one whose secrets changed is.
+    const account = this.rotation.accountFor(row, { id: agentId, name: agent.config.displayName, external }, model);
+    const stamp = `${secretsStamp(secrets)}|${account}`;
     const current = this.running.get(agentId);
     if (current && !current.closed && current.row.id === row.id && current.launch.profileDir === launchFor({ row, profile, privateDir: this.privateDir(agentId), secrets: {} }).profileDir) {
       if (this.startedWith.get(agentId) === stamp || current.busy || current.held || this.left.commandsOf(current) > 0) return current;
@@ -418,7 +439,7 @@ export class ExternalAgents implements RunnerHost {
     if (pending) return pending;
     const start = (async () => {
       const lent = row.mcpEnvHeaders && this.deps.mcpUrl?.() ? this.lent.env(agentId) : {};
-      const launch = launchFor({ row, profile, privateDir: ownFolder(this.privateDir(agentId)), secrets: { ...secrets, ...this.tokenEnv(row, profile), ...lent } });
+      const launch = launchFor({ row, profile, privateDir: ownFolder(this.privateDir(agentId)), secrets: { ...secrets, ...this.tokenEnv(row, account), ...lent } });
       const connection = new CliConnection(row, launch, agentId, this.deps.spawn ?? spawnLongLived, this.deps.now);
       connection.onOwnWords = (sessionId, update) => {
         // It says what came of it: a stop from here cuts nothing of that session's off.
@@ -440,6 +461,8 @@ export class ExternalAgents implements RunnerHost {
         this.setUnavailable(agentId, failed);
         throw new NourideError("external_agent", failed, failed);
       }
+      connection.parts = this.parts.started(row, launch.env, runCommand);
+      this.rotation.started(agentId, account);
       this.running.set(agentId, connection);
       this.startedWith.set(agentId, stamp);
       this.startedWithEach.set(agentId, hashedEach(secrets));
@@ -459,11 +482,11 @@ export class ExternalAgents implements RunnerHost {
    * that goes on, told which variables its shell does not have yet. Not for a command the CLI left running: that may go
    * on for hours, and the turn is told at once instead.
    */
-  async forTurn(agent: LoadedAgent, signal?: AbortSignal): Promise<{ cli: CliConnection; notYet: string[] }> {
+  async forTurn(agent: LoadedAgent, signal?: AbortSignal, model?: string): Promise<{ cli: CliConnection; notYet: string[] }> {
     const now = this.deps.now ?? Date.now;
     const deadline = now() + (this.deps.freshWaitMs ?? FRESH_WAIT_MS);
     for (;;) {
-      const cli = await this.connection(agent);
+      const cli = await this.connection(agent, model);
       const notYet = this.notYet(agent.config.id, cli);
       const blocked = cli.busy || cli.held;
       if (notYet.length === 0 || !blocked || this.left.commandsOf(cli) > 0 || now() >= deadline || signal?.aborted) return { cli, notYet };
@@ -494,7 +517,9 @@ export class ExternalAgents implements RunnerHost {
       const scan = this.deps.scan ?? ((row: CliRow) => scanCli(row));
       this.scanned = { at: now, clis: Promise.all(this.rows().map(scan)) };
     }
-    return withStanding(await this.scanned.clis, this.deps.newest, check);
+    const clis = await this.scanned.clis;
+    this.parts.note(clis);
+    return withStanding(clis, this.deps.newest, check, this.rows());
   }
 
   /**
@@ -568,7 +593,7 @@ export class ExternalAgents implements RunnerHost {
 
   /** Every CLI with its accounts and the agents on each, for the Models page; `fresh` (Check again) asks the registry too. */
   async accountList(agents: readonly LoadedAgent[], fresh = false): Promise<CliAccountsView[]> {
-    return this.accounts.list(this.rows(), await this.scan(fresh, fresh), agents, (agent) => this.profiles(agent, fresh));
+    return this.accounts.list(this.rows(), await this.scan(fresh, fresh), agents, (agent) => this.profiles(agent, fresh), this.rotation);
   }
 
   /**

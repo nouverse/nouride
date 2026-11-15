@@ -24,7 +24,9 @@ import { canWrite, useMe } from "@/commons/lib/session";
 import { useTextFilter } from "@/commons/lib/use-text-filter";
 import { useOrchestratorFirst } from "@/commons/components/agents/AgentName";
 import { Elsewhere, elsewhereWords, ShowEveryone } from "@/commons/components/people/Elsewhere";
-import { FILL_PAGE, ScrollCard } from "@/commons/components/ui/ScrollCard";
+import { ListCard } from "@/commons/components/ui/ListCard";
+import { SearchInput } from "@/commons/components/ui/SearchInput";
+import { StickyBar } from "@/commons/components/ui/StickyBar";
 import { Count, SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
 import { Card, EmptyState, ErrorNote, PageHeader } from "@/commons/components/ui/ui";
 import { useWhose, type Whose } from "@/commons/hooks/use-whose";
@@ -139,7 +141,7 @@ export default function MissionsPage({ agent }: { agent?: string }) {
   };
 
   return (
-    <div className={FILL_PAGE}>
+    <div className="space-y-6 *:animate-fade">
       <PageHeader
         ask={PAGE_ASKS.missions}
         title="Missions"
@@ -184,25 +186,30 @@ export default function MissionsPage({ agent }: { agent?: string }) {
 
       {limitsOpen && <MissionSettingsCard />}
 
-      <SegmentedTabs
-        tabs={TABS.map((entry) => ({
-          value: entry.id,
-          label: entry.label,
-          // The one count coloured: it is the one that means somebody has to do something.
-          after: <Count n={counts[entry.id]} highlight={entry.id === "needs_you" && counts.needs_you > 0} />,
-        }))}
-        value={tab}
-        onChange={setTab}
-      />
-
-      {/* Keyed by the tab, so the list it filters is drawn anew and fades in (`FILL_PAGE`). */}
-      <ScrollCard
-        key={tab}
-        fill
-        title={current.title(counts[tab])}
-        {...(held.length > 0 ? { search: { value: filter, onChange: setFilter, placeholder: "Search missions" } } : {})}
-        actions={<MissionFilters picker={canPick ? { whose, setWhose } : null} days={days} onDays={setDays} agent={agent} agents={agents.map((entry) => entry.id)} />}
+      {/* The tabs, the filters and the search stay at the top of the window while the list scrolls under them. */}
+      <StickyBar
+        label="Which missions"
+        tools={
+          <>
+            {held.length > 0 ? <SearchInput value={filter} onChange={setFilter} placeholder="Search missions" className="w-48" /> : null}
+            <MissionFilters picker={canPick ? { whose, setWhose } : null} days={days} onDays={setDays} agent={agent} agents={agents.map((entry) => entry.id)} />
+          </>
+        }
       >
+        <SegmentedTabs
+          tabs={TABS.map((entry) => ({
+            value: entry.id,
+            label: entry.label,
+            // The one count coloured: it is the one that means somebody has to do something.
+            after: <Count n={counts[entry.id]} highlight={entry.id === "needs_you" && counts.needs_you > 0} />,
+          }))}
+          value={tab}
+          onChange={setTab}
+        />
+      </StickyBar>
+
+      {/* Keyed by the tab, so the list it filters is drawn anew and fades in. */}
+      <ListCard key={tab} title={current.title(counts[tab])}>
         {failed ? (
           <ErrorNote error={failed} />
         ) : arriving ? (
@@ -218,7 +225,7 @@ export default function MissionsPage({ agent }: { agent?: string }) {
             <Elsewhere count={elsewhere} onEveryone={everyone} />
           </div>
         ) : null}
-      </ScrollCard>
+      </ListCard>
     </div>
   );
 }

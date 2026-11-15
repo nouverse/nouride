@@ -10,6 +10,7 @@ import { Card } from "@/commons/components/ui/ui";
 import { Markdown } from "@/commons/components/ui/Markdown";
 import { MarkdownPreview } from "@/commons/components/ui/MarkdownPreview";
 import { Leaving } from "@/commons/components/ui/OverPage";
+import { Expandable } from "@/commons/components/ui/ListCard";
 
 export function BriefCard({ brief, shown }: { brief: string; shown: { name: string; said: string } }) {
   const [open, setOpen] = useState(false);
@@ -26,9 +27,9 @@ export function BriefCard({ brief, shown }: { brief: string; shown: { name: stri
           </button>
         }
       >
-        <div className="max-h-96 overflow-y-auto pr-1 [overflow-wrap:anywhere]">
+        <Expandable maxHeight="max-h-96" className="[overflow-wrap:anywhere]">
           <Markdown source={brief} compact />
-        </div>
+        </Expandable>
       </Card>
       {/* Outside the card's body: folded, the body is not there, and the file still opens from the header. */}
       <Leaving value={reading}>{() => <MarkdownPreview name={shown.name} source={brief} onClose={() => setReading(false)} />}</Leaving>

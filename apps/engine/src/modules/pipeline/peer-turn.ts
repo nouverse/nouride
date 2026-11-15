@@ -55,6 +55,7 @@ import { meter } from "@/modules/llm/metered.ts";
 import { contextInto, stepsInto } from "@/modules/turns/recorder.ts";
 import { alertOnFallback } from "@/modules/pipeline/fallback-alert.ts";
 import { fallbacksFor } from "@/modules/llm/fallbacks.ts";
+import { askDone, keepDone } from "./work-done.ts";
 
 const log = createLogger("pipeline.peer-turn");
 
@@ -291,6 +292,8 @@ export function startPeerTurn(ctx: TurnContext, request: PeerTurnRequest, option
     /** How it ended — written to its own record too, when it moved and has one. */
     const close = (outcome: HelperOutcome, result?: DelegatedEnd["result"]): HelperOutcome => {
       record?.finish(outcome, { ...(result ? { result } : {}), model, stopped: controller.signal.aborted });
+      // Kept for both agents' own chats once it has ended (`work-done.ts`).
+      keepDone(ctx.deps.workDone, askDone({ helper: peer.config.id, asker: request.from, from: request.ctx, task: request.task, report: outcome.report, job: job?.id, paused: outcome.paused }));
       return outcome;
     };
     try {

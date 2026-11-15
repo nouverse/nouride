@@ -144,7 +144,7 @@ describe("each kind, written in its card", () => {
       sent = await saved(host);
     });
     expect(seen.agents).toEqual(["Nouva, who runs this automation", "Nix"]);
-    expect(seen.kinds).toEqual(["Ask an agent", "Run a command", "Send a message", "Start a mission", "Wait for your OK"]);
+    expect(seen.kinds).toEqual(["Ask an agent", "Run a command", "Send a message", "Start a mission", "Wait for your OK", "Several at the same time"]);
     expect(seen.titles[0]).toContain("Step 1 · Run a commandls -la");
     // Another agent's step says whose it is.
     expect(seen.titles[1]).toContain("Step 2 · Nix works on itLook into it.");

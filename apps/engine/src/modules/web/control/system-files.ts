@@ -62,7 +62,10 @@ const PER_AGENT = new Set(["attachments", "tool-output", "jobs"]);
  * Whether what is at `path` may be deleted by an admin from the page: what is in the agents' workspaces, a chat's
  * attachments, a tool's kept output and a job's log. Never the folders Nouride lays out itself, which carry each
  * agent's own user and group: `workspace`, its `shared` and `private`, and an agent's own folder in each of these.
- * Those would come back owned by the wrong user, or not at all.
+ * Those would come back owned by the wrong user, or not at all. Nor the folders of an agent's coding CLI and its
+ * accounts (`.cli/<cli>/<account>`, as `external-agents/launch.ts` lays them out): one of those gone is the agent
+ * signed out of its CLI and every conversation's session with it, under a name that says none of that. What is inside
+ * an account's folder is the CLI's own, and may go.
  */
 export function removableAt(path: string, kind: "folder" | "file"): boolean {
   const parts = path.split("/");
@@ -70,7 +73,7 @@ export function removableAt(path: string, kind: "folder" | "file"): boolean {
   const at = parts[0] === "data" && PER_AGENT.has(parts[1] ?? "") ? parts.slice(1) : parts;
   if (at[0] === "workspace") {
     if (at[1] === "shared") return at.length > 2;
-    if (at[1] === "private") return at.length > 3;
+    if (at[1] === "private") return at.length > (at[3] === ".cli" ? 6 : 3);
     return at.length > 1;
   }
   if (!PER_AGENT.has(at[0] ?? "")) return false;

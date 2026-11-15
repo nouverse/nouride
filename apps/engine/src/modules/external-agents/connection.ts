@@ -8,11 +8,12 @@
  */
 
 import { VERSION } from "@/commons/version.ts";
-import { AcpClient, AcpError, AUTH_REQUIRED, type CliRow, type ContentBlock, type InitializeResult, type McpServer, type NewSessionResult, type PermissionOutcome, type RequestPermissionParams, type SessionConfigOption, type SessionUpdate, type PromptAnswer, type SteerOutcome } from "@nouride/acp";
+import { AcpClient, AcpError, AUTH_REQUIRED, INTERNAL_ERROR, type CliPart, type CliRow, type ContentBlock, type InitializeResult, type McpServer, type NewSessionResult, type PermissionOutcome, type RequestPermissionParams, type SessionConfigOption, type SessionUpdate, type PromptAnswer, type SteerOutcome } from "@nouride/acp";
 import { createLogger } from "@nouride/shared";
 import type { LongLivedProcess } from "@nouride/runtime";
 import type { Launch } from "./launch.ts";
 import { thoughtLevel } from "./models.ts";
+import { useOf, type AccountUse } from "./use.ts";
 
 const log = createLogger("external-agents");
 
@@ -31,6 +32,28 @@ export function unavailableReason(row: CliRow, error: unknown, stderr: readonly 
   if (signedOut(row, error)) return `${row.name} is not signed in. Sign in on the agent's Brain tab`;
   const line = (error instanceof Error ? error.message : String(error)).split("\n")[0] ?? "";
   return `${row.name} did not start: ${line.slice(0, 200)}`;
+}
+
+/** The failures a message's own call ended with, marked where the call is made: the error itself stays what it was. */
+const inPrompt = new WeakSet<object>();
+
+/** Whether the CLI had taken a message when this failed: the message's failure, not the CLI's start. */
+export const failedInPrompt = (error: unknown): boolean => typeof error === "object" && error !== null && inPrompt.has(error);
+
+/**
+ * Why a message the CLI was sent got no answer, in words for the chat: refused, with what the CLI said, or the CLI gone
+ * while it worked. Never "did not start": it had started, opened its session and taken the message. A turn an account's
+ * limit refused read "Claude Code did not start: session/prompt: Internal error: You've reached your Fable limit", and
+ * the person went looking for a CLI that would not start.
+ *
+ * What the CLI said is kept as it said it. Two things of the protocol's own are taken off the front: the call's name,
+ * which is ours, and JSON-RPC's standard phrase for its internal-error code, which says nothing the code does not.
+ */
+export function promptFailed(row: CliRow, error: unknown, closed: boolean): string {
+  const line = (error instanceof Error ? error.message : String(error)).split("\n")[0] ?? "";
+  const named = line.replace(/^session\/prompt:\s*/, "");
+  const said = (error instanceof AcpError && error.code === INTERNAL_ERROR ? named.replace(/^Internal error:\s*/, "") : named).slice(0, 300);
+  return closed ? `${row.name} stopped while it answered: ${said}` : `${row.name} refused the message: ${said}`;
 }
 
 /** The protocol's sign-in refusal, or the words a CLI uses for being signed out or not set up. */
@@ -63,6 +86,10 @@ export class CliConnection {
   lastUsed: number;
   /** What a session says with no prompt running — the CLI going on by itself (`own-words.ts`). */
   onOwnWords?: (sessionId: string, update: SessionUpdate) => void;
+  /** What this CLI runs on, read from the files installed as it started (`parts.ts`); none until then, or for a row that names no package. */
+  parts: Promise<CliPart[]> = Promise.resolve([]);
+  /** The account's use as this CLI last said it in a prompt (`use.ts`); null before it said any. */
+  accountUse: AccountUse | null = null;
 
   constructor(
     readonly row: CliRow,
@@ -344,7 +371,13 @@ export class CliConnection {
     this.running += 1;
     this.permissions.set(sessionId, onPermission);
     try {
-      return await client.promptAnswer(sessionId, blocks, onUpdate);
+      return await client.promptAnswer(sessionId, blocks, (update) => {
+        this.accountUse = useOf(this.row, update, this.now()) ?? this.accountUse;
+        onUpdate(update);
+      });
+    } catch (err) {
+      if (typeof err === "object" && err !== null) inPrompt.add(err);
+      throw err;
     } finally {
       this.permissions.delete(sessionId);
       this.running -= 1;

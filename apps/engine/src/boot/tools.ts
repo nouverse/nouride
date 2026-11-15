@@ -29,7 +29,7 @@ import type { GrantsPort } from "@/modules/tools/grants.store.ts";
 import type { ToolGrantsPort } from "@/modules/tools/tool-grants.store.ts";
 import type { SqliteApprovalGate } from "@/modules/tools/approvals.store.ts";
 import type { ReflectionEngine } from "@/modules/reflection/index.ts";
-import { createSkillHub } from "@/modules/skills-hub/index.ts";
+import { createSkillHub, type SkillsCatalog } from "@/modules/skills-hub/index.ts";
 import { peersFrom } from "@/modules/tools/builtins/ask-agent.ts";
 import { createBuiltinTools } from "@/modules/tools/registry.ts";
 import type { HarnessToolOptions } from "@/modules/tools/builtins/harness.ts";
@@ -63,6 +63,8 @@ export function buildTools(deps: {
   mcp?: McpManager;
   /** Nouverse's MCP catalog, for `mcp_search` (0.7.19). Undefined when `NOURIDE_MCP_CATALOG_URL` turns it off. */
   mcpCatalog?: McpCatalog | undefined;
+  /** Nouverse's skills catalog, asked first by `skill_search`. Undefined when `NOURIDE_SKILLS_CATALOG_URL` turns it off. */
+  skillsCatalog?: SkillsCatalog | undefined;
   grants: GrantsPort;
   toolGrants: ToolGrantsPort;
   jobs: JobsPort;
@@ -222,7 +224,7 @@ export function buildTools(deps: {
     },
     ...(deps.reflection ? { reflection: deps.reflection } : {}),
     ...(deps.mcpCatalog ? { mcpCatalog: { catalog: deps.mcpCatalog, linkFor: deps.linkFor } } : {}),
-    ...(deps.reflection ? { skillHub: createSkillHub({ config, secrets: deps.secrets, reflection: deps.reflection, builtinSkillsDir }) } : {}),
+    ...(deps.reflection ? { skillHub: createSkillHub({ config, secrets: deps.secrets, reflection: deps.reflection, builtinSkillsDir, catalog: deps.skillsCatalog }) } : {}),
     harness: {
       registry,
       agentsDir: config.daemon.agentsDir,

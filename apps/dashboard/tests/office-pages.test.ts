@@ -87,13 +87,13 @@ const CHAT_LIST = {
   groups: [],
 };
 
-function serve(status: unknown = STATUS): { posted: { path: string; body: unknown }[] } {
+function serve(status: unknown = STATUS, role = "admin"): { posted: { path: string; body: unknown }[] } {
   const posted: { path: string; body: unknown }[] = [];
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const path = new URL(String(input), "http://localhost").pathname;
     if (path === "/api/control/status") return json(status);
     if (path === "/api/control/chat-list") return json(CHAT_LIST);
-    if (path === "/api/control/auth/me") return json({ id: "u1", username: "mira", role: "admin" });
+    if (path === "/api/control/auth/me") return json({ id: "u1", username: "mira", role });
     if (init?.method === "POST") {
       posted.push({ path, body: JSON.parse(String(init.body ?? "{}")) });
       return json({ ok: true });
@@ -108,7 +108,8 @@ async function mount(page: "office" | "look", agentId = "codey"): Promise<{ host
   const { createRoot } = await import("react-dom/client");
   const { QueryClient, QueryClientProvider } = await import("@tanstack/react-query");
   const { RouterProvider, createRootRoute, createRoute, createRouter, createMemoryHistory, Outlet } = await import("@tanstack/react-router");
-  const { default: OfficePage } = await import("@/modules/office/index.page");
+  // The Office is the top of the Agents page: the cats over the list of the same agents.
+  const { default: OfficePage } = await import("@/modules/agents/index.page");
   const { default: AgentLookPage } = await import("@/modules/agents/look.page");
   // The pages link to others; a router to hold them, the page under test its only route.
   const root = createRootRoute({ component: () => React.createElement(Outlet) });
@@ -145,24 +146,131 @@ describe("the Office", () => {
       await eventually(() => drawn.some((call) => call.method === "drawImage"), 2_000, "the room drawn");
       const painted = drawn.filter((call) => call.method === "putImageData").map((call) => call.args[0] as { data: Uint8ClampedArray });
       expect(painted.some((image) => image.data.some((value, at) => at % 4 === 3 && value === 255))).toBe(true);
+      // Under the office, every agent as a row, the orchestrator first: each a line to press, none opened yet.
+      const rows = () => [...host.querySelectorAll<HTMLElement>("[data-agent-row]")];
+      const row = (id: string) => host.querySelector<HTMLElement>(`[data-agent-row="${id}"]`)!;
+      // In the order the server lists them, the orchestrator first: the list's own order, not the office's seats.
+      expect(rows().map((entry) => entry.dataset.agentRow)).toEqual(["nouva", "wren", "codey", "sleepy"]);
+      // A row is one thing to press, and it opens: the line was a link to the agent's page with a small arrow beside it
+      // that opened, so a press meant for one took the other. Closed, it holds no link at all.
+      expect(rows().map((entry) => [entry.querySelectorAll("a").length, entry.querySelectorAll("button").length, entry.querySelector("button")!.getAttribute("aria-expanded")])).toEqual([[0, 1, "false"], [0, 1, "false"], [0, 1, "false"], [0, 1, "false"]]);
+      // Read as what it shows, not by a name that hides it.
+      expect(row("nouva").querySelector("button")!.getAttribute("aria-label")).toBeNull();
+      expect(host.querySelectorAll("[data-agent-actions]")).toHaveLength(0);
       (host.querySelector('button[aria-label="Nouva, working"]') as HTMLButtonElement).click();
-      await eventually(() => (host.textContent ?? "").includes("telegram:nouva · 555"), 2_000, "its card");
-      expect(host.textContent).toContain("Edit look");
-      // Its card wears the orchestrator's badge too (0.8.15); Wren's, below, does not.
-      const card = () => host.querySelector("aside")?.textContent ?? "";
+      // Picking a cat shows that agent right under the Office, where the press was: what it is doing, and what a person
+      // does with it. Its row, down in the list, stays as it was: the same actions are never on the page twice.
+      const picked = () => host.querySelector<HTMLElement>("[data-agent-picked]");
+      await eventually(() => (picked()?.textContent ?? "").includes("telegram:nouva · 555"), 2_000, "its card, under the office");
+      expect(picked()!.dataset.agentPicked).toBe("nouva");
+      expect(host.querySelectorAll("[data-agent-actions]")).toHaveLength(1);
+      expect(rows().map((entry) => entry.querySelector("[data-agent-actions]"))).toEqual([null, null, null, null]);
+      expect(rows().map((entry) => entry.querySelector("button")!.getAttribute("aria-expanded"))).toEqual(["false", "false", "false", "false"]);
+      // Under the Office and over the list and its filter: a card of the page, before the row that stays.
+      const order = (first: Element, second: Element) => Boolean(first.compareDocumentPosition(second) & 4);
+      expect(order(host.querySelector('button[aria-label="Nouva, working"]')!, picked()!)).toBe(true);
+      expect(order(picked()!, host.querySelector("[data-sticky-bar]")!)).toBe(true);
+      expect(order(picked()!, host.querySelector("[data-agent-rows]")!)).toBe(true);
+      const actions = () => [...host.querySelectorAll<HTMLElement>("[data-agent-actions] a, [data-agent-actions] button")].map((entry) => entry.textContent?.trim());
+      expect(actions().filter((label) => ["Details", "Open chat", "Sleep", "Workspace", "Edit look"].includes(label ?? ""))).toEqual(["Details", "Open chat", "Sleep", "Workspace", "Edit look"]);
+      // Details is the agent's own page.
+      expect([...host.querySelectorAll("[data-agent-actions] a")].find((link) => link.textContent?.trim() === "Details")!.getAttribute("href")).toBe("/agents/nouva");
+      // The orchestrator's card wears its badge; Wren's, next, does not.
+      const card = () => picked()?.textContent ?? "";
       expect(card()).toContain("orchestrator");
       // Open chat carries on the cat's newest conversation, as its row in the chat list does: it started a new one every
       // time, and the conversation the person was in was left behind.
       const openChat = () => [...host.querySelectorAll("a")].find((link) => (link.textContent ?? "").includes("Open chat"));
       await eventually(() => (openChat()?.getAttribute("href") ?? "").endsWith("/chat/ses_nouva_newest"), 2_000, "Nouva's newest conversation");
-      // One nobody has talked to starts a chat with the cat that was picked: `/chat` alone was the orchestrator's.
+      // Another cat picked takes the card: one nobody has talked to starts a chat with the cat that was picked.
       (host.querySelector('button[aria-label="Wren, waiting for you"]') as HTMLButtonElement).click();
       await eventually(() => (openChat()?.getAttribute("href") ?? "").includes("agent=wren"), 2_000, "Wren's Open chat");
       expect(openChat()!.getAttribute("href")).toMatch(/\/chat\/?\?agent=wren$/);
       expect(card()).not.toContain("orchestrator");
+      expect([host.querySelectorAll("[data-agent-picked]").length, picked()!.dataset.agentPicked, host.querySelectorAll("[data-agent-actions]").length]).toEqual([1, "wren", 1]);
+      expect(host.querySelector('button[aria-label="Wren, waiting for you"]')!.getAttribute("aria-pressed")).toBe("true");
+      // It closes by its own button, and the cat is no longer the one marked.
+      (picked()!.querySelector('button[aria-label="Close Wren"]') as HTMLButtonElement).click();
+      await eventually(() => picked() === null, 2_000, "closed by its button");
+      expect(host.querySelectorAll("[data-agent-actions]")).toHaveLength(0);
+      expect(host.querySelector('button[aria-label="Wren, waiting for you"]')!.getAttribute("aria-pressed")).toBe("false");
+      // And by its cat pressed again.
+      (host.querySelector('button[aria-label="Wren, waiting for you"]') as HTMLButtonElement).click();
+      await eventually(() => picked()?.dataset.agentPicked === "wren", 2_000, "picked again");
+      (host.querySelector('button[aria-label="Wren, waiting for you"]') as HTMLButtonElement).click();
+      await eventually(() => picked() === null, 2_000, "closed by its cat");
+      // A row opens without the office: a press anywhere on its line, on the name as on the line's end, under that row.
+      (row("codey").querySelector("button[aria-expanded] .truncate") as HTMLElement).click();
+      await eventually(() => row("codey").querySelector("[data-agent-actions]") !== null, 2_000, "opened from its row");
+      expect(row("codey").textContent).toContain("Cannot work: Codex is not signed in");
+      expect(picked()).toBeNull();
+      // The press opened it and went nowhere: the list is still the page, and the way to the agent's page is Details.
+      expect(host.querySelector("[data-agent-rows]")).not.toBeNull();
+      expect(rows()).toHaveLength(4);
+      expect([...row("codey").querySelectorAll("[data-agent-actions] a")].find((link) => link.textContent?.trim() === "Details")!.getAttribute("href")).toMatch(/^\/agents\/codey/);
+      // A row pressed does not mark a cat, and it closes by the same press.
+      expect(host.querySelectorAll('button[aria-pressed="true"]')).toHaveLength(0);
+      // One at a time: a cat picked while a row is open closes the row, and a row pressed closes the card.
+      (host.querySelector('button[aria-label="Nouva, working"]') as HTMLButtonElement).click();
+      await eventually(() => picked()?.dataset.agentPicked === "nouva", 2_000, "the card, in the row's place");
+      expect([host.querySelectorAll("[data-agent-actions]").length, row("codey").querySelector("[data-agent-actions]")]).toEqual([1, null]);
+      (row("wren").querySelector("button[aria-expanded]") as HTMLButtonElement).click();
+      await eventually(() => row("wren").querySelector("[data-agent-actions]") !== null, 2_000, "the row, in the card's place");
+      expect([picked(), host.querySelectorAll("[data-agent-actions]").length]).toEqual([null, 1]);
+      (row("wren").querySelector("button[aria-expanded]") as HTMLButtonElement).click();
+      await eventually(() => host.querySelectorAll("[data-agent-actions]").length === 0, 2_000, "closed by the same press");
     } finally {
       unmount();
     }
+  });
+
+  // A cat picked used to open its row down in the list, and the page was moved to bring the row into view: the page
+  // left under the hand that had just pressed. Its card is under the Office now, where the press was.
+  test("nothing moves the page: not a cat picked, wherever its row is, and not a row pressed", async () => {
+    serve();
+    const { host, unmount } = await mount("office");
+    const proto = dom.window.HTMLElement.prototype as unknown as { scrollIntoView?: (this: HTMLElement) => void; getBoundingClientRect: () => unknown };
+    const [realScroll, realRect] = [proto.scrollIntoView, proto.getBoundingClientRect];
+    const moved: string[] = [];
+    try {
+      await eventually(() => host.querySelectorAll("button[aria-pressed]").length === 4, 3_000, "a button per cat");
+      proto.scrollIntoView = function (this: HTMLElement) { moved.push(this.tagName); };
+      // Every row far below the screen: where the page used to be moved.
+      proto.getBoundingClientRect = () => ({ top: 2000, bottom: 2060, left: 0, right: 0, width: 0, height: 0, x: 0, y: 0, toJSON: () => ({}) });
+      (host.querySelector('button[aria-label="Wren, waiting for you"]') as HTMLButtonElement).click();
+      await eventually(() => host.querySelector("[data-agent-picked]") !== null, 2_000, "Wren's card");
+      (host.querySelector('[data-agent-row="codey"] button[aria-expanded]') as HTMLButtonElement).click();
+      await eventually(() => host.querySelector('[data-agent-row="codey"] [data-agent-actions]') !== null, 2_000, "Codey's row, opened");
+      (host.querySelector('button[aria-label="Nouva, working"]') as HTMLButtonElement).click();
+      await eventually(() => host.querySelector<HTMLElement>("[data-agent-picked]")?.dataset.agentPicked === "nouva", 2_000, "Nouva's card");
+      expect(moved).toEqual([]);
+    } finally {
+      proto.scrollIntoView = realScroll;
+      proto.getBoundingClientRect = realRect as never;
+      unmount();
+    }
+  });
+
+  test("a cat's card opens that agent's own folder for an admin, and has no such button for anyone else", async () => {
+    const workspace = (host: HTMLElement) => [...host.querySelectorAll("a")].find((link) => (link.textContent ?? "").trim() === "Workspace");
+    const opened = async (role: string) => {
+      serve(STATUS, role);
+      const { host, unmount } = await mount("office");
+      try {
+        await eventually(() => host.querySelectorAll("button[aria-pressed]").length === 4, 3_000, "a button per cat");
+        (host.querySelector('button[aria-label="Wren, waiting for you"]') as HTMLButtonElement).click();
+        await eventually(() => (host.textContent ?? "").includes("Edit look"), 2_000, "its row, opened");
+        // Sleep is pressable once who is signed in is known, for an operator as for an admin: only then is a button
+        // that is not there one that was left out.
+        await eventually(() => [...host.querySelectorAll("button")].some((button) => (button.textContent ?? "").trim() === "Sleep" && !button.disabled), 2_000, "who is signed in");
+        return workspace(host)?.getAttribute("href");
+      } finally {
+        unmount();
+      }
+    };
+    // The picked agent's, not the orchestrator's: the tab on its own page.
+    expect(await opened("admin")).toMatch(/\/agents\/wren\/workspace(\?path=)?$/);
+    expect(await opened("operator")).toBeUndefined();
   });
 });
 

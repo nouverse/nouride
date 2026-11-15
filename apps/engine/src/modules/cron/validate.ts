@@ -10,11 +10,12 @@
  * the rows and `next_run_at` — and this can be read without the SQL around it.
  */
 
-import type { JobDelivery, JobPayload, JobStep, StepGo } from "@nouride/shared";
+import type { JobDelivery, JobPayload, JobStep, StepGo, TogetherStep } from "@nouride/shared";
 import { assertTimezone, nextCronOccurrence, parseCronExpr } from "@/modules/cron/expr.ts";
 import type { JobInput } from "@/modules/cron/cron.store.ts";
 import { CHECK_MAX, CHECKS_MAX, GOAL_MAX, REVIEW_MAX } from "@/modules/missions/limits.ts";
 import { APPROVAL_WAIT_MAX_MS, APPROVAL_WAIT_MIN_MS, STEPS_MAX } from "./steps.ts";
+import { TOGETHER_MAX, TOGETHER_MIN } from "./together.ts";
 
 /**
  * A field of a job a refusal is about (0.8.23), which the dashboard's form names: its name, agent and chat, when it
@@ -96,7 +97,7 @@ export function validateJob(input: JobInput, rules: ValidationRules): void {
 }
 
 /** What one thing a job does must be: a job of one kind, or one step of several. */
-function doesProblems(does: Exclude<JobPayload, { kind: "steps" }> | Exclude<JobStep, { kind: "approval" }>, delivery: JobDelivery | undefined): void {
+function doesProblems(does: Exclude<JobPayload, { kind: "steps" }> | Exclude<JobStep, { kind: "approval" | "parallel" }> | TogetherStep, delivery: JobDelivery | undefined): void {
   if (does.kind === "systemEvent" && !does.text.trim()) {
     throw new CronValidationError("a system event needs text to deliver.", "text");
   }
@@ -114,7 +115,9 @@ function doesProblems(does: Exclude<JobPayload, { kind: "steps" }> | Exclude<Job
   }
 }
 
-const STEP_KINDS = ["systemEvent", "agentTurn", "command", "mission", "approval"];
+const STEP_KINDS = ["systemEvent", "agentTurn", "command", "mission", "approval", "parallel"];
+/** What a step may be, as a refusal says it. */
+export const STEP_IS = "a message, an agent's turn, a command, a mission, a wait for a person or several steps at the same time";
 /** A step's id: short, and safe in a button's data and an address. */
 const STEP_ID = /^[a-z0-9][a-z0-9_-]{0,23}$/;
 
@@ -122,7 +125,7 @@ const STEP_ID = /^[a-z0-9][a-z0-9_-]{0,23}$/;
  * What a job of several steps must be, said with the step's number so whoever wrote the list finds it. Called for a
  * new job and for a change to one (`cron.store.ts`): a list is edited far more often than a job of one kind is.
  */
-export function validateSteps(input: Pick<JobInput, "payload" | "session" | "delivery">): void {
+export function validateSteps(input: Pick<JobInput, "payload" | "session" | "delivery" | "agentId">): void {
   if (input.payload.kind !== "steps") return;
   const steps = input.payload.steps;
   if (!Array.isArray(steps) || steps.length === 0) throw new CronValidationError("a job of steps needs at least one step.", "steps");
@@ -135,7 +138,7 @@ export function validateSteps(input: Pick<JobInput, "payload" | "session" | "del
   for (const [index, step] of steps.entries()) {
     const at = `step ${index + 1}`;
     if (!step || typeof step !== "object" || !STEP_KINDS.includes(step.kind)) {
-      throw new CronValidationError(`${at} must be a message, an agent's turn, a command, a mission or a wait for a person.`, "steps");
+      throw new CronValidationError(`${at} must be ${STEP_IS}.`, "steps");
     }
     if (typeof step.id !== "string" || !STEP_ID.test(step.id)) {
       throw new CronValidationError(`${at} needs an id of its own: lower-case letters, digits, - and _, at most 24.`, "steps");
@@ -153,6 +156,7 @@ export function validateSteps(input: Pick<JobInput, "payload" | "session" | "del
       throw new CronValidationError(`${at}: only a command, an agent's turn or a mission can go on only when what it said has changed.`, "steps");
     }
     if (step.kind === "approval") approvalProblems(step, at);
+    else if (step.kind === "parallel") togetherProblems(step, at, place, input.agentId, input.delivery);
     else {
       try {
         doesProblems(step, input.delivery);
@@ -173,6 +177,40 @@ function exitProblems(go: StepGo | undefined, exit: string, at: string, index: n
   const to = typeof go === "object" && go !== null && typeof go.to === "string" ? place.get(go.to) : undefined;
   if (to === undefined) throw new CronValidationError(`${at}: \`${exit}\` is "next", "end", or { to: the id of a later step }.`, "steps");
   if (to <= index) throw new CronValidationError(`${at}: \`${exit}\` points at step ${to + 1}, which is not after it. A run only goes forward.`, "steps");
+}
+
+/**
+ * What steps started together must be: two to five, each an agent's turn or a command with an id of its own, and no
+ * agent twice. Two turns of one agent at once would be one agent in one conversation answering two things: they are
+ * steps of their own, one after the other.
+ */
+function togetherProblems(step: Extract<JobStep, { kind: "parallel" }>, at: string, place: Map<string, number>, jobAgent: string, delivery: JobDelivery | undefined): void {
+  const parts = step.steps;
+  if (!Array.isArray(parts) || parts.length < TOGETHER_MIN || parts.length > TOGETHER_MAX) {
+    throw new CronValidationError(`${at}: steps at the same time are ${TOGETHER_MIN} to ${TOGETHER_MAX}.`, "steps");
+  }
+  const agents = new Set<string>();
+  for (const [index, part] of parts.entries()) {
+    const which = `${at}, part ${index + 1}`;
+    if (!part || typeof part !== "object" || (part.kind !== "agentTurn" && part.kind !== "command")) {
+      throw new CronValidationError(`${which} must be an agent's turn or a command: a mission or a wait for a person is a step of its own.`, "steps");
+    }
+    if (typeof part.id !== "string" || !STEP_ID.test(part.id) || place.has(part.id)) {
+      throw new CronValidationError(`${which} needs an id no other step of the job has: lower-case letters, digits, - and _, at most 24.`, "steps");
+    }
+    place.set(part.id, place.get(step.id)!);
+    try {
+      doesProblems(part, delivery);
+    } catch (err) {
+      if (err instanceof CronValidationError) throw new CronValidationError(`${which}: ${err.message}`, "steps");
+      throw err;
+    }
+    if (part.kind !== "agentTurn") continue;
+    if (part.agentId !== undefined && !part.agentId.trim()) throw new CronValidationError(`${which} names no agent: leave the agent out for the job's own.`, "steps");
+    const agent = part.agentId ?? jobAgent;
+    if (agents.has(agent)) throw new CronValidationError(`${at}: ${agent} has two turns at the same time. An agent takes one at a time: give the second a step of its own.`, "steps");
+    agents.add(agent);
+  }
 }
 
 function approvalProblems(step: Extract<JobStep, { kind: "approval" }>, at: string): void {

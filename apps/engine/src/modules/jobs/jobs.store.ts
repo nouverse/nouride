@@ -555,6 +555,11 @@ export class JobStore {
     return { ...(this.get(id) as JobRecord), limitMs };
   }
 
+  /** An agent's running jobs, each with whether it is a service: what waits for a job's end leaves those out. */
+  runningWithService(agentId: string): (JobRecord & { service: boolean })[] {
+    return this.running(agentId).map((job) => ({ ...job, service: this.services.has(job.id) }));
+  }
+
   /** Whether a running job is a service — what the watchdog and an update leave alone. */
   isService(id: string): boolean {
     return this.services.has(id);

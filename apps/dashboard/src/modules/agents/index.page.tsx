@@ -4,22 +4,24 @@
  * glowing status indicators, and clear metadata.
  */
 
-import { AgentStatusBadge } from "@/commons/components/agents/agent-status-badge";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { AlertTriangle, ChevronRight, Crown, KeyRound, Plus, Radio, Settings, Wrench } from "lucide-react";
+import { useMemo, useState } from "react";
+import { AlertTriangle, Plus, Settings } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import type { AgentSummary } from "@nouride/wire";
-import { FILL_PAGE, ScrollArea } from "@/commons/components/ui/ScrollCard";
 import { Count, SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
 import { agentModel, orchestratorFirst } from "@/commons/lib/agents";
 import { isAdmin, useMe } from "@/commons/lib/session";
 import { Card, EmptyState, ErrorNote, PageHeader } from "@/commons/components/ui/ui";
 import { NewAgentForm } from "./components/NewAgentForm";
+import { AgentRows, PickedAgent } from "./components/AgentRows";
 import { ListLoading } from "@/commons/components/ui/Spinner";
-import { LIFTS } from "@/commons/components/ui/CardGrid";
-import { cn } from "@/commons/lib/utils";
+import { SearchInput } from "@/commons/components/ui/SearchInput";
+import { StickyBar } from "@/commons/components/ui/StickyBar";
+import { OfficeView } from "@/commons/office/components/OfficeView";
+import { looksOf } from "@/commons/cat/look";
+import { useTextFilter } from "@/commons/lib/use-text-filter";
 import { PAGE_ASKS } from "@/commons/components/agents/page-asks";
 
 export default function AgentListPage() {
@@ -38,7 +40,20 @@ export default function AgentListPage() {
 
   const [filter, setFilter] = useState<AgentFilter>("all");
   const counts = Object.fromEntries(AGENT_FILTERS.map((entry) => [entry.id, agents.filter((agent) => inFilter(agent, entry.id)).length])) as Record<AgentFilter, number>;
-  const shown = agents.filter((agent) => inFilter(agent, filter));
+  // By its name, its id, what answers it or what it is for: with many agents, the one wanted is typed, not looked for.
+  const [query, setQuery] = useState("");
+  const listed = useTextFilter(agents.filter((agent) => inFilter(agent, filter)), query, (agent) => [agent.displayName, agent.id, agent.headline, agentModel(agent)]);
+  /**
+   * The agent shown, and where: a cat picked in the Office has its card right under the Office, where the press was;
+   * a row pressed opens under that row. One at a time: the same agent's actions are never on the page twice.
+   */
+  const [shown, setShown] = useState<{ agentId: string; at: "office" | "row" } | null>(null);
+  const pick = (agentId: string | null) => setShown(agentId ? { agentId, at: "office" } : null);
+  const openRow = (agentId: string | null) => setShown(agentId ? { agentId, at: "row" } : null);
+  const platformsOf = (agentId: string) => (gateways.data?.gateways ?? []).filter((gateway) => gateway.agent === agentId).map((gateway) => gateway.platform);
+  const picked = shown?.at === "office" ? agents.find((agent) => agent.id === shown.agentId) : undefined;
+  // From every agent: an agent's look is the same here, in the Office and on its Look tab.
+  const looks = useMemo(() => looksOf(status.data?.agents ?? []), [status.data]);
 
   // Only against a list that loaded: with none, every connection would read as belonging to nobody.
   const orphans = (status.data ? (gateways.data?.gateways ?? []) : []).filter(
@@ -46,7 +61,7 @@ export default function AgentListPage() {
   );
 
   return (
-    <div className={FILL_PAGE}>
+    <div className="space-y-6 *:animate-fade">
       <PageHeader
         ask={PAGE_ASKS.agents}
         title="Agents"
@@ -126,88 +141,34 @@ export default function AgentListPage() {
         </Card>
       ) : (
         <>
-        <SegmentedTabs
-          tabs={AGENT_FILTERS.map((entry) => ({ value: entry.id, label: entry.label, after: <Count n={counts[entry.id]} highlight={entry.id === "unavailable" && counts.unavailable > 0} /> }))}
-          value={filter}
-          onChange={setFilter}
-        />
-        {shown.length === 0 ? <EmptyState pose="searching" title={`No ${filter} agents`} /> : null}
-        {/* Its own scroll, so the tabs stay put over a long list. Keyed by the tab, to fade in anew (`FILL_PAGE`). */}
-        <ScrollArea key={filter} fill className="pr-1">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {shown.map((agent) => {
-            const connections = (gateways.data?.gateways ?? []).filter(
-              (gateway) => gateway.agent === agent.id,
-            );
-            return (
-              <button
-                key={agent.id}
-                type="button"
-                onClick={() => void navigate({ to: "/agents/$agentId", params: { agentId: agent.id } })}
-                className={cn(
-                  "group relative flex flex-col justify-between text-left rounded-2xl border border-base-content/[0.08] bg-base-100/80 backdrop-blur-xl p-5 shadow-xs hover:border-primary/40 hover:shadow-md active:scale-[0.98]",
-                  LIFTS,
-                )}
-              >
-                <div>
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="truncate font-bold text-base tracking-tight text-base-content group-hover:text-primary transition-colors">
-                          {agent.displayName}
-                        </span>
-                        {agent.id === orchestrator && (
-                          <span className="badge badge-xs badge-primary gap-1 font-semibold px-2 py-1 shadow-xs font-mono">
-                            <Crown size={10} /> orchestrator
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-base-content/65 truncate font-mono text-xs mt-0.5">{agent.id}</p>
-                      {agent.headline ? <p className="mt-1.5 line-clamp-2 text-xs text-base-content/75" title={agent.headline}>{agent.headline}</p> : null}
-                    </div>
-
-                    <div className="flex shrink-0 flex-wrap justify-end gap-1">
-                      <AgentStatusBadge agent={agent} />
-                    </div>
-                  </div>
-
-                  <div className="mt-4 p-2.5 rounded-xl bg-base-200/50 border border-base-content/[0.05]">
-                    {/* An external agent's model is its CLI's: what answers it is the CLI, on its account. */}
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-base-content/65 block mb-0.5 font-mono">{agent.external ? "Coding CLI" : "Model"}</span>
-                    <p className="text-base-content/85 truncate font-mono text-xs font-medium" title={agentModel(agent)}>{agent.external ? `${agentModel(agent)} · account ${agent.external.profile}` : agent.model}</p>
-                    {/* Why it cannot answer — not signed in, not installed — on the card, before anyone opens it. */}
-                    {agent.external && agent.activity?.unavailable ? (
-                      <p className="text-warning mt-1 flex items-center gap-1 text-[11px]" title={agent.activity.unavailable}>
-                        <KeyRound size={11} className="shrink-0" aria-hidden="true" /> <span className="truncate">{agent.activity.unavailable}</span>
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
-
-                <div className="text-base-content/65 mt-4 flex items-center justify-between gap-2 text-xs pt-3 border-t border-base-content/[0.05]">
-                  <div className="flex items-center gap-3">
-                    <span className="flex items-center gap-1.5 font-medium">
-                      <Radio size={13} className="text-primary/70" />
-                      {connections.length === 0
-                        ? "No connections"
-                        : connections.map((c) => c.platform).join(", ")}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Wrench size={12} className="opacity-60" />
-                      {agent.tools.length} tools
-                    </span>
-                  </div>
-
-                  <ChevronRight
-                    size={16}
-                    className="text-base-content/40 transition-transform group-hover:translate-x-1 group-hover:text-primary"
-                  />
-                </div>
-              </button>
-            );
-          })}
-        </div>
-        </ScrollArea>
+          {/* The office first: who is doing what, at a glance. Picking a cat shows that agent right under it. */}
+          <OfficeView selected={picked ? picked.id : null} onSelect={pick} />
+          {picked ? <PickedAgent row={{ agent: picked, platforms: platformsOf(picked.id) }} orchestrator={orchestrator} look={looks.get(picked.id)} onClose={() => setShown(null)} /> : null}
+          {/* The filter and the search stay at the top of the window while the list scrolls under them. */}
+          <StickyBar
+            label="Which agents"
+            tools={agents.length > 5 ? <SearchInput value={query} onChange={setQuery} placeholder="Search agents" className="w-48" /> : undefined}
+          >
+            <SegmentedTabs
+              tabs={AGENT_FILTERS.map((entry) => ({ value: entry.id, label: entry.label, after: <Count n={counts[entry.id]} highlight={entry.id === "unavailable" && counts.unavailable > 0} /> }))}
+              value={filter}
+              onChange={setFilter}
+            />
+          </StickyBar>
+          {listed.length === 0 ? (
+            <EmptyState pose="searching" title={query.trim() ? `Nothing matches “${query}”` : `No ${filter} agents`} />
+          ) : (
+            // Keyed by the filter, so the list it narrows is drawn anew and fades in.
+            <div key={filter}>
+              <AgentRows
+                rows={listed.map((agent) => ({ agent, platforms: platformsOf(agent.id) }))}
+                orchestrator={orchestrator}
+                looks={looks}
+                open={shown?.at === "row" ? shown.agentId : null}
+                onOpen={openRow}
+              />
+            </div>
+          )}
         </>
       )}
     </div>

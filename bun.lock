@@ -53,7 +53,7 @@
     },
     "apps/engine": {
       "name": "@nouride/engine",
-      "version": "0.8.37",
+      "version": "0.8.38",
       "bin": {
         "nouride": "./src/cli/main.ts",
       },
@@ -99,6 +99,7 @@
       "name": "@nouride/cli-kit",
       "version": "0.1.0",
       "dependencies": {
+        "@nouride/acp": "workspace:*",
         "@nouride/runtime": "workspace:*",
         "@nouride/shared": "workspace:*",
         "@nouride/wire": "workspace:*",

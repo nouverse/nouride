@@ -30,6 +30,7 @@ import { TagsCard, TidyTagsButton } from "./tags-card";
 import { TimelineTab } from "./timeline.tab";
 import { KnowledgeTab } from "./knowledge/knowledge.tab";
 import { SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
+import { StickyBar } from "@/commons/components/ui/StickyBar";
 import { PAGE_ASKS } from "@/commons/components/agents/page-asks";
 
 export type MemoryTab = "knowledge" | "notes" | "people" | "timeline" | "shared" | "proposals" | "settings";
@@ -74,7 +75,8 @@ export default function MemoriesPage({ tab: opened }: { tab?: MemoryTab } = {}) 
       {operator ? <TagsCard /> : null}
 
       {operator ? (
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        // The tabs stay at the top of the window while the tab's own page scrolls under them.
+        <StickyBar label="Which memory" className="justify-between">
           <SegmentedTabs
             tabs={MEMORY_TABS.map((option) => ({
               value: option.value,
@@ -92,7 +94,7 @@ export default function MemoriesPage({ tab: opened }: { tab?: MemoryTab } = {}) 
             <Waypoints size={16} className="text-primary transition-transform group-hover:rotate-12" />
             Graph view
           </Link>
-        </div>
+        </StickyBar>
       ) : null}
 
       {operator && tab === "knowledge" ? <KnowledgeTab editable={operator} admin={admin} /> : null}

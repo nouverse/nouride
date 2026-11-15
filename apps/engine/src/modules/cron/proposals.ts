@@ -10,7 +10,7 @@
  * it runs with nobody there.
  */
 
-import type { Job, JobPayload, JobProposal, JobStep, MessageButton, StepGo } from "@nouride/shared";
+import type { Job, JobPayload, JobProposal, JobStep, MessageButton, StepGo, TogetherStep } from "@nouride/shared";
 import type { CronPort, JobInput } from "./cron.store.ts";
 
 /** Proposals an agent may have waiting at once: past it, the oldest is the person's to answer first. */
@@ -36,7 +36,7 @@ export function proposalPressed(data: string): { id: string; on: boolean } | nul
  * of several steps says each on a line of its own, numbered, in the order they run, with where the run goes from it
  * when that is not simply the next step: every one is read before a yes.
  */
-function doesLine(agentId: string, payload: JobPayload | JobStep): string {
+function doesLine(agentId: string, payload: JobPayload | JobStep | TogetherStep): string {
   switch (payload.kind) {
     case "systemEvent":
       return `sends the text "${payload.text}"`;
@@ -51,6 +51,8 @@ function doesLine(agentId: string, payload: JobPayload | JobStep): string {
     }
     case "approval":
       return `waits for a person's yes to: "${payload.ask}"`;
+    case "parallel":
+      return ["at the same time, their words joined:", ...payload.steps.map((part) => `   - ${doesLine(agentId, part)}`)].join("\n");
     case "steps":
       return [
         "in order, each handed what the one before said:",
@@ -70,7 +72,7 @@ function exitsLine(step: JobStep, index: number, steps: readonly JobStep[]): str
     return ` ${said.join(" ")}`;
   }
   if (step.whenFailed !== undefined && step.whenFailed !== "end" && !last) said.push(`If it fails, ${place(step.whenFailed)}.`);
-  if (step.kind === "command" || step.kind === "agentTurn") {
+  if (step.kind === "command" || step.kind === "agentTurn" || step.kind === "parallel") {
     said.push(step.whenEmpty === undefined || step.whenEmpty === "end" || last ? "With nothing to say, the run ends there." : `With nothing to say, ${place(step.whenEmpty)}.`);
   }
   return said.length > 0 ? ` ${said.join(" ")}` : "";

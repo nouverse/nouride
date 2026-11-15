@@ -21,8 +21,8 @@ import { TextLoading } from "@/commons/components/ui/Skeleton";
 import { Spinner } from "@/commons/components/ui/Spinner";
 import { EmptyState, ErrorNote } from "@/commons/components/ui/ui";
 import { ago, formatBytes } from "@/commons/lib/format";
-import { isMarkdown, languageOf } from "../lib/paths";
-import type { FileActions } from "../lib/use-file-actions";
+import { isMarkdown, languageOf } from "@/commons/lib/files/paths";
+import type { FileActions } from "@/commons/lib/files/use-file-actions";
 
 const NOTE = "flex items-start gap-2 rounded-xl bg-base-200/50 px-3 py-2 text-xs text-base-content/65";
 const ACTION = "btn btn-ghost btn-sm gap-1.5 rounded-lg";
@@ -102,7 +102,7 @@ export function FileView({ entry, actions, onBack }: { entry: SystemFileEntry; a
           </p>
         ) : null}
       </div>
-      <ScrollArea fill className="lg:-mr-6 lg:pr-6">
+      <ScrollArea className="lg:-mr-6 lg:pr-6">
         {file.error ? (
           <ErrorNote error={file.error} />
         ) : !read ? (

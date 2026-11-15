@@ -16,6 +16,36 @@ export interface RawExternal {
   profile?: unknown;
   model?: unknown;
   permissions?: unknown;
+  move_at?: unknown;
+}
+
+/**
+ * `move_at`: the percent of a limit used at which an agent with several accounts moves on before a message is refused.
+ * A whole number from 1 to 99: 100 is the limit itself, where it moves anyway.
+ */
+function moveAtOf(raw: unknown, where: string): number | undefined {
+  if (raw === undefined) return undefined;
+  if (typeof raw !== "number" || !Number.isInteger(raw) || raw < 1 || raw > 99) {
+    throw new ConfigError(`${where} [external] move_at must be a whole number from 1 to 99, the percent of a limit used at which it moves to its next account, got ${JSON.stringify(raw)}`);
+  }
+  return raw;
+}
+
+/**
+ * `profile` as written: one account's name, or several in the order the agent moves through them when one reaches a
+ * limit. One field for both, so there is no second setting to keep in step with the first. Each a name a folder could
+ * carry, and none twice: an account listed twice would be moved to from itself.
+ */
+function accountsOf(raw: unknown, where: string, text: (value: unknown, key: string) => string | undefined): string[] {
+  const listed = Array.isArray(raw);
+  if (listed && raw.length === 0) throw new ConfigError(`${where} [external] profile is an empty list: name an account, or several in the order to move through them, like ["rina", "work"]`);
+  const names = (listed ? raw : [raw]).map((entry) => text(entry, "profile")).filter((name): name is string => name !== undefined);
+  for (const name of names) {
+    if (!PROFILE_NAME.test(name)) throw new ConfigError(`${where} [external] profile "${name}" must be lowercase letters, digits and dashes, at most 24`);
+  }
+  const twice = names.find((name, index) => names.indexOf(name) !== index);
+  if (twice) throw new ConfigError(`${where} [external] profile lists "${twice}" twice: each account once, in the order to move through them`);
+  return names;
 }
 
 export function externalOf(raw: unknown, where: string, knownClis: readonly string[] | undefined): { external?: ExternalAgentConfig } {
@@ -32,19 +62,20 @@ export function externalOf(raw: unknown, where: string, knownClis: readonly stri
   if (knownClis && !knownClis.includes(cli)) {
     throw new ConfigError(`${where} [external] cli "${cli}" is not a CLI this install knows (known: ${knownClis.join(", ")}); add another as [[external_clis]] in config.toml`);
   }
-  const profile = text(table.profile, "profile");
-  if (profile !== undefined && !PROFILE_NAME.test(profile)) {
-    throw new ConfigError(`${where} [external] profile "${profile}" must be lowercase letters, digits and dashes, at most 24`);
-  }
+  const accounts = accountsOf(table.profile, where, text);
+  const profile = accounts[0];
   const permissions = table.permissions;
   if (permissions !== undefined && !EXTERNAL_PERMISSIONS.includes(permissions as ExternalPermissions)) {
     throw new ConfigError(`${where} [external] permissions must be one of ${EXTERNAL_PERMISSIONS.join(", ")}, got ${JSON.stringify(permissions)}`);
   }
   const model = text(table.model, "model");
+  const moveAt = moveAtOf(table.move_at, where);
   return {
     external: {
       cli,
       ...(profile ? { profile } : {}),
+      ...(accounts.length > 1 ? { accounts } : {}),
+      ...(moveAt !== undefined ? { moveAt } : {}),
       ...(model ? { model } : {}),
       ...(permissions !== undefined ? { permissions: permissions as ExternalPermissions } : {}),
     },

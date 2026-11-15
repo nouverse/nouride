@@ -157,3 +157,35 @@ describe("a message sent while the agent works", () => {
     }
   });
 });
+
+describe("a message of files alone", () => {
+  const FILES = [
+    { path: "/uploads/a.png", mimeType: "image/png", filename: "a.png" },
+    { path: "/uploads/b.png", mimeType: "image/png", filename: "b.png" },
+  ];
+
+  test("its placeholder says how many, and goes when its turn comes: a turn of files alone holds none of the placeholder's words", async () => {
+    // The conversation's last turn had words; the one the files begin has none, as the daemon records it.
+    let newest: ChatTurn | null = { ...turnOf("turn_1", "an earlier question", [], "done"), reply: "An earlier answer." };
+    const daemon: FakeDaemon = { live: () => newest, recorded: () => (newest && newest.id === "turn_1" ? [newest] : []), liveMs: 5, sendMs: 5, liveCalls: 0 };
+    serve(daemon);
+    const view = await mount();
+    try {
+      await eventually(() => Boolean(view.latest()?.turns.some((turn) => turn.id === "turn_1")), 2_000, "the conversation as it was");
+      view.latest()!.send("", FILES);
+      await eventually(() => view.latest()?.pending === "2 files", 1_000, "the placeholder");
+      // The turn before is not its turn, however long it stays the newest.
+      const calls = daemon.liveCalls;
+      await eventually(() => daemon.liveCalls > calls + 1, 2_000, "two more polls");
+      expect(view.latest()!.pending).toBe("2 files");
+      // Its turn: files, and the daemon's stand-in where words would be. It was never matched, and half a minute on
+      // the page said no agent had started on the message.
+      newest = { ...turnOf("turn_2", "(attachment)", []), attachments: FILES.map((file) => ({ name: file.filename, mimeType: file.mimeType, kind: "image", direction: "in" as const })) };
+      await eventually(() => view.latest()?.pending === null, 2_000, "the placeholder gone");
+      expect(view.latest()!.error).toBeNull();
+    } finally {
+      view.unmount();
+    }
+  });
+});
+

@@ -28,10 +28,12 @@ import { SpendAlerts } from "@/modules/llm/spend-alerts.ts";
 import { McpLogins } from "@/modules/mcp-oauth/index.ts";
 import { McpLoginStore } from "@/modules/mcp-oauth/logins.store.ts";
 import { catalogFromEnvironment } from "@/modules/mcp-registry/index.ts";
+import { skillsCatalogFromEnvironment } from "@/modules/skills-hub/index.ts";
 import type { Memory } from "@/modules/memory/index.ts";
 import { senderHasAccount } from "@/modules/people/match.ts";
 import { Pipeline } from "@/modules/pipeline/index.ts";
 import { RoomMentionStore } from "@/modules/pipeline/room-mention.store.ts";
+import { WorkDoneStore } from "@/modules/pipeline/work-done.store.ts";
 import { CandidateStore, ReflectionEngine, ReviewStore, ToolMemory } from "@/modules/reflection/index.ts";
 import { RoomNameStore } from "@/modules/rooms/room-names.store.ts";
 import { setEffort } from "@/modules/setup/agent-effort.ts";
@@ -333,6 +335,7 @@ export async function buildTurnMachine(
     mcp,
     autoApprove: stores.autoApprove,
     roomMention: new RoomMentionStore(stores.db),
+    workDone: new WorkDoneStore(stores.db),
     roomNames: new RoomNameStore(stores.db),
     childEnv: stores.childEnv,
     heldSecrets: stores.heldSecrets,
@@ -375,11 +378,13 @@ export async function buildTurnMachine(
   // The agent asking for an update is in a turn of its own: waiting for idle lets it answer before the restart.
   // The MCP catalog, asked of Nouverse (`modules/mcp-registry`): the Explore tab, the CLI, `mcp_search`.
   const mcpCatalog = catalogFromEnvironment(process.env);
+  // And its skills catalog (`modules/skills-hub`): Explore on Skills, the CLI, `skill_search`. One, so one kept answer.
+  const skillsCatalog = skillsCatalogFromEnvironment(process.env);
   const updateTool = updateToolOptions({ dataDir: config.daemon.dataDir, cron: stores.cron, requestRestart, busy: busyWith(pipeline, jobs), jobs: workingJobs(jobs, pipeline) });
   const tools = buildTools({
     config, secrets, registry, providers: stores.providers, pipeline, approvals, grants: stores.grants, toolGrants: stores.toolGrants,
     jobs, memory: input.memory, turns: stores.turns, audit, childEnv: stores.childEnv, heldSecrets: stores.heldSecrets, ownSecrets: stores.ownSecrets,
-    reflection: parts.reflection, mcp, mcpCatalog, notes: stores.notes, linkFor: parts.linkFor,
+    reflection: parts.reflection, mcp, mcpCatalog, skillsCatalog, notes: stores.notes, linkFor: parts.linkFor,
     configPath: input.configPath,
     isolateHelper: missions.isolateHelper,
     // Fresh each time: a CLI installed a minute ago is one an agent can be made on now.
@@ -400,5 +405,5 @@ export async function buildTurnMachine(
   const waysOn = pipeline.waysOn();
   const carryOn = continuePresses({ turns: stores.turns, resume: (turn, why) => pipeline.resumeTurn(turn, why), isAdmin: (who) => pipeline.isAdmin(who), handedOver: waysOn.handedOver });
   routePresses(input.gateways.values(), [parts.prompts, proposals.cards, stepAsks, ...missions.presses(pipeline), carryOn, waysOn.presses]);
-  return { mcp, mcpLogins, mcpCatalog, skillRoots, pipeline, scheduler, tools };
+  return { mcp, mcpLogins, mcpCatalog, skillsCatalog, skillRoots, pipeline, scheduler, tools };
 }

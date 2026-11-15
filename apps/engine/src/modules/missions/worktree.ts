@@ -147,9 +147,12 @@ export async function helperWorktreeFor(input: { mission: { id: string; workdir:
  * Remove a mission's own folder — its worktree with it — once it has been kept long enough: the worktree's entry in the
  * repository pruned, its branch left there. `keepUnsaved`: not where a worktree in it — the mission's, or a helper's —
  * holds work nobody committed; those are named, and nothing is removed. Removed with no look, the work was deleted a
- * week after the mission ended, and the branch its notice named held none of it.
+ * week after the mission ended, and the branch its notice named held none of it. Null where the folder is not there:
+ * after every restart the sweep comes to each mission of the last thirty days again, and "removed" was logged for
+ * every one, gone long ago or never made here.
  */
-export async function removeOwnFolder(own: string, run: AsAgent, how: { keepUnsaved?: boolean } = {}): Promise<string[]> {
+export async function removeOwnFolder(own: string, run: AsAgent, how: { keepUnsaved?: boolean } = {}): Promise<string[] | null> {
+  if (!(await run(["test", "-d", own])).ok) return null;
   const worktree = join(own, "worktree");
   if (how.keepUnsaved) {
     const unsaved = await uncommitted(own, run);
@@ -166,7 +169,7 @@ export async function removeOwnFolder(own: string, run: AsAgent, how: { keepUnsa
  * Remove a mission's own folder that no mission's record names any more: as an ended mission's, and never over work
  * nobody committed, whose worktrees are named. Nobody is left to ask what the work was.
  */
-export function removeLeftFolder(own: string, run: AsAgent): Promise<string[]> {
+export function removeLeftFolder(own: string, run: AsAgent): Promise<string[] | null> {
   return removeOwnFolder(own, run, { keepUnsaved: true });
 }
 

@@ -33,19 +33,20 @@ Work
   Missions          kerjaan panjang yang diselesaikan agent sendiri: yang butuh kamu, yang jalan, yang selesai; Limits
   Helpers           helper, perintah dan agent yang ditanya, yang dibiarkan agent jalan: langkahnya, Stop
 Agents
-  Agents            daftarnya, New Agent (admin), dan Settings seluruh daemon
+  Agents            Office, tiap agent sebagai satu baris di bawahnya, New Agent (admin), dan Settings seluruh daemon
     └ <agent>
         Files           IDENTITY.md, SOUL.md, AGENTS.md, MEMORY.md, config.toml
         Model           provider profile dan model yang dipakai agent ini
         Brain           milik agent eksternal, menggantikan Model: CLI, akun, preset, dan model-nya,
                         plus model Nouride sendiri untuknya
+        Workspace       folder miliknya sendiri, untuk dilihat-lihat          (admin)
         Connections     bot dan nomor tempat ia menjawab
         Access          apakah ia menerima pengirim baru, seberapa banyak ia bertanya, jumlah pengirimnya
         Skills          semua skill di kumpulan, dan mana yang dibawa agent ini
         Connectors      server MCP instalasi yang dipakai agent ini
         Settings        batas tool dan turn-nya, job senyap, dan tool apa saja yang dimilikinya
         Look            kucingnya di Office
-  Office            status para agent sebagai kantor kecil berisi kucing
+  Workspace         tempat para agent bekerja: folder tiap agent, dan folder bersama   (admin)
 
 Skills              Skills Workshop: Live · Pending · Explore
 Connectors          server MCP instalasi: Installed · Explore, saklar per agent
@@ -130,7 +131,8 @@ daemon kembali. Cuma admin atau operator yang melihatnya, di situ dan di bagian 
 Home dibuka dengan sapaan dan satu baris tentang apa yang sedang terjadi: berapa agent yang bangun, berapa misi yang
 sedang jalan, berapa hal yang butuh kamu. Di pojok sapaan, box-nya bilang apakah semua berjalan baik, versinya, dan
 sudah berapa lama nyala, di sebelah badge update dan **Restart**; hal yang perlu dicek tampil sebagai kartu tepat di
-bawahnya. Lalu, berurutan:
+bawahnya. Kalau CLI coding yang dipakai salah satu agent kamu punya update, admin melihat badge kedua di sana, misalnya
+**Claude Code update out** (0.8.38), yang membuka **Models → Coding CLIs**. Lalu, berurutan:
 
 - **Yang butuh kamu.** Tool call yang ditunggu agent dijawab langsung di situ: **Allow once**, **Deny**, dan **Always
   allow** kalau ditawarkan. Langkah automation yang menunggu persetujuanmu juga dijawab di situ: **Continue** atau
@@ -142,7 +144,7 @@ bawahnya. Lalu, berurutan:
 - **Quick chat**, di laptop: satu baris ke sebuah agent, orchestrator lebih dulu dan diberi tanda, lalu chat-nya
   terbuka dengan jawabannya. Di HP, tombol chat yang melayang di setiap halaman ada di tempatnya, di atas bar tab.
 - **Your agents.** Office versi kecil, dan di sebelahnya tiap agent sebagai chip: kucingnya, namanya, mahkota di
-  orchestrator, dan titik untuk apa yang sedang ia kerjakan. Chip membuka agent-nya; gambarnya membuka Office.
+  orchestrator, dan titik untuk apa yang sedang ia kerjakan. Chip membuka agent-nya; gambarnya membuka Agents, tempat Office berada.
 - Lalu pemakaian AI hari ini, dilipat jadi satu baris, dan catatan setup kalau saat terakhir dinyalakan ada yang
   ditemukan.
 
@@ -252,7 +254,14 @@ Itu juga menutup satu kegagalan. Koneksi dibuat dari halaman agent itu sendiri, 
 perlu menanyakan kepemilikan dan dashboard gak bisa membuat gateway yang gak dimiliki siapa pun. Gateway
 yang ditulis manual di `config.toml` tanpa pemilik ditandai di bagian atas halaman Agents.
 
-![Daftar agent](/media/dashboard-agents.png)
+**Agents** dibuka dengan [Office](/id/docs/manual/office/) di atas, dan di bawahnya tiap agent jadi satu baris
+(0.8.38): kucingnya, namanya, apa yang menjawabnya, di mana ia bisa dihubungi, dan apa yang sedang ia kerjakan. Tekan
+barisnya untuk membuka halaman agent itu. Panah di ujung baris, atau klik kucingnya di Office, membuka apa yang bisa
+kamu lakukan dengannya tanpa meninggalkan daftar: **Details**, **Open chat**, **Sleep** atau **Wake**, **Workspace**
+untuk admin, dan **Edit look**. Filter di atas daftar menyaringnya ke agent yang aktif, santai, tidur, atau gak bisa
+kerja.
+
+![Para agent sebagai baris di bawah Office, dengan baris Wren terbuka: Details, Open chat, Sleep, Workspace, Edit look](/media/dashboard-agents.png)
 
 ### Model versus Models
 
@@ -279,7 +288,9 @@ sebuah chat mengatur yang ini.
 
 [Agent eksternal](/id/docs/manual/external-agents/) punya tab **Brain** sebagai ganti *Model*: CLI coding yang
 menjawabnya, akun, preset, dan model CLI-nya, dengan model Nouride sendiri untuknya terlipat di bawah. Akun-akunnya ada
-di *Models → Coding CLIs*.
+di *Models → Coding CLIs*, tempat tiap CLI disebut dengan versinya sendiri, beserta semua yang dipakainya untuk jalan
+dan apakah ada versi yang lebih baru (0.8.38). Tab Brain juga berisi akun-akun yang dipakai agent itu
+[begitu satu akun kena limit](/id/docs/manual/external-agents/#kalau-sebuah-akun-kena-limit).
 
 ![Tab Model milik sebuah agent](/media/dashboard-agent-model.png)
 
@@ -297,6 +308,22 @@ dengan cookie sesi.
 
 `config.toml` di sini milik agent itu sendiri. Milik daemon ada di kartu terakhir
 **Agents → Settings**.
+
+### Workspace
+
+Admin bisa melihat-lihat apa yang disimpan para agent selama bekerja (0.8.38), di tiga tempat yang sebenarnya satu
+tampilan berkas, sama dengan **System → Files**:
+
+- Tab **Workspace** sebuah agent, di samping Model, menampilkan folder milik agent itu sendiri, dan gak ada yang lain:
+  path di atasnya mulai dari folder itu, jadi gak ada jalan naik atau keluar darinya. Agent yang belum menyimpan
+  apa-apa punya folder yang masih kosong.
+- **Agents → Workspace**, di samping Agents, dibuka di workspace dan masuk ke dua foldernya: `private`,
+  berisi satu folder untuk tiap agent, dan `shared`, folder yang dibaca dan ditulis semua agent.
+- Di **Agents**, baris sebuah agent yang dibuka punya **Workspace**, yang membuka tab agent itu.
+
+Berkas dibuka, diunduh, dan dihapus di sana seperti di Files, dan apa pun yang menyimpan kredensial tetap gak
+ditampilkan. Yang bukan admin gak punya ketiganya. Kalau sebuah install menyimpan workspace-nya di luar folder Nouride
+sendiri, halamannya bilang workspace itu gak bisa dilihat dari sini.
 
 ### Settings, untuk semua agent
 
@@ -377,7 +404,8 @@ dulu, jadi log yang besar butuh sebentar.
 keluaran panjang yang disimpan sebuah tool, dan log job latar. Baris folder seperti itu punya tombolnya di ujung, begitu
 juga berkas yang terbuka. Halamannya bertanya dulu, menyebut berapa berkas dan berapa besar disk yang akan hilang, dan
 gak bisa dibatalkan. Berkas Nouride sendiri gak punya tombol itu: pengaturannya, database-nya, berkas persona dan memory
-para agent, dan folder yang ia siapkan untuk tiap agent. Selama sebuah mission atau job latar masih bekerja di sebuah
+para agent, folder yang ia siapkan untuk tiap agent, dan di dalamnya folder coding CLI agent itu beserta akun-akunnya
+(`.cli`), yang menyimpan login dan percakapannya. Selama sebuah mission atau job latar masih bekerja di sebuah
 folder, folder itu dan isinya menunggu sampai selesai, dan halamannya bilang yang mana dari keduanya. Setiap
 penghapusan dicatat di audit log (**Logs**, **Audit**) beserta siapa yang melakukannya.
 
@@ -472,6 +500,14 @@ anggotanya yang menjawab.
 
 Bukan preferensi gaya, masing-masing adalah bug yang pernah ditulis, atau yang dicegah oleh bentuk
 kodenya.
+
+**Halaman digulir sebagai satu halaman** (0.8.38). Kalau sebuah halaman punya tab, filter, atau pencarian sendiri,
+baris itu tetap di atas jendela sementara daftarnya bergulir di bawahnya, jadi selalu terjangkau. Daftar panjang yang
+masih punya kartu lain di bawahnya dipotong, baris terakhirnya memudar, dan **Show all** membukanya sampai habis.
+Daftar yang bergulir di dalam kartunya hanya ada di tiga tempat, mulai dari lebar laptop: **Files**, **Workspace**,
+dan **Logs**, karena path atau filter di atas daftarnya harus tetap terlihat; kartunya memanjang sampai kaki jendela,
+dan tombol chat mengambang di sudutnya. Chat menggulir percakapannya sendiri. Sebelumnya, kebanyakan halaman menahan
+daftarnya di kartu pendek yang bergulir di dalam halaman.
 
 **Aksi destruktif bertanya, dan menyebutkan akibatnya.** Item mana, berapa agent yang terpengaruh, dan
 bahwa gak ada yang bisa membatalkannya. Tombolnya memuat kata kerjanya, "Delete", bukan "OK".

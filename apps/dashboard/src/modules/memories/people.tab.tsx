@@ -242,13 +242,13 @@ export function PeopleTab({ editable, admin }: { editable: boolean; admin: boole
       ) : null}
 
       {list.length > 0 ? (
-        // Its own scroll, one row per person, closed until opened: a household of ten is ten lines.
-        <div className="max-h-[70dvh] space-y-2 overflow-y-auto">
+        // One row per person, closed until opened: a household of ten is ten lines, and the page scrolls.
+        <div className="space-y-2">
           {list.map((person) => (
             <details key={person.key} className="group border-base-content/[0.08] bg-base-100/80 rounded-2xl border">
               {/* Sticky, and the body below bounded: an open profile scrolls inside itself, so its header —
                   the name and the buttons that act on it — never scrolls away with the facts. */}
-              <summary className="bg-base-100 sticky top-0 z-10 flex cursor-pointer list-none flex-wrap items-center justify-between gap-2 rounded-2xl px-5 py-3.5 group-open:rounded-b-none">
+              <summary className="bg-base-100 flex cursor-pointer list-none flex-wrap items-center justify-between gap-2 rounded-2xl px-5 py-3.5 group-open:rounded-b-none">
                 <span className="flex min-w-0 items-center gap-2">
                   <ChevronDown size={14} className="text-base-content/50 shrink-0 transition-transform group-open:rotate-180" />
                   <span className="truncate font-semibold">{person.name}</span>
@@ -274,7 +274,7 @@ export function PeopleTab({ editable, admin }: { editable: boolean; admin: boole
                   ) : null}
                 </span>
               </summary>
-              <div className="border-base-content/[0.06] max-h-[55dvh] overflow-y-auto overscroll-contain border-t px-5 py-4">
+              <div className="border-base-content/[0.06] border-t px-5 py-4">
                 <div className="space-y-3">
                   <PersonFacts person={person} fallback={everyone} editable={editable} />
                   <PersonRecall person={person} fallback={recallEveryone} editable={editable} />

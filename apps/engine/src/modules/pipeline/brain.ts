@@ -17,6 +17,13 @@ import { TYPING_REFRESH_MS, type ExecutorDeps, type TurnBrain, type TurnRequest,
 export interface CliAnswering {
   /** The CLI by its name: "Claude Code". */
   cli: string;
+  /**
+   * The CLI's own version, as the files installed say: Claude Code's, which is not its connector's in `running`.
+   * Absent where it was not read.
+   */
+  version?: string;
+  /** The account its CLI is on now, of the several it moves between at a limit (`rotation.ts`). Absent: it has the one. */
+  account?: string;
   /** What answered its handshake, as it named itself — "@agentclientprotocol/claude-agent-acp 0.95.0" — while it runs; null when it is stopped. */
   running: string | null;
   /** The model: the pack's, else the CLI's own, as its last session opened on it; null where neither says, and the CLI chooses. */
@@ -43,6 +50,8 @@ export interface ExternalBrains {
   takes?(agent: LoadedAgent): Promise<{ image: boolean; audio: boolean } | null>;
   /** The efforts the agent's CLI offered for the model its last session opened on, for `/effort`; empty before one. */
   offeredEfforts?(agentId: string): string[];
+  /** The models each agent's CLI offered when its last session opened, for `/model`; none before one. */
+  models?: { of(agentId: string): readonly { value: string; name?: string }[] };
   /** What answers the agent in a conversation, for `/status`; null for an agent its own model answers. */
   answering?(agent: LoadedAgent, gatewayId: string, chatId: string): CliAnswering | null;
   /**

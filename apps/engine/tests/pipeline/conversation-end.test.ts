@@ -56,6 +56,7 @@ function recording(options: { cutFails?: boolean } = {}) {
     stopTurns: (agentId, chatId) => (calls.push(`stop ${agentId}'s turns in ${chatId}`), 1),
     platformOf: (gatewayId) => gatewayId.split(":")[0]!,
     forgetCliSession: (agentId, gatewayId, chatId) => void calls.push(`let ${agentId}'s CLI session in ${gatewayId} ${chatId} go`),
+    workDone: { forgetChat: (agentId, gatewayId, chatId) => (calls.push(`forget what ${agentId} asked another agent for from ${gatewayId} ${chatId}, and what it answered there`), 1) },
   };
   return { calls, deps };
 }
@@ -102,6 +103,7 @@ const DOES: Record<EndMode, string[]> = {
     `drop the effort of ${SESSION}`,
     "expire nouva's approvals in telegram:main -1001",
     "let nouva's CLI session in telegram:main -1001 go",
+    "forget what nouva asked another agent for from telegram:main -1001, and what it answered there",
   ],
 };
 

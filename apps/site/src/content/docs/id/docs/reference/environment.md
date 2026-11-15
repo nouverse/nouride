@@ -111,6 +111,7 @@ yang mewarisinya. [Secret →](/id/docs/architecture/storage/#secret)
 | `NOURIDE_WA_LOG_LEVEL` | `debug` menaikkan log bridge WhatsApp sampai paling detail, di stderr. Default `warn` |
 | `NOURIDE_WA_SEND_TIMEOUT_MS` | Berapa lama satu pengiriman WhatsApp boleh berjalan sebelum dianggap gagal. Default `60000` |
 | `NOURIDE_MCP_CATALOG_URL` | Tempat Explore, `nouride mcp search`, dan `mcp_search` mencari server MCP. Default `https://service.nouverse.tech/mcp-catalog`, mirror registry MCP resmi milik Nouverse. Salinan katalog lain boleh ada di jaringanmu sendiri; kosong mematikan pencariannya |
+| `NOURIDE_SKILLS_CATALOG_URL` | Tempat Explore di Skills, `nouride skills search`, dan `skill_search` mencari skill buatan orang lain (0.8.38). Default `https://service.nouverse.tech/skills-catalog`, daftar skill publik milik Nouverse dengan urutannya sendiri. Salinan lain boleh ada di jaringanmu sendiri; kosong mematikannya, dan daftar-daftar publik ditanya langsung seperti sebelumnya |
 
 ### Di jaringan tanpa internet langsung
 

@@ -415,6 +415,17 @@ perintah latar beserta foldernya, paling banyak enam dan sisanya dihitung. Peker
 orang lain di chat pribadi disebut tanpa isinya, cuma jenisnya, foldernya, dan lamanya. Ini memberi
 tahu agent dan gak mengunci apa pun: menghindari tabrakan tetap keputusan agent.
 
+**Yang dikerjakan satu agent untuk agent lain sampai ke keduanya (0.8.38).** Saat sebuah agent
+meminta sesuatu ke agent lain, atau memulai misi untuknya, laporannya kembali ke agent yang meminta.
+Dulu cuma itu: agent yang mengerjakan gak punya jejaknya di chat miliknya sendiri, jadi saat kamu
+menyebutnya di sana ia membacanya sebagai kabar baru dan mulai dari nol. Sekarang, selama sehari
+setelah pekerjaan seperti itu selesai, agent yang mengerjakan diberi tahu di chat miliknya apa yang
+ia kerjakan, untuk agent mana, dan bagaimana hasilnya. Dan begitu ia menjawab kamu di chat pribadi
+miliknya, agent yang meminta diberi tahu, di giliran berikutnya untuk kamu, bahwa kalian sudah
+bicara dan bagaimana jawaban itu dimulai. Isinya cuma sampai di tempat orangnya sama, atau di chat
+tempat pekerjaan itu diminta; di tempat lain agent cuma diberi tahu bahwa ia mengerjakan sesuatu
+untuk agent lain, dan kapan. Yang dikatakan di room gak pernah dibawa keluar dari room itu.
+
 **Kalau pekerjaan hasil serah terima gagal.** Kalau agent yang menerima pekerjaan gagal atau kehabisan
 waktu, baris yang ditinggalkannya membawa tombol **Continue** dan **Hand to** untuk paling banyak tiga
 agent lain di room (0.8.33). Continue membuat agent yang sama melanjutkannya. Hand to memberi agent
