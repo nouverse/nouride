@@ -20,7 +20,10 @@ export async function mission(client: Client, args: string[]): Promise<void> {
     say(`${BOLD}${m.id}${RESET} · ${m.agentId} · ${statusOf(m)}`);
     say(`  Goal: ${m.goal}`);
     if (m.checks.length > 0) say(`  Checks: ${m.checks.join("; ")}`);
-    say(`  ${DIM}${turnsSaid(m)} · ${hours(m.workedMs)} of ${hoursLimit(m.limits.hours)} · ${millions(m.tokensUsed)} of ${millions(m.limits.tokens)} tokens${RESET}`);
+    // With a coding CLI's turn at work, what it has spent so far, said as the estimate it is; a daemon that sends none, its count.
+    const running = m.shown?.running ?? 0;
+    const spent = running > 0 ? `about ${millions(m.tokensUsed + running)} of ${millions(m.limits.tokens)} tokens so far (an estimate while its turn is at work)` : `${millions(m.tokensUsed)} of ${millions(m.limits.tokens)} tokens`;
+    say(`  ${DIM}${turnsSaid(m)} · ${hours(m.workedMs)} of ${hoursLimit(m.limits.hours)} · ${spent}${RESET}`);
     // Minutes a pass: "checking" alone read as stuck (0.8.10).
     if (detail.reviewing) say(`  ${YELLOW}●${RESET} ${reviewingLine(detail.reviewing, Date.now())}`);
     if (detail.plan) {

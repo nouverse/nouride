@@ -12,7 +12,9 @@ import { missionTitle } from "@/commons/lib/mission-title";
 import { actionsFor, briefShown, grouped, inFolder, meters, needsYouSaid, rowLine, searchedIn, seenAs, tabOf, whyStarted } from "@/modules/missions/lib/mission";
 import { startInput } from "@/modules/missions/components/NewMissionForm";
 import { fieldText, fits, limitsPatch, range } from "@/modules/missions/lib/limits";
-import { nowSaid } from "@/modules/missions/components/NowLine";
+import { createElement } from "react";
+import { renderToString } from "react-dom/server";
+import { NowLine, nowSaid } from "@/modules/missions/components/NowLine";
 
 const MISSION: MissionView = {
   id: "msn_3f2a91c0d4",
@@ -141,6 +143,18 @@ describe("the four meters", () => {
     expect(meters({ ...MISSION, turnsUsed: 0 }, plan)[1]?.said).toBe("0 of 50");
     expect(hours).toMatchObject({ label: "Hours", said: "1h 12m of 8h", near: false });
     expect(spent).toMatchObject({ label: "Tokens", said: "1.3M of 50M", near: false });
+  });
+
+  test("a coding CLI's turn at work: what it has spent so far, said as an estimate with a bar, where it read unknown", () => {
+    const atWork = (running: number, tokensUsed = 0) => meters({ ...MISSION, tokensUsed, shown: { turns: false, tokens: tokensUsed > 0 ? "known" : "unknown", running } }, null)[3]!;
+    expect(atWork(26_742_673)).toMatchObject({ label: "Tokens", said: "about 26.7M of 50M so far, an estimate", near: false });
+    expect(atWork(26_742_673).share).toBeCloseTo(0.5348, 3);
+    expect(atWork(26_742_673)).not.toHaveProperty("bar");
+    // Added to what earlier turns counted, and the meter turns at 80% of the limit with it.
+    expect(atWork(5_000_000, 10_000_000)).toMatchObject({ said: "about 15M of 50M so far, an estimate", near: false });
+    expect(atWork(31_000_000, 10_000_000)).toMatchObject({ said: "about 41M of 50M so far, an estimate", near: true });
+    // No turn at work: what it was.
+    expect(meters({ ...MISSION, shown: { turns: false, tokens: "unknown" } }, null)[3]).toMatchObject({ said: "unknown of 50M (its coding CLI reports none)", bar: false });
   });
 
   test("an hours limit reads in hours and minutes: one raised from where a mission stood is no long float (0.8.8)", () => {
@@ -305,6 +319,24 @@ describe("now", () => {
     expect(nowSaid({ ...MISSION, status: "queued", reason: null }, undefined, []).text).toBe("Waiting for a free slot");
     expect(nowSaid(MISSION, undefined, [{ id: "job_1", command: "bun run build", startedAt: 0 }]).text).toBe("Waiting on bun run build");
     expect(nowSaid(MISSION, undefined, []).text).toBe("Between turns. The next starts shortly");
+  });
+});
+
+describe("a turn at work, on the mission's page", () => {
+  const now = Date.now();
+  const step = (at: number, seq: number) => ({ seq, at, kind: "tool", text: "exec", ms: 1 }) as TurnStep;
+  const live = (steps: TurnStep[]) => ({ status: "running", startedAt: now - 70 * 60_000, steps }) as unknown as LiveTurn;
+  const drawn = (mission: MissionView, turn: LiveTurn | undefined) => renderToString(createElement(NowLine, { mission, live: turn, jobs: [] }));
+
+  test("says when it last took a step, beside how long it has run: an hour's turn looks the same alive or stuck", () => {
+    expect(drawn(MISSION, live([step(now - 30 * 60_000, 1), step(now - 4 * 60_000, 2)]))).toContain("last step 4 min ago");
+    // No step on the page yet: what the mission's record says of it.
+    expect(drawn({ ...MISSION, activeAt: now - 9 * 60_000 }, live([]))).toContain("last step 9 min ago");
+    expect(drawn(MISSION, live([]))).not.toContain("last step");
+  });
+
+  test("says nothing of it between turns", () => {
+    expect(drawn({ ...MISSION, activeAt: now - 9 * 60_000 }, undefined)).not.toContain("last step");
   });
 });
 

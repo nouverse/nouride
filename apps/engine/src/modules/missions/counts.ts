@@ -7,13 +7,14 @@
  */
 
 import type { TurnOutcome } from "@/modules/pipeline/turn-shape.ts";
-import type { LimitsInForce } from "./decide.ts";
+import { nearLimit, type LimitsInForce, type Unsettled } from "./decide.ts";
 import type { MissionsDeps } from "./deps.ts";
+import { warnNotice } from "./notices.ts";
 import type { LimitsShown } from "./page.ts";
 import type { Mission } from "./types.ts";
 
 export class MissionCounts {
-  constructor(private readonly deps: Pick<MissionsDeps, "runsOnCli" | "helperTokens" | "runningTokens">) {}
+  constructor(private readonly deps: Pick<MissionsDeps, "runsOnCli" | "helperTokens" | "runningTokens" | "store" | "tell">) {}
 
   private runsOnCli(mission: Pick<Mission, "agentId">): boolean {
     return this.deps.runsOnCli?.(mission.agentId) === true;
@@ -44,6 +45,18 @@ export class MissionCounts {
     return { helpers: this.deps.helperTokens?.(mission, since) ?? 0, running: this.deps.runningTokens?.(mission) ?? 0 };
   }
 
+  /**
+   * Past 80% of a limit, said once. At a turn's end by its count, saved with the mission by the caller; inside a turn at
+   * work by that and what the turn has spent so far (`unsettled`, from `timers.ts`), saved here since nothing else does.
+   */
+  warnNear(mission: Mission, now: number, unsettled?: Unsettled): void {
+    const near = nearLimit(mission, now, this.inForce(mission), unsettled);
+    if (!near) return;
+    mission.warnedAt = now;
+    if (unsettled) this.deps.store.save(mission);
+    void this.deps.tell(mission, warnNotice(mission, near));
+  }
+
   /** Its helpers' tokens are in its count up to `now` — the reviewer's, which `Checking` added itself. */
   helpersCounted(mission: Mission, now: number): void {
     mission.helpersSince = now;
@@ -59,6 +72,8 @@ export class MissionCounts {
     if (!this.runsOnCli(mission)) return { turns: true, tokens: "known" };
     const { cliUnreported: unreported, cliTurns: heard } = mission;
     const tokens = mission.tokensUsed === 0 && (unreported > 0 || heard === 0) ? "unknown" : unreported > 0 ? "partial" : "known";
-    return { turns: false, tokens };
+    // What its turn at work has spent so far, where one is: an estimate, shown as one (`page.ts` `limitsLine`).
+    const running = mission.status === "running" ? (this.deps.runningTokens?.(mission) ?? 0) : 0;
+    return { turns: false, tokens, ...(running > 0 ? { running } : {}) };
   }
 }

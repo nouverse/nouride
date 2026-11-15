@@ -44,10 +44,21 @@ const LISTED_DAYS = { usual: 7, most: 30 } as const;
  * and whether its tokens are known (0.8.8) — the meters drew "2 of 100" turns for a coding CLI's mission, which no turn
  * limit holds, and its tokens as a count where the CLI reported none.
  */
-function view(missions: Missions, mission: Mission, things: Things) {
+function view(missions: Missions, mission: Mission, things: Things, turns?: ControlDeps["turns"]) {
   // Its owner goes out as the person, never as the id it is kept under.
   const { owner: _owner, ...shown } = mission;
-  return { ...shown, seen: seenAs(mission.status), workedMs: workedMs(mission, missions.now()), shown: missions.limitsShown(mission), ...things.said(thingOfMission(mission)) };
+  const active = activeAt(turns, mission);
+  return { ...shown, seen: seenAs(mission.status), workedMs: workedMs(mission, missions.now()), shown: missions.limitsShown(mission), ...(active !== undefined ? { activeAt: active } : {}), ...things.said(thingOfMission(mission)) };
+}
+
+/**
+ * When a mission at work last did something: the newest step of its turn at work, or that turn's start. A coding CLI's
+ * turn is hours long, and the record's own "updated" stood at its start for all of it.
+ */
+function activeAt(turns: ControlDeps["turns"], mission: Mission): number | undefined {
+  if (mission.status !== "running") return undefined;
+  const times = (turns?.runningForChat(MISSION_GATEWAY_ID, mission.id) ?? []).flatMap((turn) => [turn.startedAt, ...turn.steps.map((step) => step.at)]);
+  return times.length > 0 ? Math.max(...times) : undefined;
 }
 
 /**
@@ -175,7 +186,7 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
     // A mission that ended more than `days` ago is out of the list unless asked for (`?all=1`, the CLI's); its record stays.
     const all = c.req.query("all") === "1";
     const recent = missions.recent(limit, agent).filter((mission) => all || mission.endedAt === null || now - mission.endedAt < days * DAY_MS);
-    const rows = recent.filter((mission) => things.listed(thingOfMission(mission))).map((mission) => ({ ...view(missions, mission, things), checklist: checklistOf(deps.notes, mission) }));
+    const rows = recent.filter((mission) => things.listed(thingOfMission(mission))).map((mission) => ({ ...view(missions, mission, things, deps.turns), checklist: checklistOf(deps.notes, mission) }));
     rows.sort((a, b) => ORDER[a.seen] - ORDER[b.seen] || b.createdAt - a.createdAt);
     const elsewhere = things.elsewhere(recent.map(thingOfMission));
     return c.json({ missions: rows, ...(elsewhere ? { elsewhere } : {}) } satisfies { missions: MissionView[]; elsewhere?: number });
@@ -197,7 +208,7 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
     // The reviewer at work: minutes a pass, where "Running its checks" alone read as stuck (0.8.10).
     const reviewing = missions.reviewing(mission.id);
     return c.json({
-      mission: view(missions, mission, things),
+      mission: view(missions, mission, things, deps.turns),
       // Its conversation, for the routes every conversation has: its turns, its notes.
       sessionId: sessionIdFor(key),
       // What its turns did, in steps as each turn's line counts them — "2 of 100" turns alone read as two actions (0.8.0).
@@ -280,7 +291,7 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
     // What changed is the chat's list (a folder by its path among it), and a brief's failure an exception's message: the
     // page says what it means (0.8.23), and the chat it began in has the list.
     const plain = edited.briefFailed ? "Saved, but its brief could not be written, so it has none for now. Whoever runs the server can see why." : "Saved. The chat it began in is told what changed.";
-    return c.json({ mission: view(missions, edited.mission, things), changed: edited.changed, ...(edited.briefFailed ? { briefFailed: edited.briefFailed } : {}), plain } satisfies { mission: MissionView; changed: string[]; briefFailed?: string; plain?: string });
+    return c.json({ mission: view(missions, edited.mission, things, deps.turns), changed: edited.changed, ...(edited.briefFailed ? { briefFailed: edited.briefFailed } : {}), plain } satisfies { mission: MissionView; changed: string[]; briefFailed?: string; plain?: string });
   });
 
   /**
@@ -336,7 +347,7 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
       const told = missions.tell(id, text ?? "", by);
       if ("refused" in told) return c.json({ error: told.refused, plain: refusedPlain(told, "tell") }, 409);
       deps.audit.record({ action: "mission_tell", actor: principal.actor, agentId: told.mission.agentId, details: { mission: told.mission.id, chars: (text ?? "").trim().length } });
-      return c.json({ mission: view(missions, told.mission, things), said: told.said, plain: toldPlain(told.where) } satisfies { mission: MissionView; said?: string; plain?: string });
+      return c.json({ mission: view(missions, told.mission, things, deps.turns), said: told.said, plain: toldPlain(told.where) } satisfies { mission: MissionView; said?: string; plain?: string });
     }
     const acted =
       verb === "stop"
@@ -355,7 +366,7 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
     if ("refused" in acted) return c.json({ error: acted.refused, plain: refusedPlain(acted, verb) }, 409);
     deps.audit.record({ action: `mission_${verb}`, actor: principal.actor, agentId: acted.mission.agentId, details: { mission: acted.mission.id, ...(typeof body.outside === "string" ? { outside: body.outside } : {}) } });
     // An answer to one that went on working says where it went, as a `tell` does.
-    if (acted.where) return c.json({ mission: view(missions, acted.mission, things), said: acted.said ?? "", plain: answeredPlain(acted.where) } satisfies { mission: MissionView; said?: string; plain?: string });
-    return c.json({ mission: view(missions, acted.mission, things) } satisfies { mission: MissionView; said?: string; plain?: string });
+    if (acted.where) return c.json({ mission: view(missions, acted.mission, things, deps.turns), said: acted.said ?? "", plain: answeredPlain(acted.where) } satisfies { mission: MissionView; said?: string; plain?: string });
+    return c.json({ mission: view(missions, acted.mission, things, deps.turns) } satisfies { mission: MissionView; said?: string; plain?: string });
   });
 }

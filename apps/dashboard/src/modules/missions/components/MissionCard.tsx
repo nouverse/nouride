@@ -67,8 +67,10 @@ export function MissionCard({ mission, motion = "" }: { mission: MissionView; mo
       )}
 
       <footer className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-1">
+        {/* One at work says when it last did something: a turn of hours otherwise looks the same alive or stuck. */}
         <span className="font-mono text-xs text-base-content/65">
           {mission.agentId} · {ago(mission.createdAt)}
+          {mission.activeAt !== undefined ? ` · last step ${ago(mission.activeAt)}` : ""}
         </span>
         {/* Drawn as the Knowledge tab's Open button; the card around it is the link. */}
         <span className="btn btn-primary btn-sm gap-1 rounded-xl">

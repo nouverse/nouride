@@ -151,6 +151,9 @@ export function meters(
   const turns = share(mission.turnsUsed, mission.limits.turns);
   const hours = share(mission.workedMs, mission.limits.hours * 3_600_000);
   const spent = share(mission.tokensUsed, mission.limits.tokens);
+  // What its coding CLI's turn at work has spent so far: in no count until the turn ends, so said as an estimate.
+  const running = mission.shown.running ?? 0;
+  const soFar = share(mission.tokensUsed + running, mission.limits.tokens);
   const stepsSaid = steps ? ` · ${steps} step${steps === 1 ? "" : "s"}` : "";
   return [
     { label: "Checklist", said: total > 0 ? `${settled} of ${total}` : "no checklist yet", share: total > 0 ? settled / total : null, near: false },
@@ -158,7 +161,9 @@ export function meters(
       ? { label: "Turns", said: `${mission.turnsUsed} of ${mission.limits.turns}${stepsSaid}`, share: turns, near: (turns ?? 0) >= WARN_AT }
       : { label: "Turns", said: `${mission.turnsUsed} turn${mission.turnsUsed === 1 ? "" : "s"}${stepsSaid}`, share: null, near: false, bar: false },
     { label: "Hours", said: `${hoursWorked(mission.workedMs)} of ${hoursLimit(mission.limits.hours)}`, share: hours, near: (hours ?? 0) >= WARN_AT },
-    mission.shown.tokens === "unknown"
+    running > 0
+      ? { label: "Tokens", said: `about ${tokens(mission.tokensUsed + running)} of ${tokens(mission.limits.tokens)} so far, an estimate`, share: soFar, near: (soFar ?? 0) >= WARN_AT } // plain-words-ok: tokens, the unit a model's use is billed in
+      : mission.shown.tokens === "unknown"
       ? { label: "Tokens", said: `unknown of ${tokens(mission.limits.tokens)} (its coding CLI reports none)`, share: null, near: false, bar: false } // plain-words-ok: tokens, the unit a model's use is billed in
       : {
           label: "Tokens", // plain-words-ok: tokens, the unit a model's use is billed in

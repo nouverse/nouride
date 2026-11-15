@@ -99,6 +99,12 @@ export function workedMs(mission: Pick<Mission, "startedAt" | "endedAt" | "waite
 export interface LimitsShown {
   turns: boolean;
   tokens: MissionTokens;
+  /**
+   * What its coding CLI's turn at work has spent so far, an estimate from what the CLI says of its context while it
+   * works: in no count until the turn ends. Absent with no such turn at work. A mission that is one turn of hours read
+   * "tokens unknown" for all of it.
+   */
+  running?: number;
 }
 
 /**
@@ -108,8 +114,10 @@ export interface LimitsShown {
  */
 export function limitsLine(mission: Pick<Mission, "turnsUsed" | "limits" | "tokensUsed" | "startedAt" | "endedAt" | "waitedMs" | "waitingSince">, now: number, shown: LimitsShown = { turns: true, tokens: "known" }): string {
   const turns = turnsSaid(mission, shown.turns);
-  const tokens =
-    shown.tokens === "unknown"
+  // With a turn at work, what it has spent so far is in the line and said to be an estimate: never as a count.
+  const tokens = shown.running
+    ? `about ${millions(mission.tokensUsed + shown.running)} of ${millions(mission.limits.tokens)} tokens so far (an estimate while its turn is at work)`
+    : shown.tokens === "unknown"
       ? `tokens unknown (the CLI reports none) of ${millions(mission.limits.tokens)}`
       : `${shown.tokens === "partial" ? "at least " : ""}${millions(mission.tokensUsed)} of ${millions(mission.limits.tokens)} tokens`;
   return `${turns} · ${hoursAndMinutes(workedMs(mission, now))} of ${hoursLimit(mission.limits.hours)} · ${tokens}`;

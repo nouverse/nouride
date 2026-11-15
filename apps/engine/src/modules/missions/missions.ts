@@ -18,14 +18,14 @@ import { buttonsFor } from "./actions.ts";
 import { Asking, type Asked } from "./asking.ts";
 import { Checking, type Reviewing } from "./checking.ts";
 import type { MissionJob, MissionsDeps } from "./deps.ts";
-import { afterTurn, answersWait, blockedBy, continueGives, limitReached, limitsNear, nearLimit, openInSameRepository, planSignature, stepsDone, type LimitsInForce, type MissionLimit, type Unsettled } from "./decide.ts";
+import { afterTurn, answersWait, blockedBy, continueGives, limitReached, limitsNear, openInSameRepository, planSignature, stepsDone, type LimitsInForce, type MissionLimit, type Unsettled } from "./decide.ts";
 import { isMissionChat, MISSION_GATEWAY_ID } from "./gateway.ts";
 import { APPROVAL_ANSWERABLE_MS, MAX_RESUMES, STALL_AFTER_MS } from "./limits.ts";
 import { newMission, startRefusal, type StartRequest } from "./start.ts";
 import { acceptMission, acceptOutside, answerMission, continueMission, deleteMission, stopMission, type Acted, type Deleted, type Sayer } from "./person.ts";
 import { markRead, tellMission, unreadTold, type TellAnswer } from "./tell.ts";
 import { MissionStore } from "./missions.store.ts";
-import { goesOnNotice, needsYouNotice, paged, queuedNotice, startedNotice, warnNotice } from "./notices.ts";
+import { goesOnNotice, needsYouNotice, paged, queuedNotice, startedNotice } from "./notices.ts";
 import { announceDraft, editDraft, type DraftEdited } from "./draft-edit.ts";
 import { briefPath, type DraftChange, type DraftEditor } from "./drafts.ts";
 import { sendReport, tellEnded } from "./results.ts";
@@ -665,11 +665,9 @@ export class Missions implements TurnShaper {
     this.wait(mission, "limit", which, true, continueGives(raise, this.deps.settings()));
   }
 
-  private warnNear(mission: Mission): void {
-    const near = nearLimit(mission, this.now(), this.inForce(mission));
-    if (!near) return;
-    mission.warnedAt = this.now();
-    void this.deps.tell(mission, warnNotice(mission, near));
+  /** Past 80% of a limit, said once: at a turn's end, and inside a turn at work with what it has spent so far (`counts.ts`). */
+  warnNear(mission: Mission, unsettled?: Unsettled): void {
+    this.counts.warnNear(mission, this.now(), unsettled);
   }
 
   end(mission: Mission, status: "done" | "failed" | "stopped", why?: string, report?: string, accepted = false): void {
