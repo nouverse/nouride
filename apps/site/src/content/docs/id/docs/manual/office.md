@@ -36,12 +36,14 @@ office lain (pintu di ujung lorong menyebut berapa), dan baris di atas office me
 dari yang di office lain sedang nunggu kamu.
 
 Di bawah office, tiap agent jadi satu baris: kucingnya, namanya, apa yang menjawabnya, di mana ia bisa dihubungi, dan
-apa yang sedang ia kerjakan. Barisnya membuka halaman agent itu.
+apa yang sedang ia kerjakan.
 
-Klik kucing dan baris agent itu terbuka di bawah office: agent-nya lagi ngapain dan di mana, dengan link ke tiap chat
-dan misi, lalu **Details** untuk halamannya, **Open chat** untuk chat terakhirnya (sama seperti barisnya di Chats),
-**Sleep** atau **Wake**, dan **Edit look**. Admin juga punya **Workspace** di sana, yang membuka
-[folder milik agent itu](/id/docs/manual/dashboard/#workspace). Panah di ujung baris membuka hal yang sama.
+Klik kucing, atau tekan barisnya di mana saja, dan baris agent itu terbuka: agent-nya lagi ngapain dan di mana, dengan
+link ke tiap chat dan misi, lalu **Details** untuk halamannya, **Open chat** untuk chat terakhirnya (sama seperti
+barisnya di Chats), **Sleep** atau **Wake**, dan **Edit look**. Admin juga punya **Workspace** di sana, yang membuka
+[folder milik agent itu](/id/docs/manual/dashboard/#workspace). Menekan baris cuma membukanya, gak pindah ke mana-mana:
+halaman agent ada di **Details**. Halamannya tetap di tempat, dan cuma bergeser kalau kamu memilih kucing yang barisnya
+lagi gak kelihatan di layar.
 
 Halaman ini menanyakan status agent tiap lima detik selama terbuka dan terlihat, dan gak menanyakan apa-apa kalau
 tidak. Gak ada yang bergerak kalau sistem kamu minta gerakan dikurangi, dan di HP kantornya mengecil supaya muat.

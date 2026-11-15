@@ -311,7 +311,10 @@ from the source.
 to the window from a laptop up, their list scrolling in a card under a title, a description and tabs that stayed:
 what was left for the list was a strip, and a band under it was kept clear for the chat button. Now a page scrolls,
 and its own tabs, filter and search are one row that stays at the top of the window (`StickyBar`: clear while it
-rests in its place, the page's own ground once the page runs under it). A page's own list is shown in full; a list
+rests in its place, the page's own ground once the page runs under it). A search that belongs to a part of the page
+under the row (Explore's, the documents', an agent's skills) is drawn into the row by that part (`StickyTools`), which
+keeps what was typed and found; one asked on its button is `SearchForm`. No list is a box that scrolls inside a page
+that scrolls: such a box keeps the wheel and moves nothing. A page's own list is shown in full; a list
 with another card under it is cut short and opened with one press (`ListCard`). Files and the Workspace
 (`fillsViewport`) and Logs keep the list in the card, because the path and the filters over it have to stay: the
 card runs to the page's own margin at the window's foot, the floating chat's button lies over its corner, and what

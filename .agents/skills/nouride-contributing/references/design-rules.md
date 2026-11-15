@@ -168,6 +168,15 @@ pose=…>` or `<EmptyState pose=…>`; which state takes which pose is the table
   with one press to open it where another card follows. A list scrolls inside its card on Files, the
   Workspace and Logs alone, where the path or the filters over it have to stay. A new page is not held to
   the window without that reason.
+- A search stays in reach: in the page's `StickyBar`. One that belongs to a part of the page under the row
+  (a tab's panel, a card) is drawn into the row by that part with `StickyTools`, and one asked on a button
+  is a `SearchForm`. No list is given a box of its own that scrolls inside a page that scrolls
+  (`overflow-y-auto`, `overscroll-contain`): the box keeps the wheel and moves nothing, so the page stands
+  still under the pointer. Check a page with the wheel over the middle of its list, not by scrolling it
+  from a script.
+- A row of a list is one thing to press. Where it opens something under it, the whole line is the button
+  and what leaves the page is a named button inside what opened. Opening it never moves the page under the
+  pointer.
 - A page held to the window (`fillsViewport`, `FILL_PAGE`) has its padding inside the height it is held to,
   so what runs past the window has none under it: `FILL_PAGE` carries a foot for that. Its list is a
   `ScrollArea`, which ends with `HELD_END`.

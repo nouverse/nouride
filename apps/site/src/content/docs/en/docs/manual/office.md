@@ -35,12 +35,13 @@ office (a door at the end of the hall says how many), and the line over the offi
 many of those elsewhere are waiting for you.
 
 Under the office every agent is a row: its cat, its name, what answers it, where it is reached and what it is doing.
-A row opens the agent's page.
 
-Click a cat and that agent's row opens under the office: what the agent is doing and where, with a link to each chat
-and mission, and **Details** for its page, **Open chat** for its latest chat (as its line in Chats does), **Sleep** or
-**Wake**, and **Edit look**. An admin also has **Workspace** there, which opens
-[the agent's own folder](/en/docs/manual/dashboard/#workspace). The arrow at a row's end opens the same.
+Click a cat, or press its row anywhere, and that agent's row opens: what the agent is doing and where, with a link to
+each chat and mission, and **Details** for its page, **Open chat** for its latest chat (as its line in Chats does),
+**Sleep** or **Wake**, and **Edit look**. An admin also has **Workspace** there, which opens
+[the agent's own folder](/en/docs/manual/dashboard/#workspace). A press on the row opens it and goes nowhere: the
+agent's page is **Details**. The page stays where it is, and moves only when you pick a cat whose row is not on the
+screen.
 
 The page asks for the agents' statuses every five seconds while it is open and in view, and nothing while it is not.
 It moves nothing if your system asks for reduced motion, and on a phone it shrinks to fit.
