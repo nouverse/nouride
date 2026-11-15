@@ -109,7 +109,8 @@ export function Composer(props: ComposerProps) {
   return (
     // Its bottom clear of a phone's home indicator (the safe area, `viewport-fit=cover`): 0 on a desktop.
     <div className="p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:p-4 sm:pb-[max(1rem,env(safe-area-inset-bottom))] bg-base-100/90 backdrop-blur-xl border-t border-base-content/[0.08] shrink-0 mt-auto">
-      <div className="max-w-3xl mx-auto space-y-2">
+      {/* A column with gaps, not `space-y`: a row put away takes its gap with it, where a margin stayed on the box. */}
+      <div className="max-w-3xl mx-auto flex flex-col gap-2">
         <ErrorNote error={conversation.error} />
 
         <AttachmentTray files={attachments.files} onRemove={attachments.remove} />
@@ -284,13 +285,23 @@ export function Composer(props: ComposerProps) {
           </button>
         </div>
 
-        <div className="flex min-h-4 items-center justify-between gap-3 px-2 text-[11px] text-base-content/65">
-          {/* In a room, who answers a message that tags nobody: the router's own answer, never a guess. */}
-          <span className="min-w-0 truncate">{room ? untaggedHint : null}</span>
-          {/* The keys, out of the placeholder: there they ran on past the box and read as part of the message. */}
-          {writable && <span className="hidden shrink-0 sm:inline">Enter to send · Shift+Enter for a new line</span>}
-        </div>
+        <UnderTheBox hint={room ? untaggedHint : undefined} writable={writable} />
       </div>
+    </div>
+  );
+}
+
+/**
+ * The row under the box, only where it has words at this width: in a room, who answers a message that tags nobody (the
+ * router's own answer, never a guess); from a tablet up, the keys, out of the placeholder, where they ran on past the box
+ * and read as part of the message. Empty, it was 16px and a gap of nothing under the box on a phone.
+ */
+function UnderTheBox({ hint, writable }: { hint: string | undefined; writable: boolean }) {
+  if (!hint && !writable) return null;
+  return (
+    <div className={`${hint ? "flex" : "hidden sm:flex"} min-h-4 items-center justify-between gap-3 px-2 text-[11px] text-base-content/65`}>
+      <span className="min-w-0 truncate">{hint}</span>
+      {writable && <span className="hidden shrink-0 sm:inline">Enter to send · Shift+Enter for a new line</span>}
     </div>
   );
 }
