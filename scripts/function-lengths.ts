@@ -35,7 +35,7 @@ export const LONG_FUNCTIONS: Record<string, Record<string, Budget>> = {
   "apps/dashboard/src/modules/memories/timeline.tab.tsx": { TimelineTab: { lines: 188, why: COMPONENT("memory's timeline, its list while it loads") } },
   "apps/dashboard/src/modules/missions/mission.page.tsx": { MissionPage: { lines: 164, why: COMPONENT("one mission's page") } },
   "apps/dashboard/src/modules/people/index.page.tsx": { PersonForm: { lines: 178, why: COMPONENT("the form for one person") } },
-  "apps/dashboard/src/modules/secrets/index.page.tsx": { SecretsPage: { lines: 164, why: COMPONENT("the secrets page, its list while it loads, empty and filled") } },
+  "apps/dashboard/src/modules/secrets/index.page.tsx": { SecretsPage: { lines: 168, why: COMPONENT("the secrets page, its search that stays, its list loading, empty, filled") } },
   "apps/dashboard/src/modules/setup/index.page.tsx": { KeyForm: { lines: 164, why: COMPONENT("setup's form for a provider's key, with where a key comes from") } },
   "apps/dashboard/src/modules/users/index.page.tsx": { UsersPage: { lines: 212, why: COMPONENT("the dashboard's users") } },
   "apps/dashboard/src/modules/web-search/index.page.tsx": { WebSearchPage: { lines: 172, why: COMPONENT("the web search settings: five services, and the key name each one keeps") } },

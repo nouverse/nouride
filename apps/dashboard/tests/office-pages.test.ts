@@ -146,12 +146,16 @@ describe("the Office", () => {
       await eventually(() => drawn.some((call) => call.method === "drawImage"), 2_000, "the room drawn");
       const painted = drawn.filter((call) => call.method === "putImageData").map((call) => call.args[0] as { data: Uint8ClampedArray });
       expect(painted.some((image) => image.data.some((value, at) => at % 4 === 3 && value === 255))).toBe(true);
-      // Under the office, every agent as a row, the orchestrator first: each a link to its own page, none opened yet.
+      // Under the office, every agent as a row, the orchestrator first: each a line to press, none opened yet.
       const rows = () => [...host.querySelectorAll<HTMLElement>("[data-agent-row]")];
       const row = (id: string) => host.querySelector<HTMLElement>(`[data-agent-row="${id}"]`)!;
       // In the order the server lists them, the orchestrator first: the list's own order, not the office's seats.
       expect(rows().map((entry) => entry.dataset.agentRow)).toEqual(["nouva", "wren", "codey", "sleepy"]);
-      expect(rows().map((entry) => entry.querySelector("a")!.getAttribute("href"))).toEqual(["/agents/nouva", "/agents/wren", "/agents/codey", "/agents/sleepy"]);
+      // A row is one thing to press, and it opens: the line was a link to the agent's page with a small arrow beside it
+      // that opened, so a press meant for one took the other. Closed, it holds no link at all.
+      expect(rows().map((entry) => [entry.querySelectorAll("a").length, entry.querySelectorAll("button").length, entry.querySelector("button")!.getAttribute("aria-expanded")])).toEqual([[0, 1, "false"], [0, 1, "false"], [0, 1, "false"], [0, 1, "false"]]);
+      // Read as what it shows, not by a name that hides it.
+      expect(row("nouva").querySelector("button")!.getAttribute("aria-label")).toBeNull();
       expect(host.querySelectorAll("[data-agent-actions]")).toHaveLength(0);
       (host.querySelector('button[aria-label="Nouva, working"]') as HTMLButtonElement).click();
       // Picking a cat opens that agent's row: what it is doing, and what a person does with it, in the one place.
@@ -176,14 +180,66 @@ describe("the Office", () => {
       // One row open at a time, and the cat picked is the one marked: the row's own button closes it again.
       expect(host.querySelectorAll("[data-agent-actions]")).toHaveLength(1);
       expect(row("wren").querySelector("[data-agent-actions]")).not.toBeNull();
-      (row("wren").querySelector('button[aria-label="Close Wren\'s actions"]') as HTMLButtonElement).click();
+      expect(row("wren").querySelector("button[aria-expanded]")!.getAttribute("aria-expanded")).toBe("true");
+      (row("wren").querySelector("button[aria-expanded]") as HTMLButtonElement).click();
       await eventually(() => host.querySelectorAll("[data-agent-actions]").length === 0, 2_000, "closed");
       expect(host.querySelector('button[aria-label="Wren, waiting for you"]')!.getAttribute("aria-pressed")).toBe("false");
-      // And a row opens without the office: its own button, for a phone or a keyboard.
-      (row("codey").querySelector('button[aria-label="What to do with Codey"]') as HTMLButtonElement).click();
+      // And a row opens without the office: a press anywhere on its line, on the name as on the line's end.
+      (row("codey").querySelector("button[aria-expanded] .truncate") as HTMLElement).click();
       await eventually(() => row("codey").querySelector("[data-agent-actions]") !== null, 2_000, "opened from its row");
       expect(row("codey").textContent).toContain("Cannot work: Codex is not signed in");
+      // The press opened it and went nowhere: the list is still the page, and the way to the agent's page is Details.
+      expect(host.querySelector("[data-agent-rows]")).not.toBeNull();
+      expect(rows()).toHaveLength(4);
+      expect([...row("codey").querySelectorAll("[data-agent-actions] a")].find((link) => link.textContent?.trim() === "Details")!.getAttribute("href")).toMatch(/^\/agents\/codey/);
     } finally {
+      unmount();
+    }
+  });
+
+  test("the page is moved only for a cat picked whose row is nowhere on the screen: never for a row pressed", async () => {
+    const { outOfView } = await import("@/modules/agents/components/AgentRows");
+    // On the screen, in part or whole: under the pointer, or in sight. Not on it: above, under the row that stays, below.
+    expect([{ top: 300, bottom: 360 }, { top: 880, bottom: 940 }, { top: 40, bottom: 100 }].map((at) => outOfView(at, 900))).toEqual([false, false, false]);
+    expect([{ top: 900, bottom: 960 }, { top: 2000, bottom: 2060 }, { top: -200, bottom: -140 }, { top: 10, bottom: 64 }].map((at) => outOfView(at, 900))).toEqual([true, true, true, true]);
+
+    serve();
+    const { host, unmount } = await mount("office");
+    const proto = dom.window.HTMLElement.prototype as unknown as { scrollIntoView?: (this: HTMLElement) => void; getBoundingClientRect: () => { top: number; bottom: number } };
+    const [realScroll, realRect] = [proto.scrollIntoView, proto.getBoundingClientRect];
+    const moved: (string | undefined)[] = [];
+    let at = { top: 300, bottom: 360 };
+    try {
+      await eventually(() => host.querySelectorAll("button[aria-pressed]").length === 4, 3_000, "a button per cat");
+      proto.scrollIntoView = function (this: HTMLElement) { moved.push(this.dataset.agentRow); };
+      proto.getBoundingClientRect = () => ({ ...at, left: 0, right: 0, width: 0, height: 0, x: 0, y: 0, toJSON: () => ({}) }) as never;
+      Object.defineProperty(dom.window, "innerHeight", { value: 900, configurable: true });
+      const opened = (id: string) => eventually(() => host.querySelector(`[data-agent-row="${id}"] [data-agent-actions]`) !== null, 2_000, `${id}'s row, opened`);
+
+      // Its row in sight: picking the cat opens it and the page stays where it is.
+      (host.querySelector('button[aria-label="Nouva, working"]') as HTMLButtonElement).click();
+      await opened("nouva");
+      expect(moved).toEqual([]);
+      // A row pressed is under the pointer: wherever the page thinks it is, it is not moved.
+      at = { top: 2000, bottom: 2060 };
+      (host.querySelector('[data-agent-row="codey"] button[aria-expanded]') as HTMLButtonElement).click();
+      await opened("codey");
+      expect(moved).toEqual([]);
+      // A cat picked whose row is below the screen: brought into view, that row and once.
+      (host.querySelector('button[aria-label="Wren, waiting for you"]') as HTMLButtonElement).click();
+      await opened("wren");
+      await eventually(() => moved.length > 0, 2_000, "the row brought into view");
+      expect(moved).toEqual(["wren"]);
+      // The same cat picked again (its row closed in between) is a pick again.
+      (host.querySelector('[data-agent-row="wren"] button[aria-expanded]') as HTMLButtonElement).click();
+      await eventually(() => host.querySelector("[data-agent-actions]") === null, 2_000, "closed");
+      (host.querySelector('button[aria-label="Wren, waiting for you"]') as HTMLButtonElement).click();
+      await opened("wren");
+      await eventually(() => moved.length > 1, 2_000, "brought into view again");
+      expect(moved).toEqual(["wren", "wren"]);
+    } finally {
+      proto.scrollIntoView = realScroll;
+      proto.getBoundingClientRect = realRect;
       unmount();
     }
   });

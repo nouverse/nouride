@@ -24,6 +24,8 @@ import { canWrite, useMe } from "@/commons/lib/session";
 import { ErrorNote } from "@/commons/components/ui/ui";
 import { Details } from "@/commons/components/ui/Details";
 import { ListCard } from "@/commons/components/ui/ListCard";
+import { SearchInput } from "@/commons/components/ui/SearchInput";
+import { StickyTools } from "@/commons/components/ui/StickyBar";
 import { useTextFilter } from "@/commons/lib/use-text-filter";
 import { useSaved } from "@/commons/hooks/use-saved";
 import { ExternalNote } from "./components/ExternalNote";
@@ -105,10 +107,15 @@ export default function AgentSkillsPage({ agentId }: { agentId: string }) {
             : `Nouride's skills do not reach ${cli} yet: it uses its own. What you switch here applies when ${name} goes back to its model.`
         }
       />
+      {/* In the agent's row of tabs, which stays at the top of the window: in the card's head it left with the first rows. */}
+      {list.length > 0 ? (
+        <StickyTools>
+          <SearchInput value={query} onChange={setQuery} placeholder="Filter skills" className="w-48" />
+        </StickyTools>
+      ) : null}
       <ListCard
         title="Skills"
         description="Instructions the agent reaches for when a task matches. Every skill in the pool is on until you switch it off here; only this agent is affected."
-        {...(list.length > 0 ? { search: { value: query, onChange: setQuery, placeholder: "Filter skills" } } : {})}
       >
         <ErrorNote error={skills.error ?? save.error} />
 

@@ -1,14 +1,19 @@
 /**
  * The agents as a list of rows under the Office: each agent a line (its cat, its name, what it is doing, what answers
- * it, where it is reached) that opens its page, with a part that opens under it for what a person does with it.
+ * it, where it is reached). A press anywhere on the line opens a part under it with what a person does with that agent,
+ * its page first (Details).
  *
  * They were cards, two across and five lines tall, so seven agents ran past the window and the page under the Office
  * would have been all scroll. A row is one line; opened, it shows the agent's actions in the one place they are.
+ *
+ * A row was two things to press: the line went to the agent's page and a small arrow at its end opened the part under
+ * it, so a press meant for one took the other. And every row that opened was brought into view, the one under the
+ * pointer too, which moved the page under a hand that had just pressed it. A row is one press now, and the page moves
+ * only for a cat picked in the Office whose row is not on the screen at all.
  */
 
 import { useEffect, useRef } from "react";
-import { Link } from "@tanstack/react-router";
-import { ChevronDown, ChevronRight, Crown, KeyRound, Radio } from "lucide-react";
+import { ChevronDown, Crown, KeyRound, Radio } from "lucide-react";
 import type { AgentSummary } from "@nouride/wire";
 import type { Look } from "@/commons/cat/look";
 import { AgentAvatar } from "@/commons/components/agents/AgentAvatar";
@@ -24,12 +29,40 @@ export interface AgentRow {
   platforms: string[];
 }
 
-export function AgentRows({ rows, orchestrator, looks, open, onOpen }: { rows: AgentRow[]; orchestrator: string | null; looks: Map<string, Look>; open: string | null; onOpen: (agentId: string | null) => void }) {
-  const opened = useRef<HTMLLIElement | null>(null);
-  // Opened from the Office above: brought into view, so the cat picked and its actions are seen together.
+/** How much of the window's top the row that stays covers: a row under it is not seen. */
+const UNDER_THE_BAR = 64;
+
+/** Whether nothing of a row is on the screen: above what the window shows (or under the row that stays), or below it. */
+export function outOfView(row: { top: number; bottom: number }, windowHeight: number): boolean {
+  return row.bottom <= UNDER_THE_BAR || row.top >= windowHeight;
+}
+
+/** A cat picked in the Office: whose. Made anew at every pick, so the same cat picked again is a pick again. */
+export interface Picked {
+  agentId: string;
+}
+
+export function AgentRows({
+  rows,
+  orchestrator,
+  looks,
+  open,
+  onOpen,
+  picked,
+}: {
+  rows: AgentRow[];
+  orchestrator: string | null;
+  looks: Map<string, Look>;
+  open: string | null;
+  onOpen: (agentId: string | null) => void;
+  /** The cat last picked in the Office above: its row is brought into view when none of it is on the screen. */
+  picked?: Picked | null;
+}) {
+  const lines = useRef(new Map<string, HTMLLIElement>());
   useEffect(() => {
-    if (open) opened.current?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
-  }, [open]);
+    const row = picked ? lines.current.get(picked.agentId) : undefined;
+    if (row && outOfView(row.getBoundingClientRect(), window.innerHeight)) row.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+  }, [picked]);
   return (
     <ul className="divide-y divide-base-content/[0.06] overflow-hidden rounded-2xl border border-base-content/[0.08] bg-base-100 shadow-xs" data-agent-rows>
       {rows.map(({ agent, platforms }) => {
@@ -37,9 +70,23 @@ export function AgentRows({ rows, orchestrator, looks, open, onOpen }: { rows: A
         const look = looks.get(agent.id);
         const isOpen = open === agent.id;
         return (
-          <li key={agent.id} ref={isOpen ? opened : undefined} data-agent-row={agent.id} className={cn("scroll-mt-20", isOpen && "bg-secondary/[0.04]")}>
-            <div className="flex items-center gap-1 pr-2">
-              <Link to="/agents/$agentId" params={{ agentId: agent.id }} className="group flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5 sm:px-4" title={agent.headline ? `${name}: ${agent.headline}` : name}>
+          <li
+            key={agent.id}
+            ref={(at) => {
+              if (at) lines.current.set(agent.id, at);
+              else lines.current.delete(agent.id);
+            }}
+            data-agent-row={agent.id}
+            className={cn("scroll-mt-20", isOpen && "bg-secondary/[0.04]")}
+          >
+            {/* The line itself is the button, read as what it shows: a name of its own would hide the agent's state. */}
+            <button
+              type="button"
+              className="group flex w-full min-w-0 items-center gap-3 px-3 py-2.5 text-left sm:px-4"
+              aria-expanded={isOpen}
+              title={agent.headline ? `${name}: ${agent.headline}` : name}
+              onClick={() => onOpen(isOpen ? null : agent.id)}
+            >
                 {look ? <AgentAvatar look={look} name={name} size="sm" className="shrink-0 rounded-full" /> : null}
                 <span className="min-w-0 flex-1">
                   <span className="flex min-w-0 items-center gap-2">
@@ -67,18 +114,8 @@ export function AgentRows({ rows, orchestrator, looks, open, onOpen }: { rows: A
                   ) : null}
                 </span>
                 <AgentStatusBadge agent={agent} />
-                <ChevronRight size={16} className="hidden shrink-0 text-base-content/40 transition-transform group-hover:translate-x-0.5 group-hover:text-primary sm:block" aria-hidden="true" />
-              </Link>
-              <button
-                type="button"
-                className="btn btn-ghost btn-sm btn-circle shrink-0"
-                aria-expanded={isOpen}
-                aria-label={isOpen ? `Close ${name}'s actions` : `What to do with ${name}`}
-                onClick={() => onOpen(isOpen ? null : agent.id)}
-              >
-                <ChevronDown size={16} className={cn("transition-transform", isOpen && "rotate-180")} aria-hidden="true" />
-              </button>
-            </div>
+                <ChevronDown size={16} className={cn("shrink-0 text-base-content/50 transition-transform group-hover:text-primary", isOpen && "rotate-180")} aria-hidden="true" />
+            </button>
             {isOpen ? (
               <div className="px-3 pb-3 sm:px-4 sm:pl-[4.25rem]">
                 <AgentActions agent={agent} status={statusOf(agent)} />

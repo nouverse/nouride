@@ -92,3 +92,93 @@ describe("the row that stays at the top of the window", () => {
     }
   });
 });
+
+/**
+ * A search that belongs to a part of the page under the row, drawn in the row (`StickyTools`): Explore's search sat in
+ * its card and scrolled away with the first results, the one thing its tab is for.
+ */
+describe("what a part of the page under the row draws into it", () => {
+  async function page(parts: { row: boolean; search: boolean; fill?: boolean }) {
+    const React = await import("react");
+    const { createRoot } = await import("react-dom/client");
+    const { StickyBar, StickyTools } = await import("@/commons/components/ui/StickyBar");
+    const host = dom.document.createElement("div") as unknown as HTMLElement;
+    dom.document.body.appendChild(host as never);
+    const root = createRoot(host);
+    const draw = (now: typeof parts) =>
+      root.render(
+        React.createElement(
+          "div",
+          null,
+          now.row ? React.createElement(StickyBar, { label: "Filters", children: React.createElement("p", null, "tabs") }) : null,
+          React.createElement(
+            "section",
+            { "data-card": "" },
+            now.search ? React.createElement(StickyTools, { ...(now.fill ? { fill: true } : {}), children: React.createElement("input", { type: "search", "aria-label": "Find" }) }) : null,
+            React.createElement("p", null, "results"),
+          ),
+        ),
+      );
+    draw(parts);
+    await eventually(() => host.querySelector("section") !== null, 2_000, "the page");
+    const where = () => ({ inRow: host.querySelector('[data-sticky-bar] input[aria-label="Find"]') !== null, inCard: host.querySelector('[data-card] input[aria-label="Find"]') !== null });
+    return { host, draw, where, unmount: () => (root.unmount(), host.remove()) };
+  }
+
+  test("is in the row, not in the card it is written in; and is gone from the row when its part goes", async () => {
+    const { host, draw, where, unmount } = await page({ row: true, search: true });
+    try {
+      await eventually(() => where().inRow, 2_000, "the search in the row");
+      expect(where()).toEqual({ inRow: true, inCard: false });
+      // Once, and after the tabs: at the row's end.
+      expect(host.querySelectorAll('input[aria-label="Find"]')).toHaveLength(1);
+      expect(host.querySelector("[data-sticky-bar]")!.lastElementChild!.querySelector('input[aria-label="Find"]')).not.toBeNull();
+      // Its tab left: the row holds nothing of it, and its place takes no room.
+      draw({ row: true, search: false });
+      await eventually(() => !where().inRow, 2_000, "the search gone");
+      expect(host.querySelector("[data-sticky-tools]")!.childElementCount).toBe(0);
+      expect(host.querySelector("[data-sticky-tools]")!.getAttribute("class")).toContain("empty:hidden");
+    } finally {
+      unmount();
+    }
+  });
+
+  test("a search that is what its tab is for takes what the tabs leave", async () => {
+    const { host, where, unmount } = await page({ row: true, search: true, fill: true });
+    try {
+      await eventually(() => where().inRow, 2_000, "the search in the row");
+      expect(host.querySelector("[data-sticky-tools] > [data-fill]")!.querySelector('input[aria-label="Find"]')).not.toBeNull();
+      expect(host.querySelector("[data-sticky-tools]")!.getAttribute("class")).toContain("has-[[data-fill]]:flex-[1_1_22rem]");
+    } finally {
+      unmount();
+    }
+  });
+
+  test("where the page has no such row it is drawn where it is written, and moves to a row that comes or back when it leaves", async () => {
+    const { draw, where, unmount } = await page({ row: false, search: true });
+    try {
+      await eventually(() => where().inCard, 2_000, "the search in its card");
+      expect(where()).toEqual({ inRow: false, inCard: true });
+      draw({ row: true, search: true });
+      await eventually(() => where().inRow, 2_000, "the search in the row that came");
+      expect(where()).toEqual({ inRow: true, inCard: false });
+      draw({ row: false, search: true });
+      await eventually(() => where().inCard, 2_000, "back in its card");
+      expect(where()).toEqual({ inRow: false, inCard: true });
+    } finally {
+      unmount();
+    }
+  });
+
+  test("a page left takes its row with it: the next page's part is not drawn into a row that is gone", async () => {
+    const first = await page({ row: true, search: false });
+    first.unmount();
+    const { where, unmount } = await page({ row: false, search: true });
+    try {
+      await eventually(() => where().inCard, 2_000, "the search in its card");
+      expect(where()).toEqual({ inRow: false, inCard: true });
+    } finally {
+      unmount();
+    }
+  });
+});

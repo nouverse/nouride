@@ -33,6 +33,7 @@ import { ApiError } from "@/commons/lib/api.client";
 import { byPerson, NOBODYS } from "@/commons/lib/by-person";
 import { canWrite, isAdmin, useMe } from "@/commons/lib/session";
 import { useTextFilter } from "@/commons/lib/use-text-filter";
+import { StickyBar } from "@/commons/components/ui/StickyBar";
 import { AutomationRow } from "./components/AutomationRow";
 import { QuietHours } from "./components/QuietHours";
 import { counts, matches, rows, searchedIn, type StartFilter } from "./lib/list";
@@ -140,13 +141,13 @@ export default function AutomationsPage({ start, onStart }: { start: StartFilter
 
       {/* The picker stays where a list is empty: it is how an admin gets from nobody's back to their own. */}
       {held.length > 0 || canPick ? (
-        <div className="flex flex-wrap items-center gap-2.5">
+        <StickyBar label="Which automations" className="gap-x-2.5">
           {held.length > 0 ? <SearchInput value={search} onChange={setSearch} placeholder="Find an automation" className="h-11 min-w-0 flex-[1_1_14rem] rounded-full sm:h-10 sm:max-w-sm" /> : null}
           {canPick ? <PeopleFilter value={whose} onChange={setWhose} label="Whose automations" nobody={NOBODYS} className="rounded-full" /> : null}
           {held.length > 0 ? (
             <SearchSelect named label="Starts" options={FILTERS.map((filter) => ({ ...filter, detail: String(count[filter.value]) }))} value={start} onChange={onStart} align="start" width={220} className="rounded-full" />
           ) : null}
-        </div>
+        </StickyBar>
       ) : null}
 
       {failed ? (

@@ -18,6 +18,7 @@ import { isAdmin, useMe } from "@/commons/lib/session";
 import { SETTINGS, visible, type NavItem } from "@/commons/components/layout/nav";
 import { EmptyState, PageHeader } from "@/commons/components/ui/ui";
 import { SearchInput } from "@/commons/components/ui/SearchInput";
+import { StickyBar } from "@/commons/components/ui/StickyBar";
 import { RestartButton } from "@/commons/components/box/RestartButton";
 
 function matches(item: NavItem, words: string): boolean {
@@ -38,9 +39,10 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Settings" description="Everything you set up once: the AI your agents use, who may talk to them, and the box itself." />
-      <div className="max-w-md">
-        <SearchInput value={query} onChange={setQuery} placeholder="Find a setting" />
-      </div>
+      {/* The search stays at the top of the window while the settings scroll under it. */}
+      <StickyBar label="Find a setting">
+        <SearchInput value={query} onChange={setQuery} placeholder="Find a setting" className="w-full max-w-md" />
+      </StickyBar>
       {groups.length === 0 ? (
         <EmptyState pose="searching" title="No setting by that name" description="Try another word, or clear the search to see them all." />
       ) : (

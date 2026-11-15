@@ -9,8 +9,10 @@
 
 import { ListLoading, Spinner } from "@/commons/components/ui/Spinner";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState, type FormEvent } from "react";
-import { ExternalLink, Globe, Package, Search, Star } from "lucide-react";
+import { useEffect, useState } from "react";
+import { SearchForm } from "@/commons/components/ui/SearchForm";
+import { StickyTools } from "@/commons/components/ui/StickyBar";
+import { ExternalLink, Globe, Package, Star } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import type { CatalogDraft, McpCatalogCard, McpCatalogPage } from "@nouride/wire";
 import { Card, EmptyState, ErrorNote } from "@/commons/components/ui/ui";
@@ -43,10 +45,6 @@ export function McpExplore({
   const [query, setQuery] = useState("");
   // Asked when Search is pressed, as on Skills' Explore — not on every keystroke, which spent a request per letter.
   const [debounced, setDebounced] = useState("");
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    setDebounced(query.trim());
-  };
 
   const results = useQuery({ queryKey: ["mcp-catalog", debounced], queryFn: () => api.mcpCatalog(debounced), retry: false });
   const [picked, setPicked] = useState<string | null>(install ?? null);
@@ -62,32 +60,16 @@ export function McpExplore({
   const entries = results.data?.entries ?? [];
   const unsupported = entry.data?.result && "unsupported" in entry.data.result ? entry.data.result.unsupported : null;
 
-  // Laid out as Skills' Explore is: a search form, and results that scroll inside the card, so the form and the tabs
-  // above stay in reach on a long list.
+  // Laid out as Skills' Explore is: the search in the row that stays at the top of the window, beside the tabs, and the
+  // results as long as they are, part of the page. They were a box that scrolled inside the card, from when the page
+  // was held to the window: once the page scrolled as a page the box no longer scrolled and still kept the wheel, so
+  // with the pointer over the list nothing moved.
   return (
-    <Card
-      title="Find a connector"
-      description="Search the public catalog of connectors. They are made by others and not checked: read what one does before adding it."
-      className="flex min-h-[22rem] flex-1 flex-col"
-      bodyClassName="flex min-h-0 flex-1 flex-col"
-    >
-      <form onSubmit={submit} className="flex flex-wrap items-center gap-2">
-        <label className="input flex min-w-0 flex-1 items-center gap-2 rounded-xl">
-          <Search size={15} className="opacity-50" />
-          <input
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="github, notion, postgres…"
-            className="min-w-0 flex-1 bg-transparent outline-none"
-            aria-label="Search the catalog"
-          />
-        </label>
-        <button type="submit" className="btn btn-primary rounded-xl gap-2" disabled={results.isFetching}>
-          {results.isFetching ? <span className="loading loading-spinner loading-xs" /> : <Search size={15} />} Search
-        </button>
-      </form>
-      <div className="mt-5 min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pr-1">
+    <Card title="Find a connector" description="Search the public catalog of connectors. They are made by others and not checked: read what one does before adding it.">
+      <StickyTools fill>
+        <SearchForm value={query} onChange={setQuery} onSearch={setDebounced} placeholder="github, notion, postgres…" label="Search the catalog" busy={results.isFetching} allowEmpty />
+      </StickyTools>
+      <div data-catalog-results className="space-y-3">
       <p className="text-[11px] font-bold uppercase tracking-wider text-base-content/65 font-mono">{debounced ? `Matching “${debounced}”` : "Nouverse's picks"}</p>
       <p className="text-xs text-base-content/65">{catalogLine(results.data, Boolean(debounced))}</p>
       <ErrorNote error={results.error ?? entry.error} />

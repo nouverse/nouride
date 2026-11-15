@@ -15,7 +15,7 @@ import { agentModel, orchestratorFirst } from "@/commons/lib/agents";
 import { isAdmin, useMe } from "@/commons/lib/session";
 import { Card, EmptyState, ErrorNote, PageHeader } from "@/commons/components/ui/ui";
 import { NewAgentForm } from "./components/NewAgentForm";
-import { AgentRows } from "./components/AgentRows";
+import { AgentRows, type Picked } from "./components/AgentRows";
 import { ListLoading } from "@/commons/components/ui/Spinner";
 import { SearchInput } from "@/commons/components/ui/SearchInput";
 import { StickyBar } from "@/commons/components/ui/StickyBar";
@@ -45,6 +45,12 @@ export default function AgentListPage() {
   const shown = useTextFilter(agents.filter((agent) => inFilter(agent, filter)), query, (agent) => [agent.displayName, agent.id, agent.headline, agentModel(agent)]);
   /** The agent whose row is open: picked as a cat in the Office, or opened on its row. */
   const [open, setOpen] = useState<string | null>(null);
+  /** The cat last picked in the Office: its row is brought into view only when none of it is on the screen. */
+  const [picked, setPicked] = useState<Picked | null>(null);
+  const pick = (agentId: string | null) => {
+    setOpen(agentId);
+    if (agentId) setPicked({ agentId });
+  };
   // From every agent: an agent's look is the same here, in the Office and on its Look tab.
   const looks = useMemo(() => looksOf(status.data?.agents ?? []), [status.data]);
 
@@ -135,7 +141,7 @@ export default function AgentListPage() {
       ) : (
         <>
           {/* The office first: who is doing what, at a glance. Picking a cat opens that agent's row below. */}
-          <OfficeView selected={open} onSelect={setOpen} />
+          <OfficeView selected={open} onSelect={pick} />
           {/* The filter and the search stay at the top of the window while the list scrolls under them. */}
           <StickyBar
             label="Which agents"
@@ -158,6 +164,7 @@ export default function AgentListPage() {
                 looks={looks}
                 open={open}
                 onOpen={setOpen}
+                picked={picked}
               />
             </div>
           )}

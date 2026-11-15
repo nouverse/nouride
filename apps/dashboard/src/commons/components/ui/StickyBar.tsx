@@ -6,9 +6,14 @@
  * and what was left for the list was a strip between them and a band kept clear for the chat button, with cards cut
  * off at edges nobody could see. A page scrolls as a page now, and this one row stays in reach: what changes the list
  * is what a person reaches for halfway down it. One row, two where the window is narrow; the title scrolls away.
+ *
+ * A search that belongs to a part of the page under the row is drawn in the row too (`StickyTools`): the part keeps
+ * what was typed and what was found, the row keeps the field in reach. Explore's search sat in its card and left with
+ * it, so the one thing the tab is for was a scroll away from a long list.
  */
 
-import { type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
+import { type ReactNode, type RefObject, useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/commons/lib/utils";
 
 /**
@@ -16,6 +21,24 @@ import { cn } from "@/commons/lib/utils";
  * scrolls, which is how the row is seen to have stopped (`useAtRest`); its own top padding has that pixel back.
  */
 const BAR = "sticky -top-px z-20 -mx-4 flex flex-wrap items-center gap-x-3 gap-y-2 px-4 pt-[calc(0.5rem+1px)] pb-2 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8";
+
+/**
+ * Where a part of the page under the row draws its own search: at the row's end, or across what the tabs leave where
+ * it asks to (`data-fill`), which is a line of its own where the window is narrow. Nothing there, it takes no room.
+ */
+const FROM_BELOW = "ml-auto flex min-w-0 flex-wrap items-center gap-2 empty:hidden has-[[data-fill]]:flex-[1_1_22rem]";
+
+/** The row on the page now, for what is drawn into it from below: one page is shown at a time, so one row. */
+let shown: HTMLElement | null = null;
+const watching = new Set<() => void>();
+function show(row: HTMLElement | null): void {
+  shown = row;
+  for (const tell of watching) tell();
+}
+const watch = (tell: () => void) => {
+  watching.add(tell);
+  return () => void watching.delete(tell);
+};
 
 /** Over the page: the page's own ground, and a short fade under the row, so a card goes under it rather than being cut by it. */
 const OVER = "bg-app-bar after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:h-3 after:bg-app-bar-fade after:content-['']";
@@ -55,10 +78,36 @@ function useAtRest(row: RefObject<HTMLElement | null>): boolean {
 export function StickyBar({ children, tools, className, label }: { children?: ReactNode; tools?: ReactNode; className?: string; label?: string }) {
   const row = useRef<HTMLDivElement>(null);
   const rest = useAtRest(row);
+  // Its place for what is drawn from below, said while it is on the page and taken back when it leaves, if it is still
+  // the one said: the next page's row is on the page before this one has gone.
+  const mine = useRef<HTMLElement | null>(null);
+  const below = useCallback((at: HTMLDivElement | null) => {
+    if (at) show(at);
+    else if (shown === mine.current) show(null);
+    mine.current = at;
+  }, []);
   return (
     <div ref={row} data-sticky-bar={rest ? "rest" : "over"} role="group" {...(label ? { "aria-label": label } : {})} className={cn(BAR, !rest && OVER, className)}>
       {children}
       {tools ? <div className="ml-auto flex min-w-0 flex-wrap items-center gap-2">{tools}</div> : null}
+      <div ref={below} data-sticky-tools className={FROM_BELOW} />
     </div>
   );
+}
+
+/**
+ * A search or a filter of a part of the page under the row, drawn in the row. `fill`: across what the tabs leave, for
+ * a search that is what its tab is for. Where the page has no such row (a part drawn by itself), it is drawn where it
+ * is written, so nothing depends on the row to be usable.
+ */
+export function StickyTools({ children, fill }: { children: ReactNode; fill?: boolean }) {
+  const row = useSyncExternalStore(watch, () => shown, () => null);
+  const drawn = fill ? (
+    <div data-fill className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+      {children}
+    </div>
+  ) : (
+    children
+  );
+  return row ? createPortal(drawn, row) : <>{drawn}</>;
 }

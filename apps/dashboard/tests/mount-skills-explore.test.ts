@@ -50,6 +50,20 @@ describe("Skills Explore", () => {
     expect(html.indexOf("Install from a repository or URL")).toBeLessThan(html.indexOf("Find a skill"));
   });
 
+  test("words typed are not a search: the list stays Nouverse's picks until Search is pressed", async () => {
+    const html = await renderPage("/skills", async (host) => {
+      await clickText(host, '[role="tab"]', "Explore");
+      const input = host.querySelector('input[aria-label="Search skills"]') as HTMLInputElement;
+      Object.getOwnPropertyDescriptor(Object.getPrototypeOf(input), "value")!.set!.call(input, "pdf");
+      input.dispatchEvent(new (input.ownerDocument.defaultView as unknown as typeof globalThis).Event("input", { bubbles: true }));
+      await settle();
+      await settle();
+    });
+    expect(html).toContain('data-explore-list="catalog"');
+    expect(html).toContain("Nouverse's picks</p>");
+    expect(html).not.toContain("Matching");
+  });
+
   test("a search lists Nouverse's matches with Install: what each is called, who made it, how much it is used, how many match", async () => {
     const html = await renderPage("/skills", (host) => search(host, "pdf"));
     expect(html).toContain("Matching “pdf”");

@@ -31,6 +31,8 @@ import { isAdmin, useMe } from "@/commons/lib/session";
 import { Card, EmptyState, ErrorNote, PageHeader } from "@/commons/components/ui/ui";
 import { useConfirm } from "@/commons/components/ui/confirm";
 import { ListCard } from "@/commons/components/ui/ListCard";
+import { SearchInput } from "@/commons/components/ui/SearchInput";
+import { StickyBar } from "@/commons/components/ui/StickyBar";
 import { useTextFilter } from "@/commons/lib/use-text-filter";
 import { BackupPasswordCard } from "./components/BackupPasswordCard";
 import { LockNote } from "./components/LockNote";
@@ -167,6 +169,20 @@ export default function SecretsPage() {
         </Card>
       ) : null}
 
+      {/* Above the list: under it, at the foot of a page as long as the secrets are many, nobody saw that their backups
+          held no secrets until they needed one. */}
+      <BackupPasswordCard
+        sealed={secrets.data?.sealedInSnapshots}
+        admin={admin}
+        onTurnOff={() =>
+          ask({
+            title: "Turn off the backup password?",
+            body: "Backups from now on will not include your secrets. The backups made before keep theirs, locked with the old password.",
+            confirmLabel: "Turn off",
+          })
+        }
+      />
+
       {editing !== null ? (
         <SecretForm
           /** Non-empty means replace: the name is fixed and only a value is being asked for. */
@@ -175,6 +191,13 @@ export default function SecretsPage() {
           onCancel={() => setEditing(null)}
           onSubmit={(name, value, fields) => save.mutate({ name, value, ...(fields ? { fields } : {}) })}
         />
+      ) : null}
+
+      {/* The search stays at the top of the window while the list scrolls under it. */}
+      {entries.length > 0 ? (
+        <StickyBar label="Which secrets">
+          <SearchInput value={filter} onChange={setFilter} placeholder="Search secrets" className="w-full max-w-sm" />
+        </StickyBar>
       ) : null}
 
       <ListCard
@@ -190,7 +213,6 @@ export default function SecretsPage() {
             <RefreshCw size={13} className={secrets.isFetching ? "animate-spin" : ""} /> Refresh
           </button>
         }
-        {...(entries.length > 0 ? { search: { value: filter, onChange: setFilter, placeholder: "Search secrets" } } : {})}
       >
         {secrets.isPending ? (
           <ListLoading />
@@ -232,17 +254,6 @@ export default function SecretsPage() {
         <span>A saved secret cannot be shown again, here or anywhere, so nobody can read it out of this page. If you have lost one, replace it.</span>
       </p>
       <LockNote lock={secrets.data?.lock} />
-      <BackupPasswordCard
-        sealed={secrets.data?.sealedInSnapshots}
-        admin={admin}
-        onTurnOff={() =>
-          ask({
-            title: "Turn off the backup password?",
-            body: "Backups from now on will not include your secrets. The backups made before keep theirs, locked with the old password.",
-            confirmLabel: "Turn off",
-          })
-        }
-      />
       {dialog}
     </div>
   );

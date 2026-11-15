@@ -14,8 +14,10 @@
 
 import { ListLoading } from "@/commons/components/ui/Spinner";
 import { useState, type FormEvent } from "react";
+import { SearchForm } from "@/commons/components/ui/SearchForm";
+import { StickyTools } from "@/commons/components/ui/StickyBar";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, ExternalLink, FolderGit2, Search, ShieldAlert, Star } from "lucide-react";
+import { Download, ExternalLink, FolderGit2, ShieldAlert, Star } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import type { SkillHubFrom, SkillHubHit, SkillHubInstall } from "@nouride/wire";
 import { Card, EmptyState, ErrorNote } from "@/commons/components/ui/ui";
@@ -61,10 +63,6 @@ export function ExplorePanel({ editable, onReview }: { editable: boolean; onRevi
     onError: (error, target) => setOutcome({ ref: target, result: { ok: false, error: error instanceof Error ? error.message : String(error) } }),
   });
 
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    if (query.trim()) search.mutate(query.trim());
-  };
   const installRef = (event: FormEvent) => {
     event.preventDefault();
     if (ref.trim()) install.mutate(ref.trim());
@@ -114,28 +112,14 @@ export function ExplorePanel({ editable, onReview }: { editable: boolean; onRevi
         description="Search Nouverse's list of public skills. They are made by others and not checked: installing one puts it on the Pending tab for you to read and approve; nothing runs until you do."
         className="flex flex-col"
       >
-        <form onSubmit={submit} className="space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="input flex min-w-0 flex-1 items-center gap-2 rounded-xl">
-              <Search size={15} className="opacity-50" />
-              <input
-                type="search"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="pdf, kubernetes, release notes…"
-                className="min-w-0 flex-1 bg-transparent outline-none"
-                aria-label="Search skills"
-              />
-            </label>
-            <button type="submit" className="btn btn-primary rounded-xl gap-2" disabled={!query.trim() || search.isPending}>
-              {search.isPending ? <span className="loading loading-spinner loading-xs" /> : <Search size={15} />} Search
-            </button>
-          </div>
-        </form>
+        {/* In the row that stays at the top of the window, beside the tabs: in the card it left with the first hits. */}
+        <StickyTools fill>
+          <SearchForm value={query} onChange={setQuery} onSearch={(words) => search.mutate(words)} placeholder="pdf, kubernetes, release notes…" label="Search skills" busy={search.isPending} />
+        </StickyTools>
 
         {/* The page scrolls, not the list: nothing is below it to push off the screen, and held to what the window left
             under the two cards above it, the hits had the height of one. */}
-        <div data-explore-hits className="mt-5 space-y-3">
+        <div data-explore-hits className="space-y-3">
           <ErrorNote error={search.error} />
           {search.isPending ? <ListLoading /> : null}
           {!searched ? (

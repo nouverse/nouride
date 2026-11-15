@@ -4,8 +4,10 @@
  */
 
 import { useMutation } from "@tanstack/react-query";
-import { useState, type FormEvent } from "react";
-import { Search, X } from "lucide-react";
+import { useState } from "react";
+import { X } from "lucide-react";
+import { SearchForm } from "@/commons/components/ui/SearchForm";
+import { StickyTools } from "@/commons/components/ui/StickyBar";
 import { api } from "@/commons/lib/api";
 import { ErrorNote } from "@/commons/components/ui/ui";
 import type { OpenDocument } from "./document.dialog";
@@ -18,35 +20,28 @@ const EXCERPT = 240;
 export function KnowledgeSearch({ onOpen }: { onOpen: (at: OpenDocument) => void }) {
   const [words, setWords] = useState("");
   const search = useMutation({ mutationFn: (query: string) => api.searchKnowledge(query) });
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    if (words.trim()) search.mutate(words.trim());
-  };
   const hits = search.data?.hits ?? [];
 
   return (
     <div className="space-y-3">
-      <form onSubmit={submit} className="flex flex-wrap items-center gap-2">
-        <label className="input flex min-w-0 flex-1 items-center gap-2 rounded-xl">
-          <Search size={15} className="opacity-50" aria-hidden="true" />
-          <input
-            type="search"
-            value={words}
-            onChange={(event) => setWords(event.target.value)}
-            placeholder="Search your documents: hotel allowance, router password…"
-            className="min-w-0 flex-1 bg-transparent outline-none"
-            aria-label="Search your documents"
-          />
-        </label>
-        <button type="submit" className="btn btn-primary rounded-xl gap-2" disabled={!words.trim() || search.isPending}>
-          {search.isPending ? <span className="loading loading-spinner loading-xs" /> : <Search size={15} aria-hidden="true" />} Search
-        </button>
-        {search.data ? (
-          <button type="button" className="btn btn-ghost rounded-xl gap-1" onClick={() => search.reset()}>
-            <X size={14} aria-hidden="true" /> Clear
-          </button>
-        ) : null}
-      </form>
+      {/* In the row that stays at the top of the window, beside Memory's tabs. */}
+      <StickyTools fill>
+        <SearchForm
+          value={words}
+          onChange={setWords}
+          onSearch={(query) => search.mutate(query)}
+          placeholder="Search your documents: hotel allowance, router password…"
+          label="Search your documents"
+          busy={search.isPending}
+          after={
+            search.data ? (
+              <button type="button" className="btn btn-ghost btn-sm rounded-xl gap-1" onClick={() => search.reset()}>
+                <X size={14} aria-hidden="true" /> Clear
+              </button>
+            ) : null
+          }
+        />
+      </StickyTools>
       <ErrorNote error={search.error} />
       {search.data ? (
         <section className="border-base-content/[0.08] bg-base-100/80 rounded-2xl border px-5 py-4" aria-label="What search found">
