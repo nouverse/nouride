@@ -219,7 +219,7 @@ export function grouped(missions: readonly MissionView[]): { needsYou: MissionVi
  * shows — so the words of a report, of why it ended or of the question it waits on find it too.
  */
 export function searchedIn(mission: MissionView): (string | null | undefined)[] {
-  return [mission.goal, mission.agentId, mission.id, rowLine(mission)?.text];
+  return [mission.title, mission.goal, mission.agentId, mission.id, rowLine(mission)?.text];
 }
 
 /** Whether anything here can still change — what decides how often the page asks again. */

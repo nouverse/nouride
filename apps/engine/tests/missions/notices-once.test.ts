@@ -13,11 +13,11 @@ import { ProgressLines } from "@/modules/missions/progress-line.ts";
 import { createMissionTools } from "@/modules/tools/builtins/mission.ts";
 import { missionsHarness } from "./harness.ts";
 
-const BASE = { id: "msn_0123456789abcdef0123", goal: "Fix the login bug\nThe brief goes on for pages: …", checks: ["bun test", "bun run lint"], reviewOn: true, accept: false, jobId: null };
+const BASE = { id: "msn_0123456789abcdef0123", title: "The login bug", goal: "Fix the login bug\nThe brief goes on for pages: …", checks: ["bun test", "bun run lint"], reviewOn: true, accept: false, jobId: null };
 
 describe("started", () => {
   test("the goal whole, then the checks counted, the reviewer, how to stop it — the checks themselves are in /mission show", () => {
-    expect(startedNotice(BASE)).toBe("▶ msn_012345: Fix the login bug\nThe brief goes on for pages: …\n\n2 checks + reviewer · stop: /mission stop msn_012345");
+    expect(startedNotice(BASE)).toBe("▶ The login bug (msn_012345)\n\nFix the login bug\nThe brief goes on for pages: …\n\n2 checks + reviewer · stop: /mission stop msn_012345");
     expect(startedNotice(BASE)).not.toContain("bun test");
   });
 
@@ -38,27 +38,27 @@ describe("started", () => {
 describe("each part of a notice is its own paragraph (0.8.11)", () => {
   // In WhatsApp, Nouva's done notice to a person read as one block: "Mission … done", the result and "Branch: …" ran
   // together, each on the next line. An empty line between them keeps them apart.
-  const worked = { id: BASE.id, summary: "Lima dokumen sudah diaudit.", reviewed: true, checks: ["x"], workdir: `/srv/w/missions/${BASE.id}/worktree`, branch: null, reason: null };
+  const worked = { id: BASE.id, title: "The audit", summary: "Lima dokumen sudah diaudit.", reviewed: true, checks: ["x"], workdir: `/srv/w/missions/${BASE.id}/worktree`, branch: null, reason: null };
   const page = `https://box/dashboard/missions/${BASE.id}`;
 
   test("done: how it ended, then its result, its branch, its page", () => {
-    expect(paged(doneNotice(worked, false), page)).toBe(`✓ Mission msn_012345 done (checks passed, reviewed).\n\nLima dokumen sudah diaudit.\n\nBranch: mission/${BASE.id}\n\nPage: ${page}`);
+    expect(paged(doneNotice(worked, false), page)).toBe(`✓ The audit (msn_012345) done (checks passed, reviewed).\n\nLima dokumen sudah diaudit.\n\nBranch: mission/${BASE.id}\n\nPage: ${page}`);
   });
 
   test("waiting for the person's yes: what passed, its result, the reviewer's words, its branch, how to accept it", () => {
     expect(needsYouNotice(worked, "accept", "The reviewer: the totals add up.")).toBe(
-      `☑ Mission msn_012345 passed its checks.\n\nLima dokumen sudah diaudit.\n\nThe reviewer: the totals add up.\n\nBranch: mission/${BASE.id}\n\nAccept: /mission accept msn_012345, or /mission continue msn_012345 with what is missing.`,
+      `☑ The audit (msn_012345) passed its checks.\n\nLima dokumen sudah diaudit.\n\nThe reviewer: the totals add up.\n\nBranch: mission/${BASE.id}\n\nAccept: /mission accept msn_012345, or /mission continue msn_012345 with what is missing.`,
     );
   });
 
   test("a question, then how to answer it; started, its goal, then how it is judged and stopped", () => {
-    expect(needsYouNotice(worked, "input", "Which sheet?")).toBe("❓ Mission msn_012345 asks: Which sheet?\n\nAnswer: reply to this in your own words, or /mission answer msn_012345 <your answer> · or accept it as it is: /mission accept msn_012345");
-    expect(paged(startedNotice({ ...BASE, goal: "Audit KK 1.3a" }), page)).toBe(`▶ msn_012345: Audit KK 1.3a\n\n2 checks + reviewer · stop: /mission stop msn_012345\n\nPage: ${page}`);
+    expect(needsYouNotice(worked, "input", "Which sheet?")).toBe("❓ The audit (msn_012345) asks: Which sheet?\n\nAnswer: reply to this in your own words, or /mission answer msn_012345 <your answer> · or accept it as it is: /mission accept msn_012345");
+    expect(paged(startedNotice({ ...BASE, goal: "Audit KK 1.3a" }), page)).toBe(`▶ The login bug (msn_012345)\n\nAudit KK 1.3a\n\n2 checks + reviewer · stop: /mission stop msn_012345\n\nPage: ${page}`);
   });
 });
 
 describe("a question is never clipped unsaid", () => {
-  const where = { id: BASE.id, checks: [], workdir: "/w", branch: null, summary: null };
+  const where = { id: BASE.id, title: "The audit", checks: [], workdir: "/w", branch: null, summary: null };
 
   test("a long question is carried whole, its options at the end included", () => {
     const question = `${"Context. ".repeat(150)}\nA) keep it\nB) drop it`;

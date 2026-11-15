@@ -84,12 +84,12 @@ export function morningFacts(params: MorningSources): (person: Person, from: num
     const needsYou = [
       ...(params.missions?.open() ?? [])
         .filter((mission) => mission.status === "waiting" && missionIsMine(mission))
-        .map((mission) => ({ goal: mission.goal, what: mission.reason ?? mission.waitKind ?? "waiting" })),
+        .map((mission) => ({ goal: mission.title, what: mission.reason ?? mission.waitKind ?? "waiting" })),
       ...steps,
     ];
     const ended = (params.missions?.endedBetween(from, now) ?? [])
       .filter(missionIsMine)
-      .map((mission) => ({ goal: mission.goal, status: mission.status as "done" | "failed" | "stopped", ...(mission.status !== "done" && mission.reason ? { why: mission.reason } : {}) }));
+      .map((mission) => ({ goal: mission.title, status: mission.status as "done" | "failed" | "stopped", ...(mission.status !== "done" && mission.reason ? { why: mission.reason } : {}) }));
     const spent = admin ? params.usage.since(from) : undefined;
     // Dollars when every request had a price, tokens otherwise: a total missing some is not a total. The biggest three
     // by whichever it says — the store orders by dollars, and an unpriced model's are all zero.

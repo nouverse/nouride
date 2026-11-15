@@ -8,7 +8,7 @@
 import { describe, expect, test } from "bun:test";
 import type { LiveTurn, MissionSettings, MissionView, TurnStep } from "@nouride/wire";
 import { stepNow } from "@/commons/lib/steps";
-import { missionTitle } from "@/commons/lib/mission-title";
+import { missionName } from "@/commons/lib/mission-name";
 import { actionsFor, briefShown, grouped, inFolder, meters, needsYouSaid, rowLine, searchedIn, seenAs, tabOf, whyStarted } from "@/modules/missions/lib/mission";
 import { startInput } from "@/modules/missions/components/NewMissionForm";
 import { fieldText, fits, limitsPatch, range } from "@/modules/missions/lib/limits";
@@ -68,13 +68,17 @@ describe("what a person sees", () => {
     expect(seenAs({ ...MISSION, status: "done", seen: "done" })).toBe("Done");
   });
 
-  test("its name is its goal's first sentence, cut at a word near 90 characters (0.8.0)", () => {
-    expect(missionTitle("Automated Nouride test. Deliver the text to the chat, exactly once. Then call mission done.")).toBe("Automated Nouride test.");
-    expect(missionTitle("Upgrade the client")).toBe("Upgrade the client");
-    expect(missionTitle("  Sum up\nthe week's mail.  ")).toBe("Sum up the week's mail.");
-    const long = missionTitle("Run the shell command sleep 150 and wait for it to finish then write the word ok into done.txt in your mission folder and report");
-    expect(long.length).toBeLessThanOrEqual(91);
-    expect(long).toEndWith("the word ok into…");
+  test("its name is its title, never words cut from its goal; a daemon that sends no title, its goal as it is", () => {
+    const goal = "Automated Nouride test. Deliver the text to the chat, exactly once. Then call mission done.";
+    expect(missionName({ title: "The delivery test", goal })).toBe("The delivery test");
+    expect(missionName({ title: "  The delivery test  ", goal })).toBe("The delivery test");
+    // No title sent: the goal on one line and whole. Where it is drawn cuts it by lines; nothing here guesses a name.
+    expect(missionName({ goal })).toBe(goal);
+    expect(missionName({ title: "  ", goal: "  Sum up\nthe week's mail.  " })).toBe("Sum up the week's mail.");
+  });
+
+  test("the list's search looks in its title too", () => {
+    expect(searchedIn({ ...MISSION, title: "The delivery test" })).toContain("The delivery test");
   });
 
   test("the list's three groups keep the daemon's order inside each", () => {
@@ -90,7 +94,7 @@ describe("what a person sees", () => {
     expect(tabOf({ seen: "ended", status: "failed" })).toBe("failed");
     expect(tabOf({ seen: "ended", status: "stopped" })).toBe("stopped");
     const done = { ...MISSION, status: "done" as const, seen: "done" as const, report: "Wrote hello.txt and checked it" };
-    expect(searchedIn(done)).toEqual(["Upgrade the client", "nova", "msn_3f2a91c0d4", "Wrote hello.txt and checked it"]);
+    expect(searchedIn({ ...done, title: "The client upgrade" })).toEqual(["The client upgrade", "Upgrade the client", "nova", "msn_3f2a91c0d4", "Wrote hello.txt and checked it"]);
     // What a chat names it by, and the question it waits on, find it too.
     expect(searchedIn(waiting("input", { reason: "Which branch should it target?" })).join(" ")).toContain("Which branch should it target?");
   });
@@ -240,6 +244,9 @@ describe("the new mission form", () => {
     // Skipping the reviewer wins over criteria typed before the box was ticked.
     expect(startInput({ ...base, noReview: true, accept: true, workdir: "/srv/api" })).toEqual({ agent: "nova", goal: "Upgrade the client", checks: ["bun test", "bun run lint"], noReview: true, accept: true, workdir: "/srv/api" });
     expect(startInput({ ...base, checks: "", review: "" })).toEqual({ agent: "nova", goal: "Upgrade the client" });
+    // Its name where one was typed; left empty, none is sent and the daemon names it from its goal.
+    expect(startInput({ ...base, checks: "", review: "", title: "  The client upgrade  " })).toEqual({ agent: "nova", title: "The client upgrade", goal: "Upgrade the client" });
+    expect(startInput({ ...base, checks: "", review: "", title: "   " })).toEqual({ agent: "nova", goal: "Upgrade the client" });
   });
 
   test("a limit is sent only inside the bounds the daemon reports", () => {

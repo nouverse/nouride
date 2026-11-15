@@ -86,7 +86,7 @@ async function inState(state: State): Promise<{ h: Harness; mission: Mission }> 
       return { h, mission };
     }
     case "proposal": {
-      const result = h.missions.start({ agentId: "nova", goal: "tidy the logs", checks: CHECKS, startedBy: "8142", gatewayId: "telegram:nova", chatId: "8142", byAgent: "nova", proposed: true });
+      const result = h.missions.start({ agentId: "nova", title: "The logs", goal: "tidy the logs", checks: CHECKS, startedBy: "8142", gatewayId: "telegram:nova", chatId: "8142", byAgent: "nova", proposed: true });
       if ("refused" in result) throw new Error(result.refused);
       return { h, mission: result.mission };
     }
@@ -208,7 +208,7 @@ describe("what a person says, from every state", () => {
         if (expected.status === "done" || expected.status === "stopped") {
           // Ended: whatever turn it had is cut off, and nothing is queued after.
           expect(h.queued.length).toBe(queued);
-          expect(h.told.at(-1)!.text).toMatch(expected.status === "done" ? /^✓ Mission/ : /^✗ Mission/);
+          expect(h.told.at(-1)!.text).toMatch(expected.status === "done" ? /^✓ .+ \(msn_[0-9a-f]{6}\) done/ : /^✗ .+ \(msn_[0-9a-f]{6}\) stopped/);
         }
       });
     }

@@ -76,6 +76,12 @@ export interface Mission {
   /** Where it reports: the chat it began in. */
   gatewayId: string;
   chatId: string;
+  /**
+   * Its name for a person, a few words: what the work is called. Every place that names a mission to a person shows
+   * this and never the goal, which is an instruction to the agent. Given by the agent that starts one, taken from its
+   * job by a scheduled run, and from the goal's first sentence where a person started it with none (`start.ts`).
+   */
+  title: string;
   goal: string;
   checks: string[];
   /** The reviewer's criteria in words; null = the goal itself. */

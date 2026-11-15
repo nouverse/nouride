@@ -71,7 +71,7 @@ function missionState(mission: Mission): string {
 
 function missionLine(mission: Mission): string {
   const by = mission.agentId === mission.byAgent || mission.byAgent === null ? "" : ` · started by ${mission.byAgent}`;
-  return `${shortId(mission.id)} · ${mission.agentId}${by} · ${missionState(mission)} · ${clip(mission.goal, 100)}`;
+  return `${shortId(mission.id)} · ${mission.agentId}${by} · ${missionState(mission)} · ${mission.title}`;
 }
 
 const STEP_MARK = { done: "✓", active: "●", skipped: "–", pending: "○" } as const;
@@ -90,6 +90,7 @@ function missionDetail(mission: Mission, limits: string, plan: KeptPlan | undefi
   const lines = [
     `${mission.id} · ${mission.agentId} · ${missionState(mission)}`,
     ...(page ? [`Page: ${page}`] : []),
+    `Title: ${mission.title}`,
     `Goal: ${mission.goal}`,
     `Done when: ${doneWhen(mission)}.`,
     limits,

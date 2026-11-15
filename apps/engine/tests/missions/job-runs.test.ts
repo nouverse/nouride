@@ -99,7 +99,8 @@ describe("a job's run", () => {
     h.turn(mission, {}, () => h.missions.claim(mission.id, { kind: "done", summary: "Seven threads this week.", report: "The seven threads, one by one.", files: [] }));
     await h.settle();
     expect(h.store.get(mission.id)).toMatchObject({ status: "done", reviewed: true });
-    expect(h.told.at(-1)?.text).toStartWith("✓ Mission");
+    // Named by its job, as every run of it is.
+    expect(h.told.at(-1)?.text).toMatch(/^✓ .+ \(msn_[0-9a-f]{6}\) done \(reviewed\)\./);
     expect(h.told.at(-1)?.text).toContain("done (reviewed).");
     expect(h.told.at(-1)?.text).toContain("Seven threads this week.");
     // The job's chat gets its report whole, as any mission's does (0.8.11).

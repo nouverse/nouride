@@ -250,7 +250,7 @@ export interface ApprovalNoticeLike {
    * The mission whose turn asked (0.8.7): named, since its question lands in the chat the mission began in, where the
    * person may be talking to the agent about something else. Its short id and goal.
    */
-  mission?: { id: string; goal: string };
+  mission?: { id: string; title: string };
   /** The kind of command *Approve similar* would allow for that mission — offered only with one (`missions/similar.ts`). */
   similar?: string;
   /**
@@ -283,7 +283,7 @@ const FILE_PREVIEWS: ReadonlySet<ApprovalPreview["kind"]> = new Set(["edit", "ne
  */
 export function approvalPrompt(notice: ApprovalNoticeLike, shown: { buttons?: boolean } = {}): string {
   const { request } = notice;
-  const from = notice.mission ? `, from mission ${notice.mission.id} (${escapeMarkdown(clipGoal(notice.mission.goal))})` : "";
+  const from = notice.mission ? `, from mission ${notice.mission.id} (${escapeMarkdown(notice.mission.title)})` : "";
   const lines = [
     notice.elsewhere
       ? `⏸ **${request.agentId}** is waiting on an admin before running **${request.tool}**${from}. It was asked in another chat, where only an admin can answer it; you are one.`
@@ -364,11 +364,6 @@ export function approvalPrompt(notice: ApprovalNoticeLike, shown: { buttons?: bo
   lines.push(`id: \`${request.id}\``);
 
   return lines.join("\n");
-}
-
-/** A mission's goal as a prompt names it: its first line, short. */
-function clipGoal(goal: string): string {
-  return clip(goal.trim().split("\n")[0]!, 80);
 }
 
 /**

@@ -6,10 +6,10 @@
  * needs-you and its start on a yes were there already.
  */
 
-import { plural } from "@nouride/shared";
+import { plural, titleFromGoal } from "@nouride/shared";
 import { GAP } from "./notices.ts";
 import { shortId } from "./page.ts";
-import { briefFilesOf, briefRefusal, startRefusal, type StartRequest } from "./start.ts";
+import { briefFilesOf, briefRefusal, startRefusal, titleRefusal, type StartRequest } from "./start.ts";
 import type { MissionsPort } from "./missions.store.ts";
 import type { Mission } from "./types.ts";
 import { ownFolderOf } from "./worktree.ts";
@@ -56,13 +56,15 @@ export function signedOffBy(mission: Pick<Mission, "checks" | "reviewOn" | "acce
  * words. A person who wanted two drafts to follow the mission at work left them unstarted, since nothing said that
  * a start then is a place in the queue and not a second mission at once.
  */
-export function draftNotice(mission: Pick<Mission, "id" | "goal" | "agentId" | "byAgent" | "checks" | "reviewOn" | "accept" | "jobId">, brief: boolean, changed: readonly string[] = [], behind: string | null = null): string {
+export function draftNotice(mission: Pick<Mission, "id" | "title" | "goal" | "agentId" | "byAgent" | "checks" | "reviewOn" | "accept" | "jobId">, brief: boolean, changed: readonly string[] = [], behind: string | null = null): string {
   const id = shortId(mission.id);
   const who = mission.byAgent && mission.byAgent !== mission.agentId ? `${mission.agentId}, drafted by ${mission.byAgent}` : mission.agentId;
   const checks = mission.checks.length === 0 ? "no checks" : `${mission.checks.length} ${plural(mission.checks.length, "check")}`;
   return [
     ...(changed.length > 0 ? [`✎ Draft ${id} changed: ${changed.join(", ")}.`] : []),
-    `📝 Draft ${id} · ${who}: ${mission.goal.trim()}`,
+    // Its name, then the goal whole: what the person decides on is what it will do, and the name is how it is called after.
+    `📝 Draft ${id} · ${who}: ${mission.title.trim() || "untitled"}`,
+    mission.goal.trim(),
     `${checks} · signed off by: ${signedOffBy(mission)} · brief: ${brief ? "on the mission's page" : "none"}`,
     `Start it: /mission accept ${id} · drop it: /mission stop ${id}`,
     ...(behind ? [`Started now, it waits its turn: ${behind}. It then starts by itself.`] : []),
@@ -71,6 +73,7 @@ export function draftNotice(mission: Pick<Mission, "id" | "goal" | "agentId" | "
 
 /** What may change in a draft — the start's own fields; `limits` from the dashboard only, as an agent raises none. */
 export interface DraftChange {
+  title?: string;
   goal?: string;
   checks?: readonly string[];
   /** Criteria in words; false for no reviewer; true for the reviewer on the goal. */
@@ -102,6 +105,13 @@ export function changedDraft(
   if (!isDraft(mission)) return { refused: `Mission ${shortId(mission.id)} has started; a running mission's goal and checks stay as they are. Tell it something instead.` };
   const next: Mission = { ...mission, checks: [...mission.checks], limits: { ...mission.limits } };
   const changed: string[] = [];
+  if (change.title !== undefined && change.title.trim() !== mission.title) {
+    // Emptied, it is named from its goal again, as one started with none is.
+    const why = titleRefusal(change.title, false);
+    if (why) return { refused: why };
+    next.title = change.title.trim();
+    changed.push("title");
+  }
   if (change.goal !== undefined && change.goal.trim() !== mission.goal) {
     next.goal = change.goal.trim();
     changed.push("goal");
@@ -151,8 +161,10 @@ export function changedDraft(
     changed.push("the brief");
   }
   if (changed.length === 0) return { refused: "Nothing in the draft changes." };
+  if (!next.title) next.title = titleFromGoal(next.goal);
   const request: StartRequest = {
     agentId: next.agentId,
+    title: next.title,
     goal: next.goal,
     checks: next.checks,
     review: next.reviewOn ? (next.review ?? undefined) : false,

@@ -84,7 +84,7 @@ describe("`mission` start: the page in what it answers", () => {
     const { chat } = createMissionTools(h.missions, { linkFor: rule() });
     const pageIn = async (ctx: ToolContext) => {
       const before = new Set(h.store.open().map((one) => one.id));
-      const answer = (await chat.execute({ action: "start", goal: "count the lines", checks: ["true"] }, ctx)).content;
+      const answer = (await chat.execute({ action: "start", title: "A test mission", goal: "count the lines", checks: ["true"] }, ctx)).content;
       const id = h.store.open().find((one) => !before.has(one.id))!.id;
       return { answer, link: `Page: ${BASE}/dashboard/missions/${id}` };
     };
@@ -98,10 +98,10 @@ describe("`mission` start: the page in what it answers", () => {
   test("a start's result says the mission's page as a path, where the chat gets no link too; a refused start says none", async () => {
     const h = await missionsHarness();
     const { chat } = createMissionTools(h.missions, { linkFor: () => null });
-    const started = await chat.execute({ action: "start", goal: "count the lines", checks: ["true"] }, dm("555"));
+    const started = await chat.execute({ action: "start", title: "A test mission", goal: "count the lines", checks: ["true"] }, dm("555"));
     expect(started.content).not.toContain("Page:");
     expect(started.page).toBe(`/missions/${h.store.open().at(-1)!.id}`);
-    const refused = await chat.execute({ action: "start", goal: "" }, dm("555"));
+    const refused = await chat.execute({ action: "start", title: "A test mission", goal: "" }, dm("555"));
     expect(refused.isError).toBe(true);
     expect(refused.page).toBeUndefined();
   });
@@ -109,7 +109,7 @@ describe("`mission` start: the page in what it answers", () => {
   test("a mission proposed in a DM — nobody asked — carries the page for the chat's own person", async () => {
     const h = await missionsHarness();
     const { chat } = createMissionTools(h.missions, { linkFor: rule() });
-    const answer = (await chat.execute({ action: "start", goal: "tidy the notes" }, { ...dm("8142"), senderId: "nouride:system" })).content;
+    const answer = (await chat.execute({ action: "start", title: "A test mission", goal: "tidy the notes" }, { ...dm("8142"), senderId: "nouride:system" })).content;
     expect(answer).toStartWith("Drafted mission");
     expect(answer).toContain(`Page: ${BASE}/dashboard/missions/${h.store.open().at(-1)!.id}`);
   });

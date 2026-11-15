@@ -37,7 +37,7 @@ async function setup(settings: Parameters<typeof missionsHarness>[0] = {}) {
   });
   const draft = async (args: Record<string, unknown> = {}, ctx: ToolContext = person()) => {
     const before = new Set(h.store.open().map((one) => one.id));
-    const answer = await tools.chat.execute({ action: "start", goal: "Revise the RFC to the owner's answers", checks: ["test -s RFC.md"], ...args }, ctx);
+    const answer = await tools.chat.execute({ action: "start", title: "A test mission", goal: "Revise the RFC to the owner's answers", checks: ["test -s RFC.md"], ...args }, ctx);
     await h.settle();
     const made = h.store.open().find((one) => !before.has(one.id)) ?? null;
     return { answer, mission: made };
@@ -53,9 +53,9 @@ describe("D1 — a chat's mission is a draft", () => {
     expect(h.queued).toHaveLength(0);
     const id = mission!.id.slice(0, 10);
     const notice = h.told.at(-1)!;
-    expect(notice.text).toBe(`📝 Draft ${id} · nova: Revise the RFC to the owner's answers\n\n1 check · signed off by: you · brief: none\n\nStart it: /mission accept ${id} · drop it: /mission stop ${id}`);
+    expect(notice.text).toBe(`📝 Draft ${id} · nova: A test mission\n\nRevise the RFC to the owner's answers\n\n1 check · signed off by: you · brief: none\n\nStart it: /mission accept ${id} · drop it: /mission stop ${id}`);
     expect(notice.buttons?.map((one) => one.label)).toEqual(["Start it", "Drop it"]);
-    expect(answer.content).toStartWith(`Drafted mission ${id}: Revise the RFC`);
+    expect(answer.content).toStartWith(`Drafted mission ${id}, "A test mission": Revise the RFC`);
     expect(answer.content).toContain('Nothing runs until the person starts it: their tap, /mission accept');
     expect(answer.content).toContain('their "go" passed on with `work` action "start". Change it before then with `mission` action "edit".');
   });
@@ -67,7 +67,7 @@ describe("D1 — a chat's mission is a draft", () => {
     const { mission } = await draft({ goal: "the room" });
     const id = mission!.id.slice(0, 10);
     expect(h.told.at(-1)!.text).toBe(
-      `📝 Draft ${id} · nova: the room\n\n1 check · signed off by: you · brief: none\n\nStart it: /mission accept ${id} · drop it: /mission stop ${id}\n\nStarted now, it waits its turn: nova already runs ${first.id.slice(0, 10)} (per_agent 1). It then starts by itself.`,
+      `📝 Draft ${id} · nova: A test mission\n\nthe room\n\n1 check · signed off by: you · brief: none\n\nStart it: /mission accept ${id} · drop it: /mission stop ${id}\n\nStarted now, it waits its turn: nova already runs ${first.id.slice(0, 10)} (per_agent 1). It then starts by itself.`,
     );
     // And it does: started, it is queued behind the first, and runs when that one ends.
     h.missions.accept(mission!.id, "Gading");
@@ -148,7 +148,7 @@ describe("D3 — what never stalls as a draft", () => {
     const { h, tools } = await setup();
     const parent = await h.start("the parent", { byAgent: "nova" });
     const inside = { agentId: "nova", gatewayId: MISSION_GATEWAY_ID, chatId: parent.id, senderId: "8142" } as ToolContext;
-    await tools.inside.execute({ action: "start", goal: "a piece of it", agent: "nox" }, inside);
+    await tools.inside.execute({ action: "start", title: "A test mission", goal: "a piece of it", agent: "nox" }, inside);
     await h.settle();
     expect(h.store.recent(5).find((one) => one.goal === "a piece of it")!.status).toBe("running");
     const run = await h.start("the weekly report", { jobId: "cron_weekly" });

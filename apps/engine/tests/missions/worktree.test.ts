@@ -67,7 +67,7 @@ describe("a mission's worktree", () => {
     expect(await git(join(own, "worktree"), "branch", "--show-current")).toBe(branchOf({ id: "m1", branch: null }));
     expect(await git(repo, "branch", "--show-current")).toBe("main");
     expect(worktreeBranch({ id: "m1", workdir: moved!, branch: null })).toBe("mission/m1");
-    expect(doneNotice({ id: "m1", summary: "Done.", reviewed: false, checks: [], workdir: moved!, branch: null, reason: null }, false)).toEndWith("\nBranch: mission/m1");
+    expect(doneNotice({ id: "m1", title: "The draft", summary: "Done.", reviewed: false, checks: [], workdir: moved!, branch: null, reason: null }, false)).toEndWith("\nBranch: mission/m1");
   });
 
   test("lets two missions work in one repository side by side, where without it one waits", async () => {
@@ -233,7 +233,7 @@ describe("a branch named at start", () => {
     expect(await git(join(own, "worktree"), "branch", "--show-current")).toBe("feat/mission-ux");
     expect(await git(repo, "branch", "--list", "mission/*")).toBe("");
     expect(worktreeBranch({ ...mission, workdir: moved })).toBe("feat/mission-ux");
-    expect(doneNotice({ id: "m1", summary: "Done.", reviewed: false, checks: [], workdir: moved, branch: mission.branch, reason: null }, false)).toEndWith("\nBranch: feat/mission-ux");
+    expect(doneNotice({ id: "m1", title: "The draft", summary: "Done.", reviewed: false, checks: [], workdir: moved, branch: mission.branch, reason: null }, false)).toEndWith("\nBranch: feat/mission-ux");
     expect(await helperWorktreeFor({ mission: { ...mission, workdir: moved }, own: () => own, exists: existsSync, run })).toEqual({ path: join(own, "helpers", "1"), branch: "feat/mission-ux-helper-1" });
     // Its removal takes the worktrees and leaves the branch, named or not.
     await removeOwnFolder(own, run);

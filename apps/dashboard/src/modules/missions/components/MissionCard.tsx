@@ -16,7 +16,7 @@ import { cn } from "@/commons/lib/utils";
 import { Lit } from "@/commons/components/ui/Lit";
 import { ENTER, type Motion } from "@/commons/hooks/use-motion-list";
 import { rowLine } from "../lib/mission";
-import { missionTitle } from "@/commons/lib/mission-title";
+import { missionName } from "@/commons/lib/mission-name";
 import { SeenBadge } from "./SeenBadge";
 
 /** `motion`: how the list draws it (`useMotionList`); one that arrives is lit too. */
@@ -37,7 +37,7 @@ export function MissionCard({ mission, motion = "" }: { mission: MissionView; mo
           {readsOnly(mission) ? <Tag title="You can read this one, not change it">{whoseWords(mission)}</Tag> : null}
         </div>
         <h3 className="text-sm font-semibold leading-snug tracking-tight text-base-content line-clamp-2 [overflow-wrap:anywhere]" title={mission.goal}>
-          {missionTitle(mission.goal)}
+          {missionName(mission)}
         </h3>
       </header>
 

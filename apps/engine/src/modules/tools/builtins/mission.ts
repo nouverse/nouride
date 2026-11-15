@@ -9,7 +9,7 @@
  */
 
 import { resolveWithin, statFile } from "@nouride/runtime";
-import { createLogger, type Tool, type ToolContext, type ToolResult } from "@nouride/shared";
+import { createLogger, MISSION_TITLE_MAX, type Tool, type ToolContext, type ToolResult } from "@nouride/shared";
 import { SYSTEM_SENDER } from "@/modules/pipeline/deps.ts";
 import { pagePath, type LinkFor } from "@/modules/web/links.ts";
 import type { AuditPort } from "@/commons/audit.store.ts";
@@ -75,6 +75,7 @@ export const WHO_SIGNS =
  * track gets no branch, and needs none.
  */
 const START_FIELDS = {
+  title: { type: "string", description: `Its name for the person, in English, at most ${MISSION_TITLE_MAX} characters: what the work is called ("The viewers for 0.8.39"), not what to do.` },
   goal: { type: "string", description: "What must be true when it is done, in English, and whole: each turn starts from it, not from this conversation. A long one points at a brief file by its absolute path." },
   checks: {
     type: "array",
@@ -178,8 +179,10 @@ function startFields(args: Record<string, unknown>, ctx: ToolContext): Omit<Star
   const workdir = text(args.workdir);
   const branch = text(args.branch);
   const review = args.no_review === true ? false : text(args.review) || undefined;
+  const title = text(args.title);
   return {
     agentId: text(args.agent) || ctx.agentId,
+    ...(title ? { title } : {}),
     goal: text(args.goal),
     ...(checks ? { checks } : {}),
     ...(review !== undefined ? { review } : {}),
@@ -198,6 +201,7 @@ async function editOwn(missions: Missions, args: Record<string, unknown>, ctx: T
   if (!mission || (mission.byAgent ?? mission.agentId) !== ctx.agentId) return refused(id ? `No draft ${id} of yours.` : "Name your draft: `id`.");
   const checks = strings(args.checks);
   const change: DraftChange = {
+    ...(typeof args.title === "string" ? { title: args.title } : {}),
     ...(typeof args.goal === "string" ? { goal: args.goal } : {}),
     ...(checks ? { checks } : {}),
     ...(args.no_review === true ? { review: false } : typeof args.review === "string" ? { review: args.review } : args.no_review === false ? { review: true } : {}),
@@ -237,7 +241,7 @@ function started(missions: Missions, result: ReturnType<Missions["start"]>, page
     const brief = missions.briefPath(mission);
     const briefLine = briefFailed ? `\nIts brief could not be written: ${briefFailed}. Write it again with \`edit\`.` : `\nIts brief: ${brief} (yours to change before it starts).`;
     return ok(
-      `Drafted mission ${id}: ${mission.goal}\nDone when ${doneWhen(mission)}; signed off by ${signedOffBy(mission)}.${briefLine}${pageLine}\n` +
+      `Drafted mission ${id}, "${mission.title}": ${mission.goal}\nDone when ${doneWhen(mission)}; signed off by ${signedOffBy(mission)}.${briefLine}${pageLine}\n` +
         `Its notice is in this chat with Start it and Drop it. Nothing runs until the person starts it: their tap, /mission accept ${id}, the dashboard, ` +
         `or their "go" passed on with \`work\` action "start". Change it before then with \`mission\` action "edit". ` +
         `Tell the person what you drafted and how it will be judged done; do not do the work here as well.${reminder}`,
@@ -246,7 +250,7 @@ function started(missions: Missions, result: ReturnType<Missions["start"]>, page
   const state = mission.status === "queued" ? "queued" : "started";
   // Why it waits is the dispatcher's own decision (`blockedBy`), not guessed again here.
   const waits = result.queued ? `\nIt waits because ${result.queued}; it starts by itself once that clears.` : "";
-  return ok(`Mission ${id} ${state}: ${mission.goal}${waits}\nDone when ${doneWhen(mission)}.${pageLine}\nIt runs on its own and reports to this chat. Tell the person you started it; do not do the work here as well.${reminder}`);
+  return ok(`Mission ${id} ${state}, "${mission.title}": ${mission.goal}${waits}\nDone when ${doneWhen(mission)}.${pageLine}\nIt runs on its own and reports to this chat. Tell the person you started it; do not do the work here as well.${reminder}`);
 }
 
 export function createMissionTools(missions: Missions, options: { linkFor?: LinkFor; audit?: Pick<AuditPort, "record"> } = {}): { chat: Tool; inside: Tool } {

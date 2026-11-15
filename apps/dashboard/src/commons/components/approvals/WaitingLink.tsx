@@ -3,8 +3,9 @@
  * request to talk to the agents, a skill to review. It says what it is and opens where the answer is given; Home and
  * Work's first tab draw the same card.
  *
- * Its title wraps anywhere and stops at three lines: a mission's goal is long, and a path in it ran past the
- * card's edge and under the Quick chat card beside it on Home. The whole of it stays in the `title` and on its page.
+ * Its title wraps anywhere and stops at two lines: a long word in it, a path, ran past the card's edge and under the
+ * Quick chat card beside it on Home. It is set in the page's own type at reading weight: in the display face, large and
+ * heavy, two or three cards of it were a screen of bold on a phone. The whole of it stays in the `title` and on its page.
  * Its line says what is waited for, a mission's question among them, so it wraps and stops at two.
  */
 
@@ -40,7 +41,7 @@ export function WaitingLink({
       className={cn("group flex min-w-0 flex-col gap-2 rounded-[22px] border border-base-content/[0.08] bg-base-100 p-4 shadow-soft sm:p-5", LIFTS)}
     >
       <Tag tone="needs" className="self-start">{tag}</Tag>
-      <p className="line-clamp-3 font-display text-lg leading-snug font-medium text-base-content [overflow-wrap:anywhere]" title={full ?? title}>
+      <p className="line-clamp-2 text-[15px] leading-snug font-medium text-base-content [overflow-wrap:anywhere]" title={full ?? title}>
         {title}
       </p>
       <p className="flex min-w-0 items-start gap-1.5 text-sm text-base-content/70" title={line}>

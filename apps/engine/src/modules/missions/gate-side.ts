@@ -22,7 +22,7 @@ export function gateSide(store: Pick<MissionsPort, "get">, similar: SimilarAllow
     /** The mission whose turn asked, as its prompt names it. */
     missionOf: (request: { gateway: string; chatId: string }) => {
       const mission = request.gateway === MISSION_GATEWAY_ID ? store.get(request.chatId) : null;
-      return mission ? { id: shortId(mission.id), goal: mission.goal } : null;
+      return mission ? { id: shortId(mission.id), title: mission.title } : null;
     },
     /** *Approve similar from this mission*: the kind a request is, and the yes that allows it there. */
     similar: {

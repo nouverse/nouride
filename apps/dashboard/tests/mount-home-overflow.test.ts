@@ -18,6 +18,8 @@ useMountHarness();
 const ok = (body: unknown) => ({ status: 200, body });
 const GOAL =
   "Nouride v0.8.39, group B (phone fixes): items 13, 14, 15, the tables part of item 16 of apps/dashboard/src/commons/components/approvals/WaitingLink.tsx, and the Home waiting-card overflow bug (WaitingLink title unclamped, long path runs past the card) are built, each as its own conventional commit with tests and sabotage evidence, pushed to releases/v0.8.39. Full instructions are in the brief at the mission folder's BRIEF.md.";
+/** Its name: a few words, with one that cannot break. */
+const TITLE = "The fixes for apps/dashboard/src/commons/WaitingLink.tsx";
 const LONG_NAME = "an-agent-whose-id-is-far-longer-than-a-phone-is-wide-at-all";
 const ME = WIRE["/auth/me"] as { user: Record<string, unknown> } & Record<string, unknown>;
 const HOME = {
@@ -31,7 +33,7 @@ const HOME = {
     agents: [{ id: "nix", displayName: LONG_NAME, enabled: true, state: "running", provider: "p", model: "m", tools: [], approvals: "careful" }],
   }),
   "/approvals": ok({ pending: [] }),
-  "/missions": ok({ missions: [{ id: "m1", agentId: "nix", goal: GOAL, status: "waiting", seen: "needs_you", waitKind: "input", checklist: null }] }),
+  "/missions": ok({ missions: [{ id: "m1", agentId: "nix", title: TITLE, goal: GOAL, status: "waiting", seen: "needs_you", waitKind: "input", checklist: null }] }),
   "/knowledge": ok({ collections: [] }),
   "/advisories": ok({ advisories: [{ message: "A secret is handed to every command: /srv/nouride/.nouride/agents/nix/secrets/a-very-long-file-name.json", agents: [], hint: null }] }),
   "/auth/me": ok({ ...ME, user: { ...ME.user, displayName: "Somebodywithaverylongnamethatneverbreaksanywhere" } }),
@@ -43,15 +45,19 @@ const classOf = (host: HTMLElement, selector: string, text: string) =>
 
 describe("a mission waiting for an answer, on Home and on Work", () => {
   for (const [page, path] of [["Home", "/"], ["Work", "/work"]] as const) {
-    test(`${page}: its name, not the whole goal, broken anywhere and cut at three lines, the goal in its title`, async () => {
+    test(`${page}: its name, not the goal, broken anywhere and cut at two lines, the goal in its title`, async () => {
       answer(HOME);
       await renderPage(path, async (host) => {
         await eventually(() => host.textContent?.includes("Waiting for your answer") === true, 3_000, page);
         const card = host.querySelector<HTMLAnchorElement>('a[href="/dashboard/missions/m1"]')!;
         const title = card.querySelector("p")!;
-        expect(title.textContent).toBe("Nouride v0.8.39, group B (phone fixes): items 13, 14, 15, the tables part of item 16 of…");
+        expect(title.textContent).toBe(TITLE);
         expect(title.getAttribute("title")).toBe(GOAL);
-        expect(title.className.split(" ")).toEqual(expect.arrayContaining(["[overflow-wrap:anywhere]", "line-clamp-3"]));
+        expect(title.className.split(" ")).toEqual(expect.arrayContaining(["[overflow-wrap:anywhere]", "line-clamp-2"]));
+        // In the page's own type at reading weight: in the display face, large, a few cards were a screen of bold.
+        expect(title.className.split(" ")).toEqual(expect.arrayContaining(["text-[15px]", "font-medium"]));
+        expect(title.className).not.toContain("font-display");
+        expect(title.className).not.toContain("text-lg");
         // The card itself may be narrower than its longest word, or the grid's column grows to hold it.
         expect(card.className.split(" ")).toContain("min-w-0");
       });
@@ -63,7 +69,7 @@ describe("a mission waiting for an answer, on Home and on Work", () => {
     await renderPage("/", async (host) => {
       await eventually(() => host.textContent?.includes("Review them") === true, 3_000, "Home");
       const title = classOf(host, 'a[href="/dashboard/skills"] p', "skill");
-      expect(title.split(" ")).toEqual(expect.arrayContaining(["[overflow-wrap:anywhere]", "line-clamp-3"]));
+      expect(title.split(" ")).toEqual(expect.arrayContaining(["[overflow-wrap:anywhere]", "line-clamp-2"]));
     });
   });
 });

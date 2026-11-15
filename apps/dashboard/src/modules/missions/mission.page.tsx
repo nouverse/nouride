@@ -43,7 +43,7 @@ import { useMissionDelete } from "./hooks/use-mission-delete";
 import { Goal } from "./components/Goal";
 import { DraftForm } from "./components/DraftForm";
 import { briefShown, meters, needsYouSaid, shortId } from "./lib/mission";
-import { missionTitle } from "@/commons/lib/mission-title";
+import { missionName } from "@/commons/lib/mission-name";
 import { asksWhileWorking, openQuestion } from "@/commons/lib/mission-waits";
 import { DetailLoading } from "@/commons/components/ui/Skeleton";
 
@@ -106,7 +106,7 @@ export default function MissionPage({ missionId }: { missionId: string }) {
   });
   const detail = found.data;
   // What this page is about, for an agent asked from the chat that floats over it.
-  usePageSubject(detail ? missionTitle(detail.mission.goal) : undefined);
+  usePageSubject(detail ? missionName(detail.mission) : undefined);
   const conversation = useConversation({
     ...(detail ? { sessionId: detail.sessionId } : {}),
     agentId: detail?.mission.agentId ?? "",
@@ -161,7 +161,7 @@ export default function MissionPage({ missionId }: { missionId: string }) {
           </span>
         </div>
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-          <h1 className="min-w-0 text-lg font-semibold leading-snug tracking-tight text-base-content [overflow-wrap:anywhere] sm:text-xl">{missionTitle(mission.goal)}</h1>
+          <h1 className="min-w-0 text-lg font-semibold leading-snug tracking-tight text-base-content [overflow-wrap:anywhere] sm:text-xl">{missionName(mission)}</h1>
           <MissionActions
             mission={mission}
             writable={writable}
@@ -170,7 +170,8 @@ export default function MissionPage({ missionId }: { missionId: string }) {
             onDelete={(force) => remove.mutateAsync(force)}
           />
         </div>
-        {mission.goal.replace(/\s+/g, " ").trim() !== missionTitle(mission.goal) && <Goal goal={mission.goal} />}
+        {/* What it is to do, under what it is called; said once where the two are the same words. */}
+        {mission.goal.replace(/\s+/g, " ").trim() !== missionName(mission) && <Goal goal={mission.goal} />}
         {only && <ReadOnlyNote thing={mission} />}
       </header>
 

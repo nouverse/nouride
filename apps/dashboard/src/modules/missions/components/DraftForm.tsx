@@ -12,7 +12,11 @@ import type { MissionEdit, MissionView } from "@nouride/wire";
 import { useToast } from "@/commons/components/ui/toast";
 import { ErrorNote, Field } from "@/commons/components/ui/ui";
 
+/** The most a mission's name holds, as the daemon holds it to (`MISSION_TITLE_MAX`). */
+const TITLE_MAX = 60;
+
 interface Values {
+  title: string;
   goal: string;
   checks: string;
   review: string;
@@ -28,6 +32,7 @@ interface Values {
 /** The form's values as the draft has them: its own folder shown as empty, as the new-mission form takes it. */
 function valuesOf(mission: MissionView, brief: string | null, ownFolder: boolean): Values {
   return {
+    title: mission.title ?? "",
     goal: mission.goal,
     checks: mission.checks.join("\n"),
     review: mission.review ?? "",
@@ -46,6 +51,7 @@ function changeOf(before: Values, after: Values): MissionEdit {
   const checks = (text: string) => text.split("\n").map((line) => line.trim()).filter(Boolean);
   const number = (text: string) => Number(text.trim());
   return {
+    ...(after.title.trim() !== before.title.trim() ? { title: after.title.trim() } : {}),
     ...(after.goal.trim() !== before.goal.trim() ? { goal: after.goal.trim() } : {}),
     ...(checks(after.checks).join("\n") !== checks(before.checks).join("\n") ? { checks: checks(after.checks) } : {}),
     ...(after.noReview !== before.noReview ? (after.noReview ? { noReview: true } : { noReview: false, ...(after.review.trim() ? { review: after.review.trim() } : {}) }) : !after.noReview && after.review.trim() !== before.review.trim() ? { review: after.review.trim() } : {}),
@@ -102,6 +108,9 @@ export function DraftForm({ mission, brief, ownFolder, writable }: { mission: Mi
         if (Object.keys(change).length > 0) save.mutate();
       }}
     >
+      <Field label="Name" hint="What the work is called, in a few words. Empty: named from its goal.">
+        <input className="input input-sm w-full rounded-xl" maxLength={TITLE_MAX} value={values.title} onChange={(e) => set("title")(e.target.value)} />
+      </Field>
       <Field label="Goal" hint="What done looks like. Each turn starts from it.">
         <textarea className="textarea textarea-sm w-full rounded-xl leading-relaxed" rows={2} value={values.goal} onChange={(e) => set("goal")(e.target.value)} />
       </Field>

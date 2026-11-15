@@ -50,7 +50,7 @@ function process(gateway: FakeGateway, open = () => true) {
     voice: (_agentId, gatewayId) => gatewayId,
     isAdmin: () => false,
     askedIn: (request) => (ofMission(request) ? CHAT : null),
-    missionOf: (request) => (ofMission(request) ? { id: MISSION.slice(0, 10), goal: "Ship the *fix* for issue_42\nsecond line" } : null),
+    missionOf: (request) => (ofMission(request) ? { id: MISSION.slice(0, 10), title: "The *fix* for issue_42" } : null),
     similar: {
       kindOf: (request) => (ofMission(request) ? similarKind(request.tool, request.params)?.split(" ").slice(1).join(" ") ?? null : null),
       allow: (request) => {
@@ -99,11 +99,11 @@ async function asked(gateway: FakeGateway, gate: SqliteApprovalGate, over: Parti
 }
 
 describe("a mission's prompt", () => {
-  test("names the mission and its goal's first line, shows the command once, and the id as inline code", async () => {
+  test("names the mission by its title, shows the command once, and the id as inline code", async () => {
     const gateway = Object.assign(new FakeGateway("telegram:main"), { buttons: true });
     const { gate } = process(gateway);
     const { id, prompt } = await asked(gateway, gate);
-    expect(prompt.text).toContain(`waiting on you before running **claude-code:Bash**, from mission ${MISSION.slice(0, 10)} (Ship the \\*fix\\* for issue\\_42).`);
+    expect(prompt.text).toContain(`waiting on you before running **claude-code:Bash**, from mission ${MISSION.slice(0, 10)} (The \\*fix\\* for issue\\_42).`);
     expect(prompt.text.split("bun test ./apps/engine/tests/missions/").length - 1).toBe(1);
     expect(prompt.text).toContain("Why I am asking: Claude Code asks to run the command above.");
     expect(prompt.text).toContain(`id: \`${id}\``);

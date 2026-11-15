@@ -72,7 +72,6 @@ export const LONG_FUNCTIONS: Record<string, Record<string, Budget>> = {
   "apps/engine/src/modules/web/control/routes/knowledge.ts": { registerKnowledgeRoutes: { lines: 246, why: ROUTES("knowledge base's") } },
   "apps/engine/src/modules/web/control/routes/mcp.ts": { registerMcpRoutes: { lines: 154, why: ROUTES("MCP library's") } },
   "apps/engine/src/modules/web/control/routes/memory.ts": { registerMemoryRoutes: { lines: 176, why: ROUTES("memory") } },
-  "apps/engine/src/modules/web/control/routes/missions.ts": { registerMissionRoutes: { lines: 169, why: "the missions' six routes, registered together in the order Hono matches them, each asking whose the mission is before it answers; one resource, so a verb's handler as a function beside it is the seam" } },
   "apps/engine/src/modules/web/control/routes/rooms.ts": { registerRoomRoutes: { lines: 224, why: ROUTES("rooms'") } },
   "apps/engine/src/modules/web/control/routes/skills.ts": { registerSkillRoutes: { lines: 265, why: ROUTES("skills'") } },
   "internals/pro/packages/appliance/src/core/index.ts": { createAppliance: { lines: 285, why: "the box's appliance surface (sync, claim link, setup, automatic updates): one closure per operation over its identity and licence" } },

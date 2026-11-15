@@ -1001,6 +1001,7 @@
         "byAgent": null,
         "gatewayId": "web:dashboard",
         "chatId": "missions",
+        "title": "Write a report on the disk usage of the build box",
         "goal": "Write a report on the disk usage of the build box",
         "checks": [
           "test -s report.md"
@@ -1070,6 +1071,7 @@
         "byAgent": null,
         "gatewayId": "web:dashboard",
         "chatId": "missions",
+        "title": "Tidy the old logs",
         "goal": "Tidy the old logs",
         "checks": [
           "test -s report.md"
@@ -1138,6 +1140,7 @@
       "byAgent": null,
       "gatewayId": "web:dashboard",
       "chatId": "missions",
+      "title": "Write a report on the disk usage of the build box",
       "goal": "Write a report on the disk usage of the build box",
       "checks": [
         "test -s report.md"

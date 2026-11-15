@@ -55,7 +55,7 @@ describe("a question that waits for its answer", () => {
     const notices = h.told.filter((one) => one.text.includes("Keep the old sheet?"));
     expect(notices).toHaveLength(1);
     expect(notices[0]!.text).toBe(
-      `❓ Mission ${short(mission)} asks: Keep the old sheet?\n\nA) keep it\nB) drop it\n\nAnswer: reply to this in your own words, or /mission answer ${short(mission)} <your answer> · or accept it as it is: /mission accept ${short(mission)}`,
+      `❓ write the report (${short(mission)}) asks: Keep the old sheet?\n\nA) keep it\nB) drop it\n\nAnswer: reply to this in your own words, or /mission answer ${short(mission)} <your answer> · or accept it as it is: /mission accept ${short(mission)}`,
     );
     expect(notices[0]!.buttons!.map((button) => button.label)).toEqual(["A: keep it", "B: drop it"]);
     const waiting = h.store.get(mission.id)!;
@@ -96,7 +96,7 @@ describe("a question asked with keep_working", () => {
     });
     const notice = h.told.find((one) => one.text.includes(QUESTION))!;
     expect(notice.text).toBe(
-      `❓ Mission ${short(mission)} asks, and works on meanwhile: ${QUESTION}\n\nA) take it\nB) leave it out\n\nAnswer: reply to this in your own words, or /mission answer ${short(mission)} <your answer>`,
+      `❓ write the report (${short(mission)}) asks, and works on meanwhile: ${QUESTION}\n\nA) take it\nB) leave it out\n\nAnswer: reply to this in your own words, or /mission answer ${short(mission)} <your answer>`,
     );
     expect(notice.buttons!.map((button) => button.label)).toEqual(["A: take it", "B: leave it out"]);
   });
@@ -135,7 +135,7 @@ describe("a question asked with keep_working", () => {
     expect(h.told.filter((one) => one.text.includes("asks"))).toHaveLength(1);
     const waits = h.told.filter((one) => one.text.includes("waits for it now"));
     expect(waits).toHaveLength(1);
-    expect(waits[0]!.text).toStartWith(`⏸ Mission ${short(mission)} has done what it could without your answer, and waits for it now: ${QUESTION}`);
+    expect(waits[0]!.text).toStartWith(`⏸ write the report (${short(mission)}) has done what it could without your answer, and waits for it now: ${QUESTION}`);
     expect(waits[0]!.buttons!.map((button) => button.label)).toEqual(["A: take it", "B: leave it out"]);
 
     expect(h.missions.answer(mission.id, "take it", "Gading")).not.toHaveProperty("said");

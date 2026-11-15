@@ -90,7 +90,7 @@ describe("a turn its model could not answer", () => {
     after(h, RETRY_AFTER_MS[1]);
     h.turn(mission, { worked: 1 });
     expect(state(h, mission)).toEqual({ status: "running", waitKind: null });
-    expect(h.told.at(-1)!.text).toBe(`▶ Mission ${mission.id.slice(0, 10)} goes on: its model answered again after 2 tries.`);
+    expect(h.told.at(-1)!.text).toBe(`▶ write the report (${mission.id.slice(0, 10)}) goes on: its model answered again after 2 tries.`);
     const told = h.told.length;
     h.turn(mission, { worked: 1 });
     expect(h.told.length).toBe(told);

@@ -57,7 +57,7 @@ describe("the notice of a mission that stopped", () => {
     await h.settle();
     expect(asked).toEqual([mission.id]);
     expect(h.told.at(-1)!.text).toBe(
-      `✗ Mission ${mission.id.slice(0, 10)} stopped: stopped by Gading\n\nNot committed: work is left in ${worktree(mission.id)}, on the branch mission/${mission.id}. The folder is kept while it is there.`,
+      `✗ fix the parser (${mission.id.slice(0, 10)}) stopped: stopped by Gading\n\nNot committed: work is left in ${worktree(mission.id)}, on the branch mission/${mission.id}. The folder is kept while it is there.`,
     );
   });
 
@@ -66,13 +66,13 @@ describe("the notice of a mission that stopped", () => {
     const one = await clean.start();
     clean.missions.stop(one.id, "Gading");
     await clean.settle();
-    expect(clean.told.at(-1)!.text).toBe(`✗ Mission ${one.id.slice(0, 10)} stopped: stopped by Gading`);
+    expect(clean.told.at(-1)!.text).toBe(`✗ write the report (${one.id.slice(0, 10)}) stopped: stopped by Gading`);
 
     const broken = await missionsHarness({ leftUncommitted: async () => Promise.reject(new Error("git is not there")) });
     const two = await broken.start();
     broken.missions.stop(two.id, "Gading");
     await broken.settle();
-    expect(broken.told.at(-1)!.text).toBe(`✗ Mission ${two.id.slice(0, 10)} stopped: stopped by Gading`);
+    expect(broken.told.at(-1)!.text).toBe(`✗ write the report (${two.id.slice(0, 10)}) stopped: stopped by Gading`);
   });
 
   test("a mission that gave up is told the same way; a draft dropped is not looked at, and a done one names its branch as before", async () => {

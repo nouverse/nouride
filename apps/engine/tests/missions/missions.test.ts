@@ -20,7 +20,8 @@ describe("starting", () => {
     const mission = await h.start();
     await h.settle();
     expect(h.store.get(mission.id)!.status).toBe("running");
-    expect(h.told[0]!.text).toStartWith(`▶ ${mission.id.slice(0, 10)}: `);
+    // Named by its goal, since a person gave no title: then the goal itself, whole.
+    expect(h.told[0]!.text).toStartWith(`▶ write the report (${mission.id.slice(0, 10)})\n\nwrite the report\n\n`);
     expect(h.told[0]!.text).toContain(`/mission stop ${mission.id.slice(0, 10)}`);
     const turn = h.queued[0]!;
     expect(turn).toMatchObject({ gatewayId: MISSION_GATEWAY_ID, chatId: mission.id, senderId: SYSTEM_SENDER, mentions: ["nova"] });
@@ -80,7 +81,7 @@ describe("starting", () => {
     expect(h.queued).toHaveLength(0);
     // Said as what it is — a draft nothing has run of — not as a result that passed its checks (0.8.11, `drafts.ts`).
     const id = mission.id.slice(0, 10);
-    expect(h.told.at(-1)!.text).toBe(`📝 Draft ${id} · nova: tidy the logs\n\nno checks · signed off by: the reviewer, then you · brief: none\n\nStart it: /mission accept ${id} · drop it: /mission stop ${id}`);
+    expect(h.told.at(-1)!.text).toBe(`📝 Draft ${id} · nova: tidy the logs\n\ntidy the logs\n\nno checks · signed off by: the reviewer, then you · brief: none\n\nStart it: /mission accept ${id} · drop it: /mission stop ${id}`);
     h.missions.accept(mission.id, "Gading");
     await h.settle();
     expect(h.store.get(mission.id)!.status).toBe("running");
@@ -145,7 +146,7 @@ describe("starting", () => {
   test("an agent may start twenty in a day; a person is not counted", async () => {
     const h = await missionsHarness();
     for (let i = 0; i < 20; i += 1) await h.start(`job ${i}`, { byAgent: "nova" });
-    expect(h.missions.start({ agentId: "nova", goal: "21st", startedBy: "1", gatewayId: "t:x", chatId: "1", byAgent: "nova" })).toMatchObject({ refused: expect.stringContaining("20 missions") });
+    expect(h.missions.start({ agentId: "nova", title: "The 21st", goal: "21st", startedBy: "1", gatewayId: "t:x", chatId: "1", byAgent: "nova" })).toMatchObject({ refused: expect.stringContaining("20 missions") });
     expect("mission" in h.missions.start({ agentId: "nova", goal: "a person's", startedBy: "1", gatewayId: "t:x", chatId: "1" })).toBe(true);
   });
 });
@@ -436,7 +437,7 @@ describe("done means checked", () => {
     await h.settle();
     const done = h.store.get(mission.id)!;
     expect(done.status).toBe("done");
-    expect(h.told.at(-1)!.text).toBe("✓ Mission " + mission.id.slice(0, 10) + " done (checks passed, reviewed).\n\nThe text is written.");
+    expect(h.told.at(-1)!.text).toBe(`✓ ${mission.title} (${mission.id.slice(0, 10)}) done (checks passed, reviewed).\n\nThe text is written.`);
     expect(h.reports).toEqual([{ mission: mission.id, report: "Wrote it, all of it." }]);
     expect(h.delivered).toEqual([`${mission.workdir}/out.md`]);
     expect(h.sent.slice(-3)).toEqual(["notice", "report.md", "files"]);
@@ -476,7 +477,7 @@ describe("done means checked", () => {
     await h.settle();
     expect(h.store.get(mission.id)!.waitKind).toBe("accept");
     // It had no checks, so it passed none: it is done, and waits for a yes — its report sent with the wait, read first.
-    expect(h.told.at(-1)!.text).toStartWith(`☑ Mission ${mission.id.slice(0, 10)} is done.\n\nThe colours are blue.\n\nAccept:`);
+    expect(h.told.at(-1)!.text).toStartWith(`☑ decide the colours (${mission.id.slice(0, 10)}) is done.\n\nThe colours are blue.\n\nAccept:`);
     expect(h.reports.map((one) => one.report)).toEqual(["Blue, for the reasons below."]);
     h.missions.accept(mission.id, "Gading");
     await h.settle();
@@ -778,7 +779,7 @@ describe("a chat's task, only the turn's own (0.8.8)", () => {
   test("the chat's `mission` start names the turn it is called in, whose start the carry reads", async () => {
     const asked: string[] = [];
     const h = await missionsHarness({ turnStartedAt: (turnId) => (asked.push(turnId), 0) });
-    await createMissionTools(h.missions).chat.execute({ action: "start", goal: "count the lines" }, { agentId: "nova", gatewayId: "telegram:nova", chatId: "8142", senderId: "8142", turnId: "turn_9" } as ToolContext);
+    await createMissionTools(h.missions).chat.execute({ action: "start", title: "A test mission", goal: "count the lines" }, { agentId: "nova", gatewayId: "telegram:nova", chatId: "8142", senderId: "8142", turnId: "turn_9" } as ToolContext);
     expect(asked).toEqual(["turn_9"]);
   });
 });
@@ -1035,12 +1036,12 @@ describe("the tool's answer to a start", () => {
     const h = await missionsHarness();
     const first = await h.start("one");
     const tool = createMissionTools(h.missions).chat;
-    const answer = await tool.execute({ action: "start", goal: "two", ...atOnce }, ctx);
+    const answer = await tool.execute({ action: "start", title: "A test mission", goal: "two", ...atOnce }, ctx);
     expect(answer.isError).toBe(false);
     expect(answer.content).toContain(`It waits because nova already runs ${first.id.slice(0, 10)} (per_agent 1); it starts by itself once that clears.`);
     const queued = h.store.recent(5).find((one) => one.goal === "two")!;
     // The same words the queue notice gave the chat — one decision, said twice.
-    expect(h.told.find((one) => one.mission === queued.id)!.text).toBe(`⏳ Mission ${queued.id.slice(0, 10)} is queued: nova already runs ${first.id.slice(0, 10)} (per_agent 1). It starts by itself.`);
+    expect(h.told.find((one) => one.mission === queued.id)!.text).toBe(`⏳ A test mission (${queued.id.slice(0, 10)}) is queued: nova already runs ${first.id.slice(0, 10)} (per_agent 1). It starts by itself.`);
   });
 
   test("an agent's own per_agent (0.8.11): nox at three runs three and queues its fourth; nova keeps the daemon's one", async () => {
@@ -1060,18 +1061,18 @@ describe("the tool's answer to a start", () => {
   test("queued behind the box's limit, it names the missions running and max_running", async () => {
     const h = await missionsHarness({ settings: { maxRunning: 1 } });
     const first = await h.start("one");
-    const answer = await createMissionTools(h.missions).chat.execute({ action: "start", goal: "two", agent: "nox", ...atOnce }, ctx);
+    const answer = await createMissionTools(h.missions).chat.execute({ action: "start", title: "A test mission", goal: "two", agent: "nox", ...atOnce }, ctx);
     expect(answer.content).toContain(`It waits because the box already runs ${first.id.slice(0, 10)} (max_running 1);`);
     // Where nobody set it, it is said as the machine's: no file holds a setting of that value to look up.
     const unset = await missionsHarness({ settings: { maxRunning: 1, auto: true } });
     const running = await unset.start("one");
-    const waits = await createMissionTools(unset.missions).chat.execute({ action: "start", goal: "two", agent: "nox", ...atOnce }, ctx);
+    const waits = await createMissionTools(unset.missions).chat.execute({ action: "start", title: "A test mission", goal: "two", agent: "nox", ...atOnce }, ctx);
     expect(waits.content).toContain(`It waits because the box already runs ${running.id.slice(0, 10)} (1 at once on this machine: max_running is not set);`);
   });
 
   test("started at once, it says nothing about waiting", async () => {
     const h = await missionsHarness();
-    const answer = await createMissionTools(h.missions).chat.execute({ action: "start", goal: "one", ...atOnce }, ctx);
+    const answer = await createMissionTools(h.missions).chat.execute({ action: "start", title: "A test mission", goal: "one", ...atOnce }, ctx);
     expect(answer.content).toStartWith("Mission ");
     expect(answer.content).not.toContain("It waits because");
   });
@@ -1080,10 +1081,10 @@ describe("the tool's answer to a start", () => {
     const asked: string[] = [];
     const h = await missionsHarness({ branchRefusal: async ({ branch }) => (asked.push(branch), branch === "main" ? "main already exists in /srv/repo" : null) });
     const tool = createMissionTools(h.missions).chat;
-    const refused = await tool.execute({ action: "start", goal: "one", workdir: "/srv/repo", branch: "main" }, ctx);
+    const refused = await tool.execute({ action: "start", title: "A test mission", goal: "one", workdir: "/srv/repo", branch: "main" }, ctx);
     expect(refused).toEqual({ content: "main already exists in /srv/repo", isError: true });
     expect(h.store.recent(5)).toHaveLength(0);
-    const taken = await tool.execute({ action: "start", goal: "one", workdir: "/srv/repo", branch: "feat/x" }, ctx);
+    const taken = await tool.execute({ action: "start", title: "A test mission", goal: "one", workdir: "/srv/repo", branch: "feat/x" }, ctx);
     expect(taken.isError).toBe(false);
     expect(h.store.recent(5)[0]!.branch).toBe("feat/x");
     expect(asked).toEqual(["main", "feat/x"]);
@@ -1091,7 +1092,7 @@ describe("the tool's answer to a start", () => {
 
   test("a goal too long points at a file the caller writes first, not notes that do not exist yet", async () => {
     const h = await missionsHarness();
-    const answer = await createMissionTools(h.missions).chat.execute({ action: "start", goal: "x".repeat(5000) }, ctx);
+    const answer = await createMissionTools(h.missions).chat.execute({ action: "start", title: "A test mission", goal: "x".repeat(5000) }, ctx);
     expect(answer.isError).toBe(true);
     expect(answer.content).toContain("write the detail to a brief file first (in English, and whole, as the goal is) and name its absolute path in the goal");
     expect(answer.content).not.toContain("notes");

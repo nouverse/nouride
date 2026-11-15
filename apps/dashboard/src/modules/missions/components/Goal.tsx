@@ -1,5 +1,5 @@
 /**
- * A mission's goal in full, under its name (0.8.0). The name is the goal's first sentence (`missionTitle`); the goal was
+ * A mission's goal in full, under its name (0.8.0). The name is its title (`missionName`); the goal was
  * the page's title before, and a paragraph of it — a job's run, an agent's own — was a wall of large type. Here it is
  * reading size, three lines of it until opened — and the press to open it only where three lines cut it: a count of
  * characters offered it under a goal a wide window showed whole.

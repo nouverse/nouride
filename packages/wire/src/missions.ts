@@ -60,6 +60,8 @@ export interface MissionView {
   /** Where it reports: the chat it began in. */
   gatewayId: string;
   chatId: string;
+  /** Its name for a person, a few words: what the work is called. Absent from a daemon whose missions have none. */
+  title?: string;
   goal: string;
   checks: string[];
   /** The reviewer's criteria; null is the goal itself. */
@@ -131,6 +133,7 @@ export interface MissionDetail {
 
 /** A draft's change from the dashboard (0.8.11): what is sent changes, what is not stays. `workdir: null` is its own folder. */
 export interface MissionEdit {
+  title?: string;
   goal?: string;
   checks?: string[];
   review?: string;
@@ -151,6 +154,8 @@ export interface Reviewing {
 
 export interface MissionStart {
   agent: string;
+  /** Its name; left out, it is named from its goal's first sentence. */
+  title?: string;
   goal: string;
   checks?: string[];
   review?: string;

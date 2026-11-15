@@ -17,7 +17,7 @@ export async function mission(client: Client, args: string[]): Promise<void> {
     const detail = await client.get<MissionDetailResponse>(`/missions/${encodeURIComponent(id)}`);
     emit(detail);
     const m = detail.mission;
-    say(`${BOLD}${m.id}${RESET} · ${m.agentId} · ${statusOf(m)}`);
+    say(`${BOLD}${m.title ?? m.id}${RESET}${m.title ? ` · ${m.id}` : ""} · ${m.agentId} · ${statusOf(m)}`);
     say(`  Goal: ${m.goal}`);
     if (m.checks.length > 0) say(`  Checks: ${m.checks.join("; ")}`);
     // With a coding CLI's turn at work, what it has spent so far, said as the estimate it is; a daemon that sends none, its count.
@@ -88,7 +88,8 @@ export async function mission(client: Client, args: string[]): Promise<void> {
   if (open.length === 0) say(`${DIM}nothing running${RESET}`);
   for (const m of [...open, ...shown]) {
     const mark = m.seen === "needs_you" ? `${YELLOW}✋${RESET}` : m.seen === "working" ? `${YELLOW}●${RESET}` : m.seen === "done" ? `${GREEN}✓${RESET}` : `${RED}✗${RESET}`;
-    say(`${mark} ${BOLD}${clip(m.goal, 90)}${RESET}`);
+    // Its name; a daemon whose missions have none still says its goal's start.
+    say(`${mark} ${BOLD}${m.title ?? clip(m.goal, 90)}${RESET}`);
     say(`    ${DIM}${m.id} · ${m.agentId} · ${statusOf(m)} · turn ${m.turnsUsed}/${m.limits.turns}${RESET}`);
   }
   const hidden = ended.length - shown.length;

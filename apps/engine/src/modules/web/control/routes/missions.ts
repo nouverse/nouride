@@ -16,6 +16,7 @@
 import type { MissionDetail, MissionView } from "@nouride/wire";
 import { sessionIdFor } from "@nouride/shared";
 import { stepsDone } from "@/modules/missions/decide.ts";
+import type { DraftChange } from "@/modules/missions/drafts.ts";
 import { MISSION_GATEWAY_ID } from "@/modules/missions/gateway.ts";
 import type { Missions } from "@/modules/missions/missions.ts";
 import { workedMs } from "@/modules/missions/page.ts";
@@ -170,6 +171,27 @@ function strings(value: unknown): string[] | undefined {
   return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : undefined;
 }
 
+/** What a body sent to a draft's edit changes: only the fields it names, each as the draft takes it (`MissionEdit`). */
+function draftChangeOf(body: Record<string, unknown>): DraftChange {
+  const checks = strings(body.checks);
+  const number = (value: unknown) => (typeof value === "number" ? value : undefined);
+  const limits = body.limits && typeof body.limits === "object" ? (body.limits as Record<string, unknown>) : {};
+  const hours = number(limits.hours);
+  const turns = number(limits.turns);
+  const tokens = number(limits.tokens);
+  return {
+    ...(typeof body.title === "string" ? { title: body.title } : {}),
+    ...(typeof body.goal === "string" ? { goal: body.goal } : {}),
+    ...(checks ? { checks } : {}),
+    ...(body.noReview === true ? { review: false } : typeof body.review === "string" ? { review: body.review } : body.noReview === false ? { review: true } : {}),
+    ...(typeof body.accept === "boolean" ? { accept: body.accept } : {}),
+    ...(typeof body.workdir === "string" || body.workdir === null ? { workdir: body.workdir as string | null } : {}),
+    ...(typeof body.branch === "string" || body.branch === null ? { branch: body.branch as string | null } : {}),
+    ...(hours !== undefined || turns !== undefined || tokens !== undefined ? { limits: { ...(hours !== undefined ? { hours } : {}), ...(turns !== undefined ? { turns } : {}), ...(tokens !== undefined ? { tokens } : {}) } } : {}),
+    ...(typeof body.brief === "string" ? { brief: body.brief } : {}),
+  };
+}
+
 export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): void {
   const unavailable = { error: "missions are not run in this process" };
   /** What a route answers for a mission that is not there: also for one that is another person's (`whose.ts`). */
@@ -234,6 +256,7 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
     const checks = strings(body.checks);
     const started = missions.start({
       agentId: body.agent,
+      ...(typeof body.title === "string" && body.title.trim() ? { title: body.title } : {}),
       goal: body.goal,
       ...(checks ? { checks } : {}),
       ...(body.noReview === true ? { review: false as const } : typeof body.review === "string" && body.review.trim() ? { review: body.review } : {}),
@@ -266,26 +289,7 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
     if (mine && !things.changes(thingOfMission(mine))) return c.json(missing, 404);
     const body = await jsonBody(c);
     if (!body) return c.json({ error: "send the fields to change" }, 400);
-    const checks = strings(body.checks);
-    const number = (value: unknown) => (typeof value === "number" ? value : undefined);
-    const limits = body.limits && typeof body.limits === "object" ? (body.limits as Record<string, unknown>) : {};
-    const hours = number(limits.hours);
-    const turns = number(limits.turns);
-    const tokens = number(limits.tokens);
-    const edited = await missions.edit(
-      c.req.param("id"),
-      {
-        ...(typeof body.goal === "string" ? { goal: body.goal } : {}),
-        ...(checks ? { checks } : {}),
-        ...(body.noReview === true ? { review: false } : typeof body.review === "string" ? { review: body.review } : body.noReview === false ? { review: true } : {}),
-        ...(typeof body.accept === "boolean" ? { accept: body.accept } : {}),
-        ...(typeof body.workdir === "string" || body.workdir === null ? { workdir: body.workdir as string | null } : {}),
-        ...(typeof body.branch === "string" || body.branch === null ? { branch: body.branch as string | null } : {}),
-        ...(hours !== undefined || turns !== undefined || tokens !== undefined ? { limits: { ...(hours !== undefined ? { hours } : {}), ...(turns !== undefined ? { turns } : {}), ...(tokens !== undefined ? { tokens } : {}) } } : {}),
-        ...(typeof body.brief === "string" ? { brief: body.brief } : {}),
-      },
-      {},
-    );
+    const edited = await missions.edit(c.req.param("id"), draftChangeOf(body), {});
     if ("refused" in edited) return c.json({ error: edited.refused, plain: "The draft was not changed. Reload it, check what you entered, and try again." }, 409);
     deps.audit.record({ action: "mission_edited", actor: principal.actor, agentId: edited.mission.agentId, details: { mission: edited.mission.id, changed: edited.changed } });
     // What changed is the chat's list (a folder by its path among it), and a brief's failure an exception's message: the

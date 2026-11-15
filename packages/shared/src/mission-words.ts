@@ -1,6 +1,21 @@
 /** A mission's time and turns in the words its page, `show`, `work` and `nouride mission` all use. */
 
-import { plural } from "./text.ts";
+import { cutAtWord, oneLine, plural } from "./text.ts";
+
+/** The most a mission's title holds: a name on a card and at the head of a notice, not a sentence. */
+export const MISSION_TITLE_MAX = 60;
+
+/**
+ * A title for a mission nobody named: its goal's first sentence, without its closing stop, cut at a word near the most
+ * a title holds. A person who starts one writes a goal and no title; an agent is asked for one, and a scheduled job's
+ * run takes its job's name. The same rule, in SQL, named the missions that were there before a mission had a title
+ * (`090_mission_title.sql`).
+ */
+export function titleFromGoal(goal: string): string {
+  const flat = oneLine(goal);
+  const first = (/^.+?[.!?](?=\s|$)/.exec(flat)?.[0] ?? flat).replace(/\.+$/, "");
+  return cutAtWord(first, MISSION_TITLE_MAX, Math.ceil(MISSION_TITLE_MAX * 0.6));
+}
 
 /** Time worked, as the page writes it: `8h58m`, `45m`. */
 export function hoursAndMinutes(ms: number): string {

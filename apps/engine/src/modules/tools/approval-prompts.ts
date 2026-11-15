@@ -60,7 +60,7 @@ export interface ApprovalPromptsDeps {
    */
   askedIn?: (request: ApprovalRequest) => { gatewayId: string; chatId: string } | null;
   /** The mission whose turn asked, named on its prompt (0.8.7). Null for any other request. */
-  missionOf?: (request: ApprovalRequest) => { id: string; goal: string } | null;
+  missionOf?: (request: ApprovalRequest) => { id: string; title: string } | null;
   /**
    * *Approve similar from this mission* (0.8.7, `missions/similar.ts`): the kind of command a request is — null where
    * the button is not offered — and the yes that allows that kind for its mission.

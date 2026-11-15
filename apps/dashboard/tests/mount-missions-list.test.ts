@@ -72,3 +72,15 @@ test("a card of one at work says when it last did something; one not at work say
   answer({ "/missions": { status: 200, body: { missions: [{ ...first, status: "running", seen: "working" }] } } });
   expect(card(await renderPage("/missions"))).not.toContain("last step");
 });
+
+test("a card is headed by the mission's title, its goal on a pointer's rest", async () => {
+  const listed = WIRE["/missions"] as { missions: Record<string, unknown>[] };
+  const goal = "Write the weekly report from every closed ticket, then send it to the team.";
+  answer({ "/missions": { status: 200, body: { missions: [{ ...listed.missions[0]!, title: "The weekly report", goal }] } } });
+  await renderPage("/missions", async (host) => {
+    await eventually(() => host.querySelector('a[href="/dashboard/missions/msn_1"] h3') !== null, 2_000, "the card");
+    const heading = host.querySelector('a[href="/dashboard/missions/msn_1"] h3')!;
+    expect(heading.textContent).toBe("The weekly report");
+    expect(heading.getAttribute("title")).toBe(goal);
+  });
+});

@@ -11,7 +11,7 @@ import { missionsHarness } from "./harness.ts";
 const deps = { exists: () => true, store: { get: () => null, startedByAgentSince: () => 0 }, now: 0 };
 
 function request(fields: Partial<StartRequest>): StartRequest {
-  return { agentId: "nova", goal: "fix the parser", startedBy: "Gading", gatewayId: "telegram", chatId: "1", byAgent: "nova", ...fields };
+  return { agentId: "nova", title: "The parser", goal: "fix the parser", startedBy: "Gading", gatewayId: "telegram", chatId: "1", byAgent: "nova", ...fields };
 }
 
 describe("an agent's mission is written in English", () => {

@@ -81,7 +81,7 @@ describe("80% of a limit, inside a turn at work", () => {
     expect(warned()).toEqual([]);
     spent = 41_000_000;
     h.missions.tick();
-    expect(warned().map((one) => one.text)).toEqual([`Mission ${mission.id.slice(0, 10)} has used 80% of its 50M tokens.`]);
+    expect(warned().map((one) => one.text)).toEqual([`write the report (${mission.id.slice(0, 10)}) has used 80% of its 50M tokens.`]);
     // Kept on the record, so a restart does not say it again.
     expect(h.store.get(mission.id)!.warnedAt).not.toBeNull();
     h.missions.tick();

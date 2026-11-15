@@ -115,7 +115,8 @@ describe("its steps and its job (0.8.0)", () => {
   test("the steps its turns took, and the name of the job it is a run of — the id said nothing", async () => {
     const asked: string[] = [];
     const { h, get } = await app("operator", {
-      turns: { stepsIn: (gatewayId: string, chatId: string) => (asked.push(`${gatewayId}:${chatId}`), 37) },
+      // The turn store as the routes ask it: its steps counted, and no turn of it at work.
+      turns: { stepsIn: (gatewayId: string, chatId: string) => (asked.push(`${gatewayId}:${chatId}`), 37), runningForChat: () => [] },
       cron: { store: { get: (id: string) => (id === "cron_1" ? { id, name: "Weekly mail" } : null) } },
     });
     const mission = await h.start();

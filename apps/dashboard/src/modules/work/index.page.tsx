@@ -10,7 +10,7 @@ import { api } from "@/commons/lib/api";
 import { ApprovalCard } from "@/commons/components/approvals/ApprovalCard";
 import { EmptyState, ErrorNote, PageHeader } from "@/commons/components/ui/ui";
 import { WaitingLink } from "@/commons/components/approvals/WaitingLink";
-import { missionTitle } from "@/commons/lib/mission-title";
+import { missionName } from "@/commons/lib/mission-name";
 import { waitingLine } from "@/commons/lib/mission-waits";
 import { WaitingStepCard } from "@/commons/components/jobs/WaitingStepCard";
 import { useAnswerApproval } from "@/commons/hooks/use-answer-approval";
@@ -50,7 +50,7 @@ export default function WorkPage() {
             <WaitingStepCard key={step.runId} step={step} agent={name(step.agentId)} canAnswer={canWrite(me.data ?? null)} />
           ))}
           {asking.map((mission) => (
-            <WaitingLink key={mission.id} to="/missions/$missionId" params={{ missionId: mission.id }} tag={`Mission · ${name(mission.agentId)}`} title={missionTitle(mission.goal)} full={mission.goal} line={waitingLine(mission)} />
+            <WaitingLink key={mission.id} to="/missions/$missionId" params={{ missionId: mission.id }} tag={`Mission · ${name(mission.agentId)}`} title={missionName(mission)} full={mission.goal} line={waitingLine(mission)} />
           ))}
         </div>
       )}
