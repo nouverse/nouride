@@ -78,7 +78,7 @@ packages/runtime/src/
 - Single deployable artifact (Docker image or binary) for operations simplicity.
 - Follows Nougate's proven pattern: `apps/backend` + `apps/frontend` workspaces, single `Dockerfile` that builds frontend → installs backend deps → produces one image.
 
-**Structure:** `apps/` are processes (`engine` — the daemon and its CLI — `dashboard`, `site`), `packages/` are libraries, and `internals/` holds the private submodules. The layout and what may import what are `ARCHITECTURE.md` §1–§3.
+**Structure:** `apps/` are processes (`engine` — the daemon and its CLI — `dashboard`, `site`), `packages/` are libraries, and `internals/` holds the two submodules, Pro's private and Nougate's public. The layout and what may import what are `ARCHITECTURE.md` §1–§3.
 
 **Build:** `bun build --compile` produces one executable — engine, CLI, gateways and the WhatsApp bridge — shipped with the built dashboard beside it; the image runs the same build as one bundle on `oven/bun` at the version in `.bun-version`, through a multi-stage `Dockerfile` that mirrors Nougate's (`ARCHITECTURE.md` §10).
 

@@ -17,7 +17,7 @@ nouride/
 │   ├── cli/                    # @nouride/cli       — the commands that ask a running daemon; imports nothing of the engine (§3)
 │   ├── dashboard/              # @nouride/dashboard — React SPA, built to static assets
 │   └── site/                   # @nouride/site      — the public website: landing + the manual
-├── internals/                  # two private git submodules — not needed for the free edition (§2)
+├── internals/                  # two git submodules, Pro's private and Nougate's public; the free edition needs neither (§2)
 │   ├── pro/                    # nouride-pro: appliance, multi-user, Nouverse sign-in, the private build
 │   └── nougate/                # the LLM gateway, bundled into every official build
 ├── packages/
@@ -173,16 +173,20 @@ layer is one module inside it (`src/modules/web/`).
 | `packages/wa-bridge` | `nouride-wa-bridge` | no — MIT, see `packages/wa-bridge/README.md` (§6) |
 | `internals/nougate` | `@nouverse/nougate` | separately — its own repo, its own release |
 
-**`internals/` holds two git submodules, both private:** `internals/pro` (`nouverse/nouride-pro` —
-appliance, multi-user, oauth, build-pro and the internal docs, a workspace of its own with its own
-lockfile) and `internals/nougate`. Neither is needed for the free edition: a clone without them builds
-and tests it. With access:
+**`internals/` holds two git submodules.** `internals/pro` (`nouverse/nouride-pro`, private: appliance,
+multi-user, oauth, build-pro and the internal docs, a workspace of its own with its own lockfile) and
+`internals/nougate` (`nouverse/nougate`, public). Neither is needed for the free edition: a clone without them
+builds and tests it.
 
 ```sh
-git clone --recurse-submodules …            # or, in a clone that already exists:
-git submodule update --init
-cd internals/pro && bun install             # only to build the setup console or run its tests
+git clone https://github.com/nouverse/nouride.git      # leaves both empty
+git submodule update --init internals/nougate          # public, anyone can
+git submodule update --init internals/pro              # the maintainers: needs access to nouride-pro
+cd internals/pro && bun install                        # only to build the setup console or run its tests
 ```
+
+`git clone --recurse-submodules` is for someone with access to both: without it, git asks for a sign-in for
+`nouride-pro` and ends with an error, though the checkout itself is whole.
 
 The open parts that every edition carries — `packages/update`, `packages/system-packages`,
 `packages/wa-bridge` — are ordinary workspace members, not submodules.
@@ -500,8 +504,8 @@ CI catches drift before review does.
 
 ### What `internals/` is
 
-Two private submodules: `internals/pro`, the commercial plugins (appliance, multi-user, Nouverse
-sign-in), the private editions' build and the internal docs; and `internals/nougate`, the LLM gateway.
+Two submodules: `internals/pro`, private, the commercial plugins (appliance, multi-user, Nouverse
+sign-in), the private editions' build and the internal docs; and `internals/nougate`, public, the LLM gateway.
 Four properties, and all four are load-bearing:
 
 1. Its own `package.json` and lockfile, **outside the root `workspaces` array**.

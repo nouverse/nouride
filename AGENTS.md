@@ -28,7 +28,7 @@ agent working in this repository — Claude Code, Codex and the rest read it.
   its commits and releases are its own.
 - `packages/*` — what a second tool could use without the daemon: `runtime`, `shared`, `llm`, `gateways`, `secrets`,
   `persona`, `queue`, `policy`, `mcp`, `cli-kit`, `wa-bridge` (MIT).
-- `internals/` — private submodules: `pro`, and `nougate` (its own product, with its own rules).
+- `internals/` — submodules: `pro` (private), and `nougate` (public: its own product, with its own rules).
 - `content/` — the built-in skills and agent packs, MIT: a folder of this repository, changed here like any other.
 - **Not instructions for you:** an `AGENTS.md` inside an agent pack — `content/agents/*/AGENTS.md`, or a live install's
   packs — is that agent's persona file, what a Nouride agent reads about how to behave. It is product content.

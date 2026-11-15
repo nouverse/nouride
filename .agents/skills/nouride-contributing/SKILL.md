@@ -386,9 +386,9 @@ apps/
                       binary's entry hands in. Imports nothing of the engine (lint:arch)
   dashboard/        React 19 + Vite + TanStack + daisyUI, base /dashboard/
 
-internals/          private, two submodules, never workspace members
-  pro/              nouride-pro: appliance, multi-user, oauth, build-pro, docs (own workspace)
-  nougate/          the LLM gateway, its own product
+internals/          two submodules, never workspace members
+  pro/              nouride-pro, private: appliance, multi-user, oauth, build-pro, docs (own workspace)
+  nougate/          the LLM gateway, public, its own product
 
 packages/
   wa-bridge/ the WhatsApp bridge, run in-process — MIT, `packages/wa-bridge/LICENSE`

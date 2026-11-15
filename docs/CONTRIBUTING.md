@@ -41,12 +41,36 @@ and `checks` is the answer.
 - **Docker + Compose** — for containerized dev (`run-dev.sh`), optional for native
 
 ```bash
+git clone https://github.com/nouverse/nouride.git
+cd nouride
 bun install
 ```
 
-`content/` — the built-in skills and agent packs, MIT — is a folder of this repository: every build ships it and the
-tests read it. The private submodules under
-`internals/` are not needed for the free edition: a clone without them builds and tests it (`ARCHITECTURE.md` §2).
+That is all a contribution needs. `content/`, the built-in skills and agent packs (MIT), is a folder of this
+repository: every build ships it and the tests read it.
+
+### The two folders under `internals/`
+
+They are git submodules, and a plain clone leaves both empty. The free edition builds, runs and passes its tests that
+way: the checks of every push and of every pull request run on a clone without them.
+
+| Folder | Repository | Who can clone it | What it adds |
+|---|---|---|---|
+| `internals/nougate` | `nouverse/nougate` | anyone | Nougate, the LLM gateway, compiled into a build so it can run inside the daemon. Without it the daemon has no gateway of its own and reaches a model through any provider you configure. To get it: `git submodule update --init internals/nougate` |
+| `internals/pro` | `nouverse/nouride-pro` | the maintainers | The Pro plugins (multi-user accounts, sign-in with Nouverse, the Box appliance) and the build of the Pro editions |
+
+Leave `--recurse-submodules` off the clone. With it, git asks for a GitHub sign-in for `nouride-pro` and ends with an
+error. The checkout itself is whole and works.
+
+What a clone without `internals/pro` does differently:
+
+- The tests of the Pro plugins are reported as skipped, not passed.
+- A config that names a Pro feature, an OAuth issuer for one, is refused when the daemon starts.
+- `lint:public` says the private values are "not checked here". That is expected: the maintainers' run checks them.
+- The maintainers' skills under `.agents/skills/` are links to files that are not there. The public ones
+  (`nouride-contributing`, `nouride-testing`, `react-tailwind-daisyui`) are whole.
+
+The layout and the reasons for it: `ARCHITECTURE.md` §2.
 
 ---
 
@@ -267,7 +291,7 @@ packages/
   ui-graph/     the dashboard's graph canvas — browser code lives only in ui-*
   wire/         what the control API sends and takes, types only — the engine and the dashboard import it
 
-internals/      two private submodules: pro (the commercial plugins), nougate (the LLM gateway)
+internals/      two submodules: pro (the commercial plugins, private), nougate (the LLM gateway, public)
 content/        what a human edits, not what runs — the built-in skills and agent packs, MIT
   agents/       example persona pack — config-as-code, copied by operators, never shipped
   skills/       skills that ship with the daemon — installed as `skills/` beside the binary
