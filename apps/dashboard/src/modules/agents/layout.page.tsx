@@ -116,7 +116,7 @@ export default function AgentLayoutPage({ agentId }: { agentId: string }) {
       <div className="space-y-4">
         <Link
           to="/agents"
-          className="text-base-content/65 hover:text-base-content inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider transition-colors active:scale-95 font-mono"
+          className="text-base-content/65 hover:text-base-content inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider transition-colors active:scale-95 font-mono max-sm:min-h-8"
         >
           <ArrowLeft size={13} /> Back to Agents
         </Link>

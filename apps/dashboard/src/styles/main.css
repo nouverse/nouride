@@ -408,7 +408,8 @@
    count, a label in capitals — was squinted at on a phone ("jangan terlalu kecil", the owner). There it is 12px, the
    floor for anything secondary; body copy is `text-sm`, 14px, and never smaller on a phone than on a desktop. Every
    arbitrary size under 12px in `src` is named here, and daisyUI's 10px `badge-xs` (a tab's count). And a button is at
-   least 32px tall to a finger: `btn-xs` is 24.
+   least 32px to a finger, tall and wide: `btn-xs` is 24 tall, and one that holds an icon alone is as narrow as its
+   icon and its padding.
    Unlayered and `!important`, as above, so it wins over the utilities' layer. Two blocks rather than one media list:
    the DOM `tests/phone-type.test.ts` reads them in does not take a list. */
 @media (pointer: coarse) {
@@ -437,6 +438,7 @@
   .btn-xs {
     --size: 2rem;
     --fontsize: 0.75rem;
+    min-width: 2rem;
   }
 }
 

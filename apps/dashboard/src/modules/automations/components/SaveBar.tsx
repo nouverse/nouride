@@ -73,11 +73,13 @@ export function SaveBar({
           </p>
         ))}
       </div>
+      {/* On a phone the two share the row from their own widths, their words on one line: as equal halves, the longer
+          one's words broke in two inside it. */}
       <div className="flex shrink-0 items-center gap-2 max-sm:w-full">
-        <button type="button" className="btn btn-ghost btn-sm max-sm:flex-1" disabled={saving} onClick={onDiscard}>
+        <button type="button" className="btn btn-ghost btn-sm whitespace-nowrap max-sm:flex-auto" disabled={saving} onClick={onDiscard}>
           {fresh ? "Cancel" : "Discard changes"}
         </button>
-        <button type="button" className="btn btn-primary btn-sm gap-1.5 max-sm:flex-1" disabled={saving || lacks !== null} onClick={onSave}>
+        <button type="button" className="btn btn-primary btn-sm gap-1.5 whitespace-nowrap max-sm:flex-auto" disabled={saving || lacks !== null} onClick={onSave}>
           {saving ? <span className="loading loading-spinner loading-xs" aria-hidden="true" /> : null}
           {fresh ? "Save automation" : "Save"}
         </button>

@@ -373,7 +373,7 @@ function PersonForm({
                   <span className="break-all">{entry}</span>
                   <button
                     type="button"
-                    className="btn btn-ghost btn-xs btn-circle size-5 max-sm:size-7 min-h-0 hover:bg-error/15 hover:text-error"
+                    className="btn btn-ghost btn-xs btn-circle size-5 max-sm:size-8 min-h-0 hover:bg-error/15 hover:text-error"
                     onClick={() => setIds(ids.filter((candidate) => candidate !== entry))}
                     title={`Remove ${entry}`}
                     aria-label={`Remove ${entry}`}

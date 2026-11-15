@@ -62,7 +62,7 @@ function FolderSizes() {
       <ul className="space-y-1.5">
         {largest.map((entry) => (
           <li key={entry.name}>
-            <Link to="/files" search={{ path: entry.name }} className="group flex items-center gap-3 rounded-lg px-1 py-1 text-sm outline-none hover:bg-base-200/60 focus-visible:ring-2 focus-visible:ring-primary/50">
+            <Link to="/files" search={{ path: entry.name }} className="group flex items-center gap-3 rounded-lg px-1 py-1 text-sm outline-none hover:bg-base-200/60 focus-visible:ring-2 focus-visible:ring-primary/50 max-sm:min-h-8">
               {entry.kind === "folder" ? <Folder size={14} className="shrink-0 text-base-content/50" aria-hidden="true" /> : <File size={14} className="shrink-0 text-base-content/50" aria-hidden="true" />}
               <span className="w-28 shrink-0 truncate font-mono text-xs text-base-content/85 group-hover:text-primary sm:w-36">{entry.name}</span>
               <span className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-base-content/[0.08]" aria-hidden="true">
@@ -178,7 +178,7 @@ export default function SystemPage() {
             </Row>
             <Row icon={<Folder size={14} aria-hidden="true" />} name="Where its files are">
               <span className="inline-flex max-w-full items-center gap-1">
-                <Link to="/files" search={{ path: "" }} className="min-w-0 font-mono text-xs text-primary hover:underline [overflow-wrap:anywhere]">
+                <Link to="/files" search={{ path: "" }} className="min-w-0 font-mono text-xs text-primary hover:underline [overflow-wrap:anywhere] max-sm:py-2">
                   {read.folder}
                 </Link>
                 <CopyButton text={read.folder} />

@@ -74,6 +74,8 @@ describe("a coding CLI's update, on Home", () => {
       await eventually(() => badge(host) !== null, 3_000, "the CLI's update on Home");
       expect(badge(host)!.textContent).toBe("Claude Code update out");
       expect(badge(host)!.getAttribute("href")).toContain("/models?tab=clis");
+      // A finger's height on a phone, as Nouride's own badge beside it.
+      expect(badge(host)!.className.split(" ")).toContain("max-sm:min-h-8");
     });
   });
 

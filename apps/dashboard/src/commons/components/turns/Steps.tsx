@@ -244,7 +244,7 @@ export function StepPill({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-base-200/80 hover:bg-base-300/80 border border-base-content/[0.08] text-[11px] font-mono text-base-content/70 hover:text-base-content transition-all active:scale-95 shadow-2xs group"
+        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-base-200/80 hover:bg-base-300/80 border border-base-content/[0.08] text-[11px] font-mono text-base-content/70 hover:text-base-content transition-all active:scale-95 shadow-2xs group max-sm:min-h-8"
       >
         <span className={`font-bold ${tone}`}>{mark}</span>
         {took ? <span className="font-semibold text-base-content/85">{took}</span> : null}

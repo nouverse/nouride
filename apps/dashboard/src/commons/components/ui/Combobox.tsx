@@ -250,7 +250,7 @@ export function Combobox(props: ComboboxProps) {
           aria-label={showing && whole ? "Hide the list" : "Show the whole list"}
           aria-expanded={showing && whole}
           disabled={props.disabled || options.length === 0}
-          className="absolute right-1.5 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded-lg text-base-content/65 transition-colors hover:bg-base-200 hover:text-base-content disabled:pointer-events-none disabled:opacity-40"
+          className="absolute right-1.5 top-1/2 flex size-7 -translate-y-1/2 items-center max-sm:size-8 justify-center rounded-lg text-base-content/65 transition-colors hover:bg-base-200 hover:text-base-content disabled:pointer-events-none disabled:opacity-40"
           // Not the field's focus: on a phone that brings the keyboard up, and the list moves with it.
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => {

@@ -54,7 +54,7 @@ export function Segmented({
           key={option.value}
           type="button"
           aria-pressed={value === option.value}
-          className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all ${
+          className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all max-sm:min-h-8 ${
             value === option.value ? "bg-base-100 text-base-content shadow-xs" : "text-base-content/65 hover:text-base-content"
           }`}
           onClick={() => onChange(option.value)}

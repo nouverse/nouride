@@ -25,7 +25,7 @@ export function CliUpdateBadge({ agents }: { agents: readonly { external?: { cli
       to="/models"
       search={{ tab: "clis" }}
       data-cli-update
-      className="flex items-center gap-2 rounded-full border border-info/40 bg-info/10 px-3 py-1.5 text-xs font-semibold text-info shadow-xs transition-colors hover:bg-info/15"
+      className="flex items-center gap-2 rounded-full border border-info/40 bg-info/10 px-3 py-1.5 text-xs font-semibold text-info shadow-xs transition-colors hover:bg-info/15 max-sm:min-h-8"
     >
       <ArrowUpCircle size={13} aria-hidden="true" />
       {words}

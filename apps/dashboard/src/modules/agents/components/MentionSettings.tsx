@@ -96,7 +96,7 @@ export function MentionSettings() {
         </div>
 
         <div className="flex items-center gap-3">
-          <label className="flex items-center gap-2 cursor-pointer">
+          <label className="flex min-h-8 items-center gap-2 cursor-pointer">
             <span className="text-xs text-base-content/65 font-medium">
               {currentEnabled ? "On" : "Off"}
             </span>

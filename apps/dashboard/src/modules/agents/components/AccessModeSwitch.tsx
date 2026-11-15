@@ -79,15 +79,18 @@ export function AccessModeSwitch() {
           {!editable && <NoSettingsFile keys={["[security.access] mode"]} />}
         </div>
 
-        <input
-          type="checkbox"
-          role="switch"
-          aria-label="Accept new senders"
-          className="toggle toggle-primary"
-          checked={pairingOn}
-          disabled={!writable || !editable || setMode.isPending}
-          onChange={(event) => setMode.mutate(event.target.checked ? "pair" : "allowlist")}
-        />
+        {/* The label is what a finger presses: the switch alone is shorter than one. */}
+        <label className="flex min-h-8 cursor-pointer items-center">
+          <input
+            type="checkbox"
+            role="switch"
+            aria-label="Accept new senders"
+            className="toggle toggle-primary"
+            checked={pairingOn}
+            disabled={!writable || !editable || setMode.isPending}
+            onChange={(event) => setMode.mutate(event.target.checked ? "pair" : "allowlist")}
+          />
+        </label>
       </div>
 
       {mode === "open" && (

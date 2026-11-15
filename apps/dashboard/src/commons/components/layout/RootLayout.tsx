@@ -199,7 +199,7 @@ export function RootLayout() {
               <ChevronLeft size={22} />
             </a>
           )}
-          <Link to="/" className="flex items-center gap-2">
+          <Link to="/" className="flex min-h-11 items-center gap-2">
             <Mascot pose="head" decorative className="w-7" />
             <span className="font-display text-base font-medium tracking-tight">Nouride</span>
           </Link>

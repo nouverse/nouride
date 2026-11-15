@@ -13,7 +13,7 @@ import { cn } from "@/commons/lib/utils";
 export function Details({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <details className={cn("text-xs", className)}>
-      <summary className="text-base-content/65 hover:text-base-content cursor-pointer select-none">Details</summary>
+      <summary className="text-base-content/65 hover:text-base-content cursor-pointer select-none max-sm:py-2">Details</summary>
       <div className="text-base-content/70 mt-1.5 space-y-1.5 break-words">{children}</div>
     </details>
   );
