@@ -9,6 +9,7 @@
 import type { ApprovalRequest, MissionView, WaitingStep } from "@nouride/wire";
 import { ApprovalCard } from "@/commons/components/approvals/ApprovalCard";
 import { WaitingLink } from "@/commons/components/approvals/WaitingLink";
+import { missionTitle } from "@/commons/lib/mission-title";
 import { WaitingStepCard } from "@/commons/components/jobs/WaitingStepCard";
 import { useAnswerApproval } from "@/commons/hooks/use-answer-approval";
 
@@ -45,7 +46,7 @@ export function NeedsYouCards({
         <WaitingStepCard key={step.runId} step={step} agent={names.get(step.agentId) ?? step.agentId} canAnswer={canAnswer} />
       ))}
       {missions.map((mission) => (
-        <WaitingLink key={mission.id} to="/missions/$missionId" params={{ missionId: mission.id }} tag={`Mission · ${names.get(mission.agentId) ?? mission.agentId}`} title={mission.goal} line="Waiting for your answer" />
+        <WaitingLink key={mission.id} to="/missions/$missionId" params={{ missionId: mission.id }} tag={`Mission · ${names.get(mission.agentId) ?? mission.agentId}`} title={missionTitle(mission.goal)} full={mission.goal} line="Waiting for your answer" />
       ))}
       {requests > 0 && (
         <WaitingLink to="/access" tag="Access" title={requests === 1 ? "Someone asks to talk to your agents" : `${requests} people ask to talk to your agents`} line="See who is asking" />

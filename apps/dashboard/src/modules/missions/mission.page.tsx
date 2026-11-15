@@ -42,7 +42,8 @@ import { useMissionAct } from "./hooks/use-mission-act";
 import { useMissionDelete } from "./hooks/use-mission-delete";
 import { Goal } from "./components/Goal";
 import { DraftForm } from "./components/DraftForm";
-import { briefShown, meters, missionTitle, needsYouSaid, shortId } from "./lib/mission";
+import { briefShown, meters, needsYouSaid, shortId } from "./lib/mission";
+import { missionTitle } from "@/commons/lib/mission-title";
 import { DetailLoading } from "@/commons/components/ui/Skeleton";
 
 const OPEN_MS = 5_000;

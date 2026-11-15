@@ -196,23 +196,6 @@ export function tabOf(mission: Pick<MissionView, "seen" | "status" | "changeable
   return mission.status === "failed" ? "failed" : mission.status === "stopped" ? "stopped" : "done";
 }
 
-/** How long a mission's name may be before it is cut at a word. */
-const TITLE_MAX = 90;
-
-/**
- * A mission's name, from its goal (0.8.0): its first sentence, cut at a word near 90 characters. A goal is often a
- * paragraph — a job's run, an agent's own — and drawn whole as the page's title it was a wall of large type. The goal
- * itself is still on the page, and still what the search looks in.
- */
-export function missionTitle(goal: string): string {
-  const flat = goal.replace(/\s+/g, " ").trim();
-  const first = /^.+?[.!?](?=\s|$)/.exec(flat)?.[0] ?? flat;
-  if (first.length <= TITLE_MAX) return first;
-  const cut = first.slice(0, TITLE_MAX);
-  const space = cut.lastIndexOf(" ");
-  return `${(space > TITLE_MAX * 0.6 ? cut.slice(0, space) : cut).trimEnd()}…`;
-}
-
 /** Needs you, then working, then the rest — the daemon's order, kept as three groups to draw under their headings. */
 export function grouped(missions: readonly MissionView[]): { needsYou: MissionView[]; working: MissionView[]; finished: MissionView[] } {
   return {

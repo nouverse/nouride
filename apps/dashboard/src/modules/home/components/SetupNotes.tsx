@@ -30,7 +30,7 @@ export function SetupNotes() {
           <li key={line.message} className="flex gap-3">
             <Info size={16} className="mt-0.5 shrink-0 text-info" aria-hidden="true" />
             <div className="min-w-0 space-y-1.5">
-              <p className="text-sm leading-snug text-base-content/90">{line.message}</p>
+              <p className="text-sm leading-snug text-base-content/90 [overflow-wrap:anywhere]">{line.message}</p>
               {line.agents.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
                   {line.agents.map((agent) => (

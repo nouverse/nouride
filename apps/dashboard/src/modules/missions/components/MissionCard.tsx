@@ -15,7 +15,8 @@ import { ago } from "@/commons/lib/format";
 import { cn } from "@/commons/lib/utils";
 import { Lit } from "@/commons/components/ui/Lit";
 import { ENTER, type Motion } from "@/commons/hooks/use-motion-list";
-import { missionTitle, rowLine } from "../lib/mission";
+import { rowLine } from "../lib/mission";
+import { missionTitle } from "@/commons/lib/mission-title";
 import { SeenBadge } from "./SeenBadge";
 
 /** `motion`: how the list draws it (`useMotionList`); one that arrives is lit too. */
