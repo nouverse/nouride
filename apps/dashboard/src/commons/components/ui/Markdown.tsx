@@ -3,12 +3,18 @@
  * Supports: Headings, Lists, Blockquotes, Fenced Code (`CodeBlock`: coloured, with a copy button), Tables, Horizontal Rules,
  * Bold, Italic, Code, Markdown Links [label](url), and Auto-linked Bare URLs (https://...).
  * A link to a page of this dashboard opens it in place (`Linked`).
+ *
+ * Formulas (KaTeX, a chunk of its own: `viewers/math.tsx`): inline `$..$` and `\(..\)`, `$$..$$` within a line, and
+ * as a block a line that is `$$..$$`, or `$$` or `\[` alone on a line up to the line that ends in `$$` or `\]`. A
+ * dollar opens a formula only as a writer of TeX uses it: followed by no space, its closing one preceded by no space
+ * and followed by no digit, so "$5 and $10" stays text. Code wins: a formula inside a code span or a fence is code.
  */
 
 import { createContext, useContext, type ReactNode } from "react";
 import { useRouter } from "@tanstack/react-router";
 import { ExternalLink } from "lucide-react";
 import { CodeBlock } from "@/commons/components/ui/CodeBlock";
+import { InlineMath } from "@/commons/components/ui/viewers/InlineMath";
 import { pageInDashboard } from "@/commons/lib/page-link";
 import { underDataFolder } from "@/commons/lib/data-folder";
 import { useDataFolder } from "@/commons/hooks/use-data-folder";
@@ -68,8 +74,8 @@ function Linked({ href, children }: { href: string; children: ReactNode }) {
 /** Inline spans. Ordered so that code wins — backticks inside code are literal. */
 function inline(text: string, keyPrefix: string): ReactNode[] {
   const out: ReactNode[] = [];
-  // Matches: inline code, bold, italic, markdown link [label](url), and bare URLs https://...
-  const pattern = /(`[^`]+`)|(\*\*[^*]+\*\*)|(\*[^*]+\*)|(\[[^\]]+\]\([^)\s]+\))|(https?:\/\/[^\s<>'")\]]+)/g;
+  // Matches: inline code, formulas ($$..$$, \(..\), $..$), bold, italic, markdown link [label](url), and bare URLs https://...
+  const pattern = /(`[^`]+`)|(\$\$[^$\n]+?\$\$)|(\\\(.+?\\\))|((?<!\\)\$(?=[^\s$])[^$\n`]*?[^\s$\\]\$(?!\d))|(\*\*[^*]+\*\*)|(\*[^*]+\*)|(\[[^\]]+\]\([^)\s]+\))|(https?:\/\/[^\s<>'")\]]+)/g;
   let last = 0;
   let match: RegExpExecArray | null;
   let n = 0;
@@ -103,6 +109,10 @@ function inline(text: string, keyPrefix: string): ReactNode[] {
           </FilePath>,
         );
       }
+    } else if (token.startsWith("$$") || token.startsWith("\\(")) {
+      out.push(<InlineMath key={key} tex={token.slice(2, -2)} written={token} />);
+    } else if (token.startsWith("$")) {
+      out.push(<InlineMath key={key} tex={token.slice(1, -1)} written={token} />);
     } else if (token.startsWith("**")) {
       out.push(
         <strong key={key} className="font-semibold text-base-content">
@@ -154,6 +164,40 @@ function isTableSeparator(line: string): boolean {
   return /^\s*\|?(\s*:?-+:?\s*\|)+\s*:?-+:?\s*\|?\s*$/.test(line);
 }
 
+/** A table in the text: its first row is its head. `at` is its place among the blocks, for its cells' keys. */
+function Table({ rows, at }: { rows: string[][]; at: number }) {
+  const headers = rows[0] ?? [];
+  const bodyRows = rows.slice(1);
+  return (
+    <div className="overflow-x-auto my-3 rounded-2xl border border-base-content/10 shadow-2xs">
+      <table className="table table-sm w-full">
+        {headers.length > 0 && (
+          <thead>
+            <tr className="border-b border-base-content/10 bg-base-200/50 text-[11px] font-bold uppercase tracking-wider text-base-content/65 font-mono">
+              {headers.map((h, i) => (
+                <th key={i} className="py-2.5 px-3">
+                  {inline(h, `th${at}-${i}`)}
+                </th>
+              ))}
+            </tr>
+          </thead>
+        )}
+        <tbody className="divide-y divide-base-content/[0.06]">
+          {bodyRows.map((row, rIdx) => (
+            <tr key={rIdx} className="hover:bg-base-200/30 transition-colors">
+              {row.map((cell, cIdx) => (
+                <td key={cIdx} className="py-2 px-3 text-xs text-base-content/85">
+                  {inline(cell, `td${at}-${rIdx}-${cIdx}`)}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 /** `compact`: smaller and closer, for markdown inside something else — a notice in a chat, not a message of its own. */
 export function Markdown({ source, compact = false }: { source: string; compact?: boolean }): ReactNode {
   const lines = source.split("\n");
@@ -166,6 +210,9 @@ export function Markdown({ source, compact = false }: { source: string; compact?
   let inTable = false;
   let code: string[] | null = null;
   let codeLang = "";
+  /** A formula's block being read, and the mark that ends it (`$$` or `\]`). */
+  let formula: string[] | null = null;
+  let formulaEnd = "";
 
   const flushList = () => {
     if (list.length === 0) return;
@@ -213,37 +260,7 @@ export function Markdown({ source, compact = false }: { source: string; compact?
 
   const flushTable = () => {
     if (tableRows.length === 0) return;
-    const headers = tableRows[0] ?? [];
-    const bodyRows = tableRows.slice(1);
-
-    blocks.push(
-      <div key={blocks.length} className="overflow-x-auto my-3 rounded-2xl border border-base-content/10 shadow-2xs">
-        <table className="table table-sm w-full">
-          {headers.length > 0 && (
-            <thead>
-              <tr className="border-b border-base-content/10 bg-base-200/50 text-[11px] font-bold uppercase tracking-wider text-base-content/65 font-mono">
-                {headers.map((h, i) => (
-                  <th key={i} className="py-2.5 px-3">
-                    {inline(h, `th${blocks.length}-${i}`)}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-          )}
-          <tbody className="divide-y divide-base-content/[0.06]">
-            {bodyRows.map((row, rIdx) => (
-              <tr key={rIdx} className="hover:bg-base-200/30 transition-colors">
-                {row.map((cell, cIdx) => (
-                  <td key={cIdx} className="py-2 px-3 text-xs text-base-content/85">
-                    {inline(cell, `td${blocks.length}-${rIdx}-${cIdx}`)}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>,
-    );
+    blocks.push(<Table key={blocks.length} rows={tableRows} at={blocks.length} />);
     tableRows = [];
     inTable = false;
   };
@@ -268,6 +285,32 @@ export function Markdown({ source, compact = false }: { source: string; compact?
       flushTable();
       code = [];
       codeLang = line.trim().slice(3);
+      continue;
+    }
+
+    if (formula !== null) {
+      if (line.trim().endsWith(formulaEnd)) {
+        formula.push(line.trim().slice(0, -formulaEnd.length));
+        blocks.push(<CodeBlock key={blocks.length} lang="math" text={formula.join("\n").trim()} />);
+        formula = null;
+      } else {
+        formula.push(raw);
+      }
+      continue;
+    }
+
+    // A formula's block: `$$..$$` on a line of its own, or `$$` or `\[` alone, read up to its end.
+    const whole = /^\s*\$\$(.+)\$\$\s*$/.exec(line);
+    if ((whole && whole[1]!.trim()) || /^\s*(\$\$|\\\[)\s*$/.test(line)) {
+      flushList();
+      flushQuote();
+      flushTable();
+      if (whole) {
+        blocks.push(<CodeBlock key={blocks.length} lang="math" text={whole[1]!.trim()} />);
+      } else {
+        formula = [];
+        formulaEnd = line.trim() === "$$" ? "$$" : "\\]";
+      }
       continue;
     }
 
@@ -394,6 +437,7 @@ export function Markdown({ source, compact = false }: { source: string; compact?
   // A fence not closed yet is a block still being written: the same box, so nothing jumps when it closes, and its
   // colours when it is whole.
   if (code !== null) blocks.push(<CodeBlock key={blocks.length} lang={codeLang || undefined} text={code.join("\n")} growing />);
+  if (formula !== null) blocks.push(<CodeBlock key={blocks.length} lang="math" text={formula.join("\n")} growing />);
 
   return <div className={compact ? "space-y-1.5 text-xs" : "space-y-3 text-sm"}>{blocks}</div>;
 }

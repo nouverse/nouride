@@ -25,6 +25,8 @@ export interface Viewer {
 /** By the first word of a fence's language, lower case. */
 export const VIEWERS: Record<string, Viewer> = {
   svg: { label: "Picture", load: () => import("@/commons/components/ui/viewers/svg") },
+  math: { label: "Formula", load: () => import("@/commons/components/ui/viewers/math") },
+  latex: { label: "Formula", load: () => import("@/commons/components/ui/viewers/math") },
 };
 
 /** The viewer a fence's language names, or none: a fence may say more than its language ("svg title=…"). */
