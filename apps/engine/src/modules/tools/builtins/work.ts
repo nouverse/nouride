@@ -175,7 +175,9 @@ export function createWorkTool(deps: WorkToolDeps): Tool {
         const mission = ownMission(id, ctx);
         if (!("id" in mission)) return mission;
         const acted = deps.missions.answer(mission.id, text(args.text), by);
-        return "refused" in acted ? refused(acted.refused) : ok(`Answered; mission ${shortId(mission.id)} goes on.`);
+        if ("refused" in acted) return refused(acted.refused);
+        // One that went on working says where the answer went, as a `tell` does; one that waited goes on with it.
+        return ok(acted.said ?? `Answered; mission ${shortId(mission.id)} goes on.`);
       }
       case "accept_outside": {
         const mission = ownMission(id, ctx);

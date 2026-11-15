@@ -96,6 +96,23 @@ function refusedPlain(refused: Refused | Exclude<Deleted, { mission: Mission }> 
 }
 
 /**
+ * Where a person's answer went, for a mission that asked and went on working, said on its page: handed to the turn at
+ * work, or kept for the next, as words told to it are.
+ */
+function answeredPlain(where: TellWhere): string {
+  switch (where) {
+    case "next_step":
+      return "Answered. It reads this before its next step.";
+    case "into_cli":
+      return "Answered. Its coding CLI is given this in the turn it is working on.";
+    case "after_prompt":
+      return "Answered. Its coding CLI reads this once the prompt it is working on ends.";
+    default:
+      return `Answered. ${toldPlain(where)}`;
+  }
+}
+
+/**
  * Where a person's words to a mission went, said on its page (0.8.23), worded here from where the mission put them:
  * `said` is the chat's, naming the `/mission` command that moves it on, which a button on the page does instead.
  */
@@ -337,6 +354,8 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
     if (!acted) return c.json({ error: "stop, continue, accept, answer or tell" }, 404);
     if ("refused" in acted) return c.json({ error: acted.refused, plain: refusedPlain(acted, verb) }, 409);
     deps.audit.record({ action: `mission_${verb}`, actor: principal.actor, agentId: acted.mission.agentId, details: { mission: acted.mission.id, ...(typeof body.outside === "string" ? { outside: body.outside } : {}) } });
+    // An answer to one that went on working says where it went, as a `tell` does.
+    if (acted.where) return c.json({ mission: view(missions, acted.mission, things), said: acted.said ?? "", plain: answeredPlain(acted.where) } satisfies { mission: MissionView; said?: string; plain?: string });
     return c.json({ mission: view(missions, acted.mission, things) } satisfies { mission: MissionView; said?: string; plain?: string });
   });
 }

@@ -51,7 +51,7 @@ describe("closing a mission as done outside its checks", () => {
   test("keeps the report the agent wrote: the note is why it was closed, not a replacement for what was done", async () => {
     const h = await missionsHarness();
     const mission = await h.start("ship it", { checks: ["git fetch && git merge-base --is-ancestor a b"] });
-    h.turn(mission, {}, () => h.missions.claim(mission.id, { kind: "ask", question: "The check cannot run. A) close it B) leave it" }));
+    h.turn(mission, {}, () => h.missions.ask(mission.id, { question: "The check cannot run. A) close it B) leave it" }));
     h.store.save({ ...h.store.get(mission.id)!, report: "Merged 4dd2a07a; 49 sabotage runs caught" });
     h.missions.acceptOutside(mission.id, "merged by hand", "Gading");
     expect(h.store.get(mission.id)!.report).toBe("Merged 4dd2a07a; 49 sabotage runs caught");
@@ -74,7 +74,7 @@ describe("from a chat", () => {
     const h = await missionsHarness();
     const mission = await h.start("ship it", { checks: ["bun test"] });
     const question = `${"Long context. ".repeat(300)}\nA) keep\nB) drop`;
-    h.turn(mission, {}, () => h.missions.claim(mission.id, { kind: "ask", question }));
+    h.turn(mission, {}, () => h.missions.ask(mission.id, { question }));
     const shown = await typed(h, `/mission show ${mission.id.slice(0, 10)}`);
     expect(shown).toContain(`Asks: ${question}`);
     expect(shown).toContain("Done when: the commands pass (`bun test`");

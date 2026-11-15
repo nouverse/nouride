@@ -215,7 +215,7 @@ export function missionPage(input: PageInput): string {
     '- When the goal is met, call `mission` with action "done": the result as `summary`, two or three sentences, which is the chat\'s message; the whole `report`, markdown, as long as it needs, which the person receives as `report.md` (never write it to a file of its own); and the files the person should receive: what they asked for, never what you made to check the work (evidence, stills, fixtures, an answer key: the report names those). The daemon runs the checks, and a failure is your next turn.',
     // Never `send_message`: a mission with a question sent it to another chat of its person's, where nobody was reading
     // and from where no answer could have come back to it.
-    '- Need the person? `mission` action "ask", one question, never `send_message`: what they answer in another chat does not come back to this mission. Cannot be done? action "fail", with why and what is left.',
+    '- Need the person? `mission` action "ask", one question, never `send_message`: what they answer in another chat does not come back to this mission. It reaches them at once and the mission waits for the answer. With work left that does not depend on it, add `keep_working`: you go on, and the answer comes into your turn. Cannot be done? action "fail", with why and what is left.',
     "- Three turns in a row that call no tool and move no step stop the mission as stuck.",
   );
   return lines.join("\n");

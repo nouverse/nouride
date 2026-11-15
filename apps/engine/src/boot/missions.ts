@@ -16,6 +16,7 @@ import type { JobsPort } from "@/modules/jobs/jobs.store.ts";
 import { checkRefusal, runChecks } from "@/modules/missions/checks.ts";
 import { MISSION_GATEWAY_ID, MissionGateway } from "@/modules/missions/gateway.ts";
 import { Missions } from "@/modules/missions/missions.ts";
+import type { MissionsDeps } from "@/modules/missions/deps.ts";
 import { jobMissionEnd, startJobRun } from "@/modules/missions/job-runs.ts";
 import { MissionStore } from "@/modules/missions/missions.store.ts";
 import { SimilarAllowed } from "@/modules/missions/similar.ts";
@@ -102,6 +103,37 @@ function gitFile(path: string): string | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Words for a mission's turn at work: a person's `tell` (0.8.10), and their answer to a question it asked while it went
+ * on. Put in front of the turn as a steer is, never a chat message: the daemon's sender, the person's name, and the mark
+ * the turn's read and its end know it by (`steering.ts` `isTell`). And how such words reach that agent's turn, which is
+ * what `ask` with `keep_working` tells it of the answer it goes on without.
+ */
+function wordsIntoTurn(late: () => Pick<MissionsLate, "steerInto" | "steerReach"> | undefined): Pick<MissionsDeps, "steerTurn" | "answerReach"> {
+  return {
+    steerTurn: (mission, told) => {
+      const pipeline = late();
+      if (!pipeline) return { taken: false, why: "none" };
+      const envelope: MessageEnvelope = {
+        id: newId("msg"),
+        timestamp: told.at,
+        gateway: "web",
+        gatewayId: MISSION_GATEWAY_ID,
+        chatId: mission.id,
+        chatType: "dm",
+        senderId: SYSTEM_SENDER,
+        senderName: toldBy(told),
+        mentions: [mission.agentId],
+        text: told.text,
+        raw: { via: "tell", mission: mission.id, tell: told.id },
+      };
+      const outcome = pipeline.steerInto(mission.agentId, mission.id, MISSION_GATEWAY_ID, envelope);
+      return outcome === "taken" ? { taken: true, when: pipeline.steerReach(mission.agentId) } : { taken: false, why: outcome };
+    },
+    answerReach: (mission) => late()?.steerReach(mission.agentId) ?? null,
+  };
 }
 
 /** What the missions reach once the pipeline and the tools exist. */
@@ -255,26 +287,7 @@ export function buildMissions(params: {
     },
     queueTurn: (envelope) => late?.queueTurn(envelope) ?? false,
     stopTurn: (mission) => late?.cancelTurn(mission.agentId, mission.id),
-    // A person's `tell` (0.8.10): put in front of the mission's turn at work as a steer is, never a chat message —
-    // the daemon's sender, the person's name, and the mark the turn's read and its end know it by (`steering.ts` `isTell`).
-    steerTurn: (mission, told) => {
-      if (!late) return { taken: false, why: "none" };
-      const envelope: MessageEnvelope = {
-        id: newId("msg"),
-        timestamp: told.at,
-        gateway: "web",
-        gatewayId: MISSION_GATEWAY_ID,
-        chatId: mission.id,
-        chatType: "dm",
-        senderId: SYSTEM_SENDER,
-        senderName: toldBy(told),
-        mentions: [mission.agentId],
-        text: told.text,
-        raw: { via: "tell", mission: mission.id, tell: told.id },
-      };
-      const outcome = late.steerInto(mission.agentId, mission.id, MISSION_GATEWAY_ID, envelope);
-      return outcome === "taken" ? { taken: true, when: late.steerReach(mission.agentId) } : { taken: false, why: outcome };
-    },
+    ...wordsIntoTurn(() => late),
     branchRefusal: async ({ agentId, workdir, branch }) => {
       const repo = repositoryOf(workdir);
       if (!fileExistsSync(join(repo, ".git"))) return `\`branch\` names a worktree's branch, and ${workdir} is not in a git repository.`;

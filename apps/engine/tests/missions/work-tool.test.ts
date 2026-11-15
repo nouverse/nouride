@@ -96,7 +96,7 @@ describe("work: missions", () => {
     const { h, call } = await setup();
     const own = await h.start("write the report");
     const theirs = await h.start("theirs alone", { agentId: "nox" });
-    h.turn(own, {}, () => h.missions.claim(own.id, { kind: "ask", question: "A or B?" }));
+    h.turn(own, {}, () => h.missions.ask(own.id, { question: "A or B?" }));
     expect(h.store.get(own.id)!.waitKind).toBe("input");
     expect((await call("nova", { action: "answer", id: own.id, text: "B" })).isError).toBe(false);
     expect(h.store.get(own.id)!.status).toBe("running");
@@ -198,7 +198,7 @@ describe("the chat agent is told its mission asks", () => {
   test("the chat's notes say the mission waits on the person's answer, and say it runs once answered", async () => {
     const { h } = await setup();
     const own = await h.start("write the report");
-    h.turn(own, {}, () => h.missions.claim(own.id, { kind: "ask", question: "Which month, May or June?" }));
+    h.turn(own, {}, () => h.missions.ask(own.id, { question: "Which month, May or June?" }));
     await h.settle();
     const chat = { agentId: "nova", gatewayId: "telegram:nova", chatId: "8142" };
     const line = h.notes.tasks(chat).find((task) => task.body.startsWith(`→ mission ${own.id.slice(0, 10)}`));

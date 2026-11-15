@@ -85,7 +85,7 @@ describe("the hours limit, inside a coding CLI's turn", () => {
     h.missions.shapeFor("nova", envelopeOf(h.queued, mission.id));
     h.tick(59 * 60_000);
     for (let i = 0; i < 3; i += 1) {
-      h.missions.claim(mission.id, { kind: "ask", question: "Which branch?" });
+      h.missions.ask(mission.id, { question: "Which branch?" });
       h.tick(5 * 60_000);
     }
     h.missions.tick();

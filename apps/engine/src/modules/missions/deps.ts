@@ -11,6 +11,7 @@ import type { CheckResult } from "./checks.ts";
 import type { MissionsPort } from "./missions.store.ts";
 import type { Parked } from "./page.ts";
 import type { MissionsInForce } from "./slots.ts";
+import type { AnswerReach } from "./asking.ts";
 import type { SteerOutcome } from "./tell.ts";
 import type { Mission, Told } from "./types.ts";
 
@@ -71,6 +72,12 @@ export interface MissionsDeps {
    * at work, past what one turn reads, past its last step. Absent: kept for the next turn.
    */
   steerTurn?: (mission: Mission, told: Told) => SteerOutcome;
+  /**
+   * How words for its turn at work reach it: an agent on a model before its next step, a coding CLI into its prompt, or
+   * only after the prompt where the CLI takes none while it works. What `ask` with `keep_working` tells the agent of the
+   * answer it goes on without. Null where no turn machine is in reach.
+   */
+  answerReach?: (mission: Mission) => AnswerReach | null;
   /**
    * Why a start's `branch` cannot be its worktree's in the repository `workdir` is in, as its agent's git says — or
    * null (`worktree.ts` `branchRefusal`).

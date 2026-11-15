@@ -113,8 +113,9 @@ const missionHook: Hook = {
             ? missions.accept(mission.id, by, as)
             : missions.answer(mission.id, rest.join(" "), by);
     if ("refused" in acted) return { handled: true, reply: acted.refused };
-    // Stop and accept are answered by the mission's own notice; continue and answer go on quietly.
-    return { handled: true, ...(verb === "continue" || verb === "answer" ? { reply: `Mission ${shortId(mission.id)} goes on.` } : {}) };
+    // Stop and accept are answered by the mission's own notice; continue and answer go on quietly. An answer to one
+    // that went on working says where it went, as a `tell` does.
+    return { handled: true, ...(verb === "continue" || verb === "answer" ? { reply: acted.said ?? `Mission ${shortId(mission.id)} goes on.` } : {}) };
   },
 };
 

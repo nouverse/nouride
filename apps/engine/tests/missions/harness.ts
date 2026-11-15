@@ -12,6 +12,7 @@ import type { MissionsDeps } from "@/modules/missions/deps.ts";
 import { Missions } from "@/modules/missions/missions.ts";
 import { MissionStore } from "@/modules/missions/missions.store.ts";
 import type { MissionsInForce } from "@/modules/missions/slots.ts";
+import type { AnswerReach } from "@/modules/missions/asking.ts";
 import type { SteerOutcome } from "@/modules/missions/tell.ts";
 import type { Mission, Told } from "@/modules/missions/types.ts";
 import { NotesStore, type PlanStep } from "@/modules/notes/store.ts";
@@ -34,7 +35,7 @@ export const STARTERS_CTX = {
 export const SETTINGS: MissionsInForce = { perAgent: 1, maxRunning: 2, limitHours: 8, limitTurns: 50, limitTokens: 50_000_000 };
 
 /** The ports for folders no mission names, where a test lists some: each one asked about, and the ones removed. */
-function leftFolders(options: { left?: () => { agentId: string; id: string; changedAt: number }[]; unsavedInLeft?: (missionId: string) => string[]; leftUncommitted?: (mission: Mission) => Promise<string[]> }) {
+function leftFolders(options: { left?: () => { agentId: string; id: string; changedAt: number }[]; unsavedInLeft?: (missionId: string) => string[]; leftUncommitted?: (mission: Mission) => Promise<string[]>; answerReach?: AnswerReach | null }) {
   const asked: string[] = [];
   const removed: string[] = [];
   const removeLeft = async (agentId: string, missionId: string) => {
@@ -45,10 +46,12 @@ function leftFolders(options: { left?: () => { agentId: string; id: string; chan
   };
   // What an ended mission's notice reads of its folder: only where a test says what is there.
   const unsaved = options.leftUncommitted ? { unsaved: options.leftUncommitted } : {};
-  return { asked, removed, ports: { ...(options.left ? { folders: options.left, removeLeft } : {}), ...unsaved } };
+  // How an answer reaches a turn at work, where a test is about the words `ask` gives for it.
+  const reach = options.answerReach !== undefined ? { answerReach: () => options.answerReach ?? null } : {};
+  return { asked, removed, ports: { ...(options.left ? { folders: options.left, removeLeft } : {}), ...unsaved, ...reach } };
 }
 
-export async function missionsHarness(options: { settings?: Partial<MissionsInForce>; agents?: string[]; jobAllowed?: (jobId: string) => readonly string[]; prepare?: (mission: Mission) => Promise<string | void>; branchRefusal?: (request: { agentId: string; workdir: string; branch: string }) => Promise<string | null>; sourceRepository?: (workdir: string) => string; runsOnCli?: (agentId: string) => boolean; freeToDelete?: (agentId: string) => boolean; readBrief?: (path: string) => string | null; goalBriefOf?: (mission: Mission) => string | null; stopTurn?: (mission: Mission) => void; helperTokens?: (missionId: string, since: number) => number; runningTokens?: (missionId: string) => number; personSaid?: (mission: Mission) => string | null; turnStartedAt?: (turnId: string) => number | null; checkRefusal?: (request: { agentId: string; workdir?: string }, command: string) => string | null; steerTurn?: (mission: Mission, told: Told) => SteerOutcome; pageOf?: (mission: Mission) => string | null; diskLow?: () => number | null; left?: () => { agentId: string; id: string; changedAt: number }[]; unsavedInLeft?: (missionId: string) => string[]; unsavedIn?: (mission: Mission) => string[]; leftUncommitted?: (mission: Mission) => Promise<string[]>; noFolder?: (mission: Mission) => boolean } = {}) {
+export async function missionsHarness(options: { settings?: Partial<MissionsInForce>; agents?: string[]; jobAllowed?: (jobId: string) => readonly string[]; prepare?: (mission: Mission) => Promise<string | void>; branchRefusal?: (request: { agentId: string; workdir: string; branch: string }) => Promise<string | null>; sourceRepository?: (workdir: string) => string; runsOnCli?: (agentId: string) => boolean; freeToDelete?: (agentId: string) => boolean; readBrief?: (path: string) => string | null; goalBriefOf?: (mission: Mission) => string | null; stopTurn?: (mission: Mission) => void; helperTokens?: (missionId: string, since: number) => number; runningTokens?: (missionId: string) => number; personSaid?: (mission: Mission) => string | null; turnStartedAt?: (turnId: string) => number | null; checkRefusal?: (request: { agentId: string; workdir?: string }, command: string) => string | null; steerTurn?: (mission: Mission, told: Told) => SteerOutcome; pageOf?: (mission: Mission) => string | null; diskLow?: () => number | null; left?: () => { agentId: string; id: string; changedAt: number }[]; unsavedInLeft?: (missionId: string) => string[]; unsavedIn?: (mission: Mission) => string[]; leftUncommitted?: (mission: Mission) => Promise<string[]>; answerReach?: AnswerReach | null; noFolder?: (mission: Mission) => boolean } = {}) {
   const db = await openAndMigrate(join(tempDir("missions"), "nouride.db"));
   const store = new MissionStore(db);
   const told: { mission: string; text: string; buttons?: MessageButton[] }[] = [];

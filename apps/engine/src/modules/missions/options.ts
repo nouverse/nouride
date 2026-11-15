@@ -11,6 +11,7 @@
 
 import { type ButtonPress, clip, type MessageButton, type PressAnswer } from "@nouride/shared";
 import { pressRefusal } from "./actions.ts";
+import { openQuestion } from "./asking.ts";
 import type { Missions } from "./missions.ts";
 import { shortId } from "./page.ts";
 import type { Answered } from "./types.ts";
@@ -59,6 +60,12 @@ export function optionButtons(missionId: string, options: readonly AnswerOption[
   });
 }
 
+/** The buttons under a question's notice: one per option it names, none for a free answer. */
+export function buttonsOf(missionId: string, asked: Pick<Answered, "options" | "at">): MessageButton[] | undefined {
+  const options = optionsOf(asked);
+  return options.length > 0 ? optionButtons(missionId, options, asked.at) : undefined;
+}
+
 export interface OptionPressDeps {
   missions: Pick<Missions, "get" | "answer">;
   /** An admin by People: in a room, who besides the person who started it may answer. */
@@ -85,9 +92,10 @@ export class OptionPresses {
     // Its own question, not one asked after it.
     if (!asked || asked.at.toString(36) !== match[2]) return { notice: "It has asked another question since: answer that one.", settled: `❓ Mission ${id}: asked something else since.` };
     if (asked.answer !== undefined) return { notice: "That question is already answered.", settled: `❓ Mission ${id}: already answered.` };
-    // Closed, stopped or waiting on something else since it asked (accepted from the chat, say): the buttons go, as an
-    // action button's do (`actions.ts`), rather than staying under a question nobody can answer any more.
-    if (mission.status !== "waiting" || mission.waitKind !== "input") {
+    // Closed or stopped since it asked (accepted from the chat, say): the buttons go, as an action button's do
+    // (`actions.ts`), rather than staying under a question nobody can answer any more. A mission at work with its
+    // question open is answered like one that waits.
+    if (openQuestion(mission) !== asked) {
       const now = mission.status === "waiting" ? `waiting for ${mission.waitKind}` : mission.status;
       return { notice: `Mission ${id} has moved on (${now}), so this question no longer waits.`, settled: `❓ Mission ${id}: moved on before this was answered (${now}).` };
     }
@@ -95,6 +103,7 @@ export class OptionPresses {
     if (!option) return { notice: "That option is not on its question: answer it in your own words.", settled: `❓ Mission ${id}: that option is not on its question. Answer it in your own words.` };
     const acted = this.deps.missions.answer(mission.id, `${option.key}) ${option.text}`, press.senderName || press.senderId);
     if ("refused" in acted) return { notice: acted.refused };
-    return { notice: `Answered ${option.key}.`, settled: `❓ Mission ${id}, answered by ${press.senderName || press.senderId}: ${option.key}) ${option.text}` };
+    // One that was not waiting for it says where the answer went, as a `tell` does.
+    return { notice: acted.said ?? `Answered ${option.key}.`, settled: `❓ Mission ${id}, answered by ${press.senderName || press.senderId}: ${option.key}) ${option.text}` };
   }
 }

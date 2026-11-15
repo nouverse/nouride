@@ -64,16 +64,25 @@ export function tellMission(missions: Missions, deps: MissionsDeps, id: string, 
   if (words.length > TELL_MAX) {
     return { refused: `That is ${words.length} characters, and a tell is ${TELL_MAX} at most: put the rest in a file and tell it where.`, why: "long", length: words.length, max: TELL_MAX };
   }
+  const { where, said } = handOver(deps, mission, words, by, via);
+  log.info("a person told a mission", { mission: mission.id, by, ...(via ? { via } : {}), status: mission.status, chars: words.length });
+  return { mission: deps.store.get(mission.id) ?? mission, said, where };
+}
+
+/**
+ * Words put on the mission's record and handed to it where it stands: a `tell`, and the answer to a question it asked
+ * while it went on working (`person.ts` `answerMission`). Saved before they are handed over: a restart in between leaves
+ * them unread, and the next turn's page carries them.
+ */
+export function handOver(deps: MissionsDeps, mission: Mission, words: string, by: string, via?: string): { where: TellWhere; said: string } {
   const now = (deps.now ?? Date.now)();
   const told: Told = { id: newId("tel"), by, at: now, text: words, ...(via ? { via } : {}) };
-  // Saved before it is handed over: a restart in between leaves it unread, and the next turn's page carries it.
   mission.told = [...mission.told, told].slice(-TOLD_KEPT);
   mission.updatedAt = now;
   deps.store.save(mission);
   deps.changed?.(mission);
   const where = delivered(mission, told, deps);
-  log.info("a person told a mission", { mission: mission.id, by, ...(via ? { via } : {}), status: mission.status, chars: words.length });
-  return { mission: deps.store.get(mission.id) ?? mission, said: chatWords(where, shortId(mission.id)), where };
+  return { where, said: chatWords(where, shortId(mission.id)) };
 }
 
 /** Into its turn when one is at work; otherwise where it is kept, by what moves the mission. */

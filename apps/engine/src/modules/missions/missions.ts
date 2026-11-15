@@ -15,17 +15,17 @@ import { cutLine, worstCut, type CutCall } from "@/modules/turns/cut-calls.ts";
 import type { TurnOutcome, TurnShape, TurnShaper } from "@/modules/pipeline/turn-shape.ts";
 import { SYSTEM_SENDER } from "@/modules/pipeline/deps.ts";
 import { buttonsFor } from "./actions.ts";
+import { Asking, type Asked } from "./asking.ts";
 import { Checking, type Reviewing } from "./checking.ts";
 import type { MissionJob, MissionsDeps } from "./deps.ts";
 import { afterTurn, answersWait, blockedBy, continueGives, limitReached, limitsNear, nearLimit, openInSameRepository, planSignature, stepsDone, type LimitsInForce, type MissionLimit, type Unsettled } from "./decide.ts";
 import { isMissionChat, MISSION_GATEWAY_ID } from "./gateway.ts";
-import { ANSWERS_KEPT, APPROVAL_ANSWERABLE_MS, MAX_RESUMES, SAME_QUESTION, STALL_AFTER_MS } from "./limits.ts";
+import { APPROVAL_ANSWERABLE_MS, MAX_RESUMES, STALL_AFTER_MS } from "./limits.ts";
 import { newMission, startRefusal, type StartRequest } from "./start.ts";
 import { acceptMission, acceptOutside, answerMission, continueMission, deleteMission, stopMission, type Acted, type Deleted, type Sayer } from "./person.ts";
 import { markRead, tellMission, unreadTold, type TellAnswer } from "./tell.ts";
 import { MissionStore } from "./missions.store.ts";
 import { goesOnNotice, needsYouNotice, paged, queuedNotice, startedNotice, warnNotice } from "./notices.ts";
-import { withOptions } from "./options.ts";
 import { announceDraft, editDraft, type DraftEdited } from "./draft-edit.ts";
 import { briefPath, type DraftChange, type DraftEditor } from "./drafts.ts";
 import { sendReport, tellEnded } from "./results.ts";
@@ -41,8 +41,11 @@ const log = createLogger("missions");
 /** How a mission's later turns name the outside content an earlier one read — the record a memory write carries. */
 const OUTSIDE_EARLIER = "outside content this mission read earlier";
 
-/** What the agent said in a turn about the mission itself — acted on when the turn ends. */
-type Claim = { kind: "done"; summary: string; report: string; files: string[] } | { kind: "ask"; question: string; options?: string[] } | { kind: "fail"; reason: string; report: string };
+/**
+ * What the agent said in a turn about the mission itself — acted on when the turn ends. `ask`: it asked and stopped to
+ * wait (the question itself left at the call, `asking.ts`); `stuck`: it asked the same thing a third time.
+ */
+type Claim = { kind: "done"; summary: string; report: string; files: string[] } | { kind: "ask" } | { kind: "stuck"; reason: string } | { kind: "fail"; reason: string; report: string };
 
 /** What a mission's turns leave in memory between them: none of it needs to survive a restart. */
 interface TurnState {
@@ -57,8 +60,6 @@ interface TurnState {
   claimedAt?: number;
   idle: number;
   failures: number;
-  /** The same question, asked again in a row. */
-  sameQuestion: number;
   /** Tries made after a pause for a model that could not answer (`retry`); told once it answers again. */
   retried: number;
 }
@@ -69,6 +70,8 @@ export class Missions implements TurnShaper {
   private readonly toldQueued = new Map<string, string>();
   readonly timers: MissionTimers;
   private readonly checking: Checking;
+  /** Its questions: asked at the call, counted when alike, waited on at a turn's end (`asking.ts`). */
+  private readonly asking: Asking;
   /** What it counts beside its turns: a CLI's tokens, its helpers' (0.8.7) — kept on the mission's record. */
   private readonly counts: MissionCounts;
   /**
@@ -83,6 +86,7 @@ export class Missions implements TurnShaper {
   constructor(private readonly deps: MissionsDeps) {
     this.timers = new MissionTimers(this, deps);
     this.checking = new Checking(this, deps);
+    this.asking = new Asking(this, deps);
     this.counts = new MissionCounts(deps);
   }
 
@@ -94,7 +98,7 @@ export class Missions implements TurnShaper {
   private turnState(id: string): TurnState {
     let state = this.state.get(id);
     if (!state) {
-      state = { inFlight: false, queuedAt: null, plan: "", done: 0, idle: 0, failures: 0, sameQuestion: 0, retried: 0 };
+      state = { inFlight: false, queuedAt: null, plan: "", done: 0, idle: 0, failures: 0, retried: 0 };
       this.state.set(id, state);
     }
     return state;
@@ -418,7 +422,7 @@ export class Missions implements TurnShaper {
       return;
     }
     if (claim?.kind === "fail") return this.end(mission, "failed", `gave up: ${claim.reason}`, claim.report);
-    if (claim?.kind === "ask") return this.asked(mission, withOptions(claim.question, claim.options ?? []), claim.options ?? []);
+    if (claim?.kind === "stuck") return this.wait(mission, "stuck", claim.reason);
     if (claim?.kind === "done") {
       mission.summary = claim.summary;
       mission.report = claim.report;
@@ -431,6 +435,9 @@ export class Missions implements TurnShaper {
       this.schedule();
       return;
     }
+    // Its question still open and nothing claimed: it waits for the answer, whether it stopped to or worked on until
+    // nothing was left. Not after a turn that failed, which is tried again with the question as open as it was.
+    if (!outcome.failed && this.asking.waitsOn(mission)) return;
     state.failures = outcome.failed ? state.failures + 1 : 0;
     if (!outcome.failed && state.retried > 0) {
       void this.deps.tell(mission, goesOnNotice(mission, state.retried));
@@ -484,7 +491,7 @@ export class Missions implements TurnShaper {
     return state?.claim !== undefined ? (state.claimedAt ?? null) : null;
   }
 
-  /** `done`, `ask` or `fail` from inside a mission's turn — acted on when the turn ends. */
+  /** `done` or `fail` from inside a mission's turn — acted on when the turn ends. */
   claim(missionId: string, claim: Claim): void {
     const state = this.turnState(missionId);
     state.claim = claim;
@@ -492,16 +499,18 @@ export class Missions implements TurnShaper {
     state.claimedAt ??= this.now();
   }
 
-  /** `question` as the person reads it, its `options` listed under it (`options.ts`). */
-  private asked(mission: Mission, question: string, options: string[]): void {
-    const state = this.turnState(mission.id);
-    const last = mission.answers.at(-1);
-    state.sameQuestion = last && last.question.trim().toLowerCase() === question.trim().toLowerCase() ? state.sameQuestion + 1 : 1;
-    mission.answers = [...mission.answers, { question, at: this.now(), ...(options.length > 0 ? { options } : {}) }].slice(-ANSWERS_KEPT);
-    if (state.sameQuestion >= SAME_QUESTION) {
-      return this.wait(mission, "stuck", `it asked the same question ${SAME_QUESTION} times in a row, going round in circles: "${question}"`);
-    }
-    this.wait(mission, "input", question);
+  /**
+   * `ask` from inside a mission's turn (`asking.ts`): its question to the chat now. The turn then ends and the mission
+   * waits, as a claim; with `meanwhile` it goes on, and nothing is claimed.
+   */
+  ask(missionId: string, asked: { question: string; options?: readonly string[]; meanwhile?: boolean }): Asked {
+    const mission = this.deps.store.get(missionId);
+    if (!mission || isFinal(mission.status)) return { refused: "This mission has ended." };
+    const meanwhile = asked.meanwhile === true;
+    const outcome = this.asking.ask(mission, { question: asked.question, options: asked.options ?? [], meanwhile });
+    if ("stuck" in outcome) this.claim(missionId, { kind: "stuck", reason: outcome.stuck });
+    else if ("asked" in outcome && !meanwhile) this.claim(missionId, { kind: "ask" });
+    return outcome;
   }
 
   // ── What a person says — `person.ts` ──────────────────────────────────────
@@ -584,7 +593,7 @@ export class Missions implements TurnShaper {
     const state = this.turnState(id);
     state.idle = 0;
     state.failures = 0;
-    state.sameQuestion = 0;
+    this.asking.forget(id);
     this.checking.forget(id);
   }
 
@@ -687,6 +696,7 @@ export class Missions implements TurnShaper {
     this.toldQueued.delete(mission.id);
     this.saidFor.delete(mission.id);
     this.checking.forget(mission.id);
+    this.asking.forget(mission.id);
     // A draft dropped — never started — takes its folder with it: its brief, and nothing else was ever written there.
     if (mission.startedAt === null) void this.deps.remove?.(mission).catch((err: unknown) => log.warn("a dropped draft's folder could not be removed", { mission: mission.id, error: String(err) }));
     log.info("mission ended", { mission: mission.id, status, turns: mission.turnsUsed, tokens: mission.tokensUsed, reason: why });
@@ -808,8 +818,8 @@ export class Missions implements TurnShaper {
   }
 
   /** What it keeps in memory, table by table — exposed so a test can catch one growing without bound. */
-  tables(): { turns: number; toldQueued: number; sameCheck: number; swept: number } {
-    return { turns: this.state.size, toldQueued: this.toldQueued.size, sameCheck: this.checking.entries(), swept: this.timers.entries() };
+  tables(): { turns: number; toldQueued: number; sameCheck: number; sameQuestion: number; swept: number } {
+    return { turns: this.state.size, toldQueued: this.toldQueued.size, sameCheck: this.checking.entries(), sameQuestion: this.asking.entries(), swept: this.timers.entries() };
   }
 
   /** The minute's checks — `timers.ts`. */

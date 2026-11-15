@@ -95,13 +95,13 @@ describe("options the agent names", () => {
     ].join("\n");
     const h = await missionsHarness();
     const mission = await h.start();
-    h.turn(mission, {}, () => h.missions.claim(mission.id, { kind: "ask", question: nix }));
+    h.turn(mission, {}, () => h.missions.ask(mission.id, { question: nix }));
     expect(h.told.at(-1)!.text).toContain("1. Buka kunci HP, biarin layarnya nyala.");
     expect(h.told.at(-1)!.buttons).toBeUndefined();
     // Lettered lines in the words are no different: what the agent offers to pick from, it names.
     h.missions.answer(mission.id, "nggak", "Gading");
     h.tick(60_000);
-    h.turn(mission, {}, () => h.missions.claim(mission.id, { kind: "ask", question: "Which way?\nA) merge now\nB) wait for Nox" }));
+    h.turn(mission, {}, () => h.missions.ask(mission.id, { question: "Which way?\nA) merge now\nB) wait for Nox" }));
     expect(h.told.at(-1)!.buttons).toBeUndefined();
   });
 
@@ -165,7 +165,7 @@ describe("answering by a button", () => {
     const h = await missionsHarness();
     const presses = new OptionPresses({ missions: h.missions, isAdmin: () => false });
     const mission = await h.start();
-    h.turn(mission, {}, () => h.missions.claim(mission.id, { kind: "ask", question: "Which?", options: ["merge now", "wait for Nox"] }));
+    h.turn(mission, {}, () => h.missions.ask(mission.id, { question: "Which?", options: ["merge now", "wait for Nox"] }));
     const sent = h.told.at(-1)!.buttons!.map((button) => button.data);
     const stamp = h.store.get(mission.id)!.answers.at(-1)!.at.toString(36);
     expect(sent).toEqual([`mission:answer:${mission.id}:${stamp}:A`, `mission:answer:${mission.id}:${stamp}:B`]);
@@ -181,7 +181,7 @@ describe("answering by a button", () => {
     const h = await missionsHarness();
     const presses = new OptionPresses({ missions: h.missions, isAdmin: () => false });
     const mission = await h.start();
-    h.turn(mission, {}, () => h.missions.claim(mission.id, { kind: "ask", question: "Which colour?\n1. red\n2. blue" }));
+    h.turn(mission, {}, () => h.missions.ask(mission.id, { question: "Which colour?\n1. red\n2. blue" }));
     const stamp = h.store.get(mission.id)!.answers.at(-1)!.at.toString(36);
     const pressed = await presses.press(press({ data: `mission:answer:${mission.id}:${stamp}:2` }));
     expect(pressed).toEqual({ notice: "That option is not on its question: answer it in your own words.", settled: `❓ Mission ${mission.id.slice(0, 10)}: that option is not on its question. Answer it in your own words.` });
@@ -193,11 +193,11 @@ describe("answering by a button", () => {
     const h = await missionsHarness();
     const presses = new OptionPresses({ missions: h.missions, isAdmin: () => false });
     const mission = await h.start();
-    h.turn(mission, {}, () => h.missions.claim(mission.id, { kind: "ask", question: "First?", options: ["red", "blue"] }));
+    h.turn(mission, {}, () => h.missions.ask(mission.id, { question: "First?", options: ["red", "blue"] }));
     const first = h.told.at(-1)!.buttons!.map((button) => button.data);
     h.missions.answer(mission.id, "blue, typed", "Gading");
     h.tick(60_000);
-    h.turn(mission, {}, () => h.missions.claim(mission.id, { kind: "ask", question: "Second?", options: ["delete it", "keep it"] }));
+    h.turn(mission, {}, () => h.missions.ask(mission.id, { question: "Second?", options: ["delete it", "keep it"] }));
     const pressed = await presses.press(press({ data: first[0]! }));
     expect(pressed).toEqual({ notice: "It has asked another question since: answer that one.", settled: `❓ Mission ${mission.id.slice(0, 10)}: asked something else since.` });
     expect(h.store.get(mission.id)).toMatchObject({ status: "waiting", waitKind: "input" });
@@ -208,7 +208,7 @@ describe("answering by a button", () => {
     const h = await missionsHarness();
     const presses = new OptionPresses({ missions: h.missions, isAdmin: () => false });
     const mission = await h.start();
-    h.turn(mission, {}, () => h.missions.claim(mission.id, { kind: "ask", question: "Ship it?", options: ["yes", "no"] }));
+    h.turn(mission, {}, () => h.missions.ask(mission.id, { question: "Ship it?", options: ["yes", "no"] }));
     const a = h.told.at(-1)!.buttons![0]!.data;
     expect((await presses.press(press({ chatId: "other", data: a }))).notice).toBe("That mission does not report to this chat.");
     expect((await presses.press(press({ chatType: "group", senderId: "stranger", data: a }))).notice).toContain("Only the person who started");
@@ -218,7 +218,7 @@ describe("answering by a button", () => {
   test("a question with no options goes without buttons", async () => {
     const h = await missionsHarness();
     const mission = await h.start();
-    h.turn(mission, {}, () => h.missions.claim(mission.id, { kind: "ask", question: "What should the file be called?" }));
+    h.turn(mission, {}, () => h.missions.ask(mission.id, { question: "What should the file be called?" }));
     expect(h.told.at(-1)!.buttons).toBeUndefined();
   });
 });

@@ -60,16 +60,10 @@ export function queuedNotice(mission: Pick<Mission, "id">, behind: string): stri
 export function needsYouNotice(mission: Pick<Mission, "id" | "checks" | "workdir" | "branch" | "summary">, kind: MissionWaitKind, detail: string, gives?: string): string {
   const id = shortId(mission.id);
   switch (kind) {
-    case "input": {
-      // Never clipped unsaid (0.8.7): a question cut at 800 characters lost the options it ended with, and the person
-      // answered half a question. Past what one notice carries, it says where the whole of it is.
-      const whole = detail.trim();
-      const cut = clip(whole, QUESTION_CHARS, QUESTION_CHARS);
-      const shown = cut === whole ? whole : `${cut}\n(The question goes on: /mission show ${id} has all of it)`;
+    case "input":
       // In words first: a reply reaches the agent, which answers the mission for the person (`work` answer) — live on
       // Discord, "blue" did. Only the command was said, so a person took it for the one way (0.8.12).
-      return `❓ Mission ${id} asks: ${shown}${GAP}Answer: reply to this in your own words, or /mission answer ${id} <your answer> · or accept it as it is: /mission accept ${id}`;
-    }
+      return `❓ Mission ${id} asks: ${questionShown(id, detail)}${GAP}Answer: reply to this in your own words, or /mission answer ${id} <your answer> · or accept it as it is: /mission accept ${id}`;
     case "approval":
       return `✋ Mission ${id} needs you: nothing else can move until you answer ${detail}.`;
     case "limit":
@@ -92,6 +86,31 @@ export function needsYouNotice(mission: Pick<Mission, "id" | "checks" | "workdir
       // Said once, when it pauses: each try after is quiet, and only its going on again or a person's turn is told.
       return `⏸ Mission ${id} paused because its model could not answer: ${clip(detail.trim(), 400)}${GAP}It tries again by itself, further apart each time, for about a day. /mission continue ${id} to try now, /mission stop ${id} to end it.`;
   }
+}
+
+/**
+ * A question as a notice carries it. Never clipped unsaid (0.8.7): a question cut at 800 characters lost the options it
+ * ended with, and the person answered half a question. Past what one notice carries, it says where the whole of it is.
+ */
+function questionShown(id: string, question: string): string {
+  const whole = question.trim();
+  const cut = clip(whole, QUESTION_CHARS, QUESTION_CHARS);
+  return cut === whole ? whole : `${cut}\n(The question goes on: /mission show ${id} has all of it)`;
+}
+
+/**
+ * A question asked by a mission that goes on with other work (`keep_working`): said so, since its person otherwise
+ * reads a question as work held up. No "accept it as it is": it has not stopped.
+ */
+export function asksMeanwhileNotice(mission: Pick<Mission, "id">, question: string): string {
+  const id = shortId(mission.id);
+  return `❓ Mission ${id} asks, and works on meanwhile: ${questionShown(id, question)}${GAP}Answer: reply to this in your own words, or /mission answer ${id} <your answer>`;
+}
+
+/** Its turn ended with that question still open: what it could do without the answer is done, and it waits now. Said once. */
+export function nowWaitsNotice(mission: Pick<Mission, "id">, question: string): string {
+  const id = shortId(mission.id);
+  return `⏸ Mission ${id} has done what it could without your answer, and waits for it now: ${clip(question.trim(), 400)}${GAP}Answer: reply to this in your own words, or /mission answer ${id} <your answer> · or accept it as it is: /mission accept ${id}`;
 }
 
 /** A paused mission's model answered again (`retry`): said once, so the person knows it is no longer stalled. */

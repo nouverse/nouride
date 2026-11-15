@@ -27,6 +27,11 @@ export interface Answered {
   options?: string[];
   answer?: string;
   at: number;
+  /**
+   * How it was asked, on every question since they leave at the call (`asking.ts`): the mission then waits, or works on
+   * meanwhile (`keep_working`). Absent on one a mission of an earlier version asked.
+   */
+  asked?: "wait" | "meanwhile";
 }
 
 /**

@@ -71,8 +71,9 @@ export async function mission(client: Client, args: string[]): Promise<void> {
     }
     const text = rest.join(" ").trim();
     if (action === "answer" && !text) usageError("usage: nouride mission answer <id> <answer>");
-    const { mission: m } = await client.post<MissionResponse>(`/missions/${encodeURIComponent(id)}/${action}`, text ? { text } : {});
-    return say(`${GREEN}✓${RESET} ${m.id} · ${statusOf(m)}`);
+    const { mission: m, said } = await client.post<MissionResponse>(`/missions/${encodeURIComponent(id)}/${action}`, text ? { text } : {});
+    // An answer to one that went on working says where it went, as a `tell` does.
+    return say(`${GREEN}✓${RESET} ${m.id} · ${statusOf(m)}${said ? `: ${said}` : ""}`);
   }
 
   const all = hasFlag(args, "--all");

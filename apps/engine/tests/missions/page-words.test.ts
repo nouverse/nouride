@@ -11,7 +11,7 @@ describe("how a mission reaches its person, as its page says it", () => {
     const h = await missionsHarness();
     const page = h.turn(await h.start())!.text;
     expect(page).toContain(
-      '- Need the person? `mission` action "ask", one question, never `send_message`: what they answer in another chat does not come back to this mission.',
+      '- Need the person? `mission` action "ask", one question, never `send_message`: what they answer in another chat does not come back to this mission. It reaches them at once and the mission waits for the answer.',
     );
   });
 });

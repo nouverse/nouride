@@ -299,7 +299,7 @@ describe("a turn", () => {
     const mission = await h.start();
     const wake = (via: string) => h.missions.shapeFor("nova", { gatewayId: MISSION_GATEWAY_ID, chatId: mission.id, text: via, senderId: SYSTEM_SENDER, raw: { via } } as never);
     // Its question resumed by any of these: it ran on without the answer, and `/mission answer` was then refused.
-    h.turn(mission, {}, () => h.missions.claim(mission.id, { kind: "ask", question: "Which branch?" }));
+    h.turn(mission, {}, () => h.missions.ask(mission.id, { question: "Which branch?" }));
     for (const via of ["job quiet", "restart resumed", "provider resumed", "approval resumed"]) expect(wake(via)).toBeNull();
     expect(h.store.get(mission.id)!.waitKind).toBe("input");
     expect("mission" in h.missions.answer(mission.id, "main", "Gading")).toBe(true);
@@ -499,7 +499,7 @@ describe("a person", () => {
   test("is asked, answers, and the next turn says what they answered", async () => {
     const h = await missionsHarness();
     const mission = await h.start();
-    h.turn(mission, {}, () => h.missions.claim(mission.id, { kind: "ask", question: "Keep the old sheet?" }));
+    h.turn(mission, {}, () => h.missions.ask(mission.id, { question: "Keep the old sheet?" }));
     expect(h.store.get(mission.id)!.waitKind).toBe("input");
     expect(h.told.at(-1)!.text).toContain("asks: Keep the old sheet?");
     h.missions.answer(mission.id, "yes, rename it", "Gading");
@@ -512,7 +512,7 @@ describe("a person", () => {
     const h = await missionsHarness();
     const mission = await h.start();
     for (let i = 0; i < 3; i += 1) {
-      h.turn(mission, {}, () => h.missions.claim(mission.id, { kind: "ask", question: "Which sheet?" }));
+      h.turn(mission, {}, () => h.missions.ask(mission.id, { question: "Which sheet?" }));
       if (i < 2) h.missions.answer(mission.id, "the first", "Gading");
     }
     expect(h.store.get(mission.id)!.waitKind).toBe("stuck");
@@ -603,7 +603,7 @@ describe("limits", () => {
   test("hours count work, not waiting for a person", async () => {
     const h = await missionsHarness({ settings: { limitHours: 1 } });
     const mission = await h.start();
-    h.turn(mission, {}, () => h.missions.claim(mission.id, { kind: "ask", question: "Which one?" }));
+    h.turn(mission, {}, () => h.missions.ask(mission.id, { question: "Which one?" }));
     h.tick(5 * 60 * 60_000);
     h.missions.answer(mission.id, "the first", "Gading");
     h.turn(mission);
@@ -816,7 +816,7 @@ describe("a mission handed out from inside another", () => {
     const h = await missionsHarness({ settings: { maxRunning: 4 } });
     const parent = await h.start("ship the release");
     const child = await h.start("write the notes", { agentId: "nox", parentId: parent.id });
-    h.turn(parent, {}, () => h.missions.claim(parent.id, { kind: "ask", question: "Which version?" }));
+    h.turn(parent, {}, () => h.missions.ask(parent.id, { question: "Which version?" }));
     h.turn(child, {}, () => h.missions.claim(child.id, { kind: "done", summary: "Done.", report: "Notes written.", files: [] }));
     await h.settle();
     h.missions.accept(child.id, "Gading");
@@ -975,12 +975,16 @@ describe("what the missions keep in memory", () => {
     const running = await h.start("write it", { checks: ["test -s out.txt"] });
     const queued = await h.start("then this");
     h.setChecks(async () => ({ passed: false, failed: { command: "test -s out.txt", output: "[no output, exit code 1]" } }));
-    h.turn(running, {}, () => h.missions.claim(running.id, { kind: "done", summary: "Done.", report: "Wrote it.", files: [] }));
+    // A question asked on the way, the mission working on: its count of questions alike is kept while the mission is open.
+    h.turn(running, {}, () => {
+      h.missions.ask(running.id, { question: "Which file?", meanwhile: true });
+      h.missions.claim(running.id, { kind: "done", summary: "Done.", report: "Wrote it.", files: [] });
+    });
     await h.settle();
-    expect(h.missions.tables()).toEqual({ turns: 1, toldQueued: 1, sameCheck: 1, swept: 0 });
+    expect(h.missions.tables()).toEqual({ turns: 1, toldQueued: 1, sameCheck: 1, sameQuestion: 1, swept: 0 });
     h.missions.stop(queued.id, "Gading");
     h.missions.stop(running.id, "Gading");
-    expect(h.missions.tables()).toEqual({ turns: 0, toldQueued: 0, sameCheck: 0, swept: 0 });
+    expect(h.missions.tables()).toEqual({ turns: 0, toldQueued: 0, sameCheck: 0, sameQuestion: 0, swept: 0 });
     h.missions.turnEnded(running.id, { toolCalls: 1, worked: 1, tokens: 10, failed: false, interrupted: false, readOutside: false });
     expect(h.missions.tables().turns).toBe(0);
     h.missions.shapeFor("nova", h.queued.filter((one) => one.chatId === running.id).at(-1)!);
