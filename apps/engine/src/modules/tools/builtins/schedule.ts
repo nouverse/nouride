@@ -92,6 +92,26 @@ function doesOf(args: Record<string, unknown>): OneKind | string {
   }
 }
 
+/**
+ * The steps one step starts at the same time, as written: each a `prompt` or a `command`, as a step of that kind is.
+ * How many, and that no agent has two, is the store's to refuse, with the step named (`cron/validate.ts`).
+ */
+function togetherOf(written: unknown[], agentExists: (agentId: string) => boolean): Record<string, unknown>[] | string {
+  const parts: Record<string, unknown>[] = [];
+  for (const [index, raw] of written.entries()) {
+    const part = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+    const does = doesOf(part);
+    if (typeof does === "string") return does.startsWith("Give exactly one") ? `\`together\`, part ${index + 1}: give a \`prompt\` or a \`command\`.` : does;
+    if (does.kind !== "agentTurn" && does.kind !== "command") return `\`together\`, part ${index + 1}: only a \`prompt\` or a \`command\` starts beside others. A \`mission\` or a \`text\` is a step of its own.`;
+    const agent = typeof part.agent === "string" && part.agent.trim() ? part.agent.trim() : "";
+    if (agent && !agentExists(agent)) return `\`together\`, part ${index + 1}: there is no agent called ${agent}.`;
+    const one: Record<string, unknown> = { ...does };
+    delete one.then;
+    parts.push({ ...one, ...(agent && does.kind === "agentTurn" ? { agentId: agent } : {}), ...(typeof part.name === "string" ? { name: part.name } : {}) });
+  }
+  return parts;
+}
+
 /** A step's exit as the tool takes it, `if_failed` and `if_empty` beside `then`, under the name a job keeps it by. */
 const EXITS = [["then", "then"], ["if_failed", "whenFailed"], ["if_empty", "whenEmpty"]] as const;
 
@@ -119,16 +139,18 @@ function payloadOf(args: Record<string, unknown>, agentExists: (agentId: string)
   for (const [index, raw] of args.steps.entries()) {
     const step = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
     const asks = typeof step.ask === "string" && step.ask.trim() ? step.ask.trim() : "";
-    const does = asks ? null : doesOf(step);
-    if (typeof does === "string") return `Step ${index + 1}: ${does.replace("`prompt` or `mission`", "`prompt`, `mission` or `ask`")}`;
+    const parts = asks || !Array.isArray(step.together) ? null : togetherOf(step.together, agentExists);
+    if (typeof parts === "string") return `Step ${index + 1}: ${parts}`;
+    const does = asks || parts ? null : doesOf(step);
+    if (typeof does === "string") return `Step ${index + 1}: ${does.replace("`prompt` or `mission`", "`prompt`, `mission`, `ask` or `together`")}`;
     const agent = typeof step.agent === "string" && step.agent.trim() ? step.agent.trim() : "";
     if (agent && !agentExists(agent)) return `Step ${index + 1}: there is no agent called ${agent}.`;
     // A command's own `then` is what a job of one command does with its output: in a list that is the step after it.
-    const one: Record<string, unknown> = asks ? { kind: "approval", ask: asks } : { ...does };
+    const one: Record<string, unknown> = asks ? { kind: "approval", ask: asks } : parts ? { kind: "parallel", steps: parts } : { ...does };
     delete one.then;
     written.push({
       ...one,
-      ...(agent ? { agentId: agent } : {}),
+      ...(agent && !parts ? { agentId: agent } : {}),
       ...(typeof step.name === "string" ? { name: step.name } : {}),
       ...(step.only_changed === true ? { onlyChanged: true } : {}),
       ...Object.fromEntries(EXITS.filter(([given]) => step[given] !== undefined).map(([given, kept]) => [kept, step[given]])),
@@ -210,7 +232,7 @@ export function createScheduleTool(options: ScheduleToolOptions): Tool {
           steps: {
             type: "array",
             description:
-              "Several, in a fixed order, each handed what the one before said; the last one's words are sent. A step is one of `text`, `command`, `prompt`, `mission` (the run waits for it) or `ask` (the run waits for a person's yes). A failed step ends the run as failed and one with nothing to say ends it quietly, unless `if_failed` or `if_empty` say otherwise; `then` is where it goes once done. Each is \"next\", \"end\" or a later step's number.",
+              "Several, in a fixed order, each handed what the one before said; the last one's words are sent. A step is one of `text`, `command`, `prompt`, `mission` (the run waits for it), `ask` (the run waits for a person's yes) or `together` (2 to 5 steps of `prompt` or `command` begun at once, their words joined under each one's name). A failed step ends the run as failed and one with nothing to say ends it quietly, unless `if_failed` or `if_empty` say otherwise; `then` is where it goes once done. Each is \"next\", \"end\" or a later step's number.",
             items: {
               type: "object",
               properties: {
@@ -220,6 +242,8 @@ export function createScheduleTool(options: ScheduleToolOptions): Tool {
                 prompt: { type: "string" },
                 mission: { type: "string" },
                 ask: { type: "string" },
+                // Each of them is written as a step is, so its fields are not spelled out a second time on every request.
+                together: { type: "array", items: { type: "object" } },
                 agent: { type: "string" },
                 then: { type: "string" },
                 if_failed: { type: "string" },
@@ -259,7 +283,7 @@ export function createScheduleTool(options: ScheduleToolOptions): Tool {
       try {
         const trigger = triggerOf(String(args.when ?? ""), typeof args.tz === "string" ? args.tz : undefined, now(), options.timezone());
         // A command a call from outside sets off, with no model between, is an admin's to make from the dashboard.
-        if (trigger.kind === "webhook" && (payload.kind === "command" || (payload.kind === "steps" && payload.steps.some((step) => step.kind === "command")))) {
+        if (trigger.kind === "webhook" && (payload.kind === "command" || (payload.kind === "steps" && payload.steps.some((step) => step.kind === "command" || (step.kind === "parallel" && step.steps.some((part) => part.kind === "command")))))) {
           return { content: "A webhook that runs a command is made by an admin from the dashboard, not proposed.", isError: true };
         }
         const replaces = typeof args.replaces === "string" && args.replaces.trim() ? args.replaces.trim() : undefined;

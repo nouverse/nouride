@@ -8,18 +8,23 @@
  * the card can say what happened.
  */
 
-import type { AutomationStep, StepExit } from "@nouride/wire";
+import type { AutomationPart, AutomationStep, StepExit } from "@nouride/wire";
 import { moved } from "@/commons/lib/reorder";
 
 export type Step = AutomationStep;
 export type StepKind = Step["kind"];
+/** One of the steps a step starts at the same time: what to ask an agent, or a command. */
+export type Part = AutomationPart;
+type Together = Extract<Step, { kind: "parallel" }>;
 export type ExitName = "then" | "whenFailed" | "whenEmpty";
 
 export const EXITS: readonly ExitName[] = ["then", "whenFailed", "whenEmpty"];
-export const KINDS: readonly StepKind[] = ["agentTurn", "command", "systemEvent", "mission", "approval"];
+export const KINDS: readonly StepKind[] = ["agentTurn", "command", "systemEvent", "mission", "approval", "parallel"];
 
 /** The server's own bounds, as `cron/validate.ts` and `cron/steps.ts` hold them. */
 export const STEPS_MAX = 20;
+export const TOGETHER_MIN = 2;
+export const TOGETHER_MAX = 5;
 export const APPROVAL_WAIT_MS = 86_400_000;
 const APPROVAL_WAIT_MIN_MS = 5 * 60_000;
 const APPROVAL_WAIT_MAX_MS = 7 * 86_400_000;
@@ -46,7 +51,7 @@ export interface Changed {
 
 /** Which exits a kind can take: only a command or an agent can have nothing to say, and a message sent has no other way out. */
 export function exitsOf(step: Step): ExitName[] {
-  const can: ExitName[] = step.kind === "systemEvent" ? ["then"] : step.kind === "command" || step.kind === "agentTurn" ? ["then", "whenFailed", "whenEmpty"] : ["then", "whenFailed"];
+  const can: ExitName[] = step.kind === "systemEvent" ? ["then"] : step.kind === "command" || step.kind === "agentTurn" || step.kind === "parallel" ? ["then", "whenFailed", "whenEmpty"] : ["then", "whenFailed"];
   // One written elsewhere is still shown: the page hides nothing the automation holds.
   return EXITS.filter((exit) => can.includes(exit) || step[exit] !== undefined);
 }
@@ -57,7 +62,7 @@ export const exitOf = (step: Step, exit: ExitName): StepExit => step[exit] ?? DE
  * Whether a step can be marked to go on only when what it says changes: one that says something of its own. A message
  * says what a person wrote and a wait hands on what the step before said, and the server refuses the mark on either.
  */
-export const canWatch = (step: Pick<Step, "kind">): boolean => step.kind === "command" || step.kind === "agentTurn" || step.kind === "mission";
+export const canWatch = (step: Pick<Step, "kind">): boolean => step.kind === "command" || step.kind === "agentTurn" || step.kind === "mission" || step.kind === "parallel";
 
 /** A step with that mark set or taken off. The mark is there or it is not: never kept as off, and never on a kind that cannot hold it. */
 export function watching(step: Step, on: boolean): Step {
@@ -106,10 +111,36 @@ export function newStepId(steps: readonly Pick<Step, "id">[]): string {
   for (let n = steps.length + 1; ; n += 1) if (!taken.has(`s${n}`)) return `s${n}`;
 }
 
+/** One of the steps started at the same time, with nothing written in it yet. Its id is its step's to give (`parted`). */
+export const blankPart = (kind: Part["kind"]): Part => (kind === "command" ? { id: "", kind, argv: [] } : { id: "", kind, message: "" });
+
+/** What one of them asks or runs. */
+const partText = (part: Part): string => (part.kind === "command" ? shellLine(part.argv) : part.message);
+
+/** The same one as the other kind: its name and its words kept, an agent of its own dropped with the turn it was for. */
+export function asPart(part: Part, kind: Part["kind"]): Part {
+  if (part.kind === kind) return part;
+  const base = { id: part.id, ...(part.name ? { name: part.name } : {}) };
+  return kind === "command" ? { ...base, kind, argv: argvOf(partText(part)) } : { ...base, kind, message: partText(part) };
+}
+
+/**
+ * A step of several at the same time with each of them named by its step's id and its place: no two steps of an
+ * automation share an id, which the server holds a list to, however the step was copied, moved or renamed.
+ */
+export function parted(step: Together, parts: readonly Part[] = step.steps): Together {
+  return { ...step, steps: parts.map((part, at) => ({ ...part, id: `${step.id.slice(0, 21)}-${at + 1}` })) };
+}
+
+/** A step under another id, the steps it starts at the same time named after it. */
+const withId = (step: Step, id: string): Step => (step.kind === "parallel" ? parted({ ...step, id }) : { ...step, id });
+
 /** A new step of a kind, with nothing written in it yet. */
 export function blankStep(kind: StepKind, steps: readonly Step[]): Step {
   const id = newStepId(steps);
   switch (kind) {
+    case "parallel":
+      return parted({ id, kind, steps: [blankPart("agentTurn"), blankPart("agentTurn")] });
     case "systemEvent":
       return { id, kind, text: "" };
     case "agentTurn":
@@ -144,17 +175,21 @@ export function mainText(step: Step): string {
       return step.goal;
     case "approval":
       return step.ask;
+    case "parallel":
+      return step.steps.map(partText).map((text) => text.trim()).filter(Boolean).join(" · ");
   }
 }
 
 /** The same step as another kind: its place, its name, its exits and its words kept, what only the old kind had dropped. */
 export function asKind(step: Step, kind: StepKind): Step {
   if (step.kind === kind) return step;
-  const text = mainText(step);
+  // Of several at the same time, the first is what goes on as the one thing the step does.
+  const lead = step.kind === "parallel" ? step.steps[0] : step;
+  const text = step.kind === "parallel" ? (lead ? partText(lead as Part) : "") : mainText(step);
   const base = { id: step.id, ...(step.name ? { name: step.name } : {}), ...(step.then ? { then: step.then } : {}) };
   const failed = step.whenFailed ? { whenFailed: step.whenFailed } : {};
   const empty = step.whenEmpty ? { whenEmpty: step.whenEmpty } : {};
-  const agent = "agentId" in step && step.agentId ? { agentId: step.agentId } : {};
+  const agent = lead && "agentId" in lead && lead.agentId ? { agentId: lead.agentId } : {};
   // Kept by the kinds that say something of their own; a message or a wait cannot hold it.
   const watch = step.onlyChanged ? { onlyChanged: true as const } : {};
   switch (kind) {
@@ -168,6 +203,11 @@ export function asKind(step: Step, kind: StepKind): Step {
       return { ...base, ...failed, ...watch, kind, goal: text, ...agent };
     case "approval":
       return { ...base, ...failed, kind, ask: text };
+    case "parallel": {
+      // What the step did is the first of them; the second is there to be written.
+      const first: Part = step.kind === "command" ? { id: "", kind: "command", argv: step.argv } : { id: "", kind: "agentTurn", message: text, ...agent };
+      return parted({ ...base, ...failed, ...empty, ...watch, kind, steps: [first, blankPart("agentTurn")] });
+    }
   }
 }
 
@@ -196,7 +236,7 @@ export function insertStep(steps: readonly Step[], at: number, step: Step): Chan
   if (steps.length >= STEPS_MAX) return { steps: [...steps], reset: [] };
   const place = Math.max(0, Math.min(at, steps.length));
   const taken = steps.some((one) => one.id === step.id);
-  return forward([...steps.slice(0, place), taken ? { ...step, id: newStepId(steps) } : step, ...steps.slice(place)]);
+  return forward([...steps.slice(0, place), taken ? withId(step, newStepId(steps)) : step, ...steps.slice(place)]);
 }
 
 export function removeStep(steps: readonly Step[], index: number): Changed {
@@ -212,7 +252,7 @@ export function moveStep(steps: readonly Step[], from: number, to: number): Chan
 export function duplicateStep(steps: readonly Step[], index: number): Changed {
   const step = steps[index];
   if (!step) return { steps: [...steps], reset: [] };
-  return insertStep(steps, index + 1, { ...step, id: newStepId(steps), ...(step.name ? { name: `${step.name} copy`.slice(0, 80) } : {}) });
+  return insertStep(steps, index + 1, { ...withId(step, newStepId(steps)), ...(step.name ? { name: `${step.name} copy`.slice(0, 80) } : {}) });
 }
 
 /** One step changed, the rest as they were. */
@@ -242,7 +282,7 @@ export interface StepProblem {
   message: string;
 }
 
-function stepProblem(step: Step): string | null {
+function stepProblem(step: Step, own: string | undefined): string | null {
   if ((step.kind === "agentTurn" || step.kind === "mission") && step.agentId !== undefined && !step.agentId.trim()) return "Pick the agent for this step, or leave it to the automation's own.";
   switch (step.kind) {
     case "systemEvent":
@@ -263,11 +303,19 @@ function stepProblem(step: Step): string | null {
       if (!step.ask.trim()) return "Write the question to ask.";
       if (step.timeoutMs !== undefined && (!Number.isFinite(step.timeoutMs) || step.timeoutMs < APPROVAL_WAIT_MIN_MS || step.timeoutMs > APPROVAL_WAIT_MAX_MS)) return "It can wait between 5 minutes and 7 days.";
       return null;
+    case "parallel": {
+      if (step.steps.length < TOGETHER_MIN) return "Add at least two things to start at the same time.";
+      if (step.steps.length > TOGETHER_MAX) return `At most ${TOGETHER_MAX} start at the same time.`;
+      if (step.steps.some((part) => !partText(part).trim())) return "Write what each of them does: what to ask, or the command to run.";
+      // The automation's own agent stands for a part that names none: twice is twice either way.
+      const agents = step.steps.flatMap((part) => (part.kind === "agentTurn" ? [part.agentId || own || ""] : []));
+      return agents.some((agent, at) => agents.indexOf(agent) !== at) ? "An agent takes one of these at a time. Give each a different agent, or move one to a step of its own." : null;
+    }
   }
 }
 
 /** Everything the server would refuse a list for, so nothing it would refuse is sent. */
-export function stepProblems(steps: readonly Step[]): StepProblem[] {
+export function stepProblems(steps: readonly Step[], own?: string): StepProblem[] {
   const problems: StepProblem[] = [];
   if (steps.length === 0) problems.push({ index: null, message: "Add a step: what should happen when it starts." });
   if (steps.length > STEPS_MAX) problems.push({ index: null, message: `An automation runs at most ${STEPS_MAX} steps.` });
@@ -277,7 +325,7 @@ export function stepProblems(steps: readonly Step[]): StepProblem[] {
     else place.set(step.id, index);
   });
   steps.forEach((step, index) => {
-    const said = stepProblem(step);
+    const said = stepProblem(step, own);
     if (said) problems.push({ index, message: said });
     for (const exit of EXITS) {
       const go = step[exit];

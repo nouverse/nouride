@@ -12,7 +12,7 @@
  * throws at 3am into a log nobody is watching.
  */
 
-import { newId, createLogger, type Job, type JobRun, type StepOutcome, type JobTrigger, type JobPayload, type JobDelivery, type JobSessionMode, type JobTarget, type CronSection, type JobProposal, type Port, type ReachTest, type JobAllowance } from "@nouride/shared";
+import { newId, createLogger, type Job, type JobRun, type JobStep, type TogetherStep, type StepOutcome, type JobTrigger, type JobPayload, type JobDelivery, type JobSessionMode, type JobTarget, type CronSection, type JobProposal, type Port, type ReachTest, type JobAllowance } from "@nouride/shared";
 import { RunHistory, type RunOutcome, type RunState, type WaitingRun } from "./runs.store.ts";
 import { randomToken, type SqliteDb } from "@nouride/runtime";
 import type { AuditLog } from "@/commons/audit.store.ts";
@@ -20,6 +20,10 @@ import { nextCronOccurrence, parseCronExpr } from "@/modules/cron/expr.ts";
 import { CronValidationError, validateJob, validateSteps, type ValidationRules } from "@/modules/cron/validate.ts";
 
 const log = createLogger("cron.store");
+
+/** A step as the audit log keeps it: a command whole, any other by its kind, and the same of each step it starts together. */
+const stepAudit = (step: JobStep | TogetherStep): Record<string, unknown> =>
+  step.kind === "command" ? { kind: step.kind, argv: step.argv } : step.kind === "parallel" ? { kind: step.kind, steps: step.steps.map(stepAudit) } : { kind: step.kind };
 
 interface Row {
   id: string;
@@ -312,7 +316,7 @@ export class CronStore {
         // single most important thing here to be able to read back later.
         ...(job.payload.kind === "command" ? { argv: job.payload.argv } : {}),
         // And every step's, for a job of several: each command whole, each other step by its kind.
-        ...(job.payload.kind === "steps" ? { steps: job.payload.steps.map((step) => (step.kind === "command" ? { kind: step.kind, argv: step.argv } : { kind: step.kind })) } : {}),
+        ...(job.payload.kind === "steps" ? { steps: job.payload.steps.map(stepAudit) } : {}),
         next_run_at: job.nextRunAt,
       },
     });

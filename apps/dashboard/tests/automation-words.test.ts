@@ -69,7 +69,7 @@ describe("a step's words", () => {
       // A semantic colour, never a palette class or a hex.
       expect(look.tile).toMatch(/^bg-(primary|secondary|accent|info|success|base-content)\/\S+ text-(primary|secondary|accent|info|success|base-content)(\/\d+)?$/);
     }
-    expect(Object.keys(KIND).sort()).toEqual(["agentTurn", "approval", "command", "mission", "systemEvent"]);
+    expect(Object.keys(KIND).sort()).toEqual(["agentTurn", "approval", "command", "mission", "parallel", "systemEvent"]);
     // Pink is what needs you, and nothing else: the wait for a person alone.
     expect(Object.entries(KIND).filter(([, look]) => look.tile.includes("accent")).map(([kind]) => kind)).toEqual(["approval"]);
   });

@@ -140,6 +140,45 @@ test("`runs` says how each step of a run went, and names a run that waits so it 
   expect(out).toContain("✓ 1970-01-01T00:00:00.000Z 2s");
 });
 
+test("`runs` says each of the steps a step started at the same time, under it", async () => {
+  const { made } = client({
+    "/cron/cron_1": {
+      job: { id: "cron_1", name: "morning", describes: "every morning" },
+      runs: [
+        {
+          id: "run_1",
+          jobId: "cron_1",
+          startedAt: 1_000,
+          finishedAt: 9_000,
+          status: "error",
+          result: "step 1 of 2, 2 steps at the same time failed: nix: the model refused",
+          steps: [
+            {
+              id: "ask",
+              kind: "parallel",
+              status: "failed",
+              said: "nix: the model refused",
+              startedAt: 1_000,
+              ms: 8_000,
+              parts: [
+                { id: "news", kind: "agentTurn", status: "failed", said: "the model refused", startedAt: 1_000, ms: 2_100 },
+                { id: "tickets", kind: "command", status: "done", said: "three tickets open\nand a fourth", startedAt: 1_000, ms: 300 },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  });
+  const lines = (await said(() => cron(made, ["runs", "cron_1"]))).split("\n");
+  const at = lines.findIndex((line) => line.includes("1. ask"));
+  expect(lines.slice(at, at + 3)).toEqual([
+    "    ✗ 1. ask failed 8s  2 at the same time",
+    "        ✗ news failed 2.1s  the model refused",
+    "        ✓ tickets done 0.3s  three tickets open",
+  ]);
+});
+
 test("`continue` and `stop` answer the run that waits; without its id it is misuse", async () => {
   const { made, posts } = client({ "/automations/runs/run_wait1/answer": { ok: true } });
 

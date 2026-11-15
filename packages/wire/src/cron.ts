@@ -3,10 +3,12 @@
  * A job's work is one thing or a list of steps.
  */
 
-import type { CronDeliveryMode, JobPayload, JobSessionMode, JobStep, RunWait, StepGo, StepOutcome } from "@nouride/shared";
+import type { CronDeliveryMode, JobPayload, JobSessionMode, JobStep, RunWait, StepGo, StepOutcome, TogetherStep } from "@nouride/shared";
 
 /** One step of an automation, where a run goes from it, how one went in a run, and what a run waits for: the daemon's own. */
 export type AutomationStep = JobStep;
+/** One of the steps a step starts at the same time. */
+export type AutomationPart = TogetherStep;
 export type StepExit = StepGo;
 export type StepRunOutcome = StepOutcome;
 export type RunWaiting = RunWait;

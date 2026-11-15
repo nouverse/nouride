@@ -42,12 +42,17 @@ const MARK: Record<StepOutcome["status"], string> = {
   interrupted: `${YELLOW}↻${RESET}`,
 };
 
-/** How each step of a run went, a line each under the run's own. */
+/** How each step of a run went, a line each under the run's own; under a step that started several, a line for each of them. */
 export function sayRunSteps(run: Pick<JobRun, "steps">): void {
-  for (const [index, step] of (run.steps ?? []).entries()) {
+  const line = (step: StepOutcome, lead: string): void => {
     const took = step.ms !== undefined ? ` ${Math.max(0, Math.round(step.ms / 100) / 10)}s` : "";
-    const said = step.said ? `  ${step.said.split("\n")[0]?.slice(0, 120) ?? ""}` : "";
-    say(`    ${MARK[step.status]} ${index + 1}. ${step.id} ${DIM}${step.status}${took}${said}${RESET}`);
+    // Steps at the same time say each of theirs on its own line, so the step's is the count of them, not their words again.
+    const said = step.parts ? `  ${step.parts.length} at the same time` : step.said ? `  ${step.said.split("\n")[0]?.slice(0, 120) ?? ""}` : "";
+    say(`${lead} ${step.id} ${DIM}${step.status}${took}${said}${RESET}`);
+  };
+  for (const [index, step] of (run.steps ?? []).entries()) {
+    line(step, `    ${MARK[step.status]} ${index + 1}.`);
+    for (const part of step.parts ?? []) line(part, `        ${MARK[part.status]}`);
   }
 }
 

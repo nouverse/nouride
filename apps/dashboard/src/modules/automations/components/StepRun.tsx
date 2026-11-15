@@ -40,6 +40,7 @@ export function StepRun({
   before,
   canAnswer,
   whom,
+  partTitle,
 }: {
   outcome: StepRunOutcome;
   run: JobRunSummary;
@@ -50,13 +51,16 @@ export function StepRun({
   canAnswer: boolean;
   /** Who answers it while it waits for a person, where that is not the reader. */
   whom?: string | undefined;
+  /** What each of the steps it started at the same time is called, by its id. */
+  partTitle?: ((id: string) => string) | undefined;
 }) {
   const { label, tone } = outcomeWords(outcome, whom);
   const asking = outcome.status === "waiting" && run.waiting?.kind === "approval" && run.waiting.step === outcome.id ? run.waiting : null;
   const failed = outcome.status === "failed";
   // A step that waits says its own question as what it said: that is drawn as the question, not repeated under it.
   // One that said the same as last time has that on its chip: under "What it printed" it would read as its output.
-  const said = asking || outcome.status === "waiting" || sameAsLastTime(outcome) ? undefined : outcome.said;
+  // Several at the same time say each of theirs under its own name: joined again under them, it would be read twice.
+  const said = asking || outcome.status === "waiting" || sameAsLastTime(outcome) || outcome.parts ? undefined : outcome.said;
   return (
     <div className="space-y-2.5">
       <RunChip label={label} tone={tone} live={outcome.status === "running" || outcome.status === "waiting"} />
@@ -67,6 +71,28 @@ export function StepRun({
           {outcome.status === "waiting" ? "See the mission it waits for" : "See the mission it started"}
           <ArrowRight size={14} aria-hidden="true" className="transition-transform group-hover:translate-x-0.5" />
         </Link>
+      ) : null}
+      {outcome.parts ? (
+        <ul className="space-y-2" data-run-parts>
+          {outcome.parts.map((part) => {
+            const words = outcomeWords(part);
+            return (
+              <li key={part.id} className="space-y-1.5 rounded-[14px] bg-base-200/60 px-3 py-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="min-w-0 text-sm font-semibold text-base-content/90 [overflow-wrap:anywhere]">{partTitle?.(part.id) ?? part.id}</span>
+                  <RunChip label={words.label} tone={words.tone} live={part.status === "running"} />
+                </div>
+                {part.said ? (
+                  <Expandable maxHeight="max-h-40">
+                    <p className={cn("whitespace-pre-wrap text-base-content/85 [overflow-wrap:anywhere]", part.kind === "command" ? "font-mono text-xs" : "text-sm")}>
+                      <RunResult text={part.said} />
+                    </p>
+                  </Expandable>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
       ) : null}
       {said ? (
         <details open={failed} className="rounded-[14px] bg-base-200/60 px-3 py-2">

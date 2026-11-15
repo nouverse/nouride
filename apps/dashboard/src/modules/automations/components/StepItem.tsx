@@ -19,7 +19,7 @@ import { savesAsList, type Then } from "../lib/draft";
 import { exitTaken, outcomeWords, type Tone } from "../lib/runs";
 import { STEPS_MAX, type Step } from "../lib/steps";
 import type { Mark } from "../lib/suggested";
-import { KIND, stepLine, stepNote } from "../lib/words";
+import { KIND, partTitle, stepLine, stepNote } from "../lib/words";
 import { Branches, stepAnchor } from "./Branches";
 import type { AgentChoice } from "./KindFields";
 import { ResetNotes, StepEditor } from "./StepEditor";
@@ -110,6 +110,7 @@ export function StepItem({
   index,
   own,
   ownName,
+  agentName,
   mode,
   grip,
   mark,
@@ -124,6 +125,8 @@ export function StepItem({
   /** The automation's own agent, and what it is called. */
   own: string;
   ownName: string;
+  /** What an agent is called, by its id. */
+  agentName: (id: string) => string;
   mode: FlowMode;
   grip: Grip;
   /** What a suggested change would do to this step. */
@@ -146,10 +149,15 @@ export function StepItem({
 
   if (mode.kind === "run") {
     const outcome = mode.outcomes.get(step.id);
+    // Each of several at the same time, by the name its words are joined under; one no longer in the list keeps its id.
+    const partTitleOf = (id: string): string => {
+      const part = step.kind === "parallel" ? step.steps.find((one) => one.id === id) : undefined;
+      return part ? partTitle(part, part.kind === "agentTurn" && part.agentId ? agentName(part.agentId) : ownName) : id;
+    };
     return (
       <>
         <StepCard {...head} whole={outcome?.status === "waiting"} state={outcome ? (landed ? "target" : OF_TONE[outcomeWords(outcome, mode.whom).tone]) : undefined} dimmed={!outcome} aside={face}>
-          {outcome ? <StepRun outcome={outcome} run={mode.run} name={mode.name} before={mode.before} canAnswer={mode.canAnswer} whom={mode.whom} /> : <p className="text-xs text-base-content/65">Not reached in this run</p>}
+          {outcome ? <StepRun outcome={outcome} run={mode.run} name={mode.name} before={mode.before} canAnswer={mode.canAnswer} whom={mode.whom} partTitle={partTitleOf} /> : <p className="text-xs text-base-content/65">Not reached in this run</p>}
         </StepCard>
         {branches(outcome ? exitTaken(outcome.status) : null)}
       </>

@@ -139,6 +139,15 @@ interface StepCommon {
 }
 
 /**
+ * One of the steps a `parallel` step starts together: an agent's turn or a command, as a step of that kind is, with no
+ * exit of its own. Where the run goes is the group's to say, once all of them have ended.
+ */
+export type TogetherStep = { id: string; name?: string } & (
+  | { kind: "agentTurn"; message: string; model?: string; agentId?: string }
+  | { kind: "command"; argv: string[]; cwd?: string; timeoutMs?: number }
+);
+
+/**
  * One step of a job that runs several. Each is what a job of one kind does, less what the list decides for it: a
  * command's `then` is the step after it.
  */
@@ -160,6 +169,13 @@ export type JobStep = StepCommon &
      * that on to the next step; a no, or no answer in `timeoutMs`, is the step's failed exit.
      */
     | { kind: "approval"; ask: string; timeoutMs?: number }
+    /**
+     * Several steps started at the same time: agents' turns and commands, each handed what the step before said. The
+     * step ends when all of them have, and hands on their words joined, each under its name, with no model between.
+     * One that failed is the step's failed exit, with what the others said kept; all with nothing to say is its empty
+     * exit. No mission and no wait for a person inside it, and no agent twice: each of those is a step of its own.
+     */
+    | { kind: "parallel"; steps: TogetherStep[] }
   );
 
 /** How one step of a run went, kept on the run as it happens for whoever reads it. */
@@ -186,6 +202,8 @@ export interface StepOutcome {
   missionId?: string;
   /** Who answered it, for a step that waited for a person. */
   by?: string;
+  /** How each of the steps a `parallel` step started went, in the order they are written. */
+  parts?: StepOutcome[];
 }
 
 /** What a run that waits is waiting for. */

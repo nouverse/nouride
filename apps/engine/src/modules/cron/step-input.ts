@@ -7,10 +7,10 @@
  * exit may name a step by its number.
  */
 
-import type { JobStep, StepGo } from "@nouride/shared";
-import { CronValidationError } from "./validate.ts";
+import type { JobStep, StepGo, TogetherStep } from "@nouride/shared";
+import { CronValidationError, STEP_IS } from "./validate.ts";
 
-const KINDS = ["systemEvent", "agentTurn", "command", "mission", "approval"] as const;
+const KINDS = ["systemEvent", "agentTurn", "command", "mission", "approval", "parallel"] as const;
 
 const text = (value: unknown): string => (typeof value === "string" ? value : "");
 
@@ -33,7 +33,7 @@ export function stepsFrom(raw: unknown): JobStep[] {
 
 function stepFrom(step: Record<string, unknown>, index: number, ids: readonly string[]): JobStep {
   const kind = KINDS.find((one) => one === step.kind);
-  if (!kind) throw new CronValidationError(`step ${index + 1} must be a message, an agent's turn, a command, a mission or a wait for a person.`, "steps");
+  if (!kind) throw new CronValidationError(`step ${index + 1} must be ${STEP_IS}.`, "steps");
   const exit = (name: "then" | "whenFailed" | "whenEmpty"): Partial<Record<typeof name, StepGo>> => {
     const go = goFrom(step[name], ids);
     return go === undefined ? {} : ({ [name]: go } as Partial<Record<typeof name, StepGo>>);
@@ -75,7 +75,23 @@ function stepFrom(step: Record<string, unknown>, index: number, ids: readonly st
     }
     case "approval":
       return { ...common, kind, ask: text(step.ask).trim(), ...(typeof step.timeoutMs === "number" ? { timeoutMs: step.timeoutMs } : {}) };
+    case "parallel":
+      return { ...common, kind, steps: (Array.isArray(step.steps) ? step.steps : []).map((part, at) => partFrom(part, common.id, at)) };
   }
+}
+
+/**
+ * One of the steps started together, as written. One with no id is given its step's and its place; one that is neither
+ * a turn nor a command is kept as what it said it was, so the refusal names it (`validate.ts`).
+ */
+function partFrom(raw: unknown, of: string, at: number): TogetherStep {
+  const part = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const common = { id: text(part.id).trim() || `${of.slice(0, 21)}-${at + 1}`, ...(text(part.name).trim() ? { name: text(part.name).trim().slice(0, 80) } : {}) };
+  if (part.kind === "command") {
+    return { ...common, kind: "command", argv: Array.isArray(part.argv) ? part.argv.map(String) : [], ...(text(part.cwd) ? { cwd: text(part.cwd) } : {}), ...(typeof part.timeoutMs === "number" ? { timeoutMs: part.timeoutMs } : {}) };
+  }
+  const turn = { message: text(part.message), ...(text(part.model).trim() ? { model: text(part.model).trim() } : {}), ...(text(part.agentId).trim() ? { agentId: text(part.agentId).trim() } : {}) };
+  return { ...common, ...turn, kind: part.kind === "agentTurn" ? "agentTurn" : (text(part.kind) as "agentTurn") };
 }
 
 /**

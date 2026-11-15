@@ -163,15 +163,19 @@ const PER_TOOL = 3_400;
 // its run to send the digest itself: the chat looked up and a message sent on every run, and the report made twice.
 // 50,570 for several files in one send (~310): `send_file`'s `paths`, and that files which belong together go in ONE
 // call. Unsaid, the slides of a carousel are a call each: eight steps, eight messages, and no album where a chat has one.
-const TOTAL = 50_570;
+// 50,730 for steps at the same time (~160): `schedule`'s `together`, a step of 2 to 5 prompts or commands begun at once
+// with their words joined. Unsaid, a model asked to have three agents each look at something writes three steps in a
+// row, each waiting for the one before, or a prompt that asks one agent to ask the others.
+const TOTAL = 50_730;
 
 /**
  * What a provider is sent for the same set: the skill tools as the one entry that stands for them (`tools/fold.ts`).
  * Each tool keeps its whole definition, read when its action is opened, so `TOTAL` still holds each to its ceiling.
  * 45,740: measured at 45,734 against 50,565 for the tools themselves, the three skill tools of this set (5,525) sent
- * as an entry of about 690. On a month of a live install they were called once in 13,823 tool calls.
+ * as an entry of about 690. On a month of a live install they were called once in 13,823 tool calls. 45,900 with
+ * `schedule`'s `together` (measured at 45,896 against 50,727).
  */
-const SENT = 45_740;
+const SENT = 45_900;
 
 describe("tool schema budget", () => {
   test("every conditional tool was built, so the total means what it says", () => {

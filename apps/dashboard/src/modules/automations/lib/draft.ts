@@ -109,7 +109,7 @@ export function blankDraft(agentId: string, gatewayId: string, timezone: string)
  * to go on only when what it says changes.
  */
 function listOnly(step: Step): boolean {
-  if (step.kind === "approval" || step.name?.trim() || step.onlyChanged) return true;
+  if (step.kind === "approval" || step.kind === "parallel" || step.name?.trim() || step.onlyChanged) return true;
   if ((step.kind === "agentTurn" || step.kind === "mission") && step.agentId) return true;
   return EXITS.some((exit) => step[exit] !== undefined);
 }
@@ -138,7 +138,8 @@ export function payloadOf(draft: Pick<Draft, "steps" | "then" | "list">): JobPay
     case "mission":
       return { kind: "mission", goal: step.goal.trim(), ...(step.checks?.length ? { checks: step.checks } : {}), ...(step.review !== undefined ? { review: step.review } : {}) };
     case "approval":
-      // Unreachable: a wait for a person is only ever a step of a list (`listOnly`).
+    case "parallel":
+      // Unreachable: a wait for a person, and several at the same time, are only ever steps of a list (`listOnly`).
       return { kind: "steps", steps: [step] };
   }
 }
@@ -191,7 +192,7 @@ export function draftProblems(draft: Draft): { problems: DraftProblem[]; steps: 
   if (draft.start === "scheduled" && Object.keys(triggerBody(draft.trigger)).length === 0) problems.push({ part: "start", message: "Say when it starts." });
   if (!draft.agentId) problems.push({ part: "who", message: "Pick the agent that runs it." });
   if (!draft.gatewayId || !draft.chatId.trim()) problems.push({ part: "who", message: "Pick the chat it reports to." });
-  const steps = stepProblems(draft.steps);
+  const steps = stepProblems(draft.steps, draft.agentId);
   if (steps.length > 0) problems.push({ part: "steps", message: steps[0]!.index === null ? steps[0]!.message : `Step ${steps[0]!.index + 1}: ${steps[0]!.message}` });
   return { problems, steps };
 }
