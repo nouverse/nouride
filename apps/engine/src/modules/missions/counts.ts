@@ -19,8 +19,9 @@ export class MissionCounts {
     return this.deps.runsOnCli?.(mission.agentId) === true;
   }
 
-  /** A turn ended: its tokens, and its helpers' since the last count, into the mission's — saved with it by the caller. */
+  /** A turn ended: the turn, its tokens, and its helpers' since the last count, into the mission's — saved with it by the caller. */
   turnEnded(mission: Mission, outcome: Pick<TurnOutcome, "tokens" | "tokensUnknown">, now: number): void {
+    mission.turnsUsed += 1;
     mission.tokensUsed += outcome.tokens;
     if (this.runsOnCli(mission)) {
       mission.cliTurns += 1;

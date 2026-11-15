@@ -101,7 +101,7 @@ describe("what reaches the chat when a mission hands back its result", () => {
   });
 
   test("the ended notice carries why, never the report", () => {
-    expect(endedNotice({ id: "msn_0123456789", status: "stopped" }, "stopped by Gading")).toBe("✗ Mission msn_012345 stopped: stopped by Gading");
+    expect(endedNotice({ id: "msn_0123456789", status: "stopped", workdir: "/work/private/nova/missions/msn_0123456789", branch: null }, "stopped by Gading")).toBe("✗ Mission msn_012345 stopped: stopped by Gading");
   });
 });
 

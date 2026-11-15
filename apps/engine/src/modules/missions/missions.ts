@@ -24,11 +24,11 @@ import { newMission, startRefusal, type StartRequest } from "./start.ts";
 import { acceptMission, acceptOutside, answerMission, continueMission, deleteMission, stopMission, type Acted, type Deleted, type Sayer } from "./person.ts";
 import { markRead, tellMission, unreadTold, type TellAnswer } from "./tell.ts";
 import { MissionStore } from "./missions.store.ts";
-import { doneNotice, endedNotice, goesOnNotice, needsYouNotice, paged, queuedNotice, startedNotice, warnNotice } from "./notices.ts";
+import { goesOnNotice, needsYouNotice, paged, queuedNotice, startedNotice, warnNotice } from "./notices.ts";
 import { withOptions } from "./options.ts";
 import { announceDraft, editDraft, type DraftEdited } from "./draft-edit.ts";
 import { briefPath, type DraftChange, type DraftEditor } from "./drafts.ts";
-import { sendFiles, sendReport } from "./results.ts";
+import { sendReport, tellEnded } from "./results.ts";
 import { limitsLine, missionPage, shortId, type LimitsShown } from "./page.ts";
 import { MissionCounts } from "./counts.ts";
 import { carryBack, carryInto, carryWait, closePlan } from "./carry.ts";
@@ -386,13 +386,13 @@ export class Missions implements TurnShaper {
   turnEnded(id: string, outcome: TurnOutcome): void {
     const mission = this.deps.store.get(id);
     if (!mission || isFinal(mission.status)) {
+      if (mission) this.countCut(mission, outcome);
       this.letGo(id, mission);
       return;
     }
     const state = this.turnState(id);
     state.inFlight = false;
     const now = this.now();
-    mission.turnsUsed += 1;
     this.counts.turnEnded(mission, outcome, now);
     mission.nudgedAt = null;
     mission.updatedAt = now;
@@ -461,6 +461,19 @@ export class Missions implements TurnShaper {
     if (next.kind === "retry") return this.wait(mission, "retry", next.reason, next.attempt === 1);
     this.deps.store.save(mission);
     if (next.kind === "continue") this.queueTurn(mission, next.why);
+  }
+
+  /**
+   * The turn its end cut short, counted: a stop, an accept as it stood and a close outside its checks end the mission
+   * first and its turn after, and the turn's end then found a mission that had ended and counted nothing. A coding CLI's
+   * mission is one turn, so the whole of it went: msn_fec04791 was stopped at 26.7M tokens and its record read 0 turns
+   * and tokens unknown. Counted and nothing else: what the turn claimed decides nothing now.
+   */
+  private countCut(mission: Mission, outcome: TurnOutcome): void {
+    this.counts.turnEnded(mission, outcome, this.now());
+    this.deps.store.save(mission);
+    this.deps.changed?.(mission);
+    log.info("an ended mission's last turn counted", { mission: mission.id, status: mission.status, turns: mission.turnsUsed, tokens: mission.tokensUsed });
   }
 
   // ── What the agent says, through `mission` ───────────────────────────────
@@ -677,10 +690,7 @@ export class Missions implements TurnShaper {
     // A draft dropped — never started — takes its folder with it: its brief, and nothing else was ever written there.
     if (mission.startedAt === null) void this.deps.remove?.(mission).catch((err: unknown) => log.warn("a dropped draft's folder could not be removed", { mission: mission.id, error: String(err) }));
     log.info("mission ended", { mission: mission.id, status, turns: mission.turnsUsed, tokens: mission.tokensUsed, reason: why });
-    void this.deps
-      .tell(mission, status === "done" ? paged(doneNotice(mission, accepted), this.deps.pageOf?.(mission)) : endedNotice(mission, why ?? status))
-      .then(() => (reportShown ? undefined : sendReport(this.deps, mission)))
-      .then(() => sendFiles(this.deps, mission));
+    tellEnded(this.deps, mission, { why, accepted, reportShown });
     if (this.deps.notes) void carryBack(this.deps.notes, mission).catch((err: unknown) => log.warn("a chat's line for its mission could not be updated", { mission: mission.id, error: String(err) }));
     if (this.deps.notes) void closePlan(this.deps.notes, mission).catch((err: unknown) => log.warn("a done mission's checklist could not be closed", { mission: mission.id, error: String(err) }));
     void this.deps.remember?.(mission).catch((err: unknown) => log.warn("a mission's episode could not be filed", { mission: mission.id, error: String(err) }));

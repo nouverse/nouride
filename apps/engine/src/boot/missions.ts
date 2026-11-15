@@ -9,7 +9,7 @@ import { basename, fileExistsSync, freeDiskBytes, join, readPlainTextFile, readT
 import { contained, createLogger, newId, type GlobalConfig, type Job, type LoadedAgent, type MessageEnvelope, type Tool, type ToolContext } from "@nouride/shared";
 import { privateWorkspace, sharedWorkspace, type AgentRegistry } from "@nouride/persona";
 import { sessionIdFor } from "@nouride/shared";
-import { DISK_WARN_MB } from "./maintenance.ts";
+import { ownFolderPorts } from "./mission-folders.ts";
 import type { Notifier } from "@/commons/notify.ts";
 import type { ChatEventsPort } from "@/modules/chat-events/chat-events.store.ts";
 import type { JobsPort } from "@/modules/jobs/jobs.store.ts";
@@ -42,7 +42,7 @@ import { createWorkTool } from "@/modules/tools/builtins/work.ts";
 import type { SubagentRequest, SubagentResult } from "@/modules/tools/builtins/delegate.ts";
 import { reviewBrief, reviewOf } from "@/modules/missions/review.ts";
 import { repositoryOf, sourceRepositoryOf } from "@/modules/missions/decide.ts";
-import { branchRefusal, helperWorktreeFor, inOwnFolder, makeWorktree, ownFolderOf, ownFolders, removeExtraWorktrees, removeLeftFolder, removeOwnFolder, trackedIn, worktreeBranch, type AsAgent } from "@/modules/missions/worktree.ts";
+import { branchRefusal, helperWorktreeFor, makeWorktree, ownFolderOf, trackedIn, worktreeBranch, type AsAgent } from "@/modules/missions/worktree.ts";
 import { sendTextFile, type SendFileOptions } from "@/modules/tools/builtins/attach.ts";
 import { besidesTheReport } from "@/modules/missions/results.ts";
 import type { LinkFor } from "@/modules/web/links.ts";
@@ -318,21 +318,7 @@ export function buildMissions(params: {
       });
       if ("refused" in saved) throw new Error(saved.refused);
     },
-    remove: async (mission, how) => {
-      // Only the folder the daemon made for it — `newMission`'s default, or its worktree — under its agent's own; for a
-      // draft that never started, the folder its brief was written to, whatever folder it would have worked in.
-      const own = ownFolderOf(privateWorkspace(params.config().daemon.workspaceDir, mission.agentId), mission.id);
-      if ((!inOwnFolder(mission.workdir, own) && mission.startedAt !== null) || !params.registry.get(mission.agentId)) return null;
-      return await removeOwnFolder(own, asTheAgent(mission.agentId), how);
-    },
-    folders: () => params.registry.enabled().flatMap((agent) => ownFolders(privateWorkspace(params.config().daemon.workspaceDir, agent.config.id)).map((folder) => ({ agentId: agent.config.id, ...folder }))),
-    removeLeft: (agentId, missionId) => removeLeftFolder(ownFolderOf(privateWorkspace(params.config().daemon.workspaceDir, agentId), missionId), asTheAgent(agentId)),
-    // Where missions work — the workspace's disk — against the daemon's own disk warning, a starting value.
-    diskLow: () => {
-      const free = freeDiskBytes(params.config().daemon.workspaceDir);
-      const freeMb = free === null ? null : Math.round(free / (1024 * 1024));
-      return freeMb !== null && freeMb < DISK_WARN_MB ? freeMb : null;
-    },
+    ...ownFolderPorts(params, asTheAgent),
     sourceRepository: (workdir) => sourceRepositoryOf(workdir, gitFile),
     readBrief,
     // A coding CLI's turns: an agent whose pack names one (`ExternalAgents.runnerFor`).
@@ -342,11 +328,6 @@ export function buildMissions(params: {
     personSaid: (mission) => params.lastSaid?.(mission.gatewayId, mission.chatId, mission.startedBy) ?? null,
     turnStartedAt: (turnId) => params.turnStartedAt?.(turnId) ?? null,
     helperTokens: (mission, since) => late?.helpers(sessionIdFor({ agentId: mission.agentId, gatewayId: MISSION_GATEWAY_ID, chatId: mission.id }), since) ?? 0,
-    tidy: async (mission) => {
-      if (!params.registry.get(mission.agentId)) return { removed: [], kept: [] };
-      const own = ownFolderOf(privateWorkspace(params.config().daemon.workspaceDir, mission.agentId), mission.id);
-      return await removeExtraWorktrees(own, asTheAgent(mission.agentId));
-    },
     review: async (mission, earlier) => {
       const ctx = commandContext(mission);
       if (!late || !ctx) throw new Error("this daemon cannot run a reviewer for that agent");

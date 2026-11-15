@@ -114,9 +114,17 @@ export function doneNotice(mission: Pick<Mission, "id" | "summary" | "reviewed" 
   return [`✓ Mission ${shortId(mission.id)} done${how ? ` (${how})` : ""}.`, mission.summary?.trim() ?? "", branch ? `Branch: ${branch}` : ""].filter(Boolean).join(GAP);
 }
 
-/** *Ended*, failed or stopped: why, in place of a result. A report it has follows as `report.md`. */
-export function endedNotice(mission: Pick<Mission, "id" | "status">, why: string): string {
-  return `✗ Mission ${shortId(mission.id)} ${mission.status === "stopped" ? "stopped" : "ended"}: ${clip(why.trim(), 600)}`;
+/**
+ * *Ended*, failed or stopped: why, in place of a result. A report it has follows as `report.md`. `left`: the worktrees
+ * of its folder that hold work nobody committed. A stop cuts its turn in the middle of whatever it was doing: Nix's
+ * mission was stopped with seven files staged and the notice said "stopped by agent nix" and nothing of them. Said, the
+ * person knows the work is there and where; the folder is kept while it is.
+ */
+export function endedNotice(mission: Pick<Mission, "id" | "status" | "workdir" | "branch">, why: string, left: readonly string[] = []): string {
+  const first = `✗ Mission ${shortId(mission.id)} ${mission.status === "stopped" ? "stopped" : "ended"}: ${clip(why.trim(), 600)}`;
+  if (left.length === 0) return first;
+  const branch = worktreeBranch(mission);
+  return `${first}${GAP}Not committed: work is left in ${left.join(", ")}${branch ? `, on the branch ${branch}` : ""}. The folder is kept while it is there.`;
 }
 
 /** A progress line, written from the checklist — never by the model, so it costs nothing and claims nothing more. */

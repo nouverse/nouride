@@ -97,6 +97,11 @@ export interface MissionsDeps {
    */
   remove?: (mission: Mission, how?: { keepUnsaved: boolean }) => Promise<string[] | null>;
   /**
+   * The worktrees in its own folder that hold work nobody committed, read and nothing else: what the notice of a mission
+   * that stopped or failed names. Empty where it has no folder of its own, or all of it is committed.
+   */
+  unsaved?: (mission: Mission) => Promise<string[]>;
+  /**
    * Every agent's missions' own folders, by the mission each is named for, with when it last changed: among them the
    * ones no mission's record names any more (`MissionTimers.sweepLeft`).
    */
