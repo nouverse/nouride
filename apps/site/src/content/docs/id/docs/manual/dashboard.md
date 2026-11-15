@@ -99,7 +99,10 @@ Judul tab browser menghitung semua yang menunggu kamu, `(2) Nouride`, jadi tab y
 memberi tahu.
 
 **Di HP**, ada bar tab di bagian bawah berisi Home, Chats, Work, dan Agents, dengan angka milik Work di situ, plus
-**More**, yang membuka sisa menunya sebagai lembar yang naik dari bawah.
+**More**, yang membuka sisa menunya sebagai lembar yang naik dari bawah. Bar itu turun menghilang saat kamu scroll ke
+bawah dan muncul lagi begitu kamu scroll ke atas (0.8.39). Panel yang naik dari bawah layar (More, form untuk menambah
+langkah automation, daftar untuk memulai chat) punya nama dan tombol tutup di bagian atasnya, dan geser ke bawah di
+bagian atas itu menutupnya. Semua yang kamu tekan di sana minimal 32 piksel lebar dan tingginya, di setiap halaman menu.
 
 **Di layar utama HP**, dashboard terbuka seperti aplikasi: ikonnya kucing Nouride, Chats tampil duluan, di jendelanya
 sendiri. Buka dashboard di alamat `https://`-nya. Chrome atau Edge menawarkan **Install** (di bilah alamat, atau di menu
@@ -304,7 +307,8 @@ keduanya setinggi yang sama dan di-scroll di dalamnya, jadi pindah di antara ked
 Pratinjaunya membangun elemen React dan gak ada rendering HTML mentah di mana pun dalam aplikasi ini.
 Agent bisa menulis `MEMORY.md`-nya sendiri dan membuat skill-nya sendiri; merender itu sebagai HTML
 akan mengubah "model menuliskan tag script" menjadi script yang berjalan di browser admin, same-origin,
-dengan cookie sesi.
+dengan cookie sesi. Halaman HTML yang ditulis agent dilihat dengan cara lain, terpisah dari dashboard:
+**Preview**, di bagian [Chat](#chat).
 
 `config.toml` di sini milik agent itu sendiri. Milik daemon ada di kartu terakhir
 **Agents → Settings**.
@@ -454,6 +458,8 @@ luar. Tanpa itu tidak ada link: alamat `localhost` tidak bisa dibuka dari HP.
 - **Dibuka saat belum masuk**, link membawa ke halaman login, lalu setelah masuk, ke halaman yang dimaksud.
 - **Tanpa kartu pratinjau.** Pesan yang berisi link dikirim dengan pratinjau dimatikan, jadi chat tidak menampilkan kartu
   halaman login.
+- **File Markdown.** File Markdown yang dikirim agent ke aplikasi chat datang dengan **Open it as a page** dan link ke
+  halaman Workspace yang menggambarnya (0.8.39). Workspace milik admin, jadi link-nya ditulis untuk orang yang admin.
 - **Satu automation.** Link untuk automation yang diusulkan agent membuka halaman automation itu sendiri,
   `/automations/<id>`. Link dari sebelum Automations jadi satu halaman, `/schedule?job=<id>`, tiba di halaman yang
   sama, dan alamat lama Schedule dan Webhooks membuka daftar Automations.
@@ -555,6 +561,34 @@ terakhirnya.
 kodenya masuk clipboard persis seperti ditulis. Blok yang gak menyebut bahasa, atau bahasanya gak diwarnai Nouride,
 tetap polos.
 
+**Yang ditulis agent digambar** (0.8.39). Beberapa blok ditampilkan sebagai wujud aslinya. Kepala bloknya berpindah
+antara gambarnya dan **Code**, dan **Copy** menyalin yang ditulis agent, mana pun yang sedang tampil.
+
+- **Rumus** ditata seperti di buku: `$..$` atau `\(..\)` di dalam satu baris, `$$..$$` atau `\[..\]` di baris
+  sendiri, atau blok bernama `math` atau `latex`. Harga tetap teks: "$5 and $10" bukan rumus.
+- **Diagram**: blok bernama `mermaid` jadi diagramnya, dengan warna tampilan yang sedang kamu pakai.
+- **Gambar**: blok bernama `svg` jadi gambarnya, di atas kartu putih di kedua tampilan.
+- Diagram atau gambar terbuka besar kalau ditekan, dan bisa disimpan dari situ.
+- **Tabel yang lebar** di-scroll di dalam kotaknya, dan tepinya diberi bayangan di sisi yang masih ada lanjutannya.
+- Yang gak bisa digambar (diagram yang ada salahnya) tetap kode, tanpa pesan error.
+
+Ini berlaku di semua tempat tulisan agent dibaca: hasil misi, laporan job, catatan, file di Files dan Workspace,
+dokumen memory. **Save as PDF** di file Markdown ikut membawa gambar dan rumusnya. Gambar dan diagram ditampilkan
+sebagai gambar, jadi script yang ditulis di dalamnya gak berbuat apa-apa. Penampil diagram baru dimuat saat pertama
+kali sebuah halaman memuat diagram.
+
+**Halaman HTML** (0.8.39). Blok `html` di sebuah balasan punya **Preview** setelah balasannya selesai, begitu juga file
+`.html` di Files dan Workspace. Halamannya terbuka di atas dashboard saat kamu tekan, gak pernah sendiri, dan **Open in
+a tab** memberinya tab sendiri. Halaman itu milik agent, jadi dipisahkan dari Nouride. Script-nya sendiri jalan. Ia gak
+bisa membaca login kamu atau dashboard di sekitarnya, gak bisa menghubungi Nouride atau internet, dan gak bisa membuka
+jendela atau mengirim form. Halaman yang mengambil gambar, font atau script dari web tampil tanpa itu semua: yang
+ditampilkan pratinjau adalah yang tertulis di halamannya. Halaman di atas 2 MB gak dipratinjau, dan laporan misi gak
+punya Preview.
+
+**File dari satu balasan adalah satu set** (0.8.39). Gambar yang dikirim dalam satu balasan terbuka bersama: tombol
+panah di keyboard, tombol di tiap sisi dan geseran pindah ke gambar berikutnya, dan "4 / 8" bilang kamu di mana. Di
+bawah balasan dengan dua file atau lebih, **Download all** menyimpannya sebagai satu `.zip`.
+
 **Chat kamu milik kamu.** Tiap akun melihat miliknya sendiri: percakapannya dengan tiap agent di sini, chat pribadinya
 dengan agent di Telegram, Discord, dan WhatsApp (lewat orang yang jadi akun itu di People), grup tempat orang itu pernah
 bicara, dan room yang ia buat atau pernah bicara di dalamnya. Dua akun yang bicara dengan agent yang sama masing-masing
@@ -577,9 +611,12 @@ itu sendiri saat sedang dibuka; kamu ditanya dulu, dan gak ada yang bisa membata
 **Room** adalah satu percakapan dengan beberapa agent. Pilih agent-nya waktu membuat room, lalu tag yang kamu maksud
 (`@nox`): tag adalah cara sebuah pesan sampai ke agent tertentu. Header room menampilkan anggotanya sebagai tag yang kamu
 ketik, dan bilang siapa yang menjawab pesan tanpa tag, kalau memang ada: orchestrator kalau ia ada di room itu, atau
-satu-satunya agent di room itu. Setelan yang membuat grup di aplikasi chat menunggu tag gak berlaku di sini; `/mention required`
-di room itu yang berlaku. **Add agent** memasukkan agent lain; menu room untuk mengganti nama, mengeluarkan agent, atau
-menghapus room.
+satu-satunya agent di room itu. Admin memilihnya di situ (0.8.39): **Who answers with no tag**, di sebelah tag-tagnya,
+menawarkan bawaannya, **A tag is needed** dan tiap agent di room itu; di HP pilihannya ada di menu room. `/mention` yang
+diketik di room itu berbuat sama, dan setelan yang membuat grup di aplikasi chat menunggu tag gak berlaku di sini.
+**Add agent** memasukkan agent lain; menu room untuk mengganti nama, mengeluarkan agent, atau
+menghapus room. Kalau satu agent di room bertanya ke agent lain yang juga ada di situ, jawabannya jadi pesan agent itu
+sendiri, di atas balasan agent yang bertanya (0.8.39).
 
 **Semua yang dari aplikasi chat hanya bisa dibaca di sini.** Grup, atau chat pribadi dengan agent di Telegram, Discord,
 atau WhatsApp, menampilkan nama aplikasinya dan **Read-only**, dan di tempat kotak ketik ada catatan: balasnya di

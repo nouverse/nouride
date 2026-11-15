@@ -345,7 +345,8 @@ grupnya, bukan milik satu bot: kalau ada beberapa bot kita di grup itu, semuanya
 sama, dan perintahnya dijawab sekali. Mengubahnya hak admin, sama seperti `/daemon-restart`; orang lain
 diberi tahu begitu dan gak ada yang berubah. Di DM perintah ini gak berbuat apa-apa: DM selalu dijawab.
 Pilihan yang sama ada di halaman **Groups** di dashboard, satu daftar per grup, dan yang dikatakan satu
-tempat terlihat di tempat lainnya.
+tempat terlihat di tempat lainnya. Room yang dibuat di dashboard juga punya pilihan ini di header-nya
+(0.8.39): **Who answers with no tag**, untuk admin, di antara agent room itu sendiri.
 
 `/mention@NovelistBot`, cara menu perintah Telegram menulis perintah untuk satu bot, dijawab oleh bot
 itu: ia bilang siapa yang menjawab di sini sekarang, dan cara memberikan grup itu kepadanya.
@@ -426,6 +427,15 @@ bicara dan bagaimana jawaban itu dimulai. Isinya cuma sampai di tempat orangnya 
 tempat pekerjaan itu diminta; di tempat lain agent cuma diberi tahu bahwa ia mengerjakan sesuatu
 untuk agent lain, dan kapan. Yang dikatakan di room gak pernah dibawa keluar dari room itu.
 
+**Agent yang ditanya agent lain menjawab sendiri di room (0.8.39).** Saat sebuah agent bertanya ke agent
+lain dengan `ask_agent` dan agent itu ada di room yang sama, jawabannya juga muncul di situ sebagai
+pesannya sendiri: di room yang dibuat di dashboard, di atas balasan agent yang bertanya; di grup
+Telegram, Discord atau WhatsApp, dari bot-nya sendiri. Agent yang bertanya tahu room sudah membacanya,
+jadi ia cukup menambahkan bagiannya sendiri tanpa mengulang. Tag di dalam jawaban seperti itu gak
+menyerahkan pekerjaan ke siapa pun. Agent yang gak ada di room itu, atau gak punya bot sendiri di grupnya,
+tetap bekerja di belakang chat seperti sebelumnya, dan kata-katanya sampai ke kamu lewat agent yang
+bertanya.
+
 **Kalau pekerjaan hasil serah terima gagal.** Kalau agent yang menerima pekerjaan gagal atau kehabisan
 waktu, baris yang ditinggalkannya membawa tombol **Continue** dan **Hand to** untuk paling banyak tiga
 agent lain di room (0.8.33). Continue membuat agent yang sama melanjutkannya. Hand to memberi agent
@@ -470,9 +480,17 @@ mengatur angkanya, untuk model yang membaca lebih besar.
 Agent mengirim file balik dengan `send_file`. Ia gak akan mengirim file kredensial, atau file apa pun
 yang memuat nilai salah satu secret agent itu, karena file di platform chat gak bisa disamarkan.
 
+File Markdown yang dikirim sendirian ke aplikasi chat datang dengan satu baris tambahan, **Open it as a
+page**, dan sebuah link (0.8.39). Aplikasi chat menampilkan file seperti itu sebagai teks mentahnya;
+link itu membukanya di Workspace dashboard, dengan judul, tabel dan diagramnya digambar. Link-nya ditulis
+Nouride, untuk orang yang admin dan kalau `[dashboard] public_url` diisi
+([Link dari chat](/id/docs/manual/dashboard/#link-dari-chat)).
+
 Beberapa file yang satu kesatuan, slide carousel atau halaman hasil scan, dikirim dalam satu kiriman, berurutan:
 satu album di Telegram dan satu pesan di Discord, masing-masing sampai sepuluh file, dan satu per satu di WhatsApp
-dan di dashboard. Tiap file dicek dulu, jadi satu set sampai utuh atau tidak sama sekali.
+dan di dashboard. Tiap file dicek dulu, jadi satu set sampai utuh atau tidak sama sekali. Di dashboard,
+gambar dari satu balasan terbuka sebagai satu set, dan **Download all** menyimpan file satu balasan
+sebagai satu `.zip` (0.8.39).
 
 ## Dari terminal
 

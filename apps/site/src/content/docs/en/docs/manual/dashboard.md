@@ -97,7 +97,10 @@ The browser tab's title counts everything waiting for you, `(2) Nouride`, so a t
 you.
 
 **On a phone**, a tab bar along the bottom holds Home, Chats, Work and Agents, with Work's count on it, and **More**,
-which slides the rest of the menu up as a sheet.
+which slides the rest of the menu up as a sheet. The bar slides away as you scroll down a page and is back at the
+first scroll up (0.8.39). A panel that comes up from the foot of the screen (More, the form that adds a step to an
+automation, the list a chat is started from) has its name and a close button at its top, and a swipe down on that top
+closes it. What you press is at least 32 pixels wide and tall there, on every page of the menu.
 
 **On your phone's home screen**, the dashboard opens like an app: the Nouride cat as its icon, Chats first, in a window
 of its own. Open the dashboard at its `https://` address. Chrome or Edge offers **Install** (in the address bar, or in
@@ -293,7 +296,8 @@ are one height that scrolls inside, so switching between them does not move the 
 The preview builds React elements and there is no raw HTML rendering anywhere in the app. An agent
 can write its own `MEMORY.md` and create its own skills; rendering that as HTML would turn "the model
 emitted a script tag" into a script running in an admin's browser, same origin, with a session
-cookie.
+cookie. A page of HTML an agent wrote is looked at another way, held apart from the dashboard: **Preview**, under
+[Chat](#chat).
 
 The `config.toml` here is the agent's own. The daemon's is the last card of **Agents → Settings**.
 
@@ -437,6 +441,8 @@ dashboard is reached at from outside. Without it there are none: a `localhost` a
 - **Opened signed out**, a link goes to the login page, and once you sign in, on to the page it named.
 - **No preview card.** A message that holds a link is sent with its preview off, so the chat shows no card of the login
   page.
+- **A Markdown file.** One an agent sends to a chat app comes with **Open it as a page** and the link to the Workspace
+  page that draws it (0.8.39). The Workspace is an admin's, so the link is written for a person who is one.
 - **One automation.** The link for an automation an agent proposed opens that automation's own page,
   `/automations/<id>`. A link from before Automations was one page, `/schedule?job=<id>`, lands on the same page, and
   the old Schedule and Webhooks addresses open the Automations list.
@@ -535,6 +541,33 @@ message.
 top: the code goes to your clipboard as it was written. A block that names no language, or one Nouride does not colour,
 stays plain.
 
+**What an agent wrote is drawn** (0.8.39). Some blocks are shown as what they are. The block's head switches between
+the drawing and **Code**, and **Copy** copies what the agent wrote, whichever shows.
+
+- **A formula** is typeset: `$..$` or `\(..\)` inside a line, `$$..$$` or `\[..\]` on lines of their own, or a block
+  named `math` or `latex`. A price stays text: "$5 and $10" is not a formula.
+- **A diagram**: a block named `mermaid` is its diagram, in the colours of the look you are on.
+- **A picture**: a block named `svg` is its picture, on a white card in both looks.
+- A diagram or a picture opens large on a press, and is saved from there.
+- **A wide table** scrolls inside its box, and its edge is shaded on the side where it goes on.
+- What cannot be drawn (a diagram with a mistake in it) stays code, with no error.
+
+It is the same wherever an agent's text is read: a mission's result, a job's report, notes, a file in Files and the
+Workspace, a memory document. **Save as PDF** on a Markdown file carries the pictures and the formulas. A picture and a
+diagram are shown as images, so a script written inside one does nothing. The diagram viewer is loaded the first time
+a page holds a diagram.
+
+**A page of HTML** (0.8.39). An `html` block of a reply has **Preview** once the reply is over, and so has an `.html`
+file in Files and the Workspace. It opens the page over the dashboard when you press it, never by itself, and **Open
+in a tab** gives it a tab of its own. The page is an agent's, so it is held apart from Nouride. Its own scripts run. It
+cannot read your sign-in or the dashboard around it, cannot reach Nouride or the internet, and cannot open a window or
+send a form. A page that loads its pictures, fonts or scripts from the web is shown without them: what a preview
+shows is what is written in the page. A page larger than 2 MB is not previewed, and a mission's report has no Preview.
+
+**The files of one reply are one set** (0.8.39). Pictures sent in one reply open together: the arrow keys, a button on
+each side and a swipe go to the next, and "4 / 8" says where you are. Under a reply with two files or more,
+**Download all** saves them as one `.zip`.
+
 **Your chats are yours.** Each account sees its own: its conversations with each agent here, its private chats with the
 agents on Telegram, Discord and WhatsApp (by the person it is under People), the groups that person spoke in, and the
 rooms it made or spoke in. Two accounts talking to the same agent each have their own conversation. An operator or a
@@ -558,8 +591,12 @@ chat's own menu while it is open; you are asked first, and nothing undoes it.
 **A room** is one conversation with several agents. Pick the agents when you make it, then tag the one you mean
 (`@nox`): a tag is how a message reaches a particular agent. The room's header shows its members as the tags you type,
 and says who answers a message with no tag, if anyone does: the orchestrator when it is in the room, or the room's only
-agent. The setting that makes chat-app groups wait for a tag does not apply here; `/mention required` in the room does. **Add
-agent** brings another one in; the room's menu renames it, takes an agent out, or deletes it.
+agent. An admin picks it there (0.8.39): **Who answers with no tag**, beside the tags, offers the default, **A tag is
+needed** and each agent of the room; on a phone it is in the room's menu. `/mention` typed in the room does the same,
+and the setting that makes chat-app groups wait for a tag does not apply here. **Add
+agent** brings another one in; the room's menu renames it, takes an agent out, or deletes it. When one agent of the
+room asks another that is in it, the answer is that agent's own message, above the reply of the one that asked
+(0.8.39).
 
 **Anything from a chat app is read-only here.** A group, or a private chat with an agent on Telegram, Discord or
 WhatsApp, says its app's name and **Read-only**, and where you would type there is a note: it is answered on its own

@@ -18,7 +18,9 @@ past it is a mission's, whose turns survive a restart and keep going on their ow
 A draft runs nothing until you start it:
 
 ```text
-📝 Draft msn_3f2a91 · nix: Revise the RFC to the owner's answers
+📝 Draft msn_3f2a91 · nix: Revise the RFC
+
+Revise the RFC to the owner's answers of today, section by section, and say what changed in each.
 
 5 checks · signed off by: you · brief: on the mission's page
 
@@ -26,6 +28,10 @@ Start it: /mission accept msn_3f2a91 · drop it: /mission stop msn_3f2a91
 [Start it] [Drop it]
 ```
 
+- **Its name** is the few words after the agent's (0.8.39), and the goal is whole under it. A mission is called by
+  its name from then on: in its notices, in the list, on the cards of what waits for you. An agent names every mission
+  it drafts or starts. One you start yourself takes the **Name** you give it on the dashboard's form, or is named from
+  the first sentence of its goal. The missions made before 0.8.39 were named that way when it was installed.
 - **Its brief** is `BRIEF.md` in the mission's folder: what the work is, why, what to read, what done means. It is on
   the mission's page, and each turn of the mission starts from it.
 - **Change it first** if it is not right: tell the agent ("the checks only grep, add one that runs the tests") and it
@@ -62,7 +68,11 @@ The chat stays quiet. A mission says:
 
 - that it **started**, with its whole goal and how to stop it;
 - that it **needs you** (an approval, a question, a limit reached, a result to accept), with buttons for what you can
-  say to it: Accept, Continue, Stop, or one per option of a question;
+  say to it: Accept, Continue, Stop, or one per option of a question. A question is sent the moment it is asked
+  (0.8.39), not at the end of the turn it was asked in;
+- that it **asks, and works on meanwhile** (0.8.39): a question whose answer the rest of the work does not wait for.
+  The mission goes on, and your answer is handed to the work in progress. If the turn ends with the question still
+  open, you are told once that it has done what it could and waits for the answer now. One question is open at a time;
 - that it **paused** because its model could not answer, and tries again by itself;
 - that it is **done**, with its result in two or three sentences; then its whole **report** as `report.md`, and the
   files it made for you: a document, an image, a spreadsheet. Code it changed in a repository stays on its branch,
@@ -83,7 +93,18 @@ when a step finished. A wait on you is named again once, after four hours.
 
 **Missions** in the dashboard lists what needs you first, then what is working, then what finished, each with its
 checklist's progress. It has a tab for each, a search over the goals, reports and ids, a filter by agent, and a choice
-of how far back the finished ones go: the last 3, 7, 14 or 30 days (3 unless you choose, never further). One still open is listed however old. A mission's page shows its steps, turns, hours and tokens against their limits, the step it is
+of how far back the finished ones go: the last 3, 7, 14 or 30 days (3 unless you choose, never further). One still open is listed however old.
+
+**What waits for you says what it waits for** (0.8.39), on Home, on Work and in the list: a question with the question,
+a result to accept, a draft that has not started, a limit reached. A mission that asked and works on meanwhile is among
+them, marked **Working · asked a question**, and its page has the question and the box to answer it.
+
+**A mission at work shows it is alive** (0.8.39). A mission a coding CLI works on (Claude Code, Codex) is often one turn
+of hours. Its card says when its last step was ("last step 7 min ago"), and what the turn at work has spent so far
+is counted in, as an estimate, on its page and in `nouride mission show`. The notice at 80% of a limit comes during
+such a turn too.
+
+A mission's page shows its steps, turns, hours and tokens against their limits, the step it is
 on while it runs, its checklist with each step's note, the calls parked for you (answered right there), its questions,
 its report and files across the top once it has them, and every turn it took as a timeline, newest first, each marked
 by what started it (the next step, another agent's answer, a job's end, an approval, a retry) and by how it went, with
@@ -104,6 +125,9 @@ yours: it says whose it is, and you read it without changing it. An operator or 
 not in the list and not by its link. An admin picks whose in the dropdown beside the search, as on
 [Automations](/en/docs/manual/schedule/#whose-an-automation-is): Mine, Everyone set apart by person, one person, or
 Nobody's.
+
+**A stopped mission keeps what its last turn spent** (0.8.39): one stopped in the middle of a turn has that turn, its
+tokens and its helpers' counted. Its notice names the work in its folder that nobody committed, with the branch.
 
 From 0.8.13, an ended mission can be deleted (**Delete** on its page, or `nouride mission delete <id>`), with its
 conversation, its checklist and the folder Nouride made for it; a folder you named and its branch stay. One still open
@@ -165,6 +189,16 @@ A usage limit, a rate limit, a provider that is down: the mission **pauses** and
 and 30 minutes, then every hour, for about a day. You are told once when it pauses and once when it goes on; the time
 it waits is not counted against its hours. **Retry now** tries at once, **Stop** ends it. After a day of it, the mission
 asks you.
+
+## Its questions
+
+A mission asks through its own question, never through a message it sends. A question reaches the chat the mission
+reports to, with a button for each option, and is answered there in your own words, with a button, with
+`/mission answer <id> <answer>`, on the mission's page, or by telling the agent.
+
+A message a mission sends by itself is a message, and an answer to it does not come back to the mission. So the chat
+the mission reports to is the first in the list an agent sends from, and marked as the mission's (0.8.39), and the
+conversation a mission keeps for its own work is not a chat anything is sent to.
 
 ## Approvals
 
