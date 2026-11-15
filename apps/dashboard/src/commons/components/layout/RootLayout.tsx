@@ -79,7 +79,7 @@ export function RootLayout() {
   /**
    * A page whose list scrolls inside its own card (`fillsViewport`): padded and centred like any page, but held to the
    * window's height, so the header and the tabs stay put and only the list moves. The page's root is
-   * `FILL_PAGE` and its list a `ScrollCard fill`; the area still scrolls past the card's minimum height, so a short
+   * `FILL_PAGE` and its list a `ScrollArea`; the area still scrolls past the card's minimum height, so a short
    * screen, or a form open above the list, loses nothing. From a laptop's width up: on a phone such a page scrolls as a
    * document, as every other does.
    */

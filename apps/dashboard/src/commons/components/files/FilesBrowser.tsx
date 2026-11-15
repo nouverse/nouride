@@ -50,7 +50,7 @@ export function FilesBrowser({ path: asked, onOpen, root, only }: { path: string
       ) : shown.file ? (
         <FileView key={shown.file.path} entry={shown.file} actions={actions} onBack={() => onOpen(parentOf(shown.path))} />
       ) : (
-        <ScrollArea fill className="lg:-mr-6 lg:pr-6">
+        <ScrollArea className="lg:-mr-6 lg:pr-6">
           <FolderList listing={shown} onOpen={onOpen} actions={actions} />
         </ScrollArea>
       )}

@@ -52,14 +52,19 @@ describe("the bottom of a page", () => {
     expect(PAGE_BOTTOM.split(" ")).toContain("lg:pb-20");
   });
 
-  // It kept the page's own 2rem there while the floating chat's button was small enough to lie over its card's corner.
-  test("a page held to the window from a laptop up ends where a page that scrolls does, and has a phone's room", () => {
+  // It ended 5rem above the window's foot, to leave the floating chat's button a place of its own: a blank band under
+  // the card for as long as the page was open. It ends at the page's own margin, as its sides do.
+  test("a page held to the window from a laptop up runs to the page's own margin, and has a phone's room", () => {
     expect(phoneRem(HELD_BOTTOM)).toBe(phoneRem(PAGE_BOTTOM));
-    expect(HELD_BOTTOM.split(" ")).toContain("lg:pb-20");
+    const layout = read("commons/components/layout/RootLayout.tsx");
+    const held = [...layout.matchAll(/<div className=\{`mx-auto [^`]*`\}>/g)].map((m) => m[0]).find((one) => one.includes("lg:h-full")) ?? "";
+    const sides = /\slg:p-(\d+)\s/.exec(held)?.[1];
+    expect(sides).toBeDefined();
+    expect(HELD_BOTTOM.split(" ")).toContain(`lg:pb-${sides}`);
   });
 
-  // Skills' Explore runs down the page, on a page held to the window: its last card ended flush with the window's foot,
-  // because the layout's padding is inside the height the page is held to.
+  // A form open above the list, or a short window, runs a held page past the window: its last card ended flush with the
+  // window's foot, because the layout's padding is inside the height the page is held to.
   test("a held page that runs past the window has a foot of its own, which takes nothing from a list that fills it", () => {
     const source = read("commons/components/ui/ScrollCard.tsx");
     const foot = (/const HELD_FOOT = "([^"]+)"/.exec(source)?.[1] ?? "").split(" ");
@@ -73,18 +78,6 @@ describe("the bottom of a page", () => {
     // Its margins take back its own height and the gap before it: the list above it keeps every pixel.
     expect(steps("lg:after:-mb-", foot)).toBe(steps("lg:after:h-", foot));
     expect(steps("lg:after:-mt-", foot)).toBe(steps("gap-", fill.split(" ")));
-  });
-
-  test("a tab that runs down a held page ends with a scrolling page's room", () => {
-    const source = read("commons/components/ui/ScrollCard.tsx");
-    const steps = (pattern: RegExp, text: string) => Number(pattern.exec(text)?.[1] ?? Number.NaN);
-    const runsDown = steps(/export const RUNS_DOWN = "lg:pb-(\d+)"/, source);
-    expect(runsDown + steps(/lg:after:h-(\d+)/, source)).toBe(steps(/lg:pb-(\d+)/, PAGE_BOTTOM));
-    // On a root as tall as what it holds: one held to what the window left (`flex-1 min-h-0`) keeps the room inside it,
-    // above where its cards end.
-    const root = /<div className=\{`([^`]*\$\{RUNS_DOWN\}[^`]*)`\}>/.exec(read("modules/skills/explore.panel.tsx"))?.[1] ?? "";
-    expect(root).toContain("${RUNS_DOWN}");
-    for (const word of ["flex-1", "min-h-0"]) expect(root.split(" ")).not.toContain(word);
   });
 
   test("is under every page: the document's, the one held to the window, and System Logs", () => {
@@ -114,13 +107,30 @@ describe("the bottom of a page", () => {
     expect(foot).toBeGreaterThan(BAR_REM);
     // The last card's foot against the button's top: 2rem of air or more, as cards have between them and the bar.
     expect(phoneRem(PAGE_BOTTOM)).toBeGreaterThanOrEqual(foot + tall + 2);
-    // From a laptop up it is in the window's corner, and a page's last card ends over it: one that scrolls, and one
-    // held to the window, whose card's last row would lie under it.
+    // From a laptop up it is in the window's corner, and a page that scrolls ends over it.
     const corner = Number(/^lg:bottom-(\d+(?:\.\d+)?)$/.exec(place.find((word) => word.startsWith("lg:bottom-")) ?? "")?.[1] ?? Number.NaN) / 4;
-    for (const bottom of [PAGE_BOTTOM, HELD_BOTTOM]) {
-      const room = Number(/(?:^| )lg:pb-(\d+)(?: |$)/.exec(bottom)?.[1] ?? Number.NaN) / 4;
-      expect(room).toBeGreaterThanOrEqual(corner + tall);
-    }
+    const room = (classes: string) => Number(/(?:^| )lg:pb-(\d+)(?: |$)/.exec(classes)?.[1] ?? Number.NaN) / 4;
+    expect(room(PAGE_BOTTOM)).toBeGreaterThanOrEqual(corner + tall);
+  });
+
+  // A page held to the window runs under the button, so the button lies over its card's corner; the last row of what
+  // scrolls in the card would stay under it, with no way to bring it out.
+  test("what scrolls in a held page's card ends with room to bring its last row clear of the floating chat's button", () => {
+    const place = (/const BUTTON_PLACE = "([^"]+)"/.exec(read("commons/components/floating-chat/FloatingChat.tsx"))?.[1] ?? "").split(" ");
+    const tall = Number(/^size-(\d+)$/.exec(place.find((word) => word.startsWith("size-")) ?? "")?.[1] ?? Number.NaN) / 4;
+    const corner = Number(/^lg:bottom-(\d+(?:\.\d+)?)$/.exec(place.find((word) => word.startsWith("lg:bottom-")) ?? "")?.[1] ?? Number.NaN) / 4;
+    const room = (classes: string) => Number(/(?:^| )lg:pb-(\d+)(?: |$)/.exec(classes)?.[1] ?? Number.NaN) / 4;
+    // How far the button's top stands into a card that ends at the held page's foot; the list ends past that, with air.
+    const into = corner + tall - room(HELD_BOTTOM);
+    expect(into).toBeGreaterThan(0);
+    expect(room(constant("HELD_END"))).toBeGreaterThanOrEqual(into + 1);
+    // On each thing that scrolls there: the list and the file in Files and the Workspace, and a panel of System Logs.
+    const area = /export function ScrollArea[\s\S]*?className=\{cn\(`([^`]*)`/.exec(read("commons/components/ui/ScrollCard.tsx"))?.[1] ?? "";
+    expect(area.split(" ")).toContain("lg:overflow-y-auto");
+    expect(area.split(" ")).toContain("${HELD_END}");
+    const rows = [...read("modules/logs/components/Panel.tsx").matchAll(/className=\{`([^`]*)`\}/g)].map((m) => m[1]!.split(" ")).filter((words) => words.includes("lg:overflow-y-auto"));
+    expect(rows.length).toBe(1);
+    expect(rows[0]).toContain("${HELD_END}");
   });
 
   test("a toast stands above the tab bar on a phone, where it lay over the tabs and took their taps", () => {

@@ -102,7 +102,7 @@ export function FileView({ entry, actions, onBack }: { entry: SystemFileEntry; a
           </p>
         ) : null}
       </div>
-      <ScrollArea fill className="lg:-mr-6 lg:pr-6">
+      <ScrollArea className="lg:-mr-6 lg:pr-6">
         {file.error ? (
           <ErrorNote error={file.error} />
         ) : !read ? (
