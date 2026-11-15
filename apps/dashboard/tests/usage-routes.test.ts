@@ -25,12 +25,12 @@ test("the routes, their cache and cost, and the warning said as the daemon said 
   expect(html).toContain('role="alert"');
   expect(html).toContain(said.replaceAll("$", "$"));
   expect(html).toContain("By provider · last 7 days");
-  expect(html).toContain("<td>profile-b</td>");
+  expect(html).toMatch(/<td class="[^"]*">profile-b<\/td>/);
   expect(html).toContain(">1%</td>");
   expect(html).toContain(">94%</td>");
   expect(html).toContain(">$0.15</td>");
   // Nothing said of its cache, nothing claimed.
-  expect(html).toMatch(/<td>local<\/td><td class="break-all">llama<\/td><td class="text-right">50<\/td><td class="text-right">—<\/td><td class="text-right">—<\/td>/);
+  expect(html).toMatch(/>local<\/td><td[^>]*>llama<\/td><td[^>]*><span[^>]*>calls <\/span>50<\/td><td[^>]*><span[^>]*>cached <\/span>—<\/td><td[^>]*><span[^>]*>\$ \/ M in <\/span>—<\/td>/);
 });
 
 test("no routes yet, nothing drawn", () => {

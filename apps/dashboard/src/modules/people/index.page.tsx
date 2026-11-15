@@ -12,6 +12,8 @@
  */
 
 import { platformName } from "@/commons/lib/platform";
+import { cn } from "@/commons/lib/utils";
+import { FOLD } from "@/commons/components/ui/fold-table";
 import { isAdmin, useMe } from "@/commons/lib/session";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -87,9 +89,9 @@ export default function PeoplePage() {
               column a few letters wide and broke after every one of them (0.8.0). Its cells lose the table's lines there,
               or one person read as four rows.
             */}
-            <table className="table table-sm block w-full sm:table">
+            <table className={cn(FOLD.table, "table-sm")}>
               {/* Sticky, so the column names stay while the rows scroll under them. */}
-              <thead className="bg-base-100 sticky top-0 z-10 hidden sm:table-header-group">
+              <thead className={cn("bg-base-100 sticky top-0 z-10", FOLD.head)}>
                 <tr className="border-b border-base-content/[0.08] text-base-content/65 text-[11px] uppercase tracking-wider font-mono">
                   <th className="pl-6">Display Name</th>
                   <th>Accounts</th>
@@ -97,7 +99,7 @@ export default function PeoplePage() {
                   <th className="text-right pr-6">Actions</th>
                 </tr>
               </thead>
-              <tbody className="block divide-y divide-base-content/[0.06] sm:table-row-group">
+              <tbody className={cn("divide-y divide-base-content/[0.06]", FOLD.body)}>
                 {list.map((person) => (
                   <PersonRow key={person.key} person={person} people={list} editable={isAdmin(me.data ?? null)} onChanged={refresh} onNotes={() => setNotesOf(person)} />
                 ))}
@@ -167,8 +169,8 @@ function PersonRow({
   };
 
   return editing ? (
-    <tr className="block sm:table-row">
-      <td colSpan={4} className="block p-4 bg-base-200/50 sm:table-cell">
+    <tr className={cn(FOLD.row, "max-sm:p-0")}>
+      <td colSpan={4} className={cn(FOLD.whole, "bg-base-200/50 p-4 max-sm:p-4")}>
         <PersonForm
           existing={person}
           people={people}
@@ -182,14 +184,14 @@ function PersonRow({
       </td>
     </tr>
   ) : (
-    <tr className="block py-2 hover:bg-base-200/40 transition-colors sm:table-row sm:py-0">
-      <td className="block px-4 py-1.5 align-top max-sm:border-0 sm:table-cell sm:py-3 sm:pl-6 sm:pr-3">
+    <tr className={cn("hover:bg-base-200/40 transition-colors", FOLD.row)}>
+      <td className={cn("align-top sm:py-3 sm:pl-6 sm:pr-3", FOLD.whole)}>
         <div className="font-semibold text-sm text-base-content">{person.name}</div>
         <div className="font-mono text-[11px] text-base-content/65" title="Person key: what is remembered about them is kept under it">
           {person.key}
         </div>
       </td>
-      <td className="block px-4 py-1.5 font-mono text-xs align-top max-sm:border-0 sm:table-cell sm:px-3 sm:py-3">
+      <td className={cn("font-mono text-xs align-top sm:px-3 sm:py-3", FOLD.whole)}>
         {ids.length > 0 ? (
           <div className="space-y-1">
             {ids.map((id) => (
@@ -205,7 +207,7 @@ function PersonRow({
           </span>
         )}
       </td>
-      <td className="block px-4 py-1.5 text-xs text-base-content/70 align-top max-sm:border-0 sm:table-cell sm:px-3 sm:py-3">
+      <td className={cn("text-xs text-base-content/70 align-top sm:px-3 sm:py-3", FOLD.whole)}>
         {/* Just the button: a line of the notes read cut off mid-sentence and widened the table. */}
         <div className="flex flex-col items-start gap-1">
           <button type="button" className="btn btn-ghost btn-xs shrink-0 gap-1 rounded-lg font-medium" onClick={onNotes}>
@@ -214,7 +216,7 @@ function PersonRow({
           <MorningLine person={person} editable={editable} onChanged={onChanged} />
         </div>
       </td>
-      <td className="block px-4 py-1.5 align-top max-sm:border-0 sm:table-cell sm:py-3 sm:pr-6 sm:pl-3 sm:text-right">
+      <td className={cn("align-top sm:py-3 sm:pr-6 sm:pl-3 sm:text-right", FOLD.whole)}>
         <div className="flex items-center justify-start gap-1 sm:justify-end">
           <button
             type="button"

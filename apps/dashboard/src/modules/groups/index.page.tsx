@@ -9,6 +9,8 @@
  */
 
 import { platformName } from "@/commons/lib/platform";
+import { cn } from "@/commons/lib/utils";
+import { FOLD } from "@/commons/components/ui/fold-table";
 import { PlatformTag } from "@/commons/components/chat/PlatformBadge";
 import { isAdmin, useMe } from "@/commons/lib/session";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -79,8 +81,8 @@ export default function GroupsPage() {
           <div className="overflow-x-auto -mx-4 -my-2 sm:-mx-6">
             {/* A card per room on a phone, the table from `sm` up, as People draws its rows: in four columns at a phone's
                 width a room's name had a column a word wide. */}
-            <table className="table table-sm block w-full sm:table">
-              <thead className="bg-base-100 sticky top-0 z-10 hidden sm:table-header-group">
+            <table className={cn(FOLD.table, "table-sm")}>
+              <thead className={cn("bg-base-100 sticky top-0 z-10", FOLD.head)}>
                 <tr className="border-b border-base-content/[0.08] text-base-content/65 text-[11px] uppercase tracking-wider font-mono">
                   <th className="pl-6">Name</th>
                   <th>Agents</th>
@@ -89,7 +91,7 @@ export default function GroupsPage() {
                   <th className="text-right pr-6">Actions</th>
                 </tr>
               </thead>
-              <tbody className="block divide-y divide-base-content/[0.06] sm:table-row-group">
+              <tbody className={cn("divide-y divide-base-content/[0.06]", FOLD.body)}>
                 {visible.map((group) => (
                   <GroupRow key={`${group.platform}:${group.chatId}`} group={group} agents={agents} orchestrator={orchestrator} editable={editable} onChanged={refresh} />
                 ))}
@@ -132,8 +134,8 @@ function GroupRow({
   const renamed = !group.dashboard && Boolean(group.name) && group.name !== group.platformTitle;
 
   return (
-    <tr className="block py-2 hover:bg-base-200/40 transition-colors sm:table-row sm:py-0">
-      <td className="block px-4 py-1.5 align-top max-sm:border-0 sm:table-cell sm:py-3 sm:pl-6 sm:pr-3">
+    <tr className={cn("hover:bg-base-200/40 transition-colors", FOLD.row)}>
+      <td className={cn("align-top sm:py-3 sm:pl-6 sm:pr-3", FOLD.whole)}>
         {editing ? (
           <form
             className="flex flex-wrap items-center gap-2"
@@ -173,7 +175,7 @@ function GroupRow({
           </div>
         )}
       </td>
-      <td className="block px-4 py-1.5 text-xs align-top max-sm:border-0 sm:table-cell sm:px-3 sm:py-3">
+      <td className={cn("text-xs align-top sm:px-3 sm:py-3", FOLD.whole)}>
         {group.agents.length > 0 ? (
           <div className="flex flex-wrap gap-1">
             {group.agents.map((agent) => (
@@ -186,21 +188,21 @@ function GroupRow({
           <span className="text-base-content/65">—</span>
         )}
       </td>
-      <td className="block px-4 py-1.5 text-xs align-top max-sm:border-0 sm:table-cell sm:px-3 sm:py-3">
+      <td className={cn("text-xs align-top sm:px-3 sm:py-3", FOLD.whole)}>
         {/* Named on a phone, where there is no column header to say what is picked. */}
-        <span className="mb-1 block text-base-content/65 sm:hidden">No tag: who answers</span>
+        <span className={cn("mb-1 block text-base-content/65", FOLD.label)}>No tag: who answers</span>
         <WhoAnswers group={group} agents={agents} orchestrator={orchestrator} editable={editable} onChanged={onChanged} />
       </td>
-      <td className="block px-4 py-1.5 text-xs text-base-content/80 align-top max-sm:border-0 sm:table-cell sm:px-3 sm:py-3">
+      <td className={cn("text-xs text-base-content/80 align-top sm:px-3 sm:py-3", FOLD.whole)}>
         {/* Named on a phone, where there is no column header to say what the names are. */}
-        <span className="text-base-content/65 sm:hidden">Who talks there: </span>
+        <span className={cn("text-base-content/65", FOLD.label)}>Who talks there: </span>
         {group.people.length > 0 ? (
           group.people.map((person) => person.name).join(", ")
         ) : (
           <span className="text-base-content/65">Nobody yet</span>
         )}
       </td>
-      <td className="block px-4 py-1.5 align-top max-sm:border-0 sm:table-cell sm:py-3 sm:pr-6 sm:pl-3 sm:text-right">
+      <td className={cn("align-top sm:py-3 sm:pr-6 sm:pl-3 sm:text-right", FOLD.whole)}>
         {editable && !editing ? (
           <div className="flex items-center gap-1 sm:justify-end">
             <button
