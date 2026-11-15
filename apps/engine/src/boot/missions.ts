@@ -48,6 +48,8 @@ import { besidesTheReport } from "@/modules/missions/results.ts";
 import type { LinkFor } from "@/modules/web/links.ts";
 import type { AuditPort } from "@/commons/audit.store.ts";
 import { BRIEF_FILE, goalBrief } from "@/modules/missions/drafts.ts";
+import { keepDone, missionDone } from "@/modules/pipeline/work-done.ts";
+import { WorkDoneStore } from "@/modules/pipeline/work-done.store.ts";
 import { buildEnv, ownHomeEnv } from "@/modules/tools/builtins/exec.ts";
 
 const log = createLogger("boot.missions");
@@ -301,6 +303,8 @@ export function buildMissions(params: {
         if (!there.ok) throw new Error(there.out);
       }
     },
+    // One another agent started: kept as it ends, so the agent that ran it and the one that started it are told of it.
+    helped: (mission) => keepDone(new WorkDoneStore(params.db), missionDone(mission)),
     remember: async (mission) => {
       if (!params.memory) return;
       const person = personFor(params.config().people, mission.gatewayId, mission.startedBy)?.key ?? `${mission.gatewayId}:${mission.startedBy}`;

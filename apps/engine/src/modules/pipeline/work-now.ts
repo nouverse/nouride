@@ -16,7 +16,7 @@
  * It tells and locks nothing. The agent is the one that waits, or works somewhere else.
  */
 
-import { clipTrimmed, type LoadedAgent, type MessageEnvelope, oneLine } from "@nouride/shared";
+import { clipTrimmed, type LoadedAgent, type MessageEnvelope, oneLine, type Person } from "@nouride/shared";
 import type { JobRecord } from "@/modules/jobs/jobs.store.ts";
 import { duration } from "@/modules/jobs/wake-text.ts";
 import { MISSION_GATEWAY_ID } from "@/modules/missions/gateway.ts";
@@ -144,6 +144,16 @@ export interface WorkSources {
   namesOf(agentId: string): readonly string[];
 }
 
+/** Whether two senders are one person: the same id on the same connection, or two ids People gives one name. */
+export function samePersonIn(people: readonly Person[]): (a: Sender, b: Sender) => boolean {
+  const nameOf = (sender: Sender) => findPerson(people, sender)?.name;
+  return (a, b) => {
+    if (a.gatewayId === b.gatewayId && a.senderId === b.senderId) return true;
+    const name = nameOf(a);
+    return name !== undefined && name === nameOf(b);
+  };
+}
+
 /** At most this much of a goal or a command, on one line. */
 const WHAT_MAX = 80;
 
@@ -211,7 +221,6 @@ export function workNow(src: WorkSources): { mates: RoomMate[]; work: WorkNow[] 
  */
 export function sourcesFrom(ctx: TurnContext, agent: LoadedAgent, envelope: MessageEnvelope, reader: Sender | undefined): WorkSources {
   const { registry, jobs, missionCommands, approvals, config } = ctx.deps;
-  const personOf = (sender: Sender) => findPerson(config.people, sender)?.name;
   return {
     me: agent.config.id,
     at: { gatewayId: envelope.gatewayId, chatId: envelope.chatId, room: envelope.chatType !== "dm" },
@@ -224,11 +233,7 @@ export function sourcesFrom(ctx: TurnContext, agent: LoadedAgent, envelope: Mess
     asleep: (id) => registry.isPaused(id),
     jobs: (id) => jobs?.running(id) ?? [],
     missions: missionCommands?.running() ?? [],
-    samePerson: (a, b) => {
-      if (a.gatewayId === b.gatewayId && a.senderId === b.senderId) return true;
-      const person = personOf(a);
-      return person !== undefined && person === personOf(b);
-    },
+    samePerson: samePersonIn(config.people),
     namesOf: (id) => [id, registry.get(id)?.config.displayName ?? ""],
   };
 }

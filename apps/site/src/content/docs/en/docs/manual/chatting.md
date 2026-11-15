@@ -405,6 +405,16 @@ at most and the rest counted. Work somebody else asked for in a private chat is 
 words, only its kind, its folder and its time. This tells the agent and locks nothing: avoiding a
 clash is still the agent's call.
 
+**Work one agent did for another reaches both of them (0.8.39).** When an agent asks another for
+something, or starts a mission for it, the report goes back to the one that asked. That used to be
+all of it: the agent that did the work had no trace of it in its own chats, so when you spoke of it
+there it read it as news and started from nothing. Now, for a day after such work ends, the agent
+that did it is told in its own chats what it did, for which agent and how it ended. And once it has
+answered you in a private chat of its own, the agent that asked is told, on its next turn for you,
+that the two of you talked and how that answer began. The words go only where you are the same
+person, or in the chat the work was asked from; anywhere else an agent is told only that it did a job
+for another agent, and when. What is said in a room is never carried out of it.
+
 **When handed-over work fails.** If the agent that took the work fails or runs out of time, the line
 it leaves carries **Continue** and **Hand to** for up to three other agents of the room (0.8.33).
 Continue has the same agent take it up again. Hand to gives another agent what the first was asked.

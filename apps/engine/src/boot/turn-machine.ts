@@ -33,6 +33,7 @@ import type { Memory } from "@/modules/memory/index.ts";
 import { senderHasAccount } from "@/modules/people/match.ts";
 import { Pipeline } from "@/modules/pipeline/index.ts";
 import { RoomMentionStore } from "@/modules/pipeline/room-mention.store.ts";
+import { WorkDoneStore } from "@/modules/pipeline/work-done.store.ts";
 import { CandidateStore, ReflectionEngine, ReviewStore, ToolMemory } from "@/modules/reflection/index.ts";
 import { RoomNameStore } from "@/modules/rooms/room-names.store.ts";
 import { setEffort } from "@/modules/setup/agent-effort.ts";
@@ -334,6 +335,7 @@ export async function buildTurnMachine(
     mcp,
     autoApprove: stores.autoApprove,
     roomMention: new RoomMentionStore(stores.db),
+    workDone: new WorkDoneStore(stores.db),
     roomNames: new RoomNameStore(stores.db),
     childEnv: stores.childEnv,
     heldSecrets: stores.heldSecrets,

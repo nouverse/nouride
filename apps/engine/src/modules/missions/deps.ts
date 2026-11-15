@@ -88,6 +88,8 @@ export interface MissionsDeps {
   changed?: (mission: Mission) => void;
   /** What lasts of a mission that ended, filed once as an episode of its agent's memory, from its report. */
   remember?: (mission: Mission) => Promise<void>;
+  /** A mission another agent started has ended: kept, so both agents are told of it in their own chats (`pipeline/work-done.ts`). */
+  helped?: (mission: Mission) => void;
   /**
    * Remove an ended mission's own folder, past `KEEP_MS` — only ever the folder the daemon made for it. `keepUnsaved`:
    * not where a worktree in it holds work nobody committed — those worktrees are named, and nothing is removed. Null:

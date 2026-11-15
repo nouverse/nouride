@@ -37,6 +37,7 @@ import { outcomeOf, type TurnShape } from "./turn-shape.ts";
 import { beginTurn, close, tell, type TurnState } from "./turn-state.ts";
 import { turnBrain } from "./turn-brain.ts";
 import { compose, equip, turnRequest } from "./turn-request.ts";
+import { keepSaid } from "./work-done.ts";
 
 const log = createLogger("pipeline.turn");
 
@@ -363,6 +364,8 @@ export class TurnRunner {
     // whole: its checklist is the mission's record until it ends.
     await settleNotes(this.ctx.deps.notes, { agentId: agent.config.id, gatewayId: envelope.gatewayId, chatId: envelope.chatId, sessionId: session.id }, { keepFinished: shape !== undefined });
     tell(turn, outcomeOf(result, false));
+    // An answer to a person in a private chat: kept on what this agent lately did for another, for that one to be told.
+    keepSaid(this.ctx.deps.workDone, { me: agent.config.id, at: envelope, private: envelope.chatType === "dm", reader: shape || isSystemEvent(envelope) || envelope.senderIsBot ? undefined : turn.person, reply: result.text, people: this.ctx.deps.config.people, now: Date.now() });
 
     log.info("turn complete", {
       agent_id: agent.config.id, turn_id: record?.id,
