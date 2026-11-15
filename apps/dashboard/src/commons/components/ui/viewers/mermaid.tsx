@@ -18,7 +18,7 @@ import { Leaving } from "@/commons/components/ui/OverPage";
 import { Lightbox } from "@/commons/components/ui/Lightbox";
 import { useOfficeTheme } from "@/commons/office/lib/hooks";
 import type { ViewerProps } from "@/commons/components/ui/viewers";
-import { withSize } from "@/commons/components/ui/viewers/svg-size";
+import { withSize } from "@/commons/components/ui/viewers/svg-root";
 
 const FONT = "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
 

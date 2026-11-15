@@ -46,6 +46,15 @@ describe("an svg block in a reply", () => {
     });
   });
 
+  test("one written with no namespace, as inside a page of HTML, is given it: it was no picture to the browser, and stayed its code", async () => {
+    reply(["```svg", "<svg viewBox='0 0 40 20'><rect width='40' height='20'/></svg>", "```"].join("\n"));
+    await renderPage("/chat/ses_1", async (host) => {
+      await eventually(() => host.querySelector('[data-viewer="picture"] img') !== null, 5_000, "the picture");
+      const drawn = decodeURIComponent(host.querySelector('[data-viewer="picture"] img')!.getAttribute("src")!.split(",")[1]!);
+      expect(drawn).toBe("<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"40\" height=\"20\" viewBox='0 0 40 20'><rect width='40' height='20'/></svg>");
+    });
+  });
+
   test("a press opens it large as a sent picture, with save and no tab to open", async () => {
     reply(["```svg", SVG, "```"].join("\n"));
     await renderPage("/chat/ses_1", async (host) => {

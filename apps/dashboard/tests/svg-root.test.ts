@@ -1,11 +1,12 @@
 /**
- * An SVG given a size before it is drawn as a picture (`commons/components/ui/viewers/svg-size.ts`): one that names
+ * An SVG's root tag given what a picture needs (`commons/components/ui/viewers/svg-root.ts`). A size: one that names
  * only its `viewBox`, or a width in percent as Mermaid writes, was drawn zero wide inside the button that opens it.
- * That it is then drawn at that size is seen in a real browser; what is written into the SVG is held here.
+ * Its namespace: one written as it is inside a page of HTML was no picture to the browser, and stayed its code.
+ * That it is then drawn is seen in a real browser; what is written into the SVG is held here.
  */
 
 import { describe, expect, test } from "bun:test";
-import { withSize } from "@/commons/components/ui/viewers/svg-size";
+import { withNamespace, withSize } from "@/commons/components/ui/viewers/svg-root";
 
 describe("an svg's size, before it is drawn", () => {
   test("one that names only its viewBox takes the viewBox's width and height as its own", () => {
@@ -33,5 +34,21 @@ describe("an svg's size, before it is drawn", () => {
 
   test("with no viewBox to read, or one that is no size, it is as it was", () => {
     for (const svg of ["<svg><rect/></svg>", '<svg width="100%"><rect/></svg>', '<svg viewBox="0 0 0 80"/>', '<svg viewBox="0 0 200"/>', '<svg viewBox="0 0 200 80 5"/>', '<svg viewBox="0 0 wide tall"/>', '<svg viewBox="0 0 -200 80"/>', "graph TD; A-->B", ""]) expect(withSize(svg)).toBe(svg);
+  });
+});
+
+describe("an svg's namespace, before it is drawn", () => {
+  test("one with none is given it on its root tag, and nothing else of it changes", () => {
+    expect(withNamespace("<svg viewBox='0 0 40 20'><rect width='40' height='20'/></svg>")).toBe("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox='0 0 40 20'><rect width='40' height='20'/></svg>");
+    // After what stands before the tag, and the tag's own spelling kept.
+    expect(withNamespace("<!-- a logo -->\n<SVG><circle/></SVG>")).toBe('<!-- a logo -->\n<SVG xmlns="http://www.w3.org/2000/svg"><circle/></SVG>');
+  });
+
+  test("one that names it is as it was, and so is a text with no svg in it", () => {
+    for (const svg of ['<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"/>', "<svg xmlns='http://www.w3.org/2000/svg'><svg/></svg>", "graph TD; A-->B", ""]) expect(withNamespace(svg)).toBe(svg);
+  });
+
+  test("a link's namespace on the root is not the picture's: it still gets its own", () => {
+    expect(withNamespace('<svg xmlns:xlink="http://www.w3.org/1999/xlink"><use xlink:href="#a"/></svg>')).toBe('<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><use xlink:href="#a"/></svg>');
   });
 });
