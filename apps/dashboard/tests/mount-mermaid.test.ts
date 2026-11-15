@@ -41,6 +41,23 @@ describe("a mermaid block", () => {
     }
   });
 
+  test("what Mermaid draws is given a size before it is a picture: its width of 100% was a picture zero wide", async () => {
+    const { draw } = await import("@/commons/components/ui/viewers/mermaid");
+    const asked: string[] = [];
+    const engine = {
+      initialize: (config: { securityLevel?: string }) => void asked.push(`initialize:${config.securityLevel}`),
+      parse: async (text: string) => (asked.push(`parse:${text}`), true),
+      render: async (id: string) => (asked.push("render"), { svg: `<svg id="${id}" width="100%" style="max-width: 512.3px;" viewBox="0 0 512.3 162"><g/></svg>`, diagramType: "flowchart-v2" }),
+    } as unknown as Parameters<typeof draw>[2];
+    const svg = await draw("graph TD; A-->B", false, engine);
+    expect(svg).toMatch(/^<svg width="512\.3" height="162" id="nr-mermaid-\d+" style=/);
+    expect(svg).not.toContain("100%");
+    // Read before it is drawn, in the strict mode: a text Mermaid cannot read never reaches the drawing.
+    expect(asked).toEqual(["initialize:strict", "parse:graph TD; A-->B", "render"]);
+    const refuses = { ...engine!, parse: async () => Promise.reject(new Error("no")) } as unknown as Parameters<typeof draw>[2];
+    expect(draw("graph TD\n  A --> (((", false, refuses)).rejects.toThrow("no");
+  });
+
   test("a diagram Mermaid cannot read is the code it was, with no error box", async () => {
     const React = await import("react");
     const { createRoot } = await import("react-dom/client");

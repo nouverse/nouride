@@ -113,6 +113,8 @@ describe("a message's pictures", () => {
     await eventually(() => shownName() === "only.png", 2_000, "the picture");
     expect(counter()).toBeNull();
     expect(dialog()!.querySelector('[aria-label="The next picture"]')).toBeNull();
+    // A photo is opened at its own size, capped to the window: only a drawing is stretched to it.
+    expect(dialog()!.querySelector("img")!.className).not.toContain("w-[min(92vw,64rem)]");
   });
 });
 

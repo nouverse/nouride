@@ -37,6 +37,15 @@ describe("an svg block in a reply", () => {
     });
   });
 
+  test("one that names only its viewBox is drawn with the viewBox's size: with none it was a picture zero wide", async () => {
+    reply(["```svg", '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 80"><rect width="200" height="80" fill="teal"/></svg>', "```"].join("\n"));
+    await renderPage("/chat/ses_1", async (host) => {
+      await eventually(() => host.querySelector('[data-viewer="picture"] img') !== null, 5_000, "the picture");
+      const drawn = decodeURIComponent(host.querySelector('[data-viewer="picture"] img')!.getAttribute("src")!.split(",")[1]!);
+      expect(drawn.startsWith('<svg width="200" height="80" xmlns=')).toBe(true);
+    });
+  });
+
   test("a press opens it large as a sent picture, with save and no tab to open", async () => {
     reply(["```svg", SVG, "```"].join("\n"));
     await renderPage("/chat/ses_1", async (host) => {
@@ -47,6 +56,8 @@ describe("an svg block in a reply", () => {
       const dialog = doc.querySelector('[role="dialog"][aria-label="picture.svg"]')!;
       expect(dialog.querySelector("img")!.getAttribute("src")).toBe(host.querySelector('[data-viewer="picture"] img')!.getAttribute("src"));
       expect(dialog.querySelector("img")!.className).toContain("bg-white");
+      // A drawing has no pixels of its own: opened as wide as the window lets it, not at the 40px it names.
+      expect(dialog.querySelector("img")!.className.split(" ")).toContain("w-[min(92vw,64rem)]");
       const links = [...dialog.querySelectorAll("a")].map((a) => a.textContent?.trim());
       expect(links).toEqual(["save"]);
       expect(dialog.querySelector("a[download]")!.getAttribute("download")).toBe("picture.svg");

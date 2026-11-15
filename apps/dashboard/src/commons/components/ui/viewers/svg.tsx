@@ -8,16 +8,17 @@
  *
  * On a white card whatever the theme: an SVG is drawn for paper, its strokes black on nothing, and would vanish on
  * the dark one. A press opens it large, as a picture sent in the chat opens. One the browser cannot draw is the code
- * it was (`onFail`).
+ * it was (`onFail`). One that names no size is given its `viewBox`'s (`svg-size.ts`).
  */
 
 import { useMemo, useState } from "react";
 import { Leaving } from "@/commons/components/ui/OverPage";
 import { Lightbox } from "@/commons/components/ui/Lightbox";
 import type { ViewerProps } from "@/commons/components/ui/viewers";
+import { withSize } from "@/commons/components/ui/viewers/svg-size";
 
 function svgAddress(text: string): string {
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(text.trim())}`;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(withSize(text.trim()))}`;
 }
 
 export default function SvgPicture({ text, onFail }: ViewerProps) {

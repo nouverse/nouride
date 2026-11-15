@@ -18,6 +18,7 @@ import { Leaving } from "@/commons/components/ui/OverPage";
 import { Lightbox } from "@/commons/components/ui/Lightbox";
 import { useOfficeTheme } from "@/commons/office/lib/hooks";
 import type { ViewerProps } from "@/commons/components/ui/viewers";
+import { withSize } from "@/commons/components/ui/viewers/svg-size";
 
 const FONT = "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
 
@@ -64,12 +65,16 @@ export function configFor(dark: boolean): MermaidConfig {
 
 let drawn = 0;
 
-/** The diagram's SVG, or null while it is drawn; `onFail` when Mermaid cannot read it. */
-async function draw(text: string, dark: boolean): Promise<string> {
-  mermaid.initialize(configFor(dark));
-  await mermaid.parse(text);
-  const { svg } = await mermaid.render(`nr-mermaid-${++drawn}`, text);
-  return svg;
+/** What of Mermaid a drawing asks: a test hands it one that needs no browser to lay a diagram out. */
+type Engine = Pick<typeof mermaid, "initialize" | "parse" | "render">;
+
+/** The diagram's SVG, sized as a picture; it throws where Mermaid cannot read the text, and the block is its code. */
+export async function draw(text: string, dark: boolean, engine: Engine = mermaid): Promise<string> {
+  engine.initialize(configFor(dark));
+  await engine.parse(text);
+  const { svg } = await engine.render(`nr-mermaid-${++drawn}`, text);
+  // Mermaid writes its width as 100%: a picture has nothing to be a share of, and was drawn zero wide.
+  return withSize(svg);
 }
 
 export default function MermaidDiagram({ text, onFail }: ViewerProps) {

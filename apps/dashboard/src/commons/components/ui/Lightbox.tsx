@@ -35,6 +35,9 @@ export function Lightbox({ pictures, at = 0, light = false, onClose }: { picture
   // A `data:` address (a picture drawn from a reply's own block) cannot be opened in a tab: the browser refuses a page
   // sent to one. It is saved; anything else is opened or saved.
   const opens = !picture.src.startsWith("data:");
+  // A picture drawn from a block is a drawing with no pixels of its own: it is opened as wide as the window lets it,
+  // where a photo is opened at its own size. At its own size a small diagram opened "large" was as small as before.
+  const drawing = picture.src.startsWith("data:image/svg+xml");
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -87,7 +90,7 @@ export function Lightbox({ pictures, at = 0, light = false, onClose }: { picture
           src={picture.src}
           alt={picture.name}
           draggable={false}
-          className={`max-w-full max-h-[80dvh] rounded-xl shadow-2xl object-contain select-none ${light ? "bg-white p-4" : "bg-base-100"}`}
+          className={`max-w-full max-h-[80dvh] rounded-xl shadow-2xl object-contain select-none ${drawing ? "w-[min(92vw,64rem)]" : ""} ${light ? "bg-white p-4" : "bg-base-100"}`}
         />
         <div className="flex items-center gap-2 text-[11px] text-white/80 font-mono">
           {many && (
