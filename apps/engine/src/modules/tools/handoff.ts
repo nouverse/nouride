@@ -78,6 +78,8 @@ export interface SubAgentHandoff {
   metrics: { toolCalls: number; steps: number; ms: number };
   /** Set when `failed`, or when a status needs a reason a person can act on. */
   reason?: string;
+  /** Its answer was also said in the room it was asked in, as its own message (`pipeline/peer-shown.ts`). */
+  shown?: true;
 }
 
 /** What `buildHandoff` needs from a finished turn. Structural, so a test can hand it a literal. */
@@ -201,6 +203,13 @@ function classify(input: {
 }
 
 /**
+ * What the agent that asked is told of an answer the room has already read: the words that carry the rule, asserted
+ * by a test. Without them it retells the answer under its own name, and the room reads it twice.
+ */
+export const SHOWN_TO_THE_ROOM = (agentId: string): string =>
+  `The people in this room have already read this: it was shown there as ${agentId}'s own message. Do not repeat or summarize it. Add only what is your own: what you make of it, what you do next, or nothing.`;
+
+/**
  * The envelope as the coordinator reads it.
  *
  * Compact on purpose, and in this order: the status first, because it decides what the coordinator
@@ -215,6 +224,7 @@ export function renderHandoff(handoff: SubAgentHandoff): string {
   else lines.push("(no report)");
 
   if (handoff.reason) lines.push("", handoff.reason);
+  if (handoff.shown) lines.push("", SHOWN_TO_THE_ROOM(handoff.agentId));
 
   if (handoff.files.length > 0) {
     lines.push("", `Files it changed: ${handoff.files.join(", ")}`);

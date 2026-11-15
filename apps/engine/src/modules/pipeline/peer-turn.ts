@@ -56,6 +56,7 @@ import { contextInto, stepsInto } from "@/modules/turns/recorder.ts";
 import { alertOnFallback } from "@/modules/pipeline/fallback-alert.ts";
 import { fallbacksFor } from "@/modules/llm/fallbacks.ts";
 import { askDone, keepDone } from "./work-done.ts";
+import { shownIn, shownReport } from "./peer-shown.ts";
 
 const log = createLogger("pipeline.peer-turn");
 
@@ -311,7 +312,8 @@ export function startPeerTurn(ctx: TurnContext, request: PeerTurnRequest, option
         // With a read-only copy of the task in the asker's work notes this is part of (`workNotesCopy`).
         userMessage: {
           role: "user",
-          content: [briefing(request), workNotesCopy(ctx.deps.notes, { agentId: request.ctx.agentId, gatewayId: request.ctx.gatewayId, chatId: request.ctx.chatId })]
+          // In a room it is a member of, its answer is also said there (`peer-shown.ts`), and it is told so.
+          content: [briefing(request, shownIn(ctx, request, peer.config.id) !== null), workNotesCopy(ctx.deps.notes, { agentId: request.ctx.agentId, gatewayId: request.ctx.gatewayId, chatId: request.ctx.chatId })]
             .filter((part): part is string => Boolean(part))
             .join("\n\n"),
           timestamp: Date.now(),
@@ -355,7 +357,8 @@ export function startPeerTurn(ctx: TurnContext, request: PeerTurnRequest, option
         ...(job ? { job: job.id } : {}),
       });
       if (result.paused) return close({ report: { ...handoff, status: "incomplete", reason: "a restart stopped it before it finished" }, paused: true }, result);
-      return close({ report: handoff }, result);
+      // An answer it finished, where the room reads it too: said there now, once, waited for or behind the asking turn.
+      return close({ report: await shownReport(ctx, request, peer.config.id, handoff, { stopped: controller.signal.aborted, model }) }, result);
     } catch (err) {
       failed = true;
       // Stopped in the middle of a call once it is a job — a stop, its clock, a shutdown: what happened is the stop, not
@@ -429,6 +432,30 @@ function busy(ctx: TurnContext, request: PeerTurnRequest, peer: string): string 
     : `${peer} is already working in this chat. Ask again once it is done, or put both in one ask`;
 }
 
+/** What an asked agent is told where the room reads its answer too: the words that carry the rule, asserted by a test. */
+export const SHOWN_IN_THE_ROOM =
+  "Your reply is shown in this room as your own message, and the people in it read it as you wrote it.";
+
+/**
+ * The same ask, in a room the agent asked is a member of (`peer-shown.ts`): its answer has two readers, the agent that
+ * asked and the people in the room, so it is written for the people, in the language they are speaking, and still
+ * says what the agent that asked needs. The brief itself is in English, as work between agents is.
+ */
+function shownBriefing(request: PeerTurnRequest): string {
+  return [
+    `[${request.from} is asking you to do something, in a room you are both in. This brief is ${request.from}'s, not a person's.]`,
+    "",
+    request.task,
+    "",
+    `---`,
+    `${SHOWN_IN_THE_ROOM} It also goes back to ${request.from} as the result of a tool call, and`,
+    `${request.from} will not repeat it. So: do the work, then answer the people in the room, in the language they`,
+    "are speaking there, not the language of this brief. Say what you did, what came of it and anything that failed,",
+    "as you would say it to them yourself. No greeting, no sign-off, and tag nobody.",
+    ASKED_TO_SAY,
+  ].join("\n");
+}
+
 /** What an asked agent says of the brief itself — the words that carry the rule, asserted by a test. */
 export const ASKED_TO_SAY =
   "If you do anything outside this brief, or the brief cannot be followed as written, say so explicitly in your report.";
@@ -441,7 +468,8 @@ export const ASKED_TO_SAY =
  * greeting, a sign-off, a question at the end — into a string that no human will ever read verbatim.
  * What the caller needs back is a report.
  */
-function briefing(request: PeerTurnRequest): string {
+function briefing(request: PeerTurnRequest, shown = false): string {
+  if (shown) return shownBriefing(request);
   return [
     `[${request.from} is asking you to do something. This is not a person and this is not a chat.]`,
     "",

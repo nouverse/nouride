@@ -14,3 +14,10 @@ export function isDelegated<C extends { via: string }>(cause: C | undefined): ca
 
 /** The cause of a turn answering a person's edit (`pipeline/edits.ts`): `of` is the message edited. */
 export const EDITED = "edit";
+
+/**
+ * The cause of the turn that keeps an asked agent's answer where it was also said, in the room it was asked in
+ * (`pipeline/peer-shown.ts`): `asked` is the agent that asked it, `parent` that agent's turn. A turn of the
+ * conversation, unlike a delegate's own: it is what that agent said there.
+ */
+export const SHOWN_ANSWER = "shown answer";

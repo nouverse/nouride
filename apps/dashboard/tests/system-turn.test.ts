@@ -24,6 +24,11 @@ describe("a turn the daemon started", () => {
     expect(systemHeading({ via: "schedule", job: "job_1" })).toBe("a scheduled job ran");
   });
 
+  test("its answer to another agent's ask, said in the room it was asked in, is headed by whose question it was", () => {
+    expect(systemHeading({ via: "shown answer", asked: "nouva", parent: "turn_1" })).toBe("a question from nouva");
+    expect(systemHeading({ via: "shown answer" })).toBe("a question from another agent");
+  });
+
   test("and one that gives no reason — from before 0.7.8, or a reason this page does not know — claims none", () => {
     expect(systemHeading(undefined)).toBe("Nouride started this turn");
     expect(systemHeading({ via: "something newer" })).toBe("Nouride started this turn");

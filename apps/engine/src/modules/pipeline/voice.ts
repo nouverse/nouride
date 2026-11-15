@@ -126,6 +126,19 @@ export class Voice {
   }
 
   /**
+   * Which of our agents wrote an inbound message, and whether its words were only said (`reply`, `said`).
+   *
+   * From what we recorded when we sent it: the platform cannot answer this when several agents share one bot token,
+   * and the message id can. A miss there does not yet mean "not ours": that record is written after our own send
+   * resolves, and another connection's copy of the same message can arrive first. Falling back to the sender's own
+   * account id catches exactly that race, for the one-bot-per-agent case.
+   */
+  wroteInbound(envelope: MessageEnvelope): { agentId: string; said: boolean } | undefined {
+    const agentId = this.outbound.authorOf(envelope.gateway, envelope.chatId, envelope.id) ?? (envelope.senderIsBot ? this.agentForSender(envelope.gateway, envelope.senderId) : undefined);
+    return agentId ? { agentId, said: this.outbound.isSaid(envelope.gateway, envelope.chatId, envelope.id, agentId, Date.now()) } : undefined;
+  }
+
+  /**
    * Which agent's own bot sent a message, when the per-message registry does not know yet.
    *
    * `outbound.authorOf` is precise but keyed by message id, and that record is written only after
@@ -207,12 +220,16 @@ export class Voice {
    * Send a reply, and say whether it landed — `true` when the platform took it now. A reply buffered for a
    * connection that is down lands later, and `onDelivered` is called then (`turn_records.delivered_at`). `onSent` is
    * told the connection it went out on and the platform's ids, for a caller that rewrites it later (`steer-accept.ts`).
+   *
+   * `said`: the agent's words put in the room and nothing more (an asked agent's answer, `peer-shown.ts`). It goes out
+   * in that agent's own voice or not at all, never under another agent's bot; a tag in it hands nothing on; and the
+   * copies the platform gives our other bots are known for what they are (`OutboundRegistry.isSaid`).
    */
   async reply(
     envelope: MessageEnvelope,
     text: string,
     fromAgent?: string,
-    delivery?: { onDelivered?: () => void; onSent?: (gatewayId: string, ids: readonly string[]) => void; buttons?: MessageButton[] },
+    delivery?: { onDelivered?: () => void; onSent?: (gatewayId: string, ids: readonly string[]) => void; buttons?: MessageButton[]; said?: boolean },
   ): Promise<boolean> {
     const cronJob = cronJobOfChat(envelope.chatId);
     if (cronJob !== null) return await this.replyFromCronSession(cronJob, envelope, text, fromAgent, delivery);
@@ -251,11 +268,20 @@ export class Voice {
         ...(envelope.chatType === "dm" || isSystemEvent(envelope) ? {} : { replyTo: quotedId(envelope) }),
       });
 
+    const said = fromAgent !== undefined && delivery?.said === true;
     let ids: string[];
     let via = voice;
+    // Marked before it leaves: a platform can hand the others their copy before it has told us the message's id.
+    if (said) this.outbound.beginSaying(envelope.gateway, envelope.chatId, fromAgent, Date.now());
     try {
       ids = await send(voice);
     } catch (err) {
+      if (said) {
+        // In its own voice or not at all: under the bot of the agent that asked, it would be that agent's words.
+        this.outbound.endSaying(envelope.gateway, envelope.chatId, fromAgent);
+        log.info("an agent's words could not be said in the room through its own connection", { agent_id: fromAgent, gateway: voice.id, error: String(err) });
+        return false;
+      }
       // The agent's own bot may not be in this channel — nothing in config says which rooms a bot was
       // invited to. Falling back to the connection the message came in on keeps the answer arriving,
       // under the wrong name, which beats silence.
@@ -308,8 +334,10 @@ export class Voice {
         chatId: envelope.chatId,
         messageId: id,
         agentId: fromAgent,
+        ...(said ? { said: true } : {}),
       });
     }
+    if (said) this.outbound.endSaying(envelope.gateway, envelope.chatId, fromAgent);
 
     /**
      * Tell room memory what was just said, when the transport will not.
@@ -352,7 +380,8 @@ export class Voice {
     // Internal handover: if the reply mentions another agent that shares this bot, the platform
     // will never deliver it (the bot filters its own echo). Re-inject it as a synthetic envelope
     // so the inbound pipeline can route it to the mentioned agent.
-    if (this.handoverCb) {
+    // Not for words that are only said: a tag in them is part of what was said, and wakes nobody.
+    if (this.handoverCb && !said) {
       this.emitHandovers(text, fromAgent, outboundGatewayId, envelope, { ids, ownId, echoes });
     }
     return delivered;

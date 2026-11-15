@@ -193,18 +193,12 @@ export class InboundRouter {
 
     const instance = this.ctx.deps.config.gateways.find((g) => g.id === envelope.gatewayId);
 
-    // Who wrote it, from what we recorded when we sent it. The platform cannot answer this when
-    // several agents share one bot token, and the message id can.
-    //
-    // A miss here does not yet mean "not ours" — that record is written after our own send() call
-    // resolves, and this connection's copy of the same message can arrive first. Falling back to
-    // the sender's own account id catches exactly that race, for the one-bot-per-agent case.
-    const authored =
-      this.ctx.voice.outbound.authorOf(envelope.gateway, envelope.chatId, envelope.id) ??
-      (envelope.senderIsBot
-        ? this.ctx.voice.agentForSender(envelope.gateway, envelope.senderId)
-        : undefined);
-    const enriched: MessageEnvelope = authored ? { ...envelope, fromAgent: authored } : envelope;
+    // Which of ours wrote it, if one did (`Voice.wroteInbound`). One whose words were only said, an asked agent's
+    // answer shown in the room (`peer-shown.ts`), is nobody's to answer whatever it tags: the room has heard it, and
+    // its asker is already at work on what it says.
+    const wrote = this.ctx.voice.wroteInbound(envelope);
+    if (wrote?.said) return void log.debug("an agent's words that were only said: routed to nobody", { chat_id: envelope.chatId, from: wrote.agentId });
+    const enriched: MessageEnvelope = wrote ? { ...envelope, fromAgent: wrote.agentId } : envelope;
 
     // How deep the agent-to-agent chain is here. The platform carries no field for it, so it cannot
     // ride on the message; it lives beside the message ids in the registry, which is already bounded

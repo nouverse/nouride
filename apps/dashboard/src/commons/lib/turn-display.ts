@@ -118,6 +118,8 @@ export function systemHeading(cause: TurnCause | undefined): string {
   if (cause?.via === "cli own words") return "its coding CLI went on by itself";
   if (cause?.via === "cli stopped") return "a restart stopped a command its coding CLI had left running";
   if (cause?.via === "schedule") return "a scheduled job ran";
+  // Its answer to another agent's ask, said in the room it was asked in: nobody typed its question there.
+  if (cause?.via === "shown answer") return cause.asked ? `a question from ${cause.asked}` : "a question from another agent";
   return "Nouride started this turn";
 }
 
