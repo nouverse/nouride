@@ -14,9 +14,11 @@ import { openDatabase, removePath, type SqliteDb } from "@nouride/runtime";
 import type { MessageEnvelope } from "@nouride/shared";
 import { migrate } from "@/db/index.ts";
 import { MIGRATIONS } from "@/db/migrations.ts";
+import { LocalGateway } from "@/modules/gateways/local.ts";
 import { parseCommand } from "@/modules/hooks/parse.ts";
 import { requireMentionHere } from "@/modules/pipeline/room-mention.ts";
 import { RoomMentionStore, type RoomMentionPort } from "@/modules/pipeline/room-mention.store.ts";
+import { RoomStore } from "@/modules/rooms/rooms.store.ts";
 import { UserStore } from "@/modules/users/users.store.ts";
 import { stripLeadingSelfMention, writtenMentions } from "../../../../packages/gateways/src/channels/discord/envelope.ts";
 import { foldChatId, telegramMentions } from "../../../../packages/gateways/src/channels/telegram/envelope.ts";
@@ -708,5 +710,82 @@ describe("what the setting does", () => {
     h.said();
     await h.say({ text: "ada yang bisa bantu?" });
     expect(h.requests).toHaveLength(0);
+  });
+});
+
+/**
+ * A room made in the dashboard is read from its records: its people's messages and its agents' turns. A group
+ * command's answer was in neither, so `/mention` typed there changed who answers and said nothing anybody could read.
+ */
+describe("/mention in a room made in the dashboard", () => {
+  async function dashboardRoom() {
+    const local = new LocalGateway();
+    let rooms!: RoomStore;
+    let users!: UserStore;
+    let admin = "";
+    const bench = await pipelineBench({
+      turns: [{ text: "answer 1" }, { text: "answer 2" }],
+      agents: ["nouva", "nox"],
+      config: { daemon: { orchestrator: "nouva" }, agents: { mentions_enabled: true } },
+      gateways: [local],
+      configure: async (config, db) => {
+        users = new UserStore({ db, passwords: cheapPasswords });
+        admin = (await users.create({ username: "gading", role: "admin", createdBy: "test" })).id;
+        config.people = [{ key: "gading", ids: [`web:${admin}`], name: "Gading" }];
+      },
+      deps: ({ db }) => ({ users, rooms: (rooms = new RoomStore(db)), roomMention: new RoomMentionStore(db) }),
+    });
+    cleanup.push(bench.dispose);
+    rooms.create({ gatewayId: "web:dashboard", chatId: "room-1", agentIds: ["nouva", "nox"] });
+    bench.pipeline.setTools(new Map());
+    bench.pipeline.attach();
+    /** As the dashboard sends it: by the signed-in account, an admin's unless said otherwise. */
+    const say = async (text: string, senderId = admin) => {
+      local.dispatch({ text, chatId: "room-1", chatType: "group", senderId, senderVerified: true });
+      await bench.pipeline.idle();
+    };
+    const kept = () => bench.turns.forChat("web:dashboard", "room-1").map((turn) => ({ by: turn.agentId, asked: turn.prompt, said: turn.reply, status: turn.status, under: turn.messageId }));
+    return { bench, say, kept };
+  }
+
+  test("its answer is kept as the orchestrator's turn, under the message that asked, and no model is asked for it", async () => {
+    const room = await dashboardRoom();
+    await room.say("/mention");
+    const [answer, ...rest] = room.kept();
+    expect(rest).toEqual([]);
+    expect(answer).toMatchObject({ by: "nouva", asked: "/mention", status: "done" });
+    expect(answer!.said).toContain("Nouva answers");
+    expect(answer!.under).toBeTruthy();
+    expect(room.bench.requests).toHaveLength(0);
+  });
+
+  test("a change made by it is said there too, and the next untagged message is the named agent's", async () => {
+    const room = await dashboardRoom();
+    await room.say("/mention nox");
+    expect(room.kept().map((turn) => [turn.by, turn.asked])).toEqual([["nouva", "/mention nox"]]);
+    expect(room.kept()[0]!.said).toContain("Nox answers");
+    await room.say("who is on the build?");
+    expect(room.kept().map((turn) => turn.by)).toEqual(["nouva", "nox"]);
+  });
+
+  test("someone who is not an admin is told so there, where it used to be said into nothing, and nothing changes", async () => {
+    const room = await dashboardRoom();
+    await room.say("/mention nox", "somebody-else");
+    expect(room.kept().map((turn) => turn.said)).toEqual(["Only an admin can change this for the group."]);
+    // Nothing changed: read by the admin, the orchestrator still answers. Both answers are in the room, each once.
+    await room.say("/mention");
+    const said = room.kept().map((turn) => turn.said ?? "");
+    expect(said).toHaveLength(2);
+    expect(said.filter((text) => text.includes("Nouva answers"))).toHaveLength(1);
+    expect(said.filter((text) => text.includes("Nox answers"))).toHaveLength(0);
+  });
+});
+
+describe("/mention in a group on a chat app", () => {
+  test("its answer is the message its bot sent: no turn is kept for it, as before", async () => {
+    const g = await group();
+    await g.say({ text: "/mention" });
+    expect(g.said()).toHaveLength(1);
+    for (const bot of ["nouva", "nox", "nero"]) expect(g.turns.forChat(`telegram:${bot}`, "room-1")).toEqual([]);
   });
 });
