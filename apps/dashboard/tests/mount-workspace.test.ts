@@ -193,6 +193,25 @@ describe("an agent's Workspace tab", () => {
     });
   });
 
+  // An agent that has kept nothing has no folder yet: the page said "It is no longer there", in red, of a folder that
+  // never was.
+  test("an agent that has kept nothing yet is shown an empty folder, not a failure; a folder gone from under it still says so", async () => {
+    const gone = { status: 404, body: { error: "missing", reason: "missing", plain: "It is no longer there." } };
+    answer({ ...FILES, "/system/files?path=workspace/private/nouva&root=workspace/private/nouva": gone });
+    await renderPage("/agents/nouva/workspace", async (host) => {
+      await drawn(host, "Nothing here yet");
+      expect(text(host)).not.toContain("It is no longer there.");
+      expect(host.querySelector('[role="alert"]')).toBeNull();
+    });
+    // Below the folder the view is held to, a folder that is gone is a failure, with the way back to the agent's own.
+    answer({ ...FILES, "/system/files?path=workspace/private/nouva/old&root=workspace/private/nouva": gone });
+    await renderPage("/agents/nouva/workspace?path=workspace/private/nouva/old", async (host) => {
+      await drawn(host, "It is no longer there.");
+      expect(text(host)).not.toContain("Nothing here yet");
+      expect(text(host)).toContain("Back to Nouva's folder");
+    });
+  });
+
   test("another agent's folder, the folder above and the top, written into the address, all show this agent's own", async () => {
     answer(FILES);
     await asking(async (asked) => {

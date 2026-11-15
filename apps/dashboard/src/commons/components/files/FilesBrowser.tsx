@@ -9,9 +9,10 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Folder } from "lucide-react";
 import { api } from "@/commons/lib/api";
-import { ErrorNote } from "@/commons/components/ui/ui";
+import { ApiError } from "@/commons/lib/api.client";
+import { EmptyState, ErrorNote } from "@/commons/components/ui/ui";
 import { ScrollArea } from "@/commons/components/ui/ScrollCard";
 import { ListLoading } from "@/commons/components/ui/Spinner";
 import { heldTo, parentOf, type FilesRoot } from "@/commons/lib/files/paths";
@@ -31,12 +32,17 @@ export function FilesBrowser({ path: asked, onOpen, root, only }: { path: string
   const top = root?.path ?? "";
   // At the folder the view is held to, only the entries it names; below it, everything there.
   const shown = read && only && read.path === top ? { ...read, entries: read.entries.filter((entry) => only.includes(entry.name)), more: 0 } : read;
+  // The folder the view is held to, not made yet: an agent that has kept nothing has no folder of its own. It is
+  // empty, not gone: "It is no longer there" was said of a folder that never was.
+  const unmade = root !== undefined && path === top && listing.error instanceof ApiError && listing.error.server?.error === "missing";
   return (
     <div className="flex min-h-0 flex-col gap-4 lg:flex-1" data-files-browser>
       <div className="shrink-0">
         <Crumbs path={read?.path ?? path} onOpen={onOpen} root={root} />
       </div>
-      {listing.error ? (
+      {unmade ? (
+        <EmptyState icon={Folder} title="Nothing here yet" description="Nothing has been kept in this folder so far." className="py-8" />
+      ) : listing.error ? (
         <div className="space-y-3">
           <ErrorNote error={listing.error} />
           {path !== top ? (
