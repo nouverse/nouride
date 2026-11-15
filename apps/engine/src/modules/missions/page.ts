@@ -213,7 +213,9 @@ export function missionPage(input: PageInput): string {
       ? "- Delete with a command of its own, never chained into another: `rm -rf <absolute path>` alone. Nothing asks before a delete you run, inside this mission's folder or outside it: your coding CLI runs in the `folder` preset, where your Linux user's rights are the only limit, so a delete outside the folder is yours alone to be sure of."
       : "- Delete with a command of its own, never chained into another: `rm -rf <absolute path>` alone. A delete inside this mission's folder, by absolute path, runs without asking anyone; a chained one, or one outside, waits for a person.",
     '- When the goal is met, call `mission` with action "done": the result as `summary`, two or three sentences, which is the chat\'s message; the whole `report`, markdown, as long as it needs, which the person receives as `report.md` (never write it to a file of its own); and the files the person should receive: what they asked for, never what you made to check the work (evidence, stills, fixtures, an answer key: the report names those). The daemon runs the checks, and a failure is your next turn.',
-    '- Need the person? `mission` action "ask", one question. Cannot be done? action "fail", with why and what is left.',
+    // Never `send_message`: a mission with a question sent it to another chat of its person's, where nobody was reading
+    // and from where no answer could have come back to it.
+    '- Need the person? `mission` action "ask", one question, never `send_message`: what they answer in another chat does not come back to this mission. Cannot be done? action "fail", with why and what is left.',
     "- Three turns in a row that call no tool and move no step stop the mission as stuck.",
   );
   return lines.join("\n");

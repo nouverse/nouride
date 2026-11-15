@@ -5,7 +5,9 @@
  * ## Reachable
  *
  * Through a connection that is the agent's: one it owns (`[gateways.*] agent`), or one without an owner where it already
- * has a conversation. The chats are its conversations on those (never a cron run's), and on a connection it owns, the
+ * has a conversation. The chats are its conversations on those (never a cron run's, never a mission's own, which is the
+ * agent's work log and nobody's chat: thirteen of the twenty lines one agent was given were its ended missions, each
+ * "the web one-to-one with msn_…"), and on a connection it owns, the
  * one-to-one chat with each person in `[[people]]` who has an account on that platform — the account is the chat's
  * address there. A connection another agent owns is out, whatever conversations this agent has through it.
  *
@@ -25,6 +27,7 @@ import { estimateMessagesTokens } from "@nouride/llm";
 import { contained, createLogger, type ChatMessage, type ChatType, type GatewayName, type ToolContext } from "@nouride/shared";
 import { capStoredTurns } from "@/modules/llm/context.ts";
 import { cronJobOfChat } from "@/modules/cron/session.ts";
+import { isMissionChat } from "@/modules/missions/gateway.ts";
 import { idsOf } from "@/modules/people/match.ts";
 import { roomName } from "@/modules/rooms/room-names.store.ts";
 import type { ReachableChat, SendTargets } from "@/modules/tools/builtins/send-message.ts";
@@ -53,7 +56,7 @@ export function sendTargets(deps: RoomSources, agentId: string, chatTypes?: Pick
   };
 
   for (const session of deps.sessions.list({ agentId, limit: SESSIONS_READ })) {
-    if (session.sessionType !== "main" || cronJobOfChat(session.chatId) !== null || !usable(session.gatewayId)) continue;
+    if (session.sessionType !== "main" || cronJobOfChat(session.chatId) !== null || isMissionChat(session) || !usable(session.gatewayId)) continue;
     add(session.gatewayId, session.chatId, session.updatedAt);
   }
   // A person's one-to-one on a connection this agent owns — reachable before it ever talked there.

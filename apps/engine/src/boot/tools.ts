@@ -45,6 +45,8 @@ const log = createLogger("daemon");
 export function buildTools(deps: {
   /** A worktree for a writing helper of a mission in one (`delegate` `isolated`). */
   isolateHelper?: (ctx: ToolContext) => Promise<{ path: string; branch: string } | { refused: string }>;
+  /** In a mission's turn, the chat that mission reports to (`boot/missions.ts` `reportsTo`). */
+  missionReportsTo?: (at: { gatewayId: string; chatId: string }) => { gatewayId: string; chatId: string } | null;
   /** The coding CLIs and whether each is installed, for `agent_create`'s external agents (0.8.1). */
   clis?: () => Promise<{ id: string; name: string; installed: boolean; install: string }[]>;
   /** A coding-CLI agent's CLI, for `agent_configure` to set its model (0.8.8). */
@@ -190,8 +192,9 @@ export function buildTools(deps: {
       // So a file holding one of the agent's credentials is refused rather than posted unmasked.
       childEnv,
     },
-    // Into another chat this agent knows, and that chat's conversation (`pipeline/send-message.ts`).
-    sendMessage: pipeline.messageSender(),
+    // Into another chat this agent knows, and that chat's conversation (`pipeline/send-message.ts`); in a mission's
+    // turn, knowing which chat is the mission's.
+    sendMessage: { ...pipeline.messageSender(), ...(deps.missionReportsTo ? { reportsTo: deps.missionReportsTo } : {}) },
     /**
      * Reading a file that is in the conversation.
      *

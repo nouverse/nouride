@@ -387,6 +387,7 @@ export async function buildTurnMachine(
     reflection: parts.reflection, mcp, mcpCatalog, skillsCatalog, notes: stores.notes, linkFor: parts.linkFor,
     configPath: input.configPath,
     isolateHelper: missions.isolateHelper,
+    missionReportsTo: missions.reportsTo,
     // Fresh each time: a CLI installed a minute ago is one an agent can be made on now.
     clis: () => externalAgents.scan(true),
     cliModels: (agentId, cli) => ({ name: externalAgents.row(cli)?.name ?? cli, offered: externalAgents.models.of(agentId), runsOn: externalAgents.models.runsOn(agentId) }),
