@@ -142,7 +142,7 @@ describe("the page", () => {
   test("missions moving and nothing to answer: the cat rides beside them", async () => {
     answer({
       "/approvals": ok({ pending: [] }),
-      "/missions": ok({ missions: [mission("m1", "running")] }),
+      "/missions": ok({ missions: [mission("m1", "running", { title: "The delivery test" })] }),
       "/access": ok({ senders: [] }),
       "/skills/drafts": ok({ enabled: true, pending: [], recent: [] }),
       "/memory/proposals": ok({ proposals: [] }),
@@ -155,6 +155,9 @@ describe("the page", () => {
     });
     expect(card).toMatch(/mascot\/riding\/(01-wheelie|04-speeding|09-night-ride|19-turbo|27-zoom)/);
     expect(card.split("<img").length - 1).toBe(1);
+    // Called by its title: its goal is what the agent was told, and is not on the card.
+    expect(card).toContain("The delivery test");
+    expect(card).not.toContain("Goal m1");
   });
 
   test("nothing waiting and nothing moving: the cat rests where the cards were, and not as it did last visit", async () => {

@@ -11,6 +11,7 @@ import { AgentAvatar } from "@/commons/components/agents/AgentAvatar";
 import { Mascot, type Pose } from "@/commons/components/brand/Mascot";
 import { ProgressBar } from "@/commons/components/ui/ProgressBar";
 import { Tag } from "@/commons/components/ui/Tag";
+import { missionName } from "@/commons/lib/mission-name";
 
 const MOVING = new Set<MissionView["status"]>(["queued", "running", "checking"]);
 
@@ -37,7 +38,7 @@ export function MovingNow({ missions, looks, names, pose }: { missions: MissionV
               <Link to="/missions/$missionId" params={{ missionId: mission.id }} className="flex items-center gap-3 rounded-[14px]">
                 {look && <AgentAvatar look={look} name={name} size="sm" />}
                 <span className="min-w-0 flex-1 space-y-1.5">
-                  <span className="block truncate text-sm font-semibold text-base-content">{mission.goal}</span>
+                  <span className="block truncate text-sm font-semibold text-base-content">{missionName(mission)}</span>
                   {checklist && checklist.total > 0 ? (
                     <ProgressBar done={checklist.done} total={checklist.total} label={`${name}: ${checklist.done} of ${checklist.total} done`} />
                   ) : (

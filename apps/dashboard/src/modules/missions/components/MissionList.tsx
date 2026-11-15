@@ -14,7 +14,7 @@ import { PersonSection } from "@/commons/components/people/PersonSection";
 import { CardGrid } from "@/commons/components/ui/CardGrid";
 import { useMotionList, type Moving } from "@/commons/hooks/use-motion-list";
 import { byPerson } from "@/commons/lib/by-person";
-import { grouped, tabOf, type MissionTab } from "../lib/mission";
+import { grouped, tabsOf, type MissionTab } from "../lib/mission";
 import { MissionCard } from "./MissionCard";
 
 interface Listed {
@@ -31,7 +31,7 @@ export function MissionList({ missions, tab, shown, empty }: Listed) {
   const needsYou = useMotionList(groups.needsYou, key, { shown });
   const working = useMotionList(groups.working, key, { shown });
   const finished = useMotionList(groups.finished, key, { shown });
-  const inTab = useMotionList(missions.filter((mission) => tabOf(mission) === tab), key, { shown });
+  const inTab = useMotionList(missions.filter((mission) => tab !== "all" && tabsOf(mission).includes(tab)), key, { shown });
   if (tab !== "all") return inTab.length === 0 ? empty : <Cards cards={inTab} />;
   if (needsYou.length + working.length + finished.length === 0) return empty;
   return (
@@ -45,7 +45,7 @@ export function MissionList({ missions, tab, shown, empty }: Listed) {
 
 /** Set apart by person, in the daemon's order within each: `first` is the key of the person whose come first. */
 export function MissionsByPerson({ missions, tab, shown, empty, first }: Listed & { first: string | undefined }) {
-  const inTab = useMotionList(tab === "all" ? missions : missions.filter((mission) => tabOf(mission) === tab), key, { shown });
+  const inTab = useMotionList(tab === "all" ? missions : missions.filter((mission) => tabsOf(mission).includes(tab)), key, { shown });
   if (inTab.length === 0) return empty;
   return (
     <div className="space-y-7">

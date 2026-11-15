@@ -13,6 +13,7 @@ import { Link } from "@tanstack/react-router";
 import { ChevronDown, ChevronUp, ListChecks, Target } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import type { MissionView, NotesPlan } from "@nouride/wire";
+import { missionName } from "@/commons/lib/mission-name";
 import { stepsDone } from "@/commons/lib/notes";
 import { PlanSteps } from "./PlanSteps";
 
@@ -83,7 +84,7 @@ export function PlanStrip({ plan, chat, busy }: { plan?: NotesPlan | undefined; 
             {mission.checklist ? `${mission.checklist.done} of ${mission.checklist.total}` : MISSION_STATE[mission.status]}
           </span>
           <span className="min-w-0 truncate text-base-content">
-            {mission.status === "waiting" ? `needs you: ${mission.reason ?? mission.goal}` : (mission.checklist?.active ?? mission.goal)}
+            {mission.status === "waiting" ? `needs you: ${mission.reason ?? missionName(mission)}` : (mission.checklist?.active ?? missionName(mission))}
           </span>
         </Link>
       ))}

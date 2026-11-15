@@ -110,3 +110,35 @@ describe("a mission at work that asked a question, on its page", () => {
     }
   });
 });
+
+describe("a mission at work that asked a question, in the list of missions", () => {
+  const [first] = (WIRE["/missions"] as { missions: Record<string, unknown>[] }).missions;
+  const one = (id: string, more: Record<string, unknown>) => ({ ...first, id, status: "running", seen: "working", waitKind: null, reason: null, answers: [], ...more });
+  const LISTED = [
+    one("msn_waits", { status: "waiting", seen: "needs_you", waitKind: "input", reason: "Which folder?" }),
+    one("msn_asks", { answers: [{ question: "Mermaid adds 735 KB. Take it?", at: 2, asked: "meanwhile" }] }),
+    one("msn_works", {}),
+  ];
+  const tabs = (host: HTMLElement) => [...host.querySelectorAll<HTMLElement>('main [role="tablist"]')].filter((bar) => bar.textContent?.includes("Needs you")).flatMap((bar) => [...bar.querySelectorAll<HTMLElement>('[role="tab"]')]);
+  const tab = (host: HTMLElement, label: string) => tabs(host).find((entry) => entry.textContent?.startsWith(label))!;
+  const cards = (root: ParentNode) => [...root.querySelectorAll<HTMLElement>('a[href^="/dashboard/missions/msn_"]')].map((card) => card.getAttribute("href")!.split("/").pop()!);
+  const group = (host: HTMLElement, label: string) => cards(host.querySelector<HTMLElement>(`main section[aria-label="${label}"]`) ?? document.createElement("div"));
+
+  test("it is counted with what needs the reader, as the menu counts it, and with what works; drawn once, with what needs them", async () => {
+    answer({ "/missions": ok({ missions: LISTED }) });
+    const seen = { needs: "", works: "", all: [] as string[][], needsTab: [] as string[], worksTab: [] as string[] };
+    await renderPage("/missions", async (host) => {
+      await eventually(() => cards(host).length === 3, 3_000, "the missions");
+      seen.needs = tab(host, "Needs you").textContent ?? "";
+      seen.works = tab(host, "Working").textContent ?? "";
+      seen.all = [group(host, "Needs you"), group(host, "Working")];
+      tab(host, "Needs you").click();
+      await eventually(() => !cards(host).includes("msn_works"), 3_000, "what needs the reader");
+      seen.needsTab = cards(host);
+      tab(host, "Working").click();
+      await eventually(() => !cards(host).includes("msn_waits"), 3_000, "what works");
+      seen.worksTab = cards(host);
+    });
+    expect(seen).toEqual({ needs: "Needs you2", works: "Working2", all: [["msn_waits", "msn_asks"], ["msn_works"]], needsTab: ["msn_waits", "msn_asks"], worksTab: ["msn_asks", "msn_works"] });
+  });
+});

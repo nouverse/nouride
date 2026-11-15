@@ -34,7 +34,7 @@ import { MissionFilters, type Span } from "./components/MissionFilters";
 import { MissionList, MissionsByPerson } from "./components/MissionList";
 import { MissionSettingsCard } from "./components/MissionSettingsCard";
 import { NewMissionForm } from "./components/NewMissionForm";
-import { anyOpen, searchedIn, tabOf, type MissionTab } from "./lib/mission";
+import { anyOpen, searchedIn, tabsOf, type MissionTab } from "./lib/mission";
 import { ListLoading } from "@/commons/components/ui/Spinner";
 import { PAGE_ASKS } from "@/commons/components/agents/page-asks";
 
@@ -119,7 +119,7 @@ export default function MissionsPage({ agent }: { agent?: string }) {
   }
 
   const counts: Record<MissionTab, number> = { all: held.length, needs_you: 0, working: 0, done: 0, failed: 0, stopped: 0 };
-  for (const mission of held) counts[tabOf(mission)] += 1;
+  for (const mission of held) for (const under of tabsOf(mission)) counts[under] += 1;
   const current = TABS.find((entry) => entry.id === tab)!;
   const matched = new Set(found);
   const shown = (mission: MissionView) => matched.has(mission);

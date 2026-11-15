@@ -181,4 +181,29 @@ describe("an hours limit, said", () => {
     // Running, the turn it is on — as the page says it; the CLI said the count of those done.
     expect(await shown({ status: "running", turnsUsed: 2, endedAt: null })).toContain("turn 3 of at most 100 · ");
   });
+
+  test("…and a coding CLI's mission, held to no turn limit, is not said to have one: in `show` and in the list", async () => {
+    const base = { id: "msn_1", agentId: "kuro", title: "The gallery", waitKind: null, goal: "the gallery", checks: [], limits: { turns: 100, tokens: 100_000_000, hours: 8 }, workedMs: 60_000, tokensUsed: 0, reason: null, report: null, files: [], workdir: "/w", startedAt: 1, endedAt: null, waitedMs: 0, waitingSince: null, status: "running", seen: "working", turnsUsed: 0 };
+    const said = async (args: string[], shown: Record<string, unknown> | undefined) => {
+      const mission = { ...base, ...(shown ? { shown } : {}) };
+      const client = { get: async <T>(path: string) => (path.startsWith("/missions/") ? { mission, plan: null, parked: [] } : { missions: [mission] }) as T } as unknown as Client;
+      const lines: string[] = [];
+      const log = spyOn(console, "log").mockImplementation((line?: unknown) => void lines.push(String(line ?? "")));
+      try {
+        await missionCommand(client, args);
+      } finally {
+        log.mockRestore();
+      }
+      return lines.join("\n");
+    };
+    const cli = { turns: false, tokens: "known" };
+    expect(await said(["show", "msn_1"], cli)).toContain("turn 1 (a coding CLI's: turns not limited) · ");
+    expect(await said(["show", "msn_1"], cli)).not.toContain("of at most 100");
+    expect(await said(["list"], cli)).toContain("running · turn 0\u001b");
+    // A model's mission, and one from a daemon that does not say which limits hold: its turns against the limit, as before.
+    for (const shown of [{ turns: true, tokens: "known" }, undefined]) {
+      expect(await said(["show", "msn_1"], shown)).toContain("turn 1 of at most 100 · ");
+      expect(await said(["list"], shown)).toContain("running · turn 0/100");
+    }
+  });
 });

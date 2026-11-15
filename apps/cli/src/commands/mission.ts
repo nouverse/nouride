@@ -23,7 +23,8 @@ export async function mission(client: Client, args: string[]): Promise<void> {
     // With a coding CLI's turn at work, what it has spent so far, said as the estimate it is; a daemon that sends none, its count.
     const running = m.shown?.running ?? 0;
     const spent = running > 0 ? `about ${millions(m.tokensUsed + running)} of ${millions(m.limits.tokens)} tokens so far (an estimate while its turn is at work)` : `${millions(m.tokensUsed)} of ${millions(m.limits.tokens)} tokens`;
-    say(`  ${DIM}${turnsSaid(m)} · ${hours(m.workedMs)} of ${hoursLimit(m.limits.hours)} · ${spent}${RESET}`);
+    // A coding CLI's mission is held to no turn limit, and "of at most 100" beside its one turn read as one it had.
+    say(`  ${DIM}${turnsSaid(m, m.shown?.turns ?? true)} · ${hours(m.workedMs)} of ${hoursLimit(m.limits.hours)} · ${spent}${RESET}`);
     // Minutes a pass: "checking" alone read as stuck (0.8.10).
     if (detail.reviewing) say(`  ${YELLOW}●${RESET} ${reviewingLine(detail.reviewing, Date.now())}`);
     if (detail.plan) {
@@ -90,7 +91,7 @@ export async function mission(client: Client, args: string[]): Promise<void> {
     const mark = m.seen === "needs_you" ? `${YELLOW}✋${RESET}` : m.seen === "working" ? `${YELLOW}●${RESET}` : m.seen === "done" ? `${GREEN}✓${RESET}` : `${RED}✗${RESET}`;
     // Its name; a daemon whose missions have none still says its goal's start.
     say(`${mark} ${BOLD}${m.title ?? clip(m.goal, 90)}${RESET}`);
-    say(`    ${DIM}${m.id} · ${m.agentId} · ${statusOf(m)} · turn ${m.turnsUsed}/${m.limits.turns}${RESET}`);
+    say(`    ${DIM}${m.id} · ${m.agentId} · ${statusOf(m)} · turn ${m.turnsUsed}${m.shown?.turns === false ? "" : `/${m.limits.turns}`}${RESET}`);
   }
   const hidden = ended.length - shown.length;
   say();

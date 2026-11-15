@@ -9,7 +9,7 @@ import { describe, expect, test } from "bun:test";
 import type { LiveTurn, MissionSettings, MissionView, TurnStep } from "@nouride/wire";
 import { stepNow } from "@/commons/lib/steps";
 import { missionName } from "@/commons/lib/mission-name";
-import { actionsFor, briefShown, grouped, inFolder, meters, needsYouSaid, rowLine, searchedIn, seenAs, tabOf, whyStarted } from "@/modules/missions/lib/mission";
+import { actionsFor, briefShown, grouped, inFolder, meters, needsYouSaid, rowLine, searchedIn, seenAs, tabOf, tabsOf, whyStarted } from "@/modules/missions/lib/mission";
 import { startInput } from "@/modules/missions/components/NewMissionForm";
 import { fieldText, fits, limitsPatch, range } from "@/modules/missions/lib/limits";
 import { createElement } from "react";
@@ -125,6 +125,16 @@ describe("one at work that asked a question and went on", () => {
     expect(seenAs(asking)).toBe("Working · asked a question");
     expect(rowLine(asking)).toEqual({ label: "Asks", text: "Mermaid, at 735 KB?" });
     expect(actionsFor(asking)).toEqual(["answer", "stop"]);
+  });
+
+  test("it is under Needs you and under Working, and drawn once, with what needs the reader", () => {
+    expect(tabsOf(asking)).toEqual(["needs_you", "working"]);
+    const groups = grouped([{ ...MISSION, id: "at-work" }, { ...asking, id: "asks" }]);
+    expect([groups.needsYou, groups.working].map((group) => group.map((m) => m.id))).toEqual([["asks"], ["at-work"]]);
+    // Answered, it works like any other; one the reader only reads asks its own person, and is at work to them.
+    expect(tabsOf({ ...asking, answers: [{ ...asking.answers[0]!, answer: "ya" }] })).toEqual(["working"]);
+    expect(tabsOf({ ...asking, changeable: false })).toEqual(["working"]);
+    expect(tabsOf(MISSION)).toEqual(["working"]);
   });
 
   test("answered, or one the reader only reads, it is a mission at work like any other", () => {
