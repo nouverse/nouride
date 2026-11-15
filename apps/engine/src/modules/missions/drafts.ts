@@ -52,9 +52,11 @@ export function signedOffBy(mission: Pick<Mission, "checks" | "reviewOn" | "acce
 /**
  * The draft's notice: what the person decides on before anything runs, with a line saying what changed when it is sent
  * again after an edit. The proposal said "💡 … proposes a mission" and its goal, and the person started it without the
- * checks or the sign-off in front of them.
+ * checks or the sign-off in front of them. `behind`: what would hold it back were it started now, in the dispatcher's
+ * words. A person who wanted two drafts to follow the mission at work left them unstarted, since nothing said that
+ * a start then is a place in the queue and not a second mission at once.
  */
-export function draftNotice(mission: Pick<Mission, "id" | "goal" | "agentId" | "byAgent" | "checks" | "reviewOn" | "accept" | "jobId">, brief: boolean, changed: readonly string[] = []): string {
+export function draftNotice(mission: Pick<Mission, "id" | "goal" | "agentId" | "byAgent" | "checks" | "reviewOn" | "accept" | "jobId">, brief: boolean, changed: readonly string[] = [], behind: string | null = null): string {
   const id = shortId(mission.id);
   const who = mission.byAgent && mission.byAgent !== mission.agentId ? `${mission.agentId}, drafted by ${mission.byAgent}` : mission.agentId;
   const checks = mission.checks.length === 0 ? "no checks" : `${mission.checks.length} ${plural(mission.checks.length, "check")}`;
@@ -63,6 +65,7 @@ export function draftNotice(mission: Pick<Mission, "id" | "goal" | "agentId" | "
     `📝 Draft ${id} · ${who}: ${mission.goal.trim()}`,
     `${checks} · signed off by: ${signedOffBy(mission)} · brief: ${brief ? "on the mission's page" : "none"}`,
     `Start it: /mission accept ${id} · drop it: /mission stop ${id}`,
+    ...(behind ? [`Started now, it waits its turn: ${behind}. It then starts by itself.`] : []),
   ].join(GAP);
 }
 

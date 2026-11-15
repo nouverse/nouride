@@ -5,6 +5,7 @@
 
 import { createLogger } from "@nouride/shared";
 import { buttonsFor } from "./actions.ts";
+import { blockedBy } from "./decide.ts";
 import type { MissionsDeps } from "./deps.ts";
 import { changedDraft, draftNotice, type DraftChange, type DraftEditor } from "./drafts.ts";
 import type { Missions } from "./missions.ts";
@@ -27,7 +28,9 @@ export async function announceDraft(deps: MissionsDeps, mission: Mission, brief?
     failed = err instanceof Error ? err.message : String(err);
     log.warn("a draft's folder or brief could not be written", { mission: mission.id, error: failed });
   }
-  await deps.tell(mission, paged(draftNotice(mission, has, changed), deps.pageOf?.(mission)), buttonsFor(mission));
+  // What the dispatcher would hold it back for were it started now: said, so a start is known to be a place in the queue.
+  const behind = blockedBy(mission, deps.store.open(), deps.settings());
+  await deps.tell(mission, paged(draftNotice(mission, has, changed, behind), deps.pageOf?.(mission)), buttonsFor(mission));
   return failed;
 }
 

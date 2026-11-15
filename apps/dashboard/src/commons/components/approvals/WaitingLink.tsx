@@ -5,6 +5,7 @@
  *
  * Its title wraps anywhere and stops at three lines: a mission's goal is long, and a path in it ran past the
  * card's edge and under the Quick chat card beside it on Home. The whole of it stays in the `title` and on its page.
+ * Its line says what is waited for, a mission's question among them, so it wraps and stops at two.
  */
 
 import { Link } from "@tanstack/react-router";
@@ -42,9 +43,9 @@ export function WaitingLink({
       <p className="line-clamp-3 font-display text-lg leading-snug font-medium text-base-content [overflow-wrap:anywhere]" title={full ?? title}>
         {title}
       </p>
-      <p className="flex items-center gap-1.5 text-sm text-base-content/70">
-        {line}
-        <ArrowRight size={14} aria-hidden="true" className="transition-transform group-hover:translate-x-0.5" />
+      <p className="flex min-w-0 items-start gap-1.5 text-sm text-base-content/70" title={line}>
+        <span className="line-clamp-2 min-w-0 [overflow-wrap:anywhere]">{line}</span>
+        <ArrowRight size={14} aria-hidden="true" className="mt-[3px] shrink-0 transition-transform group-hover:translate-x-0.5" />
       </p>
     </Link>
   );

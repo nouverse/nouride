@@ -6,6 +6,7 @@
  */
 
 import type { ChatTurn, MissionSeen, MissionView, MissionWaitKind } from "@nouride/wire";
+import { asksWhileWorking, openQuestion } from "@/commons/lib/mission-waits";
 import { systemHeading } from "@/commons/lib/turn-display";
 
 /** What a person sees, in their words. */
@@ -53,15 +54,17 @@ export function seenTone(mission: Pick<MissionView, "seen" | "changeable">): str
  * The words on a mission's badge: "Needs you · a question", "Working", "Ended · failed". A mission waiting in the queue is
  * working as a person sees it, and says it is queued; one running its checks says so. A draft (0.8.11) waits on an accept
  * that starts it, and says "draft": "Needs you · accept" read as a result to sign off, the chat's notice and the page's
- * buttons saying Draft, Start it and Drop it.
+ * buttons saying Draft, Start it and Drop it. One at work that asked a question and went on says so: "Working" alone
+ * read as nothing for the person to do.
  */
-export function seenAs(mission: Pick<MissionView, "seen" | "status" | "waitKind" | "startedAt" | "changeable" | "person">): string {
+export function seenAs(mission: Pick<MissionView, "seen" | "status" | "waitKind" | "startedAt" | "changeable" | "person"> & { answers?: MissionView["answers"] }): string {
   if (waitsElsewhere(mission)) return `Waiting for ${mission.person?.name ?? "an admin"}`;
   if (mission.seen === "needs_you" && mission.waitKind === "accept" && mission.startedAt === null) return `${SEEN_LABEL.needs_you} · draft`;
   if (mission.seen === "needs_you") return mission.waitKind ? `${SEEN_LABEL.needs_you} · ${NEEDS[mission.waitKind]}` : SEEN_LABEL.needs_you;
   if (mission.seen === "ended") return `${SEEN_LABEL.ended} · ${mission.status === "failed" ? "failed" : "stopped"}`;
   if (mission.status === "queued") return `${SEEN_LABEL.working} · queued`;
   if (mission.status === "checking") return `${SEEN_LABEL.working} · checking`;
+  if (asksWhileWorking(mission) && mission.changeable !== false) return `${SEEN_LABEL.working} · asked a question`;
   return SEEN_LABEL[mission.seen];
 }
 
@@ -73,13 +76,14 @@ const CONTINUES: readonly MissionWaitKind[] = ["limit", "stuck", "unknown_outcom
 /**
  * What a person can say to a mission now, in the order the page offers them. Each only when the daemon would take it:
  * Stop until it has ended; Continue while it waits on a limit, a loop, a call whose outcome a restart lost, or an
- * accept; Accept while it waits for one; Answer while it waits on its question; and, waiting on anything else, Accept as
- * it is — closed as done without its checks passing (0.8.7), the way out of a mission stuck on a check it can never pass.
+ * accept; Accept while it waits for one; Answer while it waits on its question, or works on with one open; and, waiting
+ * on anything else, Accept as it is — closed as done without its checks passing (0.8.7), the way out of a mission stuck
+ * on a check it can never pass.
  */
-export function actionsFor(mission: Pick<MissionView, "status" | "waitKind">): MissionAction[] {
+export function actionsFor(mission: Pick<MissionView, "status" | "waitKind"> & { answers?: MissionView["answers"] }): MissionAction[] {
   const actions: MissionAction[] = [];
   const waiting = mission.status === "waiting" ? mission.waitKind : null;
-  if (waiting === "input") actions.push("answer");
+  if (waiting === "input" || asksWhileWorking(mission)) actions.push("answer");
   if (waiting === "accept") actions.push("accept");
   if (waiting && CONTINUES.includes(waiting)) actions.push("continue");
   if (waiting && waiting !== "accept") actions.push("acceptAsIs");
@@ -228,6 +232,9 @@ export function rowLine(mission: MissionView): { label: string; text: string } |
   if (mission.seen === "working") {
     if (mission.status === "queued") return { label: "Queued", text: mission.reason ?? "waits for a free slot" };
     if (mission.status === "checking") return { label: "Now", text: "running its checks" };
+    // It asked and went on: the question is what the person can do something about, so it is the line.
+    const asked = asksWhileWorking(mission) ? openQuestion(mission) : null;
+    if (asked) return { label: "Asks", text: asked.question };
     const active = mission.checklist?.active;
     return { label: "Now", text: active ?? (mission.checklist ? "between steps" : "writing its checklist") };
   }

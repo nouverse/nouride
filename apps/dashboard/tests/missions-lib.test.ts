@@ -112,6 +112,24 @@ describe("what a person can say to it now", () => {
   });
 });
 
+describe("one at work that asked a question and went on", () => {
+  const asking: MissionView = { ...MISSION, answers: [{ question: "Mermaid, at 735 KB?", at: 1, asked: "meanwhile" }] };
+
+  test("its badge says so, its row's line is the question, and Answer is offered with Stop", () => {
+    expect(seenAs(asking)).toBe("Working · asked a question");
+    expect(rowLine(asking)).toEqual({ label: "Asks", text: "Mermaid, at 735 KB?" });
+    expect(actionsFor(asking)).toEqual(["answer", "stop"]);
+  });
+
+  test("answered, or one the reader only reads, it is a mission at work like any other", () => {
+    const answered: MissionView = { ...asking, answers: [{ ...asking.answers[0]!, answer: "ya" }] };
+    expect(seenAs(answered)).toBe("Working");
+    expect(actionsFor(answered)).toEqual(["stop"]);
+    expect(rowLine(answered)?.label).toBe("Now");
+    expect(seenAs({ ...asking, changeable: false })).toBe("Working");
+  });
+});
+
 describe("the four meters", () => {
   test("steps settled of the checklist — a skipped one counts — and each limit as used of allowed, turns with their steps", () => {
     const plan = { steps: [{ state: "done" }, { state: "skipped" }, { state: "active" }, { state: "pending" }] };

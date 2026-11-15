@@ -60,6 +60,22 @@ describe("D1 — a chat's mission is a draft", () => {
     expect(answer.content).toContain('their "go" passed on with `work` action "start". Change it before then with `mission` action "edit".');
   });
 
+  test("drafted while another mission holds its turn, the notice says a start waits for it and then runs by itself", async () => {
+    // Two drafts were kept unstarted behind a mission at work, as questions on Work: nothing said a start was a place in the queue.
+    const { h, draft } = await setup({ settings: { perAgent: 1, maxRunning: 5 } });
+    const first = await h.start("the viewers");
+    const { mission } = await draft({ goal: "the room" });
+    const id = mission!.id.slice(0, 10);
+    expect(h.told.at(-1)!.text).toBe(
+      `📝 Draft ${id} · nova: the room\n\n1 check · signed off by: you · brief: none\n\nStart it: /mission accept ${id} · drop it: /mission stop ${id}\n\nStarted now, it waits its turn: nova already runs ${first.id.slice(0, 10)} (per_agent 1). It then starts by itself.`,
+    );
+    // And it does: started, it is queued behind the first, and runs when that one ends.
+    h.missions.accept(mission!.id, "Gading");
+    expect(h.store.get(mission!.id)!.status).toBe("queued");
+    h.missions.stop(first.id, "Gading");
+    expect(h.store.get(mission!.id)!.status).toBe("running");
+  });
+
   test("who signs it off is said as the person reads it", async () => {
     const { h, draft } = await setup();
     await draft({ review: "Each answer of the owner's is in the RFC." });

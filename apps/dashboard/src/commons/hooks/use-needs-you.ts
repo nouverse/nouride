@@ -14,6 +14,7 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { api } from "@/commons/lib/api";
 import type { MissionView } from "@nouride/wire";
+import { waitsForReader } from "@/commons/lib/mission-waits";
 import { canWrite, useMe } from "@/commons/lib/session";
 import { useWaitingSteps } from "./use-waiting-steps";
 
@@ -36,11 +37,12 @@ export interface NeedsYou {
 export const MOVING_MISSIONS = ["missions", "home"] as const;
 
 /**
- * The missions waiting on the reader for anything but a tool's approval, which is counted, and answered, as one. Not
- * one they only read: it reports to a chat of theirs and waits for its own person, so it is nothing they can answer.
+ * The missions waiting on the reader (`mission-waits.ts`): one waiting for anything but a tool's approval, which is
+ * counted and answered as one, or its model, which it tries again by itself; and one at work that asked a question.
+ * Not one they only read: it reports to a chat of theirs and waits for its own person, so it is nothing they can answer.
  */
-export function missionsWaiting<T extends Pick<MissionView, "seen" | "waitKind" | "changeable">>(missions: readonly T[]): T[] {
-  return missions.filter((mission) => mission.seen === "needs_you" && mission.waitKind !== "approval" && mission.changeable !== false);
+export function missionsWaiting<T extends Pick<MissionView, "seen" | "waitKind" | "changeable" | "status"> & { answers?: MissionView["answers"] }>(missions: readonly T[]): T[] {
+  return missions.filter(waitsForReader);
 }
 
 export function useNeedsYou(): NeedsYou {
