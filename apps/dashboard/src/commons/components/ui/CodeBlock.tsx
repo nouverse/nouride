@@ -157,7 +157,8 @@ export function CodeBlock({ lang, text, growing = false }: { lang?: string | und
   const coloured = useMemo<CodePiece[] | null>(() => (colourable && highlighter ? highlighter.pieces(lang ?? "", text) : null), [colourable, highlighter, lang, text]);
   return (
     <div className="rounded-xl border border-base-content/10 bg-base-200/60 overflow-hidden shadow-xs" data-viewer={pictured ? "picture" : "code"}>
-      <div className="flex min-h-7 items-center justify-between gap-2 border-b border-base-content/10 bg-base-300/40 py-0.5 pl-3 pr-1">
+      {/* The head: what a printed page leaves out (`MarkdownPreview`). */}
+      <div data-block-head className="flex min-h-7 items-center justify-between gap-2 border-b border-base-content/10 bg-base-300/40 py-0.5 pl-3 pr-1">
         <span className="text-[11px] font-mono font-medium text-base-content/65 uppercase tracking-wider">{lang}</span>
         <span className="flex shrink-0 items-center gap-0.5">
           {drawing && viewer && (
