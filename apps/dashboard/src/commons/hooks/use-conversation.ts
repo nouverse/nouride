@@ -18,7 +18,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { splitForDisplay } from "@/commons/lib/turn-display";
+import { answersSent, filesWords, splitForDisplay, type Sent } from "@/commons/lib/turn-display";
 import { useEventStream } from "@/commons/hooks/use-event-stream";
 import { useRevealing, useRoomRevealing } from "@/commons/hooks/use-revealing";
 import { usePageVisible } from "@/commons/hooks/use-page-visible";
@@ -165,6 +165,8 @@ export function useConversation(input: {
   const [startedHere, setStartedHere] = useState(false);
   const [startError, setStartError] = useState<Error | null>(null);
   const pendingSince = useRef(0);
+  /** What the message behind the placeholder was: its words and its files, for telling its turn when it comes. */
+  const sent = useRef<Sent | null>(null);
 
   const transcript = useQuery({
     /**
@@ -354,6 +356,8 @@ export function useConversation(input: {
     const fresh = carried !== undefined && Date.now() - carried.at < 60_000;
     setStartedHere(fresh);
     if (carried && fresh) {
+      // Its words alone: a first message of files alone carries none, and has no placeholder to clear.
+      sent.current = { text: carried.text, files: 0 };
       setPending(carried.text);
       pendingSince.current = carried.at;
     }
@@ -439,7 +443,7 @@ export function useConversation(input: {
         if (turn?.status === "running" || pendingRef.current) wait = streamed.current ? STREAMED_LIVE_MS : LIVE_MS;
 
         // The person's own message has arrived as a real turn; the placeholder can go.
-        if (turn && pendingRef.current && turn.prompt.trim() === pendingRef.current.trim()) {
+        if (turn && pendingRef.current && answersSent(turn, sent.current ?? { text: pendingRef.current, files: 0 })) {
           setPending(null);
         }
 
@@ -578,7 +582,8 @@ export function useConversation(input: {
        */
       const steering = !roomChatId && live?.status === "running" && Boolean(trimmed) && !attachments?.length && !trimmed.startsWith("/");
       if (!steering) {
-        setPending(trimmed || `${attachments!.length} file(s)`);
+        sent.current = { text: trimmed, files: attachments?.length ?? 0 };
+        setPending(trimmed || filesWords(attachments!.length));
         pendingSince.current = Date.now();
       }
       sendMutation.mutate({ text: trimmed, ...(attachments?.length ? { attachments } : {}), ...(page ? { page } : {}) });

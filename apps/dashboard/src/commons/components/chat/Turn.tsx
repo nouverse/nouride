@@ -13,7 +13,7 @@ import { Markdown } from "@/commons/components/ui/Markdown";
 import type { ChatTurn, LiveTurn, TurnAttachment, TurnCause, TurnStep } from "@nouride/wire";
 import { AttachmentList } from "./Attachments";
 import { saidWhileWorking, splitThinking } from "@/commons/lib/steps";
-import { answersAnEdit, saidAsDrawn, systemHeading } from "@/commons/lib/turn-display";
+import { answersAnEdit, saidAsDrawn, systemHeading, wordsOf } from "@/commons/lib/turn-display";
 import { StepPill } from "@/commons/components/turns/Steps";
 import { LiveStepLine } from "@/commons/components/turns/StepLine";
 import { CopyButton } from "@/commons/components/ui/CopyButton";
@@ -161,14 +161,14 @@ function Asked({ turn, sessionId, asker }: { turn: ChatTurn; sessionId: string; 
   if (asker !== undefined) {
     const inbound = (turn.attachments ?? []).filter((file) => file.direction !== "out");
     return (
-      <PersonMessage name={asker} text={turn.prompt} files={sessionId && inbound.length > 0 ? <AttachmentList sessionId={sessionId} files={inbound} /> : null}>
+      <PersonMessage name={asker} text={wordsOf(turn)} files={sessionId && inbound.length > 0 ? <AttachmentList sessionId={sessionId} files={inbound} /> : null}>
         {answersAnEdit(turn) ? <EditedMark /> : null}
       </PersonMessage>
     );
   }
   return (
     <UserBubble
-      text={turn.prompt}
+      text={wordsOf(turn)}
       sessionId={sessionId}
       edited={answersAnEdit(turn)}
       {...(turn.attachments?.length ? { attachments: turn.attachments } : {})}
