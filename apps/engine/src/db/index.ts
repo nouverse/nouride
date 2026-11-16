@@ -346,7 +346,7 @@ function newerThanThisBuild(applied: number, manifest: readonly Migration[]): st
   return (
     `refusing to start: this database is at schema ${applied}, and this build only knows up to ${latest}.\n` +
     `A newer Nouride has already upgraded it: an update that was rolled back leaves exactly this.\n` +
-    `  → start the newer build again, or\n` +
+    `  → start the newer build again: where an update's guard put it aside, nouride update --retry puts it back whole; else install that version again, or\n` +
     `  → restore the snapshot taken before the upgrade: nouride db list, then nouride db restore <file>`
   );
 }

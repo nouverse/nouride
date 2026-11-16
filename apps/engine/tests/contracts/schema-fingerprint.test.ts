@@ -300,6 +300,8 @@ describe("a database from a newer build", () => {
     const newer = new RegExp(`schema ${latest + 1}, and this build only knows up to ${latest}`);
     expect(() => assertSchemaMatches(db)).toThrow(newer);
     expect(() => assertSchemaMatches(db)).toThrow(/nouride db restore/);
+    // The way forward is a command too: the newer build's parts are six names, and "start it again" moved one of them.
+    expect(() => assertSchemaMatches(db)).toThrow("start the newer build again: where an update's guard put it aside, nouride update --retry puts it back whole; else install that version again");
     expect(() => adoptSchema(db)).toThrow(newer);
     expect(db.applicationId()).toBe(12345);
 

@@ -194,7 +194,7 @@ describe("memory at boot", () => {
     expect(message).toStartWith("refusing to start: the memory vault is format 3, and this build reads format 2");
     expect(message).toContain(join(vault.root, MARKER));
     // The way back is named, with where the snapshots are.
-    expect(message).toContain("start the newer build again");
+    expect(message).toContain("start the newer build again: where an update's guard put it aside, nouride update --retry puts it back whole; else install that version again");
     expect(message).toContain(snapshots());
     expect(read("days/2026-09-25.md")).toBe(HUB);
     expect(read(EPISODE)).toBe(EPISODE_06);

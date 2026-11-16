@@ -91,7 +91,7 @@ async function plainSecrets(dataDir: string, source: string | null | undefined, 
 }
 
 /** What a build says it is, or null when it does not run or says nothing that reads as a version. */
-async function versionOf(binary: string): Promise<string | null> {
+export async function versionOf(binary: string): Promise<string | null> {
   try {
     const run = await runCommand([binary, "--version"], { cwd: join(binary, ".."), timeoutMs: 10_000, maxOutputBytes: 4_000, env: { PATH: process.env.PATH ?? "/usr/bin:/bin" } });
     const line = run.exitCode === 0 ? run.stdout.trim().split("\n")[0] : "";

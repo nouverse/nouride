@@ -443,6 +443,7 @@ nouride update --start --now                   # the same, restarting at once
 nouride update --start --then "<what to check after>"   # the same, from an agent
 nouride update --start --wait                  # and return once the new version answers
 nouride update --rollback [--apply]            # the version before this one, back (daemon stopped)
+nouride update --retry [--apply]               # the build an update's guard put aside, back in (daemon stopped)
 ```
 
 Reporting is the default and touches nothing. `--start` restarts once nothing is running, waiting

@@ -108,6 +108,19 @@ nothing to handle. Until then the unit's start guard counts its starts, and on t
 outside the binary, because a new binary that crashes at once cannot rescue itself. The version that
 runs afterwards logs what happened.
 
+The build that did not come up is kept beside the install, each of its parts with `.failed` after its
+name. Where it had migrated the database before it failed, the previous version refuses to start on
+the newer schema and says so. To take that build again, every part of it together (0.8.39):
+
+```bash
+nouride update --retry            # what it would do, changing nothing
+nouride update --retry --apply    # do it, with the daemon stopped
+```
+
+The build that ran meanwhile is kept, so `nouride update --rollback` goes back to it. Do not move the
+binary back by hand: its dashboard and skills are parts of the build too. The other way out is the
+snapshot from before the upgrade: `nouride db list`, then `nouride db restore <file>`.
+
 ## If the new version is wrong
 
 A version that starts and then misbehaves is past the guard, so going back is one command, run with

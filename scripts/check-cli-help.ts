@@ -196,13 +196,13 @@ const FILES: Record<string, string[]> = {
   memory: ["commands/memory.ts", "commands/memory-tags.ts"],
   secret: ["commands/secret.ts", "commands/secret-unseal.ts", "commands/secret-decrypt.ts", "commands/secret-restore.ts"],
   doctor: ["commands/doctor.ts", "commands/doctor-checks.ts", "commands/doctor-toolchain.ts"],
-  update: ["commands/update.ts", "commands/rollback.ts"],
+  update: ["commands/update.ts", "commands/rollback.ts", "commands/retry.ts"],
   restart: ["run.ts", "wake-up.ts"],
   setup: ["setup.ts"],
   config: ["commands/config.ts"],
 };
 /** Read by the dispatch (`run.ts`) for every command, not by `restart`: answered before a command runs. */
-const MAIN_ONLY = new Set(["help", "h", "json", "rollback", "follow", "f"]);
+const MAIN_ONLY = new Set(["help", "h", "json", "rollback", "retry", "follow", "f"]);
 /** Commands with nothing to read, or answered entirely in the dispatch (`run.ts`). */
 const NO_FILES = new Set(["help", "version", "start", "stop"]);
 
@@ -245,8 +245,8 @@ for (const [command, grammar] of Object.entries(GRAMMAR)) {
   const files = FILES[command] ?? [`commands/${command}.ts`];
   const reads = new Set(files.flatMap((file) => [...flagsReadIn(readFileSync(commandFile(file), "utf8"))]));
   if (command === "restart") for (const name of MAIN_ONLY) reads.delete(name);
-  // `update --rollback` is dispatched to `rollback.ts` by `run.ts`, which reads the flag to choose it.
-  if (command === "update") reads.add("rollback");
+  // `update --rollback` and `update --retry` are dispatched to their files by `run.ts`, which reads the flag to choose.
+  if (command === "update") for (const name of ["rollback", "retry"]) reads.add(name);
   for (const name of reads) {
     if (!declared.has(name)) problems.push(`nouride ${command}: reads --${name} (${files.join(", ")}), which its grammar does not declare — it would be refused`);
   }

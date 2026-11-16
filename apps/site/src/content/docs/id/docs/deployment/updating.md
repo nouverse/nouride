@@ -113,6 +113,20 @@ lalu menjalankannya. Penjaga ini ada di unit yang ditulis installer, di luar bin
 yang langsung crash gak bisa menyelamatkan dirinya sendiri. Versi yang jalan sesudahnya mencatat apa
 yang terjadi di log.
 
+Build yang gak mau jalan itu disimpan di samping install, tiap bagiannya dengan `.failed` di belakang
+namanya. Kalau build itu sudah memigrasi database sebelum gagal, versi sebelumnya menolak start di
+schema yang lebih baru dan bilang begitu. Untuk memasang build itu lagi, semua bagiannya sekaligus
+(0.8.39):
+
+```bash
+nouride update --retry            # apa yang akan dilakukannya, tanpa mengubah apa pun
+nouride update --retry --apply    # lakukan, dengan daemon berhenti
+```
+
+Build yang sempat jalan tetap disimpan, jadi `nouride update --rollback` bisa kembali ke sana. Jangan
+pindahkan binary-nya saja dengan tangan: dashboard dan skill-nya juga bagian dari build itu. Jalan
+keluar lainnya adalah snapshot dari sebelum upgrade: `nouride db list`, lalu `nouride db restore <file>`.
+
 ## Kalau versi barunya salah
 
 Versi yang berhasil jalan lalu berulah sudah lolos dari penjaga, jadi kembali ke versi sebelumnya

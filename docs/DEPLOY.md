@@ -403,6 +403,10 @@ nouride update --rollback            # which build, and whether the database goe
 systemctl stop nouride && nouride update --rollback --apply && systemctl start nouride
 ```
 
+One that the guard put back leaves the new build beside the install, each part with `.failed` after its name.
+Where that build had migrated the database, the old one refuses to start on it; `nouride update --retry --apply`,
+with the daemon stopped, puts every part of the new build back together and keeps the old one for `--rollback`.
+
 Re-running `install.sh` with a newer tarball keeps the build it replaces the same way, so the way back
 is there after either kind of upgrade. Back to a build before 0.8.19 it also writes the secrets as that build reads
 them, `secrets.json`, which needs the store's key: run it as root (`sudo nouride update --rollback --apply`), whose

@@ -455,6 +455,7 @@ nouride update --start --now                   # sama, tapi langsung restart
 nouride update --start --then "<yang dicek sesudahnya>"   # sama, dari agent
 nouride update --start --wait                  # dan kembali setelah versi baru menjawab
 nouride update --rollback [--apply]            # kembali ke versi sebelum ini (daemon berhenti)
+nouride update --retry [--apply]               # pasang lagi build yang disisihkan penjaga update (daemon berhenti)
 ```
 
 Melapor adalah default dan gak menyentuh apa pun. `--start` baru restart setelah gak ada yang jalan,

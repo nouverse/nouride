@@ -232,6 +232,7 @@ export async function runCli(install: Install): Promise<void> {
     case "update":
       // Local, like `db restore`: it replaces what a running daemon holds open.
       if (hasFlag(args, "--rollback")) return await install.rollback(args);
+      if (hasFlag(args, "--retry")) return await install.retry(args);
       return await update(await connect(), args);
 
     case "stop":
