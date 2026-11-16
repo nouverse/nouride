@@ -15,12 +15,13 @@
 import { type ReactNode, type RefObject, useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/commons/lib/utils";
+import { HEAD_CHANGED } from "@/commons/hooks/use-head";
 
 /**
  * Across the page's own gutter, so what scrolls under it is covered edge to edge. One pixel above the top of what
  * scrolls, which is how the row is seen to have stopped (`useAtRest`); its own top padding has that pixel back.
  */
-const BAR = "sticky -top-px z-20 -mx-4 flex flex-wrap items-center gap-x-3 gap-y-2 px-4 pt-[calc(0.5rem+1px)] pb-2 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8";
+const BAR = "sticky top-[calc(var(--head,0px)-1px)] transition-[top] duration-200 ease-out z-20 -mx-4 flex flex-wrap items-center gap-x-3 gap-y-2 px-4 pt-[calc(0.5rem+1px)] pb-2 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8";
 
 /**
  * Where a part of the page under the row draws its own search: at the row's end, or across what the tabs leave where
@@ -61,13 +62,22 @@ function scrollerOf(row: HTMLElement): HTMLElement | null {
  */
 function useAtRest(row: RefObject<HTMLElement | null>): boolean {
   const [rest, setRest] = useState(false);
+  // The phone's header over the top of what scrolls (`--head`, `useHead`): the row stops under it, so the top it is
+  // measured against is the header's foot, and moves when the header goes up or comes back.
+  const [head, setHead] = useState(0);
+  useEffect(() => {
+    const read = () => setHead(Number.parseFloat(document.documentElement.style.getPropertyValue("--head")) || 0);
+    read();
+    window.addEventListener(HEAD_CHANGED, read);
+    return () => window.removeEventListener(HEAD_CHANGED, read);
+  }, []);
   useEffect(() => {
     const at = row.current;
     if (!at || typeof IntersectionObserver === "undefined") return;
-    const seen = new IntersectionObserver((entries) => setRest((entries.at(-1)?.intersectionRatio ?? 0) >= 1), { root: scrollerOf(at), rootMargin: "0px 9999px 99999px 9999px", threshold: 1 });
+    const seen = new IntersectionObserver((entries) => setRest((entries.at(-1)?.intersectionRatio ?? 0) >= 1), { root: scrollerOf(at), rootMargin: `${-head}px 9999px 99999px 9999px`, threshold: 1 });
     seen.observe(at);
     return () => seen.disconnect();
-  }, [row]);
+  }, [row, head]);
   return rest;
 }
 

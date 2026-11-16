@@ -22,6 +22,7 @@ import { HELD_BOTTOM, PAGE_BOTTOM } from "@/commons/components/ui/ScrollCard";
 import { Sheet } from "@/commons/components/ui/Sheet";
 import { Sidebar, SidebarBrand } from "@/commons/components/layout/Sidebar";
 import { useLaptop } from "@/commons/hooks/use-wide";
+import { useHead } from "@/commons/hooks/use-head";
 import { PHONE_CHAT_SPACE, TAB_BAR_SPACE, TabBar } from "@/commons/components/layout/TabBar";
 import { CompactSidebar } from "@/commons/components/layout/CompactSidebar";
 import { FloatingChat } from "@/commons/components/floating-chat/FloatingChat";
@@ -110,6 +111,10 @@ export function RootLayout() {
   /** More, on a phone: the menu's other pages, as a sheet that slides up over the page. */
   const [moreOpen, setMoreOpen] = useState(false);
   const laptop = useLaptop();
+  /** What scrolls the page, and the header in it, read for whether the header is up as it scrolls (`useHead`). */
+  const [scroller, setScroller] = useState<HTMLElement | null>(null);
+  const headerRef = useRef<HTMLElement>(null);
+  const headShown = useHead(scroller, headerRef, { active: !laptop, page: pathname });
   /** The menu expanded beside Chats, where it is folded to icons unless this browser chose otherwise (`CompactSidebar`). */
   const [menuOpen, setMenuOpen] = useKept(CHAT_MENU_KEY, false, isBoolean);
   const { total } = useNeedsYou();
@@ -178,12 +183,20 @@ export function RootLayout() {
 
   /**
    * A phone's header: the name, and the way back to Nouride Home inside its app; the rest is the tab bar's. It is the
-   * first thing in what scrolls (`SCROLLS`), before the page's `<main>`, so a scroll down takes it up with the page and
-   * gives the page the screen, where it stood still above it. A row a page keeps in reach (`StickyBar`) stays at the
-   * screen's top as before.
+   * first thing in what scrolls (`SCROLLS`), before the page's `<main>`, held at the top: a scroll down puts it up and
+   * gives the page the screen, the first scroll up brings it back (`useHead`). A row a page keeps in reach
+   * (`StickyBar`) stops under it.
    */
   const phoneHeader = (
-    <header className={cn("flex h-[calc(3.25rem+env(safe-area-inset-top))] shrink-0 items-center gap-2 px-3 pt-[env(safe-area-inset-top)] lg:hidden", phoneChat && "max-md:hidden")}>
+    <header
+      ref={headerRef}
+      inert={!headShown}
+      className={cn(
+        "bg-app-bar sticky top-0 z-30 flex h-[calc(3.25rem+env(safe-area-inset-top))] shrink-0 items-center gap-2 px-3 pt-[env(safe-area-inset-top)] transition-[translate] duration-200 ease-out lg:hidden",
+        !headShown && "-translate-y-full",
+        phoneChat && "max-md:hidden",
+      )}
+    >
       {inHomeApp() && <HomeAppBack className="-mr-1" />}
       <Link to="/" className="flex min-h-11 items-center gap-2">
         <Mascot pose="head" decorative className="w-7" />
@@ -246,7 +259,7 @@ export function RootLayout() {
         ) : fillsViewport ? (
           /* Never sideways: a tooltip waiting unseen at the edge of a phone's screen made the page pan by a few pixels under
              a finger (a mission's turn chips). What is wider than the page is that element's to wrap or scroll. */
-          <div className={SCROLLS}>
+          <div ref={setScroller} className={SCROLLS}>
             {phoneHeader}
             {/* Held to the window from a laptop's width up; on a phone it scrolls as a document, as the page beside it
                 does — a list scrolling inside a card inside a scrolling page, under a header, is a sliver there. */}
@@ -256,7 +269,7 @@ export function RootLayout() {
             </main>
           </div>
         ) : (
-          <div className={SCROLLS}>
+          <div ref={setScroller} className={SCROLLS}>
             {phoneHeader}
             <main className={`mx-auto w-full max-w-6xl space-y-6 px-4 pt-2 sm:px-6 sm:pt-4 lg:p-8 ${PAGE_BOTTOM} *:animate-fade`}>
               <PageTop pathname={pathname} admin={where.admin} />

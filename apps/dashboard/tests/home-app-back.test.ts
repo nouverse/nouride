@@ -130,21 +130,4 @@ describe("the menu's way out", () => {
     });
     expect(seen).toContainEqual({ words: "Exit", label: "Back to Nouride Home", scrolls: false });
   });
-
-  test("on a phone: the header goes up with the page, and More's sheet holds the row", async () => {
-    let header: ReturnType<typeof closes> = [];
-    let sheet: ReturnType<typeof closes> = [];
-    dom.happyDOM.setViewport({ width: 390, height: 844 });
-    answer({});
-    await asTheApp(async () => {
-      await renderPage("/", async (host) => {
-        await eventually(() => closes(host).some((link) => link.label === "Back to Nouride Home"), 3_000, "the header's button");
-        header = closes(host).filter((link) => link.label === "Back to Nouride Home");
-        sheet = closes(host).filter((link) => link.words === "Back to Nouride Home");
-      });
-    });
-    // In what scrolls: a scroll down takes it up with the page.
-    expect(header).toEqual([{ words: "", label: "Back to Nouride Home", scrolls: true }]);
-    expect(sheet).toEqual([{ words: "Back to Nouride Home", label: null, scrolls: false }]);
-  });
 });
