@@ -13,7 +13,7 @@ import { type ButtonPress, clip, type MessageButton, type PressAnswer } from "@n
 import { pressRefusal } from "./actions.ts";
 import { openQuestion } from "./asking.ts";
 import type { Missions } from "./missions.ts";
-import { shortId } from "./page.ts";
+import { called } from "./notices.ts";
 import type { Answered } from "./types.ts";
 
 export interface AnswerOption {
@@ -87,23 +87,24 @@ export class OptionPresses {
     // Where it was asked, by whom it may be answered: the one rule every mission button keeps (`actions.ts`).
     const refusal = pressRefusal(mission, press, this.deps.isAdmin);
     if (refusal) return { notice: refusal };
-    const id = shortId(mission.id);
+    // By its title, as its notices name it: this line takes the place of the question, which named it.
+    const name = called(mission);
     const asked = mission.answers.at(-1);
     // Its own question, not one asked after it.
-    if (!asked || asked.at.toString(36) !== match[2]) return { notice: "It has asked another question since: answer that one.", settled: `❓ Mission ${id}: asked something else since.` };
-    if (asked.answer !== undefined) return { notice: "That question is already answered.", settled: `❓ Mission ${id}: already answered.` };
+    if (!asked || asked.at.toString(36) !== match[2]) return { notice: "It has asked another question since: answer that one.", settled: `❓ ${name}: asked something else since.` };
+    if (asked.answer !== undefined) return { notice: "That question is already answered.", settled: `❓ ${name}: already answered.` };
     // Closed or stopped since it asked (accepted from the chat, say): the buttons go, as an action button's do
     // (`actions.ts`), rather than staying under a question nobody can answer any more. A mission at work with its
     // question open is answered like one that waits.
     if (openQuestion(mission) !== asked) {
       const now = mission.status === "waiting" ? `waiting for ${mission.waitKind}` : mission.status;
-      return { notice: `Mission ${id} has moved on (${now}), so this question no longer waits.`, settled: `❓ Mission ${id}: moved on before this was answered (${now}).` };
+      return { notice: `${name} has moved on (${now}), so this question no longer waits.`, settled: `❓ ${name}: moved on before this was answered (${now}).` };
     }
     const option = optionsOf(asked).find((one) => one.key === match[3]);
-    if (!option) return { notice: "That option is not on its question: answer it in your own words.", settled: `❓ Mission ${id}: that option is not on its question. Answer it in your own words.` };
+    if (!option) return { notice: "That option is not on its question: answer it in your own words.", settled: `❓ ${name}: that option is not on its question. Answer it in your own words.` };
     const acted = this.deps.missions.answer(mission.id, `${option.key}) ${option.text}`, press.senderName || press.senderId);
     if ("refused" in acted) return { notice: acted.refused };
     // One that was not waiting for it says where the answer went, as a `tell` does.
-    return { notice: acted.said ?? `Answered ${option.key}.`, settled: `❓ Mission ${id}, answered by ${press.senderName || press.senderId}: ${option.key}) ${option.text}` };
+    return { notice: acted.said ?? `Answered ${option.key}.`, settled: `❓ ${name}, answered by ${press.senderName || press.senderId}: ${option.key}) ${option.text}` };
   }
 }

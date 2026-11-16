@@ -24,7 +24,7 @@ export const GAP = "\n\n";
  * A mission as a notice names it: its title, then the id its commands take. The id alone told a person with three
  * missions nothing of which one had spoken, and the goal in its place was an instruction. One with no title, by its id.
  */
-function called(mission: Pick<Mission, "id" | "title">): string {
+export function called(mission: Pick<Mission, "id" | "title">): string {
   const id = shortId(mission.id);
   return mission.title?.trim() ? `${mission.title.trim()} (${id})` : `Mission ${id}`;
 }

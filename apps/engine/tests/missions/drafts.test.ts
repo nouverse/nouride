@@ -326,9 +326,9 @@ describe("D7 — Start it pressed twice", () => {
     const presses = new ActionPresses({ missions: h.missions, isAdmin: () => false });
     const press = (): ButtonPress => ({ gatewayId: "telegram:nova", chatId: "8142", chatType: "dm", messageId: "m1", data: `mission:do:${mission!.id}:accept:accept`, senderId: "8142", senderName: "Gading" });
     const id = mission!.id.slice(0, 10);
-    expect(await presses.press(press())).toEqual({ notice: `Mission ${id} started.`, settled: `Mission ${id}: started by Gading.` });
+    expect(await presses.press(press())).toEqual({ notice: `${mission!.title} (${id}) started.`, settled: `${mission!.title} (${id}): started by Gading.` });
     const again = await presses.press(press());
-    expect(again.notice).toBe(`Mission ${id} has moved on (running), so this button no longer applies.`);
+    expect(again.notice).toBe(`${mission!.title} (${id}) has moved on (running), so this button no longer applies.`);
     expect(h.store.get(mission!.id)!.status).toBe("running");
   });
 });

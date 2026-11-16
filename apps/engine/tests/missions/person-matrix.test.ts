@@ -15,6 +15,7 @@ import type { HookContext } from "@/modules/hooks/types.ts";
 import { ActionPresses, buttonsFor } from "@/modules/missions/actions.ts";
 import { OptionPresses } from "@/modules/missions/options.ts";
 import { FOLLOW_UP_MS } from "@/modules/missions/limits.ts";
+import { called } from "@/modules/missions/notices.ts";
 import type { Mission } from "@/modules/missions/types.ts";
 import { registerMissionRoutes } from "@/modules/web/control/routes/missions.ts";
 import { missionsHarness, STARTERS_CTX } from "./harness.ts";
@@ -416,11 +417,31 @@ describe("the buttons under each state", () => {
 describe("pressing them", () => {
   const data = (mission: Mission, verb: string, kind: string) => `mission:do:${mission.id}:${verb}:${kind}`;
 
+  test("the line a pressed button leaves names the mission by its title, as the message it takes the place of did", async () => {
+    const h = await missionsHarness();
+    const asking = await h.start("write the weekly numbers into the sheet", { title: "The weekly report", checks: CHECKS });
+    h.turn(asking, {}, () => void h.missions.ask(asking.id, { question: "Keep the old sheet?", options: ["keep it", "drop it"] }));
+    await h.settle();
+    const { options } = buttonsPresses(h);
+    const short = asking.id.slice(0, 10);
+    const option = h.told.findLast((one) => one.mission === asking.id && one.text.includes("Keep the old sheet?"))!.buttons![0]!.data;
+    expect((await options.press(pressOf(option))).settled).toBe(`❓ The weekly report (${short}), answered by Gading: A) keep it`);
+    // Pressed again: answered already, still under its title.
+    expect((await options.press(pressOf(option))).settled).toBe(`❓ The weekly report (${short}): already answered.`);
+    // An action's button, and the words a chat shows for the press.
+    const { h: other, mission: stuck } = await inState("stuck");
+    const pressed = await buttonsPresses(other).actions.press(pressOf(data(stuck, "accept", "stuck")));
+    expect(pressed).toEqual({ notice: `ship the report (${stuck.id.slice(0, 10)}) accepted.`, settled: `ship the report (${stuck.id.slice(0, 10)}): accepted by Gading.` });
+    // One with no title on record is named by its id, as before it had one.
+    expect(called({ id: "msn_0123456789abcdef", title: "" })).toBe("Mission msn_012345");
+    expect(called({ id: "msn_0123456789abcdef", title: "  The viewers " })).toBe("The viewers (msn_012345)");
+  });
+
   test("Accept as it is on a stuck one closes it, once; pressed again it has moved on", async () => {
     const { h, mission } = await inState("stuck");
     const { actions } = buttonsPresses(h);
     const first = await actions.press(pressOf(data(mission, "accept", "stuck")));
-    expect(first).toEqual({ notice: `Mission ${mission.id.slice(0, 10)} accepted.`, settled: `Mission ${mission.id.slice(0, 10)}: accepted by Gading.` });
+    expect(first).toEqual({ notice: `${mission.title} (${mission.id.slice(0, 10)}) accepted.`, settled: `${mission.title} (${mission.id.slice(0, 10)}): accepted by Gading.` });
     await h.settle();
     expect(h.store.get(mission.id)!.status).toBe("done");
     const done = h.told.filter((one) => one.text.startsWith("✓")).length;
@@ -470,8 +491,8 @@ describe("pressing them", () => {
     const { h, mission } = await inState("stuck");
     h.missions.continueMission(mission.id, "Gading");
     const pressed = await buttonsPresses(h).actions.press(pressOf(data(mission, "accept", "stuck")));
-    expect(pressed.notice).toContain("has moved on (running)");
-    expect(pressed.settled).toContain("moved on before this was answered");
+    const name = `ship the report (${mission.id.slice(0, 10)})`;
+    expect(pressed).toEqual({ notice: `${name} has moved on (running), so this button no longer applies.`, settled: `${name}: moved on before this was answered (running).` });
     expect(h.store.get(mission.id)!.status).toBe("running");
   });
 
@@ -522,7 +543,7 @@ describe("pressing them", () => {
     await h.settle();
     const told = h.told.length;
     const pressed = await buttonsPresses(h).options.press(pressOf(a));
-    expect(pressed).toEqual({ notice: `Mission ${mission.id.slice(0, 10)} has moved on (done), so this question no longer waits.`, settled: `❓ Mission ${mission.id.slice(0, 10)}: moved on before this was answered (done).` });
+    expect(pressed).toEqual({ notice: `${mission.title} (${mission.id.slice(0, 10)}) has moved on (done), so this question no longer waits.`, settled: `❓ ${mission.title} (${mission.id.slice(0, 10)}): moved on before this was answered (done).` });
     expect(h.store.get(mission.id)!.status).toBe("done");
     expect(h.told.length).toBe(told);
   });

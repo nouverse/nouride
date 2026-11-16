@@ -157,7 +157,7 @@ describe("a question asked with keep_working", () => {
       during.push(presses.press({ data, gatewayId: "telegram:nova", chatId: "8142", chatType: "dm", senderId: "8142", senderName: "Gading" } as never).then((answer) => void (pressed = answer)));
     });
     await Promise.all(during);
-    expect(pressed).toEqual({ notice: "Answered. It reads this before its next step.", settled: `❓ Mission ${short(mission)}, answered by Gading: B) leave it out` });
+    expect(pressed).toEqual({ notice: "Answered. It reads this before its next step.", settled: `❓ ${mission.title} (${short(mission)}), answered by Gading: B) leave it out` });
     expect(handed.map((one) => one.told.text)).toEqual([`Answer to your question "${QUESTION}\n\nA) take it\nB) leave it out": B) leave it out`]);
     expect(h.store.get(mission.id)!.answers.at(-1)!.answer).toBe("B) leave it out");
   });
@@ -235,7 +235,7 @@ describe("a question and what else a turn's end finds", () => {
     expect(h.told.filter((one) => one.text.includes("waits for it now"))).toEqual([]);
     const data = h.told.find((one) => one.text.includes(QUESTION))!.buttons![0]!.data;
     const pressed = await new OptionPresses({ missions: h.missions, isAdmin: () => false }).press({ data, gatewayId: "telegram:nova", chatId: "8142", chatType: "dm", senderId: "8142", senderName: "Gading" } as never);
-    expect(pressed.notice).toBe(`Mission ${short(mission)} has moved on (done), so this question no longer waits.`);
+    expect(pressed.notice).toBe(`${mission.title} (${short(mission)}) has moved on (done), so this question no longer waits.`);
     expect(done.answers.at(-1)!.answer).toBeUndefined();
   });
 

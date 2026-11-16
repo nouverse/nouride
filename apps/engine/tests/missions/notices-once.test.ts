@@ -184,7 +184,7 @@ describe("answering by a button", () => {
     h.turn(mission, {}, () => h.missions.ask(mission.id, { question: "Which colour?\n1. red\n2. blue" }));
     const stamp = h.store.get(mission.id)!.answers.at(-1)!.at.toString(36);
     const pressed = await presses.press(press({ data: `mission:answer:${mission.id}:${stamp}:2` }));
-    expect(pressed).toEqual({ notice: "That option is not on its question: answer it in your own words.", settled: `❓ Mission ${mission.id.slice(0, 10)}: that option is not on its question. Answer it in your own words.` });
+    expect(pressed).toEqual({ notice: "That option is not on its question: answer it in your own words.", settled: `❓ ${mission.title} (${mission.id.slice(0, 10)}): that option is not on its question. Answer it in your own words.` });
     expect(h.store.get(mission.id)).toMatchObject({ status: "waiting", waitKind: "input" });
     expect(h.store.get(mission.id)!.answers.at(-1)!.answer).toBeUndefined();
   });
@@ -199,7 +199,7 @@ describe("answering by a button", () => {
     h.tick(60_000);
     h.turn(mission, {}, () => h.missions.ask(mission.id, { question: "Second?", options: ["delete it", "keep it"] }));
     const pressed = await presses.press(press({ data: first[0]! }));
-    expect(pressed).toEqual({ notice: "It has asked another question since: answer that one.", settled: `❓ Mission ${mission.id.slice(0, 10)}: asked something else since.` });
+    expect(pressed).toEqual({ notice: "It has asked another question since: answer that one.", settled: `❓ ${mission.title} (${mission.id.slice(0, 10)}): asked something else since.` });
     expect(h.store.get(mission.id)).toMatchObject({ status: "waiting", waitKind: "input" });
     expect(h.store.get(mission.id)!.answers.at(-1)!.answer).toBeUndefined();
   });
