@@ -10,7 +10,7 @@ Read this before your first change, and again before you cut a release. The deta
 | `nouverse/nouride` | the root | public | The daemon (`apps/engine`), the dashboard, the CLI, the site, the shared packages, `content/` (the built-in skills and agent packs, MIT). Every release is tagged here. |
 | `nouverse/nouride-pro` | `internals/pro` (submodule) | private | The Pro plugins (multi-user accounts, the bundled gateway's wiring, the appliance), the release's private half (its CI, signing, the Pro editions), the maintainers' docs: the RFCs, the runbook, the e2e scripts, and the private skills linked into `.agents/skills/`. |
 | `nouverse/nougate` | `internals/nougate` (submodule) | public | Nougate, the LLM gateway: its own product, with its own rules (`internals/nougate/.agents/skills/nougate-contributing`), its own CI and its own deploys. Nouride pins a commit of it and bundles it in the Pro editions. |
-| `nouverse/nouride-home` | `apps/android-appliance` (a separate clone, gitignored) | its own | Nouride Home, the apps that run Nouride on an Android phone and on a Mac (the Mac app is not released yet). One version for both. Linked from the README; its commits and releases are its own. |
+| `nouverse/nouride-home` | `apps/android-appliance` (a separate clone, gitignored) | its own | Nouride Home, the apps that run Nouride on an Android phone and on a Mac. One version for both. Linked from the README; its commits and releases are its own. |
 
 `internals/` is optional: a clone without the submodules builds and tests the free edition. The Pro edition and the
 release need both.
