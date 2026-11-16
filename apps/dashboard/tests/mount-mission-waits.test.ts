@@ -80,7 +80,9 @@ describe("a mission at work that asked a question, on its page", () => {
     let toast = "";
     await renderPage("/missions/msn_1", async (host) => {
       await eventually(() => buttons(host).includes("Answer"), 2_000, "the answer box");
-      said = host.querySelector('[role="status"]')?.textContent ?? "";
+      // The page's own, inside `main`: the shell draws a strip of its own over every page while a save waits for a
+      // restart, and one left by another file's save was read here instead.
+      said = host.querySelector('main [role="status"]')?.textContent ?? "";
       badge = headers(host);
       const record = recordPosts({ "/missions/msn_1/answer": ok({ mission: { ...shown.mission, status: "running", seen: "working", answers: [{ question: QUESTION, at: 1, asked: "meanwhile", answer: "ya" }] }, said: "Answered. It reads this before its next step.", plain: "Answered. It reads this before its next step." }) });
       type(host.querySelector<HTMLTextAreaElement>('textarea[placeholder="Your answer"]')!, "  ya, masukin  ");
