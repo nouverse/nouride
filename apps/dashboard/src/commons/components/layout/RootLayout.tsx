@@ -22,7 +22,6 @@ import { HELD_BOTTOM, PAGE_BOTTOM } from "@/commons/components/ui/ScrollCard";
 import { Sheet } from "@/commons/components/ui/Sheet";
 import { Sidebar, SidebarBrand } from "@/commons/components/layout/Sidebar";
 import { useLaptop } from "@/commons/hooks/use-wide";
-import { useFoot } from "@/commons/hooks/use-foot";
 import { PHONE_CHAT_SPACE, TAB_BAR_SPACE, TabBar } from "@/commons/components/layout/TabBar";
 import { CompactSidebar } from "@/commons/components/layout/CompactSidebar";
 import { FloatingChat } from "@/commons/components/floating-chat/FloatingChat";
@@ -56,6 +55,12 @@ function PageTop({ pathname, admin, className }: { pathname: string; admin: bool
     </>
   );
 }
+
+/**
+ * What scrolls a page, below the header's place: the header first in it, so a scroll down takes the header up with the
+ * page, then the page itself (`<main>`), which holds the page alone.
+ */
+const SCROLLS = "min-h-0 flex-1 overflow-x-hidden overflow-y-auto";
 
 /**
  * The way back to Nouride Home's own screen, inside its app (`home-app.ts`). One button for both places it stands: a
@@ -105,9 +110,6 @@ export function RootLayout() {
   /** More, on a phone: the menu's other pages, as a sheet that slides up over the page. */
   const [moreOpen, setMoreOpen] = useState(false);
   const laptop = useLaptop();
-  /** What scrolls the page, read for whether the tab bar is at the foot as it scrolls (`useFoot`). */
-  const [scroller, setScroller] = useState<HTMLElement | null>(null);
-  const footShown = useFoot(scroller, { active: !laptop, more: moreOpen, page: pathname });
   /** The menu expanded beside Chats, where it is folded to icons unless this browser chose otherwise (`CompactSidebar`). */
   const [menuOpen, setMenuOpen] = useKept(CHAT_MENU_KEY, false, isBoolean);
   const { total } = useNeedsYou();
@@ -174,6 +176,21 @@ export function RootLayout() {
   const compact = chats && !menuOpen;
   const phoneChat = chatOpen(pathname, search);
 
+  /**
+   * A phone's header: the name, and the way back to Nouride Home inside its app; the rest is the tab bar's. It is the
+   * first thing in what scrolls (`SCROLLS`), before the page's `<main>`, so a scroll down takes it up with the page and
+   * gives the page the screen, where it stood still above it. A row a page keeps in reach (`StickyBar`) stays at the
+   * screen's top as before.
+   */
+  const phoneHeader = (
+    <header className={cn("flex h-[calc(3.25rem+env(safe-area-inset-top))] shrink-0 items-center gap-2 px-3 pt-[env(safe-area-inset-top)] lg:hidden", phoneChat && "max-md:hidden")}>
+      {inHomeApp() && <HomeAppBack className="-mr-1" />}
+      <Link to="/" className="flex min-h-11 items-center gap-2">
+        <Mascot pose="head" decorative className="w-7" />
+        <span className="font-display text-base font-medium tracking-tight">Nouride</span>
+      </Link>
+    </header>
+  );
   const sidebar = (
     <Sidebar
       pathname={pathname}
@@ -207,15 +224,6 @@ export function RootLayout() {
       )}
 
       <div className={cn("flex h-full min-h-0 flex-1 flex-col overflow-hidden", compact ? "lg:pl-[5.5rem]" : "lg:pl-64")}>
-        {/* A phone's header: the name, and the way back to Nouride Home inside its app. The rest is the tab bar's. */}
-        <header className={cn("z-20 flex h-[calc(3.25rem+env(safe-area-inset-top))] shrink-0 items-center gap-2 px-3 pt-[env(safe-area-inset-top)] lg:hidden", phoneChat && "max-md:hidden")}>
-          {inHomeApp() && <HomeAppBack className="-mr-1" />}
-          <Link to="/" className="flex min-h-11 items-center gap-2">
-            <Mascot pose="head" decorative className="w-7" />
-            <span className="font-display text-base font-medium tracking-tight">Nouride</span>
-          </Link>
-        </header>
-
         <ReconnectingBanner offline={gate.offline} />
         <RestartPendingBar />
         <RestartedToast />
@@ -226,33 +234,39 @@ export function RootLayout() {
         {/* A page fades in as it is drawn (`*:animate-fade`): its root is a new element when the page changes, and the
             same one, not moved, while it stays. */}
         {ownsViewport ? (
-          /* Above the tab bar on a phone: a chat's composer sits on the page's foot. */
-          <main className={cn("flex min-h-0 flex-1 flex-col overflow-hidden *:animate-fade", phoneChat ? PHONE_CHAT_SPACE : TAB_BAR_SPACE)}>
-            <PageTop pathname={pathname} admin={where.admin} className="mx-4 mt-2 sm:mx-6 lg:mx-8 lg:mt-4" />
-            <Outlet />
-          </main>
+          /* Above the tab bar on a phone: a chat's composer sits on the page's foot. Nothing scrolls the page here, so the
+             header stays above it. */
+          <>
+            {phoneHeader}
+            <main className={cn("flex min-h-0 flex-1 flex-col overflow-hidden *:animate-fade", phoneChat ? PHONE_CHAT_SPACE : TAB_BAR_SPACE)}>
+              <PageTop pathname={pathname} admin={where.admin} className="mx-4 mt-2 sm:mx-6 lg:mx-8 lg:mt-4" />
+              <Outlet />
+            </main>
+          </>
         ) : fillsViewport ? (
           /* Never sideways: a tooltip waiting unseen at the edge of a phone's screen made the page pan by a few pixels under
              a finger (a mission's turn chips). What is wider than the page is that element's to wrap or scroll. */
-          <main ref={setScroller} className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
+          <div className={SCROLLS}>
+            {phoneHeader}
             {/* Held to the window from a laptop's width up; on a phone it scrolls as a document, as the page beside it
                 does — a list scrolling inside a card inside a scrolling page, under a header, is a sliver there. */}
-            <div className={`mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 pt-2 sm:px-6 sm:pt-4 lg:h-full lg:p-8 ${HELD_BOTTOM} *:animate-fade`}>
+            <main className={`mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 pt-2 sm:px-6 sm:pt-4 lg:h-full lg:p-8 ${HELD_BOTTOM} *:animate-fade`}>
               <PageTop pathname={pathname} admin={where.admin} />
               <Outlet />
-            </div>
-          </main>
+            </main>
+          </div>
         ) : (
-          <main ref={setScroller} className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
-            <div className={`mx-auto w-full max-w-6xl space-y-6 px-4 pt-2 sm:px-6 sm:pt-4 lg:p-8 ${PAGE_BOTTOM} *:animate-fade`}>
+          <div className={SCROLLS}>
+            {phoneHeader}
+            <main className={`mx-auto w-full max-w-6xl space-y-6 px-4 pt-2 sm:px-6 sm:pt-4 lg:p-8 ${PAGE_BOTTOM} *:animate-fade`}>
               <PageTop pathname={pathname} admin={where.admin} />
               <Outlet />
-            </div>
-          </main>
+            </main>
+          </div>
         )}
       </div>
 
-      <TabBar pathname={pathname} more={moreOpen} onMore={() => setMoreOpen((open) => !open)} onTab={() => setMoreOpen(false)} phoneChat={phoneChat} away={!footShown} />
+      <TabBar pathname={pathname} more={moreOpen} onMore={() => setMoreOpen((open) => !open)} onTab={() => setMoreOpen(false)} phoneChat={phoneChat} />
       {/* A chat over every page but the one that is the chat: there the conversation is the page, and its box is at the foot. */}
       {!chats && <FloatingChat pathname={pathname} />}
     </div>

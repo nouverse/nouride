@@ -38,15 +38,10 @@ describe("the bottom of a page", () => {
   const constant = (name: string) => new RegExp(`export const ${name} = "([^"]+)"`).exec(read("commons/components/ui/ScrollCard.tsx"))?.[1] ?? "";
   const PAGE_BOTTOM = constant("PAGE_BOTTOM");
   const HELD_BOTTOM = constant("HELD_BOTTOM");
-  /** The tab bar's reach up from the screen's foot, past the safe area: `--foot-bar`, said once in `main.css`. */
-  const BAR_REM = Number(/--foot-bar:\s*calc\((\d+(?:\.\d+)?)rem \+ env\(safe-area-inset-bottom\)\)/.exec(read("styles/main.css"))?.[1] ?? Number.NaN);
-  /**
-   * The rems a class puts between the screen's foot and a thing, past the safe area, below a laptop's width while the
-   * bar is there: written from the bar's reach (`--foot-bar`) or its foot (`--foot`, the bar's reach while it is there).
-   */
-  const fromFoot = (classes: string, prop: string) =>
-    BAR_REM + Number(new RegExp(`(?:^|\\s)${prop}-\\[calc\\(var\\(--foot(?:-bar)?\\)\\+(\\d+(?:\\.\\d+)?)rem\\)\\]`).exec(classes)?.[1] ?? Number.NaN);
-  const phoneRem = (classes: string) => fromFoot(classes, "pb");
+  /** The rems a class gives the foot below a laptop's width, past the safe area. */
+  const phoneRem = (classes: string) => Number(/(?:^|\s)pb-\[calc\((\d+(?:\.\d+)?)rem\+env\(safe-area-inset-bottom\)\)\]/.exec(classes)?.[1] ?? Number.NaN);
+  /** The tab bar's reach up from the screen's foot, as the layout keeps clear of it (`TAB_BAR_SPACE`). */
+  const BAR_REM = Number(/export const TAB_BAR_SPACE = "max-lg:pb-\[calc\((\d+(?:\.\d+)?)rem/.exec(read("commons/components/layout/TabBar.tsx"))?.[1] ?? Number.NaN);
 
   // The last line of a page sat a finger's width above the tab bar and read as under it; a laptop's page ended 2rem
   // above the window's foot.
@@ -62,7 +57,7 @@ describe("the bottom of a page", () => {
   test("a page held to the window from a laptop up runs to the page's own margin, and has a phone's room", () => {
     expect(phoneRem(HELD_BOTTOM)).toBe(phoneRem(PAGE_BOTTOM));
     const layout = read("commons/components/layout/RootLayout.tsx");
-    const held = [...layout.matchAll(/<div className=\{`mx-auto [^`]*`\}>/g)].map((m) => m[0]).find((one) => one.includes("lg:h-full")) ?? "";
+    const held = [...layout.matchAll(/<main className=\{`mx-auto [^`]*`\}>/g)].map((m) => m[0]).find((one) => one.includes("lg:h-full")) ?? "";
     const sides = /\slg:p-(\d+)\s/.exec(held)?.[1];
     expect(sides).toBeDefined();
     expect(HELD_BOTTOM.split(" ")).toContain(`lg:pb-${sides}`);
@@ -87,7 +82,7 @@ describe("the bottom of a page", () => {
 
   test("is under every page: the document's, the one held to the window, and System Logs", () => {
     const layout = read("commons/components/layout/RootLayout.tsx");
-    const containers = [...layout.matchAll(/<div className=\{`mx-auto [^`]*`\}>/g)].map((m) => m[0]);
+    const containers = [...layout.matchAll(/<main className=\{`mx-auto [^`]*`\}>/g)].map((m) => m[0]);
     expect(containers.length).toBe(2);
     const [held, document] = [containers.find((one) => one.includes("lg:h-full"))!, containers.find((one) => !one.includes("lg:h-full"))!];
     expect(held).toContain("${HELD_BOTTOM}");
@@ -105,7 +100,7 @@ describe("the bottom of a page", () => {
     const place = (/const BUTTON_PLACE = "([^"]+)"/.exec(read("commons/components/floating-chat/FloatingChat.tsx"))?.[1] ?? "").split(" ");
     // Where the button's foot is, up from the safe area, below a laptop's width; and its height at every width
     // (`size-14` is 3.5rem: it was 2.75rem from a laptop up, and too small to find).
-    const foot = fromFoot(place.find((word) => word.startsWith("bottom-")) ?? "", "bottom");
+    const foot = Number(/^bottom-\[calc\((\d+(?:\.\d+)?)rem\+env\(safe-area-inset-bottom\)\)\]$/.exec(place.find((word) => word.startsWith("bottom-")) ?? "")?.[1] ?? Number.NaN);
     const tall = Number(/^size-(\d+)$/.exec(place.find((word) => word.startsWith("size-")) ?? "")?.[1] ?? Number.NaN) / 4;
     expect(tall).toBeGreaterThanOrEqual(3.5);
     expect(place.some((word) => /^(sm|md|lg|xl):size-/.test(word))).toBe(false);
@@ -139,12 +134,11 @@ describe("the bottom of a page", () => {
   });
 
   test("a toast stands above the tab bar on a phone, where it lay over the tabs and took their taps", () => {
-    // The layout keeps clear of the bar by the same value.
-    expect(read("commons/components/layout/TabBar.tsx")).toContain('export const TAB_BAR_SPACE = "max-lg:pb-[var(--foot-bar)]"');
+    const reach = Number(/export const TAB_BAR_SPACE = "max-lg:pb-\[calc\(([\d.]+)rem\+env\(safe-area-inset-bottom\)\)\]"/.exec(read("commons/components/layout/TabBar.tsx"))?.[1]);
     const stack = /className="(toast [^"]+)"/.exec(read("commons/components/ui/toast.tsx"))?.[1] ?? "";
-    const lifted = BAR_REM + Number(/(?:^| )max-lg:bottom-\[calc\(var\(--foot\)\+([\d.]+)rem\)\]!(?: |$)/.exec(stack)?.[1]);
-    expect(BAR_REM).toBeGreaterThan(4);
-    expect(lifted).toBeGreaterThanOrEqual(BAR_REM);
+    const lifted = Number(/(?:^| )max-lg:bottom-\[calc\(([\d.]+)rem\+env\(safe-area-inset-bottom\)\)\]!(?: |$)/.exec(stack)?.[1]);
+    expect(reach).toBeGreaterThan(4);
+    expect(lifted).toBeGreaterThanOrEqual(reach);
   });
 
   test("the chat's composer, which sits at the bottom, keeps clear of the home indicator", () => {

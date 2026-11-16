@@ -99,8 +99,8 @@ Judul tab browser menghitung semua yang menunggu kamu, `(2) Nouride`, jadi tab y
 memberi tahu.
 
 **Di HP**, ada bar tab di bagian bawah berisi Home, Chats, Work, dan Agents, dengan angka milik Work di situ, plus
-**More**, yang membuka sisa menunya sebagai lembar yang naik dari bawah. Bar itu turun menghilang saat kamu scroll ke
-bawah dan muncul lagi begitu kamu scroll ke atas (0.8.39). Panel yang naik dari bawah layar (More, form untuk menambah
+**More**, yang membuka sisa menunya sebagai lembar yang naik dari bawah. Header dengan nama Nouride ikut naik bersama
+halamannya saat kamu scroll ke bawah, dan baris tab dan filter milik halaman itu tetap di atas (0.8.39). Panel yang naik dari bawah layar (More, form untuk menambah
 langkah automation, daftar untuk memulai chat) punya nama dan tombol tutup di bagian atasnya, dan geser ke bawah di
 bagian atas itu menutupnya. Semua yang kamu tekan di sana minimal 32 piksel lebar dan tingginya, di setiap halaman menu.
 Di chat, Enter membuat baris baru di HP atau tablet dan tombol kirim yang mengirim (0.8.39); dengan keyboard, Enter

@@ -303,20 +303,6 @@
 
 /* The same ground under a phone's floating tab bar, fading up into the page: without it the page showed through the
    strip between the bar and the screen's foot, under a browser's own floating toolbar. */
-/* The phone's foot, below a laptop's width: how far the tab bar reaches up from the screen's foot (`--foot-bar`, its
-   0.5rem off the foot, its 4.25rem and the home indicator's inset), and where what stands over the bar is placed from
-   (`--foot`): the bar's reach while it is there, the inset alone while a page scrolled down has put it away
-   (`useFoot`). The chat's button, the toasts and the bar that saves are each placed by `--foot`, so they come down
-   with the bar and go back up with it; the room a page keeps at its end is placed by `--foot-bar`, so it does not
-   change under a page as it scrolls. */
-:root {
-  --foot-bar: calc(4.75rem + env(safe-area-inset-bottom));
-  --foot: var(--foot-bar);
-}
-:root[data-foot="away"] {
-  --foot: env(safe-area-inset-bottom);
-}
-
 @utility bg-app-foot {
   background: linear-gradient(to top, color-mix(in oklab, var(--color-base-200) 50%, var(--color-base-100)) 65%, transparent);
 }

@@ -10,12 +10,12 @@ import { cn } from "@/commons/lib/utils";
 /**
  * The space under a page's last card. On a phone and a tablet the tab bar floats over the page's foot (`TabBar`), with
  * the browser's toolbar and the home indicator under it, and the floating chat's button stands over the bar's right end
- * (`FloatingChat`): 11rem past the safe area (the bar's reach, `--foot-bar`, and 6.25rem), the button's top at 9rem and room to see the last card clear of it.
+ * (`FloatingChat`): 11rem past the safe area, the button's top at 9rem and room to see the last card clear of it.
  * It was 7rem, and the last line of a page sat a finger's width above the bar, read as under it. From a laptop up, a
  * page that scrolls ends 5rem above the window's foot, over the button in its corner, where it ended 2rem above the
  * foot and the last card looked cut by the window's edge.
  */
-export const PAGE_BOTTOM = "pb-[calc(var(--foot-bar)+6.25rem)] lg:pb-20";
+export const PAGE_BOTTOM = "pb-[calc(11rem+env(safe-area-inset-bottom))] lg:pb-20";
 
 /**
  * The same under a page held to the window from a laptop up (`fillsViewport`, System Logs): its card runs to the 2rem
@@ -23,7 +23,7 @@ export const PAGE_BOTTOM = "pb-[calc(var(--foot-bar)+6.25rem)] lg:pb-20";
  * window's foot, to leave the button a place of its own, and that was a blank band under the card for as long as the
  * page was open. What scrolls in the card ends with room to bring its last row clear of the button (`HELD_END`).
  */
-export const HELD_BOTTOM = "pb-[calc(var(--foot-bar)+6.25rem)] lg:pb-8";
+export const HELD_BOTTOM = "pb-[calc(11rem+env(safe-area-inset-bottom))] lg:pb-8";
 
 /**
  * The room at the end of what scrolls inside a held page's card, from a laptop up: the floating chat's button stands

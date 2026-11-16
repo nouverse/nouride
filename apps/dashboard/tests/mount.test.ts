@@ -1325,9 +1325,10 @@ describe("a failed load is not an empty or healthy page", () => {
  * its Save buttons below the fold and no way to scroll to them.
  */
 describe("which pages own the viewport", () => {
-  const SCROLLS = '<main class="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">';
+  // What scrolls the page: the phone's header first in it, then the page's own `<main>`.
+  const SCROLLS = '<div class="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">';
   // Above the phone's tab bar, where a chat's composer sits (0.8.24).
-  const FILLS = '<main class="flex min-h-0 flex-1 flex-col overflow-hidden *:animate-fade max-lg:pb-[var(--foot-bar)]">';
+  const FILLS = '<main class="flex min-h-0 flex-1 flex-col overflow-hidden *:animate-fade max-lg:pb-[calc(4.75rem+env(safe-area-inset-bottom))]">';
   const agent = (id: string) => ({ id, displayName: id, enabled: true, state: "running", provider: "p", model: "m", tools: [], approvals: "careful" });
 
   test("an agent named like one of those pages still scrolls, on every tab", async () => {
@@ -1351,7 +1352,7 @@ describe("which pages own the viewport", () => {
 
   // A conversation open on a phone is the whole screen, the tab bar stepped aside: only a tablet keeps the bar's room.
   test("a conversation, a room and a group fill it, above the tab bar on a tablet only", async () => {
-    const PHONE_CHAT = '<main class="flex min-h-0 flex-1 flex-col overflow-hidden *:animate-fade md:max-lg:pb-[var(--foot-bar)]">';
+    const PHONE_CHAT = '<main class="flex min-h-0 flex-1 flex-col overflow-hidden *:animate-fade md:max-lg:pb-[calc(4.75rem+env(safe-area-inset-bottom))]">';
     for (const path of ["/chat/ses_1", "/chat/room/room_1", "/chat/group/telegram/-100200", "/chat?agent=nouva"]) {
       const html = await renderPage(path);
       expect({ path, fills: html.includes(PHONE_CHAT) }).toEqual({ path, fills: true });

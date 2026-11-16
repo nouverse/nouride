@@ -3,8 +3,7 @@
  * appears at the page's foot with Save and Discard changes, and says what a save still lacks, or what it will change
  * besides what was typed. A refusal is said here in the server's everyday words, and its own under Details.
  *
- * It stands above a phone's tab bar, placed by the bar's foot (`--foot`) so it comes down when a scrolled page puts
- * the bar away, where a toast stands too: while it is drawn, the toasts are lifted over it
+ * It stands above a phone's tab bar, where a toast stands too: while it is drawn, the toasts are lifted over it
  * (`--toast-lift`), so an Undo never lies on Save. And it keeps clear of the chat that floats over every page
  * (`FloatingChat`): below a laptop's width it ends short of the chat's button, which stands over the tab bar's right
  * end, and from a laptop up it ends short of where the open chat's card is, 25rem wide and 1rem in from the window's
@@ -51,7 +50,7 @@ export function SaveBar({
   const refused = error ? failureWords(error) : null;
 
   return (
-    <div ref={bar} role="region" aria-label="Unsaved changes" className="sticky bottom-[calc(var(--foot)+0.75rem)] z-20 flex w-auto max-w-2xl flex-wrap items-center gap-x-4 gap-y-2 rounded-[22px] border border-base-content/[0.08] bg-base-100 px-4 py-3 shadow-xl transition-[bottom] duration-200 animate-enter max-lg:mr-[4.5rem] lg:bottom-6 lg:mr-[25rem]">
+    <div ref={bar} role="region" aria-label="Unsaved changes" className="sticky bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-20 flex w-auto max-w-2xl flex-wrap items-center gap-x-4 gap-y-2 rounded-[22px] border border-base-content/[0.08] bg-base-100 px-4 py-3 shadow-xl animate-enter max-lg:mr-[4.5rem] lg:bottom-6 lg:mr-[25rem]">
       <div className="min-w-0 flex-[1_1_14rem] space-y-1 text-sm">
         {refused ? (
           <div role="alert" className="space-y-1 text-error">

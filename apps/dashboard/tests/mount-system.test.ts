@@ -279,7 +279,7 @@ describe("Files", () => {
       expect(area.closest("section")!.className).toContain("lg:flex-1");
       // The page's root takes the window's height, which the layout holds it to.
       expect((area.closest("section")!.parentElement as HTMLElement).className).toContain("flex min-h-0 flex-1 flex-col");
-      expect((host.querySelector("main > div") as HTMLElement).className).toContain("lg:h-full");
+      expect((host.querySelector("main") as HTMLElement).className).toContain("lg:h-full");
     });
     await renderPage("/files?path=workspace/notes.md", async (host) => {
       await drawn(host, "Deploy notes");

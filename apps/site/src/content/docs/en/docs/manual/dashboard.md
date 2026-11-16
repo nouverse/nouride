@@ -97,8 +97,8 @@ The browser tab's title counts everything waiting for you, `(2) Nouride`, so a t
 you.
 
 **On a phone**, a tab bar along the bottom holds Home, Chats, Work and Agents, with Work's count on it, and **More**,
-which slides the rest of the menu up as a sheet. The bar slides away as you scroll down a page and is back at the
-first scroll up (0.8.39). A panel that comes up from the foot of the screen (More, the form that adds a step to an
+which slides the rest of the menu up as a sheet. The header with Nouride's name goes up with the page as you scroll
+down, and a page's own row of tabs and filters stays at the top (0.8.39). A panel that comes up from the foot of the screen (More, the form that adds a step to an
 automation, the list a chat is started from) has its name and a close button at its top, and a swipe down on that top
 closes it. What you press is at least 32 pixels wide and tall there, on every page of the menu. In a chat, Enter is a
 new line on a phone or a tablet and the send button sends (0.8.39); with a keyboard, Enter sends and Shift+Enter is a

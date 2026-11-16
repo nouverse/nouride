@@ -3,11 +3,11 @@
  * second bar above it, and the phone's back gesture is not the only way out.
  */
 
-import { describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { HOME_APP_BACK, inHomeApp } from "@/commons/lib/home-app";
-import { answer, renderPage, useMountHarness } from "./mount-harness.ts";
+import { answer, dom, renderPage, useMountHarness } from "./mount-harness.ts";
 import { eventually } from "./wait.ts";
 
 describe("the way back to Nouride Home", () => {
@@ -84,5 +84,67 @@ describe("on the pages that have no header", () => {
     });
     expect(inside).toHaveLength(1);
     expect(inside[0]).not.toContain("fixed");
+  });
+});
+
+/** Every link to the address the app catches, with where it is (in what scrolls the page, above its `<main>`) and its words. */
+const closes = (host: HTMLElement) =>
+  [...host.ownerDocument.body.querySelectorAll<HTMLAnchorElement>(`a[href="${HOME_APP_BACK}"]`)].map((link) => ({
+    words: (link.textContent ?? "").trim(),
+    label: link.getAttribute("aria-label"),
+    // In what scrolls the page: the element that scrolls, outside the page's own `<main>`.
+    scrolls: link.closest('[class~="overflow-y-auto"]') !== null && link.closest("main") === null,
+  }));
+
+describe("the menu's way out", () => {
+  useMountHarness();
+  afterEach(() => dom.happyDOM.setViewport({ width: 1024, height: 768 }));
+
+  // The back gesture walks the dashboard's history: after a while of moving about, leaving took as many presses.
+  test("from a laptop's width: the menu's last row, inside the app and nowhere else", async () => {
+    let inside: ReturnType<typeof closes> = [];
+    let outside: ReturnType<typeof closes> = [];
+    answer({});
+    await asTheApp(async () => {
+      await renderPage("/", async (host) => {
+        await eventually(() => closes(host).some((link) => link.words === "Back to Nouride Home"), 3_000, "the menu's row");
+        inside = closes(host);
+      });
+    });
+    await renderPage("/", async (host) => {
+      await eventually(() => (host.textContent ?? "").includes("Nouride"), 3_000, "the page");
+      outside = closes(host);
+    });
+    expect(inside).toContainEqual({ words: "Back to Nouride Home", label: null, scrolls: false });
+    expect(outside).toEqual([]);
+  });
+
+  test("folded beside Chats, the same, as a tile", async () => {
+    let seen: ReturnType<typeof closes> = [];
+    answer({});
+    await asTheApp(async () => {
+      await renderPage("/chat", async (host) => {
+        await eventually(() => closes(host).length > 0, 3_000, "the folded menu's tile");
+        seen = closes(host);
+      });
+    });
+    expect(seen).toContainEqual({ words: "Exit", label: "Back to Nouride Home", scrolls: false });
+  });
+
+  test("on a phone: the header goes up with the page, and More's sheet holds the row", async () => {
+    let header: ReturnType<typeof closes> = [];
+    let sheet: ReturnType<typeof closes> = [];
+    dom.happyDOM.setViewport({ width: 390, height: 844 });
+    answer({});
+    await asTheApp(async () => {
+      await renderPage("/", async (host) => {
+        await eventually(() => closes(host).some((link) => link.label === "Back to Nouride Home"), 3_000, "the header's button");
+        header = closes(host).filter((link) => link.label === "Back to Nouride Home");
+        sheet = closes(host).filter((link) => link.words === "Back to Nouride Home");
+      });
+    });
+    // In what scrolls: a scroll down takes it up with the page.
+    expect(header).toEqual([{ words: "", label: "Back to Nouride Home", scrolls: true }]);
+    expect(sheet).toEqual([{ words: "Back to Nouride Home", label: null, scrolls: false }]);
   });
 });

@@ -1,16 +1,18 @@
 /**
  * The whole menu with its names: beside every page from a laptop's width up, and More's sheet on a phone. Its head is
  * Nouride's name and version, its foot the box, who is signed in, the look and signing out. On Chats it can fold to its
- * icons (`CompactSidebar`), and its head offers that.
+ * icons (`CompactSidebar`), and its head offers that. Inside Nouride Home its last row closes the dashboard: the back
+ * gesture walks the dashboard's history, and after a while of moving about it took as many presses to leave.
  */
 
 import { Link } from "@tanstack/react-router";
-import { LogOut, Moon, PanelLeftClose, Sun } from "lucide-react";
+import { ChevronLeft, LogOut, Moon, PanelLeftClose, Sun } from "lucide-react";
 import type { Principal } from "@nouride/wire";
 import { Mascot } from "@/commons/components/brand/Mascot";
 import { BoxCard } from "@/commons/components/layout/BoxCard";
 import { SidebarNav } from "@/commons/components/layout/nav";
 import { SidebarVersion } from "@/commons/components/layout/SidebarVersion";
+import { HOME_APP_BACK, inHomeApp } from "@/commons/lib/home-app";
 import type { Theme } from "@/commons/lib/theme";
 
 /** Nouride's name, its head and its version: the sidebar's head, and the head of More's sheet. */
@@ -80,6 +82,12 @@ export function Sidebar({
             <LogOut size={16} />
           </button>
         </div>
+        {inHomeApp() && (
+          <a href={HOME_APP_BACK} className="btn btn-ghost h-10 min-h-10 w-full justify-start gap-2 px-2 text-sm font-medium text-base-content/70 hover:text-base-content">
+            <ChevronLeft size={18} aria-hidden="true" />
+            Back to Nouride Home
+          </a>
+        )}
       </div>
     </div>
   );

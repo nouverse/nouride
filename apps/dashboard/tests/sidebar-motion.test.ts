@@ -90,7 +90,7 @@ describe("on a phone, More and the tab bar", () => {
     // Over the sheet (z-50) while it is open.
     expect(seen.openBar).toContain("z-[60]");
     expect(seen.sheet).toContain("z-50");
-    expect(seen.sheet).toContain("max-lg:pb-[var(--foot-bar)]");
+    expect(seen.sheet).toContain("max-lg:pb-[calc(4.75rem+env(safe-area-inset-bottom))]");
   });
 
   test("put away, the sheet and its shade take no tap at once, not only when hidden", async () => {
