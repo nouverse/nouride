@@ -48,13 +48,41 @@ export function printedSource(argv: readonly string[]): PrintedSource | null {
   // `\.key`, and every `key: value` line the command printed was masked — `git log`'s "feat: …" among them (2026-10-23).
   const words = commandWords(argv).filter((word) => !word.includes("\\"));
   const file = words.find((word) => namedCredential(word) === "file");
-  if (file) return at("file", file);
+  // Named only inside a script the command runs, the file is used, not printed: what comes out is what it fetched.
+  if (file) return at(commandWords(argv.map(withoutScripts)).includes(file) ? "file" : "script", file);
   const dump = text.split(/[;&|\n"'`()]+/).map((segment) => ENV_DUMP.exec(segment.trim())?.[1]).find(Boolean);
   if (dump) return at("env", dump.split(/\s+/)[0]!);
   if (DOCKER_INSPECT.test(text)) return at("docker-inspect", "docker inspect");
   if (KUBE_SECRET.test(text)) return at("kube-secret", "kubectl get secret");
   const template = words.find((word) => namedCredential(word) === "template");
   return template ? at("template", template) : null;
+}
+
+/** An interpreter given its script in the command line: `python3 - <<'EOF'`, `node <<EOF` — the delimiter. */
+const SCRIPT_HEREDOC = /\b(?:python[\d.]*|node|bun|deno|ruby|perl|php)\b[^\n<]*<<-?\s*(['"]?)([A-Za-z_]\w*)\1/;
+/** The same with its script as an argument: `python3 -c "…"`, `node -e '…'`. */
+const SCRIPT_INLINE = /\b(?:python[\d.]*|node|bun|deno|ruby|perl|php)\s+(?:-\w+\s+)*-[ce]\s+(["'])[\s\S]*?\1/g;
+
+/**
+ * A command line without the scripts it hands an interpreter — their heredoc bodies and their `-c`/`-e` strings. What is
+ * left is what the shell itself runs: a credential file named there is printed (`cat`, `head`, `jq`); one named only in
+ * a script is a file the script uses (`printedSource`).
+ */
+function withoutScripts(command: string): string {
+  const inline = command.replace(SCRIPT_INLINE, "");
+  if (!inline.includes("<<")) return inline;
+  const kept: string[] = [];
+  let end: string | null = null;
+  for (const line of inline.split("\n")) {
+    if (end !== null) {
+      if (line.trim() === end) end = null;
+      continue;
+    }
+    kept.push(line);
+    const heredoc = SCRIPT_HEREDOC.exec(line);
+    if (heredoc) end = heredoc[2] ?? null;
+  }
+  return kept.join("\n");
 }
 
 /** A heredoc `cat` or `tee` writes to a file: `cat > f <<X`, `cat <<'X' > f`, `tee [-a] f <<X` — the delimiter. */
@@ -98,7 +126,7 @@ function sshHost(text: string): string | undefined {
 
 /** Where its values came from, as a handle's label says it: `DB_URL in proxmox:/root/nougate/.env`. */
 function labelFor(source: PrintedSource, key: string): string {
-  if (source.kind === "file" || source.kind === "template") return `${key} in ${source.host ? `${source.host}:` : ""}${source.name}`;
+  if (source.kind === "file" || source.kind === "template" || source.kind === "script") return `${key} in ${source.host ? `${source.host}:` : ""}${source.name}`;
   return `${key} from ${source.name}${source.host ? ` on ${source.host}` : ""}`;
 }
 

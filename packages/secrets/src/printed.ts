@@ -14,7 +14,11 @@
  *   pattern could know. Only a value that is plainly not a secret stays (`plainValue`), so debugging still works;
  * - `docker inspect`: each `"KEY=value"` of an `Env` list;
  * - `kubectl get secret -o yaml|json`: the values under `data:` and `stringData:`, inline ones in an annotation too;
- * - a template (`.env.example`): nothing by its key — those are placeholders — only what the shapes find.
+ * - a template (`.env.example`): nothing by its key — those are placeholders — only what the shapes find;
+ * - a script that names a credential file inside it (`python3 - <<EOF … open("tokens.json") …`): it uses the file, and
+ *   what it prints is usually what the credential fetched — a document, an API's answer — so only a value under a key
+ *   that names a credential (`SECRET_KEY`) goes. Every value went before, and a Google Doc's text, held as handles,
+ *   masked its own words in the agent's replies ("Minggu 2–4" came out as a mask).
  * Every kind: a private key block whole, then `findSecrets` over the rest — a password in a URL, a token by its prefix.
  *
  * Keys, comments and layout stay: which variables are set, the host, the port is what nearly every task needs.
@@ -22,7 +26,10 @@
 
 import { findSecrets } from "./scan.ts";
 
-export type PrintedKind = "file" | "env" | "docker-inspect" | "kube-secret" | "template";
+export type PrintedKind = "file" | "env" | "docker-inspect" | "kube-secret" | "template" | "script";
+
+/** A key that names a credential, for what a script prints: `access_token`, `client_secret`, `DB_PASSWORD`, `apiKey`. */
+const SECRET_KEY = /pass|secret|token|key|auth|cred|private|session|cookie|signature|salt|dsn|bearer/i;
 
 /** What a value is replaced with. `key` names it: the variable, or `private key`. */
 export type Swap = (value: string, key: string) => string;
@@ -154,7 +161,7 @@ export class PrintedCredentials {
 
   private line(line: string): string {
     let out = line.replace(PEM_INLINE, (block) => this.swap(block.replace(/\\n/g, "\n"), "private key"));
-    if (this.kind === "file" || this.kind === "env") out = this.assignment(out);
+    if (this.kind === "file" || this.kind === "env" || this.kind === "script") out = this.assignment(out);
     else if (this.kind === "docker-inspect") out = out.replace(ENV_STRING, (whole, key: string, raw: string) => (plainValue(jsonText(raw)) ? whole : `"${key}=${this.swap(jsonText(raw), key)}"`));
     else if (this.kind === "kube-secret") out = this.secret(out);
     return this.shapes(out);
@@ -163,12 +170,14 @@ export class PrintedCredentials {
   /** One line of a credential file or an environment: its value, by its key. */
   private assignment(line: string): string {
     if (/^\s*[#;]/.test(line)) return line;
+    // What a script prints gives up a value by its key only where the key names a credential.
+    const byKey = (key: string) => this.kind !== "script" || SECRET_KEY.test(key);
     const pgpass = PGPASS.exec(line);
-    if (pgpass && !line.includes("=") && !line.includes('"')) return pgpass[1] + this.swap(pgpass[2]!, "password");
+    if (pgpass && this.kind !== "script" && !line.includes("=") && !line.includes('"')) return pgpass[1] + this.swap(pgpass[2]!, "password");
     let pairs = 0;
     const json = line.replace(JSON_PAIR, (whole, key: string, colon: string, raw: string) => {
       pairs += 1;
-      return plainValue(jsonText(raw)) ? whole : `"${key}"${colon}"${this.swap(jsonText(raw), key)}"`;
+      return plainValue(jsonText(raw)) || !byKey(key) ? whole : `"${key}"${colon}"${this.swap(jsonText(raw), key)}"`;
     });
     if (pairs > 0) return json;
     const assigned = EQUALS.exec(line) ?? COLON.exec(line);
@@ -180,7 +189,7 @@ export class PrintedCredentials {
       const trailing = comma + spaces;
       const { quote, inner } = unquote(value);
       // A YAML `- item`, a `{` that opens a block: not a value.
-      if (plainValue(inner) || /^[{[|>]$/.test(inner) || SYSTEM_KEYS.has(key)) return line;
+      if (plainValue(inner) || /^[{[|>]$/.test(inner) || SYSTEM_KEYS.has(key) || !byKey(key)) return line;
       return `${head}${quote}${this.swap(inner, key.replace(/^.*[/:]/, "") || key)}${quote}${trailing}`;
     }
     return line.replace(NETRC, (whole, word: string, space: string, value: string) => (plainValue(value) ? whole : `${word}${space}${this.swap(value, "password")}`));
