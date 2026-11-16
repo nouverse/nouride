@@ -10,7 +10,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { answer, recordPosts, renderPage, type, useMountHarness } from "./mount-harness.ts";
+import { answer, recordPosts, renderPage, RESPONSES, type, useMountHarness } from "./mount-harness.ts";
 import { eventually } from "./wait.ts";
 
 useMountHarness();
@@ -179,6 +179,80 @@ describe("a round button in a field or a chip", () => {
     expect(clear).not.toContain("max-sm:size-7");
     expect(remove).toContain("max-sm:size-8");
     expect(remove).not.toContain("max-sm:size-7");
+  });
+});
+
+describe("what a page draws only once it has something to show", () => {
+  // The pass that measured the rest ran on an install with no skills, one account and no release to read about.
+  test("an agent's skill is switched by a label a finger's height", async () => {
+    let labels: string[][] = [];
+    let switches = 0;
+    const skill = { name: "pdf", description: "Read a PDF.", scope: "shared", path: "/skills/pdf", requires: [], missing: [], enabled: true, decided: false, toggleable: true };
+    answer({ "/agents/nouva/skills": { status: 200, body: { skills: [skill, { ...skill, name: "docx", path: "/skills/docx", enabled: false }], editable: true } } });
+    await renderPage("/agents/nouva/skills", async (host) => {
+      await eventually(() => host.querySelector('input[aria-label^="Switch o"]') !== null, 3_000, "the skills");
+      const inputs = [...host.querySelectorAll('input[aria-label^="Switch o"]')];
+      switches = inputs.length;
+      labels = inputs.filter((input) => input.parentElement?.tagName === "LABEL").map((input) => classes(input.parentElement));
+    });
+    expect(switches).toBeGreaterThan(0);
+    expect(labels).toHaveLength(switches);
+    expect(labels.filter((label) => label.includes("max-sm:min-h-8")).length).toBe(switches);
+  });
+
+  test("the Skills page's chips, one an agent, each pressed to switch the skill for it", async () => {
+    let chips: string[][] = [];
+    const agent = (id: string, displayName: string, extra: Record<string, unknown> = {}) => ({ id, displayName, enabled: true, decided: false, missingTools: [], ...extra });
+    const skill = {
+      name: "pdf", description: "Read a PDF.", scope: "shared", path: "/srv/nouride/skills/pdf/SKILL.md", requires: [], missing: [], needsTools: ["read"], offGlobally: false, lastUsedAt: null,
+      agents: [agent("nouva", "Nouva"), agent("nero", "Nero", { enabled: false }), agent("nix", "Nix", { missingTools: ["read"] })],
+    };
+    answer({ "/skills/catalog": { status: 200, body: { skills: [skill], software: [], poolDir: "/srv/nouride/skills", editable: true } }, "/skills/drafts": { status: 200, body: { enabled: true, pending: [], recent: [] } } });
+    await renderPage("/skills", async (host) => {
+      await eventually(() => host.querySelector("button.badge") !== null, 3_000, "the chips");
+      chips = [...host.querySelectorAll("button.badge")].map(classes);
+    });
+    expect(chips).toHaveLength(3);
+    expect(chips.filter((chip) => chip.includes("max-sm:min-h-8")).length).toBe(chips.length);
+  });
+
+  test("the Update page's link to a release's notes", async () => {
+    let notes: string[] = [];
+    const update = RESPONSES["/update"] as { check: object };
+    answer({ "/update": { status: 200, body: { ...update, check: { ...update.check, notesUrl: "https://example.com/notes" } } } });
+    await renderPage("/update", async (host) => {
+      await eventually(() => saying(host, "a", "Release notes") !== undefined, 3_000, "the notes' link");
+      notes = classes(saying(host, "a", "Release notes"));
+    });
+    expect(notes).toEqual(expect.arrayContaining(["inline-flex", "items-center", "max-sm:min-h-8"]));
+  });
+
+  test("the role of an account, picked from a field a finger's height", async () => {
+    let roles: string[][] = [];
+    const account = (id: string, username: string, role: string) => ({ id, username, role, createdAt: 0, mustChangePassword: false });
+    answer({ "/users": { status: 200, body: { multiUser: true, users: [account("usr_1", "tester", "admin"), account("usr_2", "sam", "operator")] } } });
+    await renderPage("/users", async (host) => {
+      await eventually(() => host.querySelector("tbody select") !== null, 3_000, "the accounts");
+      roles = [...host.querySelectorAll("tbody select")].map(classes);
+    });
+    expect(roles).toHaveLength(2);
+    expect(roles.filter((role) => role.includes("max-sm:select-sm")).length).toBe(roles.length);
+  });
+
+  test("a chat's header: its agent's name and what it is doing, cut short on a narrow phone, are whole on a pointer's rest", async () => {
+    let name = { said: "", whole: "" };
+    let doing = { said: "", whole: "" };
+    await renderPage("/chat/ses_1", async (host) => {
+      await eventually(() => host.querySelector("header h2.truncate") !== null && host.querySelector("header p.truncate") !== null, 3_000, "the chat's header");
+      const heading = host.querySelector("header h2.truncate")!;
+      const line = host.querySelector("header p.truncate")!;
+      name = { said: heading.textContent ?? "", whole: heading.getAttribute("title") ?? "" };
+      doing = { said: line.textContent ?? "", whole: line.getAttribute("title") ?? "" };
+    });
+    expect(name.said.length).toBeGreaterThan(0);
+    expect(name.whole).toBe(name.said);
+    expect(doing.whole.length).toBeGreaterThan(0);
+    expect(doing.said).toContain(doing.whole);
   });
 });
 

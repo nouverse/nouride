@@ -173,7 +173,7 @@ export default function UsersPage() {
                     {multiUser && (
                       <td className={cn("sm:px-3 sm:py-3", FOLD.whole)}>
                         <select
-                          className="select select-xs rounded-lg text-xs"
+                          className="select select-xs rounded-lg text-xs max-sm:select-sm"
                           value={user.role}
                           disabled={user.id === currentUser || setRole.isPending}
                           onChange={(e) => setRole.mutate({ id: user.id, role: e.target.value })}

@@ -173,14 +173,17 @@ export default function AgentSkillsPage({ agentId }: { agentId: string }) {
                   <p className="mt-0.5 text-xs text-base-content/65">{skill.description || "No description."}</p>
                 </div>
                 {skill.toggleable ? (
-                  <input
-                    type="checkbox"
-                    className="toggle toggle-sm toggle-primary mt-0.5 shrink-0"
-                    checked={skill.enabled}
-                    disabled={!editable || save.isPending}
-                    onChange={(event) => toggle(skill.name, event.target.checked)}
-                    aria-label={`${skill.enabled ? "Switch off" : "Switch on"} ${skill.name}`}
-                  />
+                  // The label is what a finger presses: the switch alone is 20px tall.
+                  <label className="flex shrink-0 cursor-pointer items-start max-sm:min-h-8">
+                    <input
+                      type="checkbox"
+                      className="toggle toggle-sm toggle-primary mt-0.5 shrink-0"
+                      checked={skill.enabled}
+                      disabled={!editable || save.isPending}
+                      onChange={(event) => toggle(skill.name, event.target.checked)}
+                      aria-label={`${skill.enabled ? "Switch off" : "Switch on"} ${skill.name}`}
+                    />
+                  </label>
                 ) : (
                   // Not a disabled switch: a control that cannot move invites clicking to find out
                   // why. The scope badge above already says where this one is changed.

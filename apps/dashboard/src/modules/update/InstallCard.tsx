@@ -61,7 +61,7 @@ export function InstallCard({ data }: { data: UpdateStatus }) {
                 {check.publishedAt && <Row label="Published">{new Date(check.publishedAt).toLocaleDateString()}</Row>}
                 {check.notesUrl && (
                   <Row label="Notes">
-                    <a href={check.notesUrl} target="_blank" rel="noreferrer" className="link link-hover">
+                    <a href={check.notesUrl} target="_blank" rel="noreferrer" className="link link-hover inline-flex items-center max-sm:min-h-8">
                       Release notes
                     </a>
                   </Row>
