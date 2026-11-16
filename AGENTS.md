@@ -22,10 +22,10 @@ agent working in this repository — Claude Code, Codex and the rest read it.
 - `apps/engine` — the daemon: `src/index.ts` is the boot order; `src/modules/<domain>` one domain each; `src/db`,
   `src/boot`; `src/cli` is the binary's entry and the commands that work on the install itself (`db`, `doctor`,
   `setup`). `apps/cli` — the commands that ask a running daemon: it imports nothing of the engine, and what both
-  kinds speak is `packages/cli-kit`. `apps/dashboard` — the UI. `apps/site` — the public docs. Nouride Home, the Android app that
-  runs Nouride under proot, is a related repository, not part of this one: `nouverse/nouride-home`, linked
-  from the README. Clone it to `apps/android-appliance` to work on it beside Nouride; that folder is ignored here, and
-  its commits and releases are its own.
+  kinds speak is `packages/cli-kit`. `apps/dashboard` — the UI. `apps/site` — the public docs. Nouride Home, the apps that run
+  Nouride on an Android phone (under proot) and on a Mac (Tauri, not released yet), is a related repository, not part
+  of this one: `nouverse/nouride-home`, linked from the README. Clone it to `apps/android-appliance` to work on it
+  beside Nouride; that folder is ignored here, and its commits and releases are its own.
 - `packages/*` — what a second tool could use without the daemon: `runtime`, `shared`, `llm`, `gateways`, `secrets`,
   `persona`, `queue`, `policy`, `mcp`, `cli-kit`, `wa-bridge` (MIT).
 - `internals/` — submodules: `pro` (private), and `nougate` (public: its own product, with its own rules).
