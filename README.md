@@ -11,6 +11,8 @@ Chat with them on Telegram, Discord, WhatsApp or right in your browser.
 
 [**Website**](https://nouride.com) · [**Docs**](https://nouride.com/en/docs/start/what-is-nouride/) · [**Getting started**](https://nouride.com/en/docs/start/first-run/) · [**Releases**](https://github.com/nouverse/nouride/releases)
 
+On Android? [**Nouride Home**](https://github.com/nouverse/nouride-home) runs Nouride on your phone, with no terminal and no root.
+
 [![License: FSL-1.1-ALv2](https://img.shields.io/badge/License-FSL--1.1--ALv2-blue.svg?style=flat-square)](#licence)
 [![GitHub Sponsors](https://img.shields.io/badge/Sponsor-GitHub-ea4aaa?style=flat-square&logo=githubsponsors&logoColor=white)](https://github.com/sponsors/gadingnst)
 [![Ko-fi](https://img.shields.io/badge/Support-Ko--fi-29abe0?style=flat-square&logo=kofi&logoColor=white)](https://ko-fi.com/gadingnst)
@@ -240,9 +242,9 @@ installs anything.
 
 ## Nouride Home, on a phone
 
-**[nouverse/nouride-android-appliance](https://github.com/nouverse/nouride-android-appliance)** is Nouride Home, the
+**[nouverse/nouride-home](https://github.com/nouverse/nouride-home)** is Nouride Home, the
 Android app that runs Nouride on a phone, with no terminal and no root. It has its own releases and updates itself; the
-APK is on its [Releases](https://github.com/nouverse/nouride-android-appliance/releases) page, and how to use it is in
+APK is on its [Releases](https://github.com/nouverse/nouride-home/releases) page, and how to use it is in
 the [Nouride Home guide](https://nouride.com/en/docs/deployment/nouride-home/).
 
 ## The source
