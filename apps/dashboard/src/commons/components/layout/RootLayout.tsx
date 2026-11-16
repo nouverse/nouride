@@ -57,6 +57,19 @@ function PageTop({ pathname, admin, className }: { pathname: string; admin: bool
   );
 }
 
+/**
+ * The way back to Nouride Home's own screen, inside its app (`home-app.ts`). One button for both places it stands: a
+ * signed-in page's header, and the corner of the pages that have no header (the sign-in, the setup, the welcome, a
+ * login coming back), where the phone's back gesture was the only way out.
+ */
+function HomeAppBack({ className }: { className: string }) {
+  return (
+    <a href={HOME_APP_BACK} className={cn("btn btn-ghost btn-square size-11 text-secondary active:scale-90 transition-transform", className)} aria-label="Back to Nouride Home">
+      <ChevronLeft size={22} />
+    </a>
+  );
+}
+
 export function RootLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const search = useRouterState({ select: (s) => s.location.searchStr });
@@ -147,6 +160,8 @@ export function RootLayout() {
     return (
       <div className="bg-base-200/50 min-h-dvh text-base-content selection:bg-primary/20 *:animate-fade">
         <ReconnectingBanner offline={gate.offline} />
+        {/* These pages have no header to hold the way back to Nouride Home: the same button, where the header's is. */}
+        {inHomeApp() && <HomeAppBack className="fixed left-3 top-[calc(0.25rem+env(safe-area-inset-top))] z-30" />}
         <Outlet />
       </div>
     );
@@ -194,11 +209,7 @@ export function RootLayout() {
       <div className={cn("flex h-full min-h-0 flex-1 flex-col overflow-hidden", compact ? "lg:pl-[5.5rem]" : "lg:pl-64")}>
         {/* A phone's header: the name, and the way back to Nouride Home inside its app. The rest is the tab bar's. */}
         <header className={cn("z-20 flex h-[calc(3.25rem+env(safe-area-inset-top))] shrink-0 items-center gap-2 px-3 pt-[env(safe-area-inset-top)] lg:hidden", phoneChat && "max-md:hidden")}>
-          {inHomeApp() && (
-            <a href={HOME_APP_BACK} className="btn btn-ghost btn-square -mr-1 size-11 text-secondary active:scale-90 transition-transform" aria-label="Back to Nouride Home">
-              <ChevronLeft size={22} />
-            </a>
-          )}
+          {inHomeApp() && <HomeAppBack className="-mr-1" />}
           <Link to="/" className="flex min-h-11 items-center gap-2">
             <Mascot pose="head" decorative className="w-7" />
             <span className="font-display text-base font-medium tracking-tight">Nouride</span>
