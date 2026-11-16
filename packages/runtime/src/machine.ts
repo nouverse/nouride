@@ -11,7 +11,7 @@
  * system says it (`platform-memory.ts`).
  */
 
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { availableParallelism, cpus } from "node:os";
 import { machineUsedBytes } from "./platform-memory.ts";
 import { totalMemoryBytes } from "./process-memory.ts";
@@ -30,8 +30,12 @@ export interface MachineSource {
   memoryBytes(): number;
   /** The system this is, as `process.platform` names it: which of `platform-memory.ts`'s readers is asked. */
   platform(): string;
+  /** This process, whose own memory is counted apart from what it started. */
+  pid(): number;
   /** A file's text, or null when it is not there. */
   read(path: string): string | null;
+  /** The names in a folder, or none when it is not there. */
+  list(path: string): string[];
   /** What one of the system's own programs prints, and the process it ran as; null when it is not there or fails. */
   run(program: string, args: readonly string[]): { text: string; pid: number } | null;
 }
@@ -49,15 +53,24 @@ function systemCores(): number {
   }
 }
 
-const SYSTEM: MachineSource = {
+/** The system's own: what `readMemoryUse` and the count of what this process started read unless told otherwise. */
+export const SYSTEM: MachineSource = {
   cores: systemCores,
   memoryBytes: () => totalMemoryBytes(),
   platform: () => process.platform,
+  pid: () => process.pid,
   read: (path) => {
     try {
       return readFileSync(path, "utf8");
     } catch {
       return null;
+    }
+  },
+  list: (path) => {
+    try {
+      return readdirSync(path);
+    } catch {
+      return [];
     }
   },
   // The system's own program, never one an agent installed under the same name, with none of the daemon's

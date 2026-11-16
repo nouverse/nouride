@@ -359,9 +359,9 @@ it; for anyone else, **Logs** stays under Settings with its two tabs, and **Upda
 
 **System** says what the machine is using right now, each figure a bar with a sentence beside it:
 
-- **RAM**: how much is in use of what Nouride may use, then who holds it: Nouride itself, and the agents' commands
-  where they are counted apart. On a Mac the figure in use is close to Activity Monitor's "Memory Used". In a
-  container, or under a service that sets a limit, the ceiling is that limit and
+- **RAM**: how much is in use of what Nouride may use, then who holds it: Nouride itself, and the agents' commands,
+  with their ceiling where a service gives them one. On a Mac the figure in use is close to Activity Monitor's
+  "Memory Used". In a container, or under a service that sets a limit, the ceiling is that limit and
   the figure in use is the container's own, the one `docker stats` shows, not the machine's around it. The card says
   which it is.
 - **Disk**: the disk Nouride's files are on (in a container, its volume), how much is free, and how much Nouride's

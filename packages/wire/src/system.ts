@@ -14,7 +14,10 @@ export interface SystemOverview {
   memory: {
     /** Nouride's own process, in bytes. */
     daemonBytes: number;
-    /** What the agents' commands hold together and may hold, where they have a group of their own. */
+    /**
+     * What the agents' commands hold together, and what they may hold where a cgroup of their own caps them. With no
+     * such group it is what the daemon's own processes hold, summed, and `maxBytes` is null. Null where neither is read.
+     */
     commands: { usedBytes: number; maxBytes: number | null } | null;
     /** In use of what Nouride may use: its container's or its service's own count where a limit is set, the machine's otherwise. */
     usedBytes: number | null;

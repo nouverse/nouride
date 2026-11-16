@@ -104,7 +104,8 @@ describe("System", () => {
       expect(meter(host, "RAM in use")).toBeNull();
       expect(meter(host, "Disk in use")).toBeNull();
       expect(text(host)).toContain("That is this machine's own RAM.");
-      expect(text(host)).toContain("The agents' commandsCounted together with Nouride here.");
+      expect(text(host)).toContain("The agents' commandsHow much they hold is not something Nouride can tell here.");
+      expect(text(host)).not.toContain("Counted together");
       expect(text(host)).toContain("Nouride cannot tell how large the disk is here.");
       await drawn(host, "How much Nouride's own files take could not be counted here.");
     });
