@@ -167,7 +167,7 @@ export function CodeBlock({ lang, text, growing = false }: { lang?: string | und
   const highlighter = useHighlighter(colourable);
   const coloured = useMemo<CodePiece[] | null>(() => (colourable && highlighter ? highlighter.pieces(lang ?? "", text) : null), [colourable, highlighter, lang, text]);
   // What the block is drawn as beside its code: a viewer's picture, or the page an `html` block is.
-  const drawnAs = page !== null ? "Page" : drawing && viewer ? viewer.label : null;
+  const drawnAs = page !== null ? "Preview" : drawing && viewer ? viewer.label : null;
   return (
     <div className="rounded-xl border border-base-content/10 bg-base-200/60 overflow-hidden shadow-xs" data-viewer={pictured ? "picture" : paged ? "page" : "code"}>
       {/* The head: what a printed page leaves out (`MarkdownPreview`). */}

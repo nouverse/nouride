@@ -558,7 +558,7 @@ diagram are shown as images, so a script written inside one does nothing. The di
 a page holds a diagram.
 
 **A page of HTML** (0.8.39). An `html` block of a reply is drawn in the chat as the page it is, once the reply is
-over: in the reply itself, as tall as the page up to a limit, with a switch between **Page** and **Code** on its head
+over: in the reply itself, as tall as the page up to a limit, with a switch between **Preview** and **Code** on its head
 and a link that opens it in a tab of its own. HTML an agent wrote straight into its reply, with no code block around
 it, is such a block too. An `.html` file in Files and the Workspace has **Preview**, which opens the page over the
 dashboard when you press it. The page is an agent's, so it is held apart from Nouride. Its own scripts run. It cannot

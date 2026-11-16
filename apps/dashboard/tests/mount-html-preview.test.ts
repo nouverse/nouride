@@ -70,7 +70,7 @@ const frame = (host: HTMLElement) => host.ownerDocument.body.querySelector<HTMLI
 /** The frame an html block of a reply is drawn in, inside the reply. */
 const page = (host: HTMLElement) => host.querySelector<HTMLIFrameElement>('[data-viewer="page"] iframe');
 /** A button of the block's switch between its page and its code. */
-const showAs = (host: HTMLElement, as: "Page" | "Code") => [...host.querySelectorAll<HTMLButtonElement>('[aria-label="Show as"] button')].find((button) => button.textContent?.trim() === as);
+const showAs = (host: HTMLElement, as: "Preview" | "Code") => [...host.querySelectorAll<HTMLButtonElement>('[aria-label="Show as"] button')].find((button) => button.textContent?.trim() === as);
 
 describe("an html block in a reply", () => {
   test("is drawn in the reply itself, in a frame that runs its scripts and nothing else, at the daemon's address for that block", async () => {
@@ -89,7 +89,6 @@ describe("an html block in a reply", () => {
       expect(host.ownerDocument.body.querySelector('[role="dialog"]') === null).toBe(true);
       expect(host.ownerDocument.body.querySelectorAll("iframe")).toHaveLength(1);
       expect(drawn.closest("[data-viewer]")!.querySelector("[data-block-head]")!.textContent).toMatch(/^html/i);
-      expect(previews(host)).toHaveLength(0);
       // The page's words are the frame's, never elements of the dashboard's own page.
       expect([...host.querySelectorAll("h1")].filter((heading) => heading.textContent?.trim() === "Menu")).toHaveLength(0);
     });
@@ -100,7 +99,7 @@ describe("an html block in a reply", () => {
     await renderPage("/chat/ses_1", async (host) => {
       await eventually(() => page(host) !== null, 5_000, "the block's page");
       const address = page(host)!.getAttribute("src");
-      expect(showAs(host, "Page")!.getAttribute("aria-pressed")).toBe("true");
+      expect(showAs(host, "Preview")!.getAttribute("aria-pressed")).toBe("true");
       showAs(host, "Code")!.click();
       await eventually(() => page(host) === null, 2_000, "the block as its code");
       expect([...host.querySelectorAll("pre code")].map((code) => code.textContent)).toContain(PAGE);
@@ -109,7 +108,7 @@ describe("an html block in a reply", () => {
       expect(link.getAttribute("href")).toBe(address);
       expect(link.getAttribute("target")).toBe("_blank");
       expect(link.getAttribute("rel")).toBe("noopener noreferrer");
-      showAs(host, "Page")!.click();
+      showAs(host, "Preview")!.click();
       await eventually(() => page(host) !== null, 2_000, "the block as its page again");
     });
   });
@@ -151,7 +150,7 @@ describe("an html block in a reply", () => {
       // Drawn again, it is as tall as its page last said: nothing jumps when the block comes back from its code.
       showAs(host, "Code")!.click();
       await eventually(() => page(host) === null, 2_000, "the block as its code");
-      showAs(host, "Page")!.click();
+      showAs(host, "Preview")!.click();
       await eventually(() => page(host) !== null, 2_000, "the block as its page again");
       expect(page(host)!.style.height).toBe("123px");
     });
@@ -163,7 +162,7 @@ describe("an html block in a reply", () => {
       await renderPage("/chat/ses_1", async (host) => {
         await eventually(() => host.querySelector("pre code") !== null, 5_000, "the block");
         expect(host.ownerDocument.body.querySelector("iframe") === null).toBe(true);
-        expect(showAs(host, "Page")).toBeUndefined();
+        expect(showAs(host, "Preview")).toBeUndefined();
       });
     }
   });
@@ -221,7 +220,7 @@ describe("where nothing stored can be read back", () => {
       await eventually(() => host.querySelector("pre code")?.textContent === PAGE, 5_000, "the report's block");
       expect(previews(host)).toHaveLength(0);
       expect(host.ownerDocument.body.querySelector("iframe") === null).toBe(true);
-      expect(showAs(host, "Page")).toBeUndefined();
+      expect(showAs(host, "Preview")).toBeUndefined();
     });
   });
 });

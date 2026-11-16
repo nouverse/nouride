@@ -578,7 +578,7 @@ sebagai gambar, jadi script yang ditulis di dalamnya gak berbuat apa-apa. Penamp
 kali sebuah halaman memuat diagram.
 
 **Halaman HTML** (0.8.39). Blok `html` di sebuah balasan digambar di chat sebagai halamannya, setelah balasannya
-selesai: di dalam balasan itu sendiri, setinggi halamannya sampai batas tertentu, dengan pilihan **Page** dan **Code**
+selesai: di dalam balasan itu sendiri, setinggi halamannya sampai batas tertentu, dengan pilihan **Preview** dan **Code**
 di kepalanya dan link yang membukanya di tab sendiri. HTML yang ditulis agent langsung di balasannya, tanpa blok
 kode, juga jadi blok seperti itu. File `.html` di Files dan Workspace punya **Preview**, yang membuka halamannya di
 atas dashboard saat kamu tekan. Halaman itu milik agent, jadi dipisahkan dari Nouride. Script-nya sendiri jalan. Ia gak
