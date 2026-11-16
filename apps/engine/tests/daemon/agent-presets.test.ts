@@ -87,7 +87,7 @@ describe("creating an agent from a preset", () => {
     await setup.createAgent(input("nouva"));
     expect(toolsOf(registry, "nouva")).toEqual(expect.arrayContaining(setup.availableTools()));
     expect(registry.get("nouva")?.config.tools.everyTool).toBe(true);
-    expect(await readTextFile(join(agentsDir, "nouva", "AGENTS.md"))).toContain("## How you work\n\nYou can work across files, the terminal");
+    expect(await readTextFile(join(agentsDir, "nouva", "AGENTS.md"))).toContain("## How you work\n\nYou can work across files, commands, the web and Nouride itself");
   });
 
   test("Researcher gets its tools and its lines, and nothing that writes", async () => {
