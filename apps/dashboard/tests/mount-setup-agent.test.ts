@@ -4,11 +4,15 @@
  * harness (`mount-harness.ts`).
  */
 
-import { expect, test } from "bun:test";
-import { answer, enabled, press, recordPosts, renderPage, type, useMountHarness, WIRE } from "./mount-harness.ts";
+import { afterEach, expect, test } from "bun:test";
+import { answer, dom, enabled, press, recordPosts, renderPage, type, useMountHarness, WIRE } from "./mount-harness.ts";
 import { eventually } from "./wait.ts";
 
 useMountHarness();
+// A test that makes the window a phone's leaves it one for the tests after it.
+afterEach(() => {
+  dom.happyDOM.setViewport({ width: 1024, height: 768 });
+});
 
 // The owner, 2026-11-06: the wizard's first agent is the Nourider template, named Nourider, its headline and SOUL.md
 // filled in as the New Agent form fills a Pilot's. It had "My First Agent" and a generic prompt of its own.
@@ -57,9 +61,8 @@ test("an unfinished install opened at Overview goes to the setup wizard without 
 
 // The owner, 2026-11-07, on a phone: the model picker chose the first model for them, and its list opened on focus and
 // jumped as the keyboard came up and with every keystroke. The field starts empty, and suggestions come as they type.
-test("the setup wizard's model field starts empty, and its suggestions come once something is typed", async () => {
-  // As on a phone: the provider step comes first and leaves the models it found in the cache (`setQueryData`), so the
-  // agent step mounts with them at hand, which is when the first one was chosen for the person.
+/** The wizard at its agent step, with the models the provider step left in the cache, as it leaves them. */
+async function atTheAgentStep(run: (field: HTMLInputElement, list: () => Element | null, rows: () => string[]) => Promise<void>): Promise<void> {
   answer({
     "/setup/state": { status: 200, body: { complete: false, hasAdmin: true, hasUser: true, hasProvider: false, hasAgent: false } },
     "/setup/models": { status: 200, body: { ok: true, models: ["model-one", "model-two", "other-three"] } },
@@ -70,9 +73,16 @@ test("the setup wizard's model field starts empty, and its suggestions come once
     answer({ "/setup/state": { status: 200, body: { complete: false, hasAdmin: true, hasUser: true, hasProvider: true, hasAgent: false } } });
     await app.queryClient.invalidateQueries({ queryKey: ["setup"] });
     await eventually(() => host.querySelector("#setup-model") !== null, 2_000, "the agent step");
-    const field = host.querySelector<HTMLInputElement>("#setup-model")!;
     const list = () => document.body.querySelector('[role="listbox"]');
     const rows = () => [...document.body.querySelectorAll('[role="listbox"] [role="option"]')].map((row) => row.textContent ?? "");
+    await run(host.querySelector<HTMLInputElement>("#setup-model")!, list, rows);
+  });
+}
+
+test("on a phone the setup wizard's model field starts empty, and its suggestions come once something is typed", async () => {
+  // The keyboard a focus brings up there moved a list opened on it under the finger, and with every keystroke after.
+  dom.happyDOM.setViewport({ width: 390, height: 844 });
+  await atTheAgentStep(async (field, list, rows) => {
     expect(field.value).toBe("");
     // React draws what a focus does before focus() returns: a list opened on it would be there now.
     field.focus();
@@ -84,5 +94,22 @@ test("the setup wizard's model field starts empty, and its suggestions come once
     expect(rows().some((row) => row.includes("other-three"))).toBe(false);
     type(field, "");
     await eventually(() => list() === null, 2_000, "none for an emptied field");
+  });
+});
+
+test("in a wide window the model field, still empty, lists every model as it takes the focus, and one is picked from it", async () => {
+  // Nobody making their first agent knows a model's name to type: with nothing listed there was nothing to pick from.
+  await atTheAgentStep(async (field, list, rows) => {
+    expect(field.value).toBe("");
+    expect(list()).toBeNull();
+    field.focus();
+    await eventually(() => list() !== null, 2_000, "the list on focus");
+    expect(rows()).toHaveLength(3);
+    expect(["model-one", "model-two", "other-three"].every((model) => rows().some((row) => row.includes(model)))).toBe(true);
+    [...document.body.querySelectorAll<HTMLButtonElement>('[role="listbox"] [role="option"] button')].find((option) => option.textContent?.includes("model-two"))!.click();
+    await eventually(() => field.value === "model-two", 2_000, "the model picked");
+    // Emptied again, the whole list is back: what there is to pick from is never a keystroke away.
+    type(field, "");
+    await eventually(() => rows().length === 3, 2_000, "the whole list for an emptied field");
   });
 });

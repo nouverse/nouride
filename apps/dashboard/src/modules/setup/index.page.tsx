@@ -9,6 +9,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, Check, Loader2, Sparkles } from "lucide-react";
 import { Combobox } from "@/commons/components/ui/Combobox";
+import { useWide } from "@/commons/hooks/use-wide";
 import { api } from "@/commons/lib/api";
 import type { SetupState } from "@nouride/wire";
 import { gatewayMount } from "@/commons/lib/bundled-gateway";
@@ -263,6 +264,9 @@ function KeyForm({ state, onUseGateway }: { state: SetupState | undefined; onUse
 }
 
 function AgentStep() {
+  // The model's list as the field takes the focus: it starts empty, and nobody making their first agent knows a
+  // model's name to type. Not on a phone, where the keyboard that focus brings up moves the list under the finger.
+  const wide = useWide();
   const queryClient = useQueryClient();
   const cachedModels = queryClient.getQueryData<string[]>(["models"]);
 
@@ -385,6 +389,8 @@ function AgentStep() {
             value={model}
             onChange={setModel}
             required
+            listOnFocus={wide}
+            listOnPress={wide}
           />
         </div>
 
