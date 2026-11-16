@@ -7,7 +7,7 @@
  * `agents/<id>/skills.toml`.
  *
  * A project skill is listed and not switchable. It comes from a repository an admin pointed at, so it
- * is switched off by removing its folder in the Project folders card below (0.8.24) — a different act
+ * is switched off by removing its folder in the Project folders card above the list (0.8.24) — a different act
  * with different consequences, and one control that quietly did both would be a trap.
  *
  * The list filters and scrolls inside its card, as the workshop's does (`ScrollCard`): with forty skills the
@@ -107,6 +107,8 @@ export default function AgentSkillsPage({ agentId }: { agentId: string }) {
             : `Nouride's skills do not reach ${cli} yet: it uses its own. What you switch here applies when ${name} goes back to its model.`
         }
       />
+      {/* Above the list, not under it: below forty skills it was a page's scroll away, and read as not there at all. */}
+      <SkillRootsCard agentId={agentId} />
       {/* In the agent's row of tabs, which stays at the top of the window: in the card's head it left with the first rows. */}
       {list.length > 0 ? (
         <StickyTools>
@@ -209,8 +211,6 @@ export default function AgentSkillsPage({ agentId }: { agentId: string }) {
         </span>
         {!editable ? <span>Read only: you need the operator role to change this.</span> : null}
       </div>
-
-      <SkillRootsCard agentId={agentId} />
     </div>
   );
 }
