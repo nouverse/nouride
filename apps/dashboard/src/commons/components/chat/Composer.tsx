@@ -13,6 +13,7 @@
  * the honest shape of the entanglement rather than a way of hiding it.
  */
 
+import { enterSends } from "@/commons/lib/enter-sends";
 import type { RefObject } from "react";
 import { Send, Square, SquareSlash } from "lucide-react";
 import type { Room, SlashCommand } from "@nouride/wire";
@@ -225,7 +226,8 @@ export function Composer(props: ComposerProps) {
                 return;
               }
 
-              if (e.key === "Enter" && !e.shiftKey) {
+              // On a phone Enter is a new line, the only key there that can make one: the button sends.
+              if (enterSends(e)) {
                 e.preventDefault();
                 submit();
               }
@@ -301,7 +303,7 @@ function UnderTheBox({ hint, writable }: { hint: string | undefined; writable: b
   return (
     <div className={`${hint ? "flex" : "hidden sm:flex"} min-h-4 items-center justify-between gap-3 px-2 text-[11px] text-base-content/65`}>
       <span className="min-w-0 truncate">{hint}</span>
-      {writable && <span className="hidden shrink-0 sm:inline">Enter to send · Shift+Enter for a new line</span>}
+      {writable && <span className="hidden shrink-0 sm:inline pointer-coarse:hidden">Enter to send · Shift+Enter for a new line</span>}
     </div>
   );
 }

@@ -29,7 +29,8 @@ describe("this tree", () => {
     // The Pro code's records count where it is checked out: a public clone has the records and not the files.
     const present = Object.entries(LONG_FUNCTIONS).filter(([file]) => existsSync(join(ROOT, file)));
     expect(found).toBe(present.reduce((sum, [, names]) => sum + Object.keys(names).length, 0));
-    expect(found).toBeGreaterThan(60);
+    // A floor that says the walk looked, well under the count: a function split leaves the record, as it should.
+    expect(found).toBeGreaterThan(40);
     // A reading of the whole tree, as the two under "the whole check refuses" are.
   }, 30_000);
 

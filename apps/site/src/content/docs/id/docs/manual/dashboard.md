@@ -103,6 +103,8 @@ memberi tahu.
 bawah dan muncul lagi begitu kamu scroll ke atas (0.8.39). Panel yang naik dari bawah layar (More, form untuk menambah
 langkah automation, daftar untuk memulai chat) punya nama dan tombol tutup di bagian atasnya, dan geser ke bawah di
 bagian atas itu menutupnya. Semua yang kamu tekan di sana minimal 32 piksel lebar dan tingginya, di setiap halaman menu.
+Di chat, Enter membuat baris baru di HP atau tablet dan tombol kirim yang mengirim (0.8.39); dengan keyboard, Enter
+mengirim dan Shift+Enter membuat baris baru.
 
 **Di layar utama HP**, dashboard terbuka seperti aplikasi: ikonnya kucing Nouride, Chats tampil duluan, di jendelanya
 sendiri. Buka dashboard di alamat `https://`-nya. Chrome atau Edge menawarkan **Install** (di bilah alamat, atau di menu
