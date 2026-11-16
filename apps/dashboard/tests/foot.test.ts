@@ -112,11 +112,14 @@ describe("on a phone", () => {
       tall(main);
       scrollTo(main, 20);
       scrollTo(main, 400);
-      await eventually(() => bar().hasAttribute("data-away"), 2_000, "the bar away");
-      seen.away = { foot: dom.document.documentElement.dataset.foot, inert: bar().hasAttribute("inert"), classes: bar().className.split(" ") };
+      // The bar's own mark is drawn with it; the document's is written by an effect after that. Waited for together:
+      // read the moment the bar changed, the document's was once still the old one, in a full run of the suite.
+      const foot = () => dom.document.documentElement.dataset.foot;
+      await eventually(() => bar().hasAttribute("data-away") && foot() === "away", 2_000, "the bar away, and the foot with it");
+      seen.away = { foot: foot(), inert: bar().hasAttribute("inert"), classes: bar().className.split(" ") };
       scrollTo(main, 380);
-      await eventually(() => !bar().hasAttribute("data-away"), 2_000, "the bar back");
-      seen.back = { foot: dom.document.documentElement.dataset.foot ?? null, classes: bar().className.split(" ") };
+      await eventually(() => !bar().hasAttribute("data-away") && foot() === undefined, 2_000, "the bar back, and the foot with it");
+      seen.back = { foot: foot() ?? null, classes: bar().className.split(" ") };
     });
     expect(seen.away).toEqual({ foot: "away", inert: true, classes: expect.arrayContaining(["translate-y-[calc(100%+0.5rem+env(safe-area-inset-bottom))]", "transition-[translate]"]) });
     expect(seen.back).toEqual({ foot: null, classes: expect.not.arrayContaining(["translate-y-[calc(100%+0.5rem+env(safe-area-inset-bottom))]"]) });
