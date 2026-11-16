@@ -9,9 +9,7 @@
 Nouride runs a few AI agents on a small box you own, and uses very little of it.<br>
 Chat with them on Telegram, Discord, WhatsApp or right in your browser.
 
-[**Website**](https://nouride.com) · [**Docs**](https://nouride.com/en/docs/start/what-is-nouride/) · [**Getting started**](https://nouride.com/en/docs/start/first-run/) · [**Releases**](https://github.com/nouverse/nouride/releases)
-
-On Android? [**Nouride Home**](https://github.com/nouverse/nouride-home) runs Nouride on your phone, with no terminal and no root.
+[**Website**](https://nouride.com) · [**Docs**](https://nouride.com/en/docs/start/what-is-nouride/) · [**Getting started**](https://nouride.com/en/docs/start/first-run/) · [**Releases**](https://github.com/nouverse/nouride/releases) · [**Nouride Home**](https://github.com/nouverse/nouride-home)
 
 [![License: FSL-1.1-ALv2](https://img.shields.io/badge/License-FSL--1.1--ALv2-blue.svg?style=flat-square)](#licence)
 [![GitHub Sponsors](https://img.shields.io/badge/Sponsor-GitHub-ea4aaa?style=flat-square&logo=githubsponsors&logoColor=white)](https://github.com/sponsors/gadingnst)
