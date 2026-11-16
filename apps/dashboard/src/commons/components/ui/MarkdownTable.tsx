@@ -22,8 +22,8 @@ export function isTableSeparator(line: string): boolean {
  * `cell` draws a cell's words as the text around the table draws its own.
  *
  * Its columns are the agent's, so it cannot fold into rows as the dashboard's own tables do on a phone
- * (`fold-table.ts`): it scrolls sideways in its box, and a shade on the side that holds more says so. Below `sm` a
- * column keeps a reader's width rather than squeezing a word to a line.
+ * (`fold-table.ts`): it scrolls sideways in its box, and a shade on the side that holds more says so. A column keeps a
+ * reader's width at every size of window: a table of many columns scrolls rather than squeezing a word to a line.
  */
 export function MarkdownTable({ rows, at, cell }: { rows: string[][]; at: number; cell: (text: string, key: string) => ReactNode[] }) {
   const headers = rows[0] ?? [];
@@ -55,7 +55,7 @@ export function MarkdownTable({ rows, at, cell }: { rows: string[][]; at: number
             <thead>
               <tr className="border-b border-base-content/10 bg-base-200/50 text-[11px] font-bold uppercase tracking-wider text-base-content/65 font-mono">
                 {headers.map((h, i) => (
-                  <th key={i} className="py-2.5 px-3 max-sm:min-w-28">
+                  <th key={i} className="min-w-28 py-2.5 px-3">
                     {cell(h, `th${at}-${i}`)}
                   </th>
                 ))}
@@ -66,7 +66,7 @@ export function MarkdownTable({ rows, at, cell }: { rows: string[][]; at: number
             {bodyRows.map((row, rIdx) => (
               <tr key={rIdx} className="hover:bg-base-200/30 transition-colors">
                 {row.map((words, cIdx) => (
-                  <td key={cIdx} className="py-2 px-3 text-xs text-base-content/85 max-sm:min-w-28">
+                  <td key={cIdx} className="min-w-28 py-2 px-3 text-xs text-base-content/85">
                     {cell(words, `td${at}-${rIdx}-${cIdx}`)}
                   </td>
                 ))}

@@ -1,7 +1,8 @@
 /**
  * A table in an agent's reply (`MarkdownTable.tsx`): its columns are the agent's, so it does not fold on a phone as
  * the dashboard's own tables do. It scrolls sideways in its box, a shade on each side that holds more says so, and
- * below `sm` a column keeps a reader's width.
+ * a column keeps a reader's width at every size of window: in a chat's column on a laptop a table of many columns was
+ * squeezed as it was on a phone.
  */
 
 import { describe, expect, test } from "bun:test";
@@ -39,7 +40,11 @@ describe("a table in a reply", () => {
       const frame = host.querySelector<HTMLElement>("table")!.closest("[class*=rounded-2xl]") as HTMLElement;
       const scroller = host.querySelector("table")!.parentElement as HTMLElement;
       expect(scroller.className).toContain("overflow-x-auto");
-      expect([...host.querySelectorAll("th, td")].every((cell) => cell.className.includes("max-sm:min-w-28"))).toBe(true);
+      // A least width for every cell, whatever the window's: what does not fit is scrolled to, never squeezed.
+      const cells = [...host.querySelectorAll("th, td")].map((cell) => cell.className.split(" "));
+      expect(cells).toHaveLength(10);
+      expect(cells.every((classes) => classes.includes("min-w-28"))).toBe(true);
+      expect(cells.some((classes) => classes.some((name) => name.endsWith(":min-w-28")))).toBe(false);
       const at = (left: number) => {
         Object.defineProperty(scroller, "scrollWidth", { value: 600, configurable: true });
         Object.defineProperty(scroller, "clientWidth", { value: 300, configurable: true });

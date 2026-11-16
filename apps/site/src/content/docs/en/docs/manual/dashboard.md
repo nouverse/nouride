@@ -549,7 +549,8 @@ the drawing and **Code**, and **Copy** copies what the agent wrote, whichever sh
 - **A diagram**: a block named `mermaid` is its diagram, in the colours of the look you are on.
 - **A picture**: a block named `svg` is its picture, on a white card in both looks.
 - A diagram or a picture opens large on a press, and is saved from there.
-- **A wide table** scrolls inside its box, and its edge is shaded on the side where it goes on.
+- **A wide table** scrolls sideways inside its box, each column keeping a readable width, and its edge is shaded on
+  the side where it goes on.
 - What cannot be drawn (a diagram with a mistake in it) stays code, with no error.
 
 It is the same wherever an agent's text is read: a mission's result, a job's report, notes, a file in Files and the

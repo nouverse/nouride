@@ -569,7 +569,8 @@ antara gambarnya dan **Code**, dan **Copy** menyalin yang ditulis agent, mana pu
 - **Diagram**: blok bernama `mermaid` jadi diagramnya, dengan warna tampilan yang sedang kamu pakai.
 - **Gambar**: blok bernama `svg` jadi gambarnya, di atas kartu putih di kedua tampilan.
 - Diagram atau gambar terbuka besar kalau ditekan, dan bisa disimpan dari situ.
-- **Tabel yang lebar** di-scroll di dalam kotaknya, dan tepinya diberi bayangan di sisi yang masih ada lanjutannya.
+- **Tabel yang lebar** di-scroll ke samping di dalam kotaknya, tiap kolom tetap punya lebar yang enak dibaca, dan
+  tepinya diberi bayangan di sisi yang masih ada lanjutannya.
 - Yang gak bisa digambar (diagram yang ada salahnya) tetap kode, tanpa pesan error.
 
 Ini berlaku di semua tempat tulisan agent dibaca: hasil misi, laporan job, catatan, file di Files dan Workspace,
