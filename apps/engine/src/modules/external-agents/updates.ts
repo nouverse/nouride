@@ -44,6 +44,8 @@ interface OpenCall {
   startedAt: number;
   /** Whether its `tool` step is out. Not while Claude Code still streams the input: its title is "Terminal" then. */
   announced: boolean;
+  /** Whether it is the agent's own: not a call of a helper the CLI started itself (`CliRow.helper`). */
+  own: boolean;
 }
 
 /** The reply between two steps: one message of the CLI's, and whether the chat already has it. */
@@ -68,6 +70,8 @@ export class UpdateReader {
   constructor(
     private readonly sink: UpdateSink,
     private readonly now: () => number = Date.now,
+    /** Where this CLI's connector says a call is a helper's (`CliRow.helper`); none where every call is the agent's. */
+    private readonly helper?: { meta: string; parent: string },
   ) {}
 
   /** The reply as it stands: every message chunk, in order. */
@@ -185,9 +189,15 @@ export class UpdateReader {
     }
   }
 
-  /** Tool calls open in the prompt now: a steer waits for them (`steering.ts`). */
+  /**
+   * The agent's own tool calls open in the prompt now: a steer waits for them (`steering.ts`). Not a call of a helper
+   * the CLI started itself: one working in the background keeps the prompt open long after the agent has answered,
+   * and a message for the agent then waited out its whole hold for commands that were never the agent's.
+   */
   get running(): number {
-    return this.open.size;
+    let own = 0;
+    for (const call of this.open.values()) if (call.own) own += 1;
+    return own;
   }
 
   /** The end of the prompt: a thought still open is written, and a call the agent never closed is closed as cut off. */
@@ -204,7 +214,10 @@ export class UpdateReader {
   private started(call: ToolCall): void {
     const name = nameOf(call);
     const title = call.title?.trim() || name;
-    const open: OpenCall = { name, title, like: call.kind ? LIKE[call.kind] : undefined, startedAt: this.now(), announced: false };
+    // A helper's call names the call that started the helper, where this CLI's connector says so at all.
+    const marks = this.helper ? call._meta?.[this.helper.meta] : undefined;
+    const startedBy = marks && typeof marks === "object" ? (marks as Record<string, unknown>)[this.helper!.parent] : undefined;
+    const open: OpenCall = { name, title, like: call.kind ? LIKE[call.kind] : undefined, startedAt: this.now(), announced: false, own: !(typeof startedBy === "string" && startedBy !== "") };
     this.open.set(call.toolCallId, open);
     this.calls += 1;
     if (!(call.status === "pending" && streaming(call.rawInput))) this.announced(call.toolCallId, open);
@@ -246,7 +259,8 @@ export class UpdateReader {
       outcome: failed ? "failed" : "ok",
     });
     this.done.push({ name: open.name, ok: !failed });
-    if (this.open.size === 0) this.sink.idle?.();
+    // The agent's last own call has ended: what waited for it goes in now, whatever a helper still runs.
+    if (this.running === 0) this.sink.idle?.();
   }
 
   private flushThought(): void {

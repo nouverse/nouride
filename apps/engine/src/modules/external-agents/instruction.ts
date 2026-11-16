@@ -38,6 +38,15 @@ export function whatRuns(named: string, cliId: string): string {
   );
 }
 
+/**
+ * For a CLI that starts helpers of its own (`CliRow.helper`): one working in the background does not free the chat.
+ * Its connector keeps the prompt open until the helper ends, so the turn is still the agent's and the chat shows it at
+ * work. Told the opposite by its own prompt, an agent said "the chat stays free" and the person watched it wait.
+ */
+const HELPERS_HOLD =
+  "A helper of your own that you start in the background (a subagent of your CLI's) does not free this chat: your turn stays open until it ends, " +
+  "and the person sees you at work the whole time. Their messages still reach you meanwhile. Tell them so, and never that the chat is free.";
+
 /** Found by its start alone, so a block whose first line a person reworded is still the one replaced. */
 const OPENS = "<!-- nouride:begin";
 const BEGIN = `${OPENS} (Nouride writes this part from the agent's persona files; change them on its Files tab, not here) -->`;
@@ -52,7 +61,7 @@ const END = "<!-- nouride:end -->";
  * `memory`: which memory counts (0.8.10) — a CLI may keep one of its own, and Claude Code's own prompt tells it to write
  * there; Nix kept five notes in its profile folder for four days that no other agent, nor Nouride, ever read.
  */
-function instructionBlock(input: { name: string; cli: string; persona: PersonaFiles; missions: boolean; work: boolean; memory: boolean; links: boolean; runs?: string }): string {
+function instructionBlock(input: { name: string; cli: string; persona: PersonaFiles; missions: boolean; work: boolean; memory: boolean; links: boolean; helpers: boolean; runs?: string }): string {
   const lines = [
     BEGIN,
     // No version here: the one a CLI's ACP side reports is its adapter's (claude-agent-acp 0.95.0), which the agent took
@@ -66,6 +75,7 @@ function instructionBlock(input: { name: string; cli: string; persona: PersonaFi
     ...(input.work ? ["The `work` tool shows your own missions, background jobs and approvals."] : []),
     ...(input.memory ? [CLI_MEMORY] : []),
     ...(input.links ? [DASHBOARD_LINKS] : []),
+    ...(input.helpers ? [`${HELPERS_HOLD}${input.missions ? " Work that should leave the chat free is a mission." : ""}`] : []),
     ...(input.missions ? [`${WHEN_TO_START} With the \`mission\` tool: action "start" drafts it (a goal, a brief and checks that prove it done); "edit" changes the draft until the person starts it. ${WHO_SIGNS}`] : []),
   ];
   const files: [string, string | undefined][] = [["IDENTITY.md", input.persona.identity], ["SOUL.md", input.persona.soul], ["AGENTS.md", input.persona.agents], ["MEMORY.md", input.persona.memory]];
@@ -122,7 +132,7 @@ async function rewrite(agent: LoadedAgent, path: string, change: (current: strin
  * review). What runs the agent is left out too: compared, an update of the CLI would cost every conversation its session.
  */
 export async function writeInstruction(agent: LoadedAgent, connection: CliConnection, own: string, can: { missions?: boolean; work?: boolean; memory?: boolean; links?: boolean } = {}): Promise<string> {
-  const input = { name: agent.config.displayName, cli: connection.row.name, persona: agent.persona, missions: can.missions === true, work: can.work === true, memory: can.memory === true, links: can.links === true };
+  const input = { name: agent.config.displayName, cli: connection.row.name, persona: agent.persona, missions: can.missions === true, work: can.work === true, memory: can.memory === true, links: can.links === true, helpers: connection.row.helper !== undefined };
   const named = partsNamed(await connection.parts);
   const block = instructionBlock({ ...input, ...(named ? { runs: whatRuns(named, connection.row.id) } : {}) });
   const { row, launch } = connection;
@@ -130,5 +140,6 @@ export async function writeInstruction(agent: LoadedAgent, connection: CliConnec
   await rewrite(agent, profile ?? join(own, row.instructionFile), (current) => withBlock(current, block));
   if (profile) await rewrite(agent, join(own, row.instructionFile), withoutBlock);
   const { identity, soul, agents } = agent.persona;
-  return sha256Text(instructionBlock({ ...input, missions: false, work: false, memory: false, links: false, persona: { identity, ...(soul ? { soul } : {}), ...(agents ? { agents } : {}) } }));
+  // The line about helpers is left out as the others are: compared, the release that added it would cost every conversation its session.
+  return sha256Text(instructionBlock({ ...input, missions: false, work: false, memory: false, links: false, helpers: false, persona: { identity, ...(soul ? { soul } : {}), ...(agents ? { agents } : {}) } }));
 }

@@ -319,7 +319,7 @@ export class ExternalTurnRunner {
             this.host.spending?.set(agentId, key, spentBefore + read.spent);
             this.host.spent?.(agentId, req.gatewayId, req.chatId);
           },
-        });
+        }, undefined, cli.row.helper);
         reader = read;
         let reason: AcpStopReason = "end_turn";
         if (follow) {

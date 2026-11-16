@@ -22,7 +22,8 @@
  *   `startedNewTurn` as said. A prompt says "Working.", then — 50 ms on — holds a tool call open for `FAKE_TOOL_MS` where set —
  *   `FAKE_TOOLS` of them back to back, 5 ms apart, as Codex runs its steps — and waits for a steer up to
  *   `FAKE_STEER_WAIT_MS` (3 s), then answers "Done: <prompt>". Each steer goes to stderr as `steer:<words>`.
- *   `FAKE_STEER_OFFER=no`: the same CLI, not offering the extension.
+ *   `FAKE_STEER_OFFER=no`: the same CLI, not offering the extension. `FAKE_TOOL_HELPER=1`: the tool call is a
+ *   helper's the CLI started itself, marked in its `_meta` as `{ fake: { startedBy: "agent-1" } }`.
  * - `background` — a prompt that answers "Started it." and, a moment after its end (`FAKE_LATER_MS`), goes on by itself
  *   with no prompt running, as Claude Code does when a command it left running ends: a step, then — 50 ms on, as a busy
  *   machine reads them apart — "Finished: …", and `went-on:<session>` on stderr once it has. A session it reopens replays
@@ -130,7 +131,8 @@ const server = new AcpServer({
         const toolMs = Number(process.env.FAKE_TOOL_MS ?? 0);
         const tool = (left: number) => {
           const id = `s${sessions}-${left}`;
-          channel.update({ sessionUpdate: "tool_call", toolCallId: id, title: "bun test", kind: "execute", name: "Bash", status: "in_progress" });
+          const helpers = process.env.FAKE_TOOL_HELPER === "1" ? { _meta: { fake: { startedBy: "agent-1" } } } : {};
+          channel.update({ sessionUpdate: "tool_call", toolCallId: id, title: "bun test", kind: "execute", name: "Bash", status: "in_progress", ...helpers });
           setTimeout(() => {
             process.stderr.write("tool-done\n");
             channel.update({ sessionUpdate: "tool_call_update", toolCallId: id, status: "completed" });

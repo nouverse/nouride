@@ -111,6 +111,14 @@ export interface CliRow {
    * account before a message is refused. Absent: it says nothing of the kind.
    */
   use?: { meta: string; windows: string; used: string; resets: string };
+  /**
+   * Where its connector says that a tool call is not the agent's own but a helper's that the CLI started itself (a
+   * subagent), in the call's `_meta`: the key there, and under it the field that names the call that started the
+   * helper. A helper started in the background goes on after that call has ended, and the CLI keeps the prompt open
+   * for it: a message for the agent then waits for no command of the agent's, and goes in at once. Absent: every
+   * call is the agent's own.
+   */
+  helper?: { meta: string; parent: string };
 }
 
 export const BUILT_IN_CLIS: readonly CliRow[] = [
@@ -151,6 +159,10 @@ export const BUILT_IN_CLIS: readonly CliRow[] = [
     // Every `usage_update` of 0.107.0, read on the box: `_meta["_claude/rateLimit"].unifiedWindows` holds
     // `five_hour` and `seven_day`, each `{ utilization: 0.44, resetsAt: 1794675000, status: "allowed" }`.
     use: { meta: "_claude/rateLimit", windows: "unifiedWindows", used: "utilization", resets: "resetsAt" },
+    // 0.107.0, read in its own source on the box: every update of a subagent's carries
+    // `_meta.claudeCode.parentToolUseId`, the `Agent` call that started it. With no word from the client that it reads
+    // a subagent's work after a prompt, it keeps the prompt open until its background subagents end.
+    helper: { meta: "claudeCode", parent: "parentToolUseId" },
     loginNote: "Signs in with a Claude subscription.",
   },
   {

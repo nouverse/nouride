@@ -157,7 +157,9 @@ approval's own message). A "yes" typed as a message does not answer it.
 - **An agent answered by Claude Code or Codex** (from 0.8.10) is handed your message in the prompt it is
   running, through its CLI. While a command of its runs, the message waits for that command to end, five
   minutes at most, so a test run is not pushed aside; the CLI then stops what it was writing to read it. A
-  CLI that cannot take a message mid-prompt reads it once its prompt ends, and "Got it" says so: "I'll read
+  command of a helper that Claude Code started in the background is not the agent's own, and is not waited
+  for (0.8.39): while such a helper works the agent's turn stays open and the chat shows it at work, but your
+  message is read at once. A CLI that cannot take a message mid-prompt reads it once its prompt ends, and "Got it" says so: "I'll read
   that once what I'm running now ends."
 
 What the turn read stays in the conversation. On the dashboard your message appears at once, under

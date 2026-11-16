@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import type { PlanEntry, SessionUpdate } from "@nouride/acp";
+import { BUILT_IN_CLIS, type PlanEntry, type SessionUpdate } from "@nouride/acp";
 import { UpdateReader } from "@/modules/external-agents/updates.ts";
 
 function reader(sent = false) {
@@ -243,5 +243,69 @@ describe("the last tool call open ending (0.8.10)", () => {
     call("t2", "completed");
     expect(idle).toBe(1);
     expect(read.running).toBe(0);
+  });
+});
+
+describe("a helper the CLI started itself, at work in the background", () => {
+  // As Claude's connector marks a subagent's call: the `Agent` call that started it, under its own key of `_meta`.
+  const CLAUDE = BUILT_IN_CLIS.find((row) => row.id === "claude-code")!.helper;
+
+  test("Claude Code's row says where: the call that started the helper, under the connector's own key", () => {
+    expect(CLAUDE).toEqual({ meta: "claudeCode", parent: "parentToolUseId" });
+  });
+  const steps = (helper?: { meta: string; parent: string }) => {
+    let idle = 0;
+    const read = new UpdateReader({ text: () => {}, activity: () => {}, plan: () => {}, preamble: async () => false, idle: () => void (idle += 1) }, undefined, helper);
+    const starts = (id: string, name: string, meta?: Record<string, unknown>) => read.read({ sessionUpdate: "tool_call", toolCallId: id, title: name, name, status: "in_progress", ...(meta ? { _meta: meta } : {}) });
+    const ends = (id: string) => read.read({ sessionUpdate: "tool_call_update", toolCallId: id, status: "completed" });
+    return { read, starts, ends, idle: () => idle };
+  };
+  const helpers = (by: unknown) => ({ claudeCode: { parentToolUseId: by } });
+
+  test("its calls are not the agent's own: a message for the agent does not wait for them, and the CLI is still at work", () => {
+    // The agent starts a helper in the background: that call ends at once, and the helper's own go on for minutes.
+    const r = steps(CLAUDE);
+    r.starts("agent_1", "Agent");
+    expect(r.read.running).toBe(1);
+    r.ends("agent_1");
+    expect(r.idle()).toBe(1);
+    r.starts("h1", "Bash", helpers("agent_1"));
+    r.starts("h2", "Write", helpers("agent_1"));
+    expect(r.read.running).toBe(0);
+    // Still at work for what follows what a CLI does between prompts, and for the count of its steps.
+    expect(r.read.working).toBe(true);
+    expect(r.read.toolCalls).toBe(3);
+    // The agent's own command meanwhile is waited for, and told the moment it ends, the helper's still open.
+    r.starts("own_1", "Bash");
+    expect(r.read.running).toBe(1);
+    r.ends("h1");
+    expect(r.idle()).toBe(1);
+    r.ends("own_1");
+    expect(r.idle()).toBe(2);
+    expect(r.read.running).toBe(0);
+    expect(r.read.working).toBe(true);
+  });
+
+  test("a helper the agent waits for holds a message through the call that started it, which is the agent's own", () => {
+    const r = steps(CLAUDE);
+    r.starts("agent_1", "Agent");
+    r.starts("h1", "Bash", helpers("agent_1"));
+    expect(r.read.running).toBe(1);
+    r.ends("h1");
+    expect(r.read.running).toBe(1);
+    r.ends("agent_1");
+    expect(r.read.running).toBe(0);
+  });
+
+  test("a call that names no starter is the agent's own, and so is every call of a CLI that marks none", () => {
+    const r = steps(CLAUDE);
+    for (const [id, meta] of [["a", undefined], ["b", {}], ["c", { claudeCode: {} }], ["d", helpers("")], ["e", helpers(null)], ["f", helpers(7)], ["g", { claudeCode: "agent_1" }], ["h", { other: { parentToolUseId: "agent_1" } }]] as const) {
+      r.starts(id, "Bash", meta as Record<string, unknown> | undefined);
+    }
+    expect(r.read.running).toBe(8);
+    // Another CLI's connector says nothing of the kind: the same mark is no mark there.
+    const other = steps();
+    other.starts("h1", "Bash", helpers("agent_1"));
+    expect(other.read.running).toBe(1);
   });
 });
