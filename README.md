@@ -238,12 +238,11 @@ installs anything.
 
 <br>
 
-## Nouride Home, on a phone
+## Nouride Home
 
-**[nouverse/nouride-home](https://github.com/nouverse/nouride-home)** is Nouride Home, the
-Android app that runs Nouride on a phone, with no terminal and no root. It has its own releases and updates itself; the
-APK is on its [Releases](https://github.com/nouverse/nouride-home/releases) page, and how to use it is in
-the [Nouride Home guide](https://nouride.com/en/docs/deployment/nouride-home/).
+Nouride on your phone or your Mac, no terminal needed. **[Nouride Home](https://github.com/nouverse/nouride-home)** runs
+it, keeps it running and updates itself, or opens a Nouride that already runs on another computer. Get it from its
+[Releases](https://github.com/nouverse/nouride-home/releases) page; how to use it is in the [Nouride Home guide](https://nouride.com/en/docs/deployment/nouride-home/).
 
 ## The source
 
