@@ -8,12 +8,40 @@
  * config sets neither.
  */
 
-import { readMachine, type CommandIsolation, type MachineSpec } from "@nouride/runtime";
+import { readMachine, type CommandIsolation, type MachineSpec, type SystemSpec } from "@nouride/runtime";
 import { formatBytes, plural, resolveMaxBackground, type DelegateSection } from "@nouride/shared";
 
 export interface Machine extends MachineSpec {
   /** What every command the agents run may hold together, where they run in a cgroup of their own (`isolateCommands`). */
   commandsBytes?: number;
+  /** The system under it in words (`systemWords`), read once at boot. */
+  system?: string;
+}
+
+/** How the daemon is kept running, as an agent is told it: what decides whether `systemctl` or a restart means anything. */
+const RUN_BY: Record<string, string> = {
+  systemd: "run by systemd as a service",
+  launchd: "run by launchd",
+  procd: "run by OpenWrt's procd",
+  // Docker's marker or Podman's: `detectSupervisor` reads either as this kind.
+  docker: "in a container",
+  external: "kept running by a supervisor of its own",
+  none: "started with no service manager",
+};
+
+/**
+ * The system in one sentence: "Debian GNU/Linux 12 (bookworm) on x86_64, run by systemd as a service". Each part as
+ * read (`readSystem`, and the supervisor `detectSupervisor` found); a container is said once, where the supervisor
+ * did not already say it.
+ */
+export function systemWords(system: SystemSpec, supervisor: string): string {
+  const runBy = RUN_BY[supervisor];
+  return [
+    `${system.name} on ${system.arch}`,
+    ...(system.androidKernel ? ["on an Android phone's kernel"] : []),
+    ...(runBy ? [runBy] : []),
+    ...(system.container && supervisor !== "docker" ? ["in a container"] : []),
+  ].join(", ");
 }
 
 /** The machine as boot found it: its cores and memory, and the commands' own cap where there is one. */
@@ -64,6 +92,8 @@ export function machineWords(machine: Machine): string {
  */
 export interface MachineFacts {
   words: string;
+  /** The system under it (`systemWords`), where boot read it. */
+  system?: string;
   missions: { atOnce: number; own: number };
 }
 

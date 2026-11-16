@@ -34,6 +34,7 @@ export * from "./process-background.ts";
 export * from "./process-dumpable.ts";
 export * from "./process-cgroup.ts";
 export * from "./machine.ts";
+export * from "./system.ts";
 export * from "./prompt.ts";
 export * from "./server.ts";
 export * from "./time-zone.ts";

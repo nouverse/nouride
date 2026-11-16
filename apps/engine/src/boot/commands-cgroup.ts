@@ -5,16 +5,18 @@
  * agents are told of it is in the cached part of their prompt, and must not move while the daemon runs.
  */
 
-import type { CommandIsolation } from "@nouride/runtime";
+import { readSystem, type CommandIsolation } from "@nouride/runtime";
 import { createLogger } from "@nouride/shared";
-import { atOnceBy, machineAtBoot, machineWords, type Machine } from "@/commons/machine.ts";
+import { atOnceBy, machineAtBoot, machineWords, systemWords, type Machine } from "@/commons/machine.ts";
+import { detectSupervisor } from "@/service/supervisor.ts";
 
 const log = createLogger("daemon");
 
 /** The machine as this boot reads it, said in the journal with what it gives where no limit is set. */
 export function machineFor(commands: CommandIsolation): Machine {
-  const machine = machineAtBoot(commands);
-  log.info("machine read", { machine: machineWords(machine), at_once_where_unset: atOnceBy(machine) });
+  const system = readSystem();
+  const machine = { ...machineAtBoot(commands), system: systemWords(system, detectSupervisor({ inContainer: system.container }).kind) };
+  log.info("machine read", { machine: machineWords(machine), system: machine.system, at_once_where_unset: atOnceBy(machine) });
   return machine;
 }
 

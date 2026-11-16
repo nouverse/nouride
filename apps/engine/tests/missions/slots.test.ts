@@ -84,6 +84,12 @@ describe("the machine as an agent's prompt says it", () => {
     expect(machineFacts(box, missions, registry, "nix").missions).toEqual({ atOnce: 4, own: 3 });
   });
 
+  test("the system boot read goes to the turn with the machine, and none is said where none was read", () => {
+    const box = { cores: 6, memoryBytes: 8 * GiB, system: "Debian GNU/Linux 12 (bookworm) on x86_64, run by systemd as a service" };
+    expect(machineFacts(box, missions, registry, "nouva").system).toBe("Debian GNU/Linux 12 (bookworm) on x86_64, run by systemd as a service");
+    expect("system" in machineFacts({ cores: 6, memoryBytes: 8 * GiB }, missions, registry, "nouva")).toBe(false);
+  });
+
   test("an agent's own number is never said above what the box runs: on a small machine, one", () => {
     const small = { cores: 4, memoryBytes: 2 * GiB };
     expect(machineFacts(small, missions, registry, "nix")).toEqual({ words: "4 cores, 2.0GB of memory", missions: { atOnce: 1, own: 1 } });

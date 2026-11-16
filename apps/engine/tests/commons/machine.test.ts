@@ -6,7 +6,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { isolateCommands } from "@nouride/runtime";
-import { atOnceBy, atOnceWords, backgroundInForce, backgroundLimitWords, machineAtBoot, machineWords, type Machine } from "@/commons/machine.ts";
+import { atOnceBy, atOnceWords, backgroundInForce, backgroundLimitWords, machineAtBoot, machineWords, systemWords, type Machine } from "@/commons/machine.ts";
 
 const GiB = 1024 ** 3;
 const MiB = 1024 ** 2;
@@ -123,5 +123,25 @@ describe("both limits in one line, as doctor and config check say them", () => {
     expect(atOnceWords({ machine: "4 cores, 2.0GB of memory", helpers: { limit: 0, auto: false }, missions: { limit: 1, auto: true } })).toBe(
       "no helpers in the background (set in the config), 1 mission at once (from this machine); this machine: 4 cores, 2.0GB of memory",
     );
+  });
+});
+
+describe("the system in words, as an agent is told it", () => {
+  const debian = { name: "Debian GNU/Linux 12 (bookworm)", arch: "x86_64", container: false, androidKernel: false };
+
+  test("its name, its architecture and what keeps it running", () => {
+    expect(systemWords(debian, "systemd")).toBe("Debian GNU/Linux 12 (bookworm) on x86_64, run by systemd as a service");
+    expect(systemWords({ ...debian, name: "macOS 15.1", arch: "arm64" }, "launchd")).toBe("macOS 15.1 on arm64, run by launchd");
+    expect(systemWords(debian, "none")).toBe("Debian GNU/Linux 12 (bookworm) on x86_64, started with no service manager");
+  });
+
+  test("a container said once, and an Android phone's kernel, as Nouride Home's Debian has", () => {
+    expect(systemWords({ ...debian, container: true }, "docker")).toBe("Debian GNU/Linux 12 (bookworm) on x86_64, in a container");
+    expect(systemWords({ ...debian, container: true }, "external")).toBe("Debian GNU/Linux 12 (bookworm) on x86_64, kept running by a supervisor of its own, in a container");
+    expect(systemWords({ ...debian, arch: "aarch64", androidKernel: true }, "none")).toBe("Debian GNU/Linux 12 (bookworm) on aarch64, on an Android phone's kernel, started with no service manager");
+  });
+
+  test("a supervisor it has no words for is left out, never guessed", () => {
+    expect(systemWords(debian, "something-new")).toBe("Debian GNU/Linux 12 (bookworm) on x86_64");
   });
 });

@@ -419,8 +419,9 @@ an hour (research across files or hosts, a long build, a migration rehearsal), s
 more than one only for independent pieces; work that may run past an hour is a mission's. Not for a quick
 answer, and not for something you are waiting on now.
 
-The agent is also told the machine it runs on: its cores and memory, as the daemon read them when it
-started, how many helpers it may have in the background and how many missions run at once. What is
+The agent is also told the machine it runs on: the system (its name and version, the architecture, and
+how Nouride is run there: a systemd service, launchd, a container, or an Android phone's kernel under
+Nouride Home, from 0.8.39), its cores and memory, as the daemon read them when it started, how many helpers it may have in the background and how many missions run at once. What is
 running now is said on each message while anything runs, so it can tell a free box from a busy one
 before it starts more. From 0.8.33 that covers the other agents too: in a room, which of them are at
 work there and on what, and across the box, the turns, helpers, missions and background commands

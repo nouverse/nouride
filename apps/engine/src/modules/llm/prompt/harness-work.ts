@@ -41,7 +41,11 @@ function machineLine({ ctx, toolNames }: HarnessView): string[] {
     ...(backgroundHelpers > 0 ? [`at most ${backgroundHelpers} of your ${mine} in the background`] : []),
     ...(ctx.harness.startsMissions ? [`at most ${machine.missions.atOnce} ${plural(machine.missions.atOnce, "mission")} on this machine (${machine.missions.own} of yours)`] : []),
   ];
-  return [`- **This machine** has ${machine.words}, shared by every agent on it.${limits.length ? ` At once: ${limits.join(", and ")}.` : ""}`];
+  return [
+    // What it is, so a command is written for it the first time: `apt` on Alpine, `systemctl` in a container were guesses.
+    ...(machine.system ? [`- **This system** is ${machine.system}.`] : []),
+    `- **This machine** has ${machine.words}, shared by every agent on it.${limits.length ? ` At once: ${limits.join(", and ")}.` : ""}`,
+  ];
 }
 
 /**
