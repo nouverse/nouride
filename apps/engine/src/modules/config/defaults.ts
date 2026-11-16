@@ -401,6 +401,9 @@ export const DEFAULT_CONFIG: GlobalConfig = {
     // A reasoning model through a gateway took ten seconds for one sentence, live; past fifteen the turn has
     // usually read the message already, and the line would be answering for a step it cannot shape.
     steerReplyTimeoutMs: 15_000,
+    // On: a message sent while the agent works is seen to arrive. Where the platform cannot rewrite it, it waits for
+    // the agent's own line and stands in only where that line fails.
+    steerAck: true,
   },
   attachments: {
     maxSizeMb: 50,

@@ -193,6 +193,8 @@ export class FakeGateway implements Gateway {
 
   /** Edits applied in order, so a test can read what the progress line said over time. */
   readonly edits: { messageId: string; text: string }[] = [];
+  /** It rewrites what it sent, as Telegram does; a subclass that cannot says false. */
+  readonly editsMessages: boolean = true;
 
   async editMessage(_chatId: string, messageId: string, text: string): Promise<boolean> {
     const index = Number(messageId.slice(messageId.lastIndexOf("#") + 1)) - 1;

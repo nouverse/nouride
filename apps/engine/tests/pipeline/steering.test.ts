@@ -75,6 +75,7 @@ class SlowToSend extends FakeGateway {
 
 /** A platform that will not rewrite a message it sent — `Gateway.editMessage` refused, as WhatsApp's always is. */
 class NoEdits extends FakeGateway {
+  override readonly editsMessages = false;
   override async editMessage(): Promise<boolean> {
     return false;
   }
@@ -101,6 +102,8 @@ async function bench(
     smallModel?: string;
     /** `[queue] steer_reply_timeout_ms`. */
     steerReplyTimeoutMs?: number;
+    /** `[queue] steer_ack`. */
+    steerAck?: boolean;
     people?: GlobalConfig["people"];
   } = {},
 ) {
@@ -141,6 +144,7 @@ async function bench(
       if (options.steerReplyModel !== undefined) config.queue.steerReplyModel = options.steerReplyModel;
       if (options.smallModel !== undefined) config.llm.defaults.smallModel = options.smallModel;
       if (options.steerReplyTimeoutMs !== undefined) config.queue.steerReplyTimeoutMs = options.steerReplyTimeoutMs;
+      if (options.steerAck !== undefined) config.queue.steerAck = options.steerAck;
       if (options.people) config.people = options.people;
     },
     gateway: options.slowSend
@@ -478,15 +482,50 @@ describe("a reply in the agent's own words, in place of 'Got it'", () => {
     expect(b.steps()).toContain('read a message sent while working: "use the staging DB"');
   });
 
-  test("follows 'Got it' as a message of its own where the connection cannot rewrite one", async () => {
+  // Said first where it could not be rewritten, "Got it" stood alone in English above the agent's own line, and read
+  // as a glitch in a customer's WhatsApp chat (issue #24).
+  test("where the connection cannot rewrite one, is said alone: 'Got it' waits for it and is never sent", async () => {
     const b = await bench([{ toolCalls: [{ id: "c1", name: "slow", args: {} }] }, { text: "switched to staging" }], { noEdits: true });
     b.say("m1", "migrate the database");
     await b.stepStarted();
     b.say("m2", "use the staging DB");
     await b.pipeline.idle();
 
-    expect(b.gateway.posted.indexOf(REPLY)).toBeGreaterThan(b.gateway.posted.indexOf(STEER_ACK));
-    expect(b.gateway.posted.indexOf(STEER_ACK)).toBeGreaterThanOrEqual(0);
+    expect(b.gateway.posted).toContain(REPLY);
+    expect(b.gateway.posted).not.toContain(STEER_ACK);
+  });
+
+  test("where the connection cannot rewrite one and the line fails or is late, 'Got it' is said then", async () => {
+    for (const options of [{ steerReply: null }, { steerReplyMs: 100, steerReplyTimeoutMs: 50 }]) {
+      const b = await bench([{ toolCalls: [{ id: "c1", name: "slow", args: {} }] }, { text: "done" }], { noEdits: true, ...options });
+      b.say("m1", "migrate the database");
+      await b.stepStarted();
+      b.say("m2", "use the staging DB");
+      await b.pipeline.idle();
+      await eventually(() => b.gateway.posted.includes(STEER_ACK), 2_000, "the late 'Got it'");
+
+      expect(shown(b.gateway).some((text) => text.includes(REPLY))).toBe(false);
+    }
+  });
+
+  test("`[queue] steer_ack = false`: the line alone on every platform, and nothing where there is none", async () => {
+    const b = await bench([{ toolCalls: [{ id: "c1", name: "slow", args: {} }] }, { text: "switched to staging" }], { steerAck: false });
+    b.say("m1", "migrate the database");
+    await b.stepStarted();
+    b.say("m2", "use the staging DB");
+    await b.pipeline.idle();
+    expect(b.gateway.posted).toContain(REPLY);
+    expect(b.gateway.posted).not.toContain(STEER_ACK);
+    expect(b.gateway.edits.some((edit) => edit.text.includes(REPLY))).toBe(false);
+
+    const none = await bench([{ toolCalls: [{ id: "c1", name: "slow", args: {} }] }, { text: "done" }], { steerAck: false, steerReply: null });
+    none.say("m1", "migrate the database");
+    await none.stepStarted();
+    none.say("m2", "use the staging DB");
+    await none.pipeline.idle();
+    expect(none.gateway.posted).not.toContain(STEER_ACK);
+    // The turn still reads it.
+    expect(sent(none.requests, 1)).toContain("use the staging DB");
   });
 
   test("is asked with what their message replies to — the progress line they answered, not a guess at it", async () => {

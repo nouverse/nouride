@@ -27,8 +27,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "a security classifier: what an agent may never do without a human, and the credential paths read word by word, asked of a path too (Files). It grows by a rule; a second way goes in its own file",
   },
   "apps/engine/src/modules/config/schema.docs.ts": {
-    lines: 487,
-    why: "one annotation per setting, the list `config explain` and the dashboard read; it grows by an entry (a picture's most pixels on a side, now), and splitting it would hide the list it is",
+    lines: 488,
+    why: "one annotation per setting, the list `config explain` and the dashboard read; it grows by an entry (`steer_ack`, now), and splitting it would hide the list it is",
   },
   "apps/engine/src/modules/web/control/routes/chat.ts": {
     lines: 462,
@@ -79,8 +79,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "the missions' one service (start, the dispatcher, a turn's shape, its end and the count of one cut short, ask, stop, continue, the slots, the jobs it waits for) over state this class alone holds",
   },
   "packages/gateways/src/channels/discord/gateway.ts": {
-    lines: 429,
-    why: "one Discord connection: its client's events, sends in parts at Discord's pace, edits, files and a set of them as one, buttons, presence, reconnect and the command menu with its limit, on one client",
+    lines: 430,
+    why: "one Discord connection: its client's events, sends in parts at Discord's pace, edits (declared, `editsMessages`), files as a set, buttons, presence, reconnect and the command menu",
   },
   "apps/engine/src/modules/pipeline/attachments.ts": {
     lines: 409,

@@ -1006,6 +1006,12 @@ export interface QueueSection {
   /** How long that line may take before "Got it" stands alone. */
   steerReplyTimeoutMs: number;
   /**
+   * The instant "Got it" a steered message gets. Off: nothing is said until the line in the agent's words (above) is
+   * ready, and nothing at all where there is none. On a platform that cannot rewrite a message it waits for that line
+   * anyway, and is said only where the line fails or is late (`pipeline/steer-accept.ts`).
+   */
+  steerAck: boolean;
+  /**
    * Turns running at once across every conversation. `0` lifts the ceiling.
    *
    * Distinct from `maxConcurrentPerAgent`, which is per conversation and fixed at 1. This is the total,

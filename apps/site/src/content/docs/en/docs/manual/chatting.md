@@ -142,6 +142,10 @@ While a line is being written, further messages get "Got it" alone.
 `[queue] steer_reply = false` keeps "Got it" and drops the line. `steer_reply_model` names a faster
 model on the agent's provider for it: a reasoning model can take ten seconds over one sentence.
 
+On a platform that cannot edit a message, WhatsApp among them, "Got it" is not sent first: the line is
+sent alone, and "Got it" only if the line fails or is late (0.8.39). `[queue] steer_ack = false` sends
+the line alone on every platform, and nothing at all where there is no line.
+
 If the turn is waiting on an approval in that chat, the reply says your message will be read once
 the approval is answered, with `/approve` or `/deny` (in a room it leaves the commands to the
 approval's own message). A "yes" typed as a message does not answer it.

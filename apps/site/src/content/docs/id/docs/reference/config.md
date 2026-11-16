@@ -645,6 +645,7 @@ ditulis di `config.toml`, dan `nouride config explain <kunci>` menjelaskannya le
 | `[queue] steer_reply` | `true` | Di bawah "Got it" pesan yang menyetir, satu kalimat dari agent dengan kata-katanya sendiri. |
 | `[queue] steer_reply_model` | `""` | Model yang ditanya kalimat itu; kosong berarti model agent sendiri, dan nama tingkat juga boleh. Halaman Models menampilkannya bersama helper lain. |
 | `[queue] steer_reply_timeout_ms` | `15000` | Lewat dari ini, "Got it" saja yang dikirim. |
+| `[queue] steer_ack` | `true` | "Got it" yang langsung dikirim. Mati: kalimat steering saja, dan tidak ada apa-apa kalau kalimatnya tidak ada. Di platform yang tidak bisa mengedit pesan, "Got it" hanya dikirim kalau kalimatnya gagal. |
 | `[cron] min_interval_ms` | `60000` | Ulangan terpendek yang boleh diminta sebuah job. |
 | `[cron] max_jobs` | `100` | Job terjadwal untuk semua agent. |
 | `[cron] run_retention_days` | `3` | Hari riwayat run yang disimpan. |

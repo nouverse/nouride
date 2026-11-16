@@ -254,6 +254,14 @@ export interface Gateway {
   readonly addressableMessages?: boolean;
 
   /**
+   * True where `editMessage` really rewrites a message this connection sent: a "Got it" said at once can then become
+   * the agent's own line (`pipeline/steer-accept.ts`). Absent means it cannot — every gateway has `editMessage`, which
+   * answers false where the platform has no such thing, so having the method says nothing. WhatsApp's could not, and
+   * a steered message there left "Got it" alone in English above the agent's line.
+   */
+  readonly editsMessages?: boolean;
+
+  /**
    * How much of a turn's working-out this platform should carry.
    *
    * `"live"` is the edited bubble that tracks each tool as it runs — right for a channel that exists

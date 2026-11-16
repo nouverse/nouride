@@ -64,7 +64,7 @@ export async function atWork(
   log.info("that agent is already working in this chat", { agent_id: id, chat_id: envelope.chatId, outcome });
   if (outcome === "steer") {
     const ack = !parked ? (isEdit(envelope) ? STEER_ACK_EDIT : steerAck(ctx.deps, id)) : envelope.chatType === "dm" ? STEER_ACK_PARKED : STEER_ACK_PARKED_ROOM;
-    await acceptSteer(ctx, turn, envelope, { ack, parked, send: sayAs(ctx, envelope, id) });
+    await acceptSteer(ctx, turn, envelope, { ack, parked, send: sayAs(ctx, envelope, id), rewrites: ctx.deps.gateways.get(envelope.gatewayId)?.editsMessages === true });
     return;
   }
   if (outcome === "wait" && o.handed) {

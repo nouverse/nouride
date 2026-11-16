@@ -629,6 +629,7 @@ has a control for behind **Advanced**. Each works exactly as it always did when 
 | `[queue] steer_reply` | `true` | Under a steered message's "Got it", one sentence in the agent's own words. |
 | `[queue] steer_reply_model` | `""` | The model that sentence is asked of; empty is the agent's own, and a tier's name works. The Models page shows it with the other helpers. |
 | `[queue] steer_reply_timeout_ms` | `15000` | Past this, "Got it" stands alone. |
+| `[queue] steer_ack` | `true` | The instant "Got it". Off: the steering line alone, and nothing where there is none. Where the platform cannot edit a message, "Got it" is sent only if the line fails. |
 | `[cron] min_interval_ms` | `60000` | Shortest repeat a job may ask for. |
 | `[cron] max_jobs` | `100` | Scheduled jobs across every agent. |
 | `[cron] run_retention_days` | `3` | Days of run history kept. |

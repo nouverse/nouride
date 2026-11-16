@@ -149,6 +149,11 @@ dengan pesan kamu itulah jawabannya. Sama halnya kalau panggilannya gagal atau l
 model yang lebih cepat di provider agent untuk kalimat itu: model reasoning bisa butuh sepuluh detik
 untuk satu kalimat.
 
+Di platform yang tidak bisa mengedit pesan, WhatsApp salah satunya, "Got it" tidak dikirim duluan:
+kalimat itu dikirim sendiri, dan "Got it" hanya kalau kalimatnya gagal atau terlambat (0.8.39).
+`[queue] steer_ack = false` mengirim kalimat itu saja di semua platform, dan tidak ada apa-apa kalau
+kalimatnya tidak ada.
+
 Kalau giliran itu sedang menunggu approval di chat tersebut, balasannya bilang pesan kamu dibaca
 begitu approval-nya dijawab, dengan `/approve` atau `/deny` (di room, cara menjawabnya diserahkan ke
 pesan approval itu sendiri). "Iya" yang diketik sebagai pesan gak menjawabnya.

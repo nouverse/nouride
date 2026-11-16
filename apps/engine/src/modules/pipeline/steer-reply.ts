@@ -152,12 +152,15 @@ function senderOf(ctx: TurnContext, envelope: MessageEnvelope): { sender: string
  * reply the model never saw could promise what its next step does not do.
  *
  * One at a time per turn: messages sent while a line is being written get "Got it" alone.
+ *
+ * Says whether it asked. `missed` is told where one was asked for and none came — failed or late, not the turn moving
+ * on first, which answers the message itself: a "Got it" held back for the line (`steer-accept.ts`) is said then.
  */
-export function replyToSteer(ctx: TurnContext, turn: ActiveTurn, envelope: MessageEnvelope, answer: (line: string) => Promise<unknown>): void {
+export function replyToSteer(ctx: TurnContext, turn: ActiveTurn, envelope: MessageEnvelope, answer: (line: string) => Promise<unknown>, missed?: () => void): boolean {
   const queue = ctx.deps.config.queue;
-  if (!queue.steerReply || turn.replying) return;
+  if (!queue.steerReply || turn.replying) return false;
   const agent = ctx.deps.registry.get(turn.agentId);
-  if (!agent) return;
+  if (!agent) return false;
   turn.replying = true;
   const abort = new AbortController();
   turn.replyAbort = abort;
@@ -191,7 +194,11 @@ export function replyToSteer(ctx: TurnContext, turn: ActiveTurn, envelope: Messa
       const at = { agent_id: agent.config.id, chat_id: turn.chatId, ms: Date.now() - startedAt };
       // Said once per steered message, because nothing else shows why a "Got it" stood alone.
       // Moved on — read the message, answered or ended — is the turn being quick, not the reply failing.
-      if (reply.line === null) return abort.signal.aborted ? log.info("steering reply dropped: the turn moved on first", at) : log.warn("no steering reply", { ...at, why: reply.why });
+      if (reply.line === null) {
+        if (abort.signal.aborted) return log.info("steering reply dropped: the turn moved on first", at);
+        log.warn("no steering reply", { ...at, why: reply.why });
+        return missed?.();
+      }
       // Still waiting to be read, by a turn still at work — otherwise the line would answer for a step it cannot shape.
       if (turn.answered || !turn.steers?.includes(envelope)) return log.info("steering reply too late to send", at);
       (turn.replied ??= []).push(reply.line);
@@ -199,11 +206,13 @@ export function replyToSteer(ctx: TurnContext, turn: ActiveTurn, envelope: Messa
       log.info("steering reply sent", at);
     } catch (err) {
       log.warn("steering reply not sent", { error: String(err) });
+      missed?.();
     } finally {
       turn.replying = false;
       if (turn.replyAbort === abort) delete turn.replyAbort;
     }
   })();
+  return true;
 }
 
 /**

@@ -36,7 +36,7 @@ export function steerOnArrival(
   const steered = steerTarget(ctx.activeTurns.values(), envelope, o.isCommand);
   if (steered) {
     const held = parked();
-    void acceptSteer(ctx, steered, envelope, { ack: held ? STEER_ACK_PARKED : isEdit(envelope) ? STEER_ACK_EDIT : steerAck(ctx.deps, steered.agentId), parked: held, send });
+    void acceptSteer(ctx, steered, envelope, { ack: held ? STEER_ACK_PARKED : isEdit(envelope) ? STEER_ACK_EDIT : steerAck(ctx.deps, steered.agentId), parked: held, send, rewrites: o.gateway.editsMessages === true });
     return true;
   }
   const capped = cappedTarget(ctx.activeTurns.values(), envelope, o.isCommand);
@@ -96,6 +96,8 @@ export function acceptSteer(
     parked: boolean;
     /** Through the platform, as the agent where it speaks with its own connection. */
     send: Say;
+    /** The platform rewrites a message it sent (`Gateway.editsMessages`): "Got it" can become the agent's line. */
+    rewrites: boolean;
   },
 ): Promise<unknown> {
   // As it arrived: the inbox knows it by this object (`TurnContext.holds`), and one no turn reads is this agent's
@@ -104,16 +106,34 @@ export function acceptSteer(
   if (turn.answered) return Promise.resolve();
   const draw = drawer(ctx, turn, envelope);
   drawSaid(ctx, turn, envelope, draw);
-  draw("steer_reply", o.ack);
-  const acked = o.send(o.ack);
-  // One bubble a steered message, not two: "Got it" becomes the agent's line where the connection can rewrite it, and
-  // the line follows it where it cannot. Live (0.8.7), every message sent while Nix worked left two bubbles under it.
+  // One bubble a steered message, not two: "Got it" becomes the agent's line where the connection can rewrite it.
+  // Where it cannot (WhatsApp), "Got it" waits for the line and is said only where none comes: said first, it stood
+  // alone in English above the agent's own words, and read as a glitch in a customer's chat (issue #24). Live
+  // (0.8.7), every message sent while Nix worked left two bubbles under it. `[queue] steer_ack = false` says nothing
+  // but the line, on every platform.
+  const ackOn = ctx.deps.config.queue.steerAck !== false;
+  const waits = !o.parked && (!o.rewrites || !ackOn);
+  let acked: Promise<Rewrite | undefined> = Promise.resolve(undefined);
+  const sayAck = () => {
+    draw("steer_reply", o.ack);
+    acked = o.send(o.ack);
+  };
+  if (ackOn && !waits) sayAck();
   if (!o.parked) {
-    replyToSteer(ctx, turn, envelope, async (line) => {
-      const rewrite = await acked;
-      draw("steer_reply", line);
-      if (!(rewrite && (await rewrite(`↪ ${line}`)))) await o.send(line);
-    });
+    const asked = replyToSteer(
+      ctx,
+      turn,
+      envelope,
+      async (line) => {
+        const rewrite = await acked;
+        draw("steer_reply", line);
+        if (!(rewrite && (await rewrite(`↪ ${line}`)))) await o.send(line);
+      },
+      () => {
+        if (ackOn && waits) sayAck();
+      },
+    );
+    if (!asked && ackOn && waits) sayAck();
   }
   // A coding CLI's turn hands it over mid-prompt where its CLI can take it (0.8.10, `external-agents/steering.ts`) —
   // told after the line above is asked for, which it waits on: told first, a CLI with no tool call open took the words

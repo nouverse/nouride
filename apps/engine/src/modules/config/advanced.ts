@@ -34,6 +34,7 @@ export const ADVANCED_KEYS: ReadonlySet<string> = new Set([
   "queue.steer_reply",
   "queue.steer_reply_model",
   "queue.steer_reply_timeout_ms",
+  "queue.steer_ack",
   "cron.min_interval_ms",
   "cron.max_jobs",
   "cron.run_retention_days",
