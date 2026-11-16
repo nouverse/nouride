@@ -31,11 +31,36 @@ function opensHtml(before: string): boolean {
 export function turnHtmlPreview(turnId: string, reply: string): HtmlBlockPreview {
   return (text) => {
     if (!text) return null;
-    for (let at = reply.indexOf(text); at >= 0; at = reply.indexOf(text, at + 1)) {
-      if (opensHtml(reply.slice(0, at)) || isHtmlRun(reply, at, text.length)) return `${control}/preview/turn/${encodeURIComponent(turnId)}?at=${at}&length=${text.length}`;
+    for (const [at, length] of writtenAt(reply, text)) {
+      if (opensHtml(reply.slice(0, at)) || isHtmlRun(reply, at, length)) return `${control}/preview/turn/${encodeURIComponent(turnId)}?at=${at}&length=${length}`;
     }
     return null;
   };
+}
+
+/**
+ * Where a block's words are in a reply, each as a place and a length: as they are, and as whole lines written under
+ * something (a list's item), where each line begins with the indent the block is drawn without. The address names the
+ * lines as the reply holds them, indent and all.
+ */
+function* writtenAt(reply: string, text: string): Generator<[number, number]> {
+  for (let at = reply.indexOf(text); at >= 0; at = reply.indexOf(text, at + 1)) yield [at, text.length];
+  const lines = text.split("\n");
+  for (let found = reply.indexOf(lines[0]!); found >= 0; found = reply.indexOf(lines[0]!, found + 1)) {
+    const start = reply.lastIndexOf("\n", found - 1) + 1;
+    const indent = reply.slice(start, found);
+    if (indent === "" || indent.trim() !== "") continue;
+    let end = start;
+    const held = lines.every((line, index) => {
+      const next = reply.indexOf("\n", end);
+      const written = reply.slice(end, next < 0 ? reply.length : next);
+      // A line of the block, under the same indent or under less where it is short of it (an empty line).
+      const same = written.startsWith(indent) ? written.slice(indent.length) === line : written.trimStart() === line && written.length - line.length <= indent.length;
+      if (same) end = index < lines.length - 1 ? (next < 0 ? reply.length : next + 1) : end + written.length;
+      return same && (index === lines.length - 1 || next >= 0);
+    });
+    if (held) yield [start, end - start];
+  }
 }
 
 /** The preview of an `.html` file among Nouride's files, by its path there. */

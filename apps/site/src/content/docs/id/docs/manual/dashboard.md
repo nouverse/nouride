@@ -562,13 +562,42 @@ terakhirnya.
 kodenya masuk clipboard persis seperti ditulis. Blok yang gak menyebut bahasa, atau bahasanya gak diwarnai Nouride,
 tetap polos.
 
+**Tulisan agent dibaca sebagai Markdown** (0.8.39), seperti GitHub dan aplikasi chat yang kamu kenal membacanya. Di
+luar heading, tebal, link dan kode:
+
+- **Daftar di dalam daftar**, berbutir maupun bernomor, dan **tugas** (`- [x]`) dengan kotaknya, dicentang atau belum.
+- **Kutipan di dalam kutipan**, dan catatan ala GitHub (`> [!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`,
+  `[!CAUTION]`) sebagai kotak yang menyebut jenisnya.
+- **Kolom tabel** rata kiri, tengah atau kanan sesuai baris keduanya (`:--`, `:-:`, `--:`), dan garis tegak di dalam
+  sel ditulis `\|`.
+- **Kata-kata**: tebal di dalam miring, `~~dicoret~~`, `==ditandai==`, `_garis bawah_` seperti bintang, karakter yang
+  di-escape dengan garis miring terbalik, akhir baris sebagai akhir baris. Nama yang memuat garis bawah tetap apa
+  adanya.
+- **Link** segala bentuk: di dalam kurung sudut, lewat rujukan (`[teks][ref]`), alamat email, alamat yang memuat
+  kurung.
+- **Catatan kaki** (`[^1]`) jadi nomornya di tempat ia disebut, dan isinya di akhir tulisan.
+- **Yang bisa dilipat**: `<details>` dengan `<summary>`-nya digambar sebagai sesuatu yang kamu tekan untuk membuka,
+  isinya dibaca sebagai Markdown. Beberapa tag yang cuma mengatur rupa kata juga digambar (`<kbd>`, `<sub>`, `<sup>`,
+  `<mark>`, `<u>`, `<br>`), tanpa apa pun lain yang dibawanya. Tag lain di dalam kalimat ditampilkan seperti ditulis,
+  dan komentar gak ditampilkan.
+- **Istilah dengan definisinya** di bawahnya (baris yang diawali `: `), heading yang digarisbawahi `===` atau `---`,
+  kode yang ditulis menjorok empat spasi, emoji lewat nama yang dipakai GitHub (`:rocket:`).
+- **Gambar** (`![isinya](alamat)`). Yang alamatnya adalah gambarnya sendiri (`data:`) langsung tampil. Yang ada di web
+  tampil setelah kamu tekan **Show picture**, dengan asalnya di sampingnya: alamat itu ditulis agent, dan halaman
+  atau email yang dibacanya bisa membuatnya menulis alamat yang membawa keluar apa yang ia tahu, begitu gambarnya
+  diminta.
+
+Baris yang ditulis tepat di bawah sebuah daftar, di tepi, adalah hal berikutnya yang dikatakan, bukan lanjutan butir
+terakhir.
+
 **Yang ditulis agent digambar** (0.8.39). Beberapa blok ditampilkan sebagai wujud aslinya. Kepala bloknya berpindah
 antara gambarnya dan **Code**, dan **Copy** menyalin yang ditulis agent, mana pun yang sedang tampil.
 
 - **Rumus** ditata seperti di buku: `$..$` atau `\(..\)` di dalam satu baris, `$$..$$` atau `\[..\]` di baris
   sendiri, atau blok bernama `math` atau `latex`. Harga tetap teks: "$5 and $10" bukan rumus.
 - **Diagram**: blok bernama `mermaid` jadi diagramnya, dengan warna tampilan yang sedang kamu pakai.
-- **Gambar**: blok bernama `svg` jadi gambarnya, di atas kartu putih di kedua tampilan.
+- **Gambar**: blok bernama `svg` jadi gambarnya, di atas kartu putih di kedua tampilan. `<svg>` yang ditulis langsung
+  di tulisannya, tanpa blok, digambar dengan cara yang sama.
 - Diagram atau gambar terbuka besar kalau ditekan, dan bisa disimpan dari situ.
 - **Tabel yang lebar** di-scroll ke samping di dalam kotaknya, tiap kolom tetap punya lebar yang enak dibaca, dan
   tepinya diberi bayangan di sisi yang masih ada lanjutannya.

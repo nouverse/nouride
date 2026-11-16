@@ -542,13 +542,40 @@ message.
 top: the code goes to your clipboard as it was written. A block that names no language, or one Nouride does not colour,
 stays plain.
 
+**An agent's text is read as Markdown** (0.8.39), the way GitHub and the chat apps you know read it. Beyond headings,
+bold, links and code:
+
+- **Lists inside lists**, bullets and numbers, and **tasks** (`- [x]`) with their box ticked or not.
+- **Quotes inside quotes**, and GitHub's notes (`> [!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, `[!CAUTION]`) as
+  a box that says which.
+- **A table's columns** set to the left, the middle or the right as its second line says (`:--`, `:-:`, `--:`), and
+  a bar inside a cell written `\|`.
+- **Words**: bold inside italic, `~~struck out~~`, `==marked==`, `_underscores_` as stars, a character escaped with a
+  backslash, a line's end as a line's end. A name with underscores in it stays as it is.
+- **Links** of every kind: in angle brackets, by reference (`[text][ref]`), a mail's address, an address with a
+  bracket in it.
+- **A footnote** (`[^1]`) is its number where it is said, and its words at the end of the text.
+- **What folds**: `<details>` with its `<summary>` is drawn as something you press to open, its inside read as
+  Markdown. A few tags that only say how words look are drawn too (`<kbd>`, `<sub>`, `<sup>`, `<mark>`, `<u>`,
+  `<br>`), with nothing else they carried. Any other tag in a sentence is shown as it was written, and a comment is
+  not shown.
+- **A term with its definition** under it (a line that starts with `: `), a heading underlined with `===` or `---`,
+  code written four spaces in, an emoji by the name GitHub gives it (`:rocket:`).
+- **A picture** (`![what it shows](address)`). One whose address is the picture itself (`data:`) is shown at once. One
+  on the web is shown once you press **Show picture**, with where it is from beside it: an agent writes that
+  address, and a page or a mail it read could have it write one that carries what it knows away, the moment the
+  picture is asked for.
+
+A line written right under a list, at the margin, is the next thing said, not more of the last bullet.
+
 **What an agent wrote is drawn** (0.8.39). Some blocks are shown as what they are. The block's head switches between
 the drawing and **Code**, and **Copy** copies what the agent wrote, whichever shows.
 
 - **A formula** is typeset: `$..$` or `\(..\)` inside a line, `$$..$$` or `\[..\]` on lines of their own, or a block
   named `math` or `latex`. A price stays text: "$5 and $10" is not a formula.
 - **A diagram**: a block named `mermaid` is its diagram, in the colours of the look you are on.
-- **A picture**: a block named `svg` is its picture, on a white card in both looks.
+- **A picture**: a block named `svg` is its picture, on a white card in both looks. An `<svg>` written straight into
+  the text, with no block around it, is drawn the same way.
 - A diagram or a picture opens large on a press, and is saved from there.
 - **A wide table** scrolls sideways inside its box, each column keeping a readable width, and its edge is shaded on
   the side where it goes on.

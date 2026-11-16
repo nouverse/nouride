@@ -1,33 +1,24 @@
 /**
- * A table in markdown (`Markdown`): which lines are one, and how it is drawn.
+ * A table in markdown (`Markdown`): how it is drawn.
  */
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { moreToTheSide } from "@/commons/lib/scroll-edges";
 
-/** A row's cells, from its line. */
-export function parseTableRow(line: string): string[] {
-  const trimmed = line.trim();
-  const cleaned = trimmed.replace(/^\|/, "").replace(/\|$/, "");
-  return cleaned.split("|").map((cell) => cell.trim());
-}
-
-/** The line under a table's head: dashes between its bars. */
-export function isTableSeparator(line: string): boolean {
-  return /^\s*\|?(\s*:?-+:?\s*\|)+\s*:?-+:?\s*\|?\s*$/.test(line);
-}
+/** To which side a column's words are set, as the line under the table's head says (`:--`, `:-:`, `--:`). */
+type Side = "left" | "center" | "right" | null;
+const SET: Record<string, string> = { left: "text-left", center: "text-center", right: "text-right" };
 
 /**
- * A table in the text: its first row is its head. `at` is its place among the blocks, for its cells' keys, and
- * `cell` draws a cell's words as the text around the table draws its own.
+ * A table in the text: `head` its first row, `rows` the rest, each cell drawn already as the text around the table
+ * draws its own words, and `align` the side each column's words are set to.
  *
  * Its columns are the agent's, so it cannot fold into rows as the dashboard's own tables do on a phone
  * (`fold-table.ts`): it scrolls sideways in its box, and a shade on the side that holds more says so. A column keeps a
  * reader's width at every size of window: a table of many columns scrolls rather than squeezing a word to a line.
  */
-export function MarkdownTable({ rows, at, cell }: { rows: string[][]; at: number; cell: (text: string, key: string) => ReactNode[] }) {
-  const headers = rows[0] ?? [];
-  const bodyRows = rows.slice(1);
+export function MarkdownTable({ head, rows, align }: { head: ReactNode[]; rows: ReactNode[][]; align: readonly Side[] }) {
+  const side = (column: number) => SET[align[column] ?? ""] ?? "";
   const box = useRef<HTMLDivElement>(null);
   const [more, setMore] = useState({ start: false, end: false });
   useEffect(() => {
@@ -51,23 +42,23 @@ export function MarkdownTable({ rows, at, cell }: { rows: string[][]; at: number
     <div className="relative my-3 overflow-hidden rounded-2xl border border-base-content/10 shadow-2xs" data-more-start={more.start || undefined} data-more-end={more.end || undefined}>
       <div ref={box} className="overflow-x-auto overscroll-x-contain">
         <table className="table table-sm w-full">
-          {headers.length > 0 && (
+          {head.length > 0 && (
             <thead>
               <tr className="border-b border-base-content/10 bg-base-200/50 text-[11px] font-bold uppercase tracking-wider text-base-content/65 font-mono">
-                {headers.map((h, i) => (
-                  <th key={i} className="min-w-28 py-2.5 px-3">
-                    {cell(h, `th${at}-${i}`)}
+                {head.map((words, column) => (
+                  <th key={column} className={`min-w-28 py-2.5 px-3 ${side(column)}`.trimEnd()}>
+                    {words}
                   </th>
                 ))}
               </tr>
             </thead>
           )}
           <tbody className="divide-y divide-base-content/[0.06]">
-            {bodyRows.map((row, rIdx) => (
-              <tr key={rIdx} className="hover:bg-base-200/30 transition-colors">
-                {row.map((words, cIdx) => (
-                  <td key={cIdx} className="min-w-28 py-2 px-3 text-xs text-base-content/85">
-                    {cell(words, `td${at}-${rIdx}-${cIdx}`)}
+            {rows.map((row, at) => (
+              <tr key={at} className="hover:bg-base-200/30 transition-colors">
+                {row.map((words, column) => (
+                  <td key={column} className={`min-w-28 py-2 px-3 text-xs text-base-content/85 ${side(column)}`.trimEnd()}>
+                    {words}
                   </td>
                 ))}
               </tr>

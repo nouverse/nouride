@@ -207,7 +207,10 @@ describe("html written straight into a reply, with no code block around it", () 
     answer(chat(RAW));
     await renderPage("/chat/ses_1", async (host) => {
       await eventually(() => page(host) !== null, 5_000, "the run's page");
-      expect([...host.querySelectorAll("p")].filter((line) => line.textContent === "<b>Note:</b> a sentence that begins with a tag.")).toHaveLength(1);
+      // A sentence, its tag one of the few that only say how words look: the words in bold, and no page made of it.
+      const sentence = [...host.querySelectorAll("p")].filter((line) => line.textContent === "Note: a sentence that begins with a tag.");
+      expect(sentence).toHaveLength(1);
+      expect(sentence[0]!.querySelector("strong")?.textContent).toBe("Note:");
     });
   });
 });
