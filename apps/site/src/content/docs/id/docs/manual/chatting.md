@@ -439,6 +439,12 @@ menyerahkan pekerjaan ke siapa pun. Agent yang gak ada di room itu, atau gak pun
 tetap bekerja di belakang chat seperti sebelumnya, dan kata-katanya sampai ke kamu lewat agent yang
 bertanya.
 
+Di aplikasi chat, agent yang ditanya agent lain punya baris langkahnya di chat, lewat bot agent yang
+bertanya: `[nox] ✓ 2 steps · 16s`. Di chat satu lawan satu, baris itu satu-satunya tanda agent yang
+ditanya ikut bekerja, jadi tetap ada. Di tempat agent yang ditanya menjawab sendiri, jawabannya sudah
+jadi tandanya dan baris itu gak dikirim. Baris itu tetap dikirim kalau jawabannya ternyata gak bisa
+disampaikan: bot-nya gak bisa mengirim ke situ, atau ia selesai tanpa ada yang dikatakan.
+
 **Kalau pekerjaan hasil serah terima gagal.** Kalau agent yang menerima pekerjaan gagal atau kehabisan
 waktu, baris yang ditinggalkannya membawa tombol **Continue** dan **Hand to** untuk paling banyak tiga
 agent lain di room (0.8.33). Continue membuat agent yang sama melanjutkannya. Hand to memberi agent

@@ -147,6 +147,13 @@ export interface ChatProgressOptions {
    */
   announceEmpty?: boolean;
   /**
+   * Count the steps and write nothing until `finish`, whatever the gateway's style.
+   *
+   * For a turn that may need no line at all: an agent asked in a room whose own answer is said there. Its answer is
+   * the sign that it ran, so its line is written only where the answer turned out not to be said (`drop`, `finish`).
+   */
+  summary?: boolean;
+  /**
    * The bubble is on the platform, under this id.
    *
    * So it can be recorded as the agent's. While a turn works, its bubble is the newest thing the agent has
@@ -344,9 +351,9 @@ export class ChatProgress {
     this.quietSince = undefined;
   }
 
-  /** See `Gateway.progressStyle`. */
+  /** See `Gateway.progressStyle`, and `summary` for a bubble that asks for it itself. */
   private get summaryOnly(): boolean {
-    return this.options.gateway.progressStyle === "summary";
+    return this.options.summary === true || this.options.gateway.progressStyle === "summary";
   }
 
   /**
@@ -440,6 +447,19 @@ export class ChatProgress {
     clearTimeout(this.timer);
     this.timer = undefined;
     if (!this.messageId) this.pending = undefined;
+  }
+
+  /**
+   * Over, with nothing written: what the steps led to was said in the chat by other means. For a bubble in `summary`
+   * style, which has posted nothing; a live one is closed by `finish`, which has a line of it to tidy.
+   */
+  drop(): void {
+    if (this.closed) return;
+    this.closed = true;
+    this.hush();
+    clearTimeout(this.timer);
+    this.timer = undefined;
+    this.pending = undefined;
   }
 
   /**

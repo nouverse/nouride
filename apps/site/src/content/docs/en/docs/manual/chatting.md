@@ -427,6 +427,12 @@ without repeating it. A tag inside such an answer hands the work to nobody. An a
 room, or has no bot of its own in the group, runs behind the chat as before, and its words reach you
 through the one that asked.
 
+On a chat app, an agent asked by another has a line of its steps in the chat, under the bot of the agent
+that asked: `[nox] ✓ 2 steps · 16s`. In a one-to-one chat that line is the only sign the asked agent
+worked, and it stays. Where the asked agent answers for itself, its answer is that sign and the line is
+not sent. It is still sent when the answer could not be said after all: its bot could not deliver there,
+or it ended with nothing to say.
+
 **When handed-over work fails.** If the agent that took the work fails or runs out of time, the line
 it leaves carries **Continue** and **Hand to** for up to three other agents of the room (0.8.33).
 Continue has the same agent take it up again. Hand to gives another agent what the first was asked.

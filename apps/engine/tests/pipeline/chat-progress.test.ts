@@ -601,6 +601,32 @@ describe("a platform that only wants the summary", () => {
  * answered from its own prompt and vanished — which reads as "the second one was never asked", and
  * looked like the parallel call had silently run one.
  */
+describe("a bubble asked to keep quiet until it is over, on a platform that shows steps live", () => {
+  test("its steps are counted and nothing is written; `finish` writes the one line", async () => {
+    const { gateway, sent, edits } = fakeGateway();
+    const progress = new ChatProgress({ gateway, chatId: "c1", agentLabel: "nox", announceEmpty: true, summary: true, minIntervalMs: 0 });
+    progress.step("exec uptime");
+    progress.step("read notes.md");
+    await progress.seal("waiting for you");
+    expect(sent).toEqual([]);
+
+    await progress.finish("ok");
+    expect(sent.map((message) => message.text)).toEqual([expect.stringMatching(/^\[nox\] ✓ 2 steps · \d+s$/)]);
+    expect(edits).toEqual([]);
+  });
+
+  test("`drop` ends it with nothing written, and a `finish` after it writes nothing either", async () => {
+    const { gateway, sent, edits } = fakeGateway();
+    const progress = new ChatProgress({ gateway, chatId: "c1", agentLabel: "nox", announceEmpty: true, summary: true, minIntervalMs: 0 });
+    progress.step("exec uptime");
+    progress.drop();
+    progress.step("read notes.md");
+    await progress.finish("ok");
+    expect(sent).toEqual([]);
+    expect(edits).toEqual([]);
+  });
+});
+
 describe("announcing a turn that did nothing", () => {
   test("a peer with no steps still reports, in summary style", async () => {
     const { gateway, sent } = summaryRecorder();

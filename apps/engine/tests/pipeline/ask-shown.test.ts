@@ -25,7 +25,7 @@ import { SHOWN_TO_THE_ROOM } from "@/modules/tools/handoff.ts";
 import { createBuiltinTools } from "@/modules/tools/registry.ts";
 import { conversationOf, envelope, FakeGateway } from "../helpers.ts";
 import { pipelineBench, type Bench } from "../pipeline-bench.ts";
-import { eventually } from "../wait.ts";
+import { eventually, sleep } from "../wait.ts";
 
 // ── a model that answers by who is asking ─────────────────────────────────────────────────────────────────────────
 
@@ -82,7 +82,7 @@ const TASK = "Check why the build failed and say which step it was.";
 /** What the agent asked answers: in the room's language, not the brief's. */
 const ANSWER = "Build-nya gagal di langkah lint: ada import yang tidak dipakai.";
 
-async function daemon(options: { answer: (who: string, body: Body) => Said | Promise<Said>; gateways?: (LocalGateway | FakeGateway)[]; config?: Record<string, unknown>; members?: string[] | null; waitMs?: number }) {
+async function daemon(options: { answer: (who: string, body: Body) => Said | Promise<Said>; gateways?: (LocalGateway | FakeGateway)[]; config?: Record<string, unknown>; members?: string[] | null; waitMs?: number; pack?: string; progressMs?: number }) {
   const { fetchImpl, asked } = provider(options.answer);
   const local = new LocalGateway();
   let jobs!: JobStore;
@@ -90,7 +90,7 @@ async function daemon(options: { answer: (who: string, body: Body) => Said | Pro
   const bench = await pipelineBench({
     fetch: () => fetchImpl,
     gateways: options.gateways ?? [local],
-    agents: ["nouva", "nox", "nera"].map((id) => ({ id, configToml: PACK })),
+    agents: ["nouva", "nox", "nera"].map((id) => ({ id, configToml: options.pack ?? PACK })),
     config: { daemon: { orchestrator: "nouva" }, agents: { mentions_enabled: true }, ...options.config },
     configure: (config: GlobalConfig) => {
       config.queue.steerReply = false;
@@ -98,7 +98,8 @@ async function daemon(options: { answer: (who: string, body: Body) => Said | Pro
     deps: ({ db, dataDir, config }) => {
       jobs = new JobStore({ db, logDir: join(dataDir, "jobs"), maxConcurrentPerAgent: 4, maxMs: () => config.security.jobMaxMs });
       rooms = new RoomStore(db);
-      return { jobs, rooms };
+      // A step line written as soon as there is a step, for the tests that read one while its turn works.
+      return { jobs, rooms, ...(options.progressMs ? { progressIntervalMs: options.progressMs } : {}) };
     },
   });
   benches.push(bench);
@@ -243,7 +244,7 @@ describe("where it is not the room's to read", () => {
 
 describe("in a group on a chat app, where each agent has a bot of its own", () => {
   const GROUP = "-100200";
-  const twoBots = async (answer: (who: string, body: Body) => Said | Promise<Said>, noxBot?: (bot: FakeGateway, other: FakeGateway) => void) => {
+  const twoBots = async (answer: (who: string, body: Body) => Said | Promise<Said>, noxBot?: (bot: FakeGateway, other: FakeGateway) => void, more: { pack?: string; progressMs?: number } = {}) => {
     const nouvaBot = new FakeGateway("telegram:nouva");
     const noxBot_ = new FakeGateway("telegram:nox");
     noxBot?.(noxBot_, nouvaBot);
@@ -252,6 +253,7 @@ describe("in a group on a chat app, where each agent has a bot of its own", () =
       gateways: [nouvaBot, noxBot_],
       config: { gateways: { telegram: { nouva: { enabled: true, token: "t-nouva", agent: "nouva" }, nox: { enabled: true, token: "t-nox", agent: "nox" } } } },
       answer,
+      ...more,
     });
     const person = async (text: string) => {
       nouvaBot.receive(envelope({ id: "m1", text, gatewayId: "telegram:nouva", chatId: GROUP, chatType: "group", mentionsSelf: true, timestamp: Date.now() }));
@@ -269,6 +271,90 @@ describe("in a group on a chat app, where each agent has a bot of its own", () =
     expect(toolResults(h.requestsOf("nouva")[1]!.body)[0]).toContain(SHOWN_TO_THE_ROOM("nox"));
     // Kept as Nox's turn in that group, on its own connection.
     expect(h.bench.turns.forChat("telegram:nox", GROUP).map((turn) => ({ by: turn.agentId, reply: turn.reply, via: turn.cause?.via }))).toEqual([{ by: "nox", reply: ANSWER, via: "shown answer" }]);
+  });
+
+  /** The step lines one bot sent for one agent: "[nox] ✓ 0 steps · 1s". */
+  const stepLines = (bot: FakeGateway, agent: string) => bot.sent.map((message) => message.text).filter((text) => text.startsWith(`[${agent}] `));
+  const OWN_REPLY = "Itu dari Nox. Saya perbaiki importnya sekarang.";
+  /** Where a line of the asked agent's stands among what the asking agent's bot sent, against that agent's own reply. */
+  const lineThenReply = (bot: FakeGateway, agent: string) => {
+    const texts = bot.sent.map((message) => message.text);
+    return { line: texts.findIndex((text) => text.startsWith(`[${agent}] `)), reply: texts.indexOf(OWN_REPLY) };
+  };
+
+  test("its own answer is the sign that it ran: where it is said, no step line of the asked agent is sent, by either bot", async () => {
+    const h = await twoBots(asksThenSays(ask("nox")));
+    await h.person("kenapa build-nya gagal?");
+    // The asking agent's reply is out: a line of the asked agent's, where one is written, is out before it (the next test).
+    await eventually(() => h.answers(h.nouvaBot).length === 1, 2_000, "the asking agent's reply");
+    expect(h.answers(h.noxBot)).toEqual([ANSWER]);
+    expect(stepLines(h.nouvaBot, "nox")).toEqual([]);
+    expect(stepLines(h.noxBot, "nox")).toEqual([]);
+  });
+
+  /**
+   * Nouva asks Nox, and Nox looks into its folder before it answers: a turn with a step to show. Its answer waits for
+   * `held`, so the step has its time in the chat before the turn is over.
+   */
+  const noxWorksFirst = (held: () => Promise<void>) => async (who: string, body: Body): Promise<Said> => {
+    if (who === "nouva") return toolResults(body).length === 0 ? ask("nox") : { text: OWN_REPLY };
+    if (toolResults(body).length === 0) return { toolCalls: [{ id: "g-1", name: "glob", args: { pattern: "*.md" } }] };
+    await held();
+    return { text: ANSWER };
+  };
+  const WORKS = { pack: PACK.replace('["ask_agent"]', '["ask_agent", "glob"]'), progressMs: 1 };
+
+  test("an asked agent that worked before it answered: in the group its steps are not written while it works either; in a one-to-one chat they are, live, and closed", async () => {
+    // Past the step line's own timer, set a millisecond out before this wait began: a line written while the agent
+    // works would be out by now. Nothing marks a line that is not written, so there is no condition to wait for.
+    const group = await twoBots(noxWorksFirst(() => sleep(20)), undefined, WORKS);
+    await group.person("kenapa build-nya gagal?");
+    await eventually(() => group.answers(group.nouvaBot).length === 1, 2_000, "the asking agent's reply");
+    expect(group.answers(group.noxBot)).toEqual([ANSWER]);
+    expect(stepLines(group.nouvaBot, "nox")).toEqual([]);
+    expect(group.nouvaBot.edits.filter((edit) => edit.text.startsWith("[nox] "))).toEqual([]);
+
+    // In a one-to-one chat the answer waits until the line is there, as a person sees it while the agent works.
+    const bots: { nouva?: FakeGateway } = {};
+    const dm = await twoBots(noxWorksFirst(() => eventually(() => bots.nouva !== undefined && stepLines(bots.nouva, "nox").length === 1, 2_000, "the asked agent's line while it works")), undefined, WORKS);
+    bots.nouva = dm.nouvaBot;
+    dm.nouvaBot.receive(envelope({ id: "m1", text: "kenapa build-nya gagal?", gatewayId: "telegram:nouva", chatId: "8142", chatType: "dm", timestamp: Date.now() }));
+    await dm.bench.pipeline.idle();
+    await eventually(() => dm.nouvaBot.edits.some((edit) => /^\[nox\] ✓ 1 step · \d+s$/.test(edit.text)), 2_000, "the asked agent's line, closed");
+    // One bubble, written while it worked and closed where it stood: not a line added once it was over.
+    expect(stepLines(dm.nouvaBot, "nox")).toEqual([expect.stringMatching(/^\[nox\] ✓ 1 step · \d+s$/)]);
+  });
+
+  test("where its answer is not said after all, its line is written as before: under the asking agent's bot, ahead of that agent's reply", async () => {
+    // Its own bot cannot deliver there.
+    const refused = await twoBots(asksThenSays(ask("nox")), (bot) => {
+      (bot as unknown as { failSend: Error }).failSend = new Error("403: bot is not a member of the group chat");
+    });
+    await refused.person("kenapa build-nya gagal?");
+    await eventually(() => stepLines(refused.nouvaBot, "nox").length === 1 && refused.answers(refused.nouvaBot).length === 1, 2_000, "the asked agent's line");
+    expect(stepLines(refused.nouvaBot, "nox")[0]).toMatch(/^\[nox\] ✓ 0 steps · \d+s$/);
+    expect(lineThenReply(refused.nouvaBot, "nox").line).toBeLessThan(lineThenReply(refused.nouvaBot, "nox").reply);
+    // It answered with no words.
+    const wordless = await twoBots(asksThenSays(ask("nox"), () => ({ text: "   " })));
+    await wordless.person("kenapa build-nya gagal?");
+    await eventually(() => stepLines(wordless.nouvaBot, "nox").length === 1, 2_000, "the asked agent's line");
+    expect(wordless.answers(wordless.noxBot)).toEqual([]);
+    expect(stepLines(wordless.nouvaBot, "nox")[0]).toMatch(/^\[nox\] ✓ 0 steps · \d+s$/);
+  });
+
+  test("where it does not answer for itself, its line is the only sign that it ran, and stays: a one-to-one chat, and an agent with no bot there", async () => {
+    const dm = await twoBots(asksThenSays(ask("nox")));
+    dm.nouvaBot.receive(envelope({ id: "m1", text: "kenapa build-nya gagal?", gatewayId: "telegram:nouva", chatId: "8142", chatType: "dm", timestamp: Date.now() }));
+    await dm.bench.pipeline.idle();
+    await eventually(() => stepLines(dm.nouvaBot, "nox").length === 1 && dm.answers(dm.nouvaBot).length === 1, 2_000, "the asked agent's line in a one-to-one chat");
+    expect(stepLines(dm.nouvaBot, "nox")[0]).toMatch(/^\[nox\] ✓ 0 steps · \d+s$/);
+    expect(lineThenReply(dm.nouvaBot, "nox").line).toBeLessThan(lineThenReply(dm.nouvaBot, "nox").reply);
+    expect(dm.noxBot.sent).toEqual([]);
+
+    const noBot = await twoBots(asksThenSays(ask("nera")));
+    await noBot.person("kenapa build-nya gagal?");
+    await eventually(() => stepLines(noBot.nouvaBot, "nera").length === 1, 2_000, "the line of an agent with no bot there");
+    expect(stepLines(noBot.nouvaBot, "nera")[0]).toMatch(/^\[nera\] ✓ 0 steps · \d+s$/);
   });
 
   test("where its own bot cannot deliver there it is not said at all: never under the asking agent's bot", async () => {

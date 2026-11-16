@@ -43,7 +43,9 @@ const FIXED_SLEEPS: Record<string, number> = {
   // the wait, the race under test, in a call whose move is refused and in a scheduled turn's, where nothing may move.
   // 215 → 216 for several agents asked in one call by a helper (`background-asks.test.ts`): one paces the asked agents
   // past the wait, which a turn that may move nothing must sit through, and nothing marks that moment to wait on.
-  "apps/engine": 216,
+  // 216 → 217 for an asked agent's step line that is not written where its own answer is said (`ask-shown.test.ts`):
+  // one holds its answer past the line's own timer, to show the line did not go out while it worked.
+  "apps/engine": 217,
   "apps/dashboard": 37,
   "packages/gateways": 11,
   "packages/llm": 2,

@@ -129,7 +129,12 @@ export function startPeerTurn(ctx: TurnContext, request: PeerTurnRequest, option
    *
    * No `replyTo`: the tool context carries no triggering message id, and in a DM there is nothing to
    * quote anyway.
+   *
+   * Not where the room reads the peer's own answer (`peer-shown.ts`): its answer there is the sign that it ran, and
+   * its line arrived after it, under another agent's bot ("Mango" from Nox, then "[nox] 0 steps" from Nix's). There
+   * the steps are counted and the line is written only if the answer was not said after all.
    */
+  const answersItself = shownIn(ctx, request, peer.config.id) !== null;
   const gateway = ctx.deps.gateways.get(request.ctx.gatewayId);
   const progress =
     ctx.deps.config.llm.streaming.progressInChat && gateway && ChatProgress.supported(gateway)
@@ -140,13 +145,14 @@ export function startPeerTurn(ctx: TurnContext, request: PeerTurnRequest, option
           /**
            * Even when the peer called no tools.
            *
-           * A peer never speaks for itself — its answer goes back to the agent that asked, which
+           * A peer that does not speak for itself: its answer goes back to the agent that asked, which
            * folds it into a reply of its own. So this line is the only sign it ran, and an ordinary
            * turn's rule (say nothing when nothing was done) makes a peer that answered from its
            * prompt look like a peer that was never asked. Two asked in parallel, one using a tool,
            * read as one.
            */
           announceEmpty: true,
+          ...(answersItself ? { summary: true } : {}),
           ...(ctx.deps.progressIntervalMs ? { minIntervalMs: ctx.deps.progressIntervalMs } : {}),
         })
       : undefined;
@@ -290,6 +296,8 @@ export function startPeerTurn(ctx: TurnContext, request: PeerTurnRequest, option
   let settled = false;
   const ended = (async (): Promise<HelperOutcome> => {
     let failed = false;
+    /** Its own answer was said in the room (`shownReport`). */
+    let said = false;
     /** How it ended — written to its own record too, when it moved and has one. */
     const close = (outcome: HelperOutcome, result?: DelegatedEnd["result"]): HelperOutcome => {
       record?.finish(outcome, { ...(result ? { result } : {}), model, stopped: controller.signal.aborted });
@@ -358,7 +366,9 @@ export function startPeerTurn(ctx: TurnContext, request: PeerTurnRequest, option
       });
       if (result.paused) return close({ report: { ...handoff, status: "incomplete", reason: "a restart stopped it before it finished" }, paused: true }, result);
       // An answer it finished, where the room reads it too: said there now, once, waited for or behind the asking turn.
-      return close({ report: await shownReport(ctx, request, peer.config.id, handoff, { stopped: controller.signal.aborted, model }) }, result);
+      const report = await shownReport(ctx, request, peer.config.id, handoff, { stopped: controller.signal.aborted, model });
+      said = report.shown === true;
+      return close({ report }, result);
     } catch (err) {
       failed = true;
       // Stopped in the middle of a call once it is a job — a stop, its clock, a shutdown: what happened is the stop, not
@@ -378,8 +388,10 @@ export function startPeerTurn(ctx: TurnContext, request: PeerTurnRequest, option
       request.ctx.signal.removeEventListener("abort", follow);
       // Not awaited, like the ordinary turn's: the caller is waiting on this answer, and a chat platform
       // acknowledging a status line is not something to hold it for. `finish` swallows its own failures. One in the
-      // background has had its bubble sealed: it says nothing more in the chat.
-      if (!job) void progress?.finish(failed ? "failed" : "ok");
+      // background has had its bubble sealed: it says nothing more in the chat. Nor does one whose own answer was
+      // said there: that is its line.
+      if (said) progress?.drop();
+      else if (!job) void progress?.finish(failed ? "failed" : "ok");
     }
   })();
 
