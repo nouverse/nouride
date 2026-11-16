@@ -14,7 +14,7 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { Hono } from "hono";
-import { htmlBlockAt, htmlRunAt, registerPreviewRoutes } from "@/modules/web/control/routes/preview.ts";
+import { asPage, htmlBlockAt, htmlRunAt, registerPreviewRoutes } from "@/modules/web/control/routes/preview.ts";
 import { parseConfig } from "@/modules/config/global/index.ts";
 import { bindWebServer, headersFor, PREVIEW_SECURITY_HEADERS, SECURITY_HEADERS, type WebServer } from "@/modules/web/server.ts";
 
@@ -105,6 +105,36 @@ describe("the words of html written with no fence, by where they are in a reply"
   });
 });
 
+/** What the daemon adds after a page's own words: the lines by which the page says its height to the frame around it. */
+const SAYS_ITS_HEIGHT = /\n<script>\(function\(\)\{if\(parent===window\)return;[^<]*<\/script>$/;
+/** A served page with that taken off: the page's own words, with the doctype one given to a page's inside. */
+const words = (served: string) => served.replace(SAYS_ITS_HEIGHT, "");
+
+describe("a page as it is served", () => {
+  test("its words as they are stored, then the lines by which it says its height, which reach nothing", () => {
+    const served = asPage(PAGE);
+    expect(served.startsWith(PAGE)).toBe(true);
+    const added = served.slice(PAGE.length);
+    expect(added).toMatch(SAYS_ITS_HEIGHT);
+    // One script, after everything the page wrote: it says a number to the frame around it and nothing else.
+    expect(added.match(/<script>/g)).toHaveLength(1);
+    expect(added).toContain("parent.postMessage({nouridePreviewHeight:");
+    // In a tab of its own there is no frame to tell.
+    expect(added).toContain("if(parent===window)return;");
+    expect(added).not.toMatch(/fetch|XMLHttpRequest|WebSocket|src=|href=|import|cookie|localStorage|location/);
+    expect(words(served)).toBe(PAGE);
+  });
+
+  test("words that are a page's inside are given a doctype, and a whole page keeps its own beginning", () => {
+    expect(words(asPage("<div>a card</div>"))).toBe("<!doctype html>\n<div>a card</div>");
+    for (const whole of ["<!doctype html><p>a</p>", "<!DOCTYPE html>\n<html></html>", "  <html lang=en><body>a</body></html>", "\n<!doctype html>", "<html>"]) {
+      expect(words(asPage(whole)), whole).toBe(whole);
+    }
+    // A tag that only begins like one is a page's inside.
+    expect(words(asPage("<htmlx>"))).toBe("<!doctype html>\n<htmlx>");
+  });
+});
+
 // ── the routes ────────────────────────────────────────────────────────────────────────────────────────────────────
 
 let top: string;
@@ -161,7 +191,10 @@ describe("GET /preview/turn/:id", () => {
     expect(answer.status).toBe(200);
     expect(answer.headers.get("content-type")).toBe("text/html; charset=utf-8");
     expect(answer.headers.get("cache-control")).toBe("private, no-store");
-    expect(await answer.text()).toBe(PAGE);
+    const served = await answer.text();
+    expect(words(served)).toBe(PAGE);
+    // With the lines that say its height: in a chat it is drawn in the reply, in a frame as tall as the page.
+    expect(served).toMatch(SAYS_ITS_HEIGHT);
   });
 
   test("serves html written with no fence as the page it is, and nothing else of that reply", async () => {
@@ -169,7 +202,8 @@ describe("GET /preview/turn/:id", () => {
     const answer = await admin(`/preview/turn/turn_raw?at=${at(RAW, RUN)}&length=${RUN.length}`);
     expect(answer.status).toBe(200);
     expect(answer.headers.get("content-type")).toBe("text/html; charset=utf-8");
-    expect(await answer.text()).toBe(RUN);
+    // A run is a page's inside: served with the doctype a page begins with.
+    expect(words(await answer.text())).toBe(`<!doctype html>\n${RUN}`);
     for (const path of [`/preview/turn/turn_raw?at=0&length=16`, `/preview/turn/turn_raw?at=${at(RAW, "<div>in a block")}&length=21`, `/preview/turn/turn_raw?at=0&length=${RAW.length}`]) {
       expect((await admin(path)).status, path).toBe(404);
     }
@@ -177,7 +211,9 @@ describe("GET /preview/turn/:id", () => {
 
   test("what the request carries is never served: only where the block is", async () => {
     const answer = await app("admin")(block("turn_mine", REPLY, `&html=${encodeURIComponent("<script>top.location='https://example.com'</script>")}&reply=x`));
-    expect(await answer.text()).toBe(PAGE);
+    const served = await answer.text();
+    expect(words(served)).toBe(PAGE);
+    expect(served).not.toContain("example.com");
   });
 
   test("a place in the reply that is not an html block, no place at all, a turn with no reply and no such turn are not there", async () => {
@@ -214,8 +250,8 @@ describe("GET /preview/file", () => {
     const answer = await app("admin")(file("workspace/private/nix/menu.html"));
     expect(answer.status).toBe(200);
     expect(answer.headers.get("content-type")).toBe("text/html; charset=utf-8");
-    expect(await answer.text()).toBe(PAGE);
-    expect(await (await app("admin")(file("workspace/private/nix/MENU.HTM"))).text()).toBe("<p>old</p>");
+    expect(words(await answer.text())).toBe(PAGE);
+    expect(words(await (await app("admin")(file("workspace/private/nix/MENU.HTM"))).text())).toBe("<!doctype html>\n<p>old</p>");
   });
 
   test("is an admin's, as every route of the files is", async () => {

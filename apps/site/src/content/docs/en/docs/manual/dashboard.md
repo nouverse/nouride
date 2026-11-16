@@ -296,8 +296,8 @@ are one height that scrolls inside, so switching between them does not move the 
 The preview builds React elements and there is no raw HTML rendering anywhere in the app. An agent
 can write its own `MEMORY.md` and create its own skills; rendering that as HTML would turn "the model
 emitted a script tag" into a script running in an admin's browser, same origin, with a session
-cookie. A page of HTML an agent wrote is looked at another way, held apart from the dashboard: **Preview**, under
-[Chat](#chat).
+cookie. A page of HTML an agent wrote is looked at another way, in a frame held apart from the dashboard: **A page of
+HTML**, under [Chat](#chat).
 
 The `config.toml` here is the agent's own. The daemon's is the last card of **Agents → Settings**.
 
@@ -557,13 +557,14 @@ Workspace, a memory document. **Save as PDF** on a Markdown file carries the pic
 diagram are shown as images, so a script written inside one does nothing. The diagram viewer is loaded the first time
 a page holds a diagram.
 
-**A page of HTML** (0.8.39). An `html` block of a reply has **Preview** once the reply is over, and so has an `.html`
-file in Files and the Workspace. HTML an agent wrote straight into its reply, with no code block around it, is shown
-as an `html` block too, with the same **Preview**. It opens the page over the dashboard when you press it, never by
-itself, and **Open in a tab** gives it a tab of its own. The page is an agent's, so it is held apart from Nouride. Its own scripts run. It
-cannot read your sign-in or the dashboard around it, cannot reach Nouride or the internet, and cannot open a window or
-send a form. A page that loads its pictures, fonts or scripts from the web is shown without them: what a preview
-shows is what is written in the page. A page larger than 2 MB is not previewed, and a mission's report has no Preview.
+**A page of HTML** (0.8.39). An `html` block of a reply is drawn in the chat as the page it is, once the reply is
+over: in the reply itself, as tall as the page up to a limit, with a switch between **Page** and **Code** on its head
+and a link that opens it in a tab of its own. HTML an agent wrote straight into its reply, with no code block around
+it, is such a block too. An `.html` file in Files and the Workspace has **Preview**, which opens the page over the
+dashboard when you press it. The page is an agent's, so it is held apart from Nouride. Its own scripts run. It cannot
+read your sign-in or the dashboard around it, cannot reach Nouride or the internet, and cannot open a window or send
+a form. A page that loads its pictures, fonts or scripts from the web is shown without them: what is shown is what
+is written in the page. A page larger than 2 MB is not drawn, and a mission's report keeps the block as code.
 
 **The files of one reply are one set** (0.8.39). Pictures sent in one reply open together: the arrow keys, a button on
 each side and a swipe go to the next, and "4 / 8" says where you are. Under a reply with two files or more,

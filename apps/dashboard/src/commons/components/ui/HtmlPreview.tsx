@@ -1,12 +1,13 @@
 /**
- * A page an agent wrote, looked at: the `html` block of a reply or an `.html` file, in a frame over the page.
+ * A page an agent wrote, looked at large: an `.html` file among Nouride's files, in a frame over the page. A reply's
+ * `html` block is drawn in the reply itself (`HtmlFrame`).
  *
  * The frame's address is the daemon's preview route, which serves the page under a policy of its own
  * (`routes/preview.ts` in the engine): it reaches nothing, reads nothing of the dashboard and cannot move the page
  * around it. The frame is sandboxed here too, so the same holds whatever answers at that address.
  *
- * Opened by a press and never by itself: a page somebody else wrote does not run because a message was scrolled
- * past. On white whatever the theme, as a page with no colours of its own is in any browser.
+ * Opened by a press: a file is read as its text until then. On white whatever the theme, as a page with no colours
+ * of its own is in any browser.
  */
 
 import { useEffect } from "react";

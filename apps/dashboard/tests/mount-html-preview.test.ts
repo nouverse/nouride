@@ -1,12 +1,13 @@
 /**
- * A preview of HTML an agent wrote (`commons/components/ui/HtmlPreview.tsx`, `commons/lib/html-preview.ts`): "Preview"
- * on an `html` block of a reply and on an `.html` file, which opens the page in a frame over the dashboard.
+ * A page of HTML an agent wrote, looked at (`commons/lib/html-preview.ts`): an `html` block of a reply is drawn in the
+ * reply itself, in a frame (`commons/components/ui/HtmlFrame.tsx`), and an `.html` file has "Preview", which opens it
+ * in a frame over the dashboard (`HtmlPreview.tsx`).
  *
- * The page is somebody else's. What is held here: it is opened by a press and never by itself; the frame is
- * sandboxed, with scripts and nothing else; its address is the daemon's preview route and names what is stored, a
- * turn and a place in its reply, or a file's path, never the page's own words; and it is offered only where there is
- * something stored to read back. What the page can then do is the daemon's policy and the browser's, seen in a real
- * one.
+ * The page is somebody else's. What is held here: the frame is sandboxed, with scripts and nothing else; its address
+ * is the daemon's preview route and names what is stored, a turn and a place in its reply, or a file's path, never
+ * the page's own words; it is drawn only where there is something stored to read back; what the frame hears of its
+ * height is a number held to bounds, from its own page alone; and a file's page is opened by a press. What the page
+ * can then do is the daemon's policy and the browser's, seen in a real one.
  */
 
 import { describe, expect, test } from "bun:test";
@@ -66,73 +67,113 @@ const chat = (reply: string) => ({
 const previews = (host: HTMLElement) => [...host.querySelectorAll<HTMLButtonElement>("button")].filter((button) => button.textContent?.trim() === "Preview");
 const frame = (host: HTMLElement) => host.ownerDocument.body.querySelector<HTMLIFrameElement>('[role="dialog"] iframe');
 
-describe("an html block in a reply", () => {
-  test("has Preview on it and only on it, and nothing is opened until it is pressed", async () => {
-    answer(chat(REPLY));
-    await renderPage("/chat/ses_1", async (host) => {
-      await eventually(() => previews(host).length > 0, 5_000, "the block's Preview");
-      expect(previews(host)).toHaveLength(1);
-      // On the html block's own head, not the js block's.
-      expect(previews(host)[0]!.closest("[data-block-head]")!.textContent).toMatch(/^html/i);
-      expect(host.ownerDocument.body.querySelector("iframe") === null).toBe(true);
-      // Its words are still its code: a preview is beside the block, not in its place.
-      expect(host.querySelector("pre code")!.textContent).toBe(PAGE);
-    });
-  });
+/** The frame an html block of a reply is drawn in, inside the reply. */
+const page = (host: HTMLElement) => host.querySelector<HTMLIFrameElement>('[data-viewer="page"] iframe');
+/** A button of the block's switch between its page and its code. */
+const showAs = (host: HTMLElement, as: "Page" | "Code") => [...host.querySelectorAll<HTMLButtonElement>('[aria-label="Show as"] button')].find((button) => button.textContent?.trim() === as);
 
-  test("a press opens it in a frame that runs its scripts and nothing else, at the daemon's address for that block", async () => {
+describe("an html block in a reply", () => {
+  test("is drawn in the reply itself, in a frame that runs its scripts and nothing else, at the daemon's address for that block", async () => {
     answer(chat(REPLY));
     await renderPage("/chat/ses_1", async (host) => {
-      await eventually(() => previews(host).length > 0, 5_000, "the block's Preview");
-      previews(host)[0]!.click();
-      await eventually(() => frame(host) !== null, 2_000, "the frame");
-      const drawn = frame(host)!;
+      await eventually(() => page(host) !== null, 5_000, "the block's page");
+      const drawn = page(host)!;
       expect(drawn.getAttribute("sandbox")).toBe("allow-scripts");
       expect(drawn.getAttribute("src")).toBe(`/api/control/preview/turn/turn_1?at=${REPLY.indexOf(PAGE)}&length=${PAGE.length}`);
       expect(drawn.getAttribute("referrerpolicy")).toBe("no-referrer");
+      // Asked for when it comes near the screen: a long chat does not load every page in it.
+      expect(drawn.getAttribute("loading")).toBe("lazy");
       // Never filled from the page: a frame the dashboard filled would run under the dashboard's own policy.
       expect(drawn.hasAttribute("srcdoc")).toBe(false);
-      const dialog = drawn.closest('[role="dialog"]')!;
-      expect(dialog.getAttribute("aria-label")).toBe("Preview of an html block");
-      // As wide as the screen leaves it, never a width of its own that a phone's screen is narrower than.
-      expect(drawn.parentElement!.className.split(" ")).toEqual(expect.arrayContaining(["w-full", "max-w-[76rem]"]));
-      // The same address in a tab of its own, where the daemon's policy still holds it.
-      expect(dialog.querySelector("a")!.getAttribute("href")).toBe(drawn.getAttribute("src"));
-      expect(dialog.querySelector("a")!.getAttribute("rel")).toBe("noopener noreferrer");
-      dialog.querySelector<HTMLButtonElement>('button[aria-label="Close the preview"]')!.click();
-      await eventually(() => frame(host) === null || frame(host)!.closest("[data-leaving]") !== null, 2_000, "the preview closed");
+      // In the chat, not over it: nothing opens, and the one frame is the html block's own. The js block is code.
+      expect(host.ownerDocument.body.querySelector('[role="dialog"]') === null).toBe(true);
+      expect(host.ownerDocument.body.querySelectorAll("iframe")).toHaveLength(1);
+      expect(drawn.closest("[data-viewer]")!.querySelector("[data-block-head]")!.textContent).toMatch(/^html/i);
+      expect(previews(host)).toHaveLength(0);
+      // The page's words are the frame's, never elements of the dashboard's own page.
+      expect([...host.querySelectorAll("h1")].filter((heading) => heading.textContent?.trim() === "Menu")).toHaveLength(0);
     });
   });
 
-  test("Escape closes it", async () => {
+  test("its code is a press away and its page a press back, and a link opens the page in a tab of its own", async () => {
     answer(chat(REPLY));
     await renderPage("/chat/ses_1", async (host) => {
-      await eventually(() => previews(host).length > 0, 5_000, "the block's Preview");
-      previews(host)[0]!.click();
-      await eventually(() => frame(host) !== null, 2_000, "the frame");
-      host.ownerDocument.defaultView!.dispatchEvent(new (host.ownerDocument.defaultView as unknown as { KeyboardEvent: typeof KeyboardEvent }).KeyboardEvent("keydown", { key: "Escape" }));
-      await eventually(() => frame(host) === null || frame(host)!.closest("[data-leaving]") !== null, 2_000, "the preview closed");
+      await eventually(() => page(host) !== null, 5_000, "the block's page");
+      const address = page(host)!.getAttribute("src");
+      expect(showAs(host, "Page")!.getAttribute("aria-pressed")).toBe("true");
+      showAs(host, "Code")!.click();
+      await eventually(() => page(host) === null, 2_000, "the block as its code");
+      expect([...host.querySelectorAll("pre code")].map((code) => code.textContent)).toContain(PAGE);
+      // The same address in a tab of its own, where the daemon's policy still holds it; there as its code too.
+      const link = host.querySelector<HTMLAnchorElement>('a[aria-label="Open in a tab"]')!;
+      expect(link.getAttribute("href")).toBe(address);
+      expect(link.getAttribute("target")).toBe("_blank");
+      expect(link.getAttribute("rel")).toBe("noopener noreferrer");
+      showAs(host, "Page")!.click();
+      await eventually(() => page(host) !== null, 2_000, "the block as its page again");
     });
   });
 
-  test("a reply with no html block offers none, and a block in another language whose words are a page offers none", async () => {
+  test("is as tall as its page says, within bounds, and hears no other's word for it", async () => {
+    answer(chat(REPLY));
+    await renderPage("/chat/ses_1", async (host) => {
+      await eventually(() => page(host) !== null, 5_000, "the block's page");
+      const drawn = page(host)!;
+      const view = host.ownerDocument.defaultView as unknown as Window & { MessageEvent: typeof MessageEvent };
+      const own = {};
+      let its: object | null = own;
+      Object.defineProperty(drawn, "contentWindow", { configurable: true, get: () => its });
+      const says = (data: unknown, source: unknown = own) => view.dispatchEvent(new view.MessageEvent("message", { data, source: source as MessageEventSource }));
+      const tall = () => drawn.style.height;
+      // Before its page has said anything: the window a page that fills its window is given.
+      expect(tall()).toBe("320px");
+      expect(drawn.className.split(" ")).toContain("max-h-[70dvh]");
+      says({ nouridePreviewHeight: 231.4 });
+      await eventually(() => tall() === "232px", 2_000, "the page's own height");
+      // A page far taller than a chat scrolls inside its frame; one with nothing in it still has a frame to be seen.
+      says({ nouridePreviewHeight: 99_999 });
+      await eventually(() => tall() === "640px", 2_000, "held to the tallest");
+      says({ nouridePreviewHeight: 3 });
+      await eventually(() => tall() === "40px", 2_000, "held to the least");
+      // Not its own frame's word, and not a height: each comes after the page's own and none of them is the last heard.
+      says({ nouridePreviewHeight: 123 });
+      says({ nouridePreviewHeight: 300 }, {});
+      says({ nouridePreviewHeight: 300 }, null);
+      says({ nouridePreviewHeight: "300" });
+      says({ nouridePreviewHeight: Number.NaN });
+      says("300");
+      says(null);
+      // A frame with no window of its own yet is nobody: a message from nowhere is not its page's.
+      its = null;
+      says({ nouridePreviewHeight: 300 }, null);
+      its = own;
+      await eventually(() => tall() === "123px", 2_000, "the page's own word, and no other's");
+      // Drawn again, it is as tall as its page last said: nothing jumps when the block comes back from its code.
+      showAs(host, "Code")!.click();
+      await eventually(() => page(host) === null, 2_000, "the block as its code");
+      showAs(host, "Page")!.click();
+      await eventually(() => page(host) !== null, 2_000, "the block as its page again");
+      expect(page(host)!.style.height).toBe("123px");
+    });
+  });
+
+  test("a reply with no html block draws no page, and a block in another language whose words are a page draws none", async () => {
     for (const reply of ["```js\nconsole.log(1)\n```", `\`\`\`xml\n${PAGE}\n\`\`\``, `\`\`\`\n${PAGE}\n\`\`\``]) {
       answer(chat(reply));
       await renderPage("/chat/ses_1", async (host) => {
         await eventually(() => host.querySelector("pre code") !== null, 5_000, "the block");
-        expect(previews(host)).toHaveLength(0);
+        expect(host.ownerDocument.body.querySelector("iframe") === null).toBe(true);
+        expect(showAs(host, "Page")).toBeUndefined();
       });
     }
   });
 
-  test("a block indented under a list item is previewed by the place its words are in the reply, indent and all", async () => {
+  test("a block indented under a list item is drawn from the place its words are in the reply, indent and all", async () => {
     const reply = "1. A page:\n\n   ```html\n   <p>one</p>\n   <p>two</p>\n   ```";
     answer(chat(reply));
     await renderPage("/chat/ses_1", async (host) => {
-      await eventually(() => previews(host).length > 0, 5_000, "the block's Preview");
-      previews(host)[0]!.click();
-      await eventually(() => frame(host) !== null, 2_000, "the frame");
-      const [, from, length] = /at=(\d+)&length=(\d+)/.exec(frame(host)!.getAttribute("src")!)!;
+      await eventually(() => page(host) !== null, 5_000, "the block's page");
+      const [, from, length] = /at=(\d+)&length=(\d+)/.exec(page(host)!.getAttribute("src")!)!;
       // What the address names is the block's own lines, and nothing of the fence around them.
       expect(reply.slice(Number(from), Number(from) + Number(length)).trim()).toBe("<p>one</p>\n   <p>two</p>");
     });
@@ -145,41 +186,42 @@ describe("html written straight into a reply, with no code block around it", () 
   const RUN = [CARD, "", "<table><tr><td>a cell</td></tr></table>"].join("\n");
   const RAW = ["Here it is, raw:", "", RUN, "", "What to check:", "", "<b>Note:</b> a sentence that begins with a tag."].join("\n");
 
-  test("is one html block, its code and nothing drawn from it, with Preview at the daemon's address for where it is", async () => {
+  test("is one html block, drawn in the reply at the daemon's address for where it is, and nothing of it drawn by the dashboard", async () => {
     answer(chat(RAW));
     await renderPage("/chat/ses_1", async (host) => {
-      await eventually(() => previews(host).length > 0, 5_000, "the run's Preview");
-      expect(previews(host)).toHaveLength(1);
-      expect(previews(host)[0]!.closest("[data-block-head]")!.textContent).toMatch(/^html/i);
-      // The card and the table are one block: its words as they were written, blank line and all.
-      expect([...host.querySelectorAll("pre code")].map((code) => code.textContent)).toEqual([RUN]);
-      // No tag is left as a line of prose, and none became an element of the page.
+      await eventually(() => page(host) !== null, 5_000, "the run's page");
+      expect(host.ownerDocument.body.querySelectorAll("iframe")).toHaveLength(1);
+      expect(page(host)!.getAttribute("src")).toBe(`/api/control/preview/turn/turn_1?at=${RAW.indexOf(RUN)}&length=${RUN.length}`);
+      expect(page(host)!.getAttribute("sandbox")).toBe("allow-scripts");
+      expect(page(host)!.closest("[data-viewer]")!.querySelector("[data-block-head]")!.textContent).toMatch(/^html/i);
+      // No tag is left as a line of prose, and none became an element of the dashboard's page.
       expect([...host.querySelectorAll("p")].filter((line) => /<div|<table|<\/div/.test(line.textContent ?? ""))).toHaveLength(0);
       expect([...host.querySelectorAll("h3, button, td")].filter((drawn) => /^(Render test|A button|a cell)$/.test(drawn.textContent?.trim() ?? ""))).toHaveLength(0);
-      expect(host.ownerDocument.body.querySelector("iframe") === null).toBe(true);
-      previews(host)[0]!.click();
-      await eventually(() => frame(host) !== null, 2_000, "the frame");
-      expect(frame(host)!.getAttribute("src")).toBe(`/api/control/preview/turn/turn_1?at=${RAW.indexOf(RUN)}&length=${RUN.length}`);
-      expect(frame(host)!.getAttribute("sandbox")).toBe("allow-scripts");
+      // The card and the table are one block: its code is its words as they were written, blank line and all.
+      showAs(host, "Code")!.click();
+      await eventually(() => page(host) === null, 2_000, "the run as its code");
+      expect([...host.querySelectorAll("pre code")].map((code) => code.textContent)).toEqual([RUN]);
     });
   });
 
   test("a sentence that begins with a tag stays a sentence", async () => {
     answer(chat(RAW));
     await renderPage("/chat/ses_1", async (host) => {
-      await eventually(() => previews(host).length > 0, 5_000, "the run's Preview");
+      await eventually(() => page(host) !== null, 5_000, "the run's page");
       expect([...host.querySelectorAll("p")].filter((line) => line.textContent === "<b>Note:</b> a sentence that begins with a tag.")).toHaveLength(1);
     });
   });
 });
 
 describe("where nothing stored can be read back", () => {
-  test("an html block in a mission's report has no Preview: only a reply's does", async () => {
+  test("an html block in a mission's report is its code, with no page drawn: only a reply's is", async () => {
     const shown = WIRE["/missions/msn_1"] as { mission: Record<string, unknown> };
     answer({ "/missions/msn_1": ok({ ...shown, mission: { ...shown.mission, status: "done", seen: "done", report: `The page:\n\n\`\`\`html\n${PAGE}\n\`\`\`` } }) });
     await renderPage("/missions/msn_1", async (host) => {
       await eventually(() => host.querySelector("pre code")?.textContent === PAGE, 5_000, "the report's block");
       expect(previews(host)).toHaveLength(0);
+      expect(host.ownerDocument.body.querySelector("iframe") === null).toBe(true);
+      expect(showAs(host, "Page")).toBeUndefined();
     });
   });
 });

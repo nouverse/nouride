@@ -16,15 +16,15 @@
  * not load or cannot draw it, the block is its code as above, with no error box: the code is what was written, and an
  * error says less than it does.
  *
- * An `html` block is never drawn in the page. Where it is a block of a stored reply it has "Preview", which opens it in
- * a frame of its own on a press (`HtmlPreview`): a page somebody else wrote does not run because it was scrolled past.
+ * An `html` block is never drawn in the page itself. Where it is a block of a stored reply it is drawn in a frame of its
+ * own inside the chat (`HtmlFrame`), held apart from the dashboard, with the same switch to its code and a link that
+ * opens it in a tab. Anywhere else (a reply still being written, a report, a file's text) it is its code.
  */
 
 import { Component, useContext, useEffect, useMemo, useState, type ComponentType, type ReactNode } from "react";
-import { Eye } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { CopyButton } from "@/commons/components/ui/CopyButton";
-import { HtmlPreview } from "@/commons/components/ui/HtmlPreview";
-import { Leaving } from "@/commons/components/ui/OverPage";
+import { HtmlFrame } from "@/commons/components/ui/HtmlFrame";
 import { HtmlBlocks, namesHtml } from "@/commons/lib/html-preview";
 import { viewerFor, type Viewer, type ViewerProps } from "@/commons/components/ui/viewers";
 import type { CodePiece } from "@/commons/lib/highlight";
@@ -159,39 +159,43 @@ export function CodeBlock({ lang, text, growing = false }: { lang?: string | und
   const Drawn = useViewer(failed === text ? null : viewer);
   const drawing = Drawn !== null;
   const pictured = drawing && !asCode;
-  const colourable = Boolean(lang) && !growing && !pictured && text.length <= COLOURED_UP_TO;
+  // Where this block is one of a stored reply's, the address its page is served at; none while it is still being written.
+  const previews = useContext(HtmlBlocks);
+  const page = !growing && namesHtml(lang) ? (previews?.(text) ?? null) : null;
+  const paged = page !== null && !asCode;
+  const colourable = Boolean(lang) && !growing && !pictured && !paged && text.length <= COLOURED_UP_TO;
   const highlighter = useHighlighter(colourable);
   const coloured = useMemo<CodePiece[] | null>(() => (colourable && highlighter ? highlighter.pieces(lang ?? "", text) : null), [colourable, highlighter, lang, text]);
-  // Where this block is one of a stored reply's, the address that previews it; none while it is still being written.
-  const previews = useContext(HtmlBlocks);
-  const preview = !growing && namesHtml(lang) ? (previews?.(text) ?? null) : null;
-  const [previewing, setPreviewing] = useState(false);
+  // What the block is drawn as beside its code: a viewer's picture, or the page an `html` block is.
+  const drawnAs = page !== null ? "Page" : drawing && viewer ? viewer.label : null;
   return (
-    <div className="rounded-xl border border-base-content/10 bg-base-200/60 overflow-hidden shadow-xs" data-viewer={pictured ? "picture" : "code"}>
+    <div className="rounded-xl border border-base-content/10 bg-base-200/60 overflow-hidden shadow-xs" data-viewer={pictured ? "picture" : paged ? "page" : "code"}>
       {/* The head: what a printed page leaves out (`MarkdownPreview`). */}
       <div data-block-head className="flex min-h-7 items-center justify-between gap-2 border-b border-base-content/10 bg-base-300/40 py-0.5 pl-3 pr-1">
         <span className="text-[11px] font-mono font-medium text-base-content/65 uppercase tracking-wider">{lang}</span>
         <span className="flex shrink-0 items-center gap-0.5">
-          {drawing && viewer && (
+          {drawnAs && (
             <span role="group" aria-label="Show as" className="flex items-center gap-0.5">
               <button type="button" className={SWITCH} aria-pressed={!asCode} onClick={() => setAsCode(false)}>
-                {viewer.label}
+                {drawnAs}
               </button>
               <button type="button" className={SWITCH} aria-pressed={asCode} onClick={() => setAsCode(true)}>
                 Code
               </button>
             </span>
           )}
-          {preview && (
-            <button type="button" className="btn btn-ghost btn-xs max-sm:btn-sm shrink-0 gap-1 rounded-lg" onClick={() => setPreviewing(true)}>
-              <Eye size={12} aria-hidden="true" /> Preview
-            </button>
+          {/* In a tab it is under the same policy: the daemon sends it with the page, whatever frames it. */}
+          {page && (
+            <a href={page} target="_blank" rel="noopener noreferrer" className="btn btn-ghost btn-xs max-sm:btn-sm btn-square shrink-0 rounded-lg" aria-label="Open in a tab" title="Open in a tab">
+              <ExternalLink size={12} aria-hidden="true" />
+            </a>
           )}
           <CopyButton text={text} className="btn btn-ghost btn-xs max-sm:btn-sm shrink-0 gap-1 rounded-lg" />
         </span>
       </div>
-      <Leaving value={previewing && preview}>{(src) => <HtmlPreview src={src} name="an html block" onClose={() => setPreviewing(false)} />}</Leaving>
-      {pictured && Drawn ? (
+      {paged && page ? (
+        <HtmlFrame src={page} />
+      ) : pictured && Drawn ? (
         <div className="overflow-x-auto p-3.5">
           <Fallible key={text} onFail={() => setFailed(text)}>
             <Drawn text={text} onFail={() => setFailed(text)} />

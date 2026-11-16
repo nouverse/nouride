@@ -37,6 +37,26 @@ const PREVIEW_MAX = 2 * 1024 * 1024;
 /** What a refusal says, as a page: the frame shows it where the preview would have been. */
 const said = (words: string) => `<!doctype html><meta charset="utf-8"><body style="font:15px system-ui;color:#555;padding:24px">${words}</body>`;
 
+/**
+ * What is added after a page's own words so that the page says how tall it is. In a chat a reply's page is drawn in the
+ * reply itself, in a frame the dashboard cannot see into: without this it is a box of one height for a line of text
+ * and for a long page alike. The page tells the frame around it its height, and again when that changes; in a tab of
+ * its own it says nothing. The dashboard holds what it hears to its own bounds, since a page's own script can say a
+ * number too.
+ */
+const SAYS_ITS_HEIGHT =
+  '\n<script>(function(){if(parent===window)return;var d=document,say=function(){var b=d.body;parent.postMessage({nouridePreviewHeight:Math.max(d.documentElement.offsetHeight,b?b.scrollHeight:0)},"*")};if(window.ResizeObserver)new ResizeObserver(say).observe(d.documentElement);addEventListener("load",say);say()})()</script>';
+
+/**
+ * A page as it is served: its words as they are stored, then `SAYS_ITS_HEIGHT`. Words that are a page's inside, with
+ * no doctype and no `<html>` of their own, are given the doctype a page begins with: without one a browser lays them
+ * out as pages of the last century were, where the page is always as tall as its frame and its height says nothing.
+ */
+export function asPage(html: string): string {
+  const whole = /^\s*<(?:!doctype\b|html[\s>])/i.test(html);
+  return `${whole ? "" : "<!doctype html>\n"}${html}${SAYS_ITS_HEIGHT}`;
+}
+
 /** Kept by no cache, and read as the type it is sent as: the next look reads what is stored then. */
 const PAGE = { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "private, no-store" };
 
@@ -76,7 +96,7 @@ export function registerPreviewRoutes(control: ControlApp, deps: ControlDeps): v
     const html = htmlBlockAt(turn.reply ?? "", at, length) ?? htmlRunAt(turn.reply ?? "", at, length);
     if (html === null) return c.html(said("This is not there to preview."), 404);
     if (html.length > PREVIEW_MAX) return c.html(said("This page is too large to preview here."), 413);
-    return c.body(html, 200, PAGE);
+    return c.body(asPage(html), 200, PAGE);
   });
 
   /** An `.html` file among Nouride's files, by its path there. An admin's, as every route of the files is. */
@@ -88,6 +108,6 @@ export function registerPreviewRoutes(control: ControlApp, deps: ControlDeps): v
     if (size > PREVIEW_MAX) return c.html(said("This page is too large to preview here."), 413);
     const raw = new TextDecoder("utf-8", { fatal: false }).decode(new Uint8Array(await readFileRange(found.real, 0, size).arrayBuffer()));
     // Its words as the Files page shows them: a credential written into a page is hidden here too.
-    return c.body(hidden(raw, deps.secrets.knownValues()), 200, PAGE);
+    return c.body(asPage(hidden(raw, deps.secrets.knownValues())), 200, PAGE);
   });
 }

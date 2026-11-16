@@ -307,8 +307,8 @@ keduanya setinggi yang sama dan di-scroll di dalamnya, jadi pindah di antara ked
 Pratinjaunya membangun elemen React dan gak ada rendering HTML mentah di mana pun dalam aplikasi ini.
 Agent bisa menulis `MEMORY.md`-nya sendiri dan membuat skill-nya sendiri; merender itu sebagai HTML
 akan mengubah "model menuliskan tag script" menjadi script yang berjalan di browser admin, same-origin,
-dengan cookie sesi. Halaman HTML yang ditulis agent dilihat dengan cara lain, terpisah dari dashboard:
-**Preview**, di bagian [Chat](#chat).
+dengan cookie sesi. Halaman HTML yang ditulis agent dilihat dengan cara lain, di bingkai yang terpisah dari
+dashboard: **Halaman HTML**, di bagian [Chat](#chat).
 
 `config.toml` di sini milik agent itu sendiri. Milik daemon ada di kartu terakhir
 **Agents → Settings**.
@@ -577,14 +577,15 @@ dokumen memory. **Save as PDF** di file Markdown ikut membawa gambar dan rumusny
 sebagai gambar, jadi script yang ditulis di dalamnya gak berbuat apa-apa. Penampil diagram baru dimuat saat pertama
 kali sebuah halaman memuat diagram.
 
-**Halaman HTML** (0.8.39). Blok `html` di sebuah balasan punya **Preview** setelah balasannya selesai, begitu juga file
-`.html` di Files dan Workspace. HTML yang ditulis agent langsung di balasannya, tanpa blok kode, juga ditampilkan
-sebagai blok `html` dengan **Preview** yang sama. Halamannya terbuka di atas dashboard saat kamu tekan, gak pernah
-sendiri, dan **Open in a tab** memberinya tab sendiri. Halaman itu milik agent, jadi dipisahkan dari Nouride. Script-nya sendiri jalan. Ia gak
+**Halaman HTML** (0.8.39). Blok `html` di sebuah balasan digambar di chat sebagai halamannya, setelah balasannya
+selesai: di dalam balasan itu sendiri, setinggi halamannya sampai batas tertentu, dengan pilihan **Page** dan **Code**
+di kepalanya dan link yang membukanya di tab sendiri. HTML yang ditulis agent langsung di balasannya, tanpa blok
+kode, juga jadi blok seperti itu. File `.html` di Files dan Workspace punya **Preview**, yang membuka halamannya di
+atas dashboard saat kamu tekan. Halaman itu milik agent, jadi dipisahkan dari Nouride. Script-nya sendiri jalan. Ia gak
 bisa membaca login kamu atau dashboard di sekitarnya, gak bisa menghubungi Nouride atau internet, dan gak bisa membuka
 jendela atau mengirim form. Halaman yang mengambil gambar, font atau script dari web tampil tanpa itu semua: yang
-ditampilkan pratinjau adalah yang tertulis di halamannya. Halaman di atas 2 MB gak dipratinjau, dan laporan misi gak
-punya Preview.
+ditampilkan adalah yang tertulis di halamannya. Halaman di atas 2 MB gak digambar, dan laporan misi tetap menampilkan
+bloknya sebagai kode.
 
 **File dari satu balasan adalah satu set** (0.8.39). Gambar yang dikirim dalam satu balasan terbuka bersama: tombol
 panah di keyboard, tombol di tiap sisi dan geseran pindah ke gambar berikutnya, dan "4 / 8" bilang kamu di mana. Di
