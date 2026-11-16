@@ -32,6 +32,11 @@ describe("what the dashboard may load", () => {
     expect(img).toContain("data:");
   });
 
+  test("images: a picture on the web that its reader pressed, over https and nothing plainer", () => {
+    // What keeps one from being asked for by itself is the page, which draws it only on a press.
+    expect(directive("img-src").split(" ").slice(1)).toEqual(["'self'", "data:", "blob:", "https:"]);
+  });
+
   test("scripts and connections stay same-origin", () => {
     // The dashboard is a static SPA talking to same-origin JSON. Nothing it does needs a third party,
     // and `blob:` above is deliberately *not* extended to either of these — a blob script is a script.

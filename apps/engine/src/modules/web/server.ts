@@ -127,8 +127,13 @@ export const SECURITY_HEADERS: Record<string, string> = {
      *
      * Narrower than the `data:` already here, not looser: a blob URL can only name something this
      * document created, in this tab, and dies with it.
+     *
+     * `https:` is for a picture an agent's text names on the web (`![..](https://..)`). The page asks for one only
+     * once its reader presses it (the dashboard's `markdown/Picture.tsx`): its address is the agent's to write, and
+     * a picture asked for by itself would carry whatever that address holds to whoever keeps it. Plain `http:`
+     * stays out.
      */
-    "img-src 'self' data: blob:",
+    "img-src 'self' data: blob: https:",
     "connect-src 'self'",
     "frame-ancestors 'none'",
     "base-uri 'none'",
