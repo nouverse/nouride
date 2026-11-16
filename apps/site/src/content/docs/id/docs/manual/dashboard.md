@@ -374,7 +374,8 @@ untuk yang lain, **Logs** tetap ada di bawah Settings dengan dua tabnya, dan **U
 **System** bilang apa yang sedang dipakai mesin sekarang, tiap angka berupa batang dengan satu kalimat di sebelahnya:
 
 - **RAM**: berapa yang terpakai dari yang boleh dipakai Nouride, lalu siapa yang memegangnya: Nouride sendiri, dan
-  perintah para agent kalau dihitung terpisah. Di dalam container, atau di bawah service yang memasang batas, plafonnya
+  perintah para agent kalau dihitung terpisah. Di Mac angka terpakainya mendekati "Memory Used" di Activity
+  Monitor. Di dalam container, atau di bawah service yang memasang batas, plafonnya
   adalah batas itu dan angka terpakainya milik container itu sendiri, sama dengan yang ditunjukkan `docker stats`,
   bukan milik mesin di sekelilingnya. Kartunya bilang yang mana.
 - **Disk**: disk tempat berkas Nouride berada (di container, volume-nya), berapa yang kosong, dan berapa yang dipakai
