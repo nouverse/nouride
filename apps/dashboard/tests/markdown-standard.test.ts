@@ -305,7 +305,9 @@ describe("an svg written with no fence", () => {
     expect(tokens.filter((token) => token.type === "svgBlock")).toHaveLength(3);
     const html = draw('<svg onload="alert(\'svg-xss\')" width="50" height="50"><circle cx="25" cy="25" r="20" fill="red"/></svg>');
     expect(html).not.toMatch(/<svg onload|<circle/);
-    expect(html).toContain('data-viewer="code"');
+    // Its code until the picture's viewer has loaded, the picture once it has: which one a run sees depends on whether
+    // another test loaded the viewer first, as the whole suite on Linux did.
+    expect(html).toMatch(/data-viewer="(code|picture)"/);
   });
 
   test("in a page, each is drawn as a picture and its handler is no part of the page", async () => {
