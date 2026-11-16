@@ -1,5 +1,5 @@
 /**
- * A table in an agent's reply (`Markdown.tsx`'s `Table`): its columns are the agent's, so it does not fold on a phone as
+ * A table in an agent's reply (`MarkdownTable.tsx`): its columns are the agent's, so it does not fold on a phone as
  * the dashboard's own tables do. It scrolls sideways in its box, a shade on each side that holds more says so, and
  * below `sm` a column keeps a reader's width.
  */

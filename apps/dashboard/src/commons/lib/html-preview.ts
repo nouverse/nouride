@@ -1,11 +1,13 @@
 /**
- * Where a page an agent wrote is previewed: the daemon's address for an `html` block of a reply, and for an `.html`
- * file (`web/control/routes/preview.ts` in the engine). The address names what is stored, a turn and where in its
- * reply the block is, or a file by its path: the page's own words are never sent back to be served.
+ * Where a page an agent wrote is previewed: the daemon's address for an `html` block of a reply, for HTML written
+ * straight into one (`html-run.ts`), and for an `.html` file (`web/control/routes/preview.ts` in the engine). The
+ * address names what is stored, a turn and where in its reply the HTML is, or a file by its path: the page's own
+ * words are never sent back to be served.
  */
 
 import { createContext } from "react";
 import { control } from "@/commons/lib/api.client";
+import { isHtmlRun } from "@/commons/lib/html-run";
 
 /** From an `html` block's words to the address that previews it, or null where it has none. */
 export type HtmlBlockPreview = (text: string) => string | null;
@@ -22,14 +24,15 @@ function opensHtml(before: string): boolean {
 }
 
 /**
- * The previews of one turn's `html` blocks, each by where it is in the turn's reply. A block whose words are not found
- * there as an `html` block, written inside a list and so indented in the reply, has none: the daemon would refuse it.
+ * The previews of one turn's `html` blocks, each by where it is in the turn's reply: after a fence that names `html`,
+ * or a run of HTML written with no fence. A block whose words are not found there as either, written inside a list
+ * and so indented in the reply, has none: the daemon would refuse it.
  */
 export function turnHtmlPreview(turnId: string, reply: string): HtmlBlockPreview {
   return (text) => {
     if (!text) return null;
     for (let at = reply.indexOf(text); at >= 0; at = reply.indexOf(text, at + 1)) {
-      if (opensHtml(reply.slice(0, at))) return `${control}/preview/turn/${encodeURIComponent(turnId)}?at=${at}&length=${text.length}`;
+      if (opensHtml(reply.slice(0, at)) || isHtmlRun(reply, at, text.length)) return `${control}/preview/turn/${encodeURIComponent(turnId)}?at=${at}&length=${text.length}`;
     }
     return null;
   };

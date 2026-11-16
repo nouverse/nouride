@@ -558,8 +558,9 @@ diagram are shown as images, so a script written inside one does nothing. The di
 a page holds a diagram.
 
 **A page of HTML** (0.8.39). An `html` block of a reply has **Preview** once the reply is over, and so has an `.html`
-file in Files and the Workspace. It opens the page over the dashboard when you press it, never by itself, and **Open
-in a tab** gives it a tab of its own. The page is an agent's, so it is held apart from Nouride. Its own scripts run. It
+file in Files and the Workspace. HTML an agent wrote straight into its reply, with no code block around it, is shown
+as an `html` block too, with the same **Preview**. It opens the page over the dashboard when you press it, never by
+itself, and **Open in a tab** gives it a tab of its own. The page is an agent's, so it is held apart from Nouride. Its own scripts run. It
 cannot read your sign-in or the dashboard around it, cannot reach Nouride or the internet, and cannot open a window or
 send a form. A page that loads its pictures, fonts or scripts from the web is shown without them: what a preview
 shows is what is written in the page. A page larger than 2 MB is not previewed, and a mission's report has no Preview.

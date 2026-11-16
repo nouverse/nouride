@@ -15,8 +15,8 @@ import { UsageRoutes } from "@/modules/home/components/UsageRoutes";
 
 const SRC = join(dirname(import.meta.path), "..", "src");
 const RULE = join("commons", "components", "ui", "fold-table.ts");
-/** An agent's reply: its own table, which scrolls (`Markdown.tsx`). */
-const REPLY = join("commons", "components", "ui", "Markdown.tsx");
+/** An agent's reply: its own table, which scrolls (`MarkdownTable.tsx`). */
+const REPLY = join("commons", "components", "ui", "MarkdownTable.tsx");
 
 function sources(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {

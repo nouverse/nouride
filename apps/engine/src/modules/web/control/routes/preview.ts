@@ -1,6 +1,6 @@
 /**
- * A preview of HTML an agent wrote: the `html` block of a reply, or an `.html` file among Nouride's files, served as
- * the page it is so a person can look at it.
+ * A preview of HTML an agent wrote: the `html` block of a reply, HTML written straight into one, or an `.html` file
+ * among Nouride's files, served as the page it is so a person can look at it.
  *
  * It is somebody else's page, written by a model, and it is served from the dashboard's own address. So it is served
  * under a policy of its own (`PREVIEW_SECURITY_HEADERS`, `web/server.ts`), and three things hold whatever the page
@@ -13,7 +13,7 @@
  * - **It stays where it is.** It cannot move the page around it, open a window or send a form.
  *
  * And the daemon takes the HTML from what it has stored, never from what the browser sends: a request names a turn
- * and where in its reply the block is, or a file by its path, and nothing in it is served back.
+ * and where in its reply the HTML is, or a file by its path, and nothing in it is served back.
  *
  * A frame the dashboard filled itself would take the dashboard's policy, under which the page's own scripts do not
  * run and its requests go where the dashboard's may: that is why this is a route.
@@ -23,6 +23,7 @@ import { readFileRange } from "@nouride/runtime";
 import { atLeast } from "@/modules/users/auth.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { conversationFor } from "../conversation.ts";
+import { isHtmlRun } from "../html-run.ts";
 import { filesRoot, findFile } from "../system-files.ts";
 import { readerOf } from "../whose.ts";
 import { hidden } from "./system-files.ts";
@@ -41,8 +42,9 @@ const PAGE = { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "pri
 
 /**
  * The words of an `html` block of a reply, by where they are in it, or null where that is not one: `at` must follow a
- * fence line that names `html`, and what comes after `length` characters must be the fence's end. Any other part of
- * a reply is not a page somebody wrote to be looked at, and is not served as one.
+ * fence line that names `html`, and what comes after `length` characters must be the fence's end. Besides a run of
+ * HTML written with no fence (`htmlRunAt`), no other part of a reply is a page somebody wrote to be looked at, and
+ * none is served as one.
  */
 export function htmlBlockAt(reply: string, at: number, length: number): string | null {
   // A place counted from the reply's start, in whole characters: one counted back from its end is nowhere.
@@ -53,16 +55,25 @@ export function htmlBlockAt(reply: string, at: number, length: number): string |
   return closes.test(reply.slice(at + length)) ? reply.slice(at, at + length) : null;
 }
 
+/**
+ * The words of a run of HTML an agent wrote straight into its reply, with no fence around it, by where they are in
+ * it, or null where that is not one (`html-run.ts`). Asked for HTML, a model often writes the tags as they are.
+ */
+export function htmlRunAt(reply: string, at: number, length: number): string | null {
+  return isHtmlRun(reply, at, length) ? reply.slice(at, at + length) : null;
+}
+
 export function registerPreviewRoutes(control: ControlApp, deps: ControlDeps): void {
   /**
-   * An `html` block of a turn's reply: `?at=` and `?length=` say where in the stored reply it is. Read by whoever may
-   * open the turn's conversation, as the turn itself is.
+   * An `html` block of a turn's reply, or a run of HTML written straight into it: `?at=` and `?length=` say where in
+   * the stored reply it is. Read by whoever may open the turn's conversation, as the turn itself is.
    */
   control.get(`${PREVIEW_PATH}/turn/:id`, (c) => {
     const turn = deps.turns?.get(c.req.param("id"));
     const reader = readerOf(c.get("principal"), deps.ctx.config.people);
     if (!turn || !(reader.everyone || conversationFor(deps, reader, turn.sessionId))) return c.html(said("This is not there to preview."), 404);
-    const html = htmlBlockAt(turn.reply ?? "", Number(c.req.query("at")), Number(c.req.query("length")));
+    const [at, length] = [Number(c.req.query("at")), Number(c.req.query("length"))];
+    const html = htmlBlockAt(turn.reply ?? "", at, length) ?? htmlRunAt(turn.reply ?? "", at, length);
     if (html === null) return c.html(said("This is not there to preview."), 404);
     if (html.length > PREVIEW_MAX) return c.html(said("This page is too large to preview here."), 413);
     return c.body(html, 200, PAGE);

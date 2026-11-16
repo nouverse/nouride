@@ -14,7 +14,7 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { Hono } from "hono";
-import { htmlBlockAt, registerPreviewRoutes } from "@/modules/web/control/routes/preview.ts";
+import { htmlBlockAt, htmlRunAt, registerPreviewRoutes } from "@/modules/web/control/routes/preview.ts";
 import { parseConfig } from "@/modules/config/global/index.ts";
 import { bindWebServer, headersFor, PREVIEW_SECURITY_HEADERS, SECURITY_HEADERS, type WebServer } from "@/modules/web/server.ts";
 
@@ -75,6 +75,36 @@ describe("the words of an html block, by where they are in a reply", () => {
   });
 });
 
+// As an agent asked to "write some html here" wrote it: lines of tags between its prose, with no fence around them.
+const CARD = ['<div style="padding:16px">', "  <h3>Render test</h3>", "</div>"].join("\n");
+const RUN = [CARD, "", "<table><tr><td>a cell</td></tr></table>", "", "<script>document.title = 'ran'</script>"].join("\n");
+const RAW = ["Here it is, raw:", "", RUN, "", "What to check:", "- **The card**: whether its colours show.", "", "```js", "<div>in a block</div>", "```"].join("\n");
+
+describe("the words of html written with no fence, by where they are in a reply", () => {
+  test("the run's own lines, its pieces with a blank line between them one page", () => {
+    expect(htmlRunAt(RAW, at(RAW, RUN), RUN.length)).toBe(RUN);
+    // An html block is not one, and a run is no html block: each is found by its own rule.
+    expect(htmlBlockAt(RAW, at(RAW, RUN), RUN.length)).toBeNull();
+    expect(htmlRunAt(REPLY, at(REPLY, PAGE), PAGE.length)).toBeNull();
+  });
+
+  test("no other part of the reply: its prose, the run with the prose after it, a run entered inside a line, what a code block holds", () => {
+    const boxed = "<div>in a block</div>";
+    for (const [from, length, why] of [
+      [at(RAW, "Here it is"), 16, "prose"],
+      [at(RAW, "What to check"), 14, "prose after it"],
+      [at(RAW, RUN), RUN.length + "\n\nWhat to check:".length, "the run with the prose after it"],
+      [at(RAW, RUN) + 1, RUN.length - 1, "entered inside its first line"],
+      [at(RAW, RUN), RUN.length - 4, "left inside its last line"],
+      [at(RAW, boxed), boxed.length, "what a js block holds"],
+      [0, RAW.length, "the whole reply"],
+      [Number.NaN, RUN.length, "no place"],
+    ] as const) {
+      expect(htmlRunAt(RAW, from, length), why).toBeNull();
+    }
+  });
+});
+
 // ── the routes ────────────────────────────────────────────────────────────────────────────────────────────────────
 
 let top: string;
@@ -104,6 +134,7 @@ const TURNS: Record<string, { id: string; sessionId: string; reply?: string }> =
   turn_theirs: { id: "turn_theirs", sessionId: "ses_nix:web:dashboard:theirs", reply: REPLY },
   turn_big: { id: "turn_big", sessionId: "ses_nix:web:dashboard:mine", reply: `\`\`\`html\n${"x".repeat(2 * 1024 * 1024 + 1)}\n\`\`\`` },
   turn_silent: { id: "turn_silent", sessionId: "ses_nix:web:dashboard:mine" },
+  turn_raw: { id: "turn_raw", sessionId: "ses_nix:web:dashboard:mine", reply: RAW },
 };
 /** Each conversation, and the account that opened it. */
 const OPENED: Record<string, string> = { "ses_nix:web:dashboard:mine": "web:u-viewer", "ses_nix:web:dashboard:theirs": "web:u-other" };
@@ -131,6 +162,17 @@ describe("GET /preview/turn/:id", () => {
     expect(answer.headers.get("content-type")).toBe("text/html; charset=utf-8");
     expect(answer.headers.get("cache-control")).toBe("private, no-store");
     expect(await answer.text()).toBe(PAGE);
+  });
+
+  test("serves html written with no fence as the page it is, and nothing else of that reply", async () => {
+    const admin = app("admin");
+    const answer = await admin(`/preview/turn/turn_raw?at=${at(RAW, RUN)}&length=${RUN.length}`);
+    expect(answer.status).toBe(200);
+    expect(answer.headers.get("content-type")).toBe("text/html; charset=utf-8");
+    expect(await answer.text()).toBe(RUN);
+    for (const path of [`/preview/turn/turn_raw?at=0&length=16`, `/preview/turn/turn_raw?at=${at(RAW, "<div>in a block")}&length=21`, `/preview/turn/turn_raw?at=0&length=${RAW.length}`]) {
+      expect((await admin(path)).status, path).toBe(404);
+    }
   });
 
   test("what the request carries is never served: only where the block is", async () => {

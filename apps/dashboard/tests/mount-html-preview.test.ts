@@ -40,6 +40,15 @@ describe("where a block is previewed", () => {
     expect(turnHtmlPreview("turn_1", twice)("<p>hi</p>")).toBe(`/api/control/preview/turn/turn_1?at=${twice.lastIndexOf("<p>hi</p>")}&length=9`);
   });
 
+  test("html written with no fence is previewed by where its run is in the reply, and none where it is only quoted", () => {
+    const raw = "Raw:\n\n<div>one</div>\n\nDone.";
+    expect(turnHtmlPreview("turn_1", raw)("<div>one</div>")).toBe("/api/control/preview/turn/turn_1?at=6&length=14");
+    expect(turnHtmlPreview("turn_1", "I wrote <div>one</div> for you.")("<div>one</div>")).toBeNull();
+    // Quoted in the prose first, then written on lines of its own: the run's own place.
+    const twice = "I will write <div>one</div> now:\n\n<div>one</div>";
+    expect(turnHtmlPreview("turn_1", twice)("<div>one</div>")).toBe(`/api/control/preview/turn/turn_1?at=${twice.lastIndexOf("<div>one</div>")}&length=14`);
+  });
+
   test("a file by its path, and which names are pages and which fences are html", () => {
     expect(fileHtmlPreview("workspace/private/nix/menu a&b.html")).toBe("/api/control/preview/file?path=workspace%2Fprivate%2Fnix%2Fmenu%20a%26b.html");
     expect(["menu.html", "MENU.HTM", "a.b.html"].map(isHtmlFile)).toEqual([true, true, true]);
@@ -126,6 +135,40 @@ describe("an html block in a reply", () => {
       const [, from, length] = /at=(\d+)&length=(\d+)/.exec(frame(host)!.getAttribute("src")!)!;
       // What the address names is the block's own lines, and nothing of the fence around them.
       expect(reply.slice(Number(from), Number(from) + Number(length)).trim()).toBe("<p>one</p>\n   <p>two</p>");
+    });
+  });
+});
+
+describe("html written straight into a reply, with no code block around it", () => {
+  // As an agent asked to "write some html here" wrote it: a card and a table as lines of tags, between its prose.
+  const CARD = ['<div style="padding:16px">', "  <h3>Render test</h3>", "  <button>A button</button>", "</div>"].join("\n");
+  const RUN = [CARD, "", "<table><tr><td>a cell</td></tr></table>"].join("\n");
+  const RAW = ["Here it is, raw:", "", RUN, "", "What to check:", "", "<b>Note:</b> a sentence that begins with a tag."].join("\n");
+
+  test("is one html block, its code and nothing drawn from it, with Preview at the daemon's address for where it is", async () => {
+    answer(chat(RAW));
+    await renderPage("/chat/ses_1", async (host) => {
+      await eventually(() => previews(host).length > 0, 5_000, "the run's Preview");
+      expect(previews(host)).toHaveLength(1);
+      expect(previews(host)[0]!.closest("[data-block-head]")!.textContent).toMatch(/^html/i);
+      // The card and the table are one block: its words as they were written, blank line and all.
+      expect([...host.querySelectorAll("pre code")].map((code) => code.textContent)).toEqual([RUN]);
+      // No tag is left as a line of prose, and none became an element of the page.
+      expect([...host.querySelectorAll("p")].filter((line) => /<div|<table|<\/div/.test(line.textContent ?? ""))).toHaveLength(0);
+      expect([...host.querySelectorAll("h3, button, td")].filter((drawn) => /^(Render test|A button|a cell)$/.test(drawn.textContent?.trim() ?? ""))).toHaveLength(0);
+      expect(host.ownerDocument.body.querySelector("iframe") === null).toBe(true);
+      previews(host)[0]!.click();
+      await eventually(() => frame(host) !== null, 2_000, "the frame");
+      expect(frame(host)!.getAttribute("src")).toBe(`/api/control/preview/turn/turn_1?at=${RAW.indexOf(RUN)}&length=${RUN.length}`);
+      expect(frame(host)!.getAttribute("sandbox")).toBe("allow-scripts");
+    });
+  });
+
+  test("a sentence that begins with a tag stays a sentence", async () => {
+    answer(chat(RAW));
+    await renderPage("/chat/ses_1", async (host) => {
+      await eventually(() => previews(host).length > 0, 5_000, "the run's Preview");
+      expect([...host.querySelectorAll("p")].filter((line) => line.textContent === "<b>Note:</b> a sentence that begins with a tag.")).toHaveLength(1);
     });
   });
 });

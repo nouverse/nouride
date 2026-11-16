@@ -578,8 +578,9 @@ sebagai gambar, jadi script yang ditulis di dalamnya gak berbuat apa-apa. Penamp
 kali sebuah halaman memuat diagram.
 
 **Halaman HTML** (0.8.39). Blok `html` di sebuah balasan punya **Preview** setelah balasannya selesai, begitu juga file
-`.html` di Files dan Workspace. Halamannya terbuka di atas dashboard saat kamu tekan, gak pernah sendiri, dan **Open in
-a tab** memberinya tab sendiri. Halaman itu milik agent, jadi dipisahkan dari Nouride. Script-nya sendiri jalan. Ia gak
+`.html` di Files dan Workspace. HTML yang ditulis agent langsung di balasannya, tanpa blok kode, juga ditampilkan
+sebagai blok `html` dengan **Preview** yang sama. Halamannya terbuka di atas dashboard saat kamu tekan, gak pernah
+sendiri, dan **Open in a tab** memberinya tab sendiri. Halaman itu milik agent, jadi dipisahkan dari Nouride. Script-nya sendiri jalan. Ia gak
 bisa membaca login kamu atau dashboard di sekitarnya, gak bisa menghubungi Nouride atau internet, dan gak bisa membuka
 jendela atau mengirim form. Halaman yang mengambil gambar, font atau script dari web tampil tanpa itu semua: yang
 ditampilkan pratinjau adalah yang tertulis di halamannya. Halaman di atas 2 MB gak dipratinjau, dan laporan misi gak
