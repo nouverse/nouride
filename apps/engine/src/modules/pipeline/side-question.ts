@@ -24,7 +24,7 @@ import { childSessionId, createLogger, sessionIdFor, toUserMessage, TOOL_ITERATI
 import { TurnExecutor } from "@/modules/llm/executor/index.ts";
 import { meter } from "@/modules/llm/metered.ts";
 import { fallbacksFor } from "@/modules/llm/fallbacks.ts";
-import { changesSharedTools } from "@/modules/toolchain/shared-tools.ts";
+import { sharedToolsKeeper } from "@/modules/toolchain/shared-tools.ts";
 import { resolveToolset, type AgentToolset } from "@/modules/tools/registry.ts";
 import { conversationSoFar, workInFlight } from "./aside-context.ts";
 import { alertOnFallback } from "./fallback-alert.ts";
@@ -193,7 +193,7 @@ export class SideQuestions {
       ...(ctx.deps.credentialsDir ? { credentialsDir: ctx.deps.credentialsDir } : {}),
       installDir: dirname(dirname(ctx.deps.config.daemon.dataDir)),
       binDir: join(dirname(ctx.deps.config.daemon.dataDir), "bin"),
-      changesSharedTools: (agentId: string) => changesSharedTools(ctx.deps.config, ctx.deps.registry.get(agentId)),
+      sharedTools: (agentId: string) => sharedToolsKeeper(ctx.deps.config.daemon.orchestrator ? ctx.deps.registry.get(ctx.deps.config.daemon.orchestrator) : undefined, agentId),
       // Nobody can type a slash command at this turn: it answers one.
       commands: [],
       onUsage: (usage) =>

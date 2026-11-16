@@ -41,3 +41,13 @@ test("where no agent has a user of its own, there is nothing to share, and an in
   expect([hasAgentsGroup(without), hasAgentsGroup(withIt), hasAgentsGroup(join(dir, "missing"))]).toEqual([false, true, false]);
   expect(await shareTools([dir], without)).toEqual({ ok: true });
 });
+
+test("who changes what every agent runs, as each agent is told it: the orchestrator by name, whether it is this one, its switch", async () => {
+  const { sharedToolsKeeper } = await import("@/modules/toolchain/shared-tools.ts");
+  const nouva = fakeAgent();
+  expect(sharedToolsKeeper(nouva, "nouva")).toEqual({ name: "Nouva", mine: true, on: true });
+  expect(sharedToolsKeeper(nouva, "nix")).toEqual({ name: "Nouva", mine: false, on: true });
+  expect(sharedToolsKeeper(fakeAgent({ config: { ...nouva.config, sharedTools: false } }), "nix")).toEqual({ name: "Nouva", mine: false, on: false });
+  // No orchestrator: nobody to name.
+  expect(sharedToolsKeeper(undefined, "nix")).toBeNull();
+});

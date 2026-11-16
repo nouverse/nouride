@@ -119,3 +119,21 @@ describe("in OTHER AGENTS", () => {
     expect(mentionConventionLines({ others: ["gone"], about: {}, maxHops: 4 }).join("\n")).not.toContain("Who each is");
   });
 });
+
+// An agent told to "ask the orchestrator" with no name chose by role, and sent root work to the one called Infra Ops.
+describe("the orchestrator, marked among the others", () => {
+  const about = { nouva: "Lead and PM", nero: "Infra Ops" };
+  test("in a one-to-one chat and in a room: the list and its line say which one it is", () => {
+    const bus = busConventionLines({ others: ["nouva", "nero"], hasTool: true, about, orchestrator: "nouva" }).join("\n");
+    expect(bus).toContain("The other agents on this daemon are: nouva (the orchestrator), nero.");
+    expect(bus).toContain("  - nouva (the orchestrator): Lead and PM");
+    expect(bus).toContain("  - nero: Infra Ops");
+    const room = mentionConventionLines({ others: ["nouva", "nero"], about, orchestrator: "nouva", maxHops: 3 }).join("\n");
+    expect(room).toContain("- You share this chat with: nouva (the orchestrator) (write @nouva), nero (write @nero).");
+    expect(room).toContain("  - nouva (the orchestrator): Lead and PM");
+  });
+
+  test("nothing is marked where no other agent is the orchestrator", () => {
+    expect(busConventionLines({ others: ["nouva", "nero"], hasTool: true, about }).join("\n")).not.toContain("(the orchestrator)");
+  });
+});

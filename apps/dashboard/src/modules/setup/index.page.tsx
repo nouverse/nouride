@@ -338,7 +338,7 @@ function AgentStep() {
           {/* No switches: the first agent is always a Nourider (`presets.ts`), and tools can be changed on
               its page later. What it may do is said in one line rather than asked. */}
           <p className="text-base-content/65 text-sm mt-0.5">
-            It can handle anything you ask and checks with you before anything risky.
+            It can handle anything you ask, and checks with you before anything risky. Your other agents can turn to it too.
           </p>
         </div>
 

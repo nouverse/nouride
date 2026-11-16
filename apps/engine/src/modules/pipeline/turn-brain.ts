@@ -4,7 +4,7 @@
  * opening line and the typing indicator. A phase of `TurnRunner.runTurn` (`turn.ts`).
  */
 
-import { changesSharedTools } from "@/modules/toolchain/shared-tools.ts";
+import { sharedToolsKeeper } from "@/modules/toolchain/shared-tools.ts";
 import { dirname, join } from "@nouride/runtime";
 import { createLogger, type LoadedAgent } from "@nouride/shared";
 import type { HearingCheck } from "@/modules/attachments/hearing.ts";
@@ -123,7 +123,7 @@ export function turnBrain(
     // so the "MY OWN CLI" harness section was silently absent on every real turn.
     installDir: dirname(dirname(ctx.deps.config.daemon.dataDir)),
     binDir: join(dirname(ctx.deps.config.daemon.dataDir), "bin"),
-    changesSharedTools: (agentId: string) => changesSharedTools(ctx.deps.config, ctx.deps.registry.get(agentId)),
+    sharedTools: (agentId: string) => sharedToolsKeeper(ctx.deps.config.daemon.orchestrator ? ctx.deps.registry.get(ctx.deps.config.daemon.orchestrator) : undefined, agentId),
     ...(ctx.deps.projectSkills
       ? { projectSkills: (a: LoadedAgent) => ctx.deps.projectSkills!.forAgent(a) }
       : {}),

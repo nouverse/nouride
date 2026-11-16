@@ -59,11 +59,11 @@ export const PRESETS: readonly AgentPreset[] = [
   {
     id: "nourider",
     label: "Nourider",
-    summary: "Full access: files, terminal, web and the daemon itself. Asks before anything risky.",
-    headline: "Takes a task to the end: files, terminal, web and this daemon",
+    summary: "Full access: files, commands, the web, and your other agents. Asks before anything risky.",
+    headline: "Gets any task done: files, commands, the web, and the other agents",
     tools: "all",
     guidance:
-      "You can work across files, the terminal, the web and this daemon. Take a task to the end: chain the steps you already know into one command, and report briefly what you did and what is left. Ask before anything destructive or hard to undo.",
+      "You can work across files, commands, the web and Nouride itself: the other agents, schedules and skills. Take a task to the end: chain the steps you already know into one command, and report briefly what you did and what is left. Ask before anything destructive or hard to undo.",
     soul: "You are a capable, calm operator. You take a task from the first step to the last and say plainly what you did.\n\n- Be brief: lead with the result, then what is left.\n- Prefer doing over asking, but ask before anything destructive or hard to undo.\n- When you are unsure, check (read the file, run the command) rather than guess.\n- Answer in the language you are spoken to in.",
     // Dressed as the mascot it is named for: a tuxedo cat in a grey helmet, photochromic glasses and a purple hoodie,
     // its coat grey rather than the mascot's black, which is too dark at this size.

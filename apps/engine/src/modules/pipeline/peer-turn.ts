@@ -36,7 +36,7 @@
  * Still pointed at the chat, still held there as at work, still Nox.
  */
 
-import { changesSharedTools } from "@/modules/toolchain/shared-tools.ts";
+import { sharedToolsKeeper } from "@/modules/toolchain/shared-tools.ts";
 import { workNotesCopy } from "@/modules/notes/tail.ts";
 import { dirname, join } from "@nouride/runtime";
 import { childSessionId, createLogger, resolveTurnDurationMs, tierModel, toUserMessage, type ChatType, type Tool } from "@nouride/shared";
@@ -258,7 +258,7 @@ export function startPeerTurn(ctx: TurnContext, request: PeerTurnRequest, option
     ...(ctx.deps.credentialsDir ? { credentialsDir: ctx.deps.credentialsDir } : {}),
     installDir: dirname(dirname(ctx.deps.config.daemon.dataDir)),
     binDir: join(dirname(ctx.deps.config.daemon.dataDir), "bin"),
-    changesSharedTools: (agentId: string) => changesSharedTools(ctx.deps.config, ctx.deps.registry.get(agentId)),
+    sharedTools: (agentId: string) => sharedToolsKeeper(ctx.deps.config.daemon.orchestrator ? ctx.deps.registry.get(ctx.deps.config.daemon.orchestrator) : undefined, agentId),
     ...(ctx.deps.projectSkills
       ? { projectSkills: (a: typeof peer) => ctx.deps.projectSkills!.forAgent(a) }
       : {}),

@@ -12,6 +12,22 @@
 import { join, readTextFileSync, runCommand } from "@nouride/runtime";
 import type { GlobalConfig, LoadedAgent } from "@nouride/shared";
 
+/**
+ * Who changes the programs every agent runs, as an agent's prompt says it: the orchestrator by its name, whether that
+ * is this agent, and whether its switch is on. Null where the install has no orchestrator. Read on every turn, so a
+ * new orchestrator, or the switch turned, is what the next turn is told.
+ */
+export interface SharedToolsKeeper {
+  name: string;
+  mine: boolean;
+  on: boolean;
+}
+
+export function sharedToolsKeeper(orchestrator: Pick<LoadedAgent, "config"> | undefined, agentId: string): SharedToolsKeeper | null {
+  if (!orchestrator) return null;
+  return { name: orchestrator.config.displayName || orchestrator.config.id, mine: orchestrator.config.id === agentId, on: orchestrator.config.sharedTools !== false };
+}
+
 /** The tool folders in the daemon's HOME that every agent runs from, and the orchestrator changes. */
 export const SHARED_HOME_TOOLS = [".local", ".cargo", ".rustup"] as const;
 

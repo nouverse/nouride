@@ -277,6 +277,7 @@ export class TurnContext extends ActiveTurns {
       maxHops: this.deps.config.agents.mentionMaxHops,
       channel: envelope.chatType === "dm" ? "bus" : "mention",
       ...(envelope.chatType !== "dm" && this.deps.config.daemon.orchestrator === agentId ? { frontDesk: true } : {}),
+      ...(this.deps.config.daemon.orchestrator && everyone.includes(this.deps.config.daemon.orchestrator) ? { orchestrator: this.deps.config.daemon.orchestrator } : {}),
     };
   }
 

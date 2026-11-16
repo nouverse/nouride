@@ -22,6 +22,7 @@ import type {
   UsagePurpose,
 } from "@nouride/shared";
 import type { ApprovalLevel } from "@nouride/shared";
+import type { SharedToolsKeeper } from "@/modules/toolchain/shared-tools.ts";
 import type { ApprovalGate } from "@/modules/tools/approval.ts";
 import type { AgentToolset } from "@/modules/tools/registry.ts";
 import type { ImageFit } from "@/modules/llm/images.ts";
@@ -598,8 +599,8 @@ export interface ExecutorDeps {
   installDir?: string;
   /** The user-space bin directory on $PATH, absolute — see `HarnessFacts.binDir`. */
   binDir?: string;
-  /** Whether this agent installs the programs every agent runs — the orchestrator's (`toolchain/shared-tools.ts`). */
-  changesSharedTools?: (agentId: string) => boolean;
+  /** Who changes the programs every agent runs, as this agent is told it (`toolchain/shared-tools.ts`). */
+  sharedTools?: (agentId: string) => SharedToolsKeeper | null;
   /**
    * Skills a project carries, scanned fresh each turn.
    *

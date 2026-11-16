@@ -30,7 +30,7 @@ afterEach(() => {
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 
 const PRESETS = [
-  { id: "nourider", label: "Nourider", summary: "Full access.", headline: "Takes a task to the end", soul: "You are a capable, calm operator.", tools: [] },
+  { id: "nourider", label: "Nourider", summary: "Full access.", headline: "Gets any task done", soul: "You are a capable, calm operator.", tools: [] },
   { id: "researcher", label: "Researcher", summary: "Reads the web.", headline: "Research, with links", soul: "You are a careful researcher.", tools: [] },
 ];
 
@@ -62,7 +62,7 @@ describe("the New Agent form", () => {
     const pick = (label: string) => ([...host.querySelectorAll('button[role="radio"]')].find((entry) => entry.textContent?.startsWith(label)) as HTMLButtonElement).click();
     try {
       await eventually(() => soul()?.value === "You are a capable, calm operator.", 2_000, "Pilot's SOUL filled in");
-      expect(headline().value).toBe("Takes a task to the end");
+      expect(headline().value).toBe("Gets any task done");
       // The name and the words first; what it can do after them.
       const text = host.textContent ?? "";
       expect(text.indexOf("Headline")).toBeLessThan(text.indexOf("What it can do"));
@@ -93,7 +93,7 @@ describe("the New Agent form", () => {
       expect(headline().value).toBe("Research, with links");
       type(soul(), "My own words.");
       pick("Nourider");
-      await eventually(() => headline().value === "Takes a task to the end", 2_000, "Pilot's headline");
+      await eventually(() => headline().value === "Gets any task done", 2_000, "Pilot's headline");
       expect(soul().value).toBe("My own words.");
     } finally {
       root.unmount();

@@ -261,7 +261,8 @@ export async function prepareTurn(
       ...(req.otherAgents?.names.length || req.otherAgents?.absent?.length ? { otherAgents: req.otherAgents } : {}),
       ...(deps.installDir ? { installDir: deps.installDir } : {}),
       ...agentBins(deps.binDir, req.privateDir, agentCommandsHaveOwnUsers()),
-      ...(agentCommandsHaveOwnUsers() && deps.changesSharedTools?.(agent.config.id) ? { sharesTools: true } : {}),
+      // Where each agent is its own user: who changes what they all run, named, or null where nobody is the orchestrator.
+      ...(agentCommandsHaveOwnUsers() && deps.sharedTools ? { sharedTools: deps.sharedTools(agent.config.id) } : {}),
       ...(req.helper ? { helper: true } : {}),
       ...(req.unattended ? { unattended: true } : {}),
       // A chat's turn that can start one — not a mission's own, nor a schedule's, which asks the person first.
