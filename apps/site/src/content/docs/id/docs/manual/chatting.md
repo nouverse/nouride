@@ -165,8 +165,9 @@ pesan approval itu sendiri). "Iya" yang diketik sebagai pesan gak menjawabnya.
   sedang jalan, lewat CLI-nya. Kalau ada perintahnya yang lagi jalan, pesannya nunggu perintah itu selesai,
   paling lama lima menit, supaya test yang lagi jalan gak tergeser; setelah itu CLI-nya berhenti dari apa
   yang sedang ditulisnya untuk membacanya. Perintah milik helper yang dinyalakan Claude Code di latar bukan
-  perintah agent itu sendiri, jadi gak ditunggu (0.8.39): selama helper itu kerja, giliran agent tetap
-  terbuka dan chat menampilkannya sedang kerja, tapi pesan kamu langsung dibaca. CLI yang gak bisa menerima pesan di tengah prompt membacanya
+  perintah agent itu sendiri, jadi gak ditunggu (0.8.39). Begitu agent selesai dengan bagiannya dan tinggal
+  helper itu yang kerja, gilirannya selesai: chat bebas, pesan kamu berikutnya jadi giliran sendiri, dan agent
+  bilang hasil helper-nya waktu mereka selesai. CLI yang gak bisa menerima pesan di tengah prompt membacanya
   begitu prompt-nya selesai, dan "Got it"-nya bilang begitu: "I'll read that once what I'm running now ends."
 
 Apa yang dibaca giliran itu tetap ada di percakapan. Di dashboard pesan kamu langsung muncul di bawah

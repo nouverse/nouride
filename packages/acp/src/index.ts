@@ -15,7 +15,7 @@
  * what keeps the protocol testable against an in-memory peer, and the package usable by another tool.
  */
 
-export { BUILT_IN_CLIS, type CliPreset, type CliRow } from "./agents.ts";
+export { BUILT_IN_CLIS, helpersUpdate, type CliPreset, type CliRow } from "./agents.ts";
 export { cliStanding, type CliOut, type CliStanding, type CliVersionView } from "./versions.ts";
 export { cliPart, partsNamed, underMinimum, type CliPart, type CliPartKind } from "./parts.ts";
 export { handshakeProblem } from "./handshake.ts";

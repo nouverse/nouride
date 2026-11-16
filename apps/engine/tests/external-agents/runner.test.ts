@@ -52,7 +52,7 @@ const row = (mode = "", efforts?: Record<string, string[]>): CliRow => ({
   instructionFile: "AGENTS.md",
 });
 
-function setup(options: { row?: Partial<CliRow>; tokens?: Record<string, string>; external?: Record<string, unknown>; mode?: string; efforts?: Record<string, string[]>; effort?: string; answer?: ApprovalOutcome; permissions?: "folder" | "risky" | "all"; model?: string; persona?: Record<string, string>; onText?: (delta: string) => void; onPreamble?: ExecutorDeps["onPreamble"]; stopGraceMs?: number; profileInstruction?: boolean; quietMs?: number; commandsUnder?: (pid: number) => number; kept?: Record<string, string>; left?: { load(): Record<string, OwnChat>; save(left: Record<string, OwnChat>): void }; onAsk?: () => void } = {}) {
+function setup(options: { row?: Partial<CliRow>; heldQuietMs?: number; tokens?: Record<string, string>; external?: Record<string, unknown>; mode?: string; efforts?: Record<string, string[]>; effort?: string; answer?: ApprovalOutcome; permissions?: "folder" | "risky" | "all"; model?: string; persona?: Record<string, string>; onText?: (delta: string) => void; onPreamble?: ExecutorDeps["onPreamble"]; stopGraceMs?: number; profileInstruction?: boolean; quietMs?: number; commandsUnder?: (pid: number) => number; kept?: Record<string, string>; left?: { load(): Record<string, OwnChat>; save(left: Record<string, OwnChat>): void }; onAsk?: () => void } = {}) {
   const dir = mkdtempSync(join(tmpdir(), "external-runner-"));
   dirs.push(dir);
   // The agent's own folder, which boot makes for every agent.
@@ -71,6 +71,7 @@ function setup(options: { row?: Partial<CliRow>; tokens?: Record<string, string>
     ...(options.tokens ? { accounts: { tokens: { get: (name: string) => options.tokens![name], set: async () => {}, delete: async () => false } } } : {}),
     ...(options.stopGraceMs !== undefined ? { stopGraceMs: options.stopGraceMs } : {}),
     ...(options.quietMs !== undefined ? { quietMs: options.quietMs } : {}),
+    ...(options.heldQuietMs !== undefined ? { heldQuietMs: options.heldQuietMs } : {}),
     ...(options.commandsUnder ? { commandsUnder: options.commandsUnder } : {}),
     ...(options.left ? { leftRunning: options.left } : {}),
   });
@@ -815,6 +816,89 @@ describe("what an external agent's CLI says by itself, between turns (0.8.6)", (
       expect(service.interrupted()).toEqual([]);
       expect(left.now()).toEqual({});
     });
+  });
+});
+
+describe("a CLI that keeps its prompt open for a helper it started in the background", () => {
+  // As Claude Code's connector does for a client that has not told it otherwise: the agent's own turn ends, said by a
+  // usage update that carries its cost, and the prompt is not answered until the helper has ended. Nix said "two
+  // helpers in the background, so this chat stays free", and its turn stayed open, the chat showing it at work, for as
+  // long as they took; a message meanwhile went into that turn.
+  const marks = { helper: { meta: "fake", parent: "startedBy" }, ended: { usage: "cost" } };
+  const held = (helperMs: number, more: { mode?: string; row?: Partial<CliRow>; quietMs?: number } = {}) =>
+    setup({ heldQuietMs: 100, quietMs: more.quietMs ?? 150, row: { ...marks, env: { FAKE_MODE: more.mode ?? "held", FAKE_HELPER_MS: String(helperMs), FAKE_WORK_MS: "40" }, ...more.row } });
+  const said = async (service: ExternalAgents, agent: LoadedAgent, line: string, want: number) => await stderrSaid(await service.connection(agent), (heard) => heard.startsWith(line), want);
+  const woken = (service: ExternalAgents) => {
+    const chats: OwnChat[] = [];
+    service.onOwnWords = (chat) => void chats.push(chat);
+    return chats;
+  };
+
+  test("the chat's turn ends where the agent's own work ended, with what it said, and the helper goes on behind it", async () => {
+    const { service, agent, runner, req, steps } = held(1_500);
+    const chats = woken(service);
+    const started = Date.now();
+    const result = await runner.run(req("do it in the background", { chatType: "dm" }));
+    expect(result.text).toBe("Started.");
+    // Long before the helper ends, and with the prompt itself still unanswered.
+    expect(Date.now() - started).toBeLessThan(1_200);
+    expect((await service.connection(agent)).stderrTail.filter((line) => line.startsWith("held-answered:"))).toEqual([]);
+    // The helper's call is not cut off, and is not said to be: it goes on.
+    expect(steps.filter((step) => step.includes("did not finish"))).toEqual([]);
+    expect(chats).toEqual([]);
+    // When it ends, what the helper did wakes nothing; what the agent then says of it wakes its chat, once.
+    await said(service, agent, "helper-done:", 1);
+    await eventually(() => chats.length > 0, 4_000, "the chat to be woken");
+    expect(chats).toEqual([{ agentId: "coder", gatewayId: "telegram:coder", chatId: "555" }]);
+    steps.length = 0;
+    const followed = await runner.run(req("[went on by itself]", { systemEvent: true, ownWords: true }));
+    expect(followed.text).toStartWith("Helper done.");
+    expect(followed.iterations).toBe(0);
+    // The agent's word alone: the helper's last steps, done behind the turn, are in no turn.
+    expect(steps).toEqual([]);
+    expect(chats).toHaveLength(1);
+  });
+
+  test("a message sent meanwhile is a prompt of its own, answered while the helper goes on, and the held one then answers unheard", async () => {
+    const { service, agent, runner, req } = held(1_500);
+    const chats = woken(service);
+    expect((await runner.run(req("do it in the background", { chatType: "dm" }))).text).toBe("Started.");
+    const next = await runner.run(req("and the totals?", { chatType: "dm" }));
+    expect(next.text).toStartWith("Done: ");
+    expect(next.text).toContain("and the totals?");
+    // The connector answers the prompt it held once the next one comes: nothing waits for that answer, and nothing breaks on it.
+    expect(await said(service, agent, "held-answered:", 1)).toEqual(["held-answered:moved on"]);
+    expect(chats).toEqual([]);
+    // The helper ends later still, and the agent's word of it wakes the chat as before.
+    await said(service, agent, "helper-done:", 1);
+    await eventually(() => chats.length > 0, 4_000, "the chat to be woken");
+    expect((await runner.run(req("[went on by itself]", { systemEvent: true, ownWords: true }))).text).toStartWith("Helper done.");
+  });
+
+  test("a turn another agent asked for waits for the helper: its work is part of the answer", async () => {
+    const { runner, req } = held(400);
+    const started = Date.now();
+    const result = await runner.run(req("do it in the background", { asked: true } as Partial<TurnRequest>));
+    expect(result.text).toBe("Started.\n\nHelper done.");
+    expect(Date.now() - started).toBeGreaterThanOrEqual(380);
+  });
+
+  test("an agent that works on after its turn was said to end is not let go of: its own words keep the turn", async () => {
+    // As one a message was steered into: the turn it cut short says it ended, and its own words follow.
+    // Its word comes within the wait, and it is then quiet for three times the wait with the helper's call still open.
+    const { runner, req } = held(400, { mode: "held-working" });
+    const result = await runner.run(req("do it", { chatType: "dm" }));
+    expect(result.text).toBe("Started.\n\nStill at it.\n\nAll done.");
+  });
+
+  test("a CLI whose row says neither keeps its turn until the prompt answers", async () => {
+    for (const row of [{ helper: undefined }, { ended: undefined }] as Partial<CliRow>[]) {
+      const { runner, req } = held(400, { row });
+      const started = Date.now();
+      const result = await runner.run(req("do it in the background", { chatType: "dm" }));
+      expect(result.text, JSON.stringify(row)).toBe("Started.\n\nHelper done.");
+      expect(Date.now() - started, JSON.stringify(row)).toBeGreaterThanOrEqual(380);
+    }
   });
 });
 

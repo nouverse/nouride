@@ -176,7 +176,9 @@ itu, dengan folder agent sebagai HOME-nya.
 
 Yang dibilang CLI sendiri di antara giliran sampai ke chat. Claude Code lanjut tanpa pesan saat perintah yang ia
 tinggal di background selesai: ia baca hasilnya dan bilang apa jadinya. Itu datang sebagai pesan agent sendiri,
-seperti hasil job background. Kalau kamu nulis duluan, pesan itu datang sebelum jawaban buat pesanmu. Kalau Nouride
+seperti hasil job background. Begitu juga helper yang dinyalakan Claude Code di background (0.8.39): giliran agent di
+chat selesai begitu ia selesai dengan bagiannya, chat bebas selama helper kerja, dan hasilnya datang sebagai pesan
+agent sendiri. Giliran sebuah misi tetap menunggu helper seperti itu. Kalau kamu nulis duluan, pesan itu datang sebelum jawaban buat pesanmu. Kalau Nouride
 dihentikan langsung atau crash waktu perintah itu masih jalan, agent bilang begitu setelah restart.
 
 Tab **Brain** agent eksternal, menggantikan tab Model, berisi CLI-nya, akun yang dipakai (**In use**; akun lain dipilih

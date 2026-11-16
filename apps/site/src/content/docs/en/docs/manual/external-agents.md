@@ -166,7 +166,9 @@ folder as its HOME.
 
 What the CLI says by itself between turns reaches the chat. Claude Code goes on with no message when a command it
 left running in the background ends: it reads the output and says what came of it. That arrives as the agent's own
-message, as a background job's result does. If you write first, it comes before the answer to your message. If
+message, as a background job's result does. The same holds for a helper that Claude Code starts in the background
+(0.8.39): the agent's turn in a chat ends once it has said its part, the chat is free while the helper works, and
+what came of it arrives as the agent's own message. A mission's turn waits for such helpers instead. If you write first, it comes before the answer to your message. If
 Nouride is stopped at once or crashes while such a command runs, the agent says so after the restart.
 
 An external agent's **Brain** tab, in place of the Model tab, holds its CLI, the account it answers with (**In use**;

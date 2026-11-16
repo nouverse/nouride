@@ -115,6 +115,47 @@ describe("a prompt", () => {
     void client.prompt("s1", [], () => {});
     await expect(client.prompt("s1", [], () => {})).rejects.toThrow("already answering a prompt");
   });
+
+  test("a prompt let go of is read no more: what the agent says there goes to unclaimed, and the session takes its next", async () => {
+    // An agent that keeps a prompt unanswered after its own work has ended, for helpers it started: it answers the
+    // held one when the next comes, and goes on saying what its helpers do.
+    let answerFirst: (() => void) | undefined;
+    let say: ((words: string) => void) | undefined;
+    let prompts = 0;
+    let firstAnswered = false;
+    const { client, unclaimed } = pair({
+      prompt: async (_request, channel) => {
+        prompts += 1;
+        say = (words) => channel.update({ sessionUpdate: "agent_message_chunk", content: { type: "text", text: words } });
+        if (prompts > 1) {
+          // The next prompt hands the held one off, then answers for itself once that answer has arrived.
+          answerFirst?.();
+          await eventually(() => firstAnswered, 4_000, "the held prompt's answer to arrive");
+          say("second");
+          return "end_turn";
+        }
+        say("first");
+        await new Promise<void>((resolve) => (answerFirst = resolve));
+        return "end_turn";
+      },
+    });
+    await client.initialize();
+    const first: string[] = [];
+    const held = client.prompt("s1", [{ type: "text", text: "one" }], (update) => first.push(update.sessionUpdate)).then(() => void (firstAnswered = true));
+    await eventually(() => first.length === 1, 4_000, "the first prompt's word");
+    client.letGo("s1");
+    say!("from a helper");
+    await eventually(() => unclaimed.length === 1, 4_000, "the word said with no prompt read");
+    expect(first).toHaveLength(1);
+    // The next prompt: its own listener, kept when the held one answers after it began.
+    const second: string[] = [];
+    const stop = await client.prompt("s1", [{ type: "text", text: "two" }], (update) => second.push(update.sessionUpdate));
+    await held;
+    expect(firstAnswered).toBe(true);
+    expect(stop).toBe("end_turn");
+    expect(second).toEqual(["agent_message_chunk"]);
+    expect(unclaimed).toHaveLength(1);
+  });
 });
 
 describe("a permission the agent asks for mid-prompt", () => {

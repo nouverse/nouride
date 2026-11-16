@@ -119,6 +119,22 @@ export interface CliRow {
    * call is the agent's own.
    */
   helper?: { meta: string; parent: string };
+  /**
+   * How its connector says that the CLI's own turn has ended, whatever the prompt then does: a usage update that
+   * carries this field. A connector may keep the prompt unanswered long after it, for helpers the CLI started in the
+   * background (Claude Code's does, for a client that has not told it otherwise). Read with `helper`: a chat's turn
+   * then ends where the agent's own work ended, and the helpers go on behind it. Absent: only a prompt's answer ends
+   * a turn.
+   */
+  ended?: { usage: string };
+}
+
+/** Whether an update is of a helper the CLI started itself, as its connector marks one (`CliRow.helper`). */
+export function helpersUpdate(helper: CliRow["helper"], update: object): boolean {
+  const all = (update as { _meta?: unknown })._meta;
+  const meta = helper && all && typeof all === "object" ? (all as Record<string, unknown>)[helper.meta] : undefined;
+  const startedBy = meta && typeof meta === "object" ? (meta as Record<string, unknown>)[helper!.parent] : undefined;
+  return typeof startedBy === "string" && startedBy !== "";
 }
 
 export const BUILT_IN_CLIS: readonly CliRow[] = [
@@ -163,6 +179,9 @@ export const BUILT_IN_CLIS: readonly CliRow[] = [
     // `_meta.claudeCode.parentToolUseId`, the `Agent` call that started it. With no word from the client that it reads
     // a subagent's work after a prompt, it keeps the prompt open until its background subagents end.
     helper: { meta: "claudeCode", parent: "parentToolUseId" },
+    // 0.107.0, read in its own source on the box: the usage update it sends at a turn's result is the one that
+    // carries `cost`; those between steps do not.
+    ended: { usage: "cost" },
     loginNote: "Signs in with a Claude subscription.",
   },
   {

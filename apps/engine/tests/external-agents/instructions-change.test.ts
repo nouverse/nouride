@@ -60,9 +60,9 @@ const states = new Map<string, StateRows>();
 const stateOf = (dir: string): StateRows => states.get(dir) ?? states.set(dir, stateRows()).get(dir)!;
 
 /** The service as boot makes it, its sessions and what they opened on in the database: a second one over the same is a restart. */
-function start(dir: string, ms = 0, more: { env?: Record<string, string>; quietMs?: number; commandsUnder?: (pid: number) => number; row?: Partial<CliRow> } = {}) {
+function start(dir: string, ms = 0, more: { env?: Record<string, string>; quietMs?: number; commandsUnder?: (pid: number) => number } = {}) {
   const service = new ExternalAgents({
-    rows: () => [{ ...row(ms, more.env), ...more.row }],
+    rows: () => [row(ms, more.env)],
     workspaceDir: () => dir,
     secretsFor: () => ({}),
     sessions: externalSessionsState(stateOf(dir)),
@@ -189,40 +189,6 @@ describe("a session opened on other instructions is let go at its conversation's
     const unknown = start(dir);
     await turn(unknown, agent(dir), "555", "from 0.8.7");
     expect(await sessionsSaid(unknown, dir, 1)).toEqual(["opened"]);
-  });
-});
-
-describe("a CLI that starts helpers of its own", () => {
-  const WORDS =
-    "A helper of your own that you start in the background (a subagent of your CLI's) does not free this chat: your turn stays open until it ends, " +
-    "and the person sees you at work the whole time. Their messages still reach you meanwhile. Tell them so, and never that the chat is free.";
-  const helpers = { row: { helper: { meta: "fake", parent: "startedBy" } } };
-
-  test("is told that one in the background does not free the chat; a CLI with none is told nothing of it", async () => {
-    // Nix started two subagents in the background and said "the chat stays free". Claude's connector keeps the prompt
-    // open until they end, so the chat showed Nix at work for as long as they took.
-    const plain = workspace();
-    await turn(start(plain), agent(plain), "555", "one");
-    expect(instructionFile(plain)).not.toContain("A helper of your own");
-    const dir = workspace();
-    await turn(start(dir, 0, helpers), agent(dir), "555", "one");
-    expect(instructionFile(dir)).toContain(WORDS);
-    // A mission is named as the way to a free chat only where this chat can start one.
-    expect(instructionFile(dir)).not.toContain("Work that should leave the chat free is a mission.");
-    const lent = workspace();
-    await turn(start(lent, 0, helpers), agent(lent), "555", "one", undefined, { toolset: { definitions: [{ name: "mission" }], get: () => undefined } });
-    expect(instructionFile(lent)).toContain(`${WORDS} Work that should leave the chat free is a mission.`);
-  });
-
-  test("the line is not what a session is compared by: one kept from before it is reopened, not let go", async () => {
-    const dir = workspace();
-    const before = start(dir);
-    await turn(before, agent(dir), "555", "before the line");
-    await before.stopAll();
-    const after = start(dir, 0, helpers);
-    await turn(after, agent(dir), "555", "with it");
-    expect(await sessionsSaid(after, dir, 1)).toEqual(["loaded:s1"]);
-    expect(instructionFile(dir)).toContain(WORDS);
   });
 });
 

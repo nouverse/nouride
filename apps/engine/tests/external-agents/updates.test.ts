@@ -246,6 +246,105 @@ describe("the last tool call open ending (0.8.10)", () => {
   });
 });
 
+describe("the agent's own work ended, and helpers the CLI started work on behind an unanswered prompt", () => {
+  const CLAUDE = BUILT_IN_CLIS.find((row) => row.id === "claude-code")!;
+  const QUIET = 10_000;
+  const mark = { _meta: { claudeCode: { parentToolUseId: "agent_1" } } };
+  /** A reader on a clock the test moves, as Claude Code's row has it read, or as `says` has it. */
+  const at = (says: ConstructorParameters<typeof UpdateReader>[2] = { helper: CLAUDE.helper!, ended: CLAUDE.ended! }) => {
+    let now = 0;
+    const read = new UpdateReader({ text: () => {}, activity: () => {}, plan: () => {}, preamble: async () => false }, () => now, says);
+    return {
+      read,
+      later: (ms: number) => void (now += ms),
+      ended: () => read.read({ sessionUpdate: "usage_update", used: 1_000, size: 200_000, cost: { amount: 0.01, currency: "USD" } } as never),
+      between: () => read.read({ sessionUpdate: "usage_update", used: 1_000, size: 200_000 }),
+      helper: (id: string, status: "in_progress" | "completed" = "in_progress") => read.read(status === "in_progress" ? { sessionUpdate: "tool_call", toolCallId: id, title: "bun test", name: "Bash", status, ...mark } : { sessionUpdate: "tool_call_update", toolCallId: id, status }),
+      own: (id: string, status: "in_progress" | "completed" = "in_progress") => read.read(status === "in_progress" ? { sessionUpdate: "tool_call", toolCallId: id, title: "ls", name: "Bash", status } : { sessionUpdate: "tool_call_update", toolCallId: id, status }),
+      says: (words: string) => read.read({ sessionUpdate: "agent_message_chunk", content: { type: "text", text: words } }),
+    };
+  };
+
+  test("Claude Code's row says how its connector says a turn ended: a usage update that carries its cost", () => {
+    expect(CLAUDE.ended).toEqual({ usage: "cost" });
+  });
+
+  test("once the wait has passed since its turn ended, with a helper's call open and nothing of its own since", () => {
+    const r = at();
+    r.says("Started.");
+    r.helper("h1");
+    expect(r.read.heldFor(QUIET)).toBe(false);
+    r.ended();
+    expect(r.read.heldFor(QUIET)).toBe(false);
+    r.later(QUIET - 1);
+    expect(r.read.heldFor(QUIET)).toBe(false);
+    r.later(1);
+    expect(r.read.heldFor(QUIET)).toBe(true);
+  });
+
+  test("not on a usage update between steps, which says nothing of an end, and never for a CLI whose row says none", () => {
+    const r = at();
+    r.helper("h1");
+    r.between();
+    r.later(QUIET * 3);
+    expect(r.read.heldFor(QUIET)).toBe(false);
+    const plain = at({ helper: CLAUDE.helper! });
+    plain.helper("h1");
+    plain.ended();
+    plain.later(QUIET * 3);
+    expect(plain.read.heldFor(QUIET)).toBe(false);
+  });
+
+  test("not while the agent works on: its own word, thought or step since its turn was said to end, until it ends again", () => {
+    for (const goesOn of ["a word", "a thought", "a step"] as const) {
+      const r = at();
+      r.helper("h1");
+      r.ended();
+      r.later(2_000);
+      if (goesOn === "a word") r.says("One more thing.");
+      else if (goesOn === "a thought") r.read.read({ sessionUpdate: "agent_thought_chunk", content: { type: "text", text: "Hm." } });
+      else {
+        r.own("o1");
+        r.own("o1", "completed");
+      }
+      r.later(QUIET * 3);
+      expect(r.read.heldFor(QUIET), goesOn).toBe(false);
+      // The turn that followed ends in its turn.
+      r.ended();
+      r.later(QUIET);
+      expect(r.read.heldFor(QUIET), goesOn).toBe(true);
+    }
+  });
+
+  test("not while a call of the agent's own is open, and not with no helper at all: a prompt slow to answer is no held one", () => {
+    const busy = at();
+    busy.helper("h1");
+    busy.own("o1");
+    busy.ended();
+    busy.later(QUIET * 2);
+    expect(busy.read.heldFor(QUIET)).toBe(false);
+    const alone = at();
+    alone.says("Done.");
+    alone.ended();
+    alone.later(QUIET * 2);
+    expect(alone.read.heldFor(QUIET)).toBe(false);
+  });
+
+  test("a helper between two of its steps is still at work: one that did something within the wait counts, one long gone does not", () => {
+    const r = at();
+    r.helper("h1");
+    r.ended();
+    r.later(QUIET);
+    // What a helper does is not the agent's own: it ends nothing, and keeps the helper at work.
+    r.helper("h1", "completed");
+    expect(r.read.heldFor(QUIET)).toBe(true);
+    r.later(QUIET - 1);
+    expect(r.read.heldFor(QUIET)).toBe(true);
+    r.later(1);
+    expect(r.read.heldFor(QUIET)).toBe(false);
+  });
+});
+
 describe("a helper the CLI started itself, at work in the background", () => {
   // As Claude's connector marks a subagent's call: the `Agent` call that started it, under its own key of `_meta`.
   const CLAUDE = BUILT_IN_CLIS.find((row) => row.id === "claude-code")!.helper;
@@ -255,7 +354,7 @@ describe("a helper the CLI started itself, at work in the background", () => {
   });
   const steps = (helper?: { meta: string; parent: string }) => {
     let idle = 0;
-    const read = new UpdateReader({ text: () => {}, activity: () => {}, plan: () => {}, preamble: async () => false, idle: () => void (idle += 1) }, undefined, helper);
+    const read = new UpdateReader({ text: () => {}, activity: () => {}, plan: () => {}, preamble: async () => false, idle: () => void (idle += 1) }, undefined, helper ? { helper } : {});
     const starts = (id: string, name: string, meta?: Record<string, unknown>) => read.read({ sessionUpdate: "tool_call", toolCallId: id, title: name, name, status: "in_progress", ...(meta ? { _meta: meta } : {}) });
     const ends = (id: string) => read.read({ sessionUpdate: "tool_call_update", toolCallId: id, status: "completed" });
     return { read, starts, ends, idle: () => idle };
@@ -295,6 +394,16 @@ describe("a helper the CLI started itself, at work in the background", () => {
     expect(r.read.running).toBe(1);
     r.ends("agent_1");
     expect(r.read.running).toBe(0);
+  });
+
+  test("a helper's call still open at the prompt's end goes on behind it: not cut off, where the agent's own is", () => {
+    const steps: string[] = [];
+    const read = new UpdateReader({ text: () => {}, activity: (kind, text) => void steps.push(`${kind}:${text}`), plan: () => {}, preamble: async () => false }, undefined, CLAUDE ? { helper: CLAUDE } : {});
+    read.read({ sessionUpdate: "tool_call", toolCallId: "h1", title: "bun test", name: "Bash", status: "in_progress", _meta: helpers("agent_1") });
+    read.read({ sessionUpdate: "tool_call", toolCallId: "own_1", title: "ls", name: "Bash", status: "in_progress" });
+    read.end();
+    expect(steps.filter((step) => step.startsWith("tool_done:"))).toEqual(["tool_done:Bash did not finish"]);
+    expect(read.steps).toEqual([{ name: "Bash", ok: false }]);
   });
 
   test("a call that names no starter is the agent's own, and so is every call of a CLI that marks none", () => {

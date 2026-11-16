@@ -24,6 +24,14 @@
  *   `FAKE_STEER_WAIT_MS` (3 s), then answers "Done: <prompt>". Each steer goes to stderr as `steer:<words>`.
  *   `FAKE_STEER_OFFER=no`: the same CLI, not offering the extension. `FAKE_TOOL_HELPER=1`: the tool call is a
  *   helper's the CLI started itself, marked in its `_meta` as `{ fake: { startedBy: "agent-1" } }`.
+ * - `held` — a CLI that starts a helper of its own in the background and keeps the prompt open for it, as Claude
+ *   Code's connector does: the first prompt of a session says "Started.", opens the helper's call (marked in its
+ *   `_meta` as `{ fake: { startedBy: "agent-1" } }`), says its own turn ended with a usage update that carries `cost`,
+ *   and does not answer. It answers once the helper has ended (`FAKE_HELPER_MS`) or the session's next prompt comes,
+ *   which is answered "Done: <prompt>" while the helper goes on. When the helper ends, its call is closed and the CLI
+ *   says "Helper done." by itself. `held-working`: the same, and the agent goes on working itself after its turn
+ *   "ended", as one a message was steered into does: "Still at it." a moment later (`FAKE_WORK_MS`), then, eight
+ *   times as long after, the answer.
  * - `background` — a prompt that answers "Started it." and, a moment after its end (`FAKE_LATER_MS`), goes on by itself
  *   with no prompt running, as Claude Code does when a command it left running ends: a step, then — 50 ms on, as a busy
  *   machine reads them apart — "Finished: …", and `went-on:<session>` on stderr once it has. A session it reopens replays
@@ -65,6 +73,8 @@ const servers = new Map<string, McpServer[]>();
 const efforts = JSON.parse(process.env.FAKE_EFFORTS ?? "{}") as Record<string, string[]>;
 const settings = new Map<string, { model: string; effort?: string }>();
 const closed = new Set<string>();
+/** `held` mode: each session whose first prompt is held for its helper, and what answers it when the next prompt comes. */
+const heldSessions = new Map<string, () => void>();
 /** `steer` mode: each running prompt's ear for the words a steer brings. */
 const steered = new Map<string, (words: string) => void>();
 /** The handshake's request ids — answered with the steering extension in `steer` mode. */
@@ -147,6 +157,49 @@ const server = new AcpServer({
         });
         steered.delete(sessionId);
         channel.update({ sessionUpdate: "agent_message_chunk", content: { type: "text", text: words ? `Steered: ${words}` : `Done: ${text(prompt)}` } });
+        return "end_turn";
+      }
+      if (mode === "held" || mode === "held-working") {
+        const said = (words: string) => channel.update({ sessionUpdate: "agent_message_chunk", content: { type: "text", text: words } });
+        if (heldSessions.has(sessionId)) {
+          // The session's next prompt: the one held for the helper answers now, and this one is answered for itself.
+          heldSessions.get(sessionId)!();
+          said(`Done: ${text(prompt)}`);
+          return "end_turn";
+        }
+        const helpers = { _meta: { fake: { startedBy: "agent-1" } } };
+        said("Started.");
+        channel.update({ sessionUpdate: "tool_call", toolCallId: "h1", title: "bun test", kind: "execute", name: "Bash", status: "in_progress", ...helpers });
+        channel.update({ sessionUpdate: "usage_update", used: 1_000, size: 200_000, cost: { amount: 0.01, currency: "USD" } } as never);
+        if (mode === "held-working") {
+          const work = Number(process.env.FAKE_WORK_MS ?? 150);
+          return await new Promise<"end_turn">((resolve) => {
+            setTimeout(() => {
+              said(" Still at it.");
+              // Then quiet for longer than it was before its word: nothing of its own, the helper's call open all the while.
+              setTimeout(() => {
+                channel.update({ sessionUpdate: "tool_call_update", toolCallId: "h1", status: "completed", ...helpers });
+                said(" All done.");
+                resolve("end_turn");
+              }, work * 8);
+            }, work);
+          });
+        }
+        const movedOn = new Promise<"moved on">((resolve) => heldSessions.set(sessionId, () => resolve("moved on")));
+        const helperEnded = new Promise<"helper ended">((resolve) => setTimeout(() => resolve("helper ended"), Number(process.env.FAKE_HELPER_MS ?? 400)));
+        const ended = await Promise.race([helperEnded, movedOn]);
+        const finish = () => {
+          channel.update({ sessionUpdate: "tool_call_update", toolCallId: "h1", status: "completed", ...helpers });
+          // One more step of the helper's, then the agent's own word of what came of it.
+          channel.update({ sessionUpdate: "tool_call", toolCallId: "h2", title: "cat report", kind: "read", name: "Read", status: "in_progress", ...helpers });
+          channel.update({ sessionUpdate: "tool_call_update", toolCallId: "h2", status: "completed", ...helpers });
+          said("Helper done.");
+          process.stderr.write(`helper-done:${sessionId}\n`);
+        };
+        if (ended === "helper ended") finish();
+        // Handed off to the next prompt: the helper goes on, and what comes of it is said with no prompt running.
+        else setTimeout(finish, Number(process.env.FAKE_HELPER_MS ?? 400));
+        process.stderr.write(`held-answered:${ended}\n`);
         return "end_turn";
       }
       if (mode === "slow" || mode === "deaf") {

@@ -7,7 +7,7 @@
  * runner feeds it updates and hands what comes out to the turn's sinks.
  */
 
-import { blockText, type PlanEntry, type SessionUpdate, type ToolCall, type ToolKind } from "@nouride/acp";
+import { blockText, helpersUpdate, type CliRow, type PlanEntry, type SessionUpdate, type ToolCall, type ToolKind } from "@nouride/acp";
 import { clip } from "@nouride/shared";
 import type { ToolStep } from "@/modules/llm/executor/types.ts";
 import { PromptSpend } from "./usage.ts";
@@ -70,9 +70,25 @@ export class UpdateReader {
   constructor(
     private readonly sink: UpdateSink,
     private readonly now: () => number = Date.now,
-    /** Where this CLI's connector says a call is a helper's (`CliRow.helper`); none where every call is the agent's. */
-    private readonly helper?: { meta: string; parent: string },
+    /** How this CLI's connector marks a helper's call and says the CLI's own turn ended (`CliRow`); neither where it says none. */
+    private readonly says: { helper?: CliRow["helper"]; ended?: CliRow["ended"] } = {},
   ) {}
+
+  /** When the CLI's own turn last ended, where nothing of the agent's own came since; null while it works. */
+  private endedAt: number | null = null;
+  /** When a helper the CLI started last did something. */
+  private helperAt: number | null = null;
+
+  /**
+   * Whether the agent's own work has ended and helpers it started work on behind a prompt its connector keeps open:
+   * its turn ended `quietMs` ago or more, nothing of its own came since, and a helper is at work now or was within
+   * that time. The chat's turn ends there (`runner.ts`); the helpers go on, and what the agent says of them when they
+   * end is said by itself.
+   */
+  heldFor(quietMs: number): boolean {
+    if (this.endedAt === null || this.now() - this.endedAt < quietMs || this.running > 0) return false;
+    return this.open.size > 0 || (this.helperAt !== null && this.now() - this.helperAt < quietMs);
+  }
 
   /** The reply as it stands: every message chunk, in order. */
   get text(): string {
@@ -141,6 +157,10 @@ export class UpdateReader {
   }
 
   read(update: SessionUpdate): void {
+    // Whose it is: a helper's, by its mark or by the call it reports on, or the agent's own, which is at work again.
+    const helpers = helpersUpdate(this.says.helper, update) || (update.sessionUpdate === "tool_call_update" && this.open.get(update.toolCallId)?.own === false);
+    if (helpers) this.helperAt = this.now();
+    else if (update.sessionUpdate === "agent_message_chunk" || update.sessionUpdate === "agent_thought_chunk" || update.sessionUpdate === "tool_call" || update.sessionUpdate === "tool_call_update") this.endedAt = null;
     if (update.sessionUpdate !== "agent_thought_chunk") this.flushThought();
     if (update.sessionUpdate !== "agent_message_chunk" && update.sessionUpdate !== "plan") this.stepped = this.stepped || this.reply !== "";
     switch (update.sessionUpdate) {
@@ -179,6 +199,8 @@ export class UpdateReader {
         if (Array.isArray(update.entries)) this.sink.plan(update.entries);
         return;
       case "usage_update":
+        // The CLI's own turn has ended, as its connector says it: the prompt's answer may be long in coming (`heldFor`).
+        if (this.says.ended && (update as unknown as Record<string, unknown>)[this.says.ended.usage] !== undefined) this.endedAt = this.now();
         if (!Number.isFinite(update.used) || !Number.isFinite(update.size)) return;
         this.spend.context(update.used, this.open.size);
         this.sink.context?.(update.used, update.size);
@@ -204,6 +226,8 @@ export class UpdateReader {
   end(): void {
     this.flushThought();
     for (const [id, call] of this.open) {
+      // A helper's call still open goes on behind the turn: it is not cut off, and is not said to be.
+      if (!call.own) continue;
       if (!call.announced) this.announced(id, call);
       this.sink.activity("tool_done", `${call.name} did not finish`, { callId: id, name: call.name, error: true, outcome: "failed" });
       this.done.push({ name: call.name, ok: false });
@@ -214,10 +238,7 @@ export class UpdateReader {
   private started(call: ToolCall): void {
     const name = nameOf(call);
     const title = call.title?.trim() || name;
-    // A helper's call names the call that started the helper, where this CLI's connector says so at all.
-    const marks = this.helper ? call._meta?.[this.helper.meta] : undefined;
-    const startedBy = marks && typeof marks === "object" ? (marks as Record<string, unknown>)[this.helper!.parent] : undefined;
-    const open: OpenCall = { name, title, like: call.kind ? LIKE[call.kind] : undefined, startedAt: this.now(), announced: false, own: !(typeof startedBy === "string" && startedBy !== "") };
+    const open: OpenCall = { name, title, like: call.kind ? LIKE[call.kind] : undefined, startedAt: this.now(), announced: false, own: !helpersUpdate(this.says.helper, call) };
     this.open.set(call.toolCallId, open);
     this.calls += 1;
     if (!(call.status === "pending" && streaming(call.rawInput))) this.announced(call.toolCallId, open);

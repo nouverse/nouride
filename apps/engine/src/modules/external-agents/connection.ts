@@ -366,20 +366,38 @@ export class CliConnection {
     };
   }
 
-  async prompt(sessionId: string, blocks: ContentBlock[], onUpdate: (update: SessionUpdate) => void, onPermission: PermissionHandler): Promise<PromptAnswer> {
+  /**
+   * `held`: the turn's word that the CLI's own work has ended while its connector keeps the prompt open for helpers it
+   * started (`UpdateReader.heldFor`). The prompt is then let go of, unanswered: it reads as ended, the session takes
+   * its next prompt, and what the CLI says there from now on is said with no prompt running. What a helper asks
+   * permission for still goes to the turn that started it, until the session's next prompt.
+   */
+  async prompt(sessionId: string, blocks: ContentBlock[], onUpdate: (update: SessionUpdate) => void, onPermission: PermissionHandler, held?: Promise<unknown>): Promise<PromptAnswer & { held?: true }> {
     const client = this.need();
     this.running += 1;
     this.permissions.set(sessionId, onPermission);
+    let letGo = false;
     try {
-      return await client.promptAnswer(sessionId, blocks, (update) => {
+      const answering = client.promptAnswer(sessionId, blocks, (update) => {
         this.accountUse = useOf(this.row, update, this.now()) ?? this.accountUse;
         onUpdate(update);
       });
+      if (!held) return await answering;
+      const answered = await Promise.race([answering, held.then(() => null)]);
+      if (answered) return answered;
+      letGo = true;
+      client.letGo(sessionId);
+      // It answers when its helpers have ended, or when the session's next prompt comes: nothing waits for it now.
+      answering.then(
+        () => log.info("a prompt let go of for its CLI's helpers has answered", { agent_id: this.agentId, cli: this.row.id }),
+        (err: unknown) => log.info("a prompt let go of for its CLI's helpers ended without an answer", { agent_id: this.agentId, cli: this.row.id, error: String(err) }),
+      );
+      return { stopReason: "end_turn", usage: null, held: true };
     } catch (err) {
       if (typeof err === "object" && err !== null) inPrompt.add(err);
       throw err;
     } finally {
-      this.permissions.delete(sessionId);
+      if (!letGo && this.permissions.get(sessionId) === onPermission) this.permissions.delete(sessionId);
       this.running -= 1;
       this.lastUsed = this.now();
     }
