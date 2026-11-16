@@ -38,4 +38,5 @@ export interface Install {
   decryptSecrets: Local;
   restoreSecrets: Local;
   rollback: Local;
+  retry: Local;
 }

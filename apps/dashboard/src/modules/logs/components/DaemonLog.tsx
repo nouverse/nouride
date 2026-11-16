@@ -94,7 +94,7 @@ export function DaemonLog() {
               {search && (
                 <button
                   type="button"
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 btn btn-ghost btn-xs btn-circle size-5 max-sm:size-7 min-h-0 text-base-content/65"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 btn btn-ghost btn-xs btn-circle size-5 max-sm:size-8 min-h-0 text-base-content/65"
                   onClick={() => setSearch("")}
                   aria-label="Clear search"
                 >
@@ -114,7 +114,7 @@ export function DaemonLog() {
               value={component}
               onChange={setComponent}
               width={280}
-              className="max-w-[220px] font-mono max-sm:min-w-0 max-sm:flex-1"
+              className="max-w-[220px] font-mono max-sm:min-w-0 max-sm:grow max-sm:basis-36"
             />
 
             <button

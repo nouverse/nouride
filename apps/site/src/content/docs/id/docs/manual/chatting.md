@@ -164,7 +164,10 @@ pesan approval itu sendiri). "Iya" yang diketik sebagai pesan gak menjawabnya.
 - **Agent yang dijawab Claude Code atau Codex** (sejak 0.8.10) menerima pesan kamu di tengah prompt yang
   sedang jalan, lewat CLI-nya. Kalau ada perintahnya yang lagi jalan, pesannya nunggu perintah itu selesai,
   paling lama lima menit, supaya test yang lagi jalan gak tergeser; setelah itu CLI-nya berhenti dari apa
-  yang sedang ditulisnya untuk membacanya. CLI yang gak bisa menerima pesan di tengah prompt membacanya
+  yang sedang ditulisnya untuk membacanya. Perintah milik helper yang dinyalakan Claude Code di latar bukan
+  perintah agent itu sendiri, jadi gak ditunggu (0.8.39). Begitu agent selesai dengan bagiannya dan tinggal
+  helper itu yang kerja, gilirannya selesai: chat bebas, pesan kamu berikutnya jadi giliran sendiri, dan agent
+  bilang hasil helper-nya waktu mereka selesai. CLI yang gak bisa menerima pesan di tengah prompt membacanya
   begitu prompt-nya selesai, dan "Got it"-nya bilang begitu: "I'll read that once what I'm running now ends."
 
 Apa yang dibaca giliran itu tetap ada di percakapan. Di dashboard pesan kamu langsung muncul di bawah
@@ -345,7 +348,8 @@ grupnya, bukan milik satu bot: kalau ada beberapa bot kita di grup itu, semuanya
 sama, dan perintahnya dijawab sekali. Mengubahnya hak admin, sama seperti `/daemon-restart`; orang lain
 diberi tahu begitu dan gak ada yang berubah. Di DM perintah ini gak berbuat apa-apa: DM selalu dijawab.
 Pilihan yang sama ada di halaman **Groups** di dashboard, satu daftar per grup, dan yang dikatakan satu
-tempat terlihat di tempat lainnya.
+tempat terlihat di tempat lainnya. Room yang dibuat di dashboard juga punya pilihan ini di header-nya
+(0.8.39): **Who answers with no tag**, untuk admin, di antara agent room itu sendiri.
 
 `/mention@NovelistBot`, cara menu perintah Telegram menulis perintah untuk satu bot, dijawab oleh bot
 itu: ia bilang siapa yang menjawab di sini sekarang, dan cara memberikan grup itu kepadanya.
@@ -426,6 +430,21 @@ bicara dan bagaimana jawaban itu dimulai. Isinya cuma sampai di tempat orangnya 
 tempat pekerjaan itu diminta; di tempat lain agent cuma diberi tahu bahwa ia mengerjakan sesuatu
 untuk agent lain, dan kapan. Yang dikatakan di room gak pernah dibawa keluar dari room itu.
 
+**Agent yang ditanya agent lain menjawab sendiri di room (0.8.39).** Saat sebuah agent bertanya ke agent
+lain dengan `ask_agent` dan agent itu ada di room yang sama, jawabannya juga muncul di situ sebagai
+pesannya sendiri: di room yang dibuat di dashboard, di atas balasan agent yang bertanya; di grup
+Telegram, Discord atau WhatsApp, dari bot-nya sendiri. Agent yang bertanya tahu room sudah membacanya,
+jadi ia cukup menambahkan bagiannya sendiri tanpa mengulang. Tag di dalam jawaban seperti itu gak
+menyerahkan pekerjaan ke siapa pun. Agent yang gak ada di room itu, atau gak punya bot sendiri di grupnya,
+tetap bekerja di belakang chat seperti sebelumnya, dan kata-katanya sampai ke kamu lewat agent yang
+bertanya.
+
+Di aplikasi chat, agent yang ditanya agent lain punya baris langkahnya di chat, lewat bot agent yang
+bertanya: `[nox] ✓ 2 steps · 16s`. Di chat satu lawan satu, baris itu satu-satunya tanda agent yang
+ditanya ikut bekerja, jadi tetap ada. Di tempat agent yang ditanya menjawab sendiri, jawabannya sudah
+jadi tandanya dan baris itu gak dikirim. Baris itu tetap dikirim kalau jawabannya ternyata gak bisa
+disampaikan: bot-nya gak bisa mengirim ke situ, atau ia selesai tanpa ada yang dikatakan.
+
 **Kalau pekerjaan hasil serah terima gagal.** Kalau agent yang menerima pekerjaan gagal atau kehabisan
 waktu, baris yang ditinggalkannya membawa tombol **Continue** dan **Hand to** untuk paling banyak tiga
 agent lain di room (0.8.33). Continue membuat agent yang sama melanjutkannya. Hand to memberi agent
@@ -470,9 +489,17 @@ mengatur angkanya, untuk model yang membaca lebih besar.
 Agent mengirim file balik dengan `send_file`. Ia gak akan mengirim file kredensial, atau file apa pun
 yang memuat nilai salah satu secret agent itu, karena file di platform chat gak bisa disamarkan.
 
+File Markdown yang dikirim sendirian ke aplikasi chat datang dengan satu baris tambahan, **Open it as a
+page**, dan sebuah link (0.8.39). Aplikasi chat menampilkan file seperti itu sebagai teks mentahnya;
+link itu membukanya di Workspace dashboard, dengan judul, tabel dan diagramnya digambar. Link-nya ditulis
+Nouride, untuk orang yang admin dan kalau `[dashboard] public_url` diisi
+([Link dari chat](/id/docs/manual/dashboard/#link-dari-chat)).
+
 Beberapa file yang satu kesatuan, slide carousel atau halaman hasil scan, dikirim dalam satu kiriman, berurutan:
 satu album di Telegram dan satu pesan di Discord, masing-masing sampai sepuluh file, dan satu per satu di WhatsApp
-dan di dashboard. Tiap file dicek dulu, jadi satu set sampai utuh atau tidak sama sekali.
+dan di dashboard. Tiap file dicek dulu, jadi satu set sampai utuh atau tidak sama sekali. Di dashboard,
+gambar dari satu balasan terbuka sebagai satu set, dan **Download all** menyimpan file satu balasan
+sebagai satu `.zip` (0.8.39).
 
 ## Dari terminal
 

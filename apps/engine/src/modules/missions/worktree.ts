@@ -155,7 +155,7 @@ export async function removeOwnFolder(own: string, run: AsAgent, how: { keepUnsa
   if (!(await run(["test", "-d", own])).ok) return null;
   const worktree = join(own, "worktree");
   if (how.keepUnsaved) {
-    const unsaved = await uncommitted(own, run);
+    const unsaved = await uncommittedIn(own, run);
     if (unsaved.length > 0) return unsaved;
   }
   const common = await run(["git", "-C", worktree, "rev-parse", "--path-format=absolute", "--git-common-dir"]);
@@ -173,8 +173,11 @@ export function removeLeftFolder(own: string, run: AsAgent): Promise<string[] | 
   return removeOwnFolder(own, run, { keepUnsaved: true });
 }
 
-/** The worktrees in a mission's folder holding changes nobody committed: its own, then its helpers' (`helpers/<n>`, from 1). */
-async function uncommitted(own: string, run: AsAgent): Promise<string[]> {
+/**
+ * The worktrees in a mission's folder holding changes nobody committed: its own, then its helpers' (`helpers/<n>`, from 1).
+ * It only reads: what a stop's notice names, and what a removal asks before it removes.
+ */
+export async function uncommittedIn(own: string, run: AsAgent): Promise<string[]> {
   const found: string[] = [];
   // A helper's worktree is made only inside a mission's, numbered without a gap: the first that is not one ends the list.
   for (let n = 0; ; n += 1) {

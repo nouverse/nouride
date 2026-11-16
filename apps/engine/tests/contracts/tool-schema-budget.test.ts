@@ -64,7 +64,10 @@ const size = (name: string) => JSON.stringify(tools.get(name)!.definition).lengt
 // hour with his examples (long development, a deep analysis, a long scan, research, a migration) and what it gives (it
 // keeps going on its own and proves itself done), and shorter work sent to a helper or another agent in the
 // background. "Many steps or items" had drafted missions for work of ten minutes, which a background helper does.
-const PER_TOOL = 3_400;
+// 3,550 for `mission`'s `title` (~170, at 3,544): a mission's name for its person, apart from its goal. The goal, an
+// instruction to the agent, was also what a person read as the name on every card and notice; the field has to say that
+// a title is what the work is called and not what to do, with one example, or a model writes the instruction again.
+const PER_TOOL = 3_550;
 /** All of them together, which no single agent holds but the default-rich ones come close to. */
 // 32,500 since exec's `service`: a server started as an ordinary job ended the turn and never woke it,
 // and the parameter that fixes it has to say when to use it instead of `background`. 32,800 since
@@ -166,16 +169,18 @@ const PER_TOOL = 3_400;
 // 50,730 for steps at the same time (~160): `schedule`'s `together`, a step of 2 to 5 prompts or commands begun at once
 // with their words joined. Unsaid, a model asked to have three agents each look at something writes three steps in a
 // row, each waiting for the one before, or a prompt that asks one agent to ask the others.
-const TOTAL = 50_730;
+// 50,900 for `mission`'s `title` (~170, measured at 50,899): the reason is at `PER_TOOL`.
+const TOTAL = 50_900;
 
 /**
  * What a provider is sent for the same set: the skill tools as the one entry that stands for them (`tools/fold.ts`).
  * Each tool keeps its whole definition, read when its action is opened, so `TOTAL` still holds each to its ceiling.
  * 45,740: measured at 45,734 against 50,565 for the tools themselves, the three skill tools of this set (5,525) sent
  * as an entry of about 690. On a month of a live install they were called once in 13,823 tool calls. 45,900 with
- * `schedule`'s `together` (measured at 45,896 against 50,727).
+ * `schedule`'s `together` (measured at 45,896 against 50,727). 46,070 with `mission`'s `title` (measured at 46,068
+ * against 50,899).
  */
-const SENT = 45_900;
+const SENT = 46_070;
 
 describe("tool schema budget", () => {
   test("every conditional tool was built, so the total means what it says", () => {

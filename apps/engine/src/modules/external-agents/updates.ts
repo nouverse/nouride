@@ -7,7 +7,7 @@
  * runner feeds it updates and hands what comes out to the turn's sinks.
  */
 
-import { blockText, type PlanEntry, type SessionUpdate, type ToolCall, type ToolKind } from "@nouride/acp";
+import { blockText, helpersUpdate, type CliRow, type PlanEntry, type SessionUpdate, type ToolCall, type ToolKind } from "@nouride/acp";
 import { clip } from "@nouride/shared";
 import type { ToolStep } from "@/modules/llm/executor/types.ts";
 import { PromptSpend } from "./usage.ts";
@@ -44,6 +44,8 @@ interface OpenCall {
   startedAt: number;
   /** Whether its `tool` step is out. Not while Claude Code still streams the input: its title is "Terminal" then. */
   announced: boolean;
+  /** Whether it is the agent's own: not a call of a helper the CLI started itself (`CliRow.helper`). */
+  own: boolean;
 }
 
 /** The reply between two steps: one message of the CLI's, and whether the chat already has it. */
@@ -68,7 +70,25 @@ export class UpdateReader {
   constructor(
     private readonly sink: UpdateSink,
     private readonly now: () => number = Date.now,
+    /** How this CLI's connector marks a helper's call and says the CLI's own turn ended (`CliRow`); neither where it says none. */
+    private readonly says: { helper?: CliRow["helper"]; ended?: CliRow["ended"] } = {},
   ) {}
+
+  /** When the CLI's own turn last ended, where nothing of the agent's own came since; null while it works. */
+  private endedAt: number | null = null;
+  /** When a helper the CLI started last did something. */
+  private helperAt: number | null = null;
+
+  /**
+   * Whether the agent's own work has ended and helpers it started work on behind a prompt its connector keeps open:
+   * its turn ended `quietMs` ago or more, nothing of its own came since, and a helper is at work now or was within
+   * that time. The chat's turn ends there (`runner.ts`); the helpers go on, and what the agent says of them when they
+   * end is said by itself.
+   */
+  heldFor(quietMs: number): boolean {
+    if (this.endedAt === null || this.now() - this.endedAt < quietMs || this.running > 0) return false;
+    return this.open.size > 0 || (this.helperAt !== null && this.now() - this.helperAt < quietMs);
+  }
 
   /** The reply as it stands: every message chunk, in order. */
   get text(): string {
@@ -137,6 +157,10 @@ export class UpdateReader {
   }
 
   read(update: SessionUpdate): void {
+    // Whose it is: a helper's, by its mark or by the call it reports on, or the agent's own, which is at work again.
+    const helpers = helpersUpdate(this.says.helper, update) || (update.sessionUpdate === "tool_call_update" && this.open.get(update.toolCallId)?.own === false);
+    if (helpers) this.helperAt = this.now();
+    else if (update.sessionUpdate === "agent_message_chunk" || update.sessionUpdate === "agent_thought_chunk" || update.sessionUpdate === "tool_call" || update.sessionUpdate === "tool_call_update") this.endedAt = null;
     if (update.sessionUpdate !== "agent_thought_chunk") this.flushThought();
     if (update.sessionUpdate !== "agent_message_chunk" && update.sessionUpdate !== "plan") this.stepped = this.stepped || this.reply !== "";
     switch (update.sessionUpdate) {
@@ -175,6 +199,8 @@ export class UpdateReader {
         if (Array.isArray(update.entries)) this.sink.plan(update.entries);
         return;
       case "usage_update":
+        // The CLI's own turn has ended, as its connector says it: the prompt's answer may be long in coming (`heldFor`).
+        if (this.says.ended && (update as unknown as Record<string, unknown>)[this.says.ended.usage] !== undefined) this.endedAt = this.now();
         if (!Number.isFinite(update.used) || !Number.isFinite(update.size)) return;
         this.spend.context(update.used, this.open.size);
         this.sink.context?.(update.used, update.size);
@@ -185,15 +211,23 @@ export class UpdateReader {
     }
   }
 
-  /** Tool calls open in the prompt now: a steer waits for them (`steering.ts`). */
+  /**
+   * The agent's own tool calls open in the prompt now: a steer waits for them (`steering.ts`). Not a call of a helper
+   * the CLI started itself: one working in the background keeps the prompt open long after the agent has answered,
+   * and a message for the agent then waited out its whole hold for commands that were never the agent's.
+   */
   get running(): number {
-    return this.open.size;
+    let own = 0;
+    for (const call of this.open.values()) if (call.own) own += 1;
+    return own;
   }
 
   /** The end of the prompt: a thought still open is written, and a call the agent never closed is closed as cut off. */
   end(): void {
     this.flushThought();
     for (const [id, call] of this.open) {
+      // A helper's call still open goes on behind the turn: it is not cut off, and is not said to be.
+      if (!call.own) continue;
       if (!call.announced) this.announced(id, call);
       this.sink.activity("tool_done", `${call.name} did not finish`, { callId: id, name: call.name, error: true, outcome: "failed" });
       this.done.push({ name: call.name, ok: false });
@@ -204,7 +238,7 @@ export class UpdateReader {
   private started(call: ToolCall): void {
     const name = nameOf(call);
     const title = call.title?.trim() || name;
-    const open: OpenCall = { name, title, like: call.kind ? LIKE[call.kind] : undefined, startedAt: this.now(), announced: false };
+    const open: OpenCall = { name, title, like: call.kind ? LIKE[call.kind] : undefined, startedAt: this.now(), announced: false, own: !helpersUpdate(this.says.helper, call) };
     this.open.set(call.toolCallId, open);
     this.calls += 1;
     if (!(call.status === "pending" && streaming(call.rawInput))) this.announced(call.toolCallId, open);
@@ -246,7 +280,8 @@ export class UpdateReader {
       outcome: failed ? "failed" : "ok",
     });
     this.done.push({ name: open.name, ok: !failed });
-    if (this.open.size === 0) this.sink.idle?.();
+    // The agent's last own call has ended: what waited for it goes in now, whatever a helper still runs.
+    if (this.running === 0) this.sink.idle?.();
   }
 
   private flushThought(): void {

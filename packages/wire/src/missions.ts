@@ -24,6 +24,8 @@ export interface MissionAnswered {
   question: string;
   answer?: string;
   at: number;
+  /** How it was asked: the mission waits for the answer, or works on meanwhile. Absent from a daemon that asks at a turn's end. */
+  asked?: "wait" | "meanwhile";
 }
 
 /** What a person told it while it worked (0.8.10), and the turn it read it in — absent while unread. */
@@ -58,6 +60,8 @@ export interface MissionView {
   /** Where it reports: the chat it began in. */
   gatewayId: string;
   chatId: string;
+  /** Its name for a person, a few words: what the work is called. Absent from a daemon whose missions have none. */
+  title?: string;
   goal: string;
   checks: string[];
   /** The reviewer's criteria; null is the goal itself. */
@@ -93,7 +97,9 @@ export interface MissionView {
    * Which limits hold and whether its tokens are known (0.8.8): a coding CLI's mission is held to no turn limit, and its
    * tokens are unknown where the CLI reports none — a floor where it reported for some turns only.
    */
-  shown: { turns: boolean; tokens: MissionTokens };
+  shown: { turns: boolean; tokens: MissionTokens; /** What its coding CLI's turn at work has spent so far, an estimate; absent with none at work. */ running?: number };
+  /** When its turn at work last did something: its newest step, or the turn's start. Absent with no turn at work. */
+  activeAt?: number;
   /** The scheduled job or webhook whose run this is (0.8.0): it ends at the reviewer. Absent from a daemon before it. */
   jobId?: string | null;
   /** The request body that started the run, when a webhook did. */
@@ -127,6 +133,7 @@ export interface MissionDetail {
 
 /** A draft's change from the dashboard (0.8.11): what is sent changes, what is not stays. `workdir: null` is its own folder. */
 export interface MissionEdit {
+  title?: string;
   goal?: string;
   checks?: string[];
   review?: string;
@@ -147,6 +154,8 @@ export interface Reviewing {
 
 export interface MissionStart {
   agent: string;
+  /** Its name; left out, it is named from its goal's first sentence. */
+  title?: string;
   goal: string;
   checks?: string[];
   review?: string;

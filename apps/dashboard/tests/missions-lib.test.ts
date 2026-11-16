@@ -8,10 +8,13 @@
 import { describe, expect, test } from "bun:test";
 import type { LiveTurn, MissionSettings, MissionView, TurnStep } from "@nouride/wire";
 import { stepNow } from "@/commons/lib/steps";
-import { actionsFor, briefShown, grouped, inFolder, meters, missionTitle, needsYouSaid, rowLine, searchedIn, seenAs, tabOf, whyStarted } from "@/modules/missions/lib/mission";
+import { missionName } from "@/commons/lib/mission-name";
+import { actionsFor, briefShown, grouped, inFolder, meters, needsYouSaid, rowLine, searchedIn, seenAs, tabOf, tabsOf, whyStarted } from "@/modules/missions/lib/mission";
 import { startInput } from "@/modules/missions/components/NewMissionForm";
 import { fieldText, fits, limitsPatch, range } from "@/modules/missions/lib/limits";
-import { nowSaid } from "@/modules/missions/components/NowLine";
+import { createElement } from "react";
+import { renderToString } from "react-dom/server";
+import { NowLine, nowSaid } from "@/modules/missions/components/NowLine";
 
 const MISSION: MissionView = {
   id: "msn_3f2a91c0d4",
@@ -65,13 +68,17 @@ describe("what a person sees", () => {
     expect(seenAs({ ...MISSION, status: "done", seen: "done" })).toBe("Done");
   });
 
-  test("its name is its goal's first sentence, cut at a word near 90 characters (0.8.0)", () => {
-    expect(missionTitle("Automated Nouride test. Deliver the text to the chat, exactly once. Then call mission done.")).toBe("Automated Nouride test.");
-    expect(missionTitle("Upgrade the client")).toBe("Upgrade the client");
-    expect(missionTitle("  Sum up\nthe week's mail.  ")).toBe("Sum up the week's mail.");
-    const long = missionTitle("Run the shell command sleep 150 and wait for it to finish then write the word ok into done.txt in your mission folder and report");
-    expect(long.length).toBeLessThanOrEqual(91);
-    expect(long).toEndWith("the word ok into…");
+  test("its name is its title, never words cut from its goal; a daemon that sends no title, its goal as it is", () => {
+    const goal = "Automated Nouride test. Deliver the text to the chat, exactly once. Then call mission done.";
+    expect(missionName({ title: "The delivery test", goal })).toBe("The delivery test");
+    expect(missionName({ title: "  The delivery test  ", goal })).toBe("The delivery test");
+    // No title sent: the goal on one line and whole. Where it is drawn cuts it by lines; nothing here guesses a name.
+    expect(missionName({ goal })).toBe(goal);
+    expect(missionName({ title: "  ", goal: "  Sum up\nthe week's mail.  " })).toBe("Sum up the week's mail.");
+  });
+
+  test("the list's search looks in its title too", () => {
+    expect(searchedIn({ ...MISSION, title: "The delivery test" })).toContain("The delivery test");
   });
 
   test("the list's three groups keep the daemon's order inside each", () => {
@@ -87,7 +94,7 @@ describe("what a person sees", () => {
     expect(tabOf({ seen: "ended", status: "failed" })).toBe("failed");
     expect(tabOf({ seen: "ended", status: "stopped" })).toBe("stopped");
     const done = { ...MISSION, status: "done" as const, seen: "done" as const, report: "Wrote hello.txt and checked it" };
-    expect(searchedIn(done)).toEqual(["Upgrade the client", "nova", "msn_3f2a91c0d4", "Wrote hello.txt and checked it"]);
+    expect(searchedIn({ ...done, title: "The client upgrade" })).toEqual(["The client upgrade", "Upgrade the client", "nova", "msn_3f2a91c0d4", "Wrote hello.txt and checked it"]);
     // What a chat names it by, and the question it waits on, find it too.
     expect(searchedIn(waiting("input", { reason: "Which branch should it target?" })).join(" ")).toContain("Which branch should it target?");
   });
@@ -111,6 +118,34 @@ describe("what a person can say to it now", () => {
   });
 });
 
+describe("one at work that asked a question and went on", () => {
+  const asking: MissionView = { ...MISSION, answers: [{ question: "Mermaid, at 735 KB?", at: 1, asked: "meanwhile" }] };
+
+  test("its badge says so, its row's line is the question, and Answer is offered with Stop", () => {
+    expect(seenAs(asking)).toBe("Working · asked a question");
+    expect(rowLine(asking)).toEqual({ label: "Asks", text: "Mermaid, at 735 KB?" });
+    expect(actionsFor(asking)).toEqual(["answer", "stop"]);
+  });
+
+  test("it is under Needs you and under Working, and drawn once, with what needs the reader", () => {
+    expect(tabsOf(asking)).toEqual(["needs_you", "working"]);
+    const groups = grouped([{ ...MISSION, id: "at-work" }, { ...asking, id: "asks" }]);
+    expect([groups.needsYou, groups.working].map((group) => group.map((m) => m.id))).toEqual([["asks"], ["at-work"]]);
+    // Answered, it works like any other; one the reader only reads asks its own person, and is at work to them.
+    expect(tabsOf({ ...asking, answers: [{ ...asking.answers[0]!, answer: "ya" }] })).toEqual(["working"]);
+    expect(tabsOf({ ...asking, changeable: false })).toEqual(["working"]);
+    expect(tabsOf(MISSION)).toEqual(["working"]);
+  });
+
+  test("answered, or one the reader only reads, it is a mission at work like any other", () => {
+    const answered: MissionView = { ...asking, answers: [{ ...asking.answers[0]!, answer: "ya" }] };
+    expect(seenAs(answered)).toBe("Working");
+    expect(actionsFor(answered)).toEqual(["stop"]);
+    expect(rowLine(answered)?.label).toBe("Now");
+    expect(seenAs({ ...asking, changeable: false })).toBe("Working");
+  });
+});
+
 describe("the four meters", () => {
   test("steps settled of the checklist — a skipped one counts — and each limit as used of allowed, turns with their steps", () => {
     const plan = { steps: [{ state: "done" }, { state: "skipped" }, { state: "active" }, { state: "pending" }] };
@@ -122,6 +157,18 @@ describe("the four meters", () => {
     expect(meters({ ...MISSION, turnsUsed: 0 }, plan)[1]?.said).toBe("0 of 50");
     expect(hours).toMatchObject({ label: "Hours", said: "1h 12m of 8h", near: false });
     expect(spent).toMatchObject({ label: "Tokens", said: "1.3M of 50M", near: false });
+  });
+
+  test("a coding CLI's turn at work: what it has spent so far, said as an estimate with a bar, where it read unknown", () => {
+    const atWork = (running: number, tokensUsed = 0) => meters({ ...MISSION, tokensUsed, shown: { turns: false, tokens: tokensUsed > 0 ? "known" : "unknown", running } }, null)[3]!;
+    expect(atWork(26_742_673)).toMatchObject({ label: "Tokens", said: "about 26.7M of 50M so far, an estimate", near: false });
+    expect(atWork(26_742_673).share).toBeCloseTo(0.5348, 3);
+    expect(atWork(26_742_673)).not.toHaveProperty("bar");
+    // Added to what earlier turns counted, and the meter turns at 80% of the limit with it.
+    expect(atWork(5_000_000, 10_000_000)).toMatchObject({ said: "about 15M of 50M so far, an estimate", near: false });
+    expect(atWork(31_000_000, 10_000_000)).toMatchObject({ said: "about 41M of 50M so far, an estimate", near: true });
+    // No turn at work: what it was.
+    expect(meters({ ...MISSION, shown: { turns: false, tokens: "unknown" } }, null)[3]).toMatchObject({ said: "unknown of 50M (its coding CLI reports none)", bar: false });
   });
 
   test("an hours limit reads in hours and minutes: one raised from where a mission stood is no long float (0.8.8)", () => {
@@ -207,6 +254,9 @@ describe("the new mission form", () => {
     // Skipping the reviewer wins over criteria typed before the box was ticked.
     expect(startInput({ ...base, noReview: true, accept: true, workdir: "/srv/api" })).toEqual({ agent: "nova", goal: "Upgrade the client", checks: ["bun test", "bun run lint"], noReview: true, accept: true, workdir: "/srv/api" });
     expect(startInput({ ...base, checks: "", review: "" })).toEqual({ agent: "nova", goal: "Upgrade the client" });
+    // Its name where one was typed; left empty, none is sent and the daemon names it from its goal.
+    expect(startInput({ ...base, checks: "", review: "", title: "  The client upgrade  " })).toEqual({ agent: "nova", title: "The client upgrade", goal: "Upgrade the client" });
+    expect(startInput({ ...base, checks: "", review: "", title: "   " })).toEqual({ agent: "nova", goal: "Upgrade the client" });
   });
 
   test("a limit is sent only inside the bounds the daemon reports", () => {
@@ -286,6 +336,24 @@ describe("now", () => {
     expect(nowSaid({ ...MISSION, status: "queued", reason: null }, undefined, []).text).toBe("Waiting for a free slot");
     expect(nowSaid(MISSION, undefined, [{ id: "job_1", command: "bun run build", startedAt: 0 }]).text).toBe("Waiting on bun run build");
     expect(nowSaid(MISSION, undefined, []).text).toBe("Between turns. The next starts shortly");
+  });
+});
+
+describe("a turn at work, on the mission's page", () => {
+  const now = Date.now();
+  const step = (at: number, seq: number) => ({ seq, at, kind: "tool", text: "exec", ms: 1 }) as TurnStep;
+  const live = (steps: TurnStep[]) => ({ status: "running", startedAt: now - 70 * 60_000, steps }) as unknown as LiveTurn;
+  const drawn = (mission: MissionView, turn: LiveTurn | undefined) => renderToString(createElement(NowLine, { mission, live: turn, jobs: [] }));
+
+  test("says when it last took a step, beside how long it has run: an hour's turn looks the same alive or stuck", () => {
+    expect(drawn(MISSION, live([step(now - 30 * 60_000, 1), step(now - 4 * 60_000, 2)]))).toContain("last step 4 min ago");
+    // No step on the page yet: what the mission's record says of it.
+    expect(drawn({ ...MISSION, activeAt: now - 9 * 60_000 }, live([]))).toContain("last step 9 min ago");
+    expect(drawn(MISSION, live([]))).not.toContain("last step");
+  });
+
+  test("says nothing of it between turns", () => {
+    expect(drawn({ ...MISSION, activeAt: now - 9 * 60_000 }, undefined)).not.toContain("last step");
   });
 });
 

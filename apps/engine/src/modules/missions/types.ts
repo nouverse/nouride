@@ -27,6 +27,11 @@ export interface Answered {
   options?: string[];
   answer?: string;
   at: number;
+  /**
+   * How it was asked, on every question since they leave at the call (`asking.ts`): the mission then waits, or works on
+   * meanwhile (`keep_working`). Absent on one a mission of an earlier version asked.
+   */
+  asked?: "wait" | "meanwhile";
 }
 
 /**
@@ -71,6 +76,12 @@ export interface Mission {
   /** Where it reports: the chat it began in. */
   gatewayId: string;
   chatId: string;
+  /**
+   * Its name for a person, a few words: what the work is called. Every place that names a mission to a person shows
+   * this and never the goal, which is an instruction to the agent. Given by the agent that starts one, taken from its
+   * job by a scheduled run, and from the goal's first sentence where a person started it with none (`start.ts`).
+   */
+  title: string;
   goal: string;
   checks: string[];
   /** The reviewer's criteria in words; null = the goal itself. */

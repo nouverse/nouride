@@ -136,6 +136,8 @@ export async function answerGroupCommand(
     reply: (envelope: MessageEnvelope, text: string, fromAgent: string) => Promise<unknown>;
     /** Whether a connection is up — another bot's copy waits for the orchestrator's only when its bot can answer. */
     connected: (gatewayId: string) => boolean;
+    /** Its answer once it was said, for a chat that is read from its records (`chat-queue.ts`). */
+    answered?: (envelope: MessageEnvelope, agentId: string, command: string, reply: string) => void;
     wait?: (ms: number) => Promise<void>;
   },
   envelope: MessageEnvelope,
@@ -156,6 +158,9 @@ export async function answerGroupCommand(
   const agent: LoadedAgent | undefined = addressed ?? desk ?? (owner ? o.registry.get(owner) : undefined) ?? o.registry.enabled()[0];
   if (!agent) return false;
   const result = await o.hooks.run(command.command, command.args, agent, envelope);
-  if (result.reply) await o.reply(envelope, result.reply, agent.config.id);
+  if (result.reply) {
+    await o.reply(envelope, result.reply, agent.config.id);
+    o.answered?.(envelope, agent.config.id, envelope.text.trim(), result.reply);
+  }
   return true;
 }

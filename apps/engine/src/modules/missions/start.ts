@@ -4,7 +4,7 @@
  */
 
 import { basename } from "@nouride/runtime";
-import { ownerIdentity, type MissionsSection } from "@nouride/shared";
+import { MISSION_TITLE_MAX, ownerIdentity, titleFromGoal, type MissionsSection } from "@nouride/shared";
 import { workTextIsEnglish, writeWorkInEnglish } from "@/modules/memory/index.ts";
 import { AGENT_MISSIONS_PER_DAY, CHECK_MAX, CHECKS_MAX, GOAL_MAX, REVIEW_MAX } from "./limits.ts";
 import type { MissionsPort } from "./missions.store.ts";
@@ -13,6 +13,8 @@ import type { Mission } from "./types.ts";
 /** How a mission was asked for. */
 export interface StartRequest {
   agentId: string;
+  /** Its name for a person (`Mission.title`). An agent's start gives one; without one it is named from its goal. */
+  title?: string;
   goal: string;
   checks?: readonly string[];
   /** The reviewer's criteria in words, or false for none. */
@@ -86,6 +88,18 @@ export function briefFilesOf(goal: string): string[] {
   return [...found];
 }
 
+/**
+ * Why a title cannot be a mission's name, or null. A name, so short: the goal was the name before, and a card of what
+ * waits for the person was a paragraph of instructions in large type. An agent's start must give one, since a name
+ * cut from its goal is the start of an instruction; a person's goal is in their own words, and names their mission.
+ */
+export function titleRefusal(title: string | undefined, byAgent: boolean): string | null {
+  const name = title?.trim() ?? "";
+  if (name.length > MISSION_TITLE_MAX) return `A mission's \`title\` is its name for the person, at most ${MISSION_TITLE_MAX} characters, and this one is ${name.length}: say what the work is called, and leave what to do to the goal.`;
+  if (byAgent && !name) return `A mission needs a \`title\`: its name for the person, at most ${MISSION_TITLE_MAX} characters, saying what the work is called ("The viewers for 0.8.39"), not what to do. The goal stays the instruction.`;
+  return null;
+}
+
 /** A brief is a page or two — read every turn, and written whole where it is given in a call (0.8.11). */
 const BRIEF_MAX = 20_000;
 
@@ -116,6 +130,9 @@ export function startRefusal(
   const goal = request.goal.trim();
   if (!goal) return "A mission needs a goal: what should be true when it is done.";
   if (goal.length > GOAL_MAX) return `Keep the goal under ${GOAL_MAX} characters: write the detail to a brief file first (in English, and whole, as the goal is) and name its absolute path in the goal.`;
+  // A scheduled job's run is named by its job, whoever made it.
+  const title = titleRefusal(request.title, Boolean(request.byAgent) && request.jobId === undefined);
+  if (title) return title;
   const checks = request.checks ?? [];
   if (checks.length > CHECKS_MAX) return `A mission takes at most ${CHECKS_MAX} check commands.`;
   if (checks.some((check) => typeof check !== "string" || check.length > CHECK_MAX)) return `Each check is one command, under ${CHECK_MAX} characters.`;
@@ -168,6 +185,7 @@ export function newMission(
     owner: request.owner !== undefined ? request.owner : (ownerIdentity(request.gatewayId, request.startedBy) ?? null),
     gatewayId: request.gatewayId,
     chatId: request.chatId,
+    title: request.title?.trim() || titleFromGoal(request.goal),
     goal: request.goal.trim(),
     checks: (request.checks ?? []).map((check) => check.trim()).filter(Boolean),
     review: typeof request.review === "string" && request.review.trim() ? request.review.trim() : null,

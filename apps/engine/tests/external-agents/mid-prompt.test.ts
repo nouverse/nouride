@@ -148,7 +148,7 @@ describe("a message held for a running prompt", () => {
 });
 
 describe("a coding CLI's turn, steered while its prompt runs", () => {
-  function setup(env: Record<string, string>, steerHoldMs?: number, replying?: () => boolean) {
+  function setup(env: Record<string, string>, steerHoldMs?: number, replying?: () => boolean, more: Partial<CliRow> = {}) {
     const dir = mkdtempSync(join(tmpdir(), "mid-prompt-"));
     dirs.push(dir);
     mkdirSync(privateWorkspace(dir, "coder"), { recursive: true });
@@ -163,6 +163,7 @@ describe("a coding CLI's turn, steered while its prompt runs", () => {
       env: { FAKE_MODE: "steer", FAKE_STEER_WAIT_MS: "1500", ...env },
       modes: { folder: "yolo", risky: "default", all: "default" },
       instructionFile: "AGENTS.md",
+      ...more,
     };
     const service = new ExternalAgents({ rows: () => [row], workspaceDir: () => dir, secretsFor: () => ({}), sessions: { load: () => ({}), save: () => {} }, ...(steerHoldMs !== undefined ? { steerHoldMs } : {}) });
     services.push(service);
@@ -240,6 +241,30 @@ describe("a coding CLI's turn, steered while its prompt runs", () => {
     const result = await running;
     // A step between the two: a paragraph, as `UpdateReader` says a CLI's messages around its steps.
     expect(result.text).toBe("Working.\n\nSteered: check the logs too");
+    const said = await stderrSaid(await t.service.connection(t.agent), (line) => line === "tool-done" || line.startsWith("steer:"), 2);
+    expect(said).toEqual(["tool-done", "steer:check the logs too"]);
+  });
+
+  test("not held by a command of a helper the CLI started itself: taken while it still runs", async () => {
+    // Claude Code keeps a prompt open while a subagent it started in the background works. The agent had answered
+    // long before, and a message for it still waited out the hold, five minutes, behind commands that were the helper's.
+    const helper = { meta: "fake", parent: "startedBy" };
+    const t = setup({ FAKE_STEER: "injected", FAKE_TOOL_MS: "1500", FAKE_STEER_WAIT_MS: "4000", FAKE_TOOL_HELPER: "1" }, undefined, undefined, { helper });
+    const running = t.runner.run(t.req);
+    await t.commandOpen();
+    t.send("check the logs too");
+    const result = await running;
+    expect(result.text).toBe("Working.\n\nSteered: check the logs too");
+    const said = await stderrSaid(await t.service.connection(t.agent), (line) => line === "tool-done" || line.startsWith("steer:"), 2);
+    expect(said).toEqual(["steer:check the logs too", "tool-done"]);
+  });
+
+  test("the same command of a CLI that marks no helper is the agent's own, and held for", async () => {
+    const t = setup({ FAKE_STEER: "injected", FAKE_TOOL_MS: "800", FAKE_STEER_WAIT_MS: "4000", FAKE_TOOL_HELPER: "1" });
+    const running = t.runner.run(t.req);
+    await t.commandOpen();
+    t.send("check the logs too");
+    await running;
     const said = await stderrSaid(await t.service.connection(t.agent), (line) => line === "tool-done" || line.startsWith("steer:"), 2);
     expect(said).toEqual(["tool-done", "steer:check the logs too"]);
   });

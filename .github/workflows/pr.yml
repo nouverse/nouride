@@ -11,7 +11,7 @@
 #   - `pull_request`, never `pull_request_target`: a fork's run gets a token that only reads, and no secret.
 #   - GitHub's hosted runner, named outright. Never `CI_RUNNER`: that variable can name the self-hosted machine that
 #     builds and signs releases, and a fork's code must not run there.
-#   - No private submodule: everything checked here is in this repository.
+#   - No submodule: everything checked here is in this repository.
 #
 # `tests/contracts/pull-request-workflows.test.ts` holds each of those lines.
 

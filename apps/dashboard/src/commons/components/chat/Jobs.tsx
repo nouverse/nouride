@@ -6,15 +6,19 @@
  * of nowhere. This is the only thing on screen during that gap, and it is the honest one — the daemon
  * is asked what is still running in *this* conversation, so it is also true after a reload, in a
  * second tab, and for a job started from Telegram.
+ *
+ * Its line folds the list away, as a finished job's steps fold: several long commands took the conversation's screen
+ * for as long as they ran.
  */
 
 import { useEffect, useState } from "react";
-import { Bot, Loader2, MessagesSquare, Terminal } from "lucide-react";
+import { Bot, ChevronDown, ChevronUp, Loader2, MessagesSquare, Terminal } from "lucide-react";
 import type { RunningJob } from "@nouride/wire";
 import { formatDuration } from "@/commons/lib/steps";
 
 export function JobStrip({ jobs }: { jobs: RunningJob[] }) {
   const [now, setNow] = useState(() => Date.now());
+  const [open, setOpen] = useState(true);
   useEffect(() => {
     if (jobs.length === 0) return;
     const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -25,11 +29,17 @@ export function JobStrip({ jobs }: { jobs: RunningJob[] }) {
 
   return (
     <div className="w-full max-w-xl space-y-1.5">
-      <span className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-base-content/65 font-mono">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((was) => !was)}
+        className="inline-flex min-h-8 items-center gap-2 rounded-lg text-[10px] font-bold uppercase tracking-wider text-base-content/65 font-mono hover:text-base-content"
+      >
         <Loader2 size={11} className="animate-spin text-primary" />
         {jobs.length} background {jobs.length === 1 ? "job" : "jobs"} running
-      </span>
-      {jobs.map((job) => (
+        {open ? <ChevronUp size={12} aria-hidden="true" /> : <ChevronDown size={12} aria-hidden="true" />}
+      </button>
+      {open && jobs.map((job) => (
         <div
           key={job.id}
           className="p-2 rounded-lg bg-base-100/80 border border-base-content/[0.05] text-[11px] font-mono flex items-start gap-2 text-base-content/80"

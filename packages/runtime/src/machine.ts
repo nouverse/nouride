@@ -7,12 +7,15 @@
  * figure is the one said. Every number is read, none assumed: a file that is not there lowers nothing.
  *
  * And what of that memory is in use now (`readMemoryUse`), counted where the limit is: a container's own count, not
- * its host's, which is what `/proc/meminfo` shows inside Docker.
+ * its host's, which is what `/proc/meminfo` shows inside Docker. With no such limit it is the machine's, as its own
+ * system says it (`platform-memory.ts`).
  */
 
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { availableParallelism, cpus } from "node:os";
+import { machineUsedBytes } from "./platform-memory.ts";
 import { totalMemoryBytes } from "./process-memory.ts";
+import { systemProgram } from "./process-shell.ts";
 
 export interface MachineSpec {
   /** The cores this process may run on, a container's CPU quota counted. At least 1. */
@@ -21,12 +24,20 @@ export interface MachineSpec {
   memoryBytes: number;
 }
 
-/** Where the figures are read: the system's own, unless a test gives files of its making. */
+/** Where the figures are read: the system's own, unless a test gives files, programs and a platform of its making. */
 export interface MachineSource {
   cores(): number;
   memoryBytes(): number;
+  /** The system this is, as `process.platform` names it: which of `platform-memory.ts`'s readers is asked. */
+  platform(): string;
+  /** This process, whose own memory is counted apart from what it started. */
+  pid(): number;
   /** A file's text, or null when it is not there. */
   read(path: string): string | null;
+  /** The names in a folder, or none when it is not there. */
+  list(path: string): string[];
+  /** What one of the system's own programs prints, and the process it ran as; null when it is not there or fails. */
+  run(program: string, args: readonly string[]): { text: string; pid: number } | null;
 }
 
 /**
@@ -42,12 +53,32 @@ function systemCores(): number {
   }
 }
 
-const SYSTEM: MachineSource = {
+/** The system's own: what `readMemoryUse` and the count of what this process started read unless told otherwise. */
+export const SYSTEM: MachineSource = {
   cores: systemCores,
   memoryBytes: () => totalMemoryBytes(),
+  platform: () => process.platform,
+  pid: () => process.pid,
   read: (path) => {
     try {
       return readFileSync(path, "utf8");
+    } catch {
+      return null;
+    }
+  },
+  list: (path) => {
+    try {
+      return readdirSync(path);
+    } catch {
+      return [];
+    }
+  },
+  // The system's own program, never one an agent installed under the same name, with none of the daemon's
+  // environment: it holds every key. Its words in English whatever the machine's language.
+  run: (program, args) => {
+    try {
+      const ran = Bun.spawnSync([systemProgram(program), ...args], { stdin: "ignore", stdout: "pipe", stderr: "ignore", env: { PATH: process.env.PATH ?? "/usr/bin:/bin", LC_ALL: "C" }, timeout: 5_000 });
+      return ran.exitCode === 0 ? { text: ran.stdout.toString(), pid: ran.pid } : null;
     } catch {
       return null;
     }
@@ -123,7 +154,8 @@ const stat = (text: string | null, name: string): number => Number(new RegExp(`^
  * Where a cgroup's limit is below the machine's memory, that group's own count: `memory.current` less the file cache
  * the kernel gives back on demand (`inactive_file`), which is how `docker stats` counts a container, so the figure a
  * person reads here is the one they read there. The lowest limit on the way up is the one that binds, as `readMachine`
- * has it. Elsewhere the machine's: its memory less what the kernel says could still be handed out (`MemAvailable`).
+ * has it. Elsewhere the machine's, as its system says it (`platform-memory.ts`): on Linux its memory less what the
+ * kernel says could still be handed out (`MemAvailable`), on a Mac what `vm_stat` counts as held.
  *
  * Where no such figure is kept there is none to say, and none is made from what is merely free: a Mac's free pages
  * are a sliver of what it could hand out, and the difference read 99 % in use on a machine with room to spare.
@@ -149,6 +181,5 @@ export function readMemoryUse(source: MachineSource = SYSTEM): MemoryUse {
     .filter((group): group is { max: number; used: () => number | null } => group.max !== null && (machineBytes === 0 || group.max < machineBytes))
     .sort((a, b) => a.max - b.max)[0];
   if (held) return { usedBytes: held.used(), totalBytes: held.max, limited: true, machineBytes };
-  const available = Number(/^MemAvailable:\s+(\d+) kB$/m.exec(source.read("/proc/meminfo") ?? "")?.[1] ?? 0) * 1024;
-  return { usedBytes: machineBytes > 0 && available > 0 ? Math.max(0, machineBytes - available) : null, totalBytes: machineBytes, limited: false, machineBytes };
+  return { usedBytes: machineUsedBytes(source, machineBytes), totalBytes: machineBytes, limited: false, machineBytes };
 }

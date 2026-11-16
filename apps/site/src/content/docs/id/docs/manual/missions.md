@@ -19,7 +19,9 @@ balasan: kerja yang mungkin lewat dari itu adalah urusan misi, yang gilirannya t
 Draft tidak menjalankan apa pun sampai kamu memulainya:
 
 ```text
-📝 Draft msn_3f2a91 · nix: Revise the RFC to the owner's answers
+📝 Draft msn_3f2a91 · nix: Revise the RFC
+
+Revise the RFC to the owner's answers of today, section by section, and say what changed in each.
 
 5 checks · signed off by: you · brief: on the mission's page
 
@@ -27,6 +29,10 @@ Start it: /mission accept msn_3f2a91 · drop it: /mission stop msn_3f2a91
 [Start it] [Drop it]
 ```
 
+- **Namanya** adalah beberapa kata setelah nama agent (0.8.39), dan goal-nya utuh di bawahnya. Sejak itu misi
+  disebut dengan namanya: di notifikasinya, di daftar, di kartu yang menunggu kamu. Agent memberi nama setiap misi yang
+  ia draft atau mulai. Misi yang kamu mulai sendiri memakai **Name** yang kamu isi di form dashboard, atau dinamai dari
+  kalimat pertama goal-nya. Misi yang dibuat sebelum 0.8.39 dinamai dengan cara itu waktu 0.8.39 dipasang.
 - **Brief-nya** adalah `BRIEF.md` di folder misi: apa kerjaannya, kenapa, apa yang perlu dibaca, apa arti selesai. Ia
   ada di halaman misi, dan setiap giliran misi dimulai dari situ.
 - **Ubah dulu** kalau belum pas: bilang ke agent ("cek-nya cuma grep, tambahkan yang menjalankan test") dan ia mengirim
@@ -66,7 +72,12 @@ Chat tetap sepi. Misi cuma bilang:
 
 - bahwa ia **mulai**, dengan goal-nya utuh dan cara menghentikannya;
 - bahwa ia **butuh kamu** (approval, pertanyaan, batas yang tercapai, hasil yang perlu diterima), dengan tombol untuk
-  yang bisa kamu jawab: Accept, Continue, Stop, atau satu tombol per pilihan di pertanyaannya;
+  yang bisa kamu jawab: Accept, Continue, Stop, atau satu tombol per pilihan di pertanyaannya. Pertanyaan dikirim saat
+  itu juga ketika ditanyakan (0.8.39), bukan di akhir giliran tempat ia ditanyakan;
+- bahwa ia **bertanya, dan lanjut bekerja sambil menunggu** (0.8.39): pertanyaan yang jawabannya gak ditunggu oleh sisa
+  pekerjaannya. Misinya jalan terus, dan jawaban kamu diteruskan ke pekerjaan yang sedang berjalan. Kalau gilirannya
+  selesai dan pertanyaannya masih terbuka, kamu diberi tahu sekali bahwa ia sudah mengerjakan yang bisa dikerjakan dan
+  sekarang menunggu jawabannya. Hanya satu pertanyaan yang terbuka dalam satu waktu;
 - bahwa ia **berhenti sebentar** karena modelnya gak bisa menjawab, dan mencoba lagi sendiri;
 - bahwa ia **selesai**, dengan hasilnya dalam dua-tiga kalimat; lalu **laporan** utuhnya sebagai `report.md`, dan file
   yang ia buat untukmu: dokumen, gambar, spreadsheet. Kode yang ia ubah di repo tetap di branch-nya, yang disebut di
@@ -89,7 +100,19 @@ jam.
 **Missions** di dashboard menampilkan yang butuh kamu paling atas, lalu yang sedang jalan, lalu yang sudah selesai,
 masing-masing dengan progres checklist-nya: satu tab untuk tiap kelompok, pencarian di tujuan, laporan dan ID-nya,
 filter per agent, dan seberapa jauh ke belakang yang sudah selesai ditampilkan: 3, 7, 14 atau 30 hari terakhir (3 kalau
-tidak dipilih), tidak lebih. Misi yang masih terbuka selalu tampil, berapa pun umurnya. Halaman satu misi menunjukkan langkah, giliran, jam dan token terhadap
+tidak dipilih), tidak lebih. Misi yang masih terbuka selalu tampil, berapa pun umurnya.
+
+**Yang menunggu kamu bilang apa yang ditunggu** (0.8.39), di Home, di Work dan di daftar: pertanyaan dengan
+pertanyaannya, hasil yang perlu diterima, draft yang belum dimulai, batas yang tercapai. Misi yang bertanya sambil
+lanjut bekerja ikut tampil di situ, ditandai **Working · asked a question**, dan halamannya memuat pertanyaannya dan
+kotak untuk menjawab.
+
+**Misi yang sedang bekerja kelihatan hidup** (0.8.39). Misi yang dikerjakan coding CLI (Claude Code, Codex) sering
+berupa satu giliran yang berjam-jam. Kartunya bilang kapan langkah terakhirnya ("last step 7 min ago"), dan yang sudah
+dipakai giliran yang sedang jalan ikut dihitung, sebagai perkiraan, di halamannya dan di `nouride mission show`.
+Notifikasi 80% dari sebuah batas juga datang di tengah giliran seperti itu.
+
+Halaman satu misi menunjukkan langkah, giliran, jam dan token terhadap
 batasnya, langkah yang sedang ia kerjakan saat itu juga, checklist dengan catatan tiap langkah, panggilan yang
 diparkir untuk kamu (bisa dijawab langsung di sana), pertanyaannya, laporan dan file-nya di bagian atas begitu ada,
 dan setiap gilirannya sebagai timeline, yang terbaru di atas, masing-masing ditandai apa yang memulainya (langkah
@@ -113,6 +136,10 @@ Selain itu, operator atau viewer tidak melihat milik orang lain, tidak di daftar
 milik siapa lewat dropdown di samping pencarian, seperti di
 [Automations](/id/docs/manual/schedule/#automation-ini-milik-siapa): Mine, Everyone yang dipisah per orang, satu orang,
 atau Nobody's.
+
+**Misi yang dihentikan tetap menyimpan pemakaian giliran terakhirnya** (0.8.39): misi yang dihentikan di tengah
+giliran tetap dihitung gilirannya, tokennya dan token helper-nya. Notifikasinya menyebut pekerjaan di foldernya yang
+belum di-commit siapa pun, beserta branch-nya.
 
 Sejak 0.8.13, misi yang sudah berakhir bisa dihapus (**Delete** di halamannya, atau `nouride mission delete <id>`)
 beserta percakapannya, checklist-nya dan folder yang dibuat Nouride untuknya; folder yang kamu tentukan sendiri dan
@@ -179,6 +206,16 @@ Batas pemakaian, rate limit, provider yang sedang down: misinya **berhenti seben
 setelah 2, 10 dan 30 menit, lalu tiap jam, selama kira-kira sehari. Kamu diberi tahu sekali waktu ia berhenti dan sekali
 waktu ia jalan lagi; waktu menunggunya gak dihitung ke batas jamnya. **Retry now** mencoba saat itu juga, **Stop**
 mengakhirinya. Setelah sehari, misinya bertanya ke kamu.
+
+## Pertanyaannya
+
+Misi bertanya lewat pertanyaannya sendiri, bukan lewat pesan yang ia kirim. Pertanyaan sampai ke chat tempat misi itu
+melapor, dengan satu tombol per pilihan, dan dijawab di sana dengan kata-katamu sendiri, dengan tombol, dengan
+`/mission answer <id> <jawaban>`, di halaman misinya, atau dengan bilang ke agent-nya.
+
+Pesan yang dikirim misi sendiri tetap pesan biasa, dan jawaban atas pesan itu gak kembali ke misinya. Karena itu chat
+tempat misi melapor ada di urutan pertama daftar chat yang bisa dikirimi agent, dan ditandai sebagai milik misi itu
+(0.8.39), dan percakapan yang dipakai misi untuk kerjanya sendiri bukan chat yang bisa dikirimi apa pun.
 
 ## Approval
 

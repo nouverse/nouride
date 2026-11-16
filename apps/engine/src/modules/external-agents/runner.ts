@@ -19,6 +19,7 @@ import { askPermission } from "./permission.ts";
 import { failedInPrompt, promptFailed, signedOut, unavailableReason, type CliConnection } from "./connection.ts";
 import { offeredEfforts, offeredModels, pickedNote, type OfferedModels } from "./models.ts";
 import { folderReady } from "./launch.ts";
+import { lookForHeld } from "./held.ts";
 import { UpdateReader } from "./updates.ts";
 import { situationOf, untold, type Situation } from "./situation.ts";
 import { ownKey, type OwnChat, type OwnWords } from "./own-words.ts";
@@ -65,6 +66,8 @@ export interface RunnerHost {
   readonly stopGraceMs?: number;
   /** How long a message for a running prompt waits for an open tool call. Absent: `STEER_HOLD_MS`. */
   readonly steerHoldMs?: number;
+  /** How long after a CLI's own turn ended, with only its helpers at work, a chat's turn ends. Absent: `held.ts`'s. */
+  readonly heldQuietMs?: number;
   /** The agent's status from now on: why it cannot answer, or null when it can. */
   setUnavailable(agentId: string, reason: string | null): void;
   /** The CLI's plan, as the conversation's plan beside the chat — a mission's checklist. */
@@ -319,7 +322,7 @@ export class ExternalTurnRunner {
             this.host.spending?.set(agentId, key, spentBefore + read.spent);
             this.host.spent?.(agentId, req.gatewayId, req.chatId);
           },
-        });
+        }, undefined, { ...(cli.row.helper ? { helper: cli.row.helper } : {}), ...(cli.row.ended ? { ended: cli.row.ended } : {}) });
         reader = read;
         let reason: AcpStopReason = "end_turn";
         if (follow) {
@@ -362,13 +365,18 @@ export class ExternalTurnRunner {
           const unlisten = mid ? req.steerListen!(() => mid.poke()) : undefined;
           // One that came while the session opened goes in now, not after the prompt.
           mid?.poke();
-          let answered: PromptAnswer;
+          // In the agent's own chat the turn ends where the agent's own work did, its CLI's helpers going on (`held.ts`).
+          // Looked for only where the CLI's connector says when its own turn ends: no other is ever let go of.
+          const lookout = chat && cli.row.ended ? lookForHeld(read, this.host.heldQuietMs) : null;
+          let answered: PromptAnswer & { held?: true };
           try {
-            answered = await cli.prompt(sessionId, blocks, (update) => read.read(update), permit(read));
+            answered = await cli.prompt(sessionId, blocks, (update) => read.read(update), permit(read), lookout?.ended);
           } finally {
+            lookout?.stop();
             unlisten?.();
             left = (await mid?.end()) ?? null;
           }
+          if (answered.held) log.info("a turn ended where its agent's own work did: helpers its CLI started work on", { agent_id: agentId, cli: cli.row.id });
           reason = answered.stopReason;
           // What the CLI says the prompt spent, where it says (ACP's unstable `usage`): a mission counts it (0.8.7), and
           // the conversation's usage records it as the CLI's, outside the daily caps (0.8.8) — `/status` said 0 after

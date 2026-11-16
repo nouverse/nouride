@@ -7,6 +7,7 @@
  * what lets `/prompt` print their half without printing the product. See `Section.origin`.
  */
 
+import type { SharedToolsKeeper } from "@/modules/toolchain/shared-tools.ts";
 import { canElevate, dirname, isRoot, join, whichBinary } from "@nouride/runtime";
 import type { ApprovalLevel } from "@nouride/shared";
 import { EDITION } from "@/commons/build.ts";
@@ -120,13 +121,23 @@ function userSpace(binDir: string | undefined, host: HostInstall, ownHome?: stri
 
 /**
  * Where each agent is its own user, what every agent runs is the orchestrator's to change — said to it, so it knows it
- * may, and to every other agent, so it asks rather than installing a second copy of what everyone needs.
+ * may, and to every other agent by the orchestrator's name, so it asks the right one rather than installing a second
+ * copy or guessing from a role: "ask the orchestrator" with no name sent root work to an agent called Infra Ops. Where
+ * the switch is off, or nobody is the orchestrator, each is told where a person turns it on, to point them there.
  */
-function everyAgents(options: { ownHome?: string | undefined; sharedBin?: string | undefined; sharesTools?: boolean | undefined }): string {
-  if (!options.ownHome || !options.sharedBin) return "";
-  return options.sharesTools
-    ? ` For a program every agent needs, or an update to one they all run (\`claude update\`, \`rustup update\`): as the orchestrator, \`nouride tools run -- <the install command>\` through the \`nouride\` tool, which runs it as the daemon in \`${options.sharedBin}\` and makes it every agent's to run.`
-    : " What every agent runs is the orchestrator's to change: for something they all need, ask it.";
+function everyAgents(options: { ownHome?: string | undefined; sharedBin?: string | undefined; sharedTools?: SharedToolsKeeper | null | undefined }): string {
+  if (!options.ownHome || !options.sharedBin || options.sharedTools === undefined) return "";
+  const keeper = options.sharedTools;
+  if (!keeper) return " No agent installs programs for every agent: this install has no orchestrator. For something they all need, ask the person who runs Nouride.";
+  const where = `An admin turns it on in the dashboard: Agents → ${keeper.name} → Settings → Programs every agent runs.`;
+  if (keeper.mine) {
+    return keeper.on
+      ? ` You are the orchestrator: the other agents come to you when they need a program they all run. For one, or an update to one they all run (\`claude update\`, \`rustup update\`): \`nouride tools run -- <the install command>\` through the \`nouride\` tool, which runs it as the daemon in \`${options.sharedBin}\` and makes it every agent's to run.`
+      : ` You are the orchestrator, but installing programs for every agent is off for you. ${where}`;
+  }
+  return keeper.on
+    ? ` What every agent runs is ${keeper.name}'s to change, the orchestrator: for something they all need, ask ${keeper.name}.`
+    : ` No agent installs programs for every agent now: the switch is off. ${where} Until then, ask the person who runs Nouride.`;
 }
 
 function joinOr(parts: string[]): string {
@@ -149,7 +160,7 @@ export function installLadder(
     approvals?: ApprovalLevel | undefined;
     ownHome?: string | undefined;
     sharedBin?: string | undefined;
-    sharesTools?: boolean | undefined;
+    sharedTools?: SharedToolsKeeper | null | undefined;
   } = {},
 ): string {
   // The install is found from the shared bin directory, which is `.nouride/bin`; an agent's own is in its HOME.
@@ -206,7 +217,7 @@ export function renderSkillPolicy({ ctx }: HarnessView): string[] {
       ...(ctx.tools?.some((tool) => tool.name === "exec")
         ? [
             "- A skill marked UNAVAILABLE is still the right approach: what is missing is the software,",
-            `  not the method. Install it, in this order: ${installLadder(ctx.harness?.binDir, { approvals: ctx.harness?.approvals, ownHome: ctx.harness?.ownHome, sharedBin: ctx.harness?.sharedBinDir, sharesTools: ctx.harness?.sharesTools })}`,
+            `  not the method. Install it, in this order: ${installLadder(ctx.harness?.binDir, { approvals: ctx.harness?.approvals, ownHome: ctx.harness?.ownHome, sharedBin: ctx.harness?.sharedBinDir, ...(ctx.harness?.sharedTools !== undefined ? { sharedTools: ctx.harness.sharedTools } : {}) })}`,
             ...(ctx.harness?.approvals === "trusted"
               ? ["  Nothing asks first at your approval level, so install it and say what you installed. That is", "  still better than a worse version written from memory."]
               : ["  The approval gate is how they say yes, so offering costs a tap and saves you writing a", "  worse version from memory."]),

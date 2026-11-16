@@ -45,12 +45,12 @@ describe("a person's morning line", () => {
       row = tr.className;
       cells = [...tr.querySelectorAll(":scope > td")].map((td) => td.className);
     });
-    expect(head).toContain("hidden sm:table-header-group");
-    expect(row).toContain("block");
-    expect(row).toContain("sm:table-row");
+    // By the one rule for tables on a phone (`FOLD`, `table-fold.test.ts`).
+    expect(head.split(" ")).toContain("max-sm:hidden");
+    expect(row.split(" ")).toEqual(expect.arrayContaining(["max-sm:flex", "max-sm:flex-wrap"]));
     expect(cells).toHaveLength(4);
-    for (const cell of cells) expect(cell).toMatch(/\bblock\b.*\bsm:table-cell\b/);
+    for (const cell of cells) expect(cell.split(" ")).toContain("max-sm:basis-full");
     // Without the table's line under each cell, or one person read as four rows.
-    for (const cell of cells) expect(cell).toContain("max-sm:border-0");
+    for (const cell of cells) expect(cell.split(" ")).toContain("max-sm:border-0");
   });
 });

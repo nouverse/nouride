@@ -1470,6 +1470,8 @@ nouride update --start --then "<what to check after>"   # an agent: take it, and
 nouride update --start --wait                  # take it, and return once the new version answers
 nouride update --rollback                      # the version before this one: what going back would do
 nouride update --rollback --apply              # …and do it, with the daemon stopped
+nouride update --retry                         # the build an update's guard put aside: what taking it again would do
+nouride update --retry --apply                 # …and do it, with the daemon stopped
 ```
 
 Prints the version **and the edition** — `basic`, `router`, `pro` — because the

@@ -123,6 +123,10 @@ ${BOLD}Without a running daemon${RESET} ${DIM}(these read the install's own file
                                    The version before this one, back. Says what it would do: which build,
                                    and whether the database goes back to the snapshot taken before the
                                    update migrated it, and what that loses; --apply does it, daemon stopped
+  nouride update --retry [--apply]
+                                   The build an update's guard put aside when it did not start, back in:
+                                   every part of it together, this build kept for --rollback. Says what it
+                                   would do; --apply does it, daemon stopped
   nouride version
 
 ${BOLD}Talking to a running daemon${RESET}

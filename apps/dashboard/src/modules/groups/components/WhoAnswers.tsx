@@ -3,8 +3,9 @@
  * nothing of its own. The room's own setting, the one `/mention` writes from the chat, so what is picked here is what
  * `/mention` says there, and the other way round.
  *
- * Picked by an admin, in a room on a chat app. Said in words where it cannot be picked: to anyone else, and in a room
- * made in the dashboard, which its members answer (the orchestrator when it is one of them).
+ * Picked by an admin, and said in words to anyone else. In a room made in the dashboard the agents to pick from are
+ * the ones in it: the router answers such a room by its members, and its header picks the same way
+ * (`chat/components/RoomAnswer.tsx`).
  */
 
 import { useMutation } from "@tanstack/react-query";
@@ -13,17 +14,7 @@ import { SearchSelect } from "@/commons/components/ui/SearchSelect";
 import { ErrorNote } from "@/commons/components/ui/ui";
 import { useSaved } from "@/commons/hooks/use-saved";
 import { api } from "@/commons/lib/api";
-
-const DEFAULT = "default";
-const REQUIRED = "required";
-const AGENT = "agent:";
-
-/** What is picked now, as the list's values have it: an agent picked that is gone reads as nobody, by its absence. */
-export function pickedOf(group: Pick<GroupRecord, "mention" | "untagged">): string {
-  if (!group.mention) return DEFAULT;
-  if (group.mention.requireTag) return REQUIRED;
-  return `${AGENT}${group.mention.answerer ?? group.untagged ?? ""}`;
-}
+import { agentChoice, choiceSaid, choiceSent, DEFAULT, pickedOf, REQUIRED } from "@/commons/lib/who-answers";
 
 export function WhoAnswers({
   group,
@@ -43,28 +34,18 @@ export function WhoAnswers({
   /** Who answers now, by the router's own answer. */
   const now = group.untagged ? `${nameOf(group.untagged)} answers` : "Nobody answers";
   const set = useMutation({
-    mutationFn: (next: string) =>
-      api.setGroupMention({
-        gatewayId: group.gatewayId,
-        chatId: group.chatId,
-        ...(next.startsWith(AGENT) ? { mention: "agent" as const, agent: next.slice(AGENT.length) } : { mention: next as "default" | "required" }),
-      }),
+    mutationFn: (next: string) => api.setGroupMention({ gatewayId: group.gatewayId, chatId: group.chatId, ...choiceSent(next) }),
     onSuccess: (answer, next) => {
-      const room = group.name ?? "this room";
-      const what =
-        next === REQUIRED
-          ? `A tag is needed in ${room}`
-          : next === DEFAULT
-            ? `${room} follows the default again`
-            : `${nameOf(next.slice(AGENT.length))} answers in ${room} when nobody is tagged`;
-      saved(answer, what);
+      saved(answer, choiceSaid(next, group.name ?? "this room", nameOf));
       onChanged();
     },
   });
 
-  if (group.dashboard || !editable) return <span className="text-base-content/80">{group.mention?.requireTag ? "A tag is needed" : now}</span>;
+  if (!editable) return <span className="text-base-content/80">{group.mention?.requireTag ? "A tag is needed" : now}</span>;
 
   const picked = pickedOf(group);
+  // A room made in the dashboard is answered by its members: nobody else can be named there.
+  const offered = group.dashboard ? agents.filter((agent) => group.agents.includes(agent.id)) : agents;
   return (
     <div className="space-y-1">
       <SearchSelect
@@ -72,7 +53,7 @@ export function WhoAnswers({
         options={[
           { value: DEFAULT, label: "Default" },
           { value: REQUIRED, label: "A tag is needed" },
-          ...agents.map((agent) => ({ value: `${AGENT}${agent.id}`, label: agent.name, ...(agent.id === orchestrator ? { detail: "Orchestrator" } : {}) })),
+          ...offered.map((agent) => ({ value: agentChoice(agent.id), label: agent.name, ...(agent.id === orchestrator ? { detail: "Orchestrator" } : {}) })),
         ]}
         value={picked}
         onChange={(next) => {

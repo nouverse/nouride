@@ -76,7 +76,8 @@ export default function HomePage() {
       <Hero name={name} line={summaryLine(awake, movingNow.length, needs.total)} aside={<BoxLine health={health.data} agents={status.data?.agents ?? []} />} />
       <BoxWarnings health={health.data} />
 
-      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
+      {/* A grid's column is as wide as its widest word unless its cards may be narrower: a path in one card pushed the next. */}
+      <div className="grid grid-cols-1 items-start gap-4 *:min-w-0 lg:grid-cols-3">
         <NeedsYouCards approvals={pendingApprovals} steps={waitingSteps.data?.waiting ?? []} canAnswer={canWrite(me.data ?? null)} missions={waiting} requests={needs.requests} skills={needs.skills} facts={needs.facts} documents={needs.documents} names={names} />
         {/* One cat beside the cards: where an approval waits it is the one pointing at it. */}
         {movingNow.length > 0 && <MovingNow missions={movingNow} looks={looks} names={names} {...(pendingApprovals.length === 0 ? { pose: riding } : {})} />}

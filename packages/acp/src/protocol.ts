@@ -256,6 +256,8 @@ export interface ToolCall {
   locations?: { path: string; line?: number | null }[];
   rawInput?: unknown;
   rawOutput?: unknown;
+  /** What the agent's connector adds beyond the protocol: whose call it is, among other things (`CliRow.helper`). */
+  _meta?: Record<string, unknown>;
 }
 
 export interface PlanEntry {

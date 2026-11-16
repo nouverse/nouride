@@ -9,6 +9,8 @@
 /** Beside the binary. The daemon writes the first; the guard renames it to the second on a restore. */
 export const PENDING_FILE = ".nouride-pending-update";
 export const ROLLED_BACK_FILE = ".nouride-rolled-back";
+/** What the guard adds to the name of each part of the build it takes out, beside the install (`modules/update/retry.ts`). */
+export const FAILED_SUFFIX = ".failed";
 /** Starts the guard allows an unconfirmed update before restoring the previous version. */
 export const GUARD_STARTS = 3;
 /**
@@ -45,7 +47,7 @@ export function guardScript(dir: string): string {
     `n=$(( $(cat "$p.attempts" 2>/dev/null || echo 0) + 1 ))`,
     `echo "$n" > "$p.attempts"`,
     `[ "$n" -le ${GUARD_STARTS} ] && exit 0`,
-    `for f in ${names}; do [ -e "$d/.nouride-previous/$f" ] || continue; rm -rf "$d/$f.failed"; [ -e "$d/$f" ] && mv "$d/$f" "$d/$f.failed"; mv "$d/.nouride-previous/$f" "$d/$f"; done`,
+    `for f in ${names}; do [ -e "$d/.nouride-previous/$f" ] || continue; rm -rf "$d/$f${FAILED_SUFFIX}"; [ -e "$d/$f" ] && mv "$d/$f" "$d/$f${FAILED_SUFFIX}"; mv "$d/.nouride-previous/$f" "$d/$f"; done`,
     `mv "$p" "$d/${ROLLED_BACK_FILE}"`,
     `rm -f "$p.attempts"`,
     `echo "nouride: the update did not come up; restored the previous version" >&2`,

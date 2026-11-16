@@ -60,7 +60,7 @@ export function BoxWarnings({ health }: { health: HealthPayload }) {
   return (
     <div role="alert" className="flex items-start gap-3 rounded-[22px] border border-warning/30 bg-warning/10 p-4 text-warning">
       <AlertTriangle size={18} className="mt-0.5 shrink-0" aria-hidden="true" />
-      <div className="space-y-1">
+      <div className="min-w-0 space-y-1 [overflow-wrap:anywhere]">
         <p className="text-sm font-semibold">Something to look at</p>
         <ul className="list-inside list-disc space-y-0.5 text-sm">
           {warnings.map((warning) => (

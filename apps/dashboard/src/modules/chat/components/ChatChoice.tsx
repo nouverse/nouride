@@ -137,7 +137,7 @@ export function ChatChoice({
         <span className="max-w-44 truncate font-mono text-xs font-medium max-lg:hidden">{label}</span>
       </button>
 
-      <PopoverSheet open={open} onClose={() => { setOpen(false); setTyped(null); }} anchor={anchor} label="Model and effort for this conversation" width={360}>
+      <PopoverSheet open={open} onClose={() => { setOpen(false); setTyped(null); }} anchor={anchor} label="Model and effort for this conversation" title="Model and effort" width={360}>
         <ChoicePanel
           agentId={agentId}
           name={name}
@@ -216,7 +216,7 @@ function ChoicePanel({
       }}
     >
       <div>
-        <p className="font-display text-base font-medium">Model and effort</p>
+        <p className="font-display text-base font-medium max-md:hidden">Model and effort</p>
         <p className="mt-0.5 text-xs text-base-content/65">For this conversation only, from your next message. Everywhere else {name} keeps its own.</p>
       </div>
 

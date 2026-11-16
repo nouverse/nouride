@@ -12,9 +12,14 @@
  * A cat picked in the Office opened its row, down in the list, and the page was moved to bring that row into view:
  * a person who pressed a cat saw the page leave under their hand. What a cat's press opens is shown where the press
  * was, in a card right under the Office and over the list (`PickedAgent`), and nothing moves the page.
+ *
+ * On a phone neither: a press on a cat or on a row opens the agent's card as a sheet from the foot of the screen
+ * (`AgentSheet`), as every panel a phone draws over the page is, closed by its button, a swipe down, Escape or the shade.
  */
 
 import { ChevronDown, Crown, KeyRound, Radio, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Sheet } from "@/commons/components/ui/Sheet";
 import type { AgentSummary } from "@nouride/wire";
 import type { Look } from "@/commons/cat/look";
 import { AgentAvatar } from "@/commons/components/agents/AgentAvatar";
@@ -66,7 +71,22 @@ function AgentLine({ agent, platforms, look, orchestrator }: AgentRow & { look: 
   );
 }
 
-export function AgentRows({ rows, orchestrator, looks, open, onOpen }: { rows: AgentRow[]; orchestrator: string | null; looks: Map<string, Look>; open: string | null; onOpen: (agentId: string | null) => void }) {
+export function AgentRows({
+  rows,
+  orchestrator,
+  looks,
+  open,
+  onOpen,
+  sheet = false,
+}: {
+  rows: AgentRow[];
+  orchestrator: string | null;
+  looks: Map<string, Look>;
+  open: string | null;
+  onOpen: (agentId: string | null) => void;
+  /** A press opens the agent's sheet (a phone), not a part under the row. */
+  sheet?: boolean;
+}) {
   return (
     <ul className="divide-y divide-base-content/[0.06] overflow-hidden rounded-2xl border border-base-content/[0.08] bg-base-100 shadow-xs" data-agent-rows>
       {rows.map(({ agent, platforms }) => {
@@ -78,14 +98,14 @@ export function AgentRows({ rows, orchestrator, looks, open, onOpen }: { rows: A
             <button
               type="button"
               className="group flex w-full min-w-0 items-center gap-3 px-3 py-2.5 text-left sm:px-4"
-              aria-expanded={isOpen}
+              {...(sheet ? { "aria-haspopup": "dialog" as const } : { "aria-expanded": isOpen })}
               title={agent.headline ? `${name}: ${agent.headline}` : name}
               onClick={() => onOpen(isOpen ? null : agent.id)}
             >
               <AgentLine agent={agent} platforms={platforms} look={looks.get(agent.id)} orchestrator={orchestrator} />
-              <ChevronDown size={16} className={cn("shrink-0 text-base-content/50 transition-transform group-hover:text-primary", isOpen && "rotate-180")} aria-hidden="true" />
+              <ChevronDown size={16} className={cn("shrink-0 text-base-content/50 transition-transform group-hover:text-primary", sheet ? "-rotate-90" : isOpen && "rotate-180")} aria-hidden="true" />
             </button>
-            {isOpen ? (
+            {isOpen && !sheet ? (
               <div className="px-3 pb-3 sm:px-4 sm:pl-[4.25rem]">
                 <AgentActions agent={agent} status={statusOf(agent)} />
               </div>
@@ -118,5 +138,29 @@ export function PickedAgent({ row, orchestrator, look, onClose }: { row: AgentRo
         <AgentActions agent={agent} status={statusOf(agent)} />
       </div>
     </section>
+  );
+}
+
+/**
+ * An agent's card on a phone: the line and what a person does with it, in a sheet named for the agent. The agent stays
+ * drawn while the sheet slides away, so it is not emptied on its way down.
+ */
+export function AgentSheet({ row, orchestrator, look, onClose }: { row: AgentRow | undefined; orchestrator: string | null; look: Look | undefined; onClose: () => void }) {
+  const [shown, setShown] = useState(row);
+  useEffect(() => {
+    if (row) setShown(row);
+  }, [row]);
+  const name = shown ? shown.agent.displayName || shown.agent.id : "";
+  return (
+    <Sheet open={row !== undefined} onClose={onClose} label={name || "Agent"} title={name} closeLabel={`Close ${name}`}>
+      {shown ? (
+        <div data-agent-sheet={shown.agent.id} className="space-y-3 overflow-y-auto overscroll-contain px-4 pt-1 pb-4">
+          <div className="flex min-w-0 items-center gap-3" title={shown.agent.headline ? `${name}: ${shown.agent.headline}` : name}>
+            <AgentLine agent={shown.agent} platforms={shown.platforms} look={look} orchestrator={orchestrator} />
+          </div>
+          <AgentActions agent={shown.agent} status={statusOf(shown.agent)} />
+        </div>
+      ) : null}
+    </Sheet>
   );
 }

@@ -301,7 +301,7 @@ export function renderTools(view: HarnessView): string[] {
       ? [
           ...toolchainLines(harness.binDir, { ...(harness.ownHome ? { home: harness.ownHome } : {}), ...(harness.sharedBinDir ? { sharedBin: harness.sharedBinDir } : {}) }),
           "- `Executable not found in $PATH` is not a dead end, and not a reason to improvise a" +
-            ` replacement. Install what is missing, in this order: ${installLadder(harness.binDir, { approvals: harness.approvals, ownHome: harness.ownHome, sharedBin: harness.sharedBinDir, sharesTools: harness.sharesTools })}` +
+            ` replacement. Install what is missing, in this order: ${installLadder(harness.binDir, { approvals: harness.approvals, ownHome: harness.ownHome, sharedBin: harness.sharedBinDir, ...(harness.sharedTools !== undefined ? { sharedTools: harness.sharedTools } : {}) })}` +
             " A parser or script you wrote from memory instead is the part nobody can review.",
         ]
       : []),

@@ -15,7 +15,8 @@ const DOT = { success: "bg-success", accent: "bg-accent", muted: "bg-base-conten
 
 /**
  * Each agent as a chip: its cat, its whole name, the crown on the orchestrator, and a dot for what it is doing, said in
- * words to whoever points at it or reads it aloud. Compact where a card each filled Home.
+ * words to whoever points at it or reads it aloud. Compact where a card each filled Home. A name too long for the
+ * card's width breaks onto a second line, never cut short and never run past the card's edge.
  */
 export function AgentChips({ agents, orchestrator, looks }: { agents: AgentSummary[]; orchestrator: string | null; looks: Map<string, Look> }) {
   return (
@@ -25,15 +26,15 @@ export function AgentChips({ agents, orchestrator, looks }: { agents: AgentSumma
         const now = doingNow(agent);
         const name = agent.displayName || agent.id;
         return (
-          <li key={agent.id}>
+          <li key={agent.id} className="min-w-0 max-w-full">
             <Link
               to="/agents/$agentId"
               params={{ agentId: agent.id }}
               title={agent.headline ? `${name}: ${agent.headline}` : name}
-              className="flex items-center gap-2 rounded-full border border-base-content/[0.08] bg-base-100 py-1 pr-3 pl-1 transition-colors hover:border-secondary/30 hover:bg-secondary/5"
+              className="flex min-w-0 items-center gap-2 rounded-full border border-base-content/[0.08] bg-base-100 py-1 pr-3 pl-1 transition-colors hover:border-secondary/30 hover:bg-secondary/5"
             >
               {look && <AgentAvatar look={look} name={name} size="xs" className="rounded-full" />}
-              <span className="shrink-0 text-sm font-semibold text-base-content">{name}</span>
+              <span className="min-w-0 text-sm font-semibold text-base-content [overflow-wrap:anywhere]">{name}</span>
               {agent.id === orchestrator && <Crown size={12} className="shrink-0 text-secondary" aria-label="orchestrator" />}
               <span className={cn("size-2 shrink-0 rounded-full", DOT[now.tone])} aria-hidden="true" />
               <span className="sr-only">{now.words}</span>

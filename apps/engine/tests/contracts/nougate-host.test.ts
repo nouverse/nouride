@@ -7,8 +7,8 @@
  * no provider by name. Both sides have unit tests; neither can see the other change. This boots the
  * real gateway from the submodule and asks it what the engine and the wizard will ask.
  *
- * Skipped where the submodule is not checked out or not installed — a public clone, or CI without
- * the private repositories — because there is nothing to hold the contract against there.
+ * Skipped where the submodule is not checked out or not installed — a clone without it, or CI that
+ * checks out no submodule — because there is nothing to hold the contract against there.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";

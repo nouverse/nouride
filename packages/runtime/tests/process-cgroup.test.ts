@@ -12,6 +12,7 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, wr
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { commandsMemory, forgetCommandIsolation, inCommandsCgroup, isolateCommands } from "../src/process-cgroup.ts";
+import type { MachineSource } from "../src/machine.ts";
 import { runCommand, spawnLongLived } from "../src/process.ts";
 import { startBackgroundCommand } from "../src/process-background.ts";
 
@@ -63,18 +64,29 @@ describe("splitting the cgroup", () => {
     expect(box.at("commands/pids.max")).toBe("76022");
   });
 
-  test("what the commands hold together is read from their own group, with its ceiling; with no group there is nothing to say", () => {
-    expect(commandsMemory()).toBeNull();
+  test("what the commands hold together is read from their own group, with its ceiling; with no group, what this process started holds", () => {
+    /** A system whose processes cannot be listed, and one where this process (pid 100) started two that hold 3 MiB. */
+    const blind: MachineSource = { cores: () => 1, memoryBytes: () => 0, platform: () => "a system with no reader", pid: () => 100, read: () => null, list: () => [], run: () => null };
+    const listed: MachineSource = { ...blind, platform: () => "darwin", run: () => ({ text: "  100     1 90000\n  200   100  1024\n  300   200  2048\n", pid: 999 }) };
+    expect(commandsMemory(blind)).toBeNull();
+    // No cap to say: nothing holds them to one there.
+    expect(commandsMemory(listed)).toEqual({ usedBytes: 3 * MiB, maxBytes: null });
     const box = unit({});
     expect(isolateCommands(box.options).isolated).toBe(true);
-    // The kernel writes the count; here the test does, as it would stand with a build running.
-    expect(commandsMemory()).toBeNull();
+    // The kernel writes the count; here the test does, as it would stand with a build running. Until it has, the
+    // group says nothing, and what was started is counted as anywhere else.
+    expect(commandsMemory(blind)).toBeNull();
     writeFileSync(join(box.cgroup, "commands", "memory.current"), `${412 * MiB}\n`);
-    expect(commandsMemory()).toEqual({ usedBytes: 412 * MiB, maxBytes: 1310 * MiB });
+    // The group's own count is the true one, and carries the cap: it is said, whatever a list of processes adds up to.
+    expect(commandsMemory(listed)).toEqual({ usedBytes: 412 * MiB, maxBytes: 1310 * MiB });
     writeFileSync(join(box.cgroup, "commands", "memory.max"), "max\n");
-    expect(commandsMemory()).toEqual({ usedBytes: 412 * MiB, maxBytes: null });
+    expect(commandsMemory(listed)).toEqual({ usedBytes: 412 * MiB, maxBytes: null });
     forgetCommandIsolation();
-    expect(commandsMemory()).toBeNull();
+    expect(commandsMemory(blind)).toBeNull();
+    expect(commandsMemory(listed)).toEqual({ usedBytes: 3 * MiB, maxBytes: null });
+    // The real one: this test's own process started nothing that outweighs the machine.
+    const real = commandsMemory();
+    if (real !== null) expect(real.usedBytes).toBeGreaterThanOrEqual(0);
   });
 
   test("the share is a fifth of the least of the unit's limits and the machine, between 256 and 512 MiB, and never more than half", () => {

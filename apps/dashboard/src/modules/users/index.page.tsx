@@ -5,6 +5,8 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { cn } from "@/commons/lib/utils";
+import { FOLD } from "@/commons/components/ui/fold-table";
 import { useState } from "react";
 import { ExternalLink, Info, Plus, ShieldCheck, Trash2 } from "lucide-react";
 import { api } from "@/commons/lib/api";
@@ -137,8 +139,8 @@ export default function UsersPage() {
         ) : (
           <div className="overflow-x-auto -mx-4 -my-2 sm:-mx-6">
             {/* A card per account on a phone, the table from `sm` up, as People draws its rows. */}
-            <table className="table table-sm block w-full sm:table">
-              <thead className="bg-base-100 sticky top-0 z-10 hidden sm:table-header-group">
+            <table className={cn(FOLD.table, "table-sm")}>
+              <thead className={cn("bg-base-100 sticky top-0 z-10", FOLD.head)}>
                 <tr className="border-b border-base-content/[0.08] text-base-content/65 text-[11px] uppercase tracking-wider font-mono">
                   <th className="pl-6">Account</th>
                   {multiUser && <th>Role</th>}
@@ -147,10 +149,10 @@ export default function UsersPage() {
                   <th className="text-right pr-6">Actions</th>
                 </tr>
               </thead>
-              <tbody className="block divide-y divide-base-content/[0.06] sm:table-row-group">
+              <tbody className={cn("divide-y divide-base-content/[0.06]", FOLD.body)}>
                 {list.map((user) => (
-                  <tr key={user.id} className="block py-2 hover:bg-base-200/40 transition-colors sm:table-row sm:py-0">
-                    <td className="block px-4 py-1.5 max-sm:border-0 sm:table-cell sm:py-3 sm:pl-6 sm:pr-3">
+                  <tr key={user.id} className={cn("hover:bg-base-200/40 transition-colors", FOLD.row)}>
+                    <td className={cn("sm:py-3 sm:pl-6 sm:pr-3", FOLD.whole)}>
                       <div className="flex items-center gap-3">
                         <span className="bg-primary/10 text-primary border border-primary/20 grid size-8 place-items-center rounded-xl text-xs font-bold shadow-xs">
                           {(user.displayName || user.username).slice(0, 1).toUpperCase()}
@@ -169,9 +171,9 @@ export default function UsersPage() {
                       </div>
                     </td>
                     {multiUser && (
-                      <td className="block px-4 py-1.5 max-sm:border-0 sm:table-cell sm:px-3 sm:py-3">
+                      <td className={cn("sm:px-3 sm:py-3", FOLD.whole)}>
                         <select
-                          className="select select-xs rounded-lg text-xs"
+                          className="select select-xs rounded-lg text-xs max-sm:select-sm"
                           value={user.role}
                           disabled={user.id === currentUser || setRole.isPending}
                           onChange={(e) => setRole.mutate({ id: user.id, role: e.target.value })}
@@ -184,7 +186,7 @@ export default function UsersPage() {
                         </select>
                       </td>
                     )}
-                    <td className="block px-4 py-1.5 text-xs max-sm:border-0 sm:table-cell sm:px-3 sm:py-3">
+                    <td className={cn("text-xs sm:px-3 sm:py-3", FOLD.whole)}>
                       {(() => {
                         const person = personOfAccount(people.data?.people ?? [], user.id);
                         return (
@@ -205,15 +207,15 @@ export default function UsersPage() {
                         );
                       })()}
                     </td>
-                    <td className="block px-4 py-1.5 text-base-content/65 text-xs font-mono max-sm:border-0 sm:table-cell sm:px-3 sm:py-3">
-                      <span className="font-sans sm:hidden">Last signed in </span>
+                    <td className={cn("text-base-content/65 text-xs font-mono sm:px-3 sm:py-3", FOLD.whole)}>
+                      <span className={cn("font-sans", FOLD.label)}>Last signed in </span>
                       {user.lastLoginAt
                         ? new Date(user.lastLoginAt).toLocaleString()
                         : user.mustChangePassword
                           ? "Bootstrap Credentials (Pending Change)"
                           : "Never"}
                     </td>
-                    <td className="block px-4 py-1.5 max-sm:border-0 sm:table-cell sm:py-3 sm:pr-6 sm:pl-3 sm:text-right">
+                    <td className={cn("sm:py-3 sm:pr-6 sm:pl-3 sm:text-right", FOLD.whole)}>
                       {/*
                         Absent on your own row rather than present and disabled, matching the pool
                         list: a greyed-out destructive button invites a click and then explains

@@ -138,8 +138,12 @@ describe("what the machine is using", () => {
     expect(overview.memory.daemonBytes).toBeGreaterThan(10 * 1024 * 1024);
     expect(overview.memory.totalBytes).toBeGreaterThan(overview.memory.daemonBytes);
     if (overview.memory.usedBytes !== null) expect(overview.memory.usedBytes).toBeGreaterThan(0);
-    // A test's daemon has no group for its commands: said as nothing, not as zero bytes.
-    expect(overview.memory.commands).toBeNull();
+    // A test's daemon has no group for its commands: what the processes it started hold, with no cap to say. Null
+    // only on a system whose processes cannot be listed.
+    if (overview.memory.commands !== null) {
+      expect(overview.memory.commands.usedBytes).toBeGreaterThanOrEqual(0);
+      expect(overview.memory.commands.maxBytes).toBeNull();
+    }
     expect(overview.disk!.totalBytes).toBeGreaterThan(0);
     expect(overview.disk!.freeBytes).toBeLessThanOrEqual(overview.disk!.totalBytes);
   });

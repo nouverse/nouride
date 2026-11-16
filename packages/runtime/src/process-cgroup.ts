@@ -22,6 +22,8 @@
 
 import { accessSync, constants, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
+import { SYSTEM, type MachineSource } from "./machine.ts";
+import { descendantsHeldBytes } from "./platform-memory.ts";
 
 export interface CommandIsolation {
   /** Whether agents' commands run in a cgroup of their own. */
@@ -173,14 +175,20 @@ export function commandsOomKills(): number | null {
 }
 
 /**
- * What the agents' commands hold together now and what they may hold, in bytes, or null where they have no group of
- * their own: there a command's memory is part of whatever the daemon's is counted in.
+ * What the agents' commands hold together now and what they may hold, in bytes.
+ *
+ * Their own cgroup's count where they have one: the true figure, and it carries the cap. Anywhere else (a Mac, a
+ * container, Android, a unit that hands no cgroup over) what every process this one started holds, summed
+ * (`descendantsHeldBytes`), with no cap to say. The daemon's own figure is its one process, so without this they were
+ * counted nowhere, while the page said they were counted with the daemon. Null where neither can be read.
  */
-export function commandsMemory(): { usedBytes: number; maxBytes: number | null } | null {
-  if (!commandsDir) return null;
-  const used = Number(read(`${commandsDir}/memory.current`)?.trim());
-  if (!Number.isFinite(used) || used < 0) return null;
-  return { usedBytes: used, maxBytes: limit(read(`${commandsDir}/memory.max`)) };
+export function commandsMemory(source: MachineSource = SYSTEM): { usedBytes: number; maxBytes: number | null } | null {
+  if (commandsDir) {
+    const used = Number(read(`${commandsDir}/memory.current`)?.trim());
+    if (Number.isFinite(used) && used >= 0) return { usedBytes: used, maxBytes: limit(read(`${commandsDir}/memory.max`)) };
+  }
+  const held = descendantsHeldBytes(source);
+  return held === null ? null : { usedBytes: held, maxBytes: null };
 }
 
 /** The rise in `commandsOomKills` since `before`, when there was one. */

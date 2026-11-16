@@ -177,3 +177,20 @@ describe("plainValue", () => {
     for (const value of ["hunter2", "abc", "1.5", "prod", "postgres://u:p@h/db", "null"]) expect(plainValue(value)).toBe(false);
   });
 });
+
+// A script that used a credential file printed the Google Doc it fetched: every string of it was held, and the agent's
+// own replies came out masked where they said "Minggu 2–4".
+describe("what a script that uses a credential file prints", () => {
+  test("gives up only the values under a credential's key, and what the shapes find", () => {
+    const doc = '{"title": "Proposal", "content": "Minggu 2–4: analisis kebutuhan", "access_token": "ya29.a0AfB_byC9xQ2", "refresh_token": "1//0gLm3Xz9"}\nPJ: Seluruh anggota\nDB_PASSWORD=hunter2\n';
+    const { out, swapped } = run("script", doc);
+    expect(out).toContain('"content": "Minggu 2–4: analisis kebutuhan"');
+    expect(out).toContain('"title": "Proposal"');
+    expect(out).toContain("PJ: Seluruh anggota");
+    expect(swapped.map(([key]) => key)).toEqual(["access_token", "refresh_token", "DB_PASSWORD"]);
+  });
+
+  test("a file it prints is still read whole: every value goes", () => {
+    expect(run("file", 'PJ: Seluruh anggota\n').swapped.map(([key]) => key)).toEqual(["PJ"]);
+  });
+});

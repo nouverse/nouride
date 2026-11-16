@@ -7,6 +7,7 @@
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import type { LiveTurn, MissionView, Reviewing, RunningJob } from "@nouride/wire";
+import { ago } from "@/commons/lib/format";
 import { formatElapsed, stepIcon, stepNow } from "@/commons/lib/steps";
 import { Mascot } from "@/commons/components/brand/Mascot";
 
@@ -42,6 +43,8 @@ export function NowLine({ mission, live, jobs, reviewing }: { mission: MissionVi
     return () => clearInterval(timer);
   }, [running, looking]);
   const said = nowSaid(mission, live, jobs, reviewing);
+  // The newest step the page has itself, where it has one: fresher than the mission's record, read every few seconds.
+  const lastStep = live?.steps.length ? Math.max(...live.steps.map((step) => step.at)) : mission.activeAt;
 
   return (
     <div className="flex items-start gap-3 rounded-2xl border border-primary/20 bg-primary/[0.04] px-4 py-3" aria-live="polite">
@@ -51,6 +54,8 @@ export function NowLine({ mission, live, jobs, reviewing }: { mission: MissionVi
       <div className="min-w-0 flex-1">
         <p className="font-mono text-[10px] font-bold uppercase tracking-wider text-primary">
           Now{running && live ? ` · turn ${mission.turnsUsed + 1} · ${formatElapsed(clock - live.startedAt)}` : looking && reviewing ? ` · review · ${formatElapsed(clock - reviewing.since)}` : ""}
+          {/* A turn of hours: how long it has run says nothing of whether it still moves, so when it last did is beside it. */}
+          {running && lastStep !== undefined ? ` · last step ${ago(lastStep, clock)}` : ""}
         </p>
         <p className="mt-0.5 text-sm leading-relaxed text-base-content/90 break-all sm:break-words">
           {said.icon ? <span className="mr-1.5">{said.icon}</span> : null}

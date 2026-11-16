@@ -39,6 +39,11 @@ export interface ChatListRoom {
    * nobody does, and such a message is only kept in the room.
    */
   untagged?: string;
+  /**
+   * The room's own answer to that, where it gave one with `/mention` or from its header: a tag is needed, or none is
+   * and the agent named answers. Absent while the room follows its members' rule.
+   */
+  mention?: { requireTag: boolean; answerer?: string };
 }
 
 /**

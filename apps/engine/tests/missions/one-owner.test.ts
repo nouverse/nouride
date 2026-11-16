@@ -17,7 +17,7 @@ async function setup() {
   const h = await missionsHarness({ settings: { perAgent: 5, maxRunning: 5 }, sourceRepository });
   const tools = createMissionTools(h.missions);
   const ctx = { agentId: "nova", gatewayId: "telegram:nova", chatId: "8142", senderId: "8142" } as ToolContext;
-  const start = (args: Record<string, unknown>) => tools.chat.execute({ action: "start", ...args }, ctx);
+  const start = (args: Record<string, unknown>) => tools.chat.execute({ action: "start", title: "A part of the work", ...args }, ctx);
   return { h, tools, start };
 }
 

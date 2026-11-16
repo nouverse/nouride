@@ -238,6 +238,17 @@ describe("the spill file", () => {
 });
 
 describe("printedSource: what a command line prints, by its words", () => {
+  // A script that used a Google token to fetch a document printed the document; read as the token file, every string
+  // of it was held, and the agent's replies came out masked where they said "Minggu 2–4".
+  test("a credential file named only inside a script it runs is used, not printed: the script's kind", () => {
+    const heredoc = `cd ~/doc && python3 - <<'EOF'\nimport json, os\ntok = json.load(open(f"{os.environ['D']}/tokens.json"))\nprint(fetch(tok))\nEOF`;
+    expect(printedSource(["sh", "-c", heredoc])).toMatchObject({ kind: "script", name: "/tokens.json" });
+    expect(printedSource(["sh", "-c", `node -e "const t = require('./credentials.json'); go(t)"`])).toMatchObject({ kind: "script" });
+    // Printed by the shell itself, even beside a script: the file's kind.
+    expect(printedSource(["sh", "-c", `cat tokens.json && python3 - <<'EOF'\nprint(1)\nEOF`])).toMatchObject({ kind: "file", name: "tokens.json" });
+    expect(printedSource(["sh", "-c", "bash -c 'cat ~/.npmrc'"])).toMatchObject({ kind: "file" });
+  });
+
   test("a credential file — here, over ssh, in a container, behind sudo or a shell", () => {
     for (const [command, name] of [
       [`ssh proxmox "pct exec 106 -- cat /root/nougate/.env"`, "/root/nougate/.env"],

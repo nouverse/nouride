@@ -57,7 +57,7 @@ const refusal = (reason: SystemFileRefusal, plain = REFUSALS[reason].plain) => (
  * eager rules, which take any long run of letters and digits: a lock file's hashes and a log's ids are what a person
  * opens a file to read.
  */
-function hidden(text: string, stored: Record<string, string>): string {
+export function hidden(text: string, stored: Record<string, string>): string {
   const known = maskSecrets(text, egressValues(stored), { whole: true });
   let out = "";
   let at = 0;

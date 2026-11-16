@@ -26,10 +26,10 @@ export function ToolPicker({
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       {groups.map((group) => (
-        <fieldset key={group.label} className="space-y-1.5">
+        <fieldset key={group.label} className="space-y-1.5 max-sm:space-y-0">
           <legend className="text-base-content/65 mb-1.5 text-[11px] font-bold uppercase tracking-wider font-mono">{group.label}</legend>
           {group.tools.map((tool) => (
-            <label key={tool} className="flex cursor-pointer items-center gap-2 text-sm">
+            <label key={tool} className="flex cursor-pointer items-center gap-2 text-sm max-sm:min-h-8">
               <input
                 type="checkbox"
                 className="checkbox checkbox-primary checkbox-xs"

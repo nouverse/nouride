@@ -5,7 +5,7 @@
  */
 
 import { expect, test } from "bun:test";
-import { buttons, dropdown, press, renderPage, useMountHarness } from "./mount-harness.ts";
+import { answer, buttons, dropdown, press, renderPage, useMountHarness, WIRE } from "./mount-harness.ts";
 import { eventually } from "./wait.ts";
 
 useMountHarness();
@@ -61,4 +61,26 @@ test("the list is cards in the Knowledge tab's grid, each with its status, steps
   const card = /<a[^>]*href="\/dashboard\/missions\/msn_1"[^>]*>([\s\S]*?)<\/a>/.exec(html);
   expect(card?.[0]).toContain("rounded-[22px] border p-5");
   for (const words of ["Write a report on the disk usage of the build box", "1 of 3 steps", "Write report.md", "Open"]) expect(card?.[1]).toContain(words);
+});
+
+test("a card of one at work says when it last did something; one not at work says nothing of it", async () => {
+  const listed = WIRE["/missions"] as { missions: Record<string, unknown>[] };
+  const first = listed.missions[0]!;
+  const card = (html: string) => /<a[^>]*href="\/dashboard\/missions\/msn_1"[^>]*>([\s\S]*?)<\/a>/.exec(html)?.[1] ?? "";
+  answer({ "/missions": { status: 200, body: { missions: [{ ...first, status: "running", seen: "working", activeAt: Date.now() - 7 * 60_000 }] } } });
+  expect(card(await renderPage("/missions"))).toContain("last step 7 min ago");
+  answer({ "/missions": { status: 200, body: { missions: [{ ...first, status: "running", seen: "working" }] } } });
+  expect(card(await renderPage("/missions"))).not.toContain("last step");
+});
+
+test("a card is headed by the mission's title, its goal on a pointer's rest", async () => {
+  const listed = WIRE["/missions"] as { missions: Record<string, unknown>[] };
+  const goal = "Write the weekly report from every closed ticket, then send it to the team.";
+  answer({ "/missions": { status: 200, body: { missions: [{ ...listed.missions[0]!, title: "The weekly report", goal }] } } });
+  await renderPage("/missions", async (host) => {
+    await eventually(() => host.querySelector('a[href="/dashboard/missions/msn_1"] h3') !== null, 2_000, "the card");
+    const heading = host.querySelector('a[href="/dashboard/missions/msn_1"] h3')!;
+    expect(heading.textContent).toBe("The weekly report");
+    expect(heading.getAttribute("title")).toBe(goal);
+  });
 });

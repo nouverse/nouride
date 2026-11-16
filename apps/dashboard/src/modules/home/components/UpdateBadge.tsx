@@ -22,7 +22,7 @@ import { ArrowUpCircle, CheckCircle2, CircleDashed, CloudOff, Download, MinusCir
 import { badgeState, useUpdate } from "@/commons/hooks/use-update";
 
 const SHELL =
-  "flex items-center gap-2 px-3 py-1.5 rounded-full border shadow-xs text-xs font-semibold transition-colors";
+  "flex items-center gap-2 px-3 py-1.5 rounded-full border shadow-xs text-xs font-semibold transition-colors max-sm:min-h-8";
 
 const QUIET = "bg-base-100 border-base-content/10 text-base-content/65";
 

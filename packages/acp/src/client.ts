@@ -151,8 +151,18 @@ export class AcpClient {
       const result = await this.peer.call<{ stopReason: StopReason; usage?: unknown }>("session/prompt", { sessionId, prompt });
       return { stopReason: result?.stopReason ?? "end_turn", usage: promptUsageOf(result?.usage) };
     } finally {
-      this.listeners.delete(sessionId);
+      // Its own alone: a prompt let go of (`letGo`) answers after the session's next one has begun.
+      if (this.listeners.get(sessionId) === onUpdate) this.listeners.delete(sessionId);
     }
+  }
+
+  /**
+   * Stop reading a session's running prompt, which stays unanswered: what the agent says in that session from now on
+   * is said with no prompt running (`unclaimed`), and the session takes its next prompt. For a prompt its agent keeps
+   * open after its own work has ended (`CliRow.ended`).
+   */
+  letGo(sessionId: string): void {
+    this.listeners.delete(sessionId);
   }
 
   /**

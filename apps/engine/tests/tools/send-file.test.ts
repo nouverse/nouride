@@ -9,7 +9,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import type { Attachment, ToolContext } from "@nouride/shared";
 import { createSendFileTool, sendTextFile } from "@/modules/tools/builtins/attach.ts";
 
@@ -548,5 +548,69 @@ describe("a file from text", () => {
     delivered = false;
     refused = "file is too big";
     expect(await sendTextFile(sender(), context(), "report.md", "fine")).toBe("`report.md` could not be delivered, because the platform refused it: file is too big. Sending it again here will not help.");
+  });
+});
+
+/**
+ * A markdown file arrives in a chat app as a file to download and read as its source; the dashboard draws it. So it
+ * goes with the link that opens it as a page, written by the daemon under its caption where its reader may open it.
+ */
+describe("a markdown file goes with the link that opens it as a page", () => {
+  const LINK = "https://agents.example.com/dashboard/agents/nouva/workspace?path=workspace%2Fprivate%2Fnouva%2Freport.md";
+  let asked: { chatId: string; file: string }[];
+  const withPage = (link: string | null = LINK) => {
+    sent = [];
+    asked = [];
+    return createSendFileTool({
+      send: async (_ctx, attachment) => (sent.push(attachment), { ids, delivered }),
+      maxBytes: 1024 * 1024,
+      pageOf: (ctx, file) => (asked.push({ chatId: ctx.chatId, file }), link),
+    });
+  };
+
+  test("the link's line is under the agent's caption, or alone with none, and the agent is told it went", async () => {
+    writeFileSync(join(DIR, "report.md"), "# The week\n");
+    const result = await withPage().execute({ path: "report.md", caption: "The week's report." }, context());
+    expect(sent[0]!.caption).toBe(`The week's report.\n\nOpen it as a page: ${LINK}`);
+    expect(result).toEqual({ content: "Sent `report.md` (11B) to this conversation, with the link that opens it as a page in the dashboard written under it.", isError: false });
+    // Asked for the file where it really is, links followed, for the chat it goes to.
+    expect(asked).toEqual([{ chatId: "12345", file: realpathSync(join(DIR, "report.md")) }]);
+
+    await withPage().execute({ path: "report.md" }, context());
+    expect(sent[0]!.caption).toBe(`Open it as a page: ${LINK}`);
+    expect(sent[0]!.filename).toBe("report.md");
+  });
+
+  test("a long caption goes under the link: a platform that cuts a caption cuts its end", async () => {
+    writeFileSync(join(DIR, "NOTES.MARKDOWN"), "notes\n");
+    const long = "A long word about the file. ".repeat(30).trim();
+    await withPage().execute({ path: "NOTES.MARKDOWN", caption: long }, context());
+    expect(sent[0]!.caption).toBe(`Open it as a page: ${LINK}\n\n${long}`);
+    // At the length itself it is still under: only a longer one moves.
+    const edge = "x".repeat(600);
+    await withPage().execute({ path: "NOTES.MARKDOWN", caption: edge }, context());
+    expect(sent[0]!.caption).toBe(`${edge}\n\nOpen it as a page: ${LINK}`);
+  });
+
+  test("where its reader gets no link the file goes as it always did, and the agent is told nothing of one", async () => {
+    writeFileSync(join(DIR, "report.md"), "# The week\n");
+    const result = await withPage(null).execute({ path: "report.md", caption: "The week's report." }, context());
+    expect(sent[0]!.caption).toBe("The week's report.");
+    expect(result.content).toBe("Sent `report.md` (11B) to this conversation.");
+    await withPage(null).execute({ path: "report.md" }, context());
+    expect(sent[0]!.caption).toBeUndefined();
+  });
+
+  test("only a markdown file sent alone: a log, a picture and a set are never asked about", async () => {
+    writeFileSync(join(DIR, "build.log"), "ok\n");
+    writeFileSync(join(DIR, "a.md"), "a\n");
+    writeFileSync(join(DIR, "b.md"), "b\n");
+    writeFileSync(join(DIR, "readme.md.txt"), "not one\n");
+    const tool = withPage();
+    await tool.execute({ path: "build.log", caption: "The log." }, context());
+    await tool.execute({ path: "readme.md.txt" }, context());
+    await tool.execute({ paths: ["a.md", "b.md"], caption: "Both." }, context());
+    expect(asked).toEqual([]);
+    expect(sent.map((file) => file.caption)).toEqual(["The log.", undefined, "Both.", undefined]);
   });
 });

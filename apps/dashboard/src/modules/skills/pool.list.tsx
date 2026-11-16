@@ -326,7 +326,7 @@ function SkillAgents({
               type="button"
               disabled={!editable || busy}
               onClick={() => onToggle(agent.id, !agent.enabled)}
-              className={`badge badge-sm cursor-pointer gap-1 ${
+              className={`badge badge-sm cursor-pointer gap-1 max-sm:min-h-8 ${
                 agent.enabled
                   ? agent.missingTools.length > 0
                     ? "badge-warning"

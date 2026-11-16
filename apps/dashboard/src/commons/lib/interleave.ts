@@ -30,8 +30,19 @@ export function interleave(
   events: ChatEvent[],
   messages: RoomMessage[],
 ): Entry[] {
+  /**
+   * An asked agent's answer, said in the room (`shown answer`), is drawn above the turn that asked for it while that
+   * turn had not ended when it was said. The asking agent's own answer comes after it, "what Nix said above", and is
+   * the foot of a turn that began before the answer: by when each began, the answer stood under the reply that
+   * speaks of it. One that came after its asking turn had ended, an ask behind the turn, is where it was said.
+   */
+  const byId = new Map([...turns, ...live].map((turn) => [turn.id, turn]));
+  const saidAbove = (turn: ChatTurn): ChatTurn | undefined => {
+    const asking = turn.cause?.via === "shown answer" && turn.cause.parent ? byId.get(turn.cause.parent) : undefined;
+    return asking && (asking.endedAt === undefined || asking.endedAt >= turn.startedAt) ? asking : undefined;
+  };
   const entries: Entry[] = [
-    ...turns.map((turn) => ({ kind: "turn" as const, turn, at: turn.startedAt })),
+    ...turns.map((turn) => ({ kind: "turn" as const, turn, at: saidAbove(turn)?.startedAt ?? turn.startedAt })),
     ...live.map((turn) => ({ kind: "live" as const, turn, at: turn.startedAt })),
     ...events.map((event) => ({ kind: "event" as const, event, at: event.at })),
     ...messages.map((message) => ({ kind: "message" as const, message, at: message.at })),
@@ -49,5 +60,7 @@ export function interleave(
    * room, then what somebody said, then what an agent did about it.
    */
   const rank = { event: 0, message: 1, turn: 2, live: 2 } as const;
-  return entries.sort((a, b) => a.at - b.at || rank[a.kind] - rank[b.kind]);
+  // At the same moment as the turn that asked for it, an answer said above it comes first.
+  const above = (entry: Entry) => (entry.kind === "turn" && saidAbove(entry.turn) ? 0 : 1);
+  return entries.sort((a, b) => a.at - b.at || rank[a.kind] - rank[b.kind] || above(a) - above(b));
 }

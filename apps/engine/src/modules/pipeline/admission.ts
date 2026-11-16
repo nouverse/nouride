@@ -349,7 +349,7 @@ export class Admission {
   }
 
   /**
-   * Whether this sender is let in by name — on an allowlist, or paired — rather than through an open door.
+   * Whether this sender is let in by name — on an allowlist, paired, or signed in here — rather than through an open door.
    *
    * Asked by `/restart`, which reaches past the conversation it is typed in. Everyone who gets to a hook got
    * through `admit`, and on an `open` connection that says nothing about who they are; nor does a bot's. As
@@ -357,6 +357,9 @@ export class Admission {
    */
   admitsByName(envelope: MessageEnvelope): boolean {
     if (envelope.senderIsBot) return false;
+    // Signed in to this daemon's own dashboard: an account is a name the daemon checked itself, and no allowlist of
+    // a chat app's ids holds it. Without this an admin's `/mention` in a room made in the dashboard was refused.
+    if (envelope.senderVerified === true) return true;
     const { gatewayId, senderId, chatId } = envelope;
     const staticAllowlist = this.deps.config.security.access.allowlist;
     return this.deps.access.check({ gatewayId, senderId, chatId, mode: "allowlist", staticAllowlist }).action === "allow";

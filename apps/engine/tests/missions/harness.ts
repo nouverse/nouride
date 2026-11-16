@@ -4,7 +4,7 @@
  */
 
 import { join } from "node:path";
-import type { ApprovalStatus, MessageButton, MessageEnvelope } from "@nouride/shared";
+import { titleFromGoal, type ApprovalStatus, type MessageButton, type MessageEnvelope } from "@nouride/shared";
 import { openAndMigrate } from "@/db/index.ts";
 import type { CheckResult } from "@/modules/missions/checks.ts";
 import type { Review } from "@/modules/missions/checking.ts";
@@ -12,6 +12,7 @@ import type { MissionsDeps } from "@/modules/missions/deps.ts";
 import { Missions } from "@/modules/missions/missions.ts";
 import { MissionStore } from "@/modules/missions/missions.store.ts";
 import type { MissionsInForce } from "@/modules/missions/slots.ts";
+import type { AnswerReach } from "@/modules/missions/asking.ts";
 import type { SteerOutcome } from "@/modules/missions/tell.ts";
 import type { Mission, Told } from "@/modules/missions/types.ts";
 import { NotesStore, type PlanStep } from "@/modules/notes/store.ts";
@@ -34,7 +35,7 @@ export const STARTERS_CTX = {
 export const SETTINGS: MissionsInForce = { perAgent: 1, maxRunning: 2, limitHours: 8, limitTurns: 50, limitTokens: 50_000_000 };
 
 /** The ports for folders no mission names, where a test lists some: each one asked about, and the ones removed. */
-function leftFolders(options: { left?: () => { agentId: string; id: string; changedAt: number }[]; unsavedInLeft?: (missionId: string) => string[] }) {
+function leftFolders(options: { left?: () => { agentId: string; id: string; changedAt: number }[]; unsavedInLeft?: (missionId: string) => string[]; leftUncommitted?: (mission: Mission) => Promise<string[]>; answerReach?: AnswerReach | null }) {
   const asked: string[] = [];
   const removed: string[] = [];
   const removeLeft = async (agentId: string, missionId: string) => {
@@ -43,10 +44,23 @@ function leftFolders(options: { left?: () => { agentId: string; id: string; chan
     if (unsaved.length === 0) removed.push(missionId);
     return unsaved;
   };
-  return { asked, removed, ports: options.left ? { folders: options.left, removeLeft } : {} };
+  // What an ended mission's notice reads of its folder: only where a test says what is there.
+  const unsaved = options.leftUncommitted ? { unsaved: options.leftUncommitted } : {};
+  // How an answer reaches a turn at work, where a test is about the words `ask` gives for it.
+  const reach = options.answerReach !== undefined ? { answerReach: () => options.answerReach ?? null } : {};
+  return { asked, removed, ports: { ...(options.left ? { folders: options.left, removeLeft } : {}), ...unsaved, ...reach } };
 }
 
-export async function missionsHarness(options: { settings?: Partial<MissionsInForce>; agents?: string[]; jobAllowed?: (jobId: string) => readonly string[]; prepare?: (mission: Mission) => Promise<string | void>; branchRefusal?: (request: { agentId: string; workdir: string; branch: string }) => Promise<string | null>; sourceRepository?: (workdir: string) => string; runsOnCli?: (agentId: string) => boolean; freeToDelete?: (agentId: string) => boolean; readBrief?: (path: string) => string | null; goalBriefOf?: (mission: Mission) => string | null; stopTurn?: (mission: Mission) => void; helperTokens?: (missionId: string, since: number) => number; runningTokens?: (missionId: string) => number; personSaid?: (mission: Mission) => string | null; turnStartedAt?: (turnId: string) => number | null; checkRefusal?: (request: { agentId: string; workdir?: string }, command: string) => string | null; steerTurn?: (mission: Mission, told: Told) => SteerOutcome; pageOf?: (mission: Mission) => string | null; diskLow?: () => number | null; left?: () => { agentId: string; id: string; changedAt: number }[]; unsavedInLeft?: (missionId: string) => string[]; unsavedIn?: (mission: Mission) => string[]; noFolder?: (mission: Mission) => boolean } = {}) {
+/**
+ * A start as a person makes one from a DM. An agent's start gives a title, which a test that is not about titles
+ * leaves to its goal.
+ */
+function asStarted(goal: string, extra: Partial<Parameters<Missions["start"]>[0]>): Parameters<Missions["start"]>[0] {
+  const named = extra.byAgent && extra.title === undefined ? { title: titleFromGoal(goal) } : {};
+  return { agentId: "nova", goal, startedBy: "8142", gatewayId: "telegram:nova", chatId: "8142", ...named, ...extra };
+}
+
+export async function missionsHarness(options: { settings?: Partial<MissionsInForce>; agents?: string[]; jobAllowed?: (jobId: string) => readonly string[]; prepare?: (mission: Mission) => Promise<string | void>; branchRefusal?: (request: { agentId: string; workdir: string; branch: string }) => Promise<string | null>; sourceRepository?: (workdir: string) => string; runsOnCli?: (agentId: string) => boolean; freeToDelete?: (agentId: string) => boolean; readBrief?: (path: string) => string | null; goalBriefOf?: (mission: Mission) => string | null; stopTurn?: (mission: Mission) => void; helperTokens?: (missionId: string, since: number) => number; runningTokens?: (missionId: string) => number; personSaid?: (mission: Mission) => string | null; turnStartedAt?: (turnId: string) => number | null; checkRefusal?: (request: { agentId: string; workdir?: string }, command: string) => string | null; steerTurn?: (mission: Mission, told: Told) => SteerOutcome; pageOf?: (mission: Mission) => string | null; diskLow?: () => number | null; left?: () => { agentId: string; id: string; changedAt: number }[]; unsavedInLeft?: (missionId: string) => string[]; unsavedIn?: (mission: Mission) => string[]; leftUncommitted?: (mission: Mission) => Promise<string[]>; answerReach?: AnswerReach | null; noFolder?: (mission: Mission) => boolean } = {}) {
   const db = await openAndMigrate(join(tempDir("missions"), "nouride.db"));
   const store = new MissionStore(db);
   const told: { mission: string; text: string; buttons?: MessageButton[] }[] = [];
@@ -185,7 +199,7 @@ export async function missionsHarness(options: { settings?: Partial<MissionsInFo
     },
     /** Start one in a DM, as a person would from a chat — and let its first turn be queued. */
     async start(goal = "write the report", extra: Partial<Parameters<Missions["start"]>[0]> = {}): Promise<Mission> {
-      const result = missions.start({ agentId: "nova", goal, startedBy: "8142", gatewayId: "telegram:nova", chatId: "8142", ...extra });
+      const result = missions.start(asStarted(goal, extra));
       if ("refused" in result) throw new Error(result.refused);
       await drain();
       return result.mission;

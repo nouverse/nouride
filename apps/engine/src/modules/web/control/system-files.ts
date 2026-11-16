@@ -20,7 +20,16 @@
 
 import type { SystemFileEntry, SystemFileRefusal } from "@nouride/wire";
 import { holdsCredential } from "@nouride/policy";
-import { join, linkTarget, listDir, realPathStrict, statFile } from "@nouride/runtime";
+import { dirname, join, linkTarget, listDir, realPathStrict, statFile } from "@nouride/runtime";
+
+/**
+ * The folder the files views show: the one the config file is in, `.nouride`, where the agents, the workspace and the
+ * data all are by default. The data folder's parent where a context holds no config file. One rule, for the routes
+ * and for a link that names a file the way a listing does.
+ */
+export function filesRoot(configSource: string | null | undefined, dataDir: string): string {
+  return dirname(configSource || dataDir);
+}
 
 /** Nouride's own files that hold a secret, by their path under the data folder. */
 const OWN_SECRETS = [

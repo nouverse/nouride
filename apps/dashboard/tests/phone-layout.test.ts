@@ -57,7 +57,7 @@ describe("the bottom of a page", () => {
   test("a page held to the window from a laptop up runs to the page's own margin, and has a phone's room", () => {
     expect(phoneRem(HELD_BOTTOM)).toBe(phoneRem(PAGE_BOTTOM));
     const layout = read("commons/components/layout/RootLayout.tsx");
-    const held = [...layout.matchAll(/<div className=\{`mx-auto [^`]*`\}>/g)].map((m) => m[0]).find((one) => one.includes("lg:h-full")) ?? "";
+    const held = [...layout.matchAll(/<main className=\{`mx-auto [^`]*`\}>/g)].map((m) => m[0]).find((one) => one.includes("lg:h-full")) ?? "";
     const sides = /\slg:p-(\d+)\s/.exec(held)?.[1];
     expect(sides).toBeDefined();
     expect(HELD_BOTTOM.split(" ")).toContain(`lg:pb-${sides}`);
@@ -82,7 +82,7 @@ describe("the bottom of a page", () => {
 
   test("is under every page: the document's, the one held to the window, and System Logs", () => {
     const layout = read("commons/components/layout/RootLayout.tsx");
-    const containers = [...layout.matchAll(/<div className=\{`mx-auto [^`]*`\}>/g)].map((m) => m[0]);
+    const containers = [...layout.matchAll(/<main className=\{`mx-auto [^`]*`\}>/g)].map((m) => m[0]);
     expect(containers.length).toBe(2);
     const [held, document] = [containers.find((one) => one.includes("lg:h-full"))!, containers.find((one) => !one.includes("lg:h-full"))!];
     expect(held).toContain("${HELD_BOTTOM}");

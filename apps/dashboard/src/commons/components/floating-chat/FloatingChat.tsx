@@ -2,7 +2,8 @@
  * The chat that floats over every page but Chats: a button at the foot of the window with an agent's face on it, and
  * the panel it opens, so a person can ask an agent about what they are looking at without leaving the page. From a
  * tablet's width up the panel is a card over the button, and the page under it stays in reach; on a phone it is a sheet
- * over the page (`Drawer`). Pressing the button again, Escape or the panel's own minimize puts it away.
+ * over the page (`Sheet`), under the panel's own head, where a swipe down starts. Pressing the button again, Escape, the
+ * panel's own minimize or, on a phone, a swipe down or a press on the shade puts it away.
  *
  * Which agent it opens on is `agentAtOpen`'s to say: the one the page belongs to, else the one it was last on in this
  * browser, else the orchestrator. The person picks another in the panel's bar.
@@ -14,7 +15,7 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { MessageCircle } from "lucide-react";
 import { AgentAvatar } from "@/commons/components/agents/AgentAvatar";
-import { Drawer } from "@/commons/components/ui/Drawer";
+import { Sheet } from "@/commons/components/ui/Sheet";
 import { Leaving, overPage } from "@/commons/components/ui/OverPage";
 import { useChatAgents } from "@/commons/hooks/use-chat-agents";
 import { useKept } from "@/commons/hooks/use-kept";
@@ -110,10 +111,9 @@ export function FloatingChat({ pathname }: { pathname: string }) {
           )}
         </Leaving>
       ) : (
-        <Drawer open={state.open} onClose={closeFloatingChat} side="bottom" label={label} lazy className="h-[85dvh] bg-base-100 pb-0">
-          <span aria-hidden="true" className="mx-auto mt-2.5 mb-1 h-1.5 w-10 shrink-0 rounded-full bg-base-content/20" />
+        <Sheet open={state.open} onClose={closeFloatingChat} label={label} head={false} lazy className="h-[85dvh] bg-base-100 pb-0">
           {panel}
-        </Drawer>
+        </Sheet>
       )}
     </>
   );

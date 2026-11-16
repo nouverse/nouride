@@ -126,7 +126,7 @@ describe("refused at the start", () => {
     expect("refused" in proposal).toBe(true);
     const parent = await h.start("parent");
     const { inside } = createMissionTools(h.missions);
-    const handed = await inside.execute({ action: "start", agent: "nox", goal: "the child part", checks: ["scp .env server:/x"] }, { ...ctx(), agentId: "nova", chatId: parent.id, gatewayId: "web:mission" });
+    const handed = await inside.execute({ action: "start", title: "A test mission", agent: "nox", goal: "the child part", checks: ["scp .env server:/x"] }, { ...ctx(), agentId: "nova", chatId: parent.id, gatewayId: "web:mission" });
     expect(handed.isError).toBe(true);
     expect(handed.content).toContain("would not run");
   });

@@ -42,7 +42,9 @@ import { useMissionAct } from "./hooks/use-mission-act";
 import { useMissionDelete } from "./hooks/use-mission-delete";
 import { Goal } from "./components/Goal";
 import { DraftForm } from "./components/DraftForm";
-import { briefShown, meters, missionTitle, needsYouSaid, shortId } from "./lib/mission";
+import { briefShown, meters, needsYouSaid, shortId } from "./lib/mission";
+import { missionName } from "@/commons/lib/mission-name";
+import { asksWhileWorking, openQuestion } from "@/commons/lib/mission-waits";
 import { DetailLoading } from "@/commons/components/ui/Skeleton";
 
 const OPEN_MS = 5_000;
@@ -104,7 +106,7 @@ export default function MissionPage({ missionId }: { missionId: string }) {
   });
   const detail = found.data;
   // What this page is about, for an agent asked from the chat that floats over it.
-  usePageSubject(detail ? missionTitle(detail.mission.goal) : undefined);
+  usePageSubject(detail ? missionName(detail.mission) : undefined);
   const conversation = useConversation({
     ...(detail ? { sessionId: detail.sessionId } : {}),
     agentId: detail?.mission.agentId ?? "",
@@ -140,6 +142,8 @@ export default function MissionPage({ missionId }: { missionId: string }) {
   const live = conversation.liveTurns[0];
   const waitingOn = mission.status === "waiting" ? mission.waitKind : null;
   const draft = waitingOn === "accept" && mission.startedAt === null;
+  // It asked and went on working: the question and the box to answer it are here though nothing is held up.
+  const asking = asksWhileWorking(mission) ? openQuestion(mission) : null;
 
   return (
     <div className="space-y-5">
@@ -157,7 +161,7 @@ export default function MissionPage({ missionId }: { missionId: string }) {
           </span>
         </div>
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-          <h1 className="min-w-0 text-lg font-semibold leading-snug tracking-tight text-base-content [overflow-wrap:anywhere] sm:text-xl">{missionTitle(mission.goal)}</h1>
+          <h1 className="min-w-0 text-lg font-semibold leading-snug tracking-tight text-base-content [overflow-wrap:anywhere] sm:text-xl">{missionName(mission)}</h1>
           <MissionActions
             mission={mission}
             writable={writable}
@@ -166,21 +170,22 @@ export default function MissionPage({ missionId }: { missionId: string }) {
             onDelete={(force) => remove.mutateAsync(force)}
           />
         </div>
-        {mission.goal.replace(/\s+/g, " ").trim() !== missionTitle(mission.goal) && <Goal goal={mission.goal} />}
+        {/* What it is to do, under what it is called; said once where the two are the same words. */}
+        {mission.goal.replace(/\s+/g, " ").trim() !== missionName(mission) && <Goal goal={mission.goal} />}
         {only && <ReadOnlyNote thing={mission} />}
       </header>
 
-      {mission.seen === "needs_you" && !only && (
+      {(mission.seen === "needs_you" || asking) && !only && (
         <div role="status" className="alert alert-soft alert-warning grid-cols-[auto_minmax(0,1fr)] items-start rounded-2xl">
           <Mascot pose="waiting" decorative className="w-12 sm:w-14" />
           <div className="w-full min-w-0 space-y-3">
             <p className="text-sm leading-relaxed text-base-content">
               <span className="mr-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-warning">Needs you</span>
-              {waitingOn === "input" ? "It asked a question and waits for your answer." : needsYouSaid(mission)}
+              {asking ? "It asked a question and works on meanwhile. Your answer reaches it while it works." : waitingOn === "input" ? "It asked a question and waits for your answer." : needsYouSaid(mission)}
             </p>
-            {waitingOn === "input" && (
+            {(waitingOn === "input" || asking) && (
               <>
-                <p className="rounded-xl bg-base-100/80 px-3.5 py-2 text-sm leading-relaxed [overflow-wrap:anywhere]">{mission.reason}</p>
+                <p className="whitespace-pre-line rounded-xl bg-base-100/80 px-3.5 py-2 text-sm leading-relaxed [overflow-wrap:anywhere]">{asking ? asking.question : mission.reason}</p>
                 <AnswerBox disabled={!writable} pending={act.isPending} onAnswer={(text) => act.mutate({ verb: "answer", text })} />
               </>
             )}

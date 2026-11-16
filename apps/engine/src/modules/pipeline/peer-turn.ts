@@ -36,7 +36,7 @@
  * Still pointed at the chat, still held there as at work, still Nox.
  */
 
-import { changesSharedTools } from "@/modules/toolchain/shared-tools.ts";
+import { sharedToolsKeeper } from "@/modules/toolchain/shared-tools.ts";
 import { workNotesCopy } from "@/modules/notes/tail.ts";
 import { dirname, join } from "@nouride/runtime";
 import { childSessionId, createLogger, resolveTurnDurationMs, tierModel, toUserMessage, type ChatType, type Tool } from "@nouride/shared";
@@ -56,6 +56,7 @@ import { contextInto, stepsInto } from "@/modules/turns/recorder.ts";
 import { alertOnFallback } from "@/modules/pipeline/fallback-alert.ts";
 import { fallbacksFor } from "@/modules/llm/fallbacks.ts";
 import { askDone, keepDone } from "./work-done.ts";
+import { shownIn, shownReport } from "./peer-shown.ts";
 
 const log = createLogger("pipeline.peer-turn");
 
@@ -128,7 +129,12 @@ export function startPeerTurn(ctx: TurnContext, request: PeerTurnRequest, option
    *
    * No `replyTo`: the tool context carries no triggering message id, and in a DM there is nothing to
    * quote anyway.
+   *
+   * Not where the room reads the peer's own answer (`peer-shown.ts`): its answer there is the sign that it ran, and
+   * its line arrived after it, under another agent's bot ("Mango" from Nox, then "[nox] 0 steps" from Nix's). There
+   * the steps are counted and the line is written only if the answer was not said after all.
    */
+  const answersItself = shownIn(ctx, request, peer.config.id) !== null;
   const gateway = ctx.deps.gateways.get(request.ctx.gatewayId);
   const progress =
     ctx.deps.config.llm.streaming.progressInChat && gateway && ChatProgress.supported(gateway)
@@ -139,13 +145,14 @@ export function startPeerTurn(ctx: TurnContext, request: PeerTurnRequest, option
           /**
            * Even when the peer called no tools.
            *
-           * A peer never speaks for itself — its answer goes back to the agent that asked, which
+           * A peer that does not speak for itself: its answer goes back to the agent that asked, which
            * folds it into a reply of its own. So this line is the only sign it ran, and an ordinary
            * turn's rule (say nothing when nothing was done) makes a peer that answered from its
            * prompt look like a peer that was never asked. Two asked in parallel, one using a tool,
            * read as one.
            */
           announceEmpty: true,
+          ...(answersItself ? { summary: true } : {}),
           ...(ctx.deps.progressIntervalMs ? { minIntervalMs: ctx.deps.progressIntervalMs } : {}),
         })
       : undefined;
@@ -251,7 +258,7 @@ export function startPeerTurn(ctx: TurnContext, request: PeerTurnRequest, option
     ...(ctx.deps.credentialsDir ? { credentialsDir: ctx.deps.credentialsDir } : {}),
     installDir: dirname(dirname(ctx.deps.config.daemon.dataDir)),
     binDir: join(dirname(ctx.deps.config.daemon.dataDir), "bin"),
-    changesSharedTools: (agentId: string) => changesSharedTools(ctx.deps.config, ctx.deps.registry.get(agentId)),
+    sharedTools: (agentId: string) => sharedToolsKeeper(ctx.deps.config.daemon.orchestrator ? ctx.deps.registry.get(ctx.deps.config.daemon.orchestrator) : undefined, agentId),
     ...(ctx.deps.projectSkills
       ? { projectSkills: (a: typeof peer) => ctx.deps.projectSkills!.forAgent(a) }
       : {}),
@@ -289,6 +296,8 @@ export function startPeerTurn(ctx: TurnContext, request: PeerTurnRequest, option
   let settled = false;
   const ended = (async (): Promise<HelperOutcome> => {
     let failed = false;
+    /** Its own answer was said in the room (`shownReport`). */
+    let said = false;
     /** How it ended — written to its own record too, when it moved and has one. */
     const close = (outcome: HelperOutcome, result?: DelegatedEnd["result"]): HelperOutcome => {
       record?.finish(outcome, { ...(result ? { result } : {}), model, stopped: controller.signal.aborted });
@@ -311,7 +320,8 @@ export function startPeerTurn(ctx: TurnContext, request: PeerTurnRequest, option
         // With a read-only copy of the task in the asker's work notes this is part of (`workNotesCopy`).
         userMessage: {
           role: "user",
-          content: [briefing(request), workNotesCopy(ctx.deps.notes, { agentId: request.ctx.agentId, gatewayId: request.ctx.gatewayId, chatId: request.ctx.chatId })]
+          // In a room it is a member of, its answer is also said there (`peer-shown.ts`), and it is told so.
+          content: [briefing(request, shownIn(ctx, request, peer.config.id) !== null), workNotesCopy(ctx.deps.notes, { agentId: request.ctx.agentId, gatewayId: request.ctx.gatewayId, chatId: request.ctx.chatId })]
             .filter((part): part is string => Boolean(part))
             .join("\n\n"),
           timestamp: Date.now(),
@@ -355,7 +365,10 @@ export function startPeerTurn(ctx: TurnContext, request: PeerTurnRequest, option
         ...(job ? { job: job.id } : {}),
       });
       if (result.paused) return close({ report: { ...handoff, status: "incomplete", reason: "a restart stopped it before it finished" }, paused: true }, result);
-      return close({ report: handoff }, result);
+      // An answer it finished, where the room reads it too: said there now, once, waited for or behind the asking turn.
+      const report = await shownReport(ctx, request, peer.config.id, handoff, { stopped: controller.signal.aborted, model });
+      said = report.shown === true;
+      return close({ report }, result);
     } catch (err) {
       failed = true;
       // Stopped in the middle of a call once it is a job — a stop, its clock, a shutdown: what happened is the stop, not
@@ -375,8 +388,10 @@ export function startPeerTurn(ctx: TurnContext, request: PeerTurnRequest, option
       request.ctx.signal.removeEventListener("abort", follow);
       // Not awaited, like the ordinary turn's: the caller is waiting on this answer, and a chat platform
       // acknowledging a status line is not something to hold it for. `finish` swallows its own failures. One in the
-      // background has had its bubble sealed: it says nothing more in the chat.
-      if (!job) void progress?.finish(failed ? "failed" : "ok");
+      // background has had its bubble sealed: it says nothing more in the chat. Nor does one whose own answer was
+      // said there: that is its line.
+      if (said) progress?.drop();
+      else if (!job) void progress?.finish(failed ? "failed" : "ok");
     }
   })();
 
@@ -429,6 +444,30 @@ function busy(ctx: TurnContext, request: PeerTurnRequest, peer: string): string 
     : `${peer} is already working in this chat. Ask again once it is done, or put both in one ask`;
 }
 
+/** What an asked agent is told where the room reads its answer too: the words that carry the rule, asserted by a test. */
+export const SHOWN_IN_THE_ROOM =
+  "Your reply is shown in this room as your own message, and the people in it read it as you wrote it.";
+
+/**
+ * The same ask, in a room the agent asked is a member of (`peer-shown.ts`): its answer has two readers, the agent that
+ * asked and the people in the room, so it is written for the people, in the language they are speaking, and still
+ * says what the agent that asked needs. The brief itself is in English, as work between agents is.
+ */
+function shownBriefing(request: PeerTurnRequest): string {
+  return [
+    `[${request.from} is asking you to do something, in a room you are both in. This brief is ${request.from}'s, not a person's.]`,
+    "",
+    request.task,
+    "",
+    `---`,
+    `${SHOWN_IN_THE_ROOM} It also goes back to ${request.from} as the result of a tool call, and`,
+    `${request.from} will not repeat it. So: do the work, then answer the people in the room, in the language they`,
+    "are speaking there, not the language of this brief. Say what you did, what came of it and anything that failed,",
+    "as you would say it to them yourself. No greeting, no sign-off, and tag nobody.",
+    ASKED_TO_SAY,
+  ].join("\n");
+}
+
 /** What an asked agent says of the brief itself — the words that carry the rule, asserted by a test. */
 export const ASKED_TO_SAY =
   "If you do anything outside this brief, or the brief cannot be followed as written, say so explicitly in your report.";
@@ -441,7 +480,8 @@ export const ASKED_TO_SAY =
  * greeting, a sign-off, a question at the end — into a string that no human will ever read verbatim.
  * What the caller needs back is a report.
  */
-function briefing(request: PeerTurnRequest): string {
+function briefing(request: PeerTurnRequest, shown = false): string {
+  if (shown) return shownBriefing(request);
   return [
     `[${request.from} is asking you to do something. This is not a person and this is not a chat.]`,
     "",

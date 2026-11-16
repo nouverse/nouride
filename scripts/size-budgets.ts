@@ -35,8 +35,12 @@ export const BUDGET: Record<string, Budget> = {
     why: "the dashboard chat's routes together: upload, send with its page and a first message's model and effort, live, transcripts, files, delete, each answer held to the wire's type and to whose it is",
   },
   "apps/engine/src/modules/external-agents/index.ts": {
-    lines: 548,
-    why: "the service the agents' CLIs run under: connections, sessions, sign-ins, models, lent tools, a CLI's parts, a new version's lists, a turn's account and that account's use; the logic is in files beside",
+    lines: 553,
+    why: "the service the agents' CLIs run under: connections, sessions, sign-ins, models, lent tools, parts, versions, a turn's account and use, a helper's work kept from waking a chat; logic in files beside",
+  },
+  "apps/engine/src/modules/external-agents/runner.ts": {
+    lines: 403,
+    why: "one turn of a CLI from its session to its answer: each prompt with its steering, its usage and the lookout for a turn held for helpers, in one loop whose steps share the turn's state",
   },
   "apps/engine/src/modules/cron/cron.store.ts": {
     lines: 481,
@@ -71,8 +75,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "the turn record and its columns, the causes it names, the clause every read of a conversation uses to leave a delegate's own turns out, and the queries that use it, a restart's two marks among them",
   },
   "apps/engine/src/modules/missions/missions.ts": {
-    lines: 585,
-    why: "the missions' one service (start, the dispatcher, a turn's shape, its end and who is handed it, stop, continue, the slots, the jobs it waits for) over state this class alone holds; rules: `decide.ts`",
+    lines: 590,
+    why: "the missions' one service (start, the dispatcher, a turn's shape, its end and the count of one cut short, ask, stop, continue, the slots, the jobs it waits for) over state this class alone holds",
   },
   "packages/gateways/src/channels/discord/gateway.ts": {
     lines: 429,

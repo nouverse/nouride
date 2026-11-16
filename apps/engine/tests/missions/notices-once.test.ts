@@ -13,11 +13,11 @@ import { ProgressLines } from "@/modules/missions/progress-line.ts";
 import { createMissionTools } from "@/modules/tools/builtins/mission.ts";
 import { missionsHarness } from "./harness.ts";
 
-const BASE = { id: "msn_0123456789abcdef0123", goal: "Fix the login bug\nThe brief goes on for pages: …", checks: ["bun test", "bun run lint"], reviewOn: true, accept: false, jobId: null };
+const BASE = { id: "msn_0123456789abcdef0123", title: "The login bug", goal: "Fix the login bug\nThe brief goes on for pages: …", checks: ["bun test", "bun run lint"], reviewOn: true, accept: false, jobId: null };
 
 describe("started", () => {
   test("the goal whole, then the checks counted, the reviewer, how to stop it — the checks themselves are in /mission show", () => {
-    expect(startedNotice(BASE)).toBe("▶ msn_012345: Fix the login bug\nThe brief goes on for pages: …\n\n2 checks + reviewer · stop: /mission stop msn_012345");
+    expect(startedNotice(BASE)).toBe("▶ The login bug (msn_012345)\n\nFix the login bug\nThe brief goes on for pages: …\n\n2 checks + reviewer · stop: /mission stop msn_012345");
     expect(startedNotice(BASE)).not.toContain("bun test");
   });
 
@@ -38,27 +38,27 @@ describe("started", () => {
 describe("each part of a notice is its own paragraph (0.8.11)", () => {
   // In WhatsApp, Nouva's done notice to a person read as one block: "Mission … done", the result and "Branch: …" ran
   // together, each on the next line. An empty line between them keeps them apart.
-  const worked = { id: BASE.id, summary: "Lima dokumen sudah diaudit.", reviewed: true, checks: ["x"], workdir: `/srv/w/missions/${BASE.id}/worktree`, branch: null, reason: null };
+  const worked = { id: BASE.id, title: "The audit", summary: "Lima dokumen sudah diaudit.", reviewed: true, checks: ["x"], workdir: `/srv/w/missions/${BASE.id}/worktree`, branch: null, reason: null };
   const page = `https://box/dashboard/missions/${BASE.id}`;
 
   test("done: how it ended, then its result, its branch, its page", () => {
-    expect(paged(doneNotice(worked, false), page)).toBe(`✓ Mission msn_012345 done (checks passed, reviewed).\n\nLima dokumen sudah diaudit.\n\nBranch: mission/${BASE.id}\n\nPage: ${page}`);
+    expect(paged(doneNotice(worked, false), page)).toBe(`✓ The audit (msn_012345) done (checks passed, reviewed).\n\nLima dokumen sudah diaudit.\n\nBranch: mission/${BASE.id}\n\nPage: ${page}`);
   });
 
   test("waiting for the person's yes: what passed, its result, the reviewer's words, its branch, how to accept it", () => {
     expect(needsYouNotice(worked, "accept", "The reviewer: the totals add up.")).toBe(
-      `☑ Mission msn_012345 passed its checks.\n\nLima dokumen sudah diaudit.\n\nThe reviewer: the totals add up.\n\nBranch: mission/${BASE.id}\n\nAccept: /mission accept msn_012345, or /mission continue msn_012345 with what is missing.`,
+      `☑ The audit (msn_012345) passed its checks.\n\nLima dokumen sudah diaudit.\n\nThe reviewer: the totals add up.\n\nBranch: mission/${BASE.id}\n\nAccept: /mission accept msn_012345, or /mission continue msn_012345 with what is missing.`,
     );
   });
 
   test("a question, then how to answer it; started, its goal, then how it is judged and stopped", () => {
-    expect(needsYouNotice(worked, "input", "Which sheet?")).toBe("❓ Mission msn_012345 asks: Which sheet?\n\nAnswer: reply to this in your own words, or /mission answer msn_012345 <your answer> · or accept it as it is: /mission accept msn_012345");
-    expect(paged(startedNotice({ ...BASE, goal: "Audit KK 1.3a" }), page)).toBe(`▶ msn_012345: Audit KK 1.3a\n\n2 checks + reviewer · stop: /mission stop msn_012345\n\nPage: ${page}`);
+    expect(needsYouNotice(worked, "input", "Which sheet?")).toBe("❓ The audit (msn_012345) asks: Which sheet?\n\nAnswer: reply to this in your own words, or /mission answer msn_012345 <your answer> · or accept it as it is: /mission accept msn_012345");
+    expect(paged(startedNotice({ ...BASE, goal: "Audit KK 1.3a" }), page)).toBe(`▶ The login bug (msn_012345)\n\nAudit KK 1.3a\n\n2 checks + reviewer · stop: /mission stop msn_012345\n\nPage: ${page}`);
   });
 });
 
 describe("a question is never clipped unsaid", () => {
-  const where = { id: BASE.id, checks: [], workdir: "/w", branch: null, summary: null };
+  const where = { id: BASE.id, title: "The audit", checks: [], workdir: "/w", branch: null, summary: null };
 
   test("a long question is carried whole, its options at the end included", () => {
     const question = `${"Context. ".repeat(150)}\nA) keep it\nB) drop it`;
@@ -95,13 +95,13 @@ describe("options the agent names", () => {
     ].join("\n");
     const h = await missionsHarness();
     const mission = await h.start();
-    h.turn(mission, {}, () => h.missions.claim(mission.id, { kind: "ask", question: nix }));
+    h.turn(mission, {}, () => h.missions.ask(mission.id, { question: nix }));
     expect(h.told.at(-1)!.text).toContain("1. Buka kunci HP, biarin layarnya nyala.");
     expect(h.told.at(-1)!.buttons).toBeUndefined();
     // Lettered lines in the words are no different: what the agent offers to pick from, it names.
     h.missions.answer(mission.id, "nggak", "Gading");
     h.tick(60_000);
-    h.turn(mission, {}, () => h.missions.claim(mission.id, { kind: "ask", question: "Which way?\nA) merge now\nB) wait for Nox" }));
+    h.turn(mission, {}, () => h.missions.ask(mission.id, { question: "Which way?\nA) merge now\nB) wait for Nox" }));
     expect(h.told.at(-1)!.buttons).toBeUndefined();
   });
 
@@ -165,7 +165,7 @@ describe("answering by a button", () => {
     const h = await missionsHarness();
     const presses = new OptionPresses({ missions: h.missions, isAdmin: () => false });
     const mission = await h.start();
-    h.turn(mission, {}, () => h.missions.claim(mission.id, { kind: "ask", question: "Which?", options: ["merge now", "wait for Nox"] }));
+    h.turn(mission, {}, () => h.missions.ask(mission.id, { question: "Which?", options: ["merge now", "wait for Nox"] }));
     const sent = h.told.at(-1)!.buttons!.map((button) => button.data);
     const stamp = h.store.get(mission.id)!.answers.at(-1)!.at.toString(36);
     expect(sent).toEqual([`mission:answer:${mission.id}:${stamp}:A`, `mission:answer:${mission.id}:${stamp}:B`]);
@@ -181,10 +181,10 @@ describe("answering by a button", () => {
     const h = await missionsHarness();
     const presses = new OptionPresses({ missions: h.missions, isAdmin: () => false });
     const mission = await h.start();
-    h.turn(mission, {}, () => h.missions.claim(mission.id, { kind: "ask", question: "Which colour?\n1. red\n2. blue" }));
+    h.turn(mission, {}, () => h.missions.ask(mission.id, { question: "Which colour?\n1. red\n2. blue" }));
     const stamp = h.store.get(mission.id)!.answers.at(-1)!.at.toString(36);
     const pressed = await presses.press(press({ data: `mission:answer:${mission.id}:${stamp}:2` }));
-    expect(pressed).toEqual({ notice: "That option is not on its question: answer it in your own words.", settled: `❓ Mission ${mission.id.slice(0, 10)}: that option is not on its question. Answer it in your own words.` });
+    expect(pressed).toEqual({ notice: "That option is not on its question: answer it in your own words.", settled: `❓ ${mission.title} (${mission.id.slice(0, 10)}): that option is not on its question. Answer it in your own words.` });
     expect(h.store.get(mission.id)).toMatchObject({ status: "waiting", waitKind: "input" });
     expect(h.store.get(mission.id)!.answers.at(-1)!.answer).toBeUndefined();
   });
@@ -193,13 +193,13 @@ describe("answering by a button", () => {
     const h = await missionsHarness();
     const presses = new OptionPresses({ missions: h.missions, isAdmin: () => false });
     const mission = await h.start();
-    h.turn(mission, {}, () => h.missions.claim(mission.id, { kind: "ask", question: "First?", options: ["red", "blue"] }));
+    h.turn(mission, {}, () => h.missions.ask(mission.id, { question: "First?", options: ["red", "blue"] }));
     const first = h.told.at(-1)!.buttons!.map((button) => button.data);
     h.missions.answer(mission.id, "blue, typed", "Gading");
     h.tick(60_000);
-    h.turn(mission, {}, () => h.missions.claim(mission.id, { kind: "ask", question: "Second?", options: ["delete it", "keep it"] }));
+    h.turn(mission, {}, () => h.missions.ask(mission.id, { question: "Second?", options: ["delete it", "keep it"] }));
     const pressed = await presses.press(press({ data: first[0]! }));
-    expect(pressed).toEqual({ notice: "It has asked another question since: answer that one.", settled: `❓ Mission ${mission.id.slice(0, 10)}: asked something else since.` });
+    expect(pressed).toEqual({ notice: "It has asked another question since: answer that one.", settled: `❓ ${mission.title} (${mission.id.slice(0, 10)}): asked something else since.` });
     expect(h.store.get(mission.id)).toMatchObject({ status: "waiting", waitKind: "input" });
     expect(h.store.get(mission.id)!.answers.at(-1)!.answer).toBeUndefined();
   });
@@ -208,7 +208,7 @@ describe("answering by a button", () => {
     const h = await missionsHarness();
     const presses = new OptionPresses({ missions: h.missions, isAdmin: () => false });
     const mission = await h.start();
-    h.turn(mission, {}, () => h.missions.claim(mission.id, { kind: "ask", question: "Ship it?", options: ["yes", "no"] }));
+    h.turn(mission, {}, () => h.missions.ask(mission.id, { question: "Ship it?", options: ["yes", "no"] }));
     const a = h.told.at(-1)!.buttons![0]!.data;
     expect((await presses.press(press({ chatId: "other", data: a }))).notice).toBe("That mission does not report to this chat.");
     expect((await presses.press(press({ chatType: "group", senderId: "stranger", data: a }))).notice).toContain("Only the person who started");
@@ -218,7 +218,7 @@ describe("answering by a button", () => {
   test("a question with no options goes without buttons", async () => {
     const h = await missionsHarness();
     const mission = await h.start();
-    h.turn(mission, {}, () => h.missions.claim(mission.id, { kind: "ask", question: "What should the file be called?" }));
+    h.turn(mission, {}, () => h.missions.ask(mission.id, { question: "What should the file be called?" }));
     expect(h.told.at(-1)!.buttons).toBeUndefined();
   });
 });

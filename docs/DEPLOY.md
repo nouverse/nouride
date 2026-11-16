@@ -403,6 +403,10 @@ nouride update --rollback            # which build, and whether the database goe
 systemctl stop nouride && nouride update --rollback --apply && systemctl start nouride
 ```
 
+One that the guard put back leaves the new build beside the install, each part with `.failed` after its name.
+Where that build had migrated the database, the old one refuses to start on it; `nouride update --retry --apply`,
+with the daemon stopped, puts every part of the new build back together and keeps the old one for `--rollback`.
+
 Re-running `install.sh` with a newer tarball keeps the build it replaces the same way, so the way back
 is there after either kind of upgrade. Back to a build before 0.8.19 it also writes the secrets as that build reads
 them, `secrets.json`, which needs the store's key: run it as root (`sudo nouride update --rollback --apply`), whose
@@ -584,8 +588,9 @@ that verified only one of them would be claiming something it had not checked.
 git tag v0.2.0 && git push origin v0.2.0
 ```
 
-A tag needs four secrets: `SUBMODULE_TOKEN` reads the private submodules the free edition (the gateway)
-and Pro build from, `RELEASES_REPO_TOKEN` publishes the public tarballs and images, `RELEASE_SIGNING_KEY` signs
+A tag needs four secrets: `SUBMODULE_TOKEN` checks out the submodules the editions build from (Pro's, which is
+private, and the gateway's, which is public and read with the same token in the same step, so a tag with no token builds
+no edition, the free one included), `RELEASES_REPO_TOKEN` publishes the public tarballs and images, `RELEASE_SIGNING_KEY` signs
 every checksum file, and `NOUVERSE_RELEASE_TOKEN` publishes the Pro editions for boxes. The first two
 are tried in the workflow's first job, before anything is built. `GITHUB_TOKEN` pushes the private
 image, with `packages: write`. **Pulling needs a credential too**, while the package is private:

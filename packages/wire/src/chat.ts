@@ -106,7 +106,10 @@ export interface TurnCause {
   of?: string;
   /** The job was a helper `delegate` started in the background (0.7.15), whose report this turn gives. */
   helper?: true;
-  /** The job was an ask that moved to the background (0.7.19): the agent asked, whose answer this turn passes on. */
+  /**
+   * The job was an ask that moved to the background (0.7.19): the agent asked, whose answer this turn passes on. Or,
+   * for `shown answer`, the agent that asked this one: the turn is its answer, said in the room it was asked in.
+   */
   asked?: string;
 }
 

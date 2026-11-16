@@ -190,6 +190,7 @@ export function renderFiles({ ctx, toolNames }: HarnessView): string[] {
           busConventionLines({
             others: others.names,
             ...(others.about ? { about: others.about } : {}),
+            ...(others.orchestrator ? { orchestrator: others.orchestrator } : {}),
             hasTool: toolNames.includes("ask_agent"),
             hasDelegate: toolNames.includes("delegate"),
           })
@@ -197,6 +198,7 @@ export function renderFiles({ ctx, toolNames }: HarnessView): string[] {
             others: others.names,
             ...(others.about ? { about: others.about } : {}),
             ...(others.frontDesk ? { frontDesk: true } : {}),
+            ...(others.orchestrator ? { orchestrator: others.orchestrator } : {}),
             // Forwarded, and it was not. The field was built in `turn.ts`, typed here, and dropped on
             // the way in — so every prompt fell back to `@<id>`, which is precisely the spelling the
             // comment in `mentionConventionLines` says does not resolve on Discord.

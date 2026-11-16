@@ -30,6 +30,7 @@ import { db } from "@/cli/commands/db.ts";
 import { doctor } from "@/cli/commands/doctor.ts";
 import { gatewayRename } from "@/cli/commands/gateway-rename.ts";
 import { pkg } from "@/cli/commands/pkg.ts";
+import { retry } from "@/cli/commands/retry.ts";
 import { rollback } from "@/cli/commands/rollback.ts";
 import { decryptSecrets } from "@/cli/commands/secret-decrypt.ts";
 import { restoreSecrets } from "@/cli/commands/secret-restore.ts";
@@ -109,5 +110,6 @@ await runCli({
   decryptSecrets,
   restoreSecrets,
   rollback,
+  retry,
 }).catch(crashed);
 finish();

@@ -6,6 +6,7 @@ import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv } from "vite";
 import { precompress } from "./scripts/precompress";
 import { preloadFont } from "./scripts/preload-font.ts";
+import { woff2Only } from "./scripts/woff2-only.ts";
 import { ROUTE_OPTIONS } from "./scripts/routes.ts";
 
 export default defineConfig(({ mode }) => {
@@ -57,6 +58,8 @@ export default defineConfig(({ mode }) => {
       // `.br` and `.gz` beside each script and stylesheet, which the daemon serves by Accept-Encoding.
       precompress(),
       preloadFont("manrope-latin.woff2"),
+      // The formulas' fonts (`commons/components/ui/viewers/math.tsx`), woff2 only.
+      woff2Only(["katex/dist/katex.min.css"]),
     ],
     build: {
       outDir: "dist",

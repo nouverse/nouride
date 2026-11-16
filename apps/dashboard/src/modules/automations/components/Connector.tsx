@@ -47,7 +47,7 @@ export function Connector({
 export function StepPicker({ onPick }: { onPick: (kind: StepKind) => void }) {
   return (
     <div className="p-2">
-      <p className="px-3 pt-2 pb-1.5 font-display text-base font-medium text-base-content">Add a step</p>
+      <p className="px-3 pt-2 pb-1.5 font-display text-base font-medium text-base-content max-md:hidden">Add a step</p>
       <ul className="list-none space-y-0.5">
         {KINDS.map((kind) => {
           const { icon: Icon, label, hint, tile } = KIND[kind];

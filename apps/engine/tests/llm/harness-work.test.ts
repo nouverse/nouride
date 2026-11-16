@@ -12,7 +12,7 @@ import { describe, expect, test } from "bun:test";
 import { renderTools } from "@/modules/llm/prompt/harness-tools.ts";
 
 /** A 6-core box with 8 GB, its agents' commands in a cgroup of their own: four missions at once, one of this agent's. */
-const BOX = { words: "6 cores, 8.0GB of memory (5.9GB of it for the agents' commands)", missions: { atOnce: 4, own: 1 } };
+const BOX: { words: string; missions: { atOnce: number; own: number }; system?: string } = { words: "6 cores, 8.0GB of memory (5.9GB of it for the agents' commands)", missions: { atOnce: 4, own: 1 } };
 
 function harness(toolNames: string[], opts: { missions?: boolean; background?: number; machine?: typeof BOX; helper?: boolean } = {}): string {
   return renderTools({
@@ -102,6 +102,14 @@ describe("the machine it runs on", () => {
     expect(text).toContain(`${MACHINE} At once: at most 4 of your helpers and asks in the background, and at most 4 missions on this machine (1 of yours).\n`);
     // Read before the two questions it is the ground for.
     expect(text.indexOf("**This machine**")).toBeLessThan(text.indexOf("**Who does the work**"));
+  });
+
+  // An agent guessed the system before it looked: `apt` on Alpine, `systemctl` in a container.
+  test("the system it is, said before its size, where boot read it", () => {
+    const system = "Alpine Linux 3.20.3 on x86_64, in a container";
+    const text = harness(["exec"], { machine: { ...BOX, system } });
+    expect(text).toContain(`- **This system** is Alpine Linux 3.20.3 on x86_64, in a container.\n${MACHINE}\n`);
+    expect(harness(["exec"], { machine: BOX })).not.toContain("**This system**");
   });
 
   test("each limit only where this turn can use it", () => {

@@ -175,6 +175,9 @@ export class MissionTimers {
      * at the turn's end, in place of the estimate.
      */
     if (this.stopAtLimit(mission, now)) return;
+    // Not yet at a limit, and past 80% of one with what its turn at work has spent: said now. Read at a turn's end
+    // alone, a mission that is one turn long heard of its limit only when it was stopped at it.
+    if (busy) this.missions.warnNear(mission, this.missions.unsettled(mission));
     this.progress(mission, now);
     if (busy) return;
     if (jobs) return this.heldByJob(mission, now);

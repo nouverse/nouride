@@ -6,6 +6,7 @@
  */
 
 import type { ChatTurn, MissionSeen, MissionView, MissionWaitKind } from "@nouride/wire";
+import { asksWhileWorking, openQuestion } from "@/commons/lib/mission-waits";
 import { systemHeading } from "@/commons/lib/turn-display";
 
 /** What a person sees, in their words. */
@@ -53,15 +54,17 @@ export function seenTone(mission: Pick<MissionView, "seen" | "changeable">): str
  * The words on a mission's badge: "Needs you · a question", "Working", "Ended · failed". A mission waiting in the queue is
  * working as a person sees it, and says it is queued; one running its checks says so. A draft (0.8.11) waits on an accept
  * that starts it, and says "draft": "Needs you · accept" read as a result to sign off, the chat's notice and the page's
- * buttons saying Draft, Start it and Drop it.
+ * buttons saying Draft, Start it and Drop it. One at work that asked a question and went on says so: "Working" alone
+ * read as nothing for the person to do.
  */
-export function seenAs(mission: Pick<MissionView, "seen" | "status" | "waitKind" | "startedAt" | "changeable" | "person">): string {
+export function seenAs(mission: Pick<MissionView, "seen" | "status" | "waitKind" | "startedAt" | "changeable" | "person"> & { answers?: MissionView["answers"] }): string {
   if (waitsElsewhere(mission)) return `Waiting for ${mission.person?.name ?? "an admin"}`;
   if (mission.seen === "needs_you" && mission.waitKind === "accept" && mission.startedAt === null) return `${SEEN_LABEL.needs_you} · draft`;
   if (mission.seen === "needs_you") return mission.waitKind ? `${SEEN_LABEL.needs_you} · ${NEEDS[mission.waitKind]}` : SEEN_LABEL.needs_you;
   if (mission.seen === "ended") return `${SEEN_LABEL.ended} · ${mission.status === "failed" ? "failed" : "stopped"}`;
   if (mission.status === "queued") return `${SEEN_LABEL.working} · queued`;
   if (mission.status === "checking") return `${SEEN_LABEL.working} · checking`;
+  if (asksReader(mission)) return `${SEEN_LABEL.working} · asked a question`;
   return SEEN_LABEL[mission.seen];
 }
 
@@ -73,13 +76,14 @@ const CONTINUES: readonly MissionWaitKind[] = ["limit", "stuck", "unknown_outcom
 /**
  * What a person can say to a mission now, in the order the page offers them. Each only when the daemon would take it:
  * Stop until it has ended; Continue while it waits on a limit, a loop, a call whose outcome a restart lost, or an
- * accept; Accept while it waits for one; Answer while it waits on its question; and, waiting on anything else, Accept as
- * it is — closed as done without its checks passing (0.8.7), the way out of a mission stuck on a check it can never pass.
+ * accept; Accept while it waits for one; Answer while it waits on its question, or works on with one open; and, waiting
+ * on anything else, Accept as it is — closed as done without its checks passing (0.8.7), the way out of a mission stuck
+ * on a check it can never pass.
  */
-export function actionsFor(mission: Pick<MissionView, "status" | "waitKind">): MissionAction[] {
+export function actionsFor(mission: Pick<MissionView, "status" | "waitKind"> & { answers?: MissionView["answers"] }): MissionAction[] {
   const actions: MissionAction[] = [];
   const waiting = mission.status === "waiting" ? mission.waitKind : null;
-  if (waiting === "input") actions.push("answer");
+  if (waiting === "input" || asksWhileWorking(mission)) actions.push("answer");
   if (waiting === "accept") actions.push("accept");
   if (waiting && CONTINUES.includes(waiting)) actions.push("continue");
   if (waiting && waiting !== "accept") actions.push("acceptAsIs");
@@ -147,6 +151,9 @@ export function meters(
   const turns = share(mission.turnsUsed, mission.limits.turns);
   const hours = share(mission.workedMs, mission.limits.hours * 3_600_000);
   const spent = share(mission.tokensUsed, mission.limits.tokens);
+  // What its coding CLI's turn at work has spent so far: in no count until the turn ends, so said as an estimate.
+  const running = mission.shown.running ?? 0;
+  const soFar = share(mission.tokensUsed + running, mission.limits.tokens);
   const stepsSaid = steps ? ` · ${steps} step${steps === 1 ? "" : "s"}` : "";
   return [
     { label: "Checklist", said: total > 0 ? `${settled} of ${total}` : "no checklist yet", share: total > 0 ? settled / total : null, near: false },
@@ -154,7 +161,9 @@ export function meters(
       ? { label: "Turns", said: `${mission.turnsUsed} of ${mission.limits.turns}${stepsSaid}`, share: turns, near: (turns ?? 0) >= WARN_AT }
       : { label: "Turns", said: `${mission.turnsUsed} turn${mission.turnsUsed === 1 ? "" : "s"}${stepsSaid}`, share: null, near: false, bar: false },
     { label: "Hours", said: `${hoursWorked(mission.workedMs)} of ${hoursLimit(mission.limits.hours)}`, share: hours, near: (hours ?? 0) >= WARN_AT },
-    mission.shown.tokens === "unknown"
+    running > 0
+      ? { label: "Tokens", said: `about ${tokens(mission.tokensUsed + running)} of ${tokens(mission.limits.tokens)} so far, an estimate`, share: soFar, near: (soFar ?? 0) >= WARN_AT } // plain-words-ok: tokens, the unit a model's use is billed in
+      : mission.shown.tokens === "unknown"
       ? { label: "Tokens", said: `unknown of ${tokens(mission.limits.tokens)} (its coding CLI reports none)`, share: null, near: false, bar: false } // plain-words-ok: tokens, the unit a model's use is billed in
       : {
           label: "Tokens", // plain-words-ok: tokens, the unit a model's use is billed in
@@ -196,28 +205,29 @@ export function tabOf(mission: Pick<MissionView, "seen" | "status" | "changeable
   return mission.status === "failed" ? "failed" : mission.status === "stopped" ? "stopped" : "done";
 }
 
-/** How long a mission's name may be before it is cut at a word. */
-const TITLE_MAX = 90;
-
-/**
- * A mission's name, from its goal (0.8.0): its first sentence, cut at a word near 90 characters. A goal is often a
- * paragraph — a job's run, an agent's own — and drawn whole as the page's title it was a wall of large type. The goal
- * itself is still on the page, and still what the search looks in.
- */
-export function missionTitle(goal: string): string {
-  const flat = goal.replace(/\s+/g, " ").trim();
-  const first = /^.+?[.!?](?=\s|$)/.exec(flat)?.[0] ?? flat;
-  if (first.length <= TITLE_MAX) return first;
-  const cut = first.slice(0, TITLE_MAX);
-  const space = cut.lastIndexOf(" ");
-  return `${(space > TITLE_MAX * 0.6 ? cut.slice(0, space) : cut).trimEnd()}…`;
+/** At work with a question open that is the reader's to answer: not one they only read, which asks its own person. */
+function asksReader(mission: Pick<MissionView, "status" | "waitKind" | "changeable"> & { answers?: MissionView["answers"] }): boolean {
+  return asksWhileWorking(mission) && mission.changeable !== false;
 }
 
-/** Needs you, then working, then the rest — the daemon's order, kept as three groups to draw under their headings. */
+/**
+ * Every tab a mission is under. One at work that asked the reader a question is under both a person acts on: it
+ * works, and it needs them. Under Working alone, the count beside "Needs you" was one short of the menu's, and the
+ * tab a person opens to see what waits for them left that question out.
+ */
+export function tabsOf(mission: Pick<MissionView, "seen" | "status" | "waitKind" | "changeable"> & { answers?: MissionView["answers"] }): Exclude<MissionTab, "all">[] {
+  const tab = tabOf(mission);
+  return tab === "working" && asksReader(mission) ? ["needs_you", tab] : [tab];
+}
+
+/**
+ * Needs you, then working, then the rest — the daemon's order, kept as three groups to draw under their headings. Each
+ * mission once: one at work that asked the reader a question is drawn with what needs them, where its badge says it works.
+ */
 export function grouped(missions: readonly MissionView[]): { needsYou: MissionView[]; working: MissionView[]; finished: MissionView[] } {
   return {
-    needsYou: missions.filter((m) => tabOf(m) === "needs_you"),
-    working: missions.filter((m) => tabOf(m) === "working"),
+    needsYou: missions.filter((m) => tabsOf(m)[0] === "needs_you"),
+    working: missions.filter((m) => tabsOf(m)[0] === "working"),
     finished: missions.filter((m) => m.seen === "done" || m.seen === "ended"),
   };
 }
@@ -227,7 +237,7 @@ export function grouped(missions: readonly MissionView[]): { needsYou: MissionVi
  * shows — so the words of a report, of why it ended or of the question it waits on find it too.
  */
 export function searchedIn(mission: MissionView): (string | null | undefined)[] {
-  return [mission.goal, mission.agentId, mission.id, rowLine(mission)?.text];
+  return [mission.title, mission.goal, mission.agentId, mission.id, rowLine(mission)?.text];
 }
 
 /** Whether anything here can still change — what decides how often the page asks again. */
@@ -245,6 +255,9 @@ export function rowLine(mission: MissionView): { label: string; text: string } |
   if (mission.seen === "working") {
     if (mission.status === "queued") return { label: "Queued", text: mission.reason ?? "waits for a free slot" };
     if (mission.status === "checking") return { label: "Now", text: "running its checks" };
+    // It asked and went on: the question is what the person can do something about, so it is the line.
+    const asked = asksWhileWorking(mission) ? openQuestion(mission) : null;
+    if (asked) return { label: "Asks", text: asked.question };
     const active = mission.checklist?.active;
     return { label: "Now", text: active ?? (mission.checklist ? "between steps" : "writing its checklist") };
   }

@@ -47,7 +47,9 @@ function app(role: "admin" | "operator" | "viewer", spoke: string[] = [], keeps 
           : (renamed.push({ gatewayId, chatId, title }), title ? { ok: true, name: title } : { ok: true, name: "Keluarga" }),
     },
     audit: { record: (row: { action: string }) => void audited.push(row.action) },
-    registry: { enabled: () => ["nouva", "novelist"].map((id) => ({ config: { id } })) },
+    registry: { enabled: () => ["nouva", "novelist", "nero"].map((id) => ({ config: { id } })) },
+    // The dashboard room's members: the orchestrator and the novelist. Nero is an agent, and not in it.
+    rooms: { membersOf: (gatewayId: string, chatId: string) => (gatewayId === "web:dashboard" && chatId === "web-1" ? ["nouva", "novelist"] : []) },
     ctx: { config: { people: [{ key: "mira", name: "Mira", ids: ["web:u-viewer", "telegram:77"] }] } },
     // Where Mira's accounts spoke, as the room log keeps it (`chatPlace`: the platform and the chat).
     roomMessages: { spokeIn: (ids: string[]) => new Set(ids.includes("telegram:77") ? spoke.map((chat) => `telegram\u0000${chat}`) : []) },
@@ -162,12 +164,31 @@ describe("/groups/mention: who answers a message in a room that tags nobody", ()
     expect(admin.audited).toEqual([]);
   });
 
-  test("a room made in the dashboard has none to set: its members answer", async () => {
+  test("a room made in the dashboard takes it too, as `/mention` typed there writes it: one of its members, a tag needed, its members' rule again", async () => {
     const admin = app("admin");
-    const refused = await admin.answer({ gatewayId: "web:dashboard", chatId: "web-1", mention: "agent", agent: "novelist" });
+    const WEB = { gatewayId: "web:dashboard", chatId: "web-1" };
+    expect(await (await admin.answer({ ...WEB, mention: "agent", agent: "novelist" })).json()).toEqual({ ok: true, mention: { requireTag: false, answerer: "novelist" }, untagged: "novelist" });
+    expect(await (await admin.answer({ ...WEB, mention: "required" })).json()).toEqual({ ok: true, mention: { requireTag: true } });
+    expect(await (await admin.answer({ ...WEB, mention: "default" })).json()).toEqual({ ok: true, untagged: "nouva" });
+    expect(admin.sets).toEqual([
+      { platform: "web", chatId: "web-1", choice: { requireMention: false, answerer: "novelist" }, actor: "admin" },
+      { platform: "web", chatId: "web-1", choice: { requireMention: true }, actor: "admin" },
+      { platform: "web", chatId: "web-1", choice: null, actor: "admin" },
+    ]);
+    expect(admin.audited).toEqual(["room_mention_set", "room_mention_set", "room_mention_set"]);
+  });
+
+  test("in such a room only a member can be named: an agent that is not in it is refused in the page's words, and nothing is written", async () => {
+    const admin = app("admin");
+    const refused = await admin.answer({ gatewayId: "web:dashboard", chatId: "web-1", mention: "agent", agent: "nero" });
     expect(refused.status).toBe(400);
-    expect(((await refused.json()) as { plain: string }).plain).toBe("A room made in the dashboard is answered by its members: the orchestrator when it is one of them.");
+    expect(await refused.json()).toEqual({ error: "`nero` is not in this room", plain: "That agent is not in this room. Add it to the room first." });
     expect(admin.sets).toEqual([]);
+    expect(admin.audited).toEqual([]);
+    // A group on a chat app has no member list of ours: any agent can be named there, as before.
+    expect((await admin.answer({ gatewayId: "telegram:main", chatId: "-100", mention: "agent", agent: "nero" })).status).toBe(200);
+    // And it is still an admin's.
+    expect((await app("operator").answer({ gatewayId: "web:dashboard", chatId: "web-1", mention: "required" })).status).toBe(403);
   });
 
   test("a daemon that keeps no room settings says so, and is not answered as done", async () => {

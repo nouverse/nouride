@@ -26,7 +26,7 @@ export const floatButton = (host: HTMLElement) => host.querySelector('button[ari
 export const card = () => dom.document.querySelector("[data-floating-chat]") as unknown as HTMLElement | null;
 
 /** The panel as a sheet from the foot of a phone, while it is open. */
-export const sheet = () => dom.document.querySelector('[data-drawer="bottom"][data-open][aria-label^="Chat with "]') as unknown as HTMLElement | null;
+export const sheet = () => dom.document.querySelector('[data-sheet][data-open][aria-label^="Chat with "]') as unknown as HTMLElement | null;
 
 export const boxIn = (panel: HTMLElement | null) => (panel?.querySelector("textarea") ?? null) as HTMLTextAreaElement | null;
 export const sendIn = (panel: HTMLElement | null) => (panel?.querySelector('button[aria-label="Send message"]') ?? null) as HTMLButtonElement | null;

@@ -15,7 +15,8 @@ import { ago } from "@/commons/lib/format";
 import { cn } from "@/commons/lib/utils";
 import { Lit } from "@/commons/components/ui/Lit";
 import { ENTER, type Motion } from "@/commons/hooks/use-motion-list";
-import { missionTitle, rowLine } from "../lib/mission";
+import { rowLine } from "../lib/mission";
+import { missionName } from "@/commons/lib/mission-name";
 import { SeenBadge } from "./SeenBadge";
 
 /** `motion`: how the list draws it (`useMotionList`); one that arrives is lit too. */
@@ -36,7 +37,7 @@ export function MissionCard({ mission, motion = "" }: { mission: MissionView; mo
           {readsOnly(mission) ? <Tag title="You can read this one, not change it">{whoseWords(mission)}</Tag> : null}
         </div>
         <h3 className="text-sm font-semibold leading-snug tracking-tight text-base-content line-clamp-2 [overflow-wrap:anywhere]" title={mission.goal}>
-          {missionTitle(mission.goal)}
+          {missionName(mission)}
         </h3>
       </header>
 
@@ -66,8 +67,10 @@ export function MissionCard({ mission, motion = "" }: { mission: MissionView; mo
       )}
 
       <footer className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-1">
+        {/* One at work says when it last did something: a turn of hours otherwise looks the same alive or stuck. */}
         <span className="font-mono text-xs text-base-content/65">
           {mission.agentId} · {ago(mission.createdAt)}
+          {mission.activeAt !== undefined ? ` · last step ${ago(mission.activeAt)}` : ""}
         </span>
         {/* Drawn as the Knowledge tab's Open button; the card around it is the link. */}
         <span className="btn btn-primary btn-sm gap-1 rounded-xl">

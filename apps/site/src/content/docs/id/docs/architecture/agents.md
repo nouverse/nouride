@@ -435,8 +435,9 @@ dari sejam (riset lintas file atau host, build panjang, gladi migrasi) supaya ia
 dari satu cuma untuk bagian yang saling lepas; kerja yang mungkin lewat dari sejam adalah urusan misi. Bukan
 untuk jawaban cepat, dan bukan untuk hal yang sedang kamu tunggu sekarang.
 
-Agent juga diberi tahu mesin tempat ia jalan: jumlah core dan memorinya, seperti yang dibaca daemon waktu
-mulai, berapa helper yang boleh dijalankannya di latar belakang, dan berapa misi yang jalan bersamaan. Yang
+Agent juga diberi tahu mesin tempat ia jalan: sistemnya (nama dan versinya, arsitekturnya, dan cara
+Nouride dijalankan di situ: service systemd, launchd, container, atau kernel HP Android lewat Nouride Home,
+mulai 0.8.39), jumlah core dan memorinya, seperti yang dibaca daemon waktu mulai, berapa helper yang boleh dijalankannya di latar belakang, dan berapa misi yang jalan bersamaan. Yang
 sedang jalan saat ini disebut di tiap pesan selama masih ada yang jalan, jadi ia bisa membedakan box yang
 lowong dari yang sibuk sebelum memulai yang baru. Sejak 0.8.33 itu mencakup agent lain juga: di room,
 siapa yang sedang bekerja di situ dan mengerjakan apa, dan di seluruh box, giliran, helper, misi, dan

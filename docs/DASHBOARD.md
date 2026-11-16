@@ -392,7 +392,7 @@ reaches the daemon over HTTP only (`ARCHITECTURE.md` §3).
 | `src/commons/hooks/use-revealing.ts` | an ended turn held as live while its answer is still being written out: an answer that came whole at the turn's end is written out, not taken by the history with every word at once (`splitForDisplay`, `useTypewriter` in `Turn.tsx`); in a room too, whose list of turns at work never has an ended one, so a turn seen there and then gone is held as it was last seen until the history has it (`useRoomRevealing`, `splitRoomForDisplay`) |
 | `src/commons/hooks/use-page-follows.ts` | the page under the floating chat follows the agent: read again when a call made something with a page (`tool_done.page`) and when the turn ends; on a page that makes a new one, what the agent made is opened in its place |
 | `src/commons/lib/unsaved.ts` | `useUnsaved(holds)`: a page says it holds something written and not saved, so nothing takes the person off it by itself |
-| `src/commons/components/ui/Markdown.tsx` | the deliberately small, HTML-free renderer |
+| `src/commons/components/ui/Markdown.tsx` | the deliberately small, HTML-free renderer: HTML written into a text is shown as an `html` block (`lib/html-run.ts`), never drawn in the page itself: a stored reply's is drawn in a sandboxed frame inside the reply (`HtmlFrame.tsx`) |
 | `src/commons/lib/api.ts` and `api.*.ts` | every control-API call, typed by `@nouride/wire`; cookie auth, same-origin |
 | `src/commons/lib/session.ts` | the single description of who may be where, and the redirects |
 

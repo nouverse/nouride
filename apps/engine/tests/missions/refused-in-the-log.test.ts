@@ -21,7 +21,7 @@ describe("a refused mission call", () => {
     const h = await missionsHarness();
     const tools = createMissionTools(h.missions);
     lines.length = 0;
-    const answer = await tools.chat.execute({ action: "start", goal: "a motion graphic", now: true }, chatCtx);
+    const answer = await tools.chat.execute({ action: "start", title: "A test mission", goal: "a motion graphic", now: true }, chatCtx);
     expect(answer.isError).toBe(true);
     // The agent, the chat and the turn are the line's own fields, as every line about a turn has them.
     const line = lines[0] as LogEntry & Record<string, unknown>;
@@ -47,7 +47,7 @@ describe("a refused mission call", () => {
     const h = await missionsHarness();
     const tools = createMissionTools(h.missions);
     lines.length = 0;
-    const started = await tools.chat.execute({ action: "start", goal: "draft a plan", workdir: "/tmp/x" }, { ...chatCtx, turnId: undefined } as ToolContext);
+    const started = await tools.chat.execute({ action: "start", title: "A test mission", goal: "draft a plan", workdir: "/tmp/x" }, { ...chatCtx, turnId: undefined } as ToolContext);
     expect(started.isError).toBe(false);
     expect(lines).toEqual([]);
     // A refusal that names what it was given: a draft id of 600 characters is said back in the answer.

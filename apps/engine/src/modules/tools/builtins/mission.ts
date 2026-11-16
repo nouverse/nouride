@@ -4,11 +4,12 @@
  * Two shapes, handed per turn (`ToolsetDeps.missionTool`). In a chat it offers `start` and `edit`: the agent decides
  * when work is mission-sized and drafts it, and the person starts it (0.8.11, `missions/drafts.ts`) — nobody has to type
  * `/mission`. Inside a mission's turn it adds what the mission says about itself: `done`, `ask`, `fail` — each ends the
- * turn there, and is acted on then.
+ * turn there, and is acted on then. A question leaves at the call (`missions/asking.ts`), and with `keep_working` the
+ * turn goes on.
  */
 
 import { resolveWithin, statFile } from "@nouride/runtime";
-import { createLogger, type Tool, type ToolContext, type ToolResult } from "@nouride/shared";
+import { createLogger, MISSION_TITLE_MAX, type Tool, type ToolContext, type ToolResult } from "@nouride/shared";
 import { SYSTEM_SENDER } from "@/modules/pipeline/deps.ts";
 import { pagePath, type LinkFor } from "@/modules/web/links.ts";
 import type { AuditPort } from "@/commons/audit.store.ts";
@@ -17,6 +18,7 @@ import { isDraft, signedOffBy, type DraftChange } from "@/modules/missions/draft
 import type { Missions } from "@/modules/missions/missions.ts";
 import type { StartRequest } from "@/modules/missions/start.ts";
 import type { Mission } from "@/modules/missions/types.ts";
+import type { AnswerReach } from "@/modules/missions/asking.ts";
 import { MAX_OPTIONS } from "@/modules/missions/options.ts";
 import { doneWhen, shortId } from "@/modules/missions/page.ts";
 
@@ -73,6 +75,7 @@ export const WHO_SIGNS =
  * track gets no branch, and needs none.
  */
 const START_FIELDS = {
+  title: { type: "string", description: `Its name for the person, in English, at most ${MISSION_TITLE_MAX} characters: what the work is called ("The viewers for 0.8.39"), not what to do.` },
   goal: { type: "string", description: "What must be true when it is done, in English, and whole: each turn starts from it, not from this conversation. A long one points at a brief file by its absolute path." },
   checks: {
     type: "array",
@@ -143,6 +146,24 @@ function text(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+/**
+ * What a turn is told after `ask` with `keep_working`: where the question is, what it may go on with, how the answer
+ * will reach it, and how the mission comes to wait. The last by what its turn takes while it works: told "the answer
+ * comes into your turn", a CLI that takes no words mid-prompt would wait in a turn the answer cannot enter.
+ */
+export function keepsWorking(reach: AnswerReach | null): string {
+  const answer =
+    reach === "after_prompt"
+      ? "Your CLI takes no words while it works: the answer reaches you only once this turn has ended."
+      : reach === null
+        ? "The answer reaches this turn when they give it, or your next one."
+        : "The answer comes into this turn as soon as they give it.";
+  return (
+    "Asked: the question is in their chat now, and this mission stays at work. Go on with what does not depend on the answer, and do nothing that does until it comes. " +
+    `${answer} When nothing is left that can move without it, end your turn: the mission then waits for the answer.`
+  );
+}
+
 /** `ask`'s options: none when left out or empty, null when they are not a pick a person can tap (one, too many, not text). */
 function askOptions(value: unknown): string[] | null {
   if (value === undefined || value === null) return [];
@@ -158,8 +179,10 @@ function startFields(args: Record<string, unknown>, ctx: ToolContext): Omit<Star
   const workdir = text(args.workdir);
   const branch = text(args.branch);
   const review = args.no_review === true ? false : text(args.review) || undefined;
+  const title = text(args.title);
   return {
     agentId: text(args.agent) || ctx.agentId,
+    ...(title ? { title } : {}),
     goal: text(args.goal),
     ...(checks ? { checks } : {}),
     ...(review !== undefined ? { review } : {}),
@@ -178,6 +201,7 @@ async function editOwn(missions: Missions, args: Record<string, unknown>, ctx: T
   if (!mission || (mission.byAgent ?? mission.agentId) !== ctx.agentId) return refused(id ? `No draft ${id} of yours.` : "Name your draft: `id`.");
   const checks = strings(args.checks);
   const change: DraftChange = {
+    ...(typeof args.title === "string" ? { title: args.title } : {}),
     ...(typeof args.goal === "string" ? { goal: args.goal } : {}),
     ...(checks ? { checks } : {}),
     ...(args.no_review === true ? { review: false } : typeof args.review === "string" ? { review: args.review } : args.no_review === false ? { review: true } : {}),
@@ -217,7 +241,7 @@ function started(missions: Missions, result: ReturnType<Missions["start"]>, page
     const brief = missions.briefPath(mission);
     const briefLine = briefFailed ? `\nIts brief could not be written: ${briefFailed}. Write it again with \`edit\`.` : `\nIts brief: ${brief} (yours to change before it starts).`;
     return ok(
-      `Drafted mission ${id}: ${mission.goal}\nDone when ${doneWhen(mission)}; signed off by ${signedOffBy(mission)}.${briefLine}${pageLine}\n` +
+      `Drafted mission ${id}, "${mission.title}": ${mission.goal}\nDone when ${doneWhen(mission)}; signed off by ${signedOffBy(mission)}.${briefLine}${pageLine}\n` +
         `Its notice is in this chat with Start it and Drop it. Nothing runs until the person starts it: their tap, /mission accept ${id}, the dashboard, ` +
         `or their "go" passed on with \`work\` action "start". Change it before then with \`mission\` action "edit". ` +
         `Tell the person what you drafted and how it will be judged done; do not do the work here as well.${reminder}`,
@@ -226,7 +250,7 @@ function started(missions: Missions, result: ReturnType<Missions["start"]>, page
   const state = mission.status === "queued" ? "queued" : "started";
   // Why it waits is the dispatcher's own decision (`blockedBy`), not guessed again here.
   const waits = result.queued ? `\nIt waits because ${result.queued}; it starts by itself once that clears.` : "";
-  return ok(`Mission ${id} ${state}: ${mission.goal}${waits}\nDone when ${doneWhen(mission)}.${pageLine}\nIt runs on its own and reports to this chat. Tell the person you started it; do not do the work here as well.${reminder}`);
+  return ok(`Mission ${id} ${state}, "${mission.title}": ${mission.goal}${waits}\nDone when ${doneWhen(mission)}.${pageLine}\nIt runs on its own and reports to this chat. Tell the person you started it; do not do the work here as well.${reminder}`);
 }
 
 export function createMissionTools(missions: Missions, options: { linkFor?: LinkFor; audit?: Pick<AuditPort, "record"> } = {}): { chat: Tool; inside: Tool } {
@@ -283,9 +307,10 @@ export function createMissionTools(missions: Missions, options: { linkFor?: Link
       description:
         'This mission\'s own actions. "done": the goal is met, with its result as `summary`, its whole `report` and the `files` ' +
         'the person should receive, inside its folder; the daemon then runs the checks. "ask": one `question` for the ' +
-        'person, with `options` when the answer is a pick; the mission waits for the answer. "fail": it cannot be done, ' +
+        'person, with `options` when the answer is a pick; it reaches them at once and the mission waits for the answer, ' +
+        'or with `keep_working` goes on with what does not depend on it. "fail": it cannot be done, ' +
         'with the `reason` and a `report` of what is left. ' +
-        'Each ends this turn. "start": hand a separate piece to another agent as a mission ' +
+        'Each ends this turn, but an `ask` with `keep_working`. "start": hand a separate piece to another agent as a mission ' +
         `of its own (one level: it starts none). ${ONE_OWNER}`,
       parameters: {
         type: "object",
@@ -303,6 +328,7 @@ export function createMissionTools(missions: Missions, options: { linkFor?: Link
               "becomes a button, and they are listed under the question: do not write them in it too. Leave it out for an open " +
               "answer. Steps for the person to follow, or any list to read, stay in the question and are never options.",
           },
+          keep_working: { type: "boolean", description: "ask: true when work is left that does not depend on the answer. The question goes out now, you go on with that work, and the answer comes into your turn. Left out: the mission stops here and waits for the answer." },
           reason: { type: "string", description: "fail: why it cannot be done." },
           ...START_FIELDS,
         },
@@ -345,7 +371,10 @@ export function createMissionTools(missions: Missions, options: { linkFor?: Link
         if (!question) return refused("`ask` needs one `question`.");
         const options = askOptions(args.options);
         if (options === null) return refused(`\`options\` are 2 to ${MAX_OPTIONS} answers to pick from, each a few words of text. Leave it out for an open answer.`);
-        missions.claim(mission.id, { kind: "ask", question, ...(options.length > 0 ? { options } : {}) });
+        const asked = missions.ask(mission.id, { question, options, meanwhile: args.keep_working === true });
+        if ("refused" in asked) return refused(asked.refused);
+        if ("stuck" in asked) return claimed("You have asked this the same way three times in a row, so it was not sent again. This turn ends here, and a person decides how the mission goes on.", `Asked again: ${question}`);
+        if (asked.meanwhile) return ok(keepsWorking(asked.reach));
         return claimed("Asked. This turn ends here and the mission waits for the answer; it comes back as the next turn.", `Asked: ${question}`);
       }
       case "fail": {

@@ -12,7 +12,7 @@
  * pipeline holds everything the pipeline can do, and this one runs with nobody watching.
  */
 
-import { changesSharedTools } from "@/modules/toolchain/shared-tools.ts";
+import { sharedToolsKeeper } from "@/modules/toolchain/shared-tools.ts";
 import { dirname, join } from "@nouride/runtime";
 import {
   createLogger,
@@ -277,7 +277,7 @@ export class JobTurns {
       ...(this.ctx.deps.credentialsDir ? { credentialsDir: this.ctx.deps.credentialsDir } : {}),
       installDir: dirname(dirname(this.ctx.deps.config.daemon.dataDir)),
       binDir: join(dirname(this.ctx.deps.config.daemon.dataDir), "bin"),
-      changesSharedTools: (agentId: string) => changesSharedTools(this.ctx.deps.config, this.ctx.deps.registry.get(agentId)),
+      sharedTools: (agentId: string) => sharedToolsKeeper(this.ctx.deps.config.daemon.orchestrator ? this.ctx.deps.registry.get(this.ctx.deps.config.daemon.orchestrator) : undefined, agentId),
       ...(this.ctx.deps.projectSkills
         ? { projectSkills: (a: LoadedAgent) => this.ctx.deps.projectSkills!.forAgent(a) }
         : {}),

@@ -51,6 +51,8 @@ const MAX_CHATS = 200;
 interface Entry {
   messageId: string;
   agentId: string;
+  /** Only said, never handed on: an asked agent's answer shown in a room. */
+  said?: true;
 }
 
 interface Conversation {
@@ -66,8 +68,16 @@ interface Conversation {
   hops: number;
 }
 
+/**
+ * How long an agent is taken to be saying something that is only said, from the moment it starts sending it: a send
+ * that never comes back must not leave every later message of that agent's in the chat unrouted.
+ */
+const SAYING_MS = 30_000;
+
 export class OutboundRegistry {
   private byChat = new Map<string, Conversation>();
+  /** Who is sending a message that is only said, by chat and agent, and until when. Its entries end with the send. */
+  private saying = new Map<string, number>();
 
   private key(platform: string, chatId: string): string {
     return `${platform} ${chatId}`;
@@ -80,12 +90,14 @@ export class OutboundRegistry {
     chatId: string;
     messageId: string | undefined;
     agentId: string;
+    /** Only said: an answer shown in a room that hands nothing on (`isSaid`). */
+    said?: boolean;
   }): void {
     if (!input.messageId) return;
 
     const key = this.key(input.platform, input.chatId);
     const chat = this.byChat.get(key) ?? { entries: [], hops: 0 };
-    chat.entries.push({ messageId: input.messageId, agentId: input.agentId });
+    chat.entries.push({ messageId: input.messageId, agentId: input.agentId, ...(input.said ? { said: true as const } : {}) });
     if (chat.entries.length > MAX_PER_CHAT) {
       chat.entries.splice(0, chat.entries.length - MAX_PER_CHAT);
     }
@@ -115,6 +127,32 @@ export class OutboundRegistry {
     if (!messageId) return null;
     const chat = this.byChat.get(this.key(platform, chatId));
     return chat?.entries.find((entry) => entry.messageId === messageId)?.agentId ?? null;
+  }
+
+  /**
+   * `agentId` starts sending a message here that is only said. Its id is not known until the platform has taken it,
+   * and the copy the platform hands our other bots can arrive first: until `endSaying`, a message of that agent's
+   * in this chat is that one.
+   */
+  beginSaying(platform: string, chatId: string, agentId: string, now: number): void {
+    this.saying.set(`${this.key(platform, chatId)} ${agentId}`, now + SAYING_MS);
+  }
+
+  /** The send is over, its ids recorded or not: from here only the ids say what was said. */
+  endSaying(platform: string, chatId: string, agentId: string): void {
+    this.saying.delete(`${this.key(platform, chatId)} ${agentId}`);
+  }
+
+  /**
+   * Whether a message of `agentId`'s was only said: recorded so, or arriving while that agent is sending one. Such a
+   * message is part of what the room heard and is routed to nobody, whatever it tags.
+   */
+  isSaid(platform: string, chatId: string, messageId: string | undefined, agentId: string, now: number): boolean {
+    const key = this.key(platform, chatId);
+    const entry = messageId ? this.byChat.get(key)?.entries.find((one) => one.messageId === messageId) : undefined;
+    if (entry) return entry.said === true;
+    const until = this.saying.get(`${key} ${agentId}`);
+    return until !== undefined && now < until;
   }
 
   /** Handovers so far in this conversation. */

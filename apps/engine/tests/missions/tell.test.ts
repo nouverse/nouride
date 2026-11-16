@@ -77,7 +77,7 @@ describe("telling a mission something while it works", () => {
   test("a waiting mission keeps it and is not moved by it — the answer says what moves it", async () => {
     const h = await missionsHarness({ steerTurn: () => ({ taken: false, why: "none" }) });
     const asking = await h.start();
-    h.turn(asking, {}, () => h.missions.claim(asking.id, { kind: "ask", question: "Which branch?" }));
+    h.turn(asking, {}, () => h.missions.ask(asking.id, { question: "Which branch?" }));
     const queuedBefore = h.queued.length;
     expect(h.missions.tell(asking.id, "main is fine", "Gading")).toMatchObject({ said: expect.stringContaining(`It is waiting for your answer: /mission answer ${asking.id.slice(0, 10)}`) });
     expect(h.store.get(asking.id)!).toMatchObject({ status: "waiting", waitKind: "input" });

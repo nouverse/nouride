@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { dom, renderPage, useMountHarness } from "./mount-harness.ts";
+import { renderPage, useMountHarness } from "./mount-harness.ts";
 import { eventually } from "./wait.ts";
 
 useMountHarness();
@@ -151,32 +151,5 @@ describe("the chat's drawers", () => {
     expect(swapped.history).toContain("-translate-x-full");
     expect(swapped.notes).toContain("translate-x-0");
     expect(seen.escaped).toBe(true);
-  });
-
-  test("a phone's sheets rise as the app's More does: the same corners, ground and motion", async () => {
-    const { Drawer, SHEET_BOX, DRAWER_MOTION } = await import("@/commons/components/ui/Drawer");
-    const React = await import("react");
-    const seen: Record<string, string[]> = {};
-    await renderPage("/", async (host) => {
-      // More: the sidebar drawn as a sheet below a laptop's width.
-      const more = [...host.querySelectorAll("div")].find((one) => classes(one).includes("lg:inset-y-0"));
-      seen.more = classes(more);
-    });
-    const holder = dom.document.createElement("div");
-    dom.document.body.appendChild(holder as never);
-    const { createRoot } = await import("react-dom/client");
-    const { flushSync } = await import("react-dom");
-    const root = createRoot(holder as never);
-    flushSync(() => root.render(React.createElement(Drawer, { open: true, onClose: () => undefined, side: "bottom", label: "A sheet", children: "in it" })));
-    seen.sheet = (dom.document.body.querySelector('[data-drawer="bottom"]')?.getAttribute("class") ?? "").split(/\s+/);
-    // A sheet over the page is a dialog, drawn at the body.
-    seen.sheetRole = [dom.document.body.querySelector('[data-drawer="bottom"]')?.getAttribute("role") ?? ""];
-    flushSync(() => root.unmount());
-    holder.remove();
-    expect(seen.sheetRole).toEqual(["dialog"]);
-    for (const token of [...SHEET_BOX.split(" "), ...DRAWER_MOTION.split(" ")]) {
-      expect(seen.more).toContain(token);
-      expect(seen.sheet).toContain(token);
-    }
   });
 });

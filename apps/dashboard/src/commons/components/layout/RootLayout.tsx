@@ -19,8 +19,10 @@ import { useSignOut } from "@/commons/components/layout/sign-out";
 import { gatewayPage } from "@/commons/lib/bundled-gateway";
 import { isPairedBox } from "@/commons/lib/api.appliance";
 import { HELD_BOTTOM, PAGE_BOTTOM } from "@/commons/components/ui/ScrollCard";
-import { DRAWER_MOTION, DRAWER_SHADE, SHADE_PLACE, SHEET_BOX, SHEET_PLACE } from "@/commons/components/ui/Drawer";
-import { Sidebar } from "@/commons/components/layout/Sidebar";
+import { Sheet } from "@/commons/components/ui/Sheet";
+import { Sidebar, SidebarBrand } from "@/commons/components/layout/Sidebar";
+import { useLaptop } from "@/commons/hooks/use-wide";
+import { useHead } from "@/commons/hooks/use-head";
 import { PHONE_CHAT_SPACE, TAB_BAR_SPACE, TabBar } from "@/commons/components/layout/TabBar";
 import { CompactSidebar } from "@/commons/components/layout/CompactSidebar";
 import { FloatingChat } from "@/commons/components/floating-chat/FloatingChat";
@@ -52,6 +54,25 @@ function PageTop({ pathname, admin, className }: { pathname: string; admin: bool
       <SectionTabs pathname={pathname} admin={admin} {...(className ? { className } : {})} />
       <SettingsBack pathname={pathname} admin={admin} {...(className ? { className } : {})} />
     </>
+  );
+}
+
+/**
+ * What scrolls a page, below the header's place: the header first in it, so a scroll down takes the header up with the
+ * page, then the page itself (`<main>`), which holds the page alone.
+ */
+const SCROLLS = "min-h-0 flex-1 overflow-x-hidden overflow-y-auto";
+
+/**
+ * The way back to Nouride Home's own screen, inside its app (`home-app.ts`). One button for both places it stands: a
+ * signed-in page's header, and the corner of the pages that have no header (the sign-in, the setup, the welcome, a
+ * login coming back), where the phone's back gesture was the only way out.
+ */
+function HomeAppBack({ className }: { className: string }) {
+  return (
+    <a href={HOME_APP_BACK} className={cn("btn btn-ghost btn-square size-11 text-secondary active:scale-90 transition-transform", className)} aria-label="Back to Nouride Home">
+      <ChevronLeft size={22} />
+    </a>
   );
 }
 
@@ -89,6 +110,11 @@ export function RootLayout() {
   const [theme, toggleTheme] = useTheme();
   /** More, on a phone: the menu's other pages, as a sheet that slides up over the page. */
   const [moreOpen, setMoreOpen] = useState(false);
+  const laptop = useLaptop();
+  /** What scrolls the page, and the header in it, read for whether the header is up as it scrolls (`useHead`). */
+  const [scroller, setScroller] = useState<HTMLElement | null>(null);
+  const headerRef = useRef<HTMLElement>(null);
+  const headShown = useHead(scroller, headerRef, { active: !laptop, page: pathname });
   /** The menu expanded beside Chats, where it is folded to icons unless this browser chose otherwise (`CompactSidebar`). */
   const [menuOpen, setMenuOpen] = useKept(CHAT_MENU_KEY, false, isBoolean);
   const { total } = useNeedsYou();
@@ -141,6 +167,8 @@ export function RootLayout() {
     return (
       <div className="bg-base-200/50 min-h-dvh text-base-content selection:bg-primary/20 *:animate-fade">
         <ReconnectingBanner offline={gate.offline} />
+        {/* These pages have no header to hold the way back to Nouride Home: the same button, where the header's is. */}
+        {inHomeApp() && <HomeAppBack className="fixed left-3 top-[calc(0.25rem+env(safe-area-inset-top))] z-30" />}
         <Outlet />
       </div>
     );
@@ -153,6 +181,29 @@ export function RootLayout() {
   const compact = chats && !menuOpen;
   const phoneChat = chatOpen(pathname, search);
 
+  /**
+   * A phone's header: the name, and the way back to Nouride Home inside its app; the rest is the tab bar's. It is the
+   * first thing in what scrolls (`SCROLLS`), before the page's `<main>`, held at the top: a scroll down puts it up and
+   * gives the page the screen, the first scroll up brings it back (`useHead`). A row a page keeps in reach
+   * (`StickyBar`) stops under it.
+   */
+  const phoneHeader = (
+    <header
+      ref={headerRef}
+      inert={!headShown}
+      className={cn(
+        "bg-app-bar sticky top-0 z-30 flex h-[calc(3.25rem+env(safe-area-inset-top))] shrink-0 items-center gap-2 px-3 pt-[env(safe-area-inset-top)] transition-[translate] duration-200 ease-out lg:hidden",
+        !headShown && "-translate-y-full",
+        phoneChat && "max-md:hidden",
+      )}
+    >
+      {inHomeApp() && <HomeAppBack className="-mr-1" />}
+      <Link to="/" className="flex min-h-11 items-center gap-2">
+        <Mascot pose="head" decorative className="w-7" />
+        <span className="font-display text-base font-medium tracking-tight">Nouride</span>
+      </Link>
+    </header>
+  );
   const sidebar = (
     <Sidebar
       pathname={pathname}
@@ -161,8 +212,8 @@ export function RootLayout() {
       theme={theme}
       toggleTheme={toggleTheme}
       signOut={signOut}
-      onClose={() => setMoreOpen(false)}
-      {...(chats ? { onFold: () => setMenuOpen(false) } : {})}
+      inSheet={!laptop}
+      {...(chats && laptop ? { onFold: () => setMenuOpen(false) } : {})}
     />
   );
 
@@ -172,54 +223,20 @@ export function RootLayout() {
     <div className="bg-app flex h-dvh flex-col overflow-hidden pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] text-base-content selection:bg-secondary/20">
       {/* Beside the menu, not in it: folded on Chats, the menu that holds Sign out on a phone is not drawn on a laptop. */}
       {signOutDialog}
-      {/* The sidebar, drawn once: fixed beside the page from a laptop's width up, and on a phone More, a sheet that slides
-          up over a shade that fades, and slides back down. It stays drawn so it can be seen to go: drawn only while
-          open, it came and went at once. Hidden once down (`invisible`), it and the shade take no click and no focus.
-          Only their place and opacity move. */}
-      <button
-        type="button"
-        className={cn("fixed inset-0 z-40 lg:hidden", DRAWER_SHADE, moreOpen ? SHADE_PLACE.open : SHADE_PLACE.closed)}
-        onClick={() => setMoreOpen(false)}
-        aria-label="Close menu"
-      />
-      <div
-        className={cn(
-          // A phone's More is a sheet as every drawer is (`Drawer`): the same corners, ground and motion.
-          "fixed inset-x-0 bottom-0 z-50 flex flex-col",
-          SHEET_BOX,
-          // Room at its foot for the tab bar, which stays over it while it is open (`TabBar`).
-          TAB_BAR_SPACE,
-          DRAWER_MOTION,
-          "lg:pointer-events-auto lg:visible lg:inset-y-0 lg:right-auto lg:left-0 lg:z-30 lg:max-h-none lg:translate-y-0 lg:rounded-none lg:border-r lg:border-base-content/[0.06] lg:p-0 lg:shadow-none",
-          moreOpen ? SHEET_PLACE.open : SHEET_PLACE.closed,
-        )}
-      >
-        {compact ? (
-          <>
-            <div className="hidden h-full lg:flex">
-              <CompactSidebar pathname={pathname} where={where} onExpand={() => setMenuOpen(true)} theme={theme} toggleTheme={toggleTheme} signOut={signOut} />
-            </div>
-            <div className="contents lg:hidden">{sidebar}</div>
-          </>
-        ) : (
-          sidebar
-        )}
-      </div>
+      {/* The sidebar, drawn once: fixed beside the page from a laptop's width up, and below it More, a sheet as every
+          sheet is (`Sheet`): its head Nouride's name and a close, a swipe down on it puts it away. */}
+      {laptop ? (
+        <div className="fixed inset-y-0 left-0 z-30 flex border-r border-base-content/[0.06] bg-base-200">
+          {compact ? <CompactSidebar pathname={pathname} where={where} onExpand={() => setMenuOpen(true)} theme={theme} toggleTheme={toggleTheme} signOut={signOut} /> : sidebar}
+        </div>
+      ) : (
+        // Room at its foot for the tab bar, which stays over it while it is open (`TabBar`).
+        <Sheet open={moreOpen} onClose={() => setMoreOpen(false)} label="Menu" title={<SidebarBrand />} closeLabel="Close menu" className={TAB_BAR_SPACE}>
+          {sidebar}
+        </Sheet>
+      )}
 
       <div className={cn("flex h-full min-h-0 flex-1 flex-col overflow-hidden", compact ? "lg:pl-[5.5rem]" : "lg:pl-64")}>
-        {/* A phone's header: the name, and the way back to Nouride Home inside its app. The rest is the tab bar's. */}
-        <header className={cn("z-20 flex h-[calc(3.25rem+env(safe-area-inset-top))] shrink-0 items-center gap-2 px-3 pt-[env(safe-area-inset-top)] lg:hidden", phoneChat && "max-md:hidden")}>
-          {inHomeApp() && (
-            <a href={HOME_APP_BACK} className="btn btn-ghost btn-square -mr-1 size-11 text-secondary active:scale-90 transition-transform" aria-label="Back to Nouride Home">
-              <ChevronLeft size={22} />
-            </a>
-          )}
-          <Link to="/" className="flex items-center gap-2">
-            <Mascot pose="head" decorative className="w-7" />
-            <span className="font-display text-base font-medium tracking-tight">Nouride</span>
-          </Link>
-        </header>
-
         <ReconnectingBanner offline={gate.offline} />
         <RestartPendingBar />
         <RestartedToast />
@@ -230,29 +247,35 @@ export function RootLayout() {
         {/* A page fades in as it is drawn (`*:animate-fade`): its root is a new element when the page changes, and the
             same one, not moved, while it stays. */}
         {ownsViewport ? (
-          /* Above the tab bar on a phone: a chat's composer sits on the page's foot. */
-          <main className={cn("flex min-h-0 flex-1 flex-col overflow-hidden *:animate-fade", phoneChat ? PHONE_CHAT_SPACE : TAB_BAR_SPACE)}>
-            <PageTop pathname={pathname} admin={where.admin} className="mx-4 mt-2 sm:mx-6 lg:mx-8 lg:mt-4" />
-            <Outlet />
-          </main>
+          /* Above the tab bar on a phone: a chat's composer sits on the page's foot. Nothing scrolls the page here, so the
+             header stays above it. */
+          <>
+            {phoneHeader}
+            <main className={cn("flex min-h-0 flex-1 flex-col overflow-hidden *:animate-fade", phoneChat ? PHONE_CHAT_SPACE : TAB_BAR_SPACE)}>
+              <PageTop pathname={pathname} admin={where.admin} className="mx-4 mt-2 sm:mx-6 lg:mx-8 lg:mt-4" />
+              <Outlet />
+            </main>
+          </>
         ) : fillsViewport ? (
           /* Never sideways: a tooltip waiting unseen at the edge of a phone's screen made the page pan by a few pixels under
              a finger (a mission's turn chips). What is wider than the page is that element's to wrap or scroll. */
-          <main className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
+          <div ref={setScroller} className={SCROLLS}>
+            {phoneHeader}
             {/* Held to the window from a laptop's width up; on a phone it scrolls as a document, as the page beside it
                 does — a list scrolling inside a card inside a scrolling page, under a header, is a sliver there. */}
-            <div className={`mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 pt-2 sm:px-6 sm:pt-4 lg:h-full lg:p-8 ${HELD_BOTTOM} *:animate-fade`}>
+            <main className={`mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 pt-2 sm:px-6 sm:pt-4 lg:h-full lg:p-8 ${HELD_BOTTOM} *:animate-fade`}>
               <PageTop pathname={pathname} admin={where.admin} />
               <Outlet />
-            </div>
-          </main>
+            </main>
+          </div>
         ) : (
-          <main className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
-            <div className={`mx-auto w-full max-w-6xl space-y-6 px-4 pt-2 sm:px-6 sm:pt-4 lg:p-8 ${PAGE_BOTTOM} *:animate-fade`}>
+          <div ref={setScroller} className={SCROLLS}>
+            {phoneHeader}
+            <main className={`mx-auto w-full max-w-6xl space-y-6 px-4 pt-2 sm:px-6 sm:pt-4 lg:p-8 ${PAGE_BOTTOM} *:animate-fade`}>
               <PageTop pathname={pathname} admin={where.admin} />
               <Outlet />
-            </div>
-          </main>
+            </main>
+          </div>
         )}
       </div>
 

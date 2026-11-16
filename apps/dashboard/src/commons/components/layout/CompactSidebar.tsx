@@ -6,9 +6,10 @@
  */
 
 import { Link } from "@tanstack/react-router";
-import { LogOut, Moon, PanelLeftOpen, Sun } from "lucide-react";
+import { ChevronLeft, LogOut, Moon, PanelLeftOpen, Sun } from "lucide-react";
 import { Mascot } from "@/commons/components/brand/Mascot";
 import { SidebarNav } from "@/commons/components/layout/nav";
+import { HOME_APP_BACK, inHomeApp } from "@/commons/lib/home-app";
 import type { Theme } from "@/commons/lib/theme";
 
 /** The folded menu's buttons, the same tile as its links. */
@@ -48,6 +49,13 @@ export function CompactSidebar({
           <LogOut size={18} aria-hidden="true" />
           <span aria-hidden="true">Sign out</span>
         </button>
+        {/* Inside Nouride Home, as the whole menu has it: closes the dashboard. */}
+        {inHomeApp() && (
+          <a href={HOME_APP_BACK} className={TILE} aria-label="Back to Nouride Home">
+            <ChevronLeft size={18} aria-hidden="true" />
+            <span aria-hidden="true">Exit</span>
+          </a>
+        )}
       </div>
     </div>
   );

@@ -30,7 +30,7 @@ import { McpLoginStore } from "@/modules/mcp-oauth/logins.store.ts";
 import { catalogFromEnvironment } from "@/modules/mcp-registry/index.ts";
 import { skillsCatalogFromEnvironment } from "@/modules/skills-hub/index.ts";
 import type { Memory } from "@/modules/memory/index.ts";
-import { senderHasAccount } from "@/modules/people/match.ts";
+import { senderHasAccount, senderIsAdmin } from "@/modules/people/match.ts";
 import { Pipeline } from "@/modules/pipeline/index.ts";
 import { RoomMentionStore } from "@/modules/pipeline/room-mention.store.ts";
 import { WorkDoneStore } from "@/modules/pipeline/work-done.store.ts";
@@ -91,6 +91,7 @@ export function buildTurnParts(
   const linkFor = linksFor({
     dashboard: () => input.contextConfig().dashboard,
     hasAccount: (who) => who.gatewayId === LOCAL_GATEWAY_ID || senderHasAccount(input.contextConfig().people, who, (id) => accounts.byId(id)?.role),
+    isAdmin: (who) => senderIsAdmin(input.contextConfig().people, who, (id) => accounts.byId(id)?.role),
     chatTypeOf: (gatewayId, chatId) => input.pipeline().chatTypeOf(gatewayId, chatId),
   });
   // Long work an agent finishes alone (0.8.0): built before the pipeline, which shapes their turns — `boot/missions.ts`.
@@ -387,6 +388,7 @@ export async function buildTurnMachine(
     reflection: parts.reflection, mcp, mcpCatalog, skillsCatalog, notes: stores.notes, linkFor: parts.linkFor,
     configPath: input.configPath,
     isolateHelper: missions.isolateHelper,
+    missionReportsTo: missions.reportsTo,
     // Fresh each time: a CLI installed a minute ago is one an agent can be made on now.
     clis: () => externalAgents.scan(true),
     cliModels: (agentId, cli) => ({ name: externalAgents.row(cli)?.name ?? cli, offered: externalAgents.models.of(agentId), runsOn: externalAgents.models.runsOn(agentId) }),

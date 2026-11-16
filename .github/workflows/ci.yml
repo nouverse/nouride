@@ -8,7 +8,7 @@
 #   gh workflow run ci.yml --repo nouverse/nouride --ref releases/v<X.Y.Z>
 #
 # That runs `verify`, the lint and the whole suite on Linux (its Linux-only half, process groups, prlimit, /proc, the
-# pty, never runs on a Mac), and `verify-private`, the same over the private submodules, on that branch's commit. A
+# pty, never runs on a Mac), and `verify-private`, the same with the submodules checked out, on that branch's commit. A
 # tag on a commit where they passed does not run them again; on any other commit release.yml runs the suite itself
 # before it publishes anything, so no release is built from a commit the suite never passed on.
 #
@@ -133,8 +133,8 @@ jobs:
     runs-on: ${{ fromJSON(vars.CI_RUNNER || '"ubuntu-24.04"') }}
     timeout-minutes: 15
     steps:
-      # No submodules: everything this job checks is in this repository. The ones under
-      # `internals/` are private and are not needed to verify.
+      # No submodules: everything this job checks is in this repository. Under `internals/`,
+      # Pro's is private and Nougate's is a project of its own; neither is needed to verify.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # The self-hosted runner keeps its working copy between jobs, submodules and all: the last job's private checkout
       # would be read as this commit's, built into a public image, or stop the next checkout over what its install changed.
@@ -174,8 +174,8 @@ jobs:
     # A hung test must not spend six hours of runner time, the default.
     timeout-minutes: 25
     steps:
-      # No submodules: everything this job checks is in this repository. The ones under
-      # `internals/` are private and are not needed to verify.
+      # No submodules: everything this job checks is in this repository. Under `internals/`,
+      # Pro's is private and Nougate's is a project of its own; neither is needed to verify.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # The self-hosted runner keeps its working copy between jobs, submodules and all: the last job's private checkout
       # would be read as this commit's, built into a public image, or stop the next checkout over what its install changed.
@@ -219,7 +219,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: sh packages/isolation/scripts/test-root.sh
 
-  # The Pro code, verified in nouverse/nouride-pro: its verify.yml checks this commit with the private submodules at
+  # The Pro code, verified in nouverse/nouride-pro: its verify.yml checks this commit with Pro's submodule and Nougate's at
   # their pins (lint, the whole suite, the Pro edition assembled). Not here since 2026-11-06: this repository is public,
   # and so are its logs, which would say what Pro does. This job starts that run, waits for it, and reports its
   # conclusion and nothing else; a run that cannot be started or found fails here, never passes. With `verify`, when

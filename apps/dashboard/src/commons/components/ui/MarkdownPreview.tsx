@@ -4,6 +4,10 @@
  * the dashboard as a preview. Rendered by `Markdown`, which writes no HTML of its own: a file is shown, never run.
  * **Save as PDF** prints the rendered file alone, black on white, where the browser's print dialog saves it as a PDF —
  * text a reader can select, and no PDF library in the dashboard.
+ *
+ * What the viewers drew prints as it shows: a picture (an `svg` block, a diagram) as its picture, a formula as the
+ * MathML KaTeX writes beside it, which the browser sets on its own with no stylesheet. A block's head (its language,
+ * the switch, copy) is left out, and a block that could not be drawn prints as its code.
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -38,6 +42,10 @@ const PRINT_CSS = [
   "blockquote { border-left: 3px solid #ccc; padding-left: 0.8em; color: #444; }",
   "a { color: #0645ad; text-decoration: none; } svg { display: none; }",
   "tr, li, pre { break-inside: avoid; }",
+  "[data-block-head] { display: none; }",
+  "button { all: unset; display: block; }",
+  "img { max-width: 100%; height: auto; break-inside: avoid; }",
+  ".katex-html { display: none; } [data-formula=block] { display: block; text-align: center; margin: 0.6em 0; }",
 ].join("\n");
 
 /**

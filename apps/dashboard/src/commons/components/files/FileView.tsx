@@ -11,10 +11,12 @@
 
 import { useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Download, ExternalLink, EyeOff, FileQuestion, FileText, Scissors, Trash2 } from "lucide-react";
+import { ArrowLeft, Download, ExternalLink, Eye, EyeOff, FileQuestion, FileText, Scissors, Trash2 } from "lucide-react";
 import type { SystemFileEntry } from "@nouride/wire";
 import { api } from "@/commons/lib/api";
 import { CodeBlock } from "@/commons/components/ui/CodeBlock";
+import { HtmlPreview } from "@/commons/components/ui/HtmlPreview";
+import { Leaving } from "@/commons/components/ui/OverPage";
 import { Markdown } from "@/commons/components/ui/Markdown";
 import { ScrollArea } from "@/commons/components/ui/ScrollCard";
 import { TextLoading } from "@/commons/components/ui/Skeleton";
@@ -22,6 +24,7 @@ import { Spinner } from "@/commons/components/ui/Spinner";
 import { EmptyState, ErrorNote } from "@/commons/components/ui/ui";
 import { ago, formatBytes } from "@/commons/lib/format";
 import { isMarkdown, languageOf } from "@/commons/lib/files/paths";
+import { fileHtmlPreview, isHtmlFile } from "@/commons/lib/html-preview";
 import type { FileActions } from "@/commons/lib/files/use-file-actions";
 
 const NOTE = "flex items-start gap-2 rounded-xl bg-base-200/50 px-3 py-2 text-xs text-base-content/65";
@@ -32,6 +35,7 @@ export function FileView({ entry, actions, onBack }: { entry: SystemFileEntry; a
   const [source, setSource] = useState(false);
   /** A video in a form this browser cannot play: the player sits there black, so the file is offered to keep. */
   const [unplayable, setUnplayable] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
   const read = file.data;
   const page = isMarkdown(entry.name);
   const media = api.systemMedia(entry.path);
@@ -78,6 +82,12 @@ export function FileView({ entry, actions, onBack }: { entry: SystemFileEntry; a
             {read?.kind === "text" && page ? (
               <button type="button" className={ACTION} aria-pressed={source} onClick={() => setSource((was) => !was)}>
                 {source ? "Show as a page" : "Show its source"}
+              </button>
+            ) : null}
+            {/* A page is read here as its source, and looked at in a frame of its own, on a press. */}
+            {read?.kind === "text" && isHtmlFile(entry.name) ? (
+              <button type="button" className={ACTION} onClick={() => setPreviewing(true)}>
+                <Eye size={14} aria-hidden="true" /> Preview
               </button>
             ) : null}
             {keepable ? download(false) : null}
@@ -135,6 +145,7 @@ export function FileView({ entry, actions, onBack }: { entry: SystemFileEntry; a
           <CodeBlock lang={page ? "markdown" : languageOf(entry.name)} text={read.text ?? ""} />
         )}
       </ScrollArea>
+      <Leaving value={previewing}>{() => <HtmlPreview src={fileHtmlPreview(entry.path)} name={entry.name} onClose={() => setPreviewing(false)} />}</Leaving>
     </>
   );
 }

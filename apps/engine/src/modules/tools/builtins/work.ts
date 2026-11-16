@@ -71,7 +71,7 @@ function missionState(mission: Mission): string {
 
 function missionLine(mission: Mission): string {
   const by = mission.agentId === mission.byAgent || mission.byAgent === null ? "" : ` · started by ${mission.byAgent}`;
-  return `${shortId(mission.id)} · ${mission.agentId}${by} · ${missionState(mission)} · ${clip(mission.goal, 100)}`;
+  return `${shortId(mission.id)} · ${mission.agentId}${by} · ${missionState(mission)} · ${mission.title}`;
 }
 
 const STEP_MARK = { done: "✓", active: "●", skipped: "–", pending: "○" } as const;
@@ -90,6 +90,7 @@ function missionDetail(mission: Mission, limits: string, plan: KeptPlan | undefi
   const lines = [
     `${mission.id} · ${mission.agentId} · ${missionState(mission)}`,
     ...(page ? [`Page: ${page}`] : []),
+    `Title: ${mission.title}`,
     `Goal: ${mission.goal}`,
     `Done when: ${doneWhen(mission)}.`,
     limits,
@@ -175,7 +176,9 @@ export function createWorkTool(deps: WorkToolDeps): Tool {
         const mission = ownMission(id, ctx);
         if (!("id" in mission)) return mission;
         const acted = deps.missions.answer(mission.id, text(args.text), by);
-        return "refused" in acted ? refused(acted.refused) : ok(`Answered; mission ${shortId(mission.id)} goes on.`);
+        if ("refused" in acted) return refused(acted.refused);
+        // One that went on working says where the answer went, as a `tell` does; one that waited goes on with it.
+        return ok(acted.said ?? `Answered; mission ${shortId(mission.id)} goes on.`);
       }
       case "accept_outside": {
         const mission = ownMission(id, ctx);

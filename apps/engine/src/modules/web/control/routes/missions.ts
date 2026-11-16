@@ -16,6 +16,7 @@
 import type { MissionDetail, MissionView } from "@nouride/wire";
 import { sessionIdFor } from "@nouride/shared";
 import { stepsDone } from "@/modules/missions/decide.ts";
+import type { DraftChange } from "@/modules/missions/drafts.ts";
 import { MISSION_GATEWAY_ID } from "@/modules/missions/gateway.ts";
 import type { Missions } from "@/modules/missions/missions.ts";
 import { workedMs } from "@/modules/missions/page.ts";
@@ -44,10 +45,21 @@ const LISTED_DAYS = { usual: 7, most: 30 } as const;
  * and whether its tokens are known (0.8.8) — the meters drew "2 of 100" turns for a coding CLI's mission, which no turn
  * limit holds, and its tokens as a count where the CLI reported none.
  */
-function view(missions: Missions, mission: Mission, things: Things) {
+function view(missions: Missions, mission: Mission, things: Things, turns?: ControlDeps["turns"]) {
   // Its owner goes out as the person, never as the id it is kept under.
   const { owner: _owner, ...shown } = mission;
-  return { ...shown, seen: seenAs(mission.status), workedMs: workedMs(mission, missions.now()), shown: missions.limitsShown(mission), ...things.said(thingOfMission(mission)) };
+  const active = activeAt(turns, mission);
+  return { ...shown, seen: seenAs(mission.status), workedMs: workedMs(mission, missions.now()), shown: missions.limitsShown(mission), ...(active !== undefined ? { activeAt: active } : {}), ...things.said(thingOfMission(mission)) };
+}
+
+/**
+ * When a mission at work last did something: the newest step of its turn at work, or that turn's start. A coding CLI's
+ * turn is hours long, and the record's own "updated" stood at its start for all of it.
+ */
+function activeAt(turns: ControlDeps["turns"], mission: Mission): number | undefined {
+  if (mission.status !== "running") return undefined;
+  const times = (turns?.runningForChat(MISSION_GATEWAY_ID, mission.id) ?? []).flatMap((turn) => [turn.startedAt, ...turn.steps.map((step) => step.at)]);
+  return times.length > 0 ? Math.max(...times) : undefined;
 }
 
 /**
@@ -92,6 +104,23 @@ function refusedPlain(refused: Refused | Exclude<Deleted, { mission: Mission }> 
       return "This mission is still working and has not said it is done. Wait for it, or stop it.";
     case "long":
       return `That is ${refused.length} characters, and a message to a mission can be ${refused.max} at most. Make it shorter.`;
+  }
+}
+
+/**
+ * Where a person's answer went, for a mission that asked and went on working, said on its page: handed to the turn at
+ * work, or kept for the next, as words told to it are.
+ */
+function answeredPlain(where: TellWhere): string {
+  switch (where) {
+    case "next_step":
+      return "Answered. It reads this before its next step.";
+    case "into_cli":
+      return "Answered. Its coding CLI is given this in the turn it is working on.";
+    case "after_prompt":
+      return "Answered. Its coding CLI reads this once the prompt it is working on ends.";
+    default:
+      return `Answered. ${toldPlain(where)}`;
   }
 }
 
@@ -142,6 +171,27 @@ function strings(value: unknown): string[] | undefined {
   return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : undefined;
 }
 
+/** What a body sent to a draft's edit changes: only the fields it names, each as the draft takes it (`MissionEdit`). */
+function draftChangeOf(body: Record<string, unknown>): DraftChange {
+  const checks = strings(body.checks);
+  const number = (value: unknown) => (typeof value === "number" ? value : undefined);
+  const limits = body.limits && typeof body.limits === "object" ? (body.limits as Record<string, unknown>) : {};
+  const hours = number(limits.hours);
+  const turns = number(limits.turns);
+  const tokens = number(limits.tokens);
+  return {
+    ...(typeof body.title === "string" ? { title: body.title } : {}),
+    ...(typeof body.goal === "string" ? { goal: body.goal } : {}),
+    ...(checks ? { checks } : {}),
+    ...(body.noReview === true ? { review: false } : typeof body.review === "string" ? { review: body.review } : body.noReview === false ? { review: true } : {}),
+    ...(typeof body.accept === "boolean" ? { accept: body.accept } : {}),
+    ...(typeof body.workdir === "string" || body.workdir === null ? { workdir: body.workdir as string | null } : {}),
+    ...(typeof body.branch === "string" || body.branch === null ? { branch: body.branch as string | null } : {}),
+    ...(hours !== undefined || turns !== undefined || tokens !== undefined ? { limits: { ...(hours !== undefined ? { hours } : {}), ...(turns !== undefined ? { turns } : {}), ...(tokens !== undefined ? { tokens } : {}) } } : {}),
+    ...(typeof body.brief === "string" ? { brief: body.brief } : {}),
+  };
+}
+
 export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): void {
   const unavailable = { error: "missions are not run in this process" };
   /** What a route answers for a mission that is not there: also for one that is another person's (`whose.ts`). */
@@ -158,7 +208,7 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
     // A mission that ended more than `days` ago is out of the list unless asked for (`?all=1`, the CLI's); its record stays.
     const all = c.req.query("all") === "1";
     const recent = missions.recent(limit, agent).filter((mission) => all || mission.endedAt === null || now - mission.endedAt < days * DAY_MS);
-    const rows = recent.filter((mission) => things.listed(thingOfMission(mission))).map((mission) => ({ ...view(missions, mission, things), checklist: checklistOf(deps.notes, mission) }));
+    const rows = recent.filter((mission) => things.listed(thingOfMission(mission))).map((mission) => ({ ...view(missions, mission, things, deps.turns), checklist: checklistOf(deps.notes, mission) }));
     rows.sort((a, b) => ORDER[a.seen] - ORDER[b.seen] || b.createdAt - a.createdAt);
     const elsewhere = things.elsewhere(recent.map(thingOfMission));
     return c.json({ missions: rows, ...(elsewhere ? { elsewhere } : {}) } satisfies { missions: MissionView[]; elsewhere?: number });
@@ -180,7 +230,7 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
     // The reviewer at work: minutes a pass, where "Running its checks" alone read as stuck (0.8.10).
     const reviewing = missions.reviewing(mission.id);
     return c.json({
-      mission: view(missions, mission, things),
+      mission: view(missions, mission, things, deps.turns),
       // Its conversation, for the routes every conversation has: its turns, its notes.
       sessionId: sessionIdFor(key),
       // What its turns did, in steps as each turn's line counts them — "2 of 100" turns alone read as two actions (0.8.0).
@@ -206,6 +256,7 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
     const checks = strings(body.checks);
     const started = missions.start({
       agentId: body.agent,
+      ...(typeof body.title === "string" && body.title.trim() ? { title: body.title } : {}),
       goal: body.goal,
       ...(checks ? { checks } : {}),
       ...(body.noReview === true ? { review: false as const } : typeof body.review === "string" && body.review.trim() ? { review: body.review } : {}),
@@ -238,32 +289,13 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
     if (mine && !things.changes(thingOfMission(mine))) return c.json(missing, 404);
     const body = await jsonBody(c);
     if (!body) return c.json({ error: "send the fields to change" }, 400);
-    const checks = strings(body.checks);
-    const number = (value: unknown) => (typeof value === "number" ? value : undefined);
-    const limits = body.limits && typeof body.limits === "object" ? (body.limits as Record<string, unknown>) : {};
-    const hours = number(limits.hours);
-    const turns = number(limits.turns);
-    const tokens = number(limits.tokens);
-    const edited = await missions.edit(
-      c.req.param("id"),
-      {
-        ...(typeof body.goal === "string" ? { goal: body.goal } : {}),
-        ...(checks ? { checks } : {}),
-        ...(body.noReview === true ? { review: false } : typeof body.review === "string" ? { review: body.review } : body.noReview === false ? { review: true } : {}),
-        ...(typeof body.accept === "boolean" ? { accept: body.accept } : {}),
-        ...(typeof body.workdir === "string" || body.workdir === null ? { workdir: body.workdir as string | null } : {}),
-        ...(typeof body.branch === "string" || body.branch === null ? { branch: body.branch as string | null } : {}),
-        ...(hours !== undefined || turns !== undefined || tokens !== undefined ? { limits: { ...(hours !== undefined ? { hours } : {}), ...(turns !== undefined ? { turns } : {}), ...(tokens !== undefined ? { tokens } : {}) } } : {}),
-        ...(typeof body.brief === "string" ? { brief: body.brief } : {}),
-      },
-      {},
-    );
+    const edited = await missions.edit(c.req.param("id"), draftChangeOf(body), {});
     if ("refused" in edited) return c.json({ error: edited.refused, plain: "The draft was not changed. Reload it, check what you entered, and try again." }, 409);
     deps.audit.record({ action: "mission_edited", actor: principal.actor, agentId: edited.mission.agentId, details: { mission: edited.mission.id, changed: edited.changed } });
     // What changed is the chat's list (a folder by its path among it), and a brief's failure an exception's message: the
     // page says what it means (0.8.23), and the chat it began in has the list.
     const plain = edited.briefFailed ? "Saved, but its brief could not be written, so it has none for now. Whoever runs the server can see why." : "Saved. The chat it began in is told what changed.";
-    return c.json({ mission: view(missions, edited.mission, things), changed: edited.changed, ...(edited.briefFailed ? { briefFailed: edited.briefFailed } : {}), plain } satisfies { mission: MissionView; changed: string[]; briefFailed?: string; plain?: string });
+    return c.json({ mission: view(missions, edited.mission, things, deps.turns), changed: edited.changed, ...(edited.briefFailed ? { briefFailed: edited.briefFailed } : {}), plain } satisfies { mission: MissionView; changed: string[]; briefFailed?: string; plain?: string });
   });
 
   /**
@@ -319,7 +351,7 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
       const told = missions.tell(id, text ?? "", by);
       if ("refused" in told) return c.json({ error: told.refused, plain: refusedPlain(told, "tell") }, 409);
       deps.audit.record({ action: "mission_tell", actor: principal.actor, agentId: told.mission.agentId, details: { mission: told.mission.id, chars: (text ?? "").trim().length } });
-      return c.json({ mission: view(missions, told.mission, things), said: told.said, plain: toldPlain(told.where) } satisfies { mission: MissionView; said?: string; plain?: string });
+      return c.json({ mission: view(missions, told.mission, things, deps.turns), said: told.said, plain: toldPlain(told.where) } satisfies { mission: MissionView; said?: string; plain?: string });
     }
     const acted =
       verb === "stop"
@@ -337,6 +369,8 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
     if (!acted) return c.json({ error: "stop, continue, accept, answer or tell" }, 404);
     if ("refused" in acted) return c.json({ error: acted.refused, plain: refusedPlain(acted, verb) }, 409);
     deps.audit.record({ action: `mission_${verb}`, actor: principal.actor, agentId: acted.mission.agentId, details: { mission: acted.mission.id, ...(typeof body.outside === "string" ? { outside: body.outside } : {}) } });
-    return c.json({ mission: view(missions, acted.mission, things) } satisfies { mission: MissionView; said?: string; plain?: string });
+    // An answer to one that went on working says where it went, as a `tell` does.
+    if (acted.where) return c.json({ mission: view(missions, acted.mission, things, deps.turns), said: acted.said ?? "", plain: answeredPlain(acted.where) } satisfies { mission: MissionView; said?: string; plain?: string });
+    return c.json({ mission: view(missions, acted.mission, things, deps.turns) } satisfies { mission: MissionView; said?: string; plain?: string });
   });
 }

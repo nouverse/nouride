@@ -28,7 +28,7 @@
  * - `usage.ts` — what it says it spent, and of its context, as Nouride records and shows them.
  */
 
-import { BUILT_IN_CLIS, steeringOffered, type CliRow, type McpServer } from "@nouride/acp";
+import { BUILT_IN_CLIS, helpersUpdate, steeringOffered, type CliRow, type McpServer } from "@nouride/acp";
 import { contained, createLogger, NourideError, type ExternalPermissions, type LoadedAgent, type Skill } from "@nouride/shared";
 import { agentCommandsHaveOwnUsers, commandsRunningUnder, join, removePath, runCommand, sha256Text, spawnInteractive, spawnLongLived, statFile } from "@nouride/runtime";
 import { privateWorkspace } from "@nouride/persona";
@@ -145,6 +145,8 @@ export interface ExternalAgentsDeps {
   stopGraceMs?: number;
   /** How long a message for a running prompt waits for an open tool call (`steering.ts`). */
   steerHoldMs?: number;
+  /** How long after a CLI's own turn ended, with only its helpers at work, a chat's turn ends (`runner.ts`). */
+  heldQuietMs?: number;
 }
 
 export class ExternalAgents implements RunnerHost {
@@ -193,6 +195,10 @@ export class ExternalAgents implements RunnerHost {
 
   get steerHoldMs(): number | undefined {
     return this.deps.steerHoldMs;
+  }
+
+  get heldQuietMs(): number | undefined {
+    return this.deps.heldQuietMs;
   }
 
   get stopGraceMs(): number | undefined {
@@ -442,6 +448,9 @@ export class ExternalAgents implements RunnerHost {
       const launch = launchFor({ row, profile, privateDir: ownFolder(this.privateDir(agentId)), secrets: { ...secrets, ...this.tokenEnv(row, account), ...lent } });
       const connection = new CliConnection(row, launch, agentId, this.deps.spawn ?? spawnLongLived, this.deps.now);
       connection.onOwnWords = (sessionId, update) => {
+        // What a helper the CLI started does behind a turn is not the agent's word: it wakes no chat and is in no
+        // turn. The agent's own, once the helper has ended, is.
+        if (helpersUpdate(row.helper, update)) return;
         // It says what came of it: a stop from here cuts nothing of that session's off.
         if (update.sessionUpdate === "agent_message_chunk") this.left.reported(ownKey(agentId, sessionId));
         this.ownWords.heard(ownKey(agentId, sessionId), update);

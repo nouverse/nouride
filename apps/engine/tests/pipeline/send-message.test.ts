@@ -12,6 +12,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { messageText, type GatewayInstanceConfig, type ToolContext } from "@nouride/shared";
 import { RoomMessageStore } from "@/modules/chat-events/room-messages.store.ts";
+import { MissionGateway } from "@/modules/missions/gateway.ts";
 import { recordSaid } from "@/modules/pipeline/send-message.ts";
 import type { TurnContext } from "@/modules/pipeline/turn-context.ts";
 import { createSendMessageTool } from "@/modules/tools/builtins/send-message.ts";
@@ -137,12 +138,12 @@ describe("send_message, end to end", () => {
     expect(bench.sessions.load(GROUP).messages.map((message) => messageText(message.content))).toEqual(["halo", "Halo semua!", "[system] a note", "Laporan harian."]);
   });
 
-  test("what it can reach: its conversations and its own connection's people — never another agent's bot, never a cron run", async () => {
+  test("what it can reach: its conversations and its own connection's people — never another agent's bot, never a cron run, never a mission's own conversation", async () => {
     const connection = (id: string, platform: "telegram" | "whatsapp", agent: string) =>
       ({ id, platform, name: id.split(":")[1], enabled: true, tokenSecret: "unused", agent }) as unknown as GatewayInstanceConfig;
     bench = await pipelineBench({
       agents: ["nouva", "nox"],
-      gateways: [new FakeGateway("telegram:main", "telegram"), new FakeGateway("telegram:nox", "telegram"), new FakeGateway("whatsapp:nouva", "whatsapp")],
+      gateways: [new FakeGateway("telegram:main", "telegram"), new FakeGateway("telegram:nox", "telegram"), new FakeGateway("whatsapp:nouva", "whatsapp"), new MissionGateway()],
       configure: (config) => {
         config.gateways.push(connection("telegram:nox", "telegram", "nox"), connection("whatsapp:nouva", "whatsapp", "nouva"));
         config.people.push({ key: "mira", name: "Mira", ids: ["whatsapp:62811@s.whatsapp.net", "telegram:555"] });
@@ -154,6 +155,7 @@ describe("send_message, end to end", () => {
     talked("nouva", "telegram:nox", "999"); // through Nox's own bot: not Nouva's to use
     talked("nouva", "telegram:main", "cron:job-1"); // a scheduled run's conversation, an address on no platform
     talked("nox", "telegram:main", "777"); // somebody else's conversation
+    talked("nouva", "web:mission", "msn_0123456789abcdef0123"); // a mission's work log: nobody reads a message sent there
 
     const ctx = { agentId: "nouva", gatewayId: "telegram:main", chatId: "814", gateway: "telegram", senderId: "814", chatType: "dm" } as ToolContext;
     const targets = bench.pipeline.messageSender().targets(ctx);

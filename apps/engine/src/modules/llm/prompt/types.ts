@@ -5,6 +5,7 @@
  * builder that owns it.
  */
 
+import type { SharedToolsKeeper } from "@/modules/toolchain/shared-tools.ts";
 import type {
   ApprovalLevel,
   Skill,
@@ -104,6 +105,8 @@ export interface HarnessFacts {
     about?: Record<string, string>;
     /** This agent is the orchestrator (`[daemon] orchestrator`), so in a room it is the front desk. */
     frontDesk?: boolean;
+    /** The orchestrator's id, where it is one of the others. */
+    orchestrator?: string;
     maxHops: number;
     /**
      * How a handover actually travels from *this* conversation.
@@ -140,8 +143,11 @@ export interface HarnessFacts {
    */
   ownHome?: string;
   sharedBinDir?: string;
-  /** It is the orchestrator, its own user, and installs what every agent runs (`nouride tools run`). */
-  sharesTools?: boolean;
+  /**
+   * Where each agent is its own user: who changes the programs every agent runs (the orchestrator by name, whether that
+   * is this agent, whether its switch is on), or null where the install has none (`toolchain/shared-tools.ts`).
+   */
+  sharedTools?: SharedToolsKeeper | null;
   /** A `delegate` helper: nobody reads it but the agent that asked, and nobody can answer it. */
   helper?: boolean;
   /** Work nobody watches — a mission's turn, a job's or a webhook's run (`TurnRequest.unattended`): no line of it goes out as it is written. */

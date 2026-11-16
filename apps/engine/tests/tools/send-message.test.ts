@@ -174,6 +174,67 @@ describe("the tool", () => {
   });
 });
 
+describe("in a mission's turn", () => {
+  // A mission's own conversation is nobody's chat. Its person is in the chat it reports to: here, a Telegram one-to-one.
+  const inMission = { agentId: "nouva", gatewayId: "web:mission", chatId: "msn_abc", gateway: "web", senderId: "814", chatType: "dm" } as ToolContext;
+  const gadingWeb: ReachableChat = { gatewayId: "web:dashboard", chatId: "web-1", platform: "web", kind: "dm", people: [{ key: "gading", name: "Gading" }], lastActive: 400 };
+  // The dashboard chat was used last, so it is the list's first line by its order alone.
+  const known: SendTargets = { chats: [gadingWeb, gadingDm, family], othersGateways: [] };
+
+  function tool(reportsTo: { gatewayId: string; chatId: string } | null = { gatewayId: "telegram:main", chatId: "814" }) {
+    const posted: string[] = [];
+    const asked: string[] = [];
+    const made = createSendMessageTool({
+      targets: () => known,
+      post: async (_ctx, chat) => (posted.push(`${chat.gatewayId}:${chat.chatId}`), { ok: true }),
+      reportsTo: (ctx) => (asked.push(`${ctx.gatewayId}:${ctx.chatId}`), reportsTo),
+    });
+    return { made, posted, asked };
+  }
+
+  test("the list begins with the chat the mission reports to, and says it is", async () => {
+    const { made, asked } = tool();
+    const list = (await made.execute({}, inMission)).content.split("\n");
+    expect(list[1]).toBe('- `telegram:main:814`: the telegram one-to-one with Gading · to: "gading" · this mission reports here, and its person reads it');
+    expect(list[2]).toBe('- `web:dashboard:web-1`: the web one-to-one with Gading · to: "gading"');
+    expect(list).toHaveLength(4);
+    // Asked of the turn the call is in, which is the mission's.
+    expect(asked).toContain("web:mission:msn_abc");
+  });
+
+  test("a name with several chats lists them the same way: the mission's first and marked", () => {
+    const refused = tool().made.gate!({ to: "gading", text: "Mermaid, yes or no?" }, inMission);
+    expect(refused.action).toBe("refuse");
+    const lines = (refused as { reason: string }).reason.split("\n");
+    expect(lines[0]).toStartWith('"gading" has 2 chats you can reach.');
+    expect(lines[1]).toEndWith("· this mission reports here, and its person reads it");
+    expect(lines[1]).toStartWith("- `telegram:main:814`");
+  });
+
+  test("a message to another chat is sent, and its result says where the mission reports and that an answer there never reaches it", async () => {
+    const { made, posted } = tool();
+    const result = await made.execute({ to: "web:dashboard:web-1", text: "Mermaid, yes or no?" }, inMission);
+    expect(posted).toEqual(["web:dashboard:web-1"]);
+    expect(result.isError).toBe(false);
+    expect(result.content).toEndWith(
+      'so you will have it when somebody answers. This mission reports to the telegram one-to-one with Gading, not there: an answer in that chat does not come back to the mission. A question for its person goes through `mission` action "ask".',
+    );
+  });
+
+  test("a message to the mission's own chat says nothing more, and a turn that is no mission's is as it was", async () => {
+    const { made } = tool();
+    const home = await made.execute({ to: "telegram:main:814", text: "Item 3 is pushed." }, inMission);
+    expect(home.content).toEndWith("so you will have it when somebody answers.");
+
+    const chat = tool(null);
+    const inChat = { ...inMission, gatewayId: "whatsapp:main", chatId: "1203@g.us", gateway: "whatsapp" } as ToolContext;
+    const list = (await chat.made.execute({}, inChat)).content;
+    expect(list).not.toContain("this mission reports here");
+    expect(list.split("\n")[1]).toStartWith("- `web:dashboard:web-1`");
+    expect((await chat.made.execute({ to: "web:dashboard:web-1", text: "hi" }, inChat)).content).toEndWith("so you will have it when somebody answers.");
+  });
+});
+
 describe("in a toolset", () => {
   const agentWith = (enabled: string[]) => fakeAgent({ config: { ...fakeAgent().config, tools: { enabled, approvalRequired: [], blocked: [] } } });
   const sendFile: Tool = { requiresApproval: false, definition: { name: "send_file", description: "", parameters: {} }, execute: async () => ({ content: "", isError: false }) };

@@ -39,5 +39,6 @@ test("the slash button is an icon like the paperclip, not a character", () => {
 test("the placeholder names who is messaged; the keys are said under the box", () => {
   expect(composer).toContain('`Message ${currentAgent?.displayName || "agent"}…`');
   expect(composer).not.toContain("(Enter to send, Shift+Enter for newline)");
-  expect(composer).toContain('<span className="hidden shrink-0 sm:inline">Enter to send · Shift+Enter for a new line</span>');
+  // Not where the pointer is a finger: there Enter is a new line and the button sends (`enter-sends.ts`).
+  expect(composer).toContain('<span className="hidden shrink-0 sm:inline pointer-coarse:hidden">Enter to send · Shift+Enter for a new line</span>');
 });

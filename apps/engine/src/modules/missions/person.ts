@@ -4,11 +4,14 @@
  * person or the operator; never from an agent, which cannot raise its own limit.
  */
 
-import { createLogger, ownerIdentity } from "@nouride/shared";
+import { clip, createLogger, ownerIdentity } from "@nouride/shared";
+import { openQuestion } from "./asking.ts";
+import { carryWait } from "./carry.ts";
 import { limitsNear } from "./decide.ts";
 import { workedMs } from "./page.ts";
 import type { Missions } from "./missions.ts";
 import type { MissionsDeps } from "./deps.ts";
+import { handOver, type TellWhere } from "./tell.ts";
 import { isFinal, type Mission } from "./types.ts";
 
 const log = createLogger("missions");
@@ -32,7 +35,11 @@ export type RefusedWhy =
 
 export type Refused = { refused: string; why: RefusedWhy };
 
-export type Acted = { mission: Mission } | Refused;
+/**
+ * `said`, `where`: where words handed to a mission that was not waiting for them went, in the chat's words and as the
+ * dashboard words it (`tell.ts`): an answer given to a mission that went on working.
+ */
+export type Acted = { mission: Mission; said?: string; where?: TellWhere } | Refused;
 
 /** Who said it, in a chat: their id on the connection they said it on. Absent from the dashboard and the CLI. */
 export type Sayer = { gatewayId: string; senderId: string };
@@ -115,10 +122,17 @@ export function continueMission(missions: Missions, deps: MissionsDeps, id: stri
   return { mission };
 }
 
+/**
+ * Answer its question. One that waits for the answer goes on with it, as the next turn. One that asked and went on
+ * working (`keep_working`, `asking.ts`), or waits on something else by now, has it put on its record and handed over as
+ * a `tell` is: into the turn at work, or kept for the next. Nothing is resumed by it: what a mission waits on is moved
+ * by what that wait takes.
+ */
 export function answerMission(missions: Missions, deps: MissionsDeps, id: string, text: string, by: string): Acted {
   const mission = missions.find(id);
   if (!mission) return { refused: `No mission ${id}.`, why: "missing" };
-  if (mission.status !== "waiting" || mission.waitKind !== "input") return { refused: `Mission ${named(mission)} has no question waiting.`, why: "no-question" };
+  const open = openQuestion(mission);
+  if (!open) return { refused: `Mission ${named(mission)} has no question waiting.`, why: "no-question" };
   const answer = text.trim();
   if (!answer) return { refused: "Say the answer after the mission's id.", why: "empty" };
   // A command is the person's to the daemon, not words for the agent: typed into the answer box on the live box,
@@ -126,13 +140,19 @@ export function answerMission(missions: Missions, deps: MissionsDeps, id: string
   if (/^\/mission\b/i.test(answer)) {
     return { refused: `That is a command, not an answer. Send it as a message of its own. To accept mission ${named(mission)} as it is: /mission accept ${named(mission)}.`, why: "command" };
   }
-  const last = mission.answers.at(-1);
-  if (last && last.answer === undefined) last.answer = answer;
-  missions.resume(mission);
-  deps.store.save(mission);
-  deps.changed?.(mission);
-  missions.queueTurn(mission, `${by} answered your question: ${answer}`);
-  return { mission };
+  open.answer = answer;
+  if (mission.status === "waiting" && mission.waitKind === "input") {
+    missions.resume(mission);
+    deps.store.save(mission);
+    deps.changed?.(mission);
+    missions.queueTurn(mission, `${by} answered your question: ${answer}`);
+    return { mission };
+  }
+  log.info("a mission's question answered while it was not waiting for it", { mission: mission.id, by, status: mission.status, wait: mission.waitKind });
+  // The chat's line that its mission asks is taken back, as a resume does for one that waited.
+  if (deps.notes) void carryWait(deps.notes, mission, null).catch((err: unknown) => log.warn("a chat's line for its mission's question could not be updated", { mission: mission.id, error: String(err) }));
+  const handed = handOver(deps, mission, `Answer to your question "${clip(open.question.trim(), 200)}": ${answer}`, by);
+  return { mission: deps.store.get(mission.id) ?? mission, said: `Answered. ${handed.said.replace(/^Told\. /, "")}`, where: handed.where };
 }
 
 /**

@@ -7,11 +7,11 @@
  */
 
 import type { SystemFolderSizes, SystemOverview } from "@nouride/wire";
-import { commandsMemory, dirname, diskSpace, processHeldBytes, readMachine, readMemoryUse } from "@nouride/runtime";
+import { commandsMemory, diskSpace, processHeldBytes, readMachine, readMemoryUse } from "@nouride/runtime";
 import { VERSION } from "@/commons/version.ts";
 import { atLeast } from "@/modules/users/auth.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
-import { listFolder } from "../system-files.ts";
+import { filesRoot, listFolder } from "../system-files.ts";
 import { FolderSizes } from "../system-usage.ts";
 import { ADMINS_ONLY, registerSystemFileRoutes } from "./system-files.ts";
 
@@ -21,7 +21,7 @@ export function registerSystemRoutes(control: ControlApp, deps: ControlDeps): vo
    * out when a route is first asked, not as they are registered: a context a test wires holds less than a config.
    */
   let folder: { root: string; sizes: FolderSizes } | null = null;
-  const at = () => (folder ??= ((root) => ({ root, sizes: new FolderSizes(root) }))(deps.ctx.configSource ? dirname(deps.ctx.configSource) : dirname(deps.ctx.config.daemon.dataDir)));
+  const at = () => (folder ??= ((root) => ({ root, sizes: new FolderSizes(root) }))(filesRoot(deps.ctx.configSource, deps.ctx.config.daemon.dataDir)));
 
   control.get("/system", (c) => {
     if (!atLeast(c.get("principal"), "admin")) return c.json(ADMINS_ONLY, 403);

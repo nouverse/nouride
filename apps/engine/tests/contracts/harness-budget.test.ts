@@ -14,8 +14,8 @@
  * fails here and has to be argued for, in the same change, with the reason in the commit.
  *
  * Measured, not estimated: characters of the text the model is sent, for an agent that holds every built-in tool, in
- * a one-to-one chat. The test's own folders are written as one letter and the two lines that differ by machine are
- * left out (the install ladder, which names this platform's package manager, and the machine's size), so the number
+ * a one-to-one chat. The test's own folders are written as one letter and the three lines that differ by machine are
+ * left out (the install ladder, which names this platform's package manager, the system, and the machine's size), so the number
  * is the same on a laptop and on the runner.
  */
 
@@ -83,7 +83,7 @@ describe("what rides on every request", () => {
         .replaceAll(bench.agentsDir, "/A")
         .replaceAll(tmpdir(), "/T")
         .split("\n")
-        .filter((line) => !line.startsWith("- `Executable not found in $PATH`") && !line.startsWith("- **This machine** has"))
+        .filter((line) => !line.startsWith("- `Executable not found in $PATH`") && !line.startsWith("- **This machine** has") && !line.startsWith("- **This system** is"))
         .join("\n");
       // It is the whole block that was measured: each of its sections is there.
       for (const section of ["CHECK BEFORE YOU ANSWER", "FILES", "TOOLS", "MEMORY", "YOUR CLI", "CONVERSATION"]) expect(same).toContain(`\n${section}\n`);

@@ -5,7 +5,7 @@
  * is skipped rather than stacked behind it.
  */
 
-import type { Job } from "@nouride/shared";
+import { cutAtWord, MISSION_TITLE_MAX, oneLine, type Job } from "@nouride/shared";
 import { deliveryTarget } from "@/modules/cron/addressing.ts";
 import type { Missions } from "./missions.ts";
 import type { MissionsPort } from "./missions.store.ts";
@@ -24,6 +24,8 @@ export function startJobRun(
   const reportTo = deliveryTarget(job);
   const started = deps.missions.start({
     agentId: job.agentId,
+    // Named by its job: what its person called it when they made it, cut to what a title holds.
+    title: cutAtWord(oneLine(job.name), MISSION_TITLE_MAX),
     goal: job.payload.goal,
     ...(job.payload.checks ? { checks: job.payload.checks } : {}),
     ...(job.payload.review !== undefined ? { review: job.payload.review } : {}),

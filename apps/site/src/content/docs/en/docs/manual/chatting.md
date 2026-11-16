@@ -157,6 +157,9 @@ approval's own message). A "yes" typed as a message does not answer it.
 - **An agent answered by Claude Code or Codex** (from 0.8.10) is handed your message in the prompt it is
   running, through its CLI. While a command of its runs, the message waits for that command to end, five
   minutes at most, so a test run is not pushed aside; the CLI then stops what it was writing to read it. A
+  command of a helper that Claude Code started in the background is not the agent's own, and is not waited
+  for (0.8.39). Once the agent has said its part and only such helpers work on, its turn is over: the chat is
+  free, your next message is a turn of its own, and the agent says what came of the helpers when they end. A
   CLI that cannot take a message mid-prompt reads it once its prompt ends, and "Got it" says so: "I'll read
   that once what I'm running now ends."
 
@@ -336,7 +339,8 @@ It belongs to the group, not to one bot: with several of our bots in the group, 
 same setting, and the command is answered once. Changing it is an admin's, as for `/daemon-restart`;
 anyone else is told so and nothing changes. In a DM it does nothing: a DM always gets an answer. The
 same choice is on the dashboard's **Groups** page, one list per group, and what either says the other
-shows.
+shows. A room made in the dashboard has it in its header too (0.8.39): **Who answers with no tag**, for an
+admin, among the room's own agents.
 
 `/mention@NovelistBot`, the way Telegram's command menu writes a command for one bot, is answered by
 that bot: it says who answers here now, and how to give the group to it.
@@ -415,6 +419,20 @@ that the two of you talked and how that answer began. The words go only where yo
 person, or in the chat the work was asked from; anywhere else an agent is told only that it did a job
 for another agent, and when. What is said in a room is never carried out of it.
 
+**An agent asked by another answers in the room itself (0.8.39).** When an agent asks another with
+`ask_agent` and that agent is in the room, its answer is also said there, as its own message: in a room
+made in the dashboard above the reply of the agent that asked, in a group on Telegram, Discord or
+WhatsApp from its own bot. The agent that asked knows the room has read it, and adds what is its own
+without repeating it. A tag inside such an answer hands the work to nobody. An agent that is not in the
+room, or has no bot of its own in the group, runs behind the chat as before, and its words reach you
+through the one that asked.
+
+On a chat app, an agent asked by another has a line of its steps in the chat, under the bot of the agent
+that asked: `[nox] ✓ 2 steps · 16s`. In a one-to-one chat that line is the only sign the asked agent
+worked, and it stays. Where the asked agent answers for itself, its answer is that sign and the line is
+not sent. It is still sent when the answer could not be said after all: its bot could not deliver there,
+or it ended with nothing to say.
+
 **When handed-over work fails.** If the agent that took the work fails or runs out of time, the line
 it leaves carries **Continue** and **Hand to** for up to three other agents of the room (0.8.33).
 Continue has the same agent take it up again. Hand to gives another agent what the first was asked.
@@ -454,9 +472,17 @@ the whole request. `[media] max_image_side` sets the number, for a model that re
 Agents send files back with `send_file`. It will not send a credential file, or any file holding the
 value of one of the agent's secrets, because a file on a chat platform cannot be masked.
 
+A Markdown file sent by itself to a chat app comes with one more line, **Open it as a page**, and a link
+(0.8.39). A chat app shows such a file as its source; the link opens it in the dashboard's Workspace,
+with its headings, its tables and its diagrams drawn. Nouride writes the link, for a person who is an
+admin and where `[dashboard] public_url` is set
+([Links from a chat](/en/docs/manual/dashboard/#links-from-a-chat)).
+
 Several files that belong together, the slides of a carousel or the pages of a scan, go in one send, in
 order: one album on Telegram and one message on Discord, up to ten files each, and one after another on
-WhatsApp and in the dashboard. Every file is checked first, so a set arrives whole or not at all.
+WhatsApp and in the dashboard. Every file is checked first, so a set arrives whole or not at all. In the
+dashboard the pictures of one reply open as one set, and **Download all** saves a reply's files as one
+`.zip` (0.8.39).
 
 ## From the terminal
 

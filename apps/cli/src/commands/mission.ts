@@ -17,10 +17,14 @@ export async function mission(client: Client, args: string[]): Promise<void> {
     const detail = await client.get<MissionDetailResponse>(`/missions/${encodeURIComponent(id)}`);
     emit(detail);
     const m = detail.mission;
-    say(`${BOLD}${m.id}${RESET} · ${m.agentId} · ${statusOf(m)}`);
+    say(`${BOLD}${m.title ?? m.id}${RESET}${m.title ? ` · ${m.id}` : ""} · ${m.agentId} · ${statusOf(m)}`);
     say(`  Goal: ${m.goal}`);
     if (m.checks.length > 0) say(`  Checks: ${m.checks.join("; ")}`);
-    say(`  ${DIM}${turnsSaid(m)} · ${hours(m.workedMs)} of ${hoursLimit(m.limits.hours)} · ${millions(m.tokensUsed)} of ${millions(m.limits.tokens)} tokens${RESET}`);
+    // With a coding CLI's turn at work, what it has spent so far, said as the estimate it is; a daemon that sends none, its count.
+    const running = m.shown?.running ?? 0;
+    const spent = running > 0 ? `about ${millions(m.tokensUsed + running)} of ${millions(m.limits.tokens)} tokens so far (an estimate while its turn is at work)` : `${millions(m.tokensUsed)} of ${millions(m.limits.tokens)} tokens`;
+    // A coding CLI's mission is held to no turn limit, and "of at most 100" beside its one turn read as one it had.
+    say(`  ${DIM}${turnsSaid(m, m.shown?.turns ?? true)} · ${hours(m.workedMs)} of ${hoursLimit(m.limits.hours)} · ${spent}${RESET}`);
     // Minutes a pass: "checking" alone read as stuck (0.8.10).
     if (detail.reviewing) say(`  ${YELLOW}●${RESET} ${reviewingLine(detail.reviewing, Date.now())}`);
     if (detail.plan) {
@@ -71,8 +75,9 @@ export async function mission(client: Client, args: string[]): Promise<void> {
     }
     const text = rest.join(" ").trim();
     if (action === "answer" && !text) usageError("usage: nouride mission answer <id> <answer>");
-    const { mission: m } = await client.post<MissionResponse>(`/missions/${encodeURIComponent(id)}/${action}`, text ? { text } : {});
-    return say(`${GREEN}✓${RESET} ${m.id} · ${statusOf(m)}`);
+    const { mission: m, said } = await client.post<MissionResponse>(`/missions/${encodeURIComponent(id)}/${action}`, text ? { text } : {});
+    // An answer to one that went on working says where it went, as a `tell` does.
+    return say(`${GREEN}✓${RESET} ${m.id} · ${statusOf(m)}${said ? `: ${said}` : ""}`);
   }
 
   const all = hasFlag(args, "--all");
@@ -84,8 +89,9 @@ export async function mission(client: Client, args: string[]): Promise<void> {
   if (open.length === 0) say(`${DIM}nothing running${RESET}`);
   for (const m of [...open, ...shown]) {
     const mark = m.seen === "needs_you" ? `${YELLOW}✋${RESET}` : m.seen === "working" ? `${YELLOW}●${RESET}` : m.seen === "done" ? `${GREEN}✓${RESET}` : `${RED}✗${RESET}`;
-    say(`${mark} ${BOLD}${clip(m.goal, 90)}${RESET}`);
-    say(`    ${DIM}${m.id} · ${m.agentId} · ${statusOf(m)} · turn ${m.turnsUsed}/${m.limits.turns}${RESET}`);
+    // Its name; a daemon whose missions have none still says its goal's start.
+    say(`${mark} ${BOLD}${m.title ?? clip(m.goal, 90)}${RESET}`);
+    say(`    ${DIM}${m.id} · ${m.agentId} · ${statusOf(m)} · turn ${m.turnsUsed}${m.shown?.turns === false ? "" : `/${m.limits.turns}`}${RESET}`);
   }
   const hidden = ended.length - shown.length;
   say();

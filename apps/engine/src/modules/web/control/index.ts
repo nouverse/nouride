@@ -64,6 +64,7 @@ import { registerMemoryDocumentRoutes } from "./routes/memory-documents.ts";
 import { registerMemoryTagRoutes } from "./routes/memory-tags.ts";
 import { registerKnowledgeRoutes } from "./routes/knowledge.ts";
 import { registerTurnRoutes } from "./routes/turns.ts";
+import { registerPreviewRoutes } from "./routes/preview.ts";
 import { registerEventRoutes } from "./routes/events.ts";
 import { registerMcpServerRoutes } from "./routes/mcp-server.ts";
 import { registerLlmGatewayRoutes } from "./routes/llm-gateway.ts";
@@ -154,6 +155,8 @@ export function mountControlRoutes(app: Hono, deps: ControlDeps): void {
   // `/knowledge*` — the knowledge base (0.8.20): its own prefix.
   registerKnowledgeRoutes(control, deps);
   registerTurnRoutes(control, deps);
+  // `/preview/*`: a page an agent wrote, under a policy of its own (`web/server.ts`).
+  registerPreviewRoutes(control, deps);
   registerEventRoutes(control, deps);
   registerMcpServerRoutes(control, deps);
   // Before the agent module: its `/agents/:id/:action` would take `tools` and `default` as actions.

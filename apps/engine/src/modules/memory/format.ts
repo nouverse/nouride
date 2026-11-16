@@ -82,7 +82,7 @@ export async function checkVaultFormat(vault: Vault, snapshots: string): Promise
   throw new VaultFormatError(
     `refusing to start: the memory vault is format ${found.format}, and this build reads format ${VAULT_FORMAT} (${vault.formatFile} says so).\n` +
       `A newer Nouride has already written it in a shape this build does not know; an update that was rolled back leaves exactly this.\n` +
-      `  → start the newer build again, or\n` +
+      `  → start the newer build again: where an update's guard put it aside, nouride update --retry puts it back whole; else install that version again, or\n` +
       `  → put ${vault.root} back as it was before that upgrade, from a snapshot in ${snapshots}`,
   );
 }

@@ -5,12 +5,16 @@
  */
 
 import { describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { Gateway, MessageEnvelope, OutboundMessage, Person } from "@nouride/shared";
 import { Notifier } from "@/commons/notify.ts";
 import { senderHasAccount, senderIsAdmin } from "@/modules/people/match.ts";
 import type { PipelineDeps } from "@/modules/pipeline/deps.ts";
 import { Voice } from "@/modules/pipeline/voice.ts";
-import { dashboardLink, holdsDashboardLink, linksFor, publicBase } from "@/modules/web/links.ts";
+import { filesRoot } from "@/modules/web/control/system-files.ts";
+import { dashboardLink, holdsDashboardLink, linksFor, publicBase, workspaceFileLink, workspaceFilePage } from "@/modules/web/links.ts";
 
 const BASE = "https://agents.example.com";
 const SET = { publicUrl: BASE };
@@ -34,6 +38,52 @@ describe("a dashboard link", () => {
     expect(dashboardLink(SET, { kind: "overview" })).toBe(`${BASE}/dashboard/`);
     expect(dashboardLink(SET, { kind: "agent-cli", agentId: "nix" })).toBe(`${BASE}/dashboard/agents/nix/cli`);
     expect(dashboardLink(SET, { kind: "mcp-install", name: "io.github.x/y z", agent: "nouva" })).toBe(`${BASE}/dashboard/mcp?install=io.github.x%2Fy%20z&agent=nouva`);
+    // A file of the workspace: its agent's Workspace tab, or the Agents menu's, the file's path as one parameter.
+    expect(dashboardLink(SET, { kind: "workspace-file", agentId: "nix", path: "workspace/private/nix/notes/plan a&b.md" })).toBe(`${BASE}/dashboard/agents/nix/workspace?path=workspace%2Fprivate%2Fnix%2Fnotes%2Fplan%20a%26b.md`);
+    expect(dashboardLink(SET, { kind: "workspace-file", agentId: null, path: "workspace/shared/brief.md" })).toBe(`${BASE}/dashboard/workspace?path=workspace%2Fshared%2Fbrief.md`);
+  });
+});
+
+describe("a file of the workspace, as the Workspace tab that opens it", () => {
+  const HOME = "/srv/nouride/.nouride";
+  const where = { root: HOME, workspace: `${HOME}/workspace` };
+
+  test("a file of an agent's own folder opens in that agent's tab, by its path as a files view writes one", () => {
+    expect(workspaceFilePage(where, `${HOME}/workspace/private/nix/missions/msn_1/report.md`)).toEqual({ kind: "workspace-file", agentId: "nix", path: "workspace/private/nix/missions/msn_1/report.md" });
+    expect(workspaceFilePage(where, `${HOME}/workspace/private/nix/notes.md`)).toEqual({ kind: "workspace-file", agentId: "nix", path: "workspace/private/nix/notes.md" });
+  });
+
+  test("a file of the folder the agents share opens in the Agents menu's tab", () => {
+    expect(workspaceFilePage(where, `${HOME}/workspace/shared/briefs/week.md`)).toEqual({ kind: "workspace-file", agentId: null, path: "workspace/shared/briefs/week.md" });
+  });
+
+  test("anything else has no such page: outside the workspace, beside its two folders, a folder that is nobody's file", () => {
+    for (const file of [`${HOME}/data/jobs/build.md`, `${HOME}/agents/nix/SOUL.md`, "/tmp/report.md", `${HOME}/workspace/readme.md`, `${HOME}/workspace/other/x.md`, `${HOME}/workspace/private/nix`, `${HOME}/workspace/shared`, `${HOME}/workspace`, `${HOME}/workspace-old/private/nix/a.md`]) {
+      expect(workspaceFilePage(where, file), file).toBeNull();
+    }
+  });
+
+  test("none where the install keeps the workspace outside the folder the files views show", () => {
+    expect(workspaceFilePage({ root: HOME, workspace: "/mnt/big/workspace" }, "/mnt/big/workspace/private/nix/notes.md")).toBeNull();
+  });
+
+  test("an install under a linked folder: the file is where a tool found it, links followed, and is still its workspace's", () => {
+    const real = realpathSync(mkdtempSync(join(tmpdir(), "nouride-links-")));
+    try {
+      mkdirSync(join(real, "home", "workspace", "private", "nix"), { recursive: true });
+      writeFileSync(join(real, "home", "workspace", "private", "nix", "report.md"), "# r\n");
+      symlinkSync(join(real, "home"), join(real, "linked"));
+      const linked = { root: join(real, "linked"), workspace: join(real, "linked", "workspace") };
+      expect(workspaceFilePage(linked, join(real, "home", "workspace", "private", "nix", "report.md"))).toEqual({ kind: "workspace-file", agentId: "nix", path: "workspace/private/nix/report.md" });
+    } finally {
+      rmSync(real, { recursive: true, force: true });
+    }
+  });
+
+  test("the folder the views show is the config file's, or the data folder's parent with no config file", () => {
+    expect(filesRoot(`${HOME}/config.toml`, "/var/lib/elsewhere/data")).toBe(HOME);
+    expect(filesRoot(null, `${HOME}/data`)).toBe(HOME);
+    expect(filesRoot(undefined, `${HOME}/data`)).toBe(HOME);
   });
 });
 
@@ -70,6 +120,43 @@ describe("who gets one in a chat", () => {
   test("without `public_url`, none anywhere", () => {
     expect(rule("")(dm("8142"), page)).toBeNull();
     expect(rule("")(room("group"), page)).toBeNull();
+  });
+});
+
+describe("who gets the link to a page only an admin opens: a file of the workspace", () => {
+  // 8142 is an admin; 777 holds an account that is not one; 555 holds none.
+  const rule = (publicUrl: string, admin = true) =>
+    linksFor({ dashboard: () => ({ publicUrl }), hasAccount: (who) => who.senderId === "8142" || who.senderId === "777", ...(admin ? { isAdmin: (who) => who.senderId === "8142" } : {}) });
+  const page = { kind: "workspace-file", agentId: "nix", path: "workspace/private/nix/report.md" } as const;
+  const link = `${BASE}/dashboard/agents/nix/workspace?path=workspace%2Fprivate%2Fnix%2Freport.md`;
+  const dm = (senderId: string) => ({ gatewayId: "telegram:nouva", chatId: senderId, senderId, chatType: "dm" });
+  const room = (senderId: string) => ({ gatewayId: "telegram:nouva", chatId: "-100team", senderId, chatType: "group" });
+
+  test("an admin in a DM gets it; a person with an account that is not an admin's does not, though a mission's page goes to them", () => {
+    expect(rule(BASE)(dm("8142"), page)).toBe(link);
+    expect(rule(BASE)(dm("777"), page)).toBeNull();
+    expect(rule(BASE)(dm("777"), { kind: "mission", id: "msn_1" })).toBe(`${BASE}/dashboard/missions/msn_1`);
+    expect(rule(BASE)(dm("555"), page)).toBeNull();
+  });
+
+  test("in a group it follows who asked: an admin gets it, and the page is not handed to a room on anyone else's word", () => {
+    expect(rule(BASE)(room("8142"), page)).toBe(link);
+    expect(rule(BASE)(room("777"), page)).toBeNull();
+    // The chat's id is not a person's there: an admin's DM started by the daemon is, a group is not.
+    expect(rule(BASE)({ gatewayId: "telegram:nouva", chatId: "8142", senderId: "nouride:system", chatType: "dm" }, page)).toBe(link);
+    expect(rule(BASE)({ gatewayId: "telegram:nouva", chatId: "8142", senderId: "nouride:system", chatType: "group" }, page)).toBeNull();
+  });
+
+  test("none without `public_url`, and none where nothing says who is an admin", () => {
+    expect(rule("")(dm("8142"), page)).toBeNull();
+    expect(rule(BASE, false)(dm("8142"), page)).toBeNull();
+  });
+
+  test("for a file, through its page: the link where it has one and its reader may open it, else none", () => {
+    const where = { root: "/srv/.nouride", workspace: "/srv/.nouride/workspace" };
+    expect(workspaceFileLink(rule(BASE), where, dm("8142"), "/srv/.nouride/workspace/private/nix/report.md")).toBe(link);
+    expect(workspaceFileLink(rule(BASE), where, dm("777"), "/srv/.nouride/workspace/private/nix/report.md")).toBeNull();
+    expect(workspaceFileLink(rule(BASE), where, dm("8142"), "/srv/.nouride/data/jobs/build.md")).toBeNull();
   });
 });
 

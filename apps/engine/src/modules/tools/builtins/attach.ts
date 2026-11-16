@@ -35,6 +35,7 @@ import {
   type ToolResult, formatBytes} from "@nouride/shared";
 import { rootsFor } from "@/modules/tools/builtins/files.ts";
 import { looksBinary } from "@/modules/tools/builtins/document-kind.ts";
+import { captionWithPage, readsAsPage } from "@/modules/tools/builtins/file-page.ts";
 import { credentialKind, credentialSendRefusal } from "@/modules/tools/credential-files.ts";
 import { containsSecret } from "@nouride/secrets";
 import { checkUrl, judgedFetch, type UrlPolicy } from "@/modules/tools/url-safety.ts";
@@ -75,6 +76,11 @@ export interface SendFileOptions {
    * script or a log that picked up a key is refused here instead of being posted. Absent: not checked.
    */
   childEnv?: (agentId: string) => Record<string, string>;
+  /**
+   * The dashboard link that opens a file of the workspace as a page, for the person in this chat, or null where none
+   * goes (`web/links.ts`). Asked of a markdown file sent alone, and written under its caption (`file-page.ts`).
+   */
+  pageOf?: (ctx: ToolContext, file: string) => string | null;
 }
 
 /**
@@ -383,7 +389,7 @@ function captionOf(args: Record<string, unknown>): string | undefined {
  * directories the agent may read, there, not empty, under the install's limit, no credential file, none of the
  * agent's credentials in its text, and what its name says it is.
  */
-async function localFile(raw: string, ctx: ToolContext, options: SendFileOptions): Promise<Attachment | { error: string }> {
+async function localFile(raw: string, ctx: ToolContext, options: SendFileOptions): Promise<{ file: Attachment; at: string } | { error: string }> {
   // The same sandbox and the same root list `read` uses — reached through `rootsFor` rather than
   // rebuilt here, so a change to what an agent may open cannot apply to reading and miss sending.
   // Read mode: putting a file on the wire is a read, and it must reach read-only roots such as
@@ -435,7 +441,7 @@ async function localFile(raw: string, ctx: ToolContext, options: SendFileOptions
   });
   if ("error" in checked) return { error: checked.error };
 
-  return { type: TYPE_BY_EXTENSION[extension] ?? "file", buffer, mimeType: checked.mimeType, filename, size: stat.size };
+  return { file: { type: TYPE_BY_EXTENSION[extension] ?? "file", buffer, mimeType: checked.mimeType, filename, size: stat.size }, at: resolved };
 }
 
 /** A set through the port for one file, in order, stopping at the first that does not arrive. */
@@ -461,9 +467,9 @@ async function sendSeveral(paths: readonly string[], args: Record<string, unknow
   if (paths.length > TOGETHER_MAX) return { content: `\`paths\` holds ${paths.length} files, and one call sends ${TOGETHER_MAX} at most. Send them in two calls, or as one archive.`, isError: true };
   const files: Attachment[] = [];
   for (const raw of paths) {
-    const file = await localFile(raw, ctx, options);
-    if ("error" in file) return { content: `Nothing was sent: ${file.error}`, isError: true };
-    files.push(file);
+    const read = await localFile(raw, ctx, options);
+    if ("error" in read) return { content: `Nothing was sent: ${read.error}`, isError: true };
+    files.push(read.file);
   }
   const caption = captionOf(args);
   if (caption) files[0]!.caption = caption;
@@ -541,11 +547,14 @@ export function createSendFileTool(options: SendFileOptions): Tool {
       const one = raw || several[0] || "";
       if (!one) return { content: "Give the `path` or the `url` of the file to send, or `paths` for several.", isError: true };
 
-      const attachment = await localFile(one, ctx, options);
-      if ("error" in attachment) return { content: attachment.error, isError: true };
-      const caption = captionOf(args);
-      if (caption) attachment.caption = caption;
+      const read = await localFile(one, ctx, options);
+      if ("error" in read) return { content: read.error, isError: true };
+      const attachment = read.file;
       const { filename = one, size = 0 } = attachment;
+      // A file written to be read as a page goes with the link that opens it as one, where its reader may open it.
+      const page = readsAsPage(filename) ? (options.pageOf?.(ctx, read.at) ?? null) : null;
+      const caption = captionWithPage(captionOf(args), page);
+      if (caption) attachment.caption = caption;
 
       const sent = await options.send(ctx, attachment);
       // A gateway that buffered instead of sending, or one that is gone. Reporting success there
@@ -560,7 +569,8 @@ export function createSendFileTool(options: SendFileOptions): Tool {
         bytes: size,
       });
       return {
-        content: `Sent \`${filename}\` (${formatBytes(size)}) to this conversation.`,
+        // Said so the agent does not write an address of its own under it.
+        content: `Sent \`${filename}\` (${formatBytes(size)}) to this conversation${page ? ", with the link that opens it as a page in the dashboard written under it" : ""}.`,
         isError: false,
       };
     },

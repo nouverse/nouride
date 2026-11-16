@@ -37,7 +37,7 @@ async function setup(settings: Parameters<typeof missionsHarness>[0] = {}) {
   });
   const draft = async (args: Record<string, unknown> = {}, ctx: ToolContext = person()) => {
     const before = new Set(h.store.open().map((one) => one.id));
-    const answer = await tools.chat.execute({ action: "start", goal: "Revise the RFC to the owner's answers", checks: ["test -s RFC.md"], ...args }, ctx);
+    const answer = await tools.chat.execute({ action: "start", title: "A test mission", goal: "Revise the RFC to the owner's answers", checks: ["test -s RFC.md"], ...args }, ctx);
     await h.settle();
     const made = h.store.open().find((one) => !before.has(one.id)) ?? null;
     return { answer, mission: made };
@@ -53,11 +53,27 @@ describe("D1 — a chat's mission is a draft", () => {
     expect(h.queued).toHaveLength(0);
     const id = mission!.id.slice(0, 10);
     const notice = h.told.at(-1)!;
-    expect(notice.text).toBe(`📝 Draft ${id} · nova: Revise the RFC to the owner's answers\n\n1 check · signed off by: you · brief: none\n\nStart it: /mission accept ${id} · drop it: /mission stop ${id}`);
+    expect(notice.text).toBe(`📝 Draft ${id} · nova: A test mission\n\nRevise the RFC to the owner's answers\n\n1 check · signed off by: you · brief: none\n\nStart it: /mission accept ${id} · drop it: /mission stop ${id}`);
     expect(notice.buttons?.map((one) => one.label)).toEqual(["Start it", "Drop it"]);
-    expect(answer.content).toStartWith(`Drafted mission ${id}: Revise the RFC`);
+    expect(answer.content).toStartWith(`Drafted mission ${id}, "A test mission": Revise the RFC`);
     expect(answer.content).toContain('Nothing runs until the person starts it: their tap, /mission accept');
     expect(answer.content).toContain('their "go" passed on with `work` action "start". Change it before then with `mission` action "edit".');
+  });
+
+  test("drafted while another mission holds its turn, the notice says a start waits for it and then runs by itself", async () => {
+    // Two drafts were kept unstarted behind a mission at work, as questions on Work: nothing said a start was a place in the queue.
+    const { h, draft } = await setup({ settings: { perAgent: 1, maxRunning: 5 } });
+    const first = await h.start("the viewers");
+    const { mission } = await draft({ goal: "the room" });
+    const id = mission!.id.slice(0, 10);
+    expect(h.told.at(-1)!.text).toBe(
+      `📝 Draft ${id} · nova: A test mission\n\nthe room\n\n1 check · signed off by: you · brief: none\n\nStart it: /mission accept ${id} · drop it: /mission stop ${id}\n\nStarted now, it waits its turn: nova already runs ${first.id.slice(0, 10)} (per_agent 1). It then starts by itself.`,
+    );
+    // And it does: started, it is queued behind the first, and runs when that one ends.
+    h.missions.accept(mission!.id, "Gading");
+    expect(h.store.get(mission!.id)!.status).toBe("queued");
+    h.missions.stop(first.id, "Gading");
+    expect(h.store.get(mission!.id)!.status).toBe("running");
   });
 
   test("who signs it off is said as the person reads it", async () => {
@@ -132,7 +148,7 @@ describe("D3 — what never stalls as a draft", () => {
     const { h, tools } = await setup();
     const parent = await h.start("the parent", { byAgent: "nova" });
     const inside = { agentId: "nova", gatewayId: MISSION_GATEWAY_ID, chatId: parent.id, senderId: "8142" } as ToolContext;
-    await tools.inside.execute({ action: "start", goal: "a piece of it", agent: "nox" }, inside);
+    await tools.inside.execute({ action: "start", title: "A test mission", goal: "a piece of it", agent: "nox" }, inside);
     await h.settle();
     expect(h.store.recent(5).find((one) => one.goal === "a piece of it")!.status).toBe("running");
     const run = await h.start("the weekly report", { jobId: "cron_weekly" });
@@ -310,9 +326,9 @@ describe("D7 — Start it pressed twice", () => {
     const presses = new ActionPresses({ missions: h.missions, isAdmin: () => false });
     const press = (): ButtonPress => ({ gatewayId: "telegram:nova", chatId: "8142", chatType: "dm", messageId: "m1", data: `mission:do:${mission!.id}:accept:accept`, senderId: "8142", senderName: "Gading" });
     const id = mission!.id.slice(0, 10);
-    expect(await presses.press(press())).toEqual({ notice: `Mission ${id} started.`, settled: `Mission ${id}: started by Gading.` });
+    expect(await presses.press(press())).toEqual({ notice: `${mission!.title} (${id}) started.`, settled: `${mission!.title} (${id}): started by Gading.` });
     const again = await presses.press(press());
-    expect(again.notice).toBe(`Mission ${id} has moved on (running), so this button no longer applies.`);
+    expect(again.notice).toBe(`${mission!.title} (${id}) has moved on (running), so this button no longer applies.`);
     expect(h.store.get(mission!.id)!.status).toBe("running");
   });
 });

@@ -35,7 +35,7 @@ afterEach(() => {
   for (const fn of cleanup.splice(0).reverse()) fn();
 });
 
-async function mount(options: { untagged?: (chatId: string) => string | null; groups?: unknown[]; helpers?: { agentId: string; chatId: string }[]; tags?: Record<string, Record<string, string>> } = {}) {
+async function mount(options: { untagged?: (chatId: string) => string | null; own?: Record<string, { requireMention: boolean; answerer?: string }>; groups?: unknown[]; helpers?: { agentId: string; chatId: string }[]; tags?: Record<string, Record<string, string>> } = {}) {
   const dataDir = tempDir("chat-list");
   cleanup.push(() => removePath(dataDir));
   const db = await openAndMigrate(join(dataDir, "test.db"));
@@ -63,6 +63,8 @@ async function mount(options: { untagged?: (chatId: string) => string | null; gr
         asked.push(where);
         return options.untagged?.(where.chatId) ?? null;
       },
+      // A room's own choice, as the store keeps it: by the platform and the chat.
+      roomMention: (platform: string, chatId: string) => (platform === "web" ? (options.own?.[chatId] ?? null) : null),
     },
     ctx: {
       gateways: new Map([["telegram:nouva", { platform: "telegram" }], ["telegram:nestor", { platform: "telegram" }]]),
@@ -154,6 +156,20 @@ describe("GET /chat-list", () => {
     const two = body.rooms.find((room) => room.chatId === "room-2")!;
     expect(two.untagged).toBeUndefined();
     expect(h.asked).toContainEqual({ gateway: "web", gatewayId: LOCAL, chatId: "room-1" });
+    // Neither chose for itself: no choice is said, and the header's picker reads "Default".
+    expect("mention" in one || "mention" in two).toBe(false);
+  });
+
+  test("a room's own choice of who answers is said with it, as `/mention` there or its header wrote it", async () => {
+    const h = await mount({ untagged: (chatId) => (chatId === "room-1" ? "nestor" : null), own: { "room-1": { requireMention: false, answerer: "nestor" }, "room-2": { requireMention: true } } });
+    h.rooms.create({ gatewayId: LOCAL, chatId: "room-1", agentIds: ["nouva", "nestor"] });
+    h.rooms.create({ gatewayId: LOCAL, chatId: "room-2", agentIds: ["nestor", "kuro"] });
+    h.rooms.create({ gatewayId: LOCAL, chatId: "room-3", agentIds: ["kuro"] });
+    const { body } = await h.list();
+    const room = (chatId: string) => body.rooms.find((one) => one.chatId === chatId)!;
+    expect(room("room-1")).toMatchObject({ mention: { requireTag: false, answerer: "nestor" }, untagged: "nestor" });
+    expect(room("room-2").mention).toEqual({ requireTag: true });
+    expect(room("room-3").mention).toBeUndefined();
   });
 
   test("a group two of our bots sit in is one row with both conversations, its last line the newest of what people and agents said; a dashboard room is not a group", async () => {

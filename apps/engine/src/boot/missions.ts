@@ -9,13 +9,14 @@ import { basename, fileExistsSync, freeDiskBytes, join, readPlainTextFile, readT
 import { contained, createLogger, newId, type GlobalConfig, type Job, type LoadedAgent, type MessageEnvelope, type Tool, type ToolContext } from "@nouride/shared";
 import { privateWorkspace, sharedWorkspace, type AgentRegistry } from "@nouride/persona";
 import { sessionIdFor } from "@nouride/shared";
-import { DISK_WARN_MB } from "./maintenance.ts";
+import { ownFolderPorts } from "./mission-folders.ts";
 import type { Notifier } from "@/commons/notify.ts";
 import type { ChatEventsPort } from "@/modules/chat-events/chat-events.store.ts";
 import type { JobsPort } from "@/modules/jobs/jobs.store.ts";
 import { checkRefusal, runChecks } from "@/modules/missions/checks.ts";
 import { MISSION_GATEWAY_ID, MissionGateway } from "@/modules/missions/gateway.ts";
 import { Missions } from "@/modules/missions/missions.ts";
+import type { MissionsDeps } from "@/modules/missions/deps.ts";
 import { jobMissionEnd, startJobRun } from "@/modules/missions/job-runs.ts";
 import { MissionStore } from "@/modules/missions/missions.store.ts";
 import { SimilarAllowed } from "@/modules/missions/similar.ts";
@@ -42,7 +43,7 @@ import { createWorkTool } from "@/modules/tools/builtins/work.ts";
 import type { SubagentRequest, SubagentResult } from "@/modules/tools/builtins/delegate.ts";
 import { reviewBrief, reviewOf } from "@/modules/missions/review.ts";
 import { repositoryOf, sourceRepositoryOf } from "@/modules/missions/decide.ts";
-import { branchRefusal, helperWorktreeFor, inOwnFolder, makeWorktree, ownFolderOf, ownFolders, removeExtraWorktrees, removeLeftFolder, removeOwnFolder, trackedIn, worktreeBranch, type AsAgent } from "@/modules/missions/worktree.ts";
+import { branchRefusal, helperWorktreeFor, makeWorktree, ownFolderOf, trackedIn, worktreeBranch, type AsAgent } from "@/modules/missions/worktree.ts";
 import { sendTextFile, type SendFileOptions } from "@/modules/tools/builtins/attach.ts";
 import { besidesTheReport } from "@/modules/missions/results.ts";
 import type { LinkFor } from "@/modules/web/links.ts";
@@ -102,6 +103,37 @@ function gitFile(path: string): string | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Words for a mission's turn at work: a person's `tell` (0.8.10), and their answer to a question it asked while it went
+ * on. Put in front of the turn as a steer is, never a chat message: the daemon's sender, the person's name, and the mark
+ * the turn's read and its end know it by (`steering.ts` `isTell`). And how such words reach that agent's turn, which is
+ * what `ask` with `keep_working` tells it of the answer it goes on without.
+ */
+function wordsIntoTurn(late: () => Pick<MissionsLate, "steerInto" | "steerReach"> | undefined): Pick<MissionsDeps, "steerTurn" | "answerReach"> {
+  return {
+    steerTurn: (mission, told) => {
+      const pipeline = late();
+      if (!pipeline) return { taken: false, why: "none" };
+      const envelope: MessageEnvelope = {
+        id: newId("msg"),
+        timestamp: told.at,
+        gateway: "web",
+        gatewayId: MISSION_GATEWAY_ID,
+        chatId: mission.id,
+        chatType: "dm",
+        senderId: SYSTEM_SENDER,
+        senderName: toldBy(told),
+        mentions: [mission.agentId],
+        text: told.text,
+        raw: { via: "tell", mission: mission.id, tell: told.id },
+      };
+      const outcome = pipeline.steerInto(mission.agentId, mission.id, MISSION_GATEWAY_ID, envelope);
+      return outcome === "taken" ? { taken: true, when: pipeline.steerReach(mission.agentId) } : { taken: false, why: outcome };
+    },
+    answerReach: (mission) => late()?.steerReach(mission.agentId) ?? null,
+  };
 }
 
 /** What the missions reach once the pipeline and the tools exist. */
@@ -255,26 +287,7 @@ export function buildMissions(params: {
     },
     queueTurn: (envelope) => late?.queueTurn(envelope) ?? false,
     stopTurn: (mission) => late?.cancelTurn(mission.agentId, mission.id),
-    // A person's `tell` (0.8.10): put in front of the mission's turn at work as a steer is, never a chat message —
-    // the daemon's sender, the person's name, and the mark the turn's read and its end know it by (`steering.ts` `isTell`).
-    steerTurn: (mission, told) => {
-      if (!late) return { taken: false, why: "none" };
-      const envelope: MessageEnvelope = {
-        id: newId("msg"),
-        timestamp: told.at,
-        gateway: "web",
-        gatewayId: MISSION_GATEWAY_ID,
-        chatId: mission.id,
-        chatType: "dm",
-        senderId: SYSTEM_SENDER,
-        senderName: toldBy(told),
-        mentions: [mission.agentId],
-        text: told.text,
-        raw: { via: "tell", mission: mission.id, tell: told.id },
-      };
-      const outcome = late.steerInto(mission.agentId, mission.id, MISSION_GATEWAY_ID, envelope);
-      return outcome === "taken" ? { taken: true, when: late.steerReach(mission.agentId) } : { taken: false, why: outcome };
-    },
+    ...wordsIntoTurn(() => late),
     branchRefusal: async ({ agentId, workdir, branch }) => {
       const repo = repositoryOf(workdir);
       if (!fileExistsSync(join(repo, ".git"))) return `\`branch\` names a worktree's branch, and ${workdir} is not in a git repository.`;
@@ -318,21 +331,7 @@ export function buildMissions(params: {
       });
       if ("refused" in saved) throw new Error(saved.refused);
     },
-    remove: async (mission, how) => {
-      // Only the folder the daemon made for it — `newMission`'s default, or its worktree — under its agent's own; for a
-      // draft that never started, the folder its brief was written to, whatever folder it would have worked in.
-      const own = ownFolderOf(privateWorkspace(params.config().daemon.workspaceDir, mission.agentId), mission.id);
-      if ((!inOwnFolder(mission.workdir, own) && mission.startedAt !== null) || !params.registry.get(mission.agentId)) return null;
-      return await removeOwnFolder(own, asTheAgent(mission.agentId), how);
-    },
-    folders: () => params.registry.enabled().flatMap((agent) => ownFolders(privateWorkspace(params.config().daemon.workspaceDir, agent.config.id)).map((folder) => ({ agentId: agent.config.id, ...folder }))),
-    removeLeft: (agentId, missionId) => removeLeftFolder(ownFolderOf(privateWorkspace(params.config().daemon.workspaceDir, agentId), missionId), asTheAgent(agentId)),
-    // Where missions work — the workspace's disk — against the daemon's own disk warning, a starting value.
-    diskLow: () => {
-      const free = freeDiskBytes(params.config().daemon.workspaceDir);
-      const freeMb = free === null ? null : Math.round(free / (1024 * 1024));
-      return freeMb !== null && freeMb < DISK_WARN_MB ? freeMb : null;
-    },
+    ...ownFolderPorts(params, asTheAgent),
     sourceRepository: (workdir) => sourceRepositoryOf(workdir, gitFile),
     readBrief,
     // A coding CLI's turns: an agent whose pack names one (`ExternalAgents.runnerFor`).
@@ -342,11 +341,6 @@ export function buildMissions(params: {
     personSaid: (mission) => params.lastSaid?.(mission.gatewayId, mission.chatId, mission.startedBy) ?? null,
     turnStartedAt: (turnId) => params.turnStartedAt?.(turnId) ?? null,
     helperTokens: (mission, since) => late?.helpers(sessionIdFor({ agentId: mission.agentId, gatewayId: MISSION_GATEWAY_ID, chatId: mission.id }), since) ?? 0,
-    tidy: async (mission) => {
-      if (!params.registry.get(mission.agentId)) return { removed: [], kept: [] };
-      const own = ownFolderOf(privateWorkspace(params.config().daemon.workspaceDir, mission.agentId), mission.id);
-      return await removeExtraWorktrees(own, asTheAgent(mission.agentId));
-    },
     review: async (mission, earlier) => {
       const ctx = commandContext(mission);
       if (!late || !ctx) throw new Error("this daemon cannot run a reviewer for that agent");

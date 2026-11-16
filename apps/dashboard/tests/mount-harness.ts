@@ -317,6 +317,12 @@ function install(): void {
   source.scrollTo = () => {};
 
   /**
+   * The document in standards mode, as the dashboard's own is (`index.html` starts with `<!doctype html>`). happy-dom
+   * does not say a mode at all, and KaTeX, reading that as quirks mode, refuses to typeset any formula.
+   */
+  Object.defineProperty(dom.document, "compatMode", { value: "CSS1Compat", configurable: true });
+
+  /**
    * A 2D context for `<canvas>`, which happy-dom answers with `null`.
    *
    * The memory graph draws on one, and its engine (`ui-graph`) takes the context as given: against `null` the page

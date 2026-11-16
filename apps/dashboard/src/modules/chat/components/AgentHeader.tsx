@@ -66,7 +66,10 @@ export function AgentHeader({
       {look ? <AgentAvatar look={look} name={name} size="sm" /> : null}
       <div className="flex min-w-0 flex-1 flex-col gap-0.5 pl-1">
         <div className="flex min-w-0 items-center gap-2">
-          <h2 className="min-w-0 truncate font-display text-lg font-medium tracking-tight text-base-content">{name}</h2>
+          {/* Cut short on a narrow phone, where the buttons take the row: whole on a pointer's rest. */}
+          <h2 className="min-w-0 truncate font-display text-lg font-medium tracking-tight text-base-content" title={name}>
+            {name}
+          </h2>
           {readOnly ? (
             <span className="hidden shrink-0 items-center gap-1.5 sm:flex">
               <PlatformTag platform={readOnly.platform}>{`${platformName(readOnly.platform)} chat`}</PlatformTag>
@@ -74,7 +77,7 @@ export function AgentHeader({
             </span>
           ) : null}
         </div>
-        <p className={cn("truncate text-xs font-semibold", STATUS_TONES[status.tone])}>
+        <p className={cn("truncate text-xs font-semibold", STATUS_TONES[status.tone])} title={`${status.words}${status.more ?? ""}`}>
           {readOnly ? <span className="sm:hidden">Read-only · {platformName(readOnly.platform)}</span> : null}
           <span className={readOnly ? "max-sm:hidden" : undefined}>
             {status.words}

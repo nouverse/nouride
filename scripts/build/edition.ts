@@ -80,8 +80,8 @@ export interface EditionSpec {
   /**
    * Plugins this edition carries when their source is checked out, and builds without otherwise.
    *
-   * The LLM gateway in the free build: its source is `internals/nougate`, a private submodule, and a public clone has
-   * to build Community all the same — `bun run build:binary` needs no submodule. `resolveEdition` moves each one that
+   * The LLM gateway in the free build: its source is `internals/nougate`, a submodule a clone may not have checked
+   * out, and that clone has to build Community all the same — `bun run build:binary` needs no submodule. `resolveEdition` moves each one that
    * is checked out into `bundles` before anything else reads the spec, so the four things `bundles` decides are decided
    * the one way for these too. A release must never leave one out silently: its `require` flag makes a missing checkout
    * fail the build, and the release workflow passes it.
@@ -270,7 +270,7 @@ export function resolveEdition(edition: EditionSpec, argv: string[], checkedOut:
       throw new Error(
         `${optional.require}: ${optional.plugin.dir} is not checked out, and this build must carry ${optional.plugin.pkg}.\n` +
           `  git submodule update --init ${optional.plugin.dir}\n` +
-          `  (private — you need read access to it. Without ${optional.require} the ${edition.id} edition is built without it.)`,
+          `  (Without ${optional.require} the ${edition.id} edition is built without it.)`,
       );
     }
     lines.push(optional.missing);

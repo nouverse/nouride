@@ -46,8 +46,8 @@ function agentsOf(req: TurnRequest): string {
   const has = (name: string) => req.toolset.definitions.some((definition) => definition.name === name);
   const lines =
     others.channel === "bus"
-      ? busConventionLines({ others: others.names, ...(others.about ? { about: others.about } : {}), hasTool: has("ask_agent"), hasDelegate: has("delegate") })
-      : mentionConventionLines({ others: others.names, ...(others.about ? { about: others.about } : {}), ...(others.mentions ? { mentions: others.mentions } : {}), maxHops: others.maxHops });
+      ? busConventionLines({ others: others.names, ...(others.about ? { about: others.about } : {}), ...(others.orchestrator ? { orchestrator: others.orchestrator } : {}), hasTool: has("ask_agent"), hasDelegate: has("delegate") })
+      : mentionConventionLines({ others: others.names, ...(others.about ? { about: others.about } : {}), ...(others.orchestrator ? { orchestrator: others.orchestrator } : {}), ...(others.mentions ? { mentions: others.mentions } : {}), maxHops: others.maxHops });
   return lines.join("\n").trim();
 }
 

@@ -46,10 +46,11 @@ describe("the words beside the RAM bar", () => {
     expect(ceilingWords(memory({ totalBytes: null }))).toBeNull();
   });
 
-  test("the agents' commands: their own figure and ceiling, or that they are counted with Nouride", () => {
+  test("the agents' commands: their figure, with their ceiling where they have one, or that it is not known", () => {
     expect(commandsWords({ usedBytes: 1228 * MiB, maxBytes: 4608 * MiB })).toBe("1.2 GB, and may hold up to 4.5 GB");
     expect(commandsWords({ usedBytes: 300 * MiB, maxBytes: null })).toBe("300.0 MB");
-    expect(commandsWords(null)).toBe("Counted together with Nouride here.");
+    // Never as counted somewhere else: Nouride's own figure is its one process.
+    expect(commandsWords(null)).toBe("How much they hold is not something Nouride can tell here.");
   });
 });
 

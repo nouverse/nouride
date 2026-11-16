@@ -14,6 +14,8 @@ import { ErrorNote, Field } from "@/commons/components/ui/ui";
 /** The form's fields as the route takes them: checks one per line, blanks dropped; a reviewer's words or none at all. */
 export function startInput(draft: {
   agent: string;
+  /** Its name; left empty, the daemon names it from its goal. */
+  title?: string;
   goal: string;
   checks: string;
   review: string;
@@ -24,6 +26,7 @@ export function startInput(draft: {
   const checks = draft.checks.split("\n").map((line) => line.trim()).filter(Boolean);
   return {
     agent: draft.agent,
+    ...(draft.title?.trim() ? { title: draft.title.trim() } : {}),
     goal: draft.goal.trim(),
     ...(checks.length > 0 ? { checks } : {}),
     ...(draft.noReview ? { noReview: true } : draft.review.trim() ? { review: draft.review.trim() } : {}),
@@ -36,6 +39,7 @@ export function NewMissionForm({ agents, onStarted, onCancel }: { agents: AgentS
   const orchestrator = useOrchestrator();
   const ordered = useOrchestratorFirst(agents.filter((agent) => agent.enabled), (agent) => agent.id);
   const [agent, setAgent] = useState("");
+  const [title, setTitle] = useState("");
   const [goal, setGoal] = useState("");
   const [checks, setChecks] = useState("");
   const [review, setReview] = useState("");
@@ -45,7 +49,7 @@ export function NewMissionForm({ agents, onStarted, onCancel }: { agents: AgentS
   const chosen = agent || orchestrator || ordered[0]?.id || "";
 
   const start = useMutation({
-    mutationFn: () => api.startMission(startInput({ agent: chosen, goal, checks, review, noReview, accept, workdir })),
+    mutationFn: () => api.startMission(startInput({ agent: chosen, title, goal, checks, review, noReview, accept, workdir })),
     onSuccess: ({ mission }) => onStarted(mission),
   });
   const ready = Boolean(chosen && goal.trim());
@@ -68,15 +72,21 @@ export function NewMissionForm({ agents, onStarted, onCancel }: { agents: AgentS
             ))}
           </select>
         </Field>
-        <Field label="Goal" hint="What done looks like, in a sentence or two. The agent writes its own checklist from it.">
-          <textarea
-            className="textarea textarea-sm w-full rounded-xl leading-relaxed"
-            rows={2}
-            value={goal}
-            placeholder="Upgrade the API to the new client and keep the tests green"
-            onChange={(e) => setGoal(e.target.value)}
-          />
-        </Field>
+        {/* Beside the agent: what it is called, then what it is to do. */}
+        <div className="min-w-0 space-y-4">
+          <Field label="Name" hint="What the work is called, in a few words. Empty: named from its goal.">
+            <input className="input input-sm w-full rounded-xl" maxLength={60} value={title} placeholder="The new API client" onChange={(e) => setTitle(e.target.value)} />
+          </Field>
+          <Field label="Goal" hint="What done looks like, in a sentence or two. The agent writes its own checklist from it.">
+            <textarea
+              className="textarea textarea-sm w-full rounded-xl leading-relaxed"
+              rows={2}
+              value={goal}
+              placeholder="Upgrade the API to the new client and keep the tests green"
+              onChange={(e) => setGoal(e.target.value)}
+            />
+          </Field>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

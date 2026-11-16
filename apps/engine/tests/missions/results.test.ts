@@ -71,7 +71,7 @@ describe("what reaches the chat when a mission hands back its result", () => {
     const mission = await h.start("ship it");
     h.turn(mission, {}, () => h.missions.claim(mission.id, { kind: "fail", reason: "the server is gone", report: "What was tried, in full." }));
     await h.settle();
-    expect(h.told.at(-1)!.text).toBe(`✗ Mission ${mission.id.slice(0, 10)} ended: gave up: the server is gone`);
+    expect(h.told.at(-1)!.text).toBe(`✗ ship it (${mission.id.slice(0, 10)}) ended: gave up: the server is gone`);
     expect(h.reports.at(-1)?.report).toBe("What was tried, in full.");
   });
 
@@ -101,7 +101,9 @@ describe("what reaches the chat when a mission hands back its result", () => {
   });
 
   test("the ended notice carries why, never the report", () => {
-    expect(endedNotice({ id: "msn_0123456789", status: "stopped" }, "stopped by Gading")).toBe("✗ Mission msn_012345 stopped: stopped by Gading");
+    expect(endedNotice({ id: "msn_0123456789", title: "The invoices", status: "stopped", workdir: "/work/private/nova/missions/msn_0123456789", branch: null }, "stopped by Gading")).toBe("✗ The invoices (msn_012345) stopped: stopped by Gading");
+    // One with no name of its own is said by its id, as every mission was.
+    expect(endedNotice({ id: "msn_0123456789", title: "", status: "stopped", workdir: "/work/private/nova/missions/msn_0123456789", branch: null }, "stopped by Gading")).toBe("✗ Mission msn_012345 stopped: stopped by Gading");
   });
 });
 
@@ -150,7 +152,10 @@ describe("kept on the record", () => {
 describe("nothing a person wrote is cut", () => {
   test("a draft carries its goal whole", () => {
     const goal = `${"Collect every invoice from the shared inbox. ".repeat(30)}Then file them.`;
-    expect(draftNotice({ id: "msn_0123456789", goal, agentId: "nova", byAgent: null, checks: [], reviewOn: true, accept: false, jobId: null }, false)).toContain(goal);
+    const notice = draftNotice({ id: "msn_0123456789", title: "The invoices", goal, agentId: "nova", byAgent: null, checks: [], reviewOn: true, accept: false, jobId: null }, false);
+    expect(notice).toContain(goal);
+    // Its name first, then the goal: what it is called, and what it will do.
+    expect(notice).toStartWith("📝 Draft msn_012345 · nova: The invoices\n\nCollect every invoice");
   });
 
   test("what a person told a mission, read already, is on its page whole", async () => {

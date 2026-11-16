@@ -30,10 +30,10 @@ function laidOut(cut: boolean): () => void {
   };
 }
 
-test("a long goal: its first sentence is the name, the whole goal under it, folded until opened", async () => {
+test("its title is its name, the whole goal under it, folded until opened", async () => {
   const restore = laidOut(true);
   const shown = WIRE["/missions/msn_1"] as { mission: Record<string, unknown> };
-  answer({ "/missions/msn_1": { status: 200, body: { ...shown, mission: { ...shown.mission, goal: GOAL } } } });
+  answer({ "/missions/msn_1": { status: 200, body: { ...shown, mission: { ...shown.mission, title: "The delivery test", goal: GOAL } } } });
   let title = "";
   let folded = false;
   let opened = false;
@@ -47,7 +47,7 @@ test("a long goal: its first sentence is the name, the whole goal under it, fold
     opened = !([...host.querySelectorAll("p")].find((p) => p.textContent === GOAL)?.className.includes("line-clamp-3") ?? true);
   });
   restore();
-  expect(title).toBe("Automated Nouride test.");
+  expect(title).toBe("The delivery test");
   expect(folded).toBe(true);
   expect(opened).toBe(true);
 });
@@ -447,4 +447,26 @@ test("one still working has no Delete — Stop comes first", async () => {
     shownButtons = buttons(host);
   });
   expect(shownButtons).not.toContain("Delete");
+});
+
+test("a draft's name is changed in its form: only the name is sent, and no more than a name holds can be typed", async () => {
+  answer({ "/missions/msn_1": detailOf({ status: "waiting", seen: "needs_you", waitKind: "accept", startedAt: null, title: "The RFC", checks: [], reviewOn: true, accept: false }) });
+  let sent: { path: string; body: unknown }[] = [];
+  let most = "";
+  await renderPage("/missions/msn_1", async (host) => {
+    await eventually(() => buttons(host).includes("Change the draft"), 2_000, "the draft's card");
+    press(host, "Change the draft");
+    await eventually(() => buttons(host).includes("Save the draft"), 2_000, "the form");
+    const name = [...host.querySelectorAll("input")].find((input) => input.value === "The RFC") as HTMLInputElement;
+    most = name.getAttribute("maxlength") ?? "";
+    type(name, "  The RFC, revised  ");
+    await enabled(host, "Save the draft");
+    const record = recordPosts({ "/missions/msn_1/edit": { status: 200, body: { mission: {}, changed: ["title"], plain: "Saved. The chat it began in is told what changed." } } });
+    press(host, "Save the draft");
+    await eventually(() => record.posts.length > 0, 2_000, "the change");
+    record.restore();
+    sent = record.posts;
+  });
+  expect(most).toBe("60");
+  expect(sent).toEqual([{ path: "/missions/msn_1/edit", body: { title: "The RFC, revised" } }]);
 });

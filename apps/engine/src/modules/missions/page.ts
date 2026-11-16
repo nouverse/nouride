@@ -99,6 +99,12 @@ export function workedMs(mission: Pick<Mission, "startedAt" | "endedAt" | "waite
 export interface LimitsShown {
   turns: boolean;
   tokens: MissionTokens;
+  /**
+   * What its coding CLI's turn at work has spent so far, an estimate from what the CLI says of its context while it
+   * works: in no count until the turn ends. Absent with no such turn at work. A mission that is one turn of hours read
+   * "tokens unknown" for all of it.
+   */
+  running?: number;
 }
 
 /**
@@ -108,8 +114,10 @@ export interface LimitsShown {
  */
 export function limitsLine(mission: Pick<Mission, "turnsUsed" | "limits" | "tokensUsed" | "startedAt" | "endedAt" | "waitedMs" | "waitingSince">, now: number, shown: LimitsShown = { turns: true, tokens: "known" }): string {
   const turns = turnsSaid(mission, shown.turns);
-  const tokens =
-    shown.tokens === "unknown"
+  // With a turn at work, what it has spent so far is in the line and said to be an estimate: never as a count.
+  const tokens = shown.running
+    ? `about ${millions(mission.tokensUsed + shown.running)} of ${millions(mission.limits.tokens)} tokens so far (an estimate while its turn is at work)`
+    : shown.tokens === "unknown"
       ? `tokens unknown (the CLI reports none) of ${millions(mission.limits.tokens)}`
       : `${shown.tokens === "partial" ? "at least " : ""}${millions(mission.tokensUsed)} of ${millions(mission.limits.tokens)} tokens`;
   return `${turns} · ${hoursAndMinutes(workedMs(mission, now))} of ${hoursLimit(mission.limits.hours)} · ${tokens}`;
@@ -213,7 +221,9 @@ export function missionPage(input: PageInput): string {
       ? "- Delete with a command of its own, never chained into another: `rm -rf <absolute path>` alone. Nothing asks before a delete you run, inside this mission's folder or outside it: your coding CLI runs in the `folder` preset, where your Linux user's rights are the only limit, so a delete outside the folder is yours alone to be sure of."
       : "- Delete with a command of its own, never chained into another: `rm -rf <absolute path>` alone. A delete inside this mission's folder, by absolute path, runs without asking anyone; a chained one, or one outside, waits for a person.",
     '- When the goal is met, call `mission` with action "done": the result as `summary`, two or three sentences, which is the chat\'s message; the whole `report`, markdown, as long as it needs, which the person receives as `report.md` (never write it to a file of its own); and the files the person should receive: what they asked for, never what you made to check the work (evidence, stills, fixtures, an answer key: the report names those). The daemon runs the checks, and a failure is your next turn.',
-    '- Need the person? `mission` action "ask", one question. Cannot be done? action "fail", with why and what is left.',
+    // Never `send_message`: a mission with a question sent it to another chat of its person's, where nobody was reading
+    // and from where no answer could have come back to it.
+    '- Need the person? `mission` action "ask", one question, never `send_message`: what they answer in another chat does not come back to this mission. It reaches them at once and the mission waits for the answer. With work left that does not depend on it, add `keep_working`: you go on, and the answer comes into your turn. Cannot be done? action "fail", with why and what is left.',
     "- Three turns in a row that call no tool and move no step stop the mission as stuck.",
   );
   return lines.join("\n");

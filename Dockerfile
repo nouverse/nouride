@@ -121,10 +121,10 @@ COPY scripts ./scripts
 COPY content ./content
 COPY --from=dashboard-builder /app/apps/dashboard/dist ./apps/dashboard/dist
 # The WhatsApp bridge is a workspace member, so `deps` installed Baileys with everything else.
-# What follows is for the private extensions, which keep their own lockfiles.
+# What follows is for the extensions that are repositories of their own, which keep their own lockfiles.
 
 # `nougate` only when it is checked out: both editions carry it, and a build without the
-# private submodule has an empty directory here — `basic` is then built without the gateway.
+# submodule has an empty directory here — `basic` is then built without the gateway.
 #
 # Missing until 2026-09-16, and nothing noticed: no image edition bundled nougate, because
 # `EDITION=router` fell through an `if cloud … else` and silently produced a **basic** bundle. The

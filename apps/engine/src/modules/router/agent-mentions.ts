@@ -176,11 +176,17 @@ export function describePeers(ids: string[], packOf: (id: string) => PeerPack | 
   return about;
 }
 
+/**
+ * A peer as the list names it: the orchestrator marked, so an agent that needs what only it may do (a program every
+ * agent runs) knows which one to ask, rather than guessing from a role.
+ */
+const named = (id: string, orchestrator: string | undefined) => (id === orchestrator ? `${id} (the orchestrator)` : id);
+
 /** The peers' lines under the list that names them, or nothing when no peer's pack is loaded. */
-function purposeLines(others: string[], about: Record<string, string> | undefined): string[] {
+function purposeLines(others: string[], about: Record<string, string> | undefined, orchestrator?: string): string[] {
   const described = others.filter((id) => about?.[id]);
   if (described.length === 0) return [];
-  return ["- Who each is, and what its own IDENTITY.md says it is for. Ask the one whose work it is:", ...described.map((id) => `  - ${id}: ${about![id]}`)];
+  return ["- Who each is, and what its own IDENTITY.md says it is for. Ask the one whose work it is:", ...described.map((id) => `  - ${named(id, orchestrator)}: ${about![id]}`)];
 }
 
 /**
@@ -197,6 +203,8 @@ export function mentionConventionLines(input: {
   about?: Record<string, string>;
   /** This agent is the orchestrator: the room's front desk. */
   frontDesk?: boolean;
+  /** The orchestrator's id, where it is one of the others: marked in the list. */
+  orchestrator?: string;
   /** Agents whose own bot cannot read this room — not tagged, but named, so a person who asks for one hears why. */
   absent?: string[];
   maxHops: number;
@@ -219,8 +227,8 @@ export function mentionConventionLines(input: {
     "OTHER AGENTS",
     // Written as the exact token to type, because a model shown a bare name addresses it however it
     // reads best in a sentence — "Nox", "nox_bot", "the other agent" — and none of those arrive.
-    `- You share this chat with: ${input.others.map((id) => `${id} (write ${token(id)})`).join(", ")}.`,
-    ...purposeLines(input.others, input.about),
+    `- You share this chat with: ${input.others.map((id) => `${named(id, input.orchestrator)} (write ${token(id)})`).join(", ")}.`,
+    ...purposeLines(input.others, input.about, input.orchestrator),
     ...absent,
     // The orchestrator's part in a room: the untagged message is its, and the lines above say whose work it may be.
     ...(input.frontDesk
@@ -272,13 +280,15 @@ export function busConventionLines(input: {
   hasDelegate?: boolean;
   /** Agent id → what it is for (`describePeers`). */
   about?: Record<string, string>;
+  /** The orchestrator's id, where it is one of the others: marked in the list. */
+  orchestrator?: string;
 }): string[] {
   if (input.others.length === 0) return [];
   const head = [
     "OTHER AGENTS",
-    `- The other agents on this daemon are: ${input.others.join(", ")}. They are not in this`,
+    `- The other agents on this daemon are: ${input.others.map((id) => named(id, input.orchestrator)).join(", ")}. They are not in this`,
     "  conversation: this is a one-to-one chat, and nothing you write here reaches them.",
-    ...purposeLines(input.others, input.about),
+    ...purposeLines(input.others, input.about, input.orchestrator),
     // Said as plainly as possible, because the failure it prevents is invisible from the model's
     // side: it writes the tag, the message goes out, and nothing at all happens.
     "- Writing @their-name here does nothing. It is text in a message to the person you are",

@@ -247,7 +247,7 @@ export const GRAMMAR: Readonly<Record<string, CommandGrammar>> = {
   config: { forms: { "": NONE, check: NONE, schema: NONE, explain: NONE } },
   "tool-budget": { forms: { "": ["--agent <id>"], "*": ["--agent <id>"] } },
   "turn-budget": { forms: { "": ["--agent <id>"], "*": ["--agent <id>"] } },
-  update: { forms: { "": ["--check", "--start", "--now", "--wait", "--rollback", "--apply", "--track <latest|lts>", ...WAKE] } },
+  update: { forms: { "": ["--check", "--start", "--now", "--wait", "--rollback", "--retry", "--apply", "--track <latest|lts>", ...WAKE] } },
   restart: { forms: { "": [...WAKE, "--now", "--force", "--wait"] } },
 };
 

@@ -24,6 +24,7 @@ interface Row {
   owner: string | null;
   gateway_id: string;
   chat_id: string;
+  title: string;
   goal: string;
   checks: string;
   review: string | null;
@@ -73,8 +74,8 @@ const UPSERT = `INSERT INTO missions (
   wait_kind, reason, report, files, last_check, answers, workdir, parent_id, untrusted, job_id, request, reviewed,
   limit_hours, limit_turns, limit_tokens, turns_used, tokens_used, resumes, waited_ms, waiting_since, warned_at,
   followed_up_at, progress_at, progress_done, nudged_at, created_at, started_at, updated_at, ended_at, branch, told,
-  summary, cli_turns, cli_unreported, helpers_since, owner
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  summary, cli_turns, cli_unreported, helpers_since, owner, title
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
   agent_id = excluded.agent_id, started_by = excluded.started_by, by_agent = excluded.by_agent,
   gateway_id = excluded.gateway_id, chat_id = excluded.chat_id, goal = excluded.goal, checks = excluded.checks,
@@ -90,7 +91,7 @@ ON CONFLICT(id) DO UPDATE SET
   created_at = excluded.created_at, started_at = excluded.started_at, updated_at = excluded.updated_at,
   ended_at = excluded.ended_at, branch = excluded.branch, told = excluded.told, summary = excluded.summary,
   cli_turns = excluded.cli_turns, cli_unreported = excluded.cli_unreported, helpers_since = excluded.helpers_since,
-  owner = excluded.owner`;
+  owner = excluded.owner, title = excluded.title`;
 
 /** A list that must parse to strings — read back from a JSON column this store wrote. */
 function strings(text: string): string[] {
@@ -110,6 +111,7 @@ function answered(text: string): Answered[] {
             at: one.at,
             ...(Array.isArray(one.options) && one.options.every((option) => typeof option === "string") ? { options: one.options } : {}),
             ...(typeof one.answer === "string" ? { answer: one.answer } : {}),
+            ...(one.asked === "wait" || one.asked === "meanwhile" ? { asked: one.asked } : {}),
           },
         ]
       : [];
@@ -135,6 +137,7 @@ function fromRow(row: Row): Mission {
     owner: row.owner,
     gatewayId: row.gateway_id,
     chatId: row.chat_id,
+    title: row.title,
     goal: row.goal,
     checks: strings(row.checks),
     review: row.review,
@@ -188,7 +191,7 @@ function toRow(mission: Mission): unknown[] {
     mission.waitingSince, mission.warnedAt, mission.followedUpAt, mission.progressAt, mission.progressDone,
     mission.nudgedAt, mission.createdAt, mission.startedAt, mission.updatedAt, mission.endedAt, mission.branch,
     JSON.stringify(mission.told), mission.summary, mission.cliTurns, mission.cliUnreported, mission.helpersSince,
-    mission.owner,
+    mission.owner, mission.title,
   ];
 }
 

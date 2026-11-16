@@ -16,14 +16,16 @@
  * — the fact that it *was* sent is part of the conversation — but it does not pretend to be openable.
  */
 
-import { useEffect, useState } from "react";
-import { Download, ExternalLink, ImageOff, Video, X } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Download, ExternalLink, ImageOff, LoaderCircle, Video } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import type { TurnAttachment } from "@nouride/wire";
 import { fileIconFor } from "@/commons/components/ui/FileDrop";
 import { isMarkdownFile, MarkdownPreview } from "@/commons/components/ui/MarkdownPreview";
 import { formatBytes } from "@/commons/lib/format";
-import { Leaving, overPage } from "@/commons/components/ui/OverPage";
+import { Leaving } from "@/commons/components/ui/OverPage";
+import { Lightbox } from "@/commons/components/ui/Lightbox";
+import { archiveName, archiveOf, saveAs } from "@/commons/lib/download-all";
 
 function isImage(file: TurnAttachment): boolean {
   return file.mimeType.startsWith("image/") || file.kind === "image";
@@ -49,65 +51,6 @@ function isAudio(file: TurnAttachment): boolean {
  */
 function isVideo(file: TurnAttachment): boolean {
   return file.mimeType.startsWith("video/") || file.kind === "video";
-}
-
-/**
- * The popup.
- *
- * Escape closes it, the backdrop closes it, and the image is capped to the viewport — a 4000px
- * screenshot that opens larger than the window is a screenshot you cannot see. The full-size copy is
- * one click further on, in a new tab.
- */
-function Lightbox({ src, name, onClose }: { src: string; name: string; onClose: () => void }) {
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
-  return overPage(
-    <div
-      className="fixed inset-0 z-50 grid place-items-center bg-black/80 backdrop-blur-sm p-4 animate-fade"
-      role="dialog"
-      aria-label={name}
-    >
-      {/* The backdrop is the close button, which is what everybody tries first. */}
-      <button type="button" className="absolute inset-0 cursor-zoom-out" onClick={onClose} aria-label="Close" />
-
-      <div className="relative z-10 max-w-[92vw] max-h-[88dvh] flex flex-col items-center gap-2 animate-enter">
-        <img
-          src={src}
-          alt={name}
-          className="max-w-full max-h-[80dvh] rounded-xl shadow-2xl object-contain bg-base-100"
-        />
-        <div className="flex items-center gap-2 text-[11px] text-white/80 font-mono">
-          <span className="truncate max-w-[60vw]">{name}</span>
-          <a
-            href={src}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 hover:text-white"
-          >
-            <ExternalLink size={12} /> open
-          </a>
-          <a href={src} download={name} className="inline-flex items-center gap-1 hover:text-white">
-            <Download size={12} /> save
-          </a>
-        </div>
-      </div>
-
-      <button
-        type="button"
-        onClick={onClose}
-        className="absolute top-4 right-4 z-10 btn btn-sm btn-circle bg-base-100/90 border-0"
-        aria-label="Close"
-      >
-        <X size={16} />
-      </button>
-    </div>
-  );
 }
 
 function ImageTile({ src, file, onOpen }: { src: string; file: TurnAttachment; onOpen: () => void }) {
@@ -236,6 +179,34 @@ function FileRow({ src, file, onRead }: { src: string | null; file: TurnAttachme
   );
 }
 
+/**
+ * "Download all": a message's files as one archive, built in the browser (`commons/lib/download-all.ts`), for a set
+ * of two or more that are still on disk. It says how far it is while it fetches, and which file stopped it.
+ */
+function DownloadAll({ files, align }: { files: { name: string; url: string }[]; align: "start" | "end" }) {
+  const [state, setState] = useState<{ done: number } | { failed: string } | null>(null);
+  const busy = state !== null && "done" in state;
+  const run = async () => {
+    setState({ done: 0 });
+    try {
+      const archive = await archiveOf(files, (done) => setState({ done }));
+      saveAs(archive, archiveName(files.map((file) => file.name)));
+      setState(null);
+    } catch (err) {
+      setState({ failed: err instanceof Error ? err.message : String(err) });
+    }
+  };
+  return (
+    <div className={`flex flex-wrap items-center gap-2 text-[11px] ${align === "end" ? "justify-end" : "justify-start"}`}>
+      <button type="button" className="btn btn-ghost btn-xs max-sm:btn-sm gap-1 rounded-lg text-base-content/75" onClick={() => void run()} disabled={busy}>
+        {busy ? <LoaderCircle size={12} className="animate-spin" aria-hidden="true" /> : <Download size={12} aria-hidden="true" />}
+        {busy ? `Getting ${state.done} of ${files.length}…` : `Download all (${files.length})`}
+      </button>
+      {state !== null && "failed" in state && <span className="text-error">Not downloaded: {state.failed}.</span>}
+    </div>
+  );
+}
+
 export function AttachmentList({
   sessionId,
   files,
@@ -245,11 +216,22 @@ export function AttachmentList({
   files: TurnAttachment[];
   align?: "start" | "end";
 }) {
-  const [open, setOpen] = useState<{ src: string; name: string } | null>(null);
+  /** Which of the message's pictures is open: they open as one set, a gallery. */
+  const [open, setOpen] = useState<number | null>(null);
   /** A markdown file read in place (0.8.11) — a mission's `report.md` above all — not a download. */
   const [reading, setReading] = useState<{ src: string; name: string } | null>(null);
+  // One object while the same picture is asked for: `Leaving` keeps what it was given, and the first picture is 0.
+  const opened = useMemo(() => (open === null ? null : { at: open }), [open]);
 
   if (files.length === 0) return null;
+  const pictures = files.flatMap((file) => {
+    const src = api.attachmentUrl(sessionId, file);
+    return isImage(file) && src ? [{ src, name: file.name }] : [];
+  });
+  const kept = files.flatMap((file) => {
+    const url = api.attachmentUrl(sessionId, file);
+    return url ? [{ name: file.name, url }] : [];
+  });
 
   return (
     <>
@@ -264,7 +246,7 @@ export function AttachmentList({
                 key={`${file.name}-${index}`}
                 src={src}
                 file={file}
-                onOpen={() => setOpen({ src, name: file.name })}
+                onOpen={() => setOpen(pictures.findIndex((picture) => picture.src === src))}
               />
             );
           }
@@ -280,8 +262,9 @@ export function AttachmentList({
           return <FileRow key={`${file.name}-${index}`} src={src} file={file} />;
         })}
       </div>
+      {kept.length > 1 && <DownloadAll files={kept} align={align} />}
 
-      <Leaving value={open}>{(image) => <Lightbox src={image.src} name={image.name} onClose={() => setOpen(null)} />}</Leaving>
+      <Leaving value={pictures.length > 0 && opened}>{({ at }) => <Lightbox pictures={pictures} at={at} onClose={() => setOpen(null)} />}</Leaving>
       <Leaving value={reading}>{(file) => <MarkdownPreview name={file.name} url={file.src} onClose={() => setReading(null)} />}</Leaving>
     </>
   );

@@ -5,7 +5,7 @@
  */
 
 import { KeyedQueue } from "@nouride/queue";
-import { createLogger, type MessageEnvelope } from "@nouride/shared";
+import { createLogger, sessionIdFor, type MessageEnvelope } from "@nouride/shared";
 import { parseCommand, type HookRegistry } from "@/modules/hooks/registry.ts";
 import type { PipelineDeps } from "./deps.ts";
 import type { Admission } from "./admission.ts";
@@ -21,7 +21,7 @@ import { conversationSlots } from "./fair-share.ts";
 const log = createLogger("pipeline");
 
 export function chatQueue(parts: {
-  deps: Pick<PipelineDeps, "config" | "rooms" | "registry" | "gateways" | "jobWakes" | "chatEvents">;
+  deps: Pick<PipelineDeps, "config" | "rooms" | "registry" | "gateways" | "jobWakes" | "chatEvents" | "turns">;
   hooks: HookRegistry;
   turnContext: Pick<TurnContext, "returned">;
   inbound: Pick<InboundRouter, "handle">;
@@ -37,6 +37,15 @@ export function chatQueue(parts: {
     config: deps.config,
     reply: (to: MessageEnvelope, text: string, fromAgent: string) => voice.reply(to, text, fromAgent),
     connected: (gatewayId: string) => deps.gateways.get(gatewayId)?.status === "connected",
+    /**
+     * Written down like a turn in a room made in the dashboard, as a command an agent answers is (`inbound.ts`). Such
+     * a room is read from its records, and this answer was in none: `/mention` typed there changed who answers and
+     * said nothing anybody could read. A group on a chat app has the message its bot sent.
+     */
+    answered: (to: MessageEnvelope, agentId: string, command: string, reply: string) => {
+      if (!deps.rooms?.get(to.gatewayId, to.chatId)) return;
+      deps.turns?.note({ sessionId: sessionIdFor({ agentId, gatewayId: to.gatewayId, chatId: to.chatId }), agentId, gatewayId: to.gatewayId, chatId: to.chatId, messageId: to.id, senderId: to.senderId, prompt: command, reply });
+    },
   };
   /** What tags each of our bots on a platform, by connection, as each connection says it now. */
   const botTags = (platform: MessageEnvelope["gateway"]): Record<string, string> =>

@@ -200,7 +200,7 @@ export default function LoginPage() {
               href="https://nouverse.tech"
               target="_blank"
               rel="noreferrer noopener"
-              className="inline-flex items-center gap-1 text-[11px] font-medium text-base-content/65 hover:text-primary transition-colors duration-150"
+              className="inline-flex min-h-8 items-center gap-1 text-[11px] font-medium text-base-content/65 hover:text-primary transition-colors duration-150"
             >
               <span>Powered by</span>
               <span className="font-semibold text-base-content/65 hover:text-primary">Nouverse Technologies</span>

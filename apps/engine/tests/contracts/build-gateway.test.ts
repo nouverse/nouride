@@ -1,7 +1,7 @@
 /**
  * The free build carries the LLM gateway, as the Router edition did — when its source is checked out.
  *
- * `internals/nougate` is a private submodule, and a public clone must still build Community: there it is built without
+ * `internals/nougate` is a submodule, and a clone that has not checked it out must still build Community: there it is built without
  * the gateway, and says so in one line. A release must never ship without it, so `--require-gateway` turns the missing
  * checkout into a failure, and the release workflow passes it. Whether the gateway was linked is stamped into the
  * artefact (`NOURIDE_BUILD_GATEWAY`), since the edition no longer answers it, and `--router` is refused by name.
@@ -11,7 +11,7 @@
  */
 
 import { afterAll, describe, expect, test } from "bun:test";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runCommand } from "@nouride/runtime";
@@ -55,6 +55,24 @@ describe("which build the free edition is", () => {
     expect(resolveEdition(BASIC, ["--require-gateway"], present(NOUGATE)).required).toEqual([NOUGATE]);
     // Another plugin being there is no stand-in for the gateway.
     expect(() => resolveEdition(BASIC, ["--require-gateway"], present(OAUTH))).toThrow("is not checked out");
+    // The gateway's repository is public: the refusal sends nobody to ask for access they do not need.
+    let said = "";
+    try {
+      resolveEdition(BASIC, ["--require-gateway"], present());
+    } catch (error) {
+      said = (error as Error).message;
+    }
+    expect(said).toContain("git submodule update --init internals/nougate");
+    expect(said).not.toMatch(/private|read access/);
+  });
+
+  test("a plugin that is not there to link is not called private: only Pro's repository is", () => {
+    // The Pro recipe links the gateway too, through the same refusal: it said "private" of whichever was missing.
+    const core = readFileSync(join(ROOT, "scripts/build/core.ts"), "utf8");
+    const refusal = core.slice(core.indexOf("and it is not checked out."), core.indexOf("works on a clone with no submodules at all"));
+    expect(refusal).toContain("git submodule update --init ${plugin.dir}");
+    expect(refusal).toContain("\\`internals/pro\\` is private and needs read access");
+    expect(refusal).not.toContain("you need read access to it");
   });
 
   test("whether it was linked is what the artefact's flags say: carried and stamped, or external and unstamped", () => {

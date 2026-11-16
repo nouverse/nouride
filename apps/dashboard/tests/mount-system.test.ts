@@ -104,7 +104,8 @@ describe("System", () => {
       expect(meter(host, "RAM in use")).toBeNull();
       expect(meter(host, "Disk in use")).toBeNull();
       expect(text(host)).toContain("That is this machine's own RAM.");
-      expect(text(host)).toContain("The agents' commandsCounted together with Nouride here.");
+      expect(text(host)).toContain("The agents' commandsHow much they hold is not something Nouride can tell here.");
+      expect(text(host)).not.toContain("Counted together");
       expect(text(host)).toContain("Nouride cannot tell how large the disk is here.");
       await drawn(host, "How much Nouride's own files take could not be counted here.");
     });
@@ -278,7 +279,7 @@ describe("Files", () => {
       expect(area.closest("section")!.className).toContain("lg:flex-1");
       // The page's root takes the window's height, which the layout holds it to.
       expect((area.closest("section")!.parentElement as HTMLElement).className).toContain("flex min-h-0 flex-1 flex-col");
-      expect((host.querySelector("main > div") as HTMLElement).className).toContain("lg:h-full");
+      expect((host.querySelector("main") as HTMLElement).className).toContain("lg:h-full");
     });
     await renderPage("/files?path=workspace/notes.md", async (host) => {
       await drawn(host, "Deploy notes");

@@ -28,7 +28,11 @@ describe("an event in the chat", () => {
     expect(html).toContain("<code");
     expect(html).not.toContain("`mission/");
     expect(html).toContain("<li");
-    expect(html.match(/<p /g)?.length).toBe(3);
+    // The two lines over the list are one paragraph, the second on its own line; the line under the list is the
+    // next thing said, never the last bullet's own words.
+    expect(html.match(/<p /g)?.length).toBe(2);
+    expect(html).toMatch(/is done\.<br\/?>Two helpers ran:/);
+    expect(html).toMatch(/<\/ul><p [^>]*>Accept: \/mission accept msn_80c47a<\/p>/);
     expect(html).toContain("[overflow-wrap:anywhere]");
   });
 

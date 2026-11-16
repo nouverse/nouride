@@ -11,6 +11,7 @@ import type { CheckResult } from "./checks.ts";
 import type { MissionsPort } from "./missions.store.ts";
 import type { Parked } from "./page.ts";
 import type { MissionsInForce } from "./slots.ts";
+import type { AnswerReach } from "./asking.ts";
 import type { SteerOutcome } from "./tell.ts";
 import type { Mission, Told } from "./types.ts";
 
@@ -72,6 +73,12 @@ export interface MissionsDeps {
    */
   steerTurn?: (mission: Mission, told: Told) => SteerOutcome;
   /**
+   * How words for its turn at work reach it: an agent on a model before its next step, a coding CLI into its prompt, or
+   * only after the prompt where the CLI takes none while it works. What `ask` with `keep_working` tells the agent of the
+   * answer it goes on without. Null where no turn machine is in reach.
+   */
+  answerReach?: (mission: Mission) => AnswerReach | null;
+  /**
    * Why a start's `branch` cannot be its worktree's in the repository `workdir` is in, as its agent's git says — or
    * null (`worktree.ts` `branchRefusal`).
    */
@@ -96,6 +103,11 @@ export interface MissionsDeps {
    * it had no folder of its own there, so nothing was removed and nothing is said to have been.
    */
   remove?: (mission: Mission, how?: { keepUnsaved: boolean }) => Promise<string[] | null>;
+  /**
+   * The worktrees in its own folder that hold work nobody committed, read and nothing else: what the notice of a mission
+   * that stopped or failed names. Empty where it has no folder of its own, or all of it is committed.
+   */
+  unsaved?: (mission: Mission) => Promise<string[]>;
   /**
    * Every agent's missions' own folders, by the mission each is named for, with when it last changed: among them the
    * ones no mission's record names any more (`MissionTimers.sweepLeft`).

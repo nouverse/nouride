@@ -1,17 +1,18 @@
 /**
  * A room's bar: its name, its members as the `@name` a person types to reach each, who answers a message that tags
- * nobody (the router's own answer, from `/chat-list`), adding an agent, and a menu to rename it, take an agent out, or
- * delete it.
+ * nobody (the router's own answer, from `/chat-list`) and, for an admin, the choice of who does (`RoomAnswer.tsx`),
+ * adding an agent, and a menu to rename it, take an agent out, or delete it.
  *
  * Members are shown as their tags rather than faces alone: a tag is typed, and `@nero` here is the same string the router
- * matches. On a phone the tags give way to their names in a line under the room's.
+ * matches. On a phone the tags give way to their names in a line under the room's, and who answers is picked from the
+ * room's menu.
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { useState } from "react";
-import { Check, ChevronLeft, Ellipsis, Pencil, Trash2, UserMinus, UserPlus, X } from "lucide-react";
-import type { Room } from "@nouride/wire";
+import { useState, type ReactNode } from "react";
+import { AtSign, Check, ChevronLeft, Ellipsis, Pencil, Trash2, UserMinus, UserPlus, X } from "lucide-react";
+import type { ChatListRoom, Room } from "@nouride/wire";
 import { AgentAvatar } from "@/commons/components/agents/AgentAvatar";
 import { AgentTag } from "@/commons/components/chat/AgentTag";
 import { StackedAvatars } from "@/commons/components/chat/Avatars";
@@ -19,9 +20,11 @@ import { useConfirm } from "@/commons/components/ui/confirm";
 import { DropdownMenu } from "@/commons/components/ui/DropdownMenu";
 import { useToast } from "@/commons/components/ui/toast";
 import { api } from "@/commons/lib/api";
+import { isAdmin, useMe } from "@/commons/lib/session";
 import { cn } from "@/commons/lib/utils";
 import type { ChatListData } from "../hooks/use-chat-list";
 import { HEADER_BUTTON } from "./AgentHeader";
+import { RoomAnswerChoices, RoomAnswerMenu, useRoomAnswer, type RoomAnswer } from "./RoomAnswer";
 
 const MENU = "rounded-2xl border border-base-content/[0.08] bg-base-100 p-1.5 shadow-soft";
 
@@ -35,13 +38,17 @@ function useRoomRefresh(chatId: string) {
   };
 }
 
-export function RoomHeader({ room, data, untagged, onDelete, deleting }: { room: Room; data: ChatListData; untagged: string | undefined; onDelete: () => void; deleting: boolean }) {
+export function RoomHeader({ room, data, said, onDelete, deleting }: { room: Room; data: ChatListData; /** Who answers there with no tag, and the room's own choice of it, as the chat list says them. */ said: Pick<ChatListRoom, "mention" | "untagged"> | undefined; onDelete: () => void; deleting: boolean }) {
   const toast = useToast();
   const refresh = useRoomRefresh(room.chatId);
   const [renaming, setRenaming] = useState(false);
   const [draft, setDraft] = useState("");
   const members = room.members.map((member) => member.agentId);
   const name = room.title ?? members.map(data.nameOf).join(", ");
+  const untagged = said?.untagged;
+  // An admin's to change, as `/mention` in the room is: anyone else reads who answers.
+  const admin = isAdmin(useMe().data ?? null);
+  const answer = useRoomAnswer(room, said, { name, nameOf: data.nameOf, refresh });
   const rename = useMutation({
     mutationFn: (title: string | null) => api.renameRoom(room.chatId, title),
     onSuccess: () => {
@@ -90,6 +97,7 @@ export function RoomHeader({ room, data, untagged, onDelete, deleting }: { room:
               room={room}
               data={data}
               refresh={refresh}
+              answer={admin ? answer : null}
               onRename={() => {
                 setDraft(room.title ?? "");
                 setRenaming(true);
@@ -101,20 +109,23 @@ export function RoomHeader({ room, data, untagged, onDelete, deleting }: { room:
         )}
       </div>
 
-      <ul aria-label="In this room" className="flex flex-wrap items-center gap-1.5 max-md:hidden">
-        {members.map((agentId) => {
-          const look = data.looks.get(agentId);
-          return (
-            <li key={agentId} className="inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-full border border-base-content/[0.08] bg-base-100 py-0.5 pr-2.5 pl-0.5 text-xs">
-              {look ? <AgentAvatar look={look} name={data.nameOf(agentId)} size="xxs" className="rounded-full" /> : null}
-              <AgentTag agentId={agentId} bare className="truncate font-mono">
-                @{agentId}
-              </AgentTag>
-              {untagged === agentId ? <span className="shrink-0 text-secondary">answers when nobody is tagged</span> : null}
-            </li>
-          );
-        })}
-      </ul>
+      <div className="flex flex-wrap items-center gap-1.5 max-md:hidden">
+        <ul aria-label="In this room" className="contents">
+          {members.map((agentId) => {
+            const look = data.looks.get(agentId);
+            return (
+              <li key={agentId} className="inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-full border border-base-content/[0.08] bg-base-100 py-0.5 pr-2.5 pl-0.5 text-xs">
+                {look ? <AgentAvatar look={look} name={data.nameOf(agentId)} size="xxs" className="rounded-full" /> : null}
+                <AgentTag agentId={agentId} bare className="truncate font-mono">
+                  @{agentId}
+                </AgentTag>
+                {untagged === agentId ? <span className="shrink-0 text-secondary">answers when nobody is tagged</span> : null}
+              </li>
+            );
+          })}
+        </ul>
+        {admin ? <RoomAnswerMenu answer={answer} /> : null}
+      </div>
     </header>
   );
 }
@@ -166,7 +177,7 @@ function AddAgentMenu({ room, data, refresh }: { room: Room; data: ChatListData;
 }
 
 /** The room's menu: rename it, take an agent out, delete it — each asked first where it cannot be undone. */
-function RoomMenu({ room, data, refresh, onRename, onDelete, deleting }: { room: Room; data: ChatListData; refresh: () => void; onRename: () => void; onDelete: () => void; deleting: boolean }) {
+function RoomMenu({ room, data, refresh, answer, onRename, onDelete, deleting }: { room: Room; data: ChatListData; refresh: () => void; /** Who answers with no tag, for an admin on a phone; null for anyone else. */ answer: RoomAnswer | null; onRename: () => void; onDelete: () => void; deleting: boolean }) {
   const toast = useToast();
   const { ask, dialog } = useConfirm();
   const members = room.members.map((member) => member.agentId);
@@ -182,60 +193,95 @@ function RoomMenu({ room, data, refresh, onRename, onDelete, deleting }: { room:
     <>
       <DropdownMenu trigger={<Ellipsis size={17} aria-hidden="true" />} triggerClassName={cn(HEADER_BUTTON, "w-11 px-0 sm:w-9")} ariaLabel="More for this room" width={260} menuClassName={MENU}>
         {(close) => (
-          <>
-            <li>
-              <button type="button" className="min-h-11 gap-3 rounded-xl text-sm" onClick={() => { close(); onRename(); }}>
-                <Pencil size={16} aria-hidden="true" /> Rename room
-              </button>
-            </li>
-            {members.length > 1
-              ? members.map((agentId) => (
-                  <li key={agentId}>
-                    <button
-                      type="button"
-                      className="min-h-11 gap-3 rounded-xl text-sm"
-                      disabled={removeMember.isPending}
-                      onClick={async () => {
-                        close();
-                        const confirmed = await ask({
-                          title: `Take ${data.nameOf(agentId)} out of this room?`,
-                          body: <>It stops getting messages here. What it already said stays in the room.</>,
-                          confirmLabel: "Take out",
-                        });
-                        if (confirmed) removeMember.mutate(agentId);
-                      }}
-                    >
-                      <UserMinus size={16} aria-hidden="true" /> Take {data.nameOf(agentId)} out
-                    </button>
-                  </li>
-                ))
-              : null}
-            <li>
-              <button
-                type="button"
-                className="min-h-11 gap-3 rounded-xl text-sm text-error"
-                disabled={deleting}
-                onClick={async () => {
-                  close();
-                  const confirmed = await ask({
-                    title: "Delete this room?",
-                    body: (
-                      <>
-                        The room, its history, and every member&apos;s conversation in it are deleted: {members.join(", ")}. Anything running here is cancelled. There is no undo.
-                      </>
-                    ),
-                    confirmLabel: "Delete room",
-                  });
-                  if (confirmed) onDelete();
-                }}
-              >
-                <Trash2 size={16} aria-hidden="true" /> Delete room
-              </button>
-            </li>
-          </>
+          <MenuPages answer={answer} close={close}>
+            {(whoAnswers) => (
+              <>
+                <li>
+                  <button type="button" className="min-h-11 gap-3 rounded-xl text-sm" onClick={() => { close(); onRename(); }}>
+                    <Pencil size={16} aria-hidden="true" /> Rename room
+                  </button>
+                </li>
+                {whoAnswers}
+                {members.length > 1
+                  ? members.map((agentId) => (
+                      <li key={agentId}>
+                        <button
+                          type="button"
+                          className="min-h-11 gap-3 rounded-xl text-sm"
+                          disabled={removeMember.isPending}
+                          onClick={async () => {
+                            close();
+                            const confirmed = await ask({
+                              title: `Take ${data.nameOf(agentId)} out of this room?`,
+                              body: <>It stops getting messages here. What it already said stays in the room.</>,
+                              confirmLabel: "Take out",
+                            });
+                            if (confirmed) removeMember.mutate(agentId);
+                          }}
+                        >
+                          <UserMinus size={16} aria-hidden="true" /> Take {data.nameOf(agentId)} out
+                        </button>
+                      </li>
+                    ))
+                  : null}
+                <li>
+                  <button
+                    type="button"
+                    className="min-h-11 gap-3 rounded-xl text-sm text-error"
+                    disabled={deleting}
+                    onClick={async () => {
+                      close();
+                      const confirmed = await ask({
+                        title: "Delete this room?",
+                        body: (
+                          <>
+                            The room, its history, and every member&apos;s conversation in it are deleted: {members.join(", ")}. Anything running here is cancelled. There is no undo.
+                          </>
+                        ),
+                        confirmLabel: "Delete room",
+                      });
+                      if (confirmed) onDelete();
+                    }}
+                  >
+                    <Trash2 size={16} aria-hidden="true" /> Delete room
+                  </button>
+                </li>
+              </>
+            )}
+          </MenuPages>
         )}
       </DropdownMenu>
       {dialog}
     </>
+  );
+}
+
+/**
+ * The room's menu and, on a phone, a second page of it: who answers with no tag. From a laptop up that is picked
+ * beside the members' tags, which a phone does not draw. Drawn only while the menu is open, so it opens on its first
+ * page each time.
+ */
+function MenuPages({ answer, close, children }: { answer: RoomAnswer | null; close: () => void; /** The menu's first page, handed the entry that opens the second to put among its own. */ children: (whoAnswers: ReactNode) => ReactNode }) {
+  const [picking, setPicking] = useState(false);
+  if (picking && answer) {
+    return (
+      <>
+        <li>
+          <button type="button" className="min-h-11 gap-3 rounded-xl text-sm" onClick={() => setPicking(false)}>
+            <ChevronLeft size={16} aria-hidden="true" /> Back
+          </button>
+        </li>
+        <RoomAnswerChoices answer={answer} close={close} />
+      </>
+    );
+  }
+  return children(
+    answer ? (
+      <li className="md:hidden">
+        <button type="button" className="min-h-11 gap-3 rounded-xl text-sm" onClick={() => setPicking(true)}>
+          <AtSign size={16} aria-hidden="true" /> Who answers with no tag
+        </button>
+      </li>
+    ) : null,
   );
 }

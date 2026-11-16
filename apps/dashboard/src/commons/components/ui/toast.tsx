@@ -261,7 +261,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 {/* In the toast's own colour, which the shared Details' grey would not read on. */}
                 {toast.details ? (
                   <details className="mt-1 text-xs opacity-80">
-                    <summary className="cursor-pointer select-none">Details</summary>
+                    <summary className="cursor-pointer select-none max-sm:py-2">Details</summary>
                     <p className="mt-1 whitespace-pre-line [overflow-wrap:anywhere]">{toast.details}</p>
                   </details>
                 ) : null}

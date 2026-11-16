@@ -96,19 +96,34 @@ describe("what is already there", () => {
     expect(ladder).toContain(`a release of several files goes in \`${join(own, ".local", "opt")}/<name>-<version>/\``);
   });
 
-  test("its own user: the orchestrator is told it installs for every agent; any other agent, to ask it", () => {
+  // "Ask the orchestrator" with no name sent root work to an agent called Infra Ops: each is told who, by name.
+  test("its own user: the orchestrator is told it installs for every agent; any other agent, to ask it by name", () => {
     const own = join(root, "workspace", "private", "nouva");
     const shared = join(root, ".nouride", "bin");
     const host = { root: false, sudo: false, manager: null, installers: ["`npm i -g`"], python: false };
     const mine = join(own, ".local", "bin");
-    const orchestrator = installLadder(mine, { ownHome: own, sharedBin: shared, sharesTools: true, host });
-    expect(orchestrator).toContain("as the orchestrator, `nouride tools run -- <the install command>` through the `nouride` tool");
+    const ladder = (sharedTools: { name: string; mine: boolean; on: boolean } | null) => installLadder(mine, { ownHome: own, sharedBin: shared, sharedTools, host });
+    const orchestrator = ladder({ name: "Nouva", mine: true, on: true });
+    expect(orchestrator).toContain("You are the orchestrator: the other agents come to you when they need a program they all run.");
+    expect(orchestrator).toContain("`nouride tools run -- <the install command>` through the `nouride` tool");
     expect(orchestrator).toContain(`runs it as the daemon in \`${shared}\``);
-    const other = installLadder(mine, { ownHome: own, sharedBin: shared, host });
-    expect(other).toContain("What every agent runs is the orchestrator's to change: for something they all need, ask it.");
+    const other = ladder({ name: "Nouva", mine: false, on: true });
+    expect(other).toContain("What every agent runs is Nouva's to change, the orchestrator: for something they all need, ask Nouva.");
     expect(other).not.toContain("nouride tools run");
-    // Where agents share the daemon's user, neither is said.
+    // Where agents share the daemon's user, none of it is said.
     expect(installLadder(shared, { host })).not.toContain("orchestrator");
+  });
+
+  test("the switch off, or no orchestrator: each is told where a person turns it on, to point them there", () => {
+    const own = join(root, "workspace", "private", "nix");
+    const shared = join(root, ".nouride", "bin");
+    const host = { root: false, sudo: false, manager: null, installers: [], python: false };
+    const ladder = (sharedTools: { name: string; mine: boolean; on: boolean } | null) => installLadder(join(own, ".local", "bin"), { ownHome: own, sharedBin: shared, sharedTools, host });
+    const where = "An admin turns it on in the dashboard: Agents → Nouva → Settings → Programs every agent runs.";
+    expect(ladder({ name: "Nouva", mine: true, on: false })).toContain(`You are the orchestrator, but installing programs for every agent is off for you. ${where}`);
+    expect(ladder({ name: "Nouva", mine: false, on: false })).toContain(`No agent installs programs for every agent now: the switch is off. ${where} Until then, ask the person who runs Nouride.`);
+    expect(ladder({ name: "Nouva", mine: true, on: false })).not.toContain("nouride tools run");
+    expect(ladder(null)).toContain("No agent installs programs for every agent: this install has no orchestrator. For something they all need, ask the person who runs Nouride.");
   });
 
   test("nothing at all when there is no bin directory to describe, or nothing in it", () => {

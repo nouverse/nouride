@@ -19,7 +19,8 @@
  * from what is listed, a chat or a stored secret's name, asks for `listOnFocus`: nobody knows a chat's id to type.
  * A model picked in a panel asks for `listOnPress`: the whole list when the field is pressed or emptied. A list that
  * waited for typing never showed a person what there was to pick from, and one on focus would cover the rest of a
- * panel that hands the field the focus as it opens.
+ * panel that hands the field the focus as it opens. The setup wizard's model field asks for both in a wide window: it
+ * starts empty, and a person making their first agent knows no model's name to type. On a phone it waits for typing.
  *
  * The chevron at the end opens the whole list, whatever the field holds. Typing filters by what is in the box, so a
  * field that already held a model offered only that model, and seeing the others meant deleting its name first. The
@@ -250,7 +251,7 @@ export function Combobox(props: ComboboxProps) {
           aria-label={showing && whole ? "Hide the list" : "Show the whole list"}
           aria-expanded={showing && whole}
           disabled={props.disabled || options.length === 0}
-          className="absolute right-1.5 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded-lg text-base-content/65 transition-colors hover:bg-base-200 hover:text-base-content disabled:pointer-events-none disabled:opacity-40"
+          className="absolute right-1.5 top-1/2 flex size-7 -translate-y-1/2 items-center max-sm:size-8 justify-center rounded-lg text-base-content/65 transition-colors hover:bg-base-200 hover:text-base-content disabled:pointer-events-none disabled:opacity-40"
           // Not the field's focus: on a phone that brings the keyboard up, and the list moves with it.
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => {

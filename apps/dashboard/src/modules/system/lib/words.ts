@@ -34,9 +34,12 @@ export function ceilingWords(memory: SystemOverview["memory"]): string | null {
     : "The ceiling is a limit set for Nouride here.";
 }
 
-/** What the agents' commands hold, or why there is no figure of their own. */
+/**
+ * What the agents' commands hold, with their ceiling where they have one. With no figure, that it is not known: it
+ * said they were counted with Nouride, whose own figure is its one process, so they were counted nowhere.
+ */
 export function commandsWords(commands: SystemOverview["memory"]["commands"]): string {
-  if (!commands) return "Counted together with Nouride here.";
+  if (!commands) return "How much they hold is not something Nouride can tell here.";
   return commands.maxBytes === null ? formatBytes(commands.usedBytes) : `${formatBytes(commands.usedBytes)}, and may hold up to ${formatBytes(commands.maxBytes)}`;
 }
 

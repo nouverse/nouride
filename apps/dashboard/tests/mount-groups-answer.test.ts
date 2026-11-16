@@ -10,7 +10,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { pickedOf } from "@/modules/groups/components/WhoAnswers";
+import { pickedOf } from "@/commons/lib/who-answers";
 import { answer, dropdown, recordPosts, renderPage, useMountHarness, WIRE } from "./mount-harness.ts";
 import { eventually } from "./wait.ts";
 
@@ -133,7 +133,7 @@ describe("the Groups page", () => {
     }
   });
 
-  test("says it in words where there is nothing to pick: to who is not an admin, and of a room made in the dashboard", async () => {
+  test("says it in words where there is nothing to pick: to who is not an admin", async () => {
     const me = WIRE["/auth/me"] as { user: Record<string, unknown> } & Record<string, unknown>;
     answer({ ...box({ mention: { requireTag: false, answerer: "novelist" }, untagged: "novelist" }), "/auth/me": ok({ ...me, role: "operator", user: { ...me.user, role: "operator" } }) });
     await renderPage("/groups", async (host) => {
@@ -142,17 +142,32 @@ describe("the Groups page", () => {
       expect(row(host)!.textContent).toContain("Novelist answers");
     });
 
-    answer(box({ dashboard: true, untagged: "nouva" }));
-    await renderPage("/groups", async (host) => {
-      await eventually(() => row(host) !== undefined, 4_000, "the room's row");
-      expect(dropdown(row(host)!, LABEL).button()).toBeUndefined();
-      expect(row(host)!.textContent).toContain("Nouva answers");
-    });
-
-    answer(box({ dashboard: true }));
+    // And where nobody answers, that is what they read.
+    answer({ ...box(), "/auth/me": ok({ ...me, role: "operator", user: { ...me.user, role: "operator" } }) });
     await renderPage("/groups", async (host) => {
       await eventually(() => row(host) !== undefined, 4_000, "the room's row");
       expect(row(host)!.textContent).toContain("Nobody answers");
     });
+  });
+
+  test("a room made in the dashboard is picked for too, among the agents in it and no others, and sent the same way", async () => {
+    // The novelist is an agent of the box and not in this room: the router answers a room by its members.
+    answer(box({ dashboard: true, agents: ["nouva"], untagged: "nouva" }));
+    const posted = recordPosts({ "/groups/mention": ok({ ok: true, mention: { requireTag: true } }) });
+    try {
+      await renderPage("/groups", async (host) => {
+        await eventually(() => row(host) !== undefined, 4_000, "the room's row");
+        const pick = dropdown(row(host)!, LABEL);
+        expect(pick.holds()).toBe("Default");
+        expect(row(host)!.textContent).toContain("Now: Nouva answers without a tag");
+        expect(await pick.open()).toEqual(["Default", "A tag is needed", "Nouva"]);
+        answer(box({ dashboard: true, agents: ["nouva"], mention: { requireTag: true } }));
+        await pick.pick("A tag is needed");
+        await eventually(() => dropdown(row(host)!, LABEL).holds() === "A tag is needed", 4_000, "the room showing it");
+      });
+      expect(posted.posts).toEqual([{ path: "/groups/mention", body: { ...ROOM, mention: "required" } }]);
+    } finally {
+      posted.restore();
+    }
   });
 });

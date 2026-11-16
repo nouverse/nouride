@@ -15,6 +15,7 @@ import type { HookContext } from "@/modules/hooks/types.ts";
 import { ActionPresses, buttonsFor } from "@/modules/missions/actions.ts";
 import { OptionPresses } from "@/modules/missions/options.ts";
 import { FOLLOW_UP_MS } from "@/modules/missions/limits.ts";
+import { called } from "@/modules/missions/notices.ts";
 import type { Mission } from "@/modules/missions/types.ts";
 import { registerMissionRoutes } from "@/modules/web/control/routes/missions.ts";
 import { missionsHarness, STARTERS_CTX } from "./harness.ts";
@@ -26,7 +27,7 @@ type State = (typeof STATES)[number];
 
 const CHECKS = ["test -s out.md"];
 /** A question offering two answers to pick from, a button each (`options.ts`). */
-const ASK = { kind: "ask" as const, question: "Which way?", options: ["keep the old route", "drop it"] };
+const ASK = { question: "Which way?", options: ["keep the old route", "drop it"] };
 
 /** A mission in `state`, reached the way the daemon reaches it, in a harness of its own. */
 async function inState(state: State): Promise<{ h: Harness; mission: Mission }> {
@@ -50,7 +51,7 @@ async function inState(state: State): Promise<{ h: Harness; mission: Mission }> 
     }
     case "input": {
       const mission = await started();
-      h.turn(mission, {}, () => h.missions.claim(mission.id, ASK));
+      h.turn(mission, {}, () => h.missions.ask(mission.id, ASK));
       return { h, mission };
     }
     case "approval": {
@@ -86,7 +87,7 @@ async function inState(state: State): Promise<{ h: Harness; mission: Mission }> 
       return { h, mission };
     }
     case "proposal": {
-      const result = h.missions.start({ agentId: "nova", goal: "tidy the logs", checks: CHECKS, startedBy: "8142", gatewayId: "telegram:nova", chatId: "8142", byAgent: "nova", proposed: true });
+      const result = h.missions.start({ agentId: "nova", title: "The logs", goal: "tidy the logs", checks: CHECKS, startedBy: "8142", gatewayId: "telegram:nova", chatId: "8142", byAgent: "nova", proposed: true });
       if ("refused" in result) throw new Error(result.refused);
       return { h, mission: result.mission };
     }
@@ -208,7 +209,7 @@ describe("what a person says, from every state", () => {
         if (expected.status === "done" || expected.status === "stopped") {
           // Ended: whatever turn it had is cut off, and nothing is queued after.
           expect(h.queued.length).toBe(queued);
-          expect(h.told.at(-1)!.text).toMatch(expected.status === "done" ? /^✓ Mission/ : /^✗ Mission/);
+          expect(h.told.at(-1)!.text).toMatch(expected.status === "done" ? /^✓ .+ \(msn_[0-9a-f]{6}\) done/ : /^✗ .+ \(msn_[0-9a-f]{6}\) stopped/);
         }
       });
     }
@@ -240,7 +241,7 @@ describe("accepted as it stands", () => {
   test("one with no checks says only that it was accepted as it stood", async () => {
     const h = await missionsHarness();
     const mission = await h.start("look around");
-    h.turn(mission, {}, () => h.missions.claim(mission.id, { kind: "ask", question: "Go on?" }));
+    h.turn(mission, {}, () => h.missions.ask(mission.id, { question: "Go on?" }));
     h.missions.accept(mission.id, "Gading");
     expect(h.store.get(mission.id)!.reason).toBe("accepted by Gading as it stood");
   });
@@ -391,7 +392,7 @@ describe("the buttons under each state", () => {
   test("a question without options gets none: it is answered in words", async () => {
     const h = await missionsHarness();
     const mission = await h.start();
-    h.turn(mission, {}, () => h.missions.claim(mission.id, { kind: "ask", question: "What should the file be called?" }));
+    h.turn(mission, {}, () => h.missions.ask(mission.id, { question: "What should the file be called?" }));
     expect(buttonsFor(h.store.get(mission.id)!)).toBeUndefined();
   });
 
@@ -416,11 +417,31 @@ describe("the buttons under each state", () => {
 describe("pressing them", () => {
   const data = (mission: Mission, verb: string, kind: string) => `mission:do:${mission.id}:${verb}:${kind}`;
 
+  test("the line a pressed button leaves names the mission by its title, as the message it takes the place of did", async () => {
+    const h = await missionsHarness();
+    const asking = await h.start("write the weekly numbers into the sheet", { title: "The weekly report", checks: CHECKS });
+    h.turn(asking, {}, () => void h.missions.ask(asking.id, { question: "Keep the old sheet?", options: ["keep it", "drop it"] }));
+    await h.settle();
+    const { options } = buttonsPresses(h);
+    const short = asking.id.slice(0, 10);
+    const option = h.told.findLast((one) => one.mission === asking.id && one.text.includes("Keep the old sheet?"))!.buttons![0]!.data;
+    expect((await options.press(pressOf(option))).settled).toBe(`❓ The weekly report (${short}), answered by Gading: A) keep it`);
+    // Pressed again: answered already, still under its title.
+    expect((await options.press(pressOf(option))).settled).toBe(`❓ The weekly report (${short}): already answered.`);
+    // An action's button, and the words a chat shows for the press.
+    const { h: other, mission: stuck } = await inState("stuck");
+    const pressed = await buttonsPresses(other).actions.press(pressOf(data(stuck, "accept", "stuck")));
+    expect(pressed).toEqual({ notice: `ship the report (${stuck.id.slice(0, 10)}) accepted.`, settled: `ship the report (${stuck.id.slice(0, 10)}): accepted by Gading.` });
+    // One with no title on record is named by its id, as before it had one.
+    expect(called({ id: "msn_0123456789abcdef", title: "" })).toBe("Mission msn_012345");
+    expect(called({ id: "msn_0123456789abcdef", title: "  The viewers " })).toBe("The viewers (msn_012345)");
+  });
+
   test("Accept as it is on a stuck one closes it, once; pressed again it has moved on", async () => {
     const { h, mission } = await inState("stuck");
     const { actions } = buttonsPresses(h);
     const first = await actions.press(pressOf(data(mission, "accept", "stuck")));
-    expect(first).toEqual({ notice: `Mission ${mission.id.slice(0, 10)} accepted.`, settled: `Mission ${mission.id.slice(0, 10)}: accepted by Gading.` });
+    expect(first).toEqual({ notice: `${mission.title} (${mission.id.slice(0, 10)}) accepted.`, settled: `${mission.title} (${mission.id.slice(0, 10)}): accepted by Gading.` });
     await h.settle();
     expect(h.store.get(mission.id)!.status).toBe("done");
     const done = h.told.filter((one) => one.text.startsWith("✓")).length;
@@ -470,15 +491,15 @@ describe("pressing them", () => {
     const { h, mission } = await inState("stuck");
     h.missions.continueMission(mission.id, "Gading");
     const pressed = await buttonsPresses(h).actions.press(pressOf(data(mission, "accept", "stuck")));
-    expect(pressed.notice).toContain("has moved on (running)");
-    expect(pressed.settled).toContain("moved on before this was answered");
+    const name = `ship the report (${mission.id.slice(0, 10)})`;
+    expect(pressed).toEqual({ notice: `${name} has moved on (running), so this button no longer applies.`, settled: `${name}: moved on before this was answered (running).` });
     expect(h.store.get(mission.id)!.status).toBe("running");
   });
 
   test("a button for a wait it has left does nothing — waiting on something else now", async () => {
     const { h, mission } = await inState("stuck");
     h.missions.continueMission(mission.id, "Gading");
-    h.turn(mission, {}, () => h.missions.claim(mission.id, ASK));
+    h.turn(mission, {}, () => h.missions.ask(mission.id, ASK));
     const pressed = await buttonsPresses(h).actions.press(pressOf(data(mission, "accept", "stuck")));
     expect(pressed.notice).toContain("waiting for input");
     expect(h.store.get(mission.id)).toMatchObject({ status: "waiting", waitKind: "input" });
@@ -500,7 +521,7 @@ describe("pressing them", () => {
     expect((await actions.press(pressOf(data(mission, "accept", "stuck"), { ...room, senderId: "999" }))).notice).toBe("Only the person who started this mission, or an admin, can answer it.");
     expect(h.store.get(mission.id)!.waitKind).toBe("stuck");
     h.missions.continueMission(mission.id, "Gading");
-    h.turn(mission, {}, () => h.missions.claim(mission.id, ASK));
+    h.turn(mission, {}, () => h.missions.ask(mission.id, ASK));
     const b = buttonsFor(h.store.get(mission.id)!)![1]!.data;
     expect((await options.press(pressOf(b, { ...room, senderId: "999" }))).notice).toBe("Only the person who started this mission, or an admin, can answer it.");
     expect((await options.press(pressOf(b, { ...room, senderId: "777" }))).notice).toBe("Answered B.");
@@ -522,21 +543,27 @@ describe("pressing them", () => {
     await h.settle();
     const told = h.told.length;
     const pressed = await buttonsPresses(h).options.press(pressOf(a));
-    expect(pressed).toEqual({ notice: `Mission ${mission.id.slice(0, 10)} has moved on (done), so this question no longer waits.`, settled: `❓ Mission ${mission.id.slice(0, 10)}: moved on before this was answered (done).` });
+    expect(pressed).toEqual({ notice: `${mission.title} (${mission.id.slice(0, 10)}) has moved on (done), so this question no longer waits.`, settled: `❓ ${mission.title} (${mission.id.slice(0, 10)}): moved on before this was answered (done).` });
     expect(h.store.get(mission.id)!.status).toBe("done");
     expect(h.told.length).toBe(told);
   });
 
-  test("an option pressed after the mission went on to wait for something else does not answer that", async () => {
+  test("an option pressed after the mission went on to wait for something else is its answer, kept for when it goes on, and moves nothing", async () => {
     const { h, mission } = await inState("input");
     const a = buttonsFor(h.store.get(mission.id)!)![0]!.data;
     h.missions.continueMission(mission.id, "Gading");
     expect(h.store.get(mission.id)!.waitKind).toBe("input");
-    // Stuck while its question still has no answer: a restart's cut, say — the question's buttons no longer apply.
+    // Stuck while its question still has no answer: a restart's cut, say. The question is as open as it was, and its
+    // answer is what the mission will need once a person lets it go on; what it waits on now is not answered by it.
     h.missions.wait(h.store.get(mission.id)!, "stuck", "a loop");
     const pressed = await buttonsPresses(h).options.press(pressOf(a));
-    expect(pressed.settled).toContain("moved on before this was answered (waiting for stuck)");
-    expect(h.store.get(mission.id)!.waitKind).toBe("stuck");
+    expect(pressed.settled).toContain("answered by Gading: A) keep the old route");
+    expect(pressed.notice).toBe(`Answered. Kept for its next turn. It is stuck: /mission continue ${mission.id.slice(0, 10)} lets it try again with this.`);
+    const after = h.store.get(mission.id)!;
+    expect(after).toMatchObject({ status: "waiting", waitKind: "stuck" });
+    expect(after.answers.at(-1)!.answer).toBe("A) keep the old route");
+    // Nothing was queued for it: only Continue moves a stuck mission.
+    expect(h.queued.filter((one) => one.chatId === mission.id && one.text.includes("answered"))).toEqual([]);
   });
 
   test("a mission no longer on record, or data that is not a mission button's, is answered as such", async () => {

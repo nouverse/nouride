@@ -47,7 +47,7 @@ export function StartMenu({ data }: { data: ChatListData }) {
       </DropdownMenu>
 
       <PopoverSheet open={picking} onClose={() => setPicking(false)} anchor={anchor} label="Chat with an agent" width={320}>
-        <p className="px-4 pt-3 pb-1 font-display text-base font-medium">Chat with an agent</p>
+        <p className="px-4 pt-3 pb-1 font-display text-base font-medium max-md:hidden">Chat with an agent</p>
         <ul className="flex flex-col gap-0.5 overflow-y-auto overscroll-contain p-1.5">
           {agents.map((agent) => {
             const name = agent.displayName || agent.id;

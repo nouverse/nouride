@@ -22,7 +22,7 @@ export function Hero({ name, line, aside, hour = new Date().getHours() }: { name
     <section className="hero-soft flex flex-wrap items-center gap-x-4 gap-y-3 overflow-hidden rounded-[22px] border border-base-content/[0.08] p-4 shadow-soft sm:gap-x-6 sm:p-6">
       <Mascot pose={night ? "goodNight" : "waving"} className="-my-2 w-24 sm:-my-4 sm:w-40" />
       <div className="min-w-0 flex-1 space-y-1.5 sm:space-y-3">
-        <h1 className="text-2xl leading-tight text-base-content sm:text-4xl">
+        <h1 className="text-2xl leading-tight text-base-content [overflow-wrap:anywhere] sm:text-4xl">
           {words}
           {name ? `, ${name}` : ""}
         </h1>

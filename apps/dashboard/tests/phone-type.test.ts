@@ -93,6 +93,11 @@ describe("meta text on a phone", () => {
     expect(fontSize(390, "button", "btn btn-xs", undefined, "--size")).toBe("2rem");
     expect(fontSize(1440, "button", "btn btn-xs", undefined, "--size")).toBe("");
   });
+
+  test("and as wide: one that holds an icon alone is narrower than a finger by its padding", () => {
+    expect(fontSize(390, "button", "btn btn-xs", undefined, "min-width")).toBe("32px");
+    expect(fontSize(1440, "button", "btn btn-xs", undefined, "min-width")).not.toBe("32px");
+  });
 });
 
 /** Every string literal in `src`'s code, each as its words — where class names live. */

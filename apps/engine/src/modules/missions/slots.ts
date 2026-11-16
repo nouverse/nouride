@@ -58,5 +58,5 @@ export function inForceFor(missions: MissionsSection, byMachine: number, registr
  */
 export function machineFacts(machine: Machine, missions: MissionsSection, registry: Parameters<typeof inForceFor>[2], agentId: string): MachineFacts {
   const slots = inForceFor(missions, atOnceBy(machine), registry);
-  return { words: machineWords(machine), missions: { atOnce: slots.maxRunning, own: Math.min(slots.maxRunning, slots.slotsOf?.(agentId) ?? slots.perAgent) } };
+  return { words: machineWords(machine), ...(machine.system ? { system: machine.system } : {}), missions: { atOnce: slots.maxRunning, own: Math.min(slots.maxRunning, slots.slotsOf?.(agentId) ?? slots.perAgent) } };
 }

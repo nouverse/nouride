@@ -76,7 +76,7 @@ describe("the row that stays at the top of the window", () => {
       expect(ground(row())).toBe(true);
       expect(row().getAttribute("class")).toContain("after:bg-app-bar-fade");
       // It stays one pixel above the top, or it would always be seen whole.
-      expect((row().getAttribute("class") ?? "").split(/\s+/)).toContain("-top-px");
+      expect((row().getAttribute("class") ?? "").split(/\s+/)).toContain("top-[calc(var(--head,0px)-1px)]");
     } finally {
       unmount();
     }

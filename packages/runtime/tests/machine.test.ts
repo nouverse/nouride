@@ -9,9 +9,9 @@ import { processHeldBytes } from "../src/process-memory.ts";
 
 const GiB = 1024 ** 3;
 
-/** A machine of `cores` and `gib`, and the files a cgroup would show. */
+/** A Linux machine of `cores` and `gib`, and the files a cgroup would show. It has no program to ask. */
 function source(cores: number, gib: number, files: Record<string, string> = {}): MachineSource {
-  return { cores: () => cores, memoryBytes: () => gib * GiB, read: (path) => files[path] ?? null };
+  return { cores: () => cores, memoryBytes: () => gib * GiB, platform: () => "linux", pid: () => 1, read: (path) => files[path] ?? null, list: () => [], run: () => null };
 }
 
 describe("the machine's cores and memory", () => {

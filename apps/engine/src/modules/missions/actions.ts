@@ -11,7 +11,7 @@ import type { ButtonPress, MessageButton, PressAnswer } from "@nouride/shared";
 import type { MissionWaitKind } from "@nouride/wire";
 import type { Missions } from "./missions.ts";
 import { optionButtons, optionsOf } from "./options.ts";
-import { shortId } from "./page.ts";
+import { called } from "./notices.ts";
 import type { Mission } from "./types.ts";
 
 type Verb = "accept" | "continue" | "stop";
@@ -88,16 +88,17 @@ export class ActionPresses {
     const refusal = pressRefusal(mission, press, this.deps.isAdmin);
     if (refusal) return { notice: refusal };
     const verb = match[2] as Verb;
-    const id = shortId(mission.id);
+    // By its title, as its notices name it: the line takes the place of the notice the button was under.
+    const name = called(mission);
     if (mission.status !== "waiting" || mission.waitKind !== match[3]) {
       const now = mission.status === "waiting" ? `waiting for ${mission.waitKind}` : mission.status;
-      return { notice: `Mission ${id} has moved on (${now}), so this button no longer applies.`, settled: `Mission ${id}: moved on before this was answered (${now}).` };
+      return { notice: `${name} has moved on (${now}), so this button no longer applies.`, settled: `${name}: moved on before this was answered (${now}).` };
     }
     const who = press.senderName || press.senderId;
     const as = { gatewayId: press.gatewayId, senderId: press.senderId };
     const acted = verb === "accept" ? this.deps.missions.accept(mission.id, who, as) : verb === "continue" ? this.deps.missions.continueMission(mission.id, who, undefined, as) : this.deps.missions.stop(mission.id, who);
     if ("refused" in acted) return { notice: acted.refused };
     const what = verb === "accept" && mission.startedAt === null ? "started" : DONE[verb];
-    return { notice: `Mission ${id} ${what}.`, settled: `Mission ${id}: ${what} by ${who}.` };
+    return { notice: `${name} ${what}.`, settled: `${name}: ${what} by ${who}.` };
   }
 }

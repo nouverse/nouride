@@ -24,6 +24,13 @@
  * nothing more is asked for where it sends. An unknown or ambiguous `to` is refused before anybody is asked, with the
  * chats it can reach.
  *
+ * **In a mission's turn the list knows the chat that mission reports to** (`reportsTo`). A mission's own conversation
+ * is nobody's chat, so "never the chat it is in" left its person's chat as one line among twenty. A mission on the live
+ * box had a question for its person, was given three chats with their name and none marked, and sent it to a dashboard
+ * chat nobody had open; the answer could not have come back to it from there either. That chat is now the list's first
+ * line and said to be the mission's, and a send from a mission to any other chat says so in its result. Nothing is
+ * redirected: where a message goes is what `to` says.
+ *
  * **The list has a call of its own: no `to`.** Nothing is sent and nobody is asked. An unknown `to` used to be the only
  * way to see the chats, and the schema said so; agents on two different models then made a recipient up to get the
  * list (`to: "list"`, `text: "test"`), in a chat and at the start of a scheduled job's run. Each was a failed step on
@@ -59,7 +66,12 @@ export interface SendMessageOptions {
   targets(ctx: Pick<ToolContext, "agentId">): SendTargets;
   /** Put the text on the wire, and into that chat's conversation once it landed. */
   post(ctx: ToolContext, chat: ReachableChat, text: string): Promise<{ ok: true } | { ok: false; reason: string }>;
+  /** In a mission's turn, the chat that mission reports to, where its person is; null in any other turn. */
+  reportsTo?(ctx: Pick<ToolContext, "gatewayId" | "chatId">): ChatAt | null;
 }
+
+/** A chat by where it is: its connection and its id there. */
+type ChatAt = { gatewayId: string; chatId: string };
 
 /** How many chats an error lists — the most recently active. Enough for a household; not a page of ids. */
 const LISTED = 20;
@@ -95,15 +107,29 @@ export function describeAddress(targets: SendTargets, chat: { gatewayId: string;
   return found ? describeChat(found) : chatAddress(chat);
 }
 
-function listing(chats: readonly ReachableChat[], heading: string): string {
+function listing(chats: readonly ReachableChat[], heading: string, home: ChatAt | null = null): string {
   // The People list by its name: `[[people]]` sent a model to look for a table in config.toml, which 0.8.18 moved out.
   if (chats.length === 0) return `${heading} There are none: you can only send into a chat you have already talked in, or to a person on the People list through a connection of your own.`;
-  const lines = chats.slice(0, LISTED).map((chat) => {
+  // The chat a mission reports to first, and said to be it: among several chats with one person it is the one they read.
+  const mine = home ? chats.find((chat) => chatAddress(chat) === chatAddress(home)) : undefined;
+  const ordered = mine ? [mine, ...chats.filter((chat) => chat !== mine)] : chats;
+  const lines = ordered.slice(0, LISTED).map((chat) => {
     const keys = chat.kind === "dm" ? chat.people.flatMap((person) => (person.key ? [person.key] : [])) : [];
-    return `- \`${chatAddress(chat)}\`: ${describeChat(chat)}${keys.length ? ` · to: "${keys[0]}"` : ""}`;
+    return `- \`${chatAddress(chat)}\`: ${describeChat(chat)}${keys.length ? ` · to: "${keys[0]}"` : ""}${chat === mine ? MISSIONS_CHAT : ""}`;
   });
   const more = chats.length > LISTED ? `\n(${chats.length - LISTED} less recent not shown.)` : "";
   return `${heading} Give \`to\` one of these addresses, a person's key, or a group's name:\n${lines.join("\n")}${more}`;
+}
+
+/** The mark on the line of the chat a mission reports to, the words a test holds. */
+const MISSIONS_CHAT = " · this mission reports here, and its person reads it";
+
+/**
+ * What a send from a mission's turn to another chat than its own is told: the message is in that chat, the mission is
+ * not, and what its person answers there reaches the agent's conversation in that chat and never the mission.
+ */
+function notTheMissionsChat(targets: SendTargets, home: ChatAt): string {
+  return ` This mission reports to ${describeAddress(targets, home)}, not there: an answer in that chat does not come back to the mission. A question for its person goes through \`mission\` action "ask".`;
 }
 
 /** How several groups with one name come down to one, in order: this connection, this platform, a chat you have talked in. */
@@ -130,10 +156,10 @@ type Resolved = { ok: true; chat: ReachableChat } | { ok: false; reason: string 
  *
  * The chat this turn is in is never a match: that is a reply, and it goes out as one.
  */
-export function resolveSendTarget(to: string, targets: SendTargets, here: { gatewayId: string; chatId: string; gateway: string }): Resolved {
+export function resolveSendTarget(to: string, targets: SendTargets, here: { gatewayId: string; chatId: string; gateway: string }, home: ChatAt | null = null): Resolved {
   const wanted = to.trim();
   const isHere = (chat: { gatewayId: string; chatId: string }) => chat.gatewayId === here.gatewayId && chat.chatId === here.chatId;
-  if (!wanted) return { ok: false, reason: listing(targets.chats, "`to` is empty.") };
+  if (!wanted) return { ok: false, reason: listing(targets.chats, "`to` is empty.", home) };
   if (wanted === chatAddress(here)) return { ok: false, reason: "that is the chat you are in, so answer there, in your reply" };
 
   const exact = targets.chats.find((chat) => chatAddress(chat) === wanted);
@@ -150,12 +176,12 @@ export function resolveSendTarget(to: string, targets: SendTargets, here: { gate
   const matches = named.filter((chat) => !isHere(chat));
   if (matches.length === 0) {
     if (named.length > 0) return { ok: false, reason: "that is the chat you are in, so answer there, in your reply" };
-    return { ok: false, reason: listing(targets.chats, `No chat you can reach is "${wanted}".`) };
+    return { ok: false, reason: listing(targets.chats, `No chat you can reach is "${wanted}".`, home) };
   }
   if (matches.length === 1) return { ok: true, chat: matches[0]! };
 
   if (matches.some((chat) => chat.kind === "dm")) {
-    return { ok: false, reason: listing(matches, `"${wanted}" has ${matches.length} chats you can reach. Give \`to\` the address of the one asked for.`) };
+    return { ok: false, reason: listing(matches, `"${wanted}" has ${matches.length} chats you can reach. Give \`to\` the address of the one asked for.`, home) };
   }
   let left = matches;
   for (const narrower of NARROWERS) {
@@ -163,7 +189,7 @@ export function resolveSendTarget(to: string, targets: SendTargets, here: { gate
     if (narrowed.length === 1) return { ok: true, chat: narrowed[0]! };
     if (narrowed.length > 1) left = narrowed;
   }
-  return { ok: false, reason: listing(left, `"${wanted}" could be ${left.length} chats.`) };
+  return { ok: false, reason: listing(left, `"${wanted}" could be ${left.length} chats.`, home) };
 }
 
 function textOf(args: Record<string, unknown>): string {
@@ -176,8 +202,9 @@ function asksForChats(args: Record<string, unknown>): boolean {
 }
 
 export function createSendMessageTool(options: SendMessageOptions): Tool {
+  const homeOf = (ctx: ToolContext): ChatAt | null => options.reportsTo?.(ctx) ?? null;
   const resolve = (args: Record<string, unknown>, ctx: ToolContext): Resolved =>
-    resolveSendTarget(typeof args.to === "string" ? args.to : "", options.targets(ctx), ctx);
+    resolveSendTarget(typeof args.to === "string" ? args.to : "", options.targets(ctx), ctx, homeOf(ctx));
 
   return {
     requiresApproval: true,
@@ -230,15 +257,17 @@ export function createSendMessageTool(options: SendMessageOptions): Tool {
     },
 
     async execute(args, ctx): Promise<ToolResult> {
-      if (asksForChats(args)) return { content: listing(options.targets(ctx).chats, "Nothing was sent: there was no `to`."), isError: false };
+      const home = homeOf(ctx);
+      if (asksForChats(args)) return { content: listing(options.targets(ctx).chats, "Nothing was sent: there was no `to`.", home), isError: false };
       const text = textOf(args);
       if (!text) return { content: "`text` is empty.", isError: true };
       const found = resolve(args, ctx);
       if (!found.ok) return { content: found.reason, isError: true };
       const posted = await options.post(ctx, found.chat, text);
       if (!posted.ok) return { content: `Not sent to ${describeChat(found.chat)}: ${posted.reason}`, isError: true };
+      const elsewhere = home && chatAddress(found.chat) !== chatAddress(home) ? notTheMissionsChat(options.targets(ctx), home) : "";
       return {
-        content: `Delivered to ${describeChat(found.chat)}: the platform took it, so there is nothing to check. It is in your conversation there now, so you will have it when somebody answers.`,
+        content: `Delivered to ${describeChat(found.chat)}: the platform took it, so there is nothing to check. It is in your conversation there now, so you will have it when somebody answers.${elsewhere}`,
         isError: false,
       };
     },

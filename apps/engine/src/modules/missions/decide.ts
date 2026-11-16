@@ -155,11 +155,15 @@ export function continueGives(reached: readonly MissionLimit[], settings: { limi
   return more.join(" and ");
 }
 
-/** The limit past 80% that the chat has not been told about, or null. Told once per mission. */
-export function nearLimit(mission: Mission, now: number, inForce: LimitsInForce = ALL_LIMITS): string | null {
+/**
+ * The limit past 80% that the chat has not been told about, or null. Told once per mission. With what is not in its
+ * count yet, as the limit itself is read (`limitsReached`): a coding CLI's turn is counted at its end, and a mission one
+ * turn long was told nothing before the limit stopped it.
+ */
+export function nearLimit(mission: Mission, now: number, inForce: LimitsInForce = ALL_LIMITS, unsettled: Unsettled = SETTLED): string | null {
   if (mission.warnedAt !== null) return null;
   if (inForce.turns && mission.turnsUsed >= mission.limits.turns * WARN_AT) return `its ${mission.limits.turns} turns`;
-  if (mission.tokensUsed >= mission.limits.tokens * WARN_AT) return `its ${millions(mission.limits.tokens)} tokens`;
+  if (mission.tokensUsed + unsettled.helpers + unsettled.running >= mission.limits.tokens * WARN_AT) return `its ${millions(mission.limits.tokens)} tokens`;
   if (workedMs(mission, now) >= mission.limits.hours * 3_600_000 * WARN_AT) return `its ${hoursLimit(mission.limits.hours)} of work`;
   return null;
 }

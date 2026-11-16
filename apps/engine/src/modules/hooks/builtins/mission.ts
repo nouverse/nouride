@@ -27,7 +27,7 @@ const USAGE =
 /** One mission in full: what decides it is done, where it stands, and the whole of what it asks. */
 function show(mission: Mission, limits: string): string {
   const lines = [
-    `${shortId(mission.id)} · ${mission.agentId} · ${state(mission)}`,
+    `${mission.title} · ${shortId(mission.id)} · ${mission.agentId} · ${state(mission)}`,
     `Goal: ${mission.goal}`,
     `Done when: ${doneWhen(mission)}.`,
     `Limits: ${limits}`,
@@ -43,7 +43,7 @@ function show(mission: Mission, limits: string): string {
 
 /** One mission in one line, as a list shows it. */
 function line(mission: Mission): string {
-  return `${shortId(mission.id)} · ${mission.agentId} · ${state(mission)} · ${clip(mission.goal, 80)}`;
+  return `${shortId(mission.id)} · ${mission.agentId} · ${state(mission)} · ${mission.title}`;
 }
 
 function state(mission: Mission): string {
@@ -113,8 +113,9 @@ const missionHook: Hook = {
             ? missions.accept(mission.id, by, as)
             : missions.answer(mission.id, rest.join(" "), by);
     if ("refused" in acted) return { handled: true, reply: acted.refused };
-    // Stop and accept are answered by the mission's own notice; continue and answer go on quietly.
-    return { handled: true, ...(verb === "continue" || verb === "answer" ? { reply: `Mission ${shortId(mission.id)} goes on.` } : {}) };
+    // Stop and accept are answered by the mission's own notice; continue and answer go on quietly. An answer to one
+    // that went on working says where it went, as a `tell` does.
+    return { handled: true, ...(verb === "continue" || verb === "answer" ? { reply: acted.said ?? `Mission ${shortId(mission.id)} goes on.` } : {}) };
   },
 };
 
