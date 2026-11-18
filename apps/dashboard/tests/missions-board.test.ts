@@ -6,7 +6,7 @@
 
 import { describe, expect, test } from "bun:test";
 import type { MissionView } from "@nouride/wire";
-import { barFill, boardSummary, cardLine, columnOf, doneWhen, FINISHED_SPAN, FINISHED_SPANS, fromLink, phoneOpening, timeLine } from "@/modules/missions/lib/board";
+import { barFill, cardLine, columnOf, dayBeside, doneWhen, FINISHED_SPAN, FINISHED_SPANS, fromLink, phoneOpening, SHOWN, STAGES, timeLine, whenLines, whenTip } from "@/modules/missions/lib/board";
 
 const NOW = 1_800_000_000_000;
 const base = { status: "running", seen: "working", waitKind: null, startedAt: 1, changeable: true, answers: [], checks: [], accept: false, reviewOn: false, reason: null, report: null, createdAt: NOW - 60_000, updatedAt: NOW - 60_000, endedAt: null, checklist: null, person: undefined } as unknown as MissionView;
@@ -79,8 +79,39 @@ describe("the page", () => {
     expect(fromLink(undefined)).toBeNull();
   });
 
-  test("the line under the title", () => {
-    expect(boardSummary({ backlog: 2, working: 2, needs: 1, finished: 4 })).toBe("2 in the backlog, 2 working, 1 needs you");
-    expect(boardSummary({ backlog: 0, working: 1, needs: 2, finished: 0 })).toBe("0 in the backlog, 1 working, 2 need you");
+  test("three stages on a wide page, Finished apart from them, and five shown in each before the rest", () => {
+    expect(STAGES).toEqual(["backlog", "working", "needs"]);
+    expect(SHOWN).toBe(5);
+  });
+});
+
+describe("when, behind the time line", () => {
+  const DAY = 86_400_000;
+  const made = NOW - 20 * DAY;
+  const began = NOW - 3 * DAY;
+  const labels = (mission: MissionView) => whenLines(mission).map((line) => [line.label, line.at]);
+
+  test("a draft was only made; work also started; one that waits says since when; one that ended says when", () => {
+    expect(labels(m({ ...DRAFT, createdAt: made }))).toEqual([["Created", made]]);
+    expect(labels(m({ createdAt: made, startedAt: began }))).toEqual([["Created", made], ["Started", began]]);
+    expect(labels(m({ status: "waiting", seen: "needs_you", waitKind: "input", createdAt: made, startedAt: began, updatedAt: NOW - DAY }))).toEqual([["Created", made], ["Started", began], ["Waiting since", NOW - DAY]]);
+    expect(labels(m({ status: "done", seen: "done", createdAt: made, startedAt: began, endedAt: NOW - DAY }))).toEqual([["Created", made], ["Started", began], ["Ended", NOW - DAY]]);
+  });
+
+  test("the tip names each moment with its day and its minute, in order", () => {
+    const tip = whenTip(m({ status: "done", seen: "done", createdAt: made, startedAt: began, endedAt: NOW - DAY }));
+    expect(tip).toMatch(/^Created .+ · Started .+ · Ended .+$/);
+    expect(tip).toContain(String(new Date(made).getFullYear()));
+    expect(tip).toMatch(/\d{1,2}[:.]\d{2}/);
+  });
+
+  test("where nothing can be hovered the day stands beside the line: the day it speaks of, or the day work began", () => {
+    const day = (at: number) => new Date(at).toLocaleDateString([], { day: "numeric", month: "short" });
+    const sameYear = (at: number) => new Date(at).getFullYear() === new Date(NOW).getFullYear();
+    // Twenty days back may cross a year's end: then the year is said too, which is all this leaves to the helper.
+    if (sameYear(made)) expect(dayBeside(m({ ...DRAFT, createdAt: made }), NOW)).toBe(day(made));
+    if (sameYear(began)) expect(dayBeside(m({ createdAt: made, startedAt: began }), NOW)).toBe(`since ${day(began)}`);
+    if (sameYear(NOW - DAY)) expect(dayBeside(m({ status: "done", seen: "done", createdAt: made, startedAt: began, endedAt: NOW - DAY }), NOW)).toBe(day(NOW - DAY));
+    expect(dayBeside(m({ ...DRAFT, createdAt: NOW - 400 * DAY }), NOW)).toContain(String(new Date(NOW - 400 * DAY).getFullYear()));
   });
 });

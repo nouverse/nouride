@@ -1,7 +1,8 @@
 /**
  * One mission on the board: its badge, its title (which opens its page), its bar, the line that matters in its column,
- * and the agent's own cat with its name and one time line. A draft is started from the card and a question answered
- * from it; dropping a draft stays on its page, where what goes with it is said first.
+ * and the agent's own cat with its name and one time line, the day behind it a hover away (`WhenLine`). A draft is
+ * started from the card and a question answered from it; deleting a draft stays on its page, where what goes with it
+ * is said first.
  */
 
 import { useState } from "react";
@@ -17,7 +18,8 @@ import { Lit } from "@/commons/components/ui/Lit";
 import { ENTER, type Motion } from "@/commons/hooks/use-motion-list";
 import { useMissionAct } from "../hooks/use-mission-act";
 import { actionsFor } from "../lib/mission";
-import { badgeOf, barFill, cardLine, columnOf, outcomeOf, timeLine } from "../lib/board";
+import { badgeOf, barFill, cardLine, columnOf, outcomeOf } from "../lib/board";
+import { WhenLine } from "./WhenLine";
 
 /** The badge's tint by column, and by how a finished one ended. */
 function badgeTone(mission: MissionView): string {
@@ -78,9 +80,7 @@ export function BoardCard({ mission, motion = "", writable, showWhose }: { missi
         {face?.look ? <AgentAvatar look={face.look} name={face.name} size="xs" /> : null}
         <span className="min-w-0">
           <span className="block truncate text-xs font-semibold text-base-content">{face?.name ?? mission.agentId}</span>
-          <span className="block font-mono text-[11px] text-base-content/65" data-time>
-            {timeLine(mission)}
-          </span>
+          <WhenLine mission={mission} />
         </span>
       </div>
 

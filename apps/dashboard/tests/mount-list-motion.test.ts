@@ -17,7 +17,7 @@ describe("Missions", () => {
   test("one that changes state leaves its column, out of reach, and enters the next, lit; the one that did not stays still", async () => {
     const wire = WIRE["/missions"] as { missions: Record<string, unknown>[] };
     const ended = wire.missions.find((mission) => mission.id === "msn_2")!;
-    let seen = { leaving: [] as string[], entering: [] as string[], lit: false, still: [] as string[], working: true };
+    let seen = { leaving: [] as string[], entering: [] as string[], lit: false, still: [] as string[], working: true, stays: false };
     await renderPage("/missions", async (host, app) => {
       const cardIn = (group: string, id: string) => host.querySelector(`section[aria-label="${group}"] [data-mission="${id}"]`);
       await eventually(() => cardIn("Working", "msn_1") !== null, 4_000, "msn_1 working");
@@ -35,9 +35,12 @@ describe("Missions", () => {
         lit: cardIn("Finished", "msn_1")?.querySelector(".animate-lit") !== null,
         still: classes(cardIn("Finished", "msn_2")),
         working: true,
+        stays: false,
       };
-      // The column stays, a board's columns always do: what leaves goes, and the column says it is empty.
-      await eventually(() => cardIn("Working", "msn_1") === null && host.querySelector('[data-none="working"]') !== null, 2_000, "Working emptied");
+      // The columns stay while it leaves, so it is seen going; it was the last one open, so once it has gone the three
+      // columns are the one thin strip.
+      seen.stays = cardIn("Working", "msn_1") !== null && host.querySelector("[data-board-strip]") === null;
+      await eventually(() => cardIn("Working", "msn_1") === null && host.querySelector("[data-board-strip]") !== null, 2_000, "nothing open, the strip");
       seen.working = false;
     });
     expect(seen.leaving).toEqual(expect.arrayContaining(["animate-leave", "pointer-events-none"]));
@@ -45,6 +48,7 @@ describe("Missions", () => {
     expect(seen.lit).toBe(true);
     expect(seen.still).not.toContain("animate-enter");
     expect(seen.still).not.toContain("animate-leave");
+    expect(seen.stays).toBe(true);
     expect(seen.working).toBe(false);
   });
 

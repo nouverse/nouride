@@ -32,7 +32,7 @@ import { MissionBoard } from "./components/MissionBoard";
 import { MissionSettingsCard } from "./components/MissionSettingsCard";
 import { NewMissionForm } from "./components/NewMissionForm";
 import { anyOpen, searchedIn } from "./lib/mission";
-import { boardSummary, columnOf, COLUMNS, FINISHED_SPAN, fromLink, phoneOpening, type Column, type FinishedSpan, type Outcome } from "./lib/board";
+import { columnOf, COLUMNS, FINISHED_SPAN, fromLink, phoneOpening, type Column, type FinishedSpan, type Outcome } from "./lib/board";
 import { ListLoading } from "@/commons/components/ui/Spinner";
 import { PAGE_ASKS } from "@/commons/components/agents/page-asks";
 
@@ -57,7 +57,7 @@ function noMissions({ whose, days, agent, elsewhere, onEveryone }: { whose: Whos
     <EmptyState
       pose="sleeping"
       title={agent ? `${agent} has no missions in the last ${days} days` : `No missions in the last ${days} days`}
-      description="Start one here, or ask an agent for one in a chat: it writes a draft, which runs once you start it."
+      description="Write one here, or ask an agent for one in a chat: either is a draft in the backlog, which runs once you start it."
     />
   );
 }
@@ -131,7 +131,8 @@ export default function MissionsPage({ agent, tab }: { agent?: string; tab?: str
   return (
     <div className="space-y-6 *:animate-fade">
       <div className="flex items-start justify-between gap-3">
-        <PageHeader ask={PAGE_ASKS.missions} title="Missions" description={boardSummary(counts)} className="min-w-0 flex-1" />
+        {/* No line of counts under the title: each column's head carries its own. */}
+        <PageHeader ask={PAGE_ASKS.missions} title="Missions" className="min-w-0 flex-1" />
         <div className="flex shrink-0 items-center gap-2 pt-1">
           <button
             type="button"
@@ -147,10 +148,15 @@ export default function MissionsPage({ agent, tab }: { agent?: string; tab?: str
       </div>
 
       {creating && (
-        <Card title="Start a mission" className="border-primary/30 shadow-lg">
+        <Card title="New mission" description="Saved, it waits in the backlog until you start it. Nothing runs before that." className="border-primary/30 shadow-lg">
           <NewMissionForm
             agents={status.data?.agents ?? []}
             onCancel={() => setCreating(false)}
+            // Saved to the backlog, the page stays where it is and the draft enters its column; started, its own page opens.
+            onSaved={() => {
+              setCreating(false);
+              void queryClient.invalidateQueries({ queryKey: ["missions"] });
+            }}
             onStarted={(mission) => {
               setCreating(false);
               void queryClient.invalidateQueries({ queryKey: ["missions"] });

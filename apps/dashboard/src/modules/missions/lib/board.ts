@@ -3,27 +3,38 @@
  * leads with and its one time line, which column a phone opens on, and what an old link's tab now means. Pure, so each
  * is tested on its own (`tests/missions-board.test.ts`).
  *
- * Four columns, read only: a mission moves on its own, so there is nothing to drag. **Backlog** is the drafts, which run
- * when a person starts them; **Working** is at work (queued, running, checking, or waiting on someone who is not the
- * reader); **Needs you** waits on the reader (a question, approvals, a limit, a result to accept) and never holds a
- * draft; **Finished** is done, failed or stopped, within its own span.
+ * Three stages and a history, read only: a mission moves on its own, so there is nothing to drag. **Backlog** is the
+ * drafts, which run when a person starts them; **Working** is at work (queued, running, checking, or waiting on someone
+ * who is not the reader); **Needs you** waits on the reader (a question, approvals, a limit, a result to accept) and
+ * never holds a draft. **Finished** is done, failed or stopped, within its own span: what has been, not a stage, so on a
+ * wide page it is a list under the three and only on a phone a fourth tab.
  */
 
 import type { MissionView } from "@nouride/wire";
 import { asksWhileWorking, openQuestion } from "@/commons/lib/mission-waits";
 import { ago } from "@/commons/lib/format";
+import { dayOf, fullWhen } from "@/commons/lib/when";
 import { needsYouSaid, waitsElsewhere } from "./mission";
 
 export type Column = "backlog" | "working" | "needs" | "finished";
 export type Outcome = "done" | "failed" | "stopped";
 
-/** Left to right on a wide page; on a phone, the tabs in the same order. */
+/** A phone's tabs, in order; on a wide page the first three are the columns and Finished the list under them. */
 export const COLUMNS: readonly { id: Column; label: string }[] = [
   { id: "backlog", label: "Backlog" },
   { id: "working", label: "Working" },
   { id: "needs", label: "Needs you" },
   { id: "finished", label: "Finished" },
 ];
+
+/** The three a mission is still open in: the columns of a wide page. */
+export const STAGES: readonly Column[] = ["backlog", "working", "needs"];
+
+/**
+ * How many a column shows before "Show N more", the same in every column: a backlog of forty drafts pushed Working and
+ * Needs you out of sight, as a week of finished ones had.
+ */
+export const SHOWN = 5;
 
 /** How far back Finished goes: a week unless chosen, a month at most, the daemon's own bound (`GET /missions?days=`). */
 export const FINISHED_SPANS = [7, 14, 21, 30] as const;
@@ -93,6 +104,31 @@ export function cardLine(mission: MissionView): { label: string; text: string } 
   return null;
 }
 
+/** The moments of a mission its time line leaves out, each whole: when it was made, started, has waited since, ended. */
+export function whenLines(mission: MissionView): { label: string; at: number }[] {
+  const column = columnOf(mission);
+  return [
+    { label: "Created", at: mission.createdAt },
+    ...(mission.startedAt !== null ? [{ label: "Started", at: mission.startedAt }] : []),
+    ...(column === "needs" ? [{ label: "Waiting since", at: mission.updatedAt }] : []),
+    ...(column === "finished" ? [{ label: "Ended", at: mission.endedAt ?? mission.updatedAt }] : []),
+  ];
+}
+
+/** Those moments in one line: what the time line shows when hovered or reached by keyboard. */
+export function whenTip(mission: MissionView): string {
+  return whenLines(mission).map((line) => `${line.label} ${fullWhen(line.at)}`).join(" · ");
+}
+
+/** The day beside the time line where nothing can be hovered (a phone): the day it speaks of, or the day work began. */
+export function dayBeside(mission: MissionView, now: number = Date.now()): string {
+  const column = columnOf(mission);
+  if (column === "backlog") return dayOf(mission.createdAt, now);
+  if (column === "working") return `since ${dayOf(mission.startedAt ?? mission.createdAt, now)}`;
+  if (column === "needs") return dayOf(mission.updatedAt, now);
+  return dayOf(mission.endedAt ?? mission.updatedAt, now);
+}
+
 /** The card's one time line. */
 export function timeLine(mission: MissionView, now: number = Date.now()): string {
   const column = columnOf(mission);
@@ -135,9 +171,4 @@ export function fromLink(tab: string | undefined): { column: Column; outcome?: O
     default:
       return null;
   }
-}
-
-/** The page's line under its title: what is in the backlog, at work and waiting on the reader. */
-export function boardSummary(counts: Readonly<Record<Column, number>>): string {
-  return `${counts.backlog} in the backlog, ${counts.working} working, ${counts.needs} need${counts.needs === 1 ? "s" : ""} you`;
 }

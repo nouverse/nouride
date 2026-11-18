@@ -276,19 +276,35 @@ test("its actions keep one row beside its title from md: Accept, Continue, Stop 
   expect(actions?.className).toContain("md:flex-nowrap");
 });
 
-test("on a phone its Checklist comes before its turns; from lg, beside them (0.8.11)", async () => {
-  // "How far is it" was read past every turn below lg. happy-dom lays out nothing, so the classes that order the one
-  // column are what is asserted: the side column's cards are the grid's own items there, the Checklist the first.
+test("from the top: what it does now and how far it is, its brief beside what decides it is done, then its checklist over its turns with its folder and the box to tell it beside them", async () => {
+  // "Now" and the meters were under the brief, a scroll away; what decides it is done was at the foot of the side column.
   missionTurns([missionTurn(1, {})]);
-  let checklist: HTMLElement | null = null;
+  answer({ "/missions/msn_1": detailOf({}, { brief: "The brief it works from.", briefPath: "/w/private/nova/missions/msn_1/BRIEF.md" }) });
+  const seen = { order: [] as string[], pair: [] as string[], main: [] as string[], side: [] as string[], phone: {} as Record<string, string | undefined> };
   await renderPage("/missions/msn_1", async (host) => {
-    await eventually(() => (checklist = [...host.querySelectorAll("section")].find((one) => one.querySelector("h2, h3")?.textContent === "Checklist") ?? null) !== null, 2_000, "the Checklist");
+    await eventually(() => host.querySelector("[data-work]") !== null && buttons(host).includes("Read it whole"), 2_000, "the page");
+    const titled = (root: Element) => [...root.querySelectorAll("h2, h3")].map((head) => head.textContent ?? "");
+    const meters = host.querySelector('[aria-label="Progress and limits"]')!;
+    const pair = host.querySelector("[data-brief-and-done]")!;
+    const work = host.querySelector("[data-work]")!;
+    const before = (a: Element, b: Element) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+    seen.order = [before(meters, pair) ? "meters, then the brief" : "the brief first", before(pair, work) ? "the brief, then the work" : "the work first"];
+    seen.pair = titled(pair).filter((title) => ["Brief", "Done when"].includes(title));
+    const [main, side] = [...work.children] as [HTMLElement, HTMLElement];
+    seen.main = titled(main).filter((title) => ["Checklist", "Turns"].includes(title));
+    const folder = side.querySelector("[data-folder]")!;
+    const tell = side.querySelector("textarea")!;
+    seen.side = [side.tagName, before(folder, tell) ? "its folder, then the box" : "the box first", titled(side).includes("Done when") ? "Done when below" : "no Done when"];
+    // happy-dom lays out nothing, so the classes that order the one column on a phone are what is asserted.
+    const cardOf = (title: string) => [...work.querySelectorAll("section")].find((one) => one.querySelector("h2, h3")?.textContent === title);
+    const order = (el: Element | null | undefined) => el?.className.split(" ").find((name) => name.startsWith("max-lg:order-"));
+    seen.phone = { checklist: order(cardOf("Checklist")), folder: order(folder), tell: order(tell.closest("[class*='max-lg:order-']")), turns: order(cardOf("Turns")), main: main.className.includes("max-lg:contents") ? "contents" : "a column" };
   });
-  const card = checklist as HTMLElement | null;
-  expect(card?.className).toContain("max-lg:order-first");
-  expect(card?.parentElement?.tagName).toBe("ASIDE");
-  expect(card?.parentElement?.className).toContain("max-lg:contents");
-  expect(card?.parentElement?.className).toContain("lg:space-y-5");
+  expect(seen.order).toEqual(["meters, then the brief", "the brief, then the work"]);
+  expect(seen.pair).toEqual(["Brief", "Done when"]);
+  expect(seen.main).toEqual(["Checklist", "Turns"]);
+  expect(seen.side).toEqual(["ASIDE", "its folder, then the box", "no Done when"]);
+  expect(seen.phone).toEqual({ checklist: "max-lg:order-1", folder: "max-lg:order-2", tell: "max-lg:order-3", turns: "max-lg:order-5", main: "contents" });
 });
 
 /** The page's answer for msn_1 with the mission changed — a state the fixture's install does not hold. */
@@ -302,8 +318,12 @@ test("a draft (0.8.11): its brief shown, and changed before it starts — only w
   let sent: { path: string; body: unknown }[] = [];
   let shown = "";
   let toast = "";
+  let there: boolean[] = [];
   await renderPage("/missions/msn_1", async (host) => {
     await eventually(() => buttons(host).includes("Change the draft"), 2_000, "the draft's card");
+    // Nothing of a draft has run: no meters, no checklist, no turns, no box to tell it something, and no "Needs you".
+    // As yes or no, not the elements themselves: a failure that prints a whole page's nodes never ends.
+    there = ['[aria-label="Progress and limits"]', "[data-work]", '[role="status"].alert', "[data-brief-and-done]"].map((what) => host.querySelector(what) !== null);
     // The brief folded until opened, then read in place.
     openBrief(host);
     await eventually(() => host.textContent?.includes("The owner's answers, first.") === true, 2_000, "the brief, opened");
@@ -328,7 +348,10 @@ test("a draft (0.8.11): its brief shown, and changed before it starts — only w
     record.restore();
     sent = record.posts;
   });
-  expect(shown).toContain("Nothing has run. Change it here, then start it, or drop it.");
+  expect(shown).toContain("Nothing has run. Change it here, then start it, or delete it.");
+  expect(there).toEqual([false, false, false, false]);
+  expect(shown).toContain("drafted");
+  expect(shown).not.toContain("started");
   expect(shown).toContain("What to read");
   expect(shown).toContain("The owner's answers, first.");
   expect(sent).toEqual([{ path: "/missions/msn_1/edit", body: { checks: ["test -s RFC.md", "bun run check-paths"], accept: true } }]);
@@ -359,6 +382,40 @@ function openBrief(host: HTMLElement): void {
   if (!header) throw new Error("no Brief card to open");
   (header as HTMLButtonElement).click();
 }
+
+test("a draft is deleted from its page at once: asked first with what goes, one request, then the list; it is not stopped on the way", async () => {
+  answer({ "/missions/msn_1": detailOf({ status: "waiting", seen: "needs_you", waitKind: "accept", startedAt: null }) });
+  const deletes: string[] = [];
+  const posts = recordPosts();
+  const spy = globalThis.fetch;
+  globalThis.fetch = ((input: unknown, init?: RequestInit) => {
+    if (init?.method !== "DELETE") return (spy as typeof fetch)(input as RequestInfo, init);
+    const url = new URL(String(typeof input === "string" ? input : (input as Request).url), "http://localhost");
+    deletes.push(url.pathname.replace(/^\/api\/control/, "") + url.search);
+    return Promise.resolve(new Response(JSON.stringify({ ok: true, mission: "msn_1", turns: 0 }), { status: 200, headers: { "content-type": "application/json" } }));
+  }) as typeof fetch;
+  const seen = { actions: [] as string[], asked: "", landed: "" };
+  try {
+    await renderPage("/missions/msn_1", async (host, { location }) => {
+      await eventually(() => buttons(host).includes("Start it"), 2_000, "the draft's page");
+      seen.actions = buttons(host).filter((label) => ["Start it", "Drop it", "Stop", "Delete"].includes(label));
+      press(host, "Delete");
+      await eventually(() => buttons(host).includes("Delete it"), 2_000, "the ask");
+      seen.asked = host.textContent ?? "";
+      press(host, "Delete it");
+      await eventually(() => location() === "/missions", 2_000, "back on the list");
+      seen.landed = location();
+    });
+  } finally {
+    globalThis.fetch = spy;
+    posts.restore();
+  }
+  expect(seen.actions).toEqual(["Start it", "Delete"]);
+  expect(seen.asked).toContain("Nothing has run. Its brief and the folder Nouride made for it go with it, and it does not come back.");
+  expect(deletes).toEqual(["/missions/msn_1"]);
+  expect(posts.posts.filter((post) => post.path.endsWith("/stop"))).toEqual([]);
+  expect(seen.landed).toBe("/missions");
+});
 
 test("an ended one is deleted from its page (0.8.13): asked first, asked again over work nobody committed, then the list", async () => {
   // Test missions lingered on the live box: a mission went only with its conversation, from the chat list.

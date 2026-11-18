@@ -42,7 +42,7 @@ describe("a page", () => {
   test("you go to is drawn anew and fades in, and the sidebar you went from stays as it was", async () => {
     let seen = { anew: false, fades: false, sidebarKept: false };
     await renderPage("/missions", async (host, app) => {
-      await eventually(() => host.textContent?.includes("in the backlog") ?? false, 4_000, "Missions to draw");
+      await eventually(() => host.querySelector("[data-board-column]") !== null, 4_000, "Missions to draw");
       const before = page(host).root;
       const sidebar = host.querySelector('nav[aria-label="Menu"]');
       // Helpers is a tab of Work now (0.8.24): a page of the menu's own, as the test means.

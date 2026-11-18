@@ -1806,26 +1806,6 @@ describe("missions", () => {
     expect(sent.map((post) => post.path)).toEqual(["/approvals/apr_m1/deny"]);
   });
 
-  test("New mission sends the agent and the goal, and opens the mission it started", async () => {
-    let sent: { path: string; body: unknown }[] = [];
-    let landed = "";
-    await renderPage("/missions", async (host, app) => {
-      press(host, "New mission");
-      await eventually(() => buttons(host).includes("Start mission"), 2_000, "the form");
-      const record = recordPosts({ "/missions": { status: 201, body: { mission: MISSION } } });
-      type(host.querySelector('textarea[placeholder^="Upgrade the API"]') as HTMLTextAreaElement, "Summarise last week's logs");
-      await enabled(host, "Start mission");
-      press(host, "Start mission");
-      await eventually(() => app.location() === "/missions/msn_1", 2_000, "the mission's page");
-      landed = app.location();
-      record.restore();
-      sent = record.posts;
-    });
-    expect(sent).toEqual([{ path: "/missions", body: { agent: "nouva", goal: "Summarise last week's logs" } }]);
-    expect(landed).toBe("/missions/msn_1");
-    expect(errors.filter((line) => /Error|Cannot read/.test(line))).toEqual([]);
-  });
-
   test("the limits show their bounds and save only what changed", async () => {
     let sent: { path: string; body: unknown }[] = [];
     let limits = "";

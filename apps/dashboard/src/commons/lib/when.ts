@@ -17,6 +17,17 @@ export function daysAgo(at: number, now: number = Date.now()): number {
   return Math.round((startOfDay(now) - startOfDay(at)) / DAY);
 }
 
+/** The day and the minute, whole: what a tooltip says of a moment a row gives only as "2 days ago". */
+export function fullWhen(at: number): string {
+  return new Date(at).toLocaleString([], { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+/** The day alone, with its year once it is not this one: beside a row's "2 days ago" where nothing can be hovered. */
+export function dayOf(at: number, now: number = Date.now()): string {
+  const when = new Date(at);
+  return when.toLocaleDateString([], when.getFullYear() === new Date(now).getFullYear() ? { day: "numeric", month: "short" } : { day: "numeric", month: "short", year: "numeric" });
+}
+
 export function shortWhen(at: number, now: number = Date.now()): string {
   const when = new Date(at);
   const days = daysAgo(at, now);

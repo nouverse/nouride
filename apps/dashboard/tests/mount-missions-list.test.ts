@@ -1,14 +1,15 @@
 /**
- * The Missions board, mounted (from the mockup the owner signed off): Backlog, Working, Needs you, Finished,
- * read only. Each case is a way the board would say something else than the daemon's list does: a draft counted as
- * needing the reader, a card in the wrong column or with the wrong line, Finished's span or chips dropping or keeping
- * the wrong ones, a Start or an Answer sent as something else, or a phone opening on a column with nothing to do.
+ * The Missions board, mounted: Backlog, Working and Needs you as three columns, Finished as a list under them, read
+ * only. Each case is a way the board would say something else than the daemon's list does: a draft counted as needing
+ * the reader, a card in the wrong column or with the wrong line, Finished's span or chips dropping or keeping the wrong
+ * ones, a column hiding what it holds with no way to it, three empty columns taking the page, a Start or an Answer sent
+ * as something else, or a phone opening on a column with nothing to do.
  * In a file of its own over the shared harness (`mount-harness.ts`).
  */
 
 import { describe, expect, test } from "bun:test";
 import type { MissionView } from "@nouride/wire";
-import { answer, buttons, dom, dropdown, press, recordPosts, renderPage, type, useMountHarness, WIRE } from "./mount-harness.ts";
+import { answer, buttons, dom, dropdown, enabled, press, recordPosts, renderPage, type, useMountHarness, WIRE } from "./mount-harness.ts";
 import { eventually } from "./wait.ts";
 
 useMountHarness();
@@ -56,23 +57,40 @@ test("the Limits button says Close limits while they are open, and closes them",
 });
 
 describe("the board", () => {
-  test("four columns in order, each mission in one: a draft in the Backlog, never in Needs you; the counts beside each and under the title", async () => {
+  test("three columns and Finished under them, each mission in one: a draft in the Backlog, never in Needs you; each head carries its count, and no line of counts under the title", async () => {
     answer({ "/missions": ok({ missions: BOARD }) });
-    const seen = { columns: [] as (string | null)[], ids: {} as Record<string, unknown>, counts: [] as string[], said: "" };
+    const seen = { columns: [] as (string | null)[], ids: {} as Record<string, unknown>, counts: [] as string[], said: "", strip: true };
     await renderPage("/missions", async (host) => {
       await eventually(() => shown(host), 3_000, "the board");
       seen.columns = [...host.querySelectorAll<HTMLElement>("[data-board-column]")].map((section) => section.getAttribute("aria-label"));
       for (const id of ["backlog", "working", "needs", "finished"]) seen.ids[id] = idsIn(column(host, id));
       seen.counts = [...host.querySelectorAll("[data-board-column] header")].map((head) => head.textContent ?? "");
       seen.said = host.querySelector("main h1")?.parentElement?.textContent ?? "";
+      seen.strip = host.querySelector("[data-board-strip]") !== null;
     });
+    // One open mission is enough for the columns: the strip is for a board with nothing open at all.
+    expect(seen.strip).toBe(false);
     expect(seen.columns).toEqual(["Backlog", "Working", "Needs you", "Finished"]);
     expect(seen.ids).toEqual({ backlog: ["msn_d"], working: ["msn_w"], needs: ["msn_q"], finished: ["msn_ok", "msn_f", "msn_s"] });
-    expect(seen.counts).toEqual(["Backlog1", "Working1", "Needs you1", "Finished3"]);
-    expect(seen.said).toContain("1 in the backlog, 1 working, 1 needs you");
+    expect(seen.counts).toEqual(["Backlog1", "Working1", "Needs you1", "Finished3 in the last 7 days"]);
+    expect(seen.said).not.toContain("in the backlog");
   });
 
-  test("each card: its badge, its title opening its page, its bar by status, the line its column leads with and one time line", async () => {
+  test("with nothing open the three columns are one thin strip and Finished has the page", async () => {
+    answer({ "/missions": ok({ missions: [DONE, FAILED, STOPPED] }) });
+    const seen = { strip: "", columns: [] as (string | null)[], rows: [] as unknown[] };
+    await renderPage("/missions", async (host) => {
+      await eventually(() => shown(host), 3_000, "the board");
+      seen.strip = host.querySelector("[data-board-strip]")?.textContent ?? "";
+      seen.columns = [...host.querySelectorAll<HTMLElement>("[data-board-column]")].map((section) => section.dataset.boardColumn ?? null);
+      seen.rows = idsIn(column(host, "finished"));
+    });
+    expect(seen.strip).toBe("0Backlog0Working0Needs youNothing is open. A new mission waits in the backlog until you start it.");
+    expect(seen.columns).toEqual(["finished"]);
+    expect(seen.rows).toEqual(["msn_ok", "msn_f", "msn_s"]);
+  });
+
+  test("each card: its badge, its title opening its page, its bar, the line its column leads with and one time line; a finished one is a row with its steps", async () => {
     answer({ "/missions": ok({ missions: BOARD }) });
     const seen: Record<string, unknown> = {};
     await renderPage("/missions", async (host) => {
@@ -88,16 +106,37 @@ describe("the board", () => {
       }
       const title = card(host, "msn_w").querySelector("h3 a")!;
       seen.title = [title.textContent, title.getAttribute("href"), title.getAttribute("title")];
+      const row = card(host, "msn_f");
+      seen.row = [row.tagName, row.querySelector("a")?.getAttribute("href"), /3 of 7 steps/.test(row.textContent ?? "")];
     });
     expect(seen).toEqual({
       msn_d: { badge: "Draft", bar: null, line: "Done when3 checks pass, then you accept", time: "drafted 12 min ago" },
       msn_w: { badge: "Working", bar: "bg-primary", line: "Nowrunning the Android tests", time: "last step 2 min ago" },
       msn_q: { badge: "Needs you · a question", bar: "bg-primary", line: "AsksKeep the SQLite file?", time: "asked 9 min ago" },
-      msn_ok: { badge: "Done", bar: "bg-success", line: null, time: "ended 1 day ago" },
-      // Its own red, never the primary orange nor the theme's error.
-      msn_f: { badge: "Failed", bar: "bg-failed", line: "WhyOpenBot needs a cloud account", time: "ended 3 days ago" },
-      msn_s: { badge: "Stopped", bar: "bg-base-content/35", line: "Bygading", time: "stopped 3 days ago" },
+      // A finished one is a row: no bar, its steps in words.
+      msn_ok: { badge: "Done", bar: null, line: null, time: "ended 1 day ago" },
+      msn_f: { badge: "Failed", bar: null, line: "WhyOpenBot needs a cloud account", time: "ended 3 days ago" },
+      msn_s: { badge: "Stopped", bar: null, line: "Bygading", time: "stopped 3 days ago" },
       title: ["Downloads in Home", "/dashboard/missions/msn_w", "Downloads in Home, whole"],
+      row: ["LI", "/dashboard/missions/msn_f", true],
+    });
+  });
+
+  test("the day and the minute behind each time line: made for a draft, started too for work, since when for one that waits, ended for a finished one; reached by keyboard", async () => {
+    answer({ "/missions": ok({ missions: BOARD }) });
+    const seen: Record<string, unknown> = {};
+    await renderPage("/missions", async (host) => {
+      await eventually(() => shown(host), 3_000, "the board");
+      for (const id of ["msn_d", "msn_w", "msn_q", "msn_ok"]) {
+        const tip = card(host, id).querySelector<HTMLElement>("[data-tip]")!;
+        seen[id] = [(tip.dataset.tip ?? "").split(" · ").map((part) => /^(Created|Started|Waiting since|Ended) .*\d{4}/.exec(part)?.[1] ?? part), tip.querySelector("[data-time]")?.getAttribute("tabindex"), tip.querySelector(".sr-only")?.textContent === `: ${tip.dataset.tip}`];
+      }
+    });
+    expect(seen).toEqual({
+      msn_d: [["Created"], "0", true],
+      msn_w: [["Created", "Started"], "0", true],
+      msn_q: [["Created", "Started", "Waiting since"], "0", true],
+      msn_ok: [["Created", "Started", "Ended"], "0", true],
     });
   });
 
@@ -125,6 +164,45 @@ describe("the board", () => {
       ["/missions/msn_d/accept", {}],
       ["/missions/msn_q/answer", { text: "Keep it" }],
     ]);
+  });
+});
+
+describe("New mission", () => {
+  test("New mission saved to the backlog is sent as a draft, and the page stays on the board; Start now starts it and opens its page", async () => {
+    let sent: { path: string; body: unknown }[] = [];
+    const seen = { buttons: [] as string[], said: "", after: "", closed: false, landed: "" };
+    await renderPage("/missions", async (host, app) => {
+      press(host, "New mission");
+      await eventually(() => buttons(host).includes("Save to backlog"), 2_000, "the form");
+      seen.buttons = buttons(host).filter((label) => ["Save to backlog", "Start now", "Start mission"].includes(label));
+      seen.said = host.textContent ?? "";
+      const record = recordPosts({ "/missions": { status: 201, body: { mission: { ...RUNNING, id: "msn_1" } } } });
+      type(host.querySelector('textarea[placeholder^="Upgrade the API"]') as HTMLTextAreaElement, "Summarise last week's logs");
+      await enabled(host, "Save to backlog");
+      press(host, "Save to backlog");
+      await eventually(() => !buttons(host).includes("Save to backlog"), 2_000, "the form closed");
+      seen.after = app.location();
+      seen.closed = !buttons(host).includes("Start now");
+      press(host, "New mission");
+      await eventually(() => buttons(host).includes("Start now"), 2_000, "the form again");
+      type(host.querySelector('textarea[placeholder^="Upgrade the API"]') as HTMLTextAreaElement, "Tidy the notes");
+      await enabled(host, "Start now");
+      press(host, "Start now");
+      await eventually(() => app.location() === "/missions/msn_1", 2_000, "the mission's page");
+      seen.landed = app.location();
+      record.restore();
+      sent = record.posts;
+    });
+    // The form's own button saves a draft: a mission a person writes waits in the backlog, as an agent's does.
+    expect(seen.buttons).toEqual(["Save to backlog", "Start now"]);
+    expect(seen.said).toContain("Saved, it waits in the backlog until you start it. Nothing runs before that.");
+    expect(sent).toEqual([
+      { path: "/missions", body: { agent: "nouva", goal: "Summarise last week's logs", draft: true } },
+      { path: "/missions", body: { agent: "nouva", goal: "Tidy the notes" } },
+    ]);
+    expect(seen.after).toBe("/missions");
+    expect(seen.closed).toBe(true);
+    expect(seen.landed).toBe("/missions/msn_1");
   });
 });
 
@@ -165,20 +243,28 @@ describe("Finished", () => {
     expect(seen).toEqual({ chips: ["Done 1", "Failed 1", "Stopped 1"], failed: ["msn_f"], cleared: ["msn_ok", "msn_f", "msn_s"] });
   });
 
-  test("the first five, and the rest behind \"N more\" at its foot; the open columns show everything", async () => {
+  test("every column shows its first five and the rest behind \"Show N more\", which opens it and folds it again; one of five has no such button", async () => {
     const done = Array.from({ length: 7 }, (_, at) => one(`msn_d${at}`, `Done ${at}`, { status: "done", seen: "done", endedAt: NOW - at * 60_000 }));
-    const working = Array.from({ length: 7 }, (_, at) => one(`msn_w${at}`, `Working ${at}`, { status: "running", seen: "working" }));
-    answer({ "/missions": ok({ missions: [...working, ...done] }) });
-    const seen = { before: 0, working: 0, after: 0 };
+    const working = Array.from({ length: 8 }, (_, at) => one(`msn_w${at}`, `Working ${at}`, { status: "running", seen: "working" }));
+    const drafts = Array.from({ length: 5 }, (_, at) => one(`msn_b${at}`, `Draft ${at}`, { status: "waiting", seen: "needs_you", waitKind: "accept", startedAt: null }));
+    answer({ "/missions": ok({ missions: [...working, ...drafts, ...done] }) });
+    const count = (host: HTMLElement, id: string) => idsIn(column(host, id)).length;
+    const seen = { before: [] as number[], heads: [] as string[], more: [] as (string | undefined)[], opened: [] as number[], folded: 0 };
     await renderPage("/missions", async (host) => {
       await eventually(() => shown(host), 3_000, "the board");
-      seen.before = idsIn(column(host, "finished")).length;
-      seen.working = idsIn(column(host, "working")).length;
-      press(column(host, "finished")!, "2 more");
-      await eventually(() => idsIn(column(host, "finished")).length === 7, 2_000, "all seven");
-      seen.after = idsIn(column(host, "finished")).length;
+      seen.before = ["backlog", "working", "finished"].map((id) => count(host, id));
+      // The head counts what the column holds, not what it shows.
+      seen.heads = ["backlog", "working"].map((id) => column(host, id)!.querySelector("header")?.textContent ?? "");
+      seen.more = ["backlog", "working", "finished"].map((id) => column(host, id)!.querySelector(`[data-more="${id}"]`)?.textContent);
+      press(column(host, "working")!, "Show 3 more");
+      press(column(host, "finished")!, "Show 2 more");
+      await eventually(() => count(host, "working") === 8 && count(host, "finished") === 7, 2_000, "both opened");
+      seen.opened = [count(host, "working"), count(host, "finished")];
+      press(column(host, "working")!, "Show less");
+      await eventually(() => count(host, "working") === 5, 2_000, "folded again");
+      seen.folded = count(host, "working");
     });
-    expect(seen).toEqual({ before: 5, working: 7, after: 7 });
+    expect(seen).toEqual({ before: [5, 5, 5], heads: ["Backlog5", "Working8"], more: [undefined, "Show 3 more", "Show 2 more"], opened: [8, 7], folded: 5 });
   });
 });
 
@@ -205,6 +291,34 @@ describe("on a phone", () => {
       dom.happyDOM.setViewport({ width: 1024, height: 768 });
     }
     expect(seen).toEqual({ tabs: ["1Backlog", "1Working", "1Needs you", "3Finished"], opened: "needs", ids: ["msn_q"], heights: ["44", "44", "44", "44"], after: ["msn_d"] });
+  });
+
+  test("a tab shows its first five and \"Show N more\"; nothing can be hovered, so the day stands beside each time line; Finished is cards under its span and chips", async () => {
+    phone();
+    const drafts = Array.from({ length: 7 }, (_, at) => one(`msn_b${at}`, `Draft ${at}`, { status: "waiting", seen: "needs_you", waitKind: "accept", startedAt: null, createdAt: NOW - (at + 1) * 60_000 }));
+    answer({ "/missions": ok({ missions: [...drafts, DONE] }) });
+    const panel = (host: HTMLElement) => host.querySelector<HTMLElement>("[data-column-shown]");
+    const seen = { first: 0, more: "" as string | undefined, time: "", tip: true, all: 0, finished: [] as unknown[] };
+    try {
+      await renderPage("/missions?tab=backlog", async (host) => {
+        await eventually(() => tabs(host).length === 4 && shown(host), 3_000, "the tabs");
+        seen.first = idsIn(panel(host)).length;
+        seen.more = panel(host)!.querySelector('[data-more="backlog"]')?.textContent ?? undefined;
+        seen.time = panel(host)!.querySelector("[data-time]")?.textContent ?? "";
+        seen.tip = panel(host)!.querySelector("[data-tip]") !== null;
+        press(panel(host)!, "Show 2 more");
+        await eventually(() => idsIn(panel(host)).length === 7, 2_000, "all seven");
+        seen.all = idsIn(panel(host)).length;
+        tabs(host).find((tab) => tab.dataset.tab === "finished")!.click();
+        await eventually(() => panel(host)?.dataset.columnShown === "finished", 2_000, "Finished");
+        const head = panel(host)!.querySelector("[data-finished-head]");
+        seen.finished = [panel(host)!.querySelector("[data-mission]")?.tagName, head?.querySelector("[data-outcome]") !== null, head?.textContent?.includes("Last 7 days")];
+      });
+    } finally {
+      dom.happyDOM.setViewport({ width: 1024, height: 768 });
+    }
+    const today = new Date(NOW - 60_000).toLocaleDateString([], { day: "numeric", month: "short" });
+    expect(seen).toEqual({ first: 5, more: "Show 2 more", time: `drafted 1 min ago · ${today}`, tip: false, all: 7, finished: ["ARTICLE", true, true] });
   });
 
   test("with nothing that needs the reader it opens on Working, and a link that named an old tab lands on its column", async () => {

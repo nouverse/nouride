@@ -17,7 +17,7 @@ export const PAGE_ASKS = {
   skills: { task: "to find a skill", message: "Find a skill, or write one, so my agents can … Show me what you found before you add it." },
   connectors: { task: "to connect a service", message: "Connect my agents to … so they can … Tell me what you need from me." },
   automations: { task: "to make an automation", message: "Make an automation for me: when …, do … and send me the result here. Or change one I have: …" },
-  missions: { task: "to start a mission", message: "Start a mission: … When it is done, tell me what you did." },
+  missions: { task: "to draft a mission", message: "Draft a mission: … I will start it once it looks right." },
   work: { task: "to take on a task", message: "I have a task that will take a while: … Take it on and tell me how it goes." },
   memory: { task: "to remember something", message: "Remember this for later: …" },
   people: { task: "to add someone", message: "Add someone to People, or update them: their name is …, and they reach us on …" },
