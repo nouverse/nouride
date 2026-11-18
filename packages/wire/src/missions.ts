@@ -163,6 +163,8 @@ export interface MissionStart {
   noReview?: boolean;
   accept?: boolean;
   workdir?: string;
+  /** Saved to the backlog: a draft that waits until someone starts it. Left out, it starts at once. */
+  draft?: boolean;
 }
 
 /** What a person says to a mission. */

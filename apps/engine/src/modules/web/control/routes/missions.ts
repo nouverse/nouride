@@ -192,6 +192,17 @@ function draftChangeOf(body: Record<string, unknown>): DraftChange {
   };
 }
 
+/**
+ * What a list holds: every mission still open, however many were started after it, then the newest `limit` that ended,
+ * within `days` (null: however long ago). Read from the newest alone, a draft old enough left the page while it still
+ * waited to be started.
+ */
+function listed(missions: Missions, ask: { agent: string | undefined; limit: number; days: number | null }): Mission[] {
+  const now = missions.now();
+  const ended = missions.recent(ask.limit, ask.agent).filter((mission) => mission.endedAt !== null && (ask.days === null || now - mission.endedAt < ask.days * DAY_MS));
+  return [...missions.stillOpen(ask.agent), ...ended];
+}
+
 export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): void {
   const unavailable = { error: "missions are not run in this process" };
   /** What a route answers for a mission that is not there: also for one that is another person's (`whose.ts`). */
@@ -203,11 +214,9 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
     // A month of a box's missions may be more than the usual hundred newest: asked for by days, up to the most a list holds.
     const days = Math.min(LISTED_DAYS.most, Math.max(1, Math.round(Number(c.req.query("days") ?? LISTED_DAYS.usual)) || LISTED_DAYS.usual));
     const limit = Math.min(500, Math.max(1, Number(c.req.query("limit") ?? (c.req.query("days") ? 500 : 100)) || 100));
-    const now = missions.now();
     const things = thingsFor(deps, c.get("principal"), c.req.query("whose"));
     // A mission that ended more than `days` ago is out of the list unless asked for (`?all=1`, the CLI's); its record stays.
-    const all = c.req.query("all") === "1";
-    const recent = missions.recent(limit, agent).filter((mission) => all || mission.endedAt === null || now - mission.endedAt < days * DAY_MS);
+    const recent = listed(missions, { agent, limit, days: c.req.query("all") === "1" ? null : days });
     const rows = recent.filter((mission) => things.listed(thingOfMission(mission))).map((mission) => ({ ...view(missions, mission, things, deps.turns), checklist: checklistOf(deps.notes, mission) }));
     rows.sort((a, b) => ORDER[a.seen] - ORDER[b.seen] || b.createdAt - a.createdAt);
     const elsewhere = things.elsewhere(recent.map(thingOfMission));
@@ -262,6 +271,8 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
       ...(body.noReview === true ? { review: false as const } : typeof body.review === "string" && body.review.trim() ? { review: body.review } : {}),
       ...(body.accept === true ? { accept: true } : {}),
       ...(typeof body.workdir === "string" && body.workdir.trim() ? { workdir: body.workdir.trim() } : {}),
+      // Saved to the backlog: a draft, which waits there until someone starts it.
+      ...(body.draft === true ? { proposed: true } : {}),
       startedBy: principal.user?.id ?? principal.actor,
       // The account's, wherever it reports; the command line's is nobody's.
       owner: principal.user ? `web:${principal.user.id}` : null,
@@ -269,7 +280,7 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
       chatId: typeof body.chatId === "string" ? body.chatId : DASHBOARD_MISSIONS_CHAT,
     });
     if ("refused" in started) return c.json({ error: started.refused, plain: "The mission was not started. Check its goal, its checks and its folder, and try again." }, 400);
-    deps.audit.record({ action: "mission_started", actor: principal.actor, agentId: started.mission.agentId, details: { mission: started.mission.id } });
+    deps.audit.record({ action: body.draft === true ? "mission_drafted" : "mission_started", actor: principal.actor, agentId: started.mission.agentId, details: { mission: started.mission.id } });
     return c.json({ mission: view(missions, started.mission, thingsFor(deps, principal)) } satisfies { mission: MissionView }, 201);
   });
 

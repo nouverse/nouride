@@ -66,14 +66,16 @@ export type Deleted = Acted | { refused: string; why: "unsaved"; unsaved: string
  * chat list, and test missions lingered on the live box for want of a way out.
  *
  * One still open is refused rather than stopped on the way: a delete that also stops is two decisions in one click.
+ * A draft is the one open mission that goes at once: nothing of it has run, so there is nothing to stop first.
  * Work in its folder nobody committed is refused too, by name, unless `force`; a folder the person named is never
  * touched, nor its branch.
  */
 export async function deleteMission(missions: Missions, deps: MissionsDeps, id: string, by: string, how: { force?: boolean } = {}): Promise<Deleted> {
   const mission = missions.find(id);
   if (!mission) return { refused: `No mission ${id}.`, why: "missing" };
-  if (!isFinal(mission.status)) return { refused: `Mission ${named(mission)} is ${mission.status}. Stop it first, then delete it.`, why: "open" };
-  if (!how.force) {
+  const draft = mission.status === "waiting" && mission.waitKind === "accept" && mission.startedAt === null;
+  if (!isFinal(mission.status) && !draft) return { refused: `Mission ${named(mission)} is ${mission.status}. Stop it first, then delete it.`, why: "open" };
+  if (!how.force && !draft) {
     // Removed here when nothing in it is uncommitted; `forget` below then finds the folder already gone.
     const unsaved = (await deps.remove?.(mission, { keepUnsaved: true })) ?? [];
     if (unsaved.length > 0) {

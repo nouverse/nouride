@@ -111,6 +111,12 @@ export class Missions implements TurnShaper {
     return this.deps.store.recent(limit, agentId);
   }
 
+  /** Every one that has not ended, however old and however many — `agentId` narrows to one agent's. */
+  stillOpen(agentId?: string): Mission[] {
+    const open = this.deps.store.open();
+    return agentId ? open.filter((mission) => mission.agentId === agentId) : open;
+  }
+
   /** An agent's own: those it works and those it started — what its `work` tool reaches, and nothing else. */
   ownedBy(agentId: string, limit: number): Mission[] {
     return this.deps.store.ownedBy(agentId, limit);

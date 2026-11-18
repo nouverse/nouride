@@ -191,7 +191,8 @@ export function newMission(
     accept: request.accept === true,
     status: proposed ? "waiting" : "queued",
     waitKind: proposed ? "accept" : null,
-    reason: proposed ? `proposed by ${request.byAgent ?? request.agentId}, not started` : null,
+    // A person's own draft (the dashboard's form) is nobody's proposal.
+    reason: proposed ? (request.byAgent ? `proposed by ${request.byAgent}, not started` : "a draft, not started") : null,
     report: null,
     summary: null,
     files: [],

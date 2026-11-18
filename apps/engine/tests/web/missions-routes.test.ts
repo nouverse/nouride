@@ -90,6 +90,19 @@ describe("the list", () => {
     expect(await ids("/missions?days=90")).toEqual([open.id]);
   });
 
+  test("a draft stays listed however many missions were started after it: the open ones are not cut to the newest", async () => {
+    const { h, get } = await app();
+    const draft = await h.start("an idea for later", { agentId: "nox", startedBy: "nouride:system", byAgent: "nox", proposed: true });
+    for (const goal of ["one", "two", "three"]) {
+      h.tick(60_000);
+      h.missions.stop((await h.start(goal)).id, "Gading");
+    }
+    // Two rows asked for, the three newest all ended: the draft is older than every one of them, and still open.
+    const { missions } = (await get("/missions?limit=2")) as { missions: { id: string; seen: string }[] };
+    expect(missions[0]).toMatchObject({ id: draft.id, seen: "needs_you" });
+    expect(missions.filter((m) => m.seen === "ended")).toHaveLength(2);
+  });
+
   test("one agent's, when the page asks for it", async () => {
     const { h, get } = await app();
     await h.start("nova's");
@@ -167,6 +180,21 @@ describe("acting on one", () => {
  * live box. Only once it has ended; never over work nobody committed in its folder unless forced; its conversation ends
  * as deleting one ends it.
  */
+describe("saved to the backlog", () => {
+  test("the form's draft waits unstarted, is nobody's proposal, and is recorded as drafted; without the word it starts", async () => {
+    const audit: { action: string }[] = [];
+    const { h, post } = await app("operator", { audit: { record: (row: { action: string }) => void audit.push(row) } });
+    const saved = await post("/missions", { agent: "nova", goal: "sweep the tests", draft: true });
+    expect(saved.status).toBe(201);
+    const draft = ((await saved.json()) as { mission: { id: string } }).mission;
+    expect(h.store.get(draft.id)).toMatchObject({ status: "waiting", waitKind: "accept", startedAt: null, reason: "a draft, not started", turnsUsed: 0 });
+    expect(audit.map((row) => row.action)).toEqual(["mission_drafted"]);
+    const started = await post("/missions", { agent: "nox", goal: "tidy the notes" });
+    expect(h.store.get(((await started.json()) as { mission: { id: string } }).mission.id)!.status).not.toBe("waiting");
+    expect(audit.map((row) => row.action)).toEqual(["mission_drafted", "mission_started"]);
+  });
+});
+
 describe("deleting one", () => {
   function recorded() {
     const ended: { key: unknown; mode: string }[] = [];
@@ -211,6 +239,21 @@ describe("deleting one", () => {
     viewer.h.missions.stop(ended.id, "Gading");
     expect((await viewer.del(`/missions/${ended.id}`)).status).toBe(403);
     expect(viewer.h.store.get(ended.id)).not.toBeNull();
+  });
+
+  test("a draft goes at once: nothing of it has run, so there is nothing to stop first", async () => {
+    const seen = recorded();
+    const { h, del } = await app("operator", seen.extra);
+    const draft = await h.start("an idea for later", { agentId: "nox", startedBy: "nouride:system", byAgent: "nox", proposed: true });
+    const res = await del(`/missions/${draft.id}`);
+    expect(res.status).toBe(200);
+    expect(h.store.get(draft.id)).toBeNull();
+    expect(seen.audit).toContainEqual(expect.objectContaining({ action: "mission_deleted" }));
+    // One that waits for anything else is still open work: an answer, a limit, a result to accept.
+    const asked = await h.start("asks something");
+    h.missions.ask(asked.id, { question: "Which folder?" });
+    expect((await del(`/missions/${asked.id}`)).status).toBe(409);
+    expect(h.store.get(asked.id)).not.toBeNull();
   });
 
   test("work nobody committed in its folder refuses it by name, with the note that gets past it; force deletes", async () => {
