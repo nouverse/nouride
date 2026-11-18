@@ -32,6 +32,14 @@ export interface OwnChat {
  */
 const QUIET_MS = 10_000;
 
+/**
+ * How long a step may stay open with nothing at all from the CLI before the turn stops waiting for it. Without it, a
+ * step whose end the CLI never sent held the turn as long as the CLI ran: on the box, Nix's chat showed it
+ * typing for an hour, its CLI kept up by a mission. The step goes on behind the turn, and what the CLI says next wakes
+ * the chat again. A choice.
+ */
+const STEP_QUIET_MS = 5 * 60_000;
+
 /** What starts a stretch: words, a thought, a step. What else a CLI sends with no prompt running — its commands, its context's size — says nothing. */
 function says(update: SessionUpdate): boolean {
   return update.sessionUpdate === "agent_message_chunk" || update.sessionUpdate === "agent_thought_chunk" || update.sessionUpdate === "tool_call";
@@ -46,6 +54,7 @@ export class OwnWords {
   constructor(
     private readonly wake: (chat: OwnChat) => void,
     private readonly quietMs = QUIET_MS,
+    private readonly stepQuietMs = STEP_QUIET_MS,
   ) {}
 
   /** The chat a session answers from now on, or null where it answers none of its agent's own. */
@@ -98,11 +107,19 @@ export class OwnWords {
         until.signal?.removeEventListener("abort", done);
         resolve();
       });
+      let heardAt = Date.now();
       const arm = () => {
         clearTimeout(timer);
-        timer = setTimeout(contained(log, "could not follow what a CLI said by itself", () => (read.working && !until.gone() ? arm() : done())), this.quietMs);
+        timer = setTimeout(contained(log, "could not follow what a CLI said by itself", () => {
+          if (!read.working || until.gone()) return done();
+          if (Date.now() - heardAt < this.stepQuietMs) return arm();
+          log.info("a turn following what a CLI said by itself stopped waiting for a step it never ended", { session: sessionId });
+          read.behind();
+          done();
+        }), this.quietMs);
       };
       const onUpdate = (update: SessionUpdate) => {
+        heardAt = Date.now();
         read.read(update);
         arm();
       };

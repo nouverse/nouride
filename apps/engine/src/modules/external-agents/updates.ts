@@ -222,6 +222,14 @@ export class UpdateReader {
     return own;
   }
 
+  /**
+   * Every call still open goes on behind the turn, not cut off: the turn following what the CLI said by itself stops
+   * waiting for a step its CLI never says has ended (`own-words.ts`), and `end` then says none of them failed.
+   */
+  behind(): void {
+    for (const call of this.open.values()) call.own = false;
+  }
+
   /** The end of the prompt: a thought still open is written, and a call the agent never closed is closed as cut off. */
   end(): void {
     this.flushThought();
