@@ -41,15 +41,19 @@ Start it: /mission accept msn_3f2a91 · drop it: /mission stop msn_3f2a91
 - **Mulai** dengan tombolnya, `/mission accept <id>`, tombol Start it di dashboard, atau dengan bilang ke agent untuk
   jalan; ia meneruskan kata-katamu, dan kata-kata itu disimpan bersama mulainya. **Drop it** membuangnya, beserta
   foldernya.
-- **Siapa yang mengesahkan** tertulis di draft: kamu, setelah cek-nya lolos, kecuali agent memilih pemeriksa. Kalau
-  dimulai langsung karena kamu pergi ("kerjakan sekarang, aku mau tidur"), cek lalu pemeriksa. Itu bisa kamu ubah di
-  draft.
-- Draft yang tidak dimulai siapa pun tetap ada, tercantum di bagian butuh kamu, sampai ada yang memulai atau
-  membuangnya.
+- **Siapa yang mengesahkan** tertulis di draft: kamu, setelah cek-nya lolos, kecuali agent memilih pemeriksa, seperti
+  yang ia lakukan kalau kamu pergi ("kerjakan ya, aku mau tidur"). Itu bisa kamu ubah di draft.
+- Draft yang tidak dimulai siapa pun tetap ada di Backlog papan, sampai ada yang memulai atau membuangnya. Ia tidak
+  dihitung sebagai yang butuh kamu.
 
-Bilang "kerjain sekarang, gw tidur dulu"? Agent memulainya langsung, tanpa draft, dan notifikasi *mulai*-nya mengutip
-kata-katamu. Catatan yang sudah ia tulis tentang tugas itu, dan rencananya, ikut pindah; chat-nya menyisakan satu baris,
-`→ mission msn_3f2a91, running`, yang berubah jadi hasilnya waktu misi selesai.
+Bilang "kerjain sekarang, gw tidur dulu"? Setiap misi yang dimulai agent selalu jadi draft dulu (0.8.40): ia membuat
+draft-nya dan bilang begitu, lalu kamu yang memulainya, atau kamu suruh jalan dan ia memulai draft-nya atas kata-katamu.
+Catatan yang sudah ia tulis tentang tugas itu, dan rencananya, ikut pindah; chat-nya menyisakan satu baris,
+`→ mission msn_3f2a91, running`, yang berubah jadi hasilnya waktu misi selesai. `/mission <tujuan>` meminta agent yang
+kamu sapa membuat draft dari tujuan itu: ia membaca yang perlu, menulis brief dan cek-nya, atau bertanya dulu kalau
+tujuannya belum jelas. `/goal` adalah perintah yang sama. Misi yang kamu tulis di form dashboard, dan langkah misi di
+otomasi, tetap langsung jalan: yang pertama kamu sendiri yang menulis, dan yang kedua tidak ada orang yang bisa menekan
+Start.
 
 Untuk memulai sendiri:
 
@@ -97,13 +101,17 @@ jam.
 
 ## Memantaunya
 
-**Missions** di dashboard menampilkan yang butuh kamu paling atas, lalu yang sedang jalan, lalu yang sudah selesai,
-masing-masing dengan progres checklist-nya: satu tab untuk tiap kelompok, pencarian di tujuan, laporan dan ID-nya,
-filter per agent, dan seberapa jauh ke belakang yang sudah selesai ditampilkan: 3, 7, 14 atau 30 hari terakhir (3 kalau
-tidak dipilih), tidak lebih. Misi yang masih terbuka selalu tampil, berapa pun umurnya.
+**Missions** di dashboard adalah papan dengan empat kolom (0.8.40): **Backlog**, draft-draft; **Working**, yang
+mengantre, jalan atau sedang dicek; **Needs you**, pertanyaan, approval, batas atau hasil yang perlu diterima;
+**Finished**, yang selesai, gagal atau dihentikan. Tiap kartu punya namanya, bar progres checklist-nya, satu baris yang
+penting (kapan draft dianggap selesai, langkah yang sedang dikerjakan, yang ditanyakan, kenapa gagal, siapa yang
+menghentikan), kucing agent-nya dan waktunya. **Start** di draft dan **Answer** di pertanyaan bisa langsung dari
+kartunya. Finished menampilkan 7, 14, 21 atau 30 hari terakhir (7 kalau tidak dipilih), dengan Done, Failed dan Stopped
+untuk menyaringnya; kolom lain menampilkan semua yang masih terbuka, berapa pun umurnya. Pencarian dan filter per agent
+berlaku untuk semua kolom. Di HP keempat kolom jadi empat tab dengan jumlahnya, terbuka di Needs you kalau ada isinya.
 
 **Yang menunggu kamu bilang apa yang ditunggu** (0.8.39), di Home, di Work dan di daftar: pertanyaan dengan
-pertanyaannya, hasil yang perlu diterima, draft yang belum dimulai, batas yang tercapai. Misi yang bertanya sambil
+pertanyaannya, hasil yang perlu diterima, batas yang tercapai. Misi yang bertanya sambil
 lanjut bekerja ikut tampil di situ, ditandai **Working · asked a question**, dan halamannya memuat pertanyaannya dan
 kotak untuk menjawab.
 
@@ -301,7 +309,7 @@ itu, `isolated` ditolak.
 
 | Di chat | |
 |---|---|
-| `/mission <tujuan>` | mulai satu untuk agent yang kamu sapa |
+| `/mission <tujuan>` | agent yang kamu sapa membuat draft dari tujuanmu; jalan setelah kamu memulainya |
 | `/mission` | yang jalan dan menunggu di sini, yang butuh kamu paling atas |
 | `/mission stop <id>` | akhiri |
 | `/mission continue <id> [catatan]` | lanjut melewati batas, keluar dari macet, atau dengan apa yang kurang setelah dicek |

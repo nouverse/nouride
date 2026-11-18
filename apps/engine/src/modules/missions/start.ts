@@ -41,8 +41,6 @@ export interface StartRequest {
   request?: string;
   /** A draft's brief (0.8.11): written to `BRIEF.md` in its folder (`drafts.ts`). */
   brief?: string;
-  /** The person's own words that asked for it to run at once (0.8.11, `now`): quoted in its *started*. */
-  said?: string;
   /** The chat conversation the work came from, and the turn there that started it: its task moves into the mission (`carry.ts`). */
   from?: { agentId: string; gatewayId: string; chatId: string; turnId?: string };
 }

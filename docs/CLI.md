@@ -837,8 +837,9 @@ done and that it is not resumed ([SPEC.md §13.3](./SPEC.md#133-helpers-in-the-b
 ### `nouride mission`
 
 Long work an agent finishes alone (0.8.0): it runs turn after turn, survives a restart, parks what needs a person and
-is done when its checks pass. A chat starts one (`/mission <goal>`), as do the dashboard's Missions page and an agent
-when the work needs it; a terminal is not a chat to report to, so this command does not start one.
+is done when its checks pass. In a chat an agent drafts one, which runs once a person starts it (`/mission <goal>` asks
+for one); the dashboard's Missions page starts one at once; a terminal is not a chat to report to, so this command does
+not start one.
 
 ```bash
 nouride mission                          # what needs you first, then what runs, then the last five ended

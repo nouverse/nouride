@@ -39,13 +39,18 @@ Start it: /mission accept msn_3f2a91 · drop it: /mission stop msn_3f2a91
   goal and checks stay as they are.
 - **Start it** with the button, `/mission accept <id>`, the dashboard's Start it, or by telling the agent to go: it
   passes your words on, and they are kept with the start. **Drop it** removes it, with its folder.
-- **Who signs it off** is in the draft: you, once its checks pass, unless the agent chose a reviewer for it. Started at
-  once because you are away ("do it now, I'm off to sleep"), the checks and a reviewer. You can change it in the draft.
-- A draft nobody starts stays, listed under needs you, until someone starts or drops it.
+- **Who signs it off** is in the draft: you, once its checks pass, unless the agent chose a reviewer for it, as it does
+  when you are away ("do it, I'm off to sleep"). You can change it in the draft.
+- A draft nobody starts stays in the board's Backlog until someone starts or drops it. It is not counted among what
+  needs you.
 
-Said "do it now, I'm off to sleep"? Then the agent starts it at once, without a draft, and its *started* notice quotes
-your words. What it had written down about the task, and its plan, go with it; the chat keeps one line,
-`→ mission msn_3f2a91, running`, which becomes the outcome when it ends.
+Said "do it now, I'm off to sleep"? Every mission an agent starts is a draft first (0.8.40): it drafts it and says so,
+and you start it, or tell it to go and it starts its draft on your word. What it had written down about the task, and
+its plan, go with it; the chat keeps one line, `→ mission msn_3f2a91, running`, which becomes the outcome when it ends.
+`/mission <goal>` asks the agent you address for a draft of that goal: it reads what it needs, writes the brief and
+checks, or asks you first when the goal is unclear. `/goal` is the same command. A mission you write on the dashboard's
+form, and an automation's mission step, still start at once: you wrote the first, and nobody is there to press Start
+for the second.
 
 To start one yourself:
 
@@ -91,12 +96,17 @@ when a step finished. A wait on you is named again once, after four hours.
 
 ## Watching it
 
-**Missions** in the dashboard lists what needs you first, then what is working, then what finished, each with its
-checklist's progress. It has a tab for each, a search over the goals, reports and ids, a filter by agent, and a choice
-of how far back the finished ones go: the last 3, 7, 14 or 30 days (3 unless you choose, never further). One still open is listed however old.
+**Missions** in the dashboard is a board of four columns (0.8.40): **Backlog**, the drafts; **Working**, what is
+queued, running or being checked; **Needs you**, a question, approvals, a limit or a result to accept; **Finished**,
+done, failed or stopped. Each card has its name, a bar of its checklist's progress, the line that matters (when a draft
+is done, the step it is on, what it asks, why it failed, who stopped it), the agent's cat and when. **Start** on a
+draft and **Answer** on a question work from the card. Finished goes back the last 7, 14, 21 or 30 days (7 unless you
+choose), with Done, Failed and Stopped to narrow it; the other columns list everything open, however old. A search and
+a filter by agent narrow every column. On a phone the columns are four tabs with their counts, opening on Needs you
+when anything is there.
 
 **What waits for you says what it waits for** (0.8.39), on Home, on Work and in the list: a question with the question,
-a result to accept, a draft that has not started, a limit reached. A mission that asked and works on meanwhile is among
+a result to accept, a limit reached. A mission that asked and works on meanwhile is among
 them, marked **Working · asked a question**, and its page has the question and the box to answer it.
 
 **A mission at work shows it is alive** (0.8.39). A mission a coding CLI works on (Claude Code, Codex) is often one turn
@@ -282,7 +292,7 @@ branch of its own, `mission/<id>-helper-<n>`; the result names the branches, for
 
 | In a chat | |
 |---|---|
-| `/mission <goal>` | start one for the agent you address |
+| `/mission <goal>` | the agent you address drafts one from your goal; it runs once you start it |
 | `/mission` | what runs and waits here, needs-you first |
 | `/mission stop <id>` | end it |
 | `/mission continue <id> [note]` | go on past a limit, out of being stuck, or with what an accept found missing |

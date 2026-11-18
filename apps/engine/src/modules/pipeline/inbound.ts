@@ -688,8 +688,11 @@ export class InboundRouter {
 
     // An edit is words, never a command (`edits.ts`): arrival stops one that reads as a command, and so does this.
     const command = isEdit(envelope) ? null : parseCommand(text);
+    // What the turn is asked: the message, or the words a command that falls through hands the agent instead.
+    let asked = text;
     if (command && this.hooks.has(command.command)) {
       const result = await this.hooks.run(command.command, command.args, agent, envelope);
+      if (!result.handled && result.prompt) asked = result.prompt;
       if (result.reply) {
         await this.ctx.voice.reply(envelope, result.reply);
         /**
@@ -792,7 +795,7 @@ export class InboundRouter {
     // model. Everything above reads `envelope.text`, so a quote folded into it earlier turned a
     // replied-to `/approve` into ordinary chat and let a quoted `@othername` reroute the message. See
     // `MessageEnvelope.quotedText`.
-    await this.turns.runTurn(agent, envelope, key, withQuotedContext(envelope, text));
+    await this.turns.runTurn(agent, envelope, key, withQuotedContext(envelope, asked));
   }
 }
 

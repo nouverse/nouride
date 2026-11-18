@@ -1,6 +1,7 @@
 /**
- * `/mission` — a person's side of missions in the chat. `/mission <goal>` starts one for the agent
- * addressed, as the sender, reporting here; `/mission` lists what is running and waiting here, *needs you* first;
+ * `/mission` — a person's side of missions in the chat. `/mission <goal>` asks the agent addressed to draft one from
+ * that goal, since every mission an agent starts is a draft first: a turn of its own that reads what it needs, writes
+ * the brief and checks, or asks in the chat first when the goal is unclear; `/mission` lists what is running and waiting here, *needs you* first;
  * `/mission stop|continue|accept <id>` and `/mission answer <id> <text>` act on one; `/mission tell <id> <words>` (0.8.10)
  * gives it words while it works. Most missions are started by the agent without a command — this is the explicit way, and
  * the way back in.
@@ -18,7 +19,7 @@ export type MissionCommands = Pick<Missions, "start" | "stop" | "continueMission
 const VERBS = ["stop", "continue", "accept", "answer", "tell", "show"] as const;
 
 const USAGE =
-  "/mission <goal>: start one for this agent; it reports here.\n" +
+  "/mission <goal>: this agent drafts one from your goal; it runs once you start it, and reports here.\n" +
   "/mission: what is running and waiting here. /mission show <id>: one in full.\n" +
   "/mission stop|continue|accept <id>, /mission answer <id> <answer>.\n" +
   "/mission tell <id> <words>: tell it something while it works; it is read before its next step and followed, never a new goal.\n" +
@@ -39,6 +40,19 @@ function show(mission: Mission, limits: string): string {
   const told = mission.told.at(-1);
   if (told) lines.push(`Told while it worked: ${mission.told.length}. Latest, ${told.read === undefined ? "not read yet" : `read in turn ${told.read}`}: "${clip(told.text, 200)}"`);
   return lines.join("\n");
+}
+
+/**
+ * What the agent's turn is asked for `/mission <goal>`: the goal as the person wrote it, and a draft made of it, never
+ * a mission started. The words that carry the rule are asserted by a test.
+ */
+export function draftAsked(goal: string): string {
+  return (
+    `The person sent /mission with this goal: "${goal}"\n\n` +
+    "Draft a mission for it with the `mission` tool, action \"start\": read what you need first, then write its title, " +
+    "goal, brief and checks. If the goal is unclear, ask in this chat first and draft once it is clear. The draft runs " +
+    "only when the person starts it."
+  );
 }
 
 /** One mission in one line, as a list shows it. */
@@ -73,19 +87,14 @@ function list(missions: MissionCommands, ctx: HookContext): string {
  */
 const missionHook: Hook = {
   command: "/mission",
-  description: "Start long work that runs on its own, or see and answer the missions here: /mission <goal>",
+  description: "Ask for a mission (a draft you start), or see and answer the missions here: /mission <goal>",
   handler: async (ctx) => {
     const missions = ctx.deps.missions;
     if (!missions) return { handled: true, reply: "Missions are not run in this process." };
     const [first, second, ...rest] = ctx.args;
     if (!first) return { handled: true, reply: list(missions, ctx) };
     const verb = VERBS.find((one) => one === first.toLowerCase());
-    if (!verb) {
-      const here = { gatewayId: ctx.gatewayId, chatId: ctx.chatId };
-      const started = missions.start({ agentId: ctx.agent.config.id, goal: ctx.args.join(" "), startedBy: ctx.senderId, ...here, from: { agentId: ctx.agent.config.id, ...here } });
-      // The started notice is the answer: it says what it will do and how to stop it.
-      return { handled: true, ...("refused" in started ? { reply: started.refused } : {}) };
-    }
+    if (!verb) return { handled: false, prompt: draftAsked(ctx.args.join(" ")) };
     if (!second) return { handled: true, reply: `Which mission? ${USAGE}` };
     const mission = missions.find(second);
     if (!mission || !mayAct(ctx, mission)) return { handled: true, reply: `No mission ${second} here that you can act on.` };

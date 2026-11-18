@@ -45,6 +45,8 @@ export interface HookResult {
   reply?: string;
   /** False lets the message fall through to the agent — used by `/help` on no match. */
   handled: boolean;
+  /** With `handled` false: the agent's turn runs on these words in place of the message's (`/mission <goal>`). */
+  prompt?: string;
 }
 
 /**

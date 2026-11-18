@@ -80,8 +80,6 @@ export class Missions implements TurnShaper {
    * read. In memory: after a restart, going on reads them again.
    */
   private readonly stoppedAt = new Map<string, MissionLimit[]>();
-  /** The person's words a mission started at once on (`now` with `said`, 0.8.11), quoted in its *started*. In memory. */
-  private readonly saidFor = new Map<string, string>();
 
   constructor(private readonly deps: MissionsDeps) {
     this.timers = new MissionTimers(this, deps);
@@ -227,7 +225,6 @@ export class Missions implements TurnShaper {
       const drafted = announceDraft(this.deps, mission, request.brief);
       return { mission, drafted };
     }
-    if (request.said?.trim()) this.saidFor.set(id, request.said.trim());
     this.schedule();
     const queued = this.toldQueued.get(id);
     return { mission: this.deps.store.get(id) ?? mission, ...(queued ? { queued } : {}) };
@@ -282,8 +279,7 @@ export class Missions implements TurnShaper {
     }
     log.info("mission started", { mission: mission.id, agent_id: mission.agentId, job: mission.jobId });
     // A job's run starts on its schedule, which its chat already knows: it is told when it is done or needs someone.
-    if (!mission.jobId) void this.deps.tell(mission, paged(startedNotice(mission, this.saidFor.get(mission.id)), this.deps.pageOf?.(mission)));
-    this.saidFor.delete(mission.id);
+    if (!mission.jobId) void this.deps.tell(mission, paged(startedNotice(mission), this.deps.pageOf?.(mission)));
     this.queueTurn(mission, "the mission starts. Write the checklist with `plan` first, then begin.");
   }
 
@@ -693,7 +689,6 @@ export class Missions implements TurnShaper {
     this.stoppedAt.delete(mission.id);
     this.timers.forget(mission.id);
     this.toldQueued.delete(mission.id);
-    this.saidFor.delete(mission.id);
     this.checking.forget(mission.id);
     this.asking.forget(mission.id);
     // A draft dropped — never started — takes its folder with it: its brief, and nothing else was ever written there.

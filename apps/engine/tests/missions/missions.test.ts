@@ -1029,19 +1029,18 @@ describe("an asleep agent's missions", () => {
  */
 describe("the tool's answer to a start", () => {
   const ctx = { agentId: "nova", gatewayId: "telegram:nova", chatId: "8142", senderId: "8142" } as ToolContext;
-  // Started at once, as the person asked: a draft waits for nothing but them (0.8.11).
-  const atOnce = { now: true, said: "do it now" };
-
-  test("queued, it names the reason and what holds the slot, as the dispatcher decided it", async () => {
+  test("a draft the person starts behind another is queued, and the chat is told why and what holds the slot", async () => {
     const h = await missionsHarness();
     const first = await h.start("one");
     const tool = createMissionTools(h.missions).chat;
-    const answer = await tool.execute({ action: "start", title: "A test mission", goal: "two", ...atOnce }, ctx);
+    const answer = await tool.execute({ action: "start", title: "A test mission", goal: "two" }, ctx);
     expect(answer.isError).toBe(false);
-    expect(answer.content).toContain(`It waits because nova already runs ${first.id.slice(0, 10)} (per_agent 1); it starts by itself once that clears.`);
     const queued = h.store.recent(5).find((one) => one.goal === "two")!;
-    // The same words the queue notice gave the chat — one decision, said twice.
-    expect(h.told.find((one) => one.mission === queued.id)!.text).toBe(`⏳ A test mission (${queued.id.slice(0, 10)}) is queued: nova already runs ${first.id.slice(0, 10)} (per_agent 1). It starts by itself.`);
+    expect(queued.startedAt).toBeNull();
+    expect("refused" in h.missions.accept(queued.id, "Gading")).toBe(false);
+    expect(h.store.get(queued.id)!.status).toBe("queued");
+    // The dispatcher's own reason, as the queue notice gives the chat.
+    expect(h.told.filter((one) => one.mission === queued.id).at(-1)!.text).toBe(`⏳ A test mission (${queued.id.slice(0, 10)}) is queued: nova already runs ${first.id.slice(0, 10)} (per_agent 1). It starts by itself.`);
   });
 
   test("an agent's own per_agent (0.8.11): nox at three runs three and queues its fourth; nova keeps the daemon's one", async () => {
@@ -1058,23 +1057,28 @@ describe("the tool's answer to a start", () => {
     expect(h.told.find((one) => one.mission === second.id)!.text).toContain(`nova already runs ${first.id.slice(0, 10)} (per_agent 1)`);
   });
 
-  test("queued behind the box's limit, it names the missions running and max_running", async () => {
-    const h = await missionsHarness({ settings: { maxRunning: 1 } });
-    const first = await h.start("one");
-    const answer = await createMissionTools(h.missions).chat.execute({ action: "start", title: "A test mission", goal: "two", agent: "nox", ...atOnce }, ctx);
-    expect(answer.content).toContain(`It waits because the box already runs ${first.id.slice(0, 10)} (max_running 1);`);
+  test("queued behind the box's limit once started, the chat is told the missions running and max_running", async () => {
+    const started = async (settings: Record<string, unknown>) => {
+      const h = await missionsHarness({ settings });
+      const first = await h.start("one");
+      await createMissionTools(h.missions).chat.execute({ action: "start", title: "A test mission", goal: "two", agent: "nox" }, ctx);
+      const queued = h.store.recent(5).find((one) => one.goal === "two")!;
+      h.missions.accept(queued.id, "Gading");
+      return { first, said: h.told.filter((one) => one.mission === queued.id).at(-1)!.text };
+    };
+    const set = await started({ maxRunning: 1 });
+    expect(set.said).toContain(`the box already runs ${set.first.id.slice(0, 10)} (max_running 1)`);
     // Where nobody set it, it is said as the machine's: no file holds a setting of that value to look up.
-    const unset = await missionsHarness({ settings: { maxRunning: 1, auto: true } });
-    const running = await unset.start("one");
-    const waits = await createMissionTools(unset.missions).chat.execute({ action: "start", title: "A test mission", goal: "two", agent: "nox", ...atOnce }, ctx);
-    expect(waits.content).toContain(`It waits because the box already runs ${running.id.slice(0, 10)} (1 at once on this machine: max_running is not set);`);
+    const unset = await started({ maxRunning: 1, auto: true });
+    expect(unset.said).toContain(`the box already runs ${unset.first.id.slice(0, 10)} (1 at once on this machine: max_running is not set)`);
   });
 
-  test("started at once, it says nothing about waiting", async () => {
+  test("a draft's answer says nothing about waiting: nothing runs until the person starts it", async () => {
     const h = await missionsHarness();
-    const answer = await createMissionTools(h.missions).chat.execute({ action: "start", title: "A test mission", goal: "one", ...atOnce }, ctx);
-    expect(answer.content).toStartWith("Mission ");
+    const answer = await createMissionTools(h.missions).chat.execute({ action: "start", title: "A test mission", goal: "one" }, ctx);
+    expect(answer.isError).toBe(false);
     expect(answer.content).not.toContain("It waits because");
+    expect(h.store.recent(5)[0]).toMatchObject({ status: "waiting", waitKind: "accept", startedAt: null });
   });
 
   test("a branch git refuses refuses the start, and nothing is made", async () => {
