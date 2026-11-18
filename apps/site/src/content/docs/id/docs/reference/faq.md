@@ -132,7 +132,10 @@ Gambar dan voice note *memang* dikirim ke model, kalau `read_images` dan `read_a
 Ia bisa mencari dan mengambil halaman, dan skill bawaan **browser-automation** mengendalikan browser
 sungguhan: login, mengklik sebuah situs, mengisi formulir. Browser-nya Playwright, dipasang oleh agent
 dan dijalankan lewat `exec`, jadi setiap langkahnya melewati gerbang approval yang sama dengan perintah
-lain. Ia butuh Node dan sekitar satu gigabyte memori kosong, dan bukan bagian dari daemon.
+lain. Ia butuh Node dan sekitar satu gigabyte memori kosong, dan bukan bagian dari daemon. Di image
+Docker, yang berbasis Alpine, agent memasang Chromium dan Node milik sistem sebagai paket sistem
+(sekitar 300 MB untuk Chromium), dan keduanya ada lagi setelah kontainer dibuat ulang. Kalau ia
+tidak bisa mendapatkan browser, ia mengatakannya lebih dulu, bukan menjawab dari hasil pencarian saja.
 [Skill bawaan →](/id/docs/manual/skills/#bawaan)
 
 **Bisa agent memasang program?**
