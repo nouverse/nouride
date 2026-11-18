@@ -1,6 +1,6 @@
 ---
 name: diagrams
-description: Draw a diagram as a sharp PNG (architecture, homelab or network map, flowchart, process, data flow, org chart, steps, a timeline, a before and after) with Graphviz, from a short JSON list of boxes and arrows a helper turns into a clean picture, or as a page a browser lays out where one is already set up. Use when asked to draw, sketch, map, diagram or visualise how something is connected, and for the picture in a report or how a process goes, or to redraw or update an existing diagram.
+description: Draw a diagram as a sharp PNG (architecture, network map, flowchart, process, data flow, org chart, steps, a timeline, a before and after) with Graphviz from a short JSON list of boxes and arrows, or as a page where a browser is already set up. Use when asked to draw, sketch, map, diagram or visualise how something connects, and for a report's picture
 requires: dot, python3
 needs_tools: exec, read, write, send_file
 author: Nouride
