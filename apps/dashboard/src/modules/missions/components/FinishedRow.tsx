@@ -1,11 +1,13 @@
 /**
- * One finished mission as a row of the list under the board: how it ended, its title whole (which opens its page), who
- * stopped it or why it failed, its agent, how far its checklist got, and when it ended. A row and not a card: what has
- * been is read down a list, and a title cut to a column's width said too little.
+ * One finished mission as a row of the list under the board: how it ended, its title whole, who stopped it or why it
+ * failed, its agent with its own picture, how far its checklist got, and when it ended. A row and not a card: what has
+ * been is read down a list, and a title cut to a column's width said too little. The whole row opens its page: the
+ * title's link is stretched over it, so a press anywhere on the row is a press on the title.
  */
 
 import { Link } from "@tanstack/react-router";
 import type { MissionView } from "@nouride/wire";
+import { AgentAvatar } from "@/commons/components/agents/AgentAvatar";
 import { Tag } from "@/commons/components/ui/Tag";
 import { useAgentFace } from "@/commons/hooks/use-agent-face";
 import { readsOnly, whoseWords } from "@/commons/lib/by-person";
@@ -23,14 +25,14 @@ export function FinishedRow({ mission, motion = "", showWhose }: { mission: Miss
   const line = cardLine(mission);
   const list = mission.checklist;
   return (
-    <li data-mission={mission.id} data-column="finished" className={cn("relative flex flex-wrap items-center gap-x-4 gap-y-1.5 py-3", motion)}>
+    <li data-mission={mission.id} data-column="finished" className={cn("relative -mx-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-xl px-2 py-3 transition-colors hover:bg-base-content/[0.04]", motion)}>
       {/* One that just ended arrives lit, as a card that changes column does. */}
       <Lit state={`${mission.status} ${mission.seen}`} arrived={motion === ENTER} />
       <span className={cn("w-20 shrink-0 rounded-full px-2.5 py-0.5 text-center text-xs font-semibold", TONE[outcomeOf(mission)])} data-badge>
         {badgeOf(mission)}
       </span>
       <span className="min-w-[14rem] flex-1">
-        <Link to="/missions/$missionId" params={{ missionId: mission.id }} className="text-sm font-semibold leading-snug tracking-tight text-base-content hover:underline [overflow-wrap:anywhere]" title={mission.goal}>
+        <Link to="/missions/$missionId" params={{ missionId: mission.id }} className="text-sm font-semibold leading-snug tracking-tight text-base-content after:absolute after:inset-0 after:rounded-xl [overflow-wrap:anywhere]" title={mission.goal} data-opens>
           {missionName(mission)}
         </Link>
         {line ? (
@@ -41,9 +43,13 @@ export function FinishedRow({ mission, motion = "", showWhose }: { mission: Miss
         ) : null}
       </span>
       {showWhose || readsOnly(mission) ? <Tag title={readsOnly(mission) ? "You can read this one, not change it" : undefined}>{whoseWords(mission)}</Tag> : null}
-      <span className="w-24 shrink-0 truncate text-xs text-base-content/80">{face?.name ?? mission.agentId}</span>
+      <span className="flex w-28 shrink-0 items-center gap-2 text-xs text-base-content/80" data-agent>
+        {face?.look ? <AgentAvatar look={face.look} name={face.name} size="xs" /> : null}
+        <span className="truncate">{face?.name ?? mission.agentId}</span>
+      </span>
       <span className="w-28 shrink-0 font-mono text-[11px] tabular-nums text-base-content/65">{list ? `${list.done} of ${list.total} steps` : ""}</span>
-      <WhenLine mission={mission} side="left" className="w-32 shrink-0 lg:text-right" />
+      {/* Over the stretched link, so the day behind the time is still a hover away. */}
+      <WhenLine mission={mission} side="left" className="relative z-10 w-32 shrink-0 lg:text-right" />
     </li>
   );
 }

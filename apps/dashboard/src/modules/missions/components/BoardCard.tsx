@@ -2,7 +2,8 @@
  * One mission on the board: its badge, its title (which opens its page), its bar, the line that matters in its column,
  * and the agent's own cat with its name and one time line, the day behind it a hover away (`WhenLine`). A draft is
  * started from the card and a question answered from it; deleting a draft stays on its page, where what goes with it
- * is said first.
+ * is said first. The whole card opens its page: the title's link is stretched over it, and what is pressed on the card
+ * (Start, Answer, the time's tip) stands over the link.
  */
 
 import { useState } from "react";
@@ -44,7 +45,7 @@ export function BoardCard({ mission, motion = "", writable, showWhose }: { missi
   const answerable = column === "needs" && mayAct && actionsFor(mission).includes("answer");
 
   return (
-    <article data-mission={mission.id} data-column={column} className={cn("relative space-y-3 rounded-[18px] border border-base-content/[0.08] bg-base-100 p-4 shadow-soft", motion)}>
+    <article data-mission={mission.id} data-column={column} className={cn("relative space-y-3 rounded-[18px] border border-base-content/[0.08] bg-base-100 p-4 shadow-soft transition-colors hover:border-base-content/20", motion)}>
       <Lit state={`${mission.status} ${mission.seen}`} arrived={motion === ENTER} />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-semibold", badgeTone(mission))} data-badge>
@@ -53,7 +54,7 @@ export function BoardCard({ mission, motion = "", writable, showWhose }: { missi
         {showWhose || readsOnly(mission) ? <Tag title={readsOnly(mission) ? "You can read this one, not change it" : undefined}>{whoseWords(mission)}</Tag> : null}
       </div>
       <h3 className="text-sm font-semibold leading-snug tracking-tight text-base-content [overflow-wrap:anywhere]">
-        <Link to="/missions/$missionId" params={{ missionId: mission.id }} className="line-clamp-2 hover:underline max-sm:-my-3.5 max-sm:py-3.5" title={mission.goal}>
+        <Link to="/missions/$missionId" params={{ missionId: mission.id }} className="line-clamp-2 after:absolute after:inset-0 after:rounded-[18px]" title={mission.goal} data-opens>
           {missionName(mission)}
         </Link>
       </h3>
@@ -80,12 +81,12 @@ export function BoardCard({ mission, motion = "", writable, showWhose }: { missi
         {face?.look ? <AgentAvatar look={face.look} name={face.name} size="xs" /> : null}
         <span className="min-w-0">
           <span className="block truncate text-xs font-semibold text-base-content">{face?.name ?? mission.agentId}</span>
-          <WhenLine mission={mission} />
+          <WhenLine mission={mission} className="relative z-10" />
         </span>
       </div>
 
       {startable || answerable ? (
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="relative z-10 flex flex-wrap items-center gap-2">
           {startable ? (
             <button type="button" className="btn btn-primary btn-sm min-h-11 rounded-xl px-4 sm:min-h-8" disabled={act.isPending} onClick={() => act.mutate({ verb: "accept" })}>
               Start
@@ -106,7 +107,7 @@ export function BoardCard({ mission, motion = "", writable, showWhose }: { missi
 
       {answering ? (
         <form
-          className="space-y-2"
+          className="relative z-10 space-y-2"
           onSubmit={(event) => {
             event.preventDefault();
             if (!answer.trim()) return;

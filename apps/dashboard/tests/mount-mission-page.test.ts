@@ -402,6 +402,28 @@ test("a mission's page: four meters against its limits, the checklist with each 
   expect(seen.buttons!.some((label) => /^(Continue|Accept|Answer)/.test(label))).toBe(false);
 });
 
+test("its checklist is folded to the five steps around the one at work, with all of them a press away", async () => {
+  const steps = Array.from({ length: 12 }, (_, at) => ({ text: `step ${at + 1}`, state: at < 7 ? "done" : at === 7 ? "active" : "pending" }));
+  missionTurns([missionTurn(1, {})]);
+  answer({ "/missions/msn_1": detailOf({}, { plan: { steps } }) });
+  const seen = { folded: [] as string[], button: "", opened: 0, again: 0 };
+  const texts = (host: HTMLElement) => [...host.querySelectorAll("[data-checklist] li")].map((one) => (one.textContent ?? "").replace(/^.*?: /, "").replace(/^\d+\./, "").trim());
+  await renderPage("/missions/msn_1", async (host) => {
+    await eventually(() => host.querySelector("[data-checklist]") !== null, 2_000, "the checklist");
+    seen.folded = texts(host);
+    seen.button = [...host.querySelectorAll("[data-checklist] button")].map((one) => one.textContent ?? "").join();
+    press(host.querySelector<HTMLElement>("[data-checklist]")!, "Show all 12 steps");
+    await eventually(() => texts(host).length === 12, 2_000, "all twelve");
+    seen.opened = texts(host).length;
+    press(host.querySelector<HTMLElement>("[data-checklist]")!, "Show less");
+    await eventually(() => texts(host).length === 5, 2_000, "folded again");
+    seen.again = texts(host).length;
+  });
+  expect(seen.folded).toEqual(["step 6", "step 7", "step 8", "step 9", "step 10"]);
+  expect(seen.button).toBe("Show all 12 steps");
+  expect([seen.opened, seen.again]).toEqual([12, 5]);
+});
+
 /** The Done when card's header, which opens and closes it. */
 function doneWhen(host: HTMLElement): HTMLButtonElement | undefined {
   return [...host.querySelectorAll<HTMLButtonElement>("button[aria-expanded]")].find((button) => button.textContent?.startsWith("Done when"));

@@ -5,7 +5,8 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import type { MissionView } from "@nouride/wire";
+import type { MissionView, NotesPlanStep } from "@nouride/wire";
+import { stepsShown } from "@/modules/missions/components/Checklist";
 import { barFill, cardLine, columnOf, dayBeside, doneWhen, FINISHED_SPAN, FINISHED_SPANS, fromLink, phoneOpening, SHOWN, STAGES, timeLine, whenLines, whenTip } from "@/modules/missions/lib/board";
 
 const NOW = 1_800_000_000_000;
@@ -82,6 +83,26 @@ describe("the page", () => {
   test("three stages on a wide page, Finished apart from them, and five shown in each before the rest", () => {
     expect(STAGES).toEqual(["backlog", "working", "needs"]);
     expect(SHOWN).toBe(5);
+  });
+});
+
+describe("a checklist folded", () => {
+  const step = (text: string, state: NotesPlanStep["state"] = "pending"): NotesPlanStep => ({ text, state });
+  const twelve = (active: number | null) => Array.from({ length: 12 }, (_, at) => step(`step ${at + 1}`, active === null ? "done" : at < active ? "done" : at === active ? "active" : "pending"));
+  const shown = (steps: NotesPlanStep[], open = false) => stepsShown(steps, open).steps.map((one) => one.text);
+
+  test("five show, the one at work with two on either side, so how far it is needs no press", () => {
+    expect(shown(twelve(7))).toEqual(["step 6", "step 7", "step 8", "step 9", "step 10"]);
+    expect(stepsShown(twelve(7), false).from).toBe(5);
+    // At either end the five are still five.
+    expect(shown(twelve(0))).toEqual(["step 1", "step 2", "step 3", "step 4", "step 5"]);
+    expect(shown(twelve(11))).toEqual(["step 8", "step 9", "step 10", "step 11", "step 12"]);
+  });
+
+  test("with none at work the first five; opened, or five and fewer, all of them", () => {
+    expect(shown(twelve(null))).toEqual(["step 1", "step 2", "step 3", "step 4", "step 5"]);
+    expect(shown(twelve(7), true)).toHaveLength(12);
+    expect(shown(twelve(2).slice(0, 5))).toHaveLength(5);
   });
 });
 

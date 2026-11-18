@@ -108,6 +108,13 @@ describe("the board", () => {
       seen.title = [title.textContent, title.getAttribute("href"), title.getAttribute("title")];
       const row = card(host, "msn_f");
       seen.row = [row.tagName, row.querySelector("a")?.getAttribute("href"), /3 of 7 steps/.test(row.textContent ?? "")];
+      // The whole row, and the whole card, opens the mission: the title's link is stretched over it, and what is
+      // pressed or hovered on it stands over the link.
+      const stretched = (id: string) => card(host, id).querySelector<HTMLElement>("[data-opens]")!.className.includes("after:absolute after:inset-0");
+      const over = (el: Element | null | undefined) => el?.className.includes("relative z-10") === true;
+      seen.opens = { row: stretched("msn_f"), card: stretched("msn_d"), rowTime: over(row.querySelector("[data-tip]")), start: over([...card(host, "msn_d").querySelectorAll("button")].find((one) => one.textContent === "Start")?.parentElement) };
+      // A finished row shows the agent's own picture beside its name, as a card does.
+      seen.agent = [row.querySelector("[data-agent]")?.textContent, row.querySelector("[data-agent] img, [data-agent] svg, [data-agent] canvas") !== null || row.querySelector("[data-agent]")!.children.length > 1];
     });
     expect(seen).toEqual({
       msn_d: { badge: "Draft", bar: null, line: "Done when3 checks pass, then you accept", time: "drafted 12 min ago" },
@@ -119,7 +126,10 @@ describe("the board", () => {
       msn_s: { badge: "Stopped", bar: null, line: "Bygading", time: "stopped 3 days ago" },
       title: ["Downloads in Home", "/dashboard/missions/msn_w", "Downloads in Home, whole"],
       row: ["LI", "/dashboard/missions/msn_f", true],
+      opens: { row: true, card: true, rowTime: true, start: true },
+      agent: [seen.agent && (seen.agent as unknown[])[0], true],
     });
+    expect(String((seen.agent as unknown[])[0]).length).toBeGreaterThan(0);
   });
 
   test("the day and the minute behind each time line: made for a draft, started too for work, since when for one that waits, ended for a finished one; reached by keyboard", async () => {
