@@ -352,7 +352,10 @@ describe("a fresh chat greets you with the agent's own cat", () => {
     const host = document.createElement("div");
     document.body.appendChild(host);
     const reactRoot = createRoot(host);
-    reactRoot.render(React.createElement(EmptyState, { agentName: "Nouva", senderName: undefined, onPick: () => {}, room: null, ...props } as never));
+    const { QueryClient, QueryClientProvider } = await import("@tanstack/react-query");
+    // The agent and the skills its openers are drawn from are given, so nothing is asked of a daemon.
+    const empty = React.createElement(EmptyState, { agent: { id: "nouva", displayName: "Nouva" }, skills: [], senderName: undefined, onPick: () => {}, room: null, ...props } as never);
+    reactRoot.render(React.createElement(QueryClientProvider, { client: new QueryClient() }, empty));
     return { host, unmount: () => (reactRoot.unmount(), host.remove()) };
   }
 
