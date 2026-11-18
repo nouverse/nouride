@@ -117,9 +117,9 @@ berapa pun umurnya. Kalau tidak ada yang terbuka, ketiga kolom jadi satu baris t
 Pencarian dan filter per agent berlaku untuk semua kolom. Di HP papannya jadi empat tab dengan jumlahnya, Finished yang
 keempat, terbuka di Needs you kalau ada isinya, dan tanggalnya tertulis di samping tiap waktu.
 
-Halaman sebuah mission dimulai dengan apa yang sedang dikerjakannya dan sudah sejauh mana, lalu brief-nya di samping
-apa yang menentukan ia selesai, hasilnya begitu ada, dan checklist-nya di atas turn-turn-nya, dengan foldernya dan
-kotak untuk memberi tahu sesuatu di sampingnya. Halaman draft hanya berisi yang bisa kamu ubah sebelum ia dimulai.
+Halaman sebuah mission dimulai dengan apa yang sedang dikerjakannya dan sudah sejauh mana, lalu brief-nya dan hasilnya
+begitu ada, masing-masing selebar halaman, dan checklist-nya di atas turn-turn-nya, dengan foldernya, apa yang
+menentukan ia selesai dan kotak untuk memberi tahu sesuatu di sampingnya. Halaman draft hanya berisi yang bisa kamu ubah sebelum ia dimulai.
 
 **Yang menunggu kamu bilang apa yang ditunggu** (0.8.39), di Home, di Work dan di daftar: pertanyaan dengan
 pertanyaannya, hasil yang perlu diterima, batas yang tercapai. Misi yang bertanya sambil
