@@ -8,14 +8,10 @@ author: Nouride
 
 # Drawing a diagram
 
-A diagram is for seeing the shape of a thing at a glance. You write *what* is connected to *what* as a short JSON
-list; `scripts/diagram.py`, in the folder this file is in, turns it into Graphviz with a consistent style, renders a
-PNG and an SVG, and warns about what makes a diagram hard to read. Below, `DIAGRAM` stands for that script's full path.
-Write the full path in each command, e.g. `python3 /opt/nouride/skills/diagrams/scripts/diagram.py`.
+A diagram is for seeing the shape of a thing at a glance. There are two ways to draw one here. **Which one is decided
+by a check you run first, every time: not by the kind of diagram, and not by which you know better.**
 
-## Which way
-
-Two ways to draw, and the machine decides which:
+## 0. Which way: run this before anything else
 
 ```sh
 ls <private>/browser/node_modules/playwright-core >/dev/null 2>&1 && echo "browser: set up" || echo "browser: not set up"
@@ -23,13 +19,18 @@ ls <private>/browser/node_modules/playwright-core >/dev/null 2>&1 && echo "brows
 
 `<private>` is the full path of your private folder, where the `browser-automation` skill keeps its browser.
 
-- **`browser: set up`**: draw it as a page, §6. A browser lays the picture out, so it holds what boxes and arrows
-  cannot (a timeline, a before and after, steps with what each produced, a number with its shape), in type that
-  reads.
+- **`browser: set up`**: draw it as a page, §6, **whatever the diagram is, boxes and arrows included**. A browser
+  lays the picture out, in type that reads, and it holds what Graphviz cannot (a timeline, a before and after, steps
+  with what each produced, a number with its shape). Read §1, then go to §6.
 - **`browser: not set up`**: Graphviz, §1 to §5. **Do not set a browser up for a diagram**: that is hundreds of MB
   for a picture Graphviz draws, and it is the person's machine.
 
 Either way the rule is the same: render, look, fix, then send.
+
+**With Graphviz** you write *what* is connected to *what* as a short JSON list; `scripts/diagram.py`, in the folder
+this file is in, turns it into Graphviz with a consistent style, renders a PNG and an SVG, and warns about what makes
+a diagram hard to read. Below, `DIAGRAM` stands for that script's full path. Write the full path in each command, e.g.
+`python3 /opt/nouride/skills/diagrams/scripts/diagram.py`.
 
 ## This machine
 
@@ -141,7 +142,7 @@ replaced silently, and the boxes then fit their text badly.
 
 ## 6. Drawn as a page
 
-Only where the check above said `browser: set up`. Below, `PICTURE` stands for the full path of
+Where step 0 said `browser: set up`, this is how every diagram is drawn. Below, `PICTURE` stands for the full path of
 `scripts/picture.mjs` in this skill's folder, as `DIAGRAM` does for the other.
 
 **Write one HTML file**, with your `write` tool, whose picture is one element with `id="picture"` and a fixed width:
@@ -160,9 +161,10 @@ Only where the check above said `browser: set up`. Below, `PICTURE` stands for t
   with one label over another.
 - **An arrow is drawn, not typed.** `→` is blank on a machine whose font has no such glyph. Between two steps in a
   row: a narrow cell holding a line with a CSS triangle, or a small inline `<svg>` of one line and one arrowhead.
-- **A real graph is still Graphviz's.** Where arrows cross or branch (an architecture, a network), render it with §2
-  and §3 and put its SVG in the page (`<img src="home.svg">`): the title, the legend and the notes are the page's, and
-  the layout of the graph is still computed.
+- **Arrows that cross or branch are laid out by Graphviz, inside the page.** A chain of steps is a row of cells. An
+  architecture or a network, where arrows cross, branch or come back, is rendered with §2 and §3 and its SVG put in
+  the page (`<img src="home.svg">`): the title, the legend and the notes are the page's, the graph's layout is
+  computed, and the picture you send is still the page's.
 - **As little as says it**: 3 to 7 parts, one font family, text 16px or more, dark text on a light ground or the
   reverse. Every word in it is something you know from what they told you, their files or what you checked.
 - Wider than tall, but not a strip: past three steps in a row, a second row.

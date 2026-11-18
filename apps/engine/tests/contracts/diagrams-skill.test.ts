@@ -36,7 +36,12 @@ describe("the skill", () => {
 describe("two ways to draw, and the machine decides", () => {
   test("a browser already set up means a page; none means Graphviz, and never a browser set up for a diagram", () => {
     expect(skill).toContain('ls <private>/browser/node_modules/playwright-core >/dev/null 2>&1 && echo "browser: set up" || echo "browser: not set up"');
-    expect(skill).toContain("**`browser: set up`**: draw it as a page, §6.");
+    // Decided by the check and not by the kind of diagram: on the box an agent with a browser read "a real graph is
+    // still Graphviz's" and drew boxes and arrows with Graphviz, never running the check.
+    expect(skill).toContain("**Which one is decided by a check you run first, every time: not by the kind of diagram, and not by which you know better.**");
+    expect(skill).toContain("## 0. Which way: run this before anything else");
+    expect(skill).toContain("**`browser: set up`**: draw it as a page, §6, **whatever the diagram is, boxes and arrows included**.");
+    expect(skill.indexOf("## 0. Which way")).toBeLessThan(skill.indexOf("**With Graphviz** you write"));
     expect(skill).toContain("**`browser: not set up`**: Graphviz, §1 to §5. **Do not set a browser up for a diagram**");
     expect(skill).toContain("It exits 3 where no browser starts: that is Graphviz, §1 to §5, not a browser to install.");
   });
@@ -45,7 +50,8 @@ describe("two ways to draw, and the machine decides", () => {
     expect(skill).toContain("**The browser places things, you do not.**");
     expect(skill).toContain("No `position: absolute`, no pixel coordinates, no hand-written `<svg>` of boxes");
     expect(skill).toContain("**An arrow is drawn, not typed.**");
-    expect(skill).toContain("**A real graph is still Graphviz's.**");
+    expect(skill).toContain("**Arrows that cross or branch are laid out by Graphviz, inside the page.**");
+    expect(skill).toContain("the picture you send is still the page's");
     expect(skill).toContain('node PICTURE "$TMPDIR/flow.html" --browser-dir <private>/browser --out "$TMPDIR/flow.png"');
     expect(skill).toContain("**Fix every finding and render again**, then **`read` the PNG** as in §3");
   });
