@@ -47,14 +47,20 @@ df -Pk . | awk 'NR==2{print "disk_free_mb", int($4/1024)}'; node -v 2>/dev/null 
 |---|---|
 | under 600 MB available memory, or under 500 MB disk | not here: step 8 |
 | 600 MB to 1 GB available | **tight**: one page at a time, the browser closed when you are done, and no other heavy job (a render, a build) while it runs |
-| `MUSL` (Alpine) | Playwright's own browsers do not run on musl. Use the system's (`apk add chromium`, the person's call) through the config in step 2, or step 8 |
+| `MUSL` (Alpine, which Nouride's own Docker image is) | Playwright's own browsers do not run on musl: skip `install-browser`. Install the system's Chromium, the package `chromium`, the way your instructions say a system package is installed here, and name it in the config (step 2, "On musl"). Checked in Nouride's image: about 300 MB, no root. Where your instructions say no system package can be installed: step 8 |
 | a 32-bit CPU (`armv7l`, `i686`) | no Playwright browser for it: step 8 |
 | otherwise | fine |
 
 The limits are a starting guess from those measurements, not Playwright's own; a page heavy with scripts or video
 takes more.
 
-No Node means installing it, which is the person's call.
+`NO NODE`: install `nodejs` and `npm` the way your instructions say software is installed here (on Alpine, the two
+packages beside `chromium`). Where they say nothing can be installed, that is step 8.
+
+**Never go without one in silence.** If the task needed a browser and you could not get one (it would not install, it
+would not start, the machine is too small), say so before anything else in your answer: what failed, in its own
+words, and what would fix it. What `web_search` snippets and `web_fetch` give is not what the page shows, and the
+person reads your answer as if you had opened the pages unless you tell them you did not.
 
 ## 2. Set it up once
 
@@ -90,6 +96,19 @@ has), the config names it:
 ```json
 { "browser": { "browserName": "chromium", "launchOptions": { "executablePath": "/usr/bin/chromium-browser" } } }
 ```
+
+**On musl** the setup is the same folder and the same pinned CLI, with no `install-browser`, and the config written
+from where the system's Chromium is:
+
+```sh
+mkdir -p <private>/browser/scripts <private>/browser/state <private>/browser/.playwright
+cd <private>/browser && npm init -y >/dev/null && npm i --save-exact @playwright/cli@0.1.23
+echo "{ \"browser\": { \"browserName\": \"chromium\", \"launchOptions\": { \"executablePath\": \"$(command -v chromium-browser || command -v chromium)\" } } }" > .playwright/cli.config.json
+```
+
+The helpers in `scripts/` and the skills that borrow this folder read the same config, so they use it too. Words that
+come out blank in a screenshot are in a script this machine has no font for: install its font package the same way
+(`font-noto-cjk`, `font-noto-arabic`).
 
 The tool ships its own reference for every command. **Read it before your first session**, and when
 a command you want is not below. It follows the installed version, which this file does not:
@@ -229,7 +248,8 @@ try {
 
 ## 8. Somewhere else
 
-When step 1 says no, tell the person what fell short, and offer another of their machines. **Load
+When step 1 says no, tell the person what fell short, before you do the task any other way, and offer another of
+their machines. **Load
 the `network-reach` skill** to reach it by ssh, run step 1 there, and set up the folder in step 2 on
 it, as `~/browser`. Then each command is the same one through ssh (`ssh <host> 'cd browser && npx playwright-cli --raw snapshot'`), and screenshots come back with `scp` to be read here.
 
