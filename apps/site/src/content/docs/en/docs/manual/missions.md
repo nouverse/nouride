@@ -38,11 +38,12 @@ Start it: /mission accept msn_3f2a91 · drop it: /mission stop msn_3f2a91
   sends the draft again with the change named; or change it on the mission's page in the dashboard. Once it runs, its
   goal and checks stay as they are.
 - **Start it** with the button, `/mission accept <id>`, the dashboard's Start it, or by telling the agent to go: it
-  passes your words on, and they are kept with the start. **Drop it** removes it, with its folder.
+  passes your words on, and they are kept with the start. **Drop it** removes it, with its folder, and so does
+  **Delete** on its page: a draft goes at once, since nothing of it has run.
 - **Who signs it off** is in the draft: you, once its checks pass, unless the agent chose a reviewer for it, as it does
   when you are away ("do it, I'm off to sleep"). You can change it in the draft.
-- A draft nobody starts stays in the board's Backlog until someone starts or drops it. It is not counted among what
-  needs you.
+- A draft nobody starts stays in the board's Backlog until someone starts or drops it, however long that is: a draft
+  never expires. It is not counted among what needs you.
 
 Said "do it now, I'm off to sleep"? Every mission an agent starts is a draft first (0.8.40): it drafts it and says so,
 and you start it, or tell it to go and it starts its draft on your word. What it had written down about the task, and
@@ -58,8 +59,8 @@ To start one yourself:
 /mission check the 52 linked documents in KK 1.1, mark each, and copy the workbook back
 ```
 
-or **Missions → New mission** in the dashboard. The agent you address runs it, as you, and it reports to the chat you
-started it in.
+or **Missions → New mission** in the dashboard, where **Save to backlog** keeps it as a draft until you start it and
+**Start now** starts it at once. The agent you address runs it, as you, and it reports to the chat you started it in.
 
 `/goal`, as other tools name it, starts one too. A mission is a goal someone else signs off: it ends when its checks
 pass and a reviewer agrees, not when the agent says it is done.
@@ -96,14 +97,22 @@ when a step finished. A wait on you is named again once, after four hours.
 
 ## Watching it
 
-**Missions** in the dashboard is a board of four columns (0.8.40): **Backlog**, the drafts; **Working**, what is
-queued, running or being checked; **Needs you**, a question, approvals, a limit or a result to accept; **Finished**,
-done, failed or stopped. Each card has its name, a bar of its checklist's progress, the line that matters (when a draft
-is done, the step it is on, what it asks, why it failed, who stopped it), the agent's cat and when. **Start** on a
-draft and **Answer** on a question work from the card. Finished goes back the last 7, 14, 21 or 30 days (7 unless you
-choose), with Done, Failed and Stopped to narrow it; the other columns list everything open, however old. A search and
-a filter by agent narrow every column. On a phone the columns are four tabs with their counts, opening on Needs you
-when anything is there.
+**Missions** in the dashboard is a board (0.8.40). Three columns hold what is still open: **Backlog**, the drafts;
+**Working**, what is queued, running or being checked; **Needs you**, a question, approvals, a limit or a result to
+accept. Under them **Finished** lists what is done, failed or stopped, a row each. Each card has its name, a bar of its
+checklist's progress, the line that matters (when a draft is done, the step it is on, what it asks), the agent's cat
+and when; a finished row says why it failed or who stopped it. Hover a time, or reach it with the keyboard, for the day
+and the minute it was made, started and ended. **Start** on a draft and **Answer** on a question work from the card.
+
+Every column shows its newest five, with **Show more** under them. Finished goes back the last 7, 14, 21 or 30 days (7
+unless you choose), with Done, Failed and Stopped to narrow it; what is open is listed however old. With nothing open,
+the three columns are one thin line and Finished has the page. A search and a filter by agent narrow every column. On a
+phone the board is four tabs with their counts, Finished the fourth, opening on Needs you when anything is there, and
+the day stands beside each time.
+
+A mission's own page starts with what it does now and how far it is, then its brief beside what decides it is done, its
+result once it has one, and its checklist over its turns, with its folder and the box to tell it something beside them.
+A draft's page has only what you can change before it starts.
 
 **What waits for you says what it waits for** (0.8.39), on Home, on Work and in the list: a question with the question,
 a result to accept, a limit reached. A mission that asked and works on meanwhile is among

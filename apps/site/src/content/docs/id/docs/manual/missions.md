@@ -40,11 +40,11 @@ Start it: /mission accept msn_3f2a91 · drop it: /mission stop msn_3f2a91
   tetap.
 - **Mulai** dengan tombolnya, `/mission accept <id>`, tombol Start it di dashboard, atau dengan bilang ke agent untuk
   jalan; ia meneruskan kata-katamu, dan kata-kata itu disimpan bersama mulainya. **Drop it** membuangnya, beserta
-  foldernya.
+  foldernya, begitu juga **Delete** di halamannya: draft langsung hilang, karena belum ada yang dijalankan.
 - **Siapa yang mengesahkan** tertulis di draft: kamu, setelah cek-nya lolos, kecuali agent memilih pemeriksa, seperti
   yang ia lakukan kalau kamu pergi ("kerjakan ya, aku mau tidur"). Itu bisa kamu ubah di draft.
-- Draft yang tidak dimulai siapa pun tetap ada di Backlog papan, sampai ada yang memulai atau membuangnya. Ia tidak
-  dihitung sebagai yang butuh kamu.
+- Draft yang tidak dimulai siapa pun tetap ada di Backlog papan, sampai ada yang memulai atau membuangnya, berapa pun
+  lamanya: draft tidak pernah kedaluwarsa. Ia tidak dihitung sebagai yang butuh kamu.
 
 Bilang "kerjain sekarang, gw tidur dulu"? Setiap misi yang dimulai agent selalu jadi draft dulu (0.8.40): ia membuat
 draft-nya dan bilang begitu, lalu kamu yang memulainya, atau kamu suruh jalan dan ia memulai draft-nya atas kata-katamu.
@@ -61,8 +61,9 @@ Untuk memulai sendiri:
 /mission cek 52 dokumen yang di-link di KK 1.1, tandai masing-masing, lalu salin workbook-nya balik
 ```
 
-atau **Missions → New mission** di dashboard. Agent yang kamu sapa yang menjalankannya, atas nama kamu, dan ia melapor
-ke chat tempat kamu memulainya.
+atau **Missions → New mission** di dashboard: **Save to backlog** menyimpannya sebagai draft sampai kamu memulainya,
+dan **Start now** langsung menjalankannya. Agent yang kamu sapa yang menjalankannya, atas nama kamu, dan ia melapor ke
+chat tempat kamu memulainya.
 
 `/goal`, nama yang dipakai tool lain, juga memulai misi. Misi adalah tujuan yang disahkan pihak lain: ia selesai kalau
 cek-nya lulus dan pemeriksa setuju, bukan waktu agent bilang sudah selesai.
@@ -101,14 +102,24 @@ jam.
 
 ## Memantaunya
 
-**Missions** di dashboard adalah papan dengan empat kolom (0.8.40): **Backlog**, draft-draft; **Working**, yang
-mengantre, jalan atau sedang dicek; **Needs you**, pertanyaan, approval, batas atau hasil yang perlu diterima;
-**Finished**, yang selesai, gagal atau dihentikan. Tiap kartu punya namanya, bar progres checklist-nya, satu baris yang
-penting (kapan draft dianggap selesai, langkah yang sedang dikerjakan, yang ditanyakan, kenapa gagal, siapa yang
-menghentikan), kucing agent-nya dan waktunya. **Start** di draft dan **Answer** di pertanyaan bisa langsung dari
-kartunya. Finished menampilkan 7, 14, 21 atau 30 hari terakhir (7 kalau tidak dipilih), dengan Done, Failed dan Stopped
-untuk menyaringnya; kolom lain menampilkan semua yang masih terbuka, berapa pun umurnya. Pencarian dan filter per agent
-berlaku untuk semua kolom. Di HP keempat kolom jadi empat tab dengan jumlahnya, terbuka di Needs you kalau ada isinya.
+**Missions** di dashboard adalah sebuah papan (0.8.40). Tiga kolom berisi yang masih terbuka: **Backlog**,
+draft-draft; **Working**, yang mengantre, jalan atau sedang dicek; **Needs you**, pertanyaan, approval, batas atau
+hasil yang perlu diterima. Di bawahnya **Finished** mendaftar yang selesai, gagal atau dihentikan, satu baris
+masing-masing. Tiap kartu punya namanya, bar progres checklist-nya, satu baris yang penting (kapan draft dianggap
+selesai, langkah yang sedang dikerjakan, yang ditanyakan), kucing agent-nya dan waktunya; baris Finished menyebut
+kenapa gagal atau siapa yang menghentikan. Arahkan kursor ke waktunya, atau capai dengan keyboard, untuk melihat
+tanggal dan jam ia dibuat, dimulai dan selesai. **Start** di draft dan **Answer** di pertanyaan bisa langsung dari
+kartunya.
+
+Tiap kolom menampilkan lima yang terbaru, dengan **Show more** di bawahnya. Finished menampilkan 7, 14, 21 atau 30 hari
+terakhir (7 kalau tidak dipilih), dengan Done, Failed dan Stopped untuk menyaringnya; yang masih terbuka ditampilkan
+berapa pun umurnya. Kalau tidak ada yang terbuka, ketiga kolom jadi satu baris tipis dan Finished mengisi halamannya.
+Pencarian dan filter per agent berlaku untuk semua kolom. Di HP papannya jadi empat tab dengan jumlahnya, Finished yang
+keempat, terbuka di Needs you kalau ada isinya, dan tanggalnya tertulis di samping tiap waktu.
+
+Halaman sebuah mission dimulai dengan apa yang sedang dikerjakannya dan sudah sejauh mana, lalu brief-nya di samping
+apa yang menentukan ia selesai, hasilnya begitu ada, dan checklist-nya di atas turn-turn-nya, dengan foldernya dan
+kotak untuk memberi tahu sesuatu di sampingnya. Halaman draft hanya berisi yang bisa kamu ubah sebelum ia dimulai.
 
 **Yang menunggu kamu bilang apa yang ditunggu** (0.8.39), di Home, di Work dan di daftar: pertanyaan dengan
 pertanyaannya, hasil yang perlu diterima, batas yang tercapai. Misi yang bertanya sambil
