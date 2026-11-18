@@ -1,8 +1,7 @@
 /**
- * What decides a mission is done, beside its brief at the top of its page: folded to one line ("10 checks pass, then
- * you accept") until opened, as the brief is. Open, it is the daemon's start notice in full: the commands that must
- * pass, the reviewer, a person's accept. Ten commands open beside a folded brief left a hole under the brief and pushed
- * the result down the page.
+ * What decides a mission is done, beside its work and under its folder: folded to one line ("10 checks pass, then you
+ * accept") until opened, as the brief is. Open, it is the daemon's start notice in full: the commands that must pass,
+ * the reviewer, a person's accept. Ten commands open at the top of the page pushed the result down it.
  *
  * A check that failed last time opens it by itself: that is the one thing here a person came to read.
  */

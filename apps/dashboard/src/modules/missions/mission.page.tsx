@@ -31,7 +31,6 @@ import { Meters } from "./components/Meters";
 import { MissionActions } from "./components/MissionActions";
 import { MissionResult } from "./components/MissionResult";
 import { BriefCard } from "./components/BriefCard";
-import { DoneWhenCard } from "./components/DoneWhenCard";
 import { MissionWork } from "./components/MissionWork";
 import { NowLine } from "./components/NowLine";
 import { AnswerBox } from "./components/Questions";
@@ -166,16 +165,9 @@ export default function MissionPage({ missionId }: { missionId: string }) {
         </Card>
       )}
 
-      {/* Its brief and what decides it is done, side by side at the top, each folded to its header: ten checks open beside
-          a folded brief left a hole under the brief and pushed the result down the page. A draft's form holds its own. */}
-      {draft ? (
-        detail.brief && <BriefCard brief={detail.brief} shown={briefShown(detail.briefPath, mission.id)} />
-      ) : (
-        <div className={detail.brief ? "grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]" : ""} data-brief-and-done>
-          {detail.brief && <BriefCard brief={detail.brief} shown={briefShown(detail.briefPath, mission.id)} />}
-          <DoneWhenCard mission={mission} />
-        </div>
-      )}
+      {/* Its brief across the page, as its result is under it. What decides it is done is beside the work, under its
+          folder: side by side with the brief it read as a second, lesser brief. */}
+      {detail.brief && <BriefCard brief={detail.brief} shown={briefShown(detail.briefPath, mission.id)} />}
 
       {/* Parked while it works on what does not depend on them — a mission waits only once nothing else moves. */}
       {parked.length > 0 && !only && (

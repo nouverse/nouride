@@ -278,35 +278,38 @@ test("its actions keep one row beside its title from md: Accept, Continue, Stop 
   expect(actions?.className).toContain("md:flex-nowrap");
 });
 
-test("from the top: what it does now and how far it is, its brief beside what decides it is done, then its checklist over its turns with its folder and the box to tell it beside them", async () => {
-  // "Now" and the meters were under the brief, a scroll away; what decides it is done was at the foot of the side column.
+test("from the top: what it does now and how far it is, its brief across the page, then its checklist over its turns, and beside them its folder, what decides it is done, then the box to tell it", async () => {
+  // "Now" and the meters were under the brief, a scroll away. What decides it is done stood beside the brief for a
+  // moment, where it read as a second brief: it is beside the work, under the folder.
   missionTurns([missionTurn(1, {})]);
   answer({ "/missions/msn_1": detailOf({}, { brief: "The brief it works from.", briefPath: "/w/private/nova/missions/msn_1/BRIEF.md" }) });
-  const seen = { order: [] as string[], pair: [] as string[], main: [] as string[], side: [] as string[], phone: {} as Record<string, string | undefined> };
+  const seen = { order: [] as string[], brief: "", main: [] as string[], side: [] as string[], phone: {} as Record<string, string | undefined> };
   await renderPage("/missions/msn_1", async (host) => {
     await eventually(() => host.querySelector("[data-work]") !== null && buttons(host).includes("Read it whole"), 2_000, "the page");
     const titled = (root: Element) => [...root.querySelectorAll("h2, h3")].map((head) => head.textContent ?? "");
+    const cardOf = (title: string, root: Element = host) => [...root.querySelectorAll("section")].find((one) => one.querySelector("h2, h3")?.textContent === title);
     const meters = host.querySelector('[aria-label="Progress and limits"]')!;
-    const pair = host.querySelector("[data-brief-and-done]")!;
+    const brief = cardOf("Brief")!;
     const work = host.querySelector("[data-work]")!;
     const before = (a: Element, b: Element) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
-    seen.order = [before(meters, pair) ? "meters, then the brief" : "the brief first", before(pair, work) ? "the brief, then the work" : "the work first"];
-    seen.pair = titled(pair).filter((title) => ["Brief", "Done when"].includes(title));
+    seen.order = [before(meters, brief) ? "meters, then the brief" : "the brief first", before(brief, work) ? "the brief, then the work" : "the work first"];
+    // Across the page: the page's own child, sharing its row with nothing.
+    seen.brief = brief.parentElement === work.parentElement ? "across the page" : "in a row with something";
     const [main, side] = [...work.children] as [HTMLElement, HTMLElement];
-    seen.main = titled(main).filter((title) => ["Checklist", "Turns"].includes(title));
+    seen.main = titled(main).filter((title) => ["Checklist", "Turns", "Done when"].includes(title));
     const folder = side.querySelector("[data-folder]")!;
+    const done = cardOf("Done when", side)!;
     const tell = side.querySelector("textarea")!;
-    seen.side = [side.tagName, before(folder, tell) ? "its folder, then the box" : "the box first", titled(side).includes("Done when") ? "Done when below" : "no Done when"];
+    seen.side = [side.tagName, before(folder, done) ? "its folder, then what decides it" : "what decides it first", before(done, tell) ? "then the box" : "the box first"];
     // happy-dom lays out nothing, so the classes that order the one column on a phone are what is asserted.
-    const cardOf = (title: string) => [...work.querySelectorAll("section")].find((one) => one.querySelector("h2, h3")?.textContent === title);
     const order = (el: Element | null | undefined) => el?.className.split(" ").find((name) => name.startsWith("max-lg:order-"));
-    seen.phone = { checklist: order(cardOf("Checklist")), folder: order(folder), tell: order(tell.closest("[class*='max-lg:order-']")), turns: order(cardOf("Turns")), main: main.className.includes("max-lg:contents") ? "contents" : "a column" };
+    seen.phone = { checklist: order(cardOf("Checklist", work)), folder: order(folder), done: order(done.closest("[class*='max-lg:order-']")), tell: order(tell.closest("[class*='max-lg:order-']")), turns: order(cardOf("Turns", work)), main: main.className.includes("max-lg:contents") ? "contents" : "a column" };
   });
   expect(seen.order).toEqual(["meters, then the brief", "the brief, then the work"]);
-  expect(seen.pair).toEqual(["Brief", "Done when"]);
+  expect(seen.brief).toBe("across the page");
   expect(seen.main).toEqual(["Checklist", "Turns"]);
-  expect(seen.side).toEqual(["ASIDE", "its folder, then the box", "no Done when"]);
-  expect(seen.phone).toEqual({ checklist: "max-lg:order-1", folder: "max-lg:order-2", tell: "max-lg:order-3", turns: "max-lg:order-5", main: "contents" });
+  expect(seen.side).toEqual(["ASIDE", "its folder, then what decides it", "then the box"]);
+  expect(seen.phone).toEqual({ checklist: "max-lg:order-1", folder: "max-lg:order-2", done: "max-lg:order-3", tell: "max-lg:order-4", turns: "max-lg:order-6", main: "contents" });
 });
 
 /** The page's answer for msn_1 with the mission changed — a state the fixture's install does not hold. */
@@ -325,7 +328,7 @@ test("a draft (0.8.11): its brief shown, and changed before it starts — only w
     await eventually(() => buttons(host).includes("Change the draft"), 2_000, "the draft's card");
     // Nothing of a draft has run: no meters, no checklist, no turns, no box to tell it something, and no "Needs you".
     // As yes or no, not the elements themselves: a failure that prints a whole page's nodes never ends.
-    there = ['[aria-label="Progress and limits"]', "[data-work]", '[role="status"].alert', "[data-brief-and-done]"].map((what) => host.querySelector(what) !== null);
+    there = ['[aria-label="Progress and limits"]', "[data-work]", '[role="status"].alert'].map((what) => host.querySelector(what) !== null);
     // The brief folded until opened, then read in place.
     openBrief(host);
     await eventually(() => host.textContent?.includes("The owner's answers, first.") === true, 2_000, "the brief, opened");
@@ -351,7 +354,7 @@ test("a draft (0.8.11): its brief shown, and changed before it starts — only w
     sent = record.posts;
   });
   expect(shown).toContain("Nothing has run. Change it here, then start it, or delete it.");
-  expect(there).toEqual([false, false, false, false]);
+  expect(there).toEqual([false, false, false]);
   expect(shown).toContain("drafted");
   // Its badge says Draft, as its card on the board does: a draft is no call on the reader.
   expect(shown).toContain("Draft");
@@ -403,8 +406,8 @@ function doneWhen(host: HTMLElement): HTMLButtonElement | undefined {
   return [...host.querySelectorAll<HTMLButtonElement>("button[aria-expanded]")].find((button) => button.textContent?.startsWith("Done when"));
 }
 
-test("what decides it is done is one line beside the brief until opened, and open by itself once a check has failed", async () => {
-  // Ten commands open beside a folded brief left a hole under the brief and pushed the result down the page (live).
+test("what decides it is done is one line until opened, and open by itself once a check has failed", async () => {
+  // Ten commands open at the top of the page pushed the result down it (live).
   const checks = Array.from({ length: 10 }, (_, at) => `test -s part-${at}.md`);
   answer({ "/missions/msn_1": detailOf({ checks, accept: true, lastCheck: null }, { brief: "The brief it works from." }) });
   const seen = { folded: [] as unknown[], opened: [] as unknown[], failed: [] as unknown[] };
