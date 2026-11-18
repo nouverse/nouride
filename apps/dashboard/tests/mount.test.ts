@@ -1713,20 +1713,6 @@ describe("missions", () => {
     expect(asked.filter((search) => search !== "")[0]).toBe("?agent=nouva&days=7");
   });
 
-  test("a mission's page: four meters against its limits, the checklist with each step's note, how it is judged done — and only Stop while it works", async () => {
-    const seen: { html?: string; buttons?: string[] } = {};
-    await renderPage("/missions/msn_1", async (host) => {
-      await eventually(() => host.textContent?.includes("Checklist") === true, 2_000, "the page");
-      seen.html = host.innerHTML;
-      seen.buttons = buttons(host);
-    });
-    for (const words of ["1 of 3", "0 of 50", "0m of 8h", "0 of 50M", "du in sizes.txt — build/ is 41 GB", "test -s report.md", "/srv/nouride/workspace/shared/report"]) {
-      expect(seen.html).toContain(words);
-    }
-    expect(seen.buttons).toContain("Stop");
-    expect(seen.buttons!.some((label) => /^(Continue|Accept|Answer)/.test(label))).toBe(false);
-  });
-
   test("now: the call running this moment, read from the conversation's live feed — and its turn, headed by why it started", async () => {
     const running = {
       id: "turn_m1",

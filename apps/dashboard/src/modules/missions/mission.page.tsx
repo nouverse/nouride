@@ -18,7 +18,6 @@ import { Link } from "@tanstack/react-router";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
 import { Mascot } from "@/commons/components/brand/Mascot";
 import { api } from "@/commons/lib/api";
-import type { MissionDetail } from "@nouride/wire";
 import { ApiError } from "@/commons/lib/api.client";
 import { ApprovalCard } from "@/commons/components/approvals/ApprovalCard";
 import { ReadOnlyNote } from "@/commons/components/people/ReadOnlyNote";
@@ -32,6 +31,7 @@ import { Meters } from "./components/Meters";
 import { MissionActions } from "./components/MissionActions";
 import { MissionResult } from "./components/MissionResult";
 import { BriefCard } from "./components/BriefCard";
+import { DoneWhenCard } from "./components/DoneWhenCard";
 import { MissionWork } from "./components/MissionWork";
 import { NowLine } from "./components/NowLine";
 import { AnswerBox } from "./components/Questions";
@@ -50,39 +50,6 @@ const OPEN_MS = 5_000;
 const SETTLED_MS = 60_000;
 
 const noSession = () => {};
-
-/** How it is judged done, in the words the daemon's start notice uses: its checks, then the reviewer, then a person. */
-function JudgedBy({ detail }: { detail: MissionDetail }) {
-  const { mission } = detail;
-  return (
-    <div className="space-y-3 text-sm">
-      {mission.checks.length > 0 && (
-        <div className="space-y-1">
-          <p className="font-mono text-[10px] font-bold uppercase tracking-wider text-base-content/65">Checks that must pass</p>
-          <ul className="space-y-1">
-            {mission.checks.map((check) => (
-              <li key={check} className="rounded-lg bg-base-200/70 px-2.5 py-1 font-mono text-xs break-all">
-                {check}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {/* A reviewer's brief names paths with no place to break: one ran 140 px out of this card (live, 2026-10-31). */}
-      <p className="text-base-content/80 [overflow-wrap:anywhere]">
-        <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-base-content/65">Reviewer · </span>
-        {mission.reviewOn ? (mission.review ?? "checks the result against the goal") : "none"}
-      </p>
-      {(mission.accept || mission.checks.length === 0) && <p className="text-base-content/80">A person accepts the result before it is done.</p>}
-      {mission.lastCheck && (
-        <div className="space-y-1">
-          <p className="font-mono text-[10px] font-bold uppercase tracking-wider text-error">Last check failed</p>
-          <pre className="max-h-48 overflow-auto rounded-lg bg-base-200/70 p-2.5 font-mono text-[11px] leading-relaxed whitespace-pre-wrap break-all">{mission.lastCheck}</pre>
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function MissionPage({ missionId }: { missionId: string }) {
   const me = useMe();
@@ -199,15 +166,14 @@ export default function MissionPage({ missionId }: { missionId: string }) {
         </Card>
       )}
 
-      {/* Its brief and what decides it is done, side by side at the top. A draft's form above holds what decides it. */}
+      {/* Its brief and what decides it is done, side by side at the top, each folded to its header: ten checks open beside
+          a folded brief left a hole under the brief and pushed the result down the page. A draft's form holds its own. */}
       {draft ? (
         detail.brief && <BriefCard brief={detail.brief} shown={briefShown(detail.briefPath, mission.id)} />
       ) : (
         <div className={detail.brief ? "grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]" : ""} data-brief-and-done>
           {detail.brief && <BriefCard brief={detail.brief} shown={briefShown(detail.briefPath, mission.id)} />}
-          <Card title="Done when">
-            <JudgedBy detail={detail} />
-          </Card>
+          <DoneWhenCard mission={mission} />
         </div>
       )}
 

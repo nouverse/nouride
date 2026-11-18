@@ -241,6 +241,8 @@ test("a reviewer's brief naming a long path breaks it, rather than running out o
   missionTurns([missionTurn(1, {})], { "/missions/msn_1": { status: 200, body: { ...shown, mission: { ...shown.mission, reviewOn: true, review } } } });
   let line: Element | undefined;
   await renderPage("/missions/msn_1", async (host) => {
+    await eventually(() => doneWhen(host) !== undefined, 2_000, "what decides it is done");
+    doneWhen(host)!.click();
     await eventually(() => (line = [...host.querySelectorAll("p")].find((p) => p.textContent?.startsWith("Reviewer · "))) !== undefined, 2_000, "the reviewer's line");
   });
   expect(line?.textContent).toBe(`Reviewer · ${review}`);
@@ -374,6 +376,51 @@ test("a mission at work has no draft form, and its brief is still shown — fold
   expect(folded).toContain("Kept in its folder: each turn starts from it, beside the goal.");
   expect(folded).not.toContain("The brief it works from.");
   expect(page).not.toContain("Change the draft");
+});
+
+test("a mission's page: four meters against its limits, the checklist with each step's note, how it is judged done — and only Stop while it works", async () => {
+  const seen: { html?: string; buttons?: string[] } = {};
+  await renderPage("/missions/msn_1", async (host) => {
+    await eventually(() => host.textContent?.includes("Checklist") === true, 2_000, "the page");
+    // How it is judged done is folded to its one line until opened.
+    [...host.querySelectorAll<HTMLButtonElement>("button[aria-expanded]")].find((button) => button.textContent?.startsWith("Done when"))!.click();
+    await eventually(() => host.querySelector("[data-done-when]") !== null, 2_000, "what decides it is done, opened");
+    seen.html = host.innerHTML;
+    seen.buttons = buttons(host);
+  });
+  for (const words of ["1 of 3", "0 of 50", "0m of 8h", "0 of 50M", "du in sizes.txt — build/ is 41 GB", "test -s report.md", "/srv/nouride/workspace/shared/report"]) {
+    expect(seen.html).toContain(words);
+  }
+  expect(seen.buttons).toContain("Stop");
+  expect(seen.buttons!.some((label) => /^(Continue|Accept|Answer)/.test(label))).toBe(false);
+});
+
+/** The Done when card's header, which opens and closes it. */
+function doneWhen(host: HTMLElement): HTMLButtonElement | undefined {
+  return [...host.querySelectorAll<HTMLButtonElement>("button[aria-expanded]")].find((button) => button.textContent?.startsWith("Done when"));
+}
+
+test("what decides it is done is one line beside the brief until opened, and open by itself once a check has failed", async () => {
+  // Ten commands open beside a folded brief left a hole under the brief and pushed the result down the page (live).
+  const checks = Array.from({ length: 10 }, (_, at) => `test -s part-${at}.md`);
+  answer({ "/missions/msn_1": detailOf({ checks, accept: true, lastCheck: null }, { brief: "The brief it works from." }) });
+  const seen = { folded: [] as unknown[], opened: [] as unknown[], failed: [] as unknown[] };
+  const state = (host: HTMLElement) => [doneWhen(host)?.getAttribute("aria-expanded"), host.querySelector("[data-done-when]") !== null, host.textContent?.includes("test -s part-9.md") === true];
+  await renderPage("/missions/msn_1", async (host) => {
+    await eventually(() => doneWhen(host) !== undefined, 2_000, "the card");
+    seen.folded = [...state(host), doneWhen(host)!.textContent?.includes("10 checks pass, then you accept.") === true];
+    doneWhen(host)!.click();
+    await eventually(() => host.querySelector("[data-done-when]") !== null, 2_000, "opened");
+    seen.opened = state(host);
+  });
+  answer({ "/missions/msn_1": detailOf({ checks, lastCheck: "part-3.md is empty" }) });
+  await renderPage("/missions/msn_1", async (host) => {
+    await eventually(() => doneWhen(host) !== undefined, 2_000, "the card");
+    seen.failed = [...state(host), host.textContent?.includes("part-3.md is empty") === true];
+  });
+  expect(seen.folded).toEqual(["false", false, false, true]);
+  expect(seen.opened).toEqual(["true", true, true]);
+  expect(seen.failed).toEqual(["true", true, true, true]);
 });
 
 /** The Brief card's header, which opens and closes it. */
