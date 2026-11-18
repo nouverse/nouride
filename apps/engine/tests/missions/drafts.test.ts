@@ -394,3 +394,14 @@ describe("where a mission works — a worktree is code's (0.8.11)", () => {
     expect(checks).not.toContain("a commit is on a local branch");
   });
 });
+
+test("a draft that is dropped or deleted leaves no episode: nothing of it ran", async () => {
+  const h = await missionsHarness();
+  const dropped = await h.start("an idea", { startedBy: "nouride:system", byAgent: "nova", proposed: true });
+  h.missions.stop(dropped.id, "Gading");
+  const deleted = await h.start("another idea", { startedBy: "nouride:system", byAgent: "nova", proposed: true });
+  await h.missions.delete(deleted.id, "Gading");
+  await h.settle();
+  expect(h.store.get(deleted.id)).toBeNull();
+  expect(h.remembered).toEqual([]);
+});

@@ -703,7 +703,9 @@ export class Missions implements TurnShaper {
     tellEnded(this.deps, mission, { why, accepted, reportShown });
     if (this.deps.notes) void carryBack(this.deps.notes, mission).catch((err: unknown) => log.warn("a chat's line for its mission could not be updated", { mission: mission.id, error: String(err) }));
     if (this.deps.notes) void closePlan(this.deps.notes, mission).catch((err: unknown) => log.warn("a done mission's checklist could not be closed", { mission: mission.id, error: String(err) }));
-    void this.deps.remember?.(mission).catch((err: unknown) => log.warn("a mission's episode could not be filed", { mission: mission.id, error: String(err) }));
+    // One that never started did no work to remember: a draft dropped or deleted left "Mission stopped" in its person's
+    // memory, for a mission that never ran.
+    if (mission.startedAt !== null) void this.deps.remember?.(mission).catch((err: unknown) => log.warn("a mission's episode could not be filed", { mission: mission.id, error: String(err) }));
     this.deps.helped?.(mission);
     this.tellParent(mission);
     this.tidy(mission);
