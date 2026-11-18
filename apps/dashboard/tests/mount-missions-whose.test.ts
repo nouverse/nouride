@@ -67,7 +67,7 @@ describe("a mission the reader only reads, that waits for a person", () => {
     expect(seenAs(own)).toBe("Needs you · a question");
     expect(columnOf(theirs)).toBe("working");
     expect(columnOf(own)).toBe("needs");
-    expect(seenTone(theirs)).toBe(seenTone({ seen: "ended" }));
+    expect(seenTone(theirs)).toBe(seenTone({ seen: "ended", status: "stopped", waitKind: null, startedAt: 1 }));
     expect(seenTone(own)).not.toBe(seenTone(theirs));
   });
 

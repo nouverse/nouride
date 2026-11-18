@@ -45,21 +45,30 @@ export function waitsElsewhere(mission: Pick<MissionView, "seen" | "changeable">
   return mission.seen === "needs_you" && mission.changeable === false;
 }
 
+/** A draft: written by an agent or a person, waiting for someone to start it. Nothing of it has run. */
+export function isDraft(mission: Pick<MissionView, "status" | "waitKind" | "startedAt">): boolean {
+  return mission.status === "waiting" && mission.waitKind === "accept" && mission.startedAt === null;
+}
+
+/** A draft's tone, the Backlog's own: it waits to be started, which is no call on anybody. */
+const DRAFT_TONE = "bg-secondary/12 text-secondary border-secondary/25";
+
 /** The badge's colours: one that waits for someone else is as quiet as one that ended, since nothing is the reader's to do. */
-export function seenTone(mission: Pick<MissionView, "seen" | "changeable">): string {
-  return SEEN_TONE[waitsElsewhere(mission) ? "ended" : mission.seen];
+export function seenTone(mission: Pick<MissionView, "seen" | "changeable" | "status" | "waitKind" | "startedAt">): string {
+  if (waitsElsewhere(mission)) return SEEN_TONE.ended;
+  return isDraft(mission) ? DRAFT_TONE : SEEN_TONE[mission.seen];
 }
 
 /**
  * The words on a mission's badge: "Needs you · a question", "Working", "Ended · failed". A mission waiting in the queue is
- * working as a person sees it, and says it is queued; one running its checks says so. A draft (0.8.11) waits on an accept
- * that starts it, and says "draft": "Needs you · accept" read as a result to sign off, the chat's notice and the page's
- * buttons saying Draft, Start it and Drop it. One at work that asked a question and went on says so: "Working" alone
- * read as nothing for the person to do.
+ * working as a person sees it, and says it is queued; one running its checks says so. A draft waits on the accept that
+ * starts it and says "Draft", as its card on the board does: "Needs you · accept" read as a result to sign off, and
+ * "Needs you · draft" as a call on the reader, which a draft in the backlog is not. One at work that asked a question
+ * and went on says so: "Working" alone read as nothing for the person to do.
  */
 export function seenAs(mission: Pick<MissionView, "seen" | "status" | "waitKind" | "startedAt" | "changeable" | "person"> & { answers?: MissionView["answers"] }): string {
   if (waitsElsewhere(mission)) return `Waiting for ${mission.person?.name ?? "an admin"}`;
-  if (mission.seen === "needs_you" && mission.waitKind === "accept" && mission.startedAt === null) return `${SEEN_LABEL.needs_you} · draft`;
+  if (isDraft(mission)) return "Draft";
   if (mission.seen === "needs_you") return mission.waitKind ? `${SEEN_LABEL.needs_you} · ${NEEDS[mission.waitKind]}` : SEEN_LABEL.needs_you;
   if (mission.seen === "ended") return `${SEEN_LABEL.ended} · ${mission.status === "failed" ? "failed" : "stopped"}`;
   if (mission.status === "queued") return `${SEEN_LABEL.working} · queued`;

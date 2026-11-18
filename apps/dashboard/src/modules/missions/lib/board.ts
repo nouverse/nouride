@@ -14,7 +14,7 @@ import type { MissionView } from "@nouride/wire";
 import { asksWhileWorking, openQuestion } from "@/commons/lib/mission-waits";
 import { ago } from "@/commons/lib/format";
 import { dayOf, fullWhen } from "@/commons/lib/when";
-import { needsYouSaid, waitsElsewhere } from "./mission";
+import { isDraft, needsYouSaid, waitsElsewhere } from "./mission";
 
 export type Column = "backlog" | "working" | "needs" | "finished";
 export type Outcome = "done" | "failed" | "stopped";
@@ -40,11 +40,6 @@ export const SHOWN = 5;
 export const FINISHED_SPANS = [7, 14, 21, 30] as const;
 export type FinishedSpan = (typeof FINISHED_SPANS)[number];
 export const FINISHED_SPAN: FinishedSpan = 7;
-
-/** A draft: written by an agent or a person, waiting for someone to start it. Nothing of it has run. */
-function isDraft(mission: Pick<MissionView, "status" | "waitKind" | "startedAt">): boolean {
-  return mission.status === "waiting" && mission.waitKind === "accept" && mission.startedAt === null;
-}
 
 /**
  * The column a mission is in. One that waits on someone who is not the reader is at work as they see it; one at work

@@ -10,7 +10,7 @@ import type { LiveTurn, MissionSettings, MissionView, TurnStep } from "@nouride/
 import { stepNow } from "@/commons/lib/steps";
 import { columnOf } from "@/modules/missions/lib/board";
 import { missionName } from "@/commons/lib/mission-name";
-import { actionsFor, briefShown, inFolder, meters, needsYouSaid, rowLine, searchedIn, seenAs, whyStarted } from "@/modules/missions/lib/mission";
+import { actionsFor, briefShown, inFolder, meters, needsYouSaid, rowLine, searchedIn, seenAs, seenTone, whyStarted } from "@/modules/missions/lib/mission";
 import { startInput } from "@/modules/missions/components/NewMissionForm";
 import { fieldText, fits, limitsPatch, range } from "@/modules/missions/lib/limits";
 import { createElement } from "react";
@@ -59,8 +59,10 @@ describe("what a person sees", () => {
     expect(seenAs(waiting("limit"))).toBe("Needs you · a limit");
     expect(seenAs(waiting("stuck"))).toBe("Needs you · stuck");
     expect(seenAs(waiting("accept"))).toBe("Needs you · accept");
-    // A draft waits on the accept that starts it: it says so, as its notice and its buttons do (0.8.11).
-    expect(seenAs(waiting("accept", { startedAt: null }))).toBe("Needs you · draft");
+    // A draft waits on the accept that starts it: it says Draft, as its card does, and is no call on the reader.
+    expect(seenAs(waiting("accept", { startedAt: null }))).toBe("Draft");
+    expect(seenTone(waiting("accept", { startedAt: null }))).toContain("text-secondary");
+    expect(seenTone(waiting("accept"))).toContain("text-warning");
     expect(seenAs({ ...MISSION, status: "failed", seen: "ended" })).toBe("Ended · failed");
     expect(seenAs({ ...MISSION, status: "stopped", seen: "ended" })).toBe("Ended · stopped");
     expect(seenAs({ ...MISSION, status: "queued" })).toBe("Working · queued");

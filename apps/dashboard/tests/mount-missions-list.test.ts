@@ -131,12 +131,15 @@ describe("the board", () => {
         const tip = card(host, id).querySelector<HTMLElement>("[data-tip]")!;
         seen[id] = [(tip.dataset.tip ?? "").split(" · ").map((part) => /^(Created|Started|Waiting since|Ended) .*\d{4}/.exec(part)?.[1] ?? part), tip.querySelector("[data-time]")?.getAttribute("tabindex"), tip.querySelector(".sr-only")?.textContent === `: ${tip.dataset.tip}`];
       }
+      // Over the line on a card, whose buttons are under it; to the left on a row, which ends at the page's edge.
+      seen.sides = ["msn_d", "msn_ok"].map((id) => card(host, id).querySelector<HTMLElement>("[data-tip]")!.className.split(" ").find((name) => /^tooltip-/.test(name)));
     });
     expect(seen).toEqual({
       msn_d: [["Created"], "0", true],
       msn_w: [["Created", "Started"], "0", true],
       msn_q: [["Created", "Started", "Waiting since"], "0", true],
       msn_ok: [["Created", "Started", "Ended"], "0", true],
+      sides: ["tooltip-top", "tooltip-left"],
     });
   });
 

@@ -353,6 +353,9 @@ test("a draft (0.8.11): its brief shown, and changed before it starts — only w
   expect(shown).toContain("Nothing has run. Change it here, then start it, or delete it.");
   expect(there).toEqual([false, false, false, false]);
   expect(shown).toContain("drafted");
+  // Its badge says Draft, as its card on the board does: a draft is no call on the reader.
+  expect(shown).toContain("Draft");
+  expect(shown).not.toContain("Needs you");
   expect(shown).not.toContain("started");
   expect(shown).toContain("What to read");
   expect(shown).toContain("The owner's answers, first.");

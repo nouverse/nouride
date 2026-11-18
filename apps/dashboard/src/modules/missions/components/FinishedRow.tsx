@@ -43,7 +43,7 @@ export function FinishedRow({ mission, motion = "", showWhose }: { mission: Miss
       {showWhose || readsOnly(mission) ? <Tag title={readsOnly(mission) ? "You can read this one, not change it" : undefined}>{whoseWords(mission)}</Tag> : null}
       <span className="w-24 shrink-0 truncate text-xs text-base-content/80">{face?.name ?? mission.agentId}</span>
       <span className="w-28 shrink-0 font-mono text-[11px] tabular-nums text-base-content/65">{list ? `${list.done} of ${list.total} steps` : ""}</span>
-      <WhenLine mission={mission} className="w-32 shrink-0 lg:text-right" />
+      <WhenLine mission={mission} side="left" className="w-32 shrink-0 lg:text-right" />
     </li>
   );
 }

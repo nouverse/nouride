@@ -119,7 +119,7 @@ export default function MissionPage({ missionId }: { missionId: string }) {
             {mission.jobId ? ` · a run of job ${detail.jobName ?? mission.jobId}` : ""}
           </span>
           {/* When, as its card on the board says it, the day and the minute a hover away: a draft never "started". */}
-          <WhenLine mission={mission} />
+          <WhenLine mission={mission} side="under" />
         </div>
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <h1 className="min-w-0 text-lg font-semibold leading-snug tracking-tight text-base-content [overflow-wrap:anywhere] sm:text-xl">{missionName(mission)}</h1>

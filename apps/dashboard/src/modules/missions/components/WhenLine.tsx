@@ -9,7 +9,10 @@ import { useWide } from "@/commons/hooks/use-wide";
 import { cn } from "@/commons/lib/utils";
 import { dayBeside, timeLine, whenTip } from "../lib/board";
 
-export function WhenLine({ mission, className }: { mission: MissionView; className?: string }) {
+/** Where the tip opens. Over the line on a card, whose buttons are under it; beside it on a row at the page's edge. */
+const SIDE = { over: "tooltip-top", under: "tooltip-bottom", left: "tooltip-left" };
+
+export function WhenLine({ mission, className, side = "over" }: { mission: MissionView; className?: string; side?: keyof typeof SIDE }) {
   const wide = useWide();
   const tip = whenTip(mission);
   if (!wide) {
@@ -20,7 +23,7 @@ export function WhenLine({ mission, className }: { mission: MissionView; classNa
     );
   }
   return (
-    <span className={cn("tooltip tooltip-bottom block", className)} data-tip={tip}>
+    <span className={cn("tooltip block", SIDE[side], className)} data-tip={tip}>
       <span tabIndex={0} className="cursor-default rounded font-mono text-[11px] text-base-content/65 underline decoration-base-content/25 decoration-dotted underline-offset-4" data-time>
         {timeLine(mission)}
       </span>
