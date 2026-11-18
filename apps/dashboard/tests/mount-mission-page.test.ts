@@ -300,15 +300,16 @@ test("from the top: what it does now and how far it is, its brief across the pag
     const folder = side.querySelector("[data-folder]")!;
     const done = cardOf("Done when", side)!;
     const tell = side.querySelector("textarea")!;
-    seen.side = [side.tagName, before(folder, done) ? "its folder, then what decides it" : "what decides it first", before(done, tell) ? "then the box" : "the box first"];
+    seen.side = [side.tagName, before(folder, done) ? "its folder, then what decides it" : "what decides it first", before(done, tell) ? "then the box" : "the box first", titled(side).slice(0, 2).join(", ")];
     // happy-dom lays out nothing, so the classes that order the one column on a phone are what is asserted.
     const order = (el: Element | null | undefined) => el?.className.split(" ").find((name) => name.startsWith("max-lg:order-"));
-    seen.phone = { checklist: order(cardOf("Checklist", work)), folder: order(folder), done: order(done.closest("[class*='max-lg:order-']")), tell: order(tell.closest("[class*='max-lg:order-']")), turns: order(cardOf("Turns", work)), main: main.className.includes("max-lg:contents") ? "contents" : "a column" };
+    seen.phone = { checklist: order(cardOf("Checklist", work)), folder: order(folder.closest("section")), done: order(done.closest("[class*='max-lg:order-']")), tell: order(tell.closest("[class*='max-lg:order-']")), turns: order(cardOf("Turns", work)), main: main.className.includes("max-lg:contents") ? "contents" : "a column" };
   });
   expect(seen.order).toEqual(["meters, then the brief", "the brief, then the work"]);
   expect(seen.brief).toBe("across the page");
   expect(seen.main).toEqual(["Checklist", "Turns"]);
-  expect(seen.side).toEqual(["ASIDE", "its folder, then what decides it", "then the box"]);
+  // Each card of the side column says what it is: the folder was a bare path with no word over it.
+  expect(seen.side).toEqual(["ASIDE", "its folder, then what decides it", "then the box", "Folder, Done when"]);
   expect(seen.phone).toEqual({ checklist: "max-lg:order-1", folder: "max-lg:order-2", done: "max-lg:order-3", tell: "max-lg:order-4", turns: "max-lg:order-6", main: "contents" });
 });
 

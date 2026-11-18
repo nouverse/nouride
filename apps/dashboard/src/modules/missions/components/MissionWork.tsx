@@ -48,13 +48,16 @@ export function MissionWork({
       </div>
 
       <aside className="min-w-0 max-lg:contents max-lg:[&>*]:min-w-0 lg:space-y-5">
-        {/* The folder it works in, over the box to tell it something: for an admin, a way to it in Files. */}
-        <p className="flex items-start gap-1.5 rounded-2xl border border-base-content/[0.08] bg-base-100 px-4 py-3 font-mono text-xs text-base-content/70 shadow-soft break-all max-lg:order-2" data-folder>
-          <FolderOpen size={13} className="mt-0.5 shrink-0" aria-hidden="true" />
-          <span className="min-w-0">
-            <FilePath text={mission.workdir} link="text-primary hover:underline" />
-          </span>
-        </p>
+        {/* The folder it works in, named as the cards under it are: a bare path read as nothing in particular. For an
+            admin it is a way to it in Files. */}
+        <Card title="Folder" description="Where it works, and where what it writes is kept." className="max-lg:order-2">
+          <p className="flex items-start gap-1.5 font-mono text-xs text-base-content/70 break-all" data-folder>
+            <FolderOpen size={13} className="mt-0.5 shrink-0" aria-hidden="true" />
+            <span className="min-w-0">
+              <FilePath text={mission.workdir} link="text-primary hover:underline" />
+            </span>
+          </p>
+        </Card>
         <div className="max-lg:order-3">
           <DoneWhenCard mission={mission} />
         </div>
