@@ -13,6 +13,7 @@ import type { CronPort } from "@/modules/cron/cron.store.ts";
 import type { UsagePort } from "@/modules/llm/usage.store.ts";
 import type { MissionsPort } from "@/modules/missions/missions.store.ts";
 import { MISSION_GATEWAY_ID } from "@/modules/missions/gateway.ts";
+import { isDraft } from "@/modules/missions/drafts.ts";
 import { personIdMatches } from "@/modules/people/match.ts";
 import { startMorningLines, type MorningFacts } from "@/modules/people/morning-line.ts";
 import type { TurnsPort } from "@/modules/turns/turns.store.ts";
@@ -83,7 +84,7 @@ export function morningFacts(params: MorningSources): (person: Person, from: num
     });
     const needsYou = [
       ...(params.missions?.open() ?? [])
-        .filter((mission) => mission.status === "waiting" && missionIsMine(mission))
+        .filter((mission) => mission.status === "waiting" && !isDraft(mission) && missionIsMine(mission))
         .map((mission) => ({ goal: mission.title, what: mission.reason ?? mission.waitKind ?? "waiting" })),
       ...steps,
     ];

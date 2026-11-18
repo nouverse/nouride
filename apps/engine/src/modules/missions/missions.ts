@@ -27,7 +27,7 @@ import { markRead, tellMission, unreadTold, type TellAnswer } from "./tell.ts";
 import { MissionStore } from "./missions.store.ts";
 import { goesOnNotice, needsYouNotice, paged, queuedNotice, startedNotice } from "./notices.ts";
 import { announceDraft, editDraft, type DraftEdited } from "./draft-edit.ts";
-import { briefPath, type DraftChange, type DraftEditor } from "./drafts.ts";
+import { briefPath, isDraft, type DraftChange, type DraftEditor } from "./drafts.ts";
 import { sendReport, tellEnded } from "./results.ts";
 import { limitsLine, missionPage, shortId, type LimitsShown } from "./page.ts";
 import { MissionCounts } from "./counts.ts";
@@ -164,7 +164,8 @@ export class Missions implements TurnShaper {
     let atWork = 0;
     let waiting = 0;
     for (const mission of this.deps.store.open()) {
-      if (mission.agentId !== agentId || mission.waitKind === "approval") continue;
+      // A draft waits for someone to start it, not on anyone: it is neither at work nor something a person owes.
+      if (mission.agentId !== agentId || mission.waitKind === "approval" || isDraft(mission)) continue;
       if (seenAs(mission.status) === "working" || mission.waitKind === "retry") atWork += 1;
       else waiting += 1;
     }

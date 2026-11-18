@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { renderPage, useMountHarness } from "./mount-harness.ts";
+import { dom, renderPage, useMountHarness } from "./mount-harness.ts";
 import { eventually } from "./wait.ts";
 
 useMountHarness();
@@ -42,7 +42,7 @@ describe("a page", () => {
   test("you go to is drawn anew and fades in, and the sidebar you went from stays as it was", async () => {
     let seen = { anew: false, fades: false, sidebarKept: false };
     await renderPage("/missions", async (host, app) => {
-      await eventually(() => host.textContent?.includes("Long work an agent finishes alone") ?? false, 4_000, "Missions to draw");
+      await eventually(() => host.textContent?.includes("in the backlog") ?? false, 4_000, "Missions to draw");
       const before = page(host).root;
       const sidebar = host.querySelector('nav[aria-label="Menu"]');
       // Helpers is a tab of Work now (0.8.24): a page of the menu's own, as the test means.
@@ -56,17 +56,22 @@ describe("a page", () => {
 });
 
 describe("a tab", () => {
-  test("on Missions draws the list it filters anew, and it fades in under a tab bar that stays", async () => {
+  test("on Missions, on a phone, draws the column it picks anew, and it fades in under tabs that stay", async () => {
     let seen = { anew: false, fades: false, barKept: false };
-    await renderPage("/missions", async (host) => {
-      await eventually(() => host.querySelector('[role="tablist"]') !== null, 4_000, "the tab bar");
-      const bar = host.querySelector('[role="tablist"]');
-      const list = host.querySelector("main section");
-      tab(host, "Working").click();
-      await eventually(() => host.querySelector('[aria-selected="true"]')?.textContent?.includes("Working") ?? false, 2_000, "Working to be chosen");
-      const next = host.querySelector("main section");
-      seen = { anew: next !== null && next !== list, fades: fadesIn(next), barKept: host.querySelector('[role="tablist"]') === bar };
-    });
+    dom.happyDOM.setViewport({ width: 390, height: 844 });
+    try {
+      await renderPage("/missions", async (host) => {
+        await eventually(() => host.querySelector('[role="tabpanel"]') !== null, 4_000, "the columns as tabs");
+        const bar = host.querySelector('[role="tablist"]');
+        const column = host.querySelector('[role="tabpanel"]');
+        host.querySelector<HTMLElement>('[role="tab"][data-tab="finished"]')!.click();
+        await eventually(() => host.querySelector('[aria-selected="true"]')?.textContent?.includes("Finished") ?? false, 2_000, "Finished to be chosen");
+        const next = host.querySelector('[role="tabpanel"]');
+        seen = { anew: next !== null && next !== column, fades: fadesIn(next), barKept: host.querySelector('[role="tablist"]') === bar };
+      });
+    } finally {
+      dom.happyDOM.setViewport({ width: 1024, height: 768 });
+    }
     expect(seen).toEqual({ anew: true, fades: true, barKept: true });
   });
 

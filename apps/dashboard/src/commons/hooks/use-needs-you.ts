@@ -41,7 +41,7 @@ export const MOVING_MISSIONS = ["missions", "home"] as const;
  * counted and answered as one, or its model, which it tries again by itself; and one at work that asked a question.
  * Not one they only read: it reports to a chat of theirs and waits for its own person, so it is nothing they can answer.
  */
-export function missionsWaiting<T extends Pick<MissionView, "seen" | "waitKind" | "changeable" | "status"> & { answers?: MissionView["answers"] }>(missions: readonly T[]): T[] {
+export function missionsWaiting<T extends Pick<MissionView, "seen" | "waitKind" | "changeable" | "status" | "startedAt"> & { answers?: MissionView["answers"] }>(missions: readonly T[]): T[] {
   return missions.filter(waitsForReader);
 }
 

@@ -1,7 +1,7 @@
 /**
  * Whose missions the Missions page lists: the reader's own, and for an admin alone the picker Chats and Automations
- * have, in the list's head beside its search, whose last choice reads "Nobody's". With anything but Mine picked the
- * missions are under whose they are, where the reader's own are under what a person does about them.
+ * have, in the board's head beside its search, whose last choice reads "Nobody's". With anything but Mine picked each
+ * card says whose it is, in the column of what a person does about it.
  *
  * A mission the reader only reads says whose it is, and one of those that waits for a person waits for its own: it is
  * not "Needs you" on any page of theirs, since nothing they press would answer it.
@@ -10,7 +10,8 @@
 import { describe, expect, test } from "bun:test";
 import type { MissionView } from "@nouride/wire";
 import { missionsWaiting } from "@/commons/hooks/use-needs-you";
-import { grouped, rowLine, seenAs, seenTone, tabOf } from "@/modules/missions/lib/mission";
+import { rowLine, seenAs, seenTone } from "@/modules/missions/lib/mission";
+import { columnOf } from "@/modules/missions/lib/board";
 import { answer, dropdown, renderPage, useMountHarness, WIRE } from "./mount-harness.ts";
 import { eventually } from "./wait.ts";
 
@@ -37,13 +38,11 @@ const GADING = { key: "gading", name: "Gading" };
 /** Everyone's, in the daemon's order: what needs someone first, then what works, then what finished. */
 const EVERYONE = [one("msn_s1", "Plan the arisan", { person: SAM, ...waiting }), one("msn_n", "Tidy the old logs"), one("msn_g", "Write the report", { person: GADING }), one("msn_r", "Count the stock", { person: RAKA }), one("msn_s2", "Book the bus", { person: SAM, ...ended })];
 
-const cards = (root: ParentNode) => [...root.querySelectorAll<HTMLElement>('a[href^="/dashboard/missions/msn_"]')].map((card) => card.getAttribute("href")!.split("/").pop()!);
-const card = (host: HTMLElement, id: string) => host.querySelector<HTMLElement>(`a[href="/dashboard/missions/${id}"]`);
-const sections = (host: HTMLElement) => [...host.querySelectorAll<HTMLElement>("main section[data-whose]")].map((section) => [section.getAttribute("aria-label"), cards(section)]);
-const groups = (host: HTMLElement) => [...host.querySelectorAll<HTMLElement>("main section[aria-label]:not([data-whose])")].map((section) => section.getAttribute("aria-label")).filter((label) => ["Needs you", "Working", "Finished"].includes(label ?? ""));
-/** The list's own tabs: All, Needs you, Working and the three ways one finishes. */
-const tabs = (host: HTMLElement) => [...host.querySelectorAll<HTMLElement>('main [role="tablist"]')].filter((bar) => bar.textContent?.includes("Needs you")).flatMap((bar) => [...bar.querySelectorAll<HTMLElement>('[role="tab"]')]);
-const tabCount = (host: HTMLElement, label: string) => tabs(host).find((tab) => tab.textContent?.startsWith(label))?.textContent?.slice(label.length) ?? null;
+const cards = (root: ParentNode) => [...root.querySelectorAll<HTMLElement>("[data-mission]")].map((card) => card.dataset.mission!);
+const card = (host: HTMLElement, id: string) => host.querySelector<HTMLElement>(`[data-mission="${id}"]`);
+/** Each card by its column, with whose it says it is, or null where it says nothing of it (the reader's own list). */
+const whose = (host: HTMLElement) => [...host.querySelectorAll<HTMLElement>("[data-mission]")].map((one) => [one.dataset.column, one.dataset.mission, one.querySelector("[data-tag]")?.textContent ?? null]);
+const columnCount = (host: HTMLElement, id: string) => host.querySelector(`[data-board-column="${id}"] header span`)?.textContent ?? null;
 
 /** Every list of missions the Missions page asks the daemon for, by whose it asked for. The menu's own count asks too, with no days. */
 function asked(): { whose: (string | null)[]; restore: () => void } {
@@ -66,12 +65,10 @@ describe("a mission the reader only reads, that waits for a person", () => {
     expect(seenAs(theirs)).toBe("Waiting for Gading");
     expect(seenAs(nobodys)).toBe("Waiting for an admin");
     expect(seenAs(own)).toBe("Needs you · a question");
-    expect(tabOf(theirs)).toBe("working");
-    expect(tabOf(own)).toBe("needs_you");
+    expect(columnOf(theirs)).toBe("working");
+    expect(columnOf(own)).toBe("needs");
     expect(seenTone(theirs)).toBe(seenTone({ seen: "ended" }));
     expect(seenTone(own)).not.toBe(seenTone(theirs));
-    const lists = grouped([theirs, own]);
-    expect([lists.needsYou.map((m) => m.id), lists.working.map((m) => m.id)]).toEqual([["msn_o"], ["msn_t"]]);
   });
 
   test("its row says who can answer it, not the buttons the reader has none of", () => {
@@ -90,7 +87,7 @@ describe("a mission the reader only reads, that waits for a person", () => {
 
 describe("the Missions page, as an admin", () => {
   test("one picker beside the search in the row that stays, on Mine, whose last choice reads Nobody's; Mine asks for nothing but the list", async () => {
-    const seen = { holds: "" as string | null, options: [] as string[], beside: false, sections: -1, groups: [] as (string | null)[] };
+    const seen = { holds: "" as string | null, options: [] as string[], beside: false, tags: [] as unknown[] };
     const record = asked();
     try {
       await renderPage("/missions", async (host) => {
@@ -100,44 +97,38 @@ describe("the Missions page, as an admin", () => {
         const before = picker.button()!.previousElementSibling;
         seen.beside = before?.tagName === "LABEL" && before.querySelector('input[type="search"]') !== null;
         seen.options = await picker.open();
-        seen.sections = sections(host).length;
-        seen.groups = groups(host);
+        seen.tags = whose(host).map((row) => row[2]);
       });
     } finally {
       record.restore();
     }
-    expect(seen).toEqual({ holds: "Mine", options: ["Mine", "Everyone", "Gading", "Kak Sam", "Raka", "Nobody's"], beside: true, sections: 0, groups: ["Working", "Finished"] });
+    // Their own list says nothing of whose each is.
+    expect(seen).toEqual({ holds: "Mine", options: ["Mine", "Everyone", "Gading", "Kak Sam", "Raka", "Nobody's"], beside: true, tags: [null, null] });
     expect(record.whose).toEqual([null]);
   });
 
-  test("Everyone is asked of the daemon, and listed by person: the reader's own, the others by name, Nobody's last; a tab narrows each", async () => {
+  test("Everyone is asked of the daemon, and each card says whose it is, in the column of what is done about it", async () => {
     answer({ "/missions?whose=everyone": ok({ missions: EVERYONE }), "/people/me": ok({ person: RAKA }) });
-    const seen = { all: [] as unknown[], groups: ["?"] as (string | null)[], working: [] as unknown[], done: [] as unknown[] };
+    let seen: unknown[] = [];
     const record = asked();
     try {
       await renderPage("/missions", async (host) => {
         await eventually(() => cards(host).length > 0, 3_000, "the missions");
         await dropdown(host, PICKER).pick("Everyone");
         await eventually(() => card(host, "msn_n") !== null, 3_000, "everyone's");
-        seen.all = sections(host);
-        // Under whose they are, in place of what a person does about them.
-        seen.groups = groups(host);
-        const tab = (label: string) => tabs(host).find((one) => one.textContent?.startsWith(label))!.click();
-        tab("Working");
-        await eventually(() => card(host, "msn_s2") === null && card(host, "msn_g") !== null, 3_000, "the working ones");
-        seen.working = sections(host);
-        tab("Done");
-        await eventually(() => card(host, "msn_g") === null && card(host, "msn_s2") !== null, 3_000, "the done ones");
-        seen.done = sections(host);
+        seen = whose(host);
       });
     } finally {
       record.restore();
       localStorage.removeItem(KEPT);
     }
-    expect(seen.all).toEqual([["Raka", ["msn_r"]], ["Gading", ["msn_g"]], ["Kak Sam", ["msn_s1", "msn_s2"]], ["Nobody's", ["msn_n"]]]);
-    expect(seen.groups).toEqual([]);
-    expect(seen.working).toEqual([["Raka", ["msn_r"]], ["Gading", ["msn_g"]], ["Nobody's", ["msn_n"]]]);
-    expect(seen.done).toEqual([["Kak Sam", ["msn_s2"]]]);
+    expect(seen).toEqual([
+      ["working", "msn_n", "Nobody's"],
+      ["working", "msn_g", "Gading's"],
+      ["working", "msn_r", "Raka's"],
+      ["needs", "msn_s1", "Kak Sam's"],
+      ["finished", "msn_s2", "Kak Sam's"],
+    ]);
     expect(record.whose).toEqual([null, "everyone"]);
   });
 
@@ -152,7 +143,7 @@ describe("the Missions page, as an admin", () => {
         await eventually(() => cards(host).length > 0, 3_000, "the missions");
         await dropdown(host, PICKER).pick("Kak Sam");
         await eventually(() => card(host, "msn_s1") !== null, 3_000, "hers");
-        seen = sections(host);
+        seen = whose(host);
         kept.missions = localStorage.getItem(KEPT);
         kept.automations = localStorage.getItem("nouride-automations-whose");
       });
@@ -165,7 +156,7 @@ describe("the Missions page, as an admin", () => {
       record.restore();
       localStorage.removeItem(KEPT);
     }
-    expect(seen).toEqual([["Kak Sam", ["msn_s1"]], ["Gading", ["msn_g"]]]);
+    expect(seen).toEqual([["working", "msn_g", "Gading's"], ["working", "msn_s1", "Kak Sam's"]]);
     expect(record.whose).toEqual([null, "person:sam"]);
     expect(kept).toEqual({ missions: JSON.stringify("person:sam"), automations: null });
     expect(automations).toBe("Mine");
@@ -188,8 +179,8 @@ describe("the Missions page, as an admin", () => {
       }
     }
     expect(held).toEqual({ "person:sam": "Kak Sam", unknown: "Nobody's", everyone: "Everyone" });
-    expect(said["person:sam"]).toContain("They started no mission in the last 3 days, and none reports to a chat of theirs.");
-    expect(said.unknown).toContain("Every mission of the last 3 days belongs to someone in People.");
+    expect(said["person:sam"]).toContain("They started no mission in the last 7 days, and none reports to a chat of theirs.");
+    expect(said.unknown).toContain("Every mission of the last 7 days belongs to someone in People.");
     expect(said.everyone).toContain("Nobody here has started one.");
     // How to start one is for the reader's own list.
     for (const text of Object.values(said)) expect(text).not.toContain("send /mission");
@@ -197,7 +188,7 @@ describe("the Missions page, as an admin", () => {
 
   test("while another list is on its way the head, the tabs and the picker stay, and the missions before are not shown as theirs", async () => {
     answer({ "/missions?whose=everyone": { status: 200, body: {}, hold: true } });
-    const seen = { holds: "" as string | null, cards: -1, busy: false, title: "", tabs: 0 };
+    const seen = { holds: "" as string | null, cards: -1, busy: false, title: "", search: false };
     try {
       await renderPage("/missions", async (host) => {
         await eventually(() => cards(host).length > 0, 3_000, "the missions");
@@ -207,12 +198,12 @@ describe("the Missions page, as an admin", () => {
         seen.cards = cards(host).length;
         seen.busy = host.querySelector('main [aria-busy="true"]') !== null;
         seen.title = host.querySelector("main h1")?.textContent ?? "";
-        seen.tabs = tabs(host).length;
+        seen.search = host.querySelector('main input[type="search"]') !== null;
       });
     } finally {
       localStorage.removeItem(KEPT);
     }
-    expect(seen).toEqual({ holds: "Everyone", cards: 0, busy: true, title: "Missions", tabs: 6 });
+    expect(seen).toEqual({ holds: "Everyone", cards: 0, busy: true, title: "Missions", search: true });
   });
 
   test("a list the daemon fails to give keeps the picker: the way back to their own", async () => {
@@ -241,7 +232,7 @@ describe("what an admin's own missions leave out", () => {
 
   test("is said under the list with how many, and Show everyone sets the picker and asks for everyone's", async () => {
     answer({ "/missions": ok({ ...LIST, elsewhere: 3 }), "/missions?whose=everyone": ok({ missions: EVERYONE }) });
-    const seen = { said: "", after: "" as string | null, sections: 0, still: true };
+    const seen = { said: "", after: "" as string | null, tagged: 0, still: true };
     const record = asked();
     try {
       await renderPage("/missions", async (host) => {
@@ -250,14 +241,14 @@ describe("what an admin's own missions leave out", () => {
         showEveryone(host)!.click();
         await eventually(() => card(host, "msn_n") !== null, 3_000, "everyone's");
         seen.after = dropdown(host, PICKER).holds();
-        seen.sections = sections(host).length;
+        seen.tagged = whose(host).filter((row) => row[2] !== null).length;
         seen.still = line(host) !== null;
       });
     } finally {
       record.restore();
       localStorage.removeItem(KEPT);
     }
-    expect(seen).toEqual({ said: "3 more belong to other people or to nobody.Show everyone", after: "Everyone", sections: 4, still: false });
+    expect(seen).toEqual({ said: "3 more belong to other people or to nobody.Show everyone", after: "Everyone", tagged: 5, still: false });
     expect(record.whose).toEqual([null, "everyone"]);
   });
 
@@ -294,7 +285,7 @@ describe("what an admin's own missions leave out", () => {
     } finally {
       localStorage.removeItem(KEPT);
     }
-    expect(seen.text).toContain("No missions of yours in the last 3 days");
+    expect(seen.text).toContain("No missions of yours in the last 7 days");
     expect(seen.text).toContain("2 more belong to other people or to nobody.");
     expect(seen.text).not.toContain("send /mission");
     expect(seen.after).toBe("Everyone");
@@ -305,24 +296,24 @@ describe("the Missions page, as someone who is not an admin", () => {
   test("offers no picker, and asks for their own whatever this browser kept from an admin before", async () => {
     localStorage.setItem(KEPT, JSON.stringify("everyone"));
     answer(signedIn("operator"));
-    const seen = { picker: true, sections: -1, cards: 0 };
+    const seen = { picker: true, tagged: -1, cards: 0 };
     const record = asked();
     try {
       await renderPage("/missions", async (host) => {
         await eventually(() => cards(host).length > 0, 3_000, "the missions");
         seen.picker = dropdown(host, PICKER).button() !== undefined;
-        seen.sections = sections(host).length;
+        seen.tagged = whose(host).filter((row) => row[2] !== null).length;
         seen.cards = cards(host).length;
       });
     } finally {
       record.restore();
       localStorage.removeItem(KEPT);
     }
-    expect(seen).toEqual({ picker: false, sections: 0, cards: 2 });
+    expect(seen).toEqual({ picker: false, tagged: 0, cards: 2 });
     expect(record.whose).toEqual([null]);
   });
 
-  test("a mission they only read says whose it is; one that waits is under Working, waiting for its person, and Needs you counts none", async () => {
+  test("a mission they only read says whose it is; one that waits is in Working, waiting for its person, and Needs you counts none", async () => {
     const theirs = one("msn_t", "Plan the trip", { person: GADING, changeable: false, ...waiting });
     const own = one("msn_o", "My own", { person: SAM, changeable: true });
     answer({ ...signedIn("operator"), "/missions": ok({ missions: [theirs, own] }) });
@@ -331,16 +322,16 @@ describe("the Missions page, as someone who is not an admin", () => {
       await eventually(() => cards(host).length === 2, 3_000, "the missions");
       for (const id of ["msn_t", "msn_o"]) seen.whose[id] = card(host, id)!.querySelector("[data-tag]")?.textContent?.trim() ?? null;
       seen.text = card(host, "msn_t")!.textContent?.replace(/\s+/g, " ") ?? "";
-      seen.under = [...host.querySelectorAll<HTMLElement>("main section[aria-label]")].filter((section) => ["Needs you", "Working", "Finished"].includes(section.getAttribute("aria-label") ?? "")).map((section) => [section.getAttribute("aria-label"), cards(section)]);
-      seen.needs = tabCount(host, "Needs you");
-      seen.working = tabCount(host, "Working");
-      seen.opens = card(host, "msn_t")!.getAttribute("href");
+      seen.under = whose(host).map((row) => [row[0], row[1]]);
+      seen.needs = columnCount(host, "needs");
+      seen.working = columnCount(host, "working");
+      seen.opens = card(host, "msn_t")!.querySelector("h3 a")!.getAttribute("href");
     });
     expect(seen.whose).toEqual({ msn_t: "Gading's", msn_o: null });
     expect(seen.text).toContain("Waiting for Gading");
     expect(seen.text).toContain("Only Gading can answer what it waits for.");
     expect(seen.text).not.toContain("Needs you");
-    expect(seen.under).toEqual([["Working", ["msn_t", "msn_o"]]]);
+    expect(seen.under).toEqual([["working", "msn_t"], ["working", "msn_o"]]);
     expect([seen.needs, seen.working]).toEqual(["0", "2"]);
     expect(seen.opens).toBe("/dashboard/missions/msn_t");
   });

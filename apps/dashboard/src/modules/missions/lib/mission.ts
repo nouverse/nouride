@@ -192,44 +192,9 @@ export function shortId(id: string): string {
   return id.slice(0, 10);
 }
 
-/**
- * The list's tabs: every mission, the two a person acts on, and the three ways one finishes — done, failed, stopped
- * (0.8.0). One Finished tab held all three, and finding why the stopped ones stopped meant reading every row.
- */
-export type MissionTab = "all" | "needs_you" | "working" | "done" | "failed" | "stopped";
-
-/** Which tab a mission is under: needs you, working, or how it finished. One that waits for someone else is at work. */
-export function tabOf(mission: Pick<MissionView, "seen" | "status" | "changeable">): Exclude<MissionTab, "all"> {
-  if (waitsElsewhere(mission)) return "working";
-  if (mission.seen === "needs_you" || mission.seen === "working") return mission.seen;
-  return mission.status === "failed" ? "failed" : mission.status === "stopped" ? "stopped" : "done";
-}
-
 /** At work with a question open that is the reader's to answer: not one they only read, which asks its own person. */
 function asksReader(mission: Pick<MissionView, "status" | "waitKind" | "changeable"> & { answers?: MissionView["answers"] }): boolean {
   return asksWhileWorking(mission) && mission.changeable !== false;
-}
-
-/**
- * Every tab a mission is under. One at work that asked the reader a question is under both a person acts on: it
- * works, and it needs them. Under Working alone, the count beside "Needs you" was one short of the menu's, and the
- * tab a person opens to see what waits for them left that question out.
- */
-export function tabsOf(mission: Pick<MissionView, "seen" | "status" | "waitKind" | "changeable"> & { answers?: MissionView["answers"] }): Exclude<MissionTab, "all">[] {
-  const tab = tabOf(mission);
-  return tab === "working" && asksReader(mission) ? ["needs_you", tab] : [tab];
-}
-
-/**
- * Needs you, then working, then the rest — the daemon's order, kept as three groups to draw under their headings. Each
- * mission once: one at work that asked the reader a question is drawn with what needs them, where its badge says it works.
- */
-export function grouped(missions: readonly MissionView[]): { needsYou: MissionView[]; working: MissionView[]; finished: MissionView[] } {
-  return {
-    needsYou: missions.filter((m) => tabsOf(m)[0] === "needs_you"),
-    working: missions.filter((m) => tabsOf(m)[0] === "working"),
-    finished: missions.filter((m) => m.seen === "done" || m.seen === "ended"),
-  };
 }
 
 /**

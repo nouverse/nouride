@@ -1115,10 +1115,14 @@ describe("an agent's missions, for its status (0.8.15)", () => {
     expect(h.missions.forStatus("nova")).toEqual({ atWork: 2, waiting: 0 });
     set(second, "waiting", "approval");
     expect(h.missions.forStatus("nova")).toEqual({ atWork: 1, waiting: 0 });
-    set(second, "waiting", "accept");
+    // A result to accept, of a mission that ran.
+    h.store.save({ ...h.store.get(second.id)!, status: "waiting", waitKind: "accept", startedAt: 1 });
     set(first, "done");
     expect(h.missions.forStatus("nova")).toEqual({ atWork: 0, waiting: 1 });
     expect(h.missions.forStatus("nox")).toEqual({ atWork: 1, waiting: 0 });
+    // A draft waits for someone to start it: the agent is not waiting on anybody for it.
+    h.store.save({ ...h.store.get(second.id)!, status: "waiting", waitKind: "accept", startedAt: null });
+    expect(h.missions.forStatus("nova")).toEqual({ atWork: 0, waiting: 0 });
   });
 
   test("the box's load, as a chat's turn is told it: the missions holding a slot now, running or being checked, of how many may", async () => {

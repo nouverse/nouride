@@ -13,13 +13,13 @@ const ok = (body: unknown) => ({ status: 200, body });
 const row = (id: string, extra: Record<string, unknown> = {}) => ({ id, agentId: "nix", goal: `The work of ${id}.`, status: "waiting", seen: "needs_you", waitKind: "input", checklist: null, answers: [], startedAt: 1, ...extra });
 const MISSIONS = [
   row("m_question", { answers: [{ question: "Keep the old sheet?\n\nA) keep it\nB) drop it", at: 1, asked: "wait" }] }),
-  row("m_draft", { waitKind: "accept", startedAt: null }),
   row("m_result", { waitKind: "accept" }),
   row("m_limit", { waitKind: "limit" }),
   row("m_stuck", { waitKind: "stuck" }),
   row("m_cut", { waitKind: "unknown_outcome" }),
   row("m_asking", { status: "running", seen: "working", waitKind: null, answers: [{ question: "Mermaid adds 735 KB. Take it?", at: 2, asked: "meanwhile" }] }),
-  // None of these waits for the reader.
+  // None of these waits for the reader. A draft is in the Missions board's backlog, and its chat notice offers Start.
+  row("m_draft", { waitKind: "accept", startedAt: null }),
   row("m_working", { status: "running", seen: "working", waitKind: null }),
   row("m_paused", { waitKind: "retry" }),
   row("m_approval", { waitKind: "approval" }),
@@ -27,7 +27,6 @@ const MISSIONS = [
 ];
 const LINES: Record<string, string> = {
   m_question: "Waiting for your answer: Keep the old sheet? A) keep it B) drop it",
-  m_draft: "A draft, not started yet. Start it or drop it",
   m_result: "Its result is ready. Accept it or send it back",
   m_limit: "Stopped at a limit. Let it go on or end it",
   m_stuck: "Stuck. See what stopped it",
@@ -57,9 +56,7 @@ describe("the missions that wait, as their cards say it", () => {
           expect(said?.getAttribute("title"), id).toBe(line);
           expect(said?.querySelector("span")?.className.split(" "), id).toEqual(expect.arrayContaining(["line-clamp-2", "[overflow-wrap:anywhere]"]));
         }
-        // A draft is not an answer somebody owes.
-        expect(card("m_draft")!.textContent).not.toContain("answer");
-        for (const id of ["m_working", "m_paused", "m_approval", "m_theirs"]) expect(card(id), id).toBeNull();
+        for (const id of ["m_draft", "m_working", "m_paused", "m_approval", "m_theirs"]) expect(card(id), id).toBeNull();
       });
     });
   }
@@ -121,26 +118,18 @@ describe("a mission at work that asked a question, in the list of missions", () 
     one("msn_asks", { answers: [{ question: "Mermaid adds 735 KB. Take it?", at: 2, asked: "meanwhile" }] }),
     one("msn_works", {}),
   ];
-  const tabs = (host: HTMLElement) => [...host.querySelectorAll<HTMLElement>('main [role="tablist"]')].filter((bar) => bar.textContent?.includes("Needs you")).flatMap((bar) => [...bar.querySelectorAll<HTMLElement>('[role="tab"]')]);
-  const tab = (host: HTMLElement, label: string) => tabs(host).find((entry) => entry.textContent?.startsWith(label))!;
-  const cards = (root: ParentNode) => [...root.querySelectorAll<HTMLElement>('a[href^="/dashboard/missions/msn_"]')].map((card) => card.getAttribute("href")!.split("/").pop()!);
-  const group = (host: HTMLElement, label: string) => cards(host.querySelector<HTMLElement>(`main section[aria-label="${label}"]`) ?? document.createElement("div"));
+  const column = (host: HTMLElement, id: string) => [...host.querySelectorAll<HTMLElement>(`[data-board-column="${id}"] [data-mission]`)].map((card) => card.dataset.mission!);
+  const count = (host: HTMLElement, id: string) => host.querySelector(`[data-board-column="${id}"] header`)?.textContent ?? "";
 
-  test("it is counted with what needs the reader, as the menu counts it, and with what works; drawn once, with what needs them", async () => {
+  test("it is in Needs you, counted there as the menu counts it, and drawn once", async () => {
     answer({ "/missions": ok({ missions: LISTED }) });
-    const seen = { needs: "", works: "", all: [] as string[][], needsTab: [] as string[], worksTab: [] as string[] };
+    const seen = { needs: "", works: "", columns: [] as string[][] };
     await renderPage("/missions", async (host) => {
-      await eventually(() => cards(host).length === 3, 3_000, "the missions");
-      seen.needs = tab(host, "Needs you").textContent ?? "";
-      seen.works = tab(host, "Working").textContent ?? "";
-      seen.all = [group(host, "Needs you"), group(host, "Working")];
-      tab(host, "Needs you").click();
-      await eventually(() => !cards(host).includes("msn_works"), 3_000, "what needs the reader");
-      seen.needsTab = cards(host);
-      tab(host, "Working").click();
-      await eventually(() => !cards(host).includes("msn_waits"), 3_000, "what works");
-      seen.worksTab = cards(host);
+      await eventually(() => host.querySelectorAll("[data-mission]").length === 3, 3_000, "the missions");
+      seen.needs = count(host, "needs");
+      seen.works = count(host, "working");
+      seen.columns = [column(host, "needs"), column(host, "working")];
     });
-    expect(seen).toEqual({ needs: "Needs you2", works: "Working2", all: [["msn_waits", "msn_asks"], ["msn_works"]], needsTab: ["msn_waits", "msn_asks"], worksTab: ["msn_asks", "msn_works"] });
+    expect(seen).toEqual({ needs: "Needs you2", works: "Working1", columns: [["msn_waits", "msn_asks"], ["msn_works"]] });
   });
 });
