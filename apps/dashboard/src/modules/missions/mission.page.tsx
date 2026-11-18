@@ -194,7 +194,7 @@ export default function MissionPage({ missionId }: { missionId: string }) {
           description={mission.seen === "done" ? "What it handed back." : "What it handed back so far."}
           {...(mission.seen === "done" ? { actions: <Mascot pose="trophy" decorative className="-my-3 w-16" /> } : {})}
         >
-          <MissionResult report={mission.report} files={mission.files} workdir={mission.workdir} />
+          <MissionResult missionId={mission.id} report={mission.report} files={mission.files} workdir={mission.workdir} />
         </Card>
       )}
 

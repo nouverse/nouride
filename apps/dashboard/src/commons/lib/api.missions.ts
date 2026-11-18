@@ -22,6 +22,9 @@ export const missionsApi = {
 
   mission: (id: string) => request<MissionDetail>(`${control}/missions/${encodeURIComponent(id)}`),
 
+  /** Where one of a mission's result pictures is drawn from, by its place among the result's files. */
+  missionPictureUrl: (id: string, index: number): string => `${control}/missions/${encodeURIComponent(id)}/files/${index}`,
+
   /** 201 with the mission; a refusal (no such agent, no goal, a relative folder) is a 400 whose `error` is a sentence. */
   startMission: (input: MissionStart) => post<{ mission: MissionView }>(`${control}/missions`, input),
 

@@ -5,6 +5,9 @@
  */
 
 import { describe, expect, test } from "bun:test";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { Hono } from "hono";
 import { sessionIdFor } from "@nouride/shared";
 import { MISSION_GATEWAY_ID } from "@/modules/missions/gateway.ts";
@@ -33,7 +36,8 @@ async function app(role: "admin" | "operator" | "viewer" = "operator", extra: Re
   const get = async (path: string) => (await control.request(path)).json();
   const post = (path: string, body: unknown) => control.request(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
   const del = (path: string) => control.request(path, { method: "DELETE" });
-  return { h, get, post, del };
+  const open = (path: string) => control.request(path);
+  return { h, get, post, del, open };
 }
 
 describe("the list", () => {
@@ -192,6 +196,56 @@ describe("saved to the backlog", () => {
     const started = await post("/missions", { agent: "nox", goal: "tidy the notes" });
     expect(h.store.get(((await started.json()) as { mission: { id: string } }).mission.id)!.status).not.toBe("waiting");
     expect(audit.map((row) => row.action)).toEqual(["mission_drafted", "mission_started"]);
+  });
+});
+
+describe("a picture of its result", () => {
+  // The smallest PNG there is: its eight bytes of signature are what makes it one.
+  const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
+  async function withResult(role: "operator" | "viewer" = "operator", extra: Record<string, unknown> = {}) {
+    const dir = mkdtempSync(join(tmpdir(), "nr-result-"));
+    writeFileSync(join(dir, "flow.png"), PNG);
+    writeFileSync(join(dir, "notes.md"), "# notes");
+    writeFileSync(join(dir, "logo.svg"), "<svg xmlns='http://www.w3.org/2000/svg'><script>alert(1)</script></svg>");
+    const made = await app(role, extra);
+    const mission = await made.h.start("draws a flow");
+    const kept = made.h.store.get(mission.id)!;
+    kept.files = [join(dir, "flow.png"), join(dir, "notes.md"), join(dir, "logo.svg"), join(dir, "gone.png")];
+    made.h.store.save(kept);
+    return { ...made, id: mission.id };
+  }
+
+  test("is served by its place among the result's files, as a picture drawn in the page", async () => {
+    const { open, id } = await withResult();
+    const res = await open(`/missions/${id}/files/0`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("image/png");
+    expect(res.headers.get("content-disposition")).toBe('inline; filename="flow.png"');
+    expect(res.headers.get("cache-control")).toBe("private, max-age=300");
+    expect(new Uint8Array(await res.arrayBuffer())).toEqual(PNG);
+  });
+
+  test("only a picture, only one the result names, and never an SVG, which opened by its address would run as the dashboard", async () => {
+    const { open, id } = await withResult();
+    expect((await open(`/missions/${id}/files/1`)).status).toBe(404);
+    expect((await open(`/missions/${id}/files/2`)).status).toBe(404);
+    expect((await open(`/missions/${id}/files/9`)).status).toBe(404);
+    // By its place, a whole number: nothing that reads as a path or as another number.
+    expect((await open(`/missions/${id}/files/0x1`)).status).toBe(404);
+    expect((await open(`/missions/${id}/files/-1`)).status).toBe(404);
+    expect((await open(`/missions/${id}/files/..%2Fflow.png`)).status).toBe(404);
+    // Named by the result and no longer on disk: said as that, not as a broken picture.
+    expect((await open(`/missions/${id}/files/3`)).status).toBe(410);
+    expect((await open("/missions/msn_nothinghere/files/0")).status).toBe(404);
+  });
+
+  test("to whoever may see the mission, and to nobody else", async () => {
+    // The same mission, asked for by an operator it is not known to: it reports to a chat that is not theirs.
+    const stranger = await withResult("operator", { ctx: { config: { people: [{ key: "other", name: "Other", ids: ["web:usr_someone"] }] } } });
+    expect((await stranger.get(`/missions/${stranger.id}`) as { error?: string }).error).toBe("no such mission");
+    expect((await stranger.open(`/missions/${stranger.id}/files/0`)).status).toBe(404);
+    const viewer = await withResult("viewer");
+    expect((await viewer.open(`/missions/${viewer.id}/files/0`)).status).toBe(200);
   });
 });
 

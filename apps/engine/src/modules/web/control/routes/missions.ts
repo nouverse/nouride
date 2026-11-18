@@ -28,6 +28,7 @@ import { atLeast } from "@/modules/users/auth.ts";
 import { jsonBody } from "../payloads.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { thingOfMission, thingsFor, type Things } from "../whose.ts";
+import { registerMissionPictureRoute } from "./mission-pictures.ts";
 
 /** Where a mission started from the dashboard reports, when the page names no chat. */
 const DASHBOARD_MISSIONS_CHAT = "missions";
@@ -207,6 +208,7 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
   const unavailable = { error: "missions are not run in this process" };
   /** What a route answers for a mission that is not there: also for one that is another person's (`whose.ts`). */
   const missing = { error: "no such mission", plain: "This mission is not there any more. Reload the list." };
+  registerMissionPictureRoute(control, deps);
   control.get("/missions", (c) => {
     const missions: Missions | undefined = deps.missions;
     if (!missions) return c.json(unavailable, 501);

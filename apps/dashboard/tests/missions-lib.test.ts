@@ -11,6 +11,7 @@ import { stepNow } from "@/commons/lib/steps";
 import { columnOf } from "@/modules/missions/lib/board";
 import { missionName } from "@/commons/lib/mission-name";
 import { actionsFor, briefShown, inFolder, meters, needsYouSaid, rowLine, searchedIn, seenAs, seenTone, whyStarted } from "@/modules/missions/lib/mission";
+import { ownPicture } from "@/modules/missions/components/MissionResult";
 import { startInput } from "@/modules/missions/components/NewMissionForm";
 import { fieldText, fits, limitsPatch, range } from "@/modules/missions/lib/limits";
 import { createElement } from "react";
@@ -353,5 +354,29 @@ describe("the Brief card (0.8.11)", () => {
     expect(briefShown("/w/private/nouva/audit_rina/BRIEF.md", "msn_1")).toEqual({ name: "BRIEF.md", said: "Named in its goal: /w/private/nouva/audit_rina/BRIEF.md" });
     expect(briefShown("/w/private/nouva/brief-kk.md", "msn_1").name).toBe("brief-kk.md");
     expect(briefShown(null, "msn_1").name).toBe("BRIEF.md");
+  });
+});
+
+describe("a picture a report names", () => {
+  const FOLDER = "/w/private/nix/missions/msn_1";
+  const FILES = [`${FOLDER}/report-notes.md`, `${FOLDER}/flow.png`, `${FOLDER}/charts/before it.JPG`, `${FOLDER}/logo.svg`, "/home/you/project/shot.webp"];
+  const at = (name: string) => ownPicture("msn_1", FILES, FOLDER, name);
+
+  test("is one of the mission's own result files: as its folder has it, by its name alone, with ./ or a link's %20", () => {
+    expect(at("flow.png")).toBe("/api/control/missions/msn_1/files/1");
+    expect(at("./flow.png")).toBe("/api/control/missions/msn_1/files/1");
+    expect(at("charts/before%20it.JPG")).toBe("/api/control/missions/msn_1/files/2");
+    expect(at("before it.JPG")).toBe("/api/control/missions/msn_1/files/2");
+    // In a folder the person named, outside the mission's own: by its whole path or its name.
+    expect(at("/home/you/project/shot.webp")).toBe("/api/control/missions/msn_1/files/4");
+    expect(at("shot.webp")).toBe("/api/control/missions/msn_1/files/4");
+  });
+
+  test("a name it does not hold, a file that is no picture and an SVG are none: nothing is drawn from them", () => {
+    expect(at("elsewhere.png")).toBeNull();
+    expect(at("report-notes.md")).toBeNull();
+    expect(at("logo.svg")).toBeNull();
+    expect(at("https://example.com/flow.png")).toBeNull();
+    expect(at("%E0%A4%A")).toBeNull();
   });
 });

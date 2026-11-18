@@ -6,14 +6,37 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import { FileText } from "lucide-react";
+import { api } from "@/commons/lib/api";
 import { Markdown } from "@/commons/components/ui/Markdown";
+import { OwnPictures } from "@/commons/components/ui/markdown/Picture";
 import { MarkdownPreview } from "@/commons/components/ui/MarkdownPreview";
 import { cn } from "@/commons/lib/utils";
 import { inFolder } from "../lib/mission";
 import { FilePath } from "@/commons/components/ui/FilePath";
 import { Leaving } from "@/commons/components/ui/OverPage";
 
-export function MissionResult({ report, files, workdir }: { report: string | null; files: string[]; workdir: string }) {
+/** The endings the daemon serves as a result's picture (`GET /missions/:id/files/:index`). */
+const PICTURE = /\.(png|jpe?g|gif|webp)$/i;
+
+/**
+ * Which of a mission's result files a report means by a picture's name: the file as its folder has it
+ * (`charts/flow.png`), or its name alone (`flow.png`), with or without a leading `./`. The address to draw it from,
+ * or null where the name is none of them or is no picture.
+ */
+export function ownPicture(missionId: string, files: readonly string[], workdir: string, name: string): string | null {
+  // As written, or as a link writes a space: a name that does not decode is taken as it stands.
+  let asked = name.trim();
+  try {
+    asked = decodeURIComponent(asked);
+  } catch {
+    /* as it stands */
+  }
+  asked = asked.replace(/^\.\//, "");
+  const index = files.findIndex((file) => PICTURE.test(file) && (inFolder(file, workdir) === asked || file === asked || file.slice(file.lastIndexOf("/") + 1) === asked));
+  return index < 0 ? null : api.missionPictureUrl(missionId, index);
+}
+
+export function MissionResult({ missionId, report, files, workdir }: { missionId: string; report: string | null; files: string[]; workdir: string }) {
   const [open, setOpen] = useState(false);
   const [cut, setCut] = useState(false);
   /** `report.md` opened whole, as the chat received it (0.8.11). */
@@ -30,7 +53,10 @@ export function MissionResult({ report, files, workdir }: { report: string | nul
     return () => window.removeEventListener("resize", measure);
   }, [report, open]);
 
+  // A picture the report names among the mission's own result files is drawn in place, here and in the report opened whole.
+  const pictures = (name: string) => ownPicture(missionId, files, workdir, name);
   return (
+    <OwnPictures.Provider value={pictures}>
     <div className="space-y-3">
       {report && (
         <div className="relative">
@@ -66,5 +92,6 @@ export function MissionResult({ report, files, workdir }: { report: string | nul
         </ul>
       )}
     </div>
+    </OwnPictures.Provider>
   );
 }

@@ -424,6 +424,34 @@ test("its checklist is folded to the five steps around the one at work, with all
   expect([seen.opened, seen.again]).toEqual([12, 5]);
 });
 
+test("a picture its report names among its own result files is drawn in place; any other name is its words, and one on the web still waits for a press", async () => {
+  const folder = "/srv/nouride/workspace/shared/report";
+  answer({
+    "/missions/msn_1": detailOf({
+      status: "done",
+      seen: "done",
+      workdir: folder,
+      report: "# What changed\n\n![How a message travels](flow.png)\n\n![The old layout](charts/before%20it.png)\n\n![Not handed back](elsewhere.png)\n\n![From the web](https://example.com/pic.png)",
+      files: [`${folder}/notes.md`, `${folder}/flow.png`, `${folder}/charts/before it.png`, `${folder}/drawing.svg`],
+    }),
+  });
+  const seen = { own: [] as (string | null)[][], words: false, web: [] as unknown[] };
+  await renderPage("/missions/msn_1", async (host) => {
+    await eventually(() => host.querySelector("img[data-own-picture]") !== null, 2_000, "the report's picture");
+    seen.own = [...host.querySelectorAll<HTMLImageElement>("img[data-own-picture]")].map((img) => [img.getAttribute("src"), img.getAttribute("alt")]);
+    // A name the result does not hold is no picture: its words, and nothing asked of anywhere.
+    seen.words = (host.textContent ?? "").includes("Not handed back") && [...host.querySelectorAll("img")].every((img) => !(img.getAttribute("src") ?? "").includes("elsewhere"));
+    seen.web = [buttons(host).filter((label) => label.includes("Show picture")).length, [...host.querySelectorAll("img")].some((img) => (img.getAttribute("src") ?? "").startsWith("https://example.com"))];
+  });
+  // By its place among the files, the second and the third: the daemon serves nothing by a path.
+  expect(seen.own).toEqual([
+    ["/api/control/missions/msn_1/files/1", "How a message travels"],
+    ["/api/control/missions/msn_1/files/2", "The old layout"],
+  ]);
+  expect(seen.words).toBe(true);
+  expect(seen.web).toEqual([1, false]);
+});
+
 /** The Done when card's header, which opens and closes it. */
 function doneWhen(host: HTMLElement): HTMLButtonElement | undefined {
   return [...host.querySelectorAll<HTMLButtonElement>("button[aria-expanded]")].find((button) => button.textContent?.startsWith("Done when"));
