@@ -246,7 +246,11 @@ The whole procedure — the checks, the end-to-end run on the maintainers' box, 
 maintainers' private release runbook; the order, for anyone, is in `.agents/skills/nouride-contributing/references/repos-and-releases.md`.
 In short, since 0.8.36: the release branch goes to `main` by a pull request, merged with a merge commit (never a
 squash: every commit a note cites stays in `main`), the branch is deleted, the whole suite runs on the merge commit,
-and the tag goes on it. Two refs move on the way, each only forward:
+and the tag goes on it. `bun run scripts/release/publish.ts vX.Y.Z` runs that order from the release branch (`--dry-run`
+says what it would run): it opens the pull request or takes the one open, waits for its checks, merges, deletes the
+branch, asks for `ci.yml` on the merge and waits for it to end green, then moves the refs below and pushes the tag. A
+red check stops it with nothing merged: a new commit on the branch and the same command again. After the merge, two
+refs move, each only forward, and these are the lines to finish by hand when it stopped there:
 
 ```bash
 git switch main && git pull --ff-only                                                    # main as the merge left it

@@ -874,7 +874,6 @@
   "apps/engine/tests/contracts/pro-gate.test.ts": { "version": 2, "date": 1 },
   "apps/engine/tests/contracts/prune-maps.test.ts": { "version": 6 },
   "apps/engine/tests/contracts/public-tree.test.ts": { "version": 3, "date": 1 },
-  "apps/engine/tests/contracts/publish.test.ts": { "version": 1 },
   "apps/engine/tests/contracts/quiet-command-words.test.ts": { "version": 1 },
   "apps/engine/tests/contracts/release-floor.test.ts": { "version": 1 },
   "apps/engine/tests/contracts/release-log.test.ts": { "version": 2 },
