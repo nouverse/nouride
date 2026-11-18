@@ -1276,6 +1276,9 @@
     "ack": true,
     "editable": true
   },
+  "/auth/devices": {
+    "devices": []
+  },
   "/setup/state": {
     "hasUser": true,
     "hasProvider": true,

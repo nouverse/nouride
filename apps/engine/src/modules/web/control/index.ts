@@ -31,7 +31,8 @@ import { registerChatChoiceRoutes } from "./routes/chat-choices.ts";
 import { registerNotesRoutes } from "./routes/notes.ts";
 import { registerMissionRoutes } from "./routes/missions.ts";
 import { registerRoomRoutes } from "./routes/rooms.ts";
-import { registerAuthRoutes } from "./routes/auth.ts";
+import { registerAuthRoutes, signInLimits } from "./routes/auth.ts";
+import { registerDeviceRoutes } from "./routes/devices.ts";
 import { registerGatewayRoutes } from "./routes/gateways.ts";
 import { registerProviderRoutes } from "./routes/providers.ts";
 import { registerSecretRoutes } from "./routes/secrets.ts";
@@ -104,7 +105,10 @@ export function mountControlRoutes(app: Hono, deps: ControlDeps): void {
   registerNotesRoutes(control, deps);
   registerMissionRoutes(control, deps);
   registerRoomRoutes(control, deps);
-  registerAuthRoutes(control, deps);
+  // A device token's trade spends the password's allowance per address: a guessed token is a guessed password.
+  const limits = signInLimits();
+  registerAuthRoutes(control, deps, limits);
+  registerDeviceRoutes(control, deps, limits);
   registerGatewayRoutes(control, deps);
   registerProviderRoutes(control, deps);
   registerSecretRoutes(control, deps);

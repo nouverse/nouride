@@ -45,6 +45,7 @@ import type { SqliteApprovalGate } from "@/modules/tools/approvals.store.ts";
 import type { SecretStore } from "@nouride/secrets";
 import type { Principal } from "@/modules/users/auth.ts";
 import type { UsersPort } from "@/modules/users/users.store.ts";
+import type { DeviceTokenPort } from "@/modules/users/devices.store.ts";
 import type { SetupService } from "@/modules/setup/service.ts";
 import type { SettingsService } from "@/modules/config/settings/index.ts";
 import type { FileService } from "@/modules/setup/files.ts";
@@ -164,6 +165,8 @@ export interface ControlDeps {
   updates?: UpdateOps;
   /** Dashboard accounts. Absent in processes that only ever speak to the CLI. */
   users?: UsersPort;
+  /** Device tokens a local Home app stays signed in with, beside the accounts. Absent where `users` is. */
+  devices?: DeviceTokenPort;
   /** First-run setup. Absent when the dashboard is not served. */
   setup?: SetupService;
   /** Gateway and provider editing. Absent when there is no config file to write. */

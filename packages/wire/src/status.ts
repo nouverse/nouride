@@ -88,6 +88,18 @@ export interface SetupState {
  */
 export type UserRole = "admin" | "operator" | "viewer";
 
+/** A device token as the dashboard lists it (`/auth/devices`): never its value, which is shown once by the CLI. */
+export interface DeviceTokenView {
+  id: string;
+  /** What `nouride auth device --name` called it: the app and the machine. */
+  label: string;
+  /** The account a trade signs in as: the first admin when it was made. */
+  userId: string;
+  username: string;
+  createdAt: number;
+  lastUsedAt: number | null;
+}
+
 export interface User {
   id: string;
   username: string;

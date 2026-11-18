@@ -30,6 +30,11 @@ const PUBLIC_PATHS = new Set([
    */
   "/auth/oauth/start",
   "/auth/oauth/callback",
+  /**
+   * A device token traded for a session (`routes/devices.ts`): the Home app is not signed in when it asks, and the
+   * token it presents is the credential, held to the sign-in's limit.
+   */
+  "/auth/device",
 ]);
 
 /**

@@ -73,6 +73,7 @@ const ASKED: Record<string, (ids: { session: string; mission: string; automation
   "/missions/msn_1": (ids) => `/missions/${ids.mission}`,
   "/policy/missions": () => "/policy/missions",
   "/policy/steering": () => "/policy/steering",
+  "/auth/devices": () => "/auth/devices",
   "/setup/state": () => "/setup/state",
   "/auth/me": () => "/auth/me",
   "/status": () => "/status",

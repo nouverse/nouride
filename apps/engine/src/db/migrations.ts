@@ -70,6 +70,7 @@ import watch from "./migrations/087_watch.sql" with { type: "text" };
 import heldNoLongerAsked from "./migrations/088_held_no_longer_asked.sql" with { type: "text" };
 import workForAnother from "./migrations/089_work_for_another.sql" with { type: "text" };
 import missionTitle from "./migrations/090_mission_title.sql" with { type: "text" };
+import deviceTokens from "./migrations/091_device_tokens.sql" with { type: "text" };
 
 export interface Migration {
   /** Parsed from the filename prefix, and what `user_version` is set to once applied. */
@@ -112,6 +113,7 @@ export const MIGRATIONS: readonly Migration[] = [
   { version: 88, name: "088_held_no_longer_asked.sql", sql: heldNoLongerAsked },
   { version: 89, name: "089_work_for_another.sql", sql: workForAnother },
   { version: 90, name: "090_mission_title.sql", sql: missionTitle },
+  { version: 91, name: "091_device_tokens.sql", sql: deviceTokens },
 ];
 
 /**

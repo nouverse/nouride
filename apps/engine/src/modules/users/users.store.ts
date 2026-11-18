@@ -438,16 +438,16 @@ export class UserStore {
    * Only its SHA-256 is kept, as an MCP token's is, and a token is found by hashing it. The database goes into every
    * snapshot, a USB drive's included: a row a copy holds is not a cookie anybody can present.
    */
-  startSession(userId: string): { token: string; expiresAt: number } {
+  startSession(userId: string, deviceId?: string): { token: string; expiresAt: number } {
     const token = randomToken();
     const at = this.now();
     const expiresAt = at + SESSION_TTL_MS;
     this.options.db
       .prepare(
-        `INSERT INTO user_sessions (id, user_id, token_hash, expires_at, created_at)
-         VALUES (?, ?, ?, ?, ?)`,
+        `INSERT INTO user_sessions (id, user_id, token_hash, expires_at, created_at, device_id)
+         VALUES (?, ?, ?, ?, ?, ?)`,
       )
-      .run(newId("uss"), userId, sha256Text(token), expiresAt, at);
+      .run(newId("uss"), userId, sha256Text(token), expiresAt, at, deviceId ?? null);
     this.sweepExpiredSessions();
     return { token, expiresAt };
   }
@@ -490,7 +490,7 @@ export class UserStore {
   }
 
   /**
-   * Every account and every session, in one transaction — the setup console's "Reset accounts" on a box, after
+   * Every account and every session, in one transaction (and every device token, which goes with its account: 091) — the setup console's "Reset accounts" on a box, after
    * which the next start offers the card's first sign-in again. Asked of the daemon that owns the database; the
    * plugin used to open the file and delete the rows itself, beside a daemon writing it.
    */

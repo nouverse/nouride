@@ -226,6 +226,7 @@ export const GRAMMAR: Readonly<Record<string, CommandGrammar>> = {
     },
     untaught: ["ls", "list", "remove"],
   },
+  auth: { forms: { device: ["--name <label>"] } },
   "mcp-server": {
     forms: {
       "": NONE,

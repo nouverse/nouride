@@ -243,6 +243,20 @@ Start berikutnya membuat admin pertama lagi dan mencetak password-nya, atau mema
 `db restore`, ia menolak jalan selama ada daemon yang jalan di direktori data ini.
 [FAQ: password pertama terlewat →](/id/docs/reference/faq/)
 
+## Aplikasi Home yang tetap masuk
+
+```bash
+nouride auth device --name "Nouride Home"   # token perangkat, dicetak sekali
+```
+
+Sejak 0.8.40. Untuk Nouride Home di mesin tempat daemon jalan: daemon membuat token itu hanya untuk
+CLI, yang control token-nya ada di folder data, dan mengikatnya ke akun admin pertama. Token itu gak
+kedaluwarsa; aplikasinya menukarnya dengan sesi dashboard biasa (`POST /api/control/auth/device`)
+setiap kali ia keluar, dan penukaran yang gagal dihitung di batas masuk yang sama dengan password yang
+salah. Admin melihat tiap token di halaman Users dashboard dan mencabutnya di sana, yang sekaligus
+mengakhiri sesi yang sedang dipakai aplikasinya. `nouride users reset` menghapusnya bersama akun-akun;
+ganti password gak menyentuhnya.
+
 ## Provider dan secret
 
 ```bash

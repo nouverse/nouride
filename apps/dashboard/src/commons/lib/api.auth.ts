@@ -6,7 +6,7 @@
  */
 
 import { control, post, request } from "./api.client";
-import type { PersonRecord, Principal, User } from "@nouride/wire";
+import type { DeviceTokenView, PersonRecord, Principal, User } from "@nouride/wire";
 
 export const authApi = {
   login: (username: string, password: string) =>
@@ -50,4 +50,9 @@ export const authApi = {
   deleteUser: (id: string) => request<{ ok: true; warning?: string }>(`${control}/users/${id}`, { method: "DELETE" }),
 
   setUserRole: (id: string, role: string) => post<{ ok: true }>(`${control}/users/${id}/role`, { role }),
+
+  /** The device tokens a local Home app stays signed in with: an admin's to list and revoke, never to make. */
+  devices: () => request<{ devices: DeviceTokenView[] }>(`${control}/auth/devices`),
+
+  revokeDevice: (id: string) => request<{ id: string; revoked: boolean }>(`${control}/auth/devices/${encodeURIComponent(id)}`, { method: "DELETE" }),
 };
