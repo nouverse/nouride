@@ -89,6 +89,10 @@ The result and the report are in your language, written formally, as a document 
 comes with its `report.md`, so you read it before you decide, and it is not sent again when you accept. Nothing you
 wrote is cut on the way: the goal, what you told it while it worked, what it reports.
 
+A report is not only text (0.8.40). Where the work has a shape, the agent draws it, hands the picture back among the
+files, so the chat receives it as a picture, and names it in the report; the mission's page draws it there, in place.
+A list of things with their state is a table.
+
 *Started*, *needs you* and *done* end with the mission's page, as a link, where the chat gets one:
 [Links from a chat](/en/docs/manual/dashboard/#links-from-a-chat).
 

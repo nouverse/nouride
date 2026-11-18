@@ -93,6 +93,10 @@ Hasil dan laporannya memakai bahasamu, ditulis formal seperti dokumen. Hasil yan
 bersama `report.md`-nya, supaya kamu membacanya dulu sebelum memutuskan, dan tidak dikirim lagi saat kamu menerimanya.
 Tidak ada yang kamu tulis dipotong di jalan: goal-nya, yang kamu sampaikan saat ia bekerja, dan yang ia laporkan.
 
+Laporan bukan cuma teks (0.8.40). Kalau pekerjaannya punya bentuk, agent menggambarnya, menyerahkan gambarnya di
+antara file hasil, sehingga chat menerimanya sebagai gambar, dan menyebutnya di laporan; halaman mission menggambarnya
+di sana, di tempatnya. Daftar hal beserta statusnya ditulis sebagai tabel.
+
 Notifikasi *mulai*, *butuh kamu*, dan *selesai* diakhiri link ke halaman misinya, di chat yang mendapat link:
 [Link dari chat](/id/docs/manual/dashboard/#link-dari-chat).
 

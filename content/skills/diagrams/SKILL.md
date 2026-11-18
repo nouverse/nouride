@@ -1,6 +1,6 @@
 ---
 name: diagrams
-description: Draw a diagram as a sharp PNG and SVG (architecture, homelab or network map, flowchart, process, data flow, org chart, sequence of steps) with Graphviz, from a short JSON list of boxes and arrows a helper turns into a clean picture. Use when asked to draw, sketch, map, diagram or visualise how something is connected or how a process goes, or to redraw or update an existing diagram.
+description: Draw a diagram as a sharp PNG (architecture, homelab or network map, flowchart, process, data flow, org chart, steps, a timeline, a before and after) with Graphviz, from a short JSON list of boxes and arrows a helper turns into a clean picture, or as a page a browser lays out where one is already set up. Use when asked to draw, sketch, map, diagram or visualise how something is connected, and for the picture in a report or how a process goes, or to redraw or update an existing diagram.
 requires: dot, python3
 needs_tools: exec, read, write, send_file
 author: Nouride
@@ -12,6 +12,24 @@ A diagram is for seeing the shape of a thing at a glance. You write *what* is co
 list; `scripts/diagram.py`, in the folder this file is in, turns it into Graphviz with a consistent style, renders a
 PNG and an SVG, and warns about what makes a diagram hard to read. Below, `DIAGRAM` stands for that script's full path.
 Write the full path in each command, e.g. `python3 /opt/nouride/skills/diagrams/scripts/diagram.py`.
+
+## Which way
+
+Two ways to draw, and the machine decides which:
+
+```sh
+ls <private>/browser/node_modules/playwright-core >/dev/null 2>&1 && echo "browser: set up" || echo "browser: not set up"
+```
+
+`<private>` is the full path of your private folder, where the `browser-automation` skill keeps its browser.
+
+- **`browser: set up`**: draw it as a page, §6. A browser lays the picture out, so it holds what boxes and arrows
+  cannot (a timeline, a before and after, steps with what each produced, a number with its shape), in type that
+  reads.
+- **`browser: not set up`**: Graphviz, §1 to §5. **Do not set a browser up for a diagram**: that is hundreds of MB
+  for a picture Graphviz draws, and it is the person's machine.
+
+Either way the rule is the same: render, look, fix, then send.
 
 ## This machine
 
@@ -120,6 +138,60 @@ replaced silently, and the boxes then fit their text badly.
 - Keep the spec, the `.dot` and the SVG beside each other where the work lives (a repository's `docs/`, the project
   folder), so the next change is an edit of the spec and one command, not a redraw.
 - The SVG is for a website or a document; the PNG is for chat.
+
+## 6. Drawn as a page
+
+Only where the check above said `browser: set up`. Below, `PICTURE` stands for the full path of
+`scripts/picture.mjs` in this skill's folder, as `DIAGRAM` does for the other.
+
+**Write one HTML file**, with your `write` tool, whose picture is one element with `id="picture"` and a fixed width:
+
+```html
+<!doctype html><html><head><meta charset="utf-8"><style>
+  body { margin: 0; background: #fff; font-family: system-ui, sans-serif; color: #1f2430; }
+  #picture { width: 1200px; box-sizing: border-box; padding: 40px; display: flex; flex-direction: column; gap: 28px; }
+</style></head><body><main id="picture">
+  ...
+</main></body></html>
+```
+
+- **The browser places things, you do not.** Rows and columns are `display: flex` or `display: grid` with a `gap`.
+  No `position: absolute`, no pixel coordinates, no hand-written `<svg>` of boxes: those are where a picture comes out
+  with one label over another.
+- **An arrow is drawn, not typed.** `→` is blank on a machine whose font has no such glyph. Between two steps in a
+  row: a narrow cell holding a line with a CSS triangle, or a small inline `<svg>` of one line and one arrowhead.
+- **A real graph is still Graphviz's.** Where arrows cross or branch (an architecture, a network), render it with §2
+  and §3 and put its SVG in the page (`<img src="home.svg">`): the title, the legend and the notes are the page's, and
+  the layout of the graph is still computed.
+- **As little as says it**: 3 to 7 parts, one font family, text 16px or more, dark text on a light ground or the
+  reverse. Every word in it is something you know from what they told you, their files or what you checked.
+- Wider than tall, but not a strip: past three steps in a row, a second row.
+
+**Render, then look:**
+
+```sh
+node PICTURE "$TMPDIR/flow.html" --browser-dir <private>/browser --out "$TMPDIR/flow.png"
+```
+
+It writes the PNG at twice its size, so it stays sharp when a chat shrinks it, and prints what it measured: text cut
+off by its own box, anything past the picture's edge, text over other text, text under 14px, low contrast, an arrow
+typed as a character, a picture more than five times as wide as tall. With findings it also writes `flow-check.png`,
+each one outlined and numbered. **Fix every finding and render again**, then **`read` the PNG** as in §3: measured
+clean is not the same as reads well. It exits 3 where no browser starts: that is Graphviz, §1 to §5, not a browser to
+install.
+
+Send it as in §5. Keep the HTML beside the PNG where the work lives.
+
+## In a mission's report
+
+A report is read on the mission's page and in the chat it reports to. Where the work has a shape (what now connects
+to what, the steps it took, before and after), one picture says it faster than three paragraphs.
+
+- Draw it by this skill, in the mission's folder, and **hand the PNG back among the mission's files**: the chat
+  receives it as a picture.
+- **Name it in the report where it belongs**, by its file's name: `![How a message travels now](flow.png)`. The
+  mission's page draws it there. Say in the words under it what it shows; a report must still read without it.
+- One or two pictures. A list of things with their state is a table, not a picture.
 
 ## Not this way
 
