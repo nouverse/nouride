@@ -39,6 +39,7 @@ import * as missions from "./missions.ts";
 import * as update from "./update.ts";
 import * as backups from "./backups.ts";
 import * as quietHours from "./quiet-hours.ts";
+import * as steering from "./steering.ts";
 
 export { GATEWAY_PLATFORMS, PROVIDER_KINDS } from "./types.ts";
 export type { LearningPatch } from "./learning.ts";
@@ -162,6 +163,11 @@ export class SettingsService {
   /** `[cron] quiet_hours`: when what automations would say is kept for later, or empty for never. */
   async setQuietHours(...args: Rest<typeof quietHours.setQuietHours>): Promise<SaveResult> {
     return await quietHours.setQuietHours(this.deps, ...args);
+  }
+
+  /** `[queue] steer_reply` and `steer_ack` — what a person is told when they write while the agent works. */
+  async setSteering(...args: Rest<typeof steering.setSteering>): Promise<SaveResult> {
+    return await steering.setSteering(this.deps, ...args);
   }
 
   /** `[jobs] quiet_after_minutes` — how long a job may be quiet before its agent says so. */

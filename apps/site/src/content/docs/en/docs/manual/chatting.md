@@ -144,7 +144,8 @@ model on the agent's provider for it: a reasoning model can take ten seconds ove
 
 On a platform that cannot edit a message, WhatsApp among them, "Got it" is not sent first: the line is
 sent alone, and "Got it" only if the line fails or is late (0.8.39). `[queue] steer_ack = false` sends
-the line alone on every platform, and nothing at all where there is no line.
+the line alone on every platform, and nothing at all where there is no line. Both switches are also on the
+dashboard, under Agents, Agent Settings, "While an agent works" (0.8.40).
 
 If the turn is waiting on an approval in that chat, the reply says your message will be read once
 the approval is answered, with `/approve` or `/deny` (in a room it leaves the commands to the

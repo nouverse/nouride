@@ -16,6 +16,7 @@ import { PageHeader } from "@/commons/components/ui/ui";
 import { AccessModeSwitch } from "./components/AccessModeSwitch";
 import { GroupContextControl } from "./components/GroupContextControl";
 import { MentionSettings } from "./components/MentionSettings";
+import { SteeringControl } from "./components/SteeringControl";
 import { SessionRetentionControl } from "./components/SessionRetentionControl";
 import { SpendCapControl } from "./components/SpendCapControl";
 import { ToolBudgetControl } from "./components/ToolBudgetControl";
@@ -28,7 +29,7 @@ export default function AgentSettingsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Agent Settings"
-        description="Rules for every agent: who may talk to them, group chats, agents calling on each other, the daily spend limit, how long conversations are kept, and the settings file itself."
+        description="Rules for every agent: who may talk to them, group chats, agents calling on each other, what people are told while an agent works, the daily spend limit, how long conversations are kept, and the settings file itself."
         actions={
           <Link
             to="/agents"
@@ -42,6 +43,7 @@ export default function AgentSettingsPage() {
       <AccessModeSwitch />
       <GroupContextControl />
       <MentionSettings />
+      <SteeringControl />
       <SpendCapControl />
       <ToolBudgetControl />
       <TurnBudgetControl />

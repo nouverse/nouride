@@ -7,7 +7,7 @@
  */
 
 import { control, post, request } from "./api.client";
-import type { GatewayInstance, ProviderProfileView } from "@nouride/wire";
+import type { GatewayInstance, ProviderProfileView, SteeringPolicy } from "@nouride/wire";
 
 export const settingsApi = {
   gateways: () =>
@@ -44,6 +44,12 @@ export const settingsApi = {
       `${control}/mentions`,
       input,
     ),
+
+  /** `[queue] steer_reply` and `steer_ack`: what a person is told when they write while the agent works. */
+  steeringPolicy: () => request<SteeringPolicy>(`${control}/policy/steering`),
+
+  setSteering: (input: { reply?: boolean; ack?: boolean }) =>
+    post<{ ok: true; reply: boolean; ack: boolean }>(`${control}/policy/steering`, input),
 
   saveGateway: (input: {
     platform: string;

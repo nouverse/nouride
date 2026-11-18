@@ -192,6 +192,7 @@ const ROWS: Row[] = [
   { method: "setRetentionDays", via: "the conversations window", write: ({ settings }) => settings.setRetentionDays({ scope: "sessions", days: 45, actor }) },
   { method: "setWebSearchSettings", via: "web search", write: ({ settings }) => settings.setWebSearchSettings({ patch: { mode: "searxng", endpoint: "http://127.0.0.1:8888" }, actor }) },
   { method: "setMentionsEnabled", via: "agent mentions", write: ({ settings }) => settings.setMentionsEnabled({ enabled: false, actor }) },
+  { method: "setSteering", via: "what a person is told while the agent works", write: ({ settings }) => settings.setSteering({ reply: false, ack: false, actor }) },
   { method: "setMentionMaxHops", via: "the mention chain", write: ({ settings }) => settings.setMentionMaxHops({ maxHops: 8, actor }) },
   { method: "setDailyCostCap", via: "the spend cap", write: ({ settings }) => settings.setDailyCostCap({ usd: 12.5, actor }) },
   {

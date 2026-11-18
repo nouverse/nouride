@@ -1271,6 +1271,11 @@
     },
     "editable": true
   },
+  "/policy/steering": {
+    "reply": true,
+    "ack": true,
+    "editable": true
+  },
   "/setup/state": {
     "hasUser": true,
     "hasProvider": true,

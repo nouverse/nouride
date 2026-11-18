@@ -45,6 +45,7 @@ import { registerMissionSettingsRoutes } from "./routes/mission-settings.ts";
 import { registerTierRoutes } from "./routes/tiers.ts";
 import { registerDelegateRoutes } from "./routes/delegate.ts";
 import { registerMentionRoutes } from "./routes/mentions.ts";
+import { registerSteeringRoutes } from "./routes/steering.ts";
 import { registerWebSearchRoutes } from "./routes/web-search.ts";
 import { registerPeopleRoutes } from "./routes/people.ts";
 import { registerGroupRoutes } from "./routes/groups.ts";
@@ -119,6 +120,7 @@ export function mountControlRoutes(app: Hono, deps: ControlDeps): void {
   // Before the agent module, for its `/agents/:id/delegate` — the agent module ends in `POST /agents/:id/:action`.
   registerDelegateRoutes(control, deps);
   registerMentionRoutes(control, deps);
+  registerSteeringRoutes(control, deps);
   registerWebSearchRoutes(control, deps);
   registerPeopleRoutes(control, deps);
   registerGroupRoutes(control, deps);
