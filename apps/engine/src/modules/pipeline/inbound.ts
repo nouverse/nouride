@@ -580,8 +580,9 @@ export class InboundRouter {
       chatId: envelope.chatId,
       gatewayId: envelope.gatewayId,
     };
-    const noteToChat = (prompt: string, reply: string) =>
-      this.ctx.deps.turns?.note({
+    const noteToChat = (prompt: string, reply: string) => {
+      if (!this.ctx.deps.turns) return;
+      this.ctx.deps.turns.note({
         sessionId: sessionIdFor(key),
         agentId: agent.config.id,
         gatewayId: envelope.gatewayId,
@@ -591,6 +592,9 @@ export class InboundRouter {
         prompt,
         reply,
       });
+      // The answer makes the conversation when there is none yet, so it is listed and deleted with it.
+      this.ctx.deps.sessions.keepAnswered(key);
+    };
 
     /**
      * Where ids are per connection, the agent's own connection is the only one that can answer.
@@ -696,16 +700,7 @@ export class InboundRouter {
          * nothing under it. Recorded after the send, so a command whose reply never left is not
          * remembered as answered.
          */
-        this.ctx.deps.turns?.note({
-          sessionId: sessionIdFor(key),
-          agentId: agent.config.id,
-          gatewayId: envelope.gatewayId,
-          chatId: envelope.chatId,
-          messageId: envelope.id,
-          senderId: envelope.senderId,
-          prompt: text.trim() || command.command,
-          reply: result.reply,
-        });
+        noteToChat(text.trim() || command.command, result.reply);
       }
       if (result.handled) return;
     }
