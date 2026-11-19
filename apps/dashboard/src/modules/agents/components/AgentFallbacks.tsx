@@ -16,6 +16,7 @@ import { Card, ErrorNote } from "@/commons/components/ui/ui";
 import { Combobox } from "@/commons/components/ui/Combobox";
 import { useSaved } from "@/commons/hooks/use-saved";
 import { chatModels } from "@/commons/lib/model-kind";
+import { useWide } from "@/commons/hooks/use-wide";
 
 const same = (a: FallbackPair[], b: FallbackPair[]) =>
   a.length === b.length && a.every((pair, i) => pair.provider === b[i]?.provider && pair.model.trim() === b[i]?.model);
@@ -36,6 +37,7 @@ function PairRow({
   onChange: (next: FallbackPair) => void;
   onRemove: () => void;
 }) {
+  const wide = useWide();
   const models = useQuery({
     queryKey: ["provider-models", pair.provider],
     queryFn: () => api.providerModels(pair.provider),
@@ -79,6 +81,7 @@ function PairRow({
           value={pair.model}
           onChange={(model) => onChange({ ...pair, model })}
           disabled={!editable}
+          listOnPress={wide}
         />
       </div>
     </li>

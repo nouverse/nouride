@@ -24,7 +24,7 @@ export const LONG_FUNCTIONS: Record<string, Record<string, Budget>> = {
   "apps/dashboard/src/commons/components/ui/NotesModal.tsx": { NotesModal: { lines: 156, why: COMPONENT("the one dialog for notes, to read and to edit") } },
   "apps/dashboard/src/commons/hooks/use-conversation.ts": { useConversation: { lines: 313, why: "one conversation as the daemon sees it: the live feed's loops, its turns, its sends (their page, a first pick, what was sent so its turn is known), an ended turn held while written out, shared refs" } },
   "apps/dashboard/src/modules/access/pending.tab.tsx": { PendingTab: { lines: 158, why: COMPONENT("who is waiting to be let in, and the answers to one") } },
-  "apps/dashboard/src/modules/agents/components/NewAgentForm.tsx": { NewAgentForm: { lines: 200, why: COMPONENT("the form that creates an agent") } },
+  "apps/dashboard/src/modules/agents/components/NewAgentForm.tsx": { NewAgentForm: { lines: 191, why: COMPONENT("the form that creates an agent") } },
   "apps/dashboard/src/modules/integrations/index.page.tsx": { Tokens: { lines: 186, why: COMPONENT("the tokens other tools reach Nouride's MCP server with") } },
   "apps/dashboard/src/modules/login/index.page.tsx": { LoginPage: { lines: 154, why: COMPONENT("the sign-in page, with the way out to Nouride Home in its card") } },
   "apps/dashboard/src/modules/memories/document-editor.tsx": { DocumentEditor: { lines: 185, why: COMPONENT("one knowledge document, read and edited") } },

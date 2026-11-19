@@ -18,12 +18,14 @@ import { AgentFallbacks } from "./components/AgentFallbacks";
 import { AgentEffort } from "./components/AgentEffort";
 import { ExternalNote } from "./components/ExternalNote";
 import { chatModels } from "@/commons/lib/model-kind";
+import { useWide } from "@/commons/hooks/use-wide";
 
 export default function AgentModelPage({ agentId }: { agentId: string }) {
   const status = useQuery({ queryKey: ["status"], queryFn: api.status });
   const providers = useQuery({ queryKey: ["providers"], queryFn: api.providers, retry: false });
   const me = useMe();
   const queryClient = useQueryClient();
+  const wide = useWide();
 
   const agent = (status.data?.agents ?? []).find((entry) => entry.id === agentId);
   const editable = canWrite(me.data ?? null);
@@ -114,6 +116,7 @@ export default function AgentModelPage({ agentId }: { agentId: string }) {
                 value={currentModel}
                 onChange={setModel}
                 disabled={!editable}
+                listOnPress={wide}
               />
             </Field>
           </div>

@@ -22,6 +22,7 @@ import { byInstaller, goBackMessage, setUpMessage } from "@/commons/lib/set-up";
 import { CliProfiles } from "./components/CliProfiles";
 import AgentModelPage from "./model.page";
 import { CardLoading } from "@/commons/components/ui/Skeleton";
+import { useWide } from "@/commons/hooks/use-wide";
 
 const PRESETS: { id: CliPreset; label: string; summary: string }[] = [
   { id: "folder", label: "Free in its folder", summary: "Works without asking inside its own folder. Where agents are not their own users, this asks as Risky does." },
@@ -170,6 +171,9 @@ export default function AgentCliPage({ agentId }: { agentId: string }) {
 function Settings({ agentId, data, cliName, models, admin, onSaved }: { agentId: string; data: AgentCli; cliName: string; models: { value: string; name?: string }[]; admin: boolean; onSaved: () => Promise<void> }) {
   const [permissions, setPermissions] = useState<CliPreset>(data.permissions);
   const [model, setModel] = useState(data.model ?? "");
+  // The CLI's whole list on a press, in a wide window: a person who has not picked one knows no name to type. On a
+  // phone the list waits for typing or the field's arrow, since one opened on a press moves under the keyboard.
+  const wide = useWide();
   const [effort, setEffort] = useState(ownEffort(data));
   useEffect(() => {
     setPermissions(data.permissions);
@@ -190,6 +194,7 @@ function Settings({ agentId, data, cliName, models, admin, onSaved }: { agentId:
             onChange={setModel}
             disabled={!admin}
             placeholder={`${cliName}'s default`}
+            listOnPress={wide}
           />
         </Field>
         <Effort data={data} cliName={cliName} value={effort} onChange={setEffort} disabled={!admin} />
