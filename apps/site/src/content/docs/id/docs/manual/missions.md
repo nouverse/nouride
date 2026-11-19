@@ -87,7 +87,8 @@ Chat tetap sepi. Misi cuma bilang:
   selesai lalu menunggu jawaban kamu, karena jawabannya bisa mengubah pekerjaannya. Begitu dijawab, ia mengerjakan yang
   berubah karena jawaban itu dan bilang selesai lagi. Menerimanya apa adanya tetap menutup misinya. Hanya satu
   pertanyaan yang terbuka dalam satu waktu;
-- bahwa ia **berhenti sebentar** karena modelnya gak bisa menjawab, dan mencoba lagi sendiri;
+- bahwa ia **tertahan** karena modelnya gak bisa menjawab, dan mencoba lagi sendiri;
+- bahwa ia **di-pause** (0.8.41), oleh siapa, dengan tombol Resume dan Stop;
 - bahwa ia **selesai**, dengan hasilnya dalam dua-tiga kalimat; lalu **laporan** utuhnya sebagai `report.md`, dan file
   yang ia buat untukmu: dokumen, gambar, spreadsheet. Kode yang ia ubah di repo tetap di branch-nya, yang disebut di
   notifikasinya, dan tidak dikirim;
@@ -235,10 +236,27 @@ lewat jalan lain ditutup dengan catatan: `/mission accept <id> --outside "<di ma
 
 ## Kalau modelnya gak bisa menjawab
 
-Batas pemakaian, rate limit, provider yang sedang down: misinya **berhenti sebentar** dan mencoba lagi sendiri,
-setelah 2, 10 dan 30 menit, lalu tiap jam, selama kira-kira sehari. Kamu diberi tahu sekali waktu ia berhenti dan sekali
+Batas pemakaian, rate limit, provider yang sedang down: misinya **tertahan** dan mencoba lagi sendiri,
+setelah 2, 10 dan 30 menit, lalu tiap jam, selama kira-kira sehari. Kamu diberi tahu sekali waktu ia tertahan dan sekali
 waktu ia jalan lagi; waktu menunggunya gak dihitung ke batas jamnya. **Retry now** mencoba saat itu juga, **Stop**
 mengakhirinya. Setelah sehari, misinya bertanya ke kamu.
+
+## Mem-pause misi
+
+Misi yang sedang jalan atau masih antre bisa di-pause (0.8.41): **Pause** di halamannya, `/mission pause <id>` di
+chatnya, atau `nouride mission pause <id>`. Gilirannya yang sedang jalan dipotong dan job-job latar belakangnya
+dihentikan, sama seperti waktu kena batas. Gak ada yang hilang: checklist, folder dan kerjanya sejauh ini disimpan, dan
+agent-nya bebas mengerjakan yang lain. Misi yang di-pause di sebuah repo tetap memegang repo itu, jadi misi lain di
+repo yang sama menunggu sampai ia lanjut atau dihentikan.
+
+Ia tetap di-pause selama yang kamu mau. Waktu selama di-pause gak dihitung ke batas mana pun, dan kamu gak diingatkan
+soal itu. **Resume** di halamannya atau di kartunya di Needs you, tombol **Resume** di bawah notifikasinya, atau
+`/mission continue <id>`, membuatnya lanjut dari checklist-nya; misi yang di-pause waktu masih antre kembali masuk
+antrean. **Stop** mengakhirinya.
+
+Siapa pun yang boleh menghentikan misi boleh mem-pause-nya. Orchestrator bisa mem-pause misi agent mana pun kalau kamu
+memintanya, dan cuma bisa melanjutkan misi yang ia pause sendiri: misi yang kamu pause, kamu yang melanjutkan. Misi
+yang sedang dicek, yang sudah menunggu kamu, dan draft gak bisa di-pause, karena gak ada yang sedang jalan di situ.
 
 ## Pertanyaannya
 
@@ -337,7 +355,8 @@ itu, `isolated` ditolak.
 | `/mission <tujuan>` | agent yang kamu sapa membuat draft dari tujuanmu; jalan setelah kamu memulainya |
 | `/mission` | yang jalan dan menunggu di sini, yang butuh kamu paling atas |
 | `/mission stop <id>` | akhiri |
-| `/mission continue <id> [catatan]` | lanjut melewati batas, keluar dari macet, atau dengan apa yang kurang setelah dicek |
+| `/mission pause <id>` | tahan di tempatnya: gilirannya dipotong, job-nya dihentikan, kerjanya disimpan |
+| `/mission continue <id> [catatan]` | lanjut melewati batas, keluar dari macet, setelah di-pause, atau dengan apa yang kurang setelah dicek |
 | `/mission accept <id>` | terima hasilnya, atau usulan, yang lalu mulai; di misi yang menunggu hal lain, terima apa adanya |
 | `/mission accept <id> --outside "<di mana>"` | tutup sebagai selesai lewat jalan lain, cek-nya gak dijalankan |
 | `/mission answer <id> <jawaban>` | jawab pertanyaannya |

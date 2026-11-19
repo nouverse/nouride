@@ -182,7 +182,7 @@ ${BOLD}Talking to a running daemon${RESET}
   nouride jobs log|kill <id>
   nouride mission [list] [--all]   Missions: what needs you first, then what runs, then the last five ended
   nouride mission show <id>        One mission: its goal, checks, checklist, limits and report
-  nouride mission stop|continue|accept <id> [text]
+  nouride mission stop|pause|continue|accept <id> [text]
   nouride mission answer <id> <answer>
   nouride mission tell <id> <words> Tell a mission something while it works: read before its next step
   nouride mission delete <id> [--force]

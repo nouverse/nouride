@@ -26,7 +26,8 @@ import { WhenLine } from "./WhenLine";
 function badgeTone(mission: MissionView): string {
   const column = columnOf(mission);
   if (column === "backlog") return "bg-secondary/12 text-secondary";
-  if (column === "needs") return "bg-warning/15 text-warning";
+  // A paused one is as quiet as a stopped one: nothing calls on the reader until they want it to go on.
+  if (column === "needs") return mission.waitKind === "paused" ? "bg-base-content/[0.07] text-base-content/70" : "bg-warning/15 text-warning";
   if (column === "working") return "bg-primary/12 text-primary";
   return { done: "bg-success/12 text-success", failed: "bg-failed/15 text-failed", stopped: "bg-base-content/[0.07] text-base-content/70" }[outcomeOf(mission)];
 }
@@ -43,6 +44,7 @@ export function BoardCard({ mission, motion = "", writable, showWhose }: { missi
   const mayAct = writable && !readsOnly(mission);
   const startable = column === "backlog" && mayAct;
   const answerable = column === "needs" && mayAct && actionsFor(mission).includes("answer");
+  const resumable = column === "needs" && mayAct && actionsFor(mission).includes("resume");
 
   return (
     <article data-mission={mission.id} data-column={column} className={cn("relative space-y-3 rounded-[18px] border border-base-content/[0.08] bg-base-100 p-4 shadow-soft transition-colors hover:border-base-content/20", motion)}>
@@ -85,11 +87,16 @@ export function BoardCard({ mission, motion = "", writable, showWhose }: { missi
         </span>
       </div>
 
-      {startable || answerable ? (
+      {startable || answerable || resumable ? (
         <div className="relative z-10 flex flex-wrap items-center gap-2">
           {startable ? (
             <button type="button" className="btn btn-primary btn-sm min-h-11 rounded-xl px-4 sm:min-h-8" disabled={act.isPending} onClick={() => act.mutate({ verb: "accept" })}>
               Start
+            </button>
+          ) : null}
+          {resumable ? (
+            <button type="button" className="btn btn-primary btn-sm min-h-11 w-full rounded-xl sm:min-h-8 sm:w-auto" disabled={act.isPending} onClick={() => act.mutate({ verb: "continue" })}>
+              Resume
             </button>
           ) : null}
           {answerable && !answering ? (

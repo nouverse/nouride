@@ -1,11 +1,11 @@
 /**
- * Stop, Continue and Accept, beside the mission's goal — each only when it applies (`actionsFor`) — and Delete once it
+ * Stop, Pause, Resume, Continue and Accept, beside the mission's goal — each only when it applies (`actionsFor`) — and Delete once it
  * has ended (0.8.13), or while it is still a draft, which goes at once. Answer is not here: it is a box under the question it answers. Stop, Accept as it is and Delete
- * ask first, since what they end does not come back. None of them on a mission the reader only reads: it is another
+ * ask first, since what they end does not come back; Pause does not, since Resume takes it back. None of them on a mission the reader only reads: it is another
  * person's to stop, continue and accept.
  */
 
-import { Check, Play, Square, Trash2 } from "lucide-react";
+import { Check, Pause, Play, Square, Trash2 } from "lucide-react";
 import type { MissionVerb, MissionView } from "@nouride/wire";
 import { ApiError } from "@/commons/lib/api.client";
 import { useConfirm } from "@/commons/components/ui/confirm";
@@ -74,6 +74,16 @@ export function MissionActions({
           onClick={() => onAct("continue")}
         >
           <Play size={14} aria-hidden="true" /> Continue
+        </button>
+      )}
+      {actions.includes("resume") && (
+        <button type="button" className="btn btn-primary btn-sm gap-1.5 rounded-xl" disabled={!writable || pending} onClick={() => onAct("continue")}>
+          <Play size={14} aria-hidden="true" /> Resume
+        </button>
+      )}
+      {actions.includes("pause") && (
+        <button type="button" className="btn btn-ghost btn-sm gap-1.5 rounded-xl" disabled={!writable || pending} onClick={() => onAct("pause")} title="Hold it where it is. Its work is kept, and Resume goes on.">
+          <Pause size={14} aria-hidden="true" /> Pause
         </button>
       )}
       {actions.includes("acceptAsIs") && (

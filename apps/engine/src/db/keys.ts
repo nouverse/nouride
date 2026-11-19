@@ -111,6 +111,8 @@ export const KEY_COLUMNS: readonly KeyColumn[] = [
   // A mission's agent, the agent that started it, and the chat it reports to with the person who started it there (0.8.0).
   { table: "missions", column: "agent_id", kind: "agent" },
   { table: "missions", column: "by_agent", kind: "agent" },
+  // The agent that paused it through its `work` tool, while it is paused: the one agent that may go on with it.
+  { table: "missions", column: "paused_by_agent", kind: "agent" },
   { table: "missions", column: "gateway_id", kind: "gateway" },
   { table: "missions", column: "chat_id", kind: "chatId" },
   { table: "missions", column: "started_by", kind: "sender" },

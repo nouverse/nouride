@@ -5,8 +5,8 @@
  *
  * Three stages and a history, read only: a mission moves on its own, so there is nothing to drag. **Backlog** is the
  * drafts, which run when a person starts them; **Working** is at work (queued, running, checking, or waiting on someone
- * who is not the reader); **Needs you** waits on the reader (a question, approvals, a limit, a result to accept) and
- * never holds a draft. **Finished** is done, failed or stopped, within its own span: what has been, not a stage, so on a
+ * who is not the reader); **Needs you** waits on the reader (a question, approvals, a limit, a result to accept, or a
+ * mission paused, under its own "Paused" tag with Resume) and never holds a draft. **Finished** is done, failed or stopped, within its own span: what has been, not a stage, so on a
  * wide page it is a list under the three and only on a phone a fourth tab.
  */
 
@@ -14,7 +14,7 @@ import type { MissionView } from "@nouride/wire";
 import { asksWhileWorking, openQuestion } from "@/commons/lib/mission-waits";
 import { ago } from "@/commons/lib/format";
 import { dayOf, fullWhen } from "@/commons/lib/when";
-import { isDraft, needsYouSaid, waitsElsewhere } from "./mission";
+import { isDraft, isPaused, needsYouSaid, waitsElsewhere } from "./mission";
 
 export type Column = "backlog" | "working" | "needs" | "finished";
 export type Outcome = "done" | "failed" | "stopped";
@@ -68,7 +68,7 @@ export function badgeOf(mission: MissionView): string {
     return mission.status === "queued" ? "Queued" : mission.status === "checking" ? "Checking" : "Working";
   }
   if (asksWhileWorking(mission) || mission.waitKind === "input") return "Needs you · a question";
-  return { approval: "Needs you · approval", limit: "Needs you · a limit", accept: "Needs you · accept", stuck: "Needs you · stuck", unknown_outcome: "Needs you · check", retry: "Needs you", input: "Needs you · a question" }[mission.waitKind ?? "retry"];
+  return { approval: "Needs you · approval", limit: "Needs you · a limit", accept: "Needs you · accept", stuck: "Needs you · stuck", unknown_outcome: "Needs you · check", retry: "Needs you", input: "Needs you · a question", paused: "Paused" }[mission.waitKind ?? "retry"];
 }
 
 /** What it takes to be done, said for a draft: its checks, then the person's accept or the reviewer, where either is on. */
@@ -83,6 +83,7 @@ export function cardLine(mission: MissionView): { label: string; text: string } 
   const column = columnOf(mission);
   if (column === "backlog") return { label: "Done when", text: doneWhen(mission) };
   if (column === "needs") {
+    if (isPaused(mission)) return { label: "Paused", text: `by ${mission.pausedBy ?? "someone"}. Its work so far is kept. Resume lets it go on.` };
     const asked = openQuestion(mission);
     return { label: asked ? "Asks" : "Needs", text: asked ? asked.question.replace(/\s+/g, " ").trim() : needsYouSaid(mission) };
   }
@@ -105,7 +106,7 @@ export function whenLines(mission: MissionView): { label: string; at: number }[]
   return [
     { label: "Created", at: mission.createdAt },
     ...(mission.startedAt !== null ? [{ label: "Started", at: mission.startedAt }] : []),
-    ...(column === "needs" ? [{ label: "Waiting since", at: mission.updatedAt }] : []),
+    ...(column === "needs" ? [{ label: isPaused(mission) ? "Paused since" : "Waiting since", at: mission.updatedAt }] : []),
     ...(column === "finished" ? [{ label: "Ended", at: mission.endedAt ?? mission.updatedAt }] : []),
   ];
 }
@@ -128,7 +129,7 @@ export function dayBeside(mission: MissionView, now: number = Date.now()): strin
 export function timeLine(mission: MissionView, now: number = Date.now()): string {
   const column = columnOf(mission);
   if (column === "backlog") return `drafted ${ago(mission.createdAt, now)}`;
-  if (column === "needs") return `${openQuestion(mission) ? "asked" : "waiting since"} ${ago(mission.updatedAt, now)}`;
+  if (column === "needs") return `${isPaused(mission) ? "paused" : openQuestion(mission) ? "asked" : "waiting since"} ${ago(mission.updatedAt, now)}`;
   if (column === "working") return mission.activeAt !== undefined ? `last step ${ago(mission.activeAt, now)}` : `started ${ago(mission.startedAt ?? mission.createdAt, now)}`;
   return `${outcomeOf(mission) === "stopped" ? "stopped" : "ended"} ${ago(mission.endedAt ?? mission.updatedAt, now)}`;
 }

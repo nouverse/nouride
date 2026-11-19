@@ -846,7 +846,8 @@ nouride mission                          # what needs you first, then what runs,
 nouride mission --all                    # every ended one too
 nouride mission show <id>                # its goal, checks, checklist, limits, parked approvals, report and folder
 nouride mission answer <id> <answer>     # the answer to the question it waits on
-nouride mission continue <id> [text]     # on past a limit it reached, with a line for it if you like
+nouride mission pause <id>               # hold a running or queued one where it is: its turn cut, its jobs ended, its work kept
+nouride mission continue <id> [text]     # on past a limit it reached or after a pause, with a line for it if you like
 nouride mission accept <id>              # done, where it waits for your yes
 nouride mission tell <id> <words>        # words for it while it works (0.8.10): read before its next step, never a new goal
 nouride mission stop <id>

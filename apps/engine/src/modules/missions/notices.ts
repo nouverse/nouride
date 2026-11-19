@@ -92,8 +92,12 @@ export function needsYouNotice(mission: Pick<Mission, "id" | "title" | "checks" 
     case "stuck":
       return `⚠ ${name} is stuck: ${clip(detail.trim(), 600)}${GAP}/mission continue ${id} to try again, /mission accept ${id} to accept it as it is, /mission stop ${id} to end it.`;
     case "retry":
-      // Said once, when it pauses: each try after is quiet, and only its going on again or a person's turn is told.
-      return `⏸ ${name} paused because its model could not answer: ${clip(detail.trim(), 400)}${GAP}It tries again by itself, further apart each time, for about a day. /mission continue ${id} to try now, /mission stop ${id} to end it.`;
+      // Said once, when it is held up: each try after is quiet, and only its going on again or a person's turn is told.
+      // "Paused" is not its word: that is a mission someone paused, which does nothing until someone says to go on.
+      return `⏳ ${name} is held up because its model could not answer: ${clip(detail.trim(), 400)}${GAP}It tries again by itself, further apart each time, for about a day. /mission continue ${id} to try now, /mission stop ${id} to end it.`;
+    case "paused":
+      // `detail` says who paused it ("paused by Sam"). What it keeps is said, since a stop keeps none of it going.
+      return `⏸ ${name} is ${detail}. Its work so far and its folder are kept, and the time it is paused is not counted.${GAP}/mission continue ${id} goes on from its checklist, whenever you like · /mission stop ${id} ends it.`;
   }
 }
 
@@ -131,7 +135,7 @@ export function finishedWaitsNotice(mission: Pick<Mission, "id" | "title">, ques
   return `⏸ ${called(mission)} has finished everything else, and waits for your answer before it says it is done: ${clip(question.trim(), 400)}${GAP}Answer: reply to this in your own words, or /mission answer ${id} <your answer> · or accept it as it is: /mission accept ${id}`;
 }
 
-/** A paused mission's model answered again (`retry`): said once, so the person knows it is no longer stalled. */
+/** A mission held up for its model answered again (`retry`): said once, so the person knows it is no longer stalled. */
 export function goesOnNotice(mission: Pick<Mission, "id" | "title">, tries: number): string {
   return `▶ ${called(mission)} goes on: its model answered again${tries > 1 ? ` after ${tries} tries` : ""}.`;
 }

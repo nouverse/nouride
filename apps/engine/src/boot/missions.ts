@@ -444,6 +444,7 @@ export function buildMissions(params: {
         approvals: { pending: (agentId) => params.approvals().pending(agentId), settled: (options) => params.approvals().settled(options), get: (id) => params.approvals().get(id) },
         // Who a `tell` it passes on is from (0.8.10): their People name — their id where People does not know them.
         speaker: (who) => ({ name: personFor(params.config().people, who.gatewayId, who.senderId)?.name, admin: late?.isAdmin(who) === true }),
+        orchestrator: () => params.config().daemon.orchestrator,
         ...(params.linkFor ? { linkFor: params.linkFor } : {}),
         ...(params.audit ? { audit: params.audit } : {}),
       }),

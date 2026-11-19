@@ -133,6 +133,7 @@ nouride jobs kill <id>
 nouride mission                   # missions: needs you first, then what runs, then the last five ended
 nouride mission show <id>         # one in full: goal, checks, checklist, limits, report
 nouride mission stop|continue|accept <id> [text]
+nouride mission pause <id>        # hold a running or queued one where it is, its work kept; continue goes on
 nouride mission answer <id> <answer>
 nouride mission tell <id> <words> # words for it while it works: read before its next step
 nouride mission delete <id>       # an ended one gone: its conversation, checklist and own folder (--force: work nobody committed too)

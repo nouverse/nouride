@@ -75,8 +75,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "the turn record and its columns, the causes it names, the clause every read of a conversation uses to leave a delegate's own turns out, and the queries that use it, a restart's two marks among them",
   },
   "apps/engine/src/modules/missions/missions.ts": {
-    lines: 590,
-    why: "the missions' one service (start, the dispatcher, a turn's shape, its end and the count of one cut short, ask, stop, continue, the slots, the jobs it waits for) over state this class alone holds",
+    lines: 591,
+    why: "the missions' one service (start, the dispatcher, a turn's shape, its end and one cut short counted, ask, stop, pause, continue, the slots, the jobs it waits for) over state this class alone holds",
   },
   "packages/gateways/src/channels/discord/gateway.ts": {
     lines: 430,

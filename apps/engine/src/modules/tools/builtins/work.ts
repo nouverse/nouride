@@ -4,6 +4,10 @@
  * job whose row is its own (its `ask_agent` asks included), an approval it raised. Nothing here reads a config file,
  * and nothing reaches another agent's items — an id that is not the caller's reads as one that does not exist.
  *
+ * One reach past its own: the orchestrator may pause any agent's mission. It is the agent a person asks to hold work
+ * back ("pause whatever Nix is running"), and a pause loses nothing. It goes on only with a mission it paused itself: a
+ * person's pause is a person's to end, and stopping stays each agent's own.
+ *
  * Before it, an agent that wanted to know how its mission stood read `config.toml` for the control token and called the
  * API with it, or asked a person to look.
  */
@@ -24,7 +28,9 @@ import { isDraft } from "@/modules/missions/drafts.ts";
 import { pressRefusal } from "@/modules/missions/actions.ts";
 
 export interface WorkToolDeps {
-  missions: Pick<Missions, "ownedBy" | "stillOpen" | "find" | "stop" | "answer" | "acceptOutside" | "tell" | "now" | "limitsLine" | "accept">;
+  missions: Pick<Missions, "ownedBy" | "stillOpen" | "find" | "stop" | "pause" | "continueMission" | "answer" | "acceptOutside" | "tell" | "now" | "limitsLine" | "accept">;
+  /** The orchestrator's id, where the install names one: the one agent that may pause a mission that is not its own. */
+  orchestrator?: () => string | undefined;
   /** Who is speaking in the chat a turn answers: their name in People, if it has them, and whether they are an admin (`tell`, 0.8.10). */
   speaker?: (who: { gatewayId: string; senderId: string }) => { name?: string; admin: boolean };
   /** A mission's checklist, as its turns keep it — where it stands, step by step. */
@@ -37,7 +43,7 @@ export interface WorkToolDeps {
   audit?: Pick<AuditPort, "record">;
 }
 
-const ACTIONS = ["missions", "mission", "start", "stop", "answer", "accept_outside", "tell", "jobs", "job", "kill", "approvals", "approval"] as const;
+const ACTIONS = ["missions", "mission", "start", "stop", "pause", "resume", "answer", "accept_outside", "tell", "jobs", "job", "kill", "approvals", "approval"] as const;
 type Action = (typeof ACTIONS)[number];
 
 const LISTED = 20;
@@ -72,6 +78,7 @@ function ownsMission(mission: Mission, agentId: string): boolean {
  */
 function missionState(mission: Mission): string {
   if (isDraft(mission)) return "a draft, not started (in Backlog)";
+  if (mission.status === "waiting" && mission.waitKind === "paused") return `paused by ${mission.pausedBy ?? "someone"}`;
   return mission.status === "waiting" ? `waiting for a person (${mission.waitKind ?? "?"})` : mission.status;
 }
 
@@ -143,6 +150,27 @@ function approvalDetail(request: ApprovalRequest, now: number, answerAt: string 
   ].join("\n");
 }
 
+/**
+ * `pause` and `resume`. A pause reaches the caller's own missions, and any agent's where the caller is the
+ * orchestrator; another agent's reads as one that is not there, as everywhere. A resume goes on only with the pause the
+ * caller made itself: a person's pause, or another agent's, is theirs to end.
+ */
+function pauseOrResume(deps: WorkToolDeps, action: "pause" | "resume", id: string, ctx: ToolContext): ToolResult {
+  const by = `agent ${ctx.agentId}`;
+  const found = id ? deps.missions.find(id) : null;
+  const reaches = found && (ownsMission(found, ctx.agentId) || (action === "pause" ? deps.orchestrator?.() === ctx.agentId : found.pausedByAgent === ctx.agentId));
+  if (!found || !reaches) return refused(id ? `No mission ${id} of yours.` : "Name the mission: `id`.");
+  if (action === "pause") {
+    const acted = deps.missions.pause(found.id, by, ctx.agentId);
+    if ("refused" in acted) return refused(acted.refused);
+    return ok(`Mission ${shortId(found.id)} (${found.agentId}) is paused: its turn is cut, its background jobs are ended, and its work and folder are kept. \`resume\` goes on with it; its person can too.`);
+  }
+  if (found.status !== "waiting" || found.waitKind !== "paused") return refused(`Mission ${shortId(found.id)} is not paused: it is ${missionState(found)}.`);
+  if (found.pausedByAgent !== ctx.agentId) return refused(`Mission ${shortId(found.id)} was paused by ${found.pausedBy ?? "someone else"}, not by you: going on with it is theirs to say.`);
+  const acted = deps.missions.continueMission(found.id, by);
+  return "refused" in acted ? refused(acted.refused) : ok(`Mission ${shortId(found.id)} goes on from its checklist.`);
+}
+
 export function createWorkTool(deps: WorkToolDeps): Tool {
   const now = () => deps.missions.now();
 
@@ -180,6 +208,9 @@ export function createWorkTool(deps: WorkToolDeps): Tool {
         const acted = deps.missions.stop(mission.id, by);
         return "refused" in acted ? refused(acted.refused) : ok(`Mission ${shortId(mission.id)} stopped.`);
       }
+      case "pause":
+      case "resume":
+        return pauseOrResume(deps, action, id, ctx);
       case "answer": {
         const mission = ownMission(id, ctx);
         if (!("id" in mission)) return mission;
@@ -280,7 +311,8 @@ export function createWorkTool(deps: WorkToolDeps): Tool {
       name: "work",
       description:
         "Your own work, as the daemon knows it, and only yours: missions you work or started, your background jobs (`ask_agent` asks " +
-        'included), approvals you raised. "missions" lists them, your drafts in Backlog too; "mission" shows one; "stop" ends one; "answer" answers its ' +
+        'included), approvals you raised. "missions" lists them, your drafts in Backlog too; "mission" shows one; "stop" ends one; "pause" holds one ' +
+        'where it is, its work kept, and "resume" goes on with one you paused yourself (the orchestrator may pause any agent\'s mission by its id; a pause a person made is theirs to end); "answer" answers its ' +
         'question (`text`); "start" starts a draft of yours when the person you are talking to says to (their own words in ' +
         '`text`); "accept_outside" closes one as done outside its checks, with a `text` note, when the work landed ' +
         'another way. "tell" passes on, word for word, what the person you are talking to wants a running mission of yours to ' +

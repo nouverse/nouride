@@ -22,7 +22,7 @@ import { afterTurn, answersWait, blockedBy, continueGives, limitReached, limitsN
 import { isMissionChat, MISSION_GATEWAY_ID } from "./gateway.ts";
 import { APPROVAL_ANSWERABLE_MS, MAX_RESUMES, STALL_AFTER_MS } from "./limits.ts";
 import { newMission, startRefusal, type StartRequest } from "./start.ts";
-import { acceptMission, acceptOutside, answerMission, continueMission, deleteMission, stopMission, type Acted, type Deleted, type Sayer } from "./person.ts";
+import { acceptMission, acceptOutside, answerMission, continueMission, deleteMission, pauseMission, stopMission, type Acted, type Deleted, type Sayer } from "./person.ts";
 import { markRead, tellMission, unreadTold, type TellAnswer } from "./tell.ts";
 import { MissionStore } from "./missions.store.ts";
 import { goesOnNotice, needsYouNotice, paged, queuedNotice, startedNotice } from "./notices.ts";
@@ -524,6 +524,11 @@ export class Missions implements TurnShaper {
     return stopMission(this, this.deps, id, by);
   }
 
+  /** Paused until someone says to go on (`person.ts` `pauseMission`); `agent` where an agent's `work` tool did it. */
+  pause(id: string, by: string, agent?: string): Acted {
+    return pauseMission(this, this.deps, id, by, agent);
+  }
+
   /**
    * Its conversation deleted (0.8.0): the mission goes with it — stopped first while it still runs, or it worked on with
    * its checklist gone; then the folder the daemon made for it, and its record. One history, one lifetime, as retention
@@ -542,7 +547,7 @@ export class Missions implements TurnShaper {
     return deleteMission(this, this.deps, id, by, how);
   }
 
-  /** Go on: past a limit (the one it reached raised again), out of being stuck, or with what an accept found missing. */
+  /** Go on: past a limit (the one it reached raised again), out of being stuck, after a pause, or with what an accept found missing. */
   continueMission(id: string, by: string, note?: string, as?: Sayer): Acted {
     return continueMission(this, this.deps, id, by, note, as);
   }

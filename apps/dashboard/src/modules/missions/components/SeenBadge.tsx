@@ -2,11 +2,11 @@
 
 import type { MissionView } from "@nouride/wire";
 import { cn } from "@/commons/lib/utils";
-import { isDraft, seenAs, seenTone, waitsElsewhere } from "../lib/mission";
+import { isDraft, isPaused, seenAs, seenTone, waitsElsewhere } from "../lib/mission";
 
 export function SeenBadge({ mission, className }: { mission: Pick<MissionView, "seen" | "status" | "waitKind" | "startedAt" | "changeable" | "person">; className?: string }) {
   const working = mission.seen === "working" && mission.status === "running";
-  const needsReader = mission.seen === "needs_you" && !waitsElsewhere(mission) && !isDraft(mission);
+  const needsReader = mission.seen === "needs_you" && !waitsElsewhere(mission) && !isDraft(mission) && !isPaused(mission);
   return (
     <span
       className={cn(

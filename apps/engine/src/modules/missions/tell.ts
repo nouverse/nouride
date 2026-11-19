@@ -43,6 +43,7 @@ export type TellWhere =
   | "stuck"
   | "unknown_outcome"
   | "retry"
+  | "paused"
   | "kept";
 
 /** `why` a tell was refused, for the dashboard's words at its route (0.8.20); `length` and `max` for one too long. */
@@ -105,6 +106,7 @@ function delivered(mission: Mission, told: Told, deps: MissionsDeps): TellWhere 
     case "stuck":
     case "unknown_outcome":
     case "retry":
+    case "paused":
       return mission.waitKind;
     default:
       return "kept";
@@ -146,6 +148,8 @@ function chatWords(where: TellWhere, id: string): string {
       return `Kept for its next turn. It waits for you to say whether to go on: /mission continue ${id}.`;
     case "retry":
       return "Kept for its next turn: its model could not answer, and it tries again by itself.";
+    case "paused":
+      return `Kept for its next turn. It is paused: /mission continue ${id} lets it go on, with this read first.`;
     case "kept":
       return "Kept for its next turn.";
   }

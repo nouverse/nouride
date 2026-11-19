@@ -4,13 +4,13 @@ import { BOLD, DIM, GREEN, RED, RESET, say, usageError, YELLOW, emit, hasFlag, k
 
 /**
  * `nouride mission` — long work an agent finishes alone (0.8.0): what runs and what needs you, one mission in full, and
- * what a person says to one — stop it, let it go on, answer it, accept it, tell it something while it works (0.8.10) —
+ * what a person says to one — stop it, pause it, let it go on, answer it, accept it, tell it something while it works (0.8.10) —
  * and an ended one deleted (0.8.13).
  * Starting one is a chat's or the dashboard's: a mission reports to a chat, and a terminal is not one.
  */
 export async function mission(client: Client, args: string[]): Promise<void> {
   const [action, id, ...rest] = args;
-  knownAction("mission", action, ["list", "show", "stop", "continue", "accept", "answer", "tell", "delete"]);
+  knownAction("mission", action, ["list", "show", "stop", "pause", "continue", "accept", "answer", "tell", "delete"]);
 
   if (action === "show") {
     if (!id) usageError("usage: nouride mission show <id>");
@@ -35,7 +35,8 @@ export async function mission(client: Client, args: string[]): Promise<void> {
       }
     }
     if (detail.parked.length > 0) say(`\n  Parked approvals: ${detail.parked.map((request) => request.id).join(", ")} (nouride approvals)`);
-    if (m.reason) say(`\n  ${m.status === "waiting" ? "Waiting for" : "Why"}: ${m.reason}`);
+    if (m.status === "waiting" && m.waitKind === "paused") say(`\n  Paused by ${m.pausedBy ?? "someone"}. To go on: nouride mission continue ${m.id}`);
+    else if (m.reason) say(`\n  ${m.status === "waiting" ? "Waiting for" : "Why"}: ${m.reason}`);
     if (m.report) say(`\n  Report: ${m.report}`);
     if (m.files.length > 0) say(`  Files: ${m.files.join(", ")}`);
     // None from a daemon before 0.8.10: this binary's CLI talks to the old one until it restarts.
@@ -64,7 +65,7 @@ export async function mission(client: Client, args: string[]): Promise<void> {
     return say(`${GREEN}✓${RESET} ${m.id} · ${statusOf(m)}: ${said ?? "told"}`);
   }
 
-  if (action === "stop" || action === "continue" || action === "accept" || action === "answer") {
+  if (action === "stop" || action === "pause" || action === "continue" || action === "accept" || action === "answer") {
     if (!id) usageError(`usage: nouride mission ${action} <id>${action === "answer" ? " <answer>" : ""}`);
     if (action === "accept" && hasFlag(rest, "--outside")) {
       // Done outside its checks (0.8.7): the work landed another way; the note says where. Its checks are not run.
@@ -96,7 +97,7 @@ export async function mission(client: Client, args: string[]): Promise<void> {
   const hidden = ended.length - shown.length;
   say();
   if (hidden > 0) say(`${DIM}${hidden} older not shown · nouride mission --all${RESET}`);
-  say(`${DIM}nouride mission show <id> · stop|continue|accept <id> · answer <id> <answer> · tell <id> <words> · delete <id>${RESET}`);
+  say(`${DIM}nouride mission show <id> · stop|pause|continue|accept <id> · answer <id> <answer> · tell <id> <words> · delete <id>${RESET}`);
 }
 
 const RECENT_ENDED = 5;
@@ -108,6 +109,7 @@ function reviewingLine(reviewing: { pass: number; of: number; since: number }, n
 }
 
 function statusOf(m: { status: string; waitKind: string | null }): string {
+  if (m.status === "waiting" && m.waitKind === "paused") return "paused";
   return m.status === "waiting" ? `needs you (${m.waitKind ?? "?"})` : m.status;
 }
 

@@ -41,7 +41,7 @@ describe("a turn its model could not answer", () => {
     expect(h.store.get(mission.id)!.reason).toBe(LIMIT);
     expect(h.queued.length).toBe(queued);
     const notice = h.told.at(-1)!;
-    expect(notice.text).toContain(`paused because its model could not answer: ${LIMIT}`);
+    expect(notice.text).toContain(`is held up because its model could not answer: ${LIMIT}`);
     expect(notice.text).toContain("tries again by itself");
     expect(notice.buttons?.map((button) => button.label)).toEqual(["Retry now", "Stop"]);
   });
@@ -95,7 +95,7 @@ describe("a turn its model could not answer", () => {
     h.turn(mission, { worked: 1 });
     expect(h.told.length).toBe(told);
     fail(h, mission);
-    expect(h.told.at(-1)!.text).toContain("paused because its model could not answer");
+    expect(h.told.at(-1)!.text).toContain("is held up because its model could not answer");
     after(h, RETRY_AFTER_MS[0]);
     expect(state(h, mission).status).toBe("running");
   });
@@ -139,7 +139,7 @@ describe("what a person says to a paused mission", () => {
     expect(state(h, mission).status).toBe("running");
     expect(h.queued.length).toBe(queued + 1);
     fail(h, mission);
-    expect(h.told.at(-1)!.text).toContain("paused because its model could not answer");
+    expect(h.told.at(-1)!.text).toContain("is held up because its model could not answer");
     after(h, RETRY_AFTER_MS[0]);
     expect(state(h, mission).status).toBe("running");
   });

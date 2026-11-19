@@ -213,6 +213,8 @@ export class MissionTimers {
       if (now - since >= retryAfter(this.missions.retryAttempt(mission.id))) this.missions.retryNow(mission);
       return;
     }
+    // Paused by someone: it waits as long as they like, and nobody is reminded of a wait they chose.
+    if (mission.waitKind === "paused") return;
     if (mission.waitKind === "limit" && now - since >= LIMIT_WAIT_MS) {
       this.missions.end(mission, "failed", `${mission.reason ?? "a limit"} was reached and nobody continued it in 7 days`);
       return;

@@ -137,6 +137,7 @@ nouride jobs kill <id>
 nouride mission                   # misi: yang butuh kamu dulu, lalu yang jalan, lalu lima terakhir yang selesai
 nouride mission show <id>         # satu misi lengkap: tujuan, cek, checklist, batas, laporan
 nouride mission stop|continue|accept <id> [teks]
+nouride mission pause <id>        # tahan misi yang jalan atau antre di tempatnya, kerjanya disimpan; continue melanjutkan
 nouride mission answer <id> <jawaban>
 nouride mission tell <id> <kata>  # pesan untuknya selagi bekerja: dibaca sebelum langkah berikutnya
 nouride mission delete <id>       # hapus misi yang sudah selesai: percakapan, checklist dan foldernya sendiri (--force: termasuk kerja yang belum di-commit)

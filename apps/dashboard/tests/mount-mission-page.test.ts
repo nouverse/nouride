@@ -101,6 +101,71 @@ test("one waiting on its question is accepted as it is: asked first — cancelle
   expect(sent).toEqual([{ path: "/missions/msn_1/accept", body: {} }]);
 });
 
+// A mission at work could only be stopped for good. Paused, it is held where it is and Resume goes on.
+test("one at work offers Pause, sent at once with nothing asked first: Resume takes it back", async () => {
+  let offered: string[] = [];
+  let sent: { path: string; body: unknown }[] = [];
+  let asked = 0;
+  await renderPage("/missions/msn_1", async (host) => {
+    await eventually(() => buttons(host).includes("Pause"), 2_000, "Pause");
+    offered = buttons(host).filter((label) => ["Pause", "Resume", "Stop", "Accept as it is", "Continue"].includes(label));
+    const record = recordPosts();
+    press(host, "Pause");
+    await eventually(() => record.posts.length > 0, 2_000, "the pause");
+    asked = host.querySelectorAll("dialog[open]").length;
+    record.restore();
+    sent = record.posts;
+  });
+  expect(offered).toEqual(["Pause", "Stop"]);
+  expect(asked).toBe(0);
+  expect(sent).toEqual([{ path: "/missions/msn_1/pause", body: {} }]);
+});
+
+test("a paused one says so under its own word, with who paused it, and offers Resume and Stop alone", async () => {
+  const shown = WIRE["/missions/msn_1"] as { mission: Record<string, unknown> };
+  answer({ "/missions/msn_1": { status: 200, body: { ...shown, mission: { ...shown.mission, status: "waiting", seen: "needs_you", waitKind: "paused", reason: "paused by Gading", pausedBy: "Gading" } } } });
+  let offered: string[] = [];
+  let said = "";
+  let sent: { path: string; body: unknown }[] = [];
+  await renderPage("/missions/msn_1", async (host) => {
+    await eventually(() => buttons(host).includes("Resume"), 2_000, "Resume");
+    offered = buttons(host).filter((label) => ["Pause", "Resume", "Stop", "Accept as it is", "Continue", "Answer"].includes(label));
+    said = host.querySelector('[role="status"].alert')?.textContent ?? "";
+    const record = recordPosts();
+    press(host, "Resume");
+    await eventually(() => record.posts.length > 0, 2_000, "the resume");
+    record.restore();
+    sent = record.posts;
+  });
+  expect(offered).toEqual(["Resume", "Stop"]);
+  // Its own words, and not "Needs you": nothing is asked of the reader until they want it to go on.
+  expect(said).toBe("Paused by Gading. Its work so far is kept, and the time it is paused is not counted. Resume lets it go on from its checklist, whenever you like.");
+  expect(sent).toEqual([{ path: "/missions/msn_1/continue", body: {} }]);
+});
+
+test("on the board a paused one stands in Needs you under a Paused tag, with Resume on its card", async () => {
+  const listed = WIRE["/missions"] as { missions: Record<string, unknown>[] };
+  const paused = { ...listed.missions[0]!, status: "waiting", seen: "needs_you", waitKind: "paused", reason: "paused by agent nouva", pausedBy: "agent nouva" };
+  answer({ "/missions": { status: 200, body: { ...listed, missions: [paused, ...listed.missions.slice(1)] } } });
+  const seen = { column: "", badge: "", line: "", buttons: [] as string[] };
+  let sent: { path: string; body: unknown }[] = [];
+  await renderPage("/missions", async (host) => {
+    const card = () => host.querySelector<HTMLElement>('[data-mission="msn_1"]');
+    await eventually(() => card() !== null, 3_000, "its card");
+    seen.column = card()!.getAttribute("data-column") ?? "";
+    seen.badge = card()!.querySelector("[data-badge]")?.textContent?.trim() ?? "";
+    seen.line = card()!.querySelector("[data-line]")?.textContent?.trim() ?? "";
+    seen.buttons = [...card()!.querySelectorAll("button")].map((button) => button.textContent?.trim() ?? "");
+    const record = recordPosts();
+    ([...card()!.querySelectorAll("button")].find((button) => button.textContent?.trim() === "Resume") as HTMLElement).click();
+    await eventually(() => record.posts.length > 0, 2_000, "the resume");
+    record.restore();
+    sent = record.posts;
+  });
+  expect(seen).toEqual({ column: "needs", badge: "Paused", line: "Pausedby agent nouva. Its work so far is kept. Resume lets it go on.", buttons: ["Resume"] });
+  expect(sent).toEqual([{ path: "/missions/msn_1/continue", body: {} }]);
+});
+
 /** The mission's conversation: its turns as `useConversation` reads them, from the fixture's own shape — with any other answers the test gives. */
 function missionTurns(turns: Record<string, unknown>[], also: Parameters<typeof answer>[0] = {}): void {
   const shown = WIRE["/sessions/ses_1/turns"] as Record<string, unknown>;

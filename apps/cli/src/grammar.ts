@@ -159,7 +159,7 @@ export const GRAMMAR: Readonly<Record<string, CommandGrammar>> = {
     },
   },
   jobs: { forms: { "": ["--all"], list: ["--all"], log: NONE, kill: NONE } },
-  mission: { forms: { "": ["--all"], list: ["--all"], show: NONE, stop: NONE, continue: NONE, accept: NONE, answer: NONE, tell: NONE, delete: ["--force"] } },
+  mission: { forms: { "": ["--all"], list: ["--all"], show: NONE, stop: NONE, pause: NONE, continue: NONE, accept: NONE, answer: NONE, tell: NONE, delete: ["--force"] } },
   cron: {
     forms: {
       "": ["--all"],

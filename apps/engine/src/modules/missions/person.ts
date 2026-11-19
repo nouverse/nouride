@@ -31,7 +31,10 @@ export type RefusedWhy =
   | "command"
   | "not-started"
   | "checking"
-  | "working";
+  | "working"
+  | "paused"
+  | "waiting"
+  | "not-yours";
 
 export type Refused = { refused: string; why: RefusedWhy };
 
@@ -54,6 +57,40 @@ export function stopMission(missions: Missions, deps: MissionsDeps, id: string, 
   if (isFinal(mission.status)) return { refused: `Mission ${named(mission)} has already ended (${mission.status}).`, why: "ended" };
   deps.stopTurn(mission);
   missions.end(mission, "stopped", `stopped by ${by}`);
+  return { mission: deps.store.get(mission.id) ?? mission };
+}
+
+/**
+ * Paused: its turn at work cut, its background jobs ended as a limit ends them, and the mission left waiting as
+ * `paused` until someone says to go on. Nothing of it is lost: its checklist, its folder and its repository are kept,
+ * so another mission in that repository waits behind it; its agent's slot is free, and the time it is paused counts
+ * against no limit and draws no reminder. A mission could only be stopped for good before.
+ *
+ * For one that is running or queued. One being checked, one already waiting for a person and a draft are refused, each
+ * with what can be said to it instead: nothing of theirs is running to pause. `agent`: the agent that paused it through
+ * its `work` tool, kept beside `by`: an agent goes on only with a mission it paused itself.
+ */
+export function pauseMission(missions: Missions, deps: MissionsDeps, id: string, by: string, agent?: string): Acted {
+  const mission = missions.find(id);
+  if (!mission) return { refused: `No mission ${id}.`, why: "missing" };
+  const name = named(mission);
+  if (isFinal(mission.status)) return { refused: `Mission ${name} has already ended (${mission.status}).`, why: "ended" };
+  if (mission.status === "checking") return { refused: `Mission ${name}'s checks are running now, and nothing of its own is at work to pause. To end it: /mission stop ${name}.`, why: "checking" };
+  if (mission.status === "waiting") {
+    if (mission.waitKind === "paused") return { refused: `Mission ${name} is already paused, by ${mission.pausedBy ?? "someone"}. To go on: /mission continue ${name}.`, why: "paused" };
+    if (mission.startedAt === null) return { refused: `Mission ${name} is a draft that has not started, so there is nothing to pause.`, why: "not-started" };
+    return { refused: `Mission ${name} is waiting for a person already (${mission.waitKind ?? "?"}), and nothing of it is running to pause.`, why: "waiting" };
+  }
+  // A queued one has no turn and no job; a running one's turn is cut here, and its end then decides nothing, as after
+  // a limit (`Missions.turnEnded`).
+  if (mission.status === "running") {
+    deps.stopTurn(mission);
+    for (const job of missions.jobsOf(mission)) deps.jobs?.kill(job.id, `mission ${mission.id} paused`);
+  }
+  mission.pausedBy = by;
+  mission.pausedByAgent = agent ?? null;
+  log.info("a mission paused", { mission: mission.id, by, was: mission.status, ...(agent ? { agent } : {}) });
+  missions.wait(mission, "paused", `paused by ${by}`);
   return { mission: deps.store.get(mission.id) ?? mission };
 }
 
@@ -93,6 +130,7 @@ export function continueMission(missions: Missions, deps: MissionsDeps, id: stri
   if (mission.status !== "waiting") return { refused: `Mission ${named(mission)} is ${mission.status}, not waiting for you.`, why: "not-waiting" };
   if (mission.waitKind === "input") return { refused: `It asked a question. Answer it: /mission answer ${named(mission)} <your answer>.`, why: "question" };
   if (mission.waitKind === "accept" && mission.startedAt === null) return acceptMission(missions, deps, id, by, as);
+  if (mission.waitKind === "paused") return resumePaused(missions, deps, mission, by, note);
   // Sent back from its accept with nothing said — the chat's button: "said to go on." told the agent nothing to do.
   const sentBack = mission.waitKind === "accept" && !note;
   if (mission.waitKind === "limit") {
@@ -122,6 +160,39 @@ export function continueMission(missions: Missions, deps: MissionsDeps, id: stri
   // review of affb384f). That turn's end decides nothing (`turnEnded`), so this is its next.
   missions.queueTurn(mission, sentBack ? `${by} sent its result back without saying what is missing. Check the work against the goal again, then call \`mission\` done.` : `${by} said to go on${note ? `: ${note}` : "."}`, true);
   return { mission };
+}
+
+/**
+ * On from a pause, at any time. One that was at work gets a turn from its checklist, told its last turn was cut: what
+ * that turn was doing may be half done. One paused while it was queued, which never started, is queued again and
+ * starts when a slot and its repository allow. The time it was paused is in neither's hours.
+ */
+function resumePaused(missions: Missions, deps: MissionsDeps, mission: Mission, by: string, note?: string): Acted {
+  const paused = mission.pausedBy ?? "someone";
+  mission.pausedBy = null;
+  mission.pausedByAgent = null;
+  missions.freshStart(mission.id);
+  if (mission.startedAt === null) {
+    // Before it started is not time it waited while working (as for a proposal's yes, `acceptMission`).
+    mission.waitingSince = null;
+    missions.resume(mission);
+    mission.status = "queued";
+    deps.store.save(mission);
+    deps.changed?.(mission);
+    log.info("a mission paused while queued goes on: queued again", { mission: mission.id, by });
+    missions.schedule();
+    return { mission: deps.store.get(mission.id) ?? mission };
+  }
+  missions.resume(mission);
+  deps.store.save(mission);
+  deps.changed?.(mission);
+  log.info("a paused mission goes on", { mission: mission.id, by });
+  missions.queueTurn(
+    mission,
+    `${by} said to go on after a pause (${paused} paused it)${note ? `: ${note}` : "."} The turn you were in was cut off and your background jobs were ended. Go on from your checklist: look at what the step you were on left before you repeat it, and start again any job you still need.`,
+    true,
+  );
+  return { mission: deps.store.get(mission.id) ?? mission };
 }
 
 /**
@@ -172,6 +243,10 @@ export function acceptMission(missions: Missions, deps: MissionsDeps, id: string
   if (!mission) return { refused: `No mission ${id}.`, why: "missing" };
   if (isFinal(mission.status)) return { refused: `Mission ${named(mission)} has already ended (${mission.status}).`, why: "ended" };
   if (mission.status !== "waiting") return notWaiting(mission);
+  // Paused before it ever started: there is no work to accept as it stands.
+  if (mission.waitKind === "paused" && mission.startedAt === null) {
+    return { refused: `Mission ${named(mission)} was paused before it started, so there is nothing to accept. To go on: /mission continue ${named(mission)}; to drop it: /mission stop ${named(mission)}.`, why: "not-started" };
+  }
   if (mission.waitKind !== "accept") {
     log.info("a mission accepted as it stands", { mission: mission.id, by, wait: mission.waitKind });
     deps.stopTurn(mission);
