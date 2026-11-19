@@ -100,8 +100,12 @@ export function Card({
               a phone (0.8.12). A folded card's title takes 16rem before its actions sit beside it, so on a phone the
               actions go under it rather than squeeze it to a column. */}
           {folded ? (
-            <button type="button" className="flex min-w-0 flex-[1_1_16rem] items-start gap-2 text-left" aria-expanded={folded.open} onClick={folded.toggle}>
-              <ChevronDown size={16} aria-hidden="true" className={cn("mt-0.5 shrink-0 text-base-content/60 transition-transform", !folded.open && "-rotate-90")} />
+            <button type="button" className="group flex min-w-0 flex-[1_1_16rem] items-start gap-2.5 text-left" aria-expanded={folded.open} onClick={folded.toggle}>
+              {/* The arrow in a round the height of the title's line (28px), so it is centred on the title with or
+                  without a description under it: bare and 2px from the top, it floated above the title's own line. */}
+              <span data-fold-arrow className="grid size-7 shrink-0 place-items-center rounded-full bg-base-content/[0.06] text-base-content/70 transition-colors group-hover:bg-base-content/[0.12]">
+                <ChevronDown size={16} aria-hidden="true" className={cn("transition-transform", !folded.open && "-rotate-90")} />
+              </span>
               <span className="space-y-0.5 min-w-0">
                 {title && <h2 className="text-lg text-base-content [overflow-wrap:anywhere]">{title}</h2>}
                 {description && <p className="text-base-content/65 text-sm [overflow-wrap:anywhere]">{description}</p>}

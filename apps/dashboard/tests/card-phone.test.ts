@@ -31,4 +31,12 @@ describe("a card's header", () => {
   test("folded, its title holds 16rem before the actions share its line", () => {
     expect(draw(true)).toMatch(/<button type="button" class="[^"]*flex-\[1_1_16rem\][^"]*" aria-expanded="false"/);
   });
+
+  // The arrow was 16px, 2px from the top, beside a title whose line is 28px: it floated above the title.
+  test("folded, its arrow is centred in a round the height of the title's line, and turned while it is closed", () => {
+    const html = draw(true);
+    expect(html).toMatch(/<span data-fold-arrow="true" class="[^"]*\bgrid\b[^"]*\bsize-7\b[^"]*\bplace-items-center\b[^"]*"><svg[^>]*class="[^"]*-rotate-90/);
+    expect(html).toMatch(/<h2 class="text-lg /);
+    expect(html).not.toMatch(/<svg[^>]*class="[^"]*\bmt-0\.5\b/);
+  });
 });

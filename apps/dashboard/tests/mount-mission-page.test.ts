@@ -430,6 +430,23 @@ test("its turns are folded to the newest five, with the older ones a press away"
   expect(seen.short).toBe("5 0 whole");
 });
 
+test("a turn's long reply is cut to three lines, and the press for the rest starts at the reply's own edge", async () => {
+  missionTurns([missionTurn(1, { reply: Array.from({ length: 6 }, (_, at) => `line ${at + 1}`).join("\n\n") })]);
+  const seen = { classes: "", clamped: false, open: false };
+  await renderPage("/missions/msn_1", async (host) => {
+    await eventually(() => host.querySelector("[data-turns] li") !== null, 2_000, "the turn");
+    const rest = () => [...host.querySelectorAll<HTMLButtonElement>("[data-turns] li button[aria-expanded]")].find((one) => /^(All of it|Less)$/.test(one.textContent ?? ""));
+    seen.classes = rest()?.className ?? "";
+    seen.clamped = host.querySelector("[data-turns] li .line-clamp-3") !== null;
+    rest()!.click();
+    await eventually(() => rest()?.textContent === "Less", 2_000, "the whole reply");
+    seen.open = host.querySelector("[data-turns] li .line-clamp-3") === null;
+  });
+  // Its padding is 6px: without the pull back its arrow sat 6px inside the reply's first letter.
+  expect(seen.classes.split(" ")).toEqual(expect.arrayContaining(["px-1.5", "-ml-1.5"]));
+  expect([seen.clamped, seen.open]).toEqual([true, true]);
+});
+
 test("its checklist is folded to the five steps around the one at work, with all of them a press away", async () => {
   const steps = Array.from({ length: 12 }, (_, at) => ({ text: `step ${at + 1}`, state: at < 7 ? "done" : at === 7 ? "active" : "pending" }));
   missionTurns([missionTurn(1, {})]);

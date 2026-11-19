@@ -149,7 +149,7 @@ function Reply({ text }: { text: string }) {
         <Markdown source={content} />
       </div>
       {long && (
-        <button type="button" className="btn btn-ghost btn-xs h-6 max-sm:h-8 min-h-0 gap-1 rounded-lg px-1.5 text-[11px] text-base-content/65" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+        <button type="button" className="btn btn-ghost btn-xs -ml-1.5 h-6 max-sm:h-8 min-h-0 gap-1 rounded-lg px-1.5 text-[11px] text-base-content/65" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
           {open ? <ChevronDown size={11} aria-hidden="true" /> : <ChevronRight size={11} aria-hidden="true" />}
           {open ? "Less" : "All of it"}
         </button>
