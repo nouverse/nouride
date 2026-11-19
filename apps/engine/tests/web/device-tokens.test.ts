@@ -114,6 +114,30 @@ describe("trading one for a session", () => {
     expect(devices.list()[0]!.lastUsedAt).not.toBeNull();
   });
 
+  // The dashboard offers no Sign out in a device's session (the app trades its token again at once), and tells such a
+  // session from the account's answer, never from the browser: a browser on the same phone keeps its Sign out.
+  test("the account's answer says the session is a device's, and says nothing of it for a password's or the control token", async () => {
+    await accounts();
+    const { value } = (await (await mint()).json()) as { value: string };
+    const traded = (await (await call("/auth/me", { cookie: cookieOf(await trade(value)) })).json()) as Record<string, unknown>;
+    expect(traded.device).toBe(true);
+    // The same account, signed in with its password, on the same daemon and after the trade.
+    const typed = (await (await call("/auth/me", { cookie: await signIn("gading") })).json()) as Record<string, unknown>;
+    expect(typed.kind).toBe("user");
+    expect("device" in typed).toBe(false);
+    const cli = (await (await call("/auth/me", { token: true })).json()) as Record<string, unknown>;
+    expect(cli.kind).toBe("token");
+    expect("device" in cli).toBe(false);
+  });
+
+  test("signing out is not refused to a device's session", async () => {
+    await accounts();
+    const { value } = (await (await mint()).json()) as { value: string };
+    const session = cookieOf(await trade(value));
+    expect((await call("/auth/logout", { cookie: session, body: {} })).status).toBe(200);
+    expect((await call("/auth/me", { cookie: session })).status).toBe(401);
+  });
+
   test("a wrong token is refused, and failed trades spend the address's sign-in allowance, as wrong passwords do", async () => {
     await accounts();
     const { value } = (await (await mint()).json()) as { value: string };

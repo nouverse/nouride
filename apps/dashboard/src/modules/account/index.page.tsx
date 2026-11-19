@@ -11,7 +11,7 @@ import { api } from "@/commons/lib/api";
 import { Card, ErrorNote, Field, PageHeader } from "@/commons/components/ui/ui";
 import { PersonCard } from "./person.card";
 import { useSignOut } from "@/commons/components/layout/sign-out";
-import { useMe } from "@/commons/lib/session";
+import { offersSignOut, useMe } from "@/commons/lib/session";
 import { MIN_PASSWORD_LENGTH } from "@/commons/lib/password";
 import { PasswordInput } from "@/commons/components/ui/PasswordInput";
 
@@ -29,13 +29,16 @@ export default function AccountPage() {
         title="My Account"
         description="Manage your login credentials, personal display name, and session authentication."
         actions={
-          <button
-            type="button"
-            className="btn btn-ghost btn-sm rounded-xl gap-2 font-medium text-error hover:bg-error/10 active:scale-95 transition-all"
-            onClick={signOut}
-          >
-            <LogOut size={15} /> Sign Out
-          </button>
+          // None in a device's session, as in the menu (`RootLayout`).
+          offersSignOut(me.data) ? (
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm rounded-xl gap-2 font-medium text-error hover:bg-error/10 active:scale-95 transition-all"
+              onClick={signOut}
+            >
+              <LogOut size={15} /> Sign Out
+            </button>
+          ) : null
         }
       />
 

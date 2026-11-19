@@ -13,7 +13,7 @@ import { ReconnectingBanner, ReconnectingScreen, RestartedToast, RestartPendingB
 import { UpdatedBanner } from "./UpdatedBanner";
 import { ImageMovedBanner } from "./ImageMovedBanner";
 import { bundleVersion, staleBundle } from "@/commons/lib/bundle";
-import { isAdmin, MCP_LOGIN_CALLBACK, useGate } from "@/commons/lib/session";
+import { isAdmin, MCP_LOGIN_CALLBACK, offersSignOut, useGate } from "@/commons/lib/session";
 import { useTheme } from "@/commons/lib/theme";
 import { useSignOut } from "@/commons/components/layout/sign-out";
 import { gatewayPage } from "@/commons/lib/bundled-gateway";
@@ -142,7 +142,11 @@ export function RootLayout() {
 
   useEffect(() => setMoreOpen(false), [pathname]);
 
-  const { signOut, dialog: signOutDialog } = useSignOut();
+  const { signOut: askSignOut, dialog: signOutDialog } = useSignOut();
+  // No Sign out in a session a device's token made: Nouride Home on the machine Nouride runs on signs itself in, so
+  // signing out there only flashed the sign-in page before the app traded its token again. Told from the session, not
+  // the browser: a browser on the same phone, signed in with a password, keeps its Sign out.
+  const signOut = offersSignOut(gate.principal) ? askSignOut : undefined;
 
   // Also while a redirect is on its way, until the page it goes to is the one drawn: the page asked for was drawn first,
   // and then again while the next page's route came in, so an unfinished install opened at Overview showed Overview,

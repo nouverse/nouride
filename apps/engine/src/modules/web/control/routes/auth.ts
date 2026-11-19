@@ -9,7 +9,7 @@
 
 import type { Principal, User } from "@nouride/wire";
 import { createLogger, rateLimit, type RateLimiter } from "@nouride/shared";
-import { atLeast } from "@/modules/users/auth.ts";
+import { atLeast, type Principal as ControlPrincipal } from "@/modules/users/auth.ts";
 import {
   loadOauth,
   oauthReady,
@@ -79,6 +79,21 @@ export function signInLimits(): { byAddress: RateLimiter; byAccount: RateLimiter
   return {
     byAddress: rateLimit({ name: "login", by: "ip", limit: ATTEMPTS_PER_ADDRESS, window: ATTEMPT_WINDOW }),
     byAccount: rateLimit({ name: "login", by: "account", limit: ATTEMPTS_PER_ACCOUNT, window: ATTEMPT_WINDOW }),
+  };
+}
+
+/**
+ * Who is asking, as the dashboard reads it. The CLI's token is not a person: reported as such rather than invented
+ * into one, so the dashboard can tell "signed in as someone" from "holding the host's credential". A session a
+ * device's token made says so, and no other answer carries the field.
+ */
+function whoAsks(principal: ControlPrincipal): Principal {
+  return {
+    kind: principal.kind,
+    role: principal.role,
+    actor: principal.actor,
+    user: principal.user ?? null,
+    ...(principal.device ? { device: true } : {}),
   };
 }
 
@@ -297,17 +312,7 @@ export function registerAuthRoutes(control: ControlApp, deps: ControlDeps, limit
     return c.json({ ok: true } satisfies { ok: true });
   });
 
-  control.get("/auth/me", (c) => {
-    const principal = c.get("principal");
-    // The CLI's token is not a person. Reported as such rather than invented into one, so the dashboard
-    // can tell "signed in as someone" from "holding the host's credential".
-    return c.json({
-      kind: principal.kind,
-      role: principal.role,
-      actor: principal.actor,
-      user: principal.user ?? null,
-    } satisfies Principal);
-  });
+  control.get("/auth/me", (c) => c.json(whoAsks(c.get("principal"))));
 
   /**
    * Change your own password.

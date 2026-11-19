@@ -23,6 +23,8 @@ export interface Principal {
   actor: string;
   role: UserRole;
   user?: UserRecord;
+  /** The session was traded from a device's token (`routes/devices.ts`), not signed in with a password. */
+  device?: true;
 }
 
 /** Ranked, so a check is "at least this" rather than a list of accepted roles at every call site. */
@@ -103,8 +105,9 @@ export function identify(input: {
   const token = readCookie(input.cookieHeader, SESSION_COOKIE);
   if (!token || !input.users) return null;
 
-  const user = input.users.sessionUser(token);
-  if (!user) return null;
+  const session = input.users.session(token);
+  if (!session) return null;
 
-  return { kind: "user", actor: user.username, role: user.role, user };
+  const { user } = session;
+  return { kind: "user", actor: user.username, role: user.role, user, ...(session.device ? { device: true as const } : {}) };
 }
