@@ -24,7 +24,7 @@ import { isDraft } from "@/modules/missions/drafts.ts";
 import { pressRefusal } from "@/modules/missions/actions.ts";
 
 export interface WorkToolDeps {
-  missions: Pick<Missions, "ownedBy" | "find" | "stop" | "answer" | "acceptOutside" | "tell" | "now" | "limitsLine" | "accept">;
+  missions: Pick<Missions, "ownedBy" | "stillOpen" | "find" | "stop" | "answer" | "acceptOutside" | "tell" | "now" | "limitsLine" | "accept">;
   /** Who is speaking in the chat a turn answers: their name in People, if it has them, and whether they are an admin (`tell`, 0.8.10). */
   speaker?: (who: { gatewayId: string; senderId: string }) => { name?: string; admin: boolean };
   /** A mission's checklist, as its turns keep it — where it stands, step by step. */
@@ -65,7 +65,13 @@ function ownsMission(mission: Mission, agentId: string): boolean {
   return mission.agentId === agentId || mission.byAgent === agentId;
 }
 
+/**
+ * A draft says so, in the board's own words. It read "waiting for a person (accept)", which is also what a mission
+ * whose work is done and waits for its sign-off reads: an agent asked what is in its backlog could not tell the two
+ * apart, and called a mission nobody had started one that waited for an answer.
+ */
 function missionState(mission: Mission): string {
+  if (isDraft(mission)) return "a draft, not started (in Backlog)";
   return mission.status === "waiting" ? `waiting for a person (${mission.waitKind ?? "?"})` : mission.status;
 }
 
@@ -156,10 +162,12 @@ export function createWorkTool(deps: WorkToolDeps): Tool {
     const by = `agent ${ctx.agentId}`;
     switch (action) {
       case "missions": {
-        const mine = deps.missions.ownedBy(ctx.agentId, LISTED);
-        if (mine.length === 0) return ok("You have no missions.");
-        const open = mine.filter((mission) => !isFinal(mission.status));
-        const ended = mine.filter((mission) => isFinal(mission.status));
+        // Every open one however old, then the newest that ended. The newest twenty of both together lost a draft
+        // kept in Backlog for a month behind twenty missions finished since: asked what waits there, the agent said none.
+        const open = deps.missions.stillOpen().filter((mission) => ownsMission(mission, ctx.agentId));
+        // The newest of its own are read past the open ones among them, so the ended ones shown are a full twenty.
+        const ended = deps.missions.ownedBy(ctx.agentId, LISTED + open.length).filter((mission) => isFinal(mission.status)).slice(0, LISTED);
+        if (open.length + ended.length === 0) return ok("You have no missions.");
         return ok([...open.map(missionLine), ...(ended.length ? ["Ended:", ...ended.map(missionLine)] : [])].join("\n"));
       }
       case "mission": {
@@ -272,7 +280,7 @@ export function createWorkTool(deps: WorkToolDeps): Tool {
       name: "work",
       description:
         "Your own work, as the daemon knows it, and only yours: missions you work or started, your background jobs (`ask_agent` asks " +
-        'included), approvals you raised. "missions" lists them; "mission" shows one; "stop" ends one; "answer" answers its ' +
+        'included), approvals you raised. "missions" lists them, your drafts in Backlog too; "mission" shows one; "stop" ends one; "answer" answers its ' +
         'question (`text`); "start" starts a draft of yours when the person you are talking to says to (their own words in ' +
         '`text`); "accept_outside" closes one as done outside its checks, with a `text` note, when the work landed ' +
         'another way. "tell" passes on, word for word, what the person you are talking to wants a running mission of yours to ' +

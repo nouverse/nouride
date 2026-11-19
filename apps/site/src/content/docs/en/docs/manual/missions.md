@@ -114,9 +114,14 @@ the three columns are one thin line and Finished has the page. A search and a fi
 phone the board is four tabs with their counts, Finished the fourth, opening on Needs you when anything is there, and
 the day stands beside each time.
 
+An agent can be asked the same in its chat: "what is in your backlog?" It answers for its own missions, the ones it
+works and the ones it drafted for another agent: every one still open however old, a draft named as a draft that has
+not started, and the last twenty that ended.
+
 A mission's own page starts with what it does now and how far it is, then its brief and its result once it has one,
 each across the page, and its checklist over its turns, with its folder, what decides it is done and the box to tell it
-something beside them.
+something beside them. A long checklist shows the five steps around the one at work, and the turns their newest five,
+with the rest a press away.
 A draft's page has only what you can change before it starts.
 
 **What waits for you says what it waits for** (0.8.39), on Home, on Work and in the list: a question with the question,

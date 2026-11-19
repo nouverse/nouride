@@ -44,7 +44,7 @@ async function setup() {
   });
   const as = (agentId: string, extra: Partial<ToolContext> = {}) => ({ agentId, gatewayId: "telegram:nova", chatId: "8142", senderId: "8142", ...extra }) as ToolContext;
   const call = (agentId: string, args: Record<string, unknown>, extra: Partial<ToolContext> = {}) => tool.execute(args, as(agentId, extra));
-  return { h, call, killed, gate };
+  return { h, call, killed, gate, tool };
 }
 
 describe("work: missions", () => {
@@ -58,6 +58,44 @@ describe("work: missions", () => {
     expect(listed).toContain(startedForNox.id.slice(0, 10));
     expect(listed).toContain("started by nova");
     expect(listed).not.toContain(theirs.id.slice(0, 10));
+  });
+
+  // Asked "what is in your backlog?", an agent read every draft as "waiting for a person (accept)": the words of a
+  // mission whose work is done and waits to be signed off.
+  test("a draft is said as one, in Backlog and not started; a mission waiting for its sign-off is not", async () => {
+    const { h, call, tool } = await setup();
+    const draft = await h.start("tidy the wiki", { startedBy: "nouride:system", byAgent: "nova", proposed: true });
+    const working = await h.start("write the report");
+    const lines = (await call("nova", { action: "missions" })).content.split("\n");
+    const lineOf = (id: string) => lines.find((line) => line.startsWith(id.slice(0, 10))) ?? "";
+    expect(lineOf(draft.id)).toContain("a draft, not started (in Backlog)");
+    expect(lineOf(draft.id)).not.toContain("waiting for a person");
+    expect(lineOf(working.id)).not.toContain("draft");
+    // One shown says the same, and the tool's own words say a draft is among what it lists.
+    expect((await call("nova", { action: "mission", id: draft.id })).content.split("\n")[0]).toContain("a draft, not started (in Backlog)");
+    expect(tool.definition.description).toContain('"missions" lists them, your drafts in Backlog too');
+  });
+
+  test("an old draft is listed behind any number of missions ended since, with the newest twenty of those", async () => {
+    const { h, call } = await setup();
+    const draft = await h.start("an idea kept for later", { startedBy: "nouride:system", byAgent: "nova", proposed: true });
+    const ended: string[] = [];
+    for (let n = 0; n < 22; n += 1) {
+      // Each a minute after the one before: the draft is the oldest of them all.
+      h.tick(60_000);
+      const one = await h.start(`a job ${n}`);
+      await call("nova", { action: "stop", id: one.id });
+      ended.push(one.id.slice(0, 10));
+    }
+    // And one at work, newer than them all: it takes no place among the twenty ended ones shown.
+    h.tick(60_000);
+    const atWork = await h.start("the job at work");
+    const listed = (await call("nova", { action: "missions" })).content;
+    const [open = "", past = ""] = listed.split("Ended:");
+    expect(open).toContain(atWork.id.slice(0, 10));
+    expect(open).toContain(draft.id.slice(0, 10));
+    expect(open).toContain("a draft, not started (in Backlog)");
+    expect(ended.filter((id) => past.includes(id))).toEqual(ended.slice(2));
   });
 
   test("shows one with its limits and checks; another agent's reads as one that does not exist", async () => {
