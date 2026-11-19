@@ -8,7 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import { api } from "@/commons/lib/api";
-import { HOME_APP_BACK, inHomeApp } from "@/commons/lib/home-app";
+import { HOME_APP_PAGE_BACK, inHomeApp } from "@/commons/lib/home-app";
 import { ReconnectingBanner, ReconnectingScreen, RestartedToast, RestartPendingBar } from "./Reconnecting";
 import { UpdatedBanner } from "./UpdatedBanner";
 import { ImageMovedBanner } from "./ImageMovedBanner";
@@ -69,13 +69,14 @@ function PageTop({ pathname, admin, className }: { pathname: string; admin: bool
 const SCROLLS = "relative min-h-0 flex-1 overflow-x-hidden overflow-y-auto";
 
 /**
- * The way back to Nouride Home's own screen, inside its app (`home-app.ts`), in a signed-in page's header on a phone.
- * The pages that have no header (the sign-in, the setup, the welcome, a login coming back) draw their own, inside
+ * Back, inside Nouride Home (`home-app.ts`), in a signed-in page's header on a phone: a page back, as the phone's own
+ * Back is, which asks about leaving only at the first page. Leaving at once is the menu's "Back to Nouride Home". The
+ * pages that have no header (the sign-in, the setup, the welcome, a login coming back) draw their own way out, inside
  * their content: `HomeAppLeave`.
  */
 function HomeAppBack({ className }: { className: string }) {
   return (
-    <a href={HOME_APP_BACK} className={cn("btn btn-ghost btn-square size-11 text-secondary active:scale-90 transition-transform", className)} aria-label="Back to Nouride Home">
+    <a href={HOME_APP_PAGE_BACK} className={cn("btn btn-ghost btn-square size-11 text-secondary active:scale-90 transition-transform", className)} aria-label="Back">
       <ChevronLeft size={22} />
     </a>
   );
@@ -191,7 +192,7 @@ export function RootLayout() {
   const phoneChat = chatOpen(pathname, search);
 
   /**
-   * A phone's header: the name, and the way back to Nouride Home inside its app; the rest is the tab bar's. It is the
+   * A phone's header: the name, and Back inside Nouride Home's app; the rest is the tab bar's. It is the
    * first thing in what scrolls (`SCROLLS`), before the page's `<main>`, held at the top: a scroll down puts it up and
    * gives the page the screen, the first scroll up brings it back (`useHead`). A row a page keeps in reach
    * (`StickyBar`) stops under it.

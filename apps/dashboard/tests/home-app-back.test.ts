@@ -1,12 +1,13 @@
 /**
- * Inside Nouride Home (the Android app), the dashboard's own header has the way back to the app, so the app needs no
- * second bar above it, and the phone's back gesture is not the only way out.
+ * Inside Nouride Home, the dashboard draws its own ways out, so the app needs no second bar above it: Back in a phone's
+ * header, which pages back as the phone's own Back does, and "Back to Nouride Home" in the menu and on the pages that
+ * have no header, which leaves at once. They are two links (`home-app.ts`), so the app can tell them apart.
  */
 
 import { afterEach, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { HOME_APP_BACK, inHomeApp } from "@/commons/lib/home-app";
+import { HOME_APP_BACK, HOME_APP_PAGE_BACK, inHomeApp } from "@/commons/lib/home-app";
 import { answer, dom, renderPage, useMountHarness } from "./mount-harness.ts";
 import { eventually } from "./wait.ts";
 
@@ -17,12 +18,14 @@ describe("the way back to Nouride Home", () => {
     expect(inHomeApp("Mozilla/5.0 (Macintosh) Safari/605.1.15")).toBe(false);
   });
 
-  test("the header links to the address the app catches, and only inside it", () => {
+  test("two addresses the app catches: one pages back, one leaves", () => {
+    expect(HOME_APP_PAGE_BACK).toBe("nouridehome://back");
     expect(HOME_APP_BACK).toBe("nouridehome://home");
+  });
+
+  test("the header draws its chevron only inside the app", () => {
     const header = readFileSync(join(import.meta.dir, "../src/commons/components/layout/RootLayout.tsx"), "utf8");
     expect(header).toContain('{inHomeApp() && <HomeAppBack className="-mr-1" />}');
-    expect(header).toContain("href={HOME_APP_BACK}");
-    expect(header).toContain('aria-label="Back to Nouride Home"');
   });
 });
 
@@ -38,7 +41,15 @@ async function asTheApp(run: () => Promise<void>): Promise<void> {
   }
 }
 
-const back = (host: HTMLElement) => [...host.ownerDocument.body.querySelectorAll<HTMLAnchorElement>('a[aria-label="Back to Nouride Home"]')];
+/** Every link the app catches, with its address, what it says (to the eye, and to a screen reader) and whether the header holds it. */
+const appLinks = (host: HTMLElement) =>
+  [...host.ownerDocument.body.querySelectorAll<HTMLAnchorElement>('a[href^="nouridehome://"]')].map((link) => ({
+    href: link.getAttribute("href"),
+    words: (link.textContent ?? "").trim(),
+    label: link.getAttribute("aria-label"),
+    inHeader: link.closest("header") !== null,
+    classes: (link.getAttribute("class") ?? "").split(/\s+/),
+  }));
 
 /** The pages that have no header, each with what says it is drawn and the box its way back must be inside. */
 const GATES: { name: string; path: string; drawn: (host: HTMLElement) => boolean; within: string }[] = [
@@ -117,18 +128,56 @@ describe("on the pages that have no header", () => {
     expect(shell).not.toContain('HomeAppBack className="fixed');
   });
 
-  test("a signed-in page in the app has the header's chevron alone, and it is not held to the window", async () => {
-    let inside: string[][] = [];
+});
+
+describe("Back and \"Back to Nouride Home\" are two links", () => {
+  useMountHarness();
+  afterEach(() => dom.happyDOM.setViewport({ width: 1024, height: 768 }));
+
+  // One link for every way back, and the app could not tell a page back from leaving: the header's chevron left the
+  // dashboard from any page.
+  test("on a phone: the header's bare chevron pages back, and More's row leaves", async () => {
+    let header: ReturnType<typeof appLinks> = [];
+    let menu: ReturnType<typeof appLinks> = [];
+    dom.happyDOM.setViewport({ width: 390, height: 844 });
+    answer({});
+    await asTheApp(async () => {
+      await renderPage("/agents", async (host) => {
+        await eventually(() => appLinks(host).some((link) => link.inHeader), 3_000, "the header's chevron");
+        header = appLinks(host).filter((link) => link.inHeader);
+        const more = ([...host.ownerDocument.body.querySelectorAll('nav[aria-label="Tabs"] button')] as unknown as HTMLElement[]).find((button) => (button.textContent ?? "").trim() === "More")!;
+        more.click();
+        await eventually(() => host.ownerDocument.body.querySelector('[data-sheet][data-open] a[href^="nouridehome://"]') !== null, 3_000, "More's row");
+        menu = appLinks(host).filter((link) => !link.inHeader);
+      });
+    });
+    // The header's: a bare chevron, named Back, held to nothing.
+    expect(header.map(({ href, words, label, inHeader }) => ({ href, words, label, inHeader }))).toEqual([{ href: "nouridehome://back", words: "", label: "Back", inHeader: true }]);
+    expect(header[0]!.classes).toContain("btn-square");
+    expect(header[0]!.classes).not.toContain("fixed");
+    expect(menu.map(({ href, words }) => ({ href, words }))).toEqual([{ href: "nouridehome://home", words: "Back to Nouride Home" }]);
+  });
+
+  test("from a laptop's width: the menu's row and the folded menu's tile leave, and nothing but the header's pages back", async () => {
+    const seen: Record<string, ReturnType<typeof appLinks>> = {};
     answer({});
     await asTheApp(async () => {
       await renderPage("/", async (host) => {
-        await eventually(() => back(host).length > 0, 3_000, "the header's button");
-        inside = back(host).map((link) => (link.getAttribute("class") ?? "").split(/\s+/));
+        await eventually(() => appLinks(host).some((link) => link.words === "Back to Nouride Home"), 3_000, "the menu's row");
+        seen.menu = appLinks(host);
+      });
+      await renderPage("/chat", async (host) => {
+        await eventually(() => appLinks(host).some((link) => link.words === "Exit"), 3_000, "the folded menu's tile");
+        seen.folded = appLinks(host);
       });
     });
-    expect(inside).toHaveLength(1);
-    expect(inside[0]).not.toContain("fixed");
-    expect(inside[0]).toContain("btn-square");
+    for (const place of ["menu", "folded"]) {
+      const links = seen[place]!;
+      expect(links.filter((link) => link.href === "nouridehome://back").every((link) => link.inHeader && link.label === "Back")).toBe(true);
+      expect(links.filter((link) => !link.inHeader).map((link) => link.href)).toEqual(["nouridehome://home"]);
+    }
+    expect(seen.menu!.find((link) => !link.inHeader)).toMatchObject({ words: "Back to Nouride Home", label: null });
+    expect(seen.folded!.find((link) => !link.inHeader)).toMatchObject({ words: "Exit", label: "Back to Nouride Home" });
   });
 });
 
