@@ -402,6 +402,34 @@ test("a mission's page: four meters against its limits, the checklist with each 
   expect(seen.buttons!.some((label) => /^(Continue|Accept|Answer)/.test(label))).toBe(false);
 });
 
+test("its turns are folded to the newest five, with the older ones a press away", async () => {
+  missionTurns(Array.from({ length: 8 }, (_, at) => missionTurn(at + 1, {})));
+  const seen = { folded: [] as string[], button: "", opened: 0, less: "", again: 0, short: "" };
+  const titles = (host: HTMLElement) => [...host.querySelectorAll("[data-turns] li")].map((one) => /Turn \d+/.exec(one.textContent ?? "")?.[0] ?? "");
+  await renderPage("/missions/msn_1", async (host) => {
+    await eventually(() => host.querySelector("[data-turns] li") !== null, 2_000, "the turns");
+    seen.folded = titles(host);
+    seen.button = [...host.querySelectorAll("[data-turns] > button")].map((one) => one.textContent ?? "").join();
+    press(host.querySelector<HTMLElement>("[data-turns]")!, "Show 3 older turns");
+    await eventually(() => titles(host).length === 8, 2_000, "all eight");
+    seen.opened = titles(host).length;
+    seen.less = [...host.querySelectorAll("[data-turns] > button")].map((one) => one.textContent ?? "").join();
+    press(host.querySelector<HTMLElement>("[data-turns]")!, "Show less");
+    await eventually(() => titles(host).length === 5, 2_000, "folded again");
+    seen.again = titles(host).length;
+  });
+  expect(seen.folded).toEqual(["Turn 8", "Turn 7", "Turn 6", "Turn 5", "Turn 4"]);
+  expect(seen.button).toBe("Show 3 older turns");
+  expect([seen.opened, seen.less, seen.again]).toEqual([8, "Show less", 5]);
+  // Five turns are whole: nothing to press.
+  missionTurns(Array.from({ length: 5 }, (_, at) => missionTurn(at + 1, {})));
+  await renderPage("/missions/msn_1", async (host) => {
+    await eventually(() => host.querySelector("[data-turns] li") !== null, 2_000, "the turns");
+    seen.short = `${titles(host).length} ${host.querySelectorAll("[data-turns] > button").length} ${host.querySelector<HTMLElement>("[data-turns]")!.dataset.turns}`;
+  });
+  expect(seen.short).toBe("5 0 whole");
+});
+
 test("its checklist is folded to the five steps around the one at work, with all of them a press away", async () => {
   const steps = Array.from({ length: 12 }, (_, at) => ({ text: `step ${at + 1}`, state: at < 7 ? "done" : at === 7 ? "active" : "pending" }));
   missionTurns([missionTurn(1, {})]);
