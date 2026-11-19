@@ -179,6 +179,18 @@ describe("the height of a page", () => {
     expect(shell.split(" ")).toContain("overflow-hidden");
   });
 
+  // Live, on a mission's page: a `sr-only` word of its checklist, placed absolutely with nothing positioned around it,
+  // was placed against the document, below the window's foot. The document grew taller than the window, the wheel at
+  // the page's end scrolled the shell itself up, and a blank band stood under the page.
+  test("what scrolls a page is what anything placed absolutely in it is placed against, never the document", () => {
+    const layout = read("commons/components/layout/RootLayout.tsx");
+    const scrolls = (/const SCROLLS = "([^"]+)"/.exec(layout)?.[1] ?? "").split(" ");
+    expect(scrolls).toContain("overflow-y-auto");
+    expect(scrolls).toContain("relative");
+    // Both pages that scroll are drawn in it, by its name.
+    expect(layout.match(/className=\{SCROLLS\}/g)?.length).toBe(2);
+  });
+
   test("a dialog's box is held to what is seen, under a class that says a height of its own", () => {
     // daisyUI holds `modal-box` to `100vh - 5em`. The rule here sits in a layer inside the utilities', which daisyUI's
     // is too: later than daisyUI's, so it wins there, and under the utilities themselves, so `max-h-[90dvh]` still does.

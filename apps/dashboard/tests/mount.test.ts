@@ -1326,7 +1326,7 @@ describe("a failed load is not an empty or healthy page", () => {
  */
 describe("which pages own the viewport", () => {
   // What scrolls the page: the phone's header first in it, then the page's own `<main>`.
-  const SCROLLS = '<div class="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">';
+  const SCROLLS = '<div class="relative min-h-0 flex-1 overflow-x-hidden overflow-y-auto">';
   // Above the phone's tab bar, where a chat's composer sits (0.8.24).
   const FILLS = '<main class="flex min-h-0 flex-1 flex-col overflow-hidden *:animate-fade max-lg:pb-[calc(4.75rem+env(safe-area-inset-bottom))]">';
   const agent = (id: string) => ({ id, displayName: id, enabled: true, state: "running", provider: "p", model: "m", tools: [], approvals: "careful" });
