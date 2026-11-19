@@ -222,21 +222,111 @@ describe("one question at a time", () => {
 });
 
 describe("a question and what else a turn's end finds", () => {
-  test("asked, then done in the same turn: the mission is checked, and the question's button says it moved on", async () => {
+  // A mission that asked and finished the rest went to its checks and then to its person to accept, as if the question
+  // had never been asked: the answer could no longer change the work, and the person was offered Accept beside a
+  // question nobody had answered.
+  test("asked, then done in the same turn: nothing is checked or offered for acceptance; it waits for the answer, said once", async () => {
     const { h } = await taking();
+    let checked = 0;
+    h.setChecks(async () => (checked++, { passed: true, failed: null }));
+    const mission = await h.start("write it", { checks: ["test -s out.txt"], review: false, accept: true });
+    h.turn(mission, {}, () => {
+      h.missions.ask(mission.id, { question: QUESTION, options: ["take it", "leave it out"], meanwhile: true });
+      h.missions.claim(mission.id, { kind: "done", summary: "Done.", report: "Wrote it.", files: [] });
+    });
+    await h.settle();
+    const waiting = h.store.get(mission.id)!;
+    expect(waiting).toMatchObject({ status: "waiting", waitKind: "input", reason: `${QUESTION}\n\nA) take it\nB) leave it out` });
+    expect(checked).toBe(0);
+    // What it claimed is not kept: no result is on its record for anyone to accept.
+    expect(waiting).toMatchObject({ summary: null, report: null });
+    expect(h.reports).toEqual([]);
+    expect(h.told.filter((one) => one.text.includes("passed its checks") || one.text.startsWith("☑"))).toEqual([]);
+    // Said once that the rest is finished, with the question's own buttons and no button that accepts.
+    const finished = h.told.filter((one) => one.text.includes("has finished everything else"));
+    expect(finished).toHaveLength(1);
+    expect(finished[0]!.text).toBe(
+      `⏸ write it (${short(mission)}) has finished everything else, and waits for your answer before it says it is done: ${QUESTION}\n\nA) take it\nB) leave it out\n\nAnswer: reply to this in your own words, or /mission answer ${short(mission)} <your answer> · or accept it as it is: /mission accept ${short(mission)}`,
+    );
+    expect(finished[0]!.buttons!.map((button) => button.label)).toEqual(["A: take it", "B: leave it out"]);
+    // Not also the line for a mission that only ran out of other work.
+    expect(h.told.filter((one) => one.text.includes("waits for it now"))).toEqual([]);
+    expect(h.missions.forStatus("nova")).toEqual({ atWork: 0, waiting: 1 });
+  });
+
+  test("answered, it runs a turn told to say done again, and that done is checked", async () => {
+    const { h } = await taking();
+    let checked = 0;
+    h.setChecks(async () => (checked++, { passed: true, failed: null }));
+    const mission = await h.start("write it", { checks: ["test -s out.txt"], review: false });
+    h.turn(mission, {}, () => {
+      h.missions.ask(mission.id, { question: QUESTION, meanwhile: true });
+      h.missions.claim(mission.id, { kind: "done", summary: "Done.", report: "Wrote it.", files: [] });
+    });
+    await h.settle();
+    expect(checked).toBe(0);
+
+    expect(h.missions.answer(mission.id, "leave it out", "Gading")).toMatchObject({ mission: { status: "running" } });
+    // The turn the answer starts: the answer, and that its done was not taken. A turn on a model remembers no other.
+    expect(h.queued.at(-1)!.text).toBe("Gading answered your question: leave it out You said the mission was done while this question was open, and that was not taken. Do what the answer changes, then call `mission` done again.");
+    const page = h.turn(h.store.get(mission.id)!, {}, () => h.missions.claim(mission.id, { kind: "done", summary: "Done, without it.", report: "Wrote it, Mermaid left out.", files: [] }))!.text;
+    expect(page).toContain("that was not taken");
+    await h.settle();
+    expect(checked).toBe(1);
+    expect(h.store.get(mission.id)!).toMatchObject({ status: "done", summary: "Done, without it." });
+    // Said once: the second done found no question open.
+    expect(h.told.filter((one) => one.text.includes("has finished everything else"))).toHaveLength(1);
+  });
+
+  test("a done after a question that waited was answered is checked as any done, and its turn is told nothing about saying it again", async () => {
+    const { h } = await taking();
+    let checked = 0;
+    h.setChecks(async () => (checked++, { passed: true, failed: null }));
+    const mission = await h.start("write it", { checks: ["test -s out.txt"], review: false });
+    h.turn(mission, {}, () => void h.missions.ask(mission.id, { question: QUESTION }));
+    h.missions.answer(mission.id, "take it", "Gading");
+    expect(h.queued.at(-1)!.text).toBe("Gading answered your question: take it");
+    h.turn(h.store.get(mission.id)!, {}, () => h.missions.claim(mission.id, { kind: "done", summary: "Done.", report: "Wrote it.", files: [] }));
+    await h.settle();
+    expect(checked).toBe(1);
+    expect(h.store.get(mission.id)!.status).toBe("done");
+    expect(h.told.filter((one) => one.text.includes("has finished everything else"))).toEqual([]);
+  });
+
+  test("answered in the turn that said done, before it ended, the done stands and is checked", async () => {
+    // A coding CLI's turn goes on for a while after its done: an answer handed into it leaves no question open at its end.
+    const { h, handed } = await taking();
+    let checked = 0;
+    h.setChecks(async () => (checked++, { passed: true, failed: null }));
+    const mission = await h.start("write it", { checks: ["test -s out.txt"], review: false });
+    h.turn(mission, {}, () => {
+      h.missions.ask(mission.id, { question: QUESTION, meanwhile: true });
+      h.missions.claim(mission.id, { kind: "done", summary: "Done.", report: "Wrote it.", files: [] });
+      h.missions.answer(mission.id, "take it", "Gading");
+      // The turn read the answer it was handed, as a turn at work does with words told to it.
+      h.missions.toldRead(mission.id, handed.map((one) => one.told.id));
+    });
+    await h.settle();
+    expect(checked).toBe(1);
+    expect(h.store.get(mission.id)!.status).toBe("done");
+  });
+
+  test("accepted as it stands while it waits for that answer, it closes as done, its checks not run", async () => {
+    const { h } = await taking();
+    let checked = 0;
+    h.setChecks(async () => (checked++, { passed: true, failed: null }));
     const mission = await h.start("write it", { checks: ["test -s out.txt"], review: false });
     h.turn(mission, {}, () => {
       h.missions.ask(mission.id, { question: QUESTION, options: ["take it", "leave it out"], meanwhile: true });
       h.missions.claim(mission.id, { kind: "done", summary: "Done.", report: "Wrote it.", files: [] });
     });
     await h.settle();
-    const done = h.store.get(mission.id)!;
-    expect(done.status).toBe("done");
-    expect(h.told.filter((one) => one.text.includes("waits for it now"))).toEqual([]);
+    expect(h.missions.accept(mission.id, "Gading")).toMatchObject({ mission: { status: "done", reason: "accepted by Gading as it stood, without its checks passing" } });
+    expect(checked).toBe(0);
+    // The question's button then says the mission has moved on, as for any that ended with it open.
     const data = h.told.find((one) => one.text.includes(QUESTION))!.buttons![0]!.data;
     const pressed = await new OptionPresses({ missions: h.missions, isAdmin: () => false }).press({ data, gatewayId: "telegram:nova", chatId: "8142", chatType: "dm", senderId: "8142", senderName: "Gading" } as never);
     expect(pressed.notice).toBe(`${mission.title} (${short(mission)}) has moved on (done), so this question no longer waits.`);
-    expect(done.answers.at(-1)!.answer).toBeUndefined();
   });
 
   test("a turn that failed is tried again, the question as open as it was", async () => {
@@ -332,6 +422,22 @@ describe("`mission` ask, as the agent calls it", () => {
       expect(result.content).toBe(keepsWorking(reach));
       expect(h.store.get(mission.id)!.answers.at(-1)).toMatchObject({ asked: "meanwhile" });
     }
+  });
+
+  test("`done` called with its question still open is told at the call that the mission will wait and to say done again", async () => {
+    const { h, mission, tool, call } = await setup("into_cli");
+    const ctx = { agentId: "nova", gatewayId: "web:mission", chatId: mission.id, gateway: "web", senderId: "8142", chatType: "dm" } as ToolContext;
+    const done = () => tool.execute({ action: "done", summary: "Done.", report: "Wrote it." }, ctx);
+    await call({ question: QUESTION, keep_working: true });
+    const early = await done();
+    expect(early.isError).toBe(false);
+    expect(endsTurn(early)).toBe(true);
+    expect(early.content).toBe(
+      `Noted, but your question has no answer yet: "${QUESTION}". If the answer comes before this turn ends, the mission goes on to be checked. If not, the mission waits for the answer, this \`done\` is not kept, and the answer starts your next turn: do what it changes, then call done again.`,
+    );
+    // Answered, the same call says what it always said.
+    h.missions.answer(mission.id, "take it", "Gading");
+    expect((await done()).content).toBe("Noted. This turn ends here and it goes to the person to accept.");
   });
 
   test("a second question is an error the agent reads; the same one a third time ends the turn unsent", async () => {

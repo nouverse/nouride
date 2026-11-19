@@ -26,6 +26,8 @@ export interface MissionAnswered {
   at: number;
   /** How it was asked: the mission waits for the answer, or works on meanwhile. Absent from a daemon that asks at a turn's end. */
   asked?: "wait" | "meanwhile";
+  /** The mission finished everything else and waits for this answer before it says it is done. Absent otherwise. */
+  finished?: true;
 }
 
 /** What a person told it while it worked (0.8.10), and the turn it read it in — absent while unread. */

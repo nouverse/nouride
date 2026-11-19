@@ -427,6 +427,8 @@ export class Missions implements TurnShaper {
     if (claim?.kind === "fail") return this.end(mission, "failed", `gave up: ${claim.reason}`, claim.report);
     if (claim?.kind === "stuck") return this.wait(mission, "stuck", claim.reason);
     if (claim?.kind === "done") {
+      // Its question still open: it waits for the answer, and nothing it claimed is kept or checked (`asking.ts`).
+      if (this.asking.waitsOn(mission, true)) return;
       mission.summary = claim.summary;
       mission.report = claim.report;
       mission.files = claim.files;

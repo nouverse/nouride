@@ -32,6 +32,11 @@ export interface Answered {
    * meanwhile (`keep_working`). Absent on one a mission of an earlier version asked.
    */
   asked?: "wait" | "meanwhile";
+  /**
+   * The mission said it was done while this was still open, and waits for the answer instead of going to its checks:
+   * the answer may change the work. That `done` is not kept; the turn the answer starts is told to say it again.
+   */
+  finished?: true;
 }
 
 /**

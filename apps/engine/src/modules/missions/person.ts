@@ -147,7 +147,10 @@ export function answerMission(missions: Missions, deps: MissionsDeps, id: string
     missions.resume(mission);
     deps.store.save(mission);
     deps.changed?.(mission);
-    missions.queueTurn(mission, `${by} answered your question: ${answer}`);
+    // It had said it was done before this answer came, and that was not taken: the turn the answer starts says so, since
+    // a turn on a model remembers nothing of the last.
+    const again = open.finished ? " You said the mission was done while this question was open, and that was not taken. Do what the answer changes, then call `mission` done again." : "";
+    missions.queueTurn(mission, `${by} answered your question: ${answer}${again}`);
     return { mission };
   }
   log.info("a mission's question answered while it was not waiting for it", { mission: mission.id, by, status: mission.status, wait: mission.waitKind });

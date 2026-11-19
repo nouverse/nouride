@@ -82,7 +82,11 @@ Chat tetap sepi. Misi cuma bilang:
 - bahwa ia **bertanya, dan lanjut bekerja sambil menunggu** (0.8.39): pertanyaan yang jawabannya gak ditunggu oleh sisa
   pekerjaannya. Misinya jalan terus, dan jawaban kamu diteruskan ke pekerjaan yang sedang berjalan. Kalau gilirannya
   selesai dan pertanyaannya masih terbuka, kamu diberi tahu sekali bahwa ia sudah mengerjakan yang bisa dikerjakan dan
-  sekarang menunggu jawabannya. Hanya satu pertanyaan yang terbuka dalam satu waktu;
+  sekarang menunggu jawabannya. Misi yang sudah menyelesaikan semua yang lain padahal pertanyaannya masih terbuka gak
+  lanjut ke pengecekan, dan kamu belum diminta menerima apa pun (0.8.41): ia memberi tahu sekali bahwa sisanya sudah
+  selesai lalu menunggu jawaban kamu, karena jawabannya bisa mengubah pekerjaannya. Begitu dijawab, ia mengerjakan yang
+  berubah karena jawaban itu dan bilang selesai lagi. Menerimanya apa adanya tetap menutup misinya. Hanya satu
+  pertanyaan yang terbuka dalam satu waktu;
 - bahwa ia **berhenti sebentar** karena modelnya gak bisa menjawab, dan mencoba lagi sendiri;
 - bahwa ia **selesai**, dengan hasilnya dalam dua-tiga kalimat; lalu **laporan** utuhnya sebagai `report.md`, dan file
   yang ia buat untukmu: dokumen, gambar, spreadsheet. Kode yang ia ubah di repo tetap di branch-nya, yang disebut di

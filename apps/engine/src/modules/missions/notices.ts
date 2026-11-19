@@ -122,6 +122,15 @@ export function nowWaitsNotice(mission: Pick<Mission, "id" | "title">, question:
   return `⏸ ${called(mission)} has done what it could without your answer, and waits for it now: ${clip(question.trim(), 400)}${GAP}Answer: reply to this in your own words, or /mission answer ${id} <your answer> · or accept it as it is: /mission accept ${id}`;
 }
 
+/**
+ * It said it was done with that question still open: nothing is checked and nothing is offered for acceptance until the
+ * answer, which may change the work. Said once, in place of the result the person would otherwise be asked to accept.
+ */
+export function finishedWaitsNotice(mission: Pick<Mission, "id" | "title">, question: string): string {
+  const id = shortId(mission.id);
+  return `⏸ ${called(mission)} has finished everything else, and waits for your answer before it says it is done: ${clip(question.trim(), 400)}${GAP}Answer: reply to this in your own words, or /mission answer ${id} <your answer> · or accept it as it is: /mission accept ${id}`;
+}
+
 /** A paused mission's model answered again (`retry`): said once, so the person knows it is no longer stalled. */
 export function goesOnNotice(mission: Pick<Mission, "id" | "title">, tries: number): string {
   return `▶ ${called(mission)} goes on: its model answered again${tries > 1 ? ` after ${tries} tries` : ""}.`;

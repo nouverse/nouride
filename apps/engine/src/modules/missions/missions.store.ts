@@ -112,6 +112,7 @@ function answered(text: string): Answered[] {
             ...(Array.isArray(one.options) && one.options.every((option) => typeof option === "string") ? { options: one.options } : {}),
             ...(typeof one.answer === "string" ? { answer: one.answer } : {}),
             ...(one.asked === "wait" || one.asked === "meanwhile" ? { asked: one.asked } : {}),
+            ...(one.finished === true ? { finished: true as const } : {}),
           },
         ]
       : [];

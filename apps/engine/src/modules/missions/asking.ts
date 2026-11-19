@@ -17,7 +17,7 @@ import { carryWait } from "./carry.ts";
 import type { MissionsDeps } from "./deps.ts";
 import { ANSWERS_KEPT, SAME_QUESTION } from "./limits.ts";
 import type { Missions } from "./missions.ts";
-import { asksMeanwhileNotice, needsYouNotice, nowWaitsNotice, paged } from "./notices.ts";
+import { asksMeanwhileNotice, finishedWaitsNotice, needsYouNotice, nowWaitsNotice, paged } from "./notices.ts";
 import { buttonsOf, withOptions } from "./options.ts";
 import { isFinal, type Answered, type Mission } from "./types.ts";
 
@@ -96,12 +96,19 @@ export class Asking {
    * A turn ended with nothing claimed: with its question still open, the mission waits for the answer. True where it
    * does. The question was told when it was asked; one asked to work on meanwhile is said to wait now, since its person
    * read that it went on.
+   *
+   * `finished`: the turn said the mission was done. With the question still open it waits for the answer all the same,
+   * before any check runs: a mission that asked and finished the rest went to its checks and then to its person to
+   * accept, as if the question had never been asked, and the answer could no longer change the work. The question is
+   * marked so, for the turn its answer starts, and the chat is told once that everything else is finished.
    */
-  waitsOn(mission: Mission): boolean {
+  waitsOn(mission: Mission, finished = false): boolean {
     const open = openQuestion(mission);
     if (!open) return false;
+    if (finished) open.finished = true;
     this.missions.wait(mission, "input", open.question, false);
-    if (open.asked === "meanwhile") void this.deps.tell(mission, paged(nowWaitsNotice(mission, open.question), this.deps.pageOf?.(mission)), buttonsOf(mission.id, open));
+    const notice = finished ? finishedWaitsNotice(mission, open.question) : open.asked === "meanwhile" ? nowWaitsNotice(mission, open.question) : null;
+    if (notice) void this.deps.tell(mission, paged(notice, this.deps.pageOf?.(mission)), buttonsOf(mission.id, open));
     return true;
   }
 

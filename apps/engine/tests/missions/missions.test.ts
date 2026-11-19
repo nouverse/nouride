@@ -977,8 +977,10 @@ describe("what the missions keep in memory", () => {
     const queued = await h.start("then this");
     h.setChecks(async () => ({ passed: false, failed: { command: "test -s out.txt", output: "[no output, exit code 1]" } }));
     // A question asked on the way, the mission working on: its count of questions alike is kept while the mission is open.
+    // Answered before the turn says done: a done with its question still open waits for the answer, and is not checked.
     h.turn(running, {}, () => {
       h.missions.ask(running.id, { question: "Which file?", meanwhile: true });
+      h.missions.answer(running.id, "out.txt", "Gading");
       h.missions.claim(running.id, { kind: "done", summary: "Done.", report: "Wrote it.", files: [] });
     });
     await h.settle();

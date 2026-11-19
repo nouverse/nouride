@@ -78,7 +78,11 @@ The chat stays quiet. A mission says:
   (0.8.39), not at the end of the turn it was asked in;
 - that it **asks, and works on meanwhile** (0.8.39): a question whose answer the rest of the work does not wait for.
   The mission goes on, and your answer is handed to the work in progress. If the turn ends with the question still
-  open, you are told once that it has done what it could and waits for the answer now. One question is open at a time;
+  open, you are told once that it has done what it could and waits for the answer now. A mission that finishes
+  everything else while its question is still open does not go on to its checks, and you are not asked to accept
+  anything yet (0.8.41): it tells you once that the rest is finished and waits for your answer, since the answer may
+  change the work. With the answer it does what the answer changes and says it is done again. Accepting it as it
+  stands still closes it. One question is open at a time;
 - that it **paused** because its model could not answer, and tries again by itself;
 - that it is **done**, with its result in two or three sentences; then its whole **report** as `report.md`, and the
   files it made for you: a document, an image, a spreadsheet. Code it changed in a repository stays on its branch,
