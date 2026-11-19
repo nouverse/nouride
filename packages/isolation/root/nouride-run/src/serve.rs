@@ -155,6 +155,27 @@ pub fn serve(settings: &Settings) -> i32 {
             }
             Err(reason) => refuse(reason),
         },
+        Some(Op::Remove) => match account::remove_user(
+            &request.agent,
+            &account::Removal {
+                workspace: &settings.workspace,
+                reads: &settings.reads,
+                service_uid: service.uid,
+                service_gid: service.gid,
+                daemon_cgroup: cgroup_of(&cred.pid.to_string()),
+            },
+        ) {
+            Ok(removed) => {
+                let line = match removed {
+                    account::Removed::Absent => "absent\n".to_string(),
+                    account::Removed::Gone { left } => format!("removed left={left}\n"),
+                };
+                let _ = send(&out, frame::STDOUT, line.as_bytes());
+                let _ = send(&out, frame::EXIT, b"code 0");
+                0
+            }
+            Err(reason) => refuse(reason),
+        },
         Some(Op::Run) | None => match prepare(settings, &service, cred.pid, &request) {
             Ok(becoming) => run(becoming, input, &out),
             Err(reason) => refuse(reason),

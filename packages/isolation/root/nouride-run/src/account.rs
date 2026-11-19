@@ -157,6 +157,126 @@ pub fn ensure_user(agent: &str, home: &Path) -> Result<User, String> {
     }
 }
 
+/// What `remove` did, said back to the daemon in one line.
+#[derive(Debug, PartialEq, Eq)]
+pub enum Removed {
+    /// No user of that name: nothing was there to remove.
+    Absent,
+    /// The user is gone. `left`: entries of its own in the workspace that could not be handed to the service user.
+    Gone { left: u64 },
+}
+
+/// Whether the user found under an agent's name is this helper's to remove: its uid where it is, None where there is no
+/// such user, and a refusal for one that does not carry this helper's mark, or is root or the service user under any
+/// mark. A name is not proof: `nr-<agent>` made by an administrator is somebody's account.
+fn removable(agent: &str, found: Option<&User>, service_uid: libc::uid_t) -> Result<Option<libc::uid_t>, String> {
+    let name = user_of(agent);
+    let Some(user) = found else {
+        return Ok(None);
+    };
+    if user.gecos != marker(agent) {
+        return Err(format!(
+            "a user named {name} exists that nouride did not make, so it is left as it is"
+        ));
+    }
+    if user.uid == 0 || user.uid == service_uid {
+        return Err(format!("{name} is uid {}, which this helper never removes", user.uid));
+    }
+    Ok(Some(user.uid))
+}
+
+/// Another account under the same number: `useradd -o` makes one, and everything done to the number is done to it.
+fn shares_uid(name: &str, uid: libc::uid_t) -> Option<String> {
+    let mut other = None;
+    unsafe {
+        libc::setpwent();
+        loop {
+            let entry = libc::getpwent();
+            if entry.is_null() {
+                break;
+            }
+            let theirs = CStr::from_ptr((*entry).pw_name).to_string_lossy().into_owned();
+            if (*entry).pw_uid == uid && theirs != name {
+                other = Some(theirs);
+                break;
+            }
+        }
+        libc::endpwent();
+    }
+    other
+}
+
+/// Where `remove` works, and for whom: fixed by the unit and the connection, never taken from the request.
+pub struct Removal<'a> {
+    pub workspace: &'a Path,
+    /// The folders the daemon keeps per agent (`--reads`): `<root>/<agent>` carries the agent's group.
+    pub reads: &'a [std::path::PathBuf],
+    pub service_uid: libc::uid_t,
+    pub service_gid: libc::gid_t,
+    /// The daemon's cgroup, where the helper is not in it: the agent's commands run there and nowhere else.
+    pub daemon_cgroup: Option<String>,
+}
+
+/// The temporary folders an agent's commands may write in (`serve::landlock_plan`): what it left there is handed over
+/// too, its own entries and what is under its own folders.
+const TEMPORARY: &[&str] = &["/tmp", "/var/tmp", "/dev/shm"];
+
+/// The agent's user removed, for an agent the daemon has deleted. Only a user this helper made (`removable`), under a
+/// number no other account and no process outside the daemon holds. Its processes are ended first (`leave`). Then
+/// what is its own, or its own group's, is handed to the service user: in `shared/`, in what is left of its private
+/// folder, in the folders the daemon keeps for it, and in the machine's temporary folders, so that a user made later
+/// under the same numbers reaches none of it, and an agent made again under the id is given its folder as any folder
+/// of the daemon's is (`fsafe::ensure_private`). Then `userdel` takes the user and its own group. Nothing is deleted
+/// here: what goes of its files is the daemon's to delete.
+pub fn remove_user(agent: &str, at: &Removal) -> Result<Removed, String> {
+    use crate::leave::{self, Handing};
+    let name = user_of(agent);
+    let found = lookup_user(&name);
+    let Some(uid) = removable(agent, found.as_ref(), at.service_uid)? else {
+        return Ok(Removed::Absent);
+    };
+    let gid = found.map_or(libc::gid_t::MAX, |user| user.gid);
+    if let Some(other) = shares_uid(&name, uid) {
+        return Err(format!("{name} shares uid {uid} with {other}, so it is left as it is"));
+    }
+    if let Some(pid) = leave::stranger(uid, at.daemon_cgroup.as_deref()) {
+        return Err(format!(
+            "process {pid} runs as uid {uid} outside Nouride, so {name} is left as it is"
+        ));
+    }
+    leave::end_processes(uid)?;
+    let handing = Handing {
+        uid,
+        gid,
+        to_uid: at.service_uid,
+        to_gid: at.service_gid,
+    };
+    let mut left = leave::hand_over_at(&at.workspace.join("shared"), handing, true)?;
+    left += leave::hand_over_at(&at.workspace.join("private").join(agent), handing, true)?;
+    for root in at.reads {
+        left += leave::hand_over_at(&root.join(agent), handing, true)?;
+    }
+    for dir in TEMPORARY {
+        // Best effort: a machine without one of them, or with a link there, has nothing of the agent's to hand over.
+        left += leave::hand_over_at(Path::new(dir), handing, false).unwrap_or(0);
+    }
+    // A process just killed may not be reaped yet, and `userdel` then says the user is busy: asked again, shortly.
+    let mut gone = run("userdel", &[&name]);
+    for _ in 0..5 {
+        if gone.is_ok() || lookup_user(&name).is_none() {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(200));
+        gone = run("userdel", &[&name]);
+    }
+    if lookup_user(&name).is_some() {
+        return Err(gone
+            .err()
+            .unwrap_or_else(|| format!("{name} was removed and is still there")));
+    }
+    Ok(Removed::Gone { left })
+}
+
 /// The agent's groups: `nr-agents`, and of what may be granted, exactly `wanted`. Anything else asked for is refused —
 /// the service group, root's, any group of the system's.
 pub fn set_groups(agent: &str, wanted: &[String]) -> Result<(), String> {
@@ -183,4 +303,65 @@ pub fn set_groups(agent: &str, wanted: &[String]) -> Result<(), String> {
         groups.push(group.clone());
     }
     run("usermod", &["-G", &groups.join(","), &name])
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn user(uid: libc::uid_t, gecos: &str) -> User {
+        User {
+            uid,
+            gid: uid,
+            gecos: gecos.into(),
+        }
+    }
+
+    #[test]
+    fn only_a_user_this_helper_made_is_removed() {
+        const SERVICE: libc::uid_t = 990;
+        // Its own: the mark it writes at `useradd`, for this agent.
+        assert_eq!(
+            removable("nouva", Some(&user(1001, "nouride agent nouva")), SERVICE),
+            Ok(Some(1001))
+        );
+        // Nobody of that name: nothing to remove, and not a refusal.
+        assert_eq!(removable("nouva", None, SERVICE), Ok(None));
+        // Somebody else's account under the agent's name: no mark, another agent's mark, a mark with more after it.
+        for gecos in [
+            "",
+            "Nouva,,,",
+            "nouride agent nix",
+            "nouride agent nouva2",
+            "x nouride agent nouva",
+        ] {
+            let refused = removable("nouva", Some(&user(1001, gecos)), SERVICE).unwrap_err();
+            assert_eq!(
+                refused,
+                "a user named nr-nouva exists that nouride did not make, so it is left as it is"
+            );
+        }
+        // Root and the service user, whatever their comment says.
+        assert_eq!(
+            removable("nouva", Some(&user(0, "nouride agent nouva")), SERVICE).unwrap_err(),
+            "nr-nouva is uid 0, which this helper never removes"
+        );
+        assert_eq!(
+            removable("nouva", Some(&user(SERVICE, "nouride agent nouva")), SERVICE).unwrap_err(),
+            "nr-nouva is uid 990, which this helper never removes"
+        );
+    }
+
+    #[test]
+    fn an_agent_with_no_user_is_absent_and_nothing_is_touched() {
+        // No such user on any machine these tests run on: found absent before a process or a file is looked at.
+        let at = Removal {
+            workspace: Path::new("/nonexistent/nouride-run-test/workspace"),
+            reads: &[],
+            service_uid: 990,
+            service_gid: 990,
+            daemon_cgroup: None,
+        };
+        assert_eq!(remove_user("zz-no-such-agent-0841", &at), Ok(Removed::Absent));
+    }
 }

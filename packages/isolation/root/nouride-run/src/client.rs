@@ -218,6 +218,48 @@ pub fn groups(target: &Target, agent: String, groups: Vec<String>) -> i32 {
     }
 }
 
+/// `remove`: the agent's user gone, where the helper made it. Says `absent`, or `removed left=<n>`.
+pub fn remove(target: &Target, agent: String) -> i32 {
+    let request = Request {
+        op: Some(Op::Remove),
+        agent,
+        ..Default::default()
+    };
+    if let Some(settings) = &target.local {
+        let Some(service) = crate::account::lookup_user(&settings.service_user) else {
+            return refused(&format!("the service user {} does not exist", settings.service_user));
+        };
+        // A daemon that is root runs this in its own process: its cgroup is this one's.
+        let daemon_cgroup = std::fs::read_to_string("/proc/self/cgroup").ok().and_then(|text| {
+            text.lines()
+                .find_map(|line| line.strip_prefix("0::"))
+                .map(str::to_string)
+        });
+        let at = crate::account::Removal {
+            workspace: &settings.workspace,
+            reads: &settings.reads,
+            service_uid: service.uid,
+            service_gid: service.gid,
+            daemon_cgroup,
+        };
+        return match crate::account::remove_user(&request.agent, &at) {
+            Ok(crate::account::Removed::Absent) => {
+                println!("absent");
+                0
+            }
+            Ok(crate::account::Removed::Gone { left }) => {
+                println!("removed left={left}");
+                0
+            }
+            Err(reason) => refused(&reason),
+        };
+    }
+    match connect(target) {
+        Ok(stream) => converse(stream, &request, false, None),
+        Err(err) => refused(&err.to_string()),
+    }
+}
+
 /// `info`: the helper's version and the workspace it serves.
 pub fn info(target: &Target) -> i32 {
     if let Some(settings) = &target.local {

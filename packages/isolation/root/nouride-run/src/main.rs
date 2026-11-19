@@ -8,6 +8,7 @@
 //!                                                    the same, for a daemon that is root, in this process
 //!   nouride-run put --to <path>                      stdin into a file, as whoever runs it — through `exec`
 //!   nouride-run groups [--socket <path>] --agent <id> [--group <name>]…
+//!   nouride-run remove [--socket <path>] --agent <id>      the agent's user removed, where this helper made it
 //!   nouride-run info [--socket <path>]
 //!
 //! The rules are in `serve.rs` and the files it uses, and nowhere else: see `packages/isolation/README.md`.
@@ -18,6 +19,7 @@ mod drop;
 mod frame;
 mod fsafe;
 mod landlock;
+mod leave;
 mod put;
 mod request;
 mod serve;
@@ -31,7 +33,7 @@ const DEFAULT_SOCKET: &str = "/run/nouride-run.sock";
 
 fn usage() -> i32 {
     eprintln!(
-        "usage: nouride-run serve --workspace <dir> [--reads <dir>]... [--credentials <dir>] --service-user <name>\n       nouride-run exec [--socket <path> | --local --workspace <dir> [--reads <dir>]... [--credentials <dir>] --service-user <name>] --agent <id> [--cwd <dir>] [--pid-file <path>] [--landlock off|auto|require] [--writable <dir>]... -- <command>...\n       nouride-run put --to <path>\n       nouride-run groups [--socket <path>] --agent <id> [--group <name>]...\n       nouride-run info [--socket <path>]"
+        "usage: nouride-run serve --workspace <dir> [--reads <dir>]... [--credentials <dir>] --service-user <name>\n       nouride-run exec [--socket <path> | --local --workspace <dir> [--reads <dir>]... [--credentials <dir>] --service-user <name>] --agent <id> [--cwd <dir>] [--pid-file <path>] [--landlock off|auto|require] [--writable <dir>]... -- <command>...\n       nouride-run put --to <path>\n       nouride-run groups [--socket <path>] --agent <id> [--group <name>]...\n       nouride-run remove [--socket <path>] --agent <id>\n       nouride-run info [--socket <path>]"
     );
     2
 }
@@ -161,6 +163,11 @@ fn main() {
         },
         "groups" => match (target(), args.agent.clone()) {
             (Some(target), Some(agent)) => client::groups(&target, agent, args.groups.clone()),
+            _ => usage(),
+        },
+        "remove" => match (target(), args.agent.clone()) {
+            // An id that is no agent's is refused here too, before `--local` looks anything up.
+            (Some(target), Some(agent)) if request::valid_agent(&agent) => client::remove(&target, agent),
             _ => usage(),
         },
         "info" => match target() {
