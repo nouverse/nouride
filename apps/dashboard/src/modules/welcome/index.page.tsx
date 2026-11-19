@@ -14,6 +14,7 @@ import { ErrorNote, Field } from "@/commons/components/ui/ui";
 import { Mascot } from "@/commons/components/brand/Mascot";
 import { MIN_PASSWORD_LENGTH } from "@/commons/lib/password";
 import { PasswordInput } from "@/commons/components/ui/PasswordInput";
+import { HomeAppLeave } from "@/commons/components/layout/HomeAppLeave";
 
 export default function WelcomePage() {
   const gate = useGate("/welcome");
@@ -67,9 +68,11 @@ export default function WelcomePage() {
   const ready = username.trim().length > 0 && next.length >= MIN_PASSWORD_LENGTH && next === confirm;
 
   return (
-    <div className="relative flex min-h-dvh items-center justify-center p-4 selection:bg-primary/20 overflow-clip">
+    <div className="relative flex min-h-dvh items-center justify-center p-4 pt-[calc(1rem+env(safe-area-inset-top))] selection:bg-primary/20 overflow-clip">
 
       <div className="relative w-full max-w-md rounded-[22px] border border-base-content/[0.08] bg-base-100 p-7 sm:p-8 shadow-soft space-y-6">
+        {/* The card's first row inside Nouride Home, over the mascot. */}
+        <HomeAppLeave className="-mt-3 mb-4" />
         <div className="space-y-3 text-center sm:text-left">
           <Mascot pose="waving" decorative className="mx-auto w-24 sm:mx-0" />
           <div className="space-y-1">

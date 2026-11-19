@@ -26,7 +26,7 @@ export const LONG_FUNCTIONS: Record<string, Record<string, Budget>> = {
   "apps/dashboard/src/modules/access/pending.tab.tsx": { PendingTab: { lines: 158, why: COMPONENT("who is waiting to be let in, and the answers to one") } },
   "apps/dashboard/src/modules/agents/components/NewAgentForm.tsx": { NewAgentForm: { lines: 200, why: COMPONENT("the form that creates an agent") } },
   "apps/dashboard/src/modules/integrations/index.page.tsx": { Tokens: { lines: 186, why: COMPONENT("the tokens other tools reach Nouride's MCP server with") } },
-  "apps/dashboard/src/modules/login/index.page.tsx": { LoginPage: { lines: 153, why: COMPONENT("the sign-in page") } },
+  "apps/dashboard/src/modules/login/index.page.tsx": { LoginPage: { lines: 154, why: COMPONENT("the sign-in page, with the way out to Nouride Home in its card") } },
   "apps/dashboard/src/modules/memories/document-editor.tsx": { DocumentEditor: { lines: 185, why: COMPONENT("one knowledge document, read and edited") } },
   "apps/dashboard/src/modules/memories/graph/graph.page.tsx": { MemoryGraphPage: { lines: 190, why: COMPONENT("the memory graph page") } },
   "apps/dashboard/src/modules/memories/knowledge/collection-form.tsx": { CollectionForm: { lines: 159, why: COMPONENT("the form for a knowledge collection") } },

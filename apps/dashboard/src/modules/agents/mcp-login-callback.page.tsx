@@ -15,6 +15,7 @@ import { useEffect, useRef } from "react";
 import { CheckCircle2, TriangleAlert } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import { Details } from "@/commons/components/ui/Details";
+import { HomeAppLeave } from "@/commons/components/layout/HomeAppLeave";
 
 export default function McpLoginCallbackPage() {
   const address = typeof window === "undefined" ? "" : window.location.href;
@@ -29,9 +30,10 @@ export default function McpLoginCallbackPage() {
 
   const done = finish.data;
   return (
-    <div className="flex min-h-dvh items-center justify-center p-6">
+    <div className="flex min-h-dvh items-center justify-center p-6 pt-[calc(1.5rem+env(safe-area-inset-top))]">
       <div className="card bg-base-100 border border-base-content/[0.08] shadow-xs rounded-2xl max-w-lg w-full">
         <div className="card-body gap-4">
+          <HomeAppLeave className="-mt-2" />
           {done ? (
             <>
               <h1 className="flex items-center gap-2 text-lg font-semibold">

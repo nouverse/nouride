@@ -69,9 +69,9 @@ function PageTop({ pathname, admin, className }: { pathname: string; admin: bool
 const SCROLLS = "relative min-h-0 flex-1 overflow-x-hidden overflow-y-auto";
 
 /**
- * The way back to Nouride Home's own screen, inside its app (`home-app.ts`). One button for both places it stands: a
- * signed-in page's header, and the corner of the pages that have no header (the sign-in, the setup, the welcome, a
- * login coming back), where the phone's back gesture was the only way out.
+ * The way back to Nouride Home's own screen, inside its app (`home-app.ts`), in a signed-in page's header on a phone.
+ * The pages that have no header (the sign-in, the setup, the welcome, a login coming back) draw their own, inside
+ * their content: `HomeAppLeave`.
  */
 function HomeAppBack({ className }: { className: string }) {
   return (
@@ -176,8 +176,8 @@ export function RootLayout() {
     return (
       <div className="bg-base-200/50 min-h-dvh text-base-content selection:bg-primary/20 *:animate-fade">
         <ReconnectingBanner offline={gate.offline} />
-        {/* These pages have no header to hold the way back to Nouride Home: the same button, where the header's is. */}
-        {inHomeApp() && <HomeAppBack className="fixed left-3 top-[calc(0.25rem+env(safe-area-inset-top))] z-30" />}
+        {/* No header here, and nothing held to the window: each of these pages draws its own way back to Nouride Home
+            inside its content (`HomeAppLeave`). */}
         <Outlet />
       </div>
     );

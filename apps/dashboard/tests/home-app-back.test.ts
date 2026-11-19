@@ -40,40 +40,84 @@ async function asTheApp(run: () => Promise<void>): Promise<void> {
 
 const back = (host: HTMLElement) => [...host.ownerDocument.body.querySelectorAll<HTMLAnchorElement>('a[aria-label="Back to Nouride Home"]')];
 
+/** The pages that have no header, each with what says it is drawn and the box its way back must be inside. */
+const GATES: { name: string; path: string; drawn: (host: HTMLElement) => boolean; within: string }[] = [
+  { name: "the sign-in", path: "/login", drawn: (host) => host.querySelector("input") !== null, within: '[class~="max-w-sm"][class~="bg-base-100"]' },
+  { name: "the welcome", path: "/welcome", drawn: (host) => (host.textContent ?? "").includes("Personalize Your Account"), within: '[class~="max-w-md"][class~="bg-base-100"]' },
+  { name: "the setup", path: "/setup", drawn: (host) => (host.textContent ?? "").includes("Set up Nouride"), within: '[class~="max-w-xl"]' },
+  { name: "a connector's sign-in coming back", path: "/oauth/mcp/callback?code=c&state=s", drawn: (host) => host.querySelector(".card-body") !== null, within: ".card-body" },
+];
+
+interface Seen {
+  links: { href: string | null; words: string; classes: string[]; inside: boolean; first: boolean; beforeMascot: boolean }[];
+  fixed: number;
+}
+
+/** Every link to the app on the page, where each stands, and how many things the page holds to the window. */
+function gate(host: HTMLElement, within: string): Seen {
+  const all = [...host.ownerDocument.body.querySelectorAll<HTMLAnchorElement>('a[href^="nouridehome://"]')];
+  return {
+    links: all.map((link) => {
+      const box = link.closest(within);
+      const mascot = box?.querySelector("img") ?? null;
+      return {
+        href: link.getAttribute("href"),
+        words: (link.textContent ?? "").trim(),
+        classes: (link.getAttribute("class") ?? "").split(/\s+/),
+        inside: box !== null,
+        // The first row of its box: nothing of the box comes before it.
+        first: box?.firstElementChild === link,
+        // 4: the mascot follows it in the page (Node.DOCUMENT_POSITION_FOLLOWING).
+        beforeMascot: mascot === null || (link.compareDocumentPosition(mascot) & 4) !== 0,
+      };
+    }),
+    fixed: host.ownerDocument.body.querySelectorAll('[class~="fixed"]').length,
+  };
+}
+
 describe("on the pages that have no header", () => {
   useMountHarness();
 
-  test("the sign-in page and the welcome have the same button in the app, in the corner the header's stands in", async () => {
-    const seen: Record<string, { links: number; href: string | null; classes: string[] }> = {};
-    await asTheApp(async () => {
-      answer({ "/auth/me": { status: 401, body: { error: "unauthorized" } } });
-      await renderPage("/login", async (host) => {
-        await eventually(() => host.querySelector("input") !== null, 3_000, "the sign-in page");
-        seen.login = { links: back(host).length, href: back(host)[0]?.getAttribute("href") ?? null, classes: (back(host)[0]?.getAttribute("class") ?? "").split(/\s+/) };
+  // A bare chevron held to the window's corner stood outside the card, over nothing, and lay over the page as it
+  // scrolled. Each page draws the way back as the first row of its own content instead.
+  for (const page of GATES) {
+    test(`${page.name}: in the app, a named button inside the page's own content, held to nothing; in a browser, none`, async () => {
+      let inside: Seen | null = null;
+      let outside: Seen | null = null;
+      const signedOut = page.path === "/login";
+      await asTheApp(async () => {
+        answer(signedOut ? { "/auth/me": { status: 401, body: { error: "unauthorized" } } } : {});
+        await renderPage(page.path, async (host) => {
+          await eventually(() => page.drawn(host), 3_000, page.name);
+          inside = gate(host, page.within);
+        });
       });
-      answer({});
-      await renderPage("/welcome", async (host) => {
-        await eventually(() => (host.textContent ?? "").length > 40, 3_000, "the welcome page");
-        seen.welcome = { links: back(host).length, href: back(host)[0]?.getAttribute("href") ?? null, classes: (back(host)[0]?.getAttribute("class") ?? "").split(/\s+/) };
+      answer(signedOut ? { "/auth/me": { status: 401, body: { error: "unauthorized" } } } : {});
+      await renderPage(page.path, async (host) => {
+        await eventually(() => page.drawn(host), 3_000, page.name);
+        outside = gate(host, page.within);
       });
+      // One, and it is the button that asks at once: these pages have no page before them to go back to.
+      expect(inside!.links).toHaveLength(1);
+      const link = inside!.links[0]!;
+      expect(link.href).toBe("nouridehome://home");
+      expect(link.words).toBe("Nouride Home");
+      expect(link.classes).toEqual(expect.arrayContaining(["btn", "btn-ghost", "btn-sm"]));
+      expect(link.classes).not.toContain("fixed");
+      expect(link.classes).not.toContain("absolute");
+      expect(link).toMatchObject({ inside: true, first: true, beforeMascot: true });
+      // Nothing on the page is held to the window.
+      expect(inside!.fixed).toBe(0);
+      expect(outside!.links).toEqual([]);
     });
-    for (const page of ["login", "welcome"]) {
-      // One, never a second beside a header's: these pages draw no header.
-      expect(seen[page]!.links).toBe(1);
-      expect(seen[page]!.href).toBe(HOME_APP_BACK);
-      // The header's own look and size, held to the window's corner over the page.
-      expect(seen[page]!.classes).toEqual(expect.arrayContaining(["btn", "btn-ghost", "btn-square", "size-11", "text-secondary", "fixed", "left-3", "z-30"]));
-    }
+  }
+
+  test("the shell holds nothing to the window's corner on these pages", () => {
+    const shell = readFileSync(join(import.meta.dir, "../src/commons/components/layout/RootLayout.tsx"), "utf8");
+    expect(shell).not.toContain('HomeAppBack className="fixed');
   });
 
-  test("a browser that is not the app has none there, and a signed-in page in the app has the header's alone", async () => {
-    let outside = -1;
-    answer({ "/auth/me": { status: 401, body: { error: "unauthorized" } } });
-    await renderPage("/login", async (host) => {
-      await eventually(() => host.querySelector("input") !== null, 3_000, "the sign-in page");
-      outside = back(host).length;
-    });
-    expect(outside).toBe(0);
+  test("a signed-in page in the app has the header's chevron alone, and it is not held to the window", async () => {
     let inside: string[][] = [];
     answer({});
     await asTheApp(async () => {
@@ -84,6 +128,7 @@ describe("on the pages that have no header", () => {
     });
     expect(inside).toHaveLength(1);
     expect(inside[0]).not.toContain("fixed");
+    expect(inside[0]).toContain("btn-square");
   });
 });
 
